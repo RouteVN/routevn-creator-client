@@ -26,7 +26,7 @@ refs:
       click:
         handler: handleCancelProgress
 template:
-  - 'rtgl-dialog#dialog ?open=${open} s=md aria-label="${dialogAriaLabel}"':
+  - 'rtgl-dialog#dialog ?open=${open} s=lg aria-label="${dialogAriaLabel}"':
       - rtgl-view slot=content d=v w=f g=md:
           - $if errorMessage:
               - rtgl-view w=f p=md bgc=de br=md role=alert aria-live=assertive:
@@ -40,7 +40,7 @@ template:
                       - rtgl-view slot=source-description d=h w=f g=xs av=c wrap:
                           - rtgl-text s=sm c=mu-fg: ${sourceDescription}
                           - 'rtgl-text#assetStoreLink href=${assetStoreUrl} new-tab s=sm c=pr': ${assetStoreLinkLabel}
-                  - $if isReviewStep:
+                  - $if isSelectionStep:
                       - $if hasPackageSummary:
                           - rtgl-view slot=package-summary d=v w=f g=md:
                               - $if hasPackageMetadata:
@@ -55,10 +55,9 @@ template:
                                           - 'rtgl-text s=sm c=mu-fg': '${publisherLabel}: ${packagePublisher}'
                                       - $if packageSource:
                                           - 'rtgl-text s=sm c=mu-fg': '${sourceLabel}: ${packageSource}'
-                              - $if isItemStep:
-                                  - rtgl-text s=sm c=mu-fg: ${knownDownloadBytes} ${bytesLabel}
-                                  - $if hasUnknownDownloadSize:
-                                      - rtgl-text s=sm c=mu-fg: ${unknownSizeLabel}
+                              - rtgl-text s=sm c=mu-fg: ${knownDownloadBytes} ${bytesLabel}
+                              - $if hasUnknownDownloadSize:
+                                  - rtgl-text s=sm c=mu-fg: ${unknownSizeLabel}
                               - $if warnings.length > 0:
                                   - rtgl-view d=v w=f g=xs p=md bgc=wa br=md:
                                       - rtgl-text c=wa-fg: ${warningsLabel}
@@ -82,35 +81,6 @@ template:
                                       - rtgl-text s=sm c=mu-fg: ${resource.description}
                               - 'rtgl-view d=h av=c ah=e style="align-self: center; flex: 0 0 auto;"':
                                   - rtgl-text s=sm c=${resource.selectionStatusColor}: ${resource.selectionStatus}
-                  - $if isItemStep:
-                      - rtgl-view slot=resource-preview d=v w=f g=sm:
-                          - rtgl-text s=sm c=mu-fg: ${currentResource.typeLabel}
-                          - 'rtgl-view w=240 h=135 overflow=hidden bw=xs bc=bo br=md bgc=mu style="max-width: 100%; box-sizing: border-box;"':
-                              - $if currentResource.previewSourceId:
-                                  - 'rvn-resource-import-preview-media key=${currentResource.previewSourceId} planId=${planId} sourceFileId=${currentResource.previewSourceId} label="${currentResource.name}"': null
-                                $else:
-                                  - rtgl-view w=f h=f av=c ah=c:
-                                      - rtgl-svg svg=image wh=32 c=mu-fg: null
-                      - $if animationTimeline:
-                          - rtgl-view slot=animation-timeline-preview d=v w=f g=sm:
-                              - rtgl-text s=sm c=mu-fg: ${timelinePreviewLabel}
-                              - 'rtgl-view d=v w=f g=sm p=sm bw=xs bc=bo br=md bgc=bg style="box-sizing: border-box; overflow-x: auto;"':
-                                  - $if animationTimeline.isTransition:
-                                      - rvn-keyframe-timeline w=f ?showRuler=true ?showTracks=false timelineDuration=${animationTimeline.timelineDuration}: null
-                                      - $if animationTimeline.hasPreviousProperties:
-                                          - rtgl-view d=v w=f g=xs:
-                                              - rtgl-text s=xs c=mu-fg: ${timelineOutLabel}
-                                              - rvn-keyframe-timeline w=f ?showTotalDuration=false ?showRuler=false timelineDuration=${animationTimeline.timelineDuration} :properties=${animationTimeline.previousProperties} :defaultValues=${animationTimeline.defaultValues}: null
-                                      - $if animationTimeline.hasNextProperties:
-                                          - rtgl-view d=v w=f g=xs:
-                                              - rtgl-text s=xs c=mu-fg: ${timelineInLabel}
-                                              - rvn-keyframe-timeline w=f ?showTotalDuration=false ?showRuler=false timelineDuration=${animationTimeline.timelineDuration} :properties=${animationTimeline.nextProperties} :defaultValues=${animationTimeline.defaultValues}: null
-                                      - $if animationTimeline.hasMaskProperties:
-                                          - rtgl-view d=v w=f g=xs:
-                                              - rtgl-text s=xs c=mu-fg: ${timelineMaskLabel}
-                                              - rvn-keyframe-timeline w=f ?showTotalDuration=false ?showRuler=false timelineDuration=${animationTimeline.timelineDuration} :properties=${animationTimeline.maskProperties} :defaultValues=${animationTimeline.defaultValues}: null
-                                    $else:
-                                      - rvn-keyframe-timeline w=f ?showRuler=true :properties=${animationTimeline.updateProperties} :defaultValues=${animationTimeline.defaultValues}: null
           - $if isProgressStep:
               - rtgl-view w=f h=220 av=c ah=c d=v g=md role=status aria-live=polite:
                   - rtgl-text s=lg: ${progressLabel}

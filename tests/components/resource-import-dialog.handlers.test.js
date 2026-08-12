@@ -22,17 +22,9 @@ const createDeps = () => {
         openUrl: vi.fn(),
       },
       store: {
-        selectStep: vi.fn(() => "item"),
+        selectStep: vi.fn(() => "selection"),
         selectPlan: vi.fn(() => plan),
         selectReviewValues: vi.fn(() => ({})),
-        selectCurrentResourceIndex: vi.fn(() => 0),
-        selectOrderedSelectedResourceIndexes: vi.fn(({ values }) =>
-          plan.resources
-            .map((_resource, index) => index)
-            .filter((index) => values[`resource_${index}_include`] === true),
-        ),
-        openItemStep: vi.fn(),
-        openSelectionStep: vi.fn(),
         openSourceStep: vi.fn(),
         saveReviewValues: vi.fn(),
         setResourceSelected: vi.fn(),
@@ -68,7 +60,7 @@ describe("resource-import-dialog.handlers", () => {
     expect(deps.appService.openUrl).toHaveBeenCalledWith(url);
   });
 
-  it("maps the accumulated wizard values into validation and execution", async () => {
+  it("imports the selected resources directly from the selection page", async () => {
     const { deps } = createDeps();
     const values = {
       resource_0_include: true,
@@ -102,7 +94,7 @@ describe("resource-import-dialog.handlers", () => {
     expect(deps.dispatchEvent).toHaveBeenCalledTimes(1);
   });
 
-  it("opens the first checked resource from the selection page", async () => {
+  it("imports only checked resources without opening item steps", async () => {
     const { deps, plan } = createDeps();
     plan.resources.push({
       sourceId: "transform.second",
@@ -112,19 +104,26 @@ describe("resource-import-dialog.handlers", () => {
     deps.store.selectReviewValues.mockReturnValue({
       resource_0_include: false,
       resource_1_include: true,
+      resource_1_name: "Second Transform",
+      resource_1_description: "Second description",
     });
     const values = {};
 
     await handleFormAction(deps, {
       _event: {
-        detail: { actionId: "select-continue", values, valid: true },
+        detail: { actionId: "import", values, valid: true },
       },
     });
 
-    expect(deps.store.openItemStep).toHaveBeenCalledWith({
-      values,
-      resourceIndex: 1,
-    });
+    expect(deps.projectService.executeResourceImportPlan).toHaveBeenCalledWith(
+      expect.objectContaining({
+        selectedResourceIds: ["transform.second"],
+        resourceNames: { "transform.second": "Second Transform" },
+        resourceDescriptions: {
+          "transform.second": "Second description",
+        },
+      }),
+    );
   });
 
   it("toggles a resource choice from the selection card", () => {
@@ -212,33 +211,6 @@ describe("resource-import-dialog.handlers", () => {
     expect(deps.render).toHaveBeenCalledTimes(1);
   });
 
-  it("preserves the current item values when moving to the next item", async () => {
-    const { deps, plan } = createDeps();
-    plan.resources.push({
-      sourceId: "transform.second",
-      name: "Second Transform",
-    });
-    deps.store.selectReviewValues.mockReturnValue({
-      resource_0_include: true,
-      resource_1_include: true,
-    });
-    const values = {
-      resource_0_name: "Updated Transform",
-      resource_0_description: "Updated description",
-    };
-
-    await handleFormAction(deps, {
-      _event: {
-        detail: { actionId: "next", values, valid: true },
-      },
-    });
-
-    expect(deps.store.openItemStep).toHaveBeenCalledWith({
-      values,
-      resourceIndex: 1,
-    });
-  });
-
   it("keeps the selection page open when nothing is checked", async () => {
     const { deps, plan } = createDeps();
     plan.resources.push({
@@ -254,14 +226,16 @@ describe("resource-import-dialog.handlers", () => {
     await handleFormAction(deps, {
       _event: {
         detail: {
-          actionId: "select-continue",
+          actionId: "import",
           values: {},
           valid: true,
         },
       },
     });
 
-    expect(deps.store.openItemStep).not.toHaveBeenCalled();
+    expect(
+      deps.projectService.executeResourceImportPlan,
+    ).not.toHaveBeenCalled();
     expect(deps.store.saveReviewValues).toHaveBeenCalledWith({
       values: {},
     });

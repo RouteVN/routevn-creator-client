@@ -2,7 +2,6 @@ import { generateId } from "../../internal/id.js";
 
 const SOURCE_STEP = "source";
 const SELECTION_STEP = "selection";
-const ITEM_STEP = "item";
 
 const mapErrorMessage = (error, i18n = {}) => {
   const copy = i18n.resourceImport ?? {};
@@ -30,12 +29,7 @@ export const handleBeforeMount = (deps) => {
 export const handleOnUpdate = (deps, payload = {}) => {
   const oldProps = payload.oldProps ?? {};
   const newProps = payload.newProps ?? {};
-  if (
-    oldProps.open === newProps.open &&
-    oldProps.projectResolution === newProps.projectResolution
-  ) {
-    return;
-  }
+  if (oldProps.open === newProps.open) return;
   syncFromProps(deps, newProps);
   deps.render();
 };
@@ -121,7 +115,7 @@ const handleReviewSubmit = async (deps, values) => {
   if (validation.valid === false) {
     store.setError({
       error: mapErrorMessage(validation.error, deps.i18n),
-      step: ITEM_STEP,
+      step: SELECTION_STEP,
     });
     render();
     return;
@@ -142,7 +136,7 @@ const handleReviewSubmit = async (deps, values) => {
   if (result.valid === false) {
     store.setError({
       error: mapErrorMessage(result.error, deps.i18n),
-      step: ITEM_STEP,
+      step: SELECTION_STEP,
     });
     render();
     return;
@@ -162,27 +156,7 @@ export const handleFormAction = async (deps, payload) => {
     if (step === SELECTION_STEP) {
       store.openSourceStep({ values });
       render();
-      return;
     }
-    const plan = store.selectPlan();
-    const mergedValues = mergeReviewValues(store, values);
-    const selectedResourceIndexes = store.selectOrderedSelectedResourceIndexes({
-      values: mergedValues,
-    });
-    const currentPosition = selectedResourceIndexes.indexOf(
-      store.selectCurrentResourceIndex(),
-    );
-    if (currentPosition > 0) {
-      store.openItemStep({
-        values,
-        resourceIndex: selectedResourceIndexes[currentPosition - 1],
-      });
-    } else if (plan.resources.length > 1) {
-      store.openSelectionStep({ values });
-    } else {
-      store.openSourceStep({ values });
-    }
-    render();
     return;
   }
   if (valid === false) return;
@@ -191,12 +165,15 @@ export const handleFormAction = async (deps, payload) => {
     await handleSourceSubmit(deps, values);
     return;
   }
-  if (actionId === "select-continue" && step === SELECTION_STEP) {
+  if (actionId === "import" && step === SELECTION_STEP) {
     const mergedValues = mergeReviewValues(store, values);
-    const selectedResourceIndexes = store.selectOrderedSelectedResourceIndexes({
-      values: mergedValues,
-    });
-    if (selectedResourceIndexes.length === 0) {
+    const hasSelectedResource = store
+      .selectPlan()
+      .resources.some(
+        (_resource, index) =>
+          mergedValues[`resource_${index}_include`] === true,
+      );
+    if (!hasSelectedResource) {
       store.saveReviewValues({ values });
       store.setError({
         error: mapErrorMessage(
@@ -211,30 +188,7 @@ export const handleFormAction = async (deps, payload) => {
       render();
       return;
     }
-    store.openItemStep({
-      values,
-      resourceIndex: selectedResourceIndexes[0],
-    });
-    render();
-    return;
-  }
-  if (actionId === "next" && step === ITEM_STEP) {
-    const mergedValues = mergeReviewValues(store, values);
-    const selectedResourceIndexes = store.selectOrderedSelectedResourceIndexes({
-      values: mergedValues,
-    });
-    const currentPosition = selectedResourceIndexes.indexOf(
-      store.selectCurrentResourceIndex(),
-    );
-    store.openItemStep({
-      values,
-      resourceIndex: selectedResourceIndexes[currentPosition + 1],
-    });
-    render();
-    return;
-  }
-  if (actionId === "import" && step === ITEM_STEP) {
-    await handleReviewSubmit(deps, mergeReviewValues(store, values));
+    await handleReviewSubmit(deps, mergedValues);
   }
 };
 

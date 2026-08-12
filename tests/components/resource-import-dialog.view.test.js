@@ -20,7 +20,6 @@ describe("resource-import-dialog.view", () => {
   it("renders preview media in bounded 16:9 frames", () => {
     expect(viewSource).toContain("rvn-resource-import-preview-media");
     expect(viewSource).toContain("w=160 h=90");
-    expect(viewSource).toContain("w=240 h=135");
     expect(viewSource).toContain("sourceFileId=${resource.previewSourceId}");
     expect(viewSource).toContain("?lazy=true");
   });
@@ -39,7 +38,6 @@ describe("resource-import-dialog.view", () => {
     expect(viewSource).toContain('aria-pressed="${resource.selected}"');
     expect(viewSource).toContain("${resource.selectionStatus}");
     expect(viewSource).toContain("${resource.typeLabel}");
-    expect(viewSource).toContain("${currentResource.typeLabel}");
     expect(viewSource).toContain("bgc=bg");
     expect(viewSource).toContain("bc=${resource.selectionBorderColor}");
     expect(viewSource).toContain("h-bc=${resource.selectionHoverBorderColor}");
@@ -52,10 +50,9 @@ describe("resource-import-dialog.view", () => {
     );
   });
 
-  it("renders read-only animation and transition mask timelines", () => {
-    expect(viewSource).toContain("slot=animation-timeline-preview");
-    expect(viewSource).toContain("rvn-keyframe-timeline");
-    expect(viewSource).toContain("animationTimeline.maskProperties");
-    expect(viewSource).not.toContain("currentResource.description");
+  it("does not render per-resource confirmation steps", () => {
+    expect(viewSource).not.toContain("currentResource");
+    expect(viewSource).not.toContain("animation-timeline-preview");
+    expect(viewSource).not.toContain("rvn-keyframe-timeline");
   });
 });

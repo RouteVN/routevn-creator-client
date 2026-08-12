@@ -1,18 +1,7 @@
-import {
-  getTransitionTimelineDuration,
-  getUpdateAnimationTween,
-} from "../../internal/animationDisplay.js";
-import {
-  createDefaultInitialValuesByProperty,
-  createPropertyFieldConfig,
-} from "../../internal/animationPreview.js";
-import { createDefaultTransitionMask } from "../../internal/animationMasks.js";
-import { DEFAULT_PROJECT_RESOLUTION } from "../../internal/projectResolution.js";
 import { ROUTEVN_ASSET_STORE_URL } from "../../internal/routevnUrls.js";
 
 const SOURCE_STEP = "source";
 const SELECTION_STEP = "selection";
-const ITEM_STEP = "item";
 const PROGRESS_STEP = "progress";
 
 const sourceForm = (copy) => ({
@@ -56,86 +45,6 @@ const hasPackageMetadata = (plan) =>
 const hasPackageSummary = (plan) =>
   hasPackageMetadata(plan) || (plan?.warnings?.length ?? 0) > 0;
 
-const createMaskProgressProperty = (mask = {}) => {
-  if (mask.progress?.keyframes?.length > 0) {
-    const progress = structuredClone(mask.progress);
-    const maskDelay = Math.max(0, Number(mask.delay) || 0);
-    if (maskDelay > 0 && progress.keyframes?.length > 0) {
-      progress.keyframes[0].delay =
-        maskDelay + Math.max(0, Number(progress.keyframes[0].delay) || 0);
-    }
-    return progress;
-  }
-
-  const defaultMask = createDefaultTransitionMask();
-  const keyframe = {
-    duration: Math.max(
-      1,
-      Number(mask.progressDuration) || defaultMask.progressDuration,
-    ),
-    value: 1,
-    easing: mask.progressEasing ?? defaultMask.progressEasing,
-  };
-  const delay =
-    Math.max(0, Number(mask.delay) || 0) +
-    Math.max(0, Number(mask.progressDelay) || 0);
-  if (delay > 0) keyframe.delay = delay;
-  return { initialValue: 0, keyframes: [keyframe] };
-};
-
-const createMaskTimelineProperties = (mask, copy = {}) => {
-  const masks = Array.isArray(mask) ? mask : mask ? [mask] : [];
-  const maskLabel = copy.timelineMaskLabel ?? "Mask";
-  return Object.fromEntries(
-    masks.map((item, index) => [
-      masks.length === 1 ? maskLabel : `${maskLabel} ${index + 1}`,
-      createMaskProgressProperty(item),
-    ]),
-  );
-};
-
-const createAnimationTimelinePreview = ({
-  resource,
-  projectResolution,
-  copy,
-}) => {
-  if (resource?.type !== "animation" || !resource.data?.animation) {
-    return undefined;
-  }
-
-  const animation = resource.data.animation;
-  const isTransition = animation.type === "transition";
-  const previousProperties =
-    isTransition && animation.prev?.tween ? animation.prev.tween : {};
-  const nextProperties =
-    isTransition && animation.next?.tween ? animation.next.tween : {};
-  const maskProperties = createMaskTimelineProperties(animation.mask, copy);
-  const updateProperties = getUpdateAnimationTween(resource.data);
-  const defaultValues = createDefaultInitialValuesByProperty(
-    createPropertyFieldConfig(projectResolution),
-  );
-  defaultValues[copy.timelineMaskLabel ?? "Mask"] = 0;
-
-  return {
-    isTransition,
-    previousProperties,
-    nextProperties,
-    maskProperties,
-    updateProperties,
-    hasPreviousProperties: Object.keys(previousProperties).length > 0,
-    hasNextProperties: Object.keys(nextProperties).length > 0,
-    hasMaskProperties: Object.keys(maskProperties).length > 0,
-    timelineDuration: isTransition
-      ? getTransitionTimelineDuration({
-          prevProperties: previousProperties,
-          nextProperties,
-          mask: animation.mask,
-        })
-      : undefined,
-    defaultValues,
-  };
-};
-
 const getIncludedResourceIndexes = ({ plan, values }) =>
   plan.resources
     .map((_resource, index) => index)
@@ -167,6 +76,9 @@ const getRequiredDependencySourceIds = ({ plan, values }) => {
 
 const getOrderedReviewResources = ({ plan, values }) => {
   const requiredSourceIds = getRequiredDependencySourceIds({ plan, values });
+  const dependencySourceIds = new Set(
+    plan.resources.flatMap((resource) => resource.dependencySourceIds ?? []),
+  );
   return plan.resources
     .map((resource, resourceIndex) => {
       const selected = values[`resource_${resourceIndex}_include`] === true;
@@ -178,8 +90,10 @@ const getOrderedReviewResources = ({ plan, values }) => {
       };
     })
     .sort((left, right) => {
-      const leftGroup = left.selectionLocked ? 2 : left.selected ? 0 : 1;
-      const rightGroup = right.selectionLocked ? 2 : right.selected ? 0 : 1;
+      const leftGroup = dependencySourceIds.has(left.resource.sourceId) ? 1 : 0;
+      const rightGroup = dependencySourceIds.has(right.resource.sourceId)
+        ? 1
+        : 0;
       return leftGroup - rightGroup || left.resourceIndex - right.resourceIndex;
     });
 };
@@ -228,15 +142,26 @@ const selectionForm = ({ state, copy }) => {
     slot: "selection-controls",
   });
 
-  getOrderedReviewResources({
+  const resourceFields = getOrderedReviewResources({
     plan: state.plan,
     values: state.reviewValues,
-  }).forEach(({ resourceIndex }) => {
+  }).map(({ resourceIndex }) => ({
+    type: "slot",
+    slot: `resource-selection-${resourceIndex}`,
+  }));
+  for (let index = 0; index < resourceFields.length; index += 2) {
+    const rowFields = resourceFields.slice(index, index + 2);
+    if (rowFields.length === 1) {
+      rowFields.push({
+        type: "slot",
+        slot: `resource-selection-spacer-${index}`,
+      });
+    }
     fields.push({
-      type: "slot",
-      slot: `resource-selection-${resourceIndex}`,
+      type: "row",
+      fields: rowFields,
     });
-  });
+  }
 
   return {
     title: copy.selectResourcesTitle ?? "Choose Resources",
@@ -249,81 +174,9 @@ const selectionForm = ({ state, copy }) => {
           label: copy.backButton ?? "Back",
         },
         {
-          id: "select-continue",
+          id: "import",
           variant: "pr",
-          label: copy.selectionContinueButton ?? "Continue",
-          validate: true,
-        },
-      ],
-    },
-  };
-};
-
-const itemForm = ({ state, copy }) => {
-  const selectedResourceIndexes = getOrderedReviewResources({
-    plan: state.plan,
-    values: state.reviewValues,
-  })
-    .filter(({ selected }) => selected)
-    .map(({ resourceIndex }) => resourceIndex);
-  const currentPosition = selectedResourceIndexes.indexOf(
-    state.currentResourceIndex,
-  );
-  const resource = state.plan.resources[state.currentResourceIndex];
-  const isLast = currentPosition === selectedResourceIndexes.length - 1;
-  const fields = [];
-  if (state.plan.resources.length === 1) {
-    fields.push({ type: "slot", slot: "package-summary" });
-  }
-  fields.push({ type: "slot", slot: "resource-preview" });
-  if (resource.type === "animation") {
-    fields.push({ type: "slot", slot: "animation-timeline-preview" });
-  }
-  fields.push({
-    type: "row",
-    fields: [
-      {
-        name: `resource_${state.currentResourceIndex}_name`,
-        type: "input-text",
-        label: copy.resourceNameLabel ?? "Resource Name",
-        placeholder: copy.resourceNamePlaceholder ?? "Enter a resource name",
-        required: true,
-      },
-      {
-        name: `resource_${state.currentResourceIndex}_description`,
-        type: "input-textarea",
-        label: copy.resourceDescriptionLabel ?? "Resource Description",
-        placeholder:
-          copy.resourceDescriptionPlaceholder ?? "Enter a resource description",
-        rows: 3,
-      },
-    ],
-  });
-
-  const title = (copy.customizeResourceTitle ?? "Customize {name}").replace(
-    "{name}",
-    resource.name,
-  );
-  const description = (copy.itemProgressLabel ?? "Item {current} of {total}")
-    .replace("{current}", `${currentPosition + 1}`)
-    .replace("{total}", `${selectedResourceIndexes.length}`);
-  return {
-    title,
-    description,
-    fields,
-    actions: {
-      buttons: [
-        {
-          id: "back",
-          variant: "se",
-          label: copy.backButton ?? "Back",
-        },
-        {
-          id: isLast ? "import" : "next",
-          variant: "pr",
-          label: isLast
-            ? (copy.submitAllButton ?? "Submit All")
-            : (copy.nextButton ?? "Next"),
+          label: copy.importButton ?? "Import",
           validate: true,
         },
       ],
@@ -343,12 +196,10 @@ const createReviewValues = (plan) => {
 
 export const createInitialState = () => ({
   open: false,
-  projectResolution: DEFAULT_PROJECT_RESOLUTION,
   step: SOURCE_STEP,
   sourceValues: { url: "" },
   reviewValues: {},
   plan: undefined,
-  currentResourceIndex: undefined,
   error: undefined,
   isBusy: false,
   operationId: undefined,
@@ -359,15 +210,12 @@ export const createInitialState = () => ({
 export const syncFromProps = ({ state }, { props, reset = false } = {}) => {
   const wasOpen = state.open;
   state.open = props.open === true;
-  state.projectResolution =
-    props.projectResolution ?? DEFAULT_PROJECT_RESOLUTION;
 
   if (reset || (!wasOpen && state.open)) {
     state.step = SOURCE_STEP;
     state.sourceValues = { url: "" };
     state.reviewValues = {};
     state.plan = undefined;
-    state.currentResourceIndex = undefined;
     state.error = undefined;
     state.isBusy = false;
     state.operationId = undefined;
@@ -388,8 +236,7 @@ export const setLoading = (
 export const setPlan = ({ state }, { plan } = {}) => {
   state.plan = plan;
   state.reviewValues = createReviewValues(plan);
-  state.currentResourceIndex = plan.resources.length === 1 ? 0 : undefined;
-  state.step = plan.resources.length === 1 ? ITEM_STEP : SELECTION_STEP;
+  state.step = SELECTION_STEP;
   state.isBusy = false;
   state.operationId = undefined;
   state.error = undefined;
@@ -409,33 +256,7 @@ export const openSourceStep = ({ state }, { values } = {}) => {
 
 export const reopenLoadedPlan = ({ state }) => {
   if (!state.plan) return;
-  state.currentResourceIndex =
-    state.plan.resources.length === 1 ? 0 : undefined;
-  state.step = state.plan.resources.length === 1 ? ITEM_STEP : SELECTION_STEP;
-  state.error = undefined;
-  state.formKey += 1;
-};
-
-export const openSelectionStep = ({ state }, { values } = {}) => {
-  if (values) {
-    for (const [key, value] of Object.entries(values)) {
-      state.reviewValues[key] = value;
-    }
-  }
-  state.currentResourceIndex = undefined;
   state.step = SELECTION_STEP;
-  state.error = undefined;
-  state.formKey += 1;
-};
-
-export const openItemStep = ({ state }, { values, resourceIndex } = {}) => {
-  if (values) {
-    for (const [key, value] of Object.entries(values)) {
-      state.reviewValues[key] = value;
-    }
-  }
-  state.currentResourceIndex = resourceIndex;
-  state.step = ITEM_STEP;
   state.error = undefined;
   state.formKey += 1;
 };
@@ -509,18 +330,6 @@ export const selectStep = ({ state }) => state.step;
 export const selectOperationId = ({ state }) => state.operationId;
 export const selectSourceValues = ({ state }) => state.sourceValues;
 export const selectReviewValues = ({ state }) => state.reviewValues;
-export const selectCurrentResourceIndex = ({ state }) =>
-  state.currentResourceIndex;
-export const selectOrderedSelectedResourceIndexes = (
-  { state },
-  { values } = {},
-) =>
-  getOrderedReviewResources({
-    plan: state.plan,
-    values: values ?? state.reviewValues,
-  })
-    .filter(({ selected }) => selected)
-    .map(({ resourceIndex }) => resourceIndex);
 export const selectViewData = ({ state, i18n = {} }) => {
   const copy = i18n.resourceImport ?? {};
   const plan = state.plan;
@@ -537,30 +346,12 @@ export const selectViewData = ({ state, i18n = {} }) => {
     complete: copy.completeLabel ?? "Import complete",
   };
   const isSelectionStep = state.step === SELECTION_STEP;
-  const isItemStep = state.step === ITEM_STEP;
   const allResourcesSelected =
     (plan?.resources.length ?? 0) > 0 &&
     plan.resources.every(
       (_resource, index) =>
         state.reviewValues[`resource_${index}_include`] === true,
     );
-  const rawCurrentResource = isItemStep
-    ? plan?.resources[state.currentResourceIndex]
-    : undefined;
-  const currentResource = rawCurrentResource
-    ? {
-        ...rawCurrentResource,
-        typeLabel: getResourceTypeLabel({
-          resource: rawCurrentResource,
-          copy,
-        }),
-      }
-    : undefined;
-  const animationTimeline = createAnimationTimelinePreview({
-    resource: currentResource,
-    projectResolution: state.projectResolution,
-    copy,
-  });
   const resources = plan
     ? getOrderedReviewResources({
         plan,
@@ -594,22 +385,15 @@ export const selectViewData = ({ state, i18n = {} }) => {
     step: state.step,
     isSourceStep: state.step === SOURCE_STEP,
     isSelectionStep,
-    isItemStep,
     allResourcesSelected,
     selectionToggleAllLabel: allResourcesSelected
       ? (copy.deselectAllButton ?? "Deselect All")
       : (copy.selectAllButton ?? "Select All"),
-    isReviewStep: isSelectionStep || isItemStep,
     isProgressStep: state.step === PROGRESS_STEP,
     isBusy: state.isBusy,
     formKey: state.formKey,
-    form: isSelectionStep
-      ? selectionForm({ state, copy })
-      : isItemStep
-        ? itemForm({ state, copy })
-        : sourceForm(copy),
-    defaultValues:
-      isSelectionStep || isItemStep ? state.reviewValues : state.sourceValues,
+    form: isSelectionStep ? selectionForm({ state, copy }) : sourceForm(copy),
+    defaultValues: isSelectionStep ? state.reviewValues : state.sourceValues,
     formContext: state.reviewValues,
     errorMessage: state.error?.message,
     sourceDescription:
@@ -619,17 +403,13 @@ export const selectViewData = ({ state, i18n = {} }) => {
     assetStoreUrl: ROUTEVN_ASSET_STORE_URL,
     packageName: plan?.package?.name,
     hasPackageMetadata: hasPackageMetadata(plan),
-    hasPackageSummary:
-      hasPackageSummary(plan) ||
-      (isItemStep && (plan?.resources.length ?? 0) === 1),
+    hasPackageSummary: hasPackageSummary(plan),
     planId: plan?.planId,
     packageVersion: plan?.package?.version,
     packageDescription: plan?.package?.description,
     packagePublisher: plan?.package?.publisher,
     packageSource: plan?.package?.source,
     resources,
-    currentResource,
-    animationTimeline,
     warnings,
     knownDownloadBytes: plan?.knownDownloadBytes ?? 0,
     hasUnknownDownloadSize: plan?.hasUnknownDownloadSize === true,
@@ -638,10 +418,6 @@ export const selectViewData = ({ state, i18n = {} }) => {
     warningsLabel: copy.warningsLabel ?? "Warnings",
     unknownSizeLabel: copy.unknownSizeLabel ?? "plus files of unknown size",
     bytesLabel: copy.bytesLabel ?? "bytes",
-    timelinePreviewLabel: copy.timelinePreviewLabel ?? "Timeline",
-    timelineOutLabel: copy.timelineOutLabel ?? "Out",
-    timelineInLabel: copy.timelineInLabel ?? "In",
-    timelineMaskLabel: copy.timelineMaskLabel ?? "Mask",
     progressLabel:
       progressLabelByPhase[state.progress.phase] ??
       copy.preparingLabel ??

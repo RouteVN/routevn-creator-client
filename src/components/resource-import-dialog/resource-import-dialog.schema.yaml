@@ -4,13 +4,6 @@ propsSchema:
   properties:
     open:
       type: boolean
-    projectResolution:
-      type: object
-      properties:
-        width:
-          type: number
-        height:
-          type: number
 events:
   import-cancelled: {}
   import-complete:
