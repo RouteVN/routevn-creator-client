@@ -27,7 +27,7 @@ describe("resource-import-dialog.view", () => {
   it("uses the whole resource card as the selection control", () => {
     expect(viewSource).toContain("slot=selection-controls");
     expect(viewSource).toContain(
-      "slot=resource-selection-grid cols=3 xl-cols=2 sm-cols=1",
+      "slot=resource-selection-grid cols=3 xl-cols=2 md-cols=1",
     );
     expect(viewSource).toContain("selectionToggleAllButton");
     expect(viewSource).toContain("${selectionToggleAllLabel}");

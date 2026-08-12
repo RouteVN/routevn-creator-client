@@ -66,7 +66,7 @@ template:
                   - $if isSelectionStep:
                       - rtgl-view slot=selection-controls d=h w=f ah=e:
                           - 'rtgl-button#selectionToggleAllButton v=se s=sm data-all-selected=${allResourcesSelected}': ${selectionToggleAllLabel}
-                      - rtgl-grid slot=resource-selection-grid cols=3 xl-cols=2 sm-cols=1 g=lg w=f:
+                      - rtgl-grid slot=resource-selection-grid cols=3 xl-cols=2 md-cols=1 g=lg w=f:
                           - $for resource, i in resources:
                               - 'rtgl-view#resourceSelectionCard${i} role=button tabindex=${resource.selectionTabIndex} data-resource-index=${resource.resourceIndex} data-selected=${resource.selected} data-selection-locked=${resource.selectionLocked} aria-label="${resource.selectionLabel}" aria-pressed="${resource.selected}" aria-disabled="${resource.selectionLocked}" d=h w=f av=s g=md p=md bgc=bg bw=xs bc=${resource.selectionBorderColor} h-bc=${resource.selectionHoverBorderColor} br=md cur=${resource.selectionCursor} style="box-sizing: border-box;"':
                                   - 'rtgl-view w=160 h=90 av=c ah=c br=md bgc=mu overflow=hidden style="flex: 0 0 160px;"':
