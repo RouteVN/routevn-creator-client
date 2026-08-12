@@ -494,7 +494,11 @@ export const selectViewData = ({ state, i18n }) => {
       : "",
     selectionName: selectedSound?.name ?? (channelSelected ? channelName : ""),
     selectionKey: selectedSound
-      ? `sound-${selectedSound.id}`
+      ? [
+          `sound-${selectedSound.id}`,
+          `incoming-${selectedSound.incomingTransition?.resourceId ?? "none"}`,
+          `outgoing-${selectedSound.outgoingTransition?.resourceId ?? "none"}`,
+        ].join("-")
       : channelSelected
         ? "channel"
         : "none",
@@ -605,9 +609,13 @@ const updateSoundTransition = (sound, values, direction) => {
     return;
   }
 
-  const speed = speedChanged
-    ? values[speedField]
-    : sound[transitionField]?.playback?.speed;
+  const isNewSelection =
+    resourceChanged && resourceId !== sound[transitionField]?.resourceId;
+  const speed = isNewSelection
+    ? DEFAULT_AUDIO_EFFECT_PLAYBACK_SPEED
+    : speedChanged
+      ? values[speedField]
+      : sound[transitionField]?.playback?.speed;
   sound[transitionField] = {
     resourceId,
     playback: {

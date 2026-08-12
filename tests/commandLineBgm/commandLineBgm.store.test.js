@@ -210,6 +210,9 @@ describe("commandLineBgm.store", () => {
       type: "slot",
       slot: "outgoingTransitionPlaybackSpeedSpacer",
     });
+    expect(viewData.selectionKey).toBe(
+      "sound-main-incoming-none-outgoing-none",
+    );
   });
 
   it("persists and clears incoming and outgoing transitions per sound", () => {
@@ -229,6 +232,7 @@ describe("commandLineBgm.store", () => {
         soundId: "main",
         values: {
           incomingTransitionId: "fade-in",
+          incomingTransitionPlaybackSpeed: 0.01,
           outgoingTransitionId: "crossfade",
           outgoingTransitionPlaybackSpeed: 1.5,
         },
@@ -242,9 +246,32 @@ describe("commandLineBgm.store", () => {
       },
       outgoingTransition: {
         resourceId: "crossfade",
-        playback: { speed: 1.5 },
+        playback: { speed: 1 },
       },
     });
+
+    expect(selectViewData({ state, i18n })).toMatchObject({
+      selectionKey: "none",
+    });
+
+    setSelectedSound({ state }, { soundId: "main" });
+    expect(selectViewData({ state, i18n })).toMatchObject({
+      selectionKey: "sound-main-incoming-fade-in-outgoing-crossfade",
+      defaultValues: {
+        incomingTransitionPlaybackSpeed: 1,
+        outgoingTransitionPlaybackSpeed: 1,
+      },
+    });
+
+    updateSound(
+      { state },
+      {
+        soundId: "main",
+        values: {
+          outgoingTransitionPlaybackSpeed: 1.5,
+        },
+      },
+    );
 
     updateSound(
       { state },

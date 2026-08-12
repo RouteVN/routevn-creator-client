@@ -214,9 +214,9 @@ describe("commandLineBgm.handlers", () => {
           detail: {
             values: {
               incomingTransitionId: "crossfade",
-              incomingTransitionPlaybackSpeed: 1.25,
+              incomingTransitionPlaybackSpeed: 0.01,
               outgoingTransitionId: "crossfade",
-              outgoingTransitionPlaybackSpeed: 0.75,
+              outgoingTransitionPlaybackSpeed: 0.01,
             },
           },
         },
@@ -227,6 +227,32 @@ describe("commandLineBgm.handlers", () => {
     expect(state.bgm.sounds[0]).toMatchObject({
       incomingTransition: {
         resourceId: "crossfade",
+        playback: { speed: 1 },
+      },
+      outgoingTransition: {
+        resourceId: "crossfade",
+        playback: { speed: 1 },
+      },
+    });
+    expect(render).toHaveBeenCalledOnce();
+
+    handleFormChange(
+      { store, render },
+      {
+        _event: {
+          detail: {
+            values: {
+              incomingTransitionPlaybackSpeed: 1.25,
+              outgoingTransitionPlaybackSpeed: 0.75,
+            },
+          },
+        },
+      },
+    );
+
+    expect(state.bgm.sounds[0]).toMatchObject({
+      incomingTransition: {
+        resourceId: "crossfade",
         playback: { speed: 1.25 },
       },
       outgoingTransition: {
@@ -234,7 +260,7 @@ describe("commandLineBgm.handlers", () => {
         playback: { speed: 0.75 },
       },
     });
-    expect(render).toHaveBeenCalledOnce();
+    expect(render).toHaveBeenCalledTimes(2);
   });
 
   it("updates only the selected clip timing, loop, and volume", () => {
@@ -649,8 +675,13 @@ describe("commandLineBgm.handlers", () => {
       soundId: "intro-clip",
       values: {
         incomingTransitionId: "crossfade",
-        incomingTransitionPlaybackSpeed: 1.5,
         outgoingTransitionId: "crossfade",
+      },
+    });
+    store.updateSound({
+      soundId: "intro-clip",
+      values: {
+        incomingTransitionPlaybackSpeed: 1.5,
       },
     });
 
