@@ -41,6 +41,9 @@ describe("resource-import-dialog.view", () => {
     expect(viewSource).toContain("${selectionToggleAllLabel}");
     expect(viewSource).toContain("resourceSelectionGrid:");
     expect(viewSource).not.toContain("resourceSelectionCard*:");
+    expect(viewSource).toContain(
+      "rtgl-view#resourceSelectionCard${resource.resourceIndex}${resource.selected}",
+    );
     expect(viewSource).toContain("role=button tabindex=0");
     expect(viewSource).toContain(
       "data-resource-index=${resource.resourceIndex}",

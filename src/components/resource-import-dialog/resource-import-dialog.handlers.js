@@ -197,59 +197,17 @@ const findResourceSelectionCard = (_event) =>
     .composedPath()
     .find((target) => target?.dataset?.resourceIndex !== undefined);
 
-const describeResourceSelectionEvent = (_event) => ({
-  type: _event.type,
-  target: _event.target?.tagName,
-  currentTarget: _event.currentTarget?.tagName,
-  path: _event.composedPath().map((target) => ({
-    tagName: target?.tagName,
-    id: target?.id,
-    resourceIndex: target?.dataset?.resourceIndex,
-  })),
-});
-
 const toggleResourceSelection = (deps, _event) => {
-  const { store, refs, render } = deps;
+  const { store, render } = deps;
   const card = findResourceSelectionCard(_event);
-  if (!card) {
-    console.warn(
-      "[resource-import] Click did not resolve to a resource card.",
-      describeResourceSelectionEvent(_event),
-    );
-    return;
-  }
+  if (!card) return;
   const resourceIndex = Number(card.dataset.resourceIndex);
   const selected = card.getAttribute("aria-pressed") !== "true";
-  const resource = store.selectPlan().resources[resourceIndex];
-  console.info("[resource-import] Updating resource selection.", {
-    resourceIndex,
-    sourceId: resource.sourceId,
-    name: resource.name,
-    selected,
-  });
   store.setResourceSelected({ resourceIndex, selected });
-  console.info("[resource-import] Resource selection state updated.", {
-    resourceIndex,
-    selected:
-      store.selectReviewValues()[`resource_${resourceIndex}_include`] === true,
-  });
   render();
-  const renderedCard = refs.resourceSelectionGrid.querySelector(
-    `[data-resource-index="${resourceIndex}"]`,
-  );
-  console.info("[resource-import] Rendered resource card state.", {
-    resourceIndex,
-    ariaPressed: renderedCard?.getAttribute("aria-pressed"),
-    dataSelected: renderedCard?.dataset.selected,
-    borderColor: renderedCard?.getAttribute("bc"),
-  });
 };
 
 export const handleResourceSelectionToggle = (deps, payload) => {
-  console.info(
-    "[resource-import] Selection grid received a click.",
-    describeResourceSelectionEvent(payload._event),
-  );
   toggleResourceSelection(deps, payload._event);
 };
 

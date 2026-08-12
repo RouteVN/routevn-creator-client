@@ -75,7 +75,7 @@ template:
                                         $else:
                                           - rtgl-grid cols=3 xl-cols=2 md-cols=1 g=lg w=f:
                                               - $for resource, resourceIndex in group.resources:
-                                                  - 'rtgl-view role=button tabindex=0 data-resource-index=${resource.resourceIndex} data-selected=${resource.selected} aria-label="${resource.selectionLabel}" aria-pressed="${resource.selected}" d=h w=f av=s g=md p=md bgc=bg bw=xs bc=${resource.selectionBorderColor} h-bc=${resource.selectionHoverBorderColor} br=md cur=pointer style="box-sizing: border-box;"':
+                                                  - 'rtgl-view#resourceSelectionCard${resource.resourceIndex}${resource.selected} role=button tabindex=0 data-resource-index=${resource.resourceIndex} data-selected=${resource.selected} aria-label="${resource.selectionLabel}" aria-pressed="${resource.selected}" d=h w=f av=s g=md p=md bgc=bg bw=xs bc=${resource.selectionBorderColor} h-bc=${resource.selectionHoverBorderColor} br=md cur=pointer style="box-sizing: border-box;"':
                                                       - 'rtgl-view w=160 h=90 av=c ah=c br=md bgc=mu overflow=hidden style="flex: 0 0 160px;"':
                                                           - $if resource.previewSourceId:
                                                               - 'rvn-resource-import-preview-media key=${resource.previewSourceId} planId=${planId} sourceFileId=${resource.previewSourceId} label="${resource.name}" ?lazy=true': null
