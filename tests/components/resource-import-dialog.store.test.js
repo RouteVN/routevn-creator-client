@@ -3,6 +3,7 @@ import {
   createInitialState,
   openItemStep,
   selectViewData,
+  selectOrderedSelectedResourceIndexes,
   setAllResourcesSelected,
   setResourceSelected,
   setPlan,
@@ -19,12 +20,16 @@ const createMultiResourcePlan = () => ({
   resources: [
     {
       sourceId: "source.one",
+      resourceType: "transforms",
+      type: "transform",
       name: "Transform One",
       description: "First transform",
       previewSourceId: "file.transform-one",
     },
     {
       sourceId: "source.two",
+      resourceType: "transforms",
+      type: "transform",
       name: "Transform Two",
       description: "Second transform",
       previewSourceId: "file.transform-two",
@@ -71,6 +76,7 @@ describe("resource-import-dialog.store", () => {
         expect.objectContaining({
           selectionSlot: "resource-selection-0",
           previewSourceId: "file.transform-one",
+          typeLabel: "Transform",
           selected: true,
           selectionLabel: "Import Transform One",
           selectionBorderColor: "pr",
@@ -116,7 +122,16 @@ describe("resource-import-dialog.store", () => {
     expect(view.warnings).toEqual([]);
 
     setResourceSelected({ state }, { resourceIndex: 0, selected: false });
-    expect(selectViewData({ state, i18n: {} }).resources[0]).toMatchObject({
+    const deselectedView = selectViewData({ state, i18n: {} });
+    expect(deselectedView.resources.map(({ sourceId }) => sourceId)).toEqual([
+      "source.two",
+      "source.one",
+    ]);
+    expect(
+      deselectedView.resources.find(
+        ({ sourceId }) => sourceId === "source.one",
+      ),
+    ).toMatchObject({
       selected: false,
       selectionBorderColor: "bo",
       selectionHoverBorderColor: "ac",
@@ -143,10 +158,24 @@ describe("resource-import-dialog.store", () => {
     setPlan({ state }, { plan });
 
     expect(selectViewData({ state, i18n: {} }).resources[0]).toMatchObject({
+      sourceId: "source.two",
+      selected: true,
+      selectionLocked: false,
+    });
+    expect(selectViewData({ state, i18n: {} }).resources.at(-1)).toMatchObject({
+      sourceId: "source.one",
       selected: true,
       selectionLocked: true,
       selectionStatus: "Required",
     });
+    expect(
+      selectViewData({ state, i18n: {} })
+        .form.fields.filter(({ slot }) =>
+          slot?.startsWith("resource-selection-"),
+        )
+        .map(({ slot }) => slot),
+    ).toEqual(["resource-selection-1", "resource-selection-0"]);
+    expect(selectOrderedSelectedResourceIndexes({ state })).toEqual([1, 0]);
     setResourceSelected({ state }, { resourceIndex: 0, selected: false });
     expect(state.reviewValues.resource_0_include).toBe(true);
 
@@ -182,6 +211,7 @@ describe("resource-import-dialog.store", () => {
       ]),
     );
     expect(firstView.form.actions.buttons.at(-1).id).toBe("next");
+    expect(firstView.currentResource.typeLabel).toBe("Transform");
 
     openItemStep(
       { state },
@@ -217,9 +247,9 @@ describe("resource-import-dialog.store", () => {
         expect.objectContaining({ name: "resource_0_description" }),
       ]),
     );
-    expect(
-      fields.some((field) => field.name?.includes("Destination")),
-    ).toBe(false);
+    expect(fields.some((field) => field.name?.includes("Destination"))).toBe(
+      false,
+    );
   });
 
   it("builds a read-only animation timeline with transition and mask tracks", () => {

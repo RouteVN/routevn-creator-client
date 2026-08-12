@@ -38,6 +38,8 @@ describe("resource-import-dialog.view", () => {
     );
     expect(viewSource).toContain('aria-pressed="${resource.selected}"');
     expect(viewSource).toContain("${resource.selectionStatus}");
+    expect(viewSource).toContain("${resource.typeLabel}");
+    expect(viewSource).toContain("${currentResource.typeLabel}");
     expect(viewSource).toContain("bgc=bg");
     expect(viewSource).toContain("bc=${resource.selectionBorderColor}");
     expect(viewSource).toContain("h-bc=${resource.selectionHoverBorderColor}");

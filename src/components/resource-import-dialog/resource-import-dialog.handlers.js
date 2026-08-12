@@ -83,11 +83,6 @@ const mergeReviewValues = (store, values) => {
   return mergedValues;
 };
 
-const getSelectedResourceIndexes = ({ plan, values }) =>
-  plan.resources
-    .map((_resource, index) => index)
-    .filter((index) => values[`resource_${index}_include`] === true);
-
 const handleSourceSubmit = async (deps, values) => {
   const { projectService, store, render } = deps;
   const previousSourceUrl = store.selectSourceValues()?.url?.trim();
@@ -171,8 +166,7 @@ export const handleFormAction = async (deps, payload) => {
     }
     const plan = store.selectPlan();
     const mergedValues = mergeReviewValues(store, values);
-    const selectedResourceIndexes = getSelectedResourceIndexes({
-      plan,
+    const selectedResourceIndexes = store.selectOrderedSelectedResourceIndexes({
       values: mergedValues,
     });
     const currentPosition = selectedResourceIndexes.indexOf(
@@ -198,10 +192,8 @@ export const handleFormAction = async (deps, payload) => {
     return;
   }
   if (actionId === "select-continue" && step === SELECTION_STEP) {
-    const plan = store.selectPlan();
     const mergedValues = mergeReviewValues(store, values);
-    const selectedResourceIndexes = getSelectedResourceIndexes({
-      plan,
+    const selectedResourceIndexes = store.selectOrderedSelectedResourceIndexes({
       values: mergedValues,
     });
     if (selectedResourceIndexes.length === 0) {
@@ -227,10 +219,8 @@ export const handleFormAction = async (deps, payload) => {
     return;
   }
   if (actionId === "next" && step === ITEM_STEP) {
-    const plan = store.selectPlan();
     const mergedValues = mergeReviewValues(store, values);
-    const selectedResourceIndexes = getSelectedResourceIndexes({
-      plan,
+    const selectedResourceIndexes = store.selectOrderedSelectedResourceIndexes({
       values: mergedValues,
     });
     const currentPosition = selectedResourceIndexes.indexOf(

@@ -26,6 +26,11 @@ const createDeps = () => {
         selectPlan: vi.fn(() => plan),
         selectReviewValues: vi.fn(() => ({})),
         selectCurrentResourceIndex: vi.fn(() => 0),
+        selectOrderedSelectedResourceIndexes: vi.fn(({ values }) =>
+          plan.resources
+            .map((_resource, index) => index)
+            .filter((index) => values[`resource_${index}_include`] === true),
+        ),
         openItemStep: vi.fn(),
         openSelectionStep: vi.fn(),
         openSourceStep: vi.fn(),

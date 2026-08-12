@@ -136,7 +136,7 @@ const createAnimationTimelinePreview = ({
   };
 };
 
-const getSelectedResourceIndexes = ({ plan, values }) =>
+const getIncludedResourceIndexes = ({ plan, values }) =>
   plan.resources
     .map((_resource, index) => index)
     .filter((index) => values[`resource_${index}_include`] === true);
@@ -146,7 +146,7 @@ const getRequiredDependencySourceIds = ({ plan, values }) => {
     plan.resources.map((resource) => [resource.sourceId, resource]),
   );
   const selectedSourceIds = new Set(
-    getSelectedResourceIndexes({ plan, values }).map(
+    getIncludedResourceIndexes({ plan, values }).map(
       (index) => plan.resources[index].sourceId,
     ),
   );
@@ -165,6 +165,55 @@ const getRequiredDependencySourceIds = ({ plan, values }) => {
   return requiredSourceIds;
 };
 
+const getOrderedReviewResources = ({ plan, values }) => {
+  const requiredSourceIds = getRequiredDependencySourceIds({ plan, values });
+  return plan.resources
+    .map((resource, resourceIndex) => {
+      const selected = values[`resource_${resourceIndex}_include`] === true;
+      return {
+        resource,
+        resourceIndex,
+        selected,
+        selectionLocked: selected && requiredSourceIds.has(resource.sourceId),
+      };
+    })
+    .sort((left, right) => {
+      const leftGroup = left.selectionLocked ? 2 : left.selected ? 0 : 1;
+      const rightGroup = right.selectionLocked ? 2 : right.selected ? 0 : 1;
+      return leftGroup - rightGroup || left.resourceIndex - right.resourceIndex;
+    });
+};
+
+const formatResourceType = (resourceType = "resource") => {
+  const label = resourceType.replace(/([a-z])([A-Z])/g, "$1 $2");
+  return `${label.charAt(0).toUpperCase()}${label.slice(1)}`;
+};
+
+const RESOURCE_TYPE_COPY_KEYS = Object.freeze({
+  animations: "animationTypeLabel",
+  audioEffects: "audioEffectTypeLabel",
+  characters: "characterTypeLabel",
+  colors: "colorTypeLabel",
+  controls: "controlTypeLabel",
+  fonts: "fontTypeLabel",
+  images: "imageTypeLabel",
+  layouts: "layoutTypeLabel",
+  particles: "particleTypeLabel",
+  sounds: "soundTypeLabel",
+  spritesheets: "spritesheetTypeLabel",
+  textStyles: "textStyleTypeLabel",
+  transforms: "transformTypeLabel",
+  variables: "variableTypeLabel",
+  videos: "videoTypeLabel",
+});
+
+const getResourceTypeLabel = ({ resource, copy }) => {
+  const copyKey = RESOURCE_TYPE_COPY_KEYS[resource.resourceType];
+  return (
+    copy[copyKey] ?? formatResourceType(resource.type ?? resource.resourceType)
+  );
+};
+
 const selectionForm = ({ state, copy }) => {
   const fields = [];
   if (hasPackageSummary(state.plan)) {
@@ -179,10 +228,13 @@ const selectionForm = ({ state, copy }) => {
     slot: "selection-controls",
   });
 
-  state.plan.resources.forEach((_resource, index) => {
+  getOrderedReviewResources({
+    plan: state.plan,
+    values: state.reviewValues,
+  }).forEach(({ resourceIndex }) => {
     fields.push({
       type: "slot",
-      slot: `resource-selection-${index}`,
+      slot: `resource-selection-${resourceIndex}`,
     });
   });
 
@@ -208,10 +260,12 @@ const selectionForm = ({ state, copy }) => {
 };
 
 const itemForm = ({ state, copy }) => {
-  const selectedResourceIndexes = getSelectedResourceIndexes({
+  const selectedResourceIndexes = getOrderedReviewResources({
     plan: state.plan,
     values: state.reviewValues,
-  });
+  })
+    .filter(({ selected }) => selected)
+    .map(({ resourceIndex }) => resourceIndex);
   const currentPosition = selectedResourceIndexes.indexOf(
     state.currentResourceIndex,
   );
@@ -457,6 +511,16 @@ export const selectSourceValues = ({ state }) => state.sourceValues;
 export const selectReviewValues = ({ state }) => state.reviewValues;
 export const selectCurrentResourceIndex = ({ state }) =>
   state.currentResourceIndex;
+export const selectOrderedSelectedResourceIndexes = (
+  { state },
+  { values } = {},
+) =>
+  getOrderedReviewResources({
+    plan: state.plan,
+    values: values ?? state.reviewValues,
+  })
+    .filter(({ selected }) => selected)
+    .map(({ resourceIndex }) => resourceIndex);
 export const selectViewData = ({ state, i18n = {} }) => {
   const copy = i18n.resourceImport ?? {};
   const plan = state.plan;
@@ -480,17 +544,50 @@ export const selectViewData = ({ state, i18n = {} }) => {
       (_resource, index) =>
         state.reviewValues[`resource_${index}_include`] === true,
     );
-  const requiredDependencySourceIds = plan
-    ? getRequiredDependencySourceIds({ plan, values: state.reviewValues })
-    : new Set();
-  const currentResource = isItemStep
+  const rawCurrentResource = isItemStep
     ? plan?.resources[state.currentResourceIndex]
+    : undefined;
+  const currentResource = rawCurrentResource
+    ? {
+        ...rawCurrentResource,
+        typeLabel: getResourceTypeLabel({
+          resource: rawCurrentResource,
+          copy,
+        }),
+      }
     : undefined;
   const animationTimeline = createAnimationTimelinePreview({
     resource: currentResource,
     projectResolution: state.projectResolution,
     copy,
   });
+  const resources = plan
+    ? getOrderedReviewResources({
+        plan,
+        values: state.reviewValues,
+      }).map(({ resource, resourceIndex, selected, selectionLocked }) => ({
+        ...resource,
+        resourceIndex,
+        typeLabel: getResourceTypeLabel({ resource, copy }),
+        selectionSlot: `resource-selection-${resourceIndex}`,
+        selectionLabel: (copy.includeResource ?? "Import {name}").replace(
+          "{name}",
+          getResourceLabel(resource, resourceIndex, copy),
+        ),
+        selected,
+        selectionLocked,
+        selectionTabIndex: selectionLocked ? -1 : 0,
+        selectionCursor: selectionLocked ? "default" : "pointer",
+        selectionBorderColor: selected ? "pr" : "bo",
+        selectionHoverBorderColor: selected ? "pr" : "ac",
+        selectionStatus: selectionLocked
+          ? (copy.requiredStatus ?? "Required")
+          : selected
+            ? (copy.selectedStatus ?? "Selected")
+            : (copy.notSelectedStatus ?? "Not selected"),
+        selectionStatusColor: selected ? "pr" : "mu-fg",
+      }))
+    : [];
 
   return {
     open: state.open,
@@ -530,33 +627,7 @@ export const selectViewData = ({ state, i18n = {} }) => {
     packageDescription: plan?.package?.description,
     packagePublisher: plan?.package?.publisher,
     packageSource: plan?.package?.source,
-    resources:
-      plan?.resources.map((resource, index) => {
-        const selected =
-          state.reviewValues[`resource_${index}_include`] === true;
-        const selectionLocked =
-          selected && requiredDependencySourceIds.has(resource.sourceId);
-        return {
-          ...resource,
-          selectionSlot: `resource-selection-${index}`,
-          selectionLabel: (copy.includeResource ?? "Import {name}").replace(
-            "{name}",
-            getResourceLabel(resource, index, copy),
-          ),
-          selected,
-          selectionLocked,
-          selectionTabIndex: selectionLocked ? -1 : 0,
-          selectionCursor: selectionLocked ? "default" : "pointer",
-          selectionBorderColor: selected ? "pr" : "bo",
-          selectionHoverBorderColor: selected ? "pr" : "ac",
-          selectionStatus: selectionLocked
-            ? (copy.requiredStatus ?? "Required")
-            : selected
-              ? (copy.selectedStatus ?? "Selected")
-              : (copy.notSelectedStatus ?? "Not selected"),
-          selectionStatusColor: selected ? "pr" : "mu-fg",
-        };
-      }) ?? [],
+    resources,
     currentResource,
     animationTimeline,
     warnings,
