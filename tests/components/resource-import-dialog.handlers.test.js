@@ -127,7 +127,14 @@ describe("resource-import-dialog.handlers", () => {
   });
 
   it("toggles a resource choice from the selection card", () => {
-    const { deps } = createDeps();
+    const { deps, plan } = createDeps();
+    plan.resources.push({
+      sourceId: "transform.second",
+      name: "Second Transform",
+    });
+    deps.store.selectReviewValues.mockReturnValue({
+      resource_1_include: false,
+    });
     const card = {
       dataset: { resourceIndex: "1" },
       getAttribute: vi.fn(() => "true"),
@@ -148,6 +155,9 @@ describe("resource-import-dialog.handlers", () => {
 
   it("allows a required dependency to be deselected", () => {
     const { deps } = createDeps();
+    deps.store.selectReviewValues.mockReturnValue({
+      resource_0_include: false,
+    });
     const card = {
       dataset: { resourceIndex: "0" },
       getAttribute: vi.fn(() => "true"),
