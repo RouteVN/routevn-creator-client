@@ -2,6 +2,7 @@ export const createInitialState = () => ({
   src: undefined,
   kind: "image",
   loading: false,
+  loadRequested: false,
   operationId: undefined,
 });
 
@@ -9,6 +10,7 @@ export const startLoading = ({ state }, { operationId } = {}) => {
   state.src = undefined;
   state.kind = "image";
   state.loading = true;
+  state.loadRequested = true;
   state.operationId = operationId;
 };
 
@@ -32,6 +34,7 @@ export const cancelLoading = ({ state }) => {
 };
 
 export const selectSrc = ({ state }) => state.src;
+export const selectLoadRequested = ({ state }) => state.loadRequested;
 export const selectOperationId = ({ state }) => state.operationId;
 
 export const selectViewData = ({ state, props }) => ({

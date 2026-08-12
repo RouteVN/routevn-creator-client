@@ -21,6 +21,8 @@ describe("resource-import-dialog.view", () => {
     expect(viewSource).toContain("rvn-resource-import-preview-media");
     expect(viewSource).toContain("w=160 h=90");
     expect(viewSource).toContain("w=240 h=135");
+    expect(viewSource).toContain("sourceFileId=${resource.previewSourceId}");
+    expect(viewSource).toContain("?lazy=true");
   });
 
   it("uses the whole resource card as the selection control", () => {

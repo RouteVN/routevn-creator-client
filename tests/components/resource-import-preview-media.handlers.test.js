@@ -2,6 +2,7 @@ import { describe, expect, it, vi } from "vitest";
 import {
   handleAfterMount,
   handleBeforeMount,
+  handleVisible,
   handleVideoCanPlay,
 } from "../../src/components/resource-import-preview-media/resource-import-preview-media.handlers.js";
 
@@ -14,6 +15,7 @@ const createVideo = () => ({
 describe("resource-import-preview-media.handlers", () => {
   it("loads preview bytes through the project service", async () => {
     const store = {
+      selectLoadRequested: vi.fn(() => false),
       selectOperationId: vi.fn(),
       selectSrc: vi.fn(),
       startLoading: vi.fn(({ operationId }) => {
@@ -71,6 +73,45 @@ describe("resource-import-preview-media.handlers", () => {
     });
     expect(store.cancelLoading).toHaveBeenCalledTimes(1);
     expect(URL.revokeObjectURL).toHaveBeenCalledWith("blob:preview");
+  });
+
+  it("waits until a lazy preview is visible before loading it", async () => {
+    const store = {
+      selectLoadRequested: vi.fn(() => false),
+      selectOperationId: vi.fn(),
+      selectSrc: vi.fn(),
+      startLoading: vi.fn(({ operationId }) => {
+        store.selectLoadRequested.mockReturnValue(true);
+        store.selectOperationId.mockReturnValue(operationId);
+      }),
+      setPreview: vi.fn(),
+    };
+    const projectService = {
+      loadResourceImportPreview: vi.fn(async () => ({
+        valid: true,
+        preview: {
+          bytes: new Uint8Array([1, 2, 3]),
+          mimeType: "video/webm",
+          kind: "video",
+        },
+      })),
+    };
+    const deps = {
+      projectService,
+      props: {
+        lazy: true,
+        planId: "plan-1",
+        sourceFileId: "file-thumbnail",
+      },
+      store,
+      render: vi.fn(),
+    };
+
+    await handleAfterMount(deps);
+    expect(projectService.loadResourceImportPreview).not.toHaveBeenCalled();
+
+    await handleVisible(deps);
+    expect(projectService.loadResourceImportPreview).toHaveBeenCalledTimes(1);
   });
 
   it("retries muted playback when the video can play", () => {

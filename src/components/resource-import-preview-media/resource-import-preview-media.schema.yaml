@@ -8,4 +8,6 @@ propsSchema:
       type: string
     label:
       type: string
+    lazy:
+      type: boolean
   required: [planId, sourceFileId]

@@ -29,8 +29,9 @@ export const handleBeforeMount = (deps) => {
   };
 };
 
-export const handleAfterMount = async (deps) => {
+const loadPreview = async (deps) => {
   const { projectService, props, store, render } = deps;
+  if (store.selectLoadRequested()) return;
   const operationId = generateId();
   store.startLoading({ operationId });
   render();
@@ -55,6 +56,15 @@ export const handleAfterMount = async (deps) => {
     operationId,
   });
   render();
+};
+
+export const handleAfterMount = async (deps) => {
+  if (deps.props.lazy === true) return;
+  await loadPreview(deps);
+};
+
+export const handleVisible = async (deps) => {
+  await loadPreview(deps);
 };
 
 export const handleVideoCanPlay = (_deps, payload) => {
