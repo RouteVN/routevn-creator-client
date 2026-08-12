@@ -1,18 +1,6 @@
-import { readFileSync } from "node:fs";
 import { describe, expect, it, vi } from "vitest";
 import { createResourcePackageImportService } from "../../src/deps/services/shared/resourcePackageImportService.js";
 import { ASSET_PACKAGE_KIND } from "../../src/internal/assetPackageResources.js";
-
-const manifest = () =>
-  JSON.parse(
-    readFileSync(
-      new URL(
-        "../fixtures/import-packages/transforms.valid.json",
-        import.meta.url,
-      ),
-      "utf8",
-    ),
-  );
 
 const assetManifest = () => ({
   schema: "routevn.import-pack.v1",
@@ -170,8 +158,8 @@ const createService = ({
   const importClient = {
     limits: { totalBytes: 1_000_000, downloadConcurrency: 2 },
     fetchManifest: vi.fn(async () => ({
-      manifest: manifest(),
-      manifestUrl: "http://localhost:4179/manifests/transforms.json",
+      manifest: assetManifest(),
+      manifestUrl: "http://localhost:4179/manifests/assets.json",
     })),
     downloadFile: vi.fn(async () => ({
       bytes: new Uint8Array([1, 2, 3]),
@@ -217,7 +205,6 @@ const createService = ({
   };
   const commandApi = {
     commitAssetImportPackage: vi.fn(async () => commitResult),
-    commitResourceImportPackage: vi.fn(async () => commitResult),
   };
   const service = createResourcePackageImportService({
     idGenerator: () => `generated-${++id}`,
@@ -241,6 +228,25 @@ const createService = ({
 };
 
 describe("resourcePackageImportService", () => {
+  it("rejects manifests without the asset-package kind", async () => {
+    const { service, importClient } = createService();
+    const legacyManifest = assetManifest();
+    delete legacyManifest.package.kind;
+    importClient.fetchManifest.mockResolvedValue({
+      manifest: legacyManifest,
+      manifestUrl: "http://localhost:4179/manifests/legacy.json",
+    });
+
+    const result = await service.createResourceImportPlan({
+      url: "http://localhost:4179/manifests/legacy.json",
+    });
+
+    expect(result).toMatchObject({
+      valid: false,
+      error: { code: "invalid_package_kind" },
+    });
+  });
+
   it("imports nested image, sound, and video assets from one package", async () => {
     const { service, importClient, assetService, commandApi } = createService();
     importClient.fetchManifest.mockResolvedValue({
@@ -255,13 +261,10 @@ describe("resourcePackageImportService", () => {
 
     const planned = await service.createResourceImportPlan({
       url: "http://localhost:4179/manifests/assets.json",
-      expectedResourceType: "transforms",
     });
 
     expect(planned.valid).toBe(true);
     expect(planned.plan).toMatchObject({
-      assetPackage: true,
-      expectedResourceType: "assets",
       resources: [
         { type: "image", resourceType: "images", name: "City" },
         { type: "sound", resourceType: "sounds", name: "Theme" },
@@ -284,11 +287,7 @@ describe("resourcePackageImportService", () => {
 
     expect(result).toMatchObject({
       valid: true,
-      assetPackage: true,
       importedCount: 3,
-      importedImageCount: 1,
-      importedSoundCount: 1,
-      importedVideoCount: 1,
     });
     expect(importClient.downloadFile).toHaveBeenCalledTimes(4);
     expect(assetService.stageResourceImportFile).toHaveBeenCalledTimes(4);
@@ -297,7 +296,6 @@ describe("resourcePackageImportService", () => {
         ([payload]) => payload.processImage === false,
       ),
     ).toBe(true);
-    expect(commandApi.commitResourceImportPackage).not.toHaveBeenCalled();
     expect(commandApi.commitAssetImportPackage).toHaveBeenCalledOnce();
     const commit = commandApi.commitAssetImportPackage.mock.calls[0][0];
     expect(commit.entries.map((entry) => entry.data.name)).toEqual([
@@ -331,7 +329,6 @@ describe("resourcePackageImportService", () => {
     }));
     const planned = await service.createResourceImportPlan({
       url: "http://localhost:4179/manifests/assets.json",
-      expectedResourceType: "animations",
     });
     const video = planned.plan.resources.find(
       (resource) => resource.resourceType === "videos",
@@ -345,9 +342,6 @@ describe("resourcePackageImportService", () => {
     expect(result).toMatchObject({
       valid: true,
       importedCount: 1,
-      importedImageCount: 0,
-      importedSoundCount: 0,
-      importedVideoCount: 1,
     });
     expect(importClient.downloadFile).toHaveBeenCalledTimes(2);
     const commit = commandApi.commitAssetImportPackage.mock.calls[0][0];
@@ -370,7 +364,6 @@ describe("resourcePackageImportService", () => {
     }));
     const planned = await service.createResourceImportPlan({
       url: "http://localhost:4179/manifests/assets.json",
-      expectedResourceType: "animations",
     });
     const video = planned.plan.resources.find(
       (resource) => resource.resourceType === "videos",
@@ -412,7 +405,6 @@ describe("resourcePackageImportService", () => {
     });
     const planned = await service.createResourceImportPlan({
       url: "http://localhost:4179/manifests/assets.json",
-      expectedResourceType: "animations",
     });
     const video = planned.plan.resources.find(
       (resource) => resource.resourceType === "videos",
@@ -445,7 +437,6 @@ describe("resourcePackageImportService", () => {
     );
     const planned = await service.createResourceImportPlan({
       url: "http://localhost:4179/manifests/assets.json",
-      expectedResourceType: "animations",
     });
     const image = planned.plan.resources.find(
       (resource) => resource.resourceType === "images",
@@ -464,72 +455,6 @@ describe("resourcePackageImportService", () => {
     expect(commandApi.commitAssetImportPackage).not.toHaveBeenCalled();
   });
 
-  it("uses an existing image substitution without downloading package media", async () => {
-    const { service, importClient, assetService, commandApi } = createService();
-    const planned = await service.createResourceImportPlan({
-      url: "http://localhost:4179/manifests/transforms.json",
-      expectedResourceType: "transforms",
-      operationId: "plan-operation",
-    });
-    expect(planned.plan.images[0].previewSourceId).toBe("file.pixel");
-    const result = await service.executeResourceImportPlan({
-      planId: planned.plan.planId,
-      operationId: "execute-operation",
-      resourceParentId: "folder.transforms",
-      resourceChoices: {
-        "image.pixel": {
-          mode: "existing",
-          projectResourceId: "image.existing",
-        },
-      },
-      resourceDescriptions: {
-        "transform.primary": "Updated primary description",
-      },
-    });
-    expect(result.valid).toBe(true);
-    expect(importClient.downloadFile).not.toHaveBeenCalled();
-    expect(assetService.stageResourceImportFile).not.toHaveBeenCalled();
-    expect(commandApi.commitResourceImportPackage).toHaveBeenCalledTimes(1);
-    const commit = commandApi.commitResourceImportPackage.mock.calls[0][0];
-    expect(commit.images).toEqual([]);
-    expect(commit.existingImageIds).toEqual(["image.existing"]);
-    expect(commit.resources[0].data.preview.background.imageId).toBe(
-      "image.existing",
-    );
-    expect(commit.resources[0].data.description).toBe(
-      "Updated primary description",
-    );
-    expect(commit.resources[1].data.preview.target.imageId).toBe(
-      "image.existing",
-    );
-  });
-
-  it("uses stable planned ids when creating destination folders", async () => {
-    const { service, commandApi } = createService();
-    const planned = await service.createResourceImportPlan({
-      url: "http://localhost:4179/manifests/transforms.json",
-      expectedResourceType: "transforms",
-    });
-    const result = await service.executeResourceImportPlan({
-      planId: planned.plan.planId,
-      resourceDestination: { mode: "create", name: " Imported Transforms " },
-      imageDestination: { mode: "create", name: " Imported Images " },
-    });
-
-    expect(result.valid).toBe(true);
-    const commit = commandApi.commitResourceImportPackage.mock.calls[0][0];
-    expect(commit.resourceDestination).toEqual({
-      mode: "create",
-      name: "Imported Transforms",
-      ...planned.plan.destinationFolders.resource,
-    });
-    expect(commit.imageDestination).toEqual({
-      mode: "create",
-      name: "Imported Images",
-      ...planned.plan.destinationFolders.images,
-    });
-  });
-
   it("cleans every staged blob when the atomic command batch is rejected", async () => {
     const { service, assetService } = createService({
       commitResult: {
@@ -538,19 +463,16 @@ describe("resourcePackageImportService", () => {
       },
     });
     const planned = await service.createResourceImportPlan({
-      url: "http://localhost:4179/manifests/transforms.json",
-      expectedResourceType: "transforms",
+      url: "http://localhost:4179/manifests/assets.json",
     });
     const result = await service.executeResourceImportPlan({
       planId: planned.plan.planId,
-      resourceParentId: "folder.transforms",
-      imageParentId: "folder.images",
     });
     expect(result.valid).toBe(false);
     expect(assetService.discardResourceImportFiles).toHaveBeenCalledTimes(1);
     expect(
       assetService.discardResourceImportFiles.mock.calls[0][0].fileIds,
-    ).toHaveLength(2);
+    ).toHaveLength(4);
   });
 
   it("requests plan cleanup when staging fails before returning file records", async () => {
@@ -559,52 +481,17 @@ describe("resourcePackageImportService", () => {
       new Error("thumbnail generation failed"),
     );
     const planned = await service.createResourceImportPlan({
-      url: "http://localhost:4179/manifests/transforms.json",
-      expectedResourceType: "transforms",
+      url: "http://localhost:4179/manifests/assets.json",
     });
     const result = await service.executeResourceImportPlan({
       planId: planned.plan.planId,
-      resourceParentId: "folder.transforms",
-      imageParentId: "folder.images",
     });
     expect(result.valid).toBe(false);
-    expect(commandApi.commitResourceImportPackage).not.toHaveBeenCalled();
+    expect(commandApi.commitAssetImportPackage).not.toHaveBeenCalled();
     expect(assetService.discardResourceImportFiles).toHaveBeenCalledWith({
       planId: planned.plan.planId,
       fileIds: [],
     });
-  });
-
-  it("rejects package images outside the supported upload image formats", async () => {
-    const { service, importClient, assetService, commandApi } = createService();
-    const unsupportedManifest = manifest();
-    unsupportedManifest.repository.files.items["file.pixel"].mimeType =
-      "image/gif";
-    importClient.fetchManifest.mockResolvedValue({
-      manifest: unsupportedManifest,
-      manifestUrl: "http://localhost:4179/manifests/transforms.json",
-    });
-    importClient.downloadFile.mockResolvedValue({
-      bytes: new Uint8Array([1, 2, 3]),
-      byteLength: 3,
-      contentType: "image/gif",
-    });
-    const planned = await service.createResourceImportPlan({
-      url: "http://localhost:4179/manifests/transforms.json",
-      expectedResourceType: "transforms",
-    });
-    const result = await service.executeResourceImportPlan({
-      planId: planned.plan.planId,
-      resourceParentId: "folder.transforms",
-      imageParentId: "folder.images",
-    });
-
-    expect(result).toMatchObject({
-      valid: false,
-      error: { code: "file_type_unsupported" },
-    });
-    expect(assetService.stageResourceImportFile).not.toHaveBeenCalled();
-    expect(commandApi.commitResourceImportPackage).not.toHaveBeenCalled();
   });
 
   it("cancels an active manifest request", async () => {
@@ -624,8 +511,7 @@ describe("resourcePackageImportService", () => {
         }),
     );
     const pending = service.createResourceImportPlan({
-      url: "http://localhost:4179/manifests/transforms.json",
-      expectedResourceType: "transforms",
+      url: "http://localhost:4179/manifests/assets.json",
       operationId: "cancel-me",
     });
     expect(service.cancelResourceImport({ operationId: "cancel-me" })).toEqual({
@@ -644,14 +530,11 @@ describe("resourcePackageImportService", () => {
       setCurrentProjectId,
     } = createService();
     const planned = await service.createResourceImportPlan({
-      url: "http://localhost:4179/manifests/transforms.json",
-      expectedResourceType: "transforms",
+      url: "http://localhost:4179/manifests/assets.json",
     });
     setCurrentProjectId("project-two");
     const result = await service.executeResourceImportPlan({
       planId: planned.plan.planId,
-      resourceParentId: "folder.transforms",
-      imageParentId: "folder.images",
     });
 
     expect(result).toMatchObject({
@@ -660,22 +543,19 @@ describe("resourcePackageImportService", () => {
     });
     expect(importClient.downloadFile).not.toHaveBeenCalled();
     expect(assetService.stageResourceImportFile).not.toHaveBeenCalled();
-    expect(commandApi.commitResourceImportPackage).not.toHaveBeenCalled();
+    expect(commandApi.commitAssetImportPackage).not.toHaveBeenCalled();
   });
 
   it("retains staged blobs when commit confirmation has an unknown outcome", async () => {
     const { service, assetService, commandApi } = createService();
     const unknownOutcome = new Error("confirmation interrupted");
     unknownOutcome.commitOutcome = "unknown";
-    commandApi.commitResourceImportPackage.mockRejectedValue(unknownOutcome);
+    commandApi.commitAssetImportPackage.mockRejectedValue(unknownOutcome);
     const planned = await service.createResourceImportPlan({
-      url: "http://localhost:4179/manifests/transforms.json",
-      expectedResourceType: "transforms",
+      url: "http://localhost:4179/manifests/assets.json",
     });
     const result = await service.executeResourceImportPlan({
       planId: planned.plan.planId,
-      resourceParentId: "folder.transforms",
-      imageParentId: "folder.images",
     });
     expect(result).toMatchObject({
       valid: false,
@@ -694,31 +574,22 @@ describe("resourcePackageImportService", () => {
     } = createService();
     const unknownOutcome = new Error("confirmation interrupted");
     unknownOutcome.commitOutcome = "unknown";
-    commandApi.commitResourceImportPackage.mockRejectedValueOnce(
+    commandApi.commitAssetImportPackage.mockRejectedValueOnce(
       unknownOutcome,
     );
     const planned = await service.createResourceImportPlan({
-      url: "http://localhost:4179/manifests/transforms.json",
-      expectedResourceType: "transforms",
+      url: "http://localhost:4179/manifests/assets.json",
     });
     const execution = {
       planId: planned.plan.planId,
-      resourceParentId: "folder.transforms",
-      imageParentId: "folder.images",
     };
     const firstResult = await service.executeResourceImportPlan(execution);
     expect(firstResult.valid).toBe(false);
 
-    for (const resource of planned.plan.resources) {
-      currentRepositoryState.transforms.items[resource.destinationId] = {
-        id: resource.destinationId,
-        ...resource.data,
-      };
-    }
-    for (const image of planned.plan.images) {
-      currentRepositoryState.images.items[image.destinationId] = {
-        id: image.destinationId,
-        type: "image",
+    for (const entry of planned.plan.entries) {
+      currentRepositoryState[entry.resourceType].items[entry.destinationId] = {
+        id: entry.destinationId,
+        ...entry.data,
       };
     }
     const secondResult = await service.executeResourceImportPlan(execution);
@@ -727,8 +598,8 @@ describe("resourcePackageImportService", () => {
       valid: true,
       recoveredFromPreviousCommit: true,
     });
-    expect(importClient.downloadFile).toHaveBeenCalledTimes(1);
-    expect(commandApi.commitResourceImportPackage).toHaveBeenCalledTimes(1);
+    expect(importClient.downloadFile).toHaveBeenCalledTimes(4);
+    expect(commandApi.commitAssetImportPackage).toHaveBeenCalledTimes(1);
     expect(assetService.discardResourceImportFiles).not.toHaveBeenCalled();
     expect(assetService.finalizeResourceImportFiles).toHaveBeenCalledWith({
       planId: planned.plan.planId,

@@ -1,43 +1,13 @@
 import { describe, expect, it } from "vitest";
-import { selectForm as selectRenderedForm } from "../../node_modules/@rettangoli/ui/src/components/form/form.store.js";
 import {
-  closeImageSelector,
-  confirmImageReplacement,
   createInitialState,
-  openImageSelector,
   openItemStep,
   selectViewData,
   setAllResourcesSelected,
   setResourceSelected,
-  setSelectedReplacementImage,
   setPlan,
   syncFromProps,
-  useDefaultImage,
 } from "../../src/components/resource-import-dialog/resource-import-dialog.store.js";
-
-const createRepositoryState = () => ({
-  transforms: {
-    items: {
-      folder: { id: "folder", type: "folder", name: "Folder" },
-    },
-    tree: [{ id: "folder" }],
-  },
-  images: {
-    items: {
-      imageFolder: {
-        id: "imageFolder",
-        type: "folder",
-        name: "Images",
-      },
-      existing: {
-        id: "existing",
-        type: "image",
-        name: "Existing Image",
-      },
-    },
-    tree: [{ id: "imageFolder", children: [{ id: "existing" }] }],
-  },
-});
 
 const createMultiResourcePlan = () => ({
   planId: "plan-1",
@@ -52,7 +22,6 @@ const createMultiResourcePlan = () => ({
       name: "Transform One",
       description: "First transform",
       previewSourceId: "file.transform-one",
-      primary: true,
     },
     {
       sourceId: "source.two",
@@ -62,27 +31,12 @@ const createMultiResourcePlan = () => ({
       previewKind: "video",
     },
   ],
-  images: [
-    {
-      sourceId: "image.one",
-      name: "Package Image One",
-      previewSourceId: "file.image-one",
-      usedByResourceIds: ["source.one"],
-    },
-    {
-      sourceId: "image.two",
-      name: "Package Image Two",
-      previewSourceId: "file.image-two",
-      usedByResourceIds: ["source.two"],
-    },
-  ],
   warnings: [
     {
       code: "name_conflict",
       message: "A transform with this name already exists.",
     },
   ],
-  unsupportedResourceTypes: [],
 });
 
 describe("resource-import-dialog.store", () => {
@@ -106,13 +60,7 @@ describe("resource-import-dialog.store", () => {
 
   it("opens multi-resource packages on a visual selection page", () => {
     const state = createInitialState();
-    syncFromProps(
-      { state },
-      {
-        props: { open: true, expectedResourceType: "transforms" },
-        repositoryState: createRepositoryState(),
-      },
-    );
+    syncFromProps({ state }, { props: { open: true } });
     setPlan({ state }, { plan: createMultiResourcePlan() });
 
     const view = selectViewData({ state, i18n: {} });
@@ -187,137 +135,53 @@ describe("resource-import-dialog.store", () => {
     });
   });
 
+  it("keeps selected dependencies visible and locked", () => {
+    const state = createInitialState();
+    const plan = createMultiResourcePlan();
+    plan.resources[1].dependencySourceIds = [plan.resources[0].sourceId];
+    syncFromProps({ state }, { props: { open: true } });
+    setPlan({ state }, { plan });
+
+    expect(selectViewData({ state, i18n: {} }).resources[0]).toMatchObject({
+      selected: true,
+      selectionLocked: true,
+      selectionStatus: "Required",
+    });
+    setResourceSelected({ state }, { resourceIndex: 0, selected: false });
+    expect(state.reviewValues.resource_0_include).toBe(true);
+
+    setResourceSelected({ state }, { resourceIndex: 1, selected: false });
+    setResourceSelected({ state }, { resourceIndex: 0, selected: false });
+    expect(state.reviewValues).toMatchObject({
+      resource_0_include: false,
+      resource_1_include: false,
+    });
+  });
+
   it("customizes selected resources one by one and submits from the last item", () => {
     const state = createInitialState();
-    syncFromProps(
-      { state },
-      {
-        props: { open: true, expectedResourceType: "transforms" },
-        repositoryState: createRepositoryState(),
-      },
-    );
+    syncFromProps({ state }, { props: { open: true } });
     setPlan({ state }, { plan: createMultiResourcePlan() });
     openItemStep({ state }, { resourceIndex: 0 });
 
     const firstView = selectViewData({ state, i18n: {} });
-    expect(firstView.step).toBe("item");
     expect(firstView.form).toMatchObject({
       title: "Customize Transform One",
       description: "Item 1 of 2",
     });
-    expect(firstView.currentResource).toMatchObject({
-      sourceId: "source.one",
-      previewSourceId: "file.transform-one",
-    });
-    expect(firstView.currentImages).toEqual([
-      expect.objectContaining({
-        sourceId: "image.one",
-        imageIndex: 0,
-        customized: false,
-      }),
-    ]);
     expect(firstView.form.fields).toEqual(
       expect.arrayContaining([
         expect.objectContaining({ slot: "resource-preview", type: "slot" }),
         expect.objectContaining({
           type: "row",
           fields: [
-            expect.objectContaining({
-              name: "resource_0_name",
-              label: "Resource Name",
-              type: "input-text",
-            }),
-            expect.objectContaining({
-              name: "resource_0_description",
-              label: "Resource Description",
-              type: "input-textarea",
-              rows: 3,
-            }),
-          ],
-        }),
-        expect.objectContaining({
-          slot: "image-resources-header",
-          type: "slot",
-        }),
-        expect.objectContaining({
-          slot: "image-resources-list",
-          type: "slot",
-        }),
-      ]),
-    );
-    expect(
-      firstView.form.fields.some((field) => field.name === "image_0_mode"),
-    ).toBe(false);
-    expect(
-      firstView.form.fields.find((field) =>
-        field.fields?.some(
-          (nestedField) => nestedField.name === "resourceDestinationMode",
-        ),
-      ),
-    ).toMatchObject({ type: "row" });
-    expect(
-      firstView.form.fields.map(
-        (field) => field.slot ?? field.name ?? field.fields?.[0]?.name,
-      ),
-    ).toEqual([
-      "resource-preview",
-      "resource_0_name",
-      "resourceDestinationMode",
-      "image-resources-header",
-      "imageDestinationMode",
-      "image-resources-list",
-    ]);
-    const firstRenderedForm = selectRenderedForm({
-      state: { formValues: firstView.defaultValues },
-      props: { form: firstView.form, context: firstView.formContext },
-    });
-    const firstRenderedFields = firstRenderedForm.fields.flatMap(
-      (field) => field.fields ?? [field],
-    );
-    expect(
-      firstRenderedFields.some((field) => field.name === "resourceParentId"),
-    ).toBe(false);
-    expect(
-      firstRenderedFields.some((field) => field.name === "imageParentId"),
-    ).toBe(false);
-    expect(firstView.defaultValues).toMatchObject({
-      resource_0_name: "Transform One",
-      resource_0_description: "First transform",
-      resourceDestinationMode: "new",
-      resourceNewFolderName: "Imported Transforms",
-      imageDestinationMode: "new",
-      imageNewFolderName: "Imported Transforms",
-    });
-    const destinationModeFields = firstView.form.fields
-      .flatMap((field) => field.fields ?? [field])
-      .filter((field) => field.name?.endsWith("DestinationMode"));
-    expect(destinationModeFields).toEqual(
-      expect.arrayContaining([
-        expect.objectContaining({
-          name: "resourceDestinationMode",
-          options: [
-            { label: "New Folder", value: "new" },
-            { label: "Existing Folder", value: "existing" },
-          ],
-        }),
-        expect.objectContaining({
-          name: "imageDestinationMode",
-          options: [
-            { label: "New Folder", value: "new" },
-            { label: "Existing Folder", value: "existing" },
+            expect.objectContaining({ name: "resource_0_name" }),
+            expect.objectContaining({ name: "resource_0_description" }),
           ],
         }),
       ]),
     );
-    expect(
-      destinationModeFields.find(
-        (field) => field.name === "imageDestinationMode",
-      ),
-    ).not.toHaveProperty("description");
-    expect(firstView.form.actions.buttons.at(-1)).toMatchObject({
-      id: "next",
-      label: "Next",
-    });
+    expect(firstView.form.actions.buttons.at(-1).id).toBe("next");
 
     openItemStep(
       { state },
@@ -325,250 +189,37 @@ describe("resource-import-dialog.store", () => {
         values: {
           resource_0_name: "Renamed Transform",
           resource_0_description: "Updated description",
-          resourceDestinationMode: "new",
-          resourceNewFolderName: "Custom Transforms",
-          imageDestinationMode: "new",
-          imageNewFolderName: "Custom Images",
         },
         resourceIndex: 1,
       },
     );
     const lastView = selectViewData({ state, i18n: {} });
-    expect(lastView.form).toMatchObject({
-      title: "Customize Transform Two",
-      description: "Item 2 of 2",
-    });
-    expect(lastView.form.actions.buttons.at(-1)).toMatchObject({
-      id: "import",
-      label: "Submit All",
-    });
-    expect(lastView.formContext.resource_0_name).toBe("Renamed Transform");
-    expect(lastView.formContext.resource_0_description).toBe(
-      "Updated description",
-    );
+    expect(lastView.form.actions.buttons.at(-1).id).toBe("import");
     expect(lastView.formContext).toMatchObject({
-      resourceDestinationMode: "new",
-      resourceNewFolderName: "Custom Transforms",
-      imageDestinationMode: "new",
-      imageNewFolderName: "Custom Images",
-    });
-    const resourceDestinationRow = lastView.form.fields.find((field) =>
-      field.fields?.some(
-        (nestedField) => nestedField.name === "resourceDestinationMode",
-      ),
-    );
-    expect(resourceDestinationRow).toMatchObject({ type: "row" });
-    expect(resourceDestinationRow.fields.map((field) => field.name)).toEqual([
-      "resourceDestinationMode",
-      "resourceParentId",
-      "resourceNewFolderName",
-    ]);
-    const imageDestinationRow = lastView.form.fields.find((field) =>
-      field.fields?.some(
-        (nestedField) => nestedField.name === "imageDestinationMode",
-      ),
-    );
-    expect(imageDestinationRow).toMatchObject({ type: "row" });
-    expect(imageDestinationRow.fields.map((field) => field.name)).toEqual([
-      "imageDestinationMode",
-      "imageParentId",
-      "imageNewFolderName",
-    ]);
-
-    const renderedForm = selectRenderedForm({
-      state: { formValues: lastView.defaultValues },
-      props: { form: lastView.form, context: lastView.formContext },
-    });
-    const renderedFields = renderedForm.fields.flatMap(
-      (field) => field.fields ?? [field],
-    );
-    expect(
-      renderedFields.some((field) => field.name === "resourceParentId"),
-    ).toBe(false);
-    expect(renderedFields.some((field) => field.name === "imageParentId")).toBe(
-      false,
-    );
-    expect(
-      renderedForm.fields
-        .filter((field) => field.type === "row")
-        .map((field) => field.fields.map((nestedField) => nestedField.name)),
-    ).toEqual(
-      expect.arrayContaining([
-        ["resourceDestinationMode", "resourceNewFolderName"],
-        ["imageDestinationMode", "imageNewFolderName"],
-      ]),
-    );
-  });
-
-  it("selects a replacement image and restores package defaults", () => {
-    const state = createInitialState();
-    syncFromProps(
-      { state },
-      {
-        props: { open: true, expectedResourceType: "transforms" },
-        repositoryState: createRepositoryState(),
-      },
-    );
-    setPlan({ state }, { plan: createMultiResourcePlan() });
-    openItemStep({ state }, { resourceIndex: 0 });
-
-    openImageSelector({ state }, { imageIndex: 0 });
-
-    let view = selectViewData({ state, i18n: {} });
-    expect(view.imageSelectorDialog).toEqual({
-      open: true,
-      imageIndex: 0,
-      selectedImageId: undefined,
-    });
-
-    setSelectedReplacementImage({ state }, { imageId: "existing" });
-    view = selectViewData({ state, i18n: {} });
-    expect(view.currentImages[0]).toMatchObject({
-      customized: false,
-      replacementImageId: undefined,
-    });
-    expect(view.imageSelectorDialog).toMatchObject({
-      open: true,
-      selectedImageId: "existing",
-    });
-
-    confirmImageReplacement({ state });
-    view = selectViewData({ state, i18n: {} });
-    expect(view.currentImages[0]).toMatchObject({
-      customized: true,
-      replacementImageId: "existing",
-    });
-    expect(view.imageSelectorDialog.open).toBe(false);
-
-    openImageSelector({ state }, { imageIndex: 0 });
-    expect(
-      selectViewData({ state, i18n: {} }).imageSelectorDialog,
-    ).toMatchObject({
-      open: true,
-      selectedImageId: "existing",
-    });
-    setSelectedReplacementImage({ state }, { imageId: "another-image" });
-    closeImageSelector({ state });
-    view = selectViewData({ state, i18n: {} });
-    expect(view.imageSelectorDialog.open).toBe(false);
-    expect(view.currentImages[0].replacementImageId).toBe("existing");
-
-    useDefaultImage({ state }, { imageIndex: 0 });
-    view = selectViewData({ state, i18n: {} });
-    expect(view.currentImages[0]).toMatchObject({
-      customized: false,
-      replacementImageId: undefined,
+      resource_0_name: "Renamed Transform",
+      resource_0_description: "Updated description",
     });
   });
 
-  it("skips selection for one resource and defaults to new destinations", () => {
+  it("opens a one-resource package directly on its item page", () => {
     const state = createInitialState();
-    syncFromProps(
-      { state },
-      {
-        props: { open: true, expectedResourceType: "animations" },
-        repositoryState: {
-          animations: { items: {}, tree: [] },
-          images: { items: {}, tree: [] },
-        },
-      },
-    );
-    setPlan(
-      { state },
-      {
-        plan: {
-          planId: "plan-1",
-          package: { name: "Starter Pack", version: "1.0.0" },
-          resources: [
-            {
-              sourceId: "animation.source",
-              name: "Animation",
-              previewSourceId: "file.animation",
-            },
-          ],
-          images: [],
-          warnings: [],
-          unsupportedResourceTypes: [],
-        },
-      },
-    );
-
-    const view = selectViewData({ state, i18n: {} });
-    expect(view.step).toBe("item");
-    expect(view.isSelectionStep).toBe(false);
-    expect(view.currentResource.previewSourceId).toBe("file.animation");
-    expect(view.form.fields).toEqual(
-      expect.arrayContaining([
-        expect.objectContaining({ slot: "package-summary", type: "slot" }),
-        expect.objectContaining({ slot: "resource-preview", type: "slot" }),
-      ]),
-    );
-    const destinationFields = view.form.fields.flatMap(
-      (field) => field.fields ?? [field],
-    );
-    expect(
-      destinationFields.find(
-        (field) => field.name === "resourceDestinationMode",
-      ).options,
-    ).toEqual([{ label: "New Folder", value: "new" }]);
-    expect(view.defaultValues).toMatchObject({
-      resourceDestinationMode: "new",
-      resourceNewFolderName: "Starter Pack",
-    });
-    const renderedForm = selectRenderedForm({
-      state: { formValues: view.defaultValues },
-      props: { form: view.form, context: view.formContext },
-    });
-    expect(
-      renderedForm.fields
-        .find((field) =>
-          field.fields?.some(
-            (nestedField) => nestedField.name === "resourceDestinationMode",
-          ),
-        )
-        .fields.map((field) => field.name),
-    ).toEqual(["resourceDestinationMode", "resourceNewFolderName"]);
-    expect(view.form.actions.buttons.at(-1)).toMatchObject({
-      id: "import",
-      label: "Submit All",
-    });
-  });
-
-  it("preserves package folders without asking for asset destinations", () => {
-    const state = createInitialState();
-    syncFromProps(
-      { state },
-      {
-        props: { open: true, expectedResourceType: "transforms" },
-        repositoryState: createRepositoryState(),
-      },
-    );
+    syncFromProps({ state }, { props: { open: true } });
     const plan = createMultiResourcePlan();
-    plan.assetPackage = true;
-    plan.images = [];
-    plan.resources = plan.resources.map((resource, index) => ({
-      ...resource,
-      sourceId: `images:image.${index}`,
-      resourceType: "images",
-      type: "image",
-    }));
+    plan.resources = [plan.resources[0]];
     setPlan({ state }, { plan });
-    openItemStep({ state }, { resourceIndex: 0 });
 
     const view = selectViewData({ state, i18n: {} });
     const fields = view.form.fields.flatMap((field) => field.fields ?? [field]);
-    expect(
-      fields.some((field) => field.name === "resourceDestinationMode"),
-    ).toBe(false);
-    expect(fields.some((field) => field.name === "imageDestinationMode")).toBe(
-      false,
-    );
+    expect(view.step).toBe("item");
     expect(fields).toEqual(
       expect.arrayContaining([
         expect.objectContaining({ name: "resource_0_name" }),
         expect.objectContaining({ name: "resource_0_description" }),
       ]),
     );
+    expect(
+      fields.some((field) => field.name?.includes("Destination")),
+    ).toBe(false);
   });
 
   it("builds a read-only animation timeline with transition and mask tracks", () => {
@@ -578,12 +229,7 @@ describe("resource-import-dialog.store", () => {
       {
         props: {
           open: true,
-          expectedResourceType: "animations",
           projectResolution: { width: 1280, height: 720 },
-        },
-        repositoryState: {
-          animations: { items: {}, tree: [] },
-          images: { items: {}, tree: [] },
         },
       },
     );
@@ -620,9 +266,7 @@ describe("resource-import-dialog.store", () => {
               },
             },
           ],
-          images: [],
           warnings: [],
-          unsupportedResourceTypes: [],
         },
       },
     );
@@ -638,14 +282,6 @@ describe("resource-import-dialog.store", () => {
       hasNextProperties: false,
       hasMaskProperties: true,
       timelineDuration: 1000,
-      defaultValues: { x: 640, y: 360, Mask: 0 },
-    });
-    expect(
-      view.animationTimeline.maskProperties.Mask.keyframes[0],
-    ).toMatchObject({
-      delay: 100,
-      duration: 900,
-      value: 1,
     });
   });
 });

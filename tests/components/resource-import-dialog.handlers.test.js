@@ -1,12 +1,7 @@
 import { describe, expect, it, vi } from "vitest";
 import {
   handleAssetStoreLink,
-  handleConfirmImageReplacement,
   handleFormAction,
-  handleImageCustomize,
-  handleImageSelectorClose,
-  handleImageUseDefault,
-  handleReplacementImageSelected,
   handleResourceSelectionKeyDown,
   handleResourceSelectionToggle,
   handleSelectionToggleAll,
@@ -16,12 +11,6 @@ const createDeps = () => {
   const plan = {
     planId: "plan-1",
     resources: [{ sourceId: "transform.source", name: "Transform" }],
-    images: [
-      {
-        sourceId: "image.source",
-        usedByResourceIds: ["transform.source"],
-      },
-    ],
   };
   return {
     plan,
@@ -43,11 +32,6 @@ const createDeps = () => {
         saveReviewValues: vi.fn(),
         setResourceSelected: vi.fn(),
         setAllResourcesSelected: vi.fn(),
-        openImageSelector: vi.fn(),
-        closeImageSelector: vi.fn(),
-        setSelectedReplacementImage: vi.fn(),
-        confirmImageReplacement: vi.fn(),
-        useDefaultImage: vi.fn(),
         startExecution: vi.fn(),
         setProgress: vi.fn(),
         setError: vi.fn(),
@@ -85,11 +69,6 @@ describe("resource-import-dialog.handlers", () => {
       resource_0_include: true,
       resource_0_name: "Renamed Transform",
       resource_0_description: "Updated description",
-      resourceDestinationMode: "new",
-      resourceNewFolderName: "Imported Transforms",
-      image_0_mode: "import",
-      imageDestinationMode: "new",
-      imageNewFolderName: "Imported Images",
     };
 
     await handleFormAction(deps, {
@@ -104,12 +83,6 @@ describe("resource-import-dialog.handlers", () => {
       resourceDescriptions: {
         "transform.source": "Updated description",
       },
-      resourceChoices: { "image.source": { mode: "import" } },
-      resourceDestination: {
-        mode: "create",
-        name: "Imported Transforms",
-      },
-      imageDestination: { mode: "create", name: "Imported Images" },
     };
     expect(deps.projectService.validateResourceImportPlan).toHaveBeenCalledWith(
       { planId: "plan-1", ...expectedChoices },
@@ -168,6 +141,22 @@ describe("resource-import-dialog.handlers", () => {
     expect(deps.render).toHaveBeenCalledTimes(1);
   });
 
+  it("does not toggle a required dependency", () => {
+    const { deps } = createDeps();
+
+    handleResourceSelectionToggle(deps, {
+      _event: {
+        currentTarget: {
+          dataset: { resourceIndex: "0", selectionLocked: "true" },
+          getAttribute: vi.fn(() => "true"),
+        },
+      },
+    });
+
+    expect(deps.store.setResourceSelected).not.toHaveBeenCalled();
+    expect(deps.render).not.toHaveBeenCalled();
+  });
+
   it("toggles a resource choice with Enter or Space", () => {
     const { deps } = createDeps();
     const currentTarget = {
@@ -216,30 +205,6 @@ describe("resource-import-dialog.handlers", () => {
       selected: false,
     });
     expect(deps.render).toHaveBeenCalledTimes(1);
-  });
-
-  it("stages and confirms a replacement image, then restores defaults", () => {
-    const { deps } = createDeps();
-    const currentTarget = { dataset: { imageIndex: "2" } };
-
-    handleImageCustomize(deps, { _event: { currentTarget } });
-    handleReplacementImageSelected(deps, {
-      _event: { detail: { imageId: "project-image" } },
-    });
-    handleConfirmImageReplacement(deps);
-    handleImageSelectorClose(deps);
-    handleImageUseDefault(deps, { _event: { currentTarget } });
-
-    expect(deps.store.openImageSelector).toHaveBeenCalledWith({
-      imageIndex: 2,
-    });
-    expect(deps.store.setSelectedReplacementImage).toHaveBeenCalledWith({
-      imageId: "project-image",
-    });
-    expect(deps.store.confirmImageReplacement).toHaveBeenCalledTimes(1);
-    expect(deps.store.closeImageSelector).toHaveBeenCalledTimes(1);
-    expect(deps.store.useDefaultImage).toHaveBeenCalledWith({ imageIndex: 2 });
-    expect(deps.render).toHaveBeenCalledTimes(4);
   });
 
   it("preserves the current item values when moving to the next item", async () => {

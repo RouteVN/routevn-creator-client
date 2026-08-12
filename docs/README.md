@@ -13,11 +13,10 @@
 9. [Layout Editor Canvas Hover And Selection Spec](./layout-editor-canvas-selection-spec.md)
 10. [Resource Tags Spec](./resource-tags-spec.md)
 11. [Import Packages](./import-packages.md)
-12. [Import Packages Production Readiness Checklist](./import-packages-production-readiness.md)
-13. [Observability Proposal](./observability.md)
-14. [Android Development](./android.md)
-15. [iOS Development](./ios.md)
-16. [macOS Player Export Plan](./macos-player-export-plan.md)
+12. [Observability Proposal](./observability.md)
+13. [Android Development](./android.md)
+14. [iOS Development](./ios.md)
+15. [macOS Player Export Plan](./macos-player-export-plan.md)
 
 ## Runbooks
 

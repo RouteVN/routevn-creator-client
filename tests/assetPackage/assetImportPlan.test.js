@@ -4,10 +4,7 @@ import {
   ASSET_PACKAGE_RESOURCE_CONFIGS,
   ASSET_PACKAGE_RESOURCE_TYPES,
 } from "../../src/internal/assetPackageResources.js";
-import {
-  createAssetImportPlan,
-  isAssetPackageManifest,
-} from "../../src/internal/assetImportPlan.js";
+import { createAssetImportPlan } from "../../src/internal/assetImportPlan.js";
 import { createParticlePreset } from "../../src/pages/particles/support/particlePresets.js";
 
 const createCollection = (resourceType) => {
@@ -81,7 +78,6 @@ describe("asset import plan", () => {
     const manifest = createManifest();
     let id = 0;
 
-    expect(isAssetPackageManifest(manifest, "animations")).toBe(true);
     const plan = createAssetImportPlan({
       manifest,
       manifestUrl: "https://example.com/asset-package.json",
@@ -116,20 +112,6 @@ describe("asset import plan", () => {
     expect(entrySourceIds.indexOf(color.sourceId)).toBeLessThan(
       entrySourceIds.indexOf(textStyle.sourceId),
     );
-  });
-
-  it("keeps legacy animation packages on the existing importer path", () => {
-    const manifest = createManifest();
-    delete manifest.repository.sounds;
-    for (const resourceType of ASSET_PACKAGE_RESOURCE_TYPES) {
-      if (resourceType !== "animations" && resourceType !== "images") {
-        delete manifest.repository[resourceType];
-      }
-    }
-
-    expect(isAssetPackageManifest(manifest, "animations")).toBe(true);
-    delete manifest.package.kind;
-    expect(isAssetPackageManifest(manifest, "animations")).toBe(false);
   });
 
   it("does not rewrite non-reference values that match resource ids", () => {

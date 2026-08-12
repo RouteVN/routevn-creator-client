@@ -21,26 +21,6 @@ refs:
     eventListeners:
       click:
         handler: handleSelectionToggleAll
-  imageCustomizeButton*:
-    eventListeners:
-      click:
-        handler: handleImageCustomize
-  imageUseDefaultButton*:
-    eventListeners:
-      click:
-        handler: handleImageUseDefault
-  imageSelectorDialog:
-    eventListeners:
-      close:
-        handler: handleImageSelectorClose
-  replacementImageSelector:
-    eventListeners:
-      image-selected:
-        handler: handleReplacementImageSelected
-  confirmImageSelection:
-    eventListeners:
-      click:
-        handler: handleConfirmImageReplacement
   cancelProgressButton:
     eventListeners:
       click:
@@ -61,42 +41,39 @@ template:
                           - rtgl-text s=sm c=mu-fg: ${sourceDescription}
                           - 'rtgl-text#assetStoreLink href=${assetStoreUrl} new-tab s=sm c=pr': ${assetStoreLinkLabel}
                   - $if isReviewStep:
-                      - rtgl-view slot=package-summary d=v w=f g=md:
-                          - rtgl-view d=v w=f g=xs:
-                              - rtgl-text s=lg: ${packageName}
-                              - rtgl-text c=mu-fg: ${packageVersion}
-                              - $if packageDescription:
-                                  - rtgl-text: ${packageDescription}
-                              - $if packagePublisher:
-                                  - 'rtgl-text s=sm c=mu-fg': '${publisherLabel}: ${packagePublisher}'
-                              - $if packageSource:
-                                  - 'rtgl-text s=sm c=mu-fg': '${sourceLabel}: ${packageSource}'
+                      - $if hasPackageSummary:
+                          - rtgl-view slot=package-summary d=v w=f g=md:
+                              - $if hasPackageMetadata:
+                                  - rtgl-view d=v w=f g=xs:
+                                      - $if packageName:
+                                          - rtgl-text s=lg: ${packageName}
+                                      - $if packageVersion:
+                                          - rtgl-text c=mu-fg: ${packageVersion}
+                                      - $if packageDescription:
+                                          - rtgl-text: ${packageDescription}
+                                      - $if packagePublisher:
+                                          - 'rtgl-text s=sm c=mu-fg': '${publisherLabel}: ${packagePublisher}'
+                                      - $if packageSource:
+                                          - 'rtgl-text s=sm c=mu-fg': '${sourceLabel}: ${packageSource}'
                               - $if isItemStep:
                                   - rtgl-text s=sm c=mu-fg: ${knownDownloadBytes} ${bytesLabel}
                                   - $if hasUnknownDownloadSize:
                                       - rtgl-text s=sm c=mu-fg: ${unknownSizeLabel}
-                          - $if warnings.length > 0:
-                              - rtgl-view d=v w=f g=xs p=md bgc=wa br=md:
-                                  - rtgl-text c=wa-fg: ${warningsLabel}
-                                  - $for warning, i in warnings:
-                                      - rtgl-text s=sm c=wa-fg: ${warning.message}
-                          - $if unsupportedResourceTypes.length > 0:
-                              - rtgl-view d=v w=f g=xs p=md bgc=mu br=md:
-                                  - rtgl-text c=mu-fg: ${unsupportedLabel}
-                                  - $for resourceType, i in unsupportedResourceTypes:
-                                      - rtgl-text s=sm c=mu-fg: ${resourceType}
+                              - $if warnings.length > 0:
+                                  - rtgl-view d=v w=f g=xs p=md bgc=wa br=md:
+                                      - rtgl-text c=wa-fg: ${warningsLabel}
+                                      - $for warning, i in warnings:
+                                          - rtgl-text s=sm c=wa-fg: ${warning.message}
                   - $if isSelectionStep:
                       - rtgl-view slot=selection-controls d=h w=f ah=e:
                           - 'rtgl-button#selectionToggleAllButton v=se s=sm data-all-selected=${allResourcesSelected}': ${selectionToggleAllLabel}
                       - $for resource, i in resources:
-                          - 'rtgl-view#resourceSelectionCard${i} slot=${resource.selectionSlot} role=button tabindex=0 data-resource-index=${i} data-selected=${resource.selected} aria-label="${resource.selectionLabel}" aria-pressed="${resource.selected}" d=h w=f av=s g=md p=md bgc=bg bw=xs bc=${resource.selectionBorderColor} h-bc=${resource.selectionHoverBorderColor} br=md cur=pointer style="box-sizing: border-box;"':
+                          - 'rtgl-view#resourceSelectionCard${i} slot=${resource.selectionSlot} role=button tabindex=${resource.selectionTabIndex} data-resource-index=${i} data-selected=${resource.selected} data-selection-locked=${resource.selectionLocked} aria-label="${resource.selectionLabel}" aria-pressed="${resource.selected}" aria-disabled="${resource.selectionLocked}" d=h w=f av=s g=md p=md bgc=bg bw=xs bc=${resource.selectionBorderColor} h-bc=${resource.selectionHoverBorderColor} br=md cur=${resource.selectionCursor} style="box-sizing: border-box;"':
                               - rtgl-view w=160 h=90 av=c ah=c br=md bgc=mu:
                                   - rtgl-svg svg=image wh=24 c=mu-fg: null
                               - 'rtgl-view d=v w=1fg g=xs pv=sm style="box-sizing: border-box;"':
                                   - rtgl-view d=h av=c g=xs:
                                       - rtgl-text s=md: ${resource.name}
-                                      - $if resource.primary:
-                                          - rtgl-text s=sm c=mu-fg: (${primaryLabel})
                                   - $if resource.description:
                                       - rtgl-text s=sm c=mu-fg: ${resource.description}
                               - 'rtgl-view d=h av=c ah=e style="align-self: center; flex: 0 0 auto;"':
@@ -129,40 +106,8 @@ template:
                                               - rvn-keyframe-timeline w=f ?showTotalDuration=false ?showRuler=false timelineDuration=${animationTimeline.timelineDuration} :properties=${animationTimeline.maskProperties} :defaultValues=${animationTimeline.defaultValues}: null
                                     $else:
                                       - rvn-keyframe-timeline w=f ?showRuler=true :properties=${animationTimeline.updateProperties} :defaultValues=${animationTimeline.defaultValues}: null
-                      - $if currentImages.length > 0:
-                          - rtgl-view slot=image-resources-header d=v w=f:
-                              - rtgl-text s=md: ${imageResourcesLabel}
-                          - rtgl-view slot=image-resources-list d=v w=f g=md:
-                              - $for image, i in currentImages:
-                                  - 'rtgl-view d=v w=f g=md p=md bgc=bg bw=xs bc=bo br=md style="box-sizing: border-box;"':
-                                      - rtgl-view d=h w=f av=c g=md wrap:
-                                          - $if image.customized && image.replacementImageId:
-                                              - 'rtgl-view w=160 h=90 overflow=hidden bw=xs bc=bo br=md bgc=mu style="flex: 0 0 160px;"':
-                                                  - rvn-file-image w=f h=f imageId=${image.replacementImageId} source=thumbnail: null
-                                            $elif image.previewSourceId:
-                                              - 'rtgl-view w=160 h=90 overflow=hidden bw=xs bc=bo br=md bgc=mu style="flex: 0 0 160px;"':
-                                                  - 'rvn-resource-import-preview-media key=${image.previewSourceId} planId=${planId} sourceFileId=${image.previewSourceId} label="${image.name}"': null
-                                            $else:
-                                              - 'rtgl-view w=160 h=90 av=c ah=c bw=xs bc=bo br=md bgc=mu style="flex: 0 0 160px;"':
-                                                  - rtgl-svg svg=image wh=24 c=mu-fg: null
-                                          - rtgl-view d=v w=1fg g=xs:
-                                              - rtgl-text s=md: ${image.name}
-                                              - $if image.description:
-                                                  - rtgl-text s=sm c=mu-fg: ${image.description}
-                                          - rtgl-view d=h ah=e av=c g=sm wrap:
-                                              - 'rtgl-button#imageCustomizeButton${i} data-image-index=${image.imageIndex} s=sm v=se': ${customizeImageButton}
-                                              - $if image.customized:
-                                                  - 'rtgl-button#imageUseDefaultButton${i} data-image-index=${image.imageIndex} s=sm v=gh': ${useDefaultImageButton}
           - $if isProgressStep:
               - rtgl-view w=f h=220 av=c ah=c d=v g=md role=status aria-live=polite:
                   - rtgl-text s=lg: ${progressLabel}
                   - rtgl-text c=mu-fg: ${progressCountLabel} (${progressPercent}%)
                   - rtgl-button#cancelProgressButton v=se: ${cancelButton}
-  - rtgl-dialog#imageSelectorDialog ?open=${imageSelectorDialog.open} s=xl aria-label="${imageSelectorTitle}":
-      - $if imageSelectorDialog.open:
-          - rtgl-view slot=content d=v w=f g=md:
-              - rtgl-text s=lg: ${imageSelectorTitle}
-              - 'rtgl-view w=f h=70vh style="min-width: 0; min-height: 0;"':
-                  - rvn-image-selector#replacementImageSelector key=${imageSelectorDialog.imageIndex} selectedImageId=${imageSelectorDialog.selectedImageId}: null
-              - rtgl-view d=h g=sm w=f ah=e:
-                  - rtgl-button#confirmImageSelection variant=pr: ${selectButton}

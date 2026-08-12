@@ -1,4 +1,3 @@
-import { toFlatItems } from "../../internal/project/tree.js";
 import {
   getTransitionTimelineDuration,
   getUpdateAnimationTween,
@@ -15,12 +14,6 @@ const SOURCE_STEP = "source";
 const SELECTION_STEP = "selection";
 const ITEM_STEP = "item";
 const PROGRESS_STEP = "progress";
-
-const createImageSelectorDialogState = () => ({
-  open: false,
-  imageIndex: undefined,
-  selectedImageId: undefined,
-});
 
 const sourceForm = (copy) => ({
   title: copy.title ?? "Import Package",
@@ -52,16 +45,16 @@ const sourceForm = (copy) => ({
   },
 });
 
-const createFolderOptions = (collection) =>
-  toFlatItems(collection ?? { items: {}, tree: [] })
-    .filter((item) => item.type === "folder")
-    .map((item) => ({
-      label: item.fullLabel ?? item.name ?? item.id,
-      value: item.id,
-    }));
-
 const getResourceLabel = (resource, index, copy) =>
   resource.name || `${copy.resourceFallback ?? "Resource"} ${index + 1}`;
+
+const hasPackageMetadata = (plan) =>
+  ["name", "version", "description", "publisher", "source"].some(
+    (key) => plan?.package?.[key],
+  );
+
+const hasPackageSummary = (plan) =>
+  hasPackageMetadata(plan) || (plan?.warnings?.length ?? 0) > 0;
 
 const createMaskProgressProperty = (mask = {}) => {
   if (mask.progress?.keyframes?.length > 0) {
@@ -148,150 +141,43 @@ const getSelectedResourceIndexes = ({ plan, values }) =>
     .map((_resource, index) => index)
     .filter((index) => values[`resource_${index}_include`] === true);
 
-const getResourceImageEntries = ({ plan, resource }) =>
-  plan.images
-    .map((image, index) => ({ image, index }))
-    .filter(({ image }) =>
-      (image.usedByResourceIds ?? []).includes(resource.sourceId),
-    );
-
-const createImportedImageCondition = ({ plan, selectedResourceIndexes }) => {
-  const selectedSourceIds = new Set(
-    selectedResourceIndexes.map((index) => plan.resources[index].sourceId),
+const getRequiredDependencySourceIds = ({ plan, values }) => {
+  const resourceBySourceId = new Map(
+    plan.resources.map((resource) => [resource.sourceId, resource]),
   );
-  return plan.images
-    .map((image, index) => ({ image, index }))
-    .filter(({ image }) =>
-      (image.usedByResourceIds ?? []).some((sourceId) =>
-        selectedSourceIds.has(sourceId),
-      ),
-    )
-    .map(({ index }) => `image_${index}_mode == 'import'`)
-    .join(" || ");
-};
-
-const createDestinationModeOptions = ({ options, copy }) => {
-  const destinationOptions = [
-    {
-      label: copy.newFolderOption ?? "New Folder",
-      value: "new",
-    },
-  ];
-  if (options.length > 0) {
-    destinationOptions.push({
-      label: copy.existingFolderOption ?? "Existing Folder",
-      value: "existing",
-    });
+  const selectedSourceIds = new Set(
+    getSelectedResourceIndexes({ plan, values }).map(
+      (index) => plan.resources[index].sourceId,
+    ),
+  );
+  const requiredSourceIds = new Set();
+  const pendingSourceIds = [...selectedSourceIds];
+  while (pendingSourceIds.length > 0) {
+    const sourceId = pendingSourceIds.pop();
+    const resource = resourceBySourceId.get(sourceId);
+    for (const dependencySourceId of resource?.dependencySourceIds ?? []) {
+      if (!requiredSourceIds.has(dependencySourceId)) {
+        requiredSourceIds.add(dependencySourceId);
+        pendingSourceIds.push(dependencySourceId);
+      }
+    }
   }
-  return destinationOptions;
-};
-
-const appendResourceDestinationFields = ({ fields, state, copy }) => {
-  const resourceFolderLabel =
-    state.expectedResourceType === "animations"
-      ? (copy.animationFolderLabel ?? "Animation Folder")
-      : (copy.transformFolderLabel ?? "Transform Folder");
-  fields.push({
-    type: "row",
-    fields: [
-      {
-        name: "resourceDestinationMode",
-        type: "segmented-control",
-        label: copy.destinationModeLabel ?? "Destination",
-        noClear: true,
-        required: true,
-        options: createDestinationModeOptions({
-          options: state.resourceFolderOptions,
-          copy,
-        }),
-      },
-      {
-        $when: "resourceDestinationMode == 'existing'",
-        name: "resourceParentId",
-        type: "select",
-        label: resourceFolderLabel,
-        options: state.resourceFolderOptions,
-        placeholder: copy.folderSelectPlaceholder ?? "Choose a folder",
-        searchable: true,
-        clearable: false,
-        required: true,
-      },
-      {
-        $when: "resourceDestinationMode == 'new'",
-        name: "resourceNewFolderName",
-        type: "input-text",
-        label: (copy.newFolderNameLabel ?? "New {folder} Name").replace(
-          "{folder}",
-          resourceFolderLabel,
-        ),
-        placeholder: copy.folderNamePlaceholder ?? "Enter a folder name",
-        required: {
-          message: copy.folderNameRequired ?? "Folder name is required.",
-        },
-      },
-    ],
-  });
-};
-
-const appendImageDestinationFields = ({
-  fields,
-  state,
-  copy,
-  importedImageCondition,
-}) => {
-  if (!importedImageCondition) return;
-  fields.push({
-    $when: importedImageCondition,
-    type: "row",
-    fields: [
-      {
-        name: "imageDestinationMode",
-        type: "segmented-control",
-        label: copy.imageDestinationLabel ?? "Imported Image Destination",
-        noClear: true,
-        required: true,
-        options: createDestinationModeOptions({
-          options: state.imageFolderOptions,
-          copy,
-        }),
-      },
-      {
-        $when: "imageDestinationMode == 'existing'",
-        name: "imageParentId",
-        type: "select",
-        label: copy.imageFolderLabel ?? "Image Folder",
-        options: state.imageFolderOptions,
-        placeholder: copy.folderSelectPlaceholder ?? "Choose a folder",
-        searchable: true,
-        clearable: false,
-        required: true,
-      },
-      {
-        $when: "imageDestinationMode == 'new'",
-        name: "imageNewFolderName",
-        type: "input-text",
-        label: copy.newImageFolderNameLabel ?? "New Image Folder Name",
-        placeholder: copy.folderNamePlaceholder ?? "Enter a folder name",
-        required: {
-          message: copy.folderNameRequired ?? "Folder name is required.",
-        },
-      },
-    ],
-  });
+  return requiredSourceIds;
 };
 
 const selectionForm = ({ state, copy }) => {
-  const fields = [
-    {
+  const fields = [];
+  if (hasPackageSummary(state.plan)) {
+    fields.push({
       name: "packageSummary",
       type: "slot",
       slot: "package-summary",
-    },
-    {
-      type: "slot",
-      slot: "selection-controls",
-    },
-  ];
+    });
+  }
+  fields.push({
+    type: "slot",
+    slot: "selection-controls",
+  });
 
   state.plan.resources.forEach((_resource, index) => {
     fields.push({
@@ -330,10 +216,6 @@ const itemForm = ({ state, copy }) => {
     state.currentResourceIndex,
   );
   const resource = state.plan.resources[state.currentResourceIndex];
-  const resourceImages = getResourceImageEntries({
-    plan: state.plan,
-    resource,
-  });
   const isLast = currentPosition === selectedResourceIndexes.length - 1;
   const fields = [];
   if (state.plan.resources.length === 1) {
@@ -363,24 +245,6 @@ const itemForm = ({ state, copy }) => {
       },
     ],
   });
-
-  if (!state.plan.assetPackage) {
-    appendResourceDestinationFields({ fields, state, copy });
-  }
-
-  if (resourceImages.length > 0) {
-    fields.push({ type: "slot", slot: "image-resources-header" });
-    appendImageDestinationFields({
-      fields,
-      state,
-      copy,
-      importedImageCondition: createImportedImageCondition({
-        plan: state.plan,
-        selectedResourceIndexes,
-      }),
-    });
-    fields.push({ type: "slot", slot: "image-resources-list" });
-  }
 
   const title = (copy.customizeResourceTitle ?? "Customize {name}").replace(
     "{name}",
@@ -413,47 +277,24 @@ const itemForm = ({ state, copy }) => {
   };
 };
 
-const createReviewValues = ({ plan, state }) => {
-  const resourceParentId = state.resourceFolderOptions.some(
-    (option) => option.value === state.targetParentId,
-  )
-    ? state.targetParentId
-    : state.resourceFolderOptions[0]?.value;
-  const defaultFolderName = plan.package.defaultFolderName ?? plan.package.name;
-  const values = {
-    resourceDestinationMode: "new",
-    resourceParentId,
-    resourceNewFolderName: defaultFolderName,
-    imageDestinationMode: "new",
-    imageParentId: state.imageFolderOptions[0]?.value,
-    imageNewFolderName: defaultFolderName,
-  };
+const createReviewValues = (plan) => {
+  const values = {};
   plan.resources.forEach((resource, index) => {
     values[`resource_${index}_include`] = true;
     values[`resource_${index}_name`] = resource.name;
     values[`resource_${index}_description`] = resource.description ?? "";
-  });
-  plan.images.forEach((_image, index) => {
-    values[`image_${index}_customized`] = false;
-    values[`image_${index}_mode`] = "import";
-    values[`image_${index}_existingId`] = undefined;
   });
   return values;
 };
 
 export const createInitialState = () => ({
   open: false,
-  expectedResourceType: "animations",
-  targetParentId: undefined,
   projectResolution: DEFAULT_PROJECT_RESOLUTION,
   step: SOURCE_STEP,
   sourceValues: { url: "" },
   reviewValues: {},
   plan: undefined,
   currentResourceIndex: undefined,
-  resourceFolderOptions: [],
-  imageFolderOptions: [],
-  imageSelectorDialog: createImageSelectorDialogState(),
   error: undefined,
   isBusy: false,
   operationId: undefined,
@@ -461,20 +302,11 @@ export const createInitialState = () => ({
   formKey: 0,
 });
 
-export const syncFromProps = (
-  { state },
-  { props, repositoryState, reset = false } = {},
-) => {
+export const syncFromProps = ({ state }, { props, reset = false } = {}) => {
   const wasOpen = state.open;
   state.open = props.open === true;
-  state.expectedResourceType = props.expectedResourceType ?? "animations";
-  state.targetParentId = props.targetParentId;
   state.projectResolution =
     props.projectResolution ?? DEFAULT_PROJECT_RESOLUTION;
-  state.resourceFolderOptions = createFolderOptions(
-    repositoryState?.[state.expectedResourceType],
-  );
-  state.imageFolderOptions = createFolderOptions(repositoryState?.images);
 
   if (reset || (!wasOpen && state.open)) {
     state.step = SOURCE_STEP;
@@ -482,7 +314,6 @@ export const syncFromProps = (
     state.reviewValues = {};
     state.plan = undefined;
     state.currentResourceIndex = undefined;
-    state.imageSelectorDialog = createImageSelectorDialogState();
     state.error = undefined;
     state.isBusy = false;
     state.operationId = undefined;
@@ -502,8 +333,7 @@ export const setLoading = (
 
 export const setPlan = ({ state }, { plan } = {}) => {
   state.plan = plan;
-  state.reviewValues = createReviewValues({ plan, state });
-  state.imageSelectorDialog = createImageSelectorDialogState();
+  state.reviewValues = createReviewValues(plan);
   state.currentResourceIndex = plan.resources.length === 1 ? 0 : undefined;
   state.step = plan.resources.length === 1 ? ITEM_STEP : SELECTION_STEP;
   state.isBusy = false;
@@ -566,45 +396,36 @@ export const setResourceSelected = (
   { state },
   { resourceIndex, selected } = {},
 ) => {
-  state.reviewValues[`resource_${resourceIndex}_include`] = selected === true;
+  const resource = state.plan.resources[resourceIndex];
+  if (selected !== true) {
+    const requiredSourceIds = getRequiredDependencySourceIds({
+      plan: state.plan,
+      values: state.reviewValues,
+    });
+    if (requiredSourceIds.has(resource.sourceId)) return;
+    state.reviewValues[`resource_${resourceIndex}_include`] = false;
+    return;
+  }
+
+  const resourceIndexBySourceId = new Map(
+    state.plan.resources.map((item, index) => [item.sourceId, index]),
+  );
+  const pendingSourceIds = [resource.sourceId];
+  while (pendingSourceIds.length > 0) {
+    const sourceId = pendingSourceIds.pop();
+    const index = resourceIndexBySourceId.get(sourceId);
+    if (index === undefined) continue;
+    state.reviewValues[`resource_${index}_include`] = true;
+    pendingSourceIds.push(
+      ...(state.plan.resources[index].dependencySourceIds ?? []),
+    );
+  }
 };
 
 export const setAllResourcesSelected = ({ state }, { selected } = {}) => {
   state.plan.resources.forEach((_resource, index) => {
     state.reviewValues[`resource_${index}_include`] = selected === true;
   });
-};
-
-export const openImageSelector = ({ state }, { imageIndex } = {}) => {
-  state.imageSelectorDialog.open = true;
-  state.imageSelectorDialog.imageIndex = imageIndex;
-  state.imageSelectorDialog.selectedImageId =
-    state.reviewValues[`image_${imageIndex}_existingId`];
-};
-
-export const closeImageSelector = ({ state }) => {
-  state.imageSelectorDialog = createImageSelectorDialogState();
-};
-
-export const setSelectedReplacementImage = ({ state }, { imageId } = {}) => {
-  state.imageSelectorDialog.selectedImageId = imageId;
-};
-
-export const confirmImageReplacement = ({ state }) => {
-  const imageIndex = state.imageSelectorDialog.imageIndex;
-  const imageId = state.imageSelectorDialog.selectedImageId;
-  if (!imageId) return;
-
-  state.reviewValues[`image_${imageIndex}_customized`] = true;
-  state.reviewValues[`image_${imageIndex}_mode`] = "existing";
-  state.reviewValues[`image_${imageIndex}_existingId`] = imageId;
-  state.imageSelectorDialog = createImageSelectorDialogState();
-};
-
-export const useDefaultImage = ({ state }, { imageIndex } = {}) => {
-  state.reviewValues[`image_${imageIndex}_customized`] = false;
-  state.reviewValues[`image_${imageIndex}_mode`] = "import";
-  state.reviewValues[`image_${imageIndex}_existingId`] = undefined;
 };
 
 export const startExecution = ({ state }, { values, operationId } = {}) => {
@@ -636,9 +457,6 @@ export const selectSourceValues = ({ state }) => state.sourceValues;
 export const selectReviewValues = ({ state }) => state.reviewValues;
 export const selectCurrentResourceIndex = ({ state }) =>
   state.currentResourceIndex;
-export const selectImageSelectorDialog = ({ state }) =>
-  state.imageSelectorDialog;
-
 export const selectViewData = ({ state, i18n = {} }) => {
   const copy = i18n.resourceImport ?? {};
   const plan = state.plan;
@@ -662,19 +480,12 @@ export const selectViewData = ({ state, i18n = {} }) => {
       (_resource, index) =>
         state.reviewValues[`resource_${index}_include`] === true,
     );
+  const requiredDependencySourceIds = plan
+    ? getRequiredDependencySourceIds({ plan, values: state.reviewValues })
+    : new Set();
   const currentResource = isItemStep
     ? plan?.resources[state.currentResourceIndex]
     : undefined;
-  const currentImages = currentResource
-    ? getResourceImageEntries({ plan, resource: currentResource }).map(
-        ({ image, index }) => ({
-          ...image,
-          imageIndex: index,
-          customized: state.reviewValues[`image_${index}_customized`] === true,
-          replacementImageId: state.reviewValues[`image_${index}_existingId`],
-        }),
-      )
-    : [];
   const animationTimeline = createAnimationTimelinePreview({
     resource: currentResource,
     projectResolution: state.projectResolution,
@@ -710,6 +521,10 @@ export const selectViewData = ({ state, i18n = {} }) => {
     assetStoreLinkLabel: copy.assetStoreLinkLabel ?? "Browse the Asset Store",
     assetStoreUrl: ROUTEVN_ASSET_STORE_URL,
     packageName: plan?.package?.name,
+    hasPackageMetadata: hasPackageMetadata(plan),
+    hasPackageSummary:
+      hasPackageSummary(plan) ||
+      (isItemStep && (plan?.resources.length ?? 0) === 1),
     planId: plan?.planId,
     packageVersion: plan?.package?.version,
     packageDescription: plan?.package?.description,
@@ -719,6 +534,8 @@ export const selectViewData = ({ state, i18n = {} }) => {
       plan?.resources.map((resource, index) => {
         const selected =
           state.reviewValues[`resource_${index}_include`] === true;
+        const selectionLocked =
+          selected && requiredDependencySourceIds.has(resource.sourceId);
         return {
           ...resource,
           selectionSlot: `resource-selection-${index}`,
@@ -727,35 +544,27 @@ export const selectViewData = ({ state, i18n = {} }) => {
             getResourceLabel(resource, index, copy),
           ),
           selected,
+          selectionLocked,
+          selectionTabIndex: selectionLocked ? -1 : 0,
+          selectionCursor: selectionLocked ? "default" : "pointer",
           selectionBorderColor: selected ? "pr" : "bo",
           selectionHoverBorderColor: selected ? "pr" : "ac",
-          selectionStatus: selected
-            ? (copy.selectedStatus ?? "Selected")
-            : (copy.notSelectedStatus ?? "Not selected"),
+          selectionStatus: selectionLocked
+            ? (copy.requiredStatus ?? "Required")
+            : selected
+              ? (copy.selectedStatus ?? "Selected")
+              : (copy.notSelectedStatus ?? "Not selected"),
           selectionStatusColor: selected ? "pr" : "mu-fg",
         };
       }) ?? [],
     currentResource,
-    currentImages,
-    imageSelectorDialog: state.imageSelectorDialog,
     animationTimeline,
     warnings,
-    unsupportedResourceTypes: plan?.unsupportedResourceTypes ?? [],
     knownDownloadBytes: plan?.knownDownloadBytes ?? 0,
     hasUnknownDownloadSize: plan?.hasUnknownDownloadSize === true,
-    packageSummaryLabel: copy.packageSummaryLabel ?? "Package",
     publisherLabel: copy.publisherLabel ?? "Publisher",
     sourceLabel: copy.sourceLabel ?? "Source",
-    primaryLabel: copy.primaryLabel ?? "Primary",
-    resourcesLabel: copy.resourcesLabel ?? "Resources",
-    mediaLabel: copy.mediaLabel ?? "Media dependencies",
-    imageResourcesLabel: copy.imageResourcesLabel ?? "Image Resources",
-    customizeImageButton: copy.customizeImageButton ?? "Customize",
-    useDefaultImageButton: copy.useDefaultImageButton ?? "Use Default",
-    imageSelectorTitle: copy.imageSelectorTitle ?? "Choose a Replacement Image",
-    selectButton: copy.selectButton ?? "Select",
     warningsLabel: copy.warningsLabel ?? "Warnings",
-    unsupportedLabel: copy.unsupportedLabel ?? "Not imported",
     unknownSizeLabel: copy.unknownSizeLabel ?? "plus files of unknown size",
     bytesLabel: copy.bytesLabel ?? "bytes",
     timelinePreviewLabel: copy.timelinePreviewLabel ?? "Timeline",

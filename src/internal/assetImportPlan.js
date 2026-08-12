@@ -444,6 +444,14 @@ const collectResourceDependencySourceIds = ({
   return [...dependencySourceIds];
 };
 
+const collectResourceFileDestinationIds = (data) => {
+  const fileDestinationIds = new Set();
+  visitAssetPackageReferences(data, ({ kind, value }) => {
+    if (kind === "file") fileDestinationIds.add(value);
+  });
+  return [...fileDestinationIds];
+};
+
 const orderEntriesByDependencies = (entries) => {
   const pending = [...entries];
   const ordered = [];
@@ -475,9 +483,6 @@ const orderEntriesByDependencies = (entries) => {
   }
   return ordered;
 };
-
-export const isAssetPackageManifest = (manifest) =>
-  manifest?.package?.kind === ASSET_PACKAGE_KIND;
 
 export const createAssetImportPlan = ({
   manifest,
@@ -595,6 +600,9 @@ export const createAssetImportPlan = ({
       index: entry.index,
       folder: entry.folder,
       dependencySourceIds,
+      fileDestinationIds: entry.folder
+        ? []
+        : collectResourceFileDestinationIds(data),
       data,
     };
   });
@@ -611,8 +619,6 @@ export const createAssetImportPlan = ({
       type: config.itemType,
       name: item.name,
       description: item.description ?? "",
-      selected: true,
-      primary: resources.length === 0,
       ...getPreviewData({
         item,
         config,
@@ -647,24 +653,16 @@ export const createAssetImportPlan = ({
   }));
 
   return deepFreeze({
-    assetPackage: true,
     planId,
-    schema: manifest.schema,
     manifestUrl,
     projectId,
     repositoryRevision,
-    expectedResourceType: "assets",
     package: structuredClone(manifest.package),
-    destinationFolders: {},
-    primarySourceId: resources[0].sourceId,
     entries: orderedEntries,
     resources,
-    images: [],
-    tags: [],
     files,
     previewFiles,
     warnings,
-    unsupportedResourceTypes: [],
     knownDownloadBytes,
     hasUnknownDownloadSize,
   });

@@ -4,13 +4,6 @@ propsSchema:
   properties:
     open:
       type: boolean
-    expectedResourceType:
-      type: string
-      enum:
-        - animations
-        - transforms
-    targetParentId:
-      type: string
     projectResolution:
       type: object
       properties:

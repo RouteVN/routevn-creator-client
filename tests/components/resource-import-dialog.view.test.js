@@ -28,7 +28,12 @@ describe("resource-import-dialog.view", () => {
     expect(viewSource).toContain("selectionToggleAllButton");
     expect(viewSource).toContain("${selectionToggleAllLabel}");
     expect(viewSource).toContain("rtgl-view#resourceSelectionCard");
-    expect(viewSource).toContain("role=button tabindex=0");
+    expect(viewSource).toContain(
+      "role=button tabindex=${resource.selectionTabIndex}",
+    );
+    expect(viewSource).toContain(
+      "data-selection-locked=${resource.selectionLocked}",
+    );
     expect(viewSource).toContain('aria-pressed="${resource.selected}"');
     expect(viewSource).toContain("${resource.selectionStatus}");
     expect(viewSource).toContain("bgc=bg");
@@ -48,18 +53,5 @@ describe("resource-import-dialog.view", () => {
     expect(viewSource).toContain("rvn-keyframe-timeline");
     expect(viewSource).toContain("animationTimeline.maskProperties");
     expect(viewSource).not.toContain("currentResource.description");
-  });
-
-  it("opens the project image selector directly from image resource cards", () => {
-    expect(viewSource).toContain("slot=image-resources-header");
-    expect(viewSource).toContain("slot=image-resources-list");
-    expect(viewSource).toContain("imageCustomizeButton");
-    expect(viewSource).toContain("imageUseDefaultButton");
-    expect(viewSource).toContain("imageSelectorDialog");
-    expect(viewSource).toContain("rvn-image-selector#replacementImageSelector");
-    expect(viewSource).toContain("rtgl-button#confirmImageSelection");
-    expect(viewSource).toContain("${selectButton}");
-    expect(viewSource).toContain("image.replacementImageId");
-    expect(viewSource).not.toContain("imageModeControl");
   });
 });

@@ -2,26 +2,14 @@ import { processWithConcurrency } from "../../../internal/processWithConcurrency
 import {
   AssetImportPlanError,
   createAssetImportPlan,
-  isAssetPackageManifest,
   rewriteAssetImportPlanReferences,
 } from "../../../internal/assetImportPlan.js";
-import {
-  createResourceImportPlan,
-  ResourceImportPlanError,
-  rewriteResourceImportPlanReferences,
-} from "../../../internal/resourceImportPlan.js";
 import { isAssetPackageFileMimeTypeAllowed } from "../../../internal/assetPackageResources.js";
 import {
   createImportPackageClient,
   ImportPackageClientError,
 } from "../../clients/importPackageClient.js";
-import { buildImageResourceDataFromUploadResult } from "./resourceImports.js";
 
-const SUPPORTED_IMPORT_IMAGE_MIME_TYPES = new Set([
-  "image/jpeg",
-  "image/png",
-  "image/webp",
-]);
 const PREVIEW_IMAGE_MIME_TYPES = new Set([
   "image/jpeg",
   "image/png",
@@ -36,17 +24,6 @@ const createFile = ({ bytes, name, mimeType }) => {
   }
   Object.defineProperty(blob, "name", { value: name });
   return blob;
-};
-
-const assertAssetPackageFileMimeTypes = ({ filePlan, mimeType }) => {
-  for (const validationKind of filePlan.validationKinds ?? []) {
-    if (!isAssetPackageFileMimeTypeAllowed({ validationKind, mimeType })) {
-      throw new ImportPackageClientError(
-        "file_type_unsupported",
-        "A package file has an unsupported type.",
-      );
-    }
-  }
 };
 
 const getFileName = (descriptor, sourceId) => {
@@ -78,7 +55,6 @@ const toErrorResult = (error) => {
   }
   if (
     error instanceof ImportPackageClientError ||
-    error instanceof ResourceImportPlanError ||
     error instanceof AssetImportPlanError
   ) {
     return {
@@ -103,13 +79,8 @@ const toErrorResult = (error) => {
   };
 };
 
-const containsValue = (value, expected) => {
-  if (value === expected) return true;
-  if (Array.isArray(value)) {
-    return value.some((item) => containsValue(item, expected));
-  }
-  if (!value || typeof value !== "object") return false;
-  return Object.values(value).some((item) => containsValue(item, expected));
+const fail = (code, message, options) => {
+  throw new AssetImportPlanError(code, message, options);
 };
 
 const emitProgress = (onProgress, progress) => {
@@ -124,19 +95,17 @@ const selectPlanResources = ({ plan, selectedResourceIds }) => {
   const selectedIds = new Set(
     selectedResourceIds ?? plan.resources.map((resource) => resource.sourceId),
   );
-  if (plan.assetPackage) {
-    const resourceBySourceId = new Map(
-      plan.resources.map((resource) => [resource.sourceId, resource]),
-    );
-    const pendingSourceIds = [...selectedIds];
-    while (pendingSourceIds.length > 0) {
-      const sourceId = pendingSourceIds.pop();
-      const resource = resourceBySourceId.get(sourceId);
-      for (const dependencySourceId of resource?.dependencySourceIds ?? []) {
-        if (!selectedIds.has(dependencySourceId)) {
-          selectedIds.add(dependencySourceId);
-          pendingSourceIds.push(dependencySourceId);
-        }
+  const resourceBySourceId = new Map(
+    plan.resources.map((resource) => [resource.sourceId, resource]),
+  );
+  const pendingSourceIds = [...selectedIds];
+  while (pendingSourceIds.length > 0) {
+    const sourceId = pendingSourceIds.pop();
+    const resource = resourceBySourceId.get(sourceId);
+    for (const dependencySourceId of resource?.dependencySourceIds ?? []) {
+      if (!selectedIds.has(dependencySourceId)) {
+        selectedIds.add(dependencySourceId);
+        pendingSourceIds.push(dependencySourceId);
       }
     }
   }
@@ -145,7 +114,7 @@ const selectPlanResources = ({ plan, selectedResourceIds }) => {
   );
 };
 
-const selectAssetPackageEntries = ({
+const selectPackageEntries = ({
   plan,
   selectedResources,
   rewrittenResources = selectedResources,
@@ -175,12 +144,13 @@ const selectAssetPackageEntries = ({
     }));
 };
 
-const getCommittedAssetPlanResult = ({
+const getCommittedPlanResult = ({
   plan,
   selectedResources,
   repositoryState,
 }) => {
-  const entries = selectAssetPackageEntries({ plan, selectedResources });
+  if (selectedResources.length === 0) return undefined;
+  const entries = selectPackageEntries({ plan, selectedResources });
   if (
     entries.length === 0 ||
     entries.some(
@@ -191,121 +161,27 @@ const getCommittedAssetPlanResult = ({
   ) {
     return undefined;
   }
-  const primary = selectedResources.find((resource) => resource.primary);
-  return {
-    valid: true,
-    assetPackage: true,
-    planId: plan.planId,
-    commandIds: [],
-    resourceIds: selectedResources.map((resource) => resource.destinationId),
-    imageIds: selectedResources
-      .filter((resource) => resource.resourceType === "images")
-      .map((resource) => resource.destinationId),
-    soundIds: selectedResources
-      .filter((resource) => resource.resourceType === "sounds")
-      .map((resource) => resource.destinationId),
-    videoIds: selectedResources
-      .filter((resource) => resource.resourceType === "videos")
-      .map((resource) => resource.destinationId),
-    createdFolderIds: entries
-      .filter((entry) => entry.folder)
-      .map((entry) => entry.destinationId),
-    primaryResourceId:
-      primary?.destinationId ?? selectedResources[0]?.destinationId,
-    importedCount: selectedResources.length,
-    importedImageCount: selectedResources.filter(
-      (resource) => resource.resourceType === "images",
-    ).length,
-    importedSoundCount: selectedResources.filter(
-      (resource) => resource.resourceType === "sounds",
-    ).length,
-    importedVideoCount: selectedResources.filter(
-      (resource) => resource.resourceType === "videos",
-    ).length,
-    reusedImageCount: 0,
-    recoveredFromPreviousCommit: true,
-  };
-};
-
-const getCommittedPlanResult = ({
-  plan,
-  selectedResources,
-  importedImages,
-  existingImageIds,
-  resourceDestination,
-  imageDestination,
-  repositoryState,
-}) => {
-  if (selectedResources.length === 0) return undefined;
-  if (plan.assetPackage) {
-    return getCommittedAssetPlanResult({
-      plan,
-      selectedResources,
-      repositoryState,
-    });
-  }
-  const allResourcesExist = selectedResources.every(
-    (resource) =>
-      repositoryState?.[plan.expectedResourceType]?.items?.[
-        resource.destinationId
-      ]?.type === resource.type,
-  );
-  const allImagesExist = importedImages.every(
-    (image) =>
-      repositoryState?.images?.items?.[image.destinationId]?.type === "image",
-  );
-  const createdDestinations = [
-    {
-      destination: resourceDestination,
-      resourceType: plan.expectedResourceType,
-    },
-    { destination: imageDestination, resourceType: "images" },
-  ].filter(({ destination }) => destination?.mode === "create");
-  const allCreatedFoldersExist = createdDestinations.every(
-    ({ destination, resourceType }) =>
-      repositoryState?.[resourceType]?.items?.[destination.destinationId]
-        ?.type === "folder",
-  );
-  if (!allResourcesExist || !allImagesExist || !allCreatedFoldersExist) {
-    return undefined;
-  }
-  const primary = selectedResources.find((resource) => resource.primary);
   return {
     valid: true,
     planId: plan.planId,
     commandIds: [],
-    resourceIds: selectedResources.map((resource) => resource.destinationId),
-    imageIds: importedImages.map((image) => image.destinationId),
-    reusedImageIds: existingImageIds,
-    createdFolderIds: createdDestinations.map(
-      ({ destination }) => destination.destinationId,
-    ),
-    primaryResourceId:
-      primary?.destinationId ?? selectedResources[0]?.destinationId,
     importedCount: selectedResources.length,
-    importedImageCount: importedImages.length,
-    reusedImageCount: existingImageIds.length,
     recoveredFromPreviousCommit: true,
   };
 };
 
 const validateReviewChoices = ({
-  plan,
   selectedResources,
-  resourceChoices,
   resourceNames,
   resourceDescriptions,
 }) => {
   if (selectedResources.length === 0) {
-    throw new ResourceImportPlanError(
-      "no_resources_selected",
-      "Select at least one resource to import.",
-    );
+    fail("no_resources_selected", "Select at least one resource to import.");
   }
   for (const resource of selectedResources) {
     const name = resourceNames[resource.sourceId] ?? resource.name;
     if (typeof name !== "string" || name.trim().length === 0) {
-      throw new ResourceImportPlanError(
+      fail(
         "resource_name_required",
         "Imported resource names cannot be empty.",
         { resourceId: resource.sourceId },
@@ -314,87 +190,32 @@ const validateReviewChoices = ({
     const description =
       resourceDescriptions[resource.sourceId] ?? resource.description;
     if (typeof description !== "string") {
-      throw new ResourceImportPlanError(
+      fail(
         "resource_description_invalid",
         "Imported resource descriptions must be text.",
         { resourceId: resource.sourceId },
       );
     }
   }
+};
 
-  for (const image of plan.images) {
-    const used = selectedResources.some((resource) =>
-      containsValue(resource.data, image.destinationId),
-    );
-    if (!used) continue;
-    const choice = resourceChoices[image.sourceId] ?? image.choice;
-    if (choice.mode === "existing" && !choice.projectResourceId) {
-      throw new ResourceImportPlanError(
-        "substitution_required",
-        `Choose a replacement for '${image.name}'.`,
-        { resourceId: image.sourceId },
-      );
-    }
-    if (choice.mode !== "import" && choice.mode !== "existing") {
-      throw new ResourceImportPlanError(
-        "dependency_unresolved",
-        `Resolve the image dependency '${image.name}'.`,
-        { resourceId: image.sourceId },
+const assertFileMimeTypes = ({ filePlan, mimeType }) => {
+  for (const validationKind of filePlan.validationKinds ?? []) {
+    if (!isAssetPackageFileMimeTypeAllowed({ validationKind, mimeType })) {
+      throw new ImportPackageClientError(
+        "file_type_unsupported",
+        "A package file has an unsupported type.",
       );
     }
   }
 };
 
-const resolveDestinationChoice = ({
-  choice,
-  legacyParentId,
-  plannedDestination,
-  label,
-}) => {
-  let destination = choice;
-  if (!destination && legacyParentId) {
-    destination = { mode: "existing", parentId: legacyParentId };
-  }
-  if (!destination) {
-    throw new ResourceImportPlanError(
-      "destination_required",
-      `Choose a destination folder for ${label}.`,
-    );
-  }
-  if (destination.mode === "existing") {
-    if (
-      typeof destination.parentId !== "string" ||
-      destination.parentId.length === 0
-    ) {
-      throw new ResourceImportPlanError(
-        "destination_required",
-        `Choose a destination folder for ${label}.`,
-      );
-    }
-    return { mode: "existing", parentId: destination.parentId };
-  }
-  if (destination.mode === "create") {
-    if (
-      typeof destination.name !== "string" ||
-      destination.name.trim().length === 0
-    ) {
-      throw new ResourceImportPlanError(
-        "destination_name_required",
-        `Enter a name for the new ${label} folder.`,
-      );
-    }
-    return {
-      mode: "create",
-      name: destination.name.trim(),
-      destinationId: plannedDestination.destinationId,
-      commandId: plannedDestination.commandId,
-    };
-  }
-  throw new ResourceImportPlanError(
-    "invalid_destination_mode",
-    `Choose an existing or new destination folder for ${label}.`,
+const getNeededFiles = ({ plan, selectedResources }) =>
+  plan.files.filter((file) =>
+    selectedResources.some((resource) =>
+      resource.fileDestinationIds.includes(file.destinationId),
+    ),
   );
-};
 
 export const createResourcePackageImportService = ({
   idGenerator,
@@ -413,7 +234,7 @@ export const createResourcePackageImportService = ({
   const beginOperation = (operationId) => {
     const id = operationId ?? idGenerator();
     if (operations.has(id)) {
-      throw new ResourceImportPlanError(
+      fail(
         "operation_in_progress",
         "This import operation is already running.",
       );
@@ -422,7 +243,6 @@ export const createResourcePackageImportService = ({
     operations.set(id, controller);
     return { id, controller };
   };
-
   const endOperation = (id) => operations.delete(id);
   const deletePlan = (planId) => {
     plans.delete(planId);
@@ -437,36 +257,23 @@ export const createResourcePackageImportService = ({
   };
 
   return {
-    async createResourceImportPlan({
-      url,
-      expectedResourceType,
-      operationId,
-    } = {}) {
+    async createResourceImportPlan({ url, operationId } = {}) {
       let operation;
       try {
-        recordEvent("plan.started", { expectedResourceType });
+        recordEvent("plan.started");
         operation = beginOperation(operationId);
         const source = await importClient.fetchManifest({
           url,
           signal: operation.controller.signal,
         });
-        const planOptions = {
+        const plan = createAssetImportPlan({
           manifest: source.manifest,
           manifestUrl: source.manifestUrl,
           projectId: getCurrentProjectId?.(),
           repositoryState: getRepositoryState(),
           repositoryRevision: getRepositoryRevision(),
           createId: idGenerator,
-        };
-        const plan = isAssetPackageManifest(
-          source.manifest,
-          expectedResourceType,
-        )
-          ? createAssetImportPlan(planOptions)
-          : createResourceImportPlan({
-              ...planOptions,
-              expectedResourceType,
-            });
+        });
         if (plan.knownDownloadBytes > importClient.limits.totalBytes) {
           throw new ImportPackageClientError(
             "download_too_large",
@@ -476,16 +283,13 @@ export const createResourcePackageImportService = ({
         plans.set(plan.planId, plan);
         recordEvent("plan.completed", {
           planId: plan.planId,
-          expectedResourceType,
           resourceCount: plan.resources.length,
-          imageCount: plan.images.length,
           fileCount: plan.files.length,
           knownDownloadBytes: plan.knownDownloadBytes,
         });
         return { valid: true, plan };
       } catch (error) {
         recordEvent("plan.failed", {
-          expectedResourceType,
           code: error?.code ?? "import_failed",
         });
         return toErrorResult(error);
@@ -503,27 +307,25 @@ export const createResourcePackageImportService = ({
       try {
         const plan = plans.get(planId);
         if (!plan) {
-          throw new ResourceImportPlanError(
+          fail(
             "plan_expired",
             "This import review has expired. Load the package again.",
           );
         }
-        const previewFile = plan.previewFiles?.find(
+        const previewFile = plan.previewFiles.find(
           (file) => file.sourceId === sourceFileId,
         );
         if (!previewFile) {
-          throw new ResourceImportPlanError(
-            "preview_unavailable",
-            "This package preview is unavailable.",
-            { resourceId: sourceFileId },
-          );
+          fail("preview_unavailable", "This package preview is unavailable.", {
+            resourceId: sourceFileId,
+          });
         }
         const mimeType = previewFile.descriptor.mimeType.toLowerCase();
         if (
           !PREVIEW_IMAGE_MIME_TYPES.has(mimeType) &&
           !PREVIEW_VIDEO_MIME_TYPES.has(mimeType)
         ) {
-          throw new ResourceImportPlanError(
+          fail(
             "preview_type_unsupported",
             "A package preview must be a JPEG, PNG, WebP, MP4, or WebM file.",
             { resourceId: sourceFileId },
@@ -574,18 +376,13 @@ export const createResourcePackageImportService = ({
     validateResourceImportPlan({
       planId,
       selectedResourceIds,
-      resourceChoices = {},
       resourceNames = {},
       resourceDescriptions = {},
-      resourceDestination,
-      imageDestination,
-      resourceParentId,
-      imageParentId,
     } = {}) {
       try {
         const plan = plans.get(planId);
         if (!plan) {
-          throw new ResourceImportPlanError(
+          fail(
             "plan_expired",
             "This import review has expired. Load the package again.",
           );
@@ -595,36 +392,10 @@ export const createResourcePackageImportService = ({
           selectedResourceIds,
         });
         validateReviewChoices({
-          plan,
           selectedResources,
-          resourceChoices,
           resourceNames,
           resourceDescriptions,
         });
-        if (plan.assetPackage) {
-          return { valid: true };
-        }
-        resolveDestinationChoice({
-          choice: resourceDestination,
-          legacyParentId: resourceParentId,
-          plannedDestination: plan.destinationFolders.resource,
-          label: plan.expectedResourceType,
-        });
-        const importsPackageImages = plan.images.some(
-          (image) =>
-            selectedResources.some((resource) =>
-              containsValue(resource.data, image.destinationId),
-            ) &&
-            (resourceChoices[image.sourceId] ?? image.choice).mode === "import",
-        );
-        if (importsPackageImages) {
-          resolveDestinationChoice({
-            choice: imageDestination,
-            legacyParentId: imageParentId,
-            plannedDestination: plan.destinationFolders.images,
-            label: "images",
-          });
-        }
         return { valid: true };
       } catch (error) {
         return toErrorResult(error);
@@ -635,13 +406,8 @@ export const createResourcePackageImportService = ({
       planId,
       operationId,
       selectedResourceIds,
-      resourceChoices = {},
       resourceNames = {},
       resourceDescriptions = {},
-      resourceDestination,
-      imageDestination,
-      resourceParentId,
-      imageParentId,
       onProgress,
     } = {}) {
       let operation;
@@ -651,12 +417,10 @@ export const createResourcePackageImportService = ({
       let preserveStagedFiles = false;
       let planForCleanup;
       let selectedResourcesForCleanup = [];
-      let importedImagesForCleanup = [];
-      let existingImageIdsForCleanup = [];
       try {
         const plan = plans.get(planId);
         if (!plan) {
-          throw new ResourceImportPlanError(
+          fail(
             "plan_expired",
             "This import review has expired. Load the package again.",
           );
@@ -666,75 +430,27 @@ export const createResourcePackageImportService = ({
           plan.projectId !== undefined &&
           getCurrentProjectId?.() !== plan.projectId
         ) {
-          throw new ResourceImportPlanError(
+          fail(
             "project_changed",
             "The project changed while the import was open. Review the import again.",
           );
         }
         operation = beginOperation(operationId);
-        recordEvent("execution.started", {
-          planId,
-          expectedResourceType: plan.expectedResourceType,
-        });
+        recordEvent("execution.started", { planId });
         const selectedResources = selectPlanResources({
           plan,
           selectedResourceIds,
         });
         selectedResourcesForCleanup = selectedResources;
         validateReviewChoices({
-          plan,
           selectedResources,
-          resourceChoices,
           resourceNames,
           resourceDescriptions,
         });
 
-        const usedImages = plan.images.filter((image) =>
-          selectedResources.some((resource) =>
-            containsValue(resource.data, image.destinationId),
-          ),
-        );
-        const importedImages = usedImages.filter((image) => {
-          const choice = resourceChoices[image.sourceId] ?? image.choice;
-          return choice.mode === "import";
-        });
-        const existingImageIds = [
-          ...new Set(
-            usedImages
-              .map((image) => resourceChoices[image.sourceId] ?? image.choice)
-              .filter((choice) => choice.mode === "existing")
-              .map((choice) => choice.projectResourceId),
-          ),
-        ];
-        importedImagesForCleanup = importedImages;
-        existingImageIdsForCleanup = existingImageIds;
-        let resolvedResourceDestination;
-        let resolvedImageDestination;
-        if (!plan.assetPackage) {
-          resolvedResourceDestination = resolveDestinationChoice({
-            choice: resourceDestination,
-            legacyParentId: resourceParentId,
-            plannedDestination: plan.destinationFolders.resource,
-            label: plan.expectedResourceType,
-          });
-          resolvedImageDestination =
-            importedImages.length > 0
-              ? resolveDestinationChoice({
-                  choice: imageDestination,
-                  legacyParentId: imageParentId,
-                  plannedDestination: plan.destinationFolders.images,
-                  label: "images",
-                })
-              : undefined;
-        }
-
         const previousCommit = getCommittedPlanResult({
           plan,
           selectedResources,
-          importedImages,
-          existingImageIds,
-          resourceDestination: resolvedResourceDestination,
-          imageDestination: resolvedImageDestination,
           repositoryState: getRepositoryState(),
         });
         if (previousCommit) {
@@ -748,22 +464,7 @@ export const createResourcePackageImportService = ({
           return previousCommit;
         }
 
-        const neededSourceIds = new Set(
-          importedImages.map((image) => image.sourceFileId),
-        );
-        for (const file of plan.files) {
-          if (
-            selectedResources.some((resource) =>
-              containsValue(resource.data, file.destinationId),
-            )
-          ) {
-            neededSourceIds.add(file.sourceId);
-          }
-        }
-        const neededFiles = plan.files.filter((file) =>
-          neededSourceIds.has(file.sourceId),
-        );
-
+        const neededFiles = getNeededFiles({ plan, selectedResources });
         emitProgress(onProgress, {
           phase: "downloading",
           completed: 0,
@@ -822,42 +523,26 @@ export const createResourcePackageImportService = ({
             );
           }
           const entry = downloadBySourceId.get(filePlan.sourceId);
-          const importedImage = importedImages.find(
-            (image) => image.sourceFileId === filePlan.sourceId,
-          );
           const mimeType =
             filePlan.descriptor.mimeType ?? entry.download.contentType;
-          if (plan.assetPackage) {
-            assertAssetPackageFileMimeTypes({ filePlan, mimeType });
-          }
-          if (
-            importedImage &&
-            !SUPPORTED_IMPORT_IMAGE_MIME_TYPES.has(mimeType.toLowerCase())
-          ) {
-            throw new ImportPackageClientError(
-              "file_type_unsupported",
-              "A package image has an unsupported type.",
-            );
-          }
+          assertFileMimeTypes({ filePlan, mimeType });
           const file = createFile({
             bytes: entry.download.bytes,
             name: getFileName(filePlan.descriptor, filePlan.sourceId),
             mimeType,
           });
-          if (plan.assetPackage) {
-            for (const validationKind of filePlan.validationKinds ?? []) {
-              try {
-                await assetService.validateResourceImportFile({
-                  file,
-                  validationKind,
-                });
-              } catch (error) {
-                throw new ImportPackageClientError(
-                  "file_type_unsupported",
-                  "A package file has an unsupported type.",
-                  { details: { cause: error.message } },
-                );
-              }
+          for (const validationKind of filePlan.validationKinds ?? []) {
+            try {
+              await assetService.validateResourceImportFile({
+                file,
+                validationKind,
+              });
+            } catch (error) {
+              throw new ImportPackageClientError(
+                "file_type_unsupported",
+                "A package file has an unsupported type.",
+                { details: { cause: error.message } },
+              );
             }
           }
           stagingStarted = true;
@@ -866,8 +551,7 @@ export const createResourcePackageImportService = ({
             projectId: plan.projectId,
             file,
             fileId: filePlan.destinationId,
-            thumbnailFileId: importedImage?.thumbnailFileId,
-            processImage: Boolean(importedImage),
+            processImage: false,
           });
           stageResults.set(filePlan.sourceId, stageResult);
           for (const record of stageResult.fileRecords ?? []) {
@@ -875,10 +559,6 @@ export const createResourcePackageImportService = ({
             fileRecords.push(record);
           }
           fileCommandIds[filePlan.destinationId] = filePlan.commandId;
-          if (importedImage && stageResult.thumbnailFileId) {
-            fileCommandIds[stageResult.thumbnailFileId] =
-              importedImage.thumbnailCommandId;
-          }
           completedStages += 1;
           emitProgress(onProgress, {
             phase: "processing",
@@ -887,46 +567,18 @@ export const createResourcePackageImportService = ({
           });
         }
 
-        const imageCommands = importedImages.map((image) => {
-          const uploadResult = stageResults.get(image.sourceFileId);
-          return {
-            sourceId: image.sourceId,
-            destinationId: image.destinationId,
-            commandId: image.commandId,
-            data: {
-              ...buildImageResourceDataFromUploadResult(uploadResult),
-              name: image.name,
-              description: image.description,
-              tagIds: [],
-            },
-          };
+        const actualFileIds = new Map(
+          neededFiles.map((filePlan) => [
+            filePlan.destinationId,
+            stageResults.get(filePlan.sourceId).fileId,
+          ]),
+        );
+        const rewrittenResources = rewriteAssetImportPlanReferences({
+          resources: selectedResources,
+          resourceNames,
+          resourceDescriptions,
+          fileIdMap: actualFileIds,
         });
-        const actualFileIds = new Map();
-        for (const filePlan of neededFiles) {
-          const result = stageResults.get(filePlan.sourceId);
-          actualFileIds.set(filePlan.destinationId, result.fileId);
-        }
-        const rewrittenResources = plan.assetPackage
-          ? rewriteAssetImportPlanReferences({
-              resources: selectedResources,
-              resourceNames,
-              resourceDescriptions,
-              fileIdMap: actualFileIds,
-            })
-          : rewriteResourceImportPlanReferences({
-              plan: { ...plan, resources: selectedResources },
-              resourceChoices,
-              resourceNames,
-              resourceDescriptions,
-              fileIdMap: actualFileIds,
-            });
-        const selectedTagIds = new Set(
-          rewrittenResources.flatMap((resource) => resource.data.tagIds ?? []),
-        );
-        const selectedTags = plan.tags.filter((tag) =>
-          selectedTagIds.has(tag.destinationId),
-        );
-
         emitProgress(onProgress, {
           phase: "committing",
           completed: 0,
@@ -934,35 +586,18 @@ export const createResourcePackageImportService = ({
         });
         let commitResult;
         try {
-          if (plan.assetPackage) {
-            commitResult = await commandApi.commitAssetImportPackage({
-              planId: plan.planId,
-              projectId: plan.projectId,
-              repositoryRevision: plan.repositoryRevision,
-              fileRecords,
-              fileCommandIds,
-              entries: selectAssetPackageEntries({
-                plan,
-                selectedResources,
-                rewrittenResources,
-              }),
-            });
-          } else {
-            commitResult = await commandApi.commitResourceImportPackage({
-              planId: plan.planId,
-              projectId: plan.projectId,
-              repositoryRevision: plan.repositoryRevision,
-              resourceType: plan.expectedResourceType,
-              resourceDestination: resolvedResourceDestination,
-              imageDestination: resolvedImageDestination,
-              fileRecords,
-              fileCommandIds,
-              images: imageCommands,
-              tags: selectedTags,
-              resources: rewrittenResources,
-              existingImageIds,
-            });
-          }
+          commitResult = await commandApi.commitAssetImportPackage({
+            planId: plan.planId,
+            projectId: plan.projectId,
+            repositoryRevision: plan.repositoryRevision,
+            fileRecords,
+            fileCommandIds,
+            entries: selectPackageEntries({
+              plan,
+              selectedResources,
+              rewrittenResources,
+            }),
+          });
         } catch (error) {
           if (error?.commitOutcome === "unknown") {
             preserveStagedFiles = true;
@@ -973,10 +608,6 @@ export const createResourcePackageImportService = ({
           const recoveredCommit = getCommittedPlanResult({
             plan,
             selectedResources,
-            importedImages,
-            existingImageIds,
-            resourceDestination: resolvedResourceDestination,
-            imageDestination: resolvedImageDestination,
             repositoryState: getRepositoryState(),
           });
           if (recoveredCommit) {
@@ -995,10 +626,10 @@ export const createResourcePackageImportService = ({
           });
           return commitResult;
         }
+
         committed = true;
-        assetService.finalizeResourceImportFiles?.({ planId: plan.planId });
+        assetService.finalizeResourceImportFiles?.({ planId });
         deletePlan(planId);
-        const primary = rewrittenResources.find((resource) => resource.primary);
         emitProgress(onProgress, {
           phase: "complete",
           completed: 1,
@@ -1007,31 +638,12 @@ export const createResourcePackageImportService = ({
         recordEvent("execution.completed", {
           planId,
           resourceCount: rewrittenResources.length,
-          importedImageCount: imageCommands.length,
-          reusedImageCount: existingImageIds.length,
           downloadedBytes,
         });
-        const result = {
+        return {
           ...commitResult,
-          primaryResourceId:
-            primary?.destinationId ?? rewrittenResources[0]?.destinationId,
           importedCount: rewrittenResources.length,
-          importedImageCount: imageCommands.length,
-          reusedImageCount: existingImageIds.length,
         };
-        if (plan.assetPackage) {
-          result.assetPackage = true;
-          result.importedImageCount = rewrittenResources.filter(
-            (resource) => resource.resourceType === "images",
-          ).length;
-          result.importedSoundCount = rewrittenResources.filter(
-            (resource) => resource.resourceType === "sounds",
-          ).length;
-          result.importedVideoCount = rewrittenResources.filter(
-            (resource) => resource.resourceType === "videos",
-          ).length;
-        }
-        return result;
       } catch (error) {
         recordEvent("execution.failed", {
           planId,
@@ -1048,12 +660,10 @@ export const createResourcePackageImportService = ({
             committedDuringCleanup = getCommittedPlanResult({
               plan: planForCleanup,
               selectedResources: selectedResourcesForCleanup,
-              importedImages: importedImagesForCleanup,
-              existingImageIds: existingImageIdsForCleanup,
               repositoryState: getRepositoryState(),
             });
           } catch {
-            // Cleanup below still uses the plan's captured project reference.
+            // Cleanup still uses the plan's captured project reference.
           }
         }
         if (committedDuringCleanup) {

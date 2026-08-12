@@ -14,12 +14,7 @@ const mapErrorMessage = (error, i18n = {}) => {
 };
 
 const syncFromProps = (deps, props, { reset = false } = {}) => {
-  const { projectService, store } = deps;
-  store.syncFromProps({
-    props,
-    repositoryState: projectService.getRepositoryState(),
-    reset,
-  });
+  deps.store.syncFromProps({ props, reset });
 };
 
 export const handleBeforeMount = (deps) => {
@@ -37,8 +32,6 @@ export const handleOnUpdate = (deps, payload = {}) => {
   const newProps = payload.newProps ?? {};
   if (
     oldProps.open === newProps.open &&
-    oldProps.expectedResourceType === newProps.expectedResourceType &&
-    oldProps.targetParentId === newProps.targetParentId &&
     oldProps.projectResolution === newProps.projectResolution
   ) {
     return;
@@ -77,39 +70,11 @@ const buildReviewPayload = ({ plan, values }) => {
         values[`resource_${index}_description`];
     }
   });
-  const resourceChoices = {};
-  plan.images.forEach((image, index) => {
-    const mode = values[`image_${index}_mode`];
-    resourceChoices[image.sourceId] = { mode };
-    if (mode === "existing") {
-      resourceChoices[image.sourceId].projectResourceId =
-        values[`image_${index}_existingId`];
-    }
-  });
   return {
     selectedResourceIds,
     resourceNames,
     resourceDescriptions,
-    resourceChoices,
   };
-};
-
-const importsSelectedPackageImages = ({ plan, choices }) => {
-  const selectedIds = new Set(choices.selectedResourceIds);
-  return plan.images.some(
-    (image) =>
-      choices.resourceChoices[image.sourceId]?.mode === "import" &&
-      (image.usedByResourceIds ?? []).some((sourceId) =>
-        selectedIds.has(sourceId),
-      ),
-  );
-};
-
-const buildDestinationChoice = ({ mode, parentId, folderName }) => {
-  if (mode === "new") {
-    return { mode: "create", name: folderName };
-  }
-  return { mode: "existing", parentId };
 };
 
 const mergeReviewValues = (store, values) => {
@@ -138,7 +103,6 @@ const handleSourceSubmit = async (deps, values) => {
   render();
   const result = await projectService.createResourceImportPlan({
     url: nextSourceUrl,
-    expectedResourceType: deps.props.expectedResourceType,
     operationId,
   });
   if (result.valid === false) {
@@ -155,24 +119,9 @@ const handleReviewSubmit = async (deps, values) => {
   store.saveReviewValues({ values });
   const plan = store.selectPlan();
   const choices = buildReviewPayload({ plan, values });
-  const importsPackageImages = importsSelectedPackageImages({ plan, choices });
-  const resourceDestination = buildDestinationChoice({
-    mode: values.resourceDestinationMode,
-    parentId: values.resourceParentId,
-    folderName: values.resourceNewFolderName,
-  });
-  const imageDestination = importsPackageImages
-    ? buildDestinationChoice({
-        mode: values.imageDestinationMode,
-        parentId: values.imageParentId,
-        folderName: values.imageNewFolderName,
-      })
-    : undefined;
   const validation = projectService.validateResourceImportPlan({
     planId: plan.planId,
     ...choices,
-    resourceDestination,
-    imageDestination,
   });
   if (validation.valid === false) {
     store.setError({
@@ -190,8 +139,6 @@ const handleReviewSubmit = async (deps, values) => {
     planId: plan.planId,
     operationId,
     ...choices,
-    resourceDestination,
-    imageDestination,
     onProgress(progress) {
       store.setProgress({ progress });
       render();
@@ -304,6 +251,7 @@ export const handleFormAction = async (deps, payload) => {
 const toggleResourceSelection = (deps, payload) => {
   const { store, render } = deps;
   const { currentTarget } = payload._event;
+  if (currentTarget.dataset.selectionLocked === "true") return;
   const resourceIndex = Number(currentTarget.dataset.resourceIndex);
   const selected = currentTarget.getAttribute("aria-pressed") !== "true";
   store.setResourceSelected({ resourceIndex, selected });
@@ -326,39 +274,6 @@ export const handleSelectionToggleAll = (deps, payload) => {
   const { currentTarget } = payload._event;
   const selected = currentTarget.dataset.allSelected !== "true";
   store.setAllResourcesSelected({ selected });
-  render();
-};
-
-const getImageIndex = (payload) =>
-  Number(payload._event.currentTarget.dataset.imageIndex);
-
-export const handleImageCustomize = (deps, payload) => {
-  const { store, render } = deps;
-  store.openImageSelector({ imageIndex: getImageIndex(payload) });
-  render();
-};
-
-export const handleImageUseDefault = (deps, payload) => {
-  const { store, render } = deps;
-  store.useDefaultImage({ imageIndex: getImageIndex(payload) });
-  render();
-};
-
-export const handleImageSelectorClose = (deps) => {
-  const { store, render } = deps;
-  store.closeImageSelector();
-  render();
-};
-
-export const handleReplacementImageSelected = (deps, payload) => {
-  const { store } = deps;
-  const { imageId } = payload._event.detail;
-  store.setSelectedReplacementImage({ imageId });
-};
-
-export const handleConfirmImageReplacement = (deps) => {
-  const { store, render } = deps;
-  store.confirmImageReplacement();
   render();
 };
 
