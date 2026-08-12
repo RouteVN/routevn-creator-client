@@ -47,6 +47,7 @@ export const createEmptyTagScopes = () => ({
   layouts: createResourceCollection(),
   controls: createResourceCollection(),
   animations: createResourceCollection(),
+  audioEffects: createResourceCollection(),
   particles: createResourceCollection(),
   spritesheets: createResourceCollection(),
 });
@@ -898,6 +899,23 @@ const constructAnimationResources = (
   );
 };
 
+const constructAudioEffectResources = (repositoryAudioEffects = {}) => {
+  return Object.entries(repositoryAudioEffects).reduce(
+    (result, [audioEffectId, item]) => {
+      if (item?.type !== "audioEffect" || !item.audioEffect) {
+        return result;
+      }
+
+      result[audioEffectId] = {
+        name: item.name,
+        ...structuredClone(item.audioEffect),
+      };
+      return result;
+    },
+    {},
+  );
+};
+
 const constructCharacterResources = (repositoryCharacters = {}) => {
   return Object.entries(repositoryCharacters).reduce(
     (result, [characterId, character]) => {
@@ -1169,6 +1187,7 @@ const constructProjectResources = (repositoryState = {}) => {
   const repositorySounds = repositoryState.sounds?.items || {};
   const repositoryVoices = repositoryState.voices?.items || {};
   const repositoryAnimations = repositoryState.animations?.items || {};
+  const repositoryAudioEffects = repositoryState.audioEffects?.items || {};
   const repositoryCharacters = repositoryState.characters?.items || {};
   const repositoryTransforms = repositoryState.transforms?.items || {};
   const repositoryParticles = repositoryState.particles?.items || {};
@@ -1249,6 +1268,7 @@ const constructProjectResources = (repositoryState = {}) => {
       repositoryAnimations,
       repositoryImages,
     ),
+    audioEffects: constructAudioEffectResources(repositoryAudioEffects),
     variables,
   };
 };
@@ -1789,6 +1809,7 @@ const RESOURCE_KEY_TO_TYPES = {
     "voices",
     "particles",
     "animations",
+    "audioEffects",
     "transforms",
     "characters",
     "textStyles",
@@ -1833,6 +1854,7 @@ const COLLECTION_DEFS = {
   voices: { collection: "voices", itemType: "voice" },
   particles: { collection: "particles", itemType: "particle" },
   animations: { collection: "animations", itemType: "animation" },
+  audioEffects: { collection: "audioEffects", itemType: "audioEffect" },
   transforms: { collection: "transforms", itemType: "transform" },
   characters: { collection: "characters", itemType: "character" },
   fonts: { collection: "fonts", itemType: "font" },
@@ -2783,6 +2805,10 @@ export const buildFilteredStateForExport = (
     animations: filterCollectionItemsByIds(
       state.animations,
       usedIds.animations || [],
+    ),
+    audioEffects: filterCollectionItemsByIds(
+      state.audioEffects,
+      usedIds.audioEffects || [],
     ),
     transforms: filterCollectionItemsByIds(
       state.transforms,

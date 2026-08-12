@@ -28,6 +28,11 @@ export const createInitialState = () => ({
   ],
   animatedAssets: [
     {
+      id: "audioEffects",
+      label: "Audio Effects",
+      route: "/project/audio-effects",
+    },
+    {
       id: "animations",
       label: "Animations",
       route: "/project/animations",

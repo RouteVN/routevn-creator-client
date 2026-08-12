@@ -1,0 +1,210 @@
+refs:
+  fileExplorer:
+    eventListeners:
+      file-action:
+        handler: handleFileExplorerAction
+      target-changed:
+        handler: handleFileExplorerTargetChanged
+      item-click:
+        handler: handleFileExplorerSelectionChanged
+      selection-cleared:
+        handler: handleFileExplorerSelectionChanged
+      dblclick-item:
+        handler: handleAudioEffectItemDoubleClick
+  groupview:
+    eventListeners:
+      background-click:
+        handler: handleResourceViewBackgroundClick
+      item-click:
+        handler: handleAudioEffectItemClick
+      item-edit:
+        handler: handleAudioEffectItemEdit
+      add-click:
+        handler: handleAddAudioEffectClick
+      item-dblclick:
+        handler: handleAudioEffectItemDoubleClick
+      search-input:
+        handler: handleSearchInput
+      tag-filter-change:
+        handler: handleTagFilterChange
+      tag-filter-add-option-click:
+        handler: handleTagFilterAddOptionClick
+      item-delete:
+        handler: handleItemDelete
+      item-duplicate:
+        handler: handleItemDuplicate
+      menu-click:
+        handler: handleMobileFileExplorerOpen
+  mobileFileExplorerClose:
+    eventListeners:
+      click:
+        handler: handleMobileFileExplorerClose
+  mobileDetailSheet:
+    eventListeners:
+      close:
+        handler: handleMobileDetailSheetClose
+  mobileDetailOpenButton:
+    eventListeners:
+      click:
+        handler: handleMobileDetailOpenClick
+        preventDefault: true
+        stopPropagation: true
+  mobileDetailDuplicateButton:
+    eventListeners:
+      click:
+        handler: handleMobileDetailDuplicateClick
+        preventDefault: true
+        stopPropagation: true
+  mobileDetailDeleteButton:
+    eventListeners:
+      click:
+        handler: handleMobileDetailDeleteClick
+        preventDefault: true
+        stopPropagation: true
+  fileExplorerKeyboardScope:
+    eventListeners:
+      click:
+        handler: handleFileExplorerKeyboardScopeClick
+      keydown:
+        handler: handleFileExplorerKeyboardScopeKeyDown
+  fileExplorerDetailKeyboardScope:
+    eventListeners:
+      click:
+        handler: handleFileExplorerKeyboardScopeClick
+      keydown:
+        handler: handleFileExplorerKeyboardScopeKeyDown
+  addDialog:
+    eventListeners:
+      close:
+        handler: handleAddDialogClose
+  addForm:
+    eventListeners:
+      form-action:
+        handler: handleAddFormAction
+      add-option-click:
+        handler: handleAddFormAddOptionClick
+  editDialog:
+    eventListeners:
+      close:
+        handler: handleEditDialogClose
+  editForm:
+    eventListeners:
+      form-action:
+        handler: handleEditFormAction
+      add-option-click:
+        handler: handleEditFormAddOptionClick
+  detailHeader:
+    eventListeners:
+      click:
+        handler: handleDetailHeaderClick
+  folderNameDialog:
+    eventListeners:
+      close:
+        handler: handleFolderNameDialogClose
+  folderNameForm:
+    eventListeners:
+      form-action:
+        handler: handleFolderNameFormAction
+  detailTagSelect:
+    eventListeners:
+      value-change:
+        handler: handleDetailTagValueChange
+      draft-value-change:
+        handler: handleDetailTagDraftValueChange
+      open-change:
+        handler: handleDetailTagOpenChange
+      add-option-click:
+        handler: handleDetailTagAddOptionClick
+  createTagDialog:
+    eventListeners:
+      close:
+        handler: handleCreateTagDialogClose
+  createTagForm:
+    eventListeners:
+      form-action:
+        handler: handleCreateTagFormAction
+template:
+  - 'rtgl-view d=h w=f h=f style="min-width: 0; min-height: 0;"':
+      - 'rtgl-view d=h h=f w=f style="min-width: 0; min-height: 0;"':
+          - $if showExplorerPanel:
+              - rvn-resizable-panel#fileExplorerPanel w=300 min-w=200 max-w=500 resize-side="right":
+                  - rtgl-view slot="content" w=f h=f:
+                      - rvn-resource-types :resourceCategory=${resourceCategory} :selectedResourceId=${selectedResourceId}: null
+                      - rvn-base-file-explorer#fileExplorer :items=${flatItems} shrinkable dropdown-menu allowDrag :folderContextMenuItems=${folderContextMenuItems} :itemContextMenuItems=${itemContextMenuItems} :emptyContextMenuItems=${emptyContextMenuItems}: null
+          - 'rtgl-view w=1fg h=f pl=${contentLeftPadding} pos=rel style="min-width: 0; min-height: 0;"':
+              - 'rtgl-view pos=abs h=1 bgc=bo style="left: 0; right: 0; top: 47px; z-index: 1001; pointer-events: none;"': null
+              - 'div#fileExplorerKeyboardScope tabindex=-1 style="width: 100%; height: 100%; min-width: 0; min-height: 0; outline: none;"':
+                  - $if showMobileTopTabs:
+                      - 'rtgl-view d=v w=f h=f style="min-width: 0; min-height: 0;"':
+                          - 'rvn-catalog-resources-view#groupview w=f h=f :navTitle=${title} show-menu-button menu-button-placement=trailing show-search=false search-in-filter-popover show-tag-filter progressive-render progressive-hydration-delay-frame-count=4 fixed-items-per-row=1 :mobileLayout=${mobileLayout} :groups=${catalogGroups} :selectedItemId=${selectedItemId} :selectedFolderId=${selectedFolderId} :searchQuery=${searchQuery} :tagFilterOptions=${tagFilterOptions} :selectedTagFilterValues=${selectedTagFilterValues} :tagFilterPlaceholder=${tagFilterPlaceholder} :addText=${addText} :itemContextMenuItems=${centerItemContextMenuItems}': null
+                    $else:
+                      - 'rvn-catalog-resources-view#groupview w=f h=f :navTitle=${title} search-in-filter-popover show-tag-filter progressive-render progressive-hydration-delay-frame-count=4 fixed-items-per-row=1 :groups=${catalogGroups} :selectedItemId=${selectedItemId} :selectedFolderId=${selectedFolderId} :searchQuery=${searchQuery} :tagFilterOptions=${tagFilterOptions} :selectedTagFilterValues=${selectedTagFilterValues} :tagFilterPlaceholder=${tagFilterPlaceholder} :addText=${addText} :itemContextMenuItems=${centerItemContextMenuItems}': null
+          - $if showDetailPanel:
+              - rvn-resizable-panel panel-type=detail-panel w=270 min-w=200 max-w=500 resize-side="left":
+                  - rtgl-view wh=f slot="content":
+                      - 'div#fileExplorerDetailKeyboardScope tabindex=-1 style="width: 100%; height: 100%; min-width: 0; min-height: 0; outline: none;"':
+                          - $if selectedDetailId:
+                              - rtgl-view d=v w=f h=f:
+                                  - rtgl-view#detailHeader h=48 w=f d=h bgc=bg bwb=xs ph=md av=c g=sm cur=pointer:
+                                      - rtgl-text w=1fg ellipsis=true: ${selectedDetailName}
+                                      - rtgl-svg svg=edit wh=16: null
+                                  - $if selectedItemId:
+                                      - rtgl-view d=v w=f h=1fg p=md g=md sv:
+                                          - $if selectedItemDescription:
+                                              - rtgl-view d=v w=f g=xs:
+                                                  - rtgl-text c=mu-fg: ${descriptionLabel}
+                                                  - rtgl-text s=sm: ${selectedItemDescription}
+                                          - rtgl-view d=v w=f g=xs:
+                                              - rtgl-text c=mu-fg: ${tagsLabel}
+                                              - rtgl-tag-select#detailTagSelect w=f :options=${tagFilterOptions} :selectedValues=${selectedItemTagIds} :draftSelectedValues=${detailTagDraftValues} :open=${isDetailTagSelectOpen} :addOption=${detailTagAddOption} placeholder="${addTagPlaceholder}": null
+                                          - rtgl-view d=v w=f g=xs:
+                                              - rtgl-text c=mu-fg: ${typeLabel}
+                                              - rtgl-text: ${selectedAudioEffectTypeLabel}
+                                          - rtgl-view d=v w=f g=xs:
+                                              - rtgl-text c=mu-fg: ${configurationLabel}
+                                              - rtgl-text s=sm: ${selectedAudioEffectSummary}
+                                    $else:
+                                      - rvn-detail-view#detailView key=${selectedDetailId} w=f h=1fg :fields=${detailFields}: null
+                            $else:
+                              - rtgl-view wh=f av=c ah=c bgc=mu-fg:
+                                  - rtgl-text s=md c=mu-fg: ${noSelectionLabel}
+  - $if showMobileFileExplorer:
+      - 'rtgl-view pos=fix edge=f z=1250 bgc=bg d=v style="min-width: 0; min-height: 0; padding-top: var(--rvn-mobile-overlay-top-inset, 0px); padding-bottom: env(safe-area-inset-bottom); box-sizing: border-box;"':
+          - rtgl-view h=48 w=f d=h av=c ph=md bgc=bg bwb=xs g=md:
+              - rtgl-text w=1fg s=md: ${filesLabel}
+              - rtgl-button#mobileFileExplorerClose sq pre=x v=ol: null
+          - 'rtgl-view w=f h=1fg style="min-height: 0;"':
+              - rvn-base-file-explorer#fileExplorer :items=${flatItems} shrinkable dropdown-menu allowDrag :folderContextMenuItems=${folderContextMenuItems} :itemContextMenuItems=${itemContextMenuItems} :emptyContextMenuItems=${emptyContextMenuItems}: null
+  - $if showMobileDetailSheet:
+      - rvn-mobile-sheet#mobileDetailSheet ?open=${showMobileDetailSheet}:
+          - rtgl-view slot=content d=v w=f h=f:
+              - rtgl-view#detailHeader h=36 w=f d=h bgc=bg bwb=xs ph=md av=c g=sm cur=pointer:
+                  - rtgl-text w=1fg ellipsis=true: ${selectedItemName}
+                  - rtgl-svg svg=edit wh=16: null
+              - rtgl-view d=h w=f g=sm p=md bgc=su bwb=xs:
+                  - rtgl-button#mobileDetailOpenButton w=1fg v=se pre=chevronRight: ${openButton}
+                  - rtgl-button#mobileDetailDuplicateButton w=1fg v=se pre=duplicate: ${duplicateButton}
+                  - rtgl-button#mobileDetailDeleteButton w=1fg v=se pre=trash: ${deleteButton}
+              - 'rtgl-view w=f h=1fg sv style="min-height: 0;"':
+                  - rtgl-view d=v w=f p=md g=md:
+                      - $if selectedItemDescription:
+                          - rtgl-view d=v w=f g=xs:
+                              - rtgl-text c=mu-fg: ${descriptionLabel}
+                              - rtgl-text s=sm: ${selectedItemDescription}
+                      - rtgl-view d=v w=f g=xs:
+                          - rtgl-text c=mu-fg: ${tagsLabel}
+                          - rtgl-tag-select#detailTagSelect w=f :options=${tagFilterOptions} :selectedValues=${selectedItemTagIds} :draftSelectedValues=${detailTagDraftValues} :open=${isDetailTagSelectOpen} :addOption=${detailTagAddOption} placeholder="${addTagPlaceholder}": null
+                      - rtgl-view d=v w=f g=xs:
+                          - rtgl-text c=mu-fg: ${typeLabel}
+                          - rtgl-text: ${selectedAudioEffectTypeLabel}
+                      - rtgl-view d=v w=f g=xs:
+                          - rtgl-text c=mu-fg: ${configurationLabel}
+                          - rtgl-text s=sm: ${selectedAudioEffectSummary}
+  - rtgl-dialog#folderNameDialog ?open=${isFolderNameDialogOpen} s=sm:
+      - rtgl-form#folderNameForm key=${folderNameDialogItemId} slot=content :defaultValues=${folderNameDialogDefaultValues} :form=${folderNameForm}: null
+  - rtgl-dialog#addDialog ?open=${isAddDialogOpen} s=md:
+      - rtgl-form#addForm key=${isAddDialogOpen} slot=content :defaultValues=${addFormDefaults} :form=${addForm}: null
+  - rtgl-dialog#editDialog ?open=${isEditDialogOpen} s=md:
+      - rtgl-form#editForm key=${isEditDialogOpen} slot=content :defaultValues=${editDefaultValues} :form=${editForm}: null
+  - rtgl-dialog#createTagDialog ?open=${isCreateTagDialogOpen} s=sm:
+      - rtgl-form#createTagForm key=${isCreateTagDialogOpen} slot=content :defaultValues=${createTagDefaultValues} :form=${createTagForm}: null

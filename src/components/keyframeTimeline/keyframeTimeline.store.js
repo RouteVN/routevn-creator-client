@@ -452,6 +452,7 @@ export const selectViewData = ({ state, props, props: attrs, i18n = {} }) => {
           attrs.selectedProperty?.property === propertyName);
       return {
         name: propertyName,
+        label: propertyConfig.label ?? propertyName,
         selected,
         backgroundColor: selected ? "ac" : "bg",
         hoverBackgroundColor: attrs.editable

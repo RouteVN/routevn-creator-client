@@ -52,6 +52,14 @@ const configs = [
     importPriority: 90,
   },
   {
+    resourceType: "audioEffects",
+    itemType: "audioEffect",
+    commandType: "audioEffect.create",
+    idField: "audioEffectId",
+    previewFileFields: [],
+    importPriority: 95,
+  },
+  {
     resourceType: "particles",
     itemType: "particle",
     commandType: "particle.create",
@@ -156,6 +164,8 @@ const FILE_REFERENCE_FIELDS = new Set([
 const RESOURCE_REFERENCE_FIELDS = new Set([
   "animationId",
   "animationIds",
+  "audioEffectId",
+  "audioEffectIds",
   "backgroundImageId",
   "barImageId",
   "bgmId",

@@ -71,6 +71,30 @@ const VIDEOS_DATA = {
   tree: [{ id: "video-folder", children: [{ id: "video-1" }] }],
 };
 
+const AUDIO_EFFECTS_DATA = {
+  items: {
+    "audio-effect-folder": { type: "folder", name: "Mixing" },
+    "audio-effect-1": {
+      type: "audioEffect",
+      name: "Fade Out",
+      audioEffect: {
+        type: "update",
+        tween: {
+          volume: {
+            keyframes: [{ duration: 500, value: 0 }],
+          },
+        },
+      },
+    },
+  },
+  tree: [
+    {
+      id: "audio-effect-folder",
+      children: [{ id: "audio-effect-1" }],
+    },
+  ],
+};
+
 const CHARACTERS_DATA = {
   items: {
     "character-folder": { type: "folder", name: "Cast" },
@@ -171,6 +195,7 @@ const createResourceDataByType = () => {
   resourceDataByType.images = IMAGES_DATA;
   resourceDataByType.sounds = SOUNDS_DATA;
   resourceDataByType.videos = VIDEOS_DATA;
+  resourceDataByType.audioEffects = AUDIO_EFFECTS_DATA;
   resourceDataByType.characters = CHARACTERS_DATA;
   resourceDataByType.colors = COLORS_DATA;
   resourceDataByType.fonts = FONTS_DATA;
@@ -212,6 +237,7 @@ describe("asset package store", () => {
       { label: "Sounds", type: "item", value: "sounds" },
       { label: "Videos", type: "item", value: "videos" },
       { label: "Characters", type: "item", value: "characters" },
+      { label: "Audio Effects", type: "item", value: "audioEffects" },
       { label: "Colors", type: "item", value: "colors" },
       { label: "Fonts", type: "item", value: "fonts" },
       { label: "Text Styles", type: "item", value: "textStyles" },
@@ -464,6 +490,31 @@ describe("asset package store", () => {
         "file-character-sprite": expect.any(Object),
       }),
     );
+  });
+
+  it("exports audio effect folders added by the current repository schema", () => {
+    const state = createInitialState();
+    setResourceData(
+      { state },
+      { resourceDataByType: createResourceDataByType() },
+    );
+    state.selectedFolderIdsByType.audioEffects = ["audio-effect-folder"];
+
+    const repository = selectAssetPackageData({ state });
+
+    expect(repository.audioEffects.tree).toEqual([
+      {
+        id: "audio-effect-folder",
+        children: [{ id: "audio-effect-1" }],
+      },
+    ]);
+    expect(repository.audioEffects.items["audio-effect-1"]).toMatchObject({
+      type: "audioEffect",
+      name: "Fade Out",
+      audioEffect: {
+        type: "update",
+      },
+    });
   });
 
   it("includes transitive resources required by selected folders", () => {

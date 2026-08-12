@@ -334,6 +334,8 @@ export const selectViewData = ({ state, props }) => {
 
         return {
           ...item,
+          transitionPreviousLabel: item.transitionPreviousLabel ?? "Out",
+          transitionNextLabel: item.transitionNextLabel ?? "In",
           domItemId: isPlaceholder ? "" : item.id,
           cursor: isPlaceholder ? "default" : "pointer",
           itemWidth: useFullWidthCard

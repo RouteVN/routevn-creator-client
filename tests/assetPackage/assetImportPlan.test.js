@@ -63,6 +63,20 @@ const createManifest = () => {
     fontWeight: "400",
   };
   repository.textStyles.tree[0].children = [{ id: "text-style-1" }];
+  repository.audioEffects.items["audio-effect-1"] = {
+    id: "audio-effect-1",
+    type: "audioEffect",
+    name: "Fade Out",
+    audioEffect: {
+      type: "update",
+      tween: {
+        volume: {
+          keyframes: [{ duration: 500, value: 0 }],
+        },
+      },
+    },
+  };
+  repository.audioEffects.tree[0].children = [{ id: "audio-effect-1" }];
 
   return {
     schema: "routevn.import-pack.v1",
@@ -99,12 +113,25 @@ describe("asset import plan", () => {
     const textStyle = plan.resources.find(
       (resource) => resource.sourceId === "textStyles:text-style-1",
     );
+    const audioEffect = plan.resources.find(
+      (resource) => resource.sourceId === "audioEffects:audio-effect-1",
+    );
     expect(font.data.fileId).toBe(plan.files[0].destinationId);
     expect(textStyle.data.fontId).toEqual([font.destinationId]);
     expect(textStyle.data.colorId).toBe(color.destinationId);
     expect(textStyle.dependencySourceIds).toEqual(
       expect.arrayContaining(["fonts:font-1", "colors:color-1"]),
     );
+    expect(audioEffect).toMatchObject({
+      resourceType: "audioEffects",
+      type: "audioEffect",
+      data: {
+        type: "audioEffect",
+        audioEffect: {
+          type: "update",
+        },
+      },
+    });
     const entrySourceIds = plan.entries.map((entry) => entry.sourceId);
     expect(entrySourceIds.indexOf(font.sourceId)).toBeLessThan(
       entrySourceIds.indexOf(textStyle.sourceId),

@@ -102,6 +102,93 @@ export const createCatalogResourceCommandApi = (shared) => ({
       positionTargetId: animationId,
     });
   },
+  createAudioEffect: async ({
+    audioEffectId,
+    data,
+    parentId,
+    position = "last",
+    positionTargetId,
+    index,
+  }) =>
+    submitCreateResourceCommand({
+      shared,
+      resourceType: "audioEffects",
+      type: COMMAND_TYPES.AUDIOEFFECT_CREATE,
+      idField: "audioEffectId",
+      idValue: audioEffectId,
+      data,
+      parentId,
+      position,
+      positionTargetId,
+      index,
+    }),
+  updateAudioEffect: async ({ audioEffectId, data }) =>
+    submitUpdateResourceCommand({
+      shared,
+      resourceType: "audioEffects",
+      type: COMMAND_TYPES.AUDIOEFFECT_UPDATE,
+      idField: "audioEffectId",
+      idValue: audioEffectId,
+      data,
+    }),
+  moveAudioEffect: async ({
+    audioEffectId,
+    parentId,
+    position = "last",
+    positionTargetId,
+    index,
+  }) =>
+    submitMoveResourceCommand({
+      shared,
+      resourceType: "audioEffects",
+      type: COMMAND_TYPES.AUDIOEFFECT_MOVE,
+      idField: "audioEffectId",
+      idValue: audioEffectId,
+      parentId,
+      position,
+      positionTargetId,
+      index,
+    }),
+  deleteAudioEffects: async ({ audioEffectIds }) =>
+    submitDeleteResourceCommand({
+      shared,
+      resourceType: "audioEffects",
+      type: COMMAND_TYPES.AUDIOEFFECT_DELETE,
+      deleteField: "audioEffectIds",
+      ids: audioEffectIds,
+    }),
+  async duplicateAudioEffect({ audioEffectId }) {
+    const context = await shared.ensureCommandContext();
+    const sourceAudioEffect =
+      context.state?.audioEffects?.items?.[audioEffectId];
+
+    if (!sourceAudioEffect || sourceAudioEffect.type !== "audioEffect") {
+      return {
+        valid: false,
+        error: {
+          message: "Audio effect not found.",
+        },
+      };
+    }
+
+    const nextData = structuredClone(sourceAudioEffect);
+    delete nextData.id;
+    delete nextData.parentId;
+
+    return submitCreateResourceCommand({
+      shared,
+      resourceType: "audioEffects",
+      type: COMMAND_TYPES.AUDIOEFFECT_CREATE,
+      idField: "audioEffectId",
+      data: nextData,
+      parentId: resolveCatalogResourceParentId(
+        context.state?.audioEffects,
+        audioEffectId,
+      ),
+      position: "after",
+      positionTargetId: audioEffectId,
+    });
+  },
   createParticle: async ({
     particleId,
     data,

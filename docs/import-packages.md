@@ -6,9 +6,9 @@ RouteVN Creator imports reusable resources from a strict Asset Package manifest.
 The old animation-only and transform-only package formats are not supported.
 
 An Asset Package may contain images, sounds, videos, characters, transforms,
-animations, particles, spritesheets, colors, fonts, text styles, layouts,
-variables, and controls. The creator currently excludes layouts from its export
-picker.
+animations, audio effects, particles, spritesheets, colors, fonts, text styles,
+layouts, variables, and controls. The creator currently excludes layouts from
+its export picker.
 
 ## Manifest
 

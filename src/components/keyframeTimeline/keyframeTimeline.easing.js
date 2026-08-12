@@ -206,7 +206,10 @@ const resolveInitialValue = ({ initialValue, defaultValue } = {}) => {
   return resolveNumber(initialValue, resolveNumber(defaultValue, 0));
 };
 
-const resolveTargetValue = ({ keyframe, currentValue } = {}) => {
+const resolveTargetValue = ({ keyframe, currentValue, startValue } = {}) => {
+  if (keyframe?.value === "target") {
+    return startValue;
+  }
   const keyframeValue = resolveNumber(keyframe?.value, 0);
   return keyframe?.relative ? currentValue + keyframeValue : keyframeValue;
 };
@@ -261,7 +264,11 @@ export const createKeyframeValueCurvePath = ({
     const delay = Math.max(0, resolveNumber(keyframe.delay, 0));
     const duration = resolveNumber(keyframe.duration, 1000) || 1000;
     const startValue = resolveKeyframeStartValue({ keyframe, currentValue });
-    const targetValue = resolveTargetValue({ keyframe, currentValue });
+    const targetValue = resolveTargetValue({
+      keyframe,
+      currentValue,
+      startValue,
+    });
     const hasExplicitStartValue =
       keyframe.startValue !== undefined && keyframe.startValue !== "";
     const easingSamples =

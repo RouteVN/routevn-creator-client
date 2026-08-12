@@ -1,0 +1,4 @@
+componentName: rvn-audio-effects
+propsSchema:
+  type: object
+  properties: {}

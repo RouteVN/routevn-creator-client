@@ -28,6 +28,11 @@ export const assetItems = [
 
 export const animatedAssetItems = [
   {
+    id: "audioEffects",
+    name: "Audio Effects",
+    path: "/project/audio-effects",
+  },
+  {
     id: "animations",
     name: "Animations",
     path: "/project/animations",
@@ -131,6 +136,7 @@ const resourceParentMapping = {
   "character-sprites": "characters",
   "layout-editor": "layouts",
   "animation-editor": "animations",
+  "audio-effects-editor": "audioEffects",
 };
 
 const resourceCategoryNames = {

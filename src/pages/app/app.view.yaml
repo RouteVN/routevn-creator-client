@@ -48,6 +48,8 @@ template:
                   - rvn-transforms: []
                 $elif currentRoutePattern == "/project/animations":
                   - rvn-animations: []
+                $elif currentRoutePattern == "/project/audio-effects":
+                  - rvn-audio-effects: []
                 $elif currentRoutePattern == "/project/particles":
                   - rvn-particles: []
                 $elif currentRoutePattern == "/project/videos":
@@ -64,6 +66,8 @@ template:
                   - rvn-scene-editor-lexical#sceneEditor: []
                 $elif currentRoutePattern == "/project/animation-editor":
                   - rvn-animation-editor: []
+                $elif currentRoutePattern == "/project/audio-effects-editor":
+                  - rvn-audio-effects-editor: []
                 $elif currentRoutePattern == "/project/about":
                   - rvn-about: []
                 $elif currentRoutePattern == "/project/appearance":
