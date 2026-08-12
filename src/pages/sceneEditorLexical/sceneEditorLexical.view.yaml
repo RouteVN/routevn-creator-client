@@ -186,7 +186,7 @@ template:
                                   - rvn-scene-document-editor-lexical#sectionEditor${sectionIndex} key=${section.editorKey} data-section-id=${section.id} :lines=${section.documentEditorLines} :lineDecorations=${section.documentLineDecorations} :selectionActive=${section.selectionActive} :selectedLineId=${section.selectedLineId} :hasPreviousSectionLine=${section.hasPreviousSectionLine} :hasNextSectionLine=${section.hasNextSectionLine} :showLineNumbers=${sceneSettings.showLineNumbers} :fontSize=${sceneSettings.fontSize} :textStyles=${textStyles} :mentionTargets=${mentionTargets}: null
                           - rtgl-view h=${mobileEditorBottomSpacerHeight}: null
               - rvn-mobile-keyboard-toolbar#mobileKeyboardToolbar: null
-              - 'rvn-system-actions#systemActions :actions=${selectedLineActions} :selectedLineId=${selectedLineId} :selectedLine=${selectedLine} :currentSceneId=${scene.id} actionType=presentation :presentationState=${presentationState} :backgroundTransformEditor=${backgroundTransformEditor} :suppressDialogClose=${backgroundTransformEditor.suppressActionsDialogClose}': null
+              - 'rvn-system-actions#systemActions :actions=${selectedLineActions} :selectedLineId=${selectedLineId} :selectedLine=${selectedLine} :currentSceneId=${scene.id} actionType=presentation :presentationState=${presentationState} :previousPresentationState=${previousPresentationState} :hasPreviousPresentationStateContext=${true} :backgroundTransformEditor=${backgroundTransformEditor} :suppressDialogClose=${backgroundTransformEditor.suppressActionsDialogClose}': null
         $else:
           - 'rtgl-view d=h w=f h=f style="min-width: 0; min-height: 0;"':
               - 'rtgl-view w="calc((100vw - 64px) / 2)" d=v h=f style="min-width: 0; min-height: 0;"':
@@ -232,7 +232,7 @@ template:
                           - rtgl-view d=h av=c:
                               - rtgl-text s=sm c=mu-fg: ${stateTitle}
                           - rtgl-view g=md w=f pv=md:
-                              - 'rvn-system-actions#systemActions :showSelected=${true} :actions=${selectedLineActions} :selectedLineId=${selectedLineId} :selectedLine=${selectedLine} :currentSceneId=${scene.id} actionType=presentation :presentationState=${presentationState} :backgroundTransformEditor=${backgroundTransformEditor} dialog-variant=scene-editor-left dialog-panel-width="${systemActionsDialogPanelWidth}" :suppressDialogClose=${backgroundTransformEditor.suppressActionsDialogClose}': null
+                              - 'rvn-system-actions#systemActions :showSelected=${true} :actions=${selectedLineActions} :selectedLineId=${selectedLineId} :selectedLine=${selectedLine} :currentSceneId=${scene.id} actionType=presentation :presentationState=${presentationState} :previousPresentationState=${previousPresentationState} :hasPreviousPresentationStateContext=${true} :backgroundTransformEditor=${backgroundTransformEditor} dialog-variant=scene-editor-left dialog-panel-width="${systemActionsDialogPanelWidth}" :suppressDialogClose=${backgroundTransformEditor.suppressActionsDialogClose}': null
       - rtgl-dropdown-menu#dropdownMenu :items=${dropdownMenu.items} x=${dropdownMenu.position.x} y=${dropdownMenu.position.y} ?open=${dropdownMenu.isOpen}: null
       - rtgl-popover#popover ?open=${popover.isOpen} x=${popover.position.x} y=${popover.position.y}:
           - rtgl-form#form slot=content :form=${form}: null

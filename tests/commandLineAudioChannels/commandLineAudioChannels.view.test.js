@@ -118,7 +118,14 @@ describe("command-line audio channel views", () => {
     expect(emptyAddStyles).toContain("justify-content: center");
   });
 
-  it("remounts Voice and SFX channel forms from their state-derived keys", () => {
+  it("remounts audio channel forms from their state-derived keys", () => {
+    const bgmView = readFileSync(
+      new URL(
+        "../../src/components/commandLineBgm/commandLineBgm.view.yaml",
+        import.meta.url,
+      ),
+      "utf8",
+    );
     const voiceView = readFileSync(
       new URL(
         "../../src/components/commandLineVoice/commandLineVoice.view.yaml",
@@ -134,6 +141,10 @@ describe("command-line audio channel views", () => {
       "utf8",
     );
 
+    expect(bgmView).toContain("rtgl-form#channelForm key=${channelFormKey}");
+    expect(bgmView).not.toContain(
+      "rtgl-form#channelForm key=${channelFormKey} :form=${channelForm} :defaultValues=${channelDefaultValues} p=lg",
+    );
     expect(voiceView).toContain("rtgl-form#channelForm key=${channelFormKey}");
     expect(sfxView).toContain(
       'rtgl-form#channelForm${i} data-channel-id="${channel.id}" key=${channel.channelFormKey}',

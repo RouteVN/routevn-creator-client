@@ -24,6 +24,7 @@ import {
   resolveEventBindings,
 } from "../../project/layout.js";
 import { normalizeLineActions } from "../../project/engineActions.js";
+import { constructAudioEffectResources } from "../../project/projection.js";
 import {
   sanitizeProjectDataForRouteEngine,
   summarizeProjectDataForRouteEngine,
@@ -53,6 +54,47 @@ const SCENE_EDITOR_PERF_SCOPE = "scene-editor-perf";
 const SCENE_EDITOR_CANVAS_RENDER_DEBOUNCE_MS = 50;
 const CANVAS_RUNTIME_LINE_SYNC_WINDOW_MS = 1200;
 const FAILED_SCENE_ASSET_RETRY_DELAY_MS = 60000;
+
+const selectProjectDataWithCurrentAudioEffects = (deps) => {
+  const projectData = deps.store.selectProjectData();
+  const repositoryState = deps.projectService?.getRepositoryState?.();
+  if (!repositoryState?.audioEffects?.items) {
+    return projectData;
+  }
+
+  return {
+    ...projectData,
+    resources: {
+      ...projectData?.resources,
+      audioEffects: constructAudioEffectResources(
+        repositoryState.audioEffects.items,
+      ),
+    },
+  };
+};
+
+const createCanvasAudioPreviewKey = (
+  projectData,
+  { sceneId, sectionId, lineId },
+) => {
+  if (!sceneId || !sectionId || !lineId) {
+    return undefined;
+  }
+
+  const selectedLine = projectData?.story?.scenes?.[sceneId]?.sections?.[
+    sectionId
+  ]?.lines?.find((line) => line?.id === lineId);
+  const bgm = selectedLine?.actions?.bgm;
+  const resourceId = bgm?.audioEffects?.resourceId;
+
+  return JSON.stringify({
+    sceneId,
+    sectionId,
+    lineId,
+    bgm,
+    audioEffect: projectData?.resources?.audioEffects?.[resourceId],
+  });
+};
 
 const isSceneEditorPreviewVisible = (store) => {
   return store?.selectPreviewScene?.()?.previewVisible === true;
@@ -922,10 +964,8 @@ async function preloadLayoutAssetsByIds(deps, projectData, layoutIds) {
 }
 
 const createBeforeHandleActionsHook = (deps) => {
-  const { store } = deps;
-
   return async (actions, eventContext) => {
-    const projectData = store.selectProjectData();
+    const projectData = selectProjectDataWithCurrentAudioEffects(deps);
     const { eventData, preparedActions, resolvedActions } =
       await prepareRuntimeInteractionExecution({
         actions,
@@ -991,6 +1031,61 @@ const stripSelectedLinePreviewNavigation = (
   return projectData;
 };
 
+const stripSelectedLinePreviewAudioEffect = (
+  projectData,
+  { sceneId, sectionId, lineId },
+) => {
+  if (!sceneId || !sectionId || !lineId) {
+    return projectData;
+  }
+
+  const selectedLine = projectData?.story?.scenes?.[sceneId]?.sections?.[
+    sectionId
+  ]?.lines?.find((line) => line?.id === lineId);
+  const bgm = selectedLine?.actions?.bgm;
+  const resourceId = bgm?.audioEffects?.resourceId;
+  if (!resourceId) {
+    return projectData;
+  }
+
+  const resource = projectData?.resources?.audioEffects?.[resourceId];
+  if (resource?.type !== "update") {
+    return projectData;
+  }
+
+  const sound = bgm.sounds?.length === 1 ? bgm.sounds[0] : undefined;
+  if (sound) {
+    for (const property of ["volume", "pan", "playbackRate"]) {
+      const finalKeyframe = resource.tween?.[property]?.keyframes?.at(-1);
+      if (
+        typeof finalKeyframe?.value !== "number" ||
+        !Number.isFinite(finalKeyframe.value) ||
+        finalKeyframe.relative === true
+      ) {
+        continue;
+      }
+
+      if (property === "volume") {
+        bgm.volume = finalKeyframe.value;
+        sound.volume = 100;
+      } else if (property === "pan") {
+        bgm.pan = finalKeyframe.value;
+        sound.pan = 0;
+      } else {
+        sound.playbackRate = finalKeyframe.value;
+      }
+    }
+  }
+  delete bgm.audioEffects;
+  return projectData;
+};
+
+const prepareSelectedLinePreviewProjectData = (projectData, selection) => {
+  stripSelectedLinePreviewNavigation(projectData, selection);
+  stripSelectedLinePreviewAudioEffect(projectData, selection);
+  return projectData;
+};
+
 const createProjectDataWithSelectedEntryPoint = (projectData, selection) => {
   const { sceneId, sectionId, lineId } = selection;
   const projectDataWithSelection = structuredClone(projectData);
@@ -1014,9 +1109,65 @@ const createProjectDataWithSelectedEntryPoint = (projectData, selection) => {
   }
 
   const sanitized = sanitizeProjectDataForRouteEngine(
-    stripSelectedLinePreviewNavigation(projectDataWithSelection, selection),
+    prepareSelectedLinePreviewProjectData(projectDataWithSelection, selection),
   );
   return sanitized.projectData;
+};
+
+const createProjectDataWithAudioEffectHandoff = (
+  projectData,
+  { sceneId, sectionId, lineId },
+  previousPresentationState,
+) => {
+  const selectedSection =
+    projectData?.story?.scenes?.[sceneId]?.sections?.[sectionId];
+  const selectedLineIndex = selectedSection?.lines?.findIndex(
+    (line) => line?.id === lineId,
+  );
+  const selectedBgm = selectedSection?.lines?.[selectedLineIndex]?.actions?.bgm;
+  const resourceId = selectedBgm?.audioEffects?.resourceId;
+  const audioEffect = projectData?.resources?.audioEffects?.[resourceId];
+  const previousBgm = toPlainObject(previousPresentationState).bgm;
+  const previousSound = previousBgm?.sounds?.[0];
+  const selectedSound = selectedBgm?.sounds?.[0];
+
+  if (
+    audioEffect?.type !== "transition" ||
+    selectedLineIndex < 0 ||
+    previousBgm?.sounds?.length !== 1 ||
+    selectedBgm?.sounds?.length !== 1 ||
+    previousSound?.id !== selectedSound?.id
+  ) {
+    return {
+      projectData,
+      shouldAdvanceToSelectedLine: false,
+    };
+  }
+
+  const nextProjectData = structuredClone(projectData);
+  const nextSection = nextProjectData.story.scenes[sceneId].sections[sectionId];
+  const usedLineIds = new Set(nextSection.lines.map((line) => line.id));
+  let handoffLineId = "__scene-editor-audio-effect-handoff__";
+  let suffix = 2;
+  while (usedLineIds.has(handoffLineId)) {
+    handoffLineId = `__scene-editor-audio-effect-handoff-${suffix}__`;
+    suffix += 1;
+  }
+
+  const handoffBgm = structuredClone(previousBgm);
+  delete handoffBgm.audioEffects;
+  nextSection.lines.splice(selectedLineIndex, 0, {
+    id: handoffLineId,
+    actions: {
+      bgm: handoffBgm,
+    },
+  });
+  nextSection.initialLineId = handoffLineId;
+
+  return {
+    projectData: nextProjectData,
+    shouldAdvanceToSelectedLine: true,
+  };
 };
 
 const initRouteEngineWithDiagnostics = (
@@ -1096,10 +1247,13 @@ const prepareTemporaryPresentationProjectData = async (
     },
   );
 
-  return createProjectDataWithTemporaryPresentationState(
-    projectData,
+  return stripSelectedLinePreviewAudioEffect(
+    createProjectDataWithTemporaryPresentationState(
+      projectData,
+      selection,
+      temporaryPresentationState,
+    ),
     selection,
-    temporaryPresentationState,
   );
 };
 
@@ -1119,7 +1273,7 @@ export const renderSceneEditorState = async (deps, payload = {}) => {
   const sectionId = store.selectSelectedSectionId();
   const lineId = store.selectSelectedLineId();
   const projectDataProjectionStartedAt = shouldMeasure ? getDebugNow() : 0;
-  const projectedProjectData = store.selectProjectData();
+  const projectedProjectData = selectProjectDataWithCurrentAudioEffects(deps);
   const projectDataProjectionDurationMs = shouldMeasure
     ? getDebugDurationMs(projectDataProjectionStartedAt)
     : undefined;
@@ -1129,6 +1283,13 @@ export const renderSceneEditorState = async (deps, payload = {}) => {
     sectionId,
     lineId,
   };
+  const canvasAudioPreviewKey = createCanvasAudioPreviewKey(
+    projectedProjectData,
+    selection,
+  );
+  const shouldPreviewSelectedLineAudioEffect =
+    canvasAudioPreviewKey !== undefined &&
+    canvasAudioPreviewKey !== store.selectCanvasAudioPreviewKey?.();
   const projectData = createProjectDataWithSelectedEntryPoint(
     projectedProjectData,
     selection,
@@ -1137,6 +1298,9 @@ export const renderSceneEditorState = async (deps, payload = {}) => {
     ? getDebugDurationMs(projectDataSelectionStartedAt)
     : undefined;
   const isMuted = store.selectIsMuted();
+  const skipAudio = payload?.skipAudio === true || isMuted;
+  const shouldRenderSelectedLineAudioEffect =
+    shouldPreviewSelectedLineAudioEffect && !skipAudio;
   const backgroundTransformEditorOpen =
     store.selectIsBackgroundTransformEditorOpen?.() === true;
   graphicsService.setEngineAudioMuted?.(isMuted);
@@ -1145,12 +1309,48 @@ export const renderSceneEditorState = async (deps, payload = {}) => {
   );
 
   const onRenderState = createRuntimeCurrentLineRenderStateHandler(deps);
+  const previousPresentationState =
+    store.selectPreviousPresentationState?.() ?? {};
+  let audioEffectRenderState;
+  const captureSuppressedAudioEffectRenderState = ({ renderState }) => {
+    if (
+      shouldRenderSelectedLineAudioEffect &&
+      (renderState?.audioEffects?.length ?? 0) > 0
+    ) {
+      audioEffectRenderState = renderState;
+    }
+  };
+  const initializeSelectedLineEngine = (engineProjectData) => {
+    const handoffPreview = createProjectDataWithAudioEffectHandoff(
+      engineProjectData,
+      selection,
+      previousPresentationState,
+    );
+    initRouteEngineWithDiagnostics(
+      graphicsService,
+      handoffPreview.projectData,
+      {
+        enableGlobalKeyboardBindings: false,
+        onSuppressedRenderState: captureSuppressedAudioEffectRenderState,
+        suppressRenderEffects: true,
+        onRenderState,
+      },
+    );
+    if (handoffPreview.shouldAdvanceToSelectedLine) {
+      graphicsService.engineHandleActions(
+        {
+          markLineCompleted: {},
+          nextLine: {},
+        },
+        undefined,
+        {
+          suppressRenderEffects: true,
+        },
+      );
+    }
+  };
   const engineInitStartedAt = shouldMeasure ? getDebugNow() : 0;
-  initRouteEngineWithDiagnostics(graphicsService, projectData, {
-    enableGlobalKeyboardBindings: false,
-    suppressRenderEffects: true,
-    onRenderState,
-  });
+  initializeSelectedLineEngine(projectData);
   const engineInitDurationMs = shouldMeasure
     ? getDebugDurationMs(engineInitStartedAt)
     : undefined;
@@ -1180,17 +1380,24 @@ export const renderSceneEditorState = async (deps, payload = {}) => {
   );
 
   if (renderProjectData !== projectData) {
-    initRouteEngineWithDiagnostics(graphicsService, renderProjectData, {
-      enableGlobalKeyboardBindings: false,
-      suppressRenderEffects: true,
-      onRenderState,
-    });
+    audioEffectRenderState = undefined;
+    initializeSelectedLineEngine(renderProjectData);
   }
   const temporaryPresentationStateDurationMs = shouldMeasure
     ? getDebugDurationMs(temporaryPresentationStateStartedAt)
     : undefined;
   const renderStateSelectStartedAt = shouldMeasure ? getDebugNow() : 0;
-  const currentRenderState = graphicsService.engineSelectRenderState();
+  let currentRenderState =
+    audioEffectRenderState ?? graphicsService.engineSelectRenderState();
+  if (
+    !shouldRenderSelectedLineAudioEffect &&
+    (currentRenderState?.audioEffects?.length ?? 0) > 0
+  ) {
+    currentRenderState = {
+      ...currentRenderState,
+      audioEffects: [],
+    };
+  }
   const renderStateSummary = {
     elementCount: Array.isArray(currentRenderState?.elements)
       ? currentRenderState.elements.length
@@ -1240,11 +1447,9 @@ export const renderSceneEditorState = async (deps, payload = {}) => {
     },
   );
 
-  const activeAudioFileIds =
-    payload?.skipAudio || isMuted
-      ? []
-      : (graphicsService.collectRenderStateAudioKeys?.(currentRenderState) ??
-        []);
+  const activeAudioFileIds = skipAudio
+    ? []
+    : (graphicsService.collectRenderStateAudioKeys?.(currentRenderState) ?? []);
   const audioLoadStartedAt = shouldMeasure ? getDebugNow() : 0;
   await graphicsService.ensureAudioAssetsLoaded(activeAudioFileIds);
   const audioLoadDurationMs = shouldMeasure
@@ -1290,9 +1495,15 @@ export const renderSceneEditorState = async (deps, payload = {}) => {
     } else {
       graphicsService.engineRenderCurrentState({
         preserveAnimationPlayback,
-        skipAudio: isMuted,
+        renderState: currentRenderState,
+        skipAudio,
         skipAnimations,
       });
+      if (!skipAudio) {
+        store.setCanvasAudioPreviewKey?.({
+          previewKey: canvasAudioPreviewKey,
+        });
+      }
     }
     if (shouldMeasure) {
       canvasPaintDurationMs = getDebugDurationMs(canvasPaintStartedAt);
@@ -1502,7 +1713,7 @@ export const initializeSceneEditorPage = async (deps) => {
   resetAssetLoadCache("initialize scene editor");
   store.setSceneAssetLoading({ isLoading: false });
 
-  const projectData = store.selectProjectData();
+  const projectData = selectProjectDataWithCurrentAudioEffects(deps);
   const previewWidth = projectData?.screen?.width;
   const previewHeight = projectData?.screen?.height;
 
@@ -1532,6 +1743,7 @@ export const initializeSceneEditorPage = async (deps) => {
     width: previewWidth,
     height: previewHeight,
   });
+  store.setCanvasAudioPreviewKey?.({ previewKey: undefined });
 
   await loadAssetsForSceneIds(deps, projectData, initialSceneIds, {
     showLoading: false,
@@ -1565,7 +1777,7 @@ export const restoreSceneEditorFromPreview = async (deps) => {
   resetAssetLoadCache("restore scene editor from preview");
   store.setSceneAssetLoading({ isLoading: false });
 
-  const projectData = store.selectProjectData();
+  const projectData = selectProjectDataWithCurrentAudioEffects(deps);
   const previewWidth = projectData?.screen?.width;
   const previewHeight = projectData?.screen?.height;
   const mountedCanvasRoot = await waitForMountedCanvasRoot(refs);
@@ -1581,6 +1793,7 @@ export const restoreSceneEditorFromPreview = async (deps) => {
     width: previewWidth,
     height: previewHeight,
   });
+  store.setCanvasAudioPreviewKey?.({ previewKey: undefined });
 
   const initialProjectData = createProjectDataWithSelectedEntryPoint(
     projectData,
@@ -1661,7 +1874,7 @@ export const renderSceneEditorCanvas = async (deps, payload) => {
   const lineId = store.selectSelectedLineId();
   const projectDataStartedAt = shouldMeasure ? getDebugNow() : 0;
   const projectData = createProjectDataWithSelectedEntryPoint(
-    store.selectProjectData(),
+    selectProjectDataWithCurrentAudioEffects(deps),
     {
       sceneId,
       sectionId,

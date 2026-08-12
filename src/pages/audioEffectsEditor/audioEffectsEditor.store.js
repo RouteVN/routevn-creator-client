@@ -1013,9 +1013,9 @@ const buildSelectedKeyframePanelData = (state, copy = {}) => {
     : (copy.fadePropertyLabel ?? "Fade");
   const timelineLabel =
     side === "prev"
-      ? (copy.previousLabel ?? "Previous")
+      ? (copy.outgoingLabel ?? "Outgoing")
       : side === "next"
-        ? (copy.nextLabel ?? "Next")
+        ? (copy.incomingLabel ?? "Incoming")
         : (copy.updateType ?? "Update");
   const lockedIncomingEndpoint =
     side === "next" && property === "fade" && finalKeyframe;
@@ -1327,8 +1327,8 @@ export const selectViewData = ({ state, i18n }) => {
     editKeyframeButtonLabel: copy.editKeyframeTitle ?? "Edit Keyframe",
     canRemoveSelectedProperty:
       selectedProperty !== undefined && Object.keys(tween).length > 1,
-    previousTimelineLabel: copy.previousLabel ?? "Previous",
-    nextTimelineLabel: copy.nextLabel ?? "Next",
+    previousTimelineLabel: copy.outgoingLabel ?? "Outgoing",
+    nextTimelineLabel: copy.incomingLabel ?? "Incoming",
     canAddProperty: availableProperties.length > 0,
     addPropertyButton: copy.addPropertyButton ?? "Add Property",
     addKeyframeButton: copy.addKeyframeButton ?? "Add Keyframe",

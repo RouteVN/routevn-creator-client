@@ -59,10 +59,14 @@ export const handleBeforeMount = (deps) => {
 export const handleAfterMount = async (deps) => {
   const { projectService, store, props, render } = deps;
   await projectService.ensureRepository();
-  const { sounds } = projectService.getState();
+  const { sounds, audioEffects } = projectService.getState();
 
-  store.setRepositoryState({ sounds });
+  store.setRepositoryState({ sounds, audioEffects });
   store.setBgm({ bgm: props.bgm });
+  store.setAudioEffectContext({
+    previousBgm: props.previousBgm,
+    hasPreviousBgmContext: props.hasPreviousBgmContext,
+  });
   render();
 };
 

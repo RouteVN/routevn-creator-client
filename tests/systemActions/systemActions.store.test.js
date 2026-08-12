@@ -348,6 +348,39 @@ describe("systemActions.store", () => {
     expect(preview.bgm).toEqual({ name: "Stop BGM" });
   });
 
+  it("preserves authored BGM fields over effective channel state", () => {
+    const state = createInitialState();
+    const audioEffects = {
+      resourceId: "crossfade",
+      playback: { speed: 1.5 },
+    };
+
+    const { actions } = selectActionsData({
+      state,
+      props: {
+        actions: {
+          bgm: {
+            sounds: [{ id: "main", resourceId: "authored" }],
+            volume: 100,
+            audioEffects,
+          },
+        },
+        presentationState: {
+          bgm: {
+            sounds: [{ id: "main", resourceId: "effective" }],
+            volume: 60,
+          },
+        },
+      },
+    });
+
+    expect(actions.bgm).toEqual({
+      sounds: [{ id: "main", resourceId: "authored" }],
+      volume: 100,
+      audioEffects,
+    });
+  });
+
   it("recognizes an empty-object BGM action as an explicit stop", () => {
     const state = createInitialState();
 

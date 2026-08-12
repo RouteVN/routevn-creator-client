@@ -19,7 +19,9 @@ import {
 
 const DEFAULT_CHANNEL_VOLUME = 75;
 const DEFAULT_SOUND_VOLUME = 100;
+const DEFAULT_AUDIO_EFFECT_PLAYBACK_SPEED = 1;
 const LEGACY_SOUND_ID = "default";
+const UNSUPPORTED_AUDIO_EFFECT_TYPE = "unsupported";
 
 const normalizeVolume = (volume, fallback) => {
   const parsedVolume = Number(volume);
@@ -29,6 +31,40 @@ const normalizeVolume = (volume, fallback) => {
 
   const nextVolume = parsedVolume > 100 ? parsedVolume / 10 : parsedVolume;
   return Math.max(0, Math.min(100, Math.round(nextVolume)));
+};
+
+const normalizeAudioEffectPlaybackSpeed = (speed) => {
+  const parsedSpeed = Number(speed);
+  if (!Number.isFinite(parsedSpeed) || parsedSpeed <= 0) {
+    return DEFAULT_AUDIO_EFFECT_PLAYBACK_SPEED;
+  }
+  return parsedSpeed;
+};
+
+const normalizeAudioEffectSelection = (selection) => {
+  if (!selection?.resourceId) {
+    return undefined;
+  }
+
+  const normalizedSelection = {
+    resourceId: selection.resourceId,
+  };
+  if (selection.playback?.speed !== undefined) {
+    normalizedSelection.playback = {
+      speed: normalizeAudioEffectPlaybackSpeed(selection.playback.speed),
+    };
+  }
+  return normalizedSelection;
+};
+
+const normalizeAudioEffects = (audioEffects) => {
+  if (audioEffects?.resourceId) {
+    return normalizeAudioEffectSelection(audioEffects);
+  }
+
+  return normalizeAudioEffectSelection(
+    audioEffects?.incoming ?? audioEffects?.outgoing,
+  );
 };
 
 const normalizeSounds = (sounds = []) => {
@@ -91,11 +127,103 @@ const normalizeBgm = (bgm = {}) => {
     });
   }
 
+  const audioEffects = normalizeAudioEffects(bgm.audioEffects);
+  if (audioEffects) {
+    normalizedBgm.audioEffects = audioEffects;
+  }
+
   sortAudioSoundsByStartDelay(normalizedBgm.sounds);
   return normalizedBgm;
 };
 
-const CHANNEL_FORM = {
+const isSameAudioSourceIdentity = (previousSound, nextSound) => {
+  if (
+    previousSound?.id !== nextSound?.id ||
+    previousSound?.resourceId !== nextSound?.resourceId
+  ) {
+    return false;
+  }
+
+  return ["startAt", "endAt", "startDelayMs"].every((field) => {
+    const fallback = field === "endAt" ? null : 0;
+    return (
+      (previousSound?.[field] ?? fallback) === (nextSound?.[field] ?? fallback)
+    );
+  });
+};
+
+const resolveRequiredAudioEffectType = (state) => {
+  if (!state.hasPreviousBgmContext) {
+    return undefined;
+  }
+
+  const previousSounds = state.previousBgm?.sounds ?? [];
+  const nextSounds = state.bgm.sounds;
+  if (previousSounds.length > 1 || nextSounds.length !== 1) {
+    return UNSUPPORTED_AUDIO_EFFECT_TYPE;
+  }
+  if (previousSounds.length === 0) {
+    return "transition";
+  }
+  if (previousSounds[0].id !== nextSounds[0].id) {
+    return UNSUPPORTED_AUDIO_EFFECT_TYPE;
+  }
+
+  return isSameAudioSourceIdentity(previousSounds[0], nextSounds[0])
+    ? "update"
+    : "transition";
+};
+
+const reconcileAudioEffectSelection = (state) => {
+  const resourceId = state.bgm.audioEffects?.resourceId;
+  const requiredType = resolveRequiredAudioEffectType(state);
+  if (!resourceId || requiredType === undefined) {
+    return;
+  }
+
+  const selectedResource = toFlatItems(state.audioEffectItems).find(
+    (item) => item.id === resourceId,
+  );
+  if (selectedResource && selectedResource.audioEffect?.type !== requiredType) {
+    delete state.bgm.audioEffects;
+  }
+};
+
+const createAudioEffectOptions = ({
+  items,
+  selectedResourceId,
+  requiredType,
+  copy,
+}) => {
+  const options = toFlatItems(items)
+    .filter(
+      (item) =>
+        item.type === "audioEffect" &&
+        (requiredType === undefined || item.audioEffect?.type === requiredType),
+    )
+    .map((item) => ({
+      value: item.id,
+      label: item.name,
+      suffixText: localizeCommandLineText(
+        item.audioEffect?.type === "transition" ? "Transition" : "Update",
+        copy,
+      ),
+    }));
+
+  if (
+    selectedResourceId &&
+    !options.some((option) => option.value === selectedResourceId)
+  ) {
+    options.unshift({
+      value: selectedResourceId,
+      label: `Missing audio effect (${selectedResourceId})`,
+    });
+  }
+
+  return options;
+};
+
+const createChannelForm = ({ audioEffects, items, requiredType, copy }) => ({
   fields: [
     {
       type: "row",
@@ -119,8 +247,41 @@ const CHANNEL_FORM = {
         },
       ],
     },
+    {
+      type: "row",
+      fields: [
+        {
+          name: "audioEffectId",
+          label: "Audio Effect",
+          type: "select",
+          clearable: true,
+          placeholder: "Select audio effect",
+          options: createAudioEffectOptions({
+            items,
+            selectedResourceId: audioEffects?.resourceId,
+            requiredType,
+            copy,
+          }),
+        },
+        {
+          $when: "audioEffectId",
+          name: "audioEffectPlaybackSpeed",
+          label: "Playback Speed",
+          type: "slider-with-input",
+          min: 0.01,
+          max: 4,
+          step: 0.01,
+          required: true,
+        },
+        {
+          $when: "!audioEffectId",
+          type: "slot",
+          slot: "audioEffectPlaybackSpeedSpacer",
+        },
+      ],
+    },
   ],
-};
+});
 
 const SOUND_FORM = {
   fields: [
@@ -168,6 +329,9 @@ const SOUND_FORM = {
 export const createInitialState = () => ({
   mode: "current",
   items: { items: {}, tree: [] },
+  audioEffectItems: { items: {}, tree: [] },
+  previousBgm: undefined,
+  hasPreviousBgmContext: false,
   tempSelectedResourceId: undefined,
   pendingInsertIndex: 0,
   pendingReplacementSoundId: undefined,
@@ -330,17 +494,28 @@ export const selectViewData = ({ state, i18n }) => {
     selectedSound === undefined;
   const hasSelection = channelSelected || selectedSound !== undefined;
   const channelName = localizeCommandLineText("BGM Channel", copy);
-  const form = selectedSound ? SOUND_FORM : CHANNEL_FORM;
+  const channelForm = createChannelForm({
+    audioEffects: state.bgm.audioEffects,
+    items: state.audioEffectItems,
+    requiredType: resolveRequiredAudioEffectType(state),
+    copy,
+  });
+  const form = selectedSound ? SOUND_FORM : channelForm;
+  const channelDefaultValues = {
+    interruption: state.bgm.interruption,
+    volume: state.bgm.volume,
+    audioEffectId: state.bgm.audioEffects?.resourceId,
+    audioEffectPlaybackSpeed: normalizeAudioEffectPlaybackSpeed(
+      state.bgm.audioEffects?.playback?.speed,
+    ),
+  };
   const defaultValues = selectedSound
     ? {
         startDelayMs: selectedSound.startDelayMs,
         loop: selectedSound.loop,
         volume: selectedSound.volume,
       }
-    : {
-        interruption: state.bgm.interruption,
-        volume: state.bgm.volume,
-      };
+    : channelDefaultValues;
 
   return {
     mode: state.mode,
@@ -375,11 +550,11 @@ export const selectViewData = ({ state, i18n }) => {
         : "none",
     form: localizeCommandLineForm(form, copy),
     defaultValues,
-    channelForm: localizeCommandLineForm(CHANNEL_FORM, copy),
-    channelDefaultValues: {
-      interruption: state.bgm.interruption,
-      volume: state.bgm.volume,
-    },
+    channelFormKey: state.bgm.audioEffects?.resourceId
+      ? "channel-with-audio-effect"
+      : "channel-without-audio-effect",
+    channelForm: localizeCommandLineForm(channelForm, copy),
+    channelDefaultValues,
     tempSelectedResourceId: state.tempSelectedResourceId,
     searchQuery: state.searchQuery,
     searchPlaceholder: localizeCommandLineText("Search...", copy),
@@ -394,6 +569,7 @@ export const selectViewData = ({ state, i18n }) => {
 
 export const setBgm = ({ state }, { bgm } = {}) => {
   state.bgm = normalizeBgm(bgm);
+  reconcileAudioEffectSelection(state);
   state.channelSelected = false;
   state.isChannelEditorOpen = false;
   state.selectedSoundId = undefined;
@@ -417,8 +593,22 @@ export const setMode = ({ state }, { mode } = {}) => {
   state.mode = mode;
 };
 
-export const setRepositoryState = ({ state }, { sounds } = {}) => {
-  state.items = sounds;
+export const setRepositoryState = (
+  { state },
+  { sounds, audioEffects } = {},
+) => {
+  state.items = sounds ?? { items: {}, tree: [] };
+  state.audioEffectItems = audioEffects ?? { items: {}, tree: [] };
+  reconcileAudioEffectSelection(state);
+};
+
+export const setAudioEffectContext = (
+  { state },
+  { previousBgm, hasPreviousBgmContext } = {},
+) => {
+  state.previousBgm = previousBgm ? normalizeBgm(previousBgm) : undefined;
+  state.hasPreviousBgmContext = hasPreviousBgmContext === true;
+  reconcileAudioEffectSelection(state);
 };
 
 export const clearSelectedSound = ({ state }, _payload = {}) => {
@@ -458,6 +648,30 @@ export const updateChannel = ({ state }, { values = {} } = {}) => {
   if (values.volume !== undefined) {
     state.bgm.volume = normalizeVolume(values.volume, DEFAULT_CHANNEL_VOLUME);
   }
+
+  const resourceChanged = Object.hasOwn(values, "audioEffectId");
+  const speedChanged = Object.hasOwn(values, "audioEffectPlaybackSpeed");
+  if (!resourceChanged && !speedChanged) {
+    return;
+  }
+
+  const resourceId = resourceChanged
+    ? values.audioEffectId
+    : state.bgm.audioEffects?.resourceId;
+  if (!resourceId) {
+    delete state.bgm.audioEffects;
+    return;
+  }
+
+  const speed = speedChanged
+    ? values.audioEffectPlaybackSpeed
+    : state.bgm.audioEffects?.playback?.speed;
+  state.bgm.audioEffects = {
+    resourceId,
+    playback: {
+      speed: normalizeAudioEffectPlaybackSpeed(speed),
+    },
+  };
 };
 
 export const updateSound = ({ state }, { soundId, values = {} } = {}) => {
@@ -476,6 +690,7 @@ export const updateSound = ({ state }, { soundId, values = {} } = {}) => {
   if (values.startDelayMs !== undefined) {
     sound.startDelayMs = normalizeAudioStartDelayMs(values.startDelayMs);
     sortAudioSoundsByStartDelay(state.bgm.sounds);
+    reconcileAudioEffectSelection(state);
   }
 };
 
@@ -488,6 +703,7 @@ export const connectSoundToPrevious = ({ state }, { soundId } = {}) => {
     soundId,
     resourceById,
   });
+  reconcileAudioEffectSelection(state);
 };
 
 export const startSoundDrag = (
@@ -546,6 +762,7 @@ export const finishSoundDrag = (
   }
 
   sortAudioSoundsByStartDelay(state.bgm.sounds);
+  reconcileAudioEffectSelection(state);
   state.soundDrag = undefined;
   state.suppressChannelClickUntil = suppressChannelClickUntil ?? 0;
 };
@@ -581,6 +798,7 @@ export const insertSound = (
   state.channelSelected = false;
   state.selectedSoundId = sound.id;
   state.tempSelectedResourceId = undefined;
+  reconcileAudioEffectSelection(state);
 };
 
 export const removeSound = ({ state }, { soundId } = {}) => {
@@ -588,6 +806,7 @@ export const removeSound = ({ state }, { soundId } = {}) => {
   syncBgmChannelLoop(state.bgm);
   state.channelSelected = !state.isChannelEditorOpen;
   state.selectedSoundId = undefined;
+  reconcileAudioEffectSelection(state);
 };
 
 export const replaceSoundResource = (
@@ -605,6 +824,7 @@ export const replaceSoundResource = (
   state.tempSelectedResourceId = undefined;
   state.pendingReplacementSoundId = undefined;
   closeAudioPlayer({ state });
+  reconcileAudioEffectSelection(state);
 };
 
 export const setPendingInsertIndex = ({ state }, { index } = {}) => {

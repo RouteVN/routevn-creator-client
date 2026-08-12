@@ -54,6 +54,42 @@ const sounds = {
   ],
 };
 
+const audioEffects = {
+  items: {
+    crossfade: {
+      id: "crossfade",
+      type: "audioEffect",
+      name: "Crossfade",
+      audioEffect: {
+        type: "transition",
+        prev: { fade: { keyframes: [{ value: 0, duration: 600 }] } },
+        next: { fade: { keyframes: [{ value: 100, duration: 900 }] } },
+      },
+    },
+    "fade-in": {
+      id: "fade-in",
+      type: "audioEffect",
+      name: "Fade In",
+      audioEffect: {
+        type: "transition",
+        next: { fade: { keyframes: [{ value: 100, duration: 500 }] } },
+      },
+    },
+    "smooth-volume": {
+      id: "smooth-volume",
+      type: "audioEffect",
+      name: "Smooth Volume",
+      audioEffect: {
+        type: "update",
+        tween: {
+          volume: { keyframes: [{ value: 50, duration: 500 }] },
+        },
+      },
+    },
+  },
+  tree: [{ id: "crossfade" }, { id: "fade-in" }, { id: "smooth-volume" }],
+};
+
 const i18n = {
   resourcePages: {},
   sceneEditorPage: {},
@@ -104,11 +140,32 @@ describe("commandLineBgm.store", () => {
           { name: "volume", type: "slider-with-input" },
         ],
       },
+      {
+        type: "row",
+        fields: [
+          { name: "audioEffectId", type: "select" },
+          {
+            $when: "audioEffectId",
+            name: "audioEffectPlaybackSpeed",
+            type: "slider-with-input",
+          },
+          {
+            $when: "!audioEffectId",
+            type: "slot",
+            slot: "audioEffectPlaybackSpeedSpacer",
+          },
+        ],
+      },
     ]);
     expect(selectedViewData.defaultValues).toEqual({
       interruption: "immediate",
       volume: 75,
+      audioEffectId: undefined,
+      audioEffectPlaybackSpeed: 1,
     });
+    expect(selectedViewData.channelFormKey).toBe(
+      "channel-without-audio-effect",
+    );
     expect(selectedViewData.channelForm.fields).toMatchObject([
       {
         type: "row",
@@ -117,8 +174,284 @@ describe("commandLineBgm.store", () => {
           { name: "volume", type: "slider-with-input" },
         ],
       },
+      {
+        type: "row",
+        fields: [
+          { name: "audioEffectId", type: "select" },
+          {
+            $when: "audioEffectId",
+            name: "audioEffectPlaybackSpeed",
+            type: "slider-with-input",
+          },
+          {
+            $when: "!audioEffectId",
+            type: "slot",
+            slot: "audioEffectPlaybackSpeedSpacer",
+          },
+        ],
+      },
     ]);
     expect(selectedViewData.editChannelLabel).toBe("Edit Channel");
+  });
+
+  it("lists Audio Effects in a single resource select", () => {
+    const state = createInitialState();
+    setRepositoryState({ state }, { sounds, audioEffects });
+
+    const viewData = selectViewData({ state, i18n });
+    const audioEffectField = viewData.channelForm.fields[1].fields[0];
+
+    expect(audioEffectField).toMatchObject({
+      name: "audioEffectId",
+      label: "Audio Effect",
+      type: "select",
+      placeholder: "Select audio effect",
+    });
+    expect(audioEffectField.options).toEqual([
+      {
+        value: "crossfade",
+        label: "Crossfade",
+        suffixText: "Transition",
+      },
+      { value: "fade-in", label: "Fade In", suffixText: "Transition" },
+      {
+        value: "smooth-volume",
+        label: "Smooth Volume",
+        suffixText: "Update",
+      },
+    ]);
+    expect(viewData.channelForm.fields[1].fields[1]).toMatchObject({
+      $when: "audioEffectId",
+      name: "audioEffectPlaybackSpeed",
+      type: "slider-with-input",
+      min: 0.01,
+      max: 4,
+      step: 0.01,
+    });
+    expect(viewData.channelForm.fields[1].fields[2]).toEqual({
+      $when: "!audioEffectId",
+      type: "slot",
+      slot: "audioEffectPlaybackSpeedSpacer",
+    });
+  });
+
+  it("offers transition effects when BGM starts or changes source", () => {
+    const state = createInitialState();
+    setRepositoryState({ state }, { sounds, audioEffects });
+    setBgm(
+      { state },
+      {
+        bgm: {
+          sounds: [{ id: "main", resourceId: "theme" }],
+        },
+      },
+    );
+    bgmStore.setAudioEffectContext(
+      { state },
+      {
+        previousBgm: {
+          sounds: [{ id: "main", resourceId: "intro" }],
+        },
+        hasPreviousBgmContext: true,
+      },
+    );
+
+    const audioEffectField = selectViewData({ state, i18n }).channelForm
+      .fields[1].fields[0];
+    expect(audioEffectField.options.map((option) => option.value)).toEqual([
+      "crossfade",
+      "fade-in",
+    ]);
+  });
+
+  it("does not offer Audio Effects when the BGM sound id changes", () => {
+    const state = createInitialState();
+    setRepositoryState({ state }, { sounds, audioEffects });
+    setBgm(
+      { state },
+      {
+        bgm: {
+          sounds: [{ id: "replacement", resourceId: "theme" }],
+          audioEffects: { resourceId: "crossfade" },
+        },
+      },
+    );
+    bgmStore.setAudioEffectContext(
+      { state },
+      {
+        previousBgm: {
+          sounds: [{ id: "main", resourceId: "intro" }],
+        },
+        hasPreviousBgmContext: true,
+      },
+    );
+
+    const audioEffectField = selectViewData({ state, i18n }).channelForm
+      .fields[1].fields[0];
+    expect(audioEffectField.options).toEqual([]);
+    expect(selectBgm({ state }).audioEffects).toBeUndefined();
+  });
+
+  it("offers update effects only when the same BGM sound is retained", () => {
+    const state = createInitialState();
+    setRepositoryState({ state }, { sounds, audioEffects });
+    setBgm(
+      { state },
+      {
+        bgm: {
+          sounds: [{ id: "main", resourceId: "theme" }],
+        },
+      },
+    );
+    bgmStore.setAudioEffectContext(
+      { state },
+      {
+        previousBgm: {
+          sounds: [{ id: "main", resourceId: "theme" }],
+        },
+        hasPreviousBgmContext: true,
+      },
+    );
+
+    const audioEffectField = selectViewData({ state, i18n }).channelForm
+      .fields[1].fields[0];
+    expect(audioEffectField.options).toEqual([
+      {
+        value: "smooth-volume",
+        label: "Smooth Volume",
+        suffixText: "Update",
+      },
+    ]);
+  });
+
+  it("clears an incompatible loaded Audio Effect from the draft", () => {
+    const state = createInitialState();
+    setRepositoryState({ state }, { sounds, audioEffects });
+    setBgm(
+      { state },
+      {
+        bgm: {
+          sounds: [{ id: "main", resourceId: "theme" }],
+          audioEffects: { resourceId: "smooth-volume" },
+        },
+      },
+    );
+    bgmStore.setAudioEffectContext(
+      { state },
+      {
+        previousBgm: undefined,
+        hasPreviousBgmContext: true,
+      },
+    );
+
+    expect(selectBgm({ state }).audioEffects).toBeUndefined();
+  });
+
+  it("persists and clears the selected Audio Effect", () => {
+    const state = createInitialState();
+    setRepositoryState({ state }, { sounds, audioEffects });
+
+    bgmStore.updateChannel(
+      { state },
+      {
+        values: {
+          audioEffectId: "crossfade",
+          audioEffectPlaybackSpeed: 1.5,
+        },
+      },
+    );
+
+    expect(selectBgm({ state }).audioEffects).toEqual({
+      resourceId: "crossfade",
+      playback: { speed: 1.5 },
+    });
+    expect(selectViewData({ state, i18n }).channelDefaultValues).toMatchObject({
+      audioEffectId: "crossfade",
+      audioEffectPlaybackSpeed: 1.5,
+    });
+    expect(selectViewData({ state, i18n }).channelFormKey).toBe(
+      "channel-with-audio-effect",
+    );
+
+    bgmStore.updateChannel({ state }, { values: { audioEffectId: undefined } });
+    expect(selectBgm({ state }).audioEffects).toBeUndefined();
+  });
+
+  it("defaults a newly selected Audio Effect to 1x playback speed", () => {
+    const state = createInitialState();
+    setRepositoryState({ state }, { sounds, audioEffects });
+
+    bgmStore.updateChannel(
+      { state },
+      { values: { audioEffectId: "smooth-volume" } },
+    );
+
+    expect(selectBgm({ state }).audioEffects).toEqual({
+      resourceId: "smooth-volume",
+      playback: { speed: 1 },
+    });
+    expect(
+      selectViewData({ state, i18n }).channelDefaultValues
+        .audioEffectPlaybackSpeed,
+    ).toBe(1);
+  });
+
+  it("loads the selected Audio Effect and playback speed", () => {
+    const state = createInitialState();
+    setRepositoryState({ state }, { sounds, audioEffects });
+    setBgm(
+      { state },
+      {
+        bgm: {
+          sounds: [{ id: "intro-clip", resourceId: "intro" }],
+          audioEffects: {
+            resourceId: "crossfade",
+            playback: { speed: 2 },
+          },
+        },
+      },
+    );
+
+    expect(selectViewData({ state, i18n }).channelDefaultValues).toMatchObject({
+      audioEffectId: "crossfade",
+      audioEffectPlaybackSpeed: 2,
+    });
+    expect(selectBgm({ state }).audioEffects).toEqual({
+      resourceId: "crossfade",
+      playback: { speed: 2 },
+    });
+  });
+
+  it("preserves an Audio Effect when unrelated channel fields change", () => {
+    const state = createInitialState();
+    setRepositoryState({ state }, { sounds, audioEffects });
+    setBgm(
+      { state },
+      {
+        bgm: {
+          sounds: [{ id: "intro-clip", resourceId: "intro" }],
+          audioEffects: { resourceId: "smooth-volume" },
+        },
+      },
+    );
+
+    bgmStore.updateChannel(
+      { state },
+      {
+        values: {
+          interruption: "loopEnd",
+          volume: 60,
+        },
+      },
+    );
+
+    expect(selectBgm({ state }).audioEffects).toEqual({
+      resourceId: "smooth-volume",
+    });
+    expect(selectViewData({ state, i18n }).channelDefaultValues).toMatchObject({
+      audioEffectId: "smooth-volume",
+      audioEffectPlaybackSpeed: 1,
+    });
   });
 
   it("edits sounds in the channel editor without submitting the draft", () => {

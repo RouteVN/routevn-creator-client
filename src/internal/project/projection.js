@@ -899,7 +899,7 @@ const constructAnimationResources = (
   );
 };
 
-const constructAudioEffectResources = (repositoryAudioEffects = {}) => {
+export const constructAudioEffectResources = (repositoryAudioEffects = {}) => {
   return Object.entries(repositoryAudioEffects).reduce(
     (result, [audioEffectId, item]) => {
       if (item?.type !== "audioEffect" || !item.audioEffect) {

@@ -1155,6 +1155,232 @@ describe("graphicsService", () => {
     expect(selectRenderState).toHaveBeenCalledTimes(2);
   });
 
+  it("waits for an audio-effect target before rendering a static engine state", async () => {
+    const bgmBuffer = new ArrayBuffer(8);
+    const decodedAudioKeys = new Set();
+    let resolveAudioLoad;
+    const bufferManager = {
+      has: vi.fn(() => true),
+      load: vi.fn(async () => {}),
+      getBufferMap: vi.fn(() => ({
+        "effect-bgm": {
+          buffer: bgmBuffer,
+          type: "audio/mpeg",
+        },
+      })),
+      clear: vi.fn(),
+    };
+    createAssetBufferManagerMock.mockReturnValue(bufferManager);
+    audioAssetApi.getAsset = vi.fn((key) =>
+      decodedAudioKeys.has(key) ? { key } : undefined,
+    );
+    audioAssetApi.load = vi.fn(
+      (key) =>
+        new Promise((resolve) => {
+          resolveAudioLoad = () => {
+            decodedAudioKeys.add(key);
+            resolve({ key });
+          };
+        }),
+    );
+
+    const renderState = {
+      id: "render-audio-effect",
+      elements: [{ id: "story", type: "container", children: [] }],
+      audio: [
+        {
+          id: "channel:bgm",
+          type: "audio-channel",
+          volume: 100,
+          children: [
+            {
+              id: "bgm:sound-1",
+              type: "sound",
+              src: "effect-bgm",
+              loop: true,
+            },
+          ],
+        },
+      ],
+      audioEffects: [
+        {
+          id: "effect-1",
+          type: "audio-transition",
+          targetId: "bgm:sound-1",
+          properties: {},
+        },
+      ],
+      animations: [],
+    };
+    createRouteEngineMock.mockReturnValue({
+      init: vi.fn(),
+      selectRenderState: vi.fn(() => renderState),
+      selectPresentationState: vi.fn(() => undefined),
+      selectPresentationChanges: vi.fn(() => undefined),
+      selectSectionLineChanges: vi.fn(() => []),
+      handleActions: vi.fn(),
+    });
+
+    const { createGraphicsService } = await import(
+      "../../src/deps/services/graphicsService.js"
+    );
+    const service = await createGraphicsService({
+      subject: {
+        dispatch: vi.fn(),
+      },
+    });
+
+    await service.init({
+      canvas: {
+        children: [],
+        appendChild: vi.fn(),
+        removeChild: vi.fn(),
+      },
+      width: 1920,
+      height: 1080,
+    });
+    service.initRouteEngine({
+      screen: { width: 1920, height: 1080 },
+      story: { scenes: {} },
+      resources: {},
+    });
+    routeGraphicsInstance.render.mockClear();
+
+    service.engineRenderCurrentState();
+
+    await vi.waitFor(() => {
+      expect(audioAssetApi.load).toHaveBeenCalledWith("effect-bgm", bgmBuffer);
+    });
+    expect(routeGraphicsInstance.render).not.toHaveBeenCalled();
+
+    resolveAudioLoad();
+
+    await vi.waitFor(() => {
+      expect(routeGraphicsInstance.render).toHaveBeenCalledWith(renderState);
+    });
+  });
+
+  it("removes effects whose audio target cannot be decoded", async () => {
+    const renderState = {
+      id: "render-missing-audio-effect-target",
+      elements: [],
+      audio: [
+        {
+          id: "bgm:sound-1",
+          type: "sound",
+          src: "missing-effect-bgm",
+        },
+      ],
+      audioEffects: [
+        {
+          id: "effect-1",
+          type: "audio-transition",
+          targetId: "bgm:sound-1",
+          properties: {},
+        },
+      ],
+      animations: [],
+    };
+    createRouteEngineMock.mockReturnValue({
+      init: vi.fn(),
+      selectRenderState: vi.fn(() => renderState),
+      selectPresentationState: vi.fn(() => undefined),
+      selectPresentationChanges: vi.fn(() => undefined),
+      selectSectionLineChanges: vi.fn(() => []),
+      handleActions: vi.fn(),
+    });
+
+    const { createGraphicsService } = await import(
+      "../../src/deps/services/graphicsService.js"
+    );
+    const service = await createGraphicsService({
+      subject: { dispatch: vi.fn() },
+    });
+    await service.init({
+      canvas: {
+        children: [],
+        appendChild: vi.fn(),
+        removeChild: vi.fn(),
+      },
+      width: 1920,
+      height: 1080,
+    });
+    service.initRouteEngine({
+      screen: { width: 1920, height: 1080 },
+      story: { scenes: {} },
+      resources: {},
+    });
+    routeGraphicsInstance.render.mockClear();
+
+    service.engineRenderCurrentState();
+
+    expect(routeGraphicsInstance.render).toHaveBeenCalledWith({
+      ...renderState,
+      audio: [],
+      audioEffects: [],
+    });
+  });
+
+  it("preserves an outgoing effect whose target belongs to the previous state", async () => {
+    const renderState = {
+      id: "render-outgoing-audio-effect",
+      elements: [],
+      audio: [
+        {
+          id: "bgm:incoming",
+          type: "sound",
+          src: "missing-incoming-bgm",
+        },
+      ],
+      audioEffects: [
+        {
+          id: "effect-1",
+          type: "audio-transition",
+          targetId: "bgm:outgoing",
+          properties: {},
+        },
+      ],
+      animations: [],
+    };
+    createRouteEngineMock.mockReturnValue({
+      init: vi.fn(),
+      selectRenderState: vi.fn(() => renderState),
+      selectPresentationState: vi.fn(() => undefined),
+      selectPresentationChanges: vi.fn(() => undefined),
+      selectSectionLineChanges: vi.fn(() => []),
+      handleActions: vi.fn(),
+    });
+
+    const { createGraphicsService } = await import(
+      "../../src/deps/services/graphicsService.js"
+    );
+    const service = await createGraphicsService({
+      subject: { dispatch: vi.fn() },
+    });
+    await service.init({
+      canvas: {
+        children: [],
+        appendChild: vi.fn(),
+        removeChild: vi.fn(),
+      },
+      width: 1920,
+      height: 1080,
+    });
+    service.initRouteEngine({
+      screen: { width: 1920, height: 1080 },
+      story: { scenes: {} },
+      resources: {},
+    });
+    routeGraphicsInstance.render.mockClear();
+
+    service.engineRenderCurrentState();
+
+    expect(routeGraphicsInstance.render).toHaveBeenCalledWith({
+      ...renderState,
+      audio: [],
+    });
+  });
+
   it("does not render a stale deferred state when newer audio is not yet decodable", async () => {
     const firstBgmBuffer = new ArrayBuffer(8);
     const decodedAudioKeys = new Set();
@@ -1863,6 +2089,7 @@ describe("graphicsService", () => {
     });
 
     const onRenderState = vi.fn();
+    const onSuppressedRenderState = vi.fn();
     service.initRouteEngine(
       {
         screen: { width: 1920, height: 1080 },
@@ -1871,12 +2098,22 @@ describe("graphicsService", () => {
       },
       {
         onRenderState,
+        onSuppressedRenderState,
         suppressRenderEffects: true,
       },
     );
 
     expect(routeGraphicsInstance.render).not.toHaveBeenCalled();
     expect(onRenderState).not.toHaveBeenCalled();
+    expect(onSuppressedRenderState).toHaveBeenCalledWith({
+      renderState: {
+        id: "initialization-render",
+        elements: [],
+        audio: [],
+        animations: [],
+      },
+      systemState,
+    });
 
     service.engineHandleActions({ nextLine: true });
 
@@ -1896,6 +2133,71 @@ describe("graphicsService", () => {
       },
       systemState,
     });
+  });
+
+  it("renders a supplied engine state instead of the settled state", async () => {
+    const settledRenderState = {
+      id: "settled-render",
+      elements: [],
+      audio: [],
+      animations: [],
+    };
+    const transitionRenderState = {
+      id: "transition-render",
+      elements: [],
+      audio: [],
+      audioEffects: [
+        {
+          id: "fade-in",
+          type: "audio-transition",
+          targetId: "bgm:main",
+        },
+      ],
+      animations: [],
+    };
+    const selectRenderState = vi.fn(() => settledRenderState);
+    createRouteEngineMock.mockReturnValue({
+      init: vi.fn(),
+      selectRenderState,
+      selectPresentationState: vi.fn(() => undefined),
+      selectPresentationChanges: vi.fn(() => undefined),
+      selectSectionLineChanges: vi.fn(() => []),
+      handleActions: vi.fn(),
+    });
+
+    const { createGraphicsService } = await import(
+      "../../src/deps/services/graphicsService.js"
+    );
+    const service = await createGraphicsService({
+      subject: {
+        dispatch: vi.fn(),
+      },
+    });
+
+    await service.init({
+      canvas: {
+        children: [],
+        appendChild: vi.fn(),
+        removeChild: vi.fn(),
+      },
+      width: 1920,
+      height: 1080,
+    });
+    service.initRouteEngine({
+      screen: { width: 1920, height: 1080 },
+      story: { scenes: {} },
+      resources: {},
+    });
+    routeGraphicsInstance.render.mockClear();
+
+    service.engineRenderCurrentState({
+      renderState: transitionRenderState,
+    });
+
+    expect(selectRenderState).not.toHaveBeenCalled();
+    expect(routeGraphicsInstance.render).toHaveBeenCalledWith(
+      transitionRenderState,
+    );
   });
 
   it("ignores delayed render effects from a replaced engine", async () => {

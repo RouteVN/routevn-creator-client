@@ -29,16 +29,16 @@ const assetItems = [
 
 const animatedAssetItems = [
   {
-    id: "audioEffects",
-    label: "Audio Effects",
-    path: "/project/audio-effects",
-    icon: "audio",
-  },
-  {
     id: "animations",
     label: "Animations",
     path: "/project/animations",
     icon: "animation",
+  },
+  {
+    id: "audioEffects",
+    label: "Audio Effects",
+    path: "/project/audio-effects",
+    icon: "audio",
   },
   {
     id: "particles",

@@ -265,7 +265,7 @@ template:
                     $elif mode == "screen":
                       - rvn-command-line-screen#commandLineScreen :screen=${actions.screen}: null
                     $elif mode == "bgm":
-                      - rvn-command-line-bgm#commandLineBgm :bgm=${actions.bgm}: null
+                      - rvn-command-line-bgm#commandLineBgm :bgm=${actions.bgm} :previousBgm=${previousPresentationState.bgm} :hasPreviousBgmContext=${hasPreviousPresentationStateContext}: null
                     $elif mode == "voice":
                       - rvn-command-line-voice#commandLineVoice :voice=${actions.voice} currentSceneId=${currentSceneId}: null
                     $elif mode == "sfx":

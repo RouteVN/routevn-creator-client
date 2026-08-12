@@ -16,14 +16,14 @@ describe("resource type navigation", () => {
     const desktopViewData = selectDesktopResourceTypesViewData({ props });
     const mobileViewData = selectMobileResourceTypesViewData({ props });
     expect(desktopViewData.items.map((item) => item.id)).toEqual([
-      "audioEffects",
       "animations",
+      "audioEffects",
       "particles",
       "spritesheets",
     ]);
     expect(mobileViewData.items.map((item) => item.id)).toEqual([
-      "audioEffects",
       "animations",
+      "audioEffects",
       "particles",
       "spritesheets",
     ]);
@@ -36,8 +36,8 @@ describe("resource type navigation", () => {
       (section) => section.id === "animated-assets",
     );
     expect(animatedSection.items.map((item) => item.id)).toEqual([
-      "audioEffects",
       "animations",
+      "audioEffects",
       "particles",
       "spritesheets",
     ]);

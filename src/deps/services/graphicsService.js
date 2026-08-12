@@ -852,6 +852,7 @@ export const createGraphicsService = async ({
   const splitRenderableAudio = (audioElements = []) => {
     const renderableAudio = [];
     const missingAudioKeys = [];
+    const missingAudioElementIds = [];
 
     audioElements.forEach((audioElement) => {
       const key = audioElement?.src;
@@ -862,12 +863,16 @@ export const createGraphicsService = async ({
         }
 
         missingAudioKeys.push(key);
+        if (typeof audioElement.id === "string" && audioElement.id) {
+          missingAudioElementIds.push(audioElement.id);
+        }
         return;
       }
 
       if (Array.isArray(audioElement?.children)) {
         const splitChildren = splitRenderableAudio(audioElement.children);
         missingAudioKeys.push(...splitChildren.missingAudioKeys);
+        missingAudioElementIds.push(...splitChildren.missingAudioElementIds);
         renderableAudio.push(
           splitChildren.missingAudioKeys.length > 0
             ? {
@@ -885,15 +890,50 @@ export const createGraphicsService = async ({
     return {
       renderableAudio,
       missingAudioKeys: Array.from(new Set(missingAudioKeys)),
+      missingAudioElementIds: Array.from(new Set(missingAudioElementIds)),
     };
   };
 
+  const filterAvailableAudioEffects = (renderState, unavailableTargetIds) => {
+    if (!Array.isArray(renderState?.audioEffects)) {
+      return renderState?.audioEffects;
+    }
+
+    const unavailableTargetIdSet = new Set(unavailableTargetIds);
+    return renderState.audioEffects.filter(
+      (audioEffect) => !unavailableTargetIdSet.has(audioEffect?.targetId),
+    );
+  };
+
+  const hasUnavailableAudioEffectTarget = (
+    renderState,
+    unavailableTargetIds,
+  ) => {
+    if (!Array.isArray(renderState?.audioEffects)) {
+      return false;
+    }
+
+    return (
+      filterAvailableAudioEffects(renderState, unavailableTargetIds).length !==
+      renderState.audioEffects.length
+    );
+  };
+
   const createAudioFallbackRenderState = (renderState) => {
-    const { renderableAudio } = splitRenderableAudio(renderState?.audio);
-    return {
+    const { renderableAudio, missingAudioElementIds } = splitRenderableAudio(
+      renderState?.audio,
+    );
+    const fallbackRenderState = {
       ...renderState,
       audio: renderableAudio,
     };
+    if (Array.isArray(renderState?.audioEffects)) {
+      fallbackRenderState.audioEffects = filterAvailableAudioEffects(
+        renderState,
+        missingAudioElementIds,
+      );
+    }
+    return fallbackRenderState;
   };
 
   const pruneDecodedAudioCache = async (retainedAudioKeys = []) => {
@@ -1856,7 +1896,7 @@ export const createGraphicsService = async ({
     const requestedAudioKeys = getRenderStateAudioKeys(nextRenderState);
     let retainedAudioKeys = requestedAudioKeys;
     let missingAudioKeys = [];
-    let deferredAnimatedRenderState;
+    let deferredFullRenderState;
 
     if (allowDeferredAudio && !effectiveSkipAudio) {
       const splitAudio = splitRenderableAudio(nextRenderState.audio);
@@ -1868,30 +1908,38 @@ export const createGraphicsService = async ({
           splitAudio.missingAudioKeys,
         );
         if (
-          (nextRenderState.animations?.length ?? 0) > 0 &&
+          ((nextRenderState.animations?.length ?? 0) > 0 ||
+            hasUnavailableAudioEffectTarget(
+              nextRenderState,
+              splitAudio.missingAudioElementIds,
+            )) &&
           decodableMissingAudioKeys.length ===
             splitAudio.missingAudioKeys.length
         ) {
-          deferredAnimatedRenderState = nextRenderState;
+          deferredFullRenderState = nextRenderState;
         }
-        nextRenderState = {
+        const audioFallbackRenderState = {
           ...nextRenderState,
           audio: renderableAudio,
         };
+        if (Array.isArray(nextRenderState.audioEffects)) {
+          audioFallbackRenderState.audioEffects = filterAvailableAudioEffects(
+            nextRenderState,
+            splitAudio.missingAudioElementIds,
+          );
+        }
+        nextRenderState = audioFallbackRenderState;
         retainedAudioKeys = getRenderStateAudioKeys(nextRenderState);
       }
 
       if (missingAudioKeys.length > 0) {
-        scheduleDeferredAudioRender(
-          missingAudioKeys,
-          deferredAnimatedRenderState,
-        );
+        scheduleDeferredAudioRender(missingAudioKeys, deferredFullRenderState);
       } else {
         invalidateDeferredAudioRender();
       }
     }
 
-    if (deferredAnimatedRenderState) {
+    if (deferredFullRenderState) {
       return;
     }
 
@@ -2214,6 +2262,10 @@ export const createGraphicsService = async ({
         typeof options.onRenderState === "function"
           ? options.onRenderState
           : undefined;
+      const onSuppressedRenderState =
+        typeof options.onSuppressedRenderState === "function"
+          ? options.onSuppressedRenderState
+          : undefined;
       const initialGlobal = options.initialGlobal ?? {};
       const namespace =
         typeof options.namespace === "string" && options.namespace.length > 0
@@ -2230,10 +2282,14 @@ export const createGraphicsService = async ({
         getEngine: () => routeEngine,
         routeGraphics: {
           render: (renderState) => {
-            if (
-              currentEngineGeneration !== engineGeneration ||
-              suppressedEngineRenderEffects > 0
-            ) {
+            if (currentEngineGeneration !== engineGeneration) {
+              return;
+            }
+            if (suppressedEngineRenderEffects > 0) {
+              onSuppressedRenderState?.({
+                renderState,
+                systemState: routeEngine?.selectSystemState?.(),
+              });
               return;
             }
             renderEngineState(renderState);
@@ -2316,10 +2372,11 @@ export const createGraphicsService = async ({
       }
       const {
         preserveAnimationPlayback = false,
+        renderState: requestedRenderState,
         skipAudio = false,
         skipAnimations = false,
       } = options;
-      let renderState = engine.selectRenderState();
+      let renderState = requestedRenderState ?? engine.selectRenderState();
       const loopingAnimations = skipAnimations
         ? selectLoopingUpdateAnimations(renderState?.animations)
         : [];

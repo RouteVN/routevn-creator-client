@@ -28,14 +28,14 @@ const assetItems = [
 
 const animatedAssetItems = [
   {
-    id: "audioEffects",
-    name: "Audio Effects",
-    path: "/project/audio-effects",
-  },
-  {
     id: "animations",
     name: "Animations",
     path: "/project/animations",
+  },
+  {
+    id: "audioEffects",
+    name: "Audio Effects",
+    path: "/project/audio-effects",
   },
   {
     id: "particles",

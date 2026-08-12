@@ -179,6 +179,20 @@ const getSectionLinePresentationState = (state, lineId) => {
   return toPlainObject(selectedLineEntry.presentationState);
 };
 
+const getPreviousSectionLinePresentationState = (state, lineId) => {
+  const sectionLineChanges = getSectionLineChangesForSection(
+    state,
+    state.selectedSectionId,
+  );
+  const lines = sectionLineChanges?.lines ?? [];
+  const selectedLineIndex = lines.findIndex((line) => line.id === lineId);
+  if (selectedLineIndex <= 0) {
+    return {};
+  }
+
+  return toPlainObject(lines[selectedLineIndex - 1].presentationState);
+};
+
 const collectActionTargetSectionIds = (actions) => {
   const sectionIds = new Set();
 
@@ -632,6 +646,7 @@ export const createInitialState = () => ({
   },
   sceneId: undefined,
   selectedLineId: undefined,
+  canvasAudioPreviewKey: undefined,
   sectionsGraphView: false,
   selectedSectionId: "1",
   sectionsOverviewPanel: {
@@ -1322,6 +1337,18 @@ export const selectSelectedLineId = ({ state }) => {
   return state.selectedLineId;
 };
 
+export const selectPreviousPresentationState = ({ state }) => {
+  return getPreviousSectionLinePresentationState(state, state.selectedLineId);
+};
+
+export const selectCanvasAudioPreviewKey = ({ state }) => {
+  return state.canvasAudioPreviewKey;
+};
+
+export const setCanvasAudioPreviewKey = ({ state }, { previewKey } = {}) => {
+  state.canvasAudioPreviewKey = previewKey;
+};
+
 export const setSelectedLineId = ({ state }, { selectedLineId } = {}) => {
   const selectionChanged = state.selectedLineId !== selectedLineId;
   const syncedPresentationState = getSectionLinePresentationState(
@@ -1839,6 +1866,10 @@ export const selectViewData = ({ state, i18n }) => {
       currentLine: null,
       actionsData: [],
       presentationState: selectEffectivePresentationState({ state }),
+      previousPresentationState: getPreviousSectionLinePresentationState(
+        state,
+        state.selectedLineId,
+      ),
       dropdownMenu: localizeDropdownMenu(state.dropdownMenu, copy),
       popover: state.popover,
       selectedLineId: state.selectedLineId,
@@ -2245,6 +2276,10 @@ export const selectViewData = ({ state, i18n }) => {
       state,
     }),
     presentationState: selectEffectivePresentationState({ state }),
+    previousPresentationState: getPreviousSectionLinePresentationState(
+      state,
+      state.selectedLineId,
+    ),
     sectionLineChanges: state.sectionLineChanges,
     sectionCreateDialog: state.sectionCreateDialog,
     sectionCreateForm: localizeSceneEditorForm(sectionCreateForm, copy),

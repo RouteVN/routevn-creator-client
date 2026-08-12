@@ -12,6 +12,10 @@ propsSchema:
       type: string
     presentationState:
       type: object
+    previousPresentationState:
+      type: object
+    hasPreviousPresentationStateContext:
+      type: boolean
     backgroundTransformEditor:
       type: object
     actionType:

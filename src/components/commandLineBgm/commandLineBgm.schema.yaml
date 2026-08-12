@@ -37,3 +37,21 @@ propsSchema:
         startDelayMs:
           type: number
           description: Legacy single-sound start delay
+        audioEffects:
+          type: object
+          description: Audio-effect selection for the BGM action
+          required: [resourceId]
+          properties:
+            resourceId:
+              type: string
+              description: Selected audio-effect resource
+            playback:
+              type: object
+              properties:
+                speed:
+                  type: number
+                  exclusiveMinimum: 0
+    previousBgm:
+      type: object
+    hasPreviousBgmContext:
+      type: boolean

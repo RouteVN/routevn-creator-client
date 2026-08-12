@@ -5,6 +5,7 @@ import {
   openBackgroundTransformEditor,
   refreshSceneTextStats,
   selectEffectivePresentationState,
+  selectPreviousPresentationState,
   selectViewData,
   selectSectionTransitionsDAG,
   setRepositoryState,
@@ -12,6 +13,8 @@ import {
   setPresentationState,
   setBackgroundTransformEditorSelectedElementMetrics,
   setProjectLanguage,
+  setSelectedLineId,
+  setSelectedSectionId,
   setSectionLineChangesBySectionId,
   setTemporaryPresentationState,
   showAddSectionDropdownMenu,
@@ -350,6 +353,48 @@ describe("sceneEditorLexical.store", () => {
 
     expect(selectEffectivePresentationState({ state }).dialogue).toEqual({
       mode: "adv",
+    });
+  });
+
+  it("exposes the presentation state immediately before the selected line", () => {
+    const state = createInitialState();
+    setSelectedSectionId({ state }, { selectedSectionId: "section-1" });
+    setSectionLineChangesBySectionId(
+      { state },
+      {
+        changesBySectionId: {
+          "section-1": {
+            lines: [
+              {
+                id: "line-1",
+                presentationState: {
+                  bgm: {
+                    sounds: [{ id: "main", resourceId: "intro" }],
+                  },
+                },
+              },
+              {
+                id: "line-2",
+                presentationState: {
+                  bgm: {
+                    sounds: [{ id: "main", resourceId: "theme" }],
+                  },
+                },
+              },
+            ],
+          },
+        },
+      },
+    );
+    setSelectedLineId({ state }, { selectedLineId: "line-2" });
+
+    expect(
+      selectViewData({ state, i18n: EN_I18N }).previousPresentationState.bgm,
+    ).toEqual({
+      sounds: [{ id: "main", resourceId: "intro" }],
+    });
+    expect(selectPreviousPresentationState({ state }).bgm).toEqual({
+      sounds: [{ id: "main", resourceId: "intro" }],
     });
   });
 

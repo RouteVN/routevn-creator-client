@@ -1,6 +1,6 @@
 import { describe, expect, it, vi } from "vitest";
 import { Subject } from "rxjs";
-import createRouteEngine from "route-engine-js";
+import createRouteEngine, { createEffectsHandler } from "route-engine-js";
 import {
   createSceneEditorRenderQueue,
   flushSceneEditorCanvasRender,
@@ -463,6 +463,282 @@ describe("renderSceneEditorState", () => {
     );
   });
 
+  it("refreshes Audio Effect resources before initializing Route Engine", async () => {
+    const projectData = createProjectData();
+    projectData.resources.audioEffects = {};
+    projectData.resources.sounds.track = {
+      fileId: "track.ogg",
+      fileType: "audio/ogg",
+    };
+    projectData.resources.sounds.previous = {
+      fileId: "previous.ogg",
+      fileType: "audio/ogg",
+    };
+    projectData.story.scenes["scene-1"].sections[
+      "section-1"
+    ].lines[0].actions.bgm = {
+      sounds: [
+        {
+          id: "main",
+          resourceId: "previous",
+        },
+      ],
+    };
+    projectData.story.scenes["scene-1"].sections[
+      "section-1"
+    ].lines[1].actions.bgm = {
+      sounds: [
+        {
+          id: "main",
+          resourceId: "track",
+        },
+      ],
+      audioEffects: {
+        resourceId: "fade-in",
+        playback: { speed: 1 },
+      },
+    };
+
+    const graphicsService = createGraphicsService();
+    let engine;
+    const initializedProjectData = [];
+    graphicsService.initRouteEngine = (engineProjectData, options = {}) => {
+      initializedProjectData.push(engineProjectData);
+      const handlePendingEffects = createEffectsHandler({
+        getEngine: () => engine,
+        persistence: {
+          saveSlots: vi.fn().mockResolvedValue(undefined),
+          saveGlobalDeviceVariables: vi.fn().mockResolvedValue(undefined),
+          saveGlobalAccountVariables: vi.fn().mockResolvedValue(undefined),
+          saveGlobalRuntime: vi.fn().mockResolvedValue(undefined),
+          applyScopedDataUpdates: vi.fn().mockResolvedValue(undefined),
+        },
+        routeGraphics: {
+          render: (renderState) => {
+            options.onSuppressedRenderState?.({
+              renderState,
+              systemState: engine.selectSystemState(),
+            });
+          },
+        },
+        ticker: {
+          add: vi.fn(),
+          remove: vi.fn(),
+        },
+      });
+      engine = createRouteEngine({ handlePendingEffects });
+      engine.init({
+        initialState: {
+          global: {},
+          projectData: engineProjectData,
+        },
+      });
+    };
+    graphicsService.engineSelectPresentationState = () =>
+      engine.selectPresentationState();
+    graphicsService.engineSelectRenderState = () => engine.selectRenderState();
+    graphicsService.engineHandleActions = (actions, eventContext, options) =>
+      engine.handleActions(actions, eventContext, options);
+    graphicsService.engineRenderCurrentState = vi.fn();
+    const store = {
+      canvasAudioPreviewKey: undefined,
+      selectSceneId: () => "scene-1",
+      selectSelectedSectionId: () => "section-1",
+      selectSelectedLineId: () => "line-2",
+      selectCanvasAudioPreviewKey: () => store.canvasAudioPreviewKey,
+      selectPreviousPresentationState: () => ({
+        bgm: {
+          sounds: [{ id: "main", resourceId: "previous" }],
+        },
+      }),
+      selectProjectData: () => projectData,
+      selectIsMuted: () => false,
+      setCanvasAudioPreviewKey: ({ previewKey }) => {
+        store.canvasAudioPreviewKey = previewKey;
+      },
+      setPresentationState: ({ presentationState }) => {
+        store.presentationState = presentationState;
+      },
+    };
+    const projectService = {
+      getFileContent: async () => ({
+        type: "audio/ogg",
+        url: "blob:http://localhost/track.ogg",
+      }),
+      getRepositoryState: () => ({
+        audioEffects: {
+          items: {
+            "fade-in": {
+              id: "fade-in",
+              type: "audioEffect",
+              name: "Fade In",
+              audioEffect: {
+                type: "transition",
+                prev: {
+                  fade: {
+                    keyframes: [{ value: 0, duration: 400 }],
+                  },
+                },
+                next: {
+                  fade: {
+                    keyframes: [{ value: 100, duration: 500 }],
+                  },
+                },
+              },
+            },
+          },
+        },
+      }),
+    };
+
+    await expect(
+      renderSceneEditorState({ store, graphicsService, projectService }),
+    ).resolves.toBeUndefined();
+    expect(initializedProjectData[0].resources.audioEffects["fade-in"]).toEqual(
+      expect.objectContaining({
+        type: "transition",
+      }),
+    );
+    expect(
+      initializedProjectData[0].story.scenes["scene-1"].sections[
+        "section-1"
+      ].lines.find((line) => line.id === "line-2").actions.bgm.audioEffects,
+    ).toEqual({
+      resourceId: "fade-in",
+      playback: { speed: 1 },
+    });
+    expect(graphicsService.engineRenderCurrentState).toHaveBeenCalledWith(
+      expect.objectContaining({
+        renderState: expect.objectContaining({
+          audioEffects: [
+            expect.objectContaining({
+              targetId: "bgm:main",
+              type: "audio-transition",
+              properties: {
+                volume: {
+                  enter: expect.any(Object),
+                  exit: expect.any(Object),
+                },
+              },
+            }),
+          ],
+        }),
+      }),
+    );
+
+    graphicsService.engineRenderCurrentState.mockClear();
+    await expect(
+      renderSceneEditorState({ store, graphicsService, projectService }),
+    ).resolves.toBeUndefined();
+    const secondRenderOptions =
+      graphicsService.engineRenderCurrentState.mock.calls[0][0];
+    expect(secondRenderOptions.renderState.audioEffects).toEqual([]);
+  });
+
+  it("settles the selected line without replaying its update audio effect", async () => {
+    const projectData = createProjectData();
+    projectData.resources.sounds.track = {
+      fileId: "track.ogg",
+      fileType: "audio/ogg",
+    };
+    projectData.resources.audioEffects = {
+      "volume-update": {
+        type: "update",
+        tween: {
+          volume: {
+            keyframes: [{ value: 18, duration: 500 }],
+          },
+        },
+      },
+    };
+    projectData.story.scenes["scene-1"].sections[
+      "section-1"
+    ].lines[1].actions.bgm = {
+      volume: 75,
+      sounds: [
+        {
+          id: "main",
+          resourceId: "track",
+          volume: 50,
+        },
+      ],
+      audioEffects: {
+        resourceId: "volume-update",
+        playback: { speed: 1 },
+      },
+    };
+
+    const graphicsService = createGraphicsService();
+    const store = {
+      selectSceneId: () => "scene-1",
+      selectSelectedSectionId: () => "section-1",
+      selectSelectedLineId: () => "line-2",
+      selectProjectData: () => projectData,
+      selectIsMuted: () => false,
+      setPresentationState: ({ presentationState }) => {
+        store.presentationState = presentationState;
+      },
+    };
+
+    await expect(
+      renderSceneEditorState({ store, graphicsService }),
+    ).resolves.toBeUndefined();
+    expect(store.presentationState.bgm.volume).toBe(18);
+    expect(store.presentationState.bgm.sounds[0].volume).toBe(100);
+    expect(
+      projectData.story.scenes["scene-1"].sections["section-1"].lines[1].actions
+        .bgm.audioEffects,
+    ).toEqual({
+      resourceId: "volume-update",
+      playback: { speed: 1 },
+    });
+  });
+
+  it("does not replay a temporary audio effect from an artificial line entry", async () => {
+    const projectData = createProjectData();
+    projectData.resources.sounds.track = {
+      fileId: "track.ogg",
+      fileType: "audio/ogg",
+    };
+    projectData.resources.audioEffects = {
+      "volume-update": {
+        type: "update",
+        tween: {
+          volume: {
+            keyframes: [{ value: 35, duration: 500 }],
+          },
+        },
+      },
+    };
+    const temporaryPresentationState = {
+      bgm: {
+        volume: 35,
+        sounds: [{ id: "main", resourceId: "track" }],
+        audioEffects: {
+          resourceId: "volume-update",
+          playback: { speed: 1 },
+        },
+      },
+    };
+    const graphicsService = createGraphicsService();
+    const store = {
+      selectSceneId: () => "scene-1",
+      selectSelectedSectionId: () => "section-1",
+      selectSelectedLineId: () => "line-2",
+      selectProjectData: () => projectData,
+      selectTemporaryPresentationState: () => temporaryPresentationState,
+      selectIsMuted: () => false,
+      setPresentationState: ({ presentationState }) => {
+        store.presentationState = presentationState;
+      },
+    };
+
+    await expect(
+      renderSceneEditorState({ store, graphicsService }),
+    ).resolves.toBeUndefined();
+    expect(graphicsService.engineSelectPresentationState().bgm.volume).toBe(35);
+  });
+
   it("applies temporary presentation state to the engine without replacing base store state", async () => {
     const projectData = createProjectData();
     const graphicsService = createGraphicsService();
@@ -716,11 +992,13 @@ describe("renderSceneEditorState", () => {
 
     expect(engineRenderCurrentState).toHaveBeenNthCalledWith(1, {
       preserveAnimationPlayback: false,
+      renderState: expect.any(Object),
       skipAudio: false,
       skipAnimations: true,
     });
     expect(engineRenderCurrentState).toHaveBeenNthCalledWith(2, {
       preserveAnimationPlayback: false,
+      renderState: expect.any(Object),
       skipAudio: false,
       skipAnimations: false,
     });
@@ -759,6 +1037,7 @@ describe("renderSceneEditorState", () => {
 
     expect(engineRenderCurrentState).toHaveBeenCalledWith({
       preserveAnimationPlayback: true,
+      renderState: expect.any(Object),
       skipAudio: false,
       skipAnimations: true,
     });

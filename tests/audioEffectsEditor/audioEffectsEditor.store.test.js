@@ -568,7 +568,7 @@ describe("audioEffectsEditor.store", () => {
     expect(selectViewData({ state, i18n: EN_I18N })).toMatchObject({
       selectedKeyframeDetailId: "next:fade:0",
       selectedKeyframeDetailFields: expect.arrayContaining([
-        expect.objectContaining({ label: "Timeline", value: "Next" }),
+        expect.objectContaining({ label: "Timeline", value: "Incoming" }),
         expect.objectContaining({
           label: "Property",
           value: "Fade",

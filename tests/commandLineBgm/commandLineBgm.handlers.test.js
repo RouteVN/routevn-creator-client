@@ -1,6 +1,7 @@
 import { describe, expect, it, vi } from "vitest";
 import {
   handleButtonSelectClick,
+  handleAfterMount,
   handleChannelClick,
   handleChannelContextMenu,
   handleEdgeAddClick,
@@ -45,6 +46,22 @@ const sounds = {
   ],
 };
 
+const audioEffects = {
+  items: {
+    crossfade: {
+      id: "crossfade",
+      type: "audioEffect",
+      name: "Crossfade",
+      audioEffect: {
+        type: "transition",
+        prev: { fade: { keyframes: [{ value: 0, duration: 600 }] } },
+        next: { fade: { keyframes: [{ value: 100, duration: 900 }] } },
+      },
+    },
+  },
+  tree: [{ id: "crossfade" }],
+};
+
 const i18n = {
   resourcePages: {},
   sceneEditorPage: {},
@@ -83,11 +100,80 @@ const createStore = (state) => {
 
 const createState = () => {
   const state = bgmStore.createInitialState();
-  bgmStore.setRepositoryState({ state }, { sounds });
+  bgmStore.setRepositoryState({ state }, { sounds, audioEffects });
   return state;
 };
 
 describe("commandLineBgm.handlers", () => {
+  it("loads Sounds and Audio Effects before rendering the channel form", async () => {
+    const state = bgmStore.createInitialState();
+    const store = createStore(state);
+    const ensureRepository = vi.fn().mockResolvedValue(undefined);
+    const render = vi.fn();
+
+    await handleAfterMount({
+      projectService: {
+        ensureRepository,
+        getState: vi.fn(() => ({ sounds, audioEffects })),
+      },
+      store,
+      props: {
+        bgm: {
+          sounds: [{ id: "intro-clip", resourceId: "intro" }],
+        },
+      },
+      render,
+    });
+
+    expect(ensureRepository).toHaveBeenCalledOnce();
+    expect(state.items).toEqual(sounds);
+    expect(state.audioEffectItems).toEqual(audioEffects);
+    expect(state.bgm.sounds[0]).toMatchObject({
+      id: "intro-clip",
+      resourceId: "intro",
+    });
+    expect(render).toHaveBeenCalledOnce();
+  });
+
+  it("removes an update effect when the edited line starts BGM", async () => {
+    const state = bgmStore.createInitialState();
+    const updateAudioEffects = structuredClone(audioEffects);
+    updateAudioEffects.items["smooth-volume"] = {
+      id: "smooth-volume",
+      type: "audioEffect",
+      name: "Smooth Volume",
+      audioEffect: {
+        type: "update",
+        tween: {
+          volume: { keyframes: [{ value: 50, duration: 500 }] },
+        },
+      },
+    };
+    updateAudioEffects.tree.push({ id: "smooth-volume" });
+
+    await handleAfterMount({
+      projectService: {
+        ensureRepository: vi.fn().mockResolvedValue(undefined),
+        getState: vi.fn(() => ({
+          sounds,
+          audioEffects: updateAudioEffects,
+        })),
+      },
+      store: createStore(state),
+      props: {
+        bgm: {
+          sounds: [{ id: "main", resourceId: "intro" }],
+          audioEffects: { resourceId: "smooth-volume" },
+        },
+        previousBgm: undefined,
+        hasPreviousBgmContext: true,
+      },
+      render: vi.fn(),
+    });
+
+    expect(state.bgm.audioEffects).toBeUndefined();
+  });
+
   it("updates channel controls while the channel is selected", () => {
     const state = createState();
     const render = vi.fn();
@@ -111,6 +197,31 @@ describe("commandLineBgm.handlers", () => {
       loop: true,
       volume: 60,
       sounds: [],
+    });
+    expect(render).toHaveBeenCalledOnce();
+  });
+
+  it("updates the channel Audio Effect and playback speed", () => {
+    const state = createState();
+    const render = vi.fn();
+
+    handleFormChange(
+      { store: createStore(state), render },
+      {
+        _event: {
+          detail: {
+            values: {
+              audioEffectId: "crossfade",
+              audioEffectPlaybackSpeed: 1.25,
+            },
+          },
+        },
+      },
+    );
+
+    expect(state.bgm.audioEffects).toEqual({
+      resourceId: "crossfade",
+      playback: { speed: 1.25 },
     });
     expect(render).toHaveBeenCalledOnce();
   });
@@ -519,6 +630,12 @@ describe("commandLineBgm.handlers", () => {
     const store = createStore(state);
     const dispatchEvent = vi.fn();
     store.insertSound({ id: "intro-clip", resourceId: "intro", index: 0 });
+    store.updateChannel({
+      values: {
+        audioEffectId: "crossfade",
+        audioEffectPlaybackSpeed: 1.5,
+      },
+    });
 
     handleSubmitClick(
       { store, dispatchEvent },
@@ -531,6 +648,10 @@ describe("commandLineBgm.handlers", () => {
         interruption: "immediate",
         loop: true,
         volume: 75,
+        audioEffects: {
+          resourceId: "crossfade",
+          playback: { speed: 1.5 },
+        },
         sounds: [
           {
             id: "intro-clip",

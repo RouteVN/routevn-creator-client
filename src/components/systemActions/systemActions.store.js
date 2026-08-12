@@ -284,6 +284,9 @@ export const selectViewData = ({ state, props, props: attrs, i18n }) => {
     transforms: repositoryState.transforms || { items: {}, tree: [] },
     animations: repositoryState.animations || { items: {}, tree: [] },
     selectedLine: props.selectedLine,
+    previousPresentationState: props.previousPresentationState ?? {},
+    hasPreviousPresentationStateContext:
+      props.hasPreviousPresentationStateContext === true,
     actionsType: attrs.actionType,
     showSelected: !!attrs.showSelected,
     presentationActionOrder:
@@ -669,9 +672,15 @@ export const selectActionsData = ({ props, state, copy }) => {
     authoredBgm &&
     (Object.keys(authoredBgm).length === 0 ||
       (Array.isArray(authoredBgm.sounds) && authoredBgm.sounds.length === 0));
-  const bgmAction = authoredBgmStops
+  let bgmAction = authoredBgmStops
     ? authoredBgm
     : (effectiveBgm ?? authoredBgm);
+  if (!authoredBgmStops && effectiveBgm && authoredBgm) {
+    bgmAction = {
+      ...effectiveBgm,
+      ...authoredBgm,
+    };
+  }
   if (bgmAction) {
     actionsObject.bgm = bgmAction;
     const bgmResourceId =
