@@ -136,7 +136,7 @@ describe("resource-import-dialog.handlers", () => {
       resource_1_include: false,
     });
     const card = {
-      dataset: { resourceIndex: "1" },
+      dataset: { resourceSourceId: "transform.second" },
       getAttribute: vi.fn(() => "true"),
     };
 
@@ -147,7 +147,7 @@ describe("resource-import-dialog.handlers", () => {
     });
 
     expect(deps.store.setResourceSelected).toHaveBeenCalledWith({
-      resourceIndex: 1,
+      sourceId: "transform.second",
       selected: false,
     });
     expect(deps.render).toHaveBeenCalledTimes(1);
@@ -159,7 +159,7 @@ describe("resource-import-dialog.handlers", () => {
       resource_0_include: false,
     });
     const card = {
-      dataset: { resourceIndex: "0" },
+      dataset: { resourceSourceId: "transform.source" },
       getAttribute: vi.fn(() => "true"),
     };
 
@@ -170,7 +170,7 @@ describe("resource-import-dialog.handlers", () => {
     });
 
     expect(deps.store.setResourceSelected).toHaveBeenCalledWith({
-      resourceIndex: 0,
+      sourceId: "transform.source",
       selected: false,
     });
     expect(deps.render).toHaveBeenCalledTimes(1);
@@ -179,7 +179,7 @@ describe("resource-import-dialog.handlers", () => {
   it("toggles a resource choice with Enter or Space", () => {
     const { deps } = createDeps();
     const card = {
-      dataset: { resourceIndex: "0" },
+      dataset: { resourceSourceId: "transform.source" },
       getAttribute: vi.fn(() => "false"),
     };
     const enterEvent = {
@@ -199,11 +199,11 @@ describe("resource-import-dialog.handlers", () => {
     expect(enterEvent.preventDefault).toHaveBeenCalledTimes(1);
     expect(spaceEvent.preventDefault).toHaveBeenCalledTimes(1);
     expect(deps.store.setResourceSelected).toHaveBeenNthCalledWith(1, {
-      resourceIndex: 0,
+      sourceId: "transform.source",
       selected: true,
     });
     expect(deps.store.setResourceSelected).toHaveBeenNthCalledWith(2, {
-      resourceIndex: 0,
+      sourceId: "transform.source",
       selected: true,
     });
     expect(deps.render).toHaveBeenCalledTimes(2);

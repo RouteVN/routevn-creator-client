@@ -94,6 +94,7 @@ describe("resource-import-dialog.store", () => {
       expect.arrayContaining([
         expect.objectContaining({
           previewSourceId: "file.transform-one",
+          planResourceIndex: 0,
           typeLabel: "Transform",
           selected: true,
           selectionLabel: "Import Transform One",
@@ -104,6 +105,7 @@ describe("resource-import-dialog.store", () => {
         }),
         expect.objectContaining({
           previewSourceId: "file.transform-two",
+          planResourceIndex: 1,
           previewKind: "video",
         }),
       ]),
@@ -141,7 +143,7 @@ describe("resource-import-dialog.store", () => {
       ],
     });
 
-    setResourceSelected({ state }, { resourceIndex: 0, selected: false });
+    setResourceSelected({ state }, { sourceId: "source.one", selected: false });
     const deselectedView = selectViewData({ state, i18n: {} });
     expect(deselectedView.resources.map(({ sourceId }) => sourceId)).toEqual([
       "source.one",
@@ -188,18 +190,18 @@ describe("resource-import-dialog.store", () => {
       selected: true,
       required: false,
     });
-    setResourceSelected({ state }, { resourceIndex: 0, selected: false });
+    setResourceSelected({ state }, { sourceId: "source.one", selected: false });
     expect(state.reviewValues).toMatchObject({
       resource_0_include: false,
       resource_1_include: false,
     });
 
-    setResourceSelected({ state }, { resourceIndex: 1, selected: true });
+    setResourceSelected({ state }, { sourceId: "source.two", selected: true });
     expect(state.reviewValues).toMatchObject({
       resource_0_include: true,
       resource_1_include: true,
     });
-    setResourceSelected({ state }, { resourceIndex: 1, selected: false });
+    setResourceSelected({ state }, { sourceId: "source.two", selected: false });
     expect(state.reviewValues).toMatchObject({
       resource_0_include: true,
       resource_1_include: false,

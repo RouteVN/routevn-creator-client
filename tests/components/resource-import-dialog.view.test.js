@@ -30,9 +30,9 @@ describe("resource-import-dialog.view", () => {
       "rtgl-view#resourceSelectionGrid slot=resource-selection-grid",
     );
     expect(viewSource).toContain("rtgl-grid cols=3 xl-cols=2 md-cols=1");
-    expect(viewSource).toContain(
-      "$for section, sectionIndex in resourceSections",
-    );
+    expect(viewSource).toContain("$for section in resourceSections");
+    expect(viewSource).toContain("$for group in section.groups");
+    expect(viewSource).toContain("$for resource in group.resources");
     expect(viewSource).toContain("${section.typeLabel}");
     expect(viewSource).toContain("group.kind == 'folder'");
     expect(viewSource).toContain("svg=folder");
@@ -42,11 +42,14 @@ describe("resource-import-dialog.view", () => {
     expect(viewSource).toContain("resourceSelectionGrid:");
     expect(viewSource).not.toContain("resourceSelectionCard*:");
     expect(viewSource).toContain(
-      "rtgl-view#resourceSelectionCard${resource.resourceIndex}${resource.selected}",
+      "rtgl-view#resourceSelectionCard${resource.planResourceIndex}${resource.selected}",
     );
     expect(viewSource).toContain("role=button tabindex=0");
     expect(viewSource).toContain(
-      "data-resource-index=${resource.resourceIndex}",
+      "data-resource-index=${resource.planResourceIndex}",
+    );
+    expect(viewSource).toContain(
+      'data-resource-source-id="${resource.sourceId}"',
     );
     expect(viewSource).toContain('aria-pressed="${resource.selected}"');
     expect(viewSource).not.toContain("selectionLocked");

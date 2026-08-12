@@ -195,15 +195,15 @@ export const handleFormAction = async (deps, payload) => {
 const findResourceSelectionCard = (_event) =>
   _event
     .composedPath()
-    .find((target) => target?.dataset?.resourceIndex !== undefined);
+    .find((target) => target?.dataset?.resourceSourceId !== undefined);
 
 const toggleResourceSelection = (deps, _event) => {
   const { store, render } = deps;
   const card = findResourceSelectionCard(_event);
   if (!card) return;
-  const resourceIndex = Number(card.dataset.resourceIndex);
+  const sourceId = card.dataset.resourceSourceId;
   const selected = card.getAttribute("aria-pressed") !== "true";
-  store.setResourceSelected({ resourceIndex, selected });
+  store.setResourceSelected({ sourceId, selected });
   render();
 };
 

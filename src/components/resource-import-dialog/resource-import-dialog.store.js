@@ -256,14 +256,11 @@ export const saveReviewValues = ({ state }, { values } = {}) => {
   }
 };
 
-export const setResourceSelected = (
-  { state },
-  { resourceIndex, selected } = {},
-) => {
-  const resource = state.plan.resources[resourceIndex];
+export const setResourceSelected = ({ state }, { sourceId, selected } = {}) => {
   const resourceIndexBySourceId = new Map(
     state.plan.resources.map((item, index) => [item.sourceId, index]),
   );
+  const resource = state.plan.resources[resourceIndexBySourceId.get(sourceId)];
   if (selected !== true) {
     const dependentSourceIdsByDependencySourceId = new Map();
     for (const item of state.plan.resources) {
@@ -372,7 +369,7 @@ export const selectViewData = ({ state, i18n = {} }) => {
         values: state.reviewValues,
       }).map(({ resource, resourceIndex, selected, required }) => ({
         ...resource,
-        resourceIndex,
+        planResourceIndex: resourceIndex,
         typeLabel: getResourceTypeLabel({ resource, copy }),
         selectionLabel: (copy.includeResource ?? "Import {name}").replace(
           "{name}",
