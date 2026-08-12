@@ -3,7 +3,6 @@ import {
   handleAnimationItemClick,
   handleFileExplorerSelectionChanged,
   handleResourceViewBackgroundClick,
-  handleImportAnimationClick,
 } from "../../src/pages/animations/animations.handlers.js";
 
 describe("animations.handlers", () => {
@@ -426,17 +425,4 @@ describe("animations.handlers", () => {
 
     vi.unstubAllGlobals();
   });
-
-  it("opens animation import as a global page action", () => {
-    const render = vi.fn();
-    const store = {
-      openImportDialog: vi.fn(),
-    };
-
-    handleImportAnimationClick({ render, store });
-
-    expect(store.openImportDialog).toHaveBeenCalledWith();
-    expect(render).toHaveBeenCalled();
-  });
-
 });

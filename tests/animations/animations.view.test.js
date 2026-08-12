@@ -2,7 +2,7 @@ import { readFileSync } from "fs";
 import { describe, expect, it } from "vitest";
 
 describe("animations view", () => {
-  it("shows animation import inside a three-dot actions menu", () => {
+  it("uses the shared resource import action", () => {
     const animationsView = readFileSync(
       new URL(
         "../../src/pages/animations/animations.view.yaml",
@@ -18,14 +18,8 @@ describe("animations view", () => {
       "utf8",
     );
 
-    expect(animationsView.match(/import-in-actions-menu/g)).toHaveLength(2);
-    expect(animationsView).not.toContain("import-icon-only");
-    expect(catalogView).toContain(
-      "rtgl-button#importActionsMenuButton sq pre=ellipsis v=ol",
-    );
-    expect(catalogView).toContain(
-      "rtgl-dropdown-menu#importActionsMenu :items=${importActionsMenu.items}",
-    );
+    expect(animationsView).not.toContain("import-in-actions-menu");
+    expect(catalogView).toContain("rvn-resource-import-action");
   });
 
   it("passes property defaults to every catalog timeline with curves", () => {

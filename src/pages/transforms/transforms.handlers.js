@@ -207,11 +207,6 @@ const createTransformPayload = (values = {}) => {
   };
 };
 
-const clearImportVisibilityFilters = (store) => {
-  store.setSearchQuery?.({ value: "" });
-  store.setActiveTagIds?.({ tagIds: [] });
-};
-
 const loadTransformPreviewAssets = async ({
   graphicsService,
   projectService,
@@ -645,35 +640,6 @@ export const handleAddTransformClick = async (deps, payload) => {
     deps,
     targetGroupId: groupId,
   });
-};
-
-export const handleImportTransformClick = (deps) => {
-  const { render, store } = deps;
-
-  store.openImportDialog();
-  render();
-};
-
-export const handleImportDialogClose = (deps) => {
-  const { render, store } = deps;
-  store.closeImportDialog();
-  render();
-};
-
-export const handleResourceImportComplete = async (deps, payload) => {
-  const { appService, store, render } = deps;
-  const result = payload._event.detail;
-  store.closeImportDialog();
-  clearImportVisibilityFilters(store);
-  appService.showToast({
-    message: (
-      deps.i18n.resourceImport?.assetPackageImported ??
-      "Imported {count} resources from the asset package."
-    ).replace("{count}", `${result.importedCount}`),
-    status: "success",
-  });
-  render();
-  await handleDataChanged(deps);
 };
 
 export const handleTransformFormAddOptionClick = (deps) => {

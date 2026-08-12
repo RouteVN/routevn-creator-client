@@ -253,7 +253,6 @@ const {
       centerItemContextMenuItems:
         createAnimationCenterItemContextMenuItems(copy),
       isAddDialogOpen: state.isAddDialogOpen,
-      isImportDialogOpen: state.isImportDialogOpen,
       addForm: createAddForm(copy),
       addFormDefaults: {
         name: "",
@@ -269,7 +268,6 @@ const {
         : "",
       descriptionLabel: copy.descriptionLabel ?? "Description",
       editButton: copy.editMenuItem ?? "Edit",
-      importButton: copy.importMenuButton ?? copy.importButton ?? "Import",
       tagsLabel: copy.tagsLabel ?? "Tags",
       typeLabel: copy.typeLabel ?? "Type",
       durationLabel: copy.durationLabel ?? "Duration",
@@ -288,7 +286,6 @@ const {
 export const createInitialState = () => ({
   ...createCatalogInitialState(),
   isAddDialogOpen: false,
-  isImportDialogOpen: false,
   targetGroupId: undefined,
   isEditDialogOpen: false,
   editItemId: undefined,
@@ -409,14 +406,6 @@ export const selectAnimationDisplayItemById = ({ state }, { itemId } = {}) => {
     (item) => item.id === itemId && item.type === "animation",
   );
   return rawItem ? toAnimationDisplayItem(rawItem) : undefined;
-};
-
-export const openImportDialog = ({ state }) => {
-  state.isImportDialogOpen = true;
-};
-
-export const closeImportDialog = ({ state }, _payload = {}) => {
-  state.isImportDialogOpen = false;
 };
 
 export const openAddDialog = ({ state }, { groupId } = {}) => {

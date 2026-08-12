@@ -105,11 +105,6 @@ export const createInitialState = ({ props } = {}) => ({
     isOpen: false,
     position: { ...DEFAULT_ZOOM_POPOVER_POSITION },
   },
-  importActionsMenu: {
-    isOpen: false,
-    x: 0,
-    y: 0,
-  },
   progressiveRenderedItemCount: parseNonNegativeIntegerProp(
     props?.progressiveInitialItemCount,
     DEFAULT_PROGRESSIVE_INITIAL_ITEM_COUNT,
@@ -150,20 +145,6 @@ export const openZoomPopover = ({ state }, { position } = {}) => {
 export const closeZoomPopover = ({ state }, _payload = {}) => {
   state.zoomPopover.isOpen = false;
 };
-
-export const openImportActionsMenu = ({ state }, { x, y } = {}) => {
-  state.importActionsMenu.isOpen = true;
-  state.importActionsMenu.x = x ?? 0;
-  state.importActionsMenu.y = y ?? 0;
-};
-
-export const closeImportActionsMenu = ({ state }) => {
-  state.importActionsMenu.isOpen = false;
-  state.importActionsMenu.x = 0;
-  state.importActionsMenu.y = 0;
-};
-
-export const selectImportActionsMenu = ({ state }) => state.importActionsMenu;
 
 export const setProgressiveRenderedItemCount = (
   { state },
@@ -276,9 +257,6 @@ export const selectViewData = ({ state, props }) => {
   const showMenuButton = parseBooleanProp(props.showMenuButton);
   const menuButtonPlacement =
     props.menuButtonPlacement === "trailing" ? "trailing" : "leading";
-  const canImport = parseBooleanProp(props.canImport);
-  const importIconOnly = parseBooleanProp(props.importIconOnly);
-  const importInActionsMenu = parseBooleanProp(props.importInActionsMenu);
   const hasActiveSearch = searchQuery.trim().length > 0;
   const hasActiveFilter =
     hasActiveTagFilter || (searchInFilterPopover && hasActiveSearch);
@@ -414,23 +392,6 @@ export const selectViewData = ({ state, props }) => {
           : `No items found matching "${searchQuery}"`),
     addText: props.addText ?? "Add",
     canAdd: parseBooleanProp(props.canAdd, true),
-    importText: props.importText ?? "Import",
-    canImport,
-    importIconOnly,
-    importInActionsMenu,
-    showImportActionsMenuButton: canImport && importInActionsMenu,
-    showIconImportButton: canImport && importIconOnly && !importInActionsMenu,
-    showTextImportButton: canImport && !importIconOnly && !importInActionsMenu,
-    importActionsMenu: {
-      ...state.importActionsMenu,
-      items: [
-        {
-          label: props.importText ?? "Import",
-          type: "item",
-          value: "import",
-        },
-      ],
-    },
     mobileLayout,
     scrollBottomPadding,
     dropdownMenu: state.dropdownMenu,

@@ -63,20 +63,6 @@ refs:
     eventListeners:
       click:
         handler: handleAddButtonClick
-  importBtn:
-    eventListeners:
-      click:
-        handler: handleImportButtonClick
-  importActionsMenuButton:
-    eventListeners:
-      click:
-        handler: handleImportActionsMenuButtonClick
-  importActionsMenu:
-    eventListeners:
-      close:
-        handler: handleImportActionsMenuClose
-      item-click:
-        handler: handleImportActionsMenuItemClick
   groupToggle*:
     eventListeners:
       click:
@@ -104,14 +90,9 @@ template:
                   - rtgl-input#searchInput s=sm placeholder=${searchPlaceholder} value=${searchQuery} h=1fg: null
               - $if showTagFilter:
                   - 'rtgl-button#tagFilterButton sq pre=filter v=${tagFilterButtonVariant} aria-label="${filterButtonLabel}" title="${filterButtonLabel}"': null
-              - $if showIconImportButton:
-                  - 'rtgl-button#importBtn sq pre=upload v=ol aria-label="${importText}" title="${importText}"': null
-              - $if showImportActionsMenuButton:
-                  - 'rtgl-button#importActionsMenuButton sq pre=ellipsis v=ol aria-label="${importText}" title="${importText}" aria-haspopup=menu': null
+              - rvn-resource-import-action: null
               - $if showTrailingMenuButton:
                   - 'rtgl-button#menuButton sq pre=hamburger v=ol aria-label="${menuButtonLabel}" title="${menuButtonLabel}"': null
-              - $if showTextImportButton:
-                  - rtgl-button#importBtn s=sm pre=upload v=se: ${importText}
       - 'rtgl-view#scrollContainer h=1fg w=f sv style="min-width: 0; box-sizing: border-box;"':
           - $if groups.length > 0:
               - $for group, gIndex in groups:
@@ -267,4 +248,3 @@ template:
               - rtgl-slider#zoomSlider w=160 min=${zoomControlMin} max=${zoomControlMax} step=${zoomControlStep} value=${zoomControlValue}: null
               - rtgl-button#zoomIn sq v=ol: +
   - rtgl-dropdown-menu#contextMenu :items=${dropdownMenu.items} ?open=${dropdownMenu.isOpen} x=${dropdownMenu.x} y=${dropdownMenu.y}: null
-  - rtgl-dropdown-menu#importActionsMenu :items=${importActionsMenu.items} ?open=${importActionsMenu.isOpen} x=${importActionsMenu.x} y=${importActionsMenu.y} place=be: null

@@ -1,7 +1,6 @@
 import { generateId } from "../../internal/id.js";
 import { createAnimationEditorPayload } from "../../internal/animationEditorRoute.js";
 import { createResourceFileExplorerHandlers } from "../../internal/ui/fileExplorer.js";
-import { formatI18nCopy } from "../../internal/ui/i18nCopy.js";
 import { createCatalogPageHandlers } from "../../internal/ui/resourcePages/catalog/createCatalogPageHandlers.js";
 import { appendTagIdToForm } from "../../internal/ui/resourcePages/tags.js";
 import { runResourcePageMutation } from "../../internal/ui/resourcePages/resourcePageErrors.js";
@@ -17,11 +16,6 @@ import {
 import { selectAnimationsPageCopy } from "./support/animationsPageCopy.js";
 
 const selectCopy = (deps = {}) => selectAnimationsPageCopy(deps.i18n);
-
-const clearImportVisibilityFilters = (store) => {
-  store.setSearchQuery?.({ value: "" });
-  store.setActiveTagIds?.({ tagIds: [] });
-};
 
 const navigateToAnimationEditor = ({
   appService,
@@ -346,36 +340,6 @@ export const handleAddAnimationClick = async (deps, payload) => {
   const { groupId } = payload._event.detail;
   store.openAddDialog({ groupId });
   render();
-};
-
-export const handleImportAnimationClick = (deps) => {
-  const { render, store } = deps;
-
-  store.openImportDialog();
-  render();
-};
-
-export const handleImportDialogClose = (deps) => {
-  const { render, store } = deps;
-  store.closeImportDialog();
-  render();
-};
-
-export const handleResourceImportComplete = async (deps, payload) => {
-  const { appService, store, render } = deps;
-  const result = payload._event.detail;
-  store.closeImportDialog();
-  clearImportVisibilityFilters(store);
-  appService.showToast({
-    message: formatI18nCopy(
-      deps.i18n.resourceImport?.assetPackageImported ??
-        "Imported {count} resources from the asset package.",
-      { count: result.importedCount },
-    ),
-    status: "success",
-  });
-  render();
-  await handleDataChanged(deps);
 };
 
 export const handleAnimationItemDoubleClick = (deps, payload) => {

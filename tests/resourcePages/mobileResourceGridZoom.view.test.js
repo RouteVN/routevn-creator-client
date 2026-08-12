@@ -47,10 +47,6 @@ const mobileMenuResourcePages = [
   ["variables", "variables/variables.view.yaml"],
 ];
 
-const mobileIconOnlyImportPages = [
-  ["transforms", "transforms/transforms.view.yaml"],
-];
-
 const readMobileBranch = (relativePath) => {
   const view = readFileSync(
     new URL(`../../src/pages/${relativePath}`, import.meta.url),
@@ -111,42 +107,27 @@ describe("mobile resource grid zoom wiring", () => {
     },
   );
 
-  it.each(mobileIconOnlyImportPages)(
-    "uses an icon-only mobile import action before the menu on %s",
-    (_name, relativePath) => {
-      const mobileBranch = readMobileBranch(relativePath);
+  it("renders the shared import action in every resource header", () => {
+    const sharedViews = [
+      "mediaResourcesView/mediaResourcesView.view.yaml",
+      "catalogResourcesView/catalogResourcesView.view.yaml",
+      "textStyleResourcesView/textStyleResourcesView.view.yaml",
+      "charactersResourcesView/charactersResourcesView.view.yaml",
+      "groupVariablesView/groupVariablesView.view.yaml",
+    ];
 
-      expect(mobileBranch).toContain("canImport");
-      expect(mobileBranch).toContain("import-icon-only");
-      expect(mobileBranch).toContain("menu-button-placement=trailing");
-    },
-  );
+    for (const relativePath of sharedViews) {
+      const view = readFileSync(
+        new URL(`../../src/components/${relativePath}`, import.meta.url),
+        "utf8",
+      );
+      const importIndex = view.indexOf("- rvn-resource-import-action");
+      const filterIndex = view.lastIndexOf("$if showTagFilter", importIndex);
+      const menuIndex = view.indexOf("$if showTrailingMenuButton", importIndex);
 
-  it("uses an animation actions menu for mobile imports", () => {
-    const mobileBranch = readMobileBranch("animations/animations.view.yaml");
-
-    expect(mobileBranch).toContain("canImport");
-    expect(mobileBranch).toContain("import-in-actions-menu");
-    expect(mobileBranch).not.toContain("import-icon-only");
-    expect(mobileBranch).toContain("menu-button-placement=trailing");
-  });
-
-  it("renders catalog import icon controls between filter and trailing menu", () => {
-    const catalogView = readFileSync(
-      new URL(
-        "../../src/components/catalogResourcesView/catalogResourcesView.view.yaml",
-        import.meta.url,
-      ),
-      "utf8",
-    );
-    const filterIndex = catalogView.indexOf("tagFilterButton");
-    const importIndex = catalogView.indexOf("showIconImportButton");
-    const menuIndex = catalogView.indexOf("showTrailingMenuButton");
-
-    expect(catalogView).toContain("rtgl-button#importBtn sq pre=upload v=ol");
-    expect(filterIndex).toBeGreaterThan(-1);
-    expect(importIndex).toBeGreaterThan(filterIndex);
-    expect(importIndex).toBeLessThan(menuIndex);
+      expect(importIndex).toBeGreaterThan(filterIndex);
+      expect(importIndex).toBeLessThan(menuIndex);
+    }
   });
 
   it("uses a narrow webkit scrollbar on the shared media scroll container", () => {

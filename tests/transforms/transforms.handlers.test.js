@@ -1,7 +1,6 @@
 import { describe, expect, it, vi } from "vitest";
 import { EN_I18N } from "../support/i18n.js";
 import {
-  handleImportTransformClick,
   handleMobileDetailEditClick,
   handleTransformPreviewImageContextMenu,
   handleTransformPreviewImageMenuItemClick,
@@ -9,18 +8,6 @@ import {
 } from "../../src/pages/transforms/transforms.handlers.js";
 
 describe("transforms.handlers", () => {
-  it("opens transform import as a global page action", () => {
-    const render = vi.fn();
-    const store = {
-      openImportDialog: vi.fn(),
-    };
-
-    handleImportTransformClick({ render, store });
-
-    expect(store.openImportDialog).toHaveBeenCalledWith();
-    expect(render).toHaveBeenCalled();
-  });
-
   it("opens the selected transform from the mobile detail edit action", async () => {
     const render = vi.fn();
     const transform = {

@@ -23,8 +23,6 @@ refs:
         handler: handleTransformItemDoubleClick
       add-click:
         handler: handleAddTransformClick
-      import-click:
-        handler: handleImportTransformClick
       search-input:
         handler: handleSearchInput
       tag-filter-change:
@@ -93,12 +91,6 @@ refs:
         handler: handleTransformFormChange
       add-option-click:
         handler: handleTransformFormAddOptionClick
-  importDialog:
-    eventListeners:
-      import-cancelled:
-        handler: handleImportDialogClose
-      import-complete:
-        handler: handleResourceImportComplete
   transformPreviewImageButton*:
     eventListeners:
       click:
@@ -190,9 +182,9 @@ template:
               - 'div#fileExplorerKeyboardScope tabindex=-1 style="width: 100%; height: 100%; min-width: 0; min-height: 0; outline: none;"':
                   - $if showMobileTopTabs:
                       - 'rtgl-view d=v w=f h=f style="min-width: 0; min-height: 0;"':
-                          - 'rvn-catalog-resources-view#groupview w=f h=f :navTitle=${title} show-menu-button menu-button-placement=trailing show-zoom-controls zoom-control-mode=columns default-items-per-row=2 items-per-row-config-key="groupTransformsView.itemsPerRow" show-search=false search-in-filter-popover show-tag-filter progressive-render progressive-hydration-delay-frame-count=4 :mobileLayout=${mobileLayout} :groups=${catalogGroups} :selectedItemId=${selectedItemId} :selectedFolderId=${selectedFolderId} :searchQuery=${searchQuery} :tagFilterOptions=${tagFilterOptions} :selectedTagFilterValues=${selectedTagFilterValues} :tagFilterPlaceholder=${tagFilterPlaceholder} :emptyMessage=${emptyMessage} :addText=${addText} canImport import-icon-only :importText=${importButton} :itemContextMenuItems=${centerItemContextMenuItems}': null
+                          - 'rvn-catalog-resources-view#groupview w=f h=f :navTitle=${title} show-menu-button menu-button-placement=trailing show-zoom-controls zoom-control-mode=columns default-items-per-row=2 items-per-row-config-key="groupTransformsView.itemsPerRow" show-search=false search-in-filter-popover show-tag-filter progressive-render progressive-hydration-delay-frame-count=4 :mobileLayout=${mobileLayout} :groups=${catalogGroups} :selectedItemId=${selectedItemId} :selectedFolderId=${selectedFolderId} :searchQuery=${searchQuery} :tagFilterOptions=${tagFilterOptions} :selectedTagFilterValues=${selectedTagFilterValues} :tagFilterPlaceholder=${tagFilterPlaceholder} :emptyMessage=${emptyMessage} :addText=${addText} :itemContextMenuItems=${centerItemContextMenuItems}': null
                     $else:
-                      - 'rvn-catalog-resources-view#groupview w=f h=f :navTitle=${title} show-zoom-controls zoom-control-mode=columns default-items-per-row=6 items-per-row-config-key="groupTransformsView.itemsPerRow" search-in-filter-popover progressive-render progressive-hydration-delay-frame-count=4 :groups=${catalogGroups} :selectedItemId=${selectedItemId} :selectedFolderId=${selectedFolderId} :searchQuery=${searchQuery} show-tag-filter :tagFilterOptions=${tagFilterOptions} :selectedTagFilterValues=${selectedTagFilterValues} :tagFilterPlaceholder=${tagFilterPlaceholder} :emptyMessage=${emptyMessage} :addText=${addText} canImport :importText=${importButton} :itemContextMenuItems=${centerItemContextMenuItems}': null
+                      - 'rvn-catalog-resources-view#groupview w=f h=f :navTitle=${title} show-zoom-controls zoom-control-mode=columns default-items-per-row=6 items-per-row-config-key="groupTransformsView.itemsPerRow" search-in-filter-popover progressive-render progressive-hydration-delay-frame-count=4 :groups=${catalogGroups} :selectedItemId=${selectedItemId} :selectedFolderId=${selectedFolderId} :searchQuery=${searchQuery} show-tag-filter :tagFilterOptions=${tagFilterOptions} :selectedTagFilterValues=${selectedTagFilterValues} :tagFilterPlaceholder=${tagFilterPlaceholder} :emptyMessage=${emptyMessage} :addText=${addText} :itemContextMenuItems=${centerItemContextMenuItems}': null
           - $if showDetailPanel:
               - rvn-resizable-panel panel-type=detail-panel w=270 min-w=200 max-w=500 resize-side="left":
                   - rtgl-view wh=f slot="content":
@@ -242,7 +234,6 @@ template:
                       - rtgl-tag-select#detailTagSelect slot="transform-tags" w=f :options=${tagFilterOptions} :selectedValues=${selectedItemTagIds} :draftSelectedValues=${detailTagDraftValues} :open=${isDetailTagSelectOpen} :addOption=${detailTagAddOption} :placeholder=${addTagPlaceholder}: null
   - rtgl-dialog#folderNameDialog ?open=${isFolderNameDialogOpen} s=sm:
       - rtgl-form#folderNameForm key=${folderNameDialogItemId} slot=content :defaultValues=${folderNameDialogDefaultValues} :form=${folderNameForm} w=f: null
-  - rvn-resource-import-dialog#importDialog :open=${isImportDialogOpen}: null
   - rtgl-dialog#transformDialog ?open=${isDialogOpen} s=lg:
       - rtgl-view slot="content" d=h lg-d=v ah=c g=lg w=f:
           - $if isDialogOpen:

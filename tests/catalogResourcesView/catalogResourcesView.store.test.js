@@ -1,8 +1,6 @@
 import { describe, expect, it } from "vitest";
 import {
-  closeImportActionsMenu,
   createInitialState,
-  openImportActionsMenu,
   selectViewData,
   setProgressiveRenderedItemCount,
   toggleGroupCollapse,
@@ -152,30 +150,5 @@ describe("catalogResourcesView.store", () => {
         showEmptyAdd: true,
       }),
     );
-  });
-
-  it("replaces the direct import control with an actions menu", () => {
-    const props = {
-      canImport: true,
-      importInActionsMenu: true,
-      importText: "Import",
-    };
-    const state = createInitialState({ props });
-
-    openImportActionsMenu({ state }, { x: 24, y: 48 });
-    expect(selectViewData({ state, props })).toMatchObject({
-      showImportActionsMenuButton: true,
-      showIconImportButton: false,
-      showTextImportButton: false,
-      importActionsMenu: {
-        isOpen: true,
-        x: 24,
-        y: 48,
-        items: [{ label: "Import", type: "item", value: "import" }],
-      },
-    });
-
-    closeImportActionsMenu({ state });
-    expect(state.importActionsMenu).toEqual({ isOpen: false, x: 0, y: 0 });
   });
 });

@@ -1,0 +1,10 @@
+componentName: rvn-resource-import-action
+propsSchema:
+  type: object
+  properties: {}
+events:
+  import-complete:
+    type: object
+methods:
+  type: object
+  properties: {}

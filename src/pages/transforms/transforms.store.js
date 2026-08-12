@@ -384,7 +384,6 @@ const {
       centerItemContextMenuItems:
         createTransformCenterItemContextMenuItems(copy),
       isDialogOpen: state.isDialogOpen,
-      isImportDialogOpen: state.isImportDialogOpen,
       isPreviewOnlyDialog: state.dialogMode === "preview",
       transformForm: createTransformForm({
         editMode: state.editMode,
@@ -426,7 +425,6 @@ const {
 export const createInitialState = () => ({
   ...createCatalogInitialState(),
   isDialogOpen: false,
-  isImportDialogOpen: false,
   dialogMode: "form",
   targetGroupId: undefined,
   editMode: false,
@@ -564,14 +562,6 @@ export const closeTransformFormDialog = ({ state }, _payload = {}) => {
   state.fullImagePreviewVisible = false;
   state.fullImagePreviewImageId = undefined;
   state.fullImagePreviewFileId = undefined;
-};
-
-export const openImportDialog = ({ state }) => {
-  state.isImportDialogOpen = true;
-};
-
-export const closeImportDialog = ({ state }, _payload = {}) => {
-  state.isImportDialogOpen = false;
 };
 
 export const selectTargetGroupId = ({ state }) => {
