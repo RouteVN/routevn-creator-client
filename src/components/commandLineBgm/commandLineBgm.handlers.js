@@ -300,7 +300,11 @@ export const handleEdgeAddClick = (deps, payload) => {
 
 export const handleFormChange = (deps, payload) => {
   const { render, store } = deps;
-  const values = payload._event.detail.values;
+  const { name, value, values: currentValues } = payload._event.detail;
+  const values = Object.assign({}, currentValues);
+  if (name) {
+    values[name] = value;
+  }
   const selectedSoundId = store.selectSelectedSoundId();
 
   if (selectedSoundId === undefined) {

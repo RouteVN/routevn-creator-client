@@ -263,6 +263,58 @@ describe("commandLineBgm.handlers", () => {
     expect(render).toHaveBeenCalledTimes(2);
   });
 
+  it("clears sound transitions omitted from the form values", () => {
+    const state = createState();
+    const store = createStore(state);
+    const render = vi.fn();
+    store.insertSound({ id: "intro-clip", resourceId: "intro", index: 0 });
+    store.updateSound({
+      soundId: "intro-clip",
+      values: {
+        incomingTransitionId: "crossfade",
+        outgoingTransitionId: "crossfade",
+      },
+    });
+
+    handleFormChange(
+      { store, render },
+      {
+        _event: {
+          detail: {
+            name: "incomingTransitionId",
+            value: undefined,
+            values: {
+              outgoingTransitionId: "crossfade",
+              outgoingTransitionPlaybackSpeed: 1,
+            },
+          },
+        },
+      },
+    );
+
+    expect(state.bgm.sounds[0].incomingTransition).toBeUndefined();
+    expect(state.bgm.sounds[0].outgoingTransition).toEqual({
+      resourceId: "crossfade",
+      playback: { speed: 1 },
+    });
+
+    handleFormChange(
+      { store, render },
+      {
+        _event: {
+          detail: {
+            name: "outgoingTransitionId",
+            value: undefined,
+            values: {},
+          },
+        },
+      },
+    );
+
+    expect(state.bgm.sounds[0].outgoingTransition).toBeUndefined();
+    expect(render).toHaveBeenCalledTimes(2);
+  });
+
   it("updates only the selected clip timing, loop, and volume", () => {
     const state = createState();
     const store = createStore(state);
