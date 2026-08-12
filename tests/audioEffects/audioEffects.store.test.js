@@ -5,7 +5,7 @@ import {
   setItems,
   setSelectedItemId,
 } from "../../src/pages/audioEffects/audioEffects.store.js";
-import { EN_I18N } from "../support/i18n.js";
+import { EN_I18N, JA_I18N, ZH_HANS_I18N } from "../support/i18n.js";
 
 describe("audioEffects.store", () => {
   it("summarizes transition and update definitions in the catalog", () => {
@@ -33,7 +33,7 @@ describe("audioEffects.store", () => {
                 type: "update",
                 tween: {
                   volume: { keyframes: [] },
-                  pan: { keyframes: [] },
+                  playbackRate: { keyframes: [] },
                 },
               },
             },
@@ -83,9 +83,9 @@ describe("audioEffects.store", () => {
           audioEffectTypeLabel: "Update",
           updateProperties: {
             volume: expect.objectContaining({ label: "Volume" }),
-            pan: expect.objectContaining({ label: "Pan" }),
+            playbackRate: expect.objectContaining({ label: "Playback Rate" }),
           },
-          summary: "volume, pan",
+          summary: "Volume, Playback Rate",
         }),
       ]),
     );
@@ -104,6 +104,21 @@ describe("audioEffects.store", () => {
       id: "submit",
       label: "Create",
     });
-    expect(viewData).not.toHaveProperty("isEditDialogOpen");
+    expect(viewData).toMatchObject({
+      isEditDialogOpen: false,
+      editDefaultValues: { name: "", description: "", tagIds: [] },
+    });
   });
+
+  it.each([
+    [EN_I18N, "Continue", "Create"],
+    [JA_I18N, "続ける", "作成"],
+    [ZH_HANS_I18N, "继续", "创建"],
+  ])(
+    "provides the page-specific create labels in every catalog",
+    (i18n, animationLabel, audioEffectLabel) => {
+      expect(i18n.animationsPage.continueButton).toBe(animationLabel);
+      expect(i18n.audioEffectsPage.createButton).toBe(audioEffectLabel);
+    },
+  );
 });

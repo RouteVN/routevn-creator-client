@@ -697,7 +697,7 @@ animationsPage:
   backButton: "戻る"
   chooseDestinationFolders: "保存先フォルダーを選択してください。"
   chooseFoldersTitle: "フォルダーを選択"
-  createButton: "作成"
+  continueButton: "続ける"
   editTitle: "アニメーションを編集"
   failedCreateAnimation: "アニメーションを作成できませんでした。"
   failedDuplicateAnimation: "アニメーションを複製できませんでした。"
@@ -731,7 +731,7 @@ animationsPage:
 audioEffectsPage:
   addTitle: "オーディオエフェクトを追加"
   configurationLabel: "設定"
-  continueButton: "続ける"
+  createButton: "作成"
   editTitle: "オーディオエフェクトを編集"
   failedCreateAudioEffect: "オーディオエフェクトを作成できませんでした。"
   failedCreateFolder: "オーディオエフェクトフォルダーを作成できませんでした。"

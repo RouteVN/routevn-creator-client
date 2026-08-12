@@ -384,13 +384,22 @@ export const handleRemovePropertyClick = (deps) => {
 
 const openKeyframeForm = (
   deps,
-  { add, index, property, delay, duration, followingDelay } = {},
+  {
+    add,
+    index,
+    property,
+    side = "update",
+    delay,
+    duration,
+    followingDelay,
+  } = {},
 ) => {
   const { refs, render, store } = deps;
   store.openKeyframeDialog({
     add,
     index,
     property,
+    side,
     delay,
     duration,
     followingDelay,
@@ -489,7 +498,16 @@ export const handleKeyframeDropdownItemClick = (deps, payload) => {
 
   if (value === "edit") {
     store.closeKeyframeMenu();
-    render();
+    if (store.selectIsTouchMode()) {
+      openKeyframeForm(deps, {
+        add: false,
+        side,
+        property,
+        index,
+      });
+    } else {
+      render();
+    }
     return;
   }
 
@@ -517,12 +535,13 @@ export const handleKeyframeDropdownItemClick = (deps, payload) => {
 export const handleSelectedKeyframeEditClick = (deps) => {
   const { store } = deps;
   const selectedKeyframe = store.selectSelectedKeyframe();
-  if (!selectedKeyframe || selectedKeyframe.side !== "update") {
+  if (!selectedKeyframe) {
     return;
   }
 
   openKeyframeForm(deps, {
     add: false,
+    side: selectedKeyframe.side,
     property: selectedKeyframe.property,
     index: selectedKeyframe.index,
   });
@@ -622,6 +641,7 @@ export const handleKeyframeFormAction = (deps, payload) => {
   const { actionId, values } = payload._event.detail;
   if (actionId === "delete") {
     store.removeKeyframe({
+      side: store.selectKeyframeDialogSide(),
       property: store.selectKeyframeDialogProperty(),
       index: store.selectSelectedKeyframe()?.index,
     });
@@ -633,9 +653,16 @@ export const handleKeyframeFormAction = (deps, payload) => {
     return;
   }
 
+  const side = store.selectKeyframeDialogSide();
+  const finalKeyframe = store.selectKeyframeDialogIsFinal();
+  const transitionKeyframe = side === "prev" || side === "next";
   const result = buildAudioEffectKeyframe({
-    finalKeyframe: store.selectKeyframeDialogIsFinal(),
-    property: store.selectKeyframeDialogProperty(),
+    allowRelative: !transitionKeyframe,
+    finalKeyframe,
+    fixedValue: side === "next" && finalKeyframe ? 100 : undefined,
+    property: transitionKeyframe
+      ? "volume"
+      : store.selectKeyframeDialogProperty(),
     values,
   });
   if (!result.valid) {

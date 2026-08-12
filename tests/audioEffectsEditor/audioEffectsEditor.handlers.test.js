@@ -313,7 +313,8 @@ describe("audioEffectsEditor.handlers", () => {
     expect(render).toHaveBeenCalledOnce();
   });
 
-  it("uses the right detail panel for Edit and deletes through menu actions", () => {
+  it("opens the keyframe form from the context menu and deletes through menu actions", () => {
+    const keyframeForm = { reset: vi.fn(), setValues: vi.fn() };
     const store = {
       closeKeyframeMenu: vi.fn(),
       removeKeyframe: vi.fn(),
@@ -322,17 +323,33 @@ describe("audioEffectsEditor.handlers", () => {
         property: "volume",
         index: 1,
       })),
+      openKeyframeDialog: vi.fn(),
+      selectIsTouchMode: vi.fn(() => true),
+      selectKeyframeDialogValues: vi.fn(() => ({ duration: 200 })),
     };
     const render = vi.fn();
 
     handleKeyframeDropdownItemClick(
-      { store, render },
+      { refs: { keyframeForm }, store, render },
       { _event: { detail: { item: { value: "edit" } } } },
     );
     expect(store.removeKeyframe).not.toHaveBeenCalled();
+    expect(store.openKeyframeDialog).toHaveBeenCalledWith({
+      add: false,
+      side: "update",
+      property: "volume",
+      index: 1,
+      delay: undefined,
+      duration: undefined,
+      followingDelay: undefined,
+    });
+    expect(keyframeForm.reset).toHaveBeenCalledOnce();
+    expect(keyframeForm.setValues).toHaveBeenCalledWith({
+      values: { duration: 200 },
+    });
 
     handleKeyframeDropdownItemClick(
-      { store, render },
+      { refs: { keyframeForm }, store, render },
       { _event: { detail: { item: { value: "delete-keyframe" } } } },
     );
     expect(store.removeKeyframe).toHaveBeenCalledWith({
@@ -367,6 +384,7 @@ describe("audioEffectsEditor.handlers", () => {
 
     expect(store.openKeyframeDialog).toHaveBeenCalledWith({
       add: false,
+      side: "update",
       property: "volume",
       index: 1,
       delay: undefined,
@@ -484,6 +502,7 @@ describe("audioEffectsEditor.handlers", () => {
       store: {
         selectKeyframeDialogIsFinal: vi.fn(() => false),
         selectKeyframeDialogProperty: vi.fn(() => "pan"),
+        selectKeyframeDialogSide: vi.fn(() => "update"),
         applyKeyframe: vi.fn(),
       },
       render: vi.fn(),

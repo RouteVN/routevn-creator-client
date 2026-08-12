@@ -279,7 +279,7 @@ template:
                                   - 'rvn-value-popover-input#selectedKeyframeDuration value=${selectedKeyframeEditor.duration} label="${selectedKeyframeEditor.durationLabel}"': null
                               - rtgl-select#selectedKeyframeEasingSelect slot=keyframe-easing w=f no-clear :selectedValue=${selectedKeyframeEditor.easing} :options=${selectedKeyframeEditor.easingOptions}: null
                               - $if selectedKeyframeEditor.valueSlider:
-                                  - rtgl-slider-input#selectedKeyframeValue slot=keyframe-value key=${selectedKeyframeDetailId} w=f value=${selectedKeyframeEditor.value} min=${selectedKeyframeEditor.valueSlider.min} max=${selectedKeyframeEditor.valueSlider.max} step=${selectedKeyframeEditor.valueSlider.step}: null
+                                  - rtgl-slider-input#selectedKeyframeValue slot=keyframe-value key=${selectedKeyframeDetailId} w=f value=${selectedKeyframeEditor.value} min=${selectedKeyframeEditor.valueSlider.min} max=${selectedKeyframeEditor.valueSlider.max} step=${selectedKeyframeEditor.valueSlider.step} ?disabled=${selectedKeyframeEditor.valueDisabled}: null
                                 $elif selectedKeyframeEditor.valueEditable:
                                   - rtgl-input-number#selectedKeyframeValue slot=keyframe-value key=${selectedKeyframeDetailId} w=f step=${selectedKeyframeEditor.valueStep} value=${selectedKeyframeEditor.value}: null
                               - rtgl-segmented-control#selectedKeyframeRelative slot=keyframe-value-type w=f no-clear :selectedValue=${selectedKeyframeEditor.relative} :options=${selectedKeyframeEditor.relativeOptions}: null

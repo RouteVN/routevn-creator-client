@@ -79,7 +79,9 @@ const formatAudioEffectSummary = (item, copy = {}) => {
 
   const properties = Object.keys(definition?.tween ?? {});
   return properties.length > 0
-    ? properties.join(", ")
+    ? properties
+        .map((property) => getAudioEffectPropertyLabel(property, copy))
+        .join(", ")
     : (copy.noPropertiesLabel ?? "No properties");
 };
 
@@ -128,6 +130,21 @@ const createAddForm = (copy = {}) => ({
         id: "submit",
         variant: "pr",
         label: copy.createButton ?? "Create",
+      },
+    ],
+  },
+});
+
+const createEditForm = (copy = {}) => ({
+  title: copy.editTitle ?? "Edit Audio Effect",
+  fields: createMetadataFormFields(copy),
+  actions: {
+    layout: "",
+    buttons: [
+      {
+        id: "submit",
+        variant: "pr",
+        label: copy.updateButton ?? "Update Audio Effect",
       },
     ],
   },
@@ -254,6 +271,9 @@ const {
       tagIds: [],
       dialogType: "update",
     },
+    isEditDialogOpen: state.isEditDialogOpen,
+    editForm: createEditForm(copy),
+    editDefaultValues: state.editDefaultValues,
     selectedItemDescription: selectedItem?.description ?? "",
     selectedAudioEffectTypeLabel: selectedItem?.audioEffect?.type
       ? getAudioEffectTypeLabel(selectedItem.audioEffect.type, copy)
@@ -272,6 +292,13 @@ const {
 export const createInitialState = () => ({
   ...createCatalogInitialState(),
   isAddDialogOpen: false,
+  isEditDialogOpen: false,
+  editItemId: undefined,
+  editDefaultValues: {
+    name: "",
+    description: "",
+    tagIds: [],
+  },
   targetGroupId: undefined,
 });
 
@@ -305,6 +332,7 @@ export {
 
 export const selectAudioEffectItemById = selectItemById;
 export const selectTargetGroupId = ({ state }) => state.targetGroupId;
+export const selectEditItemId = ({ state }) => state.editItemId;
 
 export const openAddDialog = ({ state }, { groupId } = {}) => {
   state.isAddDialogOpen = true;
@@ -314,6 +342,22 @@ export const openAddDialog = ({ state }, { groupId } = {}) => {
 export const closeAddDialog = ({ state }) => {
   state.isAddDialogOpen = false;
   state.targetGroupId = undefined;
+};
+
+export const openEditDialog = ({ state }, { itemId, defaultValues } = {}) => {
+  state.isEditDialogOpen = true;
+  state.editItemId = itemId;
+  state.editDefaultValues.name = defaultValues?.name ?? "";
+  state.editDefaultValues.description = defaultValues?.description ?? "";
+  state.editDefaultValues.tagIds = defaultValues?.tagIds ?? [];
+};
+
+export const closeEditDialog = ({ state }) => {
+  state.isEditDialogOpen = false;
+  state.editItemId = undefined;
+  state.editDefaultValues.name = "";
+  state.editDefaultValues.description = "";
+  state.editDefaultValues.tagIds = [];
 };
 
 export const selectViewData = (context) => {

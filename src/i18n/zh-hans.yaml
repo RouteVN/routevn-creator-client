@@ -697,7 +697,7 @@ animationsPage:
   backButton: "返回"
   chooseDestinationFolders: "请选择目标文件夹。"
   chooseFoldersTitle: "选择文件夹"
-  createButton: "创建"
+  continueButton: "继续"
   editTitle: "编辑动画"
   failedCreateAnimation: "无法创建动画。"
   failedDuplicateAnimation: "无法复制动画。"
@@ -731,7 +731,7 @@ animationsPage:
 audioEffectsPage:
   addTitle: "添加音频效果"
   configurationLabel: "配置"
-  continueButton: "继续"
+  createButton: "创建"
   editTitle: "编辑音频效果"
   failedCreateAudioEffect: "创建音频效果失败。"
   failedCreateFolder: "创建音频效果文件夹失败。"

@@ -83,6 +83,16 @@ refs:
         handler: handleAddFormAction
       add-option-click:
         handler: handleAddFormAddOptionClick
+  editDialog:
+    eventListeners:
+      close:
+        handler: handleEditDialogClose
+  editForm:
+    eventListeners:
+      form-action:
+        handler: handleEditFormAction
+      add-option-click:
+        handler: handleEditFormAddOptionClick
   detailHeader:
     eventListeners:
       click:
@@ -137,7 +147,7 @@ template:
                               - rtgl-view d=v w=f h=f:
                                   - rtgl-view#detailHeader h=48 w=f d=h bgc=bg bwb=xs ph=md av=c g=sm cur=pointer:
                                       - rtgl-text w=1fg ellipsis=true: ${selectedDetailName}
-                                      - rtgl-svg svg=chevronRight wh=16: null
+                                      - rtgl-svg svg=edit wh=16: null
                                   - $if selectedItemId:
                                       - rtgl-view d=v w=f h=1fg p=md g=md sv:
                                           - $if selectedItemDescription:
@@ -170,7 +180,7 @@ template:
           - rtgl-view slot=content d=v w=f h=f:
               - rtgl-view#detailHeader h=36 w=f d=h bgc=bg bwb=xs ph=md av=c g=sm cur=pointer:
                   - rtgl-text w=1fg ellipsis=true: ${selectedItemName}
-                  - rtgl-svg svg=chevronRight wh=16: null
+                  - rtgl-svg svg=edit wh=16: null
               - rtgl-view d=h w=f g=sm p=md bgc=su bwb=xs:
                   - rtgl-button#mobileDetailOpenButton w=1fg v=se pre=chevronRight: ${openButton}
                   - rtgl-button#mobileDetailDuplicateButton w=1fg v=se pre=duplicate: ${duplicateButton}
@@ -194,5 +204,7 @@ template:
       - rtgl-form#folderNameForm key=${folderNameDialogItemId} slot=content :defaultValues=${folderNameDialogDefaultValues} :form=${folderNameForm}: null
   - rtgl-dialog#addDialog ?open=${isAddDialogOpen} s=md:
       - rtgl-form#addForm key=${isAddDialogOpen} slot=content :defaultValues=${addFormDefaults} :form=${addForm}: null
+  - rtgl-dialog#editDialog ?open=${isEditDialogOpen} s=md:
+      - rtgl-form#editForm key=${isEditDialogOpen} slot=content :defaultValues=${editDefaultValues} :form=${editForm}: null
   - rtgl-dialog#createTagDialog ?open=${isCreateTagDialogOpen} s=sm:
       - rtgl-form#createTagForm key=${isCreateTagDialogOpen} slot=content :defaultValues=${createTagDefaultValues} :form=${createTagForm}: null

@@ -17,6 +17,7 @@ describe("audio effects views", () => {
       "handleAudioEffectItemDoubleClick",
       "handleItemDuplicate",
       "handleItemDelete",
+      "handleEditFormAction",
       "handleDetailTagValueChange",
       "handleFileExplorerTargetChanged",
     ]) {
@@ -24,8 +25,8 @@ describe("audio effects views", () => {
     }
     expect(view).toContain("rvn-catalog-resources-view#groupview");
     expect(view).toContain("rtgl-button#mobileDetailOpenButton");
-    expect(view).not.toContain("rtgl-dialog#editDialog");
-    expect(view).not.toContain("rtgl-form#editForm");
+    expect(view).toContain("rtgl-dialog#editDialog");
+    expect(view).toContain("rtgl-form#editForm");
 
     const catalogView = readFileSync(
       new URL(

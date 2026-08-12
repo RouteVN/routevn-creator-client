@@ -697,7 +697,7 @@ animationsPage:
   backButton: "Back"
   chooseDestinationFolders: "Choose destination folders."
   chooseFoldersTitle: "Choose Folders"
-  createButton: "Create"
+  continueButton: "Continue"
   editTitle: "Edit Animation"
   failedCreateAnimation: "Failed to create animation."
   failedDuplicateAnimation: "Failed to duplicate animation."
@@ -731,7 +731,7 @@ animationsPage:
 audioEffectsPage:
   addTitle: "Add Audio Effect"
   configurationLabel: "Configuration"
-  continueButton: "Continue"
+  createButton: "Create"
   editTitle: "Edit Audio Effect"
   failedCreateAudioEffect: "Failed to create audio effect."
   failedCreateFolder: "Failed to create audio effect folder."

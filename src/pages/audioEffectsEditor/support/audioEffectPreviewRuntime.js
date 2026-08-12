@@ -163,6 +163,7 @@ export const createAudioEffectPreviewStates = ({
 
 const loadPreviewSoundAssets = async ({
   graphicsService,
+  isActive,
   projectService,
   sounds,
 } = {}) => {
@@ -171,6 +172,9 @@ const loadPreviewSoundAssets = async ({
 
   for (const sound of sounds) {
     const file = await projectService.getFileContent(sound.fileId);
+    if (!isActive()) {
+      return false;
+    }
     assets[sound.fileId] = {
       url: file.url,
       type:
@@ -184,6 +188,7 @@ const loadPreviewSoundAssets = async ({
   }
 
   await graphicsService.loadAssets(assets);
+  return isActive();
 };
 
 export const stopAudioEffectPreview = async ({
@@ -196,6 +201,7 @@ export const stopAudioEffectPreview = async ({
   }
   store.stopPreviewPlayback();
   store.setPreviewPlaybackRequestId({ requestId: undefined });
+  store.setPreviewLoading({ loading: false });
   store.setPreviewPlaying({ playing: false });
   if (!store.selectPreviewRuntimeReady()) {
     return;
@@ -238,9 +244,17 @@ const schedulePreviewPlaybackIndicatorFrame = (deps, { requestId } = {}) => {
   }
 };
 
-const renderPreviewStates = async (graphicsService, states) => {
+const renderPreviewStates = async (
+  graphicsService,
+  states,
+  { isActive = () => true } = {},
+) => {
   await graphicsService.render(states.resetState);
+  if (!isActive()) {
+    return false;
+  }
   await graphicsService.render(states.renderState);
+  return isActive();
 };
 
 const restartPreviewPlaybackIndicator = (deps, { requestId } = {}) => {
@@ -306,6 +320,9 @@ export const playAudioEffectPreview = async (deps) => {
     preview.targetSound,
   ].filter(Boolean);
 
+  const requestId = generateId();
+  const isActive = () => store.selectPreviewPlaybackRequestId() === requestId;
+  store.setPreviewPlaybackRequestId({ requestId });
   store.setPreviewLoading({ loading: true });
   render();
   try {
@@ -315,24 +332,34 @@ export const playAudioEffectPreview = async (deps) => {
         width: 1,
         height: 1,
       });
+      if (!isActive()) {
+        return;
+      }
       store.setPreviewRuntimeReady({ ready: true });
     }
 
-    await loadPreviewSoundAssets({
+    const assetsLoaded = await loadPreviewSoundAssets({
       graphicsService,
+      isActive,
       projectService,
       sounds,
     });
+    if (!assetsLoaded) {
+      return;
+    }
     const states = createAudioEffectPreviewStates({
       definition: store.selectAudioEffectDefinition(),
       outgoingSound: preview.outgoingSound,
       incomingSound: preview.incomingSound,
       targetSound: preview.targetSound,
     });
-    await renderPreviewStates(graphicsService, states);
-    const requestId = generateId();
+    const statesRendered = await renderPreviewStates(graphicsService, states, {
+      isActive,
+    });
+    if (!statesRendered) {
+      return;
+    }
     const duration = store.selectAudioEffectDuration();
-    store.setPreviewPlaybackRequestId({ requestId });
     store.startPreviewPlayback({
       startedAtMs: globalThis.performance.now(),
       durationMs: duration,
@@ -345,7 +372,9 @@ export const playAudioEffectPreview = async (deps) => {
       states,
     });
   } finally {
-    store.setPreviewLoading({ loading: false });
-    render();
+    if (isActive()) {
+      store.setPreviewLoading({ loading: false });
+      render();
+    }
   }
 };

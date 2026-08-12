@@ -4,7 +4,9 @@ import {
   handleAudioEffectItemDoubleClick,
   handleAudioEffectItemEdit,
   handleDetailHeaderClick,
+  handleEditFormAction,
   handleFileExplorerAction,
+  handleItemDelete,
 } from "../../src/pages/audioEffects/audioEffects.handlers.js";
 import { EN_I18N } from "../support/i18n.js";
 
@@ -131,21 +133,18 @@ describe("audioEffects.handlers", () => {
     expect(deps.appService.navigate).not.toHaveBeenCalled();
   });
 
-  it("routes every catalog edit entry point to the dedicated editor", async () => {
+  it("routes catalog Open actions to the dedicated editor", async () => {
     const deps = {
       appService: {
         getPayload: vi.fn(() => ({ p: "project-1" })),
         navigate: vi.fn(),
       },
-      store: {
-        selectSelectedItemId: vi.fn(() => "effect-1"),
-      },
+      store: {},
     };
 
     handleAudioEffectItemEdit(deps, {
       _event: { detail: { itemId: "effect-1" } },
     });
-    handleDetailHeaderClick(deps);
     await handleFileExplorerAction(deps, {
       _event: {
         detail: {
@@ -155,7 +154,7 @@ describe("audioEffects.handlers", () => {
       },
     });
 
-    expect(deps.appService.navigate).toHaveBeenCalledTimes(3);
+    expect(deps.appService.navigate).toHaveBeenCalledTimes(2);
     expect(deps.appService.navigate).toHaveBeenNthCalledWith(
       1,
       "/project/audio-effects-editor",
@@ -173,12 +172,121 @@ describe("audioEffects.handlers", () => {
       },
     );
     expect(deps.appService.navigate).toHaveBeenNthCalledWith(
-      3,
+      2,
       "/project/audio-effects-editor",
       {
         p: "project-1",
         aef: "effect-1",
       },
     );
+  });
+
+  it("opens and saves audio-effect metadata from the detail header", async () => {
+    const item = {
+      id: "effect-1",
+      type: "audioEffect",
+      name: "Old Name",
+      description: "Old description",
+      tagIds: ["smooth"],
+      audioEffect: {
+        type: "update",
+        tween: {
+          volume: {
+            keyframes: [{ value: 50, duration: 300, easing: "linear" }],
+          },
+        },
+      },
+    };
+    const editForm = { reset: vi.fn(), setValues: vi.fn() };
+    const deps = {
+      i18n: EN_I18N,
+      appService: { showAlert: vi.fn(), showToast: vi.fn() },
+      projectService: {
+        updateAudioEffect: vi.fn(async ({ data }) => {
+          Object.assign(item, data);
+          return { valid: true };
+        }),
+        getRepositoryState: vi.fn(() => ({
+          audioEffects: {
+            items: { "effect-1": item },
+            tree: [{ id: "effect-1" }],
+          },
+        })),
+      },
+      store: {
+        selectSelectedItemId: vi.fn(() => "effect-1"),
+        selectAudioEffectItemById: vi.fn(() => item),
+        setSelectedItemId: vi.fn(),
+        openEditDialog: vi.fn(),
+        selectEditItemId: vi.fn(() => "effect-1"),
+        closeEditDialog: vi.fn(),
+        setItems: vi.fn(),
+        setSelectedFolderId: vi.fn(),
+        setTagsData: vi.fn(),
+      },
+      refs: {
+        editForm,
+        fileExplorer: { selectItem: vi.fn() },
+      },
+      render: vi.fn(),
+    };
+
+    handleDetailHeaderClick(deps);
+
+    const editValues = {
+      name: "Old Name",
+      description: "Old description",
+      tagIds: ["smooth"],
+    };
+    expect(deps.store.openEditDialog).toHaveBeenCalledWith({
+      itemId: "effect-1",
+      defaultValues: editValues,
+    });
+    expect(editForm.reset).toHaveBeenCalledOnce();
+    expect(editForm.setValues).toHaveBeenCalledWith({ values: editValues });
+
+    await handleEditFormAction(deps, {
+      _event: {
+        detail: {
+          actionId: "submit",
+          values: {
+            name: " New Name ",
+            description: "New description",
+            tagIds: ["smooth", "volume"],
+          },
+        },
+      },
+    });
+
+    expect(deps.projectService.updateAudioEffect).toHaveBeenCalledWith({
+      audioEffectId: "effect-1",
+      data: {
+        name: "New Name",
+        description: "New description",
+        tagIds: ["smooth", "volume"],
+      },
+    });
+    expect(deps.store.closeEditDialog).toHaveBeenCalledOnce();
+  });
+
+  it("checks control actions before deleting an audio effect", async () => {
+    const deps = {
+      i18n: EN_I18N,
+      appService: { showAlert: vi.fn() },
+      projectService: {
+        checkResourceUsage: vi.fn(async () => ({ isUsed: true })),
+        deleteAudioEffects: vi.fn(),
+      },
+    };
+
+    await handleItemDelete(deps, {
+      _event: { detail: { itemId: "effect-1" } },
+    });
+
+    expect(deps.projectService.checkResourceUsage).toHaveBeenCalledWith({
+      itemId: "effect-1",
+      checkTargets: ["scenes", "layouts", "controls"],
+    });
+    expect(deps.projectService.deleteAudioEffects).not.toHaveBeenCalled();
   });
 });

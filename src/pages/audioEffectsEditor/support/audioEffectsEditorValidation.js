@@ -26,7 +26,9 @@ const isAbsoluteValueInBounds = (property, value) => {
 };
 
 export const buildAudioEffectKeyframe = ({
+  allowRelative = true,
   finalKeyframe = false,
+  fixedValue,
   property,
   values = {},
 } = {}) => {
@@ -48,8 +50,8 @@ export const buildAudioEffectKeyframe = ({
     };
   }
 
-  const relative = !finalKeyframe && values.relative === true;
-  const value = Number(values.value);
+  const relative = allowRelative && !finalKeyframe && values.relative === true;
+  const value = fixedValue ?? Number(values.value);
   if (
     !Number.isFinite(value) ||
     (!relative && !isAbsoluteValueInBounds(property, value))

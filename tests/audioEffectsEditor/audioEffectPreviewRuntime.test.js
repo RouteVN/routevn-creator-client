@@ -437,6 +437,7 @@ describe("audio effect preview runtime", () => {
     const store = {
       selectPreviewRuntimeReady: vi.fn(() => true),
       selectPreviewPlaybackFrameId: vi.fn(() => 7),
+      setPreviewLoading: vi.fn(),
       setPreviewPlaybackRequestId: vi.fn(),
       setPreviewPlaying: vi.fn(),
       stopPreviewPlayback: vi.fn(),
@@ -455,5 +456,65 @@ describe("audio effect preview runtime", () => {
     expect(graphicsService.render).toHaveBeenCalledWith(
       expect.objectContaining({ audio: [], audioEffects: [] }),
     );
+  });
+
+  it("does not start playback when startup is cancelled during asset loading", async () => {
+    let playbackRequestId;
+    let resolveFileContent;
+    const fileContent = new Promise((resolve) => {
+      resolveFileContent = resolve;
+    });
+    const store = {
+      selectAudioEffectPreview: vi.fn(() => ({
+        targetSound: { id: "target", type: "sound", fileId: "target.mp3" },
+      })),
+      selectAudioEffectDefinition: vi.fn(() => ({
+        type: "update",
+        tween: {
+          volume: {
+            keyframes: [{ value: 50, duration: 300, easing: "linear" }],
+          },
+        },
+      })),
+      selectAudioEffectDuration: vi.fn(() => 300),
+      selectPreviewRuntimeReady: vi.fn(() => true),
+      selectPreviewPlaybackFrameId: vi.fn(),
+      selectPreviewPlaybackRequestId: vi.fn(() => playbackRequestId),
+      setPreviewLoading: vi.fn(),
+      setPreviewPlaying: vi.fn(),
+      setPreviewPlaybackRequestId: vi.fn(({ requestId }) => {
+        playbackRequestId = requestId;
+      }),
+      startPreviewPlayback: vi.fn(),
+      stopPreviewPlayback: vi.fn(),
+    };
+    const graphicsService = {
+      loadAssets: vi.fn(async () => {}),
+      render: vi.fn(async () => {}),
+    };
+    const deps = {
+      graphicsService,
+      projectService: {
+        getRepositoryState: vi.fn(() => ({ files: { items: {} } })),
+        getFileContent: vi.fn(() => fileContent),
+      },
+      refs: { audioPreviewCanvas: {} },
+      render: vi.fn(),
+      store,
+    };
+
+    const playPromise = playAudioEffectPreview(deps);
+    await Promise.resolve();
+    await stopAudioEffectPreview(deps);
+    resolveFileContent({ url: "blob:target.mp3", type: "audio/mpeg" });
+    await playPromise;
+
+    expect(graphicsService.loadAssets).not.toHaveBeenCalled();
+    expect(graphicsService.render).toHaveBeenCalledTimes(1);
+    expect(graphicsService.render).toHaveBeenCalledWith(
+      expect.objectContaining({ audio: [], audioEffects: [] }),
+    );
+    expect(store.startPreviewPlayback).not.toHaveBeenCalled();
+    expect(store.setPreviewPlaying).not.toHaveBeenCalledWith({ playing: true });
   });
 });

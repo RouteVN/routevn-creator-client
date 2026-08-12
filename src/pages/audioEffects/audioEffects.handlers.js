@@ -160,6 +160,8 @@ const {
       const { refs } = deps;
       if (mode === "add-form") {
         appendTagIdToForm({ form: refs.addForm, tagId });
+      } else if (mode === "edit-form") {
+        appendTagIdToForm({ form: refs.editForm, tagId });
       }
     },
   },
@@ -287,11 +289,36 @@ export const handleAudioEffectItemEdit = (deps, payload) => {
   });
 };
 
+const openEditDialogWithValues = ({ deps, itemId } = {}) => {
+  if (!itemId) {
+    return;
+  }
+
+  const { refs, render, store } = deps;
+  const { editForm, fileExplorer } = refs;
+  const item = store.selectAudioEffectItemById({ itemId });
+  if (!item) {
+    return;
+  }
+
+  const editValues = {
+    name: item.name ?? "",
+    description: item.description ?? "",
+    tagIds: item.tagIds ?? [],
+  };
+  store.setSelectedItemId({ itemId });
+  fileExplorer?.selectItem?.({ itemId });
+  store.openEditDialog({ itemId, defaultValues: editValues });
+  render();
+  editForm.reset();
+  editForm.setValues({ values: editValues });
+};
+
 export const handleDetailHeaderClick = (deps) => {
-  const { appService, store } = deps;
+  const { store } = deps;
   const itemId = store.selectSelectedItemId();
   if (itemId) {
-    navigateToEditor({ appService, audioEffectId: itemId });
+    openEditDialogWithValues({ deps, itemId });
     return;
   }
 
@@ -299,6 +326,64 @@ export const handleDetailHeaderClick = (deps) => {
     deps,
     folderId: store.selectSelectedFolderId(),
   });
+};
+
+export const handleEditFormAddOptionClick = (deps) => {
+  openCreateTagDialogForMode({
+    deps,
+    mode: "edit-form",
+    itemId: deps.store.selectEditItemId(),
+  });
+};
+
+export const handleEditDialogClose = (deps) => {
+  const { render, store } = deps;
+  store.closeEditDialog();
+  render();
+};
+
+export const handleEditFormAction = async (deps, payload) => {
+  const { appService, projectService, store } = deps;
+  const copy = selectCopy(deps);
+  const { actionId, values } = payload._event.detail;
+  if (actionId !== "submit") {
+    return;
+  }
+
+  const name = values?.name?.trim();
+  if (!name) {
+    appService.showAlert({
+      title: copy.warningTitle ?? "Warning",
+      message: copy.nameRequired ?? "Please enter an audio effect name.",
+    });
+    return;
+  }
+
+  const editItemId = store.selectEditItemId();
+  if (!editItemId) {
+    return;
+  }
+
+  const updateAttempt = await runResourcePageMutation({
+    appService,
+    fallbackMessage:
+      copy.failedUpdateAudioEffect ?? "Failed to update audio effect.",
+    action: () =>
+      projectService.updateAudioEffect({
+        audioEffectId: editItemId,
+        data: {
+          name,
+          description: values?.description ?? "",
+          tagIds: Array.isArray(values?.tagIds) ? values.tagIds : [],
+        },
+      }),
+  });
+  if (!updateAttempt.ok) {
+    return;
+  }
+
+  store.closeEditDialog();
+  await handleDataChanged(deps, { selectedItemId: editItemId });
 };
 
 export const handleItemDelete = async (deps, payload) => {
@@ -311,7 +396,7 @@ export const handleItemDelete = async (deps, payload) => {
 
   const usage = await projectService.checkResourceUsage({
     itemId,
-    checkTargets: ["scenes", "layouts"],
+    checkTargets: ["scenes", "layouts", "controls"],
   });
   if (usage.isUsed) {
     appService.showAlert({

@@ -270,7 +270,7 @@ describe("audioEffectsEditor.store", () => {
     });
   });
 
-  it("appends a timeline keyframe after the final numeric update endpoint", () => {
+  it("appends an absolute timeline keyframe after the final numeric update endpoint", () => {
     const state = createInitialState();
     loadAudioEffect(
       { state },
@@ -311,7 +311,7 @@ describe("audioEffectsEditor.store", () => {
     expect(state.keyframeDialog.open).toBe(false);
   });
 
-  it("deletes update keyframes while keeping the keyframe list non-empty", () => {
+  it("protects the final update endpoint while allowing earlier keyframes to be deleted", () => {
     const state = createInitialState();
     loadAudioEffect(
       { state },
@@ -339,11 +339,31 @@ describe("audioEffectsEditor.store", () => {
     );
 
     removeKeyframe({ state }, { property: "volume", index: 1 });
-    expect(state.definition.tween.volume.keyframes).toEqual([
-      { value: 50, duration: 150, easing: "easeOutQuad" },
-    ]);
+    expect(state.definition.tween.volume.keyframes).toHaveLength(2);
     removeKeyframe({ state }, { property: "volume", index: 0 });
-    expect(state.definition.tween.volume.keyframes).toHaveLength(1);
+    expect(state.definition.tween.volume.keyframes).toEqual([
+      { value: 30, duration: 350, easing: "easeInOutSine" },
+    ]);
+    openKeyframeDialog(
+      { state },
+      { side: "update", property: "volume", index: 0 },
+    );
+    applyKeyframe(
+      { state },
+      {
+        keyframe: {
+          value: 10,
+          relative: true,
+          duration: 200,
+          easing: "linear",
+        },
+      },
+    );
+    expect(state.definition.tween.volume.keyframes[0]).toEqual({
+      value: 10,
+      duration: 200,
+      easing: "linear",
+    });
 
     addTweenProperty({ state }, { property: "pan" });
     expect(state.definition.tween.pan.keyframes).toEqual([
@@ -558,7 +578,8 @@ describe("audioEffectsEditor.store", () => {
         delay: 20,
         duration: 900,
         easing: "easeInOutSine",
-        valueEditable: true,
+        valueDisabled: true,
+        valueEditable: false,
       },
       selectedKeyframeCanOpenEditDialog: false,
     });
@@ -655,11 +676,12 @@ describe("audioEffectsEditor.store", () => {
       { side: "next", property: "fade", index: 1 },
     );
     setSelectedKeyframeValue({ state }, { value: 90 });
-    expect(state.definition.next.fade.keyframes[1].value).toBe(90);
+    expect(state.definition.next.fade.keyframes[1].value).toBe(100);
     expect(selectViewData({ state, i18n: EN_I18N })).toMatchObject({
       selectedKeyframeEditor: {
-        value: 90,
-        valueEditable: true,
+        value: 100,
+        valueDisabled: true,
+        valueEditable: false,
       },
     });
   });
@@ -727,7 +749,7 @@ describe("audioEffectsEditor.store", () => {
     });
   });
 
-  it("deletes transition keyframes without rewriting the preceding value", () => {
+  it("protects the final incoming fade endpoint and keeps it fixed at 100", () => {
     const state = createInitialState();
     loadAudioEffect(
       { state },
@@ -754,13 +776,70 @@ describe("audioEffectsEditor.store", () => {
       { state },
       { side: "next", property: "fade", index: 1 },
     );
+    setSelectedKeyframeValue({ state }, { value: 75 });
     removeKeyframe({ state }, { side: "next", property: "fade", index: 1 });
+    openKeyframeDialog({ state }, { side: "next", property: "fade", index: 1 });
+    applyKeyframe(
+      { state },
+      {
+        keyframe: {
+          value: 75,
+          relative: true,
+          duration: 500,
+          easing: "linear",
+        },
+      },
+    );
 
     expect(state.definition.next.fade.keyframes).toEqual([
       { value: 50, duration: 300, easing: "linear" },
+      { value: 100, duration: 500, easing: "linear" },
     ]);
-    expect(state.selectedKeyframe).toBeUndefined();
-    expect(state.dirty).toBe(true);
+  });
+
+  it("inserts incoming fade keyframes before the mandatory endpoint", () => {
+    const state = createInitialState();
+    loadAudioEffect(
+      { state },
+      {
+        item: {
+          id: "crossfade",
+          name: "Crossfade",
+          audioEffect: {
+            type: "transition",
+            next: {
+              fade: {
+                keyframes: [
+                  { value: 50, duration: 300, easing: "linear" },
+                  { value: 100, duration: 600, easing: "easeInOutSine" },
+                ],
+              },
+            },
+          },
+        },
+      },
+    );
+
+    addKeyframe(
+      { state },
+      {
+        side: "next",
+        property: "fade",
+        index: 2,
+        keyframe: { value: 75, duration: 200, easing: "linear" },
+      },
+    );
+
+    expect(state.definition.next.fade.keyframes).toEqual([
+      { value: 50, duration: 300, easing: "linear" },
+      { value: 75, duration: 200, easing: "linear" },
+      { value: 100, duration: 600, easing: "easeInOutSine" },
+    ]);
+    expect(state.selectedKeyframe).toEqual({
+      side: "next",
+      property: "fade",
+      index: 1,
+    });
   });
 
   it("exposes localized keyframe menu items and protects a sole keyframe", () => {
