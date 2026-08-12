@@ -50,6 +50,20 @@ export const handleResourceImportComplete = (deps, payload) => {
   });
   render();
   dispatchEvent(
+    new CustomEvent("search-input", {
+      detail: { value: "" },
+      bubbles: true,
+      composed: true,
+    }),
+  );
+  dispatchEvent(
+    new CustomEvent("tag-filter-change", {
+      detail: { tagIds: [] },
+      bubbles: true,
+      composed: true,
+    }),
+  );
+  dispatchEvent(
     new CustomEvent("import-complete", {
       detail: result,
       bubbles: true,

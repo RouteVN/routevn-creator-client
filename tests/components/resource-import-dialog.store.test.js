@@ -44,14 +44,14 @@ const createMultiResourcePlan = () => ({
           name: "Folder One",
           depth: 0,
         },
-        { kind: "resources", sourceIds: ["source.one"] },
+        { kind: "resources", sourceIds: ["source.one"], depth: 1 },
         {
           kind: "folder",
           sourceId: "transforms:folder-two",
           name: "Folder Two",
           depth: 0,
         },
-        { kind: "resources", sourceIds: ["source.two"] },
+        { kind: "resources", sourceIds: ["source.two"], depth: 1 },
       ],
     },
   ],
@@ -137,9 +137,17 @@ describe("resource-import-dialog.store", () => {
       typeLabel: "Transform",
       groups: [
         { kind: "folder", name: "Folder One", indent: 0 },
-        { kind: "resources", resources: [{ sourceId: "source.one" }] },
+        {
+          kind: "resources",
+          indent: 16,
+          resources: [{ sourceId: "source.one" }],
+        },
         { kind: "folder", name: "Folder Two", indent: 0 },
-        { kind: "resources", resources: [{ sourceId: "source.two" }] },
+        {
+          kind: "resources",
+          indent: 16,
+          resources: [{ sourceId: "source.two" }],
+        },
       ],
     });
 

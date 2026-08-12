@@ -80,6 +80,10 @@ describe("groupVariablesView view", () => {
     expect(view).not.toContain("rvn-computed-variable-editor");
     expect(view).not.toContain("rvn-computed-conditional-editor");
     expect(view).not.toContain("addVariableDialog");
+    expect(view).toContain("resourceImportAction:");
+    expect(view).toContain("search-input:");
+    expect(view).toContain("handler: handleSearchInput");
+    expect(view).toContain("rvn-resource-import-action#resourceImportAction");
   });
 
   it("scrolls long computed forms through a constrained wrapper", () => {

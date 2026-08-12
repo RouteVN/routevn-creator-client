@@ -1,9 +1,6 @@
 import { describe, expect, it, vi } from "vitest";
 import {
   handleBeforeMount,
-  handleImportActionsMenuButtonClick,
-  handleImportActionsMenuClose,
-  handleImportActionsMenuItemClick,
   handleItemContextMenu,
   handleItemDoubleClick,
   handleZoomOut,
@@ -32,47 +29,6 @@ const createProgressiveStore = (overrides = {}) => ({
 });
 
 describe("catalogResourcesView.handlers", () => {
-  it("opens the import actions menu and dispatches its import action", () => {
-    const dispatchEvent = vi.fn();
-    const render = vi.fn();
-    const store = {
-      closeImportActionsMenu: vi.fn(),
-      openImportActionsMenu: vi.fn(),
-      selectImportActionsMenu: vi.fn(() => ({ x: 24, y: 48 })),
-    };
-    const deps = { dispatchEvent, render, store };
-    const stopPropagation = vi.fn();
-
-    handleImportActionsMenuButtonClick(deps, {
-      _event: {
-        currentTarget: {
-          getBoundingClientRect: () => ({ right: 24, bottom: 48 }),
-        },
-        stopPropagation,
-      },
-    });
-    expect(stopPropagation).toHaveBeenCalledOnce();
-    expect(store.openImportActionsMenu).toHaveBeenCalledWith({
-      x: 24,
-      y: 48,
-    });
-
-    handleImportActionsMenuItemClick(deps, {
-      _event: { detail: { item: { value: "import" } } },
-    });
-    expect(store.closeImportActionsMenu).toHaveBeenCalledOnce();
-    expect(dispatchEvent).toHaveBeenCalledWith(
-      expect.objectContaining({
-        type: "import-click",
-        detail: { x: 24, y: 48 },
-      }),
-    );
-
-    handleImportActionsMenuClose(deps);
-    expect(store.closeImportActionsMenu).toHaveBeenCalledTimes(2);
-    expect(render).toHaveBeenCalledTimes(3);
-  });
-
   it("ignores mobile item double clicks", () => {
     const dispatchEvent = vi.fn();
 

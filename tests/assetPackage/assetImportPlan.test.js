@@ -182,6 +182,24 @@ describe("asset import plan", () => {
               default: "two",
               value: "two",
             },
+            "variable-three": {
+              id: "variable-three",
+              type: "variable",
+              name: "Variable Three",
+              variableType: "string",
+              scope: "context",
+              default: "three",
+              value: "three",
+            },
+            "variable-root": {
+              id: "variable-root",
+              type: "variable",
+              name: "Root Variable",
+              variableType: "string",
+              scope: "context",
+              default: "root",
+              value: "root",
+            },
           },
           tree: [
             {
@@ -195,8 +213,10 @@ describe("asset import plan", () => {
                   id: "folder-variables-nested",
                   children: [{ id: "variable-two" }],
                 },
+                { id: "variable-three" },
               ],
             },
+            { id: "variable-root" },
           ],
         },
         colors: {
@@ -240,7 +260,12 @@ describe("asset import plan", () => {
             name: "Variables One",
             depth: 0,
           },
-          { kind: "resources", sourceIds: ["variables:variable-one"] },
+          {
+            kind: "resources",
+            sourceIds: ["variables:variable-one"],
+            depth: 1,
+            parentSourceId: "variables:folder-variables-one",
+          },
           {
             kind: "folder",
             sourceId: "variables:folder-variables-two",
@@ -252,8 +277,25 @@ describe("asset import plan", () => {
             sourceId: "variables:folder-variables-nested",
             name: "Nested Variables",
             depth: 1,
+            parentSourceId: "variables:folder-variables-two",
           },
-          { kind: "resources", sourceIds: ["variables:variable-two"] },
+          {
+            kind: "resources",
+            sourceIds: ["variables:variable-two"],
+            depth: 2,
+            parentSourceId: "variables:folder-variables-nested",
+          },
+          {
+            kind: "resources",
+            sourceIds: ["variables:variable-three"],
+            depth: 1,
+            parentSourceId: "variables:folder-variables-two",
+          },
+          {
+            kind: "resources",
+            sourceIds: ["variables:variable-root"],
+            depth: 0,
+          },
         ],
       },
       {
@@ -265,7 +307,12 @@ describe("asset import plan", () => {
             name: "Colors Folder",
             depth: 0,
           },
-          { kind: "resources", sourceIds: ["colors:color-one"] },
+          {
+            kind: "resources",
+            sourceIds: ["colors:color-one"],
+            depth: 1,
+            parentSourceId: "colors:folder-colors",
+          },
         ],
       },
     ]);

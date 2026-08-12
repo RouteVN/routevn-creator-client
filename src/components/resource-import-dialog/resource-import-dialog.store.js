@@ -124,7 +124,7 @@ const createFallbackReviewSections = (resources) => {
     if (!section) {
       section = {
         resourceType: resource.resourceType,
-        items: [{ kind: "resources", sourceIds: [] }],
+        items: [{ kind: "resources", sourceIds: [], depth: 0 }],
       };
       sectionsByResourceType.set(resource.resourceType, section);
     }
@@ -402,6 +402,7 @@ export const selectViewData = ({ state, i18n = {} }) => {
       }
       return {
         ...item,
+        indent: (item.depth ?? 0) * 16,
         resources: item.sourceIds.map((sourceId) =>
           resourceBySourceId.get(sourceId),
         ),

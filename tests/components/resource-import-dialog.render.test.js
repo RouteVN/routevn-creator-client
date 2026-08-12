@@ -129,4 +129,32 @@ describe("resource-import-dialog rendering", () => {
 
     dialog.remove();
   });
+
+  it("keeps keyboard focus on a card after toggling it", () => {
+    const dialog = document.createElement(
+      "rvn-resource-import-dialog-render-test",
+    );
+    document.body.append(dialog);
+    dialog.store.setPlan({ plan: createPlan() });
+    dialog.render();
+
+    const card = dialog.shadowRoot.querySelector('[data-resource-index="3"]');
+    card.focus();
+    card.dispatchEvent(
+      new KeyboardEvent("keydown", {
+        bubbles: true,
+        composed: true,
+        key: " ",
+      }),
+    );
+
+    const renderedCard = dialog.shadowRoot.querySelector(
+      '[data-resource-index="3"]',
+    );
+    expect(renderedCard).toBe(card);
+    expect(dialog.shadowRoot.activeElement).toBe(card);
+    expect(renderedCard.getAttribute("aria-pressed")).toBe("false");
+
+    dialog.remove();
+  });
 });

@@ -42,7 +42,10 @@ describe("resource-import-dialog.view", () => {
     expect(viewSource).toContain("resourceSelectionGrid:");
     expect(viewSource).not.toContain("resourceSelectionCard*:");
     expect(viewSource).toContain(
-      "rtgl-view#resourceSelectionCard${resource.planResourceIndex}${resource.selected}",
+      "rtgl-view#resourceSelectionCard${resource.planResourceIndex}",
+    );
+    expect(viewSource).not.toContain(
+      "resourceSelectionCard${resource.planResourceIndex}${resource.selected}",
     );
     expect(viewSource).toContain("role=button tabindex=0");
     expect(viewSource).toContain(
@@ -59,6 +62,9 @@ describe("resource-import-dialog.view", () => {
     expect(viewSource).toContain("bgc=bg");
     expect(viewSource).toContain("bc=${resource.selectionBorderColor}");
     expect(viewSource).toContain("h-bc=${resource.selectionHoverBorderColor}");
+    expect(viewSource).toContain(
+      'style="padding-left: ${group.indent}px; box-sizing: border-box;"',
+    );
     expect(viewSource).not.toContain("selectionBackgroundColor");
     expect(viewSource).not.toContain("rtgl-checkbox");
     expect(viewSource).toContain("rtgl-view w=160 h=90 av=c ah=c br=md bgc=mu");

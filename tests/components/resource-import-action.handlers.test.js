@@ -69,7 +69,26 @@ describe("resourceImportAction.handlers", () => {
       message: "Imported 3 resources from the asset package.",
       status: "success",
     });
-    expect(deps.dispatchEvent).toHaveBeenCalledWith(
+    expect(deps.dispatchEvent).toHaveBeenNthCalledWith(
+      1,
+      expect.objectContaining({
+        type: "search-input",
+        detail: { value: "" },
+        bubbles: true,
+        composed: true,
+      }),
+    );
+    expect(deps.dispatchEvent).toHaveBeenNthCalledWith(
+      2,
+      expect.objectContaining({
+        type: "tag-filter-change",
+        detail: { tagIds: [] },
+        bubbles: true,
+        composed: true,
+      }),
+    );
+    expect(deps.dispatchEvent).toHaveBeenNthCalledWith(
+      3,
       expect.objectContaining({
         type: "import-complete",
         detail: { importedCount: 3 },
@@ -77,5 +96,6 @@ describe("resourceImportAction.handlers", () => {
         composed: true,
       }),
     );
+    expect(deps.render).toHaveBeenCalledOnce();
   });
 });

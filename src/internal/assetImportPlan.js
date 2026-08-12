@@ -496,15 +496,18 @@ const createReviewSections = ({ manifest, resources }) => {
       continue;
     }
 
-    const createReviewItems = (nodes, depth) => {
+    const createReviewItems = (nodes, depth, parentSourceId) => {
       const reviewItems = [];
       let pendingResourceSourceIds = [];
       const flushResources = () => {
         if (pendingResourceSourceIds.length === 0) return;
-        reviewItems.push({
+        const resourceGroup = {
           kind: "resources",
           sourceIds: pendingResourceSourceIds,
-        });
+          depth,
+        };
+        if (parentSourceId) resourceGroup.parentSourceId = parentSourceId;
+        reviewItems.push(resourceGroup);
         pendingResourceSourceIds = [];
       };
 
@@ -519,21 +522,27 @@ const createReviewSections = ({ manifest, resources }) => {
         }
 
         flushResources();
-        const childItems = createReviewItems(node.children ?? [], depth + 1);
+        const childItems = createReviewItems(
+          node.children ?? [],
+          depth + 1,
+          sourceId,
+        );
         if (childItems.length === 0) continue;
-        reviewItems.push({
+        const folderGroup = {
           kind: "folder",
           sourceId,
           name: item.name,
           depth,
-        });
+        };
+        if (parentSourceId) folderGroup.parentSourceId = parentSourceId;
+        reviewItems.push(folderGroup);
         reviewItems.push(...childItems);
       }
       flushResources();
       return reviewItems;
     };
 
-    const items = createReviewItems(collection.tree, 0);
+    const items = createReviewItems(collection.tree, 0, undefined);
     if (items.length > 0) sections.push({ resourceType, items });
   }
 
