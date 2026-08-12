@@ -82,7 +82,7 @@ const getReviewResources = ({ plan, values }) => {
       resource,
       resourceIndex,
       selected,
-      selectionLocked: selected && requiredSourceIds.has(resource.sourceId),
+      required: selected && requiredSourceIds.has(resource.sourceId),
     };
   });
 };
@@ -261,19 +261,44 @@ export const setResourceSelected = (
   { resourceIndex, selected } = {},
 ) => {
   const resource = state.plan.resources[resourceIndex];
-  if (selected !== true) {
-    const requiredSourceIds = getRequiredDependencySourceIds({
-      plan: state.plan,
-      values: state.reviewValues,
-    });
-    if (requiredSourceIds.has(resource.sourceId)) return;
-    state.reviewValues[`resource_${resourceIndex}_include`] = false;
-    return;
-  }
-
   const resourceIndexBySourceId = new Map(
     state.plan.resources.map((item, index) => [item.sourceId, index]),
   );
+  if (selected !== true) {
+    const dependentSourceIdsByDependencySourceId = new Map();
+    for (const item of state.plan.resources) {
+      for (const dependencySourceId of item.dependencySourceIds ?? []) {
+        const dependentSourceIds =
+          dependentSourceIdsByDependencySourceId.get(dependencySourceId) ?? [];
+        dependentSourceIds.push(item.sourceId);
+        dependentSourceIdsByDependencySourceId.set(
+          dependencySourceId,
+          dependentSourceIds,
+        );
+      }
+    }
+
+    const pendingSourceIds = [resource.sourceId];
+    const deselectedSourceIds = new Set();
+    while (pendingSourceIds.length > 0) {
+      const sourceId = pendingSourceIds.pop();
+      if (deselectedSourceIds.has(sourceId)) continue;
+      deselectedSourceIds.add(sourceId);
+      const index = resourceIndexBySourceId.get(sourceId);
+      if (index === undefined) continue;
+      state.reviewValues[`resource_${index}_include`] = false;
+      for (const dependentSourceId of dependentSourceIdsByDependencySourceId.get(
+        sourceId,
+      ) ?? []) {
+        const dependentIndex = resourceIndexBySourceId.get(dependentSourceId);
+        if (state.reviewValues[`resource_${dependentIndex}_include`] === true) {
+          pendingSourceIds.push(dependentSourceId);
+        }
+      }
+    }
+    return;
+  }
+
   const pendingSourceIds = [resource.sourceId];
   while (pendingSourceIds.length > 0) {
     const sourceId = pendingSourceIds.pop();
@@ -345,7 +370,7 @@ export const selectViewData = ({ state, i18n = {} }) => {
     ? getReviewResources({
         plan,
         values: state.reviewValues,
-      }).map(({ resource, resourceIndex, selected, selectionLocked }) => ({
+      }).map(({ resource, resourceIndex, selected, required }) => ({
         ...resource,
         resourceIndex,
         typeLabel: getResourceTypeLabel({ resource, copy }),
@@ -354,12 +379,10 @@ export const selectViewData = ({ state, i18n = {} }) => {
           getResourceLabel(resource, resourceIndex, copy),
         ),
         selected,
-        selectionLocked,
-        selectionTabIndex: selectionLocked ? -1 : 0,
-        selectionCursor: selectionLocked ? "default" : "pointer",
+        required,
         selectionBorderColor: selected ? "pr" : "bo",
         selectionHoverBorderColor: selected ? "pr" : "ac",
-        selectionStatus: selectionLocked
+        selectionStatus: required
           ? (copy.requiredStatus ?? "Required")
           : selected
             ? (copy.selectedStatus ?? "Selected")

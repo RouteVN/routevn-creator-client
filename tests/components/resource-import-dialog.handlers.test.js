@@ -145,20 +145,23 @@ describe("resource-import-dialog.handlers", () => {
     expect(deps.render).toHaveBeenCalledTimes(1);
   });
 
-  it("does not toggle a required dependency", () => {
+  it("allows a required dependency to be deselected", () => {
     const { deps } = createDeps();
 
     handleResourceSelectionToggle(deps, {
       _event: {
         currentTarget: {
-          dataset: { resourceIndex: "0", selectionLocked: "true" },
+          dataset: { resourceIndex: "0" },
           getAttribute: vi.fn(() => "true"),
         },
       },
     });
 
-    expect(deps.store.setResourceSelected).not.toHaveBeenCalled();
-    expect(deps.render).not.toHaveBeenCalled();
+    expect(deps.store.setResourceSelected).toHaveBeenCalledWith({
+      resourceIndex: 0,
+      selected: false,
+    });
+    expect(deps.render).toHaveBeenCalledTimes(1);
   });
 
   it("toggles a resource choice with Enter or Space", () => {

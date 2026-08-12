@@ -170,7 +170,7 @@ describe("resource-import-dialog.store", () => {
     });
   });
 
-  it("keeps dependencies locked without changing manifest order", () => {
+  it("deselects dependents when a required dependency is deselected", () => {
     const state = createInitialState();
     const plan = createMultiResourcePlan();
     plan.resources[1].dependencySourceIds = [plan.resources[0].sourceId];
@@ -180,22 +180,35 @@ describe("resource-import-dialog.store", () => {
     expect(selectViewData({ state, i18n: {} }).resources[0]).toMatchObject({
       sourceId: "source.one",
       selected: true,
-      selectionLocked: true,
+      required: true,
       selectionStatus: "Required",
     });
     expect(selectViewData({ state, i18n: {} }).resources.at(-1)).toMatchObject({
       sourceId: "source.two",
       selected: true,
-      selectionLocked: false,
+      required: false,
     });
-    setResourceSelected({ state }, { resourceIndex: 0, selected: false });
-    expect(state.reviewValues.resource_0_include).toBe(true);
-
-    setResourceSelected({ state }, { resourceIndex: 1, selected: false });
     setResourceSelected({ state }, { resourceIndex: 0, selected: false });
     expect(state.reviewValues).toMatchObject({
       resource_0_include: false,
       resource_1_include: false,
+    });
+
+    setResourceSelected({ state }, { resourceIndex: 1, selected: true });
+    expect(state.reviewValues).toMatchObject({
+      resource_0_include: true,
+      resource_1_include: true,
+    });
+    setResourceSelected({ state }, { resourceIndex: 1, selected: false });
+    expect(state.reviewValues).toMatchObject({
+      resource_0_include: true,
+      resource_1_include: false,
+    });
+    expect(selectViewData({ state, i18n: {} }).resources[0]).toMatchObject({
+      sourceId: "source.one",
+      selected: true,
+      required: false,
+      selectionStatus: "Selected",
     });
     expect(
       selectViewData({ state, i18n: {} }).resources.map(

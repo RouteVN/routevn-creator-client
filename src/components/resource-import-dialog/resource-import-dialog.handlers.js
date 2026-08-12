@@ -195,7 +195,6 @@ export const handleFormAction = async (deps, payload) => {
 const toggleResourceSelection = (deps, payload) => {
   const { store, render } = deps;
   const { currentTarget } = payload._event;
-  if (currentTarget.dataset.selectionLocked === "true") return;
   const resourceIndex = Number(currentTarget.dataset.resourceIndex);
   const selected = currentTarget.getAttribute("aria-pressed") !== "true";
   store.setResourceSelected({ resourceIndex, selected });

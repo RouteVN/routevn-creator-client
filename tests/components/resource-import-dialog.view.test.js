@@ -38,13 +38,10 @@ describe("resource-import-dialog.view", () => {
     expect(viewSource).toContain("selectionToggleAllButton");
     expect(viewSource).toContain("${selectionToggleAllLabel}");
     expect(viewSource).toContain("rtgl-view#resourceSelectionCard");
-    expect(viewSource).toContain(
-      "role=button tabindex=${resource.selectionTabIndex}",
-    );
-    expect(viewSource).toContain(
-      "data-selection-locked=${resource.selectionLocked}",
-    );
+    expect(viewSource).toContain("role=button tabindex=0");
     expect(viewSource).toContain('aria-pressed="${resource.selected}"');
+    expect(viewSource).not.toContain("selectionLocked");
+    expect(viewSource).not.toContain("aria-disabled");
     expect(viewSource).toContain("${resource.selectionStatus}");
     expect(viewSource).toContain("${resource.typeLabel}");
     expect(viewSource).toContain("bgc=bg");
