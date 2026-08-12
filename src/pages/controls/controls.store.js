@@ -34,18 +34,6 @@ const createControlForm = ({ editMode = false, copy = {} } = {}) => ({
       addOptionLabel: copy.addTagOption ?? "Add tag",
     }),
   ],
-  actions: {
-    layout: "",
-    buttons: [
-      {
-        id: "submit",
-        variant: "pr",
-        label: editMode
-          ? (copy.updateControlButton ?? "Update Control")
-          : (copy.addControlButton ?? "Add Control"),
-      },
-    ],
-  },
 });
 
 const createSystemActionLabels = (copy = {}) => ({
@@ -235,6 +223,9 @@ const {
       editMode: Boolean(state.editItemId),
       copy,
     }),
+    dialogSubmitButtonLabel: state.editItemId
+      ? (copy.updateControlButton ?? "Update")
+      : (copy.addControlButton ?? "Add Control"),
     dialogDefaultValues: state.dialogDefaultValues,
     keydownKeyboardItems: toKeyboardItems(selectedItem?.keyboard, { copy }),
     keyupKeyboardItems: toKeyboardItems(selectedItem?.keyup, { copy }),

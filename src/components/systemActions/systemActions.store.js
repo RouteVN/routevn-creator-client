@@ -80,8 +80,16 @@ const resolveVoiceResourceId = (voice) => {
   return voice?.sounds?.[0]?.resourceId ?? voice?.resourceId;
 };
 
-const getDialogVariant = (attrs = {}) =>
-  attrs.dialogVariant === "scene-editor-left" ? "scene-editor-left" : "default";
+const getDialogVariant = (attrs = {}) => {
+  if (
+    attrs.dialogVariant === "scene-editor-left" ||
+    attrs.dialogVariant === "scene-editor-mobile"
+  ) {
+    return attrs.dialogVariant;
+  }
+
+  return "default";
+};
 
 const parseBooleanProp = (value, fallback = false) => {
   if (value === undefined || value === null) {
@@ -310,6 +318,8 @@ export const selectViewData = ({ state, props, props: attrs, i18n }) => {
       : transformEditorOpen
         ? "100vw"
         : (attrs.dialogPanelWidth ?? "50vw"),
+    actionsDialogPanelTop: attrs.dialogPanelTop ?? "0px",
+    actionsDialogPanelBottom: attrs.dialogPanelBottom ?? "0px",
     hiddenModes,
     allowedModes,
     suppressDialogClose:

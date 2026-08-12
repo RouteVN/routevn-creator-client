@@ -15,6 +15,7 @@ const createDeps = () => ({
     closeMenu: vi.fn(),
     openImportDialog: vi.fn(),
     openMenu: vi.fn(),
+    selectMenuPosition: vi.fn(() => ({ x: 101, y: 48 })),
   },
 });
 
@@ -46,7 +47,37 @@ describe("resourceImportAction.handlers", () => {
 
     expect(deps.store.closeMenu).toHaveBeenCalledOnce();
     expect(deps.store.openImportDialog).toHaveBeenCalledOnce();
+    expect(deps.dispatchEvent).not.toHaveBeenCalled();
     expect(deps.render).toHaveBeenCalledOnce();
+  });
+
+  it("emits non-import menu actions with the menu position", () => {
+    vi.stubGlobal(
+      "CustomEvent",
+      class CustomEvent {
+        constructor(type, options) {
+          this.type = type;
+          Object.assign(this, options);
+        }
+      },
+    );
+    const deps = createDeps();
+    const item = { label: "Zoom", type: "item", value: "zoom" };
+
+    handleMenuItemClick(deps, {
+      _event: { detail: { item } },
+    });
+
+    expect(deps.store.closeMenu).toHaveBeenCalledOnce();
+    expect(deps.store.openImportDialog).not.toHaveBeenCalled();
+    expect(deps.dispatchEvent).toHaveBeenCalledWith(
+      expect.objectContaining({
+        type: "menu-action",
+        detail: { item, position: { x: 101, y: 48 } },
+        bubbles: true,
+        composed: true,
+      }),
+    );
   });
 
   it("reports a completed package import", () => {

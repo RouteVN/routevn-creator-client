@@ -123,31 +123,11 @@ const createAddForm = (copy = {}) => ({
       ],
     },
   ],
-  actions: {
-    layout: "",
-    buttons: [
-      {
-        id: "submit",
-        variant: "pr",
-        label: copy.createButton ?? "Create",
-      },
-    ],
-  },
 });
 
 const createEditForm = (copy = {}) => ({
   title: copy.editTitle ?? "Edit Audio Effect",
   fields: createMetadataFormFields(copy),
-  actions: {
-    layout: "",
-    buttons: [
-      {
-        id: "submit",
-        variant: "pr",
-        label: copy.updateButton ?? "Update Audio Effect",
-      },
-    ],
-  },
 });
 
 const createExplorerItemContextMenuItems = (copy = {}) => [
@@ -265,6 +245,7 @@ const {
     centerItemContextMenuItems: createCenterItemContextMenuItems(copy),
     isAddDialogOpen: state.isAddDialogOpen,
     addForm: createAddForm(copy),
+    addSubmitButtonLabel: copy.createButton ?? "Create",
     addFormDefaults: {
       name: "",
       description: "",
@@ -273,6 +254,7 @@ const {
     },
     isEditDialogOpen: state.isEditDialogOpen,
     editForm: createEditForm(copy),
+    editSubmitButtonLabel: copy.updateButton ?? "Update",
     editDefaultValues: state.editDefaultValues,
     selectedItemDescription: selectedItem?.description ?? "",
     selectedAudioEffectTypeLabel: selectedItem?.audioEffect?.type

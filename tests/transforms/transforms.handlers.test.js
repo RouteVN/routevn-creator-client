@@ -23,6 +23,7 @@ describe("transforms.handlers", () => {
       rotation: 0,
     };
     const store = {
+      setSelectedItemId: vi.fn(),
       openTransformFormDialog: vi.fn(),
       selectProjectResolution: vi.fn(() => ({
         width: 1920,
@@ -49,6 +50,10 @@ describe("transforms.handlers", () => {
 
     expect(event.preventDefault).toHaveBeenCalled();
     expect(event.stopPropagation).toHaveBeenCalled();
+    expect(store.setSelectedItemId).toHaveBeenCalledWith({
+      itemId: "transform-1",
+      suppressMobileDetailSheet: true,
+    });
     expect(store.openTransformFormDialog).toHaveBeenCalledWith({
       editMode: true,
       itemId: "transform-1",

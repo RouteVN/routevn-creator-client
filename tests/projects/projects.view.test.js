@@ -70,20 +70,17 @@ describe("projects view", () => {
     expect(projectsView).not.toContain("rtgl-view w=f ah=c pb=lg");
   });
 
-  it("keeps the project list container free of asymmetric padding", () => {
+  it("gives project items symmetric horizontal padding", () => {
     const projectsView = readFileSync(
       new URL("../../src/pages/projects/projects.view.yaml", import.meta.url),
       "utf8",
     );
 
     expect(projectsView).toContain(
-      'rtgl-view w=f d=v style="max-width: 1280px;"',
+      'rtgl-view w=f d=v ph=md style="max-width: 1280px; box-sizing: border-box;"',
     );
     expect(projectsView).not.toContain(
       'rtgl-view w=f d=v pl=md style="max-width: 1280px;"',
-    );
-    expect(projectsView).not.toContain(
-      'rtgl-view w=f d=v ph=md style="max-width: 1280px;"',
     );
     expect(projectsView).not.toContain(
       'rtgl-view w=f d=v ph=lg style="max-width: 1280px;"',

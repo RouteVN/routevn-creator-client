@@ -148,18 +148,6 @@ const createTransformForm = ({
         required: true,
       },
     ],
-    actions: {
-      layout: "",
-      buttons: [
-        {
-          id: "submit",
-          variant: "pr",
-          label: editMode
-            ? copy.updateTransformButton
-            : copy.addTransformButton,
-        },
-      ],
-    },
   };
 };
 
@@ -390,6 +378,9 @@ const {
         projectResolution: state.projectResolution,
         copy,
       }),
+      transformSubmitButtonLabel: state.editMode
+        ? copy.updateTransformButton
+        : copy.addTransformButton,
       dialogDefaultValues: state.dialogDefaultValues,
       dialogPreviewItem: state.dialogItemData,
       dialogPreviewThumbnailFileId: state.dialogItemData?.thumbnailFileId,

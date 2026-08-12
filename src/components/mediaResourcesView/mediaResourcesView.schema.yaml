@@ -47,6 +47,9 @@ propsSchema:
     showTagFilter:
       type: boolean
       description: Whether to render the tag filter control
+    filterInOverflowMenu:
+      type: boolean
+      description: Whether the filter popover action should render in the three-dot menu
     emptyMessage:
       type: string
       description: Message to show when no items match
@@ -65,6 +68,9 @@ propsSchema:
     zoomInPopover:
       type: boolean
       description: Whether zoom controls should render inside a popover
+    zoomInOverflowMenu:
+      type: boolean
+      description: Whether the zoom popover action should render in the three-dot menu
     zoomControlMode:
       type: string
       enum:

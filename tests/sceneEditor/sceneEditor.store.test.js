@@ -10,6 +10,8 @@ import {
   setRepositoryState,
   setSceneId,
   setPresentationState,
+  setMobileKeyboardState,
+  setUiConfig,
   setBackgroundTransformEditorSelectedElementMetrics,
   setProjectLanguage,
   setSectionLineChangesBySectionId,
@@ -20,6 +22,29 @@ import {
 import { EN_I18N } from "../support/i18n.js";
 
 describe("sceneEditorLexical.store", () => {
+  it("positions the mobile actions dialog below the preview canvas", () => {
+    const state = createInitialState();
+    setUiConfig({ state }, { uiConfig: { id: "touch" } });
+
+    expect(
+      selectViewData({ state, i18n: EN_I18N })
+        .mobileSystemActionsDialogTop,
+    ).toBe("min(56.25vw, 50vh)");
+
+    setMobileKeyboardState(
+      { state },
+      {
+        isVisible: true,
+        visualHeight: 500,
+      },
+    );
+
+    expect(
+      selectViewData({ state, i18n: EN_I18N })
+        .mobileSystemActionsDialogTop,
+    ).toBe("min(56.25vw, 436px)");
+  });
+
   it("resolves the transform origin when rendered target metrics arrive", () => {
     const state = createInitialState();
 

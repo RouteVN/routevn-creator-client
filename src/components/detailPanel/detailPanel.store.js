@@ -35,7 +35,7 @@ export const createInitialState = () => ({
           {
             id: "submit",
             variant: "pr",
-            label: "Update Text",
+            label: "Update",
           },
         ],
       },
@@ -66,7 +66,7 @@ export const createInitialState = () => ({
           {
             id: "submit",
             variant: "pr",
-            label: "Update Color",
+            label: "Update",
           },
         ],
       },
@@ -133,7 +133,7 @@ export const createInitialState = () => ({
           {
             id: "submit",
             variant: "pr",
-            label: "Update Text Style",
+            label: "Update",
           },
         ],
       },

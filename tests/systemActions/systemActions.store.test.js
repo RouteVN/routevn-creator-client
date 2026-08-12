@@ -1820,6 +1820,24 @@ describe("systemActions.store", () => {
     );
   });
 
+  it("passes mobile scene editor dialog bounds to the surface", () => {
+    const state = createInitialState();
+    setUiConfig({ state }, { uiConfig: { id: "touch" } });
+
+    const viewData = selectViewData({
+      state,
+      props: {
+        dialogVariant: "scene-editor-mobile",
+        dialogPanelTop: "min(56.25vw, 50vh)",
+        dialogPanelBottom: "0px",
+      },
+    });
+
+    expect(viewData.dialogVariant).toBe("scene-editor-mobile");
+    expect(viewData.actionsDialogPanelTop).toBe("min(56.25vw, 50vh)");
+    expect(viewData.actionsDialogPanelBottom).toBe("0px");
+  });
+
   it("keeps action dialog padding removed after changing modes", () => {
     const state = createInitialState();
     setMode({ state }, { mode: "dialogue" });

@@ -49,16 +49,6 @@ const createEditForm = (copy = {}) => ({
       required: true,
     },
   ],
-  actions: {
-    layout: "",
-    buttons: [
-      {
-        id: "submit",
-        variant: "pr",
-        label: copy.updateButton ?? "Update Color",
-      },
-    ],
-  },
 });
 
 const createAddForm = (copy = {}) => ({
@@ -88,16 +78,6 @@ const createAddForm = (copy = {}) => ({
       required: true,
     },
   ],
-  actions: {
-    layout: "",
-    buttons: [
-      {
-        id: "submit",
-        variant: "pr",
-        label: copy.addButton ?? "Add Color",
-      },
-    ],
-  },
 });
 
 const buildDetailFields = (item, { copy = {} } = {}) => {
@@ -210,6 +190,7 @@ const {
       selectedColorHex: selectedItem?.hex ?? "",
       isEditDialogOpen: state.isEditDialogOpen,
       editButton: copy.editMenuItem ?? "Edit",
+      editSubmitButtonLabel: copy.updateButton ?? "Update",
       editDefaultValues: {
         name: editItem?.name ?? "",
         hex: editItem?.hex ?? "",
@@ -222,6 +203,7 @@ const {
       isAddDialogOpen: state.isAddDialogOpen,
       addDefaultValues: state.addDefaultValues,
       addForm: createAddForm(copy),
+      addSubmitButtonLabel: copy.addButton ?? "Add Color",
     };
   },
 });

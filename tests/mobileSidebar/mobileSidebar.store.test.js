@@ -29,6 +29,35 @@ const createScenesData = () => ({
 });
 
 describe("mobileSidebar scene map sections", () => {
+  it("shows videos after sounds in the assets section", () => {
+    const state = createInitialState();
+
+    const viewData = selectViewData({
+      state,
+      props: {
+        variant: "assets",
+      },
+    });
+    const assetsSection = viewData.sections.find(
+      (section) => section.id === "assets",
+    );
+
+    expect(assetsSection.items.map((item) => item.id)).toEqual([
+      "images",
+      "sounds",
+      "videos",
+      "characters",
+      "transforms",
+    ]);
+    expect(assetsSection.items.find((item) => item.id === "videos")).toEqual(
+      expect.objectContaining({
+        label: "Videos",
+        path: "/project/videos",
+        icon: "video",
+      }),
+    );
+  });
+
   it("shows system resources under the assets sheet", () => {
     const state = createInitialState();
 

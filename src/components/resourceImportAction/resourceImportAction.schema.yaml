@@ -1,8 +1,13 @@
 componentName: rvn-resource-import-action
 propsSchema:
   type: object
-  properties: {}
+  properties:
+    additionalMenuItems:
+      type: array
+      description: Optional actions rendered before Import in the three-dot menu
 events:
+  menu-action:
+    type: object
   search-input:
     type: object
   tag-filter-change:

@@ -23,6 +23,7 @@ import {
   handleDetailTagAddOptionClick,
   handleDetailTagValueChange,
   handleDeleteDialogConfirm,
+  handleEditImageSubmitClick,
   handleFileExplorerAction,
   handleFileExplorerKeyboardScopeKeyDown,
   handleFileExplorerSelectionChanged,
@@ -83,6 +84,7 @@ describe("images handlers", () => {
     const stopPropagation = vi.fn();
     const deps = {
       store: {
+        selectIsTouchMode: vi.fn(() => true),
         selectFullImagePreviewVisible: vi.fn(() => false),
         selectImageItemById: vi.fn(() => ({
           id: "image-1",
@@ -131,8 +133,38 @@ describe("images handlers", () => {
       },
       previewFileId: "thumbnail-1",
     });
+    expect(deps.store.setSelectedItemId).toHaveBeenCalledWith({
+      itemId: "image-1",
+      suppressMobileDetailSheet: true,
+    });
     expect(preventDefault).toHaveBeenCalledOnce();
     expect(stopPropagation).toHaveBeenCalledOnce();
+  });
+
+  it("submits edit-form values from the fixed action row", async () => {
+    const deps = {
+      i18n: EN_I18N,
+      appService: {
+        showAlert: vi.fn(),
+      },
+      refs: {
+        editForm: {
+          getValues: vi.fn(() => ({
+            name: "",
+            description: "",
+            tagIds: [],
+          })),
+        },
+      },
+    };
+
+    await handleEditImageSubmitClick(deps);
+
+    expect(deps.refs.editForm.getValues).toHaveBeenCalledTimes(1);
+    expect(deps.appService.showAlert).toHaveBeenCalledWith({
+      message: "Image name is required.",
+      title: "Warning",
+    });
   });
 
   it("opens the selected image folder dialog when e is pressed", () => {

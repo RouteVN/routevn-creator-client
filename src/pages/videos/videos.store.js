@@ -120,16 +120,6 @@ const createEditForm = ({ copy } = {}) => ({
       label: copy.videoLabel,
     },
   ],
-  actions: {
-    layout: "",
-    buttons: [
-      {
-        id: "submit",
-        variant: "pr",
-        label: copy.updateButton,
-      },
-    ],
-  },
 });
 
 const {

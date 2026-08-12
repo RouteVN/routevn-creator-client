@@ -147,8 +147,9 @@ const refreshProjectAnalytics = async (
 };
 
 export const handleBeforeMount = (deps) => {
-  const { appService, projectService, store } = deps;
+  const { appService, projectService, store, uiConfig } = deps;
   store.setPlatform({ platform: appService.getPlatform() });
+  store.setUiConfig({ uiConfig });
   store.setCurrentProject({
     project: {
       source: appService.getCurrentProjectEntry()?.source,

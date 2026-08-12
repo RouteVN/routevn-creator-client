@@ -53,6 +53,12 @@ refs:
         handler: handleDropdownMenuClose
       item-click:
         handler: handleDropdownMenuClickItem
+styles:
+  '#helpFloatingButton':
+    top: calc(var(--spacing-md) - 2px)
+  '@media only screen and (max-width: 640px)':
+    '#helpFloatingButton':
+      top: var(--spacing-md)
 template:
   - $if showSelected:
       - rtgl-view g=md w=f:
@@ -244,13 +250,13 @@ template:
           - $if showEmbeddedClose:
               - rtgl-view d=h av=c ah=e w=f g=lg:
                   - rtgl-button#embeddedCloseButton: ${confirmButtonLabel}
-  - rvn-system-actions-dialog-surface#actionsDialog key=${mode} :open=${isActionsDialogOpen} variant=${dialogVariant} :dialogPadding=${actionsDialogPadding} :dialogWidth=${actionsDialogWidth} :dialogHeight=${actionsDialogHeight} :panelWidth=${actionsDialogPanelWidth} :fullscreen=${actionsDialogFullscreen} fullscreen-horizontal-inset=${actionsDialogFullscreenHorizontalInset} :suppressClose=${suppressDialogClose}:
+  - rvn-system-actions-dialog-surface#actionsDialog key=${mode} :open=${isActionsDialogOpen} variant=${dialogVariant} :dialogPadding=${actionsDialogPadding} :dialogWidth=${actionsDialogWidth} :dialogHeight=${actionsDialogHeight} :panelWidth=${actionsDialogPanelWidth} :panelTop=${actionsDialogPanelTop} :panelBottom=${actionsDialogPanelBottom} :fullscreen=${actionsDialogFullscreen} fullscreen-horizontal-inset=${actionsDialogFullscreenHorizontalInset} :suppressClose=${suppressDialogClose}:
       - $if isActionsDialogOpen:
-          - 'rtgl-view slot=content w=f h=f pos=rel style="min-width: 0; min-height: 0; max-width: 100%; box-sizing: border-box; overflow-x: hidden; touch-action: pan-y;"':
+          - 'rtgl-view slot=content w=f h=f pos=rel style="min-width: 0; min-height: 0; max-width: 100%; box-sizing: border-box; overflow-x: hidden; overflow-y: auto; overscroll-behavior: contain; touch-action: pan-y;"':
               - $if backgroundTransformEditor.isOpen:
                   - 'rvn-action-transform-editor#actionTransformEditor style="display: block; width: 100%; height: 100%; min-width: 0; min-height: 0;" :transform=${backgroundTransformEditor.transform} :targetName=${backgroundTransformEditor.targetName} :targetType=${backgroundTransformEditor.targetType} canvas-aspect-ratio="${backgroundTransformEditor.canvasAspectRatio}" :projectResolution=${backgroundTransformEditor.projectResolution} :selectedElementMetrics=${backgroundTransformEditor.selectedElementMetrics}': null
                 $else:
-                  - 'rtgl-view#helpFloatingButton pos=abs z=10 w=28 h=28 ah=c av=c bgc=bg bw=xs bc=bo h-bc=ac br=f cur=pointer style="top: 10px; right: 10px; box-shadow: 0 4px 12px rgba(15, 23, 42, 0.12);"':
+                  - 'rtgl-view#helpFloatingButton pos=abs z=10 w=28 h=28 sm-w=24 sm-h=24 ah=c av=c bgc=bg bw=xs bc=bo h-bc=ac br=f cur=pointer style="right: var(--spacing-md); box-shadow: 0 4px 12px rgba(15, 23, 42, 0.12);"':
                       - rtgl-text s=xs c=mu-fg: '?'
                   - $if mode == "actions":
                       - rvn-command-line-actions#commandLineActions :actionsType=${actionsType} :hiddenModes=${hiddenModes} :allowedModes=${allowedModes}: null

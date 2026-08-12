@@ -107,7 +107,7 @@ export const editInitialValueForm = {
       {
         id: "submit",
         variant: "pr",
-        label: "Update Value",
+        label: "Update",
       },
     ],
   },

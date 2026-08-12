@@ -26,8 +26,8 @@ refs:
       click:
         handler: handleCancelProgress
 template:
-  - 'rtgl-dialog#dialog ?open=${open} s=lg aria-label="${dialogAriaLabel}"':
-      - rtgl-view slot=content d=v w=f g=md:
+  - 'rtgl-dialog#dialog ?open=${open} s=lg md-layout=fixed-top aria-label="${dialogAriaLabel}"':
+      - rtgl-view slot=content d=v w=f h=f g=md overflow=hidden:
           - $if errorMessage:
               - rtgl-view w=f p=md bgc=de br=md role=alert aria-live=assertive:
                   - rtgl-text c=de-fg: ${errorMessage}
@@ -35,7 +35,7 @@ template:
               - rtgl-view w=f h=180 av=c ah=c d=v g=md:
                   - rtgl-text: ${progressLabel}
           - $if !isBusy && !isProgressStep:
-              - rtgl-form#workflowForm key=${formKey} :defaultValues=${defaultValues} :form=${form} :context=${formContext}:
+              - rtgl-form#workflowForm key=${formKey} :defaultValues=${defaultValues} :form=${form} :context=${formContext} w=f h=f:
                   - $if isSourceStep:
                       - rtgl-view slot=source-description d=h w=f g=xs av=c wrap:
                           - rtgl-text s=sm c=mu-fg: ${sourceDescription}

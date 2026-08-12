@@ -139,9 +139,31 @@ describe("systemActions view", () => {
     expect(systemActionsView).toContain(
       ":dialogPadding=${actionsDialogPadding}",
     );
+    expect(systemActionsView).toContain(
+      ":panelTop=${actionsDialogPanelTop}",
+    );
+    expect(systemActionsView).toContain(
+      ":panelBottom=${actionsDialogPanelBottom}",
+    );
     expect(systemActionsView).toContain("overflow-x: hidden");
+    expect(systemActionsView).toContain("overflow-y: auto");
+    expect(systemActionsView).toContain("overscroll-behavior: contain");
+    expect(systemActionsView).toContain(
+      "top: calc(var(--spacing-md) - 2px)",
+    );
+    expect(systemActionsView).toContain("top: var(--spacing-md)");
+    expect(systemActionsView).toContain("right: var(--spacing-md);");
+    expect(systemActionsView).toContain(
+      "w=28 h=28 sm-w=24 sm-h=24",
+    );
     expect(sceneEditorLexicalView).toContain(
       "dialog-variant=scene-editor-left",
+    );
+    expect(sceneEditorLexicalView).toContain(
+      "dialog-variant=scene-editor-mobile",
+    );
+    expect(sceneEditorLexicalView).toContain(
+      'dialog-panel-top="${mobileSystemActionsDialogTop}"',
     );
     expect(systemActionsView).toContain(
       "rvn-action-transform-editor#actionTransformEditor",

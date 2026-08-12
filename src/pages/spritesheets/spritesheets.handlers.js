@@ -248,7 +248,7 @@ const openEditDialogForItem = ({ deps, itemId, syncExplorer = false } = {}) => {
   revokeDialogPreviewUrl(store);
 
   const values = buildDialogValues({ item });
-  store.setSelectedItemId({ itemId });
+  store.setSelectedItemId({ itemId, suppressMobileDetailSheet: true });
 
   if (syncExplorer) {
     refs.fileExplorer?.selectItem?.({ itemId });
@@ -998,6 +998,18 @@ export const handleDialogFormAction = async (deps, payload) => {
   render();
   await refreshSpritesheetData(deps, {
     selectedItemId: dialogItemId,
+  });
+};
+
+export const handleDialogSubmitClick = async (deps) => {
+  const { dialogForm } = deps.refs;
+  await handleDialogFormAction(deps, {
+    _event: {
+      detail: {
+        actionId: "submit",
+        values: dialogForm.getValues(),
+      },
+    },
   });
 };
 

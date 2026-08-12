@@ -352,6 +352,27 @@ export const selectViewData = ({ state, props }) => {
     props.zoomInPopover === undefined
       ? true
       : parseBooleanProp(props.zoomInPopover);
+  const showTagFilter = parseBooleanProp(props.showTagFilter);
+  const showZoomPopover = shouldShowZoomControls && zoomInPopover;
+  const zoomInOverflowMenu =
+    showZoomPopover && parseBooleanProp(props.zoomInOverflowMenu);
+  const filterInOverflowMenu =
+    showTagFilter && parseBooleanProp(props.filterInOverflowMenu);
+  const resourceImportMenuItems = [];
+  if (zoomInOverflowMenu) {
+    resourceImportMenuItems.push({
+      label: ZOOM_BUTTON_LABEL,
+      type: "item",
+      value: "zoom",
+    });
+  }
+  if (filterInOverflowMenu) {
+    resourceImportMenuItems.push({
+      label: FILTER_BUTTON_LABEL,
+      type: "item",
+      value: "filter",
+    });
+  }
   const showMenuButton = parseBooleanProp(props.showMenuButton);
   const menuButtonPlacement =
     props.menuButtonPlacement === "trailing" ? "trailing" : "leading";
@@ -528,7 +549,7 @@ export const selectViewData = ({ state, props }) => {
     },
     hasActiveTagFilter,
     tagFilterButtonVariant: hasActiveFilter ? "pr" : "ol",
-    showTagFilter: parseBooleanProp(props.showTagFilter),
+    showTagFilter: showTagFilter && !filterInOverflowMenu,
     uploadText: props.uploadText ?? "Upload Files",
     uploadIcon: props.uploadIcon ?? "upload",
     emptyMessage:
@@ -554,12 +575,14 @@ export const selectViewData = ({ state, props }) => {
     zoomControlStep: useColumnZoomControl ? 1 : 0.1,
     showZoomControls: shouldShowZoomControls,
     showInlineZoomControls: shouldShowZoomControls && !zoomInPopover,
-    showZoomPopoverButton: shouldShowZoomControls && zoomInPopover,
+    showZoomPopover,
+    showZoomPopoverButton: showZoomPopover && !zoomInOverflowMenu,
     zoomPopover: state.zoomPopover,
     menuButtonLabel: MENU_BUTTON_LABEL,
     backButtonLabel: BACK_BUTTON_LABEL,
     zoomButtonLabel: ZOOM_BUTTON_LABEL,
     filterButtonLabel: FILTER_BUTTON_LABEL,
+    resourceImportMenuItems,
     showSearch:
       parseBooleanProp(props.showSearch, true) && !searchInFilterPopover,
     showFilterPopoverSearch: searchInFilterPopover,

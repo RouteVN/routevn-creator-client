@@ -291,7 +291,7 @@ const createComputedExampleForm = ({
         validate: true,
         label:
           mode === "edit"
-            ? (copy.computedUpdateExampleButton ?? "Update Example")
+            ? (copy.computedUpdateExampleButton ?? "Update")
             : (copy.computedAddExampleButton ?? "Add Example"),
       },
     ],

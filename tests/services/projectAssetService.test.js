@@ -4,15 +4,17 @@ const mocked = vi.hoisted(() => ({
   detectFileType: vi.fn(),
   getImageDimensions: vi.fn(),
   extractImageThumbnail: vi.fn(),
+  getVideoDimensions: vi.fn(),
+  extractVideoThumbnail: vi.fn(),
 }));
 
 vi.mock("../../src/deps/clients/web/fileProcessors.js", () => ({
   detectFileType: mocked.detectFileType,
   getImageDimensions: mocked.getImageDimensions,
   extractImageThumbnail: mocked.extractImageThumbnail,
-  getVideoDimensions: vi.fn(),
+  getVideoDimensions: mocked.getVideoDimensions,
   extractWaveformDataFromArrayBuffer: vi.fn(),
-  extractVideoThumbnail: vi.fn(),
+  extractVideoThumbnail: mocked.extractVideoThumbnail,
 }));
 
 import { createProjectAssetService } from "../../src/deps/services/shared/projectAssetService.js";
@@ -113,6 +115,98 @@ describe("projectAssetService", () => {
         },
       }),
     );
+  });
+
+  it("returns the required thumbnail file for video uploads", async () => {
+    let storedCount = 0;
+    mocked.detectFileType.mockReturnValue("video");
+    mocked.getVideoDimensions.mockResolvedValue({
+      width: 1920,
+      height: 1080,
+      duration: 10,
+    });
+    mocked.extractVideoThumbnail.mockResolvedValue({
+      blob: new Blob(["thumbnail-bytes"], { type: "image/jpeg" }),
+    });
+    const service = createProjectAssetService({
+      idGenerator: () => "generated-id",
+      fileAdapter: {
+        continueOnUploadError: false,
+        storeFile: vi.fn(async () => {
+          storedCount += 1;
+          return { fileId: `file-${storedCount}` };
+        }),
+        getFileContent: vi.fn(),
+        getFileByProjectId: vi.fn(),
+      },
+      getCurrentStore: vi.fn(),
+      getCurrentReference: vi.fn(),
+      getStoreByProject: vi.fn(),
+    });
+
+    const result = await service.uploadFiles([
+      new File(["video-bytes"], "opening.mp4", { type: "video/mp4" }),
+    ]);
+
+    expect(result).toEqual([
+      expect.objectContaining({
+        fileId: "file-1",
+        thumbnailFileId: "file-2",
+        dimensions: {
+          width: 1920,
+          height: 1080,
+        },
+        duration: 10,
+        fileRecords: [
+          expect.objectContaining({
+            id: "file-1",
+            mimeType: "video/mp4",
+          }),
+          expect.objectContaining({
+            id: "file-2",
+            mimeType: "image/jpeg",
+          }),
+        ],
+      }),
+    ]);
+  });
+
+  it("rejects video uploads when a required thumbnail cannot be generated", async () => {
+    const consoleWarn = vi.spyOn(console, "warn").mockImplementation(() => {});
+    mocked.detectFileType.mockReturnValue("video");
+    mocked.getVideoDimensions.mockResolvedValue({
+      width: 1920,
+      height: 1080,
+      duration: 10,
+    });
+    mocked.extractVideoThumbnail.mockRejectedValue(
+      new Error("thumbnail timed out"),
+    );
+    const service = createProjectAssetService({
+      idGenerator: () => "generated-id",
+      fileAdapter: {
+        continueOnUploadError: false,
+        storeFile: vi.fn(async () => ({ fileId: "file-video" })),
+        getFileContent: vi.fn(),
+        getFileByProjectId: vi.fn(),
+      },
+      getCurrentStore: vi.fn(),
+      getCurrentReference: vi.fn(),
+      getStoreByProject: vi.fn(),
+    });
+
+    await expect(
+      service.uploadFiles([
+        new File(["video-bytes"], "opening.mp4", { type: "video/mp4" }),
+      ]),
+    ).rejects.toThrow("thumbnail timed out");
+    expect(consoleWarn).toHaveBeenCalledWith(
+      "[videoUpload] thumbnail.failed",
+      expect.objectContaining({
+        error: "thumbnail timed out",
+      }),
+    );
+    consoleWarn.mockRestore();
   });
 
   it("delegates getFileByProjectId through the stable file-adapter contract", async () => {

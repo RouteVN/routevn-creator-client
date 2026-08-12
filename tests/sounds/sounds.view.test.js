@@ -78,6 +78,23 @@ describe("sounds view", () => {
     expect(soundsView).not.toContain("handler: handleFormExtraEvent");
   });
 
+  it("keeps the edit dialog waveform within the form width", () => {
+    const soundsView = readFileSync(
+      new URL("../../src/pages/sounds/sounds.view.yaml", import.meta.url),
+      "utf8",
+    );
+
+    expect(soundsView).toContain(
+      'rtgl-view slot="sound-slot" w=f p=sm bw=xs bc=bo br=md cur=pointer style="min-width: 0; max-width: 100%; box-sizing: border-box; overflow: hidden;"',
+    );
+    expect(soundsView).toContain(
+      "rvn-waveform-visualizer#editDialogWaveform waveformDataFileId=${editPreviewFileId} w=f h=110",
+    );
+    expect(soundsView).not.toContain(
+      "rvn-waveform-visualizer#editDialogWaveform waveformDataFileId=${editPreviewFileId} w=400",
+    );
+  });
+
   it("shows a confirmation dialog for mobile detail deletes", () => {
     const soundsView = readFileSync(
       new URL("../../src/pages/sounds/sounds.view.yaml", import.meta.url),

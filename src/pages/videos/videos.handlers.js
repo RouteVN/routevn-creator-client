@@ -248,6 +248,7 @@ const {
     tagIds: item?.tagIds ?? [],
   }),
   getEditPreviewFileId: (item) => item?.thumbnailFileId,
+  suppressMobileDetailSheetOnEdit: true,
   copy: ({ i18n }) => selectVideosPageCopy(i18n),
   onEnterKey: ({ deps, selectedItemId }) => {
     void openVideoPreviewById({ deps, itemId: selectedItemId });
@@ -583,6 +584,18 @@ export const handleEditFormAction = async (deps, payload) => {
 
   handleEditDialogClose(deps);
   await handleDataChanged(deps);
+};
+
+export const handleEditSubmitClick = async (deps) => {
+  const { editForm } = deps.refs;
+  await handleEditFormAction(deps, {
+    _event: {
+      detail: {
+        actionId: "submit",
+        values: editForm.getValues(),
+      },
+    },
+  });
 };
 
 export const handleItemDelete = async (deps, payload) => {

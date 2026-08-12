@@ -35,6 +35,10 @@ refs:
     eventListeners:
       click:
         handler: handleMenuClick
+  resourceImportAction:
+    eventListeners:
+      menu-action:
+        handler: handleResourceImportMenuAction
   contextMenu:
     eventListeners:
       close:
@@ -130,7 +134,7 @@ template:
                       - rtgl-input#searchInput s=sm placeholder=${searchPlaceholder} value=${searchQuery} h=1fg: null
                   - $if showTagFilter:
                       - 'rtgl-button#tagFilterButton sq pre=filter v=${tagFilterButtonVariant} aria-label="${filterButtonLabel}" title="${filterButtonLabel}"': null
-                  - rvn-resource-import-action: null
+                  - rvn-resource-import-action#resourceImportAction :additionalMenuItems=${resourceImportMenuItems}: null
                   - $if showTrailingMenuButton:
                       - 'rtgl-button#menuButton sq pre=hamburger v=ol aria-label="${menuButtonLabel}" title="${menuButtonLabel}"': null
       - 'rtgl-view#scrollContainer h=1fg w=f sv style="min-width: 0; min-height: 0; box-sizing: border-box;"':
@@ -301,7 +305,7 @@ template:
           - rtgl-view w=1fg: null
           - rtgl-button#tagFilterClear v=se s=sm ?disabled=${tagFilterPopover.clearDisabled}: Clear
           - rtgl-button#tagFilterApply v=pr s=sm: Save
-  - $if showZoomPopoverButton:
+  - $if showZoomPopover:
       - rtgl-popover#zoomPopover ?open=${zoomPopover.isOpen} x=${zoomPopover.position.x} y=${zoomPopover.position.y} place=be content-w=260 content-g=sm content-ph=md content-pv=md:
           - rtgl-text s=md: Zoom
           - rtgl-view d=h av=c g=sm w=f:

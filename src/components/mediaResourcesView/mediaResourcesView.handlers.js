@@ -188,6 +188,24 @@ export const handleZoomButtonClick = (deps, payload) => {
   render();
 };
 
+export const handleResourceImportMenuAction = (deps, payload) => {
+  const { props, store, render } = deps;
+  const { item, position } = payload._event.detail;
+
+  if (item.value === "zoom") {
+    store.openZoomPopover({ position });
+  } else if (item.value === "filter") {
+    store.openTagFilterPopover({
+      position,
+      tagIds: props.selectedTagFilterValues ?? [],
+    });
+  } else {
+    return;
+  }
+
+  render();
+};
+
 export const handleZoomPopoverClose = (deps) => {
   const { store, render } = deps;
   store.closeZoomPopover();

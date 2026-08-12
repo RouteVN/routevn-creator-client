@@ -512,7 +512,9 @@ const openParticleDialog = async ({
   const { refs, render, store } = deps;
 
   if (itemId) {
-    store.setSelectedItemId({ itemId });
+    const selectionPayload = { itemId };
+    if (editMode) selectionPayload.suppressMobileDetailSheet = true;
+    store.setSelectedItemId(selectionPayload);
     refs.fileExplorer?.selectItem?.({ itemId });
   }
 
@@ -1041,6 +1043,20 @@ export const handleParticleFormActionClick = async (deps, payload) => {
   }
 
   await refreshParticleData(deps, { selectedItemId: particleId });
+};
+
+export const handleParticleSubmitClick = async (deps) => {
+  const { particleForm } = deps.refs;
+  const validation = particleForm.validate();
+  await handleParticleFormActionClick(deps, {
+    _event: {
+      detail: {
+        actionId: "submit",
+        valid: validation.valid,
+        values: particleForm.getValues(),
+      },
+    },
+  });
 };
 
 export const handleParticleFormChange = async (deps, payload) => {

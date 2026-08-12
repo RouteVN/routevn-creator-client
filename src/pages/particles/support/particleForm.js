@@ -837,7 +837,7 @@ export const createParticleForm = ({
         id: "submit",
         variant: "pr",
         label: editMode
-          ? (copy.updateParticleButton ?? "Update Particle")
+          ? (copy.updateParticleButton ?? "Update")
           : (copy.addParticleButton ?? "Add Particle"),
         validate: true,
       },

@@ -33,4 +33,24 @@ describe("resourceImportAction.store", () => {
     closeImportDialog({ state });
     expect(state.isImportDialogOpen).toBe(false);
   });
+
+  it("renders additional actions before Import", () => {
+    const state = createInitialState();
+    const viewData = selectViewData({
+      state,
+      props: {
+        additionalMenuItems: [
+          { label: "Zoom", type: "item", value: "zoom" },
+          { label: "Filter", type: "item", value: "filter" },
+        ],
+      },
+      i18n: {},
+    });
+
+    expect(viewData.menu.items.map((item) => item.value)).toEqual([
+      "zoom",
+      "filter",
+      "import",
+    ]);
+  });
 });

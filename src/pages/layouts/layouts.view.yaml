@@ -77,20 +77,24 @@ refs:
         handler: handleAddDialogClose
   layoutForm:
     eventListeners:
-      form-action:
-        handler: handleLayoutFormActionClick
       add-option-click:
         handler: handleAddFormAddOptionClick
+  addSubmitButton:
+    eventListeners:
+      click:
+        handler: handleAddSubmitClick
   editDialog:
     eventListeners:
       close:
         handler: handleEditDialogClose
   editForm:
     eventListeners:
-      form-action:
-        handler: handleEditFormActionClick
       add-option-click:
         handler: handleEditFormAddOptionClick
+  editSubmitButton:
+    eventListeners:
+      click:
+        handler: handleEditSubmitClick
   detailHeader:
     eventListeners:
       click:
@@ -179,10 +183,19 @@ template:
                       - rtgl-tag-select#detailTagSelect slot="layout-tags" w=f :options=${tagFilterOptions} :selectedValues=${selectedItemTagIds} :draftSelectedValues=${detailTagDraftValues} :open=${isDetailTagSelectOpen} :addOption=${detailTagAddOption} placeholder="${addTagPlaceholder}": null
   - rtgl-dialog#folderNameDialog ?open=${isFolderNameDialogOpen} s=sm:
       - rtgl-form#folderNameForm key=${folderNameDialogItemId} slot=content :defaultValues=${folderNameDialogDefaultValues} :form=${folderNameForm} w=f: null
-  - rtgl-dialog#addLayoutDialog ?open=${isAddDialogOpen} s=md:
-      - rtgl-form#layoutForm slot=content :defaultValues=${layoutFormDefaults} :form=${layoutForm} w=f: null
-  - rtgl-dialog#editDialog ?open=${isEditDialogOpen} s=md:
-      - rtgl-view slot=content g=md:
-          - rtgl-form#editForm key=${isEditDialogOpen} :defaultValues=${editDefaultValues} :form=${editForm} w=f: null
+  - rtgl-dialog#addLayoutDialog ?open=${isAddDialogOpen} s=md md-layout=fixed-top p=none:
+      - 'rtgl-view slot=content w=f h=f pv=md pos=rel style="min-width: 0; min-height: 0; overflow: hidden;"':
+          - 'rtgl-view h=1fg sv w=f style="min-height: 0;"':
+              - rtgl-form#layoutForm :defaultValues=${layoutFormDefaults} :form=${layoutForm} w=f ph=md: null
+              - 'rtgl-view h=80 aria-hidden=true style="flex: 0 0 80px;"': null
+          - 'rtgl-view d=h av=c ah=e w=f g=lg ph=md pt=md style="flex: 0 0 auto;"':
+              - rtgl-button#addSubmitButton v=pr: ${addSubmitButtonLabel}
+  - rtgl-dialog#editDialog ?open=${isEditDialogOpen} s=md md-layout=fixed-top p=none:
+      - 'rtgl-view slot=content w=f h=f pv=md pos=rel style="min-width: 0; min-height: 0; overflow: hidden;"':
+          - 'rtgl-view h=1fg sv w=f style="min-height: 0;"':
+              - rtgl-form#editForm key=${isEditDialogOpen} :defaultValues=${editDefaultValues} :form=${editForm} w=f ph=md: null
+              - 'rtgl-view h=80 aria-hidden=true style="flex: 0 0 80px;"': null
+          - 'rtgl-view d=h av=c ah=e w=f g=lg ph=md pt=md style="flex: 0 0 auto;"':
+              - rtgl-button#editSubmitButton v=pr: ${editSubmitButtonLabel}
   - rtgl-dialog#createTagDialog ?open=${isCreateTagDialogOpen} s=sm:
       - rtgl-form#createTagForm key=${isCreateTagDialogOpen} slot=content :defaultValues=${createTagDefaultValues} :form=${createTagForm} w=f: null

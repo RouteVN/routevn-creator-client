@@ -128,16 +128,6 @@ const createEditForm = ({ copy = {} } = {}) => ({
       label: copy.fontLabel ?? "Font",
     },
   ],
-  actions: {
-    layout: "",
-    buttons: [
-      {
-        id: "submit",
-        variant: "pr",
-        label: copy.updateButton ?? "Update Font",
-      },
-    ],
-  },
 });
 
 const {

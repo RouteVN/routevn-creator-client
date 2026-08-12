@@ -123,6 +123,8 @@ export const handleAfterMount = async (deps) => {
 };
 
 export const handleBeforeMount = (deps) => {
+  const { store, uiConfig } = deps;
+  store.setUiConfig({ uiConfig });
   return mountAudioTimelineDragSubscriptions(deps);
 };
 

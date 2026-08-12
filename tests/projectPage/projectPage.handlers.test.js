@@ -348,6 +348,7 @@ describe("project page handlers", () => {
       },
       store: withProjectAnalyticsRequestState({
         setPlatform: vi.fn(),
+        setUiConfig: vi.fn(),
         setCurrentProject: vi.fn(),
         setProjectAnalytics: vi.fn(),
         selectCurrentProject: vi.fn(() => ({ language: "en" })),
@@ -480,6 +481,7 @@ describe("project page handlers", () => {
       },
       store: withProjectAnalyticsRequestState({
         setPlatform: vi.fn(),
+        setUiConfig: vi.fn(),
         setCurrentProject: vi.fn(({ project }) => {
           currentProject = { ...currentProject, ...project };
         }),

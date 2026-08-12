@@ -387,7 +387,7 @@ const openEditDialogWithValues = ({ deps, itemId } = {}) => {
     return;
   }
 
-  store.setSelectedItemId({ itemId });
+  store.setSelectedItemId({ itemId, suppressMobileDetailSheet: true });
   refs.fileExplorer?.selectItem?.({ itemId });
   store.setFormValuesFromItem({ item });
   store.setEditMode({ itemId });
@@ -1107,6 +1107,18 @@ export const handleAddColorFormAction = async (deps, payload) => {
   }
 };
 
+export const handleAddColorSubmitClick = async (deps) => {
+  const { addColorForm } = deps.refs;
+  await handleAddColorFormAction(deps, {
+    _event: {
+      detail: {
+        actionId: "submit",
+        values: addColorForm.getValues(),
+      },
+    },
+  });
+};
+
 // Add font dialog handlers
 export const handleAddFontDialogClose = (deps) => {
   const { store, render } = deps;
@@ -1240,6 +1252,18 @@ export const handleAddFontFormAction = async (deps, payload) => {
     store.closeAddFontDialog();
     render();
   }
+};
+
+export const handleAddFontSubmitClick = async (deps) => {
+  const { addFontForm } = deps.refs;
+  await handleAddFontFormAction(deps, {
+    _event: {
+      detail: {
+        actionId: "submit",
+        values: addFontForm.getValues(),
+      },
+    },
+  });
 };
 export const handleSearchInput = (deps, payload) => {
   const { store, render } = deps;

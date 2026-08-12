@@ -45,7 +45,7 @@ const createVersionForm = ({ isEditing, copy = {} } = {}) => ({
         id: "submit",
         variant: "pr",
         label: isEditing
-          ? (copy.updateVersionButton ?? "Update Version")
+          ? (copy.updateVersionButton ?? "Update")
           : (copy.createVersionButton ?? "Create Version"),
       },
     ],

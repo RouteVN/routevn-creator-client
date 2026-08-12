@@ -247,8 +247,15 @@ const scrollElementIntoNearestScrollableView = (
   const containerRect = scrollContainer.getBoundingClientRect();
   const marginTop = getScrollMarginValue(element, "scrollMarginTop");
   const marginBottom = getScrollMarginValue(element, "scrollMarginBottom");
-  const topDelta = elementRect.top - containerRect.top - marginTop;
-  const bottomDelta = elementRect.bottom - containerRect.bottom + marginBottom;
+  const paddingTop = getScrollMarginValue(scrollContainer, "scrollPaddingTop");
+  const paddingBottom = getScrollMarginValue(
+    scrollContainer,
+    "scrollPaddingBottom",
+  );
+  const visibleTop = containerRect.top + paddingTop;
+  const visibleBottom = containerRect.bottom - paddingBottom;
+  const topDelta = elementRect.top - visibleTop - marginTop;
+  const bottomDelta = elementRect.bottom - visibleBottom + marginBottom;
   let nextScrollTop = scrollContainer.scrollTop;
 
   if (block === "start") {
@@ -258,8 +265,8 @@ const scrollElementIntoNearestScrollableView = (
   } else if (block === "center") {
     nextScrollTop +=
       elementRect.top -
-      containerRect.top -
-      (containerRect.height - elementRect.height) / 2;
+      visibleTop -
+      (visibleBottom - visibleTop - elementRect.height) / 2;
   } else if (topDelta < 0) {
     nextScrollTop += topDelta;
   } else if (bottomDelta > 0) {
@@ -2035,9 +2042,10 @@ export class LexicalSceneDocumentEditorElement extends HTMLElement {
           return;
         }
 
-        this.isEditorFocused = true;
         this.applyModeState("block");
-        this.focus({ preventScroll: true });
+        this.isEditorFocused = false;
+        this.refs.editor?.blur?.();
+        this.refs.surface?.focus?.({ preventScroll: true });
       });
     }
   }

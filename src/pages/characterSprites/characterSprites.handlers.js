@@ -413,7 +413,7 @@ const openEditDialogForSprite = ({
     return;
   }
 
-  store.setSelectedItemId({ itemId });
+  store.setSelectedItemId({ itemId, suppressMobileDetailSheet: true });
   if (syncExplorer) {
     refs.fileExplorer?.selectItem?.({ itemId });
   }
@@ -610,7 +610,7 @@ const openSpritesheetEditDialogForItem = ({
   revokeSpritesheetDialogPreviewUrl(store);
 
   const values = buildSpritesheetDialogValues({ item });
-  store.setSelectedItemId({ itemId });
+  store.setSelectedItemId({ itemId, suppressMobileDetailSheet: true });
 
   if (syncExplorer) {
     refs.fileExplorer?.selectItem?.({ itemId });
@@ -1741,6 +1741,18 @@ export const handleEditFormAction = async (deps, payload) => {
   await refreshCharacterSpritesData(deps);
 };
 
+export const handleEditSubmitClick = async (deps) => {
+  const { editForm } = deps.refs;
+  await handleEditFormAction(deps, {
+    _event: {
+      detail: {
+        actionId: "submit",
+        values: editForm.getValues(),
+      },
+    },
+  });
+};
+
 export const handleSpritesheetDialogClose = (deps) => {
   const { render, store } = deps;
   revokeSpritesheetDialogPreviewUrl(store);
@@ -1982,6 +1994,18 @@ export const handleSpritesheetDialogFormAction = async (deps, payload) => {
   store.closeSpritesheetDialog();
   render();
   await refreshCharacterSpritesData(deps);
+};
+
+export const handleSpritesheetDialogSubmitClick = async (deps) => {
+  const { spritesheetDialogForm } = deps.refs;
+  await handleSpritesheetDialogFormAction(deps, {
+    _event: {
+      detail: {
+        actionId: "submit",
+        values: spritesheetDialogForm.getValues(),
+      },
+    },
+  });
 };
 
 export const handleDetailClipClick = (deps, payload) => {

@@ -116,10 +116,12 @@ refs:
         handler: handleEditDialogClose
   editForm:
     eventListeners:
-      form-action:
-        handler: handleEditFormAction
       add-option-click:
         handler: handleEditFormAddOptionClick
+  editSubmitButton:
+    eventListeners:
+      click:
+        handler: handleEditSubmitClick
   editDialogImage:
     eventListeners:
       click:
@@ -172,12 +174,14 @@ refs:
         handler: handleSpritesheetDialogClose
   spritesheetDialogForm:
     eventListeners:
-      form-action:
-        handler: handleSpritesheetDialogFormAction
       form-change:
         handler: handleSpritesheetDialogFormChange
       add-option-click:
         handler: handleSpritesheetDialogFormAddOptionClick
+  spritesheetDialogSubmitButton:
+    eventListeners:
+      click:
+        handler: handleSpritesheetDialogSubmitClick
   spritesheetDialogImageSourceButton:
     eventListeners:
       click:
@@ -315,21 +319,25 @@ template:
               - 'rtgl-view w=f h=1fg sv style="min-height: 0;"':
                   - rvn-detail-view#mobileDetailView key=${selectedItemId} w=f :fields=${mobileDetailFields} :fillHeight=${mobileDetailFillHeight}:
                       - rtgl-tag-select#detailTagSelect key=${selectedItemId} slot="sprite-tags" w=f :options=${tagFilterOptions} :selectedValues=${selectedItemTagIds} :draftSelectedValues=${detailTagDraftValues} :open=${isDetailTagSelectOpen} :addOption=${detailTagAddOption} :placeholder=${addTagPlaceholder}: null
-  - rtgl-dialog#editDialog ?open=${isEditDialogOpen} s=md:
-      - rtgl-view slot=content g=md:
-          - rtgl-form#editForm key=${isEditDialogOpen} :defaultValues=${editDefaultValues} :form=${editForm} w=f:
-              - $if editPreviewFileId:
-                  - rtgl-view slot=image-slot av=c ah=c:
-                      - rvn-file-image#editDialogImage fileId=${editPreviewFileId} h=120 bw=xs bc=bo br=md cur=pointer key=${editPreviewFileId}: null
-                $else:
-                  - rtgl-view slot=image-slot av=c ah=c:
-                      - rtgl-view#editDialogImagePlaceholder w=120 h=120 av=c ah=c bgc=bg bc=bo bw=xs br=md cur=pointer:
-                          - rtgl-text c=mu-fg s=sm: ${clickToUploadLabel}
+  - rtgl-dialog#editDialog ?open=${isEditDialogOpen} s=md md-layout=fixed-top p=none:
+      - 'rtgl-view slot=content w=f h=f pv=md pos=rel style="min-width: 0; min-height: 0; overflow: hidden;"':
+          - 'rtgl-view h=1fg sv w=f style="min-height: 0;"':
+              - rtgl-form#editForm key=${isEditDialogOpen} :defaultValues=${editDefaultValues} :form=${editForm} w=f ph=md:
+                  - $if editPreviewFileId:
+                      - rtgl-view slot=image-slot av=c ah=c:
+                          - rvn-file-image#editDialogImage fileId=${editPreviewFileId} h=120 bw=xs bc=bo br=md cur=pointer key=${editPreviewFileId}: null
+                    $else:
+                      - rtgl-view slot=image-slot av=c ah=c:
+                          - rtgl-view#editDialogImagePlaceholder w=120 h=120 av=c ah=c bgc=bg bc=bo bw=xs br=md cur=pointer:
+                              - rtgl-text c=mu-fg s=sm: ${clickToUploadLabel}
+              - 'rtgl-view h=80 aria-hidden=true style="flex: 0 0 80px;"': null
+          - 'rtgl-view d=h av=c ah=e w=f g=lg ph=md pt=md style="flex: 0 0 auto;"':
+              - rtgl-button#editSubmitButton v=pr: ${editSubmitButtonLabel}
   - rtgl-dialog#folderNameDialog ?open=${isFolderNameDialogOpen} s=sm:
       - rtgl-form#folderNameForm key=${folderNameDialogItemId} slot=content :defaultValues=${folderNameDialogDefaultValues} :form=${folderNameForm} w=f: null
-  - rtgl-dialog#spritesheetDialog ?open=${isSpritesheetDialogOpen} s=lg:
+  - rtgl-dialog#spritesheetDialog ?open=${isSpritesheetDialogOpen} s=lg md-layout=fixed-top p=none:
       - $if isSpritesheetDialogPreviewMode:
-          - 'rtgl-view slot="content" d=v w=f g=lg style="min-width: min(960px, 100vw - 64px);"':
+          - 'rtgl-view slot="content" d=v w=f g=lg p=md style="min-width: min(960px, 100vw - 64px);"':
               - 'rvn-spritesheet-preview key=${spritesheetDialogPreviewKey} src=${spritesheetDialogPreviewUrl} fileId=${spritesheetDialogPreviewFileId} :atlas=${spritesheetDialogPreviewAtlas} :animation=${spritesheetDialogPreviewAnimation} h=320 :emptyLabel=${emptyPreviewLabel}': null
               - rtgl-view d=v w=f g=sm:
                   - rtgl-text s=sm c=mu-fg: ${clipsLabel}
@@ -344,39 +352,44 @@ template:
                       - rtgl-view w=f p=sm bgc=mu br=md:
                           - rtgl-text s=xs c=mu-fg: ${noAnimationsFound}
         $else:
-          - 'rtgl-view slot="content" d=h lg-d=v w=f g=lg style="min-width: min(960px, 100vw - 64px);"':
-              - rtgl-view w=5fg lg-w=f d=v g=md:
-                  - rtgl-view d=v g=xs:
-                      - rtgl-text s=sm: ${spritesheetDialogTitle}
-                      - rtgl-text s=xs c=mu-fg: ${dialogInstructions}
-                  - rtgl-form#spritesheetDialogForm key=${spritesheetDialogFormKey} :defaultValues=${spritesheetDialogValues} :form=${spritesheetDialogForm} w=f:
-                      - rtgl-view slot=spritesheet-image-source d=v g=xs:
-                          - rtgl-view w=120 h=120 av=c ah=c:
-                              - $if spritesheetDialogImageSourcePreviewUrl:
-                                  - rtgl-image#spritesheetDialogImageSourceButton src=${spritesheetDialogImageSourcePreviewUrl} w=120 h=120 of=con bw=xs bc=bo br=md cur=pointer: null
-                                $elif spritesheetDialogImageSourceFileId:
-                                  - rvn-file-image#spritesheetDialogImageSourceButton fileId=${spritesheetDialogImageSourceFileId} w=120 h=120 bw=xs bc=bo br=md cur=pointer: null
+          - 'rtgl-view slot="content" w=f h=f pv=md pos=rel style="min-width: 0; min-height: 0; overflow: hidden;"':
+              - 'rtgl-view h=1fg sv w=f style="min-height: 0;"':
+                  - 'rtgl-view d=h lg-d=v w=f g=lg ph=md style="min-width: min(960px, 100vw - 64px);"':
+                      - rtgl-view w=5fg lg-w=f d=v g=md:
+                          - rtgl-view d=v g=xs:
+                              - rtgl-text s=sm: ${spritesheetDialogTitle}
+                              - rtgl-text s=xs c=mu-fg: ${dialogInstructions}
+                          - rtgl-form#spritesheetDialogForm key=${spritesheetDialogFormKey} :defaultValues=${spritesheetDialogValues} :form=${spritesheetDialogForm} w=f:
+                              - rtgl-view slot=spritesheet-image-source d=v g=xs:
+                                  - rtgl-view w=120 h=120 av=c ah=c:
+                                      - $if spritesheetDialogImageSourcePreviewUrl:
+                                          - rtgl-image#spritesheetDialogImageSourceButton src=${spritesheetDialogImageSourcePreviewUrl} w=120 h=120 of=con bw=xs bc=bo br=md cur=pointer: null
+                                        $elif spritesheetDialogImageSourceFileId:
+                                          - rvn-file-image#spritesheetDialogImageSourceButton fileId=${spritesheetDialogImageSourceFileId} w=120 h=120 bw=xs bc=bo br=md cur=pointer: null
+                                        $else:
+                                          - rtgl-view#spritesheetDialogImageSourceButton w=120 h=120 av=c ah=c bgc=bg bc=bo bw=xs br=md cur=pointer:
+                                              - rtgl-text c=mu-fg s=sm ta=c: ${clickToUploadLabel}
+                              - rtgl-view slot=spritesheet-atlas-source d=v g=xs:
+                                  - rtgl-view d=h g=sm av=c:
+                                      - rtgl-input w=f :value=${spritesheetDialogAtlasFieldValue} disabled=true placeholder=${spritesheetDialogAtlasFieldPlaceholder}: null
+                                      - rtgl-button#spritesheetDialogAtlasSourceButton variant=se size=sm pre=upload: ${spritesheetDialogAtlasSourceLabel}
+                      - rtgl-view w=6fg lg-w=f d=v g=md:
+                          - 'rvn-spritesheet-preview key=${spritesheetDialogPreviewKey} src=${spritesheetDialogPreviewUrl} fileId=${spritesheetDialogPreviewFileId} :atlas=${spritesheetDialogPreviewAtlas} :animation=${spritesheetDialogPreviewAnimation} h=260 emptyLabel=""': null
+                          - rtgl-view d=v w=f g=sm:
+                              - rtgl-text s=sm c=mu-fg: ${clipsLabel}
+                              - $if spritesheetDialogClipOptions.length > 0:
+                                  - $for clip, clipIndex in spritesheetDialogClipOptions:
+                                      - 'rtgl-view#spritesheetDialogClipButton${clipIndex} data-clip-name=${clip.name} d=v w=f g=xs p=sm bw=xs bc=${clip.borderColor} br=md bgc=${clip.backgroundColor} h-bgc=mu cur=pointer':
+                                          - rtgl-view d=h w=f av=c g=sm:
+                                              - rtgl-text w=1fg s=sm: ${clip.name}
+                                              - rtgl-text s=xs c=mu-fg: ${clip.loopLabel}
+                                          - rtgl-text s=xs c=mu-fg: ${clip.summaryLabel}
                                 $else:
-                                  - rtgl-view#spritesheetDialogImageSourceButton w=120 h=120 av=c ah=c bgc=bg bc=bo bw=xs br=md cur=pointer:
-                                      - rtgl-text c=mu-fg s=sm ta=c: ${clickToUploadLabel}
-                      - rtgl-view slot=spritesheet-atlas-source d=v g=xs:
-                          - rtgl-view d=h g=sm av=c:
-                              - rtgl-input w=f :value=${spritesheetDialogAtlasFieldValue} disabled=true placeholder=${spritesheetDialogAtlasFieldPlaceholder}: null
-                              - rtgl-button#spritesheetDialogAtlasSourceButton variant=se size=sm pre=upload: ${spritesheetDialogAtlasSourceLabel}
-              - rtgl-view w=6fg lg-w=f d=v g=md:
-                  - 'rvn-spritesheet-preview key=${spritesheetDialogPreviewKey} src=${spritesheetDialogPreviewUrl} fileId=${spritesheetDialogPreviewFileId} :atlas=${spritesheetDialogPreviewAtlas} :animation=${spritesheetDialogPreviewAnimation} h=260 emptyLabel=""': null
-                  - rtgl-view d=v w=f g=sm:
-                      - rtgl-text s=sm c=mu-fg: ${clipsLabel}
-                      - $if spritesheetDialogClipOptions.length > 0:
-                          - $for clip, clipIndex in spritesheetDialogClipOptions:
-                              - 'rtgl-view#spritesheetDialogClipButton${clipIndex} data-clip-name=${clip.name} d=v w=f g=xs p=sm bw=xs bc=${clip.borderColor} br=md bgc=${clip.backgroundColor} h-bgc=mu cur=pointer':
-                                  - rtgl-view d=h w=f av=c g=sm:
-                                      - rtgl-text w=1fg s=sm: ${clip.name}
-                                      - rtgl-text s=xs c=mu-fg: ${clip.loopLabel}
-                                  - rtgl-text s=xs c=mu-fg: ${clip.summaryLabel}
-                        $else:
-                          - rtgl-view w=f p=sm bgc=mu br=md:
-                              - rtgl-text s=xs c=mu-fg: ${selectValidJsonToDetectClips}
+                                  - rtgl-view w=f p=sm bgc=mu br=md:
+                                      - rtgl-text s=xs c=mu-fg: ${selectValidJsonToDetectClips}
+                  - 'rtgl-view h=80 aria-hidden=true style="flex: 0 0 80px;"': null
+              - 'rtgl-view d=h av=c ah=e w=f g=lg ph=md pt=md style="flex: 0 0 auto;"':
+                  - rtgl-button#spritesheetDialogSubmitButton v=pr: ${spritesheetDialogSubmitLabel}
   - rtgl-dialog#clipFpsDialog ?open=${isClipFpsDialogOpen} s=sm:
       - rtgl-form#clipFpsForm key=${clipFpsDialogKey} slot=content :defaultValues=${clipFpsDialogValues} :form=${clipFpsForm} w=f: null
   - rtgl-dialog#createTagDialog ?open=${isCreateTagDialogOpen} s=sm:
@@ -384,14 +397,29 @@ template:
   - $when: fullImagePreviewVisible
     'div#previewOverlay tabindex=0 style="position: fixed; inset: 0; z-index: 3000; cursor: default; outline: none; background-color: rgba(0, 0, 0, 0.9);"':
       - $if fullImagePreviewFileId:
-          - 'rtgl-view pos=fix z=3002 d=h g=xs bgc=bg bw=xs bc=bo br=md p=xs style="top: 8px; left: 50%; transform: translateX(-50%); box-shadow: 0 8px 24px rgba(15, 23, 42, 0.18);"':
-              - 'rtgl-button#previewCanvasModeButton sq pre=canvas-scale v=${fullImagePreviewCanvasModeButton.variant} aria-label="${fullImagePreviewCanvasModeLabel}" aria-pressed="${fullImagePreviewCanvasModeButton.selected}" title="${fullImagePreviewCanvasModeLabel}"': null
-              - 'rtgl-button#previewFitModeButton sq pre=fit-to-frame v=${fullImagePreviewFitModeButton.variant} aria-label="${fullImagePreviewFitModeLabel}" aria-pressed="${fullImagePreviewFitModeButton.selected}" title="${fullImagePreviewFitModeLabel}"': null
-          - rtgl-view pos=fix edge=f ah=c av=c z=3001:
-              - 'div#previewImageFrame.imagePreviewFrame.imagePreviewTransparencyGrid style="${fullImagePreviewFrameStyle}"':
-                  - 'div style="${fullImagePreviewImageWrapperStyle}"':
-                      - rvn-file-image fileId=${fullImagePreviewFileId} w=f h=f: null
-                  - $if fullImagePreviewPreviousVisible:
-                      - div#previewPrevious.imagePreviewEdge.imagePreviewEdgePrevious role=button aria-label="${fullImagePreviewPreviousLabel}": null
-                  - $if fullImagePreviewNextVisible:
-                      - div#previewNext.imagePreviewEdge.imagePreviewEdgeNext role=button aria-label="${fullImagePreviewNextLabel}": null
+          - $if mobileLayout:
+              - 'rtgl-view pos=fix z=3002 d=h w=f av=c g=sm style="top: calc(var(--rvn-mobile-overlay-top-inset, 0px) + 8px); left: 0; right: 0; padding-left: max(8px, env(safe-area-inset-left)); padding-right: max(8px, env(safe-area-inset-right)); box-sizing: border-box;"':
+                  - 'rtgl-text#previewBreadcrumb w=1fg s=sm ellipsis=true style="color: white; min-width: 0; text-shadow: 0 1px 3px rgba(0, 0, 0, 0.8);"': ${fullImagePreviewBreadcrumb}
+                  - 'rtgl-view#previewModeControls d=h g=xs bgc=bg bw=xs bc=bo br=md p=xs style="flex: 0 0 auto; box-shadow: 0 8px 24px rgba(15, 23, 42, 0.18);"':
+                      - 'rtgl-button#previewCanvasModeButton sq pre=canvas-scale v=${fullImagePreviewCanvasModeButton.variant} aria-label="${fullImagePreviewCanvasModeLabel}" aria-pressed="${fullImagePreviewCanvasModeButton.selected}" title="${fullImagePreviewCanvasModeLabel}"': null
+                      - 'rtgl-button#previewFitModeButton sq pre=fit-to-frame v=${fullImagePreviewFitModeButton.variant} aria-label="${fullImagePreviewFitModeLabel}" aria-pressed="${fullImagePreviewFitModeButton.selected}" title="${fullImagePreviewFitModeLabel}"': null
+              - rtgl-view pos=fix edge=f ah=c av=c z=3001:
+                  - 'div#previewImageFrame.imagePreviewFrame.imagePreviewTransparencyGrid style="${fullImagePreviewFrameStyle}"':
+                      - 'div style="${fullImagePreviewImageWrapperStyle}"':
+                          - rvn-file-image fileId=${fullImagePreviewFileId} w=f h=f: null
+                      - $if fullImagePreviewPreviousVisible:
+                          - div#previewPrevious.imagePreviewEdge.imagePreviewEdgePrevious role=button aria-label="${fullImagePreviewPreviousLabel}": null
+                      - $if fullImagePreviewNextVisible:
+                          - div#previewNext.imagePreviewEdge.imagePreviewEdgeNext role=button aria-label="${fullImagePreviewNextLabel}": null
+            $else:
+              - 'rtgl-view pos=fix z=3002 d=h g=xs bgc=bg bw=xs bc=bo br=md p=xs style="top: 8px; left: 50%; transform: translateX(-50%); box-shadow: 0 8px 24px rgba(15, 23, 42, 0.18);"':
+                  - 'rtgl-button#previewCanvasModeButton sq pre=canvas-scale v=${fullImagePreviewCanvasModeButton.variant} aria-label="${fullImagePreviewCanvasModeLabel}" aria-pressed="${fullImagePreviewCanvasModeButton.selected}" title="${fullImagePreviewCanvasModeLabel}"': null
+                  - 'rtgl-button#previewFitModeButton sq pre=fit-to-frame v=${fullImagePreviewFitModeButton.variant} aria-label="${fullImagePreviewFitModeLabel}" aria-pressed="${fullImagePreviewFitModeButton.selected}" title="${fullImagePreviewFitModeLabel}"': null
+              - rtgl-view pos=fix edge=f ah=c av=c z=3001:
+                  - 'div#previewImageFrame.imagePreviewFrame.imagePreviewTransparencyGrid style="${fullImagePreviewFrameStyle}"':
+                      - 'div style="${fullImagePreviewImageWrapperStyle}"':
+                          - rvn-file-image fileId=${fullImagePreviewFileId} w=f h=f: null
+                      - $if fullImagePreviewPreviousVisible:
+                          - div#previewPrevious.imagePreviewEdge.imagePreviewEdgePrevious role=button aria-label="${fullImagePreviewPreviousLabel}": null
+                      - $if fullImagePreviewNextVisible:
+                          - div#previewNext.imagePreviewEdge.imagePreviewEdgeNext role=button aria-label="${fullImagePreviewNextLabel}": null

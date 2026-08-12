@@ -29,7 +29,7 @@ const openEditDialogWithValues = ({ deps, itemId } = {}) => {
     return;
   }
 
-  store.setSelectedItemId({ itemId });
+  store.setSelectedItemId({ itemId, suppressMobileDetailSheet: true });
   refs.fileExplorer?.selectItem?.({ itemId });
   store.openEditDialog({ itemId });
   render();
@@ -306,6 +306,18 @@ export const handleEditFormAction = async (deps, payload) => {
   await handleDataChanged(deps);
 };
 
+export const handleEditSubmitClick = async (deps) => {
+  const { editForm } = deps.refs;
+  await handleEditFormAction(deps, {
+    _event: {
+      detail: {
+        actionId: "submit",
+        values: editForm.getValues(),
+      },
+    },
+  });
+};
+
 export const handleFormFieldClick = (deps) => {
   const selectedItemId = deps.store.selectSelectedItemId();
   openEditDialogWithValues({ deps, itemId: selectedItemId });
@@ -357,6 +369,18 @@ export const handleAddFormAction = async (deps, payload) => {
 
   store.closeAddDialog();
   await handleDataChanged(deps);
+};
+
+export const handleAddSubmitClick = async (deps) => {
+  const { addColorForm } = deps.refs;
+  await handleAddFormAction(deps, {
+    _event: {
+      detail: {
+        actionId: "submit",
+        values: addColorForm.getValues(),
+      },
+    },
+  });
 };
 
 export const handleItemDelete = async (deps, payload) => {

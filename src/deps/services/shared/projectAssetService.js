@@ -315,7 +315,7 @@ export const createProjectAssetService = ({
               fileType: file.type,
               error: error?.message ?? "Unknown error",
             });
-            return undefined;
+            throw error;
           }
         })(),
       ]);

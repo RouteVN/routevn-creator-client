@@ -80,6 +80,7 @@ describe("resource-import-dialog.store", () => {
       assetStoreLinkLabel: "Browse the Asset Store",
       assetStoreUrl: "https://routevn.com/en/creator/asset-store/",
     });
+    expect(view.form.actions.sticky).toBe(true);
   });
 
   it("opens multi-resource packages on a visual selection page", () => {
@@ -127,6 +128,7 @@ describe("resource-import-dialog.store", () => {
       id: "import",
       label: "Import",
     });
+    expect(view.form.actions.sticky).toBe(true);
     expect(view).toMatchObject({
       allResourcesSelected: true,
       selectionToggleAllLabel: "Deselect All",

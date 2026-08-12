@@ -248,7 +248,7 @@ const openEditDialogWithValues = ({ deps, itemId } = {}) => {
     tagIds: controlItem.tagIds ?? [],
   };
 
-  store.setSelectedItemId({ itemId });
+  store.setSelectedItemId({ itemId, suppressMobileDetailSheet: true });
   fileExplorer?.selectItem?.({ itemId });
   store.openEditDialog({
     itemId,
@@ -455,6 +455,18 @@ export const handleControlFormActionClick = async (deps, payload) => {
 
   store.closeAddDialog();
   await handleDataChanged(deps);
+};
+
+export const handleControlSubmitClick = async (deps) => {
+  const { controlForm } = deps.refs;
+  await handleControlFormActionClick(deps, {
+    _event: {
+      detail: {
+        actionId: "submit",
+        values: controlForm.getValues(),
+      },
+    },
+  });
 };
 
 export const handleItemDelete = async (deps, payload) => {

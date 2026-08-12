@@ -23,10 +23,21 @@ export const handleMenuClose = (deps) => {
 };
 
 export const handleMenuItemClick = (deps, payload) => {
-  const { render, store } = deps;
+  const { dispatchEvent, render, store } = deps;
   const { item } = payload._event.detail;
+  const position = store.selectMenuPosition();
   store.closeMenu();
-  if (item.value === "import") store.openImportDialog();
+  if (item.value === "import") {
+    store.openImportDialog();
+  } else {
+    dispatchEvent(
+      new CustomEvent("menu-action", {
+        detail: { item, position },
+        bubbles: true,
+        composed: true,
+      }),
+    );
+  }
   render();
 };
 

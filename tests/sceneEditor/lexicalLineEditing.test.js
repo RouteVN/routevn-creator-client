@@ -711,7 +711,7 @@ describe("lexical scene document editor line editing", () => {
     }
   });
 
-  it("keeps the contenteditable as the focus owner when entering block mode", async () => {
+  it("moves focus off the contenteditable when entering block mode", async () => {
     const restoreDomGlobals = installDomGlobals();
     const previousRequestAnimationFrame = globalThis.requestAnimationFrame;
     globalThis.requestAnimationFrame = vi.fn((callback) => {
@@ -728,6 +728,12 @@ describe("lexical scene document editor line editing", () => {
       );
       const editorNode = document.createElement("div");
       const surfaceNode = document.createElement("div");
+      editorNode.contentEditable = "true";
+      editorNode.tabIndex = 0;
+      surfaceNode.tabIndex = 0;
+      surfaceNode.append(editorNode);
+      document.body.append(surfaceNode);
+      editorNode.focus();
 
       editorElement.refs = {
         editor: editorNode,
@@ -750,8 +756,6 @@ describe("lexical scene document editor line editing", () => {
       editorElement.clearSelectedReferenceNodeKey = vi.fn();
       editorElement.scrollLineIntoView = vi.fn();
       editorElement.scheduleRender = vi.fn();
-      editorElement.focus = vi.fn();
-      surfaceNode.focus = vi.fn();
 
       editorElement.enterBlockMode({
         focusSurface: true,
@@ -761,10 +765,8 @@ describe("lexical scene document editor line editing", () => {
       expect(editorElement.state.mode).toBe("block");
       expect(editorNode.dataset.mode).toBe("block");
       expect(surfaceNode.dataset.mode).toBe("block");
-      expect(editorElement.focus).toHaveBeenCalledWith({
-        preventScroll: true,
-      });
-      expect(surfaceNode.focus).not.toHaveBeenCalled();
+      expect(document.activeElement).toBe(surfaceNode);
+      expect(editorElement.isEditorFocused).toBe(false);
     } finally {
       if (previousRequestAnimationFrame === undefined) {
         delete globalThis.requestAnimationFrame;
@@ -814,14 +816,14 @@ describe("lexical scene document editor line editing", () => {
       editorElement.clearSelectedReferenceNodeKey = vi.fn();
       editorElement.scrollLineIntoView = vi.fn();
       editorElement.scheduleRender = vi.fn();
-      editorElement.focus = vi.fn();
+      surfaceNode.focus = vi.fn();
 
       editorElement.focusContainer({ scrollLine: false });
 
       expect(editorElement.state.mode).toBe("block");
       expect(editorElement.state.selectedLineId).toBe("line-2");
       expect(editorElement.scrollLineIntoView).not.toHaveBeenCalled();
-      expect(editorElement.focus).toHaveBeenCalledWith({
+      expect(surfaceNode.focus).toHaveBeenCalledWith({
         preventScroll: true,
       });
     } finally {
@@ -870,6 +872,69 @@ describe("lexical scene document editor line editing", () => {
           navigationDirection: "down",
         },
       );
+    } finally {
+      restoreDomGlobals();
+    }
+  });
+
+  it("scrolls a block line above the mobile toolbar inset", async () => {
+    const restoreDomGlobals = installDomGlobals();
+
+    try {
+      const { LexicalSceneDocumentEditorElement } = await import(
+        "../../src/primitives/lexicalSceneDocumentEditor.js"
+      );
+      const editorElement = Object.create(
+        LexicalSceneDocumentEditorElement.prototype,
+      );
+      const scrollContainer = document.createElement("div");
+      const lineElement = document.createElement("div");
+
+      scrollContainer.style.overflowY = "auto";
+      scrollContainer.style.scrollPaddingBottom = "48px";
+      scrollContainer.append(lineElement);
+      document.body.append(scrollContainer);
+      Object.defineProperty(scrollContainer, "clientHeight", {
+        configurable: true,
+        value: 200,
+      });
+      Object.defineProperty(scrollContainer, "scrollHeight", {
+        configurable: true,
+        value: 500,
+      });
+      Object.defineProperty(scrollContainer, "scrollTop", {
+        configurable: true,
+        writable: true,
+        value: 100,
+      });
+      scrollContainer.getBoundingClientRect = () => ({
+        top: 0,
+        right: 320,
+        bottom: 200,
+        left: 0,
+        width: 320,
+        height: 200,
+      });
+      lineElement.getBoundingClientRect = () => ({
+        top: 145,
+        right: 320,
+        bottom: 170,
+        left: 0,
+        width: 320,
+        height: 25,
+      });
+      scrollContainer.scrollTo = vi.fn();
+      editorElement.lineKeyById = new Map([["line-2", "key-2"]]);
+      editorElement.editor = {
+        getElementByKey: () => lineElement,
+      };
+
+      editorElement.scrollLineIntoView({ lineId: "line-2" });
+
+      expect(scrollContainer.scrollTo).toHaveBeenCalledWith({
+        top: 118,
+        behavior: "auto",
+      });
     } finally {
       restoreDomGlobals();
     }

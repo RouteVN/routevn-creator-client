@@ -279,7 +279,7 @@ const openVariableEditDialog = ({ deps, itemId } = {}) => {
   }
 
   refs.fileexplorer?.selectItem?.({ itemId });
-  store.setSelectedItemId({ itemId });
+  store.setSelectedItemId({ itemId, suppressMobileDetailSheet: true });
   render();
   refs.groupview?.openEditDialog?.({ itemId });
 };
@@ -405,7 +405,11 @@ export const handleVariableItemClick = (deps, payload) => {
   const { fileexplorer } = refs;
   fileexplorer?.selectItem?.({ itemId });
   store.setSelectedFolderId({ folderId: undefined });
-  store.setSelectedItemId({ itemId });
+  const selectionPayload = { itemId };
+  if (detail.suppressMobileDetailSheet === true) {
+    selectionPayload.suppressMobileDetailSheet = true;
+  }
+  store.setSelectedItemId(selectionPayload);
   render();
 };
 

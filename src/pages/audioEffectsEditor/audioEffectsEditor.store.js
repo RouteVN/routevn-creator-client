@@ -105,7 +105,7 @@ const createKeyframeForm = ({
     variant: "pr",
     label: add
       ? (copy.addKeyframeButton ?? "Add Keyframe")
-      : (copy.updateKeyframeButton ?? "Update Keyframe"),
+      : (copy.updateKeyframeButton ?? "Update"),
   });
   const fields = [
     {

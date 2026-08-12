@@ -290,6 +290,7 @@ const {
     description: item?.description ?? "",
     tagIds: item?.tagIds ?? [],
   }),
+  suppressMobileDetailSheetOnEdit: true,
   getEditPreviewFileId: (item) => item?.waveformDataFileId,
   onEnterKey: ({ deps, selectedItemId }) => {
     toggleSoundPreviewById({ deps, itemId: selectedItemId });
@@ -653,6 +654,18 @@ export const handleEditFormAction = async (deps, payload) => {
 
   handleEditDialogClose(deps);
   await handleDataChanged(deps);
+};
+
+export const handleEditSubmitClick = async (deps) => {
+  const { editForm } = deps.refs;
+  await handleEditFormAction(deps, {
+    _event: {
+      detail: {
+        actionId: "submit",
+        values: editForm.getValues(),
+      },
+    },
+  });
 };
 
 export const handleAudioPlayerClose = (deps) => {

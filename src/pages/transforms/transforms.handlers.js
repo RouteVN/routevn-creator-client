@@ -535,6 +535,8 @@ const openTransformEditDialog = async ({ deps, itemId } = {}) => {
     return;
   }
 
+  deps.store.setSelectedItemId({ itemId, suppressMobileDetailSheet: true });
+
   await openTransformDialog({
     deps,
     editMode: true,
@@ -731,6 +733,18 @@ export const handleTransformFormActionClick = async (deps, payload) => {
 
   store.closeTransformFormDialog();
   await handleDataChanged(deps);
+};
+
+export const handleTransformSubmitClick = async (deps) => {
+  const { transformForm } = deps.refs;
+  await handleTransformFormActionClick(deps, {
+    _event: {
+      detail: {
+        actionId: "submit",
+        values: transformForm.getValues(),
+      },
+    },
+  });
 };
 
 export const handleTransformFormChange = async (deps, payload) => {

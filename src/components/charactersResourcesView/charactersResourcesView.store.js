@@ -232,6 +232,21 @@ export const selectViewData = ({ state, props }) => {
     showLeadingMenuButton: showMenuButton && menuButtonPlacement === "leading",
     showTrailingMenuButton:
       showMenuButton && menuButtonPlacement === "trailing",
+    characterCardPadding: mobileLayout ? "md" : "lg",
+    characterCardGap: mobileLayout ? "md" : "xl",
+    characterCardContentGap: mobileLayout ? "sm" : "md",
+    characterCardContentStyle: mobileLayout
+      ? "height: 100%; justify-content: center; min-width: 0;"
+      : "min-width: 0;",
+    characterCardHeight: mobileLayout ? 114 : "auto",
+    characterNameSize: mobileLayout ? "h4" : "h2",
+    characterNamePlaceholderHeight: mobileLayout ? 20 : 24,
+    characterDescriptionSize: mobileLayout ? "sm" : "md",
+    characterDescriptionStyle: mobileLayout
+      ? "display: -webkit-box; -webkit-box-orient: vertical; -webkit-line-clamp: 3; overflow: hidden;"
+      : "display: block;",
+    limitCharacterDescription: mobileLayout,
+    showCharacterCardSpritesButton: !mobileLayout,
     progressiveRender: progressiveRenderEnabled,
     progressiveInitialItemCount: parseNonNegativeIntegerProp(
       props.progressiveInitialItemCount,

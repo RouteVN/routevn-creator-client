@@ -370,8 +370,8 @@ export const createWaveformThumbnail = async ({
   }
 };
 
-const VIDEO_THUMBNAIL_EVENT_TIMEOUT_MS = 1000;
-const VIDEO_THUMBNAIL_ACTIVITY_TIMEOUT_MS = 2000;
+const VIDEO_THUMBNAIL_EVENT_TIMEOUT_MS = 5000;
+const VIDEO_THUMBNAIL_ACTIVITY_TIMEOUT_MS = 10000;
 
 const clampNumber = (value, min, max) => {
   return Math.min(max, Math.max(min, value));

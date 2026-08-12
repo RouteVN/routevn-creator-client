@@ -86,7 +86,7 @@ describe("command-line audio channel views", () => {
       "utf8",
     );
 
-    expect(view).toContain("rtgl-view w=f ph=lg:");
+    expect(view).toContain("rtgl-view w=f ph=md:");
     expect(view).toContain(
       "rtgl-text#channelEditorTitle s=lg: ${channelEditorTitle}",
     );

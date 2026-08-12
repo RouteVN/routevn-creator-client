@@ -559,6 +559,17 @@ export const createMediaPageStore = ({
           activeTagIds: state.activeTagIds,
         })
       : unfilteredMediaGroups;
+    const tagViewData = taggingEnabled
+      ? buildTagViewData({
+          state,
+          selectedItem,
+          createTagFormDefinition,
+          tagFilterPlaceholder:
+            copy.tagFilterPlaceholder ?? tagging?.tagFilterPlaceholder,
+          detailTagAddOptionLabel:
+            copy.addTagOption ?? tagging?.detailTagAddOptionLabel,
+        })
+      : {};
     const detailFields = selectedItem
       ? buildDetailFields(selectedItem, { copy })
       : buildFolderDetailFields(selectedFolder).map((field) => {
@@ -616,24 +627,18 @@ export const createMediaPageStore = ({
       centerItemContextMenuItems: resolvedCenterItemContextMenuItems,
       isEditDialogOpen: state.isEditDialogOpen,
       editItemId: state.editItemId,
-      editForm: createEditForm({ copy }),
+      editForm: createEditForm({
+        copy,
+        tagOptions: tagViewData.tagFilterOptions ?? [],
+      }),
+      editSubmitButtonLabel: copy.updateButton ?? "Update",
       editDefaultValues: state.editDefaultValues,
       editPreviewFileId: state.editPreviewFileId,
       isFolderNameDialogOpen: state.isFolderNameDialogOpen,
       folderNameDialogItemId: state.folderNameDialogItemId,
       folderNameForm: createFolderNameForm(copy),
       folderNameDialogDefaultValues: state.folderNameDialogDefaultValues,
-      ...(taggingEnabled
-        ? buildTagViewData({
-            state,
-            selectedItem,
-            createTagFormDefinition,
-            tagFilterPlaceholder:
-              copy.tagFilterPlaceholder ?? tagging?.tagFilterPlaceholder,
-            detailTagAddOptionLabel:
-              copy.addTagOption ?? tagging?.detailTagAddOptionLabel,
-          })
-        : {}),
+      ...tagViewData,
     };
     Object.assign(baseViewData, mobileViewData);
 

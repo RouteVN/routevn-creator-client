@@ -10,6 +10,18 @@ const viewSource = readFileSync(
 );
 
 describe("resource-import-dialog.view", () => {
+  it("uses a fixed-top mobile layout with bounded form content", () => {
+    expect(viewSource).toContain(
+      'rtgl-dialog#dialog ?open=${open} s=lg md-layout=fixed-top aria-label="${dialogAriaLabel}"',
+    );
+    expect(viewSource).toContain(
+      "rtgl-view slot=content d=v w=f h=f g=md overflow=hidden",
+    );
+    expect(viewSource).toContain(
+      "rtgl-form#workflowForm key=${formKey} :defaultValues=${defaultValues} :form=${form} :context=${formContext} w=f h=f",
+    );
+  });
+
   it("links the source description to the asset store", () => {
     expect(viewSource).toContain("slot=source-description");
     expect(viewSource).toContain("rtgl-text#assetStoreLink");

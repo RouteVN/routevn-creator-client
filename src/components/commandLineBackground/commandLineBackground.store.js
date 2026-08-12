@@ -21,6 +21,7 @@ import {
   localizeCommandLineText,
   selectCommandLineCopy,
 } from "../../internal/ui/sceneEditor/commandLineCopy.js";
+import { createCommandLineResourceSelectorLayout } from "../../internal/ui/sceneEditor/commandLineResourceSelectorLayout.js";
 import { isTouchUiConfig } from "../../internal/ui/resourcePages/mobileResourcePage.js";
 import {
   COMMAND_LINE_SHADER_ADJUSTMENTS,
@@ -205,11 +206,21 @@ export const createInitialState = () => ({
   fullSpritesheetPreviewAnimation: undefined,
   fullSpritesheetPreviewKey: undefined,
   searchQuery: "",
+  searchPopover: {
+    isOpen: false,
+    position: {
+      x: 0,
+      y: 0,
+    },
+  },
   isTouchMode: false,
 });
 
 export const setUiConfig = ({ state }, { uiConfig } = {}) => {
   state.isTouchMode = isTouchUiConfig(uiConfig);
+  if (!state.isTouchMode) {
+    state.searchPopover.isOpen = false;
+  }
 };
 
 export const selectTempSelectedResourceId = ({ state }) => {
@@ -236,6 +247,9 @@ export const selectTempSelectedResource = ({ state }) => {
 
 export const setMode = ({ state }, { mode } = {}) => {
   state.mode = mode;
+  if (mode !== "gallery") {
+    state.searchPopover.isOpen = false;
+  }
 };
 
 export const selectMode = ({ state }) => {
@@ -379,6 +393,16 @@ export const hideFullImagePreview = ({ state }, _payload = {}) => {
 
 export const setSearchQuery = ({ state }, { value } = {}) => {
   state.searchQuery = value ?? "";
+};
+
+export const openSearchPopover = ({ state }, { position } = {}) => {
+  state.searchPopover.isOpen = true;
+  state.searchPopover.position.x = position?.x ?? 0;
+  state.searchPopover.position.y = position?.y ?? 0;
+};
+
+export const closeSearchPopover = ({ state }, _payload = {}) => {
+  state.searchPopover.isOpen = false;
 };
 
 export const setSelectedAnimationMode = ({ state }, { mode } = {}) => {
@@ -919,6 +943,9 @@ const createCustomTransformDetails = ({ state }) => {
 
 export const selectViewData = ({ state, i18n }) => {
   const copy = selectCommandLineCopy(i18n);
+  const resourceSelectorLayout = createCommandLineResourceSelectorLayout({
+    isTouchMode: state.isTouchMode,
+  });
   const itemsMap = {
     image: state.imageItems,
     spritesheet: state.spritesheetItems,
@@ -952,7 +979,8 @@ export const selectViewData = ({ state, i18n }) => {
             ? " box-shadow: inset 0 0 0 1px var(--color-pr);"
             : "";
           const resourceCardStyle =
-            "max-width: 100%; box-sizing: border-box;" +
+            (resourceSelectorLayout.cardStyle ||
+              "max-width: 100%; box-sizing: border-box;") +
             selectedResourceInsetStyle;
           const layoutTypeLabels = {
             general: localizeCommandLineText("General", copy),
@@ -1347,7 +1375,11 @@ export const selectViewData = ({ state, i18n }) => {
     tabs: localizeCommandLineOptions(tabs, copy),
     breadcrumb: localizeCommandLineBreadcrumb(breadcrumb, copy),
     items: flatItems,
-    showImageSelectorFileExplorer: !state.isTouchMode,
+    showImageSelectorFileExplorer: resourceSelectorLayout.showFileExplorer,
+    imageSelectorColumns: resourceSelectorLayout.columns,
+    spritesheetSelectorColumns: resourceSelectorLayout.columns,
+    resourceSelectorGridStyle: resourceSelectorLayout.gridStyle,
+    resourceSelectorItemStyle: resourceSelectorLayout.itemStyle,
     groups: flatGroups,
     tempSelectedResourceId: state.tempSelectedResourceId,
     tempSelectedSpritesheetValue: toSpritesheetAnimationSelectionValue(
@@ -1370,6 +1402,16 @@ export const selectViewData = ({ state, i18n }) => {
     fullSpritesheetPreviewKey: state.fullSpritesheetPreviewKey,
     searchQuery: state.searchQuery,
     searchPlaceholder: localizeCommandLineText("Search...", copy),
+    showInlineSearch: !state.isTouchMode,
+    showSearchButton: state.isTouchMode,
+    searchButtonLabel: localizeCommandLineText("Search", copy),
+    searchPopover: {
+      isOpen: state.searchPopover.isOpen,
+      position: {
+        x: state.searchPopover.position.x,
+        y: state.searchPopover.position.y,
+      },
+    },
     dialogueForm: {
       key: [
         selectedResource?.resourceType ?? "none",

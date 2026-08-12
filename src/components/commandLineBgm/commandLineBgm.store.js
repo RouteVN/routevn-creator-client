@@ -16,6 +16,8 @@ import {
   localizeCommandLineText,
   selectCommandLineCopy,
 } from "../../internal/ui/sceneEditor/commandLineCopy.js";
+import { createCommandLineResourceSelectorLayout } from "../../internal/ui/sceneEditor/commandLineResourceSelectorLayout.js";
+import { isTouchUiConfig } from "../../internal/ui/resourcePages/mobileResourcePage.js";
 
 const DEFAULT_CHANNEL_VOLUME = 75;
 const DEFAULT_SOUND_VOLUME = 100;
@@ -183,7 +185,12 @@ export const createInitialState = () => ({
     fileId: undefined,
   },
   showAudioPlayer: false,
+  isTouchMode: false,
 });
+
+export const setUiConfig = ({ state }, { uiConfig } = {}) => {
+  state.isTouchMode = isTouchUiConfig(uiConfig);
+};
 
 export const selectBgm = ({ state }) => state.bgm;
 
@@ -262,6 +269,9 @@ export const selectBreadcrumb = ({ state }) => {
 
 export const selectViewData = ({ state, i18n }) => {
   const copy = selectCommandLineCopy(i18n);
+  const resourceSelectorLayout = createCommandLineResourceSelectorLayout({
+    isTouchMode: state.isTouchMode,
+  });
   const flatSoundItems = toFlatItems(state.items);
   const soundResourceById = new Map(
     flatSoundItems.map((item) => [item.id, item]),
@@ -346,6 +356,12 @@ export const selectViewData = ({ state, i18n }) => {
     mode: state.mode,
     items: folderItems,
     groups,
+    showResourceSelectorFileExplorer: resourceSelectorLayout.showFileExplorer,
+    resourceSelectorColumns: resourceSelectorLayout.columns,
+    resourceSelectorGridStyle: resourceSelectorLayout.gridStyle,
+    resourceSelectorItemStyle: resourceSelectorLayout.itemStyle,
+    resourceSelectorCardStyle: resourceSelectorLayout.cardStyle,
+    resourceSelectorPreviewStyle: resourceSelectorLayout.previewStyle,
     sounds,
     showChannelControls: sounds.length > 0,
     isChannelEditorOpen: state.isChannelEditorOpen,

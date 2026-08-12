@@ -55,16 +55,6 @@ const createEditForm = (copy = {}) => ({
       addOptionLabel: copy.addTagOption,
     }),
   ],
-  actions: {
-    layout: "",
-    buttons: [
-      {
-        id: "submit",
-        variant: "pr",
-        label: copy.updateButton ?? "Update Animation",
-      },
-    ],
-  },
 });
 
 const createAddForm = (copy = {}) => ({
@@ -105,16 +95,6 @@ const createAddForm = (copy = {}) => ({
       ],
     },
   ],
-  actions: {
-    layout: "",
-    buttons: [
-      {
-        id: "submit",
-        variant: "pr",
-        label: copy.continueButton ?? "Continue",
-      },
-    ],
-  },
 });
 
 const createAnimationExplorerItemContextMenuItems = (copy = {}) => [
@@ -254,6 +234,7 @@ const {
         createAnimationCenterItemContextMenuItems(copy),
       isAddDialogOpen: state.isAddDialogOpen,
       addForm: createAddForm(copy),
+      addSubmitButtonLabel: copy.continueButton ?? "Continue",
       addFormDefaults: {
         name: "",
         description: "",
@@ -262,6 +243,7 @@ const {
       },
       isEditDialogOpen: state.isEditDialogOpen,
       editForm: createEditForm(copy),
+      editSubmitButtonLabel: copy.updateButton ?? "Update",
       editDefaultValues: state.editDefaultValues,
       selectedAnimationTypeLabel: selectedAnimationItem?.animationType
         ? getAnimationTypeLabel(selectedAnimationItem.animationType, copy)

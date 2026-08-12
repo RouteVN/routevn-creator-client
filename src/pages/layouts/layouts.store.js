@@ -73,16 +73,6 @@ const createLayoutForm = (copy = {}) => ({
     }),
     createFragmentField(copy),
   ],
-  actions: {
-    layout: "",
-    buttons: [
-      {
-        id: "submit",
-        variant: "pr",
-        label: copy.addButton ?? "Add Layout",
-      },
-    ],
-  },
 });
 
 const createEditLayoutForm = (copy = {}) => ({
@@ -102,16 +92,6 @@ const createEditLayoutForm = (copy = {}) => ({
     }),
     createFragmentField(copy),
   ],
-  actions: {
-    layout: "",
-    buttons: [
-      {
-        id: "submit",
-        variant: "pr",
-        label: copy.saveButton ?? "Save",
-      },
-    ],
-  },
 });
 
 const createLayoutExplorerItemContextMenuItems = (copy = {}) => [
@@ -264,6 +244,7 @@ const {
     openLayoutEditorButton: copy.openLayoutEditorButton ?? "Layout Editor",
     isAddDialogOpen: state.isAddDialogOpen,
     layoutForm: createLayoutForm(copy),
+    addSubmitButtonLabel: copy.addButton ?? "Add Layout",
     layoutFormDefaults: {
       name: "",
       layoutType: "general",
@@ -367,6 +348,7 @@ export const selectViewData = (context) => {
     isEditDialogOpen: context.state.isEditDialogOpen,
     editDefaultValues: context.state.editDefaultValues,
     editForm: createEditLayoutForm(copy),
+    editSubmitButtonLabel: copy.saveButton ?? "Save",
     flatItems,
   };
 };

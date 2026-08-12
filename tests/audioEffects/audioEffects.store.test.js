@@ -100,10 +100,10 @@ describe("audioEffects.store", () => {
       label: "Open",
       value: "edit-item",
     });
-    expect(viewData.addForm.actions.buttons[0]).toMatchObject({
-      id: "submit",
-      label: "Create",
-    });
+    expect(viewData.addForm.actions).toBeUndefined();
+    expect(viewData.addSubmitButtonLabel).toBe("Create");
+    expect(viewData.editForm.actions).toBeUndefined();
+    expect(viewData.editSubmitButtonLabel).toBe("Update");
     expect(viewData).toMatchObject({
       isEditDialogOpen: false,
       editDefaultValues: { name: "", description: "", tagIds: [] },

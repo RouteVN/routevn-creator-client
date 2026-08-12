@@ -199,16 +199,6 @@ const createAddColorForm = (colorFolderOptions, copy = {}) => ({
       required: true,
     },
   ],
-  actions: {
-    layout: "",
-    buttons: [
-      {
-        id: "submit",
-        variant: "pr",
-        label: copy.addColorButton ?? "Add Color",
-      },
-    ],
-  },
 });
 
 // Helper function to create add font form
@@ -243,16 +233,6 @@ const createAddFontForm = (fontFolderOptions, copy = {}) => ({
       required: true,
     },
   ],
-  actions: {
-    layout: "",
-    buttons: [
-      {
-        id: "submit",
-        variant: "pr",
-        label: copy.addFontButton ?? "Add Font",
-      },
-    ],
-  },
 });
 
 const getPreviewTextValue = ({ previewText, name } = {}) => {
@@ -1262,7 +1242,7 @@ export const selectViewData = ({ state, i18n }) => {
     id: "submit",
     variant: "pr",
     label: state.editMode
-      ? (copy.updateTextStyleButton ?? "Update Text Style")
+      ? (copy.updateTextStyleButton ?? "Update")
       : (copy.addTextStyleButton ?? "Add Text Style"),
   };
   const dialogForm = {
@@ -1272,7 +1252,7 @@ export const selectViewData = ({ state, i18n }) => {
     fields: dialogFields,
     actions: {
       layout: "",
-      buttons: [dialogSubmitButton],
+      buttons: [],
     },
   };
   const desktopDialogForm = {
@@ -1422,11 +1402,13 @@ export const selectViewData = ({ state, i18n }) => {
     isAddColorDialogOpen: state.isAddColorDialogOpen,
     addColorForm: addColorForm,
     addColorDefaultValues: state.newColorData,
+    addColorSubmitButtonLabel: copy.addColorButton ?? "Add Color",
 
     // Add font dialog data
     isAddFontDialogOpen: state.isAddFontDialogOpen,
     addFontForm: addFontForm,
     addFontDefaultValues: state.newFontData,
+    addFontSubmitButtonLabel: copy.addFontButton ?? "Add Font",
     selectedFontFile: state.selectedFontFile,
     hasSelectedFont: state.hasSelectedFont,
     selectedFontFileName: state.selectedFontFileName,

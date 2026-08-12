@@ -191,6 +191,17 @@ const {
       .filter(
         (group) => group.children.length > 0 || activeTagIds.length === 0,
       );
+    const particleForm = createDialogForm({
+      editMode: state.editMode,
+      tagsData: state.tagsData,
+      activeTab: state.dialogFormTab,
+      dialogStep: state.dialogStep,
+      copy,
+    });
+    const particleSubmitButton = particleForm.actions?.buttons?.find(
+      (button) => button.id === "submit",
+    );
+    particleForm.actions.buttons = [];
 
     return {
       ...baseViewData,
@@ -219,13 +230,8 @@ const {
       particleFormTabs: createParticleFormTabs(copy),
       selectedParticleFormTab: state.dialogFormTab,
       particleFormKey: `particle-form-${state.dialogStep}-${state.dialogFormTab}`,
-      particleForm: createDialogForm({
-        editMode: state.editMode,
-        tagsData: state.tagsData,
-        activeTab: state.dialogFormTab,
-        dialogStep: state.dialogStep,
-        copy,
-      }),
+      particleForm,
+      particleSubmitButtonLabel: particleSubmitButton?.label ?? "Submit",
       dialogFormValues: state.dialogFormValues,
       dialogPreviewAspectRatio: state.dialogPreviewAspectRatio,
       dialogPreviewBackgroundImage: buildDialogPreviewBackgroundImage(state),

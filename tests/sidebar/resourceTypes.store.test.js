@@ -8,7 +8,7 @@ import { selectViewData as selectMobileResourceTypesViewData } from "../../src/c
 import { JA_I18N } from "../support/i18n.js";
 
 describe("resource type navigation", () => {
-  it("shows audio effects in desktop and mobile animated asset menus", () => {
+  it("shows audio effects directly below animations in the action sheet", () => {
     const props = {
       resourceCategory: "animatedAssets",
       selectedResourceId: "audio-effects-editor",
@@ -37,8 +37,8 @@ describe("resource type navigation", () => {
       (section) => section.id === "animated-assets",
     );
     expect(animatedSection.items.map((item) => item.id)).toEqual([
-      "audioEffects",
       "animations",
+      "audioEffects",
       "particles",
       "spritesheets",
     ]);

@@ -25,5 +25,25 @@ describe("commandLineBackground view", () => {
     expect(view).toContain(
       'rtgl-view br=md w=200 pos=rel overflow=hidden style="${selectedResource.resourceCardStyle}"',
     );
+    expect(view).toContain(":columns=${imageSelectorColumns}");
+    expect(view).toContain(
+      'rtgl-view w=1fg sh style="min-width: 0; overscroll-behavior-x: contain;"',
+    );
+    expect(view).toContain(
+      'rtgl-tabs#tabs selected-tab=${tab} :items=${tabs} style="display: block; min-width: max-content;"',
+    );
+    expect(view).toContain("$if showInlineSearch:");
+    expect(view).toContain("$if showSearchButton:");
+    expect(view).toContain(
+      'rtgl-button#searchButton sq pre=search v=ol aria-label="${searchButtonLabel}"',
+    );
+    expect(view).toContain(
+      "rtgl-popover#searchPopover ?open=${searchPopover.isOpen}",
+    );
+    expect(view).toContain(
+      'rtgl-view d=h av=c ah=e w=f g=lg ph=md pt=sm style="flex: 0 0 auto;"',
+    );
+    expect(view).toContain("w=f h=f pv=md");
+    expect(view).toContain("rtgl-view w=f h=24 av=c ph=md mb=md:");
   });
 });

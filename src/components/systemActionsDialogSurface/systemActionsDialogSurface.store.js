@@ -2,8 +2,13 @@ export const createInitialState = () => ({
   suppressClose: false,
 });
 
-const normalizeVariant = (variant) =>
-  variant === "scene-editor-left" ? "scene-editor-left" : "default";
+const normalizeVariant = (variant) => {
+  if (variant === "scene-editor-left" || variant === "scene-editor-mobile") {
+    return variant;
+  }
+
+  return "default";
+};
 
 const isBooleanPropEnabled = (value) => value === true || value === "true";
 
@@ -28,6 +33,7 @@ export const selectViewData = ({ state, props }) => {
     open: props.open === true,
     variant,
     isSceneEditorLeft: variant === "scene-editor-left",
+    isSceneEditorMobile: variant === "scene-editor-mobile",
     fullscreen,
     fullscreenHorizontalInset: props.fullscreenHorizontalInset ?? "0px",
     dialogWidth,
@@ -35,6 +41,8 @@ export const selectViewData = ({ state, props }) => {
     dialogHeight: props.dialogHeight ?? "80vh",
     dialogPadding: props.dialogPadding === "none" ? "none" : "lg",
     panelWidth: props.panelWidth ?? "50vw",
+    panelTop: props.panelTop ?? "0px",
+    panelBottom: props.panelBottom ?? "0px",
     suppressClose:
       state.suppressClose === true || isBooleanPropEnabled(props.suppressClose),
     overlayHorizontalInset: "64px",

@@ -18,7 +18,7 @@ describe("systemActionsDialogSurface view", () => {
     expect(dialogSurfaceView).toContain(
       "left: ${fullscreenHorizontalInset}; top: var(--rvn-window-content-offset, 0px); right: 0; bottom: 0;",
     );
-    expect(dialogSurfaceView.match(/p=\$\{dialogPadding\}/g)).toHaveLength(4);
+    expect(dialogSurfaceView.match(/p=\$\{dialogPadding\}/g)).toHaveLength(5);
     expect(dialogSurfaceView).toContain(
       'rtgl-view slot=content tabindex=-1 autofocus pos=rel wh=f style="min-width: 0; min-height: 0; overflow: hidden; outline: none;"',
     );
@@ -40,8 +40,12 @@ describe("systemActionsDialogSurface view", () => {
     expect(dialogSurfaceView).toContain("pos=fix bgc=bg bw=xs bc=bo br=md");
     expect(
       dialogSurfaceView.match(/slot=content tabindex=-1 autofocus/g),
-    ).toHaveLength(4);
-    expect(dialogSurfaceView.match(/outline: none;/g)).toHaveLength(4);
+    ).toHaveLength(5);
+    expect(dialogSurfaceView.match(/outline: none;/g)).toHaveLength(5);
+    expect(dialogSurfaceView).toContain("$elif isSceneEditorMobile");
+    expect(dialogSurfaceView).toContain(
+      "left: 0; right: 0; top: ${panelTop}; bottom: ${panelBottom};",
+    );
     expect(dialogSurfaceView).toContain("z-index: 2002;");
     expect(dialogSurfaceView).not.toContain("handleDocumentKeyDown");
   });

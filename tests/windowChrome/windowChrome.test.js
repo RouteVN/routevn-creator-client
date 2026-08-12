@@ -53,6 +53,17 @@ const packageJson = JSON.parse(
     "utf8",
   ),
 );
+const rettangoliUiPackageJson = JSON.parse(
+  readFileSync(
+    fileURLToPath(
+      new URL(
+        "../../node_modules/@rettangoli/ui/package.json",
+        import.meta.url,
+      ),
+    ),
+    "utf8",
+  ),
+);
 const watchTauriScript = readFileSync(
   fileURLToPath(new URL("../../scripts/watch-tauri.sh", import.meta.url)),
   "utf8",
@@ -355,7 +366,7 @@ describe("standalone window chrome", () => {
   });
 
   it("keeps static entry points on the packaged Rettangoli UI version", () => {
-    const rettangoliUiVersion = packageJson.dependencies["@rettangoli/ui"];
+    const rettangoliUiVersion = rettangoliUiPackageJson.version;
     const rettangoliUiEntryFiles = collectIndexFiles(staticDirectory).filter(
       (file) => readFileSync(file, "utf8").includes("/public/@rettangoli/ui@"),
     );

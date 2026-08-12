@@ -15,6 +15,7 @@ describe("systemActionsDialogSurface.store", () => {
       open: false,
       variant: "default",
       isSceneEditorLeft: false,
+      isSceneEditorMobile: false,
       fullscreen: false,
       fullscreenHorizontalInset: "0px",
       dialogWidth: "800",
@@ -22,6 +23,8 @@ describe("systemActionsDialogSurface.store", () => {
       dialogHeight: "80vh",
       dialogPadding: "lg",
       panelWidth: "50vw",
+      panelTop: "0px",
+      panelBottom: "0px",
       suppressClose: false,
       overlayHorizontalInset: "64px",
       overlayBackground: "rgba(0, 0, 0, 0.42)",
@@ -78,6 +81,27 @@ describe("systemActionsDialogSurface.store", () => {
       panelWidthReduction: "64px",
       panelVerticalInset: "32px",
       panelMaxHeight: "800px",
+    });
+  });
+
+  it("normalizes the bounded mobile scene editor panel", () => {
+    const viewData = selectViewData({
+      state: createInitialState(),
+      props: {
+        open: true,
+        variant: "scene-editor-mobile",
+        panelTop: "min(56.25vw, 50vh)",
+        panelBottom: "0px",
+      },
+    });
+
+    expect(viewData).toMatchObject({
+      open: true,
+      variant: "scene-editor-mobile",
+      isSceneEditorLeft: false,
+      isSceneEditorMobile: true,
+      panelTop: "min(56.25vw, 50vh)",
+      panelBottom: "0px",
     });
   });
 

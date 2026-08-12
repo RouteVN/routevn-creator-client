@@ -106,9 +106,9 @@ template:
                   - $for group, groupIndex in resourceGroups:
                       - rtgl-view w=f d=v g=sm:
                           - rtgl-text s=h4: ${group.label}
-                          - rtgl-view w=f d=h wrap g=md:
+                          - 'rtgl-view w=f d=h wrap g=md style="${resourceGridStyle}"':
                               - $for resource, resourceIndex in group.resources:
-                                  - 'rtgl-view#resourceCount${groupIndex}x${resourceIndex} data-resource-key=${resource.key} role=link tabindex=0 d=v g=xs p=md bgc=su h-bgc=mu bw=xs bc=bo br=md cur=pointer style="flex: 0 1 128px; min-width: 112px; max-width: 128px; font-variant-numeric: tabular-nums;"':
+                                  - 'rtgl-view#resourceCount${groupIndex}x${resourceIndex} data-resource-key=${resource.key} role=link tabindex=0 d=v g=xs p=md bgc=su h-bgc=mu bw=xs bc=bo br=md cur=pointer style="${resourceCardStyle}"':
                                       - rtgl-text s=sm c=mu-fg: ${resource.label}
                                       - rtgl-text s=h3: ${resource.count}
                           - $if group.key == 'assets' && characterResources.length > 0:
@@ -123,8 +123,8 @@ template:
                                               - 'rtgl-text s=sm w=1fg style="font-variant-numeric: tabular-nums;"': ${character.spriteCount}
               - rtgl-view w=f d=v g=md:
                   - rtgl-text s=h4: ${i18n.projectPage.scenesTitle}
-                  - rtgl-view w=f d=h wrap g=md:
-                      - 'rtgl-view#sceneCountTotal data-resource-key=scenes role=link tabindex=0 w=128 d=v g=xs p=md bgc=su h-bgc=mu bw=xs bc=bo br=md cur=pointer style="max-width: 100%; font-variant-numeric: tabular-nums;"':
+                  - 'rtgl-view w=f d=h wrap g=md style="${resourceGridStyle}"':
+                      - 'rtgl-view#sceneCountTotal data-resource-key=scenes role=link tabindex=0 d=v g=xs p=md bgc=su h-bgc=mu bw=xs bc=bo br=md cur=pointer style="${resourceCardStyle}"':
                           - rtgl-text s=sm c=mu-fg: ${sceneCountLabel}
                           - rtgl-text s=h3: ${sceneCount}
                   - $if isSceneTextLoading:

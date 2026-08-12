@@ -3,6 +3,7 @@ import {
   handleBeforeMount,
   handleItemContextMenu,
   handleItemDoubleClick,
+  handleResourceImportMenuAction,
   handleScrollContainerClick,
   handleTagFilterButtonClick,
   handleZoomButtonClick,
@@ -17,6 +18,34 @@ const createMobileColumnZoomProps = () => ({
 });
 
 describe("mediaResourcesView.handlers", () => {
+  it.each([
+    ["zoom", "openZoomPopover", { position: { x: 940, y: 48 } }],
+    [
+      "filter",
+      "openTagFilterPopover",
+      { position: { x: 940, y: 48 }, tagIds: ["tag-1"] },
+    ],
+  ])("opens %s from the shared overflow menu", (value, method, expected) => {
+    const openPopover = vi.fn();
+    const deps = {
+      props: { selectedTagFilterValues: ["tag-1"] },
+      store: { [method]: openPopover },
+      render: vi.fn(),
+    };
+
+    handleResourceImportMenuAction(deps, {
+      _event: {
+        detail: {
+          item: { value },
+          position: { x: 940, y: 48 },
+        },
+      },
+    });
+
+    expect(openPopover).toHaveBeenCalledWith(expected);
+    expect(deps.render).toHaveBeenCalledOnce();
+  });
+
   it("emits a background click from empty grid space", () => {
     const dispatchEvent = vi.fn();
 

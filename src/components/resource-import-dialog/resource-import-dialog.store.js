@@ -23,6 +23,7 @@ const sourceForm = (copy) => ({
     },
   ],
   actions: {
+    sticky: true,
     buttons: [
       {
         id: "continue",
@@ -156,6 +157,7 @@ const selectionForm = ({ state, copy }) => {
     title: copy.selectResourcesTitle ?? "Choose Resources",
     fields,
     actions: {
+      sticky: true,
       buttons: [
         {
           id: "back",

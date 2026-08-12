@@ -260,9 +260,7 @@ const STATIC_LABEL_COPY_KEYS = Object.freeze({
     "initialValueTooltip",
   "The time it takes for the animation keyframe to move from previous value to next value":
     "keyframeDurationTooltip",
-  "Update Auto Tween": "updateAutoTweenButton",
-  "Update Keyframe": "updateKeyframeButton",
-  "Update Value": "updateValueButton",
+  Update: "updateValueButton",
   "Use Default Value": "useDefaultValueSource",
   "Relative will add the value to the previous value. Absolute will set the property value to exactly the specified value":
     "relativeValueTooltip",
@@ -768,7 +766,7 @@ const createEditAutoTweenForm = (copy = {}) => {
           {
             id: "submit",
             variant: "pr",
-            label: "Update Auto Tween",
+            label: "Update",
           },
         ],
       },
@@ -892,7 +890,7 @@ const createUpdateKeyframeForm = (
           {
             id: "submit",
             variant: "pr",
-            label: "Update Keyframe",
+            label: "Update",
           },
         ],
       },

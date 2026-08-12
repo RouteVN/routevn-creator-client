@@ -127,7 +127,10 @@ const openEditDialogWithValues = ({ deps, itemId } = {}) => {
   const characterItem = getCharacterItemById({ store, itemId });
   if (!characterItem) return;
 
-  store.setSelectedItemId({ itemId });
+  store.setSelectedItemId({
+    itemId,
+    suppressMobileDetailSheet: store.selectIsTouchMode(),
+  });
   fileExplorer?.selectItem?.({ itemId });
   store.openEditDialog({
     itemId,
@@ -672,6 +675,19 @@ export const handleDialogFormActionClick = async (deps, payload) => {
   }
 };
 
+export const handleAddCharacterSubmitClick = async (deps) => {
+  const { refs } = deps;
+  const { characterForm } = refs;
+  await handleDialogFormActionClick(deps, {
+    _event: {
+      detail: {
+        actionId: "submit",
+        values: characterForm.getValues(),
+      },
+    },
+  });
+};
+
 const {
   openCreateTagDialogForMode,
   handleCreateTagDialogClose,
@@ -1145,4 +1161,17 @@ export const handleEditFormAction = async (deps, payload) => {
     store.closeEditDialog();
     render();
   }
+};
+
+export const handleEditCharacterSubmitClick = async (deps) => {
+  const { refs } = deps;
+  const { editForm } = refs;
+  await handleEditFormAction(deps, {
+    _event: {
+      detail: {
+        actionId: "submit",
+        values: editForm.getValues(),
+      },
+    },
+  });
 };

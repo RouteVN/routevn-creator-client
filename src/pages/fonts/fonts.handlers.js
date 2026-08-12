@@ -268,6 +268,7 @@ const {
     tagIds: item?.tagIds ?? [],
   }),
   getEditPreviewFileId: (item) => item?.fileId,
+  suppressMobileDetailSheetOnEdit: true,
   tagging: {
     scopeKey: FONT_TAG_SCOPE_KEY,
     updateItemTagIds: ({ deps, itemId, tagIds }) =>
@@ -523,6 +524,18 @@ export const handleEditFormAction = async (deps, payload) => {
 
   handleEditDialogClose(deps);
   await handleDataChanged(deps);
+};
+
+export const handleEditSubmitClick = async (deps) => {
+  const { editForm } = deps.refs;
+  await handleEditFormAction(deps, {
+    _event: {
+      detail: {
+        actionId: "submit",
+        values: editForm.getValues(),
+      },
+    },
+  });
 };
 
 export const handleFontItemDoubleClick = async (deps, payload) => {

@@ -69,7 +69,8 @@ describe("textStyles view", () => {
     expect(mobileBranch).toContain(
       "rtgl-dialog#addTypographyDialog ?open=${isDialogOpen} s=md",
     );
-    expect(mobileBranch).toContain("rtgl-view slot=content g=md");
+    expect(mobileBranch).toContain("md-layout=fixed-top p=none");
+    expect(mobileBranch).toContain("rtgl-button#mobileTextStyleSubmitButton");
     expect(mobileBranch).not.toContain("rvn-font-preview");
     expect(mobileBranch).not.toContain("previewTextInput");
     expect(mobileBranch).not.toContain("100vw");

@@ -98,16 +98,6 @@ const createEditForm = ({ copy } = {}) => ({
       label: copy.soundLabel,
     },
   ],
-  actions: {
-    layout: "",
-    buttons: [
-      {
-        id: "submit",
-        variant: "pr",
-        label: copy.updateButton,
-      },
-    ],
-  },
 });
 
 const {

@@ -167,7 +167,7 @@ const createCharacterDialogForm = ({
     },
     {
       name: "description",
-      type: "input-text",
+      type: "input-textarea",
       label: copy.descriptionLabel,
       required: false,
     },
@@ -187,16 +187,6 @@ const createCharacterDialogForm = ({
     },
     createCharacterNameVariableField({ nameVariableOptions, copy }),
   ],
-  actions: {
-    layout: "",
-    buttons: [
-      {
-        id: "submit",
-        variant: "pr",
-        label: copy.addCharacterButton,
-      },
-    ],
-  },
 });
 
 const createEditCharacterDialogForm = ({
@@ -205,7 +195,6 @@ const createEditCharacterDialogForm = ({
   copy,
 } = {}) => ({
   title: copy.editCharacterTitle,
-  description: copy.editCharacterDescription,
   fields: [
     {
       name: "name",
@@ -216,7 +205,7 @@ const createEditCharacterDialogForm = ({
     },
     {
       name: "description",
-      type: "input-text",
+      type: "input-textarea",
       label: copy.descriptionLabel,
       description: copy.characterDescriptionDescription,
       required: false,
@@ -237,16 +226,6 @@ const createEditCharacterDialogForm = ({
     createSpriteGroupField(copy),
     createCharacterNameVariableField({ nameVariableOptions, copy }),
   ],
-  actions: {
-    layout: "",
-    buttons: [
-      {
-        id: "submit",
-        variant: "pr",
-        label: copy.updateCharacterButton,
-      },
-    ],
-  },
 });
 
 const createSpriteGroupDialogForm = ({ tagOptions, isEditing, copy } = {}) => ({
@@ -1112,6 +1091,7 @@ export const selectViewData = ({ state, i18n }) => {
       hiddenMobileDetailSlots: ["avatar", "character-sprite-groups"],
     }),
     addText: copy.addText,
+    addCharacterButtonLabel: copy.addCharacterButton,
     addGroupButton: copy.addGroupButton,
     addTagPlaceholder: copy.addTagPlaceholder,
     clickToUploadLabel: copy.clickToUploadLabel,
@@ -1147,6 +1127,7 @@ export const selectViewData = ({ state, i18n }) => {
     },
     resourceType: "characters",
     title: copy.title,
+    updateCharacterButtonLabel: copy.updateCharacterButton,
     folderContextMenuItems: createFolderContextMenuItems(copy),
     itemContextMenuItems: createItemContextMenuItems(copy),
     emptyContextMenuItems: createEmptyContextMenuItems(copy),

@@ -263,7 +263,7 @@ const openEditDialogWithValues = ({ deps, itemId } = {}) => {
     tagIds: item.tagIds ?? [],
   };
 
-  store.setSelectedItemId({ itemId });
+  store.setSelectedItemId({ itemId, suppressMobileDetailSheet: true });
   fileExplorer?.selectItem?.({ itemId });
   store.openEditDialog({
     itemId,
@@ -496,6 +496,18 @@ export const handleEditFormAction = async (deps, payload) => {
   await handleDataChanged(deps, { selectedItemId: editItemId });
 };
 
+export const handleEditSubmitClick = async (deps) => {
+  const { editForm } = deps.refs;
+  await handleEditFormAction(deps, {
+    _event: {
+      detail: {
+        actionId: "submit",
+        values: editForm.getValues(),
+      },
+    },
+  });
+};
+
 export const handleAddDialogClose = (deps) => {
   const { render, store } = deps;
   store.closeAddDialog();
@@ -552,6 +564,18 @@ export const handleAddFormAction = async (deps, payload) => {
   navigateToAnimationEditor({
     appService,
     animationId,
+  });
+};
+
+export const handleAddSubmitClick = async (deps) => {
+  const { addForm } = deps.refs;
+  await handleAddFormAction(deps, {
+    _event: {
+      detail: {
+        actionId: "submit",
+        values: addForm.getValues(),
+      },
+    },
   });
 };
 

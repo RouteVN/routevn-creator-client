@@ -166,6 +166,7 @@ const {
     tagIds: item?.tagIds ?? [],
   }),
   getEditPreviewFileId: (item) => item?.thumbnailFileId ?? item?.fileId,
+  suppressMobileDetailSheetOnEdit: true,
   copy: ({ i18n }) => selectImagesPageCopy(i18n),
   tagging: {
     scopeKey: IMAGE_TAG_SCOPE_KEY,
@@ -944,6 +945,19 @@ export const handleEditFormAction = async (deps, payload) => {
 
   handleEditDialogClose(deps);
   await handleDataChanged(deps);
+};
+
+export const handleEditImageSubmitClick = async (deps) => {
+  const { refs } = deps;
+  const { editForm } = refs;
+  await handleEditFormAction(deps, {
+    _event: {
+      detail: {
+        actionId: "submit",
+        values: editForm.getValues(),
+      },
+    },
+  });
 };
 
 const deleteImage = async (deps, { itemId } = {}) => {
