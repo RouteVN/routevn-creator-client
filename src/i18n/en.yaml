@@ -1972,6 +1972,8 @@ commandLinePage:
   "Audio Selection": "Audio Selection"
   "Audio": "Audio"
   "Audio Effect": "Audio Effect"
+  "Incoming Transition": "Incoming Transition"
+  "Outgoing Transition": "Outgoing Transition"
   "Auto": "Auto"
   "Auto Advance": "Auto Advance"
   "BGM": "BGM"

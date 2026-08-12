@@ -85,14 +85,31 @@ const createCanvasAudioPreviewKey = (
     sectionId
   ]?.lines?.find((line) => line?.id === lineId);
   const bgm = selectedLine?.actions?.bgm;
-  const resourceId = bgm?.audioEffects?.resourceId;
+  const resourceIds = new Set();
+  if (bgm?.audioEffects?.resourceId) {
+    resourceIds.add(bgm.audioEffects.resourceId);
+  }
+  bgm?.sounds?.forEach((sound) => {
+    if (sound.incomingTransition?.resourceId) {
+      resourceIds.add(sound.incomingTransition.resourceId);
+    }
+    if (sound.outgoingTransition?.resourceId) {
+      resourceIds.add(sound.outgoingTransition.resourceId);
+    }
+  });
+  const audioEffects = Object.fromEntries(
+    [...resourceIds].map((resourceId) => [
+      resourceId,
+      projectData?.resources?.audioEffects?.[resourceId],
+    ]),
+  );
 
   return JSON.stringify({
     sceneId,
     sectionId,
     lineId,
     bgm,
-    audioEffect: projectData?.resources?.audioEffects?.[resourceId],
+    audioEffects,
   });
 };
 
@@ -1125,18 +1142,46 @@ const createProjectDataWithAudioEffectHandoff = (
     (line) => line?.id === lineId,
   );
   const selectedBgm = selectedSection?.lines?.[selectedLineIndex]?.actions?.bgm;
-  const resourceId = selectedBgm?.audioEffects?.resourceId;
-  const audioEffect = projectData?.resources?.audioEffects?.[resourceId];
   const previousBgm = toPlainObject(previousPresentationState).bgm;
-  const previousSound = previousBgm?.sounds?.[0];
-  const selectedSound = selectedBgm?.sounds?.[0];
+  const previousSounds = previousBgm?.sounds ?? [];
+  const selectedSounds = selectedBgm?.sounds ?? [];
+  const selectedSoundById = new Map(
+    selectedSounds.map((sound) => [sound.id, sound]),
+  );
+  const previousSoundById = new Map(
+    previousSounds.map((sound) => [sound.id, sound]),
+  );
+  const hasOutgoingTransition = previousSounds.some((sound) => {
+    const selectedSound = selectedSoundById.get(sound.id);
+    return (
+      sound.outgoingTransition?.resourceId &&
+      (selectedSound?.resourceId !== sound.resourceId ||
+        selectedSound?.startAt !== sound.startAt ||
+        selectedSound?.endAt !== sound.endAt ||
+        selectedSound?.startDelayMs !== sound.startDelayMs)
+    );
+  });
+  const hasIncomingTransition = selectedSounds.some((sound) => {
+    const previousSound = previousSoundById.get(sound.id);
+    return (
+      sound.incomingTransition?.resourceId &&
+      (previousSound?.resourceId !== sound.resourceId ||
+        previousSound?.startAt !== sound.startAt ||
+        previousSound?.endAt !== sound.endAt ||
+        previousSound?.startDelayMs !== sound.startDelayMs)
+    );
+  });
+  const hasLegacyTransition = (() => {
+    const resourceId = selectedBgm?.audioEffects?.resourceId;
+    return (
+      projectData?.resources?.audioEffects?.[resourceId]?.type === "transition"
+    );
+  })();
 
   if (
-    audioEffect?.type !== "transition" ||
     selectedLineIndex < 0 ||
-    previousBgm?.sounds?.length !== 1 ||
-    selectedBgm?.sounds?.length !== 1 ||
-    previousSound?.id !== selectedSound?.id
+    previousSounds.length === 0 ||
+    (!hasLegacyTransition && !hasOutgoingTransition && !hasIncomingTransition)
   ) {
     return {
       projectData,

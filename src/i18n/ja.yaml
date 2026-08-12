@@ -1972,6 +1972,8 @@ commandLinePage:
   "Audio Selection": "音声選択"
   "Audio": "音声"
   "Audio Effect": "オーディオエフェクト"
+  "Incoming Transition": "入るトランジション"
+  "Outgoing Transition": "出るトランジション"
   "Auto": "自動"
   "Auto Advance": "自動送り"
   "BGM": "BGM"

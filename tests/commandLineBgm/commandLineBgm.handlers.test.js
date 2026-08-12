@@ -201,27 +201,38 @@ describe("commandLineBgm.handlers", () => {
     expect(render).toHaveBeenCalledOnce();
   });
 
-  it("updates the channel Audio Effect and playback speed", () => {
+  it("updates incoming and outgoing transitions on the selected sound", () => {
     const state = createState();
+    const store = createStore(state);
     const render = vi.fn();
+    store.insertSound({ id: "intro-clip", resourceId: "intro", index: 0 });
 
     handleFormChange(
-      { store: createStore(state), render },
+      { store, render },
       {
         _event: {
           detail: {
             values: {
-              audioEffectId: "crossfade",
-              audioEffectPlaybackSpeed: 1.25,
+              incomingTransitionId: "crossfade",
+              incomingTransitionPlaybackSpeed: 1.25,
+              outgoingTransitionId: "crossfade",
+              outgoingTransitionPlaybackSpeed: 0.75,
             },
           },
         },
       },
     );
 
-    expect(state.bgm.audioEffects).toEqual({
-      resourceId: "crossfade",
-      playback: { speed: 1.25 },
+    expect(state.bgm.audioEffects).toBeUndefined();
+    expect(state.bgm.sounds[0]).toMatchObject({
+      incomingTransition: {
+        resourceId: "crossfade",
+        playback: { speed: 1.25 },
+      },
+      outgoingTransition: {
+        resourceId: "crossfade",
+        playback: { speed: 0.75 },
+      },
     });
     expect(render).toHaveBeenCalledOnce();
   });
@@ -620,6 +631,10 @@ describe("commandLineBgm.handlers", () => {
         startDelayMs: 2000,
         loop: false,
         volume: 100,
+        incomingTransitionId: undefined,
+        incomingTransitionPlaybackSpeed: 1,
+        outgoingTransitionId: undefined,
+        outgoingTransitionPlaybackSpeed: 1,
       },
     });
     expect(render).toHaveBeenCalledTimes(2);
@@ -630,10 +645,12 @@ describe("commandLineBgm.handlers", () => {
     const store = createStore(state);
     const dispatchEvent = vi.fn();
     store.insertSound({ id: "intro-clip", resourceId: "intro", index: 0 });
-    store.updateChannel({
+    store.updateSound({
+      soundId: "intro-clip",
       values: {
-        audioEffectId: "crossfade",
-        audioEffectPlaybackSpeed: 1.5,
+        incomingTransitionId: "crossfade",
+        incomingTransitionPlaybackSpeed: 1.5,
+        outgoingTransitionId: "crossfade",
       },
     });
 
@@ -648,10 +665,6 @@ describe("commandLineBgm.handlers", () => {
         interruption: "immediate",
         loop: true,
         volume: 75,
-        audioEffects: {
-          resourceId: "crossfade",
-          playback: { speed: 1.5 },
-        },
         sounds: [
           {
             id: "intro-clip",
@@ -659,6 +672,14 @@ describe("commandLineBgm.handlers", () => {
             loop: false,
             volume: 100,
             startDelayMs: 0,
+            incomingTransition: {
+              resourceId: "crossfade",
+              playback: { speed: 1.5 },
+            },
+            outgoingTransition: {
+              resourceId: "crossfade",
+              playback: { speed: 1 },
+            },
           },
         ],
       },

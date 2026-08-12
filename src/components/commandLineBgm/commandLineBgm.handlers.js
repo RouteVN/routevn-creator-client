@@ -48,6 +48,12 @@ const syncSelectedSoundForm = ({ refs, store }) => {
       startDelayMs: sound.startDelayMs,
       loop: sound.loop,
       volume: sound.volume,
+      incomingTransitionId: sound.incomingTransition?.resourceId,
+      incomingTransitionPlaybackSpeed:
+        sound.incomingTransition?.playback?.speed ?? 1,
+      outgoingTransitionId: sound.outgoingTransition?.resourceId,
+      outgoingTransitionPlaybackSpeed:
+        sound.outgoingTransition?.playback?.speed ?? 1,
     },
   });
 };
@@ -63,10 +69,6 @@ export const handleAfterMount = async (deps) => {
 
   store.setRepositoryState({ sounds, audioEffects });
   store.setBgm({ bgm: props.bgm });
-  store.setAudioEffectContext({
-    previousBgm: props.previousBgm,
-    hasPreviousBgmContext: props.hasPreviousBgmContext,
-  });
   render();
 };
 

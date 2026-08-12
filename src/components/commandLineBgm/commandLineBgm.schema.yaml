@@ -21,6 +21,30 @@ propsSchema:
                 type: number
               startDelayMs:
                 type: number
+              incomingTransition:
+                type: object
+                required: [resourceId]
+                properties:
+                  resourceId:
+                    type: string
+                  playback:
+                    type: object
+                    properties:
+                      speed:
+                        type: number
+                        exclusiveMinimum: 0
+              outgoingTransition:
+                type: object
+                required: [resourceId]
+                properties:
+                  resourceId:
+                    type: string
+                  playback:
+                    type: object
+                    properties:
+                      speed:
+                        type: number
+                        exclusiveMinimum: 0
         resourceId:
           type: string
           description: Legacy single-sound BGM resource
@@ -37,21 +61,3 @@ propsSchema:
         startDelayMs:
           type: number
           description: Legacy single-sound start delay
-        audioEffects:
-          type: object
-          description: Audio-effect selection for the BGM action
-          required: [resourceId]
-          properties:
-            resourceId:
-              type: string
-              description: Selected audio-effect resource
-            playback:
-              type: object
-              properties:
-                speed:
-                  type: number
-                  exclusiveMinimum: 0
-    previousBgm:
-      type: object
-    hasPreviousBgmContext:
-      type: boolean

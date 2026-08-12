@@ -1042,7 +1042,18 @@ describe("constructProjectData", () => {
                         id: "line-1",
                         actions: {
                           bgm: {
-                            audioEffects: { resourceId: "crossfade" },
+                            sounds: [
+                              {
+                                id: "main",
+                                resourceId: "sound-1",
+                                incomingTransition: {
+                                  resourceId: "crossfade",
+                                },
+                                outgoingTransition: {
+                                  resourceId: "crossfade",
+                                },
+                              },
+                            ],
                           },
                         },
                       },
@@ -1092,7 +1103,16 @@ describe("constructProjectData", () => {
     expect(
       projectData.story.scenes["scene-1"].sections["section-1"].lines[0].actions
         .bgm,
-    ).toEqual({ audioEffects: { resourceId: "crossfade" } });
+    ).toEqual({
+      sounds: [
+        {
+          id: "main",
+          resourceId: "sound-1",
+          incomingTransition: { resourceId: "crossfade" },
+          outgoingTransition: { resourceId: "crossfade" },
+        },
+      ],
+    });
 
     const usage = collectUsedResourcesForExport(repositoryState);
     expect(usage.usedIds.audioEffects).toEqual(["crossfade"]);

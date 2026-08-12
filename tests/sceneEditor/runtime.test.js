@@ -479,8 +479,12 @@ describe("renderSceneEditorState", () => {
     ].lines[0].actions.bgm = {
       sounds: [
         {
-          id: "main",
+          id: "previous",
           resourceId: "previous",
+          outgoingTransition: {
+            resourceId: "fade-in",
+            playback: { speed: 2 },
+          },
         },
       ],
     };
@@ -489,14 +493,14 @@ describe("renderSceneEditorState", () => {
     ].lines[1].actions.bgm = {
       sounds: [
         {
-          id: "main",
+          id: "incoming",
           resourceId: "track",
+          incomingTransition: {
+            resourceId: "fade-in",
+            playback: { speed: 1 },
+          },
         },
       ],
-      audioEffects: {
-        resourceId: "fade-in",
-        playback: { speed: 1 },
-      },
     };
 
     const graphicsService = createGraphicsService();
@@ -548,7 +552,16 @@ describe("renderSceneEditorState", () => {
       selectCanvasAudioPreviewKey: () => store.canvasAudioPreviewKey,
       selectPreviousPresentationState: () => ({
         bgm: {
-          sounds: [{ id: "main", resourceId: "previous" }],
+          sounds: [
+            {
+              id: "previous",
+              resourceId: "previous",
+              outgoingTransition: {
+                resourceId: "fade-in",
+                playback: { speed: 2 },
+              },
+            },
+          ],
         },
       }),
       selectProjectData: () => projectData,
@@ -602,22 +615,28 @@ describe("renderSceneEditorState", () => {
     expect(
       initializedProjectData[0].story.scenes["scene-1"].sections[
         "section-1"
-      ].lines.find((line) => line.id === "line-2").actions.bgm.audioEffects,
-    ).toEqual({
-      resourceId: "fade-in",
-      playback: { speed: 1 },
-    });
+      ].lines.find((line) => line.id === "line-2").actions.bgm.sounds[0]
+        .incomingTransition,
+    ).toEqual({ resourceId: "fade-in", playback: { speed: 1 } });
     expect(graphicsService.engineRenderCurrentState).toHaveBeenCalledWith(
       expect.objectContaining({
         renderState: expect.objectContaining({
           audioEffects: [
             expect.objectContaining({
-              targetId: "bgm:main",
+              targetId: "bgm:previous",
+              type: "audio-transition",
+              properties: {
+                volume: {
+                  exit: expect.any(Object),
+                },
+              },
+            }),
+            expect.objectContaining({
+              targetId: "bgm:incoming",
               type: "audio-transition",
               properties: {
                 volume: {
                   enter: expect.any(Object),
-                  exit: expect.any(Object),
                 },
               },
             }),

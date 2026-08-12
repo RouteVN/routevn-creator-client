@@ -1972,6 +1972,8 @@ commandLinePage:
   "Audio Selection": "音频选择"
   "Audio": "音频"
   "Audio Effect": "音频效果"
+  "Incoming Transition": "传入过渡"
+  "Outgoing Transition": "传出过渡"
   "Auto": "自动"
   "Auto Advance": "自动前进"
   "BGM": "BGM"
