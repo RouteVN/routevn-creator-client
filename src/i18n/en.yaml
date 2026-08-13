@@ -24,6 +24,8 @@ projectsPage:
   createProjectDialogNotReady: "Create project dialog is not ready."
   createProjectMenuItem: "Create Project"
   createProjectTitle: "Create Project"
+  creatingProjectMessage: "Please wait while your project is being created."
+  creatingProjectTitle: "Creating Project…"
   darkThemeName: "Dark"
   descriptionLabel: "Description"
   displayColorLabel: "Display Color"

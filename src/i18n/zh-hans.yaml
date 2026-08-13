@@ -24,6 +24,8 @@ projectsPage:
   createProjectDialogNotReady: "项目创建对话框尚未准备好。"
   createProjectMenuItem: "创建项目"
   createProjectTitle: "创建项目"
+  creatingProjectMessage: "正在创建项目，请稍候。"
+  creatingProjectTitle: "正在创建项目…"
   darkThemeName: "深色"
   descriptionLabel: "说明"
   displayColorLabel: "显示颜色"

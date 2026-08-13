@@ -24,6 +24,8 @@ projectsPage:
   createProjectDialogNotReady: "プロジェクト作成ダイアログの準備ができていません。"
   createProjectMenuItem: "プロジェクトを作成"
   createProjectTitle: "プロジェクトを作成"
+  creatingProjectMessage: "プロジェクトを作成しています。しばらくお待ちください。"
+  creatingProjectTitle: "プロジェクトを作成中…"
   darkThemeName: "ダーク"
   descriptionLabel: "説明"
   displayColorLabel: "表示色"

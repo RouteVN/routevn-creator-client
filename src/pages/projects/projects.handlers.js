@@ -266,15 +266,34 @@ const createProjectFromValues = async (deps, values = {}) => {
       return;
     }
 
-    const newProject = await appService.createNewProject({
-      name,
-      description,
-      language,
-      iconFile,
-      projectPath,
-      template,
-      projectResolution,
+    const progressDialog = appService.showProgressDialog({
+      title: copy.creatingProjectTitle,
+      message: copy.creatingProjectMessage,
+      progress: {},
     });
+
+    let newProject;
+    let creationError;
+    try {
+      await progressDialog.waitForPaint();
+      newProject = await appService.createNewProject({
+        name,
+        description,
+        language,
+        iconFile,
+        projectPath,
+        template,
+        projectResolution,
+      });
+    } catch (error) {
+      creationError = error;
+    } finally {
+      progressDialog.close();
+    }
+
+    if (creationError) {
+      throw creationError;
+    }
 
     store.addProject({ project: newProject });
     store.closeCreateDialog();
