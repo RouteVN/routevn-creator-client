@@ -6,6 +6,7 @@
 .claude
 _site
 /dist/
+/_deps/
 vt/static/public/main.js
 vt/static/public/main.js.map
 static/public/rtgl-icons.js
