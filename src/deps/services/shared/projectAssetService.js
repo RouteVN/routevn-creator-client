@@ -289,25 +289,17 @@ export const createProjectAssetService = ({
     }
 
     if (fileType === "video") {
-      const [videoResult, videoMetadata, thumbnailPayload] = await Promise.all([
-        storeFileWithRecord({ file }),
+      const [videoMetadata, thumbnailData] = await Promise.all([
         getVideoDimensions(file),
         (async () => {
           try {
-            const thumbnailData = await extractVideoThumbnail(file, {
+            return await extractVideoThumbnail(file, {
               timeOffset: 1,
               maxWidth: IMAGE_THUMBNAIL_MAX_WIDTH,
               maxHeight: IMAGE_THUMBNAIL_MAX_HEIGHT,
               format: "image/jpeg",
               quality: 0.8,
             });
-            const thumbnailResult = await storeFileWithRecord({
-              file: thumbnailData.blob,
-            });
-            return {
-              thumbnailData,
-              thumbnailResult,
-            };
           } catch (error) {
             console.warn("[videoUpload] thumbnail.failed", {
               fileName: file.name,
@@ -319,11 +311,15 @@ export const createProjectAssetService = ({
           }
         })(),
       ]);
+      const videoResult = await storeFileWithRecord({ file });
+      const thumbnailResult = await storeFileWithRecord({
+        file: thumbnailData.blob,
+      });
 
       return {
         ...videoResult,
-        thumbnailFileId: thumbnailPayload?.thumbnailResult?.fileId,
-        thumbnailData: thumbnailPayload?.thumbnailData,
+        thumbnailFileId: thumbnailResult.fileId,
+        thumbnailData,
         dimensions: videoMetadata
           ? {
               width: videoMetadata.width,
@@ -332,12 +328,7 @@ export const createProjectAssetService = ({
           : undefined,
         duration: videoMetadata?.duration,
         type: "video",
-        fileRecords: [
-          videoResult.fileRecord,
-          ...(thumbnailPayload?.thumbnailResult
-            ? [thumbnailPayload.thumbnailResult.fileRecord]
-            : []),
-        ],
+        fileRecords: [videoResult.fileRecord, thumbnailResult.fileRecord],
       };
     }
 

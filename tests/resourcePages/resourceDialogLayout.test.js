@@ -24,6 +24,100 @@ const RESOURCE_DIALOGS = [
   ["pages/videos/videos.view.yaml", ["editDialog"]],
 ];
 
+const RESOURCE_FORMS_WITH_EXTERNAL_SUBMIT = [
+  [
+    "pages/animations/animations.view.yaml",
+    [
+      ["addForm", "handleAddFormSubmitKeyDown"],
+      ["editForm", "handleEditFormSubmitKeyDown"],
+    ],
+  ],
+  [
+    "pages/audioEffects/audioEffects.view.yaml",
+    [
+      ["addForm", "handleAddFormSubmitKeyDown"],
+      ["editForm", "handleEditFormSubmitKeyDown"],
+    ],
+  ],
+  [
+    "pages/characterSprites/characterSprites.view.yaml",
+    [
+      ["editForm", "handleEditFormSubmitKeyDown"],
+      ["spritesheetDialogForm", "handleSpritesheetDialogFormSubmitKeyDown"],
+    ],
+  ],
+  [
+    "pages/characters/characters.view.yaml",
+    [
+      ["characterForm", "handleCharacterFormSubmitKeyDown"],
+      ["editForm", "handleEditFormSubmitKeyDown"],
+    ],
+  ],
+  [
+    "pages/colors/colors.view.yaml",
+    [
+      ["editForm", "handleEditFormSubmitKeyDown"],
+      ["addColorForm", "handleAddFormSubmitKeyDown"],
+    ],
+  ],
+  [
+    "pages/controls/controls.view.yaml",
+    [["controlForm", "handleControlFormSubmitKeyDown"]],
+  ],
+  [
+    "pages/fonts/fonts.view.yaml",
+    [["editForm", "handleEditFormSubmitKeyDown"]],
+  ],
+  [
+    "pages/images/images.view.yaml",
+    [["editForm", "handleEditFormSubmitKeyDown"]],
+  ],
+  [
+    "pages/layouts/layouts.view.yaml",
+    [
+      ["layoutForm", "handleAddFormSubmitKeyDown"],
+      ["editForm", "handleEditFormSubmitKeyDown"],
+    ],
+  ],
+  [
+    "pages/particles/particles.view.yaml",
+    [["particleForm", "handleParticleFormSubmitKeyDown"]],
+  ],
+  [
+    "pages/sounds/sounds.view.yaml",
+    [["editForm", "handleEditFormSubmitKeyDown"]],
+  ],
+  [
+    "pages/spritesheets/spritesheets.view.yaml",
+    [["dialogForm", "handleDialogFormSubmitKeyDown"]],
+  ],
+  [
+    "pages/textStyles/textStyles.view.yaml",
+    [
+      ["textStyleForm", "handleTextStyleFormSubmitKeyDown"],
+      ["addColorForm", "handleAddColorFormSubmitKeyDown"],
+      ["addFontForm", "handleAddFontFormSubmitKeyDown"],
+    ],
+  ],
+  [
+    "pages/transforms/transforms.view.yaml",
+    [["transformForm", "handleTransformFormSubmitKeyDown"]],
+  ],
+  [
+    "pages/videos/videos.view.yaml",
+    [["editForm", "handleEditFormSubmitKeyDown"]],
+  ],
+];
+
+const selectRefBlock = (view, refName) => {
+  const lines = view.split("\n");
+  const start = lines.findIndex((line) => line === `  ${refName}:`);
+  const end = lines.findIndex(
+    (line, index) => index > start && /^  \S/.test(line),
+  );
+  return lines.slice(start, end === -1 ? lines.length : end).join("\n");
+};
+
 describe("resource add/edit dialog layout", () => {
   it.each(RESOURCE_DIALOGS)(
     "uses fixed-top dialogs with app-owned scrolling and actions in %s",
@@ -82,4 +176,17 @@ describe("resource add/edit dialog layout", () => {
     expect(view).toContain("rtgl-view w=6fg lg-w=f d=v g=md p=md:");
     expect(view).not.toContain("rtgl-view d=h lg-d=v ah=c g=lg w=f ph=md:");
   });
+
+  it.each(RESOURCE_FORMS_WITH_EXTERNAL_SUBMIT)(
+    "preserves Enter submission for resource forms in %s",
+    (relativePath, forms) => {
+      const view = readView(relativePath);
+
+      for (const [formRef, handler] of forms) {
+        expect(selectRefBlock(view, formRef)).toContain(
+          `keydown:\n        handler: ${handler}`,
+        );
+      }
+    },
+  );
 });

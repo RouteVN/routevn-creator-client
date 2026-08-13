@@ -118,6 +118,8 @@ refs:
     eventListeners:
       add-option-click:
         handler: handleEditFormAddOptionClick
+      keydown:
+        handler: handleEditFormSubmitKeyDown
   editSubmitButton:
     eventListeners:
       click:
@@ -178,6 +180,8 @@ refs:
         handler: handleSpritesheetDialogFormChange
       add-option-click:
         handler: handleSpritesheetDialogFormAddOptionClick
+      keydown:
+        handler: handleSpritesheetDialogFormSubmitKeyDown
   spritesheetDialogSubmitButton:
     eventListeners:
       click:

@@ -5,6 +5,7 @@ import {
 } from "../../internal/resourceTags.js";
 import { recursivelyCheckResource } from "../../internal/project/projection.js";
 import { createCatalogPageHandlers } from "../../internal/ui/resourcePages/catalog/createCatalogPageHandlers.js";
+import { forwardFormSubmitOnEnter } from "../../internal/ui/resourcePages/formSubmitKeyDown.js";
 import { appendTagIdToForm } from "../../internal/ui/resourcePages/tags.js";
 import { runResourcePageMutation } from "../../internal/ui/resourcePages/resourcePageErrors.js";
 import { COLOR_TAG_SCOPE_KEY } from "./colors.store.js";
@@ -318,6 +319,9 @@ export const handleEditSubmitClick = async (deps) => {
   });
 };
 
+export const handleEditFormSubmitKeyDown = (deps, payload) =>
+  forwardFormSubmitOnEnter({ deps, payload, submit: handleEditSubmitClick });
+
 export const handleFormFieldClick = (deps) => {
   const selectedItemId = deps.store.selectSelectedItemId();
   openEditDialogWithValues({ deps, itemId: selectedItemId });
@@ -382,6 +386,9 @@ export const handleAddSubmitClick = async (deps) => {
     },
   });
 };
+
+export const handleAddFormSubmitKeyDown = (deps, payload) =>
+  forwardFormSubmitOnEnter({ deps, payload, submit: handleAddSubmitClick });
 
 export const handleItemDelete = async (deps, payload) => {
   const { projectService, appService, render } = deps;

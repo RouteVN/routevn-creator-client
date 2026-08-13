@@ -1,6 +1,7 @@
 import { generateId } from "../../internal/id.js";
 import { isVisualTestMode } from "../../internal/visualTestMode.js";
 import { createMediaPageHandlers } from "../../internal/ui/resourcePages/media/createMediaPageHandlers.js";
+import { forwardFormSubmitOnEnter } from "../../internal/ui/resourcePages/formSubmitKeyDown.js";
 import {
   getMediaPageData,
   resolveResourceParentId,
@@ -597,6 +598,9 @@ export const handleEditSubmitClick = async (deps) => {
     },
   });
 };
+
+export const handleEditFormSubmitKeyDown = (deps, payload) =>
+  forwardFormSubmitOnEnter({ deps, payload, submit: handleEditSubmitClick });
 
 export const handleItemDelete = async (deps, payload) => {
   const { projectService, appService, render } = deps;

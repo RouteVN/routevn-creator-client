@@ -2,6 +2,7 @@ import { generateId } from "../../internal/id.js";
 import { tap } from "rxjs";
 import { createProjectStateStream } from "../../deps/services/shared/projectStateStream.js";
 import { createResourceFileExplorerHandlers } from "../../internal/ui/fileExplorer.js";
+import { forwardFormSubmitOnEnter } from "../../internal/ui/resourcePages/formSubmitKeyDown.js";
 import { createFileExplorerKeyboardScopeHandlers } from "../../internal/ui/fileExplorerKeyboardScope.js";
 import { resolveResourceParentId } from "../../internal/ui/resourcePages/media/mediaPageShared.js";
 import { handleResourceZoomShortcutKeyDown } from "../../internal/ui/resourcePages/zoomShortcuts.js";
@@ -1012,6 +1013,9 @@ export const handleDialogSubmitClick = async (deps) => {
     },
   });
 };
+
+export const handleDialogFormSubmitKeyDown = (deps, payload) =>
+  forwardFormSubmitOnEnter({ deps, payload, submit: handleDialogSubmitClick });
 
 export const handleDetailClipClick = (deps, payload) => {
   const clipName = payload._event.currentTarget.dataset.clipName;

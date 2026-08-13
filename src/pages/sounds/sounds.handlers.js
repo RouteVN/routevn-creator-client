@@ -1,6 +1,7 @@
 import { generateId } from "../../internal/id.js";
 import { filter, tap } from "rxjs";
 import { createMediaPageHandlers } from "../../internal/ui/resourcePages/media/createMediaPageHandlers.js";
+import { forwardFormSubmitOnEnter } from "../../internal/ui/resourcePages/formSubmitKeyDown.js";
 import {
   getMediaPageData,
   resolveResourceParentId,
@@ -667,6 +668,9 @@ export const handleEditSubmitClick = async (deps) => {
     },
   });
 };
+
+export const handleEditFormSubmitKeyDown = (deps, payload) =>
+  forwardFormSubmitOnEnter({ deps, payload, submit: handleEditSubmitClick });
 
 export const handleAudioPlayerClose = (deps) => {
   const { store, render } = deps;

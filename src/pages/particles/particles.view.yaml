@@ -73,6 +73,8 @@ refs:
         handler: handleParticleFormChange
       add-option-click:
         handler: handleParticleFormAddOptionClick
+      keydown:
+        handler: handleParticleFormSubmitKeyDown
   particleSubmitButton:
     eventListeners:
       click:

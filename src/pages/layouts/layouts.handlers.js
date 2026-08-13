@@ -6,6 +6,7 @@ import {
   isFragmentLayout,
 } from "../../internal/project/layout.js";
 import { createCatalogPageHandlers } from "../../internal/ui/resourcePages/catalog/createCatalogPageHandlers.js";
+import { forwardFormSubmitOnEnter } from "../../internal/ui/resourcePages/formSubmitKeyDown.js";
 import { appendTagIdToForm } from "../../internal/ui/resourcePages/tags.js";
 import { runResourcePageMutation } from "../../internal/ui/resourcePages/resourcePageErrors.js";
 import { createLayoutsFileExplorerHandlers } from "../../internal/ui/fileExplorer.js";
@@ -1156,6 +1157,9 @@ export const handleAddSubmitClick = async (deps) => {
   });
 };
 
+export const handleAddFormSubmitKeyDown = (deps, payload) =>
+  forwardFormSubmitOnEnter({ deps, payload, submit: handleAddSubmitClick });
+
 export const handleEditFormActionClick = async (deps, payload) => {
   const { store, projectService, appService, render } = deps;
   const copy = selectCopy(deps);
@@ -1213,6 +1217,9 @@ export const handleEditSubmitClick = async (deps) => {
     },
   });
 };
+
+export const handleEditFormSubmitKeyDown = (deps, payload) =>
+  forwardFormSubmitOnEnter({ deps, payload, submit: handleEditSubmitClick });
 
 export const handleOpenLayoutEditorClick = (deps, payload) => {
   const { appService } = deps;

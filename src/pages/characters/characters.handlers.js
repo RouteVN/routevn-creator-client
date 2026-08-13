@@ -1,6 +1,7 @@
 import { generateId } from "../../internal/id.js";
 import { CHARACTER_SPRITE_TAG_SCOPE_PREFIX } from "../../internal/project/commands.js";
 import { createResourceFileExplorerHandlers } from "../../internal/ui/fileExplorer.js";
+import { forwardFormSubmitOnEnter } from "../../internal/ui/resourcePages/formSubmitKeyDown.js";
 import { createFileExplorerKeyboardScopeHandlers } from "../../internal/ui/fileExplorerKeyboardScope.js";
 import {
   appendTagIdToForm,
@@ -688,6 +689,13 @@ export const handleAddCharacterSubmitClick = async (deps) => {
   });
 };
 
+export const handleCharacterFormSubmitKeyDown = (deps, payload) =>
+  forwardFormSubmitOnEnter({
+    deps,
+    payload,
+    submit: handleAddCharacterSubmitClick,
+  });
+
 const {
   openCreateTagDialogForMode,
   handleCreateTagDialogClose,
@@ -1175,3 +1183,10 @@ export const handleEditCharacterSubmitClick = async (deps) => {
     },
   });
 };
+
+export const handleEditFormSubmitKeyDown = (deps, payload) =>
+  forwardFormSubmitOnEnter({
+    deps,
+    payload,
+    submit: handleEditCharacterSubmitClick,
+  });

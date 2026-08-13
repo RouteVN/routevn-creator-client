@@ -2,6 +2,7 @@ import { generateId } from "../../internal/id.js";
 import { createAudioEffectsEditorPayload } from "../../internal/audioEffectsEditorRoute.js";
 import { createResourceFileExplorerHandlers } from "../../internal/ui/fileExplorer.js";
 import { createCatalogPageHandlers } from "../../internal/ui/resourcePages/catalog/createCatalogPageHandlers.js";
+import { forwardFormSubmitOnEnter } from "../../internal/ui/resourcePages/formSubmitKeyDown.js";
 import { appendTagIdToForm } from "../../internal/ui/resourcePages/tags.js";
 import { runResourcePageMutation } from "../../internal/ui/resourcePages/resourcePageErrors.js";
 import {
@@ -398,6 +399,9 @@ export const handleEditSubmitClick = async (deps) => {
   });
 };
 
+export const handleEditFormSubmitKeyDown = (deps, payload) =>
+  forwardFormSubmitOnEnter({ deps, payload, submit: handleEditSubmitClick });
+
 export const handleAddSubmitClick = async (deps) => {
   const { addForm } = deps.refs;
   await handleAddFormAction(deps, {
@@ -409,6 +413,9 @@ export const handleAddSubmitClick = async (deps) => {
     },
   });
 };
+
+export const handleAddFormSubmitKeyDown = (deps, payload) =>
+  forwardFormSubmitOnEnter({ deps, payload, submit: handleAddSubmitClick });
 
 export const handleItemDelete = async (deps, payload) => {
   const { appService, projectService } = deps;

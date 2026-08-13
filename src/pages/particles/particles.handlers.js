@@ -1,5 +1,6 @@
 import { generateId } from "../../internal/id.js";
 import { createCatalogPageHandlers } from "../../internal/ui/resourcePages/catalog/createCatalogPageHandlers.js";
+import { forwardFormSubmitOnEnter } from "../../internal/ui/resourcePages/formSubmitKeyDown.js";
 import { createResourceFileExplorerHandlers } from "../../internal/ui/fileExplorer.js";
 import {
   appendTagIdToForm,
@@ -1058,6 +1059,13 @@ export const handleParticleSubmitClick = async (deps) => {
     },
   });
 };
+
+export const handleParticleFormSubmitKeyDown = (deps, payload) =>
+  forwardFormSubmitOnEnter({
+    deps,
+    payload,
+    submit: handleParticleSubmitClick,
+  });
 
 export const handleParticleFormChange = async (deps, payload) => {
   const { render, store } = deps;

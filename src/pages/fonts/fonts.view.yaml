@@ -87,6 +87,8 @@ refs:
     eventListeners:
       add-option-click:
         handler: handleEditFormAddOptionClick
+      keydown:
+        handler: handleEditFormSubmitKeyDown
   editSubmitButton:
     eventListeners:
       click:

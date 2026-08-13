@@ -5,6 +5,7 @@ import {
 } from "../../internal/runtime/graphicsEngineRuntime.js";
 import { createFileExplorerKeyboardScopeHandlers } from "../../internal/ui/fileExplorerKeyboardScope.js";
 import { createCatalogPageHandlers } from "../../internal/ui/resourcePages/catalog/createCatalogPageHandlers.js";
+import { forwardFormSubmitOnEnter } from "../../internal/ui/resourcePages/formSubmitKeyDown.js";
 import { appendTagIdToForm } from "../../internal/ui/resourcePages/tags.js";
 import { runResourcePageMutation } from "../../internal/ui/resourcePages/resourcePageErrors.js";
 import {
@@ -746,6 +747,13 @@ export const handleTransformSubmitClick = async (deps) => {
     },
   });
 };
+
+export const handleTransformFormSubmitKeyDown = (deps, payload) =>
+  forwardFormSubmitOnEnter({
+    deps,
+    payload,
+    submit: handleTransformSubmitClick,
+  });
 
 export const handleTransformFormChange = async (deps, payload) => {
   const { store } = deps;

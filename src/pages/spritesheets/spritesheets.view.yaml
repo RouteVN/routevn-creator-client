@@ -95,6 +95,8 @@ refs:
         handler: handleDialogFormChange
       add-option-click:
         handler: handleDialogFormAddOptionClick
+      keydown:
+        handler: handleDialogFormSubmitKeyDown
   dialogSubmitButton:
     eventListeners:
       click:

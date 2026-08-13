@@ -89,6 +89,8 @@ refs:
         handler: handleTransformFormChange
       add-option-click:
         handler: handleTransformFormAddOptionClick
+      keydown:
+        handler: handleTransformFormSubmitKeyDown
   transformSubmitButton:
     eventListeners:
       click:

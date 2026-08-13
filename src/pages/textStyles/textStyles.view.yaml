@@ -100,7 +100,7 @@ refs:
       add-option-click:
         handler: handleTextStyleFormAddOptionClick
       keydown:
-        handler: handleDesktopTextStyleFormKeyDown
+        handler: handleTextStyleFormSubmitKeyDown
   desktopTextStyleSubmitButton:
     eventListeners:
       click:
@@ -120,7 +120,9 @@ refs:
       close:
         handler: handleAddColorDialogClose
   addColorForm:
-    eventListeners: {}
+    eventListeners:
+      keydown:
+        handler: handleAddColorFormSubmitKeyDown
   addColorSubmitButton:
     eventListeners:
       click:
@@ -136,7 +138,9 @@ refs:
       file-rejected:
         handler: handleFontFileRejected
   addFontForm:
-    eventListeners: {}
+    eventListeners:
+      keydown:
+        handler: handleAddFontFormSubmitKeyDown
   addFontSubmitButton:
     eventListeners:
       click:

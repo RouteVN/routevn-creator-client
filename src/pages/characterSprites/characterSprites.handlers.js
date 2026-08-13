@@ -1,6 +1,7 @@
 import { generateId, generatePrefixedId } from "../../internal/id.js";
 import { processWithConcurrency } from "../../internal/processWithConcurrency.js";
 import { createCharacterSpritesFileExplorerHandlers } from "../../internal/ui/fileExplorer.js";
+import { forwardFormSubmitOnEnter } from "../../internal/ui/resourcePages/formSubmitKeyDown.js";
 import {
   appendTagIdToForm,
   createResourcePageTagHandlers,
@@ -1753,6 +1754,9 @@ export const handleEditSubmitClick = async (deps) => {
   });
 };
 
+export const handleEditFormSubmitKeyDown = (deps, payload) =>
+  forwardFormSubmitOnEnter({ deps, payload, submit: handleEditSubmitClick });
+
 export const handleSpritesheetDialogClose = (deps) => {
   const { render, store } = deps;
   revokeSpritesheetDialogPreviewUrl(store);
@@ -2007,6 +2011,13 @@ export const handleSpritesheetDialogSubmitClick = async (deps) => {
     },
   });
 };
+
+export const handleSpritesheetDialogFormSubmitKeyDown = (deps, payload) =>
+  forwardFormSubmitOnEnter({
+    deps,
+    payload,
+    submit: handleSpritesheetDialogSubmitClick,
+  });
 
 export const handleDetailClipClick = (deps, payload) => {
   const clipName = payload._event.currentTarget.dataset.clipName;

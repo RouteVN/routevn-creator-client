@@ -173,6 +173,7 @@ describe("projectAssetService", () => {
 
   it("rejects video uploads when a required thumbnail cannot be generated", async () => {
     const consoleWarn = vi.spyOn(console, "warn").mockImplementation(() => {});
+    const storeFile = vi.fn(async () => ({ fileId: "file-video" }));
     mocked.detectFileType.mockReturnValue("video");
     mocked.getVideoDimensions.mockResolvedValue({
       width: 1920,
@@ -186,7 +187,7 @@ describe("projectAssetService", () => {
       idGenerator: () => "generated-id",
       fileAdapter: {
         continueOnUploadError: false,
-        storeFile: vi.fn(async () => ({ fileId: "file-video" })),
+        storeFile,
         getFileContent: vi.fn(),
         getFileByProjectId: vi.fn(),
       },
@@ -206,6 +207,7 @@ describe("projectAssetService", () => {
         error: "thumbnail timed out",
       }),
     );
+    expect(storeFile).not.toHaveBeenCalled();
     consoleWarn.mockRestore();
   });
 
