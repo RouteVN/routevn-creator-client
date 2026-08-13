@@ -284,6 +284,17 @@ const getPreviewFileId = (item) => item?.thumbnailFileId ?? item?.fileId;
 
 const createEditForm = ({ tagOptions, copy } = {}) => ({
   title: copy.editSpriteTitle,
+  actions: {
+    sticky: true,
+    buttons: [
+      {
+        id: "submit",
+        variant: "pr",
+        validate: true,
+        label: copy.updateSpriteButton,
+      },
+    ],
+  },
   fields: [
     {
       name: "name",
@@ -1492,7 +1503,6 @@ export const selectViewData = ({ state, i18n }) => {
       tagOptions: tagViewData.tagFilterOptions,
       copy,
     }),
-    editSubmitButtonLabel: copy.updateSpriteButton,
     editDefaultValues: state.editDefaultValues,
     editPreviewFileId: state.editPreviewFileId,
     isSpritesheetDialogOpen: state.isSpritesheetDialogOpen,

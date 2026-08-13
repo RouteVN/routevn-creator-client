@@ -5,7 +5,6 @@ import {
 } from "../../internal/resourceTags.js";
 import { recursivelyCheckResource } from "../../internal/project/projection.js";
 import { createCatalogPageHandlers } from "../../internal/ui/resourcePages/catalog/createCatalogPageHandlers.js";
-import { forwardFormSubmitOnEnter } from "../../internal/ui/resourcePages/formSubmitKeyDown.js";
 import { appendTagIdToForm } from "../../internal/ui/resourcePages/tags.js";
 import { runResourcePageMutation } from "../../internal/ui/resourcePages/resourcePageErrors.js";
 import { COLOR_TAG_SCOPE_KEY } from "./colors.store.js";
@@ -307,21 +306,6 @@ export const handleEditFormAction = async (deps, payload) => {
   await handleDataChanged(deps);
 };
 
-export const handleEditSubmitClick = async (deps) => {
-  const { editForm } = deps.refs;
-  await handleEditFormAction(deps, {
-    _event: {
-      detail: {
-        actionId: "submit",
-        values: editForm.getValues(),
-      },
-    },
-  });
-};
-
-export const handleEditFormSubmitKeyDown = (deps, payload) =>
-  forwardFormSubmitOnEnter({ deps, payload, submit: handleEditSubmitClick });
-
 export const handleFormFieldClick = (deps) => {
   const selectedItemId = deps.store.selectSelectedItemId();
   openEditDialogWithValues({ deps, itemId: selectedItemId });
@@ -374,21 +358,6 @@ export const handleAddFormAction = async (deps, payload) => {
   store.closeAddDialog();
   await handleDataChanged(deps);
 };
-
-export const handleAddSubmitClick = async (deps) => {
-  const { addColorForm } = deps.refs;
-  await handleAddFormAction(deps, {
-    _event: {
-      detail: {
-        actionId: "submit",
-        values: addColorForm.getValues(),
-      },
-    },
-  });
-};
-
-export const handleAddFormSubmitKeyDown = (deps, payload) =>
-  forwardFormSubmitOnEnter({ deps, payload, submit: handleAddSubmitClick });
 
 export const handleItemDelete = async (deps, payload) => {
   const { projectService, appService, render } = deps;

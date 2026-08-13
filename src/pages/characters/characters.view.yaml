@@ -73,12 +73,8 @@ refs:
     eventListeners:
       add-option-click:
         handler: handleCharacterFormAddOptionClick
-      keydown:
-        handler: handleCharacterFormSubmitKeyDown
-  addCharacterSubmitButton:
-    eventListeners:
-      click:
-        handler: handleAddCharacterSubmitClick
+      form-action:
+        handler: handleDialogFormActionClick
   avatarImage:
     eventListeners:
       click:
@@ -109,12 +105,8 @@ refs:
     eventListeners:
       add-option-click:
         handler: handleEditFormAddOptionClick
-      keydown:
-        handler: handleEditFormSubmitKeyDown
-  editCharacterSubmitButton:
-    eventListeners:
-      click:
-        handler: handleEditCharacterSubmitClick
+      form-action:
+        handler: handleEditFormAction
   .spriteGroupAddButton:
     eventListeners:
       click:
@@ -236,51 +228,43 @@ template:
           - rtgl-form#folderNameForm key=${folderNameDialogItemId} slot=content :defaultValues=${folderNameDialogDefaultValues} :form=${folderNameForm} w=f: null
   - $if isDialogOpen:
       - rtgl-dialog#addCharacterDialog ?open=${isDialogOpen} s=md md-layout=fixed-top p=none:
-          - 'rtgl-view slot=content w=f h=f pv=md pos=rel style="min-width: 0; min-height: 0; overflow: hidden;"':
-              - 'rtgl-view h=1fg sv w=f style="min-height: 0;"':
-                  - rtgl-form#characterForm key=${isDialogOpen} :defaultValues=${dialogDefaultValues} :form=${dialogForm} w=f ph=md:
-                      - $if avatarFileId:
-                          - rtgl-view slot=avatar-slot w=120 h=120 av=c ah=c:
-                              - rvn-file-image#avatarImage fileId=${avatarFileId} w=120 h=120 cur=pointer br=md: null
-                        $else:
-                          - rtgl-view slot=avatar-slot w=120 h=120 av=c ah=c:
-                              - rtgl-view#avatarPlaceholder w=120 h=120 av=c ah=c bgc=bg bc=bo bw=xs br=md cur=pointer:
-                                  - rtgl-text c=mu-fg s=sm: ${clickToUploadLabel}
-                  - 'rtgl-view h=80 aria-hidden=true style="flex: 0 0 80px;"': null
-              - 'rtgl-view d=h av=c ah=e w=f g=lg ph=md pt=md style="flex: 0 0 auto;"':
-                  - rtgl-button#addCharacterSubmitButton v=pr: ${addCharacterButtonLabel}
+          - rtgl-view slot=content d=v w=f h=f overflow=hidden:
+              - rtgl-form#characterForm key=${isDialogOpen} :defaultValues=${dialogDefaultValues} :form=${dialogForm} w=f h=f:
+                  - $if avatarFileId:
+                      - rtgl-view slot=avatar-slot w=120 h=120 av=c ah=c:
+                          - rvn-file-image#avatarImage fileId=${avatarFileId} w=120 h=120 cur=pointer br=md: null
+                    $else:
+                      - rtgl-view slot=avatar-slot w=120 h=120 av=c ah=c:
+                          - rtgl-view#avatarPlaceholder w=120 h=120 av=c ah=c bgc=bg bc=bo bw=xs br=md cur=pointer:
+                              - rtgl-text c=mu-fg s=sm: ${clickToUploadLabel}
   - $if isEditDialogOpen:
       - rtgl-dialog#editDialog ?open=${isEditDialogOpen} s=md md-layout=fixed-top p=none:
-          - 'rtgl-view slot=content w=f h=f pv=md pos=rel style="min-width: 0; min-height: 0; overflow: hidden;"':
-              - 'rtgl-view h=1fg sv w=f style="min-height: 0;"':
-                  - rtgl-form#editForm key=${isEditDialogOpen} :defaultValues=${editDefaultValues} :form=${editForm} w=f ph=md:
-                      - $if editAvatarFileId:
-                          - rtgl-view slot=avatar-slot w=120 h=120 av=c ah=c:
-                              - rvn-file-image#editAvatarImage fileId=${editAvatarFileId} w=120 h=120 cur=pointer br=md: null
-                        $else:
-                          - rtgl-view slot=avatar-slot w=120 h=120 av=c ah=c:
-                              - rtgl-view#editAvatarPlaceholder w=120 h=120 av=c ah=c bgc=bg bc=bo bw=xs br=md cur=pointer:
-                                  - rtgl-text c=mu-fg s=sm: ${clickToUploadLabel}
-                      - 'rtgl-view slot="sprite-groups-slot" d=v w=f g=md':
-                          - $if editSpriteGroupTagOptions.length > 0:
-                              - rtgl-view d=h w=f ah=e:
-                                  - rtgl-view w=1fg: null
-                                  - rtgl-button.spriteGroupAddButton data-target=edit s=sm v=gh pre=plus: ${addGroupButton}
-                              - $if editSpriteGroups.length > 0:
-                                  - $for spriteGroup, i in editSpriteGroups:
-                                      - rtgl-view.spriteGroupCard data-target=edit data-index=${i} d=v w=f g=xs p=md bw=xs bc=bo h-bc=ac br=md cur=pointer:
-                                          - rtgl-text s=sm: ${spriteGroup.name}
-                                          - $if spriteGroup.tagSummary:
-                                              - rtgl-text s=xs c=mu-fg: ${spriteGroup.tagSummary}
-                                $else:
-                                  - rtgl-view w=f p=md bgc=mu br=md:
-                                      - rtgl-text s=xs c=mu-fg: ${noSpriteGroupsYet}
+          - rtgl-view slot=content d=v w=f h=f overflow=hidden:
+              - rtgl-form#editForm key=${isEditDialogOpen} :defaultValues=${editDefaultValues} :form=${editForm} w=f h=f:
+                  - $if editAvatarFileId:
+                      - rtgl-view slot=avatar-slot w=120 h=120 av=c ah=c:
+                          - rvn-file-image#editAvatarImage fileId=${editAvatarFileId} w=120 h=120 cur=pointer br=md: null
+                    $else:
+                      - rtgl-view slot=avatar-slot w=120 h=120 av=c ah=c:
+                          - rtgl-view#editAvatarPlaceholder w=120 h=120 av=c ah=c bgc=bg bc=bo bw=xs br=md cur=pointer:
+                              - rtgl-text c=mu-fg s=sm: ${clickToUploadLabel}
+                  - 'rtgl-view slot="sprite-groups-slot" d=v w=f g=md':
+                      - $if editSpriteGroupTagOptions.length > 0:
+                          - rtgl-view d=h w=f ah=e:
+                              - rtgl-view w=1fg: null
+                              - rtgl-button.spriteGroupAddButton data-target=edit s=sm v=gh pre=plus: ${addGroupButton}
+                          - $if editSpriteGroups.length > 0:
+                              - $for spriteGroup, i in editSpriteGroups:
+                                  - rtgl-view.spriteGroupCard data-target=edit data-index=${i} d=v w=f g=xs p=md bw=xs bc=bo h-bc=ac br=md cur=pointer:
+                                      - rtgl-text s=sm: ${spriteGroup.name}
+                                      - $if spriteGroup.tagSummary:
+                                          - rtgl-text s=xs c=mu-fg: ${spriteGroup.tagSummary}
                             $else:
                               - rtgl-view w=f p=md bgc=mu br=md:
-                                  - rtgl-text s=xs c=mu-fg: ${editSpriteGroupsMessage}
-                  - 'rtgl-view h=80 aria-hidden=true style="flex: 0 0 80px;"': null
-              - 'rtgl-view d=h av=c ah=e w=f g=lg ph=md pt=md style="flex: 0 0 auto;"':
-                  - rtgl-button#editCharacterSubmitButton v=pr: ${updateCharacterButtonLabel}
+                                  - rtgl-text s=xs c=mu-fg: ${noSpriteGroupsYet}
+                        $else:
+                          - rtgl-view w=f p=md bgc=mu br=md:
+                              - rtgl-text s=xs c=mu-fg: ${editSpriteGroupsMessage}
   - $if isSpriteGroupDialogOpen:
       - rtgl-dialog#spriteGroupDialog ?open=${isSpriteGroupDialogOpen} s=sm:
           - rtgl-form#spriteGroupForm key=${isSpriteGroupDialogOpen} slot=content :defaultValues=${spriteGroupDialogDefaultValues} :form=${spriteGroupDialogForm} w=f: null

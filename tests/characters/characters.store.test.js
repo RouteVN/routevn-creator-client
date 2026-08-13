@@ -275,10 +275,28 @@ describe("characters store sprite group tags", () => {
 
     const viewData = selectViewData({ state, i18n: EN_I18N });
 
-    expect(viewData.dialogForm.actions).toBeUndefined();
-    expect(viewData.editForm.actions).toBeUndefined();
-    expect(viewData.addCharacterButtonLabel).toBe("Add Character");
-    expect(viewData.updateCharacterButtonLabel).toBe("Update");
+    expect(viewData.dialogForm.actions).toEqual({
+      sticky: true,
+      buttons: [
+        {
+          id: "submit",
+          variant: "pr",
+          validate: true,
+          label: "Add Character",
+        },
+      ],
+    });
+    expect(viewData.editForm.actions).toEqual({
+      sticky: true,
+      buttons: [
+        {
+          id: "submit",
+          variant: "pr",
+          validate: true,
+          label: "Update",
+        },
+      ],
+    });
     expect(viewData.editForm.description).toBeUndefined();
     expect(
       viewData.dialogForm.fields.find((field) => field.name === "description"),

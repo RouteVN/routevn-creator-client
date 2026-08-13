@@ -631,7 +631,6 @@ export const createMediaPageStore = ({
         copy,
         tagOptions: tagViewData.tagFilterOptions ?? [],
       }),
-      editSubmitButtonLabel: copy.updateButton ?? "Update",
       editDefaultValues: state.editDefaultValues,
       editPreviewFileId: state.editPreviewFileId,
       isFolderNameDialogOpen: state.isFolderNameDialogOpen,

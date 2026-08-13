@@ -24,6 +24,17 @@ const hexToRgb = (hex) => {
 
 const createEditForm = (copy = {}) => ({
   title: copy.editTitle ?? "Edit Color",
+  actions: {
+    sticky: true,
+    buttons: [
+      {
+        id: "submit",
+        variant: "pr",
+        validate: true,
+        label: copy.updateButton ?? "Update",
+      },
+    ],
+  },
   fields: [
     {
       name: "name",
@@ -53,6 +64,17 @@ const createEditForm = (copy = {}) => ({
 
 const createAddForm = (copy = {}) => ({
   title: copy.addTitle ?? "Add Color",
+  actions: {
+    sticky: true,
+    buttons: [
+      {
+        id: "submit",
+        variant: "pr",
+        validate: true,
+        label: copy.addButton ?? "Add Color",
+      },
+    ],
+  },
   fields: [
     {
       name: "name",
@@ -190,7 +212,6 @@ const {
       selectedColorHex: selectedItem?.hex ?? "",
       isEditDialogOpen: state.isEditDialogOpen,
       editButton: copy.editMenuItem ?? "Edit",
-      editSubmitButtonLabel: copy.updateButton ?? "Update",
       editDefaultValues: {
         name: editItem?.name ?? "",
         hex: editItem?.hex ?? "",
@@ -203,7 +224,6 @@ const {
       isAddDialogOpen: state.isAddDialogOpen,
       addDefaultValues: state.addDefaultValues,
       addForm: createAddForm(copy),
-      addSubmitButtonLabel: copy.addButton ?? "Add Color",
     };
   },
 });

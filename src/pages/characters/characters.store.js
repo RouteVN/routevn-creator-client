@@ -158,6 +158,17 @@ const createCharacterDialogForm = ({
   copy,
 } = {}) => ({
   title: copy.addCharacterTitle,
+  actions: {
+    sticky: true,
+    buttons: [
+      {
+        id: "submit",
+        variant: "pr",
+        validate: true,
+        label: copy.addCharacterButton,
+      },
+    ],
+  },
   fields: [
     {
       name: "name",
@@ -195,6 +206,17 @@ const createEditCharacterDialogForm = ({
   copy,
 } = {}) => ({
   title: copy.editCharacterTitle,
+  actions: {
+    sticky: true,
+    buttons: [
+      {
+        id: "submit",
+        variant: "pr",
+        validate: true,
+        label: copy.updateCharacterButton,
+      },
+    ],
+  },
   fields: [
     {
       name: "name",
@@ -1091,7 +1113,6 @@ export const selectViewData = ({ state, i18n }) => {
       hiddenMobileDetailSlots: ["avatar", "character-sprite-groups"],
     }),
     addText: copy.addText,
-    addCharacterButtonLabel: copy.addCharacterButton,
     addGroupButton: copy.addGroupButton,
     addTagPlaceholder: copy.addTagPlaceholder,
     clickToUploadLabel: copy.clickToUploadLabel,
@@ -1127,7 +1148,6 @@ export const selectViewData = ({ state, i18n }) => {
     },
     resourceType: "characters",
     title: copy.title,
-    updateCharacterButtonLabel: copy.updateCharacterButton,
     folderContextMenuItems: createFolderContextMenuItems(copy),
     itemContextMenuItems: createItemContextMenuItems(copy),
     emptyContextMenuItems: createEmptyContextMenuItems(copy),

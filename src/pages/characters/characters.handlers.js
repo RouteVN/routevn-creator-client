@@ -1,7 +1,6 @@
 import { generateId } from "../../internal/id.js";
 import { CHARACTER_SPRITE_TAG_SCOPE_PREFIX } from "../../internal/project/commands.js";
 import { createResourceFileExplorerHandlers } from "../../internal/ui/fileExplorer.js";
-import { forwardFormSubmitOnEnter } from "../../internal/ui/resourcePages/formSubmitKeyDown.js";
 import { createFileExplorerKeyboardScopeHandlers } from "../../internal/ui/fileExplorerKeyboardScope.js";
 import {
   appendTagIdToForm,
@@ -676,26 +675,6 @@ export const handleDialogFormActionClick = async (deps, payload) => {
   }
 };
 
-export const handleAddCharacterSubmitClick = async (deps) => {
-  const { refs } = deps;
-  const { characterForm } = refs;
-  await handleDialogFormActionClick(deps, {
-    _event: {
-      detail: {
-        actionId: "submit",
-        values: characterForm.getValues(),
-      },
-    },
-  });
-};
-
-export const handleCharacterFormSubmitKeyDown = (deps, payload) =>
-  forwardFormSubmitOnEnter({
-    deps,
-    payload,
-    submit: handleAddCharacterSubmitClick,
-  });
-
 const {
   openCreateTagDialogForMode,
   handleCreateTagDialogClose,
@@ -1170,23 +1149,3 @@ export const handleEditFormAction = async (deps, payload) => {
     render();
   }
 };
-
-export const handleEditCharacterSubmitClick = async (deps) => {
-  const { refs } = deps;
-  const { editForm } = refs;
-  await handleEditFormAction(deps, {
-    _event: {
-      detail: {
-        actionId: "submit",
-        values: editForm.getValues(),
-      },
-    },
-  });
-};
-
-export const handleEditFormSubmitKeyDown = (deps, payload) =>
-  forwardFormSubmitOnEnter({
-    deps,
-    payload,
-    submit: handleEditCharacterSubmitClick,
-  });

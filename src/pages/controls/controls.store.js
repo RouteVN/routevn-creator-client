@@ -15,6 +15,19 @@ const createControlForm = ({ editMode = false, copy = {} } = {}) => ({
   title: editMode
     ? (copy.editControlTitle ?? "Edit Control")
     : (copy.addControlTitle ?? "Add Control"),
+  actions: {
+    sticky: true,
+    buttons: [
+      {
+        id: "submit",
+        variant: "pr",
+        validate: true,
+        label: editMode
+          ? (copy.updateControlButton ?? "Update")
+          : (copy.addControlButton ?? "Add Control"),
+      },
+    ],
+  },
   fields: [
     {
       name: "name",
@@ -223,9 +236,6 @@ const {
       editMode: Boolean(state.editItemId),
       copy,
     }),
-    dialogSubmitButtonLabel: state.editItemId
-      ? (copy.updateControlButton ?? "Update")
-      : (copy.addControlButton ?? "Add Control"),
     dialogDefaultValues: state.dialogDefaultValues,
     keydownKeyboardItems: toKeyboardItems(selectedItem?.keyboard, { copy }),
     keyupKeyboardItems: toKeyboardItems(selectedItem?.keyup, { copy }),

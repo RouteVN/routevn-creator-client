@@ -4,83 +4,105 @@ import { describe, expect, it } from "vitest";
 const readView = (relativePath) =>
   readFileSync(new URL(`../../src/${relativePath}`, import.meta.url), "utf8");
 
-const RESOURCE_DIALOGS = [
-  ["pages/animations/animations.view.yaml", ["addDialog", "editDialog"]],
-  ["pages/audioEffects/audioEffects.view.yaml", ["addDialog", "editDialog"]],
-  ["pages/characterSprites/characterSprites.view.yaml", ["editDialog"]],
-  [
-    "pages/characters/characters.view.yaml",
-    ["addCharacterDialog", "editDialog"],
-  ],
-  ["pages/colors/colors.view.yaml", ["addColorDialog", "editDialog"]],
-  ["pages/controls/controls.view.yaml", ["addControlDialog"]],
-  ["pages/fonts/fonts.view.yaml", ["editDialog"]],
-  ["pages/layouts/layouts.view.yaml", ["addLayoutDialog", "editDialog"]],
-  ["pages/particles/particles.view.yaml", ["particleDialog"]],
-  ["pages/sounds/sounds.view.yaml", ["editDialog"]],
-  ["pages/spritesheets/spritesheets.view.yaml", ["spritesheetDialog"]],
-  ["pages/transforms/transforms.view.yaml", ["transformDialog"]],
-  ["pages/videos/videos.view.yaml", ["editDialog"]],
-];
-
-const RESOURCE_FORMS_WITH_EXTERNAL_SUBMIT = [
+const SIMPLE_RESOURCE_DIALOGS = [
   [
     "pages/animations/animations.view.yaml",
+    "pages/animations/animations.store.js",
+    ["addDialog", "editDialog"],
     [
-      ["addForm", "handleAddFormSubmitKeyDown"],
-      ["editForm", "handleEditFormSubmitKeyDown"],
+      ["addForm", "handleAddFormAction"],
+      ["editForm", "handleEditFormAction"],
     ],
   ],
   [
     "pages/audioEffects/audioEffects.view.yaml",
+    "pages/audioEffects/audioEffects.store.js",
+    ["addDialog", "editDialog"],
     [
-      ["addForm", "handleAddFormSubmitKeyDown"],
-      ["editForm", "handleEditFormSubmitKeyDown"],
+      ["addForm", "handleAddFormAction"],
+      ["editForm", "handleEditFormAction"],
     ],
   ],
   [
     "pages/characterSprites/characterSprites.view.yaml",
-    [
-      ["editForm", "handleEditFormSubmitKeyDown"],
-      ["spritesheetDialogForm", "handleSpritesheetDialogFormSubmitKeyDown"],
-    ],
+    "pages/characterSprites/characterSprites.store.js",
+    ["editDialog"],
+    [["editForm", "handleEditFormAction"]],
   ],
   [
     "pages/characters/characters.view.yaml",
+    "pages/characters/characters.store.js",
+    ["addCharacterDialog", "editDialog"],
     [
-      ["characterForm", "handleCharacterFormSubmitKeyDown"],
-      ["editForm", "handleEditFormSubmitKeyDown"],
+      ["characterForm", "handleDialogFormActionClick"],
+      ["editForm", "handleEditFormAction"],
     ],
   ],
   [
     "pages/colors/colors.view.yaml",
+    "pages/colors/colors.store.js",
+    ["addColorDialog", "editDialog"],
     [
-      ["editForm", "handleEditFormSubmitKeyDown"],
-      ["addColorForm", "handleAddFormSubmitKeyDown"],
+      ["addColorForm", "handleAddFormAction"],
+      ["editForm", "handleEditFormAction"],
     ],
   ],
   [
     "pages/controls/controls.view.yaml",
-    [["controlForm", "handleControlFormSubmitKeyDown"]],
+    "pages/controls/controls.store.js",
+    ["addControlDialog"],
+    [["controlForm", "handleControlFormActionClick"]],
   ],
   [
     "pages/fonts/fonts.view.yaml",
-    [["editForm", "handleEditFormSubmitKeyDown"]],
+    "pages/fonts/fonts.store.js",
+    ["editDialog"],
+    [["editForm", "handleEditFormAction"]],
+  ],
+  [
+    "pages/images/images.view.yaml",
+    "pages/images/images.store.js",
+    ["editDialog"],
+    [["editForm", "handleEditFormAction"]],
   ],
   [
     "pages/layouts/layouts.view.yaml",
+    "pages/layouts/layouts.store.js",
+    ["addLayoutDialog", "editDialog"],
     [
-      ["layoutForm", "handleAddFormSubmitKeyDown"],
-      ["editForm", "handleEditFormSubmitKeyDown"],
+      ["layoutForm", "handleLayoutFormActionClick"],
+      ["editForm", "handleEditFormActionClick"],
     ],
+  ],
+  [
+    "pages/sounds/sounds.view.yaml",
+    "pages/sounds/sounds.store.js",
+    ["editDialog"],
+    [["editForm", "handleEditFormAction"]],
+  ],
+  [
+    "pages/videos/videos.view.yaml",
+    "pages/videos/videos.store.js",
+    ["editDialog"],
+    [["editForm", "handleEditFormAction"]],
+  ],
+];
+
+const SPECIALIZED_RESOURCE_DIALOGS = [
+  ["pages/characterSprites/characterSprites.view.yaml", ["spritesheetDialog"]],
+  ["pages/particles/particles.view.yaml", ["particleDialog"]],
+  ["pages/spritesheets/spritesheets.view.yaml", ["spritesheetDialog"]],
+  ["pages/transforms/transforms.view.yaml", ["transformDialog"]],
+];
+
+const RESOURCE_FORMS_WITH_EXTERNAL_SUBMIT = [
+  [
+    "pages/characterSprites/characterSprites.view.yaml",
+    [["spritesheetDialogForm", "handleSpritesheetDialogFormSubmitKeyDown"]],
   ],
   [
     "pages/particles/particles.view.yaml",
     [["particleForm", "handleParticleFormSubmitKeyDown"]],
-  ],
-  [
-    "pages/sounds/sounds.view.yaml",
-    [["editForm", "handleEditFormSubmitKeyDown"]],
   ],
   [
     "pages/spritesheets/spritesheets.view.yaml",
@@ -98,10 +120,6 @@ const RESOURCE_FORMS_WITH_EXTERNAL_SUBMIT = [
     "pages/transforms/transforms.view.yaml",
     [["transformForm", "handleTransformFormSubmitKeyDown"]],
   ],
-  [
-    "pages/videos/videos.view.yaml",
-    [["editForm", "handleEditFormSubmitKeyDown"]],
-  ],
 ];
 
 const selectRefBlock = (view, refName) => {
@@ -114,25 +132,40 @@ const selectRefBlock = (view, refName) => {
 };
 
 describe("resource add/edit dialog layout", () => {
-  it("uses form-owned scrolling and actions for the image editor", () => {
-    const view = readView("pages/images/images.view.yaml");
-    const dialogLine = view
-      .split("\n")
-      .find((line) => line.includes("rtgl-dialog#editDialog "));
+  it.each(SIMPLE_RESOURCE_DIALOGS)(
+    "uses native sticky form actions in %s",
+    (relativePath, storePath, dialogIds, forms) => {
+      const view = readView(relativePath);
+      const store = readView(storePath);
 
-    expect(dialogLine).toContain("md-layout=fixed-top");
-    expect(dialogLine).toContain("p=none");
-    expect(view).toContain(
-      "rtgl-view slot=content d=v w=f h=f overflow=hidden:",
-    );
-    expect(view).toContain(
-      "rtgl-form#editForm key=${isEditDialogOpen} :defaultValues=${editDefaultValues} :form=${editForm} w=f h=f:",
-    );
-    expect(view).not.toContain("editImageSubmitButton");
-    expect(view).not.toContain("h=80 aria-hidden=true");
-  });
+      for (const dialogId of dialogIds) {
+        const dialogLine = view
+          .split("\n")
+          .find((line) => line.includes(`rtgl-dialog#${dialogId} `));
+        expect(dialogLine).toContain("md-layout=fixed-top");
+        expect(dialogLine).toContain("p=none");
+      }
 
-  it.each(RESOURCE_DIALOGS)(
+      for (const [formRef, handler] of forms) {
+        const formLine = view
+          .split("\n")
+          .find((line) => line.includes(`rtgl-form#${formRef} `));
+        expect(formLine).toContain("w=f h=f");
+        expect(selectRefBlock(view, formRef)).toContain(
+          `form-action:\n        handler: ${handler}`,
+        );
+      }
+
+      expect(
+        view.match(/slot=content d=v w=f h=f overflow=hidden:/g),
+      ).toHaveLength(dialogIds.length);
+      expect(store.match(/sticky: true/g)?.length ?? 0).toBeGreaterThanOrEqual(
+        forms.length,
+      );
+    },
+  );
+
+  it.each(SPECIALIZED_RESOURCE_DIALOGS)(
     "uses fixed-top dialogs with app-owned scrolling and actions in %s",
     (relativePath, dialogIds) => {
       const view = readView(relativePath);

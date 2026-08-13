@@ -83,12 +83,8 @@ refs:
     eventListeners:
       add-option-click:
         handler: handleControlFormAddOptionClick
-      keydown:
-        handler: handleControlFormSubmitKeyDown
-  controlSubmitButton:
-    eventListeners:
-      click:
-        handler: handleControlSubmitClick
+      form-action:
+        handler: handleControlFormActionClick
   detailTagSelect:
     eventListeners:
       value-change:
@@ -215,11 +211,7 @@ template:
   - rtgl-dialog#folderNameDialog ?open=${isFolderNameDialogOpen} s=sm:
       - rtgl-form#folderNameForm key=${folderNameDialogItemId} slot=content :defaultValues=${folderNameDialogDefaultValues} :form=${folderNameForm} w=f: null
   - rtgl-dialog#addControlDialog ?open=${isDialogOpen} s=md md-layout=fixed-top p=none:
-      - 'rtgl-view slot=content w=f h=f pv=md pos=rel style="min-width: 0; min-height: 0; overflow: hidden;"':
-          - 'rtgl-view h=1fg sv w=f style="min-height: 0;"':
-              - rtgl-form#controlForm :defaultValues=${dialogDefaultValues} :form=${dialogForm} w=f ph=md: null
-              - 'rtgl-view h=80 aria-hidden=true style="flex: 0 0 80px;"': null
-          - 'rtgl-view d=h av=c ah=e w=f g=lg ph=md pt=md style="flex: 0 0 auto;"':
-              - rtgl-button#controlSubmitButton v=pr: ${dialogSubmitButtonLabel}
+      - rtgl-view slot=content d=v w=f h=f overflow=hidden:
+          - rtgl-form#controlForm :defaultValues=${dialogDefaultValues} :form=${dialogForm} w=f h=f: null
   - rtgl-dialog#createTagDialog ?open=${isCreateTagDialogOpen} s=sm:
       - rtgl-form#createTagForm slot=content :defaultValues=${createTagDefaultValues} :form=${createTagForm} w=f: null

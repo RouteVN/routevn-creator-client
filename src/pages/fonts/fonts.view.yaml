@@ -87,12 +87,8 @@ refs:
     eventListeners:
       add-option-click:
         handler: handleEditFormAddOptionClick
-      keydown:
-        handler: handleEditFormSubmitKeyDown
-  editSubmitButton:
-    eventListeners:
-      click:
-        handler: handleEditSubmitClick
+      form-action:
+        handler: handleEditFormAction
   folderNameDialog:
     eventListeners:
       close:
@@ -178,18 +174,14 @@ template:
                   - rvn-detail-view#mobileDetailView key=${selectedItemId} w=f :fields=${mobileDetailFields} :fillHeight=${mobileDetailFillHeight}:
                       - rtgl-tag-select#detailTagSelect slot="font-tags" w=f :options=${tagFilterOptions} :selectedValues=${selectedItemTagIds} :draftSelectedValues=${detailTagDraftValues} :open=${isDetailTagSelectOpen} :addOption=${detailTagAddOption} placeholder="${addTagPlaceholder}": null
   - rtgl-dialog#editDialog ?open=${isEditDialogOpen} s=md md-layout=fixed-top p=none:
-      - 'rtgl-view slot=content w=f h=f pv=md pos=rel style="min-width: 0; min-height: 0; overflow: hidden;"':
-          - 'rtgl-view h=1fg sv w=f style="min-height: 0;"':
-              - rtgl-form#editForm key=${isEditDialogOpen} :defaultValues=${editDefaultValues} :form=${editForm} w=f ph=md:
-                  - $if editPreviewFileId:
-                      - 'rtgl-view#editDialogFontPreview slot="font-slot" w=f bw=xs bc=bo br=md p=md cur=pointer style="min-width: 0; max-width: 100%; box-sizing: border-box; overflow: hidden;"':
-                          - rvn-font-preview mode=live fileId=${editPreviewFileId} :fontFamily=${editPreviewFontFamily} :fontWeightDescriptor=${editPreviewFontWeightDescriptor} fontWeight=${editPreviewFontWeight} previewText="Aa" fontSize=60 width=f height=120 av=c ah=c: null
-                    $else:
-                      - rtgl-view#editDialogFontPreviewPlaceholder slot="font-slot" w=f h=120 bw=xs bc=bo br=md av=c ah=c cur=pointer:
-                          - rtgl-text c=mu-fg s=sm: ${clickToUploadLabel}
-              - 'rtgl-view h=80 aria-hidden=true style="flex: 0 0 80px;"': null
-          - 'rtgl-view d=h av=c ah=e w=f g=lg ph=md pt=md style="flex: 0 0 auto;"':
-              - rtgl-button#editSubmitButton v=pr: ${editSubmitButtonLabel}
+      - rtgl-view slot=content d=v w=f h=f overflow=hidden:
+          - rtgl-form#editForm key=${isEditDialogOpen} :defaultValues=${editDefaultValues} :form=${editForm} w=f h=f:
+              - $if editPreviewFileId:
+                  - 'rtgl-view#editDialogFontPreview slot="font-slot" w=f bw=xs bc=bo br=md p=md cur=pointer style="min-width: 0; max-width: 100%; box-sizing: border-box; overflow: hidden;"':
+                      - rvn-font-preview mode=live fileId=${editPreviewFileId} :fontFamily=${editPreviewFontFamily} :fontWeightDescriptor=${editPreviewFontWeightDescriptor} fontWeight=${editPreviewFontWeight} previewText="Aa" fontSize=60 width=f height=120 av=c ah=c: null
+                $else:
+                  - rtgl-view#editDialogFontPreviewPlaceholder slot="font-slot" w=f h=120 bw=xs bc=bo br=md av=c ah=c cur=pointer:
+                      - rtgl-text c=mu-fg s=sm: ${clickToUploadLabel}
   - rtgl-dialog#folderNameDialog ?open=${isFolderNameDialogOpen} s=sm:
       - rtgl-form#folderNameForm key=${folderNameDialogItemId} slot=content :defaultValues=${folderNameDialogDefaultValues} :form=${folderNameForm} w=f: null
   - rtgl-dialog#fontDialog ?open=${isModalOpen} s=lg:

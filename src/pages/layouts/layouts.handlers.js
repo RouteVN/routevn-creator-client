@@ -6,7 +6,6 @@ import {
   isFragmentLayout,
 } from "../../internal/project/layout.js";
 import { createCatalogPageHandlers } from "../../internal/ui/resourcePages/catalog/createCatalogPageHandlers.js";
-import { forwardFormSubmitOnEnter } from "../../internal/ui/resourcePages/formSubmitKeyDown.js";
 import { appendTagIdToForm } from "../../internal/ui/resourcePages/tags.js";
 import { runResourcePageMutation } from "../../internal/ui/resourcePages/resourcePageErrors.js";
 import { createLayoutsFileExplorerHandlers } from "../../internal/ui/fileExplorer.js";
@@ -1145,21 +1144,6 @@ export const handleLayoutFormActionClick = async (deps, payload) => {
   await handleDataChanged(deps);
 };
 
-export const handleAddSubmitClick = async (deps) => {
-  const { layoutForm } = deps.refs;
-  await handleLayoutFormActionClick(deps, {
-    _event: {
-      detail: {
-        actionId: "submit",
-        values: layoutForm.getValues(),
-      },
-    },
-  });
-};
-
-export const handleAddFormSubmitKeyDown = (deps, payload) =>
-  forwardFormSubmitOnEnter({ deps, payload, submit: handleAddSubmitClick });
-
 export const handleEditFormActionClick = async (deps, payload) => {
   const { store, projectService, appService, render } = deps;
   const copy = selectCopy(deps);
@@ -1205,21 +1189,6 @@ export const handleEditFormActionClick = async (deps, payload) => {
   store.closeEditDialog();
   await handleDataChanged(deps);
 };
-
-export const handleEditSubmitClick = async (deps) => {
-  const { editForm } = deps.refs;
-  await handleEditFormActionClick(deps, {
-    _event: {
-      detail: {
-        actionId: "submit",
-        values: editForm.getValues(),
-      },
-    },
-  });
-};
-
-export const handleEditFormSubmitKeyDown = (deps, payload) =>
-  forwardFormSubmitOnEnter({ deps, payload, submit: handleEditSubmitClick });
 
 export const handleOpenLayoutEditorClick = (deps, payload) => {
   const { appService } = deps;

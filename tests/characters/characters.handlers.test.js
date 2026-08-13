@@ -2,12 +2,10 @@ import { describe, expect, it, vi } from "vitest";
 import { EN_I18N } from "../support/i18n.js";
 import {
   handleAddCharacterClick,
-  handleAddCharacterSubmitClick,
   handleCharacterItemClick,
   handleCloseDialog,
   handleDialogFormActionClick,
   handleEditFormAction,
-  handleEditCharacterSubmitClick,
   handleFileExplorerKeyboardScopeKeyDown,
   handleSpriteGroupAddClick,
   handleSpriteGroupCardClick,
@@ -297,8 +295,8 @@ describe("characters add dialog form reset", () => {
   });
 });
 
-describe("characters external dialog actions", () => {
-  it("submits add-form values from the fixed action row", async () => {
+describe("characters sticky form actions", () => {
+  it("submits add-form values from the form action", async () => {
     const values = {
       name: "",
       description: "",
@@ -310,23 +308,24 @@ describe("characters external dialog actions", () => {
       appService: {
         showAlert: vi.fn(),
       },
-      refs: {
-        characterForm: {
-          getValues: vi.fn(() => values),
-        },
-      },
     };
 
-    await handleAddCharacterSubmitClick(deps);
+    await handleDialogFormActionClick(deps, {
+      _event: {
+        detail: {
+          actionId: "submit",
+          values,
+        },
+      },
+    });
 
-    expect(deps.refs.characterForm.getValues).toHaveBeenCalledTimes(1);
     expect(deps.appService.showAlert).toHaveBeenCalledWith({
       message: "Character name is required.",
       title: "Warning",
     });
   });
 
-  it("submits edit-form values from the fixed action row", async () => {
+  it("submits edit-form values from the form action", async () => {
     const values = {
       name: "Hero",
       description: "",
@@ -347,16 +346,17 @@ describe("characters external dialog actions", () => {
         })),
         selectValidSpriteGroupTagIds: vi.fn(() => []),
       },
-      refs: {
-        editForm: {
-          getValues: vi.fn(() => values),
-        },
-      },
     };
 
-    await handleEditCharacterSubmitClick(deps);
+    await handleEditFormAction(deps, {
+      _event: {
+        detail: {
+          actionId: "submit",
+          values,
+        },
+      },
+    });
 
-    expect(deps.refs.editForm.getValues).toHaveBeenCalledTimes(1);
     expect(deps.appService.showAlert).toHaveBeenCalledWith({
       message: "Sprite group 1 must have at least one tag.",
       title: "Warning",

@@ -118,12 +118,8 @@ refs:
     eventListeners:
       add-option-click:
         handler: handleEditFormAddOptionClick
-      keydown:
-        handler: handleEditFormSubmitKeyDown
-  editSubmitButton:
-    eventListeners:
-      click:
-        handler: handleEditSubmitClick
+      form-action:
+        handler: handleEditFormAction
   editDialogImage:
     eventListeners:
       click:
@@ -324,19 +320,15 @@ template:
                   - rvn-detail-view#mobileDetailView key=${selectedItemId} w=f :fields=${mobileDetailFields} :fillHeight=${mobileDetailFillHeight}:
                       - rtgl-tag-select#detailTagSelect key=${selectedItemId} slot="sprite-tags" w=f :options=${tagFilterOptions} :selectedValues=${selectedItemTagIds} :draftSelectedValues=${detailTagDraftValues} :open=${isDetailTagSelectOpen} :addOption=${detailTagAddOption} :placeholder=${addTagPlaceholder}: null
   - rtgl-dialog#editDialog ?open=${isEditDialogOpen} s=md md-layout=fixed-top p=none:
-      - 'rtgl-view slot=content w=f h=f pv=md pos=rel style="min-width: 0; min-height: 0; overflow: hidden;"':
-          - 'rtgl-view h=1fg sv w=f style="min-height: 0;"':
-              - rtgl-form#editForm key=${isEditDialogOpen} :defaultValues=${editDefaultValues} :form=${editForm} w=f ph=md:
-                  - $if editPreviewFileId:
-                      - rtgl-view slot=image-slot av=c ah=c:
-                          - rvn-file-image#editDialogImage fileId=${editPreviewFileId} h=120 bw=xs bc=bo br=md cur=pointer key=${editPreviewFileId}: null
-                    $else:
-                      - rtgl-view slot=image-slot av=c ah=c:
-                          - rtgl-view#editDialogImagePlaceholder w=120 h=120 av=c ah=c bgc=bg bc=bo bw=xs br=md cur=pointer:
-                              - rtgl-text c=mu-fg s=sm: ${clickToUploadLabel}
-              - 'rtgl-view h=80 aria-hidden=true style="flex: 0 0 80px;"': null
-          - 'rtgl-view d=h av=c ah=e w=f g=lg ph=md pt=md style="flex: 0 0 auto;"':
-              - rtgl-button#editSubmitButton v=pr: ${editSubmitButtonLabel}
+      - rtgl-view slot=content d=v w=f h=f overflow=hidden:
+          - rtgl-form#editForm key=${isEditDialogOpen} :defaultValues=${editDefaultValues} :form=${editForm} w=f h=f:
+              - $if editPreviewFileId:
+                  - rtgl-view slot=image-slot av=c ah=c:
+                      - rvn-file-image#editDialogImage fileId=${editPreviewFileId} h=120 bw=xs bc=bo br=md cur=pointer key=${editPreviewFileId}: null
+                $else:
+                  - rtgl-view slot=image-slot av=c ah=c:
+                      - rtgl-view#editDialogImagePlaceholder w=120 h=120 av=c ah=c bgc=bg bc=bo bw=xs br=md cur=pointer:
+                          - rtgl-text c=mu-fg s=sm: ${clickToUploadLabel}
   - rtgl-dialog#folderNameDialog ?open=${isFolderNameDialogOpen} s=sm:
       - rtgl-form#folderNameForm key=${folderNameDialogItemId} slot=content :defaultValues=${folderNameDialogDefaultValues} :form=${folderNameForm} w=f: null
   - rtgl-dialog#spritesheetDialog ?open=${isSpritesheetDialogOpen} s=lg md-layout=fixed-top p=none:

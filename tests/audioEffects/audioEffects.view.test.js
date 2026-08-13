@@ -17,7 +17,7 @@ describe("audio effects views", () => {
       "handleAudioEffectItemDoubleClick",
       "handleItemDuplicate",
       "handleItemDelete",
-      "handleEditSubmitClick",
+      "handleEditFormAction",
       "handleDetailTagValueChange",
       "handleFileExplorerTargetChanged",
     ]) {
@@ -28,7 +28,10 @@ describe("audio effects views", () => {
     expect(view).toContain("rtgl-dialog#editDialog");
     expect(view).toContain("rtgl-form#editForm");
     expect(view).toContain("md-layout=fixed-top p=none");
-    expect(view).toContain("rtgl-button#editSubmitButton");
+    expect(view).toContain("slot=content d=v w=f h=f overflow=hidden");
+    expect(view).toContain("rtgl-form#editForm");
+    expect(view).toContain("w=f h=f");
+    expect(view).not.toContain("rtgl-button#editSubmitButton");
 
     const catalogView = readFileSync(
       new URL(

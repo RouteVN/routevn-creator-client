@@ -36,6 +36,17 @@ const getAnimationTypeLabel = (animationType, copy = {}) => {
 
 const createEditForm = (copy = {}) => ({
   title: copy.editTitle ?? "Edit Animation",
+  actions: {
+    sticky: true,
+    buttons: [
+      {
+        id: "submit",
+        variant: "pr",
+        validate: true,
+        label: copy.updateButton ?? "Update",
+      },
+    ],
+  },
   fields: [
     {
       name: "name",
@@ -59,6 +70,17 @@ const createEditForm = (copy = {}) => ({
 
 const createAddForm = (copy = {}) => ({
   title: copy.addTitle ?? "Add Animation",
+  actions: {
+    sticky: true,
+    buttons: [
+      {
+        id: "submit",
+        variant: "pr",
+        validate: true,
+        label: copy.continueButton ?? "Continue",
+      },
+    ],
+  },
   fields: [
     {
       name: "name",
@@ -234,7 +256,6 @@ const {
         createAnimationCenterItemContextMenuItems(copy),
       isAddDialogOpen: state.isAddDialogOpen,
       addForm: createAddForm(copy),
-      addSubmitButtonLabel: copy.continueButton ?? "Continue",
       addFormDefaults: {
         name: "",
         description: "",
@@ -243,7 +264,6 @@ const {
       },
       isEditDialogOpen: state.isEditDialogOpen,
       editForm: createEditForm(copy),
-      editSubmitButtonLabel: copy.updateButton ?? "Update",
       editDefaultValues: state.editDefaultValues,
       selectedAnimationTypeLabel: selectedAnimationItem?.animationType
         ? getAnimationTypeLabel(selectedAnimationItem.animationType, copy)

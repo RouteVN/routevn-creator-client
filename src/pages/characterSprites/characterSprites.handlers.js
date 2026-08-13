@@ -1742,21 +1742,6 @@ export const handleEditFormAction = async (deps, payload) => {
   await refreshCharacterSpritesData(deps);
 };
 
-export const handleEditSubmitClick = async (deps) => {
-  const { editForm } = deps.refs;
-  await handleEditFormAction(deps, {
-    _event: {
-      detail: {
-        actionId: "submit",
-        values: editForm.getValues(),
-      },
-    },
-  });
-};
-
-export const handleEditFormSubmitKeyDown = (deps, payload) =>
-  forwardFormSubmitOnEnter({ deps, payload, submit: handleEditSubmitClick });
-
 export const handleSpritesheetDialogClose = (deps) => {
   const { render, store } = deps;
   revokeSpritesheetDialogPreviewUrl(store);

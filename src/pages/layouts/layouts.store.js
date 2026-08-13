@@ -46,6 +46,17 @@ const createLayoutTypeOptions = (copy = {}) => [
 
 const createLayoutForm = (copy = {}) => ({
   title: copy.addTitle ?? "Add Layout",
+  actions: {
+    sticky: true,
+    buttons: [
+      {
+        id: "submit",
+        variant: "pr",
+        validate: true,
+        label: copy.addButton ?? "Add Layout",
+      },
+    ],
+  },
   fields: [
     {
       name: "name",
@@ -77,6 +88,17 @@ const createLayoutForm = (copy = {}) => ({
 
 const createEditLayoutForm = (copy = {}) => ({
   title: copy.editTitle ?? "Edit Layout",
+  actions: {
+    sticky: true,
+    buttons: [
+      {
+        id: "submit",
+        variant: "pr",
+        validate: true,
+        label: copy.saveButton ?? "Save",
+      },
+    ],
+  },
   fields: [
     {
       name: "name",
@@ -244,7 +266,6 @@ const {
     openLayoutEditorButton: copy.openLayoutEditorButton ?? "Layout Editor",
     isAddDialogOpen: state.isAddDialogOpen,
     layoutForm: createLayoutForm(copy),
-    addSubmitButtonLabel: copy.addButton ?? "Add Layout",
     layoutFormDefaults: {
       name: "",
       layoutType: "general",
@@ -348,7 +369,6 @@ export const selectViewData = (context) => {
     isEditDialogOpen: context.state.isEditDialogOpen,
     editDefaultValues: context.state.editDefaultValues,
     editForm: createEditLayoutForm(copy),
-    editSubmitButtonLabel: copy.saveButton ?? "Save",
     flatItems,
   };
 };

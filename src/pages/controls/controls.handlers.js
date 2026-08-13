@@ -1,7 +1,6 @@
 import { generateId } from "../../internal/id.js";
 import { createLayoutEditorPayload } from "../../internal/layoutEditorRoute.js";
 import { createCatalogPageHandlers } from "../../internal/ui/resourcePages/catalog/createCatalogPageHandlers.js";
-import { forwardFormSubmitOnEnter } from "../../internal/ui/resourcePages/formSubmitKeyDown.js";
 import { createControlsFileExplorerHandlers } from "../../internal/ui/fileExplorer.js";
 import { appendTagIdToForm } from "../../internal/ui/resourcePages/tags.js";
 import { runResourcePageMutation } from "../../internal/ui/resourcePages/resourcePageErrors.js";
@@ -457,25 +456,6 @@ export const handleControlFormActionClick = async (deps, payload) => {
   store.closeAddDialog();
   await handleDataChanged(deps);
 };
-
-export const handleControlSubmitClick = async (deps) => {
-  const { controlForm } = deps.refs;
-  await handleControlFormActionClick(deps, {
-    _event: {
-      detail: {
-        actionId: "submit",
-        values: controlForm.getValues(),
-      },
-    },
-  });
-};
-
-export const handleControlFormSubmitKeyDown = (deps, payload) =>
-  forwardFormSubmitOnEnter({
-    deps,
-    payload,
-    submit: handleControlSubmitClick,
-  });
 
 export const handleItemDelete = async (deps, payload) => {
   const { projectService, appService, render } = deps;
