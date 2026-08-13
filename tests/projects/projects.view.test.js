@@ -106,7 +106,7 @@ describe("projects view", () => {
       "rtgl-dialog#createProjectDialog ?open=${createDialog.isOpen} s=md md-layout=fixed-top p=none",
     );
     expect(projectsView).toContain(
-      'rtgl-view slot=content w=f h=f pv=md pos=rel style="min-width: 0; min-height: 0; overflow: hidden;"',
+      'rtgl-view slot=content w=f h=f pos=rel style="min-width: 0; min-height: 0; overflow: hidden;"',
     );
     expect(projectsView).toContain(
       'rtgl-view h=80 aria-hidden=true style="flex: 0 0 80px;"',
@@ -115,6 +115,10 @@ describe("projects view", () => {
       'rtgl-view d=h av=c ah=e w=f g=lg ph=md pt=md style="flex: 0 0 auto;"',
     );
     expect(projectCreateDialogView).toContain(
+      "rtgl-form#createProjectForm key=${formKey} :defaultValues=${defaultValues} :form=${form} :context=${context} w=f",
+    );
+    expect(projectsView).not.toContain("rtgl-view slot=content w=f h=f pv=md");
+    expect(projectCreateDialogView).not.toContain(
       "rtgl-form#createProjectForm key=${formKey} :defaultValues=${defaultValues} :form=${form} :context=${context} w=f ph=md",
     );
   });
