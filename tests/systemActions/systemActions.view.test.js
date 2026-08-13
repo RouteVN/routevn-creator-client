@@ -149,10 +149,10 @@ describe("systemActions view", () => {
     expect(systemActionsView).toContain("overflow-y: auto");
     expect(systemActionsView).toContain("overscroll-behavior: contain");
     expect(systemActionsView).toContain(
-      "top: calc(var(--spacing-md) - 2px)",
+      "top: calc(var(--spacing-lg) - 2px)",
     );
-    expect(systemActionsView).toContain("top: var(--spacing-md)");
-    expect(systemActionsView).toContain("right: var(--spacing-md);");
+    expect(systemActionsView).toContain("top: var(--spacing-lg)");
+    expect(systemActionsView).toContain("right: var(--spacing-lg);");
     expect(systemActionsView).toContain(
       "w=28 h=28 sm-w=24 sm-h=24",
     );

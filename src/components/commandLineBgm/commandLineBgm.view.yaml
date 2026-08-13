@@ -199,11 +199,11 @@ styles:
     text-align: left
     width: 100%
 template:
-  - rtgl-view w=f h=f pv=md:
-      - rtgl-view w=f h=24 av=c ph=md mb=md:
+  - rtgl-view w=f h=f pv=lg:
+      - rtgl-view w=f h=24 av=c ph=lg mb=md:
           - rtgl-breadcrumb#breadcumb :items=${breadcrumb}: null
       - 'rtgl-view h=1fg sv w=f g=lg style="min-height: 0;"':
-          - rtgl-view w=f g=md ph=md:
+          - rtgl-view w=f g=md ph=lg:
               - 'rtgl-view#bgmChannel.bgmChannel.bgmChannelPreview w=f d=v pos=rel bgc=bg bw=xs bc=${channelBorderColor} h-bc=${channelHoverBorderColor} br=sm cur=pointer tabindex=0 role=button aria-label="${editChannelLabel}" style="height: ${channelHeightPx}px;"':
                   - div.bgmChannelHeader:
                       - span: ${channelLabel}
@@ -226,17 +226,17 @@ template:
                                           - 'rtgl-text s=xs c=mu-fg style="flex: 0 0 auto;"': ${sound.durationLabel}
           - $if showChannelControls:
               - rtgl-view w=f:
-                  - rtgl-form#channelForm key=${channelFormKey} :form=${channelForm} :defaultValues=${channelDefaultValues} ph=md pv=none: null
+                  - rtgl-form#channelForm key=${channelFormKey} :form=${channelForm} :defaultValues=${channelDefaultValues} ph=lg pv=none: null
               - 'rtgl-view h=240 aria-hidden=true style="flex: 0 0 240px;"': null
-      - 'rtgl-view d=h av=c ah=e w=f g=lg ph=md style="flex: 0 0 auto;"':
+      - 'rtgl-view d=h av=c ah=e w=f g=lg ph=lg style="flex: 0 0 auto;"':
           - rtgl-button#submitButton: Submit
   - rtgl-dialog#channelEditorDialog ?open=${isChannelEditorOpen} s=lg close-button:
       - 'rtgl-view slot=content d=v w=f h=80vh g=lg style="min-width: 0; min-height: 0; overflow: hidden;"':
-          - rtgl-view w=f ph=md:
+          - rtgl-view w=f ph=lg:
               - rtgl-text#channelEditorTitle s=lg: ${channelEditorTitle}
           - $if mode == 'current':
               - 'rtgl-view h=1fg sv w=f g=lg style="min-height: 0;"':
-                  - rtgl-view w=f ph=md:
+                  - rtgl-view w=f ph=lg:
                       - 'rtgl-view#editorChannel.bgmChannel w=f d=v pos=rel bgc=bg bw=xs bc=bo br=sm style="height: ${channelHeightPx}px;"':
                           - div.bgmChannelHeader:
                               - span: ${channelLabel}
@@ -262,13 +262,13 @@ template:
                                                   - 'rtgl-text s=xs c=mu-fg style="flex: 0 0 auto;"': ${sound.durationLabel}
                   - $if hasSoundSelection:
                       - rtgl-view w=f g=md:
-                          - rtgl-form#soundForm key=${selectionKey} :form=${form} :defaultValues=${defaultValues} ph=md pv=none: null
+                          - rtgl-form#soundForm key=${selectionKey} :form=${form} :defaultValues=${defaultValues} ph=lg pv=none: null
                           - 'rtgl-view h=240 aria-hidden=true style="flex: 0 0 240px;"': null
             $elif mode == 'gallery':
-              - rtgl-view d=h w=f av=c g=md ph=md:
+              - rtgl-view d=h w=f av=c g=md ph=lg:
                   - rtgl-view w=1fg: null
                   - rtgl-input#searchInput s=sm placeholder=${searchPlaceholder} value=${searchQuery} h=1fg: null
-              - 'rtgl-view d=h w=f g=lg h=1fg ph=md style="min-height: 0;"':
+              - 'rtgl-view d=h w=f g=lg h=1fg ph=lg style="min-height: 0;"':
                   - $if showResourceSelectorFileExplorer:
                       - rtgl-view h=f w=1fg sv:
                           - rvn-base-file-explorer#baseFileExplorer :items=${items}: null
@@ -288,11 +288,11 @@ template:
                                                   - 'rtgl-view w=200 h=120 av=c ah=c bgc=mu-fg style="${resourceSelectorPreviewStyle}"':
                                                       - rtgl-text s=sm c=mu-fg: No waveform
                                               - rtgl-text s=xs c=mu-fg ellipsis w=f: ${item.name}
-              - 'rtgl-view d=h av=c ah=e w=f g=lg ph=md style="flex: 0 0 auto;"':
+              - 'rtgl-view d=h av=c ah=e w=f g=lg ph=lg style="flex: 0 0 auto;"':
                   - rtgl-button#buttonSelect: Select
           - $if showAudioPlayer:
               - 'rtgl-view h=72 pos=fix edge=b z=1001 style="left: 0px; right: 0px;"':
                   - rvn-audio-player#rvnAudioPlayer fileId=${playingSound.fileId} autoPlay=true :title=${playingSound.title}: null
           - $if mode == 'current':
-              - 'rtgl-view d=h av=c ah=e w=f ph=md style="flex: 0 0 auto;"':
+              - 'rtgl-view d=h av=c ah=e w=f ph=lg style="flex: 0 0 auto;"':
                   - rtgl-button#channelEditorConfirmButton v=pr: ${confirmButtonLabel}

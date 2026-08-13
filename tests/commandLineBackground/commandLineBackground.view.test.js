@@ -41,9 +41,9 @@ describe("commandLineBackground view", () => {
       "rtgl-popover#searchPopover ?open=${searchPopover.isOpen}",
     );
     expect(view).toContain(
-      'rtgl-view d=h av=c ah=e w=f g=lg ph=md pt=sm style="flex: 0 0 auto;"',
+      'rtgl-view d=h av=c ah=e w=f g=lg ph=lg pt=sm style="flex: 0 0 auto;"',
     );
-    expect(view).toContain("w=f h=f pv=md");
-    expect(view).toContain("rtgl-view w=f h=24 av=c ph=md mb=md:");
+    expect(view).toContain("w=f h=f pv=lg");
+    expect(view).toContain("rtgl-view w=f h=24 av=c ph=lg mb=md:");
   });
 });
