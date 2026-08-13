@@ -10,8 +10,9 @@ const ICON_VALIDATIONS = [
 ];
 
 export const handleBeforeMount = (deps) => {
-  const { store, uiConfig } = deps;
+  const { appService, store, uiConfig } = deps;
   store.setUiConfig({ uiConfig });
+  store.setPlatform({ platform: appService.getPlatform() });
 };
 
 export const handleAfterMount = async (deps) => {

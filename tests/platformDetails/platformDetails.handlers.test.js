@@ -11,6 +11,7 @@ import { EN_I18N } from "../support/i18n.js";
 
 const createDeps = () => ({
   appService: {
+    getPlatform: vi.fn(() => "android"),
     showAlert: vi.fn(),
     showDialog: vi.fn(async () => true),
     showToast: vi.fn(),
@@ -49,6 +50,7 @@ const createDeps = () => ({
     selectPlatformEditIconFileId: vi.fn(() => "windows-icon-1"),
     selectSelectedPlatform: vi.fn(() => "windows"),
     setPlatformApplicationInfo: vi.fn(),
+    setPlatform: vi.fn(),
     setPlatformEditIconFileId: vi.fn(),
     setSelectedPlatform: vi.fn(),
     setUiConfig: vi.fn(),
@@ -82,6 +84,9 @@ describe("platformDetails handlers", () => {
 
     expect(deps.store.setUiConfig).toHaveBeenCalledWith({
       uiConfig: { id: "touch" },
+    });
+    expect(deps.store.setPlatform).toHaveBeenCalledWith({
+      platform: "android",
     });
   });
 

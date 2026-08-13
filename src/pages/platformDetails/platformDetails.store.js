@@ -4,6 +4,9 @@ const PLATFORM_APPLICATION_ICON_OUTPUT_SIZE = 256;
 
 const PLATFORM_IDS = ["web", "windows", "macos"];
 
+const getAvailablePlatformIds = (state) =>
+  state.platform === "android" ? ["web"] : PLATFORM_IDS;
+
 const createPlatformApplicationInfo = (platform) => {
   const applicationInfo = {
     applicationName: "",
@@ -208,6 +211,7 @@ const createPlatformEditForm = (platform, mode, copy) => {
 };
 
 export const createInitialState = () => ({
+  platform: "web",
   platformApplicationInfo: {},
   selectedPlatform: undefined,
   isTouchMode: false,
@@ -251,6 +255,7 @@ export const selectIsPlatformEditIconCropDialogOpen = ({ state }) => {
 
 export const selectViewData = ({ state, i18n }) => {
   const copy = selectPlatformDetailsPageCopy(i18n);
+  const availablePlatformIds = getAvailablePlatformIds(state);
   const createdPlatforms = PLATFORM_IDS.filter(
     (platform) => state.platformApplicationInfo[platform],
   );
@@ -263,7 +268,9 @@ export const selectViewData = ({ state, i18n }) => {
   return {
     addPlatformButtonLabel: copy.addPlatformButtonLabel,
     addPlatformMenu: state.addPlatformMenu,
-    canAddPlatform: createdPlatforms.length < PLATFORM_IDS.length,
+    canAddPlatform: availablePlatformIds.some(
+      (platform) => !state.platformApplicationInfo[platform],
+    ),
     clickToUploadLabel: copy.clickToUpload,
     contentLeftPadding: state.isTouchMode ? "0" : "sm",
     detailFillHeight: false,
@@ -345,6 +352,10 @@ export const setUiConfig = ({ state }, { uiConfig } = {}) => {
     uiConfig?.id === "touch" || uiConfig?.inputMode === "touch";
 };
 
+export const setPlatform = ({ state }, { platform } = {}) => {
+  state.platform = platform;
+};
+
 export const setSelectedPlatform = ({ state }, { platform } = {}) => {
   if (
     PLATFORM_IDS.includes(platform) &&
@@ -359,13 +370,13 @@ export const openAddPlatformMenu = ({ state, i18n }, { x, y } = {}) => {
   state.addPlatformMenu.isOpen = true;
   state.addPlatformMenu.x = x ?? 0;
   state.addPlatformMenu.y = y ?? 0;
-  state.addPlatformMenu.items = PLATFORM_IDS.filter(
-    (platform) => !state.platformApplicationInfo[platform],
-  ).map((platform) => ({
-    label: getPlatformTabLabel(platform, copy),
-    type: "item",
-    value: platform,
-  }));
+  state.addPlatformMenu.items = getAvailablePlatformIds(state)
+    .filter((platform) => !state.platformApplicationInfo[platform])
+    .map((platform) => ({
+      label: getPlatformTabLabel(platform, copy),
+      type: "item",
+      value: platform,
+    }));
 };
 
 export const closeAddPlatformMenu = ({ state }, _payload = {}) => {
