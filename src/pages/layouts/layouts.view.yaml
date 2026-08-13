@@ -179,11 +179,11 @@ template:
                       - rtgl-tag-select#detailTagSelect slot="layout-tags" w=f :options=${tagFilterOptions} :selectedValues=${selectedItemTagIds} :draftSelectedValues=${detailTagDraftValues} :open=${isDetailTagSelectOpen} :addOption=${detailTagAddOption} placeholder="${addTagPlaceholder}": null
   - rtgl-dialog#folderNameDialog ?open=${isFolderNameDialogOpen} s=sm:
       - rtgl-form#folderNameForm key=${folderNameDialogItemId} slot=content :defaultValues=${folderNameDialogDefaultValues} :form=${folderNameForm} w=f: null
-  - rtgl-dialog#addLayoutDialog ?open=${isAddDialogOpen} s=md md-layout=fixed-top p=none:
+  - rtgl-dialog#addLayoutDialog ?open=${isAddDialogOpen} s=md md-layout=fixed-top:
       - rtgl-view slot=content d=v w=f h=f overflow=hidden:
-          - rtgl-form#layoutForm :defaultValues=${layoutFormDefaults} :form=${layoutForm} sticky w=f h=f: null
-  - rtgl-dialog#editDialog ?open=${isEditDialogOpen} s=md md-layout=fixed-top p=none:
+          - rtgl-form#layoutForm :defaultValues=${layoutFormDefaults} :form=${layoutForm} sticky bottom-spacer=96 w=f h=f: null
+  - rtgl-dialog#editDialog ?open=${isEditDialogOpen} s=md md-layout=fixed-top:
       - rtgl-view slot=content d=v w=f h=f overflow=hidden:
-          - rtgl-form#editForm key=${isEditDialogOpen} :defaultValues=${editDefaultValues} :form=${editForm} sticky w=f h=f: null
+          - rtgl-form#editForm key=${isEditDialogOpen} :defaultValues=${editDefaultValues} :form=${editForm} sticky bottom-spacer=96 w=f h=f: null
   - rtgl-dialog#createTagDialog ?open=${isCreateTagDialogOpen} s=sm:
       - rtgl-form#createTagForm key=${isCreateTagDialogOpen} slot=content :defaultValues=${createTagDefaultValues} :form=${createTagForm} w=f: null

@@ -274,9 +274,9 @@ template:
               - rtgl-view d=h g=sm w=f ah=e:
                   - rtgl-button#deleteConfirmButton v=de: ${deleteDialogConfirmLabel}
   - $if isEditDialogOpen:
-      - rtgl-dialog#editDialog ?open=${isEditDialogOpen} s=md md-layout=fixed-top p=none:
+      - rtgl-dialog#editDialog ?open=${isEditDialogOpen} s=md md-layout=fixed-top:
           - rtgl-view slot=content d=v w=f h=f overflow=hidden:
-              - rtgl-form#editForm key=${isEditDialogOpen} :defaultValues=${editDefaultValues} :form=${editForm} sticky w=f h=f:
+              - rtgl-form#editForm key=${isEditDialogOpen} :defaultValues=${editDefaultValues} :form=${editForm} sticky bottom-spacer=96 w=f h=f:
                   - $if editPreviewFileId:
                       - 'rtgl-view slot=image-slot w=120 h=120 av=c ah=c style="overflow: hidden;"':
                           - rvn-file-image#editDialogImage fileId=${editPreviewFileId} w=f h=f bw=xs bc=bo br=md cur=pointer key=${editPreviewFileId}: null

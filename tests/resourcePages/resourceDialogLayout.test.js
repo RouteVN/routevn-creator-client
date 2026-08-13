@@ -143,7 +143,7 @@ describe("resource add/edit dialog layout", () => {
           .split("\n")
           .find((line) => line.includes(`rtgl-dialog#${dialogId} `));
         expect(dialogLine).toContain("md-layout=fixed-top");
-        expect(dialogLine).toContain("p=none");
+        expect(dialogLine).not.toContain(" p=");
       }
 
       for (const [formRef, handler] of forms) {
@@ -151,6 +151,7 @@ describe("resource add/edit dialog layout", () => {
           .split("\n")
           .find((line) => line.includes(`rtgl-form#${formRef} `));
         expect(formLine).toContain(" sticky ");
+        expect(formLine).toContain("bottom-spacer=96");
         expect(formLine).toContain("w=f h=f");
         expect(selectRefBlock(view, formRef)).toContain(
           `form-action:\n        handler: ${handler}`,

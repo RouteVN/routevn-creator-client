@@ -12,19 +12,19 @@ describe("characters view", () => {
     );
 
     expect(charactersView).toContain(
-      "rtgl-dialog#addCharacterDialog ?open=${isDialogOpen} s=md md-layout=fixed-top p=none:",
+      "rtgl-dialog#addCharacterDialog ?open=${isDialogOpen} s=md md-layout=fixed-top:",
     );
     expect(charactersView).toContain(
-      "rtgl-dialog#editDialog ?open=${isEditDialogOpen} s=md md-layout=fixed-top p=none:",
+      "rtgl-dialog#editDialog ?open=${isEditDialogOpen} s=md md-layout=fixed-top:",
     );
     expect(
       charactersView.match(/slot=content d=v w=f h=f overflow=hidden:/g),
     ).toHaveLength(2);
     expect(charactersView).toContain(
-      "rtgl-form#characterForm key=${isDialogOpen} :defaultValues=${dialogDefaultValues} :form=${dialogForm} sticky w=f h=f:",
+      "rtgl-form#characterForm key=${isDialogOpen} :defaultValues=${dialogDefaultValues} :form=${dialogForm} sticky bottom-spacer=96 w=f h=f:",
     );
     expect(charactersView).toContain(
-      "rtgl-form#editForm key=${isEditDialogOpen} :defaultValues=${editDefaultValues} :form=${editForm} sticky w=f h=f:",
+      "rtgl-form#editForm key=${isEditDialogOpen} :defaultValues=${editDefaultValues} :form=${editForm} sticky bottom-spacer=96 w=f h=f:",
     );
     expect(charactersView).toContain(
       "form-action:\n        handler: handleDialogFormActionClick",

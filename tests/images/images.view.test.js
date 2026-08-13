@@ -9,13 +9,13 @@ describe("images view", () => {
     );
 
     expect(imagesView).toContain(
-      "rtgl-dialog#editDialog ?open=${isEditDialogOpen} s=md md-layout=fixed-top p=none:",
+      "rtgl-dialog#editDialog ?open=${isEditDialogOpen} s=md md-layout=fixed-top:",
     );
     expect(imagesView).toContain(
       "rtgl-view slot=content d=v w=f h=f overflow=hidden:",
     );
     expect(imagesView).toContain(
-      "rtgl-form#editForm key=${isEditDialogOpen} :defaultValues=${editDefaultValues} :form=${editForm} sticky w=f h=f:",
+      "rtgl-form#editForm key=${isEditDialogOpen} :defaultValues=${editDefaultValues} :form=${editForm} sticky bottom-spacer=96 w=f h=f:",
     );
     expect(imagesView).toContain(
       "form-action:\n        handler: handleEditFormAction",
