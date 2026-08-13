@@ -7,30 +7,11 @@ set -e
 
 BUILD_TYPE=${1:-web}
 SETUP_FILE="src/setup.${BUILD_TYPE}.js"
-RETTANGOLI_SPEC=$(node -e '
-const spec = require("./package.json").dependencies?.["@rettangoli/ui"];
-if (!spec) {
-  console.error("Error: @rettangoli/ui is missing from package.json dependencies.");
-  process.exit(1);
-}
-process.stdout.write(spec);
-')
-
-if [[ "${RETTANGOLI_SPEC}" == file:* ]]; then
-  RETTANGOLI_PACKAGE_DIR="${RETTANGOLI_SPEC#file:}"
-  RETTANGOLI_IS_LOCAL=true
-else
-  RETTANGOLI_PACKAGE_DIR="node_modules/@rettangoli/ui"
-  RETTANGOLI_IS_LOCAL=false
-fi
+RETTANGOLI_PACKAGE_INFO=$(node scripts/resolve-rettangoli-ui-package.js)
+IFS=$'\t' read -r RETTANGOLI_PACKAGE_DIR RETTANGOLI_VERSION RETTANGOLI_IS_LOCAL <<< "${RETTANGOLI_PACKAGE_INFO}"
 
 LOCAL_RETTANGOLI_PACKAGE="${RETTANGOLI_PACKAGE_DIR}/package.json"
 LOCAL_RETTANGOLI_FILE="${RETTANGOLI_PACKAGE_DIR}/dist/rettangoli-iife-ui.min.js"
-RETTANGOLI_VERSION=$(node -e '
-const packagePath = process.argv[1];
-const packageJson = require(require("node:path").resolve(packagePath));
-process.stdout.write(packageJson.version);
-' "${LOCAL_RETTANGOLI_PACKAGE}")
 
 RETTANGOLI_URL="https://cdn.jsdelivr.net/npm/@rettangoli/ui@${RETTANGOLI_VERSION}/dist/rettangoli-iife-ui.min.js"
 RETTANGOLI_DIR="static/public/@rettangoli/ui@${RETTANGOLI_VERSION}/dist"
