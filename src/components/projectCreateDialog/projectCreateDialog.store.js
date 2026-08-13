@@ -128,6 +128,17 @@ const selectCopy = (i18n = {}) => {
 const createLocalizedForm = (copy = {}, projectLanguageCopy, i18n) => ({
   ...form,
   title: copy.createProjectTitle,
+  actions: {
+    sticky: true,
+    buttons: [
+      {
+        id: "submit",
+        variant: "pr",
+        validate: true,
+        label: copy.submitButton,
+      },
+    ],
+  },
   fields: form.fields.map((field) => {
     if (field.name === "name") {
       return {

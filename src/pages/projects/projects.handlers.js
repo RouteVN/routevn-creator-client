@@ -320,26 +320,8 @@ export const handleCreateDialogClose = (deps) => {
   render();
 };
 
-export const handleCreateDialogSubmit = async (deps) => {
-  const { appService, refs, i18n } = deps;
-  const copy = selectProjectsPageCopy(i18n);
-  const dialogBody = refs.projectCreateDialogBody;
-
-  if (
-    !dialogBody ||
-    typeof dialogBody.validate !== "function" ||
-    typeof dialogBody.getValues !== "function"
-  ) {
-    appService.showAlert({ message: copy.createProjectDialogNotReady });
-    return;
-  }
-
-  const validation = await dialogBody.validate();
-  if (validation?.valid === false) {
-    return;
-  }
-
-  const values = await dialogBody.getValues();
+export const handleCreateDialogSubmit = async (deps, payload) => {
+  const { values } = payload._event.detail;
   await createProjectFromValues(deps, values);
 };
 

@@ -117,22 +117,6 @@ const createDeps = ({
       set: vi.fn(async () => {}),
     },
     render: vi.fn(),
-    refs: {
-      projectCreateDialogBody: {
-        validate: vi.fn(async () => ({ valid: true })),
-        getValues: vi.fn(async () => ({
-          name: "New Project",
-          description: "",
-          language: "ja",
-          iconFile: undefined,
-          template: "default",
-          resolution: "1920x1080",
-          resolutionWidth: 1920,
-          resolutionHeight: 1080,
-          projectPath: "/projects/new-project",
-        })),
-      },
-    },
   };
 };
 
@@ -438,13 +422,27 @@ describe("projects create dialog", () => {
     expect(deps.render).toHaveBeenCalled();
   });
 
-  it("creates a project from the page-owned dialog body methods", async () => {
+  it("creates a project from the sticky form submit event", async () => {
     const deps = createDeps();
 
-    await handleCreateDialogSubmit(deps);
+    await handleCreateDialogSubmit(deps, {
+      _event: {
+        detail: {
+          values: {
+            name: "New Project",
+            description: "",
+            language: "ja",
+            iconFile: undefined,
+            template: "default",
+            resolution: "1920x1080",
+            resolutionWidth: 1920,
+            resolutionHeight: 1080,
+            projectPath: "/projects/new-project",
+          },
+        },
+      },
+    });
 
-    expect(deps.refs.projectCreateDialogBody.validate).toHaveBeenCalled();
-    expect(deps.refs.projectCreateDialogBody.getValues).toHaveBeenCalled();
     expect(deps.appService.showProgressDialog).toHaveBeenCalledWith({
       title: "Creating Project…",
       message: "Please wait while your project is being created.",
@@ -487,7 +485,23 @@ describe("projects create dialog", () => {
       new Error("creation failed"),
     );
 
-    await handleCreateDialogSubmit(deps);
+    await handleCreateDialogSubmit(deps, {
+      _event: {
+        detail: {
+          values: {
+            name: "New Project",
+            description: "",
+            language: "ja",
+            iconFile: undefined,
+            template: "default",
+            resolution: "1920x1080",
+            resolutionWidth: 1920,
+            resolutionHeight: 1080,
+            projectPath: "/projects/new-project",
+          },
+        },
+      },
+    });
 
     const progressDialog =
       deps.appService.showProgressDialog.mock.results[0].value;

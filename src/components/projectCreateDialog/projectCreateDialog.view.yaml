@@ -3,8 +3,8 @@ refs:
     eventListeners:
       form-change:
         handler: handleFormChange
-      keydown:
-        handler: handleKeyDown
+      form-action:
+        handler: handleFormAction
   browseButton:
     eventListeners:
       click:
@@ -24,7 +24,7 @@ refs:
       confirm:
         handler: handleIconCropDialogConfirm
 template:
-  - rtgl-form#createProjectForm key=${formKey} :defaultValues=${defaultValues} :form=${form} :context=${context} w=f:
+  - rtgl-form#createProjectForm key=${formKey} :defaultValues=${defaultValues} :form=${form} :context=${context} w=f h=f:
       - rtgl-view slot=project-icon-selector w=f:
           - $if iconPreviewUrl:
               - rtgl-view w=120 h=120 av=c ah=c:

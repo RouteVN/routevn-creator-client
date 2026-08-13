@@ -176,38 +176,6 @@ export const handleIconCropDialogConfirm = async (deps) => {
   }
 };
 
-export const handleKeyDown = (deps, payload) => {
-  const { refs } = deps;
-  const event = payload._event;
-  const targetTagName = event.target?.tagName;
-
-  if (event.key !== "Enter" || event.shiftKey) {
-    return;
-  }
-
-  if (targetTagName === "TEXTAREA" || targetTagName === "RTGL-TEXTAREA") {
-    return;
-  }
-
-  if (targetTagName === "BUTTON" || targetTagName === "RTGL-BUTTON") {
-    event.preventDefault();
-    event.target?.click?.();
-    return;
-  }
-
-  const componentRoot = refs.createProjectForm?.getRootNode?.();
-  const dialogBodyHost = componentRoot?.host;
-  const shellRoot = dialogBodyHost?.getRootNode?.();
-  const submitButton = shellRoot?.querySelector?.("[data-action-id='submit']");
-
-  if (!submitButton) {
-    return;
-  }
-
-  event.preventDefault();
-  submitButton.click();
-};
-
 export const handleValidate = (deps) => {
   const { i18n, refs, render, store } = deps;
   const copy = selectCopy(i18n);
@@ -248,4 +216,25 @@ export const handleGetValues = (deps) => {
   values.projectPath = store.selectProjectPath();
   values.iconFile = store.selectIconFile();
   return values;
+};
+
+export const handleFormAction = (deps, payload) => {
+  const { dispatchEvent } = deps;
+  const { actionId } = payload._event.detail;
+  if (actionId !== "submit") {
+    return;
+  }
+
+  const validation = handleValidate(deps);
+  if (!validation.valid) {
+    return;
+  }
+
+  dispatchEvent(
+    new CustomEvent("submit", {
+      detail: {
+        values: handleGetValues(deps),
+      },
+    }),
+  );
 };
