@@ -5,6 +5,9 @@ refs:
         handler: handleBreadcumbClick
   dialogueForm:
     eventListeners:
+      form-input:
+        handler: handleFormInput
+        debounce: 120
       form-change:
         handler: handleFormChange
       form-section-action:

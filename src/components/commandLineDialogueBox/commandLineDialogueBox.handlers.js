@@ -890,6 +890,22 @@ export const handleFormChange = (deps, payload) => {
   dispatchTemporaryPresentationStateChange(deps);
 };
 
+export const handleFormInput = (deps, payload) => {
+  const { render, store } = deps;
+  const { name, value } = payload._event.detail;
+
+  if (name === "characterName") {
+    store.setCharacterName({ characterName: value });
+  } else if (name === "spriteAnimationPlaybackSpeed") {
+    store.setSpriteAnimationPlaybackSpeed({ speed: value });
+  } else {
+    return;
+  }
+
+  render();
+  dispatchTemporaryPresentationStateChange(deps);
+};
+
 export const handleFormSectionAction = async (deps, payload) => {
   const { appService, i18n, render, store } = deps;
   const { sectionId, actionId, position } = payload._event.detail;

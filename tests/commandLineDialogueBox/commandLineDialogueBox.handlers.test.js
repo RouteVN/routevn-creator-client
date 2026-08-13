@@ -8,6 +8,7 @@ import {
   handleCharacterSpriteBoxContextMenu,
   handleCharacterSpriteMenuButtonClick,
   handleFormChange,
+  handleFormInput,
   handleFormSectionAction,
   handleRemoveCustomTextSpeedClick,
   handleSpriteGroupTabClick,
@@ -208,6 +209,8 @@ describe("commandLineDialogueBox.handlers", () => {
     expect(view).toContain("handler: handleCharacterSpriteBoxClick");
     expect(view).toContain("form-section-action:");
     expect(view).toContain("handler: handleFormSectionAction");
+    expect(view).toContain("form-input:");
+    expect(view).toContain("handler: handleFormInput");
     expect(view).toContain("rtgl-button#removeCustomTextSpeedButton");
     expect(view).toContain("handler: handleRemoveCustomTextSpeedClick");
     expect(view).toContain("rtgl-slider-input#textSpeed");
@@ -1015,6 +1018,64 @@ describe("commandLineDialogueBox.handlers", () => {
         },
       },
     });
+  });
+
+  it("does not replay stale form values from debounced input", () => {
+    const state = createInitialState();
+    const render = vi.fn();
+    const dispatchEvent = vi.fn();
+    const store = createStore(state);
+    setCustomCharacterName({ state }, { customCharacterName: true });
+    setCharacterName({ state }, { characterName: "Old name" });
+
+    handleFormChange(
+      {
+        props: { layouts, characters },
+        refs: createFormRefs(),
+        render,
+        store,
+        dispatchEvent,
+      },
+      {
+        _event: {
+          detail: {
+            values: {
+              resourceId: "layout-adv",
+              characterId: "",
+              customCharacterName: false,
+              characterName: "",
+              persistCharacter: false,
+              clearPage: false,
+            },
+          },
+        },
+      },
+    );
+
+    handleFormInput(
+      {
+        props: { layouts, characters },
+        render,
+        store,
+        dispatchEvent,
+      },
+      {
+        _event: {
+          detail: {
+            name: "characterName",
+            value: "Typed name",
+            values: {
+              customCharacterName: true,
+              characterName: "Typed name",
+            },
+          },
+        },
+      },
+    );
+
+    expect(state.customCharacterName).toBe(false);
+    expect(state.characterName).toBe("Typed name");
+    expect(selectDialogueBuildState({ state }).customCharacterName).toBe(false);
   });
 
   it("emits temporary presentation state changes with customized text speed", () => {
