@@ -18,7 +18,7 @@ jobs:
         uses: actions/checkout@v4
         with:
           repository: RouteVN/route-engine
-          ref: 435d6b78408ab534d4f69f117d613c7b6b65ca86
+          ref: bbd551d2aaa8c5a77a9d7c9619c27ebbf4ae5e54
           path: _deps/route-engine
 
       - name: Build Route Engine
