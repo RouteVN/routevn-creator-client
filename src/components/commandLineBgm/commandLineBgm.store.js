@@ -122,15 +122,26 @@ const normalizeBgm = (bgm = {}) => {
     });
   }
 
+  const audioEffects = normalizeAudioEffectSelection(bgm.audioEffects);
+  if (audioEffects) {
+    normalizedBgm.audioEffects = audioEffects;
+  }
+
   sortAudioSoundsByStartDelay(normalizedBgm.sounds);
   return normalizedBgm;
 };
 
-const createAudioEffectOptions = ({ items, selectedResourceId, copy }) => {
+const createAudioEffectOptions = ({
+  items,
+  selectedResourceId,
+  allowedTypes,
+  copy,
+}) => {
   const options = toFlatItems(items)
     .filter(
       (item) =>
-        item.type === "audioEffect" && item.audioEffect?.type === "update",
+        item.type === "audioEffect" &&
+        allowedTypes.includes(item.audioEffect?.type),
     )
     .map((item) => ({
       value: item.id,
@@ -154,7 +165,7 @@ const createAudioEffectOptions = ({ items, selectedResourceId, copy }) => {
   return options;
 };
 
-const createChannelForm = () => ({
+const createChannelForm = ({ audioEffects, items, copy }) => ({
   fields: [
     {
       type: "row",
@@ -178,6 +189,39 @@ const createChannelForm = () => ({
         },
       ],
     },
+    {
+      type: "row",
+      fields: [
+        {
+          name: "audioEffectId",
+          label: "Audio Effect",
+          type: "select",
+          clearable: true,
+          placeholder: "Select audio effect",
+          options: createAudioEffectOptions({
+            items,
+            selectedResourceId: audioEffects?.resourceId,
+            allowedTypes: ["transition", "update"],
+            copy,
+          }),
+        },
+        {
+          $when: "audioEffectId",
+          name: "audioEffectPlaybackSpeed",
+          label: "Playback Speed",
+          type: "slider-with-input",
+          min: 0.01,
+          max: 4,
+          step: 0.01,
+          required: true,
+        },
+        {
+          $when: "!audioEffectId",
+          type: "slot",
+          slot: "audioEffectPlaybackSpeedSpacer",
+        },
+      ],
+    },
   ],
 });
 
@@ -196,6 +240,7 @@ const createBoundaryEffectFields = ({ boundary, sound, items, copy }) => {
         options: createAudioEffectOptions({
           items,
           selectedResourceId: sound?.[effectField]?.resourceId,
+          allowedTypes: ["update"],
           copy,
         }),
       },
@@ -429,7 +474,11 @@ export const selectViewData = ({ state, i18n }) => {
     selectedSound === undefined;
   const hasSelection = channelSelected || selectedSound !== undefined;
   const channelName = localizeCommandLineText("BGM Channel", copy);
-  const channelForm = createChannelForm();
+  const channelForm = createChannelForm({
+    audioEffects: state.bgm.audioEffects,
+    items: state.audioEffectItems,
+    copy,
+  });
   const soundForm = createSoundForm({
     sound: selectedSound,
     items: state.audioEffectItems,
@@ -439,6 +488,10 @@ export const selectViewData = ({ state, i18n }) => {
   const channelDefaultValues = {
     interruption: state.bgm.interruption,
     volume: state.bgm.volume,
+    audioEffectId: state.bgm.audioEffects?.resourceId,
+    audioEffectPlaybackSpeed: normalizeAudioEffectPlaybackSpeed(
+      state.bgm.audioEffects?.playback?.speed,
+    ),
   };
   const defaultValues = selectedSound
     ? {
@@ -493,7 +546,9 @@ export const selectViewData = ({ state, i18n }) => {
         : "none",
     form: localizeCommandLineForm(form, copy),
     defaultValues,
-    channelFormKey: "channel",
+    channelFormKey: state.bgm.audioEffects?.resourceId
+      ? "channel-with-audio-effect"
+      : "channel-without-audio-effect",
     channelForm: localizeCommandLineForm(channelForm, copy),
     channelDefaultValues,
     tempSelectedResourceId: state.tempSelectedResourceId,
@@ -578,6 +633,34 @@ export const updateChannel = ({ state }, { values = {} } = {}) => {
   if (values.volume !== undefined) {
     state.bgm.volume = normalizeVolume(values.volume, DEFAULT_CHANNEL_VOLUME);
   }
+
+  const resourceChanged = Object.hasOwn(values, "audioEffectId");
+  const speedChanged = Object.hasOwn(values, "audioEffectPlaybackSpeed");
+  if (!resourceChanged && !speedChanged) {
+    return;
+  }
+
+  const resourceId = resourceChanged
+    ? values.audioEffectId
+    : state.bgm.audioEffects?.resourceId;
+  if (!resourceId) {
+    delete state.bgm.audioEffects;
+    return;
+  }
+
+  const isNewSelection =
+    resourceChanged && resourceId !== state.bgm.audioEffects?.resourceId;
+  const speed = isNewSelection
+    ? DEFAULT_AUDIO_EFFECT_PLAYBACK_SPEED
+    : speedChanged
+      ? values.audioEffectPlaybackSpeed
+      : state.bgm.audioEffects?.playback?.speed;
+  state.bgm.audioEffects = {
+    resourceId,
+    playback: {
+      speed: normalizeAudioEffectPlaybackSpeed(speed),
+    },
+  };
 };
 
 const updateSoundBoundaryEffect = (sound, values, boundary) => {

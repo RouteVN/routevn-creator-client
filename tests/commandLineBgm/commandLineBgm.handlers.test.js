@@ -48,6 +48,16 @@ const sounds = {
 
 const audioEffects = {
   items: {
+    "channel-transition": {
+      id: "channel-transition",
+      type: "audioEffect",
+      name: "Channel Transition",
+      audioEffect: {
+        type: "transition",
+        prev: { fade: { keyframes: [{ value: 0, duration: 600 }] } },
+        next: { fade: { keyframes: [{ value: 100, duration: 900 }] } },
+      },
+    },
     crossfade: {
       id: "crossfade",
       type: "audioEffect",
@@ -60,7 +70,7 @@ const audioEffects = {
       },
     },
   },
-  tree: [{ id: "crossfade" }],
+  tree: [{ id: "channel-transition" }, { id: "crossfade" }],
 };
 
 const i18n = {
@@ -136,7 +146,7 @@ describe("commandLineBgm.handlers", () => {
     expect(render).toHaveBeenCalledOnce();
   });
 
-  it("removes an update effect when the edited line starts BGM", async () => {
+  it("preserves a loaded channel update effect", async () => {
     const state = bgmStore.createInitialState();
     const updateAudioEffects = structuredClone(audioEffects);
     updateAudioEffects.items["smooth-volume"] = {
@@ -166,13 +176,13 @@ describe("commandLineBgm.handlers", () => {
           sounds: [{ id: "main", resourceId: "intro" }],
           audioEffects: { resourceId: "smooth-volume" },
         },
-        previousBgm: undefined,
-        hasPreviousBgmContext: true,
       },
       render: vi.fn(),
     });
 
-    expect(state.bgm.audioEffects).toBeUndefined();
+    expect(state.bgm.audioEffects).toEqual({
+      resourceId: "smooth-volume",
+    });
   });
 
   it("updates channel controls while the channel is selected", () => {
@@ -200,6 +210,47 @@ describe("commandLineBgm.handlers", () => {
       sounds: [],
     });
     expect(render).toHaveBeenCalledOnce();
+  });
+
+  it("updates and clears a channel Audio Effect", () => {
+    const state = createState();
+    const render = vi.fn();
+    const store = createStore(state);
+
+    handleFormChange(
+      { store, render },
+      {
+        _event: {
+          detail: {
+            values: {
+              audioEffectId: "channel-transition",
+              audioEffectPlaybackSpeed: 0.01,
+            },
+          },
+        },
+      },
+    );
+
+    expect(state.bgm.audioEffects).toEqual({
+      resourceId: "channel-transition",
+      playback: { speed: 1 },
+    });
+
+    handleFormChange(
+      { store, render },
+      {
+        _event: {
+          detail: {
+            name: "audioEffectId",
+            value: undefined,
+            values: {},
+          },
+        },
+      },
+    );
+
+    expect(state.bgm.audioEffects).toBeUndefined();
+    expect(render).toHaveBeenCalledTimes(2);
   });
 
   it("updates begin and end effects on the selected sound", () => {
