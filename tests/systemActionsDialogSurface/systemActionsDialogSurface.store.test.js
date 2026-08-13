@@ -28,9 +28,9 @@ describe("systemActionsDialogSurface.store", () => {
       suppressClose: false,
       overlayHorizontalInset: "64px",
       overlayBackground: "rgba(0, 0, 0, 0.42)",
-      panelHorizontalInset: "96px",
-      panelWidthReduction: "64px",
-      panelVerticalInset: "32px",
+      panelHorizontalInset: "80px",
+      panelWidthReduction: "32px",
+      panelVerticalInset: "16px",
       panelMaxHeight: "800px",
     });
   });
@@ -77,9 +77,9 @@ describe("systemActionsDialogSurface.store", () => {
       suppressClose: true,
       overlayHorizontalInset: "64px",
       overlayBackground: "rgba(0, 0, 0, 0.42)",
-      panelHorizontalInset: "96px",
-      panelWidthReduction: "64px",
-      panelVerticalInset: "32px",
+      panelHorizontalInset: "80px",
+      panelWidthReduction: "32px",
+      panelVerticalInset: "16px",
       panelMaxHeight: "800px",
     });
   });

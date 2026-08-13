@@ -5,10 +5,10 @@ refs:
         handler: handleActionClick
 template:
   - 'rtgl-view w=f h=f pv=lg br=md d=v style="min-width: 0; min-height: 0; box-sizing: border-box; overflow: hidden;"':
-      - rtgl-view w=f ph=md:
+      - rtgl-view w=f ph=lg:
           - rtgl-text s=sm c=mu-fg: Actions
       - 'rtgl-view h=1fg w=f mt=lg sv style="min-width: 0; min-height: 0;"':
-          - 'rtgl-view w=f d=v g=sm ph=md style="min-width: 0; box-sizing: border-box;"':
+          - 'rtgl-view w=f d=v g=sm ph=lg style="min-width: 0; box-sizing: border-box;"':
               - $for item, i in items:
                   - 'rtgl-view#action${i} data-action-id=${item.id} g=md d=h av=c ph=md bgc=mu h-bgc=ac br=md h=36 w=f cur=pointer style="min-width: 0; box-sizing: border-box;"':
                       - rtgl-svg svg=${item.icon} wh=24: null
