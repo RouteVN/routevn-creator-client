@@ -138,6 +138,17 @@ const resolveAdjacentImageItemId = ({
 
 const createEditForm = ({ copy, tagOptions } = {}) => ({
   title: copy.editTitle,
+  actions: {
+    sticky: true,
+    buttons: [
+      {
+        id: "submit",
+        variant: "pr",
+        validate: true,
+        label: copy.updateButton,
+      },
+    ],
+  },
   fields: [
     {
       name: "name",
@@ -280,8 +291,6 @@ const {
       deleteDialogItemName,
     );
     viewData.deleteDialogConfirmLabel = copy.deleteButton;
-    viewData.updateButtonLabel = copy.updateButton;
-
     return viewData;
   },
 });

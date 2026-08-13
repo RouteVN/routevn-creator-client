@@ -1,6 +1,5 @@
 import { generateId } from "../../internal/id.js";
 import { createMediaPageHandlers } from "../../internal/ui/resourcePages/media/createMediaPageHandlers.js";
-import { forwardFormSubmitOnEnter } from "../../internal/ui/resourcePages/formSubmitKeyDown.js";
 import { processPendingUploads } from "../../internal/ui/resourcePages/media/processPendingUploads.js";
 import { resolveResourceParentId } from "../../internal/ui/resourcePages/media/mediaPageShared.js";
 import {
@@ -947,26 +946,6 @@ export const handleEditFormAction = async (deps, payload) => {
   handleEditDialogClose(deps);
   await handleDataChanged(deps);
 };
-
-export const handleEditImageSubmitClick = async (deps) => {
-  const { refs } = deps;
-  const { editForm } = refs;
-  await handleEditFormAction(deps, {
-    _event: {
-      detail: {
-        actionId: "submit",
-        values: editForm.getValues(),
-      },
-    },
-  });
-};
-
-export const handleEditFormSubmitKeyDown = (deps, payload) =>
-  forwardFormSubmitOnEnter({
-    deps,
-    payload,
-    submit: handleEditImageSubmitClick,
-  });
 
 const deleteImage = async (deps, { itemId } = {}) => {
   const { projectService, appService, render, store } = deps;

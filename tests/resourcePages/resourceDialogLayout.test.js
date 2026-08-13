@@ -15,7 +15,6 @@ const RESOURCE_DIALOGS = [
   ["pages/colors/colors.view.yaml", ["addColorDialog", "editDialog"]],
   ["pages/controls/controls.view.yaml", ["addControlDialog"]],
   ["pages/fonts/fonts.view.yaml", ["editDialog"]],
-  ["pages/images/images.view.yaml", ["editDialog"]],
   ["pages/layouts/layouts.view.yaml", ["addLayoutDialog", "editDialog"]],
   ["pages/particles/particles.view.yaml", ["particleDialog"]],
   ["pages/sounds/sounds.view.yaml", ["editDialog"]],
@@ -69,10 +68,6 @@ const RESOURCE_FORMS_WITH_EXTERNAL_SUBMIT = [
     [["editForm", "handleEditFormSubmitKeyDown"]],
   ],
   [
-    "pages/images/images.view.yaml",
-    [["editForm", "handleEditFormSubmitKeyDown"]],
-  ],
-  [
     "pages/layouts/layouts.view.yaml",
     [
       ["layoutForm", "handleAddFormSubmitKeyDown"],
@@ -119,6 +114,24 @@ const selectRefBlock = (view, refName) => {
 };
 
 describe("resource add/edit dialog layout", () => {
+  it("uses form-owned scrolling and actions for the image editor", () => {
+    const view = readView("pages/images/images.view.yaml");
+    const dialogLine = view
+      .split("\n")
+      .find((line) => line.includes("rtgl-dialog#editDialog "));
+
+    expect(dialogLine).toContain("md-layout=fixed-top");
+    expect(dialogLine).toContain("p=none");
+    expect(view).toContain(
+      "rtgl-view slot=content d=v w=f h=f overflow=hidden:",
+    );
+    expect(view).toContain(
+      "rtgl-form#editForm key=${isEditDialogOpen} :defaultValues=${editDefaultValues} :form=${editForm} w=f h=f:",
+    );
+    expect(view).not.toContain("editImageSubmitButton");
+    expect(view).not.toContain("h=80 aria-hidden=true");
+  });
+
   it.each(RESOURCE_DIALOGS)(
     "uses fixed-top dialogs with app-owned scrolling and actions in %s",
     (relativePath, dialogIds) => {

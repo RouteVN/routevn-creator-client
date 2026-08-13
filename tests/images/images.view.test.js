@@ -2,7 +2,7 @@ import { readFileSync } from "fs";
 import { describe, expect, it } from "vitest";
 
 describe("images view", () => {
-  it("uses the Character dialog scrolling and action pattern", () => {
+  it("uses the Project dialog scrolling and sticky form action pattern", () => {
     const imagesView = readFileSync(
       new URL("../../src/pages/images/images.view.yaml", import.meta.url),
       "utf8",
@@ -12,22 +12,18 @@ describe("images view", () => {
       "rtgl-dialog#editDialog ?open=${isEditDialogOpen} s=md md-layout=fixed-top p=none:",
     );
     expect(imagesView).toContain(
-      'rtgl-view slot=content w=f h=f pv=md pos=rel style="min-width: 0; min-height: 0; overflow: hidden;"',
+      "rtgl-view slot=content d=v w=f h=f overflow=hidden:",
     );
     expect(imagesView).toContain(
-      'rtgl-view h=1fg sv w=f style="min-height: 0;"',
+      "rtgl-form#editForm key=${isEditDialogOpen} :defaultValues=${editDefaultValues} :form=${editForm} w=f h=f:",
     );
     expect(imagesView).toContain(
+      "form-action:\n        handler: handleEditFormAction",
+    );
+    expect(imagesView).not.toContain("editImageSubmitButton");
+    expect(imagesView).not.toContain("h=80 aria-hidden=true");
+    expect(imagesView).not.toContain(
       "rtgl-form#editForm key=${isEditDialogOpen} :defaultValues=${editDefaultValues} :form=${editForm} w=f ph=md:",
-    );
-    expect(imagesView).toContain(
-      'rtgl-view h=80 aria-hidden=true style="flex: 0 0 80px;"',
-    );
-    expect(imagesView).toContain(
-      'rtgl-view d=h av=c ah=e w=f g=lg ph=md pt=md style="flex: 0 0 auto;"',
-    );
-    expect(imagesView).toContain(
-      "rtgl-button#editImageSubmitButton v=pr: ${updateButtonLabel}",
     );
     expect(imagesView).not.toContain("md-layout=top:");
   });

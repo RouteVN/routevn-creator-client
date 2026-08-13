@@ -40,14 +40,23 @@ const createContext = () => ({
 });
 
 describe("images store detail tag draft", () => {
-  it("keeps the edit action outside the form", () => {
+  it("uses the form-owned sticky edit action", () => {
     const viewData = selectViewData({
       state: createInitialState(),
       i18n: EN_I18N,
     });
 
-    expect(viewData.editForm.actions).toBeUndefined();
-    expect(viewData.updateButtonLabel).toBe("Update");
+    expect(viewData.editForm.actions).toEqual({
+      sticky: true,
+      buttons: [
+        {
+          id: "submit",
+          variant: "pr",
+          validate: true,
+          label: "Update",
+        },
+      ],
+    });
   });
 
   it("uses tag names for selected values in the edit form", () => {

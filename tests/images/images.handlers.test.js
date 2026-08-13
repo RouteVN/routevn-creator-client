@@ -23,7 +23,7 @@ import {
   handleDetailTagAddOptionClick,
   handleDetailTagValueChange,
   handleDeleteDialogConfirm,
-  handleEditImageSubmitClick,
+  handleEditFormAction,
   handleFileExplorerAction,
   handleFileExplorerKeyboardScopeKeyDown,
   handleFileExplorerSelectionChanged,
@@ -141,26 +141,27 @@ describe("images handlers", () => {
     expect(stopPropagation).toHaveBeenCalledOnce();
   });
 
-  it("submits edit-form values from the fixed action row", async () => {
+  it("submits edit-form values from the sticky form action", async () => {
     const deps = {
       i18n: EN_I18N,
       appService: {
         showAlert: vi.fn(),
       },
-      refs: {
-        editForm: {
-          getValues: vi.fn(() => ({
+    };
+
+    await handleEditFormAction(deps, {
+      _event: {
+        detail: {
+          actionId: "submit",
+          values: {
             name: "",
             description: "",
             tagIds: [],
-          })),
+          },
         },
       },
-    };
+    });
 
-    await handleEditImageSubmitClick(deps);
-
-    expect(deps.refs.editForm.getValues).toHaveBeenCalledTimes(1);
     expect(deps.appService.showAlert).toHaveBeenCalledWith({
       message: "Image name is required.",
       title: "Warning",
