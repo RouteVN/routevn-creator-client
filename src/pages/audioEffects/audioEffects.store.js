@@ -31,6 +31,7 @@ const createUpdateTimelineProperties = (tween = {}, copy = {}) =>
       {
         ...structuredClone(config),
         label: getAudioEffectPropertyLabel(property, copy),
+        initialValue: config.keyframes?.[0]?.startValue,
       },
     ]),
   );
@@ -45,7 +46,7 @@ const createFadeTimelineProperties = ({ definition, side, copy } = {}) => {
   return {
     fade: {
       label: copy.fadePropertyLabel ?? "Fade",
-      initialValue: previous ? 100 : 0,
+      initialValue: keyframes[0]?.startValue ?? (previous ? 100 : 0),
       keyframes: structuredClone(keyframes),
     },
   };

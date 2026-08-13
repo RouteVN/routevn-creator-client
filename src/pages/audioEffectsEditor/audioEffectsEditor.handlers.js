@@ -629,6 +629,20 @@ export const handleSelectedKeyframeRelativeChange = (deps, payload) => {
   commitSelectedKeyframeChange(deps);
 };
 
+export const handleSelectedPropertyStartValueChange = (deps, payload) => {
+  const { render, store } = deps;
+  store.setSelectedPropertyStartValue({ value: resolveValueChange(payload) });
+  render();
+};
+
+export const handleSelectedPropertyValueSourceChange = (deps, payload) => {
+  const { render, store } = deps;
+  store.setSelectedPropertyValueSource({
+    valueSource: resolveValueChange(payload),
+  });
+  render();
+};
+
 export const handleKeyframeDialogClose = (deps) => {
   const { render, store } = deps;
   store.closeKeyframeDialog();

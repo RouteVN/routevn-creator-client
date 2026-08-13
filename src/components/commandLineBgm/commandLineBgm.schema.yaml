@@ -21,7 +21,7 @@ propsSchema:
                 type: number
               startDelayMs:
                 type: number
-              incomingTransition:
+              beginEffect:
                 type: object
                 required: [resourceId]
                 properties:
@@ -33,7 +33,7 @@ propsSchema:
                       speed:
                         type: number
                         exclusiveMinimum: 0
-              outgoingTransition:
+              endEffect:
                 type: object
                 required: [resourceId]
                 properties:

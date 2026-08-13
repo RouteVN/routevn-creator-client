@@ -81,10 +81,10 @@ const normalizeSounds = (sounds = []) => {
         normalizedSound[field] = sound[field];
       }
     }
-    for (const field of ["incomingTransition", "outgoingTransition"]) {
-      const transition = normalizeAudioEffectSelection(sound[field]);
-      if (transition) {
-        normalizedSound[field] = transition;
+    for (const field of ["beginEffect", "endEffect"]) {
+      const effect = normalizeAudioEffectSelection(sound[field]);
+      if (effect) {
+        normalizedSound[field] = effect;
       }
     }
     return normalizedSound;
@@ -126,18 +126,11 @@ const normalizeBgm = (bgm = {}) => {
   return normalizedBgm;
 };
 
-const createAudioEffectOptions = ({
-  items,
-  selectedResourceId,
-  direction,
-  copy,
-}) => {
+const createAudioEffectOptions = ({ items, selectedResourceId, copy }) => {
   const options = toFlatItems(items)
     .filter(
       (item) =>
-        item.type === "audioEffect" &&
-        item.audioEffect?.type === "transition" &&
-        item.audioEffect?.[direction === "incoming" ? "next" : "prev"]?.fade,
+        item.type === "audioEffect" && item.audioEffect?.type === "update",
     )
     .map((item) => ({
       value: item.id,
@@ -188,31 +181,27 @@ const createChannelForm = () => ({
   ],
 });
 
-const createTransitionFields = ({ direction, sound, items, copy }) => {
-  const transitionField = `${direction}Transition`;
-  const transitionIdField = `${transitionField}Id`;
+const createBoundaryEffectFields = ({ boundary, sound, items, copy }) => {
+  const effectField = `${boundary}Effect`;
+  const effectIdField = `${effectField}Id`;
   return {
     type: "row",
     fields: [
       {
-        name: transitionIdField,
-        label:
-          direction === "incoming"
-            ? "Incoming Transition"
-            : "Outgoing Transition",
+        name: effectIdField,
+        label: boundary === "begin" ? "Begin Effect" : "End Effect",
         type: "select",
         clearable: true,
         placeholder: "Select audio effect",
         options: createAudioEffectOptions({
           items,
-          selectedResourceId: sound?.[transitionField]?.resourceId,
-          direction,
+          selectedResourceId: sound?.[effectField]?.resourceId,
           copy,
         }),
       },
       {
-        $when: transitionIdField,
-        name: `${transitionField}PlaybackSpeed`,
+        $when: effectIdField,
+        name: `${effectField}PlaybackSpeed`,
         label: "Playback Speed",
         type: "slider-with-input",
         min: 0.01,
@@ -221,9 +210,9 @@ const createTransitionFields = ({ direction, sound, items, copy }) => {
         required: true,
       },
       {
-        $when: `!${transitionIdField}`,
+        $when: `!${effectIdField}`,
         type: "slot",
-        slot: `${transitionField}PlaybackSpeedSpacer`,
+        slot: `${effectField}PlaybackSpeedSpacer`,
       },
     ],
   };
@@ -269,8 +258,8 @@ const createSoundForm = ({ sound, items, copy }) => ({
         },
       ],
     },
-    createTransitionFields({ direction: "incoming", sound, items, copy }),
-    createTransitionFields({ direction: "outgoing", sound, items, copy }),
+    createBoundaryEffectFields({ boundary: "begin", sound, items, copy }),
+    createBoundaryEffectFields({ boundary: "end", sound, items, copy }),
   ],
 });
 
@@ -456,13 +445,13 @@ export const selectViewData = ({ state, i18n }) => {
         startDelayMs: selectedSound.startDelayMs,
         loop: selectedSound.loop,
         volume: selectedSound.volume,
-        incomingTransitionId: selectedSound.incomingTransition?.resourceId,
-        incomingTransitionPlaybackSpeed: normalizeAudioEffectPlaybackSpeed(
-          selectedSound.incomingTransition?.playback?.speed,
+        beginEffectId: selectedSound.beginEffect?.resourceId,
+        beginEffectPlaybackSpeed: normalizeAudioEffectPlaybackSpeed(
+          selectedSound.beginEffect?.playback?.speed,
         ),
-        outgoingTransitionId: selectedSound.outgoingTransition?.resourceId,
-        outgoingTransitionPlaybackSpeed: normalizeAudioEffectPlaybackSpeed(
-          selectedSound.outgoingTransition?.playback?.speed,
+        endEffectId: selectedSound.endEffect?.resourceId,
+        endEffectPlaybackSpeed: normalizeAudioEffectPlaybackSpeed(
+          selectedSound.endEffect?.playback?.speed,
         ),
       }
     : channelDefaultValues;
@@ -496,8 +485,8 @@ export const selectViewData = ({ state, i18n }) => {
     selectionKey: selectedSound
       ? [
           `sound-${selectedSound.id}`,
-          `incoming-${selectedSound.incomingTransition?.resourceId ?? "none"}`,
-          `outgoing-${selectedSound.outgoingTransition?.resourceId ?? "none"}`,
+          `begin-${selectedSound.beginEffect?.resourceId ?? "none"}`,
+          `end-${selectedSound.endEffect?.resourceId ?? "none"}`,
         ].join("-")
       : channelSelected
         ? "channel"
@@ -591,10 +580,10 @@ export const updateChannel = ({ state }, { values = {} } = {}) => {
   }
 };
 
-const updateSoundTransition = (sound, values, direction) => {
-  const transitionField = `${direction}Transition`;
-  const resourceField = `${transitionField}Id`;
-  const speedField = `${transitionField}PlaybackSpeed`;
+const updateSoundBoundaryEffect = (sound, values, boundary) => {
+  const effectField = `${boundary}Effect`;
+  const resourceField = `${effectField}Id`;
+  const speedField = `${effectField}PlaybackSpeed`;
   const resourceChanged = Object.hasOwn(values, resourceField);
   const speedChanged = Object.hasOwn(values, speedField);
   if (!resourceChanged && !speedChanged) {
@@ -603,20 +592,20 @@ const updateSoundTransition = (sound, values, direction) => {
 
   const resourceId = resourceChanged
     ? values[resourceField]
-    : sound[transitionField]?.resourceId;
+    : sound[effectField]?.resourceId;
   if (!resourceId) {
-    delete sound[transitionField];
+    delete sound[effectField];
     return;
   }
 
   const isNewSelection =
-    resourceChanged && resourceId !== sound[transitionField]?.resourceId;
+    resourceChanged && resourceId !== sound[effectField]?.resourceId;
   const speed = isNewSelection
     ? DEFAULT_AUDIO_EFFECT_PLAYBACK_SPEED
     : speedChanged
       ? values[speedField]
-      : sound[transitionField]?.playback?.speed;
-  sound[transitionField] = {
+      : sound[effectField]?.playback?.speed;
+  sound[effectField] = {
     resourceId,
     playback: {
       speed: normalizeAudioEffectPlaybackSpeed(speed),
@@ -641,8 +630,8 @@ export const updateSound = ({ state }, { soundId, values = {} } = {}) => {
     sound.startDelayMs = normalizeAudioStartDelayMs(values.startDelayMs);
     sortAudioSoundsByStartDelay(state.bgm.sounds);
   }
-  updateSoundTransition(sound, values, "incoming");
-  updateSoundTransition(sound, values, "outgoing");
+  updateSoundBoundaryEffect(sound, values, "begin");
+  updateSoundBoundaryEffect(sound, values, "end");
 };
 
 export const connectSoundToPrevious = ({ state }, { soundId } = {}) => {

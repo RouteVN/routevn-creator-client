@@ -323,7 +323,7 @@ describe("systemActions.store", () => {
     expect(preview.bgm).toMatchObject({ id: "intro", name: "Intro" });
   });
 
-  it("keeps an authored empty BGM action visible as a stop action", () => {
+  it("hides an authored empty BGM action from presentation state", () => {
     const state = createInitialState();
     const bgm = {
       interruption: "immediate",
@@ -345,7 +345,7 @@ describe("systemActions.store", () => {
     });
 
     expect(actions.bgm).toEqual(bgm);
-    expect(preview.bgm).toEqual({ name: "Stop BGM" });
+    expect(preview.bgm).toBeUndefined();
   });
 
   it("preserves authored BGM fields over effective channel state", () => {
@@ -381,7 +381,7 @@ describe("systemActions.store", () => {
     });
   });
 
-  it("recognizes an empty-object BGM action as an explicit stop", () => {
+  it("preserves an empty-object BGM action without a presentation item", () => {
     const state = createInitialState();
 
     const { actions, preview } = selectActionsData({
@@ -397,7 +397,7 @@ describe("systemActions.store", () => {
     });
 
     expect(actions.bgm).toEqual({});
-    expect(preview.bgm).toEqual({ name: "Stop BGM" });
+    expect(preview.bgm).toBeUndefined();
   });
 
   it("preserves and previews sounds across canonical SFX channels", () => {

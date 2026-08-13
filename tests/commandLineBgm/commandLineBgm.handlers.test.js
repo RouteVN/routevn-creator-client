@@ -53,9 +53,10 @@ const audioEffects = {
       type: "audioEffect",
       name: "Crossfade",
       audioEffect: {
-        type: "transition",
-        prev: { fade: { keyframes: [{ value: 0, duration: 600 }] } },
-        next: { fade: { keyframes: [{ value: 100, duration: 900 }] } },
+        type: "update",
+        tween: {
+          volume: { keyframes: [{ value: 100, duration: 600 }] },
+        },
       },
     },
   },
@@ -201,7 +202,7 @@ describe("commandLineBgm.handlers", () => {
     expect(render).toHaveBeenCalledOnce();
   });
 
-  it("updates incoming and outgoing transitions on the selected sound", () => {
+  it("updates begin and end effects on the selected sound", () => {
     const state = createState();
     const store = createStore(state);
     const render = vi.fn();
@@ -213,10 +214,10 @@ describe("commandLineBgm.handlers", () => {
         _event: {
           detail: {
             values: {
-              incomingTransitionId: "crossfade",
-              incomingTransitionPlaybackSpeed: 0.01,
-              outgoingTransitionId: "crossfade",
-              outgoingTransitionPlaybackSpeed: 0.01,
+              beginEffectId: "crossfade",
+              beginEffectPlaybackSpeed: 0.01,
+              endEffectId: "crossfade",
+              endEffectPlaybackSpeed: 0.01,
             },
           },
         },
@@ -225,11 +226,11 @@ describe("commandLineBgm.handlers", () => {
 
     expect(state.bgm.audioEffects).toBeUndefined();
     expect(state.bgm.sounds[0]).toMatchObject({
-      incomingTransition: {
+      beginEffect: {
         resourceId: "crossfade",
         playback: { speed: 1 },
       },
-      outgoingTransition: {
+      endEffect: {
         resourceId: "crossfade",
         playback: { speed: 1 },
       },
@@ -242,8 +243,8 @@ describe("commandLineBgm.handlers", () => {
         _event: {
           detail: {
             values: {
-              incomingTransitionPlaybackSpeed: 1.25,
-              outgoingTransitionPlaybackSpeed: 0.75,
+              beginEffectPlaybackSpeed: 1.25,
+              endEffectPlaybackSpeed: 0.75,
             },
           },
         },
@@ -251,11 +252,11 @@ describe("commandLineBgm.handlers", () => {
     );
 
     expect(state.bgm.sounds[0]).toMatchObject({
-      incomingTransition: {
+      beginEffect: {
         resourceId: "crossfade",
         playback: { speed: 1.25 },
       },
-      outgoingTransition: {
+      endEffect: {
         resourceId: "crossfade",
         playback: { speed: 0.75 },
       },
@@ -263,7 +264,7 @@ describe("commandLineBgm.handlers", () => {
     expect(render).toHaveBeenCalledTimes(2);
   });
 
-  it("clears sound transitions omitted from the form values", () => {
+  it("clears sound boundary effects omitted from the form values", () => {
     const state = createState();
     const store = createStore(state);
     const render = vi.fn();
@@ -271,8 +272,8 @@ describe("commandLineBgm.handlers", () => {
     store.updateSound({
       soundId: "intro-clip",
       values: {
-        incomingTransitionId: "crossfade",
-        outgoingTransitionId: "crossfade",
+        beginEffectId: "crossfade",
+        endEffectId: "crossfade",
       },
     });
 
@@ -281,19 +282,19 @@ describe("commandLineBgm.handlers", () => {
       {
         _event: {
           detail: {
-            name: "incomingTransitionId",
+            name: "beginEffectId",
             value: undefined,
             values: {
-              outgoingTransitionId: "crossfade",
-              outgoingTransitionPlaybackSpeed: 1,
+              endEffectId: "crossfade",
+              endEffectPlaybackSpeed: 1,
             },
           },
         },
       },
     );
 
-    expect(state.bgm.sounds[0].incomingTransition).toBeUndefined();
-    expect(state.bgm.sounds[0].outgoingTransition).toEqual({
+    expect(state.bgm.sounds[0].beginEffect).toBeUndefined();
+    expect(state.bgm.sounds[0].endEffect).toEqual({
       resourceId: "crossfade",
       playback: { speed: 1 },
     });
@@ -303,7 +304,7 @@ describe("commandLineBgm.handlers", () => {
       {
         _event: {
           detail: {
-            name: "outgoingTransitionId",
+            name: "endEffectId",
             value: undefined,
             values: {},
           },
@@ -311,7 +312,7 @@ describe("commandLineBgm.handlers", () => {
       },
     );
 
-    expect(state.bgm.sounds[0].outgoingTransition).toBeUndefined();
+    expect(state.bgm.sounds[0].endEffect).toBeUndefined();
     expect(render).toHaveBeenCalledTimes(2);
   });
 
@@ -709,10 +710,10 @@ describe("commandLineBgm.handlers", () => {
         startDelayMs: 2000,
         loop: false,
         volume: 100,
-        incomingTransitionId: undefined,
-        incomingTransitionPlaybackSpeed: 1,
-        outgoingTransitionId: undefined,
-        outgoingTransitionPlaybackSpeed: 1,
+        beginEffectId: undefined,
+        beginEffectPlaybackSpeed: 1,
+        endEffectId: undefined,
+        endEffectPlaybackSpeed: 1,
       },
     });
     expect(render).toHaveBeenCalledTimes(2);
@@ -726,14 +727,14 @@ describe("commandLineBgm.handlers", () => {
     store.updateSound({
       soundId: "intro-clip",
       values: {
-        incomingTransitionId: "crossfade",
-        outgoingTransitionId: "crossfade",
+        beginEffectId: "crossfade",
+        endEffectId: "crossfade",
       },
     });
     store.updateSound({
       soundId: "intro-clip",
       values: {
-        incomingTransitionPlaybackSpeed: 1.5,
+        beginEffectPlaybackSpeed: 1.5,
       },
     });
 
@@ -755,11 +756,11 @@ describe("commandLineBgm.handlers", () => {
             loop: false,
             volume: 100,
             startDelayMs: 0,
-            incomingTransition: {
+            beginEffect: {
               resourceId: "crossfade",
               playback: { speed: 1.5 },
             },
-            outgoingTransition: {
+            endEffect: {
               resourceId: "crossfade",
               playback: { speed: 1 },
             },

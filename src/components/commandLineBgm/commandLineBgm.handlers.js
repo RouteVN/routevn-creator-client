@@ -48,12 +48,10 @@ const syncSelectedSoundForm = ({ refs, store }) => {
       startDelayMs: sound.startDelayMs,
       loop: sound.loop,
       volume: sound.volume,
-      incomingTransitionId: sound.incomingTransition?.resourceId,
-      incomingTransitionPlaybackSpeed:
-        sound.incomingTransition?.playback?.speed ?? 1,
-      outgoingTransitionId: sound.outgoingTransition?.resourceId,
-      outgoingTransitionPlaybackSpeed:
-        sound.outgoingTransition?.playback?.speed ?? 1,
+      beginEffectId: sound.beginEffect?.resourceId,
+      beginEffectPlaybackSpeed: sound.beginEffect?.playback?.speed ?? 1,
+      endEffectId: sound.endEffect?.resourceId,
+      endEffectPlaybackSpeed: sound.endEffect?.playback?.speed ?? 1,
     },
   });
 };

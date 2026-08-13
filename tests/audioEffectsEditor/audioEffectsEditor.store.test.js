@@ -25,6 +25,9 @@ import {
   setSelectedKeyframeEasing,
   setSelectedKeyframeRelative,
   setSelectedKeyframeValue,
+  setSelectedProperty,
+  setSelectedPropertyStartValue,
+  setSelectedPropertyValueSource,
   setPreviewSoundSelectorSelectedSoundId,
   setPreviewPlayhead,
   setSelectedEditorTab,
@@ -242,6 +245,140 @@ describe("audioEffectsEditor.store", () => {
       selectedKeyframeDetailId: undefined,
       noSelectionLabel: "No selection",
     });
+  });
+
+  it("selects update properties and edits their start value in the detail panel", () => {
+    const state = createInitialState();
+    loadAudioEffect(
+      { state },
+      {
+        item: {
+          id: "smooth-update",
+          name: "Smooth Update",
+          audioEffect: {
+            type: "update",
+            tween: {
+              volume: {
+                keyframes: [
+                  {
+                    startValue: 80,
+                    value: 50,
+                    duration: 250,
+                    easing: "linear",
+                  },
+                ],
+              },
+            },
+          },
+        },
+      },
+    );
+
+    setSelectedProperty({ state }, { side: "update", property: "volume" });
+
+    expect(selectViewData({ state, i18n: EN_I18N })).toMatchObject({
+      detailsPanelTitle: "Property",
+      selectedProperty: { side: "update", property: "volume" },
+      selectedPropertyDetailId: "update:volume",
+      selectedPropertyDetailFields: [
+        { label: "Timeline", value: "Update" },
+        { label: "Property", value: "Volume" },
+        { label: "Value source", slot: "property-value-source" },
+        { label: "Start value", slot: "property-start-value" },
+      ],
+      selectedPropertyEditor: {
+        valueSource: "fixed",
+        valueSourceOptions: [
+          { label: "Default", value: "default" },
+          { label: "Fixed", value: "fixed" },
+        ],
+        startValue: 80,
+        startValueSlider: { min: 0, max: 100, step: 1 },
+      },
+    });
+
+    setSelectedPropertyStartValue({ state }, { value: 65 });
+    expect(state.definition.tween.volume.keyframes[0].startValue).toBe(65);
+    expect(
+      selectViewData({ state, i18n: EN_I18N }).updateTimelineProperties.volume
+        .initialValue,
+    ).toBe(65);
+    setSelectedPropertyValueSource({ state }, { valueSource: "default" });
+    expect(
+      state.definition.tween.volume.keyframes[0].startValue,
+    ).toBeUndefined();
+    expect(selectViewData({ state, i18n: EN_I18N })).toMatchObject({
+      selectedPropertyDetailFields: [
+        { label: "Timeline", value: "Update" },
+        { label: "Property", value: "Volume" },
+        { label: "Value source", slot: "property-value-source" },
+      ],
+      selectedPropertyEditor: {
+        valueSource: "default",
+        startValue: 100,
+      },
+    });
+    expect(
+      selectViewData({ state, i18n: EN_I18N }).updateTimelineProperties.volume
+        .initialValue,
+    ).toBeUndefined();
+    setSelectedPropertyValueSource({ state }, { valueSource: "fixed" });
+    expect(state.definition.tween.volume.keyframes[0].startValue).toBe(100);
+    expect(state.dirty).toBe(true);
+  });
+
+  it("selects transition fade properties and edits their boundary start value", () => {
+    const state = createInitialState();
+    loadAudioEffect(
+      { state },
+      {
+        item: {
+          id: "crossfade",
+          name: "Crossfade",
+          audioEffect: {
+            type: "transition",
+            prev: {
+              fade: {
+                keyframes: [{ value: 0, duration: 500, easing: "linear" }],
+              },
+            },
+            next: {
+              fade: {
+                keyframes: [{ value: 100, duration: 500, easing: "linear" }],
+              },
+            },
+          },
+        },
+      },
+    );
+
+    setSelectedProperty({ state }, { side: "prev", property: "fade" });
+    expect(selectViewData({ state, i18n: EN_I18N })).toMatchObject({
+      detailsPanelTitle: "Property",
+      selectedPropertyDetailId: "prev:fade",
+      selectedPropertyEditor: {
+        valueSource: "default",
+        startValue: 100,
+      },
+      canRemoveSelectedProperty: false,
+    });
+
+    setSelectedPropertyValueSource({ state }, { valueSource: "fixed" });
+    expect(state.definition.prev.fade.keyframes[0].startValue).toBe(100);
+    setSelectedPropertyStartValue({ state }, { value: 90 });
+    expect(state.definition.prev.fade.keyframes[0].startValue).toBe(90);
+    expect(
+      selectViewData({ state, i18n: EN_I18N }).previousTimelineProperties.fade
+        .initialValue,
+    ).toBe(90);
+
+    setSelectedProperty({ state }, { side: "next", property: "fade" });
+    expect(selectViewData({ state, i18n: EN_I18N })).toMatchObject({
+      selectedPropertyDetailId: "next:fade",
+      selectedPropertyEditor: { valueSource: "default", startValue: 0 },
+    });
+    setSelectedPropertyValueSource({ state }, { valueSource: "fixed" });
+    expect(state.definition.next.fade.keyframes[0].startValue).toBe(0);
   });
 
   it("loads saved preview sounds from the audio effect item", () => {

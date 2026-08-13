@@ -477,11 +477,13 @@ describe("renderSceneEditorState", () => {
     projectData.story.scenes["scene-1"].sections[
       "section-1"
     ].lines[0].actions.bgm = {
+      loop: true,
       sounds: [
         {
           id: "previous",
           resourceId: "previous",
-          outgoingTransition: {
+          loop: false,
+          endEffect: {
             resourceId: "fade-in",
             playback: { speed: 2 },
           },
@@ -491,11 +493,17 @@ describe("renderSceneEditorState", () => {
     projectData.story.scenes["scene-1"].sections[
       "section-1"
     ].lines[1].actions.bgm = {
+      loop: true,
       sounds: [
         {
           id: "incoming",
           resourceId: "track",
-          incomingTransition: {
+          loop: false,
+          beginEffect: {
+            resourceId: "fade-in",
+            playback: { speed: 1 },
+          },
+          endEffect: {
             resourceId: "fade-in",
             playback: { speed: 1 },
           },
@@ -552,11 +560,13 @@ describe("renderSceneEditorState", () => {
       selectCanvasAudioPreviewKey: () => store.canvasAudioPreviewKey,
       selectPreviousPresentationState: () => ({
         bgm: {
+          loop: true,
           sounds: [
             {
               id: "previous",
               resourceId: "previous",
-              outgoingTransition: {
+              loop: false,
+              endEffect: {
                 resourceId: "fade-in",
                 playback: { speed: 2 },
               },
@@ -586,15 +596,10 @@ describe("renderSceneEditorState", () => {
               type: "audioEffect",
               name: "Fade In",
               audioEffect: {
-                type: "transition",
-                prev: {
-                  fade: {
-                    keyframes: [{ value: 0, duration: 400 }],
-                  },
-                },
-                next: {
-                  fade: {
-                    keyframes: [{ value: 100, duration: 500 }],
+                type: "update",
+                tween: {
+                  volume: {
+                    keyframes: [{ startValue: 0, value: 100, duration: 500 }],
                   },
                 },
               },
@@ -609,36 +614,43 @@ describe("renderSceneEditorState", () => {
     ).resolves.toBeUndefined();
     expect(initializedProjectData[0].resources.audioEffects["fade-in"]).toEqual(
       expect.objectContaining({
-        type: "transition",
+        type: "update",
       }),
     );
     expect(
       initializedProjectData[0].story.scenes["scene-1"].sections[
         "section-1"
       ].lines.find((line) => line.id === "line-2").actions.bgm.sounds[0]
-        .incomingTransition,
+        .beginEffect,
     ).toEqual({ resourceId: "fade-in", playback: { speed: 1 } });
     expect(graphicsService.engineRenderCurrentState).toHaveBeenCalledWith(
       expect.objectContaining({
         renderState: expect.objectContaining({
-          audioEffects: [
+          audio: [
             expect.objectContaining({
-              targetId: "bgm:previous",
-              type: "audio-transition",
-              properties: {
-                volume: {
-                  exit: expect.any(Object),
-                },
-              },
-            }),
-            expect.objectContaining({
-              targetId: "bgm:incoming",
-              type: "audio-transition",
-              properties: {
-                volume: {
-                  enter: expect.any(Object),
-                },
-              },
+              children: [
+                expect.objectContaining({
+                  id: "bgm:incoming",
+                  beginEffect: {
+                    volume: {
+                      keyframes: [
+                        expect.objectContaining({
+                          startValue: 0,
+                          value: 100,
+                          duration: 500,
+                        }),
+                      ],
+                    },
+                  },
+                  endEffect: {
+                    volume: {
+                      keyframes: [
+                        expect.objectContaining({ value: 100, duration: 500 }),
+                      ],
+                    },
+                  },
+                }),
+              ],
             }),
           ],
         }),
@@ -651,7 +663,10 @@ describe("renderSceneEditorState", () => {
     ).resolves.toBeUndefined();
     const secondRenderOptions =
       graphicsService.engineRenderCurrentState.mock.calls[0][0];
-    expect(secondRenderOptions.renderState.audioEffects).toEqual([]);
+    expect(secondRenderOptions.renderState.audioEffects).toBeUndefined();
+    expect(secondRenderOptions.renderState.audio[0].children[0]).toHaveProperty(
+      "beginEffect",
+    );
   });
 
   it("settles the selected line without replaying its update audio effect", async () => {

@@ -12,9 +12,12 @@ import {
   handlePreviewSoundClick,
   handleConfirmSoundSelection,
   handlePreviewSoundSelected,
+  handlePropertyNameClick,
   handleSavePreviewClick,
   handleSelectedKeyframeDelayChange,
   handleSelectedKeyframeEditClick,
+  handleSelectedPropertyStartValueChange,
+  handleSelectedPropertyValueSourceChange,
   handleTimelineZoomChange,
   handleTimelineZoomIn,
   handleTimelineZoomOut,
@@ -240,6 +243,51 @@ describe("audioEffectsEditor.handlers", () => {
       index: "1",
     });
     expect(render).toHaveBeenCalledOnce();
+  });
+
+  it("selects a property without opening a dialog", () => {
+    const store = { setSelectedProperty: vi.fn() };
+    const render = vi.fn();
+
+    handlePropertyNameClick(
+      { store, render },
+      {
+        _event: {
+          detail: { side: "prev", property: "fade" },
+        },
+      },
+    );
+
+    expect(store.setSelectedProperty).toHaveBeenCalledWith({
+      side: "prev",
+      property: "fade",
+    });
+    expect(render).toHaveBeenCalledOnce();
+  });
+
+  it("edits the selected property value source and fixed value", () => {
+    const store = {
+      setSelectedPropertyStartValue: vi.fn(),
+      setSelectedPropertyValueSource: vi.fn(),
+    };
+    const render = vi.fn();
+
+    handleSelectedPropertyStartValueChange(
+      { store, render },
+      { _event: { detail: { value: 75 } } },
+    );
+    handleSelectedPropertyValueSourceChange(
+      { store, render },
+      { _event: { detail: { value: "default" } } },
+    );
+
+    expect(store.setSelectedPropertyStartValue).toHaveBeenCalledWith({
+      value: 75,
+    });
+    expect(store.setSelectedPropertyValueSource).toHaveBeenCalledWith({
+      valueSource: "default",
+    });
+    expect(render).toHaveBeenCalledTimes(2);
   });
 
   it("selects a right-clicked keyframe and opens its positioned menu", () => {

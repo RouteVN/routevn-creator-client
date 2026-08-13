@@ -32,7 +32,9 @@ describe("audioEffects.store", () => {
               audioEffect: {
                 type: "update",
                 tween: {
-                  volume: { keyframes: [] },
+                  volume: {
+                    keyframes: [{ startValue: 72, value: 50, duration: 300 }],
+                  },
                   playbackRate: { keyframes: [] },
                 },
               },
@@ -82,7 +84,10 @@ describe("audioEffects.store", () => {
           animationType: "update",
           audioEffectTypeLabel: "Update",
           updateProperties: {
-            volume: expect.objectContaining({ label: "Volume" }),
+            volume: expect.objectContaining({
+              label: "Volume",
+              initialValue: 72,
+            }),
             playbackRate: expect.objectContaining({ label: "Playback Rate" }),
           },
           summary: "Volume, Playback Rate",

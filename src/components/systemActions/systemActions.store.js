@@ -683,13 +683,13 @@ export const selectActionsData = ({ props, state, copy }) => {
   }
   if (bgmAction) {
     actionsObject.bgm = bgmAction;
-    const bgmResourceId =
-      bgmAction.sounds?.[0]?.resourceId ?? bgmAction.resourceId;
-    preview.bgm = sounds[bgmResourceId] ?? {
-      name: authoredBgmStops
-        ? localizeCommandLineText("Stop BGM", copy)
-        : (bgmResourceId ?? localizeCommandLineText("BGM", copy)),
-    };
+    if (!authoredBgmStops) {
+      const bgmResourceId =
+        bgmAction.sounds?.[0]?.resourceId ?? bgmAction.resourceId;
+      preview.bgm = sounds[bgmResourceId] ?? {
+        name: bgmResourceId ?? localizeCommandLineText("BGM", copy),
+      };
+    }
   }
 
   const voiceAction = isPlainObject(actions.voice)

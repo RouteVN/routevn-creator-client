@@ -214,6 +214,7 @@ const createUpdateTimelineProperties = (tween = {}, copy = {}) =>
       {
         ...cloneDefinition(config),
         label: getPropertyLabel(property, copy),
+        initialValue: config.keyframes?.[0]?.startValue,
         keyframes: createTimelineKeyframes(config.keyframes),
       },
     ]),
@@ -229,7 +230,7 @@ const createFadeTimelineProperties = ({ definition, side, copy } = {}) => {
   return {
     fade: {
       label: copy.fadePropertyLabel ?? "Fade",
-      initialValue: previous ? 100 : 0,
+      initialValue: keyframes[0]?.startValue ?? (previous ? 100 : 0),
       keyframes: createTimelineKeyframes(keyframes),
     },
   };
@@ -565,7 +566,10 @@ export const setSelectedProperty = (
   { side = "update", property } = {},
 ) => {
   const propertyExists =
-    side === "update" && state.definition.tween?.[property] !== undefined;
+    (side === "update" && state.definition.tween?.[property] !== undefined) ||
+    ((side === "prev" || side === "next") &&
+      property === "fade" &&
+      getMutableKeyframes(state, { side, property }) !== undefined);
   state.selectedProperty = propertyExists ? { side, property } : undefined;
   state.selectedKeyframe = undefined;
 };
@@ -956,6 +960,72 @@ export const setSelectedKeyframeRelative = ({ state }, { relative } = {}) => {
   commitSelectedKeyframeChange(state);
 };
 
+const getSelectedPropertyStartValueConfig = (state) => {
+  const selectedProperty = state.selectedProperty;
+  if (!selectedProperty) {
+    return undefined;
+  }
+
+  const keyframe = getMutableKeyframes(state, selectedProperty)?.[0];
+  if (!keyframe) {
+    return undefined;
+  }
+
+  const property =
+    selectedProperty.side === "update" ? selectedProperty.property : "volume";
+  return {
+    keyframe,
+    propertyConfig: AUDIO_EFFECT_PROPERTY_CONFIG[property] ?? {},
+  };
+};
+
+export const setSelectedPropertyStartValue = ({ state }, { value } = {}) => {
+  const config = getSelectedPropertyStartValueConfig(state);
+  const nextValue = Number(value);
+  if (
+    !config ||
+    !Number.isFinite(nextValue) ||
+    (config.propertyConfig.min !== undefined &&
+      nextValue < config.propertyConfig.min) ||
+    (config.propertyConfig.max !== undefined &&
+      nextValue > config.propertyConfig.max)
+  ) {
+    return;
+  }
+
+  config.keyframe.startValue = nextValue;
+  commitSelectedKeyframeChange(state);
+};
+
+export const setSelectedPropertyValueSource = (
+  { state },
+  { valueSource } = {},
+) => {
+  const config = getSelectedPropertyStartValueConfig(state);
+  if (!config || (valueSource !== "default" && valueSource !== "fixed")) {
+    return;
+  }
+
+  if (valueSource === "default") {
+    if (config.keyframe.startValue === undefined) {
+      return;
+    }
+    delete config.keyframe.startValue;
+  } else {
+    if (config.keyframe.startValue !== undefined) {
+      return;
+    }
+    const side = state.selectedProperty.side;
+    config.keyframe.startValue =
+      side === "prev"
+        ? 100
+        : side === "next"
+          ? 0
+          : (config.propertyConfig.defaultValue ?? 0);
+  }
+  commitSelectedKeyframeChange(state);
+};
+
 export const selectKeyframeDialogValues = ({ state }) => {
   const { add, delay, duration, index, property, side } = state.keyframeDialog;
   const resolvedProperty = side === "update" ? property : "volume";
@@ -1103,6 +1173,87 @@ const buildSelectedKeyframePanelData = (state, copy = {}) => {
   };
 };
 
+const buildSelectedPropertyPanelData = (state, copy = {}) => {
+  const selectedProperty = state.selectedProperty;
+  const config = getSelectedPropertyStartValueConfig(state);
+  if (!selectedProperty || !config) {
+    return undefined;
+  }
+
+  const { property, side } = selectedProperty;
+  const updateProperty = side === "update";
+  const propertyLabel = updateProperty
+    ? getPropertyLabel(property, copy)
+    : (copy.fadePropertyLabel ?? "Fade");
+  const timelineLabel =
+    side === "prev"
+      ? (copy.outgoingLabel ?? "Outgoing")
+      : side === "next"
+        ? (copy.incomingLabel ?? "Incoming")
+        : (copy.updateType ?? "Update");
+  const hasStartValue = config.keyframe.startValue !== undefined;
+  const defaultStartValue =
+    side === "prev"
+      ? 100
+      : side === "next"
+        ? 0
+        : (config.propertyConfig.defaultValue ?? 0);
+  const fields = [
+    {
+      type: "text",
+      label: copy.timelineLabel ?? "Timeline",
+      value: timelineLabel,
+    },
+    {
+      type: "text",
+      label: copy.propertyLabel ?? "Property",
+      value: propertyLabel,
+    },
+    {
+      type: "slot",
+      label: copy.valueSourceLabel ?? "Value source",
+      slot: "property-value-source",
+    },
+  ];
+  if (hasStartValue) {
+    fields.push({
+      type: "slot",
+      label: copy.startValueLabel ?? "Start value",
+      slot: "property-start-value",
+    });
+  }
+
+  return {
+    id: `${side}:${property}`,
+    fields,
+    editor: {
+      valueSource: hasStartValue ? "fixed" : "default",
+      valueSourceOptions: [
+        {
+          label: copy.defaultValueOption ?? "Default",
+          value: "default",
+        },
+        {
+          label: copy.fixedValueOption ?? "Fixed",
+          value: "fixed",
+        },
+      ],
+      startValue: hasStartValue
+        ? config.keyframe.startValue
+        : defaultStartValue,
+      startValueSlider:
+        config.propertyConfig.max === undefined
+          ? undefined
+          : {
+              min: config.propertyConfig.min,
+              max: config.propertyConfig.max,
+              step: config.propertyConfig.step,
+            },
+      startValueStep: config.propertyConfig.step ?? 0.01,
+    },
+  };
+};
+
 export const selectViewData = ({ state, i18n }) => {
   const copy = selectAudioEffectsEditorPageCopy(i18n);
   const isTransition = state.definition.type === "transition";
@@ -1158,6 +1309,10 @@ export const selectViewData = ({ state, i18n }) => {
   const selectedKeyframePanel =
     state.selectedEditorTab === "timeline"
       ? buildSelectedKeyframePanelData(state, copy)
+      : undefined;
+  const selectedPropertyPanel =
+    state.selectedEditorTab === "timeline"
+      ? buildSelectedPropertyPanelData(state, copy)
       : undefined;
   const preview = selectAudioEffectPreview({ state });
   const previewSoundItems = isTransition
@@ -1317,10 +1472,15 @@ export const selectViewData = ({ state, i18n }) => {
     showRightPanel: !state.isTouchMode,
     detailsPanelTitle: selectedKeyframePanel
       ? (copy.keyframeDetailsTitle ?? "Keyframe Details")
-      : undefined,
+      : selectedPropertyPanel
+        ? (copy.propertyLabel ?? "Property")
+        : undefined,
     selectedKeyframeDetailId: selectedKeyframePanel?.id,
     selectedKeyframeDetailFields: selectedKeyframePanel?.fields ?? [],
     selectedKeyframeEditor: selectedKeyframePanel?.editor,
+    selectedPropertyDetailId: selectedPropertyPanel?.id,
+    selectedPropertyDetailFields: selectedPropertyPanel?.fields ?? [],
+    selectedPropertyEditor: selectedPropertyPanel?.editor,
     selectedKeyframeCanOpenEditDialog:
       selectedKeyframePanel?.canOpenEditDialog === true,
     noSelectionLabel: copy.noSelectionLabel ?? "No selection",

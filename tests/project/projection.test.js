@@ -1046,10 +1046,10 @@ describe("constructProjectData", () => {
                               {
                                 id: "main",
                                 resourceId: "sound-1",
-                                incomingTransition: {
+                                beginEffect: {
                                   resourceId: "crossfade",
                                 },
-                                outgoingTransition: {
+                                endEffect: {
                                   resourceId: "crossfade",
                                 },
                               },
@@ -1108,8 +1108,8 @@ describe("constructProjectData", () => {
         {
           id: "main",
           resourceId: "sound-1",
-          incomingTransition: { resourceId: "crossfade" },
-          outgoingTransition: { resourceId: "crossfade" },
+          beginEffect: { resourceId: "crossfade" },
+          endEffect: { resourceId: "crossfade" },
         },
       ],
     });

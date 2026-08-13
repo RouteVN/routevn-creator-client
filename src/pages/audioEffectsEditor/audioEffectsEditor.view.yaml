@@ -96,6 +96,8 @@ refs:
         handler: handleKeyframeRightClick
       keyframe-duration-change:
         handler: handleKeyframeDurationChange
+      property-name-click:
+        handler: handlePropertyNameClick
       timeline-duration-extend:
         handler: handleTimelineDurationExtend
   nextTimeline:
@@ -110,6 +112,8 @@ refs:
         handler: handleKeyframeRightClick
       keyframe-duration-change:
         handler: handleKeyframeDurationChange
+      property-name-click:
+        handler: handlePropertyNameClick
       timeline-duration-extend:
         handler: handleTimelineDurationExtend
   addPropertyDialog:
@@ -152,6 +156,14 @@ refs:
     eventListeners:
       value-change:
         handler: handleSelectedKeyframeRelativeChange
+  selectedPropertyStartValue:
+    eventListeners:
+      value-input:
+        handler: handleSelectedPropertyStartValueChange
+  selectedPropertyValueSource:
+    eventListeners:
+      value-change:
+        handler: handleSelectedPropertyValueSourceChange
   keyframeDropdownMenu:
     eventListeners:
       close:
@@ -194,8 +206,6 @@ template:
                               - 'rtgl-slider#timelineZoomSlider w=120 min=${timelineZoomMin} max=${timelineZoomMax} step=${timelineZoomStep} value=${timelineZoom} aria-label="${timelineZoomLabel}" title="${timelineZoomLabel}"': null
                               - 'rtgl-button#timelineZoomIn sq v=ol s=sm aria-label="${timelineZoomInLabel}" title="${timelineZoomInLabel}"': +
                       - $if selectedEditorTab == 'timeline' && isUpdate:
-                          - $if canRemoveSelectedProperty:
-                              - rtgl-button#removePropertyButton pre=trash v=ol s=sm: ${removePropertyButton}
                           - $if canAddProperty:
                               - rtgl-button#addPropertyButton pre=plus s=sm: ${addPropertyButton}
                       - $if selectedEditorTab == 'preview':
@@ -270,6 +280,8 @@ template:
                           - rtgl-text w=1fg: ${detailsPanelTitle}
                           - $if selectedKeyframeCanOpenEditDialog:
                               - 'rtgl-button#editSelectedKeyframeButton sq v=gh pre=edit aria-label="${editKeyframeButtonLabel}" title="${editKeyframeButtonLabel}"': null
+                            $elif canRemoveSelectedProperty:
+                              - 'rtgl-button#removePropertyButton sq v=gh pre=trash aria-label="${removePropertyButton}" title="${removePropertyButton}"': null
                   - 'rtgl-view w=f h=1fg sv style="min-height: 0;"':
                       - $if selectedKeyframeDetailId:
                           - rvn-detail-view#selectedKeyframeDetails key=${selectedKeyframeDetailId} :fields=${selectedKeyframeDetailFields} :fillHeight=${false}:
@@ -283,6 +295,14 @@ template:
                                 $elif selectedKeyframeEditor.valueEditable:
                                   - rtgl-input-number#selectedKeyframeValue slot=keyframe-value key=${selectedKeyframeDetailId} w=f step=${selectedKeyframeEditor.valueStep} value=${selectedKeyframeEditor.value}: null
                               - rtgl-segmented-control#selectedKeyframeRelative slot=keyframe-value-type w=f no-clear :selectedValue=${selectedKeyframeEditor.relative} :options=${selectedKeyframeEditor.relativeOptions}: null
+                        $elif selectedPropertyDetailId:
+                          - rvn-detail-view#selectedPropertyDetails key=${selectedPropertyDetailId} :fields=${selectedPropertyDetailFields} :fillHeight=${false}:
+                              - rtgl-segmented-control#selectedPropertyValueSource slot=property-value-source w=f no-clear :selectedValue=${selectedPropertyEditor.valueSource} :options=${selectedPropertyEditor.valueSourceOptions}: null
+                              - $if selectedPropertyEditor.valueSource == 'fixed':
+                                  - $if selectedPropertyEditor.startValueSlider:
+                                      - rtgl-slider-input#selectedPropertyStartValue slot=property-start-value key=${selectedPropertyDetailId} w=f value=${selectedPropertyEditor.startValue} min=${selectedPropertyEditor.startValueSlider.min} max=${selectedPropertyEditor.startValueSlider.max} step=${selectedPropertyEditor.startValueSlider.step}: null
+                                    $else:
+                                      - rtgl-input-number#selectedPropertyStartValue slot=property-start-value key=${selectedPropertyDetailId} w=f value=${selectedPropertyEditor.startValue} min=0 step=${selectedPropertyEditor.startValueStep}: null
                         $else:
                           - rtgl-view w=f h=f av=c ah=c p=md:
                               - rtgl-text s=sm c=mu-fg ta=c: ${noSelectionLabel}
