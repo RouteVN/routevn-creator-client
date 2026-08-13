@@ -106,8 +106,8 @@ const createMetadataFormFields = (copy = {}) => [
 
 const createAddForm = (copy = {}) => ({
   title: copy.addTitle ?? "Add Audio Effect",
+  sticky: true,
   actions: {
-    sticky: true,
     buttons: [
       {
         id: "submit",
@@ -138,8 +138,8 @@ const createAddForm = (copy = {}) => ({
 
 const createEditForm = (copy = {}) => ({
   title: copy.editTitle ?? "Edit Audio Effect",
+  sticky: true,
   actions: {
-    sticky: true,
     buttons: [
       {
         id: "submit",

@@ -162,6 +162,7 @@ describe("resource add/edit dialog layout", () => {
       expect(store.match(/sticky: true/g)?.length ?? 0).toBeGreaterThanOrEqual(
         forms.length,
       );
+      expect(store).not.toMatch(/actions:\s*{\s*sticky:\s*true/);
     },
   );
 

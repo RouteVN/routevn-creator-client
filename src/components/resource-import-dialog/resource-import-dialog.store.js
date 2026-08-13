@@ -6,6 +6,7 @@ const PROGRESS_STEP = "progress";
 
 const sourceForm = (copy) => ({
   title: copy.title ?? "Import Package",
+  sticky: true,
   fields: [
     {
       type: "slot",
@@ -23,7 +24,6 @@ const sourceForm = (copy) => ({
     },
   ],
   actions: {
-    sticky: true,
     buttons: [
       {
         id: "continue",
@@ -155,9 +155,9 @@ const selectionForm = ({ state, copy }) => {
 
   return {
     title: copy.selectResourcesTitle ?? "Choose Resources",
+    sticky: true,
     fields,
     actions: {
-      sticky: true,
       buttons: [
         {
           id: "back",

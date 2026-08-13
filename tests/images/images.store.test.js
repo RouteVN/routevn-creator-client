@@ -46,8 +46,8 @@ describe("images store detail tag draft", () => {
       i18n: EN_I18N,
     });
 
+    expect(viewData.editForm.sticky).toBe(true);
     expect(viewData.editForm.actions).toEqual({
-      sticky: true,
       buttons: [
         {
           id: "submit",

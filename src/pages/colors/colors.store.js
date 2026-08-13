@@ -24,8 +24,8 @@ const hexToRgb = (hex) => {
 
 const createEditForm = (copy = {}) => ({
   title: copy.editTitle ?? "Edit Color",
+  sticky: true,
   actions: {
-    sticky: true,
     buttons: [
       {
         id: "submit",
@@ -64,8 +64,8 @@ const createEditForm = (copy = {}) => ({
 
 const createAddForm = (copy = {}) => ({
   title: copy.addTitle ?? "Add Color",
+  sticky: true,
   actions: {
-    sticky: true,
     buttons: [
       {
         id: "submit",

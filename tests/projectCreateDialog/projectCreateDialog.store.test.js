@@ -83,8 +83,8 @@ describe("projectCreateDialog.store", () => {
     const state = createInitialState();
     const viewData = selectViewData({ state, i18n: EN_I18N });
 
+    expect(viewData.form.sticky).toBe(true);
     expect(viewData.form.actions).toEqual({
-      sticky: true,
       buttons: [
         {
           id: "submit",
