@@ -27,8 +27,10 @@ describe("projects view", () => {
     );
     expect(projectsView).toContain("rtgl-text: ${localTitle}");
     expect(projectsView).toContain(
-      'rtgl-button#mobileCreateMenuButton sq pre=plus v=ol title="${createButtonText}" aria-label="${createButtonText}"',
+      'rtgl-button#mobileCreateMenuButton pre=plus title="${createButtonText}" aria-label="${createButtonText}"\': ${createButtonText}',
     );
+    expect(projectsView).not.toContain("rtgl-button#mobileCreateMenuButton v=");
+    expect(projectsView).not.toContain("rtgl-button#mobileCreateMenuButton sq");
     expect(projectsView).not.toContain("rtgl-text s=h3: ${localTitle}");
     expect(projectsView).not.toContain("pt=lg pb=md");
     expect(projectsView).not.toContain(
