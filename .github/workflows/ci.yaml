@@ -14,6 +14,37 @@ jobs:
         with:
           bun-version: 1.3.4
 
+      - name: Checkout Route Engine
+        uses: actions/checkout@v4
+        with:
+          repository: RouteVN/route-engine
+          ref: 435d6b78408ab534d4f69f117d613c7b6b65ca86
+          path: _deps/route-engine
+
+      - name: Build Route Engine
+        working-directory: _deps/route-engine
+        run: |
+          bun install --frozen-lockfile
+          bun run build
+
+      - name: Checkout Route Graphics
+        uses: actions/checkout@v4
+        with:
+          repository: RouteVN/route-graphics
+          ref: 15a27057513b768272d63482810ebe6689f5427a
+          path: _deps/route-graphics
+
+      - name: Build Route Graphics
+        working-directory: _deps/route-graphics
+        run: |
+          bun install --frozen-lockfile
+          bun run build
+
+      - name: Link runtime dependencies
+        run: |
+          ln -s "$GITHUB_WORKSPACE/_deps/route-engine" "$GITHUB_WORKSPACE/../route-engine"
+          ln -s "$GITHUB_WORKSPACE/_deps/route-graphics" "$GITHUB_WORKSPACE/../route-graphics"
+
       # Install dependencies from root
       - name: Install Dependencies
         run: bun install --frozen-lockfile
