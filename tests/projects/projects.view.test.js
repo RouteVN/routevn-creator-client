@@ -103,7 +103,7 @@ describe("projects view", () => {
     );
 
     expect(projectsView).toContain(
-      "rtgl-dialog#createProjectDialog ?open=${createDialog.isOpen} s=md md-layout=fixed-top p=none",
+      "rtgl-dialog#createProjectDialog ?open=${createDialog.isOpen} s=md md-layout=fixed-top:",
     );
     expect(projectsView).toContain(
       "rtgl-view slot=content d=v w=f h=f overflow=hidden",
