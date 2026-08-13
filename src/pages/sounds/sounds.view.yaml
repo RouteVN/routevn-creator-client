@@ -101,10 +101,10 @@ refs:
         handler: handleEditDialogClose
   editForm:
     eventListeners:
-      form-action:
-        handler: handleEditFormAction
       add-option-click:
         handler: handleEditFormAddOptionClick
+      form-action:
+        handler: handleEditFormAction
   folderNameDialog:
     eventListeners:
       close:
@@ -211,12 +211,12 @@ template:
                   - rtgl-button#mobileDeleteCancelButton v=se: ${cancelButton}
                   - rtgl-button#mobileDeleteConfirmButton v=pr pre=trash: ${mobileDeleteDialogConfirmLabel}
   - $if isEditDialogOpen:
-      - rtgl-dialog#editDialog ?open=${isEditDialogOpen} s=md:
-          - rtgl-view slot=content g=md:
-              - rtgl-form#editForm key=${isEditDialogOpen} :defaultValues=${editDefaultValues} :form=${editForm} w=f:
+      - rtgl-dialog#editDialog ?open=${isEditDialogOpen} s=md md-layout=fixed-top:
+          - rtgl-view slot=content d=v w=f h=f overflow=hidden:
+              - rtgl-form#editForm key=${isEditDialogOpen} :defaultValues=${editDefaultValues} :form=${editForm} sticky bottom-spacer=96 w=f h=f:
                   - $if editPreviewFileId:
-                      - rtgl-view slot="sound-slot" p=sm bw=xs bc=bo br=md cur=pointer:
-                          - rvn-waveform-visualizer#editDialogWaveform waveformDataFileId=${editPreviewFileId} w=400 h=110: null
+                      - 'rtgl-view slot="sound-slot" w=f p=sm bw=xs bc=bo br=md cur=pointer style="min-width: 0; max-width: 100%; box-sizing: border-box; overflow: hidden;"':
+                          - rvn-waveform-visualizer#editDialogWaveform waveformDataFileId=${editPreviewFileId} w=f h=110: null
                     $else:
                       - rtgl-view#editDialogWaveformPlaceholder slot="sound-slot" w=f h=110 av=c ah=c bgc=bg bc=bo bw=xs br=md cur=pointer:
                           - rtgl-text c=mu-fg s=sm: ${clickToUploadLabel}

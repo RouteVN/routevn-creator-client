@@ -2,6 +2,32 @@ import { readFileSync } from "fs";
 import { describe, expect, it } from "vitest";
 
 describe("images view", () => {
+  it("uses the Project dialog scrolling and sticky form action pattern", () => {
+    const imagesView = readFileSync(
+      new URL("../../src/pages/images/images.view.yaml", import.meta.url),
+      "utf8",
+    );
+
+    expect(imagesView).toContain(
+      "rtgl-dialog#editDialog ?open=${isEditDialogOpen} s=md md-layout=fixed-top:",
+    );
+    expect(imagesView).toContain(
+      "rtgl-view slot=content d=v w=f h=f overflow=hidden:",
+    );
+    expect(imagesView).toContain(
+      "rtgl-form#editForm key=${isEditDialogOpen} :defaultValues=${editDefaultValues} :form=${editForm} sticky bottom-spacer=96 w=f h=f:",
+    );
+    expect(imagesView).toContain(
+      "form-action:\n        handler: handleEditFormAction",
+    );
+    expect(imagesView).not.toContain("editImageSubmitButton");
+    expect(imagesView).not.toContain("h=80 aria-hidden=true");
+    expect(imagesView).not.toContain(
+      "rtgl-form#editForm key=${isEditDialogOpen} :defaultValues=${editDefaultValues} :form=${editForm} w=f ph=md:",
+    );
+    expect(imagesView).not.toContain("md-layout=top:");
+  });
+
   it("clears selection when the media grid emits a background click", () => {
     const imagesView = readFileSync(
       new URL("../../src/pages/images/images.view.yaml", import.meta.url),
@@ -12,7 +38,7 @@ describe("images view", () => {
     expect(imagesView).toContain("handler: handleResourceViewBackgroundClick");
   });
 
-  it("shows column zoom controls in the mobile media header", () => {
+  it("moves mobile zoom and filter into the overflow menu", () => {
     const imagesView = readFileSync(
       new URL("../../src/pages/images/images.view.yaml", import.meta.url),
       "utf8",
@@ -26,7 +52,10 @@ describe("images view", () => {
     );
 
     expect(mobileBranch).toContain("show-zoom-controls");
+    expect(mobileBranch).toContain("zoom-in-overflow-menu");
     expect(mobileBranch).toContain("zoom-control-mode=columns");
+    expect(mobileBranch).toContain("show-tag-filter");
+    expect(mobileBranch).toContain("filter-in-overflow-menu");
     expect(mobileBranch).toContain("default-items-per-row=2");
     expect(mobileBranch).toContain(
       'items-per-row-config-key="groupImagesView.itemsPerRow"',
@@ -230,6 +259,23 @@ describe("images view", () => {
 
     expect(imagesView).toContain("handler: handleMobileDetailPreviewClick");
     expect(imagesView).toContain("handler: handleMobileDetailDeleteClick");
+  });
+
+  it("constrains the edit image preview to a fixed aspect-preserving box", () => {
+    const imagesView = readFileSync(
+      new URL("../../src/pages/images/images.view.yaml", import.meta.url),
+      "utf8",
+    );
+
+    expect(imagesView).toContain(
+      'rtgl-view slot=image-slot w=120 h=120 av=c ah=c style="overflow: hidden;"',
+    );
+    expect(imagesView).toContain(
+      "rvn-file-image#editDialogImage fileId=${editPreviewFileId} w=f h=f",
+    );
+    expect(imagesView).not.toContain(
+      "rvn-file-image#editDialogImage fileId=${editPreviewFileId} h=120",
+    );
   });
 
   it("shows a confirmation dialog for image deletes", () => {

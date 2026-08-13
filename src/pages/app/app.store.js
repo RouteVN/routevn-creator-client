@@ -41,6 +41,7 @@ const mobileTabIdByRoutePattern = {
   "/project/about": "settings",
   "/project/appearance": "settings",
   "/project/language": "settings",
+  "/project/asset-package": "release",
   "/project/user": "settings",
 };
 
@@ -101,6 +102,7 @@ export const selectCurrentRoutePattern = ({ state }) => {
     "/project/about",
     "/project/appearance",
     "/project/language",
+    "/project/asset-package",
     "/project/user",
     "/project/fonts",
     "/project/layouts",

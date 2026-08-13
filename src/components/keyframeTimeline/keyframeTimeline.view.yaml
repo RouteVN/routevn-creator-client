@@ -3,12 +3,6 @@ refs:
     eventListeners:
       pointerdown:
         handler: handleRulerScrubStart
-      pointermove:
-        handler: handleRulerScrubMove
-      pointerup:
-        handler: handleRulerScrubEnd
-      pointercancel:
-        handler: handleRulerScrubCancel
   track*:
     eventListeners:
       mousemove:
@@ -57,6 +51,11 @@ styles:
     container-type: inline-size
   ".keyframeTimelineKeyframeValue":
     min-width: "0"
+  ".keyframeTimelineKeyframeStartValue":
+    min-width: "0"
+  '@container (max-width: 80px)':
+    ".keyframeTimelineKeyframeStartValue":
+      display: none
   '@container (max-width: 40px)':
     ".keyframeTimelineKeyframeValue":
       display: none
@@ -122,6 +121,8 @@ template:
                                                           - 'rtgl-view pos=abs bgc=fg style="top: 5px; bottom: 5px; left: 6px; width: 1px; pointer-events: none;"': null
                                                       - 'rtgl-view#durationHandleRight${pIndex}x${j} data-keyframe-duration-handle=right data-resize-edge=right data-property=${property.name} data-index=${j} pos=abs style="top: 0; bottom: 0; right: 0; width: 7px; cursor: ew-resize; touch-action: none; z-index: 3;"':
                                                           - 'rtgl-view pos=abs bgc=fg style="top: 5px; bottom: 5px; right: 6px; width: 1px; pointer-events: none;"': null
+                                                  - $if keyframe.startValueVisible:
+                                                      - 'rtgl-text.keyframeTimelineKeyframeStartValue s=xs c=${keyframe.foregroundColor} ta=s ellipsis style="position: absolute; top: 50%; left: 13px; right: 10px; transform: translateY(-50%); z-index: 4; pointer-events: none;"': ${keyframe.startValueLabel}
                                                   - 'rtgl-text.keyframeTimelineKeyframeValue s=xs c=${keyframe.foregroundColor} ta=e ellipsis style="position: absolute; top: 50%; left: 10px; right: 13px; transform: translateY(-50%); z-index: 4; pointer-events: none;"': ${keyframe.value}
                                       - $if property.fillerWidthPercent && property.fillerWidthPercent > 0:
                                           - 'rtgl-view d=h h=f style="width: ${property.fillerWidthPercent}%"': null

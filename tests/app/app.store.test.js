@@ -68,6 +68,15 @@ describe("app.store repository loading progress", () => {
     );
   });
 
+  it("resolves the asset package release route", () => {
+    const state = createInitialState();
+    state.currentRoute = "/project/asset-package";
+
+    expect(selectViewData({ state }).currentRoutePattern).toBe(
+      "/project/asset-package",
+    );
+  });
+
   it("resolves the platform details route", () => {
     const state = createInitialState();
     state.currentRoute = "/project/releases/platform-details";
@@ -195,11 +204,11 @@ describe("app.store mobile tab active state", () => {
     expect(selectMobileTab({ state, tabId: "assets" }).color).toBe("mu-fg");
   });
 
-  it("highlights the settings tab on settings routes", () => {
+  it("highlights the release tab on the asset package route", () => {
     const state = createInitialState();
-    state.currentRoute = "/project/language";
+    state.currentRoute = "/project/asset-package";
 
-    expect(selectMobileTab({ state, tabId: "settings" }).color).toBe("white");
+    expect(selectMobileTab({ state, tabId: "release" }).color).toBe("white");
     expect(selectMobileTab({ state, tabId: "assets" }).color).toBe("mu-fg");
   });
 

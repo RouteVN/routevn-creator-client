@@ -124,6 +124,11 @@ const releaseItems = [
     name: "Web Server",
     path: "/project/releases/web-server",
   },
+  {
+    id: "assetPackage",
+    name: "Asset Package",
+    path: "/project/asset-package",
+  },
 ];
 
 // Map sub-resource IDs to their parent resource IDs for menu highlighting

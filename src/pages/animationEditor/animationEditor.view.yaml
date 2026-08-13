@@ -70,6 +70,18 @@ refs:
     eventListeners:
       click:
         handler: handleMaskRemoveRequestClick
+  selectedKeyframeAddButton:
+    eventListeners:
+      click:
+        handler: handleSelectedKeyframeAddClick
+  selectedKeyframeDeleteButton:
+    eventListeners:
+      click:
+        handler: handleSelectedKeyframeDeleteClick
+  selectedKeyframeRemoveStartValueButton:
+    eventListeners:
+      click:
+        handler: handleSelectedKeyframeRemoveStartValueClick
   selectedPropertyDeleteButton:
     eventListeners:
       click:
@@ -278,6 +290,14 @@ refs:
     eventListeners:
       value-change:
         handler: handleSelectedKeyframeValueChange
+  selectedKeyframeStartValue:
+    eventListeners:
+      value-input:
+        handler: handleSelectedKeyframeStartValueChange
+  selectedKeyframeStartValuePopover:
+    eventListeners:
+      value-change:
+        handler: handleSelectedKeyframeStartValueChange
   selectedKeyframeRelative:
     eventListeners:
       value-change:
@@ -290,10 +310,10 @@ refs:
     eventListeners:
       value-change:
         handler: handleSelectedPropertyInitialValueChange
-  selectedPropertyUseDefault:
+  selectedPropertyInitialValueType:
     eventListeners:
-      click:
-        handler: handleSelectedPropertyUseDefaultClick
+      value-change:
+        handler: handleSelectedPropertyInitialValueTypeChange
   selectedPropertyAutoDuration:
     eventListeners:
       value-change:
@@ -338,6 +358,12 @@ refs:
         handler: handleClosePopover
       item-click:
         handler: handleAddPropertySideMenuItemClick
+  selectedKeyframeAddMenu:
+    eventListeners:
+      close:
+        handler: handleClosePopover
+      item-click:
+        handler: handleSelectedKeyframeAddMenuItemClick
   disableMaskButton:
     eventListeners:
       click:
@@ -635,6 +661,10 @@ template:
                           - rtgl-text w=1fg: ${detailsPanelTitle}
                           - $if selectedKeyframeDetailId:
                               - 'rtgl-button#editSelectedKeyframeButton sq v=gh pre=edit aria-label="${editKeyframeButtonLabel}" title="${editKeyframeButtonLabel}"': null
+                              - $if selectedKeyframeAddMenuItems.length > 0:
+                                  - 'rtgl-button#selectedKeyframeAddButton sq v=gh pre=plus aria-haspopup=menu aria-expanded="${popover.selectedKeyframeAddMenuIsOpen}" aria-label="${addButton}" title="${addButton}"': null
+                              - $if selectedKeyframeCanDelete:
+                                  - 'rtgl-button#selectedKeyframeDeleteButton sq v=gh pre=trash aria-label="${deleteKeyframeButtonLabel}" title="${deleteKeyframeButtonLabel}"': null
                             $elif selectedMask:
                               - 'rtgl-button#selectedMaskDeleteButton sq v=gh pre=trash aria-label="${removeButton}" title="${removeButton}"': null
                             $elif selectedPropertyDetailId:
@@ -647,6 +677,18 @@ template:
                               - 'rtgl-view data-popover-input-field=true slot=keyframe-duration w=f h=32 d=h av=c ph=md bgc=mu bw=xs bc=bg h-bc=ac br=md cur=pointer style="box-sizing: border-box;"':
                                   - 'rvn-value-popover-input#selectedKeyframeDuration value=${selectedKeyframeEditor.duration} label="${selectedKeyframeEditor.durationLabel}"': null
                               - rtgl-select#selectedKeyframeEasingSelect slot=keyframe-easing w=f no-clear :selectedValue=${selectedKeyframeEditor.easing} :options=${selectedKeyframeEditor.easingOptions}: null
+                              - $if selectedKeyframeEditor.hasStartValue:
+                                  - rtgl-view slot=keyframe-start-value d=v w=f g=xs:
+                                      - rtgl-view d=h w=f av=c:
+                                          - rtgl-text w=1fg c=mu-fg: ${selectedKeyframeEditor.startValueLabel}
+                                          - 'rtgl-button#selectedKeyframeRemoveStartValueButton sq v=gh pre=x aria-label="${removeStartValueButtonLabel}" title="${removeStartValueButtonLabel}"': null
+                                      - $if selectedKeyframeEditor.valueSlider:
+                                          - rtgl-slider-input#selectedKeyframeStartValue key=${selectedKeyframeDetailId} w=f value=${selectedKeyframeEditor.startValue} min=${selectedKeyframeEditor.valueSlider.min} max=${selectedKeyframeEditor.valueSlider.max} step=${selectedKeyframeEditor.valueSlider.step}: null
+                                        $elif selectedKeyframeEditor.valueUsesPopover:
+                                          - 'rtgl-view data-popover-input-field=true w=f h=32 d=h av=c ph=md bgc=mu bw=xs bc=bg h-bc=ac br=md cur=pointer style="box-sizing: border-box;"':
+                                              - 'rvn-value-popover-input#selectedKeyframeStartValuePopover value=${selectedKeyframeEditor.startValue} label="${selectedKeyframeEditor.startValueLabel}"': null
+                                        $else:
+                                          - rtgl-input-number#selectedKeyframeStartValue key=${selectedKeyframeDetailId} w=f step=${selectedKeyframeEditor.valueStep} value=${selectedKeyframeEditor.startValue}: null
                               - $if selectedKeyframeEditor.valueSlider:
                                   - rtgl-slider-input#selectedKeyframeValue slot=keyframe-value key=${selectedKeyframeDetailId} w=f value=${selectedKeyframeEditor.value} min=${selectedKeyframeEditor.valueSlider.min} max=${selectedKeyframeEditor.valueSlider.max} step=${selectedKeyframeEditor.valueSlider.step}: null
                                 $elif selectedKeyframeEditor.valueUsesPopover:
@@ -662,6 +704,7 @@ template:
                                       - 'rvn-value-popover-input#selectedPropertyAutoDuration value=${selectedPropertyEditor.duration} label="${selectedPropertyEditor.durationLabel}"': null
                                   - rtgl-select#selectedPropertyAutoEasing slot=property-auto-easing w=f no-clear :selectedValue=${selectedPropertyEditor.easing} :options=${selectedPropertyEditor.easingOptions}: null
                                 $else:
+                                  - rtgl-segmented-control#selectedPropertyInitialValueType slot=property-initial-value-type w=f no-clear :selectedValue=${selectedPropertyEditor.initialValueType} :options=${selectedPropertyEditor.initialValueTypeOptions}: null
                                   - rtgl-view slot=property-initial-value d=v w=f g=xs:
                                       - $if selectedPropertyEditor && selectedPropertyEditor.initialValueSlider:
                                           - rtgl-slider-input#selectedPropertyInitialValue key=${selectedPropertyDetailId} w=f value=${selectedPropertyEditor.initialValue} min=${selectedPropertyEditor.initialValueSlider.min} max=${selectedPropertyEditor.initialValueSlider.max} step=${selectedPropertyEditor.initialValueSlider.step}: null
@@ -670,8 +713,6 @@ template:
                                               - 'rvn-value-popover-input#selectedPropertyInitialValuePopover value=${selectedPropertyEditor.initialValue} label="${selectedPropertyEditor.initialValueLabel}"': null
                                         $elif selectedPropertyEditor:
                                           - rtgl-input-number#selectedPropertyInitialValue key=${selectedPropertyDetailId} w=f step=${selectedPropertyEditor.initialValueStep} value=${selectedPropertyEditor.initialValue}: null
-                                      - $if selectedPropertyEditor && selectedPropertyEditor.hasInitialValue:
-                                          - rtgl-button#selectedPropertyUseDefault s=sm v=se w=f: ${useDefaultValueButtonLabel}
                         $elif selectedMask:
                           - rtgl-view#selectedMaskDetails data-timeline-selection-surface=true d=v w=f g=md p=md pb=xl:
                               - $if maskEditorPanel.unsupported:
@@ -829,6 +870,7 @@ template:
                   - rtgl-button#previewDialogSaveButton s=sm: ${saveButton}
   - rtgl-dropdown-menu#keyframeDropdownMenu :items=${keyframeDropdownItems} ?open=${popover.dropdownMenuIsOpen} x=${popover.x} y=${popover.y}: null
   - rtgl-dropdown-menu#addPropertySideMenu :items=${addPropertySideMenuItems} ?open=${popover.addPropertySideMenuIsOpen} x=${popover.x} y=${popover.y}: null
+  - rtgl-dropdown-menu#selectedKeyframeAddMenu :items=${selectedKeyframeAddMenuItems} ?open=${popover.selectedKeyframeAddMenuIsOpen} x=${popover.x} y=${popover.y}: null
   - rtgl-dialog#imageSelectorDialog ?open=${imageSelectorDialog.open} s=xl:
       - $if imageSelectorDialog.open:
           - rtgl-view slot=content d=v w=f g=md:

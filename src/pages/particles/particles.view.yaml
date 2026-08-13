@@ -69,12 +69,16 @@ refs:
         handler: handleParticleDialogClose
   particleForm:
     eventListeners:
-      form-action:
-        handler: handleParticleFormActionClick
       form-change:
         handler: handleParticleFormChange
       add-option-click:
         handler: handleParticleFormAddOptionClick
+      keydown:
+        handler: handleParticleFormSubmitKeyDown
+  particleSubmitButton:
+    eventListeners:
+      click:
+        handler: handleParticleSubmitClick
   tabs:
     eventListeners:
       item-click:
@@ -219,47 +223,58 @@ template:
                       - rtgl-tag-select#detailTagSelect slot="particle-tags" w=f :options=${tagFilterOptions} :selectedValues=${selectedItemTagIds} :draftSelectedValues=${detailTagDraftValues} :open=${isDetailTagSelectOpen} :addOption=${detailTagAddOption} :placeholder=${addTagPlaceholder}: null
   - rtgl-dialog#folderNameDialog ?open=${isFolderNameDialogOpen} s=sm:
       - rtgl-form#folderNameForm key=${folderNameDialogItemId} slot=content :defaultValues=${folderNameDialogDefaultValues} :form=${folderNameForm} w=f: null
-  - rtgl-dialog#particleDialog ?open=${isDialogOpen} s=lg:
-      - 'rtgl-view slot="content" d=h lg-d=v ah=c g=lg w=f h=70vh style="min-height: 0;"':
+  - rtgl-dialog#particleDialog ?open=${isDialogOpen} s=lg md-layout=fixed-top p=none:
+      - 'rtgl-view slot="content" d=v w=f h=f pv=md pos=rel style="min-width: 0; min-height: 0; overflow: hidden;"':
           - $if isDialogOpen:
               - $if !isPreviewOnlyDialog:
-                  - 'rtgl-view w=4fg lg-w=f d=v g=md h=f style="min-width: 0; min-height: 0;"':
-                      - 'rtgl-view w=f h=1fg sv style="min-height: 0;"':
-                          - rtgl-form#particleForm key=${particleFormKey} :defaultValues=${dialogFormValues} :form=${particleForm} w=f:
-                              - $if showParticleFormTabs:
-                                  - rtgl-tabs#tabs slot=particle-form-tabs selected-tab=${selectedParticleFormTab} :items=${particleFormTabs}: null
-                              - rtgl-view slot=particle-texture-image d=v w=f:
-                                  - rtgl-view d=v w=f g=xs:
-                                      - rtgl-text: ${textureImageLabel}
-                                      - rtgl-text s=sm c=mu-fg: ${textureImageDescription}
-                                  - 'rtgl-view h=8 style="flex-shrink: 0;"': null
-                                  - $if dialogTextureImage:
-                                      - 'rtgl-view#dialogTextureImageButton role=button tabindex=0 aria-haspopup=dialog aria-label="${textureImageLabel}" cur=pointer bw=xs bc=${dialogTextureImage.itemBorderColor} h-bc=${dialogTextureImage.itemHoverBorderColor} br=md w=160 overflow=hidden style="max-width: 100%; box-sizing: border-box;"':
-                                          - 'div.particleImageThumbnailTransparencyGrid style="display: block; width: 100%; aspect-ratio: ${dialogTextureImage.previewAspectRatio}; overflow: hidden;"':
-                                              - rvn-file-image w=f h=f fileId=${dialogTextureImage.previewFileId}: null
-                                          - rtgl-view w=f p=md:
-                                              - rtgl-text s=xs c=mu-fg ellipsis w=f: ${dialogTextureImage.name}
-                                    $else:
-                                      - 'rtgl-view#dialogTextureImageButton role=button tabindex=0 aria-haspopup=dialog aria-label="${textureImageLabel}" w=160 h=90 av=c ah=c bgc=bg bc=bo bw=xs br=md cur=pointer style="max-width: 100%; box-sizing: border-box;"':
-                                          - rtgl-text c=mu-fg s=sm: ${selectImageLabel}
-              - 'rtgl-view w=6fg lg-w=f d=v av=c g=md h=f style="min-width: 0; min-height: 0; overflow-y: auto;"':
-                  - 'rtgl-view w=f pos=rel br=md bw=xs bc=bo style="aspect-ratio: ${dialogPreviewAspectRatio}; overflow: hidden; background: #000;"':
-                      - rtgl-view pos=abs cor=full:
-                          - 'div#dialogCanvas style="width: 100%; height: 100%; display: flex; overflow: hidden;"': null
-                  - $if !isPreviewOnlyDialog:
-                      - rtgl-view d=v w=f:
-                          - rtgl-text s=sm c=mu-fg: ${backgroundImageLabel}
-                          - 'rtgl-view h=8 style="flex-shrink: 0;"': null
-                          - rtgl-view d=h wrap g=sm w=f av=c:
-                              - $if dialogPreviewBackgroundImage:
-                                  - 'rtgl-view#dialogPreviewBackgroundImageButton cur=pointer bw=xs bc=${dialogPreviewBackgroundImage.itemBorderColor} h-bc=${dialogPreviewBackgroundImage.itemHoverBorderColor} br=md w=160 overflow=hidden style="max-width: 100%; box-sizing: border-box;"':
-                                      - 'div.particleImageThumbnailTransparencyGrid style="display: block; width: 100%; aspect-ratio: ${dialogPreviewBackgroundImage.previewAspectRatio}; overflow: hidden;"':
-                                          - rvn-file-image w=f h=f fileId=${dialogPreviewBackgroundImage.previewFileId}: null
-                                      - rtgl-view w=f p=md:
-                                          - rtgl-text s=xs c=mu-fg ellipsis w=f: ${dialogPreviewBackgroundImage.name}
-                                $else:
-                                  - 'rtgl-view#dialogPreviewBackgroundImageButton w=160 h=90 av=c ah=c bgc=bg bc=bo bw=xs br=md cur=pointer style="max-width: 100%; box-sizing: border-box;"':
-                                      - rtgl-text c=mu-fg s=sm: ${selectImageLabel}
+                  - 'rtgl-view h=1fg sv w=f style="min-height: 0;"':
+                      - 'rtgl-view d=h lg-d=v ah=c g=lg w=f ph=md style="min-width: 0; min-height: 0;"':
+                          - 'rtgl-view w=4fg lg-w=f d=v g=md style="min-width: 0; min-height: 0;"':
+                              - rtgl-form#particleForm key=${particleFormKey} :defaultValues=${dialogFormValues} :form=${particleForm} w=f:
+                                  - $if showParticleFormTabs:
+                                      - rtgl-tabs#tabs slot=particle-form-tabs selected-tab=${selectedParticleFormTab} :items=${particleFormTabs}: null
+                                  - rtgl-view slot=particle-texture-image d=v w=f:
+                                      - rtgl-view d=v w=f g=xs:
+                                          - rtgl-text: ${textureImageLabel}
+                                          - rtgl-text s=sm c=mu-fg: ${textureImageDescription}
+                                      - 'rtgl-view h=8 style="flex-shrink: 0;"': null
+                                      - $if dialogTextureImage:
+                                          - 'rtgl-view#dialogTextureImageButton role=button tabindex=0 aria-haspopup=dialog aria-label="${textureImageLabel}" cur=pointer bw=xs bc=${dialogTextureImage.itemBorderColor} h-bc=${dialogTextureImage.itemHoverBorderColor} br=md w=160 overflow=hidden style="max-width: 100%; box-sizing: border-box;"':
+                                              - 'div.particleImageThumbnailTransparencyGrid style="display: block; width: 100%; aspect-ratio: ${dialogTextureImage.previewAspectRatio}; overflow: hidden;"':
+                                                  - rvn-file-image w=f h=f fileId=${dialogTextureImage.previewFileId}: null
+                                              - rtgl-view w=f p=md:
+                                                  - rtgl-text s=xs c=mu-fg ellipsis w=f: ${dialogTextureImage.name}
+                                        $else:
+                                          - 'rtgl-view#dialogTextureImageButton role=button tabindex=0 aria-haspopup=dialog aria-label="${textureImageLabel}" w=160 h=90 av=c ah=c bgc=bg bc=bo bw=xs br=md cur=pointer style="max-width: 100%; box-sizing: border-box;"':
+                                              - rtgl-text c=mu-fg s=sm: ${selectImageLabel}
+                          - $if !mobileLayout:
+                              - 'rtgl-view w=6fg lg-w=f d=v av=c g=md style="min-width: 0; min-height: 0;"':
+                                  - 'rtgl-view w=f pos=rel br=md bw=xs bc=bo style="aspect-ratio: ${dialogPreviewAspectRatio}; overflow: hidden; background: #000;"':
+                                      - rtgl-view pos=abs cor=full:
+                                          - 'div#dialogCanvas style="width: 100%; height: 100%; display: flex; overflow: hidden;"': null
+                                  - rtgl-view d=v w=f:
+                                      - rtgl-text s=sm c=mu-fg: ${backgroundImageLabel}
+                                      - 'rtgl-view h=8 style="flex-shrink: 0;"': null
+                                      - rtgl-view d=h wrap g=sm w=f av=c:
+                                          - $if dialogPreviewBackgroundImage:
+                                              - 'rtgl-view#dialogPreviewBackgroundImageButton cur=pointer bw=xs bc=${dialogPreviewBackgroundImage.itemBorderColor} h-bc=${dialogPreviewBackgroundImage.itemHoverBorderColor} br=md w=160 overflow=hidden style="max-width: 100%; box-sizing: border-box;"':
+                                                  - 'div.particleImageThumbnailTransparencyGrid style="display: block; width: 100%; aspect-ratio: ${dialogPreviewBackgroundImage.previewAspectRatio}; overflow: hidden;"':
+                                                      - rvn-file-image w=f h=f fileId=${dialogPreviewBackgroundImage.previewFileId}: null
+                                                  - rtgl-view w=f p=md:
+                                                      - rtgl-text s=xs c=mu-fg ellipsis w=f: ${dialogPreviewBackgroundImage.name}
+                                            $else:
+                                              - 'rtgl-view#dialogPreviewBackgroundImageButton w=160 h=90 av=c ah=c bgc=bg bc=bo bw=xs br=md cur=pointer style="max-width: 100%; box-sizing: border-box;"':
+                                                  - rtgl-text c=mu-fg s=sm: ${selectImageLabel}
+                            $else:
+                              - 'div#dialogCanvas aria-hidden=true style="position: fixed; left: -10000px; top: -10000px; width: 1px; height: 1px; opacity: 0; pointer-events: none;"': null
+                      - 'rtgl-view h=80 aria-hidden=true style="flex: 0 0 80px;"': null
+                  - 'rtgl-view d=h av=c ah=e w=f g=lg ph=md pt=md style="flex: 0 0 auto;"':
+                      - rtgl-button#particleSubmitButton v=pr: ${particleSubmitButtonLabel}
+                $else:
+                  - 'rtgl-view h=1fg sv w=f ph=md style="min-height: 0;"':
+                      - 'rtgl-view w=f pos=rel br=md bw=xs bc=bo style="aspect-ratio: ${dialogPreviewAspectRatio}; overflow: hidden; background: #000;"':
+                          - rtgl-view pos=abs cor=full:
+                              - 'div#dialogCanvas style="width: 100%; height: 100%; display: flex; overflow: hidden;"': null
   - rtgl-dialog#createTagDialog ?open=${isCreateTagDialogOpen} s=sm:
       - rtgl-form#createTagForm key=${isCreateTagDialogOpen} slot=content :defaultValues=${createTagDefaultValues} :form=${createTagForm} w=f: null
   - rtgl-dialog#previewImageSelectorDialog ?open=${previewImageSelectorDialog.open} s=xl:

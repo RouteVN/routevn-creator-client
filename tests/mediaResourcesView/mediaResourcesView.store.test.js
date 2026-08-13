@@ -130,6 +130,28 @@ describe("mediaResourcesView.store", () => {
     );
   });
 
+  it("moves mobile zoom and filter actions into the overflow menu", () => {
+    const props = {
+      mobileLayout: true,
+      showZoomControls: true,
+      zoomInPopover: true,
+      zoomInOverflowMenu: true,
+      zoomControlMode: "columns",
+      showTagFilter: true,
+      filterInOverflowMenu: true,
+    };
+    const state = createInitialState({ props });
+    const viewData = selectViewData({ state, props });
+
+    expect(viewData.resourceImportMenuItems.map((item) => item.value)).toEqual([
+      "zoom",
+      "filter",
+    ]);
+    expect(viewData.showZoomPopover).toBe(true);
+    expect(viewData.showZoomPopoverButton).toBe(false);
+    expect(viewData.showTagFilter).toBe(false);
+  });
+
   it("clamps mobile column zoom controls to six columns", () => {
     const props = {
       mobileLayout: true,

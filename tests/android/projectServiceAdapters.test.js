@@ -77,6 +77,117 @@ describe("android project service adapters", () => {
     vi.restoreAllMocks();
   });
 
+  it("stores large project files through bounded ordered bridge chunks", async () => {
+    const sourceBytes = Uint8Array.from(
+      { length: 1_200_000 },
+      (_, index) => index % 251,
+    );
+    const writtenChunks = [];
+    let bytesWritten = 0;
+    mocked.callAndroidBridge.mockImplementation((method, payload) => {
+      if (method === "ensureProjectStorage") {
+        return true;
+      }
+      if (method === "beginProjectFileWrite") {
+        expect(payload).toEqual({
+          projectId: "project-1",
+          fileId: "video-file",
+          mimeType: "video/mp4",
+          size: sourceBytes.byteLength,
+        });
+        return { writeId: "write-1" };
+      }
+      if (method === "appendProjectFileWrite") {
+        expect(payload.writeId).toBe("write-1");
+        expect(payload.offset).toBe(bytesWritten);
+        expect(payload.base64.length).toBeLessThanOrEqual(699_052);
+        const chunk = Buffer.from(payload.base64, "base64");
+        writtenChunks.push(chunk);
+        bytesWritten += chunk.byteLength;
+        return { bytesWritten };
+      }
+      if (method === "finishProjectFileWrite") {
+        expect(payload).toEqual({ writeId: "write-1" });
+        return { size: bytesWritten };
+      }
+
+      throw new Error(`Unexpected bridge method: ${method}`);
+    });
+    const { fileAdapter } = createAndroidProjectServiceAdapters({
+      collabLog: vi.fn(),
+      creatorVersion: 1,
+    });
+
+    await expect(
+      fileAdapter.storeFile({
+        file: { type: "video/mp4" },
+        bytes: toExactArrayBuffer(sourceBytes),
+        idGenerator: () => "video-file",
+        getCurrentReference: () => ({ projectId: "project-1" }),
+      }),
+    ).resolves.toMatchObject({ fileId: "video-file" });
+
+    expect(
+      mocked.callAndroidBridge.mock.calls.filter(
+        ([method]) => method === "appendProjectFileWrite",
+      ),
+    ).toHaveLength(3);
+    expect(Buffer.concat(writtenChunks)).toEqual(Buffer.from(sourceBytes));
+    expect(mocked.callAndroidBridge).not.toHaveBeenCalledWith(
+      "writeProjectFile",
+      expect.anything(),
+    );
+  });
+
+  it("aborts the native project file session when a chunk write fails", async () => {
+    const sourceBytes = new Uint8Array(600_000);
+    let appendCount = 0;
+    mocked.callAndroidBridge.mockImplementation((method, payload) => {
+      if (method === "ensureProjectStorage") {
+        return true;
+      }
+      if (method === "beginProjectFileWrite") {
+        return { writeId: "write-1" };
+      }
+      if (method === "appendProjectFileWrite") {
+        appendCount += 1;
+        if (appendCount === 2) {
+          throw new Error("Native chunk write failed");
+        }
+        return {
+          bytesWritten: Buffer.from(payload.base64, "base64").byteLength,
+        };
+      }
+      if (method === "abortProjectFileWrite") {
+        return true;
+      }
+
+      throw new Error(`Unexpected bridge method: ${method}`);
+    });
+    const { fileAdapter } = createAndroidProjectServiceAdapters({
+      collabLog: vi.fn(),
+      creatorVersion: 1,
+    });
+
+    await expect(
+      fileAdapter.storeFile({
+        file: { type: "video/mp4" },
+        bytes: toExactArrayBuffer(sourceBytes),
+        idGenerator: () => "video-file",
+        getCurrentReference: () => ({ projectId: "project-1" }),
+      }),
+    ).rejects.toThrow("Native chunk write failed");
+
+    expect(mocked.callAndroidBridge).toHaveBeenCalledWith(
+      "abortProjectFileWrite",
+      { writeId: "write-1" },
+    );
+    expect(mocked.callAndroidBridge).not.toHaveBeenCalledWith(
+      "finishProjectFileWrite",
+      expect.anything(),
+    );
+  });
+
   it("prompts for distribution ZIP save location with the desktop ZIP name pattern", async () => {
     const saveFilePicker = vi.fn(async () => "content://exports/export.zip");
     const { fileAdapter } = createAndroidProjectServiceAdapters({

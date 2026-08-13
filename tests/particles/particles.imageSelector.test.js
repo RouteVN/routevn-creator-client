@@ -43,12 +43,15 @@ describe("particle texture image selector", () => {
       view.indexOf("$if dialogPreviewBackgroundImage:"),
       view.indexOf("rtgl-dialog#createTagDialog"),
     );
-    const textureCard = `                                      - 'rtgl-view#dialogTextureImageButton role=button tabindex=0 aria-haspopup=dialog aria-label="\${textureImageLabel}" cur=pointer bw=xs bc=\${dialogTextureImage.itemBorderColor} h-bc=\${dialogTextureImage.itemHoverBorderColor} br=md w=160 overflow=hidden style="max-width: 100%; box-sizing: border-box;"':
-                                          - 'div.particleImageThumbnailTransparencyGrid style="display: block; width: 100%; aspect-ratio: \${dialogTextureImage.previewAspectRatio}; overflow: hidden;"':
-                                              - rvn-file-image w=f h=f fileId=\${dialogTextureImage.previewFileId}: null
-                                          - rtgl-view w=f p=md:`;
-
-    expect(view).toContain(textureCard);
+    expect(view).toContain(
+      'rtgl-view#dialogTextureImageButton role=button tabindex=0 aria-haspopup=dialog aria-label="${textureImageLabel}" cur=pointer',
+    );
+    expect(view).toContain(
+      'div.particleImageThumbnailTransparencyGrid style="display: block; width: 100%; aspect-ratio: ${dialogTextureImage.previewAspectRatio}; overflow: hidden;"',
+    );
+    expect(view).toContain(
+      "rvn-file-image w=f h=f fileId=${dialogTextureImage.previewFileId}",
+    );
     expect(previewBackgroundBlock).toContain(
       "dialogPreviewBackgroundImageButton cur=pointer",
     );

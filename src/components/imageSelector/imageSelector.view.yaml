@@ -22,10 +22,10 @@ template:
               - rtgl-view d=h av=c g=md:
                   - rtgl-svg svg=folder wh=16: null
                   - rtgl-text: ${group.fullLabel}
-          - rtgl-view d=h w=f wrap g=md:
+          - 'rtgl-view d=h w=f wrap g=md style="${imageGridStyle}"':
               - $for item, j in group.children:
                   - 'rtgl-view#imageItemRef${i}x${j} role=option tabindex=0 aria-selected="${item.isSelected}" data-item-id=${item.id} bw=xs bc=${item.itemBorderColor} h-bc=${item.itemHoverBorderColor} br=md cur=pointer key=${item.id}':
-                      - 'rtgl-view br=md w=200 pos=rel overflow=hidden style="${item.imageCardStyle}"':
+                      - 'rtgl-view br=md pos=rel overflow=hidden style="${item.imageCardStyle}"':
                           - 'div.imageSelectorThumbnailTransparencyGrid style="display: block; width: 100%; aspect-ratio: ${item.previewAspectRatio}; overflow: hidden;"':
                               - rvn-file-image w=f h=f imageId=${item.id} source="thumbnail": null
                           - rtgl-view w=f p=md:

@@ -44,6 +44,23 @@ describe("mediaResourcesView view", () => {
     expect(view.match(/place=be/g)).toHaveLength(2);
   });
 
+  it("passes ordered overflow actions through the import menu", () => {
+    const view = readFileSync(
+      new URL(
+        "../../src/components/mediaResourcesView/mediaResourcesView.view.yaml",
+        import.meta.url,
+      ),
+      "utf8",
+    );
+
+    expect(view).toContain("resourceImportAction:");
+    expect(view).toContain("handler: handleResourceImportMenuAction");
+    expect(view).toContain(
+      "rvn-resource-import-action#resourceImportAction :additionalMenuItems=${resourceImportMenuItems}",
+    );
+    expect(view).toContain("$if showZoomPopover:");
+  });
+
   it("passes font family names to previews without interpolating selector text", () => {
     const view = readFileSync(
       new URL(

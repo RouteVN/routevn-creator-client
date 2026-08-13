@@ -7,6 +7,10 @@ refs:
     eventListeners:
       value-input:
         handler: handleSearchInput
+  resourceImportAction:
+    eventListeners:
+      search-input:
+        handler: handleSearchInput
   tagFilterButton:
     eventListeners:
       click:
@@ -233,6 +237,23 @@ refs:
         handler: handleCloseContextMenu
       item-click:
         handler: handleContextMenuClickItem
+styles:
+  '@media only screen and (max-width: 768px)':
+    .computedDialogContent:
+      grid-template-columns: minmax(0, 1fr) !important
+      grid-template-rows: minmax(0, 1fr) minmax(96px, 0.4fr) auto !important
+      column-gap: "0 !important"
+    .computedDialogDivider:
+      display: none
+    .computedExamplesPanel:
+      grid-column: "1 !important"
+      grid-row: "2 !important"
+      width: 100% !important
+      min-width: "0 !important"
+      overflow: hidden
+    .computedDialogFooter:
+      grid-column: "1 !important"
+      grid-row: "3 !important"
 template:
   - 'rtgl-view w=f h=f g=sm style="min-width: 0; min-height: 0;"':
       - 'rtgl-view h=48 w=f bgc=bg bwb=xs ph=md av=c d=h g=md style="position: sticky; top: 0px; z-index: 1000;"':
@@ -245,6 +266,7 @@ template:
               - rtgl-input#searchInput s=sm placeholder="${searchPlaceholder}" value=${searchQuery} h=1fg: null
           - $if showTagFilter:
               - 'rtgl-button#tagFilterButton sq pre=filter v=${tagFilterButtonVariant} aria-label="${filterLabel}" title="${filterLabel}"': null
+          - rvn-resource-import-action#resourceImportAction: null
           - $if showTrailingMenuButton:
               - 'rtgl-button#menuButton sq pre=hamburger v=ol aria-label="${menuButtonLabel}" title="${menuButtonLabel}"': null
       - 'rtgl-view#scrollContainer h=1fg w=f sv style="min-width: 0; min-height: 0; box-sizing: border-box;"':
@@ -333,10 +355,10 @@ template:
           - $if flatGroups.length > 0:
               - 'rtgl-view w=f h="${scrollBottomPadding}" style="flex-shrink: 0;"': null
   - $if !readonly:
-      - rtgl-dialog#variableDialog s=md ?open=${isVariableDialogOpen}:
-          - 'rtgl-view slot=content d=v w=f style="max-height: 70vh; min-height: 0; overflow: hidden;"':
-              - 'rtgl-view w=f sv style="min-height: 0; max-height: calc(70vh - 57px);"':
-                  - rtgl-form#variableForm key=variable-${dialogKey} :defaultValues=${defaultValues} :form=${variableForm} w=f :context=${context}:
+      - rtgl-dialog#variableDialog s=md md-layout=fixed-top p=none ?open=${isVariableDialogOpen}:
+          - 'rtgl-view slot=content d=v w=f h=f pv=md pos=rel style="min-width: 0; min-height: 0; overflow: hidden;"':
+              - 'rtgl-view w=f h=1fg sv style="min-height: 0;"':
+                  - rtgl-form#variableForm key=variable-${dialogKey} :defaultValues=${defaultValues} :form=${variableForm} w=f ph=md :context=${context}:
                       - 'rtgl-view slot="enum-values" d=v w=f g=sm':
                           - $if enumValues.length > 0:
                               - rtgl-view d=h wrap g=sm w=f:
@@ -347,11 +369,12 @@ template:
                               - rtgl-text s=sm c=mu-fg: ${noValuesYetMessage}
                           - rtgl-view d=h w=f:
                               - rtgl-button#enumAddValueButton s=sm v=se pre=plus: ${addValueButton}
-              - 'rtgl-view d=h w=f ah=e p=md bgc=bg style="flex-shrink: 0; box-sizing: border-box;"':
+                  - 'rtgl-view h=80 aria-hidden=true style="flex: 0 0 80px;"': null
+              - 'rtgl-view d=h av=c ah=e w=f g=lg ph=md pt=md bgc=bg style="flex: 0 0 auto; box-sizing: border-box;"':
                   - rtgl-button#variableSubmitButton v=pr: ${variableSubmitLabel}
-      - rtgl-dialog#computedDialog s=lg ?open=${isComputedDialogOpen}:
-          - 'rtgl-view slot=content w=f h=70vh style="display: grid; grid-template-columns: minmax(0, 1fr) 1px 280px; grid-template-rows: minmax(0, 1fr) auto; column-gap: var(--spacing-lg); min-width: 0; min-height: 0; overflow: hidden;"':
-              - 'rtgl-view#computedFormScrollContainer w=1fg h=f sv style="grid-column: 1; grid-row: 1; min-width: 0; min-height: 0;"':
+      - rtgl-dialog#computedDialog s=lg md-layout=fixed-top p=none ?open=${isComputedDialogOpen}:
+          - 'rtgl-view class=computedDialogContent slot=content w=f h=70vh md-h=f pv=md style="display: grid; grid-template-columns: minmax(0, 1fr) 1px 280px; grid-template-rows: minmax(0, 1fr) auto; column-gap: var(--spacing-lg); min-width: 0; min-height: 0; overflow: hidden;"':
+              - 'rtgl-view#computedFormScrollContainer w=1fg h=f sv ph=md style="grid-column: 1; grid-row: 1; min-width: 0; min-height: 0;"':
                   - 'rtgl-form#computedForm key=computed-${dialogKey} :defaultValues=${defaultValues} :form=${computedForm} :context=${context}':
                       - 'rtgl-view slot="operation" d=v w=f g=sm pb=lg':
                           - rtgl-view d=h w=f av=c g=sm:
@@ -426,8 +449,9 @@ template:
                                           - 'rtgl-button#addConditionalNodeDefault data-target-kind=default s=sm v=se pre=plus w=f': ${conditionalAddResultLabel}
                             $else:
                               - rtgl-button#addOperationButton v=se pre=plus w=f: ${addOperationLabel}
-              - 'rtgl-view w=1 h=f bgc=bo style="grid-column: 2; grid-row: 1 / span 2;"': null
-              - 'rtgl-view w=280 h=f d=v g=md style="grid-column: 3; grid-row: 1 / span 2; min-width: 0; min-height: 0;"':
+                  - 'rtgl-view h=80 aria-hidden=true style="flex: 0 0 80px;"': null
+              - 'rtgl-view class=computedDialogDivider w=1 h=f bgc=bo style="grid-column: 2; grid-row: 1 / span 2;"': null
+              - 'rtgl-view class=computedExamplesPanel w=280 h=f d=v g=md ph=md style="grid-column: 3; grid-row: 1 / span 2; min-width: 0; min-height: 0;"':
                   - rtgl-view d=h w=f av=c g=sm:
                       - rtgl-text w=1fg s=lg fw=b: ${computedExamplesLabel}
                       - 'rtgl-button#addComputedExampleButton sq v=se pre=plus aria-label="${computedExampleAddLabel}" title="${computedExampleAddLabel}"': null
@@ -447,7 +471,7 @@ template:
                     $else:
                       - rtgl-view w=f h=1fg av=c ah=c:
                           - rtgl-text s=sm c=mu-fg: ${computedNoExamplesMessage}
-              - 'rtgl-view d=h ah=e p=md bgc=bg style="grid-column: 1; grid-row: 2; box-sizing: border-box;"':
+              - 'rtgl-view class=computedDialogFooter d=h av=c ah=e w=f g=lg ph=md pt=md bgc=bg style="grid-column: 1; grid-row: 2; box-sizing: border-box;"':
                   - rtgl-button#computedSubmitButton v=pr: ${computedSubmitLabel}
       - rtgl-dialog#computedExampleDialog s=md ?open=${computedExampleDialog.isOpen}:
           - rtgl-view slot=content g=md:

@@ -248,6 +248,7 @@ const {
     tagIds: item?.tagIds ?? [],
   }),
   getEditPreviewFileId: (item) => item?.thumbnailFileId,
+  suppressMobileDetailSheetOnEdit: true,
   copy: ({ i18n }) => selectVideosPageCopy(i18n),
   onEnterKey: ({ deps, selectedItemId }) => {
     void openVideoPreviewById({ deps, itemId: selectedItemId });

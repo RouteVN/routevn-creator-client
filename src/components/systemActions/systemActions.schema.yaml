@@ -28,7 +28,12 @@ propsSchema:
       enum:
         - default
         - scene-editor-left
+        - scene-editor-mobile
     dialogPanelWidth:
+      type: string
+    dialogPanelTop:
+      type: string
+    dialogPanelBottom:
       type: string
     hiddenModes:
       type: array

@@ -5,9 +5,10 @@ import {
 } from "../../src/components/mobileSidebar/mobileSidebar.store.js";
 import { selectViewData as selectDesktopResourceTypesViewData } from "../../src/pages/resourceTypes/resourceTypes.store.js";
 import { selectViewData as selectMobileResourceTypesViewData } from "../../src/components/imagesMobileResourceTypes/imagesMobileResourceTypes.store.js";
+import { JA_I18N } from "../support/i18n.js";
 
 describe("resource type navigation", () => {
-  it("shows audio effects in desktop and mobile animated asset menus", () => {
+  it("shows audio effects directly below animations in the action sheet", () => {
     const props = {
       resourceCategory: "animatedAssets",
       selectedResourceId: "audio-effects-editor",
@@ -62,7 +63,7 @@ describe("resource type navigation", () => {
     ]);
   });
 
-  it("shows appearance and language in settings resource menus", () => {
+  it("shows settings pages in desktop and mobile resource menus", () => {
     const desktopViewData = selectDesktopResourceTypesViewData({
       props: {
         resourceCategory: "settings",
@@ -88,7 +89,20 @@ describe("resource type navigation", () => {
     ).toEqual(["project", "about", "appearance", "language"]);
   });
 
-  it("shows platform details in desktop and mobile release menus", () => {
+  it("localizes the asset package item in the mobile release menu", () => {
+    const mobileSidebarViewData = selectMobileSidebarViewData({
+      state: createMobileSidebarInitialState(),
+      props: { variant: "release" },
+      i18n: JA_I18N,
+    });
+    const assetPackageItem = mobileSidebarViewData.sections
+      .flatMap((section) => section.items)
+      .find((item) => item.id === "assetPackage");
+
+    expect(assetPackageItem.label).toBe("アセットパッケージ");
+  });
+
+  it("shows asset packages and platform details in release menus", () => {
     const desktopViewData = selectDesktopResourceTypesViewData({
       props: {
         resourceCategory: "releases",
@@ -106,11 +120,12 @@ describe("resource type navigation", () => {
       "versions",
       "platformDetails",
       "webServer",
+      "assetPackage",
     ]);
     expect(
       mobileSidebarViewData.sections.flatMap((section) =>
         section.items.map((item) => item.id),
       ),
-    ).toEqual(["versions", "platformDetails"]);
+    ).toEqual(["versions", "platformDetails", "assetPackage"]);
   });
 });

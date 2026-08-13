@@ -1,6 +1,7 @@
 import { generateId, generatePrefixedId } from "../../internal/id.js";
 import { processWithConcurrency } from "../../internal/processWithConcurrency.js";
 import { createCharacterSpritesFileExplorerHandlers } from "../../internal/ui/fileExplorer.js";
+import { forwardFormSubmitOnEnter } from "../../internal/ui/resourcePages/formSubmitKeyDown.js";
 import {
   appendTagIdToForm,
   createResourcePageTagHandlers,
@@ -413,7 +414,7 @@ const openEditDialogForSprite = ({
     return;
   }
 
-  store.setSelectedItemId({ itemId });
+  store.setSelectedItemId({ itemId, suppressMobileDetailSheet: true });
   if (syncExplorer) {
     refs.fileExplorer?.selectItem?.({ itemId });
   }
@@ -610,7 +611,7 @@ const openSpritesheetEditDialogForItem = ({
   revokeSpritesheetDialogPreviewUrl(store);
 
   const values = buildSpritesheetDialogValues({ item });
-  store.setSelectedItemId({ itemId });
+  store.setSelectedItemId({ itemId, suppressMobileDetailSheet: true });
 
   if (syncExplorer) {
     refs.fileExplorer?.selectItem?.({ itemId });
@@ -1983,6 +1984,25 @@ export const handleSpritesheetDialogFormAction = async (deps, payload) => {
   render();
   await refreshCharacterSpritesData(deps);
 };
+
+export const handleSpritesheetDialogSubmitClick = async (deps) => {
+  const { spritesheetDialogForm } = deps.refs;
+  await handleSpritesheetDialogFormAction(deps, {
+    _event: {
+      detail: {
+        actionId: "submit",
+        values: spritesheetDialogForm.getValues(),
+      },
+    },
+  });
+};
+
+export const handleSpritesheetDialogFormSubmitKeyDown = (deps, payload) =>
+  forwardFormSubmitOnEnter({
+    deps,
+    payload,
+    submit: handleSpritesheetDialogSubmitClick,
+  });
 
 export const handleDetailClipClick = (deps, payload) => {
   const clipName = payload._event.currentTarget.dataset.clipName;

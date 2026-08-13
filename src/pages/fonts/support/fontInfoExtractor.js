@@ -1,11 +1,5 @@
 import { getFontFaceWeightDescriptor } from "../../../internal/fontCapabilities.js";
-
-const PREVIEW_GLYPH_CHARACTERS = [
-  ..."ABCDEFGHIJKLMNOPQRSTUVWXYZ",
-  ..."abcdefghijklmnopqrstuvwxyz",
-  ..."0123456789",
-  ..."!@#$%^&*()-_=+[]{};:'\",.<>/?\\|`~",
-];
+import { createFontPreviewGlyphs } from "../../../internal/fontPreviewGlyphs.js";
 
 const getSignature = (fontData) => {
   if (fontData.length < 4) {
@@ -37,10 +31,6 @@ const detectFontFormat = (fontData) => {
   return "Unknown";
 };
 
-const createPreviewGlyphs = () => {
-  return PREVIEW_GLYPH_CHARACTERS.map((char) => ({ char }));
-};
-
 export const createFontInfoExtractor = ({ getFileContent, loadFont }) => {
   const extractFontInfo = async (fontItem) => {
     try {
@@ -65,7 +55,7 @@ export const createFontInfoExtractor = ({ getFileContent, loadFont }) => {
         fileSize: `${Math.round(fontBuffer.byteLength / 1024)} KB`,
         format,
         fontWeight: fontItem.defaultWeight ?? "normal",
-        glyphs: createPreviewGlyphs(),
+        glyphs: createFontPreviewGlyphs(),
       };
     } catch (error) {
       return {
@@ -76,7 +66,7 @@ export const createFontInfoExtractor = ({ getFileContent, loadFont }) => {
         fileSize: "0 KB",
         format: "Unknown",
         fontWeight: fontItem.defaultWeight ?? "normal",
-        glyphs: createPreviewGlyphs(),
+        glyphs: createFontPreviewGlyphs(),
         error: error.message,
       };
     }

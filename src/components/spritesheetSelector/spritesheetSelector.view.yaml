@@ -14,10 +14,10 @@ template:
                   - rtgl-view d=h av=c g=md:
                       - rtgl-svg svg=folder wh=16: null
                       - rtgl-text: ${group.fullLabel}
-              - rtgl-view d=h w=f wrap g=md:
+              - 'rtgl-view d=h w=f wrap g=md style="${spritesheetGridStyle}"':
                   - $for item, j in group.children:
-                      - rtgl-view#spritesheetItemRef${i}x${j} data-selection-value=${item.selectionValue} data-resource-id=${item.resourceId} data-animation-name=${item.animationName} bw=xs bc=${item.itemBorderColor} h-bc=${item.itemHoverBorderColor} br=md cur=pointer key=${item.selectionValue}:
-                          - 'rtgl-view br=md w=200 pos=rel overflow=hidden style="${item.cardStyle}"':
+                      - 'rtgl-view#spritesheetItemRef${i}x${j} data-selection-value=${item.selectionValue} data-resource-id=${item.resourceId} data-animation-name=${item.animationName} bw=xs bc=${item.itemBorderColor} h-bc=${item.itemHoverBorderColor} br=md cur=pointer key=${item.selectionValue} style="${spritesheetCardStyle}"':
+                          - 'rtgl-view br=md w=200 pos=rel overflow=hidden style="${spritesheetCardStyle}${item.cardStyle}"':
                               - 'rvn-spritesheet-preview key=${item.previewKey} previewKey=${item.previewKey} fileId=${item.fileId} :atlas=${item.atlas} :animation=${item.animation} w=f h=120 emptyLabel="${noPreviewLabel}"': null
                               - rtgl-view w=f p=md:
                                   - rtgl-text s=xs c=mu-fg ellipsis w=f: ${item.name}

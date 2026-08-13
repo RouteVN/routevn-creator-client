@@ -3,22 +3,15 @@
 set -e
 
 PORT="3001"
-RETTANGOLI_VERSION=$(node -e '
-const version = require("./package.json").dependencies?.["@rettangoli/ui"];
-if (!version) {
-  console.error("Error: @rettangoli/ui is missing from package.json dependencies.");
-  process.exit(1);
-}
-process.stdout.write(version);
-')
-RETTANGOLI_VERSION="${RETTANGOLI_VERSION#^}"
-RETTANGOLI_VERSION="${RETTANGOLI_VERSION#~}"
+RETTANGOLI_PACKAGE_INFO=$(node scripts/resolve-rettangoli-ui-package.js)
+IFS=$'\t' read -r RETTANGOLI_PACKAGE_DIR RETTANGOLI_VERSION RETTANGOLI_IS_LOCAL <<< "${RETTANGOLI_PACKAGE_INFO}"
+
+LOCAL_RETTANGOLI_PACKAGE="${RETTANGOLI_PACKAGE_DIR}/package.json"
+LOCAL_RETTANGOLI_FILE="${RETTANGOLI_PACKAGE_DIR}/dist/rettangoli-iife-ui.min.js"
 
 RTGL_BIN="node_modules/.bin/rtgl"
 RETTANGOLI_DIR="static/public/@rettangoli/ui@${RETTANGOLI_VERSION}/dist"
 RETTANGOLI_FILE="${RETTANGOLI_DIR}/rettangoli-iife-ui.min.js"
-LOCAL_RETTANGOLI_PACKAGE="node_modules/@rettangoli/ui/package.json"
-LOCAL_RETTANGOLI_FILE="node_modules/@rettangoli/ui/dist/rettangoli-iife-ui.min.js"
 
 if [ ! -x "${RTGL_BIN}" ]; then
   echo "Error: local rtgl CLI is missing. Run bun install before watching."
@@ -28,7 +21,16 @@ fi
 echo "Preparing iOS watch assets..."
 bun run build:bundle
 
-if [ ! -f "${RETTANGOLI_FILE}" ]; then
+if [ "${RETTANGOLI_IS_LOCAL}" = true ]; then
+  if [ ! -f "${LOCAL_RETTANGOLI_FILE}" ]; then
+    echo "Error: local Rettangoli UI bundle is missing at ${LOCAL_RETTANGOLI_FILE}."
+    echo "Build the local @rettangoli/ui package before watching iOS."
+    exit 1
+  fi
+
+  mkdir -p "${RETTANGOLI_DIR}"
+  cp "${LOCAL_RETTANGOLI_FILE}" "${RETTANGOLI_FILE}"
+elif [ ! -f "${RETTANGOLI_FILE}" ]; then
   mkdir -p "${RETTANGOLI_DIR}"
 
   if [ ! -f "${LOCAL_RETTANGOLI_FILE}" ]; then

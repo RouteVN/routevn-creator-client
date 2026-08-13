@@ -80,11 +80,15 @@ describe("groupVariablesView view", () => {
     expect(view).not.toContain("rvn-computed-variable-editor");
     expect(view).not.toContain("rvn-computed-conditional-editor");
     expect(view).not.toContain("addVariableDialog");
+    expect(view).toContain("resourceImportAction:");
+    expect(view).toContain("search-input:");
+    expect(view).toContain("handler: handleSearchInput");
+    expect(view).toContain("rvn-resource-import-action#resourceImportAction");
   });
 
   it("scrolls long computed forms through a constrained wrapper", () => {
     expect(view).toContain(
-      'rtgl-view#computedFormScrollContainer w=1fg h=f sv style="grid-column: 1; grid-row: 1; min-width: 0; min-height: 0;"',
+      'rtgl-view#computedFormScrollContainer w=1fg h=f sv ph=md style="grid-column: 1; grid-row: 1; min-width: 0; min-height: 0;"',
     );
     expect(view).toContain('rtgl-view slot="operation" d=v w=f g=sm pb=lg');
     expect(view).toContain(
@@ -99,14 +103,15 @@ describe("groupVariablesView view", () => {
   });
 
   it("keeps variable and computed submit actions visible below scrolling content", () => {
+    expect(view).toContain('rtgl-view w=f h=1fg sv style="min-height: 0;"');
     expect(view).toContain(
-      'rtgl-view w=f sv style="min-height: 0; max-height: calc(70vh - 57px);"',
+      "rtgl-dialog#variableDialog s=md md-layout=fixed-top p=none",
     );
     expect(view).toContain(
       "rtgl-button#variableSubmitButton v=pr: ${variableSubmitLabel}",
     );
     expect(view).toContain(
-      'rtgl-view slot=content w=f h=70vh style="display: grid; grid-template-columns: minmax(0, 1fr) 1px 280px; grid-template-rows: minmax(0, 1fr) auto; column-gap: var(--spacing-lg); min-width: 0; min-height: 0; overflow: hidden;"',
+      'rtgl-view class=computedDialogContent slot=content w=f h=70vh md-h=f pv=md style="display: grid; grid-template-columns: minmax(0, 1fr) 1px 280px; grid-template-rows: minmax(0, 1fr) auto; column-gap: var(--spacing-lg); min-width: 0; min-height: 0; overflow: hidden;"',
     );
     expect(view).toContain(
       'style="grid-column: 1; grid-row: 2; box-sizing: border-box;"',
@@ -118,7 +123,7 @@ describe("groupVariablesView view", () => {
     expect(view).toContain("handler: handleVariableFormKeyDown");
     const variableFooter = view
       .split("\n")
-      .find((line) => line.includes("d=h w=f ah=e p=md bgc=bg"));
+      .find((line) => line.includes("grid-column: 1; grid-row: 2"));
     const computedFooter = view
       .split("\n")
       .find((line) => line.includes('style="grid-column: 1; grid-row: 2;'));

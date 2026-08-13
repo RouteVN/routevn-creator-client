@@ -1,0 +1,13 @@
+componentName: rvn-resource-import-dialog
+propsSchema:
+  type: object
+  properties:
+    open:
+      type: boolean
+events:
+  import-cancelled: {}
+  import-complete:
+    type: object
+methods:
+  type: object
+  properties: {}

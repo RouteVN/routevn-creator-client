@@ -23,6 +23,18 @@ describe("app view", () => {
     expect(appView).toContain("rvn-language");
   });
 
+  it("renders the asset package settings page for its project route", () => {
+    const appView = readFileSync(
+      new URL("../../src/pages/app/app.view.yaml", import.meta.url),
+      "utf8",
+    );
+
+    expect(appView).toContain(
+      '$elif currentRoutePattern == "/project/asset-package"',
+    );
+    expect(appView).toContain("rvn-asset-package");
+  });
+
   it("prevents mobile tab tap feedback from rendering over the sheet", () => {
     const appView = readFileSync(
       new URL("../../src/pages/app/app.view.yaml", import.meta.url),

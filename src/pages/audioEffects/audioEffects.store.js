@@ -107,6 +107,16 @@ const createMetadataFormFields = (copy = {}) => [
 
 const createAddForm = (copy = {}) => ({
   title: copy.addTitle ?? "Add Audio Effect",
+  actions: {
+    buttons: [
+      {
+        id: "submit",
+        variant: "pr",
+        validate: true,
+        label: copy.createButton ?? "Create",
+      },
+    ],
+  },
   fields: [
     ...createMetadataFormFields(copy),
     {
@@ -124,31 +134,21 @@ const createAddForm = (copy = {}) => ({
       ],
     },
   ],
-  actions: {
-    layout: "",
-    buttons: [
-      {
-        id: "submit",
-        variant: "pr",
-        label: copy.createButton ?? "Create",
-      },
-    ],
-  },
 });
 
 const createEditForm = (copy = {}) => ({
   title: copy.editTitle ?? "Edit Audio Effect",
-  fields: createMetadataFormFields(copy),
   actions: {
-    layout: "",
     buttons: [
       {
         id: "submit",
         variant: "pr",
-        label: copy.updateButton ?? "Update Audio Effect",
+        validate: true,
+        label: copy.updateButton ?? "Update",
       },
     ],
   },
+  fields: createMetadataFormFields(copy),
 });
 
 const createExplorerItemContextMenuItems = (copy = {}) => [

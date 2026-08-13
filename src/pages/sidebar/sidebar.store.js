@@ -183,6 +183,7 @@ export const selectViewData = ({ state, props = {}, i18n }) => {
     }
 
     if (
+      currentPath === "/project/asset-package" ||
       currentPath === "/project/releases" ||
       currentPath.startsWith("/project/releases/")
     ) {

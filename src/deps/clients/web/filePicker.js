@@ -41,6 +41,18 @@ const resolveAccept = (options = {}) => {
   return "";
 };
 
+const downloadBlob = (blob, defaultPath) => {
+  const url = URL.createObjectURL(blob);
+  const anchor = document.createElement("a");
+  anchor.href = url;
+  anchor.download = defaultPath || "download";
+  document.body.appendChild(anchor);
+  anchor.click();
+  document.body.removeChild(anchor);
+  URL.revokeObjectURL(url);
+  return anchor.download;
+};
+
 export const createWebFilePicker = () => {
   return {
     /**
@@ -103,16 +115,15 @@ export const createWebFilePicker = () => {
      * @param {string} defaultPath - The suggested filename.
      * @returns {Promise<string>}
      */
-    async saveFilePicker(blob, defaultPath) {
-      const url = URL.createObjectURL(blob);
-      const a = document.createElement("a");
-      a.href = url;
-      a.download = defaultPath || "download";
-      document.body.appendChild(a);
-      a.click();
-      document.body.removeChild(a);
-      URL.revokeObjectURL(url);
-      return a.download;
+    async saveFilePicker(blobOrOptions, defaultPath) {
+      if (!(blobOrOptions instanceof Blob)) {
+        return blobOrOptions.defaultPath ?? "download";
+      }
+      return downloadBlob(blobOrOptions, defaultPath);
+    },
+
+    async writeFile(targetPath, blob) {
+      return downloadBlob(blob, targetPath);
     },
   };
 };

@@ -284,6 +284,16 @@ const getPreviewFileId = (item) => item?.thumbnailFileId ?? item?.fileId;
 
 const createEditForm = ({ tagOptions, copy } = {}) => ({
   title: copy.editSpriteTitle,
+  actions: {
+    buttons: [
+      {
+        id: "submit",
+        variant: "pr",
+        validate: true,
+        label: copy.updateSpriteButton,
+      },
+    ],
+  },
   fields: [
     {
       name: "name",
@@ -309,16 +319,6 @@ const createEditForm = ({ tagOptions, copy } = {}) => ({
       label: copy.imageLabel,
     },
   ],
-  actions: {
-    layout: "",
-    buttons: [
-      {
-        id: "submit",
-        variant: "pr",
-        label: copy.updateSpriteButton,
-      },
-    ],
-  },
 });
 
 const createSpritesheetDialogForm = (copy) => ({
@@ -369,31 +369,9 @@ const createSpritesheetDialogForm = (copy) => ({
       required: false,
     },
   ],
-  actions: {
-    layout: "",
-    buttons: [
-      {
-        id: "submit",
-        variant: "pr",
-        label: copy.saveButton,
-      },
-    ],
-  },
 });
 
-const buildSpritesheetDialogForm = (copy, submitLabel) => {
-  const spritesheetDialogForm = createSpritesheetDialogForm(copy);
-  return {
-    ...spritesheetDialogForm,
-    actions: {
-      ...spritesheetDialogForm.actions,
-      buttons: spritesheetDialogForm.actions.buttons.map((button) => ({
-        ...button,
-        label: button.id === "submit" ? submitLabel : button.label,
-      })),
-    },
-  };
-};
+const buildSpritesheetDialogForm = (copy) => createSpritesheetDialogForm(copy);
 
 const createFolderNameForm = (copy) => ({
   title: copy.editFolderTitle,
@@ -1339,6 +1317,9 @@ export const selectViewData = ({ state, i18n }) => {
   const selectedItem = selectSelectedItem({ state });
   const previewImage =
     selectedItem?.type === "image" ? selectedItem : undefined;
+  const previewFlatItem = flatItems.find(
+    (item) => item.id === state.selectedItemId,
+  );
   const projectResolution = requireProjectResolution(
     state.projectResolution,
     copy.projectResolutionLabel,
@@ -1508,6 +1489,7 @@ export const selectViewData = ({ state, i18n }) => {
       projectResolution,
       previousItemId,
       nextItemId,
+      breadcrumb: previewFlatItem?.fullLabel ?? previewImage?.name,
       copy,
     }),
     folderContextMenuItems: createFolderContextMenuItems(copy),
@@ -1531,12 +1513,11 @@ export const selectViewData = ({ state, i18n }) => {
         : state.spritesheetDialogMode === "edit"
           ? copy.editSpritesheetTitle
           : "",
-    spritesheetDialogForm: buildSpritesheetDialogForm(
-      copy,
+    spritesheetDialogForm: buildSpritesheetDialogForm(copy),
+    spritesheetDialogSubmitLabel:
       state.spritesheetDialogMode === "create"
         ? copy.addSpritesheetButton
         : copy.updateSpritesheetButton,
-    ),
     spritesheetDialogFormKey: `${state.spritesheetDialogMode}-${state.spritesheetDialogItemId ?? "new"}-${state.spritesheetDialogRevision}`,
     spritesheetDialogValues: state.spritesheetDialogValues,
     spritesheetDialogPreviewUrl: state.spritesheetDialogPreviewUrl,

@@ -77,20 +77,20 @@ refs:
         handler: handleAddDialogClose
   layoutForm:
     eventListeners:
-      form-action:
-        handler: handleLayoutFormActionClick
       add-option-click:
         handler: handleAddFormAddOptionClick
+      form-action:
+        handler: handleLayoutFormActionClick
   editDialog:
     eventListeners:
       close:
         handler: handleEditDialogClose
   editForm:
     eventListeners:
-      form-action:
-        handler: handleEditFormActionClick
       add-option-click:
         handler: handleEditFormAddOptionClick
+      form-action:
+        handler: handleEditFormActionClick
   detailHeader:
     eventListeners:
       click:
@@ -179,10 +179,11 @@ template:
                       - rtgl-tag-select#detailTagSelect slot="layout-tags" w=f :options=${tagFilterOptions} :selectedValues=${selectedItemTagIds} :draftSelectedValues=${detailTagDraftValues} :open=${isDetailTagSelectOpen} :addOption=${detailTagAddOption} placeholder="${addTagPlaceholder}": null
   - rtgl-dialog#folderNameDialog ?open=${isFolderNameDialogOpen} s=sm:
       - rtgl-form#folderNameForm key=${folderNameDialogItemId} slot=content :defaultValues=${folderNameDialogDefaultValues} :form=${folderNameForm} w=f: null
-  - rtgl-dialog#addLayoutDialog ?open=${isAddDialogOpen} s=md:
-      - rtgl-form#layoutForm slot=content :defaultValues=${layoutFormDefaults} :form=${layoutForm} w=f: null
-  - rtgl-dialog#editDialog ?open=${isEditDialogOpen} s=md:
-      - rtgl-view slot=content g=md:
-          - rtgl-form#editForm key=${isEditDialogOpen} :defaultValues=${editDefaultValues} :form=${editForm} w=f: null
+  - rtgl-dialog#addLayoutDialog ?open=${isAddDialogOpen} s=md md-layout=fixed-top:
+      - rtgl-view slot=content d=v w=f h=f overflow=hidden:
+          - rtgl-form#layoutForm :defaultValues=${layoutFormDefaults} :form=${layoutForm} sticky bottom-spacer=96 w=f h=f: null
+  - rtgl-dialog#editDialog ?open=${isEditDialogOpen} s=md md-layout=fixed-top:
+      - rtgl-view slot=content d=v w=f h=f overflow=hidden:
+          - rtgl-form#editForm key=${isEditDialogOpen} :defaultValues=${editDefaultValues} :form=${editForm} sticky bottom-spacer=96 w=f h=f: null
   - rtgl-dialog#createTagDialog ?open=${isCreateTagDialogOpen} s=sm:
       - rtgl-form#createTagForm key=${isCreateTagDialogOpen} slot=content :defaultValues=${createTagDefaultValues} :form=${createTagForm} w=f: null

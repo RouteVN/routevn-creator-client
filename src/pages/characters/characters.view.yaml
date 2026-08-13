@@ -71,10 +71,10 @@ refs:
         handler: handleCloseDialog
   characterForm:
     eventListeners:
-      form-action:
-        handler: handleDialogFormActionClick
       add-option-click:
         handler: handleCharacterFormAddOptionClick
+      form-action:
+        handler: handleDialogFormActionClick
   avatarImage:
     eventListeners:
       click:
@@ -103,10 +103,10 @@ refs:
         handler: handleEditDialogAvatarClick
   editForm:
     eventListeners:
-      form-action:
-        handler: handleEditFormAction
       add-option-click:
         handler: handleEditFormAddOptionClick
+      form-action:
+        handler: handleEditFormAction
   .spriteGroupAddButton:
     eventListeners:
       click:
@@ -227,9 +227,9 @@ template:
       - rtgl-dialog#folderNameDialog ?open=${isFolderNameDialogOpen} s=sm:
           - rtgl-form#folderNameForm key=${folderNameDialogItemId} slot=content :defaultValues=${folderNameDialogDefaultValues} :form=${folderNameForm} w=f: null
   - $if isDialogOpen:
-      - rtgl-dialog#addCharacterDialog ?open=${isDialogOpen} s=md:
-          - rtgl-view slot=content g=md:
-              - rtgl-form#characterForm key=${isDialogOpen} :defaultValues=${dialogDefaultValues} :form=${dialogForm} w=f:
+      - rtgl-dialog#addCharacterDialog ?open=${isDialogOpen} s=md md-layout=fixed-top:
+          - rtgl-view slot=content d=v w=f h=f overflow=hidden:
+              - rtgl-form#characterForm key=${isDialogOpen} :defaultValues=${dialogDefaultValues} :form=${dialogForm} sticky bottom-spacer=96 w=f h=f:
                   - $if avatarFileId:
                       - rtgl-view slot=avatar-slot w=120 h=120 av=c ah=c:
                           - rvn-file-image#avatarImage fileId=${avatarFileId} w=120 h=120 cur=pointer br=md: null
@@ -238,9 +238,9 @@ template:
                           - rtgl-view#avatarPlaceholder w=120 h=120 av=c ah=c bgc=bg bc=bo bw=xs br=md cur=pointer:
                               - rtgl-text c=mu-fg s=sm: ${clickToUploadLabel}
   - $if isEditDialogOpen:
-      - rtgl-dialog#editDialog ?open=${isEditDialogOpen} s=md:
-          - rtgl-view slot=content g=md:
-              - rtgl-form#editForm key=${isEditDialogOpen} :defaultValues=${editDefaultValues} :form=${editForm} w=f:
+      - rtgl-dialog#editDialog ?open=${isEditDialogOpen} s=md md-layout=fixed-top:
+          - rtgl-view slot=content d=v w=f h=f overflow=hidden:
+              - rtgl-form#editForm key=${isEditDialogOpen} :defaultValues=${editDefaultValues} :form=${editForm} sticky bottom-spacer=96 w=f h=f:
                   - $if editAvatarFileId:
                       - rtgl-view slot=avatar-slot w=120 h=120 av=c ah=c:
                           - rvn-file-image#editAvatarImage fileId=${editAvatarFileId} w=120 h=120 cur=pointer br=md: null

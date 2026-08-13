@@ -46,6 +46,16 @@ const createLayoutTypeOptions = (copy = {}) => [
 
 const createLayoutForm = (copy = {}) => ({
   title: copy.addTitle ?? "Add Layout",
+  actions: {
+    buttons: [
+      {
+        id: "submit",
+        variant: "pr",
+        validate: true,
+        label: copy.addButton ?? "Add Layout",
+      },
+    ],
+  },
   fields: [
     {
       name: "name",
@@ -73,20 +83,20 @@ const createLayoutForm = (copy = {}) => ({
     }),
     createFragmentField(copy),
   ],
-  actions: {
-    layout: "",
-    buttons: [
-      {
-        id: "submit",
-        variant: "pr",
-        label: copy.addButton ?? "Add Layout",
-      },
-    ],
-  },
 });
 
 const createEditLayoutForm = (copy = {}) => ({
   title: copy.editTitle ?? "Edit Layout",
+  actions: {
+    buttons: [
+      {
+        id: "submit",
+        variant: "pr",
+        validate: true,
+        label: copy.saveButton ?? "Save",
+      },
+    ],
+  },
   fields: [
     {
       name: "name",
@@ -102,16 +112,6 @@ const createEditLayoutForm = (copy = {}) => ({
     }),
     createFragmentField(copy),
   ],
-  actions: {
-    layout: "",
-    buttons: [
-      {
-        id: "submit",
-        variant: "pr",
-        label: copy.saveButton ?? "Save",
-      },
-    ],
-  },
 });
 
 const createLayoutExplorerItemContextMenuItems = (copy = {}) => [

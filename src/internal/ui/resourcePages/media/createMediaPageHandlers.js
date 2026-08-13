@@ -26,6 +26,7 @@ export const createMediaPageHandlers = ({
     description: item?.description ?? "",
   }),
   getEditPreviewFileId = () => undefined,
+  suppressMobileDetailSheetOnEdit = false,
   onEnterKey,
   onEditKey,
   tagging,
@@ -148,7 +149,11 @@ export const createMediaPageHandlers = ({
 
     const editValues = getEditValues(item);
 
-    store.setSelectedItemId({ itemId });
+    const selectionPayload = { itemId };
+    if (suppressMobileDetailSheetOnEdit) {
+      selectionPayload.suppressMobileDetailSheet = true;
+    }
+    store.setSelectedItemId(selectionPayload);
     fileExplorer?.selectItem?.({ itemId });
     store.openEditDialog({
       itemId,

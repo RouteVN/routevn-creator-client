@@ -13,6 +13,7 @@ import {
   selectProjectLanguageCopy,
   selectProjectLanguageLabel,
 } from "../../internal/ui/projectLanguage.js";
+import { isTouchUiConfig } from "../../internal/ui/resourcePages/mobileResourcePage.js";
 import { buildProjectAnalytics } from "./support/projectAnalytics.js";
 import { selectProjectPageCopy } from "./support/projectPageCopy.js";
 
@@ -21,6 +22,7 @@ const formatCount = (value) =>
 
 export const createInitialState = () => ({
   platform: "web",
+  isTouchMode: false,
   project: {
     name: "",
     description: "",
@@ -52,6 +54,10 @@ export const createInitialState = () => ({
 
 export const setPlatform = ({ state }, { platform } = {}) => {
   state.platform = platform ?? "web";
+};
+
+export const setUiConfig = ({ state }, { uiConfig } = {}) => {
+  state.isTouchMode = isTouchUiConfig(uiConfig);
 };
 
 export const setCurrentProject = ({ state }, { project } = {}) => {
@@ -276,6 +282,12 @@ export const selectViewData = ({ state, i18n }) => {
     projectExportLoadingStatusText: copy.exportingProject,
     projectSource: state.project.source,
     projectActionMenu: state.projectActionMenu,
+    resourceGridStyle: state.isTouchMode
+      ? "display: grid; grid-template-columns: repeat(2, minmax(0, 1fr));"
+      : "",
+    resourceCardStyle: state.isTouchMode
+      ? "width: 100%; min-width: 0; max-width: none; box-sizing: border-box; font-variant-numeric: tabular-nums;"
+      : "flex: 0 1 128px; min-width: 112px; max-width: 128px; font-variant-numeric: tabular-nums;",
     resourceGroups: state.analytics.resourceGroups.map((group) => ({
       key: group.key,
       label: resourceTypeCopy[`${group.key}Label`] ?? group.key,

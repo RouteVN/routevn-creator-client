@@ -136,8 +136,18 @@ const resolveAdjacentImageItemId = ({
   return imageIds[nextIndex];
 };
 
-const createEditForm = ({ copy } = {}) => ({
+const createEditForm = ({ copy, tagOptions } = {}) => ({
   title: copy.editTitle,
+  actions: {
+    buttons: [
+      {
+        id: "submit",
+        variant: "pr",
+        validate: true,
+        label: copy.updateButton,
+      },
+    ],
+  },
   fields: [
     {
       name: "name",
@@ -155,6 +165,7 @@ const createEditForm = ({ copy } = {}) => ({
       label: copy.tagsLabel,
       placeholder: copy.selectTagsPlaceholder,
       addOptionLabel: copy.addTagOption,
+      options: tagOptions,
     }),
     {
       type: "slot",
@@ -162,16 +173,6 @@ const createEditForm = ({ copy } = {}) => ({
       label: copy.imageLabel,
     },
   ],
-  actions: {
-    layout: "",
-    buttons: [
-      {
-        id: "submit",
-        variant: "pr",
-        label: copy.updateButton,
-      },
-    ],
-  },
 });
 
 const {
@@ -289,7 +290,6 @@ const {
       deleteDialogItemName,
     );
     viewData.deleteDialogConfirmLabel = copy.deleteButton;
-
     return viewData;
   },
 });

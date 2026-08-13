@@ -210,6 +210,7 @@ const STATIC_LABEL_COPY_KEYS = Object.freeze({
   Channel: "channelLabel",
   "Custom Initial Value": "customInitialValueLabel",
   "Custom Value": "customValueSource",
+  Default: "defaultLabel",
   "Delay (ms)": "delayMsLabel",
   Delete: "deleteMenuItem",
   "Delete keyframe": "deleteKeyframeMenuItem",
@@ -228,6 +229,7 @@ const STATIC_LABEL_COPY_KEYS = Object.freeze({
   In: "inTimelineLabel",
   Initial: "initialLabel",
   "Initial value": "initialValueLabel",
+  "Initial value type": "initialValueTypeLabel",
   Invert: "invertLabel",
   Keyframes: "keyframesTweenMode",
   Kind: "kindLabel",
@@ -258,11 +260,8 @@ const STATIC_LABEL_COPY_KEYS = Object.freeze({
     "initialValueTooltip",
   "The time it takes for the animation keyframe to move from previous value to next value":
     "keyframeDurationTooltip",
-  "Update Auto Tween": "updateAutoTweenButton",
-  "Update Keyframe": "updateKeyframeButton",
-  "Update Value": "updateValueButton",
+  Update: "updateValueButton",
   "Use Default Value": "useDefaultValueSource",
-  "Use initial value": "useInitialValueLabel",
   "Relative will add the value to the previous value. Absolute will set the property value to exactly the specified value":
     "relativeValueTooltip",
   "Value Source": "valueSourceLabel",
@@ -767,7 +766,7 @@ const createEditAutoTweenForm = (copy = {}) => {
           {
             id: "submit",
             variant: "pr",
-            label: "Update Auto Tween",
+            label: "Update",
           },
         ],
       },
@@ -891,7 +890,7 @@ const createUpdateKeyframeForm = (
           {
             id: "submit",
             variant: "pr",
-            label: "Update Keyframe",
+            label: "Update",
           },
         ],
       },
@@ -919,8 +918,26 @@ const createAddPropertyForm = (
     initialValueField.defaultValue =
       propertyFieldConfig[property]?.defaultValue ?? 0;
     initialValueField.$when = isUpdateSide
-      ? 'tweenMode != "auto" && useInitialValue == true'
-      : "useInitialValue == true";
+      ? 'tweenMode != "auto" && initialValueType == "value"'
+      : 'initialValueType == "value"';
+  }
+  const initialValueTypeField = {
+    name: "initialValueType",
+    type: "segmented-control",
+    label: "Initial value type",
+    noClear: true,
+    tooltip: {
+      content:
+        "The initial value of the property at the start of the animation. If not set, it will use the element's current value at start of animation",
+    },
+    options: [
+      { label: "Default", value: "default" },
+      { label: "Value", value: "value" },
+    ],
+    required: true,
+  };
+  if (isUpdateSide) {
+    initialValueTypeField.$when = 'tweenMode != "auto"';
   }
   const fields = [];
 
@@ -952,27 +969,7 @@ const createAddPropertyForm = (
       options: localizeOptions(TWEEN_MODE_OPTIONS, copy),
       required: true,
     });
-    fields.push({
-      name: "useInitialValue",
-      type: "segmented-control",
-      label: "Use initial value",
-      noClear: true,
-      $when: 'tweenMode != "auto"',
-      tooltip: {
-        content:
-          "The initial value of the property at the start of the animation. If not set, it will use the element's current value at start of animation",
-      },
-      options: [
-        {
-          label: "No",
-          value: false,
-        },
-        {
-          label: "Yes",
-          value: true,
-        },
-      ],
-    });
+    fields.push(initialValueTypeField);
     const autoFields = createAutoTweenFields(copy).map((field) => ({
       ...field,
       $when: 'tweenMode == "auto"',
@@ -982,26 +979,7 @@ const createAddPropertyForm = (
     }
     fields.push(...autoFields);
   } else {
-    fields.push({
-      name: "useInitialValue",
-      type: "segmented-control",
-      label: "Use initial value",
-      noClear: true,
-      tooltip: {
-        content:
-          "The initial value of the property at the start of the animation. If not set, it will use the element's current value at start of animation",
-      },
-      options: [
-        {
-          label: "No",
-          value: false,
-        },
-        {
-          label: "Yes",
-          value: true,
-        },
-      ],
-    });
+    fields.push(initialValueTypeField);
     if (initialValueField) {
       fields.push(initialValueField);
     }
@@ -1360,6 +1338,11 @@ export const createInitialState = () => ({
   },
   editMode: false,
   editItemId: undefined,
+  animationJsonCopyShortcutStartedAt: undefined,
+  animationCanvasCaptureShortcutStartedAt: undefined,
+  animationCanvasCaptureInProgress: false,
+  animationVideoShortcutStartedAt: undefined,
+  animationVideoExportInProgress: false,
   autosaveVersion: 0,
   autosavePersistedVersion: 0,
   autosaveInFlight: false,
@@ -1669,6 +1652,61 @@ export const selectEditItemData = ({ state }) => {
   return state.data?.items?.[state.editItemId];
 };
 
+export const setAnimationJsonCopyShortcutStartedAt = (
+  { state },
+  { timestamp } = {},
+) => {
+  state.animationJsonCopyShortcutStartedAt = timestamp;
+};
+
+export const selectAnimationJsonCopyShortcutStartedAt = ({ state }) => {
+  return state.animationJsonCopyShortcutStartedAt;
+};
+
+export const setAnimationCanvasCaptureShortcutStartedAt = (
+  { state },
+  { timestamp } = {},
+) => {
+  state.animationCanvasCaptureShortcutStartedAt = timestamp;
+};
+
+export const selectAnimationCanvasCaptureShortcutStartedAt = ({ state }) => {
+  return state.animationCanvasCaptureShortcutStartedAt;
+};
+
+export const setAnimationCanvasCaptureInProgress = (
+  { state },
+  { inProgress } = {},
+) => {
+  state.animationCanvasCaptureInProgress = inProgress ?? false;
+};
+
+export const selectAnimationCanvasCaptureInProgress = ({ state }) => {
+  return state.animationCanvasCaptureInProgress;
+};
+
+export const setAnimationVideoShortcutStartedAt = (
+  { state },
+  { timestamp } = {},
+) => {
+  state.animationVideoShortcutStartedAt = timestamp;
+};
+
+export const selectAnimationVideoShortcutStartedAt = ({ state }) => {
+  return state.animationVideoShortcutStartedAt;
+};
+
+export const setAnimationVideoExportInProgress = (
+  { state },
+  { inProgress } = {},
+) => {
+  state.animationVideoExportInProgress = inProgress ?? false;
+};
+
+export const selectAnimationVideoExportInProgress = ({ state }) => {
+  return state.animationVideoExportInProgress;
+};
+
 export const selectDialogType = ({ state }) => {
   return state.dialogType;
 };
@@ -1961,6 +1999,59 @@ export const setSelectedKeyframeValue = ({ state }, { value } = {}) => {
   }
 };
 
+export const setSelectedKeyframeStartValue = (
+  { state },
+  { startValue } = {},
+) => {
+  const keyframe = getMutableSelectedKeyframe(state);
+  if (!keyframe) {
+    return;
+  }
+
+  if (startValue === undefined || startValue === "") {
+    delete keyframe.startValue;
+    return;
+  }
+
+  const nextStartValue = Number(startValue);
+  if (Number.isFinite(nextStartValue)) {
+    keyframe.startValue = nextStartValue;
+  }
+};
+
+export const selectDefaultSelectedKeyframeStartValue = ({ state }) => {
+  const selectedKeyframe = state.selectedKeyframe;
+  if (!selectedKeyframe) {
+    return 0;
+  }
+
+  const { side, property, index } = selectedKeyframe;
+  const propertyConfig = getSectionProperties(state, side)[property];
+  const selectedFrame = propertyConfig?.keyframes?.[index];
+  if (!selectedFrame) {
+    return 0;
+  }
+
+  if (selectedFrame.relative) {
+    return 0;
+  }
+
+  let currentValue = Number(propertyConfig.initialValue);
+  if (!Number.isFinite(currentValue)) {
+    currentValue = getDefaultInitialValues(state)[property] ?? 0;
+  }
+
+  for (const keyframe of propertyConfig.keyframes.slice(0, index)) {
+    const value = Number(keyframe.value);
+    if (!Number.isFinite(value)) {
+      continue;
+    }
+    currentValue = keyframe.relative ? currentValue + value : value;
+  }
+
+  return currentValue;
+};
+
 export const selectSelectedKeyframeDuration = ({ state }) => {
   return getMutableSelectedKeyframe(state)?.duration;
 };
@@ -2057,6 +2148,12 @@ const createTweenAnimationsForTarget = ({
               easing: keyframe.easing ?? "linear",
               relative: keyframe.relative ?? false,
             };
+            if (
+              keyframe.startValue !== undefined &&
+              keyframe.startValue !== ""
+            ) {
+              nextKeyframe.startValue = parseFloat(keyframe.startValue);
+            }
             const delay = Math.max(0, Number(keyframe.delay) || 0);
             if (delay > 0) {
               nextKeyframe.delay = delay;
@@ -2121,6 +2218,9 @@ const createTweenPayload = ({ properties, projectResolution } = {}) => {
           easing: keyframe.easing ?? "linear",
           relative: keyframe.relative ?? false,
         };
+        if (keyframe.startValue !== undefined && keyframe.startValue !== "") {
+          nextKeyframe.startValue = parseFloat(keyframe.startValue);
+        }
         const delay = Math.max(0, Number(keyframe.delay) || 0);
         if (delay > 0) {
           nextKeyframe.delay = delay;
@@ -2344,6 +2444,9 @@ export const addKeyframe = ({ state }, keyframe = {}) => {
     value: parseFloat(keyframe.value),
     relative: keyframe.relative,
   };
+  if (keyframe.startValue !== undefined && keyframe.startValue !== "") {
+    nextKeyframe.startValue = parseFloat(keyframe.startValue);
+  }
   if (keyframe.delay !== undefined) {
     nextKeyframe.delay = Math.max(0, parseInt(keyframe.delay, 10) || 0);
   }
@@ -2484,6 +2587,12 @@ export const updateKeyframe = (
     value: parseFloat(keyframe.value),
     relative: keyframe.relative,
   };
+  const currentStartValue = keyframes[index]?.startValue;
+  if (keyframe.startValue === undefined && currentStartValue !== undefined) {
+    nextKeyframe.startValue = currentStartValue;
+  } else if (keyframe.startValue !== undefined) {
+    nextKeyframe.startValue = parseFloat(keyframe.startValue);
+  }
   const currentDelay = Math.max(0, Number(keyframes[index]?.delay) || 0);
   if (keyframe.delay === undefined && currentDelay > 0) {
     nextKeyframe.delay = currentDelay;
@@ -3350,6 +3459,54 @@ const buildSelectedKeyframePanelData = (
           : (copy.updateType ?? "Update");
   const easing = keyframe.easing ?? "linear";
   const valueSlider = propertyFieldConfig[property]?.slider;
+  const hasStartValue =
+    keyframe.startValue !== undefined && keyframe.startValue !== "";
+  const fields = [
+    {
+      type: "text",
+      label: copy.timelineLabel ?? "Timeline",
+      value: timelineLabel,
+    },
+    {
+      type: "text",
+      label: copy.propertyLabel ?? "Property",
+      value: propertyFieldConfig[property]?.label ?? property,
+    },
+    {
+      type: "slot",
+      label: copy.delayMsLabel ?? "Delay (ms)",
+      slot: "keyframe-delay",
+    },
+    {
+      type: "slot",
+      label: copy.durationMsLabel ?? "Duration (ms)",
+      slot: "keyframe-duration",
+    },
+    {
+      type: "slot",
+      label: copy.easingLabel ?? "Easing",
+      slot: "keyframe-easing",
+    },
+  ];
+  if (hasStartValue) {
+    fields.push({
+      type: "slot",
+      slot: "keyframe-start-value",
+    });
+  }
+  fields.push(
+    {
+      type: "slot",
+      label: copy.valueLabel ?? "Value",
+      slot: "keyframe-value",
+    },
+    {
+      type: "slot",
+      label: copy.valueTypeLabel ?? "Value type",
+      slot: "keyframe-value-type",
+    },
+  );
+
   return {
     id: `${side}:${property}:${index}`,
     editor: {
@@ -3364,49 +3521,16 @@ const buildSelectedKeyframePanelData = (
         { label: copy.absoluteValueType ?? "Absolute", value: false },
         { label: copy.relativeValueType ?? "Relative", value: true },
       ],
+      hasStartValue,
+      startValue: keyframe.startValue,
+      startValueLabel: copy.startValueLabel ?? "Start value",
       value: keyframe.value,
       valueLabel: copy.valueLabel ?? "Value",
       valueStep: propertyFieldConfig[property]?.input?.step ?? "any",
       valueSlider,
       valueUsesPopover: Boolean(propertyFieldConfig[property]?.input),
     },
-    fields: [
-      {
-        type: "text",
-        label: copy.timelineLabel ?? "Timeline",
-        value: timelineLabel,
-      },
-      {
-        type: "text",
-        label: copy.propertyLabel ?? "Property",
-        value: propertyFieldConfig[property]?.label ?? property,
-      },
-      {
-        type: "slot",
-        label: copy.delayMsLabel ?? "Delay (ms)",
-        slot: "keyframe-delay",
-      },
-      {
-        type: "slot",
-        label: copy.durationMsLabel ?? "Duration (ms)",
-        slot: "keyframe-duration",
-      },
-      {
-        type: "slot",
-        label: copy.easingLabel ?? "Easing",
-        slot: "keyframe-easing",
-      },
-      {
-        type: "slot",
-        label: copy.valueLabel ?? "Value",
-        slot: "keyframe-value",
-      },
-      {
-        type: "slot",
-        label: copy.valueTypeLabel ?? "Value type",
-        slot: "keyframe-value-type",
-      },
-    ],
+    fields,
   };
 };
 
@@ -3471,9 +3595,16 @@ const buildSelectedPropertyPanelData = (
   } else {
     fields.push({
       type: "slot",
-      label: copy.initialValueLabel ?? "Initial value",
-      slot: "property-initial-value",
+      label: copy.initialValueTypeLabel ?? "Initial value type",
+      slot: "property-initial-value-type",
     });
+    if (hasInitialValue) {
+      fields.push({
+        type: "slot",
+        label: copy.initialValueLabel ?? "Initial value",
+        slot: "property-initial-value",
+      });
+    }
   }
 
   return {
@@ -3490,6 +3621,17 @@ const buildSelectedPropertyPanelData = (
           hasInitialValue,
           initialValue,
           initialValueLabel: copy.initialValueLabel ?? "Initial value",
+          initialValueType: hasInitialValue ? "value" : "default",
+          initialValueTypeOptions: [
+            {
+              label: copy.defaultLabel ?? "Default",
+              value: "default",
+            },
+            {
+              label: copy.valueLabel ?? "Value",
+              value: "value",
+            },
+          ],
           initialValueSlider,
           initialValueStep: propertyFieldConfig[property]?.input?.step ?? "any",
           initialValueUsesPopover: Boolean(
@@ -3741,6 +3883,26 @@ export const selectViewData = ({ state, i18n }) => {
     propertyFieldConfig,
     copy,
   );
+  const selectedKeyframeAddMenuItems =
+    selectedKeyframePanel?.editor && !selectedKeyframePanel.editor.hasStartValue
+      ? [
+          {
+            label: copy.startValueLabel ?? "Start value",
+            type: "item",
+            value: "start-value",
+          },
+        ]
+      : [];
+  const selectedKeyframeCanDelete = (() => {
+    if (!state.selectedKeyframe) {
+      return false;
+    }
+
+    const { side, property } = state.selectedKeyframe;
+    const keyframes =
+      getSectionProperties(state, side)[property]?.keyframes ?? [];
+    return !isMaskSide(side) || keyframes.length > 1;
+  })();
   const imageFolderItems = toFlatItems(state.imagesData).filter(
     (item) => item.type === "folder",
   );
@@ -3791,7 +3953,7 @@ export const selectViewData = ({ state, i18n }) => {
 
   let addPropertyContext = {};
   let addPropertyFormDefaultValues = {
-    useInitialValue: false,
+    initialValueType: "default",
     tweenMode: "keyframes",
     duration: AUTO_TWEEN_DEFAULT_DURATION,
     easing: AUTO_TWEEN_DEFAULT_EASING,
@@ -3841,7 +4003,7 @@ export const selectViewData = ({ state, i18n }) => {
     addPropertySide,
     addPropertySelectedProperty ?? "",
     addPropertyFormDefaultValues.tweenMode ?? "",
-    addPropertyFormDefaultValues.useInitialValue ? "initial" : "current",
+    addPropertyFormDefaultValues.initialValueType ?? "default",
   ].join(":");
 
   if (state.popover.mode === "editKeyframe") {
@@ -3954,6 +4116,8 @@ export const selectViewData = ({ state, i18n }) => {
     selectedKeyframeDetailId: selectedKeyframePanel?.id,
     selectedKeyframeDetailFields: selectedKeyframePanel?.fields ?? [],
     selectedKeyframeEditor: selectedKeyframePanel?.editor,
+    selectedKeyframeAddMenuItems,
+    selectedKeyframeCanDelete,
     selectedPropertyDetailId: selectedPropertyPanel?.id,
     selectedPropertyDetailFields: selectedPropertyPanel?.fields ?? [],
     selectedPropertyEditor: selectedPropertyPanel?.editor,
@@ -4025,6 +4189,8 @@ export const selectViewData = ({ state, i18n }) => {
         state.popover.mode,
       ),
       addPropertySideMenuIsOpen: state.popover.mode === "addPropertySideMenu",
+      selectedKeyframeAddMenuIsOpen:
+        state.popover.mode === "selectedKeyframeAddMenu",
     },
     addPropertyFormDefaultValues,
     imageSelectorDialog: state.imageSelectorDialog,
@@ -4083,6 +4249,7 @@ export const selectViewData = ({ state, i18n }) => {
     doneButton: copy.doneButton ?? "Done",
     deletePropertyButtonLabel:
       copy.deletePropertyButtonLabel ?? "Delete property",
+    deleteKeyframeButtonLabel: copy.deleteKeyframeMenuItem ?? "Delete keyframe",
     propertyRemoveConfirmMessage:
       copy.propertyRemoveConfirmMessage ??
       "Delete this animation property? This cannot be undone.",
@@ -4092,8 +4259,8 @@ export const selectViewData = ({ state, i18n }) => {
     editKeyframeButtonLabel: copy.editKeyframeMenuItem ?? "Edit keyframe",
     imageLabel: copy.imageLabel ?? "Image",
     initialValueLabel: copy.initialValueLabel ?? "Initial value",
-    useDefaultValueButtonLabel:
-      copy.useDefaultValueSource ?? "Use Default Value",
+    removeStartValueButtonLabel:
+      copy.removeStartValueButtonLabel ?? "Remove start value",
     inTimelineLabel: copy.inTimelineLabel ?? "Incoming",
     invertLabel: copy.invertLabel ?? "Invert",
     detailsPanelTitle: selectedMask

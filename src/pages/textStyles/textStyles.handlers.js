@@ -6,6 +6,7 @@ import {
 import { buildFontResourceDataFromUploadResult } from "../../deps/services/shared/resourceImports.js";
 import { recursivelyCheckResource } from "../../internal/project/projection.js";
 import { createResourceFileExplorerHandlers } from "../../internal/ui/fileExplorer.js";
+import { forwardFormSubmitOnEnter } from "../../internal/ui/resourcePages/formSubmitKeyDown.js";
 import { createFileExplorerKeyboardScopeHandlers } from "../../internal/ui/fileExplorerKeyboardScope.js";
 import { handleResourceZoomShortcutKeyDown } from "../../internal/ui/resourcePages/zoomShortcuts.js";
 import {
@@ -387,7 +388,7 @@ const openEditDialogWithValues = ({ deps, itemId } = {}) => {
     return;
   }
 
-  store.setSelectedItemId({ itemId });
+  store.setSelectedItemId({ itemId, suppressMobileDetailSheet: true });
   refs.fileExplorer?.selectItem?.({ itemId });
   store.setFormValuesFromItem({ item });
   store.setEditMode({ itemId });
@@ -1037,26 +1038,15 @@ export const handleDesktopTextStyleSubmitClick = async (deps) => {
   await submitDesktopTextStyleForm(deps);
 };
 
-export const handleDesktopTextStyleFormKeyDown = async (deps, payload) => {
-  const { store } = deps;
-  const event = payload._event;
-  if (store.selectIsTouchMode() || event.key !== "Enter" || event.shiftKey) {
-    return;
-  }
+export const handleTextStyleFormSubmitKeyDown = (deps, payload) =>
+  forwardFormSubmitOnEnter({
+    deps,
+    payload,
+    submit: handleDesktopTextStyleSubmitClick,
+  });
 
-  const isTextarea = event
-    .composedPath()
-    .some(
-      (element) =>
-        element.tagName === "TEXTAREA" || element.tagName === "RTGL-TEXTAREA",
-    );
-  if (isTextarea) {
-    return;
-  }
-
-  event.preventDefault();
-  await submitDesktopTextStyleForm(deps);
-};
+export const handleDesktopTextStyleFormKeyDown =
+  handleTextStyleFormSubmitKeyDown;
 
 // Add color dialog handlers
 export const handleAddColorDialogClose = (deps) => {
@@ -1106,6 +1096,25 @@ export const handleAddColorFormAction = async (deps, payload) => {
     render();
   }
 };
+
+export const handleAddColorSubmitClick = async (deps) => {
+  const { addColorForm } = deps.refs;
+  await handleAddColorFormAction(deps, {
+    _event: {
+      detail: {
+        actionId: "submit",
+        values: addColorForm.getValues(),
+      },
+    },
+  });
+};
+
+export const handleAddColorFormSubmitKeyDown = (deps, payload) =>
+  forwardFormSubmitOnEnter({
+    deps,
+    payload,
+    submit: handleAddColorSubmitClick,
+  });
 
 // Add font dialog handlers
 export const handleAddFontDialogClose = (deps) => {
@@ -1241,6 +1250,25 @@ export const handleAddFontFormAction = async (deps, payload) => {
     render();
   }
 };
+
+export const handleAddFontSubmitClick = async (deps) => {
+  const { addFontForm } = deps.refs;
+  await handleAddFontFormAction(deps, {
+    _event: {
+      detail: {
+        actionId: "submit",
+        values: addFontForm.getValues(),
+      },
+    },
+  });
+};
+
+export const handleAddFontFormSubmitKeyDown = (deps, payload) =>
+  forwardFormSubmitOnEnter({
+    deps,
+    payload,
+    submit: handleAddFontSubmitClick,
+  });
 export const handleSearchInput = (deps, payload) => {
   const { store, render } = deps;
   const searchQuery = payload._event.detail?.value ?? "";

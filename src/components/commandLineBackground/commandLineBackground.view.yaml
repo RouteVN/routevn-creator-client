@@ -35,6 +35,14 @@ refs:
     eventListeners:
       value-input:
         handler: handleSearchInput
+  searchButton:
+    eventListeners:
+      click:
+        handler: handleSearchButtonClick
+  searchPopover:
+    eventListeners:
+      close:
+        handler: handleSearchPopoverClose
   form:
     eventListeners:
       form-field-event:
@@ -71,12 +79,12 @@ styles:
     background-repeat: repeat
     background-size: 12px 12px
 template:
-  - 'rtgl-view w=f h=f pv=lg pos=rel style="min-width: 0; min-height: 0; overflow: hidden;"':
-      - rtgl-view w=f ph=lg:
+  - 'rtgl-view w=f h=f pv=md pos=rel style="min-width: 0; min-height: 0; overflow: hidden;"':
+      - rtgl-view w=f h=24 av=c ph=md mb=md:
           - rtgl-breadcrumb#breadcumb :items=${breadcrumb}: null
       - $if mode == 'current':
           - 'rtgl-view h=1fg sv w=f style="min-height: 0;"':
-              - rtgl-form#form key=${dialogueForm.key} :form=${dialogueForm.form} :defaultValues=${dialogueForm.defaultValues} p=lg:
+              - rtgl-form#form key=${dialogueForm.key} :form=${dialogueForm.form} :defaultValues=${dialogueForm.defaultValues} ph=md pv=none:
                   - $if selectedResource:
                       - $if selectedResource.resourceType == 'image':
                           - rtgl-view#backgroundImage slot=background cur=pointer bw=xs bc=${selectedResource.itemBorderColor} h-bc=${selectedResource.itemHoverBorderColor} br=md:
@@ -132,31 +140,34 @@ template:
                                   - rtgl-text s=sm c=mu-fg: ${item.label}
                                   - 'rtgl-text s=sm style="font-variant-numeric: tabular-nums;"': ${item.value}
               - 'rtgl-view h=240 aria-hidden=true style="flex: 0 0 240px;"': null
-          - 'rtgl-view d=h av=c ah=e w=f g=lg ph=lg style="flex: 0 0 auto;"':
+          - 'rtgl-view d=h av=c ah=e w=f g=lg ph=md style="flex: 0 0 auto;"':
               - rtgl-button#submitButton: ${submitButtonLabel}
       - $if mode == 'gallery':
-          - rtgl-view d=h w=f av=c g=md ph=lg:
-              - rtgl-tabs#tabs selected-tab=${tab} :items=${tabs}: null
-              - rtgl-view w=1fg: null
-              - rtgl-input#searchInput s=sm placeholder=${searchPlaceholder} value=${searchQuery} h=1fg: null
-          - 'rtgl-view d=h w=f g=lg mt=sm h=1fg ph=lg style="min-height: 0;"':
+          - 'rtgl-view d=h w=f av=c g=md ph=md style="min-width: 0;"':
+              - 'rtgl-view w=1fg sh style="min-width: 0; overscroll-behavior-x: contain;"':
+                  - 'rtgl-tabs#tabs selected-tab=${tab} :items=${tabs} style="display: block; min-width: max-content;"': null
+              - $if showInlineSearch:
+                  - rtgl-input#searchInput s=sm placeholder=${searchPlaceholder} value=${searchQuery} h=1fg: null
+              - $if showSearchButton:
+                  - 'rtgl-button#searchButton sq pre=search v=ol aria-label="${searchButtonLabel}" title="${searchButtonLabel}"': null
+          - 'rtgl-view d=h w=f g=lg mt=sm h=1fg ph=md style="min-height: 0;"':
               - $if showImageSelectorFileExplorer:
                   - rtgl-view h=f w=1fg sv:
                       - rvn-base-file-explorer#baseFileExplorer :items=${items}: null
               - rtgl-view h=f w=2fg sv g=lg:
                   - $if tab == 'image':
-                      - rvn-image-selector#rvnImageSelector selectedImageId=${tempSelectedResourceId} searchQuery=${searchQuery}: null
+                      - rvn-image-selector#rvnImageSelector selectedImageId=${tempSelectedResourceId} searchQuery=${searchQuery} :columns=${imageSelectorColumns}: null
                     $elif tab == 'spritesheet':
-                      - rvn-spritesheet-selector#spritesheetSelector selectedSpritesheetValue=${tempSelectedSpritesheetValue} searchQuery=${searchQuery}: null
+                      - rvn-spritesheet-selector#spritesheetSelector selectedSpritesheetValue=${tempSelectedSpritesheetValue} searchQuery=${searchQuery} :columns=${spritesheetSelectorColumns}: null
                     $elif tab == 'layout':
                       - $for group, i in groups:
                           - rtgl-view g=md:
                               - rtgl-view d=h av=c g=md:
                                   - rtgl-svg svg=folder wh=16: null
                                   - rtgl-text: ${group.fullLabel}
-                              - rtgl-view d=h w=f wrap g=lg:
+                              - 'rtgl-view d=h w=f wrap g=lg style="${resourceSelectorGridStyle}"':
                                   - $for item, j in group.children:
-                                      - rtgl-view#resourceItem${i}x${j} data-resource-id=${item.id} cur=pointer bw=xs bc=${item.itemBorderColor} h-bc=${item.itemHoverBorderColor} br=md:
+                                      - 'rtgl-view#resourceItem${i}x${j} data-resource-id=${item.id} cur=pointer bw=xs bc=${item.itemBorderColor} h-bc=${item.itemHoverBorderColor} br=md style="${resourceSelectorItemStyle}"':
                                           - 'rtgl-view w=225 br=md overflow=hidden style="${item.resourceCardStyle}"':
                                               - 'rtgl-view w=f style="aspect-ratio: ${item.previewAspectRatio}; overflow: hidden;"':
                                                   - $if item.previewFileId:
@@ -174,9 +185,9 @@ template:
                               - rtgl-view d=h av=c g=md:
                                   - rtgl-svg svg=folder wh=16: null
                                   - rtgl-text: ${group.fullLabel}
-                              - rtgl-view d=h w=f wrap g=lg:
+                              - 'rtgl-view d=h w=f wrap g=lg style="${resourceSelectorGridStyle}"':
                                   - $for item, j in group.children:
-                                      - rtgl-view#resourceItem${i}x${j} data-resource-id=${item.id} cur=pointer bw=xs bc=${item.itemBorderColor} h-bc=${item.itemHoverBorderColor} br=md:
+                                      - 'rtgl-view#resourceItem${i}x${j} data-resource-id=${item.id} cur=pointer bw=xs bc=${item.itemBorderColor} h-bc=${item.itemHoverBorderColor} br=md style="${resourceSelectorItemStyle}"':
                                           - 'rtgl-view br=md pos=rel w=200 overflow=hidden style="${item.resourceCardStyle}"':
                                               - 'rtgl-view w=f pos=rel style="aspect-ratio: ${item.previewAspectRatio}; overflow: hidden;"':
                                                   - rvn-file-image w=f h=f fileId=${item.previewFileId}: null
@@ -184,8 +195,12 @@ template:
                                                       - rtgl-icon icon=play s=xl c=fg: null
                                               - rtgl-view w=f p=md:
                                                   - rtgl-text s=xs c=mu-fg ellipsis w=f: ${item.name}
-          - 'rtgl-view d=h av=c ah=e w=f g=lg ph=lg style="flex: 0 0 auto;"':
+          - 'rtgl-view d=h av=c ah=e w=f g=lg ph=md pt=sm style="flex: 0 0 auto;"':
               - rtgl-button#buttonSelect: ${selectButtonLabel}
+
+  - $if showSearchButton:
+      - rtgl-popover#searchPopover ?open=${searchPopover.isOpen} x=${searchPopover.position.x} y=${searchPopover.position.y} place=be content-w=320 content-ph=md content-pv=md:
+          - rtgl-input#searchInput s=sm placeholder=${searchPlaceholder} value=${searchQuery} w=f: null
 
   - $if fullImagePreviewVisible || fullSpritesheetPreviewVisible:
       - rtgl-view#previewOverlay pos=fix edge=f z=3000 cur=pointer:

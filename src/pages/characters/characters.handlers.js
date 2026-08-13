@@ -127,7 +127,10 @@ const openEditDialogWithValues = ({ deps, itemId } = {}) => {
   const characterItem = getCharacterItemById({ store, itemId });
   if (!characterItem) return;
 
-  store.setSelectedItemId({ itemId });
+  store.setSelectedItemId({
+    itemId,
+    suppressMobileDetailSheet: store.selectIsTouchMode(),
+  });
   fileExplorer?.selectItem?.({ itemId });
   store.openEditDialog({
     itemId,

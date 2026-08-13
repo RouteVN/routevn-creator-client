@@ -29,7 +29,7 @@ const openEditDialogWithValues = ({ deps, itemId } = {}) => {
     return;
   }
 
-  store.setSelectedItemId({ itemId });
+  store.setSelectedItemId({ itemId, suppressMobileDetailSheet: true });
   refs.fileExplorer?.selectItem?.({ itemId });
   store.openEditDialog({ itemId });
   render();

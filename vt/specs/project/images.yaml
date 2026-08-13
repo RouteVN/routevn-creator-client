@@ -109,6 +109,20 @@ steps:
     value: /project/images
   - action: wait
     ms: 450
+  - action: select
+    selector: "rvn-resource-import-action #menuButton"
+    steps:
+      - action: click
+  - action: waitFor
+    selector: "rvn-resource-import-action #menu[open] [role='menuitem']:has-text('Import')"
+    state: visible
+    timeoutMs: 5000
+  - action: keypress
+    key: Escape
+  - action: waitFor
+    selector: "rvn-resource-import-action #menu"
+    state: hidden
+    timeoutMs: 5000
   - action: screenshot
   - action: waitFor
     selector: "rvn-media-resources-view#groupview #itemRef0x0"

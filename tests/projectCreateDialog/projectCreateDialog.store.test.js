@@ -78,4 +78,21 @@ describe("projectCreateDialog.store", () => {
     });
     expect(viewData.defaultValues.language).toBe("en");
   });
+
+  it("uses the form-owned sticky submit action", () => {
+    const state = createInitialState();
+    const viewData = selectViewData({ state, i18n: EN_I18N });
+
+    expect(viewData.form).not.toHaveProperty("sticky");
+    expect(viewData.form.actions).toEqual({
+      buttons: [
+        {
+          id: "submit",
+          variant: "pr",
+          validate: true,
+          label: "Submit",
+        },
+      ],
+    });
+  });
 });

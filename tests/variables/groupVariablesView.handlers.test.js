@@ -463,6 +463,7 @@ describe("groupVariablesView.handlers", () => {
         type: "variable-item-click",
         detail: {
           itemId: "variable-1",
+          suppressMobileDetailSheet: true,
         },
       }),
     );

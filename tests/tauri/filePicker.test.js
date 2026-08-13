@@ -61,4 +61,20 @@ describe("Tauri file picker", () => {
     ).resolves.toBeNull();
     expect(mocks.writeFile).not.toHaveBeenCalled();
   });
+
+  it("writes Blob content directly to an already selected path", async () => {
+    const blob = new Blob(["package"], { type: "application/zip" });
+
+    const savedPath = await createTauriFilePicker().writeFile(
+      "/exports/asset-package.zip",
+      blob,
+    );
+
+    expect(savedPath).toBe("/exports/asset-package.zip");
+    expect(mocks.save).not.toHaveBeenCalled();
+    expect(mocks.writeFile).toHaveBeenCalledWith(
+      "/exports/asset-package.zip",
+      new TextEncoder().encode("package"),
+    );
+  });
 });

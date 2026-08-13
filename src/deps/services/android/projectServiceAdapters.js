@@ -45,6 +45,8 @@ import {
 
 const PROJECT_INFO_KEY = "projectInfo";
 const CREATOR_VERSION_KEY = "creatorVersion";
+const PROJECT_FILE_WRITE_CHUNK_SIZE_BYTES = 512 * 1024;
+const PROJECT_FILE_WRITE_YIELD_INTERVAL_CHUNKS = 8;
 
 const normalizeProjectInfo = (projectInfo = {}) => ({
   id: projectInfo.id ?? "",
@@ -297,16 +299,59 @@ const assertUnusedAndroidProjectStorage = (projectId) => {
   }
 };
 
-const writeAndroidProjectFile = ({ projectId, fileId, bytes, mimeType }) => {
+const yieldAndroidProjectFileWrite = async () => {
+  await new Promise((resolve) => setTimeout(resolve, 0));
+};
+
+const writeAndroidProjectFile = async ({
+  projectId,
+  fileId,
+  bytes,
+  mimeType,
+}) => {
   const safeProjectId = assertSafeAndroidStorageSegment(projectId, {
     label: "Android project id",
   });
-  callAndroidBridge("writeProjectFile", {
+  const { writeId } = callAndroidBridge("beginProjectFileWrite", {
     projectId: safeProjectId,
     fileId,
     mimeType: resolveProjectFileMimeType({ mimeType, bytes }),
-    base64: uint8ArrayToBase64(bytes),
+    size: bytes.byteLength,
   });
+
+  try {
+    for (
+      let offset = 0, chunkIndex = 0;
+      offset < bytes.byteLength;
+      offset += PROJECT_FILE_WRITE_CHUNK_SIZE_BYTES, chunkIndex += 1
+    ) {
+      const chunkEnd = Math.min(
+        offset + PROJECT_FILE_WRITE_CHUNK_SIZE_BYTES,
+        bytes.byteLength,
+      );
+      const result = callAndroidBridge("appendProjectFileWrite", {
+        writeId,
+        offset,
+        base64: uint8ArrayToBase64(bytes.subarray(offset, chunkEnd)),
+      });
+      if (result?.bytesWritten !== chunkEnd) {
+        throw new Error("Android project file write offset did not advance.");
+      }
+
+      if ((chunkIndex + 1) % PROJECT_FILE_WRITE_YIELD_INTERVAL_CHUNKS === 0) {
+        await yieldAndroidProjectFileWrite();
+      }
+    }
+
+    return callAndroidBridge("finishProjectFileWrite", { writeId });
+  } catch (error) {
+    try {
+      callAndroidBridge("abortProjectFileWrite", { writeId });
+    } catch (abortError) {
+      console.warn("Failed to abort Android project file write.", abortError);
+    }
+    throw error;
+  }
 };
 
 const readAndroidProjectFile = ({ projectId, fileId }) => {
@@ -403,7 +448,7 @@ const copyTemplateFiles = async ({ templateId, projectId, templateData }) => {
         const blob = await response.blob();
         const bytes = new Uint8Array(await blob.arrayBuffer());
         const templateMimeType = templateData.files.items[fileId].mimeType;
-        writeAndroidProjectFile({
+        await writeAndroidProjectFile({
           projectId,
           fileId: assertSafeProjectFileId(fileId),
           bytes,
@@ -696,7 +741,7 @@ export const createAndroidProjectServiceAdapters = ({
       });
 
       ensureAndroidProjectStorage(resolvedProjectId);
-      writeAndroidProjectFile({
+      await writeAndroidProjectFile({
         projectId: resolvedProjectId,
         fileId: safeFileId,
         bytes: fileBytes,
@@ -711,6 +756,21 @@ export const createAndroidProjectServiceAdapters = ({
           mimeType,
         }),
       };
+    },
+
+    deleteStoredFiles: async ({
+      fileIds,
+      projectReference,
+      getCurrentReference,
+    }) => {
+      const reference = projectReference ?? getCurrentReference();
+      const projectId = reference?.repositoryProjectId || reference?.projectId;
+      for (const fileId of fileIds) {
+        callAndroidBridge("deleteProjectFile", {
+          projectId,
+          fileId: assertSafeProjectFileId(fileId),
+        });
+      }
     },
 
     getFileContent: async ({ fileId, fileMetadata, getCurrentReference }) => {

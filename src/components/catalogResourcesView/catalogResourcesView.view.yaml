@@ -63,10 +63,6 @@ refs:
     eventListeners:
       click:
         handler: handleAddButtonClick
-  importBtn:
-    eventListeners:
-      click:
-        handler: handleImportButtonClick
   groupToggle*:
     eventListeners:
       click:
@@ -94,12 +90,9 @@ template:
                   - rtgl-input#searchInput s=sm placeholder=${searchPlaceholder} value=${searchQuery} h=1fg: null
               - $if showTagFilter:
                   - 'rtgl-button#tagFilterButton sq pre=filter v=${tagFilterButtonVariant} aria-label="${filterButtonLabel}" title="${filterButtonLabel}"': null
-              - $if showIconImportButton:
-                  - 'rtgl-button#importBtn sq pre=upload v=ol aria-label="${importText}" title="${importText}"': null
+              - rvn-resource-import-action: null
               - $if showTrailingMenuButton:
                   - 'rtgl-button#menuButton sq pre=hamburger v=ol aria-label="${menuButtonLabel}" title="${menuButtonLabel}"': null
-              - $if showTextImportButton:
-                  - rtgl-button#importBtn s=sm pre=upload v=se: ${importText}
       - 'rtgl-view#scrollContainer h=1fg w=f sv style="min-width: 0; box-sizing: border-box;"':
           - $if groups.length > 0:
               - $for group, gIndex in groups:
@@ -207,6 +200,10 @@ template:
                                                           - rtgl-view d=v w=f g=xs:
                                                               - rtgl-text s=xs c=mu-fg: ${item.transitionNextLabel}
                                                               - rvn-keyframe-timeline w=f ?showTotalDuration=false ?showRuler=false timelineDuration=${item.transitionTimelineDuration} :properties=${item.nextProperties} :defaultValues=${item.timelineDefaultValues}: null
+                                                          - $for maskTimelineRow in item.maskTimelineRows:
+                                                              - rtgl-view d=v w=f g=xs:
+                                                                  - rtgl-text s=xs c=mu-fg: ${maskTimelineRow.label}
+                                                                  - rvn-keyframe-timeline w=f ?showTotalDuration=false ?showRuler=false timelineDuration=${item.transitionTimelineDuration} :properties=${maskTimelineRow.properties} :defaultValues=${item.maskTimelineDefaultValues}: null
                                                     $else:
                                                       - rvn-keyframe-timeline w=f ?showRuler=true :properties=${item.updateProperties} :defaultValues=${item.timelineDefaultValues}: null
                                             $else:

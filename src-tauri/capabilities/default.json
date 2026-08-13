@@ -52,6 +52,9 @@
           "url": "https://routevn.com/*"
         },
         {
+          "url": "http://localhost:3003/*"
+        },
+        {
           "url": "https://x.com/routevn"
         },
         {

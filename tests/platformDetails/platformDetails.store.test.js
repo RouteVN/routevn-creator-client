@@ -6,6 +6,7 @@ import {
   openPlatformCreateDialog,
   openPlatformEditDialog,
   selectViewData,
+  setPlatform,
   setPlatformApplicationInfo,
   setSelectedPlatform,
 } from "../../src/pages/platformDetails/platformDetails.store.js";
@@ -36,6 +37,33 @@ describe("platformDetails.store", () => {
         { label: "macOS", type: "item", value: "macos" },
       ],
     });
+  });
+
+  it("offers only Web platform details in the Android app", () => {
+    const state = createInitialState();
+    setPlatform({ state }, { platform: "android" });
+
+    openAddPlatformMenu({ state, i18n: EN_I18N }, { x: 100, y: 200 });
+
+    expect(selectViewData({ state, i18n: EN_I18N })).toMatchObject({
+      canAddPlatform: true,
+      addPlatformMenu: {
+        items: [{ label: "Web", type: "item", value: "web" }],
+      },
+    });
+
+    setPlatformApplicationInfo(
+      { state },
+      {
+        platform: "web",
+        applicationInfo: {
+          applicationName: "Project One",
+          applicationIdentifier: "com.example.project-one",
+        },
+      },
+    );
+
+    expect(selectViewData({ state, i18n: EN_I18N }).canAddPlatform).toBe(false);
   });
 
   it("opens a prefilled create form without creating a platform tab", () => {

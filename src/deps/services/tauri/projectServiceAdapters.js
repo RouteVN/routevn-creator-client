@@ -4,6 +4,7 @@ import {
   readFile,
   readDir,
   exists,
+  remove,
 } from "@tauri-apps/plugin-fs";
 import { join, resolveResource } from "@tauri-apps/api/path";
 import { Channel, convertFileSrc, invoke } from "@tauri-apps/api/core";
@@ -1160,6 +1161,23 @@ export const createTauriProjectServiceAdapters = ({
         fileId,
         downloadUrl: fileUrl,
       };
+    },
+
+    deleteStoredFiles: async ({
+      fileIds,
+      projectReference,
+      getCurrentReference,
+    }) => {
+      const reference = projectReference ?? getCurrentReference();
+      const filesPath = await getReferenceFilesPath(reference);
+      for (const fileId of fileIds) {
+        const safeFileId = assertSafeProjectFileId(fileId);
+        const filePath = await join(filesPath, safeFileId);
+        if (await exists(filePath)) {
+          await remove(filePath);
+        }
+        fileUrlByCacheKey.delete(getFileUrlCacheKey(reference, safeFileId));
+      }
     },
 
     requiresFileMetadata: true,

@@ -60,6 +60,7 @@ const toolbarItems = [
 ];
 
 const TOOLBAR_HEIGHT_PX = 48;
+const MOBILE_TAB_BAR_HEIGHT_PX = 64;
 
 export const createInitialState = () => ({
   isVisible: false,
@@ -178,11 +179,15 @@ export const selectViewData = ({ state, i18n }) => {
   const toolbarTop = Number.isFinite(visualViewportBottom)
     ? Math.max(0, Math.round(visualViewportBottom - TOOLBAR_HEIGHT_PX))
     : 0;
+  const toolbarPositionStyle = state.isVisible
+    ? `top: ${toolbarTop}px`
+    : `bottom: calc(${MOBILE_TAB_BAR_HEIGHT_PX}px + env(safe-area-inset-bottom))`;
 
   return {
     isVisible: state.isVisible,
     bottomStyle: `${state.bottom}px`,
     toolbarTopStyle: `${toolbarTop}px`,
+    toolbarPositionStyle,
     toolbarItems: localizeToolbarItems(toolbarItems, copy),
   };
 };

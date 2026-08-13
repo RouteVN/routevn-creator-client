@@ -266,18 +266,39 @@ const createProjectFromValues = async (deps, values = {}) => {
       return;
     }
 
-    const newProject = await appService.createNewProject({
-      name,
-      description,
-      language,
-      iconFile,
-      projectPath,
-      template,
-      projectResolution,
+    store.closeCreateDialog();
+    render();
+
+    const progressDialog = appService.showProgressDialog({
+      title: copy.creatingProjectTitle,
+      message: copy.creatingProjectMessage,
+      progress: {},
     });
 
+    let newProject;
+    let creationError;
+    try {
+      await progressDialog.waitForPaint();
+      newProject = await appService.createNewProject({
+        name,
+        description,
+        language,
+        iconFile,
+        projectPath,
+        template,
+        projectResolution,
+      });
+    } catch (error) {
+      creationError = error;
+    } finally {
+      progressDialog.close();
+    }
+
+    if (creationError) {
+      throw creationError;
+    }
+
     store.addProject({ project: newProject });
-    store.closeCreateDialog();
     render();
   } catch (error) {
     appService.showAlert({
@@ -301,26 +322,8 @@ export const handleCreateDialogClose = (deps) => {
   render();
 };
 
-export const handleCreateDialogSubmit = async (deps) => {
-  const { appService, refs, i18n } = deps;
-  const copy = selectProjectsPageCopy(i18n);
-  const dialogBody = refs.projectCreateDialogBody;
-
-  if (
-    !dialogBody ||
-    typeof dialogBody.validate !== "function" ||
-    typeof dialogBody.getValues !== "function"
-  ) {
-    appService.showAlert({ message: copy.createProjectDialogNotReady });
-    return;
-  }
-
-  const validation = await dialogBody.validate();
-  if (validation?.valid === false) {
-    return;
-  }
-
-  const values = await dialogBody.getValues();
+export const handleCreateDialogSubmit = async (deps, payload) => {
+  const { values } = payload._event.detail;
   await createProjectFromValues(deps, values);
 };
 

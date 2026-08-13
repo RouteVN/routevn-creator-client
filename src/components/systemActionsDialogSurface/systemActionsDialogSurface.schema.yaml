@@ -9,6 +9,7 @@ propsSchema:
       enum:
         - default
         - scene-editor-left
+        - scene-editor-mobile
     dialogWidth:
       type: string
     dialogHeight:
@@ -19,6 +20,10 @@ propsSchema:
         - lg
         - none
     panelWidth:
+      type: string
+    panelTop:
+      type: string
+    panelBottom:
       type: string
     fullscreen:
       type: boolean

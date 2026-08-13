@@ -120,10 +120,9 @@ refs:
     eventListeners:
       close:
         handler: handleCreateDialogClose
-  projectCreateDialogBody: {}
-  createProjectSubmitButton:
+  projectCreateDialogBody:
     eventListeners:
-      click:
+      submit:
         handler: handleCreateDialogSubmit
   addMemberDialog:
     eventListeners:
@@ -141,7 +140,7 @@ template:
                   - rtgl-text: ${localTitle}
                   - rtgl-view w=1fg: null
                   - $if showMobileProjectActions:
-                      - 'rtgl-button#mobileCreateMenuButton sq pre=plus v=ol title="${createButtonText}" aria-label="${createButtonText}"': null
+                      - 'rtgl-button#mobileCreateMenuButton pre=plus title="${createButtonText}" aria-label="${createButtonText}"': ${createButtonText}
                     $else:
                       - rtgl-view d=h g=sm:
                           - rtgl-button#createButton data-testid=create-project-button: ${createButtonText}
@@ -155,7 +154,7 @@ template:
                         $else:
                           - rtgl-button#loginButton variant=se: ${loginButtonText}
           - 'rtgl-view w=f h=1fg ah=c sv style="min-height: 0;"':
-              - 'rtgl-view w=f d=v style="max-width: 1280px;"':
+              - 'rtgl-view w=f d=v ph=md style="max-width: 1280px; box-sizing: border-box;"':
                   - 'rtgl-view w=f ah=c':
                       - rtgl-view sm-w=f w=640 h=1fg d=v g=xl:
                           - rtgl-view w=f g=md pt=lg:
@@ -223,11 +222,10 @@ template:
               - rtgl-text c=mu-fg: ${deleteDialogMessage}
           - rtgl-view d=h g=sm w=f ah=e:
               - rtgl-button#deleteConfirmButton v=pr: ${deleteDialogConfirmLabel}
-  - rtgl-dialog#createProjectDialog ?open=${createDialog.isOpen} s=md:
-      - rtgl-view slot=content w=f p=lg g=lg:
-          - rvn-project-create-dialog#projectCreateDialogBody key=${createDialog.formKey} :platform=${platform} :defaultValues=${createDialog.defaultValues}: null
-          - rtgl-view d=h g=sm w=f ah=e:
-              - rtgl-button#createProjectSubmitButton data-action-id=submit v=pr: ${i18n.projectsPage.submitButton}
+  - $if createDialog.isOpen:
+      - rtgl-dialog#createProjectDialog ?open=${createDialog.isOpen} s=md md-layout=fixed-top:
+          - rtgl-view slot=content d=v w=f h=f overflow=hidden:
+              - rvn-project-create-dialog#projectCreateDialogBody key=${createDialog.formKey} :platform=${platform} :defaultValues=${createDialog.defaultValues} w=f h=f: null
   - rtgl-dialog#cloudCreateProjectDialog ?open=${cloudCreateDialog.isOpen} s=md:
       - rtgl-view slot=content w=f p=lg:
           - rtgl-form#cloudCreateForm key=${cloudCreateDialog.formKey} :form=${cloudCreateForm} :defaultValues=${cloudCreateDialog.defaultValues} w=f: null

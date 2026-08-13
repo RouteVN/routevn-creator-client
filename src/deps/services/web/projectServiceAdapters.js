@@ -229,6 +229,22 @@ export const createWebProjectServiceAdapters = ({
       return { fileId };
     },
 
+    deleteStoredFiles: async ({
+      fileIds,
+      projectReference,
+      getCurrentStore,
+      getStoreByProject,
+    }) => {
+      const projectId =
+        projectReference?.repositoryProjectId ?? projectReference?.projectId;
+      const adapter = projectId
+        ? await getStoreByProject(projectId)
+        : getCurrentStore();
+      for (const fileId of fileIds) {
+        await adapter.deleteFile(fileId);
+      }
+    },
+
     getFileContent: async ({ fileId, getCurrentStore }) => {
       const adapter = getCurrentStore();
 

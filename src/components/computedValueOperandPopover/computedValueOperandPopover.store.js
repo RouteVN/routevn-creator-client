@@ -96,6 +96,6 @@ export const selectViewData = ({ i18n, props, state }) => {
     addValueLabel:
       props.initialValue === undefined
         ? (copy.addValueButton ?? "Add Value")
-        : (copy.computedUpdateValueButton ?? "Update Value"),
+        : (copy.computedUpdateValueButton ?? "Update"),
   };
 };

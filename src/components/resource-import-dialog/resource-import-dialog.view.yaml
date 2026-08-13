@@ -1,0 +1,96 @@
+refs:
+  dialog:
+    eventListeners:
+      close:
+        handler: handleDialogClose
+  workflowForm:
+    eventListeners:
+      form-action:
+        handler: handleFormAction
+  assetStoreLink:
+    eventListeners:
+      click:
+        handler: handleAssetStoreLink
+  resourceSelectionGrid:
+    eventListeners:
+      click:
+        handler: handleResourceSelectionToggle
+      keydown:
+        handler: handleResourceSelectionKeyDown
+  selectionToggleAllButton:
+    eventListeners:
+      click:
+        handler: handleSelectionToggleAll
+  cancelProgressButton:
+    eventListeners:
+      click:
+        handler: handleCancelProgress
+template:
+  - 'rtgl-dialog#dialog ?open=${open} s=lg md-layout=fixed-top aria-label="${dialogAriaLabel}"':
+      - rtgl-view slot=content d=v w=f h=f g=md overflow=hidden:
+          - $if errorMessage:
+              - rtgl-view w=f p=md bgc=de br=md role=alert aria-live=assertive:
+                  - rtgl-text c=de-fg: ${errorMessage}
+          - $if isBusy && isSourceStep:
+              - rtgl-view w=f h=180 av=c ah=c d=v g=md:
+                  - rtgl-text: ${progressLabel}
+          - $if !isBusy && !isProgressStep:
+              - rtgl-form#workflowForm key=${formKey} :defaultValues=${defaultValues} :form=${form} :context=${formContext} sticky w=f h=f:
+                  - $if isSourceStep:
+                      - rtgl-view slot=source-description d=h w=f g=xs av=c wrap:
+                          - rtgl-text s=sm c=mu-fg: ${sourceDescription}
+                          - 'rtgl-text#assetStoreLink href=${assetStoreUrl} new-tab s=sm c=pr': ${assetStoreLinkLabel}
+                  - $if isSelectionStep:
+                      - $if hasPackageSummary:
+                          - rtgl-view slot=package-summary d=v w=f g=md:
+                              - $if hasPackageMetadata:
+                                  - rtgl-view d=v w=f g=xs:
+                                      - $if packageName:
+                                          - rtgl-text s=lg: ${packageName}
+                                      - $if packageVersion:
+                                          - rtgl-text c=mu-fg: ${packageVersion}
+                                      - $if packageDescription:
+                                          - rtgl-text: ${packageDescription}
+                                      - $if packagePublisher:
+                                          - 'rtgl-text s=sm c=mu-fg': '${publisherLabel}: ${packagePublisher}'
+                                      - $if packageSource:
+                                          - 'rtgl-text s=sm c=mu-fg': '${sourceLabel}: ${packageSource}'
+                              - $if warnings.length > 0:
+                                  - rtgl-view d=v w=f g=xs p=md bgc=wa br=md:
+                                      - rtgl-text c=wa-fg: ${warningsLabel}
+                                      - $for warning, i in warnings:
+                                          - rtgl-text s=sm c=wa-fg: ${warning.message}
+                  - $if isSelectionStep:
+                      - rtgl-view slot=selection-controls d=h w=f ah=e:
+                          - 'rtgl-button#selectionToggleAllButton v=se s=sm data-all-selected=${allResourcesSelected}': ${selectionToggleAllLabel}
+                      - rtgl-view#resourceSelectionGrid slot=resource-selection-grid d=v w=f g=xl:
+                          - $for section in resourceSections:
+                              - rtgl-view d=v w=f g=lg:
+                                  - rtgl-text s=lg: ${section.typeLabel}
+                                  - $for group in section.groups:
+                                      - $if group.kind == 'folder':
+                                          - 'rtgl-view d=h w=f av=c g=xs style="padding-left: ${group.indent}px;"':
+                                              - rtgl-svg svg=folder wh=16 c=mu-fg: null
+                                              - rtgl-text s=md: ${group.name}
+                                        $else:
+                                          - 'rtgl-grid cols=3 xl-cols=2 md-cols=1 g=lg w=f style="padding-left: ${group.indent}px; box-sizing: border-box;"':
+                                              - $for resource in group.resources:
+                                                  - 'rtgl-view#resourceSelectionCard${resource.planResourceIndex} role=button tabindex=0 data-resource-index=${resource.planResourceIndex} data-resource-source-id="${resource.sourceId}" data-selected=${resource.selected} aria-label="${resource.selectionLabel}" aria-pressed="${resource.selected}" d=h w=f av=s g=md p=md bgc=bg bw=xs bc=${resource.selectionBorderColor} h-bc=${resource.selectionHoverBorderColor} br=md cur=pointer style="box-sizing: border-box;"':
+                                                      - 'rtgl-view w=160 h=90 av=c ah=c br=md bgc=mu overflow=hidden style="flex: 0 0 160px;"':
+                                                          - $if resource.previewSourceId:
+                                                              - 'rvn-resource-import-preview-media key=${resource.previewSourceId} planId=${planId} sourceFileId=${resource.previewSourceId} label="${resource.name}" ?lazy=true': null
+                                                            $else:
+                                                              - rtgl-svg svg=image wh=24 c=mu-fg: null
+                                                      - 'rtgl-view d=v w=1fg g=xs pv=sm style="box-sizing: border-box;"':
+                                                          - rtgl-view d=h av=c g=xs:
+                                                              - rtgl-text s=md: ${resource.name}
+                                                          - rtgl-text s=sm c=mu-fg: ${resource.typeLabel}
+                                                          - $if resource.description:
+                                                              - rtgl-text s=sm c=mu-fg: ${resource.description}
+                                                      - 'rtgl-view d=h av=c ah=e style="align-self: center; flex: 0 0 auto;"':
+                                                          - rtgl-text s=sm c=${resource.selectionStatusColor}: ${resource.selectionStatus}
+          - $if isProgressStep:
+              - rtgl-view w=f h=220 av=c ah=c d=v g=md role=status aria-live=polite:
+                  - rtgl-text s=lg: ${progressLabel}
+                  - rtgl-text c=mu-fg: ${progressCountLabel} (${progressPercent}%)
+                  - rtgl-button#cancelProgressButton v=se: ${cancelButton}

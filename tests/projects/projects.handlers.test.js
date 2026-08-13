@@ -27,6 +27,10 @@ const createDeps = ({
   ensureProjectCompatibleByPath = vi.fn(async () => {}),
   platform = "tauri",
 } = {}) => {
+  const progressDialog = {
+    close: vi.fn(),
+    waitForPaint: vi.fn(async () => {}),
+  };
   const appService = {
     getPlatform: vi.fn(() => platform),
     getAppVersion: vi.fn(() => "1.0.0"),
@@ -40,6 +44,7 @@ const createDeps = ({
       projectPath: "/projects/new-project",
     })),
     showAlert: vi.fn(),
+    showProgressDialog: vi.fn(() => progressDialog),
     showToast: vi.fn(),
     setCurrentProjectEntry: vi.fn(),
     getUserConfig: vi.fn(),
@@ -112,22 +117,6 @@ const createDeps = ({
       set: vi.fn(async () => {}),
     },
     render: vi.fn(),
-    refs: {
-      projectCreateDialogBody: {
-        validate: vi.fn(async () => ({ valid: true })),
-        getValues: vi.fn(async () => ({
-          name: "New Project",
-          description: "",
-          language: "ja",
-          iconFile: undefined,
-          template: "default",
-          resolution: "1920x1080",
-          resolutionWidth: 1920,
-          resolutionHeight: 1080,
-          projectPath: "/projects/new-project",
-        })),
-      },
-    },
   };
 };
 
@@ -433,13 +422,41 @@ describe("projects create dialog", () => {
     expect(deps.render).toHaveBeenCalled();
   });
 
-  it("creates a project from the page-owned dialog body methods", async () => {
+  it("creates a project from the sticky form submit event", async () => {
     const deps = createDeps();
 
-    await handleCreateDialogSubmit(deps);
+    await handleCreateDialogSubmit(deps, {
+      _event: {
+        detail: {
+          values: {
+            name: "New Project",
+            description: "",
+            language: "ja",
+            iconFile: undefined,
+            template: "default",
+            resolution: "1920x1080",
+            resolutionWidth: 1920,
+            resolutionHeight: 1080,
+            projectPath: "/projects/new-project",
+          },
+        },
+      },
+    });
 
-    expect(deps.refs.projectCreateDialogBody.validate).toHaveBeenCalled();
-    expect(deps.refs.projectCreateDialogBody.getValues).toHaveBeenCalled();
+    expect(deps.appService.showProgressDialog).toHaveBeenCalledWith({
+      title: "Creating Project…",
+      message: "Please wait while your project is being created.",
+      progress: {},
+    });
+    const progressDialog =
+      deps.appService.showProgressDialog.mock.results[0].value;
+    expect(progressDialog.waitForPaint).toHaveBeenCalledOnce();
+    expect(deps.store.closeCreateDialog).toHaveBeenCalledOnce();
+    expect(
+      deps.store.closeCreateDialog.mock.invocationCallOrder[0],
+    ).toBeLessThan(
+      deps.appService.showProgressDialog.mock.invocationCallOrder[0],
+    );
     expect(deps.appService.createNewProject).toHaveBeenCalledWith({
       name: "New Project",
       description: "",
@@ -459,7 +476,50 @@ describe("projects create dialog", () => {
         projectPath: "/projects/new-project",
       },
     });
-    expect(deps.store.closeCreateDialog).toHaveBeenCalled();
+    expect(progressDialog.close).toHaveBeenCalledOnce();
+    expect(
+      deps.appService.showProgressDialog.mock.invocationCallOrder[0],
+    ).toBeLessThan(
+      deps.appService.createNewProject.mock.invocationCallOrder[0],
+    );
+  });
+
+  it("closes the form before loading and closes progress when creation fails", async () => {
+    const deps = createDeps();
+    deps.appService.createNewProject.mockRejectedValue(
+      new Error("creation failed"),
+    );
+
+    await handleCreateDialogSubmit(deps, {
+      _event: {
+        detail: {
+          values: {
+            name: "New Project",
+            description: "",
+            language: "ja",
+            iconFile: undefined,
+            template: "default",
+            resolution: "1920x1080",
+            resolutionWidth: 1920,
+            resolutionHeight: 1080,
+            projectPath: "/projects/new-project",
+          },
+        },
+      },
+    });
+
+    const progressDialog =
+      deps.appService.showProgressDialog.mock.results[0].value;
+    expect(progressDialog.close).toHaveBeenCalledOnce();
+    expect(deps.store.closeCreateDialog).toHaveBeenCalledOnce();
+    expect(
+      deps.store.closeCreateDialog.mock.invocationCallOrder[0],
+    ).toBeLessThan(
+      deps.appService.showProgressDialog.mock.invocationCallOrder[0],
+    );
+    expect(deps.appService.showAlert).toHaveBeenCalledWith({
+      message: "creation failed",
+    });
   });
 });
 

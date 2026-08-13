@@ -24,7 +24,7 @@ describe("importPackages", () => {
 
     await expect(
       fetchImportPackageJson({
-        url: "https://example.com/package.json",
+        url: "https://example.com/asset-package.json",
       }),
     ).rejects.toThrow("Import URL must return JSON.");
     expect(json).not.toHaveBeenCalled();
@@ -43,7 +43,7 @@ describe("importPackages", () => {
 
     await expect(
       fetchImportPackageJson({
-        url: "https://example.com/package.json",
+        url: "https://example.com/asset-package.json",
       }),
     ).rejects.toThrow("Import URL did not return valid JSON.");
   });

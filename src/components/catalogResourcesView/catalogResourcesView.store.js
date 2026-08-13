@@ -257,8 +257,6 @@ export const selectViewData = ({ state, props }) => {
   const showMenuButton = parseBooleanProp(props.showMenuButton);
   const menuButtonPlacement =
     props.menuButtonPlacement === "trailing" ? "trailing" : "leading";
-  const canImport = parseBooleanProp(props.canImport);
-  const importIconOnly = parseBooleanProp(props.importIconOnly);
   const hasActiveSearch = searchQuery.trim().length > 0;
   const hasActiveFilter =
     hasActiveTagFilter || (searchInFilterPopover && hasActiveSearch);
@@ -394,11 +392,6 @@ export const selectViewData = ({ state, props }) => {
           : `No items found matching "${searchQuery}"`),
     addText: props.addText ?? "Add",
     canAdd: parseBooleanProp(props.canAdd, true),
-    importText: props.importText ?? "Import",
-    canImport,
-    importIconOnly,
-    showIconImportButton: canImport && importIconOnly,
-    showTextImportButton: canImport && !importIconOnly,
     mobileLayout,
     scrollBottomPadding,
     dropdownMenu: state.dropdownMenu,

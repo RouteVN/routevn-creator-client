@@ -6,6 +6,8 @@ propsSchema:
       type: string
     defaultValues:
       type: object
+events:
+  submit: {}
 methods:
   type: object
   properties:

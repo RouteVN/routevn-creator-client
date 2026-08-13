@@ -1,5 +1,6 @@
 import { generateId } from "../../internal/id.js";
 import { createCatalogPageHandlers } from "../../internal/ui/resourcePages/catalog/createCatalogPageHandlers.js";
+import { forwardFormSubmitOnEnter } from "../../internal/ui/resourcePages/formSubmitKeyDown.js";
 import { createResourceFileExplorerHandlers } from "../../internal/ui/fileExplorer.js";
 import {
   appendTagIdToForm,
@@ -8,6 +9,7 @@ import {
 import { runResourcePageMutation } from "../../internal/ui/resourcePages/resourcePageErrors.js";
 import { extractFileIdsFromRenderState } from "../../internal/project/layout.js";
 import { createRenderableParticleData } from "../../internal/particles.js";
+import { createParticlePreviewState } from "../../internal/particlePreview.js";
 import { captureCanvasThumbnailImage } from "../../internal/runtime/graphicsEngineRuntime.js";
 import { createFileExplorerKeyboardScopeHandlers } from "../../internal/ui/fileExplorerKeyboardScope.js";
 import {
@@ -19,7 +21,6 @@ import {
   buildParticlePayload,
   resolveParticleBaseData,
 } from "./support/particleForm.js";
-import { createParticlePreviewState } from "./support/particlePreview.js";
 import {
   DEFAULT_PARTICLE_PRESET_ID,
   PARTICLE_PRESET_OPTIONS,
@@ -512,7 +513,9 @@ const openParticleDialog = async ({
   const { refs, render, store } = deps;
 
   if (itemId) {
-    store.setSelectedItemId({ itemId });
+    const selectionPayload = { itemId };
+    if (editMode) selectionPayload.suppressMobileDetailSheet = true;
+    store.setSelectedItemId(selectionPayload);
     refs.fileExplorer?.selectItem?.({ itemId });
   }
 
@@ -1042,6 +1045,27 @@ export const handleParticleFormActionClick = async (deps, payload) => {
 
   await refreshParticleData(deps, { selectedItemId: particleId });
 };
+
+export const handleParticleSubmitClick = async (deps) => {
+  const { particleForm } = deps.refs;
+  const validation = particleForm.validate();
+  await handleParticleFormActionClick(deps, {
+    _event: {
+      detail: {
+        actionId: "submit",
+        valid: validation.valid,
+        values: particleForm.getValues(),
+      },
+    },
+  });
+};
+
+export const handleParticleFormSubmitKeyDown = (deps, payload) =>
+  forwardFormSubmitOnEnter({
+    deps,
+    payload,
+    submit: handleParticleSubmitClick,
+  });
 
 export const handleParticleFormChange = async (deps, payload) => {
   const { render, store } = deps;

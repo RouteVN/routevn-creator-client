@@ -74,6 +74,16 @@ const buildPendingMediaItem = (item) => ({
 
 const createEditForm = ({ copy } = {}) => ({
   title: copy.editTitle,
+  actions: {
+    buttons: [
+      {
+        id: "submit",
+        variant: "pr",
+        validate: true,
+        label: copy.updateButton,
+      },
+    ],
+  },
   fields: [
     {
       name: "name",
@@ -98,16 +108,6 @@ const createEditForm = ({ copy } = {}) => ({
       label: copy.soundLabel,
     },
   ],
-  actions: {
-    layout: "",
-    buttons: [
-      {
-        id: "submit",
-        variant: "pr",
-        label: copy.updateButton,
-      },
-    ],
-  },
 });
 
 const {

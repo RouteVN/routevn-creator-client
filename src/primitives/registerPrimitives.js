@@ -10,6 +10,10 @@ import {
   RouteGraphicsTextPreviewElement,
   ROUTE_GRAPHICS_TEXT_PREVIEW_TAG_NAME,
 } from "./routeGraphicsTextPreview.js";
+import {
+  VisibilityObserverElement,
+  VISIBILITY_OBSERVER_TAG_NAME,
+} from "./visibilityObserver.js";
 
 export const registerPrimitives = () => {
   if (!customElements.get(LEXICAL_SCENE_DOCUMENT_EDITOR_TAG_NAME)) {
@@ -28,6 +32,12 @@ export const registerPrimitives = () => {
     customElements.define(
       ROUTE_GRAPHICS_TEXT_PREVIEW_TAG_NAME,
       RouteGraphicsTextPreviewElement,
+    );
+  }
+  if (!customElements.get(VISIBILITY_OBSERVER_TAG_NAME)) {
+    customElements.define(
+      VISIBILITY_OBSERVER_TAG_NAME,
+      VisibilityObserverElement,
     );
   }
 };

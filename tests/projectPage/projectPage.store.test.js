@@ -8,10 +8,28 @@ import {
   setProjectAnalytics,
   setProjectAnalyticsRequestId,
   setSceneTextAnalyticsStatus,
+  setUiConfig,
 } from "../../src/pages/project/project.store.js";
 import { EN_I18N } from "../support/i18n.js";
 
 describe("project page store", () => {
+  it("uses two full-width resource columns only in touch mode", () => {
+    const state = createInitialState();
+
+    const desktopViewData = selectViewData({ state, i18n: EN_I18N });
+    expect(desktopViewData.resourceGridStyle).toBe("");
+    expect(desktopViewData.resourceCardStyle).toContain("max-width: 128px");
+
+    setUiConfig({ state }, { uiConfig: { id: "touch" } });
+
+    const mobileViewData = selectViewData({ state, i18n: EN_I18N });
+    expect(mobileViewData.resourceGridStyle).toContain(
+      "grid-template-columns: repeat(2, minmax(0, 1fr))",
+    );
+    expect(mobileViewData.resourceCardStyle).toContain("width: 100%");
+    expect(mobileViewData.resourceCardStyle).toContain("min-width: 0");
+  });
+
   it("tracks the latest project analytics request", () => {
     const state = createInitialState();
 

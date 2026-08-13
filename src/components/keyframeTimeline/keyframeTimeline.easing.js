@@ -206,12 +206,23 @@ const resolveInitialValue = ({ initialValue, defaultValue } = {}) => {
   return resolveNumber(initialValue, resolveNumber(defaultValue, 0));
 };
 
-const resolveTargetValue = ({ keyframe, startValue } = {}) => {
+const resolveTargetValue = ({ keyframe, currentValue, startValue } = {}) => {
   if (keyframe?.value === "target") {
     return startValue;
   }
   const keyframeValue = resolveNumber(keyframe?.value, 0);
-  return keyframe?.relative ? startValue + keyframeValue : keyframeValue;
+  return keyframe?.relative ? currentValue + keyframeValue : keyframeValue;
+};
+
+const resolveKeyframeStartValue = ({ keyframe, currentValue } = {}) => {
+  if (keyframe?.startValue === undefined || keyframe.startValue === "") {
+    return currentValue;
+  }
+
+  const authoredStartValue = resolveNumber(keyframe.startValue, currentValue);
+  return keyframe.relative
+    ? currentValue + authoredStartValue
+    : authoredStartValue;
 };
 
 const createValuePointPath = ({ points, timelineDuration } = {}) => {
@@ -247,22 +258,30 @@ export const createKeyframeValueCurvePath = ({
 
   const points = [];
   let elapsedTimeMs = 0;
-  let startValue = resolveInitialValue({ initialValue, defaultValue });
+  let currentValue = resolveInitialValue({ initialValue, defaultValue });
 
   keyframes.forEach((keyframe) => {
-    if (keyframe.startValue !== undefined) {
-      startValue = resolveNumber(keyframe.startValue, startValue);
-    }
     const delay = Math.max(0, resolveNumber(keyframe.delay, 0));
     const duration = resolveNumber(keyframe.duration, 1000) || 1000;
-    const targetValue = resolveTargetValue({ keyframe, startValue });
+    const startValue = resolveKeyframeStartValue({ keyframe, currentValue });
+    const targetValue = resolveTargetValue({
+      keyframe,
+      currentValue,
+      startValue,
+    });
+    const hasExplicitStartValue =
+      keyframe.startValue !== undefined && keyframe.startValue !== "";
     const easingSamples =
       EASING_SAMPLES[keyframe.easing ?? "linear"] ?? EASING_SAMPLES.linear;
 
     if (delay > 0) {
       if (points.length === 0) {
-        points.push({ timeMs: elapsedTimeMs, value: startValue });
+        points.push({ timeMs: elapsedTimeMs, value: currentValue });
       }
+      points.push({ timeMs: elapsedTimeMs + delay, value: currentValue });
+    }
+
+    if (hasExplicitStartValue && points.length > 0) {
       points.push({ timeMs: elapsedTimeMs + delay, value: startValue });
     }
 
@@ -278,7 +297,7 @@ export const createKeyframeValueCurvePath = ({
     });
 
     elapsedTimeMs += delay + duration;
-    startValue = targetValue;
+    currentValue = targetValue;
   });
 
   const resolvedTimelineDuration =
@@ -290,7 +309,7 @@ export const createKeyframeValueCurvePath = ({
   if (resolvedTimelineDuration > elapsedTimeMs) {
     points.push({
       timeMs: resolvedTimelineDuration,
-      value: startValue,
+      value: currentValue,
     });
   }
 

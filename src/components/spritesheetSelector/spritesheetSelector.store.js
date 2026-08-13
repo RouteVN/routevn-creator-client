@@ -37,6 +37,11 @@ const matchesSearch = (item, searchQuery) => {
   );
 };
 
+const parseColumnCount = (value) => {
+  const columns = Number(value);
+  return Number.isInteger(columns) && columns > 0 ? columns : undefined;
+};
+
 const createAnimationItems = (spritesheet = {}, selectedSpritesheetValue) => {
   return Object.entries(spritesheet.animations ?? {}).map(
     ([animationName, animation]) => {
@@ -101,6 +106,10 @@ export const selectViewData = ({ state, props = {}, i18n }) => {
   const selectedSpritesheetValue =
     props.selectedSpritesheetValue ?? state.selectedSpritesheetValue;
   const searchQuery = (props.searchQuery ?? "").toLowerCase().trim();
+  const columns = parseColumnCount(props.columns);
+  const spritesheetGridStyle = columns
+    ? `display: grid; grid-template-columns: repeat(${columns}, minmax(0, 1fr));`
+    : "";
   const { resourceId, animationName } = parseSpritesheetAnimationSelectionValue(
     selectedSpritesheetValue,
   );
@@ -116,6 +125,10 @@ export const selectViewData = ({ state, props = {}, i18n }) => {
 
   return {
     groups,
+    spritesheetGridStyle,
+    spritesheetCardStyle: columns
+      ? "width: 100%; min-width: 0; max-width: 100%; box-sizing: border-box;"
+      : "max-width: 100%; box-sizing: border-box;",
     selectedSpritesheetValue,
     selectedResourceId: resourceId,
     selectedAnimationName: animationName,

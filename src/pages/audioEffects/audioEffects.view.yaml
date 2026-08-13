@@ -79,20 +79,20 @@ refs:
         handler: handleAddDialogClose
   addForm:
     eventListeners:
-      form-action:
-        handler: handleAddFormAction
       add-option-click:
         handler: handleAddFormAddOptionClick
+      form-action:
+        handler: handleAddFormAction
   editDialog:
     eventListeners:
       close:
         handler: handleEditDialogClose
   editForm:
     eventListeners:
-      form-action:
-        handler: handleEditFormAction
       add-option-click:
         handler: handleEditFormAddOptionClick
+      form-action:
+        handler: handleEditFormAction
   detailHeader:
     eventListeners:
       click:
@@ -202,9 +202,11 @@ template:
                           - rtgl-text s=sm: ${selectedAudioEffectSummary}
   - rtgl-dialog#folderNameDialog ?open=${isFolderNameDialogOpen} s=sm:
       - rtgl-form#folderNameForm key=${folderNameDialogItemId} slot=content :defaultValues=${folderNameDialogDefaultValues} :form=${folderNameForm}: null
-  - rtgl-dialog#addDialog ?open=${isAddDialogOpen} s=md:
-      - rtgl-form#addForm key=${isAddDialogOpen} slot=content :defaultValues=${addFormDefaults} :form=${addForm}: null
-  - rtgl-dialog#editDialog ?open=${isEditDialogOpen} s=md:
-      - rtgl-form#editForm key=${isEditDialogOpen} slot=content :defaultValues=${editDefaultValues} :form=${editForm}: null
+  - rtgl-dialog#addDialog ?open=${isAddDialogOpen} s=md md-layout=fixed-top:
+      - rtgl-view slot=content d=v w=f h=f overflow=hidden:
+          - rtgl-form#addForm key=${isAddDialogOpen} :defaultValues=${addFormDefaults} :form=${addForm} sticky bottom-spacer=96 w=f h=f: null
+  - rtgl-dialog#editDialog ?open=${isEditDialogOpen} s=md md-layout=fixed-top:
+      - rtgl-view slot=content d=v w=f h=f overflow=hidden:
+          - rtgl-form#editForm key=${isEditDialogOpen} :defaultValues=${editDefaultValues} :form=${editForm} sticky bottom-spacer=96 w=f h=f: null
   - rtgl-dialog#createTagDialog ?open=${isCreateTagDialogOpen} s=sm:
       - rtgl-form#createTagForm key=${isCreateTagDialogOpen} slot=content :defaultValues=${createTagDefaultValues} :form=${createTagForm}: null

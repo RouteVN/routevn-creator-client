@@ -130,10 +130,10 @@ refs:
         handler: handleEditDialogClose
   editForm:
     eventListeners:
-      form-action:
-        handler: handleEditFormAction
       add-option-click:
         handler: handleEditFormAddOptionClick
+      form-action:
+        handler: handleEditFormAction
   folderNameDialog:
     eventListeners:
       close:
@@ -225,7 +225,7 @@ template:
               - 'div#fileExplorerKeyboardScope tabindex=-1 style="width: 100%; height: 100%; min-width: 0; min-height: 0; outline: none;"':
                   - $if showMobileTopTabs:
                       - 'rtgl-view d=v w=f h=f style="min-width: 0; min-height: 0;"':
-                          - 'rvn-media-resources-view#groupview w=f h=f :navTitle=${title} show-menu-button menu-button-placement=trailing show-zoom-controls zoom-in-popover zoom-control-mode=columns default-items-per-row=2 items-per-row-config-key="groupImagesView.itemsPerRow" show-search=false search-in-filter-popover show-tag-filter progressive-render progressive-hydration-delay-frame-count=4 lazy-image-cards image-card-aspect-ratio="16 / 9" :mobileLayout=${mobileLayout} :groups=${mediaGroups} :selectedItemId=${selectedItemId} :selectedFolderId=${selectedFolderId} :searchQuery=${searchQuery} :tagFilterOptions=${tagFilterOptions} :selectedTagFilterValues=${selectedTagFilterValues} :tagFilterPlaceholder=${tagFilterPlaceholder} :uploadText=${uploadText} :acceptedFileTypes=${acceptedFileTypes} :imageHeight=${imageHeight} :maxWidth=${maxWidth} :itemContextMenuItems=${centerItemContextMenuItems}': null
+                          - 'rvn-media-resources-view#groupview w=f h=f :navTitle=${title} show-menu-button menu-button-placement=trailing show-zoom-controls zoom-in-popover zoom-in-overflow-menu zoom-control-mode=columns default-items-per-row=2 items-per-row-config-key="groupImagesView.itemsPerRow" show-search=false search-in-filter-popover show-tag-filter filter-in-overflow-menu progressive-render progressive-hydration-delay-frame-count=4 lazy-image-cards image-card-aspect-ratio="16 / 9" :mobileLayout=${mobileLayout} :groups=${mediaGroups} :selectedItemId=${selectedItemId} :selectedFolderId=${selectedFolderId} :searchQuery=${searchQuery} :tagFilterOptions=${tagFilterOptions} :selectedTagFilterValues=${selectedTagFilterValues} :tagFilterPlaceholder=${tagFilterPlaceholder} :uploadText=${uploadText} :acceptedFileTypes=${acceptedFileTypes} :imageHeight=${imageHeight} :maxWidth=${maxWidth} :itemContextMenuItems=${centerItemContextMenuItems}': null
                     $else:
                       - 'rvn-media-resources-view#groupview w=f h=f :navTitle=${title} show-zoom-controls zoom-in-popover zoom-control-mode=columns default-items-per-row=6 items-per-row-config-key="groupImagesView.itemsPerRow" search-in-filter-popover show-tag-filter progressive-render progressive-hydration-delay-frame-count=4 lazy-image-cards image-card-aspect-ratio="16 / 9" :groups=${mediaGroups} :selectedItemId=${selectedItemId} :selectedFolderId=${selectedFolderId} :searchQuery=${searchQuery} :tagFilterOptions=${tagFilterOptions} :selectedTagFilterValues=${selectedTagFilterValues} :tagFilterPlaceholder=${tagFilterPlaceholder} :uploadText=${uploadText} :acceptedFileTypes=${acceptedFileTypes} :imageHeight=${imageHeight} :maxWidth=${maxWidth} :itemContextMenuItems=${centerItemContextMenuItems} scroll-bottom-padding=32vh': null
           - $if showDetailPanel:
@@ -274,15 +274,15 @@ template:
               - rtgl-view d=h g=sm w=f ah=e:
                   - rtgl-button#deleteConfirmButton v=de: ${deleteDialogConfirmLabel}
   - $if isEditDialogOpen:
-      - rtgl-dialog#editDialog ?open=${isEditDialogOpen} s=md:
-          - rtgl-view slot=content g=md:
-              - rtgl-form#editForm key=${isEditDialogOpen} :defaultValues=${editDefaultValues} :form=${editForm} w=f:
+      - rtgl-dialog#editDialog ?open=${isEditDialogOpen} s=md md-layout=fixed-top:
+          - rtgl-view slot=content d=v w=f h=f overflow=hidden:
+              - rtgl-form#editForm key=${isEditDialogOpen} :defaultValues=${editDefaultValues} :form=${editForm} sticky bottom-spacer=96 w=f h=f:
                   - $if editPreviewFileId:
-                      - rtgl-view slot=image-slot av=c ah=c:
-                          - rvn-file-image#editDialogImage fileId=${editPreviewFileId} h=120 bw=xs bc=bo br=md cur=pointer key=${editPreviewFileId}: null
+                      - 'rtgl-view slot=image-slot w=120 h=120 av=c ah=c style="overflow: hidden;"':
+                          - rvn-file-image#editDialogImage fileId=${editPreviewFileId} w=f h=f bw=xs bc=bo br=md cur=pointer key=${editPreviewFileId}: null
                     $else:
-                      - rtgl-view slot=image-slot av=c ah=c:
-                          - rtgl-view#editDialogImagePlaceholder w=120 h=120 av=c ah=c bgc=bg bc=bo bw=xs br=md cur=pointer:
+                      - rtgl-view slot=image-slot w=120 h=120 av=c ah=c:
+                          - rtgl-view#editDialogImagePlaceholder w=f h=f av=c ah=c bgc=bg bc=bo bw=xs br=md cur=pointer:
                               - rtgl-text c=mu-fg s=sm: ${clickToUploadLabel}
   - $if isFolderNameDialogOpen:
       - rtgl-dialog#folderNameDialog ?open=${isFolderNameDialogOpen} s=sm:
@@ -293,16 +293,31 @@ template:
   - $when: fullImagePreviewVisible
     'div#previewOverlay tabindex=0 style="position: fixed; inset: 0; z-index: 3000; cursor: default; outline: none; background-color: rgba(0, 0, 0, 0.9);"':
       - $if fullImagePreviewFileId:
-          - 'div style="${fullImagePreviewLayoutStyle}"':
-              - 'div style="${fullImagePreviewTopBarStyle}"':
-                  - 'rtgl-text#previewBreadcrumb s=sm ellipsis=true style="color: white; min-width: 0; max-width: 100%;"': ${fullImagePreviewBreadcrumb}
-                  - 'rtgl-view#previewModeControls d=h g=xs bgc=bg bw=xs bc=bo br=md p=xs style="box-shadow: 0 8px 24px rgba(15, 23, 42, 0.18);"':
+          - $if mobileLayout:
+              - 'rtgl-view pos=fix z=3002 d=h w=f av=c g=sm style="top: calc(var(--rvn-mobile-overlay-top-inset, 0px) + 8px); left: 0; right: 0; padding-left: max(8px, env(safe-area-inset-left)); padding-right: max(8px, env(safe-area-inset-right)); box-sizing: border-box;"':
+                  - 'rtgl-text#previewBreadcrumb w=1fg s=sm ellipsis=true style="color: white; min-width: 0; text-shadow: 0 1px 3px rgba(0, 0, 0, 0.8);"': ${fullImagePreviewBreadcrumb}
+                  - 'rtgl-view#previewModeControls d=h g=xs bgc=bg bw=xs bc=bo br=md p=xs style="flex: 0 0 auto; box-shadow: 0 8px 24px rgba(15, 23, 42, 0.18);"':
                       - 'rtgl-button#previewCanvasModeButton sq pre=canvas-scale v=${fullImagePreviewCanvasModeButton.variant} aria-label="${fullImagePreviewCanvasModeLabel}" aria-pressed="${fullImagePreviewCanvasModeButton.selected}" title="${fullImagePreviewCanvasModeLabel}"': null
                       - 'rtgl-button#previewFitModeButton sq pre=fit-to-frame v=${fullImagePreviewFitModeButton.variant} aria-label="${fullImagePreviewFitModeLabel}" aria-pressed="${fullImagePreviewFitModeButton.selected}" title="${fullImagePreviewFitModeLabel}"': null
-              - 'div#previewImageFrame.imagePreviewFrame.imagePreviewTransparencyGrid style="${fullImagePreviewFrameStyle}"':
-                  - 'div style="${fullImagePreviewImageWrapperStyle}"':
-                      - rvn-file-image fileId=${fullImagePreviewFileId} w=f h=f: null
-                  - $if fullImagePreviewPreviousVisible:
-                      - div#previewPrevious.imagePreviewEdge.imagePreviewEdgePrevious role=button aria-label="${fullImagePreviewPreviousLabel}": null
-                  - $if fullImagePreviewNextVisible:
-                      - div#previewNext.imagePreviewEdge.imagePreviewEdgeNext role=button aria-label="${fullImagePreviewNextLabel}": null
+              - rtgl-view pos=fix edge=f ah=c av=c z=3001:
+                  - 'div#previewImageFrame.imagePreviewFrame.imagePreviewTransparencyGrid style="${fullImagePreviewFrameStyle}"':
+                      - 'div style="${fullImagePreviewImageWrapperStyle}"':
+                          - rvn-file-image fileId=${fullImagePreviewFileId} w=f h=f: null
+                      - $if fullImagePreviewPreviousVisible:
+                          - div#previewPrevious.imagePreviewEdge.imagePreviewEdgePrevious role=button aria-label="${fullImagePreviewPreviousLabel}": null
+                      - $if fullImagePreviewNextVisible:
+                          - div#previewNext.imagePreviewEdge.imagePreviewEdgeNext role=button aria-label="${fullImagePreviewNextLabel}": null
+            $else:
+              - 'div style="${fullImagePreviewLayoutStyle}"':
+                  - 'div style="${fullImagePreviewTopBarStyle}"':
+                      - 'rtgl-text#previewBreadcrumb s=sm ellipsis=true style="color: white; min-width: 0; max-width: 100%;"': ${fullImagePreviewBreadcrumb}
+                      - 'rtgl-view#previewModeControls d=h g=xs bgc=bg bw=xs bc=bo br=md p=xs style="box-shadow: 0 8px 24px rgba(15, 23, 42, 0.18);"':
+                          - 'rtgl-button#previewCanvasModeButton sq pre=canvas-scale v=${fullImagePreviewCanvasModeButton.variant} aria-label="${fullImagePreviewCanvasModeLabel}" aria-pressed="${fullImagePreviewCanvasModeButton.selected}" title="${fullImagePreviewCanvasModeLabel}"': null
+                          - 'rtgl-button#previewFitModeButton sq pre=fit-to-frame v=${fullImagePreviewFitModeButton.variant} aria-label="${fullImagePreviewFitModeLabel}" aria-pressed="${fullImagePreviewFitModeButton.selected}" title="${fullImagePreviewFitModeLabel}"': null
+                  - 'div#previewImageFrame.imagePreviewFrame.imagePreviewTransparencyGrid style="${fullImagePreviewFrameStyle}"':
+                      - 'div style="${fullImagePreviewImageWrapperStyle}"':
+                          - rvn-file-image fileId=${fullImagePreviewFileId} w=f h=f: null
+                      - $if fullImagePreviewPreviousVisible:
+                          - div#previewPrevious.imagePreviewEdge.imagePreviewEdgePrevious role=button aria-label="${fullImagePreviewPreviousLabel}": null
+                      - $if fullImagePreviewNextVisible:
+                          - div#previewNext.imagePreviewEdge.imagePreviewEdgeNext role=button aria-label="${fullImagePreviewNextLabel}": null

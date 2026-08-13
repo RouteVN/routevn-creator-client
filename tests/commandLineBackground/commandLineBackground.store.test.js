@@ -1,6 +1,8 @@
 import { describe, expect, it } from "vitest";
 import {
   createInitialState,
+  closeSearchPopover,
+  openSearchPopover,
   selectBackgroundFilters,
   selectBackgroundShaderAdjustmentOptionEnabled,
   selectBackgroundShaderAdjustmentValue,
@@ -20,8 +22,10 @@ import {
   setSelectedFlipY,
   setSelectedOpacity,
   setSelectedResource,
+  setMode,
   setTempSelectedResource,
   setSelectedTransform,
+  setUiConfig,
 } from "../../src/components/commandLineBackground/commandLineBackground.store.js";
 import { COMMAND_LINE_SHADER_ADJUSTMENTS } from "../../src/internal/commandLineShaderAdjustments.js";
 
@@ -40,6 +44,50 @@ const createEmptyCollection = () => ({
 });
 
 describe("commandLineBackground.store", () => {
+  it("uses two resource selector columns and hides the explorer in touch mode", () => {
+    const state = createInitialState();
+
+    expect(selectViewData({ state }).imageSelectorColumns).toBeUndefined();
+    expect(selectViewData({ state })).toMatchObject({
+      showImageSelectorFileExplorer: true,
+      spritesheetSelectorColumns: undefined,
+      showInlineSearch: true,
+      showSearchButton: false,
+    });
+
+    setUiConfig({ state }, { uiConfig: { inputMode: "touch" } });
+
+    expect(selectViewData({ state }).imageSelectorColumns).toBe(2);
+    expect(selectViewData({ state })).toMatchObject({
+      showImageSelectorFileExplorer: false,
+      spritesheetSelectorColumns: 2,
+      resourceSelectorGridStyle:
+        "display: grid; grid-template-columns: repeat(2, minmax(0, 1fr));",
+      showInlineSearch: false,
+      showSearchButton: true,
+    });
+  });
+
+  it("opens and closes the touch search popover at the search button", () => {
+    const state = createInitialState();
+
+    openSearchPopover({ state }, { position: { x: 312, y: 48 } });
+
+    expect(selectViewData({ state }).searchPopover).toEqual({
+      isOpen: true,
+      position: { x: 312, y: 48 },
+    });
+
+    closeSearchPopover({ state });
+
+    expect(selectViewData({ state }).searchPopover.isOpen).toBe(false);
+
+    openSearchPopover({ state }, { position: { x: 312, y: 48 } });
+    setMode({ state }, { mode: "current" });
+
+    expect(selectViewData({ state }).searchPopover.isOpen).toBe(false);
+  });
+
   it("keeps optional background fields hidden until they are added", () => {
     const state = createInitialState();
 

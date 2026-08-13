@@ -1,0 +1,13 @@
+componentName: rvn-resource-import-preview-media
+propsSchema:
+  type: object
+  properties:
+    planId:
+      type: string
+    sourceFileId:
+      type: string
+    label:
+      type: string
+    lazy:
+      type: boolean
+  required: [planId, sourceFileId]

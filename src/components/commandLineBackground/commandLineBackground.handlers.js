@@ -941,6 +941,26 @@ export const handleSearchInput = (deps, payload) => {
   render();
 };
 
+export const handleSearchButtonClick = (deps, payload) => {
+  const { refs, store, render } = deps;
+  payload._event.stopPropagation();
+  const rect = refs.searchButton.getBoundingClientRect();
+
+  store.openSearchPopover({
+    position: {
+      x: Math.round(rect.right),
+      y: Math.round(rect.bottom),
+    },
+  });
+  render();
+};
+
+export const handleSearchPopoverClose = (deps) => {
+  const { store, render } = deps;
+  store.closeSearchPopover();
+  render();
+};
+
 export const handleSubmitClick = (deps, payload) => {
   payload?._event?.stopPropagation?.();
   const { dispatchEvent, store } = deps;

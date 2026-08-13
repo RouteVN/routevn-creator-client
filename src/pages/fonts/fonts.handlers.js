@@ -268,6 +268,7 @@ const {
     tagIds: item?.tagIds ?? [],
   }),
   getEditPreviewFileId: (item) => item?.fileId,
+  suppressMobileDetailSheetOnEdit: true,
   tagging: {
     scopeKey: FONT_TAG_SCOPE_KEY,
     updateItemTagIds: ({ deps, itemId, tagIds }) =>

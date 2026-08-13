@@ -23,6 +23,21 @@ describe("fonts view", () => {
     expect(fontsView).not.toContain(" fontFamily=${editPreviewFontFamily}");
   });
 
+  it("keeps the edit preview within the form width", () => {
+    const fontsView = readFileSync(
+      new URL("../../src/pages/fonts/fonts.view.yaml", import.meta.url),
+      "utf8",
+    );
+
+    expect(fontsView).toContain(
+      'rtgl-view#editDialogFontPreview slot="font-slot" w=f bw=xs bc=bo br=md p=md cur=pointer style="min-width: 0; max-width: 100%; box-sizing: border-box; overflow: hidden;"',
+    );
+    expect(fontsView).toContain(
+      'previewText="Aa" fontSize=60 width=f height=120 av=c ah=c',
+    );
+    expect(fontsView).not.toContain('previewText="Aa" fontSize=60 width=320');
+  });
+
   it("keeps a scroll filler below the desktop font grid", () => {
     const fontsView = readFileSync(
       new URL("../../src/pages/fonts/fonts.view.yaml", import.meta.url),

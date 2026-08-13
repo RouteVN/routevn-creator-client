@@ -25,13 +25,45 @@ describe("command-line form spacing", () => {
       const lines = view.split("\n");
       const formLines = lines.filter(
         (line) =>
-          line.includes("- rtgl-form") && !line.includes("slot=content"),
+          line.includes("rtgl-form") && !line.includes("slot=content"),
       );
 
-      expect(view).toContain("pv=lg");
+      if (view.includes("rtgl-breadcrumb")) {
+        expect(view).toContain("pv=md");
+        expect(view).not.toContain("pv=lg");
+      } else {
+        expect(view).toContain("pv=lg");
+      }
       expect(view).not.toMatch(/rtgl-view[^\n]*w=f h=f p=lg/);
-      for (const formLine of formLines) {
-        expect(formLine).toContain("p=lg");
+      for (let index = 0; index < lines.length; index += 1) {
+        const formLine = lines[index];
+        if (
+          !formLine.includes("rtgl-form") ||
+          formLine.includes("slot=content")
+        ) {
+          continue;
+        }
+
+        const ancestorLines = [];
+        let ancestorIndent = formLine.search(/\S/);
+        for (let ancestorIndex = index - 1; ancestorIndex >= 0; ancestorIndex -= 1) {
+          const ancestorLine = lines[ancestorIndex];
+          const currentIndent = ancestorLine.search(/\S/);
+          if (currentIndent < 0 || currentIndent >= ancestorIndent) {
+            continue;
+          }
+
+          ancestorLines.push(ancestorLine);
+          ancestorIndent = currentIndent;
+        }
+
+        if (ancestorLines.some((line) => line.includes("ph=md"))) {
+          expect(formLine).toContain("ph=none");
+        } else {
+          expect(formLine).toContain("ph=md");
+        }
+        expect(formLine).toContain("pv=none");
+        expect(formLine).not.toContain("p=none");
       }
 
       for (let index = 0; index < lines.length; index += 1) {
@@ -48,7 +80,9 @@ describe("command-line form spacing", () => {
               line.search(/\S/) === breadcrumbIndent - 4 &&
               line.includes("- rtgl-view"),
           );
-        expect(containerLine).toContain("ph=lg");
+        expect(containerLine.trim()).toBe(
+          "- rtgl-view w=f h=24 av=c ph=md mb=md:",
+        );
       }
 
       dialogFormCount += formLines.length;

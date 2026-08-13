@@ -7,12 +7,16 @@ import {
   handleFormInputChange,
   handleOptionsSectionAction,
   handleResourceItemClick,
+  handleSearchButtonClick,
+  handleSearchPopoverClose,
   handleSpritesheetSelected,
   handleSubmitClick,
   handleTabClick,
 } from "../../src/components/commandLineBackground/commandLineBackground.handlers.js";
 import {
   createInitialState,
+  closeSearchPopover,
+  openSearchPopover,
   removeFlipXOption,
   removeFlipYOption,
   removeBackgroundShaderAdjustmentOption,
@@ -92,6 +96,8 @@ const createStoreApi = (state) => ({
   removeBackgroundShaderAdjustmentOption: (payload) =>
     removeBackgroundShaderAdjustmentOption({ state }, payload),
   removeOpacityOption: (payload) => removeOpacityOption({ state }, payload),
+  closeSearchPopover: (payload) => closeSearchPopover({ state }, payload),
+  openSearchPopover: (payload) => openSearchPopover({ state }, payload),
   selectAnimationOptionEnabled: () => selectAnimationOptionEnabled({ state }),
   selectBackgroundFilters: () => selectBackgroundFilters({ state }),
   selectBackgroundLoop: () => selectBackgroundLoop({ state }),
@@ -272,6 +278,42 @@ const setRepositoryCollections = (state) => {
 };
 
 describe("commandLineBackground.handlers", () => {
+  it("opens and closes the touch search popover from the search button", () => {
+    const state = createInitialState();
+    const render = vi.fn();
+    const stopPropagation = vi.fn();
+    const store = createStoreApi(state);
+
+    handleSearchButtonClick(
+      {
+        refs: {
+          searchButton: {
+            getBoundingClientRect: () => ({ right: 312.4, bottom: 48.2 }),
+          },
+        },
+        store,
+        render,
+      },
+      {
+        _event: {
+          stopPropagation,
+        },
+      },
+    );
+
+    expect(stopPropagation).toHaveBeenCalledTimes(1);
+    expect(state.searchPopover).toEqual({
+      isOpen: true,
+      position: { x: 312, y: 48 },
+    });
+    expect(render).toHaveBeenCalledTimes(1);
+
+    handleSearchPopoverClose({ store, render });
+
+    expect(state.searchPopover.isOpen).toBe(false);
+    expect(render).toHaveBeenCalledTimes(2);
+  });
+
   it("hydrates existing transform state before mount", () => {
     const state = createInitialState();
 

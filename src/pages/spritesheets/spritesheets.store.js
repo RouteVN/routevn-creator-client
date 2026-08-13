@@ -111,7 +111,7 @@ const createCenterItemContextMenuItems = (copy = {}) => [
   },
 ];
 
-const createDialogForm = (copy = {}, submitLabel = copy.saveButton) => ({
+const createDialogForm = (copy = {}) => ({
   title: copy.spritesheetTitle ?? "Spritesheet",
   fields: [
     {
@@ -159,16 +159,6 @@ const createDialogForm = (copy = {}, submitLabel = copy.saveButton) => ({
       required: false,
     },
   ],
-  actions: {
-    layout: "",
-    buttons: [
-      {
-        id: "submit",
-        variant: "pr",
-        label: submitLabel ?? copy.saveButton ?? "Save",
-      },
-    ],
-  },
 });
 
 const createFolderNameForm = (copy = {}) => ({
@@ -218,7 +208,7 @@ const createClipFpsForm = (copy = {}) => ({
       {
         id: "submit",
         variant: "pr",
-        label: copy.updateFpsButton ?? "Update FPS",
+        label: copy.updateFpsButton ?? "Update",
       },
     ],
   },
@@ -945,7 +935,7 @@ export const selectViewData = ({ state, i18n }) => {
   const dialogSubmitLabel =
     state.dialogMode === "create"
       ? (copy.addSpritesheetButton ?? "Add Spritesheet")
-      : (copy.updateSpritesheetButton ?? "Update Spritesheet");
+      : (copy.updateSpritesheetButton ?? "Update");
   return {
     resourceCategory: "animatedAssets",
     selectedResourceId: "spritesheets",
@@ -1009,7 +999,7 @@ export const selectViewData = ({ state, i18n }) => {
           ? (copy.editSpritesheetTitle ?? "Edit Spritesheet")
           : "",
     dialogSubmitLabel,
-    dialogForm: createDialogForm(copy, dialogSubmitLabel),
+    dialogForm: createDialogForm(copy),
     dialogFormKey: `${state.dialogMode}-${state.dialogItemId ?? "new"}-${state.dialogRevision}`,
     dialogValues: state.dialogValues,
     isCreateTagDialogOpen: state.isCreateTagDialogOpen,

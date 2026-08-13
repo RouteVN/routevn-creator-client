@@ -105,7 +105,7 @@ const scheduleRevealEditableSelection = (direction) => {
 
 const dispatchArrowKey = (direction) => {
   const activeElement = getDeepActiveElement();
-  if (!isEditableElement(activeElement)) {
+  if (!activeElement?.dispatchEvent) {
     return;
   }
 
@@ -123,6 +123,10 @@ const dispatchArrowKey = (direction) => {
   });
 
   activeElement.dispatchEvent(event);
+  if (!isEditableElement(activeElement)) {
+    return;
+  }
+
   if (!event.defaultPrevented) {
     moveSelection(activeElement, direction);
   }

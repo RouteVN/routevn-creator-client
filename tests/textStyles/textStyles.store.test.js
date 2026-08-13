@@ -280,9 +280,7 @@ describe("textStyles.store", () => {
       variant: "pr",
       label: "Add Text Style",
     });
-    expect(viewData.dialogForm.actions.buttons).toEqual([
-      viewData.dialogSubmitButton,
-    ]);
+    expect(viewData.dialogForm.actions.buttons).toEqual([]);
   });
 
   it("offers only a static font's extracted weight", () => {

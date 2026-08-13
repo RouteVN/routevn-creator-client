@@ -2,6 +2,26 @@ import { readFileSync } from "fs";
 import { describe, expect, it } from "vitest";
 
 describe("animations view", () => {
+  it("uses the shared resource import action", () => {
+    const animationsView = readFileSync(
+      new URL(
+        "../../src/pages/animations/animations.view.yaml",
+        import.meta.url,
+      ),
+      "utf8",
+    );
+    const catalogView = readFileSync(
+      new URL(
+        "../../src/components/catalogResourcesView/catalogResourcesView.view.yaml",
+        import.meta.url,
+      ),
+      "utf8",
+    );
+
+    expect(animationsView).not.toContain("import-in-actions-menu");
+    expect(catalogView).toContain("rvn-resource-import-action");
+  });
+
   it("passes property defaults to every catalog timeline with curves", () => {
     const catalogView = readFileSync(
       new URL(
@@ -13,6 +33,12 @@ describe("animations view", () => {
     expect(
       catalogView.match(/:defaultValues=\$\{item\.timelineDefaultValues\}/g),
     ).toHaveLength(3);
+    expect(catalogView).toContain(
+      "$for maskTimelineRow in item.maskTimelineRows",
+    );
+    expect(catalogView).toContain(
+      ":properties=${maskTimelineRow.properties} :defaultValues=${item.maskTimelineDefaultValues}",
+    );
   });
 
   it("uses edit, duplicate, and delete icons in the mobile detail sheet", () => {

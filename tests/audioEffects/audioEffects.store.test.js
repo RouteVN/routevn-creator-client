@@ -105,9 +105,27 @@ describe("audioEffects.store", () => {
       label: "Open",
       value: "edit-item",
     });
-    expect(viewData.addForm.actions.buttons[0]).toMatchObject({
-      id: "submit",
-      label: "Create",
+    expect(viewData.addForm).not.toHaveProperty("sticky");
+    expect(viewData.addForm.actions).toEqual({
+      buttons: [
+        {
+          id: "submit",
+          variant: "pr",
+          validate: true,
+          label: "Create",
+        },
+      ],
+    });
+    expect(viewData.editForm).not.toHaveProperty("sticky");
+    expect(viewData.editForm.actions).toEqual({
+      buttons: [
+        {
+          id: "submit",
+          variant: "pr",
+          validate: true,
+          label: "Update",
+        },
+      ],
     });
     expect(viewData).toMatchObject({
       isEditDialogOpen: false,

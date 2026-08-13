@@ -27,6 +27,12 @@ describe("audio effects views", () => {
     expect(view).toContain("rtgl-button#mobileDetailOpenButton");
     expect(view).toContain("rtgl-dialog#editDialog");
     expect(view).toContain("rtgl-form#editForm");
+    expect(view).toContain("md-layout=fixed-top:");
+    expect(view).not.toContain("md-layout=fixed-top p=none");
+    expect(view).toContain("slot=content d=v w=f h=f overflow=hidden");
+    expect(view).toContain("rtgl-form#editForm");
+    expect(view).toContain("w=f h=f");
+    expect(view).not.toContain("rtgl-button#editSubmitButton");
 
     const catalogView = readFileSync(
       new URL(

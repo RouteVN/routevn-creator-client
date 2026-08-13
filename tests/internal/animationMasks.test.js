@@ -9,6 +9,44 @@ import {
 } from "../../src/internal/animationMasks.js";
 
 describe("animationMasks", () => {
+  it("accepts finite start values on animation keyframes", () => {
+    const createPayload = (startValue) => ({
+      type: "animation.create",
+      payload: {
+        animationId: "animation-a",
+        data: {
+          type: "animation",
+          name: "Animation One",
+          animation: {
+            type: "update",
+            tween: {
+              x: {
+                keyframes: [
+                  {
+                    startValue,
+                    duration: 500,
+                    value: 100,
+                    easing: "linear",
+                  },
+                ],
+              },
+            },
+          },
+        },
+      },
+    });
+
+    expect(validatePayload(createPayload(25))).toEqual({ valid: true });
+    expect(validatePayload(createPayload("25"))).toMatchObject({
+      valid: false,
+      error: {
+        message: expect.stringContaining(
+          "startValue must be a finite number when provided",
+        ),
+      },
+    });
+  });
+
   it("preserves transition-mask progress delay through editing and runtime compilation", () => {
     const imageItems = {
       "mask-image": {

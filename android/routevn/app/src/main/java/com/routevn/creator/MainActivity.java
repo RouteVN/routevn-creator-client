@@ -21,6 +21,7 @@ import android.os.Looper;
 import android.provider.OpenableColumns;
 import android.provider.MediaStore;
 import android.provider.DocumentsContract;
+import android.system.Os;
 import android.util.Base64;
 import android.util.Log;
 import android.view.WindowInsets;
@@ -55,8 +56,10 @@ import java.nio.charset.StandardCharsets;
 import java.text.SimpleDateFormat;
 import java.util.Date;
 import java.util.HashMap;
+import java.util.Iterator;
 import java.util.Locale;
 import java.util.Map;
+import java.util.UUID;
 import org.json.JSONArray;
 import org.json.JSONObject;
 
@@ -77,6 +80,51 @@ public class MainActivity extends Activity {
     private static final String DEBUG_VALIDATION_PREFS = "debug-validation";
     private static final String NATIVE_EXPORTER_SMOKE_LAST_UPDATE_KEY =
         "nativeExporterSmokeLastUpdateTime";
+    private static final int PROJECT_FILE_WRITE_MAX_BASE64_CHUNK_CHARS =
+        1024 * 1024;
+    private static final int PROJECT_FILE_WRITE_MAX_ACTIVE_SESSIONS = 32;
+    private static final long PROJECT_FILE_WRITE_SESSION_MAX_AGE_MS =
+        10 * 60 * 1000L;
+    private static final long PROJECT_FILE_WRITE_TEMP_MAX_AGE_MS =
+        60 * 60 * 1000L;
+    private static final String PROJECT_FILE_WRITE_TEMP_PREFIX =
+        ".routevn-project-write-";
+
+    private static final class ProjectFileWriteSession {
+        private final String writeId;
+        private final String projectId;
+        private final String fileId;
+        private final String mimeType;
+        private final long expectedSize;
+        private final long createdAt;
+        private final File temporaryFile;
+        private final File targetFile;
+        private FileOutputStream output;
+        private long bytesWritten;
+
+        private ProjectFileWriteSession(
+            String writeId,
+            String projectId,
+            String fileId,
+            String mimeType,
+            long expectedSize,
+            long createdAt,
+            File temporaryFile,
+            File targetFile,
+            FileOutputStream output
+        ) {
+            this.writeId = writeId;
+            this.projectId = projectId;
+            this.fileId = fileId;
+            this.mimeType = mimeType;
+            this.expectedSize = expectedSize;
+            this.createdAt = createdAt;
+            this.temporaryFile = temporaryFile;
+            this.targetFile = targetFile;
+            this.output = output;
+            this.bytesWritten = 0;
+        }
+    }
 
     private WebView webView;
     private long splashStartedAt;
@@ -94,6 +142,8 @@ public class MainActivity extends Activity {
     private final Handler mainHandler = new Handler(Looper.getMainLooper());
     private final Runnable finishSplashRunnable = this::finishSplash;
     private final Map<String, SQLiteDatabase> sqliteDatabases = new HashMap<>();
+    private final Map<String, ProjectFileWriteSession> projectFileWriteSessions =
+        new HashMap<>();
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -501,6 +551,7 @@ public class MainActivity extends Activity {
         }
 
         closeSqliteDatabases();
+        closeProjectFileWriteSessions();
 
         if (webView != null) {
             webView.destroy();
@@ -795,6 +846,67 @@ public class MainActivity extends Activity {
         }
 
         @JavascriptInterface
+        public String beginProjectFileWrite(String payloadJson) {
+            try {
+                JSONObject payload = new JSONObject(payloadJson);
+                return bridgeSuccess(
+                    beginProjectFileWriteSession(
+                        payload.getString("projectId"),
+                        payload.getString("fileId"),
+                        payload.optString(
+                            "mimeType",
+                            "application/octet-stream"
+                        ),
+                        payload.getLong("size")
+                    )
+                );
+            } catch (Exception error) {
+                return bridgeFailure(error);
+            }
+        }
+
+        @JavascriptInterface
+        public String appendProjectFileWrite(String payloadJson) {
+            try {
+                JSONObject payload = new JSONObject(payloadJson);
+                return bridgeSuccess(
+                    appendProjectFileWriteSession(
+                        payload.getString("writeId"),
+                        payload.getLong("offset"),
+                        payload.getString("base64")
+                    )
+                );
+            } catch (Exception error) {
+                return bridgeFailure(error);
+            }
+        }
+
+        @JavascriptInterface
+        public String finishProjectFileWrite(String payloadJson) {
+            try {
+                JSONObject payload = new JSONObject(payloadJson);
+                return bridgeSuccess(
+                    finishProjectFileWriteSession(
+                        payload.getString("writeId")
+                    )
+                );
+            } catch (Exception error) {
+                return bridgeFailure(error);
+            }
+        }
+
+        @JavascriptInterface
+        public String abortProjectFileWrite(String payloadJson) {
+            try {
+                JSONObject payload = new JSONObject(payloadJson);
+                abortProjectFileWriteSession(payload.getString("writeId"));
+                return bridgeSuccess(true);
+            } catch (Exception error) {
+                return bridgeFailure(error);
+            }
+        }
+
+        @JavascriptInterface
         public String writeProjectFile(String payloadJson) {
             try {
                 JSONObject payload = new JSONObject(payloadJson);
@@ -805,6 +917,21 @@ public class MainActivity extends Activity {
                     payload.optString("mimeType", "application/octet-stream")
                 );
                 return bridgeSuccess(result);
+            } catch (Exception error) {
+                return bridgeFailure(error);
+            }
+        }
+
+        @JavascriptInterface
+        public String deleteProjectFile(String payloadJson) {
+            try {
+                JSONObject payload = new JSONObject(payloadJson);
+                return bridgeSuccess(
+                    deleteProjectFileBytes(
+                        payload.getString("projectId"),
+                        payload.getString("fileId")
+                    )
+                );
             } catch (Exception error) {
                 return bridgeFailure(error);
             }
@@ -1230,33 +1357,286 @@ public class MainActivity extends Activity {
         String base64,
         String mimeType
     ) throws Exception {
+        long expectedSize = getBase64DecodedSize(base64);
+        JSONObject started = beginProjectFileWriteSession(
+            projectId,
+            fileId,
+            mimeType,
+            expectedSize
+        );
+        String writeId = started.getString("writeId");
+        long offset = 0;
+
+        try {
+            for (
+                int index = 0;
+                index < base64.length();
+                index += PROJECT_FILE_WRITE_MAX_BASE64_CHUNK_CHARS
+            ) {
+                int chunkEnd = Math.min(
+                    index + PROJECT_FILE_WRITE_MAX_BASE64_CHUNK_CHARS,
+                    base64.length()
+                );
+                JSONObject appended = appendProjectFileWriteSession(
+                    writeId,
+                    offset,
+                    base64.substring(index, chunkEnd)
+                );
+                offset = appended.getLong("bytesWritten");
+            }
+
+            return finishProjectFileWriteSession(writeId);
+        } catch (Exception error) {
+            abortProjectFileWriteSession(writeId);
+            throw error;
+        }
+    }
+
+    private long getBase64DecodedSize(String base64) {
+        int encodedLength = base64 == null ? 0 : base64.length();
+        if (encodedLength == 0) {
+            return 0;
+        }
+        if (encodedLength % 4 != 0) {
+            throw new IllegalArgumentException("Project file data is invalid.");
+        }
+
+        int padding = 0;
+        if (base64.charAt(encodedLength - 1) == '=') {
+            padding += 1;
+        }
+        if (base64.charAt(encodedLength - 2) == '=') {
+            padding += 1;
+        }
+        return ((long) encodedLength / 4L) * 3L - padding;
+    }
+
+    private synchronized JSONObject beginProjectFileWriteSession(
+        String projectId,
+        String fileId,
+        String mimeType,
+        long expectedSize
+    ) throws Exception {
+        if (expectedSize < 0) {
+            throw new IllegalArgumentException("Project file size is invalid.");
+        }
+
         String safeProjectId = safePathSegment(projectId);
         String safeFileId = safePathSegment(fileId);
         ensureProjectDirectories(safeProjectId);
         File projectRoot = getProjectRoot(safeProjectId);
-        File file = resolveSafeRelativeFile(new File(projectRoot, "files"), safeFileId);
-        writeBytes(file, Base64.decode(base64, Base64.DEFAULT));
+        File filesRoot = new File(projectRoot, "files");
+        long now = System.currentTimeMillis();
+        cleanupExpiredProjectFileWriteSessions(now);
+        cleanupStaleProjectFileWriteTempFiles(filesRoot, now);
+        if (
+            projectFileWriteSessions.size() >=
+            PROJECT_FILE_WRITE_MAX_ACTIVE_SESSIONS
+        ) {
+            throw new IllegalStateException(
+                "Too many project file writes are active."
+            );
+        }
 
-        File metadataFile = resolveSafeRelativeFile(
-            new File(projectRoot, "file-metadata"),
-            safeFileId + ".mime"
+        String writeId = UUID.randomUUID().toString();
+        File temporaryFile = File.createTempFile(
+            PROJECT_FILE_WRITE_TEMP_PREFIX + safeFileId + "-",
+            ".tmp",
+            filesRoot
         );
-        writeBytes(
-            metadataFile,
-            normalizeMimeType(mimeType).getBytes(StandardCharsets.UTF_8)
-        );
+        try {
+            File targetFile = resolveSafeRelativeFile(filesRoot, safeFileId);
+            String normalizedMimeType = normalizeMimeType(mimeType);
+            JSONObject result = new JSONObject();
+            result.put("writeId", writeId);
+            FileOutputStream output = new FileOutputStream(temporaryFile);
+            ProjectFileWriteSession session = new ProjectFileWriteSession(
+                writeId,
+                safeProjectId,
+                safeFileId,
+                normalizedMimeType,
+                expectedSize,
+                now,
+                temporaryFile,
+                targetFile,
+                output
+            );
+            projectFileWriteSessions.put(writeId, session);
+            return result;
+        } catch (Exception error) {
+            deleteTemporaryFile(temporaryFile);
+            throw error;
+        }
+    }
+
+    private synchronized JSONObject appendProjectFileWriteSession(
+        String writeId,
+        long offset,
+        String base64Chunk
+    ) throws Exception {
+        ProjectFileWriteSession session = requireProjectFileWriteSession(writeId);
+        if (offset != session.bytesWritten) {
+            throw new IllegalStateException(
+                "Project file write chunk offset is invalid."
+            );
+        }
+        if (base64Chunk == null || base64Chunk.isEmpty()) {
+            throw new IllegalArgumentException(
+                "Project file write chunk is empty."
+            );
+        }
+        if (
+            base64Chunk.length() >
+            PROJECT_FILE_WRITE_MAX_BASE64_CHUNK_CHARS
+        ) {
+            throw new IllegalArgumentException(
+                "Project file write chunk is too large."
+            );
+        }
+
+        byte[] chunk = Base64.decode(base64Chunk, Base64.NO_WRAP);
+        if (chunk.length == 0) {
+            throw new IllegalArgumentException(
+                "Project file write chunk is empty."
+            );
+        }
+        long nextOffset = session.bytesWritten + chunk.length;
+        if (nextOffset > session.expectedSize) {
+            throw new IllegalStateException(
+                "Project file write exceeded its expected size."
+            );
+        }
+
+        session.output.write(chunk);
+        session.bytesWritten = nextOffset;
 
         JSONObject result = new JSONObject();
-        result.put(
-            "url",
-            "https://" +
-            APP_ASSET_HOST +
-            "/android-files/projects/" +
-            safeProjectId +
-            "/files/" +
-            safeFileId
-        );
+        result.put("bytesWritten", session.bytesWritten);
         return result;
+    }
+
+    private synchronized JSONObject finishProjectFileWriteSession(String writeId)
+        throws Exception {
+        ProjectFileWriteSession session = requireProjectFileWriteSession(writeId);
+        projectFileWriteSessions.remove(session.writeId);
+
+        try {
+            if (session.bytesWritten != session.expectedSize) {
+                throw new IllegalStateException(
+                    "Project file write did not receive the expected bytes."
+                );
+            }
+
+            session.output.flush();
+            session.output.getFD().sync();
+            session.output.close();
+            session.output = null;
+            Os.rename(
+                session.temporaryFile.getAbsolutePath(),
+                session.targetFile.getAbsolutePath()
+            );
+
+            File projectRoot = getProjectRoot(session.projectId);
+            File metadataFile = resolveSafeRelativeFile(
+                new File(projectRoot, "file-metadata"),
+                session.fileId + ".mime"
+            );
+            writeBytesAtomically(
+                metadataFile,
+                session.mimeType.getBytes(StandardCharsets.UTF_8)
+            );
+
+            JSONObject result = new JSONObject();
+            result.put(
+                "url",
+                "https://" +
+                APP_ASSET_HOST +
+                "/android-files/projects/" +
+                session.projectId +
+                "/files/" +
+                session.fileId
+            );
+            result.put("size", session.bytesWritten);
+            return result;
+        } finally {
+            closeAndDeleteProjectFileWriteSession(session);
+        }
+    }
+
+    private synchronized void abortProjectFileWriteSession(String writeId) {
+        ProjectFileWriteSession session = projectFileWriteSessions.remove(writeId);
+        if (session != null) {
+            closeAndDeleteProjectFileWriteSession(session);
+        }
+    }
+
+    private synchronized void closeProjectFileWriteSessions() {
+        for (ProjectFileWriteSession session : projectFileWriteSessions.values()) {
+            closeAndDeleteProjectFileWriteSession(session);
+        }
+        projectFileWriteSessions.clear();
+    }
+
+    private ProjectFileWriteSession requireProjectFileWriteSession(String writeId) {
+        String resolvedWriteId = writeId == null ? "" : writeId.trim();
+        ProjectFileWriteSession session = projectFileWriteSessions.get(
+            resolvedWriteId
+        );
+        if (session == null) {
+            throw new IllegalArgumentException(
+                "Project file write session was not found."
+            );
+        }
+        return session;
+    }
+
+    private void cleanupExpiredProjectFileWriteSessions(long now) {
+        Iterator<Map.Entry<String, ProjectFileWriteSession>> iterator =
+            projectFileWriteSessions.entrySet().iterator();
+        while (iterator.hasNext()) {
+            ProjectFileWriteSession session = iterator.next().getValue();
+            if (
+                now - session.createdAt >
+                PROJECT_FILE_WRITE_SESSION_MAX_AGE_MS
+            ) {
+                iterator.remove();
+                closeAndDeleteProjectFileWriteSession(session);
+            }
+        }
+    }
+
+    private void cleanupStaleProjectFileWriteTempFiles(File filesRoot, long now) {
+        File[] temporaryFiles = filesRoot.listFiles(file ->
+            file.isFile() &&
+            file.getName().startsWith(PROJECT_FILE_WRITE_TEMP_PREFIX) &&
+            file.getName().endsWith(".tmp")
+        );
+        if (temporaryFiles == null) {
+            return;
+        }
+
+        for (File temporaryFile : temporaryFiles) {
+            if (
+                now - temporaryFile.lastModified() >
+                PROJECT_FILE_WRITE_TEMP_MAX_AGE_MS
+            ) {
+                deleteTemporaryFile(temporaryFile);
+            }
+        }
+    }
+
+    private void closeAndDeleteProjectFileWriteSession(
+        ProjectFileWriteSession session
+    ) {
+        if (session.output != null) {
+            try {
+                session.output.close();
+            } catch (Exception error) {
+                Log.w(TAG, "Failed to close project file write session.", error);
+            }
+            session.output = null;
+        }
+        deleteTemporaryFile(session.temporaryFile);
     }
 
     private JSONObject readProjectFileBytes(String projectId, String fileId)
@@ -1275,6 +1655,27 @@ public class MainActivity extends Activity {
             "mimeType",
             resolveProjectFileMimeType(safeProjectId, safeFileId, file)
         );
+        return result;
+    }
+
+    private JSONObject deleteProjectFileBytes(String projectId, String fileId)
+        throws Exception {
+        String safeProjectId = safePathSegment(projectId);
+        String safeFileId = safePathSegment(fileId);
+        File projectRoot = getProjectRoot(safeProjectId);
+        File file = resolveSafeRelativeFile(new File(projectRoot, "files"), safeFileId);
+        File metadataFile = resolveSafeRelativeFile(
+            new File(projectRoot, "file-metadata"),
+            safeFileId + ".mime"
+        );
+        if (file.exists() && !file.delete()) {
+            throw new IllegalStateException("Project file could not be deleted.");
+        }
+        if (metadataFile.exists() && !metadataFile.delete()) {
+            throw new IllegalStateException("Project file metadata could not be deleted.");
+        }
+        JSONObject result = new JSONObject();
+        result.put("deleted", true);
         return result;
     }
 
@@ -3048,6 +3449,32 @@ public class MainActivity extends Activity {
 
         try (FileOutputStream output = new FileOutputStream(file)) {
             output.write(bytes);
+        }
+    }
+
+    private void writeBytesAtomically(File file, byte[] bytes) throws Exception {
+        File parentFile = file.getParentFile();
+        if (parentFile != null && !parentFile.exists() && !parentFile.mkdirs()) {
+            throw new IllegalStateException("Failed to create output directory.");
+        }
+        if (parentFile == null) {
+            throw new IllegalStateException("Output directory is required.");
+        }
+
+        File temporaryFile = File.createTempFile(
+            ".routevn-atomic-write-",
+            ".tmp",
+            parentFile
+        );
+        try {
+            try (FileOutputStream output = new FileOutputStream(temporaryFile)) {
+                output.write(bytes);
+                output.flush();
+                output.getFD().sync();
+            }
+            Os.rename(temporaryFile.getAbsolutePath(), file.getAbsolutePath());
+        } finally {
+            deleteTemporaryFile(temporaryFile);
         }
     }
 

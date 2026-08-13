@@ -1,4 +1,5 @@
 import { describe, expect, it } from "vitest";
+import { EN_I18N } from "../support/i18n.js";
 import {
   clearFullImagePreviewSuppressNextClick,
   clearFullImagePreviewTouchStartPoint,
@@ -39,6 +40,54 @@ const createContext = () => ({
 });
 
 describe("images store detail tag draft", () => {
+  it("uses the form-owned sticky edit action", () => {
+    const viewData = selectViewData({
+      state: createInitialState(),
+      i18n: EN_I18N,
+    });
+
+    expect(viewData.editForm).not.toHaveProperty("sticky");
+    expect(viewData.editForm.actions).toEqual({
+      buttons: [
+        {
+          id: "submit",
+          variant: "pr",
+          validate: true,
+          label: "Update",
+        },
+      ],
+    });
+  });
+
+  it("uses tag names for selected values in the edit form", () => {
+    const context = createContext();
+
+    setTagsData(context, {
+      tagsData: {
+        tree: [{ id: "tag-background" }],
+        items: {
+          "tag-background": {
+            id: "tag-background",
+            type: "tag",
+            name: "Background",
+          },
+        },
+      },
+    });
+
+    const viewData = selectViewData(context);
+    const tagField = viewData.editForm.fields.find(
+      (field) => field.name === "tagIds",
+    );
+
+    expect(tagField.options).toEqual([
+      {
+        label: "Background",
+        value: "tag-background",
+      },
+    ]);
+  });
+
   it("suppresses the mobile detail sheet for file explorer item jumps", () => {
     const context = createContext();
 

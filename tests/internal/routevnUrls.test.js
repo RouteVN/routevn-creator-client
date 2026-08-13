@@ -59,6 +59,9 @@ describe("routevnUrls", () => {
     expect(getRoutevnCreatorDocsUrl("/project/language")).toBe(
       "https://routevn.com/en/creator/docs/page-index/#settings",
     );
+    expect(getRoutevnCreatorDocsUrl("/project/asset-package")).toBe(
+      "https://routevn.com/en/creator/docs/page-index/#release",
+    );
     expect(getRoutevnCreatorDocsUrl("/project/user")).toBe(
       "https://routevn.com/en/creator/docs/page-index/#settings",
     );

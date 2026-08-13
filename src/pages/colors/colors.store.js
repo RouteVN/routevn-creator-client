@@ -24,6 +24,16 @@ const hexToRgb = (hex) => {
 
 const createEditForm = (copy = {}) => ({
   title: copy.editTitle ?? "Edit Color",
+  actions: {
+    buttons: [
+      {
+        id: "submit",
+        variant: "pr",
+        validate: true,
+        label: copy.updateButton ?? "Update",
+      },
+    ],
+  },
   fields: [
     {
       name: "name",
@@ -49,20 +59,20 @@ const createEditForm = (copy = {}) => ({
       required: true,
     },
   ],
-  actions: {
-    layout: "",
-    buttons: [
-      {
-        id: "submit",
-        variant: "pr",
-        label: copy.updateButton ?? "Update Color",
-      },
-    ],
-  },
 });
 
 const createAddForm = (copy = {}) => ({
   title: copy.addTitle ?? "Add Color",
+  actions: {
+    buttons: [
+      {
+        id: "submit",
+        variant: "pr",
+        validate: true,
+        label: copy.addButton ?? "Add Color",
+      },
+    ],
+  },
   fields: [
     {
       name: "name",
@@ -88,16 +98,6 @@ const createAddForm = (copy = {}) => ({
       required: true,
     },
   ],
-  actions: {
-    layout: "",
-    buttons: [
-      {
-        id: "submit",
-        variant: "pr",
-        label: copy.addButton ?? "Add Color",
-      },
-    ],
-  },
 });
 
 const buildDetailFields = (item, { copy = {} } = {}) => {

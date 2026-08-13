@@ -1,260 +1,191 @@
-# Import Packages
+# Asset Package Import
 
 ## Purpose
 
-This document defines the initial RouteVN import package shape and the asset
-store import-link flow.
+RouteVN Creator imports reusable resources from a strict Asset Package manifest.
+The old animation-only and transform-only package formats are not supported.
 
-Import packages let users import reusable project resources from a copied URL.
-The first implementation can support one resource type at a time, but the
-package shape should stay general enough for images, sounds, videos, fonts,
-spritesheets, transforms, animations, particles, colors, text styles, layouts,
-controls, and variables.
+An Asset Package may contain images, sounds, videos, characters, transforms,
+animations, audio effects, particles, spritesheets, colors, fonts, text styles,
+layouts, variables, and controls. The creator currently excludes layouts from
+its export picker.
 
-## Shape
+## Manifest
 
-An import package is a wrapper around a partial repository.
+The manifest is a partial RouteVN repository:
 
 ```json
 {
   "schema": "routevn.import-pack.v1",
   "package": {
-    "id": "example.fx-pack",
-    "name": "FX Pack",
-    "version": "1.0.0",
-    "description": "Particles, textures, and transition animations."
+    "kind": "routevn.creator.asset-package"
   },
-  "repository": {
-    "files": {
-      "items": {}
-    },
-    "images": {
-      "items": {},
-      "tree": []
-    },
-    "transforms": {
-      "items": {},
-      "tree": []
-    },
-    "animations": {
-      "items": {},
-      "tree": []
-    },
-    "particles": {
-      "items": {},
-      "tree": []
-    }
-  }
-}
-```
-
-Only included repository roots are imported.
-
-The package should reuse RouteVN's normal `{ items, tree }` collection shape.
-Folders are normal items with `type: "folder"`; there is no separate `folders`
-section and no separate `resources` array.
-
-## Package-Local IDs
-
-All ids inside the package are package-local ids.
-
-They may appear in normal repository fields such as `id`, `fileId`,
-`thumbnailFileId`, `imageId`, `texture`, `resourceId`, `transformId`,
-`animationId`, and `particleId`.
-
-During import, the client maps package-local ids to real project ids.
-
-```text
-file.spark -> generated-file-id
-image.spark -> generated-or-existing-image-id
-transform.center -> generated-transform-id
-```
-
-Saved project data must contain real project ids only.
-
-## Files
-
-File-backed resources point to `repository.files.items` records. File records
-extend the normal file metadata with import-only `source` data.
-
-```json
-{
   "repository": {
     "files": {
       "items": {
         "file.spark": {
           "id": "file.spark",
-          "type": "image",
           "mimeType": "image/png",
-          "sha256": "optional",
           "source": {
-            "url": "assets/spark.png"
+            "url": "./files/file.spark"
           }
         }
       }
-    }
-  }
-}
-```
-
-`source.url` may be absolute or relative to the manifest URL. If `sha256` is
-present, the importer should verify the downloaded bytes.
-
-## Folders
-
-Packages should not create destination folders by default. The import flow asks
-the user to choose a destination folder for each imported resource type and for
-file-backed dependencies such as images or sounds.
-
-```json
-{
-  "transforms": {
-    "items": {
-      "transform.center": {
-        "id": "transform.center",
-        "type": "transform",
-        "name": "Center",
-        "x": 960,
-        "y": 540,
-        "scaleX": 1,
-        "scaleY": 1,
-        "anchorX": 0.5,
-        "anchorY": 0.5,
-        "rotation": 0
-      }
     },
-    "tree": [{ "id": "transform.center" }]
-  }
-}
-```
-
-Default import behavior:
-
-- show only existing project folders as destination choices
-- require a real destination folder for each imported resource type
-- append imported items to the selected folder
-- do not add a synthetic `Root` folder option
-- do not create a package root folder
-- skip resource types with no imported items
-- do not move existing project resources selected as substitutions
-
-Package folders may still be present in future generalized packages, but the
-first importer should treat them as package organization only unless a later
-flow explicitly supports folder creation or merging.
-
-## Media Substitution
-
-Users should always be able to replace file-backed resources during import.
-
-The package describes default media. The local import session decides whether a
-media resource is imported, renamed, skipped, or mapped to an existing project
-resource.
-
-This local choice is not part of the package format.
-
-```json
-{
-  "resourceChoices": {
-    "image.spark": {
-      "mode": "existing",
-      "projectResourceId": "existing-image-id"
+    "images": {
+      "items": {
+        "folder.effects": {
+          "id": "folder.effects",
+          "type": "folder",
+          "name": "Effects"
+        },
+        "image.spark": {
+          "id": "image.spark",
+          "type": "image",
+          "name": "Spark",
+          "fileId": "file.spark"
+        }
+      },
+      "tree": [
+        {
+          "id": "folder.effects",
+          "children": [{ "id": "image.spark" }]
+        }
+      ]
     }
   }
 }
 ```
 
-If a package image is mapped to an existing image, dependent resources should use
-the existing project image id and the client should avoid downloading unused
-default files.
+Only included repository collections are imported. Each collection uses the
+normal `{ items, tree }` shape, and folders are regular items with
+`type: "folder"`.
 
-## Asset Store Import Links
+The creator exports only `package.kind`. Catalog metadata such as package id,
+name, version, description, publisher, or source may be supplied by a publishing
+system, but is not required in a creator-generated manifest.
 
-The asset store should expose a stable import link for each importable package.
-The user copies this link and pastes it into RouteVN Creator.
+## IDs and references
 
-Expected flow:
+Every file, folder, and resource id in the manifest is package-local. The
+importer generates project ids and rewrites only schema-defined file and
+resource reference fields.
 
-1. The user opens the asset store.
-2. The user copies an import link for one asset or pack.
-3. The user pastes the link into RouteVN Creator.
-4. The client fetches the import package manifest.
-5. The client shows an import review flow.
-6. The user confirms placement, renames, and media substitutions.
-7. The client imports the resolved resources into the current project.
+Required resource dependencies must be present. During review, selected
+dependencies remain selected and cannot be deselected while a selected resource
+requires them. Missing required dependencies reject the package.
 
-Basic URL contract:
+Scene, section, and line ids are project-owned. Resources containing
+`sceneId`, `sectionId`, `lineId`, or their plural forms are rejected until
+story content can be packaged and remapped.
 
-```text
-GET https://assets.routevn.example/import/example.fx-pack
-Accept: application/json
-```
+## Files
 
-Response:
+File-backed resources reference records in `repository.files.items`.
+`source.url` may be absolute or relative to the final manifest URL. Optional
+`size` and `sha256` values are validated when supplied.
 
-```http
-Content-Type: application/json
-```
-
-The response body is a `routevn.import-pack.v1` package.
-
-The import link may point directly to the manifest or redirect to the manifest.
-The link should identify one importable package, not a general catalog page.
-
-## Auth
-
-Public packages can use unauthenticated links.
-
-For authenticated packages, prefer a signed import link generated by the asset
-store after the user logs in or purchases the asset.
+The creator downloads a ZIP with this layout:
 
 ```text
-https://assets.routevn.example/import/example.fx-pack?token=...
+asset-package.json
+files/<package-local-file-id>
 ```
 
-The token should authorize fetching the manifest and protected file URLs. It
-should be scoped to one package and may expire.
+After extraction, the directory can be served directly by a static file server.
 
-The first implementation should not require RouteVN Creator to understand the
-asset store's full account system. Full first-party account auth can be added
-later with authorization headers if needed.
+Files are fetched with request timeouts, per-file and total byte limits,
+content-type checks, and optional SHA-256 verification. They are validated
+against the owning resource type before staging.
 
-The client should not rely on browser cookies from the asset store page,
-especially in the desktop app.
+## Folder trees and dependencies
 
-## Validation
+The creator lets users choose top-level folders. Selecting a folder includes its
+complete subtree and preserves folder and item order. Export also includes
+transitive resource and file dependencies, even when their source folders were
+not explicitly selected.
 
-The client should treat import links as untrusted network input:
+Import recreates the selected resources' complete package folder ancestry in
+the matching project collections. It does not ask for replacement destination
+folders or media substitutions.
 
-- fetch with explicit size limits
-- require a supported `schema`
-- resolve relative file URLs against the manifest URL
-- validate all files through normal upload/file-type rules
-- verify hashes when `sha256` is provided
-- show stable user-facing errors for network, auth, validation, and file failures
+Files, folders, and resources are committed in one atomic command batch. A
+pre-commit failure discards staged files. If commit confirmation is interrupted,
+staged files are retained so a retry can recognize an already committed plan.
 
-Recommended initial errors:
+## Preview media
 
-- `Package could not be loaded.`
-- `This package format is not supported.`
-- `This package requires authorization.`
-- `A package file could not be downloaded.`
-- `A package file has an unsupported type.`
-- `A package file failed integrity validation.`
+Resources may reference package-only preview files through
+`previewMediaFileId` and `thumbnailMediaFileId`. Supported preview MIME types
+are JPEG, PNG, WebP, MP4, and WebM.
 
-## MVP Scope
+Preview files are fetched lazily through the same bounded client as imported
+files. Preview-only fields and files are not persisted in the destination
+project unless another retained resource field references the file.
 
-The first implementation can support a narrow path:
+Creator-generated previews include:
 
-- paste an absolute `http` or `https` package URL
-- import transform packages and animation packages by URL
-- accept either a full import package, a resource collection, or a single
-  resource item for the supported resource type
-- let the user choose the destination resource folder before importing
-- download image dependencies and let the user choose the destination image
-  folder when image dependencies exist
-- rewrite imported transform preview image references and animation mask image
-  references to the newly imported images
-- skip substitutions and generalized multi-resource import for now
+- animations: one full cycle on a black background, plus a preview-derived
+  thumbnail video scaled to fit within 640 by 360
+- particles: full-resolution and lower-resolution videos
+- spritesheets: one full cycle of the first animation at its configured FPS,
+  in full-resolution and lower-resolution videos
+- sounds: a 640 by 360 waveform PNG
+- fonts: a 1920 by 1080 glyph preview and a 640 by 360 thumbnail
+- text styles: a 960 by 270 preview and a 427 by 120 thumbnail
 
-Future iterations can broaden this to package-level folder import, existing
-resource substitution, and additional resource types.
+Generated video MIME type is MP4 or WebM depending on the desktop WebView's
+canvas recording support. Generated previews exist only in the exported ZIP.
+
+## Import flow
+
+1. Load and strictly validate the manifest.
+2. Show a selection page when the package contains multiple resources.
+3. Keep required dependencies selected and locked.
+4. Let the user review and edit each selected resource's name and description.
+5. Lazily load the current resource preview.
+6. Download and validate only the selected resources' required files.
+7. Remap package-local ids.
+8. Commit the selected folder trees and resources atomically.
+
+A one-resource package skips the selection page.
+
+## Publisher requirements
+
+Production import links and every redirected manifest or file URL must use
+HTTPS. HTTP is accepted only for `localhost`, `127.0.0.1`, and `::1`
+testing.
+
+Publishers should:
+
+- return the manifest as `application/json` or a JSON `+json` type
+- enable CORS for supported RouteVN Creator origins
+- avoid third-party-cookie requirements
+- use public or package-scoped signed URLs for protected packages
+- keep signed URLs valid long enough for review and download
+- return a compatible content type for every file
+
+Packaged Tauri builds allow HTTPS network and preview media requests through
+their configured CSP.
+
+## Limits and validation
+
+The importer treats every package as untrusted input. It rejects unsupported
+schema or package kinds, unknown repository roots or fields, malformed trees,
+duplicate or missing items, invalid ids, dangling dependencies, project-only
+references, mismatched media types, and packages with no resources.
+
+Current limits are:
+
+- 2 MiB per manifest
+- 2,000 package files
+- 50 MiB per file
+- 200 MiB total per import
+- 500 resources per collection
+- 32 folder-tree levels
+- three parallel downloads
+- 15-second manifest timeout
+- 30-second file timeout
+
+The creator validates the final manifest against importer limits before writing
+the ZIP.

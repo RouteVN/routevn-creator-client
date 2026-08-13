@@ -306,7 +306,7 @@ const openEditDialogWithValues = ({ deps, itemId } = {}) => {
     description: item.description ?? "",
     tagIds: item.tagIds ?? [],
   };
-  store.setSelectedItemId({ itemId });
+  store.setSelectedItemId({ itemId, suppressMobileDetailSheet: true });
   fileExplorer?.selectItem?.({ itemId });
   store.openEditDialog({ itemId, defaultValues: editValues });
   render();

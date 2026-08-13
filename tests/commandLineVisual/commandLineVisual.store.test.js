@@ -26,6 +26,7 @@ import {
   setSpritesheets,
   setTempSelectedResourceId,
   setTransforms,
+  setUiConfig,
   setVideos,
   showVisualFlipOption,
   showDropdownMenu,
@@ -184,6 +185,27 @@ const setRepositoryCollections = (state) => {
     },
   );
 };
+
+describe("commandLineVisual mobile resource selector", () => {
+  it("uses two resource columns and hides the explorer in touch mode", () => {
+    const state = createInitialState();
+
+    expect(selectViewData({ state })).toMatchObject({
+      showResourceSelectorFileExplorer: true,
+      resourceSelectorColumns: undefined,
+      resourceSelectorGridStyle: "",
+    });
+
+    setUiConfig({ state }, { uiConfig: { inputMode: "touch" } });
+
+    expect(selectViewData({ state })).toMatchObject({
+      showResourceSelectorFileExplorer: false,
+      resourceSelectorColumns: 2,
+      resourceSelectorGridStyle:
+        "display: grid; grid-template-columns: repeat(2, minmax(0, 1fr));",
+    });
+  });
+});
 
 describe("commandLineVisual.store animation controls", () => {
   it("exposes animation controls for each selected visual", () => {

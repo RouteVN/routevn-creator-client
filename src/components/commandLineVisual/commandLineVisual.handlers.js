@@ -90,6 +90,11 @@ const TRANSFORM_FIELDS = [
   "originY",
 ];
 
+export const handleBeforeMount = (deps) => {
+  const { store, uiConfig } = deps;
+  store.setUiConfig({ uiConfig });
+};
+
 const hasInlineTransform = (item = {}) =>
   TRANSFORM_FIELDS.some((field) => item?.[field] !== undefined);
 

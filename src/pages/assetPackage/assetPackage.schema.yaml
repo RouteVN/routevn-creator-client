@@ -1,0 +1,4 @@
+componentName: rvn-asset-package
+propsSchema:
+  type: object
+  properties: {}

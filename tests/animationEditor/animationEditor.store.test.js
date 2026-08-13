@@ -26,8 +26,14 @@ import {
   openPropertyRemoveConfirmDialog,
   selectAnimationRenderStateWithAnimations,
   selectAnimationResetState,
+  selectAnimationJsonCopyShortcutStartedAt,
+  selectAnimationCanvasCaptureInProgress,
+  selectAnimationCanvasCaptureShortcutStartedAt,
+  selectAnimationVideoExportInProgress,
+  selectAnimationVideoShortcutStartedAt,
   selectPreviewDurationMs,
   selectPreviewData,
+  selectDefaultSelectedKeyframeStartValue,
   selectSelectedEditorTab,
   selectSelectedKeyframeFormValues,
   selectTimelinePan,
@@ -37,6 +43,11 @@ import {
   selectTransitionMasks,
   selectViewData,
   setImages,
+  setAnimationJsonCopyShortcutStartedAt,
+  setAnimationCanvasCaptureInProgress,
+  setAnimationCanvasCaptureShortcutStartedAt,
+  setAnimationVideoExportInProgress,
+  setAnimationVideoShortcutStartedAt,
   setPopover,
   setPreviewPlayhead,
   setPreviewImage,
@@ -47,6 +58,7 @@ import {
   setSelectedKeyframeDuration,
   setSelectedKeyframeEasing,
   setSelectedKeyframeRelative,
+  setSelectedKeyframeStartValue,
   setSelectedKeyframeTiming,
   setSelectedKeyframeValue,
   setSelectedMask,
@@ -66,11 +78,52 @@ import {
   setUiConfig,
   startPendingTransitionMask,
   togglePreviewLoop,
+  updateKeyframe,
   updatePopoverFormValues,
 } from "../../src/pages/animationEditor/animationEditor.store.js";
 import { EN_I18N } from "../support/i18n.js";
 
 describe("animationEditor.store", () => {
+  it("tracks the first y press for the animation JSON shortcut", () => {
+    const state = createInitialState();
+
+    expect(selectAnimationJsonCopyShortcutStartedAt({ state })).toBeUndefined();
+
+    setAnimationJsonCopyShortcutStartedAt({ state }, { timestamp: 120 });
+    expect(selectAnimationJsonCopyShortcutStartedAt({ state })).toBe(120);
+
+    setAnimationJsonCopyShortcutStartedAt({ state }, { timestamp: undefined });
+    expect(selectAnimationJsonCopyShortcutStartedAt({ state })).toBeUndefined();
+  });
+
+  it("tracks the vv shortcut and animation video export state", () => {
+    const state = createInitialState();
+
+    expect(selectAnimationVideoShortcutStartedAt({ state })).toBeUndefined();
+    expect(selectAnimationVideoExportInProgress({ state })).toBe(false);
+
+    setAnimationVideoShortcutStartedAt({ state }, { timestamp: 240 });
+    setAnimationVideoExportInProgress({ state }, { inProgress: true });
+
+    expect(selectAnimationVideoShortcutStartedAt({ state })).toBe(240);
+    expect(selectAnimationVideoExportInProgress({ state })).toBe(true);
+  });
+
+  it("tracks the cc shortcut and animation canvas capture state", () => {
+    const state = createInitialState();
+
+    expect(
+      selectAnimationCanvasCaptureShortcutStartedAt({ state }),
+    ).toBeUndefined();
+    expect(selectAnimationCanvasCaptureInProgress({ state })).toBe(false);
+
+    setAnimationCanvasCaptureShortcutStartedAt({ state }, { timestamp: 240 });
+    setAnimationCanvasCaptureInProgress({ state }, { inProgress: true });
+
+    expect(selectAnimationCanvasCaptureShortcutStartedAt({ state })).toBe(240);
+    expect(selectAnimationCanvasCaptureInProgress({ state })).toBe(true);
+  });
+
   it("defaults to Timeline and exposes Timeline and Preview tabs", () => {
     const state = createInitialState();
 
@@ -459,6 +512,7 @@ describe("animationEditor.store", () => {
         { label: "Absolute", value: false },
         { label: "Relative", value: true },
       ],
+      hasStartValue: false,
       value: 120,
       valueLabel: "Value",
       valueStep: 0.01,
@@ -469,6 +523,11 @@ describe("animationEditor.store", () => {
       label: "Ease Out Bounce",
       value: "easeOutBounce",
     });
+    expect(viewData.selectedKeyframeAddMenuItems).toEqual([
+      { label: "Start value", type: "item", value: "start-value" },
+    ]);
+    expect(viewData.selectedKeyframeCanDelete).toBe(true);
+    expect(selectDefaultSelectedKeyframeStartValue({ state })).toBe(0);
     expect(selectSelectedKeyframeFormValues({ state })).toEqual({
       delay: 125,
       duration: 450,
@@ -478,6 +537,19 @@ describe("animationEditor.store", () => {
     });
     expect(viewData.showRightPanel).toBe(true);
     expect(viewData.selectedEditorTab).toBe("tween");
+
+    setSelectedKeyframeStartValue({ state }, { startValue: 25 });
+    const viewDataWithStartValue = selectViewData({ state, i18n: EN_I18N });
+    expect(viewDataWithStartValue.selectedKeyframeDetailFields).toContainEqual({
+      type: "slot",
+      slot: "keyframe-start-value",
+    });
+    expect(viewDataWithStartValue.selectedKeyframeEditor).toMatchObject({
+      hasStartValue: true,
+      startValue: 25,
+      startValueLabel: "Start value",
+    });
+    expect(viewDataWithStartValue.selectedKeyframeAddMenuItems).toEqual([]);
 
     setSelectedKeyframeDelay({ state }, { delay: 240.9 });
     setSelectedKeyframeDuration({ state }, { duration: 875.9 });
@@ -528,6 +600,11 @@ describe("animationEditor.store", () => {
       { type: "text", label: "Property", value: "Alpha" },
       {
         type: "slot",
+        label: "Initial value type",
+        slot: "property-initial-value-type",
+      },
+      {
+        type: "slot",
         label: "Initial value",
         slot: "property-initial-value",
       },
@@ -536,17 +613,30 @@ describe("animationEditor.store", () => {
       hasInitialValue: true,
       initialValue: 0.5,
       initialValueLabel: "Initial value",
+      initialValueType: "value",
+      initialValueTypeOptions: [
+        { label: "Default", value: "default" },
+        { label: "Value", value: "value" },
+      ],
       initialValueSlider: { min: 0, max: 1, step: 0.01 },
       initialValueStep: "any",
       initialValueUsesPopover: false,
     });
-    expect(viewData.useDefaultValueButtonLabel).toBe("Use Default Value");
-
     delete state.tweenBySection.prev.alpha.initialValue;
     viewData = selectViewData({ state, i18n: EN_I18N });
+    expect(viewData.selectedPropertyDetailFields).toEqual([
+      { type: "text", label: "Timeline", value: "Outgoing" },
+      { type: "text", label: "Property", value: "Alpha" },
+      {
+        type: "slot",
+        label: "Initial value type",
+        slot: "property-initial-value-type",
+      },
+    ]);
     expect(viewData.selectedPropertyEditor).toMatchObject({
       hasInitialValue: false,
       initialValue: 1,
+      initialValueType: "default",
     });
 
     setSelectedKeyframe(
@@ -735,6 +825,44 @@ describe("animationEditor.store", () => {
       "delay",
     );
     expect(state.tweenBySection.update.x.keyframes[0].duration).toBe(1000);
+  });
+
+  it("preserves a keyframe start value when the edit dialog updates it", () => {
+    const state = createInitialState();
+    openDialog({ state }, { dialogType: "update" });
+    state.tweenBySection.update.x = {
+      keyframes: [
+        {
+          duration: 1000,
+          easing: "linear",
+          startValue: 25,
+          value: 100,
+        },
+      ],
+    };
+
+    updateKeyframe(
+      { state },
+      {
+        side: "update",
+        property: "x",
+        index: 0,
+        keyframe: {
+          duration: 750,
+          easing: "easeOutQuad",
+          relative: false,
+          value: 80,
+        },
+      },
+    );
+
+    expect(state.tweenBySection.update.x.keyframes[0]).toEqual({
+      duration: 750,
+      easing: "easeOutQuad",
+      relative: false,
+      startValue: 25,
+      value: 80,
+    });
   });
 
   it("offsets the following delay when a keyframe moves", () => {
@@ -1358,7 +1486,6 @@ describe("animationEditor.store", () => {
     const propertyField = viewData.addPropertyForm.fields.find(
       (field) => field.name === "property",
     );
-
     expect(propertyField.options.map((option) => option.value)).toEqual([
       "alpha",
       "x",
@@ -1430,6 +1557,12 @@ describe("animationEditor.store", () => {
     const propertyField = viewData.addPropertyForm.fields.find(
       (field) => field.name === "property",
     );
+    const initialValueTypeField = viewData.addPropertyForm.fields.find(
+      (field) => field.name === "initialValueType",
+    );
+    const initialValueField = viewData.addPropertyForm.fields.find(
+      (field) => field.name === "initialValue",
+    );
 
     expect(propertyField.options.map((option) => option.value)).toEqual([
       "x",
@@ -1441,6 +1574,15 @@ describe("animationEditor.store", () => {
       "scaleY",
       "rotation",
     ]);
+    expect(initialValueTypeField).toMatchObject({
+      label: "Initial value type",
+      options: [
+        { label: "Default", value: "default" },
+        { label: "Value", value: "value" },
+      ],
+    });
+    expect(initialValueTypeField).not.toHaveProperty("$when");
+    expect(initialValueField.$when).toBe('initialValueType == "value"');
   });
 
   it("prevents absolute and viewport translation properties from sharing a tween axis", () => {
@@ -1542,8 +1684,11 @@ describe("animationEditor.store", () => {
     const initialValueFields = addPropertyForm.fields.filter(
       (field) => field.name === "initialValue",
     );
+    const initialValueTypeField = addPropertyForm.fields.find(
+      (field) => field.name === "initialValueType",
+    );
 
-    expect(viewData.addPropertyFormKey).toBe("open:update:x:keyframes:current");
+    expect(viewData.addPropertyFormKey).toBe("open:update:x:keyframes:default");
     expect(viewData.addPropertyFormDefaultValues).toMatchObject({
       property: "x",
       initialValue: 960,
@@ -1551,7 +1696,16 @@ describe("animationEditor.store", () => {
     expect(initialValueFields).toHaveLength(1);
     expect(initialValueFields[0]).toMatchObject({
       defaultValue: 960,
-      $when: 'tweenMode != "auto" && useInitialValue == true',
+      $when: 'tweenMode != "auto" && initialValueType == "value"',
+    });
+    expect(initialValueTypeField).toMatchObject({
+      type: "segmented-control",
+      label: "Initial value type",
+      $when: 'tweenMode != "auto"',
+      options: [
+        { label: "Default", value: "default" },
+        { label: "Value", value: "value" },
+      ],
     });
   });
 
@@ -1899,6 +2053,7 @@ describe("animationEditor.store", () => {
           delay: 300,
           duration: 700,
           easing: "linear",
+          startValue: -20,
           value: 10,
         },
       ],
@@ -1910,6 +2065,7 @@ describe("animationEditor.store", () => {
     expect(renderState.animations[0].tween.x.keyframes[0]).toMatchObject({
       delay: 300,
       duration: 700,
+      startValue: -20,
     });
   });
 

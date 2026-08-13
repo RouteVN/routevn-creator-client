@@ -28,6 +28,8 @@ const mocked = vi.hoisted(() => ({
     getCurrentProjectInfo: vi.fn(),
     updateCurrentProjectInfo: vi.fn(),
     updateProjectInfoByProjectId: vi.fn(),
+    getCurrentAssetPackage: vi.fn(),
+    updateCurrentAssetPackage: vi.fn(),
     getCurrentPlatformDetails: vi.fn(),
     getCurrentPlatformDetailsDefaults: vi.fn(),
     createCurrentPlatformDetails: vi.fn(),

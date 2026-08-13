@@ -252,6 +252,8 @@ final class RouteVNViewController: UIViewController, WKNavigationDelegate, WKScr
             return try listProjectFolders()
         case "writeProjectFile":
             return try writeProjectFile(payload)
+        case "deleteProjectFile":
+            return try deleteProjectFile(payload)
         case "readProjectFile":
             return try readProjectFile(payload)
         case "readProjectFileMetadata":
@@ -679,6 +681,13 @@ final class RouteVNViewController: UIViewController, WKNavigationDelegate, WKScr
             "base64": try Data(contentsOf: fileURL).base64EncodedString(),
             "mimeType": try storage.projectFileMimeType(projectId: projectId, fileId: fileId)
         ]
+    }
+
+    private func deleteProjectFile(_ payload: [String: Any]) throws -> [String: Any] {
+        let projectId = try storage.safePathSegment(requiredString(payload, "projectId"))
+        let fileId = try storage.safePathSegment(requiredString(payload, "fileId"))
+        try storage.deleteProjectFile(projectId: projectId, fileId: fileId)
+        return ["deleted": true]
     }
 
     private func readProjectFileMetadata(_ payload: [String: Any]) throws -> [String: Any] {
@@ -2024,6 +2033,18 @@ final class RouteVNNativeStorage {
             mimeType,
             metadataRoot: projectMetadataRoot(projectId: projectId),
             fileId: fileId
+        )
+    }
+
+    func deleteProjectFile(projectId: String, fileId: String) throws {
+        let safeProjectId = try safePathSegment(projectId)
+        let safeFileId = try safePathSegment(fileId)
+        try FileManager.default.removeItemIfExists(
+            at: projectFilePath(projectId: safeProjectId, fileId: safeFileId)
+        )
+        try FileManager.default.removeItemIfExists(
+            at: projectMetadataRoot(projectId: safeProjectId)
+                .appendingPathComponent("\(safeFileId).mime")
         )
     }
 

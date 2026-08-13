@@ -1,0 +1,552 @@
+import { describe, expect, it } from "vitest";
+import {
+  ASSET_PACKAGE_KIND,
+  ASSET_PACKAGE_RESOURCE_CONFIGS,
+  ASSET_PACKAGE_RESOURCE_TYPES,
+} from "../../src/internal/assetPackageResources.js";
+import { createAssetImportPlan } from "../../src/internal/assetImportPlan.js";
+import { createParticlePreset } from "../../src/pages/particles/support/particlePresets.js";
+
+const createCollection = (resourceType) => {
+  const folderId = `folder-${resourceType}`;
+  return {
+    items: {
+      [folderId]: {
+        id: folderId,
+        type: "folder",
+        name: resourceType,
+      },
+    },
+    tree: [{ id: folderId }],
+  };
+};
+
+const createManifest = () => {
+  const repository = {
+    files: {
+      items: {
+        "file-font": {
+          id: "file-font",
+          mimeType: "font/woff2",
+          source: { url: "./files/file-font" },
+        },
+      },
+    },
+  };
+  for (const { resourceType } of ASSET_PACKAGE_RESOURCE_CONFIGS) {
+    repository[resourceType] = createCollection(resourceType);
+  }
+
+  repository.fonts.items["font-1"] = {
+    id: "font-1",
+    type: "font",
+    name: "Body Font",
+    fileId: "file-font",
+    fontFamily: "Body Font",
+  };
+  repository.fonts.tree[0].children = [{ id: "font-1" }];
+  repository.colors.items["color-1"] = {
+    id: "color-1",
+    type: "color",
+    name: "Body Color",
+    hex: "#112233",
+  };
+  repository.colors.tree[0].children = [{ id: "color-1" }];
+  repository.textStyles.items["text-style-1"] = {
+    id: "text-style-1",
+    type: "textStyle",
+    name: "Body",
+    fontId: ["font-1"],
+    colorId: "color-1",
+    fontSize: 24,
+    lineHeight: 1.5,
+    fontWeight: "400",
+  };
+  repository.textStyles.tree[0].children = [{ id: "text-style-1" }];
+  repository.audioEffects.items["audio-effect-1"] = {
+    id: "audio-effect-1",
+    type: "audioEffect",
+    name: "Fade Out",
+    audioEffect: {
+      type: "update",
+      tween: {
+        volume: {
+          keyframes: [{ duration: 500, value: 0 }],
+        },
+      },
+    },
+  };
+  repository.audioEffects.tree[0].children = [{ id: "audio-effect-1" }];
+
+  return {
+    schema: "routevn.import-pack.v1",
+    package: {
+      kind: ASSET_PACKAGE_KIND,
+    },
+    repository,
+  };
+};
+
+describe("asset import plan", () => {
+  it("accepts every package resource collection and rewrites dependencies", () => {
+    const manifest = createManifest();
+    let id = 0;
+
+    const plan = createAssetImportPlan({
+      manifest,
+      manifestUrl: "https://example.com/asset-package.json",
+      repositoryState: {},
+      createId: () => `generated-${++id}`,
+      resolveFileUrl: ({ descriptor, manifestUrl }) =>
+        new URL(descriptor.source.url, manifestUrl).href,
+    });
+
+    expect(new Set(plan.entries.map((entry) => entry.resourceType))).toEqual(
+      new Set(ASSET_PACKAGE_RESOURCE_TYPES),
+    );
+    const font = plan.resources.find(
+      (resource) => resource.sourceId === "fonts:font-1",
+    );
+    const color = plan.resources.find(
+      (resource) => resource.sourceId === "colors:color-1",
+    );
+    const textStyle = plan.resources.find(
+      (resource) => resource.sourceId === "textStyles:text-style-1",
+    );
+    const audioEffect = plan.resources.find(
+      (resource) => resource.sourceId === "audioEffects:audio-effect-1",
+    );
+    expect(font.data.fileId).toBe(plan.files[0].destinationId);
+    expect(textStyle.data.fontId).toEqual([font.destinationId]);
+    expect(textStyle.data.colorId).toBe(color.destinationId);
+    expect(textStyle.dependencySourceIds).toEqual(
+      expect.arrayContaining(["fonts:font-1", "colors:color-1"]),
+    );
+    expect(audioEffect).toMatchObject({
+      resourceType: "audioEffects",
+      type: "audioEffect",
+      data: {
+        type: "audioEffect",
+        audioEffect: {
+          type: "update",
+        },
+      },
+    });
+    const entrySourceIds = plan.entries.map((entry) => entry.sourceId);
+    expect(entrySourceIds.indexOf(font.sourceId)).toBeLessThan(
+      entrySourceIds.indexOf(textStyle.sourceId),
+    );
+    expect(entrySourceIds.indexOf(color.sourceId)).toBeLessThan(
+      entrySourceIds.indexOf(textStyle.sourceId),
+    );
+  });
+
+  it("preserves manifest resource-type and folder order for review", () => {
+    const manifest = {
+      schema: "routevn.import-pack.v1",
+      package: { kind: ASSET_PACKAGE_KIND },
+      repository: {
+        files: { items: {} },
+        variables: {
+          items: {
+            "folder-variables-one": {
+              id: "folder-variables-one",
+              type: "folder",
+              name: "Variables One",
+            },
+            "variable-one": {
+              id: "variable-one",
+              type: "variable",
+              name: "Variable One",
+              variableType: "string",
+              scope: "context",
+              default: "one",
+              value: "one",
+            },
+            "folder-variables-two": {
+              id: "folder-variables-two",
+              type: "folder",
+              name: "Variables Two",
+            },
+            "folder-variables-nested": {
+              id: "folder-variables-nested",
+              type: "folder",
+              name: "Nested Variables",
+            },
+            "variable-two": {
+              id: "variable-two",
+              type: "variable",
+              name: "Variable Two",
+              variableType: "string",
+              scope: "context",
+              default: "two",
+              value: "two",
+            },
+            "variable-three": {
+              id: "variable-three",
+              type: "variable",
+              name: "Variable Three",
+              variableType: "string",
+              scope: "context",
+              default: "three",
+              value: "three",
+            },
+            "variable-root": {
+              id: "variable-root",
+              type: "variable",
+              name: "Root Variable",
+              variableType: "string",
+              scope: "context",
+              default: "root",
+              value: "root",
+            },
+          },
+          tree: [
+            {
+              id: "folder-variables-one",
+              children: [{ id: "variable-one" }],
+            },
+            {
+              id: "folder-variables-two",
+              children: [
+                {
+                  id: "folder-variables-nested",
+                  children: [{ id: "variable-two" }],
+                },
+                { id: "variable-three" },
+              ],
+            },
+            { id: "variable-root" },
+          ],
+        },
+        colors: {
+          items: {
+            "folder-colors": {
+              id: "folder-colors",
+              type: "folder",
+              name: "Colors Folder",
+            },
+            "color-one": {
+              id: "color-one",
+              type: "color",
+              name: "Color One",
+              hex: "#112233",
+            },
+          },
+          tree: [
+            {
+              id: "folder-colors",
+              children: [{ id: "color-one" }],
+            },
+          ],
+        },
+      },
+    };
+    let id = 0;
+
+    const plan = createAssetImportPlan({
+      manifest,
+      repositoryState: {},
+      createId: () => `generated-${++id}`,
+    });
+
+    expect(plan.reviewSections).toEqual([
+      {
+        resourceType: "variables",
+        items: [
+          {
+            kind: "folder",
+            sourceId: "variables:folder-variables-one",
+            name: "Variables One",
+            depth: 0,
+          },
+          {
+            kind: "resources",
+            sourceIds: ["variables:variable-one"],
+            depth: 1,
+            parentSourceId: "variables:folder-variables-one",
+          },
+          {
+            kind: "folder",
+            sourceId: "variables:folder-variables-two",
+            name: "Variables Two",
+            depth: 0,
+          },
+          {
+            kind: "folder",
+            sourceId: "variables:folder-variables-nested",
+            name: "Nested Variables",
+            depth: 1,
+            parentSourceId: "variables:folder-variables-two",
+          },
+          {
+            kind: "resources",
+            sourceIds: ["variables:variable-two"],
+            depth: 2,
+            parentSourceId: "variables:folder-variables-nested",
+          },
+          {
+            kind: "resources",
+            sourceIds: ["variables:variable-three"],
+            depth: 1,
+            parentSourceId: "variables:folder-variables-two",
+          },
+          {
+            kind: "resources",
+            sourceIds: ["variables:variable-root"],
+            depth: 0,
+          },
+        ],
+      },
+      {
+        resourceType: "colors",
+        items: [
+          {
+            kind: "folder",
+            sourceId: "colors:folder-colors",
+            name: "Colors Folder",
+            depth: 0,
+          },
+          {
+            kind: "resources",
+            sourceIds: ["colors:color-one"],
+            depth: 1,
+            parentSourceId: "colors:folder-colors",
+          },
+        ],
+      },
+    ]);
+  });
+
+  it("does not rewrite non-reference values that match resource ids", () => {
+    const manifest = createManifest();
+    manifest.repository.variables.items["variable-1"] = {
+      id: "variable-1",
+      type: "variable",
+      name: "Stored color id",
+      variableType: "string",
+      scope: "context",
+      default: "color-1",
+      value: "color-1",
+    };
+    manifest.repository.variables.tree[0].children = [{ id: "variable-1" }];
+    let id = 0;
+
+    const plan = createAssetImportPlan({
+      manifest,
+      repositoryState: {},
+      createId: () => `generated-${++id}`,
+    });
+    const variable = plan.resources.find(
+      (resource) => resource.sourceId === "variables:variable-1",
+    );
+
+    expect(variable.data.default).toBe("color-1");
+    expect(variable.data.value).toBe("color-1");
+    expect(variable.dependencySourceIds).toEqual([]);
+  });
+
+  it("rewrites computed variable references without changing literal values", () => {
+    const manifest = createManifest();
+    manifest.repository.variables.items.variableBase = {
+      id: "variableBase",
+      type: "variable",
+      name: "Base",
+      variableType: "string",
+      scope: "context",
+      default: "color-1",
+      value: "color-1",
+    };
+    manifest.repository.variables.items.variableDerived = {
+      id: "variableDerived",
+      type: "variable",
+      name: "Derived",
+      variableType: "string",
+      computed: { expr: { var: "variables.variableBase" } },
+    };
+    manifest.repository.variables.tree[0].children = [
+      { id: "variableDerived" },
+      { id: "variableBase" },
+    ];
+    let id = 0;
+
+    const plan = createAssetImportPlan({
+      manifest,
+      repositoryState: {},
+      createId: () => `generated-${++id}`,
+    });
+    const base = plan.resources.find(
+      (resource) => resource.sourceId === "variables:variableBase",
+    );
+    const derived = plan.resources.find(
+      (resource) => resource.sourceId === "variables:variableDerived",
+    );
+
+    expect(base.data.default).toBe("color-1");
+    expect(base.data.value).toBe("color-1");
+    expect(derived.data.computed.expr.var).toBe(
+      `variables[${JSON.stringify(base.destinationId)}]`,
+    );
+    expect(derived.dependencySourceIds).toContain("variables:variableBase");
+  });
+
+  it("rejects unresolved required resource references", () => {
+    const manifest = createManifest();
+    delete manifest.repository.fonts.items["font-1"];
+    manifest.repository.fonts.tree[0].children = [];
+
+    expect(() =>
+      createAssetImportPlan({
+        manifest,
+        repositoryState: {},
+        createId: () => "generated",
+      }),
+    ).toThrow("Referenced resource 'font-1' is missing.");
+  });
+
+  it("rejects project-only scene and section references", () => {
+    const manifest = createManifest();
+    manifest.repository.controls.items["control-1"] = {
+      id: "control-1",
+      type: "control",
+      name: "Continue",
+      interaction: {
+        resetStoryAtSection: { sectionId: "section-1" },
+      },
+    };
+    manifest.repository.controls.tree[0].children = [{ id: "control-1" }];
+
+    expect(() =>
+      createAssetImportPlan({
+        manifest,
+        repositoryState: {},
+        createId: () => "generated",
+      }),
+    ).toThrow("Project reference 'sectionId' is not supported");
+  });
+
+  it("rejects file MIME types that do not match their owning resource", () => {
+    const manifest = createManifest();
+    manifest.repository.files.items["file-font"].mimeType = "text/html";
+
+    expect(() =>
+      createAssetImportPlan({
+        manifest,
+        repositoryState: {},
+        createId: () => "generated",
+      }),
+    ).toThrow("unsupported type for font assets");
+  });
+
+  it("shows sound waveform previews without importing the preview PNG", () => {
+    const manifest = createManifest();
+    manifest.repository.files.items["file-sound"] = {
+      id: "file-sound",
+      mimeType: "audio/mpeg",
+      source: { url: "./files/file-sound" },
+    };
+    manifest.repository.files.items["file-waveform"] = {
+      id: "file-waveform",
+      mimeType: "application/json",
+      source: { url: "./files/file-waveform" },
+    };
+    manifest.repository.files.items["file-waveform-preview"] = {
+      id: "file-waveform-preview",
+      mimeType: "image/png",
+      source: { url: "./files/file-waveform-preview" },
+    };
+    manifest.repository.sounds.items["sound-1"] = {
+      id: "sound-1",
+      type: "sound",
+      name: "Theme",
+      fileId: "file-sound",
+      waveformDataFileId: "file-waveform",
+      duration: 1.5,
+      previewMediaFileId: "file-waveform-preview",
+    };
+    manifest.repository.sounds.tree[0].children = [{ id: "sound-1" }];
+    let id = 0;
+
+    const plan = createAssetImportPlan({
+      manifest,
+      manifestUrl: "https://example.com/asset-package.json",
+      repositoryState: {},
+      createId: () => `generated-${++id}`,
+      resolveFileUrl: ({ descriptor, manifestUrl }) =>
+        new URL(descriptor.source.url, manifestUrl).href,
+    });
+
+    const sound = plan.resources.find(
+      (resource) => resource.sourceId === "sounds:sound-1",
+    );
+    expect(sound).toMatchObject({
+      previewSourceId: "file-waveform-preview",
+      previewKind: "image",
+      previewMimeType: "image/png",
+    });
+    expect(sound.data.previewMediaFileId).toBeUndefined();
+    expect(plan.files.map((file) => file.sourceId)).toEqual(
+      expect.arrayContaining(["file-sound", "file-waveform"]),
+    );
+    expect(plan.files.map((file) => file.sourceId)).not.toContain(
+      "file-waveform-preview",
+    );
+    expect(plan.previewFiles.map((file) => file.sourceId)).toContain(
+      "file-waveform-preview",
+    );
+  });
+
+  it("accepts package-only WebM previews", () => {
+    const manifest = createManifest();
+    manifest.repository.files.items["file-particle-preview"] = {
+      id: "file-particle-preview",
+      mimeType: "video/webm",
+      source: { url: "./files/file-particle-preview" },
+    };
+    manifest.repository.files.items["file-particle-thumbnail"] = {
+      id: "file-particle-thumbnail",
+      mimeType: "video/webm",
+      source: { url: "./files/file-particle-thumbnail" },
+    };
+    manifest.repository.particles.items["particle-1"] = {
+      ...createParticlePreset({
+        presetId: "sparkle",
+        projectResolution: { width: 640, height: 360 },
+      }),
+      id: "particle-1",
+      previewMediaFileId: "file-particle-preview",
+      thumbnailMediaFileId: "file-particle-thumbnail",
+    };
+    manifest.repository.particles.tree[0].children = [{ id: "particle-1" }];
+    let id = 0;
+
+    const plan = createAssetImportPlan({
+      manifest,
+      manifestUrl: "https://example.com/asset-package.json",
+      repositoryState: {},
+      createId: () => `generated-${++id}`,
+      resolveFileUrl: ({ descriptor, manifestUrl }) =>
+        new URL(descriptor.source.url, manifestUrl).href,
+    });
+
+    const particle = plan.resources.find(
+      (resource) => resource.sourceId === "particles:particle-1",
+    );
+    expect(particle).toMatchObject({
+      previewSourceId: "file-particle-thumbnail",
+      previewKind: "video",
+      previewMimeType: "video/webm",
+    });
+    expect(particle.data.previewMediaFileId).toBeUndefined();
+    expect(particle.data.thumbnailMediaFileId).toBeUndefined();
+    expect(plan.files.map((file) => file.sourceId)).not.toContain(
+      "file-particle-preview",
+    );
+    expect(plan.files.map((file) => file.sourceId)).not.toContain(
+      "file-particle-thumbnail",
+    );
+    expect(plan.previewFiles.map((file) => file.sourceId)).toContain(
+      "file-particle-thumbnail",
+    );
+  });
+});

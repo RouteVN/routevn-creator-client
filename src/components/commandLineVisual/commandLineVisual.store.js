@@ -51,6 +51,8 @@ import {
   localizeCommandLineText,
   selectCommandLineCopy,
 } from "../../internal/ui/sceneEditor/commandLineCopy.js";
+import { createCommandLineResourceSelectorLayout } from "../../internal/ui/sceneEditor/commandLineResourceSelectorLayout.js";
+import { isTouchUiConfig } from "../../internal/ui/resourcePages/mobileResourcePage.js";
 
 const RESOURCE_TYPES = [
   { type: "image", label: "Images" },
@@ -717,6 +719,7 @@ const parseResourceExplorerId = (itemId = "") => {
 
 export const createInitialState = () => ({
   mode: "current",
+  isTouchMode: false,
   tab: "image",
   images: createEmptyCollection(),
   spritesheets: createEmptyCollection(),
@@ -760,6 +763,10 @@ export const createInitialState = () => ({
   },
   addVisualPopover: createAddVisualPopover(),
 });
+
+export const setUiConfig = ({ state }, { uiConfig } = {}) => {
+  state.isTouchMode = isTouchUiConfig(uiConfig);
+};
 
 export const setMode = ({ state }, { mode } = {}) => {
   state.mode = mode;
@@ -1474,6 +1481,9 @@ export const selectVisualsWithRepositoryData = ({ state }) => {
 
 export const selectViewData = ({ state, i18n }) => {
   const copy = selectCommandLineCopy(i18n);
+  const resourceSelectorLayout = createCommandLineResourceSelectorLayout({
+    isTouchMode: state.isTouchMode,
+  });
   const activeResourceType = getActiveResourceType(state);
   const activeResourceCollection =
     selectResourceCollection(state, activeResourceType) ??
@@ -1753,6 +1763,12 @@ export const selectViewData = ({ state, i18n }) => {
     tabs: localizeCommandLineOptions(tabs, copy),
     resourceItems,
     resourceGroups,
+    showResourceSelectorFileExplorer: resourceSelectorLayout.showFileExplorer,
+    resourceSelectorColumns: resourceSelectorLayout.columns,
+    resourceSelectorGridStyle: resourceSelectorLayout.gridStyle,
+    resourceSelectorItemStyle: resourceSelectorLayout.itemStyle,
+    resourceSelectorCardStyle: resourceSelectorLayout.cardStyle,
+    resourceSelectorPreviewStyle: resourceSelectorLayout.previewStyle,
     tempSelectedSpritesheetValue: toSpritesheetAnimationSelectionValue(
       state.tempSelectedResourceId,
       state.tempSelectedAnimationName,

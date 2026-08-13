@@ -290,6 +290,7 @@ const {
     description: item?.description ?? "",
     tagIds: item?.tagIds ?? [],
   }),
+  suppressMobileDetailSheetOnEdit: true,
   getEditPreviewFileId: (item) => item?.waveformDataFileId,
   onEnterKey: ({ deps, selectedItemId }) => {
     toggleSoundPreviewById({ deps, itemId: selectedItemId });

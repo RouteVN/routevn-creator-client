@@ -275,6 +275,35 @@ describe("characters store sprite group tags", () => {
 
     const viewData = selectViewData({ state, i18n: EN_I18N });
 
+    expect(viewData.dialogForm).not.toHaveProperty("sticky");
+    expect(viewData.dialogForm.actions).toEqual({
+      buttons: [
+        {
+          id: "submit",
+          variant: "pr",
+          validate: true,
+          label: "Add Character",
+        },
+      ],
+    });
+    expect(viewData.editForm).not.toHaveProperty("sticky");
+    expect(viewData.editForm.actions).toEqual({
+      buttons: [
+        {
+          id: "submit",
+          variant: "pr",
+          validate: true,
+          label: "Update",
+        },
+      ],
+    });
+    expect(viewData.editForm.description).toBeUndefined();
+    expect(
+      viewData.dialogForm.fields.find((field) => field.name === "description"),
+    ).toMatchObject({ type: "input-textarea" });
+    expect(
+      viewData.editForm.fields.find((field) => field.name === "description"),
+    ).toMatchObject({ type: "input-textarea" });
     expect(viewData.tagFilterOptions).toEqual([
       {
         label: "Main Cast",
@@ -356,7 +385,7 @@ describe("characters store sprite group tags", () => {
     });
     expect(viewData.spriteGroupDialogForm.title).toBe("Edit Sprite Group");
     expect(viewData.spriteGroupDialogForm.actions.buttons[0].label).toBe(
-      "Update Group",
+      "Update",
     );
     expect(viewData.editDefaultValues.nameVariableId).toBe("playerName");
     expect(viewData.detailFields).toContainEqual({

@@ -57,6 +57,8 @@ const syncSelectedSoundForm = ({ refs, store }) => {
 };
 
 export const handleBeforeMount = (deps) => {
+  const { store, uiConfig } = deps;
+  store.setUiConfig({ uiConfig });
   return mountAudioTimelineDragSubscriptions(deps);
 };
 

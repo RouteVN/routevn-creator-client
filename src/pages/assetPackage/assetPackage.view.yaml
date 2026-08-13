@@ -1,0 +1,83 @@
+refs:
+  addResourceTypeButton:
+    eventListeners:
+      click:
+        handler: handleAddResourceTypeButtonClick
+  resourceTypeMenu:
+    eventListeners:
+      close:
+        handler: handleResourceTypeMenuClose
+      item-click:
+        handler: handleResourceTypeMenuItemClick
+  resourceTypeHeading*:
+    eventListeners:
+      contextmenu:
+        handler: handleResourceTypeHeadingContextMenu
+  resourceTypeContextMenu:
+    eventListeners:
+      close:
+        handler: handleResourceTypeContextMenuClose
+      item-click:
+        handler: handleResourceTypeContextMenuItemClick
+  editResourceFoldersButton*:
+    eventListeners:
+      click:
+        handler: handleEditResourceFoldersButtonClick
+  resourceFolderPicker:
+    eventListeners:
+      close:
+        handler: handleResourceFolderPickerClose
+  resourceFolderOption*:
+    eventListeners:
+      click:
+        handler: handleResourceFolderOptionClick
+  confirmResourceFolders:
+    eventListeners:
+      click:
+        handler: handleConfirmResourceFolders
+  downloadAssetPackageButton:
+    eventListeners:
+      click:
+        handler: handleDownloadAssetPackageButtonClick
+template:
+  - 'rtgl-view d=h w=f h=f style="min-width: 0; min-height: 0;"':
+      - 'rtgl-view d=h h=f w=f style="min-width: 0; min-height: 0;"':
+          - $if showExplorerPanel:
+              - rvn-resizable-panel#fileExplorer w=300 min-w=200 max-w=500 resize-side="right":
+                  - rtgl-view slot="content" w=f h=f:
+                      - rvn-resource-types :resourceCategory=${resourceCategory} :selectedResourceId=${selectedResourceId}: null
+          - 'rtgl-view w=1fg h=f pl=${contentLeftPadding} pos=rel style="min-width: 0; min-height: 0;"':
+              - 'rtgl-view pos=abs h=1 bgc=bo style="left: 0; right: 0; top: 47px; z-index: 1001; pointer-events: none;"': null
+              - 'rtgl-view w=f h=f g=sm style="min-width: 0; min-height: 0;"':
+                  - 'rtgl-view h=48 w=f bgc=bg bwb=xs ph=md av=c style="position: sticky; top: 0px; z-index: 1000;"':
+                      - rtgl-view w=f d=h av=c g=sm:
+                          - rtgl-text w=1fg: ${i18n.assetPackagePage.title}
+                          - rtgl-button#addResourceTypeButton v=pr pre=plus: ${i18n.assetPackagePage.addResourceTypeButton}
+                          - rtgl-button#downloadAssetPackageButton v=pr pre=download: ${i18n.assetPackagePage.downloadAssetPackageButton}
+                  - 'rtgl-view h=1fg w=f sv style="min-width: 0;"':
+                      - 'rtgl-view d=v g=md w=f ph=md pt=md style="min-width: 0; padding-bottom: 32vh; box-sizing: border-box;"':
+                          - rtgl-view w=560 sm-w=f d=v g=md:
+                              - $for section, sectionIndex in selectedResourceSections:
+                                  - rtgl-view w=f d=v g=sm:
+                                      - rtgl-view w=f d=h av=c:
+                                          - rtgl-view d=h av=c w=1fg h=32 ph=sm br=sm h-bgc=mu:
+                                              - 'rtgl-text#resourceTypeHeading${sectionIndex} data-resource-type="${section.resourceType}" s=md w=f': ${section.label}
+                                          - 'rtgl-button#editResourceFoldersButton${sectionIndex} data-resource-type="${section.resourceType}" sq v=ol pre=edit aria-label="${section.editButtonLabel}" title="${section.editButtonLabel}"': null
+                                      - rtgl-view w=f d=v g=xs:
+                                          - $for folder, folderIndex in section.selectedFolders:
+                                              - rtgl-view w=f d=h av=c g=sm p=sm:
+                                                  - rtgl-svg svg=folder wh=16 c=mu-fg: null
+                                                  - rtgl-text s=sm: ${folder.label}
+  - rtgl-dropdown-menu#resourceTypeMenu :items=${resourceTypeMenuItems} ?open=${resourceTypeMenu.isOpen} x=${resourceTypeMenu.x} y=${resourceTypeMenu.y}: null
+  - rtgl-dropdown-menu#resourceTypeContextMenu :items=${resourceTypeContextMenu.items} ?open=${resourceTypeContextMenu.isOpen} x=${resourceTypeContextMenu.x} y=${resourceTypeContextMenu.y}: null
+  - rtgl-popover#resourceFolderPicker ?open=${resourceFolderPickerOpen} x=${folderPicker.x} y=${folderPicker.y} place=be content-w=320 content-g=sm content-ph=md content-pv=md:
+      - rtgl-view w=f d=v g=xs:
+          - $for folder, i in folderOptions:
+              - 'rtgl-button#resourceFolderOption${i} data-folder-id="${folder.id}" w=f v=${folder.buttonVariant} aria-label="${folder.label}" aria-pressed="${folder.selected}"':
+                  - rtgl-view w=f d=h av=c g=sm:
+                      - rtgl-svg svg=${folder.icon} wh=18: null
+                      - rtgl-text s=sm ta=s w=1fg: ${folder.label}
+                      - $if folder.selected:
+                          - rtgl-text s=sm c=mu-fg: ${folder.selectionOrder}
+      - rtgl-view w=f d=h ah=e pt=sm:
+          - rtgl-button#confirmResourceFolders s=sm v=pr: ${i18n.assetPackagePage.confirmButton}

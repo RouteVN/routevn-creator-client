@@ -66,9 +66,8 @@ describe("project page view", () => {
     expect(projectView).toContain(
       "data-resource-key=${resource.key} role=link tabindex=0",
     );
-    expect(projectView).toContain(
-      "flex: 0 1 128px; min-width: 112px; max-width: 128px;",
-    );
+    expect(projectView).toContain('style="${resourceGridStyle}"');
+    expect(projectView).toContain('style="${resourceCardStyle}"');
     expect(projectView).toContain(
       'rtgl-view#characterResourcesTable bw=xs bc=bo br=md style="width: min(100%, 672px); max-width: 672px; align-self: flex-start;"',
     );
@@ -83,7 +82,10 @@ describe("project page view", () => {
     expect(projectView).not.toContain("${character.imageCount}");
     expect(projectView).not.toContain("${character.spritesheetCount}");
     expect(projectView).toContain(
-      "#sceneCountTotal data-resource-key=scenes role=link tabindex=0 w=128",
+      "#sceneCountTotal data-resource-key=scenes role=link tabindex=0",
+    );
+    expect(projectView).toContain(
+      '#sceneCountTotal data-resource-key=scenes role=link tabindex=0 d=v g=xs p=md bgc=su h-bgc=mu bw=xs bc=bo br=md cur=pointer style="${resourceCardStyle}"',
     );
     expect(projectView).not.toContain("#sceneLineTotal");
     expect(projectView).not.toContain(

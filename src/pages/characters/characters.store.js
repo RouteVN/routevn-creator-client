@@ -158,6 +158,16 @@ const createCharacterDialogForm = ({
   copy,
 } = {}) => ({
   title: copy.addCharacterTitle,
+  actions: {
+    buttons: [
+      {
+        id: "submit",
+        variant: "pr",
+        validate: true,
+        label: copy.addCharacterButton,
+      },
+    ],
+  },
   fields: [
     {
       name: "name",
@@ -167,7 +177,7 @@ const createCharacterDialogForm = ({
     },
     {
       name: "description",
-      type: "input-text",
+      type: "input-textarea",
       label: copy.descriptionLabel,
       required: false,
     },
@@ -187,16 +197,6 @@ const createCharacterDialogForm = ({
     },
     createCharacterNameVariableField({ nameVariableOptions, copy }),
   ],
-  actions: {
-    layout: "",
-    buttons: [
-      {
-        id: "submit",
-        variant: "pr",
-        label: copy.addCharacterButton,
-      },
-    ],
-  },
 });
 
 const createEditCharacterDialogForm = ({
@@ -205,7 +205,16 @@ const createEditCharacterDialogForm = ({
   copy,
 } = {}) => ({
   title: copy.editCharacterTitle,
-  description: copy.editCharacterDescription,
+  actions: {
+    buttons: [
+      {
+        id: "submit",
+        variant: "pr",
+        validate: true,
+        label: copy.updateCharacterButton,
+      },
+    ],
+  },
   fields: [
     {
       name: "name",
@@ -216,7 +225,7 @@ const createEditCharacterDialogForm = ({
     },
     {
       name: "description",
-      type: "input-text",
+      type: "input-textarea",
       label: copy.descriptionLabel,
       description: copy.characterDescriptionDescription,
       required: false,
@@ -237,16 +246,6 @@ const createEditCharacterDialogForm = ({
     createSpriteGroupField(copy),
     createCharacterNameVariableField({ nameVariableOptions, copy }),
   ],
-  actions: {
-    layout: "",
-    buttons: [
-      {
-        id: "submit",
-        variant: "pr",
-        label: copy.updateCharacterButton,
-      },
-    ],
-  },
 });
 
 const createSpriteGroupDialogForm = ({ tagOptions, isEditing, copy } = {}) => ({

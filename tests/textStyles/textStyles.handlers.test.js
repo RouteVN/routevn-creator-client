@@ -710,6 +710,7 @@ describe("textStyles.handlers", () => {
     expect(event.stopPropagation).toHaveBeenCalled();
     expect(deps.store.setSelectedItemId).toHaveBeenCalledWith({
       itemId: "text-style-1",
+      suppressMobileDetailSheet: true,
     });
     expect(deps.refs.fileExplorer.selectItem).toHaveBeenCalledWith({
       itemId: "text-style-1",

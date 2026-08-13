@@ -2,6 +2,42 @@ import { readFileSync } from "node:fs";
 import { describe, expect, it } from "vitest";
 
 describe("characters view", () => {
+  it("uses image-style fixed-top dialogs with sticky form actions", () => {
+    const charactersView = readFileSync(
+      new URL(
+        "../../src/pages/characters/characters.view.yaml",
+        import.meta.url,
+      ),
+      "utf8",
+    );
+
+    expect(charactersView).toContain(
+      "rtgl-dialog#addCharacterDialog ?open=${isDialogOpen} s=md md-layout=fixed-top:",
+    );
+    expect(charactersView).toContain(
+      "rtgl-dialog#editDialog ?open=${isEditDialogOpen} s=md md-layout=fixed-top:",
+    );
+    expect(
+      charactersView.match(/slot=content d=v w=f h=f overflow=hidden:/g),
+    ).toHaveLength(2);
+    expect(charactersView).toContain(
+      "rtgl-form#characterForm key=${isDialogOpen} :defaultValues=${dialogDefaultValues} :form=${dialogForm} sticky bottom-spacer=96 w=f h=f:",
+    );
+    expect(charactersView).toContain(
+      "rtgl-form#editForm key=${isEditDialogOpen} :defaultValues=${editDefaultValues} :form=${editForm} sticky bottom-spacer=96 w=f h=f:",
+    );
+    expect(charactersView).toContain(
+      "form-action:\n        handler: handleDialogFormActionClick",
+    );
+    expect(charactersView).toContain(
+      "form-action:\n        handler: handleEditFormAction",
+    );
+    expect(charactersView).not.toContain("addCharacterSubmitButton");
+    expect(charactersView).not.toContain("editCharacterSubmitButton");
+    expect(charactersView).not.toContain("h=80 aria-hidden=true");
+    expect(charactersView).not.toContain('layout="fixed"');
+  });
+
   it("uses the same mobile file explorer navbar sizing as images", () => {
     const charactersView = readFileSync(
       new URL(

@@ -489,7 +489,10 @@ const openEditDialogForItem = ({ deps, itemId } = {}) => {
 
   dispatchEvent(
     new CustomEvent("variable-item-click", {
-      detail: { itemId },
+      detail: {
+        itemId,
+        suppressMobileDetailSheet: parseBooleanProp(props.mobileLayout),
+      },
       bubbles: true,
       composed: true,
     }),

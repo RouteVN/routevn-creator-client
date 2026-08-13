@@ -527,6 +527,7 @@ describe("characterSprites store", () => {
     const viewData = selectViewData({ state, i18n: EN_I18N });
     expect(state.fullImagePreviewVisible).toBe(true);
     expect(state.fullImagePreviewFileId).toBe("original-file");
+    expect(viewData.fullImagePreviewBreadcrumb).toBe("Main > Hero Smile");
     expect(viewData.fullImagePreviewFrameStyle).toContain(
       "aspect-ratio: 1920 / 1080",
     );

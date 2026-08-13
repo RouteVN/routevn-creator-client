@@ -2,6 +2,7 @@ import { generateId } from "../../internal/id.js";
 import { tap } from "rxjs";
 import { createProjectStateStream } from "../../deps/services/shared/projectStateStream.js";
 import { createResourceFileExplorerHandlers } from "../../internal/ui/fileExplorer.js";
+import { forwardFormSubmitOnEnter } from "../../internal/ui/resourcePages/formSubmitKeyDown.js";
 import { createFileExplorerKeyboardScopeHandlers } from "../../internal/ui/fileExplorerKeyboardScope.js";
 import { resolveResourceParentId } from "../../internal/ui/resourcePages/media/mediaPageShared.js";
 import { handleResourceZoomShortcutKeyDown } from "../../internal/ui/resourcePages/zoomShortcuts.js";
@@ -248,7 +249,7 @@ const openEditDialogForItem = ({ deps, itemId, syncExplorer = false } = {}) => {
   revokeDialogPreviewUrl(store);
 
   const values = buildDialogValues({ item });
-  store.setSelectedItemId({ itemId });
+  store.setSelectedItemId({ itemId, suppressMobileDetailSheet: true });
 
   if (syncExplorer) {
     refs.fileExplorer?.selectItem?.({ itemId });
@@ -1000,6 +1001,21 @@ export const handleDialogFormAction = async (deps, payload) => {
     selectedItemId: dialogItemId,
   });
 };
+
+export const handleDialogSubmitClick = async (deps) => {
+  const { dialogForm } = deps.refs;
+  await handleDialogFormAction(deps, {
+    _event: {
+      detail: {
+        actionId: "submit",
+        values: dialogForm.getValues(),
+      },
+    },
+  });
+};
+
+export const handleDialogFormSubmitKeyDown = (deps, payload) =>
+  forwardFormSubmitOnEnter({ deps, payload, submit: handleDialogSubmitClick });
 
 export const handleDetailClipClick = (deps, payload) => {
   const clipName = payload._event.currentTarget.dataset.clipName;

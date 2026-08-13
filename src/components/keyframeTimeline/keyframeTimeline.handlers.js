@@ -2,19 +2,45 @@ const DURATION_RESIZE_SNAP_MS = 100;
 const DEFAULT_KEYFRAME_DURATION_MS = 1000;
 const TIMELINE_EXTENSION_STEP_MS = 1000;
 
-const clamp = (value, min, max) => {
-  return Math.min(Math.max(value, min), max);
+export const handleBeforeMount = (deps) => {
+  const eventTarget = globalThis.window;
+  const listeners = [
+    [
+      "pointermove",
+      (event) =>
+        handleRulerScrubMove(deps, {
+          _event: event,
+        }),
+    ],
+    [
+      "pointerup",
+      (event) =>
+        handleRulerScrubEnd(deps, {
+          _event: event,
+        }),
+    ],
+    [
+      "pointercancel",
+      (event) =>
+        handleRulerScrubCancel(deps, {
+          _event: event,
+        }),
+    ],
+    ["blur", () => handleRulerScrubWindowBlur(deps)],
+  ];
+  listeners.forEach(([type, listener]) => {
+    eventTarget.addEventListener(type, listener);
+  });
+
+  return () => {
+    listeners.forEach(([type, listener]) => {
+      eventTarget.removeEventListener(type, listener);
+    });
+  };
 };
 
-const resolveHoverIndicatorPercent = ({ element, clientX } = {}) => {
-  const rect = element?.getBoundingClientRect?.();
-  const width = rect?.width ?? 0;
-
-  if (width <= 0) {
-    return undefined;
-  }
-
-  return (clamp(clientX - rect.left, 0, width) / width) * 100;
+const clamp = (value, min, max) => {
+  return Math.min(Math.max(value, min), max);
 };
 
 const resolveTimelineDuration = (props = {}) => {
@@ -99,15 +125,27 @@ const dispatchRulerScrubEvent = ({
   );
 };
 
-const resolveRulerScrubPosition = ({ element, clientX, props } = {}) => {
-  const leftPercent = resolveHoverIndicatorPercent({ element, clientX });
-  const timelineDuration = resolveTimelineDuration(props);
+const resolveRulerScrubPosition = ({
+  element,
+  clientX,
+  props,
+  rulerScrub,
+} = {}) => {
+  const rect = element?.getBoundingClientRect?.();
+  const trackLeft = rulerScrub?.trackLeft ?? rect?.left;
+  const trackWidth = rulerScrub?.trackWidth ?? rect?.width ?? 0;
+  const leftPercent =
+    trackWidth > 0
+      ? (clamp(clientX - trackLeft, 0, trackWidth) / trackWidth) * 100
+      : undefined;
+  const timelineDuration =
+    rulerScrub?.timelineDuration ?? resolveTimelineDuration(props);
   const timeMs =
     leftPercent === undefined
       ? undefined
       : Math.round((leftPercent / 100) * timelineDuration);
 
-  return { leftPercent, timeMs };
+  return { leftPercent, timeMs, timelineDuration, trackLeft, trackWidth };
 };
 
 const dispatchAddKeyframeEvent = ({
@@ -385,20 +423,23 @@ export const handleRulerScrubStart = (deps, payload) => {
     return;
   }
 
-  const { leftPercent, timeMs } = resolveRulerScrubPosition({
-    element: event.currentTarget,
-    clientX: event.clientX,
-    props,
-  });
+  const { leftPercent, timeMs, timelineDuration, trackLeft, trackWidth } =
+    resolveRulerScrubPosition({
+      element: event.currentTarget,
+      clientX: event.clientX,
+      props,
+    });
   if (leftPercent === undefined) {
     return;
   }
 
   event.preventDefault();
-  event.currentTarget.setPointerCapture?.(event.pointerId);
   store.startRulerScrub({
     leftPercent,
     pointerId: event.pointerId,
+    timelineDuration,
+    trackLeft,
+    trackWidth,
   });
   dispatchRulerScrubEvent({
     dispatchEvent,
@@ -418,9 +459,9 @@ export const handleRulerScrubMove = (deps, payload) => {
   }
 
   const { leftPercent, timeMs } = resolveRulerScrubPosition({
-    element: event.currentTarget,
     clientX: event.clientX,
     props,
+    rulerScrub,
   });
   event.preventDefault();
   store.updateRulerScrub({ leftPercent });
@@ -442,12 +483,11 @@ export const handleRulerScrubEnd = (deps, payload) => {
   }
 
   const { leftPercent, timeMs } = resolveRulerScrubPosition({
-    element: event.currentTarget,
     clientX: event.clientX,
     props,
+    rulerScrub,
   });
   event.preventDefault();
-  event.currentTarget.releasePointerCapture?.(event.pointerId);
   store.clearRulerScrub({});
   dispatchRulerScrubEvent({
     committed: true,
@@ -463,6 +503,16 @@ export const handleRulerScrubCancel = (deps, payload) => {
   const { render, store } = deps;
   const rulerScrub = store.selectRulerScrub();
   if (!rulerScrub || rulerScrub.pointerId !== payload._event.pointerId) {
+    return;
+  }
+
+  store.clearRulerScrub({});
+  render();
+};
+
+export const handleRulerScrubWindowBlur = (deps) => {
+  const { render, store } = deps;
+  if (!store.selectRulerScrub()) {
     return;
   }
 

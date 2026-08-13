@@ -1785,6 +1785,28 @@ const selectMobilePreviewCanvasMaxWidth = ({ state }) => {
   return `min(100%, ${maxWidthPx}px)`;
 };
 
+const selectMobileSystemActionsDialogTop = ({ state }) => {
+  const projectResolution = selectProjectResolution({ state });
+  const viewportWidthHeight = Number(
+    ((projectResolution.height / projectResolution.width) * 100).toFixed(4),
+  );
+  let maximumCanvasHeight = "50vh";
+
+  if (state.isTouchMode && state.mobileKeyboardState?.isVisible) {
+    const visualHeight = Number(state.mobileKeyboardState.visualHeight);
+    if (Number.isFinite(visualHeight) && visualHeight > 0) {
+      maximumCanvasHeight = `${Math.max(
+        MOBILE_PREVIEW_MIN_HEIGHT_PX,
+        visualHeight -
+          MOBILE_KEYBOARD_TOOLBAR_HEIGHT_PX -
+          MOBILE_PREVIEW_VERTICAL_PADDING_PX,
+      )}px`;
+    }
+  }
+
+  return `min(${viewportWidthHeight}vw, ${maximumCanvasHeight})`;
+};
+
 const selectMobileEditorBottomSpacerHeight = ({ state }) => {
   if (!state.isTouchMode || !state.mobileKeyboardState?.isVisible) {
     return "30vh";
@@ -1891,6 +1913,9 @@ export const selectViewData = ({ state, i18n }) => {
       canvasAspectRatio: selectCanvasAspectRatio({ state }),
       previewCanvasMaxWidth: selectPreviewCanvasMaxWidth({ state }),
       mobilePreviewCanvasMaxWidth: selectMobilePreviewCanvasMaxWidth({ state }),
+      mobileSystemActionsDialogTop: selectMobileSystemActionsDialogTop({
+        state,
+      }),
       mobileEditorBottomSpacerHeight: selectMobileEditorBottomSpacerHeight({
         state,
       }),
@@ -2266,6 +2291,7 @@ export const selectViewData = ({ state, i18n }) => {
     canvasAspectRatio: selectCanvasAspectRatio({ state }),
     previewCanvasMaxWidth: selectPreviewCanvasMaxWidth({ state }),
     mobilePreviewCanvasMaxWidth: selectMobilePreviewCanvasMaxWidth({ state }),
+    mobileSystemActionsDialogTop: selectMobileSystemActionsDialogTop({ state }),
     mobileEditorBottomSpacerHeight: selectMobileEditorBottomSpacerHeight({
       state,
     }),

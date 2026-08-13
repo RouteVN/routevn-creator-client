@@ -117,6 +117,7 @@ describe("characters item selection", () => {
     };
     const deps = {
       store: {
+        selectIsTouchMode: vi.fn(() => false),
         selectSelectedItemId: vi.fn(() => "character-1"),
         selectCharacterItemById: vi.fn(() => character),
         setSelectedItemId: vi.fn(),
@@ -149,6 +150,10 @@ describe("characters item selection", () => {
       itemId: "character-1",
       spriteGroups: [],
     });
+    expect(deps.store.setSelectedItemId).toHaveBeenCalledWith({
+      itemId: "character-1",
+      suppressMobileDetailSheet: false,
+    });
     expect(deps.refs.editForm.setValues).toHaveBeenCalledWith({
       values: {
         name: "Hero",
@@ -160,6 +165,53 @@ describe("characters item selection", () => {
     });
     expect(event.preventDefault).toHaveBeenCalledTimes(1);
     expect(event.stopPropagation).toHaveBeenCalledTimes(1);
+  });
+
+  it("hides the mobile detail action sheet before opening edit", () => {
+    const character = {
+      id: "character-1",
+      name: "Hero",
+      description: "Main character",
+      spriteGroups: [],
+      tagIds: [],
+    };
+    const deps = {
+      store: {
+        selectIsTouchMode: vi.fn(() => true),
+        selectSelectedItemId: vi.fn(() => "character-1"),
+        selectCharacterItemById: vi.fn(() => character),
+        setSelectedItemId: vi.fn(),
+        openEditDialog: vi.fn(),
+      },
+      refs: {
+        fileExplorer: {
+          getSelectedItem: vi.fn(() => ({
+            isFolder: false,
+            itemId: "character-1",
+          })),
+          selectItem: vi.fn(),
+        },
+        editForm: {
+          reset: vi.fn(),
+          setValues: vi.fn(),
+        },
+      },
+      render: vi.fn(),
+    };
+
+    handleFileExplorerKeyboardScopeKeyDown(deps, {
+      _event: {
+        key: "e",
+        preventDefault: vi.fn(),
+        stopPropagation: vi.fn(),
+      },
+    });
+
+    expect(deps.store.setSelectedItemId).toHaveBeenCalledWith({
+      itemId: "character-1",
+      suppressMobileDetailSheet: true,
+    });
+    expect(deps.store.openEditDialog).toHaveBeenCalledTimes(1);
   });
 
   it("goes back one browser-history entry with Shift+H", () => {
@@ -239,6 +291,75 @@ describe("characters add dialog form reset", () => {
         shortcut: "",
         tagIds: [],
       },
+    });
+  });
+});
+
+describe("characters sticky form actions", () => {
+  it("submits add-form values from the form action", async () => {
+    const values = {
+      name: "",
+      description: "",
+      shortcut: "",
+      tagIds: [],
+    };
+    const deps = {
+      i18n: EN_I18N,
+      appService: {
+        showAlert: vi.fn(),
+      },
+    };
+
+    await handleDialogFormActionClick(deps, {
+      _event: {
+        detail: {
+          actionId: "submit",
+          values,
+        },
+      },
+    });
+
+    expect(deps.appService.showAlert).toHaveBeenCalledWith({
+      message: "Character name is required.",
+      title: "Warning",
+    });
+  });
+
+  it("submits edit-form values from the form action", async () => {
+    const values = {
+      name: "Hero",
+      description: "",
+      shortcut: "",
+      tagIds: [],
+    };
+    const deps = {
+      i18n: EN_I18N,
+      appService: {
+        showAlert: vi.fn(),
+      },
+      store: {
+        selectEditCharacterDraft: vi.fn(() => ({
+          editItemId: "character-hero",
+          editAvatarFileId: undefined,
+          editAvatarUploadResult: undefined,
+          editSpriteGroups: [{ id: "group-face", name: "Face", tags: [] }],
+        })),
+        selectValidSpriteGroupTagIds: vi.fn(() => []),
+      },
+    };
+
+    await handleEditFormAction(deps, {
+      _event: {
+        detail: {
+          actionId: "submit",
+          values,
+        },
+      },
+    });
+
+    expect(deps.appService.showAlert).toHaveBeenCalledWith({
+      message: "Sprite group 1 must have at least one tag.",
+      title: "Warning",
     });
   });
 });

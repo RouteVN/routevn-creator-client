@@ -14,6 +14,7 @@ import {
   setBgm,
   setRepositoryState,
   setSelectedSound,
+  setUiConfig,
   startSoundDrag,
   updateSound,
   updateSoundDrag,
@@ -101,6 +102,25 @@ const i18n = {
 };
 
 describe("commandLineBgm.store", () => {
+  it("uses two audio columns and hides the explorer in touch mode", () => {
+    const state = createInitialState();
+
+    expect(selectViewData({ state, i18n })).toMatchObject({
+      showResourceSelectorFileExplorer: true,
+      resourceSelectorColumns: undefined,
+      resourceSelectorGridStyle: "",
+    });
+
+    setUiConfig({ state }, { uiConfig: { inputMode: "touch" } });
+
+    expect(selectViewData({ state, i18n })).toMatchObject({
+      showResourceSelectorFileExplorer: false,
+      resourceSelectorColumns: 2,
+      resourceSelectorGridStyle:
+        "display: grid; grid-template-columns: repeat(2, minmax(0, 1fr));",
+    });
+  });
+
   it("keeps every select-prefixed export read-only", () => {
     const state = Object.freeze(createInitialState());
     const selectors = Object.entries(bgmStore).filter(([name]) => {

@@ -166,6 +166,7 @@ const {
     tagIds: item?.tagIds ?? [],
   }),
   getEditPreviewFileId: (item) => item?.thumbnailFileId ?? item?.fileId,
+  suppressMobileDetailSheetOnEdit: true,
   copy: ({ i18n }) => selectImagesPageCopy(i18n),
   tagging: {
     scopeKey: IMAGE_TAG_SCOPE_KEY,

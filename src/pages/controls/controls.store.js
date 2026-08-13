@@ -15,6 +15,18 @@ const createControlForm = ({ editMode = false, copy = {} } = {}) => ({
   title: editMode
     ? (copy.editControlTitle ?? "Edit Control")
     : (copy.addControlTitle ?? "Add Control"),
+  actions: {
+    buttons: [
+      {
+        id: "submit",
+        variant: "pr",
+        validate: true,
+        label: editMode
+          ? (copy.updateControlButton ?? "Update")
+          : (copy.addControlButton ?? "Add Control"),
+      },
+    ],
+  },
   fields: [
     {
       name: "name",
@@ -34,18 +46,6 @@ const createControlForm = ({ editMode = false, copy = {} } = {}) => ({
       addOptionLabel: copy.addTagOption ?? "Add tag",
     }),
   ],
-  actions: {
-    layout: "",
-    buttons: [
-      {
-        id: "submit",
-        variant: "pr",
-        label: editMode
-          ? (copy.updateControlButton ?? "Update Control")
-          : (copy.addControlButton ?? "Add Control"),
-      },
-    ],
-  },
 });
 
 const createSystemActionLabels = (copy = {}) => ({

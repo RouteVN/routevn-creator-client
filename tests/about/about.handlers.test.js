@@ -32,5 +32,8 @@ describe("about handlers", () => {
     expect(openerPermission.allow).toContainEqual({
       url: "https://routevn.com/*",
     });
+    expect(openerPermission.allow).toContainEqual({
+      url: "http://localhost:3003/*",
+    });
   });
 });

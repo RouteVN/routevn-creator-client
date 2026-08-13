@@ -133,6 +133,30 @@ describe("keyframeTimeline easing curves", () => {
     expect(points.at(-1)).toEqual({ x: 100, y: 1 });
   });
 
+  it("draws an explicit keyframe start value", () => {
+    const points = readPathPoints(
+      createKeyframeValueCurvePath({
+        initialValue: 0,
+        keyframes: [
+          {
+            delay: 200,
+            duration: 800,
+            easing: "linear",
+            startValue: 0.25,
+            value: 1,
+          },
+        ],
+        timelineDuration: 1000,
+      }),
+    );
+
+    expect(points[0]).toEqual({ x: 0, y: 19 });
+    expect(points[1]).toEqual({ x: 20, y: 19 });
+    expect(points[2].x).toBe(20);
+    expect(points[2].y).toBeLessThan(19);
+    expect(points.at(-1)).toEqual({ x: 100, y: 1 });
+  });
+
   it("uses per-keyframe start values and keeps symbolic targets stable", () => {
     const points = readPathPoints(
       createKeyframeValueCurvePath({
@@ -219,6 +243,39 @@ describe("keyframeTimeline easing curves", () => {
       initialValueColor: "mu",
     });
     expect(autoProperty.valueCurvePath).toBeUndefined();
+  });
+
+  it("shows and formats only explicit keyframe start values", () => {
+    const viewData = selectViewData({
+      state: createInitialState(),
+      props: {
+        properties: {
+          x: {
+            keyframes: [
+              {
+                duration: 500,
+                relative: true,
+                startValue: 0,
+                value: -100,
+              },
+              { duration: 500, startValue: 50, value: 200 },
+              { duration: 500, value: 300 },
+            ],
+          },
+        },
+      },
+    });
+
+    expect(viewData.selectedProperties[0].keyframes).toMatchObject([
+      {
+        startValue: 0,
+        startValueLabel: "Δ+0",
+        startValueVisible: true,
+        value: "Δ-100",
+      },
+      { startValueLabel: 50, startValueVisible: true, value: 200 },
+      { startValueVisible: false },
+    ]);
   });
 
   it("localizes the auto indicator beside the property name", () => {
@@ -327,6 +384,8 @@ describe("keyframeTimeline easing curves", () => {
     expect(view).toContain("data-keyframe-slot=true h=f pos=rel style=");
     expect(view).not.toContain("data-keyframe-slot=true h=f pos=rel bgc=");
     expect(view).toContain("handler: handleRulerScrubStart");
+    expect(view).not.toContain("handler: handleRulerScrubMove");
+    expect(view).not.toContain("handler: handleRulerScrubEnd");
     expect(view).toContain("cursor: ${rulerCursor}");
     expect(view).not.toContain("cursor: ew-resize; touch-action: none;\"':");
     expect(view).toContain("handler: handleKeyframeMoveStart");
@@ -392,7 +451,13 @@ describe("keyframeTimeline easing curves", () => {
     expect(view).toMatch(
       /rtgl-text\.keyframeTimelineKeyframeValue[^\n]+ta=e ellipsis[^\n]+left: 10px; right: 13px[^\n]+keyframe.value/,
     );
+    expect(view).toContain("$if keyframe.startValueVisible:");
+    expect(view).toMatch(
+      /rtgl-text\.keyframeTimelineKeyframeStartValue[^\n]+ta=s ellipsis[^\n]+left: 13px; right: 10px[^\n]+keyframe.startValueLabel/,
+    );
     expect(view).toContain("container-type: inline-size");
+    expect(view).toContain("@container (max-width: 80px)");
+    expect(view).toContain('".keyframeTimelineKeyframeStartValue":');
     expect(view).toContain("@container (max-width: 40px)");
     expect(view).toContain('".keyframeTimelineKeyframeValue":');
     expect(view).toContain("display: none");
