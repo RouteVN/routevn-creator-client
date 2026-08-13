@@ -158,7 +158,6 @@ const createCharacterDialogForm = ({
   copy,
 } = {}) => ({
   title: copy.addCharacterTitle,
-  sticky: true,
   actions: {
     buttons: [
       {
@@ -206,7 +205,6 @@ const createEditCharacterDialogForm = ({
   copy,
 } = {}) => ({
   title: copy.editCharacterTitle,
-  sticky: true,
   actions: {
     buttons: [
       {

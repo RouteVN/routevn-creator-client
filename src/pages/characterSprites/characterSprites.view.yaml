@@ -321,7 +321,7 @@ template:
                       - rtgl-tag-select#detailTagSelect key=${selectedItemId} slot="sprite-tags" w=f :options=${tagFilterOptions} :selectedValues=${selectedItemTagIds} :draftSelectedValues=${detailTagDraftValues} :open=${isDetailTagSelectOpen} :addOption=${detailTagAddOption} :placeholder=${addTagPlaceholder}: null
   - rtgl-dialog#editDialog ?open=${isEditDialogOpen} s=md md-layout=fixed-top p=none:
       - rtgl-view slot=content d=v w=f h=f overflow=hidden:
-          - rtgl-form#editForm key=${isEditDialogOpen} :defaultValues=${editDefaultValues} :form=${editForm} w=f h=f:
+          - rtgl-form#editForm key=${isEditDialogOpen} :defaultValues=${editDefaultValues} :form=${editForm} sticky w=f h=f:
               - $if editPreviewFileId:
                   - rtgl-view slot=image-slot av=c ah=c:
                       - rvn-file-image#editDialogImage fileId=${editPreviewFileId} h=120 bw=xs bc=bo br=md cur=pointer key=${editPreviewFileId}: null

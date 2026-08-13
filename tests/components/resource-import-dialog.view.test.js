@@ -18,7 +18,7 @@ describe("resource-import-dialog.view", () => {
       "rtgl-view slot=content d=v w=f h=f g=md overflow=hidden",
     );
     expect(viewSource).toContain(
-      "rtgl-form#workflowForm key=${formKey} :defaultValues=${defaultValues} :form=${form} :context=${formContext} w=f h=f",
+      "rtgl-form#workflowForm key=${formKey} :defaultValues=${defaultValues} :form=${form} :context=${formContext} sticky w=f h=f",
     );
   });
 

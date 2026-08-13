@@ -138,7 +138,6 @@ const resolveAdjacentImageItemId = ({
 
 const createEditForm = ({ copy, tagOptions } = {}) => ({
   title: copy.editTitle,
-  sticky: true,
   actions: {
     buttons: [
       {

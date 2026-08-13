@@ -204,9 +204,9 @@ template:
       - rtgl-form#folderNameForm key=${folderNameDialogItemId} slot=content :defaultValues=${folderNameDialogDefaultValues} :form=${folderNameForm}: null
   - rtgl-dialog#addDialog ?open=${isAddDialogOpen} s=md md-layout=fixed-top p=none:
       - rtgl-view slot=content d=v w=f h=f overflow=hidden:
-          - rtgl-form#addForm key=${isAddDialogOpen} :defaultValues=${addFormDefaults} :form=${addForm} w=f h=f: null
+          - rtgl-form#addForm key=${isAddDialogOpen} :defaultValues=${addFormDefaults} :form=${addForm} sticky w=f h=f: null
   - rtgl-dialog#editDialog ?open=${isEditDialogOpen} s=md md-layout=fixed-top p=none:
       - rtgl-view slot=content d=v w=f h=f overflow=hidden:
-          - rtgl-form#editForm key=${isEditDialogOpen} :defaultValues=${editDefaultValues} :form=${editForm} w=f h=f: null
+          - rtgl-form#editForm key=${isEditDialogOpen} :defaultValues=${editDefaultValues} :form=${editForm} sticky w=f h=f: null
   - rtgl-dialog#createTagDialog ?open=${isCreateTagDialogOpen} s=sm:
       - rtgl-form#createTagForm key=${isCreateTagDialogOpen} slot=content :defaultValues=${createTagDefaultValues} :form=${createTagForm}: null

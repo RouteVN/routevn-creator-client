@@ -15,7 +15,7 @@ describe("images view", () => {
       "rtgl-view slot=content d=v w=f h=f overflow=hidden:",
     );
     expect(imagesView).toContain(
-      "rtgl-form#editForm key=${isEditDialogOpen} :defaultValues=${editDefaultValues} :form=${editForm} w=f h=f:",
+      "rtgl-form#editForm key=${isEditDialogOpen} :defaultValues=${editDefaultValues} :form=${editForm} sticky w=f h=f:",
     );
     expect(imagesView).toContain(
       "form-action:\n        handler: handleEditFormAction",

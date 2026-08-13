@@ -36,7 +36,6 @@ const getAnimationTypeLabel = (animationType, copy = {}) => {
 
 const createEditForm = (copy = {}) => ({
   title: copy.editTitle ?? "Edit Animation",
-  sticky: true,
   actions: {
     buttons: [
       {
@@ -70,7 +69,6 @@ const createEditForm = (copy = {}) => ({
 
 const createAddForm = (copy = {}) => ({
   title: copy.addTitle ?? "Add Animation",
-  sticky: true,
   actions: {
     buttons: [
       {

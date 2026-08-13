@@ -46,7 +46,6 @@ const createLayoutTypeOptions = (copy = {}) => [
 
 const createLayoutForm = (copy = {}) => ({
   title: copy.addTitle ?? "Add Layout",
-  sticky: true,
   actions: {
     buttons: [
       {
@@ -88,7 +87,6 @@ const createLayoutForm = (copy = {}) => ({
 
 const createEditLayoutForm = (copy = {}) => ({
   title: copy.editTitle ?? "Edit Layout",
-  sticky: true,
   actions: {
     buttons: [
       {

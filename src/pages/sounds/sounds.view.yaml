@@ -213,7 +213,7 @@ template:
   - $if isEditDialogOpen:
       - rtgl-dialog#editDialog ?open=${isEditDialogOpen} s=md md-layout=fixed-top p=none:
           - rtgl-view slot=content d=v w=f h=f overflow=hidden:
-              - rtgl-form#editForm key=${isEditDialogOpen} :defaultValues=${editDefaultValues} :form=${editForm} w=f h=f:
+              - rtgl-form#editForm key=${isEditDialogOpen} :defaultValues=${editDefaultValues} :form=${editForm} sticky w=f h=f:
                   - $if editPreviewFileId:
                       - 'rtgl-view slot="sound-slot" w=f p=sm bw=xs bc=bo br=md cur=pointer style="min-width: 0; max-width: 100%; box-sizing: border-box; overflow: hidden;"':
                           - rvn-waveform-visualizer#editDialogWaveform waveformDataFileId=${editPreviewFileId} w=f h=110: null

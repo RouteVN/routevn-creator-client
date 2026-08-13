@@ -35,7 +35,7 @@ template:
               - rtgl-view w=f h=180 av=c ah=c d=v g=md:
                   - rtgl-text: ${progressLabel}
           - $if !isBusy && !isProgressStep:
-              - rtgl-form#workflowForm key=${formKey} :defaultValues=${defaultValues} :form=${form} :context=${formContext} w=f h=f:
+              - rtgl-form#workflowForm key=${formKey} :defaultValues=${defaultValues} :form=${form} :context=${formContext} sticky w=f h=f:
                   - $if isSourceStep:
                       - rtgl-view slot=source-description d=h w=f g=xs av=c wrap:
                           - rtgl-text s=sm c=mu-fg: ${sourceDescription}

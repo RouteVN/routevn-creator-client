@@ -275,7 +275,7 @@ describe("characters store sprite group tags", () => {
 
     const viewData = selectViewData({ state, i18n: EN_I18N });
 
-    expect(viewData.dialogForm.sticky).toBe(true);
+    expect(viewData.dialogForm).not.toHaveProperty("sticky");
     expect(viewData.dialogForm.actions).toEqual({
       buttons: [
         {
@@ -286,7 +286,7 @@ describe("characters store sprite group tags", () => {
         },
       ],
     });
-    expect(viewData.editForm.sticky).toBe(true);
+    expect(viewData.editForm).not.toHaveProperty("sticky");
     expect(viewData.editForm.actions).toEqual({
       buttons: [
         {

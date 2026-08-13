@@ -96,7 +96,6 @@ const buildPendingMediaItem = (item) => ({
 
 const createEditForm = ({ copy } = {}) => ({
   title: copy.editTitle,
-  sticky: true,
   actions: {
     buttons: [
       {

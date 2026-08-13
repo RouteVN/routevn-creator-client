@@ -150,6 +150,7 @@ describe("resource add/edit dialog layout", () => {
         const formLine = view
           .split("\n")
           .find((line) => line.includes(`rtgl-form#${formRef} `));
+        expect(formLine).toContain(" sticky ");
         expect(formLine).toContain("w=f h=f");
         expect(selectRefBlock(view, formRef)).toContain(
           `form-action:\n        handler: ${handler}`,
@@ -159,10 +160,7 @@ describe("resource add/edit dialog layout", () => {
       expect(
         view.match(/slot=content d=v w=f h=f overflow=hidden:/g),
       ).toHaveLength(dialogIds.length);
-      expect(store.match(/sticky: true/g)?.length ?? 0).toBeGreaterThanOrEqual(
-        forms.length,
-      );
-      expect(store).not.toMatch(/actions:\s*{\s*sticky:\s*true/);
+      expect(store).not.toContain("sticky: true");
     },
   );
 

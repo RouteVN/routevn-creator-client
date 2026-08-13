@@ -229,7 +229,7 @@ template:
   - $if isDialogOpen:
       - rtgl-dialog#addCharacterDialog ?open=${isDialogOpen} s=md md-layout=fixed-top p=none:
           - rtgl-view slot=content d=v w=f h=f overflow=hidden:
-              - rtgl-form#characterForm key=${isDialogOpen} :defaultValues=${dialogDefaultValues} :form=${dialogForm} w=f h=f:
+              - rtgl-form#characterForm key=${isDialogOpen} :defaultValues=${dialogDefaultValues} :form=${dialogForm} sticky w=f h=f:
                   - $if avatarFileId:
                       - rtgl-view slot=avatar-slot w=120 h=120 av=c ah=c:
                           - rvn-file-image#avatarImage fileId=${avatarFileId} w=120 h=120 cur=pointer br=md: null
@@ -240,7 +240,7 @@ template:
   - $if isEditDialogOpen:
       - rtgl-dialog#editDialog ?open=${isEditDialogOpen} s=md md-layout=fixed-top p=none:
           - rtgl-view slot=content d=v w=f h=f overflow=hidden:
-              - rtgl-form#editForm key=${isEditDialogOpen} :defaultValues=${editDefaultValues} :form=${editForm} w=f h=f:
+              - rtgl-form#editForm key=${isEditDialogOpen} :defaultValues=${editDefaultValues} :form=${editForm} sticky w=f h=f:
                   - $if editAvatarFileId:
                       - rtgl-view slot=avatar-slot w=120 h=120 av=c ah=c:
                           - rvn-file-image#editAvatarImage fileId=${editAvatarFileId} w=120 h=120 cur=pointer br=md: null

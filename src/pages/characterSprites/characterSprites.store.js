@@ -284,7 +284,6 @@ const getPreviewFileId = (item) => item?.thumbnailFileId ?? item?.fileId;
 
 const createEditForm = ({ tagOptions, copy } = {}) => ({
   title: copy.editSpriteTitle,
-  sticky: true,
   actions: {
     buttons: [
       {

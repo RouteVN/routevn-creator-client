@@ -21,10 +21,10 @@ describe("characters view", () => {
       charactersView.match(/slot=content d=v w=f h=f overflow=hidden:/g),
     ).toHaveLength(2);
     expect(charactersView).toContain(
-      "rtgl-form#characterForm key=${isDialogOpen} :defaultValues=${dialogDefaultValues} :form=${dialogForm} w=f h=f:",
+      "rtgl-form#characterForm key=${isDialogOpen} :defaultValues=${dialogDefaultValues} :form=${dialogForm} sticky w=f h=f:",
     );
     expect(charactersView).toContain(
-      "rtgl-form#editForm key=${isEditDialogOpen} :defaultValues=${editDefaultValues} :form=${editForm} w=f h=f:",
+      "rtgl-form#editForm key=${isEditDialogOpen} :defaultValues=${editDefaultValues} :form=${editForm} sticky w=f h=f:",
     );
     expect(charactersView).toContain(
       "form-action:\n        handler: handleDialogFormActionClick",

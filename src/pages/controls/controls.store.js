@@ -15,7 +15,6 @@ const createControlForm = ({ editMode = false, copy = {} } = {}) => ({
   title: editMode
     ? (copy.editControlTitle ?? "Edit Control")
     : (copy.addControlTitle ?? "Add Control"),
-  sticky: true,
   actions: {
     buttons: [
       {

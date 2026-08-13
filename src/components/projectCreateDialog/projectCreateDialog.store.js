@@ -128,7 +128,6 @@ const selectCopy = (i18n = {}) => {
 const createLocalizedForm = (copy = {}, projectLanguageCopy, i18n) => ({
   ...form,
   title: copy.createProjectTitle,
-  sticky: true,
   actions: {
     buttons: [
       {

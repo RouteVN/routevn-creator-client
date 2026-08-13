@@ -100,7 +100,7 @@ describe("audioEffects.store", () => {
       label: "Open",
       value: "edit-item",
     });
-    expect(viewData.addForm.sticky).toBe(true);
+    expect(viewData.addForm).not.toHaveProperty("sticky");
     expect(viewData.addForm.actions).toEqual({
       buttons: [
         {
@@ -111,7 +111,7 @@ describe("audioEffects.store", () => {
         },
       ],
     });
-    expect(viewData.editForm.sticky).toBe(true);
+    expect(viewData.editForm).not.toHaveProperty("sticky");
     expect(viewData.editForm.actions).toEqual({
       buttons: [
         {

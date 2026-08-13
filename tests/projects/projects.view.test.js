@@ -109,7 +109,7 @@ describe("projects view", () => {
       "rtgl-view slot=content d=v w=f h=f overflow=hidden",
     );
     expect(projectCreateDialogView).toContain(
-      "rtgl-form#createProjectForm key=${formKey} :defaultValues=${defaultValues} :form=${form} :context=${context} w=f h=f",
+      "rtgl-form#createProjectForm key=${formKey} :defaultValues=${defaultValues} :form=${form} :context=${context} sticky w=f h=f",
     );
     expect(projectsView).toContain("handler: handleCreateDialogSubmit");
     expect(projectsView).not.toContain("createProjectSubmitButton");
