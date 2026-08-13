@@ -223,7 +223,7 @@ template:
           - rtgl-view d=h g=sm w=f ah=e:
               - rtgl-button#deleteConfirmButton v=pr: ${deleteDialogConfirmLabel}
   - $if createDialog.isOpen:
-      - rtgl-dialog#createProjectDialog ?open=${createDialog.isOpen} s=md md-layout=fixed-top p=sm:
+      - rtgl-dialog#createProjectDialog ?open=${createDialog.isOpen} s=md md-layout=fixed-top:
           - rtgl-view slot=content d=v w=f h=f overflow=hidden:
               - rvn-project-create-dialog#projectCreateDialogBody key=${createDialog.formKey} :platform=${platform} :defaultValues=${createDialog.defaultValues} w=f h=f: null
   - rtgl-dialog#cloudCreateProjectDialog ?open=${cloudCreateDialog.isOpen} s=md:
