@@ -451,6 +451,12 @@ describe("projects create dialog", () => {
     const progressDialog =
       deps.appService.showProgressDialog.mock.results[0].value;
     expect(progressDialog.waitForPaint).toHaveBeenCalledOnce();
+    expect(deps.store.closeCreateDialog).toHaveBeenCalledOnce();
+    expect(
+      deps.store.closeCreateDialog.mock.invocationCallOrder[0],
+    ).toBeLessThan(
+      deps.appService.showProgressDialog.mock.invocationCallOrder[0],
+    );
     expect(deps.appService.createNewProject).toHaveBeenCalledWith({
       name: "New Project",
       description: "",
@@ -470,7 +476,6 @@ describe("projects create dialog", () => {
         projectPath: "/projects/new-project",
       },
     });
-    expect(deps.store.closeCreateDialog).toHaveBeenCalled();
     expect(progressDialog.close).toHaveBeenCalledOnce();
     expect(
       deps.appService.showProgressDialog.mock.invocationCallOrder[0],
@@ -479,7 +484,7 @@ describe("projects create dialog", () => {
     );
   });
 
-  it("closes the progress dialog and preserves the form when creation fails", async () => {
+  it("closes the form before loading and closes progress when creation fails", async () => {
     const deps = createDeps();
     deps.appService.createNewProject.mockRejectedValue(
       new Error("creation failed"),
@@ -506,7 +511,12 @@ describe("projects create dialog", () => {
     const progressDialog =
       deps.appService.showProgressDialog.mock.results[0].value;
     expect(progressDialog.close).toHaveBeenCalledOnce();
-    expect(deps.store.closeCreateDialog).not.toHaveBeenCalled();
+    expect(deps.store.closeCreateDialog).toHaveBeenCalledOnce();
+    expect(
+      deps.store.closeCreateDialog.mock.invocationCallOrder[0],
+    ).toBeLessThan(
+      deps.appService.showProgressDialog.mock.invocationCallOrder[0],
+    );
     expect(deps.appService.showAlert).toHaveBeenCalledWith({
       message: "creation failed",
     });

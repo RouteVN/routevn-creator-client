@@ -266,6 +266,9 @@ const createProjectFromValues = async (deps, values = {}) => {
       return;
     }
 
+    store.closeCreateDialog();
+    render();
+
     const progressDialog = appService.showProgressDialog({
       title: copy.creatingProjectTitle,
       message: copy.creatingProjectMessage,
@@ -296,7 +299,6 @@ const createProjectFromValues = async (deps, values = {}) => {
     }
 
     store.addProject({ project: newProject });
-    store.closeCreateDialog();
     render();
   } catch (error) {
     appService.showAlert({
