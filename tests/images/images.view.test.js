@@ -219,24 +219,26 @@ describe("images view", () => {
       "utf8",
     );
 
-    const layoutStyleStart = imagesView.indexOf("fullImagePreviewLayoutStyle");
     const breadcrumbStyleStart = imagesView.indexOf(
       "fullImagePreviewTopBarStyle",
-      layoutStyleStart,
     );
     const breadcrumbStart = imagesView.indexOf(
       "fullImagePreviewBreadcrumb",
       breadcrumbStyleStart,
     );
+    const layoutStyleStart = imagesView.indexOf(
+      "fullImagePreviewLayoutStyle",
+      breadcrumbStart,
+    );
     const frameStart = imagesView.indexOf(
       "previewImageFrame",
-      breadcrumbStyleStart,
+      layoutStyleStart,
     );
 
-    expect(layoutStyleStart).toBeGreaterThan(-1);
-    expect(breadcrumbStyleStart).toBeGreaterThan(layoutStyleStart);
+    expect(breadcrumbStyleStart).toBeGreaterThan(-1);
     expect(breadcrumbStart).toBeGreaterThan(breadcrumbStyleStart);
-    expect(frameStart).toBeGreaterThan(breadcrumbStart);
+    expect(layoutStyleStart).toBeGreaterThan(breadcrumbStart);
+    expect(frameStart).toBeGreaterThan(layoutStyleStart);
     expect(imagesView).toContain("rtgl-text#previewBreadcrumb");
     expect(imagesView).toContain("rtgl-view#previewModeControls");
   });

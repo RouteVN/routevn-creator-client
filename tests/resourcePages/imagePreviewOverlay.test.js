@@ -51,7 +51,9 @@ describe("imagePreviewOverlay", () => {
       "width: min(88vw, calc((var(--rvn-app-viewport-height, 100vh) - 120px) * (1920 / 1080)))",
     );
     expect(style).toContain("position: fixed");
-    expect(style).toContain("top: 8px");
+    expect(style).toContain(
+      "top: calc(var(--rvn-window-content-offset, 0px) + 8px)",
+    );
     expect(style).toContain("transform: translateX(-50%)");
     expect(style).toContain("display: grid");
     expect(style).toContain(

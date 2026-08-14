@@ -42,7 +42,7 @@ export const createImagePreviewTopBarStyle = (projectResolution) => {
     `width: min(88vw, calc((${APP_VIEWPORT_HEIGHT} - 120px) * (${aspectRatio})))`,
     "max-width: 88vw",
     "position: fixed",
-    "top: 8px",
+    `top: calc(${APP_VIEWPORT_TOP} + 8px)`,
     "left: 50%",
     "transform: translateX(-50%)",
     "z-index: 3002",
