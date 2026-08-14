@@ -1,5 +1,4 @@
 import { generateId } from "../../../internal/id.js";
-import { getTransitionFadeKeyframes } from "../../../internal/audioEffectDefinition.js";
 import { resolveResourceFileType } from "../../../internal/resourceFileMetadata.js";
 import { AUDIO_EFFECT_PROPERTY_CONFIG } from "../audioEffectsEditor.constants.js";
 import { selectAudioEffectsEditorPageCopy } from "./audioEffectsEditorPageCopy.js";
@@ -28,42 +27,29 @@ const createSoundNode = (sound, properties = {}) => ({
   ...properties,
 });
 
-const createFadePhase = ({ definition, initialValue, side } = {}) => {
-  const keyframes = getTransitionFadeKeyframes(definition, side);
-  if (keyframes.length === 0) {
-    return undefined;
-  }
-
-  const phase = { keyframes: structuredClone(keyframes) };
-  const authoredInitialValue = definition[side]?.fade?.initialValue;
-  if (authoredInitialValue !== undefined) {
-    phase.initialValue = authoredInitialValue;
-  } else if (initialValue !== undefined) {
-    phase.initialValue = initialValue;
+const createPhase = (config) => {
+  const phase = { keyframes: structuredClone(config.keyframes) };
+  if (config.initialValue !== undefined) {
+    phase.initialValue = config.initialValue;
   }
   return phase;
 };
 
 const createTransitionEffect = (definition, occurrenceId) => {
-  const volume = {};
-  const exit = createFadePhase({ definition, side: "prev" });
-  const enter = createFadePhase({
-    definition,
-    initialValue: 0,
-    side: "next",
-  });
-  if (exit) {
-    volume.exit = exit;
+  const properties = {};
+  for (const [property, config] of Object.entries(definition.prev ?? {})) {
+    properties[property] = { exit: createPhase(config) };
   }
-  if (enter) {
-    volume.enter = enter;
+  for (const [property, config] of Object.entries(definition.next ?? {})) {
+    properties[property] ??= {};
+    properties[property].enter = createPhase(config);
   }
 
   return {
     id: `audio-effect-preview:${occurrenceId}`,
     type: "audio-transition",
     targetId: PREVIEW_SOUND_ID,
-    properties: { volume },
+    properties,
   };
 };
 
@@ -87,12 +73,12 @@ const createUpdateEffect = (definition, occurrenceId) => {
 };
 
 const getTransitionPersistentValues = (definition) => {
-  const keyframes = getTransitionFadeKeyframes(definition, "next");
-  if (keyframes.length === 0) {
-    return {};
-  }
-
-  return { volume: keyframes.at(-1).value };
+  return Object.fromEntries(
+    Object.entries(definition.next ?? {}).map(([property, config]) => [
+      property,
+      config.keyframes.at(-1).value,
+    ]),
+  );
 };
 
 const getUpdatePersistentValues = (definition) =>

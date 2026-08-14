@@ -19,7 +19,7 @@ describe("audio effect preview runtime", () => {
       definition: {
         type: "transition",
         prev: {
-          fade: {
+          volume: {
             initialValue: 75,
             keyframes: [
               {
@@ -33,7 +33,7 @@ describe("audio effect preview runtime", () => {
           },
         },
         next: {
-          fade: {
+          volume: {
             initialValue: 25,
             keyframes: [
               {
@@ -141,6 +141,48 @@ describe("audio effect preview runtime", () => {
     });
   });
 
+  it("previews transition pan and playback-rate tracks", () => {
+    const { renderState } = createAudioEffectPreviewStates({
+      occurrenceId: "transition-properties",
+      outgoingSound: { fileId: "outgoing.mp3" },
+      incomingSound: { fileId: "incoming.mp3" },
+      definition: {
+        type: "transition",
+        prev: {
+          pan: {
+            initialValue: 0,
+            keyframes: [{ value: -1, duration: 300, easing: "linear" }],
+          },
+        },
+        next: {
+          playbackRate: {
+            initialValue: 0.5,
+            keyframes: [{ value: 0.75, duration: 500, easing: "linear" }],
+          },
+        },
+      },
+    });
+
+    expect(renderState.audio[0]).toMatchObject({
+      src: "incoming.mp3",
+      playbackRate: 0.75,
+    });
+    expect(renderState.audioEffects[0].properties).toEqual({
+      pan: {
+        exit: {
+          initialValue: 0,
+          keyframes: [{ value: -1, duration: 300, easing: "linear" }],
+        },
+      },
+      playbackRate: {
+        enter: {
+          initialValue: 0.5,
+          keyframes: [{ value: 0.75, duration: 500, easing: "linear" }],
+        },
+      },
+    });
+  });
+
   it("uses a distinct preview baseline when an update ends at an audio default", () => {
     const { renderState, resetState } = createAudioEffectPreviewStates({
       occurrenceId: "update-defaults",
@@ -207,10 +249,15 @@ describe("audio effect preview runtime", () => {
       selectAudioEffectDefinition: vi.fn(() => ({
         type: "transition",
         prev: {
-          fade: { duration: 600, easing: "easeOutSine" },
+          volume: {
+            keyframes: [{ value: 0, duration: 600, easing: "easeOutSine" }],
+          },
         },
         next: {
-          fade: { duration: 900, easing: "easeInSine" },
+          volume: {
+            initialValue: 0,
+            keyframes: [{ value: 100, duration: 900, easing: "easeInSine" }],
+          },
         },
       })),
       selectPreviewRuntimeReady: vi.fn(() => runtimeReady),
@@ -353,8 +400,17 @@ describe("audio effect preview runtime", () => {
       })),
       selectAudioEffectDefinition: vi.fn(() => ({
         type: "transition",
-        prev: { fade: { duration: 600, easing: "easeOutSine" } },
-        next: { fade: { duration: 900, easing: "easeInSine" } },
+        prev: {
+          volume: {
+            keyframes: [{ value: 0, duration: 600, easing: "easeOutSine" }],
+          },
+        },
+        next: {
+          volume: {
+            initialValue: 0,
+            keyframes: [{ value: 100, duration: 900, easing: "easeInSine" }],
+          },
+        },
       })),
       selectAudioEffectDuration: vi.fn(() => 900),
       selectPreviewLoopEnabled: vi.fn(() => loopEnabled),

@@ -351,9 +351,10 @@ export const handleConfirmSoundSelection = (deps) => {
   render();
 };
 
-export const handleAddPropertyClick = (deps) => {
+export const handleAddPropertyClick = (deps, payload) => {
   const { refs, render, store } = deps;
-  store.openAddPropertyDialog();
+  const { side } = payload._event.currentTarget.dataset;
+  store.openAddPropertyDialog({ side });
   render();
   refs.addPropertyForm.reset();
   refs.addPropertyForm.setValues({
@@ -373,28 +374,31 @@ export const handleAddPropertyFormAction = (deps, payload) => {
   if (actionId !== "submit") {
     return;
   }
-  store.addTweenProperty({ property: values.property });
+  store.addAudioEffectProperty({
+    property: values.property,
+    side: store.selectAddPropertySide(),
+  });
   render();
 };
 
 export const handleRemovePropertyClick = (deps) => {
   const { appService, render, store } = deps;
   const copy = selectCopy(deps);
-  if (store.selectViewData().properties.length <= 1) {
+  if (!store.selectViewData().canRemoveSelectedProperty) {
     appService.showAlert({
       title: copy.warningTitle ?? "Warning",
       message:
         copy.updatePropertyRequired ??
-        "An update effect must contain at least one property.",
+        "An audio effect must contain at least one property.",
     });
     return;
   }
 
-  const property = store.selectSelectedProperty()?.property;
-  if (!property) {
+  const selectedProperty = store.selectSelectedProperty();
+  if (!selectedProperty) {
     return;
   }
-  store.removeTweenProperty({ property });
+  store.removeAudioEffectProperty(selectedProperty);
   render();
 };
 
@@ -431,20 +435,19 @@ export const handleAddKeyframeFromTimeline = (deps, payload) => {
   const { render, store } = deps;
   const { delay, duration, followingDelay, index, property, side } =
     payload._event.detail;
-  const transitionFade =
-    (side === "prev" || side === "next") && property === "fade";
-  if (side !== "update" && !transitionFade) {
+  if (
+    !["update", "prev", "next"].includes(side) ||
+    !AUDIO_EFFECT_PROPERTY_CONFIG[property]
+  ) {
     return;
   }
 
   const result = buildAudioEffectKeyframe({
-    property: transitionFade ? "volume" : property,
+    property,
     values: {
       useStartValue: false,
       relative: false,
-      value: transitionFade
-        ? 50
-        : AUDIO_EFFECT_PROPERTY_CONFIG[property]?.defaultValue,
+      value: AUDIO_EFFECT_PROPERTY_CONFIG[property].defaultValue,
       delay: delay ?? 0,
       duration: duration ?? 1000,
       easing: "linear",
@@ -489,17 +492,13 @@ export const handleKeyframeMenuClose = (deps) => {
   render();
 };
 
-const createDefaultKeyframe = ({ property, side }) => {
-  const transitionFade =
-    (side === "prev" || side === "next") && property === "fade";
+const createDefaultKeyframe = ({ property }) => {
   return buildAudioEffectKeyframe({
-    property: transitionFade ? "volume" : property,
+    property,
     values: {
       useStartValue: false,
       relative: false,
-      value: transitionFade
-        ? 50
-        : AUDIO_EFFECT_PROPERTY_CONFIG[property]?.defaultValue,
+      value: AUDIO_EFFECT_PROPERTY_CONFIG[property]?.defaultValue,
       delay: 0,
       duration: 1000,
       easing: "linear",
@@ -530,7 +529,7 @@ export const handleKeyframeDropdownItemClick = (deps, payload) => {
   if (value === "delete-keyframe") {
     store.removeKeyframe({ side, property, index });
   } else if (value === "add-left" || value === "add-right") {
-    const result = createDefaultKeyframe({ property, side });
+    const result = createDefaultKeyframe({ property });
     if (!result.valid) {
       return;
     }
@@ -732,16 +731,10 @@ export const handleKeyframeFormAction = (deps, payload) => {
     return;
   }
 
-  const side = store.selectKeyframeDialogSide();
   const finalKeyframe = store.selectKeyframeDialogIsFinal();
-  const transitionKeyframe = side === "prev" || side === "next";
   const result = buildAudioEffectKeyframe({
-    allowRelative: !transitionKeyframe,
     finalKeyframe,
-    fixedValue: side === "next" && finalKeyframe ? 100 : undefined,
-    property: transitionKeyframe
-      ? "volume"
-      : store.selectKeyframeDialogProperty(),
+    property: store.selectKeyframeDialogProperty(),
     values,
   });
   if (!result.valid) {

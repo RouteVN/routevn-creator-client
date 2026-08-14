@@ -1,5 +1,6 @@
 import { describe, expect, it, vi } from "vitest";
 import {
+  handleAddPropertyClick,
   handleAddKeyframeFromTimeline,
   handleBackClick,
   handleEditorTabClick,
@@ -33,6 +34,31 @@ import {
 import { EN_I18N } from "../support/i18n.js";
 
 describe("audioEffectsEditor.handlers", () => {
+  it("opens property creation for the requested transition side", () => {
+    const refs = {
+      addPropertyForm: { reset: vi.fn(), setValues: vi.fn() },
+    };
+    const store = {
+      openAddPropertyDialog: vi.fn(),
+      selectViewData: vi.fn(() => ({
+        addPropertyFormDefaults: { property: "pan" },
+      })),
+    };
+    const render = vi.fn();
+
+    handleAddPropertyClick(
+      { refs, render, store },
+      { _event: { currentTarget: { dataset: { side: "next" } } } },
+    );
+
+    expect(store.openAddPropertyDialog).toHaveBeenCalledWith({ side: "next" });
+    expect(refs.addPropertyForm.reset).toHaveBeenCalledOnce();
+    expect(refs.addPropertyForm.setValues).toHaveBeenCalledWith({
+      values: { property: "pan" },
+    });
+    expect(render).toHaveBeenCalledOnce();
+  });
+
   it("toggles preview looping", () => {
     const store = { togglePreviewLoop: vi.fn() };
     const render = vi.fn();
@@ -227,7 +253,7 @@ describe("audioEffectsEditor.handlers", () => {
     expect(render).toHaveBeenCalledOnce();
   });
 
-  it("adds and selects an intermediate transition fade keyframe", () => {
+  it("adds and selects an intermediate transition volume keyframe", () => {
     const store = { addKeyframe: vi.fn() };
     const render = vi.fn();
 
@@ -237,7 +263,7 @@ describe("audioEffectsEditor.handlers", () => {
         _event: {
           detail: {
             side: "prev",
-            property: "fade",
+            property: "volume",
             index: 1,
             delay: 50,
             duration: 300,
@@ -248,12 +274,12 @@ describe("audioEffectsEditor.handlers", () => {
     );
 
     expect(store.addKeyframe).toHaveBeenCalledWith({
-      property: "fade",
+      property: "volume",
       side: "prev",
       index: 1,
       followingDelay: 25,
       keyframe: {
-        value: 50,
+        value: 100,
         delay: 50,
         duration: 300,
         easing: "linear",
@@ -291,14 +317,14 @@ describe("audioEffectsEditor.handlers", () => {
       { store, render },
       {
         _event: {
-          detail: { side: "prev", property: "fade" },
+          detail: { side: "prev", property: "volume" },
         },
       },
     );
 
     expect(store.setSelectedProperty).toHaveBeenCalledWith({
       side: "prev",
-      property: "fade",
+      property: "volume",
     });
     expect(render).toHaveBeenCalledOnce();
   });
@@ -341,7 +367,7 @@ describe("audioEffectsEditor.handlers", () => {
         _event: {
           detail: {
             side: "next",
-            property: "fade",
+            property: "volume",
             index: "1",
             x: 120,
             y: 160,
@@ -352,12 +378,12 @@ describe("audioEffectsEditor.handlers", () => {
 
     expect(store.setSelectedKeyframe).toHaveBeenCalledWith({
       side: "next",
-      property: "fade",
+      property: "volume",
       index: "1",
     });
     expect(store.openKeyframeMenu).toHaveBeenCalledWith({
       side: "next",
-      property: "fade",
+      property: "volume",
       index: "1",
       x: 120,
       y: 160,
@@ -374,7 +400,7 @@ describe("audioEffectsEditor.handlers", () => {
       closeKeyframeMenu: vi.fn(),
       selectKeyframeMenu: vi.fn(() => ({
         side: "prev",
-        property: "fade",
+        property: "volume",
         index: 1,
       })),
     };
@@ -387,10 +413,10 @@ describe("audioEffectsEditor.handlers", () => {
 
     expect(store.addKeyframe).toHaveBeenCalledWith({
       side: "prev",
-      property: "fade",
+      property: "volume",
       index: expectedIndex,
       keyframe: {
-        value: 50,
+        value: 100,
         duration: 1000,
         easing: "linear",
       },
@@ -557,10 +583,16 @@ describe("audioEffectsEditor.handlers", () => {
     const definition = {
       type: "transition",
       next: {
-        fade: {
-          delay: 25,
-          duration: 500,
-          easing: "easeOutQuad",
+        volume: {
+          initialValue: 0,
+          keyframes: [
+            {
+              value: 100,
+              delay: 25,
+              duration: 500,
+              easing: "easeOutQuad",
+            },
+          ],
         },
       },
     };
@@ -593,10 +625,16 @@ describe("audioEffectsEditor.handlers", () => {
         audioEffect: {
           type: "transition",
           next: {
-            fade: {
-              delay: 25,
-              duration: 500,
-              easing: "easeOutQuad",
+            volume: {
+              initialValue: 0,
+              keyframes: [
+                {
+                  value: 100,
+                  delay: 25,
+                  duration: 500,
+                  easing: "easeOutQuad",
+                },
+              ],
             },
           },
         },
@@ -616,7 +654,7 @@ describe("audioEffectsEditor.handlers", () => {
         _event: {
           detail: {
             side: "next",
-            property: "fade",
+            property: "volume",
             index: 0,
             delay: 25,
             duration: 500,
@@ -627,7 +665,7 @@ describe("audioEffectsEditor.handlers", () => {
 
     expect(store.updateKeyframeTiming).toHaveBeenCalledWith({
       side: "next",
-      property: "fade",
+      property: "volume",
       index: 0,
       delay: 25,
       duration: 500,

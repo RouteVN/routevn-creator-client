@@ -73,6 +73,14 @@ refs:
     eventListeners:
       click:
         handler: handleAddPropertyClick
+  addPreviousPropertyButton:
+    eventListeners:
+      click:
+        handler: handleAddPropertyClick
+  addNextPropertyButton:
+    eventListeners:
+      click:
+        handler: handleAddPropertyClick
   removePropertyButton:
     eventListeners:
       click:
@@ -239,7 +247,13 @@ template:
                               - 'rtgl-button#timelineZoomIn sq v=ol s=sm aria-label="${timelineZoomInLabel}" title="${timelineZoomInLabel}"': +
                       - $if selectedEditorTab == 'timeline' && isUpdate:
                           - $if canAddProperty:
-                              - rtgl-button#addPropertyButton pre=plus s=sm: ${addPropertyButton}
+                              - 'rtgl-button#addPropertyButton data-side=update pre=plus s=sm': ${addPropertyButton}
+                      - $if selectedEditorTab == 'timeline' && isTransition:
+                          - rtgl-view d=h av=c g=sm:
+                              - $if canAddPreviousProperty:
+                                  - 'rtgl-button#addPreviousPropertyButton data-side=prev pre=plus s=sm': ${outgoingTimelineLabel}
+                              - $if canAddNextProperty:
+                                  - 'rtgl-button#addNextPropertyButton data-side=next pre=plus s=sm': ${incomingTimelineLabel}
                       - $if selectedEditorTab == 'preview':
                           - 'rtgl-button#savePreviewButton s=sm ?disabled=${saving}': ${saveButton}
                   - $if selectedEditorTab == 'timeline':
