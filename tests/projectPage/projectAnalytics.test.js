@@ -110,8 +110,8 @@ describe("project analytics", () => {
       {
         key: "animatedAssets",
         resources: [
-          { key: "audioEffects", count: 0 },
           { key: "animations", count: 0 },
+          { key: "audioEffects", count: 0 },
           { key: "particles", count: 0 },
           { key: "spritesheets", count: 0 },
         ],

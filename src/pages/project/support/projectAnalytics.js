@@ -8,7 +8,7 @@ export const PROJECT_ANALYTICS_RESOURCE_GROUPS = Object.freeze([
   },
   {
     key: "animatedAssets",
-    resourceKeys: ["audioEffects", "animations", "particles", "spritesheets"],
+    resourceKeys: ["animations", "audioEffects", "particles", "spritesheets"],
   },
   {
     key: "userInterface",
