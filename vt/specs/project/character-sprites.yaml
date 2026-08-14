@@ -165,6 +165,18 @@ steps:
     timeoutMs: 10000
   - action: wait
     ms: 400
+  - action: assert
+    type: js
+    fn: eval
+    args:
+      - "(() => { const deepQuery = (root, selector) => { if (!root) return undefined; const direct = root.querySelector?.(selector); if (direct) return direct; for (const node of root.querySelectorAll?.('*') ?? []) { const found = node.shadowRoot ? deepQuery(node.shadowRoot, selector) : undefined; if (found) return found; } return undefined; }; return deepQuery(document, '#previewBreadcrumb')?.textContent?.trim(); })()"
+    value: Default Sprites > spritesheet
+  - action: assert
+    type: js
+    fn: eval
+    args:
+      - "(() => { const deepQuery = (root, selector) => { if (!root) return undefined; const direct = root.querySelector?.(selector); if (direct) return direct; for (const node of root.querySelectorAll?.('*') ?? []) { const found = node.shadowRoot ? deepQuery(node.shadowRoot, selector) : undefined; if (found) return found; } return undefined; }; const breadcrumb = deepQuery(document, '#previewBreadcrumb').getBoundingClientRect(); const controls = deepQuery(document, '#previewModeControls').getBoundingClientRect(); return Math.abs((breadcrumb.top + breadcrumb.height / 2) - (controls.top + controls.height / 2)) < 1 && Math.abs(controls.top - 8) < 1; })()"
+    value: true
   - action: screenshot
   - action: keypress
     key: l

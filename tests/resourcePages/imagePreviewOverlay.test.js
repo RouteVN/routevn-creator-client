@@ -41,11 +41,18 @@ describe("imagePreviewOverlay", () => {
     expect(style).toContain("transform: translate(-50%, -50%)");
   });
 
-  it("positions the centered top bar above the preview frame", () => {
-    const style = createImagePreviewTopBarStyle();
+  it("positions the centered top bar at the top of the app viewport", () => {
+    const style = createImagePreviewTopBarStyle({
+      width: 1920,
+      height: 1080,
+    });
 
-    expect(style).toContain("position: absolute");
-    expect(style).toContain("bottom: calc(100% + 8px)");
+    expect(style).toContain(
+      "width: min(88vw, calc((var(--rvn-app-viewport-height, 100vh) - 120px) * (1920 / 1080)))",
+    );
+    expect(style).toContain("position: fixed");
+    expect(style).toContain("top: 8px");
+    expect(style).toContain("transform: translateX(-50%)");
     expect(style).toContain("display: grid");
     expect(style).toContain(
       "grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr)",

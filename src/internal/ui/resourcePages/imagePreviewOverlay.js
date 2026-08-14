@@ -35,12 +35,17 @@ export const createImagePreviewLayoutStyle = (projectResolution) => {
   ].join("; ");
 };
 
-export const createImagePreviewTopBarStyle = () => {
+export const createImagePreviewTopBarStyle = (projectResolution) => {
+  const aspectRatio = formatProjectResolutionAspectRatio(projectResolution);
+
   return [
-    "position: absolute",
-    "left: 0",
-    "right: 0",
-    "bottom: calc(100% + 8px)",
+    `width: min(88vw, calc((${APP_VIEWPORT_HEIGHT} - 120px) * (${aspectRatio})))`,
+    "max-width: 88vw",
+    "position: fixed",
+    "top: 8px",
+    "left: 50%",
+    "transform: translateX(-50%)",
+    "z-index: 3002",
     "display: grid",
     "grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr)",
     "align-items: center",
@@ -110,7 +115,7 @@ export const createImagePreviewOverlayViewData = ({
   fullImagePreviewFileId: state.fullImagePreviewFileId,
   fullImagePreviewBreadcrumb: breadcrumb ?? "",
   fullImagePreviewLayoutStyle: createImagePreviewLayoutStyle(projectResolution),
-  fullImagePreviewTopBarStyle: createImagePreviewTopBarStyle(),
+  fullImagePreviewTopBarStyle: createImagePreviewTopBarStyle(projectResolution),
   fullImagePreviewFrameStyle: createImagePreviewFrameStyle(projectResolution),
   fullImagePreviewImageWrapperStyle: createImagePreviewImageWrapperStyle({
     image,
