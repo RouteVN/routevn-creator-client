@@ -457,6 +457,8 @@ export const selectViewData = ({ state, props, props: attrs }) => {
         svg = "spritesheets";
       } else if (item.type === "sound") {
         svg = "audio";
+      } else if (item.type === "audioEffect") {
+        svg = "audioEffects";
       } else if (item.type.startsWith("text")) {
         svg = "text";
       } else if (item.type.startsWith("container")) {

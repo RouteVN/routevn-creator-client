@@ -72,6 +72,28 @@ describe("baseFileExplorer.store", () => {
     expect(viewData.items[0].svg).toBe("audio");
   });
 
+  it("uses the audio effects icon for audio effects", () => {
+    const state = createInitialState();
+    const viewData = selectViewData({
+      state,
+      props: {
+        items: [
+          {
+            id: "audio-effect-1",
+            type: "audioEffect",
+            name: "Fade In",
+            _level: 0,
+            hasChildren: false,
+            parentId: null,
+          },
+        ],
+      },
+    });
+
+    expect(viewData.items).toHaveLength(1);
+    expect(viewData.items[0].svg).toBe("audioEffects");
+  });
+
   it("preserves an explicit item icon", () => {
     const state = createInitialState();
     const viewData = selectViewData({
