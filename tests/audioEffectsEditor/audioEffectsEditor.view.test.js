@@ -23,6 +23,10 @@ describe("audioEffectsEditor view", () => {
     );
     expect(view).toContain("rtgl-slider-input#selectedKeyframeStartValue");
     expect(view).toContain("rtgl-input-number#selectedKeyframeStartValue");
+    expect(view).toContain("$if selectedKeyframeEditor.startValueSlider:");
+    expect(view).toContain(
+      "min=${selectedKeyframeEditor.startValueSlider.min}",
+    );
     expect(view).toContain("rtgl-dropdown-menu#selectedKeyframeAddMenu");
     expect(view).toContain("rtgl-slider-input#selectedPropertyInitialValue");
     expect(view).toContain("rtgl-input-number#selectedPropertyInitialValue");

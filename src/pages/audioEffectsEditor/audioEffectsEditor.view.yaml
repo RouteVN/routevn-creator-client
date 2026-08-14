@@ -315,8 +315,8 @@ template:
                                       - rtgl-view d=h w=f av=c:
                                           - rtgl-text w=1fg c=mu-fg: ${selectedKeyframeEditor.startValueLabel}
                                           - 'rtgl-button#selectedKeyframeRemoveStartValueButton sq v=gh pre=x aria-label="${removeStartValueButtonLabel}" title="${removeStartValueButtonLabel}"': null
-                                      - $if selectedKeyframeEditor.valueSlider:
-                                          - rtgl-slider-input#selectedKeyframeStartValue key=${selectedKeyframeDetailId} w=f value=${selectedKeyframeEditor.startValue} min=${selectedKeyframeEditor.valueSlider.min} max=${selectedKeyframeEditor.valueSlider.max} step=${selectedKeyframeEditor.valueSlider.step}: null
+                                      - $if selectedKeyframeEditor.startValueSlider:
+                                          - rtgl-slider-input#selectedKeyframeStartValue key=${selectedKeyframeDetailId} w=f value=${selectedKeyframeEditor.startValue} min=${selectedKeyframeEditor.startValueSlider.min} max=${selectedKeyframeEditor.startValueSlider.max} step=${selectedKeyframeEditor.startValueSlider.step}: null
                                         $else:
                                           - rtgl-input-number#selectedKeyframeStartValue key=${selectedKeyframeDetailId} w=f step=${selectedKeyframeEditor.valueStep} value=${selectedKeyframeEditor.startValue}: null
                               - $if selectedKeyframeEditor.valueSlider:

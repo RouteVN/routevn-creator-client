@@ -747,6 +747,55 @@ describe("audioEffectsEditor.store", () => {
     });
   });
 
+  it("keeps relative start-value deltas outside absolute slider bounds", () => {
+    const state = createInitialState();
+    loadAudioEffect(
+      { state },
+      {
+        item: {
+          id: "relative-volume",
+          name: "Relative Volume",
+          audioEffect: {
+            type: "update",
+            tween: {
+              volume: {
+                keyframes: [
+                  {
+                    startValue: -25,
+                    value: 20,
+                    relative: true,
+                    duration: 100,
+                    easing: "linear",
+                  },
+                  { value: 100, duration: 100, easing: "linear" },
+                ],
+              },
+            },
+          },
+        },
+      },
+    );
+    setSelectedKeyframe(
+      { state },
+      { side: "update", property: "volume", index: 0 },
+    );
+
+    const editor = selectViewData({
+      state,
+      i18n: EN_I18N,
+    }).selectedKeyframeEditor;
+
+    expect(editor).toMatchObject({
+      relative: true,
+      startValue: -25,
+      valueSlider: { min: 0, max: 100, step: 1 },
+    });
+    expect(editor).toHaveProperty("startValueSlider", undefined);
+
+    setSelectedKeyframeStartValue({ state }, { startValue: -40 });
+    expect(state.definition.tween.volume.keyframes[0].startValue).toBe(-40);
+  });
+
   it("maps transition definitions into timeline tracks", () => {
     const state = createInitialState();
     loadAudioEffect(

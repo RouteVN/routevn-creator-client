@@ -1208,6 +1208,14 @@ const buildSelectedKeyframePanelData = (state, copy = {}) => {
   const lockedIncomingEndpoint =
     side === "next" && property === "fade" && finalKeyframe;
   const hasStartValue = keyframe.startValue !== undefined;
+  const valueSlider =
+    propertyConfig.max === undefined
+      ? undefined
+      : {
+          min: propertyConfig.min,
+          max: propertyConfig.max,
+          step: propertyConfig.step,
+        };
   const fields = [
     {
       type: "text",
@@ -1274,18 +1282,12 @@ const buildSelectedKeyframePanelData = (state, copy = {}) => {
       hasStartValue,
       startValue: keyframe.startValue,
       startValueLabel: copy.startValueLabel ?? "Start value",
+      startValueSlider: keyframe.relative === true ? undefined : valueSlider,
       value: keyframe.value,
       valueDisabled: lockedIncomingEndpoint,
       valueEditable: !lockedIncomingEndpoint,
       valueStep: propertyConfig.step ?? 0.01,
-      valueSlider:
-        propertyConfig.max === undefined
-          ? undefined
-          : {
-              min: propertyConfig.min,
-              max: propertyConfig.max,
-              step: propertyConfig.step,
-            },
+      valueSlider,
     },
     fields,
   };
