@@ -1068,38 +1068,6 @@
           }
         }
       },
-      "UntGYnWj9HKq": {
-        "id": "UntGYnWj9HKq",
-        "type": "audioEffect",
-        "name": "Partial crossfade 1s",
-        "description": "",
-        "audioEffect": {
-          "type": "transition",
-          "prev": {
-            "fade": {
-              "keyframes": [
-                {
-                  "value": 0,
-                  "duration": 750,
-                  "easing": "linear"
-                }
-              ]
-            }
-          },
-          "next": {
-            "fade": {
-              "keyframes": [
-                {
-                  "value": 100,
-                  "delay": 250,
-                  "duration": 750,
-                  "easing": "linear"
-                }
-              ]
-            }
-          }
-        }
-      },
       "iJ62KMzKszTq": {
         "id": "iJ62KMzKszTq",
         "type": "audioEffect",
@@ -1145,9 +1113,6 @@
           },
           {
             "id": "a65dzppVeTPc"
-          },
-          {
-            "id": "UntGYnWj9HKq"
           },
           {
             "id": "iJ62KMzKszTq"

@@ -27,7 +27,6 @@ describe("default template audio effects", () => {
       "Fade in 1s",
       "Fade out 1s",
       "Crossfade 1s",
-      "Partial crossfade 1s",
       "Fade-through 1s",
     ]);
     expect(
@@ -99,30 +98,6 @@ describe("default template audio effects", () => {
           type: "transition",
           prev: {
             fade: {
-              keyframes: [{ value: 0, duration: 750, easing: "linear" }],
-            },
-          },
-          next: {
-            fade: {
-              keyframes: [
-                {
-                  value: 100,
-                  delay: 250,
-                  duration: 750,
-                  easing: "linear",
-                },
-              ],
-            },
-          },
-        },
-      },
-      {
-        type: "audioEffect",
-        description: "",
-        audioEffect: {
-          type: "transition",
-          prev: {
-            fade: {
               keyframes: [{ value: 0, duration: 500, easing: "linear" }],
             },
           },
@@ -145,6 +120,6 @@ describe("default template audio effects", () => {
       audioEffects.map(({ audioEffect }) =>
         getAudioEffectDefinitionDuration(audioEffect),
       ),
-    ).toEqual([1000, 1000, 1000, 1000, 1000]);
+    ).toEqual([1000, 1000, 1000, 1000]);
   });
 });
