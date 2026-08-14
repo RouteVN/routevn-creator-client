@@ -276,4 +276,63 @@ describe("app.store floating help button", () => {
     );
     expect(selectViewData({ state: iosState }).helpButtonBottom).toBe("128px");
   });
+
+  it("raises the Android touch help button only on the scene editor", () => {
+    const androidState = createInitialState();
+    setPlatform({ state: androidState }, { platform: "android" });
+    setUiConfig(
+      { state: androidState },
+      { uiConfig: { id: "touch", inputMode: "touch" } },
+    );
+    setCurrentRoute(
+      { state: androidState },
+      {
+        route: "/project/scene-editor",
+        payload: { p: "project-1", s: "scene-1" },
+      },
+    );
+
+    expect(selectViewData({ state: androidState }).helpButtonBottom).toBe(
+      "140px",
+    );
+
+    setCurrentRoute(
+      { state: androidState },
+      { route: "/project/scenes", payload: { p: "project-1" } },
+    );
+
+    expect(selectViewData({ state: androidState }).helpButtonBottom).toBe(
+      "92px",
+    );
+
+    const iosState = createInitialState();
+    setPlatform({ state: iosState }, { platform: "ios" });
+    setUiConfig(
+      { state: iosState },
+      { uiConfig: { id: "touch", inputMode: "touch" } },
+    );
+    setCurrentRoute(
+      { state: iosState },
+      {
+        route: "/project/scene-editor",
+        payload: { p: "project-1", s: "scene-1" },
+      },
+    );
+
+    expect(selectViewData({ state: iosState }).helpButtonBottom).toBe("128px");
+
+    const desktopState = createInitialState();
+    setPlatform({ state: desktopState }, { platform: "android" });
+    setCurrentRoute(
+      { state: desktopState },
+      {
+        route: "/project/scene-editor",
+        payload: { p: "project-1", s: "scene-1" },
+      },
+    );
+
+    expect(selectViewData({ state: desktopState }).helpButtonBottom).toBe(
+      "24px",
+    );
+  });
 });

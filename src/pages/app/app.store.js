@@ -17,6 +17,7 @@ const MOBILE_TAB_BAR_HEIGHT_PX = 64;
 const HELP_BUTTON_BOTTOM_OFFSET_PX = 24;
 const HELP_BUTTON_TOUCH_BOTTOM_OFFSET_PX = 28;
 const HELP_BUTTON_IOS_EXTRA_BOTTOM_OFFSET_PX = 36;
+const SCENE_EDITOR_ANDROID_HELP_BUTTON_EXTRA_BOTTOM_OFFSET_PX = 48;
 const MOBILE_TAB_BAR_ACTIVE_COLOR = "white";
 const MOBILE_TAB_BAR_INACTIVE_COLOR = "mu-fg";
 
@@ -280,8 +281,15 @@ const selectRepositoryLoadingProgressPercent = ({ state }) => {
 
 export const selectViewData = ({ state, i18n }) => {
   const copy = selectAppCopy(i18n);
+  const currentRoutePattern = selectCurrentRoutePattern({ state });
   const showSidebar = selectShowSidebar({ state });
   const showMobileTabBar = selectShowMobileTabBar({ state });
+  const sceneEditorAndroidHelpButtonExtraBottomOffset =
+    state.isTouchMode &&
+    state.platform === "android" &&
+    currentRoutePattern === "/project/scene-editor"
+      ? SCENE_EDITOR_ANDROID_HELP_BUTTON_EXTRA_BOTTOM_OFFSET_PX
+      : 0;
   const repositoryLoadingProgressPercent =
     selectRepositoryLoadingProgressPercent({
       state,
@@ -292,7 +300,7 @@ export const selectViewData = ({ state, i18n }) => {
 
   return {
     ...state,
-    currentRoutePattern: selectCurrentRoutePattern({ state }),
+    currentRoutePattern,
     showSidebar,
     showMobileTabBar,
     mobileTabBarItems: selectMobileTabBarItems({ state, i18n }),
@@ -308,7 +316,8 @@ export const selectViewData = ({ state, i18n }) => {
           HELP_BUTTON_TOUCH_BOTTOM_OFFSET_PX +
           (state.platform === "ios"
             ? HELP_BUTTON_IOS_EXTRA_BOTTOM_OFFSET_PX
-            : 0)
+            : 0) +
+          sceneEditorAndroidHelpButtonExtraBottomOffset
         }px`
       : `${HELP_BUTTON_BOTTOM_OFFSET_PX}px`,
     repositoryLoadingProgressPercent,
