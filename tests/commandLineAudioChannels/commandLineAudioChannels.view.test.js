@@ -118,6 +118,32 @@ describe("command-line audio channel views", () => {
     expect(emptyAddStyles).toContain("justify-content: center");
   });
 
+  it("shows a centered plus in an empty Voice channel preview", () => {
+    const view = readFileSync(
+      new URL(
+        "../../src/components/commandLineVoice/commandLineVoice.view.yaml",
+        import.meta.url,
+      ),
+      "utf8",
+    );
+    const templateStart = view.indexOf("template:");
+    const editorStart = view.indexOf(
+      "  - rtgl-dialog#channelEditorDialog",
+      templateStart,
+    );
+    const mainView = view.slice(templateStart, editorStart);
+    const emptyAddStyleStart = view.indexOf('  ".voiceEmptyAdd":');
+    const emptyAddStyles = view.slice(
+      emptyAddStyleStart,
+      view.indexOf('  ".voiceEmptyAdd:hover":', emptyAddStyleStart),
+    );
+
+    expect(mainView).toContain('div.voiceEmptyAdd aria-hidden=true\': "+"');
+    expect(mainView).not.toContain("${emptyAudioLabel}");
+    expect(emptyAddStyles).toContain("align-items: center");
+    expect(emptyAddStyles).toContain("justify-content: center");
+  });
+
   it("remounts audio channel forms from their state-derived keys", () => {
     const bgmView = readFileSync(
       new URL(

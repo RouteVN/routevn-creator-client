@@ -186,7 +186,7 @@ export const handleAfterMount = async (deps) => {
   render();
 };
 
-export const handleChannelClick = (deps, payload) => {
+export const handleChannelClick = async (deps, payload) => {
   const { store, render, appService } = deps;
   const { _event: event } = payload;
   if (
@@ -198,18 +198,23 @@ export const handleChannelClick = (deps, payload) => {
   }
   event.stopPropagation();
   appService.blurActiveElement();
+  if (!store.selectHasVoiceSounds()) {
+    await pickAndInsertVoice(deps, 0);
+    return;
+  }
+
   store.openChannelEditor();
   render();
 };
 
-export const handleChannelKeyDown = (deps, payload) => {
+export const handleChannelKeyDown = async (deps, payload) => {
   const { _event: event } = payload;
   if (!isSelectionKey(event) || event.target !== event.currentTarget) {
     return;
   }
 
   event.preventDefault();
-  handleChannelClick(deps, payload);
+  await handleChannelClick(deps, payload);
 };
 
 export const handleChannelEditorClose = (deps) => {

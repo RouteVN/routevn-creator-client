@@ -78,6 +78,7 @@ const createUploadHarness = () => {
     })),
     showAlert: vi.fn(),
     showDropdownMenu: vi.fn(),
+    blurActiveElement: vi.fn(),
   };
 
   return { appService, projectService, uploadResult };
@@ -207,14 +208,14 @@ describe("commandLineVoice.handlers", () => {
     expect(render).toHaveBeenCalledTimes(2);
   });
 
-  it("opens the Voice channel editor from its channel", () => {
+  it("opens the Voice channel editor from a populated channel", async () => {
     const state = voiceStore.createInitialState();
     const store = createStore(state);
     const render = vi.fn();
     const blurActiveElement = vi.fn();
     store.insertSound({ id: "clip", resourceId: "voice-1", index: 0 });
 
-    handleChannelClick(
+    await handleChannelClick(
       { store, render, appService: { blurActiveElement } },
       { _event: { stopPropagation: vi.fn() } },
     );
@@ -224,6 +225,37 @@ describe("commandLineVoice.handlers", () => {
     expect(state.selectedSoundId).toBeUndefined();
     expect(blurActiveElement).toHaveBeenCalledOnce();
     expect(render).toHaveBeenCalledOnce();
+  });
+
+  it("picks and adds Voice audio directly from an empty channel", async () => {
+    const state = voiceStore.createInitialState();
+    const { deps, appService, render } = createUploadDeps(state);
+    const stopPropagation = vi.fn();
+
+    await handleChannelClick(deps, {
+      _event: { stopPropagation },
+    });
+
+    expect(stopPropagation).toHaveBeenCalledOnce();
+    expect(appService.blurActiveElement).toHaveBeenCalledOnce();
+    expect(appService.pickFiles).toHaveBeenCalledOnce();
+    expect(state.voice.sounds).toHaveLength(1);
+    expect(state.isChannelEditorOpen).toBe(false);
+    expect(render).toHaveBeenCalledOnce();
+  });
+
+  it("leaves an empty Voice channel unchanged when picking is cancelled", async () => {
+    const state = voiceStore.createInitialState();
+    const { deps, appService, render } = createUploadDeps(state);
+    appService.pickFiles.mockResolvedValueOnce(undefined);
+
+    await handleChannelClick(deps, {
+      _event: { stopPropagation: vi.fn() },
+    });
+
+    expect(state.voice.sounds).toEqual([]);
+    expect(state.isChannelEditorOpen).toBe(false);
+    expect(render).not.toHaveBeenCalled();
   });
 
   it("removes a Voice clip from its context menu", async () => {

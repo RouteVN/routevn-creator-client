@@ -187,6 +187,10 @@ export const createInitialState = () => ({
 
 export const selectVoice = ({ state }) => state.voice;
 
+export const selectHasVoiceSounds = ({ state }) => {
+  return state.voice.sounds.length > 0;
+};
+
 export const selectVoicePayload = ({ state }) => {
   return normalizeVoice(state.voice);
 };
@@ -298,7 +302,6 @@ export const selectViewData = ({ state, i18n }) => {
     channelEditorTitle: channelName,
     confirmButtonLabel: localizeCommandLineText("Confirm", copy),
     editChannelLabel: localizeCommandLineText("Edit Channel", copy),
-    emptyAudioLabel: localizeCommandLineText("No audio", copy),
     addAudioLabel: localizeCommandLineText("Add voice audio", copy),
     addBeforeLabel: localizeCommandLineText("Add audio before", copy),
     addAfterLabel: localizeCommandLineText("Add audio after", copy),

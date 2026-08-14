@@ -265,6 +265,7 @@ export const createInitialState = () => ({
   pendingChannelId: undefined,
   pendingInsertIndex: 0,
   pendingReplacementSoundId: undefined,
+  closeEditorAfterSoundSelection: false,
   tempSelectedResourceId: undefined,
   searchQuery: "",
   addChannelPopover: {
@@ -327,6 +328,10 @@ export const selectPendingInsertIndex = ({ state }) => {
 
 export const selectPendingReplacementSoundId = ({ state }) => {
   return state.pendingReplacementSoundId;
+};
+
+export const selectCloseEditorAfterSoundSelection = ({ state }) => {
+  return state.closeEditorAfterSoundSelection;
 };
 
 export const selectTempSelectedResourceId = ({ state }) => {
@@ -577,6 +582,7 @@ export const setSfx = ({ state }, { sfx } = {}) => {
   state.selectedSoundId = undefined;
   state.pendingChannelId = undefined;
   state.pendingReplacementSoundId = undefined;
+  state.closeEditorAfterSoundSelection = false;
 };
 
 export const addChannel = ({ state }, { id } = {}) => {
@@ -652,6 +658,7 @@ export const openChannelEditor = ({ state }, { channelId } = {}) => {
   state.editingChannelId = channelId;
   state.selectedSoundId = undefined;
   state.addChannelPopover.isOpen = false;
+  state.closeEditorAfterSoundSelection = false;
 };
 
 export const closeChannelEditor = ({ state }, _payload = {}) => {
@@ -662,6 +669,7 @@ export const closeChannelEditor = ({ state }, _payload = {}) => {
   state.pendingChannelId = undefined;
   state.tempSelectedResourceId = undefined;
   state.pendingReplacementSoundId = undefined;
+  state.closeEditorAfterSoundSelection = false;
   closeAudioPlayer({ state });
 };
 
@@ -903,6 +911,13 @@ export const setPendingReplacement = (
 ) => {
   state.pendingChannelId = channelId;
   state.pendingReplacementSoundId = soundId;
+};
+
+export const setCloseEditorAfterSoundSelection = (
+  { state },
+  { close } = {},
+) => {
+  state.closeEditorAfterSoundSelection = close ?? false;
 };
 
 export const setTempSelectedResource = ({ state }, { resourceId } = {}) => {

@@ -317,6 +317,7 @@ export const createInitialState = () => ({
   tempSelectedResourceId: undefined,
   pendingInsertIndex: 0,
   pendingReplacementSoundId: undefined,
+  closeEditorAfterSoundSelection: false,
   channelSelected: false,
   isChannelEditorOpen: false,
   selectedSoundId: undefined,
@@ -337,6 +338,10 @@ export const setUiConfig = ({ state }, { uiConfig } = {}) => {
 };
 
 export const selectBgm = ({ state }) => state.bgm;
+
+export const selectHasBgmSounds = ({ state }) => {
+  return state.bgm.sounds.length > 0;
+};
 
 export const selectSelectedSoundId = ({ state }) => state.selectedSoundId;
 
@@ -366,6 +371,10 @@ export const selectPendingInsertIndex = ({ state }) => {
 
 export const selectPendingReplacementSoundId = ({ state }) => {
   return state.pendingReplacementSoundId;
+};
+
+export const selectCloseEditorAfterSoundSelection = ({ state }) => {
+  return state.closeEditorAfterSoundSelection;
 };
 
 export const selectTempSelectedResourceId = ({ state }) => {
@@ -585,6 +594,7 @@ export const setBgm = ({ state }, { bgm } = {}) => {
   state.isChannelEditorOpen = false;
   state.selectedSoundId = undefined;
   state.pendingReplacementSoundId = undefined;
+  state.closeEditorAfterSoundSelection = false;
 };
 
 export const clearBgm = ({ state }, _payload = {}) => {
@@ -597,6 +607,7 @@ export const clearBgm = ({ state }, _payload = {}) => {
   state.pendingInsertIndex = 0;
   state.tempSelectedResourceId = undefined;
   state.pendingReplacementSoundId = undefined;
+  state.closeEditorAfterSoundSelection = false;
   closeAudioPlayer({ state });
 };
 
@@ -622,6 +633,7 @@ export const openChannelEditor = ({ state }, _payload = {}) => {
   state.channelSelected = false;
   state.isChannelEditorOpen = true;
   state.selectedSoundId = undefined;
+  state.closeEditorAfterSoundSelection = false;
 };
 
 export const closeChannelEditor = ({ state }, _payload = {}) => {
@@ -632,6 +644,7 @@ export const closeChannelEditor = ({ state }, _payload = {}) => {
   state.soundDrag = undefined;
   state.tempSelectedResourceId = undefined;
   state.pendingReplacementSoundId = undefined;
+  state.closeEditorAfterSoundSelection = false;
   closeAudioPlayer({ state });
 };
 
@@ -867,6 +880,13 @@ export const setPendingInsertIndex = ({ state }, { index } = {}) => {
 
 export const setPendingReplacement = ({ state }, { soundId } = {}) => {
   state.pendingReplacementSoundId = soundId;
+};
+
+export const setCloseEditorAfterSoundSelection = (
+  { state },
+  { close } = {},
+) => {
+  state.closeEditorAfterSoundSelection = close ?? false;
 };
 
 export const setTempSelectedResource = ({ state }, { resourceId } = {}) => {

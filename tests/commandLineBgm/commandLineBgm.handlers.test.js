@@ -411,6 +411,37 @@ describe("commandLineBgm.handlers", () => {
     expect(render).toHaveBeenCalledOnce();
   });
 
+  it("opens the gallery from an empty channel and closes after adding", () => {
+    const state = createState();
+    const store = createStore(state);
+    const render = vi.fn();
+    const stopPropagation = vi.fn();
+    const blurActiveElement = vi.fn();
+
+    handleChannelClick(
+      { store, render, appService: { blurActiveElement } },
+      { _event: { stopPropagation } },
+    );
+
+    expect(state.isChannelEditorOpen).toBe(true);
+    expect(state.mode).toBe("gallery");
+    expect(state.pendingInsertIndex).toBe(0);
+    expect(state.closeEditorAfterSoundSelection).toBe(true);
+    expect(stopPropagation).toHaveBeenCalledOnce();
+    expect(blurActiveElement).toHaveBeenCalledOnce();
+    expect(render).toHaveBeenCalledOnce();
+
+    store.setTempSelectedResource({ resourceId: "intro" });
+    handleButtonSelectClick({ store, render });
+
+    expect(state.bgm.sounds).toHaveLength(1);
+    expect(state.bgm.sounds[0].resourceId).toBe("intro");
+    expect(state.isChannelEditorOpen).toBe(false);
+    expect(state.mode).toBe("current");
+    expect(state.closeEditorAfterSoundSelection).toBe(false);
+    expect(render).toHaveBeenCalledTimes(2);
+  });
+
   it("opens the channel editor when a channel descendant is clicked", () => {
     const state = createState();
     const store = createStore(state);

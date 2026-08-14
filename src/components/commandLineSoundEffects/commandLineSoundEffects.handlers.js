@@ -41,10 +41,19 @@ const syncSelectedSoundForm = ({ refs, store }) => {
   });
 };
 
-const openSfxGallery = ({ store, render, channelId, index }) => {
+const openSfxGallery = ({
+  store,
+  render,
+  channelId,
+  index,
+  closeEditorAfterSelection = false,
+}) => {
   store.setPendingReplacement({ channelId: undefined, soundId: undefined });
   store.setPendingInsertion({ channelId, index });
   store.setTempSelectedResource({ resourceId: undefined });
+  store.setCloseEditorAfterSoundSelection({
+    close: closeEditorAfterSelection,
+  });
   store.setMode({ mode: "gallery" });
   render();
 };
@@ -142,6 +151,18 @@ export const handleChannelClick = (deps, payload) => {
   appService.blurActiveElement();
   const channelId = event.currentTarget.dataset.channelId;
   store.openChannelEditor({ channelId });
+  const channel = store.selectChannelById({ channelId });
+  if (channel.sounds.length === 0) {
+    openSfxGallery({
+      store,
+      render,
+      channelId,
+      index: 0,
+      closeEditorAfterSelection: true,
+    });
+    return;
+  }
+
   render();
 };
 
@@ -512,6 +533,7 @@ export const handleBreadcumbClick = (deps, payload) => {
 
   store.setMode({ mode: id });
   store.setTempSelectedResource({ resourceId: undefined });
+  store.setCloseEditorAfterSoundSelection({ close: false });
   render();
 };
 
@@ -524,6 +546,8 @@ export const handleButtonSelectClick = (deps) => {
   }
 
   const replacementSoundId = store.selectPendingReplacementSoundId();
+  const closeEditorAfterSelection =
+    store.selectCloseEditorAfterSoundSelection();
   if (replacementSoundId) {
     store.replaceSoundResource({
       channelId,
@@ -538,6 +562,10 @@ export const handleButtonSelectClick = (deps) => {
       index: store.selectPendingInsertIndex(),
     });
   }
-  store.setMode({ mode: "current" });
+  if (closeEditorAfterSelection) {
+    store.closeChannelEditor();
+  } else {
+    store.setMode({ mode: "current" });
+  }
   render();
 };

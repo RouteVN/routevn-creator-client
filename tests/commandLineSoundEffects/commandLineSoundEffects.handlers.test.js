@@ -79,7 +79,7 @@ const createState = () => {
 };
 
 describe("commandLineSoundEffects.handlers", () => {
-  it("opens a channel editor when any part of the channel is clicked", () => {
+  it("opens the gallery from an empty channel and closes after adding", () => {
     const state = createState();
     const store = createStore(state);
     const render = vi.fn();
@@ -101,8 +101,51 @@ describe("commandLineSoundEffects.handlers", () => {
 
     expect(state.selectedChannelId).toBe("Channel One");
     expect(state.editingChannelId).toBe("Channel One");
+    expect(state.mode).toBe("gallery");
+    expect(state.pendingChannelId).toBe("Channel One");
+    expect(state.pendingInsertIndex).toBe(0);
+    expect(state.closeEditorAfterSoundSelection).toBe(true);
     expect(stopPropagation).toHaveBeenCalledOnce();
     expect(blurActiveElement).toHaveBeenCalledOnce();
+    expect(render).toHaveBeenCalledOnce();
+
+    store.setTempSelectedResource({ resourceId: "rain" });
+    handleButtonSelectClick({ store, render });
+
+    expect(state.channels[0].sounds).toHaveLength(1);
+    expect(state.channels[0].sounds[0].resourceId).toBe("rain");
+    expect(state.editingChannelId).toBeUndefined();
+    expect(state.mode).toBe("current");
+    expect(state.closeEditorAfterSoundSelection).toBe(false);
+    expect(render).toHaveBeenCalledTimes(2);
+  });
+
+  it("opens the channel editor for a populated channel", () => {
+    const state = createState();
+    const store = createStore(state);
+    const render = vi.fn();
+    const blurActiveElement = vi.fn();
+    store.addChannel({ id: "Weather" });
+    store.insertSound({
+      channelId: "Weather",
+      id: "rain-clip",
+      resourceId: "rain",
+      index: 0,
+    });
+
+    handleChannelClick(
+      { store, render, appService: { blurActiveElement } },
+      {
+        _event: {
+          currentTarget: { dataset: { channelId: "Weather" } },
+          stopPropagation: vi.fn(),
+        },
+      },
+    );
+
+    expect(state.editingChannelId).toBe("Weather");
+    expect(state.mode).toBe("current");
+    expect(state.closeEditorAfterSoundSelection).toBe(false);
     expect(render).toHaveBeenCalledOnce();
   });
 

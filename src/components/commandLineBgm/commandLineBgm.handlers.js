@@ -11,10 +11,18 @@ import {
   selectCommandLineCopy,
 } from "../../internal/ui/sceneEditor/commandLineCopy.js";
 
-const openBgmGallery = ({ store, render, index }) => {
+const openBgmGallery = ({
+  store,
+  render,
+  index,
+  closeEditorAfterSelection = false,
+}) => {
   store.setPendingReplacement({ soundId: undefined });
   store.setPendingInsertIndex({ index });
   store.setTempSelectedResource({ resourceId: undefined });
+  store.setCloseEditorAfterSoundSelection({
+    close: closeEditorAfterSelection,
+  });
   store.setMode({ mode: "gallery" });
   render();
 };
@@ -85,6 +93,16 @@ export const handleChannelClick = (deps, payload) => {
   event.stopPropagation();
   appService.blurActiveElement();
   store.openChannelEditor();
+  if (!store.selectHasBgmSounds()) {
+    openBgmGallery({
+      store,
+      render,
+      index: 0,
+      closeEditorAfterSelection: true,
+    });
+    return;
+  }
+
   render();
 };
 
@@ -425,6 +443,7 @@ export const handleBreadcumbActionsClick = (deps, payload) => {
 
   store.setMode({ mode: id });
   store.setTempSelectedResource({ resourceId: undefined });
+  store.setCloseEditorAfterSoundSelection({ close: false });
   render();
 };
 
@@ -436,6 +455,8 @@ export const handleButtonSelectClick = (deps) => {
   }
 
   const replacementSoundId = store.selectPendingReplacementSoundId();
+  const closeEditorAfterSelection =
+    store.selectCloseEditorAfterSoundSelection();
   if (replacementSoundId) {
     store.replaceSoundResource({
       soundId: replacementSoundId,
@@ -448,6 +469,10 @@ export const handleButtonSelectClick = (deps) => {
       index: store.selectPendingInsertIndex(),
     });
   }
-  store.setMode({ mode: "current" });
+  if (closeEditorAfterSelection) {
+    store.closeChannelEditor();
+  } else {
+    store.setMode({ mode: "current" });
+  }
   render();
 };
