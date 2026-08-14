@@ -15,12 +15,21 @@ describe("audioEffectsEditor view", () => {
     expect(view).toContain("rvn-keyframe-timeline#nextTimeline");
     expect(view).toContain("rvn-detail-view#selectedKeyframeDetails");
     expect(view).toContain("rvn-detail-view#selectedPropertyDetails");
-    expect(view).toContain("rtgl-slider-input#selectedPropertyStartValue");
-    expect(view).toContain("rtgl-input-number#selectedPropertyStartValue");
+    expect(view).toContain(
+      "rtgl-button#selectedKeyframeAddButton sq v=gh pre=plus aria-haspopup=menu",
+    );
+    expect(view).toContain(
+      "rtgl-button#selectedKeyframeRemoveStartValueButton sq v=gh pre=x",
+    );
+    expect(view).toContain("rtgl-slider-input#selectedKeyframeStartValue");
+    expect(view).toContain("rtgl-input-number#selectedKeyframeStartValue");
+    expect(view).toContain("rtgl-dropdown-menu#selectedKeyframeAddMenu");
+    expect(view).toContain("rtgl-slider-input#selectedPropertyInitialValue");
+    expect(view).toContain("rtgl-input-number#selectedPropertyInitialValue");
     expect(view).toContain(
       "rtgl-segmented-control#selectedPropertyValueSource",
     );
-    expect(view).toContain("$if selectedPropertyEditor.valueSource == 'fixed'");
+    expect(view).toContain("$if selectedPropertyEditor.hasInitialValue");
     expect(view).toContain("rtgl-text s=sm c=mu-fg ta=c: ${noSelectionLabel}");
     expect(view).toContain("rtgl-view#editorTabs role=tablist");
     expect(view).toContain("$for item, i in editorTabs");
@@ -61,8 +70,13 @@ describe("audioEffectsEditor view", () => {
     expect(view).toContain("handler: handleKeyframeDropdownItemClick");
     expect(view).toContain("handler: handleKeyframeMenuClose");
     expect(view.match(/handler: handlePropertyNameClick/g)).toHaveLength(3);
-    expect(view).toContain("handler: handleSelectedPropertyStartValueChange");
+    expect(view).toContain("handler: handleSelectedPropertyInitialValueChange");
     expect(view).toContain("handler: handleSelectedPropertyValueSourceChange");
+    expect(view).toContain("handler: handleSelectedKeyframeStartValueChange");
+    expect(view).toContain(
+      "handler: handleSelectedKeyframeRemoveStartValueClick",
+    );
+    expect(view).toContain("handler: handleSelectedKeyframeAddMenuItemClick");
     expect(view.match(/handler: handleAddKeyframeFromTimeline/g)).toHaveLength(
       3,
     );

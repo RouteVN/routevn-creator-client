@@ -866,6 +866,7 @@ animationEditorPage:
   valueTypeLabel: "Value type"
 audioEffectsEditorPage:
   absoluteValueType: "Absolute"
+  addButton: "Add"
   addKeyframeButton: "Add Keyframe"
   addKeyframeLeftMenuItem: "Add keyframe to left"
   addKeyframeRightMenuItem: "Add keyframe to right"
@@ -895,6 +896,7 @@ audioEffectsEditorPage:
   fixedValueOption: "Fixed"
   incomingLabel: "Incoming"
   incomingSoundLabel: "Incoming Sound"
+  initialValueLabel: "Initial value"
   invalidKeyframe: "Enter a valid keyframe value, timing, and easing."
   keyframeDetailsTitle: "Keyframe Details"
   loopPreviewLabel: "Loop preview"
@@ -908,6 +910,7 @@ audioEffectsEditorPage:
   propertyLabel: "Property"
   relativeValueType: "Relative"
   removePropertyButton: "Remove Property"
+  removeStartValueButtonLabel: "Remove start value"
   saveButton: "Save"
   savingButton: "Saving…"
   selectSoundLabel: "Select Sound"

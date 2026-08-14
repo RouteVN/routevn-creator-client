@@ -623,15 +623,64 @@ export const handleSelectedKeyframeValueChange = (deps, payload) => {
   commitSelectedKeyframeChange(deps);
 };
 
+export const handleSelectedKeyframeStartValueChange = (deps, payload) => {
+  const { store } = deps;
+  store.setSelectedKeyframeStartValue({
+    startValue: resolveValueChange(payload),
+  });
+  commitSelectedKeyframeChange(deps);
+};
+
+export const handleSelectedKeyframeRemoveStartValueClick = (deps) => {
+  const { store } = deps;
+  store.setSelectedKeyframeStartValue({ startValue: undefined });
+  commitSelectedKeyframeChange(deps);
+};
+
+export const handleSelectedKeyframeAddClick = (deps, payload) => {
+  const { render, store } = deps;
+  if (!store.selectSelectedKeyframe()) {
+    return;
+  }
+
+  const rect = payload._event.currentTarget.getBoundingClientRect();
+  store.openSelectedKeyframeAddMenu({
+    x: rect.left,
+    y: rect.bottom,
+  });
+  render();
+};
+
+export const handleSelectedKeyframeAddMenuItemClick = (deps, payload) => {
+  const { render, store } = deps;
+  if (payload._event.detail.item.value !== "start-value") {
+    return;
+  }
+
+  store.setSelectedKeyframeStartValue({
+    startValue: store.selectDefaultSelectedKeyframeStartValue(),
+  });
+  store.closeSelectedKeyframeAddMenu();
+  render();
+};
+
+export const handleSelectedKeyframeAddMenuClose = (deps) => {
+  const { render, store } = deps;
+  store.closeSelectedKeyframeAddMenu();
+  render();
+};
+
 export const handleSelectedKeyframeRelativeChange = (deps, payload) => {
   const { store } = deps;
   store.setSelectedKeyframeRelative({ relative: resolveValueChange(payload) });
   commitSelectedKeyframeChange(deps);
 };
 
-export const handleSelectedPropertyStartValueChange = (deps, payload) => {
+export const handleSelectedPropertyInitialValueChange = (deps, payload) => {
   const { render, store } = deps;
-  store.setSelectedPropertyStartValue({ value: resolveValueChange(payload) });
+  store.setSelectedPropertyInitialValue({
+    initialValue: resolveValueChange(payload),
+  });
   render();
 };
 

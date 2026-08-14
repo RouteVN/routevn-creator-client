@@ -214,7 +214,7 @@ const createUpdateTimelineProperties = (tween = {}, copy = {}) =>
       {
         ...cloneDefinition(config),
         label: getPropertyLabel(property, copy),
-        initialValue: config.keyframes?.[0]?.startValue,
+        initialValue: config.initialValue,
         keyframes: createTimelineKeyframes(config.keyframes),
       },
     ]),
@@ -227,10 +227,11 @@ const createFadeTimelineProperties = ({ definition, side, copy } = {}) => {
   }
 
   const previous = side === "prev";
+  const initialValue = definition[side]?.fade?.initialValue;
   return {
     fade: {
       label: copy.fadePropertyLabel ?? "Fade",
-      initialValue: keyframes[0]?.startValue ?? (previous ? 100 : 0),
+      initialValue: initialValue ?? (previous ? 100 : 0),
       keyframes: createTimelineKeyframes(keyframes),
     },
   };
@@ -279,6 +280,11 @@ export const createInitialState = () => ({
   timelineViewportWidth: undefined,
   selectedKeyframe: undefined,
   selectedProperty: undefined,
+  selectedKeyframeAddMenu: {
+    open: false,
+    x: undefined,
+    y: undefined,
+  },
   keyframeMenu: {
     open: false,
     x: undefined,
@@ -327,6 +333,9 @@ export const loadAudioEffect = ({ state }, { item } = {}) => {
   state.timelineViewportWidth = undefined;
   state.selectedKeyframe = undefined;
   state.selectedProperty = undefined;
+  state.selectedKeyframeAddMenu.open = false;
+  state.selectedKeyframeAddMenu.x = undefined;
+  state.selectedKeyframeAddMenu.y = undefined;
   closeKeyframeMenu({ state });
   state.dirty = false;
 };
@@ -354,8 +363,47 @@ export const selectPreviewSoundSelectorTarget = ({ state }) =>
   state.previewSoundSelector.target;
 export const selectSelectedKeyframe = ({ state }) => state.selectedKeyframe;
 export const selectSelectedProperty = ({ state }) => state.selectedProperty;
+export const selectSelectedKeyframeAddMenu = ({ state }) =>
+  state.selectedKeyframeAddMenu;
 export const selectIsTouchMode = ({ state }) => state.isTouchMode;
 export const selectKeyframeMenu = ({ state }) => state.keyframeMenu;
+export const selectDefaultSelectedKeyframeStartValue = ({ state }) => {
+  const selectedKeyframe = state.selectedKeyframe;
+  if (!selectedKeyframe) {
+    return 0;
+  }
+
+  const { index, property, side } = selectedKeyframe;
+  const keyframes = getMutableKeyframes(state, selectedKeyframe) ?? [];
+  const selectedFrame = keyframes[index];
+  if (!selectedFrame || selectedFrame.relative) {
+    return 0;
+  }
+
+  const propertyInitialValue =
+    side === "update"
+      ? state.definition.tween?.[property]?.initialValue
+      : state.definition[side]?.fade?.initialValue;
+  let currentValue = Number(propertyInitialValue);
+  if (!Number.isFinite(currentValue)) {
+    currentValue =
+      side === "prev"
+        ? 100
+        : side === "next"
+          ? 0
+          : (AUDIO_EFFECT_PROPERTY_CONFIG[property]?.defaultValue ?? 0);
+  }
+
+  for (const keyframe of keyframes.slice(0, index)) {
+    const value = Number(keyframe.value);
+    if (!Number.isFinite(value)) {
+      continue;
+    }
+    currentValue = keyframe.relative ? currentValue + value : value;
+  }
+
+  return currentValue;
+};
 export const selectKeyframeDialogProperty = ({ state }) =>
   state.keyframeDialog.property;
 export const selectKeyframeDialogSide = ({ state }) =>
@@ -491,19 +539,25 @@ export const selectAudioEffectPreviewData = ({ state }) =>
         target: createPreviewSoundSlot(state.previewSoundIds.target),
       };
 
-const getMutableKeyframes = (state, { side = "update", property } = {}) => {
+const getMutablePropertyConfig = (
+  state,
+  { side = "update", property } = {},
+) => {
   if (side === "update") {
-    return state.definition.tween?.[property]?.keyframes;
+    return state.definition.tween?.[property];
   }
   if (
     state.definition.type === "transition" &&
     (side === "prev" || side === "next") &&
     property === "fade"
   ) {
-    return state.definition[side]?.fade?.keyframes;
+    return state.definition[side]?.fade;
   }
   return undefined;
 };
+
+const getMutableKeyframes = (state, selectedProperty = {}) =>
+  getMutablePropertyConfig(state, selectedProperty)?.keyframes;
 
 export const updateTransitionTiming = (
   { state },
@@ -559,6 +613,7 @@ export const setSelectedKeyframe = (
     ? { side, property, index: resolvedIndex }
     : undefined;
   state.selectedProperty = undefined;
+  state.selectedKeyframeAddMenu.open = false;
 };
 
 export const setSelectedProperty = (
@@ -572,6 +627,19 @@ export const setSelectedProperty = (
       getMutableKeyframes(state, { side, property }) !== undefined);
   state.selectedProperty = propertyExists ? { side, property } : undefined;
   state.selectedKeyframe = undefined;
+  state.selectedKeyframeAddMenu.open = false;
+};
+
+export const openSelectedKeyframeAddMenu = ({ state }, { x, y } = {}) => {
+  state.selectedKeyframeAddMenu.open = true;
+  state.selectedKeyframeAddMenu.x = x;
+  state.selectedKeyframeAddMenu.y = y;
+};
+
+export const closeSelectedKeyframeAddMenu = ({ state }) => {
+  state.selectedKeyframeAddMenu.open = false;
+  state.selectedKeyframeAddMenu.x = undefined;
+  state.selectedKeyframeAddMenu.y = undefined;
 };
 
 export const openKeyframeMenu = (
@@ -942,6 +1010,43 @@ export const setSelectedKeyframeValue = ({ state }, { value } = {}) => {
   commitSelectedKeyframeChange(state);
 };
 
+export const setSelectedKeyframeStartValue = (
+  { state },
+  { startValue } = {},
+) => {
+  const selectedKeyframe = state.selectedKeyframe;
+  const keyframe = getMutableSelectedKeyframe(state);
+  if (!selectedKeyframe || !keyframe) {
+    return;
+  }
+
+  if (startValue === undefined || startValue === "") {
+    delete keyframe.startValue;
+    commitSelectedKeyframeChange(state);
+    return;
+  }
+
+  const transitionKeyframe =
+    selectedKeyframe.side === "prev" || selectedKeyframe.side === "next";
+  const propertyConfig = transitionKeyframe
+    ? AUDIO_EFFECT_PROPERTY_CONFIG.volume
+    : AUDIO_EFFECT_PROPERTY_CONFIG[selectedKeyframe.property];
+  const nextStartValue = Number(startValue);
+  if (
+    !Number.isFinite(nextStartValue) ||
+    (!keyframe.relative &&
+      ((propertyConfig.min !== undefined &&
+        nextStartValue < propertyConfig.min) ||
+        (propertyConfig.max !== undefined &&
+          nextStartValue > propertyConfig.max)))
+  ) {
+    return;
+  }
+
+  keyframe.startValue = nextStartValue;
+  commitSelectedKeyframeChange(state);
+};
+
 export const setSelectedKeyframeRelative = ({ state }, { relative } = {}) => {
   const selectedKeyframe = state.selectedKeyframe;
   const keyframe = getMutableSelectedKeyframe(state);
@@ -960,30 +1065,45 @@ export const setSelectedKeyframeRelative = ({ state }, { relative } = {}) => {
   commitSelectedKeyframeChange(state);
 };
 
-const getSelectedPropertyStartValueConfig = (state) => {
+const getSelectedPropertyInitialValueConfig = (state) => {
   const selectedProperty = state.selectedProperty;
   if (!selectedProperty) {
     return undefined;
   }
 
-  const keyframe = getMutableKeyframes(state, selectedProperty)?.[0];
-  if (!keyframe) {
+  const definition = getMutablePropertyConfig(state, selectedProperty);
+  if (!definition) {
     return undefined;
   }
 
   const property =
     selectedProperty.side === "update" ? selectedProperty.property : "volume";
   return {
-    keyframe,
+    definition,
     propertyConfig: AUDIO_EFFECT_PROPERTY_CONFIG[property] ?? {},
   };
 };
 
-export const setSelectedPropertyStartValue = ({ state }, { value } = {}) => {
-  const config = getSelectedPropertyStartValueConfig(state);
-  const nextValue = Number(value);
+export const setSelectedPropertyInitialValue = (
+  { state },
+  { initialValue } = {},
+) => {
+  const config = getSelectedPropertyInitialValueConfig(state);
+  if (!config) {
+    return;
+  }
+
+  if (initialValue === undefined || initialValue === "") {
+    if (config.definition.initialValue === undefined) {
+      return;
+    }
+    delete config.definition.initialValue;
+    state.dirty = true;
+    return;
+  }
+
+  const nextValue = Number(initialValue);
   if (
-    !config ||
     !Number.isFinite(nextValue) ||
     (config.propertyConfig.min !== undefined &&
       nextValue < config.propertyConfig.min) ||
@@ -993,37 +1113,35 @@ export const setSelectedPropertyStartValue = ({ state }, { value } = {}) => {
     return;
   }
 
-  config.keyframe.startValue = nextValue;
-  commitSelectedKeyframeChange(state);
+  config.definition.initialValue = nextValue;
+  state.dirty = true;
 };
 
 export const setSelectedPropertyValueSource = (
   { state },
   { valueSource } = {},
 ) => {
-  const config = getSelectedPropertyStartValueConfig(state);
+  const config = getSelectedPropertyInitialValueConfig(state);
   if (!config || (valueSource !== "default" && valueSource !== "fixed")) {
     return;
   }
 
   if (valueSource === "default") {
-    if (config.keyframe.startValue === undefined) {
-      return;
-    }
-    delete config.keyframe.startValue;
-  } else {
-    if (config.keyframe.startValue !== undefined) {
-      return;
-    }
-    const side = state.selectedProperty.side;
-    config.keyframe.startValue =
-      side === "prev"
-        ? 100
-        : side === "next"
-          ? 0
-          : (config.propertyConfig.defaultValue ?? 0);
+    setSelectedPropertyInitialValue({ state }, { initialValue: undefined });
+    return;
   }
-  commitSelectedKeyframeChange(state);
+  if (config.definition.initialValue !== undefined) {
+    return;
+  }
+
+  const side = state.selectedProperty.side;
+  const initialValue =
+    side === "prev"
+      ? 100
+      : side === "next"
+        ? 0
+        : (config.propertyConfig.defaultValue ?? 0);
+  setSelectedPropertyInitialValue({ state }, { initialValue });
 };
 
 export const selectKeyframeDialogValues = ({ state }) => {
@@ -1089,6 +1207,7 @@ const buildSelectedKeyframePanelData = (state, copy = {}) => {
         : (copy.updateType ?? "Update");
   const lockedIncomingEndpoint =
     side === "next" && property === "fade" && finalKeyframe;
+  const hasStartValue = keyframe.startValue !== undefined;
   const fields = [
     {
       type: "text",
@@ -1101,16 +1220,6 @@ const buildSelectedKeyframePanelData = (state, copy = {}) => {
       value: propertyLabel,
     },
   ];
-  if (updateKeyframe) {
-    fields.push({
-      type: "text",
-      label: copy.startValueLabel ?? "Start value",
-      value:
-        keyframe.startValue === undefined
-          ? (copy.currentValueOption ?? "Current value")
-          : `${keyframe.startValue}`,
-    });
-  }
   fields.push(
     {
       type: "slot",
@@ -1128,6 +1237,12 @@ const buildSelectedKeyframePanelData = (state, copy = {}) => {
       slot: "keyframe-easing",
     },
   );
+  if (hasStartValue) {
+    fields.push({
+      type: "slot",
+      slot: "keyframe-start-value",
+    });
+  }
   fields.push({
     type: "slot",
     label: copy.valueLabel ?? "Value",
@@ -1156,6 +1271,9 @@ const buildSelectedKeyframePanelData = (state, copy = {}) => {
         { label: copy.absoluteValueType ?? "Absolute", value: false },
         { label: copy.relativeValueType ?? "Relative", value: true },
       ],
+      hasStartValue,
+      startValue: keyframe.startValue,
+      startValueLabel: copy.startValueLabel ?? "Start value",
       value: keyframe.value,
       valueDisabled: lockedIncomingEndpoint,
       valueEditable: !lockedIncomingEndpoint,
@@ -1175,7 +1293,7 @@ const buildSelectedKeyframePanelData = (state, copy = {}) => {
 
 const buildSelectedPropertyPanelData = (state, copy = {}) => {
   const selectedProperty = state.selectedProperty;
-  const config = getSelectedPropertyStartValueConfig(state);
+  const config = getSelectedPropertyInitialValueConfig(state);
   if (!selectedProperty || !config) {
     return undefined;
   }
@@ -1191,8 +1309,8 @@ const buildSelectedPropertyPanelData = (state, copy = {}) => {
       : side === "next"
         ? (copy.incomingLabel ?? "Incoming")
         : (copy.updateType ?? "Update");
-  const hasStartValue = config.keyframe.startValue !== undefined;
-  const defaultStartValue =
+  const hasInitialValue = config.definition.initialValue !== undefined;
+  const defaultInitialValue =
     side === "prev"
       ? 100
       : side === "next"
@@ -1215,11 +1333,11 @@ const buildSelectedPropertyPanelData = (state, copy = {}) => {
       slot: "property-value-source",
     },
   ];
-  if (hasStartValue) {
+  if (hasInitialValue) {
     fields.push({
       type: "slot",
-      label: copy.startValueLabel ?? "Start value",
-      slot: "property-start-value",
+      label: copy.initialValueLabel ?? "Initial value",
+      slot: "property-initial-value",
     });
   }
 
@@ -1227,7 +1345,20 @@ const buildSelectedPropertyPanelData = (state, copy = {}) => {
     id: `${side}:${property}`,
     fields,
     editor: {
-      valueSource: hasStartValue ? "fixed" : "default",
+      hasInitialValue,
+      initialValue: hasInitialValue
+        ? config.definition.initialValue
+        : defaultInitialValue,
+      initialValueSlider:
+        config.propertyConfig.max === undefined
+          ? undefined
+          : {
+              min: config.propertyConfig.min,
+              max: config.propertyConfig.max,
+              step: config.propertyConfig.step,
+            },
+      initialValueStep: config.propertyConfig.step ?? 0.01,
+      valueSource: hasInitialValue ? "fixed" : "default",
       valueSourceOptions: [
         {
           label: copy.defaultValueOption ?? "Default",
@@ -1238,18 +1369,6 @@ const buildSelectedPropertyPanelData = (state, copy = {}) => {
           value: "fixed",
         },
       ],
-      startValue: hasStartValue
-        ? config.keyframe.startValue
-        : defaultStartValue,
-      startValueSlider:
-        config.propertyConfig.max === undefined
-          ? undefined
-          : {
-              min: config.propertyConfig.min,
-              max: config.propertyConfig.max,
-              step: config.propertyConfig.step,
-            },
-      startValueStep: config.propertyConfig.step ?? 0.01,
     },
   };
 };
@@ -1314,6 +1433,16 @@ export const selectViewData = ({ state, i18n }) => {
     state.selectedEditorTab === "timeline"
       ? buildSelectedPropertyPanelData(state, copy)
       : undefined;
+  const selectedKeyframeAddMenuItems =
+    selectedKeyframePanel?.editor && !selectedKeyframePanel.editor.hasStartValue
+      ? [
+          {
+            label: copy.startValueLabel ?? "Start value",
+            type: "item",
+            value: "start-value",
+          },
+        ]
+      : [];
   const preview = selectAudioEffectPreview({ state });
   const previewSoundItems = isTransition
     ? [
@@ -1469,6 +1598,8 @@ export const selectViewData = ({ state, i18n }) => {
     selectedProperty,
     keyframeMenu: state.keyframeMenu,
     keyframeMenuItems,
+    selectedKeyframeAddMenu: state.selectedKeyframeAddMenu,
+    selectedKeyframeAddMenuItems,
     showRightPanel: !state.isTouchMode,
     detailsPanelTitle: selectedKeyframePanel
       ? (copy.keyframeDetailsTitle ?? "Keyframe Details")
@@ -1483,6 +1614,9 @@ export const selectViewData = ({ state, i18n }) => {
     selectedPropertyEditor: selectedPropertyPanel?.editor,
     selectedKeyframeCanOpenEditDialog:
       selectedKeyframePanel?.canOpenEditDialog === true,
+    addButton: copy.addButton ?? "Add",
+    removeStartValueButtonLabel:
+      copy.removeStartValueButtonLabel ?? "Remove start value",
     noSelectionLabel: copy.noSelectionLabel ?? "No selection",
     editKeyframeButtonLabel: copy.editKeyframeTitle ?? "Edit Keyframe",
     canRemoveSelectedProperty:

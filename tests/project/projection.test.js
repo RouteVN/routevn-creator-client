@@ -993,6 +993,7 @@ describe("constructProjectData", () => {
               type: "transition",
               prev: {
                 fade: {
+                  initialValue: 90,
                   delay: 0,
                   duration: 600,
                   easing: "easeInOutSine",
@@ -1000,6 +1001,7 @@ describe("constructProjectData", () => {
               },
               next: {
                 fade: {
+                  initialValue: 10,
                   delay: 0,
                   duration: 900,
                   easing: "easeInOutSine",
@@ -1015,7 +1017,8 @@ describe("constructProjectData", () => {
               type: "update",
               tween: {
                 volume: {
-                  keyframes: [{ value: 50, duration: 100 }],
+                  initialValue: 75,
+                  keyframes: [{ startValue: 60, value: 50, duration: 100 }],
                 },
               },
             },
@@ -1077,6 +1080,7 @@ describe("constructProjectData", () => {
         type: "transition",
         prev: {
           fade: {
+            initialValue: 90,
             delay: 0,
             duration: 600,
             easing: "easeInOutSine",
@@ -1084,6 +1088,7 @@ describe("constructProjectData", () => {
         },
         next: {
           fade: {
+            initialValue: 10,
             delay: 0,
             duration: 900,
             easing: "easeInOutSine",
@@ -1095,7 +1100,8 @@ describe("constructProjectData", () => {
         type: "update",
         tween: {
           volume: {
-            keyframes: [{ value: 50, duration: 100 }],
+            initialValue: 75,
+            keyframes: [{ startValue: 60, value: 50, duration: 100 }],
           },
         },
       },

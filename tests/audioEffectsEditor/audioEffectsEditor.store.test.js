@@ -17,6 +17,7 @@ import {
   selectAudioEffectDuration,
   selectAudioEffectPreview,
   selectAudioEffectPreviewData,
+  selectDefaultSelectedKeyframeStartValue,
   selectKeyframeDialogIsFinal,
   selectViewData,
   setSelectedKeyframe,
@@ -24,9 +25,10 @@ import {
   setSelectedKeyframeDuration,
   setSelectedKeyframeEasing,
   setSelectedKeyframeRelative,
+  setSelectedKeyframeStartValue,
   setSelectedKeyframeValue,
   setSelectedProperty,
-  setSelectedPropertyStartValue,
+  setSelectedPropertyInitialValue,
   setSelectedPropertyValueSource,
   setPreviewSoundSelectorSelectedSoundId,
   setPreviewPlayhead,
@@ -247,7 +249,7 @@ describe("audioEffectsEditor.store", () => {
     });
   });
 
-  it("selects update properties and edits their start value in the detail panel", () => {
+  it("edits an update property initial value independently from keyframe starts", () => {
     const state = createInitialState();
     loadAudioEffect(
       { state },
@@ -283,51 +285,82 @@ describe("audioEffectsEditor.store", () => {
       selectedPropertyDetailFields: [
         { label: "Timeline", value: "Update" },
         { label: "Property", value: "Volume" },
-        { label: "Value source", slot: "property-value-source" },
-        { label: "Start value", slot: "property-start-value" },
+        {
+          type: "slot",
+          label: "Value source",
+          slot: "property-value-source",
+        },
       ],
       selectedPropertyEditor: {
-        valueSource: "fixed",
+        hasInitialValue: false,
+        initialValue: 100,
+        valueSource: "default",
         valueSourceOptions: [
           { label: "Default", value: "default" },
           { label: "Fixed", value: "fixed" },
         ],
-        startValue: 80,
-        startValueSlider: { min: 0, max: 100, step: 1 },
       },
     });
 
-    setSelectedPropertyStartValue({ state }, { value: 65 });
+    setSelectedKeyframe(
+      { state },
+      { side: "update", property: "volume", index: 0 },
+    );
+    setSelectedKeyframeStartValue({ state }, { startValue: 65 });
     expect(state.definition.tween.volume.keyframes[0].startValue).toBe(65);
+    setSelectedProperty({ state }, { side: "update", property: "volume" });
     expect(
       selectViewData({ state, i18n: EN_I18N }).updateTimelineProperties.volume
         .initialValue,
-    ).toBe(65);
-    setSelectedPropertyValueSource({ state }, { valueSource: "default" });
-    expect(
-      state.definition.tween.volume.keyframes[0].startValue,
     ).toBeUndefined();
     expect(selectViewData({ state, i18n: EN_I18N })).toMatchObject({
       selectedPropertyDetailFields: [
         { label: "Timeline", value: "Update" },
         { label: "Property", value: "Volume" },
-        { label: "Value source", slot: "property-value-source" },
+        {
+          type: "slot",
+          label: "Value source",
+          slot: "property-value-source",
+        },
       ],
       selectedPropertyEditor: {
+        hasInitialValue: false,
+        initialValue: 100,
         valueSource: "default",
-        startValue: 100,
       },
     });
-    expect(
-      selectViewData({ state, i18n: EN_I18N }).updateTimelineProperties.volume
-        .initialValue,
-    ).toBeUndefined();
+
     setSelectedPropertyValueSource({ state }, { valueSource: "fixed" });
-    expect(state.definition.tween.volume.keyframes[0].startValue).toBe(100);
+    expect(state.definition.tween.volume.initialValue).toBe(100);
+    expect(state.definition.tween.volume.keyframes[0].startValue).toBe(65);
+    setSelectedPropertyInitialValue({ state }, { initialValue: 90 });
+    expect(state.definition.tween.volume.initialValue).toBe(90);
+    expect(state.definition.tween.volume.keyframes[0].startValue).toBe(65);
+    expect(selectViewData({ state, i18n: EN_I18N })).toMatchObject({
+      selectedPropertyDetailFields: expect.arrayContaining([
+        {
+          type: "slot",
+          label: "Initial value",
+          slot: "property-initial-value",
+        },
+      ]),
+      selectedPropertyEditor: {
+        hasInitialValue: true,
+        initialValue: 90,
+        initialValueSlider: { min: 0, max: 100, step: 1 },
+        valueSource: "fixed",
+      },
+      updateTimelineProperties: {
+        volume: { initialValue: 90 },
+      },
+    });
+    setSelectedPropertyValueSource({ state }, { valueSource: "default" });
+    expect(state.definition.tween.volume.initialValue).toBeUndefined();
+    expect(state.definition.tween.volume.keyframes[0].startValue).toBe(65);
     expect(state.dirty).toBe(true);
   });
 
-  it("selects transition fade properties and edits their boundary start value", () => {
+  it("edits transition initial values independently from keyframe starts", () => {
     const state = createInitialState();
     loadAudioEffect(
       { state },
@@ -356,29 +389,60 @@ describe("audioEffectsEditor.store", () => {
     expect(selectViewData({ state, i18n: EN_I18N })).toMatchObject({
       detailsPanelTitle: "Property",
       selectedPropertyDetailId: "prev:fade",
+      selectedPropertyDetailFields: expect.arrayContaining([
+        {
+          type: "slot",
+          label: "Value source",
+          slot: "property-value-source",
+        },
+      ]),
       selectedPropertyEditor: {
+        hasInitialValue: false,
+        initialValue: 100,
         valueSource: "default",
-        startValue: 100,
       },
       canRemoveSelectedProperty: false,
     });
 
+    setSelectedKeyframe(
+      { state },
+      { side: "prev", property: "fade", index: 0 },
+    );
+    setSelectedKeyframeStartValue({ state }, { startValue: 90 });
+    expect(state.definition.prev.fade.keyframes[0].startValue).toBe(90);
+    setSelectedProperty({ state }, { side: "prev", property: "fade" });
+    expect(
+      selectViewData({ state, i18n: EN_I18N }).previousTimelineProperties.fade
+        .initialValue,
+    ).toBe(100);
     setSelectedPropertyValueSource({ state }, { valueSource: "fixed" });
-    expect(state.definition.prev.fade.keyframes[0].startValue).toBe(100);
-    setSelectedPropertyStartValue({ state }, { value: 90 });
+    expect(state.definition.prev.fade.initialValue).toBe(100);
+    setSelectedPropertyInitialValue({ state }, { initialValue: 80 });
+    expect(state.definition.prev.fade.initialValue).toBe(80);
     expect(state.definition.prev.fade.keyframes[0].startValue).toBe(90);
     expect(
       selectViewData({ state, i18n: EN_I18N }).previousTimelineProperties.fade
         .initialValue,
-    ).toBe(90);
+    ).toBe(80);
 
     setSelectedProperty({ state }, { side: "next", property: "fade" });
     expect(selectViewData({ state, i18n: EN_I18N })).toMatchObject({
       selectedPropertyDetailId: "next:fade",
-      selectedPropertyEditor: { valueSource: "default", startValue: 0 },
+      selectedPropertyDetailFields: expect.arrayContaining([
+        {
+          type: "slot",
+          label: "Value source",
+          slot: "property-value-source",
+        },
+      ]),
+      selectedPropertyEditor: {
+        hasInitialValue: false,
+        initialValue: 0,
+        valueSource: "default",
+      },
     });
     setSelectedPropertyValueSource({ state }, { valueSource: "fixed" });
-    expect(state.definition.next.fade.keyframes[0].startValue).toBe(0);
+    expect(state.definition.next.fade.initialValue).toBe(0);
   });
 
   it("loads saved preview sounds from the audio effect item", () => {
@@ -607,20 +671,49 @@ describe("audioEffectsEditor.store", () => {
           label: "Property",
           value: "Playback Rate",
         }),
-        expect.objectContaining({
-          label: "Start value",
-          value: "Current value",
-        }),
       ]),
       selectedKeyframeEditor: {
         delay: 0,
         duration: 100,
         easing: "linear",
+        hasStartValue: false,
         value: 1.25,
         valueEditable: true,
       },
+      selectedKeyframeAddMenuItems: [
+        { label: "Start value", type: "item", value: "start-value" },
+      ],
       selectedKeyframeCanOpenEditDialog: true,
     });
+    expect(
+      selectViewData({ state, i18n: EN_I18N }).selectedKeyframeDetailFields,
+    ).not.toContainEqual(expect.objectContaining({ label: "Start value" }));
+    expect(selectDefaultSelectedKeyframeStartValue({ state })).toBe(1);
+    expect(
+      selectViewData({ state, i18n: EN_I18N }).updateTimelineProperties
+        .playbackRate.initialValue,
+    ).toBeUndefined();
+
+    setSelectedKeyframeStartValue({ state }, { startValue: 0.8 });
+    const viewDataWithStartValue = selectViewData({ state, i18n: EN_I18N });
+    expect(viewDataWithStartValue).toMatchObject({
+      selectedKeyframeDetailFields: expect.arrayContaining([
+        { type: "slot", slot: "keyframe-start-value" },
+      ]),
+      selectedKeyframeEditor: {
+        hasStartValue: true,
+        startValue: 0.8,
+        startValueLabel: "Start value",
+      },
+      selectedKeyframeAddMenuItems: [],
+    });
+    expect(
+      viewDataWithStartValue.updateTimelineProperties.playbackRate.initialValue,
+    ).toBeUndefined();
+    setSelectedKeyframeStartValue({ state }, { startValue: undefined });
+    expect(
+      state.definition.tween.playbackRate.keyframes[0].startValue,
+    ).toBeUndefined();
 
     setSelectedKeyframeDelay({ state }, { delay: 25 });
     setSelectedKeyframeDuration({ state }, { duration: 175 });
@@ -664,9 +757,21 @@ describe("audioEffectsEditor.store", () => {
           name: "Crossfade",
           audioEffect: {
             type: "transition",
-            prev: { fade: { delay: 10, duration: 600, easing: "linear" } },
+            prev: {
+              fade: {
+                initialValue: 80,
+                delay: 10,
+                duration: 600,
+                easing: "linear",
+              },
+            },
             next: {
-              fade: { delay: 20, duration: 900, easing: "easeInOutSine" },
+              fade: {
+                initialValue: 20,
+                delay: 20,
+                duration: 900,
+                easing: "easeInOutSine",
+              },
             },
           },
         },
@@ -679,13 +784,13 @@ describe("audioEffectsEditor.store", () => {
       timelineUsedDuration: 920,
       previousTimelineProperties: {
         fade: {
-          initialValue: 100,
+          initialValue: 80,
           keyframes: [{ delay: 10, duration: 600, easing: "linear", value: 0 }],
         },
       },
       nextTimelineProperties: {
         fade: {
-          initialValue: 0,
+          initialValue: 20,
           keyframes: [
             {
               delay: 20,
@@ -729,6 +834,7 @@ describe("audioEffectsEditor.store", () => {
       { side: "prev", delay: 25, duration: 700 },
     );
     expect(state.definition.prev.fade).toEqual({
+      initialValue: 80,
       keyframes: [
         {
           delay: 25,

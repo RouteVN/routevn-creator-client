@@ -121,4 +121,42 @@ describe("audioEffectsEditor validation", () => {
       }),
     ).toMatchObject({ valid: false });
   });
+
+  it("validates property initial values independently from keyframe starts", () => {
+    expect(
+      validateDefinition({
+        type: "update",
+        tween: {
+          volume: {
+            initialValue: 90,
+            keyframes: [
+              { startValue: 75, value: 50, duration: 300, easing: "linear" },
+            ],
+          },
+        },
+      }),
+    ).toEqual({ valid: true });
+
+    expect(
+      validateDefinition({
+        type: "transition",
+        prev: {
+          fade: {
+            initialValue: 90,
+            keyframes: [
+              { startValue: 75, value: 0, duration: 300, easing: "linear" },
+            ],
+          },
+        },
+        next: {
+          fade: {
+            initialValue: 10,
+            keyframes: [
+              { startValue: 25, value: 100, duration: 300, easing: "linear" },
+            ],
+          },
+        },
+      }),
+    ).toEqual({ valid: true });
+  });
 });

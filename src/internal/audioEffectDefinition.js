@@ -65,9 +65,14 @@ export const normalizeAudioEffectDefinition = (definition = {}) => {
     if (!normalized[side]?.fade) {
       continue;
     }
-    normalized[side].fade = {
+    const fade = normalized[side].fade;
+    const normalizedFade = {
       keyframes: clone(getTransitionFadeKeyframes(normalized, side)),
     };
+    if (fade.initialValue !== undefined) {
+      normalizedFade.initialValue = fade.initialValue;
+    }
+    normalized[side].fade = normalizedFade;
   }
   return normalized;
 };

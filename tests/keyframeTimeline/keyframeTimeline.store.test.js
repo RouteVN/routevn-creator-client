@@ -472,6 +472,17 @@ describe("keyframeTimeline easing curves", () => {
     ]);
   });
 
+  it("lets the property row receive clicks through the initial value display", () => {
+    const view = readFileSync(
+      "src/components/keyframeTimeline/keyframeTimeline.view.yaml",
+      "utf8",
+    );
+
+    expect(view).toContain(
+      'rtgl-view h=24 w=24 av=c ah=e mr=sm ml=sm pos=rel style="z-index: 2; pointer-events: none;"',
+    );
+  });
+
   it("marks only the matching keyframe as selected", () => {
     const viewData = selectViewData({
       state: createInitialState(),

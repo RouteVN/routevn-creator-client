@@ -33,7 +33,8 @@ describe("audioEffects.store", () => {
                 type: "update",
                 tween: {
                   volume: {
-                    keyframes: [{ startValue: 72, value: 50, duration: 300 }],
+                    initialValue: 72,
+                    keyframes: [{ startValue: 61, value: 50, duration: 300 }],
                   },
                   playbackRate: { keyframes: [] },
                 },

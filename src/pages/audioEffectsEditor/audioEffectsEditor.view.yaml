@@ -136,6 +136,14 @@ refs:
     eventListeners:
       click:
         handler: handleSelectedKeyframeEditClick
+  selectedKeyframeAddButton:
+    eventListeners:
+      click:
+        handler: handleSelectedKeyframeAddClick
+  selectedKeyframeRemoveStartValueButton:
+    eventListeners:
+      click:
+        handler: handleSelectedKeyframeRemoveStartValueClick
   selectedKeyframeDelay:
     eventListeners:
       value-change:
@@ -152,14 +160,18 @@ refs:
     eventListeners:
       value-input:
         handler: handleSelectedKeyframeValueChange
+  selectedKeyframeStartValue:
+    eventListeners:
+      value-input:
+        handler: handleSelectedKeyframeStartValueChange
   selectedKeyframeRelative:
     eventListeners:
       value-change:
         handler: handleSelectedKeyframeRelativeChange
-  selectedPropertyStartValue:
+  selectedPropertyInitialValue:
     eventListeners:
       value-input:
-        handler: handleSelectedPropertyStartValueChange
+        handler: handleSelectedPropertyInitialValueChange
   selectedPropertyValueSource:
     eventListeners:
       value-change:
@@ -170,6 +182,12 @@ refs:
         handler: handleKeyframeMenuClose
       item-click:
         handler: handleKeyframeDropdownItemClick
+  selectedKeyframeAddMenu:
+    eventListeners:
+      close:
+        handler: handleSelectedKeyframeAddMenuClose
+      item-click:
+        handler: handleSelectedKeyframeAddMenuItemClick
 styles:
   ".audioEffectPreviewSoundButton:focus":
     outline: none
@@ -280,7 +298,9 @@ template:
                           - rtgl-text w=1fg: ${detailsPanelTitle}
                           - $if selectedKeyframeCanOpenEditDialog:
                               - 'rtgl-button#editSelectedKeyframeButton sq v=gh pre=edit aria-label="${editKeyframeButtonLabel}" title="${editKeyframeButtonLabel}"': null
-                            $elif canRemoveSelectedProperty:
+                          - $if selectedKeyframeAddMenuItems.length > 0:
+                              - 'rtgl-button#selectedKeyframeAddButton sq v=gh pre=plus aria-haspopup=menu aria-expanded="${selectedKeyframeAddMenu.open}" aria-label="${addButton}" title="${addButton}"': null
+                          - $if canRemoveSelectedProperty:
                               - 'rtgl-button#removePropertyButton sq v=gh pre=trash aria-label="${removePropertyButton}" title="${removePropertyButton}"': null
                   - 'rtgl-view w=f h=1fg sv style="min-height: 0;"':
                       - $if selectedKeyframeDetailId:
@@ -290,6 +310,15 @@ template:
                               - 'rtgl-view data-popover-input-field=true slot=keyframe-duration w=f h=32 d=h av=c ph=md bgc=mu bw=xs bc=bg h-bc=ac br=md cur=pointer style="box-sizing: border-box;"':
                                   - 'rvn-value-popover-input#selectedKeyframeDuration value=${selectedKeyframeEditor.duration} label="${selectedKeyframeEditor.durationLabel}"': null
                               - rtgl-select#selectedKeyframeEasingSelect slot=keyframe-easing w=f no-clear :selectedValue=${selectedKeyframeEditor.easing} :options=${selectedKeyframeEditor.easingOptions}: null
+                              - $if selectedKeyframeEditor.hasStartValue:
+                                  - rtgl-view slot=keyframe-start-value d=v w=f g=xs:
+                                      - rtgl-view d=h w=f av=c:
+                                          - rtgl-text w=1fg c=mu-fg: ${selectedKeyframeEditor.startValueLabel}
+                                          - 'rtgl-button#selectedKeyframeRemoveStartValueButton sq v=gh pre=x aria-label="${removeStartValueButtonLabel}" title="${removeStartValueButtonLabel}"': null
+                                      - $if selectedKeyframeEditor.valueSlider:
+                                          - rtgl-slider-input#selectedKeyframeStartValue key=${selectedKeyframeDetailId} w=f value=${selectedKeyframeEditor.startValue} min=${selectedKeyframeEditor.valueSlider.min} max=${selectedKeyframeEditor.valueSlider.max} step=${selectedKeyframeEditor.valueSlider.step}: null
+                                        $else:
+                                          - rtgl-input-number#selectedKeyframeStartValue key=${selectedKeyframeDetailId} w=f step=${selectedKeyframeEditor.valueStep} value=${selectedKeyframeEditor.startValue}: null
                               - $if selectedKeyframeEditor.valueSlider:
                                   - rtgl-slider-input#selectedKeyframeValue slot=keyframe-value key=${selectedKeyframeDetailId} w=f value=${selectedKeyframeEditor.value} min=${selectedKeyframeEditor.valueSlider.min} max=${selectedKeyframeEditor.valueSlider.max} step=${selectedKeyframeEditor.valueSlider.step} ?disabled=${selectedKeyframeEditor.valueDisabled}: null
                                 $elif selectedKeyframeEditor.valueEditable:
@@ -298,11 +327,11 @@ template:
                         $elif selectedPropertyDetailId:
                           - rvn-detail-view#selectedPropertyDetails key=${selectedPropertyDetailId} :fields=${selectedPropertyDetailFields} :fillHeight=${false}:
                               - rtgl-segmented-control#selectedPropertyValueSource slot=property-value-source w=f no-clear :selectedValue=${selectedPropertyEditor.valueSource} :options=${selectedPropertyEditor.valueSourceOptions}: null
-                              - $if selectedPropertyEditor.valueSource == 'fixed':
-                                  - $if selectedPropertyEditor.startValueSlider:
-                                      - rtgl-slider-input#selectedPropertyStartValue slot=property-start-value key=${selectedPropertyDetailId} w=f value=${selectedPropertyEditor.startValue} min=${selectedPropertyEditor.startValueSlider.min} max=${selectedPropertyEditor.startValueSlider.max} step=${selectedPropertyEditor.startValueSlider.step}: null
+                              - $if selectedPropertyEditor.hasInitialValue:
+                                  - $if selectedPropertyEditor.initialValueSlider:
+                                      - rtgl-slider-input#selectedPropertyInitialValue slot=property-initial-value key=${selectedPropertyDetailId} w=f value=${selectedPropertyEditor.initialValue} min=${selectedPropertyEditor.initialValueSlider.min} max=${selectedPropertyEditor.initialValueSlider.max} step=${selectedPropertyEditor.initialValueSlider.step}: null
                                     $else:
-                                      - rtgl-input-number#selectedPropertyStartValue slot=property-start-value key=${selectedPropertyDetailId} w=f value=${selectedPropertyEditor.startValue} min=0 step=${selectedPropertyEditor.startValueStep}: null
+                                      - rtgl-input-number#selectedPropertyInitialValue slot=property-initial-value key=${selectedPropertyDetailId} w=f value=${selectedPropertyEditor.initialValue} step=${selectedPropertyEditor.initialValueStep}: null
                         $else:
                           - rtgl-view w=f h=f av=c ah=c p=md:
                               - rtgl-text s=sm c=mu-fg ta=c: ${noSelectionLabel}
@@ -318,3 +347,4 @@ template:
               - rtgl-view d=h g=sm w=f ah=e:
                   - 'rtgl-button#confirmSoundSelection variant=pr ?disabled=${soundSelectionConfirmDisabled}': ${confirmSoundSelectionButton}
   - rtgl-dropdown-menu#keyframeDropdownMenu :items=${keyframeMenuItems} ?open=${keyframeMenu.open} x=${keyframeMenu.x} y=${keyframeMenu.y}: null
+  - rtgl-dropdown-menu#selectedKeyframeAddMenu :items=${selectedKeyframeAddMenuItems} ?open=${selectedKeyframeAddMenu.open} x=${selectedKeyframeAddMenu.x} y=${selectedKeyframeAddMenu.y}: null

@@ -35,7 +35,10 @@ const createFadePhase = ({ definition, initialValue, side } = {}) => {
   }
 
   const phase = { keyframes: structuredClone(keyframes) };
-  if (initialValue !== undefined) {
+  const authoredInitialValue = definition[side]?.fade?.initialValue;
+  if (authoredInitialValue !== undefined) {
+    phase.initialValue = authoredInitialValue;
+  } else if (initialValue !== undefined) {
     phase.initialValue = initialValue;
   }
   return phase;
@@ -64,21 +67,24 @@ const createTransitionEffect = (definition, occurrenceId) => {
   };
 };
 
-const createUpdateEffect = (definition, occurrenceId) => ({
-  id: `audio-effect-preview:${occurrenceId}`,
-  type: "audio-transition",
-  targetId: PREVIEW_SOUND_ID,
-  properties: Object.fromEntries(
-    Object.entries(definition.tween ?? {}).map(([property, config]) => [
-      property,
-      {
-        update: {
-          keyframes: structuredClone(config.keyframes),
-        },
-      },
-    ]),
-  ),
-});
+const createUpdateEffect = (definition, occurrenceId) => {
+  const properties = Object.fromEntries(
+    Object.entries(definition.tween ?? {}).map(([property, config]) => {
+      const update = { keyframes: structuredClone(config.keyframes) };
+      if (config.initialValue !== undefined) {
+        update.initialValue = config.initialValue;
+      }
+      return [property, { update }];
+    }),
+  );
+
+  return {
+    id: `audio-effect-preview:${occurrenceId}`,
+    type: "audio-transition",
+    targetId: PREVIEW_SOUND_ID,
+    properties,
+  };
+};
 
 const getTransitionPersistentValues = (definition) => {
   const keyframes = getTransitionFadeKeyframes(definition, "next");

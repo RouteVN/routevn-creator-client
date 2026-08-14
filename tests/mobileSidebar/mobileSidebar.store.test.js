@@ -84,6 +84,22 @@ describe("mobileSidebar scene map sections", () => {
     ]);
   });
 
+  it("uses the dedicated audio effects icon", () => {
+    const state = createInitialState();
+    const viewData = selectViewData({
+      state,
+      props: { variant: "assets" },
+    });
+    const audioEffectsItem = viewData.sections
+      .flatMap((section) => section.items)
+      .find((item) => item.id === "audioEffects");
+
+    expect(audioEffectsItem).toMatchObject({
+      icon: "audioEffects",
+      path: "/project/audio-effects",
+    });
+  });
+
   it("shows scene map and recently visited scenes instead of a full linear scene list", () => {
     const state = createInitialState();
     setScenesData({ state }, { scenesData: createScenesData() });

@@ -599,6 +599,7 @@ describe("renderSceneEditorState", () => {
                 type: "update",
                 tween: {
                   volume: {
+                    initialValue: 25,
                     keyframes: [{ startValue: 0, value: 100, duration: 500 }],
                   },
                 },
@@ -633,6 +634,7 @@ describe("renderSceneEditorState", () => {
                   id: "bgm:incoming",
                   beginEffect: {
                     volume: {
+                      initialValue: 25,
                       keyframes: [
                         expect.objectContaining({
                           startValue: 0,
@@ -644,6 +646,7 @@ describe("renderSceneEditorState", () => {
                   },
                   endEffect: {
                     volume: {
+                      initialValue: 25,
                       keyframes: [
                         expect.objectContaining({ value: 100, duration: 500 }),
                       ],

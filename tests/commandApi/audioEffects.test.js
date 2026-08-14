@@ -7,8 +7,22 @@ const crossfade = {
   name: "Crossfade",
   audioEffect: {
     type: "transition",
-    prev: { fade: { delay: 0, duration: 600, easing: "easeInOutSine" } },
-    next: { fade: { delay: 0, duration: 900, easing: "easeInOutSine" } },
+    prev: {
+      fade: {
+        initialValue: 90,
+        delay: 0,
+        duration: 600,
+        easing: "easeInOutSine",
+      },
+    },
+    next: {
+      fade: {
+        initialValue: 10,
+        delay: 0,
+        duration: 900,
+        easing: "easeInOutSine",
+      },
+    },
   },
 };
 
@@ -80,7 +94,8 @@ describe("audio effect command API", () => {
       type: "update",
       tween: {
         volume: {
-          keyframes: [{ value: 50, duration: 300 }],
+          initialValue: 90,
+          keyframes: [{ startValue: 75, value: 50, duration: 300 }],
         },
       },
     };

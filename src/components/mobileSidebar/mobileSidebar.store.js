@@ -44,7 +44,7 @@ const animatedAssetItems = [
     id: "audioEffects",
     label: "Audio Effects",
     path: "/project/audio-effects",
-    icon: "audio",
+    icon: "audioEffects",
   },
   {
     id: "particles",

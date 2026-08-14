@@ -14,9 +14,14 @@ import {
   handlePreviewSoundSelected,
   handlePropertyNameClick,
   handleSavePreviewClick,
+  handleSelectedKeyframeAddClick,
+  handleSelectedKeyframeAddMenuClose,
+  handleSelectedKeyframeAddMenuItemClick,
   handleSelectedKeyframeDelayChange,
   handleSelectedKeyframeEditClick,
-  handleSelectedPropertyStartValueChange,
+  handleSelectedKeyframeRemoveStartValueClick,
+  handleSelectedKeyframeStartValueChange,
+  handleSelectedPropertyInitialValueChange,
   handleSelectedPropertyValueSourceChange,
   handleTimelineZoomChange,
   handleTimelineZoomIn,
@@ -265,14 +270,14 @@ describe("audioEffectsEditor.handlers", () => {
     expect(render).toHaveBeenCalledOnce();
   });
 
-  it("edits the selected property value source and fixed value", () => {
+  it("edits the selected property value source and initial value", () => {
     const store = {
-      setSelectedPropertyStartValue: vi.fn(),
+      setSelectedPropertyInitialValue: vi.fn(),
       setSelectedPropertyValueSource: vi.fn(),
     };
     const render = vi.fn();
 
-    handleSelectedPropertyStartValueChange(
+    handleSelectedPropertyInitialValueChange(
       { store, render },
       { _event: { detail: { value: 75 } } },
     );
@@ -281,8 +286,8 @@ describe("audioEffectsEditor.handlers", () => {
       { _event: { detail: { value: "default" } } },
     );
 
-    expect(store.setSelectedPropertyStartValue).toHaveBeenCalledWith({
-      value: 75,
+    expect(store.setSelectedPropertyInitialValue).toHaveBeenCalledWith({
+      initialValue: 75,
     });
     expect(store.setSelectedPropertyValueSource).toHaveBeenCalledWith({
       valueSource: "default",
@@ -458,6 +463,61 @@ describe("audioEffectsEditor.handlers", () => {
 
     expect(store.setSelectedKeyframeDelay).toHaveBeenCalledWith({ delay: 125 });
     expect(render).toHaveBeenCalledOnce();
+  });
+
+  it("adds, edits, and removes a selected keyframe start value", () => {
+    const store = {
+      closeSelectedKeyframeAddMenu: vi.fn(),
+      openSelectedKeyframeAddMenu: vi.fn(),
+      selectDefaultSelectedKeyframeStartValue: vi.fn(() => 75),
+      selectSelectedKeyframe: vi.fn(() => ({
+        side: "update",
+        property: "volume",
+        index: 1,
+      })),
+      setSelectedKeyframeStartValue: vi.fn(),
+    };
+    const render = vi.fn();
+
+    handleSelectedKeyframeAddClick(
+      { render, store },
+      {
+        _event: {
+          currentTarget: {
+            getBoundingClientRect: () => ({ left: 120, bottom: 180 }),
+          },
+        },
+      },
+    );
+    expect(store.openSelectedKeyframeAddMenu).toHaveBeenCalledWith({
+      x: 120,
+      y: 180,
+    });
+
+    handleSelectedKeyframeAddMenuItemClick(
+      { render, store },
+      { _event: { detail: { item: { value: "start-value" } } } },
+    );
+    expect(store.setSelectedKeyframeStartValue).toHaveBeenCalledWith({
+      startValue: 75,
+    });
+
+    handleSelectedKeyframeStartValueChange(
+      { render, store },
+      { _event: { detail: { value: 65 } } },
+    );
+    expect(store.setSelectedKeyframeStartValue).toHaveBeenCalledWith({
+      startValue: 65,
+    });
+
+    handleSelectedKeyframeRemoveStartValueClick({ render, store });
+    expect(store.setSelectedKeyframeStartValue).toHaveBeenCalledWith({
+      startValue: undefined,
+    });
+
+    handleSelectedKeyframeAddMenuClose({ render, store });
+    expect(store.closeSelectedKeyframeAddMenu).toHaveBeenCalledTimes(2);
+    expect(render).toHaveBeenCalledTimes(5);
   });
 
   it("saves transition timeline state when navigating back", async () => {

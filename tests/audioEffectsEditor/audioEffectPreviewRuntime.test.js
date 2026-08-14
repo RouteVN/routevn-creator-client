@@ -20,6 +20,7 @@ describe("audio effect preview runtime", () => {
         type: "transition",
         prev: {
           fade: {
+            initialValue: 75,
             keyframes: [
               {
                 value: 40,
@@ -33,6 +34,7 @@ describe("audio effect preview runtime", () => {
         },
         next: {
           fade: {
+            initialValue: 25,
             keyframes: [
               {
                 value: 60,
@@ -69,6 +71,7 @@ describe("audio effect preview runtime", () => {
         properties: {
           volume: {
             exit: {
+              initialValue: 75,
               keyframes: [
                 {
                   delay: 25,
@@ -80,7 +83,7 @@ describe("audio effect preview runtime", () => {
               ],
             },
             enter: {
-              initialValue: 0,
+              initialValue: 25,
               keyframes: [
                 {
                   delay: 50,
@@ -105,6 +108,7 @@ describe("audio effect preview runtime", () => {
         type: "update",
         tween: {
           volume: {
+            initialValue: 80,
             keyframes: [
               { value: 50, duration: 150, easing: "easeOutQuad" },
               { value: 30, duration: 350, easing: "easeInOutSine" },
@@ -126,6 +130,7 @@ describe("audio effect preview runtime", () => {
       properties: {
         volume: {
           update: {
+            initialValue: 80,
             keyframes: [
               { value: 50, duration: 150, easing: "easeOutQuad" },
               { value: 30, duration: 350, easing: "easeInOutSine" },
