@@ -262,6 +262,11 @@ export const createInitialState = () => ({
     target: undefined,
     selectedSoundId: undefined,
   },
+  playButtonTooltip: {
+    open: false,
+    x: 0,
+    y: 0,
+  },
   previewLoading: false,
   previewLoopEnabled: false,
   previewPlaying: false,
@@ -320,6 +325,7 @@ export const loadAudioEffect = ({ state }, { item } = {}) => {
   state.previewSoundSelector.open = false;
   state.previewSoundSelector.target = undefined;
   state.previewSoundSelector.selectedSoundId = undefined;
+  state.playButtonTooltip.open = false;
   state.selectedEditorTab = "timeline";
   state.previewPlaybackFrameId = undefined;
   state.previewPlaybackStartedAtMs = undefined;
@@ -465,7 +471,18 @@ export const confirmPreviewSoundSelection = ({ state }) => {
     return;
   }
   state.previewSoundIds[target] = selectedSoundId;
+  state.playButtonTooltip.open = false;
   closePreviewSoundSelector({ state });
+};
+
+export const showPlayButtonTooltip = ({ state }, { x, y } = {}) => {
+  state.playButtonTooltip.open = true;
+  state.playButtonTooltip.x = x;
+  state.playButtonTooltip.y = y;
+};
+
+export const hidePlayButtonTooltip = ({ state }) => {
+  state.playButtonTooltip.open = false;
 };
 
 export const setPreviewLoading = ({ state }, { loading } = {}) => {
@@ -1474,6 +1491,13 @@ export const selectViewData = ({ state, i18n }) => {
   const previewReady = isTransition
     ? transitionSoundsValid
     : Boolean(preview.targetSound);
+  const playButtonDisabledReason = previewReady
+    ? undefined
+    : isTransition
+      ? (copy.selectTransitionPreviewSoundsToPlay ??
+        "Select different outgoing and incoming sounds in Preview to enable playback.")
+      : (copy.selectPreviewSoundToPlay ??
+        "Select a preview sound in Preview to enable playback.");
   const timelinePixelsPerSecond = Math.round(
     TIMELINE_BASE_PIXELS_PER_SECOND * state.timelineZoom,
   );
@@ -1643,6 +1667,13 @@ export const selectViewData = ({ state, i18n }) => {
       ? (copy.stopPreviewButton ?? "Stop Preview")
       : (copy.playButton ?? "Play"),
     playButtonDisabled: !previewReady || state.previewLoading,
+    playButtonDisabledReason,
+    playButtonTooltip: {
+      open:
+        playButtonDisabledReason !== undefined && state.playButtonTooltip.open,
+      x: state.playButtonTooltip.x,
+      y: state.playButtonTooltip.y,
+    },
     loopPreviewLabel: copy.loopPreviewLabel ?? "Loop preview",
     previewLoopButtonVariant: state.previewLoopEnabled ? "pr" : "ol",
     previewLoopEnabled: state.previewLoopEnabled,

@@ -6,6 +6,7 @@ import {
   closePreviewSoundSelector,
   confirmPreviewSoundSelection,
   createInitialState,
+  hidePlayButtonTooltip,
   loadAudioEffect,
   markSaved,
   openKeyframeMenu,
@@ -36,6 +37,7 @@ import {
   setSoundsData,
   setTimelineViewportWidth,
   setTimelineZoom,
+  showPlayButtonTooltip,
   startPreviewPlayback,
   togglePreviewLoop,
   updateTransitionTiming,
@@ -156,6 +158,9 @@ describe("audioEffectsEditor.store", () => {
       ],
       playButton: "Play",
       playButtonDisabled: true,
+      playButtonDisabledReason:
+        "Select different outgoing and incoming sounds in Preview to enable playback.",
+      playButtonTooltip: { open: false, x: 0, y: 0 },
       loopPreviewLabel: "Loop preview",
       previewLoopButtonVariant: "ol",
       previewLoopEnabled: false,
@@ -163,6 +168,15 @@ describe("audioEffectsEditor.store", () => {
         { target: "outgoing", label: "Outgoing Sound" },
         { target: "incoming", label: "Incoming Sound" },
       ],
+    });
+
+    showPlayButtonTooltip({ state }, { x: 120, y: 56 });
+    expect(selectViewData({ state, i18n: EN_I18N })).toMatchObject({
+      playButtonTooltip: { open: true, x: 120, y: 56 },
+    });
+    hidePlayButtonTooltip({ state });
+    expect(selectViewData({ state, i18n: EN_I18N })).toMatchObject({
+      playButtonTooltip: { open: false },
     });
 
     openPreviewSoundSelector({ state }, { target: "outgoing" });
@@ -200,6 +214,8 @@ describe("audioEffectsEditor.store", () => {
     expect(selectViewData({ state, i18n: EN_I18N })).toMatchObject({
       selectedEditorTab: "preview",
       playButtonDisabled: false,
+      playButtonDisabledReason: undefined,
+      playButtonTooltip: { open: false },
       showRightPanel: true,
       noSelectionLabel: "No selection",
     });
@@ -246,6 +262,8 @@ describe("audioEffectsEditor.store", () => {
       detailsPanelTitle: undefined,
       selectedKeyframeDetailId: undefined,
       noSelectionLabel: "No selection",
+      playButtonDisabledReason:
+        "Select a preview sound in Preview to enable playback.",
     });
   });
 

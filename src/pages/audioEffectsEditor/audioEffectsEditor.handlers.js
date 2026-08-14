@@ -251,6 +251,22 @@ export const handlePlayClick = async (deps) => {
   }
 };
 
+export const handlePlayButtonTooltipShow = (deps, payload) => {
+  const { render, store } = deps;
+  const rect = payload._event.currentTarget.getBoundingClientRect();
+  store.showPlayButtonTooltip({
+    x: rect.left + rect.width / 2,
+    y: rect.bottom + 8,
+  });
+  render();
+};
+
+export const handlePlayButtonTooltipHide = (deps) => {
+  const { render, store } = deps;
+  store.hidePlayButtonTooltip();
+  render();
+};
+
 export const handleTogglePreviewLoop = (deps) => {
   const { render, store } = deps;
   store.togglePreviewLoop({});

@@ -9,6 +9,8 @@ import {
   handleKeyframeFormAction,
   handleKeyframeMenuClose,
   handleKeyframeRightClick,
+  handlePlayButtonTooltipHide,
+  handlePlayButtonTooltipShow,
   handlePreviewSoundClick,
   handleConfirmSoundSelection,
   handlePreviewSoundSelected,
@@ -39,6 +41,37 @@ describe("audioEffectsEditor.handlers", () => {
 
     expect(store.togglePreviewLoop).toHaveBeenCalledWith({});
     expect(render).toHaveBeenCalledOnce();
+  });
+
+  it("shows the disabled Play explanation below its focusable wrapper", () => {
+    const store = {
+      showPlayButtonTooltip: vi.fn(),
+      hidePlayButtonTooltip: vi.fn(),
+    };
+    const render = vi.fn();
+
+    handlePlayButtonTooltipShow(
+      { store, render },
+      {
+        _event: {
+          currentTarget: {
+            getBoundingClientRect: () => ({
+              left: 20,
+              bottom: 48,
+              width: 80,
+            }),
+          },
+        },
+      },
+    );
+    handlePlayButtonTooltipHide({ store, render });
+
+    expect(store.showPlayButtonTooltip).toHaveBeenCalledWith({
+      x: 60,
+      y: 56,
+    });
+    expect(store.hidePlayButtonTooltip).toHaveBeenCalledOnce();
+    expect(render).toHaveBeenCalledTimes(2);
   });
 
   it("changes timeline zoom from the slider and step buttons", () => {

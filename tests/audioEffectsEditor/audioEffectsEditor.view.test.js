@@ -57,6 +57,11 @@ describe("audioEffectsEditor view", () => {
     expect(view).toContain('".audioEffectPreviewSoundButton:focus-visible"');
     expect(view).toContain("rtgl-button#playButton");
     expect(view).toContain("handler: handlePlayClick");
+    expect(view).toContain("rtgl-view#playButtonTooltipTrigger role=group");
+    expect(view).toContain("handler: handlePlayButtonTooltipShow");
+    expect(view).toContain("handler: handlePlayButtonTooltipHide");
+    expect(view).toContain("rtgl-tooltip ?open=${playButtonTooltip.open}");
+    expect(view).toContain('place="b" content="${playButtonDisabledReason}"');
     expect(view).toContain(
       "rtgl-button#previewLoopButton sq v=${previewLoopButtonVariant} pre=loop",
     );

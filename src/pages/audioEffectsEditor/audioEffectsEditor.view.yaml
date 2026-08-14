@@ -7,6 +7,16 @@ refs:
     eventListeners:
       click:
         handler: handlePlayClick
+  playButtonTooltipTrigger:
+    eventListeners:
+      mouseenter:
+        handler: handlePlayButtonTooltipShow
+      mouseleave:
+        handler: handlePlayButtonTooltipHide
+      focus:
+        handler: handlePlayButtonTooltipShow
+      blur:
+        handler: handlePlayButtonTooltipHide
   previewLoopButton:
     eventListeners:
       click:
@@ -208,7 +218,11 @@ template:
                   - rtgl-text ellipsis=true: ${audioEffectName}
                   - rtgl-text s=xs c=mu-fg: ${effectTypeLabel}
               - 'rtgl-button#previewLoopButton sq v=${previewLoopButtonVariant} pre=loop aria-label="${loopPreviewLabel}" aria-pressed="${previewLoopEnabled}" title="${loopPreviewLabel}"': null
-              - 'rtgl-button#playButton s=sm aria-label="${playButton}" aria-pressed="${previewPlaying}" ?disabled=${playButtonDisabled}': ${playButton}
+              - $if playButtonDisabledReason:
+                  - 'rtgl-view#playButtonTooltipTrigger role=group tabindex=0 aria-label="${playButton}: ${playButtonDisabledReason}" d=h av=c':
+                      - 'rtgl-button#playButton s=sm aria-label="${playButton}" aria-pressed="${previewPlaying}" ?disabled=${playButtonDisabled}': ${playButton}
+                $else:
+                  - 'rtgl-button#playButton s=sm aria-label="${playButton}" aria-pressed="${previewPlaying}" ?disabled=${playButtonDisabled}': ${playButton}
           - 'rtgl-view d=v h=1fg sv w=f p=md g=lg style="min-height: 0;"':
               - 'div#audioPreviewCanvas style="display: none; width: 1px; height: 1px;"': null
               - 'rtgl-view d=v w=f h=1fg g=md style="min-height: 0;"':
@@ -348,3 +362,4 @@ template:
                   - 'rtgl-button#confirmSoundSelection variant=pr ?disabled=${soundSelectionConfirmDisabled}': ${confirmSoundSelectionButton}
   - rtgl-dropdown-menu#keyframeDropdownMenu :items=${keyframeMenuItems} ?open=${keyframeMenu.open} x=${keyframeMenu.x} y=${keyframeMenu.y}: null
   - rtgl-dropdown-menu#selectedKeyframeAddMenu :items=${selectedKeyframeAddMenuItems} ?open=${selectedKeyframeAddMenu.open} x=${selectedKeyframeAddMenu.x} y=${selectedKeyframeAddMenu.y}: null
+  - rtgl-tooltip ?open=${playButtonTooltip.open} x=${playButtonTooltip.x} y=${playButtonTooltip.y} place="b" content="${playButtonDisabledReason}": null
