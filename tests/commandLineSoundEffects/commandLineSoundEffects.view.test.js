@@ -2,7 +2,7 @@ import { readFileSync } from "node:fs";
 import { describe, expect, it } from "vitest";
 
 describe("commandLineSoundEffects view", () => {
-  it("uses the medium size for the sound effect editor dialog", () => {
+  it("uses the large size for the sound effect editor dialog", () => {
     const view = readFileSync(
       new URL(
         "../../src/components/commandLineSoundEffects/commandLineSoundEffects.view.yaml",
@@ -12,10 +12,10 @@ describe("commandLineSoundEffects view", () => {
     );
 
     expect(view).toContain(
-      "rtgl-dialog#channelEditorDialog ?open=${isChannelEditorOpen} s=md close-button:",
+      "rtgl-dialog#channelEditorDialog ?open=${isChannelEditorOpen} s=lg close-button:",
     );
     expect(view).not.toContain(
-      "rtgl-dialog#channelEditorDialog ?open=${isChannelEditorOpen} s=lg",
+      "rtgl-dialog#channelEditorDialog ?open=${isChannelEditorOpen} s=md",
     );
   });
 
