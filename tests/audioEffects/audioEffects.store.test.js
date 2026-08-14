@@ -60,6 +60,8 @@ describe("audioEffects.store", () => {
           transitionTimelineDuration: 900,
           transitionPreviousLabel: "Previous",
           transitionNextLabel: "Next",
+          maskTimelineRows: [],
+          maskTimelineDefaultValues: {},
           prevProperties: {
             fade: {
               label: "Fade",

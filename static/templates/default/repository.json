@@ -988,6 +988,174 @@
       }
     ]
   },
+  "audioEffects": {
+    "items": {
+      "RwTkafZDHjgk": {
+        "id": "RwTkafZDHjgk",
+        "type": "folder",
+        "name": "Default"
+      },
+      "Wd6F6UwPiydF": {
+        "id": "Wd6F6UwPiydF",
+        "type": "audioEffect",
+        "name": "Fade in 1s",
+        "description": "",
+        "audioEffect": {
+          "type": "update",
+          "tween": {
+            "volume": {
+              "keyframes": [
+                {
+                  "startValue": 0,
+                  "value": 100,
+                  "duration": 1000,
+                  "easing": "linear"
+                }
+              ]
+            }
+          }
+        }
+      },
+      "VihkNgdrSQD9": {
+        "id": "VihkNgdrSQD9",
+        "type": "audioEffect",
+        "name": "Fade out 1s",
+        "description": "",
+        "audioEffect": {
+          "type": "update",
+          "tween": {
+            "volume": {
+              "keyframes": [
+                {
+                  "startValue": 100,
+                  "value": 0,
+                  "duration": 1000,
+                  "easing": "linear"
+                }
+              ]
+            }
+          }
+        }
+      },
+      "a65dzppVeTPc": {
+        "id": "a65dzppVeTPc",
+        "type": "audioEffect",
+        "name": "Crossfade 1s",
+        "description": "",
+        "audioEffect": {
+          "type": "transition",
+          "prev": {
+            "fade": {
+              "keyframes": [
+                {
+                  "value": 0,
+                  "duration": 1000,
+                  "easing": "linear"
+                }
+              ]
+            }
+          },
+          "next": {
+            "fade": {
+              "keyframes": [
+                {
+                  "value": 100,
+                  "duration": 1000,
+                  "easing": "linear"
+                }
+              ]
+            }
+          }
+        }
+      },
+      "UntGYnWj9HKq": {
+        "id": "UntGYnWj9HKq",
+        "type": "audioEffect",
+        "name": "Partial crossfade 1s",
+        "description": "",
+        "audioEffect": {
+          "type": "transition",
+          "prev": {
+            "fade": {
+              "keyframes": [
+                {
+                  "value": 0,
+                  "duration": 750,
+                  "easing": "linear"
+                }
+              ]
+            }
+          },
+          "next": {
+            "fade": {
+              "keyframes": [
+                {
+                  "value": 100,
+                  "delay": 250,
+                  "duration": 750,
+                  "easing": "linear"
+                }
+              ]
+            }
+          }
+        }
+      },
+      "iJ62KMzKszTq": {
+        "id": "iJ62KMzKszTq",
+        "type": "audioEffect",
+        "name": "Fade-through 1s",
+        "description": "",
+        "audioEffect": {
+          "type": "transition",
+          "prev": {
+            "fade": {
+              "keyframes": [
+                {
+                  "value": 0,
+                  "duration": 500,
+                  "easing": "linear"
+                }
+              ]
+            }
+          },
+          "next": {
+            "fade": {
+              "keyframes": [
+                {
+                  "value": 100,
+                  "delay": 500,
+                  "duration": 500,
+                  "easing": "linear"
+                }
+              ]
+            }
+          }
+        }
+      }
+    },
+    "tree": [
+      {
+        "id": "RwTkafZDHjgk",
+        "children": [
+          {
+            "id": "Wd6F6UwPiydF"
+          },
+          {
+            "id": "VihkNgdrSQD9"
+          },
+          {
+            "id": "a65dzppVeTPc"
+          },
+          {
+            "id": "UntGYnWj9HKq"
+          },
+          {
+            "id": "iJ62KMzKszTq"
+          }
+        ]
+      }
+    ]
+  },
   "characters": {
     "items": {
       "gZn7X95K41aJ": {

@@ -209,6 +209,8 @@ const buildCatalogItem = (item, { copy = {} } = {}) => {
       : 0,
     transitionPreviousLabel: copy.previousLabel ?? "Previous",
     transitionNextLabel: copy.nextLabel ?? "Next",
+    maskTimelineRows: [],
+    maskTimelineDefaultValues: {},
     timelineDefaultValues: {
       volume: 100,
       pan: 0,
