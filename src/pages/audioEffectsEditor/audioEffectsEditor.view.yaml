@@ -224,14 +224,14 @@ template:
                                           - rtgl-view d=v w=f g=xs:
                                               - 'rtgl-view d=h h=24 w=104 bgc=bg bwr=xs bc=bo av=c style="min-width: 104px; flex-shrink: 0; position: sticky; left: 0; z-index: 6;"':
                                                   - rtgl-view w=72 av=c ah=s pl=sm:
-                                                      - rtgl-text s=sm c=mu-fg: ${previousTimelineLabel}
+                                                      - rtgl-text s=sm c=mu-fg: ${outgoingTimelineLabel}
                                                   - rtgl-view h=24 w=24 mr=sm ml=sm: null
                                               - rvn-keyframe-timeline#previousTimeline editable=true side=prev ?showRuler=false ?showTotalDuration=false timelineDuration=${timelineDuration} usedDuration=${timelineUsedDuration} :properties=${previousTimelineProperties} :defaultValues=${previousTimelineDefaultValues} :selectedKeyframe=${selectedKeyframe} :selectedProperty=${selectedProperty}: null
                                       - $if nextTimelineVisible:
                                           - rtgl-view d=v w=f g=xs:
                                               - 'rtgl-view d=h h=24 w=104 bgc=bg bwr=xs bc=bo av=c style="min-width: 104px; flex-shrink: 0; position: sticky; left: 0; z-index: 6;"':
                                                   - rtgl-view w=72 av=c ah=s pl=sm:
-                                                      - rtgl-text s=sm c=mu-fg: ${nextTimelineLabel}
+                                                      - rtgl-text s=sm c=mu-fg: ${incomingTimelineLabel}
                                                   - rtgl-view h=24 w=24 mr=sm ml=sm: null
                                               - rvn-keyframe-timeline#nextTimeline editable=true side=next ?showRuler=false ?showTotalDuration=false timelineDuration=${timelineDuration} usedDuration=${timelineUsedDuration} :properties=${nextTimelineProperties} :defaultValues=${nextTimelineDefaultValues} :selectedKeyframe=${selectedKeyframe} :selectedProperty=${selectedProperty}: null
                                       - 'rtgl-view h=32 style="flex-shrink: 0;"': null

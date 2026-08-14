@@ -195,10 +195,10 @@ template:
                                                       - rtgl-view d=v w=f g=md:
                                                           - rvn-keyframe-timeline w=f ?showRuler=true ?showTracks=false timelineDuration=${item.transitionTimelineDuration}: null
                                                           - rtgl-view d=v w=f g=xs:
-                                                              - rtgl-text s=xs c=mu-fg: ${item.transitionPreviousLabel}
+                                                              - rtgl-text s=xs c=mu-fg: ${item.transitionOutgoingLabel}
                                                               - rvn-keyframe-timeline w=f ?showTotalDuration=false ?showRuler=false timelineDuration=${item.transitionTimelineDuration} :properties=${item.prevProperties} :defaultValues=${item.timelineDefaultValues}: null
                                                           - rtgl-view d=v w=f g=xs:
-                                                              - rtgl-text s=xs c=mu-fg: ${item.transitionNextLabel}
+                                                              - rtgl-text s=xs c=mu-fg: ${item.transitionIncomingLabel}
                                                               - rvn-keyframe-timeline w=f ?showTotalDuration=false ?showRuler=false timelineDuration=${item.transitionTimelineDuration} :properties=${item.nextProperties} :defaultValues=${item.timelineDefaultValues}: null
                                                           - $for maskTimelineRow in item.maskTimelineRows:
                                                               - rtgl-view d=v w=f g=xs:

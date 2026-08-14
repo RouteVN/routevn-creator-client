@@ -35,7 +35,7 @@ const createInitialAudioEffectDefinition = (dialogType) => {
           keyframes: [
             {
               value: 0,
-              duration: 600,
+              duration: 1000,
               easing: "easeInOutSine",
             },
           ],
@@ -46,7 +46,7 @@ const createInitialAudioEffectDefinition = (dialogType) => {
           keyframes: [
             {
               value: 100,
-              duration: 900,
+              duration: 1000,
               easing: "easeInOutSine",
             },
           ],

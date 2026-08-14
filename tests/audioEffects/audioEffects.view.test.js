@@ -42,8 +42,8 @@ describe("audio effects views", () => {
       "utf8",
     );
     expect(catalogView).toContain("$elif item.cardKind == 'animation'");
-    expect(catalogView).toContain("${item.transitionPreviousLabel}");
-    expect(catalogView).toContain("${item.transitionNextLabel}");
+    expect(catalogView).toContain("${item.transitionOutgoingLabel}");
+    expect(catalogView).toContain("${item.transitionIncomingLabel}");
     expect(catalogView).toContain("rvn-keyframe-timeline");
   });
 

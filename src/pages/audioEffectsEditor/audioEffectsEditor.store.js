@@ -1487,8 +1487,8 @@ export const selectViewData = ({ state, i18n }) => {
     editKeyframeButtonLabel: copy.editKeyframeTitle ?? "Edit Keyframe",
     canRemoveSelectedProperty:
       selectedProperty !== undefined && Object.keys(tween).length > 1,
-    previousTimelineLabel: copy.outgoingLabel ?? "Outgoing",
-    nextTimelineLabel: copy.incomingLabel ?? "Incoming",
+    outgoingTimelineLabel: copy.outgoingLabel ?? "Outgoing",
+    incomingTimelineLabel: copy.incomingLabel ?? "Incoming",
     canAddProperty: availableProperties.length > 0,
     addPropertyButton: copy.addPropertyButton ?? "Add Property",
     addKeyframeButton: copy.addKeyframeButton ?? "Add Keyframe",

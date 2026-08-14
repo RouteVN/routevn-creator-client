@@ -13,6 +13,10 @@ describe("audioEffectsEditor view", () => {
 
     expect(view).toContain("rvn-keyframe-timeline#previousTimeline");
     expect(view).toContain("rvn-keyframe-timeline#nextTimeline");
+    expect(view).toContain("${outgoingTimelineLabel}");
+    expect(view).toContain("${incomingTimelineLabel}");
+    expect(view).not.toContain("${previousTimelineLabel}");
+    expect(view).not.toContain("${nextTimelineLabel}");
     expect(view).toContain("rvn-detail-view#selectedKeyframeDetails");
     expect(view).toContain("rvn-detail-view#selectedPropertyDetails");
     expect(view).toContain("rtgl-slider-input#selectedPropertyStartValue");

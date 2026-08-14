@@ -70,6 +70,8 @@ describe("audioEffectsEditor.store", () => {
       timelineZoomMin: 0.25,
       timelineZoomMax: 4,
       timelineZoomStep: 0.125,
+      outgoingTimelineLabel: "Outgoing",
+      incomingTimelineLabel: "Incoming",
     });
     expect(viewData.timelineCanvasStyle).toContain("width: 904px");
     expect(viewData.timelinePlayheadStyle).toContain("* 0.45");

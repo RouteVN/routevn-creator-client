@@ -67,12 +67,12 @@ const formatAudioEffectSummary = (item, copy = {}) => {
     const sides = [];
     if (definition.prev?.fade) {
       sides.push(
-        `${copy.previousLabel ?? "Previous"}: ${getAudioEffectKeyframesDuration(getTransitionFadeKeyframes(definition, "prev"))}ms`,
+        `${copy.outgoingLabel ?? "Outgoing"}: ${getAudioEffectKeyframesDuration(getTransitionFadeKeyframes(definition, "prev"))}ms`,
       );
     }
     if (definition.next?.fade) {
       sides.push(
-        `${copy.nextLabel ?? "Next"}: ${getAudioEffectKeyframesDuration(getTransitionFadeKeyframes(definition, "next"))}ms`,
+        `${copy.incomingLabel ?? "Incoming"}: ${getAudioEffectKeyframesDuration(getTransitionFadeKeyframes(definition, "next"))}ms`,
       );
     }
     return sides.join(" · ");
@@ -207,8 +207,8 @@ const buildCatalogItem = (item, { copy = {} } = {}) => {
     transitionTimelineDuration: transition
       ? getTransitionTimelineDuration(definition)
       : 0,
-    transitionPreviousLabel: copy.previousLabel ?? "Previous",
-    transitionNextLabel: copy.nextLabel ?? "Next",
+    transitionOutgoingLabel: copy.outgoingLabel ?? "Outgoing",
+    transitionIncomingLabel: copy.incomingLabel ?? "Incoming",
     maskTimelineRows: [],
     maskTimelineDefaultValues: {},
     timelineDefaultValues: {

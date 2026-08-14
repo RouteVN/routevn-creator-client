@@ -41,6 +41,8 @@ describe("catalogResourcesView.store", () => {
       expect.objectContaining({
         id: "animation-1",
         name: "Imported Animation",
+        transitionOutgoingLabel: "Outgoing",
+        transitionIncomingLabel: "Incoming",
       }),
     ]);
   });

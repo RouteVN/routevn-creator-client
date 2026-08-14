@@ -18,12 +18,14 @@ describe("audioEffects.handlers", () => {
         type: "transition",
         prev: {
           fade: {
-            keyframes: [{ value: 0, duration: 600, easing: "easeInOutSine" }],
+            keyframes: [{ value: 0, duration: 1000, easing: "easeInOutSine" }],
           },
         },
         next: {
           fade: {
-            keyframes: [{ value: 100, duration: 900, easing: "easeInOutSine" }],
+            keyframes: [
+              { value: 100, duration: 1000, easing: "easeInOutSine" },
+            ],
           },
         },
       },
