@@ -295,6 +295,11 @@ export const createInitialState = () => ({
   },
   addPropertyDialogOpen: false,
   addPropertySide: "update",
+  addPropertySideMenu: {
+    open: false,
+    x: undefined,
+    y: undefined,
+  },
   keyframeDialog: {
     open: false,
     side: undefined,
@@ -338,6 +343,9 @@ export const loadAudioEffect = ({ state }, { item } = {}) => {
   state.selectedKeyframeAddMenu.open = false;
   state.selectedKeyframeAddMenu.x = undefined;
   state.selectedKeyframeAddMenu.y = undefined;
+  state.addPropertySideMenu.open = false;
+  state.addPropertySideMenu.x = undefined;
+  state.addPropertySideMenu.y = undefined;
   closeKeyframeMenu({ state });
   state.dirty = false;
 };
@@ -667,6 +675,9 @@ export const openAddPropertyDialog = ({ state }, { side = "update" } = {}) => {
   if (!validSide) {
     return;
   }
+  state.addPropertySideMenu.open = false;
+  state.addPropertySideMenu.x = undefined;
+  state.addPropertySideMenu.y = undefined;
   state.addPropertySide = side;
   state.addPropertyDialogOpen = true;
 };
@@ -676,6 +687,18 @@ export const closeAddPropertyDialog = ({ state }) => {
 };
 
 export const selectAddPropertySide = ({ state }) => state.addPropertySide;
+
+export const openAddPropertySideMenu = ({ state }, { x, y } = {}) => {
+  state.addPropertySideMenu.open = true;
+  state.addPropertySideMenu.x = x;
+  state.addPropertySideMenu.y = y;
+};
+
+export const closeAddPropertySideMenu = ({ state }) => {
+  state.addPropertySideMenu.open = false;
+  state.addPropertySideMenu.x = undefined;
+  state.addPropertySideMenu.y = undefined;
+};
 
 export const addAudioEffectProperty = (
   { state },
@@ -1375,6 +1398,27 @@ export const selectViewData = ({ state, i18n }) => {
   const availableProperties = AUDIO_EFFECT_PROPERTY_KEYS.filter(
     (property) => !addPropertyTracks[property],
   );
+  const canAddPreviousProperty =
+    Object.keys(state.definition.prev ?? {}).length <
+    AUDIO_EFFECT_PROPERTY_KEYS.length;
+  const canAddNextProperty =
+    Object.keys(state.definition.next ?? {}).length <
+    AUDIO_EFFECT_PROPERTY_KEYS.length;
+  const addPropertySideMenuItems = [];
+  if (canAddPreviousProperty) {
+    addPropertySideMenuItems.push({
+      label: copy.outgoingLabel ?? "Outgoing",
+      type: "item",
+      value: "prev",
+    });
+  }
+  if (canAddNextProperty) {
+    addPropertySideMenuItems.push({
+      label: copy.incomingLabel ?? "Incoming",
+      type: "item",
+      value: "next",
+    });
+  }
   const dialogProperty = state.keyframeDialog.property;
   const dialogSide = state.keyframeDialog.side;
   const dialogKeyframes =
@@ -1615,12 +1659,9 @@ export const selectViewData = ({ state, i18n }) => {
     outgoingTimelineLabel: copy.outgoingLabel ?? "Outgoing",
     incomingTimelineLabel: copy.incomingLabel ?? "Incoming",
     canAddProperty: availableProperties.length > 0,
-    canAddPreviousProperty:
-      Object.keys(state.definition.prev ?? {}).length <
-      AUDIO_EFFECT_PROPERTY_KEYS.length,
-    canAddNextProperty:
-      Object.keys(state.definition.next ?? {}).length <
-      AUDIO_EFFECT_PROPERTY_KEYS.length,
+    canAddTransitionProperty: addPropertySideMenuItems.length > 0,
+    addPropertySideMenu: state.addPropertySideMenu,
+    addPropertySideMenuItems,
     addPropertyButton: copy.addPropertyButton ?? "Add Property",
     addKeyframeButton: copy.addKeyframeButton ?? "Add Keyframe",
     removePropertyButton: copy.removePropertyButton ?? "Remove Property",

@@ -1,6 +1,8 @@
 import { describe, expect, it, vi } from "vitest";
 import {
   handleAddPropertyClick,
+  handleAddPropertySideMenuClose,
+  handleAddPropertySideMenuItemClick,
   handleAddKeyframeFromTimeline,
   handleBackClick,
   handleEditorTabClick,
@@ -34,7 +36,29 @@ import {
 import { EN_I18N } from "../support/i18n.js";
 
 describe("audioEffectsEditor.handlers", () => {
-  it("opens property creation for the requested transition side", () => {
+  it("opens the transition-side menu from the shared add button", () => {
+    const store = { openAddPropertySideMenu: vi.fn() };
+    const render = vi.fn();
+
+    handleAddPropertyClick(
+      { render, store },
+      {
+        _event: {
+          clientX: 120,
+          clientY: 48,
+          currentTarget: { dataset: {} },
+        },
+      },
+    );
+
+    expect(store.openAddPropertySideMenu).toHaveBeenCalledWith({
+      x: 120,
+      y: 48,
+    });
+    expect(render).toHaveBeenCalledOnce();
+  });
+
+  it("opens property creation for the selected transition side", () => {
     const refs = {
       addPropertyForm: { reset: vi.fn(), setValues: vi.fn() },
     };
@@ -46,9 +70,9 @@ describe("audioEffectsEditor.handlers", () => {
     };
     const render = vi.fn();
 
-    handleAddPropertyClick(
+    handleAddPropertySideMenuItemClick(
       { refs, render, store },
-      { _event: { currentTarget: { dataset: { side: "next" } } } },
+      { _event: { detail: { item: { value: "next" } } } },
     );
 
     expect(store.openAddPropertyDialog).toHaveBeenCalledWith({ side: "next" });
@@ -56,6 +80,16 @@ describe("audioEffectsEditor.handlers", () => {
     expect(refs.addPropertyForm.setValues).toHaveBeenCalledWith({
       values: { property: "pan" },
     });
+    expect(render).toHaveBeenCalledOnce();
+  });
+
+  it("closes the transition-side menu", () => {
+    const store = { closeAddPropertySideMenu: vi.fn() };
+    const render = vi.fn();
+
+    handleAddPropertySideMenuClose({ render, store });
+
+    expect(store.closeAddPropertySideMenu).toHaveBeenCalledOnce();
     expect(render).toHaveBeenCalledOnce();
   });
 

@@ -73,14 +73,12 @@ refs:
     eventListeners:
       click:
         handler: handleAddPropertyClick
-  addPreviousPropertyButton:
+  addPropertySideMenu:
     eventListeners:
-      click:
-        handler: handleAddPropertyClick
-  addNextPropertyButton:
-    eventListeners:
-      click:
-        handler: handleAddPropertyClick
+      close:
+        handler: handleAddPropertySideMenuClose
+      item-click:
+        handler: handleAddPropertySideMenuItemClick
   removePropertyButton:
     eventListeners:
       click:
@@ -249,11 +247,8 @@ template:
                           - $if canAddProperty:
                               - 'rtgl-button#addPropertyButton data-side=update pre=plus s=sm': ${addPropertyButton}
                       - $if selectedEditorTab == 'timeline' && isTransition:
-                          - rtgl-view d=h av=c g=sm:
-                              - $if canAddPreviousProperty:
-                                  - 'rtgl-button#addPreviousPropertyButton data-side=prev pre=plus s=sm': ${outgoingTimelineLabel}
-                              - $if canAddNextProperty:
-                                  - 'rtgl-button#addNextPropertyButton data-side=next pre=plus s=sm': ${incomingTimelineLabel}
+                          - $if canAddTransitionProperty:
+                              - 'rtgl-button#addPropertyButton pre=plus s=sm aria-haspopup=menu aria-expanded="${addPropertySideMenu.open}"': ${addPropertyButton}
                       - $if selectedEditorTab == 'preview':
                           - 'rtgl-button#savePreviewButton s=sm ?disabled=${saving}': ${saveButton}
                   - $if selectedEditorTab == 'timeline':
@@ -375,5 +370,6 @@ template:
               - rtgl-view d=h g=sm w=f ah=e:
                   - 'rtgl-button#confirmSoundSelection variant=pr ?disabled=${soundSelectionConfirmDisabled}': ${confirmSoundSelectionButton}
   - rtgl-dropdown-menu#keyframeDropdownMenu :items=${keyframeMenuItems} ?open=${keyframeMenu.open} x=${keyframeMenu.x} y=${keyframeMenu.y}: null
+  - rtgl-dropdown-menu#addPropertySideMenu :items=${addPropertySideMenuItems} ?open=${addPropertySideMenu.open} x=${addPropertySideMenu.x} y=${addPropertySideMenu.y}: null
   - rtgl-dropdown-menu#selectedKeyframeAddMenu :items=${selectedKeyframeAddMenuItems} ?open=${selectedKeyframeAddMenu.open} x=${selectedKeyframeAddMenu.x} y=${selectedKeyframeAddMenu.y}: null
   - rtgl-tooltip ?open=${playButtonTooltip.open} x=${playButtonTooltip.x} y=${playButtonTooltip.y} place="b" content="${playButtonDisabledReason}": null

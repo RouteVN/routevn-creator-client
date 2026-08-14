@@ -825,6 +825,48 @@ describe("audioEffectsEditor.store", () => {
     expect(Object.keys(state.definition.next)).toEqual(["playbackRate"]);
   });
 
+  it("offers transition sides from one add-property menu", () => {
+    const state = createInitialState();
+    loadAudioEffect(
+      { state },
+      {
+        item: {
+          id: "transition-properties",
+          name: "Transition Properties",
+          audioEffect: {
+            type: "transition",
+            prev: {
+              volume: {
+                keyframes: [{ value: 0, duration: 300, easing: "linear" }],
+              },
+            },
+          },
+        },
+      },
+    );
+
+    expect(selectViewData({ state, i18n: EN_I18N })).toMatchObject({
+      canAddTransitionProperty: true,
+      addPropertySideMenuItems: [
+        { label: "Outgoing", type: "item", value: "prev" },
+        { label: "Incoming", type: "item", value: "next" },
+      ],
+    });
+
+    addAudioEffectProperty({ state }, { side: "prev", property: "pan" });
+    addAudioEffectProperty(
+      { state },
+      { side: "prev", property: "playbackRate" },
+    );
+
+    expect(selectViewData({ state, i18n: EN_I18N })).toMatchObject({
+      canAddTransitionProperty: true,
+      addPropertySideMenuItems: [
+        { label: "Incoming", type: "item", value: "next" },
+      ],
+    });
+  });
+
   it("keeps relative start-value deltas outside absolute slider bounds", () => {
     const state = createInitialState();
     loadAudioEffect(

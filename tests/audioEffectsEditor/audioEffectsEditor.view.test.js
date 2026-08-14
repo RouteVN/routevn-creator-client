@@ -15,6 +15,12 @@ describe("audioEffectsEditor view", () => {
     expect(view).toContain("rvn-keyframe-timeline#nextTimeline");
     expect(view).toContain("${outgoingTimelineLabel}");
     expect(view).toContain("${incomingTimelineLabel}");
+    expect(view).toContain(
+      "rtgl-button#addPropertyButton pre=plus s=sm aria-haspopup=menu",
+    );
+    expect(view).toContain("rtgl-dropdown-menu#addPropertySideMenu");
+    expect(view).not.toContain("#addPreviousPropertyButton");
+    expect(view).not.toContain("#addNextPropertyButton");
     expect(view).not.toContain("${previousTimelineLabel}");
     expect(view).not.toContain("${nextTimelineLabel}");
     expect(view).toContain("rvn-detail-view#selectedKeyframeDetails");

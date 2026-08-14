@@ -351,15 +351,45 @@ export const handleConfirmSoundSelection = (deps) => {
   render();
 };
 
-export const handleAddPropertyClick = (deps, payload) => {
+const openAddPropertyDialog = (deps, { side } = {}) => {
   const { refs, render, store } = deps;
-  const { side } = payload._event.currentTarget.dataset;
   store.openAddPropertyDialog({ side });
   render();
   refs.addPropertyForm.reset();
   refs.addPropertyForm.setValues({
     values: store.selectViewData().addPropertyFormDefaults,
   });
+};
+
+export const handleAddPropertyClick = (deps, payload) => {
+  const { render, store } = deps;
+  const event = payload._event;
+  const { side } = event.currentTarget.dataset;
+  if (side) {
+    openAddPropertyDialog(deps, { side });
+    return;
+  }
+
+  store.openAddPropertySideMenu({
+    x: event.clientX,
+    y: event.clientY,
+  });
+  render();
+};
+
+export const handleAddPropertySideMenuItemClick = (deps, payload) => {
+  const side = payload._event.detail.item.value;
+  if (side !== "prev" && side !== "next") {
+    return;
+  }
+
+  openAddPropertyDialog(deps, { side });
+};
+
+export const handleAddPropertySideMenuClose = (deps) => {
+  const { render, store } = deps;
+  store.closeAddPropertySideMenu();
+  render();
 };
 
 export const handleAddPropertyDialogClose = (deps) => {
