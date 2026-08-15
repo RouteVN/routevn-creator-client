@@ -121,6 +121,7 @@ export const createInitialState = () => ({
     projectId: null,
     projectPath: "",
     projectName: "",
+    confirmationText: "",
   },
 
   createDialog: {
@@ -432,6 +433,7 @@ export const openDeleteDialog = (
   state.deleteDialog.projectId = projectId || null;
   state.deleteDialog.projectPath = projectPath ?? "";
   state.deleteDialog.projectName = projectName;
+  state.deleteDialog.confirmationText = "";
 };
 
 export const closeDeleteDialog = ({ state }, _payload = {}) => {
@@ -439,6 +441,14 @@ export const closeDeleteDialog = ({ state }, _payload = {}) => {
   state.deleteDialog.projectId = null;
   state.deleteDialog.projectPath = "";
   state.deleteDialog.projectName = "";
+  state.deleteDialog.confirmationText = "";
+};
+
+export const setDeleteDialogConfirmationText = (
+  { state },
+  { confirmationText } = {},
+) => {
+  state.deleteDialog.confirmationText = confirmationText ?? "";
 };
 
 export const selectDeleteDialogProjectId = ({ state }) => {
@@ -447,6 +457,10 @@ export const selectDeleteDialogProjectId = ({ state }) => {
 
 export const selectDeleteDialogProjectPath = ({ state }) => {
   return state.deleteDialog.projectPath || "";
+};
+
+export const selectDeleteDialogConfirmationText = ({ state }) => {
+  return state.deleteDialog.confirmationText;
 };
 
 export const selectIsDeleteDialogOpen = ({ state }) => {
@@ -496,6 +510,7 @@ export const selectIsAddMemberDialogOpen = ({ state }) => {
 
 export const selectViewData = ({ state, i18n }) => {
   const copy = selectProjectsPageCopy(i18n);
+  const isAndroidProjectDelete = state.platform === "android";
   const deleteDialogProjectName = state.deleteDialog.projectName
     ? `"${state.deleteDialog.projectName}"`
     : copy.removeProjectTargetFallback;
@@ -749,11 +764,27 @@ export const selectViewData = ({ state, i18n }) => {
     showProjectAccountActions: Boolean(
       state.showCloudProjects && !state.isTouchMode,
     ),
-    deleteDialogTitle: copy.removeProjectTitle,
-    deleteDialogMessage: formatProjectsPageCopy(copy.removeProjectMessage, {
-      projectName: deleteDialogProjectName,
-    }),
-    deleteDialogConfirmLabel: copy.removeButton,
+    isAndroidProjectDelete,
+    deleteDialogTitle: isAndroidProjectDelete
+      ? copy.deleteProjectTitle
+      : copy.removeProjectTitle,
+    deleteDialogMessage: formatProjectsPageCopy(
+      isAndroidProjectDelete
+        ? copy.deleteProjectWarning
+        : copy.removeProjectMessage,
+      {
+        projectName: deleteDialogProjectName,
+      },
+    ),
+    deleteDialogConfirmationLabel: copy.deleteProjectConfirmationLabel,
+    deleteDialogConfirmationPlaceholder:
+      copy.deleteProjectConfirmationPlaceholder,
+    deleteDialogConfirmDisabled:
+      isAndroidProjectDelete &&
+      state.deleteDialog.confirmationText !== "Delete",
+    deleteDialogConfirmLabel: isAndroidProjectDelete
+      ? copy.deleteButton
+      : copy.removeButton,
     hasLocalProjects,
     loadingMessage: copy.loadingMessage,
     localEmptyMessage:

@@ -278,6 +278,14 @@ export const createAppService = (params) => {
       return appService.loadAllProjects();
     },
 
+    async deleteProject(projectId) {
+      return callAndroidBridge("deleteProject", { projectId });
+    },
+
+    async discardPendingSaveDocument(uri) {
+      return callAndroidBridge("discardPendingSaveDocument", { uri });
+    },
+
     copyText(value) {
       return copyTextToClipboard(value);
     },

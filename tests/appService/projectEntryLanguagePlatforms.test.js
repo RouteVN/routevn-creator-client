@@ -244,8 +244,7 @@ describe("project-entry language platform propagation", () => {
         ]);
         expect(globalUI.showToast).toHaveBeenCalledWith({
           title: "Error",
-          message:
-            "The project was created, but its icon could not be saved.",
+          message: "The project was created, but its icon could not be saved.",
           status: "error",
         });
         expect(consoleError).toHaveBeenCalledWith(
@@ -363,6 +362,41 @@ describe("project-entry language platform propagation", () => {
       }),
     ).rejects.toThrow("Imported project identity does not match.");
     await expect(db.get("projectEntries")).resolves.toEqual([]);
+  });
+
+  it("delegates permanent Android project deletion to native storage", async () => {
+    mocked.androidBridge.mockResolvedValue({
+      deleted: true,
+      existed: true,
+    });
+    const appService = createAndroidAppService(
+      createParams({ db: createDb(), projectService: createProjectService() }),
+    );
+
+    await expect(appService.deleteProject("project-1")).resolves.toEqual({
+      deleted: true,
+      existed: true,
+    });
+    expect(mocked.androidBridge).toHaveBeenCalledWith("deleteProject", {
+      projectId: "project-1",
+    });
+  });
+
+  it("delegates failed Android save-document cleanup to native storage", async () => {
+    mocked.androidBridge.mockResolvedValue({ deleted: true });
+    const appService = createAndroidAppService(
+      createParams({ db: createDb(), projectService: createProjectService() }),
+    );
+
+    await expect(
+      appService.discardPendingSaveDocument(
+        "content://exports/project-one.zip",
+      ),
+    ).resolves.toEqual({ deleted: true });
+    expect(mocked.androidBridge).toHaveBeenCalledWith(
+      "discardPendingSaveDocument",
+      { uri: "content://exports/project-one.zip" },
+    );
   });
 
   it.each([

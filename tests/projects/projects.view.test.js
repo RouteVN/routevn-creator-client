@@ -116,13 +116,19 @@ describe("projects view", () => {
     expect(projectsView).not.toContain("h=80 aria-hidden=true");
   });
 
-  it("shows only the remove action in the project removal confirmation", () => {
+  it("shows a hard destructive confirmation for Android project deletion", () => {
     const projectsView = readFileSync(
       new URL("../../src/pages/projects/projects.view.yaml", import.meta.url),
       "utf8",
     );
 
     expect(projectsView).toContain("rtgl-button#deleteConfirmButton v=pr");
+    expect(projectsView).toContain(
+      "rtgl-button#deleteConfirmButton v=de ?disabled=${deleteDialogConfirmDisabled}",
+    );
+    expect(projectsView).toContain("rtgl-input#deleteConfirmationInput");
+    expect(projectsView).toContain("handler: handleDeleteConfirmationInput");
+    expect(projectsView).toContain("role=alert");
     expect(projectsView).not.toContain("deleteCancelButton");
     expect(projectsView).not.toContain("handleDeleteDialogCancel");
   });

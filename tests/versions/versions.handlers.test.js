@@ -46,6 +46,7 @@ const createDeps = ({ repository, version, editingVersionId } = {}) => {
       showAlert: vi.fn(),
       showProgressDialog: vi.fn(() => progressDialog),
       closeAll: vi.fn(),
+      discardPendingSaveDocument: vi.fn(async () => ({ deleted: true })),
     },
     projectService: {
       ensureRepository: vi.fn(async () => repository),
@@ -572,6 +573,61 @@ describe("versions.handleDownloadZipClick", () => {
     expect(deps.appService.showAlert).toHaveBeenCalledWith({
       message: "ZIP export completed.\nSaved to: /tmp/export.zip",
       title: EN_I18N.versionsPage.exportCompletedTitle,
+    });
+  });
+
+  it("discards an Android save document when export preparation fails", async () => {
+    const repository = {
+      getRevision: vi.fn(() => 3),
+      getState: vi.fn(() => structuredClone(initialProjectData)),
+      loadState: vi.fn(async () => {
+        throw new Error("history replay failed");
+      }),
+    };
+    const deps = createDeps({ repository });
+    deps.appService.getPlatform.mockReturnValue("android");
+    deps.projectService.promptDistributionZipPath.mockResolvedValue(
+      "content://exports/project-one.zip",
+    );
+
+    await chooseAndConfirmExport(handleDownloadZipClick, deps);
+
+    expect(deps.appService.discardPendingSaveDocument).toHaveBeenCalledWith(
+      "content://exports/project-one.zip",
+    );
+    expect(
+      deps.projectService.createDistributionZipStreamedToPath,
+    ).not.toHaveBeenCalled();
+    expect(deps.appService.showAlert).toHaveBeenCalledWith({
+      message: expect.stringContaining("history replay failed"),
+      title: EN_I18N.versionsPage.errorTitle,
+    });
+  });
+
+  it("reports when Android cannot remove a failed save document", async () => {
+    const repository = {
+      getRevision: vi.fn(() => 3),
+      getState: vi.fn(() => structuredClone(initialProjectData)),
+      loadState: vi.fn(async () => {
+        throw new Error("history replay failed");
+      }),
+    };
+    const deps = createDeps({ repository });
+    deps.appService.getPlatform.mockReturnValue("android");
+    deps.appService.discardPendingSaveDocument.mockRejectedValue(
+      new Error("The incomplete export could not be removed."),
+    );
+    deps.projectService.promptDistributionZipPath.mockResolvedValue(
+      "content://exports/project-one.zip",
+    );
+
+    await chooseAndConfirmExport(handleDownloadZipClick, deps);
+
+    expect(deps.appService.showAlert).toHaveBeenCalledWith({
+      message: expect.stringMatching(
+        /history replay failed.*incomplete export could not be removed/,
+      ),
+      title: EN_I18N.versionsPage.errorTitle,
     });
   });
 

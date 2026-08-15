@@ -112,6 +112,10 @@ refs:
     eventListeners:
       close:
         handler: handleDeleteDialogClose
+  deleteConfirmationInput:
+    eventListeners:
+      value-input:
+        handler: handleDeleteConfirmationInput
   cloudCreateProjectDialog:
     eventListeners:
       close:
@@ -219,9 +223,18 @@ template:
       - rtgl-view slot=content g=lg p=lg:
           - rtgl-view d=v g=md:
               - rtgl-text s=lg: ${deleteDialogTitle}
-              - rtgl-text c=mu-fg: ${deleteDialogMessage}
+              - $if isAndroidProjectDelete:
+                  - rtgl-view w=f p=md bgc=de br=md role=alert:
+                      - rtgl-text c=de-fg: ${deleteDialogMessage}
+                  - rtgl-text: ${deleteDialogConfirmationLabel}
+                  - 'rtgl-input#deleteConfirmationInput w=f value=${deleteDialog.confirmationText} placeholder=${deleteDialogConfirmationPlaceholder} aria-label="${deleteDialogConfirmationLabel}" autocapitalize=off spellcheck=false': null
+                $else:
+                  - rtgl-text c=mu-fg: ${deleteDialogMessage}
           - rtgl-view d=h g=sm w=f ah=e:
-              - rtgl-button#deleteConfirmButton v=pr: ${deleteDialogConfirmLabel}
+              - $if isAndroidProjectDelete:
+                  - rtgl-button#deleteConfirmButton v=de ?disabled=${deleteDialogConfirmDisabled}: ${deleteDialogConfirmLabel}
+                $else:
+                  - rtgl-button#deleteConfirmButton v=pr: ${deleteDialogConfirmLabel}
   - $if createDialog.isOpen:
       - rtgl-dialog#createProjectDialog ?open=${createDialog.isOpen} s=md md-layout=fixed-top:
           - rtgl-view slot=content d=v w=f h=f overflow=hidden:

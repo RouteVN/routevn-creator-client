@@ -469,14 +469,6 @@ const writeDownloadFile = ({ filename, bytes, mimeType }) => {
   });
 };
 
-const writeSelectedFile = ({ uri, bytes, mimeType }) => {
-  return callAndroidBridge("writeFileToUri", {
-    uri,
-    mimeType: mimeType || "application/octet-stream",
-    base64: uint8ArrayToBase64(bytes),
-  });
-};
-
 const collectDistributionZipAssets = async ({
   fileEntries,
   getCurrentReference,
@@ -500,10 +492,13 @@ const collectDistributionZipAssets = async ({
         mime: fileEntry.mimeType || mimeType || "application/octet-stream",
       };
     } catch (error) {
-      if (!isMissingProjectFileError(error)) {
-        throw error;
+      if (isMissingProjectFileError(error)) {
+        throw new Error(
+          `Required project file is missing during export: ${safeFileId}`,
+          { cause: error },
+        );
       }
-      console.warn(`Skipping missing file during export: ${safeFileId}`);
+      throw error;
     }
   }
 
@@ -883,31 +878,12 @@ export const createAndroidProjectServiceAdapters = ({
       staticFiles,
       getCurrentReference,
     }) => {
-      try {
-        return await createNativeDistributionZipStreamedToPath({
-          projectData,
-          fileEntries,
-          outputPath,
-          staticFiles,
-          getCurrentReference,
-        });
-      } catch (error) {
-        console.warn(
-          "Native Android ZIP export failed; falling back to JavaScript ZIP.",
-          error,
-        );
-      }
-
-      const zipBytes = await createDistributionZipBytes({
+      return createNativeDistributionZipStreamedToPath({
         projectData,
         fileEntries,
+        outputPath,
         staticFiles,
         getCurrentReference,
-      });
-      return writeSelectedFile({
-        uri: outputPath,
-        bytes: zipBytes,
-        mimeType: "application/zip",
       });
     },
   };

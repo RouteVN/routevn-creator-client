@@ -210,7 +210,7 @@ describe("android project service adapters", () => {
     });
   });
 
-  it("writes streamed ZIP exports to the selected Android file URI", async () => {
+  it("creates validated JavaScript ZIP bytes before writing a download", async () => {
     let savedPayload;
     mocked.callAndroidBridge.mockImplementation((method, payload) => {
       if (method === "readProjectFile") {
@@ -224,9 +224,9 @@ describe("android project service adapters", () => {
         };
       }
 
-      if (method === "writeFileToUri") {
+      if (method === "writeDownloadFile") {
         savedPayload = payload;
-        return "content://exports/export.zip";
+        return "content://downloads/project_version.zip";
       }
 
       throw new Error(`Unexpected bridge method: ${method}`);
@@ -236,7 +236,7 @@ describe("android project service adapters", () => {
       creatorVersion: 1,
     });
 
-    const savedPath = await fileAdapter.createDistributionZipStreamedToPath({
+    const savedPath = await fileAdapter.createDistributionZipStreamed({
       projectData: {
         projectData: {
           story: {
@@ -245,7 +245,7 @@ describe("android project service adapters", () => {
         },
       },
       fileEntries: [{ fileId: "file-1", mimeType: "image/png" }],
-      outputPath: "content://exports/export.zip",
+      zipName: "project_version",
       staticFiles: {
         indexHtml: "<!doctype html>",
         mainJs: "console.log('routevn');",
@@ -261,8 +261,8 @@ describe("android project service adapters", () => {
       }),
     });
 
-    expect(savedPath).toBe("content://exports/export.zip");
-    expect(savedPayload.uri).toBe("content://exports/export.zip");
+    expect(savedPath).toBe("content://downloads/project_version.zip");
+    expect(savedPayload.filename).toBe("project_version.zip");
     expect(savedPayload.mimeType).toBe("application/zip");
 
     const zipBytes = Buffer.from(savedPayload.base64, "base64");
@@ -291,6 +291,88 @@ describe("android project service adapters", () => {
     );
     expect(Array.from(parsedBundle.assets["file-1"].buffer)).toEqual([1, 2, 3]);
     expect(parsedBundle.assets["file-1"].mime).toBe("image/png");
+  });
+
+  it("uses the native verified publisher for a selected Android ZIP URI", async () => {
+    let savedPayload;
+    mocked.callAndroidBridge.mockImplementation((method, payload) => {
+      if (method === "createDistributionZipStreamedToUri") {
+        savedPayload = payload;
+        return { uri: payload.uri };
+      }
+
+      throw new Error(`Unexpected bridge method: ${method}`);
+    });
+    const { fileAdapter } = createAndroidProjectServiceAdapters({
+      collabLog: vi.fn(),
+      creatorVersion: 1,
+    });
+
+    await expect(
+      fileAdapter.createDistributionZipStreamedToPath({
+        projectData: {
+          projectData: { story: { initialSceneId: "scene-1" } },
+        },
+        fileEntries: [{ fileId: "file-1", mimeType: "image/png" }],
+        outputPath: "content://exports/export.zip",
+        staticFiles: {
+          indexHtml: "<!doctype html>",
+          mainJs: "console.log('routevn');",
+          manifestJson: '{"name":"Project One"}',
+          webIconFileId: "file-1",
+        },
+        getCurrentReference: () => ({ projectId: "project-1" }),
+      }),
+    ).resolves.toBe("content://exports/export.zip");
+
+    expect(savedPayload).toMatchObject({
+      projectId: "project-1",
+      uri: "content://exports/export.zip",
+      fileEntries: [{ id: "file-1", mimeType: "image/png" }],
+      indexHtml: "<!doctype html>",
+      mainJs: "console.log('routevn');",
+      manifestJson: '{"name":"Project One"}',
+      webIconFileId: "file-1",
+      usePartFile: true,
+    });
+    expect(savedPayload.instructionsJson).toContain(
+      '"initialSceneId":"scene-1"',
+    );
+    expect(mocked.callAndroidBridge).not.toHaveBeenCalledWith(
+      "writeFileToUri",
+      expect.anything(),
+    );
+  });
+
+  it("rejects distribution exports when a required project file is missing", async () => {
+    mocked.callAndroidBridge.mockImplementation((method) => {
+      if (method === "readProjectFile") {
+        throw new Error("Project file was not found.");
+      }
+
+      throw new Error(`Unexpected bridge method: ${method}`);
+    });
+    const { fileAdapter } = createAndroidProjectServiceAdapters({
+      collabLog: vi.fn(),
+      creatorVersion: 1,
+    });
+
+    await expect(
+      fileAdapter.createDistributionZipStreamed({
+        projectData: { projectData: {} },
+        fileEntries: [{ fileId: "missing-file", mimeType: "image/png" }],
+        zipName: "project_version",
+        staticFiles: {},
+        getCurrentReference: () => ({ projectId: "project-1" }),
+      }),
+    ).rejects.toThrow(
+      "Required project file is missing during export: missing-file",
+    );
+
+    expect(mocked.callAndroidBridge).not.toHaveBeenCalledWith(
+      "writeDownloadFile",
+      expect.anything(),
+    );
   });
 
   it("rejects endpoint-backed Android collab sessions while disabled", async () => {

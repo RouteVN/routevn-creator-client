@@ -4,11 +4,15 @@ import { describe, expect, it } from "vitest";
 import {
   addProject,
   closeAppVersionMenu,
+  closeDeleteDialog,
   createInitialState,
+  openDeleteDialog,
   openLanguageDialog,
   openAppVersionMenu,
   removeProject,
+  selectDeleteDialogConfirmationText,
   selectViewData,
+  setDeleteDialogConfirmationText,
   setPlatform,
   setProjects,
 } from "../../src/pages/projects/projects.store.js";
@@ -239,6 +243,39 @@ describe("projects.store addProject", () => {
         },
       ],
     });
+  });
+
+  it("requires an exact confirmation for permanent Android project deletion", () => {
+    const state = createInitialState();
+    setPlatform({ state }, { platform: "android" });
+    openDeleteDialog(
+      { state },
+      {
+        projectId: "project-1",
+        projectName: "Project One",
+      },
+    );
+
+    expect(selectViewData({ state, i18n: EN_I18N })).toMatchObject({
+      isAndroidProjectDelete: true,
+      deleteDialogTitle: "Permanently Delete Project",
+      deleteDialogMessage:
+        'This will permanently delete "Project One" and all of its project data from this Android device. This cannot be undone.',
+      deleteDialogConfirmationLabel: 'Type "Delete" to confirm.',
+      deleteDialogConfirmationPlaceholder: "Delete",
+      deleteDialogConfirmDisabled: true,
+      deleteDialogConfirmLabel: "Delete",
+    });
+
+    setDeleteDialogConfirmationText({ state }, { confirmationText: "Delete" });
+
+    expect(selectDeleteDialogConfirmationText({ state })).toBe("Delete");
+    expect(
+      selectViewData({ state, i18n: EN_I18N }).deleteDialogConfirmDisabled,
+    ).toBe(false);
+
+    closeDeleteDialog({ state });
+    expect(selectDeleteDialogConfirmationText({ state })).toBe("");
   });
 });
 

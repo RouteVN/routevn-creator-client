@@ -9,6 +9,7 @@ import {
   handleAppearanceFormAction,
   handleCreateButtonClick,
   handleCreateDialogSubmit,
+  handleDeleteConfirmationInput,
   handleDeleteDialogConfirm,
   handleLanguageDialogClose,
   handleLanguageFormAction,
@@ -46,6 +47,9 @@ const createDeps = ({
     showAlert: vi.fn(),
     showProgressDialog: vi.fn(() => progressDialog),
     showToast: vi.fn(),
+    deleteProject: vi.fn(async () => ({ deleted: true })),
+    removeProjectEntry: vi.fn(async () => {}),
+    removeProjectEntryByPath: vi.fn(async () => {}),
     setCurrentProjectEntry: vi.fn(),
     getUserConfig: vi.fn(),
     setUserConfig: vi.fn(),
@@ -103,6 +107,8 @@ const createDeps = ({
       addProject: vi.fn(),
       selectDeleteDialogProjectId: vi.fn(() => ""),
       selectDeleteDialogProjectPath: vi.fn(() => ""),
+      selectDeleteDialogConfirmationText: vi.fn(() => "Delete"),
+      setDeleteDialogConfirmationText: vi.fn(),
       closeDeleteDialog: vi.fn(),
       removeProject: vi.fn(),
     },
@@ -866,8 +872,6 @@ describe("projects.handleDeleteDialogConfirm", () => {
       "/projects/project-one",
     );
 
-    deps.appService.removeProjectEntryByPath = vi.fn(async () => {});
-
     await handleDeleteDialogConfirm(deps);
 
     expect(deps.projectService.releaseProjectRuntime).toHaveBeenCalledWith(
@@ -880,6 +884,76 @@ describe("projects.handleDeleteDialogConfirm", () => {
       projectPath: "/projects/project-one",
     });
     expect(deps.store.closeDeleteDialog).toHaveBeenCalledTimes(1);
+  });
+
+  it("permanently deletes Android project storage before removing the entry", async () => {
+    const deps = createDeps({ platform: "android" });
+    deps.store.selectDeleteDialogProjectId.mockReturnValue("project-1");
+
+    await handleDeleteDialogConfirm(deps);
+
+    expect(deps.projectService.releaseProjectRuntime).toHaveBeenCalledWith(
+      "project-1",
+    );
+    expect(deps.appService.deleteProject).toHaveBeenCalledWith("project-1");
+    expect(deps.appService.removeProjectEntry).toHaveBeenCalledWith(
+      "project-1",
+    );
+    expect(deps.store.removeProject).toHaveBeenCalledWith({
+      projectId: "project-1",
+    });
+    expect(
+      deps.projectService.releaseProjectRuntime.mock.invocationCallOrder[0],
+    ).toBeLessThan(deps.appService.deleteProject.mock.invocationCallOrder[0]);
+    expect(
+      deps.appService.deleteProject.mock.invocationCallOrder[0],
+    ).toBeLessThan(
+      deps.appService.removeProjectEntry.mock.invocationCallOrder[0],
+    );
+    expect(deps.store.closeDeleteDialog).toHaveBeenCalledTimes(1);
+  });
+
+  it("requires the exact Android deletion confirmation text", async () => {
+    const deps = createDeps({ platform: "android" });
+    deps.store.selectDeleteDialogProjectId.mockReturnValue("project-1");
+    deps.store.selectDeleteDialogConfirmationText.mockReturnValue("delete");
+
+    await handleDeleteDialogConfirm(deps);
+
+    expect(deps.projectService.releaseProjectRuntime).not.toHaveBeenCalled();
+    expect(deps.appService.deleteProject).not.toHaveBeenCalled();
+    expect(deps.appService.removeProjectEntry).not.toHaveBeenCalled();
+    expect(deps.store.closeDeleteDialog).not.toHaveBeenCalled();
+  });
+
+  it("keeps the Android confirmation open when native deletion fails", async () => {
+    const deps = createDeps({ platform: "android" });
+    deps.store.selectDeleteDialogProjectId.mockReturnValue("project-1");
+    deps.appService.deleteProject.mockRejectedValue(
+      new Error("Native deletion failed"),
+    );
+
+    await handleDeleteDialogConfirm(deps);
+
+    expect(deps.appService.removeProjectEntry).not.toHaveBeenCalled();
+    expect(deps.store.removeProject).not.toHaveBeenCalled();
+    expect(deps.store.closeDeleteDialog).not.toHaveBeenCalled();
+    expect(deps.appService.showAlert).toHaveBeenCalledWith({
+      message: "Failed to delete project data. Please try again.",
+    });
+  });
+
+  it("tracks Android deletion confirmation input", () => {
+    const deps = createDeps({ platform: "android" });
+
+    handleDeleteConfirmationInput(deps, {
+      _event: { detail: { value: "Delete" } },
+    });
+
+    expect(deps.store.setDeleteDialogConfirmationText).toHaveBeenCalledWith({
+      confirmationText: "Delete",
+    });
+    expect(deps.render).toHaveBeenCalledTimes(1);
   });
 });
 
@@ -966,5 +1040,37 @@ describe("projects.handleProjectContextMenu", () => {
       ],
     });
     expect(deps.appService.showAlert).not.toHaveBeenCalled();
+  });
+
+  it("labels the Android project action as Delete", () => {
+    const deps = createDeps({ platform: "android" });
+
+    handleProjectContextMenu(deps, {
+      _event: {
+        preventDefault: vi.fn(),
+        clientX: 10,
+        clientY: 20,
+        currentTarget: {
+          dataset: {
+            projectId: "project-1",
+          },
+        },
+      },
+    });
+
+    expect(deps.store.openDropdownMenu).toHaveBeenCalledWith({
+      x: 10,
+      y: 20,
+      scope: "local",
+      projectId: "project-1",
+      projectPath: "",
+      items: [
+        {
+          label: EN_I18N.projectsPage.deleteButton,
+          type: "item",
+          value: "delete",
+        },
+      ],
+    });
   });
 });

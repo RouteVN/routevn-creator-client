@@ -71,6 +71,8 @@ import java.util.Set;
 import java.util.UUID;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
+import java.util.zip.ZipEntry;
+import java.util.zip.ZipFile;
 import javax.crypto.Cipher;
 import javax.crypto.KeyGenerator;
 import javax.crypto.SecretKey;
@@ -121,6 +123,10 @@ public class MainActivity extends Activity {
         "routevn.auth.session";
     private static final String PROJECT_DATABASE_NAME = "project.db";
     private static final String PROJECTS_DIRECTORY_NAME = "projects";
+    private static final String EXPORT_INCOMPLETE_MARKER_NAME =
+        "ROUTEVN_EXPORT_INCOMPLETE.txt";
+    private static final String EXPORT_INCOMPLETE_MARKER_CONTENT =
+        "This RouteVN project export is incomplete. Do not import or edit it.";
 
     private static final class ProjectFileWriteSession {
         private final String writeId;
@@ -178,6 +184,7 @@ public class MainActivity extends Activity {
     private final Map<String, SQLiteDatabase> sqliteDatabases = new HashMap<>();
     private final Map<String, ProjectFileWriteSession> projectFileWriteSessions =
         new HashMap<>();
+    private final Set<String> pendingSaveDocumentUris = new HashSet<>();
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -700,6 +707,7 @@ public class MainActivity extends Activity {
 
         closeSqliteDatabases();
         closeProjectFileWriteSessions();
+        cleanupPendingSaveDocuments();
         bridgeExecutor.shutdownNow();
 
         if (webView != null) {
@@ -981,6 +989,8 @@ public class MainActivity extends Activity {
                 return bridge.getProjectStorageStatus(payloadJson);
             case "listProjectFolders":
                 return bridge.listProjectFolders(payloadJson);
+            case "deleteProject":
+                return bridge.deleteProject(payloadJson);
             case "beginProjectFileWrite":
                 return bridge.beginProjectFileWrite(payloadJson);
             case "appendProjectFileWrite":
@@ -1001,6 +1011,8 @@ public class MainActivity extends Activity {
                 return bridge.writeDownloadFile(payloadJson);
             case "writeFileToUri":
                 return bridge.writeFileToUri(payloadJson);
+            case "discardPendingSaveDocument":
+                return bridge.discardPendingSaveDocument(payloadJson);
             case "createDistributionZipStreamedToUri":
                 return bridge.createDistributionZipStreamedToUri(payloadJson);
             case "openFilePicker":
@@ -1215,6 +1227,17 @@ public class MainActivity extends Activity {
             }
         }
 
+        public String deleteProject(String payloadJson) {
+            try {
+                JSONObject payload = new JSONObject(payloadJson);
+                return bridgeSuccess(
+                    deleteProjectStorage(payload.getString("projectId"))
+                );
+            } catch (Exception error) {
+                return bridgeFailure(error);
+            }
+        }
+
         public String beginProjectFileWrite(String payloadJson) {
             try {
                 JSONObject payload = new JSONObject(payloadJson);
@@ -1346,9 +1369,24 @@ public class MainActivity extends Activity {
                 JSONObject payload = new JSONObject(payloadJson);
                 String uri = writeFileToUriBytes(
                     payload.getString("uri"),
-                    payload.getString("base64")
+                    payload.getString("base64"),
+                    payload.optString(
+                        "mimeType",
+                        "application/octet-stream"
+                    )
                 );
                 return bridgeSuccess(uri);
+            } catch (Exception error) {
+                return bridgeFailure(error);
+            }
+        }
+
+        public String discardPendingSaveDocument(String payloadJson) {
+            try {
+                JSONObject payload = new JSONObject(payloadJson);
+                return bridgeSuccess(
+                    discardPendingSaveDocumentUri(payload.getString("uri"))
+                );
             } catch (Exception error) {
                 return bridgeFailure(error);
             }
@@ -2340,6 +2378,19 @@ public class MainActivity extends Activity {
         projectFileWriteSessions.clear();
     }
 
+    private synchronized void closeProjectFileWriteSessions(String projectId) {
+        Iterator<Map.Entry<String, ProjectFileWriteSession>> iterator =
+            projectFileWriteSessions.entrySet().iterator();
+        while (iterator.hasNext()) {
+            ProjectFileWriteSession session = iterator.next().getValue();
+            if (!projectId.equals(session.projectId)) {
+                continue;
+            }
+            iterator.remove();
+            closeAndDeleteProjectFileWriteSession(session);
+        }
+    }
+
     private ProjectFileWriteSession requireProjectFileWriteSession(String writeId) {
         String resolvedWriteId = writeId == null ? "" : writeId.trim();
         ProjectFileWriteSession session = projectFileWriteSessions.get(
@@ -2469,6 +2520,7 @@ public class MainActivity extends Activity {
         String safeFilename = sanitizeDownloadFilename(filename);
         byte[] bytes = Base64.decode(base64, Base64.DEFAULT);
         String normalizedMimeType = normalizeMimeType(mimeType);
+        validateZipBytesIfNeeded(safeFilename, normalizedMimeType, bytes);
 
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
             ContentValues values = new ContentValues();
@@ -2478,6 +2530,7 @@ public class MainActivity extends Activity {
                 MediaStore.MediaColumns.RELATIVE_PATH,
                 Environment.DIRECTORY_DOWNLOADS + "/RouteVN Creator"
             );
+            values.put(MediaStore.MediaColumns.IS_PENDING, 1);
 
             ContentResolver resolver = getContentResolver();
             Uri uri = resolver.insert(MediaStore.Downloads.EXTERNAL_CONTENT_URI, values);
@@ -2485,13 +2538,25 @@ public class MainActivity extends Activity {
                 throw new IllegalStateException("Failed to create download entry.");
             }
 
-            try (OutputStream output = resolver.openOutputStream(uri)) {
-                if (output == null) {
-                    throw new IllegalStateException("Failed to open download entry.");
+            try {
+                writeBytesToUriAndVerify(uri, bytes);
+
+                ContentValues publishedValues = new ContentValues();
+                publishedValues.put(MediaStore.MediaColumns.IS_PENDING, 0);
+                if (resolver.update(uri, publishedValues, null, null) != 1) {
+                    throw new IllegalStateException(
+                        "Failed to publish download entry."
+                    );
                 }
-                output.write(bytes);
+                return uri.toString();
+            } catch (Throwable error) {
+                throw createPublicationFailure(
+                    "Failed to save download.",
+                    uri,
+                    true,
+                    error
+                );
             }
-            return uri.toString();
         }
 
         File downloadsRoot = getExternalFilesDir(Environment.DIRECTORY_DOWNLOADS);
@@ -2499,13 +2564,20 @@ public class MainActivity extends Activity {
             downloadsRoot = new File(getFilesDir(), "downloads");
         }
         File outputFile = resolveSafeRelativeFile(downloadsRoot, safeFilename);
-        writeBytes(outputFile, bytes);
+        writeBytesAtomically(outputFile, bytes);
+        if (outputFile.length() != bytes.length) {
+            deleteTemporaryFile(outputFile);
+            throw new IllegalStateException(
+                "Saved download size does not match its source."
+            );
+        }
         return Uri.fromFile(outputFile).toString();
     }
 
     private String writeFileToUriBytes(
         String uriString,
-        String base64
+        String base64,
+        String mimeType
     ) throws Exception {
         String normalizedUri = uriString == null ? "" : uriString.trim();
         if (normalizedUri.isEmpty()) {
@@ -2514,34 +2586,50 @@ public class MainActivity extends Activity {
 
         Uri uri = Uri.parse(normalizedUri);
         byte[] bytes = Base64.decode(base64, Base64.DEFAULT);
+        String normalizedMimeType = normalizeMimeType(mimeType);
+        boolean cleanupOnFailure = claimPendingSaveDocument(uri);
 
-        try (
-            OutputStream output = getContentResolver().openOutputStream(uri, "wt")
-        ) {
-            if (output == null) {
-                throw new IllegalStateException("Failed to open save location.");
-            }
-            output.write(bytes);
+        try {
+            validateZipBytesIfNeeded("", normalizedMimeType, bytes);
+            writeBytesToUriAndVerify(uri, bytes);
+            return uri.toString();
+        } catch (Throwable error) {
+            throw createPublicationFailure(
+                "Failed to save file.",
+                uri,
+                cleanupOnFailure,
+                error
+            );
         }
-
-        return uri.toString();
     }
 
     private JSONObject createDistributionZipStreamedToUri(JSONObject payload)
         throws Exception {
         String safeProjectId = safePathSegment(payload.getString("projectId"));
-        String destinationUri = payload.getString("uri");
-        String instructionsJson = payload.getString("instructionsJson");
-
-        File exportsRoot = new File(getCacheDir(), "distribution-exports");
-        if (!exportsRoot.exists() && !exportsRoot.mkdirs()) {
-            throw new IllegalStateException("Failed to create export cache directory.");
+        String destinationUriString = payload.getString("uri").trim();
+        if (destinationUriString.isEmpty()) {
+            throw new IllegalArgumentException("Save location is required.");
         }
-
-        File outputFile = File.createTempFile("distribution-", ".zip", exportsRoot);
-        File partFile = new File(outputFile.getPath() + ".part");
+        Uri destinationUri = Uri.parse(destinationUriString);
+        boolean cleanupOnFailure = claimPendingSaveDocument(destinationUri);
+        File outputFile = null;
+        File partFile = null;
 
         try {
+            String instructionsJson = payload.getString("instructionsJson");
+            File exportsRoot = new File(getCacheDir(), "distribution-exports");
+            if (!exportsRoot.exists() && !exportsRoot.mkdirs()) {
+                throw new IllegalStateException(
+                    "Failed to create export cache directory."
+                );
+            }
+
+            outputFile = File.createTempFile(
+                "distribution-",
+                ".zip",
+                exportsRoot
+            );
+            partFile = new File(outputFile.getPath() + ".part");
             JSONObject nativePayload = new JSONObject();
             nativePayload.put("outputPath", outputFile.getAbsolutePath());
             nativePayload.put(
@@ -2577,12 +2665,20 @@ public class MainActivity extends Activity {
             JSONObject stats = NativeExporter.createDistributionZipStreamed(
                 nativePayload
             );
-            Uri uri = copyFileToUri(outputFile, destinationUri);
+            validateDistributionZip(outputFile, true);
+            copyFileToUriAndVerify(outputFile, destinationUri);
 
             JSONObject result = new JSONObject();
-            result.put("uri", uri.toString());
+            result.put("uri", destinationUri.toString());
             result.put("stats", stats);
             return result;
+        } catch (Throwable error) {
+            throw createPublicationFailure(
+                "Failed to save distribution ZIP.",
+                destinationUri,
+                cleanupOnFailure,
+                error
+            );
         } finally {
             deleteTemporaryFile(outputFile);
             deleteTemporaryFile(partFile);
@@ -2606,11 +2702,9 @@ public class MainActivity extends Activity {
             );
             File file = resolveSafeRelativeFile(filesRoot, safeFileId);
             if (!file.isFile()) {
-                Log.w(
-                    TAG,
-                    "Skipping missing file during native ZIP export: " + safeFileId
+                throw new IllegalStateException(
+                    "Required project file is missing: " + safeFileId
                 );
-                continue;
             }
 
             String mimeType = entry.optString("mimeType", "");
@@ -2630,17 +2724,13 @@ public class MainActivity extends Activity {
         return assets;
     }
 
-    private Uri copyFileToUri(File inputFile, String uriString) throws Exception {
-        String normalizedUri = uriString == null ? "" : uriString.trim();
-        if (normalizedUri.isEmpty()) {
-            throw new IllegalArgumentException("Save location is required.");
-        }
-
+    private void copyFileToUriAndVerify(File inputFile, Uri uri) throws Exception {
         if (!inputFile.isFile()) {
             throw new IllegalStateException("Native export output was not created.");
         }
 
-        Uri uri = Uri.parse(normalizedUri);
+        long expectedSize = inputFile.length();
+        long writtenSize;
         try (
             FileInputStream input = new FileInputStream(inputFile);
             OutputStream output = getContentResolver().openOutputStream(uri, "wt")
@@ -2648,10 +2738,239 @@ public class MainActivity extends Activity {
             if (output == null) {
                 throw new IllegalStateException("Failed to open save location.");
             }
-            writeOutputStream(output, input);
+            writtenSize = writeOutputStream(output, input);
+            output.flush();
+        }
+        if (writtenSize != expectedSize) {
+            throw new IllegalStateException(
+                "Saved output size does not match its source."
+            );
+        }
+        assertUriSize(uri, expectedSize);
+    }
+
+    private void writeBytesToUriAndVerify(Uri uri, byte[] bytes)
+        throws Exception {
+        try (
+            OutputStream output = getContentResolver().openOutputStream(uri, "wt")
+        ) {
+            if (output == null) {
+                throw new IllegalStateException("Failed to open save location.");
+            }
+            output.write(bytes);
+            output.flush();
+        }
+        assertUriSize(uri, bytes.length);
+    }
+
+    private void assertUriSize(Uri uri, long expectedSize) throws Exception {
+        Long reportedSize = queryUriSize(uri);
+        if (reportedSize != null && reportedSize == expectedSize) {
+            return;
         }
 
-        return uri;
+        long readableSize;
+        try (InputStream input = getContentResolver().openInputStream(uri)) {
+            if (input == null) {
+                throw new IllegalStateException(
+                    "The storage provider did not allow output verification."
+                );
+            }
+            readableSize = countInputStreamBytes(input);
+        } catch (Exception error) {
+            throw new IllegalStateException(
+                "The saved output could not be verified.",
+                error
+            );
+        }
+
+        if (readableSize != expectedSize) {
+            throw new IllegalStateException(
+                "Saved output size does not match its source."
+            );
+        }
+    }
+
+    private Long queryUriSize(Uri uri) {
+        try (
+            Cursor cursor = getContentResolver()
+                .query(
+                    uri,
+                    new String[] { OpenableColumns.SIZE },
+                    null,
+                    null,
+                    null
+                )
+        ) {
+            if (
+                cursor != null &&
+                cursor.moveToFirst() &&
+                !cursor.isNull(0)
+            ) {
+                long size = cursor.getLong(0);
+                return size >= 0 ? size : null;
+            }
+        } catch (Exception error) {
+            Log.w(TAG, "Failed to query saved output size.", error);
+        }
+        return null;
+    }
+
+    private long countInputStreamBytes(InputStream input) throws Exception {
+        long totalBytes = 0;
+        byte[] buffer = new byte[8192];
+        int read;
+        while ((read = input.read(buffer)) != -1) {
+            totalBytes += read;
+        }
+        return totalBytes;
+    }
+
+    private void rememberPendingSaveDocument(Uri uri) {
+        synchronized (pendingSaveDocumentUris) {
+            pendingSaveDocumentUris.add(uri.toString());
+        }
+    }
+
+    private boolean claimPendingSaveDocument(Uri uri) {
+        synchronized (pendingSaveDocumentUris) {
+            return pendingSaveDocumentUris.remove(uri.toString());
+        }
+    }
+
+    private boolean discardPendingSaveDocumentUri(String uriString) {
+        String normalizedUri = uriString == null ? "" : uriString.trim();
+        if (normalizedUri.isEmpty()) {
+            throw new IllegalArgumentException("Save location is required.");
+        }
+
+        Uri uri = Uri.parse(normalizedUri);
+        if (!claimPendingSaveDocument(uri)) {
+            return false;
+        }
+        if (!deletePublishedUri(uri)) {
+            throw new IllegalStateException(
+                "The unused save file could not be removed. " +
+                "An incomplete output may remain at the selected location."
+            );
+        }
+        return true;
+    }
+
+    private void cleanupPendingSaveDocuments() {
+        String[] pendingUris;
+        synchronized (pendingSaveDocumentUris) {
+            pendingUris = pendingSaveDocumentUris.toArray(new String[0]);
+            pendingSaveDocumentUris.clear();
+        }
+        for (String pendingUri : pendingUris) {
+            deletePublishedUri(Uri.parse(pendingUri));
+        }
+    }
+
+    private boolean deletePublishedUri(Uri uri) {
+        ContentResolver resolver = getContentResolver();
+        try {
+            if (
+                DocumentsContract.isDocumentUri(this, uri) &&
+                DocumentsContract.deleteDocument(resolver, uri)
+            ) {
+                return true;
+            }
+        } catch (Exception error) {
+            Log.w(TAG, "Failed to delete incomplete document.", error);
+        }
+
+        try {
+            return resolver.delete(uri, null, null) > 0;
+        } catch (Exception error) {
+            Log.w(TAG, "Failed to delete incomplete output.", error);
+            return false;
+        }
+    }
+
+    private Exception createPublicationFailure(
+        String message,
+        Uri uri,
+        boolean cleanupOnFailure,
+        Throwable error
+    ) {
+        if (cleanupOnFailure && deletePublishedUri(uri)) {
+            return asException(error);
+        }
+
+        return new IllegalStateException(
+            message +
+            " An incomplete output may remain at the selected location. " +
+            "Delete it before trying again.",
+            error
+        );
+    }
+
+    private Exception asException(Throwable error) {
+        if (error instanceof Exception) {
+            return (Exception) error;
+        }
+        return new IllegalStateException("Android publication failed.", error);
+    }
+
+    private void validateZipBytesIfNeeded(
+        String filename,
+        String mimeType,
+        byte[] bytes
+    ) throws Exception {
+        boolean isZip =
+            "application/zip".equals(mimeType) ||
+            filename.toLowerCase(Locale.ROOT).endsWith(".zip");
+        if (!isZip) {
+            return;
+        }
+
+        File validationRoot = new File(getCacheDir(), "export-validation");
+        if (!validationRoot.exists() && !validationRoot.mkdirs()) {
+            throw new IllegalStateException(
+                "Failed to create export validation directory."
+            );
+        }
+        File validationFile = File.createTempFile(
+            "routevn-export-",
+            ".zip",
+            validationRoot
+        );
+        try {
+            writeBytes(validationFile, bytes);
+            validateDistributionZip(validationFile, false);
+        } finally {
+            deleteTemporaryFile(validationFile);
+        }
+    }
+
+    private void validateDistributionZip(
+        File zipFile,
+        boolean requirePackageBundle
+    ) throws Exception {
+        try (ZipFile archive = new ZipFile(zipFile)) {
+            if (archive.size() == 0) {
+                throw new IllegalStateException("Generated ZIP is empty.");
+            }
+            if (requirePackageBundle) {
+                ZipEntry packageEntry = archive.getEntry("package.bin");
+                if (
+                    packageEntry == null ||
+                    packageEntry.isDirectory() ||
+                    packageEntry.getSize() <= 0
+                ) {
+                    throw new IllegalStateException(
+                        "Generated distribution ZIP is missing package.bin."
+                    );
+                }
+            }
+        } catch (Exception error) {
+            throw new IllegalStateException(
+                "Generated ZIP failed validation.",
+                error
+            );
+        }
     }
 
     private String optionalJsonString(JSONObject object, String key) {
@@ -2810,29 +3129,62 @@ public class MainActivity extends Activity {
         if (!safeProjectId.equals(projectInfoId)) {
             throw new IllegalArgumentException("Project storage id does not match.");
         }
+        validateProjectDatabaseForExport(projectDbFile);
         String exportFolderName = resolveProjectExportFolderName(projectInfo);
 
         Uri treeUri = Uri.parse(normalizedUri);
         Uri destinationRootUri = getTreeRootDocumentUri(treeUri);
+        Uri exportRootUri = null;
 
-        Uri exportRootUri = createChildDirectory(
-            destinationRootUri,
-            exportFolderName
-        );
-        copyFileToDocumentDirectory(
-            projectDbFile,
-            exportRootUri,
-            "project.db",
-            "application/octet-stream"
-        );
+        try {
+            exportRootUri = createChildDirectory(
+                destinationRootUri,
+                exportFolderName
+            );
+            Uri incompleteMarkerUri = createChildFile(
+                exportRootUri,
+                EXPORT_INCOMPLETE_MARKER_NAME,
+                "text/plain"
+            );
+            writeBytesToUriAndVerify(
+                incompleteMarkerUri,
+                EXPORT_INCOMPLETE_MARKER_CONTENT.getBytes(StandardCharsets.UTF_8)
+            );
+            copyFileToDocumentDirectory(
+                projectDbFile,
+                exportRootUri,
+                "project.db",
+                "application/octet-stream"
+            );
 
-        Uri filesUri = createChildDirectory(exportRootUri, "files");
-        copyFileDirectoryContentsToDocumentDirectory(projectFilesRoot, filesUri);
+            Uri filesUri = createChildDirectory(exportRootUri, "files");
+            copyFileDirectoryContentsToDocumentDirectory(
+                projectFilesRoot,
+                filesUri
+            );
+            if (!deletePublishedUri(incompleteMarkerUri)) {
+                throw new IllegalStateException(
+                    "Failed to finalize project export."
+                );
+            }
 
-        JSONObject result = new JSONObject();
-        result.put("uri", exportRootUri.toString());
-        result.put("name", exportFolderName);
-        return result;
+            JSONObject result = new JSONObject();
+            result.put("uri", exportRootUri.toString());
+            result.put("name", exportFolderName);
+            return result;
+        } catch (Throwable error) {
+            if (exportRootUri == null) {
+                throw asException(error);
+            }
+            throw createPublicationFailure(
+                "Failed to export project folder \"" +
+                exportFolderName +
+                "\".",
+                exportRootUri,
+                true,
+                error
+            );
+        }
     }
 
     private void checkpointProjectDatabaseForExport(String projectId)
@@ -2853,6 +3205,20 @@ public class MainActivity extends Activity {
             )
         ) {
             // Materialize pending WAL frames into project.db before copying it.
+        } finally {
+            database.close();
+        }
+    }
+
+    private void validateProjectDatabaseForExport(File databaseFile)
+        throws Exception {
+        SQLiteDatabase database = SQLiteDatabase.openDatabase(
+            databaseFile.getAbsolutePath(),
+            null,
+            SQLiteDatabase.OPEN_READONLY
+        );
+        try {
+            assertDatabaseIntegrity(database);
         } finally {
             database.close();
         }
@@ -2958,6 +3324,21 @@ public class MainActivity extends Activity {
         );
     }
 
+    private JSONObject deleteProjectStorage(String projectId) throws Exception {
+        String safeProjectId = safePathSegment(projectId);
+        closeProjectFileWriteSessions(safeProjectId);
+        closeDatabase(getProjectDatabasePath(safeProjectId));
+
+        File projectRoot = getProjectRoot(safeProjectId);
+        boolean existed = projectRoot.exists();
+        deleteRecursively(projectRoot);
+
+        JSONObject result = new JSONObject();
+        result.put("deleted", true);
+        result.put("existed", existed);
+        return result;
+    }
+
     private File getPickerRoot(String requestId) throws Exception {
         return resolveSafeRelativeFile(
             new File(getFilesDir(), "picker"),
@@ -2985,7 +3366,7 @@ public class MainActivity extends Activity {
 
         if (!file.delete() && file.exists()) {
             throw new IllegalStateException(
-                "Failed to delete temporary picker file."
+                "Failed to delete stored file."
             );
         }
     }
@@ -3343,6 +3724,7 @@ public class MainActivity extends Activity {
 
         Intent intent = new Intent(Intent.ACTION_CREATE_DOCUMENT);
         intent.addCategory(Intent.CATEGORY_OPENABLE);
+        intent.addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION);
         intent.addFlags(Intent.FLAG_GRANT_WRITE_URI_PERMISSION);
         intent.setType(normalizeMimeType(mimeType));
         intent.putExtra(Intent.EXTRA_TITLE, sanitizeDownloadFilename(filename));
@@ -3379,7 +3761,9 @@ public class MainActivity extends Activity {
                 return;
             }
 
-            result.put("uri", data.getData().toString());
+            Uri saveDocumentUri = data.getData();
+            rememberPendingSaveDocument(saveDocumentUri);
+            result.put("uri", saveDocumentUri.toString());
             sendAndroidSaveFilePickerResult(result);
         } catch (Exception error) {
             sendAndroidSaveFilePickerError(
@@ -3665,7 +4049,9 @@ public class MainActivity extends Activity {
     ) throws Exception {
         File[] children = sourceDirectory.listFiles();
         if (children == null) {
-            return;
+            throw new IllegalStateException(
+                "Failed to read project files for export."
+            );
         }
 
         for (File child : children) {
@@ -3704,15 +4090,15 @@ public class MainActivity extends Activity {
             sanitizeExportFilename(filename),
             mimeType
         );
-        try (
-            FileInputStream input = new FileInputStream(sourceFile);
-            OutputStream output = getContentResolver()
-                .openOutputStream(outputFileUri, "wt")
-        ) {
-            if (output == null) {
-                throw new IllegalStateException("Failed to open export file.");
-            }
-            writeOutputStream(output, input);
+        try {
+            copyFileToUriAndVerify(sourceFile, outputFileUri);
+        } catch (Throwable error) {
+            throw createPublicationFailure(
+                "Failed to save export file \"" + filename + "\".",
+                outputFileUri,
+                true,
+                error
+            );
         }
     }
 

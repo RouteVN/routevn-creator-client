@@ -1060,6 +1060,18 @@ const runWebExport = async (deps, confirmation) => {
   }
 
   if (exportError) {
+    if (outputPath && appService.getPlatform() === "android") {
+      try {
+        await appService.discardPendingSaveDocument(outputPath);
+      } catch (cleanupError) {
+        const combinedError = new Error(
+          `${getErrorMessage(exportError)} ${getErrorMessage(cleanupError)}`,
+          { cause: exportError },
+        );
+        combinedError.details = exportError?.details;
+        exportError = combinedError;
+      }
+    }
     const replay = exportError?.details?.replay;
     if (replay) {
       console.error("Version export history replay failed", {
