@@ -2,7 +2,7 @@ import { readFileSync } from "node:fs";
 import { describe, expect, it } from "vitest";
 
 describe("audioEffectsEditor view", () => {
-  it("edits transition fades through timelines and the detail panel only", () => {
+  it("edits transition properties through timelines and the detail panel", () => {
     const view = readFileSync(
       new URL(
         "../../src/pages/audioEffectsEditor/audioEffectsEditor.view.yaml",
@@ -15,6 +15,12 @@ describe("audioEffectsEditor view", () => {
     expect(view).toContain("rvn-keyframe-timeline#nextTimeline");
     expect(view).toContain("${outgoingTimelineLabel}");
     expect(view).toContain("${incomingTimelineLabel}");
+    expect(view).toContain(
+      "rtgl-button#addPropertyButton pre=plus s=sm aria-haspopup=menu",
+    );
+    expect(view).toContain("rtgl-dropdown-menu#addPropertySideMenu");
+    expect(view).not.toContain("#addPreviousPropertyButton");
+    expect(view).not.toContain("#addNextPropertyButton");
     expect(view).not.toContain("${previousTimelineLabel}");
     expect(view).not.toContain("${nextTimelineLabel}");
     expect(view).toContain("rvn-detail-view#selectedKeyframeDetails");
@@ -111,7 +117,6 @@ describe("audioEffectsEditor view", () => {
     expect(view).not.toContain("av=c p=md g=md bwb=xs bc=bo");
     expect(view).not.toContain("rtgl-button#saveButton");
     expect(view).not.toContain("transitionForm");
-    expect(view).not.toContain("Transition Fades");
     expect(view).not.toContain("editorDescription");
   });
 });

@@ -1,7 +1,6 @@
 import { isTouchUiConfig } from "../../internal/ui/resourcePages/mobileResourcePage.js";
 import {
   getAudioEffectDefinitionDuration,
-  getTransitionFadeKeyframes,
   normalizeAudioEffectDefinition,
 } from "../../internal/audioEffectDefinition.js";
 import {
@@ -20,11 +19,27 @@ const TIMELINE_BASE_PIXELS_PER_SECOND = 200;
 const TIMELINE_PROPERTY_COLUMN_WIDTH = 104;
 const TIMELINE_VIEWPORT_PADDING = 32;
 
-const createDefaultUpdateKeyframe = (property) => ({
-  value: AUDIO_EFFECT_PROPERTY_CONFIG[property]?.defaultValue ?? 0,
-  duration: 300,
-  easing: "easeInOutSine",
-});
+const createDefaultKeyframe = (property, { side = "update" } = {}) => {
+  const keyframe = {
+    value: AUDIO_EFFECT_PROPERTY_CONFIG[property]?.defaultValue ?? 0,
+    duration: 300,
+    easing: "easeInOutSine",
+  };
+  if (side === "prev" && property === "volume") {
+    keyframe.value = 0;
+  }
+  return keyframe;
+};
+
+const createDefaultPropertyTrack = (property, { side = "update" } = {}) => {
+  const track = {
+    keyframes: [createDefaultKeyframe(property, { side })],
+  };
+  if (side === "next" && property === "volume") {
+    track.initialValue = 0;
+  }
+  return track;
+};
 
 const formatEasingLabel = (easing) =>
   easing
@@ -46,7 +61,7 @@ const createDefaultDefinition = () => ({
   type: "update",
   tween: {
     volume: {
-      keyframes: [createDefaultUpdateKeyframe("volume")],
+      keyframes: [createDefaultKeyframe("volume")],
     },
   },
 });
@@ -85,10 +100,8 @@ const createAddPropertyForm = (availableProperties, copy = {}) => ({
 
 const createKeyframeForm = ({
   add = false,
-  fixedValue,
   finalKeyframe = false,
   property,
-  transitionKeyframe = false,
   copy,
 } = {}) => {
   const propertyConfig = AUDIO_EFFECT_PROPERTY_CONFIG[property] ?? {};
@@ -129,7 +142,7 @@ const createKeyframeForm = ({
     },
   ];
 
-  if (!finalKeyframe && !transitionKeyframe) {
+  if (!finalKeyframe) {
     fields.push({
       name: "relative",
       type: "segmented-control",
@@ -148,7 +161,6 @@ const createKeyframeForm = ({
     type: "input-number",
     label: copy.valueLabel ?? "Value",
     step: propertyConfig.step ?? 0.01,
-    disabled: fixedValue !== undefined,
     required: true,
   });
 
@@ -207,9 +219,9 @@ const createTimelineKeyframes = (keyframes = []) =>
     duration: Math.max(1, Number(keyframe.duration) || 0),
   }));
 
-const createUpdateTimelineProperties = (tween = {}, copy = {}) =>
+const createTimelineProperties = (tracks = {}, copy = {}) =>
   Object.fromEntries(
-    Object.entries(tween).map(([property, config]) => [
+    Object.entries(tracks).map(([property, config]) => [
       property,
       {
         ...cloneDefinition(config),
@@ -219,23 +231,6 @@ const createUpdateTimelineProperties = (tween = {}, copy = {}) =>
       },
     ]),
   );
-
-const createFadeTimelineProperties = ({ definition, side, copy } = {}) => {
-  const keyframes = getTransitionFadeKeyframes(definition, side);
-  if (keyframes.length === 0) {
-    return {};
-  }
-
-  const previous = side === "prev";
-  const initialValue = definition[side]?.fade?.initialValue;
-  return {
-    fade: {
-      label: copy.fadePropertyLabel ?? "Fade",
-      initialValue: initialValue ?? (previous ? 100 : 0),
-      keyframes: createTimelineKeyframes(keyframes),
-    },
-  };
-};
 
 const TIMELINE_DEFAULT_VALUES = Object.freeze(
   Object.fromEntries(
@@ -299,6 +294,12 @@ export const createInitialState = () => ({
     index: undefined,
   },
   addPropertyDialogOpen: false,
+  addPropertySide: "update",
+  addPropertySideMenu: {
+    open: false,
+    x: undefined,
+    y: undefined,
+  },
   keyframeDialog: {
     open: false,
     side: undefined,
@@ -342,6 +343,9 @@ export const loadAudioEffect = ({ state }, { item } = {}) => {
   state.selectedKeyframeAddMenu.open = false;
   state.selectedKeyframeAddMenu.x = undefined;
   state.selectedKeyframeAddMenu.y = undefined;
+  state.addPropertySideMenu.open = false;
+  state.addPropertySideMenu.x = undefined;
+  state.addPropertySideMenu.y = undefined;
   closeKeyframeMenu({ state });
   state.dirty = false;
 };
@@ -386,18 +390,13 @@ export const selectDefaultSelectedKeyframeStartValue = ({ state }) => {
     return 0;
   }
 
-  const propertyInitialValue =
-    side === "update"
-      ? state.definition.tween?.[property]?.initialValue
-      : state.definition[side]?.fade?.initialValue;
+  const propertyInitialValue = getMutablePropertyConfig(state, {
+    side,
+    property,
+  })?.initialValue;
   let currentValue = Number(propertyInitialValue);
   if (!Number.isFinite(currentValue)) {
-    currentValue =
-      side === "prev"
-        ? 100
-        : side === "next"
-          ? 0
-          : (AUDIO_EFFECT_PROPERTY_CONFIG[property]?.defaultValue ?? 0);
+    currentValue = AUDIO_EFFECT_PROPERTY_CONFIG[property]?.defaultValue ?? 0;
   }
 
   for (const keyframe of keyframes.slice(0, index)) {
@@ -556,35 +555,26 @@ export const selectAudioEffectPreviewData = ({ state }) =>
         target: createPreviewSoundSlot(state.previewSoundIds.target),
       };
 
-const getMutablePropertyConfig = (
-  state,
-  { side = "update", property } = {},
-) => {
+const getMutablePropertyTracks = (state, side = "update") => {
   if (side === "update") {
-    return state.definition.tween?.[property];
+    return state.definition.type === "update"
+      ? state.definition.tween
+      : undefined;
   }
   if (
     state.definition.type === "transition" &&
-    (side === "prev" || side === "next") &&
-    property === "fade"
+    (side === "prev" || side === "next")
   ) {
-    return state.definition[side]?.fade;
+    return state.definition[side];
   }
   return undefined;
 };
 
+const getMutablePropertyConfig = (state, { side = "update", property } = {}) =>
+  getMutablePropertyTracks(state, side)?.[property];
+
 const getMutableKeyframes = (state, selectedProperty = {}) =>
   getMutablePropertyConfig(state, selectedProperty)?.keyframes;
-
-export const updateTransitionTiming = (
-  { state },
-  { side, delay, duration } = {},
-) => {
-  updateKeyframeTiming(
-    { state },
-    { side, property: "fade", index: 0, delay, duration },
-  );
-};
 
 export const setTimelineDuration = ({ state }, { duration } = {}) => {
   const nextDuration = Number(duration);
@@ -638,10 +628,7 @@ export const setSelectedProperty = (
   { side = "update", property } = {},
 ) => {
   const propertyExists =
-    (side === "update" && state.definition.tween?.[property] !== undefined) ||
-    ((side === "prev" || side === "next") &&
-      property === "fade" &&
-      getMutableKeyframes(state, { side, property }) !== undefined);
+    getMutableKeyframes(state, { side, property }) !== undefined;
   state.selectedProperty = propertyExists ? { side, property } : undefined;
   state.selectedKeyframe = undefined;
   state.selectedKeyframeAddMenu.open = false;
@@ -680,7 +667,18 @@ export const closeKeyframeMenu = ({ state }) => {
   state.keyframeMenu.index = undefined;
 };
 
-export const openAddPropertyDialog = ({ state }) => {
+export const openAddPropertyDialog = ({ state }, { side = "update" } = {}) => {
+  const validSide =
+    state.definition.type === "transition"
+      ? side === "prev" || side === "next"
+      : side === "update";
+  if (!validSide) {
+    return;
+  }
+  state.addPropertySideMenu.open = false;
+  state.addPropertySideMenu.x = undefined;
+  state.addPropertySideMenu.y = undefined;
+  state.addPropertySide = side;
   state.addPropertyDialogOpen = true;
 };
 
@@ -688,37 +686,82 @@ export const closeAddPropertyDialog = ({ state }) => {
   state.addPropertyDialogOpen = false;
 };
 
-export const addTweenProperty = ({ state }, { property } = {}) => {
-  if (
-    !AUDIO_EFFECT_PROPERTY_KEYS.includes(property) ||
-    state.definition.type !== "update" ||
-    state.definition.tween[property]
-  ) {
+export const selectAddPropertySide = ({ state }) => state.addPropertySide;
+
+export const openAddPropertySideMenu = ({ state }, { x, y } = {}) => {
+  state.addPropertySideMenu.open = true;
+  state.addPropertySideMenu.x = x;
+  state.addPropertySideMenu.y = y;
+};
+
+export const closeAddPropertySideMenu = ({ state }) => {
+  state.addPropertySideMenu.open = false;
+  state.addPropertySideMenu.x = undefined;
+  state.addPropertySideMenu.y = undefined;
+};
+
+export const addAudioEffectProperty = (
+  { state },
+  { property, side = state.addPropertySide } = {},
+) => {
+  const validSide =
+    state.definition.type === "transition"
+      ? side === "prev" || side === "next"
+      : side === "update";
+  if (!validSide || !AUDIO_EFFECT_PROPERTY_KEYS.includes(property)) {
     return;
   }
 
-  state.definition.tween[property] = {
-    keyframes: [createDefaultUpdateKeyframe(property)],
-  };
-  state.selectedProperty = { side: "update", property };
+  let tracks = getMutablePropertyTracks(state, side);
+  if (!tracks && state.definition.type === "transition") {
+    state.definition[side] = {};
+    tracks = state.definition[side];
+  }
+  if (!tracks || tracks[property]) {
+    return;
+  }
+
+  tracks[property] = createDefaultPropertyTrack(property, { side });
+  state.selectedProperty = { side, property };
   state.selectedKeyframe = undefined;
   state.addPropertyDialogOpen = false;
   state.dirty = true;
 };
 
-export const removeTweenProperty = ({ state }, { property } = {}) => {
+const countAudioEffectProperties = (definition) =>
+  definition.type === "transition"
+    ? ["prev", "next"].reduce(
+        (count, side) => count + Object.keys(definition[side] ?? {}).length,
+        0,
+      )
+    : Object.keys(definition.tween ?? {}).length;
+
+export const removeAudioEffectProperty = (
+  { state },
+  { property, side = "update" } = {},
+) => {
+  const tracks = getMutablePropertyTracks(state, side);
   if (
-    state.definition.type !== "update" ||
-    Object.keys(state.definition.tween).length <= 1
+    !tracks?.[property] ||
+    countAudioEffectProperties(state.definition) <= 1
   ) {
     return;
   }
 
-  delete state.definition.tween[property];
-  if (state.selectedProperty?.property === property) {
+  delete tracks[property];
+  if (side !== "update" && Object.keys(tracks).length === 0) {
+    delete state.definition[side];
+  }
+  if (
+    state.selectedProperty?.side === side &&
+    state.selectedProperty.property === property
+  ) {
     state.selectedProperty = undefined;
   }
-  if (state.selectedKeyframe?.property === property) {
+  if (
+    state.selectedKeyframe?.side === side &&
+    state.selectedKeyframe.property === property
+  ) {
     state.selectedKeyframe = undefined;
   }
   state.dirty = true;
@@ -771,10 +814,10 @@ const insertKeyframe = (
   }
 
   const requestedIndex = Number.isInteger(index) ? index : keyframes.length;
-  let insertionIndex = Math.min(Math.max(0, requestedIndex), keyframes.length);
-  if (side === "next" && property === "fade") {
-    insertionIndex = Math.min(insertionIndex, keyframes.length - 1);
-  }
+  const insertionIndex = Math.min(
+    Math.max(0, requestedIndex),
+    keyframes.length,
+  );
   keyframes.splice(insertionIndex, 0, cloneDefinition(keyframe));
   if (followingDelay !== undefined) {
     const followingKeyframe = keyframes[insertionIndex + 1];
@@ -820,15 +863,9 @@ export const applyKeyframe = ({ state }, { keyframe } = {}) => {
   }
 
   const nextKeyframe = cloneDefinition(keyframe);
-  if (side !== "update") {
-    delete nextKeyframe.relative;
-  }
   const finalKeyframe = !add && index === keyframes.length - 1;
-  if (side === "update" && finalKeyframe) {
+  if (finalKeyframe) {
     delete nextKeyframe.relative;
-  }
-  if (side === "next" && property === "fade" && finalKeyframe) {
-    nextKeyframe.value = 100;
   }
 
   let applied = false;
@@ -869,9 +906,7 @@ export const removeKeyframe = (
   const resolvedIndex = Number(index);
   const keyframes = getMutableKeyframes(state, { side, property });
   const finalKeyframe = resolvedIndex === keyframes?.length - 1;
-  const protectedEndpoint =
-    finalKeyframe &&
-    (side === "update" || (side === "next" && property === "fade"));
+  const protectedEndpoint = finalKeyframe;
   if (
     !keyframes ||
     keyframes.length <= 1 ||
@@ -1002,19 +1037,10 @@ export const setSelectedKeyframeValue = ({ state }, { value } = {}) => {
   const selectedKeyframe = state.selectedKeyframe;
   const keyframe = getMutableSelectedKeyframe(state);
   const nextValue = Number(value);
-  const transitionKeyframe =
-    selectedKeyframe?.side === "prev" || selectedKeyframe?.side === "next";
-  const keyframes = getMutableKeyframes(state, selectedKeyframe) ?? [];
-  const lockedIncomingEndpoint =
-    selectedKeyframe?.side === "next" &&
-    selectedKeyframe.property === "fade" &&
-    selectedKeyframe.index === keyframes.length - 1;
-  const propertyConfig = transitionKeyframe
-    ? AUDIO_EFFECT_PROPERTY_CONFIG.volume
-    : AUDIO_EFFECT_PROPERTY_CONFIG[selectedKeyframe?.property];
+  const propertyConfig =
+    AUDIO_EFFECT_PROPERTY_CONFIG[selectedKeyframe?.property] ?? {};
   if (
     !keyframe ||
-    lockedIncomingEndpoint ||
     !Number.isFinite(nextValue) ||
     (!keyframe.relative &&
       ((propertyConfig.min !== undefined && nextValue < propertyConfig.min) ||
@@ -1043,11 +1069,8 @@ export const setSelectedKeyframeStartValue = (
     return;
   }
 
-  const transitionKeyframe =
-    selectedKeyframe.side === "prev" || selectedKeyframe.side === "next";
-  const propertyConfig = transitionKeyframe
-    ? AUDIO_EFFECT_PROPERTY_CONFIG.volume
-    : AUDIO_EFFECT_PROPERTY_CONFIG[selectedKeyframe.property];
+  const propertyConfig =
+    AUDIO_EFFECT_PROPERTY_CONFIG[selectedKeyframe.property] ?? {};
   const nextStartValue = Number(startValue);
   if (
     !Number.isFinite(nextStartValue) ||
@@ -1067,10 +1090,9 @@ export const setSelectedKeyframeStartValue = (
 export const setSelectedKeyframeRelative = ({ state }, { relative } = {}) => {
   const selectedKeyframe = state.selectedKeyframe;
   const keyframe = getMutableSelectedKeyframe(state);
-  const keyframes =
-    state.definition.tween?.[selectedKeyframe?.property]?.keyframes ?? [];
+  const keyframes = getMutableKeyframes(state, selectedKeyframe) ?? [];
   const finalKeyframe = selectedKeyframe?.index === keyframes.length - 1;
-  if (selectedKeyframe?.side !== "update" || !keyframe || finalKeyframe) {
+  if (!selectedKeyframe || !keyframe || finalKeyframe) {
     return;
   }
 
@@ -1093,11 +1115,10 @@ const getSelectedPropertyInitialValueConfig = (state) => {
     return undefined;
   }
 
-  const property =
-    selectedProperty.side === "update" ? selectedProperty.property : "volume";
   return {
     definition,
-    propertyConfig: AUDIO_EFFECT_PROPERTY_CONFIG[property] ?? {},
+    propertyConfig:
+      AUDIO_EFFECT_PROPERTY_CONFIG[selectedProperty.property] ?? {},
   };
 };
 
@@ -1151,29 +1172,18 @@ export const setSelectedPropertyValueSource = (
     return;
   }
 
-  const side = state.selectedProperty.side;
-  const initialValue =
-    side === "prev"
-      ? 100
-      : side === "next"
-        ? 0
-        : (config.propertyConfig.defaultValue ?? 0);
+  const initialValue = config.propertyConfig.defaultValue ?? 0;
   setSelectedPropertyInitialValue({ state }, { initialValue });
 };
 
 export const selectKeyframeDialogValues = ({ state }) => {
   const { add, delay, duration, index, property, side } = state.keyframeDialog;
-  const resolvedProperty = side === "update" ? property : "volume";
   if (add) {
     return {
       useStartValue: false,
-      startValue:
-        AUDIO_EFFECT_PROPERTY_CONFIG[resolvedProperty]?.defaultValue ?? 0,
+      startValue: AUDIO_EFFECT_PROPERTY_CONFIG[property]?.defaultValue ?? 0,
       relative: false,
-      value:
-        side === "next"
-          ? 50
-          : (AUDIO_EFFECT_PROPERTY_CONFIG[resolvedProperty]?.defaultValue ?? 0),
+      value: AUDIO_EFFECT_PROPERTY_CONFIG[property]?.defaultValue ?? 0,
       delay: delay ?? 0,
       duration: duration ?? 300,
       easing: "easeInOutSine",
@@ -1186,12 +1196,12 @@ export const selectKeyframeDialogValues = ({ state }) => {
     useStartValue: keyframe.startValue !== undefined,
     startValue:
       keyframe.startValue ??
-      AUDIO_EFFECT_PROPERTY_CONFIG[resolvedProperty]?.defaultValue ??
+      AUDIO_EFFECT_PROPERTY_CONFIG[property]?.defaultValue ??
       0,
     relative: keyframe.relative === true,
     value:
       keyframe.value ??
-      AUDIO_EFFECT_PROPERTY_CONFIG[resolvedProperty]?.defaultValue ??
+      AUDIO_EFFECT_PROPERTY_CONFIG[property]?.defaultValue ??
       0,
     delay: keyframe.delay ?? 0,
     duration: keyframe.duration ?? 0,
@@ -1207,23 +1217,16 @@ const buildSelectedKeyframePanelData = (state, copy = {}) => {
   }
 
   const { index, property, side } = selectedKeyframe;
-  const updateKeyframe = side === "update";
   const keyframes = getMutableKeyframes(state, { side, property }) ?? [];
   const finalKeyframe = index === keyframes.length - 1;
-  const propertyConfig = updateKeyframe
-    ? (AUDIO_EFFECT_PROPERTY_CONFIG[property] ?? {})
-    : AUDIO_EFFECT_PROPERTY_CONFIG.volume;
-  const propertyLabel = updateKeyframe
-    ? getPropertyLabel(property, copy)
-    : (copy.fadePropertyLabel ?? "Fade");
+  const propertyConfig = AUDIO_EFFECT_PROPERTY_CONFIG[property] ?? {};
+  const propertyLabel = getPropertyLabel(property, copy);
   const timelineLabel =
     side === "prev"
       ? (copy.outgoingLabel ?? "Outgoing")
       : side === "next"
         ? (copy.incomingLabel ?? "Incoming")
         : (copy.updateType ?? "Update");
-  const lockedIncomingEndpoint =
-    side === "next" && property === "fade" && finalKeyframe;
   const hasStartValue = keyframe.startValue !== undefined;
   const valueSlider =
     propertyConfig.max === undefined
@@ -1273,7 +1276,7 @@ const buildSelectedKeyframePanelData = (state, copy = {}) => {
     label: copy.valueLabel ?? "Value",
     slot: "keyframe-value",
   });
-  if (updateKeyframe && !finalKeyframe) {
+  if (!finalKeyframe) {
     fields.push({
       type: "slot",
       label: copy.valueTypeLabel ?? "Value type",
@@ -1283,7 +1286,7 @@ const buildSelectedKeyframePanelData = (state, copy = {}) => {
 
   return {
     id: `${side}:${property}:${index}`,
-    canOpenEditDialog: updateKeyframe,
+    canOpenEditDialog: true,
     editor: {
       delay: keyframe.delay ?? 0,
       delayLabel: copy.delayMsLabel ?? "Delay (ms)",
@@ -1301,8 +1304,8 @@ const buildSelectedKeyframePanelData = (state, copy = {}) => {
       startValueLabel: copy.startValueLabel ?? "Start value",
       startValueSlider: keyframe.relative === true ? undefined : valueSlider,
       value: keyframe.value,
-      valueDisabled: lockedIncomingEndpoint,
-      valueEditable: !lockedIncomingEndpoint,
+      valueDisabled: false,
+      valueEditable: true,
       valueStep: propertyConfig.step ?? 0.01,
       valueSlider,
     },
@@ -1318,10 +1321,7 @@ const buildSelectedPropertyPanelData = (state, copy = {}) => {
   }
 
   const { property, side } = selectedProperty;
-  const updateProperty = side === "update";
-  const propertyLabel = updateProperty
-    ? getPropertyLabel(property, copy)
-    : (copy.fadePropertyLabel ?? "Fade");
+  const propertyLabel = getPropertyLabel(property, copy);
   const timelineLabel =
     side === "prev"
       ? (copy.outgoingLabel ?? "Outgoing")
@@ -1329,12 +1329,7 @@ const buildSelectedPropertyPanelData = (state, copy = {}) => {
         ? (copy.incomingLabel ?? "Incoming")
         : (copy.updateType ?? "Update");
   const hasInitialValue = config.definition.initialValue !== undefined;
-  const defaultInitialValue =
-    side === "prev"
-      ? 100
-      : side === "next"
-        ? 0
-        : (config.propertyConfig.defaultValue ?? 0);
+  const defaultInitialValue = config.propertyConfig.defaultValue ?? 0;
   const fields = [
     {
       type: "text",
@@ -1396,9 +1391,34 @@ export const selectViewData = ({ state, i18n }) => {
   const copy = selectAudioEffectsEditorPageCopy(i18n);
   const isTransition = state.definition.type === "transition";
   const tween = isTransition ? {} : state.definition.tween;
+  const addPropertySide = isTransition ? state.addPropertySide : "update";
+  const addPropertyTracks = isTransition
+    ? (state.definition[addPropertySide] ?? {})
+    : tween;
   const availableProperties = AUDIO_EFFECT_PROPERTY_KEYS.filter(
-    (property) => !tween[property],
+    (property) => !addPropertyTracks[property],
   );
+  const canAddPreviousProperty =
+    Object.keys(state.definition.prev ?? {}).length <
+    AUDIO_EFFECT_PROPERTY_KEYS.length;
+  const canAddNextProperty =
+    Object.keys(state.definition.next ?? {}).length <
+    AUDIO_EFFECT_PROPERTY_KEYS.length;
+  const addPropertySideMenuItems = [];
+  if (canAddPreviousProperty) {
+    addPropertySideMenuItems.push({
+      label: copy.outgoingLabel ?? "Outgoing",
+      type: "item",
+      value: "prev",
+    });
+  }
+  if (canAddNextProperty) {
+    addPropertySideMenuItems.push({
+      label: copy.incomingLabel ?? "Incoming",
+      type: "item",
+      value: "next",
+    });
+  }
   const dialogProperty = state.keyframeDialog.property;
   const dialogSide = state.keyframeDialog.side;
   const dialogKeyframes =
@@ -1409,12 +1429,6 @@ export const selectViewData = ({ state, i18n }) => {
   const finalKeyframe =
     !state.keyframeDialog.add &&
     state.keyframeDialog.index === dialogKeyframes.length - 1;
-  const transitionDialog = dialogSide === "prev" || dialogSide === "next";
-  const fixedDialogValue =
-    finalKeyframe && dialogSide === "next" && dialogProperty === "fade"
-      ? 100
-      : undefined;
-
   const properties = Object.entries(tween).map(([property, config]) => ({
     id: property,
     label: getPropertyLabel(property, copy),
@@ -1431,19 +1445,18 @@ export const selectViewData = ({ state, i18n }) => {
       canDelete: index < config.keyframes.length - 1,
     })),
   }));
-  const updateTimelineProperties = createUpdateTimelineProperties(tween, copy);
-  const previousTimelineProperties = createFadeTimelineProperties({
-    definition: state.definition,
-    side: "prev",
+  const updateTimelineProperties = createTimelineProperties(tween, copy);
+  const previousTimelineProperties = createTimelineProperties(
+    state.definition.prev,
     copy,
-  });
-  const nextTimelineProperties = createFadeTimelineProperties({
-    definition: state.definition,
-    side: "next",
+  );
+  const nextTimelineProperties = createTimelineProperties(
+    state.definition.next,
     copy,
-  });
+  );
   const usedDuration = getAudioEffectDefinitionDuration(state.definition);
   const selectedProperty = state.selectedProperty;
+  const propertyCount = countAudioEffectProperties(state.definition);
   const selectedKeyframePanel =
     state.selectedEditorTab === "timeline"
       ? buildSelectedKeyframePanelData(state, copy)
@@ -1541,11 +1554,7 @@ export const selectViewData = ({ state, i18n }) => {
   const keyframeMenuKeyframes = getMutableKeyframes(state, state.keyframeMenu);
   const keyframeMenuFinal =
     state.keyframeMenu.index === keyframeMenuKeyframes?.length - 1;
-  const keyframeMenuProtectedEndpoint =
-    keyframeMenuFinal &&
-    (state.keyframeMenu.side === "update" ||
-      (state.keyframeMenu.side === "next" &&
-        state.keyframeMenu.property === "fade"));
+  const keyframeMenuProtectedEndpoint = keyframeMenuFinal;
   const keyframeMenuItems = AUDIO_EFFECT_KEYFRAME_MENU_ITEMS.filter(
     (item) =>
       item.value !== "delete-keyframe" ||
@@ -1601,9 +1610,9 @@ export const selectViewData = ({ state, i18n }) => {
     updateTimelineProperties,
     updateTimelineDefaultValues: TIMELINE_DEFAULT_VALUES,
     previousTimelineProperties,
-    previousTimelineDefaultValues: { fade: 100 },
+    previousTimelineDefaultValues: TIMELINE_DEFAULT_VALUES,
     nextTimelineProperties,
-    nextTimelineDefaultValues: { fade: 0 },
+    nextTimelineDefaultValues: TIMELINE_DEFAULT_VALUES,
     previousTimelineVisible: Object.keys(previousTimelineProperties).length > 0,
     nextTimelineVisible: Object.keys(nextTimelineProperties).length > 0,
     timelineDuration: timelineDisplayDuration,
@@ -1646,10 +1655,13 @@ export const selectViewData = ({ state, i18n }) => {
     noSelectionLabel: copy.noSelectionLabel ?? "No selection",
     editKeyframeButtonLabel: copy.editKeyframeTitle ?? "Edit Keyframe",
     canRemoveSelectedProperty:
-      selectedProperty !== undefined && Object.keys(tween).length > 1,
+      selectedProperty !== undefined && propertyCount > 1,
     outgoingTimelineLabel: copy.outgoingLabel ?? "Outgoing",
     incomingTimelineLabel: copy.incomingLabel ?? "Incoming",
     canAddProperty: availableProperties.length > 0,
+    canAddTransitionProperty: addPropertySideMenuItems.length > 0,
+    addPropertySideMenu: state.addPropertySideMenu,
+    addPropertySideMenuItems,
     addPropertyButton: copy.addPropertyButton ?? "Add Property",
     addKeyframeButton: copy.addKeyframeButton ?? "Add Keyframe",
     removePropertyButton: copy.removePropertyButton ?? "Remove Property",
@@ -1690,10 +1702,8 @@ export const selectViewData = ({ state, i18n }) => {
     keyframeDialogKey: `${dialogSide ?? ""}:${dialogProperty ?? ""}:${state.keyframeDialog.index ?? "add"}:${state.keyframeDialog.add}`,
     keyframeForm: createKeyframeForm({
       add: state.keyframeDialog.add,
-      fixedValue: fixedDialogValue,
       finalKeyframe,
-      property: transitionDialog ? "volume" : dialogProperty,
-      transitionKeyframe: transitionDialog,
+      property: dialogProperty,
       copy,
     }),
     keyframeFormDefaults: selectKeyframeDialogValues({ state }),

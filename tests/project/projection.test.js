@@ -992,19 +992,27 @@ describe("constructProjectData", () => {
             audioEffect: {
               type: "transition",
               prev: {
-                fade: {
+                volume: {
                   initialValue: 90,
-                  delay: 0,
-                  duration: 600,
-                  easing: "easeInOutSine",
+                  keyframes: [
+                    {
+                      value: 0,
+                      duration: 600,
+                      easing: "easeInOutSine",
+                    },
+                  ],
                 },
               },
               next: {
-                fade: {
+                volume: {
                   initialValue: 10,
-                  delay: 0,
-                  duration: 900,
-                  easing: "easeInOutSine",
+                  keyframes: [
+                    {
+                      value: 100,
+                      duration: 900,
+                      easing: "easeInOutSine",
+                    },
+                  ],
                 },
               },
             },
@@ -1079,19 +1087,15 @@ describe("constructProjectData", () => {
         name: "Crossfade",
         type: "transition",
         prev: {
-          fade: {
+          volume: {
             initialValue: 90,
-            delay: 0,
-            duration: 600,
-            easing: "easeInOutSine",
+            keyframes: [{ value: 0, duration: 600, easing: "easeInOutSine" }],
           },
         },
         next: {
-          fade: {
+          volume: {
             initialValue: 10,
-            delay: 0,
-            duration: 900,
-            easing: "easeInOutSine",
+            keyframes: [{ value: 100, duration: 900, easing: "easeInOutSine" }],
           },
         },
       },

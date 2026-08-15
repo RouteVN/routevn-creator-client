@@ -80,12 +80,13 @@ describe("default template audio effects", () => {
         audioEffect: {
           type: "transition",
           prev: {
-            fade: {
+            volume: {
               keyframes: [{ value: 0, duration: 1000, easing: "linear" }],
             },
           },
           next: {
-            fade: {
+            volume: {
+              initialValue: 0,
               keyframes: [{ value: 100, duration: 1000, easing: "linear" }],
             },
           },
@@ -97,12 +98,13 @@ describe("default template audio effects", () => {
         audioEffect: {
           type: "transition",
           prev: {
-            fade: {
+            volume: {
               keyframes: [{ value: 0, duration: 500, easing: "linear" }],
             },
           },
           next: {
-            fade: {
+            volume: {
+              initialValue: 0,
               keyframes: [
                 {
                   value: 100,

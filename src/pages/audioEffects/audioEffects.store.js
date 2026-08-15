@@ -1,7 +1,7 @@
 import { applyFolderRequiredRootDragOptions } from "../../internal/fileExplorerDragOptions.js";
 import {
+  getAudioEffectDefinitionDuration,
   getAudioEffectKeyframesDuration,
-  getTransitionFadeKeyframes,
 } from "../../internal/audioEffectDefinition.js";
 import { createCatalogPageStore } from "../../internal/ui/resourcePages/catalog/createCatalogPageStore.js";
 import { createTagField } from "../../internal/ui/resourcePages/tags.js";
@@ -24,9 +24,9 @@ const getAudioEffectPropertyLabel = (property, copy = {}) => {
   return labels[property] ?? property;
 };
 
-const createUpdateTimelineProperties = (tween = {}, copy = {}) =>
+const createTimelineProperties = (tracks = {}, copy = {}) =>
   Object.fromEntries(
-    Object.entries(tween).map(([property, config]) => [
+    Object.entries(tracks).map(([property, config]) => [
       property,
       {
         ...structuredClone(config),
@@ -36,44 +36,31 @@ const createUpdateTimelineProperties = (tween = {}, copy = {}) =>
     ]),
   );
 
-const createFadeTimelineProperties = ({ definition, side, copy } = {}) => {
-  const keyframes = getTransitionFadeKeyframes(definition, side);
-  if (keyframes.length === 0) {
-    return {};
-  }
-
-  const previous = side === "prev";
-  const initialValue = definition[side]?.fade?.initialValue;
-  return {
-    fade: {
-      label: copy.fadePropertyLabel ?? "Fade",
-      initialValue: initialValue ?? (previous ? 100 : 0),
-      keyframes: structuredClone(keyframes),
-    },
-  };
-};
-
-const getTransitionTimelineDuration = (definition = {}) =>
-  Math.max(
-    ...["prev", "next"].map((side) =>
-      getAudioEffectKeyframesDuration(
-        getTransitionFadeKeyframes(definition, side),
-      ),
-    ),
+const getTransitionSideDuration = (tracks = {}) =>
+  Object.values(tracks).reduce(
+    (duration, config) =>
+      Math.max(duration, getAudioEffectKeyframesDuration(config.keyframes)),
+    0,
   );
 
 const formatAudioEffectSummary = (item, copy = {}) => {
   const definition = item?.audioEffect;
   if (definition?.type === "transition") {
     const sides = [];
-    if (definition.prev?.fade) {
+    if (definition.prev) {
+      const properties = Object.keys(definition.prev)
+        .map((property) => getAudioEffectPropertyLabel(property, copy))
+        .join(", ");
       sides.push(
-        `${copy.outgoingLabel ?? "Outgoing"}: ${getAudioEffectKeyframesDuration(getTransitionFadeKeyframes(definition, "prev"))}ms`,
+        `${copy.outgoingLabel ?? "Outgoing"}: ${properties} · ${getTransitionSideDuration(definition.prev)}ms`,
       );
     }
-    if (definition.next?.fade) {
+    if (definition.next) {
+      const properties = Object.keys(definition.next)
+        .map((property) => getAudioEffectPropertyLabel(property, copy))
+        .join(", ");
       sides.push(
-        `${copy.incomingLabel ?? "Incoming"}: ${getAudioEffectKeyframesDuration(getTransitionFadeKeyframes(definition, "next"))}ms`,
+        `${copy.incomingLabel ?? "Incoming"}: ${properties} · ${getTransitionSideDuration(definition.next)}ms`,
       );
     }
     return sides.join(" · ");
@@ -197,16 +184,16 @@ const buildCatalogItem = (item, { copy = {} } = {}) => {
     cardKind: "animation",
     itemWidth: "f",
     prevProperties: transition
-      ? createFadeTimelineProperties({ definition, side: "prev", copy })
+      ? createTimelineProperties(definition.prev, copy)
       : {},
     nextProperties: transition
-      ? createFadeTimelineProperties({ definition, side: "next", copy })
+      ? createTimelineProperties(definition.next, copy)
       : {},
     updateProperties: transition
       ? {}
-      : createUpdateTimelineProperties(definition.tween, copy),
+      : createTimelineProperties(definition.tween, copy),
     transitionTimelineDuration: transition
-      ? getTransitionTimelineDuration(definition)
+      ? getAudioEffectDefinitionDuration(definition)
       : 0,
     transitionOutgoingLabel: copy.outgoingLabel ?? "Outgoing",
     transitionIncomingLabel: copy.incomingLabel ?? "Incoming",

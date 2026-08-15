@@ -1088,7 +1088,7 @@
         "audioEffect": {
           "type": "transition",
           "prev": {
-            "fade": {
+            "volume": {
               "keyframes": [
                 {
                   "value": 0,
@@ -1099,7 +1099,8 @@
             }
           },
           "next": {
-            "fade": {
+            "volume": {
+              "initialValue": 0,
               "keyframes": [
                 {
                   "value": 100,
@@ -1119,7 +1120,7 @@
         "audioEffect": {
           "type": "transition",
           "prev": {
-            "fade": {
+            "volume": {
               "keyframes": [
                 {
                   "value": 0,
@@ -1130,7 +1131,8 @@
             }
           },
           "next": {
-            "fade": {
+            "volume": {
+              "initialValue": 0,
               "keyframes": [
                 {
                   "value": 100,

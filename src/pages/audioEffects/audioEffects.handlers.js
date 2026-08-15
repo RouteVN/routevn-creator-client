@@ -31,7 +31,7 @@ const createInitialAudioEffectDefinition = (dialogType) => {
     return {
       type: "transition",
       prev: {
-        fade: {
+        volume: {
           keyframes: [
             {
               value: 0,
@@ -42,7 +42,8 @@ const createInitialAudioEffectDefinition = (dialogType) => {
         },
       },
       next: {
-        fade: {
+        volume: {
+          initialValue: 0,
           keyframes: [
             {
               value: 100,

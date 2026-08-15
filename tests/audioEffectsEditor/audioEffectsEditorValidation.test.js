@@ -141,7 +141,7 @@ describe("audioEffectsEditor validation", () => {
       validateDefinition({
         type: "transition",
         prev: {
-          fade: {
+          volume: {
             initialValue: 90,
             keyframes: [
               { startValue: 75, value: 0, duration: 300, easing: "linear" },
@@ -149,7 +149,7 @@ describe("audioEffectsEditor validation", () => {
           },
         },
         next: {
-          fade: {
+          volume: {
             initialValue: 10,
             keyframes: [
               { startValue: 25, value: 100, duration: 300, easing: "linear" },

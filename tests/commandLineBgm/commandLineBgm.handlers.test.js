@@ -54,8 +54,8 @@ const audioEffects = {
       name: "Channel Transition",
       audioEffect: {
         type: "transition",
-        prev: { fade: { keyframes: [{ value: 0, duration: 600 }] } },
-        next: { fade: { keyframes: [{ value: 100, duration: 900 }] } },
+        prev: { volume: { keyframes: [{ value: 0, duration: 600 }] } },
+        next: { volume: { keyframes: [{ value: 100, duration: 900 }] } },
       },
     },
     crossfade: {

@@ -21,8 +21,15 @@ describe("audioEffects.store", () => {
               name: "Crossfade",
               audioEffect: {
                 type: "transition",
-                prev: { fade: { duration: 600 } },
-                next: { fade: { duration: 900 } },
+                prev: {
+                  volume: { keyframes: [{ value: 0, duration: 600 }] },
+                },
+                next: {
+                  volume: {
+                    initialValue: 0,
+                    keyframes: [{ value: 100, duration: 900 }],
+                  },
+                },
               },
             },
             smooth: {
@@ -64,22 +71,22 @@ describe("audioEffects.store", () => {
           maskTimelineRows: [],
           maskTimelineDefaultValues: {},
           prevProperties: {
-            fade: {
-              label: "Fade",
-              initialValue: 100,
+            volume: {
+              label: "Volume",
+              initialValue: undefined,
               keyframes: [expect.objectContaining({ duration: 600, value: 0 })],
             },
           },
           nextProperties: {
-            fade: {
-              label: "Fade",
+            volume: {
+              label: "Volume",
               initialValue: 0,
               keyframes: [
                 expect.objectContaining({ duration: 900, value: 100 }),
               ],
             },
           },
-          summary: "Outgoing: 600ms · Incoming: 900ms",
+          summary: "Outgoing: Volume · 600ms · Incoming: Volume · 900ms",
         }),
         expect.objectContaining({
           id: "smooth",
@@ -99,7 +106,8 @@ describe("audioEffects.store", () => {
     );
     expect(viewData).toMatchObject({
       selectedAudioEffectTypeLabel: "Transition",
-      selectedAudioEffectSummary: "Outgoing: 600ms · Incoming: 900ms",
+      selectedAudioEffectSummary:
+        "Outgoing: Volume · 600ms · Incoming: Volume · 900ms",
       selectedResourceId: "audioEffects",
       resourceCategory: "animatedAssets",
       openButton: "Open",
