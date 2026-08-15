@@ -1813,6 +1813,7 @@ scenesPage:
   failedUpdateScene: "Failed to update scene."
   folderLabel: "Folder"
   mapAddHint: "Right click in the map to add a scene"
+  mapAddHintLongTap: "Long tap in the map to add a scene"
   noSectionsLabel: "No sections"
   openMenuItem: "Open"
   sceneFallback: "Scene {time}"

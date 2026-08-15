@@ -1813,6 +1813,7 @@ scenesPage:
   failedUpdateScene: "无法更新场景。"
   folderLabel: "文件夹"
   mapAddHint: "右键点击地图以添加场景"
+  mapAddHintLongTap: "长按地图以添加场景"
   noSectionsLabel: "没有段落"
   openMenuItem: "打开"
   sceneFallback: "场景 {time}"

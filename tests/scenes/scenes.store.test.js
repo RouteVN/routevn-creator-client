@@ -233,6 +233,7 @@ describe("scenes.store mobile layout", () => {
     expect(viewData.whiteboardMinimapPlacement).toBe("top-left");
     expect(viewData.whiteboardMinimapHeightScale).toBe(2 / 3);
     expect(viewData.whiteboardMinimapTopInset).toBe(8);
+    expect(viewData.mapAddHint).toBe("Long tap in the map to add a scene");
 
     setTouchMinimapReady({ state }, { isReady: true });
     setWhiteboardConnectionsReady({ state }, { isReady: true });
@@ -262,6 +263,9 @@ describe("scenes.store mobile layout", () => {
     expect(viewData.whiteboardMinimapPlacement).toBe("bottom-left");
     expect(viewData.whiteboardMinimapHeightScale).toBe(1);
     expect(viewData.whiteboardMinimapTopInset).toBeUndefined();
+    expect(viewData.mapAddHint).toBe(
+      "Right click in the map to add a scene",
+    );
   });
 
   it("uses a popover on desktop and a dialog on touch for scene creation", () => {

@@ -674,6 +674,8 @@ export const selectViewData = ({ state, i18n }) => {
     sectionsLabel: copy.sectionsLabel ?? "Sections",
     noSectionsLabel: copy.noSectionsLabel ?? "No sections",
     noSelectionLabel: copy.noSelectionLabel ?? "No selection",
-    mapAddHint: copy.mapAddHint ?? "Right click in the map to add a scene",
+    mapAddHint: state.isTouchMode
+      ? (copy.mapAddHintLongTap ?? "Long tap in the map to add a scene")
+      : (copy.mapAddHint ?? "Right click in the map to add a scene"),
   };
 };

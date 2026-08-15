@@ -1813,6 +1813,7 @@ scenesPage:
   failedUpdateScene: "シーンを更新できませんでした。"
   folderLabel: "フォルダー"
   mapAddHint: "マップを右クリックしてシーンを追加"
+  mapAddHintLongTap: "マップを長押ししてシーンを追加"
   noSectionsLabel: "セクションはありません"
   openMenuItem: "開く"
   sceneFallback: "シーン {time}"
