@@ -86,7 +86,7 @@ export const createAndroidSqliteConnection = ({ dbPath }) => {
 
   return {
     async init() {
-      callAndroidBridge("sqliteOpen", { dbPath });
+      await callAndroidBridge("sqliteOpen", { dbPath });
     },
 
     async select(sql, args = []) {
@@ -94,7 +94,7 @@ export const createAndroidSqliteConnection = ({ dbPath }) => {
       let ok = false;
       let resultSize;
       try {
-        const rows = callAndroidBridge("sqliteQuery", {
+        const rows = await callAndroidBridge("sqliteQuery", {
           dbPath,
           sql,
           args: normalizeArgs(args),
@@ -124,7 +124,7 @@ export const createAndroidSqliteConnection = ({ dbPath }) => {
     },
 
     async close() {
-      callAndroidBridge("sqliteClose", { dbPath });
+      await callAndroidBridge("sqliteClose", { dbPath });
     },
   };
 };

@@ -10,8 +10,8 @@ Browser builds persist project data through IndexedDB-backed stores.
 
 Desktop builds persist project data through Tauri/SQLite-backed stores.
 
-Android builds run the web app inside a native WebView shell and persist project
-data through the web/IndexedDB-backed stores. Tauri is not used for mobile.
+Android builds run the web app inside a native WebView shell and persist app and
+project data through native SQLite-backed stores. Tauri is not used for mobile.
 
 ## Frameworks used
 

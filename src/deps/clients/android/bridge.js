@@ -3,9 +3,16 @@ import {
   logAndroidBridgeTiming,
 } from "../../../internal/navigationTiming.js";
 
+const BRIDGE_PROTOCOL_VERSION = 1;
+const BRIDGE_RESPONSE_TIMEOUT_MS = 30 * 60 * 1000;
+
+let nextBridgeRequestId = 1;
+let configuredBridge;
+const pendingBridgeRequests = new Map();
+
 const getAndroidBridge = () => {
   const bridge = window.RouteVNAndroid;
-  if (!bridge) {
+  if (typeof bridge?.postMessage !== "function") {
     throw new Error("Android bridge is not available.");
   }
   return bridge;
@@ -23,39 +30,93 @@ const getBridgeResultSize = (value) => {
   return undefined;
 };
 
-export const callAndroidBridge = (method, payload = {}) => {
-  const startedAt = getNavigationTimingNow();
-  const bridge = getAndroidBridge();
-  const fn = bridge[method];
-  if (typeof fn !== "function") {
-    throw new Error(`Android bridge method is not available: ${method}`);
+const handleAndroidBridgeMessage = (event) => {
+  let response;
+  try {
+    response = JSON.parse(event.data);
+  } catch {
+    return;
   }
+
+  if (response?.version !== BRIDGE_PROTOCOL_VERSION) {
+    return;
+  }
+
+  const pending = pendingBridgeRequests.get(response.id);
+  if (!pending) {
+    return;
+  }
+
+  pendingBridgeRequests.delete(response.id);
+  clearTimeout(pending.timeoutId);
+
+  if (response.ok === true) {
+    pending.resolve(response.value);
+    return;
+  }
+
+  const error = new Error(
+    response.error?.message ?? `Android bridge call failed: ${pending.method}`,
+  );
+  error.code = response.error?.code;
+  pending.reject(error);
+};
+
+const ensureAndroidBridgeListener = () => {
+  const bridge = getAndroidBridge();
+  if (configuredBridge !== bridge) {
+    bridge.onmessage = handleAndroidBridgeMessage;
+    configuredBridge = bridge;
+  }
+  return bridge;
+};
+
+export const callAndroidBridge = async (method, payload = {}) => {
+  const startedAt = getNavigationTimingNow();
+  const bridge = ensureAndroidBridgeListener();
 
   let ok = false;
   let errorCode;
   let resultSize;
   try {
-    const rawResult = fn.call(bridge, JSON.stringify(payload));
-    let result;
-    try {
-      result = JSON.parse(rawResult);
-    } catch {
-      throw new Error(`Android bridge returned invalid JSON for ${method}.`);
-    }
+    const requestId = String(nextBridgeRequestId);
+    nextBridgeRequestId += 1;
 
-    ok = !!result?.ok;
-    if (!ok) {
-      const error = new Error(
-        result?.error?.message || `Android bridge call failed: ${method}`,
-      );
-      error.code = result?.error?.code;
-      error.details = result?.error?.details;
-      errorCode = error.code;
-      throw error;
-    }
+    const value = await new Promise((resolve, reject) => {
+      const timeoutId = setTimeout(() => {
+        pendingBridgeRequests.delete(requestId);
+        reject(new Error(`Android bridge call timed out: ${method}`));
+      }, BRIDGE_RESPONSE_TIMEOUT_MS);
 
-    resultSize = getBridgeResultSize(result.value);
-    return result.value;
+      pendingBridgeRequests.set(requestId, {
+        method,
+        resolve,
+        reject,
+        timeoutId,
+      });
+
+      try {
+        bridge.postMessage(
+          JSON.stringify({
+            version: BRIDGE_PROTOCOL_VERSION,
+            id: requestId,
+            method,
+            payload,
+          }),
+        );
+      } catch (error) {
+        pendingBridgeRequests.delete(requestId);
+        clearTimeout(timeoutId);
+        reject(error);
+      }
+    });
+
+    ok = true;
+    resultSize = getBridgeResultSize(value);
+    return value;
+  } catch (error) {
+    errorCode = error?.code;
+    throw error;
   } finally {
     logAndroidBridgeTiming({
       method,

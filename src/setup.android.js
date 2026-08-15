@@ -1,6 +1,7 @@
 import { createGlobalUI } from "@rettangoli/ui";
 
 import { createDb } from "./deps/clients/android/db.js";
+import { callAndroidBridge } from "./deps/clients/android/bridge.js";
 import { createAndroidFilePicker } from "./deps/clients/android/filePicker.js";
 import AndroidRouter from "./deps/clients/android/router.js";
 import { createBrowserEventsClient } from "./deps/clients/browserEvents.js";
@@ -15,9 +16,18 @@ import Subject from "./deps/subject.js";
 import { createGraphicsService } from "./deps/services/graphicsService.js";
 import { deriveProjectFormatVersionFromAppVersion } from "./internal/projectCompatibility.js";
 import { registerPrimitives } from "./primitives/registerPrimitives.js";
+import { setAndroidDebugBuild } from "./internal/navigationTiming.js";
 import tauriConfig from "../src-tauri/tauri.conf.json";
 
 registerPrimitives();
+
+let isAndroidDebugBuild = false;
+try {
+  isAndroidDebugBuild = await callAndroidBridge("isDebugBuild");
+} catch {
+  // The bridge is absent in browser-only smoke checks.
+}
+setAndroidDebugBuild(isAndroidDebugBuild);
 
 const uiConfig = {
   id: "touch",
@@ -57,11 +67,11 @@ const subject = new Subject();
 let nativeBackInFlight = false;
 
 const notifyAndroidBackState = () => {
-  try {
-    window.RouteVNAndroid?.updateBackState?.(router.canGoBack());
-  } catch {
-    // Android bridge may not be present in browser-based smoke checks.
-  }
+  void callAndroidBridge("updateBackState", {
+    canGoBack: router.canGoBack(),
+  }).catch(() => {
+    // The bridge is absent in browser-only smoke checks.
+  });
 };
 
 router.setOnStackChange(notifyAndroidBackState);
@@ -117,12 +127,12 @@ const projectService = createProjectService({
 });
 
 const openUrl = async (url) => {
-  if (window.RouteVNAndroid?.openExternalUrl) {
-    window.RouteVNAndroid.openExternalUrl(url);
+  try {
+    await callAndroidBridge("openExternalUrl", { url });
     return;
+  } catch {
+    window.open(url, "_blank");
   }
-
-  window.open(url, "_blank");
 };
 
 const appService = createAppService({
@@ -177,14 +187,7 @@ const deps = {
 };
 
 const installAndroidDebugHooks = () => {
-  let isDebugBuild = false;
-  try {
-    isDebugBuild = window.RouteVNAndroid?.isDebugBuild?.() === true;
-  } catch {
-    isDebugBuild = false;
-  }
-
-  if (!isDebugBuild) {
+  if (!isAndroidDebugBuild) {
     return;
   }
 
@@ -208,5 +211,6 @@ const installAndroidDebugHooks = () => {
 
 installAndroidDebugHooks();
 notifyAndroidBackState();
+void callAndroidBridge("markSplashReady").catch(() => {});
 
 export { deps };

@@ -241,16 +241,16 @@ const requestNativeAndroidFilePicker = (options = {}) => {
   return new Promise((resolve, reject) => {
     pendingAndroidFilePickers.set(requestId, { resolve, reject });
 
-    try {
+    void Promise.resolve(
       callAndroidBridge("openFilePicker", {
         requestId,
         multiple: options.multiple ?? false,
         accept: resolveAccept(options),
-      });
-    } catch (error) {
+      }),
+    ).catch((error) => {
       pendingAndroidFilePickers.delete(requestId);
       reject(error);
-    }
+    });
   });
 };
 
@@ -265,16 +265,16 @@ const requestNativeAndroidFolderPicker = (options = {}) => {
   return new Promise((resolve, reject) => {
     pendingAndroidFolderPickers.set(requestId, { resolve, reject });
 
-    try {
+    void Promise.resolve(
       callAndroidBridge("openFolderPicker", {
         requestId,
         title: options.title || "Select Folder",
         writable: options.writable === true,
-      });
-    } catch (error) {
+      }),
+    ).catch((error) => {
       pendingAndroidFolderPickers.delete(requestId);
       reject(error);
-    }
+    });
   });
 };
 
@@ -289,16 +289,16 @@ const requestNativeAndroidSaveFilePicker = (options = {}) => {
   return new Promise((resolve, reject) => {
     pendingAndroidSaveFilePickers.set(requestId, { resolve, reject });
 
-    try {
+    void Promise.resolve(
       callAndroidBridge("openSaveFilePicker", {
         requestId,
         filename: resolveSaveFilename(options),
         mimeType: resolveSaveMimeType(options),
-      });
-    } catch (error) {
+      }),
+    ).catch((error) => {
       pendingAndroidSaveFilePickers.delete(requestId);
       reject(error);
-    }
+    });
   });
 };
 
@@ -323,7 +323,7 @@ const resolvePickerRequestId = (descriptor = {}) => {
   return match?.[1];
 };
 
-const cleanupNativePickedFiles = (descriptors = []) => {
+const cleanupNativePickedFiles = async (descriptors = []) => {
   const requestIds = new Set();
   for (const descriptor of descriptors) {
     const requestId = resolvePickerRequestId(descriptor);
@@ -334,7 +334,7 @@ const cleanupNativePickedFiles = (descriptors = []) => {
 
   for (const requestId of requestIds) {
     try {
-      callAndroidBridge("deletePickerRequest", { requestId });
+      await callAndroidBridge("deletePickerRequest", { requestId });
     } catch (error) {
       console.warn("[android.filePicker] Failed to clean picker files", {
         requestId,
@@ -351,7 +351,7 @@ const readNativePickedFiles = async (descriptors) => {
       files.push(await readNativePickedFile(descriptor));
     }
   } finally {
-    cleanupNativePickedFiles(descriptors);
+    await cleanupNativePickedFiles(descriptors);
   }
   return files;
 };

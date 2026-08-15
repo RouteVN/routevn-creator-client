@@ -6,25 +6,16 @@
       name="viewport"
       content="width=device-width, initial-scale=1.0, viewport-fit=cover, user-scalable=no"
     />
+    <meta
+      http-equiv="Content-Security-Policy"
+      content="default-src 'self'; script-src 'self' 'wasm-unsafe-eval'; style-src 'self' 'unsafe-inline'; img-src 'self' https: data: blob:; media-src 'self' https: data: blob:; font-src 'self' data:; connect-src 'self' https: ws://127.0.0.1:3001; worker-src 'self' blob:; frame-src 'none'; object-src 'none'; base-uri 'none'; form-action 'self'"
+    />
     <title>RouteVN Creator</title>
-    <script>
-      window.env = {
-        ROUTEVN_API_ENDPOINT: "https://api.example.invalid",
-      };
-    </script>
+    <script src="/public/android-env.js"></script>
     <link rel="stylesheet" href="/public/theme.css" />
     <script src="/public/rtgl-icons.js"></script>
     <script src="/public/@rettangoli/ui@1.21.1/dist/rettangoli-iife-ui.min.js"></script>
     <script type="module" src="/public/main.js"></script>
-    <script>
-      window.addEventListener("load", () => {
-        requestAnimationFrame(() => {
-          requestAnimationFrame(() => {
-            window.RouteVNAndroid?.markSplashReady?.();
-          });
-        });
-      });
-    </script>
   </head>
   <body class="dark">
     <rvn-app></rvn-app>

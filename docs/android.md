@@ -53,7 +53,7 @@ sdk.dir=/Users/<user>/Android/Sdk
 
 ## Endpoint Configuration
 
-`static/android/index.html` defines Android runtime endpoints through
+`static/public/android-env.js` defines Android runtime endpoints through
 `window.env`:
 
 - `ROUTEVN_API_ENDPOINT`
@@ -186,7 +186,8 @@ The native bridge in `MainActivity.java` handles:
 
 - route back-state updates and Android back dispatch
 - external URL opening
-- SQLite open/query/exec/close
+- named global app-database operations
+- project-only SQLite open/query/exec/close
 - project file read/write/metadata
 - download writes
 - Android document picker results
@@ -214,11 +215,14 @@ files/projects/<projectId>/
 sibling directories returned by the same API. `app.db` is resolved with
 `getDatabasePath("app.db")`; project roots are resolved below `getFilesDir()`.
 
-The JavaScript SQLite path contract remains deliberately narrow:
+The native database contract remains deliberately narrow:
 
-- `app.db` resolves only to the global app database.
-- `projects/<projectId>/project.db` resolves only to that project's database.
-- all other database paths are rejected by the native bridge.
+- the global `app.db` is accessed only through named key/value and event
+  operations
+- the raw SQLite bridge accepts only
+  `projects/<projectId>/project.db`, one statement per request, and the query,
+  schema, transaction, and write statement classes used by the project store
+- all other database paths and statement classes are rejected
 
 Project discovery requires both `project.db` and `files/`, so incomplete
 directories are not listed as valid projects.
@@ -235,6 +239,31 @@ native handler maps the request back to the extensionless stored project file.
 The file handler accepts only project-asset and picker-file routes; database,
 WAL, metadata, staging, and unrelated private paths are not served.
 
+## WebView Security Boundary
+
+The WebView does not use `addJavascriptInterface`. Native operations are
+provided through AndroidX `addWebMessageListener` with a versioned asynchronous
+request protocol. The native listener accepts only main-frame messages from:
+
+- `https://appassets.androidplatform.net` in every build
+- `http://127.0.0.1:3001` additionally in debug builds
+
+There is no wildcard-origin or compatibility fallback. A WebView without the
+origin-scoped message-listener feature fails closed instead of exposing a less
+safe bridge.
+
+The Android document uses a restrictive Content Security Policy: scripts must
+come from the document origin, frames and objects are disabled, and inline
+scripts are not permitted. Internal-file CORS responses name the one expected
+origin for the build. Direct `file://` and `content://` access, automatic
+JavaScript windows, and third-party cookies are disabled.
+
+Authentication and refresh tokens are removed from the serialized
+`userConfig` value before `app.db` is written. The opaque session JSON is
+encrypted with an AES-GCM key generated in Android Keystore; only ciphertext is
+stored in the excluded `auth-secrets` preferences file. The session is merged
+back into the in-memory config only when the app reads its named global state.
+
 ## Backup And Device Transfer
 
 `android:allowBackup` is enabled as the master switch, but RouteVN does not use
@@ -250,8 +279,8 @@ The configured policy is:
   device-to-device transfer
 - Android 7–8 backs up no RouteVN app data because those versions cannot apply
   the device-to-device-only condition
-- the global `app.db`, including authentication tokens, is never backed up or
-  transferred
+- the global `app.db` and Keystore-encrypted authentication secret are never
+  backed up or transferred
 - picker files, staging files, preferences, and other private files are not
   backed up or transferred
 
@@ -325,7 +354,7 @@ can miss Android-specific parser, layout, asset, and bridge behavior.
   changes should refresh from `http://127.0.0.1:3001/android/index.html`
   without reinstalling the APK.
 - For packaged-asset validation, build a release bundle with `bun run
-  android:bundle`. A native release build without rebuilding Android web assets
+android:bundle`. A native release build without rebuilding Android web assets
   can package stale JavaScript.
 - If a debug app shows a WebView network error on launch, start
   `bun run watch:android` and confirm `adb reverse tcp:3001 tcp:3001` is active
@@ -337,7 +366,7 @@ can miss Android-specific parser, layout, asset, and bridge behavior.
   blank screens were caused by frontend render errors such as missing i18n
   catalogs or Rettangoli parser failures, not native Activity failures.
 - The Android build log should show `Building frontend bundle with
-  src/setup.android.js` and include the configured `i18n` block. If it does not,
+src/setup.android.js` and include the configured `i18n` block. If it does not,
   the APK may not match the web bundle contract expected by the app.
 
 ### WebView Validation
@@ -454,6 +483,7 @@ same device, same project, and same navigation path. Otherwise it is easy to
   An unquoted value such as `h=${scrollBottomPadding}` can expand to
   `h=calc(96px + env(safe-area-inset-bottom))`, which the Rettangoli selector
   parser treats as invalid separate tokens.
+
 - A `style="height: ${scrollBottomPadding};"` spacer can collapse in some
   nested resource scroll layouts. The `h` attribute path matches established
   app spacer usage and produced a real measured `96px` spacer on Android.

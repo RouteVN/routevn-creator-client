@@ -4,7 +4,11 @@ const ACTIVE_TRACE_TTL_MS = 2000;
 let nextTraceId = 0;
 let activeTraceId;
 let activeTraceClearTimer;
-let cachedAndroidDebugBuild;
+let cachedAndroidDebugBuild = false;
+
+export const setAndroidDebugBuild = (isDebugBuild) => {
+  cachedAndroidDebugBuild = isDebugBuild === true;
+};
 
 export const getNavigationTimingNow = () => {
   if (
@@ -20,23 +24,6 @@ export const getNavigationTimingNow = () => {
 const roundMs = (value) => Number(value.toFixed(2));
 
 const isAndroidDebugBuild = () => {
-  if (cachedAndroidDebugBuild !== undefined) {
-    return cachedAndroidDebugBuild;
-  }
-
-  const bridge =
-    typeof window !== "undefined" ? window.RouteVNAndroid : undefined;
-  if (typeof bridge?.isDebugBuild === "function") {
-    try {
-      cachedAndroidDebugBuild = bridge.isDebugBuild() === true;
-      return cachedAndroidDebugBuild;
-    } catch {
-      cachedAndroidDebugBuild = false;
-      return cachedAndroidDebugBuild;
-    }
-  }
-
-  cachedAndroidDebugBuild = false;
   return cachedAndroidDebugBuild;
 };
 

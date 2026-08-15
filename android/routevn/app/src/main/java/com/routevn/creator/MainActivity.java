@@ -21,6 +21,8 @@ import android.os.Looper;
 import android.provider.OpenableColumns;
 import android.provider.MediaStore;
 import android.provider.DocumentsContract;
+import android.security.keystore.KeyGenParameterSpec;
+import android.security.keystore.KeyProperties;
 import android.system.Os;
 import android.util.Base64;
 import android.util.Log;
@@ -29,7 +31,6 @@ import android.view.ViewGroup;
 import android.view.Window;
 import android.webkit.ConsoleMessage;
 import android.webkit.CookieManager;
-import android.webkit.JavascriptInterface;
 import android.webkit.ValueCallback;
 import android.webkit.WebChromeClient;
 import android.webkit.WebResourceError;
@@ -39,12 +40,17 @@ import android.webkit.WebSettings;
 import android.webkit.WebView;
 import android.webkit.WebViewClient;
 import android.view.View;
+import android.view.Gravity;
 import android.widget.Toast;
 import android.widget.FrameLayout;
+import android.widget.TextView;
 import android.window.OnBackInvokedCallback;
 import android.window.OnBackInvokedDispatcher;
 import androidx.core.splashscreen.SplashScreen;
+import androidx.webkit.JavaScriptReplyProxy;
 import androidx.webkit.WebViewAssetLoader;
+import androidx.webkit.WebViewCompat;
+import androidx.webkit.WebViewFeature;
 import java.io.ByteArrayOutputStream;
 import java.io.File;
 import java.io.FileInputStream;
@@ -53,13 +59,22 @@ import java.io.InputStream;
 import java.io.OutputStream;
 import java.net.URLConnection;
 import java.nio.charset.StandardCharsets;
+import java.security.KeyStore;
 import java.text.SimpleDateFormat;
 import java.util.Date;
 import java.util.HashMap;
 import java.util.Iterator;
 import java.util.Locale;
 import java.util.Map;
+import java.util.HashSet;
+import java.util.Set;
 import java.util.UUID;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
+import javax.crypto.Cipher;
+import javax.crypto.KeyGenerator;
+import javax.crypto.SecretKey;
+import javax.crypto.spec.GCMParameterSpec;
 import org.json.JSONArray;
 import org.json.JSONObject;
 
@@ -71,6 +86,11 @@ public class MainActivity extends Activity {
     private static final int DEV_SERVER_PORT = 3001;
     private static final String DEV_SERVER_URL =
         "http://" + DEV_SERVER_HOST + ":" + DEV_SERVER_PORT + "/android/index.html";
+    private static final String APP_ORIGIN = "https://" + APP_ASSET_HOST;
+    private static final String DEV_SERVER_ORIGIN =
+        "http://" + DEV_SERVER_HOST + ":" + DEV_SERVER_PORT;
+    private static final String ANDROID_BRIDGE_NAME = "RouteVNAndroid";
+    private static final int ANDROID_BRIDGE_PROTOCOL_VERSION = 1;
     private static final int FILE_CHOOSER_REQUEST_CODE = 3711;
     private static final int ANDROID_FILE_PICKER_REQUEST_CODE = 3712;
     private static final int ANDROID_SAVE_FILE_PICKER_REQUEST_CODE = 3713;
@@ -90,6 +110,13 @@ public class MainActivity extends Activity {
     private static final String PROJECT_FILE_WRITE_TEMP_PREFIX =
         ".routevn-project-write-";
     private static final String APP_DATABASE_NAME = "app.db";
+    private static final String USER_CONFIG_DB_KEY = "userConfig";
+    private static final String AUTH_CONFIG_KEY = "auth";
+    private static final String AUTH_SESSION_CONFIG_KEY = "session";
+    private static final String AUTH_SECRET_PREFERENCES = "auth-secrets";
+    private static final String AUTH_SECRET_VALUE_KEY = "session";
+    private static final String AUTH_SECRET_KEY_ALIAS =
+        "routevn.auth.session";
     private static final String PROJECT_DATABASE_NAME = "project.db";
     private static final String PROJECTS_DIRECTORY_NAME = "projects";
 
@@ -136,13 +163,15 @@ public class MainActivity extends Activity {
     private boolean systemInsetsApplied = false;
     private WebViewAssetLoader assetLoader;
     private ValueCallback<Uri[]> fileChooserCallback;
-    private boolean canGoBackInWebApp = false;
+    private volatile boolean canGoBackInWebApp = false;
     private Object backInvokedCallback;
     private String pendingAndroidFilePickerRequestId;
     private boolean pendingAndroidFilePickerMultiple = false;
     private String pendingAndroidSaveFilePickerRequestId;
     private String pendingAndroidFolderPickerRequestId;
     private final Handler mainHandler = new Handler(Looper.getMainLooper());
+    private final ExecutorService bridgeExecutor =
+        Executors.newSingleThreadExecutor();
     private final Runnable finishSplashRunnable = this::finishSplash;
     private final Map<String, SQLiteDatabase> sqliteDatabases = new HashMap<>();
     private final Map<String, ProjectFileWriteSession> projectFileWriteSessions =
@@ -375,9 +404,12 @@ public class MainActivity extends Activity {
             )
         );
         webView.setBackgroundColor(Color.BLACK);
-        webView.addJavascriptInterface(new AndroidBridge(), "RouteVNAndroid");
         configureWebSettings(webView.getSettings());
         configureCookies();
+        if (!configureSecureAndroidBridge()) {
+            showUnsupportedWebViewError();
+            return;
+        }
 
         webView.setWebViewClient(new RouteVNWebViewClient());
         webView.setWebChromeClient(new RouteVNWebChromeClient());
@@ -425,9 +457,10 @@ public class MainActivity extends Activity {
         settings.setDatabaseEnabled(true);
         settings.setMediaPlaybackRequiresUserGesture(false);
         settings.setAllowFileAccess(false);
-        settings.setAllowContentAccess(true);
+        settings.setAllowContentAccess(false);
         settings.setAllowFileAccessFromFileURLs(false);
         settings.setAllowUniversalAccessFromFileURLs(false);
+        settings.setJavaScriptCanOpenWindowsAutomatically(false);
         settings.setSupportMultipleWindows(false);
         settings.setTextZoom(100);
 
@@ -474,7 +507,103 @@ public class MainActivity extends Activity {
     private void configureCookies() {
         CookieManager cookieManager = CookieManager.getInstance();
         cookieManager.setAcceptCookie(true);
-        cookieManager.setAcceptThirdPartyCookies(webView, true);
+        cookieManager.setAcceptThirdPartyCookies(webView, false);
+    }
+
+    private boolean configureSecureAndroidBridge() {
+        if (!WebViewFeature.isFeatureSupported(WebViewFeature.WEB_MESSAGE_LISTENER)) {
+            return false;
+        }
+
+        Set<String> allowedOriginRules = new HashSet<>();
+        allowedOriginRules.add(APP_ORIGIN);
+        if (BuildConfig.DEBUG) {
+            allowedOriginRules.add(DEV_SERVER_ORIGIN);
+        }
+
+        WebViewCompat.addWebMessageListener(
+            webView,
+            ANDROID_BRIDGE_NAME,
+            allowedOriginRules,
+            (view, message, sourceOrigin, isMainFrame, replyProxy) -> {
+                if (!isMainFrame || !isAllowedBridgeOrigin(sourceOrigin)) {
+                    Log.w(TAG, "Rejected Android bridge message from " + sourceOrigin);
+                    return;
+                }
+
+                String messageData = message.getData();
+                if (messageData == null) {
+                    postBridgeResponse(
+                        replyProxy,
+                        bridgeFailure(
+                            new IllegalArgumentException(
+                                "Android bridge message is invalid."
+                            )
+                        )
+                    );
+                    return;
+                }
+
+                bridgeExecutor.execute(() -> {
+                    String response = dispatchAndroidBridgeMessage(messageData);
+                    postBridgeResponse(replyProxy, response);
+                });
+            }
+        );
+        return true;
+    }
+
+    private void showUnsupportedWebViewError() {
+        if (webView != null) {
+            webView.destroy();
+            webView = null;
+        }
+
+        TextView message = new TextView(this);
+        message.setText(
+            "RouteVN Creator needs a newer Android System WebView. " +
+            "Update Android System WebView or Google Chrome, then reopen the app."
+        );
+        message.setTextColor(Color.WHITE);
+        message.setTextSize(18);
+        message.setGravity(Gravity.CENTER);
+        message.setPadding(48, 48, 48, 48);
+
+        FrameLayout rootView = new FrameLayout(this);
+        rootView.setBackgroundColor(Color.BLACK);
+        rootView.addView(
+            message,
+            new FrameLayout.LayoutParams(
+                ViewGroup.LayoutParams.MATCH_PARENT,
+                ViewGroup.LayoutParams.MATCH_PARENT
+            )
+        );
+        applySystemBarInsets(rootView);
+        setContentView(rootView);
+        rootView.requestApplyInsets();
+        requestSplashDismiss();
+        mainHandler.postDelayed(finishSplashRunnable, SPLASH_MAX_VISIBLE_MS);
+    }
+
+    private boolean isAllowedBridgeOrigin(Uri sourceOrigin) {
+        if (sourceOrigin == null) {
+            return false;
+        }
+
+        String origin = sourceOrigin.toString();
+        return APP_ORIGIN.equals(origin) ||
+            (BuildConfig.DEBUG && DEV_SERVER_ORIGIN.equals(origin));
+    }
+
+    private void postBridgeResponse(
+        JavaScriptReplyProxy replyProxy,
+        String response
+    ) {
+        mainHandler.post(() -> {
+            if (webView != null) {
+                replyProxy.postMessage(response);
+            }
+        });
     }
 
     private String getInitialAppUrl() {
@@ -502,6 +631,14 @@ public class MainActivity extends Activity {
             DEV_SERVER_HOST.equals(uri.getHost()) &&
             uri.getPort() == DEV_SERVER_PORT
         );
+    }
+
+    private boolean isTrustedAppDocumentUrl(Uri uri) {
+        if (isAppAssetUrl(uri)) {
+            return "/web/index.html".equals(uri.getPath());
+        }
+        return isDebugDevServerUrl(uri) &&
+            "/android/index.html".equals(uri.getPath());
     }
 
     private boolean openExternalUri(Uri uri) {
@@ -555,6 +692,7 @@ public class MainActivity extends Activity {
 
         closeSqliteDatabases();
         closeProjectFileWriteSessions();
+        bridgeExecutor.shutdownNow();
 
         if (webView != null) {
             webView.destroy();
@@ -612,22 +750,32 @@ public class MainActivity extends Activity {
         @Override
         public boolean shouldOverrideUrlLoading(WebView view, WebResourceRequest request) {
             Uri uri = request.getUrl();
-            if (isAppAssetUrl(uri) || isDebugDevServerUrl(uri)) {
+            if (isTrustedAppDocumentUrl(uri)) {
                 return false;
             }
 
-            return openExternalUri(uri);
+            if (isAppAssetUrl(uri) || isDebugDevServerUrl(uri)) {
+                return true;
+            }
+
+            openExternalUri(uri);
+            return true;
         }
 
         @Override
         @SuppressWarnings("deprecation")
         public boolean shouldOverrideUrlLoading(WebView view, String url) {
             Uri uri = Uri.parse(url);
-            if (isAppAssetUrl(uri) || isDebugDevServerUrl(uri)) {
+            if (isTrustedAppDocumentUrl(uri)) {
                 return false;
             }
 
-            return openExternalUri(uri);
+            if (isAppAssetUrl(uri) || isDebugDevServerUrl(uri)) {
+                return true;
+            }
+
+            openExternalUri(uri);
+            return true;
         }
 
         @Override
@@ -728,55 +876,265 @@ public class MainActivity extends Activity {
 
     private Map<String, String> createInternalFileResponseHeaders() {
         Map<String, String> headers = new HashMap<>();
-        headers.put("Access-Control-Allow-Origin", "*");
+        headers.put(
+            "Access-Control-Allow-Origin",
+            BuildConfig.DEBUG ? DEV_SERVER_ORIGIN : APP_ORIGIN
+        );
         headers.put("Access-Control-Allow-Methods", "GET, OPTIONS");
         headers.put("Access-Control-Allow-Headers", "Origin, Range, Accept, Content-Type");
         headers.put("Access-Control-Expose-Headers", "Content-Length, Content-Range, Accept-Ranges");
-        headers.put("Cross-Origin-Resource-Policy", "cross-origin");
+        headers.put(
+            "Cross-Origin-Resource-Policy",
+            BuildConfig.DEBUG ? "cross-origin" : "same-origin"
+        );
+        headers.put("Content-Security-Policy", "default-src 'none'; sandbox");
+        headers.put("X-Content-Type-Options", "nosniff");
         return headers;
     }
 
+    private String dispatchAndroidBridgeMessage(String messageData) {
+        String requestId = "";
+        try {
+            JSONObject request = new JSONObject(messageData);
+            requestId = request.getString("id");
+            if (requestId.isEmpty() || requestId.length() > 64) {
+                throw new IllegalArgumentException(
+                    "Android bridge request id is invalid."
+                );
+            }
+            if (
+                request.getInt("version") != ANDROID_BRIDGE_PROTOCOL_VERSION
+            ) {
+                throw new IllegalArgumentException(
+                    "Unsupported Android bridge protocol version."
+                );
+            }
+
+            String method = request.getString("method");
+            JSONObject payload = request.optJSONObject("payload");
+            if (payload == null) {
+                payload = new JSONObject();
+            }
+
+            String result = dispatchAndroidBridgeMethod(
+                method,
+                payload.toString()
+            );
+            return attachBridgeResponseMetadata(requestId, result);
+        } catch (Throwable error) {
+            return attachBridgeResponseMetadata(
+                requestId,
+                bridgeFailure(error)
+            );
+        }
+    }
+
+    private String dispatchAndroidBridgeMethod(
+        String method,
+        String payloadJson
+    ) throws Exception {
+        JSONObject payload = new JSONObject(payloadJson);
+        AndroidBridge bridge = new AndroidBridge();
+        switch (method) {
+            case "isDebugBuild":
+                return bridgeSuccess(bridge.isDebugBuild());
+            case "updateBackState":
+                bridge.updateBackState(payload.getBoolean("canGoBack"));
+                return bridgeSuccess(true);
+            case "openExternalUrl":
+                bridge.openExternalUrl(payload.getString("url"));
+                return bridgeSuccess(true);
+            case "markSplashReady":
+                bridge.markSplashReady();
+                return bridgeSuccess(true);
+            case "appDbInit":
+                return bridge.appDbInit(payloadJson);
+            case "appDbGet":
+                return bridge.appDbGet(payloadJson);
+            case "appDbSet":
+                return bridge.appDbSet(payloadJson);
+            case "appDbRemove":
+                return bridge.appDbRemove(payloadJson);
+            case "appDbGetEvents":
+                return bridge.appDbGetEvents(payloadJson);
+            case "appDbAppendEvent":
+                return bridge.appDbAppendEvent(payloadJson);
+            case "sqliteOpen":
+                return bridge.sqliteOpen(payloadJson);
+            case "sqliteQuery":
+                return bridge.sqliteQuery(payloadJson);
+            case "sqliteExec":
+                return bridge.sqliteExec(payloadJson);
+            case "sqliteClose":
+                return bridge.sqliteClose(payloadJson);
+            case "ensureProjectStorage":
+                return bridge.ensureProjectStorage(payloadJson);
+            case "getProjectStorageStatus":
+                return bridge.getProjectStorageStatus(payloadJson);
+            case "listProjectFolders":
+                return bridge.listProjectFolders(payloadJson);
+            case "beginProjectFileWrite":
+                return bridge.beginProjectFileWrite(payloadJson);
+            case "appendProjectFileWrite":
+                return bridge.appendProjectFileWrite(payloadJson);
+            case "finishProjectFileWrite":
+                return bridge.finishProjectFileWrite(payloadJson);
+            case "abortProjectFileWrite":
+                return bridge.abortProjectFileWrite(payloadJson);
+            case "writeProjectFile":
+                return bridge.writeProjectFile(payloadJson);
+            case "deleteProjectFile":
+                return bridge.deleteProjectFile(payloadJson);
+            case "readProjectFile":
+                return bridge.readProjectFile(payloadJson);
+            case "readProjectFileMetadata":
+                return bridge.readProjectFileMetadata(payloadJson);
+            case "writeDownloadFile":
+                return bridge.writeDownloadFile(payloadJson);
+            case "writeFileToUri":
+                return bridge.writeFileToUri(payloadJson);
+            case "createDistributionZipStreamedToUri":
+                return bridge.createDistributionZipStreamedToUri(payloadJson);
+            case "openFilePicker":
+                return bridge.openFilePicker(payloadJson);
+            case "openSaveFilePicker":
+                return bridge.openSaveFilePicker(payloadJson);
+            case "openFolderPicker":
+                return bridge.openFolderPicker(payloadJson);
+            case "importProjectFolder":
+                return bridge.importProjectFolder(payloadJson);
+            case "exportProjectFolder":
+                return bridge.exportProjectFolder(payloadJson);
+            case "deletePickerRequest":
+                return bridge.deletePickerRequest(payloadJson);
+            default:
+                throw new IllegalArgumentException(
+                    "Unsupported Android bridge method."
+                );
+        }
+    }
+
+    private String attachBridgeResponseMetadata(
+        String requestId,
+        String resultJson
+    ) {
+        try {
+            JSONObject result = new JSONObject(resultJson);
+            result.put("version", ANDROID_BRIDGE_PROTOCOL_VERSION);
+            result.put("id", requestId);
+            return result.toString();
+        } catch (Exception error) {
+            return "{\"version\":1,\"id\":\"\",\"ok\":false," +
+                "\"error\":{\"message\":\"Android bridge response failed\"}}";
+        }
+    }
+
     private final class AndroidBridge {
-        @JavascriptInterface
         public boolean isDebugBuild() {
             return BuildConfig.DEBUG;
         }
 
-        @JavascriptInterface
         public void updateBackState(boolean canGoBack) {
             canGoBackInWebApp = canGoBack;
         }
 
-        @JavascriptInterface
         public void openExternalUrl(String url) {
             runOnUiThread(() -> openExternalUri(Uri.parse(url)));
         }
 
-        @JavascriptInterface
         public void markSplashReady() {
             runOnUiThread(MainActivity.this::requestSplashDismiss);
         }
 
-        @JavascriptInterface
-        public String sqliteOpen(String payloadJson) {
+        public String appDbInit(String payloadJson) {
             try {
                 JSONObject payload = new JSONObject(payloadJson);
-                String dbPath = payload.getString("dbPath");
-                openDatabase(dbPath);
+                initializeAppDatabase(payload.optBoolean("withEvents", false));
                 return bridgeSuccess(true);
             } catch (Exception error) {
                 return bridgeFailure(error);
             }
         }
 
-        @JavascriptInterface
+        public String appDbGet(String payloadJson) {
+            try {
+                JSONObject payload = new JSONObject(payloadJson);
+                return bridgeSuccess(readAppDatabaseValue(payload.getString("key")));
+            } catch (Exception error) {
+                return bridgeFailure(error);
+            }
+        }
+
+        public String appDbSet(String payloadJson) {
+            try {
+                JSONObject payload = new JSONObject(payloadJson);
+                writeAppDatabaseValue(
+                    payload.getString("key"),
+                    payload.getString("valueJson")
+                );
+                return bridgeSuccess(true);
+            } catch (Exception error) {
+                return bridgeFailure(error);
+            }
+        }
+
+        public String appDbRemove(String payloadJson) {
+            try {
+                JSONObject payload = new JSONObject(payloadJson);
+                removeAppDatabaseValue(payload.getString("key"));
+                return bridgeSuccess(true);
+            } catch (Exception error) {
+                return bridgeFailure(error);
+            }
+        }
+
+        public String appDbGetEvents(String payloadJson) {
+            try {
+                JSONObject payload = new JSONObject(payloadJson);
+                Long since = payload.has("since") && !payload.isNull("since")
+                    ? payload.getLong("since")
+                    : null;
+                return bridgeSuccess(readAppDatabaseEvents(since));
+            } catch (Exception error) {
+                return bridgeFailure(error);
+            }
+        }
+
+        public String appDbAppendEvent(String payloadJson) {
+            try {
+                JSONObject payload = new JSONObject(payloadJson);
+                appendAppDatabaseEvent(
+                    payload.getString("type"),
+                    payload.getString("payloadJson")
+                );
+                return bridgeSuccess(true);
+            } catch (Exception error) {
+                return bridgeFailure(error);
+            }
+        }
+
+        public String sqliteOpen(String payloadJson) {
+            try {
+                JSONObject payload = new JSONObject(payloadJson);
+                String dbPath = payload.getString("dbPath");
+                openProjectDatabaseForBridge(dbPath);
+                return bridgeSuccess(true);
+            } catch (Exception error) {
+                return bridgeFailure(error);
+            }
+        }
+
         public String sqliteQuery(String payloadJson) {
             try {
                 JSONObject payload = new JSONObject(payloadJson);
-                SQLiteDatabase database = openDatabase(payload.getString("dbPath"));
+                SQLiteDatabase database = openProjectDatabaseForBridge(
+                    payload.getString("dbPath")
+                );
+                String sql = payload.getString("sql");
+                validateBridgeQuerySql(sql);
                 JSONArray rows = queryDatabase(
                     database,
-                    payload.getString("sql"),
+                    sql,
                     payload.optJSONArray("args")
                 );
                 return bridgeSuccess(rows);
@@ -785,14 +1143,17 @@ public class MainActivity extends Activity {
             }
         }
 
-        @JavascriptInterface
         public String sqliteExec(String payloadJson) {
             try {
                 JSONObject payload = new JSONObject(payloadJson);
-                SQLiteDatabase database = openDatabase(payload.getString("dbPath"));
+                SQLiteDatabase database = openProjectDatabaseForBridge(
+                    payload.getString("dbPath")
+                );
+                String sql = payload.getString("sql");
+                validateBridgeExecuteSql(sql);
                 int rowsAffected = executeDatabaseStatement(
                     database,
-                    payload.getString("sql"),
+                    sql,
                     payload.optJSONArray("args")
                 );
                 JSONObject result = new JSONObject();
@@ -803,18 +1164,18 @@ public class MainActivity extends Activity {
             }
         }
 
-        @JavascriptInterface
         public String sqliteClose(String payloadJson) {
             try {
                 JSONObject payload = new JSONObject(payloadJson);
-                closeDatabase(payload.getString("dbPath"));
+                String dbPath = payload.getString("dbPath");
+                resolveProjectDatabaseFileForBridge(dbPath);
+                closeDatabase(dbPath);
                 return bridgeSuccess(true);
             } catch (Exception error) {
                 return bridgeFailure(error);
             }
         }
 
-        @JavascriptInterface
         public String ensureProjectStorage(String payloadJson) {
             try {
                 JSONObject payload = new JSONObject(payloadJson);
@@ -825,7 +1186,6 @@ public class MainActivity extends Activity {
             }
         }
 
-        @JavascriptInterface
         public String getProjectStorageStatus(String payloadJson) {
             try {
                 JSONObject payload = new JSONObject(payloadJson);
@@ -839,7 +1199,6 @@ public class MainActivity extends Activity {
             }
         }
 
-        @JavascriptInterface
         public String listProjectFolders(String payloadJson) {
             try {
                 return bridgeSuccess(MainActivity.this.listProjectFolders());
@@ -848,7 +1207,6 @@ public class MainActivity extends Activity {
             }
         }
 
-        @JavascriptInterface
         public String beginProjectFileWrite(String payloadJson) {
             try {
                 JSONObject payload = new JSONObject(payloadJson);
@@ -868,7 +1226,6 @@ public class MainActivity extends Activity {
             }
         }
 
-        @JavascriptInterface
         public String appendProjectFileWrite(String payloadJson) {
             try {
                 JSONObject payload = new JSONObject(payloadJson);
@@ -884,7 +1241,6 @@ public class MainActivity extends Activity {
             }
         }
 
-        @JavascriptInterface
         public String finishProjectFileWrite(String payloadJson) {
             try {
                 JSONObject payload = new JSONObject(payloadJson);
@@ -898,7 +1254,6 @@ public class MainActivity extends Activity {
             }
         }
 
-        @JavascriptInterface
         public String abortProjectFileWrite(String payloadJson) {
             try {
                 JSONObject payload = new JSONObject(payloadJson);
@@ -909,7 +1264,6 @@ public class MainActivity extends Activity {
             }
         }
 
-        @JavascriptInterface
         public String writeProjectFile(String payloadJson) {
             try {
                 JSONObject payload = new JSONObject(payloadJson);
@@ -925,7 +1279,6 @@ public class MainActivity extends Activity {
             }
         }
 
-        @JavascriptInterface
         public String deleteProjectFile(String payloadJson) {
             try {
                 JSONObject payload = new JSONObject(payloadJson);
@@ -940,7 +1293,6 @@ public class MainActivity extends Activity {
             }
         }
 
-        @JavascriptInterface
         public String readProjectFile(String payloadJson) {
             try {
                 JSONObject payload = new JSONObject(payloadJson);
@@ -954,7 +1306,6 @@ public class MainActivity extends Activity {
             }
         }
 
-        @JavascriptInterface
         public String readProjectFileMetadata(String payloadJson) {
             try {
                 JSONObject payload = new JSONObject(payloadJson);
@@ -968,7 +1319,6 @@ public class MainActivity extends Activity {
             }
         }
 
-        @JavascriptInterface
         public String writeDownloadFile(String payloadJson) {
             try {
                 JSONObject payload = new JSONObject(payloadJson);
@@ -983,7 +1333,6 @@ public class MainActivity extends Activity {
             }
         }
 
-        @JavascriptInterface
         public String writeFileToUri(String payloadJson) {
             try {
                 JSONObject payload = new JSONObject(payloadJson);
@@ -997,7 +1346,6 @@ public class MainActivity extends Activity {
             }
         }
 
-        @JavascriptInterface
         public String createDistributionZipStreamedToUri(String payloadJson) {
             try {
                 JSONObject payload = new JSONObject(payloadJson);
@@ -1009,7 +1357,6 @@ public class MainActivity extends Activity {
             }
         }
 
-        @JavascriptInterface
         public String openFilePicker(String payloadJson) {
             try {
                 JSONObject payload = new JSONObject(payloadJson);
@@ -1026,7 +1373,6 @@ public class MainActivity extends Activity {
             }
         }
 
-        @JavascriptInterface
         public String openSaveFilePicker(String payloadJson) {
             try {
                 JSONObject payload = new JSONObject(payloadJson);
@@ -1046,7 +1392,6 @@ public class MainActivity extends Activity {
             }
         }
 
-        @JavascriptInterface
         public String openFolderPicker(String payloadJson) {
             try {
                 JSONObject payload = new JSONObject(payloadJson);
@@ -1060,7 +1405,6 @@ public class MainActivity extends Activity {
             }
         }
 
-        @JavascriptInterface
         public String importProjectFolder(String payloadJson) {
             try {
                 JSONObject payload = new JSONObject(payloadJson);
@@ -1073,7 +1417,6 @@ public class MainActivity extends Activity {
             }
         }
 
-        @JavascriptInterface
         public String exportProjectFolder(String payloadJson) {
             try {
                 JSONObject payload = new JSONObject(payloadJson);
@@ -1108,7 +1451,6 @@ public class MainActivity extends Activity {
             }
         }
 
-        @JavascriptInterface
         public String deletePickerRequest(String payloadJson) {
             try {
                 JSONObject payload = new JSONObject(payloadJson);
@@ -1145,6 +1487,287 @@ public class MainActivity extends Activity {
         }
     }
 
+    private void initializeAppDatabase(boolean withEvents) throws Exception {
+        SQLiteDatabase database = openDatabase(APP_DATABASE_NAME);
+        database.execSQL(
+            "CREATE TABLE IF NOT EXISTS kv (" +
+            "key TEXT PRIMARY KEY, value TEXT)"
+        );
+        if (withEvents) {
+            database.execSQL(
+                "CREATE TABLE IF NOT EXISTS events (" +
+                "id INTEGER PRIMARY KEY AUTOINCREMENT, " +
+                "type TEXT NOT NULL, payload TEXT, " +
+                "created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP)"
+            );
+        }
+    }
+
+    private String readAppDatabaseValue(String key) throws Exception {
+        String safeKey = validateAppDatabaseKey(key);
+        SQLiteDatabase database = openDatabase(APP_DATABASE_NAME);
+        String valueJson = null;
+        try (
+            Cursor cursor = database.query(
+                "kv",
+                new String[] { "value" },
+                "key = ?",
+                new String[] { safeKey },
+                null,
+                null,
+                null,
+                "1"
+            )
+        ) {
+            if (cursor.moveToFirst()) {
+                valueJson = cursor.getString(0);
+            }
+        }
+
+        if (!USER_CONFIG_DB_KEY.equals(safeKey)) {
+            return valueJson;
+        }
+
+        JSONObject userConfig = valueJson == null
+            ? new JSONObject()
+            : new JSONObject(valueJson);
+        String authSessionJson = readSecureAuthSession();
+        if (authSessionJson != null) {
+            JSONObject auth = userConfig.optJSONObject(AUTH_CONFIG_KEY);
+            if (auth == null) {
+                auth = new JSONObject();
+                userConfig.put(AUTH_CONFIG_KEY, auth);
+            }
+            auth.put(
+                AUTH_SESSION_CONFIG_KEY,
+                new JSONObject(authSessionJson)
+            );
+        }
+        return userConfig.toString();
+    }
+
+    private void writeAppDatabaseValue(String key, String valueJson)
+        throws Exception {
+        String safeKey = validateAppDatabaseKey(key);
+        String persistedValueJson = valueJson;
+        if (USER_CONFIG_DB_KEY.equals(safeKey)) {
+            JSONObject userConfig = new JSONObject(valueJson);
+            JSONObject auth = userConfig.optJSONObject(AUTH_CONFIG_KEY);
+            Object authSession = auth == null
+                ? null
+                : auth.opt(AUTH_SESSION_CONFIG_KEY);
+            if (authSession instanceof JSONObject) {
+                writeSecureAuthSession(authSession.toString());
+            } else {
+                clearSecureAuthSession();
+            }
+            if (auth != null) {
+                auth.remove(AUTH_SESSION_CONFIG_KEY);
+                if (auth.length() == 0) {
+                    userConfig.remove(AUTH_CONFIG_KEY);
+                }
+            }
+            persistedValueJson = userConfig.toString();
+        }
+
+        ContentValues values = new ContentValues();
+        values.put("key", safeKey);
+        values.put("value", persistedValueJson);
+        openDatabase(APP_DATABASE_NAME).insertWithOnConflict(
+            "kv",
+            null,
+            values,
+            SQLiteDatabase.CONFLICT_REPLACE
+        );
+    }
+
+    private void removeAppDatabaseValue(String key) throws Exception {
+        String safeKey = validateAppDatabaseKey(key);
+        if (USER_CONFIG_DB_KEY.equals(safeKey)) {
+            clearSecureAuthSession();
+        }
+        openDatabase(APP_DATABASE_NAME).delete(
+            "kv",
+            "key = ?",
+            new String[] { safeKey }
+        );
+    }
+
+    private JSONArray readAppDatabaseEvents(Long since) throws Exception {
+        SQLiteDatabase database = openDatabase(APP_DATABASE_NAME);
+        JSONArray events = new JSONArray();
+        String selection = since == null ? null : "id > ?";
+        String[] selectionArgs = since == null
+            ? null
+            : new String[] { String.valueOf(since) };
+        try (
+            Cursor cursor = database.query(
+                "events",
+                new String[] { "id", "type", "payload" },
+                selection,
+                selectionArgs,
+                null,
+                null,
+                "id"
+            )
+        ) {
+            while (cursor.moveToNext()) {
+                JSONObject event = new JSONObject();
+                event.put("id", cursor.getLong(0));
+                event.put("type", cursor.getString(1));
+                event.put("payloadJson", cursor.getString(2));
+                events.put(event);
+            }
+        }
+        return events;
+    }
+
+    private void appendAppDatabaseEvent(String type, String payloadJson)
+        throws Exception {
+        if (type == null || type.isEmpty() || type.length() > 256) {
+            throw new IllegalArgumentException("App event type is invalid.");
+        }
+        ContentValues values = new ContentValues();
+        values.put("type", type);
+        values.put("payload", payloadJson);
+        openDatabase(APP_DATABASE_NAME).insertOrThrow("events", null, values);
+    }
+
+    private String validateAppDatabaseKey(String key) {
+        if (key == null || key.isEmpty() || key.length() > 256) {
+            throw new IllegalArgumentException("App database key is invalid.");
+        }
+        return key;
+    }
+
+    private SecretKey getOrCreateAuthSecretKey() throws Exception {
+        KeyStore keyStore = KeyStore.getInstance("AndroidKeyStore");
+        keyStore.load(null);
+        java.security.Key storedKey = keyStore.getKey(
+            AUTH_SECRET_KEY_ALIAS,
+            null
+        );
+        if (storedKey instanceof SecretKey) {
+            return (SecretKey) storedKey;
+        }
+
+        KeyGenerator keyGenerator = KeyGenerator.getInstance(
+            KeyProperties.KEY_ALGORITHM_AES,
+            "AndroidKeyStore"
+        );
+        keyGenerator.init(
+            new KeyGenParameterSpec.Builder(
+                AUTH_SECRET_KEY_ALIAS,
+                KeyProperties.PURPOSE_ENCRYPT |
+                    KeyProperties.PURPOSE_DECRYPT
+            )
+                .setBlockModes(KeyProperties.BLOCK_MODE_GCM)
+                .setEncryptionPaddings(
+                    KeyProperties.ENCRYPTION_PADDING_NONE
+                )
+                .build()
+        );
+        return keyGenerator.generateKey();
+    }
+
+    private void writeSecureAuthSession(String authSessionJson)
+        throws Exception {
+        String encodedValue;
+        try {
+            encodedValue = encryptAuthSession(authSessionJson);
+        } catch (Exception error) {
+            deleteAuthSecretKey();
+            encodedValue = encryptAuthSession(authSessionJson);
+        }
+        boolean committed = getSharedPreferences(
+            AUTH_SECRET_PREFERENCES,
+            MODE_PRIVATE
+        )
+            .edit()
+            .putString(AUTH_SECRET_VALUE_KEY, encodedValue)
+            .commit();
+        if (!committed) {
+            throw new IllegalStateException("Failed to store auth session.");
+        }
+    }
+
+    private String encryptAuthSession(String authSessionJson)
+        throws Exception {
+        Cipher cipher = Cipher.getInstance("AES/GCM/NoPadding");
+        cipher.init(Cipher.ENCRYPT_MODE, getOrCreateAuthSecretKey());
+        byte[] ciphertext = cipher.doFinal(
+            authSessionJson.getBytes(StandardCharsets.UTF_8)
+        );
+        return Base64.encodeToString(cipher.getIV(), Base64.NO_WRAP) +
+            ":" +
+            Base64.encodeToString(ciphertext, Base64.NO_WRAP);
+    }
+
+    private String readSecureAuthSession() {
+        SharedPreferences preferences = getSharedPreferences(
+            AUTH_SECRET_PREFERENCES,
+            MODE_PRIVATE
+        );
+        String encodedValue = preferences.getString(
+            AUTH_SECRET_VALUE_KEY,
+            null
+        );
+        if (encodedValue == null) {
+            return null;
+        }
+
+        try {
+            String[] parts = encodedValue.split(":", -1);
+            if (parts.length != 2) {
+                throw new IllegalArgumentException(
+                    "Stored auth session is invalid."
+                );
+            }
+            byte[] iv = Base64.decode(parts[0], Base64.NO_WRAP);
+            byte[] ciphertext = Base64.decode(parts[1], Base64.NO_WRAP);
+            Cipher cipher = Cipher.getInstance("AES/GCM/NoPadding");
+            cipher.init(
+                Cipher.DECRYPT_MODE,
+                getOrCreateAuthSecretKey(),
+                new GCMParameterSpec(128, iv)
+            );
+            return new String(
+                cipher.doFinal(ciphertext),
+                StandardCharsets.UTF_8
+            );
+        } catch (Exception error) {
+            Log.e(TAG, "Stored auth session could not be decrypted.", error);
+            preferences.edit().remove(AUTH_SECRET_VALUE_KEY).commit();
+            deleteAuthSecretKey();
+            return null;
+        }
+    }
+
+    private void deleteAuthSecretKey() {
+        try {
+            KeyStore keyStore = KeyStore.getInstance("AndroidKeyStore");
+            keyStore.load(null);
+            if (keyStore.containsAlias(AUTH_SECRET_KEY_ALIAS)) {
+                keyStore.deleteEntry(AUTH_SECRET_KEY_ALIAS);
+            }
+        } catch (Exception error) {
+            Log.e(TAG, "Failed to reset the auth secret key.", error);
+        }
+    }
+
+    private void clearSecureAuthSession() {
+        boolean committed = getSharedPreferences(
+            AUTH_SECRET_PREFERENCES,
+            MODE_PRIVATE
+        )
+            .edit()
+            .remove(AUTH_SECRET_VALUE_KEY)
+            .commit();
+        if (!committed) {
+            throw new IllegalStateException("Failed to clear auth session.");
+        }
+    }
+
     private synchronized SQLiteDatabase openDatabase(String dbPath) throws Exception {
         SQLiteDatabase cachedDatabase = sqliteDatabases.get(dbPath);
         if (cachedDatabase != null && cachedDatabase.isOpen()) {
@@ -1167,6 +1790,107 @@ public class MainActivity extends Activity {
         }
         sqliteDatabases.put(dbPath, database);
         return database;
+    }
+
+    private SQLiteDatabase openProjectDatabaseForBridge(String dbPath)
+        throws Exception {
+        resolveProjectDatabaseFileForBridge(dbPath);
+        return openDatabase(dbPath);
+    }
+
+    private File resolveProjectDatabaseFileForBridge(String dbPath)
+        throws Exception {
+        String normalizedPath = dbPath == null ? "" : dbPath;
+        String[] parts = normalizedPath.split("/", -1);
+        if (
+            parts.length != 3 ||
+            !PROJECTS_DIRECTORY_NAME.equals(parts[0]) ||
+            !PROJECT_DATABASE_NAME.equals(parts[2])
+        ) {
+            throw new IllegalArgumentException(
+                "The SQLite bridge only supports project databases."
+            );
+        }
+
+        String projectId = safePathSegment(parts[1]);
+        if (!projectId.equals(parts[1])) {
+            throw new IllegalArgumentException(
+                "Unsupported Android project database path."
+            );
+        }
+        return getProjectDatabaseFile(projectId);
+    }
+
+    private String normalizeSingleBridgeSqlStatement(String sql) {
+        String normalizedSql = sql == null ? "" : sql.trim();
+        while (normalizedSql.endsWith(";")) {
+            normalizedSql = normalizedSql.substring(
+                0,
+                normalizedSql.length() - 1
+            ).trim();
+        }
+        if (
+            normalizedSql.isEmpty() ||
+            normalizedSql.contains(";") ||
+            normalizedSql.contains("--") ||
+            normalizedSql.contains("/*") ||
+            normalizedSql.contains("*/")
+        ) {
+            throw new IllegalArgumentException(
+                "Android SQLite accepts one uncommented statement."
+            );
+        }
+        return normalizedSql;
+    }
+
+    private void validateBridgeQuerySql(String sql) {
+        String upperSql = normalizeSingleBridgeSqlStatement(sql)
+            .toUpperCase(Locale.ROOT);
+        if (upperSql.matches("SELECT\\s+[\\s\\S]*")) {
+            return;
+        }
+        if (
+            upperSql.matches("PRAGMA\\s+USER_VERSION") ||
+            upperSql.matches(
+                "PRAGMA\\s+TABLE_INFO\\([A-Z_][A-Z0-9_]*\\)"
+            )
+        ) {
+            return;
+        }
+        throw new IllegalArgumentException(
+            "Unsupported Android SQLite query."
+        );
+    }
+
+    private void validateBridgeExecuteSql(String sql) {
+        String upperSql = normalizeSingleBridgeSqlStatement(sql)
+            .toUpperCase(Locale.ROOT);
+        if (
+            upperSql.matches("PRAGMA\\s+JOURNAL_MODE\\s*=\\s*WAL") ||
+            upperSql.matches("PRAGMA\\s+SYNCHRONOUS\\s*=\\s*(FULL|NORMAL)") ||
+            upperSql.matches("PRAGMA\\s+BUSY_TIMEOUT\\s*=\\s*[0-9]+") ||
+            upperSql.matches("PRAGMA\\s+USER_VERSION\\s*=\\s*[0-9]+")
+        ) {
+            return;
+        }
+
+        if (
+            upperSql.startsWith("CREATE TABLE IF NOT EXISTS ") ||
+            upperSql.startsWith("CREATE INDEX IF NOT EXISTS ") ||
+            upperSql.startsWith("INSERT ") ||
+            upperSql.startsWith("UPDATE ") ||
+            upperSql.startsWith("DELETE ") ||
+            upperSql.equals("BEGIN") ||
+            upperSql.equals("BEGIN IMMEDIATE") ||
+            upperSql.equals("COMMIT") ||
+            upperSql.equals("ROLLBACK")
+        ) {
+            return;
+        }
+
+        throw new IllegalArgumentException(
+            "Unsupported Android SQLite statement."
+        );
     }
 
     private File resolveDatabaseFile(String dbPath) throws Exception {

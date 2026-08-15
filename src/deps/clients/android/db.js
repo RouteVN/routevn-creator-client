@@ -1,4 +1,5 @@
 import { createAndroidSqliteConnection } from "./sqlite.js";
+import { callAndroidBridge } from "./bridge.js";
 
 const stripSqlitePrefix = (value) =>
   String(value || "").replace(/^sqlite:/, "");
@@ -19,7 +20,10 @@ const resolveDbPath = ({ path, projectPath }) => {
 
 export const createDb = ({ path, projectPath, withEvents = false }) => {
   const dbPath = resolveDbPath({ path, projectPath });
-  const db = createAndroidSqliteConnection({ dbPath });
+  const isAppDatabase = !projectPath && dbPath === "app.db";
+  const db = isAppDatabase
+    ? undefined
+    : createAndroidSqliteConnection({ dbPath });
   let initialized = false;
   let operationQueue = Promise.resolve();
 
@@ -38,6 +42,12 @@ export const createDb = ({ path, projectPath, withEvents = false }) => {
   const instance = {
     async init() {
       return queueDbOperation(async () => {
+        if (isAppDatabase) {
+          await callAndroidBridge("appDbInit", { withEvents });
+          initialized = true;
+          return;
+        }
+
         await db.init();
         await db.execute(`
           CREATE TABLE IF NOT EXISTS kv (
@@ -64,6 +74,13 @@ export const createDb = ({ path, projectPath, withEvents = false }) => {
     async get(key) {
       return queueDbOperation(async () => {
         ensureInitialized();
+        if (isAppDatabase) {
+          const valueJson = await callAndroidBridge("appDbGet", { key });
+          return valueJson === undefined || valueJson === null
+            ? null
+            : JSON.parse(valueJson);
+        }
+
         const rows = await db.select("SELECT value FROM kv WHERE key = ?", [
           key,
         ]);
@@ -83,6 +100,14 @@ export const createDb = ({ path, projectPath, withEvents = false }) => {
     async set(key, value) {
       return queueDbOperation(async () => {
         ensureInitialized();
+        if (isAppDatabase) {
+          await callAndroidBridge("appDbSet", {
+            key,
+            valueJson: JSON.stringify(value) ?? "null",
+          });
+          return;
+        }
+
         await db.execute(
           "INSERT OR REPLACE INTO kv (key, value) VALUES (?, ?)",
           [key, JSON.stringify(value)],
@@ -93,6 +118,11 @@ export const createDb = ({ path, projectPath, withEvents = false }) => {
     async remove(key) {
       return queueDbOperation(async () => {
         ensureInitialized();
+        if (isAppDatabase) {
+          await callAndroidBridge("appDbRemove", { key });
+          return;
+        }
+
         await db.execute("DELETE FROM kv WHERE key = ?", [key]);
       });
     },
@@ -102,6 +132,14 @@ export const createDb = ({ path, projectPath, withEvents = false }) => {
     instance.getEvents = async ({ since } = {}) => {
       return queueDbOperation(async () => {
         ensureInitialized();
+        if (isAppDatabase) {
+          const events = await callAndroidBridge("appDbGetEvents", { since });
+          return events.map((event) => ({
+            type: event.type,
+            payload: event.payloadJson ? JSON.parse(event.payloadJson) : null,
+          }));
+        }
+
         const rows =
           since === undefined
             ? await db.select(
@@ -121,6 +159,14 @@ export const createDb = ({ path, projectPath, withEvents = false }) => {
     instance.appendEvent = async (event) => {
       return queueDbOperation(async () => {
         ensureInitialized();
+        if (isAppDatabase) {
+          await callAndroidBridge("appDbAppendEvent", {
+            type: event.type,
+            payloadJson: JSON.stringify(event.payload) ?? "null",
+          });
+          return;
+        }
+
         await db.execute("INSERT INTO events (type, payload) VALUES (?, ?)", [
           event.type,
           JSON.stringify(event.payload),

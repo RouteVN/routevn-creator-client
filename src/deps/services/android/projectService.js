@@ -42,16 +42,16 @@ const requestNativeAndroidProjectExport = ({ projectId, destinationUri }) => {
   return new Promise((resolve, reject) => {
     pendingAndroidProjectExports.set(requestId, { resolve, reject });
 
-    try {
+    void Promise.resolve(
       callAndroidBridge("exportProjectFolder", {
         requestId,
         projectId,
         destinationUri,
-      });
-    } catch (error) {
+      }),
+    ).catch((error) => {
       pendingAndroidProjectExports.delete(requestId);
       reject(error);
-    }
+    });
   });
 };
 

@@ -280,16 +280,16 @@ const createLocalOnlyProjectCollabSession = ({
   };
 };
 
-const ensureAndroidProjectStorage = (projectId) => {
-  callAndroidBridge("ensureProjectStorage", {
+const ensureAndroidProjectStorage = async (projectId) => {
+  await callAndroidBridge("ensureProjectStorage", {
     projectId: assertSafeAndroidStorageSegment(projectId, {
       label: "Android project id",
     }),
   });
 };
 
-const assertUnusedAndroidProjectStorage = (projectId) => {
-  const status = callAndroidBridge("getProjectStorageStatus", {
+const assertUnusedAndroidProjectStorage = async (projectId) => {
+  const status = await callAndroidBridge("getProjectStorageStatus", {
     projectId: assertSafeAndroidStorageSegment(projectId, {
       label: "Android project id",
     }),
@@ -312,7 +312,7 @@ const writeAndroidProjectFile = async ({
   const safeProjectId = assertSafeAndroidStorageSegment(projectId, {
     label: "Android project id",
   });
-  const { writeId } = callAndroidBridge("beginProjectFileWrite", {
+  const { writeId } = await callAndroidBridge("beginProjectFileWrite", {
     projectId: safeProjectId,
     fileId,
     mimeType: resolveProjectFileMimeType({ mimeType, bytes }),
@@ -329,7 +329,7 @@ const writeAndroidProjectFile = async ({
         offset + PROJECT_FILE_WRITE_CHUNK_SIZE_BYTES,
         bytes.byteLength,
       );
-      const result = callAndroidBridge("appendProjectFileWrite", {
+      const result = await callAndroidBridge("appendProjectFileWrite", {
         writeId,
         offset,
         base64: uint8ArrayToBase64(bytes.subarray(offset, chunkEnd)),
@@ -346,7 +346,7 @@ const writeAndroidProjectFile = async ({
     return callAndroidBridge("finishProjectFileWrite", { writeId });
   } catch (error) {
     try {
-      callAndroidBridge("abortProjectFileWrite", { writeId });
+      await callAndroidBridge("abortProjectFileWrite", { writeId });
     } catch (abortError) {
       console.warn("Failed to abort Android project file write.", abortError);
     }
@@ -354,11 +354,11 @@ const writeAndroidProjectFile = async ({
   }
 };
 
-const readAndroidProjectFile = ({ projectId, fileId }) => {
+const readAndroidProjectFile = async ({ projectId, fileId }) => {
   const safeProjectId = assertSafeAndroidStorageSegment(projectId, {
     label: "Android project id",
   });
-  const result = callAndroidBridge("readProjectFile", {
+  const result = await callAndroidBridge("readProjectFile", {
     projectId: safeProjectId,
     fileId,
   });
@@ -368,12 +368,12 @@ const readAndroidProjectFile = ({ projectId, fileId }) => {
   };
 };
 
-const readAndroidProjectFileMetadata = ({ projectId, fileId }) => {
+const readAndroidProjectFileMetadata = async ({ projectId, fileId }) => {
   const safeProjectId = assertSafeAndroidStorageSegment(projectId, {
     label: "Android project id",
   });
   const safeFileId = assertSafeProjectFileId(fileId);
-  const result = callAndroidBridge("readProjectFileMetadata", {
+  const result = await callAndroidBridge("readProjectFileMetadata", {
     projectId: safeProjectId,
     fileId: safeFileId,
   });
@@ -422,14 +422,14 @@ const resolveKnownFileMetadata = (fileMetadata) => {
   };
 };
 
-const resolveAndroidProjectFileMetadata = ({
+const resolveAndroidProjectFileMetadata = async ({
   projectId,
   fileId,
   fileMetadata,
 }) => {
   return (
     resolveKnownFileMetadata(fileMetadata) ??
-    readAndroidProjectFileMetadata({ projectId, fileId })
+    (await readAndroidProjectFileMetadata({ projectId, fileId }))
   );
 };
 
@@ -491,7 +491,7 @@ const collectDistributionZipAssets = async ({
   for (const fileEntry of normalizeExportFileEntries(fileEntries)) {
     const safeFileId = assertSafeProjectFileId(fileEntry.id);
     try {
-      const { bytes, mimeType } = readAndroidProjectFile({
+      const { bytes, mimeType } = await readAndroidProjectFile({
         projectId,
         fileId: safeFileId,
       });
@@ -589,7 +589,7 @@ const createNativeDistributionZipStreamedToPath = async ({
     payload.webIconFileId = staticFiles.webIconFileId;
   }
 
-  const result = callAndroidBridge(
+  const result = await callAndroidBridge(
     "createDistributionZipStreamedToUri",
     payload,
   );
@@ -664,9 +664,9 @@ export const createAndroidProjectServiceAdapters = ({
         throw new Error("Template is required for project initialization");
       }
 
-      assertUnusedAndroidProjectStorage(safeProjectId);
+      await assertUnusedAndroidProjectStorage(safeProjectId);
 
-      ensureAndroidProjectStorage(safeProjectId);
+      await ensureAndroidProjectStorage(safeProjectId);
 
       const loadedTemplateData = await loadTemplate(template);
       const languageTemplateData = resolveTemplateFontsForLanguage({
@@ -740,7 +740,7 @@ export const createAndroidProjectServiceAdapters = ({
         bytes: fileBytes,
       });
 
-      ensureAndroidProjectStorage(resolvedProjectId);
+      await ensureAndroidProjectStorage(resolvedProjectId);
       await writeAndroidProjectFile({
         projectId: resolvedProjectId,
         fileId: safeFileId,
@@ -766,7 +766,7 @@ export const createAndroidProjectServiceAdapters = ({
       const reference = projectReference ?? getCurrentReference();
       const projectId = reference?.repositoryProjectId || reference?.projectId;
       for (const fileId of fileIds) {
-        callAndroidBridge("deleteProjectFile", {
+        await callAndroidBridge("deleteProjectFile", {
           projectId,
           fileId: assertSafeProjectFileId(fileId),
         });
@@ -777,7 +777,7 @@ export const createAndroidProjectServiceAdapters = ({
       const reference = getCurrentReference();
       const projectId = reference?.repositoryProjectId || reference?.projectId;
       const safeFileId = assertSafeProjectFileId(fileId);
-      const metadata = resolveAndroidProjectFileMetadata({
+      const metadata = await resolveAndroidProjectFileMetadata({
         projectId,
         fileId: safeFileId,
         fileMetadata,
@@ -807,7 +807,7 @@ export const createAndroidProjectServiceAdapters = ({
 
     getFileByProjectId: async ({ projectId, fileId }) => {
       const safeFileId = assertSafeProjectFileId(fileId);
-      const { bytes, mimeType } = readAndroidProjectFile({
+      const { bytes, mimeType } = await readAndroidProjectFile({
         projectId,
         fileId: safeFileId,
       });

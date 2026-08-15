@@ -21,9 +21,9 @@ const normalizeFolderSelection = (selection) => {
   };
 };
 
-const listAndroidProjectFolders = () => {
+const listAndroidProjectFolders = async () => {
   try {
-    const projects = callAndroidBridge("listProjectFolders");
+    const projects = await callAndroidBridge("listProjectFolders");
     return Array.isArray(projects) ? projects : [];
   } catch {
     return undefined;
@@ -55,7 +55,7 @@ export const createAppService = (params) => {
   const appDb = params.db;
 
   const syncAndroidProjectEntriesFromStorage = async () => {
-    const discoveredProjects = listAndroidProjectFolders();
+    const discoveredProjects = await listAndroidProjectFolders();
     if (!discoveredProjects) {
       return;
     }
@@ -122,7 +122,7 @@ export const createAppService = (params) => {
         throw new Error("Project folder is required.");
       }
 
-      const importedProject = callAndroidBridge("importProjectFolder", {
+      const importedProject = await callAndroidBridge("importProjectFolder", {
         uri: folderSelection.uri,
       });
       const projectId = importedProject.id;
