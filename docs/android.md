@@ -196,6 +196,9 @@ The native bridge in `MainActivity.java` handles:
 The global app database uses Android's standard database directory, while every
 project is one self-contained directory under the app-private files directory:
 
+This is RouteVN Creator's first supported Android storage layout. No released
+Android build used another storage root, so there is no upgrade migration.
+
 ```text
 databases/app.db
 
