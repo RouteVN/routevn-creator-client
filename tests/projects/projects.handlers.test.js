@@ -943,6 +943,29 @@ describe("projects.handleDeleteDialogConfirm", () => {
     });
   });
 
+  it("commits Android deletion in the UI when cache removal fails", async () => {
+    const deps = createDeps({ platform: "android" });
+    deps.store.selectDeleteDialogProjectId.mockReturnValue("project-1");
+    deps.appService.removeProjectEntry.mockRejectedValue(
+      new Error("Cache write failed"),
+    );
+
+    await handleDeleteDialogConfirm(deps);
+
+    expect(deps.appService.deleteProject).toHaveBeenCalledWith("project-1");
+    expect(deps.store.removeProject).toHaveBeenCalledWith({
+      projectId: "project-1",
+    });
+    expect(deps.store.closeDeleteDialog).toHaveBeenCalledTimes(1);
+    expect(deps.render).toHaveBeenCalledTimes(1);
+    expect(deps.appService.showAlert).toHaveBeenCalledWith({
+      message: "Failed to remove project. Please try again.",
+    });
+    expect(deps.store.removeProject.mock.invocationCallOrder[0]).toBeLessThan(
+      deps.appService.removeProjectEntry.mock.invocationCallOrder[0],
+    );
+  });
+
   it("tracks Android deletion confirmation input", () => {
     const deps = createDeps({ platform: "android" });
 

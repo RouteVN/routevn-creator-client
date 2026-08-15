@@ -1017,16 +1017,38 @@ export const handleDeleteDialogConfirm = async (deps) => {
     return;
   }
 
+  if (isAndroid) {
+    try {
+      await projectService.releaseProjectRuntime(projectId);
+      await appService.deleteProject(projectId);
+    } catch {
+      appService.showAlert({
+        message: copy.failedDeleteProject,
+      });
+      render();
+      return;
+    }
+
+    store.removeProject({ projectId });
+    store.closeDeleteDialog();
+    render();
+
+    try {
+      await appService.removeProjectEntry(projectId);
+    } catch {
+      appService.showAlert({
+        message: copy.failedRemoveProject,
+      });
+    }
+    return;
+  }
+
   try {
     if (projectId) {
       await projectService.releaseProjectRuntime(projectId);
     }
 
-    if (isAndroid) {
-      await appService.deleteProject(projectId);
-      await appService.removeProjectEntry(projectId);
-      store.removeProject({ projectId });
-    } else if (projectPath) {
+    if (projectPath) {
       await appService.removeProjectEntryByPath(projectPath);
       store.removeProject({ projectPath });
     } else {
@@ -1036,7 +1058,7 @@ export const handleDeleteDialogConfirm = async (deps) => {
     store.closeDeleteDialog();
   } catch {
     appService.showAlert({
-      message: isAndroid ? copy.failedDeleteProject : copy.failedRemoveProject,
+      message: copy.failedRemoveProject,
     });
   }
   render();
