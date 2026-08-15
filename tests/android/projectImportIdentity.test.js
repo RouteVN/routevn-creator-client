@@ -19,11 +19,14 @@ describe("Android project import identity", () => {
     );
     expect(activity).toContain('"collab.lastCommittedId:" + sourceProjectId');
     expect(activity).toContain(
-      'database.delete("materialized_view_state", null, null)',
+      "File importWorkDir = new File(importRoot, projectId)",
     );
     expect(activity).toContain("assertDatabaseIntegrity(database)");
     expect(activity).toContain(
       "Os.rename(stagedRoot.getAbsolutePath(), projectRoot.getAbsolutePath())",
+    );
+    expect(activity).not.toContain(
+      'database.delete("materialized_view_state", null, null)',
     );
     expect(activity).not.toContain('result.put("alreadyImported"');
   });

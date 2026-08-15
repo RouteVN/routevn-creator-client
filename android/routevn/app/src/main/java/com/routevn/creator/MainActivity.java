@@ -2705,10 +2705,7 @@ public class MainActivity extends Activity {
         );
 
         File importRoot = new File(getCacheDir(), "project-import");
-        File importWorkDir = new File(
-            importRoot,
-            UUID.randomUUID().toString()
-        );
+        File importWorkDir = new File(importRoot, projectId);
         deleteRecursively(importWorkDir);
 
         try {
@@ -3911,10 +3908,6 @@ public class MainActivity extends Activity {
                         "id = ?",
                         new String[] { sourceCreateEventId }
                     );
-                }
-
-                if (hasTable(database, "materialized_view_state")) {
-                    database.delete("materialized_view_state", null, null);
                 }
 
                 database.setTransactionSuccessful();
