@@ -15,13 +15,17 @@ describe("Android WebView security boundary", () => {
     expect(activity).toContain("if (!isMainFrame || !isAllowedBridgeOrigin");
     expect(activity).toContain("allowedOriginRules.add(APP_ORIGIN)");
     expect(activity).toContain("allowedOriginRules.add(DEV_SERVER_ORIGIN)");
+    expect(activity).toContain("shouldUseDebugDevServer()");
+    expect(activity).toContain(
+      "getIntent().getBooleanExtra(DEV_SERVER_INTENT_EXTRA, false)",
+    );
     expect(activity).not.toContain("addJavascriptInterface(");
     expect(activity).not.toContain("@JavascriptInterface");
     expect(activity).not.toContain('allowedOriginRules.add("*")');
     expect(activity).toContain("isTrustedAppDocumentUrl(uri)");
-    expect(activity.match(/openExternalUri\(uri\);\s+return true;/g)).toHaveLength(
-      2,
-    );
+    expect(
+      activity.match(/openExternalUri\(uri\);\s+return true;/g),
+    ).toHaveLength(2);
     expect(activity).toContain(
       'headers.put("Content-Security-Policy", "default-src \'none\'; sandbox")',
     );
@@ -40,7 +44,7 @@ describe("Android WebView security boundary", () => {
       'headers.put("Access-Control-Allow-Origin", "*")',
     );
     expect(activity).toContain(
-      "BuildConfig.DEBUG ? DEV_SERVER_ORIGIN : APP_ORIGIN",
+      "shouldUseDebugDevServer() ? DEV_SERVER_ORIGIN : APP_ORIGIN",
     );
   });
 
@@ -55,6 +59,9 @@ describe("Android WebView security boundary", () => {
     );
     expect(activity).toContain("validateBridgeQuerySql(sql)");
     expect(activity).toContain("validateBridgeExecuteSql(sql)");
+    expect(activity.match(/PRAGMA\\\\s\+JOURNAL_MODE/g)).toHaveLength(2);
+    expect(activity.match(/PRAGMA\\\\s\+SYNCHRONOUS/g)).toHaveLength(2);
+    expect(activity.match(/PRAGMA\\\\s\+BUSY_TIMEOUT/g)).toHaveLength(2);
     expect(activity).toContain('KeyStore.getInstance("AndroidKeyStore")');
     expect(activity).toContain('Cipher.getInstance("AES/GCM/NoPadding")');
     expect(activity).toContain("auth.remove(AUTH_SESSION_CONFIG_KEY)");

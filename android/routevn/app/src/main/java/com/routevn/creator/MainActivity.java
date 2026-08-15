@@ -89,6 +89,8 @@ public class MainActivity extends Activity {
     private static final String APP_ORIGIN = "https://" + APP_ASSET_HOST;
     private static final String DEV_SERVER_ORIGIN =
         "http://" + DEV_SERVER_HOST + ":" + DEV_SERVER_PORT;
+    private static final String DEV_SERVER_INTENT_EXTRA =
+        "routevnUseDevServer";
     private static final String ANDROID_BRIDGE_NAME = "RouteVNAndroid";
     private static final int ANDROID_BRIDGE_PROTOCOL_VERSION = 1;
     private static final int FILE_CHOOSER_REQUEST_CODE = 3711;
@@ -468,7 +470,7 @@ public class MainActivity extends Activity {
             settings.setSafeBrowsingEnabled(true);
         }
 
-        if (BuildConfig.DEBUG) {
+        if (shouldUseDebugDevServer()) {
             settings.setMixedContentMode(WebSettings.MIXED_CONTENT_COMPATIBILITY_MODE);
         } else {
             settings.setMixedContentMode(WebSettings.MIXED_CONTENT_NEVER_ALLOW);
@@ -517,7 +519,7 @@ public class MainActivity extends Activity {
 
         Set<String> allowedOriginRules = new HashSet<>();
         allowedOriginRules.add(APP_ORIGIN);
-        if (BuildConfig.DEBUG) {
+        if (shouldUseDebugDevServer()) {
             allowedOriginRules.add(DEV_SERVER_ORIGIN);
         }
 
@@ -592,7 +594,7 @@ public class MainActivity extends Activity {
 
         String origin = sourceOrigin.toString();
         return APP_ORIGIN.equals(origin) ||
-            (BuildConfig.DEBUG && DEV_SERVER_ORIGIN.equals(origin));
+            (shouldUseDebugDevServer() && DEV_SERVER_ORIGIN.equals(origin));
     }
 
     private void postBridgeResponse(
@@ -607,12 +609,18 @@ public class MainActivity extends Activity {
     }
 
     private String getInitialAppUrl() {
-        if (BuildConfig.DEBUG) {
+        if (shouldUseDebugDevServer()) {
             Log.i(TAG, "Loading Android dev server URL: " + DEV_SERVER_URL);
             return DEV_SERVER_URL;
         }
 
+        Log.i(TAG, "Loading packaged Android app URL: " + APP_URL);
         return APP_URL;
+    }
+
+    private boolean shouldUseDebugDevServer() {
+        return BuildConfig.DEBUG &&
+            getIntent().getBooleanExtra(DEV_SERVER_INTENT_EXTRA, false);
     }
 
     private boolean isAppAssetUrl(Uri uri) {
@@ -625,7 +633,7 @@ public class MainActivity extends Activity {
 
     private boolean isDebugDevServerUrl(Uri uri) {
         return (
-            BuildConfig.DEBUG &&
+            shouldUseDebugDevServer() &&
             uri != null &&
             "http".equals(uri.getScheme()) &&
             DEV_SERVER_HOST.equals(uri.getHost()) &&
@@ -878,14 +886,14 @@ public class MainActivity extends Activity {
         Map<String, String> headers = new HashMap<>();
         headers.put(
             "Access-Control-Allow-Origin",
-            BuildConfig.DEBUG ? DEV_SERVER_ORIGIN : APP_ORIGIN
+            shouldUseDebugDevServer() ? DEV_SERVER_ORIGIN : APP_ORIGIN
         );
         headers.put("Access-Control-Allow-Methods", "GET, OPTIONS");
         headers.put("Access-Control-Allow-Headers", "Origin, Range, Accept, Content-Type");
         headers.put("Access-Control-Expose-Headers", "Content-Length, Content-Range, Accept-Ranges");
         headers.put(
             "Cross-Origin-Resource-Policy",
-            BuildConfig.DEBUG ? "cross-origin" : "same-origin"
+            shouldUseDebugDevServer() ? "cross-origin" : "same-origin"
         );
         headers.put("Content-Security-Policy", "default-src 'none'; sandbox");
         headers.put("X-Content-Type-Options", "nosniff");
@@ -1851,6 +1859,10 @@ public class MainActivity extends Activity {
         }
         if (
             upperSql.matches("PRAGMA\\s+USER_VERSION") ||
+            upperSql.matches("PRAGMA\\s+JOURNAL_MODE\\s*=\\s*WAL") ||
+            upperSql.matches("PRAGMA\\s+SYNCHRONOUS\\s*=\\s*(FULL|NORMAL)") ||
+            upperSql.matches("PRAGMA\\s+BUSY_TIMEOUT\\s*=\\s*[0-9]+") ||
+            upperSql.matches("PRAGMA\\s+USER_VERSION\\s*=\\s*[0-9]+") ||
             upperSql.matches(
                 "PRAGMA\\s+TABLE_INFO\\([A-Z_][A-Z0-9_]*\\)"
             )

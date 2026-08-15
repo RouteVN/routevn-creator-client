@@ -128,22 +128,29 @@ Open: http://localhost:3001/project
 
 ### Android Application
 
-Install the debug shell once after native Android changes:
+Build and install the debug app with packaged local JavaScript:
 
 ```shell
 bun run android:install
 ```
 
-Start the Android JS dev server:
+For explicit watch-mode development, start the Android JS dev server:
 
 ```shell
 bun run watch:android
 ```
 
-The debug app loads `http://127.0.0.1:3001/android/index.html`. The watch
-script prepares `_site`, configures `adb reverse tcp:3001 tcp:3001` when a
-device is connected, and serves `src/setup.android.js` so frontend changes can
-be refreshed without reinstalling the APK.
+The watch script prepares `_site`, configures
+`adb reverse tcp:3001 tcp:3001` when a device is connected, and serves
+`src/setup.android.js`. After it is ready, explicitly relaunch the debug app
+against the server:
+
+```shell
+adb shell am start -S -n com.routevn.creator/.MainActivity \
+  --ez routevnUseDevServer true
+```
+
+Normal launches omit this extra and always use packaged local JavaScript.
 
 ### Desktop Application (Tauri)
 
