@@ -127,6 +127,12 @@ describe("projects view", () => {
       "rtgl-button#deleteConfirmButton v=de ?disabled=${deleteDialogConfirmDisabled}",
     );
     expect(projectsView).toContain("rtgl-input#deleteConfirmationInput");
+    expect(projectsView).toContain(
+      "aria-label=${deleteDialogConfirmationPlaceholder}",
+    );
+    expect(projectsView).not.toContain(
+      'aria-label="${deleteDialogConfirmationLabel}"',
+    );
     expect(projectsView).toContain("handler: handleDeleteConfirmationInput");
     expect(projectsView).toContain("role=alert");
     expect(projectsView).not.toContain("deleteCancelButton");

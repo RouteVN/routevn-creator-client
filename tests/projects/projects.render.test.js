@@ -7,7 +7,9 @@ import { parse } from "../../node_modules/@rettangoli/fe/node_modules/jempl/src/
 import * as handlerExports from "../../src/pages/projects/projects.handlers.js";
 import {
   createInitialState,
+  openDeleteDialog,
   selectViewData,
+  setPlatform,
   setProjects,
 } from "../../src/pages/projects/projects.store.js";
 
@@ -39,6 +41,32 @@ describe("projects render", () => {
     );
     const viewData = selectViewData({ state, i18n: EN_I18N });
 
+    expect(() =>
+      parseView({
+        h,
+        template: parse(PROJECTS_VIEW.template),
+        viewData,
+        refs: PROJECTS_VIEW.refs,
+        handlers,
+      }),
+    ).not.toThrow();
+  });
+
+  it("renders the Android hard-delete dialog with quoted confirmation copy", () => {
+    const state = createInitialState();
+    setPlatform({ state }, { platform: "android" });
+    openDeleteDialog(
+      { state },
+      {
+        projectId: "project-1",
+        projectName: "Project One",
+      },
+    );
+    const viewData = selectViewData({ state, i18n: EN_I18N });
+
+    expect(viewData.deleteDialogConfirmationLabel).toBe(
+      'Type "Delete" to confirm.',
+    );
     expect(() =>
       parseView({
         h,
