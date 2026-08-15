@@ -74,6 +74,9 @@ describe("Android WebView security boundary", () => {
     expect(html).toContain(
       "script-src 'self' 'unsafe-eval' 'wasm-unsafe-eval'",
     );
+    expect(html).toContain(
+      "font-src 'self' data: blob: https://appassets.androidplatform.net",
+    );
     expect(html).toContain("frame-src 'none'");
     expect(html).toContain("object-src 'none'");
     expect(html).toContain('src="/public/android-env.js"');
