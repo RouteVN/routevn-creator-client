@@ -122,12 +122,13 @@ export const createAppService = (params) => {
         throw new Error("Project folder is required.");
       }
 
+      const projectId = generateId();
       const importedProject = await callAndroidBridge("importProjectFolder", {
         uri: folderSelection.uri,
+        projectId,
       });
-      const projectId = importedProject.id;
-      if (!projectId) {
-        throw new Error("Imported project is missing an id.");
+      if (importedProject.id !== projectId) {
+        throw new Error("Imported project identity does not match.");
       }
 
       const importedName = importedProject.name?.trim?.() ?? "";

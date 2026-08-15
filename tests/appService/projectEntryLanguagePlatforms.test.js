@@ -308,6 +308,63 @@ describe("project-entry language platform propagation", () => {
     ]);
   });
 
+  it("assigns a fresh local id when importing an Android project", async () => {
+    let importPayload;
+    mocked.androidBridge.mockImplementation((method, payload) => {
+      if (method !== "importProjectFolder") {
+        throw new Error(`Unexpected Android bridge method: ${method}`);
+      }
+
+      importPayload = payload;
+      return {
+        id: payload.projectId,
+        name: "Imported Project",
+        description: "Imported description",
+        language: "en",
+        iconFileId: null,
+      };
+    });
+    const db = createDb();
+    const appService = createAndroidAppService(
+      createParams({ db, projectService: createProjectService() }),
+    );
+
+    const project = await appService.openExistingProject({
+      uri: "content://projects/imported-project",
+      name: "Imported Project",
+    });
+
+    expect(importPayload).toEqual({
+      uri: "content://projects/imported-project",
+      projectId: project.id,
+    });
+    expect(project.id).toMatch(/^[1-9A-HJ-NP-Za-km-z]{12}$/);
+    await expect(db.get("projectEntries")).resolves.toEqual([
+      expect.objectContaining({
+        id: project.id,
+        name: "Imported Project",
+      }),
+    ]);
+  });
+
+  it("rejects an Android import that returns a different project id", async () => {
+    mocked.androidBridge.mockResolvedValue({
+      id: "unexpected-project-id",
+      name: "Imported Project",
+    });
+    const db = createDb();
+    const appService = createAndroidAppService(
+      createParams({ db, projectService: createProjectService() }),
+    );
+
+    await expect(
+      appService.openExistingProject({
+        uri: "content://projects/imported-project",
+      }),
+    ).rejects.toThrow("Imported project identity does not match.");
+    await expect(db.get("projectEntries")).resolves.toEqual([]);
+  });
+
   it.each([
     ["android", createAndroidAppService, mocked.androidBridge],
     ["ios", createIOSAppService, mocked.iosBridge],

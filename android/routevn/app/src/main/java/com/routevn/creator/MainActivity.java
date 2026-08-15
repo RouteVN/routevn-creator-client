@@ -1417,7 +1417,8 @@ public class MainActivity extends Activity {
             try {
                 JSONObject payload = new JSONObject(payloadJson);
                 JSONObject result = importProjectFolderFromTreeUri(
-                    payload.getString("uri")
+                    payload.getString("uri"),
+                    payload.getString("projectId")
                 );
                 return bridgeSuccess(result);
             } catch (Exception error) {
@@ -2669,11 +2670,21 @@ public class MainActivity extends Activity {
         }
     }
 
-    private JSONObject importProjectFolderFromTreeUri(String uriString)
+    private JSONObject importProjectFolderFromTreeUri(
+        String uriString,
+        String requestedProjectId
+    )
         throws Exception {
         String normalizedUri = uriString == null ? "" : uriString.trim();
         if (normalizedUri.isEmpty()) {
             throw new IllegalArgumentException("Project folder is required.");
+        }
+        String projectId = safePathSegment(requestedProjectId);
+        File projectRoot = getProjectRoot(projectId);
+        if (projectRoot.exists()) {
+            throw new IllegalArgumentException(
+                "Generated Android project storage already exists."
+            );
         }
 
         Uri treeUri = Uri.parse(normalizedUri);
@@ -2696,7 +2707,7 @@ public class MainActivity extends Activity {
         File importRoot = new File(getCacheDir(), "project-import");
         File importWorkDir = new File(
             importRoot,
-            String.valueOf(System.currentTimeMillis())
+            UUID.randomUUID().toString()
         );
         deleteRecursively(importWorkDir);
 
@@ -2717,59 +2728,21 @@ public class MainActivity extends Activity {
             }
 
             JSONObject projectInfo = readProjectInfoFromDatabaseFile(tempDbFile);
-            String projectId = safePathSegment(projectInfo.optString("id", ""));
-            String projectDbPath = getProjectDatabasePath(projectId);
-            File targetDbFile = getProjectDatabaseFile(projectId);
-            File targetDbDirectory = targetDbFile.getParentFile();
-            File projectRoot = getProjectRoot(projectId);
-            File targetFilesRoot = new File(projectRoot, "files");
-            File targetMetadataRoot = new File(projectRoot, "file-metadata");
-            boolean alreadyImported = targetDbFile.isFile() && targetFilesRoot.isDirectory();
+            String sourceProjectId = safePathSegment(
+                projectInfo.optString("id", "")
+            );
+            rewriteImportedProjectIdentity(
+                tempDbFile,
+                sourceProjectId,
+                projectId
+            );
+            projectInfo.put("id", projectId);
 
-            if (!alreadyImported) {
-                closeDatabase(projectDbPath);
-                try {
-                    deleteRecursively(projectRoot);
-
-                    copyFile(tempDbFile, targetDbFile);
-                    File tempWalFile = new File(importWorkDir, "project.db-wal");
-                    if (tempWalFile.isFile()) {
-                        copyFile(
-                            tempWalFile,
-                            new File(targetDbDirectory, "project.db-wal")
-                        );
-                    }
-                    File tempShmFile = new File(importWorkDir, "project.db-shm");
-                    if (tempShmFile.isFile()) {
-                        copyFile(
-                            tempShmFile,
-                            new File(targetDbDirectory, "project.db-shm")
-                        );
-                    }
-                    File tempJournalFile = new File(
-                        importWorkDir,
-                        "project.db-journal"
-                    );
-                    if (tempJournalFile.isFile()) {
-                        copyFile(
-                            tempJournalFile,
-                            new File(targetDbDirectory, "project.db-journal")
-                        );
-                    }
-
-                    copyDocumentDirectoryContents(filesUri, targetFilesRoot);
-                    if (metadataUri != null) {
-                        copyDocumentDirectoryContents(metadataUri, targetMetadataRoot);
-                    }
-                } catch (Exception importError) {
-                    try {
-                        closeDatabase(projectDbPath);
-                        deleteRecursively(projectRoot);
-                    } catch (Exception cleanupError) {
-                        importError.addSuppressed(cleanupError);
-                    }
-                    throw importError;
-                }
+            File stagedFilesRoot = new File(importWorkDir, "files");
+            File stagedMetadataRoot = new File(importWorkDir, "file-metadata");
+            copyDocumentDirectoryContents(filesUri, stagedFilesRoot);
+            if (metadataUri != null) {
+                copyDocumentDirectoryContents(metadataUri, stagedMetadataRoot);
             }
 
             JSONObject result = new JSONObject();
@@ -2787,11 +2760,32 @@ public class MainActivity extends Activity {
                 "sourceName",
                 resolveDocumentDisplayName(rootDocumentUri, "Selected Folder")
             );
-            result.put("alreadyImported", alreadyImported);
+
+            promoteImportedProject(importWorkDir, projectRoot);
             return result;
         } finally {
             deleteRecursively(importWorkDir);
         }
+    }
+
+    private void promoteImportedProject(File stagedRoot, File projectRoot)
+        throws Exception {
+        File projectsRoot = projectRoot.getParentFile();
+        if (
+            projectsRoot == null ||
+            (!projectsRoot.exists() && !projectsRoot.mkdirs())
+        ) {
+            throw new IllegalStateException(
+                "Failed to create Android projects directory."
+            );
+        }
+        if (projectRoot.exists()) {
+            throw new IllegalArgumentException(
+                "Generated Android project storage already exists."
+            );
+        }
+
+        Os.rename(stagedRoot.getAbsolutePath(), projectRoot.getAbsolutePath());
     }
 
     private JSONObject exportProjectFolderToTreeUri(
@@ -3809,6 +3803,189 @@ public class MainActivity extends Activity {
             return projectInfo;
         } finally {
             database.close();
+        }
+    }
+
+    private void rewriteImportedProjectIdentity(
+        File databaseFile,
+        String sourceProjectId,
+        String targetProjectId
+    ) throws Exception {
+        if (sourceProjectId.equals(targetProjectId)) {
+            throw new IllegalArgumentException(
+                "Imported project must use a new project id."
+            );
+        }
+
+        SQLiteDatabase database = SQLiteDatabase.openDatabase(
+            databaseFile.getAbsolutePath(),
+            null,
+            SQLiteDatabase.OPEN_READWRITE
+        );
+
+        try {
+            assertDatabaseIntegrity(database);
+            if (!hasTable(database, "app_state")) {
+                throw new IllegalArgumentException(
+                    "Selected project uses an unsupported database format."
+                );
+            }
+
+            String rawProjectInfo = readKeyValueTableValue(
+                database,
+                "app_state",
+                "projectInfo"
+            );
+            if (rawProjectInfo == null || rawProjectInfo.trim().isEmpty()) {
+                throw new IllegalArgumentException(
+                    "Selected project is missing project information."
+                );
+            }
+            JSONObject projectInfo = new JSONObject(rawProjectInfo);
+            String storedProjectId = safePathSegment(
+                projectInfo.optString("id", "")
+            );
+            if (!sourceProjectId.equals(storedProjectId)) {
+                throw new IllegalArgumentException(
+                    "Selected project identity does not match."
+                );
+            }
+
+            assertCommittedProjectIdentity(database, sourceProjectId);
+
+            database.beginTransaction();
+            try {
+                projectInfo.put("id", targetProjectId);
+                ContentValues projectInfoValues = new ContentValues();
+                projectInfoValues.put("value", projectInfo.toString());
+                int updatedProjectInfo = database.update(
+                    "app_state",
+                    projectInfoValues,
+                    "key = ?",
+                    new String[] { "projectInfo" }
+                );
+                if (updatedProjectInfo != 1) {
+                    throw new IllegalArgumentException(
+                        "Selected project is missing project information."
+                    );
+                }
+                database.delete(
+                    "app_state",
+                    "key = ?",
+                    new String[] {
+                        "collab.lastCommittedId:" + sourceProjectId,
+                    }
+                );
+
+                String sourceCreateEventId =
+                    "project-create:" + sourceProjectId;
+                String targetCreateEventId =
+                    "project-create:" + targetProjectId;
+
+                if (hasTable(database, "committed_events")) {
+                    ContentValues committedIdentity = new ContentValues();
+                    committedIdentity.put("project_id", targetProjectId);
+                    database.update(
+                        "committed_events",
+                        committedIdentity,
+                        null,
+                        null
+                    );
+
+                    ContentValues committedCreateId = new ContentValues();
+                    committedCreateId.put("id", targetCreateEventId);
+                    database.update(
+                        "committed_events",
+                        committedCreateId,
+                        "id = ?",
+                        new String[] { sourceCreateEventId }
+                    );
+                }
+
+                if (hasTable(database, "local_drafts")) {
+                    ContentValues draftCreateId = new ContentValues();
+                    draftCreateId.put("id", targetCreateEventId);
+                    database.update(
+                        "local_drafts",
+                        draftCreateId,
+                        "id = ?",
+                        new String[] { sourceCreateEventId }
+                    );
+                }
+
+                if (hasTable(database, "materialized_view_state")) {
+                    database.delete("materialized_view_state", null, null);
+                }
+
+                database.setTransactionSuccessful();
+            } finally {
+                database.endTransaction();
+            }
+
+            try (
+                Cursor checkpoint = database.rawQuery(
+                    "PRAGMA wal_checkpoint(TRUNCATE)",
+                    null
+                )
+            ) {
+                if (!checkpoint.moveToFirst()) {
+                    throw new IllegalStateException(
+                        "Failed to checkpoint imported project database."
+                    );
+                }
+            }
+            assertDatabaseIntegrity(database);
+        } finally {
+            database.close();
+        }
+
+        deleteTemporaryFile(
+            new File(databaseFile.getAbsolutePath() + "-wal")
+        );
+        deleteTemporaryFile(
+            new File(databaseFile.getAbsolutePath() + "-shm")
+        );
+        deleteTemporaryFile(
+            new File(databaseFile.getAbsolutePath() + "-journal")
+        );
+    }
+
+    private void assertCommittedProjectIdentity(
+        SQLiteDatabase database,
+        String sourceProjectId
+    ) throws Exception {
+        if (!hasTable(database, "committed_events")) {
+            return;
+        }
+
+        try (
+            Cursor cursor = database.rawQuery(
+                "SELECT project_id FROM committed_events " +
+                "WHERE project_id IS NOT NULL AND project_id <> ? LIMIT 1",
+                new String[] { sourceProjectId }
+            )
+        ) {
+            if (cursor.moveToFirst()) {
+                throw new IllegalArgumentException(
+                    "Selected project contains mismatched repository history."
+                );
+            }
+        }
+    }
+
+    private void assertDatabaseIntegrity(SQLiteDatabase database)
+        throws Exception {
+        try (
+            Cursor cursor = database.rawQuery("PRAGMA integrity_check", null)
+        ) {
+            if (
+                !cursor.moveToFirst() ||
+                !"ok".equalsIgnoreCase(cursor.getString(0))
+            ) {
+                throw new IllegalArgumentException(
+                    "Selected project database is corrupted."
+                );
+            }
         }
     }
 
