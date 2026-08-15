@@ -168,11 +168,12 @@ template:
           - rtgl-popover#sceneFormPopover ?open=${showSceneFormPopover} x=${sceneFormPosition.x} y=${sceneFormPosition.y}:
               - rtgl-form#sceneForm key=${sceneFormKey} slot=content :defaultValues=${sceneFormData} :form=${sceneFormFields} w=320: null
       - $if showSceneFormDialog:
-          - rtgl-dialog#sceneFormDialog ?open=${showSceneFormDialog} s=sm:
-              - rtgl-form#sceneForm key=${sceneFormKey} slot=content :defaultValues=${sceneFormData} :form=${sceneFormFields} w=f: null
-      - rtgl-dialog#editDialog ?open=${isEditDialogOpen} s=md:
-          - rtgl-view slot=content g=md:
-              - rtgl-form#editForm key=${isEditDialogOpen} :defaultValues=${editDefaultValues} :form=${editForm} w=f: null
+          - rtgl-dialog#sceneFormDialog ?open=${showSceneFormDialog} s=md md-layout=fixed-top:
+              - rtgl-view slot=content d=v w=f h=f overflow=hidden:
+                  - rtgl-form#sceneForm key=${sceneFormKey} :defaultValues=${sceneFormData} :form=${sceneFormFields} sticky bottom-spacer=96 w=f h=f: null
+      - rtgl-dialog#editDialog ?open=${isEditDialogOpen} s=md md-layout=fixed-top:
+          - rtgl-view slot=content d=v w=f h=f overflow=hidden:
+              - rtgl-form#editForm key=${isEditDialogOpen} :defaultValues=${editDefaultValues} :form=${editForm} sticky bottom-spacer=96 w=f h=f: null
       - rtgl-dropdown-menu#dropdownMenu :items=${dropdownMenu.items} x=${dropdownMenu.position.x} y=${dropdownMenu.position.y} ?open=${dropdownMenu.isOpen}: null
       - rtgl-tooltip ?open=${deadEndTooltip.open} x=${deadEndTooltip.x} y=${deadEndTooltip.y} place="t" content="${deadEndTooltip.content}": null
       - $if showMobileScenesControls:

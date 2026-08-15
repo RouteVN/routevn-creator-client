@@ -41,7 +41,7 @@ describe("scenes view", () => {
     );
   });
 
-  it("uses a popover for desktop scene creation and a dialog form for mobile", () => {
+  it("uses a popover for desktop scene creation", () => {
     const scenesView = readFileSync(
       new URL("../../src/pages/scenes/scenes.view.yaml", import.meta.url),
       "utf8",
@@ -50,11 +50,28 @@ describe("scenes view", () => {
     expect(scenesView).toContain(
       "rtgl-popover#sceneFormPopover ?open=${showSceneFormPopover} x=${sceneFormPosition.x} y=${sceneFormPosition.y}",
     );
+  });
+
+  it("uses image-style mobile dialogs with sticky scene form actions", () => {
+    const scenesView = readFileSync(
+      new URL("../../src/pages/scenes/scenes.view.yaml", import.meta.url),
+      "utf8",
+    );
+
     expect(scenesView).toContain(
-      "rtgl-dialog#sceneFormDialog ?open=${showSceneFormDialog} s=sm",
+      "rtgl-dialog#sceneFormDialog ?open=${showSceneFormDialog} s=md md-layout=fixed-top:",
     );
     expect(scenesView).toContain(
-      "rtgl-form#sceneForm key=${sceneFormKey} slot=content :defaultValues=${sceneFormData} :form=${sceneFormFields} w=f",
+      "rtgl-dialog#editDialog ?open=${isEditDialogOpen} s=md md-layout=fixed-top:",
+    );
+    expect(
+      scenesView.match(/slot=content d=v w=f h=f overflow=hidden:/g),
+    ).toHaveLength(2);
+    expect(scenesView).toContain(
+      "rtgl-form#sceneForm key=${sceneFormKey} :defaultValues=${sceneFormData} :form=${sceneFormFields} sticky bottom-spacer=96 w=f h=f:",
+    );
+    expect(scenesView).toContain(
+      "rtgl-form#editForm key=${isEditDialogOpen} :defaultValues=${editDefaultValues} :form=${editForm} sticky bottom-spacer=96 w=f h=f:",
     );
   });
 

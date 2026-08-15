@@ -191,6 +191,35 @@ The native bridge in `MainActivity.java` handles:
 - download writes
 - Android document picker results
 
+## Private Storage Layout
+
+The global app database uses Android's standard database directory, while every
+project is one self-contained directory under the app-private files directory:
+
+```text
+databases/app.db
+
+files/projects/<projectId>/
+  project.db
+  project.db-wal
+  project.db-shm
+  files/<fileId>
+  file-metadata/<fileId>.mime
+```
+
+`databases/` and `files/` in this diagram are Android backup domains, not
+sibling directories returned by the same API. `app.db` is resolved with
+`getDatabasePath("app.db")`; project roots are resolved below `getFilesDir()`.
+
+The JavaScript SQLite path contract remains deliberately narrow:
+
+- `app.db` resolves only to the global app database.
+- `projects/<projectId>/project.db` resolves only to that project's database.
+- all other database paths are rejected by the native bridge.
+
+Project discovery requires both `project.db` and `files/`, so incomplete
+directories are not listed as valid projects.
+
 Project files are stored in app-private storage and served back through
 `/android-files/`. For media assets, Android returns typed URLs such as:
 
@@ -200,6 +229,32 @@ Project files are stored in app-private storage and served back through
 
 The typed filename lets Pixi choose the right image/video parser while the
 native handler maps the request back to the extensionless stored project file.
+The file handler accepts only project-asset and picker-file routes; database,
+WAL, metadata, staging, and unrelated private paths are not served.
+
+## Backup And Device Transfer
+
+`android:allowBackup` is enabled as the master switch, but RouteVN does not use
+Android Auto Backup for cloud project recovery. Projects commonly contain media
+and can exceed Auto Backup's 25 MB per-app cloud quota.
+
+The configured policy is:
+
+- cloud backup contains no current RouteVN app data
+- Android 12+ device-to-device transfer includes only the complete `projects/`
+  root
+- Android 9–11 includes `projects/` only when the backup transport declares a
+  device-to-device transfer
+- Android 7–8 backs up no RouteVN app data because those versions cannot apply
+  the device-to-device-only condition
+- the global `app.db`, including authentication tokens, is never backed up or
+  transferred
+- picker files, staging files, preferences, and other private files are not
+  backed up or transferred
+
+Manual project export remains the recovery mechanism until RouteVN provides a
+project-aware cloud backup or synchronization service. Android device transfer
+is a convenience and must not be presented as the user's only backup.
 
 ## Android Back
 

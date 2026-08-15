@@ -89,6 +89,9 @@ public class MainActivity extends Activity {
         60 * 60 * 1000L;
     private static final String PROJECT_FILE_WRITE_TEMP_PREFIX =
         ".routevn-project-write-";
+    private static final String APP_DATABASE_NAME = "app.db";
+    private static final String PROJECT_DATABASE_NAME = "project.db";
+    private static final String PROJECTS_DIRECTORY_NAME = "projects";
 
     private static final class ProjectFileWriteSession {
         private final String writeId;
@@ -1148,8 +1151,7 @@ public class MainActivity extends Activity {
             return cachedDatabase;
         }
 
-        File databasesRoot = new File(getFilesDir(), "databases");
-        File databaseFile = resolveSafeRelativeFile(databasesRoot, dbPath);
+        File databaseFile = resolveDatabaseFile(dbPath);
         File parentFile = databaseFile.getParentFile();
         if (parentFile != null && !parentFile.exists() && !parentFile.mkdirs()) {
             throw new IllegalStateException("Failed to create database directory.");
@@ -1165,6 +1167,30 @@ public class MainActivity extends Activity {
         }
         sqliteDatabases.put(dbPath, database);
         return database;
+    }
+
+    private File resolveDatabaseFile(String dbPath) throws Exception {
+        String normalizedPath = dbPath == null ? "" : dbPath;
+        if (APP_DATABASE_NAME.equals(normalizedPath)) {
+            return getDatabasePath(APP_DATABASE_NAME).getCanonicalFile();
+        }
+
+        String[] parts = normalizedPath.split("/", -1);
+        if (
+            parts.length == 3 &&
+            PROJECTS_DIRECTORY_NAME.equals(parts[0]) &&
+            PROJECT_DATABASE_NAME.equals(parts[2])
+        ) {
+            String projectId = safePathSegment(parts[1]);
+            if (!projectId.equals(parts[1])) {
+                throw new IllegalArgumentException(
+                    "Unsupported Android database path."
+                );
+            }
+            return getProjectDatabaseFile(projectId);
+        }
+
+        throw new IllegalArgumentException("Unsupported Android database path.");
     }
 
     private synchronized void closeDatabase(String dbPath) {
@@ -1967,7 +1993,6 @@ public class MainActivity extends Activity {
             if (!alreadyImported) {
                 closeDatabase(projectDbPath);
                 try {
-                    deleteRecursively(targetDbDirectory);
                     deleteRecursively(projectRoot);
 
                     copyFile(tempDbFile, targetDbFile);
@@ -2003,7 +2028,6 @@ public class MainActivity extends Activity {
                 } catch (Exception importError) {
                     try {
                         closeDatabase(projectDbPath);
-                        deleteRecursively(targetDbDirectory);
                         deleteRecursively(projectRoot);
                     } catch (Exception cleanupError) {
                         importError.addSuppressed(cleanupError);
@@ -2117,23 +2141,24 @@ public class MainActivity extends Activity {
     }
 
     private String getProjectDatabasePath(String projectId) {
-        return "projects/" + safePathSegment(projectId) + "/project.db";
+        return PROJECTS_DIRECTORY_NAME +
+            "/" +
+            safePathSegment(projectId) +
+            "/" +
+            PROJECT_DATABASE_NAME;
     }
 
     private File getProjectDatabaseFile(String projectId) throws Exception {
-        return resolveSafeRelativeFile(
-            new File(getFilesDir(), "databases"),
-            getProjectDatabasePath(projectId)
-        );
+        return new File(
+            getProjectRoot(projectId),
+            PROJECT_DATABASE_NAME
+        ).getCanonicalFile();
     }
 
     private JSONArray listProjectFolders() throws Exception {
         JSONArray projects = new JSONArray();
-        File projectDatabasesRoot = new File(
-            new File(getFilesDir(), "databases"),
-            "projects"
-        );
-        File[] projectDirectories = projectDatabasesRoot.listFiles();
+        File projectsRoot = new File(getFilesDir(), PROJECTS_DIRECTORY_NAME);
+        File[] projectDirectories = projectsRoot.listFiles();
         if (projectDirectories == null) {
             return projects;
         }
@@ -2150,8 +2175,11 @@ public class MainActivity extends Activity {
                 continue;
             }
 
-            File projectDbFile = new File(projectDirectory, "project.db");
-            File projectFilesRoot = new File(getProjectRoot(projectId), "files");
+            File projectDbFile = new File(
+                projectDirectory,
+                PROJECT_DATABASE_NAME
+            );
+            File projectFilesRoot = new File(projectDirectory, "files");
             if (!projectDbFile.isFile() || !projectFilesRoot.isDirectory()) {
                 continue;
             }
@@ -2198,7 +2226,7 @@ public class MainActivity extends Activity {
 
     private File getProjectRoot(String projectId) throws Exception {
         return resolveSafeRelativeFile(
-            new File(getFilesDir(), "projects"),
+            new File(getFilesDir(), PROJECTS_DIRECTORY_NAME),
             safePathSegment(projectId)
         );
     }
@@ -2317,14 +2345,38 @@ public class MainActivity extends Activity {
     private File resolveInternalStorageFileForPath(String normalizedPath)
         throws Exception {
         String[] parts = normalizeInternalStoragePath(normalizedPath).split("/");
-        if (isTypedProjectFilePath(parts)) {
+        if (
+            parts.length == 4 &&
+            PROJECTS_DIRECTORY_NAME.equals(parts[0]) &&
+            "files".equals(parts[2])
+        ) {
             String safeProjectId = safePathSegment(parts[1]);
-            String safeFileId = safePathSegment(parts[3]);
-            File projectRoot = getProjectRoot(safeProjectId);
-            return resolveSafeRelativeFile(new File(projectRoot, "files"), safeFileId);
+            return resolveSafeRelativeFile(
+                new File(getProjectRoot(safeProjectId), "files"),
+                safePathSegment(parts[3])
+            );
         }
 
-        return resolveSafeRelativeFile(getFilesDir(), normalizedPath);
+        if (isTypedProjectFilePath(parts)) {
+            String safeProjectId = safePathSegment(parts[1]);
+            return resolveSafeRelativeFile(
+                new File(getProjectRoot(safeProjectId), "files"),
+                safePathSegment(parts[3])
+            );
+        }
+
+        if (
+            parts.length == 4 &&
+            "picker".equals(parts[0]) &&
+            "files".equals(parts[2])
+        ) {
+            return resolveSafeRelativeFile(
+                new File(getPickerRoot(safePathSegment(parts[1])), "files"),
+                safePathSegment(parts[3])
+            );
+        }
+
+        throw new SecurityException("Unsupported Android internal file path.");
     }
 
     private boolean isTypedProjectFilePath(String[] parts) {

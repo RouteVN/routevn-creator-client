@@ -46,6 +46,8 @@ event store.
 Storage location:
 
 - desktop: project-specific SQLite `project.db`
+- Android: app-private `files/projects/<projectId>/project.db`, beside the
+  project's `files/` asset directory
 - web: project-specific IndexedDB project DB
 
 Current app-owned keys:
@@ -130,7 +132,8 @@ For the complete contract, see
 `11-windows-player-runtime-persistence.md`.
 
 The global app DB separately owns app-level cached project listing data and the
-shared `userConfig` object.
+shared `userConfig` object. On Android it uses the platform-standard
+`getDatabasePath("app.db")` location and is not part of a project directory.
 
 For the agreed persisted key catalog across global app DB, project-specific DB
 `app` store, and non-persisted runtime-only values, see
