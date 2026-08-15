@@ -68,10 +68,12 @@ describe("Android WebView security boundary", () => {
     expect(androidDb).toContain('callAndroidBridge("appDbSet"');
   });
 
-  it("uses a restrictive Android document policy without inline scripts or frames", async () => {
+  it("keeps Android scripts same-origin while allowing the embedded Pixi renderer", async () => {
     const html = await readRepoFile("static/android/index.html");
 
-    expect(html).toContain("script-src 'self' 'wasm-unsafe-eval'");
+    expect(html).toContain(
+      "script-src 'self' 'unsafe-eval' 'wasm-unsafe-eval'",
+    );
     expect(html).toContain("frame-src 'none'");
     expect(html).toContain("object-src 'none'");
     expect(html).toContain('src="/public/android-env.js"');
