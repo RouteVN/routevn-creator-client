@@ -70,6 +70,7 @@ export const createInitialState = () => ({
   pageTop: 0,
   visualHeight: 0,
   layoutHeight: 0,
+  pressedActionId: undefined,
   arrowRepeat: {
     direction: undefined,
     pointerId: undefined,
@@ -121,6 +122,16 @@ export const selectKeyboardState = ({ state }) => {
   };
 };
 
+export const setPressedActionId = ({ state }, { actionId } = {}) => {
+  state.pressedActionId = actionId;
+};
+
+export const clearPressedActionId = ({ state }) => {
+  state.pressedActionId = undefined;
+};
+
+export const selectPressedActionId = ({ state }) => state.pressedActionId;
+
 export const setArrowRepeatState = (
   { state },
   { direction, pointerId, delayTimerId } = {},
@@ -154,7 +165,7 @@ export const selectArrowRepeatState = ({ state }) => {
   };
 };
 
-const localizeToolbarItems = (items, copy = {}) => {
+const createToolbarViewItems = (items, copy = {}, pressedActionId) => {
   const labels = {
     "arrow-left": copy.leftLabel ?? "Left",
     "arrow-up": copy.upLabel ?? "Up",
@@ -168,6 +179,7 @@ const localizeToolbarItems = (items, copy = {}) => {
 
   return items.map((item) => ({
     ...item,
+    bgColor: item.id === pressedActionId ? "ac" : "mu",
     title: labels[item.id] ?? item.title,
   }));
 };
@@ -188,6 +200,10 @@ export const selectViewData = ({ state, i18n }) => {
     bottomStyle: `${state.bottom}px`,
     toolbarTopStyle: `${toolbarTop}px`,
     toolbarPositionStyle,
-    toolbarItems: localizeToolbarItems(toolbarItems, copy),
+    toolbarItems: createToolbarViewItems(
+      toolbarItems,
+      copy,
+      state.pressedActionId,
+    ),
   };
 };

@@ -1,8 +1,10 @@
 import { describe, expect, it } from "vitest";
 import {
+  clearPressedActionId,
   createInitialState,
   selectViewData,
   setKeyboardState,
+  setPressedActionId,
 } from "../../src/components/mobileKeyboardToolbar/mobileKeyboardToolbar.store.js";
 import { EN_I18N } from "../support/i18n.js";
 
@@ -38,5 +40,27 @@ describe("mobileKeyboardToolbar.store", () => {
     expect(selectViewData({ state, i18n: EN_I18N }).toolbarPositionStyle).toBe(
       "top: 452px",
     );
+  });
+
+  it("uses the accent background only for the currently pressed item", () => {
+    const state = createInitialState();
+
+    setPressedActionId({ state }, { actionId: "arrow-left" });
+
+    const pressedItems = selectViewData({ state, i18n: EN_I18N }).toolbarItems;
+    expect(
+      pressedItems.find((item) => item.id === "arrow-left")?.bgColor,
+    ).toBe("ac");
+    expect(pressedItems.find((item) => item.id === "actions")?.bgColor).toBe(
+      "mu",
+    );
+
+    clearPressedActionId({ state });
+
+    expect(
+      selectViewData({ state, i18n: EN_I18N }).toolbarItems.every(
+        (item) => item.bgColor === "mu",
+      ),
+    ).toBe(true);
   });
 });

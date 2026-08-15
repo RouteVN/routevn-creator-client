@@ -1,6 +1,8 @@
 import { JSDOM } from "jsdom";
 import { describe, expect, it, vi } from "vitest";
 import {
+  handleToolbarItemLostPointerCapture,
+  handleToolbarItemPointerCancel,
   handleToolbarItemPointerDown,
   handleToolbarItemPointerUp,
 } from "../../src/components/mobileKeyboardToolbar/mobileKeyboardToolbar.handlers.js";
@@ -34,12 +36,20 @@ const installDomGlobals = () => {
 
 const createStore = () => {
   let repeatState = {};
+  let pressedActionId;
 
   return {
+    clearPressedActionId: () => {
+      pressedActionId = undefined;
+    },
     clearArrowRepeatState: () => {
       repeatState = {};
     },
+    selectPressedActionId: () => pressedActionId,
     selectArrowRepeatState: () => repeatState,
+    setPressedActionId: ({ actionId }) => {
+      pressedActionId = actionId;
+    },
     setArrowRepeatIntervalId: ({ intervalTimerId }) => {
       repeatState.intervalTimerId = intervalTimerId;
     },
@@ -67,6 +77,7 @@ describe("mobileKeyboardToolbar.handlers", () => {
       currentTarget.setPointerCapture = vi.fn();
       currentTarget.releasePointerCapture = vi.fn();
       const store = createStore();
+      const render = vi.fn();
       const pointerEvent = {
         currentTarget,
         pointerId: 12,
@@ -75,7 +86,7 @@ describe("mobileKeyboardToolbar.handlers", () => {
       };
 
       handleToolbarItemPointerDown(
-        { store },
+        { store, render },
         {
           _event: pointerEvent,
         },
@@ -86,13 +97,93 @@ describe("mobileKeyboardToolbar.handlers", () => {
         key: "ArrowDown",
         code: "ArrowDown",
       });
+      expect(store.selectPressedActionId()).toBe("arrow-down");
+      expect(render).toHaveBeenCalledTimes(1);
 
       handleToolbarItemPointerUp(
-        { store },
+        { store, render },
         {
           _event: pointerEvent,
         },
       );
+      expect(store.selectPressedActionId()).toBeUndefined();
+      expect(render).toHaveBeenCalledTimes(2);
+    } finally {
+      restoreDomGlobals();
+    }
+  });
+
+  it("shows press feedback for non-arrow toolbar actions", () => {
+    const restoreDomGlobals = installDomGlobals();
+
+    try {
+      const currentTarget = document.createElement("div");
+      currentTarget.dataset.actionId = "preview";
+      currentTarget.setPointerCapture = vi.fn();
+      currentTarget.releasePointerCapture = vi.fn();
+      const store = createStore();
+      const render = vi.fn();
+      const pointerEvent = {
+        currentTarget,
+        pointerId: 14,
+        preventDefault: vi.fn(),
+        stopPropagation: vi.fn(),
+      };
+
+      handleToolbarItemPointerDown(
+        { store, render },
+        {
+          _event: pointerEvent,
+        },
+      );
+
+      expect(currentTarget.setPointerCapture).toHaveBeenCalledWith(14);
+      expect(store.selectPressedActionId()).toBe("preview");
+
+      handleToolbarItemPointerUp(
+        { store, render },
+        {
+          _event: pointerEvent,
+        },
+      );
+
+      expect(currentTarget.releasePointerCapture).toHaveBeenCalledWith(14);
+      expect(store.selectPressedActionId()).toBeUndefined();
+      expect(render).toHaveBeenCalledTimes(2);
+    } finally {
+      restoreDomGlobals();
+    }
+  });
+
+  it("clears press feedback when the pointer is cancelled or capture is lost", () => {
+    const restoreDomGlobals = installDomGlobals();
+
+    try {
+      const currentTarget = document.createElement("div");
+      currentTarget.dataset.actionId = "actions";
+      currentTarget.releasePointerCapture = vi.fn();
+      const store = createStore();
+      const render = vi.fn();
+      const pointerEvent = {
+        currentTarget,
+        pointerId: 18,
+        preventDefault: vi.fn(),
+        stopPropagation: vi.fn(),
+      };
+
+      store.setPressedActionId({ actionId: "actions" });
+      handleToolbarItemPointerCancel(
+        { store, render },
+        { _event: pointerEvent },
+      );
+
+      expect(store.selectPressedActionId()).toBeUndefined();
+
+      store.setPressedActionId({ actionId: "actions" });
+      handleToolbarItemLostPointerCapture({ store, render });
+
+      expect(store.selectPressedActionId()).toBeUndefined();
+      expect(render).toHaveBeenCalledTimes(2);
     } finally {
       restoreDomGlobals();
     }

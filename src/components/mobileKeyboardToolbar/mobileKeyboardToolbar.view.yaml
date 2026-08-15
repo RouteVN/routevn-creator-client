@@ -23,6 +23,6 @@ template:
   - 'rtgl-view pos=fix w=100vw h=48 bgc=bg bwb=xs bc=bo style="left: 0; ${toolbarPositionStyle}; z-index: 1450; box-shadow: 0 -8px 24px rgba(15, 23, 42, 0.12); touch-action: none; user-select: none; -webkit-user-select: none; -webkit-touch-callout: none;"':
       - rtgl-view w=f h=f d=h av=c ah=c g=xs:
           - $for item, i in toolbarItems:
-              - 'rtgl-view#toolbarItem${i} data-action-id=${item.id} title="${item.title}" role=button w=${item.width} h=42 br=md av=c ah=c bgc=mu h-bgc=ac cur=pointer style="touch-action: none; user-select: none; -webkit-user-select: none; -webkit-touch-callout: none;"':
+              - 'rtgl-view#toolbarItem${i} data-action-id=${item.id} title="${item.title}" role=button w=${item.width} h=42 br=md av=c ah=c bgc=${item.bgColor} h-bgc=ac cur=pointer style="touch-action: none; user-select: none; -webkit-user-select: none; -webkit-touch-callout: none;"':
                   - 'rtgl-view style="${item.iconStyle}"':
                       - rtgl-svg svg=${item.icon} wh=20 c=mu-fg: null

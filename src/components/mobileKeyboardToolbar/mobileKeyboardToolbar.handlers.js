@@ -287,6 +287,15 @@ const stopArrowRepeat = (store) => {
   disableArrowRepeatNativeCalloutSuppression();
 };
 
+const clearToolbarPressedState = ({ store, render }) => {
+  if (!store.selectPressedActionId()) {
+    return;
+  }
+
+  store.clearPressedActionId();
+  render();
+};
+
 const startArrowRepeat = (store, direction, pointerId) => {
   stopArrowRepeat(store);
   enableArrowRepeatNativeCalloutSuppression();
@@ -415,6 +424,7 @@ export const handleBeforeMount = (deps) => {
   };
   const stopArrowRepeatOnPointerEnd = () => {
     stopArrowRepeat(store);
+    clearToolbarPressedState({ store, render });
   };
   const suppressNativeCalloutEvent = (event) => {
     if (!isArrowRepeatNativeCalloutSuppressed()) {
@@ -473,42 +483,47 @@ export const handleBeforeMount = (deps) => {
       cancelAnimationFrame(animationFrameId);
     }
     stopArrowRepeat(store);
+    store.clearPressedActionId();
     document.getElementById(ARROW_REPEAT_SUPPRESSION_STYLE_ID)?.remove();
     cleanupVirtualKeyboardOverlay?.();
   };
 };
 
-export const handleToolbarItemPointerDown = ({ store }, payload) => {
+export const handleToolbarItemPointerDown = ({ store, render }, payload) => {
   const event = payload._event;
   const actionId = event.currentTarget.dataset.actionId;
   const direction = DIRECTION_BY_ACTION_ID[actionId];
 
   event.preventDefault();
   event.stopPropagation();
+  event.currentTarget.setPointerCapture?.(event.pointerId);
+  store.setPressedActionId({ actionId });
+  render();
 
   if (!direction) {
     stopArrowRepeat(store);
     return;
   }
 
-  event.currentTarget.setPointerCapture?.(event.pointerId);
   startArrowRepeat(store, direction, event.pointerId);
 };
 
-const stopToolbarPointerAction = ({ store }, payload) => {
+const stopToolbarPointerAction = ({ store, render }, payload) => {
   const event = payload._event;
   event.preventDefault();
   event.stopPropagation();
   event.currentTarget.releasePointerCapture?.(event.pointerId);
   stopArrowRepeat(store);
+  clearToolbarPressedState({ store, render });
 };
 
 export const handleToolbarItemPointerUp = stopToolbarPointerAction;
 
 export const handleToolbarItemPointerCancel = stopToolbarPointerAction;
 
-export const handleToolbarItemLostPointerCapture = ({ store }) => {
+export const handleToolbarItemLostPointerCapture = ({ store, render }) => {
   stopArrowRepeat(store);
+  clearToolbarPressedState({ store, render });
 };
 
 const suppressArrowTouchDefault = (payload) => {
@@ -539,6 +554,7 @@ export const handleToolbarItemContextMenu = (deps, payload) => {
   payload._event.preventDefault();
   payload._event.stopPropagation();
   stopArrowRepeat(deps.store);
+  clearToolbarPressedState(deps);
 };
 
 export const handleToolbarItemClick = ({ dispatchEvent }, payload) => {
