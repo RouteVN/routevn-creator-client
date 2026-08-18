@@ -604,6 +604,24 @@ describe("commandLineBgm.handlers", () => {
   });
 
   it("reuses the resource id so the same track keeps a stable playback identity", () => {
+    const render = vi.fn();
+    const authorChannel = () => {
+      const state = createState();
+      const store = createStore(state);
+      store.setPendingInsertIndex({ index: 0 });
+      store.setTempSelectedResource({ resourceId: "intro" });
+      store.setMode({ mode: "gallery" });
+      handleButtonSelectClick({ store, render });
+      return state.bgm.sounds[0].id;
+    };
+
+    // Two independently authored channels (e.g. one per section) must agree
+    // on the id or the runtime restarts the track at the section boundary.
+    expect(authorChannel()).toBe("intro");
+    expect(authorChannel()).toBe("intro");
+  });
+
+  it("suffixes clip ids when the same resource is inserted twice", () => {
     const state = createState();
     const store = createStore(state);
     const render = vi.fn();

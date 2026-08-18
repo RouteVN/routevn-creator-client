@@ -718,6 +718,66 @@ describe("commandLineBgm.store", () => {
     expect(selectSelectedSoundId({ state })).toBeUndefined();
   });
 
+  it("derives clip ids from the resource and suffixes channel duplicates", () => {
+    const state = createInitialState();
+    setRepositoryState({ state }, { sounds });
+
+    insertSound({ state }, { resourceId: "intro" });
+    insertSound({ state }, { resourceId: "intro" });
+    insertSound({ state }, { resourceId: "intro" });
+
+    expect(selectBgm({ state }).sounds.map((sound) => sound.id)).toEqual([
+      "intro",
+      "intro-2",
+      "intro-3",
+    ]);
+  });
+
+  it("keeps explicit clip ids and only suffixes on collision", () => {
+    const state = createInitialState();
+    setRepositoryState({ state }, { sounds });
+
+    insertSound({ state }, { id: "intro-clip", resourceId: "intro" });
+    insertSound({ state }, { resourceId: "theme" });
+
+    expect(selectBgm({ state }).sounds.map((sound) => sound.id)).toEqual([
+      "intro-clip",
+      "theme",
+    ]);
+  });
+
+  it("skips suffix ids already owned by other clips", () => {
+    const state = createInitialState();
+    setRepositoryState({ state }, { sounds });
+
+    insertSound({ state }, { id: "intro-2", resourceId: "theme" });
+    insertSound({ state }, { resourceId: "intro" });
+    insertSound({ state }, { resourceId: "intro" });
+
+    expect(selectBgm({ state }).sounds.map((sound) => sound.id)).toEqual([
+      "intro-2",
+      "intro",
+      "intro-3",
+    ]);
+  });
+
+  it("reuses freed ids when clips are removed", () => {
+    const state = createInitialState();
+    setRepositoryState({ state }, { sounds });
+
+    insertSound({ state }, { resourceId: "intro" });
+    insertSound({ state }, { resourceId: "intro" });
+    removeSound({ state }, { soundId: "intro" });
+    insertSound({ state }, { resourceId: "intro" });
+
+    // The replacement clip is appended after the survivor, but reclaims the
+    // freed base id.
+    expect(selectBgm({ state }).sounds.map((sound) => sound.id)).toEqual([
+      "intro-2",
+      "intro",
+    ]);
+  });
+
   it("connects a sound to the exact end of the previous sound", () => {
     const state = createInitialState();
     setRepositoryState({ state }, { sounds });

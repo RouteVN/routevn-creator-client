@@ -819,7 +819,7 @@ export const finishSoundDrag = (
 
 export const insertSound = (
   { state },
-  { id, resourceId, index = state.bgm.sounds.length } = {},
+  { resourceId, id = resourceId, index = state.bgm.sounds.length } = {},
 ) => {
   // Resource-derived ids collide when the same resource is inserted twice;
   // suffix them like normalizeSounds so channel ids stay unique.
