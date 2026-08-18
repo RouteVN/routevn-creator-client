@@ -15,6 +15,19 @@ describe("versions view export actions", () => {
     expect(versionsView).not.toContain("rtgl-button#saveVersionBtn v=pr sq");
   });
 
+  it("uses the image-style dialog and sticky version form", () => {
+    expect(versionsView).toContain("$if isVersionDialogOpen:");
+    expect(versionsView).toContain(
+      "rtgl-dialog#versionDialog ?open=${isVersionDialogOpen} s=md md-layout=fixed-top:",
+    );
+    expect(versionsView).toContain(
+      "rtgl-view slot=content d=v w=f h=f overflow=hidden:",
+    );
+    expect(versionsView).toContain(
+      "rtgl-form#versionForm key=${isVersionDialogOpen} :form=${versionForm} sticky bottom-spacer=96 w=f h=f:",
+    );
+  });
+
   it("shows loading before the settled empty-version state", () => {
     const loadingIndex = versionsView.indexOf("$if isVersionsLoading:");
     const emptyIndex = versionsView.indexOf("$elif versions.length == 0:");

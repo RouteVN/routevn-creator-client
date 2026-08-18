@@ -13,6 +13,7 @@ import {
   setVersions,
   setWindowsExportAvailability,
 } from "../../src/pages/versions/versions.store.js";
+import { EN_I18N } from "../support/i18n.js";
 
 const version = {
   id: "version-1",
@@ -21,6 +22,27 @@ const version = {
   actionIndex: 12,
   createdAt: "2026-01-01T00:00:00.000Z",
 };
+
+describe("versions store form", () => {
+  it("uses the new-version title and a validated sticky-form action", () => {
+    const viewData = selectViewData({
+      state: createInitialState(),
+      i18n: EN_I18N,
+    });
+
+    expect(viewData.versionForm.title).toBe("New Version");
+    expect(viewData.versionForm.actions).toEqual({
+      buttons: [
+        {
+          id: "submit",
+          variant: "pr",
+          validate: true,
+          label: "New Version",
+        },
+      ],
+    });
+  });
+});
 
 describe("versions store mobile view data", () => {
   it("shows the selected version in a mobile detail sheet in touch mode", () => {

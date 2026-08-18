@@ -130,9 +130,10 @@ template:
                               - rtgl-button#detailWindowsInstallerBtn data-version-id="${selectedItemId}" v=se s=sm pre=download w=f: ${exportWindowsInstallerButton}
                           - $if canExportMacosApplication:
                               - rtgl-button#detailMacosApplicationBtn data-version-id="${selectedItemId}" v=se s=sm pre=download w=f: ${exportMacosApplicationButton}
-  - rtgl-dialog#versionDialog ?open=${isVersionDialogOpen} s=md:
-      - rtgl-view slot=content w=f:
-          - rtgl-form#versionForm :form=${versionForm} w=f: null
+  - $if isVersionDialogOpen:
+      - rtgl-dialog#versionDialog ?open=${isVersionDialogOpen} s=md md-layout=fixed-top:
+          - rtgl-view slot=content d=v w=f h=f overflow=hidden:
+              - rtgl-form#versionForm key=${isVersionDialogOpen} :form=${versionForm} sticky bottom-spacer=96 w=f h=f: null
   - $if isExportConfirmationOpen:
       - rtgl-dialog#exportConfirmationDialog ?open=${isExportConfirmationOpen} s=md:
           - rtgl-view slot=content w=f p=lg g=lg:

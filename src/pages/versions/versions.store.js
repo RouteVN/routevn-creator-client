@@ -24,7 +24,7 @@ const getVersionDescription = (version) => {
 const createVersionForm = ({ isEditing, copy = {} } = {}) => ({
   title: isEditing
     ? (copy.editVersionTitle ?? "Edit Version")
-    : (copy.createVersionTitle ?? "Create Version"),
+    : (copy.createVersionTitle ?? "New Version"),
   fields: [
     {
       name: "name",
@@ -39,14 +39,14 @@ const createVersionForm = ({ isEditing, copy = {} } = {}) => ({
     },
   ],
   actions: {
-    layout: "",
     buttons: [
       {
         id: "submit",
         variant: "pr",
+        validate: true,
         label: isEditing
           ? (copy.updateVersionButton ?? "Update")
-          : (copy.createVersionButton ?? "Create Version"),
+          : (copy.createVersionButton ?? "New Version"),
       },
     ],
   },
