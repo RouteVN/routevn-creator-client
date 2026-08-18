@@ -37,7 +37,7 @@ steps:
   - action: wait
     ms: 250
   - action: select
-    selector: "#createProjectSubmitButton"
+    selector: "rtgl-form#createProjectForm rtgl-button[data-action-id=submit]"
     steps:
       - action: click
   - action: waitFor
@@ -96,7 +96,7 @@ steps:
       - action: write
         value: playerName
   - action: select
-    selector: "#variableDialog rtgl-button[data-action-id='submit']"
+    selector: "#variableDialog #variableSubmitButton"
     steps:
       - action: click
   - action: waitFor
@@ -227,7 +227,7 @@ steps:
         value: "42"
   - action: screenshot
   - action: select
-    selector: "#variableDialog rtgl-button[data-action-id='submit']"
+    selector: "#variableDialog #variableSubmitButton"
     steps:
       - action: click
   - action: waitFor
@@ -375,7 +375,7 @@ steps:
     ms: 250
   - action: screenshot
   - action: select
-    selector: "#variableDialog rtgl-button[data-action-id='submit']"
+    selector: "#variableDialog #variableSubmitButton"
     steps:
       - action: click
   - action: waitFor

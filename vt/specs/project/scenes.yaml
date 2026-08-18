@@ -49,7 +49,7 @@ steps:
   - action: wait
     ms: 250
   - action: select
-    selector: "#createProjectSubmitButton"
+    selector: "rtgl-form#createProjectForm rtgl-button[data-action-id=submit]"
     steps:
       - action: click
   - action: waitFor
@@ -124,13 +124,11 @@ steps:
   - action: select
     selector: "#updateTimeline #track0"
     steps:
-      - action: click
-  - action: waitFor
-    selector: "#addKeyframeForm"
-    state: attached
-    timeoutMs: 5000
+      - action: hover
+  - action: wait
+    ms: 200
   - action: select
-    selector: "#addKeyframeForm rtgl-button[data-action-id='submit']"
+    selector: "#updateTimeline #track0"
     steps:
       - action: click
   - action: waitFor
@@ -346,17 +344,13 @@ steps:
     steps:
       - action: click
   - action: waitFor
-    selector: "rvn-command-line-background#commandLineBackground rtgl-select[data-field-name='animationId'] #option2"
+    selector: "rvn-command-line-background#commandLineBackground rtgl-select[data-field-name='animationId'] #option3"
     state: visible
     timeoutMs: 5000
   - action: select
-    selector: "rvn-command-line-background#commandLineBackground rtgl-select[data-field-name='animationId'] #option2"
+    selector: "rvn-command-line-background#commandLineBackground rtgl-select[data-field-name='animationId'] #option3"
     steps:
       - action: click
-  - action: waitFor
-    selector: "rvn-command-line-background#commandLineBackground rtgl-segmented-control[data-field-name='playbackLoop']"
-    state: attached
-    timeoutMs: 5000
   - action: select
     selector: "rvn-command-line-background#commandLineBackground rtgl-select[data-field-name='animationId'] [data-testid='select-button']"
     steps:
@@ -364,6 +358,12 @@ steps:
       - action: scroll
         deltaX: 0
         deltaY: 500
+  - action: wait
+    ms: 250
+  - action: waitFor
+    selector: "rvn-command-line-background#commandLineBackground rtgl-segmented-control[data-field-name='playbackLoop']"
+    state: attached
+    timeoutMs: 5000
   - action: assert
     type: js
     fn: eval
@@ -378,11 +378,11 @@ steps:
     steps:
       - action: click
   - action: waitFor
-    selector: "rvn-command-line-background#commandLineBackground rtgl-select[data-field-name='animationId'] #option3"
+    selector: "rvn-command-line-background#commandLineBackground rtgl-select[data-field-name='animationId'] #option4"
     state: visible
     timeoutMs: 5000
   - action: select
-    selector: "rvn-command-line-background#commandLineBackground rtgl-select[data-field-name='animationId'] #option3"
+    selector: "rvn-command-line-background#commandLineBackground rtgl-select[data-field-name='animationId'] #option4"
     steps:
       - action: click
   - action: select
@@ -450,14 +450,14 @@ steps:
     steps:
       - action: click
   - action: waitFor
-    selector: "rvn-system-actions#systemActions rvn-command-line-screen#commandLineScreen rtgl-input-number[data-field-name='playbackSpeed'] input"
+    selector: "rvn-system-actions#systemActions rvn-command-line-screen#commandLineScreen rtgl-slider-input[data-field-name='playbackSpeed'] rtgl-input-number input"
     state: visible
     timeoutMs: 5000
   - action: assert
     type: js
     fn: eval
     args:
-      - "(() => { const deepQuery = (root, selector) => { const direct = root?.querySelector?.(selector); if (direct) return direct; for (const node of root?.querySelectorAll?.('*') ?? []) { const found = node.shadowRoot ? deepQuery(node.shadowRoot, selector) : undefined; if (found) return found; } return undefined; }; const systemActions = deepQuery(document, 'rvn-system-actions#systemActions'); const screen = deepQuery(systemActions.shadowRoot, 'rvn-command-line-screen#commandLineScreen'); const form = deepQuery(screen.shadowRoot, 'rtgl-form#form'); const speedField = deepQuery(form.shadowRoot, 'rtgl-input-number[data-field-name=playbackSpeed]'); const speed = deepQuery(speedField.shadowRoot, 'input'); const continuity = deepQuery(form.shadowRoot, 'rtgl-segmented-control[data-field-name=playbackContinuity]'); const loop = deepQuery(form.shadowRoot, '[data-field-name=playbackLoop]'); return `${speed.value}:${Boolean(continuity)}:${Boolean(loop)}`; })()"
+      - "(() => { const deepQuery = (root, selector) => { const direct = root?.querySelector?.(selector); if (direct) return direct; for (const node of root?.querySelectorAll?.('*') ?? []) { const found = node.shadowRoot ? deepQuery(node.shadowRoot, selector) : undefined; if (found) return found; } return undefined; }; const systemActions = deepQuery(document, 'rvn-system-actions#systemActions'); const screen = deepQuery(systemActions.shadowRoot, 'rvn-command-line-screen#commandLineScreen'); const form = deepQuery(screen.shadowRoot, 'rtgl-form#form'); const speedField = deepQuery(form.shadowRoot, 'rtgl-slider-input[data-field-name=playbackSpeed]'); const speedNumber = deepQuery(speedField?.shadowRoot, 'rtgl-input-number'); const speed = deepQuery(speedNumber?.shadowRoot, 'input'); const continuity = deepQuery(form.shadowRoot, 'rtgl-segmented-control[data-field-name=playbackContinuity]'); const loop = deepQuery(form.shadowRoot, '[data-field-name=playbackLoop]'); return `${speed.value}:${Boolean(continuity)}:${Boolean(loop)}`; })()"
     value: "1:true:false"
   - action: wait
     ms: 250
@@ -513,14 +513,14 @@ steps:
     steps:
       - action: click
   - action: waitFor
-    selector: "rvn-command-line-choices#commandLineChoices rtgl-input-number[data-field-name='playbackSpeed'] input"
+    selector: "rvn-command-line-choices#commandLineChoices rtgl-slider-input[data-field-name='playbackSpeed'] rtgl-input-number input"
     state: visible
     timeoutMs: 5000
   - action: assert
     type: js
     fn: eval
     args:
-      - "(() => { const deepQuery = (root, selector) => { const direct = root?.querySelector?.(selector); if (direct) return direct; for (const node of root?.querySelectorAll?.('*') ?? []) { const found = node.shadowRoot ? deepQuery(node.shadowRoot, selector) : undefined; if (found) return found; } return undefined; }; const systemActions = deepQuery(document, 'rvn-system-actions#systemActions'); const choices = deepQuery(systemActions.shadowRoot, 'rvn-command-line-choices#commandLineChoices'); const form = deepQuery(choices.shadowRoot, 'rtgl-form#choiceForm'); const speedField = deepQuery(form.shadowRoot, 'rtgl-input-number[data-field-name=playbackSpeed]'); const speed = deepQuery(speedField.shadowRoot, 'input'); const continuity = deepQuery(form.shadowRoot, 'rtgl-segmented-control[data-field-name=playbackContinuity]'); const continuityOption = deepQuery(continuity.shadowRoot, '#option0'); return `${speed.value}:${continuityOption.getAttribute('aria-pressed')}`; })()"
+      - "(() => { const deepQuery = (root, selector) => { const direct = root?.querySelector?.(selector); if (direct) return direct; for (const node of root?.querySelectorAll?.('*') ?? []) { const found = node.shadowRoot ? deepQuery(node.shadowRoot, selector) : undefined; if (found) return found; } return undefined; }; const systemActions = deepQuery(document, 'rvn-system-actions#systemActions'); const choices = deepQuery(systemActions.shadowRoot, 'rvn-command-line-choices#commandLineChoices'); const form = deepQuery(choices.shadowRoot, 'rtgl-form#choiceForm'); const speedField = deepQuery(form.shadowRoot, 'rtgl-slider-input[data-field-name=playbackSpeed]'); const speedNumber = deepQuery(speedField?.shadowRoot, 'rtgl-input-number'); const speed = deepQuery(speedNumber?.shadowRoot, 'input'); const continuity = deepQuery(form.shadowRoot, 'rtgl-segmented-control[data-field-name=playbackContinuity]'); const continuityOption = deepQuery(continuity.shadowRoot, '#option0'); return `${speed.value}:${continuityOption.getAttribute('aria-pressed')}`; })()"
     value: "1:true"
   - action: keypress
     key: Escape

@@ -37,7 +37,7 @@ steps:
   - action: wait
     ms: 250
   - action: select
-    selector: "#createProjectSubmitButton"
+    selector: "rtgl-form#createProjectForm rtgl-button[data-action-id=submit]"
     steps:
       - action: click
   - action: waitFor
@@ -210,7 +210,7 @@ steps:
       - "(() => { const deepQuery = (root, selector) => { if (!root) return undefined; const direct = root.querySelector?.(selector); if (direct) return direct; for (const node of root.querySelectorAll?.('*') ?? []) { const found = node.shadowRoot ? deepQuery(node.shadowRoot, selector) : undefined; if (found) return found; } return undefined; }; return deepQuery(document, '#detailHeader')?.textContent?.trim(); })()"
     value: options_black_bg
   - action: select
-    selector: "rvn-media-resources-view#groupview #contextMenu #option0"
+    selector: "rvn-media-resources-view#groupview #contextMenu #optionD0I0"
     steps:
       - action: click
   - action: waitFor

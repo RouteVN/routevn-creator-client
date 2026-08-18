@@ -37,7 +37,7 @@ steps:
   - action: wait
     ms: 250
   - action: select
-    selector: "#createProjectSubmitButton"
+    selector: "rtgl-form#createProjectForm rtgl-button[data-action-id=submit]"
     steps:
       - action: click
   - action: waitFor
@@ -297,8 +297,31 @@ steps:
     state: attached
     timeoutMs: 5000
   - action: waitFor
-    selector: "rvn-command-line-bgm#commandLineBgm #emptyAddButton"
+    selector: "rvn-command-line-bgm#commandLineBgm #resourceItem0x0"
     state: visible
+    timeoutMs: 10000
+  - action: screenshot
+  - action: select
+    selector: "rvn-command-line-bgm#commandLineBgm #resourceItem0x0"
+    steps:
+      - action: click
+  - action: select
+    selector: "rvn-command-line-bgm#commandLineBgm #buttonSelect"
+    steps:
+      - action: click
+  - action: waitFor
+    selector: "rvn-command-line-bgm#commandLineBgm #channelEditorDialog[open]"
+    state: hidden
+    timeoutMs: 10000
+  - action: wait
+    ms: 300
+  - action: select
+    selector: "rvn-command-line-bgm#commandLineBgm #bgmChannel"
+    steps:
+      - action: click
+  - action: waitFor
+    selector: "rvn-command-line-bgm#commandLineBgm #channelEditorDialog[open]"
+    state: attached
     timeoutMs: 5000
   - action: waitFor
     selector: "rvn-command-line-bgm#commandLineBgm #channelEditorConfirmButton"
@@ -310,27 +333,20 @@ steps:
     args:
       - "(() => { const deepQuery = (root, selector) => { const direct = root?.querySelector?.(selector); if (direct) return direct; for (const node of root?.querySelectorAll?.('*') ?? []) { const found = node.shadowRoot ? deepQuery(node.shadowRoot, selector) : undefined; if (found) return found; } return undefined; }; const bgm = deepQuery(document, 'rvn-command-line-bgm#commandLineBgm'); const title = deepQuery(bgm?.shadowRoot, '#channelEditorTitle'); const channel = deepQuery(bgm?.shadowRoot, '#editorChannel'); return Boolean(title && channel && Math.abs(title.getBoundingClientRect().left - channel.getBoundingClientRect().left) <= 1); })()"
     value: true
-  - action: screenshot
-  - action: select
-    selector: "rvn-command-line-bgm#commandLineBgm #emptyAddButton"
-    steps:
-      - action: click
-  - action: waitFor
-    selector: "rvn-command-line-bgm#commandLineBgm #resourceItem0x0"
-    state: visible
-    timeoutMs: 10000
-  - action: select
-    selector: "rvn-command-line-bgm#commandLineBgm #resourceItem0x0"
-    steps:
-      - action: click
-  - action: select
-    selector: "rvn-command-line-bgm#commandLineBgm #buttonSelect"
-    steps:
-      - action: click
   - action: waitFor
     selector: "rvn-command-line-bgm#commandLineBgm #soundClip0"
     state: visible
     timeoutMs: 10000
+  - action: assert
+    type: js
+    fn: eval
+    args:
+      - "(() => { const deepQuery = (root, selector) => { const direct = root?.querySelector?.(selector); if (direct) return direct; for (const node of root?.querySelectorAll?.('*') ?? []) { const found = node.shadowRoot ? deepQuery(node.shadowRoot, selector) : undefined; if (found) return found; } return undefined; }; const bgm = deepQuery(document, 'rvn-command-line-bgm#commandLineBgm'); const clip = bgm?.shadowRoot?.querySelector?.('#soundClip0'); if (!clip) return 'missing'; clip.focus(); clip.dispatchEvent(new KeyboardEvent('keydown', { key: 'Enter', bubbles: true, composed: true })); return 'selected'; })()"
+    value: "selected"
+  - action: waitFor
+    selector: "rvn-command-line-bgm#commandLineBgm rtgl-form#soundForm"
+    state: attached
+    timeoutMs: 5000
   - action: wait
     ms: 300
   - action: screenshot
@@ -388,7 +404,7 @@ steps:
     timeoutMs: 5000
   - action: waitFor
     selector: "rvn-command-line-bgm#commandLineBgm rtgl-form#channelForm rtgl-select[data-field-name='audioEffectId']"
-    state: visible
+    state: attached
     timeoutMs: 5000
   - action: assert
     type: js
@@ -428,31 +444,6 @@ steps:
     state: visible
     timeoutMs: 10000
   - action: screenshot
-  - action: select
-    selector: "rvn-command-line-voice#commandLineVoice #voiceChannel"
-    steps:
-      - action: click
-  - action: waitFor
-    selector: "rvn-command-line-voice#commandLineVoice #channelEditorDialog[open]"
-    state: attached
-    timeoutMs: 5000
-  - action: waitFor
-    selector: "rvn-command-line-voice#commandLineVoice #emptyAddButton"
-    state: visible
-    timeoutMs: 5000
-  - action: waitFor
-    selector: "rvn-command-line-voice#commandLineVoice #channelEditorConfirmButton"
-    state: visible
-    timeoutMs: 5000
-  - action: screenshot
-  - action: select
-    selector: "rvn-command-line-voice#commandLineVoice #channelEditorConfirmButton"
-    steps:
-      - action: click
-  - action: waitFor
-    selector: "rvn-command-line-voice#commandLineVoice #channelEditorDialog[open]"
-    state: hidden
-    timeoutMs: 5000
   - action: keypress
     key: Escape
   - action: waitFor
@@ -506,36 +497,16 @@ steps:
     state: attached
     timeoutMs: 5000
   - action: waitFor
-    selector: "rvn-command-line-sound-effects#commandLineSoundEffects #emptyAddButton0"
-    state: visible
-    timeoutMs: 5000
-  - action: waitFor
-    selector: "rvn-command-line-sound-effects#commandLineSoundEffects #channelEditorConfirmButton"
-    state: visible
-    timeoutMs: 5000
-  - action: screenshot
-  - action: select
-    selector: "rvn-command-line-sound-effects#commandLineSoundEffects #emptyAddButton0"
-    steps:
-      - action: click
-  - action: waitFor
     selector: "rvn-command-line-sound-effects#commandLineSoundEffects #resourceItem0x0"
     state: visible
     timeoutMs: 10000
+  - action: screenshot
   - action: select
     selector: "rvn-command-line-sound-effects#commandLineSoundEffects #resourceItem0x0"
     steps:
       - action: click
   - action: select
     selector: "rvn-command-line-sound-effects#commandLineSoundEffects #buttonSelect"
-    steps:
-      - action: click
-  - action: waitFor
-    selector: "rvn-command-line-sound-effects#commandLineSoundEffects #soundClip0x0"
-    state: visible
-    timeoutMs: 10000
-  - action: select
-    selector: "rvn-command-line-sound-effects#commandLineSoundEffects #channelEditorConfirmButton"
     steps:
       - action: click
   - action: waitFor

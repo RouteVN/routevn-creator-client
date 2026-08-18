@@ -37,7 +37,7 @@ steps:
   - action: wait
     ms: 250
   - action: select
-    selector: "#createProjectSubmitButton"
+    selector: "rtgl-form#createProjectForm rtgl-button[data-action-id=submit]"
     steps:
       - action: click
   - action: waitFor
@@ -83,7 +83,7 @@ steps:
       - action: write
         value: Sprite Mina
   - action: select
-    selector: "#addCharacterDialog rtgl-input#field1 input"
+    selector: "#addCharacterDialog rtgl-textarea#field1 textarea"
     steps:
       - action: clear
       - action: write
@@ -362,11 +362,11 @@ steps:
     steps:
       - action: click
   - action: waitFor
-    selector: "rvn-command-line-characters#commandLineCharacters rtgl-slider-input[data-adjustment-id='brightness'] input"
+    selector: "rvn-command-line-characters#commandLineCharacters rtgl-slider-input[data-adjustment-id='brightness'] input[type='number']"
     state: visible
     timeoutMs: 5000
   - action: select
-    selector: "rvn-command-line-characters#commandLineCharacters rtgl-slider-input[data-adjustment-id='brightness'] input"
+    selector: "rvn-command-line-characters#commandLineCharacters rtgl-slider-input[data-adjustment-id='brightness'] input[type='number']"
     steps:
       - action: clear
       - action: write

@@ -37,7 +37,7 @@ steps:
   - action: wait
     ms: 250
   - action: select
-    selector: "#createProjectSubmitButton"
+    selector: "rtgl-form#createProjectForm rtgl-button[data-action-id=submit]"
     steps:
       - action: click
   - action: waitFor
@@ -167,11 +167,11 @@ steps:
     steps:
       - action: click
   - action: waitFor
-    selector: "rtgl-dropdown-menu#addPropertySideMenu #option2"
+    selector: "rtgl-dropdown-menu#addPropertySideMenu #optionD0I2"
     state: visible
     timeoutMs: 5000
   - action: select
-    selector: "rtgl-dropdown-menu#addPropertySideMenu #option2"
+    selector: "rtgl-dropdown-menu#addPropertySideMenu #optionD0I2"
     steps:
       - action: click
   - action: waitFor
@@ -215,7 +215,7 @@ steps:
     state: visible
     timeoutMs: 5000
   - action: waitFor
-    selector: "#maskTrackRow0 rvn-file-image"
+    selector: "#maskTrackRow0 rvn-file-image rtgl-image#image img"
     state: visible
     timeoutMs: 5000
   - action: waitFor
@@ -264,7 +264,7 @@ steps:
     state: visible
     timeoutMs: 5000
   - action: select
-    selector: "[data-keyframe='true']"
+    selector: ":nth-match([data-keyframe='true'], 1)"
     steps:
       - action: click
   - action: waitFor
@@ -285,12 +285,12 @@ steps:
     steps:
       - action: click
   - action: waitFor
-    selector: "rtgl-dropdown-menu#selectedKeyframeAddMenu #option0"
+    selector: "rtgl-dropdown-menu#selectedKeyframeAddMenu #optionD0I0"
     state: visible
     timeoutMs: 5000
   - action: screenshot
   - action: select
-    selector: "rtgl-dropdown-menu#selectedKeyframeAddMenu #option0"
+    selector: "rtgl-dropdown-menu#selectedKeyframeAddMenu #optionD0I0"
     steps:
       - action: click
   - action: waitFor
@@ -307,7 +307,7 @@ steps:
     state: hidden
     timeoutMs: 5000
   - action: select
-    selector: "#selectedKeyframeDelay #textDisplay"
+    selector: "#selectedKeyframeDelay #trigger"
     steps:
       - action: click
   - action: waitFor
@@ -441,7 +441,7 @@ steps:
     steps:
       - action: click
   - action: waitFor
-    selector: "rtgl-dropdown-menu#addPropertySideMenu"
-    state: visible
+    selector: "rtgl-dropdown-menu#addPropertySideMenu[open]"
+    state: attached
     timeoutMs: 5000
 ---

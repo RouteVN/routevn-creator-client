@@ -37,7 +37,7 @@ steps:
   - action: wait
     ms: 250
   - action: select
-    selector: "#createProjectSubmitButton"
+    selector: "rtgl-form#createProjectForm rtgl-button[data-action-id=submit]"
     steps:
       - action: click
   - action: waitFor
@@ -135,7 +135,7 @@ steps:
     ms: 300
   - action: screenshot
   - action: select
-    selector: "#spritesheetDialog rtgl-button[data-action-id='submit']"
+    selector: "#spritesheetDialog #dialogSubmitButton"
     steps:
       - action: click
   - action: waitFor
@@ -379,11 +379,11 @@ steps:
     steps:
       - action: click
   - action: waitFor
-    selector: "rvn-command-line-visual#commandLineVisual rtgl-slider-input[data-adjustment-id='brightness'] input"
+    selector: "rvn-command-line-visual#commandLineVisual rtgl-slider-input[data-adjustment-id='brightness'] input[type='number']"
     state: visible
     timeoutMs: 5000
   - action: select
-    selector: "rvn-command-line-visual#commandLineVisual rtgl-slider-input[data-adjustment-id='brightness'] input"
+    selector: "rvn-command-line-visual#commandLineVisual rtgl-slider-input[data-adjustment-id='brightness'] input[type='number']"
     steps:
       - action: clear
       - action: write
@@ -417,11 +417,11 @@ steps:
     steps:
       - action: click
   - action: waitFor
-    selector: "rvn-command-line-visual#commandLineVisual #animation0x0 #option2"
+    selector: "rvn-command-line-visual#commandLineVisual #animation0x0 #option3"
     state: visible
     timeoutMs: 5000
   - action: select
-    selector: "rvn-command-line-visual#commandLineVisual #animation0x0 #option2"
+    selector: "rvn-command-line-visual#commandLineVisual #animation0x0 #option3"
     steps:
       - action: click
   - action: waitFor

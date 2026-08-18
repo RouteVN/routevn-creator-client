@@ -37,7 +37,7 @@ steps:
   - action: wait
     ms: 250
   - action: select
-    selector: "#createProjectSubmitButton"
+    selector: "rtgl-form#createProjectForm rtgl-button[data-action-id=submit]"
     steps:
       - action: click
   - action: waitFor
@@ -94,7 +94,7 @@ steps:
   - action: assert
     type: text
     selector: "#detailHeader"
-    value: Noto Sans SC
+    value: Noto Sans 400
   - action: select
     selector: "#zoomButton"
     steps:

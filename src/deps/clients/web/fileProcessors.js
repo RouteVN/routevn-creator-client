@@ -372,6 +372,11 @@ export const createWaveformThumbnail = async ({
 
 const VIDEO_THUMBNAIL_EVENT_TIMEOUT_MS = 5000;
 const VIDEO_THUMBNAIL_ACTIVITY_TIMEOUT_MS = 10000;
+// requestVideoFrameCallback only fires when a frame reaches the compositor,
+// which does not happen for detached video elements (headless runs included).
+// The frame is already decoded and drawable once loadeddata/seeked fired, so
+// the presentation wait only gets a short grace period.
+const VIDEO_THUMBNAIL_FRAME_TIMEOUT_MS = 250;
 
 const clampNumber = (value, min, max) => {
   return Math.min(max, Math.max(min, value));
@@ -526,7 +531,7 @@ const analyzeVideoFrame = ({ ctx, width, height } = {}) => {
 
 const waitForVideoFrame = async (
   video,
-  { timeoutMs = VIDEO_THUMBNAIL_EVENT_TIMEOUT_MS } = {},
+  { timeoutMs = VIDEO_THUMBNAIL_FRAME_TIMEOUT_MS } = {},
 ) => {
   if (typeof video.requestVideoFrameCallback === "function") {
     await new Promise((resolve) => {
@@ -601,7 +606,7 @@ const seekVideoToTime = async (
   await waitForVideoLoadedData(video, { timeoutMs });
 
   if (Math.abs(video.currentTime - normalizedTime) < 0.001) {
-    await waitForVideoFrame(video, { timeoutMs });
+    await waitForVideoFrame(video);
     return normalizedTime;
   }
 
@@ -633,7 +638,7 @@ const seekVideoToTime = async (
     video.currentTime = normalizedTime;
   });
 
-  await waitForVideoFrame(video, { timeoutMs });
+  await waitForVideoFrame(video);
   return normalizedTime;
 };
 
@@ -649,7 +654,7 @@ const captureVideoFrameAtTime = async ({
     await seekVideoToTime(video, time, { timeoutMs });
   } else {
     await waitForVideoLoadedData(video, { timeoutMs });
-    await waitForVideoFrame(video, { timeoutMs });
+    await waitForVideoFrame(video);
   }
 
   drawVideoFrameToCanvas({

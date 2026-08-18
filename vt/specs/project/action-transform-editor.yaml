@@ -45,7 +45,7 @@ steps:
     steps:
       - action: click
   - action: select
-    selector: "#createProjectSubmitButton"
+    selector: "rtgl-form#createProjectForm rtgl-button[data-action-id=submit]"
     steps:
       - action: click
   - action: waitFor
@@ -207,6 +207,10 @@ steps:
       - "(() => { const deepQuery = (root, selector) => { const direct = root?.querySelector?.(selector); if (direct) return direct; for (const node of root?.querySelectorAll?.('*') ?? []) { const found = node.shadowRoot ? deepQuery(node.shadowRoot, selector) : undefined; if (found) return found; } return undefined; }; const editor = deepQuery(document, 'rvn-action-transform-editor#actionTransformEditor'); const xField = deepQuery(editor?.shadowRoot, '#groupItem0x0x0'); const nextX = Number(xField?.textContent?.trim()); const moved = Math.abs(nextX - window.__vtActionTransformX - 192) < 0.01; window.__vtActionTransformX = nextX; return String(moved); })()"
     value: "true"
   - action: screenshot
+  - action: select
+    selector: "rvn-action-transform-editor#actionTransformEditor rvn-layout-anchor-grid[data-name='anchor'] #anchorCell4"
+    steps:
+      - action: blur
   - action: keypress
     key: ArrowDown
   - action: wait
@@ -225,6 +229,10 @@ steps:
     selector: "rvn-command-line-background#commandLineBackground #customTransformButton"
     state: visible
     timeoutMs: 10000
+  - action: keypress
+    key: Escape
+  - action: wait
+    ms: 300
   - action: keypress
     key: Escape
   - action: waitFor

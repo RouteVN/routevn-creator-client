@@ -1,4 +1,5 @@
 refs:
+  anchorGrid: {}
   anchorCell*:
     eventListeners:
       click:
