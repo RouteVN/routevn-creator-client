@@ -1,5 +1,4 @@
 import { toFlatItems } from "../../internal/project/tree.js";
-import { generateId } from "../../internal/id.js";
 import {
   finishAudioTimelineDrag,
   mountAudioTimelineDragSubscriptions,
@@ -463,8 +462,11 @@ export const handleButtonSelectClick = (deps) => {
       resourceId,
     });
   } else {
+    // The sound id is the runtime playback identity: re-authoring the same
+    // resource in another section must reuse it so the track continues
+    // instead of restarting. insertSound suffixes repeated resources.
     store.insertSound({
-      id: generateId(),
+      id: resourceId,
       resourceId,
       index: store.selectPendingInsertIndex(),
     });

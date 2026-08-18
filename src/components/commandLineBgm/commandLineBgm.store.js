@@ -821,9 +821,18 @@ export const insertSound = (
   { state },
   { id, resourceId, index = state.bgm.sounds.length } = {},
 ) => {
+  // Resource-derived ids collide when the same resource is inserted twice;
+  // suffix them like normalizeSounds so channel ids stay unique.
+  const existingIds = new Set(state.bgm.sounds.map((sound) => sound.id));
+  let uniqueId = id;
+  let duplicateIndex = 2;
+  while (existingIds.has(uniqueId)) {
+    uniqueId = `${id}-${duplicateIndex}`;
+    duplicateIndex += 1;
+  }
   const sound = normalizeSounds([
     {
-      id,
+      id: uniqueId,
       resourceId,
       volume: DEFAULT_SOUND_VOLUME,
     },

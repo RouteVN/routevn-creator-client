@@ -435,6 +435,7 @@ describe("commandLineBgm.handlers", () => {
     handleButtonSelectClick({ store, render });
 
     expect(state.bgm.sounds).toHaveLength(1);
+    expect(state.bgm.sounds[0].id).toBe("intro");
     expect(state.bgm.sounds[0].resourceId).toBe("intro");
     expect(state.isChannelEditorOpen).toBe(false);
     expect(state.mode).toBe("current");
@@ -593,12 +594,36 @@ describe("commandLineBgm.handlers", () => {
     expect(state.mode).toBe("current");
     expect(state.bgm.sounds).toHaveLength(1);
     expect(state.bgm.sounds[0]).toMatchObject({
+      id: "intro",
       resourceId: "intro",
       volume: 100,
       startDelayMs: 0,
     });
     expect(state.selectedSoundId).toBe(state.bgm.sounds[0].id);
     expect(render).toHaveBeenCalledOnce();
+  });
+
+  it("reuses the resource id so the same track keeps a stable playback identity", () => {
+    const state = createState();
+    const store = createStore(state);
+    const render = vi.fn();
+    store.setPendingInsertIndex({ index: 0 });
+    store.setTempSelectedResource({ resourceId: "intro" });
+    store.setMode({ mode: "gallery" });
+
+    handleButtonSelectClick({ store, render });
+
+    expect(state.bgm.sounds.map((sound) => sound.id)).toEqual(["intro"]);
+
+    store.setPendingInsertIndex({ index: 1 });
+    store.setTempSelectedResource({ resourceId: "intro" });
+    store.setMode({ mode: "gallery" });
+    handleButtonSelectClick({ store, render });
+
+    expect(state.bgm.sounds.map((sound) => sound.id)).toEqual([
+      "intro",
+      "intro-2",
+    ]);
   });
 
   it("selects and removes an individual clip from its context menu", async () => {
