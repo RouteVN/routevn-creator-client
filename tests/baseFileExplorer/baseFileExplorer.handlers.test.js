@@ -78,13 +78,17 @@ const createPointerEvent = ({
   x,
   y,
   pointerId = 1,
+  pointerType = "touch",
+  isPrimary = true,
+  button = 0,
 } = {}) => {
   return {
     currentTarget,
     target,
     pointerId,
-    pointerType: "touch",
-    isPrimary: true,
+    pointerType,
+    isPrimary,
+    button,
     clientX: x,
     clientY: y,
     preventDefault: vi.fn(),
@@ -403,6 +407,64 @@ describe("baseFileExplorer handlers", () => {
     expect(moveEvent.stopPropagation).not.toHaveBeenCalled();
   });
 
+  it("preserves the normal context menu for a pen barrel-button press", () => {
+    vi.useFakeTimers();
+    const { deps, state } = createDragDeps();
+
+    handleContainerPointerDown(deps, {
+      _event: createPointerEvent({
+        currentTarget: deps.refs.root,
+        x: 24,
+        y: 80,
+        pointerType: "pen",
+        button: 2,
+      }),
+    });
+    vi.advanceTimersByTime(400);
+
+    expect(deps.store.selectEmptyLongPressTimerId()).toBeUndefined();
+    expect(deps.store.selectEmptyLongPressStartPoint()).toBeUndefined();
+
+    const contextMenuEvent = createContextMenuEvent({
+      currentTarget: deps.refs.root,
+      target: { closest: vi.fn(() => undefined) },
+    });
+    handleContainerContextMenu(deps, { _event: contextMenuEvent });
+
+    expect(state.dropdownMenu.isOpen).toBe(true);
+    expect(contextMenuEvent.preventDefault).toHaveBeenCalledTimes(1);
+    expect(contextMenuEvent.stopPropagation).not.toHaveBeenCalled();
+  });
+
+  it("cancels an empty-space long press when another pointer touches", () => {
+    vi.useFakeTimers();
+    const { deps, state } = createDragDeps();
+
+    handleContainerPointerDown(deps, {
+      _event: createPointerEvent({
+        currentTarget: deps.refs.root,
+        x: 24,
+        y: 80,
+        pointerId: 7,
+      }),
+    });
+    handleContainerPointerDown(deps, {
+      _event: createPointerEvent({
+        currentTarget: deps.refs.root,
+        x: 40,
+        y: 80,
+        pointerId: 8,
+        isPrimary: false,
+      }),
+    });
+    vi.advanceTimersByTime(400);
+
+    expect(state.dropdownMenu.isOpen).toBe(false);
+    expect(deps.store.selectEmptyLongPressTimerId()).toBeUndefined();
+    expect(deps.store.selectEmptyLongPressStartPoint()).toBeUndefined();
+    expect(deps.store.selectEmptyLongPressPointerId()).toBeUndefined();
+  });
+
   it("ignores container long-press handling when the touch starts on an item", () => {
     vi.useFakeTimers();
     const { deps, state } = createDragDeps();
@@ -450,6 +512,32 @@ describe("baseFileExplorer handlers", () => {
       }),
     });
 
+    expect(deps.store.selectEmptyLongPressStartPoint()).toBeUndefined();
+  });
+
+  it("cancels the touch-event fallback when another touch starts", () => {
+    vi.useFakeTimers();
+    const { deps, state } = createDragDeps();
+    const firstTouch = createTouchEvent({
+      currentTarget: deps.refs.root,
+      x: 30,
+      y: 100,
+    });
+
+    handleContainerTouchStart(deps, { _event: firstTouch });
+    handleContainerTouchStart(deps, {
+      _event: {
+        ...firstTouch,
+        touches: [
+          { clientX: 30, clientY: 100 },
+          { clientX: 50, clientY: 100 },
+        ],
+      },
+    });
+    vi.advanceTimersByTime(400);
+
+    expect(state.dropdownMenu.isOpen).toBe(false);
+    expect(deps.store.selectEmptyLongPressTimerId()).toBeUndefined();
     expect(deps.store.selectEmptyLongPressStartPoint()).toBeUndefined();
   });
 

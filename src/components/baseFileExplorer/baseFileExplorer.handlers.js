@@ -963,11 +963,16 @@ export const handleItemMouseDown = (deps, payload) => {
 export const handleContainerPointerDown = (deps, payload) => {
   const { store } = deps;
   const event = payload?._event;
-  if (
-    event?.pointerType === "mouse" ||
-    event?.isPrimary === false ||
-    isFileExplorerItemEvent(event)
-  ) {
+  if (event?.pointerType === "mouse") {
+    return;
+  }
+
+  if (event?.isPrimary === false || event?.button !== 0) {
+    cancelEmptyLongPress(store);
+    return;
+  }
+
+  if (isFileExplorerItemEvent(event)) {
     return;
   }
 
@@ -987,15 +992,21 @@ export const handleContainerPointerDown = (deps, payload) => {
 export const handleContainerTouchStart = (deps, payload) => {
   const { store } = deps;
   const event = payload?._event;
-  if (
-    store.selectEmptyLongPressPointerId() !== undefined ||
-    isFileExplorerItemEvent(event)
-  ) {
+  if (event?.touches?.length !== 1) {
+    cancelEmptyLongPress(store);
+    return;
+  }
+
+  if (store.selectEmptyLongPressPointerId() !== undefined) {
+    return;
+  }
+
+  if (isFileExplorerItemEvent(event)) {
     return;
   }
 
   const touchPoint = getTouchPoint(event);
-  if (!touchPoint || event?.touches?.length !== 1) {
+  if (!touchPoint) {
     return;
   }
 
