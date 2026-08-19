@@ -479,6 +479,7 @@ webServerPage:
   urlLabel: "URL"
   warningTitle: "Warning"
 resourcePages:
+  actionsLabel: "Actions"
   addTagOption: "Add tag"
   addTagPlaceholder: "Add tag"
   addText: "Add"

@@ -219,7 +219,7 @@ template:
               - rtgl-text w=1fg s=md: ${filesLabel}
               - rtgl-button#mobileFileExplorerClose sq pre=x v=ol: null
           - 'rtgl-view w=f h=1fg style="min-height: 0;"':
-              - rvn-base-file-explorer#fileExplorer :items=${flatItems} shrinkable dropdown-menu allowDrag :folderContextMenuItems=${folderContextMenuItems} :itemContextMenuItems=${itemContextMenuItems} :emptyContextMenuItems=${emptyContextMenuItems}: null
+              - rvn-base-file-explorer#fileExplorer :items=${flatItems} shrinkable dropdown-menu allowDrag show-item-menu-actions :folderContextMenuItems=${folderContextMenuItems} :itemContextMenuItems=${itemContextMenuItems} :emptyContextMenuItems=${emptyContextMenuItems}: null
   - $if showMobileDetailSheet:
       - rvn-mobile-sheet#mobileDetailSheet ?open=${showMobileDetailSheet}:
           - rtgl-view slot=content d=v w=f h=f:

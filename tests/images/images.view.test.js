@@ -109,6 +109,35 @@ describe("images view", () => {
     expect(mobileExplorerBranch).toContain("bottom-empty-space-height=80vh");
   });
 
+  it("enables per-item action menus only in the mobile file explorer", () => {
+    const imagesView = readFileSync(
+      new URL("../../src/pages/images/images.view.yaml", import.meta.url),
+      "utf8",
+    );
+
+    const mobileExplorerStart = imagesView.indexOf(
+      "$if showMobileFileExplorer",
+    );
+    const mobileDetailSheetStart = imagesView.indexOf(
+      "$if showMobileDetailSheet",
+      mobileExplorerStart,
+    );
+    const mobileExplorerBranch = imagesView.slice(
+      mobileExplorerStart,
+      mobileDetailSheetStart,
+    );
+    const desktopExplorerBranch = imagesView.slice(0, mobileExplorerStart);
+
+    expect(mobileExplorerBranch).toContain("show-item-menu-actions");
+    expect(mobileExplorerBranch).toContain(
+      ":folderContextMenuItems=${folderContextMenuItems}",
+    );
+    expect(mobileExplorerBranch).toContain(
+      ":itemContextMenuItems=${itemContextMenuItems}",
+    );
+    expect(desktopExplorerBranch).not.toContain("show-item-menu-actions");
+  });
+
   it("keeps the mobile file explorer clear of iOS safe areas", () => {
     const imagesView = readFileSync(
       new URL("../../src/pages/images/images.view.yaml", import.meta.url),

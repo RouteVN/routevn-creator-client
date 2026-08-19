@@ -180,4 +180,38 @@ describe("baseFileExplorer.store", () => {
     expect(disabledViewData.items[0].touchAction).toBe("pan-y");
     expect(enabledViewData.items[0].touchAction).toBe("none");
   });
+
+  it("shows localized item menu actions only when explicitly enabled", () => {
+    const state = createInitialState();
+    const item = {
+      id: "item-1",
+      type: "image",
+      name: "Image 1",
+      _level: 0,
+      hasChildren: false,
+      parentId: null,
+    };
+    const baseProps = {
+      items: [item],
+      itemContextMenuItems: [{ label: "Rename", value: "rename-item" }],
+    };
+
+    const disabledViewData = selectViewData({
+      state,
+      props: baseProps,
+      i18n: { resourcePages: { actionsLabel: "Item actions" } },
+    });
+    const enabledViewData = selectViewData({
+      state,
+      props: {
+        ...baseProps,
+        showItemMenuActions: true,
+      },
+      i18n: { resourcePages: { actionsLabel: "Item actions" } },
+    });
+
+    expect(disabledViewData.items[0].showMenuAction).toBe(false);
+    expect(enabledViewData.items[0].showMenuAction).toBe(true);
+    expect(enabledViewData.itemActionsLabel).toBe("Item actions");
+  });
 });

@@ -123,4 +123,4 @@ template:
               - rtgl-text w=1fg s=md: ${nodeExplorerTitle}
               - rtgl-button#mobileFileExplorerClose sq pre=x v=ol: null
           - 'rtgl-view w=f h=1fg style="min-height: 0;"':
-              - rvn-base-file-explorer#fileExplorer :items=${flatItems} shrinkable dropdown-menu allowDrag bottom-empty-space-height=80vh :contextMenuItems=${contextMenuItems} :emptyContextMenuItems=${emptyContextMenuItems}: null
+              - rvn-base-file-explorer#fileExplorer :items=${flatItems} shrinkable dropdown-menu allowDrag show-item-menu-actions bottom-empty-space-height=80vh :contextMenuItems=${contextMenuItems} :emptyContextMenuItems=${emptyContextMenuItems}: null

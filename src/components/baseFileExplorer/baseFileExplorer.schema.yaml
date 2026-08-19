@@ -71,6 +71,9 @@ propsSchema:
     dropdownMenu:
       type: boolean
       description: Enable context menu dropdown on right-click
+    showItemMenuActions:
+      type: boolean
+      description: Show a trailing action menu button for each item with context-menu actions
     no-empty-message:
       type: boolean
       description: Whether to show the empty message when there are no items

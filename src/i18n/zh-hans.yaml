@@ -479,6 +479,7 @@ webServerPage:
   urlLabel: "URL"
   warningTitle: "警告"
 resourcePages:
+  actionsLabel: "操作"
   addTagOption: "添加标签"
   addTagPlaceholder: "添加标签"
   addText: "添加"

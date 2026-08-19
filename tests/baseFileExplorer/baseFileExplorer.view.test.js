@@ -40,6 +40,13 @@ describe("baseFileExplorer view", () => {
     expect(view).toContain("data-file-explorer-arrow=true");
   });
 
+  it("wires background pointer and touch starts for empty-space menus", () => {
+    const view = readView();
+
+    expect(view).toContain("handler: handleContainerPointerDown");
+    expect(view).toContain("handler: handleContainerTouchStart");
+  });
+
   it("renders special-item badges in the bottom-right corner of the item icon", () => {
     const view = readView();
 
@@ -68,5 +75,18 @@ describe("baseFileExplorer view", () => {
       "[data-file-explorer-item='true']:hover .visibilityAction",
     );
     expect(view).toContain("data-always-visible='true'");
+  });
+
+  it("renders opt-in trailing item menu actions", () => {
+    const view = readView();
+
+    expect(view).toContain("itemMenu*:");
+    expect(view).toContain("handler: handleItemMenuClick");
+    expect(view).toContain("$if item.showMenuAction");
+    expect(view).toContain("rtgl-button#itemMenuRef${i}");
+    expect(view).toContain("data-file-explorer-action=true");
+    expect(view).toContain("pre=ellipsis");
+    expect(view).toContain('aria-label="${itemActionsLabel}"');
+    expect(view).toContain("aria-haspopup=menu");
   });
 });

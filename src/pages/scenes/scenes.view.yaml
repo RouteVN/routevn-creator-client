@@ -185,7 +185,7 @@ template:
                   - rtgl-text w=1fg s=md: ${filesLabel}
                   - rtgl-button#mobileFileExplorerClose sq pre=x v=ol: null
               - 'rtgl-view w=f h=1fg style="min-height: 0;"':
-                  - rvn-base-file-explorer#fileexplorer :items=${flatItems} shrinkable dropdown-menu allowDrag :folderContextMenuItems=${folderContextMenuItems} :itemContextMenuItems=${itemContextMenuItems} :emptyContextMenuItems=${emptyContextMenuItems}: null
+                  - rvn-base-file-explorer#fileexplorer :items=${flatItems} shrinkable dropdown-menu allowDrag show-item-menu-actions :folderContextMenuItems=${folderContextMenuItems} :itemContextMenuItems=${itemContextMenuItems} :emptyContextMenuItems=${emptyContextMenuItems}: null
       - $if showMapAddHint:
           - 'rtgl-view pos=abs z=150 style="left: 50%; bottom: 24px; transform: translateX(-50%);"':
               - rtgl-view d=h av=c g=sm bgc=mu bc=bo bw=xs br=sm pv=md ph=md:

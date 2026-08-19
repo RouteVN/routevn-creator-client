@@ -37,6 +37,9 @@ export const createInitialState = () => ({
   touchDragActive: false,
   touchScrollActive: false,
   touchScrollLastPoint: undefined,
+  emptyLongPressTimerId: undefined,
+  emptyLongPressStartPoint: undefined,
+  emptyLongPressPointerId: undefined,
   touchContextMenuSuppressUntil: 0,
   suppressNextClick: false,
   dragAutoScrollTimerId: undefined,
@@ -146,6 +149,24 @@ export const clearTouchDrag = ({ state }, _payload = {}) => {
   state.touchScrollLastPoint = undefined;
 };
 
+export const setEmptyLongPressTimerId = ({ state }, { timerId } = {}) => {
+  state.emptyLongPressTimerId = timerId;
+};
+
+export const setEmptyLongPressStartPoint = ({ state }, { point } = {}) => {
+  state.emptyLongPressStartPoint = point;
+};
+
+export const setEmptyLongPressPointerId = ({ state }, { pointerId } = {}) => {
+  state.emptyLongPressPointerId = pointerId;
+};
+
+export const clearEmptyLongPress = ({ state }, _payload = {}) => {
+  state.emptyLongPressTimerId = undefined;
+  state.emptyLongPressStartPoint = undefined;
+  state.emptyLongPressPointerId = undefined;
+};
+
 export const setTouchContextMenuSuppressUntil = (
   { state },
   { suppressUntil } = {},
@@ -237,6 +258,18 @@ export const selectTouchScrollActive = ({ state }) => {
 
 export const selectTouchScrollLastPoint = ({ state }) => {
   return state.touchScrollLastPoint;
+};
+
+export const selectEmptyLongPressTimerId = ({ state }) => {
+  return state.emptyLongPressTimerId;
+};
+
+export const selectEmptyLongPressStartPoint = ({ state }) => {
+  return state.emptyLongPressStartPoint;
+};
+
+export const selectEmptyLongPressPointerId = ({ state }) => {
+  return state.emptyLongPressPointerId;
 };
 
 export const selectTouchContextMenuSuppressUntil = ({ state }) => {
@@ -389,7 +422,7 @@ export const selectPopoverItemId = ({ state }) => {
   return state.popover.itemId;
 };
 
-export const selectViewData = ({ state, props, props: attrs }) => {
+export const selectViewData = ({ state, props, props: attrs, i18n = {} }) => {
   let items = props.items || [];
 
   // Filter items based on collapsed state
@@ -417,6 +450,20 @@ export const selectViewData = ({ state, props, props: attrs }) => {
     getBooleanAttr(attrs, "allowDrag", "allow-drag") ||
     getBooleanAttr(attrs, "draggable", "draggable");
   const touchAction = dragEnabled ? "none" : "pan-y";
+  const showItemMenuActions = getBooleanAttr(
+    attrs,
+    "showItemMenuActions",
+    "show-item-menu-actions",
+  );
+  const contextMenuItems = Array.isArray(props.contextMenuItems)
+    ? props.contextMenuItems
+    : undefined;
+  const folderContextMenuItems = Array.isArray(props.folderContextMenuItems)
+    ? props.folderContextMenuItems
+    : undefined;
+  const itemContextMenuItems = Array.isArray(props.itemContextMenuItems)
+    ? props.itemContextMenuItems
+    : undefined;
 
   // Map items with additional UI properties
   const processedItems = visibleItems.map((item) => {
@@ -466,6 +513,12 @@ export const selectViewData = ({ state, props, props: attrs }) => {
       }
     }
 
+    const resolvedContextMenuItems = Array.isArray(item.contextMenuItems)
+      ? item.contextMenuItems
+      : item.type === "folder"
+        ? (folderContextMenuItems ?? contextMenuItems)
+        : (itemContextMenuItems ?? contextMenuItems);
+
     return {
       ...item,
       ml: item._level * 16,
@@ -478,6 +531,8 @@ export const selectViewData = ({ state, props, props: attrs }) => {
       iconColor: item.iconColor ?? "fg",
       iconCssColor: item.iconCssColor ?? "var(--foreground)",
       textColor: item.textColor ?? "fg",
+      showMenuAction:
+        showItemMenuActions && resolvedContextMenuItems?.length > 0,
     };
   });
 
@@ -544,6 +599,7 @@ export const selectViewData = ({ state, props, props: attrs }) => {
     ),
     noEmptyMessage: getBooleanAttr(attrs, "noEmptyMessage", "no-empty-message"),
     shrinkable: getBooleanAttr(attrs, "shrinkable", "shrinkable"),
+    itemActionsLabel: i18n.resourcePages?.actionsLabel ?? "Actions",
   };
 
   return viewData;

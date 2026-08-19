@@ -44,6 +44,7 @@ export const handleBeforeMount = (deps) => {
   const cleanupSubscriptions = mountSubscriptions(deps);
   return () => {
     clearTouchDragTimer(deps.store);
+    cancelEmptyLongPress(deps.store);
     clearDragAutoScrollTimer(deps.store);
     cleanupSubscriptions();
   };
@@ -86,6 +87,19 @@ const isFileExplorerControlEvent = (event) => {
         event.target.closest("[data-file-explorer-action]"),
     )
   );
+};
+
+const isFileExplorerItemEvent = (event) => {
+  return (
+    typeof event?.target?.closest === "function" &&
+    Boolean(event.target.closest("[data-file-explorer-item='true']"))
+  );
+};
+
+const getEmptyContextMenuItems = (props) => {
+  return Array.isArray(props.emptyContextMenuItems)
+    ? props.emptyContextMenuItems
+    : undefined;
 };
 
 const calculateForbiddenTargets = (sourceItem, allItems) => {
@@ -672,6 +686,21 @@ const clearTouchDragTimer = (store) => {
   store.setTouchDragTimerId({ timerId: undefined });
 };
 
+const clearEmptyLongPressTimer = (store) => {
+  const timerId = store.selectEmptyLongPressTimerId();
+  if (timerId === undefined) {
+    return;
+  }
+
+  clearTimeout(timerId);
+  store.setEmptyLongPressTimerId({ timerId: undefined });
+};
+
+const cancelEmptyLongPress = (store) => {
+  clearEmptyLongPressTimer(store);
+  store.clearEmptyLongPress();
+};
+
 const cancelPendingTouchDrag = (deps) => {
   const { store } = deps;
   clearTouchDragTimer(store);
@@ -805,6 +834,44 @@ const startMobileLongPressTimer = (deps, { point } = {}) => {
   store.setTouchDragTimerId({ timerId });
 };
 
+const startEmptyLongPressTimer = (deps, { point } = {}) => {
+  const { props, render, store } = deps;
+  const emptyContextMenuItems = getEmptyContextMenuItems(props);
+  if (!emptyContextMenuItems?.length) {
+    return false;
+  }
+
+  store.setEmptyLongPressStartPoint({ point });
+
+  const timerId = setTimeout(() => {
+    store.setEmptyLongPressTimerId({ timerId: undefined });
+    store.setSuppressNextClick({ suppress: true });
+    suppressTouchContextMenu(store);
+    store.showDropdownMenuFileExplorerEmpty({
+      position: point,
+      emptyContextMenuItems,
+    });
+    render();
+  }, TOUCH_LONG_PRESS_DELAY_MS);
+
+  store.setEmptyLongPressTimerId({ timerId });
+  return true;
+};
+
+const handleEmptyLongPressPointMove = (store, { point } = {}) => {
+  const startPoint = store.selectEmptyLongPressStartPoint();
+  if (!startPoint) {
+    return false;
+  }
+
+  const distance = Math.hypot(point.x - startPoint.x, point.y - startPoint.y);
+  if (distance > TOUCH_SCROLL_CANCEL_DISTANCE) {
+    cancelEmptyLongPress(store);
+  }
+
+  return true;
+};
+
 const updateDragTarget = (deps, { clientY } = {}) => {
   const { store, render, props } = deps;
 
@@ -890,6 +957,54 @@ export const handleItemMouseDown = (deps, payload) => {
     event,
     clientX: event.clientX,
     clientY: event.clientY,
+  });
+};
+
+export const handleContainerPointerDown = (deps, payload) => {
+  const { store } = deps;
+  const event = payload?._event;
+  if (
+    event?.pointerType === "mouse" ||
+    event?.isPrimary === false ||
+    isFileExplorerItemEvent(event)
+  ) {
+    return;
+  }
+
+  const point = getPointerPoint(event);
+  if (!point) {
+    return;
+  }
+
+  cancelEmptyLongPress(store);
+  if (!startEmptyLongPressTimer(deps, { point })) {
+    return;
+  }
+
+  store.setEmptyLongPressPointerId({ pointerId: event.pointerId });
+};
+
+export const handleContainerTouchStart = (deps, payload) => {
+  const { store } = deps;
+  const event = payload?._event;
+  if (
+    store.selectEmptyLongPressPointerId() !== undefined ||
+    isFileExplorerItemEvent(event)
+  ) {
+    return;
+  }
+
+  const touchPoint = getTouchPoint(event);
+  if (!touchPoint || event?.touches?.length !== 1) {
+    return;
+  }
+
+  cancelEmptyLongPress(store);
+  startEmptyLongPressTimer(deps, {
+    point: {
+      x: touchPoint.clientX,
+      y: touchPoint.clientY,
+    },
   });
 };
 
@@ -1135,8 +1250,22 @@ const handleMobilePointMove = (deps, payload, { point } = {}) => {
 };
 
 export const handleWindowTouchMove = (deps, payload) => {
+  const { store } = deps;
   const touchPoint = getTouchPoint(payload?._event);
   if (!touchPoint) {
+    return;
+  }
+
+  if (
+    store.selectEmptyLongPressStartPoint() !== undefined &&
+    store.selectEmptyLongPressPointerId() === undefined
+  ) {
+    handleEmptyLongPressPointMove(store, {
+      point: {
+        x: touchPoint.clientX,
+        y: touchPoint.clientY,
+      },
+    });
     return;
   }
 
@@ -1151,6 +1280,19 @@ export const handleWindowTouchMove = (deps, payload) => {
 export const handleWindowPointerMove = (deps, payload) => {
   const { store } = deps;
   const event = payload?._event;
+  const emptyLongPressPointerId = store.selectEmptyLongPressPointerId();
+  if (
+    emptyLongPressPointerId !== undefined &&
+    event?.pointerId === emptyLongPressPointerId &&
+    event?.pointerType !== "mouse"
+  ) {
+    const point = getPointerPoint(event);
+    if (point) {
+      handleEmptyLongPressPointMove(store, { point });
+    }
+    return;
+  }
+
   const pointerId = store.selectTouchDragPointerId();
 
   if (
@@ -1216,6 +1358,15 @@ const handleMobilePointEnd = (deps, payload, { point } = {}) => {
 };
 
 export const handleWindowTouchEnd = (deps, payload) => {
+  const { store } = deps;
+  if (
+    store.selectEmptyLongPressStartPoint() !== undefined &&
+    store.selectEmptyLongPressPointerId() === undefined
+  ) {
+    cancelEmptyLongPress(store);
+    return;
+  }
+
   const touchPoint = getTouchPoint(payload?._event);
   handleMobilePointEnd(deps, payload, {
     point: touchPoint
@@ -1230,6 +1381,16 @@ export const handleWindowTouchEnd = (deps, payload) => {
 export const handleWindowPointerUp = (deps, payload) => {
   const { store } = deps;
   const event = payload?._event;
+  const emptyLongPressPointerId = store.selectEmptyLongPressPointerId();
+  if (
+    emptyLongPressPointerId !== undefined &&
+    event?.pointerId === emptyLongPressPointerId &&
+    event?.pointerType !== "mouse"
+  ) {
+    cancelEmptyLongPress(store);
+    return;
+  }
+
   const pointerId = store.selectTouchDragPointerId();
 
   if (
@@ -1247,6 +1408,13 @@ export const handleWindowPointerUp = (deps, payload) => {
 
 export const handleWindowTouchCancel = (deps, payload) => {
   const { store, render } = deps;
+
+  if (store.selectEmptyLongPressStartPoint() !== undefined) {
+    if (store.selectEmptyLongPressPointerId() === undefined) {
+      cancelEmptyLongPress(store);
+    }
+    return;
+  }
 
   payload?._event?.preventDefault?.();
   payload?._event?.stopPropagation?.();
@@ -1269,6 +1437,16 @@ export const handleWindowTouchCancel = (deps, payload) => {
 export const handleWindowPointerCancel = (deps, payload) => {
   const { store } = deps;
   const event = payload?._event;
+  const emptyLongPressPointerId = store.selectEmptyLongPressPointerId();
+  if (
+    emptyLongPressPointerId !== undefined &&
+    event?.pointerId === emptyLongPressPointerId &&
+    event?.pointerType !== "mouse"
+  ) {
+    cancelEmptyLongPress(store);
+    return;
+  }
+
   const pointerId = store.selectTouchDragPointerId();
 
   if (
@@ -1329,6 +1507,13 @@ const subscriptions = (deps) => {
 
 const shouldSuppressTouchContextMenu = (deps, event) => {
   const { store, props: attrs } = deps;
+  if (
+    store.selectEmptyLongPressStartPoint() !== undefined ||
+    store.selectTouchContextMenuSuppressUntil() > Date.now()
+  ) {
+    return true;
+  }
+
   if (!isDragEnabledForAttrs(attrs)) {
     return false;
   }
@@ -1337,8 +1522,7 @@ const shouldSuppressTouchContextMenu = (deps, event) => {
     event?.sourceCapabilities?.firesTouchEvents === true ||
     store.selectTouchDragActive() ||
     store.selectTouchScrollActive() ||
-    store.selectTouchDragStartPoint() !== undefined ||
-    store.selectTouchContextMenuSuppressUntil() > Date.now()
+    store.selectTouchDragStartPoint() !== undefined
   );
 };
 
@@ -1351,11 +1535,7 @@ export const handleContainerClick = (deps, payload) => {
     return;
   }
 
-  const target = payload?._event?.target;
-  if (
-    typeof target?.closest === "function" &&
-    target.closest("[data-file-explorer-item='true']")
-  ) {
+  if (isFileExplorerItemEvent(payload?._event)) {
     return;
   }
 
@@ -1382,9 +1562,7 @@ export const handleContainerContextMenu = (deps, payload) => {
 
   payload._event.preventDefault();
 
-  const emptyContextMenuItems = Array.isArray(props.emptyContextMenuItems)
-    ? props.emptyContextMenuItems
-    : undefined;
+  const emptyContextMenuItems = getEmptyContextMenuItems(props);
   if (!emptyContextMenuItems?.length) {
     return;
   }
@@ -1401,9 +1579,13 @@ export const handleEmptyMessageClick = (deps, payload) => {
   const { store, render, props } = deps;
   payload._event.preventDefault();
 
-  const emptyContextMenuItems = Array.isArray(props.emptyContextMenuItems)
-    ? props.emptyContextMenuItems
-    : undefined;
+  if (store.selectSuppressNextClick()) {
+    payload._event.stopPropagation();
+    store.setSuppressNextClick({ suppress: false });
+    return;
+  }
+
+  const emptyContextMenuItems = getEmptyContextMenuItems(props);
   if (!emptyContextMenuItems?.length) {
     return;
   }
@@ -1417,8 +1599,61 @@ export const handleEmptyMessageClick = (deps, payload) => {
   render();
 };
 
+const openItemDropdownMenu = (
+  deps,
+  { itemId, position, emitSelectionEvent = true, hideDeleteIcon = false } = {},
+) => {
+  const { dispatchEvent, props, render, store } = deps;
+  const item = props.items?.find((entry) => entry.id === itemId);
+  if (!item) {
+    return;
+  }
+
+  const contextMenuItems = Array.isArray(props.contextMenuItems)
+    ? props.contextMenuItems
+    : undefined;
+  const folderContextMenuItems = Array.isArray(props.folderContextMenuItems)
+    ? props.folderContextMenuItems
+    : undefined;
+  const itemContextMenuItems = Array.isArray(props.itemContextMenuItems)
+    ? props.itemContextMenuItems
+    : undefined;
+  const resolvedContextMenuItems = Array.isArray(item.contextMenuItems)
+    ? item.contextMenuItems
+    : item.type === "folder"
+      ? (folderContextMenuItems ?? contextMenuItems)
+      : (itemContextMenuItems ?? contextMenuItems);
+  if (!resolvedContextMenuItems?.length) {
+    return;
+  }
+
+  const dropdownMenuItems = hideDeleteIcon
+    ? resolvedContextMenuItems.map((menuItem) => {
+        if (menuItem.value !== "delete-item" || menuItem.icon === undefined) {
+          return menuItem;
+        }
+
+        const itemWithoutDeleteIcon = { ...menuItem };
+        delete itemWithoutDeleteIcon.icon;
+        return itemWithoutDeleteIcon;
+      })
+    : resolvedContextMenuItems;
+
+  store.showDropdownMenuFileExplorerItem({
+    position,
+    id: itemId,
+    type: item.type,
+    contextMenuItems: dropdownMenuItems,
+  });
+  store.clearPendingDrag();
+  store.setSelectedItemId({ itemId });
+  render();
+  if (emitSelectionEvent) {
+    emitItemClick({ dispatchEvent, item });
+  }
+};
+
 export const handleItemContextMenu = (deps, payload) => {
-  const { store, render, props } = deps;
   payload._event.preventDefault();
   payload._event.stopPropagation();
 
@@ -1431,39 +1666,32 @@ export const handleItemContextMenu = (deps, payload) => {
     return;
   }
 
-  // Find the item to get its type
-  const item = props.items?.find((item) => item.id === itemId);
-  const contextMenuItems = Array.isArray(props.contextMenuItems)
-    ? props.contextMenuItems
-    : undefined;
-  const folderContextMenuItems = Array.isArray(props.folderContextMenuItems)
-    ? props.folderContextMenuItems
-    : undefined;
-  const itemContextMenuItems = Array.isArray(props.itemContextMenuItems)
-    ? props.itemContextMenuItems
-    : undefined;
-  const resolvedContextMenuItems = Array.isArray(item?.contextMenuItems)
-    ? item.contextMenuItems
-    : item?.type === "folder"
-      ? (folderContextMenuItems ?? contextMenuItems)
-      : (itemContextMenuItems ?? contextMenuItems);
-  if (!resolvedContextMenuItems?.length) {
+  openItemDropdownMenu(deps, {
+    position: { x: payload._event.clientX, y: payload._event.clientY },
+    itemId,
+  });
+};
+
+export const handleItemMenuClick = (deps, payload) => {
+  const event = payload._event;
+  event.preventDefault();
+  event.stopPropagation();
+
+  const itemId = getItemIdFromEvent(event);
+  if (!itemId) {
     return;
   }
 
-  // Show dropdown menu for item
-  store.showDropdownMenuFileExplorerItem({
-    position: { x: payload._event.clientX, y: payload._event.clientY },
-    id: itemId,
-    type: item?.type,
-    contextMenuItems: resolvedContextMenuItems,
-    folderContextMenuItems,
-    itemContextMenuItems,
+  const rect = event.currentTarget.getBoundingClientRect();
+  openItemDropdownMenu(deps, {
+    itemId,
+    emitSelectionEvent: false,
+    hideDeleteIcon: true,
+    position: {
+      x: Math.round(rect.right),
+      y: Math.round(rect.bottom),
+    },
   });
-  store.clearPendingDrag();
-  store.setSelectedItemId({ itemId });
-  render();
-  emitItemClick({ dispatchEvent: deps.dispatchEvent, item });
 };
 
 export const handleItemClick = (deps, payload) => {
@@ -1714,6 +1942,7 @@ export const handleSetFolderCollapsed = (deps, payload) => {
 
 export const handleDropdownMenuClickOverlay = (deps) => {
   const { store, render } = deps;
+  store.setSuppressNextClick({ suppress: false });
   store.hideDropdownMenu();
   render();
 };
@@ -1730,6 +1959,7 @@ export const handleDropdownMenuClickItem = (deps, payload) => {
   const position = store.selectDropdownMenuPosition();
 
   // Hide dropdown
+  store.setSuppressNextClick({ suppress: false });
   store.hideDropdownMenu();
   render();
 

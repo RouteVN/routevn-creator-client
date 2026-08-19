@@ -479,6 +479,7 @@ webServerPage:
   urlLabel: "URL"
   warningTitle: "警告"
 resourcePages:
+  actionsLabel: "アクション"
   addTagOption: "タグを追加"
   addTagPlaceholder: "タグを追加"
   addText: "追加"

@@ -2,12 +2,18 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import {
   handleClearSelection,
   handleContainerClick,
+  handleContainerContextMenu,
+  handleContainerPointerDown,
+  handleContainerTouchStart,
+  handleDropdownMenuClickOverlay,
   handleItemContextMenu,
+  handleItemMenuClick,
   handleItemPointerDown,
   handleItemTouchStart,
   handleVisibilityToggleClick,
   handleNavigateSelection,
   handleWindowMouseUp,
+  handleWindowPointerCancel,
   handleWindowPointerMove,
   handleWindowPointerUp,
   handleWindowTouchCancel,
@@ -104,9 +110,14 @@ const createTouchEvent = ({
   };
 };
 
-const createContextMenuEvent = ({ currentTarget, firesTouchEvents } = {}) => {
+const createContextMenuEvent = ({
+  currentTarget,
+  target = currentTarget,
+  firesTouchEvents,
+} = {}) => {
   return {
     currentTarget,
+    target,
     clientX: 10,
     clientY: 16,
     preventDefault: vi.fn(),
@@ -129,6 +140,7 @@ const createDragDeps = ({ itemCount = 4, rootHeight = 128 } = {}) => {
     items,
     allowDrag: true,
     contextMenuItems: [{ label: "Rename", value: "rename-item" }],
+    emptyContextMenuItems: [{ label: "New Folder", value: "new-item" }],
   };
   const state = baseFileExplorerStore.createInitialState();
   const store = createBoundStore({ state, props });
@@ -310,6 +322,163 @@ describe("baseFileExplorer handlers", () => {
     expect(deps.dispatchEvent).not.toHaveBeenCalled();
   });
 
+  it("opens the empty-space menu after a stationary pointer long press", () => {
+    vi.useFakeTimers();
+    const { deps, state } = createDragDeps();
+    const event = createPointerEvent({
+      currentTarget: deps.refs.root,
+      x: 24,
+      y: 112,
+      pointerId: 7,
+    });
+
+    handleContainerPointerDown(deps, { _event: event });
+    vi.advanceTimersByTime(359);
+
+    expect(state.dropdownMenu.isOpen).toBe(false);
+
+    vi.advanceTimersByTime(1);
+
+    expect(state.dropdownMenu).toEqual({
+      isOpen: true,
+      position: { x: 24, y: 112 },
+      itemId: null,
+      items: [{ label: "New Folder", value: "new-item" }],
+    });
+    expect(deps.store.selectSuppressNextClick()).toBe(true);
+    expect(deps.render).toHaveBeenCalledTimes(1);
+
+    const contextMenuEvent = createContextMenuEvent({
+      currentTarget: deps.refs.root,
+      target: { closest: vi.fn(() => undefined) },
+      firesTouchEvents: true,
+    });
+    handleContainerContextMenu(deps, { _event: contextMenuEvent });
+
+    expect(contextMenuEvent.preventDefault).toHaveBeenCalledTimes(1);
+    expect(contextMenuEvent.stopPropagation).toHaveBeenCalledTimes(1);
+    expect(deps.render).toHaveBeenCalledTimes(1);
+
+    handleWindowPointerUp(deps, {
+      _event: createPointerEvent({
+        currentTarget: deps.refs.root,
+        x: 24,
+        y: 112,
+        pointerId: 7,
+      }),
+    });
+
+    expect(deps.store.selectEmptyLongPressStartPoint()).toBeUndefined();
+    expect(deps.store.selectEmptyLongPressPointerId()).toBeUndefined();
+
+    handleDropdownMenuClickOverlay(deps);
+
+    expect(deps.store.selectSuppressNextClick()).toBe(false);
+  });
+
+  it("cancels an empty-space long press when touch movement becomes a scroll", () => {
+    vi.useFakeTimers();
+    const { deps, state } = createDragDeps();
+    handleContainerPointerDown(deps, {
+      _event: createPointerEvent({
+        currentTarget: deps.refs.root,
+        x: 24,
+        y: 80,
+        pointerId: 7,
+      }),
+    });
+    const moveEvent = createPointerEvent({
+      currentTarget: deps.refs.root,
+      x: 24,
+      y: 89,
+      pointerId: 7,
+    });
+
+    handleWindowPointerMove(deps, { _event: moveEvent });
+    vi.advanceTimersByTime(400);
+
+    expect(state.dropdownMenu.isOpen).toBe(false);
+    expect(deps.store.selectEmptyLongPressStartPoint()).toBeUndefined();
+    expect(moveEvent.preventDefault).not.toHaveBeenCalled();
+    expect(moveEvent.stopPropagation).not.toHaveBeenCalled();
+  });
+
+  it("ignores container long-press handling when the touch starts on an item", () => {
+    vi.useFakeTimers();
+    const { deps, state } = createDragDeps();
+    const itemTarget = {
+      closest: (selector) =>
+        selector === "[data-file-explorer-item='true']" ? {} : undefined,
+    };
+
+    handleContainerPointerDown(deps, {
+      _event: createPointerEvent({
+        currentTarget: deps.refs.root,
+        target: itemTarget,
+        x: 24,
+        y: 16,
+      }),
+    });
+    vi.advanceTimersByTime(400);
+
+    expect(state.dropdownMenu.isOpen).toBe(false);
+    expect(deps.store.selectEmptyLongPressTimerId()).toBeUndefined();
+  });
+
+  it("supports the touch-event fallback for empty-space long press", () => {
+    vi.useFakeTimers();
+    const { deps, state } = createDragDeps();
+    handleContainerTouchStart(deps, {
+      _event: createTouchEvent({
+        currentTarget: deps.refs.root,
+        x: 30,
+        y: 100,
+      }),
+    });
+
+    vi.advanceTimersByTime(360);
+
+    expect(state.dropdownMenu.isOpen).toBe(true);
+    expect(state.dropdownMenu.position).toEqual({ x: 30, y: 100 });
+
+    handleWindowTouchEnd(deps, {
+      _event: createTouchEvent({
+        currentTarget: deps.refs.root,
+        x: 30,
+        y: 100,
+        ended: true,
+      }),
+    });
+
+    expect(deps.store.selectEmptyLongPressStartPoint()).toBeUndefined();
+  });
+
+  it("cancels a pointer-backed empty long press when the pointer is cancelled", () => {
+    vi.useFakeTimers();
+    const { deps, state } = createDragDeps();
+    handleContainerPointerDown(deps, {
+      _event: createPointerEvent({
+        currentTarget: deps.refs.root,
+        x: 24,
+        y: 80,
+        pointerId: 7,
+      }),
+    });
+
+    handleWindowPointerCancel(deps, {
+      _event: createPointerEvent({
+        currentTarget: deps.refs.root,
+        x: 24,
+        y: 80,
+        pointerId: 7,
+      }),
+    });
+    vi.advanceTimersByTime(400);
+
+    expect(state.dropdownMenu.isOpen).toBe(false);
+    expect(deps.store.selectEmptyLongPressStartPoint()).toBeUndefined();
+  });
+
   it("emits visibility changes without selecting or dragging the row", () => {
     const { deps } = createDragDeps({ itemCount: 1 });
     deps.props.items[0].visibilityToggle = true;
@@ -352,6 +521,53 @@ describe("baseFileExplorer handlers", () => {
         }),
       }),
     );
+  });
+
+  it("opens the item context menu from the trailing action button without dragging or navigating", () => {
+    const { deps, state } = createDragDeps({ itemCount: 1 });
+    deps.props.contextMenuItems = [
+      { label: "Rename", value: "rename-item" },
+      { label: "Delete", icon: "trash", value: "delete-item" },
+    ];
+    const actionTarget = {
+      closest: (selector) =>
+        selector === "[data-file-explorer-action]" ? actionTarget : undefined,
+    };
+    const currentTarget = {
+      getAttribute: (name) => (name === "data-item-id" ? "item-1" : undefined),
+      getBoundingClientRect: () => ({ right: 312.4, bottom: 84.6 }),
+    };
+    const event = {
+      currentTarget,
+      target: actionTarget,
+      preventDefault: vi.fn(),
+      stopPropagation: vi.fn(),
+    };
+
+    handleItemPointerDown(deps, {
+      _event: createPointerEvent({
+        currentTarget: deps.refs.itemRef0,
+        target: actionTarget,
+        x: 300,
+        y: 72,
+      }),
+    });
+    handleItemMenuClick(deps, { _event: event });
+
+    expect(deps.store.selectPendingDrag()).toBeNull();
+    expect(event.preventDefault).toHaveBeenCalledOnce();
+    expect(event.stopPropagation).toHaveBeenCalledOnce();
+    expect(state.dropdownMenu).toEqual({
+      isOpen: true,
+      position: { x: 312, y: 85 },
+      itemId: "item-1",
+      items: [
+        { label: "Rename", value: "rename-item" },
+        { label: "Delete", value: "delete-item" },
+      ],
+    });
+    expect(deps.store.selectSelectedItemId()).toBe("item-1");
+    expect(deps.dispatchEvent).not.toHaveBeenCalled();
   });
 
   it("jumps selection by distance and clamps to the visible list bounds", () => {
@@ -845,7 +1061,10 @@ describe("baseFileExplorer handlers", () => {
     expect(touchContextMenuEvent.stopPropagation).toHaveBeenCalled();
     expect(deps.store.selectDropdownMenuItemId()).toBeNull();
 
-    const { deps: desktopDeps } = createDragDeps();
+    const { deps: desktopDeps, state: desktopState } = createDragDeps();
+    desktopDeps.props.contextMenuItems = [
+      { label: "Delete", icon: "trash", value: "delete-item" },
+    ];
     const mouseContextMenuEvent = createContextMenuEvent({
       currentTarget: desktopDeps.refs.itemRef0,
     });
@@ -854,6 +1073,9 @@ describe("baseFileExplorer handlers", () => {
 
     expect(desktopDeps.store.selectDropdownMenuItemId()).toBe("item-1");
     expect(desktopDeps.store.selectSelectedItemId()).toBe("item-1");
+    expect(desktopState.dropdownMenu.items).toEqual([
+      { label: "Delete", icon: "trash", value: "delete-item" },
+    ]);
     expect(desktopDeps.dispatchEvent).toHaveBeenCalledWith(
       expect.objectContaining({
         type: "item-click",

@@ -8,6 +8,11 @@ const mobileFileExplorerPages = [
     "$if showMobileFileExplorer",
   ],
   [
+    "audio effects",
+    "audioEffects/audioEffects.view.yaml",
+    "$if showMobileFileExplorer",
+  ],
+  [
     "character sprites",
     "characterSprites/characterSprites.view.yaml",
     "$if showMobileFileExplorer",
@@ -28,6 +33,7 @@ const mobileFileExplorerPages = [
   ],
   ["layouts", "layouts/layouts.view.yaml", "$if showMobileFileExplorer"],
   ["particles", "particles/particles.view.yaml", "$if showMobileFileExplorer"],
+  ["scenes", "scenes/scenes.view.yaml", "$if showMobileFileExplorer"],
   ["sounds", "sounds/sounds.view.yaml", "$if showMobileFileExplorer"],
   [
     "spritesheets",
@@ -87,6 +93,27 @@ describe("mobile file explorer navbar", () => {
       expect(view).not.toContain(
         "rtgl-view h=56 w=f d=h av=c ph=md bgc=bg bwb=xs g=md",
       );
+    },
+  );
+
+  it.each(mobileFileExplorerPages)(
+    "exposes the empty-space menu in the mobile explorer for %s",
+    (_name, relativePath, explorerCondition) => {
+      const view = readFileSync(
+        new URL(`../../src/pages/${relativePath}`, import.meta.url),
+        "utf8",
+      );
+      const mobileBranch = view.slice(view.indexOf(explorerCondition));
+      const explorerLine = mobileBranch
+        .split("\n")
+        .find((line) => line.includes("rvn-base-file-explorer#file"));
+
+      expect(explorerLine).toContain("dropdown-menu");
+      expect(explorerLine).toContain("show-item-menu-actions");
+      expect(explorerLine).toContain(
+        ":emptyContextMenuItems=${emptyContextMenuItems}",
+      );
+      expect(view.match(/show-item-menu-actions/g)).toHaveLength(1);
     },
   );
 });
