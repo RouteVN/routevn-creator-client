@@ -298,8 +298,10 @@ describe("vnPreview.handlers", () => {
       },
       graphicsService: {
         destroy: vi.fn(),
+        getCanvas: vi.fn(),
       },
       store: {
+        selectIsPreviewRotated: vi.fn(() => false),
         setUiConfig: vi.fn(),
         setAssetLoading: vi.fn(),
         setPreviewReady: vi.fn(),
@@ -428,8 +430,82 @@ describe("vnPreview.handlers", () => {
       expect.any(Function),
       true,
     );
-    expect(addEventListener).toHaveBeenCalledTimes(2);
-    expect(removeEventListener).toHaveBeenCalledTimes(2);
+    [
+      "pointerdown",
+      "pointermove",
+      "pointerup",
+      "pointerover",
+      "pointerout",
+      "pointerleave",
+      "pointercancel",
+    ].forEach((eventType) => {
+      expect(addEventListener).toHaveBeenCalledWith(
+        eventType,
+        expect.any(Function),
+        true,
+      );
+      expect(removeEventListener).toHaveBeenCalledWith(
+        eventType,
+        expect.any(Function),
+        true,
+      );
+    });
+    expect(addEventListener).toHaveBeenCalledTimes(9);
+    expect(removeEventListener).toHaveBeenCalledTimes(9);
+  });
+
+  it("maps rotated pointer events back to the scene coordinate axes", async () => {
+    const { handleBeforeMount } = await import(
+      "../../src/components/vnPreview/vnPreview.handlers.js"
+    );
+    const listeners = {};
+    vi.stubGlobal("window", {
+      addEventListener: vi.fn((eventName, listener) => {
+        listeners[eventName] = listener;
+      }),
+      removeEventListener: vi.fn(),
+    });
+
+    const deps = {
+      dispatchEvent: vi.fn(),
+      refs: {},
+      graphicsService: {
+        destroy: vi.fn(),
+        getCanvas: vi.fn(() => ({
+          getBoundingClientRect: () => ({
+            left: 100,
+            top: 50,
+            width: 360,
+            height: 640,
+          }),
+        })),
+      },
+      store: {
+        selectIsPreviewRotated: vi.fn(() => true),
+        setUiConfig: vi.fn(),
+        setAssetLoading: vi.fn(),
+        setPreviewReady: vi.fn(),
+        resetAssetLoadCache: vi.fn(),
+      },
+      uiConfig: {
+        inputMode: "touch",
+      },
+    };
+    const cleanup = handleBeforeMount(deps);
+    const event = {
+      clientX: 460,
+      clientY: 50,
+    };
+
+    listeners.pointerdown(event);
+
+    expect(event).toMatchObject({
+      clientX: 100,
+      clientY: 50,
+    });
+    expect(deps.graphicsService.getCanvas).toHaveBeenCalledOnce();
+
+    cleanup();
   });
 
   it("toggles rotation without forwarding the control click to the preview", async () => {

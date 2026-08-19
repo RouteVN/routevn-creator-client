@@ -133,6 +133,8 @@ export const togglePreviewRotation = ({ state }, _payload = {}) => {
   state.isRotated = !state.isRotated;
 };
 
+export const selectIsPreviewRotated = ({ state }) => state.isRotated;
+
 export const setAssetLoading = ({ state }, { isLoading } = {}) => {
   state.isAssetLoading = isLoading;
 };

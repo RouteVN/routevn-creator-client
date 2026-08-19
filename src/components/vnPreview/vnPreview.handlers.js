@@ -19,11 +19,21 @@ import {
   resolveSceneIdForSectionId,
   withPreviewEntryPoint,
 } from "./support/vnPreviewProjectData.js";
+import { remapRotatedPreviewPointerEvent } from "./support/vnPreviewPointerCoordinates.js";
 import { selectSceneEditorCopy } from "../../internal/ui/sceneEditor/sceneEditorCopy.js";
 
 const FORWARDED_PREVIEW_KEY_EVENT = "__rvnForwardedPreviewKeyEvent";
 const PREVIEW_FORWARDED_KEYS = new Set(["Enter"]);
 const PREVIEW_LEGACY_KEY_CODE_BY_KEY = new Map([["Enter", 13]]);
+const PREVIEW_POINTER_EVENT_TYPES = [
+  "pointerdown",
+  "pointermove",
+  "pointerup",
+  "pointerover",
+  "pointerout",
+  "pointerleave",
+  "pointercancel",
+];
 
 const focusPreviewSurface = (refs) => {
   const previewSurface = refs?.previewSurface;
@@ -613,6 +623,16 @@ export const handleBeforeMount = (deps) => {
     }
   }
 
+  function handlePreviewPointerEvent(event) {
+    if (!store.selectIsPreviewRotated()) {
+      return;
+    }
+
+    const canvas = graphicsService.getCanvas?.();
+    const canvasRect = canvas?.getBoundingClientRect?.();
+    remapRotatedPreviewPointerEvent(event, canvasRect);
+  }
+
   const nativeBackSubscription = subject
     ?.pipe(
       filter(({ action }) => action === "app.nativeBack"),
@@ -625,6 +645,9 @@ export const handleBeforeMount = (deps) => {
 
   window.addEventListener("keydown", handleKeyDown, true);
   window.addEventListener("keyup", handleKeyUp, true);
+  PREVIEW_POINTER_EVENT_TYPES.forEach((eventType) => {
+    window.addEventListener(eventType, handlePreviewPointerEvent, true);
+  });
 
   return () => {
     store.setAssetLoading({ isLoading: false });
@@ -634,6 +657,9 @@ export const handleBeforeMount = (deps) => {
     nativeBackSubscription?.unsubscribe();
     window.removeEventListener("keydown", handleKeyDown, true);
     window.removeEventListener("keyup", handleKeyUp, true);
+    PREVIEW_POINTER_EVENT_TYPES.forEach((eventType) => {
+      window.removeEventListener(eventType, handlePreviewPointerEvent, true);
+    });
   };
 };
 
