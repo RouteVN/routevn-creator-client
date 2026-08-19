@@ -44,6 +44,8 @@ propsSchema:
             type: string
           variableType:
             type: string
+    compactPreviews:
+      type: boolean
 methods:
   type: object
   properties:

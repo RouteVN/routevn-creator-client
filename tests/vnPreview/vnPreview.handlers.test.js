@@ -300,13 +300,21 @@ describe("vnPreview.handlers", () => {
         destroy: vi.fn(),
       },
       store: {
+        setUiConfig: vi.fn(),
         setAssetLoading: vi.fn(),
         setPreviewReady: vi.fn(),
         resetAssetLoadCache: vi.fn(),
       },
+      uiConfig: {
+        inputMode: "touch",
+      },
     };
 
     const cleanup = handleBeforeMount(deps);
+
+    expect(deps.store.setUiConfig).toHaveBeenCalledWith({
+      uiConfig: deps.uiConfig,
+    });
 
     const enterEvent = {
       type: "keydown",
@@ -422,5 +430,36 @@ describe("vnPreview.handlers", () => {
     );
     expect(addEventListener).toHaveBeenCalledTimes(2);
     expect(removeEventListener).toHaveBeenCalledTimes(2);
+  });
+
+  it("toggles rotation without forwarding the control click to the preview", async () => {
+    const { handleRotatePreview } = await import(
+      "../../src/components/vnPreview/vnPreview.handlers.js"
+    );
+    const event = {
+      preventDefault: vi.fn(),
+      stopPropagation: vi.fn(),
+    };
+    const deps = {
+      refs: {
+        previewSurface: {
+          focus: vi.fn(),
+        },
+      },
+      render: vi.fn(),
+      store: {
+        togglePreviewRotation: vi.fn(),
+      },
+    };
+
+    handleRotatePreview(deps, { _event: event });
+
+    expect(event.preventDefault).toHaveBeenCalledTimes(1);
+    expect(event.stopPropagation).toHaveBeenCalledTimes(1);
+    expect(deps.store.togglePreviewRotation).toHaveBeenCalledTimes(1);
+    expect(deps.render).toHaveBeenCalledTimes(1);
+    expect(deps.refs.previewSurface.focus).toHaveBeenCalledWith({
+      preventScroll: true,
+    });
   });
 });

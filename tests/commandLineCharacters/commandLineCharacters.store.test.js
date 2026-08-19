@@ -11,6 +11,7 @@ import {
   setExistingCharacters,
   setItems,
   setMode,
+  setUiConfig,
   setSelectedCharacterIndex,
   setSelectedSpriteGroupId,
   setTransforms,
@@ -922,5 +923,37 @@ describe("commandLineCharacters.store custom transforms", () => {
         { label: "Scale", value: "1.25 x 1.25" },
       ]),
     });
+  });
+});
+
+describe("commandLineCharacters.store mobile resource selectors", () => {
+  it("hides explorers and exposes a two-column card grid in touch mode", () => {
+    const state = createInitialState();
+    setUiConfig({ state }, { uiConfig: { inputMode: "touch" } });
+
+    const viewData = selectViewData({ state, i18n: EN_I18N });
+
+    expect(viewData.showResourceSelectorFileExplorer).toBe(false);
+    expect(viewData.resourceSelectorGridStyle).toContain(
+      "grid-template-columns: repeat(2, minmax(0, 1fr))",
+    );
+    expect(viewData.resourceSelectorItemStyle).toContain("width: 100%");
+    expect(viewData.resourceSelectorCardStyle).toContain("width: 100%");
+    expect(viewData.characterSelectorPreviewStyle).toContain(
+      "aspect-ratio: 5 / 3",
+    );
+  });
+
+  it("keeps the explorer and desktop card size outside touch mode", () => {
+    const viewData = selectViewData({
+      state: createInitialState(),
+      i18n: EN_I18N,
+    });
+
+    expect(viewData.showResourceSelectorFileExplorer).toBe(true);
+    expect(viewData.resourceSelectorGridStyle).toBe("");
+    expect(viewData.characterSelectorPreviewStyle).toBe(
+      "width: 200px; height: 120px;",
+    );
   });
 });

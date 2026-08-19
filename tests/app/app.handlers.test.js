@@ -5,10 +5,82 @@ import Subject from "../../src/deps/subject.js";
 import {
   createRouteTransitionRunner,
   handleBeforeMount,
+  handleMobileTabLostPointerCapture,
+  handleMobileTabPointerCancel,
+  handleMobileTabPointerDown,
+  handleMobileTabPointerUp,
   handleSceneEditorKeyboardStateChange,
   handleWindowPop,
   maybePromptLinuxAppImageDesktopIntegration,
 } from "../../src/pages/app/app.handlers.js";
+
+describe("app mobile tab press feedback", () => {
+  const createDeps = () => {
+    let pressedMobileTabId;
+
+    return {
+      appService: {
+        recordInteractionTiming: vi.fn(),
+      },
+      render: vi.fn(),
+      store: {
+        clearPressedMobileTabId: vi.fn(() => {
+          pressedMobileTabId = undefined;
+        }),
+        selectPressedMobileTabId: vi.fn(() => pressedMobileTabId),
+        setPressedMobileTabId: vi.fn(({ tabId }) => {
+          pressedMobileTabId = tabId;
+        }),
+      },
+    };
+  };
+
+  const createPointerEvent = () => ({
+    currentTarget: {
+      dataset: { tabId: "release" },
+      releasePointerCapture: vi.fn(),
+      setPointerCapture: vi.fn(),
+    },
+    pointerId: 7,
+    timeStamp: 10,
+  });
+
+  it("shows feedback on pointer down and clears it on pointer up", () => {
+    const deps = createDeps();
+    const event = createPointerEvent();
+
+    handleMobileTabPointerDown(deps, { _event: event });
+
+    expect(event.currentTarget.setPointerCapture).toHaveBeenCalledWith(7);
+    expect(deps.store.setPressedMobileTabId).toHaveBeenCalledWith({
+      tabId: "release",
+    });
+    expect(deps.render).toHaveBeenCalledTimes(1);
+
+    handleMobileTabPointerUp(deps, { _event: event });
+
+    expect(event.currentTarget.releasePointerCapture).toHaveBeenCalledWith(7);
+    expect(deps.store.clearPressedMobileTabId).toHaveBeenCalledOnce();
+    expect(deps.render).toHaveBeenCalledTimes(2);
+  });
+
+  it("clears feedback when the pointer is cancelled or capture is lost", () => {
+    const deps = createDeps();
+    const event = createPointerEvent();
+
+    handleMobileTabPointerDown(deps, { _event: event });
+    handleMobileTabPointerCancel(deps, { _event: event });
+
+    expect(deps.store.clearPressedMobileTabId).toHaveBeenCalledOnce();
+    expect(deps.render).toHaveBeenCalledTimes(2);
+
+    handleMobileTabPointerDown(deps, { _event: event });
+    handleMobileTabLostPointerCapture(deps);
+
+    expect(deps.store.clearPressedMobileTabId).toHaveBeenCalledTimes(2);
+    expect(deps.render).toHaveBeenCalledTimes(4);
+  });
+});
 
 describe("app Scene Editor keyboard state", () => {
   it("updates the app shell when the Scene Editor keyboard changes", () => {

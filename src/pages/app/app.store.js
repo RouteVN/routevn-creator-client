@@ -5,6 +5,7 @@ export const createInitialState = () => ({
   isTouchMode: false,
   isMobileSheetOpen: false,
   mobileSheetVariant: undefined,
+  pressedMobileTabId: undefined,
   isSceneEditorKeyboardVisible: false,
   isRepositoryLoading: false,
   repositoryLoadingPhase: "",
@@ -20,6 +21,8 @@ const HELP_BUTTON_IOS_EXTRA_BOTTOM_OFFSET_PX = 36;
 const SCENE_EDITOR_ANDROID_HELP_BUTTON_EXTRA_BOTTOM_OFFSET_PX = 48;
 const MOBILE_TAB_BAR_ACTIVE_COLOR = "white";
 const MOBILE_TAB_BAR_INACTIVE_COLOR = "mu-fg";
+const MOBILE_TAB_BAR_PRESSED_BACKGROUND_COLOR = "ac";
+const MOBILE_TAB_BAR_BACKGROUND_COLOR = "bg";
 
 const routesWithoutNavbar = ["/projects", "/authenticate"];
 const routesWithoutMobileTabBar = [];
@@ -165,8 +168,9 @@ const selectMobileTabBarItems = ({ state, i18n }) => {
   const activeMobileTabId = selectActiveMobileTabId({ state });
   const copy = selectAppCopy(i18n);
   return mobileTabBarItems.map((item) => {
+    const isPressed = item.id === state.pressedMobileTabId;
     const color =
-      item.id === activeMobileTabId
+      item.id === activeMobileTabId || isPressed
         ? MOBILE_TAB_BAR_ACTIVE_COLOR
         : MOBILE_TAB_BAR_INACTIVE_COLOR;
 
@@ -175,6 +179,9 @@ const selectMobileTabBarItems = ({ state, i18n }) => {
       icon: item.icon,
       label: copy[item.labelKey] ?? item.id,
       color,
+      backgroundColor: isPressed
+        ? MOBILE_TAB_BAR_PRESSED_BACKGROUND_COLOR
+        : MOBILE_TAB_BAR_BACKGROUND_COLOR,
     };
   });
 };
@@ -217,6 +224,18 @@ export const openMobileSheet = ({ state }, { variant } = {}) => {
 export const closeMobileSheet = ({ state }, _payload = {}) => {
   state.isMobileSheetOpen = false;
   state.mobileSheetVariant = undefined;
+};
+
+export const setPressedMobileTabId = ({ state }, { tabId } = {}) => {
+  state.pressedMobileTabId = tabId;
+};
+
+export const clearPressedMobileTabId = ({ state }) => {
+  state.pressedMobileTabId = undefined;
+};
+
+export const selectPressedMobileTabId = ({ state }) => {
+  return state.pressedMobileTabId;
 };
 
 export const setRepositoryLoading = ({ state }, { isLoading } = {}) => {

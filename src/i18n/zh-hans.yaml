@@ -742,6 +742,9 @@ actionTransformEditor:
   title: "变换"
   unnamedTarget: "当前项目"
   visualTarget: "视觉元素"
+vnPreview:
+  restoreOrientationButton: "恢复预览方向"
+  rotateButton: "将预览旋转 90 度"
 animationEditorPage:
   absoluteValueType: "绝对值"
   addAnimationPropertyTitle: "添加动画属性"

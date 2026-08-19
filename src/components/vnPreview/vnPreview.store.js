@@ -3,6 +3,7 @@ import {
   formatProjectResolutionAspectRatio,
   requireProjectResolution,
 } from "../../internal/projectResolution.js";
+import { isTouchUiConfig } from "../../internal/ui/resourcePages/mobileResourcePage.js";
 
 const createEmptyAssetLoadCache = () => ({
   sceneIds: [],
@@ -27,7 +28,11 @@ const createViewportSize = () => ({
 
 const formatCssPixels = (value) => `${Math.round(value * 100) / 100}px`;
 
-const createPreviewFrameStyle = ({ projectResolution, viewportSize }) => {
+const createPreviewLayout = ({
+  isRotated,
+  projectResolution,
+  viewportSize,
+}) => {
   const projectWidth =
     toPositiveDimension(projectResolution?.width) ??
     DEFAULT_PROJECT_RESOLUTION.width;
@@ -40,24 +45,42 @@ const createPreviewFrameStyle = ({ projectResolution, viewportSize }) => {
   const viewportHeight =
     toPositiveDimension(viewportSize?.height) ??
     DEFAULT_PROJECT_RESOLUTION.height;
+  const availableWidth = isRotated ? viewportHeight : viewportWidth;
+  const availableHeight = isRotated ? viewportWidth : viewportHeight;
   const scale = Math.min(
-    viewportWidth / projectWidth,
-    viewportHeight / projectHeight,
+    availableWidth / projectWidth,
+    availableHeight / projectHeight,
   );
   const width = projectWidth * scale;
   const height = projectHeight * scale;
+  const stageWidth = isRotated ? height : width;
+  const stageHeight = isRotated ? width : height;
 
-  return [
-    "flex: 0 0 auto",
+  const previewStageStyle = [
     "position: relative",
+    "flex: 0 0 auto",
+    `width: ${formatCssPixels(stageWidth)}`,
+    `height: ${formatCssPixels(stageHeight)}`,
+    "max-width: 100vw",
+    "max-height: 100vh",
+  ].join("; ");
+  const previewFrameStyle = [
+    "position: absolute",
+    "left: 50%",
+    "top: 50%",
     `aspect-ratio: ${projectWidth} / ${projectHeight}`,
     `width: ${formatCssPixels(width)}`,
     `height: ${formatCssPixels(height)}`,
-    "max-width: 100vw",
-    "max-height: 100vh",
+    `transform: translate(-50%, -50%) rotate(${isRotated ? 90 : 0}deg)`,
+    "transform-origin: center",
     "overflow: hidden",
     "background: #000",
   ].join("; ");
+
+  return {
+    previewFrameStyle,
+    previewStageStyle,
+  };
 };
 
 const readAssetLoadCache = (state) => {
@@ -95,10 +118,20 @@ const ensureAssetLoadCache = (state) => {
 export const createInitialState = () => ({
   isAssetLoading: false,
   isPreviewReady: false,
+  isRotated: false,
+  isTouchMode: false,
   assetLoadCache: createEmptyAssetLoadCache(),
   projectResolution: DEFAULT_PROJECT_RESOLUTION,
   viewportSize: createViewportSize(),
 });
+
+export const setUiConfig = ({ state }, { uiConfig } = {}) => {
+  state.isTouchMode = isTouchUiConfig(uiConfig);
+};
+
+export const togglePreviewRotation = ({ state }, _payload = {}) => {
+  state.isRotated = !state.isRotated;
+};
 
 export const setAssetLoading = ({ state }, { isLoading } = {}) => {
   state.isAssetLoading = isLoading;
@@ -159,7 +192,14 @@ export const markAssetSceneIdsLoaded = ({ state }, { sceneIds } = {}) => {
   }
 };
 
-export const selectViewData = ({ props: attrs, state }) => {
+export const selectViewData = ({ props: attrs, state, i18n }) => {
+  const copy = i18n?.vnPreview ?? {};
+  const previewLayout = createPreviewLayout({
+    isRotated: state.isRotated,
+    projectResolution: state.projectResolution,
+    viewportSize: state.viewportSize,
+  });
+
   return {
     sceneId: attrs.sceneId,
     sectionId: attrs.sectionId,
@@ -169,9 +209,11 @@ export const selectViewData = ({ props: attrs, state }) => {
     canvasAspectRatio: formatProjectResolutionAspectRatio(
       state.projectResolution,
     ),
-    previewFrameStyle: createPreviewFrameStyle({
-      projectResolution: state.projectResolution,
-      viewportSize: state.viewportSize,
-    }),
+    isRotated: state.isRotated,
+    showRotatePreviewButton: state.isTouchMode,
+    rotatePreviewLabel: state.isRotated
+      ? (copy.restoreOrientationButton ?? "Restore preview orientation")
+      : (copy.rotateButton ?? "Rotate preview 90 degrees"),
+    ...previewLayout,
   };
 };

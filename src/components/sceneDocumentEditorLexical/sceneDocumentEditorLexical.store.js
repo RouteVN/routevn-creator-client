@@ -11,4 +11,5 @@ export const selectViewData = ({ props }) => ({
   fontSize: props.fontSize ?? "md",
   textStyles: props.textStyles || [],
   mentionTargets: props.mentionTargets || [],
+  compactPreviews: props.compactPreviews ?? false,
 });

@@ -585,7 +585,9 @@ const createBeforeHandleActionsHook = (
 };
 
 export const handleBeforeMount = (deps) => {
-  const { dispatchEvent, store, graphicsService, refs, subject } = deps;
+  const { dispatchEvent, store, graphicsService, refs, subject, uiConfig } =
+    deps;
+  store.setUiConfig({ uiConfig });
   function handleKeyDown(event) {
     if (event.key !== "Escape") {
       if (
@@ -633,6 +635,16 @@ export const handleBeforeMount = (deps) => {
     window.removeEventListener("keydown", handleKeyDown, true);
     window.removeEventListener("keyup", handleKeyUp, true);
   };
+};
+
+export const handleRotatePreview = (deps, payload) => {
+  const { store, render, refs } = deps;
+  const { _event: event } = payload;
+  event.preventDefault();
+  event.stopPropagation();
+  store.togglePreviewRotation();
+  render();
+  focusPreviewSurface(refs);
 };
 
 export const handleAfterMount = async (deps) => {

@@ -81,6 +81,11 @@ const getDropdownPositionFromEvent = (event) => {
   };
 };
 
+export const handleBeforeMount = (deps) => {
+  const { store, uiConfig } = deps;
+  store.setUiConfig({ uiConfig });
+};
+
 const beginAddCharacterSelection = (store) => {
   store.clearPendingCharacterIndex();
   store.setSelectedCharacterIndex({ index: undefined });

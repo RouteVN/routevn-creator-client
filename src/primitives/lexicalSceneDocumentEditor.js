@@ -663,6 +663,12 @@ const STYLES = `
     max-width: none;
   }
 
+  rvn-lexical-scene-document-editor[data-compact-previews="true"] .preview-items {
+    align-items: center;
+    gap: 4px;
+    min-height: 24px;
+  }
+
   .gutter-right .gutter-row[data-constrained="true"] .preview-items {
     display: flex;
     flex-wrap: wrap;
@@ -678,6 +684,12 @@ const STYLES = `
     min-width: 0;
     max-width: 100%;
     min-height: 24px;
+  }
+
+  rvn-lexical-scene-document-editor[data-compact-previews="true"] .preview-item {
+    align-items: center;
+    gap: 4px;
+    min-height: 16px;
   }
 
   .preview-item[data-overlay="true"] {
@@ -710,9 +722,29 @@ const STYLES = `
     height: 24px;
   }
 
+  rvn-lexical-scene-document-editor[data-compact-previews="true"]
+    .preview-thumb[data-size="bg"],
+  rvn-lexical-scene-document-editor[data-compact-previews="true"]
+    .preview-thumb[data-size="visual"] {
+    width: 24px;
+    height: 16px;
+  }
+
+  rvn-lexical-scene-document-editor[data-compact-previews="true"]
+    .preview-thumb[data-size="sprite"] {
+    width: 14px;
+    height: 16px;
+  }
+
   .preview-thumb[data-size="icon"] {
     width: 24px;
     height: 24px;
+  }
+
+  rvn-lexical-scene-document-editor[data-compact-previews="true"]
+    .preview-thumb[data-size="icon"] {
+    width: 16px;
+    height: 16px;
   }
 
   .preview-color-swatch {
@@ -739,6 +771,11 @@ const STYLES = `
   .preview-image-stack rvn-stacked-file-images {
     display: block;
     flex-shrink: 0;
+  }
+
+  rvn-lexical-scene-document-editor[data-compact-previews="true"]
+    .preview-image-stack {
+    gap: 2px;
   }
 
   .preview-group-delete-overlay {
@@ -1169,6 +1206,7 @@ export class LexicalSceneDocumentEditorElement extends HTMLElement {
       hasNextSectionLine: false,
       showLineNumbers: true,
       fontSize: DEFAULT_EDITOR_FONT_SIZE,
+      compactPreviews: false,
       mode: "block",
       plainText: "",
       mentionTargets: [],
@@ -1707,6 +1745,27 @@ export class LexicalSceneDocumentEditorElement extends HTMLElement {
 
   get fontSize() {
     return this.state.fontSize;
+  }
+
+  set compactPreviews(value) {
+    const compactPreviews = value === true || value === "true";
+    if (this.state.compactPreviews === compactPreviews) {
+      return;
+    }
+
+    this.state.compactPreviews = compactPreviews;
+    this.dataset.compactPreviews = String(compactPreviews);
+    for (const row of this.rightGutterRowsByLineId.values()) {
+      row.removeAttribute("data-signature");
+    }
+    if (!this.isConnected || !this.refs.editor) {
+      return;
+    }
+    this.scheduleRender();
+  }
+
+  get compactPreviews() {
+    return this.state.compactPreviews === true;
   }
 
   setMode(mode) {
@@ -7695,6 +7754,7 @@ export class LexicalSceneDocumentEditorElement extends HTMLElement {
       ? "true"
       : "false";
     this.dataset.mode = this.state.mode;
+    this.dataset.compactPreviews = String(this.state.compactPreviews);
     this.refs.surface.dataset.mode = this.state.mode;
     this.refs.editor.dataset.mode = this.state.mode;
     this.style.setProperty(
@@ -8804,6 +8864,13 @@ export class LexicalSceneDocumentEditorElement extends HTMLElement {
     borderRadius = "false",
     isDelete = false,
   } = {}) {
+    const compactPreviews = this.state?.compactPreviews === true;
+    let previewWidth = size === "sprite" ? 20 : 36;
+    let previewHeight = 24;
+    if (compactPreviews) {
+      previewWidth = size === "sprite" ? 14 : 24;
+      previewHeight = 16;
+    }
     const thumb = document.createElement("div");
     thumb.className = "preview-thumb";
     thumb.dataset.size = size;
@@ -8813,15 +8880,15 @@ export class LexicalSceneDocumentEditorElement extends HTMLElement {
       thumb.append(
         this.createFileImage({
           fileId,
-          width: size === "sprite" ? 20 : 36,
-          height: 24,
+          width: previewWidth,
+          height: previewHeight,
           borderRadius: borderRadius === "true" ? "f" : undefined,
         }),
       );
     } else if (placeholderIcon) {
       const placeholder = document.createElement("div");
       placeholder.className = "preview-placeholder";
-      placeholder.append(this.createSvgIcon(placeholderIcon, 24));
+      placeholder.append(this.createSvgIcon(placeholderIcon, previewHeight));
       thumb.append(placeholder);
     }
 
@@ -8833,6 +8900,7 @@ export class LexicalSceneDocumentEditorElement extends HTMLElement {
   }
 
   createCharacterSpritePreview(sprite = {}) {
+    const compactPreviews = this.state?.compactPreviews === true;
     const layers = Array.isArray(sprite.spritePreviewLayers)
       ? sprite.spritePreviewLayers
       : [];
@@ -8868,8 +8936,8 @@ export class LexicalSceneDocumentEditorElement extends HTMLElement {
 
     const preview = document.createElement("rvn-stacked-file-images");
     preview.layers = previewLayers;
-    preview.w = "20";
-    preview.h = "24";
+    preview.w = compactPreviews ? "14" : "20";
+    preview.h = compactPreviews ? "16" : "24";
     preview.br = sprite.spritePreviewBr ?? "none";
     preview.spritesheetBr = "none";
     preview.spritesheetCheckerCellSize = "4";
@@ -8901,7 +8969,9 @@ export class LexicalSceneDocumentEditorElement extends HTMLElement {
     const thumb = document.createElement("div");
     thumb.className = "preview-thumb";
     thumb.dataset.size = "icon";
-    thumb.append(this.createSvgIcon(icon, 24));
+    thumb.append(
+      this.createSvgIcon(icon, this.state?.compactPreviews ? 16 : 24),
+    );
 
     if (isDelete) {
       thumb.append(
@@ -8918,21 +8988,25 @@ export class LexicalSceneDocumentEditorElement extends HTMLElement {
   createIconDeleteMark() {
     const mark = document.createElement("div");
     mark.className = "preview-icon-delete-mark";
-    mark.append(this.createSvgIcon("x", 20));
+    mark.append(this.createSvgIcon("x", this.state?.compactPreviews ? 16 : 20));
     return mark;
   }
 
   createDeleteOverlay() {
     const overlay = document.createElement("div");
     overlay.className = "preview-delete-overlay";
-    overlay.append(this.createSvgIcon("x", 16, "er"));
+    overlay.append(
+      this.createSvgIcon("x", this.state?.compactPreviews ? 12 : 16, "er"),
+    );
     return overlay;
   }
 
   createPreviewGroupDeleteOverlay() {
     const overlay = document.createElement("div");
     overlay.className = "preview-group-delete-overlay";
-    overlay.append(this.createSvgIcon("x", 16, "er"));
+    overlay.append(
+      this.createSvgIcon("x", this.state?.compactPreviews ? 12 : 16, "er"),
+    );
     return overlay;
   }
 

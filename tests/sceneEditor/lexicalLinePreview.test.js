@@ -365,4 +365,60 @@ describe("lexical scene document editor line previews", () => {
       restoreDomGlobals();
     }
   });
+
+  it("uses smaller action icons for compact mobile previews", async () => {
+    const restoreDomGlobals = installDomGlobals();
+
+    try {
+      const { LexicalSceneDocumentEditorElement } = await import(
+        "../../src/primitives/lexicalSceneDocumentEditor.js"
+      );
+      const editorPrototype = LexicalSceneDocumentEditorElement.prototype;
+      const preview = editorPrototype.createIconPreview.call(
+        {
+          state: {
+            compactPreviews: true,
+          },
+          createSvgIcon: editorPrototype.createSvgIcon,
+        },
+        {
+          icon: "music",
+        },
+      );
+
+      expect(preview.querySelector("rtgl-svg").getAttribute("wh")).toBe("16");
+    } finally {
+      restoreDomGlobals();
+    }
+  });
+
+  it("uses smaller image thumbnails for compact mobile previews", async () => {
+    const restoreDomGlobals = installDomGlobals();
+
+    try {
+      const { LexicalSceneDocumentEditorElement } = await import(
+        "../../src/primitives/lexicalSceneDocumentEditor.js"
+      );
+      const editorPrototype = LexicalSceneDocumentEditorElement.prototype;
+      const preview = editorPrototype.createMediaThumb.call(
+        {
+          state: {
+            compactPreviews: true,
+          },
+          createFileImage: editorPrototype.createFileImage,
+          createSvgIcon: editorPrototype.createSvgIcon,
+        },
+        {
+          fileId: "background-file",
+          size: "bg",
+        },
+      );
+      const image = preview.querySelector("rvn-file-image");
+
+      expect(image.getAttribute("w")).toBe("24");
+      expect(image.getAttribute("h")).toBe("16");
+    } finally {
+      restoreDomGlobals();
+    }
+  });
 });

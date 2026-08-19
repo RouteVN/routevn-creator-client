@@ -742,6 +742,9 @@ actionTransformEditor:
   title: "Transform"
   unnamedTarget: "Current item"
   visualTarget: "Visual"
+vnPreview:
+  restoreOrientationButton: "Restore preview orientation"
+  rotateButton: "Rotate preview 90 degrees"
 animationEditorPage:
   absoluteValueType: "Absolute"
   addAnimationPropertyTitle: "Add animation property"

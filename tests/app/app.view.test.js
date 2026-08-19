@@ -44,12 +44,14 @@ describe("app view", () => {
     expect(appView).toContain("rvn-mobile-sheet#mobileSheet");
     expect(appView).toContain("position: relative; z-index: 1150;");
     expect(appView).toContain(
-      "rtgl-view#mobileTabItem${i} data-tab-id=${item.id}",
+      "rtgl-view#mobileTabItem${i} data-tab-id=${item.id} w=1fg h=f d=v ah=c av=c g=xs bgc=${item.backgroundColor}",
     );
     expect(appView).toContain(
       "rtgl-svg wh=22 svg=${item.icon} c=${item.color}",
     );
     expect(appView).toContain("rtgl-text s=xs c=${item.color}");
     expect(appView).toContain("-webkit-tap-highlight-color: transparent;");
+    expect(appView).toContain("handler: handleMobileTabPointerCancel");
+    expect(appView).toContain("handler: handleMobileTabLostPointerCapture");
   });
 });

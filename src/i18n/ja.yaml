@@ -742,6 +742,9 @@ actionTransformEditor:
   title: "トランスフォーム"
   unnamedTarget: "現在の項目"
   visualTarget: "ビジュアル"
+vnPreview:
+  restoreOrientationButton: "プレビューの向きを元に戻す"
+  rotateButton: "プレビューを90度回転"
 animationEditorPage:
   absoluteValueType: "絶対値"
   addAnimationPropertyTitle: "アニメーションプロパティを追加"

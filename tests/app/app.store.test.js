@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
 import {
+  clearPressedMobileTabId,
   createInitialState,
   openMobileSheet,
   selectCurrentRoute,
@@ -7,6 +8,7 @@ import {
   selectViewData,
   setCurrentRoute,
   setPlatform,
+  setPressedMobileTabId,
   setRepositoryLoading,
   setRepositoryLoadingPhase,
   setRepositoryLoadingProgress,
@@ -220,6 +222,30 @@ describe("app.store mobile tab active state", () => {
 
     expect(selectMobileTab({ state, tabId: "release" }).color).toBe("white");
     expect(selectMobileTab({ state, tabId: "assets" }).color).toBe("mu-fg");
+  });
+
+  it("uses the accent background only for the currently pressed tab", () => {
+    const state = createInitialState();
+    state.currentRoute = "/project/images";
+
+    setPressedMobileTabId({ state }, { tabId: "release" });
+
+    expect(selectMobileTab({ state, tabId: "release" })).toMatchObject({
+      backgroundColor: "ac",
+      color: "white",
+    });
+    expect(selectMobileTab({ state, tabId: "assets" })).toMatchObject({
+      backgroundColor: "bg",
+      color: "white",
+    });
+
+    clearPressedMobileTabId({ state });
+
+    expect(
+      selectViewData({ state }).mobileTabBarItems.every(
+        (item) => item.backgroundColor === "bg",
+      ),
+    ).toBe(true);
   });
 
   it("replaces the scene editor tabs while the mobile keyboard is visible", () => {

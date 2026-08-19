@@ -695,23 +695,52 @@ export const handleMobileTabClick = (deps, payload = {}) => {
 };
 
 export const handleMobileTabPointerDown = (deps, payload = {}) => {
-  const { appService } = deps;
+  const { appService, store, render } = deps;
+  const event = payload._event;
+  const tabId = event.currentTarget.dataset.tabId;
   logNavigationInteractionTiming({
     appService,
     source: "app.mobile-tab.pointerdown",
-    event: payload._event,
-    data: { tabId: payload._event.currentTarget.dataset.tabId },
+    event,
+    data: { tabId },
   });
+
+  event.currentTarget.setPointerCapture?.(event.pointerId);
+  store.setPressedMobileTabId({ tabId });
+  render();
 };
 
 export const handleMobileTabPointerUp = (deps, payload = {}) => {
   const { appService } = deps;
+  const event = payload._event;
   logNavigationInteractionTiming({
     appService,
     source: "app.mobile-tab.pointerup",
-    event: payload._event,
-    data: { tabId: payload._event.currentTarget.dataset.tabId },
+    event,
+    data: { tabId: event.currentTarget.dataset.tabId },
   });
+
+  event.currentTarget.releasePointerCapture?.(event.pointerId);
+  clearMobileTabPressedState(deps);
+};
+
+const clearMobileTabPressedState = ({ store, render }) => {
+  if (!store.selectPressedMobileTabId()) {
+    return;
+  }
+
+  store.clearPressedMobileTabId();
+  render();
+};
+
+export const handleMobileTabPointerCancel = (deps, payload = {}) => {
+  const event = payload._event;
+  event.currentTarget.releasePointerCapture?.(event.pointerId);
+  clearMobileTabPressedState(deps);
+};
+
+export const handleMobileTabLostPointerCapture = (deps) => {
+  clearMobileTabPressedState(deps);
 };
 
 export const handleMobileSheetClose = (deps) => {

@@ -14,6 +14,7 @@ import {
   handleCustomTransformButtonKeyDown,
   handleDropdownMenuClickItem,
   handleFormSectionAction,
+  handleBeforeMount,
   handleOpacityInput,
   handleShaderAdjustmentInput,
   handleSpriteItemClick,
@@ -160,6 +161,22 @@ const createStoreApi = (state) => ({
 });
 
 describe("commandLineCharacters.handlers", () => {
+  it("configures touch layout before mounting", () => {
+    const setUiConfig = vi.fn();
+    const uiConfig = {
+      inputMode: "touch",
+    };
+
+    handleBeforeMount({
+      store: {
+        setUiConfig,
+      },
+      uiConfig,
+    });
+
+    expect(setUiConfig).toHaveBeenCalledWith({ uiConfig });
+  });
+
   it("opens the custom transform editor from the summary box with the keyboard", () => {
     const state = createInitialState();
     const dispatchEvent = vi.fn();
