@@ -109,6 +109,9 @@ describe("commandLineBgm.store", () => {
       showResourceSelectorFileExplorer: true,
       resourceSelectorColumns: undefined,
       resourceSelectorGridStyle: "",
+      resourceSelectorHorizontalPadding: "lg",
+      resourceSelectorCardStyle:
+        "width: 200px; min-width: 0; max-width: 100%; box-sizing: border-box;",
     });
 
     setUiConfig({ state }, { uiConfig: { inputMode: "touch" } });
@@ -118,6 +121,9 @@ describe("commandLineBgm.store", () => {
       resourceSelectorColumns: 2,
       resourceSelectorGridStyle:
         "display: grid; grid-template-columns: repeat(2, minmax(0, 1fr));",
+      resourceSelectorHorizontalPadding: "none",
+      resourceSelectorCardStyle:
+        "width: 100%; min-width: 0; max-width: 100%; box-sizing: border-box;",
     });
   });
 
