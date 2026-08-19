@@ -5,6 +5,7 @@ import {
   handleContainerContextMenu,
   handleContainerPointerDown,
   handleContainerTouchStart,
+  handleDropdownMenuClickItem,
   handleDropdownMenuClickOverlay,
   handleItemContextMenu,
   handleItemMenuClick,
@@ -378,6 +379,52 @@ describe("baseFileExplorer handlers", () => {
     handleDropdownMenuClickOverlay(deps);
 
     expect(deps.store.selectSuppressNextClick()).toBe(false);
+    expect(state.dropdownMenu.isOpen).toBe(true);
+    expect(deps.render).toHaveBeenCalledTimes(1);
+
+    handleDropdownMenuClickOverlay(deps);
+
+    expect(state.dropdownMenu.isOpen).toBe(false);
+    expect(deps.render).toHaveBeenCalledTimes(2);
+  });
+
+  it("does not activate a menu item from the touch release that opened it", () => {
+    vi.useFakeTimers();
+    const { deps, state } = createDragDeps();
+    handleContainerPointerDown(deps, {
+      _event: createPointerEvent({
+        currentTarget: deps.refs.root,
+        x: 24,
+        y: 112,
+        pointerId: 7,
+      }),
+    });
+    vi.advanceTimersByTime(360);
+
+    const payload = {
+      _event: {
+        detail: {
+          item: { label: "New Folder", value: "new-item" },
+        },
+      },
+    };
+    handleDropdownMenuClickItem(deps, payload);
+
+    expect(deps.store.selectSuppressNextClick()).toBe(false);
+    expect(state.dropdownMenu.isOpen).toBe(true);
+    expect(deps.dispatchEvent).not.toHaveBeenCalled();
+
+    handleDropdownMenuClickItem(deps, payload);
+
+    expect(state.dropdownMenu.isOpen).toBe(false);
+    expect(deps.dispatchEvent).toHaveBeenCalledWith(
+      expect.objectContaining({
+        type: "file-action",
+        detail: expect.objectContaining({
+          itemId: null,
+        }),
+      }),
+    );
   });
 
   it("cancels an empty-space long press when touch movement becomes a scroll", () => {

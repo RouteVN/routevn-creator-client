@@ -1953,13 +1953,22 @@ export const handleSetFolderCollapsed = (deps, payload) => {
 
 export const handleDropdownMenuClickOverlay = (deps) => {
   const { store, render } = deps;
-  store.setSuppressNextClick({ suppress: false });
+  if (store.selectSuppressNextClick()) {
+    store.setSuppressNextClick({ suppress: false });
+    return;
+  }
+
   store.hideDropdownMenu();
   render();
 };
 
 export const handleDropdownMenuClickItem = (deps, payload) => {
   const { store, dispatchEvent, render } = deps;
+  if (store.selectSuppressNextClick()) {
+    store.setSuppressNextClick({ suppress: false });
+    return;
+  }
+
   const detail = payload._event.detail;
   const itemId = store.selectDropdownMenuItemId();
 
@@ -1970,7 +1979,6 @@ export const handleDropdownMenuClickItem = (deps, payload) => {
   const position = store.selectDropdownMenuPosition();
 
   // Hide dropdown
-  store.setSuppressNextClick({ suppress: false });
   store.hideDropdownMenu();
   render();
 
