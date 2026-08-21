@@ -438,6 +438,7 @@ describe("vnPreview.handlers", () => {
       "pointerout",
       "pointerleave",
       "pointercancel",
+      "wheel",
     ].forEach((eventType) => {
       expect(addEventListener).toHaveBeenCalledWith(
         eventType,
@@ -450,8 +451,8 @@ describe("vnPreview.handlers", () => {
         true,
       );
     });
-    expect(addEventListener).toHaveBeenCalledTimes(9);
-    expect(removeEventListener).toHaveBeenCalledTimes(9);
+    expect(addEventListener).toHaveBeenCalledTimes(10);
+    expect(removeEventListener).toHaveBeenCalledTimes(10);
   });
 
   it("maps rotated pointer events back to the scene coordinate axes", async () => {
@@ -504,6 +505,21 @@ describe("vnPreview.handlers", () => {
       clientY: 50,
     });
     expect(deps.graphicsService.getCanvas).toHaveBeenCalledOnce();
+
+    const wheelEvent = {
+      clientX: 460,
+      clientY: 50,
+      deltaY: 120,
+    };
+
+    listeners.wheel(wheelEvent);
+
+    expect(wheelEvent).toMatchObject({
+      clientX: 100,
+      clientY: 50,
+      deltaY: 120,
+    });
+    expect(deps.graphicsService.getCanvas).toHaveBeenCalledTimes(2);
 
     cleanup();
   });

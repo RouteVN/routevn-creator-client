@@ -49,7 +49,7 @@ const setEventCoordinate = (event, key, value) => {
   return event[key] === value;
 };
 
-export const remapRotatedPreviewPointerEvent = (event, rect) => {
+export const remapRotatedPreviewEventCoordinates = (event, rect) => {
   const mappedPoint = mapRotatedPreviewClientPoint(event, rect);
   if (!mappedPoint) {
     return false;

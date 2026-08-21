@@ -19,6 +19,7 @@ import Subject from "./deps/subject.js";
 import Router from "./deps/clients/router.js";
 import { createGraphicsService } from "./deps/services/graphicsService.js";
 import { deriveProjectFormatVersionFromAppVersion } from "./internal/projectCompatibility.js";
+import { isVisualTestMode } from "./internal/visualTestMode.js";
 import { registerPrimitives } from "./primitives/registerPrimitives.js";
 import tauriConfig from "../src-tauri/tauri.conf.json";
 
@@ -43,7 +44,11 @@ const isTouchPrimaryDevice = () =>
   window.matchMedia("(pointer: coarse)").matches ||
   window.matchMedia("(hover: none)").matches;
 
-const activeUiVersion = isTouchPrimaryDevice() ? "touch" : "normal";
+const isTouchVisualTest =
+  isVisualTestMode() &&
+  new URLSearchParams(window.location.search).get("vt-input-mode") === "touch";
+const activeUiVersion =
+  isTouchVisualTest || isTouchPrimaryDevice() ? "touch" : "normal";
 const uiConfig = uiVersions[activeUiVersion];
 document.documentElement.dataset.rvnUiVersion = uiConfig.id;
 document.documentElement.dataset.rvnInputMode = uiConfig.inputMode;

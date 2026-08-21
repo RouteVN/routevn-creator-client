@@ -1,0 +1,119 @@
+---
+title: Project Scenes Mobile Preview
+description: Covers the touch scene-map preview, rotated mobile layout, and running-canvas hit testing.
+url: /projects?vt-input-mode=touch
+skipInitialScreenshot: true
+viewport:
+  id: mobile
+  width: 390
+  height: 844
+steps:
+  - action: waitFor
+    selector: "#mobileCreateMenuButton"
+    state: visible
+    timeoutMs: 5000
+  - action: select
+    selector: "#mobileCreateMenuButton"
+    steps:
+      - action: click
+  - action: waitFor
+    selector: "#mobileActionMenu [role='menuitem']:has-text('Create Project')"
+    state: visible
+    timeoutMs: 5000
+  - action: select
+    selector: "#mobileActionMenu [role='menuitem']:has-text('Create Project')"
+    steps:
+      - action: click
+  - action: waitFor
+    selector: rtgl-form#createProjectForm rtgl-input#field0 input
+    state: attached
+    timeoutMs: 5000
+  - action: select
+    selector: rtgl-form#createProjectForm rtgl-input#field0 input
+    steps:
+      - action: clear
+      - action: write
+        value: Project One
+  - action: select
+    selector: rtgl-form#createProjectForm rtgl-input#field1 input
+    steps:
+      - action: clear
+      - action: write
+        value: Covers the rotated mobile scene preview.
+  - action: select
+    selector: "rtgl-form#createProjectForm rtgl-button[data-action-id=submit]"
+    steps:
+      - action: click
+  - action: waitFor
+    selector: "#projectItem0"
+    state: visible
+    timeoutMs: 30000
+  - action: select
+    selector: "#projectItem0"
+    steps:
+      - action: click
+  - action: waitFor
+    selector: rvn-project
+    state: attached
+    timeoutMs: 10000
+  - action: waitFor
+    selector: "#mobileTabItem1"
+    state: visible
+    timeoutMs: 5000
+  - action: select
+    selector: "#mobileTabItem1"
+    steps:
+      - action: click
+  - action: waitFor
+    selector: "rvn-mobile-sidebar [data-item-id='scene-map']"
+    state: visible
+    timeoutMs: 5000
+  - action: select
+    selector: "rvn-mobile-sidebar [data-item-id='scene-map']"
+    steps:
+      - action: click
+  - action: waitFor
+    selector: rvn-scenes
+    state: attached
+    timeoutMs: 10000
+  - action: waitFor
+    selector: "#whiteboard #itemRef0"
+    state: visible
+    timeoutMs: 10000
+  - action: select
+    selector: "#whiteboard #itemRef0"
+    steps:
+      - action: rclick
+  - action: waitFor
+    selector: "#dropdownMenu [role='menuitem']:has-text('Preview')"
+    state: visible
+    timeoutMs: 5000
+  - action: select
+    selector: "#dropdownMenu [role='menuitem']:has-text('Preview')"
+    steps:
+      - action: click
+  - action: waitFor
+    selector: "#vnPreview [data-preview-ready='true']"
+    state: attached
+    timeoutMs: 10000
+  - action: waitFor
+    selector: "#vnPreview #rotatePreviewButton"
+    state: visible
+    timeoutMs: 5000
+  - action: screenshot
+  - action: select
+    selector: "#vnPreview #rotatePreviewButton"
+    steps:
+      - action: click
+  - action: wait
+    ms: 150
+  - action: screenshot
+  - action: move
+    x: 100
+    y: 421
+  - action: mouseDown
+  - action: mouseUp
+  - action: wait
+    ms: 400
+  - action: screenshot
+---

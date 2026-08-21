@@ -55,6 +55,8 @@ const createPreviewLayout = ({
   const height = projectHeight * scale;
   const stageWidth = isRotated ? height : width;
   const stageHeight = isRotated ? width : height;
+  const canvasHostLeft = (stageWidth - width) / 2;
+  const canvasHostTop = (stageHeight - height) / 2;
 
   const previewStageStyle = [
     "position: relative",
@@ -63,21 +65,29 @@ const createPreviewLayout = ({
     `height: ${formatCssPixels(stageHeight)}`,
     "max-width: 100vw",
     "max-height: 100vh",
+    "background: #000",
   ].join("; ");
   const previewFrameStyle = [
     "position: absolute",
-    "left: 50%",
-    "top: 50%",
-    `aspect-ratio: ${projectWidth} / ${projectHeight}`,
+    "inset: 0",
+    "overflow: hidden",
+    "pointer-events: none",
+    "z-index: 1",
+  ].join("; ");
+  const previewCanvasHostStyle = [
+    "position: absolute",
+    `left: ${formatCssPixels(canvasHostLeft)}`,
+    `top: ${formatCssPixels(canvasHostTop)}`,
     `width: ${formatCssPixels(width)}`,
     `height: ${formatCssPixels(height)}`,
-    `transform: translate(-50%, -50%) rotate(${isRotated ? 90 : 0}deg)`,
-    "transform-origin: center",
-    "overflow: hidden",
+    `aspect-ratio: ${projectWidth} / ${projectHeight}`,
+    "overflow: visible",
     "background: #000",
+    "z-index: 0",
   ].join("; ");
 
   return {
+    previewCanvasHostStyle,
     previewFrameStyle,
     previewStageStyle,
   };

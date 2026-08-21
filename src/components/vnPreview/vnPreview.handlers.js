@@ -19,13 +19,13 @@ import {
   resolveSceneIdForSectionId,
   withPreviewEntryPoint,
 } from "./support/vnPreviewProjectData.js";
-import { remapRotatedPreviewPointerEvent } from "./support/vnPreviewPointerCoordinates.js";
+import { remapRotatedPreviewEventCoordinates } from "./support/vnPreviewPointerCoordinates.js";
 import { selectSceneEditorCopy } from "../../internal/ui/sceneEditor/sceneEditorCopy.js";
 
 const FORWARDED_PREVIEW_KEY_EVENT = "__rvnForwardedPreviewKeyEvent";
 const PREVIEW_FORWARDED_KEYS = new Set(["Enter"]);
 const PREVIEW_LEGACY_KEY_CODE_BY_KEY = new Map([["Enter", 13]]);
-const PREVIEW_POINTER_EVENT_TYPES = [
+const PREVIEW_COORDINATE_EVENT_TYPES = [
   "pointerdown",
   "pointermove",
   "pointerup",
@@ -33,6 +33,7 @@ const PREVIEW_POINTER_EVENT_TYPES = [
   "pointerout",
   "pointerleave",
   "pointercancel",
+  "wheel",
 ];
 
 const focusPreviewSurface = (refs) => {
@@ -623,14 +624,14 @@ export const handleBeforeMount = (deps) => {
     }
   }
 
-  function handlePreviewPointerEvent(event) {
+  function handlePreviewCoordinateEvent(event) {
     if (!store.selectIsPreviewRotated()) {
       return;
     }
 
     const canvas = graphicsService.getCanvas?.();
     const canvasRect = canvas?.getBoundingClientRect?.();
-    remapRotatedPreviewPointerEvent(event, canvasRect);
+    remapRotatedPreviewEventCoordinates(event, canvasRect);
   }
 
   const nativeBackSubscription = subject
@@ -645,8 +646,8 @@ export const handleBeforeMount = (deps) => {
 
   window.addEventListener("keydown", handleKeyDown, true);
   window.addEventListener("keyup", handleKeyUp, true);
-  PREVIEW_POINTER_EVENT_TYPES.forEach((eventType) => {
-    window.addEventListener(eventType, handlePreviewPointerEvent, true);
+  PREVIEW_COORDINATE_EVENT_TYPES.forEach((eventType) => {
+    window.addEventListener(eventType, handlePreviewCoordinateEvent, true);
   });
 
   return () => {
@@ -657,8 +658,8 @@ export const handleBeforeMount = (deps) => {
     nativeBackSubscription?.unsubscribe();
     window.removeEventListener("keydown", handleKeyDown, true);
     window.removeEventListener("keyup", handleKeyUp, true);
-    PREVIEW_POINTER_EVENT_TYPES.forEach((eventType) => {
-      window.removeEventListener(eventType, handlePreviewPointerEvent, true);
+    PREVIEW_COORDINATE_EVENT_TYPES.forEach((eventType) => {
+      window.removeEventListener(eventType, handlePreviewCoordinateEvent, true);
     });
   };
 };

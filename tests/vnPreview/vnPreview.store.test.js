@@ -38,9 +38,12 @@ describe("vnPreview.store", () => {
     });
     expect(normalViewData.previewStageStyle).toContain("width: 360px");
     expect(normalViewData.previewStageStyle).toContain("height: 202.5px");
-    expect(normalViewData.previewFrameStyle).toContain("width: 360px");
-    expect(normalViewData.previewFrameStyle).toContain("height: 202.5px");
-    expect(normalViewData.previewFrameStyle).toContain("rotate(0deg)");
+    expect(normalViewData.previewCanvasHostStyle).toContain("left: 0px");
+    expect(normalViewData.previewCanvasHostStyle).toContain("top: 0px");
+    expect(normalViewData.previewCanvasHostStyle).toContain("width: 360px");
+    expect(normalViewData.previewCanvasHostStyle).toContain("height: 202.5px");
+    expect(normalViewData.previewCanvasHostStyle).not.toContain("transform");
+    expect(normalViewData.previewFrameStyle).not.toContain("transform");
 
     togglePreviewRotation({ state });
     const rotatedViewData = selectViewData({
@@ -56,9 +59,12 @@ describe("vnPreview.store", () => {
     });
     expect(rotatedViewData.previewStageStyle).toContain("width: 360px");
     expect(rotatedViewData.previewStageStyle).toContain("height: 640px");
-    expect(rotatedViewData.previewFrameStyle).toContain("width: 640px");
-    expect(rotatedViewData.previewFrameStyle).toContain("height: 360px");
-    expect(rotatedViewData.previewFrameStyle).toContain("rotate(90deg)");
+    expect(rotatedViewData.previewCanvasHostStyle).toContain("left: -140px");
+    expect(rotatedViewData.previewCanvasHostStyle).toContain("top: 140px");
+    expect(rotatedViewData.previewCanvasHostStyle).toContain("width: 640px");
+    expect(rotatedViewData.previewCanvasHostStyle).toContain("height: 360px");
+    expect(rotatedViewData.previewCanvasHostStyle).not.toContain("transform");
+    expect(rotatedViewData.previewFrameStyle).not.toContain("transform");
   });
 
   it("keeps the rotate control hidden for desktop UI", () => {

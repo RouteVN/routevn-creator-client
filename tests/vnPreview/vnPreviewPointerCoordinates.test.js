@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 import {
   mapRotatedPreviewClientPoint,
-  remapRotatedPreviewPointerEvent,
+  remapRotatedPreviewEventCoordinates,
 } from "../../src/components/vnPreview/support/vnPreviewPointerCoordinates.js";
 
 const ROTATED_CANVAS_RECT = {
@@ -71,9 +71,9 @@ describe("vnPreview rotated pointer coordinates", () => {
       clientY: 50,
     };
 
-    expect(remapRotatedPreviewPointerEvent(event, ROTATED_CANVAS_RECT)).toBe(
-      true,
-    );
+    expect(
+      remapRotatedPreviewEventCoordinates(event, ROTATED_CANVAS_RECT),
+    ).toBe(true);
     expect(event).toMatchObject({
       clientX: 100,
       clientY: 50,

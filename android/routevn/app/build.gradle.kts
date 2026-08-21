@@ -32,8 +32,8 @@ android {
         applicationId = "com.routevn.creator"
         minSdk = 24
         targetSdk = 37
-        versionCode = 3
-        versionName = "1.12.2"
+        versionCode = 4
+        versionName = "1.12.3"
         manifestPlaceholders["usesCleartextTraffic"] = "false"
     }
 
