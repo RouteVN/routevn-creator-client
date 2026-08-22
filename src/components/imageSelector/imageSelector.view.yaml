@@ -18,7 +18,7 @@ styles:
 template:
   - 'rtgl-view#container role=listbox aria-label="${imageSelectorLabel}" h=1fg sv g=lg style="outline: none;"':
       - $for group, i in groups:
-          - 'rtgl-view#groupRef${i} data-group-id=${group.id} mb=sm w=f bgc=bg style="position: sticky; top: 0"':
+          - 'rtgl-view#groupRef${i} data-group-id=${group.id} mb=sm w=f bgc=bg z=100 pv=xs style="position: sticky; top: 0;"':
               - rtgl-view d=h av=c g=md:
                   - rtgl-svg svg=folder wh=16: null
                   - rtgl-text: ${group.fullLabel}
