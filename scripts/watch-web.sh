@@ -27,7 +27,7 @@ if [ ! -x "${RTGL_BIN}" ]; then
   exit 1
 fi
 
-echo "Preparing Tauri watch static assets..."
+echo "Preparing Web watch static assets..."
 
 if [ "${RETTANGOLI_IS_LOCAL}" = true ]; then
   if [ ! -f "${LOCAL_RETTANGOLI_FILE}" ]; then
@@ -50,4 +50,4 @@ fi
 mkdir -p _site
 cp -rf static/. _site/
 
-exec "${RTGL_BIN}" fe watch -s src/setup.tauri.js "$@"
+exec "${RTGL_BIN}" fe watch -s src/setup.web.js "$@"
