@@ -1185,6 +1185,7 @@ export const createScenesFileExplorerHandlers = ({
         sceneId: move.itemId,
         parentId: move.parentId,
         position: move.repositoryPosition,
+        positionTargetId: move.repositoryPositionTargetId,
       });
 
       await refresh(deps);
