@@ -66,24 +66,24 @@ describe("appearance store", () => {
     const viewData = selectViewData({ state, i18n });
 
     expect(viewData.themes.map(({ id }) => id)).toEqual([
-      "soft-dark",
       "dark",
+      "black",
       "light",
     ]);
     expect(viewData.themes.map(({ name }) => name)).toEqual(names);
-    expect(viewData.currentTheme).toBe("soft-dark");
+    expect(viewData.currentTheme).toBe("dark");
     expect(viewData.themes[0].isSelected).toBe(true);
   });
 
   it("selects an additional theme without changing its id", () => {
     const state = createInitialState();
 
-    setCurrentTheme({ state }, { theme: "soft-dark" });
+    setCurrentTheme({ state }, { theme: "black" });
 
     const viewData = selectViewData({ state, i18n: EN_I18N });
-    expect(state.currentTheme).toBe("soft-dark");
-    expect(
-      viewData.themes.find(({ id }) => id === "soft-dark")?.isSelected,
-    ).toBe(true);
+    expect(state.currentTheme).toBe("black");
+    expect(viewData.themes.find(({ id }) => id === "black")?.isSelected).toBe(
+      true,
+    );
   });
 });

@@ -54,12 +54,12 @@ describe("theme css", () => {
       "utf8",
     );
 
-    const softDark = getThemeBlock(themeCss, "theme-soft-dark");
     const darkTokens = getThemeTokens(getThemeBlock(themeCss, "dark"));
-    const softDarkTokens = getThemeTokens(softDark);
+    const blackTokens = getThemeTokens(getThemeBlock(themeCss, "theme-black"));
 
     expect(themeCss).not.toContain(".theme-neutral-light");
-    expect(softDarkTokens).toEqual({
+    expect(themeCss).not.toContain(".theme-soft-dark");
+    expect(darkTokens).toMatchObject({
       "--background": "oklch(0.22 0 0)",
       "--surface": "oklch(0.255 0 0)",
       "--foreground": "oklch(0.96 0 0)",
@@ -79,13 +79,21 @@ describe("theme css", () => {
       "--scrollbar-thumb": "oklch(0.45 0 0)",
       "--scrollbar-thumb-hover": "oklch(0.55 0 0)",
     });
+    expect(blackTokens).toMatchObject({
+      "--background": "oklch(0.145 0 0)",
+      "--surface": "oklch(0.18 0 0)",
+      "--foreground": "oklch(0.985 0 0)",
+      "--primary": "oklch(0.922 0 0)",
+      "--input": "oklch(1 0 0 / 15%)",
+      "--border": "oklch(1 0 0 / 10%)",
+    });
     expect(
-      getOklchLightness(softDarkTokens["--background"]) -
-        getOklchLightness(darkTokens["--background"]),
+      getOklchLightness(darkTokens["--background"]) -
+        getOklchLightness(blackTokens["--background"]),
     ).toBeGreaterThanOrEqual(0.07);
     expect(
-      getOklchLightness(softDarkTokens["--surface"]) -
-        getOklchLightness(darkTokens["--surface"]),
+      getOklchLightness(darkTokens["--surface"]) -
+        getOklchLightness(blackTokens["--surface"]),
     ).toBeGreaterThanOrEqual(0.07);
   });
 });

@@ -249,17 +249,17 @@ describe("projects.store addProject", () => {
   it("builds the appearance dialog with every supported theme", () => {
     const state = createInitialState();
 
-    openAppearanceDialog({ state }, { theme: "soft-dark" });
+    openAppearanceDialog({ state }, { theme: "black" });
     const viewData = selectViewData({ state, i18n: EN_I18N });
 
     expect(state.appearanceDialog.defaultValues).toEqual({
-      theme: "soft-dark",
+      theme: "black",
     });
     expect(viewData.appearanceForm.fields[0]).toMatchObject({
       name: "theme",
       options: [
-        { value: "soft-dark", label: "Dark" },
-        { value: "dark", label: "Black" },
+        { value: "dark", label: "Dark" },
+        { value: "black", label: "Black" },
         { value: "light", label: "Light" },
       ],
     });
@@ -268,8 +268,8 @@ describe("projects.store addProject", () => {
   it("defaults appearance to Dark", () => {
     const state = createInitialState();
 
-    expect(state.currentTheme).toBe("soft-dark");
-    expect(state.appearanceDialog.defaultValues.theme).toBe("soft-dark");
+    expect(state.currentTheme).toBe("dark");
+    expect(state.appearanceDialog.defaultValues.theme).toBe("dark");
   });
 
   it("requires an exact confirmation for permanent Android project deletion", () => {

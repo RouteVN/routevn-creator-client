@@ -3,7 +3,7 @@ import { selectAppearancePageCopy } from "./support/appearancePageCopy.js";
 
 const themeOptions = [
   {
-    id: "soft-dark",
+    id: "dark",
     name: "Dark",
     copyKey: "darkThemeName",
     previewPageBackground: "oklch(0.22 0 0)",
@@ -16,7 +16,7 @@ const themeOptions = [
     previewBorder: "oklch(1 0 0 / 14%)",
   },
   {
-    id: "dark",
+    id: "black",
     name: "Black",
     copyKey: "blackThemeName",
     previewPageBackground: "oklch(0.145 0 0)",

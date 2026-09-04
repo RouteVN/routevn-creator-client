@@ -68,18 +68,27 @@ describe("appShellService", () => {
     vi.stubGlobal("document", root);
 
     try {
-      expect(service.applyTheme("soft-dark")).toBe("soft-dark");
+      expect(service.applyTheme("dark")).toBe("dark");
       for (const target of [body, documentElement]) {
         expect(target.classes).toContain("dark");
-        expect(target.classes).toContain("theme-soft-dark");
+        expect(target.classes).toContain("theme-dark");
+        expect(target.classes).not.toContain("theme-black");
         expect(target.classes).not.toContain("theme-light");
-        expect(target.element.dataset.rvnTheme).toBe("soft-dark");
+        expect(target.element.dataset.rvnTheme).toBe("dark");
+      }
+
+      expect(service.applyTheme("black")).toBe("black");
+      for (const target of [body, documentElement]) {
+        expect(target.classes).toContain("dark");
+        expect(target.classes).not.toContain("theme-dark");
+        expect(target.classes).toContain("theme-black");
+        expect(target.element.dataset.rvnTheme).toBe("black");
       }
 
       expect(service.applyTheme("light")).toBe("light");
       for (const target of [body, documentElement]) {
         expect(target.classes).not.toContain("dark");
-        expect(target.classes).not.toContain("theme-soft-dark");
+        expect(target.classes).not.toContain("theme-black");
         expect(target.classes).toContain("theme-light");
         expect(target.element.dataset.rvnTheme).toBe("light");
       }

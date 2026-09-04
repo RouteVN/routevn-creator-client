@@ -702,11 +702,11 @@ export const selectViewData = ({ state, i18n }) => {
         required: true,
         options: [
           {
-            value: "soft-dark",
+            value: "dark",
             label: copy.darkThemeName,
           },
           {
-            value: "dark",
+            value: "black",
             label: copy.blackThemeName,
           },
           {
