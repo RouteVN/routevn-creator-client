@@ -38,6 +38,56 @@ const createDeps = () => {
 };
 
 describe("appShellService", () => {
+  it("applies additional theme classes and dark mode consistently", () => {
+    const deps = createDeps();
+    const service = createAppShellService(deps);
+    const createThemeElement = () => {
+      const classes = new Set();
+      return {
+        classes,
+        element: {
+          classList: {
+            toggle: (className, enabled) => {
+              if (enabled) {
+                classes.add(className);
+              } else {
+                classes.delete(className);
+              }
+            },
+          },
+          dataset: {},
+        },
+      };
+    };
+    const body = createThemeElement();
+    const documentElement = createThemeElement();
+    const root = {
+      body: body.element,
+      documentElement: documentElement.element,
+    };
+    vi.stubGlobal("document", root);
+
+    try {
+      expect(service.applyTheme("soft-dark")).toBe("soft-dark");
+      for (const target of [body, documentElement]) {
+        expect(target.classes).toContain("dark");
+        expect(target.classes).toContain("theme-soft-dark");
+        expect(target.classes).not.toContain("theme-neutral-light");
+        expect(target.element.dataset.rvnTheme).toBe("soft-dark");
+      }
+
+      expect(service.applyTheme("neutral-light")).toBe("neutral-light");
+      for (const target of [body, documentElement]) {
+        expect(target.classes).not.toContain("dark");
+        expect(target.classes).not.toContain("theme-soft-dark");
+        expect(target.classes).toContain("theme-neutral-light");
+        expect(target.element.dataset.rvnTheme).toBe("neutral-light");
+      }
+    } finally {
+      vi.unstubAllGlobals();
+    }
+  });
+
   it("awaits registered work before navigation continues", async () => {
     const deps = createDeps();
     const service = createAppShellService(deps);

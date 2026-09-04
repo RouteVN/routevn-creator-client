@@ -709,6 +709,14 @@ export const selectViewData = ({ state, i18n }) => {
             value: "light",
             label: copy.lightThemeName,
           },
+          {
+            value: "soft-dark",
+            label: copy.softDarkThemeName,
+          },
+          {
+            value: "neutral-light",
+            label: copy.neutralLightThemeName,
+          },
         ],
       },
     ],

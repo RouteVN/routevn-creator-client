@@ -7,6 +7,7 @@ import {
   closeDeleteDialog,
   createInitialState,
   openDeleteDialog,
+  openAppearanceDialog,
   openLanguageDialog,
   openAppVersionMenu,
   removeProject,
@@ -241,6 +242,26 @@ describe("projects.store addProject", () => {
             },
           ],
         },
+      ],
+    });
+  });
+
+  it("builds the appearance dialog with every supported theme", () => {
+    const state = createInitialState();
+
+    openAppearanceDialog({ state }, { theme: "soft-dark" });
+    const viewData = selectViewData({ state, i18n: EN_I18N });
+
+    expect(state.appearanceDialog.defaultValues).toEqual({
+      theme: "soft-dark",
+    });
+    expect(viewData.appearanceForm.fields[0]).toMatchObject({
+      name: "theme",
+      options: [
+        { value: "dark", label: "Dark" },
+        { value: "light", label: "Light" },
+        { value: "soft-dark", label: "Soft Dark" },
+        { value: "neutral-light", label: "Neutral Light" },
       ],
     });
   });

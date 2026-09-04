@@ -100,6 +100,8 @@ projectsPage:
   resolutionLabel: "解像度"
   resolutionWidthRequired: "解像度の幅は必須です。"
   resolutionWidthLabel: "解像度の幅"
+  softDarkThemeName: "ソフトダーク"
+  neutralLightThemeName: "ニュートラルライト"
   roleMember: "メンバー"
   roleOwner: "オーナー"
   saveButton: "保存"
@@ -2280,6 +2282,8 @@ settingsUserPage:
 appearancePage:
   darkThemeName: "ダーク"
   lightThemeName: "ライト"
+  softDarkThemeName: "ソフトダーク"
+  neutralLightThemeName: "ニュートラルライト"
   themesTitle: "テーマ"
   title: "外観"
 assetPackagePage:

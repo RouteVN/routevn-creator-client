@@ -100,6 +100,8 @@ projectsPage:
   resolutionLabel: "Resolution"
   resolutionWidthRequired: "Resolution Width is required."
   resolutionWidthLabel: "Resolution Width"
+  softDarkThemeName: "Soft Dark"
+  neutralLightThemeName: "Neutral Light"
   roleMember: "Member"
   roleOwner: "Owner"
   saveButton: "Save"
@@ -2280,6 +2282,8 @@ settingsUserPage:
 appearancePage:
   darkThemeName: "Dark"
   lightThemeName: "Light"
+  softDarkThemeName: "Soft Dark"
+  neutralLightThemeName: "Neutral Light"
   themesTitle: "Themes"
   title: "Appearance"
 assetPackagePage:

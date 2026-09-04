@@ -2,9 +2,10 @@ import { describe, expect, it } from "vitest";
 import {
   createInitialState,
   selectViewData,
+  setCurrentTheme,
   setUiConfig,
 } from "../../src/pages/appearance/appearance.store.js";
-import { EN_I18N } from "../support/i18n.js";
+import { EN_I18N, JA_I18N, ZH_HANS_I18N } from "../support/i18n.js";
 
 describe("appearance store", () => {
   it("uses an images-style two-column touch grid", () => {
@@ -43,5 +44,47 @@ describe("appearance store", () => {
     expect(viewData.themes[0].previewInput).toBe("oklch(1 0 0 / 15%)");
     expect(viewData.themes[1].previewPrimary).toBe("oklch(0.32 0.018 250)");
     expect(viewData.themes[1].previewInput).toBe("oklch(0.91 0.008 250)");
+    expect(viewData.themes[2].previewPrimary).toBe("oklch(0.9 0 0)");
+    expect(viewData.themes[2].previewInput).toBe("oklch(1 0 0 / 18%)");
+    expect(viewData.themes[3].previewPrimary).toBe("oklch(0.28 0 0)");
+    expect(viewData.themes[3].previewInput).toBe("oklch(0.92 0 0)");
+  });
+
+  it.each([
+    {
+      i18n: EN_I18N,
+      names: ["Dark", "Light", "Soft Dark", "Neutral Light"],
+    },
+    {
+      i18n: JA_I18N,
+      names: ["ダーク", "ライト", "ソフトダーク", "ニュートラルライト"],
+    },
+    {
+      i18n: ZH_HANS_I18N,
+      names: ["深色", "浅色", "柔和深色", "中性浅色"],
+    },
+  ])("localizes all theme names", ({ i18n, names }) => {
+    const state = createInitialState();
+    const viewData = selectViewData({ state, i18n });
+
+    expect(viewData.themes.map(({ id }) => id)).toEqual([
+      "dark",
+      "light",
+      "soft-dark",
+      "neutral-light",
+    ]);
+    expect(viewData.themes.map(({ name }) => name)).toEqual(names);
+  });
+
+  it("selects an additional theme without changing its id", () => {
+    const state = createInitialState();
+
+    setCurrentTheme({ state }, { theme: "soft-dark" });
+
+    const viewData = selectViewData({ state, i18n: EN_I18N });
+    expect(state.currentTheme).toBe("soft-dark");
+    expect(
+      viewData.themes.find(({ id }) => id === "soft-dark")?.isSelected,
+    ).toBe(true);
   });
 });
