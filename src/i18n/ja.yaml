@@ -6,6 +6,7 @@ projectsPage:
   appearanceMenuItem: "外観"
   appearanceTitle: "外観"
   avatarLabel: "アバター"
+  blackThemeName: "ブラック"
   cancelButton: "キャンセル"
   cannotAddOwner: "プロジェクトのオーナーをメンバーとして追加することはできません。"
   checkUpdateMenuItem: "アップデートを確認"
@@ -100,8 +101,6 @@ projectsPage:
   resolutionLabel: "解像度"
   resolutionWidthRequired: "解像度の幅は必須です。"
   resolutionWidthLabel: "解像度の幅"
-  softDarkThemeName: "ソフトダーク"
-  neutralLightThemeName: "ニュートラルライト"
   roleMember: "メンバー"
   roleOwner: "オーナー"
   saveButton: "保存"
@@ -2280,10 +2279,9 @@ settingsUserPage:
   placeholderNote: "これはユーザー設定画面のプレースホルダーです"
   title: "ユーザー設定"
 appearancePage:
+  blackThemeName: "ブラック"
   darkThemeName: "ダーク"
   lightThemeName: "ライト"
-  softDarkThemeName: "ソフトダーク"
-  neutralLightThemeName: "ニュートラルライト"
   themesTitle: "テーマ"
   title: "外観"
 assetPackagePage:

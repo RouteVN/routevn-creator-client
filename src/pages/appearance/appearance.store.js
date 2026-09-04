@@ -1,11 +1,24 @@
-import { normalizeTheme } from "../../internal/theme.js";
+import { DEFAULT_APP_THEME, normalizeTheme } from "../../internal/theme.js";
 import { selectAppearancePageCopy } from "./support/appearancePageCopy.js";
 
 const themeOptions = [
   {
-    id: "dark",
+    id: "soft-dark",
     name: "Dark",
     copyKey: "darkThemeName",
+    previewPageBackground: "oklch(0.22 0 0)",
+    previewPanelBackground: "oklch(0.255 0 0)",
+    previewCardBackground: "oklch(0.32 0 0)",
+    previewAccent: "oklch(0.4 0 0)",
+    previewPrimary: "oklch(0.9 0 0)",
+    previewSecondary: "oklch(0.32 0 0)",
+    previewInput: "oklch(1 0 0 / 18%)",
+    previewBorder: "oklch(1 0 0 / 14%)",
+  },
+  {
+    id: "dark",
+    name: "Black",
+    copyKey: "blackThemeName",
     previewPageBackground: "oklch(0.145 0 0)",
     previewPanelBackground: "oklch(0.18 0 0)",
     previewCardBackground: "oklch(0.269 0 0)",
@@ -28,32 +41,6 @@ const themeOptions = [
     previewInput: "oklch(0.91 0.008 250)",
     previewBorder: "oklch(0.84 0.012 250)",
   },
-  {
-    id: "soft-dark",
-    name: "Soft Dark",
-    copyKey: "softDarkThemeName",
-    previewPageBackground: "oklch(0.22 0 0)",
-    previewPanelBackground: "oklch(0.255 0 0)",
-    previewCardBackground: "oklch(0.32 0 0)",
-    previewAccent: "oklch(0.4 0 0)",
-    previewPrimary: "oklch(0.9 0 0)",
-    previewSecondary: "oklch(0.32 0 0)",
-    previewInput: "oklch(1 0 0 / 18%)",
-    previewBorder: "oklch(1 0 0 / 14%)",
-  },
-  {
-    id: "neutral-light",
-    name: "Neutral Light",
-    copyKey: "neutralLightThemeName",
-    previewPageBackground: "oklch(0.975 0 0)",
-    previewPanelBackground: "oklch(0.995 0 0)",
-    previewCardBackground: "oklch(0.94 0 0)",
-    previewAccent: "oklch(0.9 0 0)",
-    previewPrimary: "oklch(0.28 0 0)",
-    previewSecondary: "oklch(0.94 0 0)",
-    previewInput: "oklch(0.92 0 0)",
-    previewBorder: "oklch(0.87 0 0)",
-  },
 ];
 
 export const createInitialState = () => ({
@@ -61,7 +48,7 @@ export const createInitialState = () => ({
   selectedResourceId: "appearance",
   repositoryTarget: "settings",
   flatItems: [],
-  currentTheme: "dark",
+  currentTheme: DEFAULT_APP_THEME,
   isTouchMode: false,
 });
 

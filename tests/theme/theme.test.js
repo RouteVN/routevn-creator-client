@@ -8,32 +8,28 @@ import {
 } from "../../src/internal/theme.js";
 
 describe("app themes", () => {
-  it("registers the soft dark and neutral light themes", () => {
-    expect(APP_THEME_IDS).toEqual([
-      "dark",
-      "light",
-      "soft-dark",
-      "neutral-light",
-    ]);
+  it("registers Black, Dark, and Light with stable persisted ids", () => {
+    expect(APP_THEME_IDS).toEqual(["soft-dark", "dark", "light"]);
     expect(APP_THEME_CLASS_NAMES).toEqual([
+      "theme-soft-dark",
       "theme-dark",
       "theme-light",
-      "theme-soft-dark",
-      "theme-neutral-light",
     ]);
   });
 
-  it("normalizes and classifies the additional themes", () => {
+  it("normalizes and classifies the supported themes", () => {
+    expect(normalizeTheme("dark")).toBe("dark");
     expect(normalizeTheme("soft-dark")).toBe("soft-dark");
-    expect(normalizeTheme("neutral-light")).toBe("neutral-light");
+    expect(isDarkTheme("dark")).toBe(true);
     expect(isDarkTheme("soft-dark")).toBe(true);
-    expect(isDarkTheme("neutral-light")).toBe(false);
+    expect(isDarkTheme("light")).toBe(false);
+    expect(getThemeClassName("dark")).toBe("theme-dark");
     expect(getThemeClassName("soft-dark")).toBe("theme-soft-dark");
-    expect(getThemeClassName("neutral-light")).toBe("theme-neutral-light");
   });
 
-  it("keeps existing fallback and legacy light behavior", () => {
-    expect(normalizeTheme("unknown")).toBe("dark");
+  it("defaults unsupported themes to Dark and keeps legacy light behavior", () => {
+    expect(normalizeTheme("unknown")).toBe("soft-dark");
+    expect(normalizeTheme("neutral-light")).toBe("soft-dark");
     expect(normalizeTheme("light-soft")).toBe("light");
     expect(normalizeTheme("light-warm")).toBe("light");
   });

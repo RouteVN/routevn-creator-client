@@ -258,12 +258,18 @@ describe("projects.store addProject", () => {
     expect(viewData.appearanceForm.fields[0]).toMatchObject({
       name: "theme",
       options: [
-        { value: "dark", label: "Dark" },
+        { value: "soft-dark", label: "Dark" },
+        { value: "dark", label: "Black" },
         { value: "light", label: "Light" },
-        { value: "soft-dark", label: "Soft Dark" },
-        { value: "neutral-light", label: "Neutral Light" },
       ],
     });
+  });
+
+  it("defaults appearance to Dark", () => {
+    const state = createInitialState();
+
+    expect(state.currentTheme).toBe("soft-dark");
+    expect(state.appearanceDialog.defaultValues.theme).toBe("soft-dark");
   });
 
   it("requires an exact confirmation for permanent Android project deletion", () => {

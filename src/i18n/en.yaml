@@ -6,6 +6,7 @@ projectsPage:
   appearanceMenuItem: "Appearance"
   appearanceTitle: "Appearance"
   avatarLabel: "Avatar"
+  blackThemeName: "Black"
   cancelButton: "Cancel"
   cannotAddOwner: "Project owner cannot be added as a member."
   checkUpdateMenuItem: "Check for update"
@@ -100,8 +101,6 @@ projectsPage:
   resolutionLabel: "Resolution"
   resolutionWidthRequired: "Resolution Width is required."
   resolutionWidthLabel: "Resolution Width"
-  softDarkThemeName: "Soft Dark"
-  neutralLightThemeName: "Neutral Light"
   roleMember: "Member"
   roleOwner: "Owner"
   saveButton: "Save"
@@ -2280,10 +2279,9 @@ settingsUserPage:
   placeholderNote: "This is a placeholder for the user settings interface"
   title: "User Settings"
 appearancePage:
+  blackThemeName: "Black"
   darkThemeName: "Dark"
   lightThemeName: "Light"
-  softDarkThemeName: "Soft Dark"
-  neutralLightThemeName: "Neutral Light"
   themesTitle: "Themes"
   title: "Appearance"
 assetPackagePage:

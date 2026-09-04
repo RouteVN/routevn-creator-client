@@ -20,6 +20,10 @@
         background: #050505;
       }
 
+      body.theme-soft-dark {
+        background: oklch(0.22 0 0);
+      }
+
       body {
         --rvn-mobile-overlay-top-inset: env(safe-area-inset-top);
         --rvn-app-viewport-height: calc(
@@ -58,7 +62,7 @@
       });
     </script>
   </head>
-  <body class="dark">
+  <body class="dark theme-soft-dark">
     <rvn-app></rvn-app>
     <rtgl-global-ui></rtgl-global-ui>
   </body>

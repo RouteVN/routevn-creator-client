@@ -38,7 +38,7 @@ const createDeps = () => {
 };
 
 describe("appShellService", () => {
-  it("applies additional theme classes and dark mode consistently", () => {
+  it("applies the Dark theme class and dark mode consistently", () => {
     const deps = createDeps();
     const service = createAppShellService(deps);
     const createThemeElement = () => {
@@ -72,16 +72,16 @@ describe("appShellService", () => {
       for (const target of [body, documentElement]) {
         expect(target.classes).toContain("dark");
         expect(target.classes).toContain("theme-soft-dark");
-        expect(target.classes).not.toContain("theme-neutral-light");
+        expect(target.classes).not.toContain("theme-light");
         expect(target.element.dataset.rvnTheme).toBe("soft-dark");
       }
 
-      expect(service.applyTheme("neutral-light")).toBe("neutral-light");
+      expect(service.applyTheme("light")).toBe("light");
       for (const target of [body, documentElement]) {
         expect(target.classes).not.toContain("dark");
         expect(target.classes).not.toContain("theme-soft-dark");
-        expect(target.classes).toContain("theme-neutral-light");
-        expect(target.element.dataset.rvnTheme).toBe("neutral-light");
+        expect(target.classes).toContain("theme-light");
+        expect(target.element.dataset.rvnTheme).toBe("light");
       }
     } finally {
       vi.unstubAllGlobals();

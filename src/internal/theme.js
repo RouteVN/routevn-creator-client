@@ -1,15 +1,16 @@
-export const THEME_DARK = "dark";
+// Theme IDs are persisted, so the existing `dark` ID keeps its original
+// near-black palette while the user-facing names describe the palettes.
+export const THEME_BLACK = "dark";
+export const THEME_DARK = "soft-dark";
 export const THEME_LIGHT = "light";
-export const THEME_SOFT_DARK = "soft-dark";
-export const THEME_NEUTRAL_LIGHT = "neutral-light";
+export const DEFAULT_APP_THEME = THEME_DARK;
 const LEGACY_LIGHT_THEME_IDS = new Set(["light-soft", "light-warm"]);
-const DARK_THEME_IDS = new Set([THEME_DARK, THEME_SOFT_DARK]);
+const DARK_THEME_IDS = new Set([THEME_BLACK, THEME_DARK]);
 
 export const APP_THEME_IDS = Object.freeze([
   THEME_DARK,
+  THEME_BLACK,
   THEME_LIGHT,
-  THEME_SOFT_DARK,
-  THEME_NEUTRAL_LIGHT,
 ]);
 
 export const APP_THEME_CLASS_NAMES = Object.freeze(
@@ -21,7 +22,7 @@ export const normalizeTheme = (theme) => {
     return THEME_LIGHT;
   }
 
-  return APP_THEME_IDS.includes(theme) ? theme : THEME_DARK;
+  return APP_THEME_IDS.includes(theme) ? theme : DEFAULT_APP_THEME;
 };
 
 export const isDarkTheme = (theme) => {

@@ -40,40 +40,39 @@ describe("appearance store", () => {
 
     const viewData = selectViewData({ state, i18n: EN_I18N });
 
-    expect(viewData.themes[0].previewPrimary).toBe("oklch(0.922 0 0)");
-    expect(viewData.themes[0].previewInput).toBe("oklch(1 0 0 / 15%)");
-    expect(viewData.themes[1].previewPrimary).toBe("oklch(0.32 0.018 250)");
-    expect(viewData.themes[1].previewInput).toBe("oklch(0.91 0.008 250)");
-    expect(viewData.themes[2].previewPrimary).toBe("oklch(0.9 0 0)");
-    expect(viewData.themes[2].previewInput).toBe("oklch(1 0 0 / 18%)");
-    expect(viewData.themes[3].previewPrimary).toBe("oklch(0.28 0 0)");
-    expect(viewData.themes[3].previewInput).toBe("oklch(0.92 0 0)");
+    expect(viewData.themes[0].previewPrimary).toBe("oklch(0.9 0 0)");
+    expect(viewData.themes[0].previewInput).toBe("oklch(1 0 0 / 18%)");
+    expect(viewData.themes[1].previewPrimary).toBe("oklch(0.922 0 0)");
+    expect(viewData.themes[1].previewInput).toBe("oklch(1 0 0 / 15%)");
+    expect(viewData.themes[2].previewPrimary).toBe("oklch(0.32 0.018 250)");
+    expect(viewData.themes[2].previewInput).toBe("oklch(0.91 0.008 250)");
   });
 
   it.each([
     {
       i18n: EN_I18N,
-      names: ["Dark", "Light", "Soft Dark", "Neutral Light"],
+      names: ["Dark", "Black", "Light"],
     },
     {
       i18n: JA_I18N,
-      names: ["ダーク", "ライト", "ソフトダーク", "ニュートラルライト"],
+      names: ["ダーク", "ブラック", "ライト"],
     },
     {
       i18n: ZH_HANS_I18N,
-      names: ["深色", "浅色", "柔和深色", "中性浅色"],
+      names: ["深色", "黑色", "浅色"],
     },
   ])("localizes all theme names", ({ i18n, names }) => {
     const state = createInitialState();
     const viewData = selectViewData({ state, i18n });
 
     expect(viewData.themes.map(({ id }) => id)).toEqual([
+      "soft-dark",
       "dark",
       "light",
-      "soft-dark",
-      "neutral-light",
     ]);
     expect(viewData.themes.map(({ name }) => name)).toEqual(names);
+    expect(viewData.currentTheme).toBe("soft-dark");
+    expect(viewData.themes[0].isSelected).toBe(true);
   });
 
   it("selects an additional theme without changing its id", () => {

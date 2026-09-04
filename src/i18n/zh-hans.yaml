@@ -6,6 +6,7 @@ projectsPage:
   appearanceMenuItem: "外观"
   appearanceTitle: "外观"
   avatarLabel: "头像"
+  blackThemeName: "黑色"
   cancelButton: "取消"
   cannotAddOwner: "不能将项目所有者添加为成员。"
   checkUpdateMenuItem: "检查更新"
@@ -100,8 +101,6 @@ projectsPage:
   resolutionLabel: "分辨率"
   resolutionWidthRequired: "分辨率宽度为必填项。"
   resolutionWidthLabel: "分辨率宽度"
-  softDarkThemeName: "柔和深色"
-  neutralLightThemeName: "中性浅色"
   roleMember: "成员"
   roleOwner: "所有者"
   saveButton: "保存"
@@ -2280,10 +2279,9 @@ settingsUserPage:
   placeholderNote: "这是用户设置界面的占位内容"
   title: "用户设置"
 appearancePage:
+  blackThemeName: "黑色"
   darkThemeName: "深色"
   lightThemeName: "浅色"
-  softDarkThemeName: "柔和深色"
-  neutralLightThemeName: "中性浅色"
   themesTitle: "主题"
   title: "外观"
 assetPackagePage:
