@@ -78,12 +78,12 @@ template:
               - $if showMobilePreviewButton:
                   - rtgl-button#previewButton ml=sm v=se: ${previewTitle}
           - 'rtgl-view d=v h=1fg w=f style="min-height: 0;"':
-              - 'rtgl-view#layoutEditorCanvasBackground w=f style="min-width: 0;"':
+              - 'rtgl-view#layoutEditorCanvasBackground w=f bgc=bg style="min-width: 0; background-image: radial-gradient(circle, var(--input) 1px, transparent 1px); background-size: 24px 24px;"':
                   - 'div style="position: relative; width: ${layoutEditorCanvasMaxWidth}; max-width: 100%; margin-left: auto; margin-right: auto;"':
                       - 'rvn-layout-editor-canvas#layoutEditorCanvas style="display: block; width: 100%;" :resolution=${projectResolution} :layoutState=${layoutState} selectedItemId=${selectedItemId} :previewData=${previewData} :disableMoveDrag=${selectedItemIsInsideDirectedContainer} :disableInteraction=${selectedItemIsEffectivelyHidden}': null
               - 'rtgl-view h=1fg w=f sv style="min-height: 0; ${previewPanelVisibilityStyle}"':
                   - $if showPreviewHeader:
-                      - 'rtgl-view h=48 w=f d=h bgc=bg bwb=xs ph=md av=c style="position: sticky; top: 0px; z-index: 1000;"':
+                      - 'rtgl-view h=48 w=f d=h bgc=bg bwt=xs bwb=xs ph=md av=c style="position: sticky; top: 0px; z-index: 1000;"':
                           - rtgl-text w=1fg s=lg ellipsis=true: ${previewTitle}
                           - rtgl-button#saveButton ml=sm: ${savePreviewButton}
                   - $if isPreviewMounted:
