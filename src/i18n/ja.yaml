@@ -6,6 +6,7 @@ projectsPage:
   appearanceMenuItem: "外観"
   appearanceTitle: "外観"
   avatarLabel: "アバター"
+  blackThemeName: "ブラック"
   cancelButton: "キャンセル"
   cannotAddOwner: "プロジェクトのオーナーをメンバーとして追加することはできません。"
   checkUpdateMenuItem: "アップデートを確認"
@@ -2278,6 +2279,7 @@ settingsUserPage:
   placeholderNote: "これはユーザー設定画面のプレースホルダーです"
   title: "ユーザー設定"
 appearancePage:
+  blackThemeName: "ブラック"
   darkThemeName: "ダーク"
   lightThemeName: "ライト"
   themesTitle: "テーマ"

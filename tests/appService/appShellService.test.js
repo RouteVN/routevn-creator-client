@@ -38,6 +38,65 @@ const createDeps = () => {
 };
 
 describe("appShellService", () => {
+  it("applies the Dark theme class and dark mode consistently", () => {
+    const deps = createDeps();
+    const service = createAppShellService(deps);
+    const createThemeElement = () => {
+      const classes = new Set();
+      return {
+        classes,
+        element: {
+          classList: {
+            toggle: (className, enabled) => {
+              if (enabled) {
+                classes.add(className);
+              } else {
+                classes.delete(className);
+              }
+            },
+          },
+          dataset: {},
+        },
+      };
+    };
+    const body = createThemeElement();
+    const documentElement = createThemeElement();
+    const root = {
+      body: body.element,
+      documentElement: documentElement.element,
+    };
+    vi.stubGlobal("document", root);
+
+    try {
+      expect(service.applyTheme("dark")).toBe("dark");
+      for (const target of [body, documentElement]) {
+        expect(target.classes).toContain("dark");
+        expect(target.classes).toContain("theme-dark");
+        expect(target.classes).not.toContain("theme-black");
+        expect(target.classes).not.toContain("theme-light");
+        expect(target.element.dataset.rvnTheme).toBe("dark");
+      }
+
+      expect(service.applyTheme("black")).toBe("black");
+      for (const target of [body, documentElement]) {
+        expect(target.classes).toContain("dark");
+        expect(target.classes).not.toContain("theme-dark");
+        expect(target.classes).toContain("theme-black");
+        expect(target.element.dataset.rvnTheme).toBe("black");
+      }
+
+      expect(service.applyTheme("light")).toBe("light");
+      for (const target of [body, documentElement]) {
+        expect(target.classes).not.toContain("dark");
+        expect(target.classes).not.toContain("theme-black");
+        expect(target.classes).toContain("theme-light");
+        expect(target.element.dataset.rvnTheme).toBe("light");
+      }
+    } finally {
+      vi.unstubAllGlobals();
+    }
+  });
+
   it("awaits registered work before navigation continues", async () => {
     const deps = createDeps();
     const service = createAppShellService(deps);

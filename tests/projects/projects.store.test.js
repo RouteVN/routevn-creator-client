@@ -7,6 +7,7 @@ import {
   closeDeleteDialog,
   createInitialState,
   openDeleteDialog,
+  openAppearanceDialog,
   openLanguageDialog,
   openAppVersionMenu,
   removeProject,
@@ -243,6 +244,32 @@ describe("projects.store addProject", () => {
         },
       ],
     });
+  });
+
+  it("builds the appearance dialog with every supported theme", () => {
+    const state = createInitialState();
+
+    openAppearanceDialog({ state }, { theme: "black" });
+    const viewData = selectViewData({ state, i18n: EN_I18N });
+
+    expect(state.appearanceDialog.defaultValues).toEqual({
+      theme: "black",
+    });
+    expect(viewData.appearanceForm.fields[0]).toMatchObject({
+      name: "theme",
+      options: [
+        { value: "dark", label: "Dark" },
+        { value: "black", label: "Black" },
+        { value: "light", label: "Light" },
+      ],
+    });
+  });
+
+  it("defaults appearance to Dark", () => {
+    const state = createInitialState();
+
+    expect(state.currentTheme).toBe("dark");
+    expect(state.appearanceDialog.defaultValues.theme).toBe("dark");
   });
 
   it("requires an exact confirmation for permanent Android project deletion", () => {

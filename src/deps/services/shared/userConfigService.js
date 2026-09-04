@@ -1,6 +1,8 @@
+import { DEFAULT_APP_THEME } from "../../../internal/theme.js";
+
 const DEFAULT_USER_CONFIG = {
   appearance: {
-    theme: "dark",
+    theme: DEFAULT_APP_THEME,
   },
   groupImagesView: {
     itemsPerRow: 6,

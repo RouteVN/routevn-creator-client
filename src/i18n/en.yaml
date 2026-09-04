@@ -6,6 +6,7 @@ projectsPage:
   appearanceMenuItem: "Appearance"
   appearanceTitle: "Appearance"
   avatarLabel: "Avatar"
+  blackThemeName: "Black"
   cancelButton: "Cancel"
   cannotAddOwner: "Project owner cannot be added as a member."
   checkUpdateMenuItem: "Check for update"
@@ -2278,6 +2279,7 @@ settingsUserPage:
   placeholderNote: "This is a placeholder for the user settings interface"
   title: "User Settings"
 appearancePage:
+  blackThemeName: "Black"
   darkThemeName: "Dark"
   lightThemeName: "Light"
   themesTitle: "Themes"

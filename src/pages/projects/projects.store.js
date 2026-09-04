@@ -1,4 +1,4 @@
-import { normalizeTheme } from "../../internal/theme.js";
+import { DEFAULT_APP_THEME, normalizeTheme } from "../../internal/theme.js";
 import { APP_LOCALE_OPTIONS } from "../../internal/ui/appLocale.js";
 import {
   formatProjectsPageCopy,
@@ -49,7 +49,7 @@ export const createInitialState = () => ({
   platform: "tauri",
   appVersion: "",
   currentLocale: "en",
-  currentTheme: "dark",
+  currentTheme: DEFAULT_APP_THEME,
 
   profileMenu: {
     isOpen: false,
@@ -84,7 +84,7 @@ export const createInitialState = () => ({
     isOpen: false,
     formKey: 0,
     defaultValues: {
-      theme: "dark",
+      theme: DEFAULT_APP_THEME,
     },
   },
 
@@ -704,6 +704,10 @@ export const selectViewData = ({ state, i18n }) => {
           {
             value: "dark",
             label: copy.darkThemeName,
+          },
+          {
+            value: "black",
+            label: copy.blackThemeName,
           },
           {
             value: "light",

@@ -1,4 +1,4 @@
-import { normalizeTheme } from "../../internal/theme.js";
+import { DEFAULT_APP_THEME, normalizeTheme } from "../../internal/theme.js";
 import { selectAppearancePageCopy } from "./support/appearancePageCopy.js";
 
 const themeOptions = [
@@ -6,6 +6,19 @@ const themeOptions = [
     id: "dark",
     name: "Dark",
     copyKey: "darkThemeName",
+    previewPageBackground: "oklch(0.22 0 0)",
+    previewPanelBackground: "oklch(0.255 0 0)",
+    previewCardBackground: "oklch(0.32 0 0)",
+    previewAccent: "oklch(0.4 0 0)",
+    previewPrimary: "oklch(0.9 0 0)",
+    previewSecondary: "oklch(0.32 0 0)",
+    previewInput: "oklch(1 0 0 / 18%)",
+    previewBorder: "oklch(1 0 0 / 14%)",
+  },
+  {
+    id: "black",
+    name: "Black",
+    copyKey: "blackThemeName",
     previewPageBackground: "oklch(0.145 0 0)",
     previewPanelBackground: "oklch(0.18 0 0)",
     previewCardBackground: "oklch(0.269 0 0)",
@@ -35,7 +48,7 @@ export const createInitialState = () => ({
   selectedResourceId: "appearance",
   repositoryTarget: "settings",
   flatItems: [],
-  currentTheme: "dark",
+  currentTheme: DEFAULT_APP_THEME,
   isTouchMode: false,
 });
 
