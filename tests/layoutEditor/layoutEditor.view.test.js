@@ -57,6 +57,48 @@ describe("layoutEditor.view", () => {
     );
   });
 
+  it("draws the preview header divider above and below", () => {
+    const layoutEditorView = readFileSync(
+      new URL(
+        "../../src/pages/layoutEditor/layoutEditor.view.yaml",
+        import.meta.url,
+      ),
+      "utf8",
+    );
+
+    expect(layoutEditorView).toContain(
+      "h=48 w=f d=h bgc=bg bwt=xs bwb=xs ph=md av=c",
+    );
+  });
+
+  it("draws vertical borders around the canvas", () => {
+    const layoutEditorCanvasView = readFileSync(
+      new URL(
+        "../../src/components/layoutEditorCanvas/layoutEditorCanvas.view.yaml",
+        import.meta.url,
+      ),
+      "utf8",
+    );
+
+    expect(layoutEditorCanvasView).toContain("bwl=xs bwr=xs bc=bo");
+    expect(layoutEditorCanvasView).not.toContain("bwb=xs");
+  });
+
+  it("marks the empty canvas workspace with a theme-aware dot grid", () => {
+    const layoutEditorView = readFileSync(
+      new URL(
+        "../../src/pages/layoutEditor/layoutEditor.view.yaml",
+        import.meta.url,
+      ),
+      "utf8",
+    );
+
+    expect(layoutEditorView).toContain(
+      "background-image: radial-gradient(circle, var(--input) 1px, transparent 1px)",
+    );
+    expect(layoutEditorView).toContain("background-size: 24px 24px");
+  });
+
   it("renders only allowlisted semantic labels in selected-item headers", () => {
     const layoutEditorView = readFileSync(
       new URL(
