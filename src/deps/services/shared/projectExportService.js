@@ -69,16 +69,103 @@ const BUNDLE_PLAYER_INDEX_HTML_TEMPLATE = `<!doctype html>
         place-items: center;
         box-sizing: border-box;
         padding: 24px;
-        color: #fff;
-        background: __ROUTEVN_WEB_BACKGROUND_COLOR__;
-        font: 600 24px/1.2 sans-serif;
-        letter-spacing: 0.02em;
+        color: #f2f2f2;
+        background: #101010;
+        font: 400 20px/1.4 -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
         z-index: 10;
         user-select: none;
+        transition: opacity 200ms ease, visibility 0s 200ms;
       }
 
       #loading.ready {
         cursor: pointer;
+      }
+
+      .loading-progress,
+      #loading-start {
+        grid-area: 1 / 1;
+        transition: opacity 160ms ease, visibility 0s 160ms;
+      }
+
+      .loading-progress {
+        width: min(220px, 66vw);
+        animation: loading-appear 160ms ease-out;
+      }
+
+      #loading.ready .loading-progress {
+        opacity: 0;
+        visibility: hidden;
+        animation: none;
+      }
+
+      #loading.ready #loading-start {
+        opacity: 1;
+        visibility: visible;
+        transition-delay: 80ms;
+      }
+
+      @keyframes loading-appear {
+        from { opacity: 0; }
+        to { opacity: 1; }
+      }
+
+      .loading-labels {
+        display: flex;
+        justify-content: space-between;
+        align-items: baseline;
+        margin-bottom: 14px;
+      }
+
+      #loading-percentage {
+        color: #d0d0d0;
+        font-size: 18px;
+        font-variant-numeric: tabular-nums;
+      }
+
+      #loading-progress {
+        appearance: none;
+        display: block;
+        width: 100%;
+        height: 2px;
+        border: 0;
+        background: #333;
+        color: #eee;
+      }
+
+      #loading-progress::-webkit-progress-bar {
+        background: #333;
+      }
+
+      #loading-progress::-webkit-progress-value {
+        background: #eee;
+        transition: width 150ms ease-out;
+      }
+
+      #loading-progress::-moz-progress-bar {
+        background: #eee;
+        transition: width 150ms ease-out;
+      }
+
+      #loading-start {
+        opacity: 0;
+        visibility: hidden;
+        border: 0;
+        padding: 12px 22px;
+        min-height: 48px;
+        background: transparent;
+        color: inherit;
+        font: inherit;
+        letter-spacing: 0.01em;
+        cursor: pointer;
+      }
+
+      #loading-start:hover {
+        color: #fff;
+      }
+
+      #loading-start:focus-visible {
+        outline: 1px solid #b8b8b8;
+        outline-offset: 4px;
       }
 
       #loading.error {
@@ -88,7 +175,27 @@ const BUNDLE_PLAYER_INDEX_HTML_TEMPLATE = `<!doctype html>
       }
 
       #loading.hidden {
-        display: none;
+        opacity: 0;
+        visibility: hidden;
+        pointer-events: none;
+      }
+
+      @media (prefers-reduced-motion: reduce) {
+        #loading,
+        .loading-progress,
+        #loading-start,
+        #loading.ready #loading-start {
+          animation: none;
+          transition: none;
+        }
+
+        #loading-progress::-webkit-progress-value {
+          transition: none;
+        }
+
+        #loading-progress::-moz-progress-bar {
+          transition: none;
+        }
       }
 
       #loading .loading-error {
@@ -123,7 +230,16 @@ const BUNDLE_PLAYER_INDEX_HTML_TEMPLATE = `<!doctype html>
     </style>
   </head>
   <body data-player-start="click">
-    <div id="loading">Loading...</div>
+    <div id="loading">
+      <div class="loading-progress">
+        <div class="loading-labels">
+          <span id="loading-label">Loading…</span>
+          <span id="loading-percentage" aria-hidden="true">0%</span>
+        </div>
+        <progress id="loading-progress" max="100" value="0" aria-labelledby="loading-label"></progress>
+      </div>
+      <button id="loading-start" type="button" disabled>Click to start</button>
+    </div>
     <div id="canvas"></div>
   </body>
   <script>

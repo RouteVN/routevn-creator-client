@@ -1,5 +1,6 @@
 import { readFileSync } from "node:fs";
 import { fileURLToPath } from "node:url";
+import { JSDOM } from "jsdom";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import {
   BUNDLE_FORMAT_VERSION_V4,
@@ -85,14 +86,24 @@ describe("projectExportService", () => {
   it("keeps the loading and click-to-start surface only in the web player HTML", () => {
     for (const html of [BUNDLE_PLAYER_INDEX_HTML, webPlayerIndexHtml]) {
       expect(html).toContain('<body data-player-start="click">');
-      expect(html).toContain('<div id="loading">Loading...</div>');
+      expect(html).toContain('<span id="loading-label">Loading…</span>');
+      const dom = new JSDOM(html);
+      expect(
+        dom.window.document.querySelector("#loading-progress").tagName,
+      ).toBe("PROGRESS");
+      expect(dom.window.document.querySelector("#loading-progress").value).toBe(
+        0,
+      );
+      dom.window.close();
+      expect(html).toContain('id="loading-start"');
+      expect(html).toContain("disabled>Click to start</button>");
       expect(html).toContain("#loading.ready");
     }
 
     for (const html of [macosPlayerIndexHtml, windowsPlayerIndexHtml]) {
       expect(html).toContain('<body data-player-start="automatic">');
       expect(html).toContain('<div id="loading"></div>');
-      expect(html).not.toContain('<div id="loading">Loading...</div>');
+      expect(html).not.toContain('id="loading-progress"');
       expect(html).not.toContain("#loading.ready");
     }
   });

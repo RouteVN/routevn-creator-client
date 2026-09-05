@@ -6,17 +6,20 @@ export const waitForPlayerStart = async ({
     return;
   }
 
-  loadingElement.textContent = "Click to start";
+  const progress = loadingElement.querySelector(".loading-progress");
+  const startButton = loadingElement.querySelector("#loading-start");
+  const window = loadingElement.ownerDocument.defaultView;
+  startButton.textContent = window.matchMedia("(pointer: coarse)").matches
+    ? "Tap to start"
+    : "Click to start";
+  progress.inert = true;
+  progress.setAttribute("aria-hidden", "true");
+  startButton.disabled = false;
   loadingElement.classList.add("ready");
 
   await new Promise((resolve) => {
-    const handleClick = () => {
-      loadingElement.removeEventListener("click", handleClick);
-      resolve();
-    };
-
-    loadingElement.addEventListener("click", handleClick);
+    loadingElement.addEventListener("click", resolve, { once: true });
   });
 
-  loadingElement.classList.remove("ready");
+  startButton.disabled = true;
 };
