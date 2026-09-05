@@ -135,6 +135,28 @@ steps:
     type: js
     fn: eval
     args:
+      - |
+        (() => {
+          const deepQuery = (root, selector) => {
+            const direct = root?.querySelector?.(selector);
+            if (direct) return direct;
+            for (const node of root?.querySelectorAll?.('*') ?? []) {
+              const found = node.shadowRoot ? deepQuery(node.shadowRoot, selector) : undefined;
+              if (found) return found;
+            }
+          };
+          const editor = deepQuery(document, 'rvn-action-transform-editor#actionTransformEditor');
+          const background = getComputedStyle(deepQuery(editor.shadowRoot, '#actionTransformCanvasBackground'));
+          const frame = getComputedStyle(deepQuery(editor.shadowRoot, '#actionTransformCanvasFrame'));
+          return String(background.backgroundImage.includes('radial-gradient') &&
+            background.backgroundSize === '24px 24px' &&
+            frame.borderLeftWidth === '1px' && frame.borderRightWidth === '1px');
+        })()
+    value: "true"
+  - action: assert
+    type: js
+    fn: eval
+    args:
       - "(() => { const deepQuery = (root, selector) => { const direct = root?.querySelector?.(selector); if (direct) return direct; for (const node of root?.querySelectorAll?.('*') ?? []) { const found = node.shadowRoot ? deepQuery(node.shadowRoot, selector) : undefined; if (found) return found; } return undefined; }; const sceneEditor = deepQuery(document, 'rvn-scene-editor-lexical'); const metrics = sceneEditor?.store?.selectBackgroundTransformEditor?.()?.selectedElementMetrics; return `${metrics?.width}x${metrics?.height}`; })()"
     value: "1920x1080"
   - action: select
@@ -220,6 +242,52 @@ steps:
     fn: eval
     args:
       - "(() => { const deepQuery = (root, selector) => { const direct = root?.querySelector?.(selector); if (direct) return direct; for (const node of root?.querySelectorAll?.('*') ?? []) { const found = node.shadowRoot ? deepQuery(node.shadowRoot, selector) : undefined; if (found) return found; } return undefined; }; const editor = deepQuery(document, 'rvn-action-transform-editor#actionTransformEditor'); const yField = deepQuery(editor?.shadowRoot, '#groupItem0x0x1'); return String(Number(yField?.textContent?.trim()) === window.__vtActionTransformY + 1); })()"
+    value: "true"
+  - action: assert
+    type: js
+    fn: eval
+    args:
+      - |
+        (async () => {
+          const deepQuery = (root, selector) => {
+            const direct = root?.querySelector?.(selector);
+            if (direct) return direct;
+            for (const node of root?.querySelectorAll?.('*') ?? []) {
+              const found = node.shadowRoot ? deepQuery(node.shadowRoot, selector) : undefined;
+              if (found) return found;
+            }
+          };
+          const waitUntil = async (condition) => {
+            const deadline = Date.now() + 5000;
+            while (!condition()) {
+              if (Date.now() >= deadline) throw new Error('Scale display did not update');
+              await new Promise((resolve) => setTimeout(resolve, 50));
+            }
+          };
+          const editor = deepQuery(document, 'rvn-action-transform-editor#actionTransformEditor');
+          const inspector = () => deepQuery(editor.shadowRoot, '#transformInspector');
+          const original = editor.props.transform;
+          const update = (formValues) => editor.transformedHandlers.handleInspectorUpdate({
+            _event: { detail: { formValues } },
+          });
+          try {
+            update({ ...original, scaleX: 1.23456789, scaleY: 0.98765432 });
+            for (const [name, expected] of [['scaleX', '1.23'], ['scaleY', '0.99']]) {
+              const field = () => deepQuery(inspector().shadowRoot, `[data-name='${name}']`);
+              await waitUntil(() => field()?.textContent.trim() === expected);
+              field().click();
+              await waitUntil(() => {
+                const form = deepQuery(inspector().shadowRoot, '#popoverForm');
+                return deepQuery(form, 'input')?.value === expected;
+              });
+              inspector().transformedHandlers.handlePopverFormClose({});
+            }
+            return String(editor.props.transform.scaleX === 1.23456789 && editor.props.transform.scaleY === 0.98765432);
+          } finally {
+            inspector().transformedHandlers.handlePopverFormClose({});
+            update(original);
+          }
+        })()
     value: "true"
   - action: select
     selector: "rvn-action-transform-editor#actionTransformEditor #doneButton"

@@ -3,6 +3,7 @@ import yaml from "js-yaml";
 import { describe, expect, it } from "vitest";
 import {
   createInitialState,
+  openPopoverForm,
   selectViewData,
   setValues,
 } from "../../src/components/layoutEditPanel/layoutEditPanel.store.js";
@@ -20,6 +21,42 @@ const CONSTANTS = yaml.load(
 );
 
 describe("layoutEditPanel transform mode", () => {
+  it.each([
+    [1.23456789, 0.98765432, 1.23, 0.99],
+    [0.1 + 0.2, 1.2 + 0.01, 0.3, 1.21],
+    [-1.236, -0.994, -1.24, -0.99],
+    [0, 1, 0, 1],
+  ])(
+    "rounds scale readouts and popovers without changing the transform (%s, %s)",
+    (scaleX, scaleY, expectedX, expectedY) => {
+      const state = createInitialState();
+      setValues({ state }, { values: { scaleX, scaleY } });
+      const viewData = selectViewData({
+        state,
+        props: {
+          mode: "transform",
+          projectResolution: { width: 1920, height: 1080 },
+          layoutsData: EMPTY_TREE,
+          charactersData: EMPTY_TREE,
+        },
+        constants: CONSTANTS,
+        i18n: EN_I18N,
+      });
+      const fields = viewData.config.sections[0].items[1].fields;
+
+      expect(fields.map(({ value }) => value)).toEqual([expectedX, expectedY]);
+      for (const field of fields) {
+        openPopoverForm(
+          { state },
+          { name: field.name, form: field.popoverForm },
+        );
+        expect(state.popover.defaultValues.value).toBe(field.value);
+      }
+      expect(state.values).toMatchObject({ scaleX, scaleY });
+      expect(viewData.values).toMatchObject({ scaleX, scaleY });
+    },
+  );
+
   it("exposes only action-transform controls", () => {
     const state = createInitialState();
     setValues(

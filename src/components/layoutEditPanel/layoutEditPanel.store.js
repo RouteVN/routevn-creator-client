@@ -877,6 +877,8 @@ export const updateValueProperty = ({ state }, { value, name } = {}) => {
   }
 };
 
+const roundScaleForDisplay = (value) => Number(Number(value ?? 1).toFixed(2));
+
 export const openPopoverForm = (
   { state },
   { x, y, name, form, projectResolution, copy } = {},
@@ -885,7 +887,11 @@ export const openPopoverForm = (
     return;
   }
 
-  const value = getValueAtPath(state.values, name);
+  const fieldValue = getValueAtPath(state.values, name);
+  const value =
+    name === "scaleX" || name === "scaleY"
+      ? roundScaleForDisplay(fieldValue)
+      : fieldValue;
   const popoverFormValues = {
     value,
   };
@@ -1675,6 +1681,8 @@ export const selectViewData = ({ state, props, constants, i18n }) => {
     variablesData: state.variablesData,
     copy,
   });
+  values.scaleX = roundScaleForDisplay(values.scaleX);
+  values.scaleY = roundScaleForDisplay(values.scaleY);
   values.textRevealIndicatorItems = values.textRevealIndicatorItems.map(
     (item) => hydrateTextRevealIndicatorItem(item, state.spritesheetsData),
   );
