@@ -11,6 +11,7 @@ import {
   toggleTagFilterPopoverOption,
 } from "../../internal/ui/tagFilterPopover.handlers.js";
 import { dispatchResourceViewBackgroundClick } from "../../internal/ui/resourcePages/resourceViewBackground.js";
+import { getRetainedRenderedItemCount } from "../../internal/ui/resourcePages/progressivePlaceholders.js";
 
 const PROGRESSIVE_INITIAL_ITEM_COUNT = 8;
 const PROGRESSIVE_BATCH_ITEM_COUNT = 24;
@@ -491,7 +492,18 @@ const syncProgressiveRenderState = (deps) => {
   const nextRenderedItemCount = currentSignature
     ? Math.min(
         totalItemCount,
-        Math.max(currentRenderedItemCount, progressiveInitialItemCount),
+        Math.max(
+          progressiveInitialItemCount,
+          getRetainedRenderedItemCount({
+            previousItemIds: JSON.parse(currentSignature).flatMap(
+              ([, itemIds]) => itemIds,
+            ),
+            nextItemIds: groups.flatMap((group) =>
+              (group.children ?? []).map((item) => item.id),
+            ),
+            renderedItemCount: currentRenderedItemCount,
+          }),
+        ),
       )
     : Math.min(totalItemCount, progressiveInitialItemCount);
   store.setProgressiveRenderedItemCount({
@@ -536,10 +548,15 @@ const syncSoundWaveformHydrationState = (deps) => {
   }
 
   cancelSoundWaveformRenderFrame(store);
+  const nextRenderedItemCount = getRetainedRenderedItemCount({
+    previousItemIds: currentSignature ? JSON.parse(currentSignature) : [],
+    nextItemIds: getSoundWaveformItemIds(groups),
+    renderedItemCount: store.selectSoundWaveformRenderedItemCount(),
+  });
   store.setSoundWaveformRenderSignature({ signature: nextSignature });
-  store.setSoundWaveformRenderedItemCount({ itemCount: 0 });
+  store.setSoundWaveformRenderedItemCount({ itemCount: nextRenderedItemCount });
 
-  if (totalItemCount > 0) {
+  if (nextRenderedItemCount < totalItemCount) {
     scheduleSoundWaveformHydration(deps);
   }
 

@@ -1,5 +1,8 @@
 import { buildResourceOverflowMenuItems } from "../../internal/ui/resourcePages/resourceOverflowMenu.js";
-import { buildProgressivePlaceholderChildren } from "../../internal/ui/resourcePages/progressivePlaceholders.js";
+import {
+  buildProgressivePlaceholderChildren,
+  getRetainedRenderedItemCount,
+} from "../../internal/ui/resourcePages/progressivePlaceholders.js";
 import {
   buildTagFilterPopoverViewData,
   clearTagFilterPopoverTagIds,
@@ -381,13 +384,35 @@ export const selectViewData = ({ state, props, i18n }) => {
     ? DEFAULT_EAGER_IMAGE_CARD_COUNT
     : Number.POSITIVE_INFINITY;
   let remainingSoundWaveformCount = lazySoundWaveforms
-    ? state.soundWaveformRenderedItemCount
+    ? getRetainedRenderedItemCount({
+        previousItemIds: state.soundWaveformRenderSignature
+          ? JSON.parse(state.soundWaveformRenderSignature)
+          : [],
+        nextItemIds: sourceGroups.flatMap((group) =>
+          (group.children ?? [])
+            .filter(
+              (item) => item.cardKind === "sound" && item.waveformDataFileId,
+            )
+            .map((item) => item.id),
+        ),
+        renderedItemCount: state.soundWaveformRenderedItemCount,
+      })
     : Number.POSITIVE_INFINITY;
   let remainingProgressiveItemCount = progressiveRenderEnabled
-    ? state.progressiveRenderedItemCount
+    ? getRetainedRenderedItemCount({
+        previousItemIds: state.progressiveRenderSignature
+          ? JSON.parse(state.progressiveRenderSignature).flatMap(
+              ([, itemIds]) => itemIds,
+            )
+          : [],
+        nextItemIds: sourceGroups.flatMap((group) =>
+          (group.children ?? []).map((item) => item.id),
+        ),
+        renderedItemCount: state.progressiveRenderedItemCount,
+      })
     : Number.POSITIVE_INFINITY;
 
-  const groups = sourceGroups.map((group) => {
+  const groups = sourceGroups.map((group, groupIndex) => {
     const isCollapsed = state.collapsedIds.includes(group.id);
     const children = isCollapsed ? [] : (group.children ?? []);
     const hasVisibleChildren = children.length > 0;
@@ -419,7 +444,7 @@ export const selectViewData = ({ state, props, i18n }) => {
       showEmptyUpload: !hasVisibleChildren && !hasChildFolders,
       headerBackgroundColor: group.id === props.selectedFolderId ? "mu" : "bg",
       progressiveContentMinHeight: 0,
-      children: progressiveChildren.children.map((item) => {
+      children: progressiveChildren.children.map((item, itemIndex) => {
         const isSelected = item.id === props.selectedItemId;
         const defaultBorderColor = resolveDefaultBorderColor();
         const isInteractive = item.isInteractive !== false;
@@ -470,6 +495,14 @@ export const selectViewData = ({ state, props, i18n }) => {
 
         return {
           ...item,
+          // FE uses element IDs as DOM keys. Keep sound canvases tied to their
+          // resource rather than their changing position in the list.
+          refKey:
+            item.cardKind === "sound"
+              ? Array.from(item.id, (character) =>
+                  character.codePointAt(0).toString(16),
+                ).join("x")
+              : `${groupIndex}x${itemIndex}`,
           domItemId: isInteractive ? item.id : "",
           cursor: isInteractive ? "pointer" : "default",
           itemContainerStyle: useFullWidthCard
