@@ -60,6 +60,9 @@ export const createAppServiceCore = ({
 
   const userConfigService = createUserConfigService({
     db,
+    onChange: ({ key }) => {
+      subject.dispatch("app.userConfig.changed", { key });
+    },
     onLoadError: () => {
       const copy = appShellService.getAppCopy?.() ?? {};
       appShellService.showToast({

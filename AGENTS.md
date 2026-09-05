@@ -34,6 +34,11 @@ Notes:
   user asks for it, when preparing release/VT output, or when there is a
   specific build-only issue to verify.
 - Before pushing, run lint/format checks (the push hook also enforces this).
+- During Android development, refresh the connected test device after each
+  completed app change without waiting for another user request. Follow
+  `docs/android.md` and reuse the running Android dev server for frontend
+  changes; rebuild/install the APK when native changes require it. Verify the
+  device loaded the updated app. If disconnected, report that refresh is pending.
 
 Run tests:
 
@@ -128,6 +133,17 @@ If you need deeper or broader Rettangoli framework reference material, use
 - `src/internal/project/` is reserved for pure project semantics only.
 - Small pure app-owned helpers that are neither project semantics nor UI orchestration belong in `src/internal/`.
 - `src/deps/features/` and `src/deps/infra/` are legacy folders. Do not add new code there.
+
+## Page Scroll Spacing
+
+- Most vertically scrolling pages should include extra space after the last
+  content item so users can scroll it clear of bottom navigation and floating
+  controls on desktop and mobile.
+- Follow the Project/Config pattern: a non-shrinking, `aria-hidden` 240px spacer
+  inside the scrolling content. Reuse an existing equivalent spacer instead of
+  adding a second one. Fixed canvases and other intentionally non-scrolling
+  surfaces do not need this spacer.
+- See `docs/engineering.md` for the page scroll spacing pattern.
 
 ## Detail Panel Pattern
 

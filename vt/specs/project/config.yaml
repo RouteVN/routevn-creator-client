@@ -1,6 +1,6 @@
 ---
 title: Project Config Page
-description: Covers Language, Asset Package, and Appearance in order, global Release menu visibility, disabled direct links with trailing slashes, and theme and language switching.
+description: Covers Language, Asset Package, Help Button, and Appearance in order, global Release menu visibility, disabled direct links with trailing slashes, and theme and language switching.
 url: /projects
 skipInitialScreenshot: true
 viewport:
@@ -75,7 +75,30 @@ steps:
     args:
       - >-
         (() => { const find = root => root.querySelector('rvn-config') ?? [...root.querySelectorAll('*')].map(node => node.shadowRoot && find(node.shadowRoot)).find(Boolean); return [...find(document).shadowRoot.querySelectorAll('[id$="Section"]')].map(node => node.id).join(','); })()
-    value: "languageSection,assetPackageSection,appearanceSection"
+    value: "languageSection,assetPackageSection,helpButtonSection,appearanceSection"
+  - action: waitFor
+    selector: "#helpButtonToggle #option1[aria-pressed='true']"
+    state: visible
+    timeoutMs: 5000
+  - action: waitFor
+    selector: "#helpFloatingButton"
+    state: visible
+    timeoutMs: 5000
+  - action: select
+    selector: "#helpButtonToggle #option0"
+    steps:
+      - action: click
+  - action: assert
+    type: hidden
+    selector: "#helpFloatingButton"
+  - action: select
+    selector: "#helpButtonToggle #option1"
+    steps:
+      - action: click
+  - action: waitFor
+    selector: "#helpFloatingButton"
+    state: visible
+    timeoutMs: 5000
   - action: select
     selector: "#sidebar [data-item-id='release']"
     steps:

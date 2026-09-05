@@ -69,5 +69,8 @@ steps:
     value: /project/about
   - action: wait
     ms: 450
+  - action: assert
+    type: visible
+    selector: "rvn-about rtgl-button[data-id='all-social']"
   - action: screenshot
 ---

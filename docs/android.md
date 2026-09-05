@@ -133,6 +133,12 @@ JS, YAML view, store, handler, i18n, and setup changes are then served from the
 dev server. A normal launcher start does not set this extra and uses packaged
 JavaScript instead.
 
+During development, refresh the connected test device after each completed app
+change and verify that it loaded the updated dev-server content. Reuse an
+existing watch session. Frontend changes need a refresh, while native changes
+require rebuilding and installing the APK. If the device is disconnected,
+report that the refresh is pending.
+
 If multiple Android devices are connected, set `ANDROID_SERIAL` before running
 the watch command:
 

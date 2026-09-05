@@ -2275,6 +2275,7 @@ audioPlayerPage:
   errorTitle: "Error"
   missingFileId: "Missing fileId"
 aboutPage:
+  allSocialMediaButton: "All social media"
   appVersionText: "RouteVN Creator {appVersion}"
   checkForUpdatesButton: "Check for Updates"
   communityTitle: "Community"
@@ -2291,6 +2292,10 @@ configPage:
   title: "Config"
   assetPackageTitle: "Asset Package"
   assetPackageDescription: "Enable this if you plan to release an asset pack in the RouteVN asset store."
+  helpButtonTitle: "Help Button"
+  helpButtonDescription: "Show the floating question-mark button at the bottom right."
+  hideLabel: "Hide"
+  showLabel: "Show"
   disabledLabel: "Disabled"
   enabledLabel: "Enabled"
   appearanceTitle: "Appearance"

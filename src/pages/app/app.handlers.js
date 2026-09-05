@@ -26,6 +26,10 @@ import { getRoutevnCreatorDocsUrl } from "../../internal/routevnUrls.js";
 import { resolveUpdatesEnabled } from "../../internal/updates.js";
 import { recordRecentSceneVisit } from "../../internal/ui/recentScenes.js";
 import { isAssetPackageEnabled } from "../../internal/ui/releasePreferences.js";
+import {
+  HELP_BUTTON_VISIBLE_CONFIG_KEY,
+  isHelpButtonVisible,
+} from "../../internal/ui/helpPreferences.js";
 
 const GLOBAL_NAV_TIMEOUT_MS = 1500;
 const ROUTE_HISTORY_MODES = new Set(["push", "replace", "none"]);
@@ -565,6 +569,7 @@ export const handleBeforeMount = (deps) => {
   appService.setAppCopyProvider?.(() => selectAppCopy(deps.i18n));
   store.setPlatform({ platform: appService.getPlatform() });
   store.setUiConfig({ uiConfig });
+  store.setHelpButtonVisible({ visible: isHelpButtonVisible(appService) });
   subject.dispatch("app.route.request", {
     path: initialPath,
     payload: appService.getPayload(),
@@ -768,7 +773,7 @@ export const handleSceneEditorKeyboardStateChange = (deps, payload = {}) => {
 };
 
 const subscriptions = (deps) => {
-  const { appService, subject } = deps;
+  const { appService, subject, store, render } = deps;
   const runRouteTransition = createRouteTransitionRunner(deps);
   let navigationRequestSequence = 0;
   const projectKeyDown$ = fromEvent(window, "keydown", { capture: true }).pipe(
@@ -814,6 +819,19 @@ const subscriptions = (deps) => {
   };
 
   return [
+    subject.pipe(
+      filter(
+        ({ action, payload }) =>
+          action === "app.userConfig.changed" &&
+          payload.key === HELP_BUTTON_VISIBLE_CONFIG_KEY,
+      ),
+      tap(() => {
+        store.setHelpButtonVisible({
+          visible: isHelpButtonVisible(appService),
+        });
+        render();
+      }),
+    ),
     subject.pipe(
       filter(({ action }) => action === "routePop"),
       tap(() => {

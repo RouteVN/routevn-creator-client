@@ -154,6 +154,7 @@ export const createUserConfigService = ({
   db,
   onLoadError,
   onPersistError,
+  onChange,
   writeDelayMs = DEFAULT_WRITE_DELAY_MS,
 } = {}) => {
   let currentUserConfig = cloneConfig(DEFAULT_USER_CONFIG);
@@ -219,6 +220,7 @@ export const createUserConfigService = ({
     setUserConfig(key, value) {
       setConfigValueByPath(currentUserConfig, key, value);
       schedulePersist();
+      onChange?.({ key });
     },
 
     getAllUserConfig() {

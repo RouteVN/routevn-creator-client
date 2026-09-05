@@ -54,6 +54,7 @@ export const createInitialState = () => ({
   currentTheme: DEFAULT_APP_THEME,
   currentLocale: DEFAULT_APP_LOCALE,
   assetPackageEnabled: false,
+  showHelpButton: true,
   isTouchMode: false,
 });
 
@@ -97,6 +98,12 @@ export const selectViewData = ({ state, i18n }) => {
     languageTitle: copy.languageTitle,
     assetPackageTitle: copy.assetPackageTitle,
     assetPackageDescription: copy.assetPackageDescription,
+    helpButtonTitle: copy.helpButtonTitle,
+    helpButtonDescription: copy.helpButtonDescription,
+    helpButtonOptions: [
+      { value: false, label: copy.hideLabel },
+      { value: true, label: copy.showLabel },
+    ],
     assetPackageOptions: [
       { value: false, label: copy.disabledLabel },
       { value: true, label: copy.enabledLabel },
@@ -112,6 +119,10 @@ export const setAssetPackageEnabled = ({ state }, { enabled }) => {
 };
 
 export const selectCurrentLocale = ({ state }) => state.currentLocale;
+
+export const setHelpButtonVisible = ({ state }, { visible }) => {
+  state.showHelpButton = visible;
+};
 
 export const setCurrentLocale = ({ state }, { locale } = {}) => {
   state.currentLocale = locale ?? DEFAULT_APP_LOCALE;

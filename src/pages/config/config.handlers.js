@@ -4,6 +4,10 @@ import {
 } from "../../internal/ui/appLocale.js";
 import { selectConfigPageCopy } from "./support/configPageCopy.js";
 import {
+  HELP_BUTTON_VISIBLE_CONFIG_KEY,
+  isHelpButtonVisible,
+} from "../../internal/ui/helpPreferences.js";
+import {
   ASSET_PACKAGE_ENABLED_CONFIG_KEY,
   isAssetPackageEnabled,
 } from "../../internal/ui/releasePreferences.js";
@@ -13,6 +17,7 @@ export const handleBeforeMount = (deps) => {
 
   store.setUiConfig({ uiConfig });
   store.setAssetPackageEnabled({ enabled: isAssetPackageEnabled(appService) });
+  store.setHelpButtonVisible({ visible: isHelpButtonVisible(appService) });
   store.setCurrentTheme({ theme: appService.getTheme() });
   store.setCurrentLocale({
     locale: resolveAppLocale({ appService, localeService: locale }),
@@ -79,6 +84,15 @@ export const handleAssetPackageChange = (deps, payload) => {
 
   appService.setUserConfig(ASSET_PACKAGE_ENABLED_CONFIG_KEY, enabled);
   store.setAssetPackageEnabled({ enabled });
+  render();
+};
+
+export const handleHelpButtonChange = (deps, payload) => {
+  const { appService, render, store } = deps;
+  const { value: visible } = payload._event.detail;
+
+  appService.setUserConfig(HELP_BUTTON_VISIBLE_CONFIG_KEY, visible);
+  store.setHelpButtonVisible({ visible });
   render();
 };
 

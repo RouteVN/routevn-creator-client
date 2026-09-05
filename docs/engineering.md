@@ -552,11 +552,17 @@ contract is:
 - sync reads in handlers/components
 - async persistence on writes
 
-Config orders Language, Asset Package, and Appearance. The Asset Package
+Config orders Language, Asset Package, Help Button, and Appearance. The Asset Package
 preference uses `release.assetPackageEnabled` inside the global app KV
 `userConfig` value, not a project record. It defaults to disabled when absent.
 Both Release menus read it when mounted; disabled direct links go to Config.
 Disabling the page hides its authoring UI without deleting project asset packages.
+
+Help Button uses `app.showHelpButton` in the same global `userConfig` value.
+It defaults to shown when absent. Config changes apply immediately on desktop
+and mobile and persist across navigation and restarts. The app shell listens
+for `app.userConfig.changed` from the app service and removes or restores the
+floating help button without changing its existing position.
 
 Update availability is a platform capability. Direct desktop and Google Play
 Android adapters share the automatic update schedule in
@@ -728,6 +734,21 @@ The intended split is:
 - `view`: declarative structure
 - `store`: UI-local state and derived display data
 - `handlers`: orchestration
+
+### Page Scroll Spacing
+
+Most vertically scrolling pages should provide space below their final content
+item on desktop and mobile. Users must be able to scroll the last item above
+bottom navigation and floating controls, rather than stopping flush against the
+bottom edge.
+
+For ordinary page content, follow Project and Config: append
+`rtgl-view h=240 aria-hidden=true` with `style="flex: 0 0 240px;"` inside the
+scrolling container. The spacer must participate in scroll height and must not
+shrink. Keep fixed navigation outside that container. Reuse equivalent spacing
+already supplied by a page or shared component; do not stack duplicate spacers.
+Forms with their own bottom-spacer support should use that API. Fixed canvases
+and intentionally non-scrolling surfaces are exceptions.
 
 ### Handler Lifecycle State
 

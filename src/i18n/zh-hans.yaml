@@ -2275,6 +2275,7 @@ audioPlayerPage:
   errorTitle: "错误"
   missingFileId: "缺少 fileId"
 aboutPage:
+  allSocialMediaButton: "全部社交媒体"
   appVersionText: "RouteVN Creator {appVersion}"
   checkForUpdatesButton: "检查更新"
   communityTitle: "社区"
@@ -2291,6 +2292,10 @@ configPage:
   title: "偏好设置"
   assetPackageTitle: "资源包"
   assetPackageDescription: "如果你计划在 RouteVN 素材商店发布素材包，请启用此选项。"
+  helpButtonTitle: "帮助按钮"
+  helpButtonDescription: "显示右下角的问号悬浮按钮。"
+  hideLabel: "隐藏"
+  showLabel: "显示"
   disabledLabel: "已禁用"
   enabledLabel: "已启用"
   appearanceTitle: "外观"
