@@ -535,6 +535,8 @@ resourcePages:
   typeLabel: "Type"
   unknownValue: "Unknown"
   uploadButton: "Upload"
+  usedInLabel: "Used In"
+  usedInNone: "None"
   warningTitle: "Warning"
 resourceTypes:
   animatedAssetsLabel: "Animated Assets"

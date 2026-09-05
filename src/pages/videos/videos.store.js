@@ -3,6 +3,7 @@ import { applyFolderRequiredRootDragOptions } from "../../internal/fileExplorerD
 import { createMediaPageStore } from "../../internal/ui/resourcePages/media/createMediaPageStore.js";
 import { createTagField } from "../../internal/ui/resourcePages/tags.js";
 import { matchesTagAwareSearch } from "../../internal/resourceTags.js";
+import { createUsedInDetailField } from "../../internal/resourceSceneUsage.js";
 import { selectVideosPageCopy } from "./support/videosPageCopy.js";
 
 const VIDEO_TAG_SCOPE_KEY = "videos";
@@ -34,7 +35,7 @@ const formatDuration = (duration, copy) => {
   return `${minutes}:${seconds.toString().padStart(2, "0")}`;
 };
 
-const buildDetailFields = (item, { copy } = {}) => {
+const buildDetailFields = (item, { copy, scenes } = {}) => {
   if (!item) {
     return [];
   }
@@ -74,6 +75,11 @@ const buildDetailFields = (item, { copy } = {}) => {
       label: copy.durationLabel,
       value: formatDuration(item.duration, copy),
     },
+    createUsedInDetailField({
+      scenes,
+      itemId: item.id,
+      copy,
+    }),
   ];
 };
 

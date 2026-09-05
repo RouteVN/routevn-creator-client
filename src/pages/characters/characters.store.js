@@ -27,6 +27,7 @@ import {
 } from "./support/spriteGroups.js";
 import { getVariableOptions } from "../../internal/project/projection.js";
 import { formatI18nCopy } from "../../internal/ui/i18nCopy.js";
+import { createUsedInDetailField } from "../../internal/resourceSceneUsage.js";
 import { selectCharactersPageCopy } from "./support/charactersPageCopy.js";
 
 const createFolderContextMenuItems = (copy) => [
@@ -349,6 +350,7 @@ export const buildSpriteGroupDropdownItems = ({ index, total, copy } = {}) => {
 export const createInitialState = () => ({
   charactersData: { tree: [], items: {} },
   variablesData: { tree: [], items: {} },
+  scenes: undefined,
   tagsData: createEmptyTagCollection(),
   spriteTagsByCharacterId: {},
   activeTagIds: [],
@@ -411,10 +413,16 @@ export const createInitialState = () => ({
   editSpriteGroups: [],
 });
 
-export const setItems = ({ state }, { charactersData, variablesData } = {}) => {
+export const setItems = (
+  { state },
+  { charactersData, variablesData, scenes } = {},
+) => {
   state.charactersData = charactersData;
   if (variablesData !== undefined) {
     state.variablesData = variablesData;
+  }
+  if (scenes !== undefined) {
+    state.scenes = scenes;
   }
   if (
     state.selectedFolderId &&
@@ -1007,6 +1015,12 @@ export const selectViewData = ({ state, i18n }) => {
         slot: "character-tags",
         label: copy.tagsLabel,
       },
+      createUsedInDetailField({
+        scenes: state.scenes,
+        itemId: selectedItem.id,
+        additionalItemIds: Object.keys(selectedItem.sprites?.items ?? {}),
+        copy,
+      }),
       {
         type: "slot",
         slot: "character-sprite-groups",

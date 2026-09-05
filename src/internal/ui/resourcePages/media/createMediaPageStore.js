@@ -211,6 +211,7 @@ export const createMediaPageStore = ({
 
   const createInitialState = () => ({
     data: EMPTY_TREE,
+    scenes: undefined,
     pendingUploads: [],
     selectedItemId: undefined,
     selectedFolderId: undefined,
@@ -231,8 +232,11 @@ export const createMediaPageStore = ({
       : {}),
   });
 
-  const setItems = ({ state }, { data } = {}) => {
+  const setItems = ({ state }, { data, scenes } = {}) => {
     state.data = data ?? EMPTY_TREE;
+    if (scenes !== undefined) {
+      state.scenes = scenes;
+    }
     if (
       state.selectedFolderId &&
       state.data?.items?.[state.selectedFolderId]?.type !== "folder"
@@ -571,7 +575,11 @@ export const createMediaPageStore = ({
         })
       : {};
     const detailFields = selectedItem
-      ? buildDetailFields(selectedItem, { copy })
+      ? buildDetailFields(selectedItem, {
+          copy,
+          state,
+          scenes: state.scenes,
+        })
       : buildFolderDetailFields(selectedFolder).map((field) => {
           if (field.label === "Type") {
             return {

@@ -535,6 +535,8 @@ resourcePages:
   typeLabel: "类型"
   unknownValue: "未知"
   uploadButton: "上传"
+  usedInLabel: "使用的场景"
+  usedInNone: "无"
   warningTitle: "警告"
 resourceTypes:
   animatedAssetsLabel: "动画素材"

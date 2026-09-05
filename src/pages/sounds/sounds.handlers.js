@@ -164,7 +164,7 @@ const handlePanelResize = (deps, payload) => {
   }
 };
 
-const syncSoundPageData = ({ store, repositoryState } = {}) => {
+const syncSoundPageData = ({ store, repositoryState, scenes } = {}) => {
   const tagsData = getTagsCollection(repositoryState, SOUND_TAG_SCOPE_KEY);
   const mediaData = getMediaPageData({
     repositoryState,
@@ -178,6 +178,7 @@ const syncSoundPageData = ({ store, repositoryState } = {}) => {
       tagsCollection: tagsData,
       itemType: "sound",
     }),
+    scenes,
   });
 };
 

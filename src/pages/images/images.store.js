@@ -16,6 +16,7 @@ import {
   DEFAULT_FILE_EXPLORER_AUTO_COLLAPSE_THRESHOLD,
   shouldStartCollapsedFileExplorer,
 } from "../../internal/ui/resourcePages/media/mediaPageShared.js";
+import { createUsedInDetailField } from "../../internal/resourceSceneUsage.js";
 import { selectImagesPageCopy } from "./support/imagesPageCopy.js";
 
 const AUTO_COLLAPSE_FILE_EXPLORER_ITEM_THRESHOLD =
@@ -35,7 +36,7 @@ const resolveImageAspectRatio = (item) => {
   return `${Math.max(1, Math.round(width))} / ${Math.max(1, Math.round(height))}`;
 };
 
-const buildDetailFields = (item, { copy } = {}) => {
+const buildDetailFields = (item, { copy, scenes } = {}) => {
   if (!item) {
     return [];
   }
@@ -70,6 +71,11 @@ const buildDetailFields = (item, { copy } = {}) => {
       label: copy.dimensionsLabel,
       value: item.width && item.height ? `${item.width} × ${item.height}` : "",
     },
+    createUsedInDetailField({
+      scenes,
+      itemId: item.id,
+      copy,
+    }),
   ];
 };
 

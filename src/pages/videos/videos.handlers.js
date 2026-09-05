@@ -191,7 +191,7 @@ const openVideoPreviewById = async ({ deps, itemId } = {}) => {
   render();
 };
 
-const syncVideoPageData = ({ store, repositoryState } = {}) => {
+const syncVideoPageData = ({ store, repositoryState, scenes } = {}) => {
   const tagsData = getTagsCollection(repositoryState, VIDEO_TAG_SCOPE_KEY);
   const mediaData = getMediaPageData({
     repositoryState,
@@ -205,6 +205,7 @@ const syncVideoPageData = ({ store, repositoryState } = {}) => {
       tagsCollection: tagsData,
       itemType: "video",
     }),
+    scenes,
   });
 };
 
