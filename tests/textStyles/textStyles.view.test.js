@@ -25,9 +25,7 @@ describe("textStyles view", () => {
 
     expect(mobileDetailBranch).toContain("mobileDetailEditButton");
     expect(mobileDetailBranch).toContain("pre=edit: ${editButton}");
-    expect(mobileDetailBranch).toContain(
-      "rtgl-view d=h w=f g=sm p=md bgc=su bwb=xs",
-    );
+    expect(mobileDetailBranch).toContain("rtgl-view d=h w=f g=sm p=md bwb=xs");
     expect(mobileDetailBranch).toContain(
       "rtgl-button#mobileDetailEditButton w=1fg v=se pre=edit",
     );
