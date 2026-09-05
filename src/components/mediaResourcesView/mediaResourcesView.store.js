@@ -1,8 +1,5 @@
 import { buildResourceOverflowMenuItems } from "../../internal/ui/resourcePages/resourceOverflowMenu.js";
-import {
-  buildProgressivePlaceholderChildren,
-  getRetainedRenderedItemCount,
-} from "../../internal/ui/resourcePages/progressivePlaceholders.js";
+import { buildProgressivePlaceholderChildren } from "../../internal/ui/resourcePages/progressivePlaceholders.js";
 import {
   buildTagFilterPopoverViewData,
   clearTagFilterPopoverTagIds,
@@ -113,7 +110,7 @@ export const createInitialState = ({ props } = {}) => ({
   ),
   progressiveRenderSignature: "",
   progressiveFrameId: undefined,
-  soundWaveformRenderedItemCount: 0,
+  soundWaveformRenderedItemIds: [],
   soundWaveformRenderSignature: "",
   soundWaveformFrameId: undefined,
   syncRenderFrameId: undefined,
@@ -188,15 +185,15 @@ export const clearProgressiveFrameId = ({ state }) => {
 
 export const selectProgressiveFrameId = ({ state }) => state.progressiveFrameId;
 
-export const setSoundWaveformRenderedItemCount = (
+export const setSoundWaveformRenderedItemIds = (
   { state },
-  { itemCount } = {},
+  { itemIds } = {},
 ) => {
-  state.soundWaveformRenderedItemCount = itemCount ?? 0;
+  state.soundWaveformRenderedItemIds = itemIds ?? [];
 };
 
-export const selectSoundWaveformRenderedItemCount = ({ state }) =>
-  state.soundWaveformRenderedItemCount;
+export const selectSoundWaveformRenderedItemIds = ({ state }) =>
+  state.soundWaveformRenderedItemIds;
 
 export const setSoundWaveformRenderSignature = (
   { state },
@@ -383,33 +380,9 @@ export const selectViewData = ({ state, props, i18n }) => {
   let remainingEagerImageCardCount = lazyImageCards
     ? DEFAULT_EAGER_IMAGE_CARD_COUNT
     : Number.POSITIVE_INFINITY;
-  let remainingSoundWaveformCount = lazySoundWaveforms
-    ? getRetainedRenderedItemCount({
-        previousItemIds: state.soundWaveformRenderSignature
-          ? JSON.parse(state.soundWaveformRenderSignature)
-          : [],
-        nextItemIds: sourceGroups.flatMap((group) =>
-          (group.children ?? [])
-            .filter(
-              (item) => item.cardKind === "sound" && item.waveformDataFileId,
-            )
-            .map((item) => item.id),
-        ),
-        renderedItemCount: state.soundWaveformRenderedItemCount,
-      })
-    : Number.POSITIVE_INFINITY;
+  const renderedSoundWaveformIds = new Set(state.soundWaveformRenderedItemIds);
   let remainingProgressiveItemCount = progressiveRenderEnabled
-    ? getRetainedRenderedItemCount({
-        previousItemIds: state.progressiveRenderSignature
-          ? JSON.parse(state.progressiveRenderSignature).flatMap(
-              ([, itemIds]) => itemIds,
-            )
-          : [],
-        nextItemIds: sourceGroups.flatMap((group) =>
-          (group.children ?? []).map((item) => item.id),
-        ),
-        renderedItemCount: state.progressiveRenderedItemCount,
-      })
+    ? state.progressiveRenderedItemCount
     : Number.POSITIVE_INFINITY;
 
   const groups = sourceGroups.map((group, groupIndex) => {
@@ -422,15 +395,22 @@ export const selectViewData = ({ state, props, i18n }) => {
       remainingProgressiveItemCount,
       groupId: group.id,
       placeholderItemCount: children.length,
-      createPlaceholder: ({ item, absoluteIndex, groupId }) => ({
-        id: `${item.id ?? `${groupId}-${absoluteIndex}`}-placeholder`,
-        domItemId: "",
-        sourceItemId: item.id,
-        cardKind: item.cardKind,
-        previewAspectRatio: item.previewAspectRatio,
-        isPlaceholder: true,
-        isInteractive: false,
-      }),
+      createPlaceholder: ({ item, absoluteIndex, groupId }) => {
+        // Keep a hydrated sound's card when it moves beyond the card batch,
+        // without enabling intervening cards or waveforms.
+        if (lazySoundWaveforms && renderedSoundWaveformIds.has(item.id)) {
+          return item;
+        }
+        return {
+          id: `${item.id ?? `${groupId}-${absoluteIndex}`}-placeholder`,
+          domItemId: "",
+          sourceItemId: item.id,
+          cardKind: item.cardKind,
+          previewAspectRatio: item.previewAspectRatio,
+          isPlaceholder: true,
+          isInteractive: false,
+        };
+      },
     });
 
     remainingProgressiveItemCount =
@@ -455,21 +435,13 @@ export const selectViewData = ({ state, props, i18n }) => {
         const hasSoundWaveform =
           item.cardKind === "sound" && Boolean(item.waveformDataFileId);
         const shouldRenderWaveform =
-          hasSoundWaveform && remainingSoundWaveformCount > 0;
+          hasSoundWaveform &&
+          (!lazySoundWaveforms || renderedSoundWaveformIds.has(item.id));
 
         if (canRenderImagePreview) {
           remainingEagerImageCardCount = Math.max(
             0,
             remainingEagerImageCardCount - 1,
-          );
-        }
-        if (
-          hasSoundWaveform &&
-          remainingSoundWaveformCount !== Number.POSITIVE_INFINITY
-        ) {
-          remainingSoundWaveformCount = Math.max(
-            0,
-            remainingSoundWaveformCount - 1,
           );
         }
         const useFullWidthCard =

@@ -36,6 +36,12 @@ export const resetWaveform = ({ state }) => {
   state.isLoading = false;
 };
 
+export const cancelWaveformLoad = ({ state }) => {
+  state.loadVersion += 1;
+  state.loadingFileId = undefined;
+  state.isLoading = false;
+};
+
 export const selectWaveformLoad = ({ state }) => ({
   loadedFileId: state.loadedFileId,
   loadingFileId: state.loadingFileId,

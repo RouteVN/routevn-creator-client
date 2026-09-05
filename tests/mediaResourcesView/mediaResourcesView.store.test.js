@@ -2,7 +2,7 @@ import { describe, expect, it } from "vitest";
 import {
   createInitialState,
   selectViewData,
-  setSoundWaveformRenderedItemCount,
+  setSoundWaveformRenderedItemIds,
 } from "../../src/components/mediaResourcesView/mediaResourcesView.store.js";
 import { MOBILE_RESOURCE_SCROLL_BOTTOM_PADDING } from "../../src/internal/ui/resourcePages/mobileResourcePage.js";
 
@@ -294,10 +294,10 @@ describe("mediaResourcesView.store", () => {
       ),
     ).toEqual([false, false]);
 
-    setSoundWaveformRenderedItemCount(
+    setSoundWaveformRenderedItemIds(
       { state },
       {
-        itemCount: 1,
+        itemIds: ["sound-1"],
       },
     );
     const hydratedViewData = selectViewData({ state, props });

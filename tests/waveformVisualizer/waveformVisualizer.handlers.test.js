@@ -51,7 +51,7 @@ describe("waveformVisualizer.handlers", () => {
         selectRenderedSize: () => renderedSize,
         selectWaveformData: () => undefined,
         setRenderedSize,
-        resetWaveform: vi.fn(),
+        cancelWaveformLoad: vi.fn(),
       },
     });
 
@@ -262,6 +262,32 @@ describe("waveformVisualizer.handlers", () => {
 
     expect(deps.render).toHaveBeenCalledTimes(renderCount);
     expect(context.clearRect).not.toHaveBeenCalled();
+  });
+
+  it("retries an interrupted load after reconnecting and ignores the old result", async () => {
+    const resolveLoads = [];
+    const downloadMetadata = vi.fn(
+      () => new Promise((resolve) => resolveLoads.push(resolve)),
+    );
+    const { deps, context } = createWaveform(downloadMetadata);
+    globalThis.requestAnimationFrame = vi.fn(() => 1);
+    globalThis.cancelAnimationFrame = vi.fn();
+    const cleanup = handleBeforeMount(deps);
+    const firstLoad = handleAfterMount(deps);
+    cleanup();
+    const reconnectedCleanup = handleBeforeMount(deps);
+    const secondLoad = handleAfterMount(deps);
+    expect(downloadMetadata).toHaveBeenCalledTimes(2);
+
+    resolveLoads[0]({ amplitudes: [100] });
+    await firstLoad;
+    expect(deps.store.selectWaveformData()).toBeUndefined();
+    expect(context.clearRect).not.toHaveBeenCalled();
+    resolveLoads[1]({ amplitudes: [200] });
+    await secondLoad;
+    expect(deps.store.selectWaveformData()).toEqual({ amplitudes: [200] });
+    expect(context.clearRect).toHaveBeenCalledOnce();
+    reconnectedCleanup();
   });
 
   it("downsamples the complete waveform into the canvas width", () => {

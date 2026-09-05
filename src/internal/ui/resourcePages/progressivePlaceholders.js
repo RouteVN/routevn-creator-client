@@ -1,20 +1,5 @@
 export const DEFAULT_PROGRESSIVE_PLACEHOLDER_ITEM_COUNT = 12;
 
-export const getRetainedRenderedItemCount = ({
-  previousItemIds,
-  nextItemIds,
-  renderedItemCount,
-}) => {
-  const renderedIds = new Set(previousItemIds.slice(0, renderedItemCount));
-  let nextCount = Math.min(renderedItemCount, nextItemIds.length);
-  nextItemIds.forEach((itemId, index) => {
-    if (renderedIds.has(itemId)) {
-      nextCount = Math.max(nextCount, index + 1);
-    }
-  });
-  return nextCount;
-};
-
 const clampNonNegativeInteger = (value, fallback = 0) => {
   const numericValue = Number(value);
   if (!Number.isFinite(numericValue) || numericValue < 0) {

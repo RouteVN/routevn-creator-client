@@ -50,7 +50,9 @@ export const handleBeforeMount = (deps) => {
   return () => {
     cancelAnimationFrame(animationFrameId);
     resizeObserver?.disconnect();
-    store.resetWaveform();
+    // Keyed DOM moves disconnect this instance briefly. Keep completed data
+    // and its canvas, but prevent an unfinished request from rendering later.
+    store.cancelWaveformLoad();
   };
 };
 
