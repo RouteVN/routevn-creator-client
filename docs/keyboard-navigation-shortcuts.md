@@ -143,6 +143,11 @@ Implementation:
 
 The Scene Editor has block mode for line-level navigation and text mode for
 editing the selected line.
+Block navigation continues one line at a time across section boundaries,
+including repeated keys while keyboard focus transfers to the selected section.
+Inactive sections do not handle block shortcuts or reclaim keyboard focus.
+When the selected block moves outside the viewport, it is revealed immediately
+without a smooth-scroll animation. Text-mode scrolling is unchanged.
 
 | Shortcut           | Mode  | Action                                                  |
 | ------------------ | ----- | ------------------------------------------------------- |
