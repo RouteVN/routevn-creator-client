@@ -20,6 +20,7 @@ Gradle pins.
 - `minSdk`: `24`
 - Build tools: `37.0.0`
 - NDK: `29.0.14206865`
+- AndroidX Core Splashscreen: `1.2.0`
 - AndroidX WebKit: `1.16.0`
 - Google Play In-App Updates: `2.1.0`
 
@@ -84,6 +85,16 @@ https://appassets.androidplatform.net/web/index.html
 ```
 
 This gives the local bundle an HTTPS origin while serving packaged app files.
+
+### Startup Splash
+
+The native shell uses AndroidX Core Splashscreen with the default exit behavior.
+The splash is dismissed as soon as the frontend sends `markSplashReady` and the
+system bar insets have been applied. There is no minimum display duration.
+
+A single five-second fallback is scheduled at activity creation so a missing
+readiness signal does not hold the splash indefinitely. Dismissing the splash
+or destroying the activity cancels the fallback.
 
 ## Build And Install
 

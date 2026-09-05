@@ -100,8 +100,7 @@ public class MainActivity extends Activity {
     private static final int ANDROID_FILE_PICKER_REQUEST_CODE = 3712;
     private static final int ANDROID_SAVE_FILE_PICKER_REQUEST_CODE = 3713;
     private static final int ANDROID_FOLDER_PICKER_REQUEST_CODE = 3714;
-    private static final long SPLASH_MIN_VISIBLE_MS = 1400L;
-    private static final long SPLASH_MAX_VISIBLE_MS = 5000L;
+    private static final long SPLASH_READY_TIMEOUT_MS = 5000L;
     private static final String DEBUG_VALIDATION_PREFS = "debug-validation";
     private static final String NATIVE_EXPORTER_SMOKE_LAST_UPDATE_KEY =
         "nativeExporterSmokeLastUpdateTime";
@@ -168,7 +167,6 @@ public class MainActivity extends Activity {
     private WebView webView;
     private GooglePlayUpdater googlePlayUpdater;
     private boolean appResumed = false;
-    private long splashStartedAt;
     private boolean splashDismissRequested = false;
     private boolean splashReady = false;
     private boolean systemInsetsApplied = false;
@@ -194,9 +192,6 @@ public class MainActivity extends Activity {
         configureSplashState();
         SplashScreen splashScreen = SplashScreen.installSplashScreen(this);
         splashScreen.setKeepOnScreenCondition(() -> !splashReady);
-        splashScreen.setOnExitAnimationListener(splashScreenView ->
-            splashScreenView.remove()
-        );
 
         super.onCreate(savedInstanceState);
 
@@ -397,10 +392,10 @@ public class MainActivity extends Activity {
     }
 
     private void configureSplashState() {
-        splashStartedAt = System.currentTimeMillis();
         splashDismissRequested = false;
         splashReady = false;
         systemInsetsApplied = false;
+        mainHandler.postDelayed(finishSplashRunnable, SPLASH_READY_TIMEOUT_MS);
     }
 
     private void configureWebView() {
@@ -441,7 +436,6 @@ public class MainActivity extends Activity {
         applySystemBarInsets(rootView);
         setContentView(rootView);
         rootView.requestApplyInsets();
-        mainHandler.postDelayed(finishSplashRunnable, SPLASH_MAX_VISIBLE_MS);
     }
 
     private void requestSplashDismiss() {
@@ -450,21 +444,19 @@ public class MainActivity extends Activity {
         }
 
         splashDismissRequested = true;
-        scheduleSplashFinishIfReady();
+        finishSplashIfReady();
     }
 
-    private void scheduleSplashFinishIfReady() {
+    private void finishSplashIfReady() {
         if (!splashDismissRequested || !systemInsetsApplied) {
             return;
         }
 
-        long elapsedMs = System.currentTimeMillis() - splashStartedAt;
-        long remainingMs = Math.max(0L, SPLASH_MIN_VISIBLE_MS - elapsedMs);
-        mainHandler.removeCallbacks(finishSplashRunnable);
-        mainHandler.postDelayed(finishSplashRunnable, remainingMs);
+        finishSplash();
     }
 
     private void finishSplash() {
+        mainHandler.removeCallbacks(finishSplashRunnable);
         splashReady = true;
         if (webView != null) {
             webView.invalidate();
@@ -508,7 +500,7 @@ public class MainActivity extends Activity {
                     systemBars.bottom
                 );
                 systemInsetsApplied = true;
-                scheduleSplashFinishIfReady();
+                finishSplashIfReady();
                 return insets;
             }
 
@@ -519,7 +511,7 @@ public class MainActivity extends Activity {
                 insets.getSystemWindowInsetBottom()
             );
             systemInsetsApplied = true;
-            scheduleSplashFinishIfReady();
+            finishSplashIfReady();
             return insets;
         });
     }
@@ -603,7 +595,6 @@ public class MainActivity extends Activity {
         setContentView(rootView);
         rootView.requestApplyInsets();
         requestSplashDismiss();
-        mainHandler.postDelayed(finishSplashRunnable, SPLASH_MAX_VISIBLE_MS);
     }
 
     private boolean isAllowedBridgeOrigin(Uri sourceOrigin) {
