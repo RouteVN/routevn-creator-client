@@ -338,6 +338,49 @@ steps:
     type: js
     fn: eval
     args:
+      - |
+        (async () => {
+          const deepQuery = (root, selector) => {
+            const direct = root?.querySelector?.(selector);
+            if (direct) return direct;
+            for (const node of root?.querySelectorAll?.('*') ?? []) {
+              const found = node.shadowRoot ? deepQuery(node.shadowRoot, selector) : undefined;
+              if (found) return found;
+            }
+          };
+          const canvas = deepQuery(document, 'rvn-layout-editor-canvas#layoutEditorCanvas');
+          const editor = deepQuery(document, 'rvn-layout-editor');
+          const waitUntil = async (condition) => {
+            const deadline = Date.now() + 10000;
+            while (!condition()) {
+              if (Date.now() >= deadline) throw new Error('Timed out waiting for draft reconciliation');
+              await new Promise((resolve) => setTimeout(resolve, 50));
+            }
+          };
+          await waitUntil(() => !editor.store.selectPendingPersistPayload());
+          const dragStart = canvas.store.selectDragging().dragStartPosition;
+          // Simulate a collaborator edit after the paused drag has autosaved.
+          const result = await editor.deps.projectService.updateLayoutElement({
+            layoutId: editor.store.selectLayoutId(),
+            elementId: 'wTne3pvWw7ui',
+            data: { name: 'Fragment Two' },
+            replace: false,
+          });
+          if (result.valid === false) return 'save-rejected';
+          await editor.transformedHandlers.handleDataChanged({});
+          await waitUntil(() => canvas.props.layoutState.elements.items.wTne3pvWw7ui.name === 'Fragment Two');
+          canvas.deps.subject.dispatch('border-drag-move', { x: 30, y: 15 });
+          const updatedItem = canvas.store.selectPendingUpdatedItem();
+          const retainedFields = updatedItem?.name === 'Fragment Two';
+          const retainedDragStart = canvas.store.selectDragging().dragStartPosition === dragStart;
+          canvas.deps.subject.dispatch('border-drag-move', { x: 20, y: 10 });
+          return String(retainedFields && retainedDragStart);
+        })()
+    value: "true"
+  - action: assert
+    type: js
+    fn: eval
+    args:
       - "(() => { const findById = (elements, id) => { for (const element of Array.isArray(elements) ? elements : []) { if (element?.id === id) return element; const child = findById(element?.children, id); if (child) return child; } }; const root = findById(window.__vtFragmentDragElements, 'wTne3pvWw7ui'); const fields = ['x', 'y', 'width', 'height', 'rotation']; const descendantsStayedLocal = window.__vtFragmentDragBaseline.every((before) => { const after = findById(window.__vtFragmentDragElements, before.id); return after && fields.every((field) => Object.is(after[field], before[field])); }); return String(root?.x === window.__vtFragmentDragExpected.x && root?.y === window.__vtFragmentDragExpected.y && descendantsStayedLocal); })()"
     value: "true"
   - action: assert
@@ -373,7 +416,10 @@ steps:
           const root = findById(canvas.store.selectCanvasRenderState().baseElements, 'wTne3pvWw7ui');
           const expected = window.__vtFragmentDragExpected;
           delete window.__vtFragmentDragExpected;
-          return String(root.x === expected.x && root.y === expected.y);
+          const editor = deepQuery(document, 'rvn-layout-editor');
+          const savedItem = editor.deps.projectService.getRepositoryState()
+            .layouts.items[editor.store.selectLayoutId()].elements.items.wTne3pvWw7ui;
+          return String(root.x === expected.x && root.y === expected.y && savedItem.name === 'Fragment Two');
         })()
     value: "true"
   - action: assert

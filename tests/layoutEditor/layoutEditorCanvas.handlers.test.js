@@ -337,6 +337,51 @@ const delayNextAssetLoad = (deps) => {
 };
 
 describe("layoutEditorCanvas drag rendering", () => {
+  it.each(["move", "release"])(
+    "retains collaborator fields on %s after a drag draft is acknowledged",
+    async (nextAction) => {
+      const drag = createDragHarness();
+      drag.start();
+      await drag.move(10);
+      const dragRenderState = drag.deps.store.selectDragRenderState();
+      await drag.renderParentDraft();
+
+      const oldProps = { ...drag.deps.props };
+      const layoutState = drag.deps.props.layoutState;
+      const updatedItem = {
+        ...layoutState.elements.items.parent,
+        name: "Container Two",
+        opacity: 0.5,
+      };
+      drag.deps.props.layoutState = {
+        ...layoutState,
+        elements: {
+          ...layoutState.elements,
+          items: { ...layoutState.elements.items, parent: updatedItem },
+        },
+      };
+      await handleOnUpdate(drag.deps, {
+        oldProps,
+        newProps: drag.deps.props,
+      });
+      expect(drag.deps.store.selectDragRenderState()).toBe(dragRenderState);
+
+      if (nextAction === "move") {
+        await drag.move(20);
+        expect(drag.renderedParent().x).toBe(20);
+      }
+      await drag.end();
+      const updates = drag.deps.dispatchEvent.mock.calls
+        .map(([event]) => event)
+        .filter(({ type }) => type === "update");
+      expect(updates.at(-1).detail.updatedItem).toMatchObject({
+        x: nextAction === "move" ? 20 : 10,
+        name: "Container Two",
+        opacity: 0.5,
+      });
+    },
+  );
+
   it("keeps movement relative to drag start across parent redraws", async () => {
     const drag = createDragHarness();
     drag.start();

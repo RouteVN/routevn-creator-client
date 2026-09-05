@@ -1711,6 +1711,10 @@ async function handleDebouncedUpdate(deps, payload) {
         };
       }
 
+      // Only edits newer than this acknowledged save should overlay repository data.
+      store.clearPendingPersistPayload({
+        persistenceRequestId: payload.persistenceRequestId,
+      });
       const currentPayload = getEditorPayload(appService);
       store.syncRepositoryState(
         createLayoutEditorRepositoryStoreData({
@@ -1719,9 +1723,6 @@ async function handleDebouncedUpdate(deps, payload) {
           resourceType: currentPayload.resourceType || resourceType,
         }),
       );
-      store.clearPendingPersistPayload({
-        persistenceRequestId: payload.persistenceRequestId,
-      });
       return {
         ok: true,
         didPersist: true,
@@ -1989,26 +1990,21 @@ export const handleLayoutEditPanelUpdateHandler = async (deps, payload) => {
     updatedItem: updatedItem,
   });
 
+  const pendingPayload = queuePendingLayoutEditorPersist(store, {
+    layoutId,
+    resourceType,
+    selectedItemId,
+    updatedItem,
+  });
   if (
     shouldPersistLayoutEditorFieldImmediately({
       name: detail.name,
       itemType: currentItem.type,
     })
   ) {
-    await handleDebouncedUpdate(deps, {
-      layoutId,
-      resourceType,
-      selectedItemId,
-      updatedItem,
-    });
+    await handleDebouncedUpdate(deps, pendingPayload);
   } else {
     const { subject } = deps;
-    const pendingPayload = queuePendingLayoutEditorPersist(store, {
-      layoutId,
-      resourceType,
-      selectedItemId,
-      updatedItem,
-    });
     subject.dispatch("layoutEditor.updateElement", pendingPayload);
   }
 

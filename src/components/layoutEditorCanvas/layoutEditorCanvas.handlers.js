@@ -1751,12 +1751,12 @@ export const handleOnUpdate = async (deps, changes) => {
 
   const nextSelectedItem = getSelectedItem(newProps);
   if (
-    !deps.store.selectDragging().isDragging &&
     areCanvasItemsEquivalent(
       nextSelectedItem,
       deps.store.selectPendingUpdatedItem(),
     )
   ) {
+    // Accept refreshed item fields; the gesture's render snapshot stays separate.
     deps.store.clearPendingUpdatedItem();
   }
 
