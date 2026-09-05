@@ -1,6 +1,7 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { JSDOM } from "jsdom";
 import { createAndroidUpdater } from "../../src/deps/clients/android/updater.js";
+import { createGlobalUIClient } from "../../src/deps/clients/globalUI.js";
 import { resolveUpdatesEnabled } from "../../src/internal/updates.js";
 import { EN_I18N } from "../support/i18n.js";
 
@@ -28,7 +29,7 @@ const setup = async ({
   const beforeInstall = vi.fn(async () => {});
   const isForeground = vi.fn(() => true);
   const deps = {
-    globalUI,
+    globalUI: createGlobalUIClient({ globalUI }),
     bridge,
     beforeInstall,
     isForeground,

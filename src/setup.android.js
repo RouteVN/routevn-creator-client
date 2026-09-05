@@ -8,6 +8,7 @@ import { createAndroidAudioRuntime } from "./deps/clients/android/audioRuntime.j
 import { createAndroidUpdater } from "./deps/clients/android/updater.js";
 import AndroidRouter from "./deps/clients/android/router.js";
 import { createBrowserEventsClient } from "./deps/clients/browserEvents.js";
+import { createGlobalUIClient } from "./deps/clients/globalUI.js";
 
 import { createAppService } from "./deps/services/android/appService.js";
 import { createProjectService } from "./deps/services/android/projectService.js";
@@ -54,7 +55,9 @@ await appDb.init();
 const router = new AndroidRouter({ initialPath: "/projects" });
 const filePicker = createAndroidFilePicker();
 const globalUIElement = document.querySelector("rtgl-global-ui");
-const globalUI = createGlobalUI(globalUIElement);
+const globalUI = createGlobalUIClient({
+  globalUI: createGlobalUI(globalUIElement),
+});
 const audioService = createAudioService({
   createAudioContext: androidAudioRuntime.createAudioContext,
 });

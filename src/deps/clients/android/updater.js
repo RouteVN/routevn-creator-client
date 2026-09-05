@@ -26,8 +26,17 @@ export const createAndroidUpdater = async ({
   let lastReadyPromptVersion;
   let manualCheckRequested = false;
 
+  const showWhenIdle = (show) =>
+    globalUI.runWhenIdle(() => {
+      if (isForeground()) return show();
+    });
+  const showAlert = (options) =>
+    showWhenIdle(() => globalUI.showAlert(options));
+  const showConfirm = (options) =>
+    showWhenIdle(() => globalUI.showConfirm(options));
+
   const showError = (copy) =>
-    globalUI.showAlert({
+    showAlert({
       title: copy.errorTitle ?? "Error",
       message:
         copy.googlePlayUpdateFailed ??
@@ -35,14 +44,16 @@ export const createAndroidUpdater = async ({
     });
 
   const promptInstall = async (info, copy) => {
-    lastReadyPromptVersion = info.versionCode;
-    const install = await globalUI.showConfirm({
-      title: copy.updateAvailableTitle ?? "Update Available",
-      message:
-        copy.googlePlayUpdateReady ??
-        "The update is ready. Restart RouteVN Creator to install it?",
-      confirmText: copy.restartToUpdateButton ?? "Restart and Update",
-      cancelText: copy.laterButton ?? "Later",
+    const install = await showWhenIdle(() => {
+      lastReadyPromptVersion = info.versionCode;
+      return globalUI.showConfirm({
+        title: copy.updateAvailableTitle ?? "Update Available",
+        message:
+          copy.googlePlayUpdateReady ??
+          "The update is ready. Restart RouteVN Creator to install it?",
+        confirmText: copy.restartToUpdateButton ?? "Restart and Update",
+        cancelText: copy.laterButton ?? "Later",
+      });
     });
     if (!install || !isForeground()) return;
     const progress = createProgressDialog({
@@ -68,7 +79,7 @@ export const createAndroidUpdater = async ({
       if (status === "unsupported") {
         supported = false;
         if (!silent || manualCheckRequested)
-          await globalUI.showAlert({
+          await showAlert({
             title: copy.updateAvailableTitle ?? "Update Available",
             message:
               copy.googlePlayUpdatesUnavailable ??
@@ -79,7 +90,7 @@ export const createAndroidUpdater = async ({
         userAccepted = true;
         await promptInstall(updateInfo, copy);
       } else if (status === "available") {
-        userAccepted = await globalUI.showConfirm({
+        userAccepted = await showConfirm({
           title: copy.updateAvailableTitle ?? "Update Available",
           message:
             copy.googlePlayUpdateAvailable ??
@@ -101,14 +112,14 @@ export const createAndroidUpdater = async ({
         }
       } else if (!silent || manualCheckRequested) {
         if (status === "up-to-date")
-          await globalUI.showAlert({
+          await showAlert({
             title: copy.upToDateTitle ?? "Up to Date",
             message:
               copy.latestVersionMessage ??
               "You are already on the latest version",
           });
         else if (status === "downloading" || status === "installing")
-          await globalUI.showAlert({
+          await showAlert({
             title: copy.updateDownloadTitle ?? "Downloading update",
             message:
               copy.googlePlayUpdateInProgress ??

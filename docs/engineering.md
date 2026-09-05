@@ -571,6 +571,11 @@ await `flushUserConfig()`. Layout/Control Editor registers its persistence drain
 with this hook. Explicit settings flushes reject database write failures;
 background autosaves report them without an unhandled rejection. A failed editor
 or settings save must abort installation and retain pending changes for retry.
+Android update prompts must also preserve unsubmitted input in global dialogs.
+The app-owned `src/deps/clients/globalUI.js` adapter tracks dialog and dropdown
+promises through the published UI API. Update confirmations and alerts run only
+after that surface is idle, allowing result handlers to open follow-up dialogs
+first and rechecking foreground visibility before showing a prompt.
 
 #### `projectService`
 

@@ -90,6 +90,7 @@ beforeEach(() => {
   vi.stubGlobal("document", dom.window.document);
   vi.spyOn(console, "error").mockImplementation(() => {});
   mocked.globalUI.showConfirm.mockResolvedValue(true);
+  mocked.globalUI.showAlert.mockResolvedValue(undefined);
   mocked.bridge.mockImplementation(async (method) => {
     if (method === "getAppUpdateSupport") return { status: "supported" };
     if (method === "checkAppUpdate")
