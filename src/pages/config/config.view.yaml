@@ -1,0 +1,58 @@
+refs:
+  languageSelect:
+    eventListeners:
+      value-change:
+        handler: handleLanguageChange
+  themeCard*:
+    eventListeners:
+      click:
+        handler: handleThemeCardClick
+  assetPackageToggle:
+    eventListeners:
+      value-change:
+        handler: handleAssetPackageChange
+template:
+  - 'rtgl-view d=h w=f h=f style="min-width: 0; min-height: 0;"':
+      - 'rtgl-view d=h w=f h=f style="min-width: 0; min-height: 0;"':
+          - $if showExplorerPanel:
+              - rvn-resizable-panel#fileExplorer w=300 min-w=200 max-w=500 resize-side="right":
+                  - rtgl-view slot="content" w=f h=f:
+                      - rvn-resource-types :resourceCategory=${resourceCategory} :selectedResourceId=${selectedResourceId}: null
+          - 'rtgl-view w=1fg h=f p=${contentPadding} d=v style="min-width: 0; min-height: 0;"':
+              - $if isTouchMode:
+                  - 'rtgl-view h=48 w=f bgc=bg bwb=xs ph=md av=c style="position: sticky; top: 0px; z-index: 1000;"':
+                      - rtgl-view w=f d=h av=c g=md wrap:
+                          - rtgl-view av=c g=sm d=h w=1fg:
+                              - rtgl-text: ${title}
+                $else:
+                  - rtgl-text s=h2: ${title}
+              - 'rtgl-view w=f h=1fg mt=${contentBodyMarginTop} p=${contentBodyPadding} sv style="min-width: 0; min-height: 0;"':
+                  - rtgl-view#languageSection w=f g=lg:
+                      - rtgl-text s=h4: ${languageTitle}
+                      - 'rtgl-view w=560 sm-w=f style="max-width: 100%;"':
+                          - rtgl-select#languageSelect w=f no-clear :selectedValue=${currentLocale} :options=${languageOptions}: null
+                  - rtgl-view#assetPackageSection w=f mt=xl g=lg:
+                      - rtgl-text s=h4: ${assetPackageTitle}
+                      - 'rtgl-view w=560 sm-w=f g=md style="max-width: 100%;"':
+                          - rtgl-text s=sm c=mu-fg: ${assetPackageDescription}
+                          - rtgl-segmented-control#assetPackageToggle w=f no-clear :selectedValue=${assetPackageEnabled} :options=${assetPackageOptions}: null
+                  - rtgl-view#appearanceSection w=f mt=xl:
+                      - rtgl-text s=h4: ${appearanceTitle}
+                      - 'rtgl-grid w=f mt=lg g=md cols="${themeGridColumns}" style="min-width: 0; align-content: start; align-items: start;"':
+                          - $for item, i in themes:
+                              - 'rtgl-view#themeCard${i} data-theme=${item.id} d=v w=f bw=xs bc=${item.itemBorderColor} h-bc=${item.itemHoverBorderColor} bgc=bg br=md cur=pointer overflow=hidden style="max-width: 100%; box-sizing: border-box;"':
+                                  - 'rtgl-view w=f p=xs style="background-color: ${item.previewPageBackground}; aspect-ratio: ${themePreviewAspectRatio}; border-bottom: 1px solid ${item.previewBorder}; box-sizing: border-box;"':
+                                      - rtgl-view w=f h=f d=h g=sm:
+                                          - 'rtgl-view w=3fg h=f br=sm bw=xs bc=bo style="background-color: ${item.previewPanelBackground}; border-color: ${item.previewBorder};"': null
+                                          - rtgl-view w=7fg h=f d=v g=sm:
+                                              - rtgl-view w=f h=2fg d=h g=sm:
+                                                  - 'rtgl-view w=2fg h=f br=sm bw=xs bc=bo style="background-color: ${item.previewCardBackground}; border-color: ${item.previewBorder};"': null
+                                                  - 'rtgl-view w=1fg h=f br=sm style="background-color: ${item.previewPrimary};"': null
+                                              - rtgl-view w=f h=1fg d=h g=sm:
+                                                  - 'rtgl-view w=1fg h=f br=sm bw=xs bc=bo style="background-color: ${item.previewAccent}; border-color: ${item.previewBorder};"': null
+                                                  - 'rtgl-view w=2fg h=f br=sm bw=xs bc=bo style="background-color: ${item.previewInput}; border-color: ${item.previewBorder};"': null
+                                              - rtgl-view w=f h=1fg d=h g=sm:
+                                                  - 'rtgl-view w=1fg h=f br=sm bw=xs bc=bo style="background-color: ${item.previewSecondary}; border-color: ${item.previewBorder};"': null
+                                                  - 'rtgl-view w=2fg h=f br=sm bw=xs bc=bo style="background-color: ${item.previewCardBackground}; border-color: ${item.previewBorder};"': null
+                                  - rtgl-view w=f p=md:
+                                      - rtgl-text s=xs c=mu-fg ellipsis=true w=f: ${item.name}

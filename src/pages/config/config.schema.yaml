@@ -1,4 +1,4 @@
-componentName: rvn-language
+componentName: rvn-config
 propsSchema:
   type: object
   properties: {}

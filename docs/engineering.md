@@ -538,6 +538,12 @@ contract is:
 - sync reads in handlers/components
 - async persistence on writes
 
+Config orders Language, Asset Package, and Appearance. The Asset Package
+preference uses `release.assetPackageEnabled` inside the global app KV
+`userConfig` value, not a project record. It defaults to disabled when absent.
+Both Release menus read it when mounted; disabled direct links go to Config.
+Disabling the page hides its authoring UI without deleting project asset packages.
+
 #### `projectService`
 
 Handler-facing facade for:

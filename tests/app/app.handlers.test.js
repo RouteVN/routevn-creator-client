@@ -248,6 +248,85 @@ describe("app route transitions", () => {
     expect(appService.prepareNavigation).not.toHaveBeenCalled();
   });
 
+  it.each(["/project/appearance", "/project/language", "/project/language/"])(
+    "opens Config from the legacy %s link and preserves the project",
+    async (path) => {
+      const appService = {
+        prepareNavigation: vi.fn(async () => {}),
+        replace: vi.fn(),
+        getCurrentProjectId: vi.fn(() => "project-1"),
+        refreshCurrentProjectEntry: vi.fn(async () => {}),
+        getPlatform: vi.fn(() => "web"),
+      };
+      const store = {
+        setCurrentRoute: vi.fn(),
+        closeMobileSheet: vi.fn(),
+        setRepositoryLoading: vi.fn(),
+      };
+
+      await createRouteTransitionRunner({
+        appService,
+        projectService: {
+          getEnsuredProjectId: vi.fn(() => "project-1"),
+          ensureRepository: vi.fn(async () => {}),
+        },
+        store,
+        render: vi.fn(),
+        i18n: {},
+      })({ path, payload: { p: "project-1" } });
+
+      expect(appService.replace).toHaveBeenCalledWith(
+        "/project/config",
+        { p: "project-1" },
+        { state: undefined },
+      );
+      expect(store.setCurrentRoute).toHaveBeenCalledWith({
+        route: "/project/config",
+        payload: { p: "project-1" },
+      });
+    },
+  );
+
+  it.each([undefined, false, true])(
+    "gates direct Asset Package navigation with global preference %s",
+    async (enabled) => {
+      const appService = {
+        getUserConfig: vi.fn(() => enabled),
+        prepareNavigation: vi.fn(async () => {}),
+        replace: vi.fn(),
+        getCurrentProjectId: vi.fn(() => "project-1"),
+        refreshCurrentProjectEntry: vi.fn(async () => {}),
+        getPlatform: vi.fn(() => "web"),
+      };
+      const store = {
+        setCurrentRoute: vi.fn(),
+        closeMobileSheet: vi.fn(),
+        setRepositoryLoading: vi.fn(),
+      };
+      await createRouteTransitionRunner({
+        appService,
+        projectService: {
+          getEnsuredProjectId: vi.fn(() => "project-1"),
+          ensureRepository: vi.fn(async () => {}),
+        },
+        store,
+        render: vi.fn(),
+        i18n: {},
+      })({ path: "/project/asset-package", payload: { p: "project-1" } });
+
+      expect(store.setCurrentRoute).toHaveBeenCalledWith({
+        route: enabled ? "/project/asset-package" : "/project/config",
+        payload: { p: "project-1" },
+      });
+      if (!enabled)
+        expect(appService.replace).toHaveBeenCalledWith(
+          "/project/config",
+          { p: "project-1" },
+          { state: undefined },
+        );
+    },
+  );
+
   it("returns to projects when project route validation fails", async () => {
     const error = new Error(
       "state.story.initialSceneId must reference an existing scene",
@@ -625,8 +704,8 @@ const navigationShortcutCases = [
   ["r", "/project/releases/versions"],
   ["ws", "/project/releases/web-server"],
   ["ab", "/project/about"],
-  ["ap", "/project/appearance"],
-  ["sl", "/project/language"],
+  ["ap", "/project/config"],
+  ["sl", "/project/config"],
 ];
 
 const createKeyboardScope = (harness) => {

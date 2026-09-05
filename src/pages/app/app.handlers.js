@@ -25,6 +25,7 @@ import { getLocalProjectPathFromPayload } from "../../internal/localProjectRoute
 import { getRoutevnCreatorDocsUrl } from "../../internal/routevnUrls.js";
 import { resolveUpdatesEnabled } from "../../internal/updates.js";
 import { recordRecentSceneVisit } from "../../internal/ui/recentScenes.js";
+import { isAssetPackageEnabled } from "../../internal/ui/releasePreferences.js";
 
 const GLOBAL_NAV_TIMEOUT_MS = 1500;
 const ROUTE_HISTORY_MODES = new Set(["push", "replace", "none"]);
@@ -152,6 +153,8 @@ const isProjectRoute = (path) => {
 
 const LEGACY_ROUTE_REDIRECTS = {
   "/project/system-variables": "/project/controls",
+  "/project/appearance": "/project/config",
+  "/project/language": "/project/config",
 };
 
 const getCanonicalRoutePath = (path) => {
@@ -264,7 +267,13 @@ export const createRouteTransitionRunner = (deps) => {
     const copy = selectAppCopy(i18n);
     const currentTransitionToken = ++transitionToken;
     const nextPayload = normalizePayload(payload);
-    const canonicalPath = getCanonicalRoutePath(path);
+    let canonicalPath = getCanonicalRoutePath(path);
+    if (
+      canonicalPath === "/project/asset-package" &&
+      !isAssetPackageEnabled(appService)
+    ) {
+      canonicalPath = "/project/config";
+    }
     const routeHistoryMode = normalizeRouteHistoryMode(
       historyMode,
       shouldUpdateHistory ? "push" : "none",
@@ -530,8 +539,8 @@ const targetPathBySequence = {
   r: "/project/releases/versions",
   ws: "/project/releases/web-server",
   ab: "/project/about",
-  ap: "/project/appearance",
-  sl: "/project/language",
+  ap: "/project/config",
+  sl: "/project/config",
 };
 
 const targetSequencePrefixes = new Set(

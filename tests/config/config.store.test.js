@@ -3,11 +3,31 @@ import {
   createInitialState,
   selectViewData,
   setCurrentTheme,
+  setCurrentLocale,
   setUiConfig,
-} from "../../src/pages/appearance/appearance.store.js";
+  setAssetPackageEnabled,
+} from "../../src/pages/config/config.store.js";
 import { EN_I18N, JA_I18N, ZH_HANS_I18N } from "../support/i18n.js";
 
-describe("appearance store", () => {
+describe("config store", () => {
+  it("defaults Asset Package to disabled and exposes localized options", () => {
+    const state = createInitialState();
+    const viewData = selectViewData({ state, i18n: EN_I18N });
+
+    expect(viewData.assetPackageEnabled).toBe(false);
+    expect(viewData.assetPackageOptions).toEqual([
+      { value: false, label: "Disabled" },
+      { value: true, label: "Enabled" },
+    ]);
+    expect(viewData.assetPackageDescription).toBe(
+      "Enable this if you plan to release an asset pack in the RouteVN asset store.",
+    );
+    setAssetPackageEnabled({ state }, { enabled: true });
+    expect(selectViewData({ state, i18n: EN_I18N }).assetPackageEnabled).toBe(
+      true,
+    );
+  });
+
   it("uses an images-style two-column touch grid", () => {
     const state = createInitialState();
 
@@ -85,5 +105,41 @@ describe("appearance store", () => {
     expect(viewData.themes.find(({ id }) => id === "black")?.isSelected).toBe(
       true,
     );
+  });
+});
+
+describe("config language store", () => {
+  it("builds the app language selector", () => {
+    const state = createInitialState();
+    setCurrentLocale({ state }, { locale: "ja" });
+
+    const viewData = selectViewData({ state, i18n: EN_I18N });
+
+    expect(viewData).toMatchObject({
+      resourceCategory: "settings",
+      selectedResourceId: "config",
+      title: "Config",
+      appearanceTitle: "Appearance",
+      languageTitle: "Language",
+      currentLocale: "ja",
+      languageOptions: [
+        { value: "en", label: "English" },
+        { value: "ja", label: "日本語 (Beta)" },
+        { value: "zh-hans", label: "简体中文 (Beta)" },
+      ],
+    });
+  });
+
+  it("uses the compact settings layout in touch mode", () => {
+    const state = createInitialState();
+    setUiConfig({ state }, { uiConfig: { id: "touch" } });
+
+    expect(selectViewData({ state, i18n: EN_I18N })).toMatchObject({
+      isTouchMode: true,
+      showExplorerPanel: false,
+      contentPadding: "0",
+      contentBodyPadding: "md",
+      contentBodyMarginTop: "0",
+    });
   });
 });

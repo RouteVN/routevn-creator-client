@@ -1,0 +1,228 @@
+---
+title: Project Config Page
+description: Covers Language, Asset Package, and Appearance in order, global Release menu visibility, and theme and language switching.
+url: /projects
+skipInitialScreenshot: true
+viewport:
+  id: wide
+  width: 1440
+  height: 900
+steps:
+  - action: waitFor
+    selector: "[data-testid='create-project-button']"
+    state: visible
+    timeoutMs: 5000
+  - action: select
+    testId: create-project-button
+    steps:
+      - action: click
+  - action: waitFor
+    selector: rtgl-form#createProjectForm rtgl-input#field0 input
+    state: attached
+    timeoutMs: 5000
+  - action: select
+    selector: rtgl-form#createProjectForm rtgl-input#field0 input
+    steps:
+      - action: clear
+      - action: write
+        value: Project One
+  - action: select
+    selector: "rtgl-form#createProjectForm rtgl-button[data-action-id=submit]"
+    steps:
+      - action: click
+  - action: waitFor
+    selector: "#projectItem0"
+    state: visible
+    timeoutMs: 30000
+  - action: select
+    selector: "#projectItem0"
+    steps:
+      - action: click
+  - action: waitFor
+    selector: rvn-project
+    state: attached
+    timeoutMs: 10000
+  - action: select
+    selector: "#sidebar [data-item-id='settings']"
+    steps:
+      - action: click
+  - action: waitFor
+    selector: "rvn-resource-types [data-item-id='config']"
+    state: visible
+    timeoutMs: 10000
+  - action: select
+    selector: "rvn-resource-types [data-item-id='config']"
+    steps:
+      - action: click
+  - action: waitFor
+    selector: rvn-config
+    state: attached
+    timeoutMs: 10000
+  - action: assert
+    type: url
+    value: /project/config
+  - action: waitFor
+    selector: "#assetPackageToggle #option0"
+    state: visible
+    timeoutMs: 10000
+  - action: waitFor
+    selector: "#assetPackageToggle #option0[aria-pressed='true']"
+    state: visible
+    timeoutMs: 10000
+  - action: assert
+    type: js
+    fn: eval
+    args:
+      - >-
+        (() => { const find = root => root.querySelector('rvn-config') ?? [...root.querySelectorAll('*')].map(node => node.shadowRoot && find(node.shadowRoot)).find(Boolean); return [...find(document).shadowRoot.querySelectorAll('[id$="Section"]')].map(node => node.id).join(','); })()
+    value: "languageSection,assetPackageSection,appearanceSection"
+  - action: select
+    selector: "#sidebar [data-item-id='release']"
+    steps:
+      - action: click
+  - action: waitFor
+    selector: "rvn-versions"
+    state: attached
+    timeoutMs: 10000
+  - action: assert
+    type: hidden
+    selector: "rvn-resource-types [data-item-id='assetPackage']"
+  - action: select
+    selector: "#sidebar [data-item-id='settings']"
+    steps:
+      - action: click
+  - action: waitFor
+    selector: "rvn-resource-types [data-item-id='config']"
+    state: visible
+    timeoutMs: 10000
+  - action: select
+    selector: "rvn-resource-types [data-item-id='config']"
+    steps:
+      - action: click
+  - action: waitFor
+    selector: "rvn-config"
+    state: attached
+    timeoutMs: 10000
+  - action: select
+    selector: "#assetPackageToggle #option1"
+    steps:
+      - action: click
+  - action: waitFor
+    selector: "#assetPackageToggle #option1[aria-pressed='true']"
+    state: visible
+    timeoutMs: 10000
+  - action: select
+    selector: "#sidebar [data-item-id='release']"
+    steps:
+      - action: click
+  - action: waitFor
+    selector: "rvn-versions"
+    state: attached
+    timeoutMs: 10000
+  - action: waitFor
+    selector: "rvn-resource-types [data-item-id='assetPackage']"
+    state: visible
+    timeoutMs: 10000
+  - action: select
+    selector: "rvn-resource-types [data-item-id='assetPackage']"
+    steps:
+      - action: click
+  - action: waitFor
+    selector: "rvn-asset-package"
+    state: attached
+    timeoutMs: 10000
+  - action: select
+    selector: "#sidebar [data-item-id='settings']"
+    steps:
+      - action: click
+  - action: waitFor
+    selector: "rvn-resource-types [data-item-id='config']"
+    state: visible
+    timeoutMs: 10000
+  - action: select
+    selector: "rvn-resource-types [data-item-id='config']"
+    steps:
+      - action: click
+  - action: waitFor
+    selector: "rvn-config"
+    state: attached
+    timeoutMs: 10000
+  - action: waitFor
+    selector: "#assetPackageToggle #option1[aria-pressed='true']"
+    state: visible
+    timeoutMs: 10000
+  - action: select
+    selector: "#assetPackageToggle #option0"
+    steps:
+      - action: click
+  - action: waitFor
+    selector: "#assetPackageToggle #option0[aria-pressed='true']"
+    state: visible
+    timeoutMs: 10000
+  - action: select
+    selector: "#sidebar [data-item-id='release']"
+    steps:
+      - action: click
+  - action: waitFor
+    selector: "rvn-versions"
+    state: attached
+    timeoutMs: 10000
+  - action: assert
+    type: hidden
+    selector: "rvn-resource-types [data-item-id='assetPackage']"
+  - action: select
+    selector: "#sidebar [data-item-id='settings']"
+    steps:
+      - action: click
+  - action: waitFor
+    selector: "rvn-resource-types [data-item-id='config']"
+    state: visible
+    timeoutMs: 10000
+  - action: select
+    selector: "rvn-resource-types [data-item-id='config']"
+    steps:
+      - action: click
+  - action: waitFor
+    selector: "rvn-config"
+    state: attached
+    timeoutMs: 10000
+  - action: waitFor
+    selector: "#assetPackageToggle #option0[aria-pressed='true']"
+    state: visible
+    timeoutMs: 10000
+  - action: waitFor
+    selector: "#themeCard2"
+    state: visible
+    timeoutMs: 5000
+  - action: wait
+    ms: 300
+  - action: screenshot
+  - action: select
+    selector: "#themeCard2"
+    steps:
+      - action: click
+  - action: wait
+    ms: 300
+  - action: waitFor
+    selector: "rtgl-select#languageSelect [data-testid='select-button']"
+    state: visible
+    timeoutMs: 5000
+  - action: wait
+    ms: 300
+  - action: screenshot
+  - action: select
+    selector: "rtgl-select#languageSelect [data-testid='select-button']"
+    steps:
+      - action: click
+  - action: waitFor
+    selector: "rtgl-select#languageSelect #option1"
+    state: attached
+    timeoutMs: 5000
+  - action: select
+    selector: "rtgl-select#languageSelect #option1"
+    steps:
+      - action: click
+  - action: wait
+    ms: 500
+  - action: screenshot
+---
