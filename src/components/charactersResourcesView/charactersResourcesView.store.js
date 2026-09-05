@@ -1,3 +1,4 @@
+import { buildResourceOverflowMenuItems } from "../../internal/ui/resourcePages/resourceOverflowMenu.js";
 import { buildProgressivePlaceholderChildren } from "../../internal/ui/resourcePages/progressivePlaceholders.js";
 import {
   buildTagFilterPopoverViewData,
@@ -139,7 +140,7 @@ export const clearSyncRenderFrameId = ({ state }) => {
 
 export const selectSyncRenderFrameId = ({ state }) => state.syncRenderFrameId;
 
-export const selectViewData = ({ state, props }) => {
+export const selectViewData = ({ state, props, i18n }) => {
   const mobileLayout = parseBooleanProp(props.mobileLayout);
   const hasActiveTagFilter = (props.selectedTagFilterValues?.length ?? 0) > 0;
   const searchQuery = props.searchQuery ?? "";
@@ -150,6 +151,11 @@ export const selectViewData = ({ state, props }) => {
   const hasActiveSearch = searchQuery.trim().length > 0;
   const hasActiveFilter =
     hasActiveTagFilter || (searchInFilterPopover && hasActiveSearch);
+  const showTagFilter = parseBooleanProp(props.showTagFilter);
+  const resourceImportMenuItems = buildResourceOverflowMenuItems({
+    showFilter: mobileLayout && showTagFilter,
+    i18n,
+  });
   const scrollBottomPadding = resolveResourceScrollBottomPadding({
     mobileLayout,
     scrollBottomPadding: props.scrollBottomPadding,
@@ -221,7 +227,8 @@ export const selectViewData = ({ state, props }) => {
         tagFilterPopoverViewData.tagFilterPopover.clearDisabled &&
         !(searchInFilterPopover && hasActiveSearch),
     },
-    showTagFilter: parseBooleanProp(props.showTagFilter),
+    showTagFilter: showTagFilter && !mobileLayout,
+    resourceImportMenuItems,
     hasActiveTagFilter,
     tagFilterButtonVariant: hasActiveFilter ? "pr" : "ol",
     menuButtonLabel: MENU_BUTTON_LABEL,

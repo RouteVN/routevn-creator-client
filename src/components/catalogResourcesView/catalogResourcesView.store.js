@@ -1,3 +1,4 @@
+import { buildResourceOverflowMenuItems } from "../../internal/ui/resourcePages/resourceOverflowMenu.js";
 import { buildProgressivePlaceholderChildren } from "../../internal/ui/resourcePages/progressivePlaceholders.js";
 import {
   buildTagFilterPopoverViewData,
@@ -224,7 +225,7 @@ export {
   toggleTagFilterPopoverTagId,
 };
 
-export const selectViewData = ({ state, props }) => {
+export const selectViewData = ({ state, props, i18n }) => {
   const mobileLayout = parseBooleanProp(props.mobileLayout);
   const useColumnZoomControl = isColumnZoomControlMode(props);
   const columnZoomControlMax = getMaxItemsPerRow(props);
@@ -247,6 +248,14 @@ export const selectViewData = ({ state, props }) => {
         : hasFixedItemsPerRow
           ? `${fixedColumnCount}`
           : buildAutoFillGridColumns(DEFAULT_CARD_WIDTH);
+  const showTagFilter = parseBooleanProp(props.showTagFilter);
+  const showZoomControls =
+    useColumnZoomControl && parseBooleanProp(props.showZoomControls);
+  const resourceImportMenuItems = buildResourceOverflowMenuItems({
+    showZoom: mobileLayout && showZoomControls,
+    showFilter: mobileLayout && showTagFilter,
+    i18n,
+  });
   const scrollBottomPadding = resolveResourceScrollBottomPadding({
     mobileLayout,
     scrollBottomPadding: props.scrollBottomPadding,
@@ -357,7 +366,8 @@ export const selectViewData = ({ state, props }) => {
         tagFilterPopoverViewData.tagFilterPopover.clearDisabled &&
         !(searchInFilterPopover && hasActiveSearch),
     },
-    showTagFilter: parseBooleanProp(props.showTagFilter),
+    showTagFilter: showTagFilter && !mobileLayout,
+    resourceImportMenuItems,
     hasActiveTagFilter,
     tagFilterButtonVariant: hasActiveFilter ? "pr" : "ol",
     itemsPerRow,
@@ -366,8 +376,8 @@ export const selectViewData = ({ state, props }) => {
     zoomControlMin: MIN_ITEMS_PER_ROW,
     zoomControlMax: columnZoomControlMax,
     zoomControlStep: 1,
-    showZoomControls:
-      useColumnZoomControl && parseBooleanProp(props.showZoomControls),
+    showZoomControls,
+    showZoomPopoverButton: showZoomControls && !mobileLayout,
     zoomPopover: state.zoomPopover,
     menuButtonLabel: MENU_BUTTON_LABEL,
     zoomButtonLabel: ZOOM_BUTTON_LABEL,

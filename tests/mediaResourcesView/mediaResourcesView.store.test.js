@@ -118,7 +118,7 @@ describe("mediaResourcesView.store", () => {
       props,
     });
 
-    expect(viewData.showZoomPopoverButton).toBe(true);
+    expect(viewData.showZoomPopoverButton).toBe(false);
     expect(viewData.itemsPerRow).toBe(2);
     expect(viewData.cardGridColumns).toBe("2");
     expect(viewData.zoomControlMax).toBe(6);
@@ -135,10 +135,8 @@ describe("mediaResourcesView.store", () => {
       mobileLayout: true,
       showZoomControls: true,
       zoomInPopover: true,
-      zoomInOverflowMenu: true,
       zoomControlMode: "columns",
       showTagFilter: true,
-      filterInOverflowMenu: true,
     };
     const state = createInitialState({ props });
     const viewData = selectViewData({ state, props });

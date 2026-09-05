@@ -52,7 +52,7 @@ propsSchema:
       description: Where the menu icon renders in the header
     mobileLayout:
       type: boolean
-      description: Whether to use the mobile layout
+      description: Uses the mobile layout with available zoom and filter actions in the three-dot menu
     scrollBottomPadding:
       type: string
       description: Extra bottom padding inside the scroll container

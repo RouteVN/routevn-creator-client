@@ -17,6 +17,6 @@ refs:
         handler: handleResourceImportComplete
 template:
   - rtgl-view d=h av=c:
-      - 'rtgl-button#menuButton sq pre=ellipsis v=ol aria-label="${importLabel}" title="${importLabel}" aria-haspopup=menu': null
+      - 'rtgl-button#menuButton sq pre=ellipsis v=ol aria-label="${menuLabel}" title="${menuLabel}" aria-haspopup=menu': null
       - rtgl-dropdown-menu#menu :items=${menu.items} ?open=${menu.isOpen} x=${menu.x} y=${menu.y} place=be: null
       - rvn-resource-import-dialog#importDialog :open=${isImportDialogOpen}: null

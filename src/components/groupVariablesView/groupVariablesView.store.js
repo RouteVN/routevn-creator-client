@@ -1,3 +1,4 @@
+import { buildResourceOverflowMenuItems } from "../../internal/ui/resourcePages/resourceOverflowMenu.js";
 import {
   matchesTagAwareSearch,
   matchesTagFilter,
@@ -1590,6 +1591,11 @@ export const selectViewData = ({ state, props, i18n }) => {
     props,
   });
   const mobileLayout = parseBooleanProp(props.mobileLayout);
+  const showTagFilter = parseBooleanProp(props.showTagFilter);
+  const resourceImportMenuItems = buildResourceOverflowMenuItems({
+    showFilter: mobileLayout && showTagFilter,
+    i18n,
+  });
   const scrollBottomPadding = resolveResourceScrollBottomPadding({
     mobileLayout,
     scrollBottomPadding: props.scrollBottomPadding,
@@ -2032,7 +2038,8 @@ export const selectViewData = ({ state, props, i18n }) => {
         tagFilterPopoverViewData.tagFilterPopover.clearDisabled &&
         !(searchInFilterPopover && hasActiveSearch),
     },
-    showTagFilter: parseBooleanProp(props.showTagFilter),
+    showTagFilter: showTagFilter && !mobileLayout,
+    resourceImportMenuItems,
     showSearch:
       parseBooleanProp(props.showSearch, true) && !searchInFilterPopover,
     showFilterPopoverSearch: searchInFilterPopover,

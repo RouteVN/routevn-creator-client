@@ -84,7 +84,7 @@ propsSchema:
       description: Whether add actions should be shown
     mobileLayout:
       type: boolean
-      description: Whether cards should use the touch/mobile layout; column zoom controls still drive grid columns when enabled
+      description: Uses the mobile layout with available zoom and filter actions in the three-dot menu
     scrollBottomPadding:
       type: string
       description: Extra bottom padding inside the scroll container

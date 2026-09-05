@@ -1,3 +1,4 @@
+import { buildResourceOverflowMenuItems } from "../../internal/ui/resourcePages/resourceOverflowMenu.js";
 import { buildProgressivePlaceholderChildren } from "../../internal/ui/resourcePages/progressivePlaceholders.js";
 import {
   buildTagFilterPopoverViewData,
@@ -308,7 +309,7 @@ const buildAutoFillGridColumns = (cardWidth) => {
   return `repeat(auto-fill, minmax(min(${width}px, 100%), ${width}px))`;
 };
 
-export const selectViewData = ({ state, props }) => {
+export const selectViewData = ({ state, props, i18n }) => {
   const baseHeight = props.imageHeight ?? 150;
   const baseWidth = props.maxWidth ?? 400;
   const baseMediaWidth = 225;
@@ -355,24 +356,14 @@ export const selectViewData = ({ state, props }) => {
   const showTagFilter = parseBooleanProp(props.showTagFilter);
   const showZoomPopover = shouldShowZoomControls && zoomInPopover;
   const zoomInOverflowMenu =
-    showZoomPopover && parseBooleanProp(props.zoomInOverflowMenu);
+    showZoomPopover && parseBooleanProp(props.zoomInOverflowMenu, mobileLayout);
   const filterInOverflowMenu =
-    showTagFilter && parseBooleanProp(props.filterInOverflowMenu);
-  const resourceImportMenuItems = [];
-  if (zoomInOverflowMenu) {
-    resourceImportMenuItems.push({
-      label: ZOOM_BUTTON_LABEL,
-      type: "item",
-      value: "zoom",
-    });
-  }
-  if (filterInOverflowMenu) {
-    resourceImportMenuItems.push({
-      label: FILTER_BUTTON_LABEL,
-      type: "item",
-      value: "filter",
-    });
-  }
+    showTagFilter && parseBooleanProp(props.filterInOverflowMenu, mobileLayout);
+  const resourceImportMenuItems = buildResourceOverflowMenuItems({
+    showZoom: zoomInOverflowMenu,
+    showFilter: filterInOverflowMenu,
+    i18n,
+  });
   const showMenuButton = parseBooleanProp(props.showMenuButton);
   const menuButtonPlacement =
     props.menuButtonPlacement === "trailing" ? "trailing" : "leading";

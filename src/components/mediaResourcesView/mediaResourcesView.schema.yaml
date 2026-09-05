@@ -49,7 +49,7 @@ propsSchema:
       description: Whether to render the tag filter control
     filterInOverflowMenu:
       type: boolean
-      description: Whether the filter popover action should render in the three-dot menu
+      description: Whether the filter popover action should render in the three-dot menu; defaults to mobileLayout
     emptyMessage:
       type: string
       description: Message to show when no items match
@@ -70,7 +70,7 @@ propsSchema:
       description: Whether zoom controls should render inside a popover
     zoomInOverflowMenu:
       type: boolean
-      description: Whether the zoom popover action should render in the three-dot menu
+      description: Whether the zoom popover action should render in the three-dot menu; defaults to mobileLayout
     zoomControlMode:
       type: string
       enum:
@@ -121,7 +121,7 @@ propsSchema:
       description: Whether image cards should fill the available row width and use image aspect ratios
     mobileLayout:
       type: boolean
-      description: Whether cards should use the touch/mobile layout; column zoom controls still drive grid columns when enabled
+      description: Uses the mobile layout with available zoom and filter actions in the three-dot menu
     itemContextMenuItems:
       type: array
       description: Context menu items for media cards

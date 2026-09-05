@@ -1,3 +1,4 @@
+export { handleResourceImportMenuAction } from "../../internal/ui/resourcePages/resourceOverflowMenu.js";
 import { buildUniqueTagIds } from "../../internal/resourceTags.js";
 import { selectI18nCopy } from "../../internal/ui/i18nCopy.js";
 import {
