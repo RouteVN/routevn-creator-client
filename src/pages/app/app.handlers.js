@@ -163,7 +163,7 @@ const getCanonicalRoutePath = (path) => {
       ? path.replace(/\/+$/, "")
       : path;
 
-  return LEGACY_ROUTE_REDIRECTS[normalizedPath] ?? path;
+  return LEGACY_ROUTE_REDIRECTS[normalizedPath] ?? normalizedPath;
 };
 
 const getCurrentQueryPayload = (appService) => {

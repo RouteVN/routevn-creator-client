@@ -13,6 +13,11 @@ import {
   handleWindowPop,
   maybePromptLinuxAppImageDesktopIntegration,
 } from "../../src/pages/app/app.handlers.js";
+import {
+  createInitialState as createAppState,
+  selectCurrentRoutePattern,
+  setCurrentRoute,
+} from "../../src/pages/app/app.store.js";
 
 describe("app mobile tab press feedback", () => {
   const createDeps = () => {
@@ -287,9 +292,21 @@ describe("app route transitions", () => {
     },
   );
 
-  it.each([undefined, false, true])(
-    "gates direct Asset Package navigation with global preference %s",
-    async (enabled) => {
+  it.each(
+    [
+      "/project/asset-package",
+      "/project/asset-package/",
+      "/project/asset-package///",
+    ].flatMap((path) =>
+      [undefined, false, true].map((enabled) => ({ path, enabled })),
+    ),
+  )(
+    "gates $path with global preference $enabled",
+    async ({ path, enabled }) => {
+      const state = createAppState();
+      const expectedRoute = enabled
+        ? "/project/asset-package"
+        : "/project/config";
       const appService = {
         getUserConfig: vi.fn(() => enabled),
         prepareNavigation: vi.fn(async () => {}),
@@ -299,7 +316,9 @@ describe("app route transitions", () => {
         getPlatform: vi.fn(() => "web"),
       };
       const store = {
-        setCurrentRoute: vi.fn(),
+        setCurrentRoute: vi.fn((payload) =>
+          setCurrentRoute({ state }, payload),
+        ),
         closeMobileSheet: vi.fn(),
         setRepositoryLoading: vi.fn(),
       };
@@ -312,18 +331,26 @@ describe("app route transitions", () => {
         store,
         render: vi.fn(),
         i18n: {},
-      })({ path: "/project/asset-package", payload: { p: "project-1" } });
+      })({ path, payload: { p: "project-1" } });
 
-      expect(store.setCurrentRoute).toHaveBeenCalledWith({
-        route: enabled ? "/project/asset-package" : "/project/config",
+      expect(appService.prepareNavigation).toHaveBeenCalledWith({
+        path: expectedRoute,
         payload: { p: "project-1" },
       });
-      if (!enabled)
+      expect(store.setCurrentRoute).toHaveBeenCalledWith({
+        route: expectedRoute,
+        payload: { p: "project-1" },
+      });
+      expect(selectCurrentRoutePattern({ state })).toBe(expectedRoute);
+      if (path !== expectedRoute) {
         expect(appService.replace).toHaveBeenCalledWith(
-          "/project/config",
+          expectedRoute,
           { p: "project-1" },
           { state: undefined },
         );
+      } else {
+        expect(appService.replace).not.toHaveBeenCalled();
+      }
     },
   );
 

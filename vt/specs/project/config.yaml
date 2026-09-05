@@ -1,6 +1,6 @@
 ---
 title: Project Config Page
-description: Covers Language, Asset Package, and Appearance in order, global Release menu visibility, and theme and language switching.
+description: Covers Language, Asset Package, and Appearance in order, global Release menu visibility, disabled direct links with trailing slashes, and theme and language switching.
 url: /projects
 skipInitialScreenshot: true
 viewport:
@@ -87,22 +87,20 @@ steps:
   - action: assert
     type: hidden
     selector: "rvn-resource-types [data-item-id='assetPackage']"
-  - action: select
-    selector: "#sidebar [data-item-id='settings']"
-    steps:
-      - action: click
-  - action: waitFor
-    selector: "rvn-resource-types [data-item-id='config']"
-    state: visible
-    timeoutMs: 10000
-  - action: select
-    selector: "rvn-resource-types [data-item-id='config']"
-    steps:
-      - action: click
+  - action: customEvent
+    name: routevn:vt:navigate
+    detail:
+      path: /project/asset-package/
   - action: waitFor
     selector: "rvn-config"
     state: attached
     timeoutMs: 10000
+  - action: assert
+    type: url
+    value: /project/config
+  - action: assert
+    type: hidden
+    selector: "rvn-asset-package"
   - action: select
     selector: "#assetPackageToggle #option1"
     steps:
