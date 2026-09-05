@@ -402,6 +402,7 @@ versionsPage:
   macosVerifyingApplicationStatus: "アプリケーションを検証しています..."
   macosVerifyingArchiveStatus: "アプリケーションアーカイブを検証しています..."
   loadingMessage: "読み込み中..."
+  nameDescription: "バージョン名は任意ですが、連番の番号体系（例: 1.0.0）を使用することをお勧めします。"
   nameLabel: "名前"
   noSelectionLabel: "未選択"
   noVersionsMessage: "バージョンはありません"

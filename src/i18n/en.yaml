@@ -402,6 +402,7 @@ versionsPage:
   macosVerifyingApplicationStatus: "Verifying application..."
   macosVerifyingArchiveStatus: "Verifying application archive..."
   loadingMessage: "Loading..."
+  nameDescription: "Version name can be anything, but it is recommended you use an incremental numbering system (for example 1.0.0)."
   nameLabel: "Name"
   noSelectionLabel: "No selection"
   noVersionsMessage: "No versions"

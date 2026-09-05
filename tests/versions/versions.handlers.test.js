@@ -1325,7 +1325,7 @@ describe("versions macOS export handlers", () => {
     expect(deps.refs.macosExportForm.reset).toHaveBeenCalledTimes(1);
     expect(deps.refs.macosExportForm.setValues).toHaveBeenCalledWith({
       values: {
-        version: "Version 1",
+        version: "",
         buildNumber: "",
       },
     });
@@ -1360,6 +1360,35 @@ describe("versions macOS export handlers", () => {
     expect(
       deps.projectService.createMacosApplicationToPath.mock.calls[0][4],
     ).toEqual({ onProgress: expect.any(Function) });
+  });
+
+  it("prefills the version field when the version name is a valid 3-part semver", async () => {
+    const repository = {
+      loadState: vi.fn(async () => structuredClone(initialProjectData)),
+      loadEvents: vi.fn(async () => []),
+      getState: vi.fn(() => structuredClone(initialProjectData)),
+    };
+    const deps = createDeps({
+      repository,
+      version: {
+        id: "version-1",
+        name: "1.2.3",
+        actionIndex: 3,
+        createdAt: "2026-01-01T00:00:00.000Z",
+      },
+    });
+
+    await handleDownloadMacosApplicationClick(
+      deps,
+      createVersionClickPayload(),
+    );
+
+    expect(deps.refs.macosExportForm.setValues).toHaveBeenCalledWith({
+      values: {
+        version: "1.2.3",
+        buildNumber: "",
+      },
+    });
   });
 
   it("requires a manually entered build number for every macOS export", async () => {

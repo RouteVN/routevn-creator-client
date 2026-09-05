@@ -402,6 +402,7 @@ versionsPage:
   macosVerifyingApplicationStatus: "正在验证应用..."
   macosVerifyingArchiveStatus: "正在验证应用归档..."
   loadingMessage: "正在加载..."
+  nameDescription: "版本名称可以任意指定，但建议使用递增的版本编号（例如 1.0.0）。"
   nameLabel: "名称"
   noSelectionLabel: "未选择"
   noVersionsMessage: "没有版本"
