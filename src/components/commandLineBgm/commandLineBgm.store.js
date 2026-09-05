@@ -22,7 +22,6 @@ import { isTouchUiConfig } from "../../internal/ui/resourcePages/mobileResourceP
 const DEFAULT_CHANNEL_VOLUME = 75;
 const DEFAULT_SOUND_VOLUME = 100;
 const DEFAULT_AUDIO_EFFECT_PLAYBACK_SPEED = 1;
-const LEGACY_SOUND_ID = "default";
 
 const normalizeVolume = (volume, fallback) => {
   const parsedVolume = Number(volume);
@@ -110,7 +109,7 @@ const normalizeBgm = (bgm = {}) => {
   } else if (bgm.resourceId !== undefined) {
     normalizedBgm.sounds = normalizeSounds([
       {
-        id: LEGACY_SOUND_ID,
+        id: bgm.resourceId,
         resourceId: bgm.resourceId,
         volume: DEFAULT_SOUND_VOLUME,
         startDelayMs: bgm.startDelayMs,

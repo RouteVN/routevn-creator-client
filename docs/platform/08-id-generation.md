@@ -100,6 +100,24 @@ Default rule:
 - do not add new readable prefixes to normal persisted domain ids unless there
   is a compatibility or protocol reason
 
+## BGM Playback Identity
+
+BGM clip IDs default to the sound resource ID so independently authored
+volume changes can retain playback. Opening legacy single-sound BGM in the
+editor uses that same resource ID for its local clip, matching route-engine's
+legacy runtime fallback. This does not rewrite stored project data on open.
+
+Existing explicit IDs are preserved, including `default` in single-clip
+channels. That ID may come from an older editor conversion or identify a
+surviving occurrence after other clips were removed; the editor cannot infer
+which. The engine resolves legacy playback compatibility at runtime without
+rewriting authored IDs.
+
+Repeated insertions receive `-2`, `-3`, and later suffixes when their IDs
+collide with existing clips. Resource IDs remain unescaped in authored data;
+the engine escapes them when constructing namespaced render IDs. Voice and SFX
+keep their separate occurrence-ID rules.
+
 ## Generator Injection Rule
 
 Some services accept an `idGenerator` callback instead of directly importing the
