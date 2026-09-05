@@ -8,12 +8,14 @@ const installDomGlobals = () => {
     document: globalThis.document,
     HTMLElement: globalThis.HTMLElement,
     Node: globalThis.Node,
+    getComputedStyle: globalThis.getComputedStyle,
   };
 
   globalThis.window = dom.window;
   globalThis.document = dom.window.document;
   globalThis.HTMLElement = dom.window.HTMLElement;
   globalThis.Node = dom.window.Node;
+  globalThis.getComputedStyle = dom.window.getComputedStyle.bind(dom.window);
 
   return () => {
     for (const [name, value] of Object.entries(previousGlobals)) {
@@ -189,40 +191,103 @@ describe("lexical scene document editor line previews", () => {
     }
   });
 
-  it("renders deleted dialogue previews as dialogue icons with a centered x mark", async () => {
-    const restoreDomGlobals = installDomGlobals();
+  it.each(["ADV", "NVL"])(
+    "renders deleted dialogue as an icon with an x mark and no %s label",
+    async (dialogueModeLabel) => {
+      const restoreDomGlobals = installDomGlobals();
 
+      try {
+        const { LexicalSceneDocumentEditorElement } = await import(
+          "../../src/primitives/lexicalSceneDocumentEditor.js"
+        );
+        const editorPrototype = LexicalSceneDocumentEditorElement.prototype;
+        const previewItems = editorPrototype.createPreviewItems.call(
+          editorPrototype,
+          {
+            hasDialogueLayout: true,
+            dialogueChangeType: "delete",
+            dialogueModeLabel,
+          },
+        );
+
+        expect(
+          previewItems.querySelector(".preview-delete-overlay"),
+        ).toBeNull();
+        expect(previewItems.textContent).toBe("");
+        expect(
+          previewItems.querySelector(".preview-icon-delete-mark"),
+        ).not.toBeNull();
+        expect(
+          previewItems.querySelector(".preview-dialogue-item"),
+        ).not.toBeNull();
+        expect(
+          Array.from(previewItems.querySelectorAll("rtgl-svg")).map((icon) =>
+            icon.getAttribute("svg"),
+          ),
+        ).toEqual(["dialogue", "x"]);
+        expect(
+          Array.from(previewItems.querySelectorAll("rtgl-svg")).map((icon) =>
+            icon.getAttribute("wh"),
+          ),
+        ).toEqual(["24", "20"]);
+      } finally {
+        restoreDomGlobals();
+      }
+    },
+  );
+
+  it("summarizes only previews that do not fit and restores them when the gutter grows", async () => {
+    const restoreDomGlobals = installDomGlobals();
     try {
       const { LexicalSceneDocumentEditorElement } = await import(
         "../../src/primitives/lexicalSceneDocumentEditor.js"
       );
-      const editorPrototype = LexicalSceneDocumentEditorElement.prototype;
-      const previewItems = editorPrototype.createPreviewItems.call(
-        editorPrototype,
-        {
-          hasDialogueLayout: true,
-          dialogueChangeType: "delete",
-          dialogueModeLabel: "ADV",
-        },
-      );
+      const editor = LexicalSceneDocumentEditorElement.prototype;
+      const previews = editor.createPreviewItems({
+        hasDialogueLayout: true,
+        hasControl: true,
+        hasVoice: true,
+        hasSfx: true,
+        hasChoices: true,
+        hasInput: true,
+      });
+      const items = [...previews.querySelectorAll(":scope > .preview-item")];
+      const overflow = previews.querySelector(".preview-overflow");
+      overflow.getBoundingClientRect = () => ({ width: 16 });
+      previews.style.columnGap = "8px";
+      previews.getBoundingClientRect = () => ({ left: 100, width: 184 });
+      items.forEach((item, index) => {
+        item.getBoundingClientRect = () => ({ right: 124 + index * 32 });
+      });
+      const row = document.createElement("div");
+      row.append(previews);
+      const line = document.createElement("p");
 
-      expect(previewItems.querySelector(".preview-delete-overlay")).toBeNull();
-      expect(
-        previewItems.querySelector(".preview-icon-delete-mark"),
-      ).not.toBeNull();
-      expect(
-        previewItems.querySelector(".preview-dialogue-item"),
-      ).not.toBeNull();
-      expect(
-        Array.from(previewItems.querySelectorAll("rtgl-svg")).map((icon) =>
-          icon.getAttribute("svg"),
-        ),
-      ).toEqual(["dialogue", "x"]);
-      expect(
-        Array.from(previewItems.querySelectorAll("rtgl-svg")).map((icon) =>
-          icon.getAttribute("wh"),
-        ),
-      ).toEqual(["24", "20"]);
+      editor.syncLineRightGutterWidth(line, row, 100);
+      expect(items.map((item) => item.hidden)).toEqual([
+        false,
+        false,
+        true,
+        true,
+        true,
+        true,
+      ]);
+      expect(overflow.hidden).toBe(false);
+      expect(overflow.textContent).toBe("+4");
+      expect(line.style.paddingRight).toBe("100px");
+
+      editor.syncLineRightGutterWidth(line, row, 24);
+      expect(items.every((item) => item.hidden)).toBe(true);
+      expect(overflow.textContent).toBe("+6");
+
+      editor.syncLineRightGutterWidth(line, row, 200);
+      expect(items.every((item) => !item.hidden)).toBe(true);
+      expect(overflow.hidden).toBe(true);
+      expect(line.style.paddingRight).toBe("184px");
+
+      editor.syncLineRightGutterWidth(line, row, 100);
+      expect(items.filter((item) => !item.hidden)).toHaveLength(2);
+      expect(overflow.textContent).toBe("+4");
     } finally {
       restoreDomGlobals();
     }

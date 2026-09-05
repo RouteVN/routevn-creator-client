@@ -258,5 +258,9 @@ template:
       - $if previewVisible:
           - rvn-vn-preview#vnPreview scene-id="${previewSceneId}" section-id="${previewSectionId}" line-id="${previewLineId}": null
       - $if isScenePageLoading:
-          - 'rtgl-view pos=abs edge=f z=1000 bgc=bg av=c ah=c style="pointer-events: auto;"':
-              - rtgl-text s=sm c=mu-fg: ${loadingSceneLabel}
+          - $if isTouchMode:
+              - 'rtgl-view#scenePageLoading pos=fix bgc=bg av=c ah=c role=status style="z-index: 1101; left: 0; right: 0; top: 0; bottom: ${mobileSceneEditorBottomInset}; pointer-events: auto;"':
+                  - rtgl-text s=sm c=mu-fg: ${loadingSceneLabel}
+            $else:
+              - 'rtgl-view#scenePageLoading pos=abs edge=f z=1000 bgc=bg av=c ah=c role=status style="pointer-events: auto;"':
+                  - rtgl-text s=sm c=mu-fg: ${loadingSceneLabel}

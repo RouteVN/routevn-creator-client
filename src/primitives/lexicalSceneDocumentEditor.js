@@ -605,7 +605,7 @@ const STYLES = `
     right: 0;
     width: max-content;
     max-width: none;
-    justify-content: flex-start;
+    justify-content: flex-end;
     padding-left: 0;
     padding-right: 0;
   }
@@ -613,6 +613,7 @@ const STYLES = `
   .gutter-right .gutter-row[data-constrained="true"] {
     width: var(--line-right-gutter-width);
     max-width: var(--line-right-gutter-width);
+    overflow: hidden;
   }
 
   .gutter-row[data-selected="true"] .line-number {
@@ -656,7 +657,7 @@ const STYLES = `
     display: inline-flex;
     flex-wrap: nowrap;
     align-items: flex-start;
-    justify-content: flex-start;
+    justify-content: flex-end;
     gap: 8px;
     min-width: 0;
     width: max-content;
@@ -671,7 +672,6 @@ const STYLES = `
 
   .gutter-right .gutter-row[data-constrained="true"] .preview-items {
     display: flex;
-    flex-wrap: wrap;
     width: 100%;
     max-width: 100%;
   }
@@ -679,7 +679,8 @@ const STYLES = `
   .preview-item {
     display: inline-flex;
     align-items: flex-start;
-    flex-wrap: wrap;
+    flex-wrap: nowrap;
+    flex-shrink: 0;
     gap: 6px;
     min-width: 0;
     max-width: 100%;
@@ -690,6 +691,19 @@ const STYLES = `
     align-items: center;
     gap: 4px;
     min-height: 16px;
+  }
+
+  .preview-overflow {
+    flex: 0 0 auto;
+    color: var(--muted-foreground);
+    font-size: 12px;
+    line-height: 24px;
+    white-space: nowrap;
+    text-align: right;
+  }
+
+  .preview-item[hidden], .preview-overflow[hidden] {
+    display: none;
   }
 
   .preview-item[data-overlay="true"] {
@@ -761,7 +775,8 @@ const STYLES = `
 
   .preview-image-stack {
     display: flex;
-    flex-wrap: wrap;
+    flex-wrap: nowrap;
+    flex-shrink: 0;
     align-items: center;
     gap: 4px;
     min-width: 0;
@@ -822,12 +837,6 @@ const STYLES = `
     justify-content: center;
     color: var(--foreground);
     pointer-events: none;
-  }
-
-  .preview-dialogue-label {
-    color: var(--muted-foreground);
-    font-size: 12px;
-    line-height: 1;
   }
 
   .surface[data-mode="block"] .editor {
@@ -8005,7 +8014,6 @@ export class LexicalSceneDocumentEditorElement extends HTMLElement {
       screenTransition: Boolean(lineDecoration.screenTransition),
       sectionTransition: Boolean(lineDecoration.sectionTransition),
       hasDialogueLayout: Boolean(lineDecoration.hasDialogueLayout),
-      dialogueModeLabel: lineDecoration.dialogueModeLabel || "",
       dialogueChangeType: lineDecoration.dialogueChangeType,
       hasControl: Boolean(lineDecoration.hasControl),
       controlChangeType: lineDecoration.controlChangeType,
@@ -8060,15 +8068,44 @@ export class LexicalSceneDocumentEditorElement extends HTMLElement {
     rightRow.removeAttribute("data-constrained");
 
     const previewItems = rightRow.firstElementChild;
+    const overflow = previewItems.querySelector(".preview-overflow");
+    const items = Array.from(previewItems.children).filter(
+      (item) => item !== overflow,
+    );
+    items.forEach((item) => {
+      item.hidden = false;
+    });
+    overflow.hidden = true;
+
+    const previewRect = previewItems.getBoundingClientRect();
     const measuredNaturalWidth = Math.max(
-      Math.ceil(previewItems?.getBoundingClientRect?.().width ?? 0),
-      Math.ceil(previewItems?.scrollWidth ?? 0),
+      Math.ceil(previewRect.width),
+      Math.ceil(previewItems.scrollWidth),
     );
     const isConstrained = measuredNaturalWidth > maxRightGutterWidth;
     const lineRightGutterWidth = Math.min(
       maxRightGutterWidth,
       Math.max(DEFAULT_RIGHT_GUTTER_WIDTH, measuredNaturalWidth),
     );
+
+    if (isConstrained) {
+      const gap = Number.parseFloat(getComputedStyle(previewItems).columnGap);
+      const itemRightEdges = items.map(
+        (item) => item.getBoundingClientRect().right - previewRect.left,
+      );
+      overflow.textContent = `+${items.length}`;
+      overflow.hidden = false;
+      const overflowWidth = Math.ceil(overflow.getBoundingClientRect().width);
+      const availableWidth = lineRightGutterWidth - overflowWidth - gap;
+      const firstHiddenIndex = itemRightEdges.findIndex(
+        (rightEdge) => rightEdge > availableWidth,
+      );
+      const hiddenItems = items.slice(firstHiddenIndex);
+      hiddenItems.forEach((item) => {
+        item.hidden = true;
+      });
+      overflow.textContent = `+${hiddenItems.length}`;
+    }
 
     rightRow.dataset.constrained = String(isConstrained);
     rightRow.style.setProperty(
@@ -8770,10 +8807,6 @@ export class LexicalSceneDocumentEditorElement extends HTMLElement {
           deleteDisplay: "mark",
         }),
       );
-      const label = document.createElement("div");
-      label.className = "preview-dialogue-label";
-      label.textContent = lineDecoration.dialogueModeLabel || "ADV";
-      item.append(label);
       container.append(item);
     }
 
@@ -8852,6 +8885,14 @@ export class LexicalSceneDocumentEditorElement extends HTMLElement {
           isDelete: lineDecoration.setNextLineConfigChangeType === "delete",
         }),
       );
+    }
+
+    if (container.childNodes.length > 0) {
+      const overflow = document.createElement("span");
+      overflow.className = "preview-overflow";
+      overflow.hidden = true;
+      overflow.setAttribute("aria-hidden", "true");
+      container.append(overflow);
     }
 
     return container;
