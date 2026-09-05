@@ -165,6 +165,7 @@ public class MainActivity extends Activity {
     }
 
     private WebView webView;
+    private boolean appResumed = false;
     private long splashStartedAt;
     private boolean splashDismissRequested = false;
     private boolean splashReady = false;
@@ -700,6 +701,35 @@ public class MainActivity extends Activity {
     }
 
     @Override
+    protected void onResume() {
+        super.onResume();
+        appResumed = true;
+        if (webView != null) {
+            webView.onResume();
+            notifyAudioLifecycle();
+        }
+    }
+
+    @Override
+    protected void onPause() {
+        appResumed = false;
+        notifyAudioLifecycle();
+        if (webView != null) {
+            webView.onPause();
+        }
+        super.onPause();
+    }
+
+    private void notifyAudioLifecycle() {
+        if (webView != null) {
+            webView.evaluateJavascript(
+                "window.routeVNSetAppActive?.(" + appResumed + ")",
+                null
+            );
+        }
+    }
+
+    @Override
     protected void onDestroy() {
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
             unregisterBackInvokedCallback();
@@ -749,6 +779,12 @@ public class MainActivity extends Activity {
     }
 
     private final class RouteVNWebViewClient extends WebViewClient {
+        @Override
+        public void onPageFinished(WebView view, String url) {
+            super.onPageFinished(view, url);
+            notifyAudioLifecycle();
+        }
+
         @Override
         public WebResourceResponse shouldInterceptRequest(
             WebView view,

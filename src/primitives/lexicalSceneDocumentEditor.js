@@ -628,7 +628,7 @@ const STYLES = `
     width: 32px;
     color: var(--muted-foreground);
     font-size: var(--scene-document-editor-font-size);
-    font-weight: 600;
+    font-weight: 400;
     line-height: 1.5;
     text-align: right;
     margin-right: 2px;
@@ -1939,6 +1939,10 @@ export class LexicalSceneDocumentEditorElement extends HTMLElement {
   }
 
   focusContainer({ scrollLine = true } = {}) {
+    if (this.state.selectionActive === false) {
+      return;
+    }
+
     const selectedLineId = this.state.selectedLineId || this.state.lines[0]?.id;
     this.enterBlockMode({
       focusSurface: true,
@@ -2081,7 +2085,7 @@ export class LexicalSceneDocumentEditorElement extends HTMLElement {
     if (lineId) {
       this.state.selectedLineId = lineId;
       if (scrollLine) {
-        this.scrollLineIntoView({ lineId });
+        this.scrollLineIntoView({ lineId, behavior: "instant" });
       }
     }
 
@@ -2097,7 +2101,11 @@ export class LexicalSceneDocumentEditorElement extends HTMLElement {
 
     if (focusSurface) {
       requestAnimationFrame(() => {
-        if (!this.isConnected) {
+        if (
+          !this.isConnected ||
+          this.state.selectionActive === false ||
+          this.state.mode !== "block"
+        ) {
           return;
         }
 
@@ -2188,7 +2196,7 @@ export class LexicalSceneDocumentEditorElement extends HTMLElement {
 
     this.state.selectedLineId = nextLineId;
     this.scheduleRender();
-    this.scrollLineIntoView({ lineId: nextLineId });
+    this.scrollLineIntoView({ lineId: nextLineId, behavior: "instant" });
     this.dispatchSelectedLineChanged(nextLineId, selectionDetail);
   }
 
@@ -3096,13 +3104,24 @@ export class LexicalSceneDocumentEditorElement extends HTMLElement {
       (activeElement === document.body ||
         activeElement === document.documentElement) &&
       (target === document.body || target === document.documentElement);
-    if (!isBodyKeyTarget) {
+    // Selection changes before the next frame transfers focus between sections.
+    // Route repeated arrows from the old surface to the selected section.
+    const isInactiveSectionKeyTarget = (event.composedPath?.() ?? []).some(
+      (element) =>
+        element instanceof LexicalSceneDocumentEditorElement &&
+        element !== this &&
+        element.selectionActive === false,
+    );
+    if (!isBodyKeyTarget && !isInactiveSectionKeyTarget) {
       return false;
     }
 
     event.preventDefault();
     event.stopPropagation();
     event.stopImmediatePropagation?.();
+    if (isInactiveSectionKeyTarget) {
+      this.refs.surface.focus({ preventScroll: true });
+    }
     this.moveBlockSelection(navigationDelta);
     return true;
   }
@@ -4625,7 +4644,7 @@ export class LexicalSceneDocumentEditorElement extends HTMLElement {
   handleSurfaceKeyDown(event) {
     this.hideSelectionPopover();
 
-    if (this.state.mode !== "block") {
+    if (this.state.selectionActive === false || this.state.mode !== "block") {
       return false;
     }
 

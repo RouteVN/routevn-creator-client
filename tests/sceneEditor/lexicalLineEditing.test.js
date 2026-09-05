@@ -361,6 +361,169 @@ describe("lexical scene document editor line editing", () => {
     }
   });
 
+  it.each([
+    ["ArrowDown", 1],
+    ["ArrowUp", -1],
+    ["j", 1],
+    ["k", -1],
+  ])(
+    "routes repeated %s to the selected section before focus transfers",
+    async (key, delta) => {
+      const restoreDomGlobals = installDomGlobals();
+      try {
+        const { LexicalSceneDocumentEditorElement } = await import(
+          "../../src/primitives/lexicalSceneDocumentEditor.js"
+        );
+        const activeEditor = Object.create(
+          LexicalSceneDocumentEditorElement.prototype,
+        );
+        const previousEditor = Object.create(
+          LexicalSceneDocumentEditorElement.prototype,
+        );
+        const previousSurface = document.createElement("div");
+        const nextSurface = document.createElement("div");
+        previousSurface.tabIndex = 0;
+        nextSurface.tabIndex = 0;
+        document.body.append(previousSurface, nextSurface);
+        previousSurface.focus();
+        previousEditor.state = { selectionActive: false, mode: "block" };
+        activeEditor.state = { selectionActive: true, mode: "block" };
+        activeEditor.refs = {
+          editor: document.createElement("div"),
+          surface: nextSurface,
+        };
+        activeEditor.getActiveElement = () => document.activeElement;
+        activeEditor.moveBlockSelection = vi.fn();
+        const event = new window.KeyboardEvent("keydown", {
+          key,
+          bubbles: true,
+          cancelable: true,
+        });
+        Object.defineProperty(event, "target", { value: previousSurface });
+        Object.defineProperty(event, "composedPath", {
+          value: () => [
+            previousSurface,
+            previousEditor,
+            document.body,
+            document,
+            window,
+          ],
+        });
+
+        activeEditor.handleWindowKeyDownCapture(event);
+
+        expect(event.defaultPrevented).toBe(true);
+        expect(activeEditor.moveBlockSelection).toHaveBeenCalledExactlyOnceWith(
+          delta,
+        );
+        expect(document.activeElement).toBe(nextSurface);
+      } finally {
+        restoreDomGlobals();
+      }
+    },
+  );
+
+  it("does not navigate an inactive surface from a cleared line selection", async () => {
+    const restoreDomGlobals = installDomGlobals();
+    try {
+      const { LexicalSceneDocumentEditorElement } = await import(
+        "../../src/primitives/lexicalSceneDocumentEditor.js"
+      );
+      const editorElement = Object.create(
+        LexicalSceneDocumentEditorElement.prototype,
+      );
+      editorElement.state = {
+        selectionActive: false,
+        mode: "block",
+        selectedLineId: undefined,
+        lines: [{ id: "line-1" }, { id: "line-2" }],
+      };
+      editorElement.hideSelectionPopover = vi.fn();
+      editorElement.moveBlockSelection = vi.fn();
+      const event = new window.KeyboardEvent("keydown", {
+        key: "ArrowDown",
+        cancelable: true,
+      });
+
+      expect(editorElement.handleSurfaceKeyDown(event)).toBe(false);
+      expect(editorElement.moveBlockSelection).not.toHaveBeenCalled();
+      expect(editorElement.state.selectedLineId).toBeUndefined();
+    } finally {
+      restoreDomGlobals();
+    }
+  });
+
+  it("ignores a queued container focus request after its section becomes inactive", async () => {
+    const restoreDomGlobals = installDomGlobals();
+    try {
+      const { LexicalSceneDocumentEditorElement } = await import(
+        "../../src/primitives/lexicalSceneDocumentEditor.js"
+      );
+      const editorElement = Object.create(
+        LexicalSceneDocumentEditorElement.prototype,
+      );
+      editorElement.state = {
+        selectionActive: false,
+        selectedLineId: undefined,
+        lines: [{ id: "line-1" }],
+      };
+      editorElement.enterBlockMode = vi.fn();
+
+      editorElement.focusContainer();
+
+      expect(editorElement.enterBlockMode).not.toHaveBeenCalled();
+      expect(editorElement.state.selectedLineId).toBeUndefined();
+    } finally {
+      restoreDomGlobals();
+    }
+  });
+
+  it.each(["inactive", "text-editor"])(
+    "cancels pending block focus when the editor becomes %s",
+    async (nextState) => {
+      const restoreDomGlobals = installDomGlobals();
+      const frames = installAnimationFrameQueue();
+      try {
+        const { LexicalSceneDocumentEditorElement } = await import(
+          "../../src/primitives/lexicalSceneDocumentEditor.js"
+        );
+        const editorElement = Object.create(
+          LexicalSceneDocumentEditorElement.prototype,
+        );
+        Object.defineProperty(editorElement, "dataset", { value: {} });
+        Object.defineProperty(editorElement, "isConnected", { value: true });
+        editorElement.state = {
+          selectionActive: true,
+          mode: "block",
+          selectedLineId: "line-1",
+        };
+        editorElement.refs = {
+          editor: { dataset: {}, blur: vi.fn() },
+          surface: { dataset: {}, focus: vi.fn() },
+        };
+        editorElement.clearPendingTextInputFallback = vi.fn();
+        editorElement.clearSelectedReferenceNodeKey = vi.fn();
+        editorElement.scheduleRender = vi.fn();
+        editorElement.enterBlockMode({ lineId: "line-1", scrollLine: false });
+        if (nextState === "inactive") {
+          editorElement.state.selectionActive = false;
+        } else {
+          editorElement.state.mode = "text-editor";
+        }
+        frames.callbacks.forEach((callback) => callback());
+
+        expect(editorElement.refs.surface.focus).not.toHaveBeenCalled();
+        expect(editorElement.refs.editor.blur).not.toHaveBeenCalled();
+        expect(editorElement.state.mode).toBe(
+          nextState === "text-editor" ? "text-editor" : "block",
+        );
+      } finally {
+        frames.restore();
+        restoreDomGlobals();
+      }
+    },
+  );
+
   it("suppresses block-mode Space from the window capture path", async () => {
     const restoreDomGlobals = installDomGlobals();
 
@@ -765,6 +928,10 @@ describe("lexical scene document editor line editing", () => {
       expect(editorElement.state.mode).toBe("block");
       expect(editorNode.dataset.mode).toBe("block");
       expect(surfaceNode.dataset.mode).toBe("block");
+      expect(editorElement.scrollLineIntoView).toHaveBeenCalledWith({
+        lineId: "line-1",
+        behavior: "instant",
+      });
       expect(document.activeElement).toBe(surfaceNode);
       expect(editorElement.isEditorFocused).toBe(false);
     } finally {
@@ -836,6 +1003,54 @@ describe("lexical scene document editor line editing", () => {
     }
   });
 
+  it.each([
+    [1, "line-1", "line-2", "down"],
+    [-1, "line-2", "line-1", "up"],
+  ])(
+    "moves block selection by %s and reveals the line without scroll animation",
+    async (delta, selectedLineId, nextLineId, navigationDirection) => {
+      const restoreDomGlobals = installDomGlobals();
+      try {
+        const { LexicalSceneDocumentEditorElement } = await import(
+          "../../src/primitives/lexicalSceneDocumentEditor.js"
+        );
+        const editorElement = Object.create(
+          LexicalSceneDocumentEditorElement.prototype,
+        );
+        editorElement.state = {
+          mode: "block",
+          selectedLineId,
+          lines: [{ id: "line-1" }, { id: "line-2" }],
+        };
+        editorElement.scheduleRender = vi.fn();
+        editorElement.scrollLineIntoView = vi.fn();
+        editorElement.dispatchSelectedLineChanged = vi.fn();
+
+        editorElement.moveBlockSelection(delta);
+
+        expect(editorElement.state.selectedLineId).toBe(nextLineId);
+        expect(editorElement.scheduleRender).toHaveBeenCalledOnce();
+        expect(
+          editorElement.scrollLineIntoView,
+        ).toHaveBeenCalledExactlyOnceWith({
+          lineId: nextLineId,
+          behavior: "instant",
+        });
+        expect(editorElement.dispatchSelectedLineChanged).toHaveBeenCalledWith(
+          nextLineId,
+          {
+            cursorPosition: undefined,
+            isCollapsed: false,
+            mode: "block",
+            navigationDirection,
+          },
+        );
+      } finally {
+        restoreDomGlobals();
+      }
+    },
+  );
+
   it("emits block navigation direction when moving down at the last line", async () => {
     const restoreDomGlobals = installDomGlobals();
 
@@ -861,6 +1076,7 @@ describe("lexical scene document editor line editing", () => {
       expect(editorElement.state.selectedLineId).toBe("line-2");
       expect(editorElement.scrollLineIntoView).toHaveBeenCalledWith({
         lineId: "line-2",
+        behavior: "instant",
       });
       expect(editorElement.dispatchSelectedLineChanged).toHaveBeenCalledWith(
         "line-2",
@@ -965,6 +1181,7 @@ describe("lexical scene document editor line editing", () => {
       expect(editorElement.state.selectedLineId).toBe("line-1");
       expect(editorElement.scrollLineIntoView).toHaveBeenCalledWith({
         lineId: "line-1",
+        behavior: "instant",
       });
       expect(editorElement.dispatchSelectedLineChanged).toHaveBeenCalledWith(
         "line-1",

@@ -2351,6 +2351,7 @@ export const handleSelectedLineChanged = (deps, payload) => {
         refs,
         adjacentSectionTarget.lineId,
         adjacentSectionTarget.sectionId,
+        { behavior: detail.mode === "block" ? "instant" : "auto" },
       );
       if (detail.mode === "text-editor") {
         focusLinesEditorLine(refs, {

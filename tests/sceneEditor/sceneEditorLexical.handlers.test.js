@@ -2411,7 +2411,7 @@ describe("sceneEditorLexical.handlers actions dialog", () => {
     );
   });
 
-  it("moves block selection from the last line to the next section first line", () => {
+  it("moves block selection to the next section without scroll animation", () => {
     const previousRequestAnimationFrame = globalThis.requestAnimationFrame;
     globalThis.requestAnimationFrame = vi.fn((callback) => {
       callback();
@@ -2508,6 +2508,7 @@ describe("sceneEditorLexical.handlers actions dialog", () => {
       expect(deps.render).toHaveBeenCalledOnce();
       expect(nextSectionEditor.scrollLineIntoView).toHaveBeenCalledWith({
         lineId: "line-3",
+        behavior: "instant",
       });
       expect(nextSectionEditor.focusContainer).toHaveBeenCalled();
       expect(deps.subject.dispatch).toHaveBeenCalledWith(
@@ -2526,7 +2527,7 @@ describe("sceneEditorLexical.handlers actions dialog", () => {
     }
   });
 
-  it("moves block selection from the first line to the previous section last line", () => {
+  it("moves block selection to the previous section without scroll animation", () => {
     const previousRequestAnimationFrame = globalThis.requestAnimationFrame;
     globalThis.requestAnimationFrame = vi.fn((callback) => {
       callback();
@@ -2623,6 +2624,7 @@ describe("sceneEditorLexical.handlers actions dialog", () => {
       expect(deps.render).toHaveBeenCalledOnce();
       expect(previousSectionEditor.scrollLineIntoView).toHaveBeenCalledWith({
         lineId: "line-2",
+        behavior: "instant",
       });
       expect(previousSectionEditor.focusContainer).toHaveBeenCalled();
       expect(deps.subject.dispatch).toHaveBeenCalledWith(
@@ -2734,6 +2736,7 @@ describe("sceneEditorLexical.handlers actions dialog", () => {
       });
       expect(nextSectionEditor.scrollLineIntoView).toHaveBeenCalledWith({
         lineId: "line-3",
+        behavior: "auto",
       });
       expect(nextSectionEditor.focusLine).toHaveBeenCalledWith({
         sectionId: "section-2",
@@ -2936,6 +2939,7 @@ describe("sceneEditorLexical.handlers actions dialog", () => {
       });
       expect(previousSectionEditor.scrollLineIntoView).toHaveBeenCalledWith({
         lineId: "line-2",
+        behavior: "auto",
       });
       expect(previousSectionEditor.focusLine).toHaveBeenCalledWith({
         sectionId: "section-1",
