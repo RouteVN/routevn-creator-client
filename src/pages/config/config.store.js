@@ -1,5 +1,9 @@
+import {
+  APP_LOCALE_OPTIONS,
+  DEFAULT_APP_LOCALE,
+} from "../../internal/ui/appLocale.js";
 import { DEFAULT_APP_THEME, normalizeTheme } from "../../internal/theme.js";
-import { selectAppearancePageCopy } from "./support/appearancePageCopy.js";
+import { selectConfigPageCopy } from "./support/configPageCopy.js";
 
 const themeOptions = [
   {
@@ -45,10 +49,11 @@ const themeOptions = [
 
 export const createInitialState = () => ({
   resourceCategory: "settings",
-  selectedResourceId: "appearance",
+  selectedResourceId: "config",
   repositoryTarget: "settings",
-  flatItems: [],
   currentTheme: DEFAULT_APP_THEME,
+  currentLocale: DEFAULT_APP_LOCALE,
+  assetPackageEnabled: false,
   isTouchMode: false,
 });
 
@@ -62,7 +67,7 @@ export const setUiConfig = ({ state }, { uiConfig } = {}) => {
 };
 
 export const selectViewData = ({ state, i18n }) => {
-  const copy = selectAppearancePageCopy(i18n);
+  const copy = selectConfigPageCopy(i18n);
   const themes = themeOptions.map((item) => {
     const isSelected = state.currentTheme === item.id;
 
@@ -87,11 +92,27 @@ export const selectViewData = ({ state, i18n }) => {
       ? "2"
       : "repeat(auto-fill, minmax(min(320px, 100%), 320px))",
     themePreviewAspectRatio: "16 / 9",
-    title: copy.title ?? "Appearance",
-    themesTitle: copy.themesTitle ?? "Themes",
+    title: copy.title,
+    appearanceTitle: copy.appearanceTitle,
+    languageTitle: copy.languageTitle,
+    assetPackageTitle: copy.assetPackageTitle,
+    assetPackageDescription: copy.assetPackageDescription,
+    assetPackageOptions: [
+      { value: false, label: copy.disabledLabel },
+      { value: true, label: copy.enabledLabel },
+    ],
+    languageOptions: APP_LOCALE_OPTIONS,
   };
 };
 
-export const selectState = ({ state }) => {
-  return state;
+export const selectCurrentTheme = ({ state }) => state.currentTheme;
+
+export const setAssetPackageEnabled = ({ state }, { enabled }) => {
+  state.assetPackageEnabled = enabled;
+};
+
+export const selectCurrentLocale = ({ state }) => state.currentLocale;
+
+export const setCurrentLocale = ({ state }, { locale } = {}) => {
+  state.currentLocale = locale ?? DEFAULT_APP_LOCALE;
 };

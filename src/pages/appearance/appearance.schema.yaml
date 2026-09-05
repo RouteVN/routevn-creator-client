@@ -1,4 +1,0 @@
-componentName: rvn-appearance
-propsSchema:
-  type: object
-  properties: {}

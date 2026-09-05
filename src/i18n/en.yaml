@@ -564,9 +564,8 @@ resourceTypes:
   variables: "Variables"
   videos: "Videos"
   about: "About"
-  appearance: "Appearance"
+  config: "Config"
   assetPackage: "Asset Package"
-  language: "Language"
   versions: "Versions"
   webServer: "Web Server"
 colorsPage:
@@ -2282,12 +2281,18 @@ settingsUserPage:
   placeholderMessage: "User settings content will go here"
   placeholderNote: "This is a placeholder for the user settings interface"
   title: "User Settings"
-appearancePage:
+configPage:
+  title: "Config"
+  assetPackageTitle: "Asset Package"
+  assetPackageDescription: "Enable this if you plan to release an asset pack in the RouteVN asset store."
+  disabledLabel: "Disabled"
+  enabledLabel: "Enabled"
+  appearanceTitle: "Appearance"
   blackThemeName: "Black"
   darkThemeName: "Dark"
   lightThemeName: "Light"
-  themesTitle: "Themes"
-  title: "Appearance"
+  languageTitle: "Language"
+  failedChangeLanguage: "Could not change the language. Please try again."
 assetPackagePage:
   addResourceTypeButton: "Add"
   assetPackageDownloaded: "Asset package downloaded."
@@ -2321,10 +2326,6 @@ assetPackagePage:
   title: "Asset Package"
   videoMenuItem: "Video"
   videosSectionTitle: "Videos"
-settingsLanguagePage:
-  description: "Choose the language used by RouteVN Creator."
-  failedChangeLanguage: "Could not change the language. Please try again."
-  title: "Language"
 resourceImport:
   assetPackageImported: "Imported {count} resources from the asset package."
   title: "Import Package"

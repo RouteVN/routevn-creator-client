@@ -35,8 +35,8 @@ pressed within 1.5 seconds.
 | `g r`    | Release Versions | `/project/releases/versions`   |
 | `g w s`  | Web Server       | `/project/releases/web-server` |
 | `g a b`  | About            | `/project/about`               |
-| `g a p`  | Appearance       | `/project/appearance`          |
-| `g s l`  | Language         | `/project/language`            |
+| `g a p`  | Config           | `/project/config`              |
+| `g s l`  | Config           | `/project/config`              |
 
 The sequence:
 

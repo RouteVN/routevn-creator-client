@@ -52,22 +52,14 @@ describe("app.store repository loading progress", () => {
     );
   });
 
-  it("resolves the appearance route", () => {
+  it("resolves Config and selects the mobile Settings tab", () => {
     const state = createInitialState();
-    state.currentRoute = "/project/appearance";
-
+    state.currentRoute = "/project/config";
+    setUiConfig({ state }, { uiConfig: { id: "touch" } });
     expect(selectViewData({ state }).currentRoutePattern).toBe(
-      "/project/appearance",
+      "/project/config",
     );
-  });
-
-  it("resolves the language settings route", () => {
-    const state = createInitialState();
-    state.currentRoute = "/project/language";
-
-    expect(selectViewData({ state }).currentRoutePattern).toBe(
-      "/project/language",
-    );
+    expect(selectMobileTab({ state, tabId: "settings" }).color).toBe("white");
   });
 
   it("resolves the asset package release route", () => {

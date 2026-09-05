@@ -137,16 +137,10 @@ const settingsItems = [
     icon: "info",
   },
   {
-    id: "appearance",
-    label: "Appearance",
-    path: "/project/appearance",
-    icon: "sun",
-  },
-  {
-    id: "language",
-    label: "Language",
-    path: "/project/language",
-    icon: "website",
+    id: "config",
+    label: "Config",
+    path: "/project/config",
+    icon: "settings",
   },
 ];
 
@@ -205,12 +199,17 @@ const resourceParentMapping = {
 };
 
 export const createInitialState = () => ({
+  assetPackageEnabled: false,
   scenesData: { tree: [], items: {} },
   recentSceneIds: [],
 });
 
 export const setScenesData = ({ state }, { scenesData } = {}) => {
   state.scenesData = scenesData ?? { tree: [], items: {} };
+};
+
+export const setAssetPackageEnabled = ({ state }, { enabled }) => {
+  state.assetPackageEnabled = enabled;
 };
 
 export const setRecentSceneIds = ({ state }, { sceneIds } = {}) => {
@@ -273,7 +272,11 @@ const getNavigationItems = (state) =>
   Object.values(getSectionsByVariant(state))
     .flat()
     .flatMap((section) => section.items)
-    .filter((item) => !item.hidden);
+    .filter(
+      (item) =>
+        !item.hidden &&
+        (item.id !== "assetPackage" || state.assetPackageEnabled),
+    );
 
 const selectCurrentResourceId = () => {
   if (typeof window === "undefined") {
@@ -320,7 +323,11 @@ export const selectViewData = ({ state, props = {}, i18n }) => {
   const viewSections = sections.map((section) => ({
     ...section,
     items: section.items
-      .filter((item) => !item.hidden)
+      .filter(
+        (item) =>
+          !item.hidden &&
+          (item.id !== "assetPackage" || state.assetPackageEnabled),
+      )
       .map((item) => ({
         ...item,
         label: resourceTypesCopy[item.id] ?? item.label,

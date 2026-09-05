@@ -2,6 +2,12 @@ import {
   createNavigationTiming,
   logNavigationInteractionTiming,
 } from "../../internal/navigationTiming.js";
+import { isAssetPackageEnabled } from "../../internal/ui/releasePreferences.js";
+
+export const handleBeforeMount = (deps) => {
+  const { appService, store } = deps;
+  store.setAssetPackageEnabled({ enabled: isAssetPackageEnabled(appService) });
+};
 
 export const handleItemClick = (deps, payload) => {
   const { appService, store } = deps;

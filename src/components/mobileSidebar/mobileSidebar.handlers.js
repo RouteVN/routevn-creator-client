@@ -6,6 +6,7 @@ import {
   createNavigationTiming,
   logNavigationInteractionTiming,
 } from "../../internal/navigationTiming.js";
+import { isAssetPackageEnabled } from "../../internal/ui/releasePreferences.js";
 
 const resolveProjectId = (appService) => {
   return (
@@ -24,6 +25,7 @@ const refreshRecentSceneIds = ({ appService, store } = {}) => {
 
 export const handleBeforeMount = (deps) => {
   const { appService, projectService, store, render } = deps;
+  store.setAssetPackageEnabled({ enabled: isAssetPackageEnabled(appService) });
   refreshRecentSceneIds({ appService, store });
   const cleanup = projectService.subscribeProjectState(
     ({ repositoryState } = {}) => {

@@ -11,16 +11,14 @@ describe("app view", () => {
     expect(appView).toContain("rvn-sidebar :currentRoute=${currentRoute}");
   });
 
-  it("renders the language settings page for its project route", () => {
+  it("renders the combined Config page for its project route", () => {
     const appView = readFileSync(
       new URL("../../src/pages/app/app.view.yaml", import.meta.url),
       "utf8",
     );
 
-    expect(appView).toContain(
-      '$elif currentRoutePattern == "/project/language"',
-    );
-    expect(appView).toContain("rvn-language");
+    expect(appView).toContain('$elif currentRoutePattern == "/project/config"');
+    expect(appView).toContain("rvn-config");
   });
 
   it("renders the asset package settings page for its project route", () => {

@@ -92,14 +92,9 @@ const settingsItems = [
     path: "/project/about",
   },
   {
-    id: "appearance",
-    name: "Appearance",
-    path: "/project/appearance",
-  },
-  {
-    id: "language",
-    name: "Language",
-    path: "/project/language",
+    id: "config",
+    name: "Config",
+    path: "/project/config",
   },
   // {
   //   id: "user",
@@ -166,7 +161,11 @@ const resourceCategoryNames = {
   },
 };
 
-export const createInitialState = () => ({});
+export const createInitialState = () => ({ assetPackageEnabled: false });
+
+export const setAssetPackageEnabled = ({ state }, { enabled }) => {
+  state.assetPackageEnabled = enabled;
+};
 
 const getResourceTypesCopy = (i18n = {}) => i18n.resourceTypes ?? {};
 
@@ -178,13 +177,16 @@ const EMPTY_CATEGORY = Object.freeze({
 const getCategoryConfig = (resourceCategory) =>
   resourceCategoryNames[resourceCategory] || EMPTY_CATEGORY;
 
-export const selectResourceItem = ({ props }, id) => {
+export const selectResourceItem = ({ state = {}, props }, id) => {
+  if (id === "assetPackage" && !state.assetPackageEnabled) {
+    return undefined;
+  }
   const { resourceCategory } = props;
   const categoryConfig = getCategoryConfig(resourceCategory);
   return categoryConfig.resources.find((item) => item.id === id);
 };
 
-export const selectViewData = ({ props, i18n }) => {
+export const selectViewData = ({ state = {}, props, i18n }) => {
   const { resourceCategory, selectedResourceId } = props;
   const copy = getResourceTypesCopy(i18n);
   const categoryConfig = getCategoryConfig(resourceCategory);
@@ -194,7 +196,9 @@ export const selectViewData = ({ props, i18n }) => {
     resourceParentMapping[selectedResourceId] || selectedResourceId;
 
   const resourceItems = categoryConfig.resources.filter(
-    (item) => !item.hidden || item.id === actualSelectedId,
+    (item) =>
+      (!item.hidden || item.id === actualSelectedId) &&
+      (item.id !== "assetPackage" || state.assetPackageEnabled),
   );
 
   const items = resourceItems.map((item) => {

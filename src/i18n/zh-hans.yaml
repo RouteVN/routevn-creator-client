@@ -564,9 +564,8 @@ resourceTypes:
   variables: "变量"
   videos: "视频"
   about: "关于"
-  appearance: "外观"
+  config: "偏好设置"
   assetPackage: "资源包"
-  language: "语言"
   versions: "版本"
   webServer: "Web 服务器"
 colorsPage:
@@ -2282,12 +2281,18 @@ settingsUserPage:
   placeholderMessage: "用户设置内容会显示在这里"
   placeholderNote: "这是用户设置界面的占位内容"
   title: "用户设置"
-appearancePage:
+configPage:
+  title: "偏好设置"
+  assetPackageTitle: "资源包"
+  assetPackageDescription: "如果你计划在 RouteVN 素材商店发布素材包，请启用此选项。"
+  disabledLabel: "已禁用"
+  enabledLabel: "已启用"
+  appearanceTitle: "外观"
   blackThemeName: "黑色"
   darkThemeName: "深色"
   lightThemeName: "浅色"
-  themesTitle: "主题"
-  title: "外观"
+  languageTitle: "语言"
+  failedChangeLanguage: "无法更改语言。请重试。"
 assetPackagePage:
   addResourceTypeButton: "添加"
   assetPackageDownloaded: "资源包已下载。"
@@ -2321,10 +2326,6 @@ assetPackagePage:
   title: "资源包"
   videoMenuItem: "视频"
   videosSectionTitle: "视频"
-settingsLanguagePage:
-  description: "选择 RouteVN Creator 使用的语言。"
-  failedChangeLanguage: "无法更改语言。请重试。"
-  title: "语言"
 resourceImport:
   assetPackageImported: "已从资源包导入{count}个资源。"
   title: "导入资源包"
