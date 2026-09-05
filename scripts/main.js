@@ -21,6 +21,8 @@ import { resolveBundleAssetMimeType } from "../src/internal/bundleRuntimeAssets.
 import { createBundleRangeReader as createPackageBinRangeReader } from "../src/deps/services/shared/projectExportService.js";
 import { installPlayerAudioUnlock } from "./playerAudioUnlock.js";
 import { waitForPlayerStart } from "./playerStartGate.js";
+import { updatePlayerLoadingProgress } from "./playerLoadingProgress.js";
+import { createPlayerStartupEffects } from "./playerStartupEffects.js";
 
 const MAX_DIAGNOSTIC_EVENTS = 24;
 const MAX_DIAGNOSTIC_TEXT_LENGTH = 12_000;
@@ -474,11 +476,20 @@ const createBundleAssetLoader = ({ bundleReader, routeGraphics }) => {
       );
     },
 
-    async ensureAssetsLoaded(assetIds = []) {
+    async ensureAssetsLoaded(assetIds = [], onProgress) {
       const uniqueAssetIds = Array.from(
         new Set(assetIds.filter((assetId) => bundleReader.hasAsset(assetId))),
       );
-      await Promise.all(uniqueAssetIds.map(loadAsset));
+      let loaded = 0;
+      const total = uniqueAssetIds.length;
+      onProgress?.({ loaded, total });
+      await Promise.all(
+        uniqueAssetIds.map(async (assetId) => {
+          await loadAsset(assetId);
+          loaded += 1;
+          onProgress?.({ loaded, total });
+        }),
+      );
     },
   };
 };
@@ -607,7 +618,10 @@ const createRuntimePersistence = ({ namespace }) => {
   return createHostPersistence();
 };
 
-const prepareEngine = async ({ jsonData, bundleReader, bundleMetadata }) => {
+const prepareEngine = async (
+  { jsonData, bundleReader, bundleMetadata },
+  { onStepComplete, onAssetProgress, waitForStart },
+) => {
   recordDiagnosticStep("Preparing graphics runtime", {
     assetCount: Object.keys(bundleReader.manifest?.assets ?? {}).length,
     atlasCount: Object.keys(bundleReader.manifest?.atlases ?? {}).length,
@@ -615,11 +629,11 @@ const prepareEngine = async ({ jsonData, bundleReader, bundleMetadata }) => {
   const plugins = await loadGraphicsEnginePlugins().catch((error) => {
     throw createRuntimeError("Failed to load graphics engine plugins.", error);
   });
+  onStepComplete();
   const namespace = createBundleNamespace(bundleMetadata);
 
   // Create dedicated ticker for auto mode
   const ticker = new Ticker();
-  ticker.start();
 
   const routeGraphics = createRouteGraphics();
   let engine;
@@ -711,14 +725,18 @@ const prepareEngine = async ({ jsonData, bundleReader, bundleMetadata }) => {
     }
   };
 
-  const renderEngineState = (renderState) => {
+  const prepareRenderState = (renderState) => {
     const audioRenderState = prepareRenderStateAudioChannelsForGraphics({
       renderState,
       presentationState: engine?.selectPresentationState?.(),
     });
-    latestPreparedRenderState = prepareRenderStateKeyboardForGraphics({
+    return prepareRenderStateKeyboardForGraphics({
       renderState: audioRenderState,
     });
+  };
+
+  const renderEngineState = (renderState) => {
+    latestPreparedRenderState = prepareRenderState(renderState);
     const missingAssetIds = bundleAssetLoader.collectMissingAssetIds(
       latestPreparedRenderState,
     );
@@ -784,6 +802,7 @@ const prepareEngine = async ({ jsonData, bundleReader, bundleMetadata }) => {
       namespace,
     });
   });
+  onStepComplete();
 
   const handlePersistenceError = (error) => {
     const runtimeError = createRuntimeError(
@@ -864,6 +883,7 @@ const prepareEngine = async ({ jsonData, bundleReader, bundleMetadata }) => {
         height: screenHeight,
       });
     });
+  onStepComplete();
 
   installPlayerAudioUnlock({
     resumeAudio: () => routeGraphics.resumeAudio(),
@@ -871,7 +891,12 @@ const prepareEngine = async ({ jsonData, bundleReader, bundleMetadata }) => {
 
   canvasContainer?.appendChild(routeGraphics.canvas);
 
-  engine = createRouteEngine({ handlePendingEffects: effectsHandler });
+  const startupEffects = waitForStart
+    ? createPlayerStartupEffects({ getEngine: () => engine, effectsHandler })
+    : undefined;
+  engine = createRouteEngine({
+    handlePendingEffects: startupEffects ?? effectsHandler,
+  });
   const preloadSaveSlotImagesResult = await preloadRuntimeSaveSlotImages(
     routeGraphics,
     saveSlots,
@@ -881,6 +906,7 @@ const prepareEngine = async ({ jsonData, bundleReader, bundleMetadata }) => {
       error,
     );
   });
+  onStepComplete();
 
   if (preloadSaveSlotImagesResult.failed > 0) {
     console.warn(
@@ -888,7 +914,7 @@ const prepareEngine = async ({ jsonData, bundleReader, bundleMetadata }) => {
     );
   }
 
-  const startEngine = () => {
+  const initializeEngine = () => {
     recordDiagnosticStep("Starting route engine", { namespace });
     try {
       engine.init({
@@ -913,19 +939,57 @@ const prepareEngine = async ({ jsonData, bundleReader, bundleMetadata }) => {
     }
   };
 
+  if (waitForStart) {
+    initializeEngine();
+    const openingState = prepareRenderState(engine.selectRenderState());
+    await bundleAssetLoader.ensureAssetsLoaded(
+      bundleAssetLoader.collectMissingAssetIds(openingState),
+      onAssetProgress,
+    );
+  }
+
   return {
-    startEngine,
+    startEngine: () => {
+      if (startupEffects) {
+        startupEffects.start();
+      } else {
+        initializeEngine();
+      }
+      ticker.start();
+    },
     waitForFirstRender: () => firstRenderPromise,
   };
 };
 
 const bootstrap = async () => {
+  const loadingElement = document.getElementById("loading");
+  const startMode = document.body?.dataset.playerStart;
+  // Five setup steps occupy the first 20%; opening assets occupy the rest.
+  let completedSteps = 0;
+  const onStepComplete = () => {
+    completedSteps += 1;
+    updatePlayerLoadingProgress(loadingElement, {
+      loaded: completedSteps * 4,
+      total: 100,
+    });
+  };
+  const onAssetProgress = ({ loaded, total }) => {
+    updatePlayerLoadingProgress(loadingElement, {
+      loaded: 20 + (total === 0 ? 80 : (loaded / total) * 80),
+      total: 100,
+    });
+  };
   try {
     const preloadedData = await preloadBundleData();
-    const engineRuntime = await prepareEngine(preloadedData);
+    onStepComplete();
+    const engineRuntime = await prepareEngine(preloadedData, {
+      onStepComplete,
+      onAssetProgress,
+      waitForStart: startMode === "click",
+    });
     await waitForPlayerStart({
-      loadingElement: document.getElementById("loading"),
-      startMode: document.body?.dataset.playerStart,
+      loadingElement,
+      startMode,
     });
     engineRuntime.startEngine();
     await engineRuntime.waitForFirstRender();

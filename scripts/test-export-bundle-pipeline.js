@@ -367,7 +367,9 @@ try {
   assert.ok(!indexHtml.includes("/@vite/client"));
   assert.ok(!indexHtml.includes("player-runtime-persistence-host.js"));
   assert.ok(indexHtml.includes('<body data-player-start="click">'));
-  assert.ok(indexHtml.includes('<div id="loading">Loading...</div>'));
+  assert.ok(indexHtml.includes('<span id="loading-label">Loading…</span>'));
+  assert.ok(indexHtml.includes('<progress id="loading-progress"'));
+  assert.ok(indexHtml.includes("disabled>Click to start</button>"));
   assert.ok(indexHtml.includes("#loading.ready"));
 
   const packageBin = await zip.file("package.bin").async("arraybuffer");
