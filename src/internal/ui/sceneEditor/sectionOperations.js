@@ -30,22 +30,6 @@ const updateSceneEditorSelectionPayload = (
   appService.setPayload(nextPayload);
 };
 
-const flattenRefs = (value) => {
-  if (!value) {
-    return [];
-  }
-
-  if (Array.isArray(value)) {
-    return value.flatMap((item) => flattenRefs(item));
-  }
-
-  if (typeof value === "object") {
-    return [value];
-  }
-
-  return [];
-};
-
 export const scrollSceneEditorSectionTabIntoView = (deps, sectionId) => {
   const { refs } = deps;
   const scheduleFrame =
@@ -54,26 +38,29 @@ export const scrollSceneEditorSectionTabIntoView = (deps, sectionId) => {
       : (callback) => setTimeout(callback, 0);
 
   scheduleFrame(() => {
-    const refElements = Object.values(refs || {}).flatMap((entry) =>
-      flattenRefs(entry),
-    );
-    const sectionRef = refElements.find(
-      (element) =>
-        element?.dataset?.sectionBlockId === sectionId ||
-        element?.dataset?.sectionId === sectionId,
-    );
-    const doc = typeof document !== "undefined" ? document : undefined;
-    const sectionElement =
-      sectionRef ||
-      doc?.querySelector?.('[data-section-block-id="' + sectionId + '"]') ||
-      Array.from(doc?.querySelectorAll?.("[data-section-id]") || []).find(
-        (element) => element.getAttribute("data-section-id") === sectionId,
-      );
+    const scrollContainer = refs.sceneEditorSectionsScroll;
+    if (!scrollContainer) {
+      return;
+    }
 
-    sectionElement?.scrollIntoView({
-      behavior: "smooth",
-      block: "start",
-      inline: "nearest",
+    const sectionElement = Array.from(
+      scrollContainer.querySelectorAll("[data-section-block-id]"),
+    ).find((element) => element.dataset.sectionBlockId === sectionId);
+    if (!sectionElement) {
+      return;
+    }
+
+    // Sticky headers move with the viewport; the section block keeps its
+    // original position. Align it directly, without the line scroll padding.
+    const sectionTop = sectionElement.getBoundingClientRect().top;
+    const containerTop = scrollContainer.getBoundingClientRect().top;
+    scrollContainer.scrollTo({
+      top:
+        scrollContainer.scrollTop +
+        sectionTop -
+        containerTop -
+        scrollContainer.clientTop,
+      behavior: "instant",
     });
   });
 };

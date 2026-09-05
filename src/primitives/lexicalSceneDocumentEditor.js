@@ -628,7 +628,7 @@ const STYLES = `
     width: 32px;
     color: var(--muted-foreground);
     font-size: var(--scene-document-editor-font-size);
-    font-weight: 600;
+    font-weight: 400;
     line-height: 1.5;
     text-align: right;
     margin-right: 2px;
