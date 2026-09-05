@@ -503,6 +503,7 @@ const createAnimationPersistSnapshot = ({ copy, store } = {}) => {
       store.selectAnimationName().trim() || getDefaultNewAnimationName(copy),
     description: store.selectAnimationDescription(),
     animationData,
+    cameraTracks: store.selectCameraTracks(),
   };
 };
 
@@ -524,6 +525,7 @@ const persistEditorSnapshot = async ({ deps, snapshot } = {}) => {
             name: snapshot.name,
             description: snapshot.description,
             animation: snapshot.animationData,
+            cameraTracks: snapshot.cameraTracks,
           },
         }),
     });
@@ -541,6 +543,7 @@ const persistEditorSnapshot = async ({ deps, snapshot } = {}) => {
             name: snapshot.name,
             description: snapshot.description,
             animation: snapshot.animationData,
+            cameraTracks: snapshot.cameraTracks,
           },
           parentId: snapshot.targetGroupId,
           position: "last",
@@ -582,6 +585,7 @@ const createAnimationPersistFingerprint = (snapshot) => {
     name: snapshot.name,
     description: snapshot.description,
     animation: snapshot.animationData,
+    cameraTracks: snapshot.cameraTracks,
   });
 };
 
@@ -597,6 +601,7 @@ const createAnimationClipboardItem = ({ copy, store } = {}) => {
   item.name = snapshot.name;
   item.description = snapshot.description;
   item.animation = snapshot.animationData;
+  item.cameraTracks = snapshot.cameraTracks;
   return item;
 };
 
@@ -745,6 +750,15 @@ const initializePreview = async ({ deps } = {}) => {
     width: projectResolution.width,
     height: projectResolution.height,
   });
+  if (store.selectCameraTracks()?.length) {
+    await ensureManualPreviewAtTime({
+      graphicsService,
+      projectService,
+      store,
+      timeMs: 0,
+    });
+    return;
+  }
   stopPreviewPlaybackIndicator({
     store,
   });
@@ -1538,7 +1552,7 @@ export const handleAddPropertySideMenuItemClick = (deps, payload) => {
   render();
 };
 
-export const handleAddPropertyFormSubmit = (deps, payload) => {
+export const handleAddPropertyFormSubmit = async (deps, payload) => {
   const { render, store } = deps;
   const popover = store.selectPopover();
   const {
@@ -1588,6 +1602,7 @@ export const handleAddPropertyFormSubmit = (deps, payload) => {
   queueEditorAutosave({
     deps,
   });
+  if (property === "camera") await refreshCameraPreview(deps, 0);
 };
 
 export const handleAddKeyframeFromTimeline = (deps, payload) => {
@@ -1686,6 +1701,13 @@ const openSelectedKeyframeEditDialog = (deps, { x = 0, y = 0 } = {}) => {
   if (!selectedKeyframe || !values) {
     return false;
   }
+  if (selectedKeyframe.property === "camera") {
+    store.closePopover();
+    store.openCameraEditor(selectedKeyframe);
+    invalidatePreview({ store });
+    render();
+    return true;
+  }
 
   store.setPopover({
     mode: "editKeyframe",
@@ -1697,11 +1719,6 @@ const openSelectedKeyframeEditDialog = (deps, { x = 0, y = 0 } = {}) => {
   refs.editKeyframeForm.reset();
   refs.editKeyframeForm.setValues({ values });
   return true;
-};
-
-export const handleSelectedKeyframeEditClick = (deps, payload) => {
-  const { clientX: x, clientY: y } = payload._event;
-  openSelectedKeyframeEditDialog(deps, { x, y });
 };
 
 export const handleKeyframeClick = (deps, payload) => {
@@ -2199,6 +2216,13 @@ export const handleKeyframeDropdownItemClick = (deps, payload) => {
     openSelectedKeyframeEditDialog(deps, { x, y });
     return;
   } else if (value === "edit-initial-value") {
+    if (property === "camera") {
+      store.closePopover();
+      store.openCameraEditor({ side });
+      invalidatePreview({ store });
+      render();
+      return;
+    }
     store.setPopover({
       mode: "editInitialValue",
       x,
@@ -2267,6 +2291,72 @@ export const handleKeyframeDropdownItemClick = (deps, payload) => {
       deps,
     });
   }
+};
+
+export const handleAdjustCamera = (deps) => {
+  const { store, render } = deps;
+  const selected =
+    store.selectSelectedKeyframe() ?? store.selectSelectedProperty();
+  store.openCameraEditor(selected);
+  invalidatePreview({ store });
+  render();
+};
+
+export const handleAdjustInitialCamera = (deps) => {
+  const { store, render } = deps;
+  const { side } =
+    store.selectSelectedKeyframe() ?? store.selectSelectedProperty();
+  store.openCameraEditor({ side });
+  invalidatePreview({ store });
+  render();
+};
+
+export const handleAdjustCameraStartValue = (deps) => {
+  const { store, render } = deps;
+  const { side, index } = store.selectSelectedKeyframe();
+  store.openCameraEditor({ side, index, field: "startValue" });
+  invalidatePreview({ store });
+  render();
+};
+
+export const handleCameraPoseChange = (deps, payload) => {
+  const { store, render } = deps;
+  store.setCameraEditorPose(payload._event.detail);
+  render();
+};
+
+const refreshCameraPreview = async (deps, timeMs) => {
+  const { appService, graphicsService, projectService, render, store } = deps;
+  store.setPreviewPlayhead({ timeMs, visible: true });
+  render();
+  try {
+    await ensureManualPreviewAtTime({
+      graphicsService,
+      projectService,
+      store,
+      timeMs,
+    });
+  } catch {
+    appService.showToast({
+      message: selectCopy(deps).failedRenderAnimationPreview,
+    });
+  }
+};
+
+export const handleCameraDone = async (deps) => {
+  const { store, render } = deps;
+  const timeMs = store.selectCameraEditorTimeMs();
+  store.commitCameraEditor();
+  invalidatePreview({ store });
+  render();
+  queueEditorAutosave({ deps });
+  await refreshCameraPreview(deps, timeMs);
+};
+
+export const handleCameraClose = (deps) => {
+  const { store, render } = deps;
+  store.closeCameraEditor();
+  render();
 };
 
 export const handleEditKeyframeFormSubmit = (deps, payload) => {

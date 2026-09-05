@@ -610,6 +610,7 @@ describe("animationEditor.store", () => {
       },
     ]);
     expect(viewData.selectedPropertyEditor).toEqual({
+      camera: false,
       hasInitialValue: true,
       initialValue: 0.5,
       initialValueLabel: "Initial value",
@@ -1487,6 +1488,7 @@ describe("animationEditor.store", () => {
       (field) => field.name === "property",
     );
     expect(propertyField.options.map((option) => option.value)).toEqual([
+      "camera",
       "alpha",
       "x",
       "y",
@@ -1552,6 +1554,7 @@ describe("animationEditor.store", () => {
         },
       },
     );
+    updatePopoverFormValues({ state }, { formValues: { property: "x" } });
 
     const viewData = selectViewData({ state, i18n: EN_I18N });
     const propertyField = viewData.addPropertyForm.fields.find(
@@ -1565,6 +1568,7 @@ describe("animationEditor.store", () => {
     );
 
     expect(propertyField.options.map((option) => option.value)).toEqual([
+      "camera",
       "x",
       "y",
       "translateX",

@@ -42,7 +42,6 @@ import {
   handleSelectedKeyframeDelayChange,
   handleSelectedKeyframeDurationChange,
   handleSelectedKeyframeEasingChange,
-  handleSelectedKeyframeEditClick,
   handleSelectedKeyframeAddClick,
   handleSelectedKeyframeAddMenuItemClick,
   handleSelectedKeyframeDeleteClick,
@@ -145,6 +144,7 @@ describe("animationEditor.handlers", () => {
     const showToast = vi.fn();
     const store = {
       selectAnimationDescription: vi.fn(() => "Latest description"),
+      selectCameraTracks: vi.fn(),
       selectAnimationJsonCopyShortcutStartedAt: vi.fn(() => shortcutStartedAt),
       selectAnimationName: vi.fn(() => "Fade Fast"),
       selectDialogType: vi.fn(() => "update"),
@@ -1079,7 +1079,7 @@ describe("animationEditor.handlers", () => {
     expect(render).toHaveBeenCalled();
   });
 
-  it("opens and prefills the selected keyframe edit dialog", () => {
+  it("opens and prefills the keyframe edit dialog from its context menu", () => {
     const selectedKeyframe = {
       side: "update",
       property: "x",
@@ -1099,13 +1099,14 @@ describe("animationEditor.handlers", () => {
     const store = {
       selectSelectedKeyframe: vi.fn(() => selectedKeyframe),
       selectSelectedKeyframeFormValues: vi.fn(() => values),
+      selectPopover: vi.fn(() => ({ payload: selectedKeyframe, x: 40, y: 80 })),
       setPopover: vi.fn(),
     };
     const render = vi.fn();
 
-    handleSelectedKeyframeEditClick(
+    handleKeyframeDropdownItemClick(
       { refs: { editKeyframeForm }, store, render },
-      { _event: { clientX: 40, clientY: 80 } },
+      { _event: { detail: { item: { value: "edit" } } } },
     );
 
     expect(store.setPopover).toHaveBeenCalledWith({

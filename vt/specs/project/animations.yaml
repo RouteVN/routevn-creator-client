@@ -345,7 +345,7 @@ steps:
     type: js
     fn: eval
     args:
-      - "(() => { const deepQuery = (root, selector) => { const direct = root?.querySelector?.(selector); if (direct) return direct; for (const node of root?.querySelectorAll?.('*') ?? []) { const found = node.shadowRoot ? deepQuery(node.shadowRoot, selector) : undefined; if (found) return found; } return undefined; }; return Boolean(deepQuery(document, '#selectedKeyframeEasingSelect')) && Boolean(deepQuery(document, '#editSelectedKeyframeButton')); })()"
+      - "(() => { const deepQuery = (root, selector) => { const direct = root?.querySelector?.(selector); if (direct) return direct; for (const node of root?.querySelectorAll?.('*') ?? []) { const found = node.shadowRoot ? deepQuery(node.shadowRoot, selector) : undefined; if (found) return found; } return undefined; }; return Boolean(deepQuery(document, '#selectedKeyframeEasingSelect')) && !deepQuery(document, '#editSelectedKeyframeButton'); })()"
     value: true
   - action: waitFor
     selector: "#selectedKeyframeDetails"
@@ -444,4 +444,236 @@ steps:
     selector: "rtgl-dropdown-menu#addPropertySideMenu[open]"
     state: attached
     timeoutMs: 5000
+  # Camera starts as one track and edits its pose without numeric transform fields.
+  - action: select
+    selector: "#addPropertySideMenu #optionD0I0"
+    steps:
+      - action: click
+  - action: waitFor
+    selector: "#addPropertyForm"
+    state: visible
+    timeoutMs: 5000
+  - action: select
+    selector: "#addPropertyForm rtgl-button[data-action-id=submit]"
+    steps:
+      - action: click
+  - action: waitFor
+    selector: "#adjustCameraKeyframe"
+    state: visible
+    timeoutMs: 5000
+  - action: waitFor
+    selector: "#canvas canvas"
+    state: visible
+    timeoutMs: 5000
+  - action: assert
+    type: js
+    fn: eval
+    args:
+      - |
+        (() => {
+          const find = (root) => {
+            const canvas = root.querySelector('#canvas canvas');
+            if (canvas) return canvas;
+            for (const node of root.querySelectorAll('*')) {
+              const found = node.shadowRoot && find(node.shadowRoot);
+              if (found) return found;
+            }
+          };
+          find(document).dataset.cameraPreview = 'mounted';
+          return true;
+        })()
+    value: true
+  - action: screenshot
+  - action: select
+    selector: "#adjustCameraKeyframe"
+    steps:
+      - action: click
+  - action: waitFor
+    selector: "rvn-camera-viewport"
+    state: visible
+    timeoutMs: 5000
+  - action: screenshot
+  - action: select
+    selector: "rvn-animation-camera-editor #zoomIn"
+    steps:
+      - action: click
+  - action: select
+    selector: "rvn-camera-viewport"
+    steps:
+      - action: focus
+  - action: keypress
+    key: ArrowRight
+  - action: screenshot
+  - action: select
+    selector: "rvn-animation-camera-editor #done"
+    steps:
+      - action: click
+  - action: waitFor
+    selector: "#cameraDialog"
+    state: hidden
+    timeoutMs: 5000
+  - action: waitFor
+    selector: "#canvas canvas[data-camera-preview=mounted]"
+    state: visible
+    timeoutMs: 5000
+  - action: select
+    selector: "#adjustCameraKeyframe"
+    steps:
+      - action: click
+  - action: select
+    selector: "rvn-animation-camera-editor #reset"
+    steps:
+      - action: click
+  - action: keypress
+    key: Escape
+  - action: select
+    selector: "#adjustCameraKeyframe"
+    steps:
+      - action: click
+  - action: assert
+    type: js
+    fn: eval
+    args:
+      - "(() => { const find = (root) => { const direct = root.querySelector('rvn-camera-viewport'); if (direct) return direct; for (const node of root.querySelectorAll('*')) { const result = node.shadowRoot && find(node.shadowRoot); if (result) return result; } }; const viewport = find(document); return Math.abs(viewport.pose.scaleX - 1.1) < 0.0001 && viewport.pose.x === viewport.projectResolution.width / 2 + 1; })()"
+    value: true
+  - action: screenshot
+  - action: keypress
+    key: Escape
+  - action: waitFor
+    selector: "#canvas canvas[data-camera-preview=mounted]"
+    state: visible
+    timeoutMs: 5000
+  - action: select
+    selector: "#adjustCameraInitial"
+    steps:
+      - action: click
+  - action: select
+    selector: "rvn-animation-camera-editor #zoomOut"
+    steps:
+      - action: click
+  - action: screenshot
+  - action: select
+    selector: "rvn-animation-camera-editor #done"
+    steps:
+      - action: click
+  - action: waitFor
+    selector: "#canvas canvas[data-camera-preview=mounted]"
+    state: visible
+    timeoutMs: 5000
+  - action: assert
+    type: js
+    fn: eval
+    args:
+      - |
+        (async () => {
+          const find = (root) => {
+            const editor = root.querySelector('rvn-animation-editor');
+            if (editor) return editor;
+            for (const node of root.querySelectorAll('*')) {
+              const found = node.shadowRoot && find(node.shadowRoot);
+              if (found) return found;
+            }
+          };
+          const editor = find(document);
+          const tween = editor.store.selectProperties({ side: 'prev' });
+          if (Math.abs(tween.scaleX.initialValue - 1 / 1.1) > 0.0001) return false;
+          if (Math.abs(tween.scaleX.keyframes[0].value - 1.1) > 0.0001) return false;
+          const frames = [];
+          for (const timeMs of [0, 500, 999, 0]) {
+            await editor.transformedHandlers.handleRulerTimeScrub({ _event: { detail: { timeMs } } });
+            frames.push(editor.shadowRoot.querySelector('canvas').toDataURL());
+          }
+          return frames[0] !== frames[1] && frames[1] !== frames[2] && frames[0] === frames[3];
+        })()
+    value: true
+  - action: assert
+    type: text
+    selector: "#previousTimeline [data-keyframe=true][data-property=camera][data-index='0'] rtgl-text[ta=s]"
+    value: "91%"
+  - action: assert
+    type: text
+    selector: "#previousTimeline [data-keyframe=true][data-property=camera][data-index='0'] rtgl-text[ta=e]"
+    value: "110%"
+  - action: screenshot
+  # A Camera keyframe has its own optional Start value, independent of the track.
+  - action: select
+    selector: "#selectedKeyframeAddButton"
+    steps:
+      - action: click
+  - action: select
+    selector: "#selectedKeyframeAddMenu #optionD0I0"
+    steps:
+      - action: click
+  - action: select
+    selector: "#adjustCameraStartValue"
+    steps:
+      - action: click
+  - action: select
+    selector: "rvn-animation-camera-editor #zoomIn"
+    steps:
+      - action: click
+  - action: select
+    selector: "rvn-animation-camera-editor #done"
+    steps:
+      - action: click
+  - action: waitFor
+    selector: "#cameraDialog"
+    state: hidden
+    timeoutMs: 5000
+  - action: waitFor
+    selector: "#canvas canvas[data-camera-preview=mounted]"
+    state: visible
+    timeoutMs: 5000
+  - action: assert
+    type: js
+    fn: eval
+    args:
+      - |
+        (() => {
+          const find = (root) => {
+            const editor = root.querySelector('rvn-animation-editor');
+            if (editor) return editor;
+            for (const node of root.querySelectorAll('*')) {
+              const found = node.shadowRoot && find(node.shadowRoot);
+              if (found) return found;
+            }
+          };
+          const editor = find(document);
+          const tween = editor.store.selectProperties({ side: 'prev' });
+          return Math.abs(tween.scaleX.keyframes[0].startValue - 1) < 0.0001
+            && Math.abs(tween.scaleY.keyframes[0].startValue - 1) < 0.0001
+            && Math.abs(tween.scaleX.initialValue - 1 / 1.1) < 0.0001
+            && Math.abs(tween.scaleX.keyframes[0].value - 1.1) < 0.0001
+            && editor.store.selectPreviewPlayheadTimeMs() === 0;
+        })()
+    value: true
+  - action: assert
+    type: text
+    selector: "#previousTimeline [data-keyframe=true][data-property=camera][data-index='0'] rtgl-text[ta=s]"
+    value: "100%"
+  - action: assert
+    type: text
+    selector: "#previousTimeline [data-keyframe=true][data-property=camera][data-index='0'] rtgl-text[ta=e]"
+    value: "110%"
+  - action: screenshot
+  - action: select
+    selector: "#selectedKeyframeRemoveStartValueButton"
+    steps:
+      - action: click
+  - action: waitFor
+    selector: "#adjustCameraStartValue"
+    state: hidden
+    timeoutMs: 5000
+  - action: waitFor
+    selector: "#selectedKeyframeAddButton"
+    state: visible
+    timeoutMs: 5000
+  - action: assert
+    type: text
+    selector: "#previousTimeline [data-keyframe=true][data-property=camera][data-index='0'] rtgl-text[ta=s]"
+    value: "91%"
+  - action: assert
+    type: text
+    selector: "#previousTimeline [data-keyframe=true][data-property=camera][data-index='0'] rtgl-text[ta=e]"
+    value: "110%"
 ---

@@ -755,7 +755,17 @@ actionTransformEditor:
 vnPreview:
   restoreOrientationButton: "恢复预览方向"
   rotateButton: "将预览旋转 90 度"
+animationCameraEditor:
+  initialTitle: "调整初始镜头"
+  title: "调整镜头"
+  doneButton: "完成"
+  resetButton: "重置"
+  zoomInLabel: "放大"
+  zoomOutLabel: "缩小"
+  viewportLabel: "镜头预览。拖动或使用方向键移动，使用加号和减号缩放。"
 animationEditorPage:
+  cameraPropertyLabel: "镜头"
+  adjustCameraButton: "调整镜头"
   absoluteValueType: "绝对值"
   addAnimationPropertyTitle: "添加动画属性"
   addButton: "添加"

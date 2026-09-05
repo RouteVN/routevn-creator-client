@@ -755,7 +755,17 @@ actionTransformEditor:
 vnPreview:
   restoreOrientationButton: "Restore preview orientation"
   rotateButton: "Rotate preview 90 degrees"
+animationCameraEditor:
+  title: "Adjust camera"
+  initialTitle: "Adjust initial camera"
+  doneButton: "Done"
+  resetButton: "Reset"
+  zoomInLabel: "Zoom in"
+  zoomOutLabel: "Zoom out"
+  viewportLabel: "Camera preview. Drag or use arrow keys to move. Use plus and minus to zoom."
 animationEditorPage:
+  cameraPropertyLabel: "Camera"
+  adjustCameraButton: "Adjust camera"
   absoluteValueType: "Absolute"
   addAnimationPropertyTitle: "Add animation property"
   addButton: "Add"

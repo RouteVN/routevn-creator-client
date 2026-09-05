@@ -1,0 +1,31 @@
+refs:
+  viewport: {}
+  zoomIn:
+    eventListeners:
+      click:
+        handler: handleZoomIn
+  zoomOut:
+    eventListeners:
+      click:
+        handler: handleZoomOut
+  reset:
+    eventListeners:
+      click:
+        handler: handleReset
+  done:
+    eventListeners:
+      click:
+        handler: handleDone
+template:
+  - 'rtgl-view w=f h=f d=v bgc=bg style="min-height:0;"':
+      - 'rtgl-view d=h w=f h=64 av=c ph=lg pr=xl g=md bwb=xs bc=bo style="box-sizing:border-box; flex-shrink:0;"':
+          - rtgl-text w=1fg: ${title}
+      - 'rvn-camera-viewport#viewport tabindex=0 role=group aria-label="${viewportLabel}" :pose=${pose} :resolution=${projectResolution} :imageSize=${imageSize} style="flex:1; min-height:0;"':
+          - $if imageId:
+              - rvn-file-image w=f h=f imageId=${imageId} source=original: null
+      - 'rtgl-view d=h w=f h=64 av=c ah=c g=md ph=md bwt=xs bc=bo style="box-sizing:border-box; flex-shrink:0;"':
+          - 'rtgl-button#zoomOut sq v=gh aria-label="${zoomOutLabel}" title="${zoomOutLabel}"': "−"
+          - rtgl-text w=64 ta=c: ${zoomLabel}
+          - 'rtgl-button#zoomIn sq v=gh aria-label="${zoomInLabel}" title="${zoomInLabel}"': "+"
+          - rtgl-button#reset v=gh: ${resetButton}
+          - rtgl-button#done v=pr: ${doneButton}
