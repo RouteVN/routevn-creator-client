@@ -563,8 +563,11 @@ Android adapters share the automatic update schedule in
 `src/deps/clients/automaticUpdateChecks.js`. Android's Play adapter lives in
 `src/deps/clients/android/updater.js`, with native Play operations in
 `GooglePlayUpdater.java`. Play update requests must not block the native storage
-executor. Direct Android builds and installations outside Play do not enable this
-adapter; About uses the capability instead of a desktop-only platform check.
+executor. Direct Android release builds and release installations outside Play do
+not enable this adapter. Debug builds enable real Play checks with an enabled Play
+Store even when installed through USB; an unavailable/unowned response must retain
+the manual check capability for retry. About uses the capability instead of a
+desktop-only platform check.
 iOS supplies no updater and keeps update controls hidden. Before completing an
 Android update, drain mounted editors through `registerBeforeNavigation` and
 await `flushUserConfig()`. Layout/Control Editor registers its persistence drain

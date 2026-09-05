@@ -45,11 +45,13 @@ final class GooglePlayUpdater {
         if (!BuildConfig.GOOGLE_PLAY_UPDATES || unavailable) return false;
         try {
             PackageManager packages = activity.getPackageManager();
+            if (!packages.getApplicationInfo(PLAY_STORE, 0).enabled) return false;
+            // USB-installed debug builds can exercise the real Play API too.
+            if (BuildConfig.DEBUG) return true;
             String installer = Build.VERSION.SDK_INT >= Build.VERSION_CODES.R
                 ? packages.getInstallSourceInfo(activity.getPackageName()).getInstallingPackageName()
                 : packages.getInstallerPackageName(activity.getPackageName());
-            return PLAY_STORE.equals(installer) &&
-                packages.getApplicationInfo(PLAY_STORE, 0).enabled;
+            return PLAY_STORE.equals(installer);
         } catch (PackageManager.NameNotFoundException | SecurityException error) {
             return false;
         }
@@ -104,6 +106,8 @@ final class GooglePlayUpdater {
                 if (code == InstallErrorCode.ERROR_API_NOT_AVAILABLE ||
                     code == InstallErrorCode.ERROR_APP_NOT_OWNED ||
                     code == InstallErrorCode.ERROR_PLAY_STORE_NOT_FOUND) {
+                    // Keep manual checks available while testing a debug installation.
+                    if (BuildConfig.DEBUG) return result("unavailable");
                     unavailable = true;
                     return result("unsupported");
                 }

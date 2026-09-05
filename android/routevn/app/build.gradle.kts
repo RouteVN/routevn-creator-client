@@ -55,6 +55,7 @@ android {
 
     buildTypes {
         debug {
+            buildConfigField("boolean", "GOOGLE_PLAY_UPDATES", "true")
             manifestPlaceholders["usesCleartextTraffic"] = "true"
         }
 

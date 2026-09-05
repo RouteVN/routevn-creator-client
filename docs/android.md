@@ -179,15 +179,20 @@ bun run android:bundle
 ### Google Play Updates
 
 `android:bundle` sets `-ProutevnDistribution=google-play`. Other Gradle builds
-default to `direct`; direct builds do not enable the Play updater. To build a
+default to `direct`; direct release builds do not enable the Play updater. To build a
 Play APK explicitly, use `./gradlew :app:assembleRelease -ProutevnDistribution=google-play`.
 Keep increasing Android `versionCode` for each published release.
 
-The native adapter additionally requires the app's installing package to be
-`com.android.vending` and an enabled Play Store. Sideloaded development APKs and
-other distributions continue working with update controls hidden. An unavailable
-Play API or an unowned app disables checking for the session. Network/check
-failures remain silent for automatic checks and show feedback for manual checks.
+The native adapter requires an enabled Play Store. Release builds additionally
+require the app's installing package to be `com.android.vending`; other release
+distributions continue working with update controls hidden. An unavailable Play
+API or an unowned app disables checking for the session in release builds.
+
+Debug builds enable the Play updater even when installed through USB. About keeps
+**Check for Updates** available after Play reports an unavailable API or an unowned
+app, so developers can retry. Checks still use the real Play API and its eligibility
+rules. Unavailable updates and network/check failures remain silent for automatic
+checks and show feedback for manual checks.
 
 Android and direct desktop builds share `automaticUpdateChecks.js`: check at
 startup, then poll every ten minutes and check again once more than two hours
@@ -218,8 +223,8 @@ Both builds need matching application IDs/signing certificates, and the tester's
 Google account must have downloaded the app from Play at least once. The Android
 `versionCode` determines update eligibility; About currently displays the shared
 app version, which can stay unchanged when only native test versions are changed.
-A locally sideloaded debug APK validates the unsupported-install behavior, not
-actual Play update delivery.
+A locally sideloaded debug APK can exercise checks and unavailable-install
+feedback. Use the Play installation steps above to validate actual update delivery.
 
 Run `bunx vitest run tests/android/updater.test.js tests/appService/mobileUpdateSetup.test.js`
 for update-flow and save-before-restart coverage. Shared alert/confirm spacing is

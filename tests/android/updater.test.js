@@ -173,6 +173,37 @@ describe("Android Google Play updater", () => {
     expect(bridge).not.toHaveBeenCalled();
   });
 
+  it("keeps manual checks visible and retryable when Play is unavailable on debug", async () => {
+    const { updater, globalUI, bridge } = await setup({
+      status: "unavailable",
+    });
+    await updater.checkForUpdates(true);
+    expect(globalUI.showAlert).not.toHaveBeenCalled();
+    await updater.checkForUpdates(false);
+    expect(globalUI.showAlert).toHaveBeenCalledWith(
+      expect.objectContaining({
+        message: EN_I18N.appPage.googlePlayUpdatesUnavailable,
+      }),
+    );
+    expect(
+      resolveUpdatesEnabled({
+        appService: { getPlatform: () => "android" },
+        updaterService: updater,
+      }),
+    ).toBe(true);
+    expect(updater.isUpdateAvailable()).toBe(false);
+    expect(bridge).not.toHaveBeenCalledWith("startAppUpdate");
+    expect(bridge).not.toHaveBeenCalledWith("completeAppUpdate");
+
+    bridge.mockResolvedValueOnce({ status: "up-to-date" });
+    await updater.checkForUpdates(false);
+    expect(globalUI.showAlert).toHaveBeenLastCalledWith(
+      expect.objectContaining({
+        message: EN_I18N.appPage.latestVersionMessage,
+      }),
+    );
+  });
+
   it("coalesces concurrent checks so prompts cannot stack", async () => {
     const { updater, bridge, globalUI } = await setup({ status: "available" });
     await Promise.all([

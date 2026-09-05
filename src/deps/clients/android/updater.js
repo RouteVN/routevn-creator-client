@@ -81,8 +81,8 @@ export const createAndroidUpdater = async ({
       updateInfo = await bridge("checkAppUpdate");
       if (!isForeground()) return updateInfo;
       const { status } = updateInfo;
-      if (status === "unsupported") {
-        supported = false;
+      if (status === "unsupported" || status === "unavailable") {
+        if (status === "unsupported") supported = false;
         if (!silent || manualCheckRequested)
           await showAlert({
             title: copy.updateAvailableTitle ?? "Update Available",
