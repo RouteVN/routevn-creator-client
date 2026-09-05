@@ -11,6 +11,8 @@ import {
   setDetailPanelSelectedItemId,
   setPreviewData,
   setUiConfig,
+  setPendingPersistPayload,
+  clearPendingPersistPayload,
 } from "../../src/pages/layoutEditor/layoutEditor.store.js";
 
 const TEST_CONSTANTS = {
@@ -48,6 +50,83 @@ const LAYOUT_EDITOR_CONSTANTS = yaml.load(
 );
 
 describe("layoutEditor.store", () => {
+  it.each(["layouts", "controls"])(
+    "preserves the latest unsaved position when an older %s save is reconciled",
+    (resourceType) => {
+      const state = createInitialState();
+      const committedItem = Object.freeze({ type: "rect", x: 10, y: 0 });
+      const layoutData = {
+        items: Object.freeze({ "item-one": committedItem }),
+        tree: [{ id: "item-one" }],
+      };
+      const payload = {
+        projectResolution: { width: 1920, height: 1080 },
+        layoutId: "layout-one",
+        resourceType,
+        layoutData,
+      };
+      const updatedItem = { type: "rect", x: 20, y: 0 };
+      setPendingPersistPayload(
+        { state },
+        {
+          payload: {
+            layoutId: "layout-one",
+            resourceType,
+            selectedItemId: "item-one",
+            updatedItem,
+            persistenceRequestId: "save-two",
+          },
+        },
+      );
+
+      syncRepositoryState({ state }, payload);
+      clearPendingPersistPayload(
+        { state },
+        { persistenceRequestId: "save-one" },
+      );
+      expect(state.layoutData.items["item-one"].x).toBe(20);
+      expect(layoutData.items["item-one"].x).toBe(10);
+      expect(state.pendingPersistPayload.updatedItem).toEqual(updatedItem);
+
+      clearPendingPersistPayload(
+        { state },
+        { persistenceRequestId: "save-two" },
+      );
+      syncRepositoryState({ state }, payload);
+      expect(state.layoutData.items["item-one"].x).toBe(10);
+    },
+  );
+
+  it.each([
+    { layoutId: "layout-two", resourceType: "layouts" },
+    { layoutId: "layout-one", resourceType: "controls" },
+  ])("does not carry a pending drag into another owner: %j", (owner) => {
+    const state = createInitialState();
+    setPendingPersistPayload(
+      { state },
+      {
+        payload: {
+          layoutId: "layout-one",
+          resourceType: "layouts",
+          selectedItemId: "item-one",
+          updatedItem: { type: "rect", x: 20, y: 0 },
+        },
+      },
+    );
+    syncRepositoryState(
+      { state },
+      {
+        ...owner,
+        projectResolution: { width: 1920, height: 1080 },
+        layoutData: {
+          items: { "item-one": { type: "rect", x: 10, y: 0 } },
+          tree: [{ id: "item-one" }],
+        },
+      },
+    );
+    expect(state.layoutData.items["item-one"].x).toBe(10);
+  });
+
   it("marks selected descendants of hidden parents as effectively hidden", () => {
     const state = createInitialState();
 
@@ -289,10 +368,7 @@ describe("layoutEditor.store", () => {
     const roleLabels = {
       "choice-item": ["container-ref-choice-item", "Choice Item"],
       "choice-item-text": ["text-ref-choice-item-content", "Choice Item Text"],
-      "dialogue-text": [
-        "text-revealing-ref-dialogue-content",
-        "Dialogue Text",
-      ],
+      "dialogue-text": ["text-revealing-ref-dialogue-content", "Dialogue Text"],
       "nvl-line": ["container-ref-dialogue-line", "NVL Line"],
       "nvl-line-speaker-name": [
         "text-ref-dialogue-line-character-name",

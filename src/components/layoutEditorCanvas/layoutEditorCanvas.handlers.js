@@ -689,14 +689,22 @@ const createTransientCanvasItemUpdater = ({ updatedItem, dragging } = {}) => {
 };
 
 const renderTransientCanvasItem = (deps, updatedItem) => {
-  const { baseElements, parsedElements, canvasUnitsPerCssPixel } =
-    deps.store.selectCanvasRenderState();
-  const { occurrencesById, occurrenceIdsByOwner } =
-    deps.store.selectSelectionOccurrenceState();
+  const { store, props, graphicsService } = deps;
+  const dragRenderState = store.selectDragRenderState();
+  if (!dragRenderState) {
+    return false;
+  }
+  const {
+    baseElements,
+    parsedElements,
+    occurrencesById,
+    occurrenceIdsByOwner,
+  } = dragRenderState;
+  const { canvasUnitsPerCssPixel } = store.selectCanvasRenderState();
   const occurrenceIds = new Set(occurrenceIdsByOwner[updatedItem.id] ?? []);
   const updateElement = createTransientCanvasItemUpdater({
     updatedItem,
-    dragging: deps.store.selectDragging(),
+    dragging: store.selectDragging(),
   });
   if (
     baseElements.length === 0 ||
@@ -726,14 +734,22 @@ const renderTransientCanvasItem = (deps, updatedItem) => {
       baseElements: nextBaseState.elements,
       parsedElements: nextParsedState.elements,
       selectedItemId: updatedItem.id,
-      selectedOccurrenceId: deps.store.selectSelectedOccurrenceId(),
+      selectedOccurrenceId: store.selectSelectedOccurrenceId(),
       occurrencesById,
       occurrenceIdsByOwner,
       selectedItem: updatedItem,
-      disableMoveDrag: deps.props.disableMoveDrag === true,
+      disableMoveDrag: props.disableMoveDrag === true,
       canvasUnitsPerCssPixel,
     });
-  deps.graphicsService.render({ elements, animations: [] });
+  // A full render awaiting assets must not paint over this newer position.
+  store.setActiveRenderRequestId({ requestId: undefined });
+  graphicsService.render({ elements, animations: [] });
+  store.setCanvasRenderState({
+    elements,
+    baseElements: nextBaseState.elements,
+    parsedElements: nextParsedState.elements,
+    canvasUnitsPerCssPixel,
+  });
   dispatchSelectedElementMetrics(deps, {
     itemId: updatedItem.id,
     metrics: selectedElementMetrics,
@@ -825,7 +841,11 @@ const startCanvasPointerSelectionDrag = (
   }
 
   dispatchCanvasSelection(deps, selection);
-  const currentItem = getLayoutItemById(deps.props, selection.itemId);
+  const pendingUpdatedItem = deps.store.selectPendingUpdatedItem();
+  const currentItem =
+    pendingUpdatedItem?.id === selection.itemId
+      ? pendingUpdatedItem
+      : getLayoutItemById(deps.props, selection.itemId);
   const canMove =
     currentItem &&
     Number.isFinite(currentItem.x) &&
@@ -1485,13 +1505,13 @@ const handleBorderDragMove = async (deps, payload = {}) => {
   }
 
   deps.store.setPendingUpdatedItem({ updatedItem });
+  dispatchCanvasItemEvent(deps, "drag-update", updatedItem);
   if (!renderTransientCanvasItem(deps, updatedItem)) {
     await renderLayoutEditorCanvas(deps, deps.props, {
       updatedItem,
       reason: "border-drag-move",
     });
   }
-  dispatchCanvasItemEvent(deps, "drag-update", updatedItem);
 };
 
 const handleBorderDragEnd = async (deps) => {
@@ -1507,11 +1527,11 @@ const handleBorderDragEnd = async (deps) => {
     return;
   }
 
+  dispatchCanvasItemEvent(deps, "update", pendingUpdatedItem);
   await renderLayoutEditorCanvas(deps, deps.props, {
     updatedItem: pendingUpdatedItem,
     reason: "border-drag-end",
   });
-  dispatchCanvasItemEvent(deps, "update", pendingUpdatedItem);
 };
 
 const subscriptions = (deps) => {
@@ -1736,6 +1756,7 @@ export const handleOnUpdate = async (deps, changes) => {
       deps.store.selectPendingUpdatedItem(),
     )
   ) {
+    // Accept refreshed item fields; the gesture's render snapshot stays separate.
     deps.store.clearPendingUpdatedItem();
   }
 

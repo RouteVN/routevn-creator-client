@@ -10,6 +10,7 @@ export const createInitialState = () => ({
   isDragging: false,
   dragMode: "move",
   dragStartPosition: undefined,
+  dragRenderState: undefined,
   pendingUpdatedItem: undefined,
   fileContentCacheById: {},
   activeRenderRequestId: undefined,
@@ -37,6 +38,14 @@ export const setGraphicsReady = ({ state }, { value = false } = {}) => {
 export const startDragging = ({ state }, { dragMode = "move" } = {}) => {
   state.isDragging = true;
   state.dragMode = dragMode;
+  state.activeRenderRequestId = undefined;
+  // Pointer deltas stay relative to this snapshot for the entire gesture.
+  state.dragRenderState = {
+    baseElements: state.canvasBaseElements,
+    parsedElements: state.canvasParsedElements,
+    occurrencesById: state.selectionOccurrencesById,
+    occurrenceIdsByOwner: state.selectionOccurrenceIdsByOwner,
+  };
 };
 
 export const setDragStartPosition = (
@@ -96,6 +105,7 @@ export const stopDragging = ({ state }, _payload = {}) => {
   state.isDragging = false;
   state.dragMode = "move";
   state.dragStartPosition = undefined;
+  state.dragRenderState = undefined;
 };
 
 export const setPendingUpdatedItem = ({ state }, { updatedItem } = {}) => {
@@ -312,6 +322,10 @@ export const selectCanvasRenderState = ({ state }) => {
     parsedElements: state.canvasParsedElements,
     canvasUnitsPerCssPixel: state.canvasUnitsPerCssPixel,
   };
+};
+
+export const selectDragRenderState = ({ state }) => {
+  return state.dragRenderState;
 };
 
 export const selectViewData = ({ state, props }) => {

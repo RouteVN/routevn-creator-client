@@ -1,5 +1,8 @@
 import { describe, expect, it, vi } from "vitest";
+import { produce } from "immer";
 import { EN_I18N } from "../support/i18n.js";
+import * as layoutEditorStore from "../../src/pages/layoutEditor/layoutEditor.store.js";
+import { createLayoutEditorRepositoryStoreData } from "../../src/pages/layoutEditor/support/layoutEditorRepositoryState.js";
 import {
   handleBackClick,
   handleFileExplorerAction,
@@ -132,6 +135,162 @@ const createLayoutEditorDeps = ({
     i18n: EN_I18N,
   };
 };
+
+const createDraftReconciliationHarness = (resourceType) => {
+  const deps = createLayoutEditorDeps({ resourceType });
+  let repositoryState = {
+    project: { resolution: { width: 1920, height: 1080 } },
+    [resourceType]: {
+      items: {
+        "layout-1": {
+          elements: {
+            tree: [{ id: "item-1" }],
+            items: {
+              "item-1": {
+                type: "container-ref-save-load-slot",
+                name: "Container One",
+                x: 0,
+                y: 0,
+                paginationMode: "continuous",
+              },
+            },
+          },
+        },
+      },
+    },
+  };
+  let state = layoutEditorStore.createInitialState();
+  for (const name of [
+    "syncRepositoryState",
+    "setSelectedItemId",
+    "updateSelectedItem",
+    "setPendingPersistPayload",
+    "clearPendingPersistPayload",
+  ]) {
+    deps.store[name] = vi.fn((payload) => {
+      state = produce(state, (draft) => {
+        layoutEditorStore[name]({ state: draft }, payload);
+      });
+    });
+  }
+  for (const name of [
+    "selectSelectedItemId",
+    "selectSelectedItemData",
+    "selectItemDataById",
+    "selectImages",
+    "selectPendingPersistPayload",
+  ]) {
+    deps.store[name] = (payload) => layoutEditorStore[name]({ state }, payload);
+  }
+  const updateElement = vi.fn(async ({ elementId, data, replace }) => {
+    repositoryState = produce(repositoryState, (draft) => {
+      const items = draft[resourceType].items["layout-1"].elements.items;
+      if (replace) {
+        items[elementId] = data;
+      } else {
+        Object.assign(items[elementId], data);
+      }
+    });
+    return { valid: true };
+  });
+  deps.projectService.updateLayoutElement = updateElement;
+  deps.projectService.updateControlElement = updateElement;
+  deps.projectService.getRepositoryState = () => repositoryState;
+  deps.appService.getPayload = () => ({
+    p: "project-1",
+    [resourceType === "controls" ? "c" : "l"]: "layout-1",
+  });
+  deps.store.syncRepositoryState(
+    createLayoutEditorRepositoryStoreData({
+      repositoryState,
+      layoutId: "layout-1",
+      resourceType,
+    }),
+  );
+  deps.store.setSelectedItemId({ itemId: "item-1" });
+  return {
+    deps,
+    updateElement,
+    savedItem: () =>
+      repositoryState[resourceType].items["layout-1"].elements.items["item-1"],
+    edit: (name, value) =>
+      handleLayoutEditPanelUpdateHandler(deps, {
+        _event: { detail: { name, value } },
+      }),
+  };
+};
+
+describe.each(["layouts", "controls"])(
+  "layoutEditor %s draft reconciliation",
+  (resourceType) => {
+    it("supersedes a debounced draft when a newer field is saved immediately", async () => {
+      const { deps, edit, savedItem } =
+        createDraftReconciliationHarness(resourceType);
+      await edit("x", 10);
+      await edit("paginationMode", "paginated");
+
+      expect(savedItem()).toMatchObject({ x: 10, paginationMode: "paginated" });
+      expect(deps.store.selectSelectedItemData()).toMatchObject({
+        x: 10,
+        paginationMode: "paginated",
+      });
+      expect(deps.store.selectPendingPersistPayload()).toBeUndefined();
+
+      await edit("x", 20);
+      await handleBackClick(deps);
+      expect(savedItem()).toMatchObject({ x: 20, paginationMode: "paginated" });
+    });
+
+    it("retains edits made while an immediate save is in flight", async () => {
+      const { deps, edit, savedItem, updateElement } =
+        createDraftReconciliationHarness(resourceType);
+      const persist = updateElement.getMockImplementation();
+      let release;
+      const saveReady = new Promise((resolve) => {
+        release = resolve;
+      });
+      updateElement.mockImplementationOnce(async (payload) => {
+        await saveReady;
+        return persist(payload);
+      });
+      await edit("x", 10);
+      const saving = edit("paginationMode", "paginated");
+      await vi.waitFor(() => expect(updateElement).toHaveBeenCalledTimes(1));
+      await edit("x", 20);
+      const pending = deps.store.selectPendingPersistPayload();
+      release();
+      await saving;
+
+      expect(savedItem()).toMatchObject({ x: 10, paginationMode: "paginated" });
+      expect(deps.store.selectSelectedItemData()).toMatchObject({
+        x: 20,
+        paginationMode: "paginated",
+      });
+      expect(deps.store.selectPendingPersistPayload()).toEqual(pending);
+      await handleBackClick(deps);
+      expect(savedItem()).toMatchObject({ x: 20, paginationMode: "paginated" });
+    });
+
+    it("accepts refreshed fields once the pending save is acknowledged", async () => {
+      const { deps, edit, savedItem, updateElement } =
+        createDraftReconciliationHarness(resourceType);
+      const persist = updateElement.getMockImplementation();
+      updateElement.mockImplementationOnce(async (payload) => {
+        const result = await persist(payload);
+        await persist({ elementId: "item-1", data: { name: "Container Two" } });
+        return result;
+      });
+      await edit("x", 10);
+      await handleBackClick(deps);
+
+      expect(deps.store.selectPendingPersistPayload()).toBeUndefined();
+      expect(deps.store.selectSelectedItemData().name).toBe("Container Two");
+      await edit("x", 20);
+      await handleBackClick(deps);
+      expect(savedItem()).toMatchObject({ x: 20, name: "Container Two" });
+    });
+  },
+);
 
 describe("layoutEditor.handleFileExplorerVisibilityToggle", () => {
   it("optimistically updates and persists element visibility", async () => {
