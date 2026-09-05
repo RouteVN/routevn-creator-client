@@ -31,7 +31,6 @@ export const resolveRettangoliUiPackage = ({
       packageDir,
       version: localPackageJson.version,
       isLocal: true,
-      isPatched: false,
     };
   }
 
@@ -46,9 +45,6 @@ export const resolveRettangoliUiPackage = ({
     packageDir: "node_modules/@rettangoli/ui",
     version: spec,
     isLocal: false,
-    isPatched: Boolean(
-      packageJson.patchedDependencies?.[`@rettangoli/ui@${spec}`],
-    ),
   };
 };
 
@@ -58,11 +54,8 @@ const isCli = process.argv[1]
 
 if (isCli) {
   try {
-    const { packageDir, version, isLocal, isPatched } =
-      resolveRettangoliUiPackage();
-    process.stdout.write(
-      [packageDir, version, String(isLocal), String(isPatched)].join("\t"),
-    );
+    const { packageDir, version, isLocal } = resolveRettangoliUiPackage();
+    process.stdout.write([packageDir, version, String(isLocal)].join("\t"));
   } catch (error) {
     console.error(`Error: ${error.message}`);
     process.exitCode = 1;

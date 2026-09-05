@@ -210,10 +210,12 @@ app version, which can stay unchanged when only native test versions are changed
 A locally sideloaded debug APK validates the unsupported-install behavior, not
 actual Play update delivery.
 
-Run `bun run test:update-dialogs` with Google Chrome installed for isolated browser
-coverage of the app-owned update dialogs, spacing, and save-before-restart flow.
-The [Rettangoli UI patch](../patches/README.md) removes duplicate alert/confirm
-padding; the shared progress dialog uses the same single layer of padding.
+Run `bunx vitest run tests/android/updater.test.js tests/appService/mobileUpdateSetup.test.js`
+for update-flow and save-before-restart coverage. Shared alert/confirm spacing is
+owned and visually tested by Rettangoli; the client must consume its fix through
+a published dependency version, as required by the
+[dependency ownership rules](engineering.md#dependency-ownership). The app-owned
+progress dialog uses the dialog primitive's single layer of padding.
 
 ## Release Signing
 

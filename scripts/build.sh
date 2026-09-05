@@ -8,7 +8,7 @@ set -e
 BUILD_TYPE=${1:-web}
 SETUP_FILE="src/setup.${BUILD_TYPE}.js"
 RETTANGOLI_PACKAGE_INFO=$(node scripts/resolve-rettangoli-ui-package.js)
-IFS=$'\t' read -r RETTANGOLI_PACKAGE_DIR RETTANGOLI_VERSION RETTANGOLI_IS_LOCAL RETTANGOLI_IS_PATCHED <<< "${RETTANGOLI_PACKAGE_INFO}"
+IFS=$'\t' read -r RETTANGOLI_PACKAGE_DIR RETTANGOLI_VERSION RETTANGOLI_IS_LOCAL <<< "${RETTANGOLI_PACKAGE_INFO}"
 
 LOCAL_RETTANGOLI_PACKAGE="${RETTANGOLI_PACKAGE_DIR}/package.json"
 LOCAL_RETTANGOLI_FILE="${RETTANGOLI_PACKAGE_DIR}/dist/rettangoli-iife-ui.min.js"
@@ -48,12 +48,13 @@ fi
 echo "Generating bundle file..."
 bun run build:bundle
 
-# Refresh local and patched dependencies even when a cached bundle exists.
+# Prepare Rettangoli UI if needed. Local file dependencies are recopied on
+# every build so rebuilding the sibling package is immediately reflected here.
 echo "Checking Rettangoli UI..."
-if [ "${RETTANGOLI_IS_LOCAL}" = true ] || [ "${RETTANGOLI_IS_PATCHED}" = true ]; then
+if [ "${RETTANGOLI_IS_LOCAL}" = true ]; then
   if [ ! -f "${LOCAL_RETTANGOLI_FILE}" ]; then
     echo "Error: local Rettangoli UI bundle is missing at ${LOCAL_RETTANGOLI_FILE}."
-    echo "Install or build the declared @rettangoli/ui dependency before building this app."
+    echo "Build the local @rettangoli/ui package before building this app."
     exit 1
   fi
 

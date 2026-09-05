@@ -33,6 +33,20 @@ Local-first collaboration:
 
 - `insieme`
 
+## Dependency Ownership
+
+Dependency patches in this repository are strictly prohibited. This includes
+`bun patch`, `patchedDependencies`, `patch-package`, install-time rewrites,
+vendored modifications, and edits to dependency source or generated bundles in
+`node_modules` or cached static assets.
+
+Fix shared-library bugs in the owning upstream repository, open a PR there, and
+consume the fix through a published package version. Rettangoli changes belong in
+`../rettangoli`. Local `file:` dependencies may be used for development and
+validation against that checkout; they must not replace the published dependency
+in a client PR. If the upstream fix is not released yet, link its PR and make the
+pending version upgrade explicit rather than introducing a dependency patch.
+
 ## Localization
 
 Frontend locale catalogs live in `src/i18n/*.yaml`. Keep every locale aligned
