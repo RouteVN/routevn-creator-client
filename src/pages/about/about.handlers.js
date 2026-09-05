@@ -19,13 +19,17 @@ export const handleDataChanged = () => {
 };
 
 export const handleCheckForUpdates = async (deps) => {
-  const { updaterService, i18n } = deps;
+  const { updaterService, i18n, store, render } = deps;
   if (!resolveUpdatesEnabled(deps) || !updaterService) {
+    store.setUpdatesEnabled({ updatesEnabled: false });
+    render();
     return;
   }
 
   // Check for updates with UI feedback
   await updaterService.checkForUpdates(false, { copy: i18n?.appPage ?? {} });
+  store.setUpdatesEnabled({ updatesEnabled: resolveUpdatesEnabled(deps) });
+  render();
 };
 
 export const handleClickSocialButton = async (deps, payload) => {

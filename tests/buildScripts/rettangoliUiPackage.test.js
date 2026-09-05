@@ -22,6 +22,7 @@ describe("Rettangoli UI package resolution", () => {
       packageDir: "node_modules/@rettangoli/ui",
       version: "1.20.0",
       isLocal: false,
+      isPatched: false,
     });
     expect(readPaths).toEqual(["/project/package.json"]);
   });
@@ -50,7 +51,24 @@ describe("Rettangoli UI package resolution", () => {
       packageDir: "../rettangoli/packages/rettangoli-ui",
       version: "1.21.0",
       isLocal: true,
+      isPatched: false,
     });
+  });
+
+  it("refreshes the exact pinned UI patch instead of reusing a cached bundle", () => {
+    const result = resolveRettangoliUiPackage({
+      projectRoot: "/project",
+      readJson: () => ({
+        dependencies: { "@rettangoli/ui": "1.21.1" },
+        patchedDependencies: {
+          "@rettangoli/ui@1.21.1": "patches/ui.patch",
+        },
+      }),
+    });
+
+    expect(result.isLocal).toBe(false);
+    expect(result.isPatched).toBe(true);
+    expect(result.packageDir).toBe("node_modules/@rettangoli/ui");
   });
 
   it("requires published dependencies to use an exact version", () => {

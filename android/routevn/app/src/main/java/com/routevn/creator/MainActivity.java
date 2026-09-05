@@ -71,6 +71,7 @@ import java.util.Set;
 import java.util.UUID;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
+import java.util.function.Consumer;
 import java.util.zip.ZipEntry;
 import java.util.zip.ZipFile;
 import javax.crypto.Cipher;
@@ -165,6 +166,7 @@ public class MainActivity extends Activity {
     }
 
     private WebView webView;
+    private GooglePlayUpdater googlePlayUpdater;
     private boolean appResumed = false;
     private long splashStartedAt;
     private boolean splashDismissRequested = false;
@@ -198,6 +200,14 @@ public class MainActivity extends Activity {
 
         super.onCreate(savedInstanceState);
 
+        googlePlayUpdater = new GooglePlayUpdater(this, state -> {
+            if (webView != null) {
+                webView.evaluateJavascript(
+                    "window.dispatchEvent(new CustomEvent('routevn:android-update', {detail:" + state + "}))",
+                    null
+                );
+            }
+        });
         validateNativeExporterSmoke();
         configureWindow();
         configureWebView();
@@ -555,8 +565,9 @@ public class MainActivity extends Activity {
                 }
 
                 bridgeExecutor.execute(() -> {
-                    String response = dispatchAndroidBridgeMessage(messageData);
-                    postBridgeResponse(replyProxy, response);
+                    dispatchAndroidBridgeMessage(messageData, response ->
+                        postBridgeResponse(replyProxy, response)
+                    );
                 });
             }
         );
@@ -704,6 +715,7 @@ public class MainActivity extends Activity {
     protected void onResume() {
         super.onResume();
         appResumed = true;
+        googlePlayUpdater.onResume();
         if (webView != null) {
             webView.onResume();
             notifyAudioLifecycle();
@@ -713,6 +725,7 @@ public class MainActivity extends Activity {
     @Override
     protected void onPause() {
         appResumed = false;
+        googlePlayUpdater.onPause();
         notifyAudioLifecycle();
         if (webView != null) {
             webView.onPause();
@@ -731,6 +744,7 @@ public class MainActivity extends Activity {
 
     @Override
     protected void onDestroy() {
+        googlePlayUpdater.destroy();
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
             unregisterBackInvokedCallback();
         }
@@ -944,7 +958,7 @@ public class MainActivity extends Activity {
         return headers;
     }
 
-    private String dispatchAndroidBridgeMessage(String messageData) {
+    private void dispatchAndroidBridgeMessage(String messageData, Consumer<String> reply) {
         String requestId = "";
         try {
             JSONObject request = new JSONObject(messageData);
@@ -968,16 +982,40 @@ public class MainActivity extends Activity {
                 payload = new JSONObject();
             }
 
+            if ("getAppUpdateSupport".equals(method) || "checkAppUpdate".equals(method) ||
+                "startAppUpdate".equals(method) || "completeAppUpdate".equals(method)) {
+                String updateRequestId = requestId;
+                mainHandler.post(() -> {
+                    try {
+                        googlePlayUpdater.handle(method)
+                            .addOnCompleteListener(task -> {
+                                String result;
+                                try {
+                                    result = task.isSuccessful()
+                                        ? bridgeSuccess(task.getResult())
+                                        : bridgeFailure(task.getException());
+                                } catch (Exception error) {
+                                    result = bridgeFailure(error);
+                                }
+                                reply.accept(attachBridgeResponseMetadata(updateRequestId, result));
+                            });
+                    } catch (Exception error) {
+                        reply.accept(attachBridgeResponseMetadata(updateRequestId, bridgeFailure(error)));
+                    }
+                });
+                return;
+            }
+
             String result = dispatchAndroidBridgeMethod(
                 method,
                 payload.toString()
             );
-            return attachBridgeResponseMetadata(requestId, result);
+            reply.accept(attachBridgeResponseMetadata(requestId, result));
         } catch (Throwable error) {
-            return attachBridgeResponseMetadata(
+            reply.accept(attachBridgeResponseMetadata(
                 requestId,
                 bridgeFailure(error)
-            );
+            ));
         }
     }
 

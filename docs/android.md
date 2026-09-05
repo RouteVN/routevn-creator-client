@@ -21,6 +21,7 @@ Gradle pins.
 - Build tools: `37.0.0`
 - NDK: `29.0.14206865`
 - AndroidX WebKit: `1.16.0`
+- Google Play In-App Updates: `2.1.0`
 
 ## Local Setup
 
@@ -163,6 +164,56 @@ Build a release app bundle to validate packaged web assets:
 ```bash
 bun run android:bundle
 ```
+
+### Google Play Updates
+
+`android:bundle` sets `-ProutevnDistribution=google-play`. Other Gradle builds
+default to `direct`; direct builds do not enable the Play updater. To build a
+Play APK explicitly, use `./gradlew :app:assembleRelease -ProutevnDistribution=google-play`.
+Keep increasing Android `versionCode` for each published release.
+
+The native adapter additionally requires the app's installing package to be
+`com.android.vending` and an enabled Play Store. Sideloaded development APKs and
+other distributions continue working with update controls hidden. An unavailable
+Play API or an unowned app disables checking for the session. Network/check
+failures remain silent for automatic checks and show feedback for manual checks.
+
+Android and direct desktop builds share `automaticUpdateChecks.js`: check at
+startup, then poll every ten minutes and check again once more than two hours
+have elapsed. About exposes **Check for Updates** when the adapter supports it.
+Android skips background checks without advancing the last-check timestamp.
+
+Android uses Google's flexible update flow. Downloading allows continued editing;
+the downloaded update asks the user to restart. Restart first runs the existing
+pre-navigation save hooks and flushes user settings. Save failures prevent the
+restart. Update requests are asynchronous and do not block the native storage
+executor. A native install listener and resume check recover completed downloads.
+
+Validate actual Play delivery using
+[internal app sharing](https://developer.android.com/guide/playcore/in-app-updates/test):
+
+1. The Play Console account owner must accept the Internal App Sharing terms.
+2. Enable Internal App Sharing in the phone's Play Store settings. Tap the Play
+   Store version seven times under About to expose its developer options.
+3. Upload and install a lower-version-code Play build from its sharing link. It
+   must already contain the updater. Export local projects before uninstalling a
+   development build with a different signing certificate.
+4. Upload a higher-version-code build to Internal App Sharing. Open its sharing
+   link on the phone, but do not install it from the Play Store page.
+5. Return to RouteVN and use About's Check for Updates action. Accept the download,
+   then accept Restart and Update when it is ready.
+
+Both builds need matching application IDs/signing certificates, and the tester's
+Google account must have downloaded the app from Play at least once. The Android
+`versionCode` determines update eligibility; About currently displays the shared
+app version, which can stay unchanged when only native test versions are changed.
+A locally sideloaded debug APK validates the unsupported-install behavior, not
+actual Play update delivery.
+
+Run `bun run test:update-dialogs` with Google Chrome installed for isolated browser
+coverage of the app-owned update dialogs, spacing, and save-before-restart flow.
+The [Rettangoli UI patch](../patches/README.md) removes duplicate alert/confirm
+padding; the shared progress dialog uses the same single layer of padding.
 
 ## Release Signing
 

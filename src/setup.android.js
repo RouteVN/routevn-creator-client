@@ -5,6 +5,7 @@ import { createDb } from "./deps/clients/android/db.js";
 import { callAndroidBridge } from "./deps/clients/android/bridge.js";
 import { createAndroidFilePicker } from "./deps/clients/android/filePicker.js";
 import { createAndroidAudioRuntime } from "./deps/clients/android/audioRuntime.js";
+import { createAndroidUpdater } from "./deps/clients/android/updater.js";
 import AndroidRouter from "./deps/clients/android/router.js";
 import { createBrowserEventsClient } from "./deps/clients/browserEvents.js";
 
@@ -62,13 +63,16 @@ const browserEventsClient = createBrowserEventsClient();
 const appVersion = tauriConfig.version;
 const creatorVersion = deriveProjectFormatVersionFromAppVersion(appVersion);
 
-const updater = {
-  checkForUpdates: async () => null,
-  startAutomaticChecks: () => {},
-  getUpdateInfo: () => null,
-  getDownloadProgress: () => 0,
-  isUpdateAvailable: () => false,
-};
+const updater = await createAndroidUpdater({
+  globalUI,
+  keyValueStore: appDb,
+  browserEventsClient,
+  getCopy: () => appService.getAppCopy(),
+  beforeInstall: async () => {
+    await appService.prepareNavigation({ path: "/projects" });
+    await appService.flushUserConfig();
+  },
+});
 
 const subject = new Subject();
 let nativeBackInFlight = false;
@@ -150,6 +154,8 @@ const appService = createAppService({
   openUrl,
   appVersion,
   platform: "android",
+  updatesEnabled: Boolean(updater),
+  updater,
   audioService,
   projectService,
   subject,

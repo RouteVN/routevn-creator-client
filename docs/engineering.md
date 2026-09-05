@@ -544,6 +544,14 @@ preference uses `release.assetPackageEnabled` inside the global app KV
 Both Release menus read it when mounted; disabled direct links go to Config.
 Disabling the page hides its authoring UI without deleting project asset packages.
 
+Update availability is a platform capability. Direct desktop and Google Play
+Android adapters share the automatic update schedule in
+`src/deps/clients/automaticUpdateChecks.js`. Android's Play adapter lives in
+`src/deps/clients/android/updater.js`, with native Play operations in
+`GooglePlayUpdater.java`. Play update requests must not block the native storage
+executor. Direct Android builds and installations outside Play do not enable this
+adapter; About uses the capability instead of a desktop-only platform check.
+
 #### `projectService`
 
 Handler-facing facade for:

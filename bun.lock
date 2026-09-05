@@ -50,6 +50,9 @@
       },
     },
   },
+  "patchedDependencies": {
+    "@rettangoli/ui@1.21.1": "patches/@rettangoli%2Fui@1.21.1.patch",
+  },
   "overrides": {
     "@tauri-apps/api": "2.11.0",
     "liquidjs": "10.27.0",

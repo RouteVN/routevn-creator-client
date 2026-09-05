@@ -2,6 +2,7 @@ import { check } from "@tauri-apps/plugin-updater";
 import { relaunch } from "@tauri-apps/plugin-process";
 import { createProgressDialog } from "../progressDialog.js";
 import { isMacosHost } from "./platform.js";
+import { createAutomaticUpdateChecks } from "../automaticUpdateChecks.js";
 
 const formatUpdaterCopy = (template, values = {}) => {
   return String(template || "").replace(/\{([A-Za-z0-9_]+)\}/g, (match, key) =>
@@ -185,35 +186,10 @@ const createUpdater = ({ globalUI, keyValueStore }) => {
     }
   };
 
-  const startAutomaticChecks = (options = {}) => {
-    const getCopy =
-      typeof options.getCopy === "function"
-        ? options.getCopy
-        : () => options.copy ?? {};
-    const TEN_MINUTES_IN_MS = 10 * 60 * 1000;
-    const TWO_HOURS_IN_MS = 2 * 60 * 60 * 1000;
-
-    const performCheck = async ({ force = false } = {}) => {
-      const lastCheckTime = await keyValueStore.get("lastCheckTime");
-      const currentTime = Date.now();
-
-      if (
-        force ||
-        !lastCheckTime ||
-        currentTime - lastCheckTime > TWO_HOURS_IN_MS
-      ) {
-        try {
-          await checkForUpdates(true, { copy: getCopy() });
-        } finally {
-          await keyValueStore.set("lastCheckTime", currentTime);
-        }
-      }
-    };
-
-    performCheck({ force: true });
-
-    setInterval(performCheck, TEN_MINUTES_IN_MS);
-  };
+  const startAutomaticChecks = createAutomaticUpdateChecks({
+    checkForUpdates,
+    keyValueStore,
+  });
 
   return {
     checkForUpdates,

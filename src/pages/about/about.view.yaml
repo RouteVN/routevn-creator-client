@@ -36,7 +36,7 @@ template:
                       - rtgl-view av=c g=sm:
                           - rtgl-text s=sm: ${appVersionText}
                       - rtgl-view d=h g=md:
-                          - $if platform == 'tauri' && updatesEnabled:
+                          - $if updatesEnabled:
                               - rtgl-button#checkUpdateButton v=se: ${checkForUpdatesButton}
                   - rtgl-view g=md:
                       - rtgl-text s=h4: ${communityTitle}

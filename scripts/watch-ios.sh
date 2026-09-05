@@ -4,7 +4,7 @@ set -e
 
 PORT="3001"
 RETTANGOLI_PACKAGE_INFO=$(node scripts/resolve-rettangoli-ui-package.js)
-IFS=$'\t' read -r RETTANGOLI_PACKAGE_DIR RETTANGOLI_VERSION RETTANGOLI_IS_LOCAL <<< "${RETTANGOLI_PACKAGE_INFO}"
+IFS=$'\t' read -r RETTANGOLI_PACKAGE_DIR RETTANGOLI_VERSION RETTANGOLI_IS_LOCAL RETTANGOLI_IS_PATCHED <<< "${RETTANGOLI_PACKAGE_INFO}"
 
 LOCAL_RETTANGOLI_PACKAGE="${RETTANGOLI_PACKAGE_DIR}/package.json"
 LOCAL_RETTANGOLI_FILE="${RETTANGOLI_PACKAGE_DIR}/dist/rettangoli-iife-ui.min.js"
@@ -21,10 +21,10 @@ fi
 echo "Preparing iOS watch assets..."
 bun run build:bundle
 
-if [ "${RETTANGOLI_IS_LOCAL}" = true ]; then
+if [ "${RETTANGOLI_IS_LOCAL}" = true ] || [ "${RETTANGOLI_IS_PATCHED}" = true ]; then
   if [ ! -f "${LOCAL_RETTANGOLI_FILE}" ]; then
     echo "Error: local Rettangoli UI bundle is missing at ${LOCAL_RETTANGOLI_FILE}."
-    echo "Build the local @rettangoli/ui package before watching iOS."
+    echo "Install or build the declared @rettangoli/ui dependency before watching iOS."
     exit 1
   fi
 

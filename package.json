@@ -61,7 +61,7 @@
     "watch:android": "./scripts/watch-android.sh",
     "watch:ios": "./scripts/watch-ios.sh",
     "android:install": "bun run build:android && cd android/routevn && ./gradlew installDebug",
-    "android:bundle": "bun run build:android && cd android/routevn && ./gradlew bundleRelease",
+    "android:bundle": "bun run build:android && cd android/routevn && ./gradlew bundleRelease -ProutevnDistribution=google-play",
     "ios:build": "./scripts/ios.sh build",
     "ios:run": "./scripts/ios.sh run",
     "ios:devices": "./scripts/ios.sh devices",
@@ -73,6 +73,7 @@
     "test:collab-adapters": "node scripts/test-collab-adapters.js",
     "test:puty": "vitest run tests/puty",
     "test:mobile-keyboard:android": "node scripts/mobile-keyboard-screenshot-android.js",
+    "test:update-dialogs": "node scripts/test-update-dialogs.js",
     "check:contracts": "rtgl check --dir src/components --dir src/pages",
     "vt:generate": "bun run build:web && bash ./scripts/run-vt-docker.sh vt screenshot",
     "vt:docker": "bun run vt:generate",
@@ -125,5 +126,8 @@
     "src/**/*.{js}": [
       "oxlint && bun prettier --write"
     ]
+  },
+  "patchedDependencies": {
+    "@rettangoli/ui@1.21.1": "patches/@rettangoli%2Fui@1.21.1.patch"
   }
 }
