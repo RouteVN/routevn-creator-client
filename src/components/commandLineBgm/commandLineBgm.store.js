@@ -106,6 +106,10 @@ const normalizeBgm = (bgm = {}) => {
 
   if (Array.isArray(bgm.sounds)) {
     normalizedBgm.sounds = normalizeSounds(bgm.sounds);
+    const [sound] = normalizedBgm.sounds;
+    if (normalizedBgm.sounds.length === 1 && sound.id === "default") {
+      sound.id = sound.resourceId;
+    }
   } else if (bgm.resourceId !== undefined) {
     normalizedBgm.sounds = normalizeSounds([
       {

@@ -582,7 +582,61 @@ describe("commandLineBgm.store", () => {
     expect(legacy).not.toHaveProperty("sounds");
   });
 
-  it.each(["default", "old-random-id", "theme-2"])(
+  it("opens a converted legacy clip with resource identity before inserting another copy", () => {
+    const original = Object.freeze({
+      volume: 80,
+      sounds: Object.freeze([
+        Object.freeze({
+          id: "default",
+          resourceId: "theme",
+          volume: 40,
+          pan: 0.2,
+          startDelayMs: 250,
+        }),
+      ]),
+    });
+    const state = createInitialState();
+    setRepositoryState({ state }, { sounds });
+    setBgm({ state }, { bgm: original });
+
+    expect(selectBgm({ state }).sounds[0]).toMatchObject({
+      id: "theme",
+      resourceId: "theme",
+      volume: 40,
+      pan: 0.2,
+      startDelayMs: 250,
+    });
+    insertSound({ state }, { resourceId: "theme" });
+    expect(selectBgm({ state }).sounds.map(({ id }) => id)).toEqual([
+      "theme",
+      "theme-2",
+    ]);
+    expect(original.sounds[0].id).toBe("default");
+    expect(original.sounds).toHaveLength(1);
+  });
+
+  it("preserves a default ID in a multi-clip channel without collisions", () => {
+    const state = createInitialState();
+    setBgm(
+      { state },
+      {
+        bgm: {
+          sounds: [
+            { id: "default", resourceId: "theme" },
+            { id: "theme", resourceId: "theme" },
+          ],
+        },
+      },
+    );
+    insertSound({ state }, { resourceId: "theme" });
+    expect(selectBgm({ state }).sounds.map(({ id }) => id)).toEqual([
+      "default",
+      "theme",
+      "theme-2",
+    ]);
+  });
+
+  it.each(["old-random-id", "theme-2"])(
     "does not reinterpret an explicit canonical ID: %s",
     (id) => {
       const state = createInitialState();
