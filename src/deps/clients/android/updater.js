@@ -62,9 +62,14 @@ export const createAndroidUpdater = async ({
     });
     try {
       await beforeInstall();
-      const result = await bridge("completeAppUpdate");
-      if (result.status !== "installing")
-        throw new Error("Update installation did not start.");
+      // Work can start after confirmation while editor/settings saves drain.
+      // The updater's own progress dialog intentionally is not a work blocker.
+      await globalUI.runWhenIdle(async () => {
+        if (!isForeground()) return;
+        const result = await bridge("completeAppUpdate");
+        if (result.status !== "installing")
+          throw new Error("Update installation did not start.");
+      });
     } finally {
       progress.close();
     }

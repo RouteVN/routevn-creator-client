@@ -576,6 +576,11 @@ The app-owned `src/deps/clients/globalUI.js` adapter tracks dialog and dropdown
 promises through the published UI API. Update confirmations and alerts run only
 after that surface is idle, allowing result handlers to open follow-up dialogs
 first and rechecking foreground visibility before showing a prompt.
+Android `showProgressDialog()` uses the same adapter: each creation/import/export
+operation blocks updates until its own controller is closed, even if another
+progress dialog replaces its DOM. Recheck this barrier after saving and before
+native restart. The updater's own installation indicator is excluded so it
+cannot wait on itself.
 
 #### `projectService`
 

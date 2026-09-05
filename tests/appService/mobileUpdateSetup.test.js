@@ -12,6 +12,8 @@ import {
   handleLayoutEditorCanvasDragUpdate,
 } from "../../src/pages/layoutEditor/layoutEditor.handlers.js";
 import { createLayoutEditorRepositoryStoreData } from "../../src/pages/layoutEditor/support/layoutEditorRepositoryState.js";
+import { handleCreateDialogSubmit } from "../../src/pages/projects/projects.handlers.js";
+import { handleDownloadAssetPackageButtonClick } from "../../src/pages/assetPackage/assetPackage.handlers.js";
 import { EN_I18N } from "../support/i18n.js";
 
 const mocked = vi.hoisted(() => ({
@@ -179,6 +181,228 @@ const openEditor = (pages, resourceType) => {
 };
 
 describe("mobile setup update persistence", () => {
+  it("waits for project creation to finish before offering restart", async () => {
+    const {
+      deps: { pages },
+    } = await import("../../src/setup.android.js");
+    let finishCreation;
+    vi.spyOn(pages.appService, "createNewProject").mockImplementation(
+      () =>
+        new Promise((resolve) => {
+          finishCreation = resolve;
+        }),
+    );
+    const store = { closeCreateDialog: vi.fn(), addProject: vi.fn() };
+    const creating = handleCreateDialogSubmit(
+      { ...pages, store, render: vi.fn(), i18n: EN_I18N },
+      {
+        _event: {
+          detail: {
+            values: {
+              name: "Project One",
+              template: "default",
+              resolution: "1920x1080",
+            },
+          },
+        },
+      },
+    );
+    await vi.waitFor(() => expect(finishCreation).toBeTypeOf("function"));
+    const updating = pages.updaterService.checkForUpdates(true);
+    await new Promise((resolve) => setTimeout(resolve, 10));
+    try {
+      expect(mocked.globalUI.showConfirm).not.toHaveBeenCalled();
+      expect(mocked.bridge).not.toHaveBeenCalledWith("completeAppUpdate");
+    } finally {
+      finishCreation({ id: "project-1", name: "Project One" });
+      await creating;
+      await updating;
+    }
+    expect(store.addProject).toHaveBeenCalledOnce();
+    expect(store.addProject.mock.invocationCallOrder[0]).toBeLessThan(
+      mocked.globalUI.showConfirm.mock.invocationCallOrder[0],
+    );
+    expect(mocked.bridge).toHaveBeenCalledWith("completeAppUpdate");
+  });
+
+  it("releases failed creation progress and waits for its error feedback before prompting", async () => {
+    const {
+      deps: { pages },
+    } = await import("../../src/setup.android.js");
+    let rejectCreation;
+    vi.spyOn(pages.appService, "createNewProject").mockImplementation(
+      () =>
+        new Promise((resolve, reject) => {
+          rejectCreation = reject;
+        }),
+    );
+    let closeError;
+    mocked.globalUI.showAlert.mockImplementationOnce(
+      () =>
+        new Promise((resolve) => {
+          closeError = resolve;
+        }),
+    );
+    const creating = handleCreateDialogSubmit(
+      {
+        ...pages,
+        store: { closeCreateDialog: vi.fn(), addProject: vi.fn() },
+        render: vi.fn(),
+        i18n: EN_I18N,
+      },
+      {
+        _event: {
+          detail: { values: { name: "Project One", resolution: "1920x1080" } },
+        },
+      },
+    );
+    await vi.waitFor(() => expect(rejectCreation).toBeTypeOf("function"));
+    const updating = pages.updaterService.checkForUpdates(true);
+    rejectCreation(new Error("Template copy failed"));
+    await creating;
+    await new Promise((resolve) => setTimeout(resolve, 10));
+    try {
+      expect(document.querySelector("#routevn-progress-dialog")).toBeNull();
+      expect(closeError).toBeTypeOf("function");
+      expect(mocked.globalUI.showConfirm).not.toHaveBeenCalled();
+      expect(mocked.bridge).not.toHaveBeenCalledWith("completeAppUpdate");
+    } finally {
+      closeError();
+      await updating;
+    }
+    expect(mocked.bridge).toHaveBeenCalledWith("completeAppUpdate");
+  });
+
+  it("waits for asset package generation and output writing before offering restart", async () => {
+    const {
+      deps: { pages },
+    } = await import("../../src/setup.android.js");
+    vi.spyOn(pages.appService, "saveFilePicker").mockResolvedValue(
+      "/tmp/package.zip",
+    );
+    let finishBundle;
+    const createAssetPackageBundle = vi.fn(
+      () =>
+        new Promise((resolve) => {
+          finishBundle = resolve;
+        }),
+    );
+    let finishWrite;
+    const writeFile = vi
+      .spyOn(pages.appService, "writeFile")
+      .mockImplementation(
+        () =>
+          new Promise((resolve) => {
+            finishWrite = resolve;
+          }),
+      );
+    const exporting = handleDownloadAssetPackageButtonClick({
+      ...pages,
+      i18n: EN_I18N,
+      projectService: { createAssetPackageBundle },
+      store: {
+        selectAssetPackageData: () => ({
+          files: {
+            items: {
+              "file-1": {
+                id: "file-1",
+                mimeType: "image/png",
+                source: { url: "./files/file-1" },
+              },
+            },
+          },
+          images: {
+            items: {
+              "image-1": {
+                id: "image-1",
+                type: "image",
+                name: "Image One",
+                fileId: "file-1",
+              },
+            },
+            tree: [{ id: "image-1" }],
+          },
+        }),
+      },
+    });
+    await vi.waitFor(() => expect(finishBundle).toBeTypeOf("function"));
+    const updating = pages.updaterService.checkForUpdates(true);
+    await new Promise((resolve) => setTimeout(resolve, 10));
+    try {
+      expect(mocked.globalUI.showConfirm).not.toHaveBeenCalled();
+      finishBundle(new Blob(["package"]));
+      await vi.waitFor(() => expect(finishWrite).toBeTypeOf("function"));
+      expect(mocked.globalUI.showConfirm).not.toHaveBeenCalled();
+      expect(mocked.bridge).not.toHaveBeenCalledWith("completeAppUpdate");
+    } finally {
+      finishBundle(new Blob(["package"]));
+      await vi.waitFor(() => expect(finishWrite).toBeTypeOf("function"));
+      finishWrite("/tmp/package.zip");
+      await exporting;
+      await updating;
+    }
+    expect(writeFile).toHaveBeenCalledOnce();
+    expect(mocked.globalUI.showAlert.mock.invocationCallOrder[0]).toBeLessThan(
+      mocked.globalUI.showConfirm.mock.invocationCallOrder[0],
+    );
+    expect(mocked.bridge).toHaveBeenCalledWith("completeAppUpdate");
+  });
+
+  it.each([0, 1])(
+    "waits for all overlapping progress owners when closing owner %s first",
+    async (first) => {
+      const {
+        deps: { pages },
+      } = await import("../../src/setup.android.js");
+      const progress = [
+        pages.appService.showProgressDialog({ title: "Creating project" }),
+        pages.appService.showProgressDialog({ title: "Exporting project" }),
+      ];
+      const updating = pages.updaterService.checkForUpdates(true);
+      progress[first].close();
+      progress[first].close();
+      await new Promise((resolve) => setTimeout(resolve, 10));
+      try {
+        expect(mocked.globalUI.showConfirm).not.toHaveBeenCalled();
+        expect(mocked.bridge).not.toHaveBeenCalledWith("completeAppUpdate");
+      } finally {
+        progress[1 - first].close();
+        await updating;
+      }
+      expect(mocked.globalUI.showConfirm).toHaveBeenCalledOnce();
+      expect(mocked.bridge).toHaveBeenCalledWith("completeAppUpdate");
+    },
+  );
+
+  it("rechecks progress work before native restart without waiting on its own progress dialog", async () => {
+    const {
+      deps: { pages },
+    } = await import("../../src/setup.android.js");
+    let progress;
+    const unregister = pages.appService.registerBeforeNavigation(() => {
+      progress = pages.appService.showProgressDialog({
+        title: "Exporting project",
+      });
+    });
+    const updating = pages.updaterService.checkForUpdates(false);
+    await vi.waitFor(() => expect(progress).toBeDefined());
+    try {
+      expect(mocked.globalUI.showConfirm).toHaveBeenCalledOnce();
+      expect(
+        document.querySelector("#routevn-update-progress-dialog[open]"),
+      ).not.toBeNull();
+      expect(mocked.bridge).not.toHaveBeenCalledWith("completeAppUpdate");
+    } finally {
+      progress.close();
+      unregister();
+      await updating;
+    }
+    expect(mocked.bridge).toHaveBeenCalledWith("completeAppUpdate");
+    expect(
+      document.querySelector("#routevn-update-progress-dialog"),
+    ).toBeNull();
+  });
+
   it.each(["layouts", "controls"])(
     "waits for queued %s edits and settings before installing",
     async (resourceType) => {
