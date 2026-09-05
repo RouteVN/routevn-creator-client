@@ -56,6 +56,8 @@ projectsPage:
   fillRequiredFields: "必須項目を入力してください。"
   importButton: "取り込む"
   importedProjectMessage: "プロジェクト「{projectName}」を取り込みました。"
+  importingProjectMessage: "プロジェクトを取り込んでいます。しばらくお待ちください。"
+  importingProjectTitle: "プロジェクトを取り込み中…"
   importProjectMenuItem: "プロジェクトを取り込む"
   incompatibleProjectTitle: "互換性のないプロジェクト"
   invalidProjectEntryImportAgain: "このプロジェクト項目は無効です。一覧から削除して、もう一度プロジェクトを取り込んでください。"

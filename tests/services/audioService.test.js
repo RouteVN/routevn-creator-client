@@ -69,6 +69,75 @@ describe("audio service", () => {
     expect(contexts[0].close).toHaveBeenCalledOnce();
   });
 
+  it("stops the old track before a replacement player loads and plays another", async () => {
+    const { contexts, MockAudioContext } = createAudioContextHarness();
+    globalThis.window = { AudioContext: MockAudioContext };
+    const replacementResponse = Promise.withResolvers();
+    globalThis.fetch = vi
+      .fn()
+      .mockResolvedValueOnce(createAudioResponse())
+      .mockReturnValueOnce(replacementResponse.promise);
+    const audioService = createAudioService();
+    const releaseOldPlayer = audioService.acquire();
+    await audioService.loadAudio("blob:first");
+    await audioService.play();
+    const context = contexts[0];
+    const oldSource = context.createBufferSource.mock.results[0].value;
+    const firstBuffer = oldSource.buffer;
+    const releaseNewPlayer = audioService.acquire();
+
+    try {
+      const replacementLoad = audioService.loadAudio("blob:second");
+      releaseOldPlayer();
+
+      expect(audioService.isPlaying()).toBe(false);
+      expect(audioService.getCurrentTime()).toBe(0);
+      expect(oldSource.stop).toHaveBeenCalledOnce();
+      expect(oldSource.disconnect).toHaveBeenCalledOnce();
+      expect(oldSource.onended).toBeNull();
+      expect(context.close).not.toHaveBeenCalled();
+
+      replacementResponse.resolve(createAudioResponse());
+      await replacementLoad;
+      await audioService.play();
+
+      expect(context.createBufferSource).toHaveBeenCalledTimes(2);
+      const newSource = context.createBufferSource.mock.results[1].value;
+      expect(newSource.buffer).not.toBe(firstBuffer);
+      expect(newSource.start).toHaveBeenCalledWith(0, 0);
+      expect(audioService.isPlaying()).toBe(true);
+    } finally {
+      releaseOldPlayer();
+      releaseNewPlayer();
+    }
+  });
+
+  it("keeps the previous track stopped if loading its replacement fails", async () => {
+    const { contexts, MockAudioContext } = createAudioContextHarness();
+    globalThis.window = { AudioContext: MockAudioContext };
+    globalThis.fetch = vi
+      .fn()
+      .mockResolvedValueOnce(createAudioResponse())
+      .mockResolvedValueOnce({ ok: false, status: 404 });
+    const audioService = createAudioService();
+    const releasePlayer = audioService.acquire();
+
+    try {
+      await audioService.loadAudio("blob:first");
+      await audioService.play();
+      const oldSource = contexts[0].createBufferSource.mock.results[0].value;
+
+      await expect(audioService.loadAudio("blob:missing")).rejects.toThrow(
+        "Failed to fetch audio: 404",
+      );
+
+      expect(audioService.isPlaying()).toBe(false);
+      expect(oldSource.stop).toHaveBeenCalledOnce();
+    } finally {
+      releasePlayer();
+    }
+  });
+
   it("ignores a superseded audio load", async () => {
     const { MockAudioContext } = createAudioContextHarness();
     globalThis.window = { AudioContext: MockAudioContext };

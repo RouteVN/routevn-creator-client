@@ -56,6 +56,8 @@ projectsPage:
   fillRequiredFields: "Please fill in all required fields."
   importButton: "Import"
   importedProjectMessage: "Project \"{projectName}\" imported."
+  importingProjectMessage: "Please wait while your project is being imported."
+  importingProjectTitle: "Importing Project…"
   importProjectMenuItem: "Import Project"
   incompatibleProjectTitle: "Incompatible Project"
   invalidProjectEntryImportAgain: "This project entry is invalid. Remove it from the list and import the project again."

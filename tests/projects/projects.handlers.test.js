@@ -818,6 +818,106 @@ describe("projects app version menu", () => {
 });
 
 describe("projects.handleOpenButtonClick", () => {
+  it.each(["tauri", "android", "ios"])(
+    "keeps progress visible through import and list refresh on %s",
+    async (platform) => {
+      const deps = createDeps({ platform });
+      const paint = Promise.withResolvers();
+      const importing = Promise.withResolvers();
+      const refreshing = Promise.withResolvers();
+      const progressDialog = {
+        waitForPaint: vi.fn(() => paint.promise),
+        close: vi.fn(),
+      };
+      deps.appService.openFolderPicker.mockResolvedValue(
+        "/projects/project-one",
+      );
+      deps.appService.showProgressDialog.mockReturnValue(progressDialog);
+      deps.appService.openExistingProject.mockReturnValue(importing.promise);
+      deps.appService.loadAllProjects.mockReturnValue(refreshing.promise);
+
+      const task = handleOpenButtonClick(deps);
+      await vi.waitFor(() => {
+        expect(progressDialog.waitForPaint).toHaveBeenCalledOnce();
+      });
+      expect(deps.appService.showProgressDialog).toHaveBeenCalledWith({
+        title: "Importing Project…",
+        message: "Please wait while your project is being imported.",
+        progress: {},
+      });
+      expect(deps.appService.openExistingProject).not.toHaveBeenCalled();
+
+      paint.resolve();
+      await vi.waitFor(() => {
+        expect(deps.appService.openExistingProject).toHaveBeenCalledWith(
+          "/projects/project-one",
+        );
+      });
+      expect(progressDialog.close).not.toHaveBeenCalled();
+      const project = { id: "project-one", name: "Project One" };
+      importing.resolve(project);
+      await vi.waitFor(() => {
+        expect(deps.appService.loadAllProjects).toHaveBeenCalledOnce();
+      });
+      expect(progressDialog.close).not.toHaveBeenCalled();
+      expect(deps.appService.showToast).not.toHaveBeenCalled();
+
+      refreshing.resolve([project]);
+      await task;
+      expect(deps.store.setProjects).toHaveBeenCalledWith({
+        projects: [project],
+      });
+      expect(progressDialog.close).toHaveBeenCalledOnce();
+      expect(deps.render.mock.invocationCallOrder[0]).toBeLessThan(
+        progressDialog.close.mock.invocationCallOrder[0],
+      );
+      expect(progressDialog.close.mock.invocationCallOrder[0]).toBeLessThan(
+        deps.appService.showToast.mock.invocationCallOrder[0],
+      );
+    },
+  );
+
+  it("does not show progress when folder selection is cancelled", async () => {
+    const deps = createDeps();
+    deps.appService.openFolderPicker.mockResolvedValue(undefined);
+
+    await handleOpenButtonClick(deps);
+
+    expect(deps.appService.showProgressDialog).not.toHaveBeenCalled();
+    expect(deps.appService.openExistingProject).not.toHaveBeenCalled();
+    expect(deps.appService.showToast).not.toHaveBeenCalled();
+    expect(deps.appService.showAlert).not.toHaveBeenCalled();
+  });
+
+  it.each(["openExistingProject", "loadAllProjects"])(
+    "closes progress before showing an error when %s fails",
+    async (method) => {
+      const deps = createDeps();
+      deps.appService.openFolderPicker.mockResolvedValue(
+        "/projects/project-one",
+      );
+      deps.appService.openExistingProject.mockResolvedValue({
+        id: "project-one",
+        name: "Project One",
+      });
+      deps.appService[method].mockRejectedValue(new Error("Import failed"));
+
+      await handleOpenButtonClick(deps);
+
+      const progressDialog =
+        deps.appService.showProgressDialog.mock.results[0].value;
+      expect(progressDialog.close).toHaveBeenCalledOnce();
+      expect(progressDialog.close.mock.invocationCallOrder[0]).toBeLessThan(
+        deps.appService.showAlert.mock.invocationCallOrder[0],
+      );
+      expect(deps.appService.showAlert).toHaveBeenCalledWith({
+        message: "Import failed",
+      });
+      expect(deps.store.setProjects).not.toHaveBeenCalled();
+      expect(deps.appService.showToast).not.toHaveBeenCalled();
+    },
+  );
+
   it("reloads the project list and shows a toast after a successful import", async () => {
     const deps = createDeps();
     deps.appService.openFolderPicker.mockResolvedValue(
