@@ -458,11 +458,20 @@ const flushQueuedLayoutEditorUpdates = async (deps) => {
 };
 
 export const handleBeforeMount = (deps) => {
-  const { store, uiConfig } = deps;
+  const { appService, store, uiConfig } = deps;
   store.setUiConfig({ uiConfig });
 
   const cleanupSubscriptions = mountSubscriptions(deps);
+  const unregisterBeforeNavigation = appService.registerBeforeNavigation(
+    async () => {
+      const flushResult = await flushQueuedLayoutEditorUpdates(deps);
+      if (!flushResult.ok) {
+        throw new Error("Failed to save layout changes before navigation.");
+      }
+    },
+  );
   return async () => {
+    unregisterBeforeNavigation();
     await flushQueuedLayoutEditorUpdates(deps);
     cleanupSubscriptions?.();
   };

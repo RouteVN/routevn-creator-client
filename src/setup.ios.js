@@ -57,14 +57,6 @@ const browserEventsClient = createBrowserEventsClient();
 const appVersion = tauriConfig.version;
 const creatorVersion = deriveProjectFormatVersionFromAppVersion(appVersion);
 
-const updater = {
-  checkForUpdates: async () => null,
-  startAutomaticChecks: () => {},
-  getUpdateInfo: () => null,
-  getDownloadProgress: () => 0,
-  isUpdateAvailable: () => false,
-};
-
 const subject = new Subject();
 let nativeBackInFlight = false;
 
@@ -252,7 +244,6 @@ const pageDependencies = {
   appService,
   apiService,
   projectService,
-  updaterService: updater,
   dialogueQueueService,
 };
 

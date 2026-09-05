@@ -551,6 +551,12 @@ Android adapters share the automatic update schedule in
 `GooglePlayUpdater.java`. Play update requests must not block the native storage
 executor. Direct Android builds and installations outside Play do not enable this
 adapter; About uses the capability instead of a desktop-only platform check.
+iOS supplies no updater and keeps update controls hidden. Before completing an
+Android update, drain mounted editors through `registerBeforeNavigation` and
+await `flushUserConfig()`. Layout/Control Editor registers its persistence drain
+with this hook. Explicit settings flushes reject database write failures;
+background autosaves report them without an unhandled rejection. A failed editor
+or settings save must abort installation and retain pending changes for retry.
 
 #### `projectService`
 
