@@ -128,12 +128,12 @@ body {
 
   --sm-font-size: 0.875rem;
   --sm-font-weight: 400;
-  --sm-line-height: 1;
+  --sm-line-height: 1.25rem;
   --sm-letter-spacing: normal;
 
   --xs-font-size: 0.75rem;
   --xs-font-weight: normal;
-  --xs-line-height: 1;
+  --xs-line-height: 1rem;
   --xs-letter-spacing: normal;
 
   --primary: oklch(0.32 0.018 250);
