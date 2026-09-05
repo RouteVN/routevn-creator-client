@@ -582,7 +582,7 @@ describe("commandLineBgm.store", () => {
     expect(legacy).not.toHaveProperty("sounds");
   });
 
-  it("opens a converted legacy clip with resource identity before inserting another copy", () => {
+  it("preserves a singleton default ID and its settings when inserting another copy", () => {
     const original = Object.freeze({
       volume: 80,
       sounds: Object.freeze([
@@ -600,7 +600,7 @@ describe("commandLineBgm.store", () => {
     setBgm({ state }, { bgm: original });
 
     expect(selectBgm({ state }).sounds[0]).toMatchObject({
-      id: "theme",
+      id: "default",
       resourceId: "theme",
       volume: 40,
       pan: 0.2,
@@ -608,8 +608,8 @@ describe("commandLineBgm.store", () => {
     });
     insertSound({ state }, { resourceId: "theme" });
     expect(selectBgm({ state }).sounds.map(({ id }) => id)).toEqual([
+      "default",
       "theme",
-      "theme-2",
     ]);
     expect(original.sounds[0].id).toBe("default");
     expect(original.sounds).toHaveLength(1);
@@ -636,7 +636,7 @@ describe("commandLineBgm.store", () => {
     ]);
   });
 
-  it.each(["old-random-id", "theme-2"])(
+  it.each(["default", "old-random-id", "theme-2"])(
     "does not reinterpret an explicit canonical ID: %s",
     (id) => {
       const state = createInitialState();

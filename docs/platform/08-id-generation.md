@@ -107,14 +107,16 @@ volume changes can retain playback. Opening legacy single-sound BGM in the
 editor uses that same resource ID for its local clip, matching route-engine's
 legacy runtime fallback. This does not rewrite stored project data on open.
 
-Older editor conversions used `default` for a single BGM clip. Opening that
-form also uses the resource ID in the local draft, matching the engine's alias
-and keeping later insertions distinct. Other explicit IDs are preserved,
-including `default` in multi-clip channels. Repeated insertions of a resource
-within one channel receive `-2`, `-3`, and later suffixes to keep occurrences
-distinct. Resource IDs remain unescaped in authored data; the engine escapes
-them when constructing namespaced render IDs. Voice and SFX keep their
-separate occurrence-ID rules.
+Existing explicit IDs are preserved, including `default` in single-clip
+channels. That ID may come from an older editor conversion or identify a
+surviving occurrence after other clips were removed; the editor cannot infer
+which. The engine resolves legacy playback compatibility at runtime without
+rewriting authored IDs.
+
+Repeated insertions receive `-2`, `-3`, and later suffixes when their IDs
+collide with existing clips. Resource IDs remain unescaped in authored data;
+the engine escapes them when constructing namespaced render IDs. Voice and SFX
+keep their separate occurrence-ID rules.
 
 ## Generator Injection Rule
 
