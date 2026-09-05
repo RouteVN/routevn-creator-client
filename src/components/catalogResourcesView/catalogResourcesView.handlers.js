@@ -1,3 +1,4 @@
+export { handleResourceImportMenuAction } from "../../internal/ui/resourcePages/resourceOverflowMenu.js";
 import {
   applyTagFilterPopoverSelection,
   clearTagFilterPopoverSelection,

@@ -37,6 +37,9 @@ export const selectViewData = ({ state, props = {}, i18n = {} }) => {
 
   return {
     importLabel,
+    menuLabel: props.additionalMenuItems?.length
+      ? (i18n.resourcePages?.actionsLabel ?? "Actions")
+      : importLabel,
     isImportDialogOpen: state.isImportDialogOpen,
     menu: {
       isOpen: state.isMenuOpen,

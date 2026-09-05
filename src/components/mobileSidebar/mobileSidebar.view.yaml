@@ -8,11 +8,11 @@ refs:
       click:
         handler: handleItemClick
 template:
-  - rtgl-view d=v w=${w} h=${h} bgc=bg:
-      - rtgl-view d=v w=f h=f p=lg g=lg sv:
+  - rtgl-view d=v w=${w} h=${h} bgc=bg pb=lg:
+      - rtgl-view d=v w=f h=f ph=lg g=lg sv:
           - $for section, sectionIndex in sections:
               - rtgl-view d=v w=f g=xs:
-                  - rtgl-view h=32 w=f av=c ph=xs:
+                  - 'rtgl-view h=32 w=f av=c ph=md bgc=bg z=1 style="position: sticky; top: 0;"':
                       - rtgl-text s=xs c=mu-fg: ${section.label}
                   - $for item, itemIndex in section.items:
                       - 'rtgl-view#mobileSidebarItem${sectionIndex}x${itemIndex} data-item-id=${item.id} w=f h=48 d=h av=c g=sm ph=md br=lg bgc=${item.bgc} h-bgc=mu cur=pointer style="touch-action: manipulation; user-select: none; -webkit-user-select: none; -webkit-touch-callout: none; -webkit-tap-highlight-color: transparent;"':

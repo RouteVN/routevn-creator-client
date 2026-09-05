@@ -61,7 +61,7 @@ propsSchema:
       description: Number of animation frames to wait before rendering the next progressive batch
     mobileLayout:
       type: boolean
-      description: Whether cards should use the touch/mobile full-width layout
+      description: Uses the mobile layout with available zoom and filter actions in the three-dot menu
     scrollBottomPadding:
       type: string
       description: Extra bottom padding inside the scroll container

@@ -1,0 +1,522 @@
+---
+title: Mobile Resource Menus
+description: Verifies compact mobile headers, available Zoom and Filter actions, popover handoff, and the file explorer across all resource view families.
+url: /projects?vt-input-mode=touch
+skipInitialScreenshot: true
+viewport:
+  id: mobile
+  width: 360
+  height: 800
+steps:
+  - action: waitFor
+    selector: "#mobileCreateMenuButton"
+    state: visible
+    timeoutMs: 5000
+  - action: select
+    selector: "#mobileCreateMenuButton"
+    steps:
+      - action: click
+  - action: waitFor
+    selector: "#mobileActionMenu [role='menuitem']:has-text('Create Project')"
+    state: visible
+    timeoutMs: 5000
+  - action: select
+    selector: "#mobileActionMenu [role='menuitem']:has-text('Create Project')"
+    steps:
+      - action: click
+  - action: waitFor
+    selector: rtgl-form#createProjectForm rtgl-input#field0 input
+    state: attached
+    timeoutMs: 5000
+  - action: select
+    selector: rtgl-form#createProjectForm rtgl-input#field0 input
+    steps:
+      - action: clear
+      - action: write
+        value: Project One
+  - action: select
+    selector: rtgl-form#createProjectForm rtgl-input#field1 input
+    steps:
+      - action: clear
+      - action: write
+        value: Covers mobile resource menus.
+  - action: select
+    selector: rtgl-form#createProjectForm rtgl-button[data-action-id=submit]
+    steps:
+      - action: click
+  - action: waitFor
+    selector: "#projectItem0"
+    state: visible
+    timeoutMs: 30000
+  - action: select
+    selector: "#projectItem0"
+    steps:
+      - action: click
+  - action: waitFor
+    selector: rvn-project
+    state: attached
+    timeoutMs: 10000
+  - action: select
+    selector: "#mobileTabItem0"
+    steps:
+      - action: click
+  - action: waitFor
+    selector: rvn-mobile-sidebar [data-item-id='images']
+    state: visible
+    timeoutMs: 10000
+  - action: select
+    selector: rvn-mobile-sidebar [data-item-id='images']
+    steps:
+      - action: click
+  - action: waitFor
+    selector: rvn-images
+    state: attached
+    timeoutMs: 10000
+  - action: waitFor
+    selector: "rvn-images rvn-resource-import-action #menuButton"
+    state: visible
+    timeoutMs: 10000
+  - action: assert
+    type: hidden
+    selector: "rvn-images #tagFilterButton"
+  - action: assert
+    type: hidden
+    selector: "rvn-images #zoomButton"
+  - action: select
+    selector: "rvn-images rvn-resource-import-action #menuButton"
+    steps:
+      - action: click
+  - action: waitFor
+    selector: "rvn-images rvn-resource-import-action #menu[open] [role='menuitem']:has-text('Filter')"
+    state: visible
+    timeoutMs: 10000
+  - action: waitFor
+    selector: "rvn-images rvn-resource-import-action #menu[open] [role='menuitem']:has-text('Import')"
+    state: visible
+    timeoutMs: 10000
+  - action: waitFor
+    selector: "rvn-images rvn-resource-import-action #menu[open] [role='menuitem']:has-text('Zoom')"
+    state: visible
+    timeoutMs: 10000
+  - action: screenshot
+  - action: select
+    selector: "rvn-images rvn-resource-import-action #menu[open] [role='menuitem']:has-text('Zoom')"
+    steps:
+      - action: click
+  - action: waitFor
+    selector: "rvn-images #zoomPopover[open]"
+    state: visible
+    timeoutMs: 10000
+  - action: select
+    selector: "rvn-images #zoomPopover #zoomOut"
+    steps:
+      - action: click
+  - action: select
+    selector: "rvn-images #zoomPopover #zoomIn"
+    steps:
+      - action: click
+  - action: keypress
+    key: Escape
+  - action: waitFor
+    selector: "rvn-images #zoomPopover"
+    state: hidden
+    timeoutMs: 10000
+  - action: select
+    selector: "rvn-images rvn-resource-import-action #menuButton"
+    steps:
+      - action: click
+  - action: waitFor
+    selector: "rvn-images rvn-resource-import-action #menu[open] [role='menuitem']:has-text('Filter')"
+    state: visible
+    timeoutMs: 10000
+  - action: select
+    selector: "rvn-images rvn-resource-import-action #menu[open] [role='menuitem']:has-text('Filter')"
+    steps:
+      - action: click
+  - action: waitFor
+    selector: "rvn-images #tagFilterPopover[open]"
+    state: visible
+    timeoutMs: 10000
+  - action: waitFor
+    selector: "rvn-images #tagFilterPopover #searchInput input"
+    state: visible
+    timeoutMs: 10000
+  - action: select
+    selector: "rvn-images #tagFilterApply"
+    steps:
+      - action: click
+  - action: waitFor
+    selector: "rvn-images #tagFilterPopover"
+    state: hidden
+    timeoutMs: 10000
+  - action: select
+    selector: rvn-images rtgl-button[pre='hamburger']
+    steps:
+      - action: click
+  - action: waitFor
+    selector: "rvn-images #mobileFileExplorerClose"
+    state: visible
+    timeoutMs: 10000
+  - action: select
+    selector: "rvn-images #mobileFileExplorerClose"
+    steps:
+      - action: click
+  - action: select
+    selector: "#mobileTabItem0"
+    steps:
+      - action: click
+  - action: waitFor
+    selector: rvn-mobile-sidebar [data-item-id='colors']
+    state: visible
+    timeoutMs: 10000
+  - action: select
+    selector: rvn-mobile-sidebar [data-item-id='colors']
+    steps:
+      - action: click
+  - action: waitFor
+    selector: rvn-colors
+    state: attached
+    timeoutMs: 10000
+  - action: waitFor
+    selector: "rvn-colors rvn-resource-import-action #menuButton"
+    state: visible
+    timeoutMs: 10000
+  - action: assert
+    type: hidden
+    selector: "rvn-colors #tagFilterButton"
+  - action: assert
+    type: hidden
+    selector: "rvn-colors #zoomButton"
+  - action: select
+    selector: "rvn-colors rvn-resource-import-action #menuButton"
+    steps:
+      - action: click
+  - action: waitFor
+    selector: "rvn-colors rvn-resource-import-action #menu[open] [role='menuitem']:has-text('Filter')"
+    state: visible
+    timeoutMs: 10000
+  - action: waitFor
+    selector: "rvn-colors rvn-resource-import-action #menu[open] [role='menuitem']:has-text('Import')"
+    state: visible
+    timeoutMs: 10000
+  - action: waitFor
+    selector: "rvn-colors rvn-resource-import-action #menu[open] [role='menuitem']:has-text('Zoom')"
+    state: visible
+    timeoutMs: 10000
+  - action: screenshot
+  - action: select
+    selector: "rvn-colors rvn-resource-import-action #menu[open] [role='menuitem']:has-text('Zoom')"
+    steps:
+      - action: click
+  - action: waitFor
+    selector: "rvn-colors #zoomPopover[open]"
+    state: visible
+    timeoutMs: 10000
+  - action: select
+    selector: "rvn-colors #zoomPopover #zoomOut"
+    steps:
+      - action: click
+  - action: select
+    selector: "rvn-colors #zoomPopover #zoomIn"
+    steps:
+      - action: click
+  - action: keypress
+    key: Escape
+  - action: waitFor
+    selector: "rvn-colors #zoomPopover"
+    state: hidden
+    timeoutMs: 10000
+  - action: select
+    selector: "rvn-colors rvn-resource-import-action #menuButton"
+    steps:
+      - action: click
+  - action: waitFor
+    selector: "rvn-colors rvn-resource-import-action #menu[open] [role='menuitem']:has-text('Filter')"
+    state: visible
+    timeoutMs: 10000
+  - action: select
+    selector: "rvn-colors rvn-resource-import-action #menu[open] [role='menuitem']:has-text('Filter')"
+    steps:
+      - action: click
+  - action: waitFor
+    selector: "rvn-colors #tagFilterPopover[open]"
+    state: visible
+    timeoutMs: 10000
+  - action: waitFor
+    selector: "rvn-colors #tagFilterPopover #searchInput input"
+    state: visible
+    timeoutMs: 10000
+  - action: select
+    selector: "rvn-colors #tagFilterApply"
+    steps:
+      - action: click
+  - action: waitFor
+    selector: "rvn-colors #tagFilterPopover"
+    state: hidden
+    timeoutMs: 10000
+  - action: select
+    selector: rvn-colors rtgl-button[pre='hamburger']
+    steps:
+      - action: click
+  - action: waitFor
+    selector: "rvn-colors #mobileFileExplorerClose"
+    state: visible
+    timeoutMs: 10000
+  - action: select
+    selector: "rvn-colors #mobileFileExplorerClose"
+    steps:
+      - action: click
+  - action: select
+    selector: "#mobileTabItem0"
+    steps:
+      - action: click
+  - action: waitFor
+    selector: rvn-mobile-sidebar [data-item-id='characters']
+    state: visible
+    timeoutMs: 10000
+  - action: select
+    selector: rvn-mobile-sidebar [data-item-id='characters']
+    steps:
+      - action: click
+  - action: waitFor
+    selector: rvn-characters
+    state: attached
+    timeoutMs: 10000
+  - action: waitFor
+    selector: "rvn-characters rvn-resource-import-action #menuButton"
+    state: visible
+    timeoutMs: 10000
+  - action: assert
+    type: hidden
+    selector: "rvn-characters #tagFilterButton"
+  - action: assert
+    type: hidden
+    selector: "rvn-characters #zoomButton"
+  - action: select
+    selector: "rvn-characters rvn-resource-import-action #menuButton"
+    steps:
+      - action: click
+  - action: waitFor
+    selector: "rvn-characters rvn-resource-import-action #menu[open] [role='menuitem']:has-text('Filter')"
+    state: visible
+    timeoutMs: 10000
+  - action: waitFor
+    selector: "rvn-characters rvn-resource-import-action #menu[open] [role='menuitem']:has-text('Import')"
+    state: visible
+    timeoutMs: 10000
+  - action: assert
+    type: hidden
+    selector: "rvn-characters rvn-resource-import-action #menu[open] [role='menuitem']:has-text('Zoom')"
+  - action: screenshot
+  - action: select
+    selector: "rvn-characters rvn-resource-import-action #menu[open] [role='menuitem']:has-text('Filter')"
+    steps:
+      - action: click
+  - action: waitFor
+    selector: "rvn-characters #tagFilterPopover[open]"
+    state: visible
+    timeoutMs: 10000
+  - action: waitFor
+    selector: "rvn-characters #tagFilterPopover #searchInput input"
+    state: visible
+    timeoutMs: 10000
+  - action: select
+    selector: "rvn-characters #tagFilterApply"
+    steps:
+      - action: click
+  - action: waitFor
+    selector: "rvn-characters #tagFilterPopover"
+    state: hidden
+    timeoutMs: 10000
+  - action: select
+    selector: rvn-characters rtgl-button[pre='hamburger']
+    steps:
+      - action: click
+  - action: waitFor
+    selector: "rvn-characters #mobileFileExplorerClose"
+    state: visible
+    timeoutMs: 10000
+  - action: select
+    selector: "rvn-characters #mobileFileExplorerClose"
+    steps:
+      - action: click
+  - action: select
+    selector: "#mobileTabItem0"
+    steps:
+      - action: click
+  - action: waitFor
+    selector: rvn-mobile-sidebar [data-item-id='text-styles']
+    state: visible
+    timeoutMs: 10000
+  - action: select
+    selector: rvn-mobile-sidebar [data-item-id='text-styles']
+    steps:
+      - action: click
+  - action: waitFor
+    selector: rvn-text-styles
+    state: attached
+    timeoutMs: 10000
+  - action: waitFor
+    selector: "rvn-text-styles rvn-resource-import-action #menuButton"
+    state: visible
+    timeoutMs: 10000
+  - action: assert
+    type: hidden
+    selector: "rvn-text-styles #tagFilterButton"
+  - action: assert
+    type: hidden
+    selector: "rvn-text-styles #zoomButton"
+  - action: select
+    selector: "rvn-text-styles rvn-resource-import-action #menuButton"
+    steps:
+      - action: click
+  - action: waitFor
+    selector: "rvn-text-styles rvn-resource-import-action #menu[open] [role='menuitem']:has-text('Filter')"
+    state: visible
+    timeoutMs: 10000
+  - action: waitFor
+    selector: "rvn-text-styles rvn-resource-import-action #menu[open] [role='menuitem']:has-text('Import')"
+    state: visible
+    timeoutMs: 10000
+  - action: waitFor
+    selector: "rvn-text-styles rvn-resource-import-action #menu[open] [role='menuitem']:has-text('Zoom')"
+    state: visible
+    timeoutMs: 10000
+  - action: screenshot
+  - action: select
+    selector: "rvn-text-styles rvn-resource-import-action #menu[open] [role='menuitem']:has-text('Zoom')"
+    steps:
+      - action: click
+  - action: waitFor
+    selector: "rvn-text-styles #zoomPopover[open]"
+    state: visible
+    timeoutMs: 10000
+  - action: select
+    selector: "rvn-text-styles #zoomPopover #zoomOut"
+    steps:
+      - action: click
+  - action: select
+    selector: "rvn-text-styles #zoomPopover #zoomIn"
+    steps:
+      - action: click
+  - action: keypress
+    key: Escape
+  - action: waitFor
+    selector: "rvn-text-styles #zoomPopover"
+    state: hidden
+    timeoutMs: 10000
+  - action: select
+    selector: "rvn-text-styles rvn-resource-import-action #menuButton"
+    steps:
+      - action: click
+  - action: waitFor
+    selector: "rvn-text-styles rvn-resource-import-action #menu[open] [role='menuitem']:has-text('Filter')"
+    state: visible
+    timeoutMs: 10000
+  - action: select
+    selector: "rvn-text-styles rvn-resource-import-action #menu[open] [role='menuitem']:has-text('Filter')"
+    steps:
+      - action: click
+  - action: waitFor
+    selector: "rvn-text-styles #tagFilterPopover[open]"
+    state: visible
+    timeoutMs: 10000
+  - action: waitFor
+    selector: "rvn-text-styles #tagFilterPopover #searchInput input"
+    state: visible
+    timeoutMs: 10000
+  - action: select
+    selector: "rvn-text-styles #tagFilterApply"
+    steps:
+      - action: click
+  - action: waitFor
+    selector: "rvn-text-styles #tagFilterPopover"
+    state: hidden
+    timeoutMs: 10000
+  - action: select
+    selector: rvn-text-styles rtgl-button[pre='hamburger']
+    steps:
+      - action: click
+  - action: waitFor
+    selector: "rvn-text-styles #mobileFileExplorerClose"
+    state: visible
+    timeoutMs: 10000
+  - action: select
+    selector: "rvn-text-styles #mobileFileExplorerClose"
+    steps:
+      - action: click
+  - action: select
+    selector: "#mobileTabItem0"
+    steps:
+      - action: click
+  - action: waitFor
+    selector: rvn-mobile-sidebar [data-item-id='variables']
+    state: visible
+    timeoutMs: 10000
+  - action: select
+    selector: rvn-mobile-sidebar [data-item-id='variables']
+    steps:
+      - action: click
+  - action: waitFor
+    selector: rvn-variables
+    state: attached
+    timeoutMs: 10000
+  - action: waitFor
+    selector: "rvn-variables rvn-resource-import-action #menuButton"
+    state: visible
+    timeoutMs: 10000
+  - action: assert
+    type: hidden
+    selector: "rvn-variables #tagFilterButton"
+  - action: assert
+    type: hidden
+    selector: "rvn-variables #zoomButton"
+  - action: select
+    selector: "rvn-variables rvn-resource-import-action #menuButton"
+    steps:
+      - action: click
+  - action: waitFor
+    selector: "rvn-variables rvn-resource-import-action #menu[open] [role='menuitem']:has-text('Filter')"
+    state: visible
+    timeoutMs: 10000
+  - action: waitFor
+    selector: "rvn-variables rvn-resource-import-action #menu[open] [role='menuitem']:has-text('Import')"
+    state: visible
+    timeoutMs: 10000
+  - action: assert
+    type: hidden
+    selector: "rvn-variables rvn-resource-import-action #menu[open] [role='menuitem']:has-text('Zoom')"
+  - action: screenshot
+  - action: select
+    selector: "rvn-variables rvn-resource-import-action #menu[open] [role='menuitem']:has-text('Filter')"
+    steps:
+      - action: click
+  - action: waitFor
+    selector: "rvn-variables #tagFilterPopover[open]"
+    state: visible
+    timeoutMs: 10000
+  - action: waitFor
+    selector: "rvn-variables #tagFilterPopover #searchInput input"
+    state: visible
+    timeoutMs: 10000
+  - action: select
+    selector: "rvn-variables #tagFilterApply"
+    steps:
+      - action: click
+  - action: waitFor
+    selector: "rvn-variables #tagFilterPopover"
+    state: hidden
+    timeoutMs: 10000
+  - action: select
+    selector: rvn-variables rtgl-button[pre='hamburger']
+    steps:
+      - action: click
+  - action: waitFor
+    selector: "rvn-variables #mobileFileExplorerClose"
+    state: visible
+    timeoutMs: 10000
+  - action: select
+    selector: "rvn-variables #mobileFileExplorerClose"
+    steps:
+      - action: click
+---

@@ -480,6 +480,8 @@ webServerPage:
   urlLabel: "URL"
   warningTitle: "警告"
 resourcePages:
+  zoomLabel: "ズーム"
+  filterLabel: "絞り込み"
   actionsLabel: "アクション"
   addTagOption: "タグを追加"
   addTagPlaceholder: "タグを追加"
