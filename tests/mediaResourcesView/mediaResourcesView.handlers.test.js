@@ -342,7 +342,7 @@ describe("mediaResourcesView.handlers", () => {
     );
     vi.stubGlobal("cancelAnimationFrame", vi.fn());
 
-    let renderedItemCount = 0;
+    let renderedItemIds = [];
     let renderSignature = "";
     let frameId;
     const render = vi.fn();
@@ -395,9 +395,9 @@ describe("mediaResourcesView.handlers", () => {
           clearSoundWaveformFrameId: () => {
             frameId = undefined;
           },
-          selectSoundWaveformRenderedItemCount: () => renderedItemCount,
-          setSoundWaveformRenderedItemCount: ({ itemCount }) => {
-            renderedItemCount = itemCount;
+          selectSoundWaveformRenderedItemIds: () => renderedItemIds,
+          setSoundWaveformRenderedItemIds: ({ itemIds }) => {
+            renderedItemIds = itemIds;
           },
           selectSoundWaveformRenderSignature: () => renderSignature,
           setSoundWaveformRenderSignature: ({ signature }) => {
@@ -407,17 +407,22 @@ describe("mediaResourcesView.handlers", () => {
         render,
       });
 
-      expect(renderedItemCount).toBe(0);
+      expect(renderedItemIds).toEqual([]);
       expect(render).not.toHaveBeenCalled();
 
       for (let frameIndex = 0; frameIndex < 7; frameIndex += 1) {
         frameCallbacks.shift()();
-        expect(renderedItemCount).toBe(0);
+        expect(renderedItemIds).toEqual([]);
         expect(render).not.toHaveBeenCalled();
       }
 
       frameCallbacks.shift()();
-      expect(renderedItemCount).toBe(4);
+      expect(renderedItemIds).toEqual([
+        "sound-1",
+        "sound-2",
+        "sound-3",
+        "sound-4",
+      ]);
       expect(render).toHaveBeenCalledTimes(1);
     } finally {
       vi.unstubAllGlobals();

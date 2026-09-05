@@ -91,11 +91,11 @@ steps:
   - action: wait
     ms: 500
   - action: waitFor
-    selector: "#groupview #itemRef0x0[data-item-id]:not([data-item-id=''])"
+    selector: "#groupview [data-resource-view-item='true'][data-item-id]:not([data-item-id=''])"
     state: visible
     timeoutMs: 10000
   - action: select
-    selector: "#groupview #itemRef0x0[data-item-id]:not([data-item-id=''])"
+    selector: "#groupview [data-resource-view-item='true'][data-item-id]:not([data-item-id=''])"
     steps:
       - action: click
   - action: waitFor

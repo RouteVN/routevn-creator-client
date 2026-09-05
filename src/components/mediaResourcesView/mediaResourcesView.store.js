@@ -110,7 +110,7 @@ export const createInitialState = ({ props } = {}) => ({
   ),
   progressiveRenderSignature: "",
   progressiveFrameId: undefined,
-  soundWaveformRenderedItemCount: 0,
+  soundWaveformRenderedItemIds: [],
   soundWaveformRenderSignature: "",
   soundWaveformFrameId: undefined,
   syncRenderFrameId: undefined,
@@ -185,15 +185,15 @@ export const clearProgressiveFrameId = ({ state }) => {
 
 export const selectProgressiveFrameId = ({ state }) => state.progressiveFrameId;
 
-export const setSoundWaveformRenderedItemCount = (
+export const setSoundWaveformRenderedItemIds = (
   { state },
-  { itemCount } = {},
+  { itemIds } = {},
 ) => {
-  state.soundWaveformRenderedItemCount = itemCount ?? 0;
+  state.soundWaveformRenderedItemIds = itemIds ?? [];
 };
 
-export const selectSoundWaveformRenderedItemCount = ({ state }) =>
-  state.soundWaveformRenderedItemCount;
+export const selectSoundWaveformRenderedItemIds = ({ state }) =>
+  state.soundWaveformRenderedItemIds;
 
 export const setSoundWaveformRenderSignature = (
   { state },
@@ -380,14 +380,12 @@ export const selectViewData = ({ state, props, i18n }) => {
   let remainingEagerImageCardCount = lazyImageCards
     ? DEFAULT_EAGER_IMAGE_CARD_COUNT
     : Number.POSITIVE_INFINITY;
-  let remainingSoundWaveformCount = lazySoundWaveforms
-    ? state.soundWaveformRenderedItemCount
-    : Number.POSITIVE_INFINITY;
+  const renderedSoundWaveformIds = new Set(state.soundWaveformRenderedItemIds);
   let remainingProgressiveItemCount = progressiveRenderEnabled
     ? state.progressiveRenderedItemCount
     : Number.POSITIVE_INFINITY;
 
-  const groups = sourceGroups.map((group) => {
+  const groups = sourceGroups.map((group, groupIndex) => {
     const isCollapsed = state.collapsedIds.includes(group.id);
     const children = isCollapsed ? [] : (group.children ?? []);
     const hasVisibleChildren = children.length > 0;
@@ -397,15 +395,22 @@ export const selectViewData = ({ state, props, i18n }) => {
       remainingProgressiveItemCount,
       groupId: group.id,
       placeholderItemCount: children.length,
-      createPlaceholder: ({ item, absoluteIndex, groupId }) => ({
-        id: `${item.id ?? `${groupId}-${absoluteIndex}`}-placeholder`,
-        domItemId: "",
-        sourceItemId: item.id,
-        cardKind: item.cardKind,
-        previewAspectRatio: item.previewAspectRatio,
-        isPlaceholder: true,
-        isInteractive: false,
-      }),
+      createPlaceholder: ({ item, absoluteIndex, groupId }) => {
+        // Keep a hydrated sound's card when it moves beyond the card batch,
+        // without enabling intervening cards or waveforms.
+        if (lazySoundWaveforms && renderedSoundWaveformIds.has(item.id)) {
+          return item;
+        }
+        return {
+          id: `${item.id ?? `${groupId}-${absoluteIndex}`}-placeholder`,
+          domItemId: "",
+          sourceItemId: item.id,
+          cardKind: item.cardKind,
+          previewAspectRatio: item.previewAspectRatio,
+          isPlaceholder: true,
+          isInteractive: false,
+        };
+      },
     });
 
     remainingProgressiveItemCount =
@@ -419,7 +424,7 @@ export const selectViewData = ({ state, props, i18n }) => {
       showEmptyUpload: !hasVisibleChildren && !hasChildFolders,
       headerBackgroundColor: group.id === props.selectedFolderId ? "mu" : "bg",
       progressiveContentMinHeight: 0,
-      children: progressiveChildren.children.map((item) => {
+      children: progressiveChildren.children.map((item, itemIndex) => {
         const isSelected = item.id === props.selectedItemId;
         const defaultBorderColor = resolveDefaultBorderColor();
         const isInteractive = item.isInteractive !== false;
@@ -430,21 +435,13 @@ export const selectViewData = ({ state, props, i18n }) => {
         const hasSoundWaveform =
           item.cardKind === "sound" && Boolean(item.waveformDataFileId);
         const shouldRenderWaveform =
-          hasSoundWaveform && remainingSoundWaveformCount > 0;
+          hasSoundWaveform &&
+          (!lazySoundWaveforms || renderedSoundWaveformIds.has(item.id));
 
         if (canRenderImagePreview) {
           remainingEagerImageCardCount = Math.max(
             0,
             remainingEagerImageCardCount - 1,
-          );
-        }
-        if (
-          hasSoundWaveform &&
-          remainingSoundWaveformCount !== Number.POSITIVE_INFINITY
-        ) {
-          remainingSoundWaveformCount = Math.max(
-            0,
-            remainingSoundWaveformCount - 1,
           );
         }
         const useFullWidthCard =
@@ -470,6 +467,14 @@ export const selectViewData = ({ state, props, i18n }) => {
 
         return {
           ...item,
+          // FE uses element IDs as DOM keys. Keep sound canvases tied to their
+          // resource rather than their changing position in the list.
+          refKey:
+            item.cardKind === "sound"
+              ? Array.from(item.id, (character) =>
+                  character.codePointAt(0).toString(16),
+                ).join("x")
+              : `${groupIndex}x${itemIndex}`,
           domItemId: isInteractive ? item.id : "",
           cursor: isInteractive ? "pointer" : "default",
           itemContainerStyle: useFullWidthCard

@@ -273,14 +273,6 @@ const getSoundWaveformItemIds = (groups = []) => {
   return itemIds;
 };
 
-const getSoundWaveformRenderSignature = (groups = []) => {
-  return JSON.stringify(getSoundWaveformItemIds(groups));
-};
-
-const countSoundWaveformItems = (groups = []) => {
-  return getSoundWaveformItemIds(groups).length;
-};
-
 const cancelProgressiveRenderFrame = (store) => {
   const frameId = store.selectProgressiveFrameId();
   if (frameId === undefined) {
@@ -296,8 +288,8 @@ const canManageSoundWaveformHydration = (store) => {
     typeof store.selectSoundWaveformFrameId === "function" &&
     typeof store.clearSoundWaveformFrameId === "function" &&
     typeof store.setSoundWaveformFrameId === "function" &&
-    typeof store.selectSoundWaveformRenderedItemCount === "function" &&
-    typeof store.setSoundWaveformRenderedItemCount === "function" &&
+    typeof store.selectSoundWaveformRenderedItemIds === "function" &&
+    typeof store.setSoundWaveformRenderedItemIds === "function" &&
     typeof store.selectSoundWaveformRenderSignature === "function" &&
     typeof store.setSoundWaveformRenderSignature === "function"
   );
@@ -414,33 +406,34 @@ const scheduleSoundWaveformHydration = (deps) => {
     return;
   }
 
-  const totalItemCount = countSoundWaveformItems(props.groups);
-  if (store.selectSoundWaveformRenderedItemCount() >= totalItemCount) {
+  const itemIds = getSoundWaveformItemIds(props.groups);
+  const renderedIds = new Set(store.selectSoundWaveformRenderedItemIds());
+  if (itemIds.every((id) => renderedIds.has(id))) {
     return;
   }
 
   const hydrateNextBatch = () => {
     store.clearSoundWaveformFrameId();
 
-    const nextTotalItemCount = countSoundWaveformItems(deps.props.groups);
-    const nextRenderedItemCount = Math.min(
-      nextTotalItemCount,
-      store.selectSoundWaveformRenderedItemCount() +
-        SOUND_WAVEFORM_BATCH_ITEM_COUNT,
-    );
+    const nextItemIds = getSoundWaveformItemIds(deps.props.groups);
+    const nextRenderedIds = new Set(store.selectSoundWaveformRenderedItemIds());
+    const pendingIds = nextItemIds.filter((id) => !nextRenderedIds.has(id));
+    pendingIds
+      .slice(0, SOUND_WAVEFORM_BATCH_ITEM_COUNT)
+      .forEach((id) => nextRenderedIds.add(id));
 
-    store.setSoundWaveformRenderedItemCount({
-      itemCount: nextRenderedItemCount,
+    store.setSoundWaveformRenderedItemIds({
+      itemIds: nextItemIds.filter((id) => nextRenderedIds.has(id)),
     });
     render();
 
-    if (nextRenderedItemCount < nextTotalItemCount) {
+    if (pendingIds.length > SOUND_WAVEFORM_BATCH_ITEM_COUNT) {
       scheduleSoundWaveformHydration(deps);
     }
   };
 
   if (typeof globalThis.requestAnimationFrame !== "function") {
-    store.setSoundWaveformRenderedItemCount({ itemCount: totalItemCount });
+    store.setSoundWaveformRenderedItemIds({ itemIds });
     render();
     return;
   }
@@ -491,7 +484,7 @@ const syncProgressiveRenderState = (deps) => {
   const nextRenderedItemCount = currentSignature
     ? Math.min(
         totalItemCount,
-        Math.max(currentRenderedItemCount, progressiveInitialItemCount),
+        Math.max(progressiveInitialItemCount, currentRenderedItemCount),
       )
     : Math.min(totalItemCount, progressiveInitialItemCount);
   store.setProgressiveRenderedItemCount({
@@ -512,35 +505,36 @@ const syncSoundWaveformHydrationState = (deps) => {
   }
 
   const groups = props.groups ?? [];
-  const totalItemCount = countSoundWaveformItems(groups);
+  const itemIds = getSoundWaveformItemIds(groups);
+  const nextSignature = JSON.stringify(itemIds);
+  const currentSignature = store.selectSoundWaveformRenderSignature();
   const lazySoundWaveformsEnabled = isLazySoundWaveformsEnabled(props);
 
   if (!lazySoundWaveformsEnabled) {
     const didChange =
-      store.selectSoundWaveformRenderSignature() !== "" ||
-      store.selectSoundWaveformRenderedItemCount() !== totalItemCount;
+      currentSignature !== "" ||
+      JSON.stringify(store.selectSoundWaveformRenderedItemIds()) !==
+        nextSignature;
     cancelSoundWaveformRenderFrame(store);
     store.setSoundWaveformRenderSignature({ signature: "" });
-    store.setSoundWaveformRenderedItemCount({ itemCount: totalItemCount });
+    store.setSoundWaveformRenderedItemIds({ itemIds });
     return didChange;
   }
 
-  const nextSignature = getSoundWaveformRenderSignature(groups);
-  const currentSignature = store.selectSoundWaveformRenderSignature();
-
   if (nextSignature === currentSignature) {
-    if (store.selectSoundWaveformRenderedItemCount() < totalItemCount) {
-      scheduleSoundWaveformHydration(deps);
-    }
+    scheduleSoundWaveformHydration(deps);
     return false;
   }
 
-  cancelSoundWaveformRenderFrame(store);
+  const renderedIds = new Set(store.selectSoundWaveformRenderedItemIds());
+  const retainedIds = itemIds.filter((id) => renderedIds.has(id));
   store.setSoundWaveformRenderSignature({ signature: nextSignature });
-  store.setSoundWaveformRenderedItemCount({ itemCount: 0 });
+  store.setSoundWaveformRenderedItemIds({ itemIds: retainedIds });
 
-  if (totalItemCount > 0) {
+  if (retainedIds.length < itemIds.length) {
     scheduleSoundWaveformHydration(deps);
+  } else {
+    cancelSoundWaveformRenderFrame(store);
   }
 
   return true;

@@ -50,23 +50,39 @@ export const handleBeforeMount = (deps) => {
   return () => {
     cancelAnimationFrame(animationFrameId);
     resizeObserver?.disconnect();
+    // Keyed DOM moves disconnect this instance briefly. Keep completed data
+    // and its canvas, but prevent an unfinished request from rendering later.
+    store.cancelWaveformLoad();
   };
 };
 
-export const handleAfterMount = async (deps) => {
-  const { props: attrs, refs, store, render, projectService } = deps;
+const loadWaveform = async (deps, fileId) => {
+  const { refs, store, render, projectService } = deps;
+  const { loadedFileId, loadingFileId } = store.selectWaveformLoad();
 
-  if (!attrs.waveformDataFileId) {
+  if (!fileId) {
+    if (loadedFileId || loadingFileId) {
+      store.resetWaveform();
+      render();
+    }
     return;
   }
 
-  try {
-    const waveformData = await projectService.downloadMetadata(
-      attrs.waveformDataFileId,
-    );
+  if (fileId === loadedFileId || fileId === loadingFileId) {
+    return;
+  }
 
-    store.setWaveformData({ data: waveformData });
-    store.setLoading({ isLoading: false });
+  store.startWaveformLoad({ fileId });
+  const { version } = store.selectWaveformLoad();
+  render();
+
+  try {
+    const waveformData = await projectService.downloadMetadata(fileId);
+    if (store.selectWaveformLoad().version !== version) {
+      return;
+    }
+
+    store.finishWaveformLoad({ fileId, data: waveformData });
     render();
     const { width, height } = store.selectRenderedSize();
     renderWaveformCanvas({
@@ -76,38 +92,22 @@ export const handleAfterMount = async (deps) => {
       height,
     });
   } catch {
-    store.setLoading({ isLoading: false });
+    if (store.selectWaveformLoad().version !== version) {
+      return;
+    }
+    store.finishWaveformLoad({ fileId, data: undefined });
     render();
   }
 };
 
-export const handleOnUpdate = async (deps, payload) => {
-  const { refs, store, render, projectService } = deps;
-  const { newProps: attrs } = payload;
+export const handleAfterMount = (deps) => {
+  return loadWaveform(deps, deps.props.waveformDataFileId);
+};
 
-  if (!attrs?.waveformDataFileId) {
-    return;
-  }
-
-  store.setLoading({ isLoading: true });
-
-  try {
-    const waveformData = await projectService.downloadMetadata(
-      attrs.waveformDataFileId,
-    );
-
-    store.setWaveformData({ data: waveformData });
-    store.setLoading({ isLoading: false });
-    render();
-    const { width, height } = store.selectRenderedSize();
-    renderWaveformCanvas({
-      canvas: refs.waveformCanvas,
-      waveformData,
-      width,
-      height,
-    });
-  } catch {
-    store.setLoading({ isLoading: false });
+export const handleOnUpdate = (deps, { oldProps, newProps }) => {
+  const { render } = deps;
+  if (oldProps.w !== newProps.w || oldProps.h !== newProps.h) {
     render();
   }
+  return loadWaveform(deps, newProps.waveformDataFileId);
 };
