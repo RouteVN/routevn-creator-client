@@ -524,7 +524,7 @@ describe("commandLineBgm.store", () => {
     expect(selectSelectedSoundId({ state })).toBeUndefined();
   });
 
-  it("migrates legacy single-sound BGM without losing its start delay", () => {
+  it("opens legacy single-sound BGM with resource identity and its start delay", () => {
     const state = createInitialState();
     setRepositoryState({ state }, { sounds });
     setBgm(
@@ -545,7 +545,7 @@ describe("commandLineBgm.store", () => {
       volume: 50,
       sounds: [
         {
-          id: "default",
+          id: "theme",
           resourceId: "theme",
           loop: false,
           volume: 100,
@@ -558,6 +558,43 @@ describe("commandLineBgm.store", () => {
       leftPercent: "4.0000",
       widthPercent: "96.0000",
     });
+  });
+
+  it("matches legacy edit identity to a new insertion without mutating the input", () => {
+    const legacy = Object.freeze({
+      resourceId: "theme",
+      loop: true,
+      volume: 80,
+    });
+    const edited = createInitialState();
+    setBgm({ state: edited }, { bgm: legacy });
+    edited.bgm.volume = 35;
+    setBgm({ state: edited }, { bgm: selectBgm({ state: edited }) });
+
+    const inserted = createInitialState();
+    insertSound({ state: inserted }, { resourceId: "theme" });
+
+    expect(selectBgm({ state: edited }).sounds[0].id).toBe(
+      selectBgm({ state: inserted }).sounds[0].id,
+    );
+    expect(selectBgm({ state: edited }).volume).toBe(35);
+    expect(legacy).toEqual({ resourceId: "theme", loop: true, volume: 80 });
+    expect(legacy).not.toHaveProperty("sounds");
+  });
+
+  it.each(["default", "old-random-id", "theme-2"])(
+    "does not reinterpret an explicit canonical ID: %s",
+    (id) => {
+      const state = createInitialState();
+      setBgm({ state }, { bgm: { sounds: [{ id, resourceId: "theme" }] } });
+      expect(selectBgm({ state }).sounds[0].id).toBe(id);
+    },
+  );
+
+  it("keeps raw resource IDs so the engine can escape them exactly once", () => {
+    const state = createInitialState();
+    setBgm({ state }, { bgm: { resourceId: "theme:mix%" } });
+    expect(selectBgm({ state }).sounds[0].id).toBe("theme:mix%");
   });
 
   it("positions canonical clips by their preserved absolute start delays", () => {
