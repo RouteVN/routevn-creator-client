@@ -57,6 +57,24 @@ Notes:
 - The `scripts/test-*.js` files remain the home for non-Puty runtime,
   integration, convergence, and command-contract coverage.
 
+## Dependency Changes
+
+Patching dependencies in this repository is strictly prohibited.
+
+- Do not use `bun patch`, `patchedDependencies`, `patch-package`, package-manager
+  patch files, install hooks that rewrite dependencies, or equivalent overrides.
+- Do not modify dependency source or generated bundles in `node_modules`, vendor
+  modified dependency code, or replace cached dependency assets with edited builds
+  to work around an upstream bug.
+- Fix dependency bugs in the owning repository and open a PR there. For Rettangoli,
+  use `../rettangoli` and follow that repository's instructions.
+- Consume the fix through a normal published dependency version after upstream
+  release. Until then, link the upstream PR and state that the client upgrade is
+  pending; do not hide the missing release with a local patch.
+- The existing local `file:` dependency workflow is for development and validation
+  against the upstream checkout only, not a substitute for a published client
+  dependency.
+
 ## Architecture
 
 This project uses a custom frontend framework based on 3 component files: view, store, handlers:

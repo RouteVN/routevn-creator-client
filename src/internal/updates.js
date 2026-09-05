@@ -11,5 +11,9 @@ export const resolveUpdatesEnabled = ({
     return false;
   }
 
+  if (updaterService?.isSupported) {
+    return updaterService.isSupported();
+  }
+
   return Boolean(updaterService);
 };

@@ -15,6 +15,10 @@ val hasReleaseSigningConfig =
         !releaseKeyAlias.isNullOrBlank()
 val repoRoot = rootProject.projectDir.resolve("../..").canonicalFile
 val androidNdkVersion = "29.0.14206865"
+val routevnDistribution = providers.gradleProperty("routevnDistribution").orElse("direct").get()
+require(routevnDistribution in setOf("direct", "google-play")) {
+    "routevnDistribution must be direct or google-play"
+}
 
 val buildAndroidRust by tasks.registering(Exec::class) {
     workingDir = repoRoot
@@ -34,6 +38,7 @@ android {
         targetSdk = 37
         versionCode = 4
         versionName = "1.12.3"
+        buildConfigField("boolean", "GOOGLE_PLAY_UPDATES", (routevnDistribution == "google-play").toString())
         manifestPlaceholders["usesCleartextTraffic"] = "false"
     }
 
@@ -50,6 +55,7 @@ android {
 
     buildTypes {
         debug {
+            buildConfigField("boolean", "GOOGLE_PLAY_UPDATES", "true")
             manifestPlaceholders["usesCleartextTraffic"] = "true"
         }
 
@@ -85,6 +91,7 @@ tasks.matching {
 }
 
 dependencies {
-    implementation("androidx.core:core-splashscreen:1.0.1")
+    implementation("com.google.android.play:app-update:2.1.0")
+    implementation("androidx.core:core-splashscreen:1.2.0")
     implementation("androidx.webkit:webkit:1.16.0")
 }

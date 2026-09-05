@@ -172,15 +172,15 @@ export const createUserConfigService = ({
       .then(async () => {
         await db.set(USER_CONFIG_DB_KEY, snapshot);
         didReportPersistError = false;
-      })
-      .catch((error) => {
-        if (!didReportPersistError) {
-          didReportPersistError = true;
-          onPersistError?.(error);
-        }
       });
 
-    persistChain = nextPersist;
+    // Handle autosave errors, but let explicit flushes observe a failed write.
+    persistChain = nextPersist.catch((error) => {
+      if (!didReportPersistError) {
+        didReportPersistError = true;
+        onPersistError?.(error);
+      }
+    });
     return nextPersist;
   };
 

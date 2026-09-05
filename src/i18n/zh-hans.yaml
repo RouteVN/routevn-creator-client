@@ -192,6 +192,12 @@ projectPage:
   warningTitle: "警告"
   wordsLabel: "词数"
 appPage:
+  googlePlayUpdateAvailable: "Google Play 上已有新版 RouteVN Creator。"
+  googlePlayUpdateFailed: "无法通过 Google Play 更新。请重试。"
+  googlePlayUpdateInProgress: "Google Play 正在下载更新。您可以继续创作。"
+  googlePlayUpdateReady: "更新已准备好。是否重启 RouteVN Creator 并安装？"
+  googlePlayUpdatesUnavailable: "当前安装的应用无法通过 Google Play 更新。"
+  restartToUpdateButton: "重启并更新"
   assetsTab: "素材"
   buildingProjectState: "正在构建项目状态..."
   discordPresenceMakingVisualNovel: "正在制作视觉小说"

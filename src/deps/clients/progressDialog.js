@@ -51,7 +51,6 @@ export const createProgressDialog = (
   const content = createRtglElement(root, "rtgl-view", {
     slot: "content",
     g: "lg",
-    p: "lg",
   });
   const header = createRtglElement(root, "rtgl-view", { g: "sm", w: "f" });
   const titleText = createRtglElement(root, "rtgl-text", { s: "lg" }, title);

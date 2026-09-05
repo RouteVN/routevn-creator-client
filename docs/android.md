@@ -20,7 +20,9 @@ Gradle pins.
 - `minSdk`: `24`
 - Build tools: `37.0.0`
 - NDK: `29.0.14206865`
+- AndroidX Core Splashscreen: `1.2.0`
 - AndroidX WebKit: `1.16.0`
+- Google Play In-App Updates: `2.1.0`
 
 ## Local Setup
 
@@ -83,6 +85,16 @@ https://appassets.androidplatform.net/web/index.html
 ```
 
 This gives the local bundle an HTTPS origin while serving packaged app files.
+
+### Startup Splash
+
+The native shell uses AndroidX Core Splashscreen with the default exit behavior.
+The splash is dismissed as soon as the frontend sends `markSplashReady` and the
+system bar insets have been applied. There is no minimum display duration.
+
+A single five-second fallback is scheduled at activity creation so a missing
+readiness signal does not hold the splash indefinitely. Dismissing the splash
+or destroying the activity cancels the fallback.
 
 ## Build And Install
 
@@ -163,6 +175,63 @@ Build a release app bundle to validate packaged web assets:
 ```bash
 bun run android:bundle
 ```
+
+### Google Play Updates
+
+`android:bundle` sets `-ProutevnDistribution=google-play`. Other Gradle builds
+default to `direct`; direct release builds do not enable the Play updater. To build a
+Play APK explicitly, use `./gradlew :app:assembleRelease -ProutevnDistribution=google-play`.
+Keep increasing Android `versionCode` for each published release.
+
+The native adapter requires an enabled Play Store. Release builds additionally
+require the app's installing package to be `com.android.vending`; other release
+distributions continue working with update controls hidden. An unavailable Play
+API or an unowned app disables checking for the session in release builds.
+
+Debug builds enable the Play updater even when installed through USB. About keeps
+**Check for Updates** available after Play reports an unavailable API or an unowned
+app, so developers can retry. Checks still use the real Play API and its eligibility
+rules. Unavailable updates and network/check failures remain silent for automatic
+checks and show feedback for manual checks.
+
+Android and direct desktop builds share `automaticUpdateChecks.js`: check at
+startup, then poll every ten minutes and check again once more than two hours
+have elapsed. About exposes **Check for Updates** when the adapter supports it.
+Android skips background checks without advancing the last-check timestamp.
+
+Android uses Google's flexible update flow. Downloading allows continued editing;
+the downloaded update asks the user to restart. Restart first runs the existing
+pre-navigation save hooks and flushes user settings. Save failures prevent the
+restart. Update requests are asynchronous and do not block the native storage
+executor. A native install listener and resume check recover completed downloads.
+
+Validate actual Play delivery using
+[internal app sharing](https://developer.android.com/guide/playcore/in-app-updates/test):
+
+1. The Play Console account owner must accept the Internal App Sharing terms.
+2. Enable Internal App Sharing in the phone's Play Store settings. Tap the Play
+   Store version seven times under About to expose its developer options.
+3. Upload and install a lower-version-code Play build from its sharing link. It
+   must already contain the updater. Export local projects before uninstalling a
+   development build with a different signing certificate.
+4. Upload a higher-version-code build to Internal App Sharing. Open its sharing
+   link on the phone, but do not install it from the Play Store page.
+5. Return to RouteVN and use About's Check for Updates action. Accept the download,
+   then accept Restart and Update when it is ready.
+
+Both builds need matching application IDs/signing certificates, and the tester's
+Google account must have downloaded the app from Play at least once. The Android
+`versionCode` determines update eligibility; About currently displays the shared
+app version, which can stay unchanged when only native test versions are changed.
+A locally sideloaded debug APK can exercise checks and unavailable-install
+feedback. Use the Play installation steps above to validate actual update delivery.
+
+Run `bunx vitest run tests/android/updater.test.js tests/appService/mobileUpdateSetup.test.js`
+for update-flow and save-before-restart coverage. Shared alert/confirm spacing is
+owned and visually tested by Rettangoli; the client must consume its fix through
+a published dependency version, as required by the
+[dependency ownership rules](engineering.md#dependency-ownership). The app-owned
+progress dialog uses the dialog primitive's single layer of padding.
 
 ## Release Signing
 

@@ -192,6 +192,12 @@ projectPage:
   warningTitle: "警告"
   wordsLabel: "単語数"
 appPage:
+  googlePlayUpdateAvailable: "Google Play で RouteVN Creator の新しいバージョンを利用できます。"
+  googlePlayUpdateFailed: "Google Play でアップデートできませんでした。もう一度お試しください。"
+  googlePlayUpdateInProgress: "Google Play でアップデートをダウンロードしています。このまま作業を続けられます。"
+  googlePlayUpdateReady: "アップデートの準備ができました。RouteVN Creator を再起動してインストールしますか？"
+  googlePlayUpdatesUnavailable: "このアプリでは Google Play のアップデートを利用できません。"
+  restartToUpdateButton: "再起動してアップデート"
   assetsTab: "素材"
   buildingProjectState: "プロジェクト状態を構築しています..."
   discordPresenceMakingVisualNovel: "ノベルゲームを制作中"

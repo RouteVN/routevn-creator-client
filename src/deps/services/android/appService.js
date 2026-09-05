@@ -5,7 +5,6 @@ import { generateId } from "../../../internal/id.js";
 import { copyTextToClipboard } from "../../../internal/copyText.js";
 import { createNativeApplicationIdentifier } from "../../../internal/nativeApplicationIdentifier.js";
 import { normalizeProjectLanguage } from "../../../internal/projectLanguage.js";
-import { createProgressDialog } from "../../clients/progressDialog.js";
 
 const normalizeFolderSelection = (selection) => {
   if (typeof selection === "string") {
@@ -53,6 +52,7 @@ const toAndroidProjectEntry = ({ project, existingEntry } = {}) => {
 
 export const createAppService = (params) => {
   const appDb = params.db;
+  const { globalUI } = params;
 
   const syncAndroidProjectEntriesFromStorage = async () => {
     const discoveredProjects = await listAndroidProjectFolders();
@@ -270,7 +270,7 @@ export const createAppService = (params) => {
     ...appService,
 
     showProgressDialog(options) {
-      return createProgressDialog(options);
+      return globalUI.showProgressDialog(options);
     },
 
     async loadAllProjects() {

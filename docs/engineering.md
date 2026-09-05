@@ -33,6 +33,20 @@ Local-first collaboration:
 
 - `insieme`
 
+## Dependency Ownership
+
+Dependency patches in this repository are strictly prohibited. This includes
+`bun patch`, `patchedDependencies`, `patch-package`, install-time rewrites,
+vendored modifications, and edits to dependency source or generated bundles in
+`node_modules` or cached static assets.
+
+Fix shared-library bugs in the owning upstream repository, open a PR there, and
+consume the fix through a published package version. Rettangoli changes belong in
+`../rettangoli`. Local `file:` dependencies may be used for development and
+validation against that checkout; they must not replace the published dependency
+in a client PR. If the upstream fix is not released yet, link its PR and make the
+pending version upgrade explicit rather than introducing a dependency patch.
+
 ## Localization
 
 Frontend locale catalogs live in `src/i18n/*.yaml`. Keep every locale aligned
@@ -543,6 +557,33 @@ preference uses `release.assetPackageEnabled` inside the global app KV
 `userConfig` value, not a project record. It defaults to disabled when absent.
 Both Release menus read it when mounted; disabled direct links go to Config.
 Disabling the page hides its authoring UI without deleting project asset packages.
+
+Update availability is a platform capability. Direct desktop and Google Play
+Android adapters share the automatic update schedule in
+`src/deps/clients/automaticUpdateChecks.js`. Android's Play adapter lives in
+`src/deps/clients/android/updater.js`, with native Play operations in
+`GooglePlayUpdater.java`. Play update requests must not block the native storage
+executor. Direct Android release builds and release installations outside Play do
+not enable this adapter. Debug builds enable real Play checks with an enabled Play
+Store even when installed through USB; an unavailable/unowned response must retain
+the manual check capability for retry. About uses the capability instead of a
+desktop-only platform check.
+iOS supplies no updater and keeps update controls hidden. Before completing an
+Android update, drain mounted editors through `registerBeforeNavigation` and
+await `flushUserConfig()`. Layout/Control Editor registers its persistence drain
+with this hook. Explicit settings flushes reject database write failures;
+background autosaves report them without an unhandled rejection. A failed editor
+or settings save must abort installation and retain pending changes for retry.
+Android update prompts must also preserve unsubmitted input in global dialogs.
+The app-owned `src/deps/clients/globalUI.js` adapter tracks dialog and dropdown
+promises through the published UI API. Update confirmations and alerts run only
+after that surface is idle, allowing result handlers to open follow-up dialogs
+first and rechecking foreground visibility before showing a prompt.
+Android `showProgressDialog()` uses the same adapter: each creation/import/export
+operation blocks updates until its own controller is closed, even if another
+progress dialog replaces its DOM. Recheck this barrier after saving and before
+native restart. The updater's own installation indicator is excluded so it
+cannot wait on itself.
 
 #### `projectService`
 
