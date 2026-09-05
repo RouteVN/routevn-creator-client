@@ -1,7 +1,7 @@
 /**
  * Audio Service - handles audio playback using Web Audio API
  */
-export const createAudioService = () => {
+export const createAudioService = ({ createAudioContext } = {}) => {
   // Audio context and nodes
   let audioContext = null;
   let sourceNode = null;
@@ -113,7 +113,9 @@ export const createAudioService = () => {
 
       const AudioContextClass =
         window.AudioContext || window.webkitAudioContext;
-      audioContext = new AudioContextClass();
+      audioContext = createAudioContext
+        ? createAudioContext()
+        : new AudioContextClass();
 
       gainNode = audioContext.createGain();
       gainNode.connect(audioContext.destination);

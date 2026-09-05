@@ -1,8 +1,10 @@
 import { createGlobalUI } from "@rettangoli/ui";
+import { configureAudioRuntime } from "route-graphics";
 
 import { createDb } from "./deps/clients/android/db.js";
 import { callAndroidBridge } from "./deps/clients/android/bridge.js";
 import { createAndroidFilePicker } from "./deps/clients/android/filePicker.js";
+import { createAndroidAudioRuntime } from "./deps/clients/android/audioRuntime.js";
 import AndroidRouter from "./deps/clients/android/router.js";
 import { createBrowserEventsClient } from "./deps/clients/browserEvents.js";
 
@@ -20,6 +22,9 @@ import { setAndroidDebugBuild } from "./internal/navigationTiming.js";
 import tauriConfig from "../src-tauri/tauri.conf.json";
 
 registerPrimitives();
+
+const androidAudioRuntime = createAndroidAudioRuntime();
+configureAudioRuntime(androidAudioRuntime.graphicsRuntime);
 
 let isAndroidDebugBuild = false;
 try {
@@ -49,7 +54,9 @@ const router = new AndroidRouter({ initialPath: "/projects" });
 const filePicker = createAndroidFilePicker();
 const globalUIElement = document.querySelector("rtgl-global-ui");
 const globalUI = createGlobalUI(globalUIElement);
-const audioService = createAudioService();
+const audioService = createAudioService({
+  createAudioContext: androidAudioRuntime.createAudioContext,
+});
 const browserEventsClient = createBrowserEventsClient();
 
 const appVersion = tauriConfig.version;
