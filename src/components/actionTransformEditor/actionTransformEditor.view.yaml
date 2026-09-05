@@ -19,8 +19,8 @@ template:
           - rtgl-button#doneButton v=pr: ${doneButton}
       - $if isTouchMode:
           - 'rtgl-view w=f h=1fg d=v style="min-width: 0; min-height: 0;"':
-              - 'rtgl-view w=f p=md bgc=bg ah=c style="flex: 0 0 auto; min-width: 0;"':
-                  - 'div style="position: relative; width: ${canvasMaxWidth}; max-width: 100%; margin-left: auto; margin-right: auto; overflow: hidden;"':
+              - 'rtgl-view#actionTransformCanvasBackground w=f p=md bgc=bg ah=c style="flex: 0 0 auto; min-width: 0; background-image: radial-gradient(circle, var(--input) 1px, transparent 1px); background-size: 24px 24px;"':
+                  - 'rtgl-view#actionTransformCanvasFrame bwl=xs bwr=xs bc=bo style="position: relative; width: ${canvasMaxWidth}; max-width: 100%; margin-left: auto; margin-right: auto; overflow: hidden;"':
                       - 'rvn-scene-editor-preview-canvas#actionTransformCanvasHost style="display: block; width: 100%;" canvas-aspect-ratio="${canvasAspectRatio}"': null
               - 'rtgl-view w=f h=1fg sv pv=md style="min-height: 0;"':
                   - rvn-layout-edit-panel#transformInspector mode=transform :projectResolution=${projectResolution} :selectedElementMetrics=${selectedElementMetrics} :values=${inspectorValues}: null
@@ -33,8 +33,8 @@ template:
                       - 'rtgl-view w=f p=md g=xs bw=xs bc=bo br=md bgc=mu style="box-sizing: border-box;"':
                           - rtgl-text s=xs c=mu-fg: ${targetTypeLabel}
                           - rtgl-text s=sm w=f ellipsis=true: ${targetName}
-              - 'rtgl-view w=1fg h=f bgc=bg av=s ah=c style="min-width: 0; min-height: 0; overflow: auto; box-sizing: border-box;"':
-                  - 'div style="position: relative; width: ${canvasMaxWidth}; max-width: 100%; margin-left: auto; margin-right: auto; overflow: hidden;"':
+              - 'rtgl-view#actionTransformCanvasBackground w=1fg h=f bgc=bg av=s ah=c style="min-width: 0; min-height: 0; overflow: auto; box-sizing: border-box; background-image: radial-gradient(circle, var(--input) 1px, transparent 1px); background-size: 24px 24px;"':
+                  - 'rtgl-view#actionTransformCanvasFrame bwl=xs bwr=xs bc=bo style="position: relative; width: ${canvasMaxWidth}; max-width: 100%; margin-left: auto; margin-right: auto; overflow: hidden;"':
                       - 'rvn-scene-editor-preview-canvas#actionTransformCanvasHost style="display: block; width: 100%;" canvas-aspect-ratio="${canvasAspectRatio}"': null
               - rvn-resizable-panel panel-type=transform-editor w=300 min-w=240 max-w=500 resize-side=left:
                   - 'rtgl-view slot=content w=f h=f d=v style="min-width: 0; min-height: 0;"':
