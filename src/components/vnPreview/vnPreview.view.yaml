@@ -14,6 +14,8 @@ refs:
           width: ${_event.target.innerWidth}
           height: ${_event.target.innerHeight}
 styles:
+  "#previewSurface:focus-visible":
+    --focus-ring-box-shadow: none
   "#canvas > canvas":
     transform: none
     transform-origin: center
@@ -23,7 +25,7 @@ template:
   - 'rtgl-view#previewSurface pos=fix edge=f tabindex=-1 style="display: flex; justify-content: center; align-items: center; overflow: hidden; background: black; outline: none; min-width: 0; min-height: 0;" z=3500 data-preview-ready=${isPreviewReady}':
       - 'rtgl-view style="${previewStageStyle}"':
           - 'div#canvas data-preview-rotated=${isRotated} style="${previewCanvasHostStyle}"': null
-          - 'rtgl-view bwb=xs style="${previewFrameStyle}"': null
+          - 'rtgl-view style="${previewFrameStyle}"': null
           - $if isAssetLoading:
               - rtgl-view pos=abs edge=f w=f h=f bgc=bg op=0.6 av=c ah=c z=2:
                   - rtgl-text s=h3: Loading preview...
