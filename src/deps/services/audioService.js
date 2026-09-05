@@ -155,6 +155,8 @@ export const createAudioService = () => {
         return undefined;
       }
 
+      // Replacement players can mount before the previous owner releases.
+      service.stop();
       service.init();
       const context = audioContext;
       const requestId = ++loadRequestId;

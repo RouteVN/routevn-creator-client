@@ -420,10 +420,22 @@ export const handleOpenButtonClick = async (deps) => {
       return;
     }
 
-    const importedProject = await appService.openExistingProject(selectedPath);
-    const projects = await appService.loadAllProjects();
-    store.setProjects({ projects });
-    render();
+    const progressDialog = appService.showProgressDialog({
+      title: copy.importingProjectTitle,
+      message: copy.importingProjectMessage,
+      progress: {},
+    });
+
+    let importedProject;
+    try {
+      await progressDialog.waitForPaint();
+      importedProject = await appService.openExistingProject(selectedPath);
+      const projects = await appService.loadAllProjects();
+      store.setProjects({ projects });
+      render();
+    } finally {
+      progressDialog.close();
+    }
 
     appService.showToast({
       message: formatProjectsPageCopy(copy.importedProjectMessage, {

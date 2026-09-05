@@ -56,6 +56,8 @@ projectsPage:
   fillRequiredFields: "请填写所有必填项。"
   importButton: "导入"
   importedProjectMessage: "项目“{projectName}”已导入。"
+  importingProjectMessage: "正在导入项目，请稍候。"
+  importingProjectTitle: "正在导入项目…"
   importProjectMenuItem: "导入项目"
   incompatibleProjectTitle: "项目不兼容"
   invalidProjectEntryImportAgain: "该项目条目无效。请从列表中移除后重新导入项目。"
