@@ -387,6 +387,19 @@ export const syncRepositoryState = ({ state }, payload = {}) => {
     resourceType,
   });
   state.layoutData = layoutData ?? { items: {}, tree: [] };
+  const pending = state.pendingPersistPayload;
+  if (
+    pending &&
+    pending.layoutId === layoutId &&
+    pending.resourceType === resourceType &&
+    state.layoutData.items[pending.selectedItemId]
+  ) {
+    // An earlier save can finish while a newer drag position is still queued.
+    // Copy the item map so preserving the draft never mutates repository data.
+    const items = Object.assign({}, state.layoutData.items);
+    items[pending.selectedItemId] = pending.updatedItem;
+    state.layoutData = { tree: state.layoutData.tree, items };
+  }
   state.images = images ?? { items: {}, tree: [] };
   state.soundsData = soundsData ?? { items: {}, tree: [] };
   state.spritesheetsData = spritesheetsData ?? { items: {}, tree: [] };

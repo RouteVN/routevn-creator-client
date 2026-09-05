@@ -102,6 +102,7 @@ const createStore = (props) => {
     selectHoverFrameId: bindSelector(canvasStore.selectHoverFrameId),
     setCanvasRenderState: bindAction(canvasStore.setCanvasRenderState),
     selectCanvasRenderState: bindSelector(canvasStore.selectCanvasRenderState),
+    selectDragRenderState: bindSelector(canvasStore.selectDragRenderState),
     selectPendingUpdatedItem: bindSelector(
       canvasStore.selectPendingUpdatedItem,
     ),
@@ -266,6 +267,141 @@ const runClick = (deps, { clickCount = 1, metaKey = false } = {}) => {
 
   return event;
 };
+
+const createDragHarness = () => {
+  vi.stubGlobal(
+    "requestAnimationFrame",
+    vi.fn(() => 1),
+  );
+  const deps = createDeps({ selectedItemId: "parent" });
+  const { parsedElements } = deps.store.selectCanvasRenderState();
+  deps.store.setCanvasRenderState({
+    elements: parsedElements,
+    baseElements: parsedElements,
+    parsedElements,
+    canvasUnitsPerCssPixel: 1,
+  });
+  const pointer = {
+    button: 0,
+    isPrimary: true,
+    pointerId: 1,
+    pointerType: "mouse",
+    clientX: 30,
+    clientY: 30,
+    currentTarget: {
+      setPointerCapture: vi.fn(),
+      releasePointerCapture: vi.fn(),
+    },
+  };
+  return {
+    deps,
+    start: () => handleCanvasPointerDown(deps, { _event: pointer }),
+    move: (deltaX) =>
+      handleCanvasPointerMove(deps, {
+        _event: { ...pointer, clientX: pointer.clientX + deltaX },
+      }),
+    end: () => handleCanvasPointerUp(deps, { _event: pointer }),
+    renderedParent: () =>
+      deps.graphicsService.render.mock.calls.at(-1)[0].elements[0],
+    renderParentDraft: () => {
+      const oldProps = { ...deps.props };
+      const elements = deps.props.layoutState.elements;
+      deps.props.layoutState = {
+        ...deps.props.layoutState,
+        elements: {
+          ...elements,
+          items: {
+            ...elements.items,
+            parent: deps.store.selectPendingUpdatedItem(),
+          },
+        },
+      };
+      return handleOnUpdate(deps, { oldProps, newProps: deps.props });
+    },
+  };
+};
+
+const delayNextAssetLoad = (deps) => {
+  let release;
+  let notifyStarted;
+  const started = new Promise((resolve) => {
+    notifyStarted = resolve;
+  });
+  deps.graphicsService.loadAssets.mockImplementationOnce(() => {
+    notifyStarted();
+    return new Promise((resolve) => {
+      release = resolve;
+    });
+  });
+  return { started, release: () => release() };
+};
+
+describe("layoutEditorCanvas drag rendering", () => {
+  it("keeps movement relative to drag start across parent redraws", async () => {
+    const drag = createDragHarness();
+    drag.start();
+    await drag.move(10);
+    await drag.renderParentDraft();
+    await drag.move(20);
+    expect(drag.renderedParent()).toMatchObject({ x: 20, y: 0 });
+    await drag.move(25);
+    expect(drag.renderedParent()).toMatchObject({ x: 25, y: 0 });
+    await drag.end();
+    expect(drag.renderedParent()).toMatchObject({ x: 25, y: 0 });
+  });
+
+  it("does not let a delayed full redraw overwrite newer movement", async () => {
+    const drag = createDragHarness();
+    drag.start();
+    await drag.move(10);
+    const assets = delayNextAssetLoad(drag.deps);
+    const redraw = drag.renderParentDraft();
+    await assets.started;
+    await drag.move(20);
+    expect(drag.renderedParent().x).toBe(20);
+    assets.release();
+    await redraw;
+    expect(drag.renderedParent().x).toBe(20);
+    await drag.move(25);
+    expect(drag.renderedParent().x).toBe(25);
+  });
+
+  it("starts the next drag from the latest position before the release redraw finishes", async () => {
+    const drag = createDragHarness();
+    drag.start();
+    await drag.move(10);
+    const assets = delayNextAssetLoad(drag.deps);
+    const released = drag.end();
+    await assets.started;
+    drag.start();
+    await drag.move(10);
+    expect(drag.deps.store.selectPendingUpdatedItem().x).toBe(20);
+    expect(drag.renderedParent().x).toBe(20);
+    assets.release();
+    await released;
+    expect(drag.renderedParent().x).toBe(20);
+    await drag.end();
+    const updates = drag.deps.dispatchEvent.mock.calls
+      .map(([event]) => event)
+      .filter(({ type }) => type === "update");
+    expect(updates.map(({ detail }) => detail.updatedItem.x)).toEqual([10, 20]);
+    const eventTypes = drag.deps.dispatchEvent.mock.calls.map(
+      ([event]) => event.type,
+    );
+    expect(eventTypes.indexOf("update")).toBeLessThan(
+      eventTypes.lastIndexOf("drag-update"),
+    );
+  });
+
+  it("keeps the current position when canvas chrome resizes during a drag", async () => {
+    const drag = createDragHarness();
+    drag.start();
+    await drag.move(10);
+    drag.deps.canvasBounds.width = 200;
+    handleCanvasResize(drag.deps);
+    expect(drag.renderedParent().x).toBe(10);
+  });
+});
 
 describe("layoutEditorCanvas pointer selection", () => {
   it("renders hover with Route Graphics rects and a one-CSS-pixel light-gray line", () => {

@@ -307,16 +307,75 @@ steps:
     type: js
     fn: eval
     args:
+      - |
+        (async () => {
+          const deepQuery = (root, selector) => {
+            const direct = root?.querySelector?.(selector);
+            if (direct) return direct;
+            for (const node of root?.querySelectorAll?.('*') ?? []) {
+              const found = node.shadowRoot ? deepQuery(node.shadowRoot, selector) : undefined;
+              if (found) return found;
+            }
+          };
+          const findById = (elements, id) => {
+            for (const element of elements ?? []) {
+              if (element.id === id) return element;
+              const child = findById(element.children, id);
+              if (child) return child;
+            }
+          };
+          const canvas = deepQuery(document, 'rvn-layout-editor-canvas#layoutEditorCanvas');
+          await canvas.transformedHandlers.restartPreview({});
+          canvas.deps.subject.dispatch('border-drag-move', { x: 30, y: 15 });
+          const moved = findById(window.__vtFragmentDragElements, 'wTne3pvWw7ui');
+          const expected = window.__vtFragmentDragExpected;
+          const stayedUnderPointer = moved.x === expected.x + 10 && moved.y === expected.y + 5;
+          canvas.deps.subject.dispatch('border-drag-move', { x: 20, y: 10 });
+          return String(stayedUnderPointer);
+        })()
+    value: "true"
+  - action: assert
+    type: js
+    fn: eval
+    args:
       - "(() => { const findById = (elements, id) => { for (const element of Array.isArray(elements) ? elements : []) { if (element?.id === id) return element; const child = findById(element?.children, id); if (child) return child; } }; const root = findById(window.__vtFragmentDragElements, 'wTne3pvWw7ui'); const fields = ['x', 'y', 'width', 'height', 'rotation']; const descendantsStayedLocal = window.__vtFragmentDragBaseline.every((before) => { const after = findById(window.__vtFragmentDragElements, before.id); return after && fields.every((field) => Object.is(after[field], before[field])); }); return String(root?.x === window.__vtFragmentDragExpected.x && root?.y === window.__vtFragmentDragExpected.y && descendantsStayedLocal); })()"
     value: "true"
   - action: assert
     type: js
     fn: eval
     args:
-      - "(() => { const deepQuery = (root, selector) => { const direct = root?.querySelector?.(selector); if (direct) return direct; for (const node of root?.querySelectorAll?.('*') ?? []) { const found = node.shadowRoot ? deepQuery(node.shadowRoot, selector) : undefined; if (found) return found; } return undefined; }; const canvas = deepQuery(document, 'rvn-layout-editor-canvas#layoutEditorCanvas'); if (!canvas || !window.__vtFragmentOriginalRender) return 'missing-drag'; canvas.deps.graphicsService.render = window.__vtFragmentOriginalRender; canvas.deps.subject.dispatch('border-drag-end'); delete window.__vtFragmentOriginalRender; delete window.__vtFragmentDragElements; delete window.__vtFragmentDragBaseline; delete window.__vtFragmentDragExpected; return 'released'; })()"
+      - "(() => { const deepQuery = (root, selector) => { const direct = root?.querySelector?.(selector); if (direct) return direct; for (const node of root?.querySelectorAll?.('*') ?? []) { const found = node.shadowRoot ? deepQuery(node.shadowRoot, selector) : undefined; if (found) return found; } return undefined; }; const canvas = deepQuery(document, 'rvn-layout-editor-canvas#layoutEditorCanvas'); if (!canvas || !window.__vtFragmentOriginalRender) return 'missing-drag'; canvas.deps.graphicsService.render = window.__vtFragmentOriginalRender; canvas.deps.subject.dispatch('border-drag-end'); delete window.__vtFragmentOriginalRender; delete window.__vtFragmentDragElements; delete window.__vtFragmentDragBaseline; return 'released'; })()"
     value: "released"
   - action: wait
     ms: 500
+  - action: assert
+    type: js
+    fn: eval
+    args:
+      - |
+        (() => {
+          const deepQuery = (root, selector) => {
+            const direct = root?.querySelector?.(selector);
+            if (direct) return direct;
+            for (const node of root?.querySelectorAll?.('*') ?? []) {
+              const found = node.shadowRoot ? deepQuery(node.shadowRoot, selector) : undefined;
+              if (found) return found;
+            }
+          };
+          const findById = (elements, id) => {
+            for (const element of elements ?? []) {
+              if (element.id === id) return element;
+              const child = findById(element.children, id);
+              if (child) return child;
+            }
+          };
+          const canvas = deepQuery(document, 'rvn-layout-editor-canvas#layoutEditorCanvas');
+          const root = findById(canvas.store.selectCanvasRenderState().baseElements, 'wTne3pvWw7ui');
+          const expected = window.__vtFragmentDragExpected;
+          delete window.__vtFragmentDragExpected;
+          return String(root.x === expected.x && root.y === expected.y);
+        })()
+    value: "true"
   - action: assert
     type: js
     fn: eval
