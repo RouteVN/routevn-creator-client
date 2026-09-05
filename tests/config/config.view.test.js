@@ -2,7 +2,7 @@ import { readFileSync } from "node:fs";
 import { describe, expect, it } from "vitest";
 
 describe("config view", () => {
-  it("orders Language, Asset Package, and Appearance with a direct preference control", () => {
+  it("orders Language, Asset Package, Help Button, and Appearance with a direct preference control", () => {
     const view = readFileSync(
       new URL("../../src/pages/config/config.view.yaml", import.meta.url),
       "utf8",
@@ -11,6 +11,9 @@ describe("config view", () => {
       view.indexOf("#assetPackageSection"),
     );
     expect(view.indexOf("#assetPackageSection")).toBeLessThan(
+      view.indexOf("#helpButtonSection"),
+    );
+    expect(view.indexOf("#helpButtonSection")).toBeLessThan(
       view.indexOf("#appearanceSection"),
     );
     expect(view).toContain("rtgl-segmented-control#assetPackageToggle");

@@ -4,6 +4,7 @@ import {
   handleAfterMount,
   handleBeforeMount,
   handleLanguageChange,
+  handleHelpButtonChange,
   handleThemeCardClick,
 } from "../../src/pages/config/config.handlers.js";
 import { EN_I18N } from "../support/i18n.js";
@@ -35,6 +36,7 @@ const createDeps = () => {
       setCurrentLocale: vi.fn(),
       setUiConfig: vi.fn(),
       setAssetPackageEnabled: vi.fn(),
+      setHelpButtonVisible: vi.fn(),
     },
     uiConfig: { id: "normal", inputMode: "pointer" },
     i18n: EN_I18N,
@@ -43,6 +45,37 @@ const createDeps = () => {
 };
 
 describe("config handlers", () => {
+  it.each([undefined, false, true])(
+    "loads help button visibility %s before mount, defaulting to shown",
+    (visible) => {
+      const deps = createDeps();
+      deps.appService.getUserConfig.mockImplementation((key) =>
+        key === "app.showHelpButton" ? visible : undefined,
+      );
+
+      handleBeforeMount(deps);
+
+      expect(deps.store.setHelpButtonVisible).toHaveBeenCalledWith({
+        visible: visible !== false,
+      });
+    },
+  );
+
+  it.each([false, true])("persists help button visibility %s", (visible) => {
+    const deps = createDeps();
+
+    handleHelpButtonChange(deps, {
+      _event: { detail: { value: visible } },
+    });
+
+    expect(deps.appService.setUserConfig).toHaveBeenCalledExactlyOnceWith(
+      "app.showHelpButton",
+      visible,
+    );
+    expect(deps.store.setHelpButtonVisible).toHaveBeenCalledWith({ visible });
+    expect(deps.render).toHaveBeenCalledOnce();
+  });
+
   it.each([undefined, false, true])(
     "loads the global Asset Package preference %s before mount",
     (enabled) => {

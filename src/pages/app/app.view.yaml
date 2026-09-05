@@ -106,5 +106,6 @@ template:
   - $if isMobileSheetOpen:
       - rvn-mobile-sheet#mobileSheet ?open=${isMobileSheetOpen}:
           - rvn-mobile-sidebar slot=content variant=${mobileSheetVariant} w=f h=f: []
-  - 'rtgl-view#helpFloatingButton pos=fix z=1200 w=56 h=56 ah=c av=c bgc=bg bw=xs bc=bo h-bc=ac br=f cur=pointer style="right: 24px; bottom: ${helpButtonBottom}; box-shadow: 0 8px 24px rgba(15, 23, 42, 0.12);"':
-      - rtgl-text s=h4 c=mu-fg: '?'
+  - $if showHelpButton:
+      - 'rtgl-view#helpFloatingButton pos=fix z=1200 w=56 h=56 ah=c av=c bgc=bg bw=xs bc=bo h-bc=ac br=f cur=pointer style="right: 24px; bottom: ${helpButtonBottom}; box-shadow: 0 8px 24px rgba(15, 23, 42, 0.12);"':
+          - rtgl-text s=h4 c=mu-fg: '?'

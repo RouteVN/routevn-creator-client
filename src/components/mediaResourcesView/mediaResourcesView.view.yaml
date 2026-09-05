@@ -102,10 +102,15 @@ refs:
       click:
         handler: handlePreviewActionClick
 styles:
+  "[data-resource-view-item]":
+    user-select: none
+    "-webkit-user-select": none
   "#scrollContainer::-webkit-scrollbar":
     width: 1px
     height: 1px
   ".mediaImageThumbnailTransparencyGrid":
+    # Let the card own gestures; native image long-press can stall Android WebView input.
+    pointer-events: none
     background-color: "#eef2f7"
     background-image: 'linear-gradient(45deg, #94a3b8 25%, transparent 25%), linear-gradient(-45deg, #94a3b8 25%, transparent 25%), linear-gradient(45deg, transparent 75%, #94a3b8 75%), linear-gradient(-45deg, transparent 75%, #94a3b8 75%)'
     background-position: "0 0, 0 6px, 6px -6px, -6px 0"

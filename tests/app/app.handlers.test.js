@@ -124,6 +124,7 @@ describe("app route transitions", () => {
     const appService = {
       getPath: vi.fn(() => "/"),
       getPayload: vi.fn(() => ({})),
+      getUserConfig: vi.fn(() => undefined),
       getPlatform: vi.fn(() => "tauri"),
       setAppCopyProvider: vi.fn(),
       setDiscordPresenceDetails: vi.fn(async () => {}),
@@ -139,6 +140,7 @@ describe("app route transitions", () => {
       store: {
         setPlatform: vi.fn(),
         setUiConfig: vi.fn(),
+        setHelpButtonVisible: vi.fn(),
       },
       subject: {
         dispatch: vi.fn(),
@@ -570,6 +572,7 @@ describe("app route transitions", () => {
       getHistoryState: vi.fn(() => ({})),
       getPath: vi.fn(() => currentPath),
       getPayload: vi.fn(() => ({ ...currentPayload })),
+      getUserConfig: vi.fn(() => undefined),
       getPlatform: vi.fn(() => "web"),
       prepareNavigation: vi.fn(async () => {}),
       refreshCurrentProjectEntry: vi.fn(async () => {}),
@@ -591,6 +594,7 @@ describe("app route transitions", () => {
       setPlatform: vi.fn(),
       setRepositoryLoading: vi.fn(),
       setUiConfig: vi.fn(),
+      setHelpButtonVisible: vi.fn(),
     };
     const deps = {
       appService,
@@ -684,6 +688,7 @@ const createNavigationShortcutHarness = () => {
   const appService = {
     getPath: vi.fn(() => "/project/images"),
     getPayload: vi.fn(() => ({ p: "project-1" })),
+    getUserConfig: vi.fn(() => undefined),
     getPlatform: vi.fn(() => "web"),
     isInputFocused: vi.fn(() => true),
     navigate: vi.fn(),
@@ -694,6 +699,7 @@ const createNavigationShortcutHarness = () => {
     store: {
       setPlatform: vi.fn(),
       setUiConfig: vi.fn(),
+      setHelpButtonVisible: vi.fn(),
     },
     subject: {
       dispatch: vi.fn(),

@@ -3,6 +3,7 @@ export const createInitialState = () => ({
   currentRoute: "/projects",
   currentRoutePayload: {},
   isTouchMode: false,
+  showHelpButton: true,
   isMobileSheetOpen: false,
   mobileSheetVariant: undefined,
   pressedMobileTabId: undefined,
@@ -182,6 +183,10 @@ const selectMobileTabBarItems = ({ state, i18n }) => {
         : MOBILE_TAB_BAR_BACKGROUND_COLOR,
     };
   });
+};
+
+export const setHelpButtonVisible = ({ state }, { visible }) => {
+  state.showHelpButton = visible;
 };
 
 export const setUiConfig = ({ state }, { uiConfig } = {}) => {

@@ -33,6 +33,12 @@ const social = [
     svg: "x-social",
     href: "https://x.com/routevn",
   },
+  {
+    id: "all-social",
+    label: "All social media",
+    svg: "",
+    href: "https://routevn.com/social",
+  },
 ];
 
 export const createInitialState = () => ({
@@ -56,12 +62,14 @@ export const selectViewData = ({ state, i18n }) => {
 
   return {
     ...state,
-    social,
+    social: social.map((item) => {
+      if (item.id !== "all-social") return item;
+      return { ...item, label: copy.allSocialMediaButton ?? item.label };
+    }),
     showExplorerPanel: !state.isTouchMode,
     contentPadding: state.isTouchMode ? "0" : "lg",
     contentBodyPadding: state.isTouchMode ? "md" : "0",
     contentBodyMarginTop: state.isTouchMode ? "0" : "lg",
-    communityItemsDirection: state.isTouchMode ? "v" : "h",
     title: copy.title ?? "About",
     versionInformationTitle:
       copy.versionInformationTitle ?? "Version Information",

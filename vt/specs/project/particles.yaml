@@ -120,6 +120,27 @@ steps:
     selector: "#particleDialog rtgl-input#field2 input"
     state: attached
     timeoutMs: 5000
+  - action: waitFor
+    selector: "#particleDialog #particleFormTabsScroll"
+    state: visible
+    timeoutMs: 5000
+  - action: select
+    selector: "#particleDialog rtgl-tabs#tabs [data-id='movement']"
+    steps:
+      - action: click
+  - action: waitFor
+    selector: "#particleDialog rtgl-tabs#tabs[selected-tab='movement']"
+    state: attached
+    timeoutMs: 5000
+  - action: screenshot
+  - action: select
+    selector: "#particleDialog rtgl-tabs#tabs [data-id='basics']"
+    steps:
+      - action: click
+  - action: waitFor
+    selector: "#particleDialog rtgl-tabs#tabs[selected-tab='basics']"
+    state: attached
+    timeoutMs: 5000
   - action: wait
     ms: 400
   - action: screenshot

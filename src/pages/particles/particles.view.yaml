@@ -208,10 +208,10 @@ template:
   - $if showMobileDetailSheet:
       - rvn-mobile-sheet#mobileDetailSheet ?open=${showMobileDetailSheet}:
           - rtgl-view slot=content d=v w=f h=f:
-              - rtgl-view#detailHeader h=36 w=f d=h bgc=bg bwb=xs ph=md av=c g=sm cur=pointer:
+              - rtgl-view#detailHeader h=36 w=f d=h bwb=xs ph=md av=c g=sm cur=pointer:
                   - rtgl-text w=1fg ellipsis=true: ${selectedItemName}
                   - rtgl-svg svg=edit wh=16: null
-              - rtgl-view d=h w=f g=sm p=md bgc=su bwb=xs:
+              - rtgl-view d=h w=f g=sm p=md bwb=xs:
                   - rtgl-button#mobileDetailPreviewButton w=1fg v=se pre=zoomIn: ${previewButton}
                   - rtgl-button#mobileDetailDeleteButton w=1fg v=se pre=trash: ${deleteButton}
               - 'rtgl-view w=f h=1fg sv style="min-height: 0;"':
@@ -232,7 +232,9 @@ template:
                           - 'rtgl-view w=4fg lg-w=f d=v g=md style="min-width: 0; min-height: 0;"':
                               - rtgl-form#particleForm key=${particleFormKey} :defaultValues=${dialogFormValues} :form=${particleForm} w=f:
                                   - $if showParticleFormTabs:
-                                      - rtgl-tabs#tabs slot=particle-form-tabs selected-tab=${selectedParticleFormTab} :items=${particleFormTabs}: null
+                                      - 'rtgl-view#particleFormTabsScroll slot=particle-form-tabs w=f sh style="min-width: 0; overscroll-behavior-x: contain;"':
+                                          - 'div style="width: max-content; min-width: 100%;"':
+                                              - rtgl-tabs#tabs selected-tab=${selectedParticleFormTab} :items=${particleFormTabs}: null
                                   - rtgl-view slot=particle-texture-image d=v w=f:
                                       - rtgl-view d=v w=f g=xs:
                                           - rtgl-text: ${textureImageLabel}
