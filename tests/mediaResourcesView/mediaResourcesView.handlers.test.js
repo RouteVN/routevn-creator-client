@@ -255,6 +255,7 @@ describe("mediaResourcesView.handlers", () => {
     );
 
     expect(preventDefault).toHaveBeenCalled();
+    expect(dispatchEvent).toHaveBeenCalledOnce();
     expect(dispatchEvent).toHaveBeenCalledWith(
       expect.objectContaining({
         type: "item-dblclick",

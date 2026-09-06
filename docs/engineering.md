@@ -984,6 +984,12 @@ time, but they are the current standard.
 
 Resource pages should stay explicit at the page level.
 
+On touch devices, long-pressing a resource card runs only its primary action
+(preview, play, edit, or open). Do not emit a preliminary `item-click` selection
+event: it opens the selected-item action sheet before the primary action runs.
+Primary actions that select an item must suppress the mobile detail sheet while
+keeping explorer selection synchronized. A normal tap still opens the sheet.
+
 Do not hide an entire resource page behind one giant page factory or one
 universal layout abstraction.
 

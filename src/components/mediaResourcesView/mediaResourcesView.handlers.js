@@ -1097,13 +1097,6 @@ export const handleItemContextMenu = (deps, payload) => {
 
   if (parseBooleanProp(props.mobileLayout)) {
     dispatchEvent(
-      new CustomEvent("item-click", {
-        detail: { itemId, source: "context-menu" },
-        bubbles: true,
-        composed: true,
-      }),
-    );
-    dispatchEvent(
       new CustomEvent("item-dblclick", {
         detail: {
           itemId,

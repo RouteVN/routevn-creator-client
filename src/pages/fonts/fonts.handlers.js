@@ -527,7 +527,7 @@ export const handleEditFormAction = async (deps, payload) => {
 };
 
 export const handleFontItemDoubleClick = async (deps, payload) => {
-  const { store, render, projectService, appService } = deps;
+  const { store, render, refs, projectService, appService } = deps;
   const { itemId, isFolder } = payload._event.detail;
   if (isFolder || !itemId) {
     return;
@@ -538,6 +538,8 @@ export const handleFontItemDoubleClick = async (deps, payload) => {
     return;
   }
 
+  store.setSelectedItemId({ itemId, suppressMobileDetailSheet: true });
+  refs.fileExplorer?.selectItem?.({ itemId });
   await loadFontInfo({ store, projectService, appService }, { itemId });
   store.setPreviewFontItemId({ itemId });
   store.setModalOpen({ isOpen: true });

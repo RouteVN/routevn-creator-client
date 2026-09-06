@@ -279,7 +279,7 @@ const openPreviewDialogForItem = ({
   revokeDialogPreviewUrl(store);
 
   const values = buildDialogValues({ item });
-  store.setSelectedItemId({ itemId });
+  store.setSelectedItemId({ itemId, suppressMobileDetailSheet: true });
 
   if (syncExplorer) {
     refs.fileExplorer?.selectItem?.({ itemId });
