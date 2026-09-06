@@ -1,6 +1,11 @@
 const EMPTY_SRC = "";
 const DEFAULT_LAZY_ROOT_MARGIN = "400px 0px";
 
+export const handleImageDragStart = (_deps, payload) => {
+  // A native image drag can capture Android input while a long press opens a preview.
+  payload._event.preventDefault();
+};
+
 const getFileIdFromProps = (attrs, projectService) => {
   if (attrs.fileId && attrs.imageId) {
     console.warn("[fileImage] invalid-props", {

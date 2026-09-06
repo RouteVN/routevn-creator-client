@@ -34,6 +34,7 @@ import {
   handlePreviewCanvasModeClick,
   handlePreviewFitModeClick,
   handlePreviewOverlayClick,
+  handleFullPreviewDialogClose,
   handlePreviewOverlayKeyDown,
   handlePreviewOverlayTouchEnd,
   handlePreviewOverlayTouchStart,
@@ -44,6 +45,21 @@ import {
 const originalRequestAnimationFrame = globalThis.requestAnimationFrame;
 
 describe("images handlers", () => {
+  it("closes the native preview dialog even while a post-swipe click is suppressed", () => {
+    globalThis.requestAnimationFrame = vi.fn((callback) => callback());
+    const deps = {
+      store: {
+        hideFullImagePreview: vi.fn(),
+        selectFullImagePreviewSuppressNextClick: vi.fn(() => true),
+      },
+      refs: {},
+      render: vi.fn(),
+    };
+    handleFullPreviewDialogClose(deps);
+    expect(deps.store.hideFullImagePreview).toHaveBeenCalledOnce();
+    expect(deps.render).toHaveBeenCalledOnce();
+  });
+
   beforeEach(() => {
     generateIdMock.mockClear();
     processPendingUploadsMock.mockReset();

@@ -155,6 +155,19 @@ export const handleTagFilterButtonClick = (deps, payload) => {
   openTagFilterPopoverFromButton(deps, payload, { alignEnd: true });
 };
 export const handleTagFilterPopoverClose = closeTagFilterPopoverFromOverlay;
+export const handleTagFilterPopoverPositioned = (deps) => {
+  const { props, refs, store } = deps;
+  const { searchInput } = refs;
+  if (
+    !parseBooleanProp(props.searchInFilterPopover) ||
+    !store.selectTagFilterSearchFocusPending()
+  ) {
+    return;
+  }
+
+  store.clearTagFilterSearchFocusPending();
+  searchInput.focus();
+};
 export const handleTagFilterOptionClick = toggleTagFilterPopoverOption;
 export const handleTagFilterClearClick = (deps, payload) => {
   const { dispatchEvent, props } = deps;

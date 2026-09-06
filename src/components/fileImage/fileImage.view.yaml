@@ -1,7 +1,10 @@
 refs:
-  image: {}
+  image:
+    eventListeners:
+      dragstart:
+        handler: handleImageDragStart
 template:
   - $if hasSrc:
-      - rtgl-image#image src=${src} bc=${borderColor} of=con ${containerAttrString} ondragstart="event.preventDefault()": null
+      - rtgl-image#image src=${src} bc=${borderColor} of=con ${containerAttrString}: null
     $else:
       - rtgl-view#image bc=${borderColor} ${containerAttrString}: null

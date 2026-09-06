@@ -79,11 +79,21 @@ refs:
     eventListeners:
       click:
         handler: handlePlayPreviewClick
+  fullPreviewDialog:
+    eventListeners:
+      close:
+        handler: handlePreviewOverlayClick
+        stopPropagation: true
   previewOverlay:
     eventListeners:
       click:
         handler: handlePreviewOverlayClick
 styles:
+  "#previewOverlay":
+    user-select: none
+    "-webkit-user-select": none
+    --focus-ring-outline: none
+    --focus-ring-box-shadow: none
   ".layoutEditorImageFieldTransparencyGrid":
     background-color: "#eef2f7"
     background-image: 'linear-gradient(45deg, #94a3b8 25%, transparent 25%), linear-gradient(-45deg, #94a3b8 25%, transparent 25%), linear-gradient(45deg, transparent 75%, #94a3b8 75%), linear-gradient(-45deg, transparent 75%, #94a3b8 75%)'
@@ -182,8 +192,9 @@ template:
           - rtgl-view d=h g=sm w=f ah=e:
               - rtgl-button#confirmImageSelection variant=pr: OK
   - $when: fullImagePreviewVisible
-    rtgl-view#previewOverlay pos=fix edge=f z=3000 cur=pointer:
-      - rtgl-view w=f h=f pos=fix edge=f bgc=bg: null
-      - $if fullImagePreviewImageId:
-          - rtgl-view pos=fix edge=f ah=c av=c z=3001:
-              - rvn-file-image imageId=${fullImagePreviewImageId} w=80% h=80% bc=ac bw=xs br=md: null
+    rtgl-dialog#fullPreviewDialog open layout=fixed bare p=none:
+      - rtgl-view#previewOverlay slot=content pos=fix edge=f z=3000 cur=pointer:
+          - rtgl-view w=f h=f pos=fix edge=f bgc=bg: null
+          - $if fullImagePreviewImageId:
+              - rtgl-view pos=fix edge=f ah=c av=c z=3001:
+                  - rvn-file-image imageId=${fullImagePreviewImageId} w=80% h=80% bc=ac bw=xs br=md: null

@@ -356,7 +356,7 @@ const openSpritePreviewById = ({ deps, itemId, syncExplorer = false } = {}) => {
     return;
   }
 
-  store.setSelectedItemId({ itemId });
+  store.setSelectedItemId({ itemId, suppressMobileDetailSheet: true });
   if (syncExplorer) {
     refs.fileExplorer?.selectItem?.({ itemId });
   }

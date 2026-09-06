@@ -150,8 +150,10 @@ steps:
   - action: wait
     ms: 150
   - action: screenshot
-  - action: keypress
-    key: Escape
+  - action: select
+    selector: "#videoPreviewDialog .close-button"
+    steps:
+      - action: click
   - action: waitFor
     selector: "#videoPreviewDialog"
     state: hidden

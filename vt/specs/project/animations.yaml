@@ -195,6 +195,43 @@ steps:
     steps:
       - action: click
   - action: select
+    selector: "#imageItemRef0x0"
+    steps:
+      - action: dblclick
+  - action: waitFor
+    selector: "#fullPreviewDialog[open] #previewOverlay"
+    state: visible
+    timeoutMs: 5000
+  - action: screenshot
+  - action: select
+    selector: "#previewOverlay"
+    steps:
+      - action: click
+  - action: waitFor
+    selector: "#fullPreviewDialog"
+    state: detached
+    timeoutMs: 5000
+  - action: assert
+    type: visible
+    selector: "#imageSelectorDialog[open] #confirmMaskImageSelection"
+  - action: select
+    selector: "#imageItemRef0x0"
+    steps:
+      - action: dblclick
+  - action: waitFor
+    selector: "#fullPreviewDialog[open]"
+    state: visible
+    timeoutMs: 5000
+  - action: keypress
+    key: Escape
+  - action: waitFor
+    selector: "#fullPreviewDialog"
+    state: detached
+    timeoutMs: 5000
+  - action: assert
+    type: visible
+    selector: "#imageSelectorDialog[open] #confirmMaskImageSelection"
+  - action: select
     selector: "#confirmMaskImageSelection"
     steps:
       - action: click

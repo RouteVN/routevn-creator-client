@@ -735,6 +735,22 @@ The intended split is:
 - `store`: UI-local state and derived display data
 - `handlers`: orchestration
 
+### Fullscreen Resource Previews
+
+Fullscreen resource previews must use `rtgl-dialog open layout=fixed bare
+p=none`, with the preview surface in `slot=content`. A fixed element with a
+high `z-index` remains outside the browser's modal layer and becomes inert
+when an editing or selector dialog is open. Keep the underlying dialog mounted
+to preserve its draft, and stop propagation of the preview dialog's `close`
+event so dismissing a preview does not also close the editor. Video previews
+must expose a close button because the video surface consumes taps for playback.
+
+Shared image thumbnails must cancel native `dragstart` through a normal view
+event listener. Inline handlers such as `ondragstart` are blocked by Android's
+Content Security Policy. An uncancelled image drag can capture WebView input
+when a long press opens a preview. Validate repeated opening and closing with
+native Android long presses; synthetic clicks alone do not exercise this path.
+
 ### Command-Line Dialog Spacing
 
 Command-line dialogs use `md` (8px) padding on desktop and mobile. Keep the
