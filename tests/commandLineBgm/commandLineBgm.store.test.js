@@ -109,7 +109,7 @@ describe("commandLineBgm.store", () => {
       showResourceSelectorFileExplorer: true,
       resourceSelectorColumns: undefined,
       resourceSelectorGridStyle: "",
-      resourceSelectorHorizontalPadding: "lg",
+      resourceSelectorHorizontalPadding: "md",
       resourceSelectorCardStyle:
         "width: 200px; min-width: 0; max-width: 100%; box-sizing: border-box;",
     });

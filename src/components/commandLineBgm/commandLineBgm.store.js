@@ -1,3 +1,4 @@
+import { selectResourceSelectorEmptyMessage } from "../../internal/ui/resourcePages/selectorEmptyState.js";
 import { toFlatGroups, toFlatItems } from "../../internal/project/tree.js";
 import {
   connectAudioSoundToPrevious,
@@ -531,10 +532,15 @@ export const selectViewData = ({ state, i18n }) => {
     mode: state.mode,
     items: folderItems,
     groups,
+    selectorEmptyMessage: selectResourceSelectorEmptyMessage({
+      groups: groups,
+      searchQuery: searchQuery,
+      i18n,
+    }),
     showResourceSelectorFileExplorer: resourceSelectorLayout.showFileExplorer,
     resourceSelectorColumns: resourceSelectorLayout.columns,
     resourceSelectorGridStyle: resourceSelectorLayout.gridStyle,
-    resourceSelectorHorizontalPadding: state.isTouchMode ? "none" : "lg",
+    resourceSelectorHorizontalPadding: state.isTouchMode ? "none" : "md",
     resourceSelectorCardStyle:
       resourceSelectorLayout.cardStyle ||
       "width: 200px; min-width: 0; max-width: 100%; box-sizing: border-box;",

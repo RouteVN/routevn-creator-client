@@ -1,3 +1,4 @@
+import { selectResourceSelectorEmptyMessage } from "../../internal/ui/resourcePages/selectorEmptyState.js";
 import { toFlatGroups, toFlatItems } from "../../internal/project/tree.js";
 import {
   DEFAULT_ANIMATION_PLAYBACK_CONTINUITY,
@@ -1450,8 +1451,18 @@ export const selectViewData = ({ state, props, i18n }) => {
     context,
     items: characterTreeData.explorerItems,
     groups: characterTreeData.groups,
+    selectorEmptyMessage: selectResourceSelectorEmptyMessage({
+      groups: characterTreeData.groups,
+      searchQuery: state.searchQuery,
+      i18n,
+    }),
     spriteItems,
     spriteGroups,
+    spriteSelectorEmptyMessage: selectResourceSelectorEmptyMessage({
+      groups: spriteGroups,
+      searchQuery: state.searchQuery,
+      i18n,
+    }),
     showSpriteGroupTabs: spriteSelectionTabs.length > 1,
     spriteSelectionTabs,
     selectedSpriteGroupId,

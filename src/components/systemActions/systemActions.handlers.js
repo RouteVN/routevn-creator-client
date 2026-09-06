@@ -1,4 +1,9 @@
+import { filter } from "rxjs";
 import { normalizeLineActions } from "../../internal/project/engineActions.js";
+import {
+  HELP_BUTTON_VISIBLE_CONFIG_KEY,
+  isHelpButtonVisible,
+} from "../../internal/ui/helpPreferences.js";
 import {
   createActionItemWithInlineTransform,
   createBackgroundWithInlineTransform,
@@ -79,13 +84,37 @@ export const handleAfterMount = async (deps) => {
 };
 
 export const handleBeforeMount = (deps) => {
-  const { props, render, store, uiConfig } = deps;
+  const {
+    appService,
+    projectService,
+    props,
+    render,
+    store,
+    subject,
+    uiConfig,
+  } = deps;
   store.setUiConfig({ uiConfig });
+  store.setHelpButtonVisible({ visible: isHelpButtonVisible(appService) });
   syncActions(store, props.actions);
   store.setRepositoryState({
-    repositoryState: deps.projectService.getRepositoryState(),
+    repositoryState: projectService.getRepositoryState(),
   });
   render();
+
+  const subscription = subject
+    .pipe(
+      filter(
+        ({ action, payload }) =>
+          action === "app.userConfig.changed" &&
+          payload.key === HELP_BUTTON_VISIBLE_CONFIG_KEY,
+      ),
+    )
+    .subscribe(() => {
+      store.setHelpButtonVisible({ visible: isHelpButtonVisible(appService) });
+      render();
+    });
+
+  return () => subscription.unsubscribe();
 };
 
 export const handleOnUpdate = (deps, changes) => {

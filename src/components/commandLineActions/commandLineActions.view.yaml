@@ -3,15 +3,20 @@ refs:
     eventListeners:
       click:
         handler: handleActionClick
+styles:
+  "[data-action-section]":
+    margin-top: var(--spacing-lg)
+  "[data-action-section]:first-child":
+    margin-top: "0"
 template:
-  - 'rtgl-view w=f h=f pv=lg br=md d=v style="min-width: 0; min-height: 0; box-sizing: border-box; overflow: hidden;"':
-      - rtgl-view w=f h=24 av=c ph=lg mb=md:
+  - 'rtgl-view w=f h=f pv=md br=md d=v style="min-width: 0; min-height: 0; box-sizing: border-box; overflow: hidden;"':
+      - rtgl-view w=f h=24 av=c ph=md mb=md:
           - rtgl-breadcrumb :items=${breadcrumb}: null
       - 'rtgl-view h=1fg w=f sv style="min-width: 0; min-height: 0;"':
-          - 'rtgl-view w=f d=v g=sm ph=lg style="min-width: 0; box-sizing: border-box;"':
+          - 'rtgl-view w=f d=v g=sm ph=md style="min-width: 0; box-sizing: border-box;"':
               - $for item, i in items:
                   - $if item.type == "section":
-                      - 'rtgl-text s=xs c=mu-fg mt=lg w=f ellipsis=true': ${item.label}
+                      - 'rtgl-text data-action-section=true s=xs c=mu-fg w=f ellipsis=true': ${item.label}
                     $else:
                       - 'rtgl-view#action${i} data-action-id=${item.id} g=md d=h av=c ph=md bgc=mu h-bgc=ac br=md h=36 w=f cur=pointer style="min-width: 0; box-sizing: border-box;"':
                           - rtgl-svg svg=${item.icon} wh=24: null

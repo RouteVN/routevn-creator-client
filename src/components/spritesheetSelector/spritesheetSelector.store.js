@@ -1,3 +1,4 @@
+import { selectResourceSelectorEmptyMessage } from "../../internal/ui/resourcePages/selectorEmptyState.js";
 import {
   parseSpritesheetAnimationSelectionValue,
   toSpritesheetAnimationSelectionValue,
@@ -122,13 +123,22 @@ export const selectViewData = ({ state, props = {}, i18n }) => {
     )
     .filter((group) => group.children.length > 0 || group.id !== ROOT_GROUP_ID)
     .filter((group) => group.shouldDisplay);
+  const spritesheetCardStyle = columns
+    ? "width: 100%; min-width: 0; max-width: 100%; box-sizing: border-box;"
+    : "max-width: 100%; box-sizing: border-box;";
 
   return {
     groups,
+    selectorEmptyMessage: selectResourceSelectorEmptyMessage({
+      groups: groups,
+      searchQuery: searchQuery,
+      i18n,
+    }),
     spritesheetGridStyle,
-    spritesheetCardStyle: columns
-      ? "width: 100%; min-width: 0; max-width: 100%; box-sizing: border-box;"
-      : "max-width: 100%; box-sizing: border-box;",
+    spritesheetCardStyle,
+    spritesheetPreviewCardStyle: columns
+      ? spritesheetCardStyle
+      : "width: 200px; min-width: 0; max-width: 100%; box-sizing: border-box;",
     selectedSpritesheetValue,
     selectedResourceId: resourceId,
     selectedAnimationName: animationName,

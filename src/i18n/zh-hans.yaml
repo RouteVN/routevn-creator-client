@@ -488,6 +488,8 @@ webServerPage:
   urlLabel: "URL"
   warningTitle: "警告"
 resourcePages:
+  selectorEmptyMessage: "没有可供选择的项目。"
+  selectorNoResultsMessage: "没有符合搜索条件的项目。"
   zoomLabel: "缩放"
   filterLabel: "筛选"
   actionsLabel: "操作"

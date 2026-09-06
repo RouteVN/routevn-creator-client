@@ -671,6 +671,23 @@ export const handleSearchInput = (deps, payload) => {
   render();
 };
 
+export const handleSearchButtonClick = (deps, payload) => {
+  const { refs, store, render } = deps;
+  const { searchButton } = refs;
+  payload._event.stopPropagation();
+  const rect = searchButton.getBoundingClientRect();
+  store.openSearchPopover({
+    position: { x: Math.round(rect.right), y: Math.round(rect.bottom) },
+  });
+  render();
+};
+
+export const handleSearchPopoverClose = (deps) => {
+  const { store, render } = deps;
+  store.closeSearchPopover();
+  render();
+};
+
 export const handleTabClick = (deps, payload) => {
   const { store, render } = deps;
   store.setTab({

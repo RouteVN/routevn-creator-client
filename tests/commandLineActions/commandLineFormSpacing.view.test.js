@@ -28,8 +28,9 @@ describe("command-line form spacing", () => {
           line.includes("rtgl-form") && !line.includes("slot=content"),
       );
 
-      expect(view).toContain("pv=lg");
-      expect(view).not.toMatch(/rtgl-view[^\n]*w=f h=f p=lg/);
+      expect(view).toContain("pv=md");
+      expect(view).not.toMatch(/rtgl-view[^\n]*w=f h=f p=md/);
+      expect(view).not.toMatch(/\b(?:p|ph|pv|pt|pb|pl|pr)=lg\b/);
       for (let index = 0; index < lines.length; index += 1) {
         const formLine = lines[index];
         if (
@@ -52,10 +53,10 @@ describe("command-line form spacing", () => {
           ancestorIndent = currentIndent;
         }
 
-        if (ancestorLines.some((line) => line.includes("ph=lg"))) {
+        if (ancestorLines.some((line) => line.includes("ph=md"))) {
           expect(formLine).toContain("ph=none");
         } else {
-          expect(formLine).toContain("ph=lg");
+          expect(formLine).toContain("ph=md");
         }
         expect(formLine).toContain("pv=none");
         expect(formLine).not.toContain("p=none");
@@ -76,7 +77,7 @@ describe("command-line form spacing", () => {
               line.includes("- rtgl-view"),
           );
         expect(containerLine.trim()).toBe(
-          "- rtgl-view w=f h=24 av=c ph=lg mb=md:",
+          "- rtgl-view w=f h=24 av=c ph=md mb=md:",
         );
       }
 

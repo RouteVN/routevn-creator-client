@@ -1,3 +1,4 @@
+import { selectResourceSelectorEmptyMessage } from "../../internal/ui/resourcePages/selectorEmptyState.js";
 import { toFlatGroups, toFlatItems } from "../../internal/project/tree.js";
 import {
   canLoopAnimationById,
@@ -1879,6 +1880,11 @@ export const selectViewData = ({ state, i18n }) => {
     mode: state.mode,
     items: characterTreeData.explorerItems,
     groups: characterTreeData.groups,
+    selectorEmptyMessage: selectResourceSelectorEmptyMessage({
+      groups: characterTreeData.groups,
+      searchQuery: searchQuery,
+      i18n,
+    }),
     showResourceSelectorFileExplorer: resourceSelectorLayout.showFileExplorer,
     resourceSelectorGridStyle: resourceSelectorLayout.gridStyle,
     resourceSelectorItemStyle: resourceSelectorLayout.itemStyle,
@@ -1891,6 +1897,11 @@ export const selectViewData = ({ state, i18n }) => {
     animationOptions,
     spriteItems,
     spriteGroups,
+    spriteSelectorEmptyMessage: selectResourceSelectorEmptyMessage({
+      groups: spriteGroups,
+      searchQuery: searchQuery,
+      i18n,
+    }),
     showSpriteGroupTabs: spriteSelectionTabs.length > 1,
     spriteSelectionTabs,
     selectedSpriteGroupId,
