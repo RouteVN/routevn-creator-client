@@ -832,6 +832,8 @@ animationEditorPage:
   keyframeValueTooltip: "アニメーション終了時のプロパティの最終値です。"
   kindLabel: "種類"
   linearEasingLabel: "リニア"
+  loopMenuItem: "ループする"
+  dontLoopMenuItem: "ループしない"
   loopPreviewLabel: "プレビューをループ"
   maskRemoveConfirmMessage: "このトランジションマスクを削除しますか？この操作は元に戻せません。"
   maskRemoveConfirmTitle: "マスクを削除"

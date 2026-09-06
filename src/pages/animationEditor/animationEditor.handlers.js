@@ -3241,6 +3241,31 @@ export const handleTogglePreviewLoop = (deps) => {
   render();
 };
 
+export const handleMobileEditorMenuClick = (deps, payload) => {
+  const { refs, store, render } = deps;
+  payload._event.stopPropagation();
+  const rect = refs.mobileEditorMenuButton.getBoundingClientRect();
+  store.closePopover();
+  store.setPopover({ mode: "editorMenu", x: rect.right, y: rect.bottom });
+  render();
+};
+
+export const handleMobileEditorMenuItemClick = (deps, payload) => {
+  const { store, render } = deps;
+  const { item } = payload._event.detail;
+  const { x, y } = store.selectPopover();
+  store.closePopover();
+
+  if (item.value === "loop") {
+    store.togglePreviewLoop({});
+  } else if (item.value === "zoom") {
+    store.setSelectedEditorTab({ tab: "tween" });
+    store.setPopover({ mode: "timelineZoom", x, y });
+  }
+
+  render();
+};
+
 export const handleEditInitialValueFormSubmit = (deps, payload) => {
   const { render, store } = deps;
   const popover = store.selectPopover();

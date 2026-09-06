@@ -4293,6 +4293,19 @@ export const selectViewData = ({ state, i18n }) => {
     previewPlayheadVisible: state.previewPlayheadVisible,
     previewLoopEnabled: state.previewLoopEnabled,
     previewLoopButtonVariant: state.previewLoopEnabled ? "pr" : "ol",
+    showMobileEditorMenu: state.isTouchMode,
+    showInlineTimelineZoom: !state.isTouchMode,
+    mobileEditorMenuLabel: copy.actionsLabel,
+    mobileEditorMenuItems: [
+      {
+        type: "item",
+        value: "loop",
+        label: state.previewLoopEnabled
+          ? copy.dontLoopMenuItem
+          : copy.loopMenuItem,
+      },
+      { type: "item", value: "zoom", label: copy.zoomLabel },
+    ],
     timelinePlayheadVisible,
     timelinePlayheadStyle,
     timelineUsedAreaStyle,
@@ -4314,6 +4327,7 @@ export const selectViewData = ({ state, i18n }) => {
         ? (copy.transitionType ?? "Transition")
         : (copy.updateType ?? "Update"),
     transitionTimelineDuration,
+    previewCanvasPadding: state.isTouchMode ? "0" : "lg",
     canvasAspectRatio: formatProjectResolutionAspectRatio(
       state.projectResolution,
     ),
@@ -4394,6 +4408,8 @@ export const selectViewData = ({ state, i18n }) => {
     addPropertySideMenuItems: transitionAddPropertySideOptions,
     popover: {
       ...state.popover,
+      editorMenuIsOpen: state.popover.mode === "editorMenu",
+      timelineZoomIsOpen: state.popover.mode === "timelineZoom",
       popoverIsOpen:
         state.popover.mode === "editInitialValue" ||
         showAddPropertyPopover ||

@@ -499,7 +499,7 @@ describe("keyframeTimeline easing curves", () => {
     expect(view).toContain(
       'rtgl-view d=h w=f av=e bgc=bg style="position: sticky; top: 0; z-index: 7;"',
     );
-    expect(view).toMatch(/w=104 bgc=bg bwr=xs bc=bo[^\n]+position: sticky/);
+    expect(view).toMatch(/w=104 bgc=bg[^\n]+position: sticky/);
     expect(view).toContain("left: 0; z-index: 6");
     expect(view).toMatch(/data-keyframe=true[^\n]+br=md/);
     expect(view).toMatch(/data-keyframe-slot=true[^\n]+flex-shrink: 0/);

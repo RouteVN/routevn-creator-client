@@ -65,7 +65,7 @@ template:
           - rtgl-view d=v w=f g=xs:
               - $if showRuler:
                   - 'rtgl-view d=h w=f av=e bgc=bg style="position: sticky; top: 0; z-index: 7;"':
-                      - 'rtgl-view d=h h=56 w=104 bgc=bg bwr=xs bc=bo style="min-width: 104px; flex-shrink: 0; position: sticky; left: 0; z-index: 6;"':
+                      - 'rtgl-view d=h h=56 w=104 bgc=bg style="min-width: 104px; flex-shrink: 0; position: sticky; left: 0; z-index: 6;"':
                           - rtgl-view w=72: null
                           - rtgl-view h=24 w=24 mr=sm ml=sm: null
                       - 'rtgl-view#rulerTrack w=f h=56 pos=rel style="min-width: 0; overflow: visible; cursor: ${rulerCursor}; touch-action: none;"':
@@ -82,7 +82,7 @@ template:
               - $if showTracks:
                   - $for property, pIndex in selectedProperties:
                       - rtgl-view d=h w=f av=c:
-                          - 'rtgl-view data-selected=${property.selected} d=h h=24 w=104 bgc=${property.backgroundColor} h-bgc=${property.hoverBackgroundColor} bwr=xs bc=bo av=c cur=${property.rowCursor} style="min-width: 104px; flex-shrink: 0; position: sticky; left: 0; z-index: 6;"':
+                          - 'rtgl-view data-selected=${property.selected} d=h h=24 w=104 bgc=${property.backgroundColor} h-bgc=${property.hoverBackgroundColor} av=c cur=${property.rowCursor} style="min-width: 104px; flex-shrink: 0; position: sticky; left: 0; z-index: 6;"':
                               - $if editable:
                                   - 'rtgl-view#propertyName${pIndex}.keyframeTimelinePropertyRow data-property=${property.name} role=button tabindex=0 aria-pressed="${property.selected}" aria-label="${property.thumbnailName}" w=f h=f pos=abs cur=pointer style="inset: 0; z-index: 0;"': null
                               - 'rtgl-view w=72 av=c d=h ah=s pl=sm pos=rel style="z-index: 1; pointer-events: none;"':
