@@ -241,6 +241,9 @@ progress dialog uses the dialog primitive's single layer of padding.
 
 ## Release Signing
 
+Google Cloud API setup and the proposed Play publishing pipeline are documented
+in [Google Play Release Automation](./notes/google-play-release-automation.md).
+
 For release signing, provide these environment variables before running the
 bundle command:
 
