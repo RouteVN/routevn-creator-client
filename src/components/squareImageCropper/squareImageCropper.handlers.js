@@ -126,6 +126,10 @@ export const handleOnUpdate = (deps, payload = {}) => {
   syncFromFile(deps, newProps.file);
 };
 
+export const handleImageDragStart = (_deps, payload) => {
+  payload._event.preventDefault();
+};
+
 export const handleViewportMouseDown = (deps, payload) => {
   if (!deps.store.selectImageUrl()) {
     return;

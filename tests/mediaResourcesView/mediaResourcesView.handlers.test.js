@@ -6,9 +6,11 @@ import {
   handleResourceImportMenuAction,
   handleScrollContainerClick,
   handleTagFilterButtonClick,
+  handleTagFilterPopoverPositioned,
   handleZoomButtonClick,
   handleZoomOut,
 } from "../../src/components/mediaResourcesView/mediaResourcesView.handlers.js";
+import * as mediaStore from "../../src/components/mediaResourcesView/mediaResourcesView.store.js";
 
 const createMobileColumnZoomProps = () => ({
   mobileLayout: true,
@@ -18,6 +20,41 @@ const createMobileColumnZoomProps = () => ({
 });
 
 describe("mediaResourcesView.handlers", () => {
+  it("focuses filter search once per opening, without stealing focus on reposition", () => {
+    const props = { searchInFilterPopover: true };
+    const context = { props, state: mediaStore.createInitialState({ props }) };
+    const focus = vi.fn();
+    const deps = {
+      props,
+      refs: { searchInput: { focus } },
+      store: {
+        selectTagFilterSearchFocusPending: () =>
+          mediaStore.selectTagFilterSearchFocusPending(context),
+        clearTagFilterSearchFocusPending: () =>
+          mediaStore.clearTagFilterSearchFocusPending(context),
+      },
+    };
+
+    mediaStore.openTagFilterPopover(context);
+    handleTagFilterPopoverPositioned(deps);
+    handleTagFilterPopoverPositioned(deps);
+    expect(focus).toHaveBeenCalledOnce();
+
+    mediaStore.closeTagFilterPopover(context);
+    handleTagFilterPopoverPositioned(deps);
+    expect(focus).toHaveBeenCalledOnce();
+
+    mediaStore.openTagFilterPopover(context);
+    handleTagFilterPopoverPositioned(deps);
+    expect(focus).toHaveBeenCalledTimes(2);
+
+    mediaStore.closeTagFilterPopover(context);
+    props.searchInFilterPopover = false;
+    mediaStore.openTagFilterPopover(context);
+    handleTagFilterPopoverPositioned(deps);
+    expect(focus).toHaveBeenCalledTimes(2);
+  });
+
   it.each([
     ["zoom", "openZoomPopover", { position: { x: 940, y: 48 } }],
     [

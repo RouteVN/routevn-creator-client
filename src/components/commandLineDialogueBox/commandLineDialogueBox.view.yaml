@@ -57,6 +57,11 @@ refs:
         handler: handleSpriteItemClick
       dblclick:
         handler: handleSpriteItemDoubleClick
+  fullPreviewDialog:
+    eventListeners:
+      close:
+        action: hideFullImagePreview
+        stopPropagation: true
   previewOverlay:
     eventListeners:
       click:
@@ -69,6 +74,12 @@ refs:
     eventListeners:
       click:
         handler: handleSubmitClick
+styles:
+  "#previewOverlay":
+    user-select: none
+    "-webkit-user-select": none
+    --focus-ring-outline: none
+    --focus-ring-box-shadow: none
 template:
   - rtgl-view w=f h=f pv=md:
       - $if mode == 'current':
@@ -165,11 +176,12 @@ template:
           - 'rtgl-view d=h av=c ah=e w=f g=lg ph=md style="flex: 0 0 auto;"':
               - rtgl-button#buttonSelect: ${selectButtonLabel}
   - $if fullImagePreviewVisible:
-      - rtgl-view#previewOverlay pos=fix edge=f z=3000 cur=pointer:
-          - rtgl-view w=f h=f pos=fix edge=f bgc=bg: null
-          - $if fullImagePreviewFileId:
-              - rtgl-view pos=fix edge=f ah=c av=c z=3001:
-                  - $if fullImagePreviewKind == 'spritesheet':
-                      - 'rvn-spritesheet-preview key=${fullImagePreviewKey} previewKey=${fullImagePreviewKey} fileId=${fullImagePreviewFileId} :atlas=${fullImagePreviewAtlas} :animation=${fullImagePreviewAnimation} w=80% h=80% emptyLabel="${noPreviewLabel}"': null
-                    $else:
-                      - rvn-file-image fileId=${fullImagePreviewFileId} w=80% h=80% bc=ac bw=xs br=md: null
+      - rtgl-dialog#fullPreviewDialog open layout=fixed bare p=none:
+          - rtgl-view#previewOverlay slot=content pos=fix edge=f z=3000 cur=pointer:
+              - rtgl-view w=f h=f pos=fix edge=f bgc=bg: null
+              - $if fullImagePreviewFileId:
+                  - rtgl-view pos=fix edge=f ah=c av=c z=3001:
+                      - $if fullImagePreviewKind == 'spritesheet':
+                          - 'rvn-spritesheet-preview key=${fullImagePreviewKey} previewKey=${fullImagePreviewKey} fileId=${fullImagePreviewFileId} :atlas=${fullImagePreviewAtlas} :animation=${fullImagePreviewAnimation} w=80% h=80% emptyLabel="${noPreviewLabel}"': null
+                        $else:
+                          - rvn-file-image fileId=${fullImagePreviewFileId} w=80% h=80% bc=ac bw=xs br=md: null

@@ -1,6 +1,8 @@
 refs:
   cropViewport:
     eventListeners:
+      dragstart:
+        handler: handleImageDragStart
       mousedown:
         handler: handleViewportMouseDown
       wheel:
@@ -24,7 +26,7 @@ template:
       - 'rtgl-view#cropViewport pos=rel w=${viewportSize} h=${viewportSize} bgc=bg bc=bo bw=xs br=lg cur=${cropCursor} style="overflow: hidden; touch-action: none; margin: 0 auto;"':
           - $if imageUrl:
               - 'rtgl-view style="${imageFrameStyle}"':
-                  - rtgl-image src=${imageUrl} w=f h=f of=cov ondragstart="event.preventDefault()": null
+                  - rtgl-image src=${imageUrl} w=f h=f of=cov: null
             $else:
               - rtgl-view w=f h=f av=c ah=c:
                   - rtgl-text s=sm c=mu-fg: Loading image...

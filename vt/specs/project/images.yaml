@@ -237,6 +237,18 @@ steps:
     selector: "#previewOverlay"
     state: visible
     timeoutMs: 10000
+  - action: assert
+    type: js
+    fn: eval
+    args:
+      - |
+        (() => {
+          const page = document.querySelector('rvn-app').shadowRoot.querySelector('rvn-images');
+          const preview = page.shadowRoot.querySelector('#fullPreviewDialog');
+          return String(preview.dialog.matches(':modal') &&
+            preview.querySelector('#previewOverlay').assignedSlot !== null);
+        })()
+    value: "true"
   - action: wait
     ms: 600
   - action: assert

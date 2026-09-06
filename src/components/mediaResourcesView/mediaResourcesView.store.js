@@ -3,10 +3,12 @@ import { buildProgressivePlaceholderChildren } from "../../internal/ui/resourceP
 import {
   buildTagFilterPopoverViewData,
   clearTagFilterPopoverTagIds,
+  clearTagFilterSearchFocusPending,
   closeTagFilterPopover,
   createTagFilterPopoverState,
   openTagFilterPopover,
   selectTagFilterPopoverDraftTagIds,
+  selectTagFilterSearchFocusPending,
   toggleTagFilterPopoverTagId,
 } from "../../internal/ui/tagFilterPopover.js";
 import { resolveResourceScrollBottomPadding } from "../../internal/ui/resourcePages/mobileResourcePage.js";
@@ -288,9 +290,11 @@ export const selectDropdownMenu = ({ state }) => state.dropdownMenu;
 
 export {
   clearTagFilterPopoverTagIds,
+  clearTagFilterSearchFocusPending,
   closeTagFilterPopover,
   openTagFilterPopover,
   selectTagFilterPopoverDraftTagIds,
+  selectTagFilterSearchFocusPending,
   toggleTagFilterPopoverTagId,
 };
 

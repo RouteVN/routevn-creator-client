@@ -30,6 +30,7 @@ const normalizeTagIds = (tagIds) => {
 export const createTagFilterPopoverState = () => ({
   tagFilterPopover: {
     isOpen: false,
+    searchFocusPending: false,
     position: { ...DEFAULT_TAG_FILTER_POPOVER_POSITION },
     draftTagIds: [],
   },
@@ -37,6 +38,7 @@ export const createTagFilterPopoverState = () => ({
 
 export const openTagFilterPopover = ({ state }, { position, tagIds } = {}) => {
   state.tagFilterPopover.isOpen = true;
+  state.tagFilterPopover.searchFocusPending = true;
   state.tagFilterPopover.position = {
     x: position?.x ?? DEFAULT_TAG_FILTER_POPOVER_POSITION.x,
     y: position?.y ?? DEFAULT_TAG_FILTER_POPOVER_POSITION.y,
@@ -46,6 +48,14 @@ export const openTagFilterPopover = ({ state }, { position, tagIds } = {}) => {
 
 export const closeTagFilterPopover = ({ state }, _payload = {}) => {
   state.tagFilterPopover.isOpen = false;
+  state.tagFilterPopover.searchFocusPending = false;
+};
+
+export const selectTagFilterSearchFocusPending = ({ state }) =>
+  state.tagFilterPopover.isOpen && state.tagFilterPopover.searchFocusPending;
+
+export const clearTagFilterSearchFocusPending = ({ state }) => {
+  state.tagFilterPopover.searchFocusPending = false;
 };
 
 export const toggleTagFilterPopoverTagId = ({ state }, { tagId } = {}) => {

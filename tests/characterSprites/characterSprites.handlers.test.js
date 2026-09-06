@@ -1,5 +1,6 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { EN_I18N } from "../support/i18n.js";
+import * as characterSpritesStore from "../../src/pages/characterSprites/characterSprites.store.js";
 import {
   handleEditDialogImageClick,
   handleFileExplorerKeyboardScopeKeyDown,
@@ -9,6 +10,10 @@ import {
   handlePreviewNextClick,
   handlePreviewOverlayKeyDown,
   handlePreviewPreviousClick,
+  handlePreviewOverlayClick,
+  handleSpriteItemClick,
+  handleSpriteItemPreview,
+  handleMobileDetailPreviewClick,
 } from "../../src/pages/characterSprites/characterSprites.handlers.js";
 
 const originalRequestAnimationFrame = globalThis.requestAnimationFrame;
@@ -86,6 +91,76 @@ describe("characterSprites preview handlers", () => {
     globalThis.requestAnimationFrame = originalRequestAnimationFrame;
   });
 
+  it("keeps the mobile sheet closed through preview navigation and restores it on a regular selection", async () => {
+    globalThis.requestAnimationFrame = (callback) => callback();
+    const context = {
+      state: characterSpritesStore.createInitialState(),
+      i18n: EN_I18N,
+    };
+    characterSpritesStore.setUiConfig(context, { uiConfig: { id: "touch" } });
+    characterSpritesStore.setItems(context, {
+      spritesData: {
+        tree: [
+          {
+            id: "folder-1",
+            children: [{ id: "sprite-1" }, { id: "sprite-2" }],
+          },
+        ],
+        items: {
+          "folder-1": { id: "folder-1", type: "folder", name: "Sprites" },
+          "sprite-1": {
+            id: "sprite-1",
+            name: "Sprite 1",
+            type: "image",
+            fileId: "file-1",
+          },
+          "sprite-2": {
+            id: "sprite-2",
+            name: "Sprite 2",
+            type: "image",
+            fileId: "file-2",
+          },
+        },
+      },
+    });
+    const deps = createPreviewDeps();
+    deps.store = Object.fromEntries(
+      Object.entries(characterSpritesStore).map(([name, handler]) => [
+        name,
+        (payload) => handler(context, payload),
+      ]),
+    );
+    const viewData = () => characterSpritesStore.selectViewData(context);
+
+    handleSpriteItemPreview(deps, {
+      _event: {
+        detail: { itemId: "sprite-1", source: "mobile-context-menu" },
+      },
+    });
+    expect(viewData().fullImagePreviewVisible).toBe(true);
+    expect(viewData().showMobileDetailSheet).toBe(false);
+    expect(deps.refs.fileExplorer.selectItem).toHaveBeenLastCalledWith({
+      itemId: "sprite-1",
+    });
+
+    handlePreviewNextClick(deps, { _event: createEvent("click") });
+    expect(deps.store.selectSelectedItemId()).toBe("sprite-2");
+    expect(viewData().showMobileDetailSheet).toBe(false);
+    handlePreviewOverlayClick(deps);
+    expect(viewData().fullImagePreviewVisible).toBe(false);
+    expect(viewData().showMobileDetailSheet).toBe(false);
+
+    await handleSpriteItemClick(deps, {
+      _event: { detail: { itemId: "sprite-2" } },
+    });
+    expect(viewData().showMobileDetailSheet).toBe(true);
+    handleMobileDetailPreviewClick(deps, { _event: createEvent("click") });
+    expect(viewData().fullImagePreviewVisible).toBe(true);
+    expect(viewData().showMobileDetailSheet).toBe(false);
+    handlePreviewOverlayClick(deps);
+    expect(viewData().showMobileDetailSheet).toBe(false);
+  });
+
   it("navigates preview items from the left and right overlay edges", () => {
     globalThis.requestAnimationFrame = vi.fn((callback) => {
       callback();
@@ -112,9 +187,11 @@ describe("characterSprites preview handlers", () => {
     });
     expect(deps.store.setSelectedItemId).toHaveBeenCalledWith({
       itemId: "sprite-2",
+      suppressMobileDetailSheet: true,
     });
     expect(deps.store.setSelectedItemId).toHaveBeenCalledWith({
       itemId: "sprite-0",
+      suppressMobileDetailSheet: true,
     });
     expect(nextEvent.preventDefault).toHaveBeenCalledTimes(1);
     expect(nextEvent.stopPropagation).toHaveBeenCalledTimes(1);

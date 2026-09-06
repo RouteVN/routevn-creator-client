@@ -706,6 +706,10 @@ export const handleImageItemPreview = (deps, payload) => {
   });
 };
 
+export const handleFullPreviewDialogClose = (deps) => {
+  closeImagePreview(deps);
+};
+
 export const handlePreviewOverlayClick = (deps, payload) => {
   if (consumeSuppressedPreviewClick(deps, payload)) {
     return;
