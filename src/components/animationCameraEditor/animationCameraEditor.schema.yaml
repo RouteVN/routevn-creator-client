@@ -1,0 +1,19 @@
+componentName: rvn-animation-camera-editor
+propsSchema:
+  type: object
+  properties:
+    initial:
+      type: boolean
+    pose:
+      type: object
+    projectResolution:
+      type: object
+    imageId:
+      type: string
+    imageSize:
+      type: object
+events:
+  pose-change:
+    type: object
+  done:
+    type: object

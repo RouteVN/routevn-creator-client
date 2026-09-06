@@ -182,6 +182,80 @@ describe("keyframeTimeline easing curves", () => {
     expect(points[36].y).toBe(points.at(-1).y);
   });
 
+  it("draws independent 0–1 progress curves with delays and unused timeline space", () => {
+    const pose = { x: 960, y: 540, scaleX: 1, scaleY: 1 };
+    const keyframes = [
+      { delay: 100, duration: 400, easing: "easeInQuad", value: pose },
+      {
+        delay: 200,
+        duration: 800,
+        easing: "easeOutQuad",
+        startValue: pose,
+        value: pose,
+      },
+    ];
+    const authored = structuredClone(keyframes);
+    const path = createKeyframeValueCurvePath({
+      mode: "progress",
+      initialValue: pose,
+      keyframes,
+      timelineDuration: 2000,
+    });
+    const points = readPathPoints(path);
+    expect(points.slice(0, 2)).toEqual([
+      { x: 0, y: 19 },
+      { x: 5, y: 19 },
+    ]);
+    expect(points).toContainEqual({ x: 15, y: 14.5 });
+    expect(path).toContain("L25.00,1.00 M25.00,19.00 L35.00,19.00");
+    expect(points).toContainEqual({ x: 55, y: 5.5 });
+    expect(points.slice(-2)).toEqual([
+      { x: 75, y: 1 },
+      { x: 100, y: 1 },
+    ]);
+    expect(keyframes).toEqual(authored);
+  });
+
+  it("supports every easing in progress mode without reading authored values", () => {
+    for (const easing of SUPPORTED_EASING_CURVE_NAMES) {
+      const path = createKeyframeValueCurvePath({
+        mode: "progress",
+        keyframes: [{ duration: 1000, easing }],
+      });
+      expect(path).toBe(createPath({ easing, initialValue: 0, endValue: 1 }));
+    }
+    expect(createKeyframeValueCurvePath({ mode: "progress" })).toBe("");
+  });
+
+  it("uses live timing drafts for progress curves without replacing value labels", () => {
+    const state = createInitialState();
+    state.durationResize = {
+      property: "camera",
+      index: 0,
+      delay: 200,
+      duration: 800,
+      timelineDuration: 2000,
+    };
+    const props = {
+      properties: {
+        camera: {
+          valueCurveMode: "progress",
+          keyframes: [{ duration: 500, valueLabel: "100%" }],
+        },
+      },
+    };
+    const property = selectViewData({ state, props }).selectedProperties[0];
+    expect(property.valueCurvePath).toBe(
+      createKeyframeValueCurvePath({
+        mode: "progress",
+        keyframes: [{ delay: 200, duration: 800 }],
+        timelineDuration: 2000,
+      }),
+    );
+    expect(property.keyframes[0].value).toBe("100%");
+    expect(props.properties.camera.keyframes[0].duration).toBe(500);
+  });
+
   it("adds one property value path and easing labels to keyframe tracks", () => {
     const viewData = selectViewData({
       state: createInitialState(),

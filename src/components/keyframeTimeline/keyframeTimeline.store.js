@@ -472,7 +472,7 @@ export const selectViewData = ({ state, props, props: attrs, i18n = {} }) => {
           ? autoLabel.toLocaleLowerCase()
           : isDefault
             ? "D"
-            : value,
+            : (propertyConfig.initialValueLabel ?? value),
         initialValueColor: autoConfig ? "mu" : selected ? "ac-fg" : "fg",
         trackMode: autoConfig ? "auto" : "keyframes",
         keyframes: propertyConfig.keyframes,
@@ -628,15 +628,21 @@ export const selectViewData = ({ state, props, props: attrs, i18n = {} }) => {
               ...keyframe,
               easing: keyframe.easing ?? "linear",
               easingLabel: formatEasingLabel(keyframe.easing ?? "linear"),
-              startValueLabel: formatKeyframeValue({
-                value: keyframe.startValue,
-                relative: keyframe.relative,
-              }),
-              startValueVisible: keyframe.startValue !== undefined,
-              value: formatKeyframeValue({
-                value: keyframe.value,
-                relative: keyframe.relative,
-              }),
+              startValueLabel:
+                keyframe.startValueLabel ??
+                formatKeyframeValue({
+                  value: keyframe.startValue,
+                  relative: keyframe.relative,
+                }),
+              startValueVisible:
+                keyframe.startValueLabel !== undefined ||
+                keyframe.startValue !== undefined,
+              value:
+                keyframe.valueLabel ??
+                formatKeyframeValue({
+                  value: keyframe.value,
+                  relative: keyframe.relative,
+                }),
               widthPercent: widthPercent.toFixed(2),
               delayPercent: delayPercent.toFixed(2),
               cursor: attrs.editable
@@ -657,6 +663,7 @@ export const selectViewData = ({ state, props, props: attrs, i18n = {} }) => {
           initialValue: propertyConfig.initialValue,
           keyframes: effectiveKeyframes,
           timelineDuration: resolvedTimelineDuration,
+          mode: propertyConfig.valueCurveMode,
         });
         nextProperty.propertyWidthPercent = propertyWidthPercent.toFixed(2);
         nextProperty.fillerWidthPercent = (100 - propertyWidthPercent).toFixed(

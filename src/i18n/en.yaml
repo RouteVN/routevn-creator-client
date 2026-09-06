@@ -758,7 +758,20 @@ actionTransformEditor:
 vnPreview:
   restoreOrientationButton: "Restore preview orientation"
   rotateButton: "Rotate preview 90 degrees"
+animationCameraEditor:
+  zoomValueLabel: "Zoom (%)"
+  invalidNumberMessage: "Enter a valid number."
+  invalidZoomMessage: "Enter a zoom greater than 0."
+  title: "Adjust camera"
+  initialTitle: "Adjust initial camera"
+  doneButton: "Done"
+  resetButton: "Reset"
+  zoomInLabel: "Zoom in (Shift: 5×)"
+  zoomOutLabel: "Zoom out (Shift: 5×)"
+  viewportLabel: "Camera preview. Drag or use arrow keys to move. Use plus and minus to zoom."
 animationEditorPage:
+  cameraPropertyLabel: "Camera"
+  adjustCameraButton: "Adjust camera"
   absoluteValueType: "Absolute"
   addAnimationPropertyTitle: "Add animation property"
   addButton: "Add"
@@ -849,6 +862,7 @@ animationEditorPage:
   propertyDetailsTitle: "Property"
   propertyLabel: "Property"
   recordingAnimationVideo: "Recording animation video…"
+  removeInitialValueButtonLabel: "Remove initial value"
   removeStartValueButtonLabel: "Remove start value"
   relativeValueTooltip: "Relative will add the value to the previous value. Absolute will set the property value to exactly the specified value"
   relativeValueType: "Relative"

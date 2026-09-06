@@ -758,7 +758,20 @@ actionTransformEditor:
 vnPreview:
   restoreOrientationButton: "恢复预览方向"
   rotateButton: "将预览旋转 90 度"
+animationCameraEditor:
+  zoomValueLabel: "缩放（%）"
+  invalidNumberMessage: "请输入有效数字。"
+  invalidZoomMessage: "请输入大于 0 的缩放值。"
+  initialTitle: "调整初始镜头"
+  title: "调整镜头"
+  doneButton: "完成"
+  resetButton: "重置"
+  zoomInLabel: "放大（Shift：5 倍）"
+  zoomOutLabel: "缩小（Shift：5 倍）"
+  viewportLabel: "镜头预览。拖动或使用方向键移动，使用加号和减号缩放。"
 animationEditorPage:
+  cameraPropertyLabel: "镜头"
+  adjustCameraButton: "调整镜头"
   absoluteValueType: "绝对值"
   addAnimationPropertyTitle: "添加动画属性"
   addButton: "添加"
@@ -849,6 +862,7 @@ animationEditorPage:
   propertyDetailsTitle: "属性"
   propertyLabel: "属性"
   recordingAnimationVideo: "正在录制动画视频…"
+  removeInitialValueButtonLabel: "移除初始值"
   removeStartValueButtonLabel: "移除起始值"
   relativeValueTooltip: "相对值会加到前一个值上。绝对值会将属性设置为指定值。"
   relativeValueType: "相对值"

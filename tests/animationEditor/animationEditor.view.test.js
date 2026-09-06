@@ -1,7 +1,86 @@
 import { readFileSync } from "node:fs";
 import { describe, expect, it } from "vitest";
+import { JSDOM } from "jsdom";
+import * as editor from "../../src/pages/animationEditor/animationEditor.store.js";
+import { EN_I18N } from "../support/i18n.js";
+import { renderViewYaml } from "../support/renderView.js";
 
 describe("animationEditor view", () => {
+  it.each(["update", "transition"])(
+    "puts the %s preview on the layout editor's dotted background",
+    (dialogType) => {
+      const state = editor.createInitialState();
+      editor.openDialog({ state }, { dialogType });
+      const fragment = JSDOM.fragment(
+        renderViewYaml(
+          "src/pages/animationEditor/animationEditor.view.yaml",
+          editor.selectViewData({ state, i18n: EN_I18N }),
+        ),
+      );
+      const background = fragment.querySelector(
+        "#animationEditorCanvasBackground",
+      );
+      expect(background.getAttribute("bgc")).toBe("bg");
+      expect(background.style.backgroundImage).toBe(
+        "radial-gradient(circle, var(--input) 1px, transparent 1px)",
+      );
+      expect(background.style.backgroundSize).toBe("24px 24px");
+      expect(background.querySelector("#canvas")).not.toBeNull();
+      expect(background.querySelector('[bgc="fg"]')).toBeNull();
+    },
+  );
+
+  it.each(["camera", "x", "alpha"])(
+    "keeps field controls and only Add/Delete header buttons for %s keyframes",
+    (property) => {
+      const state = editor.createInitialState();
+      editor.addProperty({ state }, { side: "update", property });
+      while (state.tweenBySection.update[property].keyframes.length < 2) {
+        editor.addKeyframe(
+          { state },
+          { side: "update", property, value: 1, duration: 1000 },
+        );
+      }
+      editor.setSelectedKeyframe(
+        { state },
+        { side: "update", property, index: 0 },
+      );
+      const dom = new JSDOM(
+        renderViewYaml(
+          "src/pages/animationEditor/animationEditor.view.yaml",
+          editor.selectViewData({ state, i18n: EN_I18N }),
+        ),
+      );
+      try {
+        const { document } = dom.window;
+        const buttons = document.querySelectorAll(
+          "#timelineDetailsHeader rtgl-button",
+        );
+        expect(Array.from(buttons, (button) => button.id)).toEqual([
+          "selectedKeyframeAddButton",
+          "selectedKeyframeDeleteButton",
+        ]);
+        expect(
+          document.querySelector("#editSelectedKeyframeButton"),
+        ).toBeNull();
+        for (const id of [
+          "selectedKeyframeDelay",
+          "selectedKeyframeDuration",
+          "selectedKeyframeEasingSelect",
+        ]) {
+          expect(document.getElementById(id)).not.toBeNull();
+        }
+        if (property === "camera") {
+          expect(
+            document.getElementById("adjustCameraKeyframe"),
+          ).not.toBeNull();
+        }
+      } finally {
+        dom.window.close();
+      }
+    },
+  );
+
   it("uses an outline navbar icon button for the back action", () => {
     const view = readFileSync(
       new URL(
@@ -128,7 +207,6 @@ describe("animationEditor view", () => {
     expect(view).toContain("handler: handlePropertyRemoveConfirmClick");
     expect(view).toContain("rtgl-text s=sm c=mu-fg ta=c: ${noSelectionLabel}");
     expect(view).not.toContain("${selectTimelineItemPrompt}");
-    expect(view).toContain("rtgl-button#editSelectedKeyframeButton");
     expect(view).toContain("rtgl-select#selectedKeyframeEasingSelect");
     expect(view).toContain("handler: handleSelectedKeyframeEasingChange");
     expect(view).toContain("data-popover-input-field=true slot=keyframe-delay");
@@ -202,9 +280,6 @@ describe("animationEditor view", () => {
     expect(view).toContain("handler: handleMaskTimelineRowClick");
     expect(view).toContain("handler: handleMaskTimelineRowKeyDown");
     expect(view).toContain("$elif selectedMask");
-    expect(view).toContain(
-      "rtgl-button#editSelectedKeyframeButton sq v=gh pre=edit",
-    );
     expect(view).toContain("rtgl-view#selectedMaskDetails");
     expect(view).toContain("rtgl-view#selectedMaskSoftness");
     expect(view).toContain("handler: handleSelectedMaskSoftnessClick");

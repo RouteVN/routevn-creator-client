@@ -45,6 +45,15 @@ import {
   UPDATE_PROPERTY_KEYS,
 } from "./animationEditor.constants.js";
 import { selectAnimationEditorPageCopy } from "./support/animationEditorPageCopy.js";
+import {
+  cameraTimelineProperties,
+  createCameraPose,
+  expandCameraTrack,
+  formatCameraPoseLabel,
+  groupCameraTrack,
+  roundCameraPose,
+} from "../../internal/animationCamera.js";
+import { createCameraPreviewElement } from "./support/animationCamera.js";
 
 const TIMELINE_ZOOM_DEFAULT = 2;
 const TIMELINE_ZOOM_MIN = 0.25;
@@ -67,6 +76,10 @@ const createPropertyFieldConfig = (
   );
 
   return {
+    camera: {
+      label: copy.cameraPropertyLabel ?? "Camera",
+      defaultValue: createCameraPose({ width, height }),
+    },
     progress: {
       label: copy.progressPropertyLabel ?? "Progress",
       defaultValue: 0,
@@ -559,6 +572,7 @@ const createPreviewContentElement = ({
   imagesData,
   projectResolution,
   fallbackFill,
+  camera = false,
 } = {}) => {
   const { width, height } = requireProjectResolution(
     projectResolution,
@@ -569,6 +583,14 @@ const createPreviewContentElement = ({
   const imageItem = getPreviewImageResource(imagesData, previewSlot?.imageId);
 
   if (!imageItem) {
+    if (camera) {
+      return createCameraPreviewElement({
+        id,
+        width,
+        height,
+        fill: fallbackFill === "white" ? "#d8d8d8" : fallbackFill,
+      });
+    }
     return createPreviewRect({
       id,
       x: centerX,
@@ -598,6 +620,8 @@ const createAnimationResetState = ({
   imagesData,
   previewImages,
   projectResolution,
+  updateProperties,
+  previousProperties,
 } = {}) => {
   const elements = [
     createPreviewBackgroundElement({
@@ -615,6 +639,7 @@ const createAnimationResetState = ({
         imagesData,
         projectResolution,
         fallbackFill: PREVIEW_TRANSITION_PREV_FILL,
+        camera: Boolean(previousProperties?.camera),
       }),
     );
   } else {
@@ -625,6 +650,7 @@ const createAnimationResetState = ({
         imagesData,
         projectResolution,
         fallbackFill: "white",
+        camera: Boolean(updateProperties?.camera),
       }),
     );
   }
@@ -875,14 +901,24 @@ const createUpdateKeyframeForm = (
   options = {},
   copy = {},
 ) => {
+  const form = createAddKeyframeForm(
+    property,
+    propertyFieldConfig,
+    { ...options, includeDelay: true },
+    copy,
+  );
+  if (property === "camera") {
+    form.fields = form.fields.filter((field) => field.name !== "relative");
+    const valueIndex = form.fields.findIndex((field) => field.name === "value");
+    form.fields[valueIndex] = {
+      type: "slot",
+      slot: "camera-value",
+      label: copy.cameraPropertyLabel ?? "Camera",
+    };
+  }
   return localizeForm(
     {
-      ...createAddKeyframeForm(
-        property,
-        propertyFieldConfig,
-        { ...options, includeDelay: true },
-        copy,
-      ),
+      ...form,
       title: "Edit Keyframe",
       actions: {
         layout: "",
@@ -906,14 +942,15 @@ const createAddPropertyForm = (
   copy = {},
 ) => {
   const isUpdateSide = side === "update";
-  const initialValueField = property
-    ? createSliderField({
-        property,
-        propertyFieldConfig,
-        name: "initialValue",
-        label: "Initial value",
-      })
-    : undefined;
+  const initialValueField =
+    property && property !== "camera"
+      ? createSliderField({
+          property,
+          propertyFieldConfig,
+          name: "initialValue",
+          label: "Initial value",
+        })
+      : undefined;
   if (initialValueField) {
     initialValueField.defaultValue =
       propertyFieldConfig[property]?.defaultValue ?? 0;
@@ -960,7 +997,7 @@ const createAddPropertyForm = (
     required: true,
   });
 
-  if (isUpdateSide) {
+  if (isUpdateSide && property !== "camera") {
     fields.push({
       name: "tweenMode",
       type: "segmented-control",
@@ -978,7 +1015,7 @@ const createAddPropertyForm = (
       fields.push(initialValueField);
     }
     fields.push(...autoFields);
-  } else {
+  } else if (property !== "camera") {
     fields.push(initialValueTypeField);
     if (initialValueField) {
       fields.push(initialValueField);
@@ -1004,10 +1041,9 @@ const createAddPropertyForm = (
   );
 };
 
-const createTransitionAddPropertySideMenuItems = ({
+const createTransitionPropertySideOptions = ({
   previousAvailable = false,
   nextAvailable = false,
-  maskAvailable = false,
   copy = {},
 } = {}) => {
   const items = [];
@@ -1025,14 +1061,6 @@ const createTransitionAddPropertySideMenuItems = ({
       label: copy.inTimelineLabel ?? "Incoming",
       type: "item",
       value: "next",
-    });
-  }
-
-  if (maskAvailable) {
-    items.push({
-      label: copy.maskTitle ?? "Mask",
-      type: "item",
-      value: "mask",
     });
   }
 
@@ -1284,10 +1312,13 @@ const getPropertyOptionsForSide = (side, propertyFieldConfig) => {
 };
 
 const PROPERTY_CONFLICTS = Object.freeze({
-  x: ["translateX"],
-  translateX: ["x"],
-  y: ["translateY"],
-  translateY: ["y"],
+  camera: ["x", "y", "scaleX", "scaleY", "translateX", "translateY"],
+  x: ["translateX", "camera"],
+  translateX: ["x", "camera"],
+  y: ["translateY", "camera"],
+  translateY: ["y", "camera"],
+  scaleX: ["camera"],
+  scaleY: ["camera"],
 });
 
 const hasPropertyConflict = (properties = {}, property) => {
@@ -1308,6 +1339,8 @@ const getAvailableProperties = (state, side, propertyFieldConfig) => {
 };
 
 export const createInitialState = () => ({
+  cameraEditor: undefined,
+  cameraTracksAuthored: false,
   data: EMPTY_TREE,
   imagesData: createEmptyImagesData(),
   selectedItemId: undefined,
@@ -1549,10 +1582,16 @@ const cloneTweenBySectionFromItem = (itemData, dialogType) => {
     tweenBySection.next = structuredClone(
       itemData?.animation?.next?.tween ?? {},
     );
+    for (const side of itemData?.cameraTracks ?? []) {
+      tweenBySection[side] = groupCameraTrack(tweenBySection[side]);
+    }
     return tweenBySection;
   }
 
   tweenBySection.update = structuredClone(getUpdateAnimationTween(itemData));
+  if (itemData?.cameraTracks?.includes("update")) {
+    tweenBySection.update = groupCameraTrack(tweenBySection.update);
+  }
   return tweenBySection;
 };
 
@@ -1585,6 +1624,8 @@ export const openDialog = (
     dialogType ?? getDialogType(itemData?.animation?.type);
 
   state.dialogType = resolvedDialogType;
+  state.cameraEditor = undefined;
+  state.cameraTracksAuthored = itemData?.cameraTracks !== undefined;
   state.selectedEditorTab = DEFAULT_EDITOR_TAB;
   state.selectedKeyframe = undefined;
   state.selectedProperty = undefined;
@@ -1889,19 +1930,25 @@ const getMutableSelectedKeyframe = (state) => {
   return getMutableSectionProperties(state, side)[property]?.keyframes?.[index];
 };
 
+const getKeyframeFormValues = (keyframe, property) => {
+  const values = {
+    delay: keyframe.delay ?? 0,
+    duration: keyframe.duration,
+    easing: keyframe.easing ?? "linear",
+  };
+  if (property !== "camera") {
+    values.value = keyframe.value;
+    values.relative = keyframe.relative ?? false;
+  }
+  return values;
+};
+
 export const selectSelectedKeyframeFormValues = ({ state }) => {
   const keyframe = getMutableSelectedKeyframe(state);
   if (!keyframe) {
     return undefined;
   }
-
-  return {
-    delay: keyframe.delay ?? 0,
-    duration: keyframe.duration,
-    value: keyframe.value,
-    easing: keyframe.easing ?? "linear",
-    relative: keyframe.relative ?? false,
-  };
+  return getKeyframeFormValues(keyframe, state.selectedKeyframe.property);
 };
 
 export const setSelectedKeyframeEasing = ({ state }, { easing } = {}) => {
@@ -2013,6 +2060,11 @@ export const setSelectedKeyframeStartValue = (
     return;
   }
 
+  if (state.selectedKeyframe.property === "camera") {
+    keyframe.startValue = { ...startValue };
+    return;
+  }
+
   const nextStartValue = Number(startValue);
   if (Number.isFinite(nextStartValue)) {
     keyframe.startValue = nextStartValue;
@@ -2030,6 +2082,14 @@ export const selectDefaultSelectedKeyframeStartValue = ({ state }) => {
   const selectedFrame = propertyConfig?.keyframes?.[index];
   if (!selectedFrame) {
     return 0;
+  }
+
+  if (property === "camera") {
+    return {
+      ...(propertyConfig.keyframes[index - 1]?.value ??
+        propertyConfig.initialValue ??
+        createCameraPose(state.projectResolution)),
+    };
   }
 
   if (selectedFrame.relative) {
@@ -2092,7 +2152,58 @@ const getTweenPropertyDuration = (config = {}) => {
 };
 
 export const selectProperties = ({ state }, { side } = {}) => {
-  return getMutableSectionProperties(state, side) ?? {};
+  return expandCameraTrack(getMutableSectionProperties(state, side) ?? {});
+};
+
+export const selectCameraTracks = ({ state }) => {
+  const sides = Object.entries(state.tweenBySection)
+    .filter(([, properties]) => properties.camera)
+    .map(([side]) => side);
+  return sides.length || state.cameraTracksAuthored ? sides : undefined;
+};
+
+export const openCameraEditor = (
+  { state },
+  { side, index, field = "value" } = {},
+) => {
+  const camera = getSectionProperties(state, side).camera;
+  const pose =
+    index === undefined
+      ? (camera.initialValue ?? createCameraPose(state.projectResolution))
+      : camera.keyframes[index][field];
+  state.cameraEditor = { side, index, field, pose: { ...pose } };
+};
+
+export const selectCameraEditorTimeMs = ({ state }) => {
+  const { side, index, field } = state.cameraEditor;
+  if (index === undefined) return 0;
+  const { keyframes } = getSectionProperties(state, side).camera;
+  const startTimeMs = keyframes
+    .slice(0, index)
+    .reduce((time, frame) => time + (frame.delay ?? 0) + frame.duration, 0);
+  const frame = keyframes[index];
+  return (
+    startTimeMs +
+    (frame.delay ?? 0) +
+    (field === "startValue" ? 0 : frame.duration)
+  );
+};
+
+export const closeCameraEditor = ({ state }) => {
+  state.cameraEditor = undefined;
+};
+
+export const setCameraEditorPose = ({ state }, { pose }) => {
+  state.cameraEditor.pose = pose;
+};
+
+export const commitCameraEditor = ({ state }) => {
+  const { side, index, field, pose } = state.cameraEditor;
+  const camera = getMutableSectionProperties(state, side).camera;
+  const roundedPose = roundCameraPose(pose);
+  if (index === undefined) camera.initialValue = roundedPose;
+  else camera.keyframes[index][field] = roundedPose;
+  state.cameraEditor = undefined;
 };
 
 export const setPopover = ({ state }, { mode, x, y, payload } = {}) => {
@@ -2125,6 +2236,7 @@ const createTweenAnimationsForTarget = ({
   targetId,
   animationIdPrefix,
 } = {}) => {
+  properties = expandCameraTrack(properties);
   const animations = [];
   const defaultInitialValuesByProperty = createDefaultInitialValuesByProperty(
     createPropertyFieldConfig(projectResolution),
@@ -2193,6 +2305,7 @@ const createTweenAnimationsForTarget = ({
 };
 
 const createTweenPayload = ({ properties, projectResolution } = {}) => {
+  properties = expandCameraTrack(properties);
   const tween = {};
   const defaultInitialValuesByProperty = createDefaultInitialValuesByProperty(
     createPropertyFieldConfig(projectResolution),
@@ -2281,6 +2394,7 @@ const createAnimationRenderState = ({
         imagesData,
         previewImages,
         projectResolution,
+        updateProperties,
       }),
       animations,
     };
@@ -2339,6 +2453,7 @@ const createAnimationRenderState = ({
         imagesData,
         projectResolution,
         fallbackFill: PREVIEW_TRANSITION_NEXT_FILL,
+        camera: Boolean(nextProperties?.camera),
       }),
     ],
     animations: hasTransitionAnimation ? [transitionAnimation] : [],
@@ -2351,6 +2466,8 @@ export const selectAnimationResetState = ({ state }) => {
     imagesData: state.imagesData,
     previewImages: state.previewImages,
     projectResolution: state.projectResolution,
+    updateProperties: state.tweenBySection.update,
+    previousProperties: state.tweenBySection.prev,
   });
 };
 
@@ -2392,6 +2509,22 @@ export const addProperty = (
     properties[property] ||
     hasPropertyConflict(properties, property)
   ) {
+    return;
+  }
+
+  if (property === "camera") {
+    state.cameraTracksAuthored = true;
+    const pose = createCameraPose(state.projectResolution);
+    properties.camera = {
+      initialValue: pose,
+      keyframes: [{ duration: 1000, easing: "linear", value: { ...pose } }],
+    };
+    state.selectedKeyframe = {
+      side: resolveDialogSide(state, side),
+      property,
+      index: 0,
+    };
+    state.selectedProperty = undefined;
     return;
   }
 
@@ -2441,7 +2574,14 @@ export const addKeyframe = ({ state }, keyframe = {}) => {
   const nextKeyframe = {
     duration: parseInt(keyframe.duration, 10),
     easing: keyframe.easing,
-    value: parseFloat(keyframe.value),
+    value:
+      keyframe.property === "camera"
+        ? {
+            ...(keyframes[index - 1]?.value ??
+              properties.camera.initialValue ??
+              createCameraPose(state.projectResolution)),
+          }
+        : parseFloat(keyframe.value),
     relative: keyframe.relative,
   };
   if (keyframe.startValue !== undefined && keyframe.startValue !== "") {
@@ -2584,14 +2724,20 @@ export const updateKeyframe = (
   const nextKeyframe = {
     ...keyframe,
     duration: parseInt(keyframe.duration, 10),
-    value: parseFloat(keyframe.value),
-    relative: keyframe.relative,
+    value:
+      property === "camera"
+        ? keyframes[index].value
+        : parseFloat(keyframe.value),
+    relative: property === "camera" ? false : keyframe.relative,
   };
   const currentStartValue = keyframes[index]?.startValue;
   if (keyframe.startValue === undefined && currentStartValue !== undefined) {
     nextKeyframe.startValue = currentStartValue;
   } else if (keyframe.startValue !== undefined) {
-    nextKeyframe.startValue = parseFloat(keyframe.startValue);
+    nextKeyframe.startValue =
+      property === "camera"
+        ? keyframe.startValue
+        : parseFloat(keyframe.startValue);
   }
   const currentDelay = Math.max(0, Number(keyframes[index]?.delay) || 0);
   if (keyframe.delay === undefined && currentDelay > 0) {
@@ -3442,9 +3588,8 @@ const buildSelectedKeyframePanelData = (
   }
 
   const { side, property, index } = selectedKeyframe;
-  const keyframe = getSectionProperties(state, side)[property]?.keyframes?.[
-    index
-  ];
+  const propertyConfig = getSectionProperties(state, side)[property];
+  const keyframe = propertyConfig?.keyframes?.[index];
   if (!keyframe) {
     return undefined;
   }
@@ -3461,6 +3606,7 @@ const buildSelectedKeyframePanelData = (
   const valueSlider = propertyFieldConfig[property]?.slider;
   const hasStartValue =
     keyframe.startValue !== undefined && keyframe.startValue !== "";
+  const hasInitialValue = propertyConfig.initialValue !== undefined;
   const fields = [
     {
       type: "text",
@@ -3489,27 +3635,52 @@ const buildSelectedKeyframePanelData = (
     },
   ];
   if (hasStartValue) {
+    fields.push({ type: "slot", slot: "keyframe-start-value" });
+  }
+  if (property === "camera") {
+    if (index === 0 && hasInitialValue) {
+      fields.push({
+        type: "slot",
+        slot: "camera-initial-value",
+      });
+    }
     fields.push({
       type: "slot",
-      slot: "keyframe-start-value",
+      label: copy.cameraPropertyLabel ?? "Camera",
+      slot: "camera-value",
     });
+  } else {
+    fields.push(
+      {
+        type: "slot",
+        label: copy.valueLabel ?? "Value",
+        slot: "keyframe-value",
+      },
+      {
+        type: "slot",
+        label: copy.valueTypeLabel ?? "Value type",
+        slot: "keyframe-value-type",
+      },
+    );
   }
-  fields.push(
-    {
-      type: "slot",
-      label: copy.valueLabel ?? "Value",
-      slot: "keyframe-value",
-    },
-    {
-      type: "slot",
-      label: copy.valueTypeLabel ?? "Value type",
-      slot: "keyframe-value-type",
-    },
-  );
 
   return {
     id: `${side}:${property}:${index}`,
     editor: {
+      camera: property === "camera",
+      cameraInitialLabel:
+        property === "camera"
+          ? formatCameraPoseLabel(propertyConfig.initialValue)
+          : undefined,
+      cameraStartLabel:
+        property === "camera"
+          ? formatCameraPoseLabel(keyframe.startValue)
+          : undefined,
+      cameraValueLabel:
+        property === "camera"
+          ? formatCameraPoseLabel(keyframe.value)
+          : undefined,
+      hasInitialValue,
       delay: keyframe.delay ?? 0,
       delayLabel: copy.delayMsLabel ?? "Delay (ms)",
       duration: keyframe.duration,
@@ -3579,7 +3750,11 @@ const buildSelectedPropertyPanelData = (
     },
   ];
 
-  if (autoConfig) {
+  if (property === "camera") {
+    if (hasInitialValue) {
+      fields.push({ type: "slot", slot: "camera-initial-value" });
+    }
+  } else if (autoConfig) {
     fields.push(
       {
         type: "slot",
@@ -3618,6 +3793,11 @@ const buildSelectedPropertyPanelData = (
           easingOptions: createEasingOptions(copy),
         }
       : {
+          camera: property === "camera",
+          cameraInitialLabel:
+            property === "camera"
+              ? formatCameraPoseLabel(propertyConfig.initialValue)
+              : undefined,
           hasInitialValue,
           initialValue,
           initialValueLabel: copy.initialValueLabel ?? "Initial value",
@@ -3746,9 +3926,29 @@ export const selectViewData = ({ state, i18n }) => {
   const propertyFieldConfig = getLocalizedPropertyFieldConfig(state, copy);
   const defaultInitialValuesByProperty = getDefaultInitialValues(state);
   const dialogType = state.dialogType;
-  const updateProperties = getSectionProperties(state, "update");
-  const previousProperties = getSectionProperties(state, "prev");
-  const nextProperties = getSectionProperties(state, "next");
+  const cameraLabel = copy.cameraPropertyLabel ?? "Camera";
+  const updateProperties = cameraTimelineProperties(
+    getSectionProperties(state, "update"),
+    cameraLabel,
+  );
+  const previousProperties = cameraTimelineProperties(
+    getSectionProperties(state, "prev"),
+    cameraLabel,
+  );
+  const nextProperties = cameraTimelineProperties(
+    getSectionProperties(state, "next"),
+    cameraLabel,
+  );
+  const cameraImageId =
+    state.cameraEditor?.side === "update"
+      ? getUpdatePreviewSlot(state.previewImages).imageId
+      : getPreviewSlot(
+          state.previewImages,
+          state.cameraEditor?.side === "prev"
+            ? "preview-outgoing"
+            : "preview-incoming",
+        ).imageId;
+  const cameraImage = state.imagesData.items[cameraImageId];
   const activeTimelineDuration = getActiveTimelineDuration(state);
   const transitionTimelineDuration =
     dialogType === "transition" ? activeTimelineDuration : 0;
@@ -3794,19 +3994,25 @@ export const selectViewData = ({ state, i18n }) => {
     "next",
     propertyFieldConfig,
   );
-  const transitionAddPropertySideOptions =
-    createTransitionAddPropertySideMenuItems({
-      previousAvailable: previousAddPropertyOptions.length > 0,
-      nextAvailable: nextAddPropertyOptions.length > 0,
-      maskAvailable: true,
-      copy,
-    });
-  const transitionPropertySideOptions =
-    createTransitionAddPropertySideMenuItems({
-      previousAvailable: previousAddPropertyOptions.length > 0,
-      nextAvailable: nextAddPropertyOptions.length > 0,
-      copy,
-    });
+  const transitionPropertySideOptions = createTransitionPropertySideOptions({
+    previousAvailable: previousAddPropertyOptions.length > 0,
+    nextAvailable: nextAddPropertyOptions.length > 0,
+    copy,
+  });
+  const transitionAddPropertySideOptions = transitionPropertySideOptions.map(
+    (item) => ({
+      ...item,
+      items: (item.value === "prev"
+        ? previousAddPropertyOptions
+        : nextAddPropertyOptions
+      ).map((property) => ({ ...property, side: item.value })),
+    }),
+  );
+  transitionAddPropertySideOptions.push({
+    label: copy.maskTitle ?? "Mask",
+    type: "item",
+    value: "mask",
+  });
   const defaultTransitionAddPropertySide =
     previousAddPropertyOptions.length > 0 ? "prev" : "next";
   const addPropertySide =
@@ -3893,6 +4099,17 @@ export const selectViewData = ({ state, i18n }) => {
           },
         ]
       : [];
+  if (
+    selectedKeyframePanel?.editor.camera &&
+    state.selectedKeyframe.index === 0 &&
+    !selectedKeyframePanel.editor.hasInitialValue
+  ) {
+    selectedKeyframeAddMenuItems.push({
+      label: copy.initialValueLabel ?? "Initial value",
+      type: "item",
+      value: "initial-value",
+    });
+  }
   const selectedKeyframeCanDelete = (() => {
     if (!state.selectedKeyframe) {
       return false;
@@ -4012,13 +4229,10 @@ export const selectViewData = ({ state, i18n }) => {
       ?.keyframes?.[index];
 
     if (currentKeyframe) {
-      editKeyframeDefaultValues = {
-        delay: currentKeyframe.delay ?? 0,
-        duration: currentKeyframe.duration,
-        value: currentKeyframe.value,
-        easing: currentKeyframe.easing,
-        relative: currentKeyframe.relative,
-      };
+      editKeyframeDefaultValues = getKeyframeFormValues(
+        currentKeyframe,
+        property,
+      );
     }
   }
 
@@ -4199,6 +4413,25 @@ export const selectViewData = ({ state, i18n }) => {
     fullImagePreviewVisible: state.fullImagePreviewVisible,
     fullImagePreviewImageId: state.fullImagePreviewImageId,
     isPreviewDialogOpen: state.isPreviewDialogOpen,
+    cameraEditor: state.cameraEditor,
+    cameraEditorInitial:
+      state.cameraEditor?.index === undefined ||
+      state.cameraEditor.field === "startValue",
+    cameraImageId,
+    cameraImageSize: cameraImage
+      ? {
+          width: toPositiveNumber(
+            cameraImage.width,
+            state.projectResolution.width,
+          ),
+          height: toPositiveNumber(
+            cameraImage.height,
+            state.projectResolution.height,
+          ),
+        }
+      : state.projectResolution,
+    projectResolution: state.projectResolution,
+    adjustCameraButton: copy.adjustCameraButton ?? "Adjust camera",
     maskRemoveConfirmDialogOpen: state.maskRemoveConfirmDialogOpen,
     propertyRemoveConfirmDialogOpen: state.propertyRemoveConfirmDialogOpen,
     showRightPanel: !state.isTouchMode,
@@ -4256,11 +4489,12 @@ export const selectViewData = ({ state, i18n }) => {
     propertyRemoveConfirmTitle:
       copy.propertyRemoveConfirmTitle ?? "Delete Property",
     editPreviewButton: copy.editPreviewButton ?? "Edit Preview",
-    editKeyframeButtonLabel: copy.editKeyframeMenuItem ?? "Edit keyframe",
     imageLabel: copy.imageLabel ?? "Image",
     initialValueLabel: copy.initialValueLabel ?? "Initial value",
     removeStartValueButtonLabel:
       copy.removeStartValueButtonLabel ?? "Remove start value",
+    removeInitialValueButtonLabel:
+      copy.removeInitialValueButtonLabel ?? "Remove initial value",
     inTimelineLabel: copy.inTimelineLabel ?? "Incoming",
     invertLabel: copy.invertLabel ?? "Invert",
     detailsPanelTitle: selectedMask

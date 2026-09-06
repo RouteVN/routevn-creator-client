@@ -15,6 +15,7 @@ export const AUTO_TWEEN_DEFAULT_EASING = "linear";
 export const TIMELINE_ZOOM_STEP = 0.125;
 
 export const UPDATE_PROPERTY_KEYS = [
+  "camera",
   "alpha",
   "x",
   "y",
@@ -29,6 +30,7 @@ export const UPDATE_PROPERTY_KEYS = [
 ];
 
 export const TRANSITION_PROPERTY_KEYS = [
+  "camera",
   "x",
   "y",
   "translateX",

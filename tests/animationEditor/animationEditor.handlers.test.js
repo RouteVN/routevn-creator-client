@@ -1,4 +1,5 @@
 import { describe, expect, it, vi } from "vitest";
+import { JSDOM } from "jsdom";
 import { Subject } from "rxjs";
 import {
   handleAddMaskClick,
@@ -42,7 +43,6 @@ import {
   handleSelectedKeyframeDelayChange,
   handleSelectedKeyframeDurationChange,
   handleSelectedKeyframeEasingChange,
-  handleSelectedKeyframeEditClick,
   handleSelectedKeyframeAddClick,
   handleSelectedKeyframeAddMenuItemClick,
   handleSelectedKeyframeDeleteClick,
@@ -145,6 +145,7 @@ describe("animationEditor.handlers", () => {
     const showToast = vi.fn();
     const store = {
       selectAnimationDescription: vi.fn(() => "Latest description"),
+      selectCameraTracks: vi.fn(),
       selectAnimationJsonCopyShortcutStartedAt: vi.fn(() => shortcutStartedAt),
       selectAnimationName: vi.fn(() => "Fade Fast"),
       selectDialogType: vi.fn(() => "update"),
@@ -767,7 +768,12 @@ describe("animationEditor.handlers", () => {
     expect(render).toHaveBeenCalledTimes(4);
   });
 
-  it("does not enter timeline pan mode while typing", () => {
+  it.each([
+    "<input>",
+    '<button data-camera-value="true"></button>',
+    '<button><span id="target"></span></button>',
+    '<div role="button" tabindex="0"></div>',
+  ])("leaves Space available to the focused control: %s", (html) => {
     const store = {
       selectTimelinePanHovered: vi.fn(() => true),
       selectTimelinePanMode: vi.fn(() => false),
@@ -775,13 +781,15 @@ describe("animationEditor.handlers", () => {
     };
     const render = vi.fn();
     const preventDefault = vi.fn();
+    const fragment = JSDOM.fragment(html);
+    const target = fragment.querySelector("#target") ?? fragment.firstChild;
 
     handleTimelinePanKeyDown(
       { render, store },
       {
         _event: {
           code: "Space",
-          composedPath: () => [{ tagName: "INPUT" }],
+          composedPath: () => [target],
           preventDefault,
         },
       },
@@ -1079,7 +1087,7 @@ describe("animationEditor.handlers", () => {
     expect(render).toHaveBeenCalled();
   });
 
-  it("opens and prefills the selected keyframe edit dialog", () => {
+  it("opens and prefills the keyframe edit dialog from its context menu", () => {
     const selectedKeyframe = {
       side: "update",
       property: "x",
@@ -1099,13 +1107,14 @@ describe("animationEditor.handlers", () => {
     const store = {
       selectSelectedKeyframe: vi.fn(() => selectedKeyframe),
       selectSelectedKeyframeFormValues: vi.fn(() => values),
+      selectPopover: vi.fn(() => ({ payload: selectedKeyframe, x: 40, y: 80 })),
       setPopover: vi.fn(),
     };
     const render = vi.fn();
 
-    handleSelectedKeyframeEditClick(
+    handleKeyframeDropdownItemClick(
       { refs: { editKeyframeForm }, store, render },
-      { _event: { clientX: 40, clientY: 80 } },
+      { _event: { detail: { item: { value: "edit" } } } },
     );
 
     expect(store.setPopover).toHaveBeenCalledWith({
@@ -2245,6 +2254,50 @@ describe("animationEditor.handlers", () => {
     });
     expect(render).toHaveBeenCalledOnce();
   });
+
+  it.each([
+    ["prev", "x"],
+    ["next", "alpha"],
+    ["prev", "camera"],
+    ["next", "camera"],
+  ])(
+    "adds %s %s directly from its submenu and queues autosave",
+    async (side, property) => {
+      const store = {
+        selectPopover: vi.fn(() => ({ x: 24, y: 48 })),
+        setPopover: vi.fn(),
+        addProperty: vi.fn(),
+        selectPreviewPlaybackFrameId: vi.fn(() => undefined),
+        stopPreviewPlayback: vi.fn(),
+        bumpPreviewRenderVersion: vi.fn(),
+        setPreviewPlayhead: vi.fn(),
+        closePopover: vi.fn(),
+        queueAutosave: vi.fn(),
+        ...createIdleAutosaveMocks(),
+      };
+      const render = vi.fn();
+
+      await handleAddPropertySideMenuItemClick(
+        { store, render },
+        { _event: { detail: { item: { side, value: property } } } },
+      );
+
+      expect(store.addProperty).toHaveBeenCalledWith({ side, property });
+      expect(store.bumpPreviewRenderVersion).toHaveBeenCalledOnce();
+      expect(store.closePopover).toHaveBeenCalledOnce();
+      expect(store.queueAutosave).toHaveBeenCalledOnce();
+      expect(store.setPopover).not.toHaveBeenCalled();
+      expect(render).toHaveBeenCalled();
+      if (property === "camera") {
+        expect(store.setPreviewPlayhead).toHaveBeenCalledWith({
+          timeMs: 0,
+          visible: true,
+        });
+      } else {
+        expect(store.setPreviewPlayhead).not.toHaveBeenCalled();
+      }
+    },
+  );
 
   it("opens Add Mask from the transition Add menu", () => {
     const store = {

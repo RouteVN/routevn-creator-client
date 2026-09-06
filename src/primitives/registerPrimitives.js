@@ -14,8 +14,12 @@ import {
   VisibilityObserverElement,
   VISIBILITY_OBSERVER_TAG_NAME,
 } from "./visibilityObserver.js";
+import { CameraViewportElement } from "./cameraViewport.js";
 
 export const registerPrimitives = () => {
+  if (!customElements.get("rvn-camera-viewport")) {
+    customElements.define("rvn-camera-viewport", CameraViewportElement);
+  }
   if (!customElements.get(LEXICAL_SCENE_DOCUMENT_EDITOR_TAG_NAME)) {
     customElements.define(
       LEXICAL_SCENE_DOCUMENT_EDITOR_TAG_NAME,

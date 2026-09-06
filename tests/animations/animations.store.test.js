@@ -8,9 +8,141 @@ import {
   setProjectResolution,
   setSelectedItemId,
 } from "../../src/pages/animations/animations.store.js";
-import { EN_I18N } from "../support/i18n.js";
+import { EN_I18N, JA_I18N, ZH_HANS_I18N } from "../support/i18n.js";
+import { JSDOM } from "jsdom";
+import * as timeline from "../../src/components/keyframeTimeline/keyframeTimeline.store.js";
+import { renderViewYaml } from "../support/renderView.js";
+
+const createCameraItem = (side) => {
+  const initial = { x: 960, y: 540, scaleX: 1, scaleY: 1 };
+  const start = { x: 970, y: 550, scaleX: 1.1, scaleY: 1.1 };
+  const end = { x: 980, y: 560, scaleX: 1.25, scaleY: 1.25 };
+  const tween = Object.fromEntries(
+    Object.keys(initial).map((property) => [
+      property,
+      {
+        initialValue: initial[property],
+        keyframes: [
+          {
+            delay: 100,
+            duration: 900,
+            easing: "easeInQuad",
+            startValue: start[property],
+            value: end[property],
+          },
+        ],
+      },
+    ]),
+  );
+  tween.alpha = { keyframes: [{ duration: 500, value: 0.5 }] };
+  const animation = { type: side === "update" ? "update" : "transition" };
+  if (side === "update") animation.tween = tween;
+  else {
+    animation[side] = { tween };
+    animation[side === "prev" ? "next" : "prev"] = {
+      tween: structuredClone(tween),
+    };
+  }
+  return {
+    id: "camera-one",
+    type: "animation",
+    name: "Camera One",
+    cameraTracks: [side],
+    animation,
+  };
+};
+
+const catalogItem = (item, i18n = EN_I18N) => {
+  const state = createInitialState();
+  setItems(
+    { state },
+    { data: { items: { [item.id]: item }, tree: [{ id: item.id }] } },
+  );
+  return selectViewData({ state, i18n })
+    .catalogGroups.flatMap((group) => group.children)
+    .find((child) => child.id === item.id);
+};
 
 describe("animations.store", () => {
+  it.each(["update", "prev", "next"])(
+    "shows authored %s Camera as one labeled timeline row without changing saved or unmarked tracks",
+    (side) => {
+      const item = createCameraItem(side);
+      const before = structuredClone(item);
+      const display = catalogItem(item);
+      const properties = display[`${side}Properties`];
+      expect(Object.keys(properties)).toEqual(["alpha", "camera"]);
+      expect(properties.camera).toMatchObject({
+        label: "Camera",
+        valueCurveMode: "progress",
+        initialValueLabel: "",
+        keyframes: [
+          {
+            delay: 100,
+            duration: 900,
+            easing: "easeInQuad",
+            startValueLabel: "110%",
+            valueLabel: "125%",
+          },
+        ],
+      });
+      expect(display.duration).toBe(1000);
+      expect(display.propertyCount).toBe(side === "update" ? 2 : 7);
+      if (side !== "update") {
+        const opposite = side === "prev" ? "next" : "prev";
+        expect(display[`${opposite}Properties`]).toEqual(
+          item.animation[opposite].tween,
+        );
+        expect(display.transitionTimelineDuration).toBe(1000);
+      }
+      expect(item).toEqual(before);
+      expect(display.animation).toBe(item.animation);
+      const fragment = JSDOM.fragment(
+        renderViewYaml(
+          "src/components/keyframeTimeline/keyframeTimeline.view.yaml",
+          timeline.selectViewData({
+            state: timeline.createInitialState(),
+            props: { properties },
+            i18n: EN_I18N,
+          }),
+        ),
+      );
+      expect(
+        fragment.querySelectorAll("[data-keyframe=true][data-property=camera]"),
+      ).toHaveLength(1);
+      expect(
+        fragment.querySelector(
+          "[data-property=x], [data-property=y], [data-property=scaleX], [data-property=scaleY]",
+        ),
+      ).toBeNull();
+      const path = fragment
+        .querySelector("[data-value-curve=camera] path")
+        .getAttribute("d");
+      expect(path).not.toMatch(/NaN|Infinity/);
+    },
+  );
+
+  it.each([undefined, []])(
+    "keeps matching scalar tracks separate without Camera metadata %j",
+    (cameraTracks) => {
+      const item = createCameraItem("update");
+      item.cameraTracks = cameraTracks;
+      const display = catalogItem(item);
+      expect(display.updateProperties).toEqual(item.animation.tween);
+      expect(display.propertyCount).toBe(5);
+    },
+  );
+
+  it.each([JA_I18N, ZH_HANS_I18N])(
+    "uses the same localized Camera label as the editor",
+    (i18n) => {
+      const display = catalogItem(createCameraItem("update"), i18n);
+      expect(display.updateProperties.camera.label).toBe(
+        i18n.animationEditorPage.cameraPropertyLabel,
+      );
+    },
+  );
+
   it("exposes the selected animation preview metadata for the detail panel", () => {
     const state = createInitialState();
     setItems(
