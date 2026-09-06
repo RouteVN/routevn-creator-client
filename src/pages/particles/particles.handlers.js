@@ -513,9 +513,7 @@ const openParticleDialog = async ({
   const { refs, render, store } = deps;
 
   if (itemId) {
-    const selectionPayload = { itemId };
-    if (editMode) selectionPayload.suppressMobileDetailSheet = true;
-    store.setSelectedItemId(selectionPayload);
+    store.setSelectedItemId({ itemId, suppressMobileDetailSheet: true });
     refs.fileExplorer?.selectItem?.({ itemId });
   }
 

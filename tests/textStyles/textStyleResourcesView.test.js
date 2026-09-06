@@ -115,6 +115,7 @@ describe("textStyleResourcesView", () => {
     );
 
     expect(preventDefault).toHaveBeenCalledTimes(1);
+    expect(dispatchEvent).toHaveBeenCalledOnce();
     expect(dispatchEvent).toHaveBeenCalledWith(
       expect.objectContaining({
         type: "item-dblclick",

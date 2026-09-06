@@ -641,7 +641,7 @@ const openSpritesheetPreviewDialogForItem = ({
   revokeSpritesheetDialogPreviewUrl(store);
 
   const values = buildSpritesheetDialogValues({ item });
-  store.setSelectedItemId({ itemId });
+  store.setSelectedItemId({ itemId, suppressMobileDetailSheet: true });
 
   if (syncExplorer) {
     refs.fileExplorer?.selectItem?.({ itemId });

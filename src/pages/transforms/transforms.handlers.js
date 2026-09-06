@@ -508,16 +508,19 @@ export const handleAfterMount = (deps) => {
 };
 
 export const handleTransformItemDoubleClick = async (deps, payload) => {
+  const { store, refs } = deps;
   const { itemId, isFolder } = payload._event.detail;
   if (isFolder || !itemId) {
     return;
   }
 
-  const itemData = deps.store.selectTransformItemById({ itemId });
+  const itemData = store.selectTransformItemById({ itemId });
   if (!itemData) {
     return;
   }
 
+  store.setSelectedItemId({ itemId, suppressMobileDetailSheet: true });
+  refs.fileExplorer?.selectItem?.({ itemId });
   await openTransformDialog({
     deps,
     previewOnly: true,

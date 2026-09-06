@@ -322,7 +322,7 @@ export const handleVideoItemDoubleClick = async (deps, payload) => {
     return;
   }
 
-  store.setSelectedItemId({ itemId });
+  store.setSelectedItemId({ itemId, suppressMobileDetailSheet: true });
   refs.fileExplorer?.selectItem?.({ itemId });
   await openVideoPreviewById({ deps, itemId });
 };

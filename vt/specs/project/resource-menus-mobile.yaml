@@ -1,6 +1,6 @@
 ---
 title: Mobile Resource Menus
-description: Verifies compact mobile headers, available Zoom and Filter actions, popover handoff, and the file explorer across all resource view families.
+description: Verifies compact mobile headers, Zoom and Filter actions, popover handoff, file explorers, and primary long-press actions without opening the selected-item sheet.
 url: /projects?vt-input-mode=touch
 skipInitialScreenshot: true
 viewport:
@@ -266,6 +266,55 @@ steps:
     selector: "rvn-colors #mobileFileExplorerClose"
     steps:
       - action: click
+  - action: waitFor
+    selector: "rvn-colors #groupview #itemRef0x0"
+    state: visible
+    timeoutMs: 10000
+  - action: select
+    selector: "rvn-colors #groupview #itemRef0x0"
+    steps:
+      - action: rclick
+  - action: waitFor
+    selector: "rvn-colors #previewDialog[open]"
+    state: visible
+    timeoutMs: 5000
+  - action: assert
+    type: hidden
+    selector: "rvn-colors #mobileDetailSheet"
+  - action: keypress
+    key: Escape
+  - action: waitFor
+    selector: "rvn-colors #previewDialog"
+    state: hidden
+    timeoutMs: 5000
+  - action: assert
+    type: hidden
+    selector: "rvn-colors #mobileDetailSheet"
+  - action: select
+    selector: "rvn-colors #groupview #itemRef0x0"
+    steps:
+      - action: click
+  - action: waitFor
+    selector: "rvn-colors #mobileDetailSheet"
+    state: visible
+    timeoutMs: 5000
+  - action: select
+    selector: "rvn-colors #mobileDetailPreviewButton"
+    steps:
+      - action: click
+  - action: waitFor
+    selector: "rvn-colors #previewDialog[open]"
+    state: visible
+    timeoutMs: 5000
+  - action: assert
+    type: hidden
+    selector: "rvn-colors #mobileDetailSheet"
+  - action: keypress
+    key: Escape
+  - action: waitFor
+    selector: "rvn-colors #previewDialog"
+    state: hidden
+    timeoutMs: 5000
   - action: select
     selector: "#mobileTabItem0"
     steps:
