@@ -1,4 +1,12 @@
 refs:
+  removeCameraInitialValue:
+    eventListeners:
+      click:
+        handler: handleRemoveCameraInitialValue
+  addCameraInitialValue:
+    eventListeners:
+      click:
+        handler: handleAdjustInitialCamera
   adjustCameraKeyframe:
     eventListeners:
       click:
@@ -528,6 +536,27 @@ refs:
         handler: handleMaskImagePreviewOverlayClick
   canvas: {}
 styles:
+  "[data-camera-value]":
+    appearance: none
+    background: var(--muted)
+    border: "1px solid var(--background)"
+    border-radius: var(--border-radius-md)
+    box-sizing: border-box
+    color: var(--foreground)
+    cursor: pointer
+    font: inherit
+    font-size: var(--sm-font-size)
+    font-variant-numeric: tabular-nums
+    min-height: 32px
+    padding: "var(--spacing-sm) var(--spacing-md)"
+    text-align: start
+    overflow-wrap: anywhere
+    width: 100%
+  "[data-camera-value]:hover":
+    border-color: var(--accent)
+  "[data-camera-value]:focus-visible":
+    outline: "2px solid var(--ring)"
+    outline-offset: 2px
   ".animationEditorTab:focus-visible":
     outline: "2px solid var(--ring)"
     outline-offset: 2px
@@ -560,8 +589,8 @@ template:
               - 'rtgl-button#previewLoopButton sq v=${previewLoopButtonVariant} pre=loop aria-label="${loopPreviewLabel}" aria-pressed="${previewLoopEnabled}" title="${loopPreviewLabel}"': null
               - 'rtgl-button#playButton s=sm aria-label="${playButton}" aria-pressed="${previewPlaying}"': ${playButton}
           - rtgl-view h=1fg sv w=f p=md g=lg:
-              - rtgl-view d=v w=f g=md:
-                  - 'rtgl-view bgc=fg pos=rel style="width: ${previewCanvasMaxWidth}; max-width: 100%; margin-left: auto; margin-right: auto; aspect-ratio: ${canvasAspectRatio};"':
+              - 'rtgl-view#animationEditorCanvasBackground d=v w=f g=md p=lg bgc=bg style="box-sizing: border-box; min-width: 0; background-image: radial-gradient(circle, var(--input) 1px, transparent 1px); background-size: 24px 24px;"':
+                  - 'rtgl-view pos=rel style="width: ${previewCanvasMaxWidth}; max-width: 100%; margin-left: auto; margin-right: auto; aspect-ratio: ${canvasAspectRatio};"':
                       - rtgl-view pos=abs cor=full:
                           - 'div#canvas style="width: 100%; height: 100%; display: flex;"': null
               - 'rtgl-view d=v w=f h=1fg g=md style="min-height: 0;"':
@@ -685,12 +714,19 @@ template:
                             $elif selectedMask:
                               - 'rtgl-button#selectedMaskDeleteButton sq v=gh pre=trash aria-label="${removeButton}" title="${removeButton}"': null
                             $elif selectedPropertyDetailId:
+                              - $if selectedPropertyEditor.camera && !selectedPropertyEditor.hasInitialValue:
+                                  - 'rtgl-button#addCameraInitialValue sq v=gh pre=plus aria-label="${initialValueLabel}" title="${initialValueLabel}"': null
                               - 'rtgl-button#selectedPropertyDeleteButton sq v=gh pre=trash aria-label="${deletePropertyButtonLabel}" title="${deletePropertyButtonLabel}"': null
                   - 'rtgl-view w=f h=1fg sv style="min-height: 0;"':
                       - $if selectedKeyframeDetailId:
                           - rvn-detail-view#selectedKeyframeDetails key=${selectedKeyframeDetailId} w=f :fields=${selectedKeyframeDetailFields} :fillHeight=${false}:
-                              - rtgl-button#adjustCameraInitial slot=camera-initial-value v=ol w=f: ${adjustCameraButton}
-                              - rtgl-button#adjustCameraKeyframe slot=camera-value v=ol w=f: ${adjustCameraButton}
+                              - $if selectedKeyframeEditor.camera && selectedKeyframeEditor.hasInitialValue && selectedKeyframe.index == 0:
+                                  - rtgl-view slot=camera-initial-value d=v w=f g=xs:
+                                      - rtgl-view d=h w=f av=c:
+                                          - rtgl-text w=1fg c=mu-fg: ${initialValueLabel}
+                                          - 'rtgl-button#removeCameraInitialValue sq v=gh pre=x aria-label="${removeInitialValueButtonLabel}" title="${removeInitialValueButtonLabel}"': null
+                                      - 'button#adjustCameraInitial data-camera-value=true type=button aria-haspopup=dialog title="${adjustCameraButton}" aria-label="${adjustCameraButton}: ${selectedKeyframeEditor.cameraInitialLabel}"': ${selectedKeyframeEditor.cameraInitialLabel}
+                              - 'button#adjustCameraKeyframe data-camera-value=true slot=camera-value type=button aria-haspopup=dialog title="${adjustCameraButton}" aria-label="${adjustCameraButton}: ${selectedKeyframeEditor.cameraValueLabel}"': ${selectedKeyframeEditor.cameraValueLabel}
                               - 'rtgl-view data-popover-input-field=true slot=keyframe-delay w=f h=32 d=h av=c ph=md bgc=mu bw=xs bc=bg h-bc=ac br=md cur=pointer style="box-sizing: border-box;"':
                                   - 'rvn-value-popover-input#selectedKeyframeDelay value=${selectedKeyframeEditor.delay} label="${selectedKeyframeEditor.delayLabel}"': null
                               - 'rtgl-view data-popover-input-field=true slot=keyframe-duration w=f h=32 d=h av=c ph=md bgc=mu bw=xs bc=bg h-bc=ac br=md cur=pointer style="box-sizing: border-box;"':
@@ -702,7 +738,7 @@ template:
                                           - rtgl-text w=1fg c=mu-fg: ${selectedKeyframeEditor.startValueLabel}
                                           - 'rtgl-button#selectedKeyframeRemoveStartValueButton sq v=gh pre=x aria-label="${removeStartValueButtonLabel}" title="${removeStartValueButtonLabel}"': null
                                       - $if selectedKeyframeEditor.camera:
-                                          - rtgl-button#adjustCameraStartValue v=ol w=f: ${adjustCameraButton}
+                                          - 'button#adjustCameraStartValue data-camera-value=true type=button aria-haspopup=dialog title="${adjustCameraButton}" aria-label="${adjustCameraButton}: ${selectedKeyframeEditor.cameraStartLabel}"': ${selectedKeyframeEditor.cameraStartLabel}
                                         $elif selectedKeyframeEditor.valueSlider:
                                           - rtgl-slider-input#selectedKeyframeStartValue key=${selectedKeyframeDetailId} w=f value=${selectedKeyframeEditor.startValue} min=${selectedKeyframeEditor.valueSlider.min} max=${selectedKeyframeEditor.valueSlider.max} step=${selectedKeyframeEditor.valueSlider.step}: null
                                         $elif selectedKeyframeEditor.valueUsesPopover:
@@ -720,7 +756,12 @@ template:
                               - rtgl-segmented-control#selectedKeyframeRelative slot=keyframe-value-type w=f no-clear :selectedValue=${selectedKeyframeEditor.relative} :options=${selectedKeyframeEditor.relativeOptions}: null
                         $elif selectedPropertyDetailId:
                           - rvn-detail-view#selectedPropertyDetails key=${selectedPropertyDetailId} w=f :fields=${selectedPropertyDetailFields} :fillHeight=${false}:
-                              - rtgl-button#adjustCameraInitial slot=camera-initial-value v=ol w=f: ${adjustCameraButton}
+                              - $if selectedPropertyEditor.camera && selectedPropertyEditor.hasInitialValue:
+                                  - rtgl-view slot=camera-initial-value d=v w=f g=xs:
+                                      - rtgl-view d=h w=f av=c:
+                                          - rtgl-text w=1fg c=mu-fg: ${initialValueLabel}
+                                          - 'rtgl-button#removeCameraInitialValue sq v=gh pre=x aria-label="${removeInitialValueButtonLabel}" title="${removeInitialValueButtonLabel}"': null
+                                      - 'button#adjustCameraInitial data-camera-value=true type=button aria-haspopup=dialog title="${adjustCameraButton}" aria-label="${adjustCameraButton}: ${selectedPropertyEditor.cameraInitialLabel}"': ${selectedPropertyEditor.cameraInitialLabel}
                               - $if selectedPropertyEditor && selectedPropertyEditor.auto:
                                   - 'rtgl-view data-popover-input-field=true slot=property-auto-duration w=f h=32 d=h av=c ph=md bgc=mu bw=xs bc=bg h-bc=ac br=md cur=pointer style="box-sizing: border-box;"':
                                       - 'rvn-value-popover-input#selectedPropertyAutoDuration value=${selectedPropertyEditor.duration} label="${selectedPropertyEditor.durationLabel}"': null

@@ -234,13 +234,13 @@ const createValuePointPath = ({ points, timelineDuration } = {}) => {
   const drawableHeight = CURVE_HEIGHT - CURVE_PADDING * 2;
 
   return points
-    .map(({ timeMs, value }, pointIndex) => {
+    .map(({ timeMs, value, moveTo }, pointIndex) => {
       const x = (timeMs / timelineDuration) * CURVE_WIDTH;
       const normalizedValue = hasValueRange
         ? (value - minValue) / valueRange
         : 0.5;
       const y = CURVE_PADDING + (1 - normalizedValue) * drawableHeight;
-      const command = pointIndex === 0 ? "M" : "L";
+      const command = pointIndex === 0 || moveTo ? "M" : "L";
       return `${command}${x.toFixed(2)},${y.toFixed(2)}`;
     })
     .join(" ");
@@ -251,26 +251,37 @@ export const createKeyframeValueCurvePath = ({
   initialValue,
   keyframes = [],
   timelineDuration,
+  mode = "value",
 } = {}) => {
   if (keyframes.length === 0) {
     return "";
   }
 
   const points = [];
+  const isProgress = mode === "progress";
   let elapsedTimeMs = 0;
-  let currentValue = resolveInitialValue({ initialValue, defaultValue });
+  let currentValue = isProgress
+    ? 0
+    : resolveInitialValue({ initialValue, defaultValue });
 
   keyframes.forEach((keyframe) => {
+    if (isProgress) {
+      // Each keyframe has its own 0–1 curve, with no line joining the reset.
+      currentValue = 0;
+      points.push({ timeMs: elapsedTimeMs, value: 0, moveTo: true });
+    }
     const delay = Math.max(0, resolveNumber(keyframe.delay, 0));
     const duration = resolveNumber(keyframe.duration, 1000) || 1000;
-    const startValue = resolveKeyframeStartValue({ keyframe, currentValue });
-    const targetValue = resolveTargetValue({
-      keyframe,
-      currentValue,
-      startValue,
-    });
+    const startValue = isProgress
+      ? 0
+      : resolveKeyframeStartValue({ keyframe, currentValue });
+    const targetValue = isProgress
+      ? 1
+      : resolveTargetValue({ keyframe, currentValue, startValue });
     const hasExplicitStartValue =
-      keyframe.startValue !== undefined && keyframe.startValue !== "";
+      !isProgress &&
+      keyframe.startValue !== undefined &&
+      keyframe.startValue !== "";
     const easingSamples =
       EASING_SAMPLES[keyframe.easing ?? "linear"] ?? EASING_SAMPLES.linear;
 

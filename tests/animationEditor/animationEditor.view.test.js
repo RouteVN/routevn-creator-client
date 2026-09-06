@@ -6,6 +6,30 @@ import { EN_I18N } from "../support/i18n.js";
 import { renderViewYaml } from "../support/renderView.js";
 
 describe("animationEditor view", () => {
+  it.each(["update", "transition"])(
+    "puts the %s preview on the layout editor's dotted background",
+    (dialogType) => {
+      const state = editor.createInitialState();
+      editor.openDialog({ state }, { dialogType });
+      const fragment = JSDOM.fragment(
+        renderViewYaml(
+          "src/pages/animationEditor/animationEditor.view.yaml",
+          editor.selectViewData({ state, i18n: EN_I18N }),
+        ),
+      );
+      const background = fragment.querySelector(
+        "#animationEditorCanvasBackground",
+      );
+      expect(background.getAttribute("bgc")).toBe("bg");
+      expect(background.style.backgroundImage).toBe(
+        "radial-gradient(circle, var(--input) 1px, transparent 1px)",
+      );
+      expect(background.style.backgroundSize).toBe("24px 24px");
+      expect(background.querySelector("#canvas")).not.toBeNull();
+      expect(background.querySelector('[bgc="fg"]')).toBeNull();
+    },
+  );
+
   it.each(["camera", "x", "alpha"])(
     "keeps field controls and only Add/Delete header buttons for %s keyframes",
     (property) => {

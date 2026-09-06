@@ -11,11 +11,12 @@ import {
   handleRulerTimeScrub,
   handleSelectedKeyframeAddMenuItemClick,
   handleSelectedKeyframeRemoveStartValueClick,
+  handleRemoveCameraInitialValue,
 } from "../../src/pages/animationEditor/animationEditor.handlers.js";
 import {
   expandCameraTrack,
   groupCameraTrack,
-} from "../../src/pages/animationEditor/support/animationCamera.js";
+} from "../../src/internal/animationCamera.js";
 import { EN_I18N } from "../support/i18n.js";
 import { renderViewYaml } from "../support/renderView.js";
 
@@ -44,6 +45,197 @@ const persisted = (state, side = "update") => {
 };
 
 describe("Camera animation authoring", () => {
+  it.each(["update", "prev", "next"])(
+    "stores two-decimal %s Camera initial, start, and end poses after Done and reopening",
+    async (side) => {
+      const state = createState(side);
+      const deps = createDeps(state);
+      const camera = state.tweenBySection[side].camera;
+      camera.keyframes[0].startValue = { ...camera.initialValue };
+      const pose = {
+        x: 962.2567,
+        y: -539.5432,
+        scaleX: 1.252567,
+        scaleY: 1.2100000000000004,
+      };
+      const rounded = { x: 962.26, y: -539.54, scaleX: 1.25, scaleY: 1.21 };
+      for (const target of [
+        {},
+        { index: 0, field: "startValue" },
+        { index: 0 },
+      ]) {
+        editor.openCameraEditor({ state }, { side, ...target });
+        editor.setCameraEditorPose({ state }, { pose });
+        await handleCameraDone(deps);
+      }
+      expect(camera.initialValue).toEqual(rounded);
+      expect(camera.keyframes[0].startValue).toEqual(rounded);
+      expect(camera.keyframes[0].value).toEqual(rounded);
+      const saved = JSON.parse(JSON.stringify(persisted(state, side)));
+      const tween =
+        side === "update" ? saved.animation.tween : saved.animation[side].tween;
+      for (const [property, value] of Object.entries(rounded)) {
+        expect(tween[property]).toMatchObject({
+          initialValue: value,
+          keyframes: [{ startValue: value, value }],
+        });
+      }
+      expect(
+        validatePayload({
+          type: "animation.create",
+          payload: { animationId: "camera-one", data: saved },
+        }),
+      ).toEqual({ valid: true });
+      const reopened = editor.createInitialState();
+      editor.openDialog(
+        { state: reopened },
+        { editMode: true, itemData: saved },
+      );
+      expect(reopened.tweenBySection[side].camera).toEqual(camera);
+      expect(deps.store.queueAutosave).toHaveBeenCalledTimes(3);
+    },
+  );
+
+  it("rounds existing Camera precision when serializing without rounding independent scalar tracks", () => {
+    const pose = {
+      x: -0.001,
+      y: 540.654321,
+      scaleX: 1.123456,
+      scaleY: 1.234567,
+    };
+    const camera = {
+      initialValue: pose,
+      keyframes: [
+        { duration: 1000, easing: "linear", startValue: pose, value: pose },
+      ],
+    };
+    const scalar = { keyframes: [{ duration: 1000, value: 0.1234567 }] };
+    const authored = { camera, alpha: scalar };
+    const before = structuredClone(authored);
+    const saved = expandCameraTrack(authored);
+    const expected = { x: 0, y: 540.65, scaleX: 1.12, scaleY: 1.23 };
+    for (const [property, value] of Object.entries(expected)) {
+      expect(saved[property]).toMatchObject({
+        initialValue: value,
+        keyframes: [{ value, startValue: value }],
+      });
+    }
+    expect(saved.alpha).toBe(scalar);
+    expect(authored).toEqual(before);
+    const ungrouped = { x: scalar, scaleX: scalar };
+    expect(expandCameraTrack(ungrouped)).toBe(ungrouped);
+  });
+
+  it.each(["update", "prev", "next"])(
+    "renders a 0–1 easing curve for %s Camera independently of its poses",
+    (side) => {
+      const state = createState(side);
+      const camera = state.tweenBySection[side].camera;
+      const propertiesKey = {
+        update: "updateProperties",
+        prev: "previousProperties",
+        next: "nextProperties",
+      }[side];
+      const readCurve = () => {
+        const authored = structuredClone(camera);
+        const viewData = timeline.selectViewData({
+          state: timeline.createInitialState(),
+          props: { properties: view(state)[propertiesKey] },
+        });
+        const dom = new JSDOM(
+          renderViewYaml(
+            "src/components/keyframeTimeline/keyframeTimeline.view.yaml",
+            viewData,
+          ),
+        );
+        try {
+          expect(camera).toEqual(authored);
+          return dom.window.document
+            .querySelector("[data-value-curve=camera] path")
+            .getAttribute("d");
+        } finally {
+          dom.window.close();
+        }
+      };
+      const linear = readCurve();
+      expect(linear).toMatch(/^M0\.00,19\.00 .*L100\.00,1\.00$/);
+      expect(linear).toContain("L50.00,10.00");
+      camera.keyframes[0].easing = "easeInQuad";
+      const eased = readCurve();
+      expect(eased).not.toBe(linear);
+      expect(eased).toContain("L50.00,14.50");
+
+      camera.keyframes[0].value = {
+        x: -100.25,
+        y: 42.125,
+        scaleX: 0.8,
+        scaleY: 0.8,
+      };
+      camera.keyframes[0].startValue = camera.initialValue;
+      delete camera.initialValue;
+      expect(readCurve()).toBe(eased);
+      delete camera.keyframes[0].startValue;
+      expect(readCurve()).toBe(eased);
+      expect(JSON.stringify(persisted(state, side))).not.toContain(
+        "valueCurveMode",
+      );
+    },
+  );
+
+  it.each(["update", "prev", "next"])(
+    "formats zoom and X/Y for each %s Camera pose without mutating state on read",
+    (side) => {
+      const state = createState(side);
+      const camera = state.tweenBySection[side].camera;
+      camera.initialValue = { x: 0, y: 0, scaleX: 1, scaleY: 1 };
+      camera.keyframes[0].startValue = {
+        x: -12.345,
+        y: 540.6789,
+        scaleX: 1.25,
+        scaleY: 1.25,
+      };
+      camera.keyframes[0].value = { x: 960, y: 540, scaleX: 1.2, scaleY: 1.2 };
+      const authored = structuredClone(camera);
+      const readLabel = (id) => {
+        const dom = new JSDOM(
+          renderViewYaml(
+            "src/pages/animationEditor/animationEditor.view.yaml",
+            view(state),
+          ),
+        );
+        try {
+          const button = dom.window.document.getElementById(id);
+          expect(button.tagName).toBe("BUTTON");
+          expect(button.type).toBe("button");
+          expect(button.hasAttribute("data-camera-value")).toBe(true);
+          expect(button.getAttribute("aria-haspopup")).toBe("dialog");
+          expect(button.getAttribute("aria-label")).toBe(
+            `Adjust camera: ${button.textContent}`,
+          );
+          return button.textContent;
+        } finally {
+          dom.window.close();
+        }
+      };
+      expect(readLabel("adjustCameraInitial")).toBe("100% · X 0 · Y 0");
+      expect(readLabel("adjustCameraStartValue")).toBe(
+        "125% · X -12.35 · Y 540.68",
+      );
+      expect(readLabel("adjustCameraKeyframe")).toBe("120% · X 960 · Y 540");
+      expect(camera).toEqual(authored);
+      editor.openCameraEditor({ state }, { side, index: 0 });
+      editor.setCameraEditorPose(
+        { state },
+        { pose: { x: 800.125, y: -0.001, scaleX: 0.8, scaleY: 0.8 } },
+      );
+      expect(readLabel("adjustCameraKeyframe")).toBe("120% · X 960 · Y 540");
+      editor.commitCameraEditor({ state });
+      expect(readLabel("adjustCameraKeyframe")).toBe("80% · X 800.13 · Y 0");
+      editor.setSelectedProperty({ state }, { side, property: "camera" });
+      expect(readLabel("adjustCameraInitial")).toBe("100% · X 0 · Y 0");
+    },
+  );
+
   it.each(["update", "prev", "next"])(
     "renders the actual starting and ending zoom on %s Camera bars without changing authored poses",
     (side) => {
@@ -180,6 +372,90 @@ describe("Camera animation authoring", () => {
   });
 
   it.each(["update", "prev", "next"])(
+    "removes and restores the %s Camera initial pose from the first keyframe and property panels",
+    async (side) => {
+      const state = createState(side);
+      const deps = createDeps(state);
+      const camera = state.tweenBySection[side].camera;
+      const defaultPose = { ...camera.initialValue };
+      camera.initialValue = { x: 800, y: 450, scaleX: 0.8, scaleY: 0.8 };
+      camera.keyframes[0].value = { x: 900, y: 500, scaleX: 1.2, scaleY: 1.2 };
+      const keyframes = structuredClone(camera.keyframes);
+      const render = () =>
+        renderViewYaml(
+          "src/pages/animationEditor/animationEditor.view.yaml",
+          view(state),
+        );
+      expect(render()).toContain('id="removeCameraInitialValue"');
+      await handleRemoveCameraInitialValue(deps);
+      expect(camera).not.toHaveProperty("initialValue");
+      expect(camera.keyframes).toEqual(keyframes);
+      expect(render()).not.toContain('id="removeCameraInitialValue"');
+      expect(render()).not.toContain('id="adjustCameraInitial"');
+      expect(view(state).selectedKeyframeAddMenuItems).toContainEqual({
+        label: "Initial value",
+        type: "item",
+        value: "initial-value",
+      });
+      expect(deps.store.queueAutosave).toHaveBeenCalledOnce();
+      expect(deps.graphicsService.setAnimationTime).toHaveBeenLastCalledWith(0);
+      const saved = persisted(state, side);
+      const tween =
+        side === "update" ? saved.animation.tween : saved.animation[side].tween;
+      for (const property of ["x", "y", "scaleX", "scaleY"]) {
+        expect(tween[property]).not.toHaveProperty("initialValue");
+      }
+      expect(
+        validatePayload({
+          type: "animation.create",
+          payload: { animationId: "camera-one", data: saved },
+        }),
+      ).toEqual({ valid: true });
+      const reopened = createState(side);
+      editor.openDialog(
+        { state: reopened },
+        { itemData: saved, editMode: true },
+      );
+      expect(reopened.tweenBySection[side].camera).not.toHaveProperty(
+        "initialValue",
+      );
+      expect(editor.selectDefaultSelectedKeyframeStartValue({ state })).toEqual(
+        defaultPose,
+      );
+      editor.addKeyframe(
+        { state },
+        { side, property: "camera", index: 0, duration: 1000 },
+      );
+      expect(camera.keyframes[0].value).toEqual(defaultPose);
+      editor.deleteKeyframe({ state }, { side, property: "camera", index: 0 });
+      editor.setSelectedKeyframe(
+        { state },
+        { side, property: "camera", index: 0 },
+      );
+      handleSelectedKeyframeAddMenuItemClick(deps, {
+        _event: { detail: { item: { value: "initial-value" } } },
+      });
+      expect(state.cameraEditor.pose).toEqual(defaultPose);
+      editor.closeCameraEditor({ state });
+      expect(camera).not.toHaveProperty("initialValue");
+      handleAdjustInitialCamera(deps);
+      await handleCameraDone(deps);
+      expect(camera.initialValue).toEqual(defaultPose);
+      expect(camera.keyframes).toEqual(keyframes);
+      editor.setSelectedProperty({ state }, { side, property: "camera" });
+      expect(render()).toContain('id="removeCameraInitialValue"');
+      await handleRemoveCameraInitialValue(deps);
+      expect(render()).toContain('id="addCameraInitialValue"');
+      expect(render()).not.toContain('id="removeCameraInitialValue"');
+      handleAdjustInitialCamera(deps);
+      await handleCameraDone(deps);
+      expect(render()).not.toContain('id="addCameraInitialValue"');
+      expect(camera.initialValue).toEqual(defaultPose);
+      expect(camera.keyframes).toEqual(keyframes);
+    },
+  );
+
+  it.each(["update", "prev", "next"])(
     "edits and previews the initial %s Camera independently of the first keyframe",
     async (side) => {
       const state = createState(side);
@@ -190,7 +466,6 @@ describe("Camera animation authoring", () => {
       const initialPose = { x: 800, y: 450, scaleX: 1.25, scaleY: 1.4 };
       expect(view(state).selectedKeyframeDetailFields).toContainEqual({
         type: "slot",
-        label: "Initial value",
         slot: "camera-initial-value",
       });
       handleAdjustInitialCamera(deps);
@@ -485,7 +760,7 @@ describe("Camera animation authoring", () => {
     ]);
     expect(view(state).updateProperties.camera).toMatchObject({
       label: "Camera",
-      hideValueCurve: true,
+      valueCurveMode: "progress",
     });
   });
 

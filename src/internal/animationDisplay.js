@@ -1,4 +1,8 @@
 import { getTransitionMaskDuration } from "./animationMasks.js";
+import {
+  cameraTimelineProperties,
+  groupCameraTrack,
+} from "./animationCamera.js";
 
 const getDialogType = (animationType) => {
   return animationType === "transition" ? "transition" : "update";
@@ -68,11 +72,27 @@ export const getTransitionTimelineDuration = ({
   );
 };
 
-export const toAnimationDisplayItem = (item) => {
+export const toAnimationDisplayItem = (
+  item,
+  { cameraLabel = "Camera" } = {},
+) => {
   const animationType = getDialogType(item?.animation?.type);
-  const prevProperties = structuredClone(getTransitionSideTween(item, "prev"));
-  const nextProperties = structuredClone(getTransitionSideTween(item, "next"));
-  const updateProperties = structuredClone(getUpdateAnimationTween(item));
+  const displayProperties = (properties, side) =>
+    item?.cameraTracks?.includes(side)
+      ? cameraTimelineProperties(groupCameraTrack(properties), cameraLabel)
+      : structuredClone(properties);
+  const prevProperties = displayProperties(
+    getTransitionSideTween(item, "prev"),
+    "prev",
+  );
+  const nextProperties = displayProperties(
+    getTransitionSideTween(item, "next"),
+    "next",
+  );
+  const updateProperties = displayProperties(
+    getUpdateAnimationTween(item),
+    "update",
+  );
   const propertyCount =
     animationType === "transition"
       ? Object.keys(prevProperties).length + Object.keys(nextProperties).length

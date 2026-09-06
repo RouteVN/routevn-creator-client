@@ -896,6 +896,58 @@ describe("animationEditor.store", () => {
     );
   });
 
+  it("lists every available property under its transition side", () => {
+    const state = createInitialState();
+    openDialog({ state }, { dialogType: "transition" });
+    state.tweenBySection.prev = {};
+    state.tweenBySection.next = {};
+
+    const items = selectViewData({
+      state,
+      i18n: EN_I18N,
+    }).addPropertySideMenuItems;
+    expect(items.map((item) => item.label)).toEqual([
+      "Outgoing",
+      "Incoming",
+      "Mask",
+    ]);
+    for (const [index, side] of ["prev", "next"].entries()) {
+      expect(items[index].items.map((item) => item.value)).toEqual(
+        TRANSITION_PROPERTY_KEYS,
+      );
+      expect(items[index].items.every((item) => item.side === side)).toBe(true);
+      expect(items[index].items.find((item) => item.value === "x").label).toBe(
+        "Position X",
+      );
+    }
+  });
+
+  it("filters each submenu independently for existing and conflicting properties", () => {
+    const state = createInitialState();
+    openDialog({ state }, { dialogType: "transition" });
+    state.tweenBySection.prev = {};
+    state.tweenBySection.next = {};
+    addProperty({ state }, { side: "prev", property: "camera" });
+    addProperty({ state }, { side: "next", property: "x" });
+
+    const items = selectViewData({
+      state,
+      i18n: EN_I18N,
+    }).addPropertySideMenuItems;
+    expect(items[0].items.map((item) => item.value)).toEqual([
+      "alpha",
+      "rotation",
+    ]);
+    expect(items[1].items.map((item) => item.value)).toEqual([
+      "y",
+      "translateY",
+      "alpha",
+      "scaleX",
+      "scaleY",
+      "rotation",
+    ]);
+  });
+
   it("keeps Mask in the transition Add menu when masks already exist", () => {
     const state = createInitialState();
     openDialog({ state }, { dialogType: "transition" });
@@ -925,6 +977,21 @@ describe("animationEditor.store", () => {
       },
     ]);
     expect(enabledViewData.transitionAddPropertyButtonVisible).toBe(true);
+  });
+
+  it("omits a side when all of its compatible properties have been added", () => {
+    const state = createInitialState();
+    openDialog({ state }, { dialogType: "transition" });
+    state.tweenBySection.prev = {};
+    state.tweenBySection.next = {};
+    for (const property of ["camera", "alpha", "rotation"]) {
+      addProperty({ state }, { side: "next", property });
+    }
+    expect(
+      selectViewData({ state, i18n: EN_I18N }).addPropertySideMenuItems.map(
+        (item) => item.value,
+      ),
+    ).toEqual(["prev", "mask"]);
   });
 
   it("keeps Mask out of the touch Add Property side control", () => {

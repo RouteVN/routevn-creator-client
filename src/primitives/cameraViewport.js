@@ -6,19 +6,22 @@ export class CameraViewportElement extends HTMLElement {
     this.shadowRoot.innerHTML = `
       <style>
         :host { display:block; width:100%; height:100%; min-height:240px; outline:none; }
-        #surface { width:100%; height:100%; position:relative; overflow:hidden; touch-action:none;
+        #surface { width:100%; height:100%; position:relative; overflow:hidden; touch-action:none; user-select:none; -webkit-user-select:none;
           background-image:radial-gradient(circle,var(--input) 1px,transparent 1px); background-size:24px 24px; cursor:grab; }
         #frame { position:absolute; background:#111; box-shadow:0 0 0 1px var(--border); overflow:hidden; }
         #content { position:absolute; transform-origin:center; background-color:#d8d8d8;
           background-image:linear-gradient(#b9b9b9 1px,transparent 1px),linear-gradient(90deg,#b9b9b9 1px,transparent 1px);
           background-size:10% 10%; box-shadow:0 0 0 1px var(--ring); }
-        :host(:focus-visible) #frame { outline:2px solid var(--ring); outline-offset:4px; }
+        :host(:focus-visible:not([data-pointer-focus])) #surface { outline:2px solid var(--ring); outline-offset:-2px; }
         ::slotted(*) { display:block; width:100%; height:100%; pointer-events:none; }
       </style>
       <div id="surface"><div id="frame"><div id="content"><slot></slot></div></div></div>`;
     this.surface = this.shadowRoot.getElementById("surface");
     this.frame = this.shadowRoot.getElementById("frame");
     this.content = this.shadowRoot.getElementById("content");
+    this.surface.addEventListener("dragstart", (event) =>
+      event.preventDefault(),
+    );
     this.surface.addEventListener("pointerdown", (event) =>
       this.startDrag(event),
     );
@@ -37,11 +40,18 @@ export class CameraViewportElement extends HTMLElement {
       "wheel",
       (event) => {
         event.preventDefault();
-        if (!this.drag) this.zoom(Math.exp(-event.deltaY * 0.001));
+        const delta =
+          event.shiftKey && event.deltaY === 0 ? event.deltaX : event.deltaY;
+        const unitsPerStep =
+          event.deltaMode === 1 ? 3 : event.deltaMode === 2 ? 1 : 100;
+        if (delta !== 0) this.zoomBy(-delta / unitsPerStep, event.shiftKey);
       },
       { passive: false },
     );
     this.addEventListener("keydown", (event) => this.handleKeyDown(event));
+    this.addEventListener("blur", () =>
+      this.removeAttribute("data-pointer-focus"),
+    );
     this.observer = new ResizeObserver(() => this.paint());
   }
 
@@ -115,6 +125,7 @@ export class CameraViewportElement extends HTMLElement {
 
   startDrag(event) {
     if (event.button !== 0 || this.drag || !this.currentPose) return;
+    this.setAttribute("data-pointer-focus", "");
     this.focus({ preventScroll: true });
     this.drag = {
       pointerId: event.pointerId,
@@ -147,16 +158,29 @@ export class CameraViewportElement extends HTMLElement {
   }
 
   zoom(factor) {
+    if (this.currentPose) this.setZoom(this.currentPose.scaleX * factor);
+  }
+
+  zoomBy(steps, accelerated = false) {
+    if (this.currentPose) {
+      this.setZoom(
+        this.currentPose.scaleX + steps * (accelerated ? 0.05 : 0.01),
+      );
+    }
+  }
+
+  setZoom(scaleX) {
     const pose = this.currentPose;
     if (!pose || this.drag) return;
-    const boundedFactor = Math.max(
-      0.1 / Math.min(pose.scaleX, pose.scaleY),
-      Math.min(factor, 10 / Math.max(pose.scaleX, pose.scaleY)),
+    const aspectRatio = pose.scaleY / pose.scaleX;
+    const boundedScale = Math.max(
+      0.1 / Math.min(1, aspectRatio),
+      Math.min(scaleX, 10 / Math.max(1, aspectRatio)),
     );
     this.changePose({
       ...pose,
-      scaleX: pose.scaleX * boundedFactor,
-      scaleY: pose.scaleY * boundedFactor,
+      scaleX: boundedScale,
+      scaleY: boundedScale * aspectRatio,
     });
   }
 
@@ -173,6 +197,7 @@ export class CameraViewportElement extends HTMLElement {
       ArrowDown: [0, 1],
     };
     if (event.ctrlKey || event.metaKey || event.altKey || this.drag) return;
+    this.removeAttribute("data-pointer-focus");
     const move = moves[event.key];
     if (move) {
       event.preventDefault();
@@ -182,9 +207,9 @@ export class CameraViewportElement extends HTMLElement {
         x: this.currentPose.x + move[0] * step,
         y: this.currentPose.y + move[1] * step,
       });
-    } else if (["+", "=", "-"].includes(event.key)) {
+    } else if (["+", "=", "-", "_"].includes(event.key)) {
       event.preventDefault();
-      this.zoom(event.key === "-" ? 1 / 1.1 : 1.1);
+      this.zoomBy(["-", "_"].includes(event.key) ? -1 : 1, event.shiftKey);
     }
   }
 }

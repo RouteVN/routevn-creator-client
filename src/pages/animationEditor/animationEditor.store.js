@@ -48,10 +48,12 @@ import { selectAnimationEditorPageCopy } from "./support/animationEditorPageCopy
 import {
   cameraTimelineProperties,
   createCameraPose,
-  createCameraPreviewElement,
   expandCameraTrack,
+  formatCameraPoseLabel,
   groupCameraTrack,
-} from "./support/animationCamera.js";
+  roundCameraPose,
+} from "../../internal/animationCamera.js";
+import { createCameraPreviewElement } from "./support/animationCamera.js";
 
 const TIMELINE_ZOOM_DEFAULT = 2;
 const TIMELINE_ZOOM_MIN = 0.25;
@@ -1029,10 +1031,9 @@ const createAddPropertyForm = (
   );
 };
 
-const createTransitionAddPropertySideMenuItems = ({
+const createTransitionPropertySideOptions = ({
   previousAvailable = false,
   nextAvailable = false,
-  maskAvailable = false,
   copy = {},
 } = {}) => {
   const items = [];
@@ -1050,14 +1051,6 @@ const createTransitionAddPropertySideMenuItems = ({
       label: copy.inTimelineLabel ?? "Incoming",
       type: "item",
       value: "next",
-    });
-  }
-
-  if (maskAvailable) {
-    items.push({
-      label: copy.maskTitle ?? "Mask",
-      type: "item",
-      value: "mask",
     });
   }
 
@@ -2078,7 +2071,8 @@ export const selectDefaultSelectedKeyframeStartValue = ({ state }) => {
   if (property === "camera") {
     return {
       ...(propertyConfig.keyframes[index - 1]?.value ??
-        propertyConfig.initialValue),
+        propertyConfig.initialValue ??
+        createCameraPose(state.projectResolution)),
     };
   }
 
@@ -2158,7 +2152,9 @@ export const openCameraEditor = (
 ) => {
   const camera = getSectionProperties(state, side).camera;
   const pose =
-    index === undefined ? camera.initialValue : camera.keyframes[index][field];
+    index === undefined
+      ? (camera.initialValue ?? createCameraPose(state.projectResolution))
+      : camera.keyframes[index][field];
   state.cameraEditor = { side, index, field, pose: { ...pose } };
 };
 
@@ -2188,8 +2184,9 @@ export const setCameraEditorPose = ({ state }, { pose }) => {
 export const commitCameraEditor = ({ state }) => {
   const { side, index, field, pose } = state.cameraEditor;
   const camera = getMutableSectionProperties(state, side).camera;
-  if (index === undefined) camera.initialValue = pose;
-  else camera.keyframes[index][field] = pose;
+  const roundedPose = roundCameraPose(pose);
+  if (index === undefined) camera.initialValue = roundedPose;
+  else camera.keyframes[index][field] = roundedPose;
   state.cameraEditor = undefined;
 };
 
@@ -2563,7 +2560,11 @@ export const addKeyframe = ({ state }, keyframe = {}) => {
     easing: keyframe.easing,
     value:
       keyframe.property === "camera"
-        ? { ...(keyframes[index - 1]?.value ?? properties.camera.initialValue) }
+        ? {
+            ...(keyframes[index - 1]?.value ??
+              properties.camera.initialValue ??
+              createCameraPose(state.projectResolution)),
+          }
         : parseFloat(keyframe.value),
     relative: keyframe.relative,
   };
@@ -3565,9 +3566,8 @@ const buildSelectedKeyframePanelData = (
   }
 
   const { side, property, index } = selectedKeyframe;
-  const keyframe = getSectionProperties(state, side)[property]?.keyframes?.[
-    index
-  ];
+  const propertyConfig = getSectionProperties(state, side)[property];
+  const keyframe = propertyConfig?.keyframes?.[index];
   if (!keyframe) {
     return undefined;
   }
@@ -3584,6 +3584,7 @@ const buildSelectedKeyframePanelData = (
   const valueSlider = propertyFieldConfig[property]?.slider;
   const hasStartValue =
     keyframe.startValue !== undefined && keyframe.startValue !== "";
+  const hasInitialValue = propertyConfig.initialValue !== undefined;
   const fields = [
     {
       type: "text",
@@ -3615,10 +3616,9 @@ const buildSelectedKeyframePanelData = (
     fields.push({ type: "slot", slot: "keyframe-start-value" });
   }
   if (property === "camera") {
-    if (index === 0) {
+    if (index === 0 && hasInitialValue) {
       fields.push({
         type: "slot",
-        label: copy.initialValueLabel ?? "Initial value",
         slot: "camera-initial-value",
       });
     }
@@ -3646,6 +3646,19 @@ const buildSelectedKeyframePanelData = (
     id: `${side}:${property}:${index}`,
     editor: {
       camera: property === "camera",
+      cameraInitialLabel:
+        property === "camera"
+          ? formatCameraPoseLabel(propertyConfig.initialValue)
+          : undefined,
+      cameraStartLabel:
+        property === "camera"
+          ? formatCameraPoseLabel(keyframe.startValue)
+          : undefined,
+      cameraValueLabel:
+        property === "camera"
+          ? formatCameraPoseLabel(keyframe.value)
+          : undefined,
+      hasInitialValue,
       delay: keyframe.delay ?? 0,
       delayLabel: copy.delayMsLabel ?? "Delay (ms)",
       duration: keyframe.duration,
@@ -3716,11 +3729,9 @@ const buildSelectedPropertyPanelData = (
   ];
 
   if (property === "camera") {
-    fields.push({
-      type: "slot",
-      label: copy.initialValueLabel ?? "Initial value",
-      slot: "camera-initial-value",
-    });
+    if (hasInitialValue) {
+      fields.push({ type: "slot", slot: "camera-initial-value" });
+    }
   } else if (autoConfig) {
     fields.push(
       {
@@ -3761,6 +3772,10 @@ const buildSelectedPropertyPanelData = (
         }
       : {
           camera: property === "camera",
+          cameraInitialLabel:
+            property === "camera"
+              ? formatCameraPoseLabel(propertyConfig.initialValue)
+              : undefined,
           hasInitialValue,
           initialValue,
           initialValueLabel: copy.initialValueLabel ?? "Initial value",
@@ -3957,19 +3972,25 @@ export const selectViewData = ({ state, i18n }) => {
     "next",
     propertyFieldConfig,
   );
-  const transitionAddPropertySideOptions =
-    createTransitionAddPropertySideMenuItems({
-      previousAvailable: previousAddPropertyOptions.length > 0,
-      nextAvailable: nextAddPropertyOptions.length > 0,
-      maskAvailable: true,
-      copy,
-    });
-  const transitionPropertySideOptions =
-    createTransitionAddPropertySideMenuItems({
-      previousAvailable: previousAddPropertyOptions.length > 0,
-      nextAvailable: nextAddPropertyOptions.length > 0,
-      copy,
-    });
+  const transitionPropertySideOptions = createTransitionPropertySideOptions({
+    previousAvailable: previousAddPropertyOptions.length > 0,
+    nextAvailable: nextAddPropertyOptions.length > 0,
+    copy,
+  });
+  const transitionAddPropertySideOptions = transitionPropertySideOptions.map(
+    (item) => ({
+      ...item,
+      items: (item.value === "prev"
+        ? previousAddPropertyOptions
+        : nextAddPropertyOptions
+      ).map((property) => ({ ...property, side: item.value })),
+    }),
+  );
+  transitionAddPropertySideOptions.push({
+    label: copy.maskTitle ?? "Mask",
+    type: "item",
+    value: "mask",
+  });
   const defaultTransitionAddPropertySide =
     previousAddPropertyOptions.length > 0 ? "prev" : "next";
   const addPropertySide =
@@ -4056,6 +4077,17 @@ export const selectViewData = ({ state, i18n }) => {
           },
         ]
       : [];
+  if (
+    selectedKeyframePanel?.editor.camera &&
+    state.selectedKeyframe.index === 0 &&
+    !selectedKeyframePanel.editor.hasInitialValue
+  ) {
+    selectedKeyframeAddMenuItems.push({
+      label: copy.initialValueLabel ?? "Initial value",
+      type: "item",
+      value: "initial-value",
+    });
+  }
   const selectedKeyframeCanDelete = (() => {
     if (!state.selectedKeyframe) {
       return false;
@@ -4442,6 +4474,8 @@ export const selectViewData = ({ state, i18n }) => {
     initialValueLabel: copy.initialValueLabel ?? "Initial value",
     removeStartValueButtonLabel:
       copy.removeStartValueButtonLabel ?? "Remove start value",
+    removeInitialValueButtonLabel:
+      copy.removeInitialValueButtonLabel ?? "Remove initial value",
     inTimelineLabel: copy.inTimelineLabel ?? "Incoming",
     invertLabel: copy.invertLabel ?? "Invert",
     detailsPanelTitle: selectedMask

@@ -16,6 +16,30 @@ refs:
     eventListeners:
       click:
         handler: handleDone
+  editValue*:
+    eventListeners:
+      click:
+        handler: handleEditValue
+  valuePopover:
+    eventListeners:
+      positioned:
+        handler: handleValueEditorPositioned
+        once: true
+      close:
+        handler: handleCloseValueEditor
+        stopPropagation: true
+  valueInput:
+    eventListeners:
+      value-input:
+        action: setEditorValue
+        payload:
+          value: ${_event.detail.value}
+      keydown:
+        handler: handleValueKeyDown
+  applyValue:
+    eventListeners:
+      click:
+        handler: handleApplyValue
 template:
   - 'rtgl-view w=f h=f d=v bgc=bg style="min-height:0;"':
       - 'rtgl-view d=h w=f h=64 av=c ph=lg pr=xl g=md bwb=xs bc=bo style="box-sizing:border-box; flex-shrink:0;"':
@@ -23,9 +47,29 @@ template:
       - 'rvn-camera-viewport#viewport tabindex=0 role=group aria-label="${viewportLabel}" :pose=${pose} :resolution=${projectResolution} :imageSize=${imageSize} style="flex:1; min-height:0;"':
           - $if imageId:
               - rvn-file-image w=f h=f imageId=${imageId} source=original: null
-      - 'rtgl-view d=h w=f h=64 av=c ah=c g=md ph=md bwt=xs bc=bo style="box-sizing:border-box; flex-shrink:0;"':
-          - 'rtgl-button#zoomOut sq v=gh aria-label="${zoomOutLabel}" title="${zoomOutLabel}"': "−"
-          - rtgl-text w=64 ta=c: ${zoomLabel}
-          - 'rtgl-button#zoomIn sq v=gh aria-label="${zoomInLabel}" title="${zoomInLabel}"': "+"
-          - rtgl-button#reset v=gh: ${resetButton}
-          - rtgl-button#done v=pr: ${doneButton}
+      - 'rtgl-view d=h w=f av=c ah=c g=md ph=md pv=sm bwt=xs bc=bo style="box-sizing:border-box; flex-shrink:0; min-height:64px; flex-wrap:wrap;"':
+          - rtgl-view d=h av=c g=xs:
+              - rtgl-view#editValueX data-field=x w=120:
+                  - 'rtgl-button w=f v=gh aria-label="${valueLabels.x}: ${xLabel}" aria-haspopup=dialog':
+                      - 'span style="font-variant-numeric:tabular-nums; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;"': ${xLabel}
+              - rtgl-view#editValueY data-field=y w=120:
+                  - 'rtgl-button w=f v=gh aria-label="${valueLabels.y}: ${yLabel}" aria-haspopup=dialog':
+                      - 'span style="font-variant-numeric:tabular-nums; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;"': ${yLabel}
+          - rtgl-view d=h av=c g=xs:
+              - 'rtgl-button#zoomOut sq v=gh aria-label="${zoomOutLabel}" title="${zoomOutLabel}"': "−"
+              - rtgl-view#editValueZoom data-field=zoom w=96:
+                  - 'rtgl-button w=f v=gh aria-label="${valueLabels.zoom}: ${zoomLabel}" aria-haspopup=dialog':
+                      - 'span style="font-variant-numeric:tabular-nums; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;"': ${zoomLabel}
+              - 'rtgl-button#zoomIn sq v=gh aria-label="${zoomInLabel}" title="${zoomInLabel}"': "+"
+          - rtgl-view d=h av=c g=xs:
+              - rtgl-button#reset v=gh: ${resetButton}
+              - rtgl-button#done v=pr: ${doneButton}
+  - $if valueEditor:
+      - rtgl-popover#valuePopover open x=${valueEditor.x} y=${valueEditor.y} place=ts:
+          - rtgl-view slot=content w=240 g=md p=md:
+              - rtgl-text: ${valueEditorLabel}
+              - rtgl-input#valueInput type=number step=any w=f value=${valueEditor.value}: null
+              - $if invalidValue:
+                  - rtgl-text s=sm c=de role=alert: ${valueError}
+              - rtgl-view w=f ah=e:
+                  - rtgl-button#applyValue s=sm v=pr ?disabled=${invalidValue}: ${doneButton}

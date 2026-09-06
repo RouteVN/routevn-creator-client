@@ -186,7 +186,9 @@ const createMaskTimelineRows = (item, imagesData, copy = {}) => {
 };
 
 const buildCatalogItem = (item, { copy = {}, state } = {}) => {
-  const displayItem = toAnimationDisplayItem(item);
+  const displayItem = toAnimationDisplayItem(item, {
+    cameraLabel: copy.cameraPropertyLabel,
+  });
   return {
     ...displayItem,
     animationTypeLabel: getAnimationTypeLabel(displayItem.animationType, copy),

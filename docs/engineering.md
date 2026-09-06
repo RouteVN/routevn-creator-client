@@ -463,6 +463,13 @@ lexicalSceneDocumentEditor primitive
 This keeps low-level Lexical/editor behavior separate from scene-specific
 workflows.
 
+### Animation Camera Presentation
+
+`src/internal/animationCamera.js` shares Camera grouping and timeline presentation
+between the animation editor and animation catalog. Only sides explicitly listed
+in `cameraTracks` are grouped; stored/runtime animation tracks remain numeric.
+Editor-only preview artwork stays in `src/pages/animationEditor/support/`.
+
 ## Code Placement
 
 ### Top-Level Source Folders

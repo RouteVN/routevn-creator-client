@@ -1407,9 +1407,11 @@ export const handleTimelinePanPointerLeave = (deps) => {
 export const handleTimelinePanKeyDown = (deps, payload) => {
   const { render, store } = deps;
   const event = payload._event;
+  const target = event.composedPath?.()[0] ?? event.target;
   if (
     !isSpaceKey(event) ||
     isTextEntryEvent(event) ||
+    target?.closest?.('button, [role="button"]') ||
     !store.selectTimelinePanHovered() ||
     store.selectTimelinePanMode()
   ) {
@@ -1520,12 +1522,22 @@ export const handleTimelinePanEnd = (deps, payload) => {
   render();
 };
 
-export const handleAddPropertySideMenuItemClick = (deps, payload) => {
+const addAnimationProperty = async (deps, options) => {
   const { render, store } = deps;
-  const side = payload._event.detail.item?.value;
+  store.addProperty(options);
+  invalidatePreview({ store });
+  store.closePopover();
+  render();
+  queueEditorAutosave({ deps });
+  if (options.property === "camera") await refreshCameraPreview(deps, 0);
+};
+
+export const handleAddPropertySideMenuItemClick = async (deps, payload) => {
+  const { render, store } = deps;
+  const { item } = payload._event.detail;
   const popover = store.selectPopover();
 
-  if (side === "mask") {
+  if (item.value === "mask") {
     store.startPendingTransitionMask({});
     store.setPopover({
       mode: "addMask",
@@ -1537,23 +1549,14 @@ export const handleAddPropertySideMenuItemClick = (deps, payload) => {
     return;
   }
 
-  if (side !== "prev" && side !== "next") {
-    return;
-  }
-
-  store.setPopover({
-    mode: "addProperty",
-    x: popover.x,
-    y: popover.y,
-    payload: {
-      side,
-    },
+  await addAnimationProperty(deps, {
+    side: item.side,
+    property: item.value,
   });
-  render();
 };
 
 export const handleAddPropertyFormSubmit = async (deps, payload) => {
-  const { render, store } = deps;
+  const { store } = deps;
   const popover = store.selectPopover();
   const {
     payload: { side },
@@ -1586,7 +1589,7 @@ export const handleAddPropertyFormSubmit = async (deps, payload) => {
         : defaultInitialValue
       : undefined;
 
-  store.addProperty({
+  await addAnimationProperty(deps, {
     side: targetSide,
     property,
     initialValue: finalInitialValue,
@@ -1594,15 +1597,6 @@ export const handleAddPropertyFormSubmit = async (deps, payload) => {
     autoDuration: duration,
     autoEasing: easing,
   });
-  invalidatePreview({
-    store,
-  });
-  store.closePopover();
-  render();
-  queueEditorAutosave({
-    deps,
-  });
-  if (property === "camera") await refreshCameraPreview(deps, 0);
 };
 
 export const handleAddKeyframeFromTimeline = (deps, payload) => {
@@ -1859,6 +1853,11 @@ export const handleSelectedKeyframeAddClick = (deps, payload) => {
 
 export const handleSelectedKeyframeAddMenuItemClick = (deps, payload) => {
   const { render, store } = deps;
+  if (payload._event.detail.item.value === "initial-value") {
+    store.closePopover();
+    handleAdjustInitialCamera(deps);
+    return;
+  }
   if (payload._event.detail.item.value !== "start-value") {
     return;
   }
@@ -2317,6 +2316,20 @@ export const handleAdjustCameraStartValue = (deps) => {
   store.openCameraEditor({ side, index, field: "startValue" });
   invalidatePreview({ store });
   render();
+};
+
+export const handleRemoveCameraInitialValue = async (deps) => {
+  const { store } = deps;
+  const { side } =
+    store.selectSelectedKeyframe() ?? store.selectSelectedProperty();
+  store.updateInitialValue({
+    side,
+    property: "camera",
+    initialValue: undefined,
+  });
+  invalidatePreview({ store });
+  queueEditorAutosave({ deps });
+  await refreshCameraPreview(deps, 0);
 };
 
 export const handleCameraPoseChange = (deps, payload) => {

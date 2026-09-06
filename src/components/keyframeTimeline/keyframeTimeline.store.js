@@ -658,14 +658,13 @@ export const selectViewData = ({ state, props, props: attrs, i18n = {} }) => {
             };
           },
         );
-        nextProperty.valueCurvePath = propertyConfig.hideValueCurve
-          ? ""
-          : createKeyframeValueCurvePath({
-              defaultValue: props.defaultValues?.[property.name],
-              initialValue: propertyConfig.initialValue,
-              keyframes: effectiveKeyframes,
-              timelineDuration: resolvedTimelineDuration,
-            });
+        nextProperty.valueCurvePath = createKeyframeValueCurvePath({
+          defaultValue: props.defaultValues?.[property.name],
+          initialValue: propertyConfig.initialValue,
+          keyframes: effectiveKeyframes,
+          timelineDuration: resolvedTimelineDuration,
+          mode: propertyConfig.valueCurveMode,
+        });
         nextProperty.propertyWidthPercent = propertyWidthPercent.toFixed(2);
         nextProperty.fillerWidthPercent = (100 - propertyWidthPercent).toFixed(
           2,
