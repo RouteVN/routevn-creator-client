@@ -996,12 +996,14 @@ export const selectViewData = ({ state, i18n }) => {
         value: getNameVariableLabel(selectedItem.nameVariableId),
       });
     }
-    detailFields.push(
-      {
+    if (!state.isTouchMode) {
+      detailFields.push({
         type: "text",
         label: copy.shortcutLabel,
         value: selectedItem.shortcut ?? "",
-      },
+      });
+    }
+    detailFields.push(
       {
         type: "slot",
         slot: "character-tags",
@@ -1086,11 +1088,21 @@ export const selectViewData = ({ state, i18n }) => {
   });
 
   let editDefaultValues = {};
+  const dialogForm = createCharacterDialogForm({
+    tagOptions: tagFilterOptions,
+    nameVariableOptions,
+    copy,
+  });
   const editForm = createEditCharacterDialogForm({
     tagOptions: tagFilterOptions,
     nameVariableOptions,
     copy,
   });
+  if (state.isTouchMode) {
+    for (const form of [dialogForm, editForm]) {
+      form.fields = form.fields.filter((field) => field.name !== "shortcut");
+    }
+  }
 
   if (editItem) {
     editDefaultValues = {
@@ -1160,11 +1172,7 @@ export const selectViewData = ({ state, i18n }) => {
       tagsById: {},
       copy,
     }),
-    dialogForm: createCharacterDialogForm({
-      tagOptions: tagFilterOptions,
-      nameVariableOptions,
-      copy,
-    }),
+    dialogForm,
     spriteGroupDropdownMenu: state.spriteGroupDropdownMenu,
     isSpriteGroupDialogOpen: state.isSpriteGroupDialogOpen,
     spriteGroupDialogDefaultValues: state.spriteGroupDialogDefaultValues,
