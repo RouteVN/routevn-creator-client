@@ -279,7 +279,7 @@ template:
                                                     $else:
                                                       - rtgl-view w=f h=f av=c ah=c bgc=mu-fg:
                                                           - rtgl-text s=sm c=mu-fg: ${noThumbnailLabel}
-                                                  - rtgl-view pos=abs w=f h=f av=c ah=c bgc=bg-60:
+                                                  - rtgl-view pos=abs edge=f w=f h=f av=c ah=c bgc=bg-60:
                                                       - rtgl-icon icon=play s=xl c=fg: null
                                                 $elif item.resourceType == 'layout':
                                                   - $if item.previewFileId:
