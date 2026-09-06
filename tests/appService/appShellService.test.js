@@ -38,7 +38,7 @@ const createDeps = () => {
 };
 
 describe("appShellService", () => {
-  it("applies the Dark theme class and dark mode consistently", () => {
+  it("applies theme classes and dark mode consistently when switching themes", () => {
     const deps = createDeps();
     const service = createAppShellService(deps);
     const createThemeElement = () => {
@@ -85,11 +85,20 @@ describe("appShellService", () => {
         expect(target.element.dataset.rvnTheme).toBe("black");
       }
 
+      expect(service.applyTheme("catppuccin-mocha")).toBe("catppuccin-mocha");
+      for (const target of [body, documentElement]) {
+        expect(target.classes).toContain("dark");
+        expect(target.classes).not.toContain("theme-black");
+        expect(target.classes).toContain("theme-catppuccin-mocha");
+        expect(target.element.dataset.rvnTheme).toBe("catppuccin-mocha");
+      }
+
       expect(service.applyTheme("light")).toBe("light");
       for (const target of [body, documentElement]) {
         expect(target.classes).not.toContain("dark");
         expect(target.classes).not.toContain("theme-black");
         expect(target.classes).toContain("theme-light");
+        expect(target.classes).not.toContain("theme-catppuccin-mocha");
         expect(target.element.dataset.rvnTheme).toBe("light");
       }
     } finally {

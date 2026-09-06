@@ -713,6 +713,10 @@ export const selectViewData = ({ state, i18n }) => {
             value: "light",
             label: copy.lightThemeName,
           },
+          {
+            value: "catppuccin-mocha",
+            label: copy.catppuccinMochaThemeName,
+          },
         ],
       },
     ],

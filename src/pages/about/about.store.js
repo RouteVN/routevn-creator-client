@@ -23,7 +23,7 @@ const social = [
   },
   {
     id: "bluesky",
-    label: "BlueSky",
+    label: "Bluesky",
     svg: "bluesky",
     href: "https://bsky.app/profile/routevn.bsky.social",
   },

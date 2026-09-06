@@ -261,6 +261,7 @@ describe("projects.store addProject", () => {
         { value: "dark", label: "Dark" },
         { value: "black", label: "Black" },
         { value: "light", label: "Light" },
+        { value: "catppuccin-mocha", label: "Catppuccin Mocha" },
       ],
     });
   });
