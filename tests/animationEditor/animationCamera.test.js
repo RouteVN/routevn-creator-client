@@ -5,9 +5,15 @@ import { validatePayload } from "@routevn/creator-model";
 import * as editor from "../../src/pages/animationEditor/animationEditor.store.js";
 import * as timeline from "../../src/components/keyframeTimeline/keyframeTimeline.store.js";
 import {
+  handleAdjustCamera,
   handleAdjustInitialCamera,
   handleAdjustCameraStartValue,
+  handleCameraClose,
   handleCameraDone,
+  handleClosePopover,
+  handleEditKeyframeFormSubmit,
+  handleKeyframeClick,
+  handleKeyframeDropdownItemClick,
   handleRulerTimeScrub,
   handleSelectedKeyframeAddMenuItemClick,
   handleSelectedKeyframeRemoveStartValueClick,
@@ -16,6 +22,7 @@ import {
 import {
   expandCameraTrack,
   groupCameraTrack,
+  roundCameraPose,
 } from "../../src/internal/animationCamera.js";
 import { EN_I18N } from "../support/i18n.js";
 import { renderViewYaml } from "../support/renderView.js";
@@ -45,6 +52,211 @@ const persisted = (state, side = "update") => {
 };
 
 describe("Camera animation authoring", () => {
+  it.each(["update", "prev", "next"])(
+    "keeps tiny positive %s Camera scales valid when saving unrelated timing edits",
+    async (side) => {
+      const state = createState(side);
+      const pose = { x: -0.001, y: 0.001, scaleX: 0.001, scaleY: 0.0049 };
+      const camera = state.tweenBySection[side].camera;
+      camera.initialValue = pose;
+      camera.keyframes[0].startValue = pose;
+      camera.keyframes[0].value = pose;
+      // Imported scales are valid model data even below our stored precision.
+      const imported = persisted(state, side);
+      const tween =
+        side === "update"
+          ? imported.animation.tween
+          : imported.animation[side].tween;
+      for (const [property, value] of Object.entries(pose)) {
+        tween[property].initialValue = value;
+        tween[property].keyframes[0].startValue = value;
+        tween[property].keyframes[0].value = value;
+      }
+      const command = (data) => ({
+        type: "animation.create",
+        payload: { animationId: "camera-one", data },
+      });
+      expect(validatePayload(command(imported))).toEqual({ valid: true });
+      editor.openDialog({ state }, { editMode: true, itemData: imported });
+      editor.setSelectedKeyframe(
+        { state },
+        { side, property: "camera", index: 0 },
+      );
+      const authored = structuredClone(state.tweenBySection[side].camera);
+      editor.setSelectedKeyframeDuration({ state }, { duration: 1500 });
+      const saved = persisted(state, side);
+      expect(validatePayload(command(saved))).toEqual({ valid: true });
+      const savedTween =
+        side === "update" ? saved.animation.tween : saved.animation[side].tween;
+      const rounded = { x: 0, y: 0, scaleX: 0.01, scaleY: 0.01 };
+      for (const [property, value] of Object.entries(rounded)) {
+        expect(savedTween[property]).toMatchObject({
+          initialValue: value,
+          keyframes: [{ duration: 1500, value, startValue: value }],
+        });
+      }
+      expect(state.tweenBySection[side].camera.initialValue).toEqual(
+        authored.initialValue,
+      );
+      const deps = createDeps(state);
+      for (const target of [
+        {},
+        { index: 0, field: "startValue" },
+        { index: 0 },
+      ]) {
+        editor.openCameraEditor({ state }, { side, ...target });
+        await handleCameraDone(deps);
+      }
+      expect(state.tweenBySection[side].camera).toMatchObject({
+        initialValue: rounded,
+        keyframes: [{ value: rounded, startValue: rounded }],
+      });
+      editor.openDialog({ state }, { editMode: true, itemData: saved });
+      expect(persisted(state, side)).toEqual(saved);
+    },
+  );
+
+  it("only floors positive scales, not positions or invalid scales", () => {
+    expect(
+      roundCameraPose({
+        x: 0.001,
+        y: -0.001,
+        scaleX: Number.MIN_VALUE,
+        scaleY: 0.0149,
+      }),
+    ).toEqual({
+      x: 0,
+      y: 0,
+      scaleX: 0.01,
+      scaleY: 0.01,
+    });
+    expect(roundCameraPose({ x: 0, y: 0, scaleX: 0, scaleY: -1 })).toEqual({
+      x: 0,
+      y: 0,
+      scaleX: 0,
+      scaleY: -1,
+    });
+  });
+
+  it.each(
+    ["update", "prev", "next"].flatMap((side) =>
+      [true, false].map((touch) => ({ side, touch })),
+    ),
+  )(
+    "edits $side Camera timing and easing from the keyframe dialog (touch: $touch) without changing poses",
+    async ({ side, touch }) => {
+      const state = createState(side);
+      editor.setUiConfig(
+        { state },
+        { uiConfig: { inputMode: touch ? "touch" : "mouse" } },
+      );
+      const camera = state.tweenBySection[side].camera;
+      camera.keyframes[0].delay = 150;
+      camera.keyframes[0].startValue = {
+        x: 800,
+        y: 450,
+        scaleX: 0.8,
+        scaleY: 0.9,
+      };
+      const before = structuredClone(camera);
+      const deps = createDeps(state);
+      deps.refs = { editKeyframeForm: { reset: vi.fn(), setValues: vi.fn() } };
+      const open = () => {
+        if (touch) {
+          handleKeyframeClick(deps, {
+            _event: {
+              detail: { side, property: "camera", index: 0, x: 40, y: 80 },
+            },
+          });
+        } else {
+          editor.setPopover(
+            { state },
+            {
+              mode: "keyframeMenu",
+              payload: { side, property: "camera", index: 0 },
+            },
+          );
+          handleKeyframeDropdownItemClick(deps, {
+            _event: { detail: { item: { value: "edit" } } },
+          });
+        }
+      };
+      open();
+      expect(state.cameraEditor).toBeUndefined();
+      expect(view(state).showEditKeyframeDialog).toBe(true);
+      expect(view(state).showRightPanel).toBe(!touch);
+      expect(deps.refs.editKeyframeForm.setValues).toHaveBeenCalledWith({
+        values: { delay: 150, duration: 1000, easing: "linear" },
+      });
+      expect(view(state).editKeyframeDefaultValues).toEqual({
+        delay: 150,
+        duration: 1000,
+        easing: "linear",
+      });
+      expect(
+        view(state).updateKeyframeForm.fields.map(
+          (field) => field.name ?? field.slot,
+        ),
+      ).toEqual(["delay", "duration", "camera-value", "easing"]);
+      const markup = renderViewYaml(
+        "src/pages/animationEditor/animationEditor.view.yaml",
+        view(state),
+      );
+      expect(
+        JSDOM.fragment(markup).querySelector(
+          "#editKeyframeForm #adjustCameraKeyframeDialog[slot=camera-value]",
+        ),
+      ).not.toBeNull();
+
+      handleAdjustCamera(deps);
+      expect(state.cameraEditor.pose).toEqual(before.keyframes[0].value);
+      editor.setCameraEditorPose(
+        { state },
+        { pose: { x: 900, y: 500, scaleX: 1.2, scaleY: 1.3 } },
+      );
+      handleCameraClose(deps);
+      expect(view(state).showEditKeyframeDialog).toBe(true);
+      expect(camera).toEqual(before);
+      handleClosePopover(deps);
+      expect(camera).toEqual(before);
+      expect(deps.store.queueAutosave).not.toHaveBeenCalled();
+
+      open();
+      handleAdjustCamera(deps);
+      const pose = { x: 900, y: 500, scaleX: 1.2, scaleY: 1.3 };
+      editor.setCameraEditorPose({ state }, { pose });
+      await handleCameraDone(deps);
+      expect(view(state).showEditKeyframeDialog).toBe(true);
+      handleEditKeyframeFormSubmit(deps, {
+        _event: {
+          detail: {
+            values: { delay: 200, duration: 1600, easing: "easeInQuad" },
+          },
+        },
+      });
+      expect(view(state).showEditKeyframeDialog).toBe(false);
+      expect(camera.initialValue).toEqual(before.initialValue);
+      expect(camera.keyframes[0]).toMatchObject({
+        delay: 200,
+        duration: 1600,
+        easing: "easeInQuad",
+        value: pose,
+        startValue: before.keyframes[0].startValue,
+        relative: false,
+      });
+      const saved = persisted(state, side);
+      expect(
+        validatePayload({
+          type: "animation.create",
+          payload: { animationId: "camera-one", data: saved },
+        }),
+      ).toEqual({ valid: true });
+      editor.openDialog({ state }, { editMode: true, itemData: saved });
+      expect(state.tweenBySection[side].camera).toEqual(camera);
+      expect(deps.store.queueAutosave).toHaveBeenCalledTimes(2);
+    },
+  );
+
   it.each(["update", "prev", "next"])(
     "stores two-decimal %s Camera initial, start, and end poses after Done and reopening",
     async (side) => {

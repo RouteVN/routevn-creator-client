@@ -1,12 +1,18 @@
 export const CAMERA_PROPERTIES = ["x", "y", "scaleX", "scaleY"];
 
-const roundCameraValue = (value) => Number(value.toFixed(2)) + 0;
+const roundCameraValue = (value, property) => {
+  const rounded = Number(value.toFixed(2)) + 0;
+  // Positive scales must stay positive at the stored two-decimal precision.
+  return value > 0 && (property === "scaleX" || property === "scaleY")
+    ? Math.max(0.01, rounded)
+    : rounded;
+};
 
 export const roundCameraPose = (pose) =>
   Object.fromEntries(
     CAMERA_PROPERTIES.map((property) => [
       property,
-      roundCameraValue(pose[property]),
+      roundCameraValue(pose[property], property),
     ]),
   );
 
@@ -59,16 +65,20 @@ export const expandCameraTrack = (properties) => {
       keyframes: camera.keyframes.map((frame) => {
         const next = {
           ...frame,
-          value: roundCameraValue(frame.value[property]),
+          value: roundCameraValue(frame.value[property], property),
         };
         if (frame.startValue !== undefined)
-          next.startValue = roundCameraValue(frame.startValue[property]);
+          next.startValue = roundCameraValue(
+            frame.startValue[property],
+            property,
+          );
         return next;
       }),
     };
     if (camera.initialValue !== undefined) {
       expanded[property].initialValue = roundCameraValue(
         camera.initialValue[property],
+        property,
       );
     }
   }

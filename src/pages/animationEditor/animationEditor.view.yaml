@@ -11,6 +11,10 @@ refs:
     eventListeners:
       click:
         handler: handleAdjustCamera
+  adjustCameraKeyframeDialog:
+    eventListeners:
+      click:
+        handler: handleAdjustCamera
   adjustCameraInitial:
     eventListeners:
       click:
@@ -837,7 +841,9 @@ template:
           - rtgl-form#addKeyframeForm slot=content :form=${addKeyframeForm} :defaultValues=${addKeyframeDefaultValues} w=f: null
   - $if showEditKeyframeDialog:
       - rtgl-dialog#editKeyframeDialog ?open=${showEditKeyframeDialog} s=sm:
-          - rtgl-form#editKeyframeForm slot=content :form=${updateKeyframeForm} :defaultValues=${editKeyframeDefaultValues} w=f: null
+          - rtgl-form#editKeyframeForm slot=content :form=${updateKeyframeForm} :defaultValues=${editKeyframeDefaultValues} w=f:
+              - $if selectedKeyframeEditor.camera:
+                  - 'button#adjustCameraKeyframeDialog data-camera-value=true slot=camera-value type=button aria-haspopup=dialog title="${adjustCameraButton}" aria-label="${adjustCameraButton}: ${selectedKeyframeEditor.cameraValueLabel}"': ${selectedKeyframeEditor.cameraValueLabel}
   - $if showEditAutoDialog:
       - rtgl-dialog#editAutoDialog ?open=${showEditAutoDialog} s=sm:
           - rtgl-form#editAutoForm slot=content :form=${editAutoForm} :defaultValues=${editAutoDefaultValues}: null

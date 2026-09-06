@@ -901,14 +901,24 @@ const createUpdateKeyframeForm = (
   options = {},
   copy = {},
 ) => {
+  const form = createAddKeyframeForm(
+    property,
+    propertyFieldConfig,
+    { ...options, includeDelay: true },
+    copy,
+  );
+  if (property === "camera") {
+    form.fields = form.fields.filter((field) => field.name !== "relative");
+    const valueIndex = form.fields.findIndex((field) => field.name === "value");
+    form.fields[valueIndex] = {
+      type: "slot",
+      slot: "camera-value",
+      label: copy.cameraPropertyLabel ?? "Camera",
+    };
+  }
   return localizeForm(
     {
-      ...createAddKeyframeForm(
-        property,
-        propertyFieldConfig,
-        { ...options, includeDelay: true },
-        copy,
-      ),
+      ...form,
       title: "Edit Keyframe",
       actions: {
         layout: "",
@@ -1920,19 +1930,25 @@ const getMutableSelectedKeyframe = (state) => {
   return getMutableSectionProperties(state, side)[property]?.keyframes?.[index];
 };
 
+const getKeyframeFormValues = (keyframe, property) => {
+  const values = {
+    delay: keyframe.delay ?? 0,
+    duration: keyframe.duration,
+    easing: keyframe.easing ?? "linear",
+  };
+  if (property !== "camera") {
+    values.value = keyframe.value;
+    values.relative = keyframe.relative ?? false;
+  }
+  return values;
+};
+
 export const selectSelectedKeyframeFormValues = ({ state }) => {
   const keyframe = getMutableSelectedKeyframe(state);
   if (!keyframe) {
     return undefined;
   }
-
-  return {
-    delay: keyframe.delay ?? 0,
-    duration: keyframe.duration,
-    value: keyframe.value,
-    easing: keyframe.easing ?? "linear",
-    relative: keyframe.relative ?? false,
-  };
+  return getKeyframeFormValues(keyframe, state.selectedKeyframe.property);
 };
 
 export const setSelectedKeyframeEasing = ({ state }, { easing } = {}) => {
@@ -2708,14 +2724,20 @@ export const updateKeyframe = (
   const nextKeyframe = {
     ...keyframe,
     duration: parseInt(keyframe.duration, 10),
-    value: parseFloat(keyframe.value),
-    relative: keyframe.relative,
+    value:
+      property === "camera"
+        ? keyframes[index].value
+        : parseFloat(keyframe.value),
+    relative: property === "camera" ? false : keyframe.relative,
   };
   const currentStartValue = keyframes[index]?.startValue;
   if (keyframe.startValue === undefined && currentStartValue !== undefined) {
     nextKeyframe.startValue = currentStartValue;
   } else if (keyframe.startValue !== undefined) {
-    nextKeyframe.startValue = parseFloat(keyframe.startValue);
+    nextKeyframe.startValue =
+      property === "camera"
+        ? keyframe.startValue
+        : parseFloat(keyframe.startValue);
   }
   const currentDelay = Math.max(0, Number(keyframes[index]?.delay) || 0);
   if (keyframe.delay === undefined && currentDelay > 0) {
@@ -4207,13 +4229,10 @@ export const selectViewData = ({ state, i18n }) => {
       ?.keyframes?.[index];
 
     if (currentKeyframe) {
-      editKeyframeDefaultValues = {
-        delay: currentKeyframe.delay ?? 0,
-        duration: currentKeyframe.duration,
-        value: currentKeyframe.value,
-        easing: currentKeyframe.easing,
-        relative: currentKeyframe.relative,
-      };
+      editKeyframeDefaultValues = getKeyframeFormValues(
+        currentKeyframe,
+        property,
+      );
     }
   }
 

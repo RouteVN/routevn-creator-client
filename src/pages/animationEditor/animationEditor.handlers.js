@@ -1695,14 +1695,6 @@ const openSelectedKeyframeEditDialog = (deps, { x = 0, y = 0 } = {}) => {
   if (!selectedKeyframe || !values) {
     return false;
   }
-  if (selectedKeyframe.property === "camera") {
-    store.closePopover();
-    store.openCameraEditor(selectedKeyframe);
-    invalidatePreview({ store });
-    render();
-    return true;
-  }
-
   store.setPopover({
     mode: "editKeyframe",
     x,
