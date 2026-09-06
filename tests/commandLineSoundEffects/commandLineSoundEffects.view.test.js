@@ -12,7 +12,7 @@ describe("commandLineSoundEffects view", () => {
     );
 
     expect(view).toContain(
-      "rtgl-dialog#channelEditorDialog ?open=${isChannelEditorOpen} s=lg close-button:",
+      "rtgl-dialog#channelEditorDialog ?open=${isChannelEditorOpen} s=lg p=md close-button:",
     );
     expect(view).not.toContain(
       "rtgl-dialog#channelEditorDialog ?open=${isChannelEditorOpen} s=md",

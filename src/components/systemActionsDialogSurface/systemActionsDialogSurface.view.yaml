@@ -9,6 +9,10 @@ refs:
     eventListeners:
       close:
         handler: handleSurfaceClose
+styles:
+  "[autofocus]:focus-visible":
+    --focus-ring-outline: none
+    --focus-ring-box-shadow: none
 template:
   - $if fullscreen:
       - rtgl-dialog#dialog ?open=${open} layout=fixed bare p=${dialogPadding}:

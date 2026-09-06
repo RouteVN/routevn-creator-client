@@ -30,6 +30,7 @@ export const createInitialState = () => ({
   actions: {},
   authoredDialogueWasCleared: false,
   isTouchMode: false,
+  showHelpButton: true,
   isActionsDialogOpen: false,
   suppressDialogClose: false,
   dropdownMenu: {
@@ -51,6 +52,10 @@ export const createInitialState = () => ({
 export const setUiConfig = ({ state }, { uiConfig } = {}) => {
   state.isTouchMode =
     uiConfig?.id === "touch" || uiConfig?.inputMode === "touch";
+};
+
+export const setHelpButtonVisible = ({ state }, { visible }) => {
+  state.showHelpButton = visible;
 };
 
 const getHiddenModes = (attrs = {}) => {
@@ -274,6 +279,7 @@ export const selectViewData = ({ state, props, props: attrs, i18n }) => {
     currentSceneId: props.currentSceneId,
     mode: state.mode,
     isActionsDialogOpen: state.isActionsDialogOpen,
+    showHelpButton: state.showHelpButton,
     dropdownMenu: localizeCommandLineDropdownMenu(state.dropdownMenu, copy),
     displayActions,
     actions: actionsObject,

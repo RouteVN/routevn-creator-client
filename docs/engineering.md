@@ -735,6 +735,16 @@ The intended split is:
 - `store`: UI-local state and derived display data
 - `handlers`: orchestration
 
+### Command-Line Dialog Spacing
+
+Command-line dialogs use `md` (8px) padding on desktop and mobile. Keep the
+breadcrumb, content, resource picker, and footer aligned with `ph=md`, and
+use `pv=md` on the outer content container. Forms use `ph=md pv=none`, or
+`ph=none pv=none` when their parent already provides the horizontal padding.
+Nested audio editor dialogs explicitly use `p=md` instead of the UI library's
+default padding. Preserve the existing gaps between controls and bottom scroll
+spacers when applying this pattern.
+
 ### Page Scroll Spacing
 
 Most vertically scrolling pages should provide space below their final content

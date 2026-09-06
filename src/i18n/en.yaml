@@ -488,6 +488,8 @@ webServerPage:
   urlLabel: "URL"
   warningTitle: "Warning"
 resourcePages:
+  selectorEmptyMessage: "No items available to select."
+  selectorNoResultsMessage: "No items match your search."
   zoomLabel: "Zoom"
   filterLabel: "Filter"
   actionsLabel: "Actions"

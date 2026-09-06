@@ -1,3 +1,4 @@
+import { selectResourceSelectorEmptyMessage } from "../../internal/ui/resourcePages/selectorEmptyState.js";
 import { toFlatGroups } from "../../internal/project/tree.js";
 
 export const createInitialState = () => ({
@@ -79,6 +80,11 @@ export const selectViewData = ({ state, props = {}, i18n = {} }) => {
 
   return {
     groups,
+    selectorEmptyMessage: selectResourceSelectorEmptyMessage({
+      groups: groups,
+      searchQuery: searchQuery,
+      i18n,
+    }),
     imageGridStyle,
     imageSelectorLabel: i18n.imagesPage?.title ?? "Images",
     selectedImageId,

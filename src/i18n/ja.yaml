@@ -488,6 +488,8 @@ webServerPage:
   urlLabel: "URL"
   warningTitle: "警告"
 resourcePages:
+  selectorEmptyMessage: "選択できるアイテムがありません。"
+  selectorNoResultsMessage: "検索条件に一致するアイテムがありません。"
   zoomLabel: "ズーム"
   filterLabel: "絞り込み"
   actionsLabel: "アクション"

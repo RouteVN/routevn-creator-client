@@ -1,3 +1,4 @@
+import { selectResourceSelectorEmptyMessage } from "../../internal/ui/resourcePages/selectorEmptyState.js";
 import { toFlatGroups, toFlatItems } from "../../internal/project/tree.js";
 import { generatePrefixedId } from "../../internal/id.js";
 import {
@@ -747,6 +748,10 @@ export const createInitialState = () => ({
   pendingVisualLayer: undefined,
   selectedVisualIndex: undefined,
   searchQuery: "",
+  searchPopover: {
+    isOpen: false,
+    position: { x: 0, y: 0 },
+  },
   fullImagePreviewVisible: false,
   fullImagePreviewFileId: undefined,
   fullSpritesheetPreviewVisible: false,
@@ -766,10 +771,16 @@ export const createInitialState = () => ({
 
 export const setUiConfig = ({ state }, { uiConfig } = {}) => {
   state.isTouchMode = isTouchUiConfig(uiConfig);
+  if (!state.isTouchMode) {
+    state.searchPopover.isOpen = false;
+  }
 };
 
 export const setMode = ({ state }, { mode } = {}) => {
   state.mode = mode;
+  if (mode !== "resource-select") {
+    state.searchPopover.isOpen = false;
+  }
 };
 
 export const setTab = ({ state }, { tab } = {}) => {
@@ -1280,6 +1291,16 @@ export const setSearchQuery = ({ state }, { value } = {}) => {
   state.searchQuery = value ?? "";
 };
 
+export const openSearchPopover = ({ state }, { position }) => {
+  state.searchPopover.isOpen = true;
+  state.searchPopover.position.x = position.x;
+  state.searchPopover.position.y = position.y;
+};
+
+export const closeSearchPopover = ({ state }) => {
+  state.searchPopover.isOpen = false;
+};
+
 export const showFullImagePreview = ({ state }, { fileId } = {}) => {
   if (!fileId) {
     return;
@@ -1459,11 +1480,13 @@ export const selectVisualsWithRepositoryData = ({ state }) => {
       visual.animationName,
     );
     const resourceName = resource?.name ?? "Unknown Resource";
+    const resourceType = resource?.resourceType ?? visual.resourceType;
 
     return {
       ...visual,
       resource,
-      resourceType: resource?.resourceType ?? visual.resourceType,
+      resourceType,
+      previewBorderWidth: resourceType === "image" ? "xs" : "none",
       displayName:
         resource?.resourceType === "spritesheet" && visual.animationName
           ? `${resourceName} / ${visual.animationName}`
@@ -1516,8 +1539,11 @@ export const selectViewData = ({ state, i18n }) => {
         copy,
       ),
       previewFileId: child.thumbnailFileId || child.fileId,
+      itemBorderWidth: resourceType === "image" ? "xs" : "none",
       itemBorderColor: isSelected ? "pr" : "bo",
       itemHoverBorderColor: isSelected ? "pr" : "ac",
+      itemBackgroundColor: isSelected ? "ac" : "bg",
+      itemHoverBackgroundColor: isSelected ? "ac" : "mu",
     };
   };
   const buildResourceGroups = ({ collection, resourceType, childFilter }) => {
@@ -1763,12 +1789,18 @@ export const selectViewData = ({ state, i18n }) => {
     tabs: localizeCommandLineOptions(tabs, copy),
     resourceItems,
     resourceGroups,
+    selectorEmptyMessage: selectResourceSelectorEmptyMessage({
+      groups: resourceGroups,
+      searchQuery: searchQuery,
+      i18n,
+    }),
     showResourceSelectorFileExplorer: resourceSelectorLayout.showFileExplorer,
     resourceSelectorColumns: resourceSelectorLayout.columns,
     resourceSelectorGridStyle: resourceSelectorLayout.gridStyle,
     resourceSelectorItemStyle: resourceSelectorLayout.itemStyle,
-    resourceSelectorCardStyle: resourceSelectorLayout.cardStyle,
-    resourceSelectorPreviewStyle: resourceSelectorLayout.previewStyle,
+    resourceSelectorCardStyle: state.isTouchMode
+      ? resourceSelectorLayout.cardStyle
+      : "width: 200px; min-width: 0; max-width: 100%; box-sizing: border-box;",
     tempSelectedSpritesheetValue: toSpritesheetAnimationSelectionValue(
       state.tempSelectedResourceId,
       state.tempSelectedAnimationName,
@@ -1779,6 +1811,10 @@ export const selectViewData = ({ state, i18n }) => {
     layerOptions: localizeCommandLineOptions(VISUAL_LAYER_OPTIONS, copy),
     searchQuery: state.searchQuery,
     searchPlaceholder: localizeCommandLineText("Search...", copy),
+    showInlineSearch: !state.isTouchMode,
+    showSearchButton: state.isTouchMode,
+    searchButtonLabel: localizeCommandLineText("Search", copy),
+    searchPopover: state.searchPopover,
     fullImagePreviewVisible: state.fullImagePreviewVisible,
     fullImagePreviewFileId: state.fullImagePreviewFileId,
     fullSpritesheetPreviewVisible: state.fullSpritesheetPreviewVisible,

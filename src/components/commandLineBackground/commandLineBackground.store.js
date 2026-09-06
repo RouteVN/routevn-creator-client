@@ -1,3 +1,4 @@
+import { selectResourceSelectorEmptyMessage } from "../../internal/ui/resourcePages/selectorEmptyState.js";
 import { toFlatGroups, toFlatItems } from "../../internal/project/tree.js";
 import {
   DEFAULT_ANIMATION_PLAYBACK_SPEED,
@@ -1381,6 +1382,11 @@ export const selectViewData = ({ state, i18n }) => {
     resourceSelectorGridStyle: resourceSelectorLayout.gridStyle,
     resourceSelectorItemStyle: resourceSelectorLayout.itemStyle,
     groups: flatGroups,
+    selectorEmptyMessage: selectResourceSelectorEmptyMessage({
+      groups: flatGroups,
+      searchQuery: searchQuery,
+      i18n,
+    }),
     tempSelectedResourceId: state.tempSelectedResourceId,
     tempSelectedSpritesheetValue: toSpritesheetAnimationSelectionValue(
       state.tempSelectedResourceId,
