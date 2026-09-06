@@ -1119,10 +1119,12 @@ export const handleEditFormAction = async (deps, payload) => {
       name: formData.name,
       nameVariableId: formData.nameVariableId || "",
       description: formData.description,
-      shortcut: formData.shortcut || "",
       tagIds: Array.isArray(formData.tagIds) ? formData.tagIds : [],
       spriteGroups: reverseSpriteGroups(spriteGroupValidation.spriteGroups),
     };
+    if (formData.shortcut !== undefined) {
+      updateData.shortcut = formData.shortcut ?? "";
+    }
 
     // Include avatar file ID if it was changed
     if (editAvatarFileId) {
