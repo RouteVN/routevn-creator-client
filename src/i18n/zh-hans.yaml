@@ -832,6 +832,8 @@ animationEditorPage:
   keyframeValueTooltip: "动画结束时该属性的最终值。"
   kindLabel: "类型"
   linearEasingLabel: "线性"
+  loopMenuItem: "循环播放"
+  dontLoopMenuItem: "不循环播放"
   loopPreviewLabel: "循环预览"
   maskRemoveConfirmMessage: "要移除这个转场遮罩吗？此操作无法撤消。"
   maskRemoveConfirmTitle: "移除遮罩"

@@ -1,6 +1,6 @@
 ---
 title: Mobile Camera Keyframe Settings
-description: Touch Camera editing retains timing, easing, nested pose adjustment, cancellation, and persisted values without the desktop detail panel.
+description: Touch animation controls use a compact Loop/Zoom menu; Camera editing retains timing, easing, nested pose adjustment, cancellation, and persisted values.
 url: /projects?vt-input-mode=touch
 skipInitialScreenshot: true
 viewport:
@@ -58,6 +58,69 @@ steps:
     selector: "#mobileDetailOpenButton"
     steps:
       - action: click
+  - action: waitFor
+    selector: "#mobileEditorMenuButton"
+    state: visible
+    timeoutMs: 5000
+  - action: assert
+    type: hidden
+    selector: "#animationEditorToolbar #timelineZoomSlider"
+  - action: assert
+    type: hidden
+    selector: "#previewLoopButton"
+  - action: select
+    selector: "#mobileEditorMenuButton"
+    steps:
+      - action: click
+  - action: assert
+    type: text
+    selector: "#mobileEditorMenu #optionD0I0"
+    value: Loop
+  - action: select
+    selector: "#mobileEditorMenu #optionD0I0"
+    steps:
+      - action: click
+  - action: select
+    selector: "#mobileEditorMenuButton"
+    steps:
+      - action: click
+  - action: assert
+    type: text
+    selector: "#mobileEditorMenu #optionD0I0"
+    value: "Don't Loop"
+  - action: select
+    selector: "#mobileEditorMenu #optionD0I0"
+    steps:
+      - action: click
+  - action: select
+    selector: "#mobileEditorMenuButton"
+    steps:
+      - action: click
+  - action: select
+    selector: "#mobileEditorMenu #optionD0I1"
+    steps:
+      - action: click
+  - action: waitFor
+    selector: "#timelineZoomPopover[open]"
+    state: visible
+    timeoutMs: 5000
+  - action: assert
+    type: hidden
+    selector: "#mobileEditorMenu[open]"
+  - action: select
+    selector: "#timelineZoomPopover #timelineZoomIn"
+    steps:
+      - action: click
+  - action: select
+    selector: "#timelineZoomPopover #timelineZoomOut"
+    steps:
+      - action: click
+  - action: keypress
+    key: Escape
+  - action: waitFor
+    selector: "#timelineZoomPopover"
+    state: hidden
+    timeoutMs: 5000
   - action: select
     selector: "#addPropertiesButton"
     steps:
