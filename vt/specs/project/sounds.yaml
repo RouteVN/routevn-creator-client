@@ -148,6 +148,39 @@ steps:
   - action: wait
     ms: 700
   - action: screenshot
+  - action: assert
+    type: js
+    fn: eval
+    args:
+      - |
+        (() => {
+          const page = document.querySelector('rvn-app').shadowRoot.querySelector('rvn-sounds');
+          const player = page.shadowRoot.querySelector('#rvnAudioPlayer');
+          player.setAttribute('data-vt-preserved-player', 'true');
+          return 'ready';
+        })()
+    value: ready
+  - action: select
+    selector: "#detailHeader"
+    steps:
+      - action: click
+  - action: waitFor
+    selector: "#editDialog[open]"
+    state: visible
+    timeoutMs: 5000
+  - action: waitFor
+    selector: "#rvnAudioPlayer[data-vt-preserved-player='true']"
+    state: attached
+    timeoutMs: 1000
+  - action: keypress
+    key: Escape
+  - action: waitFor
+    selector: "#editDialog[open]"
+    state: detached
+    timeoutMs: 5000
+  - action: assert
+    type: visible
+    selector: "#rvnAudioPlayer[data-vt-preserved-player='true'] #playPauseBtn rtgl-svg[svg='pause']"
   - action: keypress
     key: Escape
   - action: waitFor

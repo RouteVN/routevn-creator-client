@@ -213,6 +213,28 @@ body {
     inset 0px 0px 0.5px rgba(255, 255, 255, 0.35);
 }
 
+.theme-catppuccin-mocha {
+  /* Official Mocha palette: https://catppuccin.com/palette/#mocha */
+  --background: #1e1e2e;
+  --surface: #313244;
+  --foreground: #cdd6f4;
+  --primary: #89b4fa;
+  --primary-foreground: #1e1e2e;
+  --secondary: #313244;
+  --secondary-foreground: #cdd6f4;
+  --muted: #313244;
+  --muted-foreground: #a6adc8;
+  --accent: #45475a;
+  --accent-foreground: #cdd6f4;
+  --destructive: #f38ba8;
+  --destructive-foreground: #1e1e2e;
+  --border: #45475a;
+  --input: #313244;
+  --ring: #89b4fa;
+  --scrollbar-thumb: #585b70;
+  --scrollbar-thumb-hover: #6c7086;
+}
+
 .theme-black {
   --background: oklch(0.145 0 0);
   --surface: oklch(0.18 0 0);

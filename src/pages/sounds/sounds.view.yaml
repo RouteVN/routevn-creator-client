@@ -227,5 +227,6 @@ template:
       - rtgl-dialog#createTagDialog ?open=${isCreateTagDialogOpen} s=sm:
           - rtgl-form#createTagForm key=${isCreateTagDialogOpen} slot=content :defaultValues=${createTagDefaultValues} :form=${createTagForm} w=f: null
   - $if showAudioPlayer:
-      - 'rtgl-view h=72 pos=fix z=1500 style="left: ${audioPlayerLeft}px; right: ${audioPlayerRight}px; bottom: ${audioPlayerBottom};"':
+      # Keep playback mounted when preceding sheets and dialogs appear or close.
+      - 'rtgl-view#audioPlayerContainer h=72 pos=fix z=1500 style="left: ${audioPlayerLeft}px; right: ${audioPlayerRight}px; bottom: ${audioPlayerBottom};"':
           - rvn-audio-player#rvnAudioPlayer fileId=${playingSound.fileId} autoPlay=true :mobileLayout=${mobileLayout} :title=${playingSound.title}: null

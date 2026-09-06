@@ -408,20 +408,8 @@ export const handleAudioPlayerClose = (deps) => {
 
 export const handleSubmitClick = (deps, payload) => {
   payload._event.stopPropagation();
-  const { appService, dispatchEvent, store, i18n } = deps;
-  const copy = selectCommandLineCopy(i18n);
+  const { dispatchEvent, store } = deps;
   const voice = store.selectVoicePayload();
-
-  if (voice.sounds.length === 0) {
-    showAlert(appService, {
-      message: localizeCommandLineText(
-        "Select a voice audio file first.",
-        copy,
-      ),
-      title: localizeCommandLineText("Warning", copy),
-    });
-    return;
-  }
 
   dispatchEvent(
     new CustomEvent("submit", {

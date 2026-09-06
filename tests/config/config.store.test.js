@@ -71,15 +71,15 @@ describe("config store", () => {
   it.each([
     {
       i18n: EN_I18N,
-      names: ["Dark", "Black", "Light"],
+      names: ["Dark", "Black", "Light", "Catppuccin Mocha"],
     },
     {
       i18n: JA_I18N,
-      names: ["ダーク", "ブラック", "ライト"],
+      names: ["ダーク", "ブラック", "ライト", "Catppuccin Mocha"],
     },
     {
       i18n: ZH_HANS_I18N,
-      names: ["深色", "黑色", "浅色"],
+      names: ["深色", "黑色", "浅色", "Catppuccin Mocha"],
     },
   ])("localizes all theme names", ({ i18n, names }) => {
     const state = createInitialState();
@@ -89,23 +89,27 @@ describe("config store", () => {
       "dark",
       "black",
       "light",
+      "catppuccin-mocha",
     ]);
     expect(viewData.themes.map(({ name }) => name)).toEqual(names);
     expect(viewData.currentTheme).toBe("dark");
     expect(viewData.themes[0].isSelected).toBe(true);
   });
 
-  it("selects an additional theme without changing its id", () => {
-    const state = createInitialState();
+  it.each(["black", "catppuccin-mocha"])(
+    "selects %s without changing its id",
+    (theme) => {
+      const state = createInitialState();
 
-    setCurrentTheme({ state }, { theme: "black" });
+      setCurrentTheme({ state }, { theme });
 
-    const viewData = selectViewData({ state, i18n: EN_I18N });
-    expect(state.currentTheme).toBe("black");
-    expect(viewData.themes.find(({ id }) => id === "black")?.isSelected).toBe(
-      true,
-    );
-  });
+      const viewData = selectViewData({ state, i18n: EN_I18N });
+      expect(state.currentTheme).toBe(theme);
+      expect(viewData.themes.find(({ id }) => id === theme)?.isSelected).toBe(
+        true,
+      );
+    },
+  );
 });
 
 describe("config language store", () => {

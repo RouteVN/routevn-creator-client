@@ -13,6 +13,9 @@ refs:
         handler: handleTagFilterButtonClick
   tagFilterPopover:
     eventListeners:
+      positioned:
+        handler: handleTagFilterPopoverPositioned
+        targetOnly: true
       close:
         handler: handleTagFilterPopoverClose
   tagFilterOption*:

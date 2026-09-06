@@ -280,6 +280,9 @@ steps:
   - action: assert
     type: url
     value: /project/scene-editor
+  - action: assert
+    type: hidden
+    selector: "rvn-lexical-scene-document-editor .preview-dialogue-label"
   - action: wait
     ms: 1600
   - action: waitFor

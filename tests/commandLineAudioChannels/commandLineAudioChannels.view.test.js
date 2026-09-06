@@ -86,7 +86,7 @@ describe("command-line audio channel views", () => {
       "utf8",
     );
 
-    expect(view).toContain("rtgl-view w=f ph=lg:");
+    expect(view).toContain("rtgl-view w=f ph=md:");
     expect(view).toContain(
       "rtgl-text#channelEditorTitle s=lg: ${channelEditorTitle}",
     );
@@ -169,7 +169,7 @@ describe("command-line audio channel views", () => {
 
     expect(bgmView).toContain("rtgl-form#channelForm key=${channelFormKey}");
     expect(bgmView).not.toContain(
-      "rtgl-form#channelForm key=${channelFormKey} :form=${channelForm} :defaultValues=${channelDefaultValues} p=lg",
+      "rtgl-form#channelForm key=${channelFormKey} :form=${channelForm} :defaultValues=${channelDefaultValues} p=md",
     );
     expect(voiceView).toContain("rtgl-form#channelForm key=${channelFormKey}");
     expect(sfxView).toContain(

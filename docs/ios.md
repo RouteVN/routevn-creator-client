@@ -28,6 +28,9 @@ Not included yet:
 - production signing profiles
 - remote collaboration
 
+App Store publishing capabilities and a proposed automation path are documented
+in [iOS App Store Release Automation](./notes/ios-app-store-release-automation.md).
+
 ## Local Setup
 
 Install:

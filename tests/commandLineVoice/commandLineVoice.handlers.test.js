@@ -258,7 +258,7 @@ describe("commandLineVoice.handlers", () => {
     expect(render).not.toHaveBeenCalled();
   });
 
-  it("removes a Voice clip from its context menu", async () => {
+  it("submits an empty channel after removing the last Voice clip", async () => {
     const state = voiceStore.createInitialState();
     const store = createStore(state);
     const render = vi.fn();
@@ -266,6 +266,8 @@ describe("commandLineVoice.handlers", () => {
     const showDropdownMenu = vi.fn().mockResolvedValue({
       item: { key: "remove" },
     });
+    const showAlert = vi.fn();
+    const dispatchEvent = vi.fn();
 
     await handleSoundContextMenu(
       {
@@ -293,6 +295,21 @@ describe("commandLineVoice.handlers", () => {
     });
     expect(state.voice.sounds).toEqual([]);
     expect(render).toHaveBeenCalledTimes(2);
+
+    handleSubmitClick(
+      { appService: { showAlert }, dispatchEvent, i18n, store },
+      { _event: { stopPropagation: vi.fn() } },
+    );
+    expect(showAlert).not.toHaveBeenCalled();
+    expect(dispatchEvent).toHaveBeenCalledOnce();
+    expect(dispatchEvent.mock.calls[0][0].detail).toEqual({
+      voice: {
+        sounds: [],
+        interruption: "immediate",
+        loop: false,
+        volume: 100,
+      },
+    });
   });
 
   it("connects a Voice clip and shifts every following clip", async () => {

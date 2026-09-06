@@ -1,3 +1,4 @@
+import { selectResourceSelectorEmptyMessage } from "../../internal/ui/resourcePages/selectorEmptyState.js";
 import { toFlatGroups } from "../../internal/project/tree.js";
 import { prependRootItemsGroup } from "../../internal/ui/resourcePages/rootGroups.js";
 
@@ -32,7 +33,7 @@ const matchesSearch = (item, searchQuery) => {
   return name.includes(searchQuery) || description.includes(searchQuery);
 };
 
-export const selectViewData = ({ state, props = {} }) => {
+export const selectViewData = ({ state, props = {}, i18n }) => {
   const sounds = state.sounds ?? { items: {}, tree: [] };
   const selectedSoundId = state.selectedSoundId;
   const searchQuery = (props.searchQuery ?? "").toLowerCase().trim();
@@ -75,6 +76,11 @@ export const selectViewData = ({ state, props = {} }) => {
 
   return {
     groups,
+    selectorEmptyMessage: selectResourceSelectorEmptyMessage({
+      groups: groups,
+      searchQuery: searchQuery,
+      i18n,
+    }),
     selectedSoundId,
   };
 };

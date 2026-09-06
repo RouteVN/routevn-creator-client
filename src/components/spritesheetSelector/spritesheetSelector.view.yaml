@@ -7,8 +7,8 @@ refs:
       dblclick:
         handler: handleSpritesheetItemDoubleClick
 template:
-  - 'rtgl-view#container h=1fg sv g=lg style="outline: none;"':
-      - $if groups.length > 0:
+  - 'rtgl-view#container w=f h=1fg sv g=lg style="outline: none;"':
+      - $if !selectorEmptyMessage:
           - $for group, i in groups:
               - 'rtgl-view#groupRef${i} data-group-id=${group.id} mb=sm w=f bgc=bg z=100 pv=xs style="position: sticky; top: 0;"':
                   - rtgl-view d=h av=c g=md:
@@ -17,10 +17,11 @@ template:
               - 'rtgl-view d=h w=f wrap g=md style="${spritesheetGridStyle}"':
                   - $for item, j in group.children:
                       - 'rtgl-view#spritesheetItemRef${i}x${j} data-selection-value=${item.selectionValue} data-resource-id=${item.resourceId} data-animation-name=${item.animationName} bw=xs bc=${item.itemBorderColor} h-bc=${item.itemHoverBorderColor} br=md cur=pointer key=${item.selectionValue} style="${spritesheetCardStyle}"':
-                          - 'rtgl-view br=md w=200 pos=rel overflow=hidden style="${spritesheetCardStyle}${item.cardStyle}"':
-                              - 'rvn-spritesheet-preview key=${item.previewKey} previewKey=${item.previewKey} fileId=${item.fileId} :atlas=${item.atlas} :animation=${item.animation} w=f h=120 emptyLabel="${noPreviewLabel}"': null
+                          - 'rtgl-view br=md pos=rel overflow=hidden style="${spritesheetPreviewCardStyle}${item.cardStyle}"':
+                              - 'div style="width: 100%; aspect-ratio: 16 / 9; overflow: hidden;"':
+                                  - 'rvn-spritesheet-preview key=${item.previewKey} previewKey=${item.previewKey} fileId=${item.fileId} :atlas=${item.atlas} :animation=${item.animation} w=f h=f emptyLabel="${noPreviewLabel}"': null
                               - rtgl-view w=f p=md:
                                   - rtgl-text s=xs c=mu-fg ellipsis w=f: ${item.name}
         $else:
-          - rtgl-view w=f h=f av=c ah=c:
-              - rtgl-text s=sm c=mu-fg: No spritesheet animations
+          - rtgl-view w=f h=1fg av=c ah=c p=md:
+              - rtgl-text s=sm c=mu-fg ta=c: ${selectorEmptyMessage}

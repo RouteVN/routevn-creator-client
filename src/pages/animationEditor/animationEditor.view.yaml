@@ -534,6 +534,11 @@ refs:
     eventListeners:
       click:
         handler: handleCancelMaskImageSelection
+  fullPreviewDialog:
+    eventListeners:
+      close:
+        handler: handleMaskImagePreviewOverlayClick
+        stopPropagation: true
   previewOverlay:
     eventListeners:
       click:
@@ -561,6 +566,11 @@ styles:
   "[data-camera-value]:focus-visible":
     outline: "2px solid var(--ring)"
     outline-offset: 2px
+  "#previewOverlay":
+    user-select: none
+    "-webkit-user-select": none
+    --focus-ring-outline: none
+    --focus-ring-box-shadow: none
   ".animationEditorTab:focus-visible":
     outline: "2px solid var(--ring)"
     outline-offset: 2px
@@ -953,11 +963,12 @@ template:
                   - rtgl-button#cancelMaskImageSelection variant=se: ${cancelButton}
                   - rtgl-button#confirmMaskImageSelection variant=pr: ${okButton}
   - $when: fullImagePreviewVisible
-    rtgl-view#previewOverlay pos=fix edge=f z=3000 cur=pointer:
-      - rtgl-view w=f h=f pos=fix edge=f bgc=bg: null
-      - $if fullImagePreviewImageId:
-          - rtgl-view pos=fix edge=f ah=c av=c z=3001:
-              - rvn-file-image imageId=${fullImagePreviewImageId} w=80% h=80% bc=ac bw=xs br=md: null
+    rtgl-dialog#fullPreviewDialog open layout=fixed bare p=none:
+      - rtgl-view#previewOverlay slot=content pos=fix edge=f z=3000 cur=pointer:
+          - rtgl-view w=f h=f pos=fix edge=f bgc=bg: null
+          - $if fullImagePreviewImageId:
+              - rtgl-view pos=fix edge=f ah=c av=c z=3001:
+                  - rvn-file-image imageId=${fullImagePreviewImageId} w=80% h=80% bc=ac bw=xs br=md: null
   - $if cameraEditor:
       - rtgl-dialog#cameraDialog open layout=fixed p=none close-button:
           - rvn-animation-camera-editor#cameraEditor slot=content w=f h=f :initial=${cameraEditorInitial} :pose=${cameraEditor.pose} :projectResolution=${projectResolution} imageId=${cameraImageId} :imageSize=${cameraImageSize}: null

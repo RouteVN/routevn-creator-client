@@ -17,6 +17,8 @@
 13. [Android Development](./android.md)
 14. [iOS Development](./ios.md)
 15. [macOS Player Export Plan](./macos-player-export-plan.md)
+16. [iOS App Store Release Automation Research](./notes/ios-app-store-release-automation.md)
+17. [Google Play Release Automation Research](./notes/google-play-release-automation.md)
 
 ## Runbooks
 

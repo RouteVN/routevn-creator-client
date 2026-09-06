@@ -67,11 +67,21 @@ refs:
     eventListeners:
       item-click:
         handler: handleFileExplorerClickItem
+  fullPreviewDialog:
+    eventListeners:
+      close:
+        action: hideFullImagePreview
+        stopPropagation: true
   previewOverlay:
     eventListeners:
       click:
         action: hideFullImagePreview
 styles:
+  "#previewOverlay":
+    user-select: none
+    "-webkit-user-select": none
+    --focus-ring-outline: none
+    --focus-ring-box-shadow: none
   ".backgroundResourceThumbnailTransparencyGrid":
     background-color: "#eef2f7"
     background-image: 'linear-gradient(45deg, #94a3b8 25%, transparent 25%), linear-gradient(-45deg, #94a3b8 25%, transparent 25%), linear-gradient(45deg, transparent 75%, #94a3b8 75%), linear-gradient(-45deg, transparent 75%, #94a3b8 75%)'
@@ -79,12 +89,12 @@ styles:
     background-repeat: repeat
     background-size: 12px 12px
 template:
-  - 'rtgl-view w=f h=f pv=lg pos=rel style="min-width: 0; min-height: 0; overflow: hidden;"':
-      - rtgl-view w=f h=24 av=c ph=lg mb=md:
+  - 'rtgl-view w=f h=f pv=md pos=rel style="min-width: 0; min-height: 0; overflow: hidden;"':
+      - rtgl-view w=f h=24 av=c ph=md mb=md:
           - rtgl-breadcrumb#breadcumb :items=${breadcrumb}: null
       - $if mode == 'current':
           - 'rtgl-view h=1fg sv w=f style="min-height: 0;"':
-              - rtgl-form#form key=${dialogueForm.key} :form=${dialogueForm.form} :defaultValues=${dialogueForm.defaultValues} ph=lg pv=none:
+              - rtgl-form#form key=${dialogueForm.key} :form=${dialogueForm.form} :defaultValues=${dialogueForm.defaultValues} ph=md pv=none:
                   - $if selectedResource:
                       - $if selectedResource.resourceType == 'image':
                           - rtgl-view#backgroundImage slot=background cur=pointer bw=xs bc=${selectedResource.itemBorderColor} h-bc=${selectedResource.itemHoverBorderColor} br=md:
@@ -140,17 +150,17 @@ template:
                                   - rtgl-text s=sm c=mu-fg: ${item.label}
                                   - 'rtgl-text s=sm style="font-variant-numeric: tabular-nums;"': ${item.value}
               - 'rtgl-view h=240 aria-hidden=true style="flex: 0 0 240px;"': null
-          - 'rtgl-view d=h av=c ah=e w=f g=lg ph=lg style="flex: 0 0 auto;"':
+          - 'rtgl-view d=h av=c ah=e w=f g=lg ph=md style="flex: 0 0 auto;"':
               - rtgl-button#submitButton: ${submitButtonLabel}
       - $if mode == 'gallery':
-          - 'rtgl-view d=h w=f av=c g=md ph=lg style="min-width: 0;"':
+          - 'rtgl-view d=h w=f av=c g=md ph=md style="min-width: 0;"':
               - 'rtgl-view w=1fg sh style="min-width: 0; overscroll-behavior-x: contain;"':
                   - 'rtgl-tabs#tabs selected-tab=${tab} :items=${tabs} style="display: block; min-width: max-content;"': null
               - $if showInlineSearch:
                   - rtgl-input#searchInput s=sm placeholder=${searchPlaceholder} value=${searchQuery} h=1fg: null
               - $if showSearchButton:
                   - 'rtgl-button#searchButton sq pre=search v=ol aria-label="${searchButtonLabel}" title="${searchButtonLabel}"': null
-          - 'rtgl-view d=h w=f g=lg mt=sm h=1fg ph=lg style="min-height: 0;"':
+          - 'rtgl-view d=h w=f g=lg mt=sm h=1fg ph=md style="min-height: 0;"':
               - $if showImageSelectorFileExplorer:
                   - rtgl-view h=f w=1fg sv:
                       - rvn-base-file-explorer#baseFileExplorer :items=${items}: null
@@ -159,6 +169,9 @@ template:
                       - rvn-image-selector#rvnImageSelector selectedImageId=${tempSelectedResourceId} searchQuery=${searchQuery} :columns=${imageSelectorColumns}: null
                     $elif tab == 'spritesheet':
                       - rvn-spritesheet-selector#spritesheetSelector selectedSpritesheetValue=${tempSelectedSpritesheetValue} searchQuery=${searchQuery} :columns=${spritesheetSelectorColumns}: null
+                    $elif selectorEmptyMessage:
+                      - rtgl-view w=f h=1fg av=c ah=c p=md:
+                          - rtgl-text s=sm c=mu-fg ta=c: ${selectorEmptyMessage}
                     $elif tab == 'layout':
                       - $for group, i in groups:
                           - rtgl-view g=md:
@@ -195,7 +208,7 @@ template:
                                                       - rtgl-icon icon=play s=xl c=fg: null
                                               - rtgl-view w=f p=md:
                                                   - rtgl-text s=xs c=mu-fg ellipsis w=f: ${item.name}
-          - 'rtgl-view d=h av=c ah=e w=f g=lg ph=lg pt=sm style="flex: 0 0 auto;"':
+          - 'rtgl-view d=h av=c ah=e w=f g=lg ph=md pt=sm style="flex: 0 0 auto;"':
               - rtgl-button#buttonSelect: ${selectButtonLabel}
 
   - $if showSearchButton:
@@ -203,11 +216,12 @@ template:
           - rtgl-input#searchInput s=sm placeholder=${searchPlaceholder} value=${searchQuery} w=f: null
 
   - $if fullImagePreviewVisible || fullSpritesheetPreviewVisible:
-      - rtgl-view#previewOverlay pos=fix edge=f z=3000 cur=pointer:
-          - rtgl-view w=f h=f pos=fix edge=f bgc=bg: null
-          - $if fullSpritesheetPreviewVisible:
-              - rtgl-view pos=fix edge=f ah=c av=c z=3001:
-                  - rvn-spritesheet-preview key=${fullSpritesheetPreviewKey} previewKey=${fullSpritesheetPreviewKey} fileId=${fullSpritesheetPreviewFileId} :atlas=${fullSpritesheetPreviewAtlas} :animation=${fullSpritesheetPreviewAnimation} w=80% h=80% br=md emptyLabel=${noThumbnailLabel}: null
-            $elif fullImagePreviewFileId:
-              - rtgl-view pos=fix edge=f ah=c av=c z=3001:
-                  - rvn-file-image fileId=${fullImagePreviewFileId} w=80% h=80% bc=ac bw=xs br=md: null
+      - rtgl-dialog#fullPreviewDialog open layout=fixed bare p=none:
+          - rtgl-view#previewOverlay slot=content pos=fix edge=f z=3000 cur=pointer:
+              - rtgl-view w=f h=f pos=fix edge=f bgc=bg: null
+              - $if fullSpritesheetPreviewVisible:
+                  - rtgl-view pos=fix edge=f ah=c av=c z=3001:
+                      - rvn-spritesheet-preview key=${fullSpritesheetPreviewKey} previewKey=${fullSpritesheetPreviewKey} fileId=${fullSpritesheetPreviewFileId} :atlas=${fullSpritesheetPreviewAtlas} :animation=${fullSpritesheetPreviewAnimation} w=80% h=80% br=md emptyLabel=${noThumbnailLabel}: null
+                $elif fullImagePreviewFileId:
+                  - rtgl-view pos=fix edge=f ah=c av=c z=3001:
+                      - rvn-file-image fileId=${fullImagePreviewFileId} w=80% h=80% bc=ac bw=xs br=md: null

@@ -45,6 +45,19 @@ const themeOptions = [
     previewInput: "oklch(0.91 0.008 250)",
     previewBorder: "oklch(0.84 0.012 250)",
   },
+  {
+    id: "catppuccin-mocha",
+    name: "Catppuccin Mocha",
+    copyKey: "catppuccinMochaThemeName",
+    previewPageBackground: "#1e1e2e",
+    previewPanelBackground: "#313244",
+    previewCardBackground: "#313244",
+    previewAccent: "#45475a",
+    previewPrimary: "#89b4fa",
+    previewSecondary: "#313244",
+    previewInput: "#313244",
+    previewBorder: "#45475a",
+  },
 ];
 
 export const createInitialState = () => ({
