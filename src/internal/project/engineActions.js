@@ -124,13 +124,14 @@ export const normalizeEngineActions = (value) => {
         continue;
       }
 
-      // Independently authored persistent actions must describe the same
-      // playback instances. Repeated copies of one resource remain distinct.
+      // Match source and timing so removing another scheduled copy does not
+      // renumber a surviving sound. Only identical schedules need an ordinal.
       const occurrences = new Map();
       for (const sound of channel.sounds ?? []) {
-        const occurrence = (occurrences.get(sound.resourceId) ?? 0) + 1;
-        occurrences.set(sound.resourceId, occurrence);
-        sound.id = getPersistentSfxSoundId(sound.resourceId, occurrence);
+        const playbackId = getPersistentSfxSoundId(sound);
+        const occurrence = (occurrences.get(playbackId) ?? 0) + 1;
+        occurrences.set(playbackId, occurrence);
+        sound.id = getPersistentSfxSoundId(sound, occurrence);
       }
     }
   }

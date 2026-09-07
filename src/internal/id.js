@@ -28,6 +28,13 @@ export const generatePrefixedId = (prefix = "", length = DEFAULT_ID_LENGTH) => {
   return `${prefix}${generateId(length)}`;
 };
 
-export const getPersistentSfxSoundId = (resourceId, occurrence) => {
-  return `persistent-sfx:${encodeURIComponent(resourceId)}:${occurrence}`;
+export const getPersistentSfxSoundId = (sound, occurrence = 1) => {
+  return [
+    "persistent-sfx",
+    encodeURIComponent(sound.resourceId),
+    sound.startDelayMs ?? 0,
+    sound.startAt ?? 0,
+    sound.endAt ?? "end",
+    occurrence,
+  ].join(":");
 };

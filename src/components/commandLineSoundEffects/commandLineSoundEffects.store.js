@@ -1,5 +1,6 @@
 import { selectResourceSelectorEmptyMessage } from "../../internal/ui/resourcePages/selectorEmptyState.js";
 import { toFlatGroups, toFlatItems } from "../../internal/project/tree.js";
+import { generateId } from "../../internal/id.js";
 import {
   connectAudioSoundToPrevious,
   createAudioTimelineLayout,
@@ -691,7 +692,22 @@ export const updateChannel = ({ state }, { channelId, values = {} } = {}) => {
     );
   }
   if (values.applyMode !== undefined) {
-    channel.applyMode = normalizeChannelApplyMode(values.applyMode);
+    const applyMode = normalizeChannelApplyMode(values.applyMode);
+    if (channel.applyMode === "persistent" && applyMode === "singleLine") {
+      // Persistent IDs are shared across matching actions. A Single Line
+      // action needs its own playback instances so it can replay.
+      for (const sound of channel.sounds) {
+        const previousId = sound.id;
+        sound.id = generateId();
+        if (
+          state.selectedChannelId === channelId &&
+          state.selectedSoundId === previousId
+        ) {
+          state.selectedSoundId = sound.id;
+        }
+      }
+    }
+    channel.applyMode = applyMode;
   }
   if (values.loop !== undefined) {
     channel.loop = values.loop;

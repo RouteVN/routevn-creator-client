@@ -2,6 +2,16 @@ import { describe, expect, it } from "vitest";
 import createRouteEngine from "route-engine-js";
 import { normalizeLineActions } from "../../src/internal/project/engineActions.js";
 import { constructProjectData } from "../../src/internal/project/projection.js";
+import {
+  createInitialState as createSystemActionsState,
+  selectActionsData,
+} from "../../src/components/systemActions/systemActions.store.js";
+import {
+  createInitialState as createSfxState,
+  selectSfx,
+  setSfx,
+  updateChannel,
+} from "../../src/components/commandLineSoundEffects/commandLineSoundEffects.store.js";
 
 const createSfxAction = (soundId, channel = {}, sound = {}) => ({
   sfx: {
@@ -106,16 +116,77 @@ describe("persistent SFX playback identity", () => {
     expect(after[0].children[0].id).not.toBe(before[0].children[0].id);
   });
 
-  it("updates volume on the continuing sound and preserves changed timing", () => {
+  it("replays independently authored actions after reopening and switching both to Single Line", () => {
+    const editedActions = ["authored-one", "authored-two"].map((id) => {
+      const authoredActions = createSfxAction(id);
+      const { actions } = selectActionsData({
+        state: createSystemActionsState(),
+        props: {
+          actions: authoredActions,
+          presentationState: normalizeLineActions(authoredActions),
+        },
+      });
+      const state = createSfxState();
+      setSfx({ state }, { sfx: actions.sfx });
+      updateChannel(
+        { state },
+        { channelId: "Environment", values: { applyMode: "singleLine" } },
+      );
+      const saved = normalizeLineActions({ sfx: selectSfx({ state }) });
+      const soundId = saved.sfx.channels[0].sounds[0].id;
+
+      // Reopening or updating an already Single Line channel must keep the
+      // newly authored instance stable within that action.
+      setSfx({ state }, { sfx: saved.sfx });
+      updateChannel(
+        { state },
+        { channelId: "Environment", values: { applyMode: "singleLine" } },
+      );
+      expect(selectSfx({ state }).channels[0].sounds[0].id).toBe(soundId);
+      return saved;
+    });
+    const { before, after } = renderAcrossSections(
+      createRepositoryState(...editedActions),
+    );
+
+    expect(after[0].children[0].src).toBe(before[0].children[0].src);
+    expect(after[0].children[0].id).not.toBe(before[0].children[0].id);
+  });
+
+  it.each([
+    ["startDelayMs", 4000],
+    ["startAt", 4],
+    ["endAt", 8],
+  ])(
+    "keeps a surviving repeated clip stable when the removed clip differs in %s",
+    (field, value) => {
+      const first = createSfxAction("first", {}, { [field]: 0 });
+      const survivingSound = {
+        id: "second",
+        resourceId: "rain",
+        [field]: value,
+      };
+      first.sfx.channels[0].sounds.push(survivingSound);
+      const second = createSfxAction("second", {}, survivingSound);
+      const { before, after } = renderAcrossSections(
+        createRepositoryState(first, second),
+      );
+
+      expect(before[0].children).toHaveLength(2);
+      expect(after[0].children).toEqual([before[0].children[1]]);
+    },
+  );
+
+  it("updates volume on the continuing sound", () => {
     const { before, after } = renderAcrossSections(
       createRepositoryState(
         createSfxAction("one", {}, { volume: 80, startAt: 0 }),
-        createSfxAction("two", {}, { volume: 40, startAt: 2 }),
+        createSfxAction("two", {}, { volume: 40, startAt: 0 }),
       ),
     );
 
     expect(after[0].children[0].id).toBe(before[0].children[0].id);
-    expect(after[0].children[0]).toMatchObject({ volume: 40, startAt: 2 });
+    expect(after[0].children[0]).toMatchObject({ volume: 40, startAt: 0 });
     expect(before[0].children[0]).toMatchObject({ volume: 80, startAt: 0 });
   });
 
@@ -126,9 +197,15 @@ describe("persistent SFX playback identity", () => {
       resourceId: "rain",
       startDelayMs: 4000,
     });
+    first.sfx.channels[0].sounds.push({
+      id: "third",
+      resourceId: "rain",
+      startDelayMs: 4000,
+    });
     const second = structuredClone(first);
     second.sfx.channels[0].sounds[0].id = "another-first";
     second.sfx.channels[0].sounds[1].id = "another-second";
+    second.sfx.channels[0].sounds[2].id = "another-third";
     const original = structuredClone(first);
     const normalized = normalizeLineActions({
       conditional: { branches: [{ actions: first }, { actions: second }] },
@@ -138,6 +215,7 @@ describe("persistent SFX playback identity", () => {
 
     expect(firstBranch.actions).toEqual(secondBranch.actions);
     expect(sounds[0].id).not.toBe(sounds[1].id);
+    expect(sounds[1].id).not.toBe(sounds[2].id);
     expect(sounds[1].startDelayMs).toBe(4000);
     expect(normalizeLineActions(normalized)).toEqual(normalized);
     expect(first).toEqual(original);
