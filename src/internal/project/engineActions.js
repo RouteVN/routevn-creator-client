@@ -1,3 +1,5 @@
+import { getPersistentSfxSoundId } from "../id.js";
+
 const BLUR_KERNEL_SIZE_OPTIONS = [5, 7, 9, 11, 13, 15];
 const DEFAULT_BLUR_KERNEL_SIZE = 9;
 const BACKGROUND_INLINE_TRANSFORM_FIELDS = [
@@ -115,6 +117,23 @@ export const normalizeEngineActions = (value) => {
       normalizeEngineActions(entry),
     ]),
   );
+
+  if (Array.isArray(normalizedValue.sfx?.channels)) {
+    for (const channel of normalizedValue.sfx.channels) {
+      if (channel.applyMode !== "persistent") {
+        continue;
+      }
+
+      // Independently authored persistent actions must describe the same
+      // playback instances. Repeated copies of one resource remain distinct.
+      const occurrences = new Map();
+      for (const sound of channel.sounds ?? []) {
+        const occurrence = (occurrences.get(sound.resourceId) ?? 0) + 1;
+        occurrences.set(sound.resourceId, occurrence);
+        sound.id = getPersistentSfxSoundId(sound.resourceId, occurrence);
+      }
+    }
+  }
 
   if (
     normalizedValue.dialogue &&

@@ -487,13 +487,14 @@ describe("systemActions.store", () => {
     expect(preview.sfx).toEqual({ names: "Rain" });
   });
 
-  it("keeps an authored SFX stop-all action visible", () => {
+  it("hides an authored SFX stop-all action from presentation state", () => {
     const state = createInitialState();
     const sfx = { channels: [] };
 
     const { actions, preview } = selectActionsData({
       state,
       props: {
+        actionType: "presentation",
         actions: { sfx },
         presentationState: {
           sfx: {
@@ -510,7 +511,7 @@ describe("systemActions.store", () => {
     });
 
     expect(actions.sfx).toEqual(sfx);
-    expect(preview.sfx).toEqual({ names: "Stop Sound Effects" });
+    expect(preview.sfx).toBeUndefined();
   });
 
   it("preserves and previews voice actions from repository voices", () => {

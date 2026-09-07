@@ -1124,10 +1124,9 @@ export const selectViewData = ({ state, i18n }) => {
     },
     {
       name: "fontSize",
-      type: "slider-with-input",
+      type: "input-number",
       label: copy.fontSizeLabel ?? "Font Size",
       min: 8,
-      max: 72,
       step: 1,
       unit: "px",
       required: true,

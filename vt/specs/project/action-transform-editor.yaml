@@ -1,6 +1,6 @@
 ---
 title: Action Transform Editor Workflow
-description: Covers opening, keyboard editing, previewing, and closing the custom transform editor from a scene background action.
+description: Covers opening, keyboard editing, scaled selection bounds, resize cursors, previewing, and closing the custom transform editor from a scene background action.
 url: /projects
 skipInitialScreenshot: true
 viewport:
@@ -260,17 +260,59 @@ steps:
           const waitUntil = async (condition) => {
             const deadline = Date.now() + 5000;
             while (!condition()) {
-              if (Date.now() >= deadline) throw new Error('Scale display did not update');
+              if (Date.now() >= deadline) throw new Error('Transform preview did not update');
               await new Promise((resolve) => setTimeout(resolve, 50));
             }
           };
           const editor = deepQuery(document, 'rvn-action-transform-editor#actionTransformEditor');
+          const sceneEditor = deepQuery(document, 'rvn-scene-editor-lexical');
           const inspector = () => deepQuery(editor.shadowRoot, '#transformInspector');
           const original = editor.props.transform;
           const update = (formValues) => editor.transformedHandlers.handleInspectorUpdate({
             _event: { detail: { formValues } },
           });
           try {
+            for (const scale of [0.5, 2]) {
+              update({ ...original, x: 960, y: 540, rotation: 0, scaleX: scale, scaleY: scale });
+              await waitUntil(() => {
+                const metrics = sceneEditor.store.selectBackgroundTransformEditor().selectedElementMetrics;
+                if (metrics?.scaleX !== scale || metrics?.scaleY !== scale) return false;
+                const entries = sceneEditor.deps.graphicsService.hitTestElementBounds({ x: 960, y: 540 })
+                  .flatMap((hit) => hit.path);
+                const target = entries.find((entry) => entry.id === 'bg-cg-background-container')?.bounds;
+                const border = entries.find((entry) => entry.id === 'selected-border')?.bounds;
+                if (!target || !border) return false;
+                return Math.abs(border.x - target.x - 4) < 0.01 &&
+                  Math.abs(border.y - target.y - 4) < 0.01 &&
+                  Math.abs(border.width + 8 - target.width) < 0.01 &&
+                  Math.abs(border.height + 8 - target.height) < 0.01;
+              });
+              if (scale === 0.5) {
+                const canvas = editor.getCanvasRoot().querySelector('canvas');
+                const canvasBounds = canvas.getBoundingClientRect();
+                const entries = sceneEditor.deps.graphicsService.hitTestElementBounds({ x: 960, y: 540 })
+                  .flatMap((hit) => hit.path);
+                const border = entries.find((entry) => entry.id === 'selected-border').bounds;
+                const inset = 3 * 1920 / canvasBounds.width;
+                const centerX = border.x + border.width / 2;
+                const centerY = border.y + border.height / 2;
+                for (const [x, y, cursor] of [
+                  [centerX + 50, centerY, 'all-scroll'],
+                  [border.x + inset, centerY, 'ew-resize'],
+                  [border.x + border.width - inset, centerY, 'ew-resize'],
+                  [centerX, border.y + inset, 'ns-resize'],
+                  [centerX, border.y + border.height - inset, 'ns-resize'],
+                ]) {
+                  canvas.dispatchEvent(new PointerEvent('pointermove', {
+                    bubbles: true, composed: true, pointerId: 1, pointerType: 'mouse',
+                    isPrimary: true, buttons: 0,
+                    clientX: canvasBounds.left + x / 1920 * canvasBounds.width,
+                    clientY: canvasBounds.top + y / 1080 * canvasBounds.height,
+                  }));
+                  await waitUntil(() => getComputedStyle(canvas).cursor === cursor);
+                }
+              }
+            }
             update({ ...original, scaleX: 1.23456789, scaleY: 0.98765432 });
             for (const [name, expected] of [['scaleX', '1.23'], ['scaleY', '0.99']]) {
               const field = () => deepQuery(inspector().shadowRoot, `[data-name='${name}']`);

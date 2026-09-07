@@ -702,9 +702,11 @@ export const selectActionsData = ({ props, state, copy }) => {
     if (!authoredBgmStops) {
       const bgmResourceId =
         bgmAction.sounds?.[0]?.resourceId ?? bgmAction.resourceId;
-      preview.bgm = sounds[bgmResourceId] ?? {
-        name: bgmResourceId ?? localizeCommandLineText("BGM", copy),
-      };
+      if (bgmResourceId || props.actionType !== "presentation") {
+        preview.bgm = sounds[bgmResourceId] ?? {
+          name: bgmResourceId ?? localizeCommandLineText("BGM", copy),
+        };
+      }
     }
   }
 
@@ -756,14 +758,22 @@ export const selectActionsData = ({ props, state, copy }) => {
       .join(", ");
 
     actionsObject.sfx = sfxAction;
-    preview.sfx = {
-      names: names || localizeCommandLineText("Stop Sound Effects", copy),
-    };
+    if (names || props.actionType !== "presentation") {
+      preview.sfx = {
+        names: names || localizeCommandLineText("Stop Sound Effects", copy),
+      };
+    }
   }
 
-  if (presentationState.character?.items) {
+  const characterItems = presentationState.character?.items;
+  if (characterItems) {
     actionsObject.character = presentationState.character;
-    preview.character = presentationState.character.items.map((char) => {
+  }
+  if (
+    characterItems &&
+    (characterItems.length > 0 || props.actionType !== "presentation")
+  ) {
+    preview.character = characterItems.map((char) => {
       const character = repositoryStateData.characters?.items?.[char.id];
       const spriteFileIds = buildCharacterSpritePreviewFileIds({
         spritesCollection: character?.sprites,
@@ -1234,6 +1244,11 @@ export const selectActionsData = ({ props, state, copy }) => {
       : undefined;
   if (Array.isArray(visualAction?.items)) {
     actionsObject.visual = visualAction;
+  }
+  if (
+    Array.isArray(visualAction?.items) &&
+    (visualAction.items.length > 0 || props.actionType !== "presentation")
+  ) {
     preview.visual = {
       count: visualAction.items.length,
       items: visualAction.items.map((item) => {

@@ -470,7 +470,11 @@ const buildOverlayAnchorMarker = ({ element, anchorRatios }) => {
   });
 };
 
-const buildOverlayResizeHandle = ({ element, edge }) => {
+const buildOverlayResizeHandle = ({
+  element,
+  edge,
+  canvasUnitsPerCssPixel,
+}) => {
   if (!hasRenderableBounds(element)) {
     return undefined;
   }
@@ -480,29 +484,28 @@ const buildOverlayResizeHandle = ({ element, edge }) => {
     width: getRenderableWidth(element),
     height: getRenderableHeight(element),
     edge,
-    size: OVERLAY_RESIZE_HANDLE_SIZE,
+    size: OVERLAY_RESIZE_HANDLE_SIZE * canvasUnitsPerCssPixel,
     fill: OVERLAY_FILL,
   });
 };
 
-const buildOverlayResizeHandles = ({ element }) => {
+const buildOverlayResizeHandles = ({ element, canvasUnitsPerCssPixel }) => {
   return RESIZE_EDGES.map((edge) =>
-    buildOverlayResizeHandle({ element, edge }),
+    buildOverlayResizeHandle({ element, edge, canvasUnitsPerCssPixel }),
   ).filter(Boolean);
 };
 
 const buildOverlayElementContainer = ({ element, id, children }) => {
   const { x: originX, y: originY } = getElementOrigin(element);
-  const { anchorX, anchorY } = getElementAnchorRatios(element);
   const overlayContainer = {
     id,
     type: "container",
-    x: (element.x ?? 0) + originX,
-    y: (element.y ?? 0) + originY,
+    x: element.x ?? 0,
+    y: element.y ?? 0,
     width: getRenderableWidth(element),
     height: getRenderableHeight(element),
-    anchorX,
-    anchorY,
+    originX,
+    originY,
     children,
   };
 
@@ -510,18 +513,25 @@ const buildOverlayElementContainer = ({ element, id, children }) => {
     overlayContainer.rotation = element.rotation;
   }
 
+  // Parsed dimensions already include scale magnitudes. Preserve only flips
+  // when the overlay is parsed again, including through ancestor containers.
   if (typeof element.scaleX === "number") {
-    overlayContainer.scaleX = element.scaleX;
+    overlayContainer.scaleX = Math.sign(element.scaleX);
   }
 
   if (typeof element.scaleY === "number") {
-    overlayContainer.scaleY = element.scaleY;
+    overlayContainer.scaleY = Math.sign(element.scaleY);
   }
 
   return overlayContainer;
 };
 
-const buildOverlayTree = ({ path, draggable, editorState }) => {
+const buildOverlayTree = ({
+  path,
+  draggable,
+  editorState,
+  canvasUnitsPerCssPixel,
+}) => {
   const selectedElement = path[path.length - 1];
   const overlayRect = buildOverlayRect({
     element: selectedElement,
@@ -541,7 +551,10 @@ const buildOverlayTree = ({ path, draggable, editorState }) => {
     id: "selected-border-group",
     children: [
       overlayRect,
-      ...buildOverlayResizeHandles({ element: selectedElement }),
+      ...buildOverlayResizeHandles({
+        element: selectedElement,
+        canvasUnitsPerCssPixel,
+      }),
       anchorMarker,
     ],
   });
@@ -708,7 +721,11 @@ const selectBackgroundElementPath = (parsedElements, editorState = {}) => {
   return applyLayoutBackgroundBounds(selectedPath, parsedElements);
 };
 
-const toSelectedElementMetrics = (path, editorState = {}) => {
+const toSelectedElementMetrics = (
+  path,
+  editorState,
+  canvasUnitsPerCssPixel,
+) => {
   const element = path?.[path.length - 1];
   if (!element || !hasRenderableBounds(element)) {
     return undefined;
@@ -722,6 +739,7 @@ const toSelectedElementMetrics = (path, editorState = {}) => {
   const scaleY = Number(transform.scaleY);
 
   return {
+    canvasUnitsPerCssPixel,
     width: getRenderableWidth(element),
     height: getRenderableHeight(element),
     anchorX,
@@ -884,6 +902,8 @@ export const createBackgroundTransformEditorCanvasState = ({
   renderState = {},
   graphicsService,
   editorState = {},
+  canvasUnitsPerCssPixel = editorState.selectedElementMetrics
+    ?.canvasUnitsPerCssPixel ?? 1,
 } = {}) => {
   const renderedElements = toElementList(renderState.elements).map(
     stripElementRuntimeInteractions,
@@ -914,6 +934,7 @@ export const createBackgroundTransformEditorCanvasState = ({
         path: overlayPath,
         draggable: true,
         editorState,
+        canvasUnitsPerCssPixel,
       })
     : undefined;
   const elementsWithOverlay = addOverlayToRenderedElements({
@@ -931,7 +952,11 @@ export const createBackgroundTransformEditorCanvasState = ({
       animations: [],
       elements: elementsWithOverlay,
     },
-    selectedElementMetrics: toSelectedElementMetrics(selectedPath, editorState),
+    selectedElementMetrics: toSelectedElementMetrics(
+      selectedPath,
+      editorState,
+      canvasUnitsPerCssPixel,
+    ),
   };
 };
 
