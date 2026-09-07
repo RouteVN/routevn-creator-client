@@ -14,6 +14,7 @@ Current exported helpers:
 - `generateId(length?)`
 - `generatePrefixedId(prefix, length?)`
 - `getIdGenerator(length?)`
+- `getPersistentSfxSoundId(sound, occurrence?)`
 
 Current shared contract:
 
@@ -79,6 +80,21 @@ only when one of these is true:
 
 Current approved prefixed or composite shapes:
 
+- `persistent-sfx:<encodedResourceId>:<startDelayMs>:<startAt>:<endAt>:<occurrence>`
+  - deterministic playback identity for sounds in Persistent SFX channels
+  - the resource ID is URI-encoded; missing delay and start offsets use `0`,
+    and an absent end offset uses `end`
+  - occurrence is one-based among sounds with the same resource and timing;
+    removing or reordering clips with different timing leaves surviving
+    playback identities stable, while simultaneous copies stay distinct
+  - Route Engine namespaces this ID by channel name; matching persistent
+    actions in different sections continue playback when their source and
+    timing match, even when the actions were created independently
+  - action normalization applies this to existing and newly authored actions;
+    Single Line SFX keeps its generated playback-instance IDs
+  - switching a channel from Persistent to Single Line generates fresh sound
+    IDs, so independently edited actions replay even if their persistent IDs
+    previously matched; later edits in Single Line mode retain those IDs
 - `scene-<base58>`
   - existing scene-creation flow currently emits this shape
   - preserve it unless we intentionally migrate scene ids repo-wide

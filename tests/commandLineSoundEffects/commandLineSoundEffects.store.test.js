@@ -558,6 +558,57 @@ describe("commandLineSoundEffects.store", () => {
     expect(state.channels[0].applyMode).toBe("singleLine");
   });
 
+  it("regenerates only the converted channel's clips and preserves sound selection", () => {
+    const state = createInitialState();
+    setSfx(
+      { state },
+      {
+        sfx: {
+          channels: [
+            {
+              id: "Weather",
+              applyMode: "persistent",
+              sounds: [
+                { id: "rain-one", resourceId: "rain" },
+                { id: "rain-two", resourceId: "rain", startDelayMs: 4000 },
+              ],
+            },
+            {
+              id: "UI",
+              sounds: [{ id: "click", resourceId: "click" }],
+            },
+          ],
+        },
+      },
+    );
+    setSelectedSound({ state }, { channelId: "Weather", soundId: "rain-two" });
+    updateChannel(
+      { state },
+      { channelId: "Weather", values: { applyMode: "persistent", volume: 60 } },
+    );
+    expect(state.channels[0].sounds.map((sound) => sound.id)).toEqual([
+      "rain-one",
+      "rain-two",
+    ]);
+
+    updateChannel(
+      { state },
+      { channelId: "Weather", values: { applyMode: "singleLine" } },
+    );
+    const ids = state.channels[0].sounds.map((sound) => sound.id);
+    expect(new Set(ids).size).toBe(2);
+    expect(ids).not.toEqual(expect.arrayContaining(["rain-one", "rain-two"]));
+    expect(state.selectedSoundId).toBe(ids[1]);
+    expect(state.channels[0].sounds[1].startDelayMs).toBe(4000);
+    expect(state.channels[1].sounds[0].id).toBe("click");
+
+    updateChannel(
+      { state },
+      { channelId: "Weather", values: { applyMode: "singleLine", volume: 50 } },
+    );
+    expect(state.channels[0].sounds.map((sound) => sound.id)).toEqual(ids);
+  });
+
   it("places inserted sounds without reflowing the channel after removal", () => {
     const state = createInitialState();
     setRepositoryState({ state }, { sounds });

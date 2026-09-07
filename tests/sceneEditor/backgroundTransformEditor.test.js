@@ -29,6 +29,7 @@ describe("backgroundTransformEditor", () => {
         editorState: {
           background: { resourceId: "background-sprite" },
           transform: { x: 197, y: 174 },
+          selectedElementMetrics: { canvasUnitsPerCssPixel: 3 },
         },
         startTransform: { x: 100, y: 120 },
       });
@@ -42,9 +43,16 @@ describe("backgroundTransformEditor", () => {
     });
     expect(canvasState.renderState.elements[1]).toMatchObject({
       id: "selected-border-group",
-      x: 1067,
-      y: 614,
+      x: 107,
+      y: 74,
+      originX: 960,
+      originY: 540,
     });
+    expect(
+      canvasState.renderState.elements[1].children.find(
+        (element) => element.id === "selected-border-resize-right",
+      ).width,
+    ).toBe(36);
   });
 
   it("uses RouteGraphics world bounds for the background selection", () => {
@@ -256,6 +264,7 @@ describe("backgroundTransformEditor", () => {
       y: 46,
     });
     expect(canvasState.selectedElementMetrics).toEqual({
+      canvasUnitsPerCssPixel: 1,
       width: 200,
       height: 100,
       anchorX: 0.5,

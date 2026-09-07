@@ -1,3 +1,5 @@
+import { getPersistentSfxSoundId } from "../id.js";
+
 const BLUR_KERNEL_SIZE_OPTIONS = [5, 7, 9, 11, 13, 15];
 const DEFAULT_BLUR_KERNEL_SIZE = 9;
 const BACKGROUND_INLINE_TRANSFORM_FIELDS = [
@@ -115,6 +117,24 @@ export const normalizeEngineActions = (value) => {
       normalizeEngineActions(entry),
     ]),
   );
+
+  if (Array.isArray(normalizedValue.sfx?.channels)) {
+    for (const channel of normalizedValue.sfx.channels) {
+      if (channel.applyMode !== "persistent") {
+        continue;
+      }
+
+      // Match source and timing so removing another scheduled copy does not
+      // renumber a surviving sound. Only identical schedules need an ordinal.
+      const occurrences = new Map();
+      for (const sound of channel.sounds ?? []) {
+        const playbackId = getPersistentSfxSoundId(sound);
+        const occurrence = (occurrences.get(playbackId) ?? 0) + 1;
+        occurrences.set(playbackId, occurrence);
+        sound.id = getPersistentSfxSoundId(sound, occurrence);
+      }
+    }
+  }
 
   if (
     normalizedValue.dialogue &&

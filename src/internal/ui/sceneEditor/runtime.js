@@ -1276,7 +1276,7 @@ const prepareTemporaryPresentationProjectData = async (
 };
 
 export const renderSceneEditorState = async (deps, payload = {}) => {
-  const { store, graphicsService } = deps;
+  const { store, graphicsService, refs } = deps;
   const {
     preserveAnimationPlayback = false,
     skipAnimations = true,
@@ -1482,11 +1482,17 @@ export const renderSceneEditorState = async (deps, payload = {}) => {
     if (backgroundTransformEditorOpen) {
       const backgroundTransformEditor =
         store.selectBackgroundTransformEditor?.();
+      const canvasWidth =
+        getBackgroundTransformEditorCanvasRoot(refs)?.getBoundingClientRect?.()
+          .width;
+      const canvasUnitsPerCssPixel =
+        canvasWidth > 0 ? renderProjectData.screen.width / canvasWidth : 1;
       const backgroundTransformCanvasState =
         createBackgroundTransformEditorCanvasState({
           renderState: currentRenderState,
           graphicsService,
           editorState: backgroundTransformEditor,
+          canvasUnitsPerCssPixel,
         });
       if (
         backgroundTransformEditor?.targetType ===
