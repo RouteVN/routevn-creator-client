@@ -37,6 +37,9 @@ static/bundle/player-runtime-persistence-host.js
 src/setup.js
 .DS_Store
 
+# Local Android release credentials
+/android/.secrets/
+
 /android/routevn/.gradle
 /android/routevn/build
 /android/routevn/app/build
