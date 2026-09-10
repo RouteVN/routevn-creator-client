@@ -1980,6 +1980,9 @@ describe("lexical scene document editor line editing", () => {
         selectedLineId: "line-0",
       };
       editorElement.getLineElementFromEvent = vi.fn(() => lineElement);
+      editorElement.getLineVisibleText = vi.fn(() =>
+        lineElement.textContent.replaceAll("\u200b", ""),
+      );
       editorElement.getLineIdFromLineElement = vi.fn(() => "line-1");
       editorElement.getEditorLineOrder = vi.fn(() => [
         { lineId: "line-1" },
@@ -2045,6 +2048,9 @@ describe("lexical scene document editor line editing", () => {
         selectedLineId: "line-0",
       };
       editorElement.getLineElementFromEvent = vi.fn(() => lineElement);
+      editorElement.getLineVisibleText = vi.fn(() =>
+        lineElement.textContent.replaceAll("\u200b", ""),
+      );
       editorElement.getLineIdFromLineElement = vi.fn(() => "line-1");
       editorElement.getEditorLineOrder = vi.fn(() => [
         { lineId: "line-1" },
@@ -2104,6 +2110,9 @@ describe("lexical scene document editor line editing", () => {
         selectedLineId: "line-0",
       };
       editorElement.getLineElementFromEvent = vi.fn(() => lineElement);
+      editorElement.getLineVisibleText = vi.fn(() =>
+        lineElement.textContent.replaceAll("\u200b", ""),
+      );
       editorElement.getLineIdFromLineElement = vi.fn(() => "line-1");
       editorElement.getEditorLineOrder = vi.fn(() => [
         { lineId: "line-1" },
@@ -4201,6 +4210,9 @@ describe("lexical scene document editor line editing", () => {
       lineElement.textContent = "hello\u200b";
 
       editorElement.getLineElementFromEvent = vi.fn(() => lineElement);
+      editorElement.getLineVisibleText = vi.fn(() =>
+        lineElement.textContent.replaceAll("\u200b", ""),
+      );
       editorElement.getLineIdFromLineElement = vi.fn(() => "line-1");
       editorElement.getEditorLineOrder = vi.fn(() => [
         { lineId: "line-1" },
@@ -4239,6 +4251,9 @@ describe("lexical scene document editor line editing", () => {
       lineElement.textContent = "hello world\u200b";
 
       editorElement.getLineElementFromEvent = vi.fn(() => lineElement);
+      editorElement.getLineVisibleText = vi.fn(() =>
+        lineElement.textContent.replaceAll("\u200b", ""),
+      );
       editorElement.getLineIdFromLineElement = vi.fn(() => "line-1");
       editorElement.getEditorLineOrder = vi.fn(() => [
         { lineId: "line-1" },
@@ -4283,6 +4298,9 @@ describe("lexical scene document editor line editing", () => {
       lineElement.textContent = "hello\u200b";
 
       editorElement.getLineElementFromEvent = vi.fn(() => lineElement);
+      editorElement.getLineVisibleText = vi.fn(() =>
+        lineElement.textContent.replaceAll("\u200b", ""),
+      );
       editorElement.getLineIdFromLineElement = vi.fn(() => "line-1");
       editorElement.getEditorLineOrder = vi.fn(() => [{ lineId: "line-1" }]);
       editorElement.getLineOffsetFromPointerEvent = vi.fn(() => 5);

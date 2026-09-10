@@ -24,6 +24,13 @@ input and caret mapping, rather than page state or the Rettangoli dependency.
    newline `beforeinput` with a different input type bypassed the corresponding
    pending flag and performed a second edit. Lexical 0.22.0 explicitly handles
    Safari reporting `insertParagraph` for a soft line break.
+4. **The double-click boundary guard still omitted newlines.** After fixing
+   pointer offsets, clicking before the final `a` in `alpha\nbeta` resolves to
+   offset 9. DOM `textContent` also reports a length of 9, so the non-final-line
+   boundary guard mistook this interior click for the line end. Its text-only
+   word range then selected `alpha\nbet` instead of leaving `beta` to native
+   selection. The same mismatch truncated actual boundary double/triple-click
+   selections. This regression was reproduced with native clicks in Chromium.
 
 The missing/stale-selection and duplicate-event failures were reproduced with
 real Lexical state and DOM/static ranges in automated tests. They establish the
@@ -47,6 +54,9 @@ failure paths; they are not a captured trace from the physical iPhone keyboard.
 - Native offsets include actual Lexical line-break nodes before the caret. The
   extra `<br>` used to display an empty paragraph or trailing caret is excluded;
   invisible caret-anchor characters still contribute zero logical characters.
+- Boundary detection, trailing-word ranges, and selection length limits read
+  the paragraph's Lexical text, including soft newlines and excluding invisible
+  anchors. This also gives end-of-line caret restoration the same logical length.
 - Enter continues to create a scene line; Shift+Enter continues to insert `\n`
   within the current dialogue. Beforeinput-only keyboards use the event's input
   type to select the operation.
@@ -70,6 +80,17 @@ bunx vitest run tests/sceneEditor tests/layoutEditor/lexicalLayoutTextEditor.tes
 or stale selections, multi-line replacement, newline deduplication, native and
 Lexical fallbacks, composition, block mode, persisted soft breaks, consecutive
 breaks, formatted text, invisible anchors, and caret placeholders.
+
+The boundary-selection regression tests use real Lexical paragraphs and DOM
+ranges. They cover interior word clicks after a soft newline, formatted text
+with invisible anchors, and complete double/triple-click selections at the
+actual line end, checking both Lexical text and native selection endpoints.
+The follow-up fix passed 372 scene/layout editor tests and lint. Native
+double/triple-clicks and replacement typing passed in Chromium, WebKit, and
+Firefox: interior and boundary double-clicks selected `beta` at offsets 6–10,
+while boundary triple-clicks selected the complete `alpha\nbeta` at 0–10.
+The iPhone dev client was disconnected during this check, so physical-device
+verification of this follow-up is pending.
 
 On 2026-09-10, an isolated browser fixture using the production primitive methods,
 Lexical's real key-command registration, native `beforeinput`, and a shadow-DOM

@@ -134,6 +134,83 @@ function texts() {
   );
 }
 
+describe("word selection after soft newlines", () => {
+  function prepareClick({ detail = 2, offset, formatted = false }) {
+    editor.update(
+      () => {
+        const prefix = $createTextNode(
+          formatted ? `alpha${EDITOR_CARET_TEXT}` : "alpha",
+        );
+        const suffix = $createTextNode("beta");
+        if (formatted) {
+          prefix.toggleFormat("bold");
+          suffix.toggleFormat("italic");
+        }
+        $getRoot()
+          .getFirstChild()
+          .clear()
+          .append(prefix, $createLineBreakNode(), suffix);
+      },
+      { discrete: true },
+    );
+    const lineElement = editor.getElementByKey(lineKeys[0]);
+    const range = document.createRange();
+    range.setStart(lineElement.lastChild.firstChild, offset);
+    range.collapse(true);
+    // JSDOM cannot hit-test coordinates; keep the real DOM-to-Lexical mapping.
+    element.getCaretRangeFromPointerEvent = vi.fn(() => range);
+    element.clearSelectedReferenceNodeKey = vi.fn();
+    element.hideSelectionPopover = vi.fn();
+    element.closeMentionMenu = vi.fn();
+    element.setMode = vi.fn();
+    return {
+      target: lineElement,
+      detail,
+      preventDefault: vi.fn(),
+      stopPropagation: vi.fn(),
+      stopImmediatePropagation: vi.fn(),
+    };
+  }
+
+  it.each([false, true])(
+    "preserves native word selection inside beta (formatted=%s)",
+    (formatted) => {
+      const event = prepareClick({ offset: 3, formatted });
+      expect(element.getLineOffsetFromPointerEvent(event, event.target)).toBe(
+        9,
+      );
+      expect(element.suppressNativeLineBoundaryDoubleClick(event)).toBe(false);
+      expect(event.preventDefault).not.toHaveBeenCalled();
+      expect(window.getSelection().isCollapsed).toBe(true);
+    },
+  );
+
+  it.each([
+    [2, "beta", 6],
+    [3, "alpha\nbeta", 0],
+  ])(
+    "selects the complete intended text for a %s-click at the actual boundary",
+    (detail, selectedText, start) => {
+      const event = prepareClick({ detail, offset: 4 });
+      expect(element.suppressNativeLineBoundaryDoubleClick(event)).toBe(true);
+      expect(event.preventDefault).toHaveBeenCalledOnce();
+      expect(
+        editor.getEditorState().read(() => $getSelection().getTextContent()),
+      ).toBe(selectedText);
+      expect(element.getNativeLineRangeSelectionContext()).toMatchObject({
+        startLineId: "line-1",
+        endLineId: "line-1",
+        startOffset: start,
+        endOffset: 10,
+      });
+      const selection = window.getSelection();
+      expect(selection.focusNode.textContent).toBe("beta");
+      expect(selection.focusOffset).toBe(4);
+      expect(texts()).toEqual(["alpha\nbeta", "beta"]);
+    },
+  );
+});
+
 describe("scene editor newline input", () => {
   it.each([
     [false, "insertParagraph"],
@@ -244,6 +321,7 @@ describe("scene editor newline input", () => {
     range.selectNodeContents(lineElement);
     range.collapse(false);
     expect(element.getLineOffsetFromRange(lineElement, range)).toBe(7);
+    expect(element.getLineVisibleTextLength(lineElement)).toBe(7);
     beforeInput("insertText", range, "X");
     expect(texts()).toEqual(["alpha\n\nX", "beta"]);
   });
@@ -255,6 +333,7 @@ describe("scene editor newline input", () => {
     range.selectNodeContents(lineElement);
     range.collapse(false);
     expect(element.getLineOffsetFromRange(lineElement, range)).toBe(0);
+    expect(element.getLineVisibleTextLength(lineElement)).toBe(0);
     beforeInput("insertText", range, "X");
     expect(texts()).toEqual(["X", "beta"]);
   });

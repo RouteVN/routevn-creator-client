@@ -3579,7 +3579,8 @@ export class LexicalSceneDocumentEditorElement extends HTMLElement {
       event,
       lineElement,
     );
-    const visibleTextLength = this.getLineVisibleTextLength(lineElement);
+    const visibleText = this.getLineVisibleText(lineElement);
+    const visibleTextLength = visibleText.length;
     const isResolvedBoundaryClick =
       typeof pointerOffset === "number" &&
       pointerOffset >= 0 &&
@@ -3606,7 +3607,7 @@ export class LexicalSceneDocumentEditorElement extends HTMLElement {
             start: 0,
             end: visibleTextLength,
           }
-        : getTrailingWordSelectionRange(lineElement.textContent);
+        : getTrailingWordSelectionRange(visibleText);
     const isCollapsedSelection = selectionRange.start === selectionRange.end;
     const didLineChange = this.state.selectedLineId !== lineId;
     this.state.selectedLineId = lineId;
@@ -8384,9 +8385,20 @@ export class LexicalSceneDocumentEditorElement extends HTMLElement {
     );
   }
 
+  getLineVisibleText(lineElement) {
+    return this.editor.getEditorState().read(
+      () => {
+        // Use the same logical units as pointer offsets and selection ranges:
+        // real soft breaks count, DOM caret placeholders and anchors do not.
+        const lineNode = $getNearestNodeFromDOMNode(lineElement);
+        return lineNode.getTextContent().replaceAll(EDITOR_CARET_TEXT, "");
+      },
+      { editor: this.editor },
+    );
+  }
+
   getLineVisibleTextLength(lineElement) {
-    return (lineElement?.textContent ?? "").replaceAll(EDITOR_CARET_TEXT, "")
-      .length;
+    return this.getLineVisibleText(lineElement).length;
   }
 
   getNativeCollapsedLineSelectionContext() {
