@@ -19,5 +19,5 @@ template:
           - 'rtgl-view h=1fg sv w=f style="min-height: 0;"':
               - rtgl-form#transitionForm key=${formKey} :defaultValues=${defaultValues} :form=${form} :context=${context} w=f ph=md pv=none: null
               - 'rtgl-view h=240 aria-hidden=true style="flex: 0 0 240px;"': null
-          - 'rtgl-view d=h av=c ah=e w=f g=lg ph=md style="flex: 0 0 auto;"':
+          - 'rtgl-view d=h av=c ah=e w=f g=lg ph=md pt=md style="flex: 0 0 auto;"':
               - rtgl-button#submitButton: Submit

@@ -115,7 +115,7 @@ template:
                           - 'rtgl-button#branchMenuButtonDefault data-branch-id=${defaultBranch.id} sq s=sm v=gh pre=ellipsis title="${branchMenuButtonLabel}" aria-label="${branchMenuButtonLabel}" aria-haspopup=menu aria-keyshortcuts="${defaultBranch.menuKeyShortcuts}"': null
                   - $if !hasDefaultBranch:
                       - rtgl-button#addDefaultButton v=ol w=f: ${addDefaultBranchButton}
-          - 'rtgl-view d=h av=c ah=e w=f g=lg ph=md style="flex: 0 0 auto;"':
+          - 'rtgl-view d=h av=c ah=e w=f g=lg ph=md pt=md style="flex: 0 0 auto;"':
               - rtgl-button#submitButton ?disabled=${!hasBranches}: ${submitButton}
       - $if mode == 'editBranch' && initiated:
           - rtgl-view w=f h=24 av=c ph=md mb=md:
@@ -168,6 +168,6 @@ template:
                   - rtgl-view g=md w=f:
                       - rtgl-text s=sm c=mu-fg: ${actionsLabel}
                       - rvn-system-actions#branchActionsEditor :showSelected=${true} :actions=${branchActions} actionType=system :hiddenModes=${hiddenModes} :allowedModes=${branchActionAllowedModes} :showEmbeddedClose=${false}: null
-          - 'rtgl-view d=h av=c ah=e w=f g=lg ph=md style="flex: 0 0 auto;"':
+          - 'rtgl-view d=h av=c ah=e w=f g=lg ph=md pt=md style="flex: 0 0 auto;"':
               - rtgl-button#saveBranchButton ?disabled=${!canSaveBranch}: ${saveButtonPrefix} ${editBranchTitle}
   - rtgl-dropdown-menu#dropdownMenu :items=${dropdownMenu.items} x=${dropdownMenu.position.x} y=${dropdownMenu.position.y} ?open=${dropdownMenu.isOpen}: null

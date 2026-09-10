@@ -218,7 +218,7 @@ describe("commandLineDialogueBox.handlers", () => {
     expect(view).toContain("rtgl-view w=f h=f pv=md:");
     expect(view).toContain("rtgl-view w=f ph=md:");
     expect(view).toContain(
-      'rtgl-view d=h av=c ah=e w=f g=lg ph=md style="flex: 0 0 auto;"',
+      'rtgl-view d=h av=c ah=e w=f g=lg ph=md pt=md style="flex: 0 0 auto;"',
     );
     expect(view).toContain("rtgl-form#dialogueForm");
     expect(view).toContain("w=f ph=md pv=none:");

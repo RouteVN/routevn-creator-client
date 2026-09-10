@@ -52,7 +52,7 @@ template:
                               - rtgl-view p=md bgc=mu br=md w=f:
                                   - rtgl-text s=sm c=mu-fg: ${noInputFieldsLabel}
                   - 'rtgl-view h=240 aria-hidden=true style="flex: 0 0 240px;"': null
-              - 'rtgl-view d=h av=c ah=e w=f g=lg ph=md style="flex: 0 0 auto;"':
+              - 'rtgl-view d=h av=c ah=e w=f g=lg ph=md pt=md style="flex: 0 0 auto;"':
                   - rtgl-button#submitButton ?disabled=${submitDisabled}: ${submitButtonLabel}
         $elif mode == "editField":
           - 'rtgl-view wh=f style="min-height: 0;"':
@@ -83,6 +83,6 @@ template:
                           - rtgl-view d=v g=xs w=150:
                               - rtgl-text s=sm c=mu-fg: ${maxLengthLabel}
                               - rtgl-input#fieldEditMaxLength data-name=maxLength type=number min=0 step=1 w=f value=${editFieldForm.maxLength}: null
-              - 'rtgl-view d=h av=c ah=e w=f g=lg ph=md style="flex: 0 0 auto;"':
+              - 'rtgl-view d=h av=c ah=e w=f g=lg ph=md pt=md style="flex: 0 0 auto;"':
                   - rtgl-button#cancelFieldEditButton v=ol: ${cancelButtonLabel}
                   - rtgl-button#saveFieldEditButton ?disabled=${!canSaveEditField}: ${saveFieldButtonLabel}
