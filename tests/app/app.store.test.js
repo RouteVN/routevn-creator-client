@@ -271,6 +271,35 @@ describe("app.store mobile tab active state", () => {
 
     expect(state.isSceneEditorKeyboardVisible).toBe(false);
   });
+
+  it.each(["ios", "android", "web"])(
+    "preserves hidden iOS tab styles without changing %s keyboard layout",
+    (platform) => {
+      const state = createInitialState();
+      setPlatform({ state }, { platform });
+      setUiConfig({ state }, { uiConfig: { id: "touch", inputMode: "touch" } });
+      setCurrentRoute({ state }, { route: "/project/scene-editor" });
+
+      setSceneEditorKeyboardVisible({ state }, { isVisible: true });
+      expect(selectViewData({ state })).toMatchObject({
+        showMobileTabBar: false,
+        mountMobileTabBar: platform === "ios",
+        mobileTabBarDisplayStyle: "display: none;",
+        contentHeight: "100%",
+      });
+
+      setSceneEditorKeyboardVisible({ state }, { isVisible: false });
+      expect(selectViewData({ state })).toMatchObject({
+        showMobileTabBar: true,
+        mountMobileTabBar: true,
+        mobileTabBarDisplayStyle: "",
+        contentHeight: "calc(var(--rvn-app-viewport-height, 100vh) - 64px)",
+      });
+
+      setCurrentRoute({ state }, { route: "/projects" });
+      expect(selectViewData({ state }).mountMobileTabBar).toBe(false);
+    },
+  );
 });
 
 describe("app.store floating help button", () => {

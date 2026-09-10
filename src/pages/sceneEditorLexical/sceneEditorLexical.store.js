@@ -1760,6 +1760,14 @@ const selectPreviewCanvasMaxWidth = ({ state }) => {
   return formatHalfViewportCanvasMaxWidth(projectResolution);
 };
 
+const formatMobileKeyboardCanvasMaxHeight = (visualHeight) => {
+  const availableHeight =
+    visualHeight -
+    MOBILE_KEYBOARD_TOOLBAR_HEIGHT_PX -
+    MOBILE_PREVIEW_VERTICAL_PADDING_PX;
+  return `max(${MOBILE_PREVIEW_MIN_HEIGHT_PX}px, calc(${availableHeight}px - var(--rvn-mobile-overlay-top-inset, 0px)))`;
+};
+
 const selectMobilePreviewCanvasMaxWidth = ({ state }) => {
   const defaultMaxWidth = selectPreviewCanvasMaxWidth({ state });
   if (!state.isTouchMode || !state.mobileKeyboardState?.isVisible) {
@@ -1772,17 +1780,9 @@ const selectMobilePreviewCanvasMaxWidth = ({ state }) => {
   }
 
   const widthMultiplier = selectCanvasAspectRatioWidthMultiplier({ state });
-  const reservedHeight =
-    MOBILE_KEYBOARD_TOOLBAR_HEIGHT_PX + MOBILE_PREVIEW_VERTICAL_PADDING_PX;
-  const availableCanvasHeight = Math.max(
-    MOBILE_PREVIEW_MIN_HEIGHT_PX,
-    visualHeight - reservedHeight,
-  );
-  const maxWidthPx = Number(
-    (availableCanvasHeight * widthMultiplier).toFixed(4),
-  );
+  const maxHeight = formatMobileKeyboardCanvasMaxHeight(visualHeight);
 
-  return `min(100%, ${maxWidthPx}px)`;
+  return `min(100%, calc(${maxHeight} * ${widthMultiplier}))`;
 };
 
 const selectMobileSystemActionsDialogTop = ({ state }) => {
@@ -1795,16 +1795,15 @@ const selectMobileSystemActionsDialogTop = ({ state }) => {
   if (state.isTouchMode && state.mobileKeyboardState?.isVisible) {
     const visualHeight = Number(state.mobileKeyboardState.visualHeight);
     if (Number.isFinite(visualHeight) && visualHeight > 0) {
-      maximumCanvasHeight = `${Math.max(
-        MOBILE_PREVIEW_MIN_HEIGHT_PX,
-        visualHeight -
-          MOBILE_KEYBOARD_TOOLBAR_HEIGHT_PX -
-          MOBILE_PREVIEW_VERTICAL_PADDING_PX,
-      )}px`;
+      maximumCanvasHeight = formatMobileKeyboardCanvasMaxHeight(visualHeight);
     }
   }
 
-  return `min(${viewportWidthHeight}vw, ${maximumCanvasHeight})`;
+  const previewHeight = `min(${viewportWidthHeight}vw, ${maximumCanvasHeight})`;
+  const visualOffsetTop = state.isTouchMode
+    ? state.mobileKeyboardState.visualOffsetTop
+    : 0;
+  return `calc(${visualOffsetTop}px + var(--rvn-mobile-overlay-top-inset, 0px) + ${previewHeight})`;
 };
 
 const selectMobileEditorBottomSpacerHeight = ({ state }) => {
@@ -1823,6 +1822,12 @@ const selectMobileEditorBottomSpacerHeight = ({ state }) => {
   const scrollRoom = Math.max(260, Math.round(visualHeight * 0.9));
 
   return `${keyboardInset + MOBILE_KEYBOARD_TOOLBAR_HEIGHT_PX + scrollRoom}px`;
+};
+
+const selectMobileSceneEditorTopInset = ({ state }) => {
+  // iOS pans the visual viewport to the caret while fixed elements remain in
+  // the layout viewport. Follow that pan, as the keyboard toolbar already does.
+  return `${state.isTouchMode ? state.mobileKeyboardState.visualOffsetTop : 0}px`;
 };
 
 const selectMobileSceneEditorBottomInset = ({ state }) => {
@@ -1922,6 +1927,7 @@ export const selectViewData = ({ state, i18n }) => {
       mobileSceneEditorBottomInset: selectMobileSceneEditorBottomInset({
         state,
       }),
+      mobileSceneEditorTopInset: selectMobileSceneEditorTopInset({ state }),
       systemActionsDialogPanelWidth: selectSystemActionsDialogPanelWidth({
         state,
       }),
@@ -2298,6 +2304,7 @@ export const selectViewData = ({ state, i18n }) => {
     mobileSceneEditorBottomInset: selectMobileSceneEditorBottomInset({
       state,
     }),
+    mobileSceneEditorTopInset: selectMobileSceneEditorTopInset({ state }),
     systemActionsDialogPanelWidth: selectSystemActionsDialogPanelWidth({
       state,
     }),

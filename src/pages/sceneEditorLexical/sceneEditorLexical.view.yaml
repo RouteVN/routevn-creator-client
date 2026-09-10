@@ -163,7 +163,7 @@ refs:
 template:
   - 'rtgl-view pos=rel w=f h=f style="min-width: 0; min-height: 0;"':
       - $if isTouchMode:
-          - 'rtgl-view pos=fix d=v bgc=bg style="z-index: 1100; left: 0; right: 0; top: 0; bottom: ${mobileSceneEditorBottomInset}; min-width: 0; min-height: 0; overflow: hidden; overscroll-behavior: none;"':
+          - 'rtgl-view pos=fix d=v bgc=bg style="z-index: 1100; left: 0; right: 0; top: ${mobileSceneEditorTopInset}; bottom: ${mobileSceneEditorBottomInset}; min-width: 0; min-height: 0; padding-top: var(--rvn-mobile-overlay-top-inset, 0px); box-sizing: border-box; overflow: hidden; overscroll-behavior: none;"':
               - 'rtgl-view w=f bwb=xs style="min-width: 0; flex-shrink: 0;"':
                   - $if backgroundTransformEditor.isOpen == false:
                       - 'rtgl-view w=f style="min-width: 0;"':

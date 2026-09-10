@@ -5037,7 +5037,10 @@ describe("lexical scene document editor line editing", () => {
         mode: "text-editor",
       };
       editorElement.isComposing = true;
-      editorElement.pendingParagraphSplitBeforeInput = false;
+      editorElement.getLineSelectionContext = vi.fn(() => ({
+        lineId: "line-1",
+        selection: { start: 0, end: 0 },
+      }));
       editorElement.splitCurrentLine = splitCurrentLine;
 
       const activeCompositionEnter = {
@@ -5072,6 +5075,7 @@ describe("lexical scene document editor line editing", () => {
       expect(deferredProcessEnter.preventDefault).toHaveBeenCalledTimes(1);
       expect(deferredProcessEnter.stopPropagation).toHaveBeenCalledTimes(1);
       expect(splitCurrentLine).not.toHaveBeenCalled();
+      expect(editorElement.getLineSelectionContext).not.toHaveBeenCalled();
 
       const regularEnter = {
         type: "keydown",

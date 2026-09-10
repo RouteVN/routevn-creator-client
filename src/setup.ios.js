@@ -4,6 +4,7 @@ import { callIOSBridge } from "./deps/clients/ios/bridge.js";
 import { createDb } from "./deps/clients/ios/db.js";
 import { createIOSFilePicker } from "./deps/clients/ios/filePicker.js";
 import IOSRouter from "./deps/clients/ios/router.js";
+import { installIOSSceneEditorKeyboard } from "./deps/clients/ios/sceneEditorKeyboard.js";
 import { createBrowserEventsClient } from "./deps/clients/browserEvents.js";
 
 import { createAppService } from "./deps/services/ios/appService.js";
@@ -141,6 +142,18 @@ const appService = createAppService({
   subject,
 });
 await appService.initUserConfig();
+installIOSSceneEditorKeyboard({
+  onRevealError: () => {
+    const copy = appService.getAppCopy();
+    appService.showToast({
+      title: copy.errorTitle ?? "Error",
+      message:
+        copy.failedRevealEditorCaret ??
+        "Could not scroll to the cursor. Please restart the app.",
+      status: "error",
+    });
+  },
+});
 
 if (window.__ROUTEVN_IOS_SMOKE_TEST__ === true) {
   window.routeVNIOSSmoke = {

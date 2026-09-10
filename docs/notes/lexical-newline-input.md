@@ -1,0 +1,93 @@
+# Scene editor newline input
+
+The scene editor page (`src/pages/sceneEditorLexical`) delegates editing to
+`src/primitives/lexicalSceneDocumentEditor.js`. The defects were in the primitive's
+input and caret mapping, rather than page state or the Rettangoli dependency.
+
+## Reproduced causes
+
+1. **Newline input ignored the event's selection.** The `beforeinput` handlers for
+   `insertParagraph` and `insertLineBreak` prevented the browser's default edit,
+   then looked for the live DOM or Lexical selection. Unlike ordinary text input,
+   they did not use `InputEvent.getTargetRanges()`. A valid event range with no
+   live selection therefore produced no edit; a stale caret could split the wrong
+   line. A soft break could also lose a cached Lexical selection when its update
+   started without a DOM range.
+2. **Caret offsets omitted soft newlines.** `getLineOffsetFromRange()` counted
+   `Range.toString()` characters. That string excludes `<br>` elements, while a
+   Lexical line-break node occupies one character in serialized dialogue. For
+   example, after `al|pha` → Shift+Enter, the caret visually followed `al\n`, but
+   mapped to offset 2 instead of 3. Typing `X` produced `alX\npha` instead of
+   `al\nXpha`. This was reproduced with real keyboard input in Chromium.
+3. **Duplicate suppression depended on the input type matching keydown.** Enter
+   and Shift+Enter already perform an edit in the key command. A subsequent
+   newline `beforeinput` with a different input type bypassed the corresponding
+   pending flag and performed a second edit. Lexical 0.22.0 explicitly handles
+   Safari reporting `insertParagraph` for a soft line break.
+
+The missing/stale-selection and duplicate-event failures were reproduced with
+real Lexical state and DOM/static ranges in automated tests. They establish the
+failure paths; they are not a captured trace from the physical iPhone keyboard.
+
+## Fix and compatibility boundaries
+
+- Newline `beforeinput` uses its target range first. Paragraph breaks support
+  ranges spanning scene lines, as well as a caret or selection within one line.
+  Existing native-selection and Lexical-selection fallbacks remain available.
+- A soft break restores the cached Lexical range only if its update has no range
+  after resolving native input selection.
+- Keydown without a usable selection leaves the native event uncancelled so
+  `beforeinput` can supply the caret. It still consumes Lexical's command to keep
+  lower-priority handlers from cancelling that fallback.
+- A pending keyboard newline records its intended input type and whether it
+  performed the edit. The following newline `beforeinput` either consumes that
+  completed edit or performs the deferred one with its target range. This also
+  preserves Shift+Enter when WebKit reports `insertParagraph`. Pending input still
+  expires on the next animation frame.
+- Native offsets include actual Lexical line-break nodes before the caret. The
+  extra `<br>` used to display an empty paragraph or trailing caret is excluded;
+  invisible caret-anchor characters still contribute zero logical characters.
+- Enter continues to create a scene line; Shift+Enter continues to insert `\n`
+  within the current dialogue. Beforeinput-only keyboards use the event's input
+  type to select the operation.
+- Active IME composition remains browser-managed. The existing deferred
+  `keyCode`/`which` 229 confirmation guard remains unchanged, so confirming an IME
+  candidate does not create a scene line. Block mode still suppresses native
+  text edits.
+
+The fix is shared across platforms, uses no user-agent branching, and changes no
+dependency source. Layout editor behavior is covered by its existing tests.
+
+## Validation
+
+Run the focused and neighboring regression suites:
+
+```bash
+bunx vitest run tests/sceneEditor tests/layoutEditor/lexicalLayoutTextEditor.test.js --exclude '**/.artifacts/**'
+```
+
+`tests/sceneEditor/lexicalNewlineInput.test.js` covers target ranges with missing
+or stale selections, multi-line replacement, newline deduplication, native and
+Lexical fallbacks, composition, block mode, persisted soft breaks, consecutive
+breaks, formatted text, invisible anchors, and caret placeholders.
+
+On 2026-09-10, an isolated browser fixture using the production primitive methods,
+Lexical's real key-command registration, native `beforeinput`, and a shadow-DOM
+contenteditable passed Enter and Shift+Enter followed by typing `X` in Chromium,
+WebKit, and Firefox. Both resulting content and subsequent insertion position
+were checked, including a deferred-keydown variant that made the primitive's
+selection unavailable until native `beforeinput`. The scene and layout editor
+regression command passed 354 tests, including 24 newline-specific cases. This is
+browser-engine coverage, not physical iOS/Android or packaged Tauri validation.
+
+For a device check, open a scene in text mode, place the caret inside dialogue,
+press Return, and type. Repeat with Shift+Enter on a hardware keyboard, including
+at the end of a line and twice consecutively. Confirm that typing follows the
+caret and that leaving/reopening the scene preserves the newlines. Also confirm
+an IME candidate with Enter before testing an ordinary Enter.
+
+## References
+
+- [Input Events Level 2: input types and target ranges](https://www.w3.org/TR/input-events-2/)
+- [Lexical 0.22.0 input handling](https://github.com/facebook/lexical/blob/v0.22.0/packages/lexical/src/LexicalEvents.ts)
+- [Existing Tauri WebKit selection and IME notes](macos-tauri-lexical-selection.md)

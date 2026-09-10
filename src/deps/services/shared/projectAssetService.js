@@ -9,15 +9,11 @@ import {
 import { processWithConcurrency } from "../../../internal/processWithConcurrency.js";
 import { getFileType as getFontFileType } from "../../../internal/fileTypes.js";
 import { loadFont } from "./fontLoader.js";
+import { computeSha256 } from "../../clients/sha256.js";
 
 const IMAGE_THUMBNAIL_MAX_WIDTH = 320;
 const IMAGE_THUMBNAIL_MAX_HEIGHT = 320;
 const MAX_PARALLEL_UPLOADS = 1;
-
-const bufferToHex = (buffer) =>
-  Array.from(new Uint8Array(buffer), (byte) =>
-    byte.toString(16).padStart(2, "0"),
-  ).join("");
 
 const getFileRecordMimeType = ({ file, bytes } = {}) => {
   if (detectFileType(file) === "font") {
@@ -46,15 +42,6 @@ const getNow = () => {
 };
 
 const getDurationMs = (startedAt) => Number((getNow() - startedAt).toFixed(2));
-
-const computeSha256 = async (bytes) => {
-  if (!crypto?.subtle?.digest) {
-    throw new Error("SHA-256 hashing is unavailable in this runtime.");
-  }
-
-  const digest = await crypto.subtle.digest("SHA-256", bytes);
-  return bufferToHex(digest);
-};
 
 const storeMetadata = async ({ data, storeFile, idGenerator }) => {
   const jsonString = JSON.stringify(data, null, 2);

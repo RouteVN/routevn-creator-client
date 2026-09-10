@@ -306,6 +306,13 @@ export const selectViewData = ({ state, i18n }) => {
   const currentRoutePattern = selectCurrentRoutePattern({ state });
   const showSidebar = selectShowSidebar({ state });
   const showMobileTabBar = selectShowMobileTabBar({ state });
+  // On older iOS, remounting the tabs briefly exposes unstyled SVGs while
+  // adopted stylesheets are restored by the polyfill on the next frame.
+  const mountMobileTabBar =
+    showMobileTabBar ||
+    (state.platform === "ios" &&
+      state.isTouchMode &&
+      currentRoutePattern === "/project/scene-editor");
   const sceneEditorAndroidHelpButtonExtraBottomOffset =
     state.isTouchMode &&
     state.platform === "android" &&
@@ -325,6 +332,8 @@ export const selectViewData = ({ state, i18n }) => {
     currentRoutePattern,
     showSidebar,
     showMobileTabBar,
+    mountMobileTabBar,
+    mobileTabBarDisplayStyle: showMobileTabBar ? "" : "display: none;",
     mobileTabBarItems: selectMobileTabBarItems({ state, i18n }),
     mobileSheetVariant: state.mobileSheetVariant ?? "assets",
     appShellDirection: showMobileTabBar ? "v" : "h",
