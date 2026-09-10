@@ -208,6 +208,8 @@ appPage:
   failedLoadAppSettings: "アプリ設定を読み込めませんでした。既定値を使用します。"
   failedOpenLink: "リンクを開けませんでした。"
   failedSaveAppSettings: "アプリ設定を保存できませんでした。"
+  failedUpdateStatusBar: "ステータスバーを更新できませんでした。アプリを再起動してください。"
+  failedRevealEditorCaret: "カーソルの位置までスクロールできませんでした。アプリを再起動してください。"
   failedSaveProjectIcon: "プロジェクトは作成されましたが、プロジェクトアイコンを保存できませんでした。"
   incompatibleProjectTitle: "互換性のないプロジェクト"
   latestVersionMessage: "すでに最新バージョンです"

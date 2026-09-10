@@ -1,4 +1,5 @@
-import { describe, expect, it, vi } from "vitest";
+import { createHash } from "node:crypto";
+import { afterEach, describe, expect, it, vi } from "vitest";
 
 const mocked = vi.hoisted(() => ({
   detectFileType: vi.fn(),
@@ -6,6 +7,7 @@ const mocked = vi.hoisted(() => ({
   extractImageThumbnail: vi.fn(),
   getVideoDimensions: vi.fn(),
   extractVideoThumbnail: vi.fn(),
+  extractWaveformDataFromArrayBuffer: vi.fn(),
 }));
 
 vi.mock("../../src/deps/clients/web/fileProcessors.js", () => ({
@@ -13,13 +15,61 @@ vi.mock("../../src/deps/clients/web/fileProcessors.js", () => ({
   getImageDimensions: mocked.getImageDimensions,
   extractImageThumbnail: mocked.extractImageThumbnail,
   getVideoDimensions: mocked.getVideoDimensions,
-  extractWaveformDataFromArrayBuffer: vi.fn(),
+  extractWaveformDataFromArrayBuffer: mocked.extractWaveformDataFromArrayBuffer,
   extractVideoThumbnail: mocked.extractVideoThumbnail,
 }));
 
 import { createProjectAssetService } from "../../src/deps/services/shared/projectAssetService.js";
 
 describe("projectAssetService", () => {
+  afterEach(() => vi.unstubAllGlobals());
+
+  it("uploads audio and its waveform with valid hashes without Web Crypto", async () => {
+    vi.stubGlobal("crypto", {});
+    mocked.detectFileType.mockReturnValue("audio");
+    mocked.extractWaveformDataFromArrayBuffer.mockResolvedValue({
+      duration: 1,
+      amplitudes: [0, 0.5, 1],
+    });
+    const storedFiles = [];
+    const service = createProjectAssetService({
+      idGenerator: () => "generated-id",
+      fileAdapter: {
+        continueOnUploadError: false,
+        storeFile: async ({ file, bytes }) => {
+          storedFiles.push({ file, bytes });
+          return { fileId: `file-${storedFiles.length}` };
+        },
+      },
+    });
+
+    const [result] = await service.uploadFiles([
+      new File(["audio-bytes"], "Sound One.wav", { type: "audio/wav" }),
+    ]);
+
+    expect(result).toMatchObject({
+      success: true,
+      type: "audio",
+      fileId: "file-1",
+      waveformDataFileId: "file-2",
+      duration: 1,
+    });
+    expect(result.fileRecords).toHaveLength(2);
+    for (const [index, { file, bytes }] of storedFiles.entries()) {
+      expect(result.fileRecords[index]).toEqual({
+        id: `file-${index + 1}`,
+        mimeType: file.type,
+        size: file.size,
+        sha256: createHash("sha256")
+          .update(new Uint8Array(bytes))
+          .digest("hex"),
+      });
+    }
+    expect(JSON.parse(await storedFiles[1].file.text()).amplitudes).toEqual([
+      0, 128, 255,
+    ]);
+  });
+
   it("can skip thumbnail generation for image uploads through the shared upload path", async () => {
     let storedCount = 0;
     const storeFile = vi.fn(async () => {

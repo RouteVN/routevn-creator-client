@@ -7,25 +7,17 @@
       content="width=device-width, initial-scale=1.0, viewport-fit=cover, user-scalable=no"
     />
     <title>RouteVN Creator</title>
+    <link rel="stylesheet" href="/public/theme.css" />
     <style>
+      /* Keep a full-height document in flow. A fixed root lets WKWebView
+         shrink its viewport to the safe area on iOS 16. */
       html,
       body {
-        height: 100%;
-        min-height: 100%;
+        position: relative;
+        height: 100vh;
+        min-height: 100vh;
+        overflow: hidden;
         margin: 0;
-        background: #f5f7fa;
-      }
-
-      body.dark {
-        background: oklch(0.22 0 0);
-      }
-
-      body.theme-black {
-        background: oklch(0.145 0 0);
-      }
-
-      body.theme-catppuccin-mocha {
-        background: var(--background);
       }
 
       body {
@@ -49,7 +41,7 @@
         ROUTEVN_API_ENDPOINT: "https://api.example.invalid",
       };
     </script>
-    <link rel="stylesheet" href="/public/theme.css" />
+    <script src="/ios/adoptedStyleSheets.js"></script>
     <script src="/public/rtgl-icons.js"></script>
     <script src="/public/@rettangoli/ui@1.21.3/dist/rettangoli-iife-ui.min.js"></script>
     <script type="module" src="/public/main.js"></script>

@@ -87,6 +87,12 @@ export const createAppServiceCore = ({
     return normalizeTheme(userConfigService.getUserConfig("appearance.theme"));
   };
 
+  const applyTheme = (theme) => {
+    const nextTheme = appShellService.applyTheme(theme);
+    platformAdapter.applyTheme?.(nextTheme);
+    return nextTheme;
+  };
+
   return {
     ...projectEntriesService,
     ...fileSelectionService,
@@ -95,16 +101,17 @@ export const createAppServiceCore = ({
 
     async initUserConfig() {
       const userConfig = await userConfigService.initUserConfig();
-      appShellService.applyTheme(getTheme());
+      applyTheme(getTheme());
       return userConfig;
     },
 
     getTheme,
+    applyTheme,
 
     setTheme(theme) {
       const nextTheme = normalizeTheme(theme);
       userConfigService.setUserConfig("appearance.theme", nextTheme);
-      appShellService.applyTheme(nextTheme);
+      applyTheme(nextTheme);
       return nextTheme;
     },
   };

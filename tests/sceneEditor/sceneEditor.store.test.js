@@ -25,14 +25,65 @@ import {
 import { EN_I18N } from "../support/i18n.js";
 
 describe("sceneEditorLexical.store", () => {
+  it("pins the mobile scene canvas and its actions panel to the panned visual viewport", () => {
+    const state = createInitialState();
+    setUiConfig({ state }, { uiConfig: { id: "touch" } });
+    setMobileKeyboardState(
+      { state },
+      { isVisible: true, visualHeight: 440, visualOffsetTop: 180 },
+    );
+
+    const view = selectViewData({ state, i18n: EN_I18N });
+    expect(view.mobileSceneEditorTopInset).toBe("180px");
+    expect(view.mobileSystemActionsDialogTop).toBe(
+      "calc(180px + var(--rvn-mobile-overlay-top-inset, 0px) + min(56.25vw, max(72px, calc(376px - var(--rvn-mobile-overlay-top-inset, 0px)))))",
+    );
+    expect(view.mobileSceneEditorBottomInset).toBe("0px");
+  });
+
+  it("keeps Android overlay keyboard positioning at the top with no viewport pan", () => {
+    const state = createInitialState();
+    setUiConfig({ state }, { uiConfig: { id: "touch" } });
+    setMobileKeyboardState(
+      { state },
+      { isVisible: true, visualHeight: 440, visualOffsetTop: 0 },
+    );
+
+    const view = selectViewData({ state, i18n: EN_I18N });
+    expect(view.mobileSceneEditorTopInset).toBe("0px");
+    expect(view.mobileSystemActionsDialogTop).toBe(
+      "calc(0px + var(--rvn-mobile-overlay-top-inset, 0px) + min(56.25vw, max(72px, calc(376px - var(--rvn-mobile-overlay-top-inset, 0px)))))",
+    );
+  });
+
+  it("tracks the visual viewport until keyboard dismissal has finished", () => {
+    const state = createInitialState();
+    setUiConfig({ state }, { uiConfig: { id: "touch" } });
+    setMobileKeyboardState(
+      { state },
+      { isVisible: false, visualOffsetTop: 80 },
+    );
+    expect(
+      selectViewData({ state, i18n: EN_I18N }).mobileSceneEditorTopInset,
+    ).toBe("80px");
+
+    setMobileKeyboardState({ state }, { isVisible: false, visualOffsetTop: 0 });
+    const view = selectViewData({ state, i18n: EN_I18N });
+    expect(view.mobileSceneEditorTopInset).toBe("0px");
+    expect(view.mobileSceneEditorBottomInset).toBe(
+      "calc(64px + env(safe-area-inset-bottom))",
+    );
+  });
+
   it("positions the mobile actions dialog below the preview canvas", () => {
     const state = createInitialState();
     setUiConfig({ state }, { uiConfig: { id: "touch" } });
 
     expect(
-      selectViewData({ state, i18n: EN_I18N })
-        .mobileSystemActionsDialogTop,
-    ).toBe("min(56.25vw, 50vh)");
+      selectViewData({ state, i18n: EN_I18N }).mobileSystemActionsDialogTop,
+    ).toBe(
+      "calc(0px + var(--rvn-mobile-overlay-top-inset, 0px) + min(56.25vw, 50vh))",
+    );
 
     setMobileKeyboardState(
       { state },
@@ -43,9 +94,10 @@ describe("sceneEditorLexical.store", () => {
     );
 
     expect(
-      selectViewData({ state, i18n: EN_I18N })
-        .mobileSystemActionsDialogTop,
-    ).toBe("min(56.25vw, 436px)");
+      selectViewData({ state, i18n: EN_I18N }).mobileSystemActionsDialogTop,
+    ).toBe(
+      "calc(0px + var(--rvn-mobile-overlay-top-inset, 0px) + min(56.25vw, max(72px, calc(436px - var(--rvn-mobile-overlay-top-inset, 0px)))))",
+    );
   });
 
   it("resolves the transform origin when rendered target metrics arrive", () => {

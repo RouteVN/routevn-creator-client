@@ -127,6 +127,11 @@ same time.
 | Sounds page            | `.mp3`, `.wav`, `.ogg`                             | explicit invalid-format toast | picker, center drag-drop, edit/replace                         |
 | Fonts page             | `.ttf`, `.otf`, `.woff2`                           | format + weight metadata      | picker, center drag-drop, edit/replace                         |
 
+For iOS Photo Library selections, the native picker preserves supported JPEG,
+PNG, and WebP representations. Photos in other formats, such as HEIC, are
+converted to JPEG or PNG when that format is allowed by the requesting surface.
+The returned files still pass the same page and upload-service validations.
+
 ### Dialog / Special Upload Surfaces
 
 | Surface                             | Allowed file types       | Extra validation                      | Notes                                      |

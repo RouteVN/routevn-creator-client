@@ -83,6 +83,9 @@ as the source of truth before selection-sensitive text edits:
   content and creates a new line from the remaining trailing content
 - Shift+Enter soft line breaks sync native selection before inserting the line
   break
+- Newline `beforeinput` prefers its target range, and caret offsets count actual
+  soft breaks. See [scene editor newline input](lexical-newline-input.md) for the
+  missing-selection, duplicate-event, and post-newline typing regressions.
 - after splitting a line, the new line is immediately marked selected and the
   caret/focus pass reinforces selection on the new line
 - line split change events include a `focusTarget`, so the page can restore the

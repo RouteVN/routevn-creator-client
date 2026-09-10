@@ -39,6 +39,11 @@ Notes:
   `docs/android.md` and reuse the running Android dev server for frontend
   changes; rebuild/install the APK when native changes require it. Verify the
   device loaded the updated app. If disconnected, report that refresh is pending.
+- During iOS development, follow `docs/ios.md` and use the connected physical
+  iPhone when requested. Reuse `watch:ios` and run `ios:refresh` after completed
+  frontend changes; rebuild/install only for native changes or packaged-build
+  validation. Verify the phone loaded the update. If it is locked or disconnected,
+  report that device verification is pending.
 
 Run tests:
 

@@ -2,7 +2,7 @@
 
 set -e
 
-PORT="3001"
+cd "$(dirname "$0")/.."
 RETTANGOLI_PACKAGE_INFO=$(node scripts/resolve-rettangoli-ui-package.js)
 IFS=$'\t' read -r RETTANGOLI_PACKAGE_DIR RETTANGOLI_VERSION RETTANGOLI_IS_LOCAL <<< "${RETTANGOLI_PACKAGE_INFO}"
 
@@ -52,6 +52,7 @@ fi
 rm -rf _site
 mkdir -p _site
 cp -rf static/* _site/
+cp node_modules/construct-style-sheets-polyfill/dist/adoptedStyleSheets.js _site/ios/adoptedStyleSheets.js
 
 "${RTGL_BIN}" ui build-svg
 mkdir -p _site/public
@@ -60,6 +61,4 @@ cp -f static/public/rtgl-icons.js _site/public/rtgl-icons.js
 echo "Building initial iOS frontend bundle..."
 "${RTGL_BIN}" fe build -s src/setup.ios.js
 
-echo "iOS debug app URL: http://127.0.0.1:${PORT}/ios/index.html"
-echo "In another terminal, run: bun run ios:run -- --dev-server \"http://127.0.0.1:${PORT}/ios/index.html\""
-exec "${RTGL_BIN}" fe watch -s src/setup.ios.js -p "${PORT}"
+exec node scripts/ios-dev-server.js

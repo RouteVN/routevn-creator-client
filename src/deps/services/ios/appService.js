@@ -5,6 +5,7 @@ import { generateId } from "../../../internal/id.js";
 import { copyTextToClipboard } from "../../../internal/copyText.js";
 import { createNativeApplicationIdentifier } from "../../../internal/nativeApplicationIdentifier.js";
 import { normalizeProjectLanguage } from "../../../internal/projectLanguage.js";
+import { isDarkTheme } from "../../../internal/theme.js";
 import { createProgressDialog } from "../../clients/progressDialog.js";
 
 const normalizeFolderSelection = (selection) => {
@@ -83,6 +84,21 @@ export const createAppService = (params) => {
   };
 
   const platformAdapter = {
+    applyTheme: (theme) => {
+      callIOSBridge("setStatusBarStyle", {
+        style: isDarkTheme(theme) ? "light" : "dark",
+      }).catch(() => {
+        const copy = appService.getAppCopy();
+        appService.showToast({
+          title: copy.errorTitle ?? "Error",
+          message:
+            copy.failedUpdateStatusBar ??
+            "Could not update the status bar. Please restart the app.",
+          status: "error",
+        });
+      });
+    },
+
     isDuplicateProjectEntry: ({ entries, entry }) => {
       return entries.some((project) => project.id === entry.id);
     },

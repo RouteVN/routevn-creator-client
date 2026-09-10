@@ -768,6 +768,15 @@ Nested audio editor dialogs explicitly use `p=md` instead of the UI library's
 default padding. Preserve the existing gaps between controls and bottom scroll
 spacers when applying this pattern.
 
+Command-line footers use `ph=md pt=md` and `flex: 0 0 auto`: 8px above the
+buttons separates them from the scrolling content, and the outer `pv=md`
+provides 8px below. Do not add another bottom gap at the dialog-surface level.
+`systemActionsDialogSurface` adds only `env(safe-area-inset-bottom, 0px)` to
+panels that reach the screen edge, so actions clear the mobile home indicator.
+Keep this inset inside the panel's border-box height and do not repeat it in
+individual command-line components. The 240px form spacers serve scrolling
+content and do not provide clearance for pinned footers.
+
 ### Page Scroll Spacing
 
 Most vertically scrolling pages should provide space below their final content

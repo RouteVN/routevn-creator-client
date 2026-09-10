@@ -1,5 +1,6 @@
 import Foundation
 import CryptoKit
+import PhotosUI
 import SQLite3
 import UIKit
 import UniformTypeIdentifiers
@@ -23,13 +24,19 @@ final class RouteVNAppDelegate: UIResponder, UIApplicationDelegate {
     }
 }
 
-final class RouteVNViewController: UIViewController, WKNavigationDelegate, WKScriptMessageHandler, UIDocumentPickerDelegate {
+final class RouteVNViewController: UIViewController, WKNavigationDelegate, WKScriptMessageHandler, UIDocumentPickerDelegate, PHPickerViewControllerDelegate {
+    override var preferredStatusBarStyle: UIStatusBarStyle {
+        statusBarStyle
+    }
+
+    private var statusBarStyle: UIStatusBarStyle = .lightContent
     private let storage = RouteVNNativeStorage()
     private var webView: WKWebView!
     private var sqliteDatabases: [String: OpaquePointer] = [:]
     private var canGoBackInWebApp = false
     private var pendingDocumentPicker: PendingDocumentPicker?
     private var didRunSmokeTest = false
+    private lazy var devServerURL: URL? = configuredDevServerURL()
     private var securityScopedFolders: [String: SecurityScopedFolderSelection] = [:]
     private let securityScopedFoldersLock = NSLock()
     private let backgroundBridgeQueue = DispatchQueue(
@@ -63,6 +70,25 @@ final class RouteVNViewController: UIViewController, WKNavigationDelegate, WKScr
 
         let contentController = WKUserContentController()
         #if DEBUG
+        if devServerURL != nil {
+            contentController.addUserScript(WKUserScript(
+                source: """
+                window.addEventListener('error', (event) => {
+                  window.webkit.messageHandlers.RouteVNIOS.postMessage({
+                    method: 'devError',
+                    payload: { message: event.message || ('Resource failed: ' + (event.target.src || event.target.href)), source: event.filename || '' }
+                  });
+                }, true);
+                window.addEventListener('unhandledrejection', (event) => {
+                  window.webkit.messageHandlers.RouteVNIOS.postMessage({
+                    method: 'devError', payload: { message: String(event.reason) }
+                  });
+                });
+                """,
+                injectionTime: .atDocumentStart,
+                forMainFrameOnly: true
+            ))
+        }
         let initialPath = ProcessInfo.processInfo.environment["ROUTEVN_IOS_INITIAL_PATH"] ?? ""
         if !initialPath.isEmpty {
             contentController.addUserScript(
@@ -103,16 +129,37 @@ final class RouteVNViewController: UIViewController, WKNavigationDelegate, WKScr
     }
 
     private func loadInitialAppURL() {
-        #if DEBUG
-        let devServerURL = ProcessInfo.processInfo.environment["ROUTEVN_IOS_DEV_SERVER_URL"] ?? ""
-        if let url = URL(string: devServerURL), !devServerURL.isEmpty {
-            webView.load(URLRequest(url: url, cachePolicy: .reloadIgnoringLocalCacheData))
+        if let url = devServerURL {
+            recordDevEvent("Loading \(url.absoluteString)")
+            webView.load(URLRequest(url: url, cachePolicy: .reloadIgnoringLocalCacheData, timeoutInterval: 15))
             return
         }
-        #endif
 
         let appURL = URL(string: "routevn://app/ios/index.html")!
         webView.load(URLRequest(url: appURL))
+    }
+
+    private func configuredDevServerURL() -> URL? {
+        #if DEBUG
+        // ios:dev writes this file so opening the app from the Home Screen also
+        // uses watch mode. Release builds never read it. An explicit environment
+        // value (including an empty one) takes precedence for Simulator/testing.
+        let configurationURL = FileManager.default.urls(for: .libraryDirectory, in: .userDomainMask)[0]
+            .appendingPathComponent("routevn-dev.json")
+        let configuration = (try? Data(contentsOf: configurationURL))
+            .flatMap { try? JSONDecoder().decode([String: String].self, from: $0) }
+        let value = ProcessInfo.processInfo.environment["ROUTEVN_IOS_DEV_SERVER_URL"]
+            ?? configuration?["url"] ?? ""
+        guard let url = URL(string: value),
+              url.scheme == "http" || url.scheme == "https",
+              let host = url.host, !host.isEmpty,
+              url.user == nil, url.password == nil else {
+            return nil
+        }
+        return url
+        #else
+        return nil
+        #endif
     }
 
     func webView(
@@ -140,7 +187,65 @@ final class RouteVNViewController: UIViewController, WKNavigationDelegate, WKScr
     }
 
     func webView(_ webView: WKWebView, didFinish navigation: WKNavigation!) {
+        if devServerURL != nil {
+            recordDevEvent("Document loaded: \(webView.url?.absoluteString ?? "")")
+        }
         runSmokeTestIfNeeded()
+    }
+
+    func webView(_ webView: WKWebView, didFailProvisionalNavigation navigation: WKNavigation!, withError error: Error) {
+        handleDevServerFailure(error)
+    }
+
+    func webView(_ webView: WKWebView, didFail navigation: WKNavigation!, withError error: Error) {
+        handleDevServerFailure(error)
+    }
+
+    private func handleDevServerFailure(_ error: Error) {
+        #if DEBUG
+        guard let url = devServerURL else { return }
+        let failure = error as NSError
+        guard failure.code != NSURLErrorCancelled else { return }
+        recordDevEvent("Navigation failed: \(failure)")
+        guard presentedViewController == nil else { return }
+        let alert = UIAlertController(
+            title: "Could not load the development server",
+            message: "\(url.absoluteString)\n\n\(failure.localizedDescription)\n\nKeep watch:ios running and connect the iPhone and Mac to the same local network.",
+            preferredStyle: .alert
+        )
+        alert.addAction(UIAlertAction(title: "Retry", style: .default) { [weak self] _ in
+            self?.loadInitialAppURL()
+        })
+        alert.addAction(UIAlertAction(title: "Use Installed App", style: .default) { [weak self] _ in
+            guard let self else { return }
+            let configurationURL = FileManager.default.urls(for: .libraryDirectory, in: .userDomainMask)[0]
+                .appendingPathComponent("routevn-dev.json")
+            do {
+                try Data("{\"url\":\"\"}".utf8).write(to: configurationURL, options: .atomic)
+                self.devServerURL = nil
+                self.loadInitialAppURL()
+            } catch {
+                self.recordDevEvent("Could not clear development setting: \(error)")
+            }
+        })
+        present(alert, animated: true)
+        #endif
+    }
+
+    private func recordDevEvent(_ message: String) {
+        #if DEBUG
+        NSLog("[RouteVN dev] %@", message)
+        let logURL = FileManager.default.urls(for: .cachesDirectory, in: .userDomainMask)[0]
+            .appendingPathComponent("routevn-dev.log")
+        do {
+            var data = (try? Data(contentsOf: logURL)) ?? Data()
+            if data.count > 65536 { data.removeAll() }
+            data.append(Data("\(Date()) \(message)\n".utf8))
+            try data.write(to: logURL, options: .atomic)
+        } catch {
+            NSLog("[RouteVN dev] Could not write diagnostic log: %@", String(describing: error))
+        }
+        #endif
     }
 
     private func isAppURL(_ url: URL) -> Bool {
@@ -148,17 +253,12 @@ final class RouteVNViewController: UIViewController, WKNavigationDelegate, WKScr
     }
 
     private func isDebugDevServerURL(_ url: URL) -> Bool {
-        #if DEBUG
-        let devServerURL = ProcessInfo.processInfo.environment["ROUTEVN_IOS_DEV_SERVER_URL"] ?? ""
-        guard let configuredURL = URL(string: devServerURL), !devServerURL.isEmpty else {
+        guard let configuredURL = devServerURL else {
             return false
         }
         return url.scheme == configuredURL.scheme &&
             url.host == configuredURL.host &&
             url.port == configuredURL.port
-        #else
-        return false
-        #endif
     }
 
     func userContentController(
@@ -198,8 +298,47 @@ final class RouteVNViewController: UIViewController, WKNavigationDelegate, WKScr
         }
     }
 
+    private func focusedTextInput(in view: UIView) -> (UIView, UITextInput)? {
+        if view.isFirstResponder, let textInput = view as? UITextInput {
+            return (view, textInput)
+        }
+        for child in view.subviews {
+            if let input = focusedTextInput(in: child) {
+                return input
+            }
+        }
+        return nil
+    }
+
+    private func currentCaretRect() -> Any {
+        guard
+            let (inputView, input) = focusedTextInput(in: webView),
+            let selection = input.selectedTextRange
+        else {
+            return NSNull()
+        }
+        let rect = inputView.convert(input.caretRect(for: selection.end), to: webView)
+        guard !rect.isNull, !rect.isInfinite, rect.height > 0 else {
+            return NSNull()
+        }
+        return [
+            "x": rect.minX,
+            "y": rect.minY,
+            "width": rect.width,
+            "height": rect.height,
+            "viewWidth": webView.bounds.width,
+        ]
+    }
+
     private func handleBridgeMethod(_ method: String, payload: [String: Any]) throws -> Any {
         switch method {
+        #if DEBUG
+        case "devError":
+            if devServerURL != nil {
+                recordDevEvent("JavaScript: \(payload)")
+            }
+            return true
+        #endif
         case "isDebugBuild":
             #if DEBUG
             return true
@@ -209,6 +348,23 @@ final class RouteVNViewController: UIViewController, WKNavigationDelegate, WKScr
         case "updateBackState":
             canGoBackInWebApp = boolValue(payload["canGoBack"])
             return true
+        case "getCaretRect":
+            return currentCaretRect()
+        case "setStatusBarStyle":
+            let nextStyle: UIStatusBarStyle
+            switch try requiredString(payload, "style") {
+            case "light":
+                nextStyle = .lightContent
+            case "dark":
+                nextStyle = .darkContent
+            default:
+                throw RouteVNError.message("Unsupported status bar style.")
+            }
+            if statusBarStyle != nextStyle {
+                statusBarStyle = nextStyle
+                setNeedsStatusBarAppearanceUpdate()
+            }
+            return true
         case "openExternalUrl":
             let urlString = stringValue(payload["url"])
             guard let url = URL(string: urlString), !urlString.isEmpty else {
@@ -217,6 +373,11 @@ final class RouteVNViewController: UIViewController, WKNavigationDelegate, WKScr
             UIApplication.shared.open(url)
             return true
         case "markSplashReady":
+            if devServerURL != nil {
+                webView.evaluateJavaScript("JSON.stringify({readyState: document.readyState, appDefined: !!customElements.get('rvn-app'), appChildren: document.querySelector('rvn-app')?.shadowRoot?.childElementCount ?? 0})") { [weak self] result, error in
+                    self?.recordDevEvent("Frontend ready: \(String(describing: result)), error: \(String(describing: error))")
+                }
+            }
             return true
         case "smokeResult":
             if isSmokeTestEnabled() {
@@ -1068,21 +1229,153 @@ final class RouteVNViewController: UIViewController, WKNavigationDelegate, WKScr
 
         let requestId = try storage.safePathSegment(requiredString(payload, "requestId"))
         try storage.deletePickerRequestFiles(requestId: requestId)
+        let contentTypes = resolveAcceptedContentTypes(stringValue(payload["accept"]))
 
         pendingDocumentPicker = PendingDocumentPicker(
             kind: .file,
             requestId: requestId,
             multiple: boolValue(payload["multiple"]),
-            writable: false
+            writable: false,
+            contentTypes: contentTypes
         )
 
+        if contentTypes.allSatisfy({ $0.conforms(to: .image) }) {
+            presentImageSourcePicker()
+        } else {
+            presentFileDocumentPicker()
+        }
+    }
+
+    private func presentImageSourcePicker() {
+        let sourcePicker = UIAlertController(title: nil, message: nil, preferredStyle: .actionSheet)
+        sourcePicker.addAction(UIAlertAction(title: "Photo Library", style: .default) { [weak self, weak sourcePicker] _ in
+            sourcePicker?.dismiss(animated: true) {
+                self?.presentPhotoLibraryPicker()
+            }
+        })
+        sourcePicker.addAction(UIAlertAction(title: "Choose Files", style: .default) { [weak self, weak sourcePicker] _ in
+            sourcePicker?.dismiss(animated: true) {
+                self?.presentFileDocumentPicker()
+            }
+        })
+        sourcePicker.addAction(UIAlertAction(title: "Cancel", style: .cancel) { [weak self] _ in
+            guard let self, let pending = self.pendingDocumentPicker else { return }
+            self.pendingDocumentPicker = nil
+            self.sendFilePickerResult(["requestId": pending.requestId, "files": []])
+        })
+        if let popover = sourcePicker.popoverPresentationController {
+            popover.sourceView = view
+            popover.sourceRect = CGRect(x: view.bounds.midX, y: view.bounds.maxY, width: 0, height: 0)
+            popover.permittedArrowDirections = []
+        }
+        present(sourcePicker, animated: true)
+    }
+
+    private func presentFileDocumentPicker() {
+        guard let pending = pendingDocumentPicker else { return }
         let picker = UIDocumentPickerViewController(
-            forOpeningContentTypes: resolveAcceptedContentTypes(stringValue(payload["accept"])),
+            forOpeningContentTypes: pending.contentTypes,
             asCopy: true
         )
-        picker.allowsMultipleSelection = boolValue(payload["multiple"])
+        picker.allowsMultipleSelection = pending.multiple
         picker.delegate = self
         present(picker, animated: true)
+    }
+
+    private func presentPhotoLibraryPicker() {
+        guard let pending = pendingDocumentPicker else { return }
+        var configuration = PHPickerConfiguration()
+        configuration.filter = .images
+        configuration.selectionLimit = pending.multiple ? 0 : 1
+        configuration.selection = .ordered
+        configuration.preferredAssetRepresentationMode = .compatible
+        let picker = PHPickerViewController(configuration: configuration)
+        picker.delegate = self
+        picker.isModalInPresentation = true
+        present(picker, animated: true)
+    }
+
+    func picker(_ picker: PHPickerViewController, didFinishPicking results: [PHPickerResult]) {
+        picker.dismiss(animated: true)
+        guard let pending = pendingDocumentPicker else { return }
+        let selectedResults = pending.multiple ? results : Array(results.prefix(1))
+
+        Task { @MainActor in
+            defer { pendingDocumentPicker = nil }
+            do {
+                var files: [[String: Any]] = []
+                for (index, result) in selectedResults.enumerated() {
+                    let photo = try await readPickedPhoto(
+                        result.itemProvider,
+                        contentTypes: pending.contentTypes,
+                        index: index
+                    )
+                    files.append(try createPickerFileResult(
+                        requestId: pending.requestId,
+                        data: photo.data,
+                        displayName: photo.filename,
+                        mimeType: photo.mimeType,
+                        index: index
+                    ))
+                }
+                sendFilePickerResult(["requestId": pending.requestId, "files": files])
+            } catch {
+                try? storage.deletePickerRequestFiles(requestId: pending.requestId)
+                sendFilePickerError(requestId: pending.requestId, message: "Failed to load selected photos.")
+            }
+        }
+    }
+
+    private func readPickedPhoto(
+        _ provider: NSItemProvider,
+        contentTypes: [UTType],
+        index: Int
+    ) async throws -> PickedPhoto {
+        let supportedTypes: [UTType] = [.jpeg, .png, .webP]
+        let availableType = provider.registeredTypeIdentifiers.compactMap { UTType($0) }.first { type in
+            supportedTypes.contains(type) && contentTypes.contains { type.conforms(to: $0) }
+        }
+        let outputType = availableType ?? [.jpeg, .png].first { type in
+            contentTypes.contains { type.conforms(to: $0) }
+        }
+        guard let outputType else {
+            throw RouteVNError.message("The selected photo cannot be imported in an accepted format.")
+        }
+        let suggestedName = sanitizeFilename(provider.suggestedName ?? "", fallback: "photo-\(index + 1)")
+        let baseName = (suggestedName as NSString).deletingPathExtension
+        let filename = "\(baseName).\(outputType.preferredFilenameExtension ?? "jpg")"
+        let mimeType = outputType.preferredMIMEType ?? "image/jpeg"
+
+        return try await withCheckedThrowingContinuation { continuation in
+            if let availableType {
+                provider.loadFileRepresentation(forTypeIdentifier: availableType.identifier) { url, error in
+                    do {
+                        if let error { throw error }
+                        guard let url else { throw RouteVNError.message("The selected photo is unavailable.") }
+                        // This provider URL is only valid until the callback returns.
+                        let data = try Data(contentsOf: url)
+                        continuation.resume(returning: PickedPhoto(data: data, filename: filename, mimeType: mimeType))
+                    } catch {
+                        continuation.resume(throwing: error)
+                    }
+                }
+                return
+            }
+
+            // Convert HEIC/HEIF and other Photos formats to an accepted JPEG or PNG.
+            provider.loadObject(ofClass: UIImage.self) { object, error in
+                if let error {
+                    continuation.resume(throwing: error)
+                    return
+                }
+                guard let image = object as? UIImage,
+                      let data = outputType == .png ? image.pngData() : image.jpegData(compressionQuality: 0.95) else {
+                    continuation.resume(throwing: RouteVNError.message("The selected photo could not be decoded."))
+                    return
+                }
+                continuation.resume(returning: PickedPhoto(data: data, filename: filename, mimeType: mimeType))
+            }
+        }
     }
 
     private func resolveSaveFilePicker(_ payload: [String: Any]) throws {
@@ -1105,7 +1398,8 @@ final class RouteVNViewController: UIViewController, WKNavigationDelegate, WKScr
             kind: .folder,
             requestId: requestId,
             multiple: false,
-            writable: boolValue(payload["writable"])
+            writable: boolValue(payload["writable"]),
+            contentTypes: [.folder]
         )
 
         let picker = UIDocumentPickerViewController(forOpeningContentTypes: [.folder])
@@ -1188,8 +1482,7 @@ final class RouteVNViewController: UIViewController, WKNavigationDelegate, WKScr
     }
 
     private func createPickerFileResult(requestId: String, sourceURL: URL, index: Int) throws -> [String: Any] {
-        let fileId = try storage.safePathSegment("file-\(index)")
-        let displayName = sourceURL.lastPathComponent.isEmpty ? fileId : sourceURL.lastPathComponent
+        let displayName = sourceURL.lastPathComponent.isEmpty ? "file-\(index)" : sourceURL.lastPathComponent
         let mimeType = mimeTypeForURL(sourceURL, fallbackName: displayName)
         let didAccess = sourceURL.startAccessingSecurityScopedResource()
         defer {
@@ -1199,6 +1492,23 @@ final class RouteVNViewController: UIViewController, WKNavigationDelegate, WKScr
         }
 
         let data = try Data(contentsOf: sourceURL)
+        return try createPickerFileResult(
+            requestId: requestId,
+            data: data,
+            displayName: displayName,
+            mimeType: mimeType,
+            index: index
+        )
+    }
+
+    private func createPickerFileResult(
+        requestId: String,
+        data: Data,
+        displayName: String,
+        mimeType: String,
+        index: Int
+    ) throws -> [String: Any] {
+        let fileId = try storage.safePathSegment("file-\(index)")
         try storage.writePickerFile(
             requestId: requestId,
             fileId: fileId,
@@ -1620,6 +1930,13 @@ private struct PendingDocumentPicker {
     let requestId: String
     let multiple: Bool
     let writable: Bool
+    let contentTypes: [UTType]
+}
+
+private struct PickedPhoto {
+    let data: Data
+    let filename: String
+    let mimeType: String
 }
 
 private struct SecurityScopedFolderSelection {

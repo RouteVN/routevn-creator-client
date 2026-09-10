@@ -6,9 +6,11 @@ import {
   $getRoot,
   $getSelection,
   $isElementNode,
+  $isLineBreakNode,
   $isRangeSelection,
   $isTextNode,
   $setCompositionKey,
+  $setSelection,
   COMMAND_PRIORITY_CRITICAL,
   COMMAND_PRIORITY_HIGH,
   KEY_ENTER_COMMAND,
@@ -1250,8 +1252,7 @@ export class LexicalSceneDocumentEditorElement extends HTMLElement {
     this.rightGutterWidth = DEFAULT_RIGHT_GUTTER_WIDTH;
     this.leftGutterRowsByLineId = new Map();
     this.rightGutterRowsByLineId = new Map();
-    this.pendingSoftLineBreakBeforeInput = false;
-    this.pendingParagraphSplitBeforeInput = false;
+    this.pendingNewlineBeforeInput = undefined;
     this.pendingTextInputFallback = undefined;
     this.pendingTextInputFallbackTimerId = undefined;
     this.lastCommittedTextInputFallback = undefined;
@@ -2008,6 +2009,22 @@ export class LexicalSceneDocumentEditorElement extends HTMLElement {
     const targetRect = isUsableClientRect(rangeRect) ? rangeRect : lineRect;
     const anchorElement = lineElement ?? this.refs?.editor;
     const lineHeight = Math.max(0, Number(lineRect?.height) || 0);
+    return this.revealSelectionRect({
+      rect: targetRect,
+      anchorElement,
+      lineHeight,
+      behavior,
+      direction,
+    });
+  }
+
+  revealSelectionRect({
+    rect,
+    anchorElement = this.refs?.editor,
+    lineHeight = rect?.height ?? 0,
+    behavior = "auto",
+    direction,
+  } = {}) {
     const paddingTop =
       direction === "up" ? 12 + Math.round(lineHeight * 1.5) : 12;
     const obscuredBottomInset = getViewportObscuredBottomInset();
@@ -2024,7 +2041,7 @@ export class LexicalSceneDocumentEditorElement extends HTMLElement {
           )
         : 112;
 
-    return scrollRectIntoNearestScrollableView(anchorElement, targetRect, {
+    return scrollRectIntoNearestScrollableView(anchorElement, rect, {
       behavior,
       block: "nearest",
       paddingTop,
@@ -2643,24 +2660,36 @@ export class LexicalSceneDocumentEditorElement extends HTMLElement {
       return true;
     }
 
-    if (event?.shiftKey) {
-      event.preventDefault();
-      event.stopPropagation?.();
-      this.pendingSoftLineBreakBeforeInput = true;
-      this.insertSoftLineBreak();
-      requestAnimationFrame(() => {
-        this.pendingSoftLineBreakBeforeInput = false;
-      });
+    const pendingNewline = {
+      inputType: event?.shiftKey ? "insertLineBreak" : "insertParagraph",
+      handled: false,
+    };
+    this.pendingNewlineBeforeInput = pendingNewline;
+    requestAnimationFrame(() => {
+      if (this.pendingNewlineBeforeInput === pendingNewline) {
+        this.pendingNewlineBeforeInput = undefined;
+      }
+    });
+
+    // A keyboard may supply the first usable caret in beforeinput. Do not
+    // cancel that native edit or mark it handled before we can locate it.
+    if (
+      !this.getLineSelectionContext({ preferNative: true }) &&
+      !this.getNativeLineRangeSelectionContext()?.isMultiLine
+    ) {
+      // Consume the command so lower-priority handlers cannot cancel the
+      // browser's beforeinput fallback either.
       return true;
     }
 
     event?.preventDefault?.();
     event?.stopPropagation?.();
-    this.pendingParagraphSplitBeforeInput = true;
-    this.splitCurrentLine();
-    requestAnimationFrame(() => {
-      this.pendingParagraphSplitBeforeInput = false;
-    });
+    pendingNewline.handled = true;
+    if (event?.shiftKey) {
+      this.insertSoftLineBreak();
+    } else {
+      this.splitCurrentLine();
+    }
     return true;
   }
 
@@ -3550,7 +3579,8 @@ export class LexicalSceneDocumentEditorElement extends HTMLElement {
       event,
       lineElement,
     );
-    const visibleTextLength = this.getLineVisibleTextLength(lineElement);
+    const visibleText = this.getLineVisibleText(lineElement);
+    const visibleTextLength = visibleText.length;
     const isResolvedBoundaryClick =
       typeof pointerOffset === "number" &&
       pointerOffset >= 0 &&
@@ -3577,7 +3607,7 @@ export class LexicalSceneDocumentEditorElement extends HTMLElement {
             start: 0,
             end: visibleTextLength,
           }
-        : getTrailingWordSelectionRange(lineElement.textContent);
+        : getTrailingWordSelectionRange(visibleText);
     const isCollapsedSelection = selectionRange.start === selectionRange.end;
     const didLineChange = this.state.selectedLineId !== lineId;
     this.state.selectedLineId = lineId;
@@ -3676,20 +3706,24 @@ export class LexicalSceneDocumentEditorElement extends HTMLElement {
       this.normalizeInvisibleLineBoundarySelection();
     });
 
-    const lineId = this.getLineIdFromRange(range);
+    let lineId = this.getLineIdFromRange(range);
     const fallbackSelection =
       this.pendingPointerFallbackSelection ||
       this.createPointerFallbackSelection(event);
-    if (!lineId) {
-      if (this.refs.editor?.contains(event?.target)) {
-        const didRestoreFallback =
-          this.restorePointerFallbackSelection(fallbackSelection);
-        if (!didRestoreFallback) {
-          this.setMode("text-editor");
+    if (!lineId && this.refs.editor?.contains(event?.target)) {
+      const didRestoreFallback =
+        this.restorePointerFallbackSelection(fallbackSelection);
+      if (!didRestoreFallback) {
+        this.setMode("text-editor");
+        if (!this.isEditorActiveElement()) {
           this.focus({ preventScroll: true });
         }
-        this.schedulePointerFallbackSelectionValidation(fallbackSelection);
       }
+      // Older WebKit hides native selections inside shadow roots. The
+      // clicked line is still known even when the caret offset is not.
+      lineId = fallbackSelection?.lineId;
+    }
+    if (!lineId) {
       this.scheduleRender();
       return;
     }
@@ -4868,31 +4902,27 @@ export class LexicalSceneDocumentEditorElement extends HTMLElement {
       return;
     }
 
-    if (inputType === "insertParagraph") {
+    if (inputType === "insertParagraph" || inputType === "insertLineBreak") {
       this.clearPendingTextInputFallback();
       event.preventDefault();
       event.stopPropagation?.();
       event.stopImmediatePropagation?.();
-      if (this.pendingParagraphSplitBeforeInput) {
-        this.pendingParagraphSplitBeforeInput = false;
+      // WebKit can report Shift+Enter as insertParagraph. Preserve the key's
+      // intent, and consume this event only if that command performed the edit.
+      const pendingNewline = this.pendingNewlineBeforeInput;
+      this.pendingNewlineBeforeInput = undefined;
+      if (pendingNewline?.handled) {
         return;
       }
 
-      this.splitCurrentLine();
-      return;
-    }
-
-    if (inputType === "insertLineBreak") {
-      this.clearPendingTextInputFallback();
-      event.preventDefault();
-      event.stopPropagation?.();
-      event.stopImmediatePropagation?.();
-      if (this.pendingSoftLineBreakBeforeInput) {
-        this.pendingSoftLineBreakBeforeInput = false;
-        return;
+      const newlineInputType = pendingNewline?.inputType ?? inputType;
+      if (newlineInputType === "insertParagraph") {
+        this.splitCurrentLine({ nativeRange: event.getTargetRanges?.()[0] });
+      } else {
+        this.insertSoftLineBreak({
+          nativeSelection: this.getInputLineSelectionContext(event),
+        });
       }
-
-      this.insertSoftLineBreak();
       return;
     }
 
@@ -5522,9 +5552,9 @@ export class LexicalSceneDocumentEditorElement extends HTMLElement {
     }
   }
 
-  getLineSelectionContext({ preferNative = false } = {}) {
+  getLineSelectionContext({ preferNative = false, nativeRange } = {}) {
     const nativeContext = preferNative
-      ? this.getLineSelectionContextFromNative()
+      ? this.getLineSelectionContextFromNative(nativeRange)
       : undefined;
     if (nativeContext) {
       return nativeContext;
@@ -5554,11 +5584,13 @@ export class LexicalSceneDocumentEditorElement extends HTMLElement {
       };
     });
 
-    return lexicalContext ?? this.getLineSelectionContextFromNative();
+    return (
+      lexicalContext ?? this.getLineSelectionContextFromNative(nativeRange)
+    );
   }
 
-  getLineSelectionContextFromNative() {
-    const nativeSelection = this.getNativeLineSelectionContext();
+  getLineSelectionContextFromNative(nativeRange) {
+    const nativeSelection = this.getNativeLineSelectionContext(nativeRange);
     return this.getLineSelectionContextFromLineSelection(nativeSelection);
   }
 
@@ -5915,14 +5947,17 @@ export class LexicalSceneDocumentEditorElement extends HTMLElement {
     });
   }
 
-  splitCurrentLine() {
-    const rangeContext = this.getNativeLineRangeSelectionContext();
+  splitCurrentLine({ nativeRange } = {}) {
+    const rangeContext = this.getNativeLineRangeSelectionContext(nativeRange);
     if (rangeContext?.isMultiLine) {
       this.replaceNativeLineRangeSelectionWithParagraphBreak(rangeContext);
       return;
     }
 
-    const context = this.getLineSelectionContext({ preferNative: true });
+    const context = this.getLineSelectionContext({
+      preferNative: true,
+      nativeRange,
+    });
     if (!context) {
       return;
     }
@@ -6470,8 +6505,13 @@ export class LexicalSceneDocumentEditorElement extends HTMLElement {
     clearSelectionTextFormatting(selection);
   }
 
-  insertSoftLineBreak() {
-    const nativeSelection = this.getNativeLineSelectionContext();
+  insertSoftLineBreak({
+    nativeSelection = this.getNativeLineSelectionContext(),
+  } = {}) {
+    const previousSelection = this.editor.getEditorState().read(() => {
+      const selection = $getSelection();
+      return $isRangeSelection(selection) ? selection.clone() : undefined;
+    });
     this.editor.update(
       () => {
         if (nativeSelection?.lineId) {
@@ -6482,7 +6522,13 @@ export class LexicalSceneDocumentEditorElement extends HTMLElement {
           }
         }
 
-        const selection = $getSelection();
+        // A fresh update can lose the cached selection when WebKit has no DOM
+        // range. Keep that fallback only when no current range was resolved.
+        let selection = $getSelection();
+        if (!$isRangeSelection(selection) && previousSelection) {
+          $setSelection(previousSelection);
+          selection = previousSelection;
+        }
         if (!$isRangeSelection(selection)) {
           return;
         }
@@ -8259,7 +8305,27 @@ export class LexicalSceneDocumentEditorElement extends HTMLElement {
       const prefixRange = document.createRange();
       prefixRange.selectNodeContents(lineElement);
       prefixRange.setEnd(range.startContainer, range.startOffset);
-      return prefixRange.toString().replaceAll(EDITOR_CARET_TEXT, "").length;
+      // Range.toString() omits <br>, but each Lexical line break occupies one
+      // content offset. Ignore the browser caret placeholder at paragraph end.
+      const lineBreakCount = this.editor.getEditorState().read(
+        () => {
+          let count = 0;
+          for (const lineBreak of lineElement.querySelectorAll("br")) {
+            if (
+              prefixRange.intersectsNode(lineBreak) &&
+              $isLineBreakNode($getNearestNodeFromDOMNode(lineBreak))
+            ) {
+              count += 1;
+            }
+          }
+          return count;
+        },
+        { editor: this.editor },
+      );
+      return (
+        prefixRange.toString().replaceAll(EDITOR_CARET_TEXT, "").length +
+        lineBreakCount
+      );
     } catch {
       return undefined;
     }
@@ -8319,9 +8385,20 @@ export class LexicalSceneDocumentEditorElement extends HTMLElement {
     );
   }
 
+  getLineVisibleText(lineElement) {
+    return this.editor.getEditorState().read(
+      () => {
+        // Use the same logical units as pointer offsets and selection ranges:
+        // real soft breaks count, DOM caret placeholders and anchors do not.
+        const lineNode = $getNearestNodeFromDOMNode(lineElement);
+        return lineNode.getTextContent().replaceAll(EDITOR_CARET_TEXT, "");
+      },
+      { editor: this.editor },
+    );
+  }
+
   getLineVisibleTextLength(lineElement) {
-    return (lineElement?.textContent ?? "").replaceAll(EDITOR_CARET_TEXT, "")
-      .length;
+    return this.getLineVisibleText(lineElement).length;
   }
 
   getNativeCollapsedLineSelectionContext() {
@@ -8457,8 +8534,10 @@ export class LexicalSceneDocumentEditorElement extends HTMLElement {
     );
   }
 
-  getNativeLineRangeSelectionContext() {
-    const range = getSelectionRange(this.refs?.editor);
+  getNativeLineRangeSelectionContext(rangeLike) {
+    const range = rangeLike
+      ? this.createNativeSelectionRange(rangeLike)
+      : getSelectionRange(this.refs?.editor);
     if (!range || range.collapsed) {
       return undefined;
     }
@@ -8559,7 +8638,12 @@ export class LexicalSceneDocumentEditorElement extends HTMLElement {
   }
 
   restorePointerFallbackSelection(fallbackSelection) {
-    if (!fallbackSelection?.lineId) {
+    if (
+      !fallbackSelection?.lineId ||
+      !(fallbackSelection.cursorPosition >= 0)
+    ) {
+      // -1 means hit testing could not see into the shadow root, not that
+      // the user tapped the line end. Preserve WebKit's native caret.
       return false;
     }
 
@@ -8576,10 +8660,7 @@ export class LexicalSceneDocumentEditorElement extends HTMLElement {
 
     this.scheduleRender();
     this.dispatchSelectedLineChanged(fallbackSelection.lineId, {
-      cursorPosition:
-        fallbackSelection.cursorPosition >= 0
-          ? fallbackSelection.cursorPosition
-          : undefined,
+      cursorPosition: fallbackSelection.cursorPosition,
       isCollapsed: true,
       mode: "text-editor",
     });
@@ -8587,7 +8668,10 @@ export class LexicalSceneDocumentEditorElement extends HTMLElement {
   }
 
   schedulePointerFallbackSelectionValidation(fallbackSelection) {
-    if (!fallbackSelection?.lineId) {
+    if (
+      !fallbackSelection?.lineId ||
+      !(fallbackSelection.cursorPosition >= 0)
+    ) {
       return;
     }
 
