@@ -65,7 +65,7 @@ template:
                           - $if operation.op != 'toggle':
                               - rtgl-text s=sm: ${operation.displayValue}
                   - rtgl-button#addOperationButton v=ol w=f mt=md: ${addOperationButton}
-          - 'rtgl-view d=h av=c ah=e w=f g=lg ph=md style="flex: 0 0 auto;"':
+          - 'rtgl-view d=h av=c ah=e w=f g=lg ph=md pt=md style="flex: 0 0 auto;"':
               - rtgl-button#submitButton ?disabled=${!hasOperations}: ${submitButton}
       - $if mode == 'edit' && initiated:
           - rtgl-view w=f h=24 av=c ph=md mb=md:
@@ -92,6 +92,6 @@ template:
                   - $if showValueField && valueInputType == 'string' && !showEnumValueSelect:
                       - rtgl-text s=sm c=mu-fg mt=lg mb=sm: ${valueLabel}
                       - rtgl-input#valueInput w=f placeholder="${valueTextPlaceholder}" value=${tempOperation.value}: null
-          - 'rtgl-view d=h av=c ah=e w=f g=lg ph=md style="flex: 0 0 auto;"':
+          - 'rtgl-view d=h av=c ah=e w=f g=lg ph=md pt=md style="flex: 0 0 auto;"':
               - rtgl-button#saveOperationButton ?disabled=${!canSaveOperation}: ${saveOperationButton}
   - rtgl-dropdown-menu#dropdownMenu :items=${dropdownMenu.items} x=${dropdownMenu.position.x} y=${dropdownMenu.position.y} ?open=${dropdownMenu.isOpen}: null

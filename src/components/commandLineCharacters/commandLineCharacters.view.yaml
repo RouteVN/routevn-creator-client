@@ -216,7 +216,7 @@ template:
                                           - rtgl-text s=xs: ${spriteGroup.name}
                   - rtgl-button#addCharacterButton v=ol w=f mt=md mh=lg: ${addCharacterButtonLabel}
                   - 'rtgl-view h=240 aria-hidden=true style="flex: 0 0 240px;"': null
-          - 'rtgl-view d=h av=c ah=e w=f g=lg ph=md style="flex: 0 0 auto;"':
+          - 'rtgl-view d=h av=c ah=e w=f g=lg ph=md pt=md style="flex: 0 0 auto;"':
               - rtgl-button#submitButton: ${submitButtonLabel}
       - $if mode == 'character-select':
           - rtgl-view w=f h=24 av=c ph=md mb=md:
@@ -283,7 +283,7 @@ template:
                                                   - 'div.commandLineCharacterThumbnailTransparencyGrid style="display: block; overflow: hidden; border-radius: 4px; ${characterSelectorPreviewStyle}"':
                                                       - rvn-file-image fileId=${item.previewFileId} w=f h=f br=sm: null
                                               - rtgl-text s=xs c=mu-fg ellipsis w=f: ${item.name}
-          - 'rtgl-view d=h av=c ah=e w=f g=lg ph=md style="flex: 0 0 auto;"':
+          - 'rtgl-view d=h av=c ah=e w=f g=lg ph=md pt=md style="flex: 0 0 auto;"':
               - rtgl-button#buttonSelect: ${selectButtonLabel}
   - $if fullImagePreviewVisible:
       - rtgl-dialog#fullPreviewDialog open layout=fixed bare p=none:
