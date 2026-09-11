@@ -9,12 +9,17 @@ final class ProjectStoragePaths {
 
     private let libraryFolder: () throws -> URL
     private let lock = NSRecursiveLock()
-    private var locationsByRoot: [String: [String: URL]] = [:]
+    private var discoveriesByRoot: [String: (modified: Date, discovery: Discovery)] = [:]
     private let identityFilename = ".routevn-project.json"
 
     private struct Identity: Codable {
         let version: Int
         let id: String
+    }
+
+    private struct Discovery {
+        var locations: [String: URL] = [:]
+        var ambiguousIds: Set<String> = []
     }
 
     init(libraryFolder: @escaping () throws -> URL) {
@@ -28,13 +33,18 @@ final class ProjectStoragePaths {
             throw CocoaError(.fileReadInvalidFileName)
         }
         let root = try libraryFolder().resolvingSymlinksInPath().standardizedFileURL
-        if let cached = locationsByRoot[root.path]?[projectId],
-           FileManager.default.fileExists(atPath: cached.path),
-           try projectIdentity(in: checkedDirectory(cached, root: root)) == projectId {
-            return Location(database: cached.appendingPathComponent("project.db"), directory: cached)
+        // Files copies/renames change the library directory. Reuse discoveries
+        // only while that directory and the cached project's identity agree.
+        if let modified = try root.resourceValues(forKeys: [.contentModificationDateKey]).contentModificationDate,
+           let cached = discoveriesByRoot[root.path], cached.modified == modified,
+           let directory = cached.discovery.locations[projectId],
+           FileManager.default.fileExists(atPath: directory.path),
+           try projectIdentity(in: checkedDirectory(directory, root: root)) == projectId {
+            return Location(database: directory.appendingPathComponent("project.db"), directory: directory)
         }
         let discovered = try discover(in: root)
-        let directory = try checkedDirectory(discovered[projectId] ?? root.appendingPathComponent(projectId, isDirectory: true), root: root)
+        guard !discovered.ambiguousIds.contains(projectId) else { throw CocoaError(.fileReadCorruptFile) }
+        let directory = try checkedDirectory(discovered.locations[projectId] ?? root.appendingPathComponent(projectId, isDirectory: true), root: root)
         if let owner = try projectIdentity(in: directory), owner != projectId {
             throw CocoaError(.fileReadCorruptFile)
         }
@@ -44,7 +54,7 @@ final class ProjectStoragePaths {
     func projectIds() throws -> [String] {
         lock.lock()
         defer { lock.unlock() }
-        return try discover(in: libraryFolder().resolvingSymlinksInPath().standardizedFileURL).keys.sorted()
+        return try discover(in: libraryFolder().resolvingSymlinksInPath().standardizedFileURL).locations.keys.sorted()
     }
 
     func preview(projectName: String) throws -> URL {
@@ -96,8 +106,9 @@ final class ProjectStoragePaths {
         return identity.id
     }
 
-    private func discover(in root: URL) throws -> [String: URL] {
-        var locations: [String: URL] = [:]
+    private func discover(in root: URL) throws -> Discovery {
+        let modified = try root.resourceValues(forKeys: [.contentModificationDateKey]).contentModificationDate
+        var discovered = Discovery()
         for child in try FileManager.default.contentsOfDirectory(at: root, includingPropertiesForKeys: [.isDirectoryKey, .isSymbolicLinkKey], options: .skipsHiddenFiles) {
             let values = try child.resourceValues(forKeys: [.isDirectoryKey, .isSymbolicLinkKey])
             guard values.isDirectory == true, values.isSymbolicLink != true else { continue }
@@ -108,11 +119,19 @@ final class ProjectStoragePaths {
             } else if child.lastPathComponent.range(of: "^[A-Za-z0-9_-]{1,128}$", options: .regularExpression) != nil {
                 id = child.lastPathComponent
             } else { continue }
-            guard locations[id] == nil else { throw CocoaError(.fileReadCorruptFile) }
-            locations[id] = directory
+            if discovered.ambiguousIds.contains(id) { continue }
+            if discovered.locations.removeValue(forKey: id) != nil {
+                discovered.ambiguousIds.insert(id)
+                continue
+            }
+            discovered.locations[id] = directory
         }
-        locationsByRoot[root.path] = locations
-        return locations
+        if let modified {
+            discoveriesByRoot[root.path] = (modified, discovered)
+        } else {
+            discoveriesByRoot.removeValue(forKey: root.path)
+        }
+        return discovered
     }
 
     func recordIdentity(projectId: String, directory: URL) throws {
@@ -126,7 +145,7 @@ final class ProjectStoragePaths {
         } else {
             try JSONEncoder().encode(Identity(version: 1, id: projectId)).write(to: target.appendingPathComponent(identityFilename), options: .withoutOverwriting)
         }
-        locationsByRoot[root.path, default: [:]][projectId] = target
+        discoveriesByRoot.removeValue(forKey: root.path)
     }
 
     func ensureDirectories(projectId: String, createProject: Bool, projectName: String? = nil) throws {

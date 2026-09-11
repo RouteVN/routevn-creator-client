@@ -4,6 +4,7 @@ import SQLite3
 @main
 struct ProjectStoragePathsNativeTests {
     static func main() throws {
+        try duplicateIdentities()
         let fm = FileManager.default
         let fixture = fm.temporaryDirectory.appendingPathComponent("routevn-storage-test-\(UUID().uuidString)")
         defer { try? fm.removeItem(at: fixture) }
@@ -157,6 +158,58 @@ struct ProjectStoragePathsNativeTests {
         let untouchedInternal = try readDatabase(legacyDatabase)
         precondition(untouchedInternal == "Existing project")
         print("PASS: sanitized names, collisions, persistent identity, folder rename, SQLite/assets, internal projects ignored and untouched, missing-folder failures and path boundaries")
+    }
+
+    static func duplicateIdentities() throws {
+        let fm = FileManager.default
+        let library = fm.temporaryDirectory.appendingPathComponent("routevn-duplicate-test-\(UUID().uuidString)")
+        defer { try? fm.removeItem(at: library) }
+        try fm.createDirectory(at: library, withIntermediateDirectories: true)
+        let paths = ProjectStoragePaths(libraryFolder: { library })
+        try paths.ensureDirectories(projectId: "project-one", createProject: true, projectName: "Project One")
+        try paths.ensureDirectories(projectId: "project-two", createProject: true, projectName: "Project Two")
+        let original = try paths.location(projectId: "project-one")
+        let unrelated = try paths.location(projectId: "project-two")
+        try writeDatabase(original.database, value: "Project One")
+        try writeDatabase(unrelated.database, value: "Project Two")
+        let identity = try Data(contentsOf: original.directory.appendingPathComponent(".routevn-project.json"))
+        // Files copies the identity with the folder. Include an id-named copy
+        // to ensure ambiguous lookup cannot fall back to that directory either.
+        let copies = ["Project One Copy", "project-one"].map { library.appendingPathComponent($0) }
+        for copy in copies { try fm.copyItem(at: original.directory, to: copy) }
+
+        // Test both a resolver that saw the original and a fresh app instance.
+        for resolver in [paths, ProjectStoragePaths(libraryFolder: { library })] {
+            do {
+                _ = try resolver.location(projectId: "project-one")
+                preconditionFailure("Resolved an ambiguous identity")
+            } catch let error as CocoaError {
+                precondition(error.code == .fileReadCorruptFile)
+            }
+            let other = try resolver.location(projectId: "project-two")
+            let value = try readDatabase(other.database)
+            precondition(value == "Project Two")
+            let ids = try resolver.projectIds()
+            precondition(ids == ["project-two"], "A duplicate must not hide unrelated projects")
+            let newLocation = try resolver.location(projectId: "project-three")
+            precondition(newLocation.directory.path == library.resolvingSymlinksInPath().appendingPathComponent("project-three").path)
+        }
+        try paths.ensureDirectories(projectId: "project-three", createProject: true, projectName: "Project Three")
+        let created = try paths.location(projectId: "project-three")
+        try writeDatabase(created.database, value: "Project Three")
+        let createdValue = try readDatabase(created.database)
+        precondition(createdValue == "Project Three")
+        // Discovery must not rewrite identities or choose a copy arbitrarily.
+        for directory in [original.directory] + copies {
+            let persistedIdentity = try Data(contentsOf: directory.appendingPathComponent(".routevn-project.json"))
+            precondition(persistedIdentity == identity)
+        }
+        for copy in copies { try fm.removeItem(at: copy) }
+        let recovered = try paths.location(projectId: "project-one")
+        precondition(recovered.directory == original.directory)
+        let ids = try paths.projectIds()
+        precondition(ids == ["project-one", "project-three", "project-two"])
+        print("PASS: duplicate identities isolated, cached/fresh lookups rejected, unrelated projects readable, creation and recovery preserved")
     }
 
     static func writeDatabase(_ url: URL, value: String) throws {
