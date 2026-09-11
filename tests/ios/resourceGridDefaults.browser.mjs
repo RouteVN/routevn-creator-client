@@ -1,8 +1,8 @@
 // Run against watch:ios. Real resource pages with isolated browser project data.
 import assert from "node:assert/strict";
 import { chromium, webkit } from "playwright";
+import { openTouchProjectsPage } from "../support/mobileBrowserApp.mjs";
 
-const origin = process.env.IOS_TEST_ORIGIN ?? "http://127.0.0.1:3004";
 const resourcePages = [
   ["images", "rvn-media-resources-view", "image"],
   ["colors", "rvn-catalog-resources-view", "color"],
@@ -19,22 +19,7 @@ for (const [name, engine] of Object.entries({ chromium, webkit })) {
     });
     const errors = [];
     page.on("pageerror", (error) => errors.push(error.message));
-    await page.addInitScript(() => {
-      window.RTGL_VT_RESET_APP_STATE = true;
-    });
-    await page.route("**/src/setup.ios.js", async (route) => {
-      const response = await route.fetch({
-        url: route.request().url().replace("setup.ios.js", "setup.web.js"),
-      });
-      await route.fulfill({ response });
-    });
-    await page.route("**/projects?*", async (route) => {
-      if (route.request().resourceType() !== "document")
-        return route.continue();
-      const response = await route.fetch({ url: origin + "/ios/index.html" });
-      await route.fulfill({ response });
-    });
-    await page.goto(origin + "/projects?vt-input-mode=touch");
+    await openTouchProjectsPage(page);
     await page.locator("#mobileCreateMenuButton").waitFor();
     await page.evaluate(async () => {
       const { appService } = document.querySelector("rvn-app").deps;

@@ -2,8 +2,10 @@
 // renderer/engine and scene editor, with mobile and desktop input.
 import assert from "node:assert/strict";
 import { chromium, webkit } from "playwright";
-
-const origin = process.env.IOS_TEST_ORIGIN ?? "http://127.0.0.1:3004";
+import {
+  openTouchProjectsPage,
+  createProjectFromMenu,
+} from "../support/mobileBrowserApp.mjs";
 
 const runScenario = async (engineName, engine, viewport) => {
   const browser = await engine.launch({ headless: true });
@@ -15,33 +17,8 @@ const runScenario = async (engineName, engine, viewport) => {
     });
     const errors = [];
     page.on("pageerror", (error) => errors.push(error.message));
-    await page.addInitScript(() => {
-      window.RTGL_VT_RESET_APP_STATE = true;
-    });
-    await page.route("**/src/setup.ios.js", async (route) => {
-      const response = await route.fetch({
-        url: route.request().url().replace("setup.ios.js", "setup.web.js"),
-      });
-      await route.fulfill({ response });
-    });
-    await page.route("**/projects?*", async (route) => {
-      if (route.request().resourceType() !== "document")
-        return route.continue();
-      const response = await route.fetch({ url: origin + "/ios/index.html" });
-      await route.fulfill({ response });
-    });
-    await page.goto(origin + "/projects?vt-input-mode=touch");
-    await page.locator("#mobileCreateMenuButton").click();
-    await page
-      .locator("#mobileActionMenu [role='menuitem']")
-      .filter({ hasText: "Create Project" })
-      .click();
-    await page
-      .locator("#createProjectForm rtgl-input[data-field-name='name'] input")
-      .fill("Project One");
-    await page
-      .locator("#createProjectForm rtgl-button[data-action-id='submit']")
-      .click();
+    await openTouchProjectsPage(page);
+    await createProjectFromMenu(page);
     await page.locator("#projectItem0").click();
     await page.locator("#mobileTabItem1").click();
     await page.locator("rvn-mobile-sidebar [data-item-id='scene-map']").click();
