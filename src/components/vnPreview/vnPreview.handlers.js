@@ -664,6 +664,12 @@ export const handleBeforeMount = (deps) => {
   };
 };
 
+export const handleClosePreview = ({ dispatchEvent }, { _event: event }) => {
+  event.preventDefault();
+  event.stopPropagation();
+  dispatchEvent(new CustomEvent("close"));
+};
+
 export const handleRotatePreview = (deps, payload) => {
   const { store, render, refs } = deps;
   const { _event: event } = payload;
@@ -675,6 +681,21 @@ export const handleRotatePreview = (deps, payload) => {
 };
 
 export const handleAfterMount = async (deps) => {
+  const { appService, dispatchEvent, i18n } = deps;
+  try {
+    await initializePreview(deps);
+  } catch (error) {
+    console.error("[vnPreview] Failed to initialize preview", error);
+    const copy = selectSceneEditorCopy(i18n);
+    appService.showToast({
+      message: copy.failedOpenPreview ?? "Failed to open preview",
+      status: "error",
+    });
+    dispatchEvent(new CustomEvent("close"));
+  }
+};
+
+const initializePreview = async (deps) => {
   const {
     dispatchEvent,
     projectService,

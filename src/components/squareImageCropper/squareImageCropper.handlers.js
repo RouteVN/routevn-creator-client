@@ -84,14 +84,19 @@ const syncFromFile = async (deps, file = deps.props.file) => {
 
 const mountSubscriptions = (deps) => {
   const subscriptions = [
-    fromEvent(window, "mousemove").pipe(
+    fromEvent(window, "pointermove").pipe(
       tap((event) =>
-        deps.handlers.handleWindowMouseMove(deps, { _event: event }),
+        deps.handlers.handleWindowPointerMove(deps, { _event: event }),
       ),
     ),
-    fromEvent(window, "mouseup").pipe(
+    fromEvent(window, "pointerup").pipe(
       tap((event) =>
-        deps.handlers.handleWindowMouseUp(deps, { _event: event }),
+        deps.handlers.handleWindowPointerEnd(deps, { _event: event }),
+      ),
+    ),
+    fromEvent(window, "pointercancel").pipe(
+      tap((event) =>
+        deps.handlers.handleWindowPointerEnd(deps, { _event: event }),
       ),
     ),
     fromEvent(window, "blur").pipe(
@@ -130,47 +135,65 @@ export const handleImageDragStart = (_deps, payload) => {
   payload._event.preventDefault();
 };
 
-export const handleViewportMouseDown = (deps, payload) => {
-  if (!deps.store.selectImageUrl()) {
-    return;
-  }
-
-  payload._event.preventDefault();
-  deps.store.startDragging({
-    mouseX: payload._event.clientX,
-    mouseY: payload._event.clientY,
-  });
-  deps.render();
+const getPointerPosition = ({ refs, store }, event) => {
+  const rect = refs.cropViewport.getBoundingClientRect();
+  const viewportSize = store.selectViewportSize();
+  return {
+    pointerId: event.pointerId,
+    x: ((event.clientX - rect.left) / rect.width) * viewportSize,
+    y: ((event.clientY - rect.top) / rect.height) * viewportSize,
+  };
 };
 
-export const handleWindowMouseMove = (deps, payload) => {
-  if (!deps.store.selectIsDragging()) {
+export const handleViewportPointerDown = (deps, { _event: event }) => {
+  const { store, refs, render } = deps;
+  const { cropViewport } = refs;
+  if (!store.selectImageUrl() || event.button !== 0) {
     return;
   }
 
-  deps.store.updateDragging({
-    mouseX: payload._event.clientX,
-    mouseY: payload._event.clientY,
-  });
-  deps.render();
+  store.startPointer(getPointerPosition(deps, event));
+  if (!store.selectHasPointer({ pointerId: event.pointerId })) {
+    return;
+  }
+
+  event.preventDefault();
+  cropViewport.setPointerCapture(event.pointerId);
+  render();
 };
 
-export const handleWindowMouseUp = (deps) => {
-  if (!deps.store.selectIsDragging()) {
+export const handleWindowPointerMove = (deps, { _event: event }) => {
+  const { store, render } = deps;
+  if (!store.selectHasPointer({ pointerId: event.pointerId })) {
     return;
   }
 
-  deps.store.stopDragging();
-  deps.render();
+  store.movePointer(getPointerPosition(deps, event));
+  render();
+};
+
+export const handleWindowPointerEnd = (deps, { _event: event }) => {
+  const { store, refs, render } = deps;
+  const { cropViewport } = refs;
+  if (!store.selectHasPointer({ pointerId: event.pointerId })) {
+    return;
+  }
+
+  store.endPointer({ pointerId: event.pointerId });
+  if (cropViewport.hasPointerCapture(event.pointerId)) {
+    cropViewport.releasePointerCapture(event.pointerId);
+  }
+  render();
 };
 
 export const handleWindowBlur = (deps) => {
-  if (!deps.store.selectIsDragging()) {
+  const { store, render } = deps;
+  if (!store.selectIsDragging()) {
     return;
   }
 
-  deps.store.stopDragging();
-  deps.render();
+  store.cancelGesture();
+  render();
 };
 
 export const handleZoomChange = (deps, payload) => {

@@ -44,6 +44,7 @@ import {
   DEFAULT_PROJECT_LANGUAGE,
   normalizeProjectLanguage,
 } from "../../internal/projectLanguage.js";
+import { isMobileSceneEditorSideBySide } from "../../internal/sceneEditorLayout.js";
 
 const INACTIVE_SECTION_EDITOR_SELECTED_LINE_ID = "";
 
@@ -635,6 +636,7 @@ const buildProjectDataSourceState = (state) => {
 
 export const createInitialState = () => ({
   isTouchMode: false,
+  appWindowMetrics: { width: 0, height: 0 },
   mobileKeyboardState: {
     isVisible: false,
     bottom: 0,
@@ -756,6 +758,50 @@ export const setSceneId = ({ state }, { sceneId } = {}) => {
 export const setUiConfig = ({ state }, { uiConfig } = {}) => {
   state.isTouchMode =
     uiConfig?.id === "touch" || uiConfig?.inputMode === "touch";
+};
+
+export const setAppWindowMetrics = ({ state }, { width, height }) => {
+  state.appWindowMetrics.width = width;
+  state.appWindowMetrics.height = height;
+};
+
+const selectMobileSideBySide = ({ state }) =>
+  isMobileSceneEditorSideBySide({
+    isTouchMode: state.isTouchMode,
+    width: state.appWindowMetrics.width,
+    height: state.appWindowMetrics.height,
+  });
+
+const selectMobileWorkspaceLayout = ({ state }) => {
+  const sideBySide = selectMobileSideBySide({ state });
+  let mobileSystemActionsDialogBottom = sideBySide
+    ? selectMobileSceneEditorBottomInset({ state })
+    : "0px";
+  if (sideBySide && state.mobileKeyboardState.isVisible) {
+    mobileSystemActionsDialogBottom = `calc(${mobileSystemActionsDialogBottom} + ${MOBILE_KEYBOARD_TOOLBAR_HEIGHT_PX}px)`;
+  }
+  return {
+    mobileSideBySide: sideBySide,
+    mobileWorkspaceStyle: sideBySide
+      ? "display: grid; grid-template-columns: minmax(0, 3fr) minmax(0, 2fr); grid-template-rows: minmax(0, 1fr);"
+      : "display: flex; flex-direction: column;",
+    mobilePreviewPanelStyle: sideBySide
+      ? "grid-column: 2; grid-row: 1; min-height: 0; overflow: hidden; border-left: 1px solid var(--border);"
+      : "",
+    mobilePresentationStatePadding: sideBySide ? "md" : "0",
+    mobilePresentationStateStyle: sideBySide
+      ? "flex: 1; min-height: 0; overflow: hidden;"
+      : "",
+    mobilePresentationStateScrollStyle: sideBySide
+      ? "flex: 1; min-height: 0; overscroll-behavior: contain;"
+      : "",
+    mobileLinesPanelStyle: sideBySide
+      ? `grid-column: 1; grid-row: 1; padding-bottom: ${MOBILE_KEYBOARD_TOOLBAR_HEIGHT_PX}px; box-sizing: border-box;`
+      : "",
+    mobileToolbarWidth: sideBySide ? "60%" : "100%",
+    mobileSystemActionsDialogRight: sideBySide ? "40%" : "0px",
+    mobileSystemActionsDialogBottom,
+  };
 };
 
 export const setMobileKeyboardState = (
@@ -1769,6 +1815,13 @@ const formatMobileKeyboardCanvasMaxHeight = (visualHeight) => {
 };
 
 const selectMobilePreviewCanvasMaxWidth = ({ state }) => {
+  if (selectMobileSideBySide({ state })) {
+    const availableHeight =
+      state.appWindowMetrics.height - MOBILE_TAB_BAR_HEIGHT_PX;
+    const ratio = selectCanvasAspectRatioWidthMultiplier({ state });
+    // Keyboard occlusion changes the space below the preview, not its size.
+    return `min(100%, calc(max(1px, ${availableHeight}px - var(--rvn-mobile-overlay-top-inset, 0px) - env(safe-area-inset-bottom, 0px)) * ${ratio}))`;
+  }
   const defaultMaxWidth = selectPreviewCanvasMaxWidth({ state });
   if (!state.isTouchMode || !state.mobileKeyboardState?.isVisible) {
     return defaultMaxWidth;
@@ -1786,6 +1839,9 @@ const selectMobilePreviewCanvasMaxWidth = ({ state }) => {
 };
 
 const selectMobileSystemActionsDialogTop = ({ state }) => {
+  if (selectMobileSideBySide({ state })) {
+    return `calc(${state.mobileKeyboardState.visualOffsetTop}px + var(--rvn-mobile-overlay-top-inset, 0px))`;
+  }
   const projectResolution = selectProjectResolution({ state });
   const viewportWidthHeight = Number(
     ((projectResolution.height / projectResolution.width) * 100).toFixed(4),
@@ -1807,21 +1863,16 @@ const selectMobileSystemActionsDialogTop = ({ state }) => {
 };
 
 const selectMobileEditorBottomSpacerHeight = ({ state }) => {
-  if (!state.isTouchMode || !state.mobileKeyboardState?.isVisible) {
-    return "30vh";
+  if (selectMobileSideBySide({ state })) {
+    return `${MOBILE_KEYBOARD_TOOLBAR_HEIGHT_PX}px`;
   }
-
-  const keyboardInset = Math.max(
-    0,
-    Number(state.mobileKeyboardState.keyboardInset) || 0,
-  );
-  const visualHeight = Math.max(
-    0,
-    Number(state.mobileKeyboardState.visualHeight) || 0,
-  );
-  const scrollRoom = Math.max(260, Math.round(visualHeight * 0.9));
-
-  return `${keyboardInset + MOBILE_KEYBOARD_TOOLBAR_HEIGHT_PX + scrollRoom}px`;
+  // Only compensate for the area actually covered below the visual viewport.
+  // keyboardInset also includes keyboard height already removed by resizing or
+  // viewport panning; adding it again lets the entire last section scroll away.
+  const obscuredBottom = state.mobileKeyboardState.isVisible
+    ? state.mobileKeyboardState.bottom
+    : 0;
+  return `${obscuredBottom + MOBILE_KEYBOARD_TOOLBAR_HEIGHT_PX}px`;
 };
 
 const selectMobileSceneEditorTopInset = ({ state }) => {
@@ -1831,6 +1882,18 @@ const selectMobileSceneEditorTopInset = ({ state }) => {
 };
 
 const selectMobileSceneEditorBottomInset = ({ state }) => {
+  if (
+    selectMobileSideBySide({ state }) &&
+    state.mobileKeyboardState.isVisible
+  ) {
+    const { layoutHeight, visualHeight, visualOffsetTop } =
+      state.mobileKeyboardState;
+    const obscuredBottom = Math.max(
+      0,
+      layoutHeight - visualHeight - visualOffsetTop,
+    );
+    return `${obscuredBottom}px`;
+  }
   if (!state.isTouchMode || state.mobileKeyboardState?.isVisible) {
     return "0px";
   }
@@ -1951,6 +2014,7 @@ export const selectViewData = ({ state, i18n }) => {
         state,
       }),
       isTouchMode: state.isTouchMode,
+      ...selectMobileWorkspaceLayout({ state }),
       loadingAssetsLabel: copy.loadingAssetsLabel ?? "Loading assets...",
       loadingSceneLabel: copy.loadingSceneLabel ?? "Loading scene...",
       previewButton: copy.previewButton ?? "Preview",
@@ -2333,6 +2397,7 @@ export const selectViewData = ({ state, i18n }) => {
       state,
     }),
     isTouchMode: state.isTouchMode,
+    ...selectMobileWorkspaceLayout({ state }),
     loadingAssetsLabel: copy.loadingAssetsLabel ?? "Loading assets...",
     loadingSceneLabel: copy.loadingSceneLabel ?? "Loading scene...",
     previewButton: copy.previewButton ?? "Preview",

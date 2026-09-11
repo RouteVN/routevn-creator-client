@@ -35,6 +35,8 @@ propsSchema:
       type: string
     dialogPanelBottom:
       type: string
+    dialogPanelRight:
+      type: string
     hiddenModes:
       type: array
       items:

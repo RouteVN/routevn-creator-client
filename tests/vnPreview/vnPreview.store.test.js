@@ -2,6 +2,8 @@ import { describe, expect, it } from "vitest";
 import {
   createInitialState,
   selectViewData,
+  setAssetLoading,
+  setPreviewReady,
   setProjectResolution,
   setUiConfig,
   setViewportSize,
@@ -16,6 +18,21 @@ const I18N = {
 };
 
 describe("vnPreview.store", () => {
+  it("shows loading throughout startup and again during later asset loads", () => {
+    const state = createInitialState();
+    const view = () => selectViewData({ state, props: {}, i18n: I18N });
+    expect(view().isPreviewLoading).toBe(true);
+    setAssetLoading({ state }, { isLoading: true });
+    setAssetLoading({ state }, { isLoading: false });
+    expect(view().isPreviewLoading).toBe(true);
+    setPreviewReady({ state }, { isPreviewReady: true });
+    expect(view().isPreviewLoading).toBe(false);
+    setAssetLoading({ state }, { isLoading: true });
+    expect(view().isPreviewLoading).toBe(true);
+    setAssetLoading({ state }, { isLoading: false });
+    expect(view().isPreviewLoading).toBe(false);
+  });
+
   it("fits the scene to swapped viewport dimensions when rotated", () => {
     const state = createInitialState();
     setProjectResolution(

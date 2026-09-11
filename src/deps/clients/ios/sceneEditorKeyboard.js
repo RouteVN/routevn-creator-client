@@ -16,6 +16,7 @@ export const installIOSSceneEditorKeyboard = ({ onRevealError } = {}) => {
   let revealFrame;
   let revealSequence = 0;
   let revealErrorReported = false;
+  let nativeCaret;
   const viewport = window.visualViewport;
 
   const cancelReveal = () => {
@@ -23,7 +24,12 @@ export const installIOSSceneEditorKeyboard = ({ onRevealError } = {}) => {
     revealSequence += 1;
   };
 
-  const revealSelection = async (direction, sequence) => {
+  const revealSelection = async (
+    direction,
+    sequence,
+    previousCaret,
+    syncSelection,
+  ) => {
     const editor = getFocusedSceneEditor();
     if (
       !editor ||
@@ -51,15 +57,38 @@ export const installIOSSceneEditorKeyboard = ({ onRevealError } = {}) => {
       const top = rect.y * scale;
       const width = rect.width * scale;
       const height = rect.height * scale;
+      const caretRect = {
+        left,
+        top,
+        right: left + width,
+        bottom: top + height,
+        width,
+        height,
+      };
+      const context = syncSelection
+        ? editor.syncSelectionFromCaretRect({ rect: caretRect })
+        : undefined;
+      const focusSequence = editor.focusRestoreSequenceId;
+      nativeCaret = context ? { editor, context, focusSequence } : undefined;
+      // Only cross a section after a native arrow actually stalled at its
+      // edge. A missing or superseded measurement must not skip a real line.
+      if (
+        context &&
+        previousCaret?.editor === editor &&
+        previousCaret.focusSequence === focusSequence &&
+        previousCaret.context.lineId === context.lineId &&
+        Math.abs(previousCaret.context.y - context.y) < 1 &&
+        editor.hasAdjacentSectionLineForVerticalNavigation(direction) &&
+        editor.dispatchTextModeVerticalBoundaryNavigation({
+          lineId: context.lineId,
+          direction,
+        })
+      ) {
+        nativeCaret = undefined;
+        return;
+      }
       editor.revealSelectionRect({
-        rect: {
-          left,
-          top,
-          right: left + width,
-          bottom: top + height,
-          width,
-          height,
-        },
+        rect: caretRect,
         behavior: "auto",
         direction,
       });
@@ -71,13 +100,13 @@ export const installIOSSceneEditorKeyboard = ({ onRevealError } = {}) => {
     }
   };
 
-  const scheduleReveal = (direction) => {
+  const scheduleReveal = (direction, previousCaret, syncSelection = true) => {
     cancelReveal();
     const sequence = revealSequence;
     // Wait for Selection.modify/native arrow movement and toolbar layout.
     revealFrame = requestAnimationFrame(() => {
       revealFrame = requestAnimationFrame(() => {
-        void revealSelection(direction, sequence);
+        void revealSelection(direction, sequence, previousCaret, syncSelection);
       });
     });
   };
@@ -102,11 +131,14 @@ export const installIOSSceneEditorKeyboard = ({ onRevealError } = {}) => {
     // tap focus. iOS otherwise pans the whole WebView to reveal the caret.
     // Keep the default event so WebKit still places the caret at the tap.
     cancelReveal();
+    nativeCaret = undefined;
     editable.focus({ preventScroll: true });
+    scheduleReveal();
   };
 
   const handleViewportResize = () => {
     if (window.innerHeight - viewport.height < 100) {
+      nativeCaret = undefined;
       cancelReveal();
       return;
     }
@@ -117,24 +149,46 @@ export const installIOSSceneEditorKeyboard = ({ onRevealError } = {}) => {
   };
 
   const handleKeyDown = (event) => {
+    const previousCaret = nativeCaret;
+    nativeCaret = undefined;
     if (event.isComposing || event.ctrlKey || event.metaKey || event.altKey) {
+      cancelReveal();
       return;
     }
     if (
       (event.key === "ArrowUp" || event.key === "ArrowDown") &&
       getFocusedSceneEditor()
     ) {
-      scheduleReveal(event.key === "ArrowUp" ? "up" : "down");
+      scheduleReveal(
+        event.key === "ArrowUp" ? "up" : "down",
+        event.shiftKey ? undefined : previousCaret,
+        !event.shiftKey,
+      );
+    } else {
+      cancelReveal();
     }
+  };
+
+  const handleFocusIn = () => {
+    nativeCaret = undefined;
+    if (getFocusedSceneEditor()) scheduleReveal();
+  };
+  const handleFocusOut = () => {
+    nativeCaret = undefined;
+    cancelReveal();
   };
 
   document.addEventListener("mousedown", handleMouseDown);
   document.addEventListener("keydown", handleKeyDown, true);
+  document.addEventListener("focusin", handleFocusIn);
+  document.addEventListener("focusout", handleFocusOut);
   viewport?.addEventListener("resize", handleViewportResize);
 
   return () => {
     document.removeEventListener("mousedown", handleMouseDown);
     document.removeEventListener("keydown", handleKeyDown, true);
+    document.removeEventListener("focusin", handleFocusIn);
+    document.removeEventListener("focusout", handleFocusOut);
     viewport?.removeEventListener("resize", handleViewportResize);
     cancelReveal();
   };

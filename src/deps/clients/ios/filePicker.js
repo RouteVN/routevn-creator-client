@@ -287,6 +287,7 @@ const requestNativeIOSSaveFilePicker = (options = {}) => {
 
     callIOSBridge("openSaveFilePicker", {
       requestId,
+      title: options.title ?? "Select Folder",
       filename: resolveSaveFilename(options),
       mimeType: resolveSaveMimeType(options),
     }).catch((error) => {

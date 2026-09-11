@@ -1,7 +1,7 @@
 import { describe, expect, it, vi } from "vitest";
 import { EN_I18N } from "../support/i18n.js";
-import { handleItemContextMenu as handleMediaLongPress } from "../../src/components/mediaResourcesView/mediaResourcesView.handlers.js";
-import { handleItemContextMenu as handleCatalogLongPress } from "../../src/components/catalogResourcesView/catalogResourcesView.handlers.js";
+import { handleItemLongPress as handleMediaLongPress } from "../../src/components/mediaResourcesView/mediaResourcesView.handlers.js";
+import { handleItemLongPress as handleCatalogLongPress } from "../../src/components/catalogResourcesView/catalogResourcesView.handlers.js";
 import { handleVideoItemDoubleClick } from "../../src/pages/videos/videos.handlers.js";
 import { handleFontItemDoubleClick } from "../../src/pages/fonts/fonts.handlers.js";
 import { handleTransformItemDoubleClick } from "../../src/pages/transforms/transforms.handlers.js";

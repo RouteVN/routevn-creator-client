@@ -119,6 +119,7 @@ const graphicsService = await createGraphicsService({ subject });
 const dialogueQueueService = createPendingQueueService({ debounceMs: 2000 });
 
 const componentDependencies = {
+  browserEventsClient,
   uiConfig,
   subject,
   graphicsService,

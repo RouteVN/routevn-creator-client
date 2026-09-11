@@ -1,4 +1,8 @@
 refs:
+  changeProjectFolderButton:
+    eventListeners:
+      click:
+        handler: handleChangeProjectFolder
   languageSelect:
     eventListeners:
       value-change:
@@ -35,6 +39,14 @@ template:
                       - rtgl-text s=h4: ${languageTitle}
                       - 'rtgl-view w=560 sm-w=f style="max-width: 100%;"':
                           - rtgl-select#languageSelect w=f no-clear :selectedValue=${currentLocale} :options=${languageOptions}: null
+                  - $if showProjectFolder:
+                      - rtgl-view#projectFolderSection w=f mt=xl g=lg:
+                          - rtgl-text s=h4: ${projectFolderTitle}
+                          - 'rtgl-view w=560 sm-w=f g=md style="max-width: 100%;"':
+                              - rtgl-view w=f d=h av=c g=sm:
+                                  - 'rtgl-svg svg=folder wh=16 c=mu-fg aria-hidden=true style="flex-shrink: 0;"': null
+                                  - 'rtgl-text#configuredProjectFolderPath w=1fg s=sm c=mu-fg style="min-width: 0; overflow-wrap: anywhere;"': ${projectFolderPath}
+                              - rtgl-button#changeProjectFolderButton v=ol: ${changeProjectFolderLabel}
                   - rtgl-view#assetPackageSection w=f mt=xl g=lg:
                       - rtgl-text s=h4: ${assetPackageTitle}
                       - 'rtgl-view w=560 sm-w=f g=md style="max-width: 100%;"':

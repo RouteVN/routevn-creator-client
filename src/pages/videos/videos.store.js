@@ -187,10 +187,11 @@ const {
     tagFilterPlaceholder: "",
   },
   hiddenMobileDetailSlots: ["video-thumbnail-file-id"],
-  extendViewData: ({ state, baseViewData }) => {
+  extendViewData: ({ state, baseViewData, copy }) => {
     return {
       ...baseViewData,
       videoVisible: state.videoVisible,
+      closePreviewButton: copy.closePreviewButton,
       isVideoPreviewReady: state.isVideoPreviewReady,
       selectedVideo: state.selectedVideo,
       selectedVideoAutoplay: state.selectedVideo?.autoplay === true,

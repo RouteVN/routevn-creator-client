@@ -324,6 +324,7 @@ export const selectViewData = ({ state, props, i18n }) => {
           transitionOutgoingLabel: item.transitionOutgoingLabel ?? "Outgoing",
           transitionIncomingLabel: item.transitionIncomingLabel ?? "Incoming",
           domItemId: isPlaceholder ? "" : item.id,
+          longPressEnabled: mobileLayout && !isPlaceholder,
           cursor: isPlaceholder ? "default" : "pointer",
           itemWidth: useFullWidthCard
             ? "f"

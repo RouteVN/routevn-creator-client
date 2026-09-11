@@ -1,4 +1,5 @@
 import { renderWaveformCanvas } from "../../../internal/waveformCanvas.js";
+import { decodeAudioBuffer } from "../audioDecoder.js";
 
 // Shared file processing utilities that are storage-agnostic
 
@@ -298,9 +299,7 @@ export const extractWaveformDataFromArrayBuffer = async (
 
   try {
     audioContext = new (window.AudioContext || window.webkitAudioContext)();
-    const audioBuffer = await audioContext.decodeAudioData(
-      arrayBuffer.slice(0),
-    );
+    const audioBuffer = await decodeAudioBuffer({ audioContext, arrayBuffer });
 
     const channelData = audioBuffer.getChannelData(0);
     const sampleCount = Math.max(
@@ -674,6 +673,7 @@ const extractScoredVideoThumbnail = async (videoFile, options = {}) => {
     format = "image/jpeg",
     quality = 0.8,
     sampleCount = 7,
+    prepareVideo,
   } = options;
 
   return new Promise((resolve, reject) => {
@@ -771,6 +771,8 @@ const extractScoredVideoThumbnail = async (videoFile, options = {}) => {
     video.onloadedmetadata = async () => {
       try {
         refreshActivityTimeout();
+        if (prepareVideo) await prepareVideo(video);
+        if (settled) return;
         const outputDimensions = getScaledThumbnailDimensions({
           sourceWidth: video.videoWidth,
           sourceHeight: video.videoHeight,
@@ -899,6 +901,7 @@ const extractInitialVideoThumbnail = async (videoFile, options = {}) => {
     maxHeight = 320,
     format = "image/jpeg",
     quality = 0.8,
+    prepareVideo,
   } = options;
 
   return new Promise((resolve, reject) => {
@@ -990,6 +993,8 @@ const extractInitialVideoThumbnail = async (videoFile, options = {}) => {
     video.onloadedmetadata = async () => {
       try {
         refreshActivityTimeout();
+        if (prepareVideo) await prepareVideo(video);
+        if (settled) return;
         const outputDimensions = getScaledThumbnailDimensions({
           sourceWidth: video.videoWidth,
           sourceHeight: video.videoHeight,

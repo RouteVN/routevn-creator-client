@@ -5,6 +5,7 @@ import {
   openAddPlatformMenu,
   openPlatformCreateDialog,
   openPlatformEditDialog,
+  selectCanAddPlatform,
   selectViewData,
   setPlatform,
   setPlatformApplicationInfo,
@@ -39,32 +40,58 @@ describe("platformDetails.store", () => {
     });
   });
 
-  it("offers only Web platform details in the Android app", () => {
-    const state = createInitialState();
-    setPlatform({ state }, { platform: "android" });
+  it.each(["android", "ios"])(
+    "offers only Web platform details in the %s app",
+    (platform) => {
+      const state = createInitialState();
+      setPlatform({ state }, { platform });
 
-    openAddPlatformMenu({ state, i18n: EN_I18N }, { x: 100, y: 200 });
+      openAddPlatformMenu({ state, i18n: EN_I18N }, { x: 100, y: 200 });
 
-    expect(selectViewData({ state, i18n: EN_I18N })).toMatchObject({
-      canAddPlatform: true,
-      addPlatformMenu: {
-        items: [{ label: "Web", type: "item", value: "web" }],
-      },
-    });
-
-    setPlatformApplicationInfo(
-      { state },
-      {
-        platform: "web",
-        applicationInfo: {
-          applicationName: "Project One",
-          applicationIdentifier: "com.example.project-one",
+      expect(selectViewData({ state, i18n: EN_I18N })).toMatchObject({
+        canAddPlatform: true,
+        addPlatformMenu: {
+          items: [{ label: "Web", type: "item", value: "web" }],
         },
-      },
-    );
+      });
 
-    expect(selectViewData({ state, i18n: EN_I18N }).canAddPlatform).toBe(false);
-  });
+      setPlatformApplicationInfo(
+        { state },
+        {
+          platform: "web",
+          applicationInfo: {
+            applicationName: "Project One",
+            applicationIdentifier: "com.example.project-one",
+          },
+        },
+      );
+
+      expect(selectViewData({ state, i18n: EN_I18N }).canAddPlatform).toBe(
+        false,
+      );
+    },
+  );
+
+  it.each(["windows", "macos"])(
+    "does not open a %s create dialog on iOS",
+    (platform) => {
+      const state = createInitialState();
+      setPlatform({ state }, { platform: "ios" });
+      openPlatformCreateDialog(
+        { state },
+        {
+          platform,
+          applicationInfo: {
+            applicationName: "Project One",
+            applicationIdentifier: "com.example.project-one",
+          },
+        },
+      );
+      expect(selectCanAddPlatform({ state }, { platform })).toBe(false);
+      expect(state.isPlatformEditDialogOpen).toBe(false);
+      expect(state.platformDialogPlatform).toBeUndefined();
+    },
+  );
 
   it("opens a prefilled create form without creating a platform tab", () => {
     const state = createInitialState();

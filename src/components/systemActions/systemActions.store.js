@@ -329,6 +329,7 @@ export const selectViewData = ({ state, props, props: attrs, i18n }) => {
         : (attrs.dialogPanelWidth ?? "50vw"),
     actionsDialogPanelTop: attrs.dialogPanelTop ?? "0px",
     actionsDialogPanelBottom: attrs.dialogPanelBottom ?? "0px",
+    actionsDialogPanelRight: attrs.dialogPanelRight ?? "0px",
     hiddenModes,
     allowedModes,
     suppressDialogClose:

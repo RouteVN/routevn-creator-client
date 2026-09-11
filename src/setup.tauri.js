@@ -104,6 +104,7 @@ const dialogueQueueService = createPendingQueueService({ debounceMs: 2000 });
 setupCloseListener({ globalUI });
 
 const componentDependencies = {
+  browserEventsClient,
   distribution,
   updatesEnabled,
   subject,

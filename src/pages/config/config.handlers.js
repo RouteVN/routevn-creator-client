@@ -16,6 +16,13 @@ export const handleBeforeMount = (deps) => {
   const { appService, locale, store, uiConfig } = deps;
 
   store.setUiConfig({ uiConfig });
+  const isIOS = appService.getPlatform() === "ios";
+  store.setProjectFolder({
+    visible: isIOS,
+    path: isIOS
+      ? appService.getProjectFolderSetup().folder?.displayPath
+      : undefined,
+  });
   store.setAssetPackageEnabled({ enabled: isAssetPackageEnabled(appService) });
   store.setHelpButtonVisible({ visible: isHelpButtonVisible(appService) });
   store.setCurrentTheme({ theme: appService.getTheme() });
@@ -40,6 +47,11 @@ export const handleAfterMount = async (deps) => {
   } catch {
     appService.showToast({ message: copy.failedChangeLanguage });
   }
+};
+
+export const handleChangeProjectFolder = ({ appService }) => {
+  if (appService.getPlatform() !== "ios") return;
+  appService.navigate("/project-folder-setup", { from: "config" });
 };
 
 export const handleLanguageChange = async (deps, payload) => {

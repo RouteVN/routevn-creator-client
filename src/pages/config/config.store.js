@@ -69,7 +69,14 @@ export const createInitialState = () => ({
   assetPackageEnabled: false,
   showHelpButton: true,
   isTouchMode: false,
+  showProjectFolder: false,
+  projectFolderPath: undefined,
 });
+
+export const setProjectFolder = ({ state }, { visible, path }) => {
+  state.showProjectFolder = visible;
+  state.projectFolderPath = path;
+};
 
 export const setCurrentTheme = ({ state }, { theme } = {}) => {
   state.currentTheme = normalizeTheme(theme);
@@ -109,6 +116,9 @@ export const selectViewData = ({ state, i18n }) => {
     title: copy.title,
     appearanceTitle: copy.appearanceTitle,
     languageTitle: copy.languageTitle,
+    projectFolderTitle: copy.projectFolderTitle,
+    changeProjectFolderLabel: copy.changeProjectFolderLabel,
+    projectFolderPath: state.projectFolderPath ?? copy.projectFolderNotSet,
     assetPackageTitle: copy.assetPackageTitle,
     assetPackageDescription: copy.assetPackageDescription,
     helpButtonTitle: copy.helpButtonTitle,

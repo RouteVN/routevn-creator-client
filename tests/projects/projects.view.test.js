@@ -45,7 +45,7 @@ describe("projects view", () => {
     );
 
     const scrollContainerIndex = projectsView.indexOf(
-      'rtgl-view w=f h=1fg ah=c sv style="min-height: 0;"',
+      "rtgl-view#projectsScroll data-platform=${platform}",
     );
     const footerContainerIndex = projectsView.indexOf(
       'rtgl-view w=f ah=c bgc=bg style="flex-shrink: 0;"',

@@ -3,6 +3,7 @@ import {
   handleBeforeMount,
   handleContextMenuClickItem,
   handleItemContextMenu,
+  handleItemLongPress,
   handleItemDoubleClick,
   handleZoomOut,
 } from "../../src/components/textStyleResourcesView/textStyleResourcesView.handlers.js";
@@ -83,13 +84,13 @@ describe("textStyleResourcesView", () => {
     );
   });
 
-  it("runs the double-click action instead of opening the context menu for mobile contextmenu gestures", () => {
+  it("runs the primary action on an explicit long press", () => {
     const dispatchEvent = vi.fn();
     const showContextMenu = vi.fn();
     const render = vi.fn();
     const preventDefault = vi.fn();
 
-    handleItemContextMenu(
+    handleItemLongPress(
       {
         props: {
           mobileLayout: true,
@@ -114,14 +115,13 @@ describe("textStyleResourcesView", () => {
       },
     );
 
-    expect(preventDefault).toHaveBeenCalledTimes(1);
     expect(dispatchEvent).toHaveBeenCalledOnce();
     expect(dispatchEvent).toHaveBeenCalledWith(
       expect.objectContaining({
         type: "item-dblclick",
         detail: {
           itemId: "text-style-1",
-          source: "mobile-context-menu",
+          source: "long-press",
         },
       }),
     );

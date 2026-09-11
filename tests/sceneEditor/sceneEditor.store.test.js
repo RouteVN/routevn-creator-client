@@ -25,6 +25,33 @@ import {
 import { EN_I18N } from "../support/i18n.js";
 
 describe("sceneEditorLexical.store", () => {
+  it.each([
+    ["hidden", { isVisible: false }, "48px"],
+    ["overlay", { isVisible: true, keyboardInset: 380, bottom: 380 }, "428px"],
+    [
+      "panned",
+      {
+        isVisible: true,
+        keyboardInset: 380,
+        bottom: 200,
+        visualOffsetTop: 180,
+      },
+      "248px",
+    ],
+    ["resized", { isVisible: true, keyboardInset: 380, bottom: 0 }, "48px"],
+  ])(
+    "keeps only obscured keyboard and toolbar clearance when %s",
+    (_name, metrics, expected) => {
+      const state = createInitialState();
+      setUiConfig({ state }, { uiConfig: { id: "touch" } });
+      setMobileKeyboardState({ state }, { visualHeight: 464, ...metrics });
+
+      expect(
+        selectViewData({ state, i18n: EN_I18N }).mobileEditorBottomSpacerHeight,
+      ).toBe(expected);
+    },
+  );
+
   it("pins the mobile scene canvas and its actions panel to the panned visual viewport", () => {
     const state = createInitialState();
     setUiConfig({ state }, { uiConfig: { id: "touch" } });

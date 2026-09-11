@@ -25,6 +25,7 @@ describe("systemActionsDialogSurface.store", () => {
       panelWidth: "50vw",
       panelTop: "0px",
       panelBottom: "0px",
+      panelRight: "0px",
       suppressClose: false,
       overlayHorizontalInset: "64px",
       overlayBackground: "rgba(0, 0, 0, 0.42)",

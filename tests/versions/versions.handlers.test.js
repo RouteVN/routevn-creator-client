@@ -43,6 +43,7 @@ const createDeps = ({ repository, version, editingVersionId } = {}) => {
         name: "Project One",
       })),
       getAppVersion: vi.fn(() => "1.0.0"),
+      getFileDisplayPath: vi.fn((path) => path),
       showAlert: vi.fn(),
       showProgressDialog: vi.fn(() => progressDialog),
       closeAll: vi.fn(),
@@ -723,33 +724,57 @@ describe("versions.handleDownloadZipClick", () => {
     ]);
   });
 
-  it("uses Web application metadata in the exported bundle", async () => {
-    const repositoryState = structuredClone(initialProjectData);
-    const repository = {
-      loadState: vi.fn(async () => structuredClone(repositoryState)),
-      getState: vi.fn(() => structuredClone(repositoryState)),
-    };
-    const deps = createDeps({ repository });
-    deps.projectService.getCurrentPlatformDetails.mockResolvedValue({
-      applicationName: "Web Edition",
-      applicationIdentifier: "com.example.web-edition",
-      iconFileId: "web-icon",
-    });
+  it.each(["tauri", "ios"])(
+    "uses the same Web application metadata and filename on %s",
+    async (platform) => {
+      const repositoryState = structuredClone(initialProjectData);
+      const repository = {
+        loadState: vi.fn(async () => structuredClone(repositoryState)),
+        getState: vi.fn(() => structuredClone(repositoryState)),
+      };
+      const deps = createDeps({ repository });
+      deps.appService.getPlatform.mockReturnValue(platform);
+      const savedPath =
+        platform === "ios"
+          ? "file:///private/export/Web%20Edition_Version%201.zip"
+          : "/exports/Web Edition_Version 1.zip";
+      const displayPath =
+        platform === "ios" ? "Exports / Web Edition_Version 1.zip" : savedPath;
+      deps.projectService.createDistributionZipStreamed.mockResolvedValue(
+        savedPath,
+      );
+      deps.appService.getFileDisplayPath.mockReturnValue(displayPath);
+      deps.projectService.getCurrentPlatformDetails.mockResolvedValue({
+        applicationName: "Web Edition",
+        applicationIdentifier: "com.example.web-edition",
+        iconFileId: "web-icon",
+      });
 
-    await chooseAndConfirmExport(handleDownloadZipClick, deps);
+      await chooseAndConfirmExport(handleDownloadZipClick, deps);
 
-    expect(
-      deps.projectService.createDistributionZipStreamed.mock.calls[0][0]
-        .bundleMetadata.project,
-    ).toMatchObject({
-      namespace: "com.example.web-edition",
-      title: "Web Edition",
-      iconFileId: "icon-1",
-    });
-    expect(
-      deps.projectService.createDistributionZipStreamed.mock.calls[0][1],
-    ).toContainEqual({ fileId: "icon-1", mimeType: "image/png" });
-  });
+      expect(
+        deps.projectService.promptDistributionZipPath,
+      ).toHaveBeenCalledWith("Web Edition_Version 1");
+      expect(deps.appService.getFileDisplayPath).toHaveBeenCalledWith(
+        savedPath,
+      );
+      expect(deps.appService.showAlert).toHaveBeenCalledWith({
+        title: EN_I18N.versionsPage.exportCompletedTitle,
+        message: `ZIP export completed.\nSaved to: ${displayPath}`,
+      });
+      expect(
+        deps.projectService.createDistributionZipStreamed.mock.calls[0][0]
+          .bundleMetadata.project,
+      ).toMatchObject({
+        namespace: "com.example.web-edition",
+        title: "Web Edition",
+        iconFileId: "icon-1",
+      });
+      expect(
+        deps.projectService.createDistributionZipStreamed.mock.calls[0][1],
+      ).toContainEqual({ fileId: "icon-1", mimeType: "image/png" });
+    },
+  );
 
   it("drops invalid font mime metadata before export", async () => {
     const repositoryState = structuredClone(initialProjectData);

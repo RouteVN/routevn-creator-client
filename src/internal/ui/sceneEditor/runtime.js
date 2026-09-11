@@ -5,6 +5,7 @@ import {
   filter,
   fromEvent,
   map,
+  merge,
   of,
   switchMap,
   tap,
@@ -2388,9 +2389,21 @@ export const mountSceneEditorSubscriptions = (deps) => {
           return EMPTY;
         }
 
-        return fromEvent(canvasRoot, "click", {
-          capture: true,
-        }).pipe(
+        // The renderer activates on pointer release. iOS may delay or omit
+        // the following compatibility click, so arm selection sync first.
+        // Ignore that click to avoid arming another advance after the tap.
+        return merge(
+          fromEvent(canvasRoot, "pointerup", { capture: true }).pipe(
+            filter((event) => event.isPrimary !== false && event.button === 0),
+          ),
+          fromEvent(canvasRoot, "click", { capture: true }).pipe(
+            filter(
+              (event) =>
+                event.detail === 0 ||
+                typeof globalThis.PointerEvent !== "function",
+            ),
+          ),
+        ).pipe(
           tap(() => {
             canvasRuntimeLineSyncGate.mark({ direction: "next" });
           }),

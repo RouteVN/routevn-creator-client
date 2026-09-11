@@ -82,7 +82,11 @@ refs:
     eventListeners:
       close:
         handler: handleOutsideVideoClick
-  videoPreviewOverlay:
+  videoPreviewClose:
+    eventListeners:
+      click:
+        handler: handleOutsideVideoClick
+  videoPreviewStage:
     eventListeners:
       click:
         handler: handleOutsideVideoClick
@@ -157,7 +161,7 @@ template:
               - 'div#fileExplorerKeyboardScope tabindex=-1 style="width: 100%; height: 100%; min-width: 0; min-height: 0; outline: none;"':
                   - $if showMobileTopTabs:
                       - 'rtgl-view d=v w=f h=f style="min-width: 0; min-height: 0;"':
-                          - 'rvn-media-resources-view#groupview w=f h=f :navTitle=${title} show-menu-button menu-button-placement=trailing show-zoom-controls zoom-in-popover zoom-control-mode=columns default-items-per-row=2 items-per-row-config-key="groupVideosView.itemsPerRow" show-search=false search-in-filter-popover show-tag-filter progressive-render progressive-hydration-delay-frame-count=4 :mobileLayout=${mobileLayout} :groups=${mediaGroups} :selectedItemId=${selectedItemId} :selectedFolderId=${selectedFolderId} :searchQuery=${searchQuery} :tagFilterOptions=${tagFilterOptions} :selectedTagFilterValues=${selectedTagFilterValues} :tagFilterPlaceholder=${tagFilterPlaceholder} :uploadText=${uploadText} :acceptedFileTypes=${acceptedFileTypes} :itemContextMenuItems=${centerItemContextMenuItems}': null
+                          - 'rvn-media-resources-view#groupview w=f h=f :navTitle=${title} show-menu-button menu-button-placement=trailing show-zoom-controls zoom-in-popover zoom-control-mode=columns items-per-row-config-key="groupVideosView.itemsPerRow" show-search=false search-in-filter-popover show-tag-filter progressive-render progressive-hydration-delay-frame-count=4 :mobileLayout=${mobileLayout} :groups=${mediaGroups} :selectedItemId=${selectedItemId} :selectedFolderId=${selectedFolderId} :searchQuery=${searchQuery} :tagFilterOptions=${tagFilterOptions} :selectedTagFilterValues=${selectedTagFilterValues} :tagFilterPlaceholder=${tagFilterPlaceholder} :uploadText=${uploadText} :acceptedFileTypes=${acceptedFileTypes} :itemContextMenuItems=${centerItemContextMenuItems}': null
                     $else:
                       - 'rvn-media-resources-view#groupview w=f h=f :navTitle=${title} show-zoom-controls zoom-control-mode=columns default-items-per-row=6 items-per-row-config-key="groupVideosView.itemsPerRow" search-in-filter-popover show-tag-filter progressive-render progressive-hydration-delay-frame-count=4 :groups=${mediaGroups} :selectedItemId=${selectedItemId} :selectedFolderId=${selectedFolderId} :searchQuery=${searchQuery} :tagFilterOptions=${tagFilterOptions} :selectedTagFilterValues=${selectedTagFilterValues} :tagFilterPlaceholder=${tagFilterPlaceholder} :uploadText=${uploadText} :acceptedFileTypes=${acceptedFileTypes} :itemContextMenuItems=${centerItemContextMenuItems}': null
           - $if showDetailPanel:
@@ -209,11 +213,14 @@ template:
       - rtgl-form#folderNameForm key=${folderNameDialogItemId} slot=content :defaultValues=${folderNameDialogDefaultValues} :form=${folderNameForm} w=f: null
   - rtgl-dialog#createTagDialog ?open=${isCreateTagDialogOpen} s=sm:
       - rtgl-form#createTagForm key=${isCreateTagDialogOpen} slot=content :defaultValues=${createTagDefaultValues} :form=${createTagForm} w=f: null
-  - rtgl-dialog#videoPreviewDialog ?open=${videoVisible} layout=fixed bare p=none close-button:
-      - 'div#videoPreviewOverlay slot=content tabindex=-1 autofocus style="display: flex; width: 100%; height: 100%; align-items: center; justify-content: center; background-color: rgba(0, 0, 0, 0.9); outline: none;"':
-          - $if selectedVideo:
-              - $if selectedVideo.url:
-                  - 'video#videoPreviewElement controls=true autoplay=${selectedVideoAutoplay} muted=${selectedVideoMuted} preload="auto" data-preview-ready=${isVideoPreviewReady} style="max-width: 100%; max-height: 100%; width: auto; height: auto; object-fit: contain; display: block; background-color: #000;"':
-                      - source src=${selectedVideo.url} type=${selectedVideo.fileType}: null
-                $else:
-                  - rtgl-text s=lg c=mu-fg: ${loadingLabel}
+  - rtgl-dialog#videoPreviewDialog ?open=${videoVisible} layout=fixed bare p=none:
+      - 'div#videoPreviewOverlay slot=content tabindex=-1 autofocus style="display: flex; flex-direction: column; width: 100%; height: 100%; min-height: 0; box-sizing: border-box; padding-top: var(--rvn-mobile-overlay-top-inset, env(safe-area-inset-top, 0px)); padding-bottom: env(safe-area-inset-bottom, 0px); background-color: var(--background); outline: none;"':
+          - 'rtgl-view d=h w=f h=56 av=c ah=e bgc=bg style="flex-shrink: 0; box-sizing: border-box; padding-left: max(12px, env(safe-area-inset-left, 0px)); padding-right: max(12px, env(safe-area-inset-right, 0px));"':
+              - 'rtgl-button#videoPreviewClose sq pre=x v=ol aria-label="${closePreviewButton}" style="min-height: 44px; min-width: 44px; align-items: center; justify-content: center;"': null
+          - 'div#videoPreviewStage style="display: flex; flex: 1; min-width: 0; min-height: 0; align-items: center; justify-content: center; padding-left: env(safe-area-inset-left, 0px); padding-right: env(safe-area-inset-right, 0px); background-color: #000;"':
+              - $if selectedVideo:
+                  - $if selectedVideo.url:
+                      - 'video#videoPreviewElement playsinline=true controls=true autoplay=${selectedVideoAutoplay} muted=${selectedVideoMuted} preload="auto" data-preview-ready=${isVideoPreviewReady} style="width: 100%; height: 100%; min-width: 0; min-height: 0; object-fit: contain; object-position: center; display: block; background-color: #000;"':
+                          - source src=${selectedVideo.url} type=${selectedVideo.fileType}: null
+                    $else:
+                      - rtgl-text s=lg c=mu-fg: ${loadingLabel}

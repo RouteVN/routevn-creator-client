@@ -835,17 +835,15 @@ export const handleProjectsClick = async (deps, payload) => {
   });
 };
 
-export const handleProjectContextMenu = (deps, payload) => {
+const openLocalProjectMenu = (deps, event, { clientX, clientY }) => {
   const { appService, store, render, i18n } = deps;
   const copy = selectProjectsPageCopy(i18n);
   const projectActionLabel =
     appService.getPlatform() === "android"
       ? copy.deleteButton
       : copy.removeButton;
-  payload._event.preventDefault();
-
-  const projectId = getProjectIdFromEvent(payload._event);
-  const projectPath = getProjectPathFromEvent(payload._event);
+  const projectId = getProjectIdFromEvent(event);
+  const projectPath = getProjectPathFromEvent(event);
   if (!projectId) {
     if (!projectPath) {
       appService.showAlert({
@@ -855,8 +853,8 @@ export const handleProjectContextMenu = (deps, payload) => {
     }
 
     const menuPayload = {
-      x: payload._event.clientX,
-      y: payload._event.clientY,
+      x: clientX,
+      y: clientY,
       scope: "local",
       projectPath,
       items: [{ label: projectActionLabel, type: "item", value: "delete" }],
@@ -868,8 +866,8 @@ export const handleProjectContextMenu = (deps, payload) => {
   }
 
   const menuPayload = {
-    x: payload._event.clientX,
-    y: payload._event.clientY,
+    x: clientX,
+    y: clientY,
     scope: "local",
     projectId: projectId,
     projectPath,
@@ -880,12 +878,21 @@ export const handleProjectContextMenu = (deps, payload) => {
   render();
 };
 
-export const handleCloudProjectContextMenu = (deps, payload) => {
+export const handleProjectContextMenu = (deps, payload) => {
+  const { _event: event } = payload;
+  event.preventDefault();
+  openLocalProjectMenu(deps, event, event);
+};
+
+export const handleProjectLongPress = (deps, payload) => {
+  const { _event: event } = payload;
+  openLocalProjectMenu(deps, event, event.detail);
+};
+
+const openCloudProjectMenu = (deps, event, { clientX, clientY }) => {
   const { appService, store, render, i18n } = deps;
   const copy = selectProjectsPageCopy(i18n);
-  payload._event.preventDefault();
-
-  const projectId = getProjectIdFromEvent(payload._event);
+  const projectId = getProjectIdFromEvent(event);
   if (!projectId) {
     appService.showAlert({
       message: copy.invalidProjectEntryRefresh,
@@ -900,8 +907,8 @@ export const handleCloudProjectContextMenu = (deps, payload) => {
   }
 
   store.openDropdownMenu({
-    x: payload._event.clientX,
-    y: payload._event.clientY,
+    x: clientX,
+    y: clientY,
     scope: "cloud",
     projectId,
     items: [
@@ -909,6 +916,17 @@ export const handleCloudProjectContextMenu = (deps, payload) => {
     ],
   });
   render();
+};
+
+export const handleCloudProjectContextMenu = (deps, payload) => {
+  const { _event: event } = payload;
+  event.preventDefault();
+  openCloudProjectMenu(deps, event, event);
+};
+
+export const handleCloudProjectLongPress = (deps, payload) => {
+  const { _event: event } = payload;
+  openCloudProjectMenu(deps, event, event.detail);
 };
 
 export const handleDropdownMenuClose = (deps) => {

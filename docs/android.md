@@ -386,6 +386,16 @@ The web app handles back in this order:
 
 ## Debugging
 
+The native touch Scene Editor uses lines on the left (60%) and preview on the
+right (40%) when the app window is at least 768 dp wide and wider than tall.
+Narrow and portrait windows retain the stacked layout. `getWindowMetrics` and
+`routevn:window-metrics` report app-window dimensions independently of keyboard
+resizing: WindowMetrics minus system-bar/display-cutout insets on Android 11+,
+and configuration dp dimensions on older versions. Visual viewport/keyboard
+metrics separately fit the workspace above the keyboard toolbar. Rebuild the
+shell for the new bridge method; see `docs/engineering.md` for shared behavior
+and browser regressions.
+
 Clear and inspect Android logs:
 
 ```bash

@@ -1,3 +1,8 @@
+import {
+  resolveResourceGridDefaultItemsPerRow,
+  subscribeResourceGridDefaults,
+} from "../../internal/ui/resourcePages/resourceGridDefaults.js";
+export { handleResourceItemLongPress as handleItemLongPress } from "../../internal/ui/resourcePages/resourcePrimaryAction.js";
 export { handleResourceImportMenuAction } from "../../internal/ui/resourcePages/resourceOverflowMenu.js";
 import {
   getAcceptAttribute,
@@ -101,20 +106,22 @@ const getItemsPerRowConfigKey = (props) => {
     : configKey;
 };
 
-const getItemsPerRowSyncSignature = (props) => {
+const getItemsPerRowSyncSignature = (deps) => {
+  const { props } = deps;
   if (!isColumnZoomControlMode(props)) {
     return "none";
   }
 
   return [
     getItemsPerRowConfigKey(props) ?? "",
-    clampItemsPerRow(props?.defaultItemsPerRow, props),
+    clampItemsPerRow(resolveResourceGridDefaultItemsPerRow(deps), props),
     getMaxItemsPerRow(props),
   ].join("|");
 };
 
-const syncPersistedItemsPerRow = ({ appService, props, store } = {}) => {
-  const signature = getItemsPerRowSyncSignature(props);
+const syncPersistedItemsPerRow = (deps) => {
+  const { appService, props, store } = deps;
+  const signature = getItemsPerRowSyncSignature(deps);
   if (store.selectItemsPerRowSyncSignature?.() === signature) {
     return false;
   }
@@ -132,7 +139,7 @@ const syncPersistedItemsPerRow = ({ appService, props, store } = {}) => {
 
   store.setItemsPerRow({
     itemsPerRow: clampItemsPerRow(
-      itemsPerRow ?? props?.defaultItemsPerRow,
+      itemsPerRow ?? resolveResourceGridDefaultItemsPerRow(deps),
       props,
     ),
   });
@@ -672,10 +679,15 @@ const scrollRenderedItemIntoView = ({
 
 export const handleBeforeMount = (deps) => {
   syncPersistedItemsPerRow(deps);
+  const unsubscribeGridDefaults = subscribeResourceGridDefaults(
+    deps,
+    syncPersistedItemsPerRow,
+  );
   syncProgressiveRenderState(deps);
   syncSoundWaveformHydrationState(deps);
 
   return () => {
+    unsubscribeGridDefaults?.();
     cancelProgressiveRenderFrame(deps.store);
     cancelSoundWaveformRenderFrame(deps.store);
     cancelScheduledSyncRender(deps.store);
@@ -1087,25 +1099,11 @@ export const handleZoomOut = (deps) => {
 };
 
 export const handleItemContextMenu = (deps, payload) => {
-  const { dispatchEvent, props, store, render } = deps;
+  const { dispatchEvent, store, render } = deps;
   payload._event.preventDefault();
 
   const itemId = getDataAttribute(payload._event, "data-item-id");
   if (!itemId) {
-    return;
-  }
-
-  if (parseBooleanProp(props.mobileLayout)) {
-    dispatchEvent(
-      new CustomEvent("item-dblclick", {
-        detail: {
-          itemId,
-          source: "mobile-context-menu",
-        },
-        bubbles: true,
-        composed: true,
-      }),
-    );
     return;
   }
 

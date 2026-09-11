@@ -739,11 +739,17 @@ export const selectViewData = ({ state, i18n }) => {
   };
 
   const localProjects = Array.isArray(state.projects)
-    ? state.projects.map((project, index) => ({
-        ...project,
-        itemId: createLocalProjectItemId(project, index),
-        encodedProjectPath: encodeProjectPathAttribute(project.projectPath),
-      }))
+    ? state.projects.map((project, index) => {
+        const pathParts =
+          project.projectFileDisplayPath?.split(" / ").slice(0, -1) ?? [];
+        return {
+          ...project,
+          itemId: createLocalProjectItemId(project, index),
+          encodedProjectPath: encodeProjectPathAttribute(project.projectPath),
+          projectFileDisplayPrefix: pathParts.slice(0, -1).join("/"),
+          projectFileDisplaySuffix: pathParts.at(-1),
+        };
+      })
     : [];
   const cloudProjects = Array.isArray(state.cloudProjects)
     ? state.cloudProjects
@@ -759,6 +765,7 @@ export const selectViewData = ({ state, i18n }) => {
   return {
     ...state,
     projects: localProjects,
+    useDefaultProjectsScroll: state.platform !== "ios",
     localTitle: copy.title,
     cloudTitle: copy.cloudTitle,
     loginButtonText: copy.loginButton,

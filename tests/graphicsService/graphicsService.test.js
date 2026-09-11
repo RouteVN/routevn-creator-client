@@ -114,6 +114,93 @@ describe("graphicsService", () => {
     });
   });
 
+  it("starts the platform output before graphics and closes it before destroying sources", async () => {
+    const calls = [];
+    const audioOutput = {
+      resume: vi.fn(async () => calls.push("output.resume")),
+      close: vi.fn(() => calls.push("output.close")),
+    };
+    routeGraphicsInstance.init.mockImplementationOnce(async () =>
+      calls.push("graphics.init"),
+    );
+    routeGraphicsInstance.destroy.mockImplementationOnce(() =>
+      calls.push("graphics.destroy"),
+    );
+    createAssetBufferManagerMock.mockReturnValue({ clear: vi.fn() });
+    const { createGraphicsService } = await import(
+      "../../src/deps/services/graphicsService.js"
+    );
+    const service = await createGraphicsService({ audioOutput });
+    await service.init({ width: 1920, height: 1080 });
+    await service.destroy();
+    expect(calls).toEqual([
+      "output.resume",
+      "graphics.init",
+      "output.close",
+      "graphics.destroy",
+    ]);
+  });
+
+  it("releases platform output if graphics initialization fails", async () => {
+    const audioOutput = { resume: vi.fn(async () => {}), close: vi.fn() };
+    routeGraphicsInstance.init.mockRejectedValueOnce(
+      new Error("Initialization failed"),
+    );
+    createAssetBufferManagerMock.mockReturnValue({ clear: vi.fn() });
+    const { createGraphicsService } = await import(
+      "../../src/deps/services/graphicsService.js"
+    );
+    const service = await createGraphicsService({ audioOutput });
+    await expect(service.init({ width: 1920, height: 1080 })).rejects.toThrow(
+      "Initialization failed",
+    );
+    expect(audioOutput.close).toHaveBeenCalledOnce();
+  });
+
+  it("can initialize, close and reopen while platform playback remains pending", async () => {
+    const audioOutput = {
+      resume: vi.fn(() => new Promise(() => {})),
+      close: vi.fn(),
+    };
+    createAssetBufferManagerMock.mockReturnValue({ clear: vi.fn() });
+    const { createGraphicsService } = await import(
+      "../../src/deps/services/graphicsService.js"
+    );
+    const service = await createGraphicsService({ audioOutput });
+    await service.init({ width: 1920, height: 1080 });
+    await service.destroy();
+    await service.init({ width: 1920, height: 1080 });
+    expect(routeGraphicsInstance.init).toHaveBeenCalledTimes(2);
+    expect(audioOutput.close).toHaveBeenCalledOnce();
+    await service.destroy();
+  });
+
+  it("reports playback failure without preventing the preview from rendering", async () => {
+    const failure = new Error("Playback denied");
+    const audioOutput = {
+      resume: vi.fn().mockRejectedValue(failure),
+      close: vi.fn(),
+    };
+    const onAudioOutputError = vi.fn();
+    const log = vi.spyOn(console, "error").mockImplementation(() => {});
+    createAssetBufferManagerMock.mockReturnValue({ clear: vi.fn() });
+    const { createGraphicsService } = await import(
+      "../../src/deps/services/graphicsService.js"
+    );
+    const service = await createGraphicsService({
+      audioOutput,
+      onAudioOutputError,
+    });
+    try {
+      await service.init({ width: 1920, height: 1080 });
+      expect(routeGraphicsInstance.init).toHaveBeenCalledOnce();
+      expect(onAudioOutputError).toHaveBeenCalledWith(failure);
+    } finally {
+      await service.destroy();
+      log.mockRestore();
+    }
+  });
+
   it("ignores stale queued asset loads after runtime destroy", async () => {
     let resolveLoad;
     const bufferManager = {

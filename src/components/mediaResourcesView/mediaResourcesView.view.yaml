@@ -88,6 +88,8 @@ refs:
         handler: handleItemMouseEnter
       mouseleave:
         handler: handleItemMouseLeave
+      long-press:
+        handler: handleItemLongPress
       contextmenu:
         handler: handleItemContextMenu
   groupDrop*:
@@ -105,6 +107,10 @@ refs:
       click:
         handler: handlePreviewActionClick
 styles:
+  '[data-long-press="true"]':
+    user-select: none
+    "-webkit-user-select": none
+    "-webkit-touch-callout": none
   "[data-resource-view-item]":
     user-select: none
     "-webkit-user-select": none
@@ -165,7 +171,7 @@ template:
                               - 'rtgl-grid w=f pt=md pb=sm mb=lg g=md cols="${cardGridColumns}" style="min-width: 0; min-height: ${group.progressiveContentMinHeight}px; align-content: start; align-items: start;"':
                                   - $if group.hasChildren:
                                       - $for item, itemIndex in group.children:
-                                          - rtgl-view#itemRef${item.refKey} data-item-id=${item.domItemId} data-resource-view-item=true cur=${item.cursor} bw=xs bc=${item.itemBorderColor} h-bc=${item.itemHoverBorderColor} br=md style="${item.itemContainerStyle}":
+                                          - rtgl-view#itemRef${item.refKey} data-item-id=${item.domItemId} data-resource-view-item=true data-long-press=${item.longPressEnabled} cur=${item.cursor} bw=xs bc=${item.itemBorderColor} h-bc=${item.itemHoverBorderColor} br=md style="${item.itemContainerStyle}":
                                               - $if item.isPlaceholder:
                                                   - 'rtgl-view br=md w=${item.placeholderCardWidth} overflow=hidden style="max-width: 100%; box-sizing: border-box;"':
                                                       - $if item.useFullWidthPlaceholder:

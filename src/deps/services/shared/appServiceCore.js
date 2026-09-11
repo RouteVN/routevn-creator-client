@@ -108,6 +108,10 @@ export const createAppServiceCore = ({
     getTheme,
     applyTheme,
 
+    getFileDisplayPath(path) {
+      return platformAdapter.getFileDisplayPath?.(path) ?? path;
+    },
+
     setTheme(theme) {
       const nextTheme = normalizeTheme(theme);
       userConfigService.setUserConfig("appearance.theme", nextTheme);

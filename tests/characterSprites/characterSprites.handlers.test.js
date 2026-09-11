@@ -134,7 +134,7 @@ describe("characterSprites preview handlers", () => {
 
     handleSpriteItemPreview(deps, {
       _event: {
-        detail: { itemId: "sprite-1", source: "mobile-context-menu" },
+        detail: { itemId: "sprite-1", source: "long-press" },
       },
     });
     expect(viewData().fullImagePreviewVisible).toBe(true);

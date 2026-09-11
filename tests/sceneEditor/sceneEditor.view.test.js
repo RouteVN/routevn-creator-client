@@ -82,7 +82,9 @@ describe("sceneEditorLexical view", () => {
     expect(view).toContain(
       'dialog-panel-top="${mobileSystemActionsDialogTop}"',
     );
-    expect(view).toContain("dialog-panel-bottom=0px");
+    expect(view).toContain(
+      'dialog-panel-bottom="${mobileSystemActionsDialogBottom}"',
+    );
   });
 
   it("opens the section menu from empty space in the sections scroller", () => {

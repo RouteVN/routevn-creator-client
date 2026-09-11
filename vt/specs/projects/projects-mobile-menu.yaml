@@ -1,0 +1,104 @@
+---
+title: Mobile Project Menu
+description: A project hold opens its menu without navigating on release, and a normal tap still opens the project.
+url: /projects?vt-input-mode=touch
+skipInitialScreenshot: true
+viewport:
+  id: mobile
+  width: 360
+  height: 800
+steps:
+  - action: waitFor
+    selector: "#mobileCreateMenuButton"
+    state: visible
+    timeoutMs: 5000
+  - action: select
+    selector: "#mobileCreateMenuButton"
+    steps:
+      - action: click
+  - action: waitFor
+    selector: "#mobileActionMenu [role='menuitem']:has-text('Create Project')"
+    state: visible
+    timeoutMs: 5000
+  - action: select
+    selector: "#mobileActionMenu [role='menuitem']:has-text('Create Project')"
+    steps:
+      - action: click
+  - action: waitFor
+    selector: rtgl-form#createProjectForm rtgl-input#field0 input
+    state: attached
+    timeoutMs: 5000
+  - action: select
+    selector: rtgl-form#createProjectForm rtgl-input#field0 input
+    steps:
+      - action: clear
+      - action: write
+        value: Project One
+  - action: select
+    selector: rtgl-form#createProjectForm rtgl-input#field1 input
+    steps:
+      - action: clear
+      - action: write
+        value: Covers the mobile project menu.
+  - action: select
+    selector: rtgl-form#createProjectForm rtgl-button[data-action-id=submit]
+    steps:
+      - action: click
+  - action: waitFor
+    selector: "#projectItem0"
+    state: visible
+    timeoutMs: 30000
+  # Exercise our hold recognizer without a browser-generated contextmenu.
+  - action: assert
+    type: js
+    fn: eval
+    args:
+      - |
+        (async () => {
+          const deepQuery = (root, selector) => {
+            const direct = root.querySelector(selector);
+            if (direct) return direct;
+            for (const node of root.querySelectorAll('*')) {
+              const found = node.shadowRoot && deepQuery(node.shadowRoot, selector);
+              if (found) return found;
+            }
+          };
+          const page = deepQuery(document, 'rvn-projects');
+          const card = deepQuery(page.shadowRoot, '[data-long-press="true"]');
+          const rect = card.getBoundingClientRect();
+          const options = {
+            pointerId: 1, pointerType: 'touch', button: 0,
+            clientX: rect.left + rect.width / 2,
+            clientY: rect.top + rect.height / 2,
+            bubbles: true, composed: true, cancelable: true,
+          };
+          card.dispatchEvent(new PointerEvent('pointerdown', options));
+          await new Promise(resolve => setTimeout(resolve, 550));
+          card.dispatchEvent(new PointerEvent('pointerup', options));
+          const click = new MouseEvent('click', { ...options, detail: 1 });
+          card.dispatchEvent(click);
+          return click.defaultPrevented;
+        })()
+    value: true
+  - action: waitFor
+    selector: "rvn-projects #dropdownMenu[open] [role='menuitem']:has-text('Remove')"
+    state: visible
+    timeoutMs: 5000
+  - action: assert
+    type: visible
+    selector: "rvn-projects #projectItem0"
+  - action: screenshot
+  - action: keypress
+    key: Escape
+  - action: waitFor
+    selector: "rvn-projects #dropdownMenu[open] [role='menuitem']"
+    state: hidden
+    timeoutMs: 5000
+  - action: select
+    selector: "rvn-projects #projectItem0"
+    steps:
+      - action: click
+  - action: waitFor
+    selector: rvn-project
+    state: attached
+    timeoutMs: 10000

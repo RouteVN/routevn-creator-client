@@ -109,6 +109,36 @@ const applyZoomLevel = (state, zoomLevel) => {
   state.offsetY = nextOffsets.offsetY;
 };
 
+const getPointerMetrics = (pointers) => {
+  const [first, second] = pointers;
+  if (!second) {
+    return { x: first.x, y: first.y, distance: 0 };
+  }
+
+  return {
+    x: (first.x + second.x) / 2,
+    y: (first.y + second.y) / 2,
+    distance: Math.hypot(second.x - first.x, second.y - first.y),
+  };
+};
+
+const rebaseGesture = (state) => {
+  if (state.pointers.length === 0) {
+    state.gesture = undefined;
+    return;
+  }
+
+  const { x, y, distance } = getPointerMetrics(state.pointers);
+  state.gesture = {
+    x,
+    y,
+    distance,
+    zoomLevel: state.zoomLevel,
+    offsetX: state.offsetX,
+    offsetY: state.offsetY,
+  };
+};
+
 export const createInitialState = () => ({
   imageUrl: undefined,
   imageWidth: 0,
@@ -116,11 +146,8 @@ export const createInitialState = () => ({
   zoomLevel: MIN_ZOOM,
   offsetX: 0,
   offsetY: 0,
-  isDragging: false,
-  dragStartMouseX: 0,
-  dragStartMouseY: 0,
-  dragStartOffsetX: 0,
-  dragStartOffsetY: 0,
+  pointers: [],
+  gesture: undefined,
 });
 
 export const setImage = (
@@ -130,11 +157,8 @@ export const setImage = (
   state.imageUrl = imageUrl;
   state.imageWidth = imageWidth ?? 0;
   state.imageHeight = imageHeight ?? 0;
-  state.isDragging = false;
-  state.dragStartMouseX = 0;
-  state.dragStartMouseY = 0;
-  state.dragStartOffsetX = 0;
-  state.dragStartOffsetY = 0;
+  state.pointers = [];
+  state.gesture = undefined;
   state.zoomLevel = MIN_ZOOM;
 
   const centeredOffsets = getCenteredOffsets(state, MIN_ZOOM);
@@ -149,53 +173,88 @@ export const clearImage = ({ state }) => {
   state.zoomLevel = MIN_ZOOM;
   state.offsetX = 0;
   state.offsetY = 0;
-  state.isDragging = false;
-  state.dragStartMouseX = 0;
-  state.dragStartMouseY = 0;
-  state.dragStartOffsetX = 0;
-  state.dragStartOffsetY = 0;
+  state.pointers = [];
+  state.gesture = undefined;
 };
 
-export const startDragging = ({ state }, { mouseX, mouseY } = {}) => {
-  if (!hasImage(state)) {
+export const startPointer = ({ state }, { pointerId, x, y }) => {
+  if (
+    !hasImage(state) ||
+    state.pointers.length >= 2 ||
+    state.pointers.some((pointer) => pointer.pointerId === pointerId)
+  ) {
     return;
   }
 
-  state.isDragging = true;
-  state.dragStartMouseX = mouseX ?? 0;
-  state.dragStartMouseY = mouseY ?? 0;
-  state.dragStartOffsetX = state.offsetX;
-  state.dragStartOffsetY = state.offsetY;
+  state.pointers.push({ pointerId, x, y });
+  rebaseGesture(state);
 };
 
-export const updateDragging = ({ state }, { mouseX, mouseY } = {}) => {
-  if (!state.isDragging || !hasImage(state)) {
+export const movePointer = ({ state }, { pointerId, x, y }) => {
+  const pointer = state.pointers.find((item) => item.pointerId === pointerId);
+  if (!pointer || !state.gesture) {
     return;
   }
 
-  const nextOffsets = clampOffsets(state, {
-    offsetX: state.dragStartOffsetX + ((mouseX ?? 0) - state.dragStartMouseX),
-    offsetY: state.dragStartOffsetY + ((mouseY ?? 0) - state.dragStartMouseY),
+  pointer.x = x;
+  pointer.y = y;
+  const current = getPointerMetrics(state.pointers);
+  const start = state.gesture;
+  const zoomRatio = start.distance > 0 ? current.distance / start.distance : 1;
+  const zoomLevel = clamp(
+    start.zoomLevel * zoomRatio,
+    MIN_ZOOM,
+    getEffectiveMaxZoom(state),
+  );
+  const scaleRatio = zoomLevel / start.zoomLevel;
+  // Keep the image point under the fingers' midpoint anchored while zooming
+  // and translating. With one pointer, this is simply a drag.
+  const offsets = clampOffsets(state, {
+    offsetX: current.x - (start.x - start.offsetX) * scaleRatio,
+    offsetY: current.y - (start.y - start.offsetY) * scaleRatio,
+    zoomLevel,
   });
-
-  state.offsetX = nextOffsets.offsetX;
-  state.offsetY = nextOffsets.offsetY;
+  state.zoomLevel = zoomLevel;
+  state.offsetX = offsets.offsetX;
+  state.offsetY = offsets.offsetY;
+  // Rebase after clamping so reversing direction at an edge responds immediately.
+  rebaseGesture(state);
 };
 
-export const stopDragging = ({ state }) => {
-  state.isDragging = false;
+export const endPointer = ({ state }, { pointerId }) => {
+  const index = state.pointers.findIndex(
+    (pointer) => pointer.pointerId === pointerId,
+  );
+  if (index < 0) {
+    return;
+  }
+
+  state.pointers.splice(index, 1);
+  // Lifting either finger must not move the image or jump on the next drag.
+  rebaseGesture(state);
+};
+
+export const cancelGesture = ({ state }) => {
+  state.pointers = [];
+  state.gesture = undefined;
 };
 
 export const setZoomLevel = ({ state }, { zoomLevel } = {}) => {
-  applyZoomLevel(state, Number(zoomLevel) || MIN_ZOOM);
+  const value = Number(zoomLevel);
+  applyZoomLevel(state, Number.isFinite(value) ? value : MIN_ZOOM);
+  rebaseGesture(state);
 };
 
 export const nudgeZoomLevel = ({ state }, { delta } = {}) => {
   applyZoomLevel(state, state.zoomLevel + (delta ?? 0));
+  rebaseGesture(state);
 };
 
 export const selectImageUrl = ({ state }) => state.imageUrl;
-export const selectIsDragging = ({ state }) => state.isDragging;
+export const selectIsDragging = ({ state }) => state.pointers.length > 0;
+export const selectHasPointer = ({ state }, { pointerId }) =>
+  state.pointers.some((pointer) => pointer.pointerId === pointerId);
+export const selectViewportSize = () => VIEWPORT_SIZE;
 export const selectZoomLevel = ({ state }) => state.zoomLevel;
 
 export const selectCropSelection = ({ state }) => {
@@ -246,16 +305,18 @@ export const selectViewData = ({ state }) => {
   return {
     imageUrl: state.imageUrl,
     isReady,
-    cropCursor: state.isDragging ? "grabbing" : isReady ? "grab" : "default",
+    cropCursor:
+      state.pointers.length > 0 ? "grabbing" : isReady ? "grab" : "default",
     imageFrameStyle: [
       "position:absolute",
-      `left:${offsets.offsetX}px`,
-      `top:${offsets.offsetY}px`,
-      `width:${width}px`,
-      `height:${height}px`,
+      // Render in the same normalized coordinates used by pointer gestures and
+      // crop export, so resizing the dialog preserves the selected image area.
+      `left:${(offsets.offsetX / VIEWPORT_SIZE) * 100}%`,
+      `top:${(offsets.offsetY / VIEWPORT_SIZE) * 100}%`,
+      `width:${(width / VIEWPORT_SIZE) * 100}%`,
+      `height:${(height / VIEWPORT_SIZE) * 100}%`,
       "pointer-events:none",
     ].join("; "),
-    viewportSize: VIEWPORT_SIZE,
     zoomLevel,
     zoomPercent: Math.round(zoomLevel * 100),
     minZoom: MIN_ZOOM,

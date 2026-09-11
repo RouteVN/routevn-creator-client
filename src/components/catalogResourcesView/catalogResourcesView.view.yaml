@@ -77,8 +77,15 @@ refs:
         handler: handleItemClick
       dblclick:
         handler: handleItemDoubleClick
+      long-press:
+        handler: handleItemLongPress
       contextmenu:
         handler: handleItemContextMenu
+styles:
+  '[data-long-press="true"]':
+    user-select: none
+    "-webkit-user-select": none
+    "-webkit-touch-callout": none
 template:
   - 'rtgl-view w=f h=f g=sm style="min-width: 0; min-height: 0;"':
       - 'rtgl-view h=48 w=f bgc=bg bwb=xs ph=md av=c style="position: sticky; top: 0px; z-index: 1000;"':
@@ -116,7 +123,7 @@ template:
                           - 'rtgl-grid w=f pt=md pb=sm mb=lg g=md cols="${cardGridColumns}" style="min-width: 0; min-height: ${group.progressiveContentMinHeight}px; align-content: start; align-items: start;"':
                               - $if group.hasChildren:
                                   - $for item, itemIndex in group.children:
-                                      - rtgl-view#itemRef${gIndex}x${itemIndex} data-item-id=${item.domItemId} data-resource-view-item=true w=${item.itemWidth} cur=${item.cursor} bw=xs bc=${item.itemBorderColor} h-bc=${item.itemHoverBorderColor} br=md style="${item.itemContainerStyle}":
+                                      - rtgl-view#itemRef${gIndex}x${itemIndex} data-item-id=${item.domItemId} data-resource-view-item=true data-long-press=${item.longPressEnabled} w=${item.itemWidth} cur=${item.cursor} bw=xs bc=${item.itemBorderColor} h-bc=${item.itemHoverBorderColor} br=md style="${item.itemContainerStyle}":
                                           - $if item.isPlaceholder:
                                               - 'rtgl-view w=f br=md style="overflow: hidden;"':
                                                   - $if item.useFullWidthCatalogPreview:

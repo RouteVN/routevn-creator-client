@@ -273,7 +273,7 @@ const createTouchDragDeps = ({ selectedItemId = "scene-1" } = {}) => {
       }
     }),
     clearTouchLongPressTimeoutId: vi.fn(() => {
-      if (touchGesture?.type === "item-press") {
+      if (touchGesture) {
         touchGesture.longPressTimeoutId = undefined;
       }
     }),
@@ -285,7 +285,9 @@ const createTouchDragDeps = ({ selectedItemId = "scene-1" } = {}) => {
       lastTouchTap = undefined;
     }),
     selectLastTouchTap: vi.fn(() => lastTouchTap),
-    startTouchPan: vi.fn(),
+    startTouchPan: vi.fn((gesture) => {
+      touchGesture = { type: "pan", ...gesture };
+    }),
     updateTouchPan: vi.fn(),
     stopTouchGesture: vi.fn(() => {
       touchGesture = undefined;
@@ -829,9 +831,11 @@ describe("whiteboard minimap drag handlers", () => {
     });
 
     expect(deps.store.startDragging).not.toHaveBeenCalled();
-    expect(deps.store.startTouchPan).toHaveBeenCalledWith({
-      touchX: 110,
-      touchY: 80,
+    expect(deps.store.startTouchPan).toHaveBeenCalledWith(
+      expect.objectContaining({ touchX: 110, touchY: 80 }),
+    );
+    handleContainerTouchEnd(deps, {
+      _event: createTouchEvent({ touches: [] }),
     });
   });
 

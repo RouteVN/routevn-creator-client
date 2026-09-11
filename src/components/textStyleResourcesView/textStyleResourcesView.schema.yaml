@@ -51,7 +51,7 @@ propsSchema:
       description: Whether zoom controls should control grid columns
     defaultItemsPerRow:
       type: number
-      description: Initial column count when zoom controls use column mode
+      description: Initial column count; when omitted, touch grids use 2 below 768px viewport width and 6 at or above it
     itemsPerRowConfigKey:
       type: string
       description: Optional user config key for persisted column count

@@ -42,6 +42,12 @@ vi.mock("../../src/deps/services/graphicsService.js", () => ({
 vi.mock("../../src/deps/clients/android/audioRuntime.js", () => ({
   createAndroidAudioRuntime: () => ({ graphicsRuntime: {} }),
 }));
+vi.mock("../../src/deps/clients/mobileAudioRuntime.js", () => ({
+  createMobileAudioRuntime: () => ({ graphicsRuntime: {} }),
+}));
+vi.mock("../../src/deps/clients/ios/graphicsAudioOutput.js", () => ({
+  createIOSGraphicsAudioOutput: () => ({ graphicsRuntime: {} }),
+}));
 vi.mock("../../src/deps/clients/android/db.js", () => ({
   createDb: () => mocked.db,
 }));

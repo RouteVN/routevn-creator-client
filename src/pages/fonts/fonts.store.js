@@ -323,5 +323,8 @@ export const selectViewData = (context) => {
   return {
     ...viewData,
     flatItems: applyFolderRequiredRootDragOptions(viewData.flatItems),
+    fontPreviewContentStyle: viewData.isTouchMode
+      ? "max-height: min(70dvh, calc(100dvh - 160px)); overflow-y: auto; overscroll-behavior: contain; box-sizing: border-box;"
+      : "",
   };
 };

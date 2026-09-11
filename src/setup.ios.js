@@ -1,11 +1,16 @@
 import { createGlobalUI } from "@rettangoli/ui";
+import { configureAudioRuntime } from "route-graphics";
 
 import { callIOSBridge } from "./deps/clients/ios/bridge.js";
+import { createMobileAudioRuntime } from "./deps/clients/mobileAudioRuntime.js";
+import { createIOSAudioOutput } from "./deps/clients/ios/audioOutput.js";
+import { createIOSGraphicsAudioOutput } from "./deps/clients/ios/graphicsAudioOutput.js";
 import { createDb } from "./deps/clients/ios/db.js";
 import { createIOSFilePicker } from "./deps/clients/ios/filePicker.js";
 import IOSRouter from "./deps/clients/ios/router.js";
 import { installIOSSceneEditorKeyboard } from "./deps/clients/ios/sceneEditorKeyboard.js";
 import { createBrowserEventsClient } from "./deps/clients/browserEvents.js";
+import { createWindowMetricsClient } from "./deps/clients/windowMetrics.js";
 
 import { createAppService } from "./deps/services/ios/appService.js";
 import { createProjectService } from "./deps/services/ios/projectService.js";
@@ -22,6 +27,12 @@ import { registerPrimitives } from "./primitives/registerPrimitives.js";
 import tauriConfig from "../src-tauri/tauri.conf.json";
 
 registerPrimitives();
+
+const iosAudioRuntime = createMobileAudioRuntime();
+const iosGraphicsAudioOutput = createIOSGraphicsAudioOutput({
+  runtime: iosAudioRuntime,
+});
+configureAudioRuntime(iosGraphicsAudioOutput.graphicsRuntime);
 
 const uiConfig = {
   id: "touch",
@@ -52,8 +63,17 @@ const router = new IOSRouter({
 const filePicker = createIOSFilePicker();
 const globalUIElement = document.querySelector("rtgl-global-ui");
 const globalUI = createGlobalUI(globalUIElement);
-const audioService = createAudioService();
+const audioService = createAudioService({
+  createAudioContext: iosAudioRuntime.createAudioContext,
+  createAudioOutput: (context) =>
+    createIOSAudioOutput(context, {
+      subscribeActivity: iosAudioRuntime.subscribeActivity,
+    }),
+});
 const browserEventsClient = createBrowserEventsClient();
+const windowMetricsClient = createWindowMetricsClient({
+  loadMetrics: () => callIOSBridge("getWindowMetrics"),
+});
 
 const appVersion = tauriConfig.version;
 const creatorVersion = deriveProjectFormatVersionFromAppVersion(appVersion);
@@ -142,6 +162,10 @@ const appService = createAppService({
   subject,
 });
 await appService.initUserConfig();
+await appService.initializeProjectFolderSetup();
+if (!appService.getProjectFolderSetup().configured) {
+  router.reset("/project-folder-setup");
+}
 installIOSSceneEditorKeyboard({
   onRevealError: () => {
     const copy = appService.getAppCopy();
@@ -236,10 +260,24 @@ const apiService = createApiService({
   baseUrl: readIOSEnv("ROUTEVN_API_ENDPOINT", "https://api.example.invalid"),
 });
 
-const graphicsService = await createGraphicsService({ subject });
+const graphicsService = await createGraphicsService({
+  subject,
+  audioOutput: iosGraphicsAudioOutput,
+  onAudioOutputError: () => {
+    const copy = appService.getAppCopy();
+    appService.showToast({
+      message:
+        copy.failedStartPreviewAudio ??
+        "Could not start preview audio. Close and reopen the preview.",
+      status: "error",
+    });
+  },
+});
 const dialogueQueueService = createPendingQueueService({ debounceMs: 2000 });
 
 const componentDependencies = {
+  windowMetricsClient,
+  browserEventsClient,
   uiConfig,
   subject,
   graphicsService,
@@ -250,6 +288,7 @@ const componentDependencies = {
 };
 
 const pageDependencies = {
+  windowMetricsClient,
   browserEventsClient,
   uiConfig,
   subject,

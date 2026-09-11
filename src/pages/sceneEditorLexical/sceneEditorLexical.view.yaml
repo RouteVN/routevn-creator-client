@@ -164,29 +164,36 @@ template:
   - 'rtgl-view pos=rel w=f h=f style="min-width: 0; min-height: 0;"':
       - $if isTouchMode:
           - 'rtgl-view pos=fix d=v bgc=bg style="z-index: 1100; left: 0; right: 0; top: ${mobileSceneEditorTopInset}; bottom: ${mobileSceneEditorBottomInset}; min-width: 0; min-height: 0; padding-top: var(--rvn-mobile-overlay-top-inset, 0px); box-sizing: border-box; overflow: hidden; overscroll-behavior: none;"':
-              - 'rtgl-view w=f bwb=xs style="min-width: 0; flex-shrink: 0;"':
-                  - $if backgroundTransformEditor.isOpen == false:
-                      - 'rtgl-view w=f style="min-width: 0;"':
-                          - 'div style="position: relative; width: ${mobilePreviewCanvasMaxWidth}; max-width: 100%; margin-left: auto; margin-right: auto;"':
-                              - 'rvn-scene-editor-preview-canvas#previewCanvasHost style="display: block; width: 100%;" canvas-aspect-ratio="${canvasAspectRatio}"': null
-                              - $if isSceneAssetLoading:
-                                  - rtgl-view pos=abs cor=full w=f h=f bgc=bg op=0.7 av=c ah=c:
-                                      - rtgl-text s=h3: ${loadingAssetsLabel}
-              - $if sectionsGraphView:
-                  - rtgl-view w=f h=1fg sv:
-                      - rtgl-text: ${sectionsGraph}
-                $else:
-                  - 'rtgl-view#sceneEditorLeftEditor d=v w=f h=1fg style="min-width: 0; min-height: 0;"':
-                      - 'rtgl-view#sceneEditorSectionsScroll w=f ph=sm pb=md sv h=1fg style="min-width: 0; scroll-padding-top: 40px; scroll-padding-bottom: 48px; overscroll-behavior: contain;"':
-                          - $for section, sectionIndex in sectionEditorItems:
-                              - 'rtgl-view#sectionBlock${sectionIndex} data-section-block-id=${section.id} data-section-id=${section.id} w=f mb=xl style="min-width: 0; scroll-margin-top: 0;"':
-                                  - 'rtgl-view#sectionHeader${sectionIndex} data-section-id=${section.id} d=h av=c h=40 bgc=bg bwb=xs style="position: sticky; top: 0px; z-index: 5; min-width: 0; box-sizing: border-box; width: calc(100% + var(--spacing-md)); margin-left: calc(var(--spacing-sm) * -1); padding-left: var(--spacing-md); padding-right: var(--spacing-sm);"':
-                                      - rtgl-text s=sm w=1fg ellipsis=true: ${section.name}
-                                      - rtgl-button#sectionMenu${sectionIndex} data-section-id=${section.id} sq v=gh s=sm pre=ellipsisLarge: null
-                                  - rvn-scene-document-editor-lexical#sectionEditor${sectionIndex} key=${section.editorKey} data-section-id=${section.id} :lines=${section.documentEditorLines} :lineDecorations=${section.documentLineDecorations} :selectionActive=${section.selectionActive} :selectedLineId=${section.selectedLineId} :hasPreviousSectionLine=${section.hasPreviousSectionLine} :hasNextSectionLine=${section.hasNextSectionLine} :showLineNumbers=${sceneSettings.showLineNumbers} :fontSize=${sceneSettings.fontSize} :textStyles=${textStyles} :mentionTargets=${mentionTargets} :compactPreviews=${isTouchMode}: null
-                          - rtgl-view h=${mobileEditorBottomSpacerHeight}: null
-              - rvn-mobile-keyboard-toolbar#mobileKeyboardToolbar: null
-              - 'rvn-system-actions#systemActions :actions=${selectedLineActions} :selectedLineId=${selectedLineId} :selectedLine=${selectedLine} :currentSceneId=${scene.id} actionType=presentation :presentationState=${presentationState} :previousPresentationState=${previousPresentationState} :hasPreviousPresentationStateContext=${true} :backgroundTransformEditor=${backgroundTransformEditor} dialog-variant=scene-editor-mobile dialog-panel-top="${mobileSystemActionsDialogTop}" dialog-panel-bottom=0px :suppressDialogClose=${backgroundTransformEditor.suppressActionsDialogClose}': null
+              - 'div#mobileSceneEditorWorkspace data-side-by-side=${mobileSideBySide} style="width: 100%; flex: 1; min-width: 0; min-height: 0; ${mobileWorkspaceStyle}"':
+                  - 'rtgl-view#mobileSceneEditorPreviewPanel w=f bwb=xs style="min-width: 0; flex-shrink: 0; ${mobilePreviewPanelStyle}"':
+                      - $if backgroundTransformEditor.isOpen == false:
+                          - 'rtgl-view w=f style="min-width: 0; flex-shrink: 0;"':
+                              - 'div style="position: relative; width: ${mobilePreviewCanvasMaxWidth}; max-width: 100%; margin-left: auto; margin-right: auto;"':
+                                  - 'rvn-scene-editor-preview-canvas#previewCanvasHost style="display: block; width: 100%;" canvas-aspect-ratio="${canvasAspectRatio}"': null
+                                  - $if isSceneAssetLoading:
+                                      - rtgl-view pos=abs cor=full w=f h=f bgc=bg op=0.7 av=c ah=c:
+                                          - rtgl-text s=h3: ${loadingAssetsLabel}
+                      - 'rtgl-view#mobilePresentationState w=f p=${mobilePresentationStatePadding} g=md style="${mobilePresentationStateStyle}"':
+                          - $if mobileSideBySide:
+                              - 'rtgl-text#mobilePresentationStateTitle s=sm c=mu-fg style="flex-shrink: 0;"': ${stateTitle}
+                          - 'rtgl-view#mobilePresentationStateScroll w=f ?sv=${mobileSideBySide} style="${mobilePresentationStateScrollStyle}"':
+                              - 'rvn-system-actions#systemActions :showSelected=${mobileSideBySide} :actions=${selectedLineActions} :selectedLineId=${selectedLineId} :selectedLine=${selectedLine} :currentSceneId=${scene.id} actionType=presentation :presentationState=${presentationState} :previousPresentationState=${previousPresentationState} :hasPreviousPresentationStateContext=${true} :backgroundTransformEditor=${backgroundTransformEditor} dialog-variant=scene-editor-mobile dialog-panel-top="${mobileSystemActionsDialogTop}" dialog-panel-bottom="${mobileSystemActionsDialogBottom}" dialog-panel-right="${mobileSystemActionsDialogRight}" :suppressDialogClose=${backgroundTransformEditor.suppressActionsDialogClose}': null
+                              - $if mobileSideBySide:
+                                  - 'rtgl-view h=240 aria-hidden=true style="flex-shrink: 0;"': null
+                  - $if sectionsGraphView:
+                      - 'rtgl-view w=f h=1fg sv style="${mobileLinesPanelStyle}"':
+                          - rtgl-text: ${sectionsGraph}
+                    $else:
+                      - 'rtgl-view#sceneEditorLeftEditor d=v w=f h=1fg style="min-width: 0; min-height: 0; ${mobileLinesPanelStyle}"':
+                          - 'rtgl-view#sceneEditorSectionsScroll w=f ph=sm pb=md sv h=1fg style="min-width: 0; scroll-padding-top: 40px; scroll-padding-bottom: 48px; overscroll-behavior: contain;"':
+                              - $for section, sectionIndex in sectionEditorItems:
+                                  - 'rtgl-view#sectionBlock${sectionIndex} data-section-block-id=${section.id} data-section-id=${section.id} w=f mb=xl style="min-width: 0; scroll-margin-top: 0;"':
+                                      - 'rtgl-view#sectionHeader${sectionIndex} data-section-id=${section.id} d=h av=c h=40 bgc=bg bwb=xs style="position: sticky; top: 0px; z-index: 5; min-width: 0; box-sizing: border-box; width: calc(100% + var(--spacing-md)); margin-left: calc(var(--spacing-sm) * -1); padding-left: var(--spacing-md); padding-right: var(--spacing-sm);"':
+                                          - rtgl-text s=sm w=1fg ellipsis=true: ${section.name}
+                                          - rtgl-button#sectionMenu${sectionIndex} data-section-id=${section.id} sq v=gh s=sm pre=ellipsisLarge: null
+                                      - rvn-scene-document-editor-lexical#sectionEditor${sectionIndex} key=${section.editorKey} data-section-id=${section.id} :lines=${section.documentEditorLines} :lineDecorations=${section.documentLineDecorations} :selectionActive=${section.selectionActive} :selectedLineId=${section.selectedLineId} :hasPreviousSectionLine=${section.hasPreviousSectionLine} :hasNextSectionLine=${section.hasNextSectionLine} :showLineNumbers=${sceneSettings.showLineNumbers} :fontSize=${sceneSettings.fontSize} :textStyles=${textStyles} :mentionTargets=${mentionTargets} :compactPreviews=${isTouchMode}: null
+                              - 'rtgl-view h=${mobileEditorBottomSpacerHeight} aria-hidden=true style="flex-shrink: 0;"': null
+              - rvn-mobile-keyboard-toolbar#mobileKeyboardToolbar width=${mobileToolbarWidth}: null
         $else:
           - 'rtgl-view d=h w=f h=f style="min-width: 0; min-height: 0;"':
               - 'rtgl-view w="calc((100vw - 64px) / 2)" d=v h=f style="min-width: 0; min-height: 0;"':

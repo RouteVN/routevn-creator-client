@@ -281,6 +281,7 @@ export const createProjectAssetService = ({
         (async () => {
           try {
             return await extractVideoThumbnail(file, {
+              prepareVideo: fileAdapter.prepareVideoThumbnail,
               timeOffset: 1,
               maxWidth: IMAGE_THUMBNAIL_MAX_WIDTH,
               maxHeight: IMAGE_THUMBNAIL_MAX_HEIGHT,

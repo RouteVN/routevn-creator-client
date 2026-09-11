@@ -1,1 +1,14 @@
+push_branch=$(git symbolic-ref --quiet --short HEAD || true)
+if [ "$push_branch" = "main" ]; then
+  echo "Push blocked: switch from main to a feature branch and open a pull request." >&2
+  exit 1
+fi
+
+while read -r local_ref local_sha remote_ref remote_sha; do
+  if [ "$local_ref" = "refs/heads/main" ] || [ "$remote_ref" = "refs/heads/main" ]; then
+    echo "Push blocked: main must be updated through a pull request." >&2
+    exit 1
+  fi
+done
+
 bun run lint

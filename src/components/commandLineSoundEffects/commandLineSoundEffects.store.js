@@ -827,6 +827,16 @@ export const updateSoundDrag = ({ state }, { pointerId, clientX } = {}) => {
   });
 };
 
+export const cancelSoundDrag = ({ state }) => {
+  const drag = state.soundDrag;
+  if (!drag) return;
+  const sound = state.channels
+    .find((channel) => channel.id === drag.channelId)
+    ?.sounds.find((item) => item.id === drag.soundId);
+  if (sound) sound.startDelayMs = drag.originStartDelayMs;
+  state.soundDrag = undefined;
+};
+
 export const finishSoundDrag = (
   { state },
   { pointerId, suppressChannelClickUntil } = {},

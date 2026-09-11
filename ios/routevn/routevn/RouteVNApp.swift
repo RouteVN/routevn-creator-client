@@ -1,3 +1,4 @@
+import AVFoundation
 import Foundation
 import CryptoKit
 import PhotosUI
@@ -22,6 +23,14 @@ final class RouteVNAppDelegate: UIResponder, UIApplicationDelegate {
         window.makeKeyAndVisible()
         return true
     }
+
+    func applicationWillResignActive(_ application: UIApplication) {
+        (window?.rootViewController as? RouteVNViewController)?.setAppActive(false)
+    }
+
+    func applicationDidBecomeActive(_ application: UIApplication) {
+        (window?.rootViewController as? RouteVNViewController)?.setAppActive(true)
+    }
 }
 
 final class RouteVNViewController: UIViewController, WKNavigationDelegate, WKScriptMessageHandler, UIDocumentPickerDelegate, PHPickerViewControllerDelegate {
@@ -30,11 +39,15 @@ final class RouteVNViewController: UIViewController, WKNavigationDelegate, WKScr
     }
 
     private var statusBarStyle: UIStatusBarStyle = .lightContent
+    private var lastReportedWindowSize: CGSize = .zero
     private let storage = RouteVNNativeStorage()
+    private var projectFolderSetup: ProjectFolderSetup { storage.projectFolderSetup }
     private var webView: WKWebView!
     private var sqliteDatabases: [String: OpaquePointer] = [:]
+    private var appActive = false
     private var canGoBackInWebApp = false
     private var pendingDocumentPicker: PendingDocumentPicker?
+    private let saveFileDestinations = SaveFileDestinations()
     private var didRunSmokeTest = false
     private lazy var devServerURL: URL? = configuredDevServerURL()
     private var securityScopedFolders: [String: SecurityScopedFolderSelection] = [:]
@@ -51,6 +64,25 @@ final class RouteVNViewController: UIViewController, WKNavigationDelegate, WKScr
         loadInitialAppURL()
     }
 
+    override func viewDidLayoutSubviews() {
+        super.viewDidLayoutSubviews()
+        publishWindowMetrics()
+    }
+
+    private func currentWindowMetrics() -> [String: CGFloat] {
+        // The controller fills the app window. Keyboard occlusion changes the
+        // WebKit visual viewport, not these bounds, including in Split View.
+        return ["width": view.bounds.width, "height": view.bounds.height]
+    }
+
+    private func publishWindowMetrics(force: Bool = false) {
+        guard webView != nil, view.bounds.width > 0, view.bounds.height > 0 else { return }
+        let size = view.bounds.size
+        guard force || size != lastReportedWindowSize else { return }
+        lastReportedWindowSize = size
+        webView.evaluateJavaScript("window.dispatchEvent(new CustomEvent('routevn:window-metrics', {detail: {width: \(size.width), height: \(size.height)}}));")
+    }
+
     deinit {
         closeSqliteDatabases()
         webView?.configuration.userContentController.removeScriptMessageHandler(forName: "RouteVNIOS")
@@ -58,6 +90,8 @@ final class RouteVNViewController: UIViewController, WKNavigationDelegate, WKScr
 
     private func configureWebView() {
         let configuration = WKWebViewConfiguration()
+        // Muted thumbnail decoding must not open the native fullscreen player.
+        configuration.allowsInlineMediaPlayback = true
         configuration.websiteDataStore = .default()
         configuration.setURLSchemeHandler(
             RouteVNSchemeHandler(storage: storage),
@@ -128,6 +162,27 @@ final class RouteVNViewController: UIViewController, WKNavigationDelegate, WKScr
         view.addSubview(webView)
     }
 
+    func setAppActive(_ active: Bool) {
+        appActive = active
+        if active {
+            webView.setAllMediaPlaybackSuspended(false) { [weak self] in
+                guard let self, self.appActive else { return }
+                self.dispatchAppActiveState()
+            }
+        } else {
+            dispatchAppActiveState()
+            // Block native media too, even if WebKit suspends JavaScript first.
+            webView.setAllMediaPlaybackSuspended(true, completionHandler: nil)
+        }
+    }
+
+    private func dispatchAppActiveState() {
+        let value = appActive ? "true" : "false"
+        webView.evaluateJavaScript(
+            "window.routeVNAppActive = \(value); window.routeVNSetAppActive?.(\(value));"
+        )
+    }
+
     private func loadInitialAppURL() {
         if let url = devServerURL {
             recordDevEvent("Loading \(url.absoluteString)")
@@ -187,6 +242,8 @@ final class RouteVNViewController: UIViewController, WKNavigationDelegate, WKScr
     }
 
     func webView(_ webView: WKWebView, didFinish navigation: WKNavigation!) {
+        publishWindowMetrics(force: true)
+        setAppActive(UIApplication.shared.applicationState == .active)
         if devServerURL != nil {
             recordDevEvent("Document loaded: \(webView.url?.absoluteString ?? "")")
         }
@@ -350,6 +407,8 @@ final class RouteVNViewController: UIViewController, WKNavigationDelegate, WKScr
             return true
         case "getCaretRect":
             return currentCaretRect()
+        case "getWindowMetrics":
+            return currentWindowMetrics()
         case "setStatusBarStyle":
             let nextStyle: UIStatusBarStyle
             switch try requiredString(payload, "style") {
@@ -405,8 +464,10 @@ final class RouteVNViewController: UIViewController, WKNavigationDelegate, WKScr
             closeDatabase(dbPath: try requiredString(payload, "dbPath"))
             return true
         case "ensureProjectStorage":
-            try storage.ensureProjectDirectories(projectId: requiredString(payload, "projectId"))
+            try storage.ensureProjectDirectories(projectId: requiredString(payload, "projectId"), createProject: true, projectName: payload["projectName"] as? String)
             return true
+        case "previewNewProjectLocation":
+            return try storage.previewNewProjectLocation(projectName: requiredString(payload, "name"))
         case "getProjectStorageStatus":
             return try storage.projectStorageStatus(projectId: requiredString(payload, "projectId"))
         case "listProjectFolders":
@@ -429,11 +490,23 @@ final class RouteVNViewController: UIViewController, WKNavigationDelegate, WKScr
             try launchFilePicker(payload)
             return true
         case "openSaveFilePicker":
-            try resolveSaveFilePicker(payload)
+            try launchSaveFilePicker(payload)
             return true
         case "openFolderPicker":
             try launchFolderPicker(payload)
             return true
+        case "getProjectFolderSetup":
+            return projectFolderSetup.status()
+        case "previewProjectFolderSetup", "confirmProjectFolderSetup":
+            let uri = try requiredString(payload, "uri")
+            let access = try accessFolderURL(uriString: uri, missingMessage: "Select a project folder first.")
+            defer { access.stop() }
+            if method == "confirmProjectFolderSetup" {
+                return try projectFolderSetup.confirm(selection: access.url)
+            }
+            var candidate = try projectFolderSetup.preview(selection: access.url)
+            candidate["uri"] = uri
+            return candidate
         case "importProjectFolder":
             return try importProjectFolder(uriString: requiredString(payload, "uri"))
         case "exportProjectFolder":
@@ -451,7 +524,8 @@ final class RouteVNViewController: UIViewController, WKNavigationDelegate, WKScr
 
     private func shouldHandleBridgeMethodInBackground(_ method: String) -> Bool {
         switch method {
-        case "createDistributionZipStreamedToUri", "importProjectFolder", "exportProjectFolder":
+        case "createDistributionZipStreamedToUri", "importProjectFolder", "exportProjectFolder",
+             "getProjectFolderSetup", "previewProjectFolderSetup", "confirmProjectFolderSetup":
             return true
         default:
             return false
@@ -499,7 +573,7 @@ final class RouteVNViewController: UIViewController, WKNavigationDelegate, WKScr
             "ok": false,
             "error": [
                 "message": error.localizedDescription,
-                "code": String(describing: type(of: error))
+                "code": (error as? ProjectFolderSetupError)?.rawValue ?? String(describing: type(of: error))
             ]
         ]
         evaluateJavaScriptCallback(name: "__routeVNIOSBridgeResult", result: result)
@@ -617,11 +691,16 @@ final class RouteVNViewController: UIViewController, WKNavigationDelegate, WKScr
     }
 
     private func openDatabase(dbPath: String) throws -> OpaquePointer {
-        if let cachedDatabase = sqliteDatabases[dbPath] {
+        let databaseURL = try storage.databaseURL(dbPath: dbPath)
+        if let cachedDatabase = sqliteDatabases[databaseURL.path] {
             return cachedDatabase
         }
-
-        let databaseURL = try storage.databaseURL(dbPath: dbPath)
+        if dbPath.hasPrefix("projects/"),
+           !FileManager.default.fileExists(atPath: databaseURL.deletingLastPathComponent().path) {
+            // New projects explicitly create their storage first. Opening a
+            // missing external project must not create an empty replacement.
+            throw RouteVNError.message("Project folder is unavailable. Reconnect its folder in setup.")
+        }
         try FileManager.default.createDirectory(
             at: databaseURL.deletingLastPathComponent(),
             withIntermediateDirectories: true
@@ -644,12 +723,13 @@ final class RouteVNViewController: UIViewController, WKNavigationDelegate, WKScr
         sqlite3_busy_timeout(openedDatabase, 5_000)
         _ = try executeRawSQL(openedDatabase, sql: "PRAGMA journal_mode=WAL")
         _ = try executeRawSQL(openedDatabase, sql: "PRAGMA busy_timeout=5000")
-        sqliteDatabases[dbPath] = openedDatabase
+        sqliteDatabases[databaseURL.path] = openedDatabase
         return openedDatabase
     }
 
     private func closeDatabase(dbPath: String) {
-        if let database = sqliteDatabases.removeValue(forKey: dbPath) {
+        if let databaseURL = try? storage.databaseURL(dbPath: dbPath),
+           let database = sqliteDatabases.removeValue(forKey: databaseURL.path) {
             sqlite3_close(database)
         }
     }
@@ -884,6 +964,12 @@ final class RouteVNViewController: UIViewController, WKNavigationDelegate, WKScr
         guard let data = Data(base64Encoded: base64) else {
             throw RouteVNError.message("Invalid file payload.")
         }
+        if SaveFileDestinations.isSaveURI(uri) {
+            let result = try saveFileDestinations.write(to: uri) { stagedURL in
+                try data.write(to: stagedURL, options: .atomic)
+            }
+            return result.url.absoluteString
+        }
         guard let url = URL(string: uri), url.isFileURL else {
             throw RouteVNError.message("Only file URLs are supported by the iOS save path.")
         }
@@ -919,6 +1005,16 @@ final class RouteVNViewController: UIViewController, WKNavigationDelegate, WKScr
         let projectId = try storage.safePathSegment(requiredString(payload, "projectId"))
         let uri = try requiredString(payload, "uri")
         let instructionsJson = try requiredString(payload, "instructionsJson")
+        if SaveFileDestinations.isSaveURI(uri) {
+            let result = try saveFileDestinations.write(to: uri) { stagedURL in
+                var stagedPayload = payload
+                stagedPayload["uri"] = stagedURL.absoluteString
+                return try self.createDistributionZipStreamedToUri(stagedPayload)
+            }
+            var exported = result.value
+            exported["uri"] = result.url.absoluteString
+            return exported
+        }
         guard let targetURL = URL(string: uri), targetURL.isFileURL else {
             throw RouteVNError.message("Only file URLs are supported by the iOS ZIP export path.")
         }
@@ -1239,14 +1335,14 @@ final class RouteVNViewController: UIViewController, WKNavigationDelegate, WKScr
             contentTypes: contentTypes
         )
 
-        if contentTypes.allSatisfy({ $0.conforms(to: .image) }) {
-            presentImageSourcePicker()
+        if contentTypes.allSatisfy({ $0.conforms(to: .image) || $0.conforms(to: .movie) }) {
+            presentMediaSourcePicker()
         } else {
             presentFileDocumentPicker()
         }
     }
 
-    private func presentImageSourcePicker() {
+    private func presentMediaSourcePicker() {
         let sourcePicker = UIAlertController(title: nil, message: nil, preferredStyle: .actionSheet)
         sourcePicker.addAction(UIAlertAction(title: "Photo Library", style: .default) { [weak self, weak sourcePicker] _ in
             sourcePicker?.dismiss(animated: true) {
@@ -1285,7 +1381,11 @@ final class RouteVNViewController: UIViewController, WKNavigationDelegate, WKScr
     private func presentPhotoLibraryPicker() {
         guard let pending = pendingDocumentPicker else { return }
         var configuration = PHPickerConfiguration()
-        configuration.filter = .images
+        let includesImages = pending.contentTypes.contains { $0.conforms(to: .image) }
+        let includesVideos = pending.contentTypes.contains { $0.conforms(to: .movie) }
+        configuration.filter = includesImages && includesVideos
+            ? .any(of: [.images, .videos])
+            : (includesVideos ? .videos : .images)
         configuration.selectionLimit = pending.multiple ? 0 : 1
         configuration.selection = .ordered
         configuration.preferredAssetRepresentationMode = .compatible
@@ -1305,6 +1405,14 @@ final class RouteVNViewController: UIViewController, WKNavigationDelegate, WKScr
             do {
                 var files: [[String: Any]] = []
                 for (index, result) in selectedResults.enumerated() {
+                    if result.itemProvider.hasItemConformingToTypeIdentifier(UTType.movie.identifier) {
+                        files.append(try await createPickedVideoResult(
+                            result.itemProvider,
+                            pending: pending,
+                            index: index
+                        ))
+                        continue
+                    }
                     let photo = try await readPickedPhoto(
                         result.itemProvider,
                         contentTypes: pending.contentTypes,
@@ -1321,9 +1429,57 @@ final class RouteVNViewController: UIViewController, WKNavigationDelegate, WKScr
                 sendFilePickerResult(["requestId": pending.requestId, "files": files])
             } catch {
                 try? storage.deletePickerRequestFiles(requestId: pending.requestId)
-                sendFilePickerError(requestId: pending.requestId, message: "Failed to load selected photos.")
+                sendFilePickerError(requestId: pending.requestId, message: "Failed to load selected media.")
             }
         }
+    }
+
+    private func createPickedVideoResult(
+        _ provider: NSItemProvider,
+        pending: PendingDocumentPicker,
+        index: Int
+    ) async throws -> [String: Any] {
+        let temporaryDirectory = FileManager.default.temporaryDirectory
+            .appendingPathComponent("routevn-video-\(pending.requestId)-\(index)", isDirectory: true)
+        try FileManager.default.createDirectory(at: temporaryDirectory, withIntermediateDirectories: true)
+        defer { try? FileManager.default.removeItem(at: temporaryDirectory) }
+
+        let sourceURL: URL = try await withCheckedThrowingContinuation { continuation in
+            provider.loadFileRepresentation(forTypeIdentifier: UTType.movie.identifier) { url, error in
+                do {
+                    if let error { throw error }
+                    guard let url else { throw RouteVNError.message("The selected video is unavailable.") }
+                    // The provider deletes its URL after this callback returns.
+                    let copyURL = temporaryDirectory.appendingPathComponent(url.lastPathComponent)
+                    try FileManager.default.copyItem(at: url, to: copyURL)
+                    continuation.resume(returning: copyURL)
+                } catch {
+                    continuation.resume(throwing: error)
+                }
+            }
+        }
+
+        if let sourceType = UTType(filenameExtension: sourceURL.pathExtension),
+           pending.contentTypes.contains(where: { sourceType.conforms(to: $0) }) {
+            return try createPickerFileResult(requestId: pending.requestId, sourceURL: sourceURL, index: index)
+        }
+
+        // Camera videos are commonly MOV; the Videos page accepts MP4 only.
+        guard pending.contentTypes.contains(where: { UTType.mpeg4Movie.conforms(to: $0) }),
+              let exporter = AVAssetExportSession(
+                asset: AVURLAsset(url: sourceURL),
+                presetName: AVAssetExportPresetHighestQuality
+              ), exporter.supportedFileTypes.contains(.mp4) else {
+            throw RouteVNError.message("The selected video cannot be imported in an accepted format.")
+        }
+        let outputURL = temporaryDirectory.appendingPathComponent("video-\(index + 1).mp4")
+        exporter.outputURL = outputURL
+        exporter.outputFileType = .mp4
+        await exporter.export()
+        guard exporter.status == .completed else {
+            throw exporter.error ?? RouteVNError.message("The selected video could not be converted to MP4.")
+        }
+        return try createPickerFileResult(requestId: pending.requestId, sourceURL: outputURL, index: index)
     }
 
     private func readPickedPhoto(
@@ -1378,14 +1534,24 @@ final class RouteVNViewController: UIViewController, WKNavigationDelegate, WKScr
         }
     }
 
-    private func resolveSaveFilePicker(_ payload: [String: Any]) throws {
+    private func launchSaveFilePicker(_ payload: [String: Any]) throws {
+        guard pendingDocumentPicker == nil else {
+            throw RouteVNError.message("Another document picker is already open.")
+        }
         let requestId = try storage.safePathSegment(requiredString(payload, "requestId"))
         let filename = sanitizeFilename(stringValue(payload["filename"]), fallback: "download")
-        let url = try storage.downloadURL(filename: filename)
-        sendSaveFilePickerResult([
-            "requestId": requestId,
-            "uri": url.absoluteString
-        ])
+        pendingDocumentPicker = PendingDocumentPicker(
+            kind: .save(filename: filename),
+            requestId: requestId,
+            multiple: false,
+            writable: true,
+            contentTypes: [.folder]
+        )
+        let picker = UIDocumentPickerViewController(forOpeningContentTypes: [.folder])
+        picker.allowsMultipleSelection = false
+        picker.title = stringValue(payload["title"])
+        picker.delegate = self
+        present(picker, animated: true)
     }
 
     private func launchFolderPicker(_ payload: [String: Any]) throws {
@@ -1404,6 +1570,7 @@ final class RouteVNViewController: UIViewController, WKNavigationDelegate, WKScr
 
         let picker = UIDocumentPickerViewController(forOpeningContentTypes: [.folder])
         picker.allowsMultipleSelection = false
+        picker.title = stringValue(payload["title"])
         picker.delegate = self
         present(picker, animated: true)
     }
@@ -1424,6 +1591,11 @@ final class RouteVNViewController: UIViewController, WKNavigationDelegate, WKScr
             sendFolderPickerResult([
                 "requestId": pending.requestId,
                 "folder": NSNull()
+            ])
+        case .save:
+            sendSaveFilePickerResult([
+                "requestId": pending.requestId,
+                "uri": NSNull()
             ])
         }
     }
@@ -1459,6 +1631,19 @@ final class RouteVNViewController: UIViewController, WKNavigationDelegate, WKScr
                     "requestId": pending.requestId,
                     "folder": folderResult
                 ])
+            case .save(let filename):
+                guard let folder = urls.first else {
+                    sendSaveFilePickerResult([
+                        "requestId": pending.requestId,
+                        "uri": NSNull()
+                    ])
+                    return
+                }
+                let uri = try saveFileDestinations.select(folder: folder, filename: filename)
+                sendSaveFilePickerResult([
+                    "requestId": pending.requestId,
+                    "uri": uri
+                ])
             }
         } catch {
             switch pending.kind {
@@ -1466,6 +1651,11 @@ final class RouteVNViewController: UIViewController, WKNavigationDelegate, WKScr
                 sendFilePickerError(requestId: pending.requestId, message: error.localizedDescription)
             case .folder:
                 sendFolderPickerError(requestId: pending.requestId, message: error.localizedDescription)
+            case .save:
+                sendSaveFilePickerResult([
+                    "requestId": pending.requestId,
+                    "error": ["message": error.localizedDescription]
+                ])
             }
         }
     }
@@ -1613,26 +1803,10 @@ final class RouteVNViewController: UIViewController, WKNavigationDelegate, WKScr
     }
 
     private func listProjectFolders() throws -> [[String: Any]] {
-        let projectDirectories = try? FileManager.default.contentsOfDirectory(
-            at: storage.projectDatabasesRoot,
-            includingPropertiesForKeys: [.isDirectoryKey]
-        )
         var projects: [[String: Any]] = []
 
-        for projectDirectory in projectDirectories ?? [] {
-            let resourceValues = try? projectDirectory.resourceValues(forKeys: [.isDirectoryKey])
-            guard resourceValues?.isDirectory == true else {
-                continue
-            }
-
-            let projectId: String
-            do {
-                projectId = try storage.safePathSegment(projectDirectory.lastPathComponent)
-            } catch {
-                continue
-            }
-
-            let projectDbURL = projectDirectory.appendingPathComponent("project.db")
+        for projectId in try storage.projectIds() {
+            let projectDbURL = try storage.databaseURL(dbPath: storage.projectDatabasePath(projectId: projectId))
             let filesURL = try storage.projectFilesRoot(projectId: projectId)
             guard
                 FileManager.default.fileExists(atPath: projectDbURL.path),
@@ -1646,7 +1820,7 @@ final class RouteVNViewController: UIViewController, WKNavigationDelegate, WKScr
                 guard try storage.safePathSegment(stringValue(projectInfo["id"])) == projectId else {
                     continue
                 }
-                projects.append(projectEntry(projectId: projectId, projectInfo: projectInfo))
+                projects.append(projectEntry(projectId: projectId, projectInfo: projectInfo, databaseURL: projectDbURL))
             } catch {
                 NSLog("Skipping invalid iOS project folder \(projectId): \(error)")
             }
@@ -1707,9 +1881,12 @@ final class RouteVNViewController: UIViewController, WKNavigationDelegate, WKScr
             if FileManager.default.fileExists(atPath: sourceMetadataURL.path) {
                 try FileManager.default.copyItem(at: sourceMetadataURL, to: targetMetadataURL)
             }
+            // Re-import can replace a partially initialized named folder.
+            // Restore its identity after replacing the directory contents.
+            try storage.recordProjectDirectory(projectId: projectId, directory: targetProjectRoot)
         }
 
-        var result = projectEntry(projectId: projectId, projectInfo: projectInfo)
+        var result = projectEntry(projectId: projectId, projectInfo: projectInfo, databaseURL: targetDbURL)
         result["sourceUri"] = folderURL.absoluteString
         result["sourceName"] = folderURL.lastPathComponent
         result["alreadyImported"] = alreadyImported
@@ -1851,9 +2028,10 @@ final class RouteVNViewController: UIViewController, WKNavigationDelegate, WKScr
         return !rows.isEmpty
     }
 
-    private func projectEntry(projectId: String, projectInfo: [String: Any]) -> [String: Any] {
+    private func projectEntry(projectId: String, projectInfo: [String: Any], databaseURL: URL) -> [String: Any] {
         var entry: [String: Any] = [
             "id": projectId,
+            "projectFilePath": databaseURL.path,
             "name": stringValue(projectInfo["name"]),
             "description": stringValue(projectInfo["description"]),
             "language": stringValue(projectInfo["language"])
@@ -1923,6 +2101,7 @@ private enum RouteVNError: LocalizedError {
 private enum PendingDocumentPickerKind {
     case file
     case folder
+    case save(filename: String)
 }
 
 private struct PendingDocumentPicker {
@@ -2255,12 +2434,12 @@ final class RouteVNSchemeHandler: NSObject, WKURLSchemeHandler {
 final class RouteVNNativeStorage {
     let root: URL
     let databasesRoot: URL
-    let projectDatabasesRoot: URL
-    let projectsRoot: URL
     let pickerRoot: URL
     let downloadsRoot: URL
     let exportsRoot: URL
     let webRoot: URL
+    let projectFolderSetup: ProjectFolderSetup
+    private let projectStoragePaths: ProjectStoragePaths
 
     init() {
         let fileManager = FileManager.default
@@ -2268,23 +2447,39 @@ final class RouteVNNativeStorage {
         let documents = fileManager.urls(for: .documentDirectory, in: .userDomainMask)[0]
         root = appSupport.appendingPathComponent("RouteVN Creator", isDirectory: true)
         databasesRoot = root.appendingPathComponent("databases", isDirectory: true)
-        projectDatabasesRoot = databasesRoot.appendingPathComponent("projects", isDirectory: true)
-        projectsRoot = root.appendingPathComponent("projects", isDirectory: true)
         pickerRoot = root.appendingPathComponent("picker", isDirectory: true)
         downloadsRoot = documents.appendingPathComponent("RouteVN Creator", isDirectory: true)
         exportsRoot = downloadsRoot.appendingPathComponent("Exports", isDirectory: true)
         webRoot = Bundle.main.resourceURL?.appendingPathComponent("web", isDirectory: true) ?? Bundle.main.bundleURL
+        let setup = ProjectFolderSetup(
+            configurationURL: root.appendingPathComponent("project-folder-setup.json"),
+            deviceName: UIDevice.current.userInterfaceIdiom == .pad ? "iPad" : "iPhone"
+        )
+        projectFolderSetup = setup
+        projectStoragePaths = ProjectStoragePaths(
+            libraryFolder: { try setup.openProjectFolder() }
+        )
 
         try? fileManager.createDirectory(at: root, withIntermediateDirectories: true)
         try? fileManager.createDirectory(at: databasesRoot, withIntermediateDirectories: true)
-        try? fileManager.createDirectory(at: projectsRoot, withIntermediateDirectories: true)
         try? fileManager.createDirectory(at: pickerRoot, withIntermediateDirectories: true)
         try? fileManager.createDirectory(at: downloadsRoot, withIntermediateDirectories: true)
         try? fileManager.createDirectory(at: exportsRoot, withIntermediateDirectories: true)
     }
 
     func databaseURL(dbPath: String) throws -> URL {
-        try safeRelativeURL(root: databasesRoot, relativePath: dbPath)
+        if dbPath.hasPrefix("projects/") {
+            let components = dbPath.split(separator: "/", omittingEmptySubsequences: false)
+            guard components.count == 3, components[2] == "project.db" else {
+                throw RouteVNError.message("Invalid project database path.")
+            }
+            return try projectStoragePaths.location(projectId: String(components[1])).database
+        }
+        return try safeRelativeURL(root: databasesRoot, relativePath: dbPath)
+    }
+
+    func projectIds() throws -> [String] {
+        try projectStoragePaths.projectIds()
     }
 
     func projectDatabasePath(projectId: String) -> String {
@@ -2292,7 +2487,7 @@ final class RouteVNNativeStorage {
     }
 
     func projectRoot(projectId: String) throws -> URL {
-        try safeRelativeURL(root: projectsRoot, relativePath: safePathSegment(projectId))
+        try projectStoragePaths.location(projectId: safePathSegment(projectId)).directory
     }
 
     func projectFilesRoot(projectId: String) throws -> URL {
@@ -2307,16 +2502,17 @@ final class RouteVNNativeStorage {
         try safeRelativeURL(root: projectFilesRoot(projectId: projectId), relativePath: safePathSegment(fileId))
     }
 
-    func ensureProjectDirectories(projectId: String) throws {
-        let safeProjectId = try safePathSegment(projectId)
-        try FileManager.default.createDirectory(
-            at: projectFilesRoot(projectId: safeProjectId),
-            withIntermediateDirectories: true
-        )
-        try FileManager.default.createDirectory(
-            at: projectMetadataRoot(projectId: safeProjectId),
-            withIntermediateDirectories: true
-        )
+    func ensureProjectDirectories(projectId: String, createProject: Bool = false, projectName: String? = nil) throws {
+        try projectStoragePaths.ensureDirectories(projectId: safePathSegment(projectId), createProject: createProject, projectName: projectName)
+    }
+
+    func previewNewProjectLocation(projectName: String) throws -> [String: Any] {
+        let directory = try projectStoragePaths.preview(projectName: projectName)
+        return ["folderName": directory.lastPathComponent, "folderPath": directory.path]
+    }
+
+    func recordProjectDirectory(projectId: String, directory: URL) throws {
+        try projectStoragePaths.recordIdentity(projectId: projectId, directory: directory)
     }
 
     func projectStorageStatus(projectId: String) throws -> [String: Any] {
@@ -2337,6 +2533,7 @@ final class RouteVNNativeStorage {
             "exists": databaseFileExists ||
                 databaseDirectoryExists ||
                 projectDirectoryExists,
+            "projectFilePath": databaseURL.path,
             "databaseFileExists": databaseFileExists,
             "databaseDirectoryExists": databaseDirectoryExists,
             "projectDirectoryExists": projectDirectoryExists
