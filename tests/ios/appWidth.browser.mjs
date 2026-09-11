@@ -43,6 +43,25 @@ for (const [engineName, engine] of Object.entries({ chromium, webkit })) {
       .locator("#createProjectForm rtgl-button[data-action-id='submit']")
       .click();
     await page.locator("#projectItem0").waitFor({ state: "visible" });
+    await page.locator("rvn-app").evaluate((app) => {
+      app.store.setPlatform({ platform: "ios" });
+      app.render();
+    });
+    // Projects has its own page-width wrapper in addition to the app shell.
+    // The available container may differ from WebKit's stale viewport units.
+    for (const width of [1133, 561.5, 744, 1133]) {
+      await page.evaluate((width) => {
+        document.body.style.width = `${width}px`;
+      }, width);
+      const scroller = await page.locator("#projectsScroll").boundingBox();
+      assert.ok(
+        Math.abs(scroller.width - width) < 1,
+        `${engineName} iOS Projects: ${scroller.width}px must follow container ${width}px`,
+      );
+    }
+    console.log(
+      `${engineName} iOS Projects: page fills its changing container`,
+    );
     await page.locator("rvn-projects").evaluate((projects) => {
       const project = projects.deps.store.selectProjects()[0];
       projects.deps.appService.navigate("/project", { p: project.id });
