@@ -43,6 +43,8 @@ refs:
         handler: handleSoundDoubleClick
       contextmenu:
         handler: handleSoundContextMenu
+      long-press:
+        handler: handleSoundLongPress
       keydown:
         handler: handleSoundKeyDown
   soundDragSurface*:
@@ -81,6 +83,10 @@ refs:
       audio-player-close:
         handler: handleAudioPlayerClose
 styles:
+  '[data-long-press="true"]':
+    user-select: none
+    "-webkit-user-select": none
+    "-webkit-touch-callout": none
   ".bgmChannel":
     box-sizing: border-box
     min-width: "0"
@@ -246,7 +252,7 @@ template:
                             $else:
                               - 'rtgl-view.bgmTimelineTrack data-timeline-track=true data-timeline-duration-ms=${timelineDurationMs} w=f pos=rel style="height: ${timelineHeightPx}px; min-width: 100%;"':
                                   - $for sound, i in sounds:
-                                      - 'rtgl-view#soundClip${i}.bgmSoundClip data-sound-id=${sound.id} d=v pos=abs overflow=hidden bw=xs bc=${sound.itemBorderColor} h-bc=${sound.itemHoverBorderColor} cur=pointer tabindex=0 role=button aria-label="${sound.name}" style="box-sizing: border-box; min-width: 56px; left: ${sound.leftPercent}%; top: ${sound.topPx}px; width: ${sound.widthPercent}%; height: 126px;"':
+                                      - 'rtgl-view#soundClip${i}.bgmSoundClip data-long-press=true data-sound-id=${sound.id} d=v pos=abs overflow=hidden bw=xs bc=${sound.itemBorderColor} h-bc=${sound.itemHoverBorderColor} cur=pointer tabindex=0 role=button aria-label="${sound.name}" style="box-sizing: border-box; min-width: 56px; left: ${sound.leftPercent}%; top: ${sound.topPx}px; width: ${sound.widthPercent}%; height: 126px;"':
                                           - rtgl-view.bgmSoundClipContent d=v w=f h=f:
                                               - div.bgmSoundWaveformArea:
                                                   - $if sound.waveformDataFileId:

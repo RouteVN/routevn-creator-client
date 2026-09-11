@@ -204,6 +204,7 @@ export const selectViewData = ({ state, props, i18n }) => {
         return {
           ...item,
           domItemId: isPlaceholder ? "" : item.id,
+          longPressEnabled: mobileLayout && !isPlaceholder,
           cursor: isPlaceholder ? "default" : "pointer",
           itemBorderColor: isSelected ? "pr" : "bo",
           itemHoverBorderColor: isPlaceholder ? "bo" : isSelected ? "pr" : "ac",

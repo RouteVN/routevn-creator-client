@@ -57,6 +57,13 @@ const form = {
       ],
     },
     {
+      $when: "platform == 'ios'",
+      name: "iosProjectLocation",
+      type: "slot",
+      slot: "ios-project-location",
+      label: "Project Location",
+    },
+    {
       name: "description",
       type: "input-text",
       label: "Description",
@@ -82,7 +89,6 @@ const form = {
       name: "resolution",
       type: "select",
       label: "Resolution",
-      description: "Choose the project resolution.",
       required: true,
       clearable: false,
       options: CREATE_PROJECT_RESOLUTION_OPTIONS,
@@ -182,7 +188,6 @@ const createLocalizedForm = (copy = {}, projectLanguageCopy, i18n) => ({
       return {
         ...field,
         label: copy.resolutionLabel,
-        description: copy.projectResolutionDescription,
       };
     }
 
@@ -208,6 +213,10 @@ const createLocalizedForm = (copy = {}, projectLanguageCopy, i18n) => ({
       };
     }
 
+    if (field.name === "iosProjectLocation") {
+      return { ...field, label: copy.projectLocationLabel };
+    }
+
     return field;
   }),
 });
@@ -221,6 +230,10 @@ export const createInitialState = () => ({
   iconPreviewUrl: undefined,
   isIconCropDialogOpen: false,
   iconCropFile: undefined,
+  locationRequestId: 0,
+  projectLocationPending: false,
+  projectLocation: undefined,
+  projectLocationError: false,
 });
 
 export const syncFromProps = ({ state }, { props } = {}) => {
@@ -228,7 +241,7 @@ export const syncFromProps = ({ state }, { props } = {}) => {
     props?.platform === "tauri"
       ? "tauri"
       : props?.platform === "android" || props?.platform === "ios"
-        ? "android"
+        ? props.platform
         : "web";
   state.formKey += 1;
   state.defaultValues = createCreateProjectDefaultValues(props?.defaultValues);
@@ -237,6 +250,25 @@ export const syncFromProps = ({ state }, { props } = {}) => {
   state.iconPreviewUrl = undefined;
   state.isIconCropDialogOpen = false;
   state.iconCropFile = undefined;
+  state.locationRequestId += 1;
+  state.projectLocationPending = false;
+  state.projectLocation = undefined;
+  state.projectLocationError = false;
+};
+
+export const beginLocationPreview = ({ state }) => {
+  state.locationRequestId += 1;
+  state.projectLocationPending = true;
+  state.projectLocationError = false;
+};
+
+export const selectLocationRequestId = ({ state }) => state.locationRequestId;
+export const selectIsLocationReady = ({ state }) =>
+  Boolean(state.projectLocation) && !state.projectLocationPending;
+export const setLocationPreview = ({ state }, { location, failed = false }) => {
+  state.projectLocationPending = false;
+  state.projectLocation = location;
+  state.projectLocationError = failed;
 };
 
 export const updateFormValues = (
@@ -326,5 +358,14 @@ export const selectViewData = ({ state, i18n }) => {
     },
     clickToUploadLabel: copy.clickToUpload,
     browseButtonLabel: copy.browseButton,
+    projectLocation: state.projectLocation,
+    projectLocationPrefix: state.projectLocation?.displayPath
+      .split(" / ")
+      .slice(0, -1)
+      .join("/"),
+    projectLocationMessage: state.projectLocationError
+      ? copy.failedPreviewProjectLocation
+      : copy.loadingMessage,
+    projectLocationError: state.projectLocationError,
   };
 };

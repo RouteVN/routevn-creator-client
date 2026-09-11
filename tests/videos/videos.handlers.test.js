@@ -2,9 +2,35 @@ import { describe, expect, it, vi } from "vitest";
 import {
   handleDataChanged,
   handleFileExplorerKeyboardScopeKeyDown,
+  handleOutsideVideoClick,
 } from "../../src/pages/videos/videos.handlers.js";
 
 describe("videos handlers", () => {
+  it("pauses playback before closing the preview", () => {
+    const calls = [];
+    handleOutsideVideoClick({
+      refs: {
+        videoPreviewElement: {
+          tagName: "VIDEO",
+          pause: () => calls.push("pause"),
+        },
+      },
+      store: { setVideoNotVisible: () => calls.push("close") },
+      render: () => calls.push("render"),
+    });
+
+    expect(calls).toEqual(["pause", "close", "render"]);
+  });
+
+  it("can close the preview while its video is still loading", () => {
+    const store = { setVideoNotVisible: vi.fn() };
+    const render = vi.fn();
+    handleOutsideVideoClick({ refs: {}, store, render });
+
+    expect(store.setVideoNotVisible).toHaveBeenCalledOnce();
+    expect(render).toHaveBeenCalledOnce();
+  });
+
   it("hydrates video file metadata from repository files on refresh", async () => {
     const repositoryState = {
       files: {

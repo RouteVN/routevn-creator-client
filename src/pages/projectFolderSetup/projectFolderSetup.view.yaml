@@ -1,0 +1,29 @@
+refs:
+  setupFolderButton:
+    eventListeners:
+      click:
+        handler: handleSetup
+  continueFolderButton:
+    eventListeners:
+      click:
+        handler: handleContinue
+template:
+  - 'rtgl-view w=f h=f bgc=bg d=v ph=md style="box-sizing: border-box; padding-block: max(24px, env(safe-area-inset-top)) max(24px, env(safe-area-inset-bottom));"':
+      - 'rtgl-view w=f h=1fg ah=c sv style="min-height: 0;"':
+          - 'rtgl-view#projectFolderSetupContent g=lg style="width: 100%; max-width: 640px; margin-block: auto; flex-shrink: 0;"':
+              - $if !hasSavedFolder:
+                  - rtgl-svg svg=folder wh=40 c=mu-fg aria-hidden=true: null
+              - rtgl-text s=${titleSize}: ${title}
+              - $if !hasSavedFolder:
+                  - rtgl-view w=f g=sm:
+                      - rtgl-text c=mu-fg: ${copy.description}
+                      - rtgl-text c=mu-fg: ${copy.newProjectsDescription}
+              - $if hasSavedFolder:
+                  - 'rtgl-view w=f d=h av=c g=sm p=lg bw=xs bc=bo br=md style="box-sizing: border-box;"':
+                      - 'rtgl-svg svg=folder wh=20 c=mu-fg aria-hidden=true style="flex-shrink: 0;"': null
+                      - 'rtgl-text#projectFolderPath w=1fg style="min-width: 0; overflow-wrap: anywhere;"': ${displayPath}
+              - $if errorMessage:
+                  - rtgl-text#projectFolderError role=alert s=sm: ${errorMessage}
+              - rtgl-button#setupFolderButton w=f v=${setupVariant} ?disabled=${isBusy}: ${setupLabel}
+              - $if hasSavedFolder:
+                  - rtgl-button#continueFolderButton w=f ?disabled=${isBusy}: ${copy.continue}

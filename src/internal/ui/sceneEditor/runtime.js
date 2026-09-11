@@ -5,8 +5,10 @@ import {
   filter,
   fromEvent,
   map,
+  merge,
   of,
   switchMap,
+  take,
   tap,
   throttleTime,
   timer,
@@ -2388,9 +2390,40 @@ export const mountSceneEditorSubscriptions = (deps) => {
           return EMPTY;
         }
 
-        return fromEvent(canvasRoot, "click", {
-          capture: true,
-        }).pipe(
+        // Arm before the renderer handles release, including when iOS omits
+        // the compatibility click. Only a matching canvas press/release is an
+        // activation; cancellation or release elsewhere ends the gesture.
+        const pointerTarget = canvasRoot.ownerDocument ?? canvasRoot;
+        return merge(
+          fromEvent(canvasRoot, "pointerdown", { capture: true }).pipe(
+            switchMap((press) => {
+              if (press.isPrimary === false || press.button !== 0) {
+                return EMPTY;
+              }
+              return merge(
+                fromEvent(pointerTarget, "pointerup", { capture: true }),
+                fromEvent(pointerTarget, "pointercancel", { capture: true }),
+              ).pipe(
+                filter((event) => event.pointerId === press.pointerId),
+                take(1),
+                filter(
+                  (event) =>
+                    event.type === "pointerup" &&
+                    event.isPrimary !== false &&
+                    event.button === 0 &&
+                    event.composedPath().includes(canvasRoot),
+                ),
+              );
+            }),
+          ),
+          fromEvent(canvasRoot, "click", { capture: true }).pipe(
+            filter(
+              (event) =>
+                event.detail === 0 ||
+                typeof globalThis.PointerEvent !== "function",
+            ),
+          ),
+        ).pipe(
           tap(() => {
             canvasRuntimeLineSyncGate.mark({ direction: "next" });
           }),

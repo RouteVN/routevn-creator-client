@@ -16,7 +16,9 @@ import {
   handleOpenButtonClick,
   handleAfterMount,
   handleBeforeMount,
+  handleCloudProjectLongPress,
   handleProjectContextMenu,
+  handleProjectLongPress,
   handleProjectsClick,
 } from "../../src/pages/projects/projects.handlers.js";
 
@@ -1077,6 +1079,94 @@ describe("projects.handleDeleteDialogConfirm", () => {
       confirmationText: "Delete",
     });
     expect(deps.render).toHaveBeenCalledTimes(1);
+  });
+});
+
+describe("projects long-press menus", () => {
+  it("opens the iOS project menu at the hold coordinates without navigating", () => {
+    const deps = createDeps({ platform: "ios" });
+
+    handleProjectLongPress(deps, {
+      _event: {
+        detail: { clientX: 42, clientY: 180, pointerType: "touch" },
+        currentTarget: {
+          dataset: {
+            projectId: "project-1",
+            projectPath: encodeURIComponent('/projects/Project "One"'),
+          },
+        },
+      },
+    });
+
+    expect(deps.store.openDropdownMenu).toHaveBeenCalledWith({
+      x: 42,
+      y: 180,
+      scope: "local",
+      projectId: "project-1",
+      projectPath: '/projects/Project "One"',
+      items: [
+        {
+          label: EN_I18N.projectsPage.removeButton,
+          type: "item",
+          value: "delete",
+        },
+      ],
+    });
+    expect(deps.render).toHaveBeenCalledOnce();
+    expect(deps.appService.navigate).not.toHaveBeenCalled();
+  });
+
+  it("allows a stale project entry to be removed by long press", () => {
+    const deps = createDeps({ platform: "ios" });
+
+    handleProjectLongPress(deps, {
+      _event: {
+        detail: { clientX: 20, clientY: 120, pointerType: "touch" },
+        currentTarget: { dataset: { projectPath: "/projects/project-one" } },
+      },
+    });
+
+    expect(deps.store.openDropdownMenu).toHaveBeenCalledWith({
+      x: 20,
+      y: 120,
+      scope: "local",
+      projectPath: "/projects/project-one",
+      items: [
+        {
+          label: EN_I18N.projectsPage.removeButton,
+          type: "item",
+          value: "delete",
+        },
+      ],
+    });
+    expect(deps.appService.showAlert).not.toHaveBeenCalled();
+  });
+
+  it("opens the cloud project menu from a touch hold", () => {
+    const deps = createDeps({ platform: "web" });
+    deps.store.selectCloudProjects = vi.fn(() => [{ id: "project-2" }]);
+
+    handleCloudProjectLongPress(deps, {
+      _event: {
+        detail: { clientX: 50, clientY: 210, pointerType: "touch" },
+        currentTarget: { dataset: { projectId: "project-2" } },
+      },
+    });
+
+    expect(deps.store.openDropdownMenu).toHaveBeenCalledWith({
+      x: 50,
+      y: 210,
+      scope: "cloud",
+      projectId: "project-2",
+      items: [
+        {
+          label: EN_I18N.projectsPage.addMemberMenuItem,
+          type: "item",
+          value: "add-member",
+        },
+      ],
+    });
+    expect(deps.appService.navigate).not.toHaveBeenCalled();
   });
 });
 

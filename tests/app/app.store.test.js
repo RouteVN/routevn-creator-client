@@ -303,7 +303,7 @@ describe("app.store mobile tab active state", () => {
 });
 
 describe("app.store floating help button", () => {
-  it("uses platform-specific touch offsets", () => {
+  it("omits the tab bar offset on Projects while keeping platform-specific touch spacing", () => {
     const androidState = createInitialState();
     setPlatform({ state: androidState }, { platform: "android" });
     setUiConfig(
@@ -319,12 +319,12 @@ describe("app.store floating help button", () => {
     );
 
     expect(selectViewData({ state: androidState }).helpButtonBottom).toBe(
-      "92px",
+      "28px",
     );
-    expect(selectViewData({ state: iosState }).helpButtonBottom).toBe("128px");
+    expect(selectViewData({ state: iosState }).helpButtonBottom).toBe("64px");
   });
 
-  it("raises the Android touch help button only on the scene editor", () => {
+  it("raises the Android and iOS touch help button only on the scene editor", () => {
     const androidState = createInitialState();
     setPlatform({ state: androidState }, { platform: "android" });
     setUiConfig(
@@ -366,7 +366,7 @@ describe("app.store floating help button", () => {
       },
     );
 
-    expect(selectViewData({ state: iosState }).helpButtonBottom).toBe("128px");
+    expect(selectViewData({ state: iosState }).helpButtonBottom).toBe("176px");
 
     const desktopState = createInitialState();
     setPlatform({ state: desktopState }, { platform: "android" });

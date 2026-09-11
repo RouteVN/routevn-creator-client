@@ -270,10 +270,38 @@ steps:
     selector: "rvn-colors #groupview #itemRef0x0"
     state: visible
     timeoutMs: 10000
-  - action: select
-    selector: "rvn-colors #groupview #itemRef0x0"
-    steps:
-      - action: rclick
+  # Exercise our hold recognizer without a browser-generated contextmenu.
+  - action: assert
+    type: js
+    fn: eval
+    args:
+      - |
+        (async () => {
+          const deepQuery = (root, selector) => {
+            const direct = root.querySelector(selector);
+            if (direct) return direct;
+            for (const node of root.querySelectorAll('*')) {
+              const found = node.shadowRoot && deepQuery(node.shadowRoot, selector);
+              if (found) return found;
+            }
+          };
+          const page = deepQuery(document, 'rvn-colors');
+          const card = deepQuery(page.shadowRoot, '[data-long-press="true"]');
+          const rect = card.getBoundingClientRect();
+          const options = {
+            pointerId: 1, pointerType: 'touch', button: 0,
+            clientX: rect.left + rect.width / 2,
+            clientY: rect.top + rect.height / 2,
+            bubbles: true, composed: true, cancelable: true,
+          };
+          card.dispatchEvent(new PointerEvent('pointerdown', options));
+          await new Promise(resolve => setTimeout(resolve, 550));
+          card.dispatchEvent(new PointerEvent('pointerup', options));
+          const click = new MouseEvent('click', { ...options, detail: 1 });
+          card.dispatchEvent(click);
+          return click.defaultPrevented;
+        })()
+    value: true
   - action: waitFor
     selector: "rvn-colors #previewDialog[open]"
     state: visible

@@ -385,6 +385,7 @@ describe("ios project service adapters", () => {
       "ensureProjectStorage",
       {
         projectId: "project-1",
+        projectName: "Project One",
       },
     );
     expect(mocked.createPersistedIOSProjectStore).toHaveBeenCalledWith({

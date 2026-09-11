@@ -1,3 +1,22 @@
+projectFolderSetupPage:
+  title: "Set up your projects folder"
+  description: "Choose “On My {deviceName}” or an existing projects folder."
+  openDescription: "Choose your existing projects folder under “On My {deviceName}”."
+  newProjectsDescription: "New projects will be created in this folder."
+  setup: "Setup"
+  pickerTitle: "Choose folder"
+  changeFolder: "Change Folder"
+  savedTitle: "Your project folder is ready"
+  continue: "Continue"
+  errorTitle: "Project folder"
+  pickError: "Could not access that folder. Please choose it again."
+  confirmError: "Could not save the folder setup. Check access and available space, then try again."
+  appFolderError: "This folder belongs to an app. Choose a separate folder under On My {deviceName}."
+  localFolderError: "Choose a local folder under On My {deviceName}. Cloud folders are not supported in this setup."
+  invalidFolderError: "That folder is unavailable. Please choose another folder."
+  nameConflictError: "A file named RouteVN Projects already exists here. Please choose another location."
+  reconnectError: "Your saved folder is unavailable. Select it again to restore access."
+  unavailableError: "Folder setup is unavailable in this app version. Install the updated iOS app, then try again."
 projectsPage:
   addMemberMenuItem: "Add Member"
   addMemberTitle: "Add Member"
@@ -54,6 +73,7 @@ projectsPage:
   failedRemoveProject: "Failed to remove project. Please try again."
   failedSelectProjectIcon: "Failed to select project icon."
   failedSelectProjectLocation: "Failed to select project location."
+  failedPreviewProjectLocation: "Could not check the project location. Reopen this dialog to try again."
   fillRequiredFields: "Please fill in all required fields."
   importButton: "Import"
   importedProjectMessage: "Project \"{projectName}\" imported."
@@ -193,6 +213,7 @@ projectPage:
   warningTitle: "Warning"
   wordsLabel: "Words"
 appPage:
+  failedStartPreviewAudio: "Could not start preview audio. Close and reopen the preview."
   googlePlayUpdateAvailable: "A new version of RouteVN Creator is available on Google Play."
   googlePlayUpdateFailed: "Could not update through Google Play. Please try again."
   googlePlayUpdateInProgress: "Google Play is downloading the update. You can continue working."
@@ -758,6 +779,8 @@ actionTransformEditor:
   unnamedTarget: "Current item"
   visualTarget: "Visual"
 vnPreview:
+  closeButton: "Exit full screen"
+  loading: "Loading preview..."
   restoreOrientationButton: "Restore preview orientation"
   rotateButton: "Rotate preview 90 degrees"
 animationCameraEditor:
@@ -1005,6 +1028,7 @@ soundsPage:
   unsupportedFormatTitle: "Unsupported Sound"
   updateButton: "Update"
 videosPage:
+  closePreviewButton: "Close"
   editTitle: "Edit Video"
   failedCreateVideo: "Failed to create video."
   failedSelectFile: "Failed to select file."
@@ -2293,7 +2317,9 @@ commandLinePage:
   "string": "string"
   "true": "true"
 audioPlayerPage:
+  seekLabel: "Seek audio"
   errorTitle: "Error"
+  failedPlayback: "Could not play this audio. Please try again."
   missingFileId: "Missing fileId"
 aboutPage:
   allSocialMediaButton: "All social media"
@@ -2311,6 +2337,9 @@ settingsUserPage:
   title: "User Settings"
 configPage:
   title: "Config"
+  projectFolderTitle: "Projects folder"
+  changeProjectFolderLabel: "Change folder"
+  projectFolderNotSet: "No folder selected"
   assetPackageTitle: "Asset Package"
   assetPackageDescription: "Enable this if you plan to release an asset pack in the RouteVN asset store."
   helpButtonTitle: "Help Button"

@@ -25,6 +25,36 @@ const PROJECTS_VIEW = yaml.load(
 const handlers = { ...handlerExports };
 
 describe("projects render", () => {
+  it("binds project gestures only to cards, leaving the list background inactive", () => {
+    const state = createInitialState();
+    setPlatform({ state }, { platform: "ios" });
+    setProjects(
+      { state },
+      { projects: [{ id: "project-1", name: "Project One" }] },
+    );
+    const rendered = parseView({
+      h,
+      template: parse(PROJECTS_VIEW.template),
+      viewData: selectViewData({ state, i18n: EN_I18N }),
+      refs: PROJECTS_VIEW.refs,
+      handlers,
+    });
+    const nodes = [];
+    const visit = (node) => {
+      nodes.push(node);
+      node.children?.forEach(visit);
+    };
+    visit(rendered);
+    const scroller = nodes.find((node) => node.data?.key === "projectsScroll");
+    const card = nodes.find((node) => node.data?.key === "projectItem0");
+
+    expect(scroller).toBeDefined();
+    expect(scroller.data.on).toBeUndefined();
+    expect(card.data.on.click).toBeTypeOf("function");
+    expect(card.data.on.contextmenu).toBeTypeOf("function");
+    expect(card.data.on["long-press"]).toBeTypeOf("function");
+  });
+
   it("renders a local project whose path contains spaces and quotes", () => {
     const state = createInitialState();
     setProjects(

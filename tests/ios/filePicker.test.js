@@ -140,7 +140,7 @@ describe("ios file picker", () => {
         Promise.resolve().then(() => {
           window.__routeVNIOSSaveFileResult({
             requestId: payload.requestId,
-            uri: "file:///exports/project_version.zip",
+            uri: "routevn-save://selected/export-1",
           });
         });
         return Promise.resolve(true);
@@ -154,12 +154,46 @@ describe("ios file picker", () => {
       mimeType: "application/zip",
     });
 
-    expect(selectedUri).toBe("file:///exports/project_version.zip");
+    expect(selectedUri).toBe("routevn-save://selected/export-1");
     expect(savePayload).toEqual({
       requestId: "save-1",
+      title: "Select Folder",
       filename: "project_version.zip",
       mimeType: "application/zip",
     });
+  });
+
+  it("returns cancellation without starting a download when the save folder picker is cancelled", async () => {
+    mocked.callIOSBridge.mockImplementation(async (method, payload) => {
+      expect(method).toBe("openSaveFilePicker");
+      queueMicrotask(() =>
+        window.__routeVNIOSSaveFileResult({
+          requestId: payload.requestId,
+          uri: null,
+        }),
+      );
+      return true;
+    });
+    const result = await createIOSFilePicker().saveFilePicker({
+      defaultPath: "Project One.zip",
+    });
+    expect(result).toBeNull();
+    expect(mocked.callIOSBridge).toHaveBeenCalledOnce();
+  });
+
+  it("rejects a save folder selection failure", async () => {
+    mocked.callIOSBridge.mockImplementation(async (_method, payload) => {
+      queueMicrotask(() =>
+        window.__routeVNIOSSaveFileResult({
+          requestId: payload.requestId,
+          error: { message: "Selected folder is unavailable" },
+        }),
+      );
+      return true;
+    });
+    await expect(
+      createIOSFilePicker().saveFilePicker({ defaultPath: "Project One.zip" }),
+    ).rejects.toThrow("Selected folder is unavailable");
   });
 
   it("opens the native folder picker with writable access when requested", async () => {
@@ -198,6 +232,30 @@ describe("ios file picker", () => {
       title: "Select Export Folder",
       writable: true,
     });
+  });
+
+  it("handles folder cancellation without writing any files", async () => {
+    mocked.callIOSBridge.mockImplementation(async (method, payload) => {
+      expect(method).toBe("openFolderPicker");
+      expect(payload).toEqual({
+        requestId: expect.stringMatching(/^folder-\d+$/),
+        title: "Choose folder",
+        writable: true,
+      });
+      queueMicrotask(() =>
+        window.__routeVNIOSFolderPickerResult({
+          requestId: payload.requestId,
+          folder: undefined,
+        }),
+      );
+      return true;
+    });
+    const folder = await createIOSFilePicker().openFolderPicker({
+      title: "Choose folder",
+      writable: true,
+    });
+    expect(folder).toBeUndefined();
+    expect(mocked.callIOSBridge).toHaveBeenCalledOnce();
   });
 
   it("writes supplied bytes to a selected iOS save URI", async () => {

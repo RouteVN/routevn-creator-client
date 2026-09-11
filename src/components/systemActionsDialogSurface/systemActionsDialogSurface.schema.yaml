@@ -25,6 +25,8 @@ propsSchema:
       type: string
     panelBottom:
       type: string
+    panelRight:
+      type: string
     fullscreen:
       type: boolean
     fullscreenHorizontalInset:

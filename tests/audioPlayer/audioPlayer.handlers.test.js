@@ -7,6 +7,7 @@ const originalCustomEvent = globalThis.CustomEvent;
 const createDeps = () => ({
   appService: {
     showAlert: vi.fn(),
+    showToast: vi.fn(),
   },
   audioService: {
     acquire: vi.fn(() => vi.fn()),
@@ -22,14 +23,17 @@ const createDeps = () => ({
   render: vi.fn(),
   store: {
     setCurrentTime: vi.fn(),
-    setDuration: vi.fn(),
     setLoading: vi.fn(),
     setPlaying: vi.fn(),
+    setDuration: vi.fn(),
+    clearSeekTime: vi.fn(),
+    selectSeekTime: vi.fn(),
   },
 });
 
 describe("audio player handlers", () => {
   afterEach(() => {
+    vi.restoreAllMocks();
     globalThis.window = originalWindow;
     globalThis.CustomEvent = originalCustomEvent;
   });
@@ -90,8 +94,8 @@ describe("audio player handlers", () => {
   it("leaves Escape to an open dialog", () => {
     let keyDownHandler;
     globalThis.window = {
-      addEventListener: vi.fn((_eventName, handler) => {
-        keyDownHandler = handler;
+      addEventListener: vi.fn((eventName, handler) => {
+        if (eventName === "keydown") keyDownHandler = handler;
       }),
       removeEventListener: vi.fn(),
     };
@@ -116,5 +120,61 @@ describe("audio player handlers", () => {
     expect(deps.dispatchEvent).not.toHaveBeenCalled();
 
     cleanup();
+  });
+
+  it("shows playback errors and clears the playing indicator", () => {
+    globalThis.window = {
+      addEventListener: vi.fn(),
+      removeEventListener: vi.fn(),
+    };
+    vi.spyOn(console, "error").mockImplementation(() => {});
+    const deps = createDeps();
+    deps.i18n = {
+      audioPlayerPage: {
+        errorTitle: "Error",
+        failedPlayback: "Playback failed.",
+      },
+    };
+    const cleanup = handleBeforeMount(deps);
+    const handleError = deps.audioService.on.mock.calls.find(
+      ([event]) => event === "error",
+    )[1];
+    handleError(new Error("Media element rejected playback"));
+    expect(deps.store.setPlaying).toHaveBeenCalledWith({ isPlaying: false });
+    expect(deps.store.setLoading).toHaveBeenCalledWith({ isLoading: false });
+    expect(deps.appService.showToast).toHaveBeenCalledWith({
+      title: "Error",
+      message: "Playback failed.",
+      status: "error",
+    });
+    cleanup();
+  });
+
+  it("ends seeking on outside releases and interruptions, and removes its listeners", () => {
+    const listeners = new Map();
+    globalThis.window = {
+      addEventListener: vi.fn((type, handler) => listeners.set(type, handler)),
+      removeEventListener: vi.fn(),
+    };
+    const deps = createDeps();
+    deps.store.selectSeekTime.mockReturnValue(30);
+    const cleanup = handleBeforeMount(deps);
+
+    listeners.get("pointerup")();
+    expect(deps.store.clearSeekTime).toHaveBeenCalledOnce();
+    // Rendering here would overwrite the value used by a following native change.
+    expect(deps.render).not.toHaveBeenCalled();
+
+    listeners.get("pointercancel")();
+    listeners.get("blur")();
+    expect(deps.store.clearSeekTime).toHaveBeenCalledTimes(3);
+    expect(deps.render).toHaveBeenCalledTimes(2);
+
+    cleanup();
+    for (const args of globalThis.window.addEventListener.mock.calls) {
+      expect(globalThis.window.removeEventListener).toHaveBeenCalledWith(
+        ...args,
+      );
+    }
   });
 });

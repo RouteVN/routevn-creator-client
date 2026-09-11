@@ -19,7 +19,7 @@ Included:
 - native bridge for local SQLite, project files, document picking, downloads,
   and local project import/export
 - native streamed distribution ZIP export for file URL save targets
-- app-private project storage under iOS Application Support
+- project storage in the local folder chosen during setup
 - user-visible downloads and exports under the app's Documents folder
 
 Not included yet:
@@ -76,7 +76,7 @@ Packaged builds load local assets through:
 routevn://app/ios/index.html
 ```
 
-Internal project and picker files are served through:
+Selected-folder project files and temporary picker files are served through:
 
 ```text
 routevn://app/ios-files/...
@@ -157,8 +157,9 @@ bun run ios:packaged
 ```
 
 Release builds always use bundled assets and ignore the development setting.
-Native SQLite/project files stay in the same app container when switching
-modes; origin-specific WebView storage (such as the remembered route) differs.
+Native project files stay in the selected folder when switching modes; app
+settings stay in Application Support. Origin-specific WebView storage (such as
+the remembered route) differs.
 
 If the dev server cannot load, the Debug shell shows the URL and connection
 error with **Retry** and **Use Installed App** actions. The latter clears the
@@ -216,242 +217,271 @@ bun run ios:run -- --simulator "iPhone 17" --smoke-test
 
 ## Native Adapters
 
-### Scene Editor Keyboard Position
+iOS uses native adapters for routing, SQLite, Files/Photos pickers, project
+storage, and exports. They live in `src/deps/clients/ios/` and
+`src/deps/services/ios/`, with the bridge in `RouteVNApp.swift`.
+Native bridge changes require rebuilding and installing the shell; refreshing
+JavaScript alone cannot add them.
 
-iOS can pan the whole WebView when a tap focuses a lower dialogue line. The
-scene editor's programmatic focus paths already use `preventScroll`, but the
-normal text-tap path previously left focus to WebKit's default action.
+### Project Folder Setup And Storage
 
-Safari Web Inspector measurements on the physical iPhone 13 Pro, iOS 16.3.1,
-reproduced this with ordinary `editor.focus()` and a caret on the last line:
+Startup opens `/project-folder-setup` when no usable library is saved; otherwise
+the normal initial route is `/projects`. Config's Change Folder action reopens
+setup without loading a project repository. Continue returns to Config when
+opened from there, or to Projects on first setup. Bottom navigation must render
+without a loaded repository; recent scene details appear only when one exists.
 
-| Measurement                                   | Before focus | Keyboard revealed | After page correction |
-| --------------------------------------------- | ------------ | ----------------- | --------------------- |
-| Time                                          | 0 ms         | 77 ms             | 124 ms                |
-| Window scroll Y                               | 0            | 161               | 161                   |
-| Visual viewport height                        | 844          | 464               | 464                   |
-| Rendered canvas top (`getBoundingClientRect`) | 0            | -161              | 0                     |
+Setup uses the native Files directory picker with the **Open** action. Choosing
+`On My iPhone` or `On My iPad` creates `RouteVN Projects` only if absent and
+reuses an existing directory without changing its contents. Choosing another
+folder uses that folder directly. Selection checks access and saves a bookmark
+immediately; there is no separate Confirm button. Cancellation and failed
+selection preserve the previous choice. Lost access requests reconnection
+without recreating the folder or falling back to internal storage.
 
-The same focus/selection sequence with `focus({ preventScroll: true })` kept
-window scroll Y and the rendered canvas top at zero throughout the recording,
-while the viewport height changed to 464. Physical screenshots confirmed the
-software keyboard could open through Web Inspector. Measure the actual canvas
-returned by `previewCanvasHost.getCanvasRoot()`; the component host uses
-`display: contents` and reports a zero-sized rectangle.
+`ProjectFolderSetup.swift` accepts the system local Files provider and rejects
+app-owned containers and cloud/unknown providers. URLs must come from the picker;
+never construct app-group UUIDs. It uses `.minimalBookmark` and
+`NSFileCoordinator`, retaining security-scoped access while project databases
+or assets may be open. Saved bookmarks retain their original locations, including
+legacy parent bookmarks. Permission covers the selected directory and its
+contents. Do not implement setup by exporting an empty directory through Save:
+Files can replace an existing folder before the delegate callback runs.
 
-`src/deps/clients/ios/sceneEditorKeyboard.js`, installed only by `setup.ios.js`,
-requests focus with `preventScroll` during the bubbling `mousedown` event.
-This runs after the primitive's block/text-mode activation and before default
-tap focus, without cancelling native caret placement. Once the keyboard changes
-the viewport and toolbar spacing is rendered, it reveals the caret inside the
-existing dialogue scroller. Gutter clicks, handled reference clicks, context
-menus, and other inputs retain their existing handlers.
+New projects use `<library>/<sanitized-project-name>/project.db`, with `files/`
+and `file-metadata/` beside the database. Preview and creation share the naming
+rule: preserve Unicode/spaces, replace unsafe characters, trim dots/whitespace,
+and limit names to 180 UTF-8 bytes. Empty names use `Untitled Project`; collisions
+receive ` (2)`, ` (3)`, etc., ignoring case. Preview does not reserve a directory;
+creation rechecks under file coordination and never merges into an existing one.
 
-On iOS 16, the scene editor's shadow selection can be reported as a zero-sized
-range on `body`, even while a native caret is visible and the toolbar arrows
-move it. The normal JavaScript reveal path then has no caret geometry. The iOS
-keyboard adapter now also schedules a reveal after Up/Down keydown, covering
-toolbar arrows and hardware keys. It waits for native selection movement, tries
-the DOM path first, then requests `getCaretRect` when that path cannot reveal a
-selection.
+`ProjectStoragePaths.swift` resolves databases and assets only within the chosen
+library. `.routevn-project.json` (`version: 1`, `id`) preserves project identity
+across folder renames; the database still owns project information. Existing
+id-named folders remain supported. Malformed identities and duplicate IDs are
+excluded without blocking unrelated projects; ambiguous IDs cannot resolve to
+an arbitrary copy. Removing duplicate copies restores discovery. Failure to read
+the library itself remains an error.
 
-The native bridge finds the first responder inside the WebView through public
-`UIView`/`UITextInput` APIs and reads `selectedTextRange` and `caretRect(for:)`.
-It converts the rectangle into WebView coordinates without changing selection
-or scrolling the native root. The iOS adapter scales those coordinates into
-CSS pixels and calls the primitive's `revealSelectionRect`, which
-scrolls only the nearest dialogue scroller. Keyboard and toolbar spacing use the
-same calculation as the existing DOM caret path. Rapid keys coalesce; replies
-for an old key, a later tap, lost focus, keyboard dismissal, or teardown are
-discarded. Android and desktop do not install this native fallback.
+Old app-private projects are left untouched and are not discovered or migrated.
+On iOS, Remove hides a project from the list without deleting its folder;
+`iosRemovedProjectIds` preserves that choice across scans and restarts. Explicit
+re-import restores the entry. Projects removed before this behavior was added
+need to be removed once more.
 
-Physical iPhone inspection confirmed the DOM range was hidden while UIKit
-returned the actual caret rectangle (2px wide and 21px high). The native bridge
-built and was installed on the connected phone. Browser validation with the real
-toolbar handler, native selection movement, and simulated legacy selection APIs
-reproduced the old failure: the caret reached y=480 behind the toolbar. With the
-fallback, twelve Down and twelve Up actions kept it between the preview and
-toolbar, with root scroll zero and the preview top fixed at 47px. Normal DOM
-selection APIs passed the same sequence without native bridge requests.
+The native shell supplies the device label independently of viewport size.
+Setup, Config, and Projects show readable paths with plain `/` separators.
+Projects omit `project.db`, stay on one line, and shorten earlier folders so the
+project folder remains visible. Display paths never replace IDs or native paths.
+The iOS Projects list keeps its header/footer outside an always-scrollable
+container (`overflow-y: scroll`, `overscroll-behavior-y: contain`); native bounce
+still needs physical-device validation.
 
-The first native fallback incorrectly added `visualViewport.offsetTop` and
-`offsetLeft` to the converted UIKit rectangle. Physical inspection reproduced
-the resulting jump with a 380px keyboard pan: the native caret was at y=-25,
-but the adapter treated it as y=355 and scrolled the list farther down, from
-430px to 454px. UIKit's conversion into the WebView already includes that pan;
-adding it again makes an offscreen caret appear visible to the scroll helper.
-Keep only the CSS-pixel scale when converting the native rectangle.
+### Export Destination
 
-After this correction, physical iPhone validation through the persistent Safari
-Inspector connection exercised the real toolbar pointer handlers with synthetic
-pointer events and read UIKit's caret after every movement. Twelve Down and
-twelve Up actions passed both at viewport offset 0 and after explicitly panning
-the WebView to 380px to reproduce the failing layout. In the panned layout,
-Down scrolled the dialogue list in 24px line increments (2px to 218px), keeping
-the caret at y=331; Up returned to scroll zero with the caret at y=309. Every
-caret remained between the section header and keyboard toolbar, and the preview
-top remained 47px. The native keyboard stayed visible in the device screenshot.
-Browser validation also covers this resized, panned viewport and the ordinary
-DOM-selection path. Regression tests use the measured negative native caret
-position and a scaled/panned viewport; both failed with the extra offset and
-passed after its removal.
+Web export opens the native Files folder picker. `SaveFileDestinations.swift`
+holds the exact security-scoped selection behind a temporary `routevn-save` URI,
+builds locally, then publishes under file coordination. Cancellation creates no
+download. Collision suffixes preserve existing exports, and staged/partial files
+are cleaned on success or failure. Native ZIP streaming and JavaScript fallback
+share this path; the result contains the actual saved filename, including any
+suffix. Readable success messages do not rename files.
 
-The fallback and cancellation cases live in
-`tests/ios/sceneEditorKeyboard.test.js`; caret clipping above the keyboard and
-below the preview is covered by `tests/sceneEditor/lexicalCaretReveal.test.js`.
-Apple documents the native read-only geometry APIs in
-[`selectedTextRange`](https://developer.apple.com/documentation/uikit/uitextinput/selectedtextrange)
-and [`caretRect(for:)`](<https://developer.apple.com/documentation/uikit/uitextinput/caretrect(for:)>).
+Shared `Documents/RouteVN Creator` and `Exports` folders are created only when a
+download/export needs them. Startup creates only private app storage.
+See Apple's [directory-access guidance](https://developer.apple.com/documentation/uikit/providing-access-to-directories).
 
-WebKit documents the iOS `preventScroll` fix in
-[Safari 15.5](https://webkit.org/blog/12669/new-webkit-features-in-safari-15-5/).
-The app's iOS deployment target is newer than that release.
+### Audio Playback
 
-The controlled device comparison and an inspector event sequence through the
-installed adapter kept the canvas top at zero. The user also confirmed the
-keyboard transition works with a normal tap. Keep the phone unlocked with
-RouteVN foregrounded while recording; a focused DOM element alone does not prove
-that the software keyboard is visible.
+On iOS 16.3, direct Web Audio can be silent under the Ring/Silent switch even
+while playback advances. The iOS output adapter routes the gain node through a
+`MediaStreamAudioDestinationNode` into an app-owned audio element, following
+the [WebKit workaround](https://bugs.webkit.org/show_bug.cgi?id=251532).
+Other platforms retain their direct output.
 
-Keyboard dismissal exposed a separate tab-bar flash: the four 22px navigation
-icons briefly measured 390 × 390px, including one animation frame. The app was
-unmounting the tabs while the keyboard was open, then recreating them on blur.
-On iOS 16.3.1 the adopted-stylesheet polyfill applies new shadow-root styles on a
-later animation frame, allowing the unstyled SVGs to fill the viewport first.
-The iOS scene editor now keeps the tab bar mounted with inline `display: none`
-while the keyboard is visible. This preserves the adopted styles and removes
-the tabs from layout, hit testing, and accessibility until they return. Android
-and desktop keep their existing mounting behavior. Dependencies are unchanged.
-Five hide/show cycles using the real app view and the same polyfill in a browser
-fixture preserved the icon nodes and kept their maximum size at 22px. After
-reloading the physical iPhone through Safari Inspector, repeating keyboard
-dismissal no longer produced oversized icons in the frame/mutation recording.
+`audioOutput.js` pauses the media element **before** stopping its producer on
+pause, stop, natural end, replacement loads, and close; reversing this order can
+repeat buffered audio. Final release clears `srcObject`, stops tracks, and
+removes the element. Late play/seek completions cannot restart cancelled playback
+or replace a newer seek target. Failures leave the UI stopped and show an error.
 
-The fixed scene surface also reserves
-`var(--rvn-mobile-overlay-top-inset, 0px)` above the preview, using its existing
-`bgc=bg` background for the status-bar area. The iOS HTML supplies the safe-area
-value; other platforms use zero. Both the actions-panel position and the
-keyboard-constrained preview height include this inset. Browser layout checks
-cover zero and 47px insets, viewport panning, keyboard dismissal, and a viewport
-small enough to constrain the preview.
-Physical iPhone measurements and a screenshot confirmed the preview starts at
-47px, the status-bar area matches the page background, and the canvas remains
-at 47px when the keyboard opens. A stale dev page initially still had zero
-padding: if `ios:refresh` reports no connected client but Safari Inspector is
-responsive, reload the inspected WebView and verify the rendered styles.
+`graphicsAudioOutput.js` connects the published `configureAudioRuntime` hook to
+the same media output. It preserves native context methods and the mobile clock.
+Each preview gets a fresh stream and a zero-valued constant source to avoid
+stale buffer repetition between sounds. Close the output before destroying
+renderer sources. Media playback starts without blocking renderer initialization
+on its promise; pending playback must not prevent rendering or closing a preview.
 
-The native status-bar foreground follows the app's Config theme, independently
-of the phone's system theme. The shared app service applies the document theme
-and calls an optional platform theme adapter, both when loading saved settings
-and when changing themes. The iOS adapter uses `isDarkTheme` to send
-`setStatusBarStyle` through the bridge: Dark, Black, and Catppuccin Mocha use
-light indicators; Light uses dark indicators. `RouteVNViewController` stores
-that style and calls `setNeedsStatusBarAppearanceUpdate()` when it changes.
-The status-bar background remains the page's theme-colored safe area.
-Installing the native bridge requires one shell rebuild; subsequent theme
-changes take effect immediately without a reload or rebuild.
-Validated on the connected iPhone with Config theme-card clicks and native
-screenshots for all four themes, including restoration of Light and its dark
-indicators after an app restart. `tests/ios/statusBarTheme.test.js` covers Config
-changes, saved-theme startup, legacy theme normalization, native failure feedback,
-and shared theme behavior without an iOS adapter.
+Android and iOS share `mobileAudioRuntime.js`. Audio runs only while both native
+activity and document visibility are active. Backgrounding pauses the iOS media
+element first, suspends contexts, and freezes the scene clock/timers. Returning
+resumes previously playing tracks; explicitly paused, stopped, or closed tracks
+stay silent. The iOS delegate also suspends WKWebView media while inactive.
+Use packaged mode to test position preservation: a dev connection reconnect can
+reload the watch-mode page.
 
-An attempted native root-scroll lock disabled the WebView's scroll gestures and
-reset its content offset from `UIScrollViewDelegate`. Physical iPhone testing
-then reported that tapping dialogue no longer opened the keyboard. That approach
-was removed, including its route policy; preserve WebKit's normal native scroll
-and focus handling. Unit tests and a successful native build did not validate
-keyboard presentation, so any replacement needs physical-device verification of
-keyboard opening, typing, dismissal, and nested dialogue scrolling.
+### OGG Decoding
 
-Removing WKWebView's keyboard notification observers (an experiment based on
-Capacitor's overlay mode) also failed on the connected iOS 16.3.1 phone. The
-device trace showed an editable element with focus, but no visible keyboard or
-keyboard-frame notification. That experiment was reverted as well.
+Older iOS rejects OGG in `decodeAudioData`; native support arrived in
+[iOS 18.4](https://webkit.org/blog/16574/webkit-features-in-safari-18-4/).
+Creator's upload waveform extraction and managed audio loaders use
+`src/deps/clients/audioDecoder.js`; `route-graphics`' own fallback does not cover
+these paths. Native decoding is attempted first on copied bytes because it may
+detach its input. On an OGG failure, the identification packet selects the
+published Vorbis/Opus decoder even if the picker supplied an unknown MIME type.
+Decoders are freed after use; invalid input still fails, and stored uploads keep
+their original bytes. Real codec fixtures live in `tests/fixtures/audio/`.
 
-Physical XCTest execution is currently blocked with Xcode 26.6 and this iOS 16
-device: test bundles build and sign, but `test-without-building` rejects them
-with `Logic Testing Unavailable`. An
-[Xcode 26.4/iOS 16 report](https://developer.apple.com/forums/thread/820586)
-describes the same failure. This is a test-runner limitation, not evidence that
-keyboard interactions pass.
+### Scene Editor Keyboard And Navigation
 
-The fixed mobile surface and actions panel still follow the toolbar's visual
-viewport offset if WebKit pans for another reason. That correction alone cannot
-prevent an initial jump, because it renders after the native focus scroll.
+Native app-window metrics select the layout: landscape windows at least 768
+logical pixels wide use 60% lines / 40% preview; portrait and narrow windows
+remain stacked. `getWindowMetrics` and `routevn:window-metrics` report bounds
+independent of keyboard occlusion. Rotate by changing styles, preserving editor
+and canvas instances. Visual viewport metrics separately fit the workspace above
+the keyboard. See [Scene Editor](engineering.md#scene-editor) for the shared
+iOS/Android contract.
 
-Android's virtual-keyboard overlay path reports a zero viewport offset, so it
-keeps the existing top position. Desktop uses its existing separate layout.
-Their platform adapters are unchanged.
+`sceneEditorKeyboard.js` requests `focus({ preventScroll: true })` on bubbling
+`mousedown`, after text-mode activation and before default tap focus. This keeps
+the preview fixed without cancelling native caret placement. Opening a scene
+must not focus the editor. Outside focus changes cancel pending caret recovery,
+and blur invalidates queued callbacks so dismissal stays dismissed. Preserve
+WebKit's native scroll gestures and keyboard observers; disabling them can
+prevent the software keyboard from appearing. DOM focus alone does not prove
+keyboard visibility.
 
-The iOS focus event and lifecycle cases live in
-`tests/ios/sceneEditorKeyboard.test.js`; the viewport positioning regression
-cases live in `tests/sceneEditor/sceneEditor.store.test.js`.
-For the separate caret-to-line-end fallback bug on older WebKit, see
-[Lexical pointer selection](notes/lexical-pointer-selection.md).
-For physical validation, open and close the scene keyboard, scroll the dialogue
-list, and open the actions panel. The canvas should stay at the visible top and
-the panel should start directly below it. See the
-[VisualViewport positioning example](https://developer.mozilla.org/en-US/docs/Web/API/VisualViewport#examples)
-for the distinction between the layout and visible viewports.
+After keyboard or Up/Down changes, reveal the caret inside the dialogue
+scroller. On iOS 16, shadow selection may appear as a zero-sized range on `body`.
+Try DOM geometry first, then the native `getCaretRect` fallback using public
+[`UITextInput`](https://developer.apple.com/documentation/uikit/uitextinput/selectedtextrange)
+and [`caretRect(for:)`](https://developer.apple.com/documentation/uikit/uitextinput/caretrect(for:))
+APIs. UIKit already converts the rectangle into WebView coordinates: apply only
+the CSS-pixel scale, without adding visual viewport offsets again. Discard replies
+after superseding keys, changed focus, later taps, dismissal, or teardown.
 
-### Platform Clients
+Native caret geometry also synchronizes the selected dialogue line when DOM
+selection is hidden. Cross a section boundary only when consecutive native
+measurements show a vertical arrow stayed on the same visual row at the edge.
+Wrapped rows keep native movement. Test Down from Section 1 into line 5 of
+Section 2, then Up: it must reach line 4 rather than Section 1.
 
-iOS uses native adapters instead of Tauri mobile APIs.
+The dialogue list's trailing spacer covers only the obscured bottom plus the
+48px toolbar. Do not add the full keyboard height again after viewport resizing
+or panning; that allows the final section to scroll entirely away. At maximum
+scroll the final line and section heading remain visible.
 
-- Router: `src/deps/clients/ios/router.js`
-- SQLite: `src/deps/clients/ios/sqlite.js`
-- File picker: `src/deps/clients/ios/filePicker.js`
-- Project services: `src/deps/services/ios/`
+Inline canvas navigation requires a matching primary press/release inside the
+canvas. Outside releases and cancelled gestures cannot arm the fallback; the
+later compatibility click must not advance twice. Non-pointer activation retains
+its click path. Preview controls stay above the loading overlay so initialization
+and asset loading can be dismissed.
 
-The native bridge in `RouteVNApp.swift` handles:
+The scene surface reserves `--rvn-mobile-overlay-top-inset` with the page's `bg`
+color; action panels and constrained preview height include it. Keep the iOS tab
+bar mounted but hidden while the keyboard is visible: recreating shadow roots
+with the iOS 16 stylesheet polyfill can briefly show oversized, unstyled icons.
+See [Lexical pointer selection](notes/lexical-pointer-selection.md) for older
+WebKit caret placement, and the [VisualViewport example](https://developer.mozilla.org/en-US/docs/Web/API/VisualViewport#examples)
+for layout versus visible viewport coordinates.
 
-- route back-state updates
-- external URL opening
-- SQLite open/query/exec/close
-- project file read/write/metadata
-- download writes
-- streamed distribution ZIP export
-- iOS document picker results
-- image-only uploads offer Photo Library and Choose Files; Photos uses the
-  system photo picker with single or multiple selection
-- local project folder import/export
+### iPad Width, Cropping, And Video
 
-Photo selections use the same temporary picker storage and upload validation
-as files selected from Files. JPEG, PNG, and WebP representations are preserved;
-other Photos formats, such as HEIC, are converted to an accepted JPEG or PNG.
-The photo picker grants access only to the selected photos, so this flow does
-not request full photo-library permission. Non-image and mixed-file requests
-continue to open Files directly.
+iPadOS 26.4 can retain a stale `100vw` width after resume while parent layout and
+dynamic viewport units remain correct. iOS app content uses parent-relative
+`100%`. Dialog sizing uses the published Rettangoli UI 1.22.1 fix from
+[PR #477](https://github.com/yuusoft-org/rettangoli/pull/477), which prefers dynamic
+viewport widths and guards calculations with `@supports` for legacy browsers.
+
+The medium crop dialog scales its square surface to available width, up to
+400px. Image geometry uses logical crop coordinates, remains clipped, and
+preserves the selection/exported area during resizing, drag, and pinch.
+Video previews fill and center within their stage with `object-fit: contain`.
+
+Images and Videos offer Photo Library and Choose Files. Photos preserves accepted
+formats, converts other images to JPEG/PNG, and converts MOV to MP4 when required.
+Temporary sources/conversions are removed after import or failure. Access is
+limited to selected items; other file types open Files directly.
+
+iOS can leave detached blob videos at `HAVE_METADATA` despite `preload="auto"`
+([WebKit limitation](https://bugs.webkit.org/show_bug.cgi?id=197608)). The iOS
+`prepareIOSVideoForThumbnail` hook starts muted inline playback, then pauses
+before sampling, with a five-second timeout. Timeout, rejection, and late play
+completion all pause the element. Both extraction paths use the hook; other
+platforms do not install it. The shell allows inline media, and preview videos
+set `playsinline` to avoid a second native fullscreen player. Close controls
+respect top/side/bottom safe areas; closing pauses the video before removal.
+
+### Status Bar Theme
+
+The native status-bar foreground follows Config's theme independently of the
+system theme. The iOS theme adapter sends `setStatusBarStyle` on saved-theme load
+and changes: Dark, Black, and Catppuccin Mocha use light indicators; Light uses
+dark indicators. The background remains the page's themed safe area. Changes
+apply immediately once the native bridge is installed.
 
 ## Validation
 
-Current simulator-safe checks:
+The PR workflow runs lint and the web build. Browser and native checks below run
+separately. Browser fixtures use isolated storage or disposable generated data;
+they do not validate native Files permissions, keyboard animation, or audible
+output. Unit checks should exclude ignored worktrees:
 
-- `bun run ios:run -- --simulator "iPhone 17" --smoke-test`
-- ZIP integrity check on the smoke-test export
-- iOS adapter tests under `tests/ios/`
-- dev workflow tests in `tests/ios/devWorkflow.test.js` (real WebSocket reload,
-  transformed iOS HTML, and device commands without builds or installs)
-- shared mobile viewport/unit tests under `tests/`
+```bash
+bunx vitest run tests/ios tests/vnPreview tests/sceneEditor tests/audioPlayer tests/resourcePages tests/squareImageCropper tests/web/audioDecoder.test.js --exclude '**/.artifacts/**' --maxWorkers=4
+```
 
-The adapter tests cover:
+With `watch:ios` running, run the relevant browser script with `node`:
 
-- iOS router stack persistence
-- file picker fallback and native-result cleanup
-- save picker and selected-file writes
-- opaque folder-picker URI forwarding
-- native streamed ZIP export delegation
-- JavaScript ZIP fallback writes to the selected URI
-- disabled remote collaboration behavior
+| Script | Regression coverage |
+| --- | --- |
+| `tests/ios/projectFolderSetup.browser.mjs` | Setup, cancellation/errors, Config return, readable paths, Projects clicks/scrolling |
+| `tests/ios/projectCreation.browser.mjs` | Destination preview, sanitized names, stable typing |
+| `tests/ios/mobileNavigation.browser.mjs` | Menus without a loaded repository, backdrop dismissal |
+| `tests/ios/appWidth.browser.mjs` | App and Projects width as containers resize |
+| `tests/ios/resourceGridDefaults.browser.mjs` | Phone/tablet defaults and saved grid preferences |
+| `tests/ios/sceneCreation.browser.mjs` | Scene forms and canvas long press |
+| `tests/ios/sceneCanvasNavigation.browser.mjs` | Canvas/line synchronization and editor focus |
+| `tests/ios/sceneEditorNavigation.browser.mjs` | Cross-section navigation with hidden DOM selection |
+| `tests/sceneEditor/canvasActivation.browser.mjs` | Valid activation versus cancelled/outside releases |
+| `tests/sceneEditor/keyboardDismiss.browser.mjs` | Focus transfer, dismissal, re-entry |
+| `tests/sceneEditor/sceneEditorScroll.browser.mjs` | Maximum scroll and portrait/landscape keyboard geometry |
+| `tests/sceneEditor/windowLayout.browser.mjs` | Editor/canvas preservation through rotation and split windows |
+| `tests/ios/graphicsAudioOutput.browser.mjs` | Real engine output, stop/end silence, lifecycle/cleanup |
+| `tests/ios/scenePreview.browser.mjs` | Preview initialization while audio playback is pending |
+| `tests/vnPreview/loadingClose.browser.mjs` | Touch dismissal during initialization and asset loading |
+| `tests/squareImageCropper/squareImageCropper.browser.mjs` | Resizing, gestures, stable selection, exported pixels |
 
-## Current Device Test Needs
+Native filesystem checks use disposable fixtures on macOS and require access to
+the host file coordination service:
 
-Simulator is enough for initial shell, SQLite, and packaged asset validation.
-A physical iPhone or iPad is needed before trusting:
+```bash
+swiftc -module-cache-path /tmp/routevn-folder-swift-cache ios/routevn/routevn/ProjectFolderSetup.swift tests/ios/projectFolderSetupNative.swift -o /tmp/routevn-folder-native-tests
+/tmp/routevn-folder-native-tests
+swiftc -module-cache-path /tmp/routevn-folder-swift-cache ios/routevn/routevn/ProjectFolderSetup.swift ios/routevn/routevn/ProjectStoragePaths.swift tests/ios/projectStoragePathsNative.swift -o /tmp/routevn-storage-native-tests
+/tmp/routevn-storage-native-tests
+swiftc -module-cache-path /tmp/routevn-export-swift-cache ios/routevn/routevn/SaveFileDestinations.swift tests/ios/saveFileDestinationsNative.swift -o /tmp/routevn-save-destinations-tests
+/tmp/routevn-save-destinations-tests
+```
 
-- Files app document provider behavior
-- security-scoped folder import/export across providers such as iCloud Drive
-- camera/photo/document picker edge cases
-- real touch keyboard and safe-area behavior
-- any release signing or install-on-device flow
+Use a physical device for these final checks:
+
+- Select/reconnect a library, cancel a replacement selection, create a project,
+  restart, and rename its folder in Files. Removing the list entry must persist
+  without deleting files; explicit re-import restores it.
+- Export into a chosen folder, cancel, and repeat an export with the same name.
+  Existing files must survive and the reported ZIP must open.
+- Play, seek, stop, switch tracks, close previews, and background/resume with the
+  Ring/Silent switch both on and off. Verify MP3 and both OGG fixture codecs.
+- Upload a gallery video; processing must finish without native fullscreen.
+  Close a loading preview, drag/pinch the cropper, and verify its exported crop.
+- Open/type/dismiss the software keyboard, move across sections, and scroll to
+  both ends. The preview stays at the safe-area top and the caret stays visible.
+- Rotate/resize the iPad and background/resume; content fills its container,
+  menus remain usable, and editor/canvas instances survive. Check theme changes
+  and restart with readable status-bar indicators.
+
+Physical XCTest with Xcode 26.6 and the iOS 16 test phone returned `Logic Testing
+Unavailable` despite successful build/signing. Use Safari Inspector plus device
+screenshots and actual interaction for keyboard validation; focused DOM state
+and browser passes alone do not establish that the native keyboard appeared.

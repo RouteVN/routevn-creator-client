@@ -1,3 +1,22 @@
+projectFolderSetupPage:
+  title: "プロジェクト用フォルダを設定"
+  description: "「この{deviceName}内」か、既存のプロジェクトフォルダを選んでください。"
+  openDescription: "「この{deviceName}内」で、これまで使っていたプロジェクトフォルダを選んでください。"
+  newProjectsDescription: "新しいプロジェクトはこのフォルダ内に作成されます。"
+  setup: "設定する"
+  pickerTitle: "フォルダを選ぶ"
+  changeFolder: "フォルダを変更"
+  savedTitle: "フォルダの準備ができました"
+  continue: "続ける"
+  errorTitle: "プロジェクトフォルダ"
+  pickError: "フォルダにアクセスできませんでした。もう一度選んでください。"
+  confirmError: "フォルダ設定を保存できませんでした。アクセス権と空き容量を確認して、もう一度お試しください。"
+  appFolderError: "このフォルダはアプリの管理下にあります。「この{deviceName}内」で別のフォルダを選んでください。"
+  localFolderError: "「この{deviceName}内」のフォルダを選んでください。この設定ではクラウドのフォルダは使用できません。"
+  invalidFolderError: "このフォルダは使用できません。別のフォルダを選んでください。"
+  nameConflictError: "RouteVN Projects という名前のファイルが既にあります。別の保存先を選んでください。"
+  reconnectError: "保存済みのフォルダにアクセスできません。もう一度選んでアクセス権を設定してください。"
+  unavailableError: "このバージョンではフォルダ設定を使用できません。更新した iOS アプリをインストールして、もう一度お試しください。"
 projectsPage:
   addMemberMenuItem: "メンバーを追加"
   addMemberTitle: "メンバーを追加"
@@ -54,6 +73,7 @@ projectsPage:
   failedRemoveProject: "プロジェクトを一覧から削除できませんでした。もう一度お試しください。"
   failedSelectProjectIcon: "プロジェクトアイコンを選択できませんでした。"
   failedSelectProjectLocation: "プロジェクトの保存場所を選択できませんでした。"
+  failedPreviewProjectLocation: "プロジェクトの保存場所を確認できませんでした。このダイアログを開き直して、もう一度お試しください。"
   fillRequiredFields: "必須項目を入力してください。"
   importButton: "取り込む"
   importedProjectMessage: "プロジェクト「{projectName}」を取り込みました。"
@@ -193,6 +213,7 @@ projectPage:
   warningTitle: "警告"
   wordsLabel: "単語数"
 appPage:
+  failedStartPreviewAudio: "プレビューの音声を再生できませんでした。プレビューを閉じて、もう一度開いてください。"
   googlePlayUpdateAvailable: "Google Play で RouteVN Creator の新しいバージョンを利用できます。"
   googlePlayUpdateFailed: "Google Play でアップデートできませんでした。もう一度お試しください。"
   googlePlayUpdateInProgress: "Google Play でアップデートをダウンロードしています。このまま作業を続けられます。"
@@ -758,6 +779,8 @@ actionTransformEditor:
   unnamedTarget: "現在の項目"
   visualTarget: "ビジュアル"
 vnPreview:
+  closeButton: "全画面表示を終了"
+  loading: "プレビューを読み込み中..."
   restoreOrientationButton: "プレビューの向きを元に戻す"
   rotateButton: "プレビューを90度回転"
 animationCameraEditor:
@@ -1005,6 +1028,7 @@ soundsPage:
   unsupportedFormatTitle: "対応していない音声"
   updateButton: "更新"
 videosPage:
+  closePreviewButton: "閉じる"
   editTitle: "動画を編集"
   failedCreateVideo: "動画を作成できませんでした。"
   failedSelectFile: "ファイルを選択できませんでした。"
@@ -2293,7 +2317,9 @@ commandLinePage:
   "string": "文字列"
   "true": "true"
 audioPlayerPage:
+  seekLabel: "再生位置"
   errorTitle: "エラー"
+  failedPlayback: "音声を再生できませんでした。もう一度お試しください。"
   missingFileId: "fileIdがありません"
 aboutPage:
   allSocialMediaButton: "SNS一覧"
@@ -2310,6 +2336,9 @@ settingsUserPage:
   placeholderNote: "これはユーザー設定画面のプレースホルダーです"
   title: "ユーザー設定"
 configPage:
+  projectFolderTitle: "プロジェクトフォルダ"
+  changeProjectFolderLabel: "フォルダを変更"
+  projectFolderNotSet: "フォルダが未選択です"
   title: "環境設定"
   assetPackageTitle: "アセットパッケージ"
   assetPackageDescription: "RouteVNの素材ストアで素材パックを公開する場合は、有効にしてください。"

@@ -407,7 +407,7 @@ export const handleSoundItemDoubleClick = (deps, payload) => {
     deps,
     itemId,
     syncExplorer: true,
-    suppressMobileDetailSheet: source === "mobile-context-menu",
+    suppressMobileDetailSheet: source === "long-press",
   });
 };
 
@@ -436,7 +436,7 @@ export const handleSoundItemPreview = (deps, payload) => {
     deps,
     itemId,
     syncExplorer: true,
-    suppressMobileDetailSheet: source === "mobile-context-menu",
+    suppressMobileDetailSheet: source === "long-press",
   });
 };
 

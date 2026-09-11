@@ -1,17 +1,23 @@
-import { ROUTEVN_CONTACT_URL } from "../../internal/routevnUrls.js";
+import {
+  ROUTEVN_CONTACT_URL,
+  ROUTEVN_CREATOR_APP_STORE_URL,
+} from "../../internal/routevnUrls.js";
 import { resolveUpdatesEnabled } from "../../internal/updates.js";
 
 export const handleBeforeMount = (deps) => {
   const { appService, store, uiConfig } = deps;
+  const platform = appService.getPlatform();
 
   store.setUiConfig({ uiConfig });
-  store.setUpdatesEnabled({ updatesEnabled: resolveUpdatesEnabled(deps) });
+  store.setUpdatesEnabled({
+    updatesEnabled: platform === "ios" || resolveUpdatesEnabled(deps),
+  });
   const appVersion = appService.getAppVersion();
   if (appVersion) {
     store.setAppVersion({ version: appVersion });
   }
 
-  store.setPlatform({ platform: appService.getPlatform() });
+  store.setPlatform({ platform });
 };
 
 export const handleDataChanged = () => {
@@ -19,7 +25,12 @@ export const handleDataChanged = () => {
 };
 
 export const handleCheckForUpdates = async (deps) => {
-  const { updaterService, i18n, store, render } = deps;
+  const { appService, updaterService, i18n, store, render } = deps;
+  if (appService.getPlatform() === "ios") {
+    await appService.openUrl(ROUTEVN_CREATOR_APP_STORE_URL);
+    return;
+  }
+
   if (!resolveUpdatesEnabled(deps) || !updaterService) {
     store.setUpdatesEnabled({ updatesEnabled: false });
     render();

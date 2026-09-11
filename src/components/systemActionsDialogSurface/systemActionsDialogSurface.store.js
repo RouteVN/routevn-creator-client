@@ -43,6 +43,7 @@ export const selectViewData = ({ state, props }) => {
     panelWidth: props.panelWidth ?? "50vw",
     panelTop: props.panelTop ?? "0px",
     panelBottom: props.panelBottom ?? "0px",
+    panelRight: props.panelRight ?? "0px",
     suppressClose:
       state.suppressClose === true || isBooleanPropEnabled(props.suppressClose),
     overlayHorizontalInset: "64px",

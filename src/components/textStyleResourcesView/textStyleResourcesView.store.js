@@ -305,6 +305,7 @@ export const selectViewData = ({ state, props, i18n }) => {
         return {
           ...item,
           domItemId: isPlaceholder ? "" : item.id,
+          longPressEnabled: mobileLayout && !isPlaceholder,
           cursor: isPlaceholder ? "default" : "pointer",
           itemWidth:
             mobileLayout || useColumnZoomControl ? "f" : DEFAULT_CARD_WIDTH,

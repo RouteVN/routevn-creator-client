@@ -15,8 +15,10 @@ import {
   VISIBILITY_OBSERVER_TAG_NAME,
 } from "./visibilityObserver.js";
 import { CameraViewportElement } from "./cameraViewport.js";
+import { installLongPress } from "./longPress.js";
 
 export const registerPrimitives = () => {
+  installLongPress();
   if (!customElements.get("rvn-camera-viewport")) {
     customElements.define("rvn-camera-viewport", CameraViewportElement);
   }

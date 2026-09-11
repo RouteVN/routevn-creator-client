@@ -97,7 +97,7 @@ it("provides an explicit dismissal control for the video playback surface", () =
   const rendered = parseView({
     h,
     template: parse(template),
-    viewData: { videoVisible: true },
+    viewData: { videoVisible: true, closePreviewButton: "Close preview" },
   });
   expect(rendered.children[0].data.attrs).toMatchObject({
     id: "videoPreviewDialog",
@@ -105,6 +105,15 @@ it("provides an explicit dismissal control for the video playback surface", () =
     layout: "fixed",
     bare: "",
     p: "none",
-    "close-button": "",
   });
+  const document = new JSDOM(toHTML(rendered)).window.document;
+  const closeButton = document.querySelector("#videoPreviewClose");
+  expect(closeButton).toBeTruthy();
+  expect(closeButton.hasAttribute("sq")).toBe(true);
+  expect(closeButton.getAttribute("s") ?? "md").toBe("md");
+  expect(closeButton.getAttribute("pre")).toBe("x");
+  expect(closeButton.getAttribute("aria-label")).toBe("Close preview");
+  expect(view.refs.videoPreviewClose.eventListeners.click.handler).toBe(
+    "handleOutsideVideoClick",
+  );
 });

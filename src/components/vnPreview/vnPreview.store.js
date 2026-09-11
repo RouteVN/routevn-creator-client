@@ -217,6 +217,7 @@ export const selectViewData = ({ props: attrs, state, i18n }) => {
     sectionId: attrs.sectionId,
     lineId: attrs.lineId,
     isAssetLoading: state.isAssetLoading,
+    isPreviewLoading: !state.isPreviewReady || state.isAssetLoading,
     isPreviewReady: state.isPreviewReady,
     canvasAspectRatio: formatProjectResolutionAspectRatio(
       state.projectResolution,
@@ -226,6 +227,8 @@ export const selectViewData = ({ props: attrs, state, i18n }) => {
     rotatePreviewLabel: state.isRotated
       ? (copy.restoreOrientationButton ?? "Restore preview orientation")
       : (copy.rotateButton ?? "Rotate preview 90 degrees"),
+    closePreviewLabel: copy.closeButton ?? "Exit full screen",
+    loadingPreviewLabel: copy.loading ?? "Loading preview...",
     ...previewLayout,
   };
 };

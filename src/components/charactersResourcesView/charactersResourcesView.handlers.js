@@ -376,26 +376,14 @@ export const handleSpritesButtonClick = (deps, payload) => {
   );
 };
 
+export const handleItemLongPress = handleSpritesButtonClick;
+
 export const handleItemContextMenu = (deps, payload) => {
-  const { dispatchEvent, props, store, render } = deps;
+  const { dispatchEvent, store, render } = deps;
   payload._event.preventDefault();
 
   const itemId = getDataAttribute(payload._event, "data-item-id");
   if (!itemId) {
-    return;
-  }
-
-  if (parseBooleanProp(props.mobileLayout)) {
-    dispatchEvent(
-      new CustomEvent("item-dblclick", {
-        detail: {
-          itemId,
-          source: "mobile-context-menu",
-        },
-        bubbles: true,
-        composed: true,
-      }),
-    );
     return;
   }
 

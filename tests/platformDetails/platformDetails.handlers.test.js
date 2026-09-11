@@ -8,6 +8,11 @@ import {
   handlePlatformEditIconCropDialogConfirm,
 } from "../../src/pages/platformDetails/platformDetails.handlers.js";
 import { EN_I18N } from "../support/i18n.js";
+import {
+  createInitialState,
+  selectCanAddPlatform,
+  setPlatform,
+} from "../../src/pages/platformDetails/platformDetails.store.js";
 
 const createDeps = () => ({
   appService: {
@@ -40,6 +45,7 @@ const createDeps = () => ({
     closePlatformEditIconCropDialog: vi.fn(),
     openAddPlatformMenu: vi.fn(),
     openPlatformCreateDialog: vi.fn(),
+    selectCanAddPlatform: vi.fn(() => true),
     selectPlatformDialogState: vi.fn(() => ({
       mode: "edit",
       platform: "windows",
@@ -59,6 +65,50 @@ const createDeps = () => ({
 });
 
 describe("platformDetails handlers", () => {
+  it.each(["windows", "macos"])(
+    "blocks adding %s from iOS menu events and form submissions",
+    async (platform) => {
+      const deps = createDeps();
+      const state = createInitialState();
+      setPlatform({ state }, { platform: "ios" });
+      deps.store.selectCanAddPlatform.mockImplementation((payload) =>
+        selectCanAddPlatform({ state }, payload),
+      );
+      await handleAddPlatformMenuItemClick(deps, {
+        _event: { detail: { item: { value: platform } } },
+      });
+      expect(
+        deps.projectService.getCurrentPlatformDetailsDefaults,
+      ).not.toHaveBeenCalled();
+      expect(deps.store.openPlatformCreateDialog).not.toHaveBeenCalled();
+      deps.store.selectPlatformDialogState.mockReturnValue({
+        mode: "create",
+        platform,
+      });
+      await handlePlatformEditFormAction(deps, {
+        _event: {
+          detail: {
+            actionId: "submit",
+            values: {
+              applicationName: "Project One",
+              applicationIdentifier: "com.example.project-one",
+            },
+          },
+        },
+      });
+      expect(
+        deps.projectService.createCurrentPlatformDetails,
+      ).not.toHaveBeenCalled();
+      expect(
+        deps.projectService.updateCurrentPlatformDetails,
+      ).not.toHaveBeenCalled();
+      expect(deps.appService.showAlert).toHaveBeenCalledWith({
+        message: EN_I18N.platformDetailsPage.failedCreatePlatformMessage,
+        title: EN_I18N.platformDetailsPage.errorTitle,
+      });
+    },
+  );
+
   it("opens the add-platform menu below the left edge of its button", () => {
     const deps = createDeps();
 

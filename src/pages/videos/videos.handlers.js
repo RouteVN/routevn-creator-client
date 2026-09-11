@@ -491,7 +491,11 @@ export const handleFilesDropRejected = (deps, payload) => {
 };
 
 export const handleOutsideVideoClick = (deps) => {
-  const { store, render } = deps;
+  const { store, refs, render } = deps;
+  const { videoPreviewElement } = refs;
+  if (isVideoElement(videoPreviewElement)) {
+    videoPreviewElement.pause();
+  }
   store.setVideoNotVisible();
   render();
 };

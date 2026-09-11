@@ -52,6 +52,52 @@ const caret = (top) => ({
 });
 
 describe("scene editor native caret reveal", () => {
+  it("syncs the selected line to UIKit's caret without moving the native selection", () => {
+    owner.state = {
+      mode: "text-editor",
+      selectionActive: true,
+      selectedLineId: "line-1",
+      lines: Array.from({ length: 6 }, (_, index) => ({
+        id: `line-${index + 1}`,
+      })),
+    };
+    owner.lineKeyById = new Map(
+      owner.state.lines.map((line) => [line.id, line.id]),
+    );
+    owner.editor = {
+      getElementByKey: (key) => ({
+        getBoundingClientRect: () => {
+          const top = 100 + (Number(key.slice(5)) - 1) * 32;
+          return { left: 40, right: 320, top, bottom: top + 32 };
+        },
+      }),
+    };
+    owner.scheduleRender = vi.fn();
+    owner.dispatchSelectedLineChanged = vi.fn();
+    const selection = document.getSelection();
+    const initialAnchor = selection.anchorNode;
+
+    expect(owner.syncSelectionFromCaretRect({ rect: caret(230) })).toEqual({
+      lineId: "line-5",
+      x: 40,
+      y: 2,
+    });
+    expect(owner.state.selectedLineId).toBe("line-5");
+    expect(owner.syncSelectionFromCaretRect({ rect: caret(198) }).lineId).toBe(
+      "line-4",
+    );
+    expect(owner.state.selectedLineId).toBe("line-4");
+    expect(owner.dispatchSelectedLineChanged).toHaveBeenLastCalledWith(
+      "line-4",
+      {
+        mode: "text-editor",
+        isCollapsed: true,
+      },
+    );
+    expect(selection.anchorNode).toBe(initialAnchor);
+    expect(scroller.scrollTo).not.toHaveBeenCalled();
+  });
+
   it("scrolls a downward caret above the iOS keyboard and toolbar inside the dialogue list", () => {
     expect(
       owner.revealSelectionRect({ rect: caret(453), direction: "down" }),

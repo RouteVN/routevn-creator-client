@@ -1,3 +1,4 @@
+import { mountSceneEditorWindowLayout } from "./support/windowLayout.js";
 import { filter, tap } from "rxjs";
 import { createProjectStateStream } from "../../deps/services/shared/projectStateStream.js";
 import { generateId } from "../../internal/id.js";
@@ -1662,6 +1663,7 @@ export const handleBeforeMount = (deps) => {
   let routeSyncSequence = 0;
   store.setScenePageLoading({ isLoading: true });
   store.setUiConfig({ uiConfig });
+  const cleanupWindowLayout = mountSceneEditorWindowLayout(deps);
   const showLineNumbers =
     appService.getUserConfig(SHOW_LINE_NUMBERS_CONFIG_KEY) ?? true;
   const isMuted = appService.getUserConfig(IS_MUTED_CONFIG_KEY) ?? false;
@@ -1712,6 +1714,7 @@ export const handleBeforeMount = (deps) => {
     .subscribe();
 
   return async () => {
+    cleanupWindowLayout?.();
     unregisterBeforeNavigation();
     projectSubscription.unsubscribe();
     routeSubscription.unsubscribe();

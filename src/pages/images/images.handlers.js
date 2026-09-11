@@ -543,7 +543,7 @@ export const handleImageItemDoubleClick = (deps, payload) => {
     deps,
     itemId,
     syncExplorer: true,
-    suppressMobileDetailSheet: source === "mobile-context-menu",
+    suppressMobileDetailSheet: source === "long-press",
   });
 };
 
@@ -702,7 +702,7 @@ export const handleImageItemPreview = (deps, payload) => {
     deps,
     itemId,
     syncExplorer: true,
-    suppressMobileDetailSheet: source === "mobile-context-menu",
+    suppressMobileDetailSheet: source === "long-press",
   });
 };
 

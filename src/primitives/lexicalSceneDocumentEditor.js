@@ -1289,6 +1289,7 @@ export class LexicalSceneDocumentEditorElement extends HTMLElement {
     this.handleSurfaceKeyDown = this.handleSurfaceKeyDown.bind(this);
     this.handleNativeFocus = this.handleNativeFocus.bind(this);
     this.handleNativeBlur = this.handleNativeBlur.bind(this);
+    this.handleDocumentPointerDown = this.handleDocumentPointerDown.bind(this);
     this.handleNativeKeyDown = this.handleNativeKeyDown.bind(this);
     this.handleNativeBeforeInput = this.handleNativeBeforeInput.bind(this);
     this.handleNativeInput = this.handleNativeInput.bind(this);
@@ -1402,6 +1403,11 @@ export class LexicalSceneDocumentEditorElement extends HTMLElement {
 
     this.refs.editor.addEventListener("focus", this.handleNativeFocus);
     this.refs.editor.addEventListener("blur", this.handleNativeBlur);
+    document.addEventListener(
+      "pointerdown",
+      this.handleDocumentPointerDown,
+      true,
+    );
     this.refs.editor.addEventListener("keydown", this.handleNativeKeyDown);
     this.refs.editor.addEventListener("input", this.handleNativeInput, true);
     window.addEventListener("keydown", this.handleWindowKeyDownCapture, true);
@@ -1475,6 +1481,11 @@ export class LexicalSceneDocumentEditorElement extends HTMLElement {
 
     this.refs.editor?.removeEventListener("focus", this.handleNativeFocus);
     this.refs.editor?.removeEventListener("blur", this.handleNativeBlur);
+    document.removeEventListener(
+      "pointerdown",
+      this.handleDocumentPointerDown,
+      true,
+    );
     this.refs.editor?.removeEventListener("keydown", this.handleNativeKeyDown);
     this.refs.editor?.removeEventListener(
       "input",
@@ -1963,10 +1974,7 @@ export class LexicalSceneDocumentEditorElement extends HTMLElement {
   }
 
   blurEditor({ lineId = this.state.selectedLineId } = {}) {
-    this.clearPointerDownInsideEditor();
-    this.lastProgrammaticFocusTarget = undefined;
-    this.programmaticFocusRestoreUntil = 0;
-    this.invalidatePendingFocusRestore();
+    this.cancelFocusRecovery();
     this.refs?.editor?.blur?.();
     this.refs?.surface?.blur?.();
     this.blur?.();
@@ -2016,6 +2024,44 @@ export class LexicalSceneDocumentEditorElement extends HTMLElement {
       behavior,
       direction,
     });
+  }
+
+  syncSelectionFromCaretRect({ rect } = {}) {
+    if (
+      this.state.selectionActive === false ||
+      this.state.mode !== "text-editor" ||
+      !isUsableClientRect(rect)
+    ) {
+      return undefined;
+    }
+
+    const caretY = (rect.top + rect.bottom) / 2;
+    for (const line of this.state.lines) {
+      const lineKey = this.lineKeyById.get(line.id);
+      const lineElement = this.editor.getElementByKey(lineKey);
+      const lineRect = lineElement?.getBoundingClientRect();
+      if (!lineRect || caretY < lineRect.top || caretY > lineRect.bottom) {
+        continue;
+      }
+
+      if (line.id !== this.state.selectedLineId) {
+        this.state.selectedLineId = line.id;
+        this.scheduleRender();
+        this.dispatchSelectedLineChanged(line.id, {
+          mode: "text-editor",
+          isCollapsed: true,
+        });
+      }
+
+      // Keep coordinates relative to the line so scrolling cannot look like
+      // native arrow movement. Reading this context never moves the caret.
+      return {
+        lineId: line.id,
+        x: rect.left - lineRect.left,
+        y: rect.top - lineRect.top,
+      };
+    }
+    return undefined;
   }
 
   revealSelectionRect({
@@ -2422,19 +2468,23 @@ export class LexicalSceneDocumentEditorElement extends HTMLElement {
   }
 
   handleNativeBlur(event) {
+    const relatedTarget = event?.relatedTarget;
+    if (
+      relatedTarget &&
+      relatedTarget !== document.body &&
+      relatedTarget !== document.documentElement &&
+      !this.refs.editor.contains(relatedTarget)
+    ) {
+      this.cancelFocusRecovery();
+    }
+
     if (this.isEditorActiveElement()) {
       this.restoreEditorFocusState();
       this.restoreLastProgrammaticFocusTarget();
       return;
     }
 
-    if (this.isWithinProgrammaticFocusRestoreWindow()) {
-      this.restoreTextEditorFocusState();
-      this.restoreLastProgrammaticFocusTarget();
-      return;
-    }
-
-    if (this.shouldRestoreProgrammaticBodyBlur()) {
+    if (this.shouldRestoreProgrammaticBodyBlur(event)) {
       this.restoreTextEditorFocusState();
       this.restoreLastProgrammaticFocusTarget();
       return;
@@ -2489,33 +2539,28 @@ export class LexicalSceneDocumentEditorElement extends HTMLElement {
           return;
         }
 
-        this.commitNativeBlur();
+        this.commitNativeBlur(event);
       }, 0);
       return;
     }
 
-    this.commitNativeBlur();
+    this.commitNativeBlur(event);
   }
 
-  commitNativeBlur() {
+  commitNativeBlur(event) {
     if (this.isEditorActiveElement()) {
       this.restoreEditorFocusState();
       this.restoreLastProgrammaticFocusTarget();
       return;
     }
 
-    if (this.isWithinProgrammaticFocusRestoreWindow()) {
+    if (this.shouldRestoreProgrammaticBodyBlur(event)) {
       this.restoreTextEditorFocusState();
       this.restoreLastProgrammaticFocusTarget();
       return;
     }
 
-    if (this.shouldRestoreProgrammaticBodyBlur()) {
-      this.restoreTextEditorFocusState();
-      this.restoreLastProgrammaticFocusTarget();
-      return;
-    }
-
+    this.cancelFocusRecovery();
     this.isEditorFocused = false;
     this.hideSelectionPopover();
     this.closeMentionMenu({
@@ -2562,12 +2607,33 @@ export class LexicalSceneDocumentEditorElement extends HTMLElement {
     );
   }
 
-  shouldRestoreProgrammaticBodyBlur() {
+  shouldRestoreProgrammaticBodyBlur(event) {
     return (
       this.state.mode === "text-editor" &&
       this.lastProgrammaticFocusTarget?.lineId &&
+      this.isWithinProgrammaticFocusRestoreWindow() &&
+      (!event?.relatedTarget ||
+        event.relatedTarget === document.body ||
+        event.relatedTarget === document.documentElement) &&
       this.isBodyActiveElement()
     );
+  }
+
+  handleDocumentPointerDown(event) {
+    if (event.button !== 0 || event.composedPath().includes(this)) {
+      return;
+    }
+
+    // An outside tap supersedes caret recovery, even during its short focus
+    // window. Leave default focus/blur behavior and toolbar actions intact.
+    this.cancelFocusRecovery();
+  }
+
+  cancelFocusRecovery() {
+    this.lastProgrammaticFocusTarget = undefined;
+    this.programmaticFocusRestoreUntil = 0;
+    this.clearPointerDownInsideEditor();
+    this.invalidatePendingFocusRestore();
   }
 
   restoreEditorFocusState() {
@@ -2836,7 +2902,9 @@ export class LexicalSceneDocumentEditorElement extends HTMLElement {
     }
 
     const nativeSelection = this.getNativeLineSelectionContext();
-    const lineId = nativeSelection?.lineId || this.state.selectedLineId;
+    // A cached selected line is not evidence that the live caret is still at
+    // a section boundary (older iOS can hide its selection after an arrow).
+    const lineId = nativeSelection?.lineId;
     if (
       !this.isTextModeVerticalNavigationBoundary(lineId, navigationDirection)
     ) {
@@ -2912,12 +2980,16 @@ export class LexicalSceneDocumentEditorElement extends HTMLElement {
         const nativeSelection = this.getNativeLineSelectionContext();
         const lineId = nativeSelection?.lineId;
         if (!lineId || lineId === this.state.selectedLineId) {
-          const didMoveWithinCurrentLine =
+          const didMoveNativeSelection =
             lineId &&
-            initialNativeSelection?.lineId === lineId &&
-            (nativeSelection.start !== initialNativeSelection.start ||
+            (!initialNativeSelection ||
+              initialNativeSelection.lineId !== lineId ||
+              nativeSelection.start !== initialNativeSelection.start ||
               nativeSelection.end !== initialNativeSelection.end);
-          if (didMoveWithinCurrentLine) {
+          // Lexical may have already synchronized selectedLineId before this
+          // frame. Arriving at an edge line is still movement, not a request
+          // to cross into the next section.
+          if (didMoveNativeSelection) {
             this.revealCurrentSelection({
               behavior: "auto",
               direction: navigationDirection,
@@ -5885,6 +5957,11 @@ export class LexicalSceneDocumentEditorElement extends HTMLElement {
   loadLines(lines, { emitChange = false, restoreSelection } = {}) {
     const nextLines = cloneSceneEditorLines(lines);
     this.isApplyingExternalLines = emitChange !== true;
+    // Loading a scene must not open the software keyboard. Keep the logical
+    // line selection without moving the browser caret into the editor.
+    const preventFocus =
+      document.documentElement.dataset.rvnInputMode === "touch" &&
+      !this.isEditorActiveElement();
 
     this.editor.update(
       () => {
@@ -5939,7 +6016,10 @@ export class LexicalSceneDocumentEditorElement extends HTMLElement {
           });
         }
       },
-      { discrete: true },
+      {
+        discrete: true,
+        tag: preventFocus ? "skip-dom-selection" : undefined,
+      },
     );
 
     requestAnimationFrame(() => {

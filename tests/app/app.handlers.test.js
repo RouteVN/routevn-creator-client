@@ -112,6 +112,45 @@ describe("app Scene Editor keyboard state", () => {
 });
 
 describe("app route transitions", () => {
+  it("opens iOS Config after changing folders without reopening the previous project", async () => {
+    const appService = {
+      prepareNavigation: vi.fn(async () => {}),
+      getCurrentProjectId: vi.fn(() => "project-1"),
+      refreshCurrentProjectEntry: vi.fn(async () => {}),
+      getPlatform: vi.fn(() => "ios"),
+      redirect: vi.fn(),
+      showAlert: vi.fn(),
+    };
+    const projectService = {
+      getEnsuredProjectId: vi.fn(() => undefined),
+      ensureRepository: vi.fn(async () => {
+        throw new Error("Previous project is outside the selected library");
+      }),
+    };
+    const store = {
+      setCurrentRoute: vi.fn(),
+      closeMobileSheet: vi.fn(),
+      setRepositoryLoading: vi.fn(),
+      setRepositoryLoadingPhase: vi.fn(),
+    };
+
+    await createRouteTransitionRunner({
+      appService,
+      projectService,
+      store,
+      render: vi.fn(),
+      i18n: {},
+    })({ path: "/project/config", payload: { p: "project-1" } });
+
+    expect(store.setCurrentRoute).toHaveBeenLastCalledWith({
+      route: "/project/config",
+      payload: { p: "project-1" },
+    });
+    expect(projectService.ensureRepository).not.toHaveBeenCalled();
+    expect(appService.redirect).not.toHaveBeenCalled();
+    expect(appService.showAlert).not.toHaveBeenCalled();
+  });
+
   it("updates Discord presence after the active locale changes", () => {
     const dom = new JSDOM("<!doctype html><body></body>");
     vi.stubGlobal("window", dom.window);

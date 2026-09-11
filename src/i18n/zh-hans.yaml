@@ -1,3 +1,22 @@
+projectFolderSetupPage:
+  title: "设置你的项目文件夹"
+  description: "选择“我的 {deviceName}”或已有的项目文件夹。"
+  openDescription: "选择“我的 {deviceName}”中已有的项目文件夹。"
+  newProjectsDescription: "新项目将在此文件夹中创建。"
+  setup: "设置"
+  pickerTitle: "选择文件夹"
+  changeFolder: "更改文件夹"
+  savedTitle: "项目文件夹已准备好"
+  continue: "继续"
+  errorTitle: "项目文件夹"
+  pickError: "无法访问此文件夹，请重新选择。"
+  confirmError: "无法保存文件夹设置。请检查访问权限和可用空间后重试。"
+  appFolderError: "此文件夹属于某个应用。请选择“我的 {deviceName}”中的独立文件夹。"
+  localFolderError: "请选择“我的 {deviceName}”中的本地文件夹。此设置不支持云端文件夹。"
+  invalidFolderError: "此文件夹不可用，请选择其他文件夹。"
+  nameConflictError: "此位置已有名为 RouteVN Projects 的文件，请选择其他位置。"
+  reconnectError: "无法访问已保存的文件夹。请重新选择以恢复访问权限。"
+  unavailableError: "此应用版本不支持文件夹设置。请安装更新后的 iOS 应用再试。"
 projectsPage:
   addMemberMenuItem: "添加成员"
   addMemberTitle: "添加成员"
@@ -54,6 +73,7 @@ projectsPage:
   failedRemoveProject: "无法从列表中移除项目。请重试。"
   failedSelectProjectIcon: "无法选择项目图标。"
   failedSelectProjectLocation: "无法选择项目保存位置。"
+  failedPreviewProjectLocation: "无法确认项目保存位置。请重新打开此对话框后重试。"
   fillRequiredFields: "请填写所有必填项。"
   importButton: "导入"
   importedProjectMessage: "项目“{projectName}”已导入。"
@@ -193,6 +213,7 @@ projectPage:
   warningTitle: "警告"
   wordsLabel: "词数"
 appPage:
+  failedStartPreviewAudio: "无法播放预览音频。请关闭预览后重新打开。"
   googlePlayUpdateAvailable: "Google Play 上已有新版 RouteVN Creator。"
   googlePlayUpdateFailed: "无法通过 Google Play 更新。请重试。"
   googlePlayUpdateInProgress: "Google Play 正在下载更新。您可以继续创作。"
@@ -758,6 +779,8 @@ actionTransformEditor:
   unnamedTarget: "当前项目"
   visualTarget: "视觉元素"
 vnPreview:
+  closeButton: "退出全屏"
+  loading: "正在加载预览..."
   restoreOrientationButton: "恢复预览方向"
   rotateButton: "将预览旋转 90 度"
 animationCameraEditor:
@@ -1005,6 +1028,7 @@ soundsPage:
   unsupportedFormatTitle: "不支持的音频"
   updateButton: "更新"
 videosPage:
+  closePreviewButton: "关闭"
   editTitle: "编辑视频"
   failedCreateVideo: "无法创建视频。"
   failedSelectFile: "无法选择文件。"
@@ -2293,7 +2317,9 @@ commandLinePage:
   "string": "字符串"
   "true": "true"
 audioPlayerPage:
+  seekLabel: "播放位置"
   errorTitle: "错误"
+  failedPlayback: "无法播放此音频。请重试。"
   missingFileId: "缺少 fileId"
 aboutPage:
   allSocialMediaButton: "全部社交媒体"
@@ -2310,6 +2336,9 @@ settingsUserPage:
   placeholderNote: "这是用户设置界面的占位内容"
   title: "用户设置"
 configPage:
+  projectFolderTitle: "项目文件夹"
+  changeProjectFolderLabel: "更改文件夹"
+  projectFolderNotSet: "未选择文件夹"
   title: "偏好设置"
   assetPackageTitle: "资源包"
   assetPackageDescription: "如果你计划在 RouteVN 素材商店发布素材包，请启用此选项。"

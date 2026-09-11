@@ -27,6 +27,11 @@ export const handleBeforeMount = (deps) => {
   const { appService, projectService, store, render } = deps;
   store.setAssetPackageEnabled({ enabled: isAssetPackageEnabled(appService) });
   refreshRecentSceneIds({ appService, store });
+  // iOS Config can release the project so library settings remain reachable.
+  // Navigation still works there; only recent scene details need a repository.
+  if (projectService.getEnsuredProjectId() !== resolveProjectId(appService)) {
+    return;
+  }
   const cleanup = projectService.subscribeProjectState(
     ({ repositoryState } = {}) => {
       store.setScenesData({ scenesData: repositoryState?.scenes });

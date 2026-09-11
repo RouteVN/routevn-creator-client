@@ -3,6 +3,7 @@ import {
   handleAssetPackageChange,
   handleAfterMount,
   handleBeforeMount,
+  handleChangeProjectFolder,
   handleLanguageChange,
   handleHelpButtonChange,
   handleThemeCardClick,
@@ -12,6 +13,12 @@ import { EN_I18N } from "../support/i18n.js";
 const createDeps = () => {
   let currentLocale = "en";
   const appService = {
+    getPlatform: vi.fn(() => "web"),
+    getProjectFolderSetup: vi.fn(() => ({
+      configured: true,
+      folder: { displayPath: "On My iPhone/My Projects" },
+    })),
+    navigate: vi.fn(),
     getTheme: vi.fn(() => "dark"),
     setTheme: vi.fn((theme) => theme),
     getUserConfig: vi.fn(() => undefined),
@@ -35,6 +42,7 @@ const createDeps = () => {
       selectCurrentLocale: vi.fn(() => currentLocale),
       setCurrentLocale: vi.fn(),
       setUiConfig: vi.fn(),
+      setProjectFolder: vi.fn(),
       setAssetPackageEnabled: vi.fn(),
       setHelpButtonVisible: vi.fn(),
     },
@@ -45,6 +53,47 @@ const createDeps = () => {
 };
 
 describe("config handlers", () => {
+  it("loads the configured iOS folder and reopens setup without changing it", () => {
+    const deps = createDeps();
+    deps.appService.getPlatform.mockReturnValue("ios");
+    handleBeforeMount(deps);
+    expect(deps.store.setProjectFolder).toHaveBeenCalledWith({
+      visible: true,
+      path: "On My iPhone/My Projects",
+    });
+    handleChangeProjectFolder(deps);
+    expect(deps.appService.navigate).toHaveBeenCalledExactlyOnceWith(
+      "/project-folder-setup",
+      { from: "config" },
+    );
+    // Remounting Config reads the latest confirmed folder.
+    deps.appService.getProjectFolderSetup.mockReturnValue({
+      configured: true,
+      folder: { displayPath: "On My iPhone/Other Projects" },
+    });
+    handleBeforeMount(deps);
+    expect(deps.store.setProjectFolder).toHaveBeenLastCalledWith({
+      visible: true,
+      path: "On My iPhone/Other Projects",
+    });
+  });
+
+  it.each(["web", "android", "tauri"])(
+    "does not expose or open the iOS folder setup on %s",
+    (platform) => {
+      const deps = createDeps();
+      deps.appService.getPlatform.mockReturnValue(platform);
+      handleBeforeMount(deps);
+      handleChangeProjectFolder(deps);
+      expect(deps.store.setProjectFolder).toHaveBeenCalledWith({
+        visible: false,
+        path: undefined,
+      });
+      expect(deps.appService.getProjectFolderSetup).not.toHaveBeenCalled();
+      expect(deps.appService.navigate).not.toHaveBeenCalled();
+    },
+  );
+
   it.each([undefined, false, true])(
     "loads help button visibility %s before mount, defaulting to shown",
     (visible) => {

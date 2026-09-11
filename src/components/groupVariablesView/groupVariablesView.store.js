@@ -1683,6 +1683,7 @@ export const selectViewData = ({ state, props, i18n }) => {
             id: item.id,
             sourceItemId: item.sourceItemId,
             domItemId: "",
+            longPressEnabled: false,
             isPlaceholder: true,
             cursor: "default",
           };
@@ -1711,6 +1712,7 @@ export const selectViewData = ({ state, props, i18n }) => {
           isEnum: isVariableEnumEnabled(item),
           isSelected: item.id === props.selectedItemId,
           domItemId: item.id,
+          longPressEnabled: mobileLayout && !readonly,
           cursor: "pointer",
         };
       });

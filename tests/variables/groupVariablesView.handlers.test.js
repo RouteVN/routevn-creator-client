@@ -30,6 +30,7 @@ import {
   handleRemoveOperationOperandClick,
   handleRowClick,
   handleRowContextMenu,
+  handleRowLongPress,
   handleRowDoubleClick,
 } from "../../src/components/groupVariablesView/groupVariablesView.handlers.js";
 
@@ -414,7 +415,7 @@ describe("groupVariablesView.handlers", () => {
     expect(store.openEditDialog).not.toHaveBeenCalled();
   });
 
-  it("opens the edit dialog instead of the row context menu on mobile contextmenu gestures", () => {
+  it("opens the edit dialog on an explicit long press", () => {
     const preventDefault = vi.fn();
     const stopPropagation = vi.fn();
     const store = {
@@ -424,7 +425,7 @@ describe("groupVariablesView.handlers", () => {
     const render = vi.fn();
     const dispatchEvent = vi.fn();
 
-    handleRowContextMenu(
+    handleRowLongPress(
       {
         props: {
           mobileLayout: true,
@@ -456,8 +457,6 @@ describe("groupVariablesView.handlers", () => {
       },
     );
 
-    expect(preventDefault).toHaveBeenCalledTimes(1);
-    expect(stopPropagation).toHaveBeenCalledTimes(1);
     expect(dispatchEvent).toHaveBeenCalledWith(
       expect.objectContaining({
         type: "variable-item-click",

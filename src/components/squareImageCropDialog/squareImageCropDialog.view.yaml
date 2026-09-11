@@ -12,7 +12,7 @@ refs:
       ready-state-changed:
         handler: handleCropperReadyStateChanged
 template:
-  - rtgl-dialog#dialog ?open=${isOpen} s=sm:
+  - rtgl-dialog#dialog ?open=${isOpen} s=md:
       - rtgl-view slot=content g=md:
           - rtgl-view g=xs:
               - rtgl-text s=md: ${title}

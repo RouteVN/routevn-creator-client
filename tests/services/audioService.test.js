@@ -62,6 +62,9 @@ describe("audio service", () => {
     await audioService.play();
 
     expect(contexts).toHaveLength(1);
+    expect(
+      contexts[0].createGain.mock.results[0].value.connect,
+    ).toHaveBeenCalledWith(contexts[0].destination);
     expect(contexts[0].close).not.toHaveBeenCalled();
     expect(contexts[0].createBufferSource).toHaveBeenCalledOnce();
 

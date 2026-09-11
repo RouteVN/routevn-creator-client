@@ -18,6 +18,7 @@ import {
 } from "../../internal/runtime/graphicsEngineRuntime.js";
 import { requireProjectResolution } from "../../internal/projectResolution.js";
 import { startCanvasVideoRecording } from "../clients/canvasVideoRecorder.js";
+import { decodeAudioBuffer } from "../clients/audioDecoder.js";
 import { loadFontBuffer } from "./shared/fontLoader.js";
 
 const selectLoopingUpdateAnimations = (animations = []) => {
@@ -550,8 +551,10 @@ const installManagedAudioAsset = () => {
     }
 
     const currentResetToken = managedAudioResetToken;
-    const nextPendingLoad = decodeContext
-      .decodeAudioData(decodeSource)
+    const nextPendingLoad = decodeAudioBuffer({
+      audioContext: decodeContext,
+      arrayBuffer: decodeSource,
+    })
       .then((audioBuffer) => {
         if (managedAudioResetToken !== currentResetToken) {
           return undefined;
@@ -619,6 +622,8 @@ installManagedAudioAsset();
 export const createGraphicsService = async ({
   subject,
   projectMediaOrigin,
+  audioOutput,
+  onAudioOutputError,
 } = {}) => {
   let routeGraphics;
   let routeGraphicsInitPromise;
@@ -1570,6 +1575,7 @@ export const createGraphicsService = async ({
   };
 
   const destroyRuntime = async () => {
+    audioOutput?.close();
     assetLoadRuntimeVersion += 1;
     ticker?.stop();
     invalidateDeferredAudioRender();
@@ -2145,6 +2151,17 @@ export const createGraphicsService = async ({
         runtimeInteractionsEnabled = true;
         loadedAssetTypes = new Map();
         assetBufferManager = createAssetBufferManager();
+        // Media playback can remain pending until the browser produces audio.
+        // It must not hold up canvas creation, asset loading, or teardown.
+        if (audioOutput) {
+          void audioOutput.resume().catch((error) => {
+            console.error(
+              "[graphicsService] Failed to start audio output",
+              error,
+            );
+            onAudioOutputError?.(error);
+          });
+        }
         routeGraphics = createRouteGraphics();
 
         const plugins = await loadGraphicsEnginePlugins();
@@ -2230,6 +2247,9 @@ export const createGraphicsService = async ({
 
       try {
         await routeGraphicsInitPromise;
+      } catch (error) {
+        await runDestroyRuntime();
+        throw error;
       } finally {
         routeGraphicsInitPromise = undefined;
       }

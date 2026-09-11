@@ -41,11 +41,31 @@ const syncFromProps = ({ store, props } = {}) => {
   });
 };
 
+const refreshProjectLocation = async (deps) => {
+  const { appService, store, render } = deps;
+  if (store.selectPlatform() !== "ios") return;
+  store.beginLocationPreview();
+  const requestId = store.selectLocationRequestId();
+  const { name } = store.selectDefaultValues();
+  render();
+  try {
+    const location = await appService.previewNewProjectLocation({ name });
+    if (store.selectLocationRequestId() !== requestId) return;
+    store.setLocationPreview({ location });
+  } catch {
+    if (store.selectLocationRequestId() !== requestId) return;
+    store.setLocationPreview({ failed: true });
+  }
+  render();
+};
+
 export const handleBeforeMount = (deps) => {
   const { store, props } = deps;
   syncFromProps({ store, props });
+  void refreshProjectLocation(deps);
 
   return () => {
+    store.beginLocationPreview();
     revokeIconPreviewUrl({ store });
     store.clearIconFile();
     store.closeIconCropDialog();
@@ -63,6 +83,7 @@ export const handleOnUpdate = (deps, payload = {}) => {
 
   revokeIconPreviewUrl({ store });
   syncFromProps({ store, props: newProps });
+  void refreshProjectLocation(deps);
   render();
 };
 
@@ -97,6 +118,7 @@ export const handleFormChange = (deps, payload) => {
   const previousValues = store.selectDefaultValues();
   const nextValues = {};
   Object.assign(nextValues, payload?._event?.detail?.values);
+  const nameChanged = nextValues.name !== previousValues.name;
   let shouldRemount = false;
 
   if (
@@ -117,6 +139,15 @@ export const handleFormChange = (deps, payload) => {
     shouldRemount,
   });
   render();
+  if (nameChanged) return refreshProjectLocation(deps);
+};
+
+export const handleFormInput = (deps, payload) => {
+  const { store } = deps;
+  const { name } = payload._event.detail;
+  if (store.selectPlatform() === "ios" && name === "name") {
+    return handleFormChange(deps, payload);
+  }
 };
 
 export const handleProjectIconClick = async (deps) => {
@@ -191,6 +222,11 @@ export const handleValidate = (deps) => {
 
   if (store.selectPlatform() === "tauri" && !store.selectProjectPath()) {
     customErrors.projectPath = copy.projectLocationRequiredAlert;
+    errors.projectPath = customErrors.projectPath;
+  }
+
+  if (store.selectPlatform() === "ios" && !store.selectIsLocationReady()) {
+    customErrors.projectPath = copy.failedPreviewProjectLocation;
     errors.projectPath = customErrors.projectPath;
   }
 

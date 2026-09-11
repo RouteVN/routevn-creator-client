@@ -1,6 +1,6 @@
 ---
 title: Project Scenes Mobile Preview
-description: Covers the touch scene-map preview, rotated mobile layout, and running-canvas hit testing.
+description: Covers canvas long press, touch scene-map preview, rotated mobile layout, running-canvas hit testing, and exiting full-screen preview back to the scene editor.
 url: /projects?vt-input-mode=touch
 skipInitialScreenshot: true
 viewport:
@@ -80,6 +80,51 @@ steps:
     selector: "#whiteboard #itemRef0"
     state: visible
     timeoutMs: 10000
+  # iOS does not supply a native contextmenu for a canvas hold.
+  - action: assert
+    type: js
+    fn: eval
+    args:
+      - |
+        (async () => {
+          const deepQuery = (root, selector) => {
+            const direct = root.querySelector(selector);
+            if (direct) return direct;
+            for (const node of root.querySelectorAll('*')) {
+              const found = node.shadowRoot && deepQuery(node.shadowRoot, selector);
+              if (found) return found;
+            }
+          };
+          const board = deepQuery(document, 'rvn-whiteboard');
+          const container = board.shadowRoot.querySelector('#container');
+          const rect = container.getBoundingClientRect();
+          const touch = new Touch({
+            identifier: 1,
+            target: container,
+            clientX: rect.left + 60,
+            clientY: rect.top + 160,
+          });
+          container.dispatchEvent(new TouchEvent('touchstart', {
+            bubbles: true, composed: true, cancelable: true, touches: [touch],
+          }));
+          await new Promise(resolve => setTimeout(resolve, 550));
+          const release = new TouchEvent('touchend', {
+            bubbles: true, composed: true, cancelable: true, touches: [],
+          });
+          container.dispatchEvent(release);
+          return release.defaultPrevented;
+        })()
+    value: true
+  - action: waitFor
+    selector: "#sceneFormDialog rtgl-input[data-field-name='name'] input"
+    state: visible
+    timeoutMs: 5000
+  - action: keypress
+    key: Escape
+  - action: waitFor
+    selector: "#sceneFormDialog"
+    state: hidden
+    timeoutMs: 5000
   - action: select
     selector: "#whiteboard #itemRef0"
     steps:
@@ -115,5 +160,47 @@ steps:
   - action: mouseUp
   - action: wait
     ms: 400
+  - action: screenshot
+  - action: select
+    selector: "#vnPreview #closePreviewButton"
+    steps:
+      - action: click
+  - action: waitFor
+    selector: "#vnPreview"
+    state: detached
+    timeoutMs: 5000
+  - action: select
+    selector: "#whiteboard #itemRef0"
+    steps:
+      - action: dblclick
+  - action: waitFor
+    selector: "#mobileKeyboardToolbar [data-action-id='preview']"
+    state: visible
+    timeoutMs: 10000
+  - action: select
+    selector: "#mobileKeyboardToolbar [data-action-id='preview']"
+    steps:
+      - action: click
+  - action: waitFor
+    selector: "#vnPreview [data-preview-ready='true']"
+    state: attached
+    timeoutMs: 10000
+  - action: select
+    selector: "#vnPreview #rotatePreviewButton"
+    steps:
+      - action: click
+  - action: screenshot
+  - action: select
+    selector: "#vnPreview #closePreviewButton"
+    steps:
+      - action: click
+  - action: waitFor
+    selector: "#vnPreview"
+    state: detached
+    timeoutMs: 5000
+  - action: waitFor
+    selector: "#sceneEditorSectionsScroll"
+    state: visible
+    timeoutMs: 5000
   - action: screenshot
 ---

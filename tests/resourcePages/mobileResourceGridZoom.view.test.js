@@ -60,13 +60,13 @@ const readMobileBranch = (relativePath) => {
 
 describe("mobile resource grid zoom wiring", () => {
   it.each(resourcePages)(
-    "uses the mobile column default for %s",
+    "uses responsive mobile column defaults for %s",
     (_name, relativePath, configKey) => {
       const mobileBranch = readMobileBranch(relativePath);
 
       expect(mobileBranch).toContain("show-zoom-controls");
       expect(mobileBranch).toContain("zoom-control-mode=columns");
-      expect(mobileBranch).toContain("default-items-per-row=2");
+      expect(mobileBranch).not.toContain("default-items-per-row=");
       expect(mobileBranch).toContain(`items-per-row-config-key="${configKey}"`);
     },
   );

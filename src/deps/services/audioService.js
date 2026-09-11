@@ -1,12 +1,19 @@
+import { decodeAudioBuffer } from "../clients/audioDecoder.js";
+
 /**
  * Audio Service - handles audio playback using Web Audio API
  */
-export const createAudioService = ({ createAudioContext } = {}) => {
+export const createAudioService = ({
+  createAudioContext,
+  createAudioOutput,
+} = {}) => {
   // Audio context and nodes
   let audioContext = null;
   let sourceNode = null;
   let gainNode = null;
   let audioBuffer = null;
+  let audioOutput;
+  let playbackRequestId = 0;
 
   // State
   let playing = false;
@@ -82,6 +89,9 @@ export const createAudioService = ({ createAudioContext } = {}) => {
   };
 
   const shutdown = () => {
+    playbackRequestId += 1;
+    audioOutput?.close();
+    audioOutput = undefined;
     loadRequestId += 1;
     loadAbortController?.abort();
     loadAbortController = undefined;
@@ -107,6 +117,27 @@ export const createAudioService = ({ createAudioContext } = {}) => {
     }
   };
 
+  const resumeAudio = async (context, output, requestId) => {
+    const isCurrent = () =>
+      context === audioContext &&
+      output === audioOutput &&
+      requestId === playbackRequestId;
+    try {
+      // Start both requests in the user gesture, before yielding to a promise.
+      await Promise.all([
+        context.state === "suspended" ? context.resume() : undefined,
+        output?.resume(),
+      ]);
+      return isCurrent();
+    } catch (error) {
+      if (isCurrent()) {
+        service.pause();
+        emit("error", error);
+      }
+      return false;
+    }
+  };
+
   const service = {
     init() {
       if (audioContext) return;
@@ -117,8 +148,9 @@ export const createAudioService = ({ createAudioContext } = {}) => {
         ? createAudioContext()
         : new AudioContextClass();
 
+      audioOutput = createAudioOutput?.(audioContext);
       gainNode = audioContext.createGain();
-      gainNode.connect(audioContext.destination);
+      gainNode.connect(audioOutput?.destination ?? audioContext.destination);
     },
 
     acquire() {
@@ -142,9 +174,7 @@ export const createAudioService = ({ createAudioContext } = {}) => {
     async unlock() {
       service.init();
 
-      if (audioContext?.state === "suspended") {
-        await audioContext.resume();
-      }
+      await resumeAudio(audioContext, audioOutput, playbackRequestId);
     },
 
     cleanup() {
@@ -184,7 +214,10 @@ export const createAudioService = ({ createAudioContext } = {}) => {
           return undefined;
         }
 
-        const decodedAudioBuffer = await context.decodeAudioData(arrayBuffer);
+        const decodedAudioBuffer = await decodeAudioBuffer({
+          audioContext: context,
+          arrayBuffer,
+        });
         if (!isActiveRequest()) {
           return undefined;
         }
@@ -216,11 +249,13 @@ export const createAudioService = ({ createAudioContext } = {}) => {
     async play(fromTime = null) {
       const context = audioContext;
       const outputGainNode = gainNode;
+      const output = audioOutput;
       const buffer = audioBuffer;
       if (!buffer || playing || !context || !outputGainNode) return;
+      const requestId = ++playbackRequestId;
 
-      if (context.state === "suspended") {
-        await context.resume();
+      if (context.state === "suspended" || output) {
+        if (!(await resumeAudio(context, output, requestId))) return;
       }
 
       if (
@@ -257,6 +292,10 @@ export const createAudioService = ({ createAudioContext } = {}) => {
     },
 
     pause() {
+      playbackRequestId += 1;
+      // Pause the media transport first: a live stream left running after its
+      // source stops can repeat buffered audio on older iOS WebKit.
+      audioOutput?.pause();
       if (!playing) return;
 
       stopSourceNode();
@@ -269,6 +308,8 @@ export const createAudioService = ({ createAudioContext } = {}) => {
     },
 
     stop() {
+      playbackRequestId += 1;
+      audioOutput?.pause();
       if (!playing && currentTime === 0) return;
 
       stopSourceNode();
@@ -289,21 +330,32 @@ export const createAudioService = ({ createAudioContext } = {}) => {
 
       const seekTime = Math.max(0, Math.min(time, duration));
       const wasPlaying = playing;
+      const requestId = ++playbackRequestId;
 
+      // Publish the released position before waiting for native output. The old
+      // source's timer/end event must not overwrite it while output resumes.
+      stopTimeUpdate();
+      if (sourceNode) sourceNode.onended = null;
       currentTime = seekTime;
       pauseTime = seekTime;
+      emit("timeupdate", currentTime);
 
       if (wasPlaying) {
-        if (context.state === "suspended") {
-          await context.resume();
+        if (requestId !== playbackRequestId) return;
+        const output = audioOutput;
+        if (context.state === "suspended" || output) {
+          if (!(await resumeAudio(context, output, requestId))) return;
         }
 
-        if (context !== audioContext || outputGainNode !== gainNode) {
+        if (
+          requestId !== playbackRequestId ||
+          context !== audioContext ||
+          outputGainNode !== gainNode
+        ) {
           return;
         }
 
         stopSourceNode();
-        stopTimeUpdate();
 
         sourceNode = context.createBufferSource();
         sourceNode.buffer = audioBuffer;
@@ -321,8 +373,6 @@ export const createAudioService = ({ createAudioContext } = {}) => {
 
         startTimeUpdate();
       }
-
-      emit("timeupdate", currentTime);
     },
 
     setVolume(volume) {

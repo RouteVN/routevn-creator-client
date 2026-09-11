@@ -8,6 +8,7 @@ import { createAndroidAudioRuntime } from "./deps/clients/android/audioRuntime.j
 import { createAndroidUpdater } from "./deps/clients/android/updater.js";
 import AndroidRouter from "./deps/clients/android/router.js";
 import { createBrowserEventsClient } from "./deps/clients/browserEvents.js";
+import { createWindowMetricsClient } from "./deps/clients/windowMetrics.js";
 import { createGlobalUIClient } from "./deps/clients/globalUI.js";
 
 import { createAppService } from "./deps/services/android/appService.js";
@@ -62,6 +63,9 @@ const audioService = createAudioService({
   createAudioContext: androidAudioRuntime.createAudioContext,
 });
 const browserEventsClient = createBrowserEventsClient();
+const windowMetricsClient = createWindowMetricsClient({
+  loadMetrics: () => callAndroidBridge("getWindowMetrics"),
+});
 
 const appVersion = tauriConfig.version;
 const creatorVersion = deriveProjectFormatVersionFromAppVersion(appVersion);
@@ -176,6 +180,8 @@ const graphicsService = await createGraphicsService({ subject });
 const dialogueQueueService = createPendingQueueService({ debounceMs: 2000 });
 
 const componentDependencies = {
+  windowMetricsClient,
+  browserEventsClient,
   uiConfig,
   subject,
   graphicsService,
@@ -186,6 +192,7 @@ const componentDependencies = {
 };
 
 const pageDependencies = {
+  windowMetricsClient,
   browserEventsClient,
   uiConfig,
   subject,

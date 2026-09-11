@@ -1,8 +1,3 @@
-const calculateSeekPosition = (clickX, progressBarWidth, duration) => {
-  const percentage = Math.max(0, Math.min(1, clickX / progressBarWidth));
-  return percentage * duration;
-};
-
 const OPEN_DIALOG_SELECTOR = "dialog[open], rtgl-dialog[open]";
 
 const isEscapeFromOpenDialog = (event) =>
@@ -56,12 +51,14 @@ export const handleBeforeMount = (deps) => {
   audioService.on("play", handlePlay);
 
   const handlePause = () => {
+    store.clearSeekTime();
     store.setPlaying({ isPlaying: false });
     render();
   };
   audioService.on("pause", handlePause);
 
   const handleEnded = () => {
+    store.clearSeekTime();
     store.setPlaying({ isPlaying: false });
     store.setCurrentTime({ currentTime: 0 });
     render();
@@ -77,8 +74,16 @@ export const handleBeforeMount = (deps) => {
 
   const handleError = (error) => {
     console.error("Audio error:", error);
+    store.clearSeekTime();
     store.setLoading({ isLoading: false });
+    store.setPlaying({ isPlaying: false });
     render();
+    appService.showToast({
+      title: copy.errorTitle ?? "Error",
+      message:
+        copy.failedPlayback ?? "Could not play this audio. Please try again.",
+      status: "error",
+    });
   };
   audioService.on("error", handleError);
 
@@ -93,9 +98,18 @@ export const handleBeforeMount = (deps) => {
     closeAudioPlayer({ dispatchEvent, audioService });
   };
   window.addEventListener("keydown", handleWindowKeyDown, true);
+  const handlePointerUp = () => handleSeekEnd(deps);
+  const handleSeekInterrupted = () => handleSeekCancel(deps);
+  // Releases can happen outside the range, and an unchanged range emits no change.
+  window.addEventListener("pointerup", handlePointerUp, true);
+  window.addEventListener("pointercancel", handleSeekInterrupted, true);
+  window.addEventListener("blur", handleSeekInterrupted);
 
   return () => {
     window.removeEventListener("keydown", handleWindowKeyDown, true);
+    window.removeEventListener("pointerup", handlePointerUp, true);
+    window.removeEventListener("pointercancel", handleSeekInterrupted, true);
+    window.removeEventListener("blur", handleSeekInterrupted);
     audioService.off("timeupdate", handleTimeUpdate);
     audioService.off("play", handlePlay);
     audioService.off("pause", handlePause);
@@ -171,17 +185,38 @@ export const handlePlayPause = async (deps, payload) => {
   await audioService.play();
 };
 
-export const handleProgressBarClick = async (deps, payload) => {
-  const { store, audioService } = deps;
-  const duration = store.selectDuration();
+export const handleSeekInput = (deps, payload) => {
+  const { store, render } = deps;
+  store.setSeekTime({ seekTime: payload._event.currentTarget.valueAsNumber });
+  render();
+};
 
-  if (!duration) return;
+export const handleSeekStart = handleSeekInput;
 
-  const rect = payload._event.currentTarget.getBoundingClientRect();
-  const clickX = payload._event.clientX - rect.left;
-  const seekTime = calculateSeekPosition(clickX, rect.width, duration);
+export const handleSeekEnd = (deps) => {
+  const { store } = deps;
+  // Do not render here: native change may follow pointerup and must read the
+  // released input value. Playback ticks (or change) resume rendering afterward.
+  store.clearSeekTime();
+};
 
-  await audioService.seek(seekTime);
+export const handleSeekChange = async (deps, payload) => {
+  const { store, render, audioService } = deps;
+  const seekTime = payload._event.currentTarget.valueAsNumber;
+  // The gesture has ended even if the native output takes time to resume.
+  store.clearSeekTime();
+  try {
+    await audioService.seek(seekTime);
+  } finally {
+    render();
+  }
+};
+
+export const handleSeekCancel = (deps) => {
+  const { store, render } = deps;
+  if (store.selectSeekTime() === undefined) return;
+  store.clearSeekTime();
+  render();
 };
 
 export const handleClose = (deps, payload) => {

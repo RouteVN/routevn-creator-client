@@ -1319,6 +1319,14 @@ export const handleOpenEditDialog = (deps, payload) => {
   openEditDialogForItem({ deps, itemId });
 };
 
+export const handleRowLongPress = (deps, payload) => {
+  const { props } = deps;
+  if (props.readonly === true) return;
+  const itemId = payload._event.currentTarget.getAttribute("data-item-id");
+  if (!itemId) return;
+  openEditDialogForItem({ deps, itemId });
+};
+
 export const handleRowContextMenu = (deps, payload) => {
   if (deps.props.readonly === true) {
     return;
@@ -1329,11 +1337,6 @@ export const handleRowContextMenu = (deps, payload) => {
 
   const itemId = getDataId(payload._event, "data-item-id", "row");
   if (!itemId) {
-    return;
-  }
-
-  if (parseBooleanProp(deps.props.mobileLayout)) {
-    openEditDialogForItem({ deps, itemId });
     return;
   }
 

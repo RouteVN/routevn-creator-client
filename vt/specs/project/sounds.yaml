@@ -1,6 +1,6 @@
 ---
 title: Sounds Workflow
-description: Covers the sounds page upload, detail, keyboard audio preview, edit submit, and filtered search states.
+description: Covers sound upload without Web Crypto, detail, keyboard audio preview, edit submit, and filtered search states.
 url: /projects
 skipInitialScreenshot: true
 viewport:
@@ -74,6 +74,12 @@ steps:
     selector: "#uploadBtnHeaderRef0"
     state: visible
     timeoutMs: 10000
+  - action: assert
+    type: js
+    fn: eval
+    args:
+      - "(() => { Object.defineProperty(globalThis.crypto, 'subtle', { configurable: true, value: undefined }); return globalThis.crypto.subtle === undefined; })()"
+    value: true
   - action: select
     selector: "#uploadBtnHeaderRef0"
     steps:

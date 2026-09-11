@@ -103,7 +103,7 @@ describe("sounds handlers", () => {
       _event: {
         detail: {
           itemId: "sound-1",
-          source: "mobile-context-menu",
+          source: "long-press",
         },
       },
     });

@@ -11,6 +11,9 @@
 		2A0000010000000000000002 /* web in Resources */ = {isa = PBXBuildFile; fileRef = 2A0000010000000000000013 /* web */; };
 		2A0000010000000000000003 /* LaunchScreen.storyboard in Resources */ = {isa = PBXBuildFile; fileRef = 2A0000010000000000000014 /* LaunchScreen.storyboard */; };
 		2A0000010000000000000004 /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = 2A0000010000000000000015 /* Assets.xcassets */; };
+		2A0000010000000000000005 /* ProjectFolderSetup.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2A0000010000000000000016 /* ProjectFolderSetup.swift */; };
+		2A0000010000000000000006 /* ProjectStoragePaths.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2A0000010000000000000017 /* ProjectStoragePaths.swift */; };
+		2A0000010000000000000007 /* SaveFileDestinations.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2A0000010000000000000018 /* SaveFileDestinations.swift */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXFileReference section */
@@ -20,6 +23,9 @@
 		2A0000010000000000000013 /* web */ = {isa = PBXFileReference; lastKnownFileType = folder; path = web; sourceTree = "<group>"; };
 		2A0000010000000000000014 /* LaunchScreen.storyboard */ = {isa = PBXFileReference; lastKnownFileType = file.storyboard; path = LaunchScreen.storyboard; sourceTree = "<group>"; };
 		2A0000010000000000000015 /* Assets.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; path = Assets.xcassets; sourceTree = "<group>"; };
+		2A0000010000000000000016 /* ProjectFolderSetup.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ProjectFolderSetup.swift; sourceTree = "<group>"; };
+		2A0000010000000000000017 /* ProjectStoragePaths.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ProjectStoragePaths.swift; sourceTree = "<group>"; };
+		2A0000010000000000000018 /* SaveFileDestinations.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SaveFileDestinations.swift; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -45,6 +51,9 @@
 			isa = PBXGroup;
 			children = (
 				2A0000010000000000000011 /* RouteVNApp.swift */,
+				2A0000010000000000000016 /* ProjectFolderSetup.swift */,
+				2A0000010000000000000017 /* ProjectStoragePaths.swift */,
+				2A0000010000000000000018 /* SaveFileDestinations.swift */,
 				2A0000010000000000000012 /* Info.plist */,
 				2A0000010000000000000015 /* Assets.xcassets */,
 				2A0000010000000000000014 /* LaunchScreen.storyboard */,
@@ -133,6 +142,9 @@
 			buildActionMask = 2147483647;
 			files = (
 				2A0000010000000000000001 /* RouteVNApp.swift in Sources */,
+				2A0000010000000000000005 /* ProjectFolderSetup.swift in Sources */,
+				2A0000010000000000000006 /* ProjectStoragePaths.swift in Sources */,
+				2A0000010000000000000007 /* SaveFileDestinations.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -274,7 +286,7 @@
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
 				CODE_SIGN_STYLE = Automatic;
 				CURRENT_PROJECT_VERSION = 1;
-				DEVELOPMENT_TEAM = "";
+				DEVELOPMENT_TEAM = 9ZKJX756AW;
 				GENERATE_INFOPLIST_FILE = NO;
 				INFOPLIST_FILE = routevn/Info.plist;
 				IPHONEOS_DEPLOYMENT_TARGET = 16.0;
