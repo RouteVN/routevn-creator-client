@@ -113,8 +113,17 @@ final class ProjectStoragePaths {
             let values = try child.resourceValues(forKeys: [.isDirectoryKey, .isSymbolicLinkKey])
             guard values.isDirectory == true, values.isSymbolicLink != true else { continue }
             let directory = try checkedDirectory(child, root: root)
+            let identity: String?
+            do {
+                identity = try projectIdentity(in: directory)
+            } catch {
+                // A broken identity belongs to this folder, not the library.
+                // Do not fall back to its name as though metadata were absent.
+                NSLog("Skipping invalid iOS project identity at \(directory.path): \(error)")
+                continue
+            }
             let id: String
-            if let identity = try projectIdentity(in: directory) {
+            if let identity {
                 id = identity
             } else if child.lastPathComponent.range(of: "^[A-Za-z0-9_-]{1,128}$", options: .regularExpression) != nil {
                 id = child.lastPathComponent

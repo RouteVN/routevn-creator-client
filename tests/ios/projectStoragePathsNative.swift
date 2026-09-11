@@ -5,6 +5,7 @@ import SQLite3
 struct ProjectStoragePathsNativeTests {
     static func main() throws {
         try duplicateIdentities()
+        try invalidIdentities()
         let fm = FileManager.default
         let fixture = fm.temporaryDirectory.appendingPathComponent("routevn-storage-test-\(UUID().uuidString)")
         defer { try? fm.removeItem(at: fixture) }
@@ -210,6 +211,60 @@ struct ProjectStoragePathsNativeTests {
         let ids = try paths.projectIds()
         precondition(ids == ["project-one", "project-three", "project-two"])
         print("PASS: duplicate identities isolated, cached/fresh lookups rejected, unrelated projects readable, creation and recovery preserved")
+    }
+
+    static func invalidIdentities() throws {
+        let fm = FileManager.default
+        let library = fm.temporaryDirectory.appendingPathComponent("routevn-invalid-identity-test-\(UUID().uuidString)")
+        defer { try? fm.removeItem(at: library) }
+        try fm.createDirectory(at: library, withIntermediateDirectories: true)
+        let paths = ProjectStoragePaths(libraryFolder: { library })
+        try paths.ensureDirectories(projectId: "project-one", createProject: true, projectName: "Project One")
+        let original = try paths.location(projectId: "project-one")
+        try writeDatabase(original.database, value: "Project One")
+        let invalidMetadata = [
+            "{invalid JSON",
+            "{}",
+            "{\"version\":2,\"id\":\"project-two\"}",
+            "{\"version\":1,\"id\":\"../escape\"}",
+        ]
+        for (index, metadata) in invalidMetadata.enumerated() {
+            let directory = library.appendingPathComponent("invalid-\(index)")
+            try fm.createDirectory(at: directory, withIntermediateDirectories: false)
+            try Data(metadata.utf8).write(to: directory.appendingPathComponent(".routevn-project.json"))
+        }
+        // Warm and fresh instances must leave valid projects usable without
+        // treating malformed metadata as a legacy folder-name identity.
+        for resolver in [paths, ProjectStoragePaths(libraryFolder: { library })] {
+            let ids = try resolver.projectIds()
+            precondition(ids == ["project-one"])
+            let location = try resolver.location(projectId: "project-one")
+            let value = try readDatabase(location.database)
+            precondition(value == "Project One")
+            let newLocation = try resolver.location(projectId: "project-three")
+            precondition(newLocation.directory.lastPathComponent == "project-three")
+            do {
+                _ = try resolver.location(projectId: "invalid-0")
+                preconditionFailure("Malformed identity resolved through its folder name")
+            } catch {}
+        }
+        try paths.ensureDirectories(projectId: "project-three", createProject: true, projectName: "Project Three")
+        for (index, metadata) in invalidMetadata.enumerated() {
+            let file = library.appendingPathComponent("invalid-\(index)/.routevn-project.json")
+            let bytes = try Data(contentsOf: file)
+            precondition(bytes == Data(metadata.utf8), "Discovery must not modify invalid metadata")
+        }
+        // A metadata error belongs to one project; loss of the library still fails.
+        try fm.removeItem(at: library)
+        do {
+            _ = try paths.projectIds()
+            preconditionFailure("Missing library was treated as an empty library")
+        } catch {}
+        do {
+            _ = try paths.location(projectId: "project-one")
+            preconditionFailure("Missing library returned a cached project")
+        } catch {}
+        print("PASS: malformed identities isolated, valid reads/creation preserved, invalid files untouched and library failures retained")
     }
 
     static func writeDatabase(_ url: URL, value: String) throws {

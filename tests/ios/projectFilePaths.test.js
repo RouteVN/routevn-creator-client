@@ -19,8 +19,11 @@ afterEach(() => {
   vi.unstubAllGlobals();
 });
 
-const createService = (entries = [], projectService) => {
-  const values = new Map([["projectEntries", entries]]);
+const createService = (
+  entries = [],
+  projectService,
+  values = new Map([["projectEntries", entries]]),
+) => {
   const db = {
     get: async (key) => structuredClone(values.get(key)),
     set: async (key, value) => values.set(key, structuredClone(value)),
@@ -149,6 +152,69 @@ describe("iOS project file paths", () => {
 
     expect(await service.loadAllProjects()).toEqual([]);
     expect(await service.getProjectEntries()).toEqual([]);
+  });
+
+  it("keeps removed projects out of discovery after restart until explicitly imported again", async () => {
+    const projects = [
+      {
+        id: "project-1",
+        name: "Project One",
+        language: "en",
+        projectFilePath: "/selected/Project One/project.db",
+      },
+      { id: "project-2", name: "Project Two", language: "en" },
+    ];
+    const values = new Map();
+    callIOSBridge.mockImplementation(async (method) => {
+      if (method === "listProjectFolders") return structuredClone(projects);
+      if (method === "importProjectFolder") return projects[0];
+      throw new Error(`Unexpected bridge call: ${method}`);
+    });
+    const service = createService([], undefined, values);
+    expect(await service.loadAllProjects()).toHaveLength(2);
+    await service.removeProjectEntry("project-1");
+    expect((await service.loadAllProjects()).map(({ id }) => id)).toEqual([
+      "project-2",
+    ]);
+
+    // Renaming the folder must not undo removal; identity stays the same.
+    projects[0].projectFilePath = "/selected/Renamed Folder/project.db";
+    const restarted = createService([], undefined, values);
+    expect((await restarted.loadAllProjects()).map(({ id }) => id)).toEqual([
+      "project-2",
+    ]);
+    callIOSBridge.mockRejectedValueOnce(new Error("Folder unavailable"));
+    await expect(
+      restarted.openExistingProject({ uri: "routevn-folder://selected" }),
+    ).rejects.toThrow("Folder unavailable");
+    expect((await restarted.loadAllProjects()).map(({ id }) => id)).toEqual([
+      "project-2",
+    ]);
+    await restarted.openExistingProject({ uri: "routevn-folder://selected" });
+    const reopened = createService([], undefined, values);
+    expect((await reopened.loadAllProjects()).map(({ id }) => id)).toEqual([
+      "project-1",
+      "project-2",
+    ]);
+    expect(projects).toHaveLength(2);
+  });
+
+  it("reports a failed removal save without dropping the project entry", async () => {
+    const project = { id: "project-1", name: "Project One", language: "en" };
+    const values = new Map();
+    const service = createService([], undefined, values);
+    callIOSBridge.mockResolvedValue([project]);
+    await service.loadAllProjects();
+    vi.spyOn(values, "set").mockImplementationOnce(() => {
+      throw new Error("Storage unavailable");
+    });
+    await expect(service.removeProjectEntry(project.id)).rejects.toThrow(
+      "Storage unavailable",
+    );
+    const restarted = createService([], undefined, values);
+    expect(await restarted.loadAllProjects()).toEqual([
+      expect.objectContaining(project),
+    ]);
   });
 
   it("fails when the selected folder cannot be read instead of showing cached projects", async () => {

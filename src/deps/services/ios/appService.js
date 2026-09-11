@@ -82,6 +82,9 @@ export const createAppService = (params) => {
 
   const syncIOSProjectEntriesFromStorage = async () => {
     const discoveredProjects = await callIOSBridge("listProjectFolders");
+    const removedProjectIds = new Set(
+      (await appDb.get("iosRemovedProjectIds")) ?? [],
+    );
 
     const entries = (await appDb.get("projectEntries")) ?? [];
     const existingEntries = Array.isArray(entries) ? entries : [];
@@ -93,6 +96,7 @@ export const createAppService = (params) => {
 
     const nextEntries = [];
     for (const project of discoveredProjects) {
+      if (removedProjectIds.has(project.id)) continue;
       const entry = toIOSProjectEntry({
         project,
         existingEntry: existingEntriesById.get(project?.id),
@@ -191,6 +195,15 @@ export const createAppService = (params) => {
       };
 
       await addProjectEntry(projectEntry);
+
+      // Explicitly importing a removed project restores it to discovery.
+      const removedProjectIds = (await appDb.get("iosRemovedProjectIds")) ?? [];
+      if (removedProjectIds.includes(projectId)) {
+        await appDb.set(
+          "iosRemovedProjectIds",
+          removedProjectIds.filter((id) => id !== projectId),
+        );
+      }
 
       const fullProject = {
         ...projectEntry,
@@ -353,6 +366,17 @@ export const createAppService = (params) => {
     async loadAllProjects() {
       await syncIOSProjectEntriesFromStorage();
       return appService.loadAllProjects();
+    },
+
+    async removeProjectEntry(projectId) {
+      // Remove hides the list entry, keeping the user's folder and assets.
+      // Remember the identity so later scans and folder renames keep it hidden.
+      const removedProjectIds = new Set(
+        (await appDb.get("iosRemovedProjectIds")) ?? [],
+      );
+      removedProjectIds.add(projectId);
+      await appDb.set("iosRemovedProjectIds", [...removedProjectIds]);
+      return appService.removeProjectEntry(projectId);
     },
 
     copyText(value) {
