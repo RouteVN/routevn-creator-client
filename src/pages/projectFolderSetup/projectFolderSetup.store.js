@@ -2,14 +2,16 @@ import { formatI18nCopy } from "../../internal/ui/i18nCopy.js";
 
 export const createInitialState = () => ({
   deviceName: "iPhone",
-  candidate: undefined,
   savedFolder: undefined,
+  isReconnecting: false,
   isBusy: false,
   errorKey: undefined,
 });
 
 export const selectIsBusy = ({ state }) => state.isBusy;
-export const selectCandidate = ({ state }) => state.candidate;
+export const setReconnecting = ({ state }, { isReconnecting }) => {
+  state.isReconnecting = isReconnecting;
+};
 
 export const setDeviceName = ({ state }, { deviceName }) => {
   state.deviceName = deviceName ?? "iPhone";
@@ -17,6 +19,9 @@ export const setDeviceName = ({ state }, { deviceName }) => {
 
 export const selectCopy = ({ state, i18n }) => {
   const copy = { ...i18n.projectFolderSetupPage };
+  if (state.isReconnecting) {
+    copy.description = copy.openDescription;
+  }
   for (const key of ["description", "appFolderError", "localFolderError"]) {
     copy[key] = formatI18nCopy(copy[key], { deviceName: state.deviceName });
   }
@@ -28,15 +33,9 @@ export const setBusy = ({ state }, { isBusy }) => {
   state.errorKey = undefined;
 };
 
-export const setCandidate = ({ state }, { candidate }) => {
-  state.candidate = candidate;
-  state.isBusy = false;
-  state.errorKey = undefined;
-};
-
 export const setSavedFolder = ({ state }, { folder }) => {
   state.savedFolder = folder;
-  state.candidate = undefined;
+  state.isReconnecting = false;
   state.isBusy = false;
   state.errorKey = undefined;
 };
@@ -48,21 +47,16 @@ export const setError = ({ state }, { errorKey }) => {
 
 export const selectViewData = ({ state, i18n }) => {
   const copy = selectCopy({ state, i18n });
-  const hasCandidate = Boolean(state.candidate);
   const hasSavedFolder = Boolean(state.savedFolder);
   return {
     ...state,
     copy,
-    hasCandidate,
     hasSavedFolder,
-    title: hasCandidate
-      ? copy.confirmTitle
-      : hasSavedFolder
-        ? copy.savedTitle
-        : copy.title,
-    displayPath:
-      state.candidate?.displayPath ?? state.savedFolder?.displayPath ?? "",
+    title: hasSavedFolder ? copy.savedTitle : copy.title,
+    titleSize: hasSavedFolder ? "h2" : "h3",
+    displayPath: state.savedFolder?.displayPath ?? "",
     errorMessage: state.errorKey ? copy[state.errorKey] : "",
-    setupLabel: hasCandidate || hasSavedFolder ? copy.changeFolder : copy.setup,
+    setupLabel: hasSavedFolder ? copy.changeFolder : copy.setup,
+    setupVariant: hasSavedFolder ? "ol" : "pr",
   };
 };

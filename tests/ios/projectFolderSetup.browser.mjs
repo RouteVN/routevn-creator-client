@@ -45,6 +45,7 @@ try {
                   JSON.stringify({ configured: false, deviceName }),
               );
             } else if (method === "openFolderPicker") {
+              trial.pickerMethod = method;
               queueMicrotask(() =>
                 window.__routeVNIOSFolderPickerResult({
                   requestId: payload.requestId,
@@ -109,12 +110,60 @@ try {
   await page.goto(origin + "/project-folder-setup?vt-input-mode=touch");
   const setup = page.locator("#setupFolderButton");
   await setup.waitFor();
+  assert.equal(await setup.textContent(), "Setup");
   await page
-    .getByText(`Choose “${localFilesRoot}” or create your own folder.`, {
+    .getByText("Set up your projects folder", { exact: true })
+    .waitFor();
+  const checkCenteredContent = async () => {
+    for (const viewport of [
+      { width: 390, height: 844 },
+      { width: 1133, height: 744 },
+      { width: 744, height: 1133 },
+      { width: 844, height: 390 },
+      { width: 390, height: 240 },
+    ]) {
+      await page.setViewportSize(viewport);
+      const geometry = await page
+        .locator("#projectFolderSetupContent")
+        .evaluate((element) => {
+          const scroller = element.parentElement;
+          scroller.scrollTop = 0;
+          const rect = element.getBoundingClientRect();
+          const parent = scroller.getBoundingClientRect();
+          return {
+            width: rect.width,
+            top: rect.top - parent.top,
+            horizontalOffset:
+              rect.x + rect.width / 2 - (parent.x + parent.width / 2),
+            verticalOffset:
+              rect.y + rect.height / 2 - (parent.y + parent.height / 2),
+            fits: rect.height <= parent.height,
+            scrollable: scroller.scrollHeight > scroller.clientHeight,
+          };
+        });
+      assert.ok(geometry.width <= 640, JSON.stringify({ viewport, geometry }));
+      assert.ok(Math.abs(geometry.horizontalOffset) < 1);
+      if (geometry.fits) assert.ok(Math.abs(geometry.verticalOffset) < 1);
+      else {
+        assert.ok(geometry.top >= 0);
+        assert.ok(geometry.scrollable);
+      }
+    }
+    await page.setViewportSize({ width: 390, height: 844 });
+  };
+  await checkCenteredContent();
+  await page
+    .getByText(`Choose “${localFilesRoot}” or an existing projects folder.`, {
+      exact: true,
+    })
+    .waitFor();
+  await page
+    .getByText("New projects will be created in this folder.", {
       exact: true,
     })
     .waitFor();
   await page.screenshot({ path: "/tmp/routevn-folder-initial-browser.png" });
+  assert.equal(await setup.getAttribute("v"), "pr");
   await page.evaluate(() => {
     window.folderTrial.selection = "app";
   });
@@ -124,6 +173,16 @@ try {
     .waitFor();
   await page.evaluate(() => {
     window.folderTrial.selection = "valid";
+    window.folderTrial.confirmFails = true;
+  });
+  await setup.click();
+  await page
+    .locator("#projectFolderError", { hasText: "Could not save" })
+    .waitFor();
+  assert.equal(await page.locator("#continueFolderButton").count(), 0);
+  assert.equal(await page.locator("#confirmFolderButton").count(), 0);
+  await page.evaluate(() => {
+    window.folderTrial.confirmFails = false;
   });
   await setup.click();
   await page
@@ -131,25 +190,28 @@ try {
       hasText: `${localFilesRoot}/My Projects`,
     })
     .waitFor();
-  assert.equal(await page.evaluate(() => window.folderTrial.confirms), 0);
-  await page.screenshot({ path: "/tmp/routevn-folder-confirm-browser.png" });
+  await page.locator("#continueFolderButton:not([disabled])").waitFor();
+  assert.equal(await setup.textContent(), "Change Folder");
+  assert.equal(await setup.getAttribute("v"), "ol");
+  assert.equal(await page.evaluate(() => window.folderTrial.confirms), 2);
+  assert.equal(
+    await page.evaluate(() => window.folderTrial.pickerMethod),
+    "openFolderPicker",
+  );
   await page.evaluate(() => {
     window.folderTrial.selection = "cancel";
   });
   await setup.click();
-  await page.locator("#confirmFolderButton:not([disabled])").waitFor();
-  await page.evaluate(() => {
-    window.folderTrial.confirmFails = true;
-  });
-  await page.locator("#confirmFolderButton").click();
-  await page
-    .locator("#projectFolderError", { hasText: "Could not save" })
-    .waitFor();
-  await page.evaluate(() => {
-    window.folderTrial.confirmFails = false;
-  });
-  await page.locator("#confirmFolderButton").click();
-  await page.locator("#continueFolderButton").waitFor();
+  await page.locator("#continueFolderButton:not([disabled])").waitFor();
+  assert.equal(await page.evaluate(() => window.folderTrial.confirms), 2);
+  assert.equal(
+    await page.evaluate(() => window.folderTrial.pickerMethod),
+    "openFolderPicker",
+  );
+  assert.equal(
+    await page.locator("#projectFolderPath").textContent(),
+    `${localFilesRoot}/My Projects`,
+  );
   await page
     .getByText(
       `This folder belongs to an app. Choose a separate folder under ${localFilesRoot}.`,
@@ -162,6 +224,7 @@ try {
       { exact: true },
     )
     .waitFor({ state: "hidden" });
+  await checkCenteredContent();
   await page.screenshot({ path: "/tmp/routevn-folder-saved-browser.png" });
   await page.reload();
   await page.locator("#continueFolderButton").waitFor();
@@ -250,8 +313,7 @@ try {
     };
   });
   await page.locator("#setupFolderButton").click();
-  await page.locator("#confirmFolderButton").waitFor();
-  await page.locator("#confirmFolderButton").click();
+  await page.locator("#continueFolderButton:not([disabled])").waitFor();
   await page.locator("#continueFolderButton").click();
   await configuredPath.waitFor();
   assert.equal(
@@ -385,7 +447,7 @@ try {
   }
   assert.deepEqual(errors, []);
   console.log(
-    `PASS: ${deviceName} onboarding, errors, Config return/path, Projects card/background taps, and empty/short/long scroll layout in portrait, landscape and tablet sizes.`,
+    `PASS: ${deviceName} centered onboarding, immediate folder saving, errors, Config return/path, Projects card/background taps, and empty/short/long scroll layout in portrait, landscape and tablet sizes.`,
   );
 } finally {
   await browser.close();

@@ -1,6 +1,8 @@
 const ROUTEVN_CREATOR_DOCS_BASE_URL = "https://routevn.com/en/creator/docs";
 
 export const ROUTEVN_CONTACT_URL = "https://routevn.com/en/contact/";
+export const ROUTEVN_CREATOR_APP_STORE_URL =
+  "https://apps.apple.com/sg/app/id6810571721";
 export const ROUTEVN_ASSET_STORE_URL =
   "https://routevn.com/en/creator/asset-store/";
 export const ROUTEVN_CREATOR_DOCS_URL = `${ROUTEVN_CREATOR_DOCS_BASE_URL}/introduction/`;

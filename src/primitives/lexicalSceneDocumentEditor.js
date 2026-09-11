@@ -5957,6 +5957,11 @@ export class LexicalSceneDocumentEditorElement extends HTMLElement {
   loadLines(lines, { emitChange = false, restoreSelection } = {}) {
     const nextLines = cloneSceneEditorLines(lines);
     this.isApplyingExternalLines = emitChange !== true;
+    // Loading a scene must not open the software keyboard. Keep the logical
+    // line selection without moving the browser caret into the editor.
+    const preventFocus =
+      document.documentElement.dataset.rvnInputMode === "touch" &&
+      !this.isEditorActiveElement();
 
     this.editor.update(
       () => {
@@ -6011,7 +6016,10 @@ export class LexicalSceneDocumentEditorElement extends HTMLElement {
           });
         }
       },
-      { discrete: true },
+      {
+        discrete: true,
+        tag: preventFocus ? "skip-dom-selection" : undefined,
+      },
     );
 
     requestAnimationFrame(() => {

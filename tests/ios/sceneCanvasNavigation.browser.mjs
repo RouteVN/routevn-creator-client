@@ -5,11 +5,11 @@ import { chromium, webkit } from "playwright";
 
 const origin = process.env.IOS_TEST_ORIGIN ?? "http://127.0.0.1:3004";
 
-for (const [engineName, engine] of Object.entries({ chromium, webkit })) {
+const runScenario = async (engineName, engine, viewport) => {
   const browser = await engine.launch({ headless: true });
   try {
     const page = await browser.newPage({
-      viewport: { width: 390, height: 844 },
+      viewport,
       hasTouch: true,
       isMobile: true,
     });
@@ -46,6 +46,13 @@ for (const [engineName, engine] of Object.entries({ chromium, webkit })) {
     await page.locator("#mobileTabItem1").click();
     await page.locator("rvn-mobile-sidebar [data-item-id='scene-map']").click();
     await page.locator("rvn-scenes").evaluate((scenes) => {
+      window.sceneOpeningFocusEvents = [];
+      document.addEventListener("focusin", (event) => {
+        const target = event.composedPath()[0];
+        if (target.isContentEditable) {
+          window.sceneOpeningFocusEvents.push(target.id);
+        }
+      });
       const { appService } = scenes.deps;
       appService.navigate("/project/scene-editor", {
         ...appService.getPayload(),
@@ -78,6 +85,19 @@ for (const [engineName, engine] of Object.entries({ chromium, webkit })) {
         });
     });
     await page.waitForTimeout(500);
+    assert.deepEqual(
+      await page.evaluate(() => window.sceneOpeningFocusEvents),
+      [],
+      "Opening a touch scene editor must never focus an editable field",
+    );
+    assert.equal(
+      await page
+        .locator("rvn-lexical-scene-document-editor")
+        .evaluateAll((editors) =>
+          editors.some((editor) => editor.isEditorActiveElement()),
+        ),
+      false,
+    );
     for (const input of ["touch", "mouse"]) {
       const before = await page.evaluate(() =>
         window.canvasNavigationEditor.store.selectSelectedLineId(),
@@ -117,8 +137,40 @@ for (const [engineName, engine] of Object.entries({ chromium, webkit })) {
     await page.evaluate(() =>
       window.canvasNavigationSubscription.unsubscribe(),
     );
+    const line = page
+      .locator("rvn-lexical-scene-document-editor .editor-paragraph")
+      .first();
+    await line.tap();
+    await page.waitForFunction(() => window.sceneOpeningFocusEvents.length > 0);
+    const editor = page.locator("rvn-lexical-scene-document-editor").first();
+    assert.equal(
+      await editor.evaluate((element) => element.isEditorActiveElement()),
+      true,
+      "Tapping dialogue must still focus the editor",
+    );
+    await page.keyboard.insertText("Tablet editing check");
+    await page.waitForFunction(() =>
+      window.canvasNavigationEditor.store
+        .selectViewData()
+        .sectionEditorItems.some((section) =>
+          JSON.stringify(section.lines).includes("Tablet editing check"),
+        ),
+    );
+    console.log(
+      `${engineName} ${viewport.width}x${viewport.height}: opening stays unfocused; tapping and typing work`,
+    );
     assert.deepEqual(errors, []);
   } finally {
     await browser.close();
+  }
+};
+
+for (const [engineName, engine] of Object.entries({ chromium, webkit })) {
+  for (const viewport of [
+    { width: 390, height: 844 },
+    { width: 1024, height: 1366 },
+    { width: 1366, height: 1024 },
+  ]) {
+    await runScenario(engineName, engine, viewport);
   }
 }

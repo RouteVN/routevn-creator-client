@@ -2463,8 +2463,6 @@ final class RouteVNNativeStorage {
         try? fileManager.createDirectory(at: root, withIntermediateDirectories: true)
         try? fileManager.createDirectory(at: databasesRoot, withIntermediateDirectories: true)
         try? fileManager.createDirectory(at: pickerRoot, withIntermediateDirectories: true)
-        try? fileManager.createDirectory(at: downloadsRoot, withIntermediateDirectories: true)
-        try? fileManager.createDirectory(at: exportsRoot, withIntermediateDirectories: true)
     }
 
     func databaseURL(dbPath: String) throws -> URL {

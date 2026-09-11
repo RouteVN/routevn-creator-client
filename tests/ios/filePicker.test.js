@@ -234,6 +234,30 @@ describe("ios file picker", () => {
     });
   });
 
+  it("handles folder cancellation without writing any files", async () => {
+    mocked.callIOSBridge.mockImplementation(async (method, payload) => {
+      expect(method).toBe("openFolderPicker");
+      expect(payload).toEqual({
+        requestId: expect.stringMatching(/^folder-\d+$/),
+        title: "Choose folder",
+        writable: true,
+      });
+      queueMicrotask(() =>
+        window.__routeVNIOSFolderPickerResult({
+          requestId: payload.requestId,
+          folder: undefined,
+        }),
+      );
+      return true;
+    });
+    const folder = await createIOSFilePicker().openFolderPicker({
+      title: "Choose folder",
+      writable: true,
+    });
+    expect(folder).toBeUndefined();
+    expect(mocked.callIOSBridge).toHaveBeenCalledOnce();
+  });
+
   it("writes supplied bytes to a selected iOS save URI", async () => {
     let writePayload;
     mocked.callIOSBridge.mockImplementation((method, payload) => {

@@ -47,6 +47,32 @@ struct ProjectFolderSetupNativeTests {
 
         let existingData = projects.appendingPathComponent("Project One.txt")
         try Data("Existing project data".utf8).write(to: existingData)
+        let existingProject = projects.appendingPathComponent("Project One", isDirectory: true)
+        let existingAssets = existingProject.appendingPathComponent("files", isDirectory: true)
+        try fm.createDirectory(at: existingAssets, withIntermediateDirectories: true)
+        let database = existingProject.appendingPathComponent("project.db")
+        let asset = existingAssets.appendingPathComponent("image.png")
+        let databaseBytes = Data([0, 1, 2, 255, 0, 128])
+        let assetBytes = Data([137, 80, 78, 71, 13, 10])
+        try databaseBytes.write(to: database)
+        try assetBytes.write(to: asset)
+
+        // Choosing the parent again must reuse the whole existing tree. A Save
+        // export could replace this directory before our callback; creation must
+        // remain app-controlled, with no remove/copy/replace operation involved.
+        for _ in 0..<2 {
+            _ = try setup.confirm(selection: local)
+            let preservedDatabase = try Data(contentsOf: database)
+            let preservedAsset = try Data(contentsOf: asset)
+            let libraryContents = try fm.contentsOfDirectory(atPath: projects.path).sorted()
+            let projectContents = try fm.contentsOfDirectory(atPath: existingProject.path).sorted()
+            let assetContents = try fm.contentsOfDirectory(atPath: existingAssets.path)
+            precondition(preservedDatabase == databaseBytes)
+            precondition(preservedAsset == assetBytes)
+            precondition(libraryContents == ["Project One", "Project One.txt"])
+            precondition(projectContents == ["files", "project.db"])
+            precondition(assetContents == ["image.png"])
+        }
         let reuse = try setup.preview(selection: projects)
         precondition(reuse["displayPath"] as? String == preview["displayPath"] as? String)
         _ = try setup.confirm(selection: projects)
@@ -105,10 +131,15 @@ struct ProjectFolderSetupNativeTests {
         let conflictParent = fixture.appendingPathComponent("Conflict/File Provider Storage", isDirectory: true)
         try fm.createDirectory(at: conflictParent, withIntermediateDirectories: true)
         try Data("Keep this file".utf8).write(to: conflictParent.appendingPathComponent("RouteVN Projects"))
+        let configurationBeforeConflict = try Data(contentsOf: config)
         do {
             _ = try setup.confirm(selection: conflictParent)
             preconditionFailure("An existing file was replaced")
         } catch ProjectFolderSetupError.nameConflict {}
+        let conflictContents = try String(contentsOf: conflictParent.appendingPathComponent("RouteVN Projects"), encoding: .utf8)
+        let configurationAfterConflict = try Data(contentsOf: config)
+        precondition(conflictContents == "Keep this file")
+        precondition(configurationAfterConflict == configurationBeforeConflict)
         precondition(reloaded.status()["configured"] as? Bool == true)
 
         // Restore the parent-based bookmark and remove the child directory.

@@ -64,9 +64,11 @@ const createDeps = () => {
 afterEach(() => vi.unstubAllGlobals());
 
 describe("iOS project folder setup client", () => {
-  it("previews the opaque picker URI without saving anything before Confirm", async () => {
+  it("selects a directory without exporting a folder over existing contents", async () => {
     const calls = installBridge(() => ({ ok: true, value: candidate }));
-    const filePicker = { openFolderPicker: vi.fn(async () => candidate) };
+    const filePicker = {
+      openFolderPicker: vi.fn(async () => candidate),
+    };
     const client = createIOSProjectFolderSetup({ filePicker });
     expect(await client.pick({ title: "Choose folder" })).toEqual(candidate);
     expect(filePicker.openFolderPicker).toHaveBeenCalledWith({
@@ -74,7 +76,10 @@ describe("iOS project folder setup client", () => {
       writable: true,
     });
     expect(calls.map(({ method, payload }) => ({ method, payload }))).toEqual([
-      { method: "previewProjectFolderSetup", payload: { uri: candidate.uri } },
+      {
+        method: "previewProjectFolderSetup",
+        payload: { uri: candidate.uri },
+      },
     ]);
     expect(client.getStatus().configured).toBe(false);
   });
@@ -84,7 +89,9 @@ describe("iOS project folder setup client", () => {
       throw new Error("Unexpected native call");
     });
     const client = createIOSProjectFolderSetup({
-      filePicker: { openFolderPicker: async () => undefined },
+      filePicker: {
+        openFolderPicker: async () => undefined,
+      },
     });
     expect(await client.pick({ title: "Choose folder" })).toBeUndefined();
     expect(calls).toEqual([]);
@@ -131,30 +138,73 @@ describe("iOS project folder setup client", () => {
 });
 
 describe("project folder onboarding", () => {
-  it("shows the actual selected path and waits for confirmation", async () => {
+  it.each([false, true])(
+    "shows the saved folder even when an old preview flag is present (%s)",
+    (preview) => {
+      const deps = createDeps();
+      const savedStatus = { configured: true, folder };
+      deps.appService.getProjectFolderSetup.mockReturnValue(savedStatus);
+      deps.appService.getPayload.mockReturnValue({
+        preview: preview ? "setup" : undefined,
+      });
+      handlers.handleBeforeMount(deps);
+      expect(deps.store.selectViewData().hasSavedFolder).toBe(true);
+      expect(deps.appService.getProjectFolderSetup()).toEqual(savedStatus);
+      expect(deps.appService.pickProjectFolderSetup).not.toHaveBeenCalled();
+      expect(deps.appService.confirmProjectFolderSetup).not.toHaveBeenCalled();
+    },
+  );
+
+  it("saves the selected folder and shows Change Folder and Continue", async () => {
     const deps = createDeps();
     handlers.handleBeforeMount(deps);
+    expect(deps.store.selectViewData().setupLabel).toBe("Setup");
+    expect(deps.store.selectViewData().hasSavedFolder).toBe(false);
     await handlers.handleSetup(deps);
+    expect(deps.appService.pickProjectFolderSetup).toHaveBeenCalledWith({
+      title: "Choose folder",
+    });
     const view = deps.store.selectViewData();
     expect(view.displayPath).toBe(folder.displayPath);
-    expect(view.hasCandidate).toBe(true);
-    expect(deps.appService.confirmProjectFolderSetup).not.toHaveBeenCalled();
-    await handlers.handleConfirm(deps);
+    expect(view.hasSavedFolder).toBe(true);
+    expect(view.setupLabel).toBe("Change Folder");
+    expect(view.isBusy).toBe(false);
+    expect(deps.appService.confirmProjectFolderSetup).toHaveBeenCalledOnce();
     expect(deps.appService.confirmProjectFolderSetup).toHaveBeenCalledWith({
       uri: candidate.uri,
     });
-    expect(deps.store.selectViewData().hasSavedFolder).toBe(true);
     expect(deps.appService.navigate).not.toHaveBeenCalled();
   });
 
-  it("keeps the previous candidate when Change folder is cancelled", async () => {
+  it("keeps the saved folder when Change Folder is cancelled", async () => {
     const deps = createDeps();
     await handlers.handleSetup(deps);
     deps.appService.pickProjectFolderSetup.mockResolvedValue(undefined);
     await handlers.handleSetup(deps);
-    expect(deps.store.selectCandidate()).toEqual(candidate);
+    expect(deps.store.selectViewData().displayPath).toBe(folder.displayPath);
+    expect(deps.appService.pickProjectFolderSetup).toHaveBeenLastCalledWith({
+      title: "Choose folder",
+    });
+    expect(deps.store.selectViewData().hasSavedFolder).toBe(true);
+    expect(deps.appService.confirmProjectFolderSetup).toHaveBeenCalledOnce();
     expect(deps.state.isBusy).toBe(false);
     expect(deps.appService.showToast).not.toHaveBeenCalled();
+  });
+
+  it("reconnects an existing folder without creating one, including after cancellation", async () => {
+    const deps = createDeps();
+    deps.appService.getProjectFolderSetup.mockReturnValue({
+      configured: false,
+      reason: "reconnect",
+    });
+    deps.appService.pickProjectFolderSetup.mockResolvedValue(undefined);
+    handlers.handleBeforeMount(deps);
+    await handlers.handleSetup(deps);
+    await handlers.handleSetup(deps);
+    expect(deps.appService.pickProjectFolderSetup).toHaveBeenLastCalledWith({
+      title: "Choose folder",
+    });
+    expect(deps.appService.confirmProjectFolderSetup).not.toHaveBeenCalled();
   });
 
   it("blocks duplicate taps while the native picker is open", async () => {
@@ -173,13 +223,34 @@ describe("project folder onboarding", () => {
     await pending;
   });
 
+  it("blocks duplicate taps while saving the selected folder", async () => {
+    const deps = createDeps();
+    let resolve;
+    deps.appService.confirmProjectFolderSetup.mockImplementation(
+      () =>
+        new Promise((done) => {
+          resolve = done;
+        }),
+    );
+    const pending = handlers.handleSetup(deps);
+    await Promise.resolve();
+    await handlers.handleSetup(deps);
+    expect(deps.appService.pickProjectFolderSetup).toHaveBeenCalledTimes(1);
+    expect(deps.appService.confirmProjectFolderSetup).toHaveBeenCalledTimes(1);
+    expect(deps.state.isBusy).toBe(true);
+    resolve({ configured: true, folder });
+    await pending;
+    expect(deps.state.isBusy).toBe(false);
+  });
+
   it("rejects an app folder with a stable localized message", async () => {
     const deps = createDeps();
     deps.appService.pickProjectFolderSetup.mockRejectedValue(
       Object.assign(new Error("native details"), { code: "appFolder" }),
     );
     await handlers.handleSetup(deps);
-    expect(deps.store.selectCandidate()).toBeUndefined();
+    expect(deps.store.selectViewData().hasSavedFolder).toBe(false);
+    expect(deps.appService.confirmProjectFolderSetup).not.toHaveBeenCalled();
     expect(deps.store.selectViewData().errorMessage).toBe(
       "This folder belongs to an app. Choose a separate folder under On My iPhone.",
     );
@@ -219,22 +290,26 @@ describe("project folder onboarding", () => {
     },
   );
 
-  it("keeps the candidate and error visible if Confirm fails", async () => {
-    const deps = createDeps();
-    await handlers.handleSetup(deps);
-    deps.appService.confirmProjectFolderSetup.mockRejectedValue(
-      new Error("Disk full"),
-    );
-    await handlers.handleConfirm(deps);
-    expect(deps.state.isBusy).toBe(false);
-    expect(deps.store.selectCandidate()).toEqual(candidate);
-    expect(deps.store.selectViewData().errorMessage).toBe(
-      i18n.projectFolderSetupPage.confirmError,
-    );
-    expect(deps.appService.navigate).not.toHaveBeenCalled();
-  });
+  it.each([false, true])(
+    "keeps the saved folder state (%s) and shows feedback if saving fails",
+    async (hasSavedFolder) => {
+      const deps = createDeps();
+      if (hasSavedFolder) await handlers.handleSetup(deps);
+      deps.appService.confirmProjectFolderSetup.mockRejectedValue(
+        new Error("Disk full"),
+      );
+      await handlers.handleSetup(deps);
+      const view = deps.store.selectViewData();
+      expect(view.isBusy).toBe(false);
+      expect(view.hasSavedFolder).toBe(hasSavedFolder);
+      expect(view.displayPath).toBe(hasSavedFolder ? folder.displayPath : "");
+      expect(view.errorMessage).toBe(i18n.projectFolderSetupPage.confirmError);
+      expect(deps.appService.showToast).toHaveBeenCalledOnce();
+      expect(deps.appService.navigate).not.toHaveBeenCalled();
+    },
+  );
 
-  it("only continues after the native confirmation is saved", () => {
+  it("only continues after the folder setup is saved", () => {
     const deps = createDeps();
     handlers.handleContinue(deps);
     expect(deps.appService.navigate).not.toHaveBeenCalled();

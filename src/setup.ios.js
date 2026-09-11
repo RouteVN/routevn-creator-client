@@ -165,6 +165,11 @@ await appService.initUserConfig();
 await appService.initializeProjectFolderSetup();
 if (!appService.getProjectFolderSetup().configured) {
   router.reset("/project-folder-setup");
+} else if (
+  initialPath === "/projects" &&
+  router.getPathName() === "/project-folder-setup"
+) {
+  router.reset("/projects");
 }
 installIOSSceneEditorKeyboard({
   onRevealError: () => {

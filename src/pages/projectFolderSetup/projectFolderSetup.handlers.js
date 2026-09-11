@@ -25,6 +25,9 @@ export const handleBeforeMount = ({ appService, store }) => {
   if (status.configured) {
     store.setSavedFolder({ folder: status.folder });
   } else if (status.reason) {
+    if (status.reason === "reconnect") {
+      store.setReconnecting({ isReconnecting: true });
+    }
     store.setError({
       errorKey:
         status.reason === "unavailable" ? "unavailableError" : "reconnectError",
@@ -37,24 +40,20 @@ export const handleSetup = async (deps) => {
   if (store.selectIsBusy()) return;
   store.setBusy({ isBusy: true });
   render();
+  let candidate;
   try {
-    const candidate = await appService.pickProjectFolderSetup({
+    candidate = await appService.pickProjectFolderSetup({
       title: i18n.projectFolderSetupPage.pickerTitle,
     });
-    if (candidate) store.setCandidate({ candidate });
-    else store.setBusy({ isBusy: false });
-    render();
   } catch (error) {
     showSetupError(deps, error, "pickError");
+    return;
   }
-};
-
-export const handleConfirm = async (deps) => {
-  const { appService, store, render } = deps;
-  const candidate = store.selectCandidate();
-  if (store.selectIsBusy() || !candidate) return;
-  store.setBusy({ isBusy: true });
-  render();
+  if (!candidate) {
+    store.setBusy({ isBusy: false });
+    render();
+    return;
+  }
   try {
     const status = await appService.confirmProjectFolderSetup({
       uri: candidate.uri,

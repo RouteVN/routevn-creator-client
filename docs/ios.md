@@ -217,6 +217,10 @@ bun run ios:run -- --simulator "iPhone 17" --smoke-test
 
 ## Native Adapters
 
+iOS startup creates only private app storage. The shared
+`Documents/RouteVN Creator` folder and its `Exports` subfolder are created only
+when a download or project export needs them. Existing saved files are retained.
+
 ### Web Export Destination
 
 Export Web opens the native Files folder picker before building the ZIP. The
@@ -276,7 +280,7 @@ WebKit at iPad portrait, iPad landscape, and phone sizes.
 The setup and Config paths use plain slashes, for example
 `On My iPhone/My Projects`, with no extra spaces around `/`.
 The native shell reports `iPhone` or `iPad` from `UIDevice.userInterfaceIdiom`.
-Setup instructions, folder errors, Config, project locations, creation previews,
+Folder errors, Config, project locations, creation previews,
 and export paths use that device name; window width and orientation do not change it.
 The older development-shell fallback remains `iPhone`, so rebuild the shell to
 validate iPad labels. The label is presentation only and never changes a bookmark
@@ -289,13 +293,35 @@ The header, app-version footer, and outer app frame remain outside the scroller.
 Check native bounce with an empty, short, and long project list on the device;
 browser layout tests cannot reproduce UIKit's rubber-band animation.
 
-iOS now opens `/project-folder-setup` until a local folder is confirmed. Setup
-opens the native Files directory picker. Selecting `On My iPhone` previews a
-`RouteVN Projects` folder beneath it. Selecting any folder uses that folder
-directly, without adding another `RouteVN Projects` level. Previously saved
-bookmarks retain their recorded location; this does not move existing projects.
-Only Confirm creates the directory, checks reading and writing, and saves a
-bookmark in Application Support (`RouteVNCreator/project-folder-setup.json`).
+iOS opens `/project-folder-setup` until a local folder is saved. Setup opens
+the native Files directory picker, whose action is **Open**. Selecting
+`On My iPhone` creates `RouteVN Projects` only if it is absent; an existing
+directory is reused with all of its contents intact. A conflicting file fails
+without changing the file or the saved configuration. Selecting any other
+folder uses it directly. The app checks reading and writing, and saves the
+selected directory's bookmark in Application Support
+(`RouteVN Creator/project-folder-setup.json`). The page then shows the saved path
+with Change Folder and Continue, without a separate confirmation step. The
+content is centered with the Projects list's 640px maximum width and side
+padding, and scrolls on short screens.
+Change Folder and reconnection use the existing directory picker so users can
+select a library they already have. Previously saved bookmarks retain their
+recorded location; existing projects are never moved. Legacy parent bookmarks
+remain supported, including a root selection with a `RouteVN Projects` child.
+Never implement setup by exporting an empty directory with the native Save
+picker: Files can offer to replace an existing directory before returning the
+delegate callback, and the public API has no no-replacement option. Folder
+creation must remain app-controlled. Saved permission covers the directory
+the user actually selected, including its contents; creating a child does not
+narrow a parent bookmark.
+The initial page uses a left-aligned folder icon, the heading “Set up your projects
+folder”, and a primary Setup button. Two description lines explain how to
+choose the folder and that new projects will be created inside it.
+Normal iOS startup defaults to `/projects`. Setup appears automatically only
+when no usable folder is saved. Once configured, a remembered setup route is
+cleared on startup so onboarding does not repeat. Users can still open Change
+Folder from Config. Explicit `--initial-path` overrides remain available for
+device tests; the temporary forced setup preview has been removed.
 Cancellation leaves the previous choice intact. Startup restores the bookmark;
 if access is lost or the folder disappears, setup requests reconnection without
 creating a replacement directory.
@@ -339,10 +365,11 @@ Setup accepts the system local Files provider (`On My iPhone`) and rejects
 app-owned containers and cloud/unknown providers. Provider URLs must come from
 the picker; app-group UUIDs are never constructed. Confirm and restored access
 use `NSFileCoordinator`; bookmarks use the iOS-compatible `.minimalBookmark`
-option. Real device permission behavior, especially selecting the root of
-On My iPhone, still needs physical testing.
+option. The previous Save experiment verified scoped access on a physical
+iPhone 13 Pro (iOS 16.3.1), but was removed because its collision handling can
+replace an existing folder. That experiment is not the current setup flow.
 
-The three setup bridge methods require an updated native shell. A live
+The setup bridge methods require an updated native shell. A live
 frontend refresh alone cannot add them. An older shell displays an update
 message before allowing another picker attempt.
 
@@ -362,7 +389,7 @@ swiftc -module-cache-path /tmp/routevn-folder-swift-cache ios/routevn/routevn/Pr
 ```
 
 The browser check covers the real mobile page, picker callbacks, cancellation,
-explicit confirmation, errors, saved-path display, reload and Continue. The
+automatic saving, errors, saved-path display, reload and Continue. The
 native Files dialog is outside web VT and must be tested on the connected phone.
 
 Storage integration was validated on the physical iPhone 13 Pro (iOS 16.3.1):

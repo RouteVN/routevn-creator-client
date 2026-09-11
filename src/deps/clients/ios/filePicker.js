@@ -230,7 +230,7 @@ const ensureIOSFolderPickerCallback = () => {
       return;
     }
 
-    pending.resolve(result.folder ?? null);
+    pending.resolve(result.folder ?? undefined);
   };
 };
 
@@ -254,7 +254,7 @@ const requestNativeIOSFilePicker = (options = {}) => {
 
 const requestNativeIOSFolderPicker = (options = {}) => {
   if (isVtMode()) {
-    return Promise.resolve(null);
+    return Promise.resolve(undefined);
   }
 
   const requestId = createIOSFolderPickerRequestId();
@@ -265,7 +265,7 @@ const requestNativeIOSFolderPicker = (options = {}) => {
 
     callIOSBridge("openFolderPicker", {
       requestId,
-      title: options.title || "Select Folder",
+      title: options.title ?? "Select Folder",
       writable: options.writable === true,
     }).catch((error) => {
       pendingIOSFolderPickers.delete(requestId);

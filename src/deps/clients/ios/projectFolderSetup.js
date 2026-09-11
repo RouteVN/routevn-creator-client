@@ -23,6 +23,8 @@ export const createIOSProjectFolderSetup = ({ filePicker }) => {
         error.code = "unavailable";
         throw error;
       }
+      // Selecting a directory never exports an empty folder over user data.
+      // Native confirmation creates the default child only when it is absent.
       const folder = await filePicker.openFolderPicker({
         title,
         writable: true,
