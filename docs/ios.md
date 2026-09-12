@@ -177,6 +177,62 @@ bundle build inputs or static icons, restart `watch:ios`; for a native or
 packaged-assets check, stop watch mode before running `ios:run`. Watch modes
 share `_site`, so run only one platform's watch process in this checkout.
 
+## App Store Release Build
+
+The Release target supports iPhone and iPad in one archive (`TARGETED_DEVICE_FAMILY
+= 1,2`) and requires iOS/iPadOS 16 or newer. It bundles the frontend and compiles
+out the development-server configuration and Safari inspection support.
+
+An existing development certificate can build an archive, but App Store export
+also needs distribution signing. Automatic export requires the signing team's
+Apple Developer Program account in Xcode Settings → Apple Accounts. For manual
+export, install an Apple Distribution certificate with its matching private key
+and an App Store provisioning profile for `com.routevn.creator` instead.
+
+Stop watch mode before building in this checkout, or build from a separate
+source snapshot so the shared `_site` output is not replaced underneath watch:
+
+```bash
+bun run build:ios
+release_dir=".artifacts/ios-release/1.14.0-1"
+mkdir -p "$release_dir"
+xcodebuild -project ios/routevn/routevn.xcodeproj -scheme routevn \
+  -configuration Release -sdk iphoneos -destination 'generic/platform=iOS' \
+  -derivedDataPath "$release_dir/DerivedData" \
+  -archivePath "$release_dir/RouteVN-Creator.xcarchive" \
+  -allowProvisioningUpdates DEVELOPMENT_TEAM=YOUR_TEAM_ID archive
+```
+
+For a local IPA, create an `ExportOptions.plist` with `method=app-store-connect`,
+`destination=export`, `signingStyle=automatic`, the matching `teamID`, and
+`manageAppVersionAndBuildNumber=false`, then run:
+
+```bash
+xcodebuild -exportArchive \
+  -archivePath "$release_dir/RouteVN-Creator.xcarchive" \
+  -exportPath "$release_dir/export" \
+  -exportOptionsPlist "$release_dir/ExportOptions.plist" \
+  -allowProvisioningUpdates
+```
+
+This saves the IPA locally; uploading and submitting for review are separate
+steps. Increment `CURRENT_PROJECT_VERSION` for another upload of the same app
+version. Validate the resulting bundle's version, `UIDeviceFamily`, packaged
+assets, signature, and privacy manifest before distribution.
+
+For terminal-only manual export, set `signingStyle=manual`, `signingCertificate`
+to the installed distribution certificate's SHA-1, and `provisioningProfiles`
+to a dictionary mapping `com.routevn.creator` to the installed profile's UUID.
+Keep `destination=export` and omit `-allowProvisioningUpdates`; this uses local
+signing assets without an Xcode account session. With Xcode 26, install the
+profile as `~/Library/Developer/Xcode/UserData/Provisioning Profiles/<UUID>.mobileprovision`.
+Check the exported IPA has the expected Apple Distribution signer, an embedded
+App Store profile, and `get-task-allow=false` before handing it off for upload.
+
+`PrivacyInfo.xcprivacy` declares file metadata access for app-owned storage
+(`C617.1`) and folders/files selected by the user (`3B52.1`), following
+[Apple's required-reason API definitions](https://developer.apple.com/documentation/bundleresources/app-privacy-configuration/nsprivacyaccessedapitypes/nsprivacyaccessedapitypereasons).
+
 ## Simulator And Asset Commands
 
 Build iOS web assets:
@@ -276,6 +332,25 @@ project folder remains visible. Display paths never replace IDs or native paths.
 The iOS Projects list keeps its header/footer outside an always-scrollable
 container (`overflow-y: scroll`, `overscroll-behavior-y: contain`); native bounce
 still needs physical-device validation.
+
+Project metadata reads use `ProjectDatabaseReader` for import, listing, and
+export. An exported WAL-mode `project.db` can have no `project.db-wal` after a
+checkpoint. On the physical iPhone, a direct read-only metadata query then
+failed with `SQLITE_CANTOPEN` while opening the absent WAL. When a direct read
+fails with `SQLITE_CANTOPEN` or `SQLITE_READONLY`, the reader coordinates a
+private temporary copy of the database and any WAL/rollback journal, then
+reads that writable copy. It rebuilds the transient SHM index locally, preserves
+committed WAL transactions, and cleans up the copy on success or failure.
+Corrupt or missing databases still fail. Normal readable databases keep the
+direct read path; import sources are never opened for writing.
+
+Native regression check (disposable filesystem fixtures, including read-only
+source folders and uncheckpointed WAL data):
+
+```bash
+swiftc -module-cache-path /tmp/routevn-folder-swift-cache ios/routevn/routevn/ProjectDatabaseReader.swift tests/ios/projectDatabaseReaderNative.swift -o /tmp/routevn-project-database-reader-tests
+/tmp/routevn-project-database-reader-tests
+```
 
 ### Export Destination
 
@@ -378,8 +453,10 @@ its click path. Preview controls stay above the loading overlay so initializatio
 and asset loading can be dismissed.
 
 The scene surface reserves `--rvn-mobile-overlay-top-inset` with the page's `bg`
-color; action panels and constrained preview height include it. Keep the iOS tab
-bar mounted but hidden while the keyboard is visible: recreating shadow roots
+color; action panels and constrained preview height include it. Portrait command
+panels use `dvw` to align with the preview: iPad can retain a stale `vw` after
+window changes, placing panels over the canvas. Keep the iOS tab bar mounted but
+hidden while the keyboard is visible: recreating shadow roots
 with the iOS 16 stylesheet polyfill can briefly show oversized, unstyled icons.
 See [Lexical pointer selection](notes/lexical-pointer-selection.md) for older
 WebKit caret placement, and the [VisualViewport example](https://developer.mozilla.org/en-US/docs/Web/API/VisualViewport#examples)

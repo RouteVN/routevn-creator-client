@@ -1971,23 +1971,12 @@ final class RouteVNViewController: UIViewController, WKNavigationDelegate, WKScr
     }
 
     private func readProjectInfo(databaseURL: URL) throws -> [String: Any] {
-        var database: OpaquePointer?
-        if sqlite3_open_v2(databaseURL.path, &database, SQLITE_OPEN_READONLY, nil) != SQLITE_OK {
-            defer {
-                if database != nil {
-                    sqlite3_close(database)
-                }
-            }
-            throw RouteVNError.message("Selected folder is not a RouteVN project.")
+        try ProjectDatabaseReader.read(at: databaseURL) { openedDatabase in
+            try self.readProjectInfo(database: openedDatabase)
         }
+    }
 
-        guard let openedDatabase = database else {
-            throw RouteVNError.message("Selected folder is not a RouteVN project.")
-        }
-        defer {
-            sqlite3_close(openedDatabase)
-        }
-
+    private func readProjectInfo(database openedDatabase: OpaquePointer) throws -> [String: Any] {
         let rawProjectInfo =
             try readAppStateValue(database: openedDatabase, tableName: "app_state", key: "projectInfo") ??
             readAppStateValue(database: openedDatabase, tableName: "kv", key: "projectInfo")

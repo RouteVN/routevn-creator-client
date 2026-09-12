@@ -14,6 +14,8 @@
 		2A0000010000000000000005 /* ProjectFolderSetup.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2A0000010000000000000016 /* ProjectFolderSetup.swift */; };
 		2A0000010000000000000006 /* ProjectStoragePaths.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2A0000010000000000000017 /* ProjectStoragePaths.swift */; };
 		2A0000010000000000000007 /* SaveFileDestinations.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2A0000010000000000000018 /* SaveFileDestinations.swift */; };
+		2A0000010000000000000008 /* ProjectDatabaseReader.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2A0000010000000000000019 /* ProjectDatabaseReader.swift */; };
+		2A0000010000000000000009 /* PrivacyInfo.xcprivacy in Resources */ = {isa = PBXBuildFile; fileRef = 2A000001000000000000001A /* PrivacyInfo.xcprivacy */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXFileReference section */
@@ -26,6 +28,8 @@
 		2A0000010000000000000016 /* ProjectFolderSetup.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ProjectFolderSetup.swift; sourceTree = "<group>"; };
 		2A0000010000000000000017 /* ProjectStoragePaths.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ProjectStoragePaths.swift; sourceTree = "<group>"; };
 		2A0000010000000000000018 /* SaveFileDestinations.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SaveFileDestinations.swift; sourceTree = "<group>"; };
+		2A0000010000000000000019 /* ProjectDatabaseReader.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ProjectDatabaseReader.swift; sourceTree = "<group>"; };
+		2A000001000000000000001A /* PrivacyInfo.xcprivacy */ = {isa = PBXFileReference; lastKnownFileType = text.xml; path = PrivacyInfo.xcprivacy; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -54,7 +58,9 @@
 				2A0000010000000000000016 /* ProjectFolderSetup.swift */,
 				2A0000010000000000000017 /* ProjectStoragePaths.swift */,
 				2A0000010000000000000018 /* SaveFileDestinations.swift */,
+				2A0000010000000000000019 /* ProjectDatabaseReader.swift */,
 				2A0000010000000000000012 /* Info.plist */,
+				2A000001000000000000001A /* PrivacyInfo.xcprivacy */,
 				2A0000010000000000000015 /* Assets.xcassets */,
 				2A0000010000000000000014 /* LaunchScreen.storyboard */,
 				2A0000010000000000000013 /* web */,
@@ -131,6 +137,7 @@
 				2A0000010000000000000002 /* web in Resources */,
 				2A0000010000000000000003 /* LaunchScreen.storyboard in Resources */,
 				2A0000010000000000000004 /* Assets.xcassets in Resources */,
+				2A0000010000000000000009 /* PrivacyInfo.xcprivacy in Resources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -145,6 +152,7 @@
 				2A0000010000000000000005 /* ProjectFolderSetup.swift in Sources */,
 				2A0000010000000000000006 /* ProjectStoragePaths.swift in Sources */,
 				2A0000010000000000000007 /* SaveFileDestinations.swift in Sources */,
+				2A0000010000000000000008 /* ProjectDatabaseReader.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
