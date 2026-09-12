@@ -1855,7 +1855,8 @@ const selectMobileSystemActionsDialogTop = ({ state }) => {
     }
   }
 
-  const previewHeight = `min(${viewportWidthHeight}vw, ${maximumCanvasHeight})`;
+  // iPad can retain a stale vw after window changes; dvw follows the app width.
+  const previewHeight = `min(${viewportWidthHeight}dvw, ${maximumCanvasHeight})`;
   const visualOffsetTop = state.isTouchMode
     ? state.mobileKeyboardState.visualOffsetTop
     : 0;

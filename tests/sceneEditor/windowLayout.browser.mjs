@@ -97,6 +97,7 @@ deps.components.windowMetricsClient = metricsClient;
       { width: 1133, height: 744, sideBySide: true },
       { width: 600, height: 744, sideBySide: false },
       { width: 744, height: 1133, sideBySide: false },
+      { width: 390, height: 844, sideBySide: false },
       { width: 844, height: 390, sideBySide: true },
     ]) {
       await page.setViewportSize({
@@ -181,14 +182,30 @@ deps.components.windowMetricsClient = metricsClient;
         .locator("#commandLineActions [data-action-id]")
         .first()
         .waitFor({ state: "visible" });
+      await page.locator("#commandLineActions [data-action-id='4']").click();
+      await page
+        .locator("#commandLineBackground rtgl-view")
+        .first()
+        .waitFor({ state: "visible" });
       if (viewport.sideBySide) {
         const dialog = await page
           .locator("#actionsDialog .commandPanel")
           .boundingBox();
         assert.ok(dialog.x + dialog.width <= preview.x + 1);
+      } else {
+        const dialog = await page
+          .locator("#actionsDialog .commandPanel")
+          .boundingBox();
+        assert.ok(
+          Math.abs(dialog.y - lines.y) <= 1,
+          `Portrait commands start at ${dialog.y}; text editor starts at ${lines.y}`,
+        );
+        assert.equal(dialog.width, lines.width);
       }
       await page.keyboard.press("Escape");
-      await page.locator("#commandLineActions").waitFor({ state: "detached" });
+      await page
+        .locator("#commandLineBackground")
+        .waitFor({ state: "detached" });
       await page.locator("#mobilePresentationStateScroll").evaluate((panel) => {
         panel.scrollTop = 0;
       });
