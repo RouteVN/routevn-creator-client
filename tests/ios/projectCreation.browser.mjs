@@ -15,7 +15,7 @@ view.template = parse(view.template);
 const schema = yaml.load(await readFile(`${folder}.schema.yaml`, "utf8"));
 const html = `<!doctype html><meta name="viewport" content="width=device-width,initial-scale=1">
 <link rel="stylesheet" href="/public/theme.css"><style>body{margin:0}</style>
-<script src="/public/@rettangoli/ui@1.22.1/dist/rettangoli-iife-ui.min.js"></script>
+<script src="/public/@rettangoli/ui@1.22.2/dist/rettangoli-iife-ui.min.js"></script>
 <script type="module">
 import {createComponent} from '${source}/node_modules/@rettangoli/fe/src/index.js';
 import * as store from '${source}/${folder}.store.js';

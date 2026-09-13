@@ -31,7 +31,7 @@ const bundle = await build({
 const theme = await readFile("static/public/theme.css", "utf8");
 const ui =
   process.env.UI_BUNDLE ??
-  "static/public/@rettangoli/ui@1.22.1/dist/rettangoli-iife-ui.min.js";
+  "static/public/@rettangoli/ui@1.22.2/dist/rettangoli-iife-ui.min.js";
 for (const [name, engine] of Object.entries({ chromium, webkit })) {
   const browser = await engine.launch({ headless: true });
   try {
