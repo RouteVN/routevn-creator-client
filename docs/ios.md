@@ -194,7 +194,7 @@ source snapshot so the shared `_site` output is not replaced underneath watch:
 
 ```bash
 bun run build:ios
-release_dir=".artifacts/ios-release/1.14.0-1"
+release_dir=".artifacts/ios-release/1.14.0-3"
 mkdir -p "$release_dir"
 xcodebuild -project ios/routevn/routevn.xcodeproj -scheme routevn \
   -configuration Release -sdk iphoneos -destination 'generic/platform=iOS' \
@@ -286,6 +286,10 @@ the normal initial route is `/projects`. Config's Change Folder action reopens
 setup without loading a project repository. Continue returns to Config when
 opened from there, or to Projects on first setup. Bottom navigation must render
 without a loaded repository; recent scene details appear only when one exists.
+The app shell waits for startup routing before mounting a page, so missing folder
+setup never triggers project discovery or a project-loading error. After
+`build:ios`, run `node tests/ios/startup.browser.mjs` to check first setup,
+reconnection, and configured-folder loading in Chromium and WebKit.
 
 Setup uses the native Files directory picker with the **Open** action. Choosing
 `On My iPhone` or `On My iPad` creates `RouteVN Projects` only if absent and
