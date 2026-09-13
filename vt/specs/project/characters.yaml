@@ -1,6 +1,6 @@
 ---
 title: Characters Workflow
-description: Covers the characters page create, detail, edit, filtered search, and empty search states.
+description: Covers the characters page create, detail, edit, shortcut removal, filtered search, and empty search states.
 url: /projects
 skipInitialScreenshot: true
 viewport:
@@ -19,17 +19,17 @@ steps:
     steps:
       - action: click
   - action: waitFor
-    selector: rtgl-form#createProjectForm rtgl-input#field0 input
+    selector: "rtgl-form#createProjectForm rtgl-input[data-field-name='name'] input"
     state: attached
     timeoutMs: 5000
   - action: select
-    selector: rtgl-form#createProjectForm rtgl-input#field0 input
+    selector: "rtgl-form#createProjectForm rtgl-input[data-field-name='name'] input"
     steps:
       - action: clear
       - action: write
         value: VT Characters Workflow
   - action: select
-    selector: rtgl-form#createProjectForm rtgl-input#field1 input
+    selector: "rtgl-form#createProjectForm rtgl-input[data-field-name='description'] input"
     steps:
       - action: clear
       - action: write
@@ -130,6 +130,95 @@ steps:
   - action: wait
     ms: 300
   - action: screenshot
+  - action: select
+    selector: "#editDialog rtgl-select[data-field-name='shortcut'] #selectButton"
+    steps:
+      - action: click
+  - action: select
+    selector: "#editDialog rtgl-select[data-field-name='shortcut'] #option5"
+    steps:
+      - action: click
+  - action: select
+    selector: "#editDialog rtgl-button[data-action-id='submit']"
+    steps:
+      - action: click
+  - action: waitFor
+    selector: "#editDialog"
+    state: hidden
+    timeoutMs: 5000
+  - action: wait
+    ms: 300
+  - action: select
+    selector: "#detailHeader"
+    steps:
+      - action: click
+  - action: waitFor
+    selector: "#editDialog[open]"
+    state: attached
+    timeoutMs: 5000
+  - action: wait
+    ms: 300
+  - action: assert
+    type: text
+    selector: "#editDialog rtgl-select[data-field-name='shortcut'] #selectButton rtgl-text"
+    value: "6"
+    match: equals
+  - action: select
+    selector: "#editDialog rtgl-select[data-field-name='shortcut'] #clearButton svg"
+    steps:
+      - action: click
+  - action: wait
+    ms: 300
+  - action: assert
+    type: text
+    selector: "#editDialog rtgl-select[data-field-name='shortcut'] #selectButton rtgl-text"
+    value: Select an option
+    match: equals
+  - action: select
+    selector: "#editDialog rtgl-button[data-action-id='submit']"
+    steps:
+      - action: click
+  - action: waitFor
+    selector: "#editDialog"
+    state: hidden
+    timeoutMs: 5000
+  - action: wait
+    ms: 300
+  - action: customEvent
+    name: routevn:vt:navigate
+    detail:
+      path: /project
+  - action: waitFor
+    selector: rvn-project
+    state: attached
+    timeoutMs: 10000
+  - action: customEvent
+    name: routevn:vt:navigate
+    detail:
+      path: /project/characters
+  - action: waitFor
+    selector: rvn-characters
+    state: attached
+    timeoutMs: 10000
+  - action: select
+    selector: "rvn-base-file-explorer#fileExplorer #itemRef1"
+    steps:
+      - action: click
+  - action: select
+    selector: "#detailHeader"
+    steps:
+      - action: click
+  - action: waitFor
+    selector: "#editDialog[open]"
+    state: attached
+    timeoutMs: 5000
+  - action: wait
+    ms: 300
+  - action: assert
+    type: text
+    selector: "#editDialog rtgl-select[data-field-name='shortcut'] #selectButton rtgl-text"
+    value: Select an option
+    match: equals
   - action: keypress
     key: Escape
   - action: waitFor
