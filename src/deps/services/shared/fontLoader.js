@@ -1,10 +1,15 @@
+import {
+  createFontAssetError,
+  isFontAssetError,
+} from "../../../internal/fontAssetError.js";
+
 const normalizeFontFamily = (value) =>
   String(value ?? "").replace(/^['"]|['"]$/g, "");
 
 export const loadFont = async (
   fontName,
   fontUrl,
-  { weight: fontWeightDescriptor } = {},
+  { weight: fontWeightDescriptor, cache = true } = {},
 ) => {
   const existingFont = Array.from(document.fonts).find(
     (font) =>
@@ -12,7 +17,7 @@ export const loadFont = async (
       (fontWeightDescriptor === undefined ||
         font.weight === fontWeightDescriptor),
   );
-  if (existingFont) {
+  if (cache && existingFont) {
     return existingFont;
   }
 
@@ -20,10 +25,26 @@ export const loadFont = async (
   if (fontWeightDescriptor !== undefined) {
     descriptors.weight = fontWeightDescriptor;
   }
-  const fontFace = new FontFace(fontName, `url(${fontUrl})`, descriptors);
-  await fontFace.load();
-  document.fonts.add(fontFace);
-  return fontFace;
+  let timeout;
+  try {
+    const fontFace = new FontFace(fontName, `url(${fontUrl})`, descriptors);
+    await Promise.race([
+      fontFace.load(),
+      new Promise((_, reject) => {
+        timeout = setTimeout(
+          () => reject(createFontAssetError(fontName, "font_load_timeout")),
+          15000,
+        );
+      }),
+    ]);
+    document.fonts.add(fontFace);
+    return fontFace;
+  } catch (error) {
+    if (isFontAssetError(error)) throw error;
+    throw createFontAssetError(fontName, "font_load_failed", error);
+  } finally {
+    clearTimeout(timeout);
+  }
 };
 
 export const loadFontBuffer = async (

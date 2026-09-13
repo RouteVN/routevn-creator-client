@@ -1163,6 +1163,33 @@ Why this matters:
 If this asset-loading behavior changes, document the reason in the same PR and
 re-check scene-editor memory behavior before merging.
 
+### Font Integrity and Asset Writes
+
+`projectAssetService.getFileContent()` checks font bytes against the saved file
+record's size and SHA-256 before handing them to a decoder. Older records without
+a hash remain readable; reads never create or replace an integrity baseline.
+Font results include the verified buffer and an owned Blob URL. Consumers must
+release that URL; graphics can consume the supplied buffer directly. Image and
+video assets retain their existing direct URL path.
+
+New TTF/OTF imports check table bounds, overlap, and table checksums (with the
+OpenType `head` checksum exception). WOFF2 imports check the container directory,
+compressed bounds, and a 128 MiB declared decompression limit before fontkit
+inspection. These are bounded container checks, not a complete font sanitizer.
+The browser still validates decoding, including replacement files with a cached
+family name. Font loading has a 15-second deadline; late results are not registered.
+
+Scene loading isolates a bad font, identifies it in a warning, and keeps the
+editor available. A preview that cannot load its fonts closes instead of starting
+with incomplete assets. Neither path changes saved font selections or files.
+
+Desktop asset uploads use the scope-checked `write_project_asset` command. It
+writes a sibling temporary file, flushes it, verifies its size and hash by reading
+it back, then publishes it without replacing an existing asset ID. Only successful
+publication returns a file record for committing. Failed attempts clean up their
+temporary file. This protects against incomplete imports; it cannot guarantee
+against later disk damage or storage hardware that falsely acknowledges writes.
+
 ### Collaboration Runtime
 
 `src/deps/services/web/collabBootstrapService.js` is a web-runtime composition

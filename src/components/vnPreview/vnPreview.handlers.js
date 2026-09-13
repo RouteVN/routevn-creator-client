@@ -21,6 +21,8 @@ import {
 } from "./support/vnPreviewProjectData.js";
 import { remapRotatedPreviewEventCoordinates } from "./support/vnPreviewPointerCoordinates.js";
 import { selectSceneEditorCopy } from "../../internal/ui/sceneEditor/sceneEditorCopy.js";
+import { getFontAssetMessage } from "../../internal/ui/fontAssetFeedback.js";
+import { isFontAssetError } from "../../internal/fontAssetError.js";
 
 const FORWARDED_PREVIEW_KEY_EVENT = "__rvnForwardedPreviewKeyEvent";
 const PREVIEW_FORWARDED_KEYS = new Set(["Enter"]);
@@ -229,18 +231,42 @@ const waitForBrowserPaint = async () => {
 const loadAssets = async (deps, fileReferences) => {
   const { projectService } = deps;
   const assets = {};
-
-  for (const fileObj of fileReferences) {
-    const { url: fileId, type } = fileObj;
-    const result = await projectService.getFileContent(fileId);
-    assets[fileId] = {
-      url: result.url,
-      type: type || result.type || "image/png",
-      fontWeightDescriptor: fileObj.fontWeightDescriptor,
-    };
+  const contents = [];
+  try {
+    for (const fileObj of fileReferences) {
+      const { url: fileId, type } = fileObj;
+      const result = await projectService.getFileContent(fileId);
+      contents.push(result);
+      assets[fileId] = {
+        url: result.url,
+        buffer: result.buffer,
+        type: type || result.type || "image/png",
+        fontWeightDescriptor: fileObj.fontWeightDescriptor,
+      };
+    }
+    return assets;
+  } catch (error) {
+    contents.forEach((content) => content.revoke?.());
+    throw error;
   }
+};
 
-  return assets;
+const reportFontFailure = (deps, error, projectData) => {
+  const message = getFontAssetMessage({
+    error,
+    fonts: projectData?.resources?.fonts,
+    i18n: deps.i18n,
+    projectService: deps.projectService,
+  });
+  if (!message) return false;
+  if (!error.reported) {
+    deps.appService.showAlert({
+      message,
+      title: deps.i18n?.resourcePages?.warningTitle ?? "Warning",
+    });
+    error.reported = true;
+  }
+  return true;
 };
 
 const resetAssetLoadCache = (store) => {
@@ -303,6 +329,7 @@ async function loadAssetsForSceneIds(
       sceneIds: uniqueSceneIds,
     });
   } catch (error) {
+    if (reportFontFailure(deps, error, projectData)) throw error;
     const copy = selectSceneEditorCopy(deps.i18n);
     appService?.showAlert({
       message:
@@ -355,13 +382,16 @@ const preloadLayoutAssetsByIds = async (deps, projectData, layoutIds) => {
     return;
   }
 
-  const assets = await loadAssets(deps, missingFileReferences);
-  const { graphicsService } = deps;
-  await graphicsService.loadAssets(assets);
+  try {
+    const assets = await loadAssets(deps, missingFileReferences);
+    const { graphicsService } = deps;
+    await graphicsService.loadAssets(assets);
 
-  store.markAssetFileIdsLoaded({
-    fileIds: Object.keys(assets),
-  });
+    store.markAssetFileIdsLoaded({ fileIds: Object.keys(assets) });
+  } catch (error) {
+    reportFontFailure(deps, error, projectData);
+    throw error;
+  }
 };
 
 const applyHydrationResult = (deps, runtime, hydrationResult) => {
@@ -681,16 +711,21 @@ export const handleRotatePreview = (deps, payload) => {
 };
 
 export const handleAfterMount = async (deps) => {
-  const { appService, dispatchEvent, i18n } = deps;
+  const { appService, dispatchEvent, i18n, store, render } = deps;
   try {
     await initializePreview(deps);
   } catch (error) {
+    store.setAssetLoading({ isLoading: false });
+    store.setPreviewReady({ isPreviewReady: false });
+    render();
     console.error("[vnPreview] Failed to initialize preview", error);
-    const copy = selectSceneEditorCopy(i18n);
-    appService.showToast({
-      message: copy.failedOpenPreview ?? "Failed to open preview",
-      status: "error",
-    });
+    if (!isFontAssetError(error)) {
+      const copy = selectSceneEditorCopy(i18n);
+      appService.showToast({
+        message: copy.failedOpenPreview ?? "Failed to open preview",
+        status: "error",
+      });
+    }
     dispatchEvent(new CustomEvent("close"));
   }
 };
@@ -797,11 +832,6 @@ const initializePreview = async (deps) => {
   await loadAssetsForSceneIds(deps, projectDataWithInitial, initialSceneIds, {
     showLoading: true,
   });
-  void preloadDirectTransitionScenes(
-    deps,
-    projectDataWithInitial,
-    initialSceneIds,
-  );
   await preloadLayoutAssetsByIds(
     deps,
     projectDataWithInitial,
@@ -849,4 +879,11 @@ const initializePreview = async (deps) => {
   await waitForBrowserPaint();
   store.setPreviewReady({ isPreviewReady: true });
   deps.render();
+  void preloadDirectTransitionScenes(
+    deps,
+    runtime.projectData,
+    initialSceneIds,
+  ).catch((error) =>
+    console.error("[vnPreview] Failed to prefetch scene assets:", error),
+  );
 };

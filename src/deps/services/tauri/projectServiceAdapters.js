@@ -52,6 +52,7 @@ import {
   withSqliteLockRetry,
 } from "../../../internal/sqliteLocking.js";
 import { assertSafeProjectFileId } from "../../../internal/projectFileIds.js";
+import { writeProjectAsset } from "../../clients/tauri/projectAssetStorage.js";
 import { getManagedSqliteConnection } from "../../clients/tauri/sqliteConnectionManager.js";
 import { isMacosHost } from "../../clients/tauri/platform.js";
 import { normalizeExportFileEntries } from "../shared/projectExportService.js";
@@ -1132,6 +1133,7 @@ export const createTauriProjectServiceAdapters = ({
     storeFile: async ({
       file,
       bytes,
+      sha256,
       projectId: _projectId,
       projectPath,
       idGenerator,
@@ -1144,15 +1146,14 @@ export const createTauriProjectServiceAdapters = ({
             repositoryProjectId: projectPath,
           }
         : getCurrentReference();
-      const fileId = idGenerator();
+      const fileId = assertSafeProjectFileId(idGenerator());
       const arrayBuffer = bytes ?? (await file.arrayBuffer());
-      const uint8Array = new Uint8Array(arrayBuffer);
 
       const filesPath = await getReferenceFilesPath(reference);
       await mkdir(filesPath, { recursive: true });
       const filePath = await join(filesPath, fileId);
 
-      await writeFile(filePath, uint8Array);
+      await writeProjectAsset({ filePath, bytes: arrayBuffer, sha256 });
 
       const fileUrl = convertFileSrc(filePath);
       fileUrlByCacheKey.set(getFileUrlCacheKey(reference, fileId), fileUrl);

@@ -24,7 +24,7 @@ export const createTestFontBytes = ({
   const directoryLength = 12 + tableDefinitions.length * 16;
   const byteLength =
     directoryLength +
-    tableDefinitions.reduce((total, table) => total + table.length, 0);
+    tableDefinitions.reduce((total, table) => total + align4(table.length), 0);
   const bytes = new Uint8Array(byteLength);
   const view = new DataView(bytes.buffer);
 
@@ -72,7 +72,12 @@ export const createTestFontBytes = ({
       }
     }
 
-    tableOffset += table.length;
+    let checksum = 0;
+    for (let offset = 0; offset < align4(table.length); offset += 4) {
+      checksum = (checksum + view.getUint32(tableOffset + offset)) >>> 0;
+    }
+    view.setUint32(recordOffset + 4, checksum);
+    tableOffset += align4(table.length);
   });
 
   return bytes;

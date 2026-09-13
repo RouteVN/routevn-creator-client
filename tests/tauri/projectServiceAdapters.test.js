@@ -186,6 +186,40 @@ const createRemoteSceneCreateCommand = ({ schemaVersion = 1 } = {}) => ({
 });
 
 describe("tauri project service adapters preflight reads", () => {
+  it("publishes uploads through verified native storage and propagates failures", async () => {
+    mocked.join.mockImplementation(async (...parts) => parts.join("/"));
+    const { fileAdapter } = createTauriProjectServiceAdapters({
+      collabLog: () => {},
+      creatorVersion: 2,
+    });
+    const bytes = new Uint8Array([1, 2, 3]);
+    const sha256 = "a".repeat(64);
+    const request = {
+      bytes,
+      sha256,
+      idGenerator: () => "asset-one",
+      getCurrentReference: () => ({
+        projectPath: "/projects/Project One",
+        cacheKey: "/projects/Project One",
+      }),
+    };
+    const stored = await fileAdapter.storeFile(request);
+    expect(stored.fileId).toBe("asset-one");
+    expect(mocked.invoke).toHaveBeenCalledWith("write_project_asset", bytes, {
+      headers: {
+        "x-asset-path": encodeURIComponent(
+          "/projects/Project One/files/asset-one",
+        ),
+        "x-asset-sha256": sha256,
+      },
+    });
+    expect(mocked.writeFile).not.toHaveBeenCalled();
+    mocked.invoke.mockRejectedValueOnce(new Error("readback mismatch"));
+    await expect(fileAdapter.storeFile(request)).rejects.toThrow(
+      "readback mismatch",
+    );
+  });
+
   beforeEach(() => {
     mocked.exists.mockReset();
     mocked.join.mockReset();
