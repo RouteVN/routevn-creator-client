@@ -119,7 +119,7 @@ for (const [engineName, engine] of Object.entries({ chromium, webkit })) {
       const html = `<!doctype html><meta name="viewport" content="width=device-width,initial-scale=1">
 <link rel="stylesheet" href="/public/theme.css">
 <style>body{margin:0;--rvn-mobile-overlay-top-inset:47px}rvn-scene-editor-preview-canvas{aspect-ratio:16/9}</style>
-<script src="/public/@rettangoli/ui@1.22.1/dist/rettangoli-iife-ui.min.js"></script>
+<script src="/public/@rettangoli/ui@1.22.2/dist/rettangoli-iife-ui.min.js"></script>
 ${markup}<script type="module">
 import {LexicalSceneDocumentEditorElement} from '${source}/src/primitives/lexicalSceneDocumentEditor.js';
 customElements.define('rvn-lexical-scene-document-editor',LexicalSceneDocumentEditorElement);

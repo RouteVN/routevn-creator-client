@@ -1,0 +1,622 @@
+---
+title: Character Tags
+description: Create tags in an open empty picker without missing options or duplicate chips, then save, reopen, and clear the selection.
+url: /projects
+skipInitialScreenshot: true
+viewport:
+  id: wide
+  width: 1440
+  height: 900
+steps:
+  - action: waitFor
+    selector: "[data-testid='create-project-button']"
+    state: visible
+    timeoutMs: 5000
+  - action: wait
+    ms: 250
+  - action: select
+    testId: create-project-button
+    steps:
+      - action: click
+  - action: waitFor
+    selector: rtgl-form#createProjectForm rtgl-input[data-field-name='name'] input
+    state: attached
+    timeoutMs: 5000
+  - action: select
+    selector: rtgl-form#createProjectForm rtgl-input[data-field-name='name'] input
+    steps:
+      - action: clear
+      - action: write
+        value: Project One
+  - action: select
+    selector: rtgl-form#createProjectForm rtgl-input[data-field-name='description'] input
+    steps:
+      - action: clear
+      - action: write
+        value: Covers the characters page.
+  - action: wait
+    ms: 250
+  - action: select
+    selector: rtgl-form#createProjectForm rtgl-button[data-action-id=submit]
+    steps:
+      - action: click
+  - action: waitFor
+    selector: "#projectItem0"
+    state: visible
+    timeoutMs: 30000
+  - action: wait
+    ms: 500
+  - action: select
+    selector: "#projectItem0"
+    steps:
+      - action: click
+  - action: waitFor
+    selector: rvn-project
+    state: attached
+    timeoutMs: 10000
+  - action: wait
+    ms: 500
+  - action: customEvent
+    name: routevn:vt:navigate
+    detail:
+      path: /project/characters
+  - action: waitFor
+    selector: rvn-characters
+    state: attached
+    timeoutMs: 10000
+  - action: assert
+    type: url
+    value: /project/characters
+  - action: wait
+    ms: 450
+  - action: waitFor
+    selector: "#addBtnHeaderRef0"
+    state: visible
+    timeoutMs: 10000
+  - action: select
+    selector: "#addBtnHeaderRef0"
+    steps:
+      - action: click
+  - action: waitFor
+    selector: "#addCharacterDialog[open]"
+    state: attached
+    timeoutMs: 5000
+  - action: wait
+    ms: 250
+  - action: select
+    selector: "#addCharacterDialog rtgl-input[data-field-name='name'] input"
+    steps:
+      - action: clear
+      - action: write
+        value: Character One
+  - action: select
+    selector: "#addCharacterDialog rtgl-tag-select[data-field-name='tagIds'] #trigger"
+    steps:
+      - action: click
+  - action: waitFor
+    selector: "#addCharacterDialog rtgl-tag-select[data-field-name='tagIds'] #popover[positioned]"
+    state: visible
+    timeoutMs: 5000
+  - action: assert
+    type: text
+    selector: "#addCharacterDialog rtgl-tag-select[data-field-name='tagIds'] #popover rtgl-text"
+    value: No tags available
+    match: equals
+  - action: screenshot
+  - action: select
+    selector: "#addCharacterDialog rtgl-tag-select[data-field-name='tagIds'] #addOptionButton"
+    steps:
+      - action: click
+  - action: waitFor
+    selector: "#createTagDialog[open]"
+    state: visible
+    timeoutMs: 5000
+  - action: select
+    selector: "#createTagForm rtgl-input[data-field-name='name'] input"
+    steps:
+      - action: clear
+      - action: write
+        value: Tag 1
+  - action: select
+    selector: "#createTagForm rtgl-button[data-action-id='submit']"
+    steps:
+      - action: click
+  - action: assert
+    type: hidden
+    selector: "#createTagDialog"
+    timeoutMs: 5000
+  - action: wait
+    ms: 300
+  - action: waitFor
+    selector: "#addCharacterDialog rtgl-tag-select[data-field-name='tagIds'] #popover[positioned]"
+    state: visible
+    timeoutMs: 5000
+  - action: assert
+    type: text
+    selector: "#addCharacterDialog rtgl-tag-select[data-field-name='tagIds'] #option0 rtgl-tag"
+    value: Tag 1
+    match: equals
+  - action: assert
+    type: text
+    selector: "#addCharacterDialog rtgl-tag-select[data-field-name='tagIds'] #trigger rtgl-tag:text-is('Tag 1')"
+    value: Tag 1
+    match: equals
+  - action: assert
+    type: hidden
+    selector: "#addCharacterDialog rtgl-tag-select[data-field-name='tagIds'] #popover rtgl-view[id^='option'] >> nth=1"
+    timeoutMs: 5000
+  - action: assert
+    type: hidden
+    selector: "#addCharacterDialog rtgl-tag-select[data-field-name='tagIds'] #trigger rtgl-tag >> nth=1"
+    timeoutMs: 5000
+  - action: assert
+    type: hidden
+    selector: "#addCharacterDialog rtgl-tag-select[data-field-name='tagIds'] #popover rtgl-text:text-is('No tags available')"
+    timeoutMs: 5000
+  - action: select
+    selector: "#addCharacterDialog rtgl-tag-select[data-field-name='tagIds'] #addOptionButton"
+    steps:
+      - action: click
+  - action: waitFor
+    selector: "#createTagDialog[open]"
+    state: visible
+    timeoutMs: 5000
+  - action: select
+    selector: "#createTagForm rtgl-input[data-field-name='name'] input"
+    steps:
+      - action: clear
+      - action: write
+        value: Tag 2
+  - action: select
+    selector: "#createTagForm rtgl-button[data-action-id='submit']"
+    steps:
+      - action: click
+  - action: assert
+    type: hidden
+    selector: "#createTagDialog"
+    timeoutMs: 5000
+  - action: wait
+    ms: 300
+  - action: waitFor
+    selector: "#addCharacterDialog rtgl-tag-select[data-field-name='tagIds'] #popover[positioned]"
+    state: visible
+    timeoutMs: 5000
+  - action: assert
+    type: text
+    selector: "#addCharacterDialog rtgl-tag-select[data-field-name='tagIds'] #option0 rtgl-tag"
+    value: Tag 1
+    match: equals
+  - action: assert
+    type: text
+    selector: "#addCharacterDialog rtgl-tag-select[data-field-name='tagIds'] #trigger rtgl-tag:text-is('Tag 1')"
+    value: Tag 1
+    match: equals
+  - action: assert
+    type: text
+    selector: "#addCharacterDialog rtgl-tag-select[data-field-name='tagIds'] #option1 rtgl-tag"
+    value: Tag 2
+    match: equals
+  - action: assert
+    type: text
+    selector: "#addCharacterDialog rtgl-tag-select[data-field-name='tagIds'] #trigger rtgl-tag:text-is('Tag 2')"
+    value: Tag 2
+    match: equals
+  - action: assert
+    type: hidden
+    selector: "#addCharacterDialog rtgl-tag-select[data-field-name='tagIds'] #popover rtgl-view[id^='option'] >> nth=2"
+    timeoutMs: 5000
+  - action: assert
+    type: hidden
+    selector: "#addCharacterDialog rtgl-tag-select[data-field-name='tagIds'] #trigger rtgl-tag >> nth=2"
+    timeoutMs: 5000
+  - action: assert
+    type: hidden
+    selector: "#addCharacterDialog rtgl-tag-select[data-field-name='tagIds'] #popover rtgl-text:text-is('No tags available')"
+    timeoutMs: 5000
+  - action: select
+    selector: "#addCharacterDialog rtgl-tag-select[data-field-name='tagIds'] #addOptionButton"
+    steps:
+      - action: click
+  - action: waitFor
+    selector: "#createTagDialog[open]"
+    state: visible
+    timeoutMs: 5000
+  - action: select
+    selector: "#createTagForm rtgl-input[data-field-name='name'] input"
+    steps:
+      - action: clear
+      - action: write
+        value: Tag 3
+  - action: select
+    selector: "#createTagForm rtgl-button[data-action-id='submit']"
+    steps:
+      - action: click
+  - action: assert
+    type: hidden
+    selector: "#createTagDialog"
+    timeoutMs: 5000
+  - action: wait
+    ms: 300
+  - action: waitFor
+    selector: "#addCharacterDialog rtgl-tag-select[data-field-name='tagIds'] #popover[positioned]"
+    state: visible
+    timeoutMs: 5000
+  - action: assert
+    type: text
+    selector: "#addCharacterDialog rtgl-tag-select[data-field-name='tagIds'] #option0 rtgl-tag"
+    value: Tag 1
+    match: equals
+  - action: assert
+    type: text
+    selector: "#addCharacterDialog rtgl-tag-select[data-field-name='tagIds'] #trigger rtgl-tag:text-is('Tag 1')"
+    value: Tag 1
+    match: equals
+  - action: assert
+    type: text
+    selector: "#addCharacterDialog rtgl-tag-select[data-field-name='tagIds'] #option1 rtgl-tag"
+    value: Tag 2
+    match: equals
+  - action: assert
+    type: text
+    selector: "#addCharacterDialog rtgl-tag-select[data-field-name='tagIds'] #trigger rtgl-tag:text-is('Tag 2')"
+    value: Tag 2
+    match: equals
+  - action: assert
+    type: text
+    selector: "#addCharacterDialog rtgl-tag-select[data-field-name='tagIds'] #option2 rtgl-tag"
+    value: Tag 3
+    match: equals
+  - action: assert
+    type: text
+    selector: "#addCharacterDialog rtgl-tag-select[data-field-name='tagIds'] #trigger rtgl-tag:text-is('Tag 3')"
+    value: Tag 3
+    match: equals
+  - action: assert
+    type: hidden
+    selector: "#addCharacterDialog rtgl-tag-select[data-field-name='tagIds'] #popover rtgl-view[id^='option'] >> nth=3"
+    timeoutMs: 5000
+  - action: assert
+    type: hidden
+    selector: "#addCharacterDialog rtgl-tag-select[data-field-name='tagIds'] #trigger rtgl-tag >> nth=3"
+    timeoutMs: 5000
+  - action: assert
+    type: hidden
+    selector: "#addCharacterDialog rtgl-tag-select[data-field-name='tagIds'] #popover rtgl-text:text-is('No tags available')"
+    timeoutMs: 5000
+  - action: select
+    selector: "#addCharacterDialog rtgl-tag-select[data-field-name='tagIds'] #option1"
+    steps:
+      - action: click
+  - action: wait
+    ms: 300
+  - action: waitFor
+    selector: "#addCharacterDialog rtgl-tag-select[data-field-name='tagIds'] #option1[aria-pressed='false']"
+    state: visible
+    timeoutMs: 5000
+  - action: select
+    selector: "#addCharacterDialog rtgl-tag-select[data-field-name='tagIds'] #option1"
+    steps:
+      - action: click
+  - action: wait
+    ms: 300
+  - action: waitFor
+    selector: "#addCharacterDialog rtgl-tag-select[data-field-name='tagIds'] #option1[aria-pressed='true']"
+    state: visible
+    timeoutMs: 5000
+  - action: select
+    selector: "#addCharacterDialog rtgl-tag-select[data-field-name='tagIds'] #option1"
+    steps:
+      - action: click
+  - action: wait
+    ms: 300
+  - action: waitFor
+    selector: "#addCharacterDialog rtgl-tag-select[data-field-name='tagIds'] #option1[aria-pressed='false']"
+    state: visible
+    timeoutMs: 5000
+  - action: select
+    selector: "#addCharacterDialog rtgl-tag-select[data-field-name='tagIds'] #option1"
+    steps:
+      - action: click
+  - action: wait
+    ms: 300
+  - action: waitFor
+    selector: "#addCharacterDialog rtgl-tag-select[data-field-name='tagIds'] #option1[aria-pressed='true']"
+    state: visible
+    timeoutMs: 5000
+  - action: select
+    selector: "#addCharacterDialog rtgl-tag-select[data-field-name='tagIds'] #option1"
+    steps:
+      - action: click
+  - action: wait
+    ms: 300
+  - action: waitFor
+    selector: "#addCharacterDialog rtgl-tag-select[data-field-name='tagIds'] #option1[aria-pressed='false']"
+    state: visible
+    timeoutMs: 5000
+  - action: select
+    selector: "#addCharacterDialog rtgl-tag-select[data-field-name='tagIds'] #option1"
+    steps:
+      - action: click
+  - action: wait
+    ms: 300
+  - action: waitFor
+    selector: "#addCharacterDialog rtgl-tag-select[data-field-name='tagIds'] #option1[aria-pressed='true']"
+    state: visible
+    timeoutMs: 5000
+  - action: assert
+    type: text
+    selector: "#addCharacterDialog rtgl-tag-select[data-field-name='tagIds'] #option0 rtgl-tag"
+    value: Tag 1
+    match: equals
+  - action: assert
+    type: text
+    selector: "#addCharacterDialog rtgl-tag-select[data-field-name='tagIds'] #trigger rtgl-tag:text-is('Tag 1')"
+    value: Tag 1
+    match: equals
+  - action: assert
+    type: text
+    selector: "#addCharacterDialog rtgl-tag-select[data-field-name='tagIds'] #option1 rtgl-tag"
+    value: Tag 2
+    match: equals
+  - action: assert
+    type: text
+    selector: "#addCharacterDialog rtgl-tag-select[data-field-name='tagIds'] #trigger rtgl-tag:text-is('Tag 2')"
+    value: Tag 2
+    match: equals
+  - action: assert
+    type: text
+    selector: "#addCharacterDialog rtgl-tag-select[data-field-name='tagIds'] #option2 rtgl-tag"
+    value: Tag 3
+    match: equals
+  - action: assert
+    type: text
+    selector: "#addCharacterDialog rtgl-tag-select[data-field-name='tagIds'] #trigger rtgl-tag:text-is('Tag 3')"
+    value: Tag 3
+    match: equals
+  - action: assert
+    type: hidden
+    selector: "#addCharacterDialog rtgl-tag-select[data-field-name='tagIds'] #popover rtgl-view[id^='option'] >> nth=3"
+    timeoutMs: 5000
+  - action: assert
+    type: hidden
+    selector: "#addCharacterDialog rtgl-tag-select[data-field-name='tagIds'] #trigger rtgl-tag >> nth=3"
+    timeoutMs: 5000
+  - action: assert
+    type: hidden
+    selector: "#addCharacterDialog rtgl-tag-select[data-field-name='tagIds'] #popover rtgl-text:text-is('No tags available')"
+    timeoutMs: 5000
+  - action: screenshot
+  - action: select
+    selector: "#addCharacterDialog rtgl-tag-select[data-field-name='tagIds'] #submitButton"
+    steps:
+      - action: click
+  - action: assert
+    type: hidden
+    selector: "#addCharacterDialog rtgl-tag-select[data-field-name='tagIds'] #popover"
+    timeoutMs: 5000
+  - action: select
+    selector: "#addCharacterDialog rtgl-button[data-action-id='submit']"
+    steps:
+      - action: click
+  - action: assert
+    type: hidden
+    selector: "#addCharacterDialog"
+    timeoutMs: 5000
+  - action: wait
+    ms: 300
+  - action: customEvent
+    name: routevn:vt:navigate
+    detail:
+      path: /project
+  - action: waitFor
+    selector: rvn-project
+    state: attached
+    timeoutMs: 5000
+  - action: customEvent
+    name: routevn:vt:navigate
+    detail:
+      path: /project/characters
+  - action: waitFor
+    selector: rvn-characters
+    state: attached
+    timeoutMs: 5000
+  - action: select
+    selector: "rvn-base-file-explorer#fileExplorer #itemRef1"
+    steps:
+      - action: click
+  - action: waitFor
+    selector: "#detailView"
+    state: attached
+    timeoutMs: 5000
+  - action: assert
+    type: text
+    selector: "#detailTagSelect #trigger rtgl-tag:text-is('Tag 1')"
+    value: Tag 1
+    match: equals
+  - action: assert
+    type: text
+    selector: "#detailTagSelect #trigger rtgl-tag:text-is('Tag 2')"
+    value: Tag 2
+    match: equals
+  - action: assert
+    type: text
+    selector: "#detailTagSelect #trigger rtgl-tag:text-is('Tag 3')"
+    value: Tag 3
+    match: equals
+  - action: assert
+    type: hidden
+    selector: "#detailTagSelect #trigger rtgl-tag >> nth=3"
+    timeoutMs: 5000
+  - action: select
+    selector: "#detailHeader"
+    steps:
+      - action: click
+  - action: waitFor
+    selector: "#editDialog[open]"
+    state: visible
+    timeoutMs: 5000
+  - action: wait
+    ms: 300
+  - action: select
+    selector: "#editDialog rtgl-tag-select[data-field-name='tagIds'] #trigger"
+    steps:
+      - action: click
+  - action: waitFor
+    selector: "#editDialog rtgl-tag-select[data-field-name='tagIds'] #popover[positioned]"
+    state: visible
+    timeoutMs: 5000
+  - action: assert
+    type: text
+    selector: "#editDialog rtgl-tag-select[data-field-name='tagIds'] #option0 rtgl-tag"
+    value: Tag 1
+    match: equals
+  - action: assert
+    type: text
+    selector: "#editDialog rtgl-tag-select[data-field-name='tagIds'] #trigger rtgl-tag:text-is('Tag 1')"
+    value: Tag 1
+    match: equals
+  - action: assert
+    type: text
+    selector: "#editDialog rtgl-tag-select[data-field-name='tagIds'] #option1 rtgl-tag"
+    value: Tag 2
+    match: equals
+  - action: assert
+    type: text
+    selector: "#editDialog rtgl-tag-select[data-field-name='tagIds'] #trigger rtgl-tag:text-is('Tag 2')"
+    value: Tag 2
+    match: equals
+  - action: assert
+    type: text
+    selector: "#editDialog rtgl-tag-select[data-field-name='tagIds'] #option2 rtgl-tag"
+    value: Tag 3
+    match: equals
+  - action: assert
+    type: text
+    selector: "#editDialog rtgl-tag-select[data-field-name='tagIds'] #trigger rtgl-tag:text-is('Tag 3')"
+    value: Tag 3
+    match: equals
+  - action: assert
+    type: hidden
+    selector: "#editDialog rtgl-tag-select[data-field-name='tagIds'] #popover rtgl-view[id^='option'] >> nth=3"
+    timeoutMs: 5000
+  - action: assert
+    type: hidden
+    selector: "#editDialog rtgl-tag-select[data-field-name='tagIds'] #trigger rtgl-tag >> nth=3"
+    timeoutMs: 5000
+  - action: assert
+    type: hidden
+    selector: "#editDialog rtgl-tag-select[data-field-name='tagIds'] #popover rtgl-text:text-is('No tags available')"
+    timeoutMs: 5000
+  - action: select
+    selector: "#editDialog rtgl-tag-select[data-field-name='tagIds'] #option0"
+    steps:
+      - action: click
+  - action: wait
+    ms: 300
+  - action: waitFor
+    selector: "#editDialog rtgl-tag-select[data-field-name='tagIds'] #option0[aria-pressed='false']"
+    state: visible
+    timeoutMs: 5000
+  - action: select
+    selector: "#editDialog rtgl-tag-select[data-field-name='tagIds'] #option1"
+    steps:
+      - action: click
+  - action: wait
+    ms: 300
+  - action: waitFor
+    selector: "#editDialog rtgl-tag-select[data-field-name='tagIds'] #option1[aria-pressed='false']"
+    state: visible
+    timeoutMs: 5000
+  - action: select
+    selector: "#editDialog rtgl-tag-select[data-field-name='tagIds'] #option2"
+    steps:
+      - action: click
+  - action: wait
+    ms: 300
+  - action: waitFor
+    selector: "#editDialog rtgl-tag-select[data-field-name='tagIds'] #option2[aria-pressed='false']"
+    state: visible
+    timeoutMs: 5000
+  - action: select
+    selector: "#editDialog rtgl-tag-select[data-field-name='tagIds'] #submitButton"
+    steps:
+      - action: click
+  - action: assert
+    type: hidden
+    selector: "#editDialog rtgl-tag-select[data-field-name='tagIds'] #popover"
+    timeoutMs: 5000
+  - action: select
+    selector: "#editDialog rtgl-button[data-action-id='submit']"
+    steps:
+      - action: click
+  - action: assert
+    type: hidden
+    selector: "#editDialog"
+    timeoutMs: 5000
+  - action: wait
+    ms: 300
+  - action: customEvent
+    name: routevn:vt:navigate
+    detail:
+      path: /project
+  - action: waitFor
+    selector: rvn-project
+    state: attached
+    timeoutMs: 5000
+  - action: customEvent
+    name: routevn:vt:navigate
+    detail:
+      path: /project/characters
+  - action: waitFor
+    selector: rvn-characters
+    state: attached
+    timeoutMs: 5000
+  - action: select
+    selector: "rvn-base-file-explorer#fileExplorer #itemRef1"
+    steps:
+      - action: click
+  - action: waitFor
+    selector: "#detailView"
+    state: attached
+    timeoutMs: 5000
+  - action: assert
+    type: text
+    selector: "#detailTagSelect #trigger rtgl-tag"
+    value: Add tag
+    match: equals
+  - action: select
+    selector: "#detailHeader"
+    steps:
+      - action: click
+  - action: waitFor
+    selector: "#editDialog[open]"
+    state: visible
+    timeoutMs: 5000
+  - action: wait
+    ms: 300
+  - action: select
+    selector: "#editDialog rtgl-tag-select[data-field-name='tagIds'] #trigger"
+    steps:
+      - action: click
+  - action: waitFor
+    selector: "#editDialog rtgl-tag-select[data-field-name='tagIds'] #popover[positioned]"
+    state: visible
+    timeoutMs: 5000
+  - action: waitFor
+    selector: "#editDialog rtgl-tag-select[data-field-name='tagIds'] #option0[aria-pressed='false']"
+    state: visible
+    timeoutMs: 5000
+  - action: waitFor
+    selector: "#editDialog rtgl-tag-select[data-field-name='tagIds'] #option1[aria-pressed='false']"
+    state: visible
+    timeoutMs: 5000
+  - action: waitFor
+    selector: "#editDialog rtgl-tag-select[data-field-name='tagIds'] #option2[aria-pressed='false']"
+    state: visible
+    timeoutMs: 5000
+  - action: assert
+    type: hidden
+    selector: "#editDialog rtgl-tag-select[data-field-name='tagIds'] #popover rtgl-view[id^='option'] >> nth=3"
+    timeoutMs: 5000
+  - action: screenshot
+---
