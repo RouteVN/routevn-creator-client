@@ -2,7 +2,9 @@ import { isMobileSceneEditorSideBySide } from "../../internal/sceneEditorLayout.
 
 export const createInitialState = () => ({
   platform: "web",
-  currentRoute: "/projects",
+  // Mount a page only after startup routing has resolved folder setup and
+  // navigation preparation. Projects must not load before that decision.
+  currentRoute: "",
   currentRoutePayload: {},
   isTouchMode: false,
   appWindowMetrics: { width: 0, height: 0 },
@@ -62,7 +64,10 @@ const selectShowAppNavigation = ({ state }) => {
   const normalizedRoutesWithoutNavbar = routesWithoutNavbar.map((route) =>
     route.replace(/\/$/, ""),
   );
-  return !normalizedRoutesWithoutNavbar.includes(normalizedPattern);
+  return (
+    Boolean(currentRoutePattern) &&
+    !normalizedRoutesWithoutNavbar.includes(normalizedPattern)
+  );
 };
 
 export const selectShowSidebar = ({ state }) => {
@@ -352,7 +357,9 @@ export const selectViewData = ({ state, i18n }) => {
   return {
     ...state,
     showHelpButton:
-      state.showHelpButton && currentRoutePattern !== "/project-folder-setup",
+      state.showHelpButton &&
+      Boolean(currentRoutePattern) &&
+      currentRoutePattern !== "/project-folder-setup",
     currentRoutePattern,
     showSidebar,
     showMobileTabBar,
