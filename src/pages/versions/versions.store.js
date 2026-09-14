@@ -30,6 +30,9 @@ const createVersionForm = ({ isEditing, copy = {} } = {}) => ({
       name: "name",
       type: "input-text",
       label: copy.nameLabel ?? "Name",
+      description:
+        copy.nameDescription ??
+        "Version name can be anything, but it is recommended you use an incremental numbering system (for example 1.0.0).",
       required: true,
     },
     {
