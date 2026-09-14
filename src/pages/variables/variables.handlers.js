@@ -161,11 +161,19 @@ const resolveDetailItemId = (detail = {}) => {
   return detail.itemId ?? detail.id ?? detail.item?.id ?? "";
 };
 
-const syncVariablesData = ({ store, repositoryState } = {}) => {
+const syncVariablesData = async ({
+  store,
+  repositoryState,
+  projectService,
+} = {}) => {
   const { tagsData, variablesData } = getVariablesData({ repositoryState });
+  const scenes = await projectService
+    ?.loadFullScenes?.()
+    .catch(() => repositoryState?.scenes);
   store.setTagsData({ tagsData });
   store.setItems({
     variablesData,
+    scenes: scenes ?? repositoryState?.scenes,
   });
 };
 
@@ -174,8 +182,8 @@ export const handleBeforeMount = (deps) => {
   syncMobileResourcePageUiConfig(deps);
   const subscription = createProjectStateStream({ projectService })
     .pipe(
-      tap(({ repositoryState }) => {
-        syncVariablesData({ store, repositoryState });
+      tap(async ({ repositoryState }) => {
+        await syncVariablesData({ store, repositoryState, projectService });
         render();
       }),
     )
@@ -192,9 +200,10 @@ export const handleAfterMount = (deps) => {
 
 const refreshVariablesData = async (deps, { selectedItemId } = {}) => {
   const { store, render, projectService, refs } = deps;
-  syncVariablesData({
+  await syncVariablesData({
     store,
     repositoryState: projectService.getState(),
+    projectService,
   });
   if (selectedItemId !== undefined) {
     const item = store.selectVariableTreeItemById({ itemId: selectedItemId });

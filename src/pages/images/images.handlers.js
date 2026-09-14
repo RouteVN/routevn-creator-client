@@ -109,7 +109,7 @@ const pickAndUploadImage = async ({
   return { uploadResult };
 };
 
-const syncImagePageData = ({ store, repositoryState } = {}) => {
+const syncImagePageData = ({ store, repositoryState, scenes } = {}) => {
   const tagsData = getTagsCollection(repositoryState, IMAGE_TAG_SCOPE_KEY);
   const collectionWithFileMetadata = withResolvedCollectionFileMetadata({
     collection: repositoryState?.images,
@@ -124,6 +124,7 @@ const syncImagePageData = ({ store, repositoryState } = {}) => {
       tagsCollection: tagsData,
       itemType: "image",
     }),
+    scenes,
   });
   store.setProjectResolution({
     projectResolution: repositoryState?.project?.resolution,

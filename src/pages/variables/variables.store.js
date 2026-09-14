@@ -38,6 +38,7 @@ import {
   getComputedExpressionOperationType,
   getComputedOperationLabel,
 } from "../../internal/computedOperations.js";
+import { createUsedInDetailField } from "../../internal/resourceSceneUsage.js";
 
 const createFolderContextMenuItems = (copy = {}) => [
   {
@@ -146,6 +147,7 @@ const selectVariableItem = (state, itemId) => {
 
 export const createInitialState = () => ({
   variablesData: { tree: [], items: {} },
+  scenes: undefined,
   selectedItemId: undefined,
   selectedFolderId: undefined,
   searchQuery: "",
@@ -162,8 +164,11 @@ export const createInitialState = () => ({
   emptyContextMenuItems: createEmptyContextMenuItems(),
 });
 
-export const setItems = ({ state }, { variablesData } = {}) => {
+export const setItems = ({ state }, { variablesData, scenes } = {}) => {
   state.variablesData = variablesData;
+  if (scenes !== undefined) {
+    state.scenes = scenes;
+  }
   if (
     state.selectedFolderId &&
     state.variablesData?.items?.[state.selectedFolderId]?.type !== "folder"
@@ -455,6 +460,14 @@ export const selectViewData = ({ state, i18n }) => {
         value: selectedVariableDefault,
       });
     }
+
+    detailFields.push(
+      createUsedInDetailField({
+        scenes: state.scenes,
+        itemId: selectedItem.id,
+        copy,
+      }),
+    );
   } else if (selectedFolder?.type === "folder") {
     detailFields.push(
       {

@@ -571,6 +571,8 @@ resourcePages:
   typeLabel: "種類"
   unknownValue: "不明"
   uploadButton: "アップロード"
+  usedInLabel: "使用中のシーン"
+  usedInNone: "なし"
   warningTitle: "警告"
 resourceTypes:
   animatedAssetsLabel: "アニメーション素材"

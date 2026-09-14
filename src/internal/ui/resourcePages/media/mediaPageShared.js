@@ -28,12 +28,14 @@ export const syncMediaPageData = ({
   store,
   repositoryState,
   resourceType,
+  scenes,
 } = {}) => {
   store.setItems({
     data: getMediaPageData({
       repositoryState,
       resourceType,
     }),
+    scenes: scenes ?? repositoryState?.scenes,
   });
 };
 

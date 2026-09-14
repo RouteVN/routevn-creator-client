@@ -426,6 +426,19 @@ export const createProjectServiceCore = ({
     return repository.ensureSceneTextStats(payload);
   };
 
+  const loadFullScenes = async () => {
+    const repository = await ensureRepository();
+    const mainState = repository.getState();
+    const sceneIds = Object.keys(mainState?.scenes?.items || {}).filter(
+      (sceneId) => mainState.scenes.items[sceneId]?.type !== "folder",
+    );
+    if (sceneIds.length === 0) {
+      return { items: {}, tree: [] };
+    }
+    const fullState = await repository.getContextState({ sceneIds });
+    return fullState?.scenes ?? { items: {}, tree: [] };
+  };
+
   const getDomainState = () => {
     const repositoryState = getRepositoryState();
     const projectId = getCurrentProjectId() || "unknown-project";
@@ -624,6 +637,7 @@ export const createProjectServiceCore = ({
     getSceneOverview,
     cacheSceneTextStats,
     ensureSceneTextStats,
+    loadFullScenes,
     getCurrentProjectInfo: repositoryService.getCurrentProjectInfo,
     updateCurrentProjectInfo: repositoryService.updateCurrentProjectInfo,
     updateProjectInfoById: repositoryService.updateProjectInfoByProjectId,

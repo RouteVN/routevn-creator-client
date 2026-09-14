@@ -83,7 +83,7 @@ const getValidSpriteGroupTagIds = ({ store, target, itemId } = {}) => {
   return store.selectValidSpriteGroupTagIds({ target, itemId });
 };
 
-const syncCharactersData = ({
+const syncCharactersData = async ({
   store,
   repositoryState,
   projectService,
@@ -94,6 +94,9 @@ const syncCharactersData = ({
     projectService.getState();
   const tagsData = getTagsCollection(state, CHARACTER_TAG_SCOPE_KEY);
   const spriteTagsByCharacterId = buildSpriteTagsByCharacterId(state);
+  const scenes = await projectService
+    ?.loadFullScenes?.()
+    .catch(() => state?.scenes);
 
   store.setTagsData({ tagsData });
   store.setSpriteTagsByCharacterId({ spriteTagsByCharacterId });
@@ -104,6 +107,7 @@ const syncCharactersData = ({
       itemType: "character",
     }),
     variablesData: state?.variables ?? { items: {}, tree: [] },
+    scenes: scenes ?? state?.scenes,
   });
 };
 
@@ -233,8 +237,8 @@ export const handleBeforeMount = (deps) => {
   syncMobileResourcePageUiConfig(deps);
   const subscription = createProjectStateStream({ projectService })
     .pipe(
-      tap(({ repositoryState }) => {
-        syncCharactersData({ store, repositoryState });
+      tap(async ({ repositoryState }) => {
+        await syncCharactersData({ store, repositoryState, projectService });
         render();
       }),
     )
@@ -251,7 +255,7 @@ export const handleAfterMount = (deps) => {
 
 const refreshCharactersData = async (deps, { selectedItemId } = {}) => {
   const { store, render, projectService, refs } = deps;
-  syncCharactersData({ store, projectService });
+  await syncCharactersData({ store, projectService });
   if (selectedItemId !== undefined) {
     const item = store.selectCharactersDataItemById({ itemId: selectedItemId });
     if (item?.type === "folder") {

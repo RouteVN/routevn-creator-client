@@ -14,11 +14,12 @@ import { clearResourcePageSelection } from "../resourceViewBackground.js";
 export const createMediaPageHandlers = ({
   resourceType,
   subscriptions,
-  syncData = ({ store, repositoryState }) =>
+  syncData = ({ store, repositoryState, scenes }) =>
     syncMediaPageData({
       store,
       repositoryState,
       resourceType,
+      scenes,
     }),
   selectItemById = (store, { itemId }) => store.selectItemById({ itemId }),
   getEditValues = (item) => ({
@@ -109,10 +110,14 @@ export const createMediaPageHandlers = ({
       selectedItemId,
       deletedItemId,
     });
+    const scenes = await deps.projectService
+      ?.loadFullScenes?.()
+      .catch(() => repositoryState?.scenes);
     syncData({
       store,
       repositoryState,
       resourceType,
+      scenes,
     });
 
     if (selectedItemId !== undefined) {
@@ -198,11 +203,15 @@ export const createMediaPageHandlers = ({
     const { projectService, store, render } = deps;
     const streams = [
       createProjectStateStream({ projectService }).pipe(
-        tap(({ repositoryState }) => {
+        tap(async ({ repositoryState }) => {
+          const scenes = await projectService
+            .loadFullScenes?.()
+            .catch(() => repositoryState?.scenes);
           syncData({
             store,
             repositoryState,
             resourceType,
+            scenes,
           });
           render();
         }),

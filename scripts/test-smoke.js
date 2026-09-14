@@ -28,6 +28,11 @@ import {
   createBundleRangeReader,
   parseBundle,
 } from "../src/deps/services/shared/projectExportService.js";
+import {
+  createUsedInDetailField,
+  findResourceSceneUsage,
+  formatResourceSceneUsage,
+} from "../src/internal/resourceSceneUsage.js";
 import { toHierarchyStructure } from "../src/internal/project/tree.js";
 
 const projectId = "proj-smoke-001";
@@ -835,5 +840,140 @@ const disabledKeyboardRenderState = prepareRenderStateKeyboardForGraphics({
 assert.equal(disabledKeyboardRenderState.global.keyboard, undefined);
 
 assert.equal((await repository.loadEvents()).length, 15);
+
+const mockUsageScenes = {
+  items: {
+    "folder-1": { id: "folder-1", name: "Act 1", type: "folder" },
+    "scene-intro": {
+      id: "scene-intro",
+      name: "Prologue",
+      type: "scene",
+      sections: {
+        items: {
+          "sec-1": {
+            id: "sec-1",
+            name: "Opening",
+            lines: {
+              items: {
+                "line-1": {
+                  id: "line-1",
+                  actions: {
+                    background: { resourceId: "bg_classroom" },
+                    bgm: { resourceId: "bgm_peaceful" },
+                    character: {
+                      characterId: "char_alice",
+                      spriteId: "spr_alice_happy",
+                    },
+                  },
+                  text: "Welcome! My affection is ${var_alice_affection}.",
+                },
+              },
+            },
+          },
+        },
+      },
+    },
+    "scene-ch1": {
+      id: "scene-ch1",
+      name: "Chapter 1",
+      type: "scene",
+      sections: {
+        items: {
+          "sec-2": {
+            id: "sec-2",
+            name: "Morning",
+            lines: {
+              items: {
+                "line-2": {
+                  id: "line-2",
+                  actions: {
+                    bgm: { resourceId: "bgm_peaceful" },
+                    video: { resourceId: "vid_intro" },
+                  },
+                },
+              },
+            },
+          },
+        },
+      },
+    },
+    "scene-ch2": {
+      id: "scene-ch2",
+      name: "Chapter 2",
+      type: "scene",
+      sections: {
+        items: {
+          "sec-3": {
+            id: "sec-3",
+            name: "Afternoon",
+            lines: {
+              items: {
+                "line-3": {
+                  id: "line-3",
+                  actions: {
+                    bgm: { resourceId: "bgm_peaceful" },
+                  },
+                },
+              },
+            },
+          },
+        },
+      },
+    },
+  },
+};
+
+assert.deepEqual(
+  findResourceSceneUsage({ scenes: mockUsageScenes, itemId: "unused_item" }),
+  [],
+);
+assert.equal(
+  formatResourceSceneUsage(
+    findResourceSceneUsage({ scenes: mockUsageScenes, itemId: "unused_item" }),
+  ),
+  "None",
+);
+assert.equal(
+  formatResourceSceneUsage(
+    findResourceSceneUsage({
+      scenes: mockUsageScenes,
+      itemId: "bg_classroom",
+    }),
+  ),
+  "Prologue",
+);
+assert.equal(
+  formatResourceSceneUsage(
+    findResourceSceneUsage({ scenes: mockUsageScenes, itemId: "bgm_peaceful" }),
+  ),
+  "Prologue, Chapter 1, +1 more",
+);
+assert.equal(
+  findResourceSceneUsage({
+    scenes: mockUsageScenes,
+    itemId: "char_alice",
+    additionalItemIds: ["spr_alice_happy"],
+  }).length,
+  1,
+);
+assert.equal(
+  findResourceSceneUsage({
+    scenes: mockUsageScenes,
+    itemId: "var_alice_affection",
+  }).length,
+  1,
+);
+assert.deepEqual(
+  createUsedInDetailField({
+    scenes: mockUsageScenes,
+    itemId: "bg_classroom",
+    copy: { usedInLabel: "Used In" },
+  }),
+  {
+    type: "text",
+    label: "Used In",
+    value: "Prologue",
+  },
+);
 
 console.log("Smoke tests: PASS");

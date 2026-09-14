@@ -38,8 +38,11 @@ export const createCatalogPageHandlers = ({
   const refreshData = async (deps, { selectedItemId } = {}) => {
     const { store, render, projectService, refs } = deps;
     const repositoryState = projectService.getRepositoryState();
+    const scenes = await projectService
+      ?.loadFullScenes?.()
+      .catch(() => repositoryState?.scenes);
     const data = selectData(repositoryState);
-    store.setItems({ data });
+    store.setItems({ data, scenes: scenes ?? repositoryState?.scenes });
     if (selectedItemId !== undefined) {
       const nextItem = data?.items?.[selectedItemId];
       if (nextItem?.type === "folder" && store.setSelectedFolderId) {
@@ -64,9 +67,12 @@ export const createCatalogPageHandlers = ({
     store.setUiConfig?.({ uiConfig: deps.uiConfig });
     const subscription = createProjectStateStream({ projectService })
       .pipe(
-        tap(({ repositoryState }) => {
+        tap(async ({ repositoryState }) => {
+          const scenes = await projectService
+            .loadFullScenes?.()
+            .catch(() => repositoryState?.scenes);
           const data = selectData(repositoryState);
-          store.setItems({ data });
+          store.setItems({ data, scenes: scenes ?? repositoryState?.scenes });
           onProjectStateChanged({ deps, repositoryState });
           render();
         }),

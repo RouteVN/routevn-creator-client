@@ -8,6 +8,7 @@ import {
 } from "../../internal/projectResolution.js";
 import { matchesTagAwareSearch } from "../../internal/resourceTags.js";
 import { toFlatItems } from "../../internal/project/tree.js";
+import { createUsedInDetailField } from "../../internal/resourceSceneUsage.js";
 import { selectTransformsPageCopy } from "./support/transformsPageCopy.js";
 
 const TRANSFORM_TAG_SCOPE_KEY = "transforms";
@@ -254,7 +255,7 @@ const buildPreviewPanel = (state, copy) => ({
   })),
 });
 
-const buildDetailFields = (item, { copy } = {}) => {
+const buildDetailFields = (item, { copy, scenes } = {}) => {
   if (!item) {
     return [];
   }
@@ -304,6 +305,11 @@ const buildDetailFields = (item, { copy } = {}) => {
       label: copy.anchorYLabel,
       value: String(item.anchorY ?? 0),
     },
+    createUsedInDetailField({
+      scenes,
+      itemId: item.id,
+      copy,
+    }),
   ];
 };
 
