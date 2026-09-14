@@ -33,6 +33,7 @@ import {
 } from "../../project/routeEngineProjectData.js";
 import { prepareRuntimeInteractionExecution } from "../../runtime/graphicsEngineRuntime.js";
 import { getFontFaceWeightDescriptor } from "../../fontCapabilities.js";
+import { getFontAssetMessage } from "../fontAssetFeedback.js";
 import {
   ACTION_TRANSFORM_TARGET_TYPES,
   createBackgroundTransformEditorCanvasState,
@@ -540,6 +541,7 @@ async function createAssetsFromFileIds(
   const resourceItemsByFileId = getResourceItemsByFileId(resources);
 
   const assets = {};
+  const failedFileLoads = new Map();
   for (const fileObj of fileReferences) {
     const { url: fileId } = fileObj;
     const foundItem = resourceItemsByFileId.get(fileId);
@@ -550,15 +552,17 @@ async function createAssetsFromFileIds(
 
       assets[fileId] = {
         url: result.url,
+        buffer: result.buffer,
         type: type || "image/png",
         fontWeightDescriptor: getFontFaceWeightDescriptor(foundItem),
       };
     } catch (error) {
+      failedFileLoads.set(fileId, error);
       console.error(`Failed to load file ${fileId}:`, error);
     }
   }
 
-  return assets;
+  return { assets, failedFileLoads };
 }
 
 const isVideoAsset = (asset) => {
@@ -634,6 +638,7 @@ const loadAssetsWithFailureIsolation = async (
   graphicsService,
   assets,
   expectedFileIds,
+  failedFileLoads,
 ) => {
   const loadedAssetIds = [];
   const failedAssetLoads = [];
@@ -644,7 +649,9 @@ const loadAssetsWithFailureIsolation = async (
   unresolvedAssetIds.forEach((fileId) => {
     failedAssetLoads.push({
       fileId,
-      error: new Error("Scene asset file content was not available"),
+      error:
+        failedFileLoads.get(fileId) ??
+        new Error("Scene asset file content was not available"),
     });
   });
 
@@ -694,7 +701,7 @@ const loadMissingAssetReferences = async (
   const { graphicsService, projectService } = deps;
   const startedAt = getDebugNow();
   const expectedFileIds = getUniqueFileIdsFromReferences(missingFileReferences);
-  const assets = await createAssetsFromFileIds(
+  const { assets, failedFileLoads } = await createAssetsFromFileIds(
     missingFileReferences,
     projectService,
     resources,
@@ -703,7 +710,27 @@ const loadMissingAssetReferences = async (
     graphicsService,
     assets,
     expectedFileIds,
+    failedFileLoads,
   );
+
+  const fontMessages = new Set(
+    result.failedAssetLoads
+      .map(({ error }) =>
+        getFontAssetMessage({
+          error,
+          fonts: resources?.fonts,
+          i18n: deps.i18n,
+          projectService,
+        }),
+      )
+      .filter(Boolean),
+  );
+  if (fontMessages.size > 0) {
+    deps.appService.showAlert({
+      message: [...fontMessages].join("\n\n"),
+      title: deps.i18n?.resourcePages?.warningTitle ?? "Warning",
+    });
+  }
 
   emitSceneEditorTiming("runtime.assets.load", {
     ...context,
