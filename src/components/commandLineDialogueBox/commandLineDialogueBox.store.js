@@ -32,8 +32,8 @@ const ANIMATION_PLAYBACK_CONTINUITY_OPTIONS = [
 ];
 
 const PERSIST_SPRITE_OPTIONS = [
-  { value: true, label: "Yes" },
   { value: false, label: "No" },
+  { value: true, label: "Yes" },
 ];
 
 const DEFAULT_TEXT_SPEED = 75;

@@ -394,10 +394,19 @@ describe("layoutEditPanel text reveal indicators", () => {
       label: "Visual",
     });
     expect(
-      viewData.textRevealIndicatorDialogForm.fields
-        .slice(1)
-        .map((field) => field.name),
-    ).toEqual(["width", "height", "offsetX", "offsetY"]);
+      viewData.textRevealIndicatorDialogForm.fields.slice(1),
+    ).toMatchObject([
+      {
+        type: "row",
+        stackAt: "none",
+        fields: [{ name: "width" }, { name: "height" }],
+      },
+      {
+        type: "row",
+        stackAt: "none",
+        fields: [{ name: "offsetX" }, { name: "offsetY" }],
+      },
+    ]);
   });
 
   it("opens the indicator dialog from the section action and list item", async () => {

@@ -575,8 +575,8 @@ describe("commandLineDialogueBox.store", () => {
       label: "Persist Sprite",
       type: "segmented-control",
       options: [
-        { value: true, label: "Yes" },
         { value: false, label: "No" },
+        { value: true, label: "Yes" },
       ],
       value: false,
     });

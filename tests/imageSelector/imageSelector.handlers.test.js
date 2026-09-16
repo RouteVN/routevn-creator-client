@@ -1,5 +1,7 @@
 import { describe, expect, it, vi } from "vitest";
 import {
+  handleAfterMount,
+  handleOnUpdate,
   handleImageItemClick,
   handleImageItemDoubleClick,
   handleImageItemKeyDown,
@@ -16,6 +18,36 @@ const createPayload = (imageId) => ({
 });
 
 describe("imageSelector.handlers", () => {
+  it("switches resource sources and clears the previous selection on prop updates", () => {
+    const images = {
+      items: { folder: { id: "folder", type: "folder", name: "Images" } },
+      tree: [{ id: "folder" }],
+    };
+    const deps = {
+      store: { setImages: vi.fn(), setSelectedImageId: vi.fn() },
+      projectService: { getRepositoryState: () => ({ images }) },
+      props: { resourceTarget: "images" },
+      render: vi.fn(),
+    };
+    handleAfterMount(deps);
+    expect(deps.store.setImages).toHaveBeenLastCalledWith({ images });
+    handleOnUpdate(deps, {
+      oldProps: { resourceTarget: "images", selectedImageId: "image-1" },
+      newProps: { resourceTarget: "characterSprites" },
+    });
+    expect(deps.store.setImages).toHaveBeenLastCalledWith({
+      images: { items: {}, tree: [] },
+    });
+    expect(deps.store.setSelectedImageId).toHaveBeenLastCalledWith({
+      imageId: undefined,
+    });
+    handleOnUpdate(deps, {
+      oldProps: { resourceTarget: "characterSprites" },
+      newProps: { resourceTarget: "images" },
+    });
+    expect(deps.store.setImages).toHaveBeenLastCalledWith({ images });
+  });
+
   it("selects images on click", () => {
     const dispatchEvent = vi.fn();
     const render = vi.fn();

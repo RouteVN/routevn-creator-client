@@ -60,7 +60,7 @@ const createDeps = () => {
     deps: {
       props: {},
       store: {
-        getState: () => state,
+        selectDialogueDefaultValues: () => state.dialogueDefaultValues,
         selectRepositoryState: () => state.repositoryState,
         setDialogueDefaultValue: ({ name, fieldValue }) => {
           state.dialogueDefaultValues[name] = fieldValue;

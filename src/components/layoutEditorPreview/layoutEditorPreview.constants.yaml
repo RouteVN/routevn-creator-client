@@ -1,15 +1,16 @@
 dialogueForm:
   fields:
     - name: dialogue-character-id
-      label: Character
+      label: Speaker
       type: select
       options: "${characterOptions}"
-      clearable: false
+      placeholder: Select speaker
+      clearable: true
     - type: row
-      stackAt: sm
+      stackAt: none
       fields:
         - name: dialogue-custom-character-name
-          label: Custom Character Name
+          label: Custom Speaker Name
           type: segmented-control
           noClear: true
           options:
@@ -20,6 +21,18 @@ dialogueForm:
         - name: dialogue-character-name
           label: Character Name
           type: input-text
+    - type: row
+      stackAt: none
+      fields:
+        - slot: dialogueCharacterAvatar
+          label: "${characterAvatarLabel}"
+          type: slot
+        - name: dialogue-character-sprite-transform-id
+          label: "${avatarTransformLabel}"
+          type: select
+          options: "${transformOptions}"
+          placeholder: "${avatarTransformPlaceholder}"
+          clearable: true
     - name: dialogue-content
       label: Dialogue Content
       type: input-text

@@ -819,6 +819,13 @@ describe("standalone window chrome", () => {
       new harness.dom.window.KeyboardEvent("keydown", { key: "Escape" }),
     );
     await flushTasks();
+    expect(harness.appWindow.setFullscreen).toHaveBeenLastCalledWith(true);
+    expect(harness.appWindow.unmaximize).not.toHaveBeenCalled();
+
+    harness.dom.window.dispatchEvent(
+      new harness.dom.window.KeyboardEvent("keydown", { key: "Escape" }),
+    );
+    await flushTasks();
     expect(harness.appWindow.setFullscreen).toHaveBeenLastCalledWith(false);
     expect(harness.appWindow.unmaximize).toHaveBeenCalledOnce();
     expect(fullscreenButton.getAttribute("aria-pressed")).toBe("false");
@@ -829,6 +836,100 @@ describe("standalone window chrome", () => {
     expect(harness.appWindow.isFullscreen).toHaveBeenCalled();
     expect(harness.appWindow.isMaximized).toHaveBeenCalled();
   });
+
+  it.each(["fullscreen", "maximized"])(
+    "requires two distinct Escape presses to restore a %s window",
+    async (mode) => {
+      const harness = createWindowHarness();
+      await flushTasks();
+      if (mode === "fullscreen") {
+        harness.setFullscreenState(true);
+      } else {
+        harness.setMaximized(true);
+      }
+      harness.getResizedHandler()();
+      await flushTasks();
+
+      const { document, KeyboardEvent } = harness.dom.window;
+      const chrome = document.querySelector("#rvn-window-chrome");
+      const status = chrome.querySelector(".rvn-window-chrome-status");
+      harness.dom.window.dispatchEvent(
+        new KeyboardEvent("keydown", { key: "Escape" }),
+      );
+      expect(chrome.dataset.expanded).toBe("true");
+      expect(chrome.dataset.revealed).toBe("true");
+      expect(status.hidden).toBe(false);
+      expect(status.textContent).toBe(
+        mode === "fullscreen"
+          ? "Press Esc again to exit fullscreen"
+          : "Press Esc again to restore window",
+      );
+      harness.dom.window.dispatchEvent(
+        new KeyboardEvent("keydown", { key: "Escape", repeat: true }),
+      );
+      await flushTasks();
+      expect(harness.appWindow.setFullscreen).not.toHaveBeenCalled();
+      expect(harness.appWindow.unmaximize).not.toHaveBeenCalled();
+
+      harness.dom.window.dispatchEvent(
+        new KeyboardEvent("keydown", { key: "Escape" }),
+      );
+      await flushTasks();
+      expect(chrome.dataset.expanded).toBe("false");
+      expect(status.hidden).toBe(true);
+      if (mode === "fullscreen") {
+        expect(harness.appWindow.setFullscreen).toHaveBeenCalledExactlyOnceWith(
+          false,
+        );
+      } else {
+        expect(harness.appWindow.unmaximize).toHaveBeenCalledOnce();
+      }
+    },
+  );
+
+  it.each(["timeout", "other key", "focus loss", "window mode change"])(
+    "requires a fresh Escape pair after %s",
+    async (resetReason) => {
+      vi.useFakeTimers();
+      const harness = createWindowHarness();
+      await vi.advanceTimersByTimeAsync(0);
+      harness.setFullscreenState(true);
+      harness.getResizedHandler()();
+      await vi.advanceTimersByTimeAsync(0);
+      const pressKey = (key) =>
+        harness.dom.window.dispatchEvent(
+          new harness.dom.window.KeyboardEvent("keydown", { key }),
+        );
+      pressKey("Escape");
+      if (resetReason === "timeout") {
+        await vi.advanceTimersByTimeAsync(1500);
+      } else if (resetReason === "other key") {
+        pressKey("a");
+      } else if (resetReason === "focus loss") {
+        harness.getFocusedHandler()({ payload: false });
+        harness.getFocusedHandler()({ payload: true });
+      } else {
+        harness.setFullscreenState(false);
+        harness.getResizedHandler()();
+        await vi.advanceTimersByTimeAsync(0);
+        harness.setFullscreenState(true);
+        harness.getResizedHandler()();
+        await vi.advanceTimersByTimeAsync(0);
+      }
+      const status = harness.dom.window.document.querySelector(
+        ".rvn-window-chrome-status",
+      );
+      expect(status.hidden).toBe(true);
+      pressKey("Escape");
+      await vi.advanceTimersByTimeAsync(0);
+      expect(harness.appWindow.setFullscreen).not.toHaveBeenCalled();
+      pressKey("Escape");
+      await vi.advanceTimersByTimeAsync(0);
+      expect(harness.appWindow.setFullscreen).toHaveBeenCalledExactlyOnceWith(
+        false,
+      );
+    },
+  );
 
   it("keeps fullscreen when a focused interaction consumes Escape", async () => {
     const harness = createWindowHarness();

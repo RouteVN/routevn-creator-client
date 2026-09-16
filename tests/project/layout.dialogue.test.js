@@ -1,12 +1,63 @@
 import { describe, expect, it } from "vitest";
+import createRouteEngine from "route-engine-js";
 import {
   buildLayoutElements,
   extractFileIdsFromRenderState,
 } from "../../src/internal/project/layout.js";
+import {
+  createNvlDialogueProject,
+  NVL_LINE_TEXT,
+} from "../support/nvlDialogue.js";
 
 const emptyCollection = { items: {}, tree: [] };
 
 describe("dialogue layout projection", () => {
+  it.each([undefined, "typewriter", "softWipe", "none"])(
+    "only reveals the newest NVL line with effect %s",
+    (revealEffect) => {
+      const engine = createRouteEngine({ handlePendingEffects: () => {} });
+      engine.init({
+        initialState: { projectData: createNvlDialogueProject(revealEffect) },
+      });
+      const collectText = (elements) =>
+        elements.flatMap((element) =>
+          element.type === "text-revealing"
+            ? [element]
+            : collectText(element.children ?? []),
+        );
+
+      for (let index = 0; index < NVL_LINE_TEXT.length; index += 1) {
+        const expectedLines =
+          index === 3
+            ? [NVL_LINE_TEXT[index]]
+            : NVL_LINE_TEXT.slice(0, index + 1);
+        const text = collectText(engine.selectRenderState().elements);
+        expect(text.map((element) => element.content)).toEqual(
+          expectedLines.map((line) => [{ text: line }]),
+        );
+        expect(
+          text.map((element) => element.revealEffect ?? "typewriter"),
+        ).toEqual(
+          expectedLines.map((_, lineIndex) =>
+            lineIndex === expectedLines.length - 1
+              ? (revealEffect ?? "typewriter")
+              : "none",
+          ),
+        );
+
+        engine.handleAction("markLineCompleted", {});
+        expect(
+          collectText(engine.selectRenderState().elements).every(
+            (element) => element.revealEffect === "none",
+          ),
+        ).toBe(true);
+        if (index < NVL_LINE_TEXT.length - 1) {
+          engine.handleActions({ nextLine: {} });
+        }
+      }
+    },
+  );
+
   it("projects ADV dialogue content for append-compatible text reveal", () => {
     const { elements } = buildLayoutElements(
       [

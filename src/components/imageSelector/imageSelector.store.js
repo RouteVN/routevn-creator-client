@@ -1,5 +1,6 @@
 import { selectResourceSelectorEmptyMessage } from "../../internal/ui/resourcePages/selectorEmptyState.js";
-import { toFlatGroups } from "../../internal/project/tree.js";
+import { toFlatGroups, toFlatItems } from "../../internal/project/tree.js";
+import { buildCharacterSpritePreviewLayer } from "../../internal/characterSpritePreview.js";
 
 export const createInitialState = () => ({
   selectedImageId: undefined,
@@ -42,14 +43,35 @@ export const selectViewData = ({ state, props = {}, i18n = {} }) => {
   const selectedImageId = state.selectedImageId;
   const searchQuery = (props.searchQuery ?? "").toLowerCase().trim();
   const columns = parseColumnCount(props.columns);
+  let imageSelectorLabel = i18n.imagesPage?.title ?? "Images";
+  if (props.resourceTarget === "characters") {
+    imageSelectorLabel = i18n.charactersPage.title;
+  } else if (props.resourceTarget === "characterSprites") {
+    imageSelectorLabel = i18n.characterSpritesPage.title;
+  }
   const imageGridStyle = columns
     ? `display: grid; grid-template-columns: repeat(${columns}, minmax(0, 1fr));`
     : "";
 
-  const groups = toFlatGroups(images)
+  const resourceGroups = toFlatGroups(images);
+  const rootItems = toFlatItems(images).filter(
+    (item) => !item.parentId && item.type !== "folder",
+  );
+  if (rootItems.length > 0) {
+    resourceGroups.unshift({
+      id: "image-selector-root",
+      fullLabel: imageSelectorLabel,
+      children: rootItems,
+    });
+  }
+  const groups = resourceGroups
     .map((group) => {
       const children = group.children
-        .filter((child) => matchesSearch(child, searchQuery))
+        .filter(
+          (child) =>
+            matchesSearch(child, searchQuery) ||
+            matchesSearch(group, searchQuery),
+        )
         .map((child) => {
           const isSelected = child.id === selectedImageId;
           const itemBorderColor = isSelected ? "pr" : "bo";
@@ -66,6 +88,8 @@ export const selectViewData = ({ state, props = {}, i18n = {} }) => {
             itemHoverBorderColor,
             imageCardStyle,
             previewAspectRatio: "16 / 9",
+            preview: buildCharacterSpritePreviewLayer(child),
+            thumbnailFileId: child.thumbnailFileId ?? child.fileId,
           };
         });
 
@@ -86,7 +110,8 @@ export const selectViewData = ({ state, props = {}, i18n = {} }) => {
       i18n,
     }),
     imageGridStyle,
-    imageSelectorLabel: i18n.imagesPage?.title ?? "Images",
+    imageSelectorLabel,
+    noAvatarLabel: i18n.charactersPage?.noAvatarLabel,
     selectedImageId,
   };
 };

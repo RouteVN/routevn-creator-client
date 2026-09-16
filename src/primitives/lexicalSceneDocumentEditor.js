@@ -5302,68 +5302,30 @@ export class LexicalSceneDocumentEditorElement extends HTMLElement {
     );
   }
 
-  selectionContainsTextStyleId() {
-    return this.editor.getEditorState().read(() => {
-      const selection = $getSelection();
-      if (!$isRangeSelection(selection) || selection.isCollapsed()) {
-        return false;
-      }
-
-      return selection.getNodes().some((node) => {
-        return (
-          $isTextNode(node) &&
-          !$isMentionNode(node) &&
-          /(?:^|;)\s*--rvn-text-style-id\s*:/.test(node.getStyle())
-        );
-      });
-    });
-  }
-
-  getSelectionFurigana() {
-    return this.editor.getEditorState().read(() => {
-      const selection = $getSelection();
-      if (!$isRangeSelection(selection) || selection.isCollapsed()) {
-        return undefined;
-      }
-
-      for (const node of selection.getNodes()) {
-        if (!$isTextNode(node) || $isMentionNode(node)) {
-          continue;
-        }
-
-        const furigana = getFuriganaFromNode(node);
-        if (furigana) {
-          return furigana;
-        }
-      }
-
-      return undefined;
-    });
-  }
-
-  getFuriganaForSelectionSnapshot(snapshot) {
+  getRichTextStateForSelectionSnapshot(snapshot) {
+    const richTextState = {
+      textStyleId: undefined,
+      furigana: undefined,
+    };
     if (!snapshot?.lineId || snapshot.start === snapshot.end) {
-      return undefined;
+      return richTextState;
     }
 
     return this.editor.getEditorState().read(() => {
       const lineKey = this.lineKeyById.get(snapshot.lineId);
       const lineNode = lineKey ? $getNodeByKey(lineKey) : undefined;
       if (!lineNode) {
-        return undefined;
+        return richTextState;
       }
 
       let offset = 0;
-      const findFurigana = (node) => {
+      const collectRichTextState = (node) => {
         if ($isElementNode(node)) {
           for (const childNode of node.getChildren()) {
-            const furigana = findFurigana(childNode);
-            if (furigana) {
-              return furigana;
-            }
+            collectRichTextState(childNode);
           }
 
-          return undefined;
+          return;
         }
 
         const length = getLexicalTextLength(node);
@@ -5372,17 +5334,19 @@ export class LexicalSceneDocumentEditorElement extends HTMLElement {
         offset = end;
 
         if (end <= snapshot.start || start >= snapshot.end) {
-          return undefined;
+          return;
         }
 
         if (!$isTextNode(node) || $isMentionNode(node)) {
-          return undefined;
+          return;
         }
 
-        return getFuriganaFromNode(node);
+        richTextState.textStyleId ??= getTextStyleIdFromNode(node);
+        richTextState.furigana ??= getFuriganaFromNode(node);
       };
 
-      return findFurigana(lineNode);
+      collectRichTextState(lineNode);
+      return richTextState;
     });
   }
 
@@ -5428,11 +5392,17 @@ export class LexicalSceneDocumentEditorElement extends HTMLElement {
 
     this.selectionMenuIsOpen = true;
     this.referenceMenuTarget = undefined;
+    // WebKit can update the native range before Lexical's selection catches up.
     this.pendingSelectionSnapshot =
-      selectionSnapshot ?? this.getCurrentSelectionSnapshot();
+      selectionSnapshot ??
+      this.getNativeLineSelectionContext() ??
+      this.getCurrentSelectionSnapshot();
 
-    const hasTextStyle = this.selectionContainsTextStyleId();
-    const hasFurigana = !!this.getSelectionFurigana();
+    const richTextState = this.getRichTextStateForSelectionSnapshot(
+      this.pendingSelectionSnapshot,
+    );
+    const hasTextStyle = !!richTextState.textStyleId;
+    const hasFurigana = !!richTextState.furigana;
     const actions = [
       {
         id: hasTextStyle ? "edit-text-style" : "add-text-style",
@@ -5566,9 +5536,7 @@ export class LexicalSceneDocumentEditorElement extends HTMLElement {
     }
 
     const furigana =
-      this.getFuriganaForSelectionSnapshot(snapshot) ??
-      this.getSelectionFurigana() ??
-      {};
+      this.getRichTextStateForSelectionSnapshot(snapshot).furigana ?? {};
     this.dispatchEvent(
       new CustomEvent("furigana-dialog-request", {
         detail: {
