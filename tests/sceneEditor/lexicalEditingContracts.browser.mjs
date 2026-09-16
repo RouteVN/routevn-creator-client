@@ -20,7 +20,7 @@ const scenarios = [
     name: `TXT-B009 collapsed target ${inputType} ${JSON.stringify(data)}`,
     lines: ["alpha", "beta"],
     offset: 2,
-    select: 6,
+    select: true,
     action: "target-input",
     inputType,
     data,
@@ -35,7 +35,7 @@ const scenarios = [
     name: `TXT-B009 collapsed forward delete at line ${targetLine} offset ${targetOffset}`,
     lines: ["alpha", "beta"],
     offset: 2,
-    select: 6,
+    select: true,
     action: "target-input",
     inputType: "deleteContentForward",
     targetLine,
@@ -89,7 +89,7 @@ const scenarios = [
       ...scenario,
       lines: ["alpha", "beta"],
       offset: 2,
-      select: 6,
+      select: true,
       backward,
     })),
   ),
@@ -113,7 +113,7 @@ const scenarios = [
     name: "TXT-002 selection across three scene lines",
     lines: ["alpha", "middle", "beta"],
     offset: 2,
-    select: 13,
+    select: true,
     action: "replace",
     expected: ["alXta"],
     caret: 3,
@@ -175,8 +175,20 @@ try {
             await page.keyboard.type(scenario.lines[i]);
           }
           await page.waitForTimeout(50);
-          // Start from a known caret instead of counting ArrowLeft across
-          // paragraph boundaries, whose caret stops differ by platform.
+          const authoredLines = await page.evaluate(() =>
+            window.owner
+              .getLinesSnapshot()
+              .map((line) =>
+                line.actions.dialogue.content.map((item) => item.text).join(""),
+              ),
+          );
+          assert.deepEqual(
+            authoredLines,
+            scenario.lines,
+            `${engineName}: ${scenario.name}: setup text`,
+          );
+          // Establish the input range directly: platform-specific Shift+Arrow
+          // selection after copying from a textarea is not part of this test.
           const anchorLineId = await page.evaluate(({ backward, offset }) => {
             const lines = window.owner.getLinesSnapshot();
             const lineId = lines[backward ? lines.length - 1 : 0].id;
@@ -194,10 +206,22 @@ try {
             },
             { lineId: anchorLineId, offset: scenario.offset },
           );
-          for (let i = 0; i < (scenario.select ?? 0); i++) {
-            await page.keyboard.press(
-              scenario.backward ? "Shift+ArrowLeft" : "Shift+ArrowRight",
-            );
+          // Let focusLine's scheduled caret restore finish before selecting.
+          await page.evaluate(() => new Promise(requestAnimationFrame));
+          if (scenario.select) {
+            await page.evaluate(({ backward }) => {
+              const lines = window.owner.refs.editor.querySelectorAll("p");
+              const start = lines[0].firstChild.firstChild;
+              const end = lines[lines.length - 1].firstChild.firstChild;
+              window
+                .getSelection()
+                .setBaseAndExtent(
+                  backward ? end : start,
+                  2,
+                  backward ? start : end,
+                  2,
+                );
+            }, scenario);
           }
           await page.waitForTimeout(50);
           const label = `${engineName}: ${scenario.name}`;
