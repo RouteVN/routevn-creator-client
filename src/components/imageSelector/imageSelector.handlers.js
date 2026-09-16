@@ -1,3 +1,5 @@
+import { getImageSelectorResources } from "../../internal/imageSelectorResources.js";
+
 export const handleBeforeMount = (deps) => {
   const { store, props } = deps;
   if (props?.selectedImageId) {
@@ -8,24 +10,38 @@ export const handleBeforeMount = (deps) => {
 };
 
 export const handleAfterMount = (deps) => {
-  const { store, projectService, render } = deps;
-  const state = projectService.getRepositoryState();
-
-  const images = state.images || { items: {}, tree: [] };
-
-  store.setImages({ images: images });
+  const { store, props, projectService, render } = deps;
+  store.setImages({
+    images: getImageSelectorResources(
+      projectService.getRepositoryState(),
+      props.resourceTarget,
+      props.characterId,
+    ),
+  });
   render();
 };
 
 export const handleOnUpdate = (deps, payload) => {
-  const { store, render } = deps;
-  const newSelectedImageId = payload?.newProps?.selectedImageId;
-  if (newSelectedImageId !== undefined) {
-    store.setSelectedImageId({
-      imageId: newSelectedImageId,
+  const { store, projectService, render } = deps;
+  const { oldProps, newProps } = payload;
+  if (
+    oldProps.resourceTarget !== newProps.resourceTarget ||
+    oldProps.characterId !== newProps.characterId
+  ) {
+    store.setImages({
+      images: getImageSelectorResources(
+        projectService.getRepositoryState(),
+        newProps.resourceTarget,
+        newProps.characterId,
+      ),
     });
-    render();
   }
+  if (oldProps.selectedImageId !== newProps.selectedImageId) {
+    store.setSelectedImageId({
+      imageId: newProps.selectedImageId,
+    });
+  }
+  render();
 };
 
 export const handleImageItemClick = (deps, payload) => {

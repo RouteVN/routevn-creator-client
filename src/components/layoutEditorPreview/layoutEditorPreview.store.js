@@ -13,8 +13,10 @@ import {
   getSaveLoadPreviewWindow,
 } from "./support/layoutEditorPreviewSupport.js";
 import { createPersistedPreviewState } from "./support/layoutEditorPreviewPersistence.js";
-import { toFlatItems } from "../../internal/project/tree.js";
+import { toFlatGroups, toFlatItems } from "../../internal/project/tree.js";
 import { toCharacterSelectOptions } from "../../internal/characterOptions.js";
+import { buildCharacterSpritePreviewLayer } from "../../internal/characterSpritePreview.js";
+import { getImageSelectorResources } from "../../internal/imageSelectorResources.js";
 import { isTouchUiConfig } from "../../internal/ui/resourcePages/mobileResourcePage.js";
 
 const EMPTY_LAYOUT_DATA = {
@@ -38,9 +40,11 @@ const DIALOGUE_CUSTOM_CHARACTER_NAME_FIELD = "dialogue-custom-character-name";
 const DIALOGUE_CHARACTER_NAME_FIELD = "dialogue-character-name";
 
 const createDialogueDefaultValues = () => ({
-  "dialogue-character-id": "",
+  "dialogue-character-id": undefined,
   [DIALOGUE_CUSTOM_CHARACTER_NAME_FIELD]: false,
   "dialogue-character-name": "Character",
+  "dialogue-character-sprite-id": undefined,
+  "dialogue-character-sprite-transform-id": undefined,
   "dialogue-content": "This is a sample dialogue content.",
   "dialogue-auto-mode": false,
   "dialogue-skip-mode": false,
@@ -90,6 +94,8 @@ const resetPreviewStateValues = (state) => {
   state.previewBackgroundImageId = undefined;
   state.imageSelectorDialog = {
     open: false,
+    resourceTarget: "images",
+    characterId: undefined,
     selectedImageId: undefined,
   };
   state.dropdownMenu = {
@@ -162,7 +168,10 @@ const withDialogueCharacterNameField = (form, { visible } = {}) => {
     }
 
     if (!visible && nextField?.name === DIALOGUE_CHARACTER_NAME_FIELD) {
-      return undefined;
+      return {
+        type: "slot",
+        slot: "dialogueCharacterNameSpacer",
+      };
     }
 
     return nextField;
@@ -246,6 +255,8 @@ export const createInitialState = () => ({
   previewBackgroundImageId: undefined,
   imageSelectorDialog: {
     open: false,
+    resourceTarget: "images",
+    characterId: undefined,
     selectedImageId: undefined,
   },
   dropdownMenu: {
@@ -493,9 +504,26 @@ export const setPreviewBackgroundImageId = ({ state }, { imageId } = {}) => {
   state.previewBackgroundImageId = imageId ?? undefined;
 };
 
-export const openImageSelectorDialog = ({ state }, _payload = {}) => {
+export const openImageSelectorDialog = (
+  { state },
+  { resourceTarget = "images" } = {},
+) => {
   state.imageSelectorDialog.open = true;
-  state.imageSelectorDialog.selectedImageId = state.previewBackgroundImageId;
+  state.imageSelectorDialog.resourceTarget =
+    resourceTarget === "characterSprites" ? "characters" : resourceTarget;
+  state.imageSelectorDialog.selectedImageId =
+    resourceTarget === "characterSprites"
+      ? state.dialogueDefaultValues["dialogue-character-sprite-id"]
+      : state.previewBackgroundImageId;
+  state.imageSelectorDialog.characterId = undefined;
+  if (resourceTarget === "characterSprites") {
+    state.imageSelectorDialog.characterId = toFlatItems(
+      state.repositoryState.characters,
+    ).find(
+      (character) =>
+        character.sprites?.items?.[state.imageSelectorDialog.selectedImageId],
+    )?.id;
+  }
   state.dropdownMenu.isOpen = false;
   state.dropdownMenu.x = 0;
   state.dropdownMenu.y = 0;
@@ -505,13 +533,42 @@ export const openImageSelectorDialog = ({ state }, _payload = {}) => {
 export const closeImageSelectorDialog = ({ state }, _payload = {}) => {
   state.imageSelectorDialog.open = false;
   state.imageSelectorDialog.selectedImageId = undefined;
+  state.imageSelectorDialog.characterId = undefined;
 };
 
-export const setImageSelectorSelectedImageId = (
-  { state },
-  { imageId } = {},
-) => {
+export const applyImageSelectorSelection = ({ state }) => {
+  const { resourceTarget, selectedImageId } = state.imageSelectorDialog;
+  if (resourceTarget === "characters" || !selectedImageId) {
+    return;
+  }
+  if (resourceTarget === "characterSprites") {
+    state.dialogueDefaultValues["dialogue-character-sprite-id"] =
+      selectedImageId;
+  } else {
+    state.previewBackgroundImageId = selectedImageId;
+  }
+  state.imageSelectorDialog.open = false;
+  state.imageSelectorDialog.selectedImageId = undefined;
+  state.imageSelectorDialog.characterId = undefined;
+};
+
+export const setImageSelectorSelection = ({ state }, { imageId } = {}) => {
+  if (state.imageSelectorDialog.resourceTarget === "characters") {
+    const character = state.repositoryState.characters.items[imageId];
+    state.imageSelectorDialog.characterId = imageId;
+    state.imageSelectorDialog.resourceTarget = "characterSprites";
+    if (
+      !character.sprites?.items?.[state.imageSelectorDialog.selectedImageId]
+    ) {
+      state.imageSelectorDialog.selectedImageId = undefined;
+    }
+    return;
+  }
   state.imageSelectorDialog.selectedImageId = imageId ?? undefined;
+};
+
+export const showImageSelectorCharacters = ({ state }) => {
+  state.imageSelectorDialog.resourceTarget = "characters";
 };
 
 export const selectDialogueDefaultValues = ({ state }) =>
@@ -628,7 +685,8 @@ export const selectPreviewData = ({ state }) => {
   });
 };
 
-export const selectViewData = ({ state, constants, props = {} }) => {
+export const selectViewData = ({ state, constants, props = {}, i18n }) => {
+  const copy = i18n.layoutEditorPage;
   const layoutState = getLayoutState(state);
   const layoutType = layoutState.layoutType;
   const previewHydrationVersion = Number.isFinite(state.previewHydrationVersion)
@@ -678,12 +736,41 @@ export const selectViewData = ({ state, constants, props = {} }) => {
     hasPreviewVariables: previewVariablesViewData.hasPreviewVariables,
     hasSaveLoadPreview: saveLoadPreviewViewData.hasSaveLoadPreview,
   });
-  const fileExplorerItems = toFlatItems(
-    state.repositoryState.images ?? {
-      items: {},
-      tree: [],
-    },
-  ).filter((item) => item.type === "folder");
+  const imageSelectorResources = getImageSelectorResources(
+    state.repositoryState,
+    state.imageSelectorDialog.resourceTarget,
+    state.imageSelectorDialog.characterId,
+  );
+  const fileExplorerItems = toFlatItems(imageSelectorResources).filter(
+    (item) => item.type === "folder",
+  );
+  const isCharacterSelection =
+    state.imageSelectorDialog.resourceTarget === "characters";
+  const avatarResources = getImageSelectorResources(
+    state.repositoryState,
+    "characterSprites",
+  );
+  const avatar =
+    avatarResources.items[
+      state.dialogueDefaultValues["dialogue-character-sprite-id"]
+    ];
+  const transforms = state.repositoryState.transforms ?? EMPTY_LAYOUT_DATA;
+  const toTransformOption = (transform) => ({
+    value: transform.id,
+    label: transform.name,
+  });
+  const transformOptions = toFlatItems(transforms)
+    .filter((item) => item.type === "transform" && !item.parentId)
+    .map(toTransformOption);
+  for (const group of toFlatGroups(transforms)) {
+    const children = group.children.filter((item) => item.type === "transform");
+    if (children.length > 0) {
+      transformOptions.push(
+        { type: "section", label: group.fullLabel },
+        ...children.map(toTransformOption),
+      );
+    }
+  }
   const dialogueForm = withDialogueCharacterNameField(constants.dialogueForm, {
     visible:
       state.dialogueDefaultValues[DIALOGUE_CUSTOM_CHARACTER_NAME_FIELD] ===
@@ -700,6 +787,15 @@ export const selectViewData = ({ state, constants, props = {} }) => {
         : undefined,
     previewBackgroundOnlyFormKey: `${identityKey}:background-only`,
     imageSelectorDialog: state.imageSelectorDialog,
+    imageSelectorCharacterName:
+      state.repositoryState.characters?.items?.[
+        state.imageSelectorDialog.characterId
+      ]?.name,
+    isCharacterSelection,
+    imageSelectorSelectedId: isCharacterSelection
+      ? state.imageSelectorDialog.characterId
+      : state.imageSelectorDialog.selectedImageId,
+    imageSelectorConfirmDisabled: !state.imageSelectorDialog.selectedImageId,
     dropdownMenu: state.dropdownMenu,
     fileExplorerItems,
     showImageSelectorFileExplorer: !state.isTouchMode,
@@ -718,9 +814,14 @@ export const selectViewData = ({ state, constants, props = {} }) => {
         ? withPreviewBackgroundSlot(dialogueForm)
         : dialogueForm,
     dialogueDefaultValues: state.dialogueDefaultValues,
+    characterAvatarPreview: buildCharacterSpritePreviewLayer(avatar),
+    characterAvatarThumbnailFileId: avatar?.thumbnailFileId ?? avatar?.fileId,
     dialogueContext: {
+      characterAvatarLabel: copy.previewCharacterAvatarLabel,
+      avatarTransformLabel: copy.previewAvatarTransformLabel,
+      avatarTransformPlaceholder: copy.previewAvatarTransformPlaceholder,
+      transformOptions,
       characterOptions: toCharacterSelectOptions(charactersData, {
-        includeNone: true,
         includeMissingValue:
           state.dialogueDefaultValues["dialogue-character-id"],
       }),

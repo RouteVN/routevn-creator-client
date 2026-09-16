@@ -4,6 +4,7 @@ import {
   loadLayoutEditorAssets,
   createLayoutEditorRenderedElements,
   createLayoutEditorRenderState,
+  createLayoutEditorAssetReferences,
   createLayoutEditorSelectionOverlay,
   formatLayoutEditorPreviewDate,
 } from "../../src/components/layoutEditorCanvas/support/layoutEditorCanvasRender.js";
@@ -16,6 +17,150 @@ import {
 } from "../../src/internal/layoutConditions.js";
 
 describe("layoutEditorPreview", () => {
+  it("renders a character sprite above the layout with its selected transform and loads its asset", () => {
+    const layoutState = {
+      id: "layout-1",
+      layoutType: "dialogue-adv",
+      elements: {
+        items: {
+          panel: { id: "panel", type: "container", width: 200, height: 100 },
+        },
+        tree: [{ id: "panel" }],
+      },
+    };
+    const repositoryState = {
+      characters: {
+        items: {
+          "character-1": {
+            type: "character",
+            sprites: {
+              items: {
+                "sprite-1": {
+                  id: "sprite-1",
+                  type: "image",
+                  fileId: "sprite-file",
+                  width: 80,
+                  height: 120,
+                },
+              },
+            },
+          },
+        },
+      },
+      transforms: {
+        items: {
+          "transform-1": {
+            type: "transform",
+            x: 150,
+            y: 200,
+            anchorX: 0.5,
+            anchorY: 1,
+            scaleX: -0.5,
+            scaleY: 0.5,
+            rotation: 15,
+          },
+        },
+      },
+    };
+    const previewData = {
+      dialogue: {
+        character: {
+          sprite: {
+            transformId: "transform-1",
+            items: [{ id: "base", resourceId: "sprite-1" }],
+          },
+        },
+      },
+    };
+    const result = createLayoutEditorAssetReferences({
+      layoutState,
+      repositoryState,
+      previewData,
+    });
+    expect(result.renderedElements.at(-1)).toMatchObject({
+      id: "layout-editor-preview-character-sprite",
+      type: "container",
+      x: 150,
+      y: 200,
+      anchorX: 0.5,
+      anchorY: 1,
+      scaleX: -0.5,
+      scaleY: 0.5,
+      rotation: 15,
+      children: [
+        { type: "sprite", src: "sprite-file", width: 80, height: 120 },
+      ],
+    });
+    expect(result.fileReferences).toEqual(
+      expect.arrayContaining([expect.objectContaining({ url: "sprite-file" })]),
+    );
+    previewData.dialogue.character.sprite.items = [];
+    expect(
+      createLayoutEditorAssetReferences({
+        layoutState,
+        repositoryState,
+        previewData,
+      }).renderedElements,
+    ).toHaveLength(1);
+  });
+
+  it("renders spritesheet avatars and skips deleted character sprites", () => {
+    const layoutState = {
+      id: "layout-1",
+      layoutType: "dialogue-adv",
+      elements: { items: {}, tree: [] },
+    };
+    const previewData = {
+      dialogue: {
+        character: {
+          sprite: { items: [{ id: "base", resourceId: "sprite-1" }] },
+        },
+      },
+    };
+    const repositoryState = {
+      characters: {
+        items: {
+          "character-1": {
+            sprites: {
+              items: {
+                "sprite-1": {
+                  id: "sprite-1",
+                  type: "spritesheet",
+                  fileId: "sheet-file",
+                  jsonData: {
+                    frames: { one: { frame: { x: 0, y: 0, w: 32, h: 32 } } },
+                  },
+                  animations: { blink: { frames: ["one"], fps: 8 } },
+                },
+              },
+            },
+          },
+        },
+      },
+    };
+    const result = createLayoutEditorAssetReferences({
+      layoutState,
+      repositoryState,
+      previewData,
+    });
+    expect(result.renderedElements[0].children[0]).toMatchObject({
+      type: "spritesheet-animation",
+      src: "sheet-file",
+      playback: { clip: "blink", fps: 8 },
+    });
+    expect(result.fileReferences).toEqual(
+      expect.arrayContaining([expect.objectContaining({ url: "sheet-file" })]),
+    );
+    repositoryState.characters.items = {};
+    expect(
+      createLayoutEditorAssetReferences({
+        layoutState,
+        repositoryState,
+        previewData,
+      }).renderedElements,
+    ).toEqual([]);
+  });
+
   it("loads font assets with their persisted weight descriptor", async () => {
     const assets = await loadLayoutEditorAssets({
       projectService: {

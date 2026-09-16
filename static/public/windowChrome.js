@@ -7,6 +7,7 @@
   const WINDOW_STATE_SETTLE_DELAY_MS = 120;
   const WINDOW_STATE_POLL_INTERVAL_MS = 500;
   const APP_ICON_MENU_DELAY_MS = 500;
+  const ESCAPE_EXIT_CONFIRMATION_MS = 1500;
   const DEFAULT_APP_TITLE = "RouteVN Creator";
   const OPEN_DIALOG_SELECTOR = "dialog[open], rtgl-dialog[open]";
   const DEFAULT_APP_ICON =
@@ -255,6 +256,10 @@
     #${WINDOW_CHROME_ID} .rvn-window-chrome-status[hidden] {
       display: none;
     }
+
+    #${WINDOW_CHROME_ID} .rvn-window-chrome-status[data-kind="escape"] {
+      color: inherit;
+    }
   `;
 
   const markup = `
@@ -387,6 +392,7 @@
 
     const state = {
       actionPending: false,
+      escapeExitArmed: false,
       focused: true,
       fullscreen: false,
       maximized: false,
@@ -394,6 +400,7 @@
     };
     let appMenuTimer;
     let statusTimer;
+    let escapeExitTimer;
     let statePollTimer;
     let stateSettleTimer;
     let syncRevision = 0;
@@ -421,7 +428,9 @@
       chrome.dataset.fullscreen = String(state.fullscreen);
       chrome.dataset.maximized = String(state.maximized);
       chrome.dataset.revealed = String(
-        (!state.fullscreen && !state.maximized) || state.revealed,
+        (!state.fullscreen && !state.maximized) ||
+          state.revealed ||
+          state.escapeExitArmed,
       );
 
       if (document.documentElement.dataset.rvnWindowChrome === "custom") {
@@ -456,7 +465,37 @@
       });
     };
 
+    const resetEscapeExit = () => {
+      if (!state.escapeExitArmed) {
+        return;
+      }
+      clearTimeout(escapeExitTimer);
+      state.escapeExitArmed = false;
+      if (status.dataset.kind === "escape") {
+        status.hidden = true;
+        status.textContent = "";
+        delete status.dataset.kind;
+      }
+      applyState();
+    };
+
+    const armEscapeExit = () => {
+      state.escapeExitArmed = true;
+      clearTimeout(statusTimer);
+      status.dataset.kind = "escape";
+      status.textContent = state.fullscreen
+        ? "Press Esc again to exit fullscreen"
+        : "Press Esc again to restore window";
+      status.hidden = false;
+      escapeExitTimer = setTimeout(
+        resetEscapeExit,
+        ESCAPE_EXIT_CONFIRMATION_MS,
+      );
+      applyState();
+    };
+
     const reportFailure = (action, error) => {
+      resetEscapeExit();
       console.error(`Failed to ${action.toLowerCase()} window.`, error);
       status.textContent = `${action} failed`;
       status.hidden = false;
@@ -480,8 +519,13 @@
         const enteredFullscreen = fullscreen && !state.fullscreen;
         const enteredMaximized =
           maximized && !fullscreen && (!state.maximized || state.fullscreen);
+        const windowModeChanged =
+          fullscreen !== state.fullscreen || maximized !== state.maximized;
         state.fullscreen = fullscreen;
         state.maximized = maximized;
+        if (windowModeChanged) {
+          resetEscapeExit();
+        }
         if (enteredFullscreen || enteredMaximized) {
           state.revealed = false;
         } else if (!maximized && !fullscreen) {
@@ -514,6 +558,7 @@
       if (state.actionPending) {
         return;
       }
+      resetEscapeExit();
       state.actionPending = true;
       applyState();
       try {
@@ -591,6 +636,9 @@
     });
 
     const handleKeyDown = (event) => {
+      if (event.defaultPrevented || event.key !== "Escape") {
+        resetEscapeExit();
+      }
       if (event.defaultPrevented) {
         return;
       }
@@ -605,14 +653,23 @@
           .composedPath()
           .some((target) => target?.matches?.(OPEN_DIALOG_SELECTOR));
         if (isFromOpenDialog) {
+          resetEscapeExit();
           return;
         }
 
         event.preventDefault();
-        runWindowAction("Restore window", toggleExpandedWindow);
+        if (event.repeat || state.actionPending) {
+          return;
+        }
+        if (state.escapeExitArmed) {
+          runWindowAction("Restore window", toggleExpandedWindow);
+        } else {
+          armEscapeExit();
+        }
       }
     };
     const handleVisibilityChange = () => {
+      resetEscapeExit();
       if (document.visibilityState === "visible") {
         scheduleWindowStateSync();
       }
@@ -640,6 +697,9 @@
         unlisteners.push(
           await appWindow.onFocusChanged(({ payload: focused }) => {
             state.focused = focused;
+            if (!focused) {
+              resetEscapeExit();
+            }
             if (!focused && (state.maximized || state.fullscreen)) {
               state.revealed = false;
             }
@@ -657,6 +717,7 @@
     const cleanup = () => {
       clearTimeout(appMenuTimer);
       clearTimeout(statusTimer);
+      clearTimeout(escapeExitTimer);
       clearInterval(statePollTimer);
       clearTimeout(stateSettleTimer);
       brandingObserver.disconnect();

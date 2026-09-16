@@ -87,6 +87,23 @@ export const createDialoguePreviewData = ({
     DEFAULT_DIALOGUE_CHARACTER_NAME;
   const dialogueContent =
     dialogueDefaultValues?.["dialogue-content"] ?? DEFAULT_DIALOGUE_CONTENT;
+  const characterSpriteId =
+    dialogueDefaultValues?.["dialogue-character-sprite-id"];
+  const characterSpriteTransformId =
+    dialogueDefaultValues?.["dialogue-character-sprite-transform-id"];
+  const character = { name: characterName };
+  if (characterSpriteId || characterSpriteTransformId) {
+    character.sprite = {
+      transformId: characterSpriteTransformId,
+      items: [],
+    };
+    if (characterSpriteId) {
+      character.sprite.items.push({
+        id: "base",
+        resourceId: characterSpriteId,
+      });
+    }
+  }
   const parsedPreviewRevealingSpeed = Number(previewRevealingSpeed);
   const dialogueRevealingSpeed =
     Number.isFinite(parsedPreviewRevealingSpeed) &&
@@ -107,9 +124,7 @@ export const createDialoguePreviewData = ({
     dialogueRevealingSpeed,
     dialogue: {
       characterId,
-      character: {
-        name: characterName,
-      },
+      character,
       content: [{ text: dialogueContent }],
       lines: dialogueLines,
     },

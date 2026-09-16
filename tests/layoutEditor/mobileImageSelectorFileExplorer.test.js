@@ -171,6 +171,7 @@ const storeCases = [
     setUiConfig: setPreviewUiConfig,
     selectViewData: (state) =>
       selectPreviewViewData({
+        i18n: EN_I18N,
         state,
         constants: PREVIEW_CONSTANTS,
       }),

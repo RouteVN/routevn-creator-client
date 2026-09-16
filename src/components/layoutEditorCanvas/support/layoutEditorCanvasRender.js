@@ -302,6 +302,79 @@ const createLayoutEditorPreviewBackgroundElement = ({
   };
 };
 
+const createLayoutEditorPreviewCharacterSprite = ({
+  previewData,
+  repositoryState,
+} = {}) => {
+  const sprite = previewData.dialogue?.character?.sprite;
+  if (!sprite?.items?.length) {
+    return undefined;
+  }
+
+  const transform = repositoryState?.transforms?.items?.[sprite.transformId];
+  const characters = Object.values(repositoryState?.characters?.items ?? {});
+  const images = {};
+  const spritesheets = {};
+  const children = [];
+  for (const item of sprite.items) {
+    const resource = characters
+      .map((character) => character.sprites?.items?.[item.resourceId])
+      .find(Boolean);
+    if (!resource?.fileId) {
+      continue;
+    }
+
+    const child = {
+      id: `layout-editor-preview-character-sprite-${item.id}`,
+      x: 0,
+      y: 0,
+    };
+    if (resource.type === "image") {
+      images[item.resourceId] = resource;
+      child.type = "sprite";
+      child.imageId = item.resourceId;
+      child.width = resource.width;
+      child.height = resource.height;
+    } else if (resource.type === "spritesheet") {
+      spritesheets[item.resourceId] = resource;
+      child.type = "spritesheet-animation";
+      child.resourceId = item.resourceId;
+    } else {
+      continue;
+    }
+    children.push(child);
+  }
+  if (children.length === 0) {
+    return undefined;
+  }
+
+  const { elements, resources } = buildLayoutElements(
+    [
+      {
+        id: "layout-editor-preview-character-sprite",
+        type: "container",
+        x: transform?.x ?? 0,
+        y: transform?.y ?? 0,
+        anchorX: transform?.anchorX ?? 0,
+        anchorY: transform?.anchorY ?? 0,
+        scaleX: transform?.scaleX ?? 1,
+        scaleY: transform?.scaleY ?? 1,
+        rotation: transform?.rotation ?? 0,
+        children,
+      },
+    ],
+    images,
+    { items: {} },
+    { items: {} },
+    { items: {} },
+    {
+      spritesheetsData: { items: spritesheets },
+      filesData: repositoryState?.files,
+    },
+  );
+  return resolveLayoutReferences(elements, { resources })[0];
+};
+
 const collectMatchingPaths = (
   elements,
   occurrenceId,
@@ -1009,10 +1082,19 @@ const createLayoutEditorResolvedElements = ({
     repositoryState,
     resolution,
   });
+  const renderedElements = [...selectionOccurrences.elements];
+  if (previewBackgroundElement) {
+    renderedElements.unshift(previewBackgroundElement);
+  }
+  const previewCharacterSprite = createLayoutEditorPreviewCharacterSprite({
+    previewData: normalizedPreviewData,
+    repositoryState,
+  });
+  if (previewCharacterSprite) {
+    renderedElements.push(previewCharacterSprite);
+  }
   return {
-    renderedElements: previewBackgroundElement
-      ? [previewBackgroundElement, ...selectionOccurrences.elements]
-      : selectionOccurrences.elements,
+    renderedElements,
     occurrencesById: selectionOccurrences.occurrencesById,
     occurrenceIdsByOwner: selectionOccurrences.occurrenceIdsByOwner,
   };

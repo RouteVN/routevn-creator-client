@@ -31,6 +31,12 @@ template:
                       - 'rtgl-view#imageItemRef${i}x${j} role=option tabindex=0 aria-selected="${item.isSelected}" data-item-id=${item.id} bw=xs bc=${item.itemBorderColor} h-bc=${item.itemHoverBorderColor} br=md cur=pointer key=${item.id}':
                           - 'rtgl-view br=md pos=rel overflow=hidden style="${item.imageCardStyle}"':
                               - 'div.imageSelectorThumbnailTransparencyGrid style="display: block; width: 100%; aspect-ratio: ${item.previewAspectRatio}; overflow: hidden;"':
-                                  - rvn-file-image w=f h=f imageId=${item.id} source="thumbnail": null
+                                  - $if item.preview.kind == 'spritesheet':
+                                      - rvn-spritesheet-preview fileId=${item.preview.fileId} :atlas=${item.preview.atlas} :animation=${item.preview.animation} previewKey=${item.preview.previewKey} w=f h=f: null
+                                    $elif item.type == 'character' && !item.thumbnailFileId:
+                                      - rtgl-view w=f h=f av=c ah=c bgc=mu:
+                                          - rtgl-text s=sm c=mu-fg: ${noAvatarLabel}
+                                    $else:
+                                      - rvn-file-image w=f h=f fileId=${item.thumbnailFileId}: null
                               - rtgl-view w=f p=md:
                                   - rtgl-text s=xs c=mu-fg ellipsis w=f: ${item.name}
