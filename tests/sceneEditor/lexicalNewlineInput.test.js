@@ -212,6 +212,71 @@ describe("word selection after soft newlines", () => {
 });
 
 describe("scene editor newline input", () => {
+  it.each([
+    ["insertText", "X", ["alpha", "betXa"], 1, 4],
+    ["insertReplacementText", "X", ["alpha", "betXa"], 1, 4],
+    ["insertFromComposition", "X", ["alpha", "betXa"], 1, 4],
+    ["insertLineBreak", undefined, ["alpha", "bet\na"], 1, 4],
+    ["insertParagraph", undefined, ["alpha", "bet", "a"], 2, 0],
+    ["insertFromPaste", "X", ["alpha", "betXa"], 1, 4],
+    ["insertFromPaste", "one\ntwo", ["alpha", "betone", "twoa"], 2, 3],
+    ["insertFromPasteAsQuotation", "X", ["alpha", "betXa"], 1, 4],
+    ["deleteContentBackward", undefined, ["alpha", "bea"], 1, 2],
+    ["deleteByCut", undefined, ["alpha", "beta"], 1, 3],
+  ])(
+    "TXT-B009: %s (%j) honors a collapsed target over a stale cross-line selection",
+    (inputType, data, expected, caretLine, caretOffset) => {
+      const staleTarget = targetRange(0, 2, 1, 2);
+      const range = document.createRange();
+      range.setStart(staleTarget.startContainer, staleTarget.startOffset);
+      range.setEnd(staleTarget.endContainer, staleTarget.endOffset);
+      window.getSelection().addRange(range);
+      beforeInput(inputType, targetRange(1, 3), data);
+
+      const savedLines = element.getLinesSnapshot();
+      expect(
+        savedLines.map((line) =>
+          getPlainTextFromContent(getLineDialogueContent(line)),
+        ),
+      ).toEqual(expected);
+      expect(savedLines.slice(0, 2).map((line) => line.id)).toEqual([
+        "line-1",
+        "line-2",
+      ]);
+      const context = element.getLineSelectionContext();
+      expect(context.lineId).toBe(savedLines[caretLine].id);
+      expect(context.selection).toMatchObject({
+        start: caretOffset,
+        end: caretOffset,
+      });
+    },
+  );
+
+  // Collapsed forward deletion needs Selection.modify, absent from JSDOM;
+  // the TXT-B009 native browser cases cover it along with these input types.
+  it.each([
+    ["insertText", "X", ["alXta"]],
+    ["insertReplacementText", "X", ["alXta"]],
+    ["insertFromComposition", "X", ["alXta"]],
+    ["insertLineBreak", undefined, ["al\nta"]],
+    ["insertFromPaste", "X", ["alXta"]],
+    ["deleteContentBackward", undefined, ["alta"]],
+    ["deleteContentForward", undefined, ["alta"]],
+    ["deleteByCut", undefined, ["alta"]],
+  ])(
+    "TXT-B009: %s still uses a live cross-line selection when the target is absent",
+    (inputType, data, expected) => {
+      const liveTarget = targetRange(0, 2, 1, 2);
+      const range = document.createRange();
+      range.setStart(liveTarget.startContainer, liveTarget.startOffset);
+      range.setEnd(liveTarget.endContainer, liveTarget.endOffset);
+      window.getSelection().addRange(range);
+      beforeInput(inputType, undefined, data);
+      expect(texts()).toEqual(expected);
+      expect(element.getLinesSnapshot()[0].id).toBe("line-1");
+    },
+  );
+
   it.each(["😀", "👨‍👩‍👧‍👦", "👍🏽", "🇸🇬"])(
     "TXT-004: Backspace preserves Unicode when deleting %s",
     (character) => {

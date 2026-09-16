@@ -6557,17 +6557,18 @@ export class LexicalSceneDocumentEditorElement extends HTMLElement {
   insertPlainText(
     text,
     {
-      nativeSelection,
-      nativeLineRangeSelection = this.getNativeLineRangeSelectionContext(),
+      nativeSelection = this.getNativeLineSelectionContext(),
+      // A resolved single-line target includes collapsed carets. Only read the
+      // live cross-line selection when no single-line target was resolved.
+      nativeLineRangeSelection = nativeSelection?.lineId
+        ? undefined
+        : this.getNativeLineRangeSelectionContext(),
       endComposition = false,
     } = {},
   ) {
     // A delayed Backspace caret recovery must not rewind subsequent input.
     this.invalidatePendingFocusRestore();
     const nextText = String(text ?? "").replace(/\r\n?/g, "\n");
-    const resolvedNativeSelection =
-      nativeSelection ?? this.getNativeLineSelectionContext();
-
     this.editor.update(
       () => {
         if (endComposition) {
@@ -6575,7 +6576,7 @@ export class LexicalSceneDocumentEditorElement extends HTMLElement {
         }
 
         this.applyNativeLineSelection({
-          nativeSelection: resolvedNativeSelection,
+          nativeSelection,
           nativeLineRangeSelection,
         });
         const selection = $getSelection();
@@ -6629,7 +6630,9 @@ export class LexicalSceneDocumentEditorElement extends HTMLElement {
 
   insertSoftLineBreak({
     nativeSelection = this.getNativeLineSelectionContext(),
-    nativeLineRangeSelection = this.getNativeLineRangeSelectionContext(),
+    nativeLineRangeSelection = nativeSelection?.lineId
+      ? undefined
+      : this.getNativeLineRangeSelectionContext(),
   } = {}) {
     this.invalidatePendingFocusRestore();
     const previousSelection = this.editor.getEditorState().read(() => {
@@ -7255,7 +7258,9 @@ export class LexicalSceneDocumentEditorElement extends HTMLElement {
 
   deleteCharacterForward({
     nativeSelection = this.getNativeLineSelectionContext(),
-    nativeLineRangeSelection = this.getNativeLineRangeSelectionContext(),
+    nativeLineRangeSelection = nativeSelection?.lineId
+      ? undefined
+      : this.getNativeLineRangeSelectionContext(),
   } = {}) {
     this.invalidatePendingFocusRestore();
     if (nativeLineRangeSelection?.isMultiLine) {
@@ -7277,6 +7282,30 @@ export class LexicalSceneDocumentEditorElement extends HTMLElement {
         }
 
         if (selection.isCollapsed()) {
+          // Extend from the resolved target, not a stale DOM selection. Read
+          // the resulting composed range because WebKit's getRangeAt() can
+          // hide a selection inside our nested shadow roots from Lexical.
+          const lineElement = lineNode
+            ? this.editor.getElementByKey(lineNode.getKey())
+            : undefined;
+          if (lineElement) {
+            const { range } = createCollapsedRangeAtPosition(
+              lineElement,
+              nativeSelection.start,
+            );
+            setSelectionFromRange(this.refs.editor, range);
+            window.getSelection().modify("extend", "forward", "character");
+            const deletionRange = this.getNativeLineRangeSelectionContext();
+            this.applyNativeLineSelection({
+              nativeSelection: this.getNativeLineSelectionContext(),
+              nativeLineRangeSelection: deletionRange,
+            });
+            if (deletionRange?.isMultiLine) {
+              this.pendingChangeReason = "structure";
+            }
+            $getSelection().removeText();
+            return;
+          }
           selection.deleteCharacter(false);
           return;
         }
@@ -7289,7 +7318,9 @@ export class LexicalSceneDocumentEditorElement extends HTMLElement {
 
   removeSelectedText({
     nativeSelection = this.getNativeLineSelectionContext(),
-    nativeLineRangeSelection = this.getNativeLineRangeSelectionContext(),
+    nativeLineRangeSelection = nativeSelection?.lineId
+      ? undefined
+      : this.getNativeLineRangeSelectionContext(),
   } = {}) {
     this.invalidatePendingFocusRestore();
     this.editor.update(

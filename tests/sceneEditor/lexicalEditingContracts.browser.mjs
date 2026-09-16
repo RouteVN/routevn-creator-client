@@ -4,6 +4,45 @@ import { chromium, webkit } from "playwright";
 import { createSceneEditorBrowserFixture } from "../support/sceneEditorBrowser.js";
 
 const scenarios = [
+  ...[
+    ["insertText", "Y", ["alpha", "betYXa"], 5],
+    ["insertReplacementText", "Y", ["alpha", "betYXa"], 5],
+    ["insertFromComposition", "Y", ["alpha", "betYXa"], 5],
+    ["insertLineBreak", undefined, ["alpha", "bet\nXa"], 5],
+    ["insertParagraph", undefined, ["alpha", "bet", "Xa"], 1],
+    ["insertFromPaste", "Y", ["alpha", "betYXa"], 5],
+    ["insertFromPaste", "one\ntwo", ["alpha", "betone", "twoXa"], 4],
+    ["insertFromPasteAsQuotation", "Y", ["alpha", "betYXa"], 5],
+    ["deleteContentBackward", undefined, ["alpha", "beXa"], 3],
+    ["deleteContentForward", undefined, ["alpha", "betX"], 4],
+    ["deleteByCut", undefined, ["alpha", "betXa"], 4],
+  ].map(([inputType, data, expected, caret]) => ({
+    name: `TXT-B009 collapsed target ${inputType} ${JSON.stringify(data)}`,
+    lines: ["alpha", "beta"],
+    offset: 2,
+    select: 6,
+    action: "target-input",
+    inputType,
+    data,
+    expected,
+    caret,
+  })),
+  ...[
+    [1, 0, ["alpha", "Xeta"], 1],
+    [1, 4, ["alpha", "betaX"], 5],
+    [0, 5, ["alphaXbeta"], 6],
+  ].map(([targetLine, targetOffset, expected, caret]) => ({
+    name: `TXT-B009 collapsed forward delete at line ${targetLine} offset ${targetOffset}`,
+    lines: ["alpha", "beta"],
+    offset: 2,
+    select: 6,
+    action: "target-input",
+    inputType: "deleteContentForward",
+    targetLine,
+    targetOffset,
+    expected,
+    caret,
+  })),
   ...["😀", "👨‍👩‍👧‍👦", "👍🏽", "🇸🇬"].map((character) => ({
     name: `TXT-004 emoji Backspace ${character}`,
     lines: [`A${character}B`],
@@ -136,11 +175,25 @@ try {
             await page.keyboard.type(scenario.lines[i]);
           }
           await page.waitForTimeout(50);
-          const selectionEnd = scenario.backward ? scenario.select : 0;
-          const moveLeft =
-            scenario.lines.join("\n").length - scenario.offset - selectionEnd;
-          for (let i = 0; i < moveLeft; i++)
-            await page.keyboard.press("ArrowLeft");
+          // Start from a known caret instead of counting ArrowLeft across
+          // paragraph boundaries, whose caret stops differ by platform.
+          const anchorLineId = await page.evaluate(({ backward, offset }) => {
+            const lines = window.owner.getLinesSnapshot();
+            const lineId = lines[backward ? lines.length - 1 : 0].id;
+            window.owner.focusLine({ lineId, cursorPosition: offset });
+            return lineId;
+          }, scenario);
+          await page.waitForFunction(
+            ({ lineId, offset }) => {
+              const caret = window.owner.getNativeLineSelectionContext();
+              return (
+                caret?.lineId === lineId &&
+                caret.start === offset &&
+                caret.end === offset
+              );
+            },
+            { lineId: anchorLineId, offset: scenario.offset },
+          );
           for (let i = 0; i < (scenario.select ?? 0); i++) {
             await page.keyboard.press(
               scenario.backward ? "Shift+ArrowLeft" : "Shift+ArrowRight",
@@ -162,6 +215,41 @@ try {
             await page.clock.pauseAt(new Date(Date.now() + 1000));
           }
           switch (scenario.action) {
+            case "target-input": {
+              // The live selection is native; supply a conflicting input
+              // target to reproduce the browser/IME disagreement explicitly.
+              const handled = await page.evaluate(
+                ({ inputType, data, targetLine = 1, targetOffset = 3 }) => {
+                  const text =
+                    window.owner.refs.editor.querySelectorAll("p")[targetLine]
+                      .firstChild.firstChild;
+                  const target = new StaticRange({
+                    startContainer: text,
+                    startOffset: targetOffset,
+                    endContainer: text,
+                    endOffset: targetOffset,
+                  });
+                  const event = new InputEvent("beforeinput", {
+                    inputType,
+                    data,
+                    bubbles: true,
+                    cancelable: true,
+                  });
+                  // Chromium normalizes WebKit-specific input types to "".
+                  Object.defineProperty(event, "inputType", {
+                    value: inputType,
+                  });
+                  Object.defineProperty(event, "getTargetRanges", {
+                    value: () => [target],
+                  });
+                  window.owner.refs.editor.dispatchEvent(event);
+                  return event.defaultPrevented;
+                },
+                scenario,
+              );
+              assert.equal(handled, true, `${label}: handled input target`);
+              break;
+            }
             case "paste":
               await page.keyboard.press("ControlOrMeta+V");
               break;
