@@ -85,28 +85,28 @@ try {
 <div style="display:flex;gap:20px;padding:20px"><div id="form" style="width:440px;flex-shrink:0"></div><div id="preview"></div></div>
 <script type="module">
 import {register,createLayoutEditorAssetReferences} from '/fixture.js';
-import createRouteGraphics,{createAssetBufferManager,containerPlugin,spritePlugin,rectPlugin} from '/graphics.js';
+import createRouteGraphics,{createAssetBufferManager,containerPlugin,spritePlugin,spritesheetAnimationPlugin,rectPlugin} from '/graphics.js';
 const i18n=${JSON.stringify(EN_I18N)};
 const layoutState={id:'layout-1',layoutType:'dialogue-adv',elements:{items:{panel:{id:'panel',type:'rect',x:0,y:160,width:400,height:100,fill:'#404050'}},tree:[{id:'panel'}]}};
 const repositoryState={
  characters:{items:{'character-1':{id:'character-1',type:'character',name:'Character One',fileId:'sprite-file',sprites:{items:{
   'sprite-1':{id:'sprite-1',type:'image',name:'Smile',fileId:'sprite-file',width:80,height:100},
   faces:{id:'faces',type:'folder',name:'Faces'},
-  'sheet-1':{id:'sheet-1',type:'spritesheet',name:'Blink',fileId:'sheet-file',width:80,height:100,jsonData:{frames:{blink:{frame:{x:0,y:0,w:80,h:100},sourceSize:{w:80,h:100},spriteSourceSize:{x:0,y:0,w:80,h:100}}},meta:{size:{w:80,h:100},scale:'1'}},animations:{idle:{frames:['blink'],fps:12}}}
+  'sheet-1':{id:'sheet-1',type:'spritesheet',name:'Blink',fileId:'sheet-file',width:160,height:50,jsonData:{frames:{blink:{frame:{x:0,y:0,w:80,h:100},sourceSize:{w:80,h:100},spriteSourceSize:{x:0,y:0,w:80,h:100}}},meta:{size:{w:80,h:100},scale:'1'}},animations:{idle:{frames:['blink'],fps:12}}}
  },tree:[{id:'sprite-1'},{id:'faces',children:[{id:'sheet-1'}]}]}},
  'character-2':{id:'character-2',type:'character',name:'Character Two',sprites:{items:{'sprite-2':{id:'sprite-2',type:'image',name:'Wave',fileId:'sprite-file',width:80,height:100}},tree:[{id:'sprite-2'}]}},
  cast:{id:'cast',type:'folder',name:'Cast'},'character-3':{id:'character-3',type:'character',name:'Character Three'}
  },tree:[{id:'character-1'},{id:'character-2'},{id:'cast',children:[{id:'character-3'}]}]},
- transforms:{items:{portraits:{id:'portraits',type:'folder',name:'Portraits'},'transform-1':{id:'transform-1',type:'transform',name:'Right',x:240,y:60,scaleX:1.5,scaleY:1.5}},tree:[{id:'portraits',children:[{id:'transform-1'}]}]},
+ transforms:{items:{portraits:{id:'portraits',type:'folder',name:'Portraits'},'transform-1':{id:'transform-1',type:'transform',name:'Right',x:240,y:180,anchorX:0.5,anchorY:1,scaleX:1.5,scaleY:1.5}},tree:[{id:'portraits',children:[{id:'transform-1'}]}]},
  images:{items:{backgrounds:{id:'backgrounds',type:'folder',name:'Backgrounds'},'image-1':{id:'image-1',type:'image',name:'Background One',fileId:'background-file',width:80,height:100}},tree:[{id:'backgrounds',children:[{id:'image-1'}]}]}
 };
 const image=document.createElement('canvas');image.width=80;image.height=100;
 const paint=image.getContext('2d');paint.fillStyle='#40b883';paint.fillRect(0,0,80,100);
 const imageUrl=image.toDataURL();
 const graphics=createRouteGraphics();
-await graphics.init({width:400,height:280,backgroundColor:0x111122,rendererPreference:'webgl',plugins:{elements:[containerPlugin,spritePlugin,rectPlugin],audio:[]},eventHandler(){}});
+await graphics.init({width:400,height:280,backgroundColor:0x111122,rendererPreference:'webgl',plugins:{elements:[containerPlugin,spritePlugin,spritesheetAnimationPlugin,rectPlugin],audio:[]},eventHandler(){}});
 document.querySelector('#preview').append(graphics.canvas);
-const manager=createAssetBufferManager();await manager.load({'sprite-file':{url:imageUrl,type:'image/png'},'background-file':{url:imageUrl,type:'image/png'}});await graphics.loadAssets(manager.getBufferMap());
+const manager=createAssetBufferManager();await manager.load({'sprite-file':{url:imageUrl,type:'image/png'},'background-file':{url:imageUrl,type:'image/png'},'sheet-file':{url:imageUrl,type:'image/png'}});await graphics.loadAssets(manager.getBufferMap());
 register({projectService:{ensureRepository:async()=>{},getRepositoryState:()=>repositoryState,getFileContent:async()=>({url:imageUrl})},__rtglI18nRuntime:{locale:'en',getMessages:()=>i18n},uiConfig:{}});
 const preview=document.createElement('rvn-layout-editor-preview');preview.layoutState=layoutState;
 preview.addEventListener('preview-data-change',event=>{
@@ -117,6 +117,12 @@ preview.addEventListener('preview-data-change',event=>{
 });
 document.querySelector('#form').append(preview);
 window.reopen=()=>{preview.initialPreviewData=structuredClone(window.previewData);};
+window.avatarBounds=()=>{
+ const element=graphics.findElementByLabel('layout-editor-preview-character-sprite-base');
+ if(!element)return;
+ const {x,y,width,height}=element.getBounds();
+ return {x,y,width,height};
+};
 window.ready=true;
 </script>`;
   for (const [name, engine] of Object.entries({ webkit, chromium })) {
@@ -344,9 +350,34 @@ window.ready=true;
         await page.evaluate(() => window.previewData.backgroundImageId),
         "image-1",
       );
+      await avatarPicker.click();
+      await characters
+        .getByRole("option", { name: "Character One", exact: true })
+        .click();
+      await picker.getByRole("option", { name: "Blink", exact: true }).click();
+      await page.getByRole("button", { name: "OK", exact: true }).click();
+      await page.waitForFunction(
+        () =>
+          window.renderedElements.at(-1)?.children?.[0]?.type ===
+          "spritesheet-animation",
+      );
+      assert.deepEqual(
+        await page.evaluate(() => {
+          const { width, height } = window.renderedElements.at(-1).children[0];
+          return { width, height };
+        }),
+        { width: 160, height: 50 },
+      );
+      await page.waitForFunction(() => window.avatarBounds()?.width === 240);
+      assert.deepEqual(await page.evaluate(() => window.avatarBounds()), {
+        x: 120,
+        y: 105,
+        width: 240,
+        height: 75,
+      });
       assert.deepEqual(errors, []);
       console.log(
-        `${name}: character-first avatar picker, character switching, animated previews, transform sections, canvas, restore, cancel, background selection, and clear passed`,
+        `${name}: character-first avatar picker, character switching, animated previews, transform sections, canvas, restore, cancel, background selection, clearing, and authored spritesheet dimensions with anchors passed`,
       );
     } finally {
       await browser.close();

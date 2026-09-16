@@ -339,6 +339,8 @@ const createLayoutEditorPreviewCharacterSprite = ({
       spritesheets[item.resourceId] = resource;
       child.type = "spritesheet-animation";
       child.resourceId = item.resourceId;
+      child.width = resource.width;
+      child.height = resource.height;
     } else {
       continue;
     }

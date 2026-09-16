@@ -104,7 +104,7 @@ describe("layoutEditorPreview", () => {
     ).toHaveLength(1);
   });
 
-  it("renders spritesheet avatars and skips deleted character sprites", () => {
+  it("preserves authored spritesheet avatar dimensions and skips deleted sprites", () => {
     const layoutState = {
       id: "layout-1",
       layoutType: "dialogue-adv",
@@ -127,6 +127,8 @@ describe("layoutEditorPreview", () => {
                   id: "sprite-1",
                   type: "spritesheet",
                   fileId: "sheet-file",
+                  width: 96,
+                  height: 80,
                   jsonData: {
                     frames: { one: { frame: { x: 0, y: 0, w: 32, h: 32 } } },
                   },
@@ -146,6 +148,8 @@ describe("layoutEditorPreview", () => {
     expect(result.renderedElements[0].children[0]).toMatchObject({
       type: "spritesheet-animation",
       src: "sheet-file",
+      width: 96,
+      height: 80,
       playback: { clip: "blink", fps: 8 },
     });
     expect(result.fileReferences).toEqual(
