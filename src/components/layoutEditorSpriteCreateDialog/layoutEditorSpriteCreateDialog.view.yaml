@@ -59,7 +59,7 @@ template:
                       - rtgl-text c=mu-fg ta=c: Select image
               - $if validationErrors.imageId:
                   - rtgl-text s=sm c=de: ${validationErrors.imageId}
-  - rtgl-dialog#imageSelectorDialog ?open=${imageSelectorDialog.open} s=xl:
+  - rtgl-dialog#imageSelectorDialog ?open=${imageSelectorDialog.open} s=lg:
       - rtgl-view slot=content d=v w=f g=md:
           - 'rtgl-view d=h w=f h=70vh g=lg style="min-width: 0; min-height: 0;"':
               - $if showImageSelectorFileExplorer:
