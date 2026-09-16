@@ -307,9 +307,34 @@ const buildDetailFields = (item, { copy } = {}) => {
   ];
 };
 
-const buildCatalogItem = (item) => ({
+const createDefaultDialogueAvatarMenuItem = (item, state, copy) => ({
+  type: "item",
+  label:
+    item.id === state.defaultDialogueAvatarTransformId
+      ? copy.clearDefaultDialogueAvatarMenuItem
+      : copy.setDefaultDialogueAvatarMenuItem,
+  value:
+    item.id === state.defaultDialogueAvatarTransformId
+      ? "clear-default-dialogue-avatar"
+      : "set-default-dialogue-avatar",
+});
+
+const buildTitleIcon = (item, state, copy) => ({
+  titleIcon:
+    item.id === state.defaultDialogueAvatarTransformId
+      ? "characterSprite"
+      : undefined,
+  titleIconLabel: copy.defaultDialogueAvatarLabel,
+});
+
+const buildCatalogItem = (item, { state, copy }) => ({
   ...item,
+  ...buildTitleIcon(item, state, copy),
   cardKind: "transform",
+  contextMenuItems: [
+    ...createTransformCenterItemContextMenuItems(copy),
+    createDefaultDialogueAvatarMenuItem(item, state, copy),
+  ],
 });
 
 const matchesSearch = matchesTagAwareSearch;
@@ -367,8 +392,20 @@ const {
     tagFilterPlaceholder: "",
   },
   extendViewData: ({ state, selectedItem, baseViewData, copy }) => {
+    const detailFields = [...baseViewData.detailFields];
+    if (
+      selectedItem?.type === "transform" &&
+      selectedItem.id === state.defaultDialogueAvatarTransformId
+    ) {
+      detailFields.push({
+        type: "text",
+        label: copy.defaultDialogueAvatarLabel,
+        value: copy.yesLabel,
+      });
+    }
     return {
       ...baseViewData,
+      detailFields,
       centerItemContextMenuItems:
         createTransformCenterItemContextMenuItems(copy),
       isDialogOpen: state.isDialogOpen,
@@ -422,6 +459,7 @@ export const createInitialState = () => ({
   editItemId: undefined,
   dialogItemData: undefined,
   projectResolution: DEFAULT_PROJECT_RESOLUTION,
+  defaultDialogueAvatarTransformId: undefined,
   imagesData: createEmptyImageCollection(),
   dialogDefaultValues: createDialogDefaultValues(),
   dialogValues: createDialogDefaultValues(),
@@ -463,6 +501,16 @@ export {
 };
 
 export const selectTransformItemById = selectItemById;
+
+export const setDefaultDialogueAvatarTransformId = (
+  { state },
+  { transformId },
+) => {
+  state.defaultDialogueAvatarTransformId = transformId;
+};
+
+export const selectDefaultDialogueAvatarTransformId = ({ state }) =>
+  state.defaultDialogueAvatarTransformId;
 
 export const setImagesData = ({ state }, { imagesData } = {}) => {
   state.imagesData = imagesData ?? createEmptyImageCollection();
@@ -706,10 +754,23 @@ export const selectImageSelectorFileExplorerItems = ({ state }) => {
 
 export const selectViewData = (context) => {
   const viewData = selectCatalogViewData(context);
+  const copy = selectTransformsPageCopy(context.i18n);
 
   return {
     ...viewData,
-    flatItems: applyFolderRequiredRootDragOptions(viewData.flatItems),
+    flatItems: applyFolderRequiredRootDragOptions(viewData.flatItems).map(
+      (item) => {
+        if (item.type !== "transform") return item;
+        return {
+          ...item,
+          ...buildTitleIcon(item, context.state, copy),
+          contextMenuItems: [
+            ...viewData.itemContextMenuItems,
+            createDefaultDialogueAvatarMenuItem(item, context.state, copy),
+          ],
+        };
+      },
+    ),
     imageFolderItems: selectImageSelectorFileExplorerItems(context),
     fullImagePreviewVisible: context.state.fullImagePreviewVisible,
     fullImagePreviewImageId: context.state.fullImagePreviewImageId,

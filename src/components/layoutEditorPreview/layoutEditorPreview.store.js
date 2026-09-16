@@ -243,6 +243,7 @@ const getLayoutState = (state) => {
 export const createInitialState = () => ({
   layoutState: undefined,
   repositoryState: {},
+  speakerAvatarUrls: {},
   previewHydrationVersion: 0,
   dialogueDefaultValues: createDialogueDefaultValues(),
   nvlDefaultValues: createNvlDefaultValues(),
@@ -280,6 +281,10 @@ export const setLayoutState = ({ state }, { layoutState } = {}) => {
 
 export const setRepositoryState = ({ state }, { repositoryState } = {}) => {
   state.repositoryState = repositoryState ?? {};
+};
+
+export const setSpeakerAvatarUrls = ({ state }, { urls }) => {
+  state.speakerAvatarUrls = urls;
 };
 
 export const resetPreviewState = ({ state }, _payload = {}) => {
@@ -542,6 +547,13 @@ export const applyImageSelectorSelection = ({ state }) => {
     return;
   }
   if (resourceTarget === "characterSprites") {
+    if (
+      !state.dialogueDefaultValues["dialogue-character-sprite-id"] &&
+      !state.dialogueDefaultValues["dialogue-character-sprite-transform-id"]
+    ) {
+      state.dialogueDefaultValues["dialogue-character-sprite-transform-id"] =
+        state.repositoryState.project?.defaultDialogueAvatarTransformId;
+    }
     state.dialogueDefaultValues["dialogue-character-sprite-id"] =
       selectedImageId;
   } else {
@@ -822,6 +834,8 @@ export const selectViewData = ({ state, constants, props = {}, i18n }) => {
       avatarTransformPlaceholder: copy.previewAvatarTransformPlaceholder,
       transformOptions,
       characterOptions: toCharacterSelectOptions(charactersData, {
+        groupByFolder: true,
+        imageSrcByFileId: state.speakerAvatarUrls,
         includeMissingValue:
           state.dialogueDefaultValues["dialogue-character-id"],
       }),

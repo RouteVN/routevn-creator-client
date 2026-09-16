@@ -394,7 +394,7 @@ const {
   handleAfterMount: handleAfterMountBase,
   refreshData: handleDataChanged,
   handleFileExplorerSelectionChanged,
-  handleFileExplorerAction,
+  handleFileExplorerAction: handleBaseFileExplorerAction,
   handleFileExplorerTargetChanged,
   handleFileExplorerKeyboardScopeClick,
   handleFileExplorerKeyboardScopeKeyDown,
@@ -435,14 +435,18 @@ const {
     });
   },
   onProjectStateChanged: ({ deps, repositoryState }) => {
-    deps.store.setTagsData({
+    const { store } = deps;
+    store.setTagsData({
       tagsData: getTagsCollection(repositoryState, TRANSFORM_TAG_SCOPE_KEY),
     });
-    deps.store.setImagesData({
+    store.setImagesData({
       imagesData: repositoryState?.images,
     });
-    deps.store.setProjectResolution({
+    store.setProjectResolution({
       projectResolution: repositoryState?.project?.resolution,
+    });
+    store.setDefaultDialogueAvatarTransformId({
+      transformId: repositoryState.project.defaultDialogueAvatarTransformId,
     });
   },
   tagging: {
@@ -469,10 +473,61 @@ const {
   },
 });
 
+const applyDefaultDialogueAvatarAction = async (deps, { itemId, action }) => {
+  const { store, projectService, appService } = deps;
+  const item = store.selectTransformItemById({ itemId });
+  if (item?.type !== "transform") {
+    return;
+  }
+  if (
+    action === "clear-default-dialogue-avatar" &&
+    itemId !== store.selectDefaultDialogueAvatarTransformId()
+  ) {
+    return;
+  }
+  const transformId =
+    action === "set-default-dialogue-avatar" ? itemId : undefined;
+  const copy = selectCopy(deps);
+  try {
+    const result = await projectService.setDefaultDialogueAvatarTransform({
+      transformId,
+    });
+    if (result.valid === false) {
+      appService.showToast({ message: copy.failedUpdateDefaultDialogueAvatar });
+      return;
+    }
+    await handleDataChanged(deps);
+  } catch {
+    appService.showToast({ message: copy.failedUpdateDefaultDialogueAvatar });
+  }
+};
+
+const isDefaultDialogueAvatarAction = (action) =>
+  action === "set-default-dialogue-avatar" ||
+  action === "clear-default-dialogue-avatar";
+
+export const handleTransformItemAction = async (deps, payload) => {
+  const { itemId, action } = payload._event.detail;
+  if (isDefaultDialogueAvatarAction(action)) {
+    await applyDefaultDialogueAvatarAction(deps, { itemId, action });
+  }
+};
+
+export const handleFileExplorerAction = async (deps, payload) => {
+  const { itemId, item } = payload._event.detail;
+  if (isDefaultDialogueAvatarAction(item?.value)) {
+    await applyDefaultDialogueAvatarAction(deps, {
+      itemId,
+      action: item.value,
+    });
+    return;
+  }
+  await handleBaseFileExplorerAction(deps, payload);
+};
+
 export {
   handleDataChanged,
   handleFileExplorerSelectionChanged,
-  handleFileExplorerAction,
   handleFileExplorerTargetChanged,
   handleFileExplorerKeyboardScopeClick,
   handleFileExplorerKeyboardScopeKeyDown,

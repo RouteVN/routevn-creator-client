@@ -1,5 +1,6 @@
 import { selectResourceSelectorEmptyMessage } from "../../internal/ui/resourcePages/selectorEmptyState.js";
 import { toFlatGroups, toFlatItems } from "../../internal/project/tree.js";
+import { toCharacterSelectOptions } from "../../internal/characterOptions.js";
 import {
   DEFAULT_ANIMATION_PLAYBACK_CONTINUITY,
   DEFAULT_ANIMATION_PLAYBACK_SPEED,
@@ -341,6 +342,7 @@ export const createInitialState = () => ({
   layouts: [],
   selectedResourceId: "",
   characters: [],
+  speakerAvatarUrls: {},
   selectedCharacterId: "",
   customCharacterName: false,
   characterName: "",
@@ -420,6 +422,7 @@ export const createInitialState = () => ({
                 required: false,
                 placeholder: "Choose a character...",
                 options: [],
+                image: { size: 28, borderRadius: "full", fit: "cover" },
               },
               {
                 $when: "values.characterId || values.customCharacterName",
@@ -630,6 +633,10 @@ export const setSelectedResource = ({ state }, { resourceId } = {}) => {
 export const setSelectedCharacterId = ({ state }, { characterId } = {}) => {
   state.selectedCharacterId = characterId ?? "";
   state.defaultValues.characterId = characterId ?? "";
+};
+
+export const setSpeakerAvatarUrls = ({ state }, { urls }) => {
+  state.speakerAvatarUrls = urls;
 };
 
 export const setCustomCharacterName = (
@@ -1077,12 +1084,11 @@ export const selectViewData = ({ state, props, i18n }) => {
     characters,
     tree: props.characterTree,
   });
-  const characterOptions = characters
-    .filter((character) => character.type === "character")
-    .map((character) => ({
-      value: character.id,
-      label: character.name,
-    }));
+  const characterOptions = toCharacterSelectOptions(characterCollection, {
+    groupByFolder: true,
+    imageSrcByFileId: state.speakerAvatarUrls,
+    includeMissingValue: state.selectedCharacterId,
+  });
   const selectedSpriteCharacter = getCharacterById({
     characters,
     characterId: state.spriteCharacterId,

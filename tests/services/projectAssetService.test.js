@@ -24,6 +24,48 @@ import { createProjectAssetService } from "../../src/deps/services/shared/projec
 describe("projectAssetService", () => {
   afterEach(() => vi.unstubAllGlobals());
 
+  it("keeps observed file URLs alive until unsubscribe and reports unavailable images", async () => {
+    const revoke = vi.fn();
+    const getFileContent = vi.fn(async ({ fileId }) => {
+      if (fileId === "missing") throw new Error("Missing file");
+      return { url: "blob:avatar", revoke };
+    });
+    const service = createProjectAssetService({
+      fileAdapter: { getFileContent },
+    });
+    let subscription;
+    const result = await new Promise((resolve) => {
+      subscription = service
+        .observeFileUrls(["avatar", "avatar", "missing"])
+        .subscribe(resolve);
+    });
+    expect(result).toEqual({
+      urls: { avatar: "blob:avatar" },
+      failedFileIds: ["missing"],
+    });
+    expect(getFileContent).toHaveBeenCalledTimes(2);
+    expect(revoke).not.toHaveBeenCalled();
+    subscription.unsubscribe();
+    expect(revoke).toHaveBeenCalledTimes(1);
+  });
+
+  it("releases file URLs that finish loading after the view has closed", async () => {
+    const revoke = vi.fn();
+    let resolveContent;
+    const content = new Promise((resolve) => {
+      resolveContent = resolve;
+    });
+    const service = createProjectAssetService({
+      fileAdapter: { getFileContent: () => content },
+    });
+    const onNext = vi.fn();
+    const subscription = service.observeFileUrls(["avatar"]).subscribe(onNext);
+    subscription.unsubscribe();
+    resolveContent({ url: "blob:avatar", revoke });
+    await vi.waitFor(() => expect(revoke).toHaveBeenCalledTimes(1));
+    expect(onNext).not.toHaveBeenCalled();
+  });
+
   it("uploads audio and its waveform with valid hashes without Web Crypto", async () => {
     vi.stubGlobal("crypto", {});
     mocked.detectFileType.mockReturnValue("audio");

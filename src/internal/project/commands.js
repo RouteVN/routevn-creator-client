@@ -108,6 +108,7 @@ const RESOURCE_COMMAND_TYPES = Object.freeze([
 
 const COMMAND_SCOPE_ENTRIES = Object.freeze([
   ["project.create", "settings"],
+  ["project.set_default_dialogue_avatar_transform", "settings"],
   ...STORY_COMMAND_TYPES.map((type) => [type, "story"]),
   ...LAYOUT_COMMAND_TYPES.map((type) => [type, "layouts"]),
   ...CONTROL_COMMAND_TYPES.map((type) => [type, "controls"]),

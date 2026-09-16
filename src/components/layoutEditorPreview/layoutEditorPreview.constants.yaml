@@ -4,6 +4,10 @@ dialogueForm:
       label: Speaker
       type: select
       options: "${characterOptions}"
+      image:
+        size: 28
+        borderRadius: full
+        fit: cover
       placeholder: Select speaker
       clearable: true
     - type: row

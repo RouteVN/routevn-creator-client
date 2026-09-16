@@ -13,6 +13,16 @@ const resolveCatalogResourceParentId = (collection, itemId) => {
 };
 
 export const createCatalogResourceCommandApi = (shared) => ({
+  async setDefaultDialogueAvatarTransform({ transformId }) {
+    const context = await shared.ensureCommandContext();
+    return shared.submitCommandWithContext({
+      context,
+      scope: "settings",
+      partition: shared.storyBasePartitionFor(context.projectId),
+      type: COMMAND_TYPES.PROJECT_SET_DEFAULT_DIALOGUE_AVATAR_TRANSFORM,
+      payload: { transformId: transformId ?? null },
+    });
+  },
   createAnimation: async ({
     animationId,
     data,

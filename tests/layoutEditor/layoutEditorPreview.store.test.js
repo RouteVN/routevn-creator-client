@@ -60,6 +60,57 @@ const TEST_CONSTANTS = {
 };
 
 describe("layoutEditorPreview.store", () => {
+  it("groups speakers by folder with avatar images and keeps missing selections", () => {
+    const state = createInitialState();
+    state.repositoryState.characters = {
+      items: {
+        root: {
+          type: "character",
+          name: "Character One",
+          fileId: "avatar-one",
+        },
+        cast: { type: "folder", name: "Cast" },
+        group: { type: "folder", name: "Guests" },
+        empty: { type: "folder", name: "Empty" },
+        two: { type: "character", name: "Character Two" },
+        three: {
+          type: "character",
+          name: "Character Three",
+          fileId: "avatar-three",
+        },
+      },
+      tree: [
+        {
+          id: "cast",
+          children: [
+            { id: "group", children: [{ id: "three" }] },
+            { id: "two" },
+          ],
+        },
+        { id: "root" },
+        { id: "empty" },
+      ],
+    };
+    state.speakerAvatarUrls = {
+      "avatar-one": "blob:one",
+      "avatar-three": "blob:three",
+    };
+    state.dialogueDefaultValues["dialogue-character-id"] = "missing";
+    const view = selectViewData({
+      state,
+      constants: TEST_CONSTANTS,
+      i18n: EN_I18N,
+    });
+    expect(view.dialogueContext.characterOptions).toEqual([
+      { value: "missing", label: "Missing Character (missing)" },
+      { value: "root", label: "Character One", imageSrc: "blob:one" },
+      { type: "section", label: "Cast" },
+      { value: "two", label: "Character Two" },
+      { type: "section", label: "Cast > Guests" },
+      { value: "three", label: "Character Three", imageSrc: "blob:three" },
+    ]);
+  });
+
   it("offers an avatar picker and transform folder sections below custom speaker name", () => {
     const state = createInitialState();
     const constants = yaml.load(
@@ -386,6 +437,7 @@ describe("layoutEditorPreview.store", () => {
       getNamedFieldNames(getDialogueNameRow(viewData.dialogueForm)),
     ).toEqual(["dialogue-custom-character-name"]);
     expect(viewData.dialogueContext.characterOptions).toEqual([
+      { type: "section", label: "Cast" },
       {
         value: "character-1",
         label: "Aki",
@@ -545,4 +597,45 @@ describe("layoutEditorPreview.store", () => {
       code: "B42",
     });
   });
+});
+
+describe("dialogue preview avatar defaults", () => {
+  it.each([undefined, "transform-default"])(
+    "uses project default %s for a new avatar",
+    (defaultId) => {
+      const state = createInitialState();
+      state.repositoryState.project = {
+        defaultDialogueAvatarTransformId: defaultId,
+      };
+      state.imageSelectorDialog.resourceTarget = "characterSprites";
+      state.imageSelectorDialog.selectedImageId = "sprite-one";
+      applyImageSelectorSelection({ state });
+      expect(state.dialogueDefaultValues["dialogue-character-sprite-id"]).toBe(
+        "sprite-one",
+      );
+      expect(
+        state.dialogueDefaultValues["dialogue-character-sprite-transform-id"],
+      ).toBe(defaultId);
+    },
+  );
+
+  it.each([undefined, "transform-custom"])(
+    "keeps the existing preview transform %s when switching sprites",
+    (transformId) => {
+      const state = createInitialState();
+      state.repositoryState.project = {
+        defaultDialogueAvatarTransformId: "transform-default",
+      };
+      state.dialogueDefaultValues["dialogue-character-sprite-id"] =
+        "sprite-one";
+      state.dialogueDefaultValues["dialogue-character-sprite-transform-id"] =
+        transformId;
+      state.imageSelectorDialog.resourceTarget = "characterSprites";
+      state.imageSelectorDialog.selectedImageId = "sprite-two";
+      applyImageSelectorSelection({ state });
+      expect(
+        state.dialogueDefaultValues["dialogue-character-sprite-transform-id"],
+      ).toBe(transformId);
+    },
+  );
 });

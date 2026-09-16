@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 import {
   createInitialState,
+  showContextMenu,
   selectViewData,
   setProgressiveRenderedItemCount,
   toggleGroupCollapse,
@@ -153,4 +154,26 @@ describe("catalogResourcesView.store", () => {
       }),
     );
   });
+});
+
+it("uses the clicked item's context menu rather than the selected item's menu", () => {
+  const state = createInitialState();
+  const customMenu = [
+    {
+      type: "item",
+      label: "Clear Default",
+      value: "clear-default-dialogue-avatar",
+    },
+  ];
+  const props = {
+    selectedItemId: "one",
+    groups: [{ children: [{ id: "two", contextMenuItems: customMenu }] }],
+    itemContextMenuItems: [
+      { type: "item", label: "Delete", value: "delete-item" },
+    ],
+  };
+  showContextMenu({ state, props }, { itemId: "two", x: 1, y: 2 });
+  expect(state.dropdownMenu.items).toEqual(customMenu);
+  showContextMenu({ state, props }, { itemId: "one", x: 1, y: 2 });
+  expect(state.dropdownMenu.items).toEqual(props.itemContextMenuItems);
 });

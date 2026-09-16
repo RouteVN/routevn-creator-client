@@ -1285,6 +1285,7 @@ characterSpritesPage:
   updateSpritesheetButton: "更新"
   uploadTargetMissing: "アップロード先フォルダーは利用できなくなりました。"
 charactersPage:
+  failedLoadAvatarImages: "一部のキャラクターのアバターを読み込めませんでした。"
   addCharacterButton: "キャラクターを追加"
   addCharacterTitle: "キャラクターを追加"
   addGroupButton: "グループを追加"
@@ -1330,6 +1331,11 @@ charactersPage:
   updateCharacterButton: "更新"
   updateGroupButton: "更新"
 transformsPage:
+  yesLabel: "はい"
+  defaultDialogueAvatarLabel: "会話アバターのデフォルトトランスフォーム"
+  setDefaultDialogueAvatarMenuItem: "アバターのデフォルトに設定"
+  clearDefaultDialogueAvatarMenuItem: "アバターのデフォルトを解除"
+  failedUpdateDefaultDialogueAvatar: "会話アバターのデフォルトを更新できませんでした。"
   addTransformButton: "トランスフォームを追加"
   addTransformTitle: "トランスフォームを追加"
   anchorBottomCenter: "下中央"
@@ -2235,6 +2241,7 @@ commandLinePage:
   "Select Resource": "素材を選択"
   "Select animation": "アニメーションを選択"
   "Select color": "色を選択"
+  dialogueAvatarTransformRequired: "会話アバターのトランスフォームを選択してください。"
   "Select transform": "トランスフォームを選択"
   selectSceneBeforeVoiceAudio: "ボイス音声を追加する前にシーンを選択してください。"
   selectVoiceAudioFirst: "先にボイス音声ファイルを選択してください。"

@@ -1,4 +1,5 @@
 import { toFlatItems } from "../../internal/project/tree.js";
+import { subscribeCharacterAvatarOptions } from "../../internal/ui/characterAvatarOptions.js";
 import {
   createAnimationReference,
   getAnimationModeById,
@@ -190,15 +191,7 @@ const resolveSelectedTransformId = ({ transforms, transformId } = {}) => {
     return transformId;
   }
 
-  return transformItems[0]?.id ?? "";
-};
-
-const getDefaultTransformId = (transforms) => {
-  return (
-    toFlatItems(transforms ?? createEmptyCollection()).find(
-      (item) => item.type === "transform",
-    )?.id ?? ""
-  );
+  return "";
 };
 
 const characterHasSpriteItems = ({ character, spriteItems } = {}) => {
@@ -291,9 +284,15 @@ const beginSpriteSelectionForCharacter = (
     });
 
   store.setSpriteCharacterId({ characterId });
-  if (!state.spriteTransformId) {
+  if (
+    !state.spriteTransformId &&
+    Object.keys(state.selectedSpriteIds).length === 0
+  ) {
     store.setSpriteTransformId({
-      transformId: getDefaultTransformId(props?.transforms),
+      transformId: resolveSelectedTransformId({
+        transforms: props.transforms,
+        transformId: props.defaultDialogueAvatarTransformId,
+      }),
     });
   }
   store.setTempSelectedSpriteIds({
@@ -731,6 +730,7 @@ const syncDialogueFormValues = (deps) => {
 
 export const handleBeforeMount = (deps) => {
   syncDialogueStateFromProps(deps, deps.props?.dialogue);
+  return subscribeCharacterAvatarOptions(deps);
 };
 
 export const handleAfterMount = (deps) => {
@@ -1209,7 +1209,21 @@ export const handleButtonSelectClick = (deps) => {
 };
 
 export const handleSubmitClick = (deps) => {
-  const { dispatchEvent } = deps;
+  const { dispatchEvent, store, props, appService, i18n } = deps;
+  const { selectedSpriteIds, spriteTransformId } =
+    store.selectDialogueBuildState();
+  if (
+    Object.values(selectedSpriteIds).some(Boolean) &&
+    !resolveSelectedTransformId({
+      transforms: props.transforms,
+      transformId: spriteTransformId,
+    })
+  ) {
+    appService.showToast({
+      message: selectCommandLineCopy(i18n).dialogueAvatarTransformRequired,
+    });
+    return;
+  }
   const dialogue = buildDialogueFromState(deps);
 
   if (!dialogue) {

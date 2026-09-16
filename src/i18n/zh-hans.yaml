@@ -1285,6 +1285,7 @@ characterSpritesPage:
   updateSpritesheetButton: "更新"
   uploadTargetMissing: "上传目标文件夹不再可用。"
 charactersPage:
+  failedLoadAvatarImages: "无法加载部分角色头像。"
   addCharacterButton: "添加角色"
   addCharacterTitle: "添加角色"
   addGroupButton: "添加组"
@@ -1330,6 +1331,11 @@ charactersPage:
   updateCharacterButton: "更新"
   updateGroupButton: "更新"
 transformsPage:
+  yesLabel: "是"
+  defaultDialogueAvatarLabel: "对话头像默认变换"
+  setDefaultDialogueAvatarMenuItem: "设为头像默认变换"
+  clearDefaultDialogueAvatarMenuItem: "清除头像默认变换"
+  failedUpdateDefaultDialogueAvatar: "无法更新对话头像的默认变换。"
   addTransformButton: "添加变换"
   addTransformTitle: "添加变换"
   anchorBottomCenter: "下方居中"
@@ -2235,6 +2241,7 @@ commandLinePage:
   "Select Resource": "选择素材"
   "Select animation": "选择动画"
   "Select color": "选择颜色"
+  dialogueAvatarTransformRequired: "请选择对话头像的变换。"
   "Select transform": "选择变换"
   selectSceneBeforeVoiceAudio: "添加语音音频前，请先选择场景。"
   selectVoiceAudioFirst: "请先选择语音音频文件。"
