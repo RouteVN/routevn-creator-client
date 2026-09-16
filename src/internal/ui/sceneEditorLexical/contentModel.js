@@ -1,6 +1,14 @@
 export const ACCENT_FILL = "#b45309";
 export const EDITOR_CARET_TEXT = "\u200b";
 
+const graphemeSegmenter = new Intl.Segmenter(undefined, {
+  granularity: "grapheme",
+});
+
+export const getPreviousGraphemeOffset = (text, offset) => {
+  return graphemeSegmenter.segment(text).containing(offset - 1)?.index ?? 0;
+};
+
 export const normalizeSingleLineText = (value) => {
   return String(value ?? "")
     .replaceAll(EDITOR_CARET_TEXT, "")

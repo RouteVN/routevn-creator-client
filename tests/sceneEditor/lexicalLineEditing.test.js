@@ -5350,7 +5350,10 @@ describe("lexical scene document editor line editing", () => {
       expect(preventDefault).toHaveBeenCalledTimes(1);
       expect(stopPropagation).toHaveBeenCalledTimes(1);
       expect(stopImmediatePropagation).toHaveBeenCalledTimes(1);
-      expect(insertPlainText).toHaveBeenCalledWith("a");
+      expect(insertPlainText).toHaveBeenCalledWith("a", {
+        nativeSelection: undefined,
+        nativeLineRangeSelection: undefined,
+      });
     } finally {
       restoreDomGlobals();
     }
@@ -5474,6 +5477,7 @@ describe("lexical scene document editor line editing", () => {
       editorElement.hideSelectionPopover = vi.fn();
       editorElement.clearSelectedReferenceNodeKey = vi.fn();
       editorElement.insertPlainText = vi.fn();
+      editorElement.getNativeLineRangeSelectionContext = vi.fn();
 
       editorElement.updatePendingTextInputFallback({
         key: "a",
@@ -5496,7 +5500,10 @@ describe("lexical scene document editor line editing", () => {
       });
 
       expect(editorElement.insertPlainText).toHaveBeenNthCalledWith(1, "a");
-      expect(editorElement.insertPlainText).toHaveBeenNthCalledWith(2, "b");
+      expect(editorElement.insertPlainText).toHaveBeenNthCalledWith(2, "b", {
+        nativeSelection: undefined,
+        nativeLineRangeSelection: undefined,
+      });
       expect(preventDefault).toHaveBeenCalledTimes(1);
     } finally {
       vi.useRealTimers();
