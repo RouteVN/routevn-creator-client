@@ -1,5 +1,8 @@
 # Scene editor newline input
 
+The maintained specification, bug register, and regression command are in
+[Scene text editor specifications](../scene-text-editor-spec.md).
+
 The scene editor page (`src/pages/sceneEditorLexical`) delegates editing to
 `src/primitives/lexicalSceneDocumentEditor.js`. The defects were in the primitive's
 input and caret mapping, rather than page state or the Rettangoli dependency.
@@ -106,6 +109,53 @@ press Return, and type. Repeat with Shift+Enter on a hardware keyboard, includin
 at the end of a line and twice consecutively. Confirm that typing follows the
 caret and that leaving/reopening the scene preserves the newlines. Also confirm
 an IME candidate with Enter before testing an ordinary Enter.
+
+## Multiline replacement and deletion follow-up (2026-09-16)
+
+Investigation of intermittent editing reports reproduced three additional
+failures in the production primitive, inside nested shadow roots:
+
+1. **Replacing text immediately after a soft break removed the wrong text.**
+   Load `alpha\nbeta`, place the caret before `b`, press Shift+ArrowRight, then
+   type `X`. Chromium and WebKit produced `alpha\nbX` instead of
+   `alpha\nXeta`. `resolvePointAtOffset()` represented the start of `beta` as
+   an element point after the line-break node. Paired with the text endpoint
+   after `b`, this made Lexical's replacement operate on the wrong side of the
+   endpoint. The app now uses the following text node at offset zero when one
+   exists. Empty rows, trailing breaks, and atomic reference boundaries keep
+   their element points.
+2. **Backspace recovery could rewind newer input.** In WebKit, Backspace
+   schedules a caret restoration on the next animation frame. If `X` arrives
+   before that frame and `YZ` arrives afterward, the old restoration moved
+   the caret before `X`, producing `YZX`. The browser regression freezes the
+   animation clock to make this event order deterministic while using native
+   keyboard input. New text, soft/paragraph breaks, paste, composition, and
+   forward deletion now invalidate pending recovery through the existing
+   sequence counter. Normal-paced Backspace recovery remains covered.
+3. **Forward Delete ignored the native target range.** WebKit could deliver a
+   valid `deleteContentForward` range while the Lexical selection available to
+   the edit was missing. The event was cancelled but no deletion happened.
+   Forward deletion now resolves the input range before editing, including
+   ranges spanning scene lines, with native/Lexical fallbacks retained.
+
+These are confirmed reproductions, not a confirmed identification of every
+reported user incident. The users' platform, installed version, and exact input
+sequence were not available. The first failure requires a real soft newline;
+automatic visual wrapping alone does not create that node boundary.
+
+Validation:
+
+```bash
+bunx vitest run tests/sceneEditor tests/layoutEditor/lexicalLayoutTextEditor.test.js --exclude '**/.artifacts/**'
+node tests/sceneEditor/lexicalMultilineEditing.browser.mjs
+```
+
+The browser suite checks serialized dialogue and native caret positions in
+Chromium and WebKit, with single/consecutive soft breaks, selected-text
+replacement, forward Delete, and rapid Backspace followed by input. It bundles
+only the primitive into a temporary fixture and does not require a running app
+or touch user projects. This is browser-engine validation; packaged desktop
+apps and physical mobile devices have not been validated for this follow-up.
 
 ## References
 

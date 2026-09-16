@@ -213,6 +213,219 @@ describe("word selection after soft newlines", () => {
 
 describe("scene editor newline input", () => {
   it.each([
+    ["insertText", "X", ["alpha", "betXa"], 1, 4],
+    ["insertReplacementText", "X", ["alpha", "betXa"], 1, 4],
+    ["insertFromComposition", "X", ["alpha", "betXa"], 1, 4],
+    ["insertLineBreak", undefined, ["alpha", "bet\na"], 1, 4],
+    ["insertParagraph", undefined, ["alpha", "bet", "a"], 2, 0],
+    ["insertFromPaste", "X", ["alpha", "betXa"], 1, 4],
+    ["insertFromPaste", "one\ntwo", ["alpha", "betone", "twoa"], 2, 3],
+    ["insertFromPasteAsQuotation", "X", ["alpha", "betXa"], 1, 4],
+    ["deleteContentBackward", undefined, ["alpha", "bea"], 1, 2],
+    ["deleteByCut", undefined, ["alpha", "beta"], 1, 3],
+  ])(
+    "TXT-B009: %s (%j) honors a collapsed target over a stale cross-line selection",
+    (inputType, data, expected, caretLine, caretOffset) => {
+      const staleTarget = targetRange(0, 2, 1, 2);
+      const range = document.createRange();
+      range.setStart(staleTarget.startContainer, staleTarget.startOffset);
+      range.setEnd(staleTarget.endContainer, staleTarget.endOffset);
+      window.getSelection().addRange(range);
+      beforeInput(inputType, targetRange(1, 3), data);
+
+      const savedLines = element.getLinesSnapshot();
+      expect(
+        savedLines.map((line) =>
+          getPlainTextFromContent(getLineDialogueContent(line)),
+        ),
+      ).toEqual(expected);
+      expect(savedLines.slice(0, 2).map((line) => line.id)).toEqual([
+        "line-1",
+        "line-2",
+      ]);
+      const context = element.getLineSelectionContext();
+      expect(context.lineId).toBe(savedLines[caretLine].id);
+      expect(context.selection).toMatchObject({
+        start: caretOffset,
+        end: caretOffset,
+      });
+    },
+  );
+
+  // Collapsed forward deletion needs Selection.modify, absent from JSDOM;
+  // the TXT-B009 native browser cases cover it along with these input types.
+  it.each([
+    ["insertText", "X", ["alXta"]],
+    ["insertReplacementText", "X", ["alXta"]],
+    ["insertFromComposition", "X", ["alXta"]],
+    ["insertLineBreak", undefined, ["al\nta"]],
+    ["insertFromPaste", "X", ["alXta"]],
+    ["deleteContentBackward", undefined, ["alta"]],
+    ["deleteContentForward", undefined, ["alta"]],
+    ["deleteByCut", undefined, ["alta"]],
+  ])(
+    "TXT-B009: %s still uses a live cross-line selection when the target is absent",
+    (inputType, data, expected) => {
+      const liveTarget = targetRange(0, 2, 1, 2);
+      const range = document.createRange();
+      range.setStart(liveTarget.startContainer, liveTarget.startOffset);
+      range.setEnd(liveTarget.endContainer, liveTarget.endOffset);
+      window.getSelection().addRange(range);
+      beforeInput(inputType, undefined, data);
+      expect(texts()).toEqual(expected);
+      expect(element.getLinesSnapshot()[0].id).toBe("line-1");
+    },
+  );
+
+  it.each(["😀", "👨‍👩‍👧‍👦", "👍🏽", "🇸🇬"])(
+    "TXT-004: Backspace preserves Unicode when deleting %s",
+    (character) => {
+      editor.update(
+        () => {
+          $getRoot()
+            .getFirstChild()
+            .clear()
+            .append($createTextNode(`A${character}B`));
+        },
+        { discrete: true },
+      );
+      element.handleBackspaceDelete({
+        nativeSelection: {
+          lineId: "line-1",
+          start: 1 + character.length,
+          end: 1 + character.length,
+        },
+      });
+      expect(texts()).toEqual(["AB", "beta"]);
+      expect(element.getLinesSnapshot()[0].actions.dialogue.content).toEqual([
+        { text: "AB" },
+      ]);
+    },
+  );
+
+  it.each([
+    ["insertText", ["alXta"]],
+    ["insertReplacementText", ["alXta"]],
+    ["insertLineBreak", ["al\nta"]],
+    ["deleteByCut", ["alta"]],
+    ["deleteContentBackward", ["alta"]],
+  ])(
+    "TXT-002: %s honors a cross-line event target over a stale caret",
+    (inputType, expected) => {
+      const range = document.createRange();
+      range.setStart(
+        editor.getElementByKey(lineKeys[0]).firstChild.firstChild,
+        0,
+      );
+      range.collapse(true);
+      window.getSelection().addRange(range);
+      beforeInput(inputType, targetRange(0, 2, 1, 2), "X");
+      expect(texts()).toEqual(expected);
+      expect(element.getLinesSnapshot()[0].id).toBe("line-1");
+    },
+  );
+
+  it.each([
+    ["one\ntwo", ["alone", "twota"], 3],
+    ["one\n", ["alone", "ta"], 0],
+    ["\none", ["al", "oneta"], 3],
+    ["one\r\n\r\ntwo", ["alone", "", "twota"], 3],
+  ])(
+    "TXT-005/006: paste %j replaces the whole range and stops before the suffix",
+    (text, expected, offset) => {
+      beforeInput("insertFromPaste", targetRange(0, 2, 1, 2), text);
+      expect(
+        element
+          .getLinesSnapshot()
+          .map((line) => getPlainTextFromContent(getLineDialogueContent(line))),
+      ).toEqual(expected);
+      expect(element.getLinesSnapshot()[0].id).toBe("line-1");
+      editor.getEditorState().read(() => {
+        const selection = $getSelection();
+        expect(selection.isCollapsed()).toBe(true);
+        expect(selection.anchor.offset).toBe(offset);
+      });
+    },
+  );
+
+  it("TXT-005: paste preserves untouched formatting and starting line actions", () => {
+    element.lineMetaByKey.set(lineKeys[0], {
+      id: "line-1",
+      sectionId: "section-1",
+      actions: { sound: { resourceId: "sound-1" } },
+    });
+    editor.update(
+      () => $getRoot().getLastChild().getFirstChild().toggleFormat("bold"),
+      { discrete: true },
+    );
+    beforeInput("insertFromPaste", targetRange(0, 2, 1, 2), "one\ntwo");
+    const lines = element.getLinesSnapshot();
+    expect(texts()).toEqual(["alone", "twota"]);
+    expect(lines[0].actions.sound).toEqual({ resourceId: "sound-1" });
+    expect(lines[1].actions.sound).toBeUndefined();
+    expect(lines[1].sectionId).toBe("section-1");
+    expect(lines[1].actions.dialogue.content.at(-1)).toMatchObject({
+      text: "ta",
+      textStyle: { fontWeight: "bold" },
+    });
+  });
+
+  it.each([
+    ["insertText", "al\nXha"],
+    ["insertLineBreak", "al\n\nha"],
+  ])(
+    "replaces selected text just after a soft newline with %s",
+    (inputType, expected) => {
+      beforeInput("insertLineBreak", targetRange(0, 2));
+      const range = document.createRange();
+      const textNode = editor.getElementByKey(lineKeys[0]).lastChild.firstChild;
+      range.setStart(textNode, 0);
+      range.setEnd(textNode, 1);
+      beforeInput(inputType, range, "X");
+      expect(texts()).toEqual([expected, "beta"]);
+    },
+  );
+
+  it.each(["missing", "stale"])(
+    "deletes forward at the input target when the Lexical caret is %s",
+    (caret) => {
+      beforeInput("insertLineBreak", targetRange(0, 2));
+      const range = document.createRange();
+      range.setStart(
+        editor.getElementByKey(lineKeys[0]).lastChild.firstChild,
+        0,
+      );
+      range.setEnd(editor.getElementByKey(lineKeys[0]).lastChild.firstChild, 1);
+      editor.update(
+        () => {
+          if (caret === "stale") {
+            $getRoot().getLastChild().selectStart();
+          } else {
+            $setSelection(null);
+          }
+        },
+        { discrete: true },
+      );
+      window.getSelection().removeAllRanges();
+      beforeInput("deleteContentForward", range);
+      expect(texts()).toEqual(["al\nha", "beta"]);
+    },
+  );
+
+  it("prioritizes a forward target spanning scene lines over a stale live caret", () => {
+    const staleRange = document.createRange();
+    staleRange.setStart(
+      editor.getElementByKey(lineKeys[0]).firstChild.firstChild,
+      0,
+    );
+    staleRange.collapse(true);
+    window.getSelection().addRange(staleRange);
+    beforeInput("deleteContentForward", targetRange(0, 2, 1, 2));
+    expect(texts()).toEqual(["alta"]);
+    expect(element.getLinesSnapshot()[0].id).toBe("line-1");
+  });
+
+  it.each([
     [false, "insertParagraph"],
     [false, "insertLineBreak"],
     [true, "insertLineBreak"],

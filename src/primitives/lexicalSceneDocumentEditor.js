@@ -13,6 +13,7 @@ import {
   $setSelection,
   COMMAND_PRIORITY_CRITICAL,
   COMMAND_PRIORITY_HIGH,
+  CUT_COMMAND,
   KEY_ENTER_COMMAND,
   KEY_ESCAPE_COMMAND,
   PASTE_COMMAND,
@@ -25,6 +26,10 @@ import {
   $patchStyleText,
 } from "@lexical/selection";
 import { registerRichText } from "@lexical/rich-text";
+import {
+  $getClipboardDataFromSelection,
+  setLexicalClipboardDataTransfer,
+} from "@lexical/clipboard";
 import { createEmptyHistoryState, registerHistory } from "@lexical/history";
 import { mergeRegister } from "@lexical/utils";
 import { generateId } from "../internal/id.js";
@@ -49,6 +54,7 @@ import {
   getContentLength,
   getLineDialogueContent,
   getPlainTextFromContent,
+  getPreviousGraphemeOffset,
   mergeAdjacentContentItems,
   normalizeSingleLineText,
   setLineDialogueContent,
@@ -81,6 +87,7 @@ import {
 } from "./lexicalRichTextShared.js";
 import {
   applySelectionToLineNode,
+  applySelectionToLineRange,
   clearSelectionTextFormatting,
   createCollapsedRangeAtPosition,
   getLexicalOffsetBeforeNode,
@@ -1385,6 +1392,38 @@ export class LexicalSceneDocumentEditorElement extends HTMLElement {
         COMMAND_PRIORITY_HIGH,
       ),
       this.editor.registerCommand(
+        CUT_COMMAND,
+        (event) => {
+          if (this.state.mode !== "text-editor" || !event?.clipboardData) {
+            return false;
+          }
+          const nativeSelection = this.getNativeLineSelectionContext();
+          const nativeLineRangeSelection =
+            this.getNativeLineRangeSelectionContext();
+          this.applyNativeLineSelection({
+            nativeSelection,
+            nativeLineRangeSelection,
+          });
+          const selection = $getSelection();
+          if (!$isRangeSelection(selection) || selection.isCollapsed()) {
+            return false;
+          }
+          // Write the resolved selection synchronously while the cut event's
+          // clipboard is writable. Only remove text after copying succeeds.
+          setLexicalClipboardDataTransfer(
+            event.clipboardData,
+            $getClipboardDataFromSelection(selection),
+          );
+          event.preventDefault();
+          this.removeSelectedText({
+            nativeSelection,
+            nativeLineRangeSelection,
+          });
+          return true;
+        },
+        COMMAND_PRIORITY_HIGH,
+      ),
+      this.editor.registerCommand(
         PASTE_COMMAND,
         (event) => {
           event?.preventDefault?.();
@@ -2208,9 +2247,13 @@ export class LexicalSceneDocumentEditorElement extends HTMLElement {
 
     this.restoreLineSelection(target);
     this.restoreLineSelectionAfterLexicalFocus(target);
+    const focusRestoreSequenceId = this.focusRestoreSequenceId;
 
     requestAnimationFrame(() => {
-      if (!this.isConnected) {
+      if (
+        !this.isConnected ||
+        this.focusRestoreSequenceId !== focusRestoreSequenceId
+      ) {
         return;
       }
 
@@ -2678,6 +2721,7 @@ export class LexicalSceneDocumentEditorElement extends HTMLElement {
 
   restoreLastProgrammaticFocusTarget() {
     const focusTarget = this.lastProgrammaticFocusTarget;
+    const focusRestoreSequenceId = this.focusRestoreSequenceId;
     if (!focusTarget?.lineId || typeof requestAnimationFrame !== "function") {
       return;
     }
@@ -2687,7 +2731,10 @@ export class LexicalSceneDocumentEditorElement extends HTMLElement {
         return;
       }
 
-      if (this.lastProgrammaticFocusTarget !== focusTarget) {
+      if (
+        this.lastProgrammaticFocusTarget !== focusTarget ||
+        this.focusRestoreSequenceId !== focusRestoreSequenceId
+      ) {
         return;
       }
 
@@ -2781,6 +2828,10 @@ export class LexicalSceneDocumentEditorElement extends HTMLElement {
         this.suppressBlockModeNativeEditorKey(event);
       }
       return;
+    }
+
+    if (isArrowKeyEvent(event) || event.key === "Home" || event.key === "End") {
+      this.invalidatePendingFocusRestore();
     }
 
     if (this.handleImmediateTextModeVerticalBoundaryNavigation(event)) {
@@ -3484,6 +3535,7 @@ export class LexicalSceneDocumentEditorElement extends HTMLElement {
       return;
     }
 
+    this.invalidatePendingFocusRestore();
     this.markPointerDownInsideEditor();
 
     const referenceSnapshot = this.getReferenceSnapshotFromContextEvent(event);
@@ -4929,6 +4981,9 @@ export class LexicalSceneDocumentEditorElement extends HTMLElement {
       this.insertPlainText(inputText, {
         nativeSelection,
         endComposition: true,
+        nativeLineRangeSelection: this.getNativeLineRangeSelectionContext(
+          event.getTargetRanges?.()[0],
+        ),
       });
       return;
     }
@@ -4965,11 +5020,7 @@ export class LexicalSceneDocumentEditorElement extends HTMLElement {
       const pastedText =
         event.dataTransfer?.getData?.("text/plain") ?? event.data ?? "";
       if (pastedText) {
-        this.handlePasteEvent({
-          clipboardData: {
-            getData: (type) => (type === "text/plain" ? pastedText : ""),
-          },
-        });
+        this.handlePasteEvent(event);
       }
       return;
     }
@@ -4993,6 +5044,9 @@ export class LexicalSceneDocumentEditorElement extends HTMLElement {
       } else {
         this.insertSoftLineBreak({
           nativeSelection: this.getInputLineSelectionContext(event),
+          nativeLineRangeSelection: this.getNativeLineRangeSelectionContext(
+            event.getTargetRanges?.()[0],
+          ),
         });
       }
       return;
@@ -5027,11 +5081,12 @@ export class LexicalSceneDocumentEditorElement extends HTMLElement {
           source: "beforeinput",
         });
       }
-      if (nativeSelection) {
-        this.insertPlainText(inputText, { nativeSelection });
-      } else {
-        this.insertPlainText(inputText);
-      }
+      this.insertPlainText(inputText, {
+        nativeSelection,
+        nativeLineRangeSelection: this.getNativeLineRangeSelectionContext(
+          event.getTargetRanges?.()[0],
+        ),
+      });
       return;
     }
 
@@ -5051,6 +5106,9 @@ export class LexicalSceneDocumentEditorElement extends HTMLElement {
       const nativeSelection = this.getInputLineSelectionContext(event);
       const didHandle = this.handleBackspaceDelete({
         nativeSelection,
+        nativeLineRangeSelection: this.getNativeLineRangeSelectionContext(
+          event.getTargetRanges?.()[0],
+        ),
       });
       if (!didHandle) {
         this.deleteCharacterBackward({ nativeSelection });
@@ -5063,7 +5121,12 @@ export class LexicalSceneDocumentEditorElement extends HTMLElement {
       event.preventDefault();
       event.stopPropagation?.();
       event.stopImmediatePropagation?.();
-      this.deleteCharacterForward();
+      this.deleteCharacterForward({
+        nativeSelection: this.getInputLineSelectionContext(event),
+        nativeLineRangeSelection: this.getNativeLineRangeSelectionContext(
+          event.getTargetRanges?.()[0],
+        ),
+      });
       return;
     }
 
@@ -5080,12 +5143,18 @@ export class LexicalSceneDocumentEditorElement extends HTMLElement {
       event.preventDefault();
       event.stopPropagation?.();
       event.stopImmediatePropagation?.();
-      this.removeSelectedText();
+      this.removeSelectedText({
+        nativeSelection: this.getInputLineSelectionContext(event),
+        nativeLineRangeSelection: this.getNativeLineRangeSelectionContext(
+          event.getTargetRanges?.()[0],
+        ),
+      });
       return;
     }
   }
 
   handleCompositionStart() {
+    this.invalidatePendingFocusRestore();
     this.isComposing = true;
     this.hideSelectionPopover();
     this.dispatchEvent(
@@ -5996,6 +6065,7 @@ export class LexicalSceneDocumentEditorElement extends HTMLElement {
   }
 
   splitCurrentLine({ nativeRange } = {}) {
+    this.invalidatePendingFocusRestore();
     const rangeContext = this.getNativeLineRangeSelectionContext(nativeRange);
     if (rangeContext?.isMultiLine) {
       this.replaceNativeLineRangeSelectionWithParagraphBreak(rangeContext);
@@ -6397,119 +6467,132 @@ export class LexicalSceneDocumentEditorElement extends HTMLElement {
   }
 
   handlePasteEvent(event) {
-    const pastedText = event?.clipboardData?.getData("text/plain") ?? "";
+    this.invalidatePendingFocusRestore();
+    const pastedText =
+      event.clipboardData?.getData("text/plain") ??
+      event.dataTransfer?.getData("text/plain") ??
+      event.data ??
+      "";
     const normalizedLines = pastedText.replace(/\r\n?/g, "\n").split("\n");
+    const nativeRange = event.getTargetRanges?.()[0];
+    const nativeSelection = this.getNativeLineSelectionContext(nativeRange);
+    const nativeLineRangeSelection =
+      this.getNativeLineRangeSelectionContext(nativeRange);
 
     if (normalizedLines.length <= 1) {
-      this.insertPlainText(pastedText);
+      this.insertPlainText(pastedText, {
+        nativeSelection,
+        nativeLineRangeSelection,
+      });
       return;
     }
-
-    const context = this.getLineSelectionContext();
-    if (!context) {
-      return;
-    }
-
-    const lineMeta = this.lineMetaByKey.get(context.lineKey);
-    if (!lineMeta) {
-      return;
-    }
-
-    const { before, after } = splitContentRange(
-      context.lineContent,
-      context.selection.start,
-      context.selection.end,
-    );
-    let targetLineId = lineMeta.id;
-    let targetCursorPosition = getContentLength(
-      appendContentArrays(
-        before,
-        ensureContentArray([{ text: normalizedLines[0] }]),
-      ),
-    );
-    this.pendingChangeReason = "structure";
 
     this.editor.update(
       () => {
-        const currentLineNode = $getNodeByKey(context.lineKey);
-        if (!currentLineNode) {
+        this.applyNativeLineSelection({
+          nativeSelection,
+          nativeLineRangeSelection,
+        });
+        const selection = $getSelection();
+        if (!$isRangeSelection(selection)) {
           return;
         }
-
-        currentLineNode.clear();
-        this.appendParagraphContent(
-          currentLineNode,
-          appendContentArrays(
-            before,
-            ensureContentArray([{ text: normalizedLines[0] }]),
-          ),
+        // Let the range replacement remove every selected scene line first.
+        // The remaining suffix belongs after the final pasted paragraph.
+        selection.insertText(normalizedLines[0]);
+        const currentLineNode = this.getLineNodeFromSelection(selection);
+        const lineMeta = this.lineMetaByKey.get(currentLineNode.getKey());
+        const offsets = getSelectionOffsets(currentLineNode, selection);
+        const { before, after } = splitContentRange(
+          this.serializeLineContent(currentLineNode),
+          offsets.start,
+          offsets.end,
         );
+        currentLineNode.clear();
+        this.appendParagraphContent(currentLineNode, before);
+        this.pendingChangeReason = "structure";
 
         let insertAfterNode = currentLineNode;
         for (let index = 1; index < normalizedLines.length; index += 1) {
           const isLastLine = index === normalizedLines.length - 1;
           const nextLineNode = $createParagraphNode();
-          const nextContent = isLastLine
-            ? appendContentArrays(
-                ensureContentArray([{ text: normalizedLines[index] }]),
-                after,
-              )
-            : ensureContentArray([{ text: normalizedLines[index] }]);
-
-          this.appendParagraphContent(nextLineNode, nextContent);
+          const pastedContent = ensureContentArray([
+            { text: normalizedLines[index] },
+          ]);
+          this.appendParagraphContent(
+            nextLineNode,
+            isLastLine
+              ? appendContentArrays(pastedContent, after)
+              : pastedContent,
+          );
           insertAfterNode.insertAfter(nextLineNode);
           insertAfterNode = nextLineNode;
-
           const nextLineMeta = createNewLineMeta(lineMeta);
-          const nextLineId = nextLineMeta.id;
           this.lineMetaByKey.set(nextLineNode.getKey(), nextLineMeta);
-          this.lineKeyById.set(nextLineId, nextLineNode.getKey());
-          targetLineId = nextLineId;
-          targetCursorPosition = getContentLength(nextContent);
+          this.lineKeyById.set(nextLineMeta.id, nextLineNode.getKey());
+          if (isLastLine) {
+            // Before the pre-existing suffix, never at the end of the whole line.
+            applySelectionToLineNode(nextLineNode, {
+              start: getContentLength(pastedContent),
+            });
+            this.state.selectedLineId = nextLineMeta.id;
+          }
         }
-
-        insertAfterNode.selectEnd();
       },
       { discrete: true },
     );
-
-    requestAnimationFrame(() => {
-      this.focusLine({
-        lineId: targetLineId,
-        cursorPosition: targetCursorPosition,
-      });
-    });
   }
 
-  insertPlainText(text, { nativeSelection, endComposition = false } = {}) {
-    const nextText = String(text ?? "").replace(/\r\n?/g, "\n");
-    const resolvedNativeSelection =
-      nativeSelection ?? this.getNativeLineSelectionContext();
+  applyNativeLineSelection({ nativeSelection, nativeLineRangeSelection } = {}) {
+    if (nativeLineRangeSelection?.isMultiLine) {
+      const start = $getNodeByKey(nativeLineRangeSelection.startLineKey);
+      const end = $getNodeByKey(nativeLineRangeSelection.endLineKey);
+      if (start && end) {
+        applySelectionToLineRange(start, end, {
+          start: nativeLineRangeSelection.startOffset,
+          end: nativeLineRangeSelection.endOffset,
+        });
+      }
+      return;
+    }
+    const key = this.lineKeyById.get(nativeSelection?.lineId);
+    const line = key ? $getNodeByKey(key) : undefined;
+    if (line) {
+      applySelectionToLineNode(line, nativeSelection);
+    }
+  }
 
+  insertPlainText(
+    text,
+    {
+      nativeSelection = this.getNativeLineSelectionContext(),
+      // A resolved single-line target includes collapsed carets. Only read the
+      // live cross-line selection when no single-line target was resolved.
+      nativeLineRangeSelection = nativeSelection?.lineId
+        ? undefined
+        : this.getNativeLineRangeSelectionContext(),
+      endComposition = false,
+    } = {},
+  ) {
+    // A delayed Backspace caret recovery must not rewind subsequent input.
+    this.invalidatePendingFocusRestore();
+    const nextText = String(text ?? "").replace(/\r\n?/g, "\n");
     this.editor.update(
       () => {
         if (endComposition) {
           $setCompositionKey(null);
         }
 
-        if (resolvedNativeSelection?.lineId) {
-          const lineKey = this.lineKeyById.get(resolvedNativeSelection.lineId);
-          const lineNode = lineKey ? $getNodeByKey(lineKey) : undefined;
-          if (lineNode) {
-            applySelectionToLineNode(lineNode, resolvedNativeSelection);
-          }
-        }
-
-        let selection = $getSelection();
+        this.applyNativeLineSelection({
+          nativeSelection,
+          nativeLineRangeSelection,
+        });
+        const selection = $getSelection();
         if (!$isRangeSelection(selection)) {
           return;
         }
-
-        if (resolvedNativeSelection?.lineId) {
-          selection = $getSelection();
-          if (!$isRangeSelection(selection)) {
-            return;
-          }
+        if (nativeLineRangeSelection?.isMultiLine) {
+          this.pendingChangeReason = "structure";
         }
 
         this.clearEmptyLineInsertionFormatting(selection);
@@ -6555,19 +6638,23 @@ export class LexicalSceneDocumentEditorElement extends HTMLElement {
 
   insertSoftLineBreak({
     nativeSelection = this.getNativeLineSelectionContext(),
+    nativeLineRangeSelection = nativeSelection?.lineId
+      ? undefined
+      : this.getNativeLineRangeSelectionContext(),
   } = {}) {
+    this.invalidatePendingFocusRestore();
     const previousSelection = this.editor.getEditorState().read(() => {
       const selection = $getSelection();
       return $isRangeSelection(selection) ? selection.clone() : undefined;
     });
     this.editor.update(
       () => {
-        if (nativeSelection?.lineId) {
-          const lineKey = this.lineKeyById.get(nativeSelection.lineId);
-          const lineNode = lineKey ? $getNodeByKey(lineKey) : undefined;
-          if (lineNode) {
-            applySelectionToLineNode(lineNode, nativeSelection);
-          }
+        this.applyNativeLineSelection({
+          nativeSelection,
+          nativeLineRangeSelection,
+        });
+        if (nativeLineRangeSelection?.isMultiLine) {
+          this.pendingChangeReason = "structure";
         }
 
         // A fresh update can lose the cached selection when WebKit has no DOM
@@ -6874,11 +6961,10 @@ export class LexicalSceneDocumentEditorElement extends HTMLElement {
         ? this.getNativeLineRangeSelectionContext()
         : undefined);
 
+    if (resolvedLineRangeSelection?.isMultiLine) {
+      return this.deleteNativeLineRangeSelection(resolvedLineRangeSelection);
+    }
     if (!nativeSelection?.lineId) {
-      if (resolvedLineRangeSelection?.isMultiLine) {
-        return this.deleteNativeLineRangeSelection(resolvedLineRangeSelection);
-      }
-
       return false;
     }
 
@@ -6923,7 +7009,15 @@ export class LexicalSceneDocumentEditorElement extends HTMLElement {
     }
 
     if (start > 0) {
-      const deleteStart = start - 1;
+      const deleteStart = this.editor.getEditorState().read(() => {
+        const line = $getNodeByKey(
+          this.lineKeyById.get(nativeSelection.lineId),
+        );
+        return getPreviousGraphemeOffset(
+          getPlainTextFromContent(this.serializeLineContent(line)),
+          start,
+        );
+      });
       if (
         this.handleBackspaceReferenceDelete({
           lineId: nativeSelection.lineId,
@@ -7138,7 +7232,10 @@ export class LexicalSceneDocumentEditorElement extends HTMLElement {
 
   deleteLineContentBackwardAtOffset(lineNode, lineMeta, offset) {
     const deleteEnd = Math.max(0, Number(offset) || 0);
-    const deleteStart = Math.max(0, deleteEnd - 1);
+    const deleteStart = getPreviousGraphemeOffset(
+      getPlainTextFromContent(this.serializeLineContent(lineNode)),
+      deleteEnd,
+    );
     this.deleteLineContentRange(lineNode, lineMeta, deleteStart, deleteEnd);
   }
 
@@ -7167,15 +7264,56 @@ export class LexicalSceneDocumentEditorElement extends HTMLElement {
     }
   }
 
-  deleteCharacterForward() {
+  deleteCharacterForward({
+    nativeSelection = this.getNativeLineSelectionContext(),
+    nativeLineRangeSelection = nativeSelection?.lineId
+      ? undefined
+      : this.getNativeLineRangeSelectionContext(),
+  } = {}) {
+    this.invalidatePendingFocusRestore();
+    if (nativeLineRangeSelection?.isMultiLine) {
+      this.deleteNativeLineRangeSelection(nativeLineRangeSelection);
+      return;
+    }
+
     this.editor.update(
       () => {
+        const lineKey = this.lineKeyById.get(nativeSelection?.lineId);
+        const lineNode = lineKey ? $getNodeByKey(lineKey) : undefined;
+        if (lineNode) {
+          applySelectionToLineNode(lineNode, nativeSelection);
+        }
+
         const selection = $getSelection();
         if (!$isRangeSelection(selection)) {
           return;
         }
 
         if (selection.isCollapsed()) {
+          // Extend from the resolved target, not a stale DOM selection. Read
+          // the resulting composed range because WebKit's getRangeAt() can
+          // hide a selection inside our nested shadow roots from Lexical.
+          const lineElement = lineNode
+            ? this.editor.getElementByKey(lineNode.getKey())
+            : undefined;
+          if (lineElement) {
+            const { range } = createCollapsedRangeAtPosition(
+              lineElement,
+              nativeSelection.start,
+            );
+            setSelectionFromRange(this.refs.editor, range);
+            window.getSelection().modify("extend", "forward", "character");
+            const deletionRange = this.getNativeLineRangeSelectionContext();
+            this.applyNativeLineSelection({
+              nativeSelection: this.getNativeLineSelectionContext(),
+              nativeLineRangeSelection: deletionRange,
+            });
+            if (deletionRange?.isMultiLine) {
+              this.pendingChangeReason = "structure";
+            }
+            $getSelection().removeText();
+            return;
+          }
           selection.deleteCharacter(false);
           return;
         }
@@ -7186,9 +7324,22 @@ export class LexicalSceneDocumentEditorElement extends HTMLElement {
     );
   }
 
-  removeSelectedText() {
+  removeSelectedText({
+    nativeSelection = this.getNativeLineSelectionContext(),
+    nativeLineRangeSelection = nativeSelection?.lineId
+      ? undefined
+      : this.getNativeLineRangeSelectionContext(),
+  } = {}) {
+    this.invalidatePendingFocusRestore();
     this.editor.update(
       () => {
+        this.applyNativeLineSelection({
+          nativeSelection,
+          nativeLineRangeSelection,
+        });
+        if (nativeLineRangeSelection?.isMultiLine) {
+          this.pendingChangeReason = "structure";
+        }
         const selection = $getSelection();
         if (!$isRangeSelection(selection)) {
           return;

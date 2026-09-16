@@ -128,6 +128,13 @@ for routine validation of ordinary code or view edits. Prefer targeted tests,
 format checks, lint checks, and the active watch output. Reserve `build:web` for
 explicit user requests, release/VT output, or a specific build-only failure.
 
+### Scene Text Editor Regression Gate
+
+[Scene text editor specifications and bug register](scene-text-editor-spec.md)
+tracks editing contracts, reproduced bugs, and their automated coverage. Update
+that register alongside editor behavior changes. Run `bun run test:scene-editor`
+for the unit and Chromium/WebKit input regression gate; CI runs it on PRs.
+
 ### Debugging Discipline
 
 Do not claim a UI bug is fixed from code inspection alone. For user-visible

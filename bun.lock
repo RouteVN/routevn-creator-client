@@ -5,6 +5,7 @@
     "": {
       "name": "routevn-creator-client",
       "dependencies": {
+        "@lexical/clipboard": "0.22.0",
         "@lexical/history": "0.22.0",
         "@lexical/rich-text": "0.22.0",
         "@lexical/selection": "0.22.0",
