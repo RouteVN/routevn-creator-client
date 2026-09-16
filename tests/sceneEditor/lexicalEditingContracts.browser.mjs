@@ -4,6 +4,14 @@ import { chromium, webkit } from "playwright";
 import { createSceneEditorBrowserFixture } from "../support/sceneEditorBrowser.js";
 
 const scenarios = [
+  ...["enter-race", "blur-race"].map((action) => ({
+    name: `TXT-B010 typing before ${action}`,
+    lines: ["abcd"],
+    offset: 3,
+    action,
+    expected: ["abcYXd"],
+    caret: 5,
+  })),
   ...[
     ["insertText", "Y", ["alpha", "betYXa"], 5],
     ["insertReplacementText", "Y", ["alpha", "betYXa"], 5],
@@ -239,6 +247,20 @@ try {
             await page.clock.pauseAt(new Date(Date.now() + 1000));
           }
           switch (scenario.action) {
+            case "enter-race":
+            case "blur-race":
+              await page.evaluate((action) => {
+                if (action === "enter-race") {
+                  window.owner.enterTextMode({
+                    lineId: window.owner.getLinesSnapshot()[0].id,
+                    cursorPosition: 3,
+                  });
+                } else {
+                  window.owner.restoreLastProgrammaticFocusTarget();
+                }
+              }, scenario.action);
+              await page.keyboard.type("Y");
+              break;
             case "target-input": {
               // The live selection is native; supply a conflicting input
               // target to reproduce the browser/IME disagreement explicitly.

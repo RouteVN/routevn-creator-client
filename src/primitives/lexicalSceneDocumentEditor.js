@@ -2247,9 +2247,13 @@ export class LexicalSceneDocumentEditorElement extends HTMLElement {
 
     this.restoreLineSelection(target);
     this.restoreLineSelectionAfterLexicalFocus(target);
+    const focusRestoreSequenceId = this.focusRestoreSequenceId;
 
     requestAnimationFrame(() => {
-      if (!this.isConnected) {
+      if (
+        !this.isConnected ||
+        this.focusRestoreSequenceId !== focusRestoreSequenceId
+      ) {
         return;
       }
 
@@ -2717,6 +2721,7 @@ export class LexicalSceneDocumentEditorElement extends HTMLElement {
 
   restoreLastProgrammaticFocusTarget() {
     const focusTarget = this.lastProgrammaticFocusTarget;
+    const focusRestoreSequenceId = this.focusRestoreSequenceId;
     if (!focusTarget?.lineId || typeof requestAnimationFrame !== "function") {
       return;
     }
@@ -2726,7 +2731,10 @@ export class LexicalSceneDocumentEditorElement extends HTMLElement {
         return;
       }
 
-      if (this.lastProgrammaticFocusTarget !== focusTarget) {
+      if (
+        this.lastProgrammaticFocusTarget !== focusTarget ||
+        this.focusRestoreSequenceId !== focusRestoreSequenceId
+      ) {
         return;
       }
 
