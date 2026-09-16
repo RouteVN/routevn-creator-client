@@ -1285,6 +1285,7 @@ characterSpritesPage:
   updateSpritesheetButton: "Update"
   uploadTargetMissing: "Upload target folder is no longer available."
 charactersPage:
+  failedLoadAvatarImages: "Could not load some character avatars."
   addCharacterButton: "Add Character"
   addCharacterTitle: "Add Character"
   addGroupButton: "Add Group"
@@ -1330,6 +1331,11 @@ charactersPage:
   updateCharacterButton: "Update"
   updateGroupButton: "Update"
 transformsPage:
+  yesLabel: "Yes"
+  defaultDialogueAvatarLabel: "Default Dialogue Avatar Transform"
+  setDefaultDialogueAvatarMenuItem: "Set as Default Avatar Transform"
+  clearDefaultDialogueAvatarMenuItem: "Clear Default Avatar Transform"
+  failedUpdateDefaultDialogueAvatar: "Failed to update the dialogue avatar default."
   addTransformButton: "Add Transform"
   addTransformTitle: "Add Transform"
   anchorBottomCenter: "Bottom Center"
@@ -2235,6 +2241,7 @@ commandLinePage:
   "Select Resource": "Select Resource"
   "Select animation": "Select animation"
   "Select color": "Select color"
+  dialogueAvatarTransformRequired: "Select a transform for the dialogue avatar."
   "Select transform": "Select transform"
   selectSceneBeforeVoiceAudio: "Select a scene before adding voice audio."
   selectVoiceAudioFirst: "Select a voice audio file first."

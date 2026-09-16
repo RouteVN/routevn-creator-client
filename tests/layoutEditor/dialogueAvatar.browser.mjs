@@ -18,6 +18,7 @@ try {
   const imports = [
     `import createComponent from ${JSON.stringify(resolve("node_modules/@rettangoli/fe/src/createComponent.js"))};`,
     `export { createLayoutEditorAssetReferences } from ${JSON.stringify(resolve("src/components/layoutEditorCanvas/support/layoutEditorCanvasRender.js"))};`,
+    `export { createProjectAssetService } from ${JSON.stringify(resolve("src/deps/services/shared/projectAssetService.js"))};`,
   ];
   const registrations = [];
   for (const name of [
@@ -26,6 +27,7 @@ try {
     "baseFileExplorer",
     "imageSelector",
     "layoutEditorPreview",
+    "commandLineDialogueBox",
   ]) {
     const prefix = resolve(`src/components/${name}/${name}`);
     const config = {};
@@ -84,11 +86,12 @@ try {
   const html = `<!doctype html><link rel="stylesheet" href="/theme.css"><script src="/icons.js"></script><script src="/ui.js"></script>
 <div style="display:flex;gap:20px;padding:20px"><div id="form" style="width:440px;flex-shrink:0"></div><div id="preview"></div></div>
 <script type="module">
-import {register,createLayoutEditorAssetReferences} from '/fixture.js';
+import {register,createLayoutEditorAssetReferences,createProjectAssetService} from '/fixture.js';
 import createRouteGraphics,{createAssetBufferManager,containerPlugin,spritePlugin,spritesheetAnimationPlugin,rectPlugin} from '/graphics.js';
 const i18n=${JSON.stringify(EN_I18N)};
 const layoutState={id:'layout-1',layoutType:'dialogue-adv',elements:{items:{panel:{id:'panel',type:'rect',x:0,y:160,width:400,height:100,fill:'#404050'}},tree:[{id:'panel'}]}};
 const repositoryState={
+ project:{defaultDialogueAvatarTransformId:new URLSearchParams(location.search).has("default")?"transform-1":undefined},
  characters:{items:{'character-1':{id:'character-1',type:'character',name:'Character One',fileId:'sprite-file',sprites:{items:{
   'sprite-1':{id:'sprite-1',type:'image',name:'Smile',fileId:'sprite-file',width:80,height:100},
   faces:{id:'faces',type:'folder',name:'Faces'},
@@ -107,7 +110,8 @@ const graphics=createRouteGraphics();
 await graphics.init({width:400,height:280,backgroundColor:0x111122,rendererPreference:'webgl',plugins:{elements:[containerPlugin,spritePlugin,spritesheetAnimationPlugin,rectPlugin],audio:[]},eventHandler(){}});
 document.querySelector('#preview').append(graphics.canvas);
 const manager=createAssetBufferManager();await manager.load({'sprite-file':{url:imageUrl,type:'image/png'},'background-file':{url:imageUrl,type:'image/png'},'sheet-file':{url:imageUrl,type:'image/png'}});await graphics.loadAssets(manager.getBufferMap());
-register({projectService:{ensureRepository:async()=>{},getRepositoryState:()=>repositoryState,getFileContent:async()=>({url:imageUrl})},__rtglI18nRuntime:{locale:'en',getMessages:()=>i18n},uiConfig:{}});
+const assetService=createProjectAssetService({fileAdapter:{getFileContent:async()=>({url:imageUrl})}});
+register({projectService:{ensureRepository:async()=>{},getRepositoryState:()=>repositoryState,getFileContent:assetService.getFileContent,observeFileUrls:assetService.observeFileUrls,subscribeProjectState:fn=>{fn({repositoryState});return()=>{};}},__rtglI18nRuntime:{locale:'en',getMessages:()=>i18n},uiConfig:{}});
 const preview=document.createElement('rvn-layout-editor-preview');preview.layoutState=layoutState;
 preview.addEventListener('preview-data-change',event=>{
  window.previewData=event.detail.previewData;
@@ -115,7 +119,15 @@ preview.addEventListener('preview-data-change',event=>{
  window.renderedElements=result.renderedElements;
  graphics.render({elements:result.renderedElements,animations:[],audio:[]});
 });
-document.querySelector('#form').append(preview);
+if(new URLSearchParams(location.search).has('command')){
+ const command=document.createElement('rvn-command-line-dialogue-box');
+ command.layouts=[{id:'layout-1',name:'Layout One',layoutType:'dialogue-adv'}];
+ command.characters=Object.values(repositoryState.characters.items);
+ command.characterTree=repositoryState.characters.tree;
+ command.dialogue={mode:'adv',ui:{resourceId:'layout-1'},characterId:'character-1',character:{name:'Custom Speaker'},persistCharacter:true};
+ command.addEventListener('submit',event=>{window.submittedDialogue=event.detail.dialogue;});
+ document.querySelector('#form').append(command);
+}else document.querySelector('#form').append(preview);
 window.reopen=()=>{preview.initialPreviewData=structuredClone(window.previewData);};
 window.avatarBounds=()=>{
  const element=graphics.findElementByLabel('layout-editor-preview-character-sprite-base');
@@ -143,6 +155,57 @@ window.ready=true;
       });
       await page.goto("http://fixture.test/");
       await page.waitForFunction(() => window.ready);
+      const speaker = page.locator(
+        'rtgl-select[data-field-name="dialogue-character-id"]',
+      );
+      await speaker
+        .getByRole("button", { name: "Select speaker", exact: true })
+        .click();
+      const castSection = speaker.getByText("Cast", { exact: true });
+      await castSection.waitFor({ state: "visible" });
+      assert.equal(
+        await castSection.evaluate((el) =>
+          Boolean(el.closest('[id^="option"]')),
+        ),
+        false,
+      );
+      const firstSpeaker = speaker.locator("#option0");
+      await firstSpeaker.locator("img").waitFor({ state: "visible" });
+      const imageBounds = await firstSpeaker.locator("img").boundingBox();
+      const nameBounds = await firstSpeaker
+        .getByText("Character One", { exact: true })
+        .boundingBox();
+      assert.ok(imageBounds.x + imageBounds.width <= nameBounds.x);
+      await page.screenshot({
+        path: join(tmpdir(), `rvn-dialogue-speakers-${name}.png`),
+      });
+      await firstSpeaker.click();
+      await speaker
+        .getByRole("button", { name: "Character One", exact: true })
+        .locator("img")
+        .waitFor({ state: "visible" });
+      await page.waitForFunction(
+        () => window.previewData?.dialogue.characterId === "character-1",
+      );
+      await speaker.locator('[data-testid="select-clear-button"] svg').click();
+      await speaker
+        .getByRole("button", { name: "Select speaker", exact: true })
+        .waitFor({ state: "visible" });
+      await speaker
+        .getByRole("button", { name: "Select speaker", exact: true })
+        .click();
+      await speaker.getByText("Character Three", { exact: true }).click();
+      await speaker
+        .getByRole("button", { name: "Character Three", exact: true })
+        .waitFor({ state: "visible" });
+      assert.equal(
+        await speaker
+          .getByRole("button", { name: "Character Three", exact: true })
+          .locator("img")
+          .count(),
+        0,
+      );
+      await speaker.locator('[data-testid="select-clear-button"] svg').click();
       const avatar = page.getByText("Character Avatar", { exact: true });
       const transform = page.getByText("Transform", { exact: true });
       const customSpeaker = page.getByText("Custom Speaker Name", {
@@ -375,9 +438,97 @@ window.ready=true;
         width: 240,
         height: 75,
       });
+      await page.goto("http://fixture.test/?default=1");
+      await page.waitForFunction(() => window.ready);
+      await page
+        .getByRole("button", { name: "Select sprite", exact: true })
+        .click();
+      await page
+        .getByRole("listbox", { name: "Characters", exact: true })
+        .getByRole("option", { name: "Character One", exact: true })
+        .click();
+      await page
+        .getByRole("listbox", { name: "Character Sprites" })
+        .getByRole("option", { name: "Smile", exact: true })
+        .click();
+      await page.getByRole("button", { name: "OK", exact: true }).click();
+      await page.waitForFunction(
+        () =>
+          window.previewData.dialogue.character.sprite.transformId ===
+          "transform-1",
+      );
+      await page
+        .getByRole("button", { name: "Right", exact: true })
+        .waitFor({ state: "visible" });
+      await page.goto("http://fixture.test/?command=1");
+      await page.waitForFunction(() => window.ready);
+      const commandSpeaker = page.locator(
+        'rtgl-select[data-field-name="characterId"]',
+      );
+      const selectedSpeaker = commandSpeaker.getByRole("button", {
+        name: "Character One",
+        exact: true,
+      });
+      await selectedSpeaker.locator("img").waitFor({ state: "visible" });
+      await selectedSpeaker.click();
+      await commandSpeaker
+        .getByText("Cast", { exact: true })
+        .waitFor({ state: "visible" });
+      const commandOption = commandSpeaker.locator("#option0");
+      const commandImageBounds = await commandOption
+        .locator("img")
+        .boundingBox();
+      const commandLabelBounds = await commandOption
+        .getByText("Character One", { exact: true })
+        .boundingBox();
+      assert.ok(
+        commandImageBounds.x + commandImageBounds.width <= commandLabelBounds.x,
+      );
+      await page.screenshot({
+        path: join(tmpdir(), `rvn-command-dialogue-speakers-${name}.png`),
+      });
+      await commandSpeaker
+        .getByText("Character Three", { exact: true })
+        .click();
+      await commandSpeaker
+        .getByRole("button", { name: "Character Three", exact: true })
+        .waitFor({ state: "visible" });
+      assert.equal(
+        await commandSpeaker
+          .getByRole("button", { name: "Character Three", exact: true })
+          .locator("img")
+          .count(),
+        0,
+      );
+      await page.getByRole("button", { name: "Submit", exact: true }).click();
+      await page.waitForFunction(
+        () => window.submittedDialogue?.characterId === "character-3",
+      );
+      assert.equal(
+        await page.evaluate(() => window.submittedDialogue.character.name),
+        "Custom Speaker",
+      );
+      assert.equal(
+        await page.evaluate(() => window.submittedDialogue.persistCharacter),
+        true,
+      );
+      await commandSpeaker
+        .locator('[data-testid="select-clear-button"] svg')
+        .click();
+      await commandSpeaker
+        .getByRole("button", { name: "Choose a character...", exact: true })
+        .waitFor({ state: "visible" });
+      await page.getByRole("button", { name: "Submit", exact: true }).click();
+      await page.waitForFunction(
+        () => !Object.hasOwn(window.submittedDialogue, "characterId"),
+      );
+      assert.equal(
+        await page.evaluate(() => window.submittedDialogue.character.name),
+        "Custom Speaker",
+      );
       assert.deepEqual(errors, []);
       console.log(
-        `${name}: character-first avatar picker, character switching, animated previews, transform sections, canvas, restore, cancel, background selection, clearing, and authored spritesheet dimensions with anchors passed`,
+        `${name}: grouped speaker avatars in preview and dialogue command; selection, clearing, custom names, persistence, sprite picking, transforms, and canvas passed`,
       );
     } finally {
       await browser.close();

@@ -1,3 +1,5 @@
+import { subscribeCharacterAvatarOptions } from "../../internal/ui/characterAvatarOptions.js";
+
 const toPositivePreviewRevealingSpeed = (rawValue) => {
   const value = Number(rawValue);
   return Number.isFinite(value) && value > 0 ? value : 50;
@@ -74,14 +76,15 @@ const didInitialPreviewDataChange = (oldProps = {}, newProps = {}) => {
 };
 
 export const handleBeforeMount = (deps) => {
-  deps.store.setUiConfig({
-    uiConfig: deps.uiConfig,
-  });
-  deps.store.setLayoutState({
-    layoutState: deps.props.layoutState,
-  });
-  deps.store.hydratePreviewState({
-    previewData: deps.props.initialPreviewData,
+  const { store, props, uiConfig, render } = deps;
+  store.setUiConfig({ uiConfig });
+  store.setLayoutState({ layoutState: props.layoutState });
+  store.hydratePreviewState({ previewData: props.initialPreviewData });
+  return subscribeCharacterAvatarOptions(deps, {
+    onProjectStateChanged: (repositoryState) => {
+      store.setRepositoryState({ repositoryState });
+      render();
+    },
   });
 };
 
@@ -313,10 +316,17 @@ export const handleImageSelectorCancel = (deps) => {
 };
 
 export const handleImageSelectorSubmit = (deps) => {
-  const { store } = deps;
+  const { store, refs } = deps;
+  const transformField = "dialogue-character-sprite-transform-id";
+  const previousTransformId =
+    store.selectDialogueDefaultValues()[transformField];
   store.applyImageSelectorSelection();
   store.hideDropdownMenu();
   renderAndEmitPreviewDataChange(deps);
+  const transformId = store.selectDialogueDefaultValues()[transformField];
+  if (transformId !== previousTransformId) {
+    refs.dialogueForm.setValues({ values: { [transformField]: transformId } });
+  }
 };
 
 export const handleImageDoubleClick = (deps, payload) => {

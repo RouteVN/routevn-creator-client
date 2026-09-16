@@ -1,4 +1,4 @@
-import { toFlatItems } from "./project/tree.js";
+import { toFlatGroups, toFlatItems } from "./project/tree.js";
 
 const DEFAULT_NONE_LABEL = "No Character";
 
@@ -30,12 +30,37 @@ export const toCharacterSelectOptions = (
     includeNone = false,
     noneLabel = DEFAULT_NONE_LABEL,
     includeMissingValue,
+    groupByFolder = false,
+    imageSrcByFileId = {},
   } = {},
 ) => {
-  const options = toCharacterItems(charactersData).map((character) => ({
-    value: character.id,
-    label: toCharacterOptionLabel(character),
-  }));
+  const characters = toCharacterItems(charactersData);
+  const toOption = (character) => {
+    const option = {
+      value: character.id,
+      label: toCharacterOptionLabel(character),
+    };
+    const imageSrc = imageSrcByFileId[character.fileId];
+    if (imageSrc) option.imageSrc = imageSrc;
+    return option;
+  };
+  const options = characters
+    .filter((character) => !groupByFolder || !character.parentId)
+    .map(toOption);
+
+  if (groupByFolder) {
+    for (const group of toFlatGroups(charactersData)) {
+      const children = group.children.filter(
+        (item) => item.type === "character",
+      );
+      if (children.length > 0) {
+        options.push(
+          { type: "section", label: group.fullLabel },
+          ...children.map(toOption),
+        );
+      }
+    }
+  }
 
   if (
     typeof includeMissingValue === "string" &&

@@ -19,6 +19,8 @@ refs:
         handler: handleTransformItemClick
       item-edit:
         handler: handleTransformItemEdit
+      item-action:
+        handler: handleTransformItemAction
       item-dblclick:
         handler: handleTransformItemDoubleClick
       add-click:

@@ -202,9 +202,13 @@ export const showContextMenu = ({ state, props }, { itemId, x, y } = {}) => {
   state.dropdownMenu.x = x;
   state.dropdownMenu.y = y;
   state.dropdownMenu.targetItemId = itemId;
-  state.dropdownMenu.items = props.itemContextMenuItems ?? [
-    { label: "Delete", type: "item", value: "delete-item" },
-  ];
+  const item = props.groups
+    ?.flatMap((group) => group.children ?? [])
+    .find((entry) => entry.id === itemId);
+  state.dropdownMenu.items = item?.contextMenuItems ??
+    props.itemContextMenuItems ?? [
+      { label: "Delete", type: "item", value: "delete-item" },
+    ];
 };
 
 export const hideContextMenu = ({ state }, _payload = {}) => {

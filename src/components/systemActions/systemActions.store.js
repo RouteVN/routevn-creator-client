@@ -296,6 +296,8 @@ export const selectViewData = ({ state, props, props: attrs, i18n }) => {
     allCharacters,
     characterTree: repositoryState.characters?.tree || [],
     transforms: repositoryState.transforms || { items: {}, tree: [] },
+    defaultDialogueAvatarTransformId:
+      repositoryState.project?.defaultDialogueAvatarTransformId,
     animations: repositoryState.animations || { items: {}, tree: [] },
     selectedLine: props.selectedLine,
     previousPresentationState: props.previousPresentationState ?? {},

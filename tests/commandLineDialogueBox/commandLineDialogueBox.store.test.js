@@ -52,6 +52,58 @@ const isFieldVisible = ({ field, values }) => {
 };
 
 describe("commandLineDialogueBox.store", () => {
+  it("groups speaker options by folder and shows avatars without changing the selected speaker", () => {
+    const state = createInitialState();
+    state.selectedCharacterId = "nested-character";
+    state.speakerAvatarUrls = { "avatar-file": "blob:avatar" };
+    const viewData = selectTestViewData({
+      state,
+      props: {
+        characters: [
+          { id: "root", type: "character", name: "Character One" },
+          { id: "cast", type: "folder", name: "Cast" },
+          { id: "guests", type: "folder", name: "Guests" },
+          {
+            id: "nested-character",
+            type: "character",
+            name: "Character Two",
+            fileId: "avatar-file",
+          },
+          { id: "empty", type: "folder", name: "Empty" },
+        ],
+        characterTree: [
+          {
+            id: "cast",
+            children: [
+              { id: "guests", children: [{ id: "nested-character" }] },
+            ],
+          },
+          { id: "root" },
+          { id: "empty" },
+        ],
+      },
+    });
+    const speaker = findFormField(
+      viewData,
+      (field) => field.name === "characterId",
+    );
+    expect(speaker.value).toBe("nested-character");
+    expect(speaker.image).toEqual({
+      size: 28,
+      borderRadius: "full",
+      fit: "cover",
+    });
+    expect(speaker.options).toEqual([
+      { value: "root", label: "Character One" },
+      { type: "section", label: "Cast > Guests" },
+      {
+        value: "nested-character",
+        label: "Character Two",
+        imageSrc: "blob:avatar",
+      },
+    ]);
+  });
+
   it("includes custom speaker name and persistCharacter in form defaults and field values", () => {
     const state = createInitialState();
 

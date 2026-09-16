@@ -1,3 +1,4 @@
+import { Observable } from "rxjs";
 import {
   getImageDimensions,
   extractImageThumbnail,
@@ -539,6 +540,34 @@ export const createProjectAssetService = ({
 
     async getFileContent(fileId) {
       return getFileContent(fileId);
+    },
+
+    observeFileUrls(fileIds) {
+      return new Observable((subscriber) => {
+        const contents = [];
+        const urls = {};
+        const failedFileIds = [];
+        const requests = [...new Set(fileIds)].map(async (fileId) => {
+          try {
+            const content = await getFileContent(fileId);
+            if (subscriber.closed) {
+              content.revoke?.();
+              return;
+            }
+            contents.push(content);
+            urls[fileId] = content.url;
+          } catch {
+            failedFileIds.push(fileId);
+          }
+        });
+        void Promise.all(requests).then(() => {
+          if (!subscriber.closed) subscriber.next({ urls, failedFileIds });
+        });
+        // Keep the URLs alive until the view switches assets or unmounts.
+        return () => {
+          for (const content of contents) content.revoke?.();
+        };
+      });
     },
 
     async downloadMetadata(fileId) {

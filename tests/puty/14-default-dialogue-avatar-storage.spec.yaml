@@ -1,0 +1,223 @@
+---
+file: ./insiemeStorageScenario.js
+group: default dialogue avatar transform sqlite storage
+suites:
+  - runInsiemeStorageScenario
+---
+suite: runInsiemeStorageScenario
+exportName: runInsiemeStorageScenario
+---
+case: persists default replacement clearing and recursive deletion
+in:
+  - projectId: project-one
+    actor:
+      userId: user-one
+      clientId: client-one
+    commands:
+      - id: folder-create
+        partition: m
+        type: transform.create
+        clientTs: 1501
+        payload:
+          transformId: folder
+          data:
+            type: folder
+            name: Folder One
+      - id: one-create
+        partition: m
+        type: transform.create
+        clientTs: 1502
+        payload:
+          transformId: one
+          data:
+            type: transform
+            name: Transform One
+            x: 0
+            'y': 0
+            scaleX: 1
+            scaleY: 1
+            anchorX: 0
+            anchorY: 0
+            rotation: 0
+      - id: two-create
+        partition: m
+        type: transform.create
+        clientTs: 1503
+        payload:
+          transformId: two
+          parentId: folder
+          position: last
+          data:
+            type: transform
+            name: Transform Two
+            x: 10
+            'y': 20
+            scaleX: 1
+            scaleY: 1
+            anchorX: 0
+            anchorY: 0
+            rotation: 0
+      - id: default-one
+        partition: m
+        type: project.set_default_dialogue_avatar_transform
+        clientTs: 1504
+        payload:
+          transformId: one
+      - id: default-two
+        partition: m
+        type: project.set_default_dialogue_avatar_transform
+        clientTs: 1505
+        payload:
+          transformId: two
+      - id: default-clear
+        partition: m
+        type: project.set_default_dialogue_avatar_transform
+        clientTs: 1506
+        payload:
+          transformId: null
+      - id: default-two-again
+        partition: m
+        type: project.set_default_dialogue_avatar_transform
+        clientTs: 1507
+        payload:
+          transformId: two
+      - id: folder-delete
+        partition: m
+        type: transform.delete
+        clientTs: 1508
+        payload:
+          transformIds:
+            - folder
+      - id: default-one-again
+        partition: m
+        type: project.set_default_dialogue_avatar_transform
+        clientTs: 1509
+        payload:
+          transformId: one
+out:
+  storedEvents:
+    - committedId: 1
+      id: folder-create
+      projectId: project-one
+      userId: user-one
+      partition: m
+      schemaVersion: 1
+      type: transform.create
+      payload:
+        transformId: folder
+        data:
+          type: folder
+          name: Folder One
+      meta:
+        clientTs: 1501
+    - committedId: 2
+      id: one-create
+      projectId: project-one
+      userId: user-one
+      partition: m
+      schemaVersion: 1
+      type: transform.create
+      payload:
+        transformId: one
+        data:
+          type: transform
+          name: Transform One
+          x: 0
+          'y': 0
+          scaleX: 1
+          scaleY: 1
+          anchorX: 0
+          anchorY: 0
+          rotation: 0
+      meta:
+        clientTs: 1502
+    - committedId: 3
+      id: two-create
+      projectId: project-one
+      userId: user-one
+      partition: m
+      schemaVersion: 1
+      type: transform.create
+      payload:
+        transformId: two
+        parentId: folder
+        position: last
+        data:
+          type: transform
+          name: Transform Two
+          x: 10
+          'y': 20
+          scaleX: 1
+          scaleY: 1
+          anchorX: 0
+          anchorY: 0
+          rotation: 0
+      meta:
+        clientTs: 1503
+    - committedId: 4
+      id: default-one
+      projectId: project-one
+      userId: user-one
+      partition: m
+      schemaVersion: 1
+      type: project.set_default_dialogue_avatar_transform
+      payload:
+        transformId: one
+      meta:
+        clientTs: 1504
+    - committedId: 5
+      id: default-two
+      projectId: project-one
+      userId: user-one
+      partition: m
+      schemaVersion: 1
+      type: project.set_default_dialogue_avatar_transform
+      payload:
+        transformId: two
+      meta:
+        clientTs: 1505
+    - committedId: 6
+      id: default-clear
+      projectId: project-one
+      userId: user-one
+      partition: m
+      schemaVersion: 1
+      type: project.set_default_dialogue_avatar_transform
+      payload:
+        transformId: null
+      meta:
+        clientTs: 1506
+    - committedId: 7
+      id: default-two-again
+      projectId: project-one
+      userId: user-one
+      partition: m
+      schemaVersion: 1
+      type: project.set_default_dialogue_avatar_transform
+      payload:
+        transformId: two
+      meta:
+        clientTs: 1507
+    - committedId: 8
+      id: folder-delete
+      projectId: project-one
+      userId: user-one
+      partition: m
+      schemaVersion: 1
+      type: transform.delete
+      payload:
+        transformIds:
+          - folder
+      meta:
+        clientTs: 1508
+    - committedId: 9
+      id: default-one-again
+      projectId: project-one
+      userId: user-one
+      partition: m
+      schemaVersion: 1
+      type: project.set_default_dialogue_avatar_transform
+      payload:
+        transformId: one
+      meta:
+        clientTs: 1509

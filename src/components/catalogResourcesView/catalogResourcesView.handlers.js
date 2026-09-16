@@ -637,6 +637,19 @@ export const handleContextMenuClickItem = (deps, payload) => {
     );
   }
 
+  if (
+    action &&
+    !["edit-item", "delete-item", "duplicate-item"].includes(action)
+  ) {
+    dispatchEvent(
+      new CustomEvent("item-action", {
+        detail: { itemId, action },
+        bubbles: true,
+        composed: true,
+      }),
+    );
+  }
+
   store.hideContextMenu();
   render();
 };
