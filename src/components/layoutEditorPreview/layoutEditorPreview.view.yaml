@@ -203,7 +203,7 @@ template:
                         $else:
                           - rtgl-text c=mu-fg ta=c: Select image
   - rtgl-dropdown-menu#dropdownMenu :items=${dropdownMenu.items} x=${dropdownMenu.x} y=${dropdownMenu.y} ?open=${dropdownMenu.isOpen}: null
-  - rtgl-dialog#imageSelectorDialog ?open=${imageSelectorDialog.open} s=xl:
+  - rtgl-dialog#imageSelectorDialog ?open=${imageSelectorDialog.open} s=lg:
       - rtgl-view slot=content d=v w=f g=md:
           - $if isCharacterSelection:
               - rtgl-text: ${i18n.charactersPage.title}
