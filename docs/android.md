@@ -12,7 +12,7 @@ The Android project should stay on the newest stable Android toolchain versions
 we have adopted in Gradle. Update this section in the same PR when changing
 Gradle pins.
 
-- Android Gradle Plugin: `9.2.0`
+- Android Gradle Plugin: `9.2.1`
 - Gradle wrapper: `9.4.1`
 - Java language level: `17`
 - `compileSdk`: `37`
@@ -22,8 +22,11 @@ Gradle pins.
 - NDK: `29.0.14206865`
 - AndroidX Core Splashscreen: `1.2.0`
 - AndroidX Fragment: `1.9.0` (constraint for Google Play In-App Updates' transitive dependency)
-- AndroidX WebKit: `1.16.0`
+- AndroidX WebKit: `1.17.0`
 - Google Play In-App Updates: `2.1.0`
+- Google Play Core Common: `2.0.4` (transitive constraint)
+- Google Play Services Basement: `18.11.0` (transitive constraint)
+- Google Play Services Tasks: `18.4.1` (transitive constraint)
 
 ## Local Setup
 
