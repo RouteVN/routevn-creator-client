@@ -110,6 +110,38 @@ at the end of a line and twice consecutively. Confirm that typing follows the
 caret and that leaving/reopening the scene preserves the newlines. Also confirm
 an IME candidate with Enter before testing an ordinary Enter.
 
+## Physical iPhone automatic Shift follow-up (2026-09-17)
+
+TXT-B012 reproduces the reported rapid-Return failure on an iPhone 13 Pro running
+iOS 16.3.1. After refreshing development signing, WebView inspection and native
+debugger attachment worked. An isolated instance of the production primitive
+inside the installed app used only dummy text, with no project persistence.
+LLDB activated the native keyboard's Return accessibility element four times
+70ms apart. The captured keydown Shift flags were `false, false, true, false`,
+with no intervening Shift keydown. The third Return inserted a soft break, giving
+four scene lines instead of five.
+
+The primitive uses the app's existing touch input mode. Return always creates a
+scene line in that mode, including Shift+Enter and beforeinput-only
+`insertLineBreak`. This applies to native iOS/Android and touch web layouts.
+Desktop/pointer Shift+Enter still inserts a soft break. The touch regression
+also exposed TXT-B013: immediate typing after a beforeinput-only split could be
+rewound by its deferred focus reset (`X`, then `Y` became `YX`). That callback
+now checks the existing focus-restore sequence so newer input supersedes it. No platform detection or
+held-Shift tracking is needed. The deferred input/deduplication logic retains
+this same decision. This is an app-owned change; no dependency source was
+modified.
+
+The rebuilt packaged Debug app passed on the same iPhone: a burst of four native
+Return events, including shifted events, created five scene lines with no soft
+breaks, and native `X` then `y` input landed in the final line. The temporary
+fixture was removed afterward. `bun run test:scene-editor` passed 455 unit tests
+and all Chromium/WebKit browser suites; lint passed. The new browser suite
+replays the captured modifier sequence, then uses native typing and asserts the
+exact content and caret. It also verifies touch beforeinput-only line breaks and native Shift+Enter
+in both touch and desktop/pointer modes. A physical iPhone hardware keyboard and IME were
+not part of this device check.
+
 ## Multiline replacement and deletion follow-up (2026-09-16)
 
 Investigation of intermittent editing reports reproduced three additional

@@ -74,6 +74,41 @@ afterEach(() => {
 });
 
 describe("scene editor pointer selection with hidden shadow selections", () => {
+  it("cancels queued caret recovery as soon as a touch starts inside the editor", () => {
+    owner.hasLine = () => true;
+    owner.markProgrammaticFocusRestore({ lineId: "line-1", cursorPosition: 8 });
+    owner.restoreLastProgrammaticFocusTarget();
+
+    owner.handleDocumentPointerDown({
+      button: 0,
+      pointerType: "touch",
+      composedPath: () => [line, editable, owner],
+    });
+    // iOS can deliver blur before compatibility mousedown. That blur must
+    // not revive the old target, even when native selection is unreadable.
+    owner.restoreLastProgrammaticFocusTarget();
+    vi.runAllTimers();
+
+    expect(owner.focusLine).not.toHaveBeenCalled();
+    expect(nativeRange.startOffset).toBe(3);
+    expect(owner.lastProgrammaticFocusTarget).toBeUndefined();
+  });
+
+  it("does not replay a pointer fallback after a newer gesture", () => {
+    owner.schedulePointerFallbackSelectionValidation({
+      lineId: "line-2",
+      cursorPosition: 8,
+    });
+    owner.handleDocumentPointerDown({
+      button: 0,
+      composedPath: () => [line, editable, owner],
+    });
+    vi.runAllTimers();
+
+    expect(owner.focusLine).not.toHaveBeenCalled();
+    expect(nativeRange.startOffset).toBe(3);
+  });
+
   it("keeps the browser caret and selects the clicked line when hit testing is unresolved", () => {
     const event = { button: 0, target: line, clientX: 90, clientY: 30 };
     owner.pendingPointerFallbackSelection =
