@@ -2,6 +2,7 @@ import { describe, expect, it, vi } from "vitest";
 import {
   handleBeforeMount,
   handleItemContextMenu,
+  handleItemLongPress,
   handleItemDoubleClick,
   handleResourceImportMenuAction,
   handleScrollContainerClick,
@@ -223,13 +224,13 @@ describe("mediaResourcesView.handlers", () => {
     );
   });
 
-  it("runs the double-click action instead of opening the context menu for mobile contextmenu gestures", () => {
+  it("runs the primary action on an explicit long press", () => {
     const dispatchEvent = vi.fn();
     const preventDefault = vi.fn();
     const showContextMenu = vi.fn();
     const render = vi.fn();
 
-    handleItemContextMenu(
+    handleItemLongPress(
       {
         props: {
           mobileLayout: true,
@@ -254,14 +255,13 @@ describe("mediaResourcesView.handlers", () => {
       },
     );
 
-    expect(preventDefault).toHaveBeenCalled();
     expect(dispatchEvent).toHaveBeenCalledOnce();
     expect(dispatchEvent).toHaveBeenCalledWith(
       expect.objectContaining({
         type: "item-dblclick",
         detail: {
           itemId: "image-1",
-          source: "mobile-context-menu",
+          source: "long-press",
         },
       }),
     );

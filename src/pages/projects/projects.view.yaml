@@ -80,20 +80,24 @@ refs:
     eventListeners:
       form-action:
         handler: handleSettingsFormAction
-  project*:
+  projectItem*:
     eventListeners:
       click:
         required: true
         handler: handleProjectsClick
       contextmenu:
         handler: handleProjectContextMenu
-  cloudProject*:
+      long-press:
+        handler: handleProjectLongPress
+  cloudProjectItem*:
     eventListeners:
       click:
         required: true
         handler: handleProjectsClick
       contextmenu:
         handler: handleCloudProjectContextMenu
+      long-press:
+        handler: handleCloudProjectLongPress
   cloudCreateForm:
     eventListeners:
       form-action:
@@ -136,8 +140,18 @@ refs:
     eventListeners:
       click:
         handler: handleDeleteDialogConfirm
+styles:
+  '#projectsScroll[data-platform="ios"]':
+    overflow-x: hidden
+    overflow-y: scroll
+    overscroll-behavior-y: contain
+    flex-wrap: nowrap
+  '[data-long-press="true"]':
+    user-select: none
+    -webkit-user-select: none
+    -webkit-touch-callout: none
 template:
-  - 'rtgl-view w=100vw d=v style="height: var(--rvn-app-viewport-height, 100vh);"':
+  - 'rtgl-view w=f d=v style="height: var(--rvn-app-viewport-height, 100vh);"':
       - 'rtgl-view w=f h=f d=v style="min-height: 0;"':
           - rtgl-view h=48 w=f bgc=bg bwb=xs ph=md av=c ah=c:
               - 'rtgl-view sm-w=f w=${navbarContentWidth} d=h av=c g=md wrap':
@@ -157,7 +171,7 @@ template:
                               - rtgl-image wh=36 br=f bw=xs bc=bo of=cov src=${avatarImageSrc}: null
                         $else:
                           - rtgl-button#loginButton variant=se: ${loginButtonText}
-          - 'rtgl-view w=f h=1fg ah=c sv style="min-height: 0;"':
+          - 'rtgl-view#projectsScroll data-platform=${platform} w=f h=1fg ah=c ?sv=${useDefaultProjectsScroll} style="min-height: 0;"':
               - 'rtgl-view w=f d=v ph=md style="max-width: 1280px; box-sizing: border-box;"':
                   - 'rtgl-view w=f ah=c':
                       - rtgl-view sm-w=f w=640 h=1fg d=v g=xl:
@@ -171,14 +185,22 @@ template:
                                           - rtgl-text s=lg c=mu-fg: ${localEmptyMessage}
                                           - rtgl-text s=sm c=mu-fg: ${localEmptySubMessage}
                               - $for project, i in projects:
-                                  - 'rtgl-view id=${project.itemId} data-project-id=${project.id} data-project-path="${project.encodedProjectPath}" h=auto w=f bw=xs bc=bo h-bc=ac p=md cur=pointer d=h av=c g=md':
+                                  - 'rtgl-view id=${project.itemId} data-project-id=${project.id} data-project-path="${project.encodedProjectPath}" data-long-press=true h=auto w=f bw=xs bc=bo h-bc=ac p=md cur=pointer d=h av=c g=md':
                                       - $if project.iconUrl:
                                           - rtgl-image wh=56 src=${project.iconUrl} bw=xs bc=bo of=con br=md: null
                                         $else:
                                           - rtgl-image wh=56 src="/public/project_logo_placeholder.png" bw=xs bc=bo of=con br=md: null
-                                      - rtgl-view w=1fg:
+                                      - 'rtgl-view w=1fg style="min-width: 0;"':
                                           - rtgl-text ellipsis w=f: ${project.name}
-                                          - $if platform != 'android' && platform != 'ios' && project.projectPath:
+                                          - $if platform == 'ios' && project.projectFileDisplayPath:
+                                              - 'rtgl-view d=h g=sm av=c mt=xs w=f style="min-width: 0;"':
+                                                  - rtgl-svg wh=14 svg=folder c=mu-fg: null
+                                                  - 'rtgl-view d=h av=c w=1fg style="min-width: 0;"':
+                                                      - $if project.projectFileDisplayPrefix:
+                                                          - 'rtgl-text s=xs c=mu-fg ellipsis style="min-width: 0;"': ${project.projectFileDisplayPrefix}
+                                                          - 'rtgl-text s=xs c=mu-fg style="flex-shrink: 0;"': /
+                                                      - 'rtgl-text s=xs c=mu-fg style="white-space: nowrap; flex-shrink: 0;"': ${project.projectFileDisplaySuffix}
+                                            $elif platform != 'android' && platform != 'ios' && project.projectPath:
                                               - 'rtgl-view d=h g=sm av=c mt=xs w=f style="min-width: 0;"':
                                                   - rtgl-svg wh=14 svg=folder c=mu-fg: null
                                                   - rtgl-text s=xs c=mu-fg ellipsis w=f: ${project.projectPath}
@@ -198,7 +220,7 @@ template:
                                                   - rtgl-text s=lg c=mu-fg: ${cloudEmptyMessage}
                                                   - rtgl-text s=sm c=mu-fg: ${cloudEmptySubMessage}
                                   - $for project, i in cloudProjects:
-                                      - rtgl-view#cloudProjectItem${i} data-project-id=${project.id} h=auto w=f bw=xs bc=bo h-bc=ac p=md d=h av=c g=md cur=pointer:
+                                      - rtgl-view#cloudProjectItem${i} data-project-id=${project.id} data-long-press=true h=auto w=f bw=xs bc=bo h-bc=ac p=md d=h av=c g=md cur=pointer:
                                           - rtgl-image wh=56 src="/public/project_logo_placeholder.png" bw=xs bc=bo of=con br=md: null
                                           - rtgl-view w=1fg:
                                               - rtgl-view d=h av=c:

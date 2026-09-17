@@ -756,6 +756,13 @@ export const handleFormExtra = (deps) => {
   render();
 };
 
+export const handleSliderFormInput = (deps, payload) => {
+  const { name } = payload._event.detail;
+  if (["playbackSpeed", "blurX", "blurY", "blurQuality"].includes(name)) {
+    handleFormInputChange(deps, payload);
+  }
+};
+
 export const handleFormInputChange = (deps, payload) => {
   const { store, render } = deps;
   const { name, value: fieldValue } = payload._event.detail;

@@ -60,14 +60,14 @@ describe("commandLineScreen.store", () => {
     expect(viewData.defaultValues.transitionAnimationId).toBe(
       "screen-crossfade",
     );
-    expect(viewData.form.fields[0]).toEqual(
+    expect(viewData.form.fields[0].fields[0]).toEqual(
       expect.objectContaining({
         clearable: true,
         label: "Animation",
         placeholder: "Animation",
       }),
     );
-    expect(viewData.form.fields[0].required).toBeUndefined();
+    expect(viewData.form.fields[0].fields[0].required).toBeUndefined();
     expect(viewData.form.fields[1]).toMatchObject({
       $when: "transitionAnimationId",
       type: "row",

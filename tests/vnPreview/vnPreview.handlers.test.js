@@ -53,6 +53,72 @@ vi.mock(
 );
 
 describe("vnPreview.handlers", () => {
+  it("names a damaged layout font and closes the preview without starting its engine", async () => {
+    const { handleAfterMount } = await import(
+      "../../src/components/vnPreview/vnPreview.handlers.js"
+    );
+    const { extractFileIdsForLayouts } = await import(
+      "../../src/internal/project/layout.js"
+    );
+    vi.mocked(extractFileIdsForLayouts).mockReturnValueOnce([
+      { url: "font-one", type: "font/ttf" },
+    ]);
+    constructProjectDataMock.mockReturnValue({
+      screen: { width: 1280, height: 720 },
+      story: { scenes: {} },
+      resources: {
+        fonts: { font: { fileId: "font-one" } },
+        layouts: { dialogue: {} },
+      },
+    });
+    const error = Object.assign(new Error("checksum mismatch"), {
+      fileId: "font-one",
+      code: "font_integrity_mismatch",
+    });
+    const deps = {
+      projectService: {
+        ensureRepository: vi.fn(async () => ({})),
+        getRepositoryState: vi.fn(() => ({
+          fonts: { items: { font: { name: "Font One", fileId: "font-one" } } },
+        })),
+        getFileContent: vi.fn(async () => {
+          throw error;
+        }),
+      },
+      appService: { showAlert: vi.fn() },
+      graphicsService: {
+        init: vi.fn(async () => {}),
+        initRouteEngine: vi.fn(),
+        loadAssets: vi.fn(),
+      },
+      store: {
+        setProjectResolution: vi.fn(),
+        setAssetLoading: vi.fn(),
+        setPreviewReady: vi.fn(),
+        resetAssetLoadCache: vi.fn(),
+        selectHasLoadedAssetFileId: vi.fn(() => false),
+      },
+      props: {},
+      refs: { canvas: {} },
+      render: vi.fn(),
+      dispatchEvent: vi.fn(),
+    };
+    await handleAfterMount(deps);
+    expect(deps.appService.showAlert).toHaveBeenCalledOnce();
+    expect(deps.appService.showAlert.mock.calls[0][0].message).toContain(
+      '"Font One"',
+    );
+    expect(deps.appService.showAlert.mock.calls[0][0].message).toContain(
+      "replace",
+    );
+    expect(deps.dispatchEvent.mock.calls[0][0].type).toBe("close");
+    expect(deps.graphicsService.initRouteEngine).not.toHaveBeenCalled();
+    expect(deps.graphicsService.loadAssets).not.toHaveBeenCalled();
+    expect(deps.store.setAssetLoading).toHaveBeenLastCalledWith({
+      isLoading: false,
+    });
+  });
+
   afterEach(() => {
     vi.unstubAllGlobals();
   });
@@ -82,6 +148,39 @@ describe("vnPreview.handlers", () => {
       missingSectionIds: [],
     });
     resolveSceneIdForSectionIdMock.mockReturnValue(undefined);
+  });
+
+  it("reports startup failure and exits the unusable preview", async () => {
+    const { handleAfterMount } = await import(
+      "../../src/components/vnPreview/vnPreview.handlers.js"
+    );
+    const failure = new Error("Preview initialization failed");
+    const log = vi.spyOn(console, "error").mockImplementation(() => {});
+    const deps = {
+      projectService: {
+        ensureRepository: vi.fn().mockRejectedValue(failure),
+      },
+      refs: { previewSurface: { focus: vi.fn() } },
+      appService: { showToast: vi.fn() },
+      store: { setAssetLoading: vi.fn(), setPreviewReady: vi.fn() },
+      render: vi.fn(),
+      dispatchEvent: vi.fn(),
+      i18n: {
+        resourcePages: {},
+        scenesPage: {},
+        sceneEditorPage: { failedOpenPreview: "Failed to open preview" },
+      },
+    };
+    try {
+      await handleAfterMount(deps);
+      expect(deps.appService.showToast).toHaveBeenCalledWith({
+        message: "Failed to open preview",
+        status: "error",
+      });
+      expect(deps.dispatchEvent.mock.calls[0][0].type).toBe("close");
+    } finally {
+      log.mockRestore();
+    }
   });
 
   it("clears the scene editor mute override when mounting full-screen preview", async () => {

@@ -301,9 +301,8 @@ export const handleSoundDoubleClick = (deps, payload) => {
   render();
 };
 
-export const handleSoundContextMenu = async (deps, payload) => {
+const openSoundContextMenu = async (deps, { event, point }) => {
   const { store, render, appService, i18n } = deps;
-  const { _event: event } = payload;
   event.preventDefault();
   event.stopPropagation();
   const soundId = selectSoundFromEvent(store, event);
@@ -343,8 +342,8 @@ export const handleSoundContextMenu = async (deps, payload) => {
   );
   const result = await appService.showDropdownMenu({
     items,
-    x: event.clientX,
-    y: event.clientY,
+    x: point.clientX,
+    y: point.clientY,
     place: "bs",
   });
 
@@ -371,6 +370,16 @@ export const handleSoundContextMenu = async (deps, payload) => {
     store.removeSound({ soundId });
     render();
   }
+};
+
+export const handleSoundContextMenu = (deps, { _event }) => {
+  return openSoundContextMenu(deps, { event: _event, point: _event });
+};
+
+export const handleSoundLongPress = (deps, { _event }) => {
+  const { store } = deps;
+  store.cancelSoundDrag();
+  return openSoundContextMenu(deps, { event: _event, point: _event.detail });
 };
 
 export const handleEmptyAddClick = async (deps, payload) => {

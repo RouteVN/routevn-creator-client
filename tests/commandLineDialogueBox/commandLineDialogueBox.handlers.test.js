@@ -1,5 +1,6 @@
 import { readFileSync } from "node:fs";
 import { describe, expect, it, vi } from "vitest";
+import { of } from "rxjs";
 import {
   handleAfterMount,
   handleBeforeMount,
@@ -23,6 +24,7 @@ import {
   setAppendDialogue,
   setCharacterSpriteEnabled,
   setCharacterName,
+  setSpeakerAvatarUrls,
   setClearPage,
   setCustomCharacterName,
   setMode,
@@ -147,6 +149,7 @@ const createStore = (state) => ({
   setCustomCharacterName: (payload) =>
     setCustomCharacterName({ state }, payload),
   setCharacterName: (payload) => setCharacterName({ state }, payload),
+  setSpeakerAvatarUrls: (payload) => setSpeakerAvatarUrls({ state }, payload),
   setCharacterSpriteEnabled: (payload) =>
     setCharacterSpriteEnabled({ state }, payload),
   setSpriteCharacterId: (payload) => setSpriteCharacterId({ state }, payload),
@@ -190,6 +193,20 @@ const createFormRefs = () => ({
     setValues: vi.fn(),
   },
 });
+
+const mountDialogue = (deps) =>
+  handleBeforeMount({
+    i18n: EN_I18N,
+    render: vi.fn(),
+    projectService: {
+      subscribeProjectState: (callback) => {
+        callback({ repositoryState: {} });
+        return () => {};
+      },
+      observeFileUrls: () => of({ urls: {}, failedFileIds: [] }),
+    },
+    ...deps,
+  });
 
 describe("commandLineDialogueBox.handlers", () => {
   it("renders the dialogue sprite content through the form slot", () => {
@@ -271,7 +288,7 @@ describe("commandLineDialogueBox.handlers", () => {
       store: createStore(state),
     };
 
-    handleBeforeMount(deps);
+    mountDialogue(deps);
     handleAfterMount(deps);
 
     expect(state.persistCharacter).toBe(true);
@@ -329,7 +346,7 @@ describe("commandLineDialogueBox.handlers", () => {
       store: createStore(state),
     };
 
-    handleBeforeMount(deps);
+    mountDialogue(deps);
     handleAfterMount(deps);
 
     expect(state.characterSpriteEnabled).toBe(true);
@@ -356,7 +373,7 @@ describe("commandLineDialogueBox.handlers", () => {
   it("hydrates explicit dialogue sprite persistence from props", () => {
     const state = createInitialState();
 
-    handleBeforeMount({
+    mountDialogue({
       props: {
         layouts,
         characters,
@@ -384,6 +401,7 @@ describe("commandLineDialogueBox.handlers", () => {
       props: {
         layouts,
         characters,
+        transforms,
         dialogue: {
           mode: "adv",
           ui: {
@@ -392,6 +410,7 @@ describe("commandLineDialogueBox.handlers", () => {
           characterId: "character-1",
           character: {
             sprite: {
+              transformId: "portrait-left",
               items: [{ id: "body", resourceId: "sprite-body" }],
             },
           },
@@ -401,7 +420,7 @@ describe("commandLineDialogueBox.handlers", () => {
       store: createStore(state),
     };
 
-    handleBeforeMount(deps);
+    mountDialogue(deps);
 
     expect(state.characterSpriteEnabled).toBe(true);
     expect(state.persistSprite).toBe(true);
@@ -424,6 +443,7 @@ describe("commandLineDialogueBox.handlers", () => {
       props: {
         layouts,
         characters,
+        transforms,
         dialogue: {
           mode: "adv",
           ui: {
@@ -432,6 +452,7 @@ describe("commandLineDialogueBox.handlers", () => {
           characterId: "character-1",
           character: {
             sprite: {
+              transformId: "portrait-left",
               items: [{ id: "body", resourceId: "sprite-body" }],
             },
           },
@@ -443,7 +464,7 @@ describe("commandLineDialogueBox.handlers", () => {
       dispatchEvent,
     };
 
-    handleBeforeMount(deps);
+    mountDialogue(deps);
     handleFormChange(deps, {
       _event: {
         detail: {
@@ -494,7 +515,7 @@ describe("commandLineDialogueBox.handlers", () => {
       dispatchEvent,
     };
 
-    handleBeforeMount(deps);
+    mountDialogue(deps);
     handleFormChange(deps, {
       _event: {
         detail: {
@@ -545,7 +566,7 @@ describe("commandLineDialogueBox.handlers", () => {
       store: createStore(state),
     };
 
-    handleBeforeMount(deps);
+    mountDialogue(deps);
     handleAfterMount(deps);
 
     expect(state.customizeTextSpeed).toBe(true);
@@ -749,7 +770,7 @@ describe("commandLineDialogueBox.handlers", () => {
       store: createStore(state),
     };
 
-    handleBeforeMount(deps);
+    mountDialogue(deps);
     handleAfterMount(deps);
 
     expect(state.selectedCharacterId).toBe("");
@@ -790,7 +811,7 @@ describe("commandLineDialogueBox.handlers", () => {
       store: createStore(state),
     };
 
-    handleBeforeMount(deps);
+    mountDialogue(deps);
     handleAfterMount(deps);
 
     expect(state.selectedCharacterId).toBe("");
@@ -1914,6 +1935,7 @@ describe("commandLineDialogueBox.handlers", () => {
         layouts,
         characters,
         transforms,
+        defaultDialogueAvatarTransformId: "portrait-left",
         animations,
       },
       render,
@@ -2011,6 +2033,7 @@ describe("commandLineDialogueBox.handlers", () => {
         layouts,
         characters,
         transforms,
+        defaultDialogueAvatarTransformId: "portrait-left",
         dialogue: {
           content: [{ text: "Sprite line" }],
         },
@@ -2441,6 +2464,82 @@ describe("commandLineDialogueBox.handlers", () => {
         characterId: "character-1",
         persistCharacter: false,
       },
+    });
+  });
+});
+
+describe("dialogue avatar default transform", () => {
+  const collection = {
+    tree: [{ id: "portrait-left" }, { id: "portrait-right" }, { id: "folder" }],
+    items: {
+      ...transforms.items,
+      "portrait-right": {
+        id: "portrait-right",
+        type: "transform",
+        name: "Right",
+      },
+      folder: { id: "folder", type: "folder", name: "Folder" },
+    },
+  };
+  it.each([
+    [undefined, ""],
+    ["portrait-right", "portrait-right"],
+    ["missing", ""],
+    ["folder", ""],
+  ])("starts a new avatar with default %s", (defaultId, expected) => {
+    const state = createInitialState();
+    handleCharacterItemClick(
+      {
+        store: createStore(state),
+        render: vi.fn(),
+        props: {
+          characters,
+          transforms: collection,
+          defaultDialogueAvatarTransformId: defaultId,
+        },
+      },
+      {
+        _event: { currentTarget: { dataset: { characterId: "character-1" } } },
+      },
+    );
+    expect(state.spriteTransformId).toBe(expected);
+  });
+
+  it("preserves an explicitly chosen transform when the default changes", () => {
+    const state = createInitialState();
+    setSpriteTransformId({ state }, { transformId: "portrait-left" });
+    handleCharacterItemClick(
+      {
+        store: createStore(state),
+        render: vi.fn(),
+        props: {
+          characters,
+          transforms: collection,
+          defaultDialogueAvatarTransformId: "portrait-right",
+        },
+      },
+      {
+        _event: { currentTarget: { dataset: { characterId: "character-1" } } },
+      },
+    );
+    expect(state.spriteTransformId).toBe("portrait-left");
+  });
+
+  it("requires an explicit transform before submitting an avatar with no default", () => {
+    const state = createInitialState();
+    state.selectedSpriteIds = { body: "sprite-body" };
+    const dispatchEvent = vi.fn();
+    const showToast = vi.fn();
+    handleSubmitClick({
+      store: createStore(state),
+      props: { transforms: collection },
+      dispatchEvent,
+      appService: { showToast },
+      i18n: EN_I18N,
+    });
+    expect(dispatchEvent).not.toHaveBeenCalled();
+    expect(showToast).toHaveBeenCalledWith({
+      message: "Select a transform for the dialogue avatar.",
     });
   });
 });

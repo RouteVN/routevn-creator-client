@@ -1104,10 +1104,19 @@ export const handleSceneFormClose = (deps) => {
 export const handleSceneFormAction = async (deps, payload) => {
   const { store, render, projectService, appService } = deps;
   const copy = selectCopy(deps);
-  const actionId = payload._event.detail.actionId;
+  const { actionId, values: formData, valid } = payload._event.detail;
 
   if (actionId === "submit") {
-    if (!store.selectShowSceneForm()) {
+    if (!store.selectShowSceneForm() || valid === false) {
+      return;
+    }
+
+    const name = formData.name?.trim();
+    if (!name) {
+      appService.showAlert({
+        message: copy.sceneNameRequired ?? "Scene name is required.",
+        title: copy.warningTitle ?? "Warning",
+      });
       return;
     }
 
@@ -1115,9 +1124,6 @@ export const handleSceneFormAction = async (deps, payload) => {
       x: 0,
       y: 0,
     };
-
-    // Get form values from the event detail (same pattern as text styles)
-    const formData = payload._event.detail.values;
 
     store.resetSceneForm();
     render();
@@ -1184,11 +1190,7 @@ export const handleSceneFormAction = async (deps, payload) => {
           parentId: formData.folderId || null,
           position: "last",
           data: {
-            name:
-              formData.name ||
-              formatI18nCopy(copy.sceneFallback ?? "Scene {time}", {
-                time: new Date().toLocaleTimeString(),
-              }),
+            name,
             position: {
               x: sceneWhiteboardPosition.x,
               y: sceneWhiteboardPosition.y,
@@ -1213,7 +1215,7 @@ export const handleSceneFormAction = async (deps, payload) => {
       store.addWhiteboardItem({
         newItem: {
           id: newSceneId,
-          name: formData.name,
+          name,
           x: sceneWhiteboardPosition.x,
           y: sceneWhiteboardPosition.y,
         },

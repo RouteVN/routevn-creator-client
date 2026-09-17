@@ -1,0 +1,4 @@
+componentName: rvn-project-folder-setup
+propsSchema:
+  type: object
+  properties: {}

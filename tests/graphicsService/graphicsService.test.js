@@ -114,6 +114,93 @@ describe("graphicsService", () => {
     });
   });
 
+  it("starts the platform output before graphics and closes it before destroying sources", async () => {
+    const calls = [];
+    const audioOutput = {
+      resume: vi.fn(async () => calls.push("output.resume")),
+      close: vi.fn(() => calls.push("output.close")),
+    };
+    routeGraphicsInstance.init.mockImplementationOnce(async () =>
+      calls.push("graphics.init"),
+    );
+    routeGraphicsInstance.destroy.mockImplementationOnce(() =>
+      calls.push("graphics.destroy"),
+    );
+    createAssetBufferManagerMock.mockReturnValue({ clear: vi.fn() });
+    const { createGraphicsService } = await import(
+      "../../src/deps/services/graphicsService.js"
+    );
+    const service = await createGraphicsService({ audioOutput });
+    await service.init({ width: 1920, height: 1080 });
+    await service.destroy();
+    expect(calls).toEqual([
+      "output.resume",
+      "graphics.init",
+      "output.close",
+      "graphics.destroy",
+    ]);
+  });
+
+  it("releases platform output if graphics initialization fails", async () => {
+    const audioOutput = { resume: vi.fn(async () => {}), close: vi.fn() };
+    routeGraphicsInstance.init.mockRejectedValueOnce(
+      new Error("Initialization failed"),
+    );
+    createAssetBufferManagerMock.mockReturnValue({ clear: vi.fn() });
+    const { createGraphicsService } = await import(
+      "../../src/deps/services/graphicsService.js"
+    );
+    const service = await createGraphicsService({ audioOutput });
+    await expect(service.init({ width: 1920, height: 1080 })).rejects.toThrow(
+      "Initialization failed",
+    );
+    expect(audioOutput.close).toHaveBeenCalledOnce();
+  });
+
+  it("can initialize, close and reopen while platform playback remains pending", async () => {
+    const audioOutput = {
+      resume: vi.fn(() => new Promise(() => {})),
+      close: vi.fn(),
+    };
+    createAssetBufferManagerMock.mockReturnValue({ clear: vi.fn() });
+    const { createGraphicsService } = await import(
+      "../../src/deps/services/graphicsService.js"
+    );
+    const service = await createGraphicsService({ audioOutput });
+    await service.init({ width: 1920, height: 1080 });
+    await service.destroy();
+    await service.init({ width: 1920, height: 1080 });
+    expect(routeGraphicsInstance.init).toHaveBeenCalledTimes(2);
+    expect(audioOutput.close).toHaveBeenCalledOnce();
+    await service.destroy();
+  });
+
+  it("reports playback failure without preventing the preview from rendering", async () => {
+    const failure = new Error("Playback denied");
+    const audioOutput = {
+      resume: vi.fn().mockRejectedValue(failure),
+      close: vi.fn(),
+    };
+    const onAudioOutputError = vi.fn();
+    const log = vi.spyOn(console, "error").mockImplementation(() => {});
+    createAssetBufferManagerMock.mockReturnValue({ clear: vi.fn() });
+    const { createGraphicsService } = await import(
+      "../../src/deps/services/graphicsService.js"
+    );
+    const service = await createGraphicsService({
+      audioOutput,
+      onAudioOutputError,
+    });
+    try {
+      await service.init({ width: 1920, height: 1080 });
+      expect(routeGraphicsInstance.init).toHaveBeenCalledOnce();
+      expect(onAudioOutputError).toHaveBeenCalledWith(failure);
+    } finally {
+      await service.destroy();
+      log.mockRestore();
+    }
+  });
+
   it("ignores stale queued asset loads after runtime destroy", async () => {
     let resolveLoad;
     const bufferManager = {
@@ -401,97 +488,107 @@ describe("graphicsService", () => {
     });
   });
 
-  it("registers runtime fonts with their weight descriptor", async () => {
-    const fontFaces = [];
-    const fontFaceSet = {
-      add: vi.fn((fontFace) => fontFaces.push(fontFace)),
-      delete: vi.fn(),
-      [Symbol.iterator]: () => fontFaces[Symbol.iterator](),
-    };
-    class TestFontFace {
-      constructor(family, source, descriptors) {
-        this.family = family;
-        this.source = source;
-        this.weight = descriptors.weight ?? "normal";
+  it.each([false, true])(
+    "registers runtime fonts with their weight descriptor (verified buffer: %s)",
+    async (verified) => {
+      const fontFaces = [];
+      const fontFaceSet = {
+        add: vi.fn((fontFace) => fontFaces.push(fontFace)),
+        delete: vi.fn(),
+        [Symbol.iterator]: () => fontFaces[Symbol.iterator](),
+      };
+      class TestFontFace {
+        constructor(family, source, descriptors) {
+          this.family = family;
+          this.source = source;
+          this.weight = descriptors.weight ?? "normal";
+        }
+
+        async load() {
+          return this;
+        }
       }
+      const originalDocument = globalThis.document;
+      const originalFontFace = globalThis.FontFace;
+      const createObjectUrl = vi
+        .spyOn(URL, "createObjectURL")
+        .mockReturnValue("blob:runtime-font");
+      const revokeObjectUrl = vi
+        .spyOn(URL, "revokeObjectURL")
+        .mockImplementation(() => {});
+      globalThis.document = {
+        fonts: fontFaceSet,
+        addEventListener: vi.fn(),
+        removeEventListener: vi.fn(),
+      };
+      globalThis.FontFace = TestFontFace;
 
-      async load() {
-        return this;
+      const fontBuffer = new ArrayBuffer(8);
+      const bufferManager = {
+        has: vi.fn(() => false),
+        load: vi.fn(async () => {}),
+        getBufferMap: vi.fn(() => ({
+          "font-600": {
+            buffer: fontBuffer,
+            type: "font/woff2",
+          },
+        })),
+        clear: vi.fn(),
+      };
+      createAssetBufferManagerMock.mockReturnValue(bufferManager);
+
+      const { createGraphicsService } = await import(
+        "../../src/deps/services/graphicsService.js"
+      );
+      const service = await createGraphicsService({
+        subject: {
+          dispatch: vi.fn(),
+        },
+      });
+
+      try {
+        await service.init({
+          canvas: {
+            children: [],
+            appendChild: vi.fn(),
+            removeChild: vi.fn(),
+          },
+          width: 1920,
+          height: 1080,
+        });
+
+        await service.loadAssets({
+          "font-600": {
+            url: verified ? "blob:verified-font" : "font://semibold",
+            buffer: verified ? fontBuffer : undefined,
+            type: "font/woff2",
+            fontWeightDescriptor: "600",
+          },
+        });
+
+        expect(fontFaces).toHaveLength(1);
+        expect(fontFaces[0]).toMatchObject({
+          family: "font-600",
+          weight: "600",
+        });
+        expect(routeGraphicsInstance.loadAssets).not.toHaveBeenCalled();
+        expect(createObjectUrl).toHaveBeenCalledOnce();
+        expect(revokeObjectUrl).toHaveBeenCalledWith("blob:runtime-font");
+        if (verified) {
+          expect(bufferManager.load).not.toHaveBeenCalled();
+          expect(revokeObjectUrl).toHaveBeenCalledWith("blob:verified-font");
+        } else {
+          expect(bufferManager.load).toHaveBeenCalledOnce();
+        }
+      } finally {
+        await service.destroy();
+        globalThis.document = originalDocument;
+        globalThis.FontFace = originalFontFace;
+        createObjectUrl.mockRestore();
+        revokeObjectUrl.mockRestore();
       }
-    }
-    const originalDocument = globalThis.document;
-    const originalFontFace = globalThis.FontFace;
-    const createObjectUrl = vi
-      .spyOn(URL, "createObjectURL")
-      .mockReturnValue("blob:runtime-font");
-    const revokeObjectUrl = vi
-      .spyOn(URL, "revokeObjectURL")
-      .mockImplementation(() => {});
-    globalThis.document = {
-      fonts: fontFaceSet,
-      addEventListener: vi.fn(),
-      removeEventListener: vi.fn(),
-    };
-    globalThis.FontFace = TestFontFace;
-
-    const fontBuffer = new ArrayBuffer(8);
-    const bufferManager = {
-      has: vi.fn(() => false),
-      load: vi.fn(async () => {}),
-      getBufferMap: vi.fn(() => ({
-        "font-600": {
-          buffer: fontBuffer,
-          type: "font/woff2",
-        },
-      })),
-      clear: vi.fn(),
-    };
-    createAssetBufferManagerMock.mockReturnValue(bufferManager);
-
-    const { createGraphicsService } = await import(
-      "../../src/deps/services/graphicsService.js"
-    );
-    const service = await createGraphicsService({
-      subject: {
-        dispatch: vi.fn(),
-      },
-    });
-
-    try {
-      await service.init({
-        canvas: {
-          children: [],
-          appendChild: vi.fn(),
-          removeChild: vi.fn(),
-        },
-        width: 1920,
-        height: 1080,
-      });
-
-      await service.loadAssets({
-        "font-600": {
-          url: "font://semibold",
-          type: "font/woff2",
-          fontWeightDescriptor: "600",
-        },
-      });
-
-      expect(fontFaces).toHaveLength(1);
-      expect(fontFaces[0]).toMatchObject({
-        family: "font-600",
-        weight: "600",
-      });
-      expect(routeGraphicsInstance.loadAssets).not.toHaveBeenCalled();
-      expect(createObjectUrl).toHaveBeenCalledOnce();
-      expect(revokeObjectUrl).toHaveBeenCalledWith("blob:runtime-font");
-    } finally {
-      await service.destroy();
-      globalThis.document = originalDocument;
-      globalThis.FontFace = originalFontFace;
-      createObjectUrl.mockRestore();
-      revokeObjectUrl.mockRestore();
-    }
-  });
+    },
+  );
 
   it("routes tauri Pixi video media through the provided localhost origin", async () => {
     const filePath = "/Users/test/project/files/video-1";

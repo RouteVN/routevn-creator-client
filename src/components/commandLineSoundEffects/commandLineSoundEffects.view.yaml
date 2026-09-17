@@ -55,6 +55,8 @@ refs:
         handler: handleSoundDoubleClick
       contextmenu:
         handler: handleSoundContextMenu
+      long-press:
+        handler: handleSoundLongPress
       keydown:
         handler: handleSoundKeyDown
   soundDragSurface*:
@@ -93,6 +95,10 @@ refs:
       audio-player-close:
         handler: handleAudioPlayerClose
 styles:
+  '[data-long-press="true"]':
+    user-select: none
+    "-webkit-user-select": none
+    "-webkit-touch-callout": none
   ".sfxChannel":
     box-sizing: border-box
     flex-shrink: "0"
@@ -281,7 +287,7 @@ template:
                                   - 'rtgl-view.sfxTimelineTrack data-timeline-track=true data-timeline-duration-ms=${editorChannel.timelineDurationMs} w=f pos=rel style="height: ${editorChannel.timelineHeightPx}px; min-width: 100%;"':
                                       - 'rtgl-view.sfxTimelineContent w=f h=f pos=rel style="box-sizing: border-box; min-width: 0;"':
                                           - $for sound, j in editorChannel.sounds:
-                                              - 'rtgl-view#soundClip0x${j}.sfxSoundClip data-channel-id="${editorChannel.id}" data-sound-id="${sound.id}" d=v pos=abs overflow=hidden bw=xs bc=${sound.itemBorderColor} h-bc=${sound.itemHoverBorderColor} cur=pointer tabindex=0 role=button aria-label="${sound.name}" style="box-sizing: border-box; min-width: 56px; left: ${sound.leftPercent}%; top: ${sound.topPx}px; width: ${sound.widthPercent}%; height: 126px;"':
+                                              - 'rtgl-view#soundClip0x${j}.sfxSoundClip data-channel-id="${editorChannel.id}" data-long-press=true data-sound-id="${sound.id}" d=v pos=abs overflow=hidden bw=xs bc=${sound.itemBorderColor} h-bc=${sound.itemHoverBorderColor} cur=pointer tabindex=0 role=button aria-label="${sound.name}" style="box-sizing: border-box; min-width: 56px; left: ${sound.leftPercent}%; top: ${sound.topPx}px; width: ${sound.widthPercent}%; height: 126px;"':
                                                   - rtgl-view.sfxSoundClipContent d=v w=f h=f:
                                                       - div.sfxSoundWaveformArea:
                                                           - $if sound.waveformDataFileId:

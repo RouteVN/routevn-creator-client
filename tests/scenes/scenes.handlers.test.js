@@ -569,7 +569,32 @@ describe("scenes.handlers config keys", () => {
     expect(deps.store.setSelectedItemId).not.toHaveBeenCalled();
   });
 
-  it("creates scene, first section, and first line as one project command batch", async () => {
+  it.each(["", " \t\n ", undefined])(
+    "rejects a blank scene name (%j) without closing the form or creating content",
+    async (name) => {
+      const deps = createDeps();
+
+      await handleSceneFormAction(deps, {
+        _event: {
+          detail: { actionId: "submit", values: { name, folderId: "" } },
+        },
+      });
+
+      expect(deps.appService.showAlert).toHaveBeenCalledWith({
+        message: "Scene name is required.",
+        title: "Warning",
+      });
+      expect(
+        deps.projectService.createSceneWithInitialContent,
+      ).not.toHaveBeenCalled();
+      expect(deps.projectService.getRepositoryState).not.toHaveBeenCalled();
+      expect(deps.store.resetSceneForm).not.toHaveBeenCalled();
+      expect(deps.store.addWhiteboardItem).not.toHaveBeenCalled();
+      expect(deps.appService.setUserConfig).not.toHaveBeenCalled();
+    },
+  );
+
+  it("trims the scene name and creates its first section and line as one batch", async () => {
     const deps = createDeps({
       userConfig: {
         "sceneEditor.recentSceneIdsByProject": {
@@ -583,7 +608,7 @@ describe("scenes.handlers config keys", () => {
         detail: {
           actionId: "submit",
           values: {
-            name: "Scene 2",
+            name: "  Scene 2  ",
             folderId: "",
           },
         },

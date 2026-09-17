@@ -1,7 +1,9 @@
 import { describe, expect, it, vi } from "vitest";
 import {
   handleBeforeMount,
+  handleContextMenuClickItem,
   handleItemContextMenu,
+  handleItemLongPress,
   handleItemDoubleClick,
   handleZoomOut,
 } from "../../src/components/catalogResourcesView/catalogResourcesView.handlers.js";
@@ -72,13 +74,13 @@ describe("catalogResourcesView.handlers", () => {
     );
   });
 
-  it("runs the double-click action instead of opening the context menu for mobile contextmenu gestures", () => {
+  it("runs the primary action on an explicit long press", () => {
     const dispatchEvent = vi.fn();
     const showContextMenu = vi.fn();
     const render = vi.fn();
     const preventDefault = vi.fn();
 
-    handleItemContextMenu(
+    handleItemLongPress(
       {
         props: {
           mobileLayout: true,
@@ -99,14 +101,13 @@ describe("catalogResourcesView.handlers", () => {
       },
     );
 
-    expect(preventDefault).toHaveBeenCalledTimes(1);
     expect(dispatchEvent).toHaveBeenCalledOnce();
     expect(dispatchEvent).toHaveBeenCalledWith(
       expect.objectContaining({
         type: "item-dblclick",
         detail: {
           itemId: "color-1",
-          source: "mobile-context-menu",
+          source: "long-press",
         },
       }),
     );
@@ -205,4 +206,26 @@ describe("catalogResourcesView.handlers", () => {
     );
     expect(render).toHaveBeenCalled();
   });
+});
+
+it("forwards custom catalog menu actions with the context-menu target", () => {
+  const dispatchEvent = vi.fn();
+  const hideContextMenu = vi.fn();
+  handleContextMenuClickItem(
+    {
+      store: {
+        selectDropdownMenu: () => ({ targetItemId: "transform-two" }),
+        hideContextMenu,
+      },
+      render: vi.fn(),
+      dispatchEvent,
+    },
+    { _event: { detail: { item: { value: "set-default-dialogue-avatar" } } } },
+  );
+  expect(dispatchEvent).toHaveBeenCalledOnce();
+  expect(dispatchEvent.mock.calls[0][0]).toMatchObject({
+    type: "item-action",
+    detail: { itemId: "transform-two", action: "set-default-dialogue-avatar" },
+  });
+  expect(hideContextMenu).toHaveBeenCalled();
 });

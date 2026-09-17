@@ -5,7 +5,9 @@ const PLATFORM_APPLICATION_ICON_OUTPUT_SIZE = 256;
 const PLATFORM_IDS = ["web", "windows", "macos"];
 
 const getAvailablePlatformIds = (state) =>
-  state.platform === "android" ? ["web"] : PLATFORM_IDS;
+  state.platform === "android" || state.platform === "ios"
+    ? ["web"]
+    : PLATFORM_IDS;
 
 const createPlatformApplicationInfo = (platform) => {
   const applicationInfo = {
@@ -234,6 +236,10 @@ export const selectSelectedPlatform = ({ state }) => {
   return state.selectedPlatform;
 };
 
+export const selectCanAddPlatform = ({ state }, { platform }) =>
+  getAvailablePlatformIds(state).includes(platform) &&
+  !state.platformApplicationInfo[platform];
+
 export const selectPlatformEditDefaultValues = ({ state }) => {
   return state.platformEditDefaultValues;
 };
@@ -411,7 +417,7 @@ export const openPlatformCreateDialog = (
   { state },
   { platform, applicationInfo } = {},
 ) => {
-  if (!PLATFORM_IDS.includes(platform) || !applicationInfo) {
+  if (!selectCanAddPlatform({ state }, { platform }) || !applicationInfo) {
     return;
   }
 

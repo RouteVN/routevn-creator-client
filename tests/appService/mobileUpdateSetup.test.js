@@ -6,7 +6,11 @@ import { parseAndRender } from "jempl";
 import { produce } from "immer";
 import * as layoutStore from "../../src/pages/layoutEditor/layoutEditor.store.js";
 import * as aboutStore from "../../src/pages/about/about.store.js";
-import { handleBeforeMount as mountAbout } from "../../src/pages/about/about.handlers.js";
+import {
+  handleBeforeMount as mountAbout,
+  handleCheckForUpdates as checkAboutUpdates,
+} from "../../src/pages/about/about.handlers.js";
+import { ROUTEVN_CREATOR_APP_STORE_URL } from "../../src/internal/routevnUrls.js";
 import {
   handleBeforeMount as mountLayoutEditor,
   handleLayoutEditorCanvasDragUpdate,
@@ -41,6 +45,12 @@ vi.mock("../../src/deps/services/graphicsService.js", () => ({
 }));
 vi.mock("../../src/deps/clients/android/audioRuntime.js", () => ({
   createAndroidAudioRuntime: () => ({ graphicsRuntime: {} }),
+}));
+vi.mock("../../src/deps/clients/mobileAudioRuntime.js", () => ({
+  createMobileAudioRuntime: () => ({ graphicsRuntime: {} }),
+}));
+vi.mock("../../src/deps/clients/ios/graphicsAudioOutput.js", () => ({
+  createIOSGraphicsAudioOutput: () => ({ graphicsRuntime: {} }),
 }));
 vi.mock("../../src/deps/clients/android/db.js", () => ({
   createDb: () => mocked.db,
@@ -506,7 +516,7 @@ describe("mobile setup update persistence", () => {
     expect(mocked.bridge).toHaveBeenCalledWith("completeAppUpdate");
   });
 
-  it("keeps the About update button hidden with the actual iOS setup dependencies", async () => {
+  it("opens the App Store from the About update button with the actual iOS setup dependencies", async () => {
     const {
       deps: { pages },
     } = await import("../../src/setup.ios.js");
@@ -521,6 +531,13 @@ describe("mobile setup update persistence", () => {
     const template = JSON.stringify(
       parseAndRender(view.template, store.selectViewData()),
     );
-    expect(template).not.toContain("#checkUpdateButton");
+    expect(template).toContain("#checkUpdateButton");
+    const openUrl = vi
+      .spyOn(pages.appService, "openUrl")
+      .mockResolvedValue(undefined);
+    await checkAboutUpdates({ ...pages, store });
+    expect(openUrl).toHaveBeenCalledExactlyOnceWith(
+      ROUTEVN_CREATOR_APP_STORE_URL,
+    );
   });
 });

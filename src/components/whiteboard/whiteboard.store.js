@@ -217,7 +217,10 @@ export const stopPanning = ({ state }, _payload = {}) => {
   state.isPanning = false;
 };
 
-export const startTouchPan = ({ state }, { touchX, touchY } = {}) => {
+export const startTouchPan = (
+  { state },
+  { touchX, touchY, longPressTimeoutId } = {},
+) => {
   const startX = Number(touchX);
   const startY = Number(touchY);
 
@@ -231,6 +234,8 @@ export const startTouchPan = ({ state }, { touchX, touchY } = {}) => {
     startY,
     startPanX: state.panX,
     startPanY: state.panY,
+    longPressTimeoutId,
+    longPressFired: false,
     hasMoved: false,
   };
 };
@@ -374,9 +379,14 @@ export const markTouchItemLongPressed = ({ state }, _payload = {}) => {
 };
 
 export const clearTouchLongPressTimeoutId = ({ state }, _payload = {}) => {
-  if (state.touchGesture?.type === "item-press") {
+  if (state.touchGesture) {
     state.touchGesture.longPressTimeoutId = undefined;
   }
+};
+
+export const markTouchCanvasLongPressed = ({ state }, _payload = {}) => {
+  state.touchGesture.longPressFired = true;
+  state.touchGesture.longPressTimeoutId = undefined;
 };
 
 export const stopTouchGesture = ({ state }, _payload = {}) => {

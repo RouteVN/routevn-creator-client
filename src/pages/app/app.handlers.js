@@ -272,6 +272,9 @@ export const createRouteTransitionRunner = (deps) => {
     const currentTransitionToken = ++transitionToken;
     const nextPayload = normalizePayload(payload);
     let canonicalPath = getCanonicalRoutePath(path);
+    if (appService.resolveProjectFolderSetupRoute) {
+      canonicalPath = appService.resolveProjectFolderSetupRoute(canonicalPath);
+    }
     if (
       canonicalPath === "/project/asset-package" &&
       !isAssetPackageEnabled(appService)
@@ -341,10 +344,12 @@ export const createRouteTransitionRunner = (deps) => {
       });
     }
 
-    const needsRepository = routeNeedsRepository(
-      canonicalPath,
-      currentProjectId,
-    );
+    // iOS Config must remain reachable after selecting a library that does not
+    // contain the previous project. Its settings do not require project data.
+    const isIOSConfig =
+      canonicalPath === "/project/config" && appService.getPlatform() === "ios";
+    const needsRepository =
+      !isIOSConfig && routeNeedsRepository(canonicalPath, currentProjectId);
     const currentProjectPath = getLocalProjectPathFromPayload(nextPayload);
     const ensuredProjectId = projectService.getEnsuredProjectId();
     const ensuredProjectPath = projectService.getEnsuredProjectPath?.() ?? "";
@@ -555,7 +560,26 @@ const targetSequencePrefixes = new Set(
 
 export const handleBeforeMount = (deps) => {
   const cleanupSubscriptions = mountSubscriptions(deps);
-  const { appService, store, subject, uiConfig } = deps;
+  const {
+    appService,
+    store,
+    subject,
+    uiConfig,
+    windowMetricsClient,
+    fullscreenEscapeClient,
+    render,
+  } = deps;
+  const cleanupFullscreenEscape = fullscreenEscapeClient?.subscribe({
+    onArmed: () =>
+      appService.showToast({
+        message: selectAppCopy(deps.i18n).pressEscapeAgainFullscreen,
+      }),
+    onError: () =>
+      appService.showToast({
+        message: selectAppCopy(deps.i18n).failedExitFullscreen,
+        status: "error",
+      }),
+  });
   let cleanupDiscordPresenceLocaleSubscription = () => {};
   if (appService.getPlatform() === "tauri") {
     syncDiscordPresenceDetails(deps);
@@ -569,6 +593,10 @@ export const handleBeforeMount = (deps) => {
   appService.setAppCopyProvider?.(() => selectAppCopy(deps.i18n));
   store.setPlatform({ platform: appService.getPlatform() });
   store.setUiConfig({ uiConfig });
+  const cleanupWindowMetrics = windowMetricsClient?.subscribe((metrics) => {
+    store.setAppWindowMetrics(metrics);
+    render();
+  });
   store.setHelpButtonVisible({ visible: isHelpButtonVisible(appService) });
   subject.dispatch("app.route.request", {
     path: initialPath,
@@ -579,6 +607,8 @@ export const handleBeforeMount = (deps) => {
   return () => {
     cleanupSubscriptions();
     cleanupDiscordPresenceLocaleSubscription();
+    cleanupWindowMetrics?.();
+    cleanupFullscreenEscape?.();
   };
 };
 

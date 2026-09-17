@@ -480,6 +480,7 @@ export const selectViewData = ({ state, props, i18n }) => {
                 ).join("x")
               : `${groupIndex}x${itemIndex}`,
           domItemId: isInteractive ? item.id : "",
+          longPressEnabled: mobileLayout && isInteractive,
           cursor: isInteractive ? "pointer" : "default",
           itemContainerStyle: useFullWidthCard
             ? "width: 100%; box-sizing: border-box;"

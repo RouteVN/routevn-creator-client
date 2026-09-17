@@ -43,6 +43,10 @@ describe("iOS scene editor keyboard", () => {
     Object.defineProperty(editable, "isContentEditable", { value: true });
     editor.revealCurrentSelection = vi.fn(() => true);
     editor.revealSelectionRect = vi.fn();
+    editor.syncSelectionFromCaretRect = vi.fn();
+    editor.hasAdjacentSectionLineForVerticalNavigation = vi.fn(() => true);
+    editor.dispatchTextModeVerticalBoundaryNavigation = vi.fn(() => true);
+    editor.focusRestoreSequenceId = 1;
     callIOSBridge.mockReset().mockResolvedValue(undefined);
     onRevealError = vi.fn();
     cleanup = installIOSSceneEditorKeyboard({ onRevealError });
@@ -202,6 +206,90 @@ describe("iOS scene editor keyboard", () => {
     });
     expect(callIOSBridge).not.toHaveBeenCalled();
   });
+
+  const useNativeCaret = (context) => {
+    editor.revealCurrentSelection.mockReturnValue(false);
+    editor.syncSelectionFromCaretRect.mockReturnValue(context);
+    callIOSBridge.mockResolvedValue({
+      x: 80,
+      y: 360,
+      width: 2,
+      height: 20,
+      viewWidth: 390,
+    });
+  };
+
+  it("tracks the real line after Down and Up without crossing from a stale first-line selection", async () => {
+    useNativeCaret({ lineId: "line-1", x: 4, y: 2 });
+    editable.focus();
+    await flushReveal();
+    editor.syncSelectionFromCaretRect.mockReturnValue({
+      lineId: "line-5",
+      x: 4,
+      y: 2,
+    });
+    arrow("ArrowDown");
+    await flushReveal();
+    editor.syncSelectionFromCaretRect.mockReturnValue({
+      lineId: "line-4",
+      x: 4,
+      y: 2,
+    });
+    arrow("ArrowUp");
+    await flushReveal();
+
+    expect(editor.syncSelectionFromCaretRect).toHaveBeenCalledTimes(3);
+    expect(
+      editor.dispatchTextModeVerticalBoundaryNavigation,
+    ).not.toHaveBeenCalled();
+  });
+
+  it.each([
+    ["ArrowUp", "up"],
+    ["ArrowDown", "down"],
+  ])(
+    "crosses a section only after a measured %s stalls at the boundary",
+    async (key, direction) => {
+      useNativeCaret({ lineId: "boundary-line", x: 4, y: 2 });
+      editable.focus();
+      await flushReveal();
+      arrow(key);
+      await flushReveal();
+
+      expect(
+        editor.dispatchTextModeVerticalBoundaryNavigation,
+      ).toHaveBeenCalledExactlyOnceWith({
+        lineId: "boundary-line",
+        direction,
+      });
+      expect(editor.revealSelectionRect).toHaveBeenCalledOnce();
+    },
+  );
+
+  it.each(["wrapped-row", "rapid-reversal", "new-focus", "shift-selection"])(
+    "does not infer a section boundary after %s",
+    async (action) => {
+      useNativeCaret({ lineId: "boundary-line", x: 4, y: 2 });
+      editable.focus();
+      await flushReveal();
+      if (action === "wrapped-row")
+        editor.syncSelectionFromCaretRect.mockReturnValue({
+          lineId: "boundary-line",
+          x: 4,
+          y: 24,
+        });
+      if (action === "new-focus") editor.focusRestoreSequenceId += 1;
+      if (action === "rapid-reversal") arrow("ArrowDown");
+      arrow("ArrowUp", { shiftKey: action === "shift-selection" });
+      await flushReveal();
+      expect(
+        editor.dispatchTextModeVerticalBoundaryNavigation,
+      ).not.toHaveBeenCalled();
+      if (action === "shift-selection") {
+        expect(editor.syncSelectionFromCaretRect).toHaveBeenCalledOnce();
+      }
+    },
+  );
 
   it("scales native view coordinates without adding viewport pan again", async () => {
     editable.focus();

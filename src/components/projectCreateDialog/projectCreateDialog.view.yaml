@@ -1,6 +1,8 @@
 refs:
   createProjectForm:
     eventListeners:
+      form-input:
+        handler: handleFormInput
       form-change:
         handler: handleFormChange
       form-action:
@@ -25,6 +27,20 @@ refs:
         handler: handleIconCropDialogConfirm
 template:
   - rtgl-form#createProjectForm key=${formKey} :defaultValues=${defaultValues} :form=${form} :context=${context} sticky w=f h=f:
+      - $if platform == 'ios':
+          - 'rtgl-view#iosProjectLocation slot=ios-project-location w=f aria-live=polite style="min-width: 0;"':
+              - $if projectLocation:
+                  - 'rtgl-view d=h av=c g=xs w=f title="${projectLocationPrefix}/${projectLocation.folderName}" style="min-width: 0;"':
+                      - rtgl-svg svg=folder wh=16 c=mu-fg: null
+                      - 'rtgl-view d=h av=c w=1fg style="min-width: 0;"':
+                          - 'rtgl-text s=sm c=mu-fg ellipsis=true style="min-width: 0;"': ${projectLocationPrefix}
+                          - 'rtgl-text s=sm c=mu-fg style="flex-shrink: 0;"': /
+                          - 'rtgl-text s=sm c=mu-fg ellipsis=true style="max-width: 65%; flex-shrink: 0;"': ${projectLocation.folderName}
+                $else:
+                  - $if projectLocationError:
+                      - rtgl-text s=sm c=de: ${projectLocationMessage}
+                    $else:
+                      - rtgl-text s=sm c=mu-fg: ${projectLocationMessage}
       - rtgl-view slot=project-icon-selector w=f:
           - $if iconPreviewUrl:
               - rtgl-view w=120 h=120 av=c ah=c:

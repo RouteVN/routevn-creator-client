@@ -28,7 +28,7 @@ describe("config store", () => {
     );
   });
 
-  it("uses an images-style two-column touch grid", () => {
+  it("uses four touch columns with two columns on small screens", () => {
     const state = createInitialState();
 
     setUiConfig({ state }, { uiConfig: { id: "touch" } });
@@ -39,7 +39,8 @@ describe("config store", () => {
     expect(viewData.contentPadding).toBe("0");
     expect(viewData.contentBodyPadding).toBe("md");
     expect(viewData.contentBodyMarginTop).toBe("0");
-    expect(viewData.themeGridColumns).toBe("2");
+    expect(viewData.themeGridColumns).toBe("4");
+    expect(viewData.themeGridSmallColumns).toBe("2");
     expect(viewData.themePreviewAspectRatio).toBe("16 / 9");
   });
 

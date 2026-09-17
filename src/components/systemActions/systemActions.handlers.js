@@ -187,6 +187,19 @@ export const handleTransformEditorChange = (deps, payload) => {
   );
 };
 
+export const handleTransformEditorCancel = (deps, payload) => {
+  const { dispatchEvent, store } = deps;
+  payload._event.stopPropagation();
+  store.setSuppressDialogClose({ suppressDialogClose: true });
+  dispatchEvent(
+    new CustomEvent("background-transform-editor-cancel", {
+      detail: {},
+      bubbles: true,
+      composed: true,
+    }),
+  );
+};
+
 export const handleTransformEditorDone = (deps, payload) => {
   payload?._event?.stopPropagation?.();
   const targetType = deps.props?.backgroundTransformEditor?.targetType;

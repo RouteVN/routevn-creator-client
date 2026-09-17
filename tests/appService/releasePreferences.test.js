@@ -53,7 +53,10 @@ describe("global Release preferences", () => {
             setAssetPackageEnabled: vi.fn(),
             setRecentSceneIds: vi.fn(),
           },
-          projectService: { subscribeProjectState: vi.fn(() => vi.fn()) },
+          projectService: {
+            getEnsuredProjectId: () => projectId,
+            subscribeProjectState: vi.fn(() => vi.fn()),
+          },
           render: vi.fn(),
         };
         mountDesktopMenu(deps);

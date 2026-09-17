@@ -10,6 +10,7 @@ import { createTauriFilePicker } from "./deps/clients/tauri/filePicker";
 import { setupFileDropNavigationGuard } from "./deps/clients/tauri/fileDropNavigation";
 import createUpdater from "./deps/clients/tauri/updater";
 import { setupCloseListener } from "./deps/clients/tauri/windowClose";
+import { createFullscreenEscapeClient } from "./deps/clients/tauri/fullscreenEscape.js";
 import { createBrowserEventsClient } from "./deps/clients/browserEvents.js";
 
 // Services
@@ -43,6 +44,7 @@ const globalUIElement = document.querySelector("rtgl-global-ui");
 const globalUI = createGlobalUI(globalUIElement);
 const audioService = createAudioService();
 const browserEventsClient = createBrowserEventsClient();
+const fullscreenEscapeClient = createFullscreenEscapeClient();
 
 // Get app version
 const appVersion = await getVersion();
@@ -104,6 +106,7 @@ const dialogueQueueService = createPendingQueueService({ debounceMs: 2000 });
 setupCloseListener({ globalUI });
 
 const componentDependencies = {
+  browserEventsClient,
   distribution,
   updatesEnabled,
   subject,
@@ -116,6 +119,7 @@ const componentDependencies = {
 
 const pageDependencies = {
   browserEventsClient,
+  fullscreenEscapeClient,
   distribution,
   updatesEnabled,
   subject,

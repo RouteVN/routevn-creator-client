@@ -112,6 +112,105 @@ describe("app Scene Editor keyboard state", () => {
 });
 
 describe("app route transitions", () => {
+  it("opens iOS Config after changing folders without reopening the previous project", async () => {
+    const appService = {
+      prepareNavigation: vi.fn(async () => {}),
+      getCurrentProjectId: vi.fn(() => "project-1"),
+      refreshCurrentProjectEntry: vi.fn(async () => {}),
+      getPlatform: vi.fn(() => "ios"),
+      redirect: vi.fn(),
+      showAlert: vi.fn(),
+    };
+    const projectService = {
+      getEnsuredProjectId: vi.fn(() => undefined),
+      ensureRepository: vi.fn(async () => {
+        throw new Error("Previous project is outside the selected library");
+      }),
+    };
+    const store = {
+      setCurrentRoute: vi.fn(),
+      closeMobileSheet: vi.fn(),
+      setRepositoryLoading: vi.fn(),
+      setRepositoryLoadingPhase: vi.fn(),
+    };
+
+    await createRouteTransitionRunner({
+      appService,
+      projectService,
+      store,
+      render: vi.fn(),
+      i18n: {},
+    })({ path: "/project/config", payload: { p: "project-1" } });
+
+    expect(store.setCurrentRoute).toHaveBeenLastCalledWith({
+      route: "/project/config",
+      payload: { p: "project-1" },
+    });
+    expect(projectService.ensureRepository).not.toHaveBeenCalled();
+    expect(appService.redirect).not.toHaveBeenCalled();
+    expect(appService.showAlert).not.toHaveBeenCalled();
+  });
+
+  it("mounts fullscreen Escape protection with localized feedback and cleanup", () => {
+    const dom = new JSDOM("<!doctype html><body></body>");
+    vi.stubGlobal("window", dom.window);
+    vi.stubGlobal("document", dom.window.document);
+    vi.stubGlobal("Element", dom.window.Element);
+    const appService = {
+      getPath: vi.fn(() => "/projects"),
+      getPayload: vi.fn(() => ({})),
+      getUserConfig: vi.fn(() => undefined),
+      getPlatform: vi.fn(() => "tauri"),
+      setAppCopyProvider: vi.fn(),
+      setDiscordPresenceDetails: vi.fn(async () => {}),
+      showToast: vi.fn(),
+    };
+    let callbacks;
+    const unsubscribe = vi.fn();
+    const deps = {
+      appService,
+      locale: { subscribe: vi.fn(() => () => {}) },
+      fullscreenEscapeClient: {
+        subscribe: vi.fn((value) => {
+          callbacks = value;
+          return unsubscribe;
+        }),
+      },
+      i18n: {
+        appPage: {
+          pressEscapeAgainFullscreen: "Escape confirmation",
+          failedExitFullscreen: "Fullscreen request failed",
+        },
+      },
+      store: {
+        setPlatform: vi.fn(),
+        setUiConfig: vi.fn(),
+        setHelpButtonVisible: vi.fn(),
+      },
+      subject: { dispatch: vi.fn(), pipe: vi.fn(() => NEVER) },
+      uiConfig: {},
+    };
+    const cleanup = handleBeforeMount(deps);
+    callbacks.onArmed();
+    expect(appService.showToast).toHaveBeenLastCalledWith({
+      message: "Escape confirmation",
+    });
+    deps.i18n.appPage.pressEscapeAgainFullscreen =
+      "Updated locale confirmation";
+    callbacks.onArmed();
+    expect(appService.showToast).toHaveBeenLastCalledWith({
+      message: "Updated locale confirmation",
+    });
+    callbacks.onError();
+    expect(appService.showToast).toHaveBeenLastCalledWith({
+      message: "Fullscreen request failed",
+      status: "error",
+    });
+    cleanup();
+    expect(unsubscribe).toHaveBeenCalledOnce();
+    dom.window.close();
+  });
+
   it("updates Discord presence after the active locale changes", () => {
     const dom = new JSDOM("<!doctype html><body></body>");
     vi.stubGlobal("window", dom.window);

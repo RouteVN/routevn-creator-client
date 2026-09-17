@@ -184,7 +184,7 @@ const createToolbarViewItems = (items, copy = {}, pressedActionId) => {
   }));
 };
 
-export const selectViewData = ({ state, i18n }) => {
+export const selectViewData = ({ state, props = {}, i18n }) => {
   const copy = selectSceneEditorCopy(i18n);
   const visualViewportBottom =
     Number(state.visualOffsetTop) + Number(state.visualHeight);
@@ -200,6 +200,7 @@ export const selectViewData = ({ state, i18n }) => {
     bottomStyle: `${state.bottom}px`,
     toolbarTopStyle: `${toolbarTop}px`,
     toolbarPositionStyle,
+    toolbarWidth: props.width ?? "100%",
     toolbarItems: createToolbarViewItems(
       toolbarItems,
       copy,

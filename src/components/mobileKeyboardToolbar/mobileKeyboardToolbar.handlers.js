@@ -325,7 +325,7 @@ const startArrowRepeat = (store, direction, pointerId) => {
 };
 
 export const handleBeforeMount = (deps) => {
-  const { store, render, dispatchEvent } = deps;
+  const { store, render, dispatchEvent, windowMetricsClient } = deps;
 
   if (typeof window === "undefined" || typeof document === "undefined") {
     return undefined;
@@ -346,7 +346,9 @@ export const handleBeforeMount = (deps) => {
     const startedAt = getSceneEditorTimingNow();
     const syncReason = pendingSyncReason;
     animationFrameId = undefined;
-    const metrics = getViewportMetrics(largestViewportHeight);
+    const metrics = getViewportMetrics(
+      windowMetricsClient?.getMetrics()?.height ?? largestViewportHeight,
+    );
     largestViewportHeight = Math.max(
       largestViewportHeight,
       metrics.visualHeight,
@@ -437,6 +439,9 @@ export const handleBeforeMount = (deps) => {
 
   const viewport = window.visualViewport;
   const virtualKeyboard = getVirtualKeyboard();
+  const unsubscribeWindowMetrics = windowMetricsClient?.subscribe(() =>
+    scheduleSync("window-metrics"),
+  );
   viewport?.addEventListener("resize", scheduleSync);
   viewport?.addEventListener("scroll", scheduleSync);
   virtualKeyboard?.addEventListener?.("geometrychange", scheduleSync);
@@ -453,6 +458,7 @@ export const handleBeforeMount = (deps) => {
   scheduleSync();
 
   return () => {
+    unsubscribeWindowMetrics?.();
     viewport?.removeEventListener("resize", scheduleSync);
     viewport?.removeEventListener("scroll", scheduleSync);
     virtualKeyboard?.removeEventListener?.("geometrychange", scheduleSync);

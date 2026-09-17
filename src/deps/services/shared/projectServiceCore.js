@@ -668,6 +668,7 @@ export const createProjectServiceCore = ({
       });
     },
     getFileContent: assetService.getFileContent,
+    observeFileUrls: assetService.observeFileUrls,
     createAssetPackageBundle:
       assetPackageExportService.createAssetPackageBundle,
     downloadMetadata: assetService.downloadMetadata,

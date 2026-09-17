@@ -69,7 +69,14 @@ export const createInitialState = () => ({
   assetPackageEnabled: false,
   showHelpButton: true,
   isTouchMode: false,
+  showProjectFolder: false,
+  projectFolderPath: undefined,
 });
+
+export const setProjectFolder = ({ state }, { visible, path }) => {
+  state.showProjectFolder = visible;
+  state.projectFolderPath = path;
+};
 
 export const setCurrentTheme = ({ state }, { theme } = {}) => {
   state.currentTheme = normalizeTheme(theme);
@@ -82,6 +89,9 @@ export const setUiConfig = ({ state }, { uiConfig } = {}) => {
 
 export const selectViewData = ({ state, i18n }) => {
   const copy = selectConfigPageCopy(i18n);
+  const themeGridColumns = state.isTouchMode
+    ? "4"
+    : "repeat(auto-fill, minmax(min(320px, 100%), 320px))";
   const themes = themeOptions.map((item) => {
     const isSelected = state.currentTheme === item.id;
 
@@ -102,13 +112,15 @@ export const selectViewData = ({ state, i18n }) => {
     contentPadding: state.isTouchMode ? "0" : "lg",
     contentBodyPadding: state.isTouchMode ? "md" : "0",
     contentBodyMarginTop: state.isTouchMode ? "0" : "lg",
-    themeGridColumns: state.isTouchMode
-      ? "2"
-      : "repeat(auto-fill, minmax(min(320px, 100%), 320px))",
+    themeGridColumns,
+    themeGridSmallColumns: state.isTouchMode ? "2" : themeGridColumns,
     themePreviewAspectRatio: "16 / 9",
     title: copy.title,
     appearanceTitle: copy.appearanceTitle,
     languageTitle: copy.languageTitle,
+    projectFolderTitle: copy.projectFolderTitle,
+    changeProjectFolderLabel: copy.changeProjectFolderLabel,
+    projectFolderPath: state.projectFolderPath ?? copy.projectFolderNotSet,
     assetPackageTitle: copy.assetPackageTitle,
     assetPackageDescription: copy.assetPackageDescription,
     helpButtonTitle: copy.helpButtonTitle,

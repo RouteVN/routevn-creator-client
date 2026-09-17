@@ -5,25 +5,79 @@ refs:
         handler: handlePlayPause
   progressBar:
     eventListeners:
-      click:
-        handler: handleProgressBarClick
+      pointerdown:
+        handler: handleSeekStart
+      input:
+        handler: handleSeekInput
+      change:
+        handler: handleSeekChange
+      pointercancel:
+        handler: handleSeekCancel
+      lostpointercapture:
+        handler: handleSeekCancel
+      blur:
+        handler: handleSeekCancel
   playerCloser:
     eventListeners:
       click:
         handler: handleClose
+styles:
+  "#progressBar":
+    position: absolute
+    top: -19px
+    left: 0
+    width: 100%
+    height: 44px
+    margin: 0
+    padding: 0
+    appearance: none
+    -webkit-appearance: none
+    background: transparent
+    -webkit-tap-highlight-color: transparent
+    cursor: pointer
+    touch-action: none
+  "#progressBar::-webkit-slider-runnable-track":
+    height: 6px
+    border-radius: 0 999px 999px 0
+    background: "linear-gradient(to right, var(--foreground) var(--seek-progress), var(--surface) var(--seek-progress))"
+  "#progressBar::-moz-range-track":
+    height: 6px
+    border-radius: 0 999px 999px 0
+    background: "linear-gradient(to right, var(--foreground) var(--seek-progress), var(--surface) var(--seek-progress))"
+  "#progressBar::-webkit-slider-thumb":
+    -webkit-appearance: none
+    appearance: none
+    width: 20px
+    height: 20px
+    margin-top: -7px
+    border: 2px solid var(--background)
+    box-sizing: border-box
+    border-radius: 50%
+    background: var(--foreground)
+    box-shadow: "0 1px 4px #0004"
+  "#progressBar::-moz-range-thumb":
+    width: 20px
+    height: 20px
+    border: 2px solid var(--background)
+    box-sizing: border-box
+    border-radius: 50%
+    background: var(--foreground)
+    box-shadow: "0 1px 4px #0004"
+  "#progressBar:focus-visible":
+    outline: 2px solid var(--ring)
+    outline-offset: 2px
 template:
   - rtgl-view w=f h=f bgc=mu:
       - $if isLoading:
           - 'rtgl-view w=f h=f d=v bgc=mu style="min-height: 0;"':
-              - 'rtgl-view w=f style="flex: 0 0 6px;"':
+              - 'div style="width: 100%; flex: 0 0 6px;"':
                   - 'rtgl-view#loadingProgressBar w=f h=6 br=full pos=rel bgc=su style="overflow: hidden; background-color: var(--surface);"': null
               - rtgl-view w=f av=c p=md h=1fg:
                   - rtgl-text c=mu-fg: Loading audio...
         $else:
           - 'rtgl-view w=f h=f d=v bgc=mu style="min-height: 0;"':
-              - 'rtgl-view w=f style="flex: 0 0 6px;"':
-                  - 'rtgl-view#progressBar w=f h=6 br=full cur=pointer pos=rel bgc=su style="overflow: hidden; background-color: var(--surface);"':
-                      - 'rtgl-view h=f bgc=ac br=full style="width: ${progressPercentage}%; transition: width 0.1s ease;"': null
+              - 'div style="width: 100%; flex: 0 0 6px; position: relative;"':
+                  - 'input#progressBar type=range min=0 max=${duration} step=0.01 :value=${seekPosition} aria-label="${seekLabel}" aria-valuetext="${currentTimeFormatted} / ${durationFormatted}" style="--seek-progress: ${progressPercentage}%;"': null
               - $if mobileLayout:
                   - 'rtgl-view d=h av=c w=f h=1fg p=md g=md style="min-width: 0; min-height: 0; box-sizing: border-box;"':
                       - 'rtgl-text w=1fg ellipsis=true style="min-width: 0;"': ${title}
@@ -32,18 +86,18 @@ template:
                               - rtgl-text s=sm c=mu-fg: ${currentTimeFormatted}
                               - rtgl-text s=sm c=mu-fg: /
                               - rtgl-text s=sm c=mu-fg: ${durationFormatted}
-                          - rtgl-view#playPauseBtn w=40 h=40 av=c ah=c cur=pointer:
+                          - rtgl-view#playPauseBtn w=40 h=40 av=c ah=c cur=pointer pos=rel z=1:
                               - $if isPlaying:
                                   - rtgl-svg wh=32 svg=pause: null
                                 $else:
                                   - rtgl-svg wh=32 svg=play: null
-                      - 'rtgl-view#playerCloser w=32 h=32 av=c ah=c cur=pointer style="flex: 0 0 32px;"':
+                      - 'rtgl-view#playerCloser w=32 h=32 av=c ah=c cur=pointer pos=rel z=1 style="flex: 0 0 32px;"':
                           - rtgl-svg svg=cross w=16 h=16: null
                 $else:
                   - 'rtgl-view ph=md d=h av=c w=f h=1fg p=md pos=rel style="min-width: 0; min-height: 0;"':
                       - 'rtgl-view w=1fg style="min-width: 0; padding-right: 32px; box-sizing: border-box;"':
                           - 'rtgl-text w=f ellipsis=true style="min-width: 0;"': ${title}
-                      - 'rtgl-view#playPauseBtn pos=abs cur=pointer style="left: 50%; top: 50%; transform: translate(-50%, -50%);"':
+                      - 'rtgl-view#playPauseBtn pos=abs cur=pointer z=1 style="left: 50%; top: 50%; transform: translate(-50%, -50%);"':
                           - $if isPlaying:
                               - rtgl-svg wh=32 svg=pause: null
                             $else:
@@ -53,5 +107,5 @@ template:
                               - rtgl-text s=sm c=mu-fg: ${currentTimeFormatted}
                               - rtgl-text s=sm c=mu-fg: /
                               - rtgl-text s=sm c=mu-fg: ${durationFormatted}
-                          - rtgl-view#playerCloser w=24 h=24 av=c ah=c cur=pointer:
+                          - rtgl-view#playerCloser w=24 h=24 av=c ah=c cur=pointer pos=rel z=1:
                               - rtgl-svg svg=cross w=16 h=16: null

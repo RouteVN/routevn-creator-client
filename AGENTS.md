@@ -34,6 +34,8 @@ Notes:
   user asks for it, when preparing release/VT output, or when there is a
   specific build-only issue to verify.
 - Before pushing, run lint/format checks (the push hook also enforces this).
+- Do not push from or directly to `main`. Use a feature branch and a pull
+  request.
 - During Android development, refresh the connected test device after each
   completed app change without waiting for another user request. Follow
   `docs/android.md` and reuse the running Android dev server for frontend

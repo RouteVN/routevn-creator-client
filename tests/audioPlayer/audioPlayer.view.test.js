@@ -26,8 +26,7 @@ describe("audio player view", () => {
     );
     expect(loadingBranch).not.toContain("#progressBar");
 
-    const unseekedTrackStyle = "background-color: var(--surface)";
-    expect(audioPlayerView.split(unseekedTrackStyle)).toHaveLength(3);
+    expect(loadingBranch).not.toContain("input#progressBar");
   });
 
   it("fills the player height without pushing controls below center", () => {
@@ -42,7 +41,9 @@ describe("audio player view", () => {
     expect(audioPlayerView).toContain(
       'rtgl-view w=f h=f d=v bgc=mu style="min-height: 0;"',
     );
-    expect(audioPlayerView).toContain('rtgl-view w=f style="flex: 0 0 6px;"');
+    expect(audioPlayerView).toContain(
+      'div style="width: 100%; flex: 0 0 6px;"',
+    );
     expect(audioPlayerView).toContain(
       'rtgl-view d=h av=c w=f h=1fg p=md g=md style="min-width: 0; min-height: 0; box-sizing: border-box;"',
     );
@@ -75,7 +76,7 @@ describe("audio player view", () => {
       'rtgl-text w=f ellipsis=true style="min-width: 0;"',
     );
     expect(desktopBranch).toContain(
-      'rtgl-view#playPauseBtn pos=abs cur=pointer style="left: 50%; top: 50%; transform: translate(-50%, -50%);"',
+      'rtgl-view#playPauseBtn pos=abs cur=pointer z=1 style="left: 50%; top: 50%; transform: translate(-50%, -50%);"',
     );
     expect(desktopBranch).toContain(
       'rtgl-view d=h av=c g=lg w=1fg ah=e style="min-width: 0; padding-left: 32px; box-sizing: border-box;"',
@@ -121,7 +122,7 @@ describe("audio player view", () => {
       'rtgl-view d=h av=c g=xs ah=e style="width: 96px; flex: 0 0 96px; white-space: nowrap; font-variant-numeric: tabular-nums;"',
     );
     expect(mobileBranch).toContain(
-      'rtgl-view#playerCloser w=32 h=32 av=c ah=c cur=pointer style="flex: 0 0 32px;"',
+      'rtgl-view#playerCloser w=32 h=32 av=c ah=c cur=pointer pos=rel z=1 style="flex: 0 0 32px;"',
     );
 
     expect(mobileBranch.indexOf("${currentTimeFormatted}")).toBeLessThan(

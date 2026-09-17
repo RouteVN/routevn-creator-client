@@ -2,10 +2,36 @@ import { describe, expect, it } from "vitest";
 import {
   createInitialState,
   selectViewData,
+  syncFromProps,
+  setLocationPreview,
 } from "../../src/components/projectCreateDialog/projectCreateDialog.store.js";
 import { EN_I18N } from "../support/i18n.js";
 
 describe("projectCreateDialog.store", () => {
+  it("shows the iOS destination separately from the desktop folder picker", () => {
+    const state = createInitialState();
+    syncFromProps({ state }, { props: { platform: "ios" } });
+    setLocationPreview(
+      { state },
+      {
+        location: {
+          folderName: "Project One",
+          displayPath: "On My iPhone / RouteVN Projects / Project One",
+        },
+      },
+    );
+    const view = selectViewData({ state, i18n: EN_I18N });
+    expect(view.platform).toBe("ios");
+    expect(view.projectLocationPrefix).toBe("On My iPhone/RouteVN Projects");
+    expect(view.projectLocation.folderName).toBe("Project One");
+    expect(
+      view.form.fields.find(({ name }) => name === "iosProjectLocation"),
+    ).toMatchObject({ $when: "platform == 'ios'", label: "Project Location" });
+    expect(
+      view.form.fields.find(({ name }) => name === "projectPath"),
+    ).toMatchObject({ $when: "platform == 'tauri'" });
+  });
+
   it("does not expose portrait resolution in the create project form", () => {
     const state = createInitialState();
     const viewData = selectViewData({ state, i18n: EN_I18N });

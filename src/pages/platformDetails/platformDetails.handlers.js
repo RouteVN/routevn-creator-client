@@ -73,6 +73,11 @@ export const handleAddPlatformMenuItemClick = async (deps, payload) => {
   const copy = selectPlatformDetailsPageCopy(i18n);
   store.closeAddPlatformMenu();
 
+  if (!store.selectCanAddPlatform({ platform })) {
+    render();
+    return;
+  }
+
   try {
     const applicationInfo =
       await projectService.getCurrentPlatformDetailsDefaults(platform);
@@ -174,6 +179,13 @@ export const handlePlatformEditFormAction = async (deps, payload = {}) => {
 
   const copy = selectPlatformDetailsPageCopy(i18n);
   const { mode, platform } = store.selectPlatformDialogState();
+  if (mode === "create" && !store.selectCanAddPlatform({ platform })) {
+    appService.showAlert({
+      message: copy.failedCreatePlatformMessage,
+      title: copy.errorTitle,
+    });
+    return;
+  }
   const patch = createPlatformDetailsPatch({
     platform,
     values,

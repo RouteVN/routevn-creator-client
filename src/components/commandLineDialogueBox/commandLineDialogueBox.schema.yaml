@@ -39,6 +39,8 @@ propsSchema:
       type: array
     transforms:
       type: object
+    defaultDialogueAvatarTransformId:
+      type: string
     animations:
       type: object
     dialogue:

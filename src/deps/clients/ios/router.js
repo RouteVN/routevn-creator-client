@@ -150,6 +150,11 @@ export default class IOSRouter {
     this.emitStackChange();
   };
 
+  reset = (path) => {
+    this.stackEntries = [parsePathAndPayload(path)];
+    this.emitStackChange();
+  };
+
   back = () => {
     if (!this.canGoBack()) {
       return false;

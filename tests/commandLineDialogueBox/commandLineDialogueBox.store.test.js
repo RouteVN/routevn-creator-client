@@ -52,6 +52,58 @@ const isFieldVisible = ({ field, values }) => {
 };
 
 describe("commandLineDialogueBox.store", () => {
+  it("groups speaker options by folder and shows avatars without changing the selected speaker", () => {
+    const state = createInitialState();
+    state.selectedCharacterId = "nested-character";
+    state.speakerAvatarUrls = { "avatar-file": "blob:avatar" };
+    const viewData = selectTestViewData({
+      state,
+      props: {
+        characters: [
+          { id: "root", type: "character", name: "Character One" },
+          { id: "cast", type: "folder", name: "Cast" },
+          { id: "guests", type: "folder", name: "Guests" },
+          {
+            id: "nested-character",
+            type: "character",
+            name: "Character Two",
+            fileId: "avatar-file",
+          },
+          { id: "empty", type: "folder", name: "Empty" },
+        ],
+        characterTree: [
+          {
+            id: "cast",
+            children: [
+              { id: "guests", children: [{ id: "nested-character" }] },
+            ],
+          },
+          { id: "root" },
+          { id: "empty" },
+        ],
+      },
+    });
+    const speaker = findFormField(
+      viewData,
+      (field) => field.name === "characterId",
+    );
+    expect(speaker.value).toBe("nested-character");
+    expect(speaker.image).toEqual({
+      size: 28,
+      borderRadius: "full",
+      fit: "cover",
+    });
+    expect(speaker.options).toEqual([
+      { value: "root", label: "Character One" },
+      { type: "section", label: "Cast > Guests" },
+      {
+        value: "nested-character",
+        label: "Character Two",
+        imageSrc: "blob:avatar",
+      },
+    ]);
+  });
+
   it("includes custom speaker name and persistCharacter in form defaults and field values", () => {
     const state = createInitialState();
 
@@ -166,11 +218,13 @@ describe("commandLineDialogueBox.store", () => {
       type: "segmented-control",
       value: true,
     });
-    expect(viewData.form.fields.map((field) => field.label)).toEqual([
-      "Layout",
-      "Speaker",
-      "Options",
-    ]);
+    expect(
+      viewData.form.fields.map((field) =>
+        field.type === "row"
+          ? field.fields.map((child) => child.label)
+          : field.label,
+      ),
+    ).toEqual([["Layout", undefined], "Speaker", "Options"]);
     expect(viewData.form.fields[1]).toMatchObject({
       id: "speaker",
       action: {
@@ -575,8 +629,8 @@ describe("commandLineDialogueBox.store", () => {
       label: "Persist Sprite",
       type: "segmented-control",
       options: [
-        { value: true, label: "Yes" },
         { value: false, label: "No" },
+        { value: true, label: "Yes" },
       ],
       value: false,
     });

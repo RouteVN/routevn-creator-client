@@ -44,7 +44,7 @@ describe("systemActionsDialogSurface view", () => {
     expect(dialogSurfaceView.match(/outline: none;/g)).toHaveLength(5);
     expect(dialogSurfaceView).toContain("$elif isSceneEditorMobile");
     expect(dialogSurfaceView).toContain(
-      "left: 0; right: 0; top: ${panelTop}; bottom: ${panelBottom};",
+      "left: 0; right: ${panelRight}; top: ${panelTop}; bottom: ${panelBottom};",
     );
     expect(dialogSurfaceView).toContain("z-index: 2002;");
     expect(dialogSurfaceView).not.toContain("handleDocumentKeyDown");

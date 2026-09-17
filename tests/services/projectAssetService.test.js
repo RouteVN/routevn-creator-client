@@ -24,6 +24,48 @@ import { createProjectAssetService } from "../../src/deps/services/shared/projec
 describe("projectAssetService", () => {
   afterEach(() => vi.unstubAllGlobals());
 
+  it("keeps observed file URLs alive until unsubscribe and reports unavailable images", async () => {
+    const revoke = vi.fn();
+    const getFileContent = vi.fn(async ({ fileId }) => {
+      if (fileId === "missing") throw new Error("Missing file");
+      return { url: "blob:avatar", revoke };
+    });
+    const service = createProjectAssetService({
+      fileAdapter: { getFileContent },
+    });
+    let subscription;
+    const result = await new Promise((resolve) => {
+      subscription = service
+        .observeFileUrls(["avatar", "avatar", "missing"])
+        .subscribe(resolve);
+    });
+    expect(result).toEqual({
+      urls: { avatar: "blob:avatar" },
+      failedFileIds: ["missing"],
+    });
+    expect(getFileContent).toHaveBeenCalledTimes(2);
+    expect(revoke).not.toHaveBeenCalled();
+    subscription.unsubscribe();
+    expect(revoke).toHaveBeenCalledTimes(1);
+  });
+
+  it("releases file URLs that finish loading after the view has closed", async () => {
+    const revoke = vi.fn();
+    let resolveContent;
+    const content = new Promise((resolve) => {
+      resolveContent = resolve;
+    });
+    const service = createProjectAssetService({
+      fileAdapter: { getFileContent: () => content },
+    });
+    const onNext = vi.fn();
+    const subscription = service.observeFileUrls(["avatar"]).subscribe(onNext);
+    subscription.unsubscribe();
+    resolveContent({ url: "blob:avatar", revoke });
+    await vi.waitFor(() => expect(revoke).toHaveBeenCalledTimes(1));
+    expect(onNext).not.toHaveBeenCalled();
+  });
+
   it("uploads audio and its waveform with valid hashes without Web Crypto", async () => {
     vi.stubGlobal("crypto", {});
     mocked.detectFileType.mockReturnValue("audio");
@@ -167,59 +209,67 @@ describe("projectAssetService", () => {
     );
   });
 
-  it("returns the required thumbnail file for video uploads", async () => {
-    let storedCount = 0;
-    mocked.detectFileType.mockReturnValue("video");
-    mocked.getVideoDimensions.mockResolvedValue({
-      width: 1920,
-      height: 1080,
-      duration: 10,
-    });
-    mocked.extractVideoThumbnail.mockResolvedValue({
-      blob: new Blob(["thumbnail-bytes"], { type: "image/jpeg" }),
-    });
-    const service = createProjectAssetService({
-      idGenerator: () => "generated-id",
-      fileAdapter: {
-        continueOnUploadError: false,
-        storeFile: vi.fn(async () => {
-          storedCount += 1;
-          return { fileId: `file-${storedCount}` };
-        }),
-        getFileContent: vi.fn(),
-        getFileByProjectId: vi.fn(),
-      },
-      getCurrentStore: vi.fn(),
-      getCurrentReference: vi.fn(),
-      getStoreByProject: vi.fn(),
-    });
-
-    const result = await service.uploadFiles([
-      new File(["video-bytes"], "opening.mp4", { type: "video/mp4" }),
-    ]);
-
-    expect(result).toEqual([
-      expect.objectContaining({
-        fileId: "file-1",
-        thumbnailFileId: "file-2",
-        dimensions: {
-          width: 1920,
-          height: 1080,
-        },
+  it.each([undefined, vi.fn()])(
+    "returns a video thumbnail using the optional platform preparation hook %s",
+    async (prepareVideoThumbnail) => {
+      let storedCount = 0;
+      mocked.detectFileType.mockReturnValue("video");
+      mocked.getVideoDimensions.mockResolvedValue({
+        width: 1920,
+        height: 1080,
         duration: 10,
-        fileRecords: [
-          expect.objectContaining({
-            id: "file-1",
-            mimeType: "video/mp4",
+      });
+      mocked.extractVideoThumbnail.mockResolvedValue({
+        blob: new Blob(["thumbnail-bytes"], { type: "image/jpeg" }),
+      });
+      const service = createProjectAssetService({
+        idGenerator: () => "generated-id",
+        fileAdapter: {
+          continueOnUploadError: false,
+          prepareVideoThumbnail,
+          storeFile: vi.fn(async () => {
+            storedCount += 1;
+            return { fileId: `file-${storedCount}` };
           }),
-          expect.objectContaining({
-            id: "file-2",
-            mimeType: "image/jpeg",
-          }),
-        ],
-      }),
-    ]);
-  });
+          getFileContent: vi.fn(),
+          getFileByProjectId: vi.fn(),
+        },
+        getCurrentStore: vi.fn(),
+        getCurrentReference: vi.fn(),
+        getStoreByProject: vi.fn(),
+      });
+
+      const result = await service.uploadFiles([
+        new File(["video-bytes"], "opening.mp4", { type: "video/mp4" }),
+      ]);
+
+      expect(mocked.extractVideoThumbnail).toHaveBeenCalledWith(
+        expect.any(File),
+        expect.objectContaining({ prepareVideo: prepareVideoThumbnail }),
+      );
+      expect(result).toEqual([
+        expect.objectContaining({
+          fileId: "file-1",
+          thumbnailFileId: "file-2",
+          dimensions: {
+            width: 1920,
+            height: 1080,
+          },
+          duration: 10,
+          fileRecords: [
+            expect.objectContaining({
+              id: "file-1",
+              mimeType: "video/mp4",
+            }),
+            expect.objectContaining({
+              id: "file-2",
+              mimeType: "image/jpeg",
+            }),
+          ],
+        }),
+      ]);
+    },
+  );
 
   it("rejects video uploads when a required thumbnail cannot be generated", async () => {
     const consoleWarn = vi.spyOn(console, "warn").mockImplementation(() => {});

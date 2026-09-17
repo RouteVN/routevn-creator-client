@@ -1295,6 +1295,7 @@ const createCharacterFormSlots = (characterIndex) => {
     transformSpacerFormSlot: `${prefix}-transform-spacer`,
     customTransformFormSlot: `${prefix}-custom-transform`,
     animationFormSlot: `${prefix}-animation`,
+    animationSpacerFormSlot: `${prefix}-animation-spacer`,
     playbackSpeedFormSlot: `${prefix}-playback-speed`,
     playbackContinuityFormSlot: `${prefix}-playback-continuity`,
     playbackLoopFormSlot: `${prefix}-playback-loop`,
@@ -1355,9 +1356,18 @@ const createCharactersForm = (characters = []) => ({
     }
 
     fields.push({
-      type: "slot",
-      slot: character.animationFormSlot,
-      label: "Animation",
+      type: "row",
+      fields: [
+        {
+          type: "slot",
+          slot: character.animationFormSlot,
+          label: "Animation",
+        },
+        {
+          type: "slot",
+          slot: character.animationSpacerFormSlot,
+        },
+      ],
     });
 
     if (character.animationId) {
@@ -1785,6 +1795,9 @@ export const selectViewData = ({ state, i18n }) => {
 
   const characterControls = processedSelectedCharacters.map(
     (char, characterIndex) => {
+      const blur = normalizeCommandLineItemBlur(
+        char.blur ?? DEFAULT_COMMAND_LINE_ITEM_BLUR,
+      );
       const animationCanLoop = canLoopAnimationById(
         state.animations,
         char.animations?.resourceId,
@@ -1820,9 +1833,12 @@ export const selectViewData = ({ state, i18n }) => {
         opacity: char.opacity ?? DEFAULT_COMMAND_LINE_ITEM_OPACITY,
         blurOptionEnabled: char.blurOptionEnabled === true,
         blurEnabled: Boolean(char.blur),
-        blur: normalizeCommandLineItemBlur(
-          char.blur ?? DEFAULT_COMMAND_LINE_ITEM_BLUR,
-        ),
+        blur,
+        blurSliderMax: {
+          x: Math.max(64, blur.x),
+          y: Math.max(64, blur.y),
+          quality: Math.max(10, blur.quality),
+        },
         flipOptions: COMMAND_LINE_ITEM_FLIP_OPTIONS.map((option) => ({
           ...option,
           enabled: char[option.fieldName] === true,

@@ -166,13 +166,22 @@ const getSelectedFormValue = (formValues, fallbackValues, fieldName) => {
 const baseForm = {
   fields: [
     {
-      name: "transitionAnimationId",
-      type: "select",
-      label: "Animation",
-      description: "",
-      clearable: true,
-      placeholder: "Animation",
-      options: "${transitionAnimationOptions}",
+      type: "row",
+      fields: [
+        {
+          name: "transitionAnimationId",
+          type: "select",
+          label: "Animation",
+          description: "",
+          clearable: true,
+          placeholder: "Animation",
+          options: "${transitionAnimationOptions}",
+        },
+        {
+          type: "slot",
+          slot: "animationSpacer",
+        },
+      ],
     },
     {
       $when: "transitionAnimationId",
@@ -424,15 +433,19 @@ export const selectViewData = ({ state, props, i18n }) => {
             {
               name: "blurX",
               label: "Blur X",
-              type: "input-number",
+              type: "slider-with-input",
               min: 0,
+              max: Math.max(64, selectedBlur.x),
+              step: 0.5,
               required: true,
             },
             {
               name: "blurY",
               label: "Blur Y",
-              type: "input-number",
+              type: "slider-with-input",
               min: 0,
+              max: Math.max(64, selectedBlur.y),
+              step: 0.5,
               required: true,
             },
           ],
@@ -443,8 +456,10 @@ export const selectViewData = ({ state, props, i18n }) => {
             {
               name: "blurQuality",
               label: "Quality",
-              type: "input-number",
+              type: "slider-with-input",
               min: 1,
+              max: Math.max(10, selectedBlur.quality),
+              step: 1,
               required: true,
             },
             {

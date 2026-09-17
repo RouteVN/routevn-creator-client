@@ -9,6 +9,7 @@ import {
   uint8ArrayToBase64,
 } from "../../clients/ios/bridge.js";
 import { assertSafeIOSStorageSegment } from "../../clients/ios/storagePaths.js";
+import { prepareIOSVideoForThumbnail } from "../../clients/ios/videoFrames.js";
 import { getIOSProjectFileUrl } from "./projectFileUrls.js";
 import {
   createPersistedIOSProjectStore,
@@ -278,11 +279,12 @@ const createLocalOnlyProjectCollabSession = ({
   };
 };
 
-const ensureIOSProjectStorage = async (projectId) => {
+const ensureIOSProjectStorage = async (projectId, projectName) => {
   await callIOSBridge("ensureProjectStorage", {
     projectId: assertSafeIOSStorageSegment(projectId, {
       label: "iOS project id",
     }),
+    projectName,
   });
 };
 
@@ -621,7 +623,7 @@ export const createIOSProjectServiceAdapters = ({
 
       await assertUnusedIOSProjectStorage(safeProjectId);
 
-      await ensureIOSProjectStorage(safeProjectId);
+      await ensureIOSProjectStorage(safeProjectId, projectInfo.name);
 
       const loadedTemplateData = await loadTemplate(template);
       const languageTemplateData = resolveTemplateFontsForLanguage({
@@ -672,6 +674,7 @@ export const createIOSProjectServiceAdapters = ({
 
   const fileAdapter = {
     continueOnUploadError: false,
+    prepareVideoThumbnail: prepareIOSVideoForThumbnail,
     requiresFileMetadata: true,
 
     storeFile: async ({

@@ -549,7 +549,7 @@ template:
                               - rtgl-text c=mu-fg s=sm: ${selectImageLabel}
                       - $if conditionalOverrideAttributeDialog.validationErrors.selectedImageId:
                           - rtgl-text s=sm c=de: ${conditionalOverrideAttributeDialog.validationErrors.selectedImageId}
-  - rtgl-dialog#imageSelectorDialog ?open=${imageSelectorDialog.open} s=xl:
+  - rtgl-dialog#imageSelectorDialog ?open=${imageSelectorDialog.open} s=lg:
       - $if imageSelectorDialog.open:
           - rtgl-view slot=content d=v w=f g=md:
               - 'rtgl-view d=h w=f h=70vh g=lg style="min-width: 0; min-height: 0;"':
@@ -590,7 +590,7 @@ template:
                       - rvn-sound-selector#soundSelector selectedSoundId=${tempSelectedSoundId}: null
               - rtgl-view d=h g=sm w=f ah=e:
                   - rtgl-button#confirmSoundSelection variant=pr: ${okButton}
-  - rtgl-dialog#spritesheetSelectorDialog ?open=${spritesheetSelectorDialog.open} s=xl:
+  - rtgl-dialog#spritesheetSelectorDialog ?open=${spritesheetSelectorDialog.open} s=lg:
       - $if spritesheetSelectorDialog.open:
           - rtgl-view slot=content d=v w=f g=md:
               - 'rtgl-view d=h w=f h=70vh g=lg style="min-width: 0; min-height: 0;"':

@@ -5,6 +5,10 @@ refs:
     eventListeners:
       click:
         handler: handleRotatePreview
+  closePreviewButton:
+    eventListeners:
+      click:
+        handler: handleClosePreview
   window:
     eventListeners:
       resize:
@@ -26,9 +30,11 @@ template:
       - 'rtgl-view style="${previewStageStyle}"':
           - 'div#canvas data-preview-rotated=${isRotated} style="${previewCanvasHostStyle}"': null
           - 'rtgl-view style="${previewFrameStyle}"': null
-          - $if isAssetLoading:
-              - rtgl-view pos=abs edge=f w=f h=f bgc=bg op=0.6 av=c ah=c z=2:
-                  - rtgl-text s=h3: Loading preview...
+          - $if isPreviewLoading:
+              - rtgl-view#previewLoading pos=abs edge=f w=f h=f av=c ah=c z=2 role=status:
+                  - rtgl-view bgc=bg ph=lg pv=md br=sm:
+                      - rtgl-text s=md fw=400 c=fg: ${loadingPreviewLabel}
       - $if showRotatePreviewButton:
-          - 'rtgl-view pos=abs z=1 style="top: calc(env(safe-area-inset-top, 0px) + 12px); right: calc(env(safe-area-inset-right, 0px) + 12px);"':
+          - 'rtgl-view pos=abs z=3 d=h g=sm style="top: calc(env(safe-area-inset-top, 0px) + 12px); right: calc(env(safe-area-inset-right, 0px) + 12px);"':
               - 'rtgl-button#rotatePreviewButton sq pre=rotate v=se aria-label="${rotatePreviewLabel}" title="${rotatePreviewLabel}" aria-pressed=${isRotated}': null
+              - 'rtgl-button#closePreviewButton sq pre=x v=se aria-label="${closePreviewLabel}" title="${closePreviewLabel}"': null

@@ -8,7 +8,7 @@ const DEFAULT_ENSURE_VISIBLE_PAN_DURATION_MS = 160;
 const MAX_ENSURE_VISIBLE_PAN_DURATION_MS = 320;
 const MOUSE_ITEM_DRAG_THRESHOLD_PX = 3;
 const TOUCH_ITEM_DRAG_THRESHOLD_PX = 6;
-const TOUCH_ITEM_LONG_PRESS_MS = 500;
+const TOUCH_LONG_PRESS_MS = 500;
 const TOUCH_DOUBLE_TAP_MS = 320;
 const TOUCH_DOUBLE_TAP_DISTANCE_PX = 28;
 
@@ -540,7 +540,7 @@ const startTouchItemPress = (
               clientY,
             },
           );
-        }, TOUCH_ITEM_LONG_PRESS_MS)
+        }, TOUCH_LONG_PRESS_MS)
       : undefined;
 
   store.startTouchItemPress({
@@ -810,6 +810,7 @@ const mountSubscriptions = (deps) => {
 export const handleBeforeMount = (deps) => {
   const cleanupSubscriptions = mountSubscriptions(deps);
   return () => {
+    stopTouchGesture(deps);
     cancelPanAnimation(deps);
     cleanupSubscriptions();
   };
@@ -825,8 +826,7 @@ export const handleAfterMount = (deps) => {
   syncCursorStyles(deps);
 };
 
-export const handleContainerContextMenu = (deps, payload) => {
-  payload._event.preventDefault();
+const dispatchCanvasContextMenu = (deps, { clientX, clientY }) => {
   const { store, refs, dispatchEvent } = deps;
 
   // Calculate click position in canvas coordinates
@@ -835,17 +835,15 @@ export const handleContainerContextMenu = (deps, payload) => {
   const pan = store.selectPan();
   const zoomLevel = store.selectZoomLevel();
 
-  const canvasX =
-    (payload._event.clientX - containerRect.left - pan.x) / zoomLevel;
-  const canvasY =
-    (payload._event.clientY - containerRect.top - pan.y) / zoomLevel;
+  const canvasX = (clientX - containerRect.left - pan.x) / zoomLevel;
+  const canvasY = (clientY - containerRect.top - pan.y) / zoomLevel;
 
   // Emit canvas right-click event
   dispatchEvent(
     new CustomEvent("canvas-context-menu", {
       detail: {
-        formX: payload._event.clientX,
-        formY: payload._event.clientY,
+        formX: clientX,
+        formY: clientY,
         whiteboardX: canvasX,
         whiteboardY: canvasY,
       },
@@ -853,6 +851,20 @@ export const handleContainerContextMenu = (deps, payload) => {
       composed: true,
     }),
   );
+};
+
+export const handleContainerContextMenu = (deps, payload) => {
+  const { store } = deps;
+  const { _event: event } = payload;
+  event.preventDefault();
+
+  // Touch holds are handled explicitly, including on browsers that also emit
+  // a native contextmenu while the finger is down.
+  if (store.selectTouchGesture()) {
+    return;
+  }
+
+  dispatchCanvasContextMenu(deps, event);
 };
 
 export const handlePanButtonClick = (deps) => {
@@ -947,9 +959,9 @@ export const handleContainerTouchStart = (deps, payload) => {
 
   cancelPanAnimation(deps);
   syncContainerSize(deps);
+  clearTouchLongPressTimeout(deps);
 
   if (touchCount >= 2) {
-    clearTouchLongPressTimeout(deps);
     store.clearLastTouchTap();
     preventTouchDefault(event);
     event.stopPropagation();
@@ -984,9 +996,27 @@ export const handleContainerTouchStart = (deps, payload) => {
   }
 
   store.clearLastTouchTap();
+  let longPressTimeoutId;
+  if (!itemId && !store.selectIsPanMode()) {
+    const clientPoint = getTouchClientPoint(event);
+    longPressTimeoutId = globalThis.setTimeout(() => {
+      const gesture = store.selectTouchGesture();
+      if (
+        gesture?.type !== "pan" ||
+        gesture.hasMoved ||
+        gesture.longPressFired
+      ) {
+        return;
+      }
+
+      store.markTouchCanvasLongPressed();
+      dispatchCanvasContextMenu(deps, clientPoint);
+    }, TOUCH_LONG_PRESS_MS);
+  }
   store.startTouchPan({
     touchX: point.x,
     touchY: point.y,
+    longPressTimeoutId,
   });
 };
 
@@ -1048,6 +1078,7 @@ export const handleContainerTouchMove = (deps, payload) => {
   }
 
   if (touchCount >= 2) {
+    clearTouchLongPressTimeout(deps);
     const metrics = getTouchPairMetrics(event, refs.container);
     if (!metrics) {
       return;
@@ -1067,6 +1098,21 @@ export const handleContainerTouchMove = (deps, payload) => {
   const point = getPrimaryTouchPoint(event, refs.container);
   if (!point) {
     return;
+  }
+
+  if (gesture?.longPressFired) {
+    return;
+  }
+
+  if (gesture?.longPressTimeoutId !== undefined) {
+    const distance = Math.hypot(
+      point.x - gesture.startX,
+      point.y - gesture.startY,
+    );
+    if (distance <= TOUCH_ITEM_DRAG_THRESHOLD_PX) {
+      return;
+    }
+    clearTouchLongPressTimeout(deps);
   }
 
   if (store.selectTouchGesture()?.type !== "pan") {
@@ -1111,9 +1157,15 @@ export const handleContainerTouchEnd = (deps, payload) => {
     return;
   }
 
-  if (gesture?.hasMoved || gesture?.type === "pinch") {
+  if (
+    gesture?.hasMoved ||
+    gesture?.longPressFired ||
+    gesture?.type === "pinch"
+  ) {
     preventTouchDefault(event);
   }
+
+  clearTouchLongPressTimeout(deps);
 
   if (touchCount >= 2) {
     const metrics = getTouchPairMetrics(event, refs.container);

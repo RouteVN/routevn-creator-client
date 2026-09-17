@@ -17,6 +17,35 @@ import {
 } from "../../src/pages/app/app.store.js";
 
 describe("app.store route context", () => {
+  it.each(["web", "tauri", "android", "ios"])(
+    "waits for startup routing before rendering a page or navigation on %s",
+    (platform) => {
+      const state = createInitialState();
+      setPlatform({ state }, { platform });
+      setUiConfig(
+        { state },
+        {
+          uiConfig: {
+            id:
+              platform === "ios" || platform === "android"
+                ? "touch"
+                : "desktop",
+          },
+        },
+      );
+
+      expect(selectViewData({ state })).toMatchObject({
+        currentRoutePattern: undefined,
+        showSidebar: false,
+        showMobileTabBar: false,
+        showHelpButton: false,
+      });
+
+      setCurrentRoute({ state }, { route: "/projects", payload: {} });
+      expect(selectViewData({ state }).currentRoutePattern).toBe("/projects");
+    },
+  );
+
   it("stores the rendered route payload for navigation preparation", () => {
     const state = createInitialState();
 
@@ -303,8 +332,9 @@ describe("app.store mobile tab active state", () => {
 });
 
 describe("app.store floating help button", () => {
-  it("uses platform-specific touch offsets", () => {
+  it("omits the tab bar offset on Projects while keeping platform-specific touch spacing", () => {
     const androidState = createInitialState();
+    setCurrentRoute({ state: androidState }, { route: "/projects" });
     setPlatform({ state: androidState }, { platform: "android" });
     setUiConfig(
       { state: androidState },
@@ -312,6 +342,7 @@ describe("app.store floating help button", () => {
     );
 
     const iosState = createInitialState();
+    setCurrentRoute({ state: iosState }, { route: "/projects" });
     setPlatform({ state: iosState }, { platform: "ios" });
     setUiConfig(
       { state: iosState },
@@ -319,12 +350,12 @@ describe("app.store floating help button", () => {
     );
 
     expect(selectViewData({ state: androidState }).helpButtonBottom).toBe(
-      "92px",
+      "28px",
     );
-    expect(selectViewData({ state: iosState }).helpButtonBottom).toBe("128px");
+    expect(selectViewData({ state: iosState }).helpButtonBottom).toBe("64px");
   });
 
-  it("raises the Android touch help button only on the scene editor", () => {
+  it("raises the Android and iOS touch help button only on the scene editor", () => {
     const androidState = createInitialState();
     setPlatform({ state: androidState }, { platform: "android" });
     setUiConfig(
@@ -366,7 +397,7 @@ describe("app.store floating help button", () => {
       },
     );
 
-    expect(selectViewData({ state: iosState }).helpButtonBottom).toBe("128px");
+    expect(selectViewData({ state: iosState }).helpButtonBottom).toBe("176px");
 
     const desktopState = createInitialState();
     setPlatform({ state: desktopState }, { platform: "android" });

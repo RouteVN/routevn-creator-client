@@ -2,6 +2,14 @@ componentName: rvn-image-selector
 propsSchema:
   type: object
   properties:
+    resourceTarget:
+      type: string
+      enum: [images, characters, characterSprites]
+      default: images
+      description: Browse project images, characters, or character sprites.
+    characterId:
+      type: string
+      description: Restrict character sprites to this character.
     selectedImageId:
       type: string
     searchQuery:

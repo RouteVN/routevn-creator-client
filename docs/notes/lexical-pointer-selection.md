@@ -54,3 +54,34 @@ All 158 tests passed. Physical-device inspection confirmed the failed hit test;
 the iPhone locked before post-fix tap validation. Device refresh and a real tap
 check remain pending until it is unlocked. Synthetic browser taps do not establish
 that native iOS selection and keyboard transitions are correct.
+
+## September 17: stale focus recovery after a new tap
+
+A separate race retained `lastProgrammaticFocusTarget` after an inside tap.
+The document pointerdown handler only cancelled recovery for outside taps;
+mousedown invalidated queued frames but retained the old target. A subsequent
+transient blur could therefore schedule a fresh recovery to the previous line.
+On older iOS, unreadable shadow selections cannot veto that recovery.
+
+Every primary pointerdown now cancels the old recovery target and sequence,
+including inside the editor, before compatibility mouse events. Mousedown
+also clears the target for mouse-only input. Deferred pointer fallback
+validation checks the sequence so it cannot overwrite a newer gesture or edit.
+These handlers leave native selection placement untouched.
+
+The regression failed before the fix in Chromium: native touch tap from line 1
+offset 5 to line 2 offset 4, then a replayed transient blur, jumped back to line 1
+offset 5. It now passes in Chromium and WebKit, including subsequent native
+typing at the tapped offset. Unit tests cover cancellation before compatibility
+mousedown and an obsolete pointer fallback timer.
+
+The same recovery sequence was replayed with synthetic pointer/blur events and
+programmatic caret placement in an isolated dummy editor on the physical iPhone
+13 Pro / iOS 16.3.1. Before the fix it restored line 1 offset 5. After installing
+the updated packaged Debug app, it kept line 2; native DOM `insertText("X")`
+produced `secoXnd sample line`, confirming offset 4 was preserved. The legacy
+selection snapshot briefly returned its default offset 0 because selection was
+unreadable; the inserted text confirmed that the actual caret had not moved.
+This is a device replay, not verification of an actual finger-tap sequence.
+The temporary editor was removed afterward. The full scene-editor gate
+(457 unit tests and all browser suites) and lint passed.

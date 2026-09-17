@@ -2,6 +2,7 @@ import { describe, expect, it, vi } from "vitest";
 import {
   handleBeforeMount,
   handleItemContextMenu,
+  handleItemLongPress,
   handleItemDoubleClick,
 } from "../../src/components/charactersResourcesView/charactersResourcesView.handlers.js";
 
@@ -57,13 +58,13 @@ describe("charactersResourcesView.handlers", () => {
     );
   });
 
-  it("runs the double-click action instead of opening the context menu for mobile contextmenu gestures", () => {
+  it("opens sprites directly on a long press without selecting the card", () => {
     const dispatchEvent = vi.fn();
     const showContextMenu = vi.fn();
     const render = vi.fn();
     const preventDefault = vi.fn();
 
-    handleItemContextMenu(
+    handleItemLongPress(
       {
         props: {
           mobileLayout: true,
@@ -78,20 +79,19 @@ describe("charactersResourcesView.handlers", () => {
         _event: {
           ...createItemEvent("character-1"),
           preventDefault,
+          stopPropagation: vi.fn(),
           clientX: 10,
           clientY: 20,
         },
       },
     );
 
-    expect(preventDefault).toHaveBeenCalledTimes(1);
     expect(dispatchEvent).toHaveBeenCalledOnce();
     expect(dispatchEvent).toHaveBeenCalledWith(
       expect.objectContaining({
-        type: "item-dblclick",
+        type: "sprites-button-click",
         detail: {
           itemId: "character-1",
-          source: "mobile-context-menu",
         },
       }),
     );

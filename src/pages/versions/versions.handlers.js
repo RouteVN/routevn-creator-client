@@ -1104,7 +1104,7 @@ const runWebExport = async (deps, confirmation) => {
     message: formatI18nCopy(
       copy.zipExportCompletedMessage ??
         "ZIP export completed.\nSaved to: {path}",
-      { path: savedPath },
+      { path: appService.getFileDisplayPath(savedPath) },
     ),
     title: copy.exportCompletedTitle ?? "Export completed",
   });

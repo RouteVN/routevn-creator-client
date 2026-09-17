@@ -90,7 +90,7 @@ template:
                       - rtgl-text c=mu-fg ta=c: Select hover thumb image
               - $if images.hoverThumbImageId:
                   - rtgl-button#clearSliderCreateImageHoverThumb data-field-name=hoverThumbImageId variant=se size=sm: Clear
-  - rtgl-dialog#imageSelectorDialog ?open=${imageSelectorDialog.open} s=xl:
+  - rtgl-dialog#imageSelectorDialog ?open=${imageSelectorDialog.open} s=lg:
       - rtgl-view slot=content d=v w=f g=md:
           - 'rtgl-view d=h w=f h=70vh g=lg style="min-width: 0; min-height: 0;"':
               - $if showImageSelectorFileExplorer:

@@ -629,7 +629,6 @@ const ITEM_TYPE_CAPABILITY_OVERRIDES = {
     supportsActions: true,
   },
   "text-revealing": {
-    supportsTextEditing: true,
     supportsTextRevealEffect: true,
     supportsTextRevealIndicator: true,
     supportsTextRevealSound: true,

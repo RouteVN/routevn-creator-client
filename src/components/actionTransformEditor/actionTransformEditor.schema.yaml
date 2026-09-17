@@ -23,6 +23,8 @@ events:
     type: object
   done:
     type: object
+  cancel:
+    type: object
 methods:
   type: object
   properties:

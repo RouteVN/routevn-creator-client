@@ -128,7 +128,18 @@ for routine validation of ordinary code or view edits. Prefer targeted tests,
 format checks, lint checks, and the active watch output. Reserve `build:web` for
 explicit user requests, release/VT output, or a specific build-only failure.
 
+### Scene Text Editor Regression Gate
+
+[Scene text editor specifications and bug register](scene-text-editor-spec.md)
+tracks editing contracts, reproduced bugs, and their automated coverage. Update
+that register alongside editor behavior changes. Run `bun run test:scene-editor`
+for the unit and Chromium/WebKit input regression gate; CI runs it on PRs.
+
 ### Debugging Discipline
+
+Desktop fullscreen keyboard contracts and native macOS validation are recorded
+in [Desktop window keyboard behavior](desktop-window-spec.md). Run
+`bun run test:window-controls` when changing window keyboard handling.
 
 Do not claim a UI bug is fixed from code inspection alone. For user-visible
 runtime behavior, reproduce the issue in the running app or with an equivalent
@@ -993,11 +1004,38 @@ time, but they are the current standard.
 
 Resource pages should stay explicit at the page level.
 
+Touch resource grids default to two columns below 768 CSS pixels of viewport
+width and six columns at 768px or wider. Phone/tablet sizing is separate from
+touch input mode. Omit `default-items-per-row` on touch page branches so the
+shared `resourceGridDefaults.js` helper can choose the default and update it on
+resize or Split View changes. Explicit defaults and saved `.mobileItemsPerRow`
+preferences take precedence; automatic defaults are not persisted. Desktop
+defaults and full-width resource lists keep their existing behavior.
+
 On touch devices, long-pressing a resource card runs only its primary action
 (preview, play, edit, or open). Do not emit a preliminary `item-click` selection
 event: it opens the selected-item action sheet before the primary action runs.
 Primary actions that select an item must suppress the mobile detail sheet while
 keeping explorer selection synchronized. A normal tap still opens the sheet.
+
+Resource holds use `src/primitives/longPress.js`, installed once per document by
+`registerPrimitives()`. The shared resource views opt interactive touch cards in
+with `data-long-press="true"` and handle the resulting `long-press` event. The
+recognizer follows pointer events across shadow roots, waits 500ms, and cancels
+on movement, scrolling, multiple pointers, or cancellation. It suppresses native
+touch context menus and the release click, including when the action opens an
+overlay. Mouse and keyboard context menus keep their normal behavior. Keep
+gesture timers out of individual resource pages and handlers.
+
+Local and cloud cards on the Projects page use this same recognizer to open
+their project dropdown menu. A normal tap opens the project; releasing a hold
+must leave the menu open without navigating.
+
+Opted-in cards disable text selection and `-webkit-touch-callout` in their owning
+view styles. Nested native form controls are excluded from recognition; custom
+controls can opt out with `data-long-press-ignore`. Gesture regressions should
+exercise pointer down/hold/up and click suppression without synthesizing a
+`contextmenu` as a substitute for a hold.
 
 Do not hide an entire resource page behind one giant page factory or one
 universal layout abstraction.
@@ -1038,6 +1076,23 @@ They must not absorb:
 Resource center components must stay presentational.
 
 ### Scene Editor
+
+The native iOS and Android touch editor uses a 60% lines / 40% preview grid
+when the app window is at least 768 logical pixels wide and wider than it is
+tall. Portrait and narrower split windows retain the stacked touch layout;
+web and desktop retain their existing layouts. `windowMetricsClient` supplies
+full app-window bounds through the native `getWindowMetrics` bridge method and
+`routevn:window-metrics` events. Keyboard occlusion must not change those bounds
+or select a different layout. Visual viewport and keyboard metrics separately
+fit the landscape workspace above the keyboard toolbar.
+
+Change the workspace's CSS grid/flex styles without conditionally remounting
+the editor or preview on rotation. Action panels cover the lines column in
+landscape. The same native window height is the keyboard toolbar's baseline,
+so rotating from a tall portrait window does not create a false keyboard inset.
+`tests/sceneEditor/windowLayout.browser.mjs` checks real editor/canvas instance
+preservation across rotation and split-window changes; the scroll browser
+fixture covers portrait and landscape keyboard geometry in Chromium and WebKit.
 
 Current scene-editing pattern:
 
@@ -1118,6 +1173,24 @@ Why this matters:
 
 If this asset-loading behavior changes, document the reason in the same PR and
 re-check scene-editor memory behavior before merging.
+
+### Font Integrity and Loading
+
+`projectAssetService.getFileContent()` checks font bytes against the saved file
+record's size and SHA-256 before handing them to a decoder. Older records without
+a hash remain readable; reads never create or replace an integrity baseline.
+Font results include the verified buffer and an owned Blob URL. Consumers must
+release that URL; graphics can consume the supplied buffer directly. Image and
+video assets retain their existing direct URL path.
+
+New uploads and replacements use browser font decoding validation, including
+replacement files with a cached family name. The shared browser font loader has
+a 15-second deadline; late results are not registered. This deadline bounds the
+asynchronous wait but cannot interrupt a decoder blocking the JavaScript thread.
+
+Scene loading isolates a bad font, identifies it in a warning, and keeps the
+editor available. A preview that cannot load its fonts closes instead of starting
+with incomplete assets. Neither path changes saved font selections or files.
 
 ### Collaboration Runtime
 

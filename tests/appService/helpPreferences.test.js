@@ -73,10 +73,10 @@ describe("global help button preference", () => {
       try {
         await vi.waitFor(() => expect(render).toHaveBeenCalled());
         expect(rendersHelpButton(store)).toBe(true);
-        const bottom = store.selectViewData().helpButtonBottom;
         const config = bindStore(configStore);
 
         for (const visible of [false, true, false]) {
+          const bottom = store.selectViewData().helpButtonBottom;
           handleHelpButtonChange(
             { appService, store: config, render: vi.fn() },
             { _event: { detail: { value: visible } } },

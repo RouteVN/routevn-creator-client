@@ -1478,6 +1478,50 @@ describe("lexical scene document editor line editing", () => {
     }
   });
 
+  it.each([
+    ["ArrowUp", "line-1"],
+    ["ArrowDown", "line-2"],
+  ])(
+    "does not cross sections from a stale selected line on %s",
+    async (key, selectedLineId) => {
+      const restoreDomGlobals = installDomGlobals();
+      try {
+        const { LexicalSceneDocumentEditorElement } = await import(
+          "../../src/primitives/lexicalSceneDocumentEditor.js"
+        );
+        const editorElement = Object.create(
+          LexicalSceneDocumentEditorElement.prototype,
+        );
+        editorElement.state = {
+          mode: "text-editor",
+          selectedLineId,
+          lines: [{ id: "line-1" }, { id: "line-2" }],
+          hasPreviousSectionLine: true,
+          hasNextSectionLine: true,
+        };
+        // iOS can move the real caret while both JS selection APIs lose it.
+        editorElement.getNativeLineSelectionContext = vi.fn(() => undefined);
+        editorElement.dispatchSelectedLineChanged = vi.fn();
+        const event = new window.KeyboardEvent("keydown", {
+          key,
+          cancelable: true,
+        });
+
+        expect(
+          editorElement.handleImmediateTextModeVerticalBoundaryNavigation(
+            event,
+          ),
+        ).toBe(false);
+        expect(event.defaultPrevented).toBe(false);
+        expect(
+          editorElement.dispatchSelectedLineChanged,
+        ).not.toHaveBeenCalled();
+      } finally {
+        restoreDomGlobals();
+      }
+    },
+  );
+
   it("keeps final-section ArrowDown on the native text navigation path", async () => {
     const restoreDomGlobals = installDomGlobals();
 
@@ -1605,6 +1649,47 @@ describe("lexical scene document editor line editing", () => {
       restoreDomGlobals();
     }
   });
+
+  it.each([
+    ["ArrowUp", "line-2", "line-1"],
+    ["ArrowDown", "line-1", "line-2"],
+  ])(
+    "does not cross a section when Lexical synchronizes %s before the navigation frame",
+    async (key, fromLine, toLine) => {
+      const restoreDomGlobals = installDomGlobals();
+      const frames = installAnimationFrameQueue();
+      try {
+        const { LexicalSceneDocumentEditorElement } = await import(
+          "../../src/primitives/lexicalSceneDocumentEditor.js"
+        );
+        const owner = Object.create(
+          LexicalSceneDocumentEditorElement.prototype,
+        );
+        Object.defineProperty(owner, "isConnected", { value: true });
+        owner.state = {
+          mode: "text-editor",
+          selectedLineId: fromLine,
+          lines: [{ id: "line-1" }, { id: "line-2" }],
+        };
+        let native = { lineId: fromLine, start: 2, end: 2 };
+        owner.getNativeLineSelectionContext = () => native;
+        owner.dispatchSelectedLineChanged = vi.fn();
+        owner.revealCurrentSelection = vi.fn();
+
+        owner.scheduleNativeSelectionLineSyncAfterVerticalNavigation({ key });
+        native = { lineId: toLine, start: 2, end: 2 };
+        owner.state.selectedLineId = toLine;
+        while (frames.callbacks.length) frames.callbacks.shift()();
+
+        expect(owner.dispatchSelectedLineChanged).not.toHaveBeenCalled();
+        expect(owner.state.selectedLineId).toBe(toLine);
+        expect(owner.revealCurrentSelection).toHaveBeenCalledOnce();
+      } finally {
+        frames.restore();
+        restoreDomGlobals();
+      }
+    },
+  );
 
   it("emits text-mode boundary navigation when ArrowDown cannot move past the last line", async () => {
     const restoreDomGlobals = installDomGlobals();
@@ -4817,7 +4902,7 @@ describe("lexical scene document editor line editing", () => {
     }
   });
 
-  it("restores focus when programmatic text entry drops focus to body", async () => {
+  it("allows body blur after the programmatic caret recovery window expires", async () => {
     const restoreDomGlobals = installDomGlobals();
     const previousRequestAnimationFrame = globalThis.requestAnimationFrame;
     globalThis.requestAnimationFrame = vi.fn((callback) => {
@@ -4870,9 +4955,8 @@ describe("lexical scene document editor line editing", () => {
         currentTarget: editorNode,
       });
 
-      expect(editorElement.commitNativeBlur).not.toHaveBeenCalled();
-      expect(editorElement.state.mode).toBe("text-editor");
-      expect(editorElement.focusLine).toHaveBeenCalledWith(focusTarget);
+      expect(editorElement.commitNativeBlur).toHaveBeenCalledOnce();
+      expect(editorElement.focusLine).not.toHaveBeenCalled();
     } finally {
       if (previousRequestAnimationFrame === undefined) {
         delete globalThis.requestAnimationFrame;
@@ -5227,6 +5311,47 @@ describe("lexical scene document editor line editing", () => {
     }
   });
 
+  it.each([
+    { key: " ", keyCode: 229 },
+    { key: " ", which: 229 },
+    { key: "2", keyCode: 229 },
+    { key: "2", which: 229 },
+  ])(
+    "does not insert an IME process key through the printable fallback: %j",
+    async (processKey) => {
+      const restoreDomGlobals = installDomGlobals();
+      vi.useFakeTimers();
+      try {
+        const { LexicalSceneDocumentEditorElement } = await import(
+          "../../src/primitives/lexicalSceneDocumentEditor.js"
+        );
+        const owner = Object.create(
+          LexicalSceneDocumentEditorElement.prototype,
+        );
+        owner.state = { mode: "text-editor" };
+        Object.defineProperty(owner, "isConnected", { value: true });
+        owner.isEditorActiveElement = () => true;
+        owner.getNativeLineSelectionContext = () => undefined;
+        owner.insertPlainText = vi.fn();
+
+        owner.updatePendingTextInputFallback({
+          ...processKey,
+          isComposing: false,
+        });
+        vi.runAllTimers();
+        expect(owner.insertPlainText).not.toHaveBeenCalled();
+        expect(owner.pendingTextInputFallback).toBeUndefined();
+
+        owner.updatePendingTextInputFallback({ key: " ", keyCode: 32 });
+        vi.runAllTimers();
+        expect(owner.insertPlainText).toHaveBeenCalledExactlyOnceWith(" ");
+      } finally {
+        vi.useRealTimers();
+        restoreDomGlobals();
+      }
+    },
+  );
+
   it("uses printable keydown text when beforeinput insertText has no data", async () => {
     const restoreDomGlobals = installDomGlobals();
 
@@ -5266,7 +5391,10 @@ describe("lexical scene document editor line editing", () => {
       expect(preventDefault).toHaveBeenCalledTimes(1);
       expect(stopPropagation).toHaveBeenCalledTimes(1);
       expect(stopImmediatePropagation).toHaveBeenCalledTimes(1);
-      expect(insertPlainText).toHaveBeenCalledWith("a");
+      expect(insertPlainText).toHaveBeenCalledWith("a", {
+        nativeSelection: undefined,
+        nativeLineRangeSelection: undefined,
+      });
     } finally {
       restoreDomGlobals();
     }
@@ -5390,6 +5518,7 @@ describe("lexical scene document editor line editing", () => {
       editorElement.hideSelectionPopover = vi.fn();
       editorElement.clearSelectedReferenceNodeKey = vi.fn();
       editorElement.insertPlainText = vi.fn();
+      editorElement.getNativeLineRangeSelectionContext = vi.fn();
 
       editorElement.updatePendingTextInputFallback({
         key: "a",
@@ -5412,7 +5541,10 @@ describe("lexical scene document editor line editing", () => {
       });
 
       expect(editorElement.insertPlainText).toHaveBeenNthCalledWith(1, "a");
-      expect(editorElement.insertPlainText).toHaveBeenNthCalledWith(2, "b");
+      expect(editorElement.insertPlainText).toHaveBeenNthCalledWith(2, "b", {
+        nativeSelection: undefined,
+        nativeLineRangeSelection: undefined,
+      });
       expect(preventDefault).toHaveBeenCalledTimes(1);
     } finally {
       vi.useRealTimers();

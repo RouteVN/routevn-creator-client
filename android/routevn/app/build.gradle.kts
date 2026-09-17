@@ -36,8 +36,8 @@ android {
         applicationId = "com.routevn.creator"
         minSdk = 24
         targetSdk = 37
-        versionCode = 6
-        versionName = "1.13.1"
+        versionCode = 9
+        versionName = "1.15.1"
         buildConfigField("boolean", "GOOGLE_PLAY_UPDATES", (routevnDistribution == "google-play").toString())
         manifestPlaceholders["usesCleartextTraffic"] = "false"
     }
@@ -91,7 +91,22 @@ tasks.matching {
 }
 
 dependencies {
+    constraints {
+        implementation("androidx.fragment:fragment:1.9.0") {
+            because("Google Play In-App Updates transitively requests an outdated Fragment release")
+        }
+        implementation("com.google.android.gms:play-services-basement:18.11.0") {
+            because("Use current Play Services stability fixes with In-App Updates")
+        }
+        implementation("com.google.android.gms:play-services-tasks:18.4.1") {
+            because("Keep the In-App Updates task runtime on the current stable release")
+        }
+        implementation("com.google.android.play:core-common:2.0.4") {
+            because("Use the current Play Core common runtime with In-App Updates")
+        }
+    }
+
     implementation("com.google.android.play:app-update:2.1.0")
     implementation("androidx.core:core-splashscreen:1.2.0")
-    implementation("androidx.webkit:webkit:1.16.0")
+    implementation("androidx.webkit:webkit:1.17.0")
 }

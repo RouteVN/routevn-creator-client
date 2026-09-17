@@ -543,7 +543,16 @@ export const selectViewData = ({ state, i18n }) => {
       type: "input-text",
       label: copy.sceneNameLabel ?? "Scene Name",
       description: copy.sceneNameDescription ?? "Enter the scene name",
-      required: true,
+      required: {
+        message: copy.sceneNameRequired ?? "Scene name is required.",
+      },
+      rules: [
+        {
+          rule: "pattern",
+          value: "\\S",
+          message: copy.sceneNameRequired ?? "Scene name is required.",
+        },
+      ],
     },
   ];
 
@@ -569,6 +578,7 @@ export const selectViewData = ({ state, i18n }) => {
       buttons: [
         {
           id: "submit",
+          validate: true,
           variant: "pr",
           label: copy.createButton ?? "Create",
         },

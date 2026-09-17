@@ -74,6 +74,12 @@ describe("project-entry language platform propagation", () => {
   beforeEach(() => {
     mocked.androidBridge.mockReset();
     mocked.iosBridge.mockReset();
+    mocked.iosBridge.mockImplementation(async (method, { projectId }) => {
+      if (method === "getProjectStorageStatus") {
+        return { projectFilePath: `/projects/${projectId}/project.db` };
+      }
+      throw new Error(`Unexpected iOS bridge method: ${method}`);
+    });
     mocked.readDir.mockReset();
     mocked.exists.mockReset();
     mocked.join.mockReset();

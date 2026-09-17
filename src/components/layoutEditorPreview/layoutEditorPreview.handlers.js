@@ -1,3 +1,5 @@
+import { subscribeCharacterAvatarOptions } from "../../internal/ui/characterAvatarOptions.js";
+
 const toPositivePreviewRevealingSpeed = (rawValue) => {
   const value = Number(rawValue);
   return Number.isFinite(value) && value > 0 ? value : 50;
@@ -74,14 +76,15 @@ const didInitialPreviewDataChange = (oldProps = {}, newProps = {}) => {
 };
 
 export const handleBeforeMount = (deps) => {
-  deps.store.setUiConfig({
-    uiConfig: deps.uiConfig,
-  });
-  deps.store.setLayoutState({
-    layoutState: deps.props.layoutState,
-  });
-  deps.store.hydratePreviewState({
-    previewData: deps.props.initialPreviewData,
+  const { store, props, uiConfig, render } = deps;
+  store.setUiConfig({ uiConfig });
+  store.setLayoutState({ layoutState: props.layoutState });
+  store.hydratePreviewState({ previewData: props.initialPreviewData });
+  return subscribeCharacterAvatarOptions(deps, {
+    onProjectStateChanged: (repositoryState) => {
+      store.setRepositoryState({ repositoryState });
+      render();
+    },
   });
 };
 
@@ -233,6 +236,52 @@ export const handlePreviewBackgroundFieldClick = async (deps) => {
   deps.render();
 };
 
+export const handleCharacterAvatarClick = (deps) => {
+  const { store, projectService, render } = deps;
+  store.setRepositoryState({
+    repositoryState: projectService.getRepositoryState(),
+  });
+  store.openImageSelectorDialog({ resourceTarget: "characterSprites" });
+  render();
+};
+
+export const handleCharacterAvatarKeyDown = (deps, { _event }) => {
+  if (_event.key === "Enter" || _event.key === " ") {
+    _event.preventDefault();
+    handleCharacterAvatarClick(deps);
+  }
+};
+
+export const handleCharacterAvatarContextMenu = (deps, { _event }) => {
+  const { store, render, i18n } = deps;
+  if (!store.selectDialogueDefaultValues()["dialogue-character-sprite-id"]) {
+    return;
+  }
+
+  _event.preventDefault();
+  store.showDropdownMenu({
+    x: _event.clientX,
+    y: _event.clientY,
+    items: [
+      {
+        type: "item",
+        label: i18n.resourcePages.removeMenuItem,
+        value: "remove-character-avatar",
+      },
+    ],
+  });
+  render();
+};
+
+export const handleClearCharacterAvatar = (deps) => {
+  const { store } = deps;
+  store.setDialogueDefaultValue({
+    name: "dialogue-character-sprite-id",
+    fieldValue: undefined,
+  });
+  renderAndEmitPreviewDataChange(deps);
+};
+
 export const handlePreviewBackgroundFieldContextMenu = (deps, payload) => {
   const imageId = deps.store.selectPreviewData()?.backgroundImageId;
   if (!imageId) {
@@ -249,10 +298,16 @@ export const handlePreviewBackgroundFieldContextMenu = (deps, payload) => {
 };
 
 export const handleImageSelected = (deps, payload) => {
-  deps.store.setImageSelectorSelectedImageId({
-    imageId: payload._event.detail?.imageId,
-  });
-  deps.render();
+  const { store, render } = deps;
+  const { imageId } = payload._event.detail;
+  store.setImageSelectorSelection({ imageId });
+  render();
+};
+
+export const handleImageSelectorBackClick = (deps) => {
+  const { store, render } = deps;
+  store.showImageSelectorCharacters();
+  render();
 };
 
 export const handleImageSelectorCancel = (deps) => {
@@ -261,12 +316,17 @@ export const handleImageSelectorCancel = (deps) => {
 };
 
 export const handleImageSelectorSubmit = (deps) => {
-  deps.store.setPreviewBackgroundImageId({
-    imageId: deps.store.selectImageSelectorSelectedImageId(),
-  });
-  deps.store.closeImageSelectorDialog();
-  deps.store.hideDropdownMenu();
+  const { store, refs } = deps;
+  const transformField = "dialogue-character-sprite-transform-id";
+  const previousTransformId =
+    store.selectDialogueDefaultValues()[transformField];
+  store.applyImageSelectorSelection();
+  store.hideDropdownMenu();
   renderAndEmitPreviewDataChange(deps);
+  const transformId = store.selectDialogueDefaultValues()[transformField];
+  if (transformId !== previousTransformId) {
+    refs.dialogueForm.setValues({ values: { [transformField]: transformId } });
+  }
 };
 
 export const handleImageDoubleClick = (deps, payload) => {
@@ -299,16 +359,22 @@ export const handleClearPreviewBackground = (deps) => {
 };
 
 export const handleDropdownMenuClickItem = (deps, payload) => {
+  const { store, render } = deps;
   const item = payload._event.detail?.item || payload._event.detail;
 
-  deps.store.hideDropdownMenu();
+  store.hideDropdownMenu();
+
+  if (item?.value === "remove-character-avatar") {
+    handleClearCharacterAvatar(deps);
+    return;
+  }
 
   if (item?.value === "remove-background") {
     handleClearPreviewBackground(deps);
     return;
   }
 
-  deps.render();
+  render();
 };
 
 export const handleDropdownMenuClose = (deps) => {

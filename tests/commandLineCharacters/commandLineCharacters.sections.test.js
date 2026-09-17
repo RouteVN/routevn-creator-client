@@ -56,7 +56,7 @@ describe("commandLineCharacters sections", () => {
         rows: [
           ["character-1-sprite", "character-1-sprite-spacer"],
           ["character-1-transform-mode", "character-1-predefined-transform"],
-          "character-1-animation",
+          ["character-1-animation", "character-1-animation-spacer"],
         ],
       },
       {
@@ -65,7 +65,7 @@ describe("commandLineCharacters sections", () => {
         rows: [
           ["character-0-sprite", "character-0-sprite-spacer"],
           ["character-0-transform-mode", "character-0-predefined-transform"],
-          "character-0-animation",
+          ["character-0-animation", "character-0-animation-spacer"],
         ],
       },
     ]);
@@ -130,7 +130,7 @@ describe("commandLineCharacters sections", () => {
     expect(rows).toEqual([
       ["character-0-sprite", "character-0-sprite-spacer"],
       ["character-0-transform-mode", "character-0-predefined-transform"],
-      "character-0-animation",
+      ["character-0-animation", "character-0-animation-spacer"],
       ["character-0-playback-speed", "character-0-playback-continuity"],
       ["character-0-playback-loop", "character-0-playback-loop-spacer"],
     ]);

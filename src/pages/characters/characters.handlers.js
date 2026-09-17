@@ -1122,7 +1122,8 @@ export const handleEditFormAction = async (deps, payload) => {
       tagIds: Array.isArray(formData.tagIds) ? formData.tagIds : [],
       spriteGroups: reverseSpriteGroups(spriteGroupValidation.spriteGroups),
     };
-    if (formData.shortcut !== undefined) {
+    // Cleared selects are omitted from form values; touch mode hides the field.
+    if (!store.selectIsTouchMode()) {
       updateData.shortcut = formData.shortcut ?? "";
     }
 

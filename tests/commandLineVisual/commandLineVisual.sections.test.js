@@ -83,7 +83,7 @@ describe("commandLineVisual sections", () => {
     expect(rows).toEqual([
       ["visual-0-preview", "visual-0-layer"],
       ["visual-0-transform-mode", "visual-0-predefined-transform"],
-      "visual-0-animation",
+      ["visual-0-animation", "visual-0-animation-spacer"],
       ["visual-0-playback-speed", "visual-0-playback-continuity"],
       ["visual-0-playback-loop", "visual-0-playback-loop-spacer"],
       ["visual-0-opacity", "visual-0-blur-toggle"],

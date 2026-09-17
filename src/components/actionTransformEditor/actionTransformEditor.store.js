@@ -50,6 +50,7 @@ export const selectViewData = ({ state, props, i18n }) => {
   return {
     isTouchMode: state.isTouchMode === true,
     title: copy.title ?? "Transform",
+    cancelButton: copy.cancelButton ?? "Cancel",
     doneButton: copy.doneButton ?? "Done",
     targetTitle: copy.targetTitle ?? "Target",
     targetTypeLabel: copy[targetTypeCopy.key] ?? targetTypeCopy.fallback,

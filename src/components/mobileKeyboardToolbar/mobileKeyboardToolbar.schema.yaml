@@ -1,7 +1,9 @@
 componentName: rvn-mobile-keyboard-toolbar
 propsSchema:
   type: object
-  properties: {}
+  properties:
+    width:
+      type: string
 events:
   action-click:
     type: object

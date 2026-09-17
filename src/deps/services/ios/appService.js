@@ -7,6 +7,31 @@ import { createNativeApplicationIdentifier } from "../../../internal/nativeAppli
 import { normalizeProjectLanguage } from "../../../internal/projectLanguage.js";
 import { isDarkTheme } from "../../../internal/theme.js";
 import { createProgressDialog } from "../../clients/progressDialog.js";
+import { createIOSProjectFolderSetup } from "../../clients/ios/projectFolderSetup.js";
+
+const formatFileDisplayPath = (filePath, deviceName) => {
+  if (!filePath) return undefined;
+
+  // Native exports return URLs; project listings already contain decoded paths.
+  // Decode only URLs, once, so literal percent sequences in names survive.
+  if (filePath.startsWith("file://")) {
+    filePath = decodeURIComponent(new URL(filePath).pathname);
+  }
+
+  const roots = [
+    ["/File Provider Storage/", `On My ${deviceName}`],
+    ["/Mobile Documents/com~apple~CloudDocs/", "iCloud Drive"],
+  ];
+  for (const [marker, label] of roots) {
+    const index = filePath.indexOf(marker);
+    if (index !== -1) {
+      const relativePath = filePath.slice(index + marker.length);
+      return `${label} / ${relativePath.split("/").join(" / ")}`;
+    }
+  }
+
+  return filePath.split("/").slice(-2).join(" / ");
+};
 
 const normalizeFolderSelection = (selection) => {
   if (typeof selection === "string") {
@@ -22,15 +47,6 @@ const normalizeFolderSelection = (selection) => {
   };
 };
 
-const listIOSProjectFolders = async () => {
-  try {
-    const projects = await callIOSBridge("listProjectFolders");
-    return Array.isArray(projects) ? projects : [];
-  } catch {
-    return undefined;
-  }
-};
-
 const toIOSProjectEntry = ({ project, existingEntry } = {}) => {
   const projectId = project?.id ?? "";
   if (!projectId) {
@@ -41,6 +57,7 @@ const toIOSProjectEntry = ({ project, existingEntry } = {}) => {
 
   return {
     id: projectId,
+    projectFilePath: project.projectFilePath,
     name: projectName || "Untitled Project",
     description: project.description ?? existingEntry?.description ?? "",
     language: normalizeProjectLanguage(
@@ -54,14 +71,22 @@ const toIOSProjectEntry = ({ project, existingEntry } = {}) => {
 
 export const createAppService = (params) => {
   const appDb = params.db;
+  const projectFolderSetup = createIOSProjectFolderSetup({
+    filePicker: params.filePicker,
+  });
+  const getFileDisplayPath = (filePath) =>
+    formatFileDisplayPath(
+      filePath,
+      projectFolderSetup.getStatus().deviceName ?? "iPhone",
+    );
 
   const syncIOSProjectEntriesFromStorage = async () => {
-    const discoveredProjects = await listIOSProjectFolders();
-    if (!discoveredProjects) {
-      return;
-    }
+    const discoveredProjects = await callIOSBridge("listProjectFolders");
+    const removedProjectIds = new Set(
+      (await appDb.get("iosRemovedProjectIds")) ?? [],
+    );
 
-    const entries = (await appDb.get("projectEntries")) || [];
+    const entries = (await appDb.get("projectEntries")) ?? [];
     const existingEntries = Array.isArray(entries) ? entries : [];
     const existingEntriesById = new Map(
       existingEntries
@@ -71,6 +96,7 @@ export const createAppService = (params) => {
 
     const nextEntries = [];
     for (const project of discoveredProjects) {
+      if (removedProjectIds.has(project.id)) continue;
       const entry = toIOSProjectEntry({
         project,
         existingEntry: existingEntriesById.get(project?.id),
@@ -84,6 +110,8 @@ export const createAppService = (params) => {
   };
 
   const platformAdapter = {
+    getFileDisplayPath,
+
     applyTheme: (theme) => {
       callIOSBridge("setStatusBarStyle", {
         style: isDarkTheme(theme) ? "light" : "dark",
@@ -103,7 +131,10 @@ export const createAppService = (params) => {
       return entries.some((project) => project.id === entry.id);
     },
 
-    mapProjectEntryToProject: () => ({}),
+    mapProjectEntryToProject: (entry) => ({
+      projectFilePath: entry.projectFilePath,
+      projectFileDisplayPath: getFileDisplayPath(entry.projectFilePath),
+    }),
 
     loadProjectIcon: async ({ entry }) => {
       if (!entry?.id || !entry?.iconFileId) return null;
@@ -154,6 +185,7 @@ export const createAppService = (params) => {
 
       const projectEntry = {
         id: projectId,
+        projectFilePath: importedProject.projectFilePath,
         name: projectName,
         description: importedProject.description ?? "",
         language: normalizeProjectLanguage(importedProject.language),
@@ -164,7 +196,21 @@ export const createAppService = (params) => {
 
       await addProjectEntry(projectEntry);
 
-      const fullProject = { ...projectEntry };
+      // Explicitly importing a removed project restores it to discovery.
+      const removedProjectIds = (await appDb.get("iosRemovedProjectIds")) ?? [];
+      if (removedProjectIds.includes(projectId)) {
+        await appDb.set(
+          "iosRemovedProjectIds",
+          removedProjectIds.filter((id) => id !== projectId),
+        );
+      }
+
+      const fullProject = {
+        ...projectEntry,
+        projectFileDisplayPath: getFileDisplayPath(
+          projectEntry.projectFilePath,
+        ),
+      };
       if (projectEntry.iconFileId) {
         const iconResult = await loadProjectIcon({
           entry: projectEntry,
@@ -221,6 +267,10 @@ export const createAppService = (params) => {
         },
       });
 
+      const storageStatus = await callIOSBridge("getProjectStorageStatus", {
+        projectId,
+      });
+      projectEntry.projectFilePath = storageStatus.projectFilePath;
       await addProjectEntry(projectEntry);
 
       if (iconFile) {
@@ -252,7 +302,12 @@ export const createAppService = (params) => {
         }
       }
 
-      const fullProject = { ...projectEntry };
+      const fullProject = {
+        ...projectEntry,
+        projectFileDisplayPath: getFileDisplayPath(
+          projectEntry.projectFilePath,
+        ),
+      };
       if (iconFileId) {
         const iconResult = await platformAdapter.loadProjectIcon({
           entry: projectEntry,
@@ -284,6 +339,26 @@ export const createAppService = (params) => {
   return {
     ...appService,
 
+    initializeProjectFolderSetup: () => projectFolderSetup.load(),
+    getProjectFolderSetup: () => projectFolderSetup.getStatus(),
+    async previewNewProjectLocation({ name }) {
+      const location = await callIOSBridge("previewNewProjectLocation", {
+        name: name.trim() || "Untitled Project",
+      });
+      return {
+        folderName: location.folderName,
+        displayPath: getFileDisplayPath(location.folderPath),
+      };
+    },
+    pickProjectFolderSetup: (options) => projectFolderSetup.pick(options),
+    confirmProjectFolderSetup: (options) => projectFolderSetup.confirm(options),
+
+    resolveProjectFolderSetupRoute(path) {
+      return projectFolderSetup.getStatus().configured
+        ? path
+        : "/project-folder-setup";
+    },
+
     showProgressDialog(options) {
       return createProgressDialog(options);
     },
@@ -291,6 +366,17 @@ export const createAppService = (params) => {
     async loadAllProjects() {
       await syncIOSProjectEntriesFromStorage();
       return appService.loadAllProjects();
+    },
+
+    async removeProjectEntry(projectId) {
+      // Remove hides the list entry, keeping the user's folder and assets.
+      // Remember the identity so later scans and folder renames keep it hidden.
+      const removedProjectIds = new Set(
+        (await appDb.get("iosRemovedProjectIds")) ?? [],
+      );
+      removedProjectIds.add(projectId);
+      await appDb.set("iosRemovedProjectIds", [...removedProjectIds]);
+      return appService.removeProjectEntry(projectId);
     },
 
     copyText(value) {

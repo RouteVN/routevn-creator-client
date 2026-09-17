@@ -5,6 +5,7 @@ import { EN_I18N } from "../support/i18n.js";
 
 it.each([
   { mode: "touch", shortcut: undefined },
+  { mode: "mouse", shortcut: undefined },
   { mode: "mouse", shortcut: "" },
   { mode: "mouse", shortcut: "3" },
 ])(
@@ -48,7 +49,12 @@ it.each([
         fieldNames.has(name),
       ),
     );
-    if (hasShortcut) values.shortcut = shortcut;
+    if (hasShortcut && shortcut !== undefined) {
+      values.shortcut = shortcut;
+    } else {
+      // Cleared selects and hidden fields are omitted from form submissions.
+      delete values.shortcut;
+    }
     values.name = "Character Two";
     const updateCharacter = vi.fn(async () => ({ valid: true }));
     const store = Object.fromEntries(
@@ -79,7 +85,7 @@ it.each([
     const { data } = updateCharacter.mock.calls[0][0];
     expect(data.name).toBe("Character Two");
     if (hasShortcut) {
-      expect(data.shortcut).toBe(shortcut);
+      expect(data.shortcut).toBe(shortcut ?? "");
     } else {
       // Character updates are partial; omitting this field preserves the saved shortcut.
       expect(data).not.toHaveProperty("shortcut");

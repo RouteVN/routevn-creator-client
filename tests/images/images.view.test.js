@@ -56,7 +56,7 @@ describe("images view", () => {
     expect(mobileBranch).toContain("zoom-control-mode=columns");
     expect(mobileBranch).toContain("show-tag-filter");
     expect(mobileBranch).toContain("filter-in-overflow-menu");
-    expect(mobileBranch).toContain("default-items-per-row=2");
+    expect(mobileBranch).not.toContain("default-items-per-row=");
     expect(mobileBranch).toContain(
       'items-per-row-config-key="groupImagesView.itemsPerRow"',
     );

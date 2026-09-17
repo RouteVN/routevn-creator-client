@@ -1,8 +1,13 @@
+import { isMobileSceneEditorSideBySide } from "../../internal/sceneEditorLayout.js";
+
 export const createInitialState = () => ({
   platform: "web",
-  currentRoute: "/projects",
+  // Mount a page only after startup routing has resolved folder setup and
+  // navigation preparation. Projects must not load before that decision.
+  currentRoute: "",
   currentRoutePayload: {},
   isTouchMode: false,
+  appWindowMetrics: { width: 0, height: 0 },
   showHelpButton: true,
   isMobileSheetOpen: false,
   mobileSheetVariant: undefined,
@@ -19,13 +24,17 @@ const MOBILE_TAB_BAR_HEIGHT_PX = 64;
 const HELP_BUTTON_BOTTOM_OFFSET_PX = 24;
 const HELP_BUTTON_TOUCH_BOTTOM_OFFSET_PX = 28;
 const HELP_BUTTON_IOS_EXTRA_BOTTOM_OFFSET_PX = 36;
-const SCENE_EDITOR_ANDROID_HELP_BUTTON_EXTRA_BOTTOM_OFFSET_PX = 48;
+const SCENE_EDITOR_HELP_BUTTON_EXTRA_BOTTOM_OFFSET_PX = 48;
 const MOBILE_TAB_BAR_ACTIVE_COLOR = "white";
 const MOBILE_TAB_BAR_INACTIVE_COLOR = "mu-fg";
 const MOBILE_TAB_BAR_PRESSED_BACKGROUND_COLOR = "ac";
 const MOBILE_TAB_BAR_BACKGROUND_COLOR = "bg";
 
-const routesWithoutNavbar = ["/projects", "/authenticate"];
+const routesWithoutNavbar = [
+  "/projects",
+  "/authenticate",
+  "/project-folder-setup",
+];
 const routesWithoutMobileTabBar = [];
 
 const mobileTabBarItems = [
@@ -55,7 +64,10 @@ const selectShowAppNavigation = ({ state }) => {
   const normalizedRoutesWithoutNavbar = routesWithoutNavbar.map((route) =>
     route.replace(/\/$/, ""),
   );
-  return !normalizedRoutesWithoutNavbar.includes(normalizedPattern);
+  return (
+    Boolean(currentRoutePattern) &&
+    !normalizedRoutesWithoutNavbar.includes(normalizedPattern)
+  );
 };
 
 export const selectShowSidebar = ({ state }) => {
@@ -85,6 +97,7 @@ export const selectCurrentRoutePattern = ({ state }) => {
     "/project",
     "/projects",
     "/authenticate",
+    "/project-folder-setup",
     "/project/images",
     "/project/spritesheets",
     "/project/characters",
@@ -177,6 +190,7 @@ const selectMobileTabBarItems = ({ state, i18n }) => {
       id: item.id,
       icon: item.icon,
       label: copy[item.labelKey] ?? item.id,
+      fontWeight: item.id === activeMobileTabId ? "700" : "400",
       color,
       backgroundColor: isPressed
         ? MOBILE_TAB_BAR_PRESSED_BACKGROUND_COLOR
@@ -196,6 +210,11 @@ export const setUiConfig = ({ state }, { uiConfig } = {}) => {
 
 export const setPlatform = ({ state }, { platform } = {}) => {
   state.platform = platform ?? "web";
+};
+
+export const setAppWindowMetrics = ({ state }, { width, height }) => {
+  state.appWindowMetrics.width = width;
+  state.appWindowMetrics.height = height;
 };
 
 export const setCurrentRoute = ({ state }, { route, payload } = {}) => {
@@ -306,6 +325,9 @@ export const selectViewData = ({ state, i18n }) => {
   const currentRoutePattern = selectCurrentRoutePattern({ state });
   const showSidebar = selectShowSidebar({ state });
   const showMobileTabBar = selectShowMobileTabBar({ state });
+  // iPad WebKit can retain a stale vw width after resuming.
+  // Its parent layout is already correct, so size iOS content from that box.
+  const appWidth = state.platform === "ios" ? "100%" : "100vw";
   // On older iOS, remounting the tabs briefly exposes unstyled SVGs while
   // adopted stylesheets are restored by the polyfill on the next frame.
   const mountMobileTabBar =
@@ -313,11 +335,16 @@ export const selectViewData = ({ state, i18n }) => {
     (state.platform === "ios" &&
       state.isTouchMode &&
       currentRoutePattern === "/project/scene-editor");
-  const sceneEditorAndroidHelpButtonExtraBottomOffset =
+  const sceneEditorHelpButtonExtraBottomOffset =
     state.isTouchMode &&
-    state.platform === "android" &&
-    currentRoutePattern === "/project/scene-editor"
-      ? SCENE_EDITOR_ANDROID_HELP_BUTTON_EXTRA_BOTTOM_OFFSET_PX
+    (state.platform === "android" || state.platform === "ios") &&
+    currentRoutePattern === "/project/scene-editor" &&
+    !isMobileSceneEditorSideBySide({
+      isTouchMode: state.isTouchMode,
+      width: state.appWindowMetrics.width,
+      height: state.appWindowMetrics.height,
+    })
+      ? SCENE_EDITOR_HELP_BUTTON_EXTRA_BOTTOM_OFFSET_PX
       : 0;
   const repositoryLoadingProgressPercent =
     selectRepositoryLoadingProgressPercent({
@@ -329,6 +356,10 @@ export const selectViewData = ({ state, i18n }) => {
 
   return {
     ...state,
+    showHelpButton:
+      state.showHelpButton &&
+      Boolean(currentRoutePattern) &&
+      currentRoutePattern !== "/project-folder-setup",
     currentRoutePattern,
     showSidebar,
     showMobileTabBar,
@@ -337,18 +368,20 @@ export const selectViewData = ({ state, i18n }) => {
     mobileTabBarItems: selectMobileTabBarItems({ state, i18n }),
     mobileSheetVariant: state.mobileSheetVariant ?? "assets",
     appShellDirection: showMobileTabBar ? "v" : "h",
-    contentWidth: showSidebar ? `calc(100vw - ${SIDEBAR_WIDTH_PX}px)` : "100vw",
+    contentWidth: showSidebar
+      ? `calc(${appWidth} - ${SIDEBAR_WIDTH_PX}px)`
+      : appWidth,
     contentHeight: showMobileTabBar
       ? `calc(var(--rvn-app-viewport-height, 100vh) - ${MOBILE_TAB_BAR_HEIGHT_PX}px)`
       : "100%",
     helpButtonBottom: state.isTouchMode
       ? `${
-          MOBILE_TAB_BAR_HEIGHT_PX +
+          (currentRoutePattern === "/projects" ? 0 : MOBILE_TAB_BAR_HEIGHT_PX) +
           HELP_BUTTON_TOUCH_BOTTOM_OFFSET_PX +
           (state.platform === "ios"
             ? HELP_BUTTON_IOS_EXTRA_BOTTOM_OFFSET_PX
             : 0) +
-          sceneEditorAndroidHelpButtonExtraBottomOffset
+          sceneEditorHelpButtonExtraBottomOffset
         }px`
       : `${HELP_BUTTON_BOTTOM_OFFSET_PX}px`,
     repositoryLoadingProgressPercent,

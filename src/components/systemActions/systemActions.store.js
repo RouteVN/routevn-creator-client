@@ -296,6 +296,8 @@ export const selectViewData = ({ state, props, props: attrs, i18n }) => {
     allCharacters,
     characterTree: repositoryState.characters?.tree || [],
     transforms: repositoryState.transforms || { items: {}, tree: [] },
+    defaultDialogueAvatarTransformId:
+      repositoryState.project?.defaultDialogueAvatarTransformId,
     animations: repositoryState.animations || { items: {}, tree: [] },
     selectedLine: props.selectedLine,
     previousPresentationState: props.previousPresentationState ?? {},
@@ -329,6 +331,7 @@ export const selectViewData = ({ state, props, props: attrs, i18n }) => {
         : (attrs.dialogPanelWidth ?? "50vw"),
     actionsDialogPanelTop: attrs.dialogPanelTop ?? "0px",
     actionsDialogPanelBottom: attrs.dialogPanelBottom ?? "0px",
+    actionsDialogPanelRight: attrs.dialogPanelRight ?? "0px",
     hiddenModes,
     allowedModes,
     suppressDialogClose:

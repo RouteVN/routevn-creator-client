@@ -1,6 +1,6 @@
 [package]
 name = "routevn-creator"
-version = "1.13.1"
+version = "1.15.1"
 description = "RouteVN Creator. Follow us on social media to stay updated."
 authors = ["Yuusoft"]
 license = "MIT"
@@ -17,6 +17,7 @@ crate-type = ["staticlib", "cdylib", "rlib"]
 
 [build-dependencies]
 tauri-build = { version = "=2.6.2", features = [] }
+cc = "1.2"
 
 [dependencies]
 serde_json = "1.0"

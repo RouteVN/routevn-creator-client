@@ -352,7 +352,7 @@ describe("images handlers", () => {
       _event: {
         detail: {
           itemId: "image-1",
-          source: "mobile-context-menu",
+          source: "long-press",
         },
       },
     });

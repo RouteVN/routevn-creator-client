@@ -80,6 +80,7 @@ import javax.crypto.SecretKey;
 import javax.crypto.spec.GCMParameterSpec;
 import org.json.JSONArray;
 import org.json.JSONObject;
+import org.json.JSONException;
 
 public class MainActivity extends Activity {
     private static final String TAG = "RouteVNAndroid";
@@ -165,6 +166,7 @@ public class MainActivity extends Activity {
     }
 
     private WebView webView;
+    private String lastReportedWindowMetrics = "";
     private GooglePlayUpdater googlePlayUpdater;
     private boolean appResumed = false;
     private boolean splashDismissRequested = false;
@@ -412,6 +414,7 @@ public class MainActivity extends Activity {
                 .build();
 
         webView = new WebView(this);
+        webView.addOnLayoutChangeListener((view, left, top, right, bottom, oldLeft, oldTop, oldRight, oldBottom) -> publishWindowMetrics(false));
         webView.setLayoutParams(
             new ViewGroup.LayoutParams(
                 ViewGroup.LayoutParams.MATCH_PARENT,
@@ -514,6 +517,42 @@ public class MainActivity extends Activity {
             finishSplashIfReady();
             return insets;
         });
+    }
+
+    private JSONObject currentWindowMetrics() throws JSONException {
+        JSONObject result = new JSONObject();
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
+            android.view.WindowMetrics metrics = getWindowManager().getCurrentWindowMetrics();
+            android.graphics.Rect bounds = metrics.getBounds();
+            android.graphics.Insets bars = metrics.getWindowInsets().getInsetsIgnoringVisibility(
+                WindowInsets.Type.systemBars() | WindowInsets.Type.displayCutout()
+            );
+            float density = getResources().getDisplayMetrics().density;
+            result.put("width", (bounds.width() - bars.left - bars.right) / density);
+            result.put("height", (bounds.height() - bars.top - bars.bottom) / density);
+        } else {
+            // Configuration dimensions follow multi-window bounds and do not
+            // shrink with adjustResize when the software keyboard opens.
+            android.content.res.Configuration configuration = getResources().getConfiguration();
+            result.put("width", configuration.screenWidthDp);
+            result.put("height", configuration.screenHeightDp);
+        }
+        return result;
+    }
+
+    private void publishWindowMetrics(boolean force) {
+        if (webView == null) return;
+        try {
+            String metrics = currentWindowMetrics().toString();
+            if (!force && metrics.equals(lastReportedWindowMetrics)) return;
+            lastReportedWindowMetrics = metrics;
+            webView.evaluateJavascript(
+                "window.dispatchEvent(new CustomEvent('routevn:window-metrics', {detail:" + metrics + "}))",
+                null
+            );
+        } catch (JSONException error) {
+            Log.e(TAG, "Could not publish window metrics", error);
+        }
     }
 
     private void configureCookies() {
@@ -787,6 +826,7 @@ public class MainActivity extends Activity {
         @Override
         public void onPageFinished(WebView view, String url) {
             super.onPageFinished(view, url);
+            publishWindowMetrics(true);
             notifyAudioLifecycle();
         }
 
@@ -1017,6 +1057,8 @@ public class MainActivity extends Activity {
         JSONObject payload = new JSONObject(payloadJson);
         AndroidBridge bridge = new AndroidBridge();
         switch (method) {
+            case "getWindowMetrics":
+                return bridgeSuccess(currentWindowMetrics());
             case "isDebugBuild":
                 return bridgeSuccess(bridge.isDebugBuild());
             case "updateBackState":

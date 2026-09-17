@@ -32,7 +32,9 @@ template:
               - rtgl-view w=f h=f d=v ah=c av=c g=sm:
                   - rtgl-text s=sm c=mu-fg: ${repositoryLoadingStatusText}
             $else:
-              - $if currentRoutePattern == "/projects":
+              - $if currentRoutePattern == "/project-folder-setup":
+                  - rvn-project-folder-setup: []
+                $elif currentRoutePattern == "/projects":
                   - rvn-projects: []
                 $elif currentRoutePattern == "/authenticate":
                   - rvn-authenticate: []
@@ -102,7 +104,7 @@ template:
                   - $for item, i in mobileTabBarItems:
                       - 'rtgl-view#mobileTabItem${i} data-tab-id=${item.id} w=1fg h=f d=v ah=c av=c g=xs bgc=${item.backgroundColor} cur=pointer style="touch-action: manipulation; user-select: none; -webkit-user-select: none; -webkit-touch-callout: none; -webkit-tap-highlight-color: transparent;"':
                           - rtgl-svg wh=22 svg=${item.icon} c=${item.color}: null
-                          - rtgl-text s=xs c=${item.color}: ${item.label}
+                          - 'rtgl-text s=xs c=${item.color} style="font-weight: ${item.fontWeight};"': ${item.label}
   - $if isMobileSheetOpen:
       - rvn-mobile-sheet#mobileSheet ?open=${isMobileSheetOpen}:
           - rvn-mobile-sidebar slot=content variant=${mobileSheetVariant} w=f h=f: []

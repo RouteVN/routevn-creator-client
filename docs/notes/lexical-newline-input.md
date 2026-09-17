@@ -1,5 +1,8 @@
 # Scene editor newline input
 
+The maintained specification, bug register, and regression command are in
+[Scene text editor specifications](../scene-text-editor-spec.md).
+
 The scene editor page (`src/pages/sceneEditorLexical`) delegates editing to
 `src/primitives/lexicalSceneDocumentEditor.js`. The defects were in the primitive's
 input and caret mapping, rather than page state or the Rettangoli dependency.
@@ -107,8 +110,111 @@ at the end of a line and twice consecutively. Confirm that typing follows the
 caret and that leaving/reopening the scene preserves the newlines. Also confirm
 an IME candidate with Enter before testing an ordinary Enter.
 
+## Physical iPhone automatic Shift follow-up (2026-09-17)
+
+TXT-B012 reproduces the reported rapid-Return failure on an iPhone 13 Pro running
+iOS 16.3.1. After refreshing development signing, WebView inspection and native
+debugger attachment worked. An isolated instance of the production primitive
+inside the installed app used only dummy text, with no project persistence.
+LLDB activated the native keyboard's Return accessibility element four times
+70ms apart. The captured keydown Shift flags were `false, false, true, false`,
+with no intervening Shift keydown. The third Return inserted a soft break, giving
+four scene lines instead of five.
+
+The primitive uses the app's existing touch input mode. Return always creates a
+scene line in that mode, including Shift+Enter and beforeinput-only
+`insertLineBreak`. This applies to native iOS/Android and touch web layouts.
+Desktop/pointer Shift+Enter still inserts a soft break. The touch regression
+also exposed TXT-B013: immediate typing after a beforeinput-only split could be
+rewound by its deferred focus reset (`X`, then `Y` became `YX`). That callback
+now checks the existing focus-restore sequence so newer input supersedes it. No platform detection or
+held-Shift tracking is needed. The deferred input/deduplication logic retains
+this same decision. This is an app-owned change; no dependency source was
+modified.
+
+The rebuilt packaged Debug app passed on the same iPhone: a burst of four native
+Return events, including shifted events, created five scene lines with no soft
+breaks, and native `X` then `y` input landed in the final line. The temporary
+fixture was removed afterward. `bun run test:scene-editor` passed 455 unit tests
+and all Chromium/WebKit browser suites; lint passed. The new browser suite
+replays the captured modifier sequence, then uses native typing and asserts the
+exact content and caret. It also verifies touch beforeinput-only line breaks and native Shift+Enter
+in both touch and desktop/pointer modes. A physical iPhone hardware keyboard and IME were
+not part of this device check.
+
+## Multiline replacement and deletion follow-up (2026-09-16)
+
+Investigation of intermittent editing reports reproduced three additional
+failures in the production primitive, inside nested shadow roots:
+
+1. **Replacing text immediately after a soft break removed the wrong text.**
+   Load `alpha\nbeta`, place the caret before `b`, press Shift+ArrowRight, then
+   type `X`. Chromium and WebKit produced `alpha\nbX` instead of
+   `alpha\nXeta`. `resolvePointAtOffset()` represented the start of `beta` as
+   an element point after the line-break node. Paired with the text endpoint
+   after `b`, this made Lexical's replacement operate on the wrong side of the
+   endpoint. The app now uses the following text node at offset zero when one
+   exists. Empty rows, trailing breaks, and atomic reference boundaries keep
+   their element points.
+2. **Backspace recovery could rewind newer input.** In WebKit, Backspace
+   schedules a caret restoration on the next animation frame. If `X` arrives
+   before that frame and `YZ` arrives afterward, the old restoration moved
+   the caret before `X`, producing `YZX`. The browser regression freezes the
+   animation clock to make this event order deterministic while using native
+   keyboard input. New text, soft/paragraph breaks, paste, composition, and
+   forward deletion now invalidate pending recovery through the existing
+   sequence counter. Normal-paced Backspace recovery remains covered.
+3. **Forward Delete ignored the native target range.** WebKit could deliver a
+   valid `deleteContentForward` range while the Lexical selection available to
+   the edit was missing. The event was cancelled but no deletion happened.
+   Forward deletion now resolves the input range before editing, including
+   ranges spanning scene lines, with native/Lexical fallbacks retained.
+
+These are confirmed reproductions, not a confirmed identification of every
+reported user incident. The users' platform, installed version, and exact input
+sequence were not available. The first failure requires a real soft newline;
+automatic visual wrapping alone does not create that node boundary.
+
+Validation:
+
+```bash
+bunx vitest run tests/sceneEditor tests/layoutEditor/lexicalLayoutTextEditor.test.js --exclude '**/.artifacts/**'
+node tests/sceneEditor/lexicalMultilineEditing.browser.mjs
+```
+
+The browser suite checks serialized dialogue and native caret positions in
+Chromium and WebKit, with single/consecutive soft breaks, selected-text
+replacement, forward Delete, and rapid Backspace followed by input. It bundles
+only the primitive into a temporary fixture and does not require a running app
+or touch user projects. This is browser-engine validation; packaged desktop
+apps and physical mobile devices have not been validated for this follow-up.
+
 ## References
 
 - [Input Events Level 2: input types and target ranges](https://www.w3.org/TR/input-events-2/)
 - [Lexical 0.22.0 input handling](https://github.com/facebook/lexical/blob/v0.22.0/packages/lexical/src/LexicalEvents.ts)
 - [Existing Tauri WebKit selection and IME notes](macos-tauri-lexical-selection.md)
+
+## Android empty-line Backspace (2026-09-17)
+
+TXT-B016 was reproduced on the connected Vivo V2309A with Gboard. An isolated
+production editor held `alpha`, `beta`, and an empty scene line. Its empty line
+contained the app's invisible caret anchor. One native software Backspace
+removed that anchor and left an empty paragraph; the second merged into `beta`.
+Lexical's keydown listener ran before the app's bubbling handler and had already
+prevented the event, so the logical line-start merge never ran on the first key.
+
+The existing window capture path now handles ordinary Backspace at a collapsed,
+resolved logical line start before Lexical's character deletion. It reuses the
+app's line merge and caret recovery, cancels the handled key, and records it for
+beforeinput deduplication. Active composition, IME process keys, modified keys,
+noncollapsed selections, and events outside the editor retain their other paths.
+
+After installing the updated packaged Debug APK, one actual Gboard Backspace
+removed the loaded empty line and kept the caret after `beta`; native `x` then
+produced `betax`. A native Return followed by one Backspace also removed the new
+empty line and left `betax` unchanged. The temporary fixture was removed. Device
+WebView bundle hashing confirmed the installed JavaScript matched the build.
+
+The full scene-editor gate passed 457 unit tests and all Chromium/WebKit browser
+suites, including five new Backspace scenarios per engine. Lint passed.

@@ -12,7 +12,7 @@ The Android project should stay on the newest stable Android toolchain versions
 we have adopted in Gradle. Update this section in the same PR when changing
 Gradle pins.
 
-- Android Gradle Plugin: `9.2.0`
+- Android Gradle Plugin: `9.2.1`
 - Gradle wrapper: `9.4.1`
 - Java language level: `17`
 - `compileSdk`: `37`
@@ -21,8 +21,12 @@ Gradle pins.
 - Build tools: `37.0.0`
 - NDK: `29.0.14206865`
 - AndroidX Core Splashscreen: `1.2.0`
-- AndroidX WebKit: `1.16.0`
+- AndroidX Fragment: `1.9.0` (constraint for Google Play In-App Updates' transitive dependency)
+- AndroidX WebKit: `1.17.0`
 - Google Play In-App Updates: `2.1.0`
+- Google Play Core Common: `2.0.4` (transitive constraint)
+- Google Play Services Basement: `18.11.0` (transitive constraint)
+- Google Play Services Tasks: `18.4.1` (transitive constraint)
 
 ## Local Setup
 
@@ -385,6 +389,16 @@ The web app handles back in this order:
 4. If the web app cannot handle back, the Activity finishes.
 
 ## Debugging
+
+The native touch Scene Editor uses lines on the left (60%) and preview on the
+right (40%) when the app window is at least 768 dp wide and wider than tall.
+Narrow and portrait windows retain the stacked layout. `getWindowMetrics` and
+`routevn:window-metrics` report app-window dimensions independently of keyboard
+resizing: WindowMetrics minus system-bar/display-cutout insets on Android 11+,
+and configuration dp dimensions on older versions. Visual viewport/keyboard
+metrics separately fit the workspace above the keyboard toolbar. Rebuild the
+shell for the new bridge method; see `docs/engineering.md` for shared behavior
+and browser regressions.
 
 Clear and inspect Android logs:
 

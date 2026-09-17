@@ -1773,6 +1773,15 @@ const mapLayoutNode = ({ node, imageItems, context, ancestry = [] }) => {
     context: nodeContext,
   });
 
+  if (
+    element.type === "text-revealing" &&
+    ancestry.some(({ node }) => node.type === "container-ref-dialogue-line")
+  ) {
+    element["$if i < dialogue.lines.length - 1"] = {
+      revealEffect: "none",
+    };
+  }
+
   const childContext = nodeContext;
 
   const resolvedChildren =

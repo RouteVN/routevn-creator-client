@@ -332,6 +332,18 @@ export const resolvePointAtOffset = (node, offset) => {
   for (let index = 0; index < children.length; index += 1) {
     const childNode = children[index];
     const childLength = getLexicalTextLength(childNode);
+    // At the start of text after a soft break, use that text node's offset 0.
+    // An element point after the break can make a text replacement operate on
+    // the wrong side of its text-node endpoint.
+    if (
+      $isLineBreakNode(childNode) &&
+      remainingOffset === childLength &&
+      $isTextNode(children[index + 1]) &&
+      !isReferenceTextNode(children[index + 1])
+    ) {
+      return resolvePointAtOffset(children[index + 1], 0);
+    }
+
     if ($isLineBreakNode(childNode) && remainingOffset <= childLength) {
       return {
         key: node.getKey(),
@@ -371,10 +383,14 @@ export const resolvePointAtOffset = (node, offset) => {
   };
 };
 
-export const applySelectionToLineNode = (lineNode, selectionSnapshot = {}) => {
+export const applySelectionToLineRange = (
+  lineNode,
+  endLineNode,
+  selectionSnapshot = {},
+) => {
   const startPoint = resolvePointAtOffset(lineNode, selectionSnapshot.start);
   const endPoint = resolvePointAtOffset(
-    lineNode,
+    endLineNode,
     selectionSnapshot.end ?? selectionSnapshot.start,
   );
 
@@ -387,6 +403,10 @@ export const applySelectionToLineNode = (lineNode, selectionSnapshot = {}) => {
   selection.anchor.set(startPoint.key, startPoint.offset, startPoint.type);
   selection.focus.set(endPoint.key, endPoint.offset, endPoint.type);
   $setSelection(selection);
+};
+
+export const applySelectionToLineNode = (lineNode, selectionSnapshot = {}) => {
+  applySelectionToLineRange(lineNode, lineNode, selectionSnapshot);
 };
 
 export const clearSelectionTextFormatting = (selection) => {
