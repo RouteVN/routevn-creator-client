@@ -134,6 +134,60 @@ function texts() {
   );
 }
 
+describe("TXT-B012 touch Return always creates a scene line", () => {
+  beforeEach(() => {
+    document.documentElement.dataset.rvnInputMode = "touch";
+  });
+
+  it.each([
+    [false, "insertParagraph"],
+    [false, "insertLineBreak"],
+    [true, "insertParagraph"],
+    [true, "insertLineBreak"],
+  ])("defers Enter (shift=%s) to the %s target", (shiftKey, inputType) => {
+    const key = new window.KeyboardEvent("keydown", {
+      key: "Enter",
+      code: "Enter",
+      keyCode: 13,
+      shiftKey,
+      cancelable: true,
+    });
+    element.handleLexicalEnterCommand(key);
+    expect(key.defaultPrevented).toBe(false);
+    beforeInput(inputType, targetRange(0, 2));
+    expect(texts()).toEqual(["al", "pha", "beta"]);
+  });
+
+  it.each(["insertParagraph", "insertLineBreak"])(
+    "creates a scene line from %s without keydown",
+    (inputType) => {
+      beforeInput(inputType, targetRange(0, 2));
+      expect(texts()).toEqual(["al", "pha", "beta"]);
+    },
+  );
+
+  it("creates only one scene line for hardware Shift+Enter and its beforeinput", () => {
+    editor.update(
+      () => $getRoot().getFirstChild().getFirstChild().select(2, 2),
+      {
+        discrete: true,
+      },
+    );
+    element.handleWindowKeyDownCapture(
+      new window.KeyboardEvent("keydown", { key: "Shift", shiftKey: true }),
+    );
+    const key = new window.KeyboardEvent("keydown", {
+      key: "Enter",
+      shiftKey: true,
+      cancelable: true,
+    });
+    element.handleLexicalEnterCommand(key);
+    expect(key.defaultPrevented).toBe(true);
+    beforeInput("insertLineBreak", targetRange(0, 2));
+    expect(texts()).toEqual(["al", "pha", "beta"]);
+  });
+});
+
 describe("word selection after soft newlines", () => {
   function prepareClick({ detail = 2, offset, formatted = false }) {
     editor.update(

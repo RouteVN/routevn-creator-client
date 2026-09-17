@@ -127,6 +127,9 @@ const EDITOR_FONT_SIZE_VALUES = {
 };
 const DEFAULT_EDITOR_FONT_SIZE = "md";
 
+const isTouchInputMode = () =>
+  document.documentElement.dataset.rvnInputMode === "touch";
+
 const normalizeEditorFontSize = (fontSize) =>
   EDITOR_FONT_SIZE_VALUES[fontSize] ? fontSize : DEFAULT_EDITOR_FONT_SIZE;
 
@@ -2666,12 +2669,13 @@ export class LexicalSceneDocumentEditorElement extends HTMLElement {
   }
 
   handleDocumentPointerDown(event) {
-    if (event.button !== 0 || event.composedPath().includes(this)) {
+    if (event.button !== 0) {
       return;
     }
 
-    // An outside tap supersedes caret recovery, even during its short focus
-    // window. Leave default focus/blur behavior and toolbar actions intact.
+    // A new gesture owns the caret, including inside this editor. On iOS,
+    // pointerdown precedes compatibility mousedown and native selection can
+    // be hidden by shadow roots, so cancel recovery before either can race it.
     this.cancelFocusRecovery();
   }
 
@@ -2776,8 +2780,11 @@ export class LexicalSceneDocumentEditorElement extends HTMLElement {
       return true;
     }
 
+    // Touch Return always creates a scene line. In particular, iOS automatic
+    // capitalization can mark a software Return as shifted.
+    const isSoftLineBreak = event?.shiftKey && !isTouchInputMode();
     const pendingNewline = {
-      inputType: event?.shiftKey ? "insertLineBreak" : "insertParagraph",
+      inputType: isSoftLineBreak ? "insertLineBreak" : "insertParagraph",
       handled: false,
     };
     this.pendingNewlineBeforeInput = pendingNewline;
@@ -2801,7 +2808,7 @@ export class LexicalSceneDocumentEditorElement extends HTMLElement {
     event?.preventDefault?.();
     event?.stopPropagation?.();
     pendingNewline.handled = true;
-    if (event?.shiftKey) {
+    if (isSoftLineBreak) {
       this.insertSoftLineBreak();
     } else {
       this.splitCurrentLine();
@@ -3538,7 +3545,7 @@ export class LexicalSceneDocumentEditorElement extends HTMLElement {
       return;
     }
 
-    this.invalidatePendingFocusRestore();
+    this.cancelFocusRecovery();
     this.markPointerDownInsideEditor();
 
     const referenceSnapshot = this.getReferenceSnapshotFromContextEvent(event);
@@ -3956,6 +3963,12 @@ export class LexicalSceneDocumentEditorElement extends HTMLElement {
 
     if (this.state.mode === "block") {
       this.handleBlockModeContextMenu(event);
+      return;
+    }
+
+    // Touch editing keeps the native selection/copy menu. Opening our rich-text
+    // menu would cancel that gesture and can replace the selected range.
+    if (isTouchInputMode()) {
       return;
     }
 
@@ -5042,7 +5055,7 @@ export class LexicalSceneDocumentEditorElement extends HTMLElement {
       }
 
       const newlineInputType = pendingNewline?.inputType ?? inputType;
-      if (newlineInputType === "insertParagraph") {
+      if (isTouchInputMode() || newlineInputType === "insertParagraph") {
         this.splitCurrentLine({ nativeRange: event.getTargetRanges?.()[0] });
       } else {
         this.insertSoftLineBreak({
@@ -5999,9 +6012,7 @@ export class LexicalSceneDocumentEditorElement extends HTMLElement {
     this.isApplyingExternalLines = emitChange !== true;
     // Loading a scene must not open the software keyboard. Keep the logical
     // line selection without moving the browser caret into the editor.
-    const preventFocus =
-      document.documentElement.dataset.rvnInputMode === "touch" &&
-      !this.isEditorActiveElement();
+    const preventFocus = isTouchInputMode() && !this.isEditorActiveElement();
 
     this.editor.update(
       () => {
@@ -6147,7 +6158,12 @@ export class LexicalSceneDocumentEditorElement extends HTMLElement {
       });
     }
 
+    const focusRestoreSequenceId = this.focusRestoreSequenceId;
     requestAnimationFrame(() => {
+      if (this.focusRestoreSequenceId !== focusRestoreSequenceId) {
+        return;
+      }
+
       const nextLineKey = this.lineKeyById.get(newLineId);
       if (!nextLineKey) {
         return;
@@ -8877,8 +8893,13 @@ export class LexicalSceneDocumentEditorElement extends HTMLElement {
       return;
     }
 
+    const focusRestoreSequenceId = this.focusRestoreSequenceId;
     setTimeout(() => {
-      if (!this.isConnected || !this.isEditorFocused) {
+      if (
+        !this.isConnected ||
+        !this.isEditorFocused ||
+        this.focusRestoreSequenceId !== focusRestoreSequenceId
+      ) {
         return;
       }
 
