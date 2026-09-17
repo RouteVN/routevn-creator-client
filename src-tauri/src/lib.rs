@@ -14,7 +14,6 @@ mod export_macos;
 mod export_windows;
 mod export_zip;
 mod linux_desktop_integration;
-mod project_asset_storage;
 mod project_file_protocol;
 mod project_media_server;
 mod static_web_server;
@@ -67,7 +66,6 @@ pub fn run() {
         .plugin(tauri_plugin_process::init())
         .plugin(tauri_plugin_persisted_scope::init())
         .invoke_handler(tauri::generate_handler![
-            project_asset_storage::write_project_asset,
             export_macos::export_macos_application,
             export_macos::get_macos_export_host_capabilities,
             export_zip::create_distribution_zip_streamed,

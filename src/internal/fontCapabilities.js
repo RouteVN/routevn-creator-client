@@ -1,5 +1,4 @@
 import { create as createFont } from "fontkit";
-import { validateNewFontData } from "./fontValidation.js";
 
 export const NEW_FONT_FILE_ACCEPT = ".ttf,.otf,.woff2";
 export const NEW_FONT_FILE_TYPES = [".ttf", ".otf", ".woff2"];
@@ -180,8 +179,6 @@ export const inspectNewFontFile = async (file) => {
       "WOFF1 font files are not supported for new uploads.",
     );
   }
-
-  validateNewFontData(fontData);
 
   try {
     return extractFontWeightCapabilities(fontData);

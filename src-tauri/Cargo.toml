@@ -36,7 +36,6 @@ urlencoding = "2.1"
 routevn-exporter = { path = "../crates/routevn-exporter" }
 routevn-packager = { path = "../crates/routevn-packager" }
 tempfile = "3"
-sha2 = "0.10"
 plist = "=1.8.0"
 
 [target.'cfg(any(target_os = "windows", target_os = "macos", target_os = "linux"))'.dependencies]

@@ -86,23 +86,6 @@ describe("project font integrity", () => {
     expect(media.revoke).not.toHaveBeenCalled();
   });
 
-  it("does not return a file record when verified storage fails", async () => {
-    const file = new File(["original"], "font-one.ttf", { type: "font/ttf" });
-    const sha256 = await computeSha256(await file.arrayBuffer());
-    const storeFile = vi.fn(async ({ sha256: expected }) => {
-      expect(expected).toBe(sha256);
-      throw new Error("readback mismatch");
-    });
-    const service = createProjectAssetService({
-      fileAdapter: { storeFile },
-      idGenerator: () => "font-one",
-    });
-    await expect(service.storeFile({ file })).rejects.toThrow(
-      "readback mismatch",
-    );
-    expect(storeFile).toHaveBeenCalledOnce();
-  });
-
   it("does not call a font damaged when the hashing runtime is unavailable", async () => {
     const { service } = setup({
       bytes: new Uint8Array([1]),
@@ -132,28 +115,5 @@ describe("project font integrity", () => {
     const content = await service.getFileContent("font-one");
     expect(new Uint8Array(content.buffer)).toEqual(bytes);
     content.revoke();
-  });
-
-  it("does not include a colliding existing asset in failed-import cleanup", async () => {
-    const deleteStoredFiles = vi.fn(async () => {});
-    const service = createProjectAssetService({
-      fileAdapter: {
-        storeFile: async () => {
-          throw new Error("asset already exists");
-        },
-        deleteStoredFiles,
-      },
-    });
-    await expect(
-      service.stageResourceImportFile({
-        planId: "plan-one",
-        fileId: "existing-font",
-        file: new File(["bytes"], "font-one.ttf"),
-      }),
-    ).rejects.toThrow("asset already exists");
-    await service.discardResourceImportFiles({ planId: "plan-one" });
-    expect(deleteStoredFiles).toHaveBeenCalledWith(
-      expect.objectContaining({ fileIds: [] }),
-    );
   });
 });

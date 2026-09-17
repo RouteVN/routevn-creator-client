@@ -7,7 +7,6 @@ import {
   resolveTemplateFontsForLanguage,
 } from "../../src/internal/defaultTemplateFonts.js";
 import { extractFontWeightCapabilities } from "../../src/internal/fontCapabilities.js";
-import { validateNewFontData } from "../../src/internal/fontValidation.js";
 import { PROJECT_LANGUAGES } from "../../src/internal/projectLanguage.js";
 import { assertSupportedProjectState } from "../../src/deps/services/shared/projectRepository.js";
 import { scaleTemplateProjectStateForResolution } from "../../src/internal/projectResolution.js";
@@ -71,7 +70,6 @@ describe("default template fonts", () => {
       );
 
       expect(font.fileId).toBe(fileId);
-      expect(() => validateNewFontData(bytes)).not.toThrow();
       expect(font).toMatchObject({
         minWeight: weight,
         defaultWeight: weight,

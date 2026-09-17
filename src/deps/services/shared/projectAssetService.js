@@ -16,7 +16,6 @@ import {
   createFontAssetError,
   isFontAssetError,
 } from "../../../internal/fontAssetError.js";
-import { validateNewFontData } from "../../../internal/fontValidation.js";
 import { loadFont } from "./fontLoader.js";
 import { computeSha256 } from "../../clients/sha256.js";
 
@@ -99,7 +98,6 @@ export const createProjectAssetService = ({
   const storeRawFile = async ({
     file,
     bytes,
-    sha256,
     projectId,
     projectPath,
     targetFileId,
@@ -107,7 +105,6 @@ export const createProjectAssetService = ({
     return fileAdapter.storeFile({
       file,
       bytes,
-      sha256,
       projectId,
       projectPath,
       idGenerator: targetFileId ? () => targetFileId : idGenerator,
@@ -127,20 +124,35 @@ export const createProjectAssetService = ({
     onStoredFileId,
   } = {}) => {
     const fileBytes = bytes ?? (await file.arrayBuffer());
-    const hashStartedAt = getNow();
-    const sha256 = await computeSha256(fileBytes);
-    if (timings) timings.hashDurationMs = getDurationMs(hashStartedAt);
-    const storeStartedAt = getNow();
-    const stored = await storeRawFile({
-      file,
-      bytes: fileBytes,
-      sha256,
-      projectId,
-      projectPath,
-      targetFileId,
-    });
-    onStoredFileId?.(stored.fileId);
-    if (timings) timings.storeDurationMs = getDurationMs(storeStartedAt);
+    const [storedResult, hashResult] = await Promise.allSettled([
+      (async () => {
+        const storeStartedAt = getNow();
+        const result = await storeRawFile({
+          file,
+          bytes: fileBytes,
+          projectId,
+          projectPath,
+          targetFileId,
+        });
+        onStoredFileId?.(result.fileId);
+        if (timings) {
+          timings.storeDurationMs = getDurationMs(storeStartedAt);
+        }
+        return result;
+      })(),
+      (async () => {
+        const hashStartedAt = getNow();
+        const result = await computeSha256(fileBytes);
+        if (timings) {
+          timings.hashDurationMs = getDurationMs(hashStartedAt);
+        }
+        return result;
+      })(),
+    ]);
+    if (storedResult.status === "rejected") throw storedResult.reason;
+    if (hashResult.status === "rejected") throw hashResult.reason;
+    const stored = storedResult.value;
+    const sha256 = hashResult.value;
 
     return {
       ...stored,
@@ -150,7 +162,7 @@ export const createProjectAssetService = ({
           file,
           bytes: fileBytes,
         }),
-        size: fileBytes.byteLength,
+        size: file.size,
         sha256,
       },
     };
@@ -358,8 +370,6 @@ export const createProjectAssetService = ({
     }
 
     if (fileType === "font") {
-      const bytes = await file.arrayBuffer();
-      validateNewFontData(bytes);
       const fontName = file.name.replace(/\.(ttf|otf|woff|woff2|ttc)$/i, "");
       const fontUrl = URL.createObjectURL(file);
 
@@ -371,7 +381,7 @@ export const createProjectAssetService = ({
       }
 
       try {
-        const stored = await storeFileWithRecord({ file, bytes });
+        const stored = await storeFileWithRecord({ file });
         return {
           ...stored,
           fontName,
@@ -418,7 +428,6 @@ export const createProjectAssetService = ({
       }
       if (validationKind === "font") {
         const bytes = await file.arrayBuffer();
-        validateNewFontData(bytes);
         const fontType = getFontFileType({ file, arrayBuffer: bytes });
         if (!fontType) {
           throw new Error("Unable to identify font file.");
