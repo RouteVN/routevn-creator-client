@@ -213,6 +213,8 @@ projectPage:
   warningTitle: "Warning"
   wordsLabel: "Words"
 appPage:
+  pressEscapeAgainFullscreen: "Press Esc twice quickly to exit fullscreen"
+  failedExitFullscreen: "Could not exit fullscreen. Please use the window controls."
   failedStartPreviewAudio: "Could not start preview audio. Close and reopen the preview."
   googlePlayUpdateAvailable: "A new version of RouteVN Creator is available on Google Play."
   googlePlayUpdateFailed: "Could not update through Google Play. Please try again."

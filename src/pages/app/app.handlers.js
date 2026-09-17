@@ -560,8 +560,26 @@ const targetSequencePrefixes = new Set(
 
 export const handleBeforeMount = (deps) => {
   const cleanupSubscriptions = mountSubscriptions(deps);
-  const { appService, store, subject, uiConfig, windowMetricsClient, render } =
-    deps;
+  const {
+    appService,
+    store,
+    subject,
+    uiConfig,
+    windowMetricsClient,
+    fullscreenEscapeClient,
+    render,
+  } = deps;
+  const cleanupFullscreenEscape = fullscreenEscapeClient?.subscribe({
+    onArmed: () =>
+      appService.showToast({
+        message: selectAppCopy(deps.i18n).pressEscapeAgainFullscreen,
+      }),
+    onError: () =>
+      appService.showToast({
+        message: selectAppCopy(deps.i18n).failedExitFullscreen,
+        status: "error",
+      }),
+  });
   let cleanupDiscordPresenceLocaleSubscription = () => {};
   if (appService.getPlatform() === "tauri") {
     syncDiscordPresenceDetails(deps);
@@ -590,6 +608,7 @@ export const handleBeforeMount = (deps) => {
     cleanupSubscriptions();
     cleanupDiscordPresenceLocaleSubscription();
     cleanupWindowMetrics?.();
+    cleanupFullscreenEscape?.();
   };
 };
 

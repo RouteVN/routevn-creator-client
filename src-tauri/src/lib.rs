@@ -1,4 +1,4 @@
-#[cfg(debug_assertions)]
+#[cfg(any(debug_assertions, target_os = "macos"))]
 use tauri::Manager;
 
 #[cfg(any(target_os = "windows", target_os = "macos", target_os = "linux"))]
@@ -14,6 +14,8 @@ mod export_macos;
 mod export_windows;
 mod export_zip;
 mod linux_desktop_integration;
+#[cfg(target_os = "macos")]
+mod macos_fullscreen_escape;
 mod project_file_protocol;
 mod project_media_server;
 mod static_web_server;
@@ -85,6 +87,11 @@ pub fn run() {
             windows_system_menu::show_windows_system_menu
         ])
         .setup(|_app| {
+            #[cfg(target_os = "macos")]
+            if let Some(window) = _app.get_webview_window("main") {
+                macos_fullscreen_escape::install(&window)?;
+            }
+
             #[cfg(debug_assertions)]
             if let Some(window) = _app.get_webview_window("main") {
                 window.open_devtools();

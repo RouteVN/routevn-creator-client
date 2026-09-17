@@ -4124,6 +4124,7 @@ dependencies = [
 name = "routevn-creator"
 version = "1.14.0"
 dependencies = [
+ "cc",
  "discord-rich-presence",
  "log",
  "plist",

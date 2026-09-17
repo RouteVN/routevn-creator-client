@@ -213,6 +213,8 @@ projectPage:
   warningTitle: "警告"
   wordsLabel: "词数"
 appPage:
+  pressEscapeAgainFullscreen: "快速按两次 Esc 退出全屏"
+  failedExitFullscreen: "无法退出全屏。请使用窗口按钮。"
   failedStartPreviewAudio: "无法播放预览音频。请关闭预览后重新打开。"
   googlePlayUpdateAvailable: "Google Play 上已有新版 RouteVN Creator。"
   googlePlayUpdateFailed: "无法通过 Google Play 更新。请重试。"

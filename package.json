@@ -78,6 +78,7 @@
     "test": "node scripts/test.js",
     "test:smoke": "node scripts/test-smoke.js",
     "test:scene-editor": "node scripts/test-scene-editor.js",
+    "test:window-controls": "node scripts/test-window-controls.js",
     "test:export-bundle": "node scripts/test-export-bundle-pipeline.js",
     "test:convergence": "node scripts/test-convergence.js",
     "test:integration": "node scripts/test-integration.js",

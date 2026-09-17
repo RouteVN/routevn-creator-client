@@ -66,5 +66,8 @@ jobs:
       - name: Scene editor regression tests
         run: bun run test:scene-editor
 
+      - name: Window control regression tests
+        run: bun run test:window-controls
+
       - name: Build Web
         run: bun run build:web
