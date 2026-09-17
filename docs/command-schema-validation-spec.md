@@ -21,8 +21,9 @@ implemented by these documentation corrections.
 
 Preparation status: Phase 1 contracts and fixture artifacts are documented in
 the [preparation package](./validation-preparation/README.md). This is ready for
-implementation planning; strict writes remain disabled until implementation,
-upstream releases, and the required feature tests are complete.
+implementation planning. The [old-project baseline gate](./validation-preparation/legacy-project-test-plan.md)
+must pass before validator changes; strict writes remain disabled until
+implementation, upstream releases, and required feature tests are complete.
 
 ## 1. Decision and outcome
 
@@ -1003,6 +1004,19 @@ specifies that dependency without changing unmarked legacy runtime behavior.
 Exit: storage and validation fixtures exist; all supported authored branches
 have a concrete contract; replay and acceptance integration decisions above
 are documented and reviewable; no strict-write flag is enabled.
+
+### Phase 1b: executable old-project baseline
+
+Complete T0 in the [old-project test plan](./validation-preparation/legacy-project-test-plan.md)
+before changing validator behavior. Freeze old-writer project packs and expected
+previous-reader results, then exercise them through real model, client SQLite,
+and browser IndexedDB paths. Prove the runner detects version loss, data changes,
+and recovery-source loss. Existing documentary scenarios are starting inputs,
+not evidence that this baseline suite is complete.
+
+Exit: old-reader A/A and pre-strict candidate parity pass for the required
+corpus/variants; fixture/source identities are pinned and cannot be regenerated
+from the candidate. Strict assertions follow during implementation.
 
 ### Phase 2: creator-model support
 

@@ -36,6 +36,15 @@ contains new contract cases and a reproduced engine baseline. Its future
 expectations are not completed feature tests. These corrections change only
 documentation and fixture data; implementation still starts separately.
 
+## Required compatibility baseline before implementation
+
+The [old-project test plan](./legacy-project-test-plan.md) splits ownership:
+model fixtures belong upstream; frozen project databases/browser stores and
+open/edit/reopen tests belong in this client. Capture the ten specified project
+packs and required variants with pinned old writers/readers, then make the T0
+baseline suite executable before changing validation behavior. Existing JSON
+scenarios and mock-based probes do not fulfill this gate.
+
 ## Approved behavior from the user review
 
 The following decisions were reviewed one at a time and accepted. They record
@@ -113,6 +122,7 @@ behavior still require implementation tests before release.
 | [Limits and inputs](./limits-and-inputs.md)                | Measured checked-in corpus, concrete new-input limits, historical processing policy, emitter/alias coverage, and inventory method                     |
 | [Machine-readable input inventory](./input-inventory.json) | Source paths/hashes, action/holder lists, measured sizes/depths, registry coverage, and selected limits                                               |
 | [Fixture catalog](./fixture-catalog.md)                    | Unchanged legacy samples, neutral scenarios, observed baseline outputs, and explicitly unexecuted strict expectations                                 |
+| [Old-project test plan](./legacy-project-test-plan.md)     | Repository ownership, frozen project packs, previous-reader oracles, real-storage upgrade checks, and the T0 baseline gate                            |
 | [Fixture manifest](./fixtures/manifest.json)               | Exact artifact/source hashes, model-version binding, and provenance                                                                                   |
 | [Replay and acceptance](./replay-and-acceptance.md)        | Complete chronological authority, same-identity moves, platform coordination, write recovery, acknowledgment promotion, and retained recovery sources |
 | [Upstream and rollout](./upstream-and-rollout.md)          | Creator-model, Insieme, and engine PR scopes, release prerequisites, client slices, reader/writer delivery, and rollback                              |
@@ -172,12 +182,14 @@ started; resume it only when requested. The short review record above is the
 starting point for resuming, with the specification and preparation artifacts
 providing the technical details.
 
-When implementation is requested, start the model, Insieme, and engine owner changes,
+Start with the T0 executable compatibility baseline and frozen project packs.
+After that gate passes, start the model, Insieme, and engine owner changes,
 then integrate the client in the documented order. The remaining gates are
 implementation, published dependencies, and feature/platform verification;
-no additional action-catalog or coordination design task is left as a
-prerequisite in the original plan. Source revisions and hashes describe the
-captured baseline; check intervening repository changes when resuming.
+the additional T0 test-preparation gate above must pass before validator changes.
+No additional action-catalog or coordination design task is required. Source
+revisions and hashes describe the captured baseline; check intervening
+repository changes when resuming.
 
 Do not enable strict writes incrementally while leaving an action holder or
 authoring route permissive. Until enforcement is complete, the documents and

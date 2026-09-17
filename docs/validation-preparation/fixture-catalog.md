@@ -24,6 +24,14 @@ they are not replacement project snapshots or persisted event fields. It also
 records the actually reproduced engine-1.46.1 unmarked interpolation result.
 Marked expectations remain unexecuted until the engine feature exists.
 
+## Whole-project compatibility coverage
+
+The [old-project test plan](./legacy-project-test-plan.md) defines the missing
+whole-project layer: immutable native folders and lossless IndexedDB captures,
+pinned old-reader oracles, exact row preservation, and the open/edit/reopen
+matrix. Its P01–P10 packs are planned, not existing project archives. The domain
+fixtures below are input material for that capture work, not a substitute for it.
+
 ## Provenance and reuse
 
 Six YAML fixtures were copied byte-for-byte from model commit

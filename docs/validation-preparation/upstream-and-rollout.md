@@ -31,6 +31,14 @@ September 18 refresh records added contracts separately. The sibling model
 checkout at `4dc3cdaa` is older than the installed package and must be updated
 to the published schema-15 baseline before implementing upstream work.
 
+## 1.1 Executable compatibility baseline gate
+
+Complete T0 in the [old-project test plan](./legacy-project-test-plan.md) before
+changing validator behavior: freeze the old project packs, pin previous readers,
+and prove baseline parity through real model, SQLite, and browser paths. This
+is test preparation, not a new architecture decision. The current documentary
+fixtures and in-memory probes are insufficient to pass this gate.
+
 ## 2. Model implementation PR
 
 Proposed scope: **Version strict command contracts while preserving legacy
@@ -213,8 +221,10 @@ and platform comparisons are required before claiming this requirement is met.
 
 The preparation deliverables are the action/context/field catalog, measured
 limits, captured/proposed fixture corpus, replay/acceptance decisions, and this
-sequencing document. They are ready for implementation once their documentary
-cross-checks pass. That does not mean future feature tests have already passed.
+sequencing document. Documentary cross-checks allow test-harness preparation
+to start. Validator changes additionally require the executable T0 baseline in
+section 1.1; passing documentation checks does not satisfy that gate or mean
+future strict feature tests have passed.
 
 During implementation, stop the affected release slice if any of these proofs
 fails: a supported template/action is missing from the contract, an old project
