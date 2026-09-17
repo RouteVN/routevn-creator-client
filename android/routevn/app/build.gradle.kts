@@ -91,6 +91,12 @@ tasks.matching {
 }
 
 dependencies {
+    constraints {
+        implementation("androidx.fragment:fragment:1.9.0") {
+            because("Google Play In-App Updates transitively requests the outdated Fragment 1.0.0")
+        }
+    }
+
     implementation("com.google.android.play:app-update:2.1.0")
     implementation("androidx.core:core-splashscreen:1.2.0")
     implementation("androidx.webkit:webkit:1.16.0")

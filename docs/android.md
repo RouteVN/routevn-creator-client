@@ -21,6 +21,7 @@ Gradle pins.
 - Build tools: `37.0.0`
 - NDK: `29.0.14206865`
 - AndroidX Core Splashscreen: `1.2.0`
+- AndroidX Fragment: `1.9.0` (constraint for Google Play In-App Updates' transitive dependency)
 - AndroidX WebKit: `1.16.0`
 - Google Play In-App Updates: `2.1.0`
 
