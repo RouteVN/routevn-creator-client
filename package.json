@@ -45,7 +45,7 @@
     "jszip": "3.10.1",
     "lexical": "0.22.0",
     "nanoid": "5.1.11",
-    "ogg-opus-decoder": "1.7.3",
+    "ogg-opus-decoder": "1.7.5",
     "route-engine-js": "1.46.1",
     "route-graphics": "1.44.3",
     "rxjs": "7.8.2",
