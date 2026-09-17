@@ -5,13 +5,15 @@ import { join } from "node:path";
 
 // Bundle the shipping primitive into an isolated fixture, without an app build
 // or access to user projects. Keep the nested shadow roots used by the app.
-export async function createSceneEditorBrowserFixture() {
+export async function createSceneEditorBrowserFixture({
+  entryPoint = "src/primitives/lexicalSceneDocumentEditor.js",
+} = {}) {
   const directory = await mkdtemp(join(tmpdir(), "rvn-scene-editor-"));
   try {
     const bundle = join(directory, "editor.js");
     execFileSync("bun", [
       "build",
-      "src/primitives/lexicalSceneDocumentEditor.js",
+      entryPoint,
       "--target",
       "browser",
       "--outfile",
@@ -32,7 +34,9 @@ export async function createSceneEditorBrowserFixture() {
 <link rel="stylesheet" href="/theme.css"><script src="/ui.js"></script>
 <body style="margin:40px"><textarea id="clipboard" aria-label="Clipboard test source"></textarea><div id="host"></div>
 <script type="module">
-import {LexicalSceneDocumentEditorElement} from '/editor.js';
+import * as fixtureModule from '/editor.js';
+const {LexicalSceneDocumentEditorElement} = fixtureModule;
+window.fixtureModule = fixtureModule;
 customElements.define('rvn-lexical-scene-document-editor', LexicalSceneDocumentEditorElement);
 const wrapper = document.createElement('div');
 document.querySelector('#host').attachShadow({mode:'open'}).append(wrapper);

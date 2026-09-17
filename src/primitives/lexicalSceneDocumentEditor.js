@@ -2188,6 +2188,7 @@ export class LexicalSceneDocumentEditorElement extends HTMLElement {
     emitSelectionChange = false,
     scrollLine = true,
   } = {}) {
+    this.invalidatePendingFocusRestore();
     this.clearPendingTextInputFallback();
     this.lastProgrammaticFocusTarget = undefined;
     this.programmaticFocusRestoreUntil = 0;
@@ -2252,7 +2253,9 @@ export class LexicalSceneDocumentEditorElement extends HTMLElement {
     requestAnimationFrame(() => {
       if (
         !this.isConnected ||
-        this.focusRestoreSequenceId !== focusRestoreSequenceId
+        this.focusRestoreSequenceId !== focusRestoreSequenceId ||
+        this.state.mode !== "text-editor" ||
+        this.state.selectedLineId !== lineId
       ) {
         return;
       }
