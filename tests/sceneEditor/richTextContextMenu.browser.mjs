@@ -132,10 +132,10 @@ window.owner.addEventListener('furigana-dialog-request', event => {
           await openMenu();
           const expectedLabels = [
             hasStyle ? "Edit text style" : "Add text style",
-            hasFurigana ? "Edit furigana" : "Add furigana",
+            hasFurigana ? "Edit ruby text" : "Add ruby text",
           ];
           if (hasStyle) expectedLabels.push("Remove text style");
-          if (hasFurigana) expectedLabels.push("Remove furigana");
+          if (hasFurigana) expectedLabels.push("Remove ruby text");
           assert.deepEqual(
             await page.evaluate(() =>
               window.owner.refs.selectionMenu.items.map((item) => item.label),
@@ -160,7 +160,7 @@ window.owner.addEventListener('furigana-dialog-request', event => {
             await openMenu();
           }
           if (hasFurigana) {
-            await clickMenu("Edit furigana");
+            await clickMenu("Edit ruby text");
             assert.deepEqual(
               await page.evaluate(() => window.furiganaRequest.furigana),
               segment.furigana,
@@ -173,7 +173,7 @@ window.owner.addEventListener('furigana-dialog-request', event => {
             );
             assert.deepEqual(await readContent(), content);
             await openMenu();
-            await clickMenu("Remove furigana");
+            await clickMenu("Remove ruby text");
             delete segment.furigana;
             if (hasStyle) await openMenu();
           }

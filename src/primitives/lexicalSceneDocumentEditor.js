@@ -4580,7 +4580,7 @@ export class LexicalSceneDocumentEditorElement extends HTMLElement {
       {
         id: hasFurigana ? "edit-furigana" : "add-furigana",
         type: "item",
-        label: hasFurigana ? "Edit furigana" : "Add furigana",
+        label: hasFurigana ? "Edit ruby text" : "Add ruby text",
       },
     ];
     if (hasTextStyle) {
@@ -4594,7 +4594,7 @@ export class LexicalSceneDocumentEditorElement extends HTMLElement {
       menu.items.push({
         id: "remove-furigana",
         type: "item",
-        label: "Remove furigana",
+        label: "Remove ruby text",
       });
     }
 
@@ -5552,7 +5552,7 @@ export class LexicalSceneDocumentEditorElement extends HTMLElement {
       {
         id: hasFurigana ? "edit-furigana" : "add-furigana",
         type: "item",
-        label: hasFurigana ? "Edit furigana" : "Add furigana",
+        label: hasFurigana ? "Edit ruby text" : "Add ruby text",
       },
     ];
 
@@ -5568,7 +5568,7 @@ export class LexicalSceneDocumentEditorElement extends HTMLElement {
       actions.push({
         id: "remove-furigana",
         type: "item",
-        label: "Remove furigana",
+        label: "Remove ruby text",
       });
     }
 

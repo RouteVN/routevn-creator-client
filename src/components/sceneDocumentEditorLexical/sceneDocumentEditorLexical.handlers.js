@@ -15,7 +15,7 @@ const getPayloadEventType = (payload) => {
 };
 
 const createFuriganaForm = (textStyleOptions = [], copy = {}) => ({
-  title: copy.furiganaTitle ?? "Add/edit furigana",
+  title: copy.furiganaTitle ?? "Add/edit ruby text",
   fields: [
     {
       name: "textStyleId",
@@ -28,9 +28,9 @@ const createFuriganaForm = (textStyleOptions = [], copy = {}) => ({
     {
       name: "text",
       type: "input-text",
-      label: copy.furiganaContentLabel ?? "Furigana Content",
+      label: copy.furiganaContentLabel ?? "Ruby Text",
       required: true,
-      placeholder: copy.furiganaPlaceholder ?? "Enter furigana",
+      placeholder: copy.furiganaPlaceholder ?? "Enter ruby text",
     },
   ],
   actions: {
@@ -107,7 +107,7 @@ export const handleFuriganaDialogRequest = async (deps, payload) => {
       title: copy.warningTitle ?? "Warning",
       message:
         copy.createTextStyleBeforeFurigana ??
-        "Create a text style before adding furigana.",
+        "Create a text style before adding ruby text.",
     });
     return;
   }
@@ -137,7 +137,7 @@ export const handleFuriganaDialogRequest = async (deps, payload) => {
       title: copy.warningTitle ?? "Warning",
       message:
         copy.furiganaRequiredMessage ??
-        "Furigana content and text style are required.",
+        "Ruby text and text style are required.",
     });
     return;
   }
