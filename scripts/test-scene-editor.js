@@ -19,6 +19,7 @@ const checks = [
   [process.execPath, ["tests/sceneEditor/lexicalTouchSelection.browser.mjs"]],
   [process.execPath, ["tests/sceneEditor/lexicalCaretRecovery.browser.mjs"]],
   [process.execPath, ["tests/sceneEditor/lexicalImeConfirmation.browser.mjs"]],
+  [process.execPath, ["tests/sceneEditor/lexicalEmptyLineBackspace.browser.mjs"]],
 ];
 for (const [command, args] of checks) {
   console.log(`Running ${command} ${args.join(" ")}`);

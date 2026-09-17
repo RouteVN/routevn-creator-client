@@ -2819,6 +2819,54 @@ export class LexicalSceneDocumentEditorElement extends HTMLElement {
     return true;
   }
 
+  handleTextModeWindowBackspace(event) {
+    if (
+      event.key !== "Backspace" ||
+      this.state.mode !== "text-editor" ||
+      this.isComposing ||
+      event?.isComposing ||
+      isImeProcessKeyboardEvent(event) ||
+      event?.defaultPrevented ||
+      event?.ctrlKey ||
+      event?.metaKey ||
+      event?.altKey
+    ) {
+      return false;
+    }
+
+    const isTextModeTarget = isEditorOrSurfaceEventTarget({
+      activeElement: this.getActiveElement(),
+      event,
+      editorElement: this.refs.editor,
+      surfaceElement: this.refs.surface,
+    });
+    if (!isTextModeTarget) {
+      return false;
+    }
+
+    const nativeSelection = this.getNativeLineSelectionContext();
+    if (nativeSelection?.start !== 0 || nativeSelection.end !== 0) {
+      return false;
+    }
+
+    // Empty lines contain an invisible caret anchor. Lexical's default
+    // Backspace deletes that anchor first, making the first press look lost.
+    // Merge at the logical line start before its character deletion runs.
+    const context =
+      this.getLineSelectionContextFromLineSelection(nativeSelection);
+    this.invalidatePendingFocusRestore();
+    if (!this.mergeCurrentLineBackward({ context, nativeSelection })) {
+      return false;
+    }
+
+    this.clearPendingTextInputFallback();
+    event.preventDefault();
+    event.stopPropagation();
+    event.stopImmediatePropagation?.();
+    this.markHandledBackspaceKeyDown(event);
+    return true;
+  }
+
   handleNativeKeyDown(event) {
     this.hideSelectionPopover();
     const key = String(event.key ?? "").toLowerCase();
@@ -3151,6 +3199,10 @@ export class LexicalSceneDocumentEditorElement extends HTMLElement {
 
   handleWindowKeyDownCapture(event) {
     if (this.state.selectionActive === false) {
+      return;
+    }
+
+    if (this.handleTextModeWindowBackspace(event)) {
       return;
     }
 
