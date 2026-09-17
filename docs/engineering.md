@@ -137,6 +137,10 @@ for the unit and Chromium/WebKit input regression gate; CI runs it on PRs.
 
 ### Debugging Discipline
 
+Desktop fullscreen keyboard contracts and native macOS validation are recorded
+in [Desktop window keyboard behavior](desktop-window-spec.md). Run
+`bun run test:window-controls` when changing window keyboard handling.
+
 Do not claim a UI bug is fixed from code inspection alone. For user-visible
 runtime behavior, reproduce the issue in the running app or with an equivalent
 browser/VT validation before presenting a fix as complete.

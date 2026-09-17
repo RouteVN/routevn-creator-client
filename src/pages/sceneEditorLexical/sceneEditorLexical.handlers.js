@@ -2169,10 +2169,11 @@ export const handleEditorDataChanged = async (deps, payload) => {
       sectionId,
     };
     requestAnimationFrame(() => {
+      if (store.selectSelectedLineId() !== focusPayload.lineId) {
+        return;
+      }
+
       focusLinesEditorLine(refs, focusPayload);
-      requestAnimationFrame(() => {
-        focusLinesEditorLine(refs, focusPayload);
-      });
     });
   }
   const scheduleFlushStartedAt = getSceneEditorTimingNow();
@@ -2701,10 +2702,13 @@ export const handleNewLine = async (deps, payload) => {
     cursorPosition: 0,
   };
   requestAnimationFrame(() => {
+    if (store.selectSelectedLineId() !== focusTarget.lineId) {
+      return;
+    }
+
+    // The primitive owns caret recovery and cancels it on newer input. A
+    // second page-level focus would start a fresh, stale request after that.
     focusLinesEditorLine(refs, focusTarget);
-    requestAnimationFrame(() => {
-      focusLinesEditorLine(refs, focusTarget);
-    });
   });
 
   scheduleSceneEditorDraftFlush(deps, {

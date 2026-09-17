@@ -151,6 +151,66 @@ describe("app route transitions", () => {
     expect(appService.showAlert).not.toHaveBeenCalled();
   });
 
+  it("mounts fullscreen Escape protection with localized feedback and cleanup", () => {
+    const dom = new JSDOM("<!doctype html><body></body>");
+    vi.stubGlobal("window", dom.window);
+    vi.stubGlobal("document", dom.window.document);
+    vi.stubGlobal("Element", dom.window.Element);
+    const appService = {
+      getPath: vi.fn(() => "/projects"),
+      getPayload: vi.fn(() => ({})),
+      getUserConfig: vi.fn(() => undefined),
+      getPlatform: vi.fn(() => "tauri"),
+      setAppCopyProvider: vi.fn(),
+      setDiscordPresenceDetails: vi.fn(async () => {}),
+      showToast: vi.fn(),
+    };
+    let callbacks;
+    const unsubscribe = vi.fn();
+    const deps = {
+      appService,
+      locale: { subscribe: vi.fn(() => () => {}) },
+      fullscreenEscapeClient: {
+        subscribe: vi.fn((value) => {
+          callbacks = value;
+          return unsubscribe;
+        }),
+      },
+      i18n: {
+        appPage: {
+          pressEscapeAgainFullscreen: "Escape confirmation",
+          failedExitFullscreen: "Fullscreen request failed",
+        },
+      },
+      store: {
+        setPlatform: vi.fn(),
+        setUiConfig: vi.fn(),
+        setHelpButtonVisible: vi.fn(),
+      },
+      subject: { dispatch: vi.fn(), pipe: vi.fn(() => NEVER) },
+      uiConfig: {},
+    };
+    const cleanup = handleBeforeMount(deps);
+    callbacks.onArmed();
+    expect(appService.showToast).toHaveBeenLastCalledWith({
+      message: "Escape confirmation",
+    });
+    deps.i18n.appPage.pressEscapeAgainFullscreen =
+      "Updated locale confirmation";
+    callbacks.onArmed();
+    expect(appService.showToast).toHaveBeenLastCalledWith({
+      message: "Updated locale confirmation",
+    });
+    callbacks.onError();
+    expect(appService.showToast).toHaveBeenLastCalledWith({
+      message: "Fullscreen request failed",
+      status: "error",
+    });
+    cleanup();
+    expect(unsubscribe).toHaveBeenCalledOnce();
+    dom.window.close();
+  });
+
   it("updates Discord presence after the active locale changes", () => {
     const dom = new JSDOM("<!doctype html><body></body>");
     vi.stubGlobal("window", dom.window);
