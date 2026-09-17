@@ -49,6 +49,8 @@ refs:
         handler: handleFormExtra
       form-change:
         handler: handleFormInputChange
+      form-input:
+        handler: handleSliderFormInput
       form-section-action:
         handler: handleOptionsSectionAction
   customTransformButton:

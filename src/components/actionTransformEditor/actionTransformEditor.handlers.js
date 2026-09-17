@@ -100,6 +100,20 @@ export const handleWindowKeyDown = (deps, payload) => {
   dispatchTransformChange(deps, { transform });
 };
 
+export const handleCancelClick = (deps, payload) => {
+  const { dispatchEvent } = deps;
+  const { _event: event } = payload;
+  event.preventDefault();
+  event.stopPropagation();
+  dispatchEvent(
+    new CustomEvent("cancel", {
+      detail: {},
+      bubbles: true,
+      composed: true,
+    }),
+  );
+};
+
 export const handleDoneClick = (deps, payload) => {
   payload._event.preventDefault();
   payload._event.stopPropagation();

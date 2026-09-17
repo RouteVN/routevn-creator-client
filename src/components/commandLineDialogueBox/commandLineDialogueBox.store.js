@@ -391,14 +391,23 @@ export const createInitialState = () => ({
   form: {
     fields: [
       {
-        name: "resourceId",
-        type: "select",
-        label: "Layout",
-        description: "",
-        required: true,
-        clearable: false,
-        placeholder: "Choose a layout...",
-        options: [],
+        type: "row",
+        fields: [
+          {
+            name: "resourceId",
+            type: "select",
+            label: "Layout",
+            description: "",
+            required: true,
+            clearable: false,
+            placeholder: "Choose a layout...",
+            options: [],
+          },
+          {
+            type: "slot",
+            slot: "layoutSpacer",
+          },
+        ],
       },
       {
         id: "speaker",

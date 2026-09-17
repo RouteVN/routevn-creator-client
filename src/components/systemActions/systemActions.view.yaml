@@ -19,6 +19,8 @@ refs:
         handler: handleTransformEditorChange
       done:
         handler: handleTransformEditorDone
+      cancel:
+        handler: handleTransformEditorCancel
   addActionButton:
     eventListeners:
       mousedown:

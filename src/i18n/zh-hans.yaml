@@ -774,6 +774,7 @@ audioEffectsPage:
   volumePropertyLabel: "音量"
 actionTransformEditor:
   backgroundTarget: "背景"
+  cancelButton: "取消"
   characterTarget: "角色"
   doneButton: "完成"
   targetTitle: "目标"

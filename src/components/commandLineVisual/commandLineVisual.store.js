@@ -216,6 +216,7 @@ const createVisualFormSlots = (visualIndex) => {
     transformSpacerFormSlot: `${prefix}-transform-spacer`,
     customTransformFormSlot: `${prefix}-custom-transform`,
     animationFormSlot: `${prefix}-animation`,
+    animationSpacerFormSlot: `${prefix}-animation-spacer`,
     playbackSpeedFormSlot: `${prefix}-playback-speed`,
     playbackContinuityFormSlot: `${prefix}-playback-continuity`,
     playbackLoopFormSlot: `${prefix}-playback-loop`,
@@ -275,9 +276,18 @@ const createVisualsForm = (visuals = []) => ({
     }
 
     fields.push({
-      type: "slot",
-      slot: visual.animationFormSlot,
-      label: "Animation",
+      type: "row",
+      fields: [
+        {
+          type: "slot",
+          slot: visual.animationFormSlot,
+          label: "Animation",
+        },
+        {
+          type: "slot",
+          slot: visual.animationSpacerFormSlot,
+        },
+      ],
     });
 
     if (visual.animationId) {
@@ -1671,6 +1681,9 @@ export const selectViewData = ({ state, i18n }) => {
   }
 
   const visualControls = processedSelectedVisuals.map((visual, visualIndex) => {
+    const blur = normalizeCommandLineItemBlur(
+      visual.blur ?? DEFAULT_COMMAND_LINE_ITEM_BLUR,
+    );
     const animationCanLoop = canLoopAnimationById(
       state.animations,
       visual.animations?.resourceId,
@@ -1704,9 +1717,12 @@ export const selectViewData = ({ state, i18n }) => {
       layer: normalizeVisualLayer(visual.layer),
       opacity: visual.opacity ?? DEFAULT_COMMAND_LINE_ITEM_OPACITY,
       blurEnabled: Boolean(visual.blur),
-      blur: normalizeCommandLineItemBlur(
-        visual.blur ?? DEFAULT_COMMAND_LINE_ITEM_BLUR,
-      ),
+      blur,
+      blurSliderMax: {
+        x: Math.max(64, blur.x),
+        y: Math.max(64, blur.y),
+        quality: Math.max(10, blur.quality),
+      },
       flipOptions: COMMAND_LINE_ITEM_FLIP_OPTIONS.map((option) => ({
         ...option,
         enabled: visual[option.fieldName] === true,

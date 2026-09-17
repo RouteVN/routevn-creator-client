@@ -1095,21 +1095,43 @@ export const selectViewData = ({ state, i18n }) => {
   ];
 
   formFields.push({
-    name: "animationId",
-    label: "Animation",
-    type: "select",
-    clearable: true,
-    placeholder: "Select animation",
-    options: animationOptions,
+    type: "row",
+    fields: [
+      {
+        name: "animationId",
+        label: "Animation",
+        type: "select",
+        clearable: true,
+        placeholder: "Select animation",
+        options: animationOptions,
+      },
+      {
+        type: "slot",
+        slot: "animationSpacer",
+      },
+    ],
   });
   if (selectedAnimationMode !== "none") {
     formFields.push({
-      name: "playbackSpeed",
-      label: "Playback Speed",
-      type: "input-number",
-      min: 0.01,
-      step: 0.1,
-      required: true,
+      type: "row",
+      fields: [
+        {
+          name: "playbackSpeed",
+          label: "Playback Speed",
+          type: "slider-with-input",
+          min: 0.01,
+          max: Math.max(4, state.selectedAnimationPlaybackSpeed),
+          step: 0.01,
+          required: true,
+        },
+        {
+          name: "playbackContinuity",
+          label: "Continuity",
+          type: "segmented-control",
+          clearable: false,
+          options: ANIMATION_PLAYBACK_CONTINUITY_OPTIONS,
+        },
+      ],
     });
   }
   if (selectedAnimationMode === "update") {
@@ -1128,16 +1150,6 @@ export const selectViewData = ({ state, i18n }) => {
       ],
     });
   }
-  if (selectedAnimationMode !== "none") {
-    formFields.push({
-      name: "playbackContinuity",
-      label: "Continuity",
-      type: "segmented-control",
-      clearable: false,
-      options: ANIMATION_PLAYBACK_CONTINUITY_OPTIONS,
-    });
-  }
-
   if (selectedResource?.resourceType === "video") {
     formFields.push({
       name: "loop",
@@ -1262,15 +1274,19 @@ export const selectViewData = ({ state, i18n }) => {
             {
               name: "blurX",
               label: "Blur X",
-              type: "input-number",
+              type: "slider-with-input",
               min: 0,
+              max: Math.max(64, state.selectedBlur.x),
+              step: 0.5,
               required: true,
             },
             {
               name: "blurY",
               label: "Blur Y",
-              type: "input-number",
+              type: "slider-with-input",
               min: 0,
+              max: Math.max(64, state.selectedBlur.y),
+              step: 0.5,
               required: true,
             },
           ],
@@ -1281,8 +1297,10 @@ export const selectViewData = ({ state, i18n }) => {
             {
               name: "blurQuality",
               label: "Quality",
-              type: "input-number",
+              type: "slider-with-input",
               min: 1,
+              max: Math.max(10, state.selectedBlur.quality),
+              step: 1,
               required: true,
             },
             {
