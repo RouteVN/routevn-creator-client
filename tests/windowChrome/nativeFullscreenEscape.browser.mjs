@@ -33,7 +33,7 @@ try {
             : "text/html",
           body: route.request().url().endsWith(".js")
             ? source
-            : '<body><h1>Project One</h1><input id="editor"><dialog><button>Close</button></dialog></body>',
+            : '<body><h1 tabindex="-1">Project One</h1><input id="editor"><dialog><button>Close</button></dialog></body>',
         }),
       );
       await page.goto("https://fixture.test/");
@@ -99,11 +99,18 @@ try {
           await page.keyboard.press("Escape");
           await page.locator("#editor").evaluate((element) => element.blur());
         } else {
+          // Give the dialog an explicit focus return target. Linux WebKit
+          // can blur its hidden button after the dialog becomes invisible;
+          // that late blur correctly resets any Escape pair started early.
+          await page.locator("h1").focus();
           await page.evaluate(() =>
             document.querySelector("dialog").showModal(),
           );
           await page.keyboard.press("Escape");
           await page.locator("dialog").waitFor({ state: "hidden" });
+          await page.waitForFunction(
+            () => document.activeElement === document.querySelector("h1"),
+          );
         }
         await page.keyboard.press("Escape");
         assert.equal(
