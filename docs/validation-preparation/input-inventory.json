@@ -9144,5 +9144,47 @@
       "pointer": "/payload"
     },
     "result": "Nested command scan confirms the same maximum as payload fixtures."
+  },
+  "implementationRefresh": {
+    "date": "2026-09-18",
+    "clientMain": "4d1fe31f96ff7a8f4eebf2b58679755a827a8851",
+    "declaredModelVersion": "1.15.0",
+    "modelSchema": 15,
+    "declaredEngineVersion": "1.46.1",
+    "strictModelVersion": "M must be greater than 15; original illustrative fixture values must be bound when adopted",
+    "scope": "Targeted additions; original corpus and source hashes remain historical evidence, not a current full-source rescan",
+    "scenario": "fixtures/scenarios/september-18-contract-refresh.json",
+    "sourceFiles": [
+      {
+        "path": "src/components/layoutEditorPreview/support/layoutEditorPreviewDialogue.js",
+        "sha256": "f43e2ffd42daa53a072e5054986d0e7cf8318c10bb11e5733c6db01f0b7959d6"
+      },
+      {
+        "path": "src/components/layoutEditorPreview/support/layoutEditorPreviewPersistence.js",
+        "sha256": "2250f2fc8ce57cb8636ca2db9f93b6859f5ce33e834683bb334c72658e960004"
+      },
+      {
+        "path": "src/pages/layoutEditor/layoutEditor.handlers.js",
+        "sha256": "2baa2ada3568f91917a9e7d8aedf6eb3867aa347499b96064d4f273b30a6fbda"
+      },
+      {
+        "path": "src/deps/services/shared/commandApi/resources/catalog.js",
+        "sha256": "636a2d7f117552e3064357c9f6073478d05069d7bae6546540c723c42232a202"
+      },
+      {
+        "path": "src/internal/project/commands.js",
+        "sha256": "c8d193c3bb765924ee8a8e0e041fb4d04e532eb7d69f4ca8440de1bbc8fcaadc"
+      },
+      {
+        "path": "tests/puty/14-default-dialogue-avatar-storage.spec.yaml",
+        "sha256": "a726a79ca193b4584679ec7315033e71ceff6781919a8667224fe9fac5452946"
+      }
+    ],
+    "requiredContracts": [
+      "PreviewDialogue.character.sprite and shared preview line shape",
+      "project.set_default_dialogue_avatar_transform and project.defaultDialogueAvatarTransformId",
+      "VariableOperation.valueMode literal marker requires model and engine releases"
+    ],
+    "remainingBeforeEnforcement": "Rerun complete emitter inventory against the implementation revision; preserve all original archived observations."
   }
 }

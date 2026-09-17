@@ -4,7 +4,13 @@ Status: Phase 1 specification, September 13, 2026. This document specifies the
 first strict model version `M`; it does not implement a validator or change any
 stored project. It supplements the [versioned-command specification](../command-schema-validation-spec.md).
 
-The source baseline is the client-pinned `route-engine-js@1.46.1` and the
+September 18 refresh: the implementation baseline is client main `4d1fe31f`,
+creator-model `1.15.0` / schema `15`, and route-engine-js `1.46.1`. The original
+source fingerprints below remain historical evidence. The refresh adds avatar
+preview data, the default-avatar-transform command, and an explicit engine
+prerequisite for literal object writes. See the [refresh fixtures](./fixtures/scenarios/september-18-contract-refresh.json).
+
+The original source baseline is the client-pinned `route-engine-js@1.46.1` and the
 reviewed sibling engine source at `7c8eb55d19b511de5f07dbd95af24fd991d5d892`
 (`1.46.3`). The newer checkout is supporting contract evidence, not permission
 to expose capabilities absent from the client's current emitters and template.
@@ -365,7 +371,7 @@ and [audio rendering](../../../route-engine/src/stores/constructRenderState.js).
 
 `VariableOperation` is exactly `{variableId!: Ref(variables), op!:
 "set"|"increment"|"decrement"|"multiply"|"divide"|"toggle", value?:
-typed operand, roundTo?: integer 0..12}`. The variable must be non-computed and
+typed operand, roundTo?: integer 0..12, valueMode?: "literal"}`. The variable must be non-computed and
 writable; scope is context/device/account as supported by the model/export
 contract. A runtime field ID is not a writable variable.
 
@@ -375,6 +381,43 @@ contract. A runtime field ID is not a writable variable.
 | boolean       | set requires Bool/binding; toggle omits value and roundTo.                                                                                                                                                                                                                                     |
 | string        | set requires TextTemplate/binding, including the empty string; all arithmetic/toggle and roundTo are invalid. If enumValues is declared, static value must be one of them; a dynamic value must satisfy the enum at execution.                                                                 |
 | object        | set requires an object or array LiteralJSON value. This is literal data, not condition/action syntax. `null` requires a separately declared nullable variable contract; the current object-variable contract does not grant it. No arithmetic, toggle, roundTo, or whole-event object binding. |
+
+### Literal object writes and engine compatibility
+
+For strict `M`, an object-variable `set` requires `valueMode: "literal"` and an
+object/array `LiteralJSON` value. The marker is forbidden for other variable
+types or operations. Omission is an error on a new strict object write; it is
+not silently supplied by the validator. Trusted UI composition adds the marker
+when constructing that operation. API authors provide the same explicit field.
+
+This is a new model-and-engine contract, not behavior supplied by the current
+engine. A probe against installed route-engine-js `1.46.1` showed that an
+unmarked `{text: "${variables.source}"}` becomes `{text: "REPLACED"}` when
+`source` is `"REPLACED"`. `_event.*` strings inside such objects are also resolved.
+
+The engine owner must recognize the marker before recursive template processing,
+validate its exact spelling and operation/value shape, and copy that operation's
+`value` without interpolation, event resolution, or action interpretation at any
+depth. Other operation fields retain their existing handling. Runtime variable
+type/permission checks still run; the marker cannot authorize an object write to
+a non-object or read-only variable. Unknown marker values fail explicitly.
+The marker must survive deferred callbacks, conditional branches, preview,
+export, save/load, and rollback. It is ordinary action data, not the persistence
+`mv` wrapper, and must not be stripped by client projection.
+
+Unmarked historical operations keep existing engine template behavior. Do not
+add markers while loading or projecting legacy actions, or globally disable
+object interpolation in mixed projects. An explicit strict edit/copy of an
+object operation must supply the literal form; warn on validation failure rather
+than silently converting a preserved old operation. A marked literal branch may
+contain keys such as `actions`, `valueMode`, or `__proto__` as inert own data;
+no path traversal or prototype mutation is permitted during copying.
+
+Ship the owning engine release before any supported reader previews/exports
+marked actions or the writer emits them. Both browser bundles and packaged
+players must contain it. The [rollout](./upstream-and-rollout.md#31-engine-implementation-pr)
+names the owner, compatibility cases, and release gate. Model-only acceptance
+cannot establish literal execution semantics.
 
 No operation changes the project's variable definition/default during authoring;
 these are player instructions. Static validation checks permissions, declared
@@ -575,13 +618,25 @@ engine snapshot, state version, or arbitrary runtime state is permitted.
 | -------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | PreviewVariables     | Dictionary keyed by declared variable IDs. Values are LiteralJSON of each variable's declared type and enum. These are examples, never writes to player state. Computed variable preview values must come from the documented computed preview behavior rather than becoming writable definitions.                                                                                                                          |
 | PreviewRuntime       | Optional numeric `dialogueTextSpeed:Nonnegative`, `autoForwardDelay:Nonnegative`, `soundVolume:Percent`, `musicVolume:Percent`, `saveLoadPagination:positive integer`; boolean `skipUnseenText`, `skipTransitionsAndAnimations`, `muteAll`, `autoMode`, `skipMode`, `dialogueUIHidden`, `isLineCompleted`; text `menuPage`, `menuEntryPoint`. No other runtime field is included in the current Creator preview vocabulary. |
-| PreviewDialogueLine  | `{characterId?: Ref(characters) or "", characterName?: Text, character?: {name?: Text}, content!: RichContent}`. Empty characterId is the explicit preview-only no-speaker sentinel.                                                                                                                                                                                                                                        |
+| PreviewDialogueLine  | `{characterId?: Ref(characters) or "", characterName?: Text, character?: {name?: Text, sprite?: PreviewDialogueSprite}, content!: RichContent}`. Empty characterId is the explicit preview-only no-speaker sentinel.                                                                                                                                                                                                        |
 | PreviewDialogue      | PreviewDialogueLine fields plus `lines?: PreviewDialogueLine[]`. Top-level content may be omitted when only lines are supplied; at least content or lines is required. It is preview text, not the dialogue action schema.                                                                                                                                                                                                  |
 | PreviewHistoryLine   | `{characterName?: Text, text!: Text}`. No saved engine state or callbacks.                                                                                                                                                                                                                                                                                                                                                  |
 | PreviewChoice        | `{items!: {content!: Text, events?: {click?: {actions!: SystemMap}}}[]}`. IDs/layout refs are absent in the shipped preview form. Every supplied callback still validates; a preview label does not grant an execution-schema bypass.                                                                                                                                                                                       |
 | PreviewConfirmDialog | `{resourceId?: Ref(layouts) or "", confirmActions?: SystemMap, cancelActions?: SystemMap}`. Empty resourceId and empty callbacks are the shipped mock-dialog placeholders; nonempty resourceId must be confirmDialog layout type.                                                                                                                                                                                           |
 | PreviewSlot          | `{slotId!: positive integer, image?: Ref(images), savedAt?: nonnegative integer, isAvailable?: Bool}`. No `state`, raw save history, URL injection, or extra transport metadata. Timestamp examples are metadata; do not impose clock-dependent validation.                                                                                                                                                                 |
 | Preview form values  | Every key names an input field found in the owner layout/its fragments. Values are bounded strings; no event handlers or DOM objects.                                                                                                                                                                                                                                                                                       |
+
+`PreviewDialogueSprite` is exactly `{transformId?: Ref(transforms), items?:
+SpriteSelection[]}`. It is supported inside both `preview.dialogue.character`
+and the shared preview-line character shape. Sprite selections resolve uniquely
+across character owners; the displayed avatar need not belong to the speaker.
+No inline render tree or unknown sprite field is accepted. An empty item array
+clears the sample avatar. A missing transform is permitted in this preview-only
+configuration because the current picker can store an avatar before its
+transform is chosen; if supplied, the transform must resolve. This does not
+relax the ordinary `DialogueSprite` requirement for a nonempty authored action.
+Trusted preview composition omits undefined optionals before strict submission.
+Save/reopen must retain the sprite resource, slot ID, and selected transform.
 
 All preview arrays have at most 1,024 entries. If both `dialogue.lines` and
 `dialogueLines` are present they must agree; no destructive normalization on
@@ -686,6 +741,29 @@ Sources: [adapter extension fields and reduction](../../src/internal/creatorMode
 [atlas importer](../../src/internal/spritesheetAtlas.js),
 [clip behavior](../../src/internal/spritesheets.js),
 [model character sprite contract](../../../routevn-creator-model/src/model.js).
+
+## Project default dialogue avatar transform
+
+Schema 15 already supports `project.defaultDialogueAvatarTransformId?:
+Ref(transforms)` and `project.set_default_dialogue_avatar_transform` with the
+exact payload `{transformId!: Ref(transforms) | null}`. Strict `M` retains this
+contract: omitted/empty/stringified-null values, folders, missing transforms,
+and extra payload fields fail. Explicit null clears the preference by removing
+the state property. A strict new full state may omit the property but cannot
+store null there. This command uses the main partition/settings scope and must
+pass the same version stamping, state validation, persistence, and replay gates
+as other commands.
+
+The preference seeds a future avatar selection; changing it does not rewrite
+existing dialogue or preview selections. Preserve the model's existing explicit
+transform-deletion rule: deleting the selected transform, including through
+recursive folder deletion, clears this preference. This is a documented reducer
+rule, not an exception allowing newly dangling authored action/preview refs.
+Those other references still receive the strict before/after impact checks.
+Name-only transform edits retain the preference. Setting/clearing it must not
+strictly revalidate unrelated legacy actions. Add set/replace/clear/delete,
+invalid-target, full-state, and mixed-version round-trip cases alongside
+`tests/puty/14-default-dialogue-avatar-storage.spec.yaml`.
 
 ## Command mutation and compatibility rules
 
@@ -820,6 +898,13 @@ above. The fixture matrix must also include all these cross-cutting cases:
   empty valid inheritance configurations, illegal direct actions alias,
   keyboard and keyup dictionaries, input-field mappings, and forbidden
   runtime-generated request metadata.
+- Marked literal object/array writes preserve template-looking strings and
+  event selectors recursively; unmarked historical operations retain existing
+  interpolation. Test missing/wrong marker, wrong variable type, nested callback,
+  mixed marked/unmarked operations, export, save/load, and rollback.
+- Avatar preview save/reopen with a different speaker and sprite owner, optional
+  transform, invalid sprite/transform refs, and unknown nested fields; project
+  default-avatar-transform set/replace/clear and deletion cleanup.
 - Static number/boolean/string/object variable writes, enum writes, computed
   read-only rejection, repeat-target sequential operations, divide0,
   optional increment/decrement value, and literal object keys that resemble

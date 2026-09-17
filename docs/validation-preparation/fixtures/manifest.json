@@ -334,14 +334,36 @@
       "path": "seeds/recovery-source-rows.json",
       "bytes": 4494,
       "sha256": "46cbf788b9ab99090fa7149c6a6020a3755fc8fe10b2d4d40806e5f64503a3f6"
+    },
+    {
+      "path": "scenarios/september-18-contract-refresh.json",
+      "bytes": 11250,
+      "sha256": "6c1d56783998b80ada186da19f8bf4cb1133dde3589ce73127b9d86562daee9c"
     }
   ],
-  "totalArtifactBytes": 185491,
+  "totalArtifactBytes": 196741,
   "notes": [
     "Copied YAML files are byte-for-byte source fixtures, not raw SQLite command histories. Their schemaVersion:14 labels the model archive, not persisted envelope schema_version.",
     "Synthetic scenarios assemble an envelope-1 project.create from bootstrap.stateRef, then replay exact records in listed order. stateRef and metadata fields are fixture harness instructions, never stored command payload fields.",
     "Observed snapshots intentionally retain current permissive behavior in negative future cases; do not adopt them as expected accepted strict states.",
     "No application code, test runner, dependency, user project, or historical row was changed.",
-    "Post-review compatibility requirement: preserve previous-reader legacy loading/recovery, including missing scene sources and previously tolerated legacy version representations. New strict commands and invalid/unsupported strict history keep strict checks. Updated future expectations only; copied legacy sources and recorded baseline observations remain unchanged."
-  ]
+    "Post-review compatibility requirement: preserve previous-reader legacy loading/recovery, including missing scene sources and previously tolerated legacy version representations. New strict commands and invalid/unsupported strict history keep strict checks. Updated future expectations only; copied legacy sources and recorded baseline observations remain unchanged.",
+    "September 18 refresh adds contract cases without rewriting copied sources or observed snapshots; current model schema 15 is not the first strict schema. Engine literal behavior requires an explicit new marker and published runtime support."
+  ],
+  "implementationRefresh": {
+    "date": "2026-09-18",
+    "clientMain": "4d1fe31f96ff7a8f4eebf2b58679755a827a8851",
+    "declaredModelVersion": "1.15.0",
+    "modelSchema": 15,
+    "declaredEngineVersion": "1.46.1",
+    "strictModelVersion": "M must be greater than 15; original illustrative fixture values must be bound when adopted",
+    "scope": "Targeted additions; original corpus and source hashes remain historical evidence, not a current full-source rescan",
+    "requiredContracts": [
+      "PreviewDialogue.character.sprite and shared preview line shape",
+      "project.set_default_dialogue_avatar_transform and project.defaultDialogueAvatarTransformId",
+      "VariableOperation.valueMode literal marker requires model and engine releases"
+    ],
+    "remainingBeforeEnforcement": "Rerun complete emitter inventory against the implementation revision; preserve all original archived observations.",
+    "scenario": "scenarios/september-18-contract-refresh.json"
+  }
 }

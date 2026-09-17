@@ -17,6 +17,25 @@ remain compatible. New blocking legacy completeness/integrity checks are
 deferred. This is a release requirement to test, not a guarantee already
 established by these documentation artifacts.
 
+## September 18 implementation refresh
+
+The planning branch includes client main `4d1fe31f`. The current client uses
+creator-model `1.15.0` (schema 15), so strict M must be a later released schema.
+Original schema-14 captures and symbolic version-15 scenarios are retained;
+they must not be mistaken for the current implementation or strict registry.
+
+The refreshed catalog covers persisted dialogue avatar previews and
+`project.set_default_dialogue_avatar_transform`. Literal object writes require
+an explicit `valueMode: "literal"` operation field implemented in both model
+and engine. The engine currently templates unmarked object strings; that legacy
+behavior remains unchanged. The rollout now includes the engine release and
+browser/native player artifact checks.
+
+The [refresh scenario](./fixtures/scenarios/september-18-contract-refresh.json)
+contains new contract cases and a reproduced engine baseline. Its future
+expectations are not completed feature tests. These corrections change only
+documentation and fixture data; implementation still starts separately.
+
 ## Approved behavior from the user review
 
 The following decisions were reviewed one at a time and accepted. They record
@@ -96,7 +115,7 @@ behavior still require implementation tests before release.
 | [Fixture catalog](./fixture-catalog.md)                    | Unchanged legacy samples, neutral scenarios, observed baseline outputs, and explicitly unexecuted strict expectations                                 |
 | [Fixture manifest](./fixtures/manifest.json)               | Exact artifact/source hashes, model-version binding, and provenance                                                                                   |
 | [Replay and acceptance](./replay-and-acceptance.md)        | Complete chronological authority, same-identity moves, platform coordination, write recovery, acknowledgment promotion, and retained recovery sources |
-| [Upstream and rollout](./upstream-and-rollout.md)          | Creator-model and Insieme PR scopes, release prerequisites, client slices, reader/writer delivery, and rollback                                       |
+| [Upstream and rollout](./upstream-and-rollout.md)          | Creator-model, Insieme, and engine PR scopes, release prerequisites, client slices, reader/writer delivery, and rollback                              |
 
 ## Decisions made during preparation
 
@@ -153,7 +172,7 @@ started; resume it only when requested. The short review record above is the
 starting point for resuming, with the specification and preparation artifacts
 providing the technical details.
 
-When implementation is requested, start the model and Insieme owner changes,
+When implementation is requested, start the model, Insieme, and engine owner changes,
 then integrate the client in the documented order. The remaining gates are
 implementation, published dependencies, and feature/platform verification;
 no additional action-catalog or coordination design task is left as a

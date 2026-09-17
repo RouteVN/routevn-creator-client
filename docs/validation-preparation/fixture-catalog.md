@@ -10,6 +10,20 @@ released strict model schema; `15` is its illustrative fixture value. The
 observed model is `@routevn/creator-model` **1.14.0**, schema **14**. An omitted
 model-version argument was used for every current-model observation.
 
+## September 18 additions
+
+The implementation baseline is client main `4d1fe31f` with installed model
+`1.15.0` / schema 15 and engine `1.46.1`. M must be greater than 15. Bind the old
+symbolic `15` examples when adopting them; do not relabel the original captures.
+
+[Contract refresh](./fixtures/scenarios/september-18-contract-refresh.json)
+adds independent authoring/runtime cases for avatar previews, default avatar
+transforms, and marked literal object writes. Its setup requirements describe
+neutral resources to construct through model commands in the future harness;
+they are not replacement project snapshots or persisted event fields. It also
+records the actually reproduced engine-1.46.1 unmarked interpolation result.
+Marked expectations remain unexecuted until the engine feature exists.
+
 ## Provenance and reuse
 
 Six YAML fixtures were copied byte-for-byte from model commit

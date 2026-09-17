@@ -11,6 +11,14 @@ records the decisions accepted one at a time, including templates and database
 reconciliation. Work is parked on `docs/versioned-schema-validation-plan`;
 implementation must wait for a separate request to resume.
 
+September 18 review refresh: this branch now includes client main `4d1fe31f`.
+The implementation baseline uses creator-model `1.15.0` / schema `15`; M must
+be a later release. Original schema-14 observations and illustrative `15`
+fixture values remain archival evidence, not a strict-version registry. The
+catalog now includes avatar previews/default-transform commands and an engine
+release prerequisite for explicit literal object writes. No feature code was
+implemented by these documentation corrections.
+
 Preparation status: Phase 1 contracts and fixture artifacts are documented in
 the [preparation package](./validation-preparation/README.md). This is ready for
 implementation planning; strict writes remain disabled until implementation,
@@ -98,7 +106,7 @@ addressed separately in section 13.
 
 ## 3. Verified starting point
 
-At the time of this review:
+At the original preparation baseline (schema 14; see the September 18 refresh above):
 
 - The client depends on `@routevn/creator-model` `1.14.0`.
 - `creatorVersion` in project app-store metadata is derived from the Creator
@@ -967,7 +975,10 @@ generic framework or duplicate validators.
 Engine action schemas and the client action emitters are reference material
 for the field catalog, not an invitation to import runtime-specific behavior
 into persistence adapters. Model rules must be released from the model repo
-and consumed through a normal dependency version.
+and consumed through a normal dependency version. The literal object-write
+contract additionally needs the owning engine release and updated exported player
+artifacts; the [rollout](./validation-preparation/upstream-and-rollout.md#31-engine-implementation-pr)
+specifies that dependency without changing unmarked legacy runtime behavior.
 
 ## 17. Implementation sequence
 
@@ -1008,6 +1019,18 @@ are documented and reviewable; no strict-write flag is enabled.
 
 Exit: old fixtures retain behavior, strict cases pass/fail as specified, and
 mixed-state command sequences are covered.
+
+### Phase 2b: engine literal-value support
+
+- Implement the catalog's explicit `valueMode: "literal"` object-set contract
+  in the engine before recursive template resolution.
+- Preserve unmarked historical operations, mixed execution, callbacks, and
+  save/load/rollback behavior; release through the owning engine repository.
+- Carry the field through client projection without exposing storage wrappers.
+  Verify Creator preview and browser/native exported players all use the release.
+
+Exit: literal values stay literal end to end, legacy interpolation is unchanged,
+and supported R/W player artifacts recognize the marker.
 
 ### Phase 3: client readers and codec
 

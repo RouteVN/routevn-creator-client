@@ -9,22 +9,27 @@ server work.
 
 ## 1. Baseline and owners
 
-| Component                               | Inspected baseline                                                                     | Owner and work                                                                                                                |
-| --------------------------------------- | -------------------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------- |
-| Creator client                          | `0844141f67bca7e194409095ad6b7a0dd8914053`                                             | This repository: composition, codec, coordination, authoritative replay, projections, platform integration, UI errors         |
-| Creator model                           | `4dc3cdaa7805905c98547743b91cf74d3ea8fef2`, package `1.14.0`, schema `14`              | `../routevn-creator-model`: all strict domain schemas, version dispatch, transition/reference rules, shipped model extensions |
-| Insieme                                 | Installed package `2.1.1`                                                              | Repository recorded by that package: `yuusoft-org/insieme`; exact event-version parsing across its client stores              |
-| Engine and shipped client/template data | Source paths and measured corpus recorded in [input inventory](./input-inventory.json) | Contract evidence; engine-only features are not automatically exposed by Creator                                              |
+| Component      | Inspected baseline                                                                | Owner and work                                                                                                                |
+| -------------- | --------------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------- |
+| Creator client | Main `4d1fe31f` (September 18 implementation refresh)                             | This repository: composition, codec, coordination, authoritative replay, projections, platform integration, UI errors         |
+| Creator model  | Installed package `1.15.0`, schema `15`; original schema-14 observations retained | `../routevn-creator-model`: all strict domain schemas, version dispatch, transition/reference rules, shipped model extensions |
+| Insieme        | Installed package `2.1.1`                                                         | Repository recorded by that package: `yuusoft-org/insieme`; exact event-version parsing across its client stores              |
+| Route Engine   | Installed `route-engine-js@1.46.1`                                                | `../route-engine`: explicit literal object-write mode, legacy runtime compatibility, packaged-player delivery                 |
 
 The package version numbers here identify inspected dependencies, not a claim
 about the latest published versions. An Insieme sibling checkout was not present
 at `../insieme` during preparation. Obtain its owning checkout when its
 implementation task starts; do not edit installed dependency files.
 
-Use M for the first strict model release. If no intervening minor is released,
-the example is package `1.15.0` / schema `15`; the actual version is selected
-through the model repository's release workflow. Bind fixture examples marked
-with M deliberately when adding them to the new compatibility archive.
+Use M for the first strict model release. Schema `15` is already released
+without this feature, so M must be later than 15; select the actual version
+through the model repository's release workflow. Existing fixture `15` values
+remain symbolic examples, never registry entries to enable verbatim. Bind both
+supported and future-version cases consistently when adopting them. Preserve
+the original schema-14 corpus and measurements as historical evidence; the
+September 18 refresh records added contracts separately. The sibling model
+checkout at `4dc3cdaa` is older than the installed package and must be updated
+to the published schema-15 baseline before implementing upstream work.
 
 ## 2. Model implementation PR
 
@@ -120,21 +125,46 @@ upgrade. App-owned ingestion interception can use the existing injected store
 interface for both `applyCommittedBatch` and `applySubmitResult`; no new hook
 is assumed necessary for that interception.
 
+## 3.1 Engine implementation PR
+
+Proposed scope: **Preserve literal values in explicitly marked object-variable
+writes without changing unmarked historical actions.** Model and engine support
+must agree on `VariableOperation.valueMode: "literal"` before client integration.
+
+- Validate the marker and `set` object/array shape before action template
+  traversal. Copy the marked value as inert JSON without evaluating templates
+  or event selectors, including nested arrays and operator/action-like keys.
+- Retain existing template resolution for unmarked operations and type,
+  computed/read-only, scope, and runtime validation for all operations.
+- Preserve the marker through nested immediate/deferred actions and runtime
+  save/load/rollback. Do not infer behavior from a project's newest `mv`, because
+  mixed projects contain both representations and runtime receives domain data.
+- Prove marked/unmarked behavior side by side against engine `1.46.1`, including
+  `${variables.source}`, `_event.value`, missing event context, and prototype-like
+  own data keys. Unknown markers and marked non-object writes must reject.
+
+Publish the normal engine package release. Both reader R and writer W must use
+it in Creator preview, browser exports, and every packaged native player before
+handling marked actions. Pin/verify player template artifacts as well as the
+client package; upgrading only Creator is insufficient. If an artifact is still
+on the old engine, that release gate remains blocked, not silently downgraded.
+
 ## 4. Client implementation slices
 
-Model and Insieme work can proceed independently. Client implementation may
+Model, Insieme, and engine work can proceed independently after agreeing on
+the literal-operation field contract. Client implementation may
 be developed against their source checkouts through the repository's normal
 local validation workflow, but the final client dependency change waits for
 published versions. No dependency patch, copied fork, install rewrite, or
 edited cached bundle is acceptable.
 
-| Slice                               | Concrete work                                                                                                                              | Exit evidence                                                                                                             |
-| ----------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------ | ------------------------------------------------------------------------------------------------------------------------- |
-| C1: reader and codec                | Preserved legacy reads, exact strict envelope branching, `mv` mapping, identities, raw-before-domain boundaries, compatibility errors      | Previous-reader parity for legacy values; strict/future-version errors; actual SQLite/IndexedDB round trips               |
-| C2: authority and recovery          | Existing legacy loading/skip/recovery behavior, chronological strict suffix validation, coherent projections, retained recovery sources    | Old-reader state and availability preserved, including missing-scene recovery; valid edit/reload; original rows unchanged |
-| C3: acceptance ownership            | Shared coordinator, platform locks, refresh/preflight/write/state advancement, partial/unknown-write recovery, both sync ingestion methods | Competing tabs/processes, exact retry, failure injection, acknowledgment-before-broadcast                                 |
-| C4: current authoring               | Current versions stamped internally at every entrypoint; template/emitter composition produces the catalog; direct same-identity moves     | Every inventoried writer covered; no alternate new envelope-1 route after enforcement                                     |
-| C5: error/UI and release validation | Stable localized errors, preserved unsaved drafts, backups/imports, platform compatibility and performance checks                          | Appropriate client script/Puty/UI/platform tests; device tests when native behavior is implemented                        |
+| Slice                               | Concrete work                                                                                                                                                                   | Exit evidence                                                                                                             |
+| ----------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------- |
+| C1: reader and codec                | Preserved legacy reads, exact strict envelope branching, `mv` mapping, identities, raw-before-domain boundaries, compatibility errors                                           | Previous-reader parity for legacy values; strict/future-version errors; actual SQLite/IndexedDB round trips               |
+| C2: authority and recovery          | Existing legacy loading/skip/recovery behavior, chronological strict suffix validation, coherent projections, retained recovery sources                                         | Old-reader state and availability preserved, including missing-scene recovery; valid edit/reload; original rows unchanged |
+| C3: acceptance ownership            | Shared coordinator, platform locks, refresh/preflight/write/state advancement, partial/unknown-write recovery, both sync ingestion methods                                      | Competing tabs/processes, exact retry, failure injection, acknowledgment-before-broadcast                                 |
+| C4: current authoring               | Current versions stamped internally; template/emitter composition covers avatar previews, the default-transform command, and literal object markers; direct same-identity moves | Every inventoried writer covered; no alternate new envelope-1 route after enforcement                                     |
+| C5: error/UI and release validation | Stable localized errors, preserved unsaved drafts, backups/imports, platform compatibility and performance checks                                                               | Appropriate client script/Puty/UI/platform tests; device tests when native behavior is implemented                        |
 
 The [replay and acceptance contract](./replay-and-acceptance.md) selects concrete
 ownership, lock lifetimes, cache handling, and failure semantics. Implementers
@@ -154,7 +184,7 @@ must not acquire a new load failure.
 Use two application release stages; this is a build/release decision, not a
 user-selectable per-command validation setting:
 
-1. **Reader release R:** consume the published dependencies; support both
+1. **Reader release R:** consume the published model, Insieme, and engine dependencies; support both
    envelope versions, chronological strict replay, safe recovery sources,
    coordination, and errors. Before cutover, projects authored entirely under
    the old format can continue their existing authoring contract. On encountering
@@ -204,7 +234,7 @@ availability must be preserved; strict suffixes must retain their recorded
 contracts. Any regression blocks this release, rather than requiring users
 to repair legacy data. Additional legacy integrity hardening is separate work.
 
-Final publication requires actual package releases, model/client/platform
+Final publication requires actual model/Insieme/engine releases, engine/player and model/client/platform
 tests, supported R/W compatibility checks, and measured loading/editing behavior.
 These are implementation/release validations, not additional pre-implementation
 design tasks or permission requests.

@@ -10,6 +10,12 @@ measurements, and the exact limit values below. The
 supported for strict authoring. Presence in an engine schema, legacy fixture,
 or conversion helper does not itself make an action supported.
 
+September 18 refresh: this remains the original measured corpus, not a rescan
+of current main. The [refresh scenario](./fixtures/scenarios/september-18-contract-refresh.json)
+and input inventory's `implementationRefresh` record current schema 15, avatar
+preview/default-transform coverage, and the new literal-operation requirement.
+Retain historical hashes; refresh the full emitter inventory before enforcement.
+
 ## Corpus and reproducibility
 
 The review used current worktree bytes at these repository revisions:
@@ -136,6 +142,8 @@ fixture; it does not justify accepting `say` in strict new input.
 
 These command families can introduce action-bearing content:
 
+- `project.set_default_dialogue_avatar_transform`: a non-action main/settings
+  command that still requires current-version stamping and strict references.
 - `project.create`: the original complete supplied state, including previews,
   controls, and shipped client extensions.
 - `line.create` and `line.update_actions`: created maps and effective changed
