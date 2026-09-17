@@ -774,6 +774,7 @@ audioEffectsPage:
   volumePropertyLabel: "Volume"
 actionTransformEditor:
   backgroundTarget: "Background"
+  cancelButton: "Cancel"
   characterTarget: "Character"
   doneButton: "Done"
   targetTitle: "Target"

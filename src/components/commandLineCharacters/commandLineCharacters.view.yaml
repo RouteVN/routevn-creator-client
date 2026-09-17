@@ -201,9 +201,9 @@ template:
                                       - 'rtgl-button#removeCharacterOpacity${i} data-index=${character.characterIndex} sq s=sm v=gh pre=x title="${removeOpacityLabel}" aria-label="${removeOpacityLabel}"': null
                                   - rtgl-slider-input#opacity${i} data-index=${character.characterIndex} key=${character.id} min=0 max=1 step=0.01 w=f value=${character.opacity}: null
                           - $if character.blurOptionEnabled:
-                              - 'rtgl-input-number#blurX${i} slot=${character.blurXFormSlot} data-index=${character.characterIndex} data-blur-field=x min=0 w=f value=${character.blur.x}': null
-                              - 'rtgl-input-number#blurY${i} slot=${character.blurYFormSlot} data-index=${character.characterIndex} data-blur-field=y min=0 w=f value=${character.blur.y}': null
-                              - 'rtgl-input-number#blurQuality${i} slot=${character.blurQualityFormSlot} data-index=${character.characterIndex} data-blur-field=quality min=1 step=1 w=f value=${character.blur.quality}': null
+                              - 'rtgl-slider-input#blurX${i} slot=${character.blurXFormSlot} data-index=${character.characterIndex} data-blur-field=x min=0 max=${character.blurSliderMax.x} step=0.5 w=f value=${character.blur.x}': null
+                              - 'rtgl-slider-input#blurY${i} slot=${character.blurYFormSlot} data-index=${character.characterIndex} data-blur-field=y min=0 max=${character.blurSliderMax.y} step=0.5 w=f value=${character.blur.y}': null
+                              - 'rtgl-slider-input#blurQuality${i} slot=${character.blurQualityFormSlot} data-index=${character.characterIndex} data-blur-field=quality min=1 max=${character.blurSliderMax.quality} step=1 w=f value=${character.blur.quality}': null
                               - 'rtgl-select#blurKernelSize${i} slot=${character.blurKernelSizeFormSlot} data-index=${character.characterIndex} data-blur-field=kernelSize w=f no-clear :selectedValue=${character.blur.kernelSize} :options=${defaultValues.blurKernelSizeOptions}': null
                               - 'rtgl-segmented-control#blurRepeatEdgePixels${i} slot=${character.blurRepeatEdgePixelsFormSlot} data-index=${character.characterIndex} data-blur-field=repeatEdgePixels w=f no-clear :selectedValue=${character.blur.repeatEdgePixels} :options=${defaultValues.blurRepeatEdgeOptions}': null
                           - $for adjustment, adjustmentIndex in character.shaderAdjustments:

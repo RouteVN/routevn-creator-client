@@ -7,6 +7,8 @@ refs:
     eventListeners:
       form-change:
         handler: handleFormChange
+      form-input:
+        handler: handleBlurFormInput
       form-section-action:
         handler: handleOptionsSectionAction
   submitButton:

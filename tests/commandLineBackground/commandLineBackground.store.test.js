@@ -178,7 +178,10 @@ describe("commandLineBackground.store", () => {
     );
     const [transformModeField, transformField, transformSpacerField] =
       transformRow.fields;
-    const animationField = viewData.dialogueForm.form.fields.find(
+    const animationRow = viewData.dialogueForm.form.fields.find((field) =>
+      field.fields?.some((child) => child.name === "animationId"),
+    );
+    const animationField = animationRow.fields.find(
       (field) => field.name === "animationId",
     );
     const opacityField = viewData.dialogueForm.form.fields.find(
@@ -236,10 +239,10 @@ describe("commandLineBackground.store", () => {
       placeholder: "Select animation",
     });
     expect(
-      viewData.dialogueForm.form.fields.indexOf(animationField),
+      viewData.dialogueForm.form.fields.indexOf(animationRow),
     ).toBeGreaterThan(viewData.dialogueForm.form.fields.indexOf(transformRow));
     expect(
-      viewData.dialogueForm.form.fields.indexOf(animationField),
+      viewData.dialogueForm.form.fields.indexOf(animationRow),
     ).toBeLessThan(viewData.dialogueForm.form.fields.indexOf(optionsSection));
     expect(opacityField).toBeUndefined();
     expect(colorField).toBeUndefined();
@@ -342,13 +345,19 @@ describe("commandLineBackground.store", () => {
 
     const viewData = selectViewData({ state });
     const animationFields = viewData.dialogueForm.form.fields;
-    const animationField = animationFields.find(
+    const animationRow = animationFields.find((field) =>
+      field.fields?.some((child) => child.name === "animationId"),
+    );
+    const animationField = animationRow.fields.find(
       (field) => field.name === "animationId",
     );
-    const continuityField = animationFields.find(
+    const playbackRow = animationFields.find((field) =>
+      field.fields?.some((child) => child.name === "playbackSpeed"),
+    );
+    const continuityField = playbackRow.fields.find(
       (field) => field.name === "playbackContinuity",
     );
-    const speedField = animationFields.find(
+    const speedField = playbackRow.fields.find(
       (field) => field.name === "playbackSpeed",
     );
     const loopField = animationFields.find(
@@ -385,9 +394,10 @@ describe("commandLineBackground.store", () => {
     expect(speedField).toMatchObject({
       name: "playbackSpeed",
       label: "Playback Speed",
-      type: "input-number",
+      type: "slider-with-input",
       min: 0.01,
-      step: 0.1,
+      max: 4,
+      step: 0.01,
       required: true,
     });
     expect(loopField).toMatchObject({
@@ -408,9 +418,10 @@ describe("commandLineBackground.store", () => {
     });
     expect(
       animationFields
+        .flatMap((field) => field.fields ?? [field])
         .filter((field) => field.name?.startsWith("playback"))
         .map((field) => field.name),
-    ).toEqual(["playbackSpeed", "playbackLoop", "playbackContinuity"]);
+    ).toEqual(["playbackSpeed", "playbackContinuity", "playbackLoop"]);
     expect(viewData.dialogueForm.defaultValues.transformId).toBe("bg-center");
     expect(viewData.dialogueForm.defaultValues.animationId).toBe("bg-pan");
     expect(viewData.dialogueForm.defaultValues.playbackContinuity).toBe(
@@ -494,7 +505,9 @@ describe("commandLineBackground.store", () => {
       },
     );
 
-    const fields = selectViewData({ state }).dialogueForm.form.fields;
+    const fields = selectViewData({ state }).dialogueForm.form.fields.flatMap(
+      (field) => field.fields ?? [field],
+    );
 
     expect(
       fields.find((field) => field.name === "playbackSpeed"),
@@ -878,8 +891,8 @@ describe("commandLineBackground.store", () => {
         {
           type: "row",
           fields: [
-            { name: "blurX", label: "Blur X", type: "input-number" },
-            { name: "blurY", label: "Blur Y", type: "input-number" },
+            { name: "blurX", label: "Blur X", type: "slider-with-input" },
+            { name: "blurY", label: "Blur Y", type: "slider-with-input" },
           ],
         },
         {
@@ -888,7 +901,7 @@ describe("commandLineBackground.store", () => {
             {
               name: "blurQuality",
               label: "Quality",
-              type: "input-number",
+              type: "slider-with-input",
             },
             {
               name: "blurKernelSize",

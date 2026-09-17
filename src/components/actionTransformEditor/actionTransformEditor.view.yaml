@@ -7,6 +7,10 @@ refs:
     eventListeners:
       click:
         handler: handleDoneClick
+  cancelButton:
+    eventListeners:
+      click:
+        handler: handleCancelClick
   transformInspector:
     eventListeners:
       update:
@@ -16,6 +20,7 @@ template:
   - 'rtgl-view w=f h=f d=v bgc=bg style="min-width: 0; min-height: 0; overflow: hidden;"':
       - 'rtgl-view h=48 w=f d=h av=c ph=md bwb=xs bc=bo g=md style="flex: 0 0 auto;"':
           - rtgl-text w=1fg ellipsis=true: ${title}
+          - rtgl-button#cancelButton v=se: ${cancelButton}
           - rtgl-button#doneButton v=pr: ${doneButton}
       - $if isTouchMode:
           - 'rtgl-view w=f h=1fg d=v style="min-width: 0; min-height: 0;"':

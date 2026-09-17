@@ -9,6 +9,7 @@ import {
   handleResourceItemClick,
   handleSearchButtonClick,
   handleSearchPopoverClose,
+  handleSliderFormInput,
   handleSpritesheetSelected,
   handleSubmitClick,
   handleTabClick,
@@ -1967,7 +1968,7 @@ describe("commandLineBackground.handlers", () => {
     expect(render).toHaveBeenCalledTimes(1);
   });
 
-  it("submits playback speed and loop for an update animation", () => {
+  it("submits typed playback speed and loop for an update animation", () => {
     const state = createInitialState();
     const render = vi.fn();
     const dispatchEvent = vi.fn();
@@ -1987,7 +1988,7 @@ describe("commandLineBackground.handlers", () => {
       },
     );
 
-    handleFormInputChange(
+    handleSliderFormInput(
       {
         store: createStoreApi(state),
         render,
@@ -1996,7 +1997,7 @@ describe("commandLineBackground.handlers", () => {
         _event: {
           detail: {
             name: "playbackSpeed",
-            value: 1.5,
+            value: 8.5,
           },
         },
       },
@@ -2024,7 +2025,7 @@ describe("commandLineBackground.handlers", () => {
       {},
     );
 
-    expect(selectSelectedAnimationPlaybackSpeed({ state })).toBe(1.5);
+    expect(selectSelectedAnimationPlaybackSpeed({ state })).toBe(8.5);
     expect(selectSelectedAnimationLoop({ state })).toBe(true);
     expect(dispatchEvent).toHaveBeenCalledTimes(1);
     expect(dispatchEvent.mock.calls[0][0].detail).toEqual({
@@ -2034,7 +2035,7 @@ describe("commandLineBackground.handlers", () => {
           resourceId: "bg-pan",
           playback: {
             continuity: "render",
-            speed: 1.5,
+            speed: 8.5,
             loop: true,
           },
         },

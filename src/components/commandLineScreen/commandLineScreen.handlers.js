@@ -86,6 +86,13 @@ export const handleAfterMount = async (deps) => {
   render();
 };
 
+export const handleBlurFormInput = (deps, payload) => {
+  const { name } = payload._event.detail;
+  if (["blurX", "blurY", "blurQuality"].includes(name)) {
+    handleFormChange(deps, payload);
+  }
+};
+
 export const handleFormChange = (deps, payload) => {
   const { render, store } = deps;
   const values = payload?._event?.detail?.values;

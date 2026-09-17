@@ -218,11 +218,13 @@ describe("commandLineDialogueBox.store", () => {
       type: "segmented-control",
       value: true,
     });
-    expect(viewData.form.fields.map((field) => field.label)).toEqual([
-      "Layout",
-      "Speaker",
-      "Options",
-    ]);
+    expect(
+      viewData.form.fields.map((field) =>
+        field.type === "row"
+          ? field.fields.map((child) => child.label)
+          : field.label,
+      ),
+    ).toEqual([["Layout", undefined], "Speaker", "Options"]);
     expect(viewData.form.fields[1]).toMatchObject({
       id: "speaker",
       action: {
