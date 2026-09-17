@@ -985,10 +985,13 @@ const getEventTimestamp = (event) => {
 };
 
 const getPrintableKeyText = (event) => {
+  // WebKit can deliver an IME confirmation key after compositionend, when
+  // isComposing is false but keyCode/which still marks it as a process key.
   if (
     event?.ctrlKey ||
     event?.metaKey ||
     event?.isComposing ||
+    isImeProcessKeyboardEvent(event) ||
     event?.defaultPrevented
   ) {
     return undefined;
