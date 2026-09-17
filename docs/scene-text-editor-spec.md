@@ -57,6 +57,7 @@ bug below; browser coverage is not a substitute for those release checks.
 | TXT-B013 | In touch mode, beforeinput-only `insertLineBreak`, type `X` before the split recovery frame, then `Y` afterward. Produced `YX` in the new scene line instead of `XY`. Reproduced in Chromium. | Guard the split's deferred focus reset with the existing focus-restore sequence; newer input invalidates it. | TXT-007; `lexicalTouchReturn.browser.mjs` freezes animation frames and asserts subsequent native typing and caret in Chromium/WebKit. |
 | TXT-B014 | Focus line 1 offset 5, tap line 2 offset 4, then deliver a transient blur. Recovery jumped back to line 1 offset 5. Reproduced in Chromium and through a synthetic event replay on the physical iPhone. | Cancel both the old target and queued recovery on every primary pointerdown, including inside the editor, and on mousedown. Deferred pointer fallback validates the recovery sequence. | TXT-007; `lexicalCaretRecovery.browser.mjs` checks native taps, replayed blur, exact caret, and subsequent native typing in Chromium/WebKit; `lexicalPointerSelection.test.js` checks early cancellation and stale fallback timers. See `notes/lexical-pointer-selection.md` for device replay and its limits. |
 | TXT-B015 | On macOS with Apple Pinyin, type `ni` then Space at `a\|b`. The candidate committed but an extra space produced `a你 b` instead of `a你b`. | WebKit delivers the confirming Space after compositionend with `isComposing: false` but keyCode/which 229. Exclude process keys from the printable fallback. | TXT-010; `lexicalImeConfirmation.browser.mjs` checks committed text, deferred Space, subsequent ordinary Space/typing, and exact caret in both engines. Unit tests cover both process-key markers and digit keys. Native Apple Pinyin before/after verification is recorded in `notes/macos-tauri-lexical-selection.md`. |
+| TXT-B016 | On Android/Gboard, place the caret at the start of a loaded empty scene line and press Backspace once. The line remained; a second press merged it. | Lexical deleted the invisible caret anchor before the app handler ran. Handle collapsed logical line-start Backspace in the existing window capture path, before Lexical character deletion. Preserve IME composition, modified keys, and native text selections. | `lexicalEmptyLineBackspace.browser.mjs` covers loaded/new empty lines, deleting the last character, consecutive empty lines, nonempty line starts, and subsequent typing/caret in Chromium and WebKit. Verified on the connected Vivo V2309A using native Gboard taps. |
 
 TXT-B012 was verified in a packaged Debug app on that same physical iPhone on
 2026-09-17. Four native software Return activations, including automatically
@@ -103,6 +104,8 @@ The command runs:
    caret and subsequent typing in both engines.
 8. Replayed IME confirmation Space does not insert whitespace, while a later
    native Space and ordinary typing retain their normal content/caret behavior.
+9. Single Backspace merges empty and nonempty scene lines at the logical start;
+   subsequent typing stays at the join, including after consecutive empty lines.
 
 The browser suites bundle the production primitive into temporary fixtures with
 nested shadow roots. They need no app build, running development server, or user

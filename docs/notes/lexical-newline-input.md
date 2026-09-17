@@ -194,3 +194,27 @@ apps and physical mobile devices have not been validated for this follow-up.
 - [Input Events Level 2: input types and target ranges](https://www.w3.org/TR/input-events-2/)
 - [Lexical 0.22.0 input handling](https://github.com/facebook/lexical/blob/v0.22.0/packages/lexical/src/LexicalEvents.ts)
 - [Existing Tauri WebKit selection and IME notes](macos-tauri-lexical-selection.md)
+
+## Android empty-line Backspace (2026-09-17)
+
+TXT-B016 was reproduced on the connected Vivo V2309A with Gboard. An isolated
+production editor held `alpha`, `beta`, and an empty scene line. Its empty line
+contained the app's invisible caret anchor. One native software Backspace
+removed that anchor and left an empty paragraph; the second merged into `beta`.
+Lexical's keydown listener ran before the app's bubbling handler and had already
+prevented the event, so the logical line-start merge never ran on the first key.
+
+The existing window capture path now handles ordinary Backspace at a collapsed,
+resolved logical line start before Lexical's character deletion. It reuses the
+app's line merge and caret recovery, cancels the handled key, and records it for
+beforeinput deduplication. Active composition, IME process keys, modified keys,
+noncollapsed selections, and events outside the editor retain their other paths.
+
+After installing the updated packaged Debug APK, one actual Gboard Backspace
+removed the loaded empty line and kept the caret after `beta`; native `x` then
+produced `betax`. A native Return followed by one Backspace also removed the new
+empty line and left `betax` unchanged. The temporary fixture was removed. Device
+WebView bundle hashing confirmed the installed JavaScript matched the build.
+
+The full scene-editor gate passed 457 unit tests and all Chromium/WebKit browser
+suites, including five new Backspace scenarios per engine. Lint passed.
