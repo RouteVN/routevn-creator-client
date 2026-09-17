@@ -5311,6 +5311,47 @@ describe("lexical scene document editor line editing", () => {
     }
   });
 
+  it.each([
+    { key: " ", keyCode: 229 },
+    { key: " ", which: 229 },
+    { key: "2", keyCode: 229 },
+    { key: "2", which: 229 },
+  ])(
+    "does not insert an IME process key through the printable fallback: %j",
+    async (processKey) => {
+      const restoreDomGlobals = installDomGlobals();
+      vi.useFakeTimers();
+      try {
+        const { LexicalSceneDocumentEditorElement } = await import(
+          "../../src/primitives/lexicalSceneDocumentEditor.js"
+        );
+        const owner = Object.create(
+          LexicalSceneDocumentEditorElement.prototype,
+        );
+        owner.state = { mode: "text-editor" };
+        Object.defineProperty(owner, "isConnected", { value: true });
+        owner.isEditorActiveElement = () => true;
+        owner.getNativeLineSelectionContext = () => undefined;
+        owner.insertPlainText = vi.fn();
+
+        owner.updatePendingTextInputFallback({
+          ...processKey,
+          isComposing: false,
+        });
+        vi.runAllTimers();
+        expect(owner.insertPlainText).not.toHaveBeenCalled();
+        expect(owner.pendingTextInputFallback).toBeUndefined();
+
+        owner.updatePendingTextInputFallback({ key: " ", keyCode: 32 });
+        vi.runAllTimers();
+        expect(owner.insertPlainText).toHaveBeenCalledExactlyOnceWith(" ");
+      } finally {
+        vi.useRealTimers();
+        restoreDomGlobals();
+      }
+    },
+  );
+
   it("uses printable keydown text when beforeinput insertText has no data", async () => {
     const restoreDomGlobals = installDomGlobals();
 

@@ -154,3 +154,30 @@ consume the Enter that Japanese IME still needs to confirm its candidate.
 `tests/sceneEditor/lexicalLineEditing.test.js` covers all three required paths:
 active-composition Enter is left to the IME, a deferred `229` Enter is consumed
 without splitting, and a regular `13` Enter still splits the line.
+
+## IME Confirmation Space (2026-09-17)
+
+Apple Simplified Pinyin also delivers the Space used to select a candidate
+after `compositionend`, with `isComposing: false` and `keyCode`/`which: 229`.
+The printable-key fallback previously accepted that Space and inserted it on
+its next timer, even though the IME had already consumed the physical key.
+This produced an unwanted space after the committed Chinese characters.
+
+`getPrintableKeyText` now excludes IME process keys using the same marker as
+the Enter guard. No post-composition timeout or whitespace removal is involved:
+a subsequent ordinary Space (`keyCode: 32`) still inserts normally, and active
+composition remains browser-managed. The check also excludes printable digit
+keys carrying the IME process marker.
+
+Native reproduction used the production editor in nested shadow roots inside
+an isolated AppKit/WKWebView window on macOS 26.6.2, with Apple Pinyin and OS
+keyboard events. At `a|b`, typing `ni` then Space previously produced `a你 b`
+with the caret at offset 3. After the fix it produces `a你b`, offset 2. A second
+Space followed by ordinary `x` produces `a你 xb`, offset 4. The fixture used
+only dummy text and restored the original input method on exit.
+
+`lexicalImeConfirmation.browser.mjs` replays the committed-text/deferred-key
+sequence in Chromium and WebKit, then uses native Space and typing to verify
+the content and caret. Unit coverage checks both `keyCode` and `which` markers
+for Space and digit keys. Browser event replay complements the native Pinyin
+check; it does not itself run an operating-system IME.
