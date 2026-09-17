@@ -1,0 +1,417 @@
+schemaVersion: 14
+initialState:
+  project: {}
+  story:
+    initialSceneId: null
+  tags:
+    images:
+      items: {}
+      tree: []
+    sounds:
+      items: {}
+      tree: []
+    videos:
+      items: {}
+      tree: []
+    characters:
+      items: {}
+      tree: []
+    fonts:
+      items: {}
+      tree: []
+    transforms:
+      items: {}
+      tree: []
+    colors:
+      items: {}
+      tree: []
+    textStyles:
+      items: {}
+      tree: []
+    variables:
+      items: {}
+      tree: []
+    layouts:
+      items: {}
+      tree: []
+    controls:
+      items: {}
+      tree: []
+    animations:
+      items: {}
+      tree: []
+    audioEffects:
+      items: {}
+      tree: []
+    particles:
+      items: {}
+      tree: []
+    spritesheets:
+      items: {}
+      tree: []
+  scenes:
+    items: {}
+    tree: []
+  files:
+    items: {}
+    tree: []
+  images:
+    items: {}
+    tree: []
+  spritesheets:
+    items: {}
+    tree: []
+  sounds:
+    items: {}
+    tree: []
+  voices:
+    items: {}
+    tree: []
+  videos:
+    items: {}
+    tree: []
+  animations:
+    items: {}
+    tree: []
+  audioEffects:
+    items: {}
+    tree: []
+  particles:
+    items: {}
+    tree: []
+  characters:
+    items: {}
+    tree: []
+  fonts:
+    items: {}
+    tree: []
+  transforms:
+    items: {}
+    tree: []
+  colors:
+    items: {}
+    tree: []
+  textStyles:
+    items: {}
+    tree: []
+  variables:
+    items: {}
+    tree: []
+  layouts:
+    items: {}
+    tree: []
+  controls:
+    items: {}
+    tree: []
+commands:
+  - type: project.create
+    payload:
+      state:
+        project: {}
+        story:
+          initialSceneId: null
+        tags:
+          images:
+            items: {}
+            tree: []
+          sounds:
+            items: {}
+            tree: []
+          videos:
+            items: {}
+            tree: []
+          characters:
+            items: {}
+            tree: []
+          fonts:
+            items: {}
+            tree: []
+          transforms:
+            items: {}
+            tree: []
+          colors:
+            items: {}
+            tree: []
+          textStyles:
+            items: {}
+            tree: []
+          variables:
+            items: {}
+            tree: []
+          layouts:
+            items: {}
+            tree: []
+          controls:
+            items: {}
+            tree: []
+          animations:
+            items: {}
+            tree: []
+          audioEffects:
+            items: {}
+            tree: []
+          particles:
+            items: {}
+            tree: []
+          spritesheets:
+            items: {}
+            tree: []
+        scenes:
+          items: {}
+          tree: []
+        files:
+          items: {}
+          tree: []
+        images:
+          items: {}
+          tree: []
+        spritesheets:
+          items: {}
+          tree: []
+        sounds:
+          items: {}
+          tree: []
+        voices:
+          items: {}
+          tree: []
+        videos:
+          items: {}
+          tree: []
+        animations:
+          items: {}
+          tree: []
+        audioEffects:
+          items: {}
+          tree: []
+        particles:
+          items: {}
+          tree: []
+        characters:
+          items: {}
+          tree: []
+        fonts:
+          items: {}
+          tree: []
+        transforms:
+          items: {}
+          tree: []
+        colors:
+          items: {}
+          tree: []
+        textStyles:
+          items: {}
+          tree: []
+        variables:
+          items: {}
+          tree: []
+        layouts:
+          items: {}
+          tree: []
+        controls:
+          items: {}
+          tree: []
+  - type: file.create
+    payload:
+      fileId: file-image
+      data:
+        mimeType: image/png
+        size: 2048
+        sha256: file-image-sha256
+  - type: file.create
+    payload:
+      fileId: thumb-image
+      data:
+        mimeType: image/webp
+        size: 128
+        sha256: thumb-image-sha256
+  - type: file.create
+    payload:
+      fileId: file-spritesheet
+      data:
+        mimeType: image/png
+        size: 1024
+        sha256: file-spritesheet-sha256
+  - type: file.create
+    payload:
+      fileId: thumb-spritesheet
+      data:
+        mimeType: image/webp
+        size: 64
+        sha256: thumb-spritesheet-sha256
+  - type: file.create
+    payload:
+      fileId: file-sound
+      data:
+        mimeType: audio/mp3
+        size: 1024
+        sha256: file-sound-sha256
+  - type: file.create
+    payload:
+      fileId: waveform-sound
+      data:
+        mimeType: application/json
+        size: 64
+        sha256: waveform-sound-sha256
+  - type: file.create
+    payload:
+      fileId: file-video
+      data:
+        mimeType: video/mp4
+        size: 4096
+        sha256: file-video-sha256
+  - type: file.create
+    payload:
+      fileId: thumb-video
+      data:
+        mimeType: image/jpeg
+        size: 128
+        sha256: thumb-video-sha256
+  - type: image.create
+    payload:
+      imageId: folder-art
+      data:
+        type: folder
+        name: Art
+  - type: image.create
+    payload:
+      imageId: image-a
+      parentId: folder-art
+      data:
+        type: image
+        name: Background
+        fileId: file-image
+        thumbnailFileId: thumb-image
+        width: 1920
+        height: 1080
+  - type: image.update
+    payload:
+      imageId: image-a
+      data:
+        description: Establishing shot
+  - type: image.move
+    payload:
+      imageId: image-a
+      parentId: folder-art
+      position: last
+  - type: spritesheet.create
+    payload:
+      spritesheetId: folder-spritesheets
+      data:
+        type: folder
+        name: Spritesheets
+  - type: spritesheet.create
+    payload:
+      spritesheetId: spritesheet-a
+      parentId: folder-spritesheets
+      data:
+        type: spritesheet
+        name: Hero Idle
+        fileId: file-spritesheet
+        thumbnailFileId: thumb-spritesheet
+        width: 256
+        height: 256
+        jsonData:
+          meta:
+            image: hero-idle.png
+        animations:
+          idle:
+            frames:
+              - 0
+              - 1
+            animationSpeed: 1
+            loop: true
+  - type: spritesheet.update
+    payload:
+      spritesheetId: spritesheet-a
+      data:
+        description: Idle loop spritesheet
+  - type: spritesheet.move
+    payload:
+      spritesheetId: spritesheet-a
+      parentId: folder-spritesheets
+      position: last
+  - type: sound.create
+    payload:
+      soundId: folder-audio
+      data:
+        type: folder
+        name: Audio
+  - type: sound.create
+    payload:
+      soundId: sound-a
+      parentId: folder-audio
+      data:
+        type: sound
+        name: Ambience
+        fileId: file-sound
+        waveformDataFileId: waveform-sound
+        duration: 42.5
+  - type: sound.update
+    payload:
+      soundId: sound-a
+      data:
+        description: Night ambience
+        waveformDataFileId: null
+  - type: sound.move
+    payload:
+      soundId: sound-a
+      parentId: folder-audio
+      position: last
+  - type: video.create
+    payload:
+      videoId: folder-video
+      data:
+        type: folder
+        name: Video
+  - type: video.create
+    payload:
+      videoId: video-a
+      parentId: folder-video
+      data:
+        type: video
+        name: Opening
+        fileId: file-video
+        thumbnailFileId: thumb-video
+        width: 1280
+        height: 720
+  - type: video.update
+    payload:
+      videoId: video-a
+      data:
+        description: Opening cinematic
+  - type: video.move
+    payload:
+      videoId: video-a
+      parentId: folder-video
+      position: last
+  - type: image.delete
+    payload:
+      imageIds:
+        - image-a
+        - folder-art
+  - type: spritesheet.delete
+    payload:
+      spritesheetIds:
+        - spritesheet-a
+        - folder-spritesheets
+  - type: sound.delete
+    payload:
+      soundIds:
+        - sound-a
+        - folder-audio
+  - type: video.delete
+    payload:
+      videoIds:
+        - video-a
+        - folder-video
+  - type: file.delete
+    payload:
+      fileIds:
+        - thumb-image
+        - file-image
+        - thumb-spritesheet
+        - file-spritesheet
+        - waveform-sound
+        - file-sound
+        - thumb-video
+        - file-video

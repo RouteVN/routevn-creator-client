@@ -1,0 +1,134 @@
+{
+  "status": "observed_baseline",
+  "initialStateRef": {
+    "path": "../legacy/schema-14/states/minimal-project.yaml",
+    "pointer": "/state"
+  },
+  "commands": [
+    {
+      "type": "scene.create",
+      "payload": {
+        "sceneId": "scene-one",
+        "data": {
+          "name": "Scene One"
+        }
+      }
+    },
+    {
+      "type": "scene.create",
+      "payload": {
+        "sceneId": "scene-two",
+        "data": {
+          "name": "Scene Two"
+        }
+      }
+    },
+    {
+      "type": "section.create",
+      "payload": {
+        "sceneId": "scene-one",
+        "sectionId": "section-one",
+        "data": {
+          "name": "Section One"
+        }
+      }
+    },
+    {
+      "type": "section.create",
+      "payload": {
+        "sceneId": "scene-one",
+        "sectionId": "section-three",
+        "data": {
+          "name": "Section Three"
+        }
+      }
+    },
+    {
+      "type": "section.create",
+      "payload": {
+        "sceneId": "scene-two",
+        "sectionId": "section-two",
+        "data": {
+          "name": "Section Two"
+        }
+      }
+    },
+    {
+      "type": "line.create",
+      "payload": {
+        "sectionId": "section-one",
+        "lines": [
+          {
+            "lineId": "line-one",
+            "data": {
+              "actions": {
+                "dialogue": {
+                  "content": [
+                    {
+                      "text": "First"
+                    }
+                  ]
+                }
+              }
+            }
+          },
+          {
+            "lineId": "line-two",
+            "data": {
+              "actions": {
+                "dialogue": {
+                  "content": [
+                    {
+                      "text": "Second"
+                    }
+                  ]
+                }
+              }
+            }
+          }
+        ]
+      }
+    },
+    {
+      "type": "file.create",
+      "payload": {
+        "fileId": "file-one",
+        "data": {
+          "mimeType": "image/png",
+          "size": 128,
+          "sha256": "fixture-image-sha256"
+        }
+      }
+    },
+    {
+      "type": "image.create",
+      "payload": {
+        "imageId": "image-one",
+        "data": {
+          "type": "image",
+          "name": "Image One",
+          "fileId": "file-one"
+        }
+      }
+    },
+    {
+      "type": "character.create",
+      "payload": {
+        "characterId": "character-one",
+        "data": {
+          "type": "character",
+          "name": "Character One",
+          "sprites": {
+            "items": {},
+            "tree": []
+          }
+        }
+      }
+    }
+  ],
+  "expectedStateRef": "project-one.state.json",
+  "modelPackageVersion": "1.14.0",
+  "modelSchemaVersion": 14,
+  "modelVersionArgument": "omitted",
+  "sequentialEqualsReplay": true
+}

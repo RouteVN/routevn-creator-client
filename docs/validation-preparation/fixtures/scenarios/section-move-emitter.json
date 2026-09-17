@@ -1,0 +1,177 @@
+{
+  "fixtureFormat": "routevn.validation-preparation.history.v1",
+  "dataOrigin": "synthetic neutral commands; no actual user project",
+  "futureContract": {
+    "status": "expected_future_not_executed",
+    "supportedStrictModelVersions": [15],
+    "symbolicModelVersion": "M",
+    "illustrativeModelVersion": 15
+  },
+  "bootstrap": {
+    "id": "bootstrap-one",
+    "projectId": "project-one",
+    "userId": "actor-one",
+    "partition": "m",
+    "type": "project.create",
+    "schemaVersion": 1,
+    "clientTs": 999,
+    "stateRef": "../seeds/project-one.state.json"
+  },
+  "id": "section-move-emitter",
+  "records": [
+    {
+      "id": "move-delete-lines",
+      "projectId": "project-one",
+      "userId": "actor-one",
+      "partition": "s:783Kx5",
+      "type": "line.delete",
+      "schemaVersion": 1,
+      "payload": {
+        "lineIds": ["line-one", "line-two"]
+      },
+      "clientTs": 1000
+    },
+    {
+      "id": "move-section",
+      "projectId": "project-one",
+      "userId": "actor-one",
+      "partition": "m",
+      "type": "section.move",
+      "schemaVersion": 1,
+      "payload": {
+        "sectionId": "section-one",
+        "sceneId": "scene-two",
+        "position": "last"
+      },
+      "clientTs": 1000
+    },
+    {
+      "id": "move-recreate-lines",
+      "projectId": "project-one",
+      "userId": "actor-one",
+      "partition": "s:6cQQTH",
+      "type": "line.create",
+      "schemaVersion": 1,
+      "payload": {
+        "sectionId": "section-one",
+        "lines": [
+          {
+            "lineId": "line-one",
+            "data": {
+              "actions": {
+                "dialogue": {
+                  "content": [
+                    {
+                      "text": "First"
+                    }
+                  ]
+                }
+              }
+            }
+          },
+          {
+            "lineId": "line-two",
+            "data": {
+              "actions": {
+                "dialogue": {
+                  "content": [
+                    {
+                      "text": "Second"
+                    }
+                  ]
+                }
+              }
+            }
+          }
+        ],
+        "position": "last"
+      },
+      "clientTs": 1000
+    }
+  ],
+  "observedCurrentModel": {
+    "status": "observed_baseline",
+    "packageVersion": "1.14.0",
+    "schemaVersion": 14,
+    "method": "unwrap fixture records only; omit model version; run existing replayCommands and sequential processCommand",
+    "valid": true,
+    "commands": 3,
+    "sequentialEqualsReplay": true,
+    "inputStateUnchanged": true,
+    "finalStateRef": "../observed/section-move-emitter.state.json",
+    "finalStateSha256": "c515ac7f8601fff9d484b2fb77f718e9e28c733f0aee931e2909a994f086ded6"
+  },
+  "expectedFuture": {
+    "historicalReplay": "preserve current three-command semantics for stored legacy histories",
+    "newAuthoring": "emit one existing model section.move against complete authority state; do not delete and recreate unchanged lines",
+    "cleanContentEquivalentToDirectMove": true
+  },
+  "source": "src/deps/services/shared/commandApi/story.js:moveSectionItem",
+  "legacyVariant": {
+    "preexistingRecord": {
+      "id": "legacy-edit",
+      "projectId": "project-one",
+      "userId": "actor-one",
+      "partition": "s:783Kx5",
+      "type": "line.update_actions",
+      "schemaVersion": 1,
+      "payload": {
+        "lineId": "line-one",
+        "data": {
+          "unrecognizedLegacyAction": {
+            "oldValue": true
+          },
+          "dialogue": {
+            "content": [
+              {
+                "text": "Legacy"
+              }
+            ],
+            "unusedLegacyField": true
+          }
+        }
+      },
+      "clientTs": 1000
+    },
+    "modifyRecreatedLine": {
+      "lineId": "line-one",
+      "actions": {
+        "unrecognizedLegacyAction": {
+          "oldValue": true
+        },
+        "dialogue": {
+          "content": [
+            {
+              "text": "Legacy"
+            }
+          ],
+          "unusedLegacyField": true
+        }
+      }
+    },
+    "expectedFuture": {
+      "naiveStrictLineCreateResult": "reject_unknown_action_or_field",
+      "requiredNewAuthoringRecord": {
+        "id": "move-section-direct",
+        "projectId": "project-one",
+        "userId": "actor-one",
+        "partition": "m",
+        "type": "section.move",
+        "schemaVersion": 2,
+        "payload": {
+          "mv": 15,
+          "commandPayload": {
+            "sectionId": "section-one",
+            "sceneId": "scene-two",
+            "position": "last"
+          }
+        },
+        "clientTs": 1000
+      },
+      "preserveLineIdentityAndActionData": true,
+      "doNotGrantLineCreateLegacyBypass": true,
+      "validateNewlyBrokenSupportedInboundReferences": true,
+      "copyAndDuplicateRemainStrictNewContent": true
+    }
+  }
+}

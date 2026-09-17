@@ -1,0 +1,307 @@
+{
+  "fixtureFormat": "routevn.validation-preparation.acceptance.v1",
+  "futureContract": {
+    "status": "expected_future_not_executed",
+    "supportedStrictModelVersions": [15],
+    "symbolicModelVersion": "M",
+    "illustrativeModelVersion": 15
+  },
+  "seedStateRef": "../seeds/project-one.state.json",
+  "batch": [
+    {
+      "id": "batch-one",
+      "projectId": "project-one",
+      "userId": "actor-one",
+      "partition": "s:783Kx5",
+      "type": "line.update_actions",
+      "schemaVersion": 2,
+      "payload": {
+        "mv": 15,
+        "commandPayload": {
+          "lineId": "line-one",
+          "data": {
+            "dialogue": {
+              "content": [
+                {
+                  "text": "Batch one"
+                }
+              ]
+            }
+          }
+        }
+      },
+      "clientTs": 1000
+    },
+    {
+      "id": "batch-two",
+      "projectId": "project-one",
+      "userId": "actor-one",
+      "partition": "s:783Kx5",
+      "type": "line.update_actions",
+      "schemaVersion": 2,
+      "payload": {
+        "mv": 15,
+        "commandPayload": {
+          "lineId": "line-two",
+          "data": {
+            "dialogue": {
+              "content": [
+                {
+                  "text": "Batch two"
+                }
+              ]
+            }
+          }
+        }
+      },
+      "clientTs": 1000
+    }
+  ],
+  "cases": [
+    {
+      "id": "invalid-third-command",
+      "appendRecord": {
+        "id": "batch-invalid",
+        "projectId": "project-one",
+        "userId": "actor-one",
+        "partition": "s:783Kx5",
+        "type": "line.update_actions",
+        "schemaVersion": 2,
+        "payload": {
+          "mv": 15,
+          "commandPayload": {
+            "lineId": "line-two",
+            "data": {
+              "dialogue": 42
+            }
+          }
+        },
+        "clientTs": 1000
+      },
+      "expectedFuture": {
+        "acceptedNewRows": 0,
+        "publishedState": "original seed",
+        "errorStage": "payload_validation",
+        "validateWholeBatchBeforeInsert": true
+      }
+    },
+    {
+      "id": "missing-batch-entry",
+      "batchOverride": [
+        {
+          "id": "batch-one",
+          "projectId": "project-one",
+          "userId": "actor-one",
+          "partition": "s:783Kx5",
+          "type": "line.update_actions",
+          "schemaVersion": 2,
+          "payload": {
+            "mv": 15,
+            "commandPayload": {
+              "lineId": "line-one",
+              "data": {
+                "dialogue": {
+                  "content": [
+                    {
+                      "text": "Batch one"
+                    }
+                  ]
+                }
+              }
+            }
+          },
+          "clientTs": 1000
+        },
+        null,
+        {
+          "id": "batch-two",
+          "projectId": "project-one",
+          "userId": "actor-one",
+          "partition": "s:783Kx5",
+          "type": "line.update_actions",
+          "schemaVersion": 2,
+          "payload": {
+            "mv": 15,
+            "commandPayload": {
+              "lineId": "line-two",
+              "data": {
+                "dialogue": {
+                  "content": [
+                    {
+                      "text": "Batch two"
+                    }
+                  ]
+                }
+              }
+            }
+          },
+          "clientTs": 1000
+        }
+      ],
+      "expectedFuture": {
+        "acceptedNewRows": 0,
+        "filterFalsyEntries": false
+      }
+    },
+    {
+      "id": "definite-second-insert-failure",
+      "injection": {
+        "stage": "persist second record",
+        "error": "known failure before second insert"
+      },
+      "expectedFuture": {
+        "persistedIds": ["batch-one"],
+        "retryIds": ["batch-two"],
+        "report": "explicit partial persistence",
+        "publishedState": "authoritative accepted prefix, never full proposed batch",
+        "firstRecordMustNotBeDuplicated": true
+      }
+    },
+    {
+      "id": "unknown-second-insert-outcome",
+      "injection": {
+        "stage": "second insert finished but acknowledgement lost"
+      },
+      "expectedFuture": {
+        "report": "unknown outcome pending durable identity lookup",
+        "reconcileBeforeRetry": true,
+        "reuseOriginalIds": true,
+        "noBlindWholeBatchResubmit": true
+      }
+    },
+    {
+      "id": "stale-cross-instance-reference",
+      "instanceA": {
+        "captureRevision": 8,
+        "proposedRecord": {
+          "id": "stale-image-write",
+          "projectId": "project-one",
+          "userId": "actor-one",
+          "partition": "s:783Kx5",
+          "type": "line.update_actions",
+          "schemaVersion": 2,
+          "payload": {
+            "mv": 15,
+            "commandPayload": {
+              "lineId": "line-one",
+              "data": {
+                "background": {
+                  "resourceId": "image-one",
+                  "opacity": 1
+                }
+              }
+            }
+          },
+          "clientTs": 1000
+        }
+      },
+      "instanceB": {
+        "acceptedBeforeAInserts": [
+          {
+            "id": "delete-image",
+            "projectId": "project-one",
+            "userId": "actor-one",
+            "partition": "m",
+            "type": "image.delete",
+            "schemaVersion": 2,
+            "payload": {
+              "mv": 15,
+              "commandPayload": {
+                "imageIds": ["image-one"]
+              }
+            },
+            "clientTs": 1000
+          }
+        ],
+        "nextRevision": 9
+      },
+      "expectedFuture": {
+        "instanceA": "revalidate under storage-supported coordination; reject missing reference or explicit stale context",
+        "acceptedRowsFromA": 0,
+        "localJavascriptQueueAloneInsufficient": true
+      }
+    },
+    {
+      "id": "project-switch-during-dependency-load",
+      "fromProject": "project-one",
+      "toProject": "project-two",
+      "expectedFuture": {
+        "acceptedRows": 0,
+        "publishIntoNewProject": false,
+        "result": "cancel or stale-context error"
+      }
+    },
+    {
+      "id": "draft-promotion-with-same-history-length",
+      "before": {
+        "committedCount": 1,
+        "latestCommittedId": 1,
+        "draftCount": 2,
+        "latestDraftClock": 3
+      },
+      "after": {
+        "committedCount": 2,
+        "latestCommittedId": 2,
+        "draftCount": 1,
+        "latestDraftClock": 3
+      },
+      "recordId": "batch-one",
+      "expectedFuture": {
+        "totalLengthUnchanged": true,
+        "revisionNumberAloneInsufficient": true,
+        "sourceIdentityAndDraftCommittedStatsChecked": true,
+        "applySameRecordTwice": false,
+        "retainedMv": 15
+      }
+    },
+    {
+      "id": "concurrent-deletion-and-reference-write",
+      "proposalA": {
+        "id": "delete-image",
+        "projectId": "project-one",
+        "userId": "actor-one",
+        "partition": "m",
+        "type": "image.delete",
+        "schemaVersion": 2,
+        "payload": {
+          "mv": 15,
+          "commandPayload": {
+            "imageIds": ["image-one"]
+          }
+        },
+        "clientTs": 1000
+      },
+      "proposalB": {
+        "id": "reference-image",
+        "projectId": "project-one",
+        "userId": "actor-one",
+        "partition": "s:783Kx5",
+        "type": "line.update_actions",
+        "schemaVersion": 2,
+        "payload": {
+          "mv": 15,
+          "commandPayload": {
+            "lineId": "line-one",
+            "data": {
+              "background": {
+                "resourceId": "image-one",
+                "opacity": 1
+              }
+            }
+          }
+        },
+        "clientTs": 1000
+      },
+      "expectedFuture": {
+        "atMostOneAcceptedWithoutAdditionalRepair": true,
+        "ifDeleteFirst": "reference rejects",
+        "ifReferenceFirst": "delete rejects unless a separate earlier explicit repair command removed the reference; no implicit reference cleanup",
+        "globalReferenceConsistencyRequired": true
+      }
+    }
+  ],
+  "observedCurrent": {
+    "status": "future_fault_injection_cases_not_executed",
+    "note": "No concurrency guarantee or transaction implementation is claimed by these declarative schedules."
+  }
+}

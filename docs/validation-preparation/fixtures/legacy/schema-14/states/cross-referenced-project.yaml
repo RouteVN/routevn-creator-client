@@ -1,0 +1,856 @@
+schemaVersion: 14
+state:
+  project: {}
+  story:
+    initialSceneId: scene-a
+  tags:
+    images:
+      items: {}
+      tree: []
+    sounds:
+      items: {}
+      tree: []
+    videos:
+      items: {}
+      tree: []
+    characters:
+      items: {}
+      tree: []
+    fonts:
+      items: {}
+      tree: []
+    transforms:
+      items: {}
+      tree: []
+    colors:
+      items: {}
+      tree: []
+    textStyles:
+      items: {}
+      tree: []
+    variables:
+      items: {}
+      tree: []
+    layouts:
+      items: {}
+      tree: []
+    controls:
+      items: {}
+      tree: []
+    animations:
+      items: {}
+      tree: []
+    audioEffects:
+      items:
+        smooth:
+          id: smooth
+          type: tag
+          name: Smooth
+          color: "#446688"
+      tree:
+        - id: smooth
+    particles:
+      items: {}
+      tree: []
+    spritesheets:
+      items: {}
+      tree: []
+  scenes:
+    items:
+      scene-a:
+        id: scene-a
+        type: scene
+        name: Intro
+        sections:
+          items:
+            section-a:
+              id: section-a
+              name: Section A
+              lines:
+                items:
+                  line-a:
+                    id: line-a
+                    actions:
+                      say: hello
+                      background:
+                        resourceId: image-rich
+                        opacity: 0.75
+                        blur:
+                          x: 6
+                          "y": 9
+                          quality: 3
+                          kernelSize: 9
+                          repeatEdgePixels: true
+                  line-b:
+                    id: line-b
+                    actions:
+                      say: bye
+                tree:
+                  - id: line-a
+                    children: []
+                  - id: line-b
+                    children: []
+            section-b:
+              id: section-b
+              name: Section B
+              lines:
+                items:
+                  line-other:
+                    id: line-other
+                    actions:
+                      say: other
+                tree:
+                  - id: line-other
+                    children: []
+          tree:
+            - id: section-a
+              children: []
+            - id: section-b
+              children: []
+      folder-scenes:
+        id: folder-scenes
+        type: folder
+        name: Folder
+      scene-b:
+        id: scene-b
+        type: scene
+        name: Middle
+        sections:
+          items:
+            section-other:
+              id: section-other
+              name: Other
+              lines:
+                items: {}
+                tree: []
+          tree:
+            - id: section-other
+              children: []
+    tree:
+      - id: scene-a
+        children: []
+      - id: folder-scenes
+        children:
+          - id: scene-b
+            children: []
+  files:
+    items:
+      file-font-ui:
+        id: file-font-ui
+        type: font
+        mimeType: font/ttf
+        size: 1
+        sha256: file-font-ui-sha256
+      file-smile:
+        id: file-smile
+        type: image
+        mimeType: image/png
+        size: 256
+        sha256: file-smile-sha256
+      file-angry:
+        id: file-angry
+        type: image
+        mimeType: image/png
+        size: 256
+        sha256: file-angry-sha256
+      thumb-spritesheet-ui:
+        id: thumb-spritesheet-ui
+        type: image-thumbnail
+        mimeType: image/webp
+        size: 128
+        sha256: thumb-spritesheet-ui-sha256
+      file-image-rich:
+        id: file-image-rich
+        type: image
+        mimeType: image/png
+        size: 2048
+        sha256: file-image-rich-sha256
+      thumb-image-rich:
+        id: thumb-image-rich
+        type: image-thumbnail
+        mimeType: image/webp
+        size: 1
+        sha256: thumb-image-rich-sha256
+      file-spritesheet-rich:
+        id: file-spritesheet-rich
+        type: image
+        mimeType: image/png
+        size: 3072
+        sha256: file-spritesheet-rich-sha256
+      thumb-spritesheet-rich:
+        id: thumb-spritesheet-rich
+        type: image-thumbnail
+        mimeType: image/webp
+        size: 128
+        sha256: thumb-spritesheet-rich-sha256
+      thumb-animation-rich:
+        id: thumb-animation-rich
+        type: image-thumbnail
+        mimeType: image/webp
+        size: 128
+        sha256: thumb-animation-rich-sha256
+      file-sound-rich:
+        id: file-sound-rich
+        type: audio
+        mimeType: audio/mp3
+        size: 1024
+        sha256: file-sound-rich-sha256
+      waveform-sound-rich:
+        id: waveform-sound-rich
+        type: audio-waveform
+        mimeType: application/json
+        size: 1
+        sha256: waveform-sound-rich-sha256
+      file-video-rich:
+        id: file-video-rich
+        type: video
+        mimeType: video/mp4
+        size: 4096
+        sha256: file-video-rich-sha256
+      thumb-video-rich:
+        id: thumb-video-rich
+        type: video-thumbnail
+        mimeType: image/jpeg
+        size: 1
+        sha256: thumb-video-rich-sha256
+    tree:
+      - id: file-font-ui
+        children: []
+      - id: file-smile
+        children: []
+      - id: file-angry
+        children: []
+      - id: thumb-spritesheet-ui
+        children: []
+      - id: file-image-rich
+        children: []
+      - id: thumb-image-rich
+        children: []
+      - id: file-spritesheet-rich
+        children: []
+      - id: thumb-spritesheet-rich
+        children: []
+      - id: thumb-animation-rich
+        children: []
+      - id: file-sound-rich
+        children: []
+      - id: waveform-sound-rich
+        children: []
+      - id: file-video-rich
+        children: []
+      - id: thumb-video-rich
+        children: []
+  images:
+    items:
+      folder-art:
+        id: folder-art
+        type: folder
+        name: Art
+      image-rich:
+        id: image-rich
+        type: image
+        name: Background
+        description: Establishing shot
+        fileId: file-image-rich
+        thumbnailFileId: thumb-image-rich
+        width: 1920
+        height: 1080
+    tree:
+      - id: folder-art
+        children:
+          - id: image-rich
+            children: []
+  spritesheets:
+    items:
+      folder-spritesheets:
+        id: folder-spritesheets
+        type: folder
+        name: Spritesheets
+      spritesheet-rich:
+        id: spritesheet-rich
+        type: spritesheet
+        name: Hero Idle
+        description: Idle loop spritesheet
+        fileId: file-spritesheet-rich
+        thumbnailFileId: thumb-spritesheet-rich
+        sheetWidth: 1024
+        sheetHeight: 512
+        frameCount: 4
+        width: 256
+        height: 256
+        jsonData:
+          meta:
+            image: hero-idle.png
+        animations:
+          idle:
+            frames:
+              - 0
+              - 1
+              - 2
+              - 3
+            animationSpeed: 1
+            loop: true
+    tree:
+      - id: folder-spritesheets
+        children:
+          - id: spritesheet-rich
+            children: []
+  sounds:
+    items:
+      folder-audio:
+        id: folder-audio
+        type: folder
+        name: Audio
+      sound-rich:
+        id: sound-rich
+        type: sound
+        name: Ambience
+        description: Night ambience
+        fileId: file-sound-rich
+        waveformDataFileId: waveform-sound-rich
+        duration: 42.5
+    tree:
+      - id: folder-audio
+        children:
+          - id: sound-rich
+            children: []
+  voices:
+    items: {}
+    tree: []
+  videos:
+    items:
+      folder-video:
+        id: folder-video
+        type: folder
+        name: Video
+      video-rich:
+        id: video-rich
+        type: video
+        name: Opening
+        description: Opening cinematic
+        fileId: file-video-rich
+        thumbnailFileId: thumb-video-rich
+        width: 1280
+        height: 720
+    tree:
+      - id: folder-video
+        children:
+          - id: video-rich
+            children: []
+  animations:
+    items:
+      animation-rich:
+        id: animation-rich
+        type: animation
+        name: Entrance Motion
+        description: Entrance motion
+        thumbnailFileId: thumb-animation-rich
+        preview:
+          background:
+            imageId: image-rich
+          outgoing:
+            imageId: image-rich
+          incoming:
+            imageId: image-rich
+        animation:
+          type: update
+          tween:
+            x:
+              auto:
+                duration: 1000
+                easing: linear
+            alpha:
+              keyframes:
+                - duration: 100
+                  delay: 25
+                  value: 1
+    tree:
+      - id: animation-rich
+        children: []
+  audioEffects:
+    items:
+      folder-audio-effects:
+        id: folder-audio-effects
+        type: folder
+        name: Audio Effects
+      crossfade:
+        id: crossfade
+        type: audioEffect
+        name: Crossfade
+        description: Fade between two BGM sources
+        tagIds:
+          - smooth
+        preview:
+          outgoing:
+            soundId: sound-rich
+          incoming:
+            soundId: sound-rich
+        audioEffect:
+          type: transition
+          prev:
+            volume:
+              initialValue: 100
+              keyframes:
+                - value: 40
+                  duration: 200
+                  easing: easeOutSine
+                - value: 0
+                  duration: 400
+                  easing: easeInOutSine
+          next:
+            volume:
+              initialValue: 0
+              keyframes:
+                - value: 60
+                  duration: 300
+                  easing: easeOutSine
+                - value: 100
+                  duration: 600
+                  easing: easeInOutSine
+      smooth-volume:
+        id: smooth-volume
+        type: audioEffect
+        name: Smooth Volume Change
+        tagIds:
+          - smooth
+        audioEffect:
+          type: update
+          tween:
+            volume:
+              initialValue: 90
+              keyframes:
+                - startValue: 80
+                  value: 50
+                  duration: 150
+                  easing: easeOutQuad
+                - value: 30
+                  duration: 350
+                  easing: easeInOutSine
+    tree:
+      - id: folder-audio-effects
+        children:
+          - id: crossfade
+            children: []
+          - id: smooth-volume
+            children: []
+  particles:
+    items: {}
+    tree: []
+  characters:
+    items:
+      character-hero:
+        id: character-hero
+        type: character
+        name: Hero
+        sprites:
+          items:
+            folder-default:
+              id: folder-default
+              type: folder
+              name: Default
+            sprite-a:
+              id: sprite-a
+              type: image
+              name: Smile
+              fileId: file-smile
+            sprite-b:
+              id: sprite-b
+              type: image
+              name: Angry
+              fileId: file-angry
+          tree:
+            - id: folder-default
+              children:
+                - id: sprite-a
+                  children: []
+            - id: sprite-b
+              children: []
+    tree:
+      - id: character-hero
+        children: []
+  fonts:
+    items:
+      font-ui:
+        id: font-ui
+        type: font
+        name: UI Font
+        fileId: file-font-ui
+        fontFamily: Suit
+        minWeight: 100
+        defaultWeight: 400
+        maxWeight: 900
+    tree:
+      - id: font-ui
+        children: []
+  transforms:
+    items:
+      transform-rich:
+        id: transform-rich
+        type: transform
+        name: Camera
+        description: Default framing transform
+        x: 100
+        "y": 200
+        scaleX: 1
+        scaleY: 1
+        anchorX: 0
+        anchorY: 0
+        rotation: 0
+    tree:
+      - id: transform-rich
+        children: []
+  colors:
+    items:
+      color-ui:
+        id: color-ui
+        type: color
+        name: White
+        hex: "#ffffff"
+    tree:
+      - id: color-ui
+        children: []
+  textStyles:
+    items:
+      text-style-ui:
+        id: text-style-ui
+        type: textStyle
+        name: UI Style
+        fontId:
+          - font-ui
+        colorId: color-ui
+        fontSize: 32
+        lineHeight: 1.4
+        fontWeight: "700"
+        shadow:
+          colorId: color-ui
+          alpha: 0.75
+          blur: 4
+          offsetX: 2
+          offsetY: 3
+    tree:
+      - id: text-style-ui
+        children: []
+  variables:
+    items:
+      variable-rich:
+        id: variable-rich
+        type: variable
+        variableType: string
+        name: Mood
+        description: Tracks the current dialogue mood
+        scope: account
+        isEnum: true
+        enumValues:
+          - calm
+          - tense
+        default: calm
+        value: calm
+      variable-rich-label:
+        id: variable-rich-label
+        type: variable
+        variableType: string
+        name: Mood Label
+        description: Derived from the current dialogue mood
+        computed:
+          branches:
+            - when:
+                eq:
+                  - var: variables["variable-rich"]
+                  - tense
+              expr: Tense
+          default:
+            expr:
+              var: variables["variable-rich"]
+          examples:
+            - id: example-tense
+              name: Tense
+              input:
+                variables:
+                  variable-rich: tense
+    tree:
+      - id: variable-rich
+        children: []
+      - id: variable-rich-label
+        children: []
+  layouts:
+    items:
+      layout-dialogue:
+        id: layout-dialogue
+        type: layout
+        name: Dialogue
+        description: Main dialogue frame
+        layoutType: dialogue-adv
+        thumbnailFileId: thumb-spritesheet-ui
+        preview:
+          backgroundImageId: image-preview-layout
+          runtime:
+            autoMode: true
+        elements:
+          items:
+            container-root:
+              id: container-root
+              type: container
+              name: Root
+              x: 0
+              "y": 0
+              width: 100
+              height: 100
+              anchorX: 0
+              anchorY: 0
+              scaleX: 1
+              scaleY: 1
+              rotation: 0
+              gapX: 16
+              gapY: 12
+              scrollUp:
+                inheritToChildren: true
+                payload:
+                  actions:
+                    nextLine: {}
+              scrollDown:
+                payload:
+                  actions:
+                    toggleDialogueUI: {}
+            text-a:
+              id: text-a
+              type: text-revealing
+              name: Title
+              x: 0
+              "y": 0
+              anchorX: 0
+              anchorY: 0
+              scaleX: 1
+              scaleY: 1
+              rotation: 0
+              text: Hello
+              textStyleId: text-style-ui
+              revealSoundId: sound-rich
+              revealSoundStopTiming: immediate
+              variableId: variable-rich
+            text-b:
+              id: text-b
+              type: text
+              name: Subtitle
+              hidden: true
+              x: 0
+              "y": 20
+              anchorX: 0
+              anchorY: 0
+              scaleX: 1
+              scaleY: 1
+              rotation: 0
+              text: World
+              textStyleId: text-style-ui
+            save-date:
+              id: save-date
+              type: text-ref-save-load-slot-date
+              name: Save Date
+              x: 0
+              "y": 40
+              anchorX: 0
+              anchorY: 0
+              scaleX: 1
+              scaleY: 1
+              rotation: 0
+              dateFormat: DD/MM/YYYY
+              textStyleId: text-style-ui
+            sprite-blur:
+              id: sprite-blur
+              type: sprite
+              name: Blurred Sprite
+              x: 0
+              "y": 60
+              anchorX: 0
+              anchorY: 0
+              scaleX: 1
+              scaleY: 1
+              rotation: 0
+              blur:
+                x: 6
+                "y": 9
+                quality: 3
+                kernelSize: 9
+                repeatEdgePixels: true
+            choice-single-item:
+              id: choice-single-item
+              type: container-ref-choice-single-item
+              name: Choice Single Item
+              x: 0
+              "y": 0
+              anchorX: 0
+              anchorY: 0
+              scaleX: 1
+              scaleY: 1
+              rotation: 0
+              direction: absolute
+              choiceItemIndex: 0
+              click:
+                inheritToChildren: true
+            anim-idle:
+              id: anim-idle
+              type: spritesheet-animation
+              name: Idle Loop
+              x: 0
+              "y": 80
+              anchorX: 0
+              anchorY: 0
+              scaleX: 1
+              scaleY: 1
+              rotation: 0
+              resourceId: spritesheet-rich
+              animationName: idle
+          tree:
+            - id: container-root
+              children:
+                - id: text-a
+                  children: []
+                - id: text-b
+                  children: []
+                - id: save-date
+                  children: []
+                - id: sprite-blur
+                  children: []
+                - id: choice-single-item
+                  children: []
+                - id: anim-idle
+                  children: []
+    tree:
+      - id: layout-dialogue
+        children: []
+  controls:
+    items:
+      control-default:
+        id: control-default
+        type: control
+        name: Default Control
+        description: Shared navigation control
+        thumbnailFileId: thumb-spritesheet-ui
+        preview:
+          choice:
+            items:
+              - content: Continue
+        keyboard:
+          enter:
+            payload:
+              actions:
+                nextLine: {}
+        keyup:
+          enter:
+            payload:
+              actions:
+                toggleAutoMode: {}
+        elements:
+          items:
+            container-root:
+              id: container-root
+              type: container
+              name: Root
+              x: 0
+              "y": 0
+              width: 100
+              height: 100
+              anchorX: 0
+              anchorY: 0
+              scaleX: 1
+              scaleY: 1
+              rotation: 0
+              gapX: 16
+              gapY: 12
+              scrollUp:
+                payload:
+                  actions:
+                    nextLine: {}
+              scrollDown:
+                inheritToChildren: true
+                payload:
+                  actions:
+                    toggleSkipMode: {}
+            text-a:
+              id: text-a
+              type: text
+              name: Title
+              x: 0
+              "y": 0
+              anchorX: 0
+              anchorY: 0
+              scaleX: 1
+              scaleY: 1
+              rotation: 0
+              text: Hello
+              textStyleId: text-style-ui
+              variableId: variable-rich
+            text-b:
+              id: text-b
+              type: text
+              name: Subtitle
+              hidden: true
+              x: 0
+              "y": 20
+              anchorX: 0
+              anchorY: 0
+              scaleX: 1
+              scaleY: 1
+              rotation: 0
+              text: World
+              textStyleId: text-style-ui
+            sprite-blur:
+              id: sprite-blur
+              type: sprite
+              name: Blurred Sprite
+              x: 0
+              "y": 60
+              anchorX: 0
+              anchorY: 0
+              scaleX: 1
+              scaleY: 1
+              rotation: 0
+              blur:
+                x: 6
+                "y": 9
+                quality: 3
+                kernelSize: 9
+                repeatEdgePixels: true
+            choice-single-item:
+              id: choice-single-item
+              type: container-ref-choice-single-item
+              name: Choice Single Item
+              x: 0
+              "y": 0
+              anchorX: 0
+              anchorY: 0
+              scaleX: 1
+              scaleY: 1
+              rotation: 0
+              direction: absolute
+              choiceItemIndex: 0
+              click:
+                inheritToChildren: true
+            anim-idle:
+              id: anim-idle
+              type: spritesheet-animation
+              name: Idle Loop
+              x: 0
+              "y": 80
+              anchorX: 0
+              anchorY: 0
+              scaleX: 1
+              scaleY: 1
+              rotation: 0
+              resourceId: spritesheet-rich
+              animationName: idle
+          tree:
+            - id: container-root
+              children:
+                - id: text-a
+                  children: []
+                - id: text-b
+                  children: []
+                - id: sprite-blur
+                  children: []
+                - id: choice-single-item
+                  children: []
+                - id: anim-idle
+                  children: []
+    tree:
+      - id: control-default
+        children: []

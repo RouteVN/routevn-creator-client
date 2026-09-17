@@ -1,0 +1,156 @@
+{
+  "fixtureFormat": "routevn.validation-preparation.recovery.v1",
+  "futureContract": {
+    "status": "expected_future_not_executed",
+    "supportedStrictModelVersions": [15],
+    "symbolicModelVersion": "M",
+    "illustrativeModelVersion": 15
+  },
+  "dataOrigin": "synthetic; all source contents derived from neutral project-one seed",
+  "committedRecords": [],
+  "legacyDraftRecords": [
+    {
+      "id": "recovery-legacy-section-name",
+      "projectId": "project-one",
+      "userId": "actor-one",
+      "partition": "m:s:783Kx5",
+      "type": "section.update",
+      "schemaVersion": 1,
+      "payload": {
+        "sectionId": "section-one",
+        "data": {
+          "name": "Recovered Section One"
+        }
+      },
+      "clientTs": 1000,
+      "draftClock": 1,
+      "createdAt": 1000
+    }
+  ],
+  "originalSourceRowsRef": "../seeds/recovery-source-rows.json",
+  "originalSourceValueHashes": [
+    {
+      "viewName": "project_repository_main_state",
+      "partition": "m",
+      "valueSha256": "d5641268fc7cf22427b079560a448580dfd4ed619fa33692efc37462a9674956"
+    },
+    {
+      "viewName": "project_repository_scene_state",
+      "partition": "s:783Kx5",
+      "valueSha256": "58421ff6252f7b15c99f68f07afa088cfae7a7d7768a1b1f32db9df57d48cf71"
+    },
+    {
+      "viewName": "project_repository_scene_state",
+      "partition": "s:6cQQTH",
+      "valueSha256": "e0cda23922c58eb17a1976c93e3a6f6c1a991fcc39fce2b33357469319ce02da"
+    }
+  ],
+  "legacyCutoff": {
+    "historyStats": {
+      "committedCount": 0,
+      "latestCommittedId": 0,
+      "draftCount": 1,
+      "latestDraftClock": 1
+    },
+    "orderedDraftIds": ["recovery-legacy-section-name"],
+    "lastDraftClock": 1
+  },
+  "strictSuffixRecords": [
+    {
+      "id": "recovery-strict-edit",
+      "projectId": "project-one",
+      "userId": "actor-one",
+      "partition": "s:783Kx5",
+      "type": "line.update_actions",
+      "schemaVersion": 2,
+      "payload": {
+        "mv": 15,
+        "commandPayload": {
+          "lineId": "line-two",
+          "data": {
+            "dialogue": {
+              "content": [
+                {
+                  "text": "After recovery cutoff"
+                }
+              ]
+            }
+          }
+        }
+      },
+      "clientTs": 1000
+    }
+  ],
+  "observedCurrent": {
+    "status": "observed_helper_and_scene_loader_baseline_not_native_device_open",
+    "bootstrapInspection": {
+      "supported": false,
+      "reason": "missing_bootstrap_event"
+    },
+    "matchingMainCheckpointAccepted": true,
+    "matchingMainCheckpointWithoutMetaAccepted": true,
+    "completeBaselineRef": "../observed/recovery-baseline.state.json",
+    "completeBaselineEqualsSeedPlusLegacyDraft": true,
+    "originalSceneSaveAttempts": 0,
+    "missingSceneSource": {
+      "loaderThrows": false,
+      "reconstructedLineCount": 0,
+      "actualSeedLineCount": 2
+    },
+    "strictSuffixUnderUnversionedModelOnly": {
+      "valid": true,
+      "finalStateRef": "../observed/recovery-strict-suffix-unversioned.state.json"
+    }
+  },
+  "expectedFuture": {
+    "retainOriginalMainAndSceneRowsInPlace": true,
+    "originalRowsAreSourceNotDisposableCache": true,
+    "newDisposableCachesUseDistinctViewNames": true,
+    "noReplacementProjectCreate": true,
+    "noSqlSchemaChange": true,
+    "noHistoryRewrite": true,
+    "baselineAtCutoff": "materialize the state returned by existing legacy loading and recovery rules at the original cutoff; no new complete-source proof requirement",
+    "suffix": "apply only records after cutoff, preserving each recorded version and order",
+    "cacheLoss": "delete only new disposable caches, reconstruct identical baseline plus suffix; retained original source hashes unchanged",
+    "backupImport": "retain original recovery source rows; never blanket-discard these as imported caches",
+    "localOnly": true,
+    "metadataAbsent": "preserve currently accepted lastCommittedId/count fallback; bind cutoff to actual ordered original prefix identities and clocks",
+    "missingSceneSource": {
+      "result": "preserve_previous_reader_behavior",
+      "loaderThrows": false,
+      "reconstructedLineCount": 0,
+      "openingEditingPreviewExportAvailability": "same as previous reader; verify on actual platform reader",
+      "newBlockingCompletenessError": false,
+      "originalSourceRowsUnchanged": true,
+      "completeOriginalStoryProven": false,
+      "additionalIntegrityHardening": "deferred_separate_work",
+      "validNewAuthoringRequest": {
+        "type": "section.update",
+        "payload": {
+          "sectionId": "section-one",
+          "data": {
+            "name": "Updated Section One"
+          }
+        }
+      },
+      "invalidNewAuthoringRequest": {
+        "type": "line.update_actions",
+        "payload": {
+          "lineId": "line-two",
+          "data": {
+            "dialogue": {
+              "content": 42
+            }
+          }
+        }
+      },
+      "scenarioIsolation": "Run independently from the complete-source variant; its strictSuffixRecords edit line-two, which is absent in this recovered zero-line state. App stamps current strict version on these authoring requests."
+    },
+    "newEditsAfterLegacyRecovery": {
+      "valid": "strictly validate against resolved legacy-compatible state, persist envelope 2, reopen to the same baseline plus recorded strict suffix",
+      "invalid": "reject before persistence, add no rows, preserve loaded project and availability",
+      "cacheResetAndRestore": "retain original legacy sources and outcomes; clear only new disposable caches",
+      "strictHistoryFailure": "preserve stored strict record and fail explicitly; legacy recovery cannot skip a strict failure"
+    }
+  }
+}
