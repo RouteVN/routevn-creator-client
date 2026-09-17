@@ -40,11 +40,12 @@ const showInvalidFormatToast = (appService, copy = {}) => {
   });
 };
 
-const showInvalidFontToast = (appService, copy = {}) => {
+const showInvalidFontToast = (appService, copy = {}, fontName) => {
   appService.showAlert({
-    message:
-      copy.invalidFontMessage ??
-      "Could not read the font's supported weights. Please choose a valid TTF, OTF, or WOFF2 font.",
+    message: (
+      copy.damagedFontImportMessage ??
+      'The font "{fontName}" is damaged or unreadable. Please choose a fresh TTF, OTF, or WOFF2 file.'
+    ).replaceAll("{fontName}", fontName),
     title: copy.warningTitle ?? "Warning",
   });
 };
@@ -58,7 +59,7 @@ const inspectFontFiles = async ({ appService, files, copy } = {}) => {
       if (error?.code === "unsupported_font_format") {
         showInvalidFormatToast(appService, copy);
       } else {
-        showInvalidFontToast(appService, copy);
+        showInvalidFontToast(appService, copy, file.name);
       }
       return undefined;
     }

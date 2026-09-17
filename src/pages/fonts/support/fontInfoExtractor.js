@@ -33,8 +33,9 @@ const detectFontFormat = (fontData) => {
 
 export const createFontInfoExtractor = ({ getFileContent, loadFont }) => {
   const extractFontInfo = async (fontItem) => {
+    let response;
     try {
-      const response = await getFileContent(fontItem.fileId);
+      response = await getFileContent(fontItem.fileId);
       if (!response?.url) {
         throw new Error("Could not get font file URL.");
       }
@@ -42,8 +43,8 @@ export const createFontInfoExtractor = ({ getFileContent, loadFont }) => {
       await loadFont(fontItem.fontFamily, response.url, {
         weight: getFontFaceWeightDescriptor(fontItem),
       });
-      const fontResponse = await fetch(response.url);
-      const fontBuffer = await fontResponse.arrayBuffer();
+      const fontBuffer =
+        response.buffer ?? (await (await fetch(response.url)).arrayBuffer());
       const fontData = new Uint8Array(fontBuffer);
       const format = detectFontFormat(fontData);
 
@@ -69,6 +70,8 @@ export const createFontInfoExtractor = ({ getFileContent, loadFont }) => {
         glyphs: createFontPreviewGlyphs(),
         error: error.message,
       };
+    } finally {
+      response?.revoke?.();
     }
   };
 

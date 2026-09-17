@@ -514,6 +514,9 @@ webServerPage:
   urlLabel: "URL"
   warningTitle: "Warning"
 resourcePages:
+  damagedFontMessage: "The font \"{fontName}\" has changed or is damaged. Open Fonts and replace its file with a fresh copy."
+  unavailableFontMessage: "The font \"{fontName}\" could not be loaded. Open Fonts and replace its file with a valid copy."
+  damagedFontImportMessage: "The font \"{fontName}\" is damaged or unreadable. Please choose a fresh TTF, OTF, or WOFF2 file."
   selectorEmptyMessage: "No items available to select."
   selectorNoResultsMessage: "No items match your search."
   zoomLabel: "Zoom"

@@ -1174,6 +1174,24 @@ Why this matters:
 If this asset-loading behavior changes, document the reason in the same PR and
 re-check scene-editor memory behavior before merging.
 
+### Font Integrity and Loading
+
+`projectAssetService.getFileContent()` checks font bytes against the saved file
+record's size and SHA-256 before handing them to a decoder. Older records without
+a hash remain readable; reads never create or replace an integrity baseline.
+Font results include the verified buffer and an owned Blob URL. Consumers must
+release that URL; graphics can consume the supplied buffer directly. Image and
+video assets retain their existing direct URL path.
+
+New uploads and replacements use browser font decoding validation, including
+replacement files with a cached family name. The shared browser font loader has
+a 15-second deadline; late results are not registered. This deadline bounds the
+asynchronous wait but cannot interrupt a decoder blocking the JavaScript thread.
+
+Scene loading isolates a bad font, identifies it in a warning, and keeps the
+editor available. A preview that cannot load its fonts closes instead of starting
+with incomplete assets. Neither path changes saved font selections or files.
+
 ### Collaboration Runtime
 
 `src/deps/services/web/collabBootstrapService.js` is a web-runtime composition

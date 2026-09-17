@@ -1652,7 +1652,7 @@ export const createGraphicsService = async ({
     );
     const normalizedAssetsByKey = new Map(normalizedAssetEntries);
     const assetEntriesToLoad = normalizedAssetEntries.filter(([key, asset]) => {
-      if (isDataUrl(asset?.url)) {
+      if (asset.buffer || isDataUrl(asset?.url)) {
         return !hasLoadedAsset(key);
       }
 
@@ -1663,20 +1663,20 @@ export const createGraphicsService = async ({
       return;
     }
 
-    const dataUrlAssetEntries = assetEntriesToLoad.filter(([, asset]) =>
-      isDataUrl(asset?.url),
+    const directAssetEntries = assetEntriesToLoad.filter(
+      ([, asset]) => asset.buffer || isDataUrl(asset?.url),
     );
     const bufferedAssetEntries = assetEntriesToLoad.filter(
-      ([, asset]) => !isDataUrl(asset?.url),
+      ([, asset]) => !asset.buffer && !isDataUrl(asset?.url),
     );
     const bufferedAssetEntriesToFetch = bufferedAssetEntries.filter(
       ([key]) => !activeBufferManager.has(key),
     );
 
     const directBufferMap = Object.fromEntries(
-      dataUrlAssetEntries.map(([key, asset]) => {
+      directAssetEntries.map(([key, asset]) => {
         const bufferEntry = {
-          buffer: decodeDataUrlToArrayBuffer(asset.url),
+          buffer: asset.buffer ?? decodeDataUrlToArrayBuffer(asset.url),
           type: asset.type ?? getDataUrlMimeType(asset.url),
         };
         if (asset.fontWeightDescriptor !== undefined) {
@@ -1685,6 +1685,9 @@ export const createGraphicsService = async ({
         return [key, bufferEntry];
       }),
     );
+    directAssetEntries.forEach(([, asset]) => {
+      if (isBlobUrl(asset.url)) URL.revokeObjectURL(asset.url);
+    });
     const bufferedAssets = Object.fromEntries(bufferedAssetEntriesToFetch);
     const blobUrlsToRevoke = bufferedAssetEntriesToFetch
       .map(([, asset]) => asset?.url)

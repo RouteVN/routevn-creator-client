@@ -8,7 +8,15 @@ import {
   detectFileType,
 } from "../../clients/web/fileProcessors.js";
 import { processWithConcurrency } from "../../../internal/processWithConcurrency.js";
-import { getFileType as getFontFileType } from "../../../internal/fileTypes.js";
+import {
+  getFileType as getFontFileType,
+  normalizeFontFileType,
+} from "../../../internal/fileTypes.js";
+import { verifyFileIntegrity } from "../../../internal/fileIntegrity.js";
+import {
+  createFontAssetError,
+  isFontAssetError,
+} from "../../../internal/fontAssetError.js";
 import { loadFont } from "./fontLoader.js";
 import { computeSha256 } from "../../clients/sha256.js";
 
@@ -162,20 +170,61 @@ export const createProjectAssetService = ({
   };
 
   const getFileContent = async (fileId) => {
+    const fileMetadata = resolveFileMetadata?.(fileId);
     const payload = {
       fileId,
       getCurrentStore,
       getCurrentReference,
       getStoreByProject,
     };
-    if (
-      fileAdapter.requiresFileMetadata === true &&
-      typeof resolveFileMetadata === "function"
-    ) {
-      payload.fileMetadata = resolveFileMetadata(fileId);
+    if (fileAdapter.requiresFileMetadata === true) {
+      payload.fileMetadata = fileMetadata;
     }
+    let fontType = normalizeFontFileType({ fileType: fileMetadata?.mimeType });
+    let content;
+    try {
+      content = await fileAdapter.getFileContent(payload);
+      fontType = fontType || normalizeFontFileType({ fileType: content.type });
+      if (!fontType) return content;
 
-    return fileAdapter.getFileContent(payload);
+      // Check the exact bytes we hand to decoders. Fetching the original URL
+      // again afterwards would allow a changed file to bypass the check.
+      const controller = new AbortController();
+      const timeout = setTimeout(() => controller.abort(), 30000);
+      let bytes;
+      try {
+        const response = await fetch(content.url, {
+          signal: controller.signal,
+        });
+        if (!response.ok)
+          throw new Error(`Font read failed (${response.status}).`);
+        bytes = await response.arrayBuffer();
+      } finally {
+        clearTimeout(timeout);
+      }
+      try {
+        await verifyFileIntegrity(bytes, fileMetadata, computeSha256);
+      } catch (error) {
+        if (error.code === "file_integrity_mismatch") {
+          throw createFontAssetError(fileId, "font_integrity_mismatch", error);
+        }
+        throw error;
+      }
+      const url = URL.createObjectURL(new Blob([bytes], { type: fontType }));
+      return {
+        url,
+        type: fontType,
+        buffer: bytes,
+        revoke: () => URL.revokeObjectURL(url),
+      };
+    } catch (error) {
+      if (fontType && !isFontAssetError(error)) {
+        throw createFontAssetError(fileId, "font_file_unavailable", error);
+      }
+      throw error;
+    } finally {
+      if (fontType) content?.revoke?.();
+    }
   };
 
   const processFile = async (file, options = {}) => {
@@ -326,22 +375,25 @@ export const createProjectAssetService = ({
       const fontUrl = URL.createObjectURL(file);
 
       try {
-        await loadFont(fontName, fontUrl);
+        await loadFont(fontName, fontUrl, { cache: false });
       } catch (loadError) {
         URL.revokeObjectURL(fontUrl);
         throw new Error(`Invalid font file: ${loadError.message}`);
       }
 
-      const stored = await storeFileWithRecord({
-        file,
-      });
-      return {
-        ...stored,
-        fontName,
-        fontUrl,
-        type: "font",
-        fileRecords: [stored.fileRecord],
-      };
+      try {
+        const stored = await storeFileWithRecord({ file });
+        return {
+          ...stored,
+          fontName,
+          fontUrl,
+          type: "font",
+          fileRecords: [stored.fileRecord],
+        };
+      } catch (error) {
+        URL.revokeObjectURL(fontUrl);
+        throw error;
+      }
     }
 
     const stored = await storeRawFile({
@@ -384,7 +436,7 @@ export const createProjectAssetService = ({
         const fontName = file.name.replace(/\.(ttf|otf|woff2)$/i, "");
         const fontUrl = URL.createObjectURL(file);
         try {
-          await loadFont(fontName, fontUrl);
+          await loadFont(fontName, fontUrl, { cache: false });
         } finally {
           URL.revokeObjectURL(fontUrl);
         }
@@ -595,8 +647,9 @@ export const createProjectAssetService = ({
         );
       }
 
+      let content;
       try {
-        const content = await getFileContent(fileId);
+        content = await getFileContent(fileId);
         await loadFont(fontName, content.url, {
           weight: fontWeightDescriptor,
         });
@@ -604,6 +657,8 @@ export const createProjectAssetService = ({
       } catch (error) {
         console.error("Failed to load font file:", error);
         return { success: false, error: error.message };
+      } finally {
+        content?.revoke?.();
       }
     },
 

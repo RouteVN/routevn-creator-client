@@ -136,6 +136,73 @@ const createGraphicsService = () => {
 };
 
 describe("renderSceneEditorState", () => {
+  it("keeps the scene editable and reports a damaged font once without sending it to graphics", async () => {
+    const projectData = createProjectData();
+    projectData.resources.fonts["font-one"] = {
+      id: "font-one",
+      fileId: "font-file-one",
+      fileType: "font/ttf",
+      name: "Font One",
+    };
+    projectData.resources.colors["color-one"] = { hex: "#ffffff" };
+    projectData.resources.textStyles["style-one"] = {
+      fontId: ["font-one"],
+      fontSize: 24,
+      colorId: "color-one",
+    };
+    projectData.resources.layouts.adv.elements[0].textStyleId = "style-one";
+    const graphicsService = createGraphicsService();
+    graphicsService.loadAssets = vi.fn(async () => {});
+    const projectService = {
+      getFileContent: vi.fn(async () => {
+        throw Object.assign(new Error("checksum mismatch"), {
+          fileId: "font-file-one",
+          code: "font_integrity_mismatch",
+        });
+      }),
+    };
+    const store = {
+      selectIsScenePageLoading: () => false,
+      selectPreviewScene: () => ({ previewVisible: false }),
+      selectSceneId: () => "scene-1",
+      selectSelectedSectionId: () => "section-1",
+      selectSelectedLineId: () => "line-2",
+      selectProjectData: () => projectData,
+      selectTemporaryPresentationState: () => ({}),
+      selectIsBackgroundTransformEditorOpen: () => false,
+      selectScene: () => ({ sections: [{ id: "section-1" }] }),
+      selectIsMuted: () => true,
+      setPresentationState: vi.fn(),
+      setSectionLineChanges: vi.fn(),
+    };
+    const deps = {
+      store,
+      projectService,
+      graphicsService,
+      render: vi.fn(),
+      appService: { showAlert: vi.fn() },
+      refs: {
+        previewCanvasHost: { getCanvasRoot: () => ({ isConnected: true }) },
+      },
+    };
+    const original = structuredClone(projectData);
+    await renderSceneEditorCanvas(deps, {
+      skipRender: true,
+      skipAnimations: true,
+    });
+    await renderSceneEditorCanvas(deps, {
+      skipRender: true,
+      skipAnimations: true,
+    });
+    expect(projectService.getFileContent).toHaveBeenCalledOnce();
+    expect(graphicsService.loadAssets).not.toHaveBeenCalled();
+    expect(deps.appService.showAlert).toHaveBeenCalledOnce();
+    expect(deps.appService.showAlert.mock.calls[0][0].message).toContain(
+      '"Font One"',
+    );
+    expect(projectData).toEqual(original);
+  });
+
   it("resolves the configured target-section entry and ignores stale line payload", () => {
     const scene = {
       initialSectionId: "section-2",

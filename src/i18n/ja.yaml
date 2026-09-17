@@ -514,6 +514,9 @@ webServerPage:
   urlLabel: "URL"
   warningTitle: "警告"
 resourcePages:
+  damagedFontMessage: "フォント「{fontName}」のファイルが変更されているか、破損しています。「フォント」を開き、新しいコピーでファイルを置き換えてください。"
+  unavailableFontMessage: "フォント「{fontName}」を読み込めませんでした。「フォント」を開き、有効なファイルで置き換えてください。"
+  damagedFontImportMessage: "フォント「{fontName}」が破損しているか、読み込めません。新しい TTF、OTF、または WOFF2 ファイルを選択してください。"
   selectorEmptyMessage: "選択できるアイテムがありません。"
   selectorNoResultsMessage: "検索条件に一致するアイテムがありません。"
   zoomLabel: "ズーム"
