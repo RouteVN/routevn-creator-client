@@ -4,6 +4,7 @@ export const createAndroidBackupClient = ({ isActive, subscribeActive }) => ({
   status: () => callAndroidBridge("getBackupStatus"),
   configure: (payload) => callAndroidBridge("configureBackup", payload),
   skip: () => callAndroidBridge("skipBackupSetup"),
+  disable: () => callAndroidBridge("disableBackup"),
   pendingProjects: () => callAndroidBridge("getPendingBackupProjects"),
   beginPass: (manual) => callAndroidBridge("beginBackupPass", { manual }),
   isActive,

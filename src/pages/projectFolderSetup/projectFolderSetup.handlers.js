@@ -107,6 +107,32 @@ export const handleCloseSkip = ({ store, render }) => {
   render();
 };
 
+export const handleStop = ({ store, render }) => {
+  if (store.selectIsBusy()) return;
+  store.setStopDialogOpen({ open: true });
+  render();
+};
+
+export const handleCloseStop = ({ store, render }) => {
+  store.setStopDialogOpen({ open: false });
+  render();
+};
+
+export const handleConfirmStop = async (deps) => {
+  const { appService, store, render } = deps;
+  if (store.selectIsBusy()) return;
+  store.setStopDialogOpen({ open: false });
+  store.setBusy({ isBusy: true });
+  render();
+  try {
+    await appService.disableBackup();
+    store.setSavedFolder({ folder: undefined });
+    appService.navigate("/projects", undefined, { historyMode: "replace" });
+  } catch (error) {
+    showSetupError(deps, error, "stopError");
+  }
+};
+
 export const handleConfirmSkip = async (deps) => {
   const { appService, store, render } = deps;
   if (store.selectIsBusy()) return;

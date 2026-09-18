@@ -19,6 +19,7 @@ const fixture = () => {
     getProjectFolderSetup: () => ({ isBackup: true, configured: false }),
     showDialog: vi.fn(async () => false),
     skipBackupSetup: vi.fn(async () => {}),
+    disableBackup: vi.fn(async () => {}),
     navigate: vi.fn(),
     showToast: vi.fn(),
     pickProjectFolderSetup: vi.fn(async () => undefined),
@@ -31,6 +32,40 @@ const fixture = () => {
   return deps;
 };
 describe("Android backup setup", () => {
+  it("requires confirmation to stop backups and preserves setup on cancellation or failure", async () => {
+    const deps = fixture();
+    const folder = { uri: "content://test", displayPath: "/Backups" };
+    deps.store.setSavedFolder({ folder });
+    handlers.handleStop(deps);
+    expect(deps.state.stopDialogOpen).toBe(true);
+    expect(deps.store.selectCopy().stopWarning).toContain("ALL PROJECTS");
+    expect(deps.store.selectCopy().stopWarning).toContain(
+      "Existing backups will remain",
+    );
+    handlers.handleCloseStop(deps);
+    expect(deps.appService.disableBackup).not.toHaveBeenCalled();
+    expect(deps.state.savedFolder).toEqual(folder);
+    deps.appService.disableBackup.mockRejectedValueOnce(new Error("failed"));
+    handlers.handleStop(deps);
+    await handlers.handleConfirmStop(deps);
+    expect(deps.state.savedFolder).toEqual(folder);
+    expect(deps.appService.navigate).not.toHaveBeenCalled();
+    expect(deps.appService.showToast).toHaveBeenCalledWith(
+      expect.objectContaining({
+        status: "error",
+        message: i18n.androidBackupSetup.stopError,
+      }),
+    );
+    handlers.handleStop(deps);
+    await handlers.handleConfirmStop(deps);
+    expect(deps.state.savedFolder).toBeUndefined();
+    expect(deps.appService.navigate).toHaveBeenCalledWith(
+      "/projects",
+      undefined,
+      { historyMode: "replace" },
+    );
+  });
+
   it("keeps Projects errors summarized and Config details scoped to the selected project", () => {
     const status = {
       configured: true,

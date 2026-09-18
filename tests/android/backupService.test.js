@@ -27,8 +27,13 @@ const fixture = async ({ lastAttemptAt = 1000000 } = {}) => {
         projectIds: status.projects.filter((p) => p.pending).map((p) => p.id),
       };
     }),
-    configure: vi.fn(async () => (status = { ...status, lastAttemptAt: 0 })),
+    configure: vi.fn(
+      async () => (status = { ...status, configured: true, lastAttemptAt: 0 }),
+    ),
     skip: vi.fn(async () => (status = { ...status, skipped: true })),
+    disable: vi.fn(
+      async () => (status = { configured: false, skipped: true, projects: [] }),
+    ),
     isActive: () => active,
     subscribeActive: (fn) => {
       listener = fn;
@@ -73,6 +78,62 @@ const fixture = async ({ lastAttemptAt = 1000000 } = {}) => {
 };
 
 describe("Android disaster backup scheduling", () => {
+  it("stays disabled across timers and resumes until explicitly configured again", async () => {
+    const f = await fixture();
+    await f.service.disable();
+    expect(f.service.getStatus().configured).toBe(false);
+    expect(vi.getTimerCount()).toBe(0);
+    f.active(false);
+    f.active(true);
+    await f.advance(BACKUP_INTERVAL_MS * 3);
+    await f.service.run(true);
+    expect(f.client.beginPass).not.toHaveBeenCalled();
+    await f.service.configure({ uri: "content://test" });
+    await f.service.run();
+    expect(f.client.beginPass).toHaveBeenCalledOnce();
+    f.stop();
+  });
+
+  it("finishes the current publication before disabling and skips remaining projects", async () => {
+    const f = await fixture({ lastAttemptAt: 1 });
+    f.projects([
+      { id: "one", pending: true },
+      { id: "two", pending: true },
+    ]);
+    let release;
+    f.backupProject.mockImplementation(
+      () =>
+        new Promise((resolve) => {
+          release = resolve;
+        }),
+    );
+    await f.advance(BACKUP_RESUME_DELAY_MS);
+    const stopping = f.service.disable();
+    expect(f.service.disable()).toBe(stopping);
+    expect(f.client.disable).not.toHaveBeenCalled();
+    f.active(false);
+    f.active(true);
+    await f.service.run(true);
+    release();
+    await stopping;
+    expect(f.backupProject.mock.calls).toEqual([["one"]]);
+    expect(f.client.disable).toHaveBeenCalledOnce();
+    expect(vi.getTimerCount()).toBe(0);
+    f.stop();
+  });
+
+  it("keeps the configuration and scheduled backups when disabling fails", async () => {
+    const f = await fixture();
+    f.client.disable.mockRejectedValue(new Error("preferences unavailable"));
+    await expect(f.service.disable()).rejects.toThrow(
+      "preferences unavailable",
+    );
+    expect(f.service.getStatus().configured).toBe(true);
+    await f.advance();
+    expect(f.client.beginPass).toHaveBeenCalledOnce();
+    f.stop();
+  });
+
   it("lets an overdue app open before starting asynchronous backup work", async () => {
     const f = await fixture({ lastAttemptAt: 1 });
     f.projects([{ id: "one", pending: true }]);

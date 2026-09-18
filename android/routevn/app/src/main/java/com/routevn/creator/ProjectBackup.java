@@ -199,6 +199,22 @@ final class ProjectBackup {
         return status();
     }
 
+    JSONObject disable() throws Exception {
+        if (prepared != null || !PUBLICATION_LOCK.tryAcquire()) throw new Failure("busy");
+        try {
+            SharedPreferences.Editor editor = prefs.edit()
+                .remove("uri").remove("directory").remove("name").remove("lastAttemptAt")
+                .putBoolean("skipped", true);
+            for (String key : prefs.getAll().keySet()) {
+                if (key.startsWith("success:") || key.startsWith("folder:") || key.startsWith("error:")) editor.remove(key);
+            }
+            // Forget the destination, never delete its files. Keep asset revisions
+            // and URI grants, which other import/export workflows may still use.
+            save(editor);
+            return status();
+        } finally { PUBLICATION_LOCK.release(); }
+    }
+
     JSONObject beginPass(boolean manual) throws Exception {
         long now = System.currentTimeMillis();
         long previous = prefs.getLong("lastAttemptAt", 0);

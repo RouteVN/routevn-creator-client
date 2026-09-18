@@ -2531,6 +2531,10 @@ androidBackupSetup:
   changeFolder: 更改备份文件夹
   continue: 继续
   pickerTitle: 选择备份文件夹
+  stop: 停止本地备份
+  stopTitle: 停止本地备份？
+  stopWarning: 新的更改将不再备份。如果卸载此应用或清除应用数据，应用内的所有项目都会丢失。现有备份会保留，但可能不包含最新更改。
+  stopError: 无法停止本地备份。请重试。
   skip: 暂时跳过
   skipTitle: 不备份，继续使用？
   skipWarning: 如果卸载此应用或清除应用数据，应用内的所有项目都会丢失。请设置备份文件夹来保护项目。

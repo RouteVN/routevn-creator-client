@@ -1,4 +1,16 @@
 refs:
+  stopBackupButton:
+    eventListeners:
+      click:
+        handler: handleStop
+  stopBackupDialog:
+    eventListeners:
+      close:
+        handler: handleCloseStop
+  confirmStopBackup:
+    eventListeners:
+      click:
+        handler: handleConfirmStop
   skipBackupDialog:
     eventListeners:
       close:
@@ -42,6 +54,14 @@ template:
                   - rtgl-button#continueFolderButton w=f ?disabled=${isBusy}: ${copy.continue}
               - $if isBackup && !hasSavedFolder:
                   - rtgl-button#skipBackupButton w=f v=tx ?disabled=${isBusy}: ${copy.skip}
+              - $if isBackup && hasSavedFolder:
+                  - rtgl-button#stopBackupButton w=f v=tx ?disabled=${isBusy}: ${copy.stop}
+  - $if isBackup:
+      - rtgl-dialog#stopBackupDialog ?open=${stopDialogOpen} s=sm:
+          - rtgl-view slot=content g=lg:
+              - rtgl-text s=lg: ${copy.stopTitle}
+              - rtgl-text c=mu-fg: ${copy.stopWarning}
+              - rtgl-button#confirmStopBackup v=de w=f ?disabled=${isBusy}: ${copy.stop}
   - rtgl-dialog#skipBackupDialog ?open=${skipDialogOpen} s=sm:
       - rtgl-view slot=content g=lg:
           - rtgl-text s=lg: ${copy.skipTitle}

@@ -183,6 +183,18 @@ strings in the owning components/stores/handlers.
 
 ## Schedule And Change Detection
 
+The configured **Backup folder is set** screen includes **Stop local backups**.
+Require a destructive confirmation explaining that new changes will not be
+backed up, uninstalling/clearing app data loses all in-app projects, and existing
+backups remain but may be outdated. Canceling keeps backup enabled.
+Stopping waits for the current project's publication, skips remaining projects,
+cancels scheduling, and durably forgets the destination and per-project backup
+status. Keep project data, asset revision counters, existing backup files, and
+shared URI grants intact. Mark setup skipped so restarting does not reopen
+onboarding; Projects and Config show **No backup set up** and offer setup again.
+A failed stop retains the configuration and reports an error. Only explicit
+folder setup re-enables backups.
+
 | Event                               | Behavior                                                                        |
 | ----------------------------------- | ------------------------------------------------------------------------------- |
 | Initial folder setup                | Immediately queue all existing projects once.                                   |

@@ -14,6 +14,7 @@ export const createBackupService = ({
 }) => {
   const state = new BehaviorSubject({ configured: false, projects: [] });
   let operation;
+  let disableOperation;
   let cleanup;
   let lastWarning;
   let timer;
@@ -35,7 +36,13 @@ export const createBackupService = ({
   };
   const scheduleNext = (minimumDelay = 0) => {
     cancelTimer();
-    if (!cleanup || operation || !state.value.configured || !client.isActive())
+    if (
+      !cleanup ||
+      operation ||
+      disableOperation ||
+      !state.value.configured ||
+      !client.isActive()
+    )
       return;
     timer = schedule(
       () => {
@@ -69,6 +76,7 @@ export const createBackupService = ({
     }
   };
   const run = (manual = false) => {
+    if (disableOperation) return Promise.resolve();
     if (operation) return operation;
     if (!state.value.configured || (!manual && !client.isActive()))
       return Promise.resolve();
@@ -84,16 +92,16 @@ export const createBackupService = ({
       try {
         const { due } = await client.beginPass(manual);
         if (!due) return;
-        if (!client.isActive()) return;
+        if (disableOperation || !client.isActive()) return;
         await beforeBackup();
-        if (!client.isActive()) return;
+        if (disableOperation || !client.isActive()) return;
         const { projectIds } = await client.pendingProjects();
         if (projectIds.length) {
           publish({ ...state.value, running: true });
           for (const projectId of projectIds) {
             // A suspended WebView resumes at the next checkpoint. Finish the current
             // native publication, but do not start another project in the background.
-            if (!client.isActive()) break;
+            if (disableOperation || !client.isActive()) break;
             try {
               await backupProject(projectId);
             } catch (error) {
@@ -110,7 +118,7 @@ export const createBackupService = ({
           status.error ??
           status.projects.find((project) => project.error)?.error;
         if (passError) publish({ ...status, error: passError });
-        warn(error);
+        if (!disableOperation) warn(error);
       }
     })().finally(() => {
       operation = undefined;
@@ -126,6 +134,7 @@ export const createBackupService = ({
     refresh,
     run,
     async configure(payload) {
+      if (disableOperation) await disableOperation;
       if (operation) await operation;
       const status = await client.configure(payload);
       if (status.needsExistingConfirmation) return status;
@@ -135,6 +144,23 @@ export const createBackupService = ({
     },
     async skip() {
       return publish(await client.skip());
+    },
+    disable() {
+      if (disableOperation) return disableOperation;
+      cancelTimer();
+      disableOperation = (async () => {
+        // Finish publication of the current project safely; skip the rest of
+        // the pass before forgetting its destination.
+        if (operation) await operation;
+        const status = await client.disable();
+        lastLocalAttemptAt = 0;
+        lastWarning = undefined;
+        return publish(status);
+      })().finally(() => {
+        disableOperation = undefined;
+        scheduleNext();
+      });
+      return disableOperation;
     },
     start(copyProvider) {
       if (cleanup) return cleanup;

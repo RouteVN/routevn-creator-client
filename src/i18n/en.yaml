@@ -2531,6 +2531,10 @@ androidBackupSetup:
   changeFolder: Change backup folder
   continue: Continue
   pickerTitle: Choose backup folder
+  stop: Stop local backups
+  stopTitle: Stop local backups?
+  stopWarning: New changes will no longer be backed up. If you uninstall this app or clear its data, ALL PROJECTS stored in the app will be lost. Existing backups will remain, but may not contain your latest changes.
+  stopError: Could not stop local backups. Try again.
   skip: Skip for now
   skipTitle: Continue without backups?
   skipWarning: If you uninstall this app or clear its data, ALL PROJECTS stored in the app will be lost. Set up a backup folder to protect them.

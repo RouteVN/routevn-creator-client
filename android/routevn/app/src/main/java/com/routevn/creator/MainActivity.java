@@ -1090,6 +1090,8 @@ public class MainActivity extends Activity {
                 return bridgeSuccess(projectBackup.configure(payload.getString("uri"), payload.optBoolean("acceptExisting")));
             case "skipBackupSetup":
                 return bridgeSuccess(projectBackup.skip());
+            case "disableBackup":
+                return bridgeSuccess(projectBackup.disable());
             case "beginBackupPass":
                 return bridgeSuccess(projectBackup.beginPass(payload.optBoolean("manual")));
             case "getPendingBackupProjects":

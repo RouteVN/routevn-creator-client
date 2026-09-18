@@ -4,6 +4,7 @@ export const createInitialState = () => ({
   deviceName: "iPhone",
   isBackup: false,
   skipDialogOpen: false,
+  stopDialogOpen: false,
   savedFolder: undefined,
   isReconnecting: false,
   isBusy: false,
@@ -72,4 +73,8 @@ export const selectViewData = ({ state, i18n }) => {
 
 export const setSkipDialogOpen = ({ state }, { open }) => {
   state.skipDialogOpen = open;
+};
+
+export const setStopDialogOpen = ({ state }, { open }) => {
+  state.stopDialogOpen = open;
 };

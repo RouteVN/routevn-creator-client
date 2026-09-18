@@ -45,6 +45,7 @@ public class BackupPublicationTest {
     File destination;
     BackupDocumentsProvider provider;
     ProjectBackup backup;
+    ProjectBackup.Storage storage;
     String revision = "1:0";
 
     @Before public void setUp() throws Exception {
@@ -89,18 +90,53 @@ public class BackupPublicationTest {
         context.getSharedPreferences("project-backup", 0).edit().clear().putString("uri", tree.toString()).commit();
         ShadowStatFs.registerStats(context.getFilesDir().getAbsolutePath(), 10000000, 9000000, 9000000);
         ShadowStatFs.registerStats(context.getNoBackupFilesDir().getAbsolutePath(), 10000000, 9000000, 9000000);
-        backup = new ProjectBackup(context, new ProjectBackup.Storage() {
+        storage = new ProjectBackup.Storage() {
             public JSONArray projects() throws Exception { return new JSONArray().put(new JSONObject().put("id", "one").put("name", "Project One")); }
             public File root(String id) { return source; }
             public String counter(String id) { return revision; }
             public void snapshot(String id, File target) throws Exception {
                 Files.copy(new File(source, "project.db").toPath(), new File(target, "project.db").toPath());
             }
-        });
+        };
+        backup = new ProjectBackup(context, storage);
     }
     @After public void tearDown() { backup.close(); }
     private File output(String name) { return new File(destination, "Project-one/" + name); }
     private void publish() throws Exception { backup.prepare("one"); backup.publish("one"); }
+    @Test public void disablingPersistsAndPreservesExistingBackupFiles() throws Exception {
+        publish();
+        String databaseHash = ProjectBackup.hash(output("project.db"));
+        String metadata = Files.readString(output("backup.json").toPath());
+        backup.markAssetChange("one");
+        JSONObject disabled = backup.disable();
+        assertFalse(disabled.getBoolean("configured"));
+        assertTrue(disabled.getBoolean("skipped"));
+        assertEquals("", disabled.getJSONArray("projects").getJSONObject(0).getString("snapshotAt"));
+        assertEquals("", disabled.getJSONArray("projects").getJSONObject(0).getString("backupFolderPath"));
+        assertEquals(1L, backup.assetRevision("one"));
+        backup.close();
+        backup = new ProjectBackup(context, storage);
+        assertFalse(backup.status().getBoolean("configured"));
+        assertFalse(backup.beginPass(false).getBoolean("due"));
+        assertFalse(backup.beginPass(true).getBoolean("due"));
+        assertEquals(databaseHash, ProjectBackup.hash(output("project.db")));
+        assertEquals(metadata, Files.readString(output("backup.json").toPath()));
+        assertArrayEquals(new byte[] {1,2,3}, Files.readAllBytes(output("files/asset").toPath()));
+        assertEquals("image/png", Files.readString(output("file-metadata/asset.mime").toPath()));
+        new File(destination, "Enabled Again").mkdirs();
+        assertTrue(backup.configure(selectFolder("/Enabled Again"), false).getBoolean("configured"));
+        assertTrue(backup.beginPass(false).getBoolean("due"));
+    }
+
+    @Test public void disablingCannotDiscardAnUnpublishedSnapshot() throws Exception {
+        backup.prepare("one");
+        try { backup.disable(); fail("disabled while prepared"); }
+        catch (ProjectBackup.Failure error) { assertEquals("busy", error.code); }
+        assertTrue(backup.status().getBoolean("configured"));
+        backup.publish("one");
+        assertFalse(backup.disable().getBoolean("configured"));
+        ProjectBackup.validateDatabase(output("project.db"), "one");
+    }
     private String selectFolder(String suffix) {
         Uri tree = DocumentsContract.buildTreeDocumentUri(BackupDocumentsProvider.AUTHORITY, "primary:Documents" + suffix);
         context.getContentResolver().takePersistableUriPermission(tree,

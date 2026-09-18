@@ -67,6 +67,9 @@ try {
           case "skipBackupSetup":
             value = save({ ...state(), skipped: true });
             break;
+          case "disableBackup":
+            value = save({ configured: false, skipped: true, projects: [] });
+            break;
           case "openFolderPicker":
             queueMicrotask(() =>
               window.__routeVNAndroidFolderPickerResult({
@@ -170,6 +173,29 @@ try {
     "Folder action must remain on screen",
   );
   assert.equal(await page.getByText("Project 50", { exact: true }).count(), 0);
+  await page.locator("#setupBackup").click();
+  await page.locator("#stopBackupButton").click();
+  await page.getByText("Stop local backups?", { exact: true }).waitFor();
+  await page.getByText(/Existing backups will remain/).waitFor();
+  await page.keyboard.press("Escape");
+  assert.ok(
+    !(await page.evaluate(() => window.backupTrial.calls)).includes(
+      "disableBackup",
+    ),
+  );
+  await page.locator("#stopBackupButton").click();
+  await page.locator("#confirmStopBackup").click();
+  await page.getByText("No backup set up", { exact: true }).waitFor();
+  await page.reload();
+  await page.getByText("No backup set up", { exact: true }).waitFor();
+  await page.locator("#setupBackup").click();
+  assert.equal(await page.locator("#stopBackupButton").count(), 0);
+  await page.evaluate(() => {
+    window.backupTrial.selection = "valid";
+  });
+  await page.locator("#setupFolderButton").click();
+  await page.getByText("Backup folder is set", { exact: true }).waitFor();
+  await page.locator("#continueFolderButton").click();
   // Settings normally sits inside a project route. Mount the actual page here
   // so this empty-library fixture does not need to invent an editable database.
   await page.evaluate(() => {

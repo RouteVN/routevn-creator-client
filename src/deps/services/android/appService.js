@@ -292,6 +292,7 @@ export const createAppService = (params) => {
       }),
     confirmProjectFolderSetup: backup.configure,
     skipBackupSetup: backup.skip,
+    disableBackup: backup.disable,
 
     showProgressDialog(options) {
       return globalUI.showProgressDialog(options);
