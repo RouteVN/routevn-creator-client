@@ -113,6 +113,7 @@ export function assertPreservedSourceRecords(
   { legacyCheckpointMetadata } = {},
 ) {
   assertEquivalent(before.drafts, after.drafts, `${context}: raw drafts`);
+  assertEquivalent(before.app, after.app, `${context}: raw app rows`);
   assertEquivalent(
     before.committed,
     after.committed,

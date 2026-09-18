@@ -83,6 +83,32 @@ describe("frozen compatibility harness negative controls", () => {
       rmSync(directory, { recursive: true });
     }
   });
+  it("detects corruption of persisted sync metadata in a real database", () => {
+    const directory = mkdtempSync(join(tmpdir(), "rvn-negative-app-"));
+    const path = join(directory, "project.db");
+    copyFileSync(`${root}/P01-draft/source/project.db`, path);
+    try {
+      const before = readSourceRecords(path);
+      const database = new DatabaseSync(path);
+      try {
+        const result = database
+          .prepare("UPDATE app_state SET value = ? WHERE key = ?")
+          .run("12345", "cursor_committed_id");
+        expect(result.changes).toBe(1);
+      } finally {
+        database.close();
+      }
+      const after = readSourceRecords(path);
+      expect(after.drafts).toEqual(before.drafts);
+      expect(after.committed).toEqual(before.committed);
+      expect(after.checkpoints).toEqual(before.checkpoints);
+      expect(() =>
+        assertPreservedSourceRecords(before, after, "sync cursor"),
+      ).toThrow(/raw app rows/);
+    } finally {
+      rmSync(directory, { recursive: true });
+    }
+  });
   it("detects the removal of a required recovery checkpoint", () => {
     const before = read(
       `${root}/P07-recovery-draft/expected/source-records.json`,

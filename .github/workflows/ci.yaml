@@ -27,6 +27,7 @@ jobs:
         with:
           name: project-compatibility
           path: .compatibility-artifacts
+          include-hidden-files: true
           if-no-files-found: error
           retention-days: 7
 
