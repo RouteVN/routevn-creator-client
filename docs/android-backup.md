@@ -46,6 +46,10 @@ later backups do not prompt again. When the selected location is the volume's
 top-level `Documents` folder, create/use `Documents/RouteVN Backups`. Use every
 other selected folder directly, including an existing `RouteVN Backups` folder.
 Persist the selected parent grant separately from the actual backup directory.
+When the user reconnects the same destination through a different tree grant,
+rebuild every saved project-folder URI using the new tree and its existing
+document ID. Preserve project mappings and successful snapshot counters; never
+keep using a revoked grant embedded in an old URI.
 Existing configurations keep their current destination until explicitly changed.
 On first-time setup, request Documents as the initial picker location using
 `DocumentsContract.EXTRA_INITIAL_URI` on Android 8+. The system picker may fall
@@ -353,6 +357,15 @@ not staged again. Include new media in both staging and destination capacity
 estimates. Deleting live assets after preparation does not invalidate the staged
 copy. Release staging on completion/failure and clean stale staging after restart.
 
+Activity destruction signals cancellation through a volatile flag without
+acquiring the preparation monitor. Copy and hash loops check cancellation at
+chunk boundaries. Queue staging, database, file-session, and unfinished-export
+cleanup behind existing storage work, then shut down the storage executor;
+never wait for preparation or filesystem cleanup on the main thread. An active
+publication owns its staging until its own cleanup releases the publication
+lock. A prepared snapshot whose publication never starts is released by queued
+storage cleanup.
+
 SQLite's [Online Backup API](https://sqlite.org/backup.html) is an alternative for
 consistent live snapshots. [VACUUM INTO](https://sqlite.org/lang_vacuum.html) also
 produces a snapshot, but cannot be assumed across the current Android minimum
@@ -565,6 +578,10 @@ simulated in this fixture; these tests do not establish real provider durability
 Regression coverage also verifies independent staged media after live-project
 deletion, staging only missing media, and reserving both media copies on shared
 internal/emulated storage.
+Native regressions also cover reconnecting after revoking the original tree
+grant, retaining checkpoint/document identities, cancellation while preparation
+holds its monitor, cancellation during hashing, and cleanup of an unpublished
+snapshot without stranding the publication lock.
 
 After `bun run build:android`, serve `_site` locally and run
 `ANDROID_TEST_ORIGIN=http://127.0.0.1:3017 node tests/android/backupSetup.browser.mjs`.

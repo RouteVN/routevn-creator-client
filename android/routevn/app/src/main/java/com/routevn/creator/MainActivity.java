@@ -794,10 +794,15 @@ public class MainActivity extends Activity {
 
         projectBackup.close();
         backupExecutor.shutdownNow();
-        closeSqliteDatabases();
-        closeProjectFileWriteSessions();
-        cleanupPendingSaveDocuments();
-        bridgeExecutor.shutdownNow();
+        // Cancellation is immediate; cleanup must wait behind storage work on
+        // its own thread, not hold Activity destruction on media copies/hashes.
+        bridgeExecutor.execute(() -> {
+            projectBackup.cleanupAfterClose();
+            closeSqliteDatabases();
+            closeProjectFileWriteSessions();
+            cleanupPendingSaveDocuments();
+        });
+        bridgeExecutor.shutdown();
 
         if (webView != null) {
             webView.destroy();

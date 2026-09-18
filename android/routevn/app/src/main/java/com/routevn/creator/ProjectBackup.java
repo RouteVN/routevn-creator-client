@@ -186,6 +186,16 @@ final class ProjectBackup {
                 for (String key : prefs.getAll().keySet()) {
                     if (key.startsWith("success:") || key.startsWith("folder:") || key.startsWith("error:")) editor.remove(key);
                 }
+            } else {
+                // The same folder may be selected through a different tree grant.
+                // Preserve project identities/checkpoints, but stop using the old
+                // grant embedded in every saved document URI.
+                for (String key : prefs.getAll().keySet()) {
+                    if (!key.startsWith("folder:")) continue;
+                    Uri mapped = Uri.parse(prefs.getString(key, ""));
+                    editor.putString(key, DocumentsContract.buildDocumentUriUsingTree(
+                        tree, DocumentsContract.getDocumentId(mapped)).toString());
+                }
             }
             save(editor.putString("uri", value).putString("directory", destination.toString())
                 .putString("name", name(destination))
@@ -283,11 +293,14 @@ final class ProjectBackup {
             if (!next.staging.mkdirs()) throw new Failure("failed");
             next.database = new File(next.staging, "project.db");
             storage.snapshot(projectId, next.staging);
+            checkActive();
             // Still on the storage executor: no project writes/deletes can run
             // between the database snapshot and these independent asset copies.
             stageAssets(missingAssets, next.staging);
+            checkActive();
             next.counter = storage.counter(projectId);
             next.snapshotAt = timestamp();
+            checkActive();
             prepared = next;
             return new JSONObject().put("projectId", projectId);
         } catch (Exception error) {
@@ -370,8 +383,13 @@ final class ProjectBackup {
         }
     }
 
-    synchronized void close() {
+    // Called on the main thread. Never wait for the prepare/publish monitor or I/O.
+    void close() {
         closed = true;
+    }
+
+    // Called by the storage worker after its queued operations have drained.
+    synchronized void cleanupAfterClose() {
         if (!publishing && prepared != null) {
             removeTree(prepared.staging);
             prepared = null;
@@ -603,7 +621,7 @@ final class ProjectBackup {
         }
     }
 
-    static String hash(File file) throws Exception {
+    String hash(File file) throws Exception {
         try (InputStream in = new FileInputStream(file)) { return hash(in); }
     }
 
@@ -614,11 +632,14 @@ final class ProjectBackup {
         }
     }
 
-    private static String hash(InputStream in) throws Exception {
+    private String hash(InputStream in) throws Exception {
         MessageDigest digest = MessageDigest.getInstance("SHA-256");
         byte[] buffer = new byte[128 * 1024];
         int count;
-        while ((count = in.read(buffer)) != -1) digest.update(buffer, 0, count);
+        while ((count = in.read(buffer)) != -1) {
+            checkActive();
+            digest.update(buffer, 0, count);
+        }
         StringBuilder value = new StringBuilder();
         for (byte b : digest.digest()) value.append(String.format(Locale.ROOT, "%02x", b & 255));
         return value.toString();
