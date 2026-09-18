@@ -10,6 +10,8 @@ or dependency version has changed in this slice.
   authored using independently installed schema-14/schema-15 clients. They are
   stored in a deterministic ZIP with a readable provenance/hash manifest; tests
   verify and extract it automatically. All 319 original files are byte-identical.
+  An additional 54 files freeze resolved-state/runtime observations and their
+  provenance without replacing any original history-only oracle.
 - Pinned previous-reader comparisons against the candidate through production
   repository loading, storage codecs, projections and model reducers.
 - Cold, warm and cache-cleared opens; exact original row bytes and storage types;
@@ -19,7 +21,11 @@ or dependency version has changed in this slice.
   10,000-edit history and an oversized historical bootstrap.
 - Logical preview/export comparisons in native-bridge and browser lanes.
   Graphics output and packaged-player delivery are separate checks.
-- Seven comparator negative controls and real-browser dump self-tests covering
+- Native resolved-state/runtime checks hydrate all scenes from the opened
+  repository, including checkpoint-only recovery. History replay is checked
+  separately. Each cold/warm/cache-cleared expectation comes from the pinned
+  previous reader, preserving its phase-specific results.
+- Fifteen comparator/recovery checks and real-browser dump self-tests covering
   typed binary data, Blob/File metadata, sparse arrays, compound keys, property
   order and advanced key generators.
 - A separate CI job, executable browser artifacts, machine-readable
@@ -42,15 +48,15 @@ branch was pushed and no package was published.
 
 ## Verification from this implementation run
 
-| Check                                                          | Result                                                                                                     |
-| -------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------- |
-| Combined compatibility command                                 | Passed: 162 SQLite open phases, 276 browser open phases, both browser dump checks, seven negative controls |
-| Client smoke, integration, convergence, collaboration adapters | Passed                                                                                                     |
-| Client Puty storage suite                                      | 5 passed                                                                                                   |
-| Client lint and new harness formatting                         | Passed                                                                                                     |
-| Model full suite                                               | 4,258 passed, including 3,462 archived cases and 8 adopted-project tests                                   |
-| Engine full suite                                              | 2,182 passed, including 20 literal-value tests                                                             |
-| Engine lint, disabled-test checks and package build            | Passed                                                                                                     |
+| Check                                                          | Result                                                                                                                                |
+| -------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------- |
+| Combined compatibility command                                 | Passed: 162 SQLite open phases, 276 browser open phases, both browser dump checks, 15 comparator/recovery checks and 6 archive checks |
+| Client smoke, integration, convergence, collaboration adapters | Passed                                                                                                                                |
+| Client Puty storage suite                                      | 5 passed                                                                                                                              |
+| Client lint and new harness formatting                         | Passed                                                                                                                                |
+| Model full suite                                               | 4,258 passed, including 3,462 archived cases and 8 adopted-project tests                                                              |
+| Engine full suite                                              | 2,182 passed, including 20 literal-value tests                                                                                        |
+| Engine lint, disabled-test checks and package build            | Passed                                                                                                                                |
 
 The archive packaging rerun used only the committed ZIP with a fresh extraction
 cache. All 319 extracted files matched their original hashes, and repacking
@@ -84,5 +90,5 @@ focused runs, immutable capture rules and report locations.
 
 The fixture gate deliberately reports `strictWritesTested: false`; these future
 checks are not represented by skipped or falsely passing tests. The known old
-SQLite acknowledgment failure and exact no-metadata checkpoint addition remain
+SQLite acknowledgment failure and exact recovery checkpoint metadata updates remain
 explicit baseline outcomes, rather than being silently repaired by the harness.

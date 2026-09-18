@@ -2,8 +2,8 @@
   "protocol": 1,
   "archive": {
     "file": "legacy-projects.zip",
-    "sha256": "1edd8bc4f9407ce26086e41e944ca8c83c4f0b6e0ab6a04b5f600041d16fdf08",
-    "bytes": 1709570
+    "sha256": "da15546077a7d9eb425ef56b9bccb07a82d38dfae2c07b0f041ba6dfd8fc4bf8",
+    "bytes": 2012396
   },
   "identities": {
     "0844141f67bca7e194409095ad6b7a0dd8914053": {
@@ -36,7 +36,8 @@
       "writer": "0844141f67bca7e194409095ad6b7a0dd8914053",
       "previousReader": "4d1fe31f96ff7a8f4eebf2b58679755a827a8851",
       "sqlite": true,
-      "browser": true
+      "browser": true,
+      "openedRepository": true
     },
     {
       "id": "P01-draft",
@@ -44,7 +45,8 @@
       "writer": "0844141f67bca7e194409095ad6b7a0dd8914053",
       "previousReader": "4d1fe31f96ff7a8f4eebf2b58679755a827a8851",
       "sqlite": true,
-      "browser": true
+      "browser": true,
+      "openedRepository": true
     },
     {
       "id": "P01-mixed",
@@ -52,7 +54,8 @@
       "writer": "0844141f67bca7e194409095ad6b7a0dd8914053",
       "previousReader": "4d1fe31f96ff7a8f4eebf2b58679755a827a8851",
       "sqlite": true,
-      "browser": true
+      "browser": true,
+      "openedRepository": true
     },
     {
       "id": "P02-draft",
@@ -60,7 +63,8 @@
       "writer": "0844141f67bca7e194409095ad6b7a0dd8914053",
       "previousReader": "4d1fe31f96ff7a8f4eebf2b58679755a827a8851",
       "sqlite": true,
-      "browser": true
+      "browser": true,
+      "openedRepository": true
     },
     {
       "id": "P02-media-draft",
@@ -68,7 +72,8 @@
       "writer": "0844141f67bca7e194409095ad6b7a0dd8914053",
       "previousReader": "4d1fe31f96ff7a8f4eebf2b58679755a827a8851",
       "sqlite": true,
-      "browser": true
+      "browser": true,
+      "openedRepository": true
     },
     {
       "id": "P02-media-mixed",
@@ -76,7 +81,8 @@
       "writer": "0844141f67bca7e194409095ad6b7a0dd8914053",
       "previousReader": "4d1fe31f96ff7a8f4eebf2b58679755a827a8851",
       "sqlite": true,
-      "browser": true
+      "browser": true,
+      "openedRepository": true
     },
     {
       "id": "P02-mixed",
@@ -84,7 +90,8 @@
       "writer": "0844141f67bca7e194409095ad6b7a0dd8914053",
       "previousReader": "4d1fe31f96ff7a8f4eebf2b58679755a827a8851",
       "sqlite": true,
-      "browser": true
+      "browser": true,
+      "openedRepository": true
     },
     {
       "id": "P03-draft",
@@ -92,7 +99,8 @@
       "writer": "0844141f67bca7e194409095ad6b7a0dd8914053",
       "previousReader": "4d1fe31f96ff7a8f4eebf2b58679755a827a8851",
       "sqlite": true,
-      "browser": true
+      "browser": true,
+      "openedRepository": true
     },
     {
       "id": "P03-mixed",
@@ -100,7 +108,8 @@
       "writer": "0844141f67bca7e194409095ad6b7a0dd8914053",
       "previousReader": "4d1fe31f96ff7a8f4eebf2b58679755a827a8851",
       "sqlite": true,
-      "browser": true
+      "browser": true,
+      "openedRepository": true
     },
     {
       "id": "P04-draft",
@@ -108,7 +117,8 @@
       "writer": "0844141f67bca7e194409095ad6b7a0dd8914053",
       "previousReader": "4d1fe31f96ff7a8f4eebf2b58679755a827a8851",
       "sqlite": true,
-      "browser": true
+      "browser": true,
+      "openedRepository": true
     },
     {
       "id": "P04-mixed",
@@ -116,7 +126,8 @@
       "writer": "0844141f67bca7e194409095ad6b7a0dd8914053",
       "previousReader": "4d1fe31f96ff7a8f4eebf2b58679755a827a8851",
       "sqlite": true,
-      "browser": true
+      "browser": true,
+      "openedRepository": true
     },
     {
       "id": "P05-draft",
@@ -124,7 +135,8 @@
       "writer": "0844141f67bca7e194409095ad6b7a0dd8914053",
       "previousReader": "4d1fe31f96ff7a8f4eebf2b58679755a827a8851",
       "sqlite": true,
-      "browser": true
+      "browser": true,
+      "openedRepository": true
     },
     {
       "id": "P05-mixed",
@@ -132,7 +144,8 @@
       "writer": "0844141f67bca7e194409095ad6b7a0dd8914053",
       "previousReader": "4d1fe31f96ff7a8f4eebf2b58679755a827a8851",
       "sqlite": true,
-      "browser": true
+      "browser": true,
+      "openedRepository": true
     },
     {
       "id": "P06-acknowledged-committed",
@@ -140,7 +153,8 @@
       "writer": "0844141f67bca7e194409095ad6b7a0dd8914053",
       "previousReader": "4d1fe31f96ff7a8f4eebf2b58679755a827a8851",
       "sqlite": true,
-      "browser": false
+      "browser": false,
+      "openedRepository": true
     },
     {
       "id": "P06-draft",
@@ -149,6 +163,7 @@
       "previousReader": "4d1fe31f96ff7a8f4eebf2b58679755a827a8851",
       "sqlite": true,
       "browser": true,
+      "openedRepository": true,
       "fault": "invalid-draft"
     },
     {
@@ -158,6 +173,7 @@
       "previousReader": "4d1fe31f96ff7a8f4eebf2b58679755a827a8851",
       "sqlite": true,
       "browser": true,
+      "openedRepository": true,
       "fault": "duplicate-committed-draft"
     },
     {
@@ -167,6 +183,7 @@
       "previousReader": "4d1fe31f96ff7a8f4eebf2b58679755a827a8851",
       "sqlite": true,
       "browser": true,
+      "openedRepository": true,
       "fault": "obsolete-line-edit"
     },
     {
@@ -176,6 +193,7 @@
       "previousReader": "4d1fe31f96ff7a8f4eebf2b58679755a827a8851",
       "sqlite": true,
       "browser": false,
+      "openedRepository": true,
       "fault": "recovery"
     },
     {
@@ -185,6 +203,7 @@
       "previousReader": "4d1fe31f96ff7a8f4eebf2b58679755a827a8851",
       "sqlite": true,
       "browser": false,
+      "openedRepository": true,
       "fault": "recovery-missing-scene"
     },
     {
@@ -194,6 +213,7 @@
       "previousReader": "4d1fe31f96ff7a8f4eebf2b58679755a827a8851",
       "sqlite": true,
       "browser": false,
+      "openedRepository": true,
       "fault": "recovery-no-meta"
     },
     {
@@ -203,6 +223,7 @@
       "previousReader": "4d1fe31f96ff7a8f4eebf2b58679755a827a8851",
       "sqlite": true,
       "browser": true,
+      "openedRepository": true,
       "fault": "real-version"
     },
     {
@@ -212,6 +233,7 @@
       "previousReader": "4d1fe31f96ff7a8f4eebf2b58679755a827a8851",
       "sqlite": true,
       "browser": true,
+      "openedRepository": true,
       "fault": "text-version"
     },
     {
@@ -220,7 +242,8 @@
       "writer": "4d1fe31f96ff7a8f4eebf2b58679755a827a8851",
       "previousReader": "4d1fe31f96ff7a8f4eebf2b58679755a827a8851",
       "sqlite": true,
-      "browser": true
+      "browser": true,
+      "openedRepository": true
     },
     {
       "id": "P09-draft",
@@ -228,7 +251,8 @@
       "writer": "4d1fe31f96ff7a8f4eebf2b58679755a827a8851",
       "previousReader": "4d1fe31f96ff7a8f4eebf2b58679755a827a8851",
       "sqlite": true,
-      "browser": true
+      "browser": true,
+      "openedRepository": true
     },
     {
       "id": "P09-mixed",
@@ -236,7 +260,8 @@
       "writer": "4d1fe31f96ff7a8f4eebf2b58679755a827a8851",
       "previousReader": "4d1fe31f96ff7a8f4eebf2b58679755a827a8851",
       "sqlite": true,
-      "browser": true
+      "browser": true,
+      "openedRepository": true
     },
     {
       "id": "P10-mixed",
@@ -244,7 +269,8 @@
       "writer": "0844141f67bca7e194409095ad6b7a0dd8914053",
       "previousReader": "4d1fe31f96ff7a8f4eebf2b58679755a827a8851",
       "sqlite": true,
-      "browser": true
+      "browser": true,
+      "openedRepository": true
     },
     {
       "id": "P10-oversized-draft",
@@ -252,7 +278,8 @@
       "writer": "0844141f67bca7e194409095ad6b7a0dd8914053",
       "previousReader": "4d1fe31f96ff7a8f4eebf2b58679755a827a8851",
       "sqlite": true,
-      "browser": true
+      "browser": true,
+      "openedRepository": true
     }
   ],
   "files": {
@@ -262,10 +289,12 @@
     "P01-committed/browser/previous-reader.json.gz": {"sha256":"473dee746555a84247a11c202da92d95fc1c9405c62c0413c9580d989fc4db3e","bytes":2664},
     "P01-committed/browser/source.json.gz": {"sha256":"82512e2a42acbc371eb6deac98002a724a4a9c8b3b0d0600642494428337918d","bytes":2939},
     "P01-committed/expected/asset-hashes.json": {"sha256":"ca3d163bab055381827226140568f3bef7eaac187cebd76878e0b63e9e442356","bytes":3},
+    "P01-committed/expected/opened-repository.json.gz": {"sha256":"1335c35533fdbdeaecc43a54279fad2f89d2338255d319134bb4873c90f68bbb","bytes":8586},
     "P01-committed/expected/previous-reader.json.gz": {"sha256":"e1dd6b4ce5de5d4ff1267658e3a91fc7ab99573e2c456ed1bfcbbefb99c983aa","bytes":2231},
     "P01-committed/expected/runtime.json": {"sha256":"bd3428416e9bf3db627b70922949a88dfb84dd4677a264e224f29651d046e4c3","bytes":29019},
     "P01-committed/expected/source-records.json": {"sha256":"be916576b918abfd0938c61078236b74a3eb2767500c8f98040bcebc8ee180e3","bytes":33672},
     "P01-committed/manifest.json": {"sha256":"379aca6c05c4dfb843460415d861c09bf3a038d10715b1aabbd4a4bac107f3b7","bytes":1918},
+    "P01-committed/opened-repository.manifest.json": {"sha256":"c468ce4ee0b128fc6b6a2fc6937bfe5308ef8e4af9abff599302ff0c7c24fb5e","bytes":667},
     "P01-committed/source/project.db": {"sha256":"69cdc9cd1461577124e95426c4875791587a4e1ad56e3b82e4cd4d7c90a55158","bytes":40960},
     "P01-committed/source/project.db-shm": {"sha256":"fd4c9fda9cd3f9ae7c962b0ddf37232294d55580e1aa165aa06129b8549389eb","bytes":32768},
     "P01-committed/source/project.db-wal": {"sha256":"e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855","bytes":0},
@@ -274,10 +303,12 @@
     "P01-draft/browser/previous-reader.json.gz": {"sha256":"473dee746555a84247a11c202da92d95fc1c9405c62c0413c9580d989fc4db3e","bytes":2664},
     "P01-draft/browser/source.json.gz": {"sha256":"bd56ffe0028c707d1ac78c18d6acd30daaeff705fd20f1f3163851529fb37aeb","bytes":2789},
     "P01-draft/expected/asset-hashes.json": {"sha256":"ca3d163bab055381827226140568f3bef7eaac187cebd76878e0b63e9e442356","bytes":3},
+    "P01-draft/expected/opened-repository.json.gz": {"sha256":"1335c35533fdbdeaecc43a54279fad2f89d2338255d319134bb4873c90f68bbb","bytes":8586},
     "P01-draft/expected/previous-reader.json.gz": {"sha256":"e1dd6b4ce5de5d4ff1267658e3a91fc7ab99573e2c456ed1bfcbbefb99c983aa","bytes":2231},
     "P01-draft/expected/runtime.json": {"sha256":"bd3428416e9bf3db627b70922949a88dfb84dd4677a264e224f29651d046e4c3","bytes":29019},
     "P01-draft/expected/source-records.json": {"sha256":"5e2f72b8be3c6c70adbb124c6c377910d9cbccddfb2c3e0a4200f1dca48ee2c3","bytes":26491},
     "P01-draft/manifest.json": {"sha256":"1422f5818baf8b40c0370a3613619996b72ebdbcebe339d8b9c1d13bdced3386","bytes":1914},
+    "P01-draft/opened-repository.manifest.json": {"sha256":"e07dda27d69cd1010fb6333ed177a41858a6ab396588eca3b9a28bca18cdaf68","bytes":667},
     "P01-draft/source/project.db": {"sha256":"08ad5106344e83463f3b3afc07e71844101271fb3b6d5b8e75b5df13c6ab4c4a","bytes":40960},
     "P01-draft/source/project.db-shm": {"sha256":"fd4c9fda9cd3f9ae7c962b0ddf37232294d55580e1aa165aa06129b8549389eb","bytes":32768},
     "P01-draft/source/project.db-wal": {"sha256":"e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855","bytes":0},
@@ -286,10 +317,12 @@
     "P01-mixed/browser/previous-reader.json.gz": {"sha256":"473dee746555a84247a11c202da92d95fc1c9405c62c0413c9580d989fc4db3e","bytes":2664},
     "P01-mixed/browser/source.json.gz": {"sha256":"593350d03f20d52736d7207302ab0bde6f32671cb986c00b4d03a30abaecc777","bytes":2932},
     "P01-mixed/expected/asset-hashes.json": {"sha256":"ca3d163bab055381827226140568f3bef7eaac187cebd76878e0b63e9e442356","bytes":3},
+    "P01-mixed/expected/opened-repository.json.gz": {"sha256":"1335c35533fdbdeaecc43a54279fad2f89d2338255d319134bb4873c90f68bbb","bytes":8586},
     "P01-mixed/expected/previous-reader.json.gz": {"sha256":"e1dd6b4ce5de5d4ff1267658e3a91fc7ab99573e2c456ed1bfcbbefb99c983aa","bytes":2231},
     "P01-mixed/expected/runtime.json": {"sha256":"bd3428416e9bf3db627b70922949a88dfb84dd4677a264e224f29651d046e4c3","bytes":29019},
     "P01-mixed/expected/source-records.json": {"sha256":"7f854ffb000e007ea7d7c648d42791858270d83fc164f8bc2e323566e7e3c60b","bytes":30082},
     "P01-mixed/manifest.json": {"sha256":"e1f1eff1069862669116b54d7c07ae12bb3b1097fc4c53fdf218483489fa86f0","bytes":1914},
+    "P01-mixed/opened-repository.manifest.json": {"sha256":"dd3d4cc604f4deceda43a99bc720ce4fa120b660955f2eafeef4b6f7a8f62ba5","bytes":667},
     "P01-mixed/source/project.db": {"sha256":"7e01e9fe6d5fbafabec50ae038890cf3e61c3ce9e3dccc9d1117ecb7768eaf74","bytes":40960},
     "P01-mixed/source/project.db-shm": {"sha256":"fd4c9fda9cd3f9ae7c962b0ddf37232294d55580e1aa165aa06129b8549389eb","bytes":32768},
     "P01-mixed/source/project.db-wal": {"sha256":"e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855","bytes":0},
@@ -298,10 +331,12 @@
     "P02-draft/browser/previous-reader.json.gz": {"sha256":"d53233b69974c1293615310f05cfe48afa6a9bce1901b921f7cb3b64f48e3fa4","bytes":10253},
     "P02-draft/browser/source.json.gz": {"sha256":"64dfc5f9464d7e0f49f8cb84848f05723b8284f401e59b1c66f5fa0e6b5f3044","bytes":11860},
     "P02-draft/expected/asset-hashes.json": {"sha256":"ca3d163bab055381827226140568f3bef7eaac187cebd76878e0b63e9e442356","bytes":3},
+    "P02-draft/expected/opened-repository.json.gz": {"sha256":"4fd037f686d89dbbaad572fa92a0599442d3af63a01b80f9e4edf61c6c2ee2de","bytes":46218},
     "P02-draft/expected/previous-reader.json.gz": {"sha256":"248bc82b06947de48c8ae4c58faec45f99e683958ee3ef3c91e12e5f174523d3","bytes":8660},
     "P02-draft/expected/runtime.json.gz": {"sha256":"9e06068aff7f18447400e0d98c1297c017d9f493f9d434db7901522f4dcedce3","bytes":5515},
     "P02-draft/expected/source-records.json": {"sha256":"1d2fc76e84dc559cafc4219c8a84d33926b2f9d60ecc2ee16d1428ae521ff865","bytes":25439},
     "P02-draft/manifest.json": {"sha256":"4d89a47991f1e980af41acc285aa09674eb7bc724093cd98f2cb6dbcf8f7e1bd","bytes":2017},
+    "P02-draft/opened-repository.manifest.json": {"sha256":"dbc18c1dc45a1f0799cf92755b2cb9efa3675e30e8845a29b34e20b5f01b3dbc","bytes":667},
     "P02-draft/source/project.db": {"sha256":"23a28eb0c0b29fc935e8913eaef9d117d946a0c107778cfba372007b62d8af22","bytes":53248},
     "P02-draft/source/project.db-shm": {"sha256":"fd4c9fda9cd3f9ae7c962b0ddf37232294d55580e1aa165aa06129b8549389eb","bytes":32768},
     "P02-draft/source/project.db-wal": {"sha256":"e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855","bytes":0},
@@ -310,10 +345,12 @@
     "P02-media-draft/browser/previous-reader.json.gz": {"sha256":"12cc683b99b2fde029b054177c24bebe8a54f2385bd41ffbf8864ac01ebf8aed","bytes":3238},
     "P02-media-draft/browser/source.json.gz": {"sha256":"4e6f081232bf55aa545a164abeaf825a55ad8a3dfd4ebb1168cdf34be6e1ecaa","bytes":155870},
     "P02-media-draft/expected/asset-hashes.json": {"sha256":"c23c8dba3d62220e81f453613ba712dc3d2c84592a35733c1d0d70eed6b77e0a","bytes":260},
+    "P02-media-draft/expected/opened-repository.json.gz": {"sha256":"3b60b20b84372592e805763569381032bfee5db203342dd1d7c94918bb8018df","bytes":11540},
     "P02-media-draft/expected/previous-reader.json.gz": {"sha256":"2cf96a064a7fb06705f6fd3de1a117073ce17b1a41f0fd60ada741866921e5bc","bytes":2715},
     "P02-media-draft/expected/runtime.json": {"sha256":"dfcc32f1699221cb0b34240ab58c0936406bc5d0736cc58aaaee3989a2cfecd4","bytes":33668},
     "P02-media-draft/expected/source-records.json": {"sha256":"d8b9630de40c7e5ef22d15c2372ea80d7843b636ce06c66f98fbc9ae204047a6","bytes":40553},
     "P02-media-draft/manifest.json": {"sha256":"6ee5303359458ca194e5e8f0fa5b217ce7c96c60a4d88e56832ad5ecf3a47f3c","bytes":2324},
+    "P02-media-draft/opened-repository.manifest.json": {"sha256":"e834bee90796012cf49694739960afc4f4c6cc802b4883291b486e6fdaf5698b","bytes":667},
     "P02-media-draft/source/files/file-one": {"sha256":"9625b9b77f41e608d449e3373acd4c5f5d53834e97f2ab90a2db81ddac6fe8e7","bytes":89},
     "P02-media-draft/source/files/font-file-one": {"sha256":"5c32c4836d28e1d7fc9f5bde13356688f31673103f94d6239a8042323e9f025c","bytes":150068},
     "P02-media-draft/source/files/sound-file-one": {"sha256":"26131825c935435301fb05d3549d815bc93b1e717d6228d890ee9578dd00025e","bytes":844},
@@ -325,10 +362,12 @@
     "P02-media-mixed/browser/previous-reader.json.gz": {"sha256":"12cc683b99b2fde029b054177c24bebe8a54f2385bd41ffbf8864ac01ebf8aed","bytes":3238},
     "P02-media-mixed/browser/source.json.gz": {"sha256":"8c17f4564ad727b43bb8329d75fa10eba3dc7e94d02e6f5e726773767a28ada8","bytes":156039},
     "P02-media-mixed/expected/asset-hashes.json": {"sha256":"c23c8dba3d62220e81f453613ba712dc3d2c84592a35733c1d0d70eed6b77e0a","bytes":260},
+    "P02-media-mixed/expected/opened-repository.json.gz": {"sha256":"3b60b20b84372592e805763569381032bfee5db203342dd1d7c94918bb8018df","bytes":11540},
     "P02-media-mixed/expected/previous-reader.json.gz": {"sha256":"2cf96a064a7fb06705f6fd3de1a117073ce17b1a41f0fd60ada741866921e5bc","bytes":2715},
     "P02-media-mixed/expected/runtime.json": {"sha256":"dfcc32f1699221cb0b34240ab58c0936406bc5d0736cc58aaaee3989a2cfecd4","bytes":33668},
     "P02-media-mixed/expected/source-records.json": {"sha256":"81fed173ac9ca3caee81061fdf831080513874fa5e79edafead9e7cf60f95d5a","bytes":46292},
     "P02-media-mixed/manifest.json": {"sha256":"b98b7bc5ad534eba39cef64b7a6c80710231a0d2e72610ecb59ac3d656670649","bytes":2324},
+    "P02-media-mixed/opened-repository.manifest.json": {"sha256":"5fe74fc52cfa0c097fcdd503eeffa2081b02a94b5c561390cce2082af09a9bbb","bytes":667},
     "P02-media-mixed/source/files/file-one": {"sha256":"9625b9b77f41e608d449e3373acd4c5f5d53834e97f2ab90a2db81ddac6fe8e7","bytes":89},
     "P02-media-mixed/source/files/font-file-one": {"sha256":"5c32c4836d28e1d7fc9f5bde13356688f31673103f94d6239a8042323e9f025c","bytes":150068},
     "P02-media-mixed/source/files/sound-file-one": {"sha256":"26131825c935435301fb05d3549d815bc93b1e717d6228d890ee9578dd00025e","bytes":844},
@@ -340,10 +379,12 @@
     "P02-mixed/browser/previous-reader.json.gz": {"sha256":"d53233b69974c1293615310f05cfe48afa6a9bce1901b921f7cb3b64f48e3fa4","bytes":10253},
     "P02-mixed/browser/source.json.gz": {"sha256":"e41a4da136ae6cba602382a763ee14dc829173d27d29cb7f4dd33c3660cbd2b2","bytes":11923},
     "P02-mixed/expected/asset-hashes.json": {"sha256":"ca3d163bab055381827226140568f3bef7eaac187cebd76878e0b63e9e442356","bytes":3},
+    "P02-mixed/expected/opened-repository.json.gz": {"sha256":"4fd037f686d89dbbaad572fa92a0599442d3af63a01b80f9e4edf61c6c2ee2de","bytes":46218},
     "P02-mixed/expected/previous-reader.json.gz": {"sha256":"248bc82b06947de48c8ae4c58faec45f99e683958ee3ef3c91e12e5f174523d3","bytes":8660},
     "P02-mixed/expected/runtime.json.gz": {"sha256":"9e06068aff7f18447400e0d98c1297c017d9f493f9d434db7901522f4dcedce3","bytes":5515},
     "P02-mixed/expected/source-records.json": {"sha256":"9c6cf07744d9dbb922e45e664d4732c07c89cb711c73bf5d0aff530f6bb6a301","bytes":26159},
     "P02-mixed/manifest.json": {"sha256":"ef1d35e632d906967677e788026c4c0f7d8f5ee3fab0b2ca5dee35191f49b666","bytes":2017},
+    "P02-mixed/opened-repository.manifest.json": {"sha256":"17ba54d0631439499d58f0d38496680881f93b293d4949e7c28301cc728e0699","bytes":667},
     "P02-mixed/source/project.db": {"sha256":"60c3029d79b810237660cfd2280cba7dc0fca86ddb27402ee9729fc1bb1175da","bytes":53248},
     "P02-mixed/source/project.db-shm": {"sha256":"fd4c9fda9cd3f9ae7c962b0ddf37232294d55580e1aa165aa06129b8549389eb","bytes":32768},
     "P02-mixed/source/project.db-wal": {"sha256":"e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855","bytes":0},
@@ -352,10 +393,12 @@
     "P03-draft/browser/previous-reader.json.gz": {"sha256":"feef0ce497ee29d87dc8210ed60ad04a58903b3f37b887386b7fc05cd0d15a53","bytes":2431},
     "P03-draft/browser/source.json.gz": {"sha256":"8edd2fe85cfb56d311bc007a8a53c78acd9587332188cb52bd02b43b1d663701","bytes":2713},
     "P03-draft/expected/asset-hashes.json": {"sha256":"ca3d163bab055381827226140568f3bef7eaac187cebd76878e0b63e9e442356","bytes":3},
+    "P03-draft/expected/opened-repository.json.gz": {"sha256":"d231d6c8a777b744b84779bcb8898bcc20efb2299ebe4cdd9a76f7403e25ee2f","bytes":7729},
     "P03-draft/expected/previous-reader.json": {"sha256":"574b4fcb01257d6879a9d96a36106ed425b1a501f327e2e31b8afd825f3e3813","bytes":61883},
     "P03-draft/expected/runtime.json": {"sha256":"932022c2123316baf35783f9d9c54c4150a04b21876f89839e11ca56029de6e1","bytes":23873},
     "P03-draft/expected/source-records.json": {"sha256":"6b30885350b80ad6d46c4fd15c4411187e23222baa1c340e0025912543269ee2","bytes":24243},
     "P03-draft/manifest.json": {"sha256":"8a738980a6df067adbe152b017d3407dce25f51467d02b8f94e277894d4c7f62","bytes":1774},
+    "P03-draft/opened-repository.manifest.json": {"sha256":"bcf922fcf798d706b6e4f2a2434447bb9f0c38a7951281832687453dac4512c5","bytes":667},
     "P03-draft/source/project.db": {"sha256":"806ef4b53863765683922e551863e6f467ac0a8bb2fb0de04a452d14993c4552","bytes":40960},
     "P03-draft/source/project.db-shm": {"sha256":"fd4c9fda9cd3f9ae7c962b0ddf37232294d55580e1aa165aa06129b8549389eb","bytes":32768},
     "P03-draft/source/project.db-wal": {"sha256":"e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855","bytes":0},
@@ -364,10 +407,12 @@
     "P03-mixed/browser/previous-reader.json.gz": {"sha256":"feef0ce497ee29d87dc8210ed60ad04a58903b3f37b887386b7fc05cd0d15a53","bytes":2431},
     "P03-mixed/browser/source.json.gz": {"sha256":"ec2af266f9adfa6f8d16361274aaefbe4cbd92d9a007c8820fa1d4c437fea28e","bytes":2851},
     "P03-mixed/expected/asset-hashes.json": {"sha256":"ca3d163bab055381827226140568f3bef7eaac187cebd76878e0b63e9e442356","bytes":3},
+    "P03-mixed/expected/opened-repository.json.gz": {"sha256":"d231d6c8a777b744b84779bcb8898bcc20efb2299ebe4cdd9a76f7403e25ee2f","bytes":7729},
     "P03-mixed/expected/previous-reader.json": {"sha256":"574b4fcb01257d6879a9d96a36106ed425b1a501f327e2e31b8afd825f3e3813","bytes":61883},
     "P03-mixed/expected/runtime.json": {"sha256":"932022c2123316baf35783f9d9c54c4150a04b21876f89839e11ca56029de6e1","bytes":23873},
     "P03-mixed/expected/source-records.json": {"sha256":"892c03631ddca5cf48412ac7145b446997dc88168827420ad33c1cfbb777f189","bytes":27835},
     "P03-mixed/manifest.json": {"sha256":"39a29d9279d8b7732e67036702686c460568cbb58f1126cc9c1bff51628836ba","bytes":1774},
+    "P03-mixed/opened-repository.manifest.json": {"sha256":"c9513aa4d8ede5a568f35732a76f434319c2affa68e3cc05f330736dbd54eff4","bytes":667},
     "P03-mixed/source/project.db": {"sha256":"63e684e5f11e8b317af74396e88fecbce8258ba6e0ba426bcebcaf320891dd88","bytes":40960},
     "P03-mixed/source/project.db-shm": {"sha256":"fd4c9fda9cd3f9ae7c962b0ddf37232294d55580e1aa165aa06129b8549389eb","bytes":32768},
     "P03-mixed/source/project.db-wal": {"sha256":"e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855","bytes":0},
@@ -376,10 +421,12 @@
     "P04-draft/browser/previous-reader.json.gz": {"sha256":"616f945aff612fd81cd04312a1444ebc10a0d7495f57162fac9d08b108dfef92","bytes":2532},
     "P04-draft/browser/source.json.gz": {"sha256":"b874d48c417cc21aabec8711fb296abc75307e9c9ca787ee0cd0dfa2aebaf375","bytes":3382},
     "P04-draft/expected/asset-hashes.json": {"sha256":"ca3d163bab055381827226140568f3bef7eaac187cebd76878e0b63e9e442356","bytes":3},
+    "P04-draft/expected/opened-repository.json.gz": {"sha256":"bb85eac7683cba2f2e8f23aca6a07a95bea0cc8e2e10dab6d6cc2180ba185e69","bytes":8036},
     "P04-draft/expected/previous-reader.json.gz": {"sha256":"5b8a8268edc6d85fe81517ee01fea985d13c8d91d7157ba72469efb849bb6ad9","bytes":2068},
     "P04-draft/expected/runtime.json": {"sha256":"a5829e37d6efdbe37c0c3a23e223577efc4c83c7e5908f0fc7506d4a317fb1de","bytes":23280},
     "P04-draft/expected/source-records.json": {"sha256":"470d465987977111d076af3a0b7c54875d6c1fa8b2bde4c5aa0ffe84097fc619","bytes":40039},
     "P04-draft/manifest.json": {"sha256":"7226ab2358c19d21f629af47503d8aaffb3e0267e408a99f08b7f87297b03284","bytes":1914},
+    "P04-draft/opened-repository.manifest.json": {"sha256":"d418fcf31195e8de329c7b3d52c9a42b19f9e69b481837ee7e03e35eadc9b322","bytes":667},
     "P04-draft/source/project.db": {"sha256":"326f70933239fe74ef8e588413c8b8c1c787df4a4253dd9e3372baac875a574c","bytes":40960},
     "P04-draft/source/project.db-shm": {"sha256":"fd4c9fda9cd3f9ae7c962b0ddf37232294d55580e1aa165aa06129b8549389eb","bytes":32768},
     "P04-draft/source/project.db-wal": {"sha256":"e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855","bytes":0},
@@ -388,10 +435,12 @@
     "P04-mixed/browser/previous-reader.json.gz": {"sha256":"616f945aff612fd81cd04312a1444ebc10a0d7495f57162fac9d08b108dfef92","bytes":2532},
     "P04-mixed/browser/source.json.gz": {"sha256":"d00126424ef769777fd750ffff057c52a6c3d9b0bc07c23dc442fd817d082edc","bytes":3534},
     "P04-mixed/expected/asset-hashes.json": {"sha256":"ca3d163bab055381827226140568f3bef7eaac187cebd76878e0b63e9e442356","bytes":3},
+    "P04-mixed/expected/opened-repository.json.gz": {"sha256":"bb85eac7683cba2f2e8f23aca6a07a95bea0cc8e2e10dab6d6cc2180ba185e69","bytes":8036},
     "P04-mixed/expected/previous-reader.json.gz": {"sha256":"5b8a8268edc6d85fe81517ee01fea985d13c8d91d7157ba72469efb849bb6ad9","bytes":2068},
     "P04-mixed/expected/runtime.json": {"sha256":"a5829e37d6efdbe37c0c3a23e223577efc4c83c7e5908f0fc7506d4a317fb1de","bytes":23280},
     "P04-mixed/expected/source-records.json": {"sha256":"e7b7367ad7bb4e7e86f7a8f596033219ef085d837beeb09db53fdc89859315ea","bytes":45778},
     "P04-mixed/manifest.json": {"sha256":"cc4ba97858ed919378bc46cb58d275055ee0d56799f2be30ad051698c2d87e4d","bytes":1914},
+    "P04-mixed/opened-repository.manifest.json": {"sha256":"508e377f435b2bf166df4c9fe59a606ce03cd945cc9801373e3991a599d56317","bytes":667},
     "P04-mixed/source/project.db": {"sha256":"04feacf93df2058a93650c916a04ea601239c4c0ea85ce028fca25a5dbb97dda","bytes":40960},
     "P04-mixed/source/project.db-shm": {"sha256":"fd4c9fda9cd3f9ae7c962b0ddf37232294d55580e1aa165aa06129b8549389eb","bytes":32768},
     "P04-mixed/source/project.db-wal": {"sha256":"e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855","bytes":0},
@@ -400,10 +449,12 @@
     "P05-draft/browser/previous-reader.json.gz": {"sha256":"03ab40d7f618aa670868c96d788d057e511dcc450480ac9a5c37376d2dd7e81e","bytes":3220},
     "P05-draft/browser/source.json.gz": {"sha256":"ae24474b78c9bec9f4e770cf7c2e44f9af6df6c22ff60c7a34752124ee971c39","bytes":3469},
     "P05-draft/expected/asset-hashes.json": {"sha256":"ca3d163bab055381827226140568f3bef7eaac187cebd76878e0b63e9e442356","bytes":3},
+    "P05-draft/expected/opened-repository.json.gz": {"sha256":"dbdfb6ebcf45318c35cfb39532ad50d30ee10c0de06457d1ff1c3074884dce1b","bytes":11956},
     "P05-draft/expected/previous-reader.json.gz": {"sha256":"6f13adf241da95d3d1fcf2b4838db2d80ec39406a3c91f39f042f1f8251e4236","bytes":2595},
     "P05-draft/expected/runtime.json": {"sha256":"9957c935a594297d139f83fcca9d4043c9010fd4f654545b41af416dc9f4ab63","bytes":41376},
     "P05-draft/expected/source-records.json": {"sha256":"c461fe3c72fe57e65807bd137ea1231f6830c8b37ad4cb2d26dbaa4a9f0772db","bytes":34039},
     "P05-draft/manifest.json": {"sha256":"8c159e0e1e7bcec0691211401996dbb9d627e7bdde06706faf1c3087d6064dcf","bytes":1914},
+    "P05-draft/opened-repository.manifest.json": {"sha256":"e58707b858e2a9bd48bb78dd016c18c0b682af6244b465d1b86b59e523b8c71b","bytes":667},
     "P05-draft/source/project.db": {"sha256":"cc28f967499aa4224106f0f0bc506b3aa56b4514ad4c7235c7bdbbd213ac4928","bytes":40960},
     "P05-draft/source/project.db-shm": {"sha256":"fd4c9fda9cd3f9ae7c962b0ddf37232294d55580e1aa165aa06129b8549389eb","bytes":32768},
     "P05-draft/source/project.db-wal": {"sha256":"e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855","bytes":0},
@@ -412,19 +463,23 @@
     "P05-mixed/browser/previous-reader.json.gz": {"sha256":"03ab40d7f618aa670868c96d788d057e511dcc450480ac9a5c37376d2dd7e81e","bytes":3220},
     "P05-mixed/browser/source.json.gz": {"sha256":"9e5cf413c4da0aa74d7a7d6d85bfbfd3068d65113130bbcab429e17afe2200f9","bytes":3650},
     "P05-mixed/expected/asset-hashes.json": {"sha256":"ca3d163bab055381827226140568f3bef7eaac187cebd76878e0b63e9e442356","bytes":3},
+    "P05-mixed/expected/opened-repository.json.gz": {"sha256":"dbdfb6ebcf45318c35cfb39532ad50d30ee10c0de06457d1ff1c3074884dce1b","bytes":11956},
     "P05-mixed/expected/previous-reader.json.gz": {"sha256":"6f13adf241da95d3d1fcf2b4838db2d80ec39406a3c91f39f042f1f8251e4236","bytes":2595},
     "P05-mixed/expected/runtime.json": {"sha256":"9957c935a594297d139f83fcca9d4043c9010fd4f654545b41af416dc9f4ab63","bytes":41376},
     "P05-mixed/expected/source-records.json": {"sha256":"6a1c3c111b046a5dc8458212291e588848917a57f00f36e5d24786ed6395d3ff","bytes":39063},
     "P05-mixed/manifest.json": {"sha256":"7ca948f9f85ab7a8e65abee477954c795b656c9bb1bfdd0e78311a4040349328","bytes":1914},
+    "P05-mixed/opened-repository.manifest.json": {"sha256":"9d73ed7b7469649ca92a4e13171b9943fac781d2e39e97f541cef8c4eefa4b92","bytes":667},
     "P05-mixed/source/project.db": {"sha256":"adb0b8c0967f656aeaf5e8c8e0c41bd37c62b603cf20d797e416e940ab229c4d","bytes":40960},
     "P05-mixed/source/project.db-shm": {"sha256":"fd4c9fda9cd3f9ae7c962b0ddf37232294d55580e1aa165aa06129b8549389eb","bytes":32768},
     "P05-mixed/source/project.db-wal": {"sha256":"e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855","bytes":0},
     "P06-acknowledged-committed/authoring-recipe.json": {"sha256":"7c1e7a217861ccb464ee6af616f9074582fec0283c4da95a1b41ab3d7217a6ac","bytes":2002},
     "P06-acknowledged-committed/expected/asset-hashes.json": {"sha256":"ca3d163bab055381827226140568f3bef7eaac187cebd76878e0b63e9e442356","bytes":3},
+    "P06-acknowledged-committed/expected/opened-repository.json.gz": {"sha256":"44eae9566d06744bbd65d331a3e53c1a092a53109e77a261e0e3e791fe838283","bytes":98},
     "P06-acknowledged-committed/expected/previous-reader.json": {"sha256":"6c2175b94242b00f20846ba775ada7f925c8da5165c23d77b7d20c1f2c900e9e","bytes":390},
     "P06-acknowledged-committed/expected/runtime.json": {"sha256":"da9c36a081aca64710f60aa9d58ebb007a70794cde66bd2f94d4c3f06915daae","bytes":41},
     "P06-acknowledged-committed/expected/source-records.json": {"sha256":"a1088266216f309a3811e4bdb59b2c98356e785e07114677568bff32bef87336","bytes":24343},
     "P06-acknowledged-committed/manifest.json": {"sha256":"a9a737bf8a1721ead655352625a5d3849c41a234f5e67ad205d6ef6521eff4ba","bytes":1791},
+    "P06-acknowledged-committed/opened-repository.manifest.json": {"sha256":"0d2ba0b655fb0bd678aacceb69e30278c433b59f74c6755f4f8a574391cb86ca","bytes":667},
     "P06-acknowledged-committed/source/project.db": {"sha256":"cba7a51d9570658c0c1a78b2185db5324d44b408ca9c0010381d437a7e98d92b","bytes":40960},
     "P06-acknowledged-committed/source/project.db-shm": {"sha256":"fd4c9fda9cd3f9ae7c962b0ddf37232294d55580e1aa165aa06129b8549389eb","bytes":32768},
     "P06-acknowledged-committed/source/project.db-wal": {"sha256":"e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855","bytes":0},
@@ -433,10 +488,12 @@
     "P06-draft/browser/previous-reader.json.gz": {"sha256":"15e103d9c1629f119ac5243fa15b53baf6c824a117a5a77cada4ea4810e7dd29","bytes":1555},
     "P06-draft/browser/source.json.gz": {"sha256":"24c20da2bb04ccd2ec9b765780d4082a9141ff5d052fd9bb86e1fb88417ccc25","bytes":2505},
     "P06-draft/expected/asset-hashes.json": {"sha256":"ca3d163bab055381827226140568f3bef7eaac187cebd76878e0b63e9e442356","bytes":3},
+    "P06-draft/expected/opened-repository.json.gz": {"sha256":"697c72113da99cfc2802882bacadb10b714bc34f03218ed58a6bfef5fa2171eb","bytes":5051},
     "P06-draft/expected/previous-reader.json": {"sha256":"8a950177704d527055c78a42d2c9919890b0c543609fbe4c0fff486b43df1b1e","bytes":38357},
     "P06-draft/expected/runtime.json": {"sha256":"9ef3b4ceaa2eeb45af8319659d972b01bd0efa549efdfbabd3d70c7bb9b392c3","bytes":14223},
     "P06-draft/expected/source-records.json": {"sha256":"ab97b01f9177e7ff6c9e95f08cdb312ad87284c9814d0d99b7e195953f984b2d","bytes":19713},
     "P06-draft/manifest.json": {"sha256":"47d2134b7a62947d9da1adbc782742d00f14d8b8d8c62af5eaedcd12385a0a9a","bytes":1900},
+    "P06-draft/opened-repository.manifest.json": {"sha256":"8ab0ea7ceb5049d3e4426e8e94754cc851ed2254787502bbee1c5dde1bf3961b","bytes":667},
     "P06-draft/source/project.db": {"sha256":"c933e46b8eeeb760aeba7a2b6dbd6006b1eabcde0cb7662da20369665ae6fbc4","bytes":40960},
     "P06-draft/source/project.db-shm": {"sha256":"fd4c9fda9cd3f9ae7c962b0ddf37232294d55580e1aa165aa06129b8549389eb","bytes":32768},
     "P06-draft/source/project.db-wal": {"sha256":"e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855","bytes":0},
@@ -445,10 +502,12 @@
     "P06-duplicate-mixed/browser/previous-reader.json.gz": {"sha256":"471c72878eb3b9735f6667c564b67bab0a0466e0c5da3f1f050e9adf441a0ec1","bytes":2583},
     "P06-duplicate-mixed/browser/source.json.gz": {"sha256":"a625dda755eb35809a6d03b58e18372133952f7e0b0c25042aef0f601199ebf7","bytes":2995},
     "P06-duplicate-mixed/expected/asset-hashes.json": {"sha256":"ca3d163bab055381827226140568f3bef7eaac187cebd76878e0b63e9e442356","bytes":3},
+    "P06-duplicate-mixed/expected/opened-repository.json.gz": {"sha256":"e54c585b8eca3a7b84cf7ef9447d2b5407fb4d640faa30b251e84df0c72d986c","bytes":8660},
     "P06-duplicate-mixed/expected/previous-reader.json.gz": {"sha256":"a9806e0a73a53b300179138db9fce3b9194f49c928bd8c4eef85359a13629a3c","bytes":2101},
     "P06-duplicate-mixed/expected/runtime.json": {"sha256":"25de1a1ece4e65ec3451079290afdac65617ea5b695c56bfb3f467dacb565c3d","bytes":26703},
     "P06-duplicate-mixed/expected/source-records.json": {"sha256":"7e4b4bbf9d709f5693a97620d45b37d9a66f583d2a24ed2ee9429e047662e846","bytes":32321},
     "P06-duplicate-mixed/manifest.json": {"sha256":"1ab2171a9e443274827cf193bb33b24457ac4ba9c0af90e3616b548fa6082f81","bytes":2062},
+    "P06-duplicate-mixed/opened-repository.manifest.json": {"sha256":"3d997591f8afccac9b6cdc16cf66eed4bc7cdb31a9abb022a661703b1bbad06d","bytes":667},
     "P06-duplicate-mixed/source/project.db": {"sha256":"e541c1f775f47ea6bc53dd2ab2258b75020b07c76a1f10bb249363112059f7b3","bytes":40960},
     "P06-duplicate-mixed/source/project.db-shm": {"sha256":"fd4c9fda9cd3f9ae7c962b0ddf37232294d55580e1aa165aa06129b8549389eb","bytes":32768},
     "P06-duplicate-mixed/source/project.db-wal": {"sha256":"e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855","bytes":0},
@@ -457,37 +516,45 @@
     "P06-obsolete-draft/browser/previous-reader.json.gz": {"sha256":"25c1423388a64a71d4962a1470ac367d817f9a099b04b3289614836c5187f957","bytes":2325},
     "P06-obsolete-draft/browser/source.json.gz": {"sha256":"3fc3d780dbc5c4201bb84f34b65c4ab99eda74a558362d9f73a9ce59e9070185","bytes":2990},
     "P06-obsolete-draft/expected/asset-hashes.json": {"sha256":"ca3d163bab055381827226140568f3bef7eaac187cebd76878e0b63e9e442356","bytes":3},
+    "P06-obsolete-draft/expected/opened-repository.json.gz": {"sha256":"694447564e9cbf3af464b6689d104159674b7d9311ef5d54c3d9216e9d6ca1ae","bytes":7908},
     "P06-obsolete-draft/expected/previous-reader.json": {"sha256":"abcb5f118743602b17cf850e24aaad266b4061abd4391627fb91b90647b957d0","bytes":59293},
     "P06-obsolete-draft/expected/runtime.json": {"sha256":"e929d34f7a25a67f5e068614a5df40739f853f2ed459900770e7fbe2a8e6d217","bytes":23875},
     "P06-obsolete-draft/expected/source-records.json": {"sha256":"bfcfef8f77b2cf8e6ebbe59e7019faa7d5e386b3291e565151d94ec29ee3c78e","bytes":30931},
     "P06-obsolete-draft/manifest.json": {"sha256":"5cb3a954f5c4ba6f35c9d8ee53a3b19066b2c61cbd298fc1a227f663b0dd8ed5","bytes":1914},
+    "P06-obsolete-draft/opened-repository.manifest.json": {"sha256":"91f50edd4ed5f431cc2825f66680b7e1701b3b987a77ed282308a1782c3b041e","bytes":667},
     "P06-obsolete-draft/source/project.db": {"sha256":"66d1ea19f32b72217e2bdd31228006d901d6d46bc367acb0abda6c4de971649d","bytes":40960},
     "P06-obsolete-draft/source/project.db-shm": {"sha256":"fd4c9fda9cd3f9ae7c962b0ddf37232294d55580e1aa165aa06129b8549389eb","bytes":32768},
     "P06-obsolete-draft/source/project.db-wal": {"sha256":"e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855","bytes":0},
     "P07-recovery-draft/authoring-recipe.json": {"sha256":"8eeca2ecdd5c9c2c5c82e08991bca22849d96216b6ec6fe03505368973567d04","bytes":6113},
     "P07-recovery-draft/expected/asset-hashes.json": {"sha256":"ca3d163bab055381827226140568f3bef7eaac187cebd76878e0b63e9e442356","bytes":3},
+    "P07-recovery-draft/expected/opened-repository.json.gz": {"sha256":"c73495d15b4dd897e9770c180e153f17e68c766fa43d7eb14cc2cf947a8f7dd3","bytes":8634},
     "P07-recovery-draft/expected/previous-reader.json": {"sha256":"13501153d3052936f6c4b543a71f4e8ea46e2b5d9ac0e5a5dfffe9c76a21b32e","bytes":19141},
     "P07-recovery-draft/expected/runtime.json": {"sha256":"7fa0c1462d27f3e515480091e5fdf5252ccc838d1e2bfc459943d5aead4462a6","bytes":577},
     "P07-recovery-draft/expected/source-records.json": {"sha256":"cc98fbe8dac6ba27d8d6f9296e75722d9de502866ca0df4bf416376af96b203e","bytes":13125},
     "P07-recovery-draft/manifest.json": {"sha256":"f496ef9015b27f9f3264f3997ab1e0c96ff1c11d41bd6e235ad10ced592d98d8","bytes":1904},
+    "P07-recovery-draft/opened-repository.manifest.json": {"sha256":"184c33bfeb256bb4e5d3c7811cd32986eaa5fe8c81f936f23141cfd6c99e6837","bytes":667},
     "P07-recovery-draft/source/project.db": {"sha256":"af94e25439531c222fb501d2bf31fca4b3674bc6f57e56a432c880733d17c3eb","bytes":49152},
     "P07-recovery-draft/source/project.db-shm": {"sha256":"fd4c9fda9cd3f9ae7c962b0ddf37232294d55580e1aa165aa06129b8549389eb","bytes":32768},
     "P07-recovery-draft/source/project.db-wal": {"sha256":"e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855","bytes":0},
     "P07-recovery-missing-scene-draft/authoring-recipe.json": {"sha256":"396e63d555b621cd84e2c195a139aee41e7197236b8dfc968415266b9ab05998","bytes":6141},
     "P07-recovery-missing-scene-draft/expected/asset-hashes.json": {"sha256":"ca3d163bab055381827226140568f3bef7eaac187cebd76878e0b63e9e442356","bytes":3},
+    "P07-recovery-missing-scene-draft/expected/opened-repository.json.gz": {"sha256":"78608081a4c45e565428d961bbcbfe37e44dc5d1258dd5bca8be4ce85066bf42","bytes":6443},
     "P07-recovery-missing-scene-draft/expected/previous-reader.json": {"sha256":"13501153d3052936f6c4b543a71f4e8ea46e2b5d9ac0e5a5dfffe9c76a21b32e","bytes":19141},
     "P07-recovery-missing-scene-draft/expected/runtime.json": {"sha256":"7fa0c1462d27f3e515480091e5fdf5252ccc838d1e2bfc459943d5aead4462a6","bytes":577},
     "P07-recovery-missing-scene-draft/expected/source-records.json": {"sha256":"2959d9d399ab671905d75829383d9fc3aa111a93c83ceb23bd5b814909d15def","bytes":10785},
     "P07-recovery-missing-scene-draft/manifest.json": {"sha256":"f39914ed629dff8dae5215895520d340dce26de48d3ecaaa6c756ed4b559386c","bytes":1932},
+    "P07-recovery-missing-scene-draft/opened-repository.manifest.json": {"sha256":"53b038c3dff8b4517501b42072b030ee16da0c90bbee3bd069b2729297ae7343","bytes":667},
     "P07-recovery-missing-scene-draft/source/project.db": {"sha256":"8dc6f6823e895815bc9da35376412a8cf56f2ffbfca7ce7e03878dfd7de1a7f8","bytes":49152},
     "P07-recovery-missing-scene-draft/source/project.db-shm": {"sha256":"fd4c9fda9cd3f9ae7c962b0ddf37232294d55580e1aa165aa06129b8549389eb","bytes":32768},
     "P07-recovery-missing-scene-draft/source/project.db-wal": {"sha256":"e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855","bytes":0},
     "P07-recovery-no-meta-draft/authoring-recipe.json": {"sha256":"190c707690266ccc4e383186477d8fa2f8424288a5608dbacb46995d3c604102","bytes":6129},
     "P07-recovery-no-meta-draft/expected/asset-hashes.json": {"sha256":"ca3d163bab055381827226140568f3bef7eaac187cebd76878e0b63e9e442356","bytes":3},
+    "P07-recovery-no-meta-draft/expected/opened-repository.json.gz": {"sha256":"c73495d15b4dd897e9770c180e153f17e68c766fa43d7eb14cc2cf947a8f7dd3","bytes":8634},
     "P07-recovery-no-meta-draft/expected/previous-reader.json": {"sha256":"13501153d3052936f6c4b543a71f4e8ea46e2b5d9ac0e5a5dfffe9c76a21b32e","bytes":19141},
     "P07-recovery-no-meta-draft/expected/runtime.json": {"sha256":"7fa0c1462d27f3e515480091e5fdf5252ccc838d1e2bfc459943d5aead4462a6","bytes":577},
     "P07-recovery-no-meta-draft/expected/source-records.json": {"sha256":"633a74c158b5694b026d706e5dc113affc816af978b79c5eb573f4292ffcd87a","bytes":13010},
     "P07-recovery-no-meta-draft/manifest.json": {"sha256":"1b15eedced7958906034c4f92370b9d883ac877e1f5434b5f2d6166a70edcb31","bytes":1920},
+    "P07-recovery-no-meta-draft/opened-repository.manifest.json": {"sha256":"74e7dd72428bdda3d4f57dd35da912b4f69ec242d248ae33bdd1e912ab1a5f6f","bytes":667},
     "P07-recovery-no-meta-draft/source/project.db": {"sha256":"d587063547ebb0cb016960f4840caa308d1b9276c2993399638d67499c9c5ce0","bytes":49152},
     "P07-recovery-no-meta-draft/source/project.db-shm": {"sha256":"fd4c9fda9cd3f9ae7c962b0ddf37232294d55580e1aa165aa06129b8549389eb","bytes":32768},
     "P07-recovery-no-meta-draft/source/project.db-wal": {"sha256":"e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855","bytes":0},
@@ -496,10 +563,12 @@
     "P08-real-draft/browser/previous-reader.json.gz": {"sha256":"c5f17cbb702e237bbe207b3a5406867f9c997fed7abad17ef081fe936188ccc9","bytes":2341},
     "P08-real-draft/browser/source.json.gz": {"sha256":"6e292c3c1b46d2c1cc49139fdde2c5064d2eeb0e40bc9cb42458d7949b71e737","bytes":2498},
     "P08-real-draft/expected/asset-hashes.json": {"sha256":"ca3d163bab055381827226140568f3bef7eaac187cebd76878e0b63e9e442356","bytes":3},
+    "P08-real-draft/expected/opened-repository.json.gz": {"sha256":"c42b77da616b01c635f7a4d01d2355291bfa694e3e932e337b96e1005cb918af","bytes":7585},
     "P08-real-draft/expected/previous-reader.json": {"sha256":"4ce3a18126851affd4a70f25979b7b53b788cd8c900216768efd712beaaa2ea1","bytes":61811},
     "P08-real-draft/expected/runtime.json": {"sha256":"dc1ca32ef103bc7ee8d0224c92bb610d9acca318fb572f2e2acb635eba0292a0","bytes":24873},
     "P08-real-draft/expected/source-records.json": {"sha256":"4e1b3a34bda4d890e23c54339cb44bd2e3528b7b738b8cc3499b7a8ea5893a1b","bytes":19708},
     "P08-real-draft/manifest.json": {"sha256":"afe9b5af3c6ed2131b6195f5e225502a0cb8587d3fcc280d8c71d428c5d2fc0b","bytes":1904},
+    "P08-real-draft/opened-repository.manifest.json": {"sha256":"5a718d452df0ef386e45cb1e96b3e650446c9e17d2abf8a06ab236118f6ec68d","bytes":667},
     "P08-real-draft/source/project.db": {"sha256":"77cd36c336f0a47d456216f53e502a6aa3070aea115aa7ce2d36868003da2957","bytes":40960},
     "P08-real-draft/source/project.db-shm": {"sha256":"fd4c9fda9cd3f9ae7c962b0ddf37232294d55580e1aa165aa06129b8549389eb","bytes":32768},
     "P08-real-draft/source/project.db-wal": {"sha256":"e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855","bytes":0},
@@ -508,10 +577,12 @@
     "P08-text-draft/browser/previous-reader.json.gz": {"sha256":"c5f17cbb702e237bbe207b3a5406867f9c997fed7abad17ef081fe936188ccc9","bytes":2341},
     "P08-text-draft/browser/source.json.gz": {"sha256":"c12f221b387fec8a9ed27fb0cd0e01cfc2539b234d9067197be5322184faf2b0","bytes":2502},
     "P08-text-draft/expected/asset-hashes.json": {"sha256":"ca3d163bab055381827226140568f3bef7eaac187cebd76878e0b63e9e442356","bytes":3},
+    "P08-text-draft/expected/opened-repository.json.gz": {"sha256":"c42b77da616b01c635f7a4d01d2355291bfa694e3e932e337b96e1005cb918af","bytes":7585},
     "P08-text-draft/expected/previous-reader.json": {"sha256":"4ce3a18126851affd4a70f25979b7b53b788cd8c900216768efd712beaaa2ea1","bytes":61811},
     "P08-text-draft/expected/runtime.json": {"sha256":"dc1ca32ef103bc7ee8d0224c92bb610d9acca318fb572f2e2acb635eba0292a0","bytes":24873},
     "P08-text-draft/expected/source-records.json": {"sha256":"e24ae9fe591c355493ecfa9ebcd7bc4e6410ce8d6dae1ec1d6f497e26b66be51","bytes":19712},
     "P08-text-draft/manifest.json": {"sha256":"78da8acc9a7ae64cd712c958ecbe1c522fba5ec04445bdfc882597b362de6bc8","bytes":1904},
+    "P08-text-draft/opened-repository.manifest.json": {"sha256":"f3aec0a179d4382dd7c80845d59c5cd77d5becdc3fdf7283246f8c147271cf3b","bytes":667},
     "P08-text-draft/source/project.db": {"sha256":"e10f0491208b09e834c843f8a984a8830db1f8c393906c085fc7ff75b6080b2f","bytes":40960},
     "P08-text-draft/source/project.db-shm": {"sha256":"fd4c9fda9cd3f9ae7c962b0ddf37232294d55580e1aa165aa06129b8549389eb","bytes":32768},
     "P08-text-draft/source/project.db-wal": {"sha256":"e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855","bytes":0},
@@ -520,10 +591,12 @@
     "P09-committed/browser/previous-reader.json.gz": {"sha256":"2f83ef7e7c96547ea9a123fade44341c6332079a490aa25514b305a7b29deb30","bytes":3193},
     "P09-committed/browser/source.json.gz": {"sha256":"be96227671f40e420df6896e05ee4199c2670001cf277232d5c6ab7ac2c3c33e","bytes":3800},
     "P09-committed/expected/asset-hashes.json": {"sha256":"ca3d163bab055381827226140568f3bef7eaac187cebd76878e0b63e9e442356","bytes":3},
+    "P09-committed/expected/opened-repository.json.gz": {"sha256":"600693c59e8f142b23c7c268116548290f3fcf794b7b376e2537823486647427","bytes":11110},
     "P09-committed/expected/previous-reader.json.gz": {"sha256":"b51ce7a48763a64aa7b36b677234c4dfd511a7424eddbbcd83453030610a7cd2","bytes":2630},
     "P09-committed/expected/runtime.json": {"sha256":"66a27be6031c0f544c5745a9ab44144957c4e331e2e202dafc1eb1e8466567b2","bytes":31921},
     "P09-committed/expected/source-records.json": {"sha256":"cd01dcc6546839802e58db9721dfe016b1c04fc1798345112f2520c4245c4854","bytes":51941},
     "P09-committed/manifest.json": {"sha256":"adac558b766d47152fb32bfb5ee7b38d60e88518ca702620f290335caf16ded8","bytes":1918},
+    "P09-committed/opened-repository.manifest.json": {"sha256":"62deb672da5bd2717a3bd1834a8007a48cf833c76fa37a6c1477dca0a7578c1f","bytes":667},
     "P09-committed/source/project.db": {"sha256":"62fec2545f49311c282fda2746a985b362c0e33d9506757b907986cfa95dd4fb","bytes":49152},
     "P09-committed/source/project.db-shm": {"sha256":"fd4c9fda9cd3f9ae7c962b0ddf37232294d55580e1aa165aa06129b8549389eb","bytes":32768},
     "P09-committed/source/project.db-wal": {"sha256":"e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855","bytes":0},
@@ -532,10 +605,12 @@
     "P09-draft/browser/previous-reader.json.gz": {"sha256":"2f83ef7e7c96547ea9a123fade44341c6332079a490aa25514b305a7b29deb30","bytes":3193},
     "P09-draft/browser/source.json.gz": {"sha256":"7d3a4af280a77fd5d7bbb74f73a86b314ad18dbff5148061c68360107bd07475","bytes":3605},
     "P09-draft/expected/asset-hashes.json": {"sha256":"ca3d163bab055381827226140568f3bef7eaac187cebd76878e0b63e9e442356","bytes":3},
+    "P09-draft/expected/opened-repository.json.gz": {"sha256":"600693c59e8f142b23c7c268116548290f3fcf794b7b376e2537823486647427","bytes":11110},
     "P09-draft/expected/previous-reader.json.gz": {"sha256":"b51ce7a48763a64aa7b36b677234c4dfd511a7424eddbbcd83453030610a7cd2","bytes":2630},
     "P09-draft/expected/runtime.json": {"sha256":"66a27be6031c0f544c5745a9ab44144957c4e331e2e202dafc1eb1e8466567b2","bytes":31921},
     "P09-draft/expected/source-records.json": {"sha256":"85dac8dc3f66c52141e1a41badeb633b2580414dbe436f2cbd657a256e512145","bytes":40452},
     "P09-draft/manifest.json": {"sha256":"374008961eeca55bd52244bc0e241ba9849400ebc7cb8d256d9798002713d779","bytes":1914},
+    "P09-draft/opened-repository.manifest.json": {"sha256":"00bf59f3e010d0c9ca9b8625645580c8ebda2333f1a799ab3edb235828ab847e","bytes":667},
     "P09-draft/source/project.db": {"sha256":"20cbdc817d1787953cca0c2a2507167cdce11a0dfb37643d9b06c766ca4118eb","bytes":40960},
     "P09-draft/source/project.db-shm": {"sha256":"fd4c9fda9cd3f9ae7c962b0ddf37232294d55580e1aa165aa06129b8549389eb","bytes":32768},
     "P09-draft/source/project.db-wal": {"sha256":"e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855","bytes":0},
@@ -544,10 +619,12 @@
     "P09-mixed/browser/previous-reader.json.gz": {"sha256":"2f83ef7e7c96547ea9a123fade44341c6332079a490aa25514b305a7b29deb30","bytes":3193},
     "P09-mixed/browser/source.json.gz": {"sha256":"6ada21a5f1175d6dab63d0dcedd051cfa70d8abb5530918e476220f58350a745","bytes":3772},
     "P09-mixed/expected/asset-hashes.json": {"sha256":"ca3d163bab055381827226140568f3bef7eaac187cebd76878e0b63e9e442356","bytes":3},
+    "P09-mixed/expected/opened-repository.json.gz": {"sha256":"600693c59e8f142b23c7c268116548290f3fcf794b7b376e2537823486647427","bytes":11110},
     "P09-mixed/expected/previous-reader.json.gz": {"sha256":"b51ce7a48763a64aa7b36b677234c4dfd511a7424eddbbcd83453030610a7cd2","bytes":2630},
     "P09-mixed/expected/runtime.json": {"sha256":"66a27be6031c0f544c5745a9ab44144957c4e331e2e202dafc1eb1e8466567b2","bytes":31921},
     "P09-mixed/expected/source-records.json": {"sha256":"46c323045cc128c489ba1aa8ae9f05e3ead528bdf2a94777dde81ae084193ea8","bytes":46191},
     "P09-mixed/manifest.json": {"sha256":"cd528ac0fd90994a9acac2e3f7a680fdbb949dd9c0c96a5b19729cdcf0f42026","bytes":1914},
+    "P09-mixed/opened-repository.manifest.json": {"sha256":"305a2e93ec64846d2aa597611747025c0525a455fdc283924f1004980dab257d","bytes":667},
     "P09-mixed/source/project.db": {"sha256":"1517782361af745263f5ec4fcd86f5a85fc4a0d17e6a145557b13ea84bbbfd91","bytes":40960},
     "P09-mixed/source/project.db-shm": {"sha256":"fd4c9fda9cd3f9ae7c962b0ddf37232294d55580e1aa165aa06129b8549389eb","bytes":32768},
     "P09-mixed/source/project.db-wal": {"sha256":"e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855","bytes":0},
@@ -556,10 +633,12 @@
     "P10-mixed/browser/previous-reader.json.gz": {"sha256":"e744eee08f9f990d7dd82980a59ca963a2789054e1f8b044e8b6a6c47cba89af","bytes":2580},
     "P10-mixed/browser/source.json.gz": {"sha256":"f0f816bcb4830ae60e127098346a6c68f1290e3c8fbf9af8667fb6648f9a1fa7","bytes":395628},
     "P10-mixed/expected/asset-hashes.json": {"sha256":"ca3d163bab055381827226140568f3bef7eaac187cebd76878e0b63e9e442356","bytes":3},
+    "P10-mixed/expected/opened-repository.json.gz": {"sha256":"a00ddd9310ad08fb0281484fbf485a7477bafe93bff56297b56451cd6ec95c6c","bytes":8529},
     "P10-mixed/expected/previous-reader.json.gz": {"sha256":"59d1e372627d35271018d89d5a5c747869c2b0b5db1ffe5b92bc0161cc06a70f","bytes":2186},
     "P10-mixed/expected/runtime.json": {"sha256":"7c8e619a98a88434835bee2a83d4ccaac282ac6f3e2b841dce096e3957815afb","bytes":26705},
     "P10-mixed/expected/source-records.json.gz": {"sha256":"8e83b74cfa9f4ac9a9e92c3e714604cd47dd412402666243ef5668c15653922d","bytes":250983},
     "P10-mixed/manifest.json": {"sha256":"12e026dbd5582358a6cfbde615ee778b49caa49f38e2df6ef76c326372d7fe0c","bytes":2127},
+    "P10-mixed/opened-repository.manifest.json": {"sha256":"12a55c455dd8209e8c880f4f4e7f52ee720f5cb205eec65ffc65f98cb93719ed","bytes":667},
     "P10-mixed/source/project.db": {"sha256":"cff7be95e64480aa1f856f2fac6fff4717f0ff83427985b349365d5678c112dd","bytes":1593344},
     "P10-mixed/source/project.db-shm": {"sha256":"fd4c9fda9cd3f9ae7c962b0ddf37232294d55580e1aa165aa06129b8549389eb","bytes":32768},
     "P10-mixed/source/project.db-wal": {"sha256":"e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855","bytes":0},
@@ -568,10 +647,12 @@
     "P10-oversized-draft/browser/previous-reader.json.gz": {"sha256":"5392b15f504b303ff996f28ac0cbaa054b54a7c1a9a03b3bef16309f02f68434","bytes":5348},
     "P10-oversized-draft/browser/source.json.gz": {"sha256":"f1f5f4bceb1693d59dd678080194e34add6b0a3cb5b8ba126868390ee639cfc1","bytes":4415},
     "P10-oversized-draft/expected/asset-hashes.json": {"sha256":"ca3d163bab055381827226140568f3bef7eaac187cebd76878e0b63e9e442356","bytes":3},
+    "P10-oversized-draft/expected/opened-repository.json.gz": {"sha256":"0be84bb488286f796b89ddc6ab1ed1feb1660eb517d94c73d064484887b8ee02","bytes":24349},
     "P10-oversized-draft/expected/previous-reader.json.gz": {"sha256":"00c629409f5efaa603aebd0d4fe3b407bd30e77133ff2d46bdfbb3bdd9d3099f","bytes":4939},
     "P10-oversized-draft/expected/runtime.json.gz": {"sha256":"823cde1405e500e28232785db6be38cb41dca03257fc0ef108b451638ef91551","bytes":4995},
     "P10-oversized-draft/expected/source-records.json.gz": {"sha256":"cba9b90952e7e28726474e6c5d7acf6f8075640eeaf90d1828fcb3db779b4a8f","bytes":3320},
     "P10-oversized-draft/manifest.json": {"sha256":"89dd12d3c3e523ff7849af252d6747cb3f0f1f65d0ec87dbd823e968bba9d7fa","bytes":2240},
+    "P10-oversized-draft/opened-repository.manifest.json": {"sha256":"28eba8c907fa903d57bfbacdb021e0dcea94c66b964d391f8ce038f997cc1f9a","bytes":667},
     "P10-oversized-draft/source/project.db": {"sha256":"e0e3e9e51401a76c650123d6202de0275c8b49cc360be32b592d966e746631bd","bytes":1089536},
     "P10-oversized-draft/source/project.db-shm": {"sha256":"fd4c9fda9cd3f9ae7c962b0ddf37232294d55580e1aa165aa06129b8549389eb","bytes":32768},
     "P10-oversized-draft/source/project.db-wal": {"sha256":"e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855","bytes":0}

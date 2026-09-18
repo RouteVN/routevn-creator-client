@@ -110,7 +110,7 @@ export function assertPreservedSourceRecords(
   before,
   after,
   context,
-  { legacyCheckpointMetadata } = {},
+  { legacyCheckpointMetadata, recoveredSceneHistoryStats } = {},
 ) {
   assertEquivalent(before.drafts, after.drafts, `${context}: raw drafts`);
   assertEquivalent(before.app, after.app, `${context}: raw app rows`);
@@ -131,6 +131,32 @@ export function assertPreservedSourceRecords(
     );
   const current = checkpointValues(after.checkpoints);
   for (const [key, value] of checkpointValues(before.checkpoints)) {
+    // The old reader refreshes scene checkpoint history counts after hydration.
+    // Only this exact metadata transition is allowed; embedded data stays exact.
+    if (
+      recoveredSceneHistoryStats &&
+      JSON.parse(key)[0][1] === "project_repository_scene_state" &&
+      value[0] === "string" &&
+      firstDifference(value, current.get(key))
+    ) {
+      const parsed = JSON.parse(value[1]);
+      const envelope = parsed.__routevnCheckpoint;
+      if (
+        envelope?.version === 1 &&
+        !firstDifference(
+          recoveredSceneHistoryStats.before,
+          envelope.meta?.historyStats,
+        )
+      ) {
+        envelope.meta.historyStats = recoveredSceneHistoryStats.after;
+        assertEquivalent(
+          encodeValue(JSON.stringify(parsed)),
+          current.get(key),
+          `${context}: exact recovered scene checkpoint metadata ${key}`,
+        );
+        continue;
+      }
+    }
     if (
       legacyCheckpointMetadata &&
       value[0] === "string" &&

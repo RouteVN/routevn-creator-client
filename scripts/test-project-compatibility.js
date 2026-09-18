@@ -1,3 +1,4 @@
+import { gzipSync } from "node:zlib";
 import { fixtureRoot as prepareFixtureRoot } from "../tests/projectCompatibility/fixtureArchive.mjs";
 import { readFixtureJson } from "../tests/projectCompatibility/fixtureIO.mjs";
 import { execFileSync } from "node:child_process";
@@ -30,12 +31,14 @@ import { createRecipes } from "../tests/projectCompatibility/recipes.mjs";
 const args = process.argv.slice(2);
 const capture = args.includes("--capture");
 const captureRuntime = args.includes("--capture-runtime");
+const captureOpened = args.includes("--capture-opened");
+const phases = ["cold", "warm", "cache-cleared"];
 if (args.includes("--prepare")) prepareBaselines();
 const filter = args
   .find((arg) => arg.startsWith("--fixture="))
   ?.slice("--fixture=".length);
 const fixtureRoot = await prepareFixtureRoot({
-  capture: capture || captureRuntime,
+  capture: capture || captureRuntime || captureOpened,
 });
 const artifactRoot = resolve(
   process.env.ROUTEVN_COMPATIBILITY_ARTIFACTS ?? tmpdir(),
@@ -88,6 +91,22 @@ function cloneSource(source, name) {
 }
 function verifyHistory(before, after, context) {
   const options = {};
+  if (context.startsWith("P07-recovery")) {
+    options.recoveredSceneHistoryStats = {
+      before: {
+        committedCount: 0,
+        latestCommittedId: 0,
+        draftCount: 2,
+        latestDraftClock: 2,
+      },
+      after: {
+        committedCount: 0,
+        latestCommittedId: 0,
+        draftCount: 1,
+        latestDraftClock: 2,
+      },
+    };
+  }
   if (context.startsWith("P07-recovery-no-meta-draft")) {
     options.legacyCheckpointMetadata = {
       historyStats: {
@@ -99,6 +118,18 @@ function verifyHistory(before, after, context) {
     };
   }
   assertPreservedSourceRecords(before, after, context, options);
+}
+function clearDisposableCaches(project, recipe) {
+  const db = new DatabaseSync(join(project, "project.db"));
+  try {
+    if (recipe.sourceCheckpoints)
+      db.prepare(
+        "DELETE FROM materialized_view_state WHERE view_name NOT IN (?, ?)",
+      ).run("project_repository_main_state", "project_repository_scene_state");
+    else db.exec("DELETE FROM materialized_view_state");
+  } finally {
+    db.close();
+  }
 }
 function injectFault(project, fault) {
   const database = new DatabaseSync(join(project, "project.db"));
@@ -241,7 +272,7 @@ try {
       );
       write(
         join(staging, "expected/previous-reader.json"),
-        previous.observation,
+        previous.historyReplay,
       );
       write(join(staging, "expected/source-records.json"), sourceRecords);
       write(
@@ -340,13 +371,13 @@ try {
       );
       assertEquivalent(
         expected,
-        oracle.observation,
+        oracle.historyReplay,
         `${id}: unchanged frozen state while adding runtime coverage`,
       );
       verifyHistory(before, oracle.sourceRecords, `${id}: runtime source`);
       write(
         join(pack, "expected/runtime.json"),
-        oracle.runtime ?? { status: "repository-unavailable" },
+        oracle.historyRuntime ?? { status: "repository-unavailable" },
       );
       manifest.files["expected/runtime.json"] = fileHash(
         join(pack, "expected/runtime.json"),
@@ -354,6 +385,77 @@ try {
       manifest.coverage.runtime = true;
       write(join(pack, "manifest.json"), manifest);
     }
+    const openedManifestPath = join(pack, "opened-repository.manifest.json");
+    const openedPath = "expected/opened-repository.json.gz";
+    if (captureOpened && !existsSync(openedManifestPath)) {
+      const project = cloneSource(join(pack, "source"), `${id}-opened-oracle`);
+      const recipe = join(pack, "authoring-recipe.json");
+      const opened = {};
+      for (const phase of phases) {
+        if (phase === "cache-cleared")
+          clearDisposableCaches(project, read(recipe));
+        const oracle = lane(
+          baselineRoot(15),
+          "read",
+          project,
+          recipe,
+          join(workspace, `${id}-opened-oracle-${phase}.json`),
+        );
+        assertEquivalent(
+          expected,
+          oracle.historyReplay,
+          `${id} ${phase}: unchanged history-only oracle`,
+        );
+        assertEquivalent(
+          read(join(pack, "expected/runtime.json")),
+          oracle.historyRuntime ?? { status: "repository-unavailable" },
+          `${id} ${phase}: unchanged history-only runtime`,
+        );
+        verifyHistory(
+          before,
+          oracle.sourceRecords,
+          `${id} ${phase}: opened oracle source`,
+        );
+        opened[phase] = oracle.openedRepository ?? {
+          status: "repository-unavailable",
+        };
+      }
+      writeFileSync(
+        join(pack, openedPath),
+        gzipSync(JSON.stringify(opened, null, 2) + "\n"),
+        { flag: "wx" },
+      );
+      write(openedManifestPath, {
+        protocol: 1,
+        previousReader: previousIdentity,
+        sourceManifestSha256: fileHash(join(pack, "manifest.json")),
+        files: { [openedPath]: fileHash(join(pack, openedPath)) },
+      });
+      console.log(
+        `Captured ${id} opened projection from pinned previous reader`,
+      );
+    }
+    if (!existsSync(openedManifestPath))
+      throw new Error(`Missing opened-project oracle: ${id}`);
+    const openedManifest = read(openedManifestPath);
+    assertEquivalent(
+      previousIdentity,
+      openedManifest.previousReader,
+      `${id}: opened oracle reader`,
+    );
+    assertEquivalent(
+      fileHash(join(pack, "manifest.json")),
+      openedManifest.sourceManifestSha256,
+      `${id}: opened oracle source`,
+    );
+    for (const [path, hash] of Object.entries(openedManifest.files))
+      assertEquivalent(
+        hash,
+        fileHash(join(pack, path)),
+        `${id}: immutable ${path}`,
+      );
+    const expectedOpened = read(join(pack, openedPath));
+    report.fixtures[id].openedRepository = openedManifest;
     const expectedRuntime =
       manifest.files["expected/runtime.json"] ||
       manifest.files["expected/runtime.json.gz"]
@@ -367,20 +469,10 @@ try {
       ["candidate", process.cwd()],
     ]) {
       const project = cloneSource(join(pack, "source"), `${id}-${name}`);
-      for (const phase of ["cold", "warm", "cache-cleared"]) {
+      for (const phase of phases) {
         report.activeCase = { id, lane: name, phase };
-        if (phase === "cache-cleared") {
-          const db = new DatabaseSync(join(project, "project.db"));
-          if (read(recipe).sourceCheckpoints)
-            db.prepare(
-              "DELETE FROM materialized_view_state WHERE view_name NOT IN (?, ?)",
-            ).run(
-              "project_repository_main_state",
-              "project_repository_scene_state",
-            );
-          else db.exec("DELETE FROM materialized_view_state");
-          db.close();
-        }
+        if (phase === "cache-cleared")
+          clearDisposableCaches(project, read(recipe));
         const result = lane(
           root,
           "read",
@@ -390,8 +482,13 @@ try {
         );
         assertEquivalent(
           expected,
-          result.observation,
-          `${id} ${name} ${phase}`,
+          result.historyReplay,
+          `${id} ${name} ${phase}: history replay`,
+        );
+        assertEquivalent(
+          expectedOpened[phase],
+          result.openedRepository ?? { status: "repository-unavailable" },
+          `${id} ${name} ${phase}: opened repository`,
         );
         for (const [fileId, hash] of Object.entries(
           read(join(pack, "expected/asset-hashes.json")),
@@ -405,8 +502,8 @@ try {
         if (expectedRuntime)
           assertEquivalent(
             expectedRuntime,
-            result.runtime ?? { status: "repository-unavailable" },
-            `${id} ${name} ${phase}: runtime`,
+            result.historyRuntime ?? { status: "repository-unavailable" },
+            `${id} ${name} ${phase}: history runtime`,
           );
         report.cases.push({
           id,
@@ -418,7 +515,7 @@ try {
       }
     }
     console.log(
-      `PASS ${id}: previous/candidate cold, warm, cache-cleared; original row bytes intact`,
+      `PASS ${id}: previous/candidate cold, warm, cache-cleared; source preservation verified`,
     );
   }
   if (args.includes("--all")) {

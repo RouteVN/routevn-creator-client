@@ -8,6 +8,7 @@ import { DatabaseSync } from "node:sqlite";
 import {
   assertEquivalent,
   assertPreservedSourceRecords,
+  decodeValue,
   encodeValue,
   readSourceRecords,
 } from "./records.mjs";
@@ -120,6 +121,121 @@ describe("frozen compatibility harness negative controls", () => {
     expect(() => assertPreservedSourceRecords(before, damaged, "P07")).toThrow(
       /recovery source/,
     );
+  });
+  it.each(["P07-recovery-draft", "P07-recovery-no-meta-draft"])(
+    "%s freezes recovered scenes and dialogue independently of empty history replay",
+    (id) => {
+      const history = decodeValue(
+        read(`${root}/${id}/expected/previous-reader.json`),
+      );
+      const { state, runtime } = decodeValue(
+        read(`${root}/${id}/expected/opened-repository.json`).cold,
+      );
+      expect(history.state.scenes.items).toEqual({});
+      expect(Object.keys(state.scenes.items)).toEqual([
+        "scene-one",
+        "scene-two",
+      ]);
+      const section =
+        state.scenes.items["scene-one"].sections.items["section-one"];
+      expect(section.name).toBe("Recovered Section One");
+      expect(section.lines.tree.map(({ id }) => id)).toEqual([
+        "line-one",
+        "line-two",
+      ]);
+      expect(runtime.status).toBe("available");
+      expect(
+        runtime.observations.map(
+          ({ presentation }) => presentation.dialogue.content,
+        ),
+      ).toEqual([
+        [{ text: "First" }],
+        [{ text: "First" }],
+        [{ text: "Second" }],
+      ]);
+    },
+  );
+  it("freezes the missing-scene checkpoint's partial recovery", () => {
+    const { state } = decodeValue(
+      read(
+        `${root}/P07-recovery-missing-scene-draft/expected/opened-repository.json`,
+      ).cold,
+    );
+    expect(Object.keys(state.scenes.items)).toEqual(["scene-one", "scene-two"]);
+    const sections = state.scenes.items["scene-one"].sections.items;
+    expect(sections["section-one"].name).toBe("Recovered Section One");
+    expect(sections["section-one"].lines).toEqual({ items: {}, tree: [] });
+    expect(state.scenes.items["scene-two"].sections.tree).toEqual([
+      { id: "section-two", children: [] },
+    ]);
+  });
+  it.each(["scene", "line", "line order", "runtime dialogue"])(
+    "detects lost recovered %s even when history replay and checkpoint bytes match",
+    (damage) => {
+      const pack = `${root}/P07-recovery-draft/expected`;
+      const expected = read(`${pack}/opened-repository.json`).cold;
+      const damaged = decodeValue(expected);
+      const lines =
+        damaged.state.scenes.items["scene-one"].sections.items["section-one"]
+          .lines;
+      if (damage === "scene") delete damaged.state.scenes.items["scene-one"];
+      if (damage === "line") delete lines.items["line-one"];
+      if (damage === "line order") lines.tree.reverse();
+      if (damage === "runtime dialogue")
+        damaged.runtime.observations[0].presentation.dialogue.content = [];
+      const history = read(`${pack}/previous-reader.json`);
+      const source = read(`${pack}/source-records.json`);
+      expect(() =>
+        assertEquivalent(history, structuredClone(history), "history"),
+      ).not.toThrow();
+      expect(() =>
+        assertPreservedSourceRecords(source, structuredClone(source), "source"),
+      ).not.toThrow();
+      expect(() =>
+        assertEquivalent(expected, encodeValue(damaged), "opened repository"),
+      ).toThrow(/opened repository: first difference/);
+    },
+  );
+  it("allows only the old reader's exact scene history-count refresh, never content loss", () => {
+    const before = read(
+      `${root}/P07-recovery-draft/expected/source-records.json`,
+    );
+    const after = structuredClone(before);
+    const index = after.checkpoints.findIndex(
+      (row) => decodeValue(row).partition === "s:783Kx5",
+    );
+    const row = decodeValue(after.checkpoints[index]);
+    const checkpoint = JSON.parse(row.value);
+    const stats = checkpoint.__routevnCheckpoint.meta.historyStats;
+    const options = {
+      recoveredSceneHistoryStats: {
+        before: structuredClone(stats),
+        after: { ...stats, draftCount: 1 },
+      },
+    };
+    stats.draftCount = 1;
+    const save = () => {
+      row.value = JSON.stringify(checkpoint);
+      after.checkpoints[index] = encodeValue(row);
+    };
+    save();
+    expect(() =>
+      assertPreservedSourceRecords(before, after, "P07", options),
+    ).not.toThrow();
+    expect(() => assertPreservedSourceRecords(before, after, "P07")).toThrow(
+      /recovery source/,
+    );
+    stats.draftCount = 0;
+    save();
+    expect(() =>
+      assertPreservedSourceRecords(before, after, "P07", options),
+    ).toThrow(/exact recovered scene checkpoint metadata/);
+    stats.draftCount = 1;
+    delete checkpoint.__routevnCheckpoint.value.scenes.items["scene-one"];
+    save();
+    expect(() =>
+      assertPreservedSourceRecords(before, after, "P07", options),
+    ).toThrow(/exact recovered scene checkpoint metadata/);
   });
   it("detects dropped version metadata without relying on payload shape", () => {
     const expected = encodeValue({

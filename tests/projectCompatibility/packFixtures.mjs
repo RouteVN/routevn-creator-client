@@ -52,6 +52,17 @@ for (const id of readdirSync(root).sort()) {
     sqlite: true,
     browser: existsSync(join(root, id, "browser/manifest.json")),
   };
+  const openedManifest = JSON.parse(
+    readFileSync(join(root, id, "opened-repository.manifest.json"), "utf8"),
+  );
+  verifyManifest(openedManifest, id);
+  if (
+    openedManifest.sourceManifestSha256 !==
+      files[`${id}/manifest.json`].sha256 ||
+    identityKey(openedManifest.previousReader) !== fixture.previousReader
+  )
+    throw new Error(`Opened-project oracle provenance mismatch: ${id}`);
+  fixture.openedRepository = true;
   if (manifest.fault) fixture.fault = manifest.fault;
   if (fixture.browser)
     verifyManifest(

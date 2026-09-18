@@ -57,11 +57,31 @@ normal project repository loader. Native comparisons check original raw payload
 BLOB bytes and SQLite storage types. Recovery-source values are checked as well;
 disposable caches and SQLite file bookkeeping are not source history.
 
-One baseline-only equivalence is deliberately narrow: opening
+Baseline-only metadata equivalences are deliberately narrow: opening
 `P07-recovery-no-meta-draft` in the previous reader adds exactly the recorded
-`historyStats` metadata to its main checkpoint. No change to the embedded state
-is permitted. Strict upgrade tests must also assert that their new policy caches
-leave the original source value untouched.
+`historyStats` metadata to its main checkpoint. Hydrating existing P07 scene
+checkpoints refreshes only `historyStats.draftCount` from 2 to 1; the other
+counts remain exactly `committedCount: 0`, `latestCommittedId: 0`, and
+`latestDraftClock: 2`. No change to embedded state or other metadata is permitted.
+Negative controls reject both lost content and any different count update.
+Strict upgrade tests must assert that their new policy caches leave the original
+source value untouched.
+
+Native observations compare the opened repository's resolved `getState()`
+projection, hydrating each scene found there through `setActiveSceneId()` and
+combining those scene snapshots before preview/export. `loadState()` remains a
+separate history-only observation: it returns an empty project for P07 even
+though checkpoint recovery restores two scenes. The complete recovery cases
+freeze the restored "First"/"Second" dialogue; the missing-scene variant freezes
+its partial recovery. Negative controls detect missing scenes, missing/reordered
+lines, and changed runtime dialogue even with unchanged history and source bytes.
+
+Each pack's supplemental `opened-repository.manifest.json` binds the new resolved
+state/runtime oracle to the pinned previous reader and original source manifest.
+Cold, warm, and cache-cleared observations are captured separately: the old
+checkpoint JSON round trip can omit undefined fields (for example P09 layout
+`isFragment`). Those differences are frozen per phase, never normalized away.
+The original history-only state/runtime oracles remain unchanged and checked.
 
 Runtime oracles exercise the real export projection and Route Engine's logical
 initial dialogue/next-line behavior. They preserve the old availability/error
@@ -84,7 +104,9 @@ Commit `tests/fixtures/legacy-projects.zip` and
 `tests/fixtures/legacy-projects.manifest.json` in ordinary Git. The ZIP is marked
 binary in `.gitattributes`; Git LFS is not required. The initial archive is
 about 1.63 MiB and contains all 319 previously expanded files without changing
-any bytes. Existing gzip members and license/source files remain intact.
+any bytes. The recovery-observation extension adds 54 supplemental files (373
+total); all 319 originals remain byte-identical. Existing gzip members and
+license/source files remain intact.
 
 The readable manifest lists fixture IDs, origin/fault labels, writer and
 previous-reader identities, platform coverage, and every file's SHA-256 and
@@ -116,7 +138,7 @@ location, separate from the verified cache:
 ```sh
 node tests/projectCompatibility/unpackFixtures.mjs /tmp/routevn-fixture-staging
 export ROUTEVN_FIXTURE_DIRECTORY=/tmp/routevn-fixture-staging
-node scripts/test-project-compatibility.js --prepare --capture --capture-runtime
+node scripts/test-project-compatibility.js --prepare --capture --capture-runtime --capture-opened
 node tests/projectCompatibility/browserRunner.mjs --capture --engine=chromium
 node tests/projectCompatibility/packFixtures.mjs /tmp/routevn-fixture-staging
 bun run test:project-compatibility
@@ -126,6 +148,9 @@ Use a new staging directory each time. The unpack command refuses to overwrite
 an existing directory. Add the new recipe in `recipes.mjs` before capture;
 `--capture` adds missing packs without overwriting old ones. `--capture-runtime`
 adds old-runtime observations only after checking state and source preservation.
+`--capture-opened` adds missing resolved-state/runtime supplements from the
+pinned previous reader for all three open phases. It first verifies the existing
+history-only oracles and source preservation, and never overwrites a supplement.
 
 Future updates **replace the ZIP and update the text manifest together**. The
 packer verifies captured manifests and refuses to change or remove any file

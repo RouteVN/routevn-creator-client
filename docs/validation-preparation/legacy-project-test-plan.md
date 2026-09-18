@@ -149,6 +149,14 @@ section/line data, relevant projectInfo/platform metadata, recovery outcomes,
 and preview/export availability. Preserve unknown legacy fields and atlas frame
 key order. Record stable structured error categories for known-invalid controls.
 
+Read the opened repository's resolved projection (`getState()`), enumerate its
+scenes, and hydrate each scene before capturing its sections/lines and runtime
+output. History-only `loadState()` replay is a separate observation: P07 can
+recover two scenes from checkpoints while history replay is empty. Freeze each
+open phase independently when the previous reader has a phase-specific outcome;
+never substitute history replay for checkpoint-recovered content. Negative
+controls must detect lost recovered scenes/lines with unchanged checkpoint bytes.
+
 Also record representative runtime observations: a dialogue line with its
 speaker/avatar, a navigation result, and indexed-sprite frame zero where used.
 For cases containing historically unsupported action names, compare whatever
@@ -327,7 +335,7 @@ preservation, logical runtime observations, real Blob assets in the media packs,
 and comparator negative controls. It still does not certify the strict-upgrade
 phases, native binaries, graphics/player delivery, or backup/restore.
 
-The real captures also found two prior-reader behaviors that mocked tests did
+The real captures also found prior-reader behaviors that mocked tests did
 not expose:
 
 - Locally acknowledged SQLite drafts can become committed rows with missing
@@ -339,6 +347,14 @@ not expose:
   captured addition, while preserving its embedded state and all history bytes.
   The strict upgrade phase must preserve the original source and write its new
   cache separately.
+- Hydrating P07 scene checkpoints refreshes `meta.historyStats.draftCount`
+  from 2 to 1, with `committedCount: 0`, `latestCommittedId: 0`, and
+  `latestDraftClock: 2` unchanged. The baseline permits only that exact metadata
+  change, never embedded state loss. Resolved project/runtime supplements are
+  captured from the pinned previous reader without rewriting original oracles.
+- Warm checkpoint JSON round trips omit some undefined fields (P09 layout
+  `isFragment`). Resolved expectations preserve the old reader's exact result
+  for each phase instead of masking the difference.
 
 Do not count passing these baseline checks as implemented strict validation.
 The model owner also has four adopted domain streams with source hashes and

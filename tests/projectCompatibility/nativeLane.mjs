@@ -85,21 +85,40 @@ try {
       },
     });
     const repository = await service.getRepositoryById(projectId);
-    const state = await repository.loadState();
-    const scenes = {};
-    for (const scene of Object.values(state.scenes.items)) {
+    // Opening may recover a project whose surviving history cannot replay it.
+    // Enumerate the resolved main projection, then hydrate every recovered scene.
+    const openedState = repository.getState();
+    const hydratedScenes = {};
+    for (const scene of Object.values(openedState.scenes.items)) {
       if (scene.type !== "scene") continue;
       await repository.setActiveSceneId(scene.id);
-      scenes[scene.id] = repository.getState().scenes.items[scene.id];
+      const hydrated = repository.getState().scenes.items[scene.id];
+      hydratedScenes[scene.id] = hydrated;
+      openedState.scenes.items[scene.id] = hydrated;
     }
-    const observation = encodeValue({
-      state,
-      scenes,
+    const openedRepository = encodeValue({
+      state: openedState,
+      runtime: observeRuntime({
+        state: openedState,
+        ...api,
+        createRouteEngine,
+      }),
+    });
+    // Preserve the original history-only oracle as a separate observation.
+    const historyState = await repository.loadState();
+    const historyScenes = Object.fromEntries(
+      Object.values(historyState.scenes.items)
+        .filter((scene) => scene.type === "scene")
+        .map((scene) => [scene.id, hydratedScenes[scene.id]]),
+    );
+    const historyReplay = encodeValue({
+      state: historyState,
+      scenes: historyScenes,
       projectInfo: await service.getProjectInfoByProjectId(projectId),
       platformDetails: await store.app.get("platformDetails.web"),
     });
-    const runtime = encodeValue(
-      observeRuntime({ state, ...api, createRouteEngine }),
+    const historyRuntime = encodeValue(
+      observeRuntime({ state: historyState, ...api, createRouteEngine }),
     );
     await repository.flushMaterializedViews();
     await store.close();
@@ -108,8 +127,9 @@ try {
       outputPath,
       JSON.stringify(
         {
-          observation,
-          runtime,
+          openedRepository,
+          historyReplay,
+          historyRuntime,
           sourceRecords: readSourceRecords(join(projectPath, "project.db")),
           measurements: {
             elapsedMs: performance.now() - started,
@@ -137,7 +157,7 @@ try {
     outputPath,
     JSON.stringify(
       {
-        observation: encodeValue({
+        historyReplay: encodeValue({
           error: { code: error.code, message: error.message },
         }),
         sourceRecords: readSourceRecords(join(projectPath, "project.db")),
