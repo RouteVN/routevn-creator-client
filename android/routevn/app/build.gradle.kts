@@ -77,6 +77,8 @@ android {
         buildConfig = true
     }
 
+    testOptions { unitTests.isIncludeAndroidResources = true }
+
     compileOptions {
         sourceCompatibility = JavaVersion.VERSION_17
         targetCompatibility = JavaVersion.VERSION_17
@@ -91,6 +93,9 @@ tasks.matching {
 }
 
 dependencies {
+    testImplementation("junit:junit:4.13.2")
+    testImplementation("org.robolectric:robolectric:4.17")
+
     constraints {
         implementation("androidx.fragment:fragment:1.9.0") {
             because("Google Play In-App Updates transitively requests an outdated Fragment release")

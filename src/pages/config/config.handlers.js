@@ -16,6 +16,9 @@ export const handleBeforeMount = (deps) => {
   const { appService, locale, store, uiConfig } = deps;
 
   store.setUiConfig({ uiConfig });
+  store.setAndroidBackupVisible({
+    visible: appService.getPlatform() === "android",
+  });
   const isIOS = appService.getPlatform() === "ios";
   store.setProjectFolder({
     visible: isIOS,

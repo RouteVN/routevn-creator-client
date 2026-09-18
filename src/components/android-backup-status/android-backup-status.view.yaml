@@ -1,0 +1,45 @@
+refs:
+  setupBackup:
+    eventListeners:
+      click:
+        handler: handleSetup
+template:
+  - $if settings:
+      - rtgl-view w=f g=lg:
+          - rtgl-text s=h4: ${copy.settingsTitle}
+          - rtgl-view w=f g=md:
+              - $if configured && folder:
+                  - rtgl-view w=f d=h av=c g=sm:
+                      - 'rtgl-svg svg=folder wh=16 c=mu-fg aria-hidden=true style="flex-shrink: 0;"': null
+                      - 'rtgl-text w=1fg s=sm ellipsis=true title="${folder}" style="min-width: 0;"': ${folderName}
+              - $if message:
+                  - rtgl-view d=h av=c g=sm:
+                      - $if showWarning:
+                          - 'rtgl-svg svg=warning-dead-end wh=16 aria-hidden=true style="flex-shrink: 0; color: #f59e0b;"': null
+                      - rtgl-text s=sm: ${message}
+              - $if !configured:
+                  - rtgl-button#setupBackup v=ol ?disabled=${busy}: ${setupLabel}
+              - $if configured && projects.length:
+                  - rtgl-text s=sm c=mu-fg: ${copy.lastBackup} ${projects[0].date}
+    $elif visible:
+      - 'rtgl-view w=f bw=xs bc=bo br=md p=lg g=md style="box-sizing: border-box;"':
+          - rtgl-view d=h av=c g=sm:
+              - $if showWarning:
+                  - 'rtgl-svg svg=warning-dead-end wh=20 aria-hidden=true style="flex-shrink: 0; color: #f59e0b;"': null
+                $else:
+                  - 'rtgl-svg svg=backup-check wh=20 aria-hidden=true style="flex-shrink: 0; color: #22c55e;"': null
+              - rtgl-text s=h4: ${title}
+          - $if message:
+              - rtgl-text s=sm: ${message}
+          - $if configured && folder:
+              - rtgl-view w=f d=h av=c g=sm:
+                  - 'rtgl-svg svg=folder wh=16 c=mu-fg aria-hidden=true style="flex-shrink: 0;"': null
+                  - 'rtgl-text w=1fg s=sm ellipsis=true title="${folder}" style="min-width: 0;"': ${folderName}
+          - $if showProjectDetails && configured:
+              - $for project in projects:
+                  - rtgl-view w=f g=xs:
+                      - rtgl-text s=sm: ${project.name}
+                      - rtgl-text s=sm c=mu-fg: ${copy.lastBackup} ${project.date}
+                      - $if project.detail:
+                          - rtgl-text s=sm: ${project.detail}
+          - rtgl-button#setupBackup w=f v=ol ?disabled=${busy}: ${setupLabel}

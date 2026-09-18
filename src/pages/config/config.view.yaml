@@ -39,6 +39,9 @@ template:
                       - rtgl-text s=h4: ${languageTitle}
                       - 'rtgl-view w=560 sm-w=f style="max-width: 100%;"':
                           - rtgl-select#languageSelect w=f no-clear :selectedValue=${currentLocale} :options=${languageOptions}: null
+                  - $if showAndroidBackup:
+                      - rtgl-view#androidBackupSection w=f mt=xl:
+                          - 'rvn-android-backup-status settings=true style="display: block; width: 100%; max-width: 560px;"': null
                   - $if showProjectFolder:
                       - rtgl-view#projectFolderSection w=f mt=xl g=lg:
                           - rtgl-text s=h4: ${projectFolderTitle}

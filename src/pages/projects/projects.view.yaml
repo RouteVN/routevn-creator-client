@@ -234,6 +234,9 @@ template:
                                                   - rtgl-text s=xs c=mu-fg: ${project.memberCount}
                                   - rtgl-view h="33vh": null
           - 'rtgl-view w=f ah=c bgc=bg style="flex-shrink: 0;"':
+              - $if platform == 'android':
+                  - 'rtgl-view sm-w=f w=640 ph=md pt=md pb=lg style="box-sizing: border-box;"':
+                      - 'rvn-android-backup-status style="display: block; width: 100%;"': null
               - 'rtgl-view sm-w=f w=640 ph=md pv=lg ah=c':
                   - $if platform != 'web':
                       - rtgl-view#appVersionButton d=h av=c ah=c ph=md pv=sm br=sm h-bgc=mu cur=pointer:

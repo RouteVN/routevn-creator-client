@@ -71,6 +71,7 @@ export const createInitialState = () => ({
   isTouchMode: false,
   showProjectFolder: false,
   projectFolderPath: undefined,
+  showAndroidBackup: false,
 });
 
 export const setProjectFolder = ({ state }, { visible, path }) => {
@@ -151,4 +152,8 @@ export const setHelpButtonVisible = ({ state }, { visible }) => {
 
 export const setCurrentLocale = ({ state }, { locale } = {}) => {
   state.currentLocale = locale ?? DEFAULT_APP_LOCALE;
+};
+
+export const setAndroidBackupVisible = ({ state }, { visible }) => {
+  state.showAndroidBackup = visible;
 };

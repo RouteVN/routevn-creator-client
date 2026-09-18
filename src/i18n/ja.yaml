@@ -2496,3 +2496,56 @@ resourceImportErrors:
     operation_in_progress: "このインポート処理はすでに実行中です。"
     commit_outcome_unknown: "インポートは保存された可能性がありますが、確認が中断されました。プロジェクトの同期後に安全に再試行してください。"
     import_failed: "パッケージをインポートできませんでした。"
+androidBackup:
+  title: プロジェクトのバックアップ
+  settingsTitle: Android ローカルバックアップ
+  notConfiguredTitle: バックアップ未設定
+  configuredTitle: ローカルバックアップ
+  configuredDescription: 自動バックアップが有効です。
+  setupFolder: バックアップフォルダーを設定
+  changeFolder: フォルダーを変更
+  notConfigured: アプリの削除やデータの消去により、すべてのプロジェクトが失われます。
+  running: バックアップ中…
+  upToDate: バックアップ済み
+  never: 未バックアップ
+  lastBackup: '前回のバックアップ：'
+  schedule: アプリを開いている間、変更を10分ごとにバックアップします。
+androidBackupErrors:
+  failed: バックアップを完了できませんでした。前回のバックアップは保持されています。再試行するか、別のローカルフォルダーを選んでください。
+  lowSpace: 空き容量不足のためバックアップを停止しました。バックアップ後に1 GB以上の空き容量が残るよう、端末または保存先の容量を確保してください。
+  unknownSpace: 空き容量を確認できません。別のローカルフォルダーを選んでください。
+  reconnect: バックアップフォルダーにアクセスできません。ストレージを接続するか、フォルダーを選び直してください。
+  localFolder: この端末またはリムーバブルドライブのフォルダーを選んでください。クラウドは対応していません。
+  nameConflict: 同名のバックアップフォルダーまたはファイルがあります。既存のバックアップを守るため、別のフォルダーを選んでください。
+  invalidBackup: 既存のバックアップDBを検証できませんでした。既存のデータは保持されています。別のフォルダーを選んでください。
+  verification: バックアップを検証できませんでした。再試行するか、別のローカルフォルダーを選んでください。
+  busy: 保存またはエクスポート中です。次回の確認時にバックアップを再試行します。
+  interrupted: バックアップが中断されました。次回の確認時に再試行します。
+  assetConflict: ファイルIDが使用されています。既存のファイルは保持されています。
+androidBackupSetup:
+  title: バックアップフォルダーの設定
+  description: アプリを削除してもプロジェクトのファイルを残せるよう、バックアップを設定してください。
+  newProjectsDescription: 「Documents」を選ぶと、その中に「RouteVN Backups」フォルダーを作成します。
+  savedTitle: バックアップフォルダーを設定しました
+  setup: バックアップフォルダーを選択
+  changeFolder: バックアップフォルダーを変更
+  continue: 続ける
+  pickerTitle: バックアップフォルダーを選択
+  skip: 今はスキップ
+  skipTitle: バックアップなしで続けますか？
+  skipWarning: アプリを削除したりデータを消去したりすると、アプリ内のすべてのプロジェクトが失われます。バックアップフォルダーを設定して保護してください。
+  skipConfirm: バックアップなしで続ける
+  cancel: キャンセル
+  existingTitle: フォルダーは空ではありません
+  existingMessage: このフォルダーをバックアップに使いますか？既存のファイルは保持されます。
+  useFolder: このフォルダーを使う
+  errorTitle: バックアップの設定に失敗しました
+  pickError: フォルダー選択を開けませんでした。再試行してください。
+  confirmError: このフォルダーを設定できませんでした。別のローカルフォルダーを選んでください。
+  appFolderError: Androidのアプリ用ストレージ以外のフォルダーを選んでください。例：Documents/RouteVN Backups。
+  localFolderError: この端末またはリムーバブルドライブのローカルフォルダーを選んでください。クラウドは対応していません。
+  reconnectError: フォルダーへのアクセスを失いました。選び直してください。
+  nameConflictError: バックアップ名が既存ファイルと競合しています。別のフォルダーを選んでください。
+  lowSpaceError: 空き容量が不足しています。バックアップ後に1 GB以上の空き容量が必要です。
+  unknownSpaceError: 空き容量を確認できません。別のローカルフォルダーを選んでください。
+  busyError: バックアップ中です。完了してからフォルダーを変更してください。

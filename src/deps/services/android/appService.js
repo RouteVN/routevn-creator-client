@@ -1,3 +1,5 @@
+import { createAndroidBackupClient } from "../../clients/android/backup.js";
+import { createBackupService } from "./backupService.js";
 import { createAppServiceCore } from "../shared/appServiceCore.js";
 import { callAndroidBridge } from "../../clients/android/bridge.js";
 import { getAndroidProjectFileUrl } from "./projectFileUrls.js";
@@ -266,8 +268,30 @@ export const createAppService = (params) => {
     platformAdapter,
   });
 
+  const backup = createBackupService({
+    client: createAndroidBackupClient(params.appActivity),
+    backupProject: (id) => params.projectService.backupProject(id),
+    beforeBackup: () => appService.prepareNavigation({ path: "/projects" }),
+    notify: (options) => appService.showToast(options),
+  });
+
   return {
     ...appService,
+    initializeBackup: backup.initialize,
+    getBackupStatus: backup.getStatus,
+    subscribeBackup: backup.subscribe,
+    refreshBackupStatus: backup.refresh,
+    backupNow: () => backup.run(true),
+    startBackupChecks: backup.start,
+    getProjectFolderSetup: () => ({ ...backup.getStatus(), isBackup: true }),
+    pickProjectFolderSetup: (options) =>
+      params.filePicker.openFolderPicker({
+        ...options,
+        writable: true,
+        startInDocuments: !backup.getStatus().configured,
+      }),
+    confirmProjectFolderSetup: backup.configure,
+    skipBackupSetup: backup.skip,
 
     showProgressDialog(options) {
       return globalUI.showProgressDialog(options);

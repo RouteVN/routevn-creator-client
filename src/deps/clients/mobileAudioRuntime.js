@@ -137,6 +137,7 @@ export const createMobileAudioRuntime = ({
 
   return {
     createAudioContext,
+    isActive: () => active,
     subscribeActivity(listener) {
       activityListeners.add(listener);
       Promise.resolve(listener(active)).catch(reportError);
