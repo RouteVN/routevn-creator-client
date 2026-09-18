@@ -32,7 +32,6 @@ export const selectViewData = ({ state, props, i18n }) => {
     showWarning: !status.configured || Boolean(error),
     visible: true,
     settings: props.settings,
-    showProjectDetails: props.settings || Boolean(error),
     configured: status.configured,
     busy: status.running,
     message,
@@ -41,18 +40,13 @@ export const selectViewData = ({ state, props, i18n }) => {
     setupLabel: status.configured ? copy.changeFolder : copy.setupFolder,
     projects: status.projects
       .filter(
-        (project) => !props.settings || project.id === state.currentProjectId,
+        (project) => props.settings && project.id === state.currentProjectId,
       )
       .map((project) => ({
         id: project.id,
-        name: project.name,
         date: project.snapshotAt
           ? formatBackupDate(project.snapshotAt)
           : copy.never,
-        detail: project.error
-          ? (i18n.androidBackupErrors[project.error] ??
-            i18n.androidBackupErrors.failed)
-          : "",
       })),
   };
 };

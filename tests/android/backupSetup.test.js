@@ -31,6 +31,29 @@ const fixture = () => {
   return deps;
 };
 describe("Android backup setup", () => {
+  it("keeps Projects errors summarized and Config details scoped to the selected project", () => {
+    const status = {
+      configured: true,
+      projects: Array.from({ length: 50 }, (_, index) => ({
+        id: `project-${index}`,
+        name: `Project ${index + 1}`,
+        error: "lowSpace",
+        backupFolderPath: `/Backups/Project-${index}`,
+        snapshotAt: "2026-09-17T12:00:00.000Z",
+      })),
+    };
+    const state = { status, currentProjectId: "project-3" };
+    const summary = selectViewData({ state, props: { settings: false }, i18n });
+    expect(summary.message).toContain("1 GB");
+    expect(summary.showWarning).toBe(true);
+    expect(summary.projects).toEqual([]);
+
+    const settings = selectViewData({ state, props: { settings: true }, i18n });
+    expect(settings.projects).toHaveLength(1);
+    expect(settings.projects[0].id).toBe("project-3");
+    expect(settings.folder).toBe("/Backups/Project-3");
+  });
+
   it("renders backup wording and requires an explicit skip confirmation", async () => {
     const deps = fixture();
     expect(deps.store.selectViewData().title).toBe("Setup backup folder");

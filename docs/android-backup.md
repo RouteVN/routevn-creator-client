@@ -153,6 +153,9 @@ Keep the card visible after skipping. Selecting a folder alone does not mean
 existing projects are protected. Keep the card after folder selection with a
 green check, **Local backups**, and **Automatic backups are enabled.**, indicating configuration rather than promising
 every recent edit is protected. Show an amber warning if backup fails.
+Keep failures to one summary message in this fixed footer; never expand a list
+of every project's errors here. Project-specific backup details stay in Config,
+so many failures cannot crowd out the project browser or folder action.
 Show the root backup folder on one line using the last two path segments;
 Config uses the selected project's backup subfolder instead.
 An empty library can finish setup without
@@ -212,6 +215,10 @@ large newly added assets can delay storage-dependent actions during that stage.
 Do not describe this as zero-cost or guaranteed hitch-free. Recheck foreground
 visibility after claiming the pass, after saving drafts, and between projects.
 Pending changes from a short session may wait until the next app launch/resume.
+Pass `reason: "backup"` through editor preparation hooks. The scene editor flushes
+pending drafts (including their normal post-save cache update), but does not
+rewrite text-statistics checkpoints merely because a backup check ran. Otherwise
+the cache timestamp itself advances the database revision on unchanged scenes.
 Activity checks subscribe to the existing mobile runtime's native
 `routeVNSetAppActive` lifecycle signal as well as document visibility. Some Android
 WebViews stay document-visible while their Activity is paused, so visibility

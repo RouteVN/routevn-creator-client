@@ -82,14 +82,12 @@ try {
             value = save({
               configured: true,
               folder,
-              projects: [
-                {
-                  id: "one",
-                  name: "Project One",
-                  pending: true,
-                  error: "lowSpace",
-                },
-              ],
+              projects: Array.from({ length: 50 }, (_, index) => ({
+                id: `project-${index}`,
+                name: `Project ${index + 1}`,
+                pending: true,
+                error: "lowSpace",
+              })),
             });
             break;
           case "beginBackupPass":
@@ -161,6 +159,17 @@ try {
     .first()
     .waitFor();
   await page.screenshot({ path: "/tmp/routevn-android-backup-card.png" });
+  const scrollBox = await page.locator("#projectsScroll").boundingBox();
+  const changeFolderBox = await page.locator("#setupBackup").boundingBox();
+  assert.ok(
+    scrollBox.height > 200,
+    "Backup errors must leave room for the project browser",
+  );
+  assert.ok(
+    changeFolderBox.y + changeFolderBox.height <= 844,
+    "Folder action must remain on screen",
+  );
+  assert.equal(await page.getByText("Project 50", { exact: true }).count(), 0);
   // Settings normally sits inside a project route. Mount the actual page here
   // so this empty-library fixture does not need to invent an editable database.
   await page.evaluate(() => {
