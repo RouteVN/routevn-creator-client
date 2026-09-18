@@ -47,6 +47,11 @@ import android.widget.TextView;
 import android.window.OnBackInvokedCallback;
 import android.window.OnBackInvokedDispatcher;
 import androidx.core.splashscreen.SplashScreen;
+import androidx.core.graphics.Insets;
+import androidx.core.view.ViewCompat;
+import androidx.core.view.WindowCompat;
+import androidx.core.view.WindowInsetsCompat;
+import androidx.core.view.WindowInsetsControllerCompat;
 import androidx.webkit.JavaScriptReplyProxy;
 import androidx.webkit.WebViewAssetLoader;
 import androidx.webkit.WebViewCompat;
@@ -402,8 +407,14 @@ public class MainActivity extends Activity {
 
     private void configureWindow() {
         Window window = getWindow();
-        window.setStatusBarColor(Color.BLACK);
-        window.setNavigationBarColor(Color.BLACK);
+        WindowCompat.enableEdgeToEdge(window);
+        WindowInsetsControllerCompat controller = WindowCompat.getInsetsController(
+            window, window.getDecorView()
+        );
+        // The native root paints a black background behind both system bars,
+        // independently of the device's light/dark theme.
+        controller.setAppearanceLightStatusBars(false);
+        controller.setAppearanceLightNavigationBars(false);
     }
 
     private void configureSplashState() {
@@ -503,32 +514,31 @@ public class MainActivity extends Activity {
         }
     }
 
+    @SuppressWarnings("deprecation") // API 28 has no builder that can clear a display cutout.
     private void applySystemBarInsets(View targetView) {
-        targetView.setOnApplyWindowInsetsListener((view, insets) -> {
-            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
-                android.graphics.Insets systemBars = insets.getInsets(
-                    WindowInsets.Type.systemBars()
-                );
-                view.setPadding(
-                    systemBars.left,
-                    systemBars.top,
-                    systemBars.right,
-                    systemBars.bottom
-                );
-                systemInsetsApplied = true;
-                finishSplashIfReady();
-                return insets;
-            }
-
+        ViewCompat.setOnApplyWindowInsetsListener(targetView, (view, insets) -> {
+            Insets safeArea = insets.getInsets(
+                WindowInsetsCompat.Type.systemBars() | WindowInsetsCompat.Type.displayCutout()
+            );
             view.setPadding(
-                insets.getSystemWindowInsetLeft(),
-                insets.getSystemWindowInsetTop(),
-                insets.getSystemWindowInsetRight(),
-                insets.getSystemWindowInsetBottom()
+                safeArea.left,
+                safeArea.top,
+                safeArea.right,
+                safeArea.bottom
             );
             systemInsetsApplied = true;
             finishSplashIfReady();
-            return insets;
+            // The WebView already sits inside this safe area. Pass only the
+            // remaining insets so it does not apply system bars/cutouts twice,
+            // while preserving keyboard insets relative to its own bounds.
+            WindowInsetsCompat remaining = insets.inset(
+                safeArea.left, safeArea.top, safeArea.right, safeArea.bottom
+            );
+            if (Build.VERSION.SDK_INT == Build.VERSION_CODES.P) {
+                // Compat.inset() cannot adjust display cutouts on Android 9.
+                return remaining.consumeDisplayCutout();
+            }
+            return remaining;
         });
     }
 

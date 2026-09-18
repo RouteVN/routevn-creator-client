@@ -7,8 +7,6 @@
         <item name="android:windowLightStatusBar">false</item>
         <item name="android:windowLightNavigationBar">false</item>
         <item name="android:windowBackground">@color/routevn_background</item>
-        <item name="android:statusBarColor">@color/routevn_background</item>
-        <item name="android:navigationBarColor">@color/routevn_background</item>
         <item name="android:colorAccent">@color/routevn_foreground</item>
     </style>
 
@@ -20,8 +18,6 @@
         <item name="android:windowSplashScreenAnimatedIcon">@drawable/splash_icon</item>
         <item name="android:windowSplashScreenIconBackgroundColor">@color/routevn_background</item>
         <item name="postSplashScreenTheme">@style/Theme.RouteVNCreator</item>
-        <item name="android:statusBarColor">@color/routevn_background</item>
-        <item name="android:navigationBarColor">@color/routevn_background</item>
         <item name="android:windowLightStatusBar">false</item>
         <item name="android:windowLightNavigationBar">false</item>
     </style>
