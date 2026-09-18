@@ -372,6 +372,12 @@ See Apple's [directory-access guidance](https://developer.apple.com/documentatio
 
 ### Audio Playback
 
+The native WebView allows audio playback without a user gesture
+(`mediaTypesRequiringUserActionForPlayback = .video`). Fullscreen preview
+replaces the editor's audio element after asynchronous preparation; requiring
+a gesture rejects that new element's `play()` with `NotAllowedError` on iPad.
+This setting requires rebuilding and installing the native shell.
+
 On iOS 16.3, direct Web Audio can be silent under the Ring/Silent switch even
 while playback advances. The iOS output adapter routes the gain node through a
 `MediaStreamAudioDestinationNode` into an app-owned audio element, following
