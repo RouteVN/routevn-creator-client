@@ -1,6 +1,7 @@
 import { createProjectServiceCore } from "../shared/projectServiceCore.js";
 import { createAndroidProjectServiceAdapters } from "./projectServiceAdapters.js";
 import { callAndroidBridge } from "../../clients/android/bridge.js";
+import { prepareAndroidProjectBackup } from "./collabClientStore.js";
 import { generateId } from "../../../internal/id.js";
 
 const ENABLE_VERBOSE_COLLAB_LOGS = false;
@@ -93,6 +94,11 @@ export const createProjectService = ({
 
   return {
     ...projectService,
+
+    async backupProject(projectId) {
+      await prepareAndroidProjectBackup({ projectId });
+      return callAndroidBridge("publishProjectBackup", { projectId });
+    },
 
     async exportProjectFolder({ projectId, destinationUri } = {}) {
       const targetProjectId = projectId || projectService.getEnsuredProjectId();

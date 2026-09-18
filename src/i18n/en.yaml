@@ -2499,3 +2499,60 @@ resourceImportErrors:
     operation_in_progress: "This import operation is already running."
     commit_outcome_unknown: "The import may have been saved, but confirmation was interrupted. Wait for project sync, then retry safely."
     import_failed: "The package could not be imported."
+androidBackup:
+  title: Project backups
+  settingsTitle: Android local backups
+  notConfiguredTitle: No backup set up
+  configuredTitle: Local backups
+  configuredDescription: Automatic backups are enabled.
+  setupFolder: Set up backup folder
+  changeFolder: Change folder
+  notConfigured: Uninstalling the app or clearing its data will delete all projects.
+  running: Backing up…
+  upToDate: Up to date
+  never: Never backed up
+  lastBackup: 'Last backup:'
+  schedule: Automatic backup every 10 minutes
+androidBackupErrors:
+  failed: Backup could not finish. Your previous backup is kept. Try again or choose another local folder.
+  lowSpace: Backup paused. Free up space on your device or backup storage. At least 1 GB must remain free after the backup.
+  unknownSpace: Available space could not be checked. Choose another local backup folder.
+  reconnect: The backup folder is unavailable. Reconnect your storage or choose the folder again.
+  localFolder: Choose a folder on this device or a removable drive. Cloud folders are not supported.
+  nameConflict: A backup folder or file with this name already exists. Choose a different backup folder to keep the existing backup safe.
+  invalidBackup: The existing backup database could not be verified. It was kept. Choose a different backup folder.
+  verification: The backup copy could not be verified. Try again or choose another local folder.
+  busy: A project is being saved or exported. Backup will retry at the next scheduled check.
+  interrupted: Backup was interrupted. It will retry at the next scheduled check.
+  assetConflict: A file ID is already in use. The existing file was kept.
+androidBackupSetup:
+  title: Setup backup folder
+  description: Set up backups to keep your project files if you uninstall the app.
+  newProjectsDescription: If you select Documents, we’ll create a RouteVN Backups folder.
+  savedTitle: Backup folder is set
+  setup: Choose backup folder
+  changeFolder: Change backup folder
+  continue: Continue
+  pickerTitle: Choose backup folder
+  stop: Stop local backups
+  stopTitle: Stop local backups?
+  stopWarning: New changes will no longer be backed up. If you uninstall this app or clear its data, ALL PROJECTS stored in the app will be lost. Existing backups will remain, but may not contain your latest changes.
+  stopError: Could not stop local backups. Try again.
+  skip: Skip for now
+  skipTitle: Continue without backups?
+  skipWarning: If you uninstall this app or clear its data, ALL PROJECTS stored in the app will be lost. Set up a backup folder to protect them.
+  skipConfirm: Continue without backups
+  cancel: Cancel
+  existingTitle: Folder is not empty
+  existingMessage: Use this folder for backups? Existing files will be kept.
+  useFolder: Use this folder
+  errorTitle: Backup setup failed
+  pickError: Could not open the folder picker. Try again.
+  confirmError: Could not set up this backup folder. Choose another local folder.
+  appFolderError: Choose a folder outside Android app storage, such as Documents/RouteVN Backups.
+  localFolderError: Choose a local folder on this device or a removable drive. Cloud folders are not supported.
+  reconnectError: Folder access was lost. Choose the folder again.
+  nameConflictError: Existing files conflict with backup names. Choose another folder.
+  lowSpaceError: Not enough free space. At least 1 GB must remain free after the backup.
+  unknownSpaceError: Free space could not be checked. Choose another local folder.
+  busyError: A backup is running. Wait for it to finish before changing folders.

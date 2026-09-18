@@ -372,9 +372,17 @@ The configured policy is:
 - picker files, staging files, preferences, and other private files are not
   backed up or transferred
 
-Manual project export remains the recovery mechanism until RouteVN provides a
-project-aware cloud backup or synchronization service. Android device transfer
-is a convenience and must not be presented as the user's only backup.
+The [Android project backup system](android-backup.md) copies changed projects
+to a user-selected local folder about every 10 minutes while the app is active.
+Launch/resume checks use the remaining cooldown, with a five-second grace period
+before overdue work starts. They do not block navigation; backgrounding cancels
+the pending timer rather than starting an exit backup.
+Setup is skippable with an uninstall/data-loss warning. Projects and Settings
+show backup status; Projects provides folder changes, and Settings shows the
+selected project's backup folder and last backup time.
+Backups reserve 1 GB of free space and retain a previous database for recovery.
+Manual export remains available. Device transfer is a convenience, not the
+user's only backup. Real-device backup validation is still required before release.
 
 ## Android Back
 

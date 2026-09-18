@@ -168,6 +168,10 @@ public class MainActivity extends Activity {
     private WebView webView;
     private String lastReportedWindowMetrics = "";
     private GooglePlayUpdater googlePlayUpdater;
+    private ProjectBackup projectBackup;
+    private final ExecutorService backupExecutor = Executors.newSingleThreadExecutor();
+    private final Set<String> projectTransactions = java.util.concurrent.ConcurrentHashMap.newKeySet();
+    private final Set<String> projectExports = java.util.concurrent.ConcurrentHashMap.newKeySet();
     private boolean appResumed = false;
     private boolean splashDismissRequested = false;
     private boolean splashReady = false;
@@ -204,6 +208,15 @@ public class MainActivity extends Activity {
                     null
                 );
             }
+        });
+        projectBackup = new ProjectBackup(this, new ProjectBackup.Storage() {
+            public JSONArray projects() throws Exception { return listProjectFolders(); }
+            public File root(String id) throws Exception { return getProjectRoot(id); }
+            public String counter(String id) throws Exception {
+                SQLiteDatabase database = openProjectDatabaseForBridge(getProjectDatabasePath(id));
+                return ProjectBackup.databaseRevision(database) + ":" + projectBackup.assetRevision(id);
+            }
+            public void snapshot(String id, File target) throws Exception { snapshotProjectForBackup(id, target); }
         });
         validateNativeExporterSmoke();
         configureWindow();
@@ -779,10 +792,17 @@ public class MainActivity extends Activity {
             unregisterBackInvokedCallback();
         }
 
-        closeSqliteDatabases();
-        closeProjectFileWriteSessions();
-        cleanupPendingSaveDocuments();
-        bridgeExecutor.shutdownNow();
+        projectBackup.close();
+        backupExecutor.shutdownNow();
+        // Cancellation is immediate; cleanup must wait behind storage work on
+        // its own thread, not hold Activity destruction on media copies/hashes.
+        bridgeExecutor.execute(() -> {
+            projectBackup.cleanupAfterClose();
+            closeSqliteDatabases();
+            closeProjectFileWriteSessions();
+            cleanupPendingSaveDocuments();
+        });
+        bridgeExecutor.shutdown();
 
         if (webView != null) {
             webView.destroy();
@@ -1037,6 +1057,18 @@ public class MainActivity extends Activity {
                 return;
             }
 
+            if ("publishProjectBackup".equals(method)) {
+                String backupRequestId = requestId;
+                String projectId = safePathSegment(payload.getString("projectId"));
+                backupExecutor.execute(() -> {
+                    String result;
+                    try { result = bridgeSuccess(projectBackup.publish(projectId)); }
+                    catch (Exception error) { result = bridgeFailure(error); }
+                    reply.accept(attachBridgeResponseMetadata(backupRequestId, result));
+                });
+                return;
+            }
+
             String result = dispatchAndroidBridgeMethod(
                 method,
                 payload.toString()
@@ -1057,6 +1089,20 @@ public class MainActivity extends Activity {
         JSONObject payload = new JSONObject(payloadJson);
         AndroidBridge bridge = new AndroidBridge();
         switch (method) {
+            case "getBackupStatus":
+                return bridgeSuccess(projectBackup.status());
+            case "configureBackup":
+                return bridgeSuccess(projectBackup.configure(payload.getString("uri"), payload.optBoolean("acceptExisting")));
+            case "skipBackupSetup":
+                return bridgeSuccess(projectBackup.skip());
+            case "disableBackup":
+                return bridgeSuccess(projectBackup.disable());
+            case "beginBackupPass":
+                return bridgeSuccess(projectBackup.beginPass(payload.optBoolean("manual")));
+            case "getPendingBackupProjects":
+                return bridgeSuccess(projectBackup.pendingProjects());
+            case "prepareProjectBackup":
+                return bridgeSuccess(projectBackup.prepare(safePathSegment(payload.getString("projectId"))));
             case "getWindowMetrics":
                 return bridgeSuccess(currentWindowMetrics());
             case "isDebugBuild":
@@ -1283,6 +1329,11 @@ public class MainActivity extends Activity {
                     sql,
                     payload.optJSONArray("args")
                 );
+                String normalized = normalizeSingleBridgeSqlStatement(sql).toUpperCase(Locale.ROOT);
+                String dbPath = payload.getString("dbPath");
+                if (normalized.equals("BEGIN") || normalized.equals("BEGIN IMMEDIATE")) projectTransactions.add(dbPath);
+                if (normalized.equals("COMMIT") || normalized.equals("ROLLBACK")) projectTransactions.remove(dbPath);
+                if (normalized.startsWith("CREATE TABLE")) ProjectBackup.installTracking(database);
                 JSONObject result = new JSONObject();
                 result.put("rowsAffected", rowsAffected);
                 return bridgeSuccess(result);
@@ -1550,8 +1601,9 @@ public class MainActivity extends Activity {
                 JSONObject payload = new JSONObject(payloadJson);
                 String requestId = safePathSegment(payload.getString("requestId"));
                 boolean writable = payload.optBoolean("writable", false);
+                boolean startInDocuments = payload.optBoolean("startInDocuments", false);
 
-                runOnUiThread(() -> launchAndroidFolderPicker(requestId, writable));
+                runOnUiThread(() -> launchAndroidFolderPicker(requestId, writable, startInDocuments));
                 return bridgeSuccess(true);
             } catch (Exception error) {
                 return bridgeFailure(error);
@@ -1578,6 +1630,7 @@ public class MainActivity extends Activity {
                 String projectId = payload.getString("projectId");
                 String destinationUri = payload.getString("destinationUri");
 
+                projectExports.add(projectId);
                 Thread exportThread = new Thread(() -> {
                     try {
                         JSONObject exportResult = exportProjectFolderToTreeUri(
@@ -1596,6 +1649,8 @@ public class MainActivity extends Activity {
                                 : error.getMessage(),
                             error
                         );
+                    } finally {
+                        projectExports.remove(projectId);
                     }
                 });
                 exportThread.start();
@@ -1633,7 +1688,7 @@ public class MainActivity extends Activity {
                 "message",
                 error.getMessage() == null ? "Android bridge call failed" : error.getMessage()
             );
-            errorBody.put("code", error.getClass().getSimpleName());
+            errorBody.put("code", error instanceof ProjectBackup.Failure ? ProjectBackup.errorCode(error) : error.getClass().getSimpleName());
             result.put("error", errorBody);
             return result.toString();
         } catch (Exception jsonError) {
@@ -1946,10 +2001,13 @@ public class MainActivity extends Activity {
         return database;
     }
 
-    private SQLiteDatabase openProjectDatabaseForBridge(String dbPath)
+    private synchronized SQLiteDatabase openProjectDatabaseForBridge(String dbPath)
         throws Exception {
         resolveProjectDatabaseFileForBridge(dbPath);
-        return openDatabase(dbPath);
+        boolean wasOpen = sqliteDatabases.containsKey(dbPath);
+        SQLiteDatabase database = openDatabase(dbPath);
+        if (!wasOpen) ProjectBackup.installTracking(database);
+        return database;
     }
 
     private File resolveProjectDatabaseFileForBridge(String dbPath)
@@ -2076,6 +2134,7 @@ public class MainActivity extends Activity {
     }
 
     private synchronized void closeDatabase(String dbPath) {
+        projectTransactions.remove(dbPath);
         SQLiteDatabase database = sqliteDatabases.remove(dbPath);
         if (database != null && database.isOpen()) {
             database.close();
@@ -2354,6 +2413,7 @@ public class MainActivity extends Activity {
         );
         try {
             File targetFile = resolveSafeRelativeFile(filesRoot, safeFileId);
+            assertNewProjectAsset(safeProjectId, safeFileId);
             String normalizedMimeType = normalizeMimeType(mimeType);
             JSONObject result = new JSONObject();
             result.put("writeId", writeId);
@@ -2439,6 +2499,8 @@ public class MainActivity extends Activity {
             session.output.getFD().sync();
             session.output.close();
             session.output = null;
+            assertNewProjectAsset(session.projectId, session.fileId);
+            projectBackup.markAssetChange(session.projectId);
             Os.rename(
                 session.temporaryFile.getAbsolutePath(),
                 session.targetFile.getAbsolutePath()
@@ -2589,6 +2651,7 @@ public class MainActivity extends Activity {
             new File(projectRoot, "file-metadata"),
             safeFileId + ".mime"
         );
+        projectBackup.markAssetChange(safeProjectId);
         if (file.exists() && !file.delete()) {
             throw new IllegalStateException("Project file could not be deleted.");
         }
@@ -3115,40 +3178,18 @@ public class MainActivity extends Activity {
 
         Uri treeUri = Uri.parse(normalizedUri);
         Uri rootDocumentUri = getTreeRootDocumentUri(treeUri);
-        Uri projectDbUri = requireChildDocument(
-            rootDocumentUri,
-            "project.db",
-            false
-        );
         Uri filesUri = requireChildDocument(rootDocumentUri, "files", true);
         Uri metadataUri = findChildDocument(rootDocumentUri, "file-metadata", true);
-        Uri projectWalUri = findChildDocument(rootDocumentUri, "project.db-wal", false);
-        Uri projectShmUri = findChildDocument(rootDocumentUri, "project.db-shm", false);
-        Uri projectJournalUri = findChildDocument(
-            rootDocumentUri,
-            "project.db-journal",
-            false
-        );
+        if (findChildDocument(rootDocumentUri, EXPORT_INCOMPLETE_MARKER_NAME, false) != null) {
+            throw new IllegalArgumentException("Selected project export is incomplete.");
+        }
 
         File importRoot = new File(getCacheDir(), "project-import");
         File importWorkDir = new File(importRoot, projectId);
         deleteRecursively(importWorkDir);
 
         try {
-            File tempDbFile = new File(importWorkDir, "project.db");
-            copyDocumentToFile(projectDbUri, tempDbFile);
-            if (projectWalUri != null) {
-                copyDocumentToFile(projectWalUri, new File(importWorkDir, "project.db-wal"));
-            }
-            if (projectShmUri != null) {
-                copyDocumentToFile(projectShmUri, new File(importWorkDir, "project.db-shm"));
-            }
-            if (projectJournalUri != null) {
-                copyDocumentToFile(
-                    projectJournalUri,
-                    new File(importWorkDir, "project.db-journal")
-                );
-            }
+            File tempDbFile = copyImportDatabase(rootDocumentUri, importWorkDir);
 
             JSONObject projectInfo = readProjectInfoFromDatabaseFile(tempDbFile);
             String sourceProjectId = safePathSegment(
@@ -3166,6 +3207,8 @@ public class MainActivity extends Activity {
             copyDocumentDirectoryContents(filesUri, stagedFilesRoot);
             if (metadataUri != null) {
                 copyDocumentDirectoryContents(metadataUri, stagedMetadataRoot);
+            } else if (!stagedMetadataRoot.mkdirs()) {
+                throw new IllegalStateException("Cannot create imported file metadata directory.");
             }
 
             JSONObject result = new JSONObject();
@@ -3189,6 +3232,59 @@ public class MainActivity extends Activity {
         } finally {
             deleteRecursively(importWorkDir);
         }
+    }
+
+    private File copyImportDatabase(Uri root, File staging) throws Exception {
+        if (!staging.exists() && !staging.mkdirs()) throw new IllegalStateException("Cannot stage import.");
+        Exception lastError = new ProjectBackup.Failure("invalidBackup");
+        for (String candidate : new String[] {"project.db", "project.db.previous"}) {
+            Uri uri = findChildDocument(root, candidate, false);
+            if (uri == null) continue;
+            File database = new File(staging, "project.db");
+            try {
+                for (String suffix : new String[] {"", "-wal", "-shm", "-journal"}) {
+                    deleteTemporaryFile(new File(staging, "project.db" + suffix));
+                }
+                copyDocumentToFile(uri, database);
+                if (candidate.equals("project.db")) {
+                    for (String suffix : new String[] {"-wal", "-shm", "-journal"}) {
+                        Uri sidecar = findChildDocument(root, "project.db" + suffix, false);
+                        if (sidecar != null) copyDocumentToFile(sidecar, new File(staging, "project.db" + suffix));
+                    }
+                }
+                ProjectBackup.validateDatabase(database, null);
+                return database;
+            } catch (Exception error) { lastError = error; }
+        }
+        throw lastError;
+    }
+
+    private void assertNewProjectAsset(String projectId, String fileId) throws Exception {
+        File root = getProjectRoot(projectId);
+        if (new File(new File(root, "files"), fileId).exists() ||
+            new File(new File(root, "file-metadata"), fileId + ".mime").exists()) {
+            throw new ProjectBackup.Failure("assetConflict");
+        }
+    }
+
+    private void snapshotProjectForBackup(String projectId, File destination) throws Exception {
+        // A project can be deleted after the scheduler lists it. Never recreate
+        // an empty working database while trying to back up that stale entry.
+        if (!getProjectDatabaseFile(projectId).isFile()) throw new ProjectBackup.Failure("failed");
+        String dbPath = getProjectDatabasePath(projectId);
+        if (projectTransactions.contains(dbPath) || projectExports.contains(projectId)) throw new ProjectBackup.Failure("busy");
+        for (ProjectFileWriteSession session : projectFileWriteSessions.values()) {
+            if (session.projectId.equals(projectId)) throw new ProjectBackup.Failure("busy");
+        }
+        SQLiteDatabase database = openProjectDatabaseForBridge(dbPath);
+        try (Cursor checkpoint = database.rawQuery("PRAGMA wal_checkpoint(TRUNCATE)", null)) {
+            if (!checkpoint.moveToFirst() || checkpoint.getInt(0) != 0 ||
+                checkpoint.getLong(1) != checkpoint.getLong(2)) throw new ProjectBackup.Failure("busy");
+        }
+        closeDatabase(dbPath);
+        try {
+            copyFile(getProjectDatabaseFile(projectId), new File(destination, "project.db"));
+        } finally { openProjectDatabaseForBridge(dbPath); }
     }
 
     private void promoteImportedProject(File stagedRoot, File projectRoot)
@@ -3886,7 +3982,7 @@ public class MainActivity extends Activity {
         pendingAndroidSaveFilePickerRequestId = null;
     }
 
-    private void launchAndroidFolderPicker(String requestId, boolean writable) {
+    private void launchAndroidFolderPicker(String requestId, boolean writable, boolean startInDocuments) {
         if (pendingAndroidFolderPickerRequestId != null) {
             sendAndroidFolderPickerError(
                 requestId,
@@ -3898,6 +3994,11 @@ public class MainActivity extends Activity {
         pendingAndroidFolderPickerRequestId = requestId;
 
         Intent intent = new Intent(Intent.ACTION_OPEN_DOCUMENT_TREE);
+        if (startInDocuments && Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+            intent.putExtra(DocumentsContract.EXTRA_INITIAL_URI,
+                DocumentsContract.buildDocumentUri("com.android.externalstorage.documents",
+                    "primary:" + Environment.DIRECTORY_DOCUMENTS));
+        }
         intent.addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION);
         if (writable) {
             intent.addFlags(Intent.FLAG_GRANT_WRITE_URI_PERMISSION);

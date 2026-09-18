@@ -154,6 +154,10 @@ const openUrl = async (url) => {
 };
 
 const appService = createAppService({
+  appActivity: {
+    isActive: androidAudioRuntime.isActive,
+    subscribeActive: androidAudioRuntime.subscribeActivity,
+  },
   db: appDb,
   router,
   globalUI,
@@ -168,6 +172,10 @@ const appService = createAppService({
   subject,
 });
 await appService.initUserConfig();
+const backupStatus = await appService.initializeBackup();
+if (!backupStatus.configured && !backupStatus.skipped && !backupStatus.error) {
+  router.replace("/project-folder-setup");
+}
 
 const apiService = createApiService({
   baseUrl: readAndroidEnv(

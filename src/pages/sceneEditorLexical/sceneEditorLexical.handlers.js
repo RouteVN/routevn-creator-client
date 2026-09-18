@@ -809,8 +809,14 @@ const getSceneEditorRoutePayload = (eventPayload = {}) => {
 
 export const prepareSceneEditorNavigation = async (
   deps,
-  { path, payload } = {},
+  { path, payload, reason } = {},
 ) => {
+  if (reason === "backup") {
+    // A real draft flush updates its stats cache through onDidFlush. Rewriting
+    // that cache without edits would itself make the next backup dirty.
+    await flushSceneEditorDrafts(deps, { force: true });
+    return;
+  }
   const currentProjectId =
     deps.projectService.getEnsuredProjectId?.() ??
     deps.appService?.getCurrentProjectId?.();

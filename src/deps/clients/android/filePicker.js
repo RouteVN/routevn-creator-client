@@ -270,6 +270,7 @@ const requestNativeAndroidFolderPicker = (options = {}) => {
         requestId,
         title: options.title || "Select Folder",
         writable: options.writable === true,
+        startInDocuments: options.startInDocuments === true,
       }),
     ).catch((error) => {
       pendingAndroidFolderPickers.delete(requestId);

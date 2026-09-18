@@ -189,6 +189,7 @@ describe("android file picker", () => {
       requestId: "folder-1",
       title: "Select Export Folder",
       writable: true,
+      startInDocuments: false,
     });
   });
 

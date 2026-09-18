@@ -2499,3 +2499,60 @@ resourceImportErrors:
     operation_in_progress: "此导入操作已在运行。"
     commit_outcome_unknown: "导入可能已保存，但确认过程被中断。请等待项目同步后安全重试。"
     import_failed: "无法导入资源包。"
+androidBackup:
+  title: 项目备份
+  settingsTitle: Android 本地备份
+  notConfiguredTitle: 尚未设置备份
+  configuredTitle: 本地备份
+  configuredDescription: 自动备份已启用。
+  setupFolder: 设置备份文件夹
+  changeFolder: 更改文件夹
+  notConfigured: 卸载应用或清除应用数据会删除所有项目。
+  running: 正在备份…
+  upToDate: 已备份
+  never: 尚未备份
+  lastBackup: 上次备份：
+  schedule: 应用打开期间，每10分钟备份有更改的项目。
+androidBackupErrors:
+  failed: 无法完成备份。之前的备份已保留。请重试或选择其他本地文件夹。
+  lowSpace: 备份已暂停。请释放设备或备份存储空间，确保备份完成后至少还有1 GB可用空间。
+  unknownSpace: 无法检查可用空间。请选择其他本地备份文件夹。
+  reconnect: 无法访问备份文件夹。请重新连接存储设备或重新选择文件夹。
+  localFolder: 请选择此设备或可移动存储设备中的文件夹。不支持云端文件夹。
+  nameConflict: 已有同名的备份文件夹或文件。请选择其他备份文件夹，以保护现有备份。
+  invalidBackup: 无法验证现有备份数据库。已有数据已保留。请选择其他备份文件夹。
+  verification: 无法验证备份副本。请重试或选择其他本地文件夹。
+  busy: 项目正在保存或导出。将在下次定时检查时重试备份。
+  interrupted: 备份已中断。将在下次定时检查时重试。
+  assetConflict: 文件ID已被使用。现有文件已保留。
+androidBackupSetup:
+  title: 设置备份文件夹
+  description: 设置备份，以便卸载应用后仍能保留项目文件。
+  newProjectsDescription: 如果选择 Documents，我们会在其中创建 RouteVN Backups 文件夹。
+  savedTitle: 已设置备份文件夹
+  setup: 选择备份文件夹
+  changeFolder: 更改备份文件夹
+  continue: 继续
+  pickerTitle: 选择备份文件夹
+  stop: 停止本地备份
+  stopTitle: 停止本地备份？
+  stopWarning: 新的更改将不再备份。如果卸载此应用或清除应用数据，应用内的所有项目都会丢失。现有备份会保留，但可能不包含最新更改。
+  stopError: 无法停止本地备份。请重试。
+  skip: 暂时跳过
+  skipTitle: 不备份，继续使用？
+  skipWarning: 如果卸载此应用或清除应用数据，应用内的所有项目都会丢失。请设置备份文件夹来保护项目。
+  skipConfirm: 不备份，继续使用
+  cancel: 取消
+  existingTitle: 文件夹不为空
+  existingMessage: 使用此文件夹进行备份？现有文件会保留。
+  useFolder: 使用此文件夹
+  errorTitle: 备份设置失败
+  pickError: 无法打开文件夹选择器。请重试。
+  confirmError: 无法设置此备份文件夹。请选择其他本地文件夹。
+  appFolderError: 请选择Android应用存储目录之外的文件夹，例如Documents/RouteVN Backups。
+  localFolderError: 请选择此设备或可移动存储设备中的本地文件夹。不支持云端文件夹。
+  reconnectError: 已失去文件夹访问权限。请重新选择。
+  nameConflictError: 现有文件与备份名称冲突。请选择其他文件夹。
+  lowSpaceError: 可用空间不足。备份完成后至少需要保留1 GB可用空间。
+  unknownSpaceError: 无法检查可用空间。请选择其他本地文件夹。
+  busyError: 正在备份。请等待完成后再更改文件夹。
