@@ -112,6 +112,7 @@ dependencies {
     }
 
     implementation("com.google.android.play:app-update:2.1.0")
+    implementation("androidx.core:core:1.19.0")
     implementation("androidx.core:core-splashscreen:1.2.0")
     implementation("androidx.webkit:webkit:1.17.0")
 }

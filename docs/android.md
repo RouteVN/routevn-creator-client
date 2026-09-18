@@ -20,6 +20,7 @@ Gradle pins.
 - `minSdk`: `24`
 - Build tools: `37.0.0`
 - NDK: `29.0.14206865`
+- AndroidX Core: `1.19.0`
 - AndroidX Core Splashscreen: `1.2.0`
 - AndroidX Fragment: `1.9.0` (constraint for Google Play In-App Updates' transitive dependency)
 - AndroidX WebKit: `1.17.0`
@@ -99,6 +100,32 @@ system bar insets have been applied. There is no minimum display duration.
 A single five-second fallback is scheduled at activity creation so a missing
 readiness signal does not hold the splash indefinitely. Dismissing the splash
 or destroying the activity cancels the fallback.
+
+### Edge-to-edge And Insets
+
+The native window uses `WindowCompat.enableEdgeToEdge()` on every supported
+Android version. The black root view draws behind transparent system bars, with
+light system-bar icons. Do not restore app-owned `setStatusBarColor`,
+`setNavigationBarColor`, or their theme attributes; these APIs are deprecated.
+
+The root view applies the union of system-bar and display-cutout insets as
+padding, including side cutouts in landscape. It subtracts that padding from
+the insets dispatched to the WebView, so web safe-area CSS does not apply it a
+second time. Remaining keyboard insets still reach the WebView; the Activity
+uses `adjustResize`, and frontend visual-viewport/keyboard handling remains
+responsible for keeping editing controls above the keyboard. Native window
+metrics continue to exclude system bars and cutouts, independently of keyboard
+visibility.
+
+Run the native inset regression tests with
+`./gradlew :app:testDebugUnitTest --tests com.routevn.creator.WindowInsetsTest`
+from `android/routevn`. They cover Android 9, 13, and 15, including the Android 9
+cutout-consumption fallback and preserving keyboard insets for the WebView.
+
+Validate portrait and landscape, gesture and three-button navigation, cutouts,
+and keyboard-open dialogs on both pre-Android-15 and Android-15+ devices. Google
+Play's warning status must be checked against the newly uploaded release bundle;
+updating source does not change findings attached to an older release.
 
 ## Build And Install
 
