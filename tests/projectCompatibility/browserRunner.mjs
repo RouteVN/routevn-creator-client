@@ -1,3 +1,4 @@
+import { fixtureRoot as prepareFixtureRoot } from "./fixtureArchive.mjs";
 import { readFixtureJson } from "./fixtureIO.mjs";
 import { chromium, webkit } from "playwright";
 import { execFileSync } from "node:child_process";
@@ -23,8 +24,8 @@ mkdirSync(artifactRoot, { recursive: true });
 const workspace = mkdtempSync(
   join(artifactRoot, "routevn-browser-compatibility-"),
 );
-const fixtureRoot = resolve("tests/fixtures/legacy-projects");
 const capture = process.argv.includes("--capture");
+const fixtureRoot = await prepareFixtureRoot({ capture });
 const filter = process.argv
   .find((arg) => arg.startsWith("--fixture="))
   ?.slice(10);

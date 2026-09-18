@@ -7,7 +7,9 @@ or dependency version has changed in this slice.
 ## Implemented and verified
 
 - 27 immutable SQLite project packs and 23 applicable portable IndexedDB packs,
-  authored using independently installed schema-14/schema-15 clients.
+  authored using independently installed schema-14/schema-15 clients. They are
+  stored in a deterministic ZIP with a readable provenance/hash manifest; tests
+  verify and extract it automatically. All 319 original files are byte-identical.
 - Pinned previous-reader comparisons against the candidate through production
   repository loading, storage codecs, projections and model reducers.
 - Cold, warm and cache-cleared opens; exact original row bytes and storage types;
@@ -17,7 +19,7 @@ or dependency version has changed in this slice.
   10,000-edit history and an oversized historical bootstrap.
 - Logical preview/export comparisons in native-bridge and browser lanes.
   Graphics output and packaged-player delivery are separate checks.
-- Six comparator negative controls and real-browser dump self-tests covering
+- Seven comparator negative controls and real-browser dump self-tests covering
   typed binary data, Blob/File metadata, sparse arrays, compound keys, property
   order and advanced key generators.
 - A separate CI job, executable browser artifacts, machine-readable
@@ -40,15 +42,22 @@ branch was pushed and no package was published.
 
 ## Verification from this implementation run
 
-| Check                                                          | Result                                                                                                   |
-| -------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------- |
-| Combined compatibility command                                 | Passed: 162 SQLite open phases, 276 browser open phases, both browser dump checks, six negative controls |
-| Client smoke, integration, convergence, collaboration adapters | Passed                                                                                                   |
-| Client Puty storage suite                                      | 5 passed                                                                                                 |
-| Client lint and new harness formatting                         | Passed                                                                                                   |
-| Model full suite                                               | 4,258 passed, including 3,462 archived cases and 8 adopted-project tests                                 |
-| Engine full suite                                              | 2,182 passed, including 20 literal-value tests                                                           |
-| Engine lint, disabled-test checks and package build            | Passed                                                                                                   |
+| Check                                                          | Result                                                                                                     |
+| -------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------- |
+| Combined compatibility command                                 | Passed: 162 SQLite open phases, 276 browser open phases, both browser dump checks, seven negative controls |
+| Client smoke, integration, convergence, collaboration adapters | Passed                                                                                                     |
+| Client Puty storage suite                                      | 5 passed                                                                                                   |
+| Client lint and new harness formatting                         | Passed                                                                                                     |
+| Model full suite                                               | 4,258 passed, including 3,462 archived cases and 8 adopted-project tests                                   |
+| Engine full suite                                              | 2,182 passed, including 20 literal-value tests                                                             |
+| Engine lint, disabled-test checks and package build            | Passed                                                                                                     |
+
+The archive packaging rerun used only the committed ZIP with a fresh extraction
+cache. All 319 extracted files matched their original hashes, and repacking
+produced identical ZIP and manifest bytes. Six additional archive tests cover
+determinism, concurrent extraction, corrupt archives/caches, unsafe paths and
+preservation of frozen files. The readable manifest and update workflow are
+linked from the harness README.
 
 The combined command was run in the existing Playwright Linux container with
 read-only source/dependency mounts and writable temporary test caches. Chromium

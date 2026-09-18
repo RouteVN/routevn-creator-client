@@ -68,3 +68,4 @@ src/setup.js
 
 # Disposable compatibility runs; immutable fixtures live under tests/fixtures.
 /.compatibility-artifacts/
+/tests/fixtures/legacy-projects/

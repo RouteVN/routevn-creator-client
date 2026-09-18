@@ -1,3 +1,4 @@
+import { fixtureRoot as prepareFixtureRoot } from "../tests/projectCompatibility/fixtureArchive.mjs";
 import { readFixtureJson } from "../tests/projectCompatibility/fixtureIO.mjs";
 import { execFileSync } from "node:child_process";
 import {
@@ -33,7 +34,9 @@ if (args.includes("--prepare")) prepareBaselines();
 const filter = args
   .find((arg) => arg.startsWith("--fixture="))
   ?.slice("--fixture=".length);
-const fixtureRoot = resolve("tests/fixtures/legacy-projects");
+const fixtureRoot = await prepareFixtureRoot({
+  capture: capture || captureRuntime,
+});
 const artifactRoot = resolve(
   process.env.ROUTEVN_COMPATIBILITY_ARTIFACTS ?? tmpdir(),
 );
@@ -421,7 +424,12 @@ try {
   if (args.includes("--all")) {
     execFileSync(
       "bunx",
-      ["vitest", "run", "tests/projectCompatibility/records.test.js"],
+      [
+        "vitest",
+        "run",
+        "tests/projectCompatibility/records.test.js",
+        "tests/projectCompatibility/fixtureArchive.test.js",
+      ],
       { stdio: "inherit" },
     );
     execFileSync(

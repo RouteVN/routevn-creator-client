@@ -78,22 +78,67 @@ native runs retain disposable databases; successful native runs retain their
 report only. Failed browser runs retain the actual database dump and persistent
 profile. CI uploads reports, executable browser bundles, and failure artifacts.
 
+## Archive format and automatic extraction
+
+Commit `tests/fixtures/legacy-projects.zip` and
+`tests/fixtures/legacy-projects.manifest.json` in ordinary Git. The ZIP is marked
+binary in `.gitattributes`; Git LFS is not required. The initial archive is
+about 1.63 MiB and contains all 319 previously expanded files without changing
+any bytes. Existing gzip members and license/source files remain intact.
+
+The readable manifest lists fixture IDs, origin/fault labels, writer and
+previous-reader identities, platform coverage, and every file's SHA-256 and
+size. Review this manifest alongside recipe/harness changes; an opaque binary
+diff alone is not evidence that a baseline update is correct.
+
+All regular entry points—including focused browser runs and comparator unit
+tests—automatically verify and extract the ZIP. Extraction goes to
+`<system temporary directory>/routevn-fixture-cache/<archive-sha256>`; override
+its parent with `ROUTEVN_FIXTURE_CACHE`. The cache is outside the working tree
+and is disposable. The archive hash, inventory, and every extracted file are
+verified on every invocation, including cache hits. Missing/corrupt files fail
+instead of being silently trusted. Delete a damaged cache directory and rerun
+to extract it again. Test lanes make their own disposable copies.
+
+Packing sorts paths, fixes ZIP timestamps and permissions/platform metadata,
+and uses the installed JSZip compression implementation. Packing the same file
+bytes with the pinned dependencies produces identical archive bytes regardless
+of filesystem timestamps. No custom unzip program or download is needed in CI.
+The tests cover deterministic output, exact extraction, simultaneous readers,
+corrupt archives/caches, unsafe paths, and frozen-file preservation.
+
 ## Capturing or extending the corpus
 
 Expected results are written only by the pinned previous reader. Regular tests
-never update fixtures. `--capture` adds missing packs and refuses to overwrite
-existing captures. `--capture-runtime` adds old-runtime observations only after
-checking that the existing state oracle and source records still match.
+never update the ZIP or manifest. Capture commands require an explicit staging
+location, separate from the verified cache:
 
 ```sh
+node tests/projectCompatibility/unpackFixtures.mjs /tmp/routevn-fixture-staging
+export ROUTEVN_FIXTURE_DIRECTORY=/tmp/routevn-fixture-staging
 node scripts/test-project-compatibility.js --prepare --capture --capture-runtime
 node tests/projectCompatibility/browserRunner.mjs --capture --engine=chromium
-node tests/projectCompatibility/packFixtures.mjs
+node tests/projectCompatibility/packFixtures.mjs /tmp/routevn-fixture-staging
+bun run test:project-compatibility
 ```
 
-Lossless gzip packaging retains original uncompressed hashes in each manifest.
-Never bless candidate output or edit frozen historical data to satisfy a new
-validator. Add a new variant with its provenance instead.
+Use a new staging directory each time. The unpack command refuses to overwrite
+an existing directory. Add the new recipe in `recipes.mjs` before capture;
+`--capture` adds missing packs without overwriting old ones. `--capture-runtime`
+adds old-runtime observations only after checking state and source preservation.
+
+Future updates **replace the ZIP and update the text manifest together**. The
+packer verifies captured manifests and refuses to change or remove any file
+listed in the previous archive manifest. Add a new labelled variant when a
+case needs correction or extension; do not bless candidate output or rewrite
+historical expectations to satisfy a new validator. Before committing, inspect
+the text manifest diff and rerun the suite from the newly packed archive.
+Staging files are not committed; `tests/fixtures/legacy-projects/` is ignored
+if that old expanded location is used for local inspection.
+
+This packaging removes roughly 78,000 fixture lines from the PR while retaining
+the same compatibility coverage. Earlier commits in this branch still contain
+the expanded files; packaging changes the final tree, not existing Git history.
 
 This suite is a pre-validation baseline. It does **not** implement or certify
 strict schema dispatch, new-write rejection, upgrade edits, backup/restore,

@@ -1,3 +1,4 @@
+import { fixtureRoot } from "./fixtureArchive.mjs";
 import { readFixtureJson } from "./fixtureIO.mjs";
 import { describe, it, expect } from "vitest";
 import { mkdtempSync, copyFileSync, rmSync } from "node:fs";
@@ -10,7 +11,7 @@ import {
   encodeValue,
   readSourceRecords,
 } from "./records.mjs";
-const root = "tests/fixtures/legacy-projects";
+const root = await fixtureRoot();
 const read = readFixtureJson;
 function removeProperty(value, name) {
   if (!Array.isArray(value)) return false;

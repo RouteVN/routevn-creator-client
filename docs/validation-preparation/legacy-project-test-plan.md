@@ -79,10 +79,16 @@ using the candidate.
 
 ## 4. Frozen project pack format
 
-Canonical client location:
+Canonical committed client files are `tests/fixtures/legacy-projects.zip` and
+`tests/fixtures/legacy-projects.manifest.json`. The text manifest records cases,
+provenance and every archived file hash. Tests verify and automatically extract
+the archive into a disposable cache outside the working tree. See the
+[harness packaging workflow](../../tests/projectCompatibility/README.md#archive-format-and-automatic-extraction).
+
+Logical layout inside the ZIP (no expanded files are committed):
 
 ```text
-tests/fixtures/legacy-projects/<fixture-id>/
+<fixture-id>/
   manifest.json
   authoring-recipe.json
   source/                         # platform-specific immutable capture
