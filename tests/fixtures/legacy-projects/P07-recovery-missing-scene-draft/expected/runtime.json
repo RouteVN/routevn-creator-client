@@ -1,0 +1,41 @@
+[
+  "object",
+  [
+    [
+      "status",
+      [
+        "string",
+        "unavailable"
+      ]
+    ],
+    [
+      "stage",
+      [
+        "string",
+        "engine-init"
+      ]
+    ],
+    [
+      "error",
+      [
+        "object",
+        [
+          [
+            "name",
+            [
+              "string",
+              "TypeError"
+            ]
+          ],
+          [
+            "message",
+            [
+              "string",
+              "Cannot read properties of undefined (reading 'initialSectionId')"
+            ]
+          ]
+        ]
+      ]
+    ]
+  ]
+]

@@ -1,0 +1,220 @@
+{
+  "protocol": 1,
+  "id": "P05-mixed",
+  "schema": 14,
+  "history": "mixed",
+  "commands": [
+    {
+      "type": "scene.create",
+      "payload": {
+        "sceneId": "scene-one",
+        "data": {
+          "name": "Scene One"
+        }
+      }
+    },
+    {
+      "type": "scene.create",
+      "payload": {
+        "sceneId": "scene-two",
+        "data": {
+          "name": "Scene Two"
+        }
+      }
+    },
+    {
+      "type": "section.create",
+      "payload": {
+        "sceneId": "scene-one",
+        "sectionId": "section-one",
+        "data": {
+          "name": "Section One"
+        }
+      }
+    },
+    {
+      "type": "section.create",
+      "payload": {
+        "sceneId": "scene-one",
+        "sectionId": "section-three",
+        "data": {
+          "name": "Section Three"
+        }
+      }
+    },
+    {
+      "type": "section.create",
+      "payload": {
+        "sceneId": "scene-two",
+        "sectionId": "section-two",
+        "data": {
+          "name": "Section Two"
+        }
+      }
+    },
+    {
+      "type": "line.create",
+      "payload": {
+        "sectionId": "section-one",
+        "lines": [
+          {
+            "lineId": "line-one",
+            "data": {
+              "actions": {
+                "dialogue": {
+                  "content": [
+                    {
+                      "text": "First"
+                    }
+                  ]
+                }
+              }
+            }
+          },
+          {
+            "lineId": "line-two",
+            "data": {
+              "actions": {
+                "dialogue": {
+                  "content": [
+                    {
+                      "text": "Second"
+                    }
+                  ]
+                }
+              }
+            }
+          }
+        ]
+      }
+    },
+    {
+      "type": "file.create",
+      "payload": {
+        "fileId": "file-one",
+        "data": {
+          "mimeType": "image/png",
+          "size": 128,
+          "sha256": "fixture-image-sha256"
+        }
+      }
+    },
+    {
+      "type": "image.create",
+      "payload": {
+        "imageId": "image-one",
+        "data": {
+          "type": "image",
+          "name": "Image One",
+          "fileId": "file-one"
+        }
+      }
+    },
+    {
+      "type": "character.create",
+      "payload": {
+        "characterId": "character-one",
+        "data": {
+          "type": "character",
+          "name": "Character One",
+          "sprites": {
+            "items": {},
+            "tree": []
+          }
+        }
+      }
+    },
+    {
+      "type": "character.sprite.create",
+      "payload": {
+        "characterId": "character-one",
+        "spriteId": "sprite-one",
+        "data": {
+          "type": "spritesheet",
+          "name": "Sprite One",
+          "fileId": "file-one",
+          "sheetWidth": 32,
+          "sheetHeight": 16,
+          "frameCount": 2,
+          "width": 16,
+          "height": 16,
+          "jsonData": {
+            "meta": {
+              "image": "image-one.png"
+            }
+          },
+          "animations": {
+            "idle": {
+              "frames": [
+                0,
+                1
+              ],
+              "fps": 12,
+              "loop": true
+            }
+          }
+        }
+      }
+    },
+    {
+      "type": "character.sprite.update",
+      "payload": {
+        "characterId": "character-one",
+        "spriteId": "sprite-one",
+        "data": {
+          "name": "Sprite One Updated"
+        }
+      }
+    },
+    {
+      "type": "character.sprite.create",
+      "payload": {
+        "characterId": "character-one",
+        "spriteId": "sprite-two",
+        "data": {
+          "type": "spritesheet",
+          "name": "Sprite One",
+          "fileId": "file-one",
+          "sheetWidth": 32,
+          "sheetHeight": 16,
+          "frameCount": 2,
+          "width": 16,
+          "height": 16,
+          "jsonData": {
+            "meta": {
+              "image": "image-one.png"
+            },
+            "frames": {
+              "frame-one": {
+                "frame": {
+                  "x": 0,
+                  "y": 0,
+                  "w": 16,
+                  "h": 16
+                }
+              },
+              "frame-two": {
+                "frame": {
+                  "x": 16,
+                  "y": 0,
+                  "w": 16,
+                  "h": 16
+                }
+              }
+            }
+          },
+          "animations": {
+            "idle": {
+              "frames": [
+                0,
+                1
+              ],
+              "fps": 12,
+              "loop": true
+            }
+          }
+        }
+      }
+    }
+  ]
+}

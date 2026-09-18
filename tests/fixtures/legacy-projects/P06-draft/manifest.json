@@ -1,0 +1,48 @@
+{
+  "protocol": 1,
+  "id": "P06-draft",
+  "origin": "fault-injected",
+  "platform": "sqlite-native-bridge",
+  "writer": {
+    "revision": "0844141f67bca7e194409095ad6b7a0dd8914053",
+    "lockfileSha256": "69a3e5a2456bee19ec6d3e88e0afb8c025ecde09a6cfac66c8160f89d75b2aa4",
+    "sourceSha256": "cce1ee912b3dde86fa7fb59aaf5594ca852239e3396492c9df4e73a4f26439a4",
+    "dependencies": {
+      "@routevn/creator-model": "1.14.0",
+      "insieme": "2.1.1",
+      "route-engine-js": "1.46.1"
+    },
+    "declaredModel": "1.14.0"
+  },
+  "previousReader": {
+    "revision": "4d1fe31f96ff7a8f4eebf2b58679755a827a8851",
+    "lockfileSha256": "13e42d8cb0604f7d17798286bc910e5630f8709b1d627742db4948f28acdbef0",
+    "sourceSha256": "0c4c004dd3e504a538f29aff9981024bb188188cc7e3ba437feac4b9722505db",
+    "dependencies": {
+      "@routevn/creator-model": "1.15.0",
+      "insieme": "2.1.1",
+      "route-engine-js": "1.46.1"
+    },
+    "declaredModel": "1.15.0"
+  },
+  "fault": "invalid-draft",
+  "parentDatabaseSha256": "181a7adfdd06fa00732fa2c7e840e8ffdbda4b2a122765d35b1c2b6f0c62370e",
+  "files": {
+    "authoring-recipe.json": "f537239c5a9078a49998cc9d4c8a303ce1cd3c5e5a1a6cf9eafcb5e0850341ea",
+    "source/project.db": "c933e46b8eeeb760aeba7a2b6dbd6006b1eabcde0cb7662da20369665ae6fbc4",
+    "expected/previous-reader.json": "8a950177704d527055c78a42d2c9919890b0c543609fbe4c0fff486b43df1b1e",
+    "expected/source-records.json": "ab97b01f9177e7ff6c9e95f08cdb312ad87284c9814d0d99b7e195953f984b2d",
+    "expected/asset-hashes.json": "ca3d163bab055381827226140568f3bef7eaac187cebd76878e0b63e9e442356",
+    "expected/runtime.json": "9ef3b4ceaa2eeb45af8319659d972b01bd0efa549efdfbabd3d70c7bb9b392c3"
+  },
+  "coverage": {
+    "open": true,
+    "fullState": true,
+    "rawHistory": true,
+    "assets": false,
+    "runtime": true,
+    "backupRestore": false,
+    "nativeDevice": false,
+    "strictUpgrade": false
+  }
+}

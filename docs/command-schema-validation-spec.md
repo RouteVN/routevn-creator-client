@@ -1,15 +1,16 @@
 # Versioned Command Validation Specification
 
-Status: behavior reviewed and approved; documentation only. No behavior
-described as a requirement below has been implemented by adding this document.
+Status: behavior reviewed and approved; implementation in progress. The
+old-project compatibility baseline is executable. Strict validation and its
+reader/writer rollout are not yet implemented by this branch.
 
 Date: September 13, 2026.
 
 User review completed September 17, 2026. The
 [approved behavior and handoff](./validation-preparation/README.md#approved-behavior-from-the-user-review)
 records the decisions accepted one at a time, including templates and database
-reconciliation. Work is parked on `docs/versioned-schema-validation-plan`;
-implementation must wait for a separate request to resume.
+reconciliation. Implementation has resumed on `docs/versioned-schema-validation-plan`
+at the user’s request, starting with the frozen compatibility baseline.
 
 September 18 review refresh: this branch now includes client main `4d1fe31f`.
 The implementation baseline uses creator-model `1.15.0` / schema `15`; M must

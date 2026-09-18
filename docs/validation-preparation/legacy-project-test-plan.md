@@ -1,9 +1,8 @@
 # Old-project compatibility test plan
 
-Status: test-preparation plan from the September 18 review, with
-fixture capture and executable harnesses still pending. This document defines
-the compatibility baseline to build **before changing validation behavior**.
-It does not claim that the old-project tests already exist or pass.
+Status: the executable T0 baseline has been implemented, with frozen old-writer
+project packs and previous-reader/candidate comparisons. Strict upgrade tests
+(T1–T3) remain outstanding; passing the baseline does not certify strict writes.
 
 ## 1. What we need to prove
 
@@ -80,7 +79,7 @@ using the candidate.
 
 ## 4. Frozen project pack format
 
-Planned canonical client location:
+Canonical client location:
 
 ```text
 tests/fixtures/legacy-projects/<fixture-id>/
@@ -314,6 +313,31 @@ required pack/variant must have a recorded passing result on its applicable
 platform; an unsupported fixture is documented with the old-reader evidence,
 not silently omitted.
 
-The next task is T0: capture old projects and build the runnable baseline suite.
-Do not start strict validator changes first and attempt to reconstruct old
-behavior afterward. This plan alone does not complete T0.
+The executable baseline is now in
+[`tests/projectCompatibility`](../../tests/projectCompatibility/README.md), with
+27 captured SQLite variants and 23 applicable portable browser captures.
+It covers old/candidate cold, warm, and cache-cleared opens, exact history
+preservation, logical runtime observations, real Blob assets in the media packs,
+and comparator negative controls. It still does not certify the strict-upgrade
+phases, native binaries, graphics/player delivery, or backup/restore.
+
+The real captures also found two prior-reader behaviors that mocked tests did
+not expose:
+
+- Locally acknowledged SQLite drafts can become committed rows with missing
+  `projectId`, making reopen fail with `validation_failed`. The dedicated
+  `P06-acknowledged-committed` case records that failure; working committed packs
+  receive their prefix through an actual sync receiver.
+- The no-metadata recovery case adds exactly `meta.historyStats` to its main
+  checkpoint when the old reader flushes. Baseline comparison allows only that
+  captured addition, while preserving its embedded state and all history bytes.
+  The strict upgrade phase must preserve the original source and write its new
+  cache separately.
+
+Do not count passing these baseline checks as implemented strict validation.
+The model owner also has four adopted domain streams with source hashes and
+exact sequential/batch comparisons; its original schema archives remain intact.
+The browser runner uses isolated persistent profiles and verifies dump fidelity
+for Blob/File values, typed buffers, sparse arrays, compound keys, ordered
+properties, and advanced auto-increment generators before comparing projects.
+Do not reconstruct old expectations from candidate output during later stages.

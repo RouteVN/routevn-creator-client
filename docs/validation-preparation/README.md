@@ -2,8 +2,10 @@
 
 Prepared: September 13, 2026. User review completed: September 17, 2026.
 Scope: specifications, captured fixture data, and
-baseline verification only. No application/model implementation, active test
-runner, dependency change, database migration, or release is included.
+baseline verification. The executable old-project baseline now lives in
+[`tests/projectCompatibility`](../../tests/projectCompatibility/README.md).
+Strict application/model validation, dependency releases, database changes, and
+release enablement are not included in this baseline work.
 
 This package completes the preparation requested before implementing the
 [versioned command validation specification](../command-schema-validation-spec.md).
@@ -43,7 +45,9 @@ model fixtures belong upstream; frozen project databases/browser stores and
 open/edit/reopen tests belong in this client. Capture the ten specified project
 packs and required variants with pinned old writers/readers, then make the T0
 baseline suite executable before changing validation behavior. Existing JSON
-scenarios and mock-based probes do not fulfill this gate.
+scenarios and mock-based probes do not fulfill this gate. The new executable
+corpus covers real SQLite and IndexedDB opens; its README distinguishes tested
+coverage from the remaining upgrade and platform gates.
 
 ## Approved behavior from the user review
 
@@ -176,14 +180,15 @@ when implementation exists.
 
 ## Handoff
 
-Work is parked on the local branch `docs/versioned-schema-validation-plan`.
-The user requested returning to `main` for other work. Implementation has not
-started; resume it only when requested. The short review record above is the
-starting point for resuming, with the specification and preparation artifacts
-providing the technical details.
+Implementation resumed at the user’s request on
+`docs/versioned-schema-validation-plan`. The executable compatibility baseline
+and frozen project packs are implemented. Model domain-fixture adoption and
+the engine literal-value prerequisite are being developed in their owning
+checkouts. The full strict validator, storage version handling, client
+coordination/integration, and release enablement are not complete.
 
-Start with the T0 executable compatibility baseline and frozen project packs.
-After that gate passes, start the model, Insieme, and engine owner changes,
+Keep the T0 executable compatibility baseline passing throughout implementation.
+Complete the model, Insieme, and engine owner changes,
 then integrate the client in the documented order. The remaining gates are
 implementation, published dependencies, and feature/platform verification;
 the additional T0 test-preparation gate above must pass before validator changes.

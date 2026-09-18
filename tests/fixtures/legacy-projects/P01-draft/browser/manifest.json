@@ -1,0 +1,30 @@
+{
+  "protocol": 1,
+  "capturedBrowser": "chromium 143.0.7499.4",
+  "writer": {
+    "revision": "0844141f67bca7e194409095ad6b7a0dd8914053",
+    "lockfileSha256": "69a3e5a2456bee19ec6d3e88e0afb8c025ecde09a6cfac66c8160f89d75b2aa4",
+    "sourceSha256": "cce1ee912b3dde86fa7fb59aaf5594ca852239e3396492c9df4e73a4f26439a4",
+    "dependencies": {
+      "@routevn/creator-model": "1.14.0",
+      "insieme": "2.1.1",
+      "route-engine-js": "1.46.1"
+    },
+    "declaredModel": "1.14.0"
+  },
+  "previousReader": {
+    "revision": "4d1fe31f96ff7a8f4eebf2b58679755a827a8851",
+    "lockfileSha256": "13e42d8cb0604f7d17798286bc910e5630f8709b1d627742db4948f28acdbef0",
+    "sourceSha256": "0c4c004dd3e504a538f29aff9981024bb188188cc7e3ba437feac4b9722505db",
+    "dependencies": {
+      "@routevn/creator-model": "1.15.0",
+      "insieme": "2.1.1",
+      "route-engine-js": "1.46.1"
+    },
+    "declaredModel": "1.15.0"
+  },
+  "files": {
+    "source.json.gz": "bd56ffe0028c707d1ac78c18d6acd30daaeff705fd20f1f3163851529fb37aeb",
+    "previous-reader.json.gz": "473dee746555a84247a11c202da92d95fc1c9405c62c0413c9580d989fc4db3e"
+  }
+}

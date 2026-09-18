@@ -1,0 +1,93 @@
+{
+  "protocol": 1,
+  "id": "P06-draft",
+  "schema": 14,
+  "history": "draft",
+  "commands": [
+    {
+      "type": "scene.create",
+      "payload": {
+        "sceneId": "scene-one",
+        "data": {
+          "name": "Scene One"
+        }
+      }
+    },
+    {
+      "type": "scene.create",
+      "payload": {
+        "sceneId": "scene-two",
+        "data": {
+          "name": "Scene Two"
+        }
+      }
+    },
+    {
+      "type": "section.create",
+      "payload": {
+        "sceneId": "scene-one",
+        "sectionId": "section-one",
+        "data": {
+          "name": "Section One"
+        }
+      }
+    },
+    {
+      "type": "section.create",
+      "payload": {
+        "sceneId": "scene-one",
+        "sectionId": "section-three",
+        "data": {
+          "name": "Section Three"
+        }
+      }
+    },
+    {
+      "type": "section.create",
+      "payload": {
+        "sceneId": "scene-two",
+        "sectionId": "section-two",
+        "data": {
+          "name": "Section Two"
+        }
+      }
+    },
+    {
+      "type": "line.create",
+      "payload": {
+        "sectionId": "section-one",
+        "lines": [
+          {
+            "lineId": "line-one",
+            "data": {
+              "actions": {
+                "dialogue": {
+                  "content": [
+                    {
+                      "text": "First"
+                    }
+                  ]
+                }
+              }
+            }
+          },
+          {
+            "lineId": "line-two",
+            "data": {
+              "actions": {
+                "dialogue": {
+                  "content": [
+                    {
+                      "text": "Second"
+                    }
+                  ]
+                }
+              }
+            }
+          }
+        ]
+      }
+    }
+  ],
+  "fault": "invalid-draft"
+}

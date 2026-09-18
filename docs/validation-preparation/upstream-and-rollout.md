@@ -1,7 +1,8 @@
 # Upstream work and rollout sequence
 
-Status: preparation only. No implementation PRs, package releases, dependency
-changes, application releases, or deployments are created by this document.
+Status: implementation has resumed with the executable old-project baseline
+and isolated owner work. No package release, client dependency upgrade, strict
+write enablement, application release, or deployment has been performed.
 
 The storage contract remains envelope 2 with `{ mv, commandPayload }` inside
 the existing payload value. There is no SQLite schema migration or application
