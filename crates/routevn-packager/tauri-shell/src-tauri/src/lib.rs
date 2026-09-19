@@ -4,6 +4,9 @@ use serde::Serialize;
 
 mod windows_system_menu;
 
+#[cfg(target_os = "windows")]
+mod windows_application_identifier;
+
 #[derive(Serialize)]
 #[serde(rename_all = "camelCase")]
 struct EmbeddedPackageInfo {
@@ -72,7 +75,7 @@ fn read_embedded_package_range(offset: u64, length: u64) -> Result<Vec<u8>, Stri
     .map_err(|error| error.to_string())
 }
 
-#[cfg(target_os = "macos")]
+#[cfg(any(target_os = "macos", target_os = "windows"))]
 fn is_valid_application_identifier(value: &str) -> bool {
     !value.is_empty()
         && value.split('.').count() > 1
@@ -177,6 +180,16 @@ fn read_macos_application_metadata(
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
     let mut context = tauri::generate_context!();
+
+    // Source-built players already compile their exported identifier into the
+    // context. Reusable Windows templates instead receive it in PE resources.
+    #[cfg(target_os = "windows")]
+    if context.config().identifier == "vn.routevn.shell" {
+        let executable_path =
+            std::env::current_exe().expect("failed to locate the Windows player executable");
+        context.config_mut().identifier = windows_application_identifier::read(&executable_path)
+            .expect("failed to load the Windows player application identity");
+    }
 
     #[cfg(target_os = "macos")]
     {
