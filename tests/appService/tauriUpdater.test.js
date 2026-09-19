@@ -2,7 +2,10 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { JSDOM } from "jsdom";
 
 const checkMock = vi.hoisted(() => vi.fn());
+const invokeMock = vi.hoisted(() => vi.fn());
 const relaunchMock = vi.hoisted(() => vi.fn());
+
+vi.mock("@tauri-apps/api/core", () => ({ invoke: invokeMock }));
 
 vi.mock("@tauri-apps/plugin-updater", () => ({
   check: checkMock,
@@ -31,18 +34,33 @@ const createUpdate = ({
   downloadAndInstall,
 });
 
+const expectedHeaders = {
+  "X-RouteVN-Device-Id": "123456789ABC",
+  "X-RouteVN-Device-Model": "Example%20Model",
+  "X-RouteVN-OS-Version": "Linux%206.8",
+};
+
+const createKeyValueStore = (entries = [["deviceId", "123456789ABC"]]) => {
+  const values = new Map(entries);
+  return {
+    get: vi.fn(async (key) => values.get(key)),
+    getOrSet: vi.fn(async (key, value) => {
+      if (!values.has(key)) values.set(key, value);
+      return values.get(key);
+    }),
+  };
+};
+
 const createUpdaterClient = ({
   globalUI = createGlobalUI(),
   update = createUpdate(),
+  keyValueStore = createKeyValueStore(),
 } = {}) => {
   checkMock.mockResolvedValue(update);
 
   const updater = createUpdater({
     globalUI,
-    keyValueStore: {
-      get: vi.fn(),
-      set: vi.fn(),
-    },
+    keyValueStore,
   });
 
   return {
@@ -63,6 +81,11 @@ const setupDocument = () => {
 describe("tauri updater", () => {
   beforeEach(() => {
     checkMock.mockReset();
+    invokeMock.mockReset();
+    invokeMock.mockResolvedValue({
+      deviceModel: "Example Model",
+      osVersion: "Linux 6.8",
+    });
     relaunchMock.mockReset();
   });
 
@@ -98,14 +121,20 @@ describe("tauri updater", () => {
       date: "2026-07-03",
       body: "Fix packaging.",
     });
-    expect(checkMock).toHaveBeenCalledWith(undefined);
+    expect(checkMock).toHaveBeenCalledWith({
+      timeout: 10_000,
+      headers: expectedHeaders,
+    });
     expect(globalUI.showConfirm).toHaveBeenCalledWith({
       message: "Update 1.7.3 is available.\nFix packaging.",
       title: "Update Available",
       confirmText: "Update Now",
       cancelText: "Later",
     });
-    expect(downloadAndInstall).toHaveBeenCalledWith(expect.any(Function));
+    expect(downloadAndInstall).toHaveBeenCalledWith(expect.any(Function), {
+      timeout: 600_000,
+      headers: {},
+    });
     expect(relaunchMock).toHaveBeenCalled();
   });
 
@@ -163,7 +192,10 @@ describe("tauri updater", () => {
     expect(
       document.getElementById("routevn-update-progress-dialog"),
     ).toBeNull();
-    expect(downloadAndInstall).toHaveBeenCalledWith(expect.any(Function));
+    expect(downloadAndInstall).toHaveBeenCalledWith(expect.any(Function), {
+      timeout: 600_000,
+      headers: {},
+    });
     expect(relaunchMock).toHaveBeenCalled();
     expect(globalUI.showAlert).not.toHaveBeenCalled();
   });
@@ -216,14 +248,97 @@ describe("tauri updater", () => {
 
     const result = await updater.checkForUpdates(false);
 
-    expect(result).toBeNull();
-    expect(checkMock).toHaveBeenCalledWith(undefined);
+    expect(result).toBeUndefined();
+    expect(checkMock).toHaveBeenCalledWith({
+      timeout: 10_000,
+      headers: expectedHeaders,
+    });
     expect(globalUI.showConfirm).not.toHaveBeenCalled();
     expect(globalUI.showAlert).toHaveBeenCalledWith({
       message: "You are already on the latest version",
       title: "Up to Date",
     });
     expect(relaunchMock).not.toHaveBeenCalled();
+  });
+
+  it("clears stale release metadata when the server returns no update", async () => {
+    const globalUI = createGlobalUI();
+    globalUI.showConfirm.mockResolvedValue(false);
+    const { updater } = createUpdaterClient({ globalUI });
+    await updater.checkForUpdates(true);
+    expect(updater.isUpdateAvailable()).toBe(true);
+    checkMock.mockResolvedValueOnce(null);
+    await updater.checkForUpdates(true);
+    expect(updater.isUpdateAvailable()).toBe(false);
+    expect(updater.getUpdateInfo()).toBeUndefined();
+    expect(globalUI.showAlert).not.toHaveBeenCalled();
+  });
+
+  it("does not report a failed server check as up to date", async () => {
+    const globalUI = createGlobalUI();
+    const { updater } = createUpdaterClient({ globalUI });
+    checkMock.mockRejectedValueOnce(new Error("503 private diagnostic"));
+    const log = vi.spyOn(console, "error").mockImplementation(() => {});
+    try {
+      await updater.checkForUpdates(false);
+      expect(globalUI.showAlert).toHaveBeenCalledWith({
+        title: "Error",
+        message:
+          "Failed to check for updates: Could not retrieve update information.",
+      });
+      expect(updater.isUpdateAvailable()).toBe(false);
+      expect(globalUI.showConfirm).not.toHaveBeenCalled();
+    } finally {
+      log.mockRestore();
+    }
+  });
+
+  it("persists an installation ID across updater clients and sends native metadata", async () => {
+    const keyValueStore = createKeyValueStore([]);
+    const globalUI = createGlobalUI();
+    globalUI.showConfirm.mockResolvedValue(false);
+    invokeMock.mockResolvedValue({
+      deviceModel: "メーカー Model / Pro",
+      osVersion: "Windows 24H2 (build 26100)",
+    });
+    const first = createUpdaterClient({ keyValueStore, globalUI });
+    await first.updater.checkForUpdates(true);
+    const second = createUpdaterClient({ keyValueStore, globalUI });
+    await second.updater.checkForUpdates(true);
+    const firstHeaders = checkMock.mock.calls[0][0].headers;
+    expect(firstHeaders["X-RouteVN-Device-Id"]).toMatch(
+      /^[1-9A-HJ-NP-Za-km-z]{12}$/,
+    );
+    expect(firstHeaders["X-RouteVN-Device-Model"]).toBe(
+      encodeURIComponent("メーカー Model / Pro"),
+    );
+    expect(firstHeaders["X-RouteVN-OS-Version"]).toBe(
+      encodeURIComponent("Windows 24H2 (build 26100)"),
+    );
+    expect(checkMock.mock.calls[1][0].headers).toEqual(firstHeaders);
+    expect(keyValueStore.getOrSet).toHaveBeenCalledTimes(1);
+    expect(invokeMock).toHaveBeenCalledWith("get_update_device_info");
+  });
+
+  it("uses unknown for unavailable native metadata without blocking update checks", async () => {
+    const { updater } = createUpdaterClient({ update: null });
+    invokeMock.mockResolvedValueOnce({
+      deviceModel: "Model",
+      osVersion: "bad\nheader",
+    });
+    await updater.checkForUpdates(true);
+    expect(checkMock.mock.calls[0][0].headers).toEqual({
+      "X-RouteVN-Device-Id": "123456789ABC",
+      "X-RouteVN-Device-Model": "Model",
+      "X-RouteVN-OS-Version": "unknown",
+    });
+    invokeMock.mockRejectedValueOnce(new Error("Native metadata unavailable"));
+    await updater.checkForUpdates(true);
+    expect(checkMock.mock.calls[1][0].headers).toEqual({
+      "X-RouteVN-Device-Id": "123456789ABC",
+      "X-RouteVN-Device-Model": "unknown",
+      "X-RouteVN-OS-Version": "unknown",
+    });
   });
 
   it("keeps using the universal updater target on macOS", async () => {
@@ -238,6 +353,8 @@ describe("tauri updater", () => {
 
     expect(checkMock).toHaveBeenCalledWith({
       target: "macos-universal",
+      timeout: 10_000,
+      headers: expectedHeaders,
     });
   });
 });

@@ -75,7 +75,7 @@ const normalizeBatchOperations = ({ puts = [], deletes = [] } = {}) => {
  * @param {boolean} [params.withEvents=false] - Include events table for insieme
  * @param {"full"} [params.durability] - Enable WAL and FULL synchronous durability
  * @param {number} [params.schemaVersion] - Required PRAGMA user_version for this database
- * @returns {{init: Function, get: Function, set: Function, remove: Function, list: Function, applyBatch: Function, clear: Function, getEvents?: Function, appendEvent?: Function}}
+ * @returns {{init: Function, get: Function, getOrSet: Function, set: Function, remove: Function, list: Function, applyBatch: Function, clear: Function, getEvents?: Function, appendEvent?: Function}}
  */
 export const createDb = ({
   path,
@@ -207,6 +207,30 @@ export const createDb = ({
           return parseStoredValue(result[0].value);
         }
         return null;
+      });
+    },
+
+    async getOrSet(key, value) {
+      const normalizedKey = requireKey(key);
+      const jsonValue = serializeValue(value);
+      return queueDbOperation(async () => {
+        if (!initialized) {
+          throw new Error("Db not initialized. Call init() first.");
+        }
+        // The unique key chooses one persisted value even across app processes.
+        await withSqliteLockRetry(() =>
+          db.execute("INSERT OR IGNORE INTO kv (key, value) VALUES ($1, $2)", [
+            normalizedKey,
+            jsonValue,
+          ]),
+        );
+        const rows = await withSqliteLockRetry(() =>
+          db.select("SELECT value FROM kv WHERE key = $1", [normalizedKey]),
+        );
+        if (!rows?.length) {
+          throw new Error("Db value unavailable after getOrSet.");
+        }
+        return parseStoredValue(rows[0].value);
       });
     },
 

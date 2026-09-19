@@ -143,6 +143,7 @@ if (args.includes("--upload")) fs.copyFileSync(args[args.indexOf("--upload") + 1
       PATH: `${bin}:${process.env.PATH}`,
       TEST_COMMAND_LOG: log,
       TEST_DEVICE_CONFIG: config,
+      ROUTEVN_UPDATE_API_URL: "http://dev-mac.local:8787/system/rpc",
     };
     execFileSync(
       "bash",
@@ -173,8 +174,12 @@ if (args.includes("--upload")) fs.copyFileSync(args[args.indexOf("--upload") + 1
     expect(calls).toHaveLength(4);
     for (const call of calls) {
       expect(call).toContain("test-device");
-      if (call.includes("--bundle")) expect(call).toContain("--noinstall");
-      else expect(call).toContain("--upload");
+      if (call.includes("--bundle")) {
+        expect(call).toContain("--noinstall");
+        expect(call[call.indexOf("--envs") + 1]).toContain(
+          "ROUTEVN_UPDATE_API_URL=http://dev-mac.local:8787/system/rpc",
+        );
+      } else expect(call).toContain("--upload");
       expect(call).not.toContain("--uninstall");
     }
   });

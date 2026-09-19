@@ -54,6 +54,8 @@
     "vite": "6.4.2"
   },
   "scripts": {
+    "mock:updates": "node scripts/mock-updates.js",
+    "test:updates": "vitest run --maxWorkers=2 --no-file-parallelism tests/updates tests/internal/updateVersion.test.js tests/appService/tauriUpdater.test.js tests/appService/automaticUpdateChecks.test.js tests/appService/mobileUpdateSetup.test.js tests/android/updater.test.js tests/android/updaterDialogs.test.js tests/ios/devWorkflow.test.js",
     "build:bundle": "vite build --config scripts/vite.bundle.config.js && vite build --config scripts/vite.player-runtime-host.config.js",
     "build:web": "./scripts/build.sh web",
     "build:tauri": "./scripts/build.sh tauri",

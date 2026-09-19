@@ -173,6 +173,7 @@ public class MainActivity extends Activity {
     private WebView webView;
     private String lastReportedWindowMetrics = "";
     private GooglePlayUpdater googlePlayUpdater;
+    private final ClientUpdateApi clientUpdateApi = new ClientUpdateApi();
     private ProjectBackup projectBackup;
     private final ExecutorService backupExecutor = Executors.newSingleThreadExecutor();
     private final Set<String> projectTransactions = java.util.concurrent.ConcurrentHashMap.newKeySet();
@@ -798,6 +799,7 @@ public class MainActivity extends Activity {
     @Override
     protected void onDestroy() {
         googlePlayUpdater.destroy();
+        clientUpdateApi.close();
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
             unregisterBackInvokedCallback();
         }
@@ -1043,6 +1045,17 @@ public class MainActivity extends Activity {
                 payload = new JSONObject();
             }
 
+            if ("requestClientUpdate".equals(method)) {
+                String updateRequestId = requestId;
+                clientUpdateApi.request(payload, (value, error) -> {
+                    String result;
+                    try { result = error == null ? bridgeSuccess(value) : bridgeFailure(error); }
+                    catch (Exception failure) { result = bridgeFailure(failure); }
+                    reply.accept(attachBridgeResponseMetadata(updateRequestId, result));
+                });
+                return;
+            }
+
             if ("getAppUpdateSupport".equals(method) || "checkAppUpdate".equals(method) ||
                 "startAppUpdate".equals(method) || "completeAppUpdate".equals(method)) {
                 String updateRequestId = requestId;
@@ -1099,6 +1112,8 @@ public class MainActivity extends Activity {
         JSONObject payload = new JSONObject(payloadJson);
         AndroidBridge bridge = new AndroidBridge();
         switch (method) {
+            case "getAppUpdateContext":
+                return bridgeSuccess(ClientUpdateApi.context());
             case "getBackupStatus":
                 return bridgeSuccess(projectBackup.status());
             case "configureBackup":
@@ -1132,6 +1147,8 @@ public class MainActivity extends Activity {
                 return bridge.appDbGet(payloadJson);
             case "appDbSet":
                 return bridge.appDbSet(payloadJson);
+            case "appDbGetOrSet":
+                return bridge.appDbGetOrSet(payloadJson);
             case "appDbRemove":
                 return bridge.appDbRemove(payloadJson);
             case "appDbGetEvents":
@@ -1256,6 +1273,18 @@ public class MainActivity extends Activity {
                     payload.getString("valueJson")
                 );
                 return bridgeSuccess(true);
+            } catch (Exception error) {
+                return bridgeFailure(error);
+            }
+        }
+
+        public String appDbGetOrSet(String payloadJson) {
+            try {
+                JSONObject payload = new JSONObject(payloadJson);
+                return bridgeSuccess(getOrSetAppDatabaseValue(
+                    payload.getString("key"),
+                    payload.getString("valueJson")
+                ));
             } catch (Exception error) {
                 return bridgeFailure(error);
             }
@@ -1798,6 +1827,23 @@ public class MainActivity extends Activity {
             values,
             SQLiteDatabase.CONFLICT_REPLACE
         );
+    }
+
+    private String getOrSetAppDatabaseValue(String key, String valueJson) throws Exception {
+        String safeKey = validateAppDatabaseKey(key);
+        // Keep this operation scoped to installation identity. App preferences
+        // must continue through writeAppDatabaseValue's secure auth handling.
+        if (!"deviceId".equals(safeKey) || valueJson == null ||
+            !valueJson.matches("\"[1-9A-HJ-NP-Za-km-z]{12}\"")) {
+            throw new IllegalArgumentException("Invalid device identity value.");
+        }
+        openDatabase(APP_DATABASE_NAME).execSQL(
+            "INSERT OR IGNORE INTO kv (key, value) VALUES (?, ?)",
+            new Object[] { safeKey, valueJson }
+        );
+        String stored = readAppDatabaseValue(safeKey);
+        if (stored == null) throw new IllegalStateException("Device identity was not persisted.");
+        return stored;
     }
 
     private void removeAppDatabaseValue(String key) throws Exception {

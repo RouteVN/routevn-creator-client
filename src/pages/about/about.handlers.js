@@ -26,7 +26,7 @@ export const handleDataChanged = () => {
 
 export const handleCheckForUpdates = async (deps) => {
   const { appService, updaterService, i18n, store, render } = deps;
-  if (appService.getPlatform() === "ios") {
+  if (appService.getPlatform() === "ios" && !updaterService) {
     await appService.openUrl(ROUTEVN_CREATOR_APP_STORE_URL);
     return;
   }

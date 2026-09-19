@@ -1,8 +1,10 @@
 import { check } from "@tauri-apps/plugin-updater";
+import { invoke } from "@tauri-apps/api/core";
 import { relaunch } from "@tauri-apps/plugin-process";
 import { createProgressDialog } from "../progressDialog.js";
 import { isMacosHost } from "./platform.js";
 import { createAutomaticUpdateChecks } from "../automaticUpdateChecks.js";
+import { getDeviceId, isDeviceMetadataText } from "../deviceIdentity.js";
 
 const formatUpdaterCopy = (template, values = {}) => {
   return String(template || "").replace(/\{([A-Za-z0-9_]+)\}/g, (match, key) =>
@@ -65,21 +67,37 @@ const createUpdateProgressDialog = (copy = {}) => {
 
 const createUpdater = ({ globalUI, keyValueStore }) => {
   let updateAvailable = false;
-  let updateInfo = null;
+  let updateInfo;
   let downloadProgress = 0;
 
   const checkForUpdates = async (silent = false, options = {}) => {
     const copy = resolveUpdaterCopy(options);
     try {
-      const update = await check(
-        isMacosHost()
-          ? {
-              target: "macos-universal",
-            }
-          : undefined,
-      );
+      const [deviceId, deviceInfo] = await Promise.all([
+        getDeviceId(keyValueStore),
+        invoke("get_update_device_info").catch(() => ({})),
+      ]);
+      const deviceModel = isDeviceMetadataText(deviceInfo?.deviceModel)
+        ? deviceInfo.deviceModel
+        : "unknown";
+      const osVersion = isDeviceMetadataText(deviceInfo?.osVersion)
+        ? deviceInfo.osVersion
+        : "unknown";
+      const checkOptions = {
+        timeout: 10_000,
+        headers: {
+          "X-RouteVN-Device-Id": deviceId,
+          "X-RouteVN-Device-Model": encodeURIComponent(deviceModel),
+          "X-RouteVN-OS-Version": encodeURIComponent(osVersion),
+        },
+      };
+      if (isMacosHost()) checkOptions.target = "macos-universal";
+      const update = await check(checkOptions);
 
       if (!update) {
+        updateAvailable = false;
+        updateInfo = undefined;
+        downloadProgress = 0;
         if (!silent && globalUI) {
           await globalUI.showAlert({
             message:
@@ -88,7 +106,7 @@ const createUpdater = ({ globalUI, keyValueStore }) => {
             title: copy.upToDateTitle ?? "Up to Date",
           });
         }
-        return null;
+        return;
       }
 
       updateAvailable = true;
@@ -120,11 +138,12 @@ const createUpdater = ({ globalUI, keyValueStore }) => {
 
       return updateInfo;
     } catch (error) {
+      updateAvailable = false;
+      updateInfo = undefined;
       console.error("Failed to check for updates:", error);
       if (!silent && globalUI) {
         const message =
-          error?.message ||
-          copy.retrieveUpdateInfoFallback ||
+          copy.retrieveUpdateInfoFallback ??
           "Could not retrieve update information.";
         await globalUI.showAlert({
           message: formatUpdaterCopy(
@@ -135,7 +154,7 @@ const createUpdater = ({ globalUI, keyValueStore }) => {
           title: copy.errorTitle ?? "Error",
         });
       }
-      return null;
+      return;
     }
   };
 
@@ -146,27 +165,31 @@ const createUpdater = ({ globalUI, keyValueStore }) => {
       let downloaded = 0;
       let contentLength = 0;
 
-      await update.downloadAndInstall((event) => {
-        switch (event.event) {
-          case "Started":
-            contentLength = event.data.contentLength || 0;
-            progressDialog.update();
-            break;
-          case "Progress":
-            downloaded += event.data.chunkLength;
-            downloadProgress =
-              contentLength > 0
-                ? Math.round((downloaded / contentLength) * 100)
-                : 0;
-            progressDialog.update({
-              progress: contentLength > 0 ? downloadProgress : undefined,
-            });
-            break;
-          case "Finished":
-            progressDialog.update({ installing: true });
-            break;
-        }
-      });
+      await update.downloadAndInstall(
+        (event) => {
+          switch (event.event) {
+            case "Started":
+              contentLength = event.data.contentLength || 0;
+              progressDialog.update();
+              break;
+            case "Progress":
+              downloaded += event.data.chunkLength;
+              downloadProgress =
+                contentLength > 0
+                  ? Math.round((downloaded / contentLength) * 100)
+                  : 0;
+              progressDialog.update({
+                progress: contentLength > 0 ? downloadProgress : undefined,
+              });
+              break;
+            case "Finished":
+              progressDialog.update({ installing: true });
+              break;
+          }
+        },
+        // The plugin otherwise reuses check headers for artifact downloads.
+        { timeout: 10 * 60 * 1000, headers: {} },
+      );
 
       await relaunch();
       progressDialog.close();

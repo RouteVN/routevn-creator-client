@@ -199,6 +199,7 @@ launch_app() {
     local device_env_values=()
     if [ -n "$IOS_SMOKE_TEST" ]; then device_env_values+=("ROUTEVN_IOS_SMOKE_TEST=1"); fi
     if [ -n "$IOS_INITIAL_PATH" ]; then device_env_values+=("ROUTEVN_IOS_INITIAL_PATH=${IOS_INITIAL_PATH}"); fi
+    if [ -n "${ROUTEVN_UPDATE_API_URL:-}" ]; then device_env_values+=("ROUTEVN_UPDATE_API_URL=${ROUTEVN_UPDATE_API_URL}"); fi
     if [ ${#device_env_values[@]} -gt 0 ]; then device_env=(--envs "${device_env_values[*]}"); fi
     # On iOS 16, LLDB can leave a successfully launched app paused. Detach
     # directly to resume it; ios-deploy's safequit accepts only running apps.
@@ -226,6 +227,10 @@ launch_app() {
   fi
   if [ -n "$IOS_INITIAL_PATH" ]; then
     launch_env+=(SIMCTL_CHILD_ROUTEVN_IOS_INITIAL_PATH="$IOS_INITIAL_PATH")
+  fi
+
+  if [ -n "${ROUTEVN_UPDATE_API_URL:-}" ]; then
+    launch_env+=(SIMCTL_CHILD_ROUTEVN_UPDATE_API_URL="$ROUTEVN_UPDATE_API_URL")
   fi
 
   env "${launch_env[@]}" xcrun simctl launch --terminate-running-process "$udid" "$BUNDLE_ID"

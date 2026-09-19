@@ -9,6 +9,7 @@ const setup = async ({
   status = "up-to-date",
   support = "supported",
   confirmed = false,
+  metadataClient,
 } = {}) => {
   const dom = new JSDOM("<!doctype html><html><body></body></html>");
   vi.stubGlobal("document", dom.window.document);
@@ -32,6 +33,7 @@ const setup = async ({
     globalUI: createGlobalUIClient({ globalUI }),
     bridge,
     beforeInstall,
+    metadataClient,
     isForeground,
     getCopy: () => EN_I18N.appPage,
     keyValueStore: { get: vi.fn(), set: vi.fn() },
@@ -314,5 +316,126 @@ describe("Android Google Play updater", () => {
     emit({ status: "downloaded", versionCode: 5 });
     expect(bridge).not.toHaveBeenCalled();
     expect(globalUI.showConfirm).not.toHaveBeenCalled();
+  });
+});
+
+describe("Google Play metadata enrichment", () => {
+  const release = { version: "1.16.0", changelog: "Improved editing" };
+  it("uses notes only for the build still offered by Play", async () => {
+    const metadataClient = {
+      check: vi.fn().mockResolvedValue({ status: "updateAvailable", release }),
+    };
+    const { updater, globalUI, bridge } = await setup({
+      status: "available",
+      metadataClient,
+      confirmed: true,
+    });
+    await updater.checkForUpdates(false);
+    expect(metadataClient.check).toHaveBeenCalledWith({ availableBuild: "5" });
+    expect(globalUI.showConfirm).toHaveBeenCalledWith(
+      expect.objectContaining({ message: expect.stringContaining("1.16.0") }),
+    );
+    expect(bridge).toHaveBeenCalledWith("startAppUpdate");
+  });
+
+  it.each(["missing", "outage", "mismatch"])(
+    "preserves the generic Play installation flow for %s metadata",
+    async (kind) => {
+      const metadataClient = {
+        check: vi.fn().mockResolvedValue({
+          status: "noUpdate",
+          reason: "noCompatibleRelease",
+        }),
+      };
+      if (kind !== "missing")
+        metadataClient.check.mockRejectedValue(new Error(kind));
+      const { updater, globalUI, bridge } = await setup({
+        status: "available",
+        metadataClient,
+        confirmed: true,
+      });
+      await updater.checkForUpdates(false);
+      expect(globalUI.showConfirm).toHaveBeenCalledExactlyOnceWith(
+        expect.objectContaining({
+          message: EN_I18N.appPage.googlePlayUpdateAvailable,
+        }),
+      );
+      expect(bridge).toHaveBeenCalledWith("startAppUpdate");
+    },
+  );
+
+  it("discards notes when Play changes the offered build", async () => {
+    const metadataClient = {
+      check: vi.fn().mockResolvedValue({ status: "updateAvailable", release }),
+    };
+    const { updater, globalUI, bridge } = await setup({
+      status: "available",
+      metadataClient,
+    });
+    bridge
+      .mockResolvedValueOnce({ status: "available", versionCode: 5 })
+      .mockResolvedValueOnce({ status: "available", versionCode: 6 });
+    await updater.checkForUpdates(false);
+    expect(globalUI.showConfirm).toHaveBeenCalledExactlyOnceWith(
+      expect.objectContaining({
+        message: EN_I18N.appPage.googlePlayUpdateAvailable,
+      }),
+    );
+  });
+
+  it("recovers a downloaded update discovered during metadata lookup without another offer", async () => {
+    const metadataClient = {
+      check: vi.fn().mockResolvedValue({ status: "updateAvailable", release }),
+    };
+    const { updater, globalUI, bridge, beforeInstall } = await setup({
+      status: "available",
+      metadataClient,
+      confirmed: true,
+    });
+    bridge
+      .mockResolvedValueOnce({ status: "available", versionCode: 5 })
+      .mockResolvedValueOnce({ status: "downloaded", versionCode: 5 });
+    await updater.checkForUpdates(false);
+    expect(globalUI.showConfirm).toHaveBeenCalledExactlyOnceWith(
+      expect.objectContaining({
+        message: EN_I18N.appPage.googlePlayUpdateReady,
+      }),
+    );
+    expect(beforeInstall).toHaveBeenCalledOnce();
+    expect(bridge).toHaveBeenCalledWith("completeAppUpdate");
+    expect(bridge).not.toHaveBeenCalledWith("startAppUpdate");
+  });
+
+  it("never requests metadata before offering already downloaded recovery", async () => {
+    const metadataClient = {
+      check: vi.fn().mockRejectedValue(new Error("Offline")),
+    };
+    const { updater, bridge } = await setup({
+      status: "downloaded",
+      metadataClient,
+      confirmed: true,
+    });
+    await updater.checkForUpdates(false);
+    expect(metadataClient.check).not.toHaveBeenCalled();
+    expect(bridge).toHaveBeenCalledWith("completeAppUpdate");
+  });
+  it("retains manual status feedback when the Play offer disappears", async () => {
+    const metadataClient = {
+      check: vi.fn().mockResolvedValue({ status: "updateAvailable", release }),
+    };
+    const { updater, globalUI, bridge } = await setup({
+      status: "available",
+      metadataClient,
+    });
+    bridge
+      .mockResolvedValueOnce({ status: "available", versionCode: 5 })
+      .mockResolvedValueOnce({ status: "up-to-date" });
+    await updater.checkForUpdates(false);
+    expect(globalUI.showConfirm).not.toHaveBeenCalled();
+    expect(globalUI.showAlert).toHaveBeenCalledWith(
+      expect.objectContaining({
+        message: EN_I18N.appPage.latestVersionMessage,
+      }),
+    );
   });
 });

@@ -25,6 +25,12 @@ import { deriveProjectFormatVersionFromAppVersion } from "./internal/projectComp
 import { DEFAULT_PROJECT_RESOLUTION } from "./internal/projectResolution.js";
 import { registerPrimitives } from "./primitives/registerPrimitives.js";
 import tauriConfig from "../src-tauri/tauri.conf.json";
+import { createGlobalUIClient } from "./deps/clients/globalUI.js";
+import {
+  createClientUpdates,
+  readClientUpdateContext,
+} from "./deps/clients/clientUpdates.js";
+import { createIOSUpdater } from "./deps/clients/ios/updater.js";
 
 registerPrimitives();
 
@@ -62,7 +68,9 @@ const router = new IOSRouter({
 });
 const filePicker = createIOSFilePicker();
 const globalUIElement = document.querySelector("rtgl-global-ui");
-const globalUI = createGlobalUI(globalUIElement);
+const globalUI = createGlobalUIClient({
+  globalUI: createGlobalUI(globalUIElement),
+});
 const audioService = createAudioService({
   createAudioContext: iosAudioRuntime.createAudioContext,
   createAudioOutput: (context) =>
@@ -75,8 +83,26 @@ const windowMetricsClient = createWindowMetricsClient({
   loadMetrics: () => callIOSBridge("getWindowMetrics"),
 });
 
-const appVersion = tauriConfig.version;
+const updateContext = await readClientUpdateContext(callIOSBridge);
+const appVersion = updateContext?.currentVersion ?? tauriConfig.version;
 const creatorVersion = deriveProjectFormatVersionFromAppVersion(appVersion);
+
+const updater = createIOSUpdater({
+  globalUI,
+  keyValueStore: appDb,
+  metadataClient: updateContext
+    ? createClientUpdates({
+        context: updateContext,
+        keyValueStore: appDb,
+        request: (params) => callIOSBridge("requestClientUpdate", params),
+      })
+    : undefined,
+  openUrl: (url) => appService.openUrl(url),
+  getCopy: () => appService.getAppCopy(),
+  isForeground: () =>
+    document.visibilityState !== "hidden" &&
+    iosAudioRuntime.isActive?.() !== false,
+});
 
 const subject = new Subject();
 let nativeBackInFlight = false;
@@ -157,6 +183,9 @@ const appService = createAppService({
   openUrl,
   appVersion,
   platform: "ios",
+  distribution: updateContext?.distribution,
+  updatesEnabled: true,
+  updater,
   audioService,
   projectService,
   subject,
@@ -293,6 +322,7 @@ const componentDependencies = {
 };
 
 const pageDependencies = {
+  updaterService: updater,
   windowMetricsClient,
   browserEventsClient,
   uiConfig,
