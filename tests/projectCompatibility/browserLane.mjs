@@ -155,23 +155,39 @@ export function createBrowserLane(api) {
         },
       });
       const repository = await service.getRepositoryById(projectId);
-      const state = await repository.loadState();
-      const scenes = {};
-      for (const scene of Object.values(state.scenes.items)) {
+      // Warm opens use the resolved checkpoint projection, not history replay.
+      const openedState = repository.getState();
+      const hydratedScenes = {};
+      for (const scene of Object.values(openedState.scenes.items)) {
         if (scene.type !== "scene") continue;
         await repository.setActiveSceneId(scene.id);
-        scenes[scene.id] = repository.getState().scenes.items[scene.id];
+        const hydrated = repository.getState().scenes.items[scene.id];
+        hydratedScenes[scene.id] = hydrated;
+        openedState.scenes.items[scene.id] = hydrated;
       }
-      const observation = await encodeIdbValue({
-        state,
-        scenes,
+      const openedRepository = await encodeIdbValue({
+        state: openedState,
+        runtime: observeRuntime({ state: openedState, ...api }),
+      });
+      // Keep the original frozen history-only observations independently checked.
+      const historyState = await repository.loadState();
+      const historyReplay = await encodeIdbValue({
+        state: historyState,
+        scenes: Object.fromEntries(
+          Object.values(historyState.scenes.items)
+            .filter((scene) => scene.type === "scene")
+            .map((scene) => [scene.id, hydratedScenes[scene.id]]),
+        ),
         projectInfo: await service.getProjectInfoByProjectId(projectId),
         platformDetails: await store.app.get("platformDetails.web"),
       });
       await repository.flushMaterializedViews();
       return {
-        observation,
-        runtime: await encodeIdbValue(observeRuntime({ state, ...api })),
+        openedRepository,
+        historyReplay,
+        historyRuntime: await encodeIdbValue(
+          observeRuntime({ state: historyState, ...api }),
+        ),
         source: await dumpDatabases(names),
         measurements: { elapsedMs: performance.now() - started },
       };

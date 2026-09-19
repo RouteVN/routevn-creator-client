@@ -1,6 +1,7 @@
 import { fixtureRoot as prepareFixtureRoot } from "./fixtureArchive.mjs";
 import { readFixtureJson } from "./fixtureIO.mjs";
 import { chromium, webkit } from "playwright";
+import assert from "node:assert/strict";
 import { execFileSync } from "node:child_process";
 import {
   readFileSync,
@@ -16,7 +17,7 @@ import { tmpdir } from "node:os";
 import { gzipSync } from "node:zlib";
 import { baselineRoot, identity, revisions } from "./baselines.mjs";
 import { assertEquivalent, fileHash, decodeValue } from "./records.mjs";
-import { encodeIdbValue } from "./indexedDbDump.mjs";
+import { encodeIdbValue, decodeIdbValue } from "./indexedDbDump.mjs";
 const artifactRoot = resolve(
   process.env.ROUTEVN_COMPATIBILITY_ARTIFACTS ?? tmpdir(),
 );
@@ -25,7 +26,11 @@ const workspace = mkdtempSync(
   join(artifactRoot, "routevn-browser-compatibility-"),
 );
 const capture = process.argv.includes("--capture");
-const fixtureRoot = await prepareFixtureRoot({ capture });
+const captureOpened = process.argv.includes("--capture-opened");
+const phases = ["cold", "warm", "cache-cleared"];
+const fixtureRoot = await prepareFixtureRoot({
+  capture: capture || captureOpened,
+});
 const filter = process.argv
   .find((arg) => arg.startsWith("--fixture="))
   ?.slice(10);
@@ -43,9 +48,9 @@ const report = {
   strictWritesTested: false,
 };
 const read = readFixtureJson;
-const write = (path, value) => {
+const write = (path, value, options) => {
   const bytes = JSON.stringify(value, null, 2) + "\n";
-  writeFileSync(path, path.endsWith(".gz") ? gzipSync(bytes) : bytes);
+  writeFileSync(path, path.endsWith(".gz") ? gzipSync(bytes) : bytes, options);
 };
 
 function bundle(root, label) {
@@ -112,6 +117,72 @@ function history(dump) {
       (store) => store.name !== "materialized_view_state",
     ),
   }));
+}
+
+async function verifyCachedLayoutCorruption(page, recipe, expectedWarm) {
+  await page.reload();
+  await page.waitForFunction(() => window.compatibility);
+  const before = await page.evaluate(
+    (recipe) => window.compatibility.run("read", recipe),
+    recipe,
+  );
+  assertEquivalent(expectedWarm, before.openedRepository, "P09 warm control");
+
+  // Alter only the disposable main checkpoint, keeping history and metadata
+  // intact. Restore through real IndexedDB and reopen through production code.
+  const damaged = structuredClone(before.source);
+  const checkpoints = damaged
+    .find((database) => database.name === "project-one")
+    .stores.find((store) => store.name === "materialized_view_state").rows;
+  const checkpoint = checkpoints.find(
+    ([key]) => decodeIdbValue(key)[0] === "project_repository_main_state",
+  );
+  assert.ok(checkpoint, "P09 must have a warm main checkpoint");
+  const row = decodeIdbValue(checkpoint[1]);
+  const damagedName = "Corrupted Layout One";
+  assert.notEqual(row.value.layouts.items["layout-one"].name, damagedName);
+  row.value.layouts.items["layout-one"].name = damagedName;
+  checkpoint[1] = await encodeIdbValue(row);
+  await page.reload();
+  await page.waitForFunction(() => window.compatibility);
+  await page.evaluate(
+    (source) => window.compatibility.restore(source),
+    damaged,
+  );
+  const after = await page.evaluate(
+    (recipe) => window.compatibility.run("read", recipe),
+    recipe,
+  );
+  assertEquivalent(
+    before.historyReplay,
+    after.historyReplay,
+    "unchanged P09 history replay",
+  );
+  assertEquivalent(
+    before.historyRuntime,
+    after.historyRuntime,
+    "unchanged P09 history runtime",
+  );
+  assertEquivalent(
+    history(before.source),
+    history(after.source),
+    "unchanged P09 source history/metadata",
+  );
+  const opened = decodeIdbValue(after.openedRepository);
+  assert.equal(opened.state.layouts.items["layout-one"].name, damagedName);
+  assert.equal(
+    opened.runtime.projected.resources.layouts["layout-one"].name,
+    damagedName,
+  );
+  assert.throws(
+    () =>
+      assertEquivalent(
+        expectedWarm,
+        after.openedRepository,
+        "P09 opened repository",
+      ),
+    /P09 opened repository: first difference/,
+  );
 }
 
 try {
@@ -205,7 +276,10 @@ try {
           rmSync(writer.profile, { recursive: true });
           rmSync(previous.profile, { recursive: true });
           write(join(directory, "source.json.gz"), result.source);
-          write(join(directory, "previous-reader.json.gz"), oracle.observation);
+          write(
+            join(directory, "previous-reader.json.gz"),
+            oracle.historyReplay,
+          );
           write(join(directory, "manifest.json"), {
             protocol: 1,
             capturedBrowser: `${engineName} ${browser.version()}`,
@@ -257,12 +331,46 @@ try {
         const expectedRuntime = await encodeIdbValue(
           decodeValue(read(join(pack, runtimePath))),
         );
+        const openedManifestPath = join(
+          directory,
+          "opened-repository.manifest.json",
+        );
+        const openedPath = "opened-repository.json.gz";
+        const captureMissingOpened =
+          captureOpened &&
+          engineName === "chromium" &&
+          !existsSync(openedManifestPath);
+        let expectedOpened;
+        if (existsSync(openedManifestPath)) {
+          const openedManifest = read(openedManifestPath);
+          assertEquivalent(
+            previousIdentity,
+            openedManifest.previousReader,
+            `${id}: opened browser oracle reader`,
+          );
+          assertEquivalent(
+            fileHash(join(directory, "manifest.json")),
+            openedManifest.sourceManifestSha256,
+            `${id}: opened browser oracle source`,
+          );
+          for (const [path, hash] of Object.entries(openedManifest.files))
+            assertEquivalent(
+              hash,
+              fileHash(join(directory, path)),
+              `${id}: immutable browser ${path}`,
+            );
+          expectedOpened = read(join(directory, openedPath));
+          report.fixtures[id].openedRepository = openedManifest;
+        } else if (!captureMissingOpened) {
+          throw new Error(`Missing opened browser oracle: ${id}`);
+        }
         for (const lane of ["previous", "candidate"]) {
           const fixture = await pageFor(
             engine,
             artifacts[lane === "previous" ? 15 : lane],
           );
           let passed = false;
+          const capturedOpened = {};
           try {
             report.activeCase = {
               engine: engineName,
@@ -274,7 +382,7 @@ try {
               (source) => window.compatibility.restore(source),
               source,
             );
-            for (const phase of ["cold", "warm", "cache-cleared"]) {
+            for (const phase of phases) {
               report.activeCase.phase = phase;
               if (phase !== "cold") {
                 await fixture.page.reload();
@@ -290,19 +398,27 @@ try {
               );
               assertEquivalent(
                 expected,
-                result.observation,
-                `${engineName} ${id} ${lane} ${phase}`,
+                result.historyReplay,
+                `${engineName} ${id} ${lane} ${phase}: history replay`,
               );
               assertEquivalent(
                 expectedRuntime,
-                result.runtime,
-                `${engineName} ${id} ${lane} ${phase}: logical preview/export`,
+                result.historyRuntime,
+                `${engineName} ${id} ${lane} ${phase}: history runtime`,
               );
               assertEquivalent(
                 history(source),
                 history(result.source),
                 `${engineName} ${id}: persisted history/metadata`,
               );
+              if (captureMissingOpened && lane === "previous")
+                capturedOpened[phase] = result.openedRepository;
+              else
+                assertEquivalent(
+                  expectedOpened[phase],
+                  result.openedRepository,
+                  `${engineName} ${id} ${lane} ${phase}: opened repository`,
+                );
               if (fixture.errors.length)
                 throw new Error(fixture.errors.join("\n"));
               report.cases.push({
@@ -313,6 +429,45 @@ try {
                 phase,
                 status: "passed",
                 measurements: result.measurements,
+              });
+            }
+            if (captureMissingOpened && lane === "previous") {
+              // Only the pinned Chromium previous-reader lane may capture.
+              assert.equal(lane, "previous");
+              expectedOpened = capturedOpened;
+              write(join(directory, openedPath), expectedOpened, {
+                flag: "wx",
+              });
+              const openedManifest = {
+                protocol: 1,
+                capturedBrowser: `${engineName} ${browser.version()}`,
+                previousReader: previousIdentity,
+                sourceManifestSha256: fileHash(
+                  join(directory, "manifest.json"),
+                ),
+                files: { [openedPath]: fileHash(join(directory, openedPath)) },
+              };
+              write(openedManifestPath, openedManifest, { flag: "wx" });
+              report.fixtures[id].openedRepository = openedManifest;
+              console.log(
+                `Captured browser ${id} opened projection from pinned previous reader`,
+              );
+            }
+            if (id === "P09-committed") {
+              report.activeCase.phase = "cached-layout-negative-control";
+              await verifyCachedLayoutCorruption(
+                fixture.page,
+                recipe,
+                expectedOpened.warm,
+              );
+              if (fixture.errors.length)
+                throw new Error(fixture.errors.join("\n"));
+              report.cases.push({
+                engine: engineName,
+                id,
+                lane,
+                phase: "cached-layout-negative-control",
+                status: "passed",
               });
             }
             passed = true;

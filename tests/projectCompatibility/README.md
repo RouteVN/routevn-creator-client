@@ -67,7 +67,7 @@ Negative controls reject both lost content and any different count update.
 Strict upgrade tests must assert that their new policy caches leave the original
 source value untouched.
 
-Native observations compare the opened repository's resolved `getState()`
+Native and browser observations compare the opened repository's resolved `getState()`
 projection, hydrating each scene found there through `setActiveSceneId()` and
 combining those scene snapshots before preview/export. `loadState()` remains a
 separate history-only observation: it returns an empty project for P07 even
@@ -81,7 +81,17 @@ state/runtime oracle to the pinned previous reader and original source manifest.
 Cold, warm, and cache-cleared observations are captured separately: the old
 checkpoint JSON round trip can omit undefined fields (for example P09 layout
 `isFragment`). Those differences are frozen per phase, never normalized away.
+The browser equivalent lives under `browser/`, uses the lossless IndexedDB
+encoding, and binds to the original browser manifest. Chromium captures its
+previous-reader expectations; both Chromium and WebKit compare against them.
 The original history-only state/runtime oracles remain unchanged and checked.
+
+A real-browser negative control changes only P09's cached layout name, restores
+the changed dump into IndexedDB, and reopens the project. History replay,
+history-based runtime, and persisted source rows must still match. The opened
+state comparison must reject the change, and the runtime projection must contain
+the changed layout name. This runs against both readers in both browsers and
+fails if the observer regresses to using history replay for main-state resources.
 
 Runtime oracles exercise the real export projection and Route Engine's logical
 initial dialogue/next-line behavior. They preserve the old availability/error
@@ -104,9 +114,9 @@ Commit `tests/fixtures/legacy-projects.zip` and
 `tests/fixtures/legacy-projects.manifest.json` in ordinary Git. The ZIP is marked
 binary in `.gitattributes`; Git LFS is not required. The initial archive is
 about 1.63 MiB and contains all 319 previously expanded files without changing
-any bytes. The recovery-observation extension adds 54 supplemental files (373
-total); all 319 originals remain byte-identical. Existing gzip members and
-license/source files remain intact.
+any bytes. Resolved-state observations add 54 native and 46 browser supplemental
+files (419 total); all 373 files from the native-recovery extension remain
+byte-identical. Existing gzip members and license/source files remain intact.
 
 The readable manifest lists fixture IDs, origin/fault labels, writer and
 previous-reader identities, platform coverage, and every file's SHA-256 and
@@ -139,7 +149,7 @@ location, separate from the verified cache:
 node tests/projectCompatibility/unpackFixtures.mjs /tmp/routevn-fixture-staging
 export ROUTEVN_FIXTURE_DIRECTORY=/tmp/routevn-fixture-staging
 node scripts/test-project-compatibility.js --prepare --capture --capture-runtime --capture-opened
-node tests/projectCompatibility/browserRunner.mjs --capture --engine=chromium
+node tests/projectCompatibility/browserRunner.mjs --capture --capture-opened --engine=chromium
 node tests/projectCompatibility/packFixtures.mjs /tmp/routevn-fixture-staging
 bun run test:project-compatibility
 ```
@@ -151,6 +161,9 @@ adds old-runtime observations only after checking state and source preservation.
 `--capture-opened` adds missing resolved-state/runtime supplements from the
 pinned previous reader for all three open phases. It first verifies the existing
 history-only oracles and source preservation, and never overwrites a supplement.
+The browser runner's `--capture-opened` does the same in Chromium against the
+original browser captures. It creates only missing supplements; regular browser
+runs require them and never create expectations from candidate output.
 
 Future updates **replace the ZIP and update the text manifest together**. The
 packer verifies captured manifests and refuses to change or remove any file

@@ -10,8 +10,8 @@ or dependency version has changed in this slice.
   authored using independently installed schema-14/schema-15 clients. They are
   stored in a deterministic ZIP with a readable provenance/hash manifest; tests
   verify and extract it automatically. All 319 original files are byte-identical.
-  An additional 54 files freeze resolved-state/runtime observations and their
-  provenance without replacing any original history-only oracle.
+  An additional 54 native and 46 browser files freeze resolved-state/runtime
+  observations and their provenance without replacing any original oracle.
 - Pinned previous-reader comparisons against the candidate through production
   repository loading, storage codecs, projections and model reducers.
 - Cold, warm and cache-cleared opens; exact original row bytes and storage types;
@@ -21,13 +21,16 @@ or dependency version has changed in this slice.
   10,000-edit history and an oversized historical bootstrap.
 - Logical preview/export comparisons in native-bridge and browser lanes.
   Graphics output and packaged-player delivery are separate checks.
-- Native resolved-state/runtime checks hydrate all scenes from the opened
+- Native and browser resolved-state/runtime checks hydrate all scenes from the opened
   repository, including checkpoint-only recovery. History replay is checked
   separately. Each cold/warm/cache-cleared expectation comes from the pinned
   previous reader, preserving its phase-specific results.
 - Fifteen comparator/recovery checks and real-browser dump self-tests covering
   typed binary data, Blob/File metadata, sparse arrays, compound keys, property
   order and advanced key generators.
+- A real IndexedDB negative control corrupts P09's cached layout while preserving
+  source history. Both readers in Chromium and WebKit detect the changed opened
+  state and runtime projection even though history-based observations still match.
 - A separate CI job, executable browser artifacts, machine-readable
   reports, and retained failure databases/profiles.
 
@@ -48,22 +51,24 @@ branch was pushed and no package was published.
 
 ## Verification from this implementation run
 
-| Check                                                          | Result                                                                                                                                |
-| -------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------- |
-| Combined compatibility command                                 | Passed: 162 SQLite open phases, 276 browser open phases, both browser dump checks, 15 comparator/recovery checks and 6 archive checks |
-| Client smoke, integration, convergence, collaboration adapters | Passed                                                                                                                                |
-| Client Puty storage suite                                      | 5 passed                                                                                                                              |
-| Client lint and new harness formatting                         | Passed                                                                                                                                |
-| Model full suite                                               | 4,258 passed, including 3,462 archived cases and 8 adopted-project tests                                                              |
-| Engine full suite                                              | 2,182 passed, including 20 literal-value tests                                                                                        |
-| Engine lint, disabled-test checks and package build            | Passed                                                                                                                                |
+| Check                                                          | Result                                                                                                                                                                     |
+| -------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Combined compatibility command                                 | Passed: 162 SQLite open phases, 276 browser open phases, both browser dump checks, 4 cached-layout corruption controls, 15 comparator/recovery checks and 6 archive checks |
+| Client smoke, integration, convergence, collaboration adapters | Passed                                                                                                                                                                     |
+| Client Puty storage suite                                      | 5 passed                                                                                                                                                                   |
+| Client lint and new harness formatting                         | Passed                                                                                                                                                                     |
+| Model full suite                                               | 4,258 passed, including 3,462 archived cases and 8 adopted-project tests                                                                                                   |
+| Engine full suite                                              | 2,182 passed, including 20 literal-value tests                                                                                                                             |
+| Engine lint, disabled-test checks and package build            | Passed                                                                                                                                                                     |
 
 The archive packaging rerun used only the committed ZIP with a fresh extraction
 cache. All 319 extracted files matched their original hashes, and repacking
 produced identical ZIP and manifest bytes. Six additional archive tests cover
 determinism, concurrent extraction, corrupt archives/caches, unsafe paths and
 preservation of frozen files. The readable manifest and update workflow are
-linked from the harness README.
+linked from the harness README. The browser projection extension preserves all
+373 preceding files and adds 46 immutable supplemental files; both browser
+engines verify per-phase opened state and runtime expectations from this archive.
 
 The combined command was run in the existing Playwright Linux container with
 read-only source/dependency mounts and writable temporary test caches. Chromium

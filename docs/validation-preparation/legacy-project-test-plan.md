@@ -156,6 +156,12 @@ recover two scenes from checkpoints while history replay is empty. Freeze each
 open phase independently when the previous reader has a phase-specific outcome;
 never substitute history replay for checkpoint-recovered content. Negative
 controls must detect lost recovered scenes/lines with unchanged checkpoint bytes.
+In the browser lane, corrupt a warm main-state checkpoint resource (P09 layout
+name), restore it into real IndexedDB, and reopen. Confirm that history-only
+state/runtime and source history still match while opened-state comparison fails
+and the opened runtime projection reflects the corruption. Run this control
+against both readers in Chromium and WebKit; check per-phase browser expectations
+captured from the pinned previous reader separately from history replay.
 
 Also record representative runtime observations: a dialogue line with its
 speaker/avatar, a navigation result, and indexed-sprite frame zero where used.

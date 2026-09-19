@@ -64,11 +64,26 @@ for (const id of readdirSync(root).sort()) {
     throw new Error(`Opened-project oracle provenance mismatch: ${id}`);
   fixture.openedRepository = true;
   if (manifest.fault) fixture.fault = manifest.fault;
-  if (fixture.browser)
+  if (fixture.browser) {
     verifyManifest(
       JSON.parse(readFileSync(join(root, id, "browser/manifest.json"), "utf8")),
       `${id}/browser`,
     );
+    const browserOpened = JSON.parse(
+      readFileSync(
+        join(root, id, "browser/opened-repository.manifest.json"),
+        "utf8",
+      ),
+    );
+    verifyManifest(browserOpened, `${id}/browser`);
+    if (
+      browserOpened.sourceManifestSha256 !==
+        files[`${id}/browser/manifest.json`].sha256 ||
+      identityKey(browserOpened.previousReader) !== fixture.previousReader
+    )
+      throw new Error(`Opened browser oracle provenance mismatch: ${id}`);
+    fixture.openedBrowserRepository = true;
+  }
   fixtures.push(fixture);
 }
 if (!fixtures.length) throw new Error("No captured fixtures found");
