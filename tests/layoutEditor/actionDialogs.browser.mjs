@@ -180,8 +180,9 @@ document.querySelector('#inspector').append(panel);
           if (scenario.mode === "touch") {
             assert.ok(
               panelBox.y <= 24 &&
-                panelBox.height <= Math.min(scenario.height * 0.6, 480),
-              `${scenario.name}: mobile action dialog must stay compact and near the top`,
+                Math.abs(panelBox.height - (scenario.height - 48 - 64) / 2) <=
+                  1,
+              `${scenario.name}: mobile action dialog must use half the height remaining after the navbar and tabs`,
             );
           }
           const scroller = page.locator(
