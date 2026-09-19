@@ -535,9 +535,159 @@ describe("mobile setup update persistence", () => {
     const openUrl = vi
       .spyOn(pages.appService, "openUrl")
       .mockResolvedValue(undefined);
-    await checkAboutUpdates({ ...pages, store });
+    await checkAboutUpdates({ ...pages, store, render: vi.fn() });
     expect(openUrl).toHaveBeenCalledExactlyOnceWith(
       ROUTEVN_CREATOR_APP_STORE_URL,
     );
+  });
+});
+
+describe("mobile update API setup", () => {
+  const nativeContext = (platform, distribution) => {
+    const context = {
+      appId: "routevn-creator",
+      currentVersion: "1.14.0",
+      target: platform,
+      arch: "aarch64",
+      distribution,
+      channel: "stable",
+    };
+    if (platform === "android") context.currentBuild = "9";
+    return context;
+  };
+
+  it.each(["google-play", "direct"])(
+    "uses native Android version and %s distribution",
+    async (distribution) => {
+      const original = mocked.bridge.getMockImplementation();
+      mocked.bridge.mockImplementation(async (method, params) => {
+        if (method === "getAppUpdateContext")
+          return nativeContext("android", distribution);
+        if (method === "getAppUpdateSupport")
+          return {
+            status: distribution === "direct" ? "unsupported" : "supported",
+          };
+        if (method === "checkAppUpdate")
+          return { status: "available", versionCode: 10 };
+        if (method === "requestClientUpdate")
+          return {
+            status: 200,
+            body: JSON.stringify({
+              jsonrpc: "2.0",
+              id: 1,
+              result: { status: "noUpdate", reason: "noCompatibleRelease" },
+            }),
+          };
+        return original(method, params);
+      });
+      mocked.globalUI.showConfirm.mockResolvedValue(false);
+      const {
+        deps: { pages },
+      } = await import("../../src/setup.android.js");
+      expect(pages.appService.getAppVersion()).toBe("1.14.0");
+      expect(pages.appService.getDistribution()).toBe(distribution);
+      if (distribution === "direct") {
+        expect(pages.updaterService).toBeUndefined();
+        expect(mocked.bridge).not.toHaveBeenCalledWith(
+          "requestClientUpdate",
+          expect.anything(),
+        );
+      } else {
+        await pages.updaterService.checkForUpdates(false, {
+          copy: EN_I18N.appPage,
+        });
+        expect(mocked.bridge).toHaveBeenCalledWith("requestClientUpdate", {
+          availableBuild: "10",
+        });
+        expect(mocked.globalUI.showConfirm).toHaveBeenCalledWith(
+          expect.objectContaining({
+            message: EN_I18N.appPage.googlePlayUpdateAvailable,
+          }),
+        );
+      }
+    },
+  );
+
+  it("uses native iOS version and sends About through the metadata bridge", async () => {
+    const original = mocked.bridge.getMockImplementation();
+    mocked.bridge.mockImplementation(async (method, params) => {
+      if (method === "getAppUpdateContext")
+        return nativeContext("ios", "app-store");
+      if (method === "requestClientUpdate")
+        return {
+          status: 200,
+          body: JSON.stringify({
+            jsonrpc: "2.0",
+            id: 1,
+            result: { status: "noUpdate", reason: "upToDate" },
+          }),
+        };
+      return original(method, params);
+    });
+    const {
+      deps: { pages },
+    } = await import("../../src/setup.ios.js");
+    const store = bindStore(aboutStore);
+    mountAbout({ ...pages, store });
+    expect(pages.appService.getAppVersion()).toBe("1.14.0");
+    expect(pages.appService.getDistribution()).toBe("app-store");
+    const openUrl = vi.spyOn(pages.appService, "openUrl");
+    await checkAboutUpdates({
+      ...pages,
+      store,
+      render: vi.fn(),
+      i18n: EN_I18N,
+    });
+    expect(mocked.bridge).toHaveBeenCalledWith("requestClientUpdate", {});
+    expect(mocked.globalUI.showAlert).toHaveBeenCalledWith(
+      expect.objectContaining({
+        message: EN_I18N.appPage.latestVersionMessage,
+      }),
+    );
+    expect(openUrl).not.toHaveBeenCalled();
+  });
+
+  it("keeps iOS automatic prompts behind appService progress work", async () => {
+    const original = mocked.bridge.getMockImplementation();
+    mocked.bridge.mockImplementation(async (method, params) => {
+      if (method === "getAppUpdateContext")
+        return nativeContext("ios", "app-store");
+      if (method === "requestClientUpdate")
+        return {
+          status: 200,
+          body: JSON.stringify({
+            jsonrpc: "2.0",
+            id: 1,
+            result: {
+              status: "updateAvailable",
+              release: {
+                version: "1.16.0",
+                changelog: "Improved editing",
+                publishedAt: "2026-09-01T00:00:00Z",
+                installation: {
+                  type: "appStore",
+                  url: ROUTEVN_CREATOR_APP_STORE_URL,
+                },
+              },
+            },
+          }),
+        };
+      return original(method, params);
+    });
+    mocked.globalUI.showConfirm.mockResolvedValue(false);
+    const {
+      deps: { pages },
+    } = await import("../../src/setup.ios.js");
+    const progress = pages.appService.showProgressDialog({
+      title: "Exporting",
+    });
+    const checking = pages.updaterService.checkForUpdates(true, {
+      copy: EN_I18N.appPage,
+    });
+    await new Promise((resolve) => setTimeout(resolve, 10));
+    expect(mocked.globalUI.showConfirm).not.toHaveBeenCalled();
+    progress.close();
+    await checking;
+    expect(mocked.globalUI.showConfirm).toHaveBeenCalledOnce();
   });
 });

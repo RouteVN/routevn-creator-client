@@ -1,6 +1,7 @@
 import { callAndroidBridge } from "./bridge.js";
 import { createAutomaticUpdateChecks } from "../automaticUpdateChecks.js";
 import { createProgressDialog } from "../progressDialog.js";
+import { formatUpdateMessage } from "../clientUpdates.js";
 
 export const createAndroidUpdater = async ({
   globalUI,
@@ -8,6 +9,7 @@ export const createAndroidUpdater = async ({
   browserEventsClient,
   beforeInstall,
   getCopy,
+  metadataClient,
   bridge = callAndroidBridge,
   isForeground = () => globalThis.document?.visibilityState !== "hidden",
 }) => {
@@ -75,10 +77,10 @@ export const createAndroidUpdater = async ({
     }
   };
 
-  const performCheck = async (silent, copy) => {
+  const performCheck = async (silent, copy, checkedInfo) => {
     let userAccepted = false;
     try {
-      updateInfo = await bridge("checkAppUpdate");
+      updateInfo = checkedInfo ?? (await bridge("checkAppUpdate"));
       if (!isForeground()) return updateInfo;
       const { status } = updateInfo;
       if (status === "unsupported" || status === "unavailable") {
@@ -95,11 +97,38 @@ export const createAndroidUpdater = async ({
         userAccepted = true;
         await promptInstall(updateInfo, copy);
       } else if (status === "available") {
+        let release;
+        if (metadataClient) {
+          try {
+            const offeredBuild = String(updateInfo.versionCode);
+            const result = await metadataClient.check({
+              availableBuild: offeredBuild,
+            });
+            if (result.status === "updateAvailable") {
+              // Play may offer a different build while metadata is in flight.
+              const currentInfo = await bridge("checkAppUpdate");
+              updateInfo = currentInfo;
+              if (
+                currentInfo.status === "available" &&
+                String(currentInfo.versionCode) === offeredBuild
+              )
+                release = result.release;
+            }
+          } catch {
+            // Catalog outages or missing entries must never block a Play offer.
+          }
+        }
+        if (updateInfo.status !== "available") {
+          // Reuse status feedback/recovery for a changed Play decision, without
+          // issuing another check or entering the available branch again.
+          return performCheck(silent, copy, updateInfo);
+        }
         userAccepted = await showConfirm({
           title: copy.updateAvailableTitle ?? "Update Available",
-          message:
-            copy.googlePlayUpdateAvailable ??
-            "A new version of RouteVN Creator is available on Google Play.",
+          message: release
+            ? formatUpdateMessage(copy, release)
+            : (copy.googlePlayUpdateAvailable ??
+              "A new version of RouteVN Creator is available on Google Play."),
           confirmText: copy.updateNowButton ?? "Update Now",
           cancelText: copy.laterButton ?? "Later",
         });

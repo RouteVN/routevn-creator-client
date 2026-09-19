@@ -65,21 +65,20 @@ const createUpdateProgressDialog = (copy = {}) => {
 
 const createUpdater = ({ globalUI, keyValueStore }) => {
   let updateAvailable = false;
-  let updateInfo = null;
+  let updateInfo;
   let downloadProgress = 0;
 
   const checkForUpdates = async (silent = false, options = {}) => {
     const copy = resolveUpdaterCopy(options);
     try {
-      const update = await check(
-        isMacosHost()
-          ? {
-              target: "macos-universal",
-            }
-          : undefined,
-      );
+      const checkOptions = { timeout: 10_000 };
+      if (isMacosHost()) checkOptions.target = "macos-universal";
+      const update = await check(checkOptions);
 
       if (!update) {
+        updateAvailable = false;
+        updateInfo = undefined;
+        downloadProgress = 0;
         if (!silent && globalUI) {
           await globalUI.showAlert({
             message:
@@ -88,7 +87,7 @@ const createUpdater = ({ globalUI, keyValueStore }) => {
             title: copy.upToDateTitle ?? "Up to Date",
           });
         }
-        return null;
+        return;
       }
 
       updateAvailable = true;
@@ -120,11 +119,12 @@ const createUpdater = ({ globalUI, keyValueStore }) => {
 
       return updateInfo;
     } catch (error) {
+      updateAvailable = false;
+      updateInfo = undefined;
       console.error("Failed to check for updates:", error);
       if (!silent && globalUI) {
         const message =
-          error?.message ||
-          copy.retrieveUpdateInfoFallback ||
+          copy.retrieveUpdateInfoFallback ??
           "Could not retrieve update information.";
         await globalUI.showAlert({
           message: formatUpdaterCopy(
@@ -135,7 +135,7 @@ const createUpdater = ({ globalUI, keyValueStore }) => {
           title: copy.errorTitle ?? "Error",
         });
       }
-      return null;
+      return;
     }
   };
 
@@ -146,27 +146,30 @@ const createUpdater = ({ globalUI, keyValueStore }) => {
       let downloaded = 0;
       let contentLength = 0;
 
-      await update.downloadAndInstall((event) => {
-        switch (event.event) {
-          case "Started":
-            contentLength = event.data.contentLength || 0;
-            progressDialog.update();
-            break;
-          case "Progress":
-            downloaded += event.data.chunkLength;
-            downloadProgress =
-              contentLength > 0
-                ? Math.round((downloaded / contentLength) * 100)
-                : 0;
-            progressDialog.update({
-              progress: contentLength > 0 ? downloadProgress : undefined,
-            });
-            break;
-          case "Finished":
-            progressDialog.update({ installing: true });
-            break;
-        }
-      });
+      await update.downloadAndInstall(
+        (event) => {
+          switch (event.event) {
+            case "Started":
+              contentLength = event.data.contentLength || 0;
+              progressDialog.update();
+              break;
+            case "Progress":
+              downloaded += event.data.chunkLength;
+              downloadProgress =
+                contentLength > 0
+                  ? Math.round((downloaded / contentLength) * 100)
+                  : 0;
+              progressDialog.update({
+                progress: contentLength > 0 ? downloadProgress : undefined,
+              });
+              break;
+            case "Finished":
+              progressDialog.update({ installing: true });
+              break;
+          }
+        },
+        { timeout: 10 * 60 * 1000 },
+      );
 
       await relaunch();
       progressDialog.close();

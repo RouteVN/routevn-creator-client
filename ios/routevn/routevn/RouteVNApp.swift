@@ -40,6 +40,7 @@ final class RouteVNViewController: UIViewController, WKNavigationDelegate, WKScr
 
     private var statusBarStyle: UIStatusBarStyle = .lightContent
     private var lastReportedWindowSize: CGSize = .zero
+    private let clientUpdateApi = ClientUpdateApi()
     private let storage = RouteVNNativeStorage()
     private var projectFolderSetup: ProjectFolderSetup { storage.projectFolderSetup }
     private var webView: WKWebView!
@@ -84,6 +85,7 @@ final class RouteVNViewController: UIViewController, WKNavigationDelegate, WKScr
     }
 
     deinit {
+        clientUpdateApi.close()
         closeSqliteDatabases()
         webView?.configuration.userContentController.removeScriptMessageHandler(forName: "RouteVNIOS")
     }
@@ -339,6 +341,25 @@ final class RouteVNViewController: UIViewController, WKNavigationDelegate, WKScr
         let requestId = body["id"] as? String
         let payload = body["payload"] as? [String: Any] ?? [:]
 
+        if method == "requestClientUpdate" {
+            guard payload.isEmpty else {
+                if let requestId {
+                    sendBridgeFailure(requestId: requestId, error: RouteVNError.message("Unexpected update request parameter."))
+                }
+                return
+            }
+            clientUpdateApi.request { [weak self] result in
+                DispatchQueue.main.async { [weak self] in
+                    guard let self, let requestId else { return }
+                    switch result {
+                    case .success(let value): self.sendBridgeSuccess(requestId: requestId, value: value)
+                    case .failure(let error): self.sendBridgeFailure(requestId: requestId, error: error)
+                    }
+                }
+            }
+            return
+        }
+
         if shouldHandleBridgeMethodInBackground(method) {
             handleBridgeMethodInBackground(method, payload: payload, requestId: requestId)
             return
@@ -399,6 +420,8 @@ final class RouteVNViewController: UIViewController, WKNavigationDelegate, WKScr
             }
             return true
         #endif
+        case "getAppUpdateContext":
+            return try ClientUpdateApi.context()
         case "isDebugBuild":
             #if DEBUG
             return true

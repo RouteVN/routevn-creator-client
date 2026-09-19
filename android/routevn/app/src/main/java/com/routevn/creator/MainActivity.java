@@ -173,6 +173,7 @@ public class MainActivity extends Activity {
     private WebView webView;
     private String lastReportedWindowMetrics = "";
     private GooglePlayUpdater googlePlayUpdater;
+    private final ClientUpdateApi clientUpdateApi = new ClientUpdateApi();
     private ProjectBackup projectBackup;
     private final ExecutorService backupExecutor = Executors.newSingleThreadExecutor();
     private final Set<String> projectTransactions = java.util.concurrent.ConcurrentHashMap.newKeySet();
@@ -798,6 +799,7 @@ public class MainActivity extends Activity {
     @Override
     protected void onDestroy() {
         googlePlayUpdater.destroy();
+        clientUpdateApi.close();
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
             unregisterBackInvokedCallback();
         }
@@ -1043,6 +1045,17 @@ public class MainActivity extends Activity {
                 payload = new JSONObject();
             }
 
+            if ("requestClientUpdate".equals(method)) {
+                String updateRequestId = requestId;
+                clientUpdateApi.request(payload, (value, error) -> {
+                    String result;
+                    try { result = error == null ? bridgeSuccess(value) : bridgeFailure(error); }
+                    catch (Exception failure) { result = bridgeFailure(failure); }
+                    reply.accept(attachBridgeResponseMetadata(updateRequestId, result));
+                });
+                return;
+            }
+
             if ("getAppUpdateSupport".equals(method) || "checkAppUpdate".equals(method) ||
                 "startAppUpdate".equals(method) || "completeAppUpdate".equals(method)) {
                 String updateRequestId = requestId;
@@ -1099,6 +1112,8 @@ public class MainActivity extends Activity {
         JSONObject payload = new JSONObject(payloadJson);
         AndroidBridge bridge = new AndroidBridge();
         switch (method) {
+            case "getAppUpdateContext":
+                return bridgeSuccess(ClientUpdateApi.context());
             case "getBackupStatus":
                 return bridgeSuccess(projectBackup.status());
             case "configureBackup":

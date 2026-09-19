@@ -1,0 +1,217 @@
+import { afterEach, describe, expect, it } from "vitest";
+import { readFileSync } from "node:fs";
+import {
+  createMockUpdateServer,
+  createMockReleases,
+} from "../../scripts/mock-updates.js";
+
+const servers = [];
+afterEach(async () => {
+  await Promise.all(
+    servers.splice(0).map(
+      (server) =>
+        new Promise((resolve) => {
+          server.closeAllConnections();
+          server.close(resolve);
+        }),
+    ),
+  );
+});
+const start = async (options) => {
+  const server = createMockUpdateServer(options);
+  servers.push(server);
+  await new Promise((resolve, reject) => {
+    server.once("error", reject);
+    server.listen(0, "127.0.0.1", resolve);
+  });
+  return `http://127.0.0.1:${server.address().port}`;
+};
+const desktopParams = {
+  currentVersion: "1.15.1",
+  target: "windows",
+  arch: "x86_64",
+  distribution: "direct",
+  channel: "stable",
+};
+const desktopPath = (params = desktopParams) =>
+  `/system/updates/v1/routevn-creator/tauri?${new URLSearchParams(params)}`;
+const androidParams = {
+  appId: "routevn-creator",
+  currentVersion: "1.15.1",
+  currentBuild: "9",
+  availableBuild: "10",
+  target: "android",
+  arch: "aarch64",
+  distribution: "google-play",
+  channel: "stable",
+};
+const rpc = (origin, params) =>
+  fetch(`${origin}/system/rpc`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json", "X-RouteVN-RPC": "1" },
+    body: JSON.stringify({
+      jsonrpc: "2.0",
+      id: 1,
+      method: "system.getClientUpdate",
+      params,
+    }),
+  });
+
+describe("mock update protocol over HTTP", () => {
+  it("serves flat Tauri fields and a byte-empty 204 for equal/newer versions", async () => {
+    const origin = await start();
+    const response = await fetch(origin + desktopPath());
+    expect(response.status).toBe(200);
+    expect(response.headers.get("cache-control")).toBe("no-store");
+    const release = await response.json();
+    expect(Object.keys(release).sort()).toEqual([
+      "notes",
+      "pub_date",
+      "signature",
+      "url",
+      "version",
+    ]);
+    expect(release.version).toBe("1.16.0");
+    for (const version of ["1.16.0", "1.17.0", "1.16.0+local.1"]) {
+      const result = await fetch(
+        origin + desktopPath({ ...desktopParams, currentVersion: version }),
+      );
+      expect(result.status).toBe(204);
+      expect(await result.text()).toBe("");
+      expect(result.headers.has("content-type")).toBe(false);
+    }
+  });
+
+  it.each(["x86_64", "aarch64"])(
+    "maps the Mac custom target for %s",
+    async (arch) => {
+      const origin = await start();
+      const result = await fetch(
+        origin +
+          desktopPath({ ...desktopParams, target: "macos-universal", arch }),
+      );
+      expect(result.status).toBe(200);
+      expect((await result.json()).version).toBe("1.16.0");
+    },
+  );
+
+  it("selects the exact Play offer, ordering Android builds numerically", async () => {
+    const releases = createMockReleases();
+    releases.push({
+      ...releases[3],
+      version: "1.17.0",
+      installation: { ...releases[3].installation, build: "100" },
+    });
+    const origin = await start({ releases });
+    const exact = await (await rpc(origin, androidParams)).json();
+    expect(exact.result.release.installation.build).toBe("10");
+    expect(exact.result.release.installation).not.toHaveProperty("signature");
+    const latestParams = { ...androidParams, currentBuild: "10" };
+    delete latestParams.availableBuild;
+    const latest = await (await rpc(origin, latestParams)).json();
+    expect(latest.result.release.installation.build).toBe("100");
+    const unknown = await (
+      await rpc(origin, { ...androidParams, availableBuild: "11" })
+    ).json();
+    expect(unknown.result).toEqual({
+      status: "noUpdate",
+      reason: "noCompatibleRelease",
+    });
+  });
+
+  it("returns iOS store metadata and never a direct installer to another distribution", async () => {
+    const origin = await start();
+    const ios = {
+      appId: "routevn-creator",
+      currentVersion: "1.15.1",
+      target: "ios",
+      arch: "aarch64",
+      distribution: "app-store",
+    };
+    expect(
+      (await (await rpc(origin, ios)).json()).result.release.installation,
+    ).toEqual({
+      type: "appStore",
+      url: "https://apps.apple.com/sg/app/id6810571721",
+    });
+    const direct = { ...androidParams, distribution: "direct" };
+    delete direct.availableBuild;
+    expect((await (await rpc(origin, direct)).json()).result).toEqual({
+      status: "unsupportedClient",
+    });
+    expect(
+      (
+        await fetch(
+          origin + desktopPath({ ...desktopParams, distribution: "steam" }),
+        )
+      ).status,
+    ).toBe(422);
+    expect(
+      (await fetch(origin + desktopPath({ ...desktopParams, channel: "beta" })))
+        .status,
+    ).toBe(204);
+  });
+
+  it.each(["unavailable", "rate-limited"])(
+    "keeps %s distinct from no-update with retry headers",
+    async (scenario) => {
+      const origin = await start({ scenario });
+      for (const response of [
+        await fetch(origin + desktopPath()),
+        await rpc(origin, androidParams),
+      ]) {
+        expect(response.status).toBe(scenario === "unavailable" ? 503 : 429);
+        expect(response.headers.get("retry-after")).toBe("60");
+        expect(await response.json()).toHaveProperty("error");
+      }
+    },
+  );
+
+  it("rejects duplicate/unknown/malformed selectors and invalid RPC params", async () => {
+    const origin = await start();
+    for (const suffix of [
+      "&arch=x86_64",
+      "&appId=other",
+      "&extra=yes",
+      "&bad=%zz",
+    ]) {
+      expect((await fetch(origin + desktopPath() + suffix)).status).toBe(400);
+    }
+    const response = await rpc(origin, {
+      ...androidParams,
+      currentBuild: "09",
+    });
+    expect((await response.json()).error.code).toBe(-32602);
+    expect(
+      (await fetch(origin + "/system/rpc", { method: "POST", body: "{}" }))
+        .status,
+    ).toBe(400);
+    expect((await fetch(origin + "/system/rpc")).status).toBe(405);
+  });
+
+  it("uses the same query selectors in development and production config without changing trust", () => {
+    const load = (name) =>
+      JSON.parse(
+        readFileSync(
+          new URL(`../../src-tauri/${name}`, import.meta.url),
+          "utf8",
+        ),
+      ).plugins.updater;
+    const development = load("tauri.conf.json");
+    const production = load("tauri.prod.conf.json");
+    for (const config of [development, production]) {
+      const url = new URL(config.endpoints[0]);
+      expect(url.pathname).toBe("/system/updates/v1/routevn-creator/tauri");
+      expect(Object.fromEntries(url.searchParams)).toEqual({
+        currentVersion: "{{current_version}}",
+        target: "{{target}}",
+        arch: "{{arch}}",
+        distribution: "direct",
+        channel: "stable",
+      });
+    }
+    expect(production.dangerousInsecureTransportProtocol).toBe(false);
+    expect(production.pubkey).not.toBe(development.pubkey);
+    expect(load("tauri.steam.conf.json").endpoints).toEqual([]);
+  });
+});

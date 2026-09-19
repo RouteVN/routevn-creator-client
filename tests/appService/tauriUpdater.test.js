@@ -98,14 +98,16 @@ describe("tauri updater", () => {
       date: "2026-07-03",
       body: "Fix packaging.",
     });
-    expect(checkMock).toHaveBeenCalledWith(undefined);
+    expect(checkMock).toHaveBeenCalledWith({ timeout: 10_000 });
     expect(globalUI.showConfirm).toHaveBeenCalledWith({
       message: "Update 1.7.3 is available.\nFix packaging.",
       title: "Update Available",
       confirmText: "Update Now",
       cancelText: "Later",
     });
-    expect(downloadAndInstall).toHaveBeenCalledWith(expect.any(Function));
+    expect(downloadAndInstall).toHaveBeenCalledWith(expect.any(Function), {
+      timeout: 600_000,
+    });
     expect(relaunchMock).toHaveBeenCalled();
   });
 
@@ -163,7 +165,9 @@ describe("tauri updater", () => {
     expect(
       document.getElementById("routevn-update-progress-dialog"),
     ).toBeNull();
-    expect(downloadAndInstall).toHaveBeenCalledWith(expect.any(Function));
+    expect(downloadAndInstall).toHaveBeenCalledWith(expect.any(Function), {
+      timeout: 600_000,
+    });
     expect(relaunchMock).toHaveBeenCalled();
     expect(globalUI.showAlert).not.toHaveBeenCalled();
   });
@@ -216,14 +220,46 @@ describe("tauri updater", () => {
 
     const result = await updater.checkForUpdates(false);
 
-    expect(result).toBeNull();
-    expect(checkMock).toHaveBeenCalledWith(undefined);
+    expect(result).toBeUndefined();
+    expect(checkMock).toHaveBeenCalledWith({ timeout: 10_000 });
     expect(globalUI.showConfirm).not.toHaveBeenCalled();
     expect(globalUI.showAlert).toHaveBeenCalledWith({
       message: "You are already on the latest version",
       title: "Up to Date",
     });
     expect(relaunchMock).not.toHaveBeenCalled();
+  });
+
+  it("clears stale release metadata when the server returns no update", async () => {
+    const globalUI = createGlobalUI();
+    globalUI.showConfirm.mockResolvedValue(false);
+    const { updater } = createUpdaterClient({ globalUI });
+    await updater.checkForUpdates(true);
+    expect(updater.isUpdateAvailable()).toBe(true);
+    checkMock.mockResolvedValueOnce(null);
+    await updater.checkForUpdates(true);
+    expect(updater.isUpdateAvailable()).toBe(false);
+    expect(updater.getUpdateInfo()).toBeUndefined();
+    expect(globalUI.showAlert).not.toHaveBeenCalled();
+  });
+
+  it("does not report a failed server check as up to date", async () => {
+    const globalUI = createGlobalUI();
+    const { updater } = createUpdaterClient({ globalUI });
+    checkMock.mockRejectedValueOnce(new Error("503 private diagnostic"));
+    const log = vi.spyOn(console, "error").mockImplementation(() => {});
+    try {
+      await updater.checkForUpdates(false);
+      expect(globalUI.showAlert).toHaveBeenCalledWith({
+        title: "Error",
+        message:
+          "Failed to check for updates: Could not retrieve update information.",
+      });
+      expect(updater.isUpdateAvailable()).toBe(false);
+      expect(globalUI.showConfirm).not.toHaveBeenCalled();
+    } finally {
+      log.mockRestore();
+    }
   });
 
   it("keeps using the universal updater target on macOS", async () => {
@@ -238,6 +274,7 @@ describe("tauri updater", () => {
 
     expect(checkMock).toHaveBeenCalledWith({
       target: "macos-universal",
+      timeout: 10_000,
     });
   });
 });
