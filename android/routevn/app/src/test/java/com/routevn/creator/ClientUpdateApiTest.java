@@ -12,6 +12,12 @@ import org.robolectric.annotation.Config;
 @RunWith(RobolectricTestRunner.class)
 @Config(sdk = 35)
 public class ClientUpdateApiTest {
+    private static final String DEVICE_ID = "123456789AbC";
+
+    private static JSONObject payload() throws Exception {
+        return new JSONObject().put("deviceId", DEVICE_ID);
+    }
+
     @Test public void reportsDistributionIndependentlyOfDebugPlaySupport() throws Exception {
         JSONObject direct = ClientUpdateApi.context("1.15.1", 9, "arm64-v8a", "direct");
         assertEquals("direct", direct.getString("distribution"));
@@ -19,28 +25,65 @@ public class ClientUpdateApiTest {
         assertEquals("aarch64", direct.getString("arch"));
         assertEquals("1.15.1", direct.getString("currentVersion"));
         JSONObject play = ClientUpdateApi.context("1.15.1", 9, "x86_64", "google-play");
-        JSONObject request = ClientUpdateApi.requestBody(play, new JSONObject().put("availableBuild", "10"));
+        JSONObject request = ClientUpdateApi.requestBody(play, payload().put("availableBuild", "10"));
         assertEquals("system.getClientUpdate", request.getString("method"));
         assertEquals("2.0", request.getString("jsonrpc"));
         assertEquals(1, request.getInt("id"));
         assertEquals("10", request.getJSONObject("params").getString("availableBuild"));
         assertEquals("google-play", play.getString("distribution"));
+        assertEquals(DEVICE_ID, request.getJSONObject("params").getString("deviceId"));
+        assertEquals(android.os.Build.MODEL, play.getString("deviceModel"));
+        assertEquals(android.os.Build.VERSION.RELEASE, play.getString("osVersion"));
     }
 
     @Test public void rejectsStoreBuildHintsForDirectAndInvalidPlayBuilds() throws Exception {
         assertThrows(IllegalArgumentException.class, () -> ClientUpdateApi.requestBody(
-            ClientUpdateApi.context("1.15.1", 9, "x86", "direct"), new JSONObject().put("availableBuild", "10")));
+            ClientUpdateApi.context("1.15.1", 9, "x86", "direct"), payload().put("availableBuild", "10")));
         for (Object value : new Object[] { "0", "9", "8", "-1", "01", "1.5", "2100000001", "999999999999999", 10, JSONObject.NULL }) {
             assertThrows(IllegalArgumentException.class, () -> ClientUpdateApi.requestBody(
                 ClientUpdateApi.context("1.15.1", 9, "armeabi-v7a", "google-play"),
-                new JSONObject().put("availableBuild", value)));
+                payload().put("availableBuild", value)));
+        }
+    }
+
+    @Test public void reportsDeviceMetadataAndFallsBackWhenUnavailable() throws Exception {
+        JSONObject context = ClientUpdateApi.context("1.15.1", 9, "arm64-v8a", "direct", "Pixel 9", "16");
+        assertEquals("Pixel 9", context.getString("deviceModel"));
+        assertEquals("16", context.getString("osVersion"));
+        JSONObject request = ClientUpdateApi.requestBody(context, payload());
+        assertEquals(DEVICE_ID, request.getJSONObject("params").getString("deviceId"));
+        assertFalse(request.getJSONObject("params").has("availableBuild"));
+        for (String value : new String[] { null, "", " ", "\u00a0", "\ufeff", "a".repeat(257),
+                "Pixel\n9", "Pixel" + (char) 0, "Pixel" + (char) 31, "Pixel" + (char) 127 }) {
+            JSONObject missingModel = ClientUpdateApi.context(
+                "1.15.1", 9, "arm64-v8a", "direct", value, "16");
+            assertEquals("unknown", missingModel.getString("deviceModel"));
+            assertEquals("16", missingModel.getString("osVersion"));
+            JSONObject missingVersion = ClientUpdateApi.context(
+                "1.15.1", 9, "arm64-v8a", "direct", "Pixel 9", value);
+            assertEquals("unknown", missingVersion.getString("osVersion"));
+            assertEquals("Pixel 9", missingVersion.getString("deviceModel"));
+        }
+    }
+
+    @Test public void requiresExactRandomDeviceIdAndRejectsCallerMetadata() throws Exception {
+        JSONObject context = ClientUpdateApi.context("1.15.1", 9, "arm64-v8a", "direct");
+        assertThrows(IllegalArgumentException.class, () -> ClientUpdateApi.requestBody(context, new JSONObject()));
+        for (Object value : new Object[] { "", "123456789Ab", "123456789AbCD", "023456789AbC",
+                "I23456789AbC", "l23456789AbC", "O23456789AbC", DEVICE_ID + "\n", 123, JSONObject.NULL }) {
+            assertThrows(IllegalArgumentException.class, () -> ClientUpdateApi.requestBody(
+                context, new JSONObject().put("deviceId", value)));
+        }
+        for (String key : new String[] { "deviceModel", "osVersion", "distribution", "currentVersion" }) {
+            assertThrows(IllegalArgumentException.class, () -> ClientUpdateApi.requestBody(
+                context, payload().put(key, "caller-supplied")));
         }
     }
 
     @Test public void rejectsCallerProvidedEndpoints() {
         assertThrows(IllegalArgumentException.class, () -> ClientUpdateApi.requestBody(
             ClientUpdateApi.context("1.15.1", 9, "x86", "direct"),
-            new JSONObject().put("endpoint", "http://example.invalid")));
+            payload().put("endpoint", "http://example.invalid")));
     }
 
     @Test public void mapsEverySupportedABIAndRejectsUnknownABI() {

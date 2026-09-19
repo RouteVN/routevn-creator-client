@@ -21,7 +21,7 @@ import { handleDownloadAssetPackageButtonClick } from "../../src/pages/assetPack
 import { EN_I18N } from "../support/i18n.js";
 
 const mocked = vi.hoisted(() => ({
-  db: { init: vi.fn(), get: vi.fn(), set: vi.fn() },
+  db: { init: vi.fn(), get: vi.fn(), getOrSet: vi.fn(), set: vi.fn() },
   bridge: vi.fn(),
   globalUI: {
     showConfirm: vi.fn(),
@@ -94,6 +94,7 @@ let cleanupEditor;
 beforeEach(() => {
   vi.resetModules();
   vi.resetAllMocks();
+  mocked.db.getOrSet.mockImplementation(async (_key, value) => value);
   dom = new JSDOM("<!doctype html><html><body></body></html>", {
     url: "https://app.example.invalid",
     pretendToBeVisual: true,
@@ -551,6 +552,8 @@ describe("mobile update API setup", () => {
       arch: "aarch64",
       distribution,
       channel: "stable",
+      deviceModel: "Example device",
+      osVersion: "18.0",
     };
     if (platform === "android") context.currentBuild = "9";
     return context;
@@ -598,6 +601,7 @@ describe("mobile update API setup", () => {
         });
         expect(mocked.bridge).toHaveBeenCalledWith("requestClientUpdate", {
           availableBuild: "10",
+          deviceId: expect.stringMatching(/^[1-9A-HJ-NP-Za-km-z]{12}$/),
         });
         expect(mocked.globalUI.showConfirm).toHaveBeenCalledWith(
           expect.objectContaining({
@@ -638,7 +642,9 @@ describe("mobile update API setup", () => {
       render: vi.fn(),
       i18n: EN_I18N,
     });
-    expect(mocked.bridge).toHaveBeenCalledWith("requestClientUpdate", {});
+    expect(mocked.bridge).toHaveBeenCalledWith("requestClientUpdate", {
+      deviceId: expect.stringMatching(/^[1-9A-HJ-NP-Za-km-z]{12}$/),
+    });
     expect(mocked.globalUI.showAlert).toHaveBeenCalledWith(
       expect.objectContaining({
         message: EN_I18N.appPage.latestVersionMessage,

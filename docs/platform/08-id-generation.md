@@ -42,6 +42,7 @@ reason to do something else.
 
 This is the default for:
 
+- persisted app-installation device ids for update requests
 - persisted project ids
 - persisted namespaces
 - repository/entity ids such as resource ids, layout element ids, section ids,

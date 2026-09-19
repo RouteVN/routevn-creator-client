@@ -1,8 +1,10 @@
 import { check } from "@tauri-apps/plugin-updater";
+import { invoke } from "@tauri-apps/api/core";
 import { relaunch } from "@tauri-apps/plugin-process";
 import { createProgressDialog } from "../progressDialog.js";
 import { isMacosHost } from "./platform.js";
 import { createAutomaticUpdateChecks } from "../automaticUpdateChecks.js";
+import { getDeviceId, isDeviceMetadataText } from "../deviceIdentity.js";
 
 const formatUpdaterCopy = (template, values = {}) => {
   return String(template || "").replace(/\{([A-Za-z0-9_]+)\}/g, (match, key) =>
@@ -71,7 +73,24 @@ const createUpdater = ({ globalUI, keyValueStore }) => {
   const checkForUpdates = async (silent = false, options = {}) => {
     const copy = resolveUpdaterCopy(options);
     try {
-      const checkOptions = { timeout: 10_000 };
+      const [deviceId, deviceInfo] = await Promise.all([
+        getDeviceId(keyValueStore),
+        invoke("get_update_device_info").catch(() => ({})),
+      ]);
+      const deviceModel = isDeviceMetadataText(deviceInfo?.deviceModel)
+        ? deviceInfo.deviceModel
+        : "unknown";
+      const osVersion = isDeviceMetadataText(deviceInfo?.osVersion)
+        ? deviceInfo.osVersion
+        : "unknown";
+      const checkOptions = {
+        timeout: 10_000,
+        headers: {
+          "X-RouteVN-Device-Id": deviceId,
+          "X-RouteVN-Device-Model": encodeURIComponent(deviceModel),
+          "X-RouteVN-OS-Version": encodeURIComponent(osVersion),
+        },
+      };
       if (isMacosHost()) checkOptions.target = "macos-universal";
       const update = await check(checkOptions);
 
@@ -168,7 +187,8 @@ const createUpdater = ({ globalUI, keyValueStore }) => {
               break;
           }
         },
-        { timeout: 10 * 60 * 1000 },
+        // The plugin otherwise reuses check headers for artifact downloads.
+        { timeout: 10 * 60 * 1000, headers: {} },
       );
 
       await relaunch();

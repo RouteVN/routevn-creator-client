@@ -12,6 +12,8 @@ const ios = {
   arch: "aarch64",
   distribution: "app-store",
   channel: "stable",
+  deviceModel: "iPhone17,1",
+  osVersion: "18.0",
 };
 const android = {
   ...ios,
@@ -29,9 +31,14 @@ const response = (result) => ({
   status: 200,
   body: JSON.stringify({ jsonrpc: "2.0", id: 1, result }),
 });
+const deviceId = "123456789ABC";
+const keyValueStore = { get: async () => deviceId };
 const setup = (result, context = ios) => {
   const request = vi.fn().mockResolvedValue(response(result));
-  return { request, client: createClientUpdates({ context, request }) };
+  return {
+    request,
+    client: createClientUpdates({ context, request, keyValueStore }),
+  };
 };
 
 describe("mobile update metadata protocol", () => {
@@ -46,6 +53,35 @@ describe("mobile update metadata protocol", () => {
   });
 
   it.each([
+    { deviceModel: "" },
+    { deviceModel: " " },
+    { deviceModel: "x".repeat(257) },
+    { deviceModel: "device\nname" },
+    { osVersion: undefined },
+    { osVersion: 18 },
+  ])("rejects invalid native device metadata %j", async (patch) => {
+    expect(
+      await readClientUpdateContext(async () => ({ ...ios, ...patch })),
+    ).toBeUndefined();
+  });
+
+  it("does not send a request before device identity is persisted", async () => {
+    const request = vi.fn();
+    const client = createClientUpdates({
+      context: ios,
+      request,
+      keyValueStore: {
+        get: async () => undefined,
+        getOrSet: async () => {
+          throw new Error("Disk full");
+        },
+      },
+    });
+    await expect(client.check()).rejects.toThrow("Disk full");
+    expect(request).not.toHaveBeenCalled();
+  });
+
+  it.each([
     { status: "noUpdate", reason: "upToDate" },
     { status: "noUpdate", reason: "noCompatibleRelease" },
     { status: "unsupportedClient" },
@@ -53,7 +89,7 @@ describe("mobile update metadata protocol", () => {
   ])("keeps the result decision $status distinct", async (result) => {
     const { client, request } = setup(result);
     expect(await client.check()).toEqual(result);
-    expect(request).toHaveBeenCalledExactlyOnceWith({});
+    expect(request).toHaveBeenCalledExactlyOnceWith({ deviceId });
   });
 
   it.each([
@@ -134,7 +170,7 @@ describe("mobile update metadata protocol", () => {
     expect(await client.check({ availableBuild: "10" })).toMatchObject({
       release: next,
     });
-    expect(request).toHaveBeenCalledWith({ availableBuild: "10" });
+    expect(request).toHaveBeenCalledWith({ availableBuild: "10", deviceId });
     await expect(client.check({ availableBuild: "11" })).rejects.toThrow();
     for (const build of ["9", "01", "0", "2100000001", "10\n"]) {
       await expect(client.check({ availableBuild: build })).rejects.toThrow();
@@ -158,6 +194,7 @@ describe("mobile update metadata protocol", () => {
       const request = vi.fn().mockResolvedValue({ status, retryAfter: "60" });
       const client = createClientUpdates({
         context: ios,
+        keyValueStore,
         request,
         now: () => now,
       });

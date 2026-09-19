@@ -342,13 +342,7 @@ final class RouteVNViewController: UIViewController, WKNavigationDelegate, WKScr
         let payload = body["payload"] as? [String: Any] ?? [:]
 
         if method == "requestClientUpdate" {
-            guard payload.isEmpty else {
-                if let requestId {
-                    sendBridgeFailure(requestId: requestId, error: RouteVNError.message("Unexpected update request parameter."))
-                }
-                return
-            }
-            clientUpdateApi.request { [weak self] result in
+            clientUpdateApi.request(payload: payload) { [weak self] result in
                 DispatchQueue.main.async { [weak self] in
                     guard let self, let requestId else { return }
                     switch result {

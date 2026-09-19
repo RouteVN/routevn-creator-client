@@ -7,6 +7,11 @@ import {
   isUpdateVersion,
 } from "../src/internal/updateVersion.js";
 
+import {
+  isDeviceId,
+  isDeviceMetadataText,
+} from "../src/deps/clients/deviceIdentity.js";
+
 const tauriPath = "/system/updates/v1/routevn-creator/tauri";
 const fields = [
   "appId",
@@ -17,6 +22,9 @@ const fields = [
   "channel",
   "currentBuild",
   "availableBuild",
+  "deviceId",
+  "deviceModel",
+  "osVersion",
 ];
 const targets = [
   "windows",
@@ -94,6 +102,12 @@ const validParams = (params) => {
     !Object.values(params).every(
       (value) => typeof value === "string" && value.length > 0,
     )
+  )
+    return false;
+  if (
+    !isDeviceId(params.deviceId) ||
+    !isDeviceMetadataText(params.deviceModel) ||
+    !isDeviceMetadataText(params.osVersion)
   )
     return false;
   if (!params.appId || !isUpdateVersion(params.currentVersion)) return false;
@@ -243,7 +257,7 @@ export const createMockUpdateServer = ({
       );
       response.setHeader(
         "Access-Control-Allow-Headers",
-        "Content-Type, X-RouteVN-RPC",
+        "Content-Type, X-RouteVN-RPC, X-RouteVN-Device-Id, X-RouteVN-Device-Model, X-RouteVN-OS-Version",
       );
       return send(204);
     }
@@ -268,7 +282,20 @@ export const createMockUpdateServer = ({
     if (desktop) {
       if (/%(?![0-9a-f]{2})/i.test(url.search))
         return httpError(400, "invalidRequest");
-      params = { appId: "routevn-creator" };
+      try {
+        params = {
+          appId: "routevn-creator",
+          deviceId: request.headers["x-routevn-device-id"],
+          deviceModel: decodeURIComponent(
+            request.headers["x-routevn-device-model"] ?? "",
+          ),
+          osVersion: decodeURIComponent(
+            request.headers["x-routevn-os-version"] ?? "",
+          ),
+        };
+      } catch {
+        return httpError(400, "invalidRequest");
+      }
       for (const [key, value] of url.searchParams) {
         if (Object.hasOwn(params, key)) return httpError(400, "invalidRequest");
         params[key] = value;

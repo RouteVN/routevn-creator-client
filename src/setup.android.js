@@ -82,6 +82,7 @@ const updater = await createAndroidUpdater({
   metadataClient: updateContext
     ? createClientUpdates({
         context: updateContext,
+        keyValueStore: appDb,
         request: (params) => callAndroidBridge("requestClientUpdate", params),
       })
     : undefined,

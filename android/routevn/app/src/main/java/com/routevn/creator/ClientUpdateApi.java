@@ -40,6 +40,11 @@ final class ClientUpdateApi implements AutoCloseable {
     }
 
     static JSONObject context(String version, int build, String abi, String distribution) throws Exception {
+        return context(version, build, abi, distribution, Build.MODEL, Build.VERSION.RELEASE);
+    }
+
+    static JSONObject context(String version, int build, String abi, String distribution,
+                              String deviceModel, String osVersion) throws Exception {
         if (!"direct".equals(distribution) && !"google-play".equals(distribution)) {
             throw new IllegalArgumentException("Unsupported Android distribution.");
         }
@@ -50,13 +55,33 @@ final class ClientUpdateApi implements AutoCloseable {
             .put("target", "android")
             .put("arch", architecture(abi))
             .put("distribution", distribution)
-            .put("channel", "stable");
+            .put("channel", "stable")
+            .put("deviceModel", deviceMetadata(deviceModel))
+            .put("osVersion", deviceMetadata(osVersion));
+    }
+
+    private static String deviceMetadata(String value) {
+        if (value == null || value.isEmpty() || value.length() > 256) return "unknown";
+        boolean hasContent = false;
+        for (int index = 0; index < value.length(); index++) {
+            char character = value.charAt(index);
+            if (character <= 0x1f || character == 0x7f) return "unknown";
+            if (!Character.isWhitespace(character) && !Character.isSpaceChar(character) && character != 0xfeff) {
+                hasContent = true;
+            }
+        }
+        return hasContent ? value : "unknown";
     }
 
     static JSONObject requestBody(JSONObject params, JSONObject payload) throws Exception {
-        if (payload.length() > (payload.has("availableBuild") ? 1 : 0)) {
+        Object deviceId = payload.opt("deviceId");
+        if (!(deviceId instanceof String) || !((String) deviceId).matches("[1-9A-HJ-NP-Za-km-z]{12}")) {
+            throw new IllegalArgumentException("Invalid device ID.");
+        }
+        if (payload.length() != (payload.has("availableBuild") ? 2 : 1)) {
             throw new IllegalArgumentException("Unexpected update request parameter.");
         }
+        params.put("deviceId", deviceId);
         if (payload.has("availableBuild")) {
             Object value = payload.get("availableBuild");
             if (!"google-play".equals(params.getString("distribution")) ||

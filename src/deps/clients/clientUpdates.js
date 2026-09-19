@@ -4,6 +4,8 @@ import {
 } from "../../internal/updateVersion.js";
 import { ROUTEVN_CREATOR_APP_STORE_URL } from "../../internal/routevnUrls.js";
 
+import { getDeviceId, isDeviceMetadataText } from "./deviceIdentity.js";
+
 const PLAY_STORE_URL =
   "https://play.google.com/store/apps/details?id=com.routevn.creator";
 const invalid = () => {
@@ -34,10 +36,14 @@ const validateContext = (context) => {
     "arch",
     "distribution",
     "channel",
+    "deviceModel",
+    "osVersion",
   ];
   if (context?.target === "android") fields.push("currentBuild");
   exactFields(context, fields);
   if (
+    !isDeviceMetadataText(context.deviceModel) ||
+    !isDeviceMetadataText(context.osVersion) ||
     context.appId !== "routevn-creator" ||
     !isUpdateVersion(context.currentVersion) ||
     !["stable", "beta"].includes(context.channel) ||
@@ -121,7 +127,12 @@ const validateResult = (result, context, availableBuild) => {
   return result;
 };
 
-export const createClientUpdates = ({ context, request, now = Date.now }) => {
+export const createClientUpdates = ({
+  context,
+  request,
+  keyValueStore,
+  now = Date.now,
+}) => {
   validateContext(context);
   let retryAt = 0;
   return {
@@ -139,6 +150,7 @@ export const createClientUpdates = ({ context, request, now = Date.now }) => {
           invalid();
         params.availableBuild = availableBuild;
       }
+      params.deviceId = await getDeviceId(keyValueStore);
       const response = await request(params);
       if (
         [429, 503].includes(response?.status) &&

@@ -1,4 +1,5 @@
 import Foundation
+import Darwin
 
 /// Fetches bounded update metadata. Store installation remains outside this client.
 final class ClientUpdateApi: NSObject, URLSessionDataDelegate {
@@ -22,11 +23,37 @@ final class ClientUpdateApi: NSObject, URLSessionDataDelegate {
         #else
         throw failure("Unsupported iOS architecture.")
         #endif
+        let systemVersion = ProcessInfo.processInfo.operatingSystemVersion
+        let osVersion = "\(systemVersion.majorVersion).\(systemVersion.minorVersion).\(systemVersion.patchVersion)"
         return [
             "appId": "routevn-creator", "currentVersion": version,
             "target": "ios", "arch": architecture,
             "distribution": "app-store", "channel": "stable",
+            "deviceModel": hardwareModel(), "osVersion": osVersion,
         ]
+    }
+
+    private static func hardwareModel() -> String {
+        var information = utsname()
+        guard uname(&information) == 0 else {
+            return "unknown"
+        }
+        let capacity = MemoryLayout.size(ofValue: information.machine)
+        let model = withUnsafePointer(to: &information.machine) { pointer in
+            pointer.withMemoryRebound(to: CChar.self, capacity: capacity) { String(cString: $0) }
+        }
+        return deviceMetadata(model)
+    }
+
+    static func deviceMetadata(_ value: String?) -> String {
+        guard let value, !value.isEmpty, value.utf16.count <= 256,
+              !value.unicodeScalars.contains(where: { $0.value <= 0x1f || $0.value == 0x7f }),
+              value.unicodeScalars.contains(where: {
+                  !CharacterSet.whitespacesAndNewlines.contains($0) && $0.value != 0xfeff
+              }) else {
+            return "unknown"
+        }
+        return value
     }
 
     static func endpoint() throws -> URL {
@@ -47,7 +74,14 @@ final class ClientUpdateApi: NSObject, URLSessionDataDelegate {
         return url
     }
 
-    static func makeRequest(bundle: Bundle = .main) throws -> URLRequest {
+    static func makeRequest(payload: [String: Any], bundle: Bundle = .main) throws -> URLRequest {
+        guard payload.count == 1, let deviceId = payload["deviceId"] as? String,
+              deviceId.utf8.count == 12,
+              deviceId.range(of: "^[1-9A-HJ-NP-Za-km-z]{12}$", options: .regularExpression) != nil else {
+            throw failure("Invalid update request parameter.")
+        }
+        var params = try context(bundle: bundle)
+        params["deviceId"] = deviceId
         var request = URLRequest(url: try endpoint(), cachePolicy: .reloadIgnoringLocalCacheData, timeoutInterval: 10)
         request.httpMethod = "POST"
         request.httpShouldHandleCookies = false
@@ -55,19 +89,19 @@ final class ClientUpdateApi: NSObject, URLSessionDataDelegate {
         request.setValue("1", forHTTPHeaderField: "X-RouteVN-RPC")
         request.setValue("no-store", forHTTPHeaderField: "Cache-Control")
         request.httpBody = try JSONSerialization.data(withJSONObject: [
-            "jsonrpc": "2.0", "id": 1, "method": "system.getClientUpdate", "params": context(bundle: bundle),
+            "jsonrpc": "2.0", "id": 1, "method": "system.getClientUpdate", "params": params,
         ])
         return request
     }
 
-    func request(completion: @escaping (Result<[String: Any], Error>) -> Void) {
+    func request(payload: [String: Any], completion: @escaping (Result<[String: Any], Error>) -> Void) {
         queue.async {
             guard self.completion == nil else {
                 completion(.failure(Self.failure("An update request is already running.")))
                 return
             }
             do {
-                let request = try Self.makeRequest()
+                let request = try Self.makeRequest(payload: payload)
                 let configuration = URLSessionConfiguration.ephemeral
                 configuration.httpCookieStorage = nil
                 configuration.httpShouldSetCookies = false

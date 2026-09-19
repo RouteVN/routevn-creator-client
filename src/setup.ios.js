@@ -93,6 +93,7 @@ const updater = createIOSUpdater({
   metadataClient: updateContext
     ? createClientUpdates({
         context: updateContext,
+        keyValueStore: appDb,
         request: (params) => callIOSBridge("requestClientUpdate", params),
       })
     : undefined,
