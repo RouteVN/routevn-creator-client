@@ -85,6 +85,9 @@ struct StampExeArgs {
     title: String,
 
     #[arg(long)]
+    identifier: String,
+
+    #[arg(long)]
     version: String,
 
     #[arg(long)]
@@ -136,6 +139,7 @@ where
 }
 
 fn run_stamp_exe(args: StampExeArgs) -> Result<()> {
+    validate_stamp_exe_identifier(&args.identifier, &args.out)?;
     let payload = fs::read(&args.payload).map_err(|source| PackagerError::ReadFile {
         path: args.payload.clone(),
         source,
@@ -164,7 +168,7 @@ fn run_stamp_exe(args: StampExeArgs) -> Result<()> {
         metadata: WindowsResourceMetadata {
             title: &args.title,
             version: &args.version,
-            application_identifier: None,
+            application_identifier: Some(&args.identifier),
             publisher: args.publisher.as_deref(),
             description: None,
             copyright: None,
@@ -189,6 +193,42 @@ fn run_stamp_exe(args: StampExeArgs) -> Result<()> {
     println!("Embedded payload bytes: {}", outcome.footer.encrypted_len);
 
     Ok(())
+}
+
+// The Windows player re-validates the stamped identifier before Tauri
+// initializes. These rules mirror tauri-shell/src-tauri/src/lib.rs so
+// stamp-exe fails before writing an executable the player would refuse to
+// start.
+const WINDOWS_SHELL_TEMPLATE_IDENTIFIER: &str = "vn.routevn.shell";
+
+fn validate_stamp_exe_identifier(identifier: &str, out: &Path) -> Result<()> {
+    let identifier = identifier.trim();
+    if identifier.eq_ignore_ascii_case(WINDOWS_SHELL_TEMPLATE_IDENTIFIER) {
+        return Err(PackagerError::InvalidWindowsResource {
+            path: out.to_path_buf(),
+            message: format!(
+                "`{identifier}` is reserved for the Windows player template; supply a unique \
+                 application identifier"
+            ),
+        });
+    }
+    if !is_valid_windows_application_identifier(identifier) {
+        return Err(PackagerError::InvalidIdentifier {
+            identifier: identifier.to_string(),
+        });
+    }
+
+    Ok(())
+}
+
+fn is_valid_windows_application_identifier(identifier: &str) -> bool {
+    identifier.split('.').count() > 1
+        && identifier.split('.').all(|segment| {
+            !segment.is_empty()
+                && segment
+                    .bytes()
+                    .all(|byte| byte.is_ascii_alphanumeric() || byte == b'-')
+        })
 }
 
 fn run_build_installer(args: BuildInstallerArgs) -> Result<()> {

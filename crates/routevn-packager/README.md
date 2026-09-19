@@ -69,6 +69,44 @@ Current target behavior:
 - if `--target` is omitted, the CLI builds for the current host platform
 - unsupported cross-host requests fail early
 
+## Windows Player Stamping
+
+Stamp a prebuilt Windows player template with per-project metadata, an icon,
+and an encrypted RouteVN package:
+
+```bash
+routevn-packager stamp-exe \
+  --template ./windows-player-template.exe \
+  --payload ./package.bin \
+  --out "./Project One.exe" \
+  --title "Project One" \
+  --identifier com.example.project-one \
+  --version 1.2.3 \
+  --icon ./icon.png
+```
+
+Supported flags:
+
+- `--template <file>`: prebuilt Windows player template executable
+- `--payload <file>`: RouteVN package to encrypt and embed
+- `--out <file>`: stamped executable output path
+- `--title <title>`: app display title
+- `--identifier <id>`: required application identifier
+- `--version <x.y.z>`: app version
+- `--publisher <name>`: optional publisher name
+- `--icon <file>`: square PNG icon between 64x64 and 256x256 pixels
+- `--key-hex <hex>` / `--nonce-hex <hex>`: optional fixed payload key
+  material; both must be supplied together, or neither so they are generated
+
+The application identifier is stamped into the executable's `InternalName`
+version resource, and the Windows player reads it before Tauri initializes to
+identify the game's save data. It must contain at least two dot-separated
+segments of ASCII letters, digits, or hyphens, such as
+`com.example.project-one`. `vn.routevn.shell` is reserved for the shared
+player template and is rejected case-insensitively. Titles may contain spaces;
+the player reads the identifier, not the title, so a title like
+`Project One` never has to be a valid identifier.
+
 ## Config File
 
 Config files can be `.json` or `.toml`.

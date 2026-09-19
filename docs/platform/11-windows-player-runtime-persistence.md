@@ -84,8 +84,9 @@ the reusable player reads that value and replaces its template identifier
 startup instead of sharing a default save directory. Players built from source
 with a per-game Tauri configuration retain that compiled identifier.
 
-The template must be rebuilt and included in Creator before new exports use
-this behavior; already exported executables are unchanged. Older templates used
+The checked-in Windows template includes this startup behavior and is bundled
+directly into Creator. Changes to the shell or its bundled frontend must include
+a rebuilt template; already exported executables are unchanged. Older templates used
 the shared `%APPDATA%/vn.routevn.shell/runtime.db`. That database is left untouched
 and is not automatically copied or merged into per-game directories because
 its rows do not establish which game owns them.
