@@ -37,8 +37,8 @@ The preparation domain fixtures below record earlier observations.
 
 ## Model-owned section-move fixture
 
-[Model PR #79](https://github.com/RouteVN/routevn-creator-model/pull/79) adopts
-[the legacy section-move fixture](https://github.com/RouteVN/routevn-creator-model/tree/80f653e66c67980593ef1e770513b1804f7a2176/tests/compat/section-move-legacy-preserved)
+[Merged model PR #79](https://github.com/RouteVN/routevn-creator-model/pull/79) adopted
+[the legacy section-move fixture](https://github.com/RouteVN/routevn-creator-model/tree/7569f0ff927f3b9a4cafe9246af622c3cf6fe83e/tests/compat/section-move-legacy-preserved)
 and its executable model test. The seed and expected state retain their original
 bytes; the two commands contain only model types and domain payloads. Sequential
 processing and batch replay must preserve the complete state, line IDs/order,
@@ -254,4 +254,4 @@ must be derived from the separate action contract inventory when the model
 tests are implemented. Shipped templates and actual project distributions
 have not been measured by these synthetic fixtures.
 
-[legacy-section-move]: https://github.com/RouteVN/routevn-creator-model/tree/80f653e66c67980593ef1e770513b1804f7a2176/tests/compat/section-move-legacy-preserved
+[legacy-section-move]: https://github.com/RouteVN/routevn-creator-model/tree/7569f0ff927f3b9a4cafe9246af622c3cf6fe83e/tests/compat/section-move-legacy-preserved

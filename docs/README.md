@@ -17,8 +17,9 @@
 13. [Android Development](./android.md)
 14. [iOS Development](./ios.md)
 15. [macOS Player Export Plan](./macos-player-export-plan.md)
-16. [Versioned Command Validation Spec](./command-schema-validation-spec.md)
-17. [Command Validation Preparation](./validation-preparation/README.md)
+16. [Android Project Backup Design](./android-backup.md)
+17. [Versioned Command Validation Spec](./command-schema-validation-spec.md)
+18. [Command Validation Preparation](./validation-preparation/README.md)
 
 ## Runbooks
 

@@ -109,10 +109,11 @@ Important details:
   partition key
 
 Windows Platform Details has its own required, editable application identifier.
-It is exported as Windows release metadata, but the reusable Windows player
-template does not yet apply it as the Tauri runtime identifier. That runtime
-continues to use the shell identifier described below until per-game identifier
-stamping is implemented.
+It is stamped into the Windows executable's `InternalName` version resource.
+The reusable player applies it as the Tauri runtime identifier before WebView2
+and SQL initialization, isolating browser profiles and native saves per game.
+Existing exports must be recreated with the updated player template to receive
+this behavior; legacy shared saves are not automatically migrated.
 
 Implication:
 

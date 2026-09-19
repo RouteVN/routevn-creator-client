@@ -360,7 +360,7 @@
     {
       "id": "section-move-legacy-preserved",
       "owner": "RouteVN/routevn-creator-model",
-      "revision": "80f653e66c67980593ef1e770513b1804f7a2176",
+      "revision": "7569f0ff927f3b9a4cafe9246af622c3cf6fe83e",
       "path": "tests/compat/section-move-legacy-preserved",
       "testPath": "tests/section-move-compatibility.test.js",
       "pullRequest": "https://github.com/RouteVN/routevn-creator-model/pull/79",

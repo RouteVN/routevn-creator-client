@@ -18,31 +18,34 @@ styles:
     --focus-ring-outline: none
     --focus-ring-box-shadow: none
 template:
-  - $if fullscreen:
-      - rtgl-dialog#dialog ?open=${open} layout=fixed bare p=${dialogPadding}:
-          - 'rtgl-view slot=content tabindex=-1 autofocus pos=rel wh=f style="min-width: 0; min-height: 0; overflow: hidden; outline: none;"':
-              - 'rtgl-view#overlay pos=fix edge=f style="z-index: 2000; background: transparent;"': null
-              - 'rtgl-view class="commandPanel edgePanel" pos=fix bgc=bg style="left: ${fullscreenHorizontalInset}; top: var(--rvn-window-content-offset, 0px); right: 0; bottom: 0; min-width: 0; min-height: 0; overflow: hidden; z-index: 2002;"':
-                  - slot name=content: null
-    $elif isSceneEditorLeft:
-      - rtgl-dialog#dialog ?open=${open} layout=fixed bare p=${dialogPadding}:
-          - 'rtgl-view slot=content tabindex=-1 autofocus pos=rel wh=f style="min-width: 0; min-height: 0; overflow: hidden; outline: none;"':
-              - 'rtgl-view#overlay pos=fix edge=f style="z-index: 2000; background: transparent;"': null
-              - 'rtgl-view pos=fix style="left: ${overlayHorizontalInset}; top: var(--rvn-window-content-offset, 0px); bottom: 0; width: ${panelWidth}; z-index: 2001; background: ${overlayBackground}; pointer-events: none;"': null
-              - 'rtgl-view class=commandPanel pos=fix bgc=bg bw=xs bc=bo br=md style="left: ${panelHorizontalInset}; top: calc(var(--rvn-window-content-offset, 0px) + ${panelVerticalInset}); bottom: ${panelVerticalInset}; width: calc(${panelWidth} - ${panelWidthReduction}); height: calc(100vh - var(--rvn-window-content-offset, 0px) - ${panelVerticalInset} - ${panelVerticalInset}); max-width: calc(100vw - ${panelHorizontalInset}); max-height: ${panelMaxHeight}; margin-block: auto; min-width: 0; min-height: 0; box-sizing: border-box; overflow: hidden; z-index: 2002; box-shadow: 8px 0 24px rgba(15, 23, 42, 0.10);"':
-                  - slot name=content: null
-    $elif isSceneEditorMobile:
-      - rtgl-dialog#dialog ?open=${open} layout=fixed bare p=${dialogPadding}:
-          - 'rtgl-view slot=content tabindex=-1 autofocus pos=rel wh=f style="min-width: 0; min-height: 0; overflow: hidden; outline: none;"':
-              - 'rtgl-view#overlay pos=fix edge=f style="z-index: 2000; background: transparent;"': null
-              - 'rtgl-view class="commandPanel edgePanel" pos=fix bgc=bg bwt=xs bc=bo style="left: 0; right: ${panelRight}; top: ${panelTop}; bottom: ${panelBottom}; min-width: 0; min-height: 0; box-sizing: border-box; overflow: hidden; z-index: 2002;"':
-                  - slot name=content: null
-    $else:
-      - $if dialogSize:
-          - rtgl-dialog#dialog ?open=${open} s=${dialogSize} p=${dialogPadding}:
-              - 'rtgl-view class=commandPanel slot=content tabindex=-1 autofocus w=${dialogWidth} h=${dialogHeight} pos=rel style="min-width: 0; min-height: 0; max-width: 100%; box-sizing: border-box; overflow-x: hidden; touch-action: pan-y; outline: none;"':
+  - $if open:
+      - $if fullscreen:
+          - rtgl-dialog#dialog ?open=${open} layout=fixed bare p=${dialogPadding}:
+              - 'rtgl-view slot=content tabindex=-1 autofocus pos=rel wh=f style="min-width: 0; min-height: 0; overflow: hidden; outline: none;"':
+                  - 'rtgl-view#overlay pos=fix edge=f style="z-index: 2000; background: transparent;"': null
+                  - 'rtgl-view class="commandPanel edgePanel" pos=fix bgc=bg style="left: ${fullscreenHorizontalInset}; top: var(--rvn-window-content-offset, 0px); right: 0; bottom: 0; min-width: 0; min-height: 0; overflow: hidden; z-index: 2002;"':
+                      - slot name=content: null
+        $elif isSceneEditorLeft:
+          - rtgl-dialog#dialog ?open=${open} layout=fixed bare p=${dialogPadding}:
+              - 'rtgl-view slot=content tabindex=-1 autofocus pos=rel wh=f style="min-width: 0; min-height: 0; overflow: hidden; outline: none;"':
+                  - 'rtgl-view#overlay pos=fix edge=f style="z-index: 2000; background: transparent;"': null
+                  - 'rtgl-view pos=fix style="left: ${overlayHorizontalInset}; top: var(--rvn-window-content-offset, 0px); bottom: 0; width: ${panelWidth}; z-index: 2001; background: ${overlayBackground}; pointer-events: none;"': null
+                  - 'rtgl-view class=commandPanel pos=fix bgc=bg bw=xs bc=bo br=md style="left: ${panelHorizontalInset}; top: calc(var(--rvn-window-content-offset, 0px) + ${panelVerticalInset}); bottom: ${panelVerticalInset}; width: calc(${panelWidth} - ${panelWidthReduction}); height: calc(100vh - var(--rvn-window-content-offset, 0px) - ${panelVerticalInset} - ${panelVerticalInset}); max-width: calc(100vw - ${panelHorizontalInset}); max-height: ${panelMaxHeight}; margin-block: auto; min-width: 0; min-height: 0; box-sizing: border-box; overflow: hidden; z-index: 2002; box-shadow: 8px 0 24px rgba(15, 23, 42, 0.10);"':
+                      - slot name=content: null
+        $elif isSceneEditorMobile:
+          - rtgl-dialog#dialog ?open=${open} layout=fixed bare p=${dialogPadding}:
+              - 'rtgl-view slot=content tabindex=-1 autofocus pos=rel wh=f style="min-width: 0; min-height: 0; overflow: hidden; outline: none;"':
+                  - 'rtgl-view#overlay pos=fix edge=f style="z-index: 2000; background: transparent;"': null
+                  - 'rtgl-view class="commandPanel edgePanel" pos=fix bgc=bg bwt=xs bc=bo style="left: 0; right: ${panelRight}; top: ${panelTop}; bottom: ${panelBottom}; min-width: 0; min-height: 0; box-sizing: border-box; overflow: hidden; z-index: 2002;"':
+                      - slot name=content: null
+        $elif compact:
+          - rtgl-dialog#dialog ?open=${open} layout=fixed-top s=lg p=${dialogPadding}:
+              - 'rtgl-view class=commandPanel slot=content tabindex=-1 autofocus w=f style="height: ${dialogHeight}; min-height: 0; max-height: 100%; overflow: hidden; outline: none;"':
                   - slot name=content: null
         $else:
-          - rtgl-dialog#dialog ?open=${open} p=${dialogPadding}:
-              - 'rtgl-view class=commandPanel slot=content tabindex=-1 autofocus w=${dialogWidth} h=${dialogHeight} pos=rel style="min-width: 0; min-height: 0; max-width: 100%; box-sizing: border-box; overflow-x: hidden; touch-action: pan-y; outline: none;"':
-                  - slot name=content: null
+          - rtgl-dialog#dialog ?open=${open} layout=fixed bare p=${dialogPadding}:
+              - 'rtgl-view slot=content tabindex=-1 autofocus pos=rel wh=f style="min-width: 0; min-height: 0; overflow: hidden; outline: none;"':
+                  - 'rtgl-view#overlay pos=fix edge=f style="z-index: 2000; background: rgba(0, 0, 0, 0.5);"': null
+                  - 'rtgl-view pos=fix ah=c av=c style="left: 16px; right: 16px; top: calc(var(--rvn-window-content-offset, 0px) + 16px); bottom: max(16px, env(safe-area-inset-bottom, 0px)); min-width: 0; min-height: 0; pointer-events: none; z-index: 2002;"':
+                      - 'rtgl-view class=commandPanel bgc=bg bw=xs bc=bo br=md style="width: ${dialogWidth}; height: ${dialogHeight}; min-width: 0; min-height: 0; max-width: 100%; max-height: 100%; flex-shrink: 1; overflow: hidden; pointer-events: auto; touch-action: pan-y;"':
+                          - slot name=content: null

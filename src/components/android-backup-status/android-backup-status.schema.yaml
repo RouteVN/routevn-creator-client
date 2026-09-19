@@ -1,0 +1,7 @@
+componentName: rvn-android-backup-status
+propsSchema:
+  type: object
+  properties:
+    settings:
+      type: boolean
+      default: false

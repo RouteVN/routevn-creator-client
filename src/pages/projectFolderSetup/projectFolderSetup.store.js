@@ -2,11 +2,18 @@ import { formatI18nCopy } from "../../internal/ui/i18nCopy.js";
 
 export const createInitialState = () => ({
   deviceName: "iPhone",
+  isBackup: false,
+  skipDialogOpen: false,
+  stopDialogOpen: false,
   savedFolder: undefined,
   isReconnecting: false,
   isBusy: false,
   errorKey: undefined,
 });
+
+export const setBackupMode = ({ state }, { isBackup }) => {
+  state.isBackup = isBackup;
+};
 
 export const selectIsBusy = ({ state }) => state.isBusy;
 export const setReconnecting = ({ state }, { isReconnecting }) => {
@@ -18,7 +25,10 @@ export const setDeviceName = ({ state }, { deviceName }) => {
 };
 
 export const selectCopy = ({ state, i18n }) => {
-  const copy = { ...i18n.projectFolderSetupPage };
+  const copy = {
+    ...(state.isBackup ? i18n.androidBackupSetup : i18n.projectFolderSetupPage),
+  };
+  if (state.isBackup) return copy;
   if (state.isReconnecting) {
     copy.description = copy.openDescription;
   }
@@ -59,4 +69,12 @@ export const selectViewData = ({ state, i18n }) => {
     setupLabel: hasSavedFolder ? copy.changeFolder : copy.setup,
     setupVariant: hasSavedFolder ? "ol" : "pr",
   };
+};
+
+export const setSkipDialogOpen = ({ state }, { open }) => {
+  state.skipDialogOpen = open;
+};
+
+export const setStopDialogOpen = ({ state }, { open }) => {
+  state.stopDialogOpen = open;
 };

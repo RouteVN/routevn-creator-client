@@ -593,6 +593,9 @@ export const handleBeforeMount = (deps) => {
   appService.setAppCopyProvider?.(() => selectAppCopy(deps.i18n));
   store.setPlatform({ platform: appService.getPlatform() });
   store.setUiConfig({ uiConfig });
+  const cleanupBackup = appService.startBackupChecks?.(() => ({
+    errors: deps.i18n.androidBackupErrors,
+  }));
   const cleanupWindowMetrics = windowMetricsClient?.subscribe((metrics) => {
     store.setAppWindowMetrics(metrics);
     render();
@@ -608,6 +611,7 @@ export const handleBeforeMount = (deps) => {
     cleanupSubscriptions();
     cleanupDiscordPresenceLocaleSubscription();
     cleanupWindowMetrics?.();
+    cleanupBackup?.();
     cleanupFullscreenEscape?.();
   };
 };

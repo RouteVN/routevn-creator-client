@@ -1891,7 +1891,8 @@ describe("systemActions.store", () => {
     });
 
     expect(viewData.actionsDialogWidth).toBe("100%");
-    expect(viewData.actionsDialogHeight).toBe("100vh");
+    expect(viewData.actionsDialogHeight).toBe("min(56dvh, 480px)");
+    expect(viewData.actionsDialogCompact).toBe(true);
     expect(viewData.actionsDialogPanelWidth).toBe("100vw");
   });
 

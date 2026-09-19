@@ -1,8 +1,32 @@
 refs:
+  stopBackupButton:
+    eventListeners:
+      click:
+        handler: handleStop
+  stopBackupDialog:
+    eventListeners:
+      close:
+        handler: handleCloseStop
+  confirmStopBackup:
+    eventListeners:
+      click:
+        handler: handleConfirmStop
+  skipBackupDialog:
+    eventListeners:
+      close:
+        handler: handleCloseSkip
+  confirmSkipBackup:
+    eventListeners:
+      click:
+        handler: handleConfirmSkip
   setupFolderButton:
     eventListeners:
       click:
         handler: handleSetup
+  skipBackupButton:
+    eventListeners:
+      click:
+        handler: handleSkip
   continueFolderButton:
     eventListeners:
       click:
@@ -21,9 +45,25 @@ template:
               - $if hasSavedFolder:
                   - 'rtgl-view w=f d=h av=c g=sm p=lg bw=xs bc=bo br=md style="box-sizing: border-box;"':
                       - 'rtgl-svg svg=folder wh=20 c=mu-fg aria-hidden=true style="flex-shrink: 0;"': null
-                      - 'rtgl-text#projectFolderPath w=1fg style="min-width: 0; overflow-wrap: anywhere;"': ${displayPath}
+                      - 'rtgl-text#projectFolderPath w=1fg ellipsis=true title="${displayPath}" style="min-width: 0; direction: rtl; text-align: left;"':
+                          - span dir=ltr: ${displayPath}
               - $if errorMessage:
                   - rtgl-text#projectFolderError role=alert s=sm: ${errorMessage}
               - rtgl-button#setupFolderButton w=f v=${setupVariant} ?disabled=${isBusy}: ${setupLabel}
               - $if hasSavedFolder:
                   - rtgl-button#continueFolderButton w=f ?disabled=${isBusy}: ${copy.continue}
+              - $if isBackup && !hasSavedFolder:
+                  - rtgl-button#skipBackupButton w=f v=tx ?disabled=${isBusy}: ${copy.skip}
+              - $if isBackup && hasSavedFolder:
+                  - rtgl-button#stopBackupButton w=f v=tx ?disabled=${isBusy}: ${copy.stop}
+  - $if isBackup:
+      - rtgl-dialog#stopBackupDialog ?open=${stopDialogOpen} s=sm:
+          - rtgl-view slot=content g=lg:
+              - rtgl-text s=lg: ${copy.stopTitle}
+              - rtgl-text c=mu-fg: ${copy.stopWarning}
+              - rtgl-button#confirmStopBackup v=de w=f ?disabled=${isBusy}: ${copy.stop}
+  - rtgl-dialog#skipBackupDialog ?open=${skipDialogOpen} s=sm:
+      - rtgl-view slot=content g=lg:
+          - rtgl-text s=lg: ${copy.skipTitle}
+          - rtgl-text c=mu-fg: ${copy.skipWarning}
+          - rtgl-button#confirmSkipBackup v=de w=f ?disabled=${isBusy}: ${copy.skipConfirm}

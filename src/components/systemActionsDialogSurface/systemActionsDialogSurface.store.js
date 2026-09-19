@@ -12,10 +12,6 @@ const normalizeVariant = (variant) => {
 
 const isBooleanPropEnabled = (value) => value === true || value === "true";
 
-const selectDialogSize = (dialogWidth) => {
-  return dialogWidth === "100%" ? "md" : undefined;
-};
-
 export const setSuppressClose = ({ state }, { suppressClose } = {}) => {
   state.suppressClose = suppressClose === true;
 };
@@ -26,7 +22,7 @@ export const selectSuppressClose = ({ state }) => {
 
 export const selectViewData = ({ state, props }) => {
   const variant = normalizeVariant(props.variant);
-  const dialogWidth = props.dialogWidth ?? "800";
+  const dialogWidth = props.dialogWidth ?? "800px";
   const fullscreen = isBooleanPropEnabled(props.fullscreen);
 
   return {
@@ -34,10 +30,10 @@ export const selectViewData = ({ state, props }) => {
     variant,
     isSceneEditorLeft: variant === "scene-editor-left",
     isSceneEditorMobile: variant === "scene-editor-mobile",
+    compact: isBooleanPropEnabled(props.compact),
     fullscreen,
     fullscreenHorizontalInset: props.fullscreenHorizontalInset ?? "0px",
     dialogWidth,
-    dialogSize: selectDialogSize(dialogWidth),
     dialogHeight: props.dialogHeight ?? "80vh",
     dialogPadding: props.dialogPadding === "none" ? "none" : "lg",
     panelWidth: props.panelWidth ?? "50vw",

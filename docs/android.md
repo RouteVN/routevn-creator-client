@@ -20,6 +20,7 @@ Gradle pins.
 - `minSdk`: `24`
 - Build tools: `37.0.0`
 - NDK: `29.0.14206865`
+- AndroidX Core: `1.19.0`
 - AndroidX Core Splashscreen: `1.2.0`
 - AndroidX Fragment: `1.9.0` (constraint for Google Play In-App Updates' transitive dependency)
 - AndroidX WebKit: `1.17.0`
@@ -99,6 +100,32 @@ system bar insets have been applied. There is no minimum display duration.
 A single five-second fallback is scheduled at activity creation so a missing
 readiness signal does not hold the splash indefinitely. Dismissing the splash
 or destroying the activity cancels the fallback.
+
+### Edge-to-edge And Insets
+
+The native window uses `WindowCompat.enableEdgeToEdge()` on every supported
+Android version. The black root view draws behind transparent system bars, with
+light system-bar icons. Do not restore app-owned `setStatusBarColor`,
+`setNavigationBarColor`, or their theme attributes; these APIs are deprecated.
+
+The root view applies the union of system-bar and display-cutout insets as
+padding, including side cutouts in landscape. It subtracts that padding from
+the insets dispatched to the WebView, so web safe-area CSS does not apply it a
+second time. Remaining keyboard insets still reach the WebView; the Activity
+uses `adjustResize`, and frontend visual-viewport/keyboard handling remains
+responsible for keeping editing controls above the keyboard. Native window
+metrics continue to exclude system bars and cutouts, independently of keyboard
+visibility.
+
+Run the native inset regression tests with
+`./gradlew :app:testDebugUnitTest --tests com.routevn.creator.WindowInsetsTest`
+from `android/routevn`. They cover Android 9, 13, and 15, including the Android 9
+cutout-consumption fallback and preserving keyboard insets for the WebView.
+
+Validate portrait and landscape, gesture and three-button navigation, cutouts,
+and keyboard-open dialogs on both pre-Android-15 and Android-15+ devices. Google
+Play's warning status must be checked against the newly uploaded release bundle;
+updating source does not change findings attached to an older release.
 
 ## Build And Install
 
@@ -342,9 +369,11 @@ safe bridge.
 
 The Android document uses a restrictive Content Security Policy: scripts must
 come from the document origin, frames and objects are disabled, and inline
-scripts are not permitted. Internal-file CORS responses name the one expected
-origin for the build. Direct `file://` and `content://` access, automatic
-JavaScript windows, and third-party cookies are disabled.
+scripts are not permitted. `connect-src` permits `blob:` and `data:` so the
+graphics renderer can fetch local project images and initialize its image
+decoder. Internal-file CORS responses name the one expected origin for the build.
+Direct `file://` and `content://` access, automatic JavaScript windows, and
+third-party cookies are disabled.
 
 Authentication and refresh tokens are removed from the serialized
 `userConfig` value before `app.db` is written. The opaque session JSON is
@@ -372,9 +401,17 @@ The configured policy is:
 - picker files, staging files, preferences, and other private files are not
   backed up or transferred
 
-Manual project export remains the recovery mechanism until RouteVN provides a
-project-aware cloud backup or synchronization service. Android device transfer
-is a convenience and must not be presented as the user's only backup.
+The [Android project backup system](android-backup.md) copies changed projects
+to a user-selected local folder about every 10 minutes while the app is active.
+Launch/resume checks use the remaining cooldown, with a five-second grace period
+before overdue work starts. They do not block navigation; backgrounding cancels
+the pending timer rather than starting an exit backup.
+Setup is skippable with an uninstall/data-loss warning. Projects and Settings
+show backup status; Projects provides folder changes, and Settings shows the
+selected project's backup folder and last backup time.
+Backups reserve 1 GB of free space and retain a previous database for recovery.
+Manual export remains available. Device transfer is a convenience, not the
+user's only backup. Real-device backup validation is still required before release.
 
 ## Android Back
 

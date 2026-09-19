@@ -66,6 +66,32 @@ describe("sceneEditorLexical.handlers mobile keyboard state", () => {
 });
 
 describe("sceneEditorLexical.handlers navigation preparation", () => {
+  it("does not rewrite scene statistics on repeated unchanged backup checks", async () => {
+    const deps = {
+      store: {
+        selectSelectedSectionId: vi.fn(() => undefined),
+        selectDraftSaveTimerId: vi.fn(() => undefined),
+        selectPendingDraftSections: vi.fn(() => []),
+        selectDraftSection: vi.fn(() => undefined),
+        setDraftSavePendingSinceAt: vi.fn(),
+        selectSceneTextStatsRefreshHandle: vi.fn(),
+        refreshSceneTextStats: vi.fn(),
+      },
+      projectService: { cacheSceneTextStats: vi.fn() },
+      refs: {},
+      render: vi.fn(),
+    };
+
+    await prepareSceneEditorNavigation(deps, { reason: "backup" });
+    await prepareSceneEditorNavigation(deps, { reason: "backup" });
+
+    expect(deps.store.selectPendingDraftSections).toHaveBeenCalledTimes(2);
+    expect(deps.projectService.cacheSceneTextStats).not.toHaveBeenCalled();
+    expect(deps.store.refreshSceneTextStats).not.toHaveBeenCalled();
+    expect(deps.store.selectSceneTextStatsRefreshHandle).not.toHaveBeenCalled();
+    expect(deps.render).not.toHaveBeenCalled();
+  });
+
   it("awaits the current text-stats cache before leaving the editor", async () => {
     let finishCache;
     const cacheSceneTextStats = vi.fn(

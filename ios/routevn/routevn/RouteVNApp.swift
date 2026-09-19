@@ -92,6 +92,9 @@ final class RouteVNViewController: UIViewController, WKNavigationDelegate, WKScr
         let configuration = WKWebViewConfiguration()
         // Muted thumbnail decoding must not open the native fullscreen player.
         configuration.allowsInlineMediaPlayback = true
+        // Fullscreen preview creates its audio sink after async scene loading,
+        // outside the initiating tap's user gesture.
+        configuration.mediaTypesRequiringUserActionForPlayback = .video
         configuration.websiteDataStore = .default()
         configuration.setURLSchemeHandler(
             RouteVNSchemeHandler(storage: storage),

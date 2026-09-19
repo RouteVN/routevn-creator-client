@@ -55,6 +55,13 @@ const createProjectService = () => ({
 });
 
 const createParams = ({ db, projectService, globalUI = {} }) => ({
+  appActivity: {
+    isActive: () => true,
+    subscribeActive: (listener) => {
+      listener(true);
+      return () => {};
+    },
+  },
   db,
   router: {
     getPayload: () => ({}),
@@ -71,6 +78,25 @@ const createParams = ({ db, projectService, globalUI = {} }) => ({
 });
 
 describe("project-entry language platform propagation", () => {
+  it("prepares Android backups with a save-only reason instead of a navigation destination", async () => {
+    mocked.androidBridge.mockImplementation(async (method) => {
+      if (method === "getBackupStatus")
+        return { configured: true, projects: [] };
+      if (method === "beginBackupPass") return { due: true };
+      if (method === "getPendingBackupProjects") return { projectIds: [] };
+      throw new Error(`Unexpected Android bridge method: ${method}`);
+    });
+    const appService = createAndroidAppService(
+      createParams({ db: createDb(), projectService: createProjectService() }),
+    );
+    const saveEditor = vi.fn(async () => {});
+    const unregister = appService.registerBeforeNavigation(saveEditor);
+    await appService.initializeBackup();
+    await appService.backupNow();
+    expect(saveEditor).toHaveBeenCalledWith({ reason: "backup" });
+    unregister();
+  });
+
   beforeEach(() => {
     mocked.androidBridge.mockReset();
     mocked.iosBridge.mockReset();
