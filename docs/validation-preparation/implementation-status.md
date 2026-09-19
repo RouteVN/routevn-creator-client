@@ -64,7 +64,7 @@ tree remain unchanged. No installed dependency sources were edited.
 | Strict browser acceptance | Chromium and WebKit pass: two competing tabs, actual IndexedDB/Web Locks, invalid-batch zero writes, exact retry, reload   |
 | Frozen native corpus      | 162 previous/candidate cold/warm/cache-cleared checks pass                                                                 |
 | Frozen browser corpus     | WebKit corpus passes; Chromium cases pass across the full run and a successful P10 rerun after an environment interruption |
-| Existing client checks    | Smoke, collaboration adapters, lint/format pass                                                                            |
+| Existing client checks    | Smoke, integration, convergence, collaboration adapters, five Puty storage cases, and lint/format pass                     |
 | Native ownership          | Rust and Java ownership tests pass, including actual competing child processes; Tauri `cargo check --lib --offline` passes |
 
 Run the client checks after consuming the owner packages:
