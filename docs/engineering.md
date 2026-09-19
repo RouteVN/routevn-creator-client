@@ -949,7 +949,10 @@ use fixed runtime defaults. The icon is emitted as 192px and 512px PNGs. HTML
 uses the 512px PNG as its favicon, and the manifest references both sizes.
 Windows metadata is
 stamped into the portable executable's version resources and the NSIS
-installer's version keys. macOS metadata is stamped into `Info.plist` using
+installer's version keys. The player reads the stamped application identifier
+before Tauri initializes, so WebView2 and native saves use the Windows Platform
+Details identifier. Legacy shared shell saves are not automatically migrated.
+macOS metadata is stamped into `Info.plist` using
 `CFBundleGetInfoString`, `NSHumanReadableCopyright`,
 `LSApplicationCategoryType`, and the app-owned `RouteVNPublisher` key.
 

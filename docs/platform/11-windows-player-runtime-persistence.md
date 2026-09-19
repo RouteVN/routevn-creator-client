@@ -50,10 +50,10 @@ On Windows this resolves conceptually to the roaming application-data tree:
 %APPDATA%/<tauri-identifier>/runtime.db
 ```
 
-For the current shell identifier, the conceptual path is:
+For an exported game with identifier `com.example.project-one`, the conceptual path is:
 
 ```text
-%APPDATA%/vn.routevn.shell/runtime.db
+%APPDATA%/com.example.project-one/runtime.db
 ```
 
 The adapter passes only `sqlite:runtime.db` to the plugin. It must not assemble
@@ -76,17 +76,25 @@ Required behavior:
   identity
 - a different game must not reuse the same identifier
 
-The reusable Windows template currently uses `vn.routevn.shell` for every
-export, so Windows exports share this database path until per-game identifier
-stamping is implemented. Windows Platform Details still requires an editable
-application identifier for release metadata, but the current packager does not
-apply that value to the Tauri runtime configuration. This temporary limitation
-is specific to the Windows packaging path. The macOS exporter stamps the editable
+Windows exports stamp the required, editable
+`platformDetails.windows.applicationIdentifier` into the executable's
+`InternalName` version resource. Before Tauri initializes WebView2 or plugins,
+the reusable player reads that value and replaces its template identifier
+`vn.routevn.shell`. Missing, invalid, or reserved template identifiers fail
+startup instead of sharing a default save directory. Players built from source
+with a per-game Tauri configuration retain that compiled identifier.
+
+The template must be rebuilt and included in Creator before new exports use
+this behavior; already exported executables are unchanged. Older templates used
+the shared `%APPDATA%/vn.routevn.shell/runtime.db`. That database is left untouched
+and is not automatically copied or merged into per-game directories because
+its rows do not establish which game owns them.
+
+The macOS exporter stamps the editable
 `platformDetails.macos.applicationIdentifier`, and the macOS shell applies it
 to Tauri's runtime configuration before the SQL plugin initializes. Users must
-keep that value stable across builds that should share saves. The later Windows
-packaging change must use a per-game platform identifier; it must not add a
-namespace inside `runtime.db` as a substitute.
+keep that value stable across builds that should share saves. Both platforms use
+the per-game identifier without adding a namespace inside `runtime.db`.
 
 For the macOS export and startup contract, see
 `13-macos-player-export.md`.

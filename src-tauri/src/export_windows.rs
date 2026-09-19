@@ -624,6 +624,26 @@ fn validate_windows_executable_metadata(
         return Err("Windows executable version is required.".to_string());
     }
 
+    let identifier = metadata
+        .application_identifier
+        .as_deref()
+        .unwrap_or("")
+        .trim();
+    if identifier.eq_ignore_ascii_case("vn.routevn.shell")
+        || identifier.split('.').count() < 2
+        || !identifier.split('.').all(|segment| {
+            !segment.is_empty()
+                && segment
+                    .bytes()
+                    .all(|byte| byte.is_ascii_alphanumeric() || byte == b'-')
+        })
+    {
+        return Err(
+            "Windows executable application identifier must be a unique reverse-domain identifier."
+                .to_string(),
+        );
+    }
+
     let _publisher = metadata.publisher.as_deref().unwrap_or("").trim();
 
     Ok(())
