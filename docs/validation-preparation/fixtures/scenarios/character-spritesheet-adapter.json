@@ -1,0 +1,189 @@
+{
+  "fixtureFormat": "routevn.validation-preparation.history.v1",
+  "dataOrigin": "synthetic neutral commands; no actual user project",
+  "futureContract": {
+    "status": "expected_future_not_executed",
+    "supportedStrictModelVersions": [15],
+    "symbolicModelVersion": "M",
+    "illustrativeModelVersion": 15
+  },
+  "bootstrap": {
+    "id": "bootstrap-one",
+    "projectId": "project-one",
+    "userId": "actor-one",
+    "partition": "m",
+    "type": "project.create",
+    "schemaVersion": 1,
+    "clientTs": 999,
+    "stateRef": "../seeds/project-one.state.json"
+  },
+  "id": "character-spritesheet-adapter",
+  "records": [
+    {
+      "id": "sprite-create",
+      "projectId": "project-one",
+      "userId": "actor-one",
+      "partition": "m",
+      "type": "character.sprite.create",
+      "schemaVersion": 1,
+      "payload": {
+        "characterId": "character-one",
+        "spriteId": "sprite-one",
+        "data": {
+          "type": "spritesheet",
+          "name": "Sprite One",
+          "fileId": "file-one",
+          "sheetWidth": 32,
+          "sheetHeight": 16,
+          "frameCount": 2,
+          "width": 16,
+          "height": 16,
+          "jsonData": {
+            "meta": {
+              "image": "image-one.png"
+            }
+          },
+          "animations": {
+            "idle": {
+              "frames": [0, 1],
+              "fps": 12,
+              "loop": true
+            }
+          }
+        }
+      },
+      "clientTs": 1000
+    },
+    {
+      "id": "sprite-update",
+      "projectId": "project-one",
+      "userId": "actor-one",
+      "partition": "m",
+      "type": "character.sprite.update",
+      "schemaVersion": 1,
+      "payload": {
+        "characterId": "character-one",
+        "spriteId": "sprite-one",
+        "data": {
+          "name": "Sprite One Updated"
+        }
+      },
+      "clientTs": 1000
+    }
+  ],
+  "observedCurrent": {
+    "rawModelCreate": {
+      "valid": false,
+      "error": {
+        "kind": "payload",
+        "code": "payload_validation_failed",
+        "message": "payload.data.type must be 'folder' or 'image'"
+      }
+    },
+    "clientAdapter": {
+      "valid": true,
+      "finalStateRef": "../observed/character-spritesheet-adapter.state.json",
+      "finalStateSha256": "c795eee275e7e33eaee8957b6fb5db7773046189b351900c181a6a100973b851"
+    }
+  },
+  "expectedFuture": {
+    "legacyReplay": "preserve existing adapter semantics and spritesheet bytes",
+    "strictAuthoring": "requires model-owned spritesheet support before strict writes are enabled",
+    "strictVariant": {
+      "result": "reject",
+      "reason": "The exact legacy payload has no atlas frames; model ownership does not make its incomplete atlas valid new content.",
+      "path": "payload.data.jsonData.frames"
+    },
+    "renameAfterSpritesheetExists": "Accept a name-only rename while preserving untouched legacy atlas bytes; newly supplied or replaced atlas/clip fields receive strict validation."
+  },
+  "strictPositiveVariant": {
+    "status": "expected_future_not_executed",
+    "execution": "Independent run from the seed; do not append these duplicate identities to the legacy scenario.",
+    "initialStateRef": "../seeds/project-one.state.json",
+    "records": [
+      {
+        "id": "sprite-create",
+        "projectId": "project-one",
+        "userId": "actor-one",
+        "partition": "m",
+        "type": "character.sprite.create",
+        "schemaVersion": 2,
+        "payload": {
+          "mv": 15,
+          "commandPayload": {
+            "characterId": "character-one",
+            "spriteId": "sprite-one",
+            "data": {
+              "type": "spritesheet",
+              "name": "Sprite One",
+              "fileId": "file-one",
+              "sheetWidth": 32,
+              "sheetHeight": 16,
+              "frameCount": 2,
+              "width": 16,
+              "height": 16,
+              "jsonData": {
+                "meta": {
+                  "image": "image-one.png"
+                },
+                "frames": {
+                  "frame-one": {
+                    "frame": {
+                      "x": 0,
+                      "y": 0,
+                      "w": 16,
+                      "h": 16
+                    }
+                  },
+                  "frame-two": {
+                    "frame": {
+                      "x": 16,
+                      "y": 0,
+                      "w": 16,
+                      "h": 16
+                    }
+                  }
+                }
+              },
+              "animations": {
+                "idle": {
+                  "frames": [0, 1],
+                  "fps": 12,
+                  "loop": true
+                }
+              }
+            }
+          }
+        },
+        "clientTs": 1000
+      },
+      {
+        "id": "sprite-update",
+        "projectId": "project-one",
+        "userId": "actor-one",
+        "partition": "m",
+        "type": "character.sprite.update",
+        "schemaVersion": 2,
+        "payload": {
+          "mv": 15,
+          "commandPayload": {
+            "characterId": "character-one",
+            "spriteId": "sprite-one",
+            "data": {
+              "name": "Sprite One Updated"
+            }
+          }
+        },
+        "clientTs": 1000
+      }
+    ],
+    "expectedFuture": {
+      "result": "accept_after_model_owned_support",
+      "frameCount": 2,
+      "sheetWidth": 32,
+      "sheetHeight": 16,
+      "clipFrames": [0, 1],
+      "renamePreservesAtlas": true
+    }
+  }
+}

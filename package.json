@@ -84,6 +84,7 @@
     "test:integration": "node scripts/test-integration.js",
     "test:collab-adapters": "node scripts/test-collab-adapters.js",
     "test:puty": "vitest run tests/puty",
+    "test:project-compatibility": "node scripts/test-project-compatibility.js --prepare --all",
     "test:mobile-keyboard:android": "node scripts/mobile-keyboard-screenshot-android.js",
     "check:contracts": "rtgl check --dir src/components --dir src/pages",
     "vt:generate": "bun run build:web && bash ./scripts/run-vt-docker.sh vt screenshot",

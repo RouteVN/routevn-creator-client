@@ -1,0 +1,84 @@
+{
+  "fixtureFormat": "routevn.validation-preparation.history.v1",
+  "dataOrigin": "synthetic neutral commands; no actual user project",
+  "futureContract": {
+    "status": "expected_future_not_executed",
+    "supportedStrictModelVersions": [15],
+    "symbolicModelVersion": "M",
+    "illustrativeModelVersion": 15
+  },
+  "bootstrap": {
+    "id": "bootstrap-one",
+    "projectId": "project-one",
+    "userId": "actor-one",
+    "partition": "m",
+    "type": "project.create",
+    "schemaVersion": 1,
+    "clientTs": 999,
+    "stateRef": "../seeds/project-one.state.json"
+  },
+  "id": "preserve-invalid",
+  "records": [
+    {
+      "id": "legacy-bad-content",
+      "projectId": "project-one",
+      "userId": "actor-one",
+      "partition": "s:783Kx5",
+      "type": "line.update_actions",
+      "schemaVersion": 1,
+      "payload": {
+        "lineId": "line-one",
+        "data": {
+          "dialogue": {
+            "content": 42
+          }
+        }
+      },
+      "clientTs": 1000
+    },
+    {
+      "id": "strict-preserve",
+      "projectId": "project-one",
+      "userId": "actor-one",
+      "partition": "s:783Kx5",
+      "type": "line.update_actions",
+      "schemaVersion": 2,
+      "payload": {
+        "mv": 15,
+        "commandPayload": {
+          "lineId": "line-one",
+          "data": {
+            "dialogue": {
+              "mode": "nvl"
+            }
+          },
+          "preserve": ["dialogue.content"]
+        }
+      },
+      "clientTs": 1000
+    }
+  ],
+  "observedCurrentModel": {
+    "status": "observed_baseline",
+    "packageVersion": "1.14.0",
+    "schemaVersion": 14,
+    "method": "unwrap fixture records only; omit model version; run existing replayCommands and sequential processCommand",
+    "valid": true,
+    "commands": 2,
+    "sequentialEqualsReplay": true,
+    "inputStateUnchanged": true,
+    "finalStateRef": "../observed/preserve-invalid.state.json",
+    "finalStateSha256": "6dc6976c9c82ee540c28cc26345dd016175ecb6752fc12749e0bbf927bf18a17"
+  },
+  "expectedFuture": {
+    "result": "reject",
+    "failedRecordId": "strict-preserve",
+    "stage": "effective_result_validation",
+    "path": "payload.data.dialogue.content",
+    "newRowsAccepted": 0,
+    "retainLegacyRecord": true,
+    "silentContentRemoval": false
+  },
+  "authoringRequestRecords": ["strict-preserve"],
+  "note": "The legacy setup record is pre-existing; zero new rows refers only to the new strict write. Current observed snapshot intentionally demonstrates the permissive baseline, not the future accepted state."
+}

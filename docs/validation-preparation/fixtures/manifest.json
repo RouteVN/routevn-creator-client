@@ -1,0 +1,382 @@
+{
+  "fixtureFormat": "routevn.validation-preparation.manifest.v1",
+  "status": "phase_1_preparation_only",
+  "created": "2026-09-13",
+  "sourceRevisions": {
+    "routevn-creator-model": "4dc3cdaa7805905c98547743b91cf74d3ea8fef2",
+    "routevn-creator-client": "0844141f67bca7e194409095ad6b7a0dd8914053"
+  },
+  "modelVersionBinding": {
+    "symbol": "M",
+    "illustrativeValue": 15,
+    "currentObservedModelSchema": 14,
+    "currentObservedPackage": "1.14.0",
+    "futureSupportedRegistry": [15],
+    "rule": "Bind M to the first released strict model schema before adopting proposed fixtures into tests; 15 is illustrative, not a claim of current support."
+  },
+  "hashRules": {
+    "artifactSha256": "SHA-256 of exact file bytes; manifest excludes itself",
+    "stateSha256": "SHA-256 of UTF-8 JSON after recursively sorting object keys lexicographically; preserve array order; no trailing newline",
+    "orderedDomainIdentity": "Creator production identity/frontier/cache fingerprints preserve domain Object.keys order using JSON.stringify semantics after safe JSON validation. Existing sorted stateSha256 values are structural baseline observations, not proof of ordered-domain identity. See scenarios/ordered-identity.json."
+  },
+  "copiedSources": [
+    {
+      "path": "legacy/schema-14/states/minimal-project.yaml",
+      "sourceRepository": "routevn-creator-model",
+      "sourcePath": "tests/compat/schema-14/states/minimal-project.yaml",
+      "sourceRevision": "4dc3cdaa7805905c98547743b91cf74d3ea8fef2",
+      "bytes": 1463,
+      "sha256": "c6ace59152ef828d10bcc9432b1ea5ede87e96867305a1d0b3f731e1c6b7c4b6",
+      "observation": {
+        "valid": true
+      }
+    },
+    {
+      "path": "legacy/schema-14/states/cross-referenced-project.yaml",
+      "sourceRepository": "routevn-creator-model",
+      "sourcePath": "tests/compat/schema-14/states/cross-referenced-project.yaml",
+      "sourceRevision": "4dc3cdaa7805905c98547743b91cf74d3ea8fef2",
+      "bytes": 21180,
+      "sha256": "caf762396ea5a23571e9cfaf7a1a9621fd5e94d92f6946426894a3f34b87edba",
+      "observation": {
+        "valid": true
+      }
+    },
+    {
+      "path": "legacy/schema-14/payloads/line.create/minimal.yaml",
+      "sourceRepository": "routevn-creator-model",
+      "sourcePath": "tests/compat/schema-14/payloads/line.create/minimal.yaml",
+      "sourceRevision": "4dc3cdaa7805905c98547743b91cf74d3ea8fef2",
+      "bytes": 146,
+      "sha256": "2dd9fd1b27869c854328d3446bb61ad5a71a8601de76b6f01d0c2e5661c1f344",
+      "observation": {
+        "valid": true
+      }
+    },
+    {
+      "path": "legacy/schema-14/payloads/line.create/full.yaml",
+      "sourceRepository": "routevn-creator-model",
+      "sourcePath": "tests/compat/schema-14/payloads/line.create/full.yaml",
+      "sourceRevision": "4dc3cdaa7805905c98547743b91cf74d3ea8fef2",
+      "bytes": 565,
+      "sha256": "5327ee7929389523d5b375e79213b6a5d7dd07e81a9183098b277edb3a6ef1a9",
+      "observation": {
+        "valid": true
+      }
+    },
+    {
+      "path": "legacy/schema-14/streams/story-crud.yaml",
+      "sourceRepository": "routevn-creator-model",
+      "sourcePath": "tests/compat/schema-14/streams/story-crud.yaml",
+      "sourceRevision": "4dc3cdaa7805905c98547743b91cf74d3ea8fef2",
+      "bytes": 7203,
+      "sha256": "f9b35445f639191d59b9119b68c06443e926049635e1bbc09317da6d9ca7a2ec",
+      "observation": {
+        "valid": true,
+        "commandCount": 14,
+        "finalStateSha256": "ebc35592581a5ce8287c254d004522b5236177954465890d99b02ca247c408b6",
+        "finalStateRef": "observed/source-story-crud.state.json",
+        "archivedExpectedFinalStatePresent": false,
+        "sequentialEqualsReplay": true
+      }
+    },
+    {
+      "path": "legacy/schema-14/streams/media-crud.yaml",
+      "sourceRepository": "routevn-creator-model",
+      "sourcePath": "tests/compat/schema-14/streams/media-crud.yaml",
+      "sourceRevision": "4dc3cdaa7805905c98547743b91cf74d3ea8fef2",
+      "bytes": 8150,
+      "sha256": "a24c02af7f9580ea594934386abb58ecb7842f5945fcb89819b4152431a038cf",
+      "observation": {
+        "valid": true,
+        "commandCount": 30,
+        "finalStateSha256": "7e8e2103777fb8ce8e1e1c1703661a2f189fbe864d07e85ff88c12b18d6a9674",
+        "finalStateRef": "observed/source-media-crud.state.json",
+        "archivedExpectedFinalStatePresent": false,
+        "sequentialEqualsReplay": true
+      }
+    }
+  ],
+  "codeSources": [
+    {
+      "repository": "routevn-creator-model",
+      "path": "src/model.js",
+      "sha256": "517d0c97bdb9cf9ff749b7bce20e01583ab013ccadaf8cb6709f03ce879d314e"
+    },
+    {
+      "repository": "routevn-creator-model",
+      "path": "src/helpers.js",
+      "sha256": "eb481ab4cebbb2d7eeb0551ede61d8d494ab1b7eb2c3784965e6fefc4c5e3e2d"
+    },
+    {
+      "repository": "routevn-creator-model",
+      "path": "src/index.js",
+      "sha256": "b22ca32c6639792121f6f3d288099fc22686f04de9148cdad8e244b26bbfc5e5"
+    },
+    {
+      "repository": "routevn-creator-client",
+      "path": "src/internal/creatorModelAdapter.js",
+      "sha256": "c54a8d602dfc1e90b59adc1b20521f94bbdabcacf0ce5fa88ddb5ab4a1f1f116"
+    },
+    {
+      "repository": "routevn-creator-client",
+      "path": "src/deps/services/shared/commandApi/story.js",
+      "sha256": "9160a78ec99c0299bf3c7d8386ec5ae18888b676e7d8fbfb36d44108f063fc26"
+    },
+    {
+      "repository": "routevn-creator-client",
+      "path": "src/deps/services/shared/collab/partitions.js",
+      "sha256": "c02bf440fad12fdfcfbfd9b3ec952343bd0b11458714fca8a6c77bb188d0095e"
+    },
+    {
+      "repository": "routevn-creator-client",
+      "path": "src/deps/services/tauri/collabClientStore.js",
+      "sha256": "aa096edee918a0d6bf007a0ab812f11afdcd6c20c45c05b9960cf399aa64e777"
+    },
+    {
+      "repository": "routevn-creator-client",
+      "path": "src/deps/services/shared/projectRepositoryViews/sceneStateView.js",
+      "sha256": "03625acca180816d7ec8573ea3ab22c907a75c85578dfc2f1386f05de0bebba8"
+    },
+    {
+      "repository": "routevn-creator-client",
+      "path": "src/deps/services/shared/projectRepositoryViews/shared.js",
+      "sha256": "176bdaf4c9aa9f838852484cb51d03c4ebcd281650eec42cb225d1bb1fa48ace"
+    }
+  ],
+  "artifacts": [
+    {
+      "path": "legacy/schema-14/payloads/line.create/full.yaml",
+      "bytes": 565,
+      "sha256": "5327ee7929389523d5b375e79213b6a5d7dd07e81a9183098b277edb3a6ef1a9"
+    },
+    {
+      "path": "legacy/schema-14/payloads/line.create/minimal.yaml",
+      "bytes": 146,
+      "sha256": "2dd9fd1b27869c854328d3446bb61ad5a71a8601de76b6f01d0c2e5661c1f344"
+    },
+    {
+      "path": "legacy/schema-14/states/cross-referenced-project.yaml",
+      "bytes": 21180,
+      "sha256": "caf762396ea5a23571e9cfaf7a1a9621fd5e94d92f6946426894a3f34b87edba"
+    },
+    {
+      "path": "legacy/schema-14/states/minimal-project.yaml",
+      "bytes": 1463,
+      "sha256": "c6ace59152ef828d10bcc9432b1ea5ede87e96867305a1d0b3f731e1c6b7c4b6"
+    },
+    {
+      "path": "legacy/schema-14/streams/media-crud.yaml",
+      "bytes": 8150,
+      "sha256": "a24c02af7f9580ea594934386abb58ecb7842f5945fcb89819b4152431a038cf"
+    },
+    {
+      "path": "legacy/schema-14/streams/story-crud.yaml",
+      "bytes": 7203,
+      "sha256": "f9b35445f639191d59b9119b68c06443e926049635e1bbc09317da6d9ca7a2ec"
+    },
+    {
+      "path": "observed/baseline-summary.json",
+      "bytes": 3048,
+      "sha256": "25678f212c4b2219c16692c62324420fe4a17b9b1bc2a300bf56ae9b72c98c71"
+    },
+    {
+      "path": "observed/character-spritesheet-adapter.state.json",
+      "bytes": 5829,
+      "sha256": "9428a2ebf9e2cdbeb1f09d0322c900a1f818fc61b08415fab70f5c67d4190f8d"
+    },
+    {
+      "path": "observed/merge-and-replace.state.json",
+      "bytes": 5099,
+      "sha256": "bf3c1babe58b8d0ac7665d8f46ad335d7128e914b006df98c9ed37027c742953"
+    },
+    {
+      "path": "observed/mixed-history.state.json",
+      "bytes": 5255,
+      "sha256": "65097b478aff05e1871f91bb938058b7c61f70f5f788fb11a34c878c4690e562"
+    },
+    {
+      "path": "observed/preserve-invalid.state.json",
+      "bytes": 4998,
+      "sha256": "497907420b64d141a237fc9a0d7564ec3fe0414c25a447ef9d92cb1070eb4497"
+    },
+    {
+      "path": "observed/preserve-valid.state.json",
+      "bytes": 5123,
+      "sha256": "8b3d9b18751b653512632b86b71f5c7a560ae801cda445ce9e3146b8900ea6d8"
+    },
+    {
+      "path": "observed/recovery-baseline.state.json",
+      "bytes": 5094,
+      "sha256": "177c390bcae8538d42189cdb51a32efb974c4718c7c07cdbd60843d675efe195"
+    },
+    {
+      "path": "observed/recovery-strict-suffix-unversioned.state.json",
+      "bytes": 5109,
+      "sha256": "3b99b9e84d5444f7a53ba98b32993db533206b1d3b3a5354e1a67f0055bc2c45"
+    },
+    {
+      "path": "observed/resource-use-clear-delete.state.json",
+      "bytes": 4625,
+      "sha256": "a73b2c26f87f61b68eaa200e0c6557d240592d57d65fcbf4196ea535a97e3511"
+    },
+    {
+      "path": "observed/section-move-direct.state.json",
+      "bytes": 5094,
+      "sha256": "3dccc5bceb2fefe08a7f15bfb5a5c7a3f82f56f656cbe53acaf495390d5f1d9b"
+    },
+    {
+      "path": "observed/section-move-emitter.state.json",
+      "bytes": 5084,
+      "sha256": "40a7f53d57d9f6f6ce2c5b03b65f7e23bed7e5788f79f6184c46ce855d4f8d3b"
+    },
+    {
+      "path": "observed/source-media-crud.state.json",
+      "bytes": 1955,
+      "sha256": "b0132594594f5d05599d40f1b06a2733c62c6e2ee56693a85314bb3e14109032"
+    },
+    {
+      "path": "observed/source-story-crud.state.json",
+      "bytes": 5069,
+      "sha256": "ead2b25ec656d622fa3943d8932c3c469c7d74ebf9228469835f4e671a338a63"
+    },
+    {
+      "path": "scenarios/acceptance-ordering.json",
+      "bytes": 8261,
+      "sha256": "b7a1767fa03a515042da18ef782cf26178e53278fee141d1cc5b682aef8bd6d3"
+    },
+    {
+      "path": "scenarios/character-spritesheet-adapter.json",
+      "bytes": 5480,
+      "sha256": "c31dbe99032959c68ecab56307835dce4e76f7267ec308b0e9fe181d7220b823"
+    },
+    {
+      "path": "scenarios/checkpoint-backed-legacy-recovery.json",
+      "bytes": 5711,
+      "sha256": "ddb984c08af147c49dd53a75ada6f5c9cc22a90ec6058ae4df7af051d5f54eed"
+    },
+    {
+      "path": "scenarios/envelope-and-version-errors.json",
+      "bytes": 8065,
+      "sha256": "78a04b8c00f0b49ce32a5aa168a11d3f18650110df80cb629e42a8e3ecb221ac"
+    },
+    {
+      "path": "scenarios/merge-and-replace.json",
+      "bytes": 3321,
+      "sha256": "286dca3fc9ed123858b248402e2ba3dd5e0f8ffea5bfceaf2b19450cccb94a78"
+    },
+    {
+      "path": "scenarios/mixed-history.json",
+      "bytes": 2622,
+      "sha256": "f02a2be8ff808cd99ab246f2a7b59b43eae997f30521c64b4a55cad7713e20dd"
+    },
+    {
+      "path": "scenarios/new-input-boundaries.json",
+      "bytes": 4723,
+      "sha256": "81972696da8f3e3cd449bda251e5905028995a839c4890ea5bd893e942cbd4d1"
+    },
+    {
+      "path": "scenarios/ordered-identity.json",
+      "bytes": 8520,
+      "sha256": "2567a5315a0567225da08de5257d3eaaee52e2ccc112e6598acaa80c296daee3"
+    },
+    {
+      "path": "scenarios/persistence-roundtrip.json",
+      "bytes": 3244,
+      "sha256": "b461a40729e24b48411c1e7a8bd95c0f5ae8ae0029727baf9b308bb152f5c543"
+    },
+    {
+      "path": "scenarios/preserve-invalid.json",
+      "bytes": 2529,
+      "sha256": "592b0c31c1888873d893963cbdd2c674b6dbc16850153417ad7ad4f2b2fd8840"
+    },
+    {
+      "path": "scenarios/preserve-valid.json",
+      "bytes": 1831,
+      "sha256": "b98c6c59f54a55558ce671f2f6b62a441baf388280b19d69b9de92fc3cc963a0"
+    },
+    {
+      "path": "scenarios/resource-use-clear-delete.json",
+      "bytes": 3334,
+      "sha256": "a3c8c91660ab969a4729ee5895aca07e44cb979ce6b17f1c861584a97fefca74"
+    },
+    {
+      "path": "scenarios/section-move-direct.json",
+      "bytes": 2883,
+      "sha256": "3463ecbc9f73139b0c9a23e0c965d3d40e87a2cc9492f99e67baebab265dad7b"
+    },
+    {
+      "path": "scenarios/section-move-emitter.json",
+      "bytes": 4842,
+      "sha256": "7df5462fd0350ce337564582b520594ba0a7bb7195f5342bc8bd668a82d4b7ac"
+    },
+    {
+      "path": "seeds/project-one.setup.json",
+      "bytes": 2787,
+      "sha256": "90e529cd8eeb5fe02636a305c42c4eedfd12ff0f9749e10223a7f5da34a7fb58"
+    },
+    {
+      "path": "seeds/project-one.state.json",
+      "bytes": 5084,
+      "sha256": "68fbea6344dd0629fa26b3ef882b762bea2a9d2d2faea6740a1ad9b0410e9973"
+    },
+    {
+      "path": "seeds/recovery-source-rows.json",
+      "bytes": 4494,
+      "sha256": "46cbf788b9ab99090fa7149c6a6020a3755fc8fe10b2d4d40806e5f64503a3f6"
+    },
+    {
+      "path": "scenarios/september-18-contract-refresh.json",
+      "bytes": 11250,
+      "sha256": "6c1d56783998b80ada186da19f8bf4cb1133dde3589ce73127b9d86562daee9c"
+    }
+  ],
+  "totalArtifactBytes": 196741,
+  "notes": [
+    "Copied YAML files are byte-for-byte source fixtures, not raw SQLite command histories. Their schemaVersion:14 labels the model archive, not persisted envelope schema_version.",
+    "Synthetic scenarios assemble an envelope-1 project.create from bootstrap.stateRef, then replay exact records in listed order. stateRef and metadata fields are fixture harness instructions, never stored command payload fields.",
+    "Observed snapshots intentionally retain current permissive behavior in negative future cases; do not adopt them as expected accepted strict states.",
+    "No application code, test runner, dependency, user project, or historical row was changed.",
+    "Post-review compatibility requirement: preserve previous-reader legacy loading/recovery, including missing scene sources and previously tolerated legacy version representations. New strict commands and invalid/unsupported strict history keep strict checks. Updated future expectations only; copied legacy sources and recorded baseline observations remain unchanged.",
+    "September 18 refresh adds contract cases without rewriting copied sources or observed snapshots; current model schema 15 is not the first strict schema. Engine literal behavior requires an explicit new marker and published runtime support."
+  ],
+  "implementationRefresh": {
+    "date": "2026-09-18",
+    "clientMain": "4d1fe31f96ff7a8f4eebf2b58679755a827a8851",
+    "declaredModelVersion": "1.15.0",
+    "modelSchema": 15,
+    "declaredEngineVersion": "1.46.1",
+    "strictModelVersion": "M must be greater than 15; original illustrative fixture values must be bound when adopted",
+    "scope": "Targeted additions; original corpus and source hashes remain historical evidence, not a current full-source rescan",
+    "requiredContracts": [
+      "PreviewDialogue.character.sprite and shared preview line shape",
+      "project.set_default_dialogue_avatar_transform and project.defaultDialogueAvatarTransformId",
+      "VariableOperation.valueMode literal marker requires model and engine releases"
+    ],
+    "remainingBeforeEnforcement": "Rerun complete emitter inventory against the implementation revision; preserve all original archived observations.",
+    "scenario": "scenarios/september-18-contract-refresh.json"
+  },
+  "movedFixtures": [
+    {
+      "id": "section-move-legacy-preserved",
+      "owner": "RouteVN/routevn-creator-model",
+      "revision": "7569f0ff927f3b9a4cafe9246af622c3cf6fe83e",
+      "path": "tests/compat/section-move-legacy-preserved",
+      "testPath": "tests/section-move-compatibility.test.js",
+      "pullRequest": "https://github.com/RouteVN/routevn-creator-model/pull/79",
+      "originalClientArtifacts": [
+        {
+          "path": "observed/section-move-legacy-preserved.state.json",
+          "bytes": 5254,
+          "sha256": "7e98fd550bc9fa982dcd5ebe8a51226a9e0727356361617648ed658dfe2bc740"
+        },
+        {
+          "path": "scenarios/section-move-legacy-preserved.json",
+          "bytes": 2417,
+          "sha256": "4cf6d065a2768bc987e5c723d80a77304e4268a479f393e1a5a2a9a43a61f4d6"
+        }
+      ],
+      "adoption": "Original seed and expected state bytes preserved; command types and domain payloads extracted from the preparation scenario. Shared client seed remains for other integration fixtures."
+    }
+  ]
+}

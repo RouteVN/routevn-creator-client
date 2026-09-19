@@ -1,0 +1,124 @@
+{
+  "fixtureFormat": "routevn.validation-preparation.history.v1",
+  "dataOrigin": "synthetic neutral commands; no actual user project",
+  "futureContract": {
+    "status": "expected_future_not_executed",
+    "supportedStrictModelVersions": [15],
+    "symbolicModelVersion": "M",
+    "illustrativeModelVersion": 15
+  },
+  "bootstrap": {
+    "id": "bootstrap-one",
+    "projectId": "project-one",
+    "userId": "actor-one",
+    "partition": "m",
+    "type": "project.create",
+    "schemaVersion": 1,
+    "clientTs": 999,
+    "stateRef": "../seeds/project-one.state.json"
+  },
+  "id": "resource-use-clear-delete",
+  "records": [
+    {
+      "id": "use-image",
+      "projectId": "project-one",
+      "userId": "actor-one",
+      "partition": "s:783Kx5",
+      "type": "line.update_actions",
+      "schemaVersion": 2,
+      "payload": {
+        "mv": 15,
+        "commandPayload": {
+          "lineId": "line-one",
+          "data": {
+            "background": {
+              "resourceId": "image-one",
+              "opacity": 1
+            }
+          }
+        }
+      },
+      "clientTs": 1000
+    },
+    {
+      "id": "clear-actions",
+      "projectId": "project-one",
+      "userId": "actor-one",
+      "partition": "s:783Kx5",
+      "type": "line.update_actions",
+      "schemaVersion": 2,
+      "payload": {
+        "mv": 15,
+        "commandPayload": {
+          "lineId": "line-one",
+          "data": {},
+          "replace": true
+        }
+      },
+      "clientTs": 1000
+    },
+    {
+      "id": "delete-image",
+      "projectId": "project-one",
+      "userId": "actor-one",
+      "partition": "m",
+      "type": "image.delete",
+      "schemaVersion": 2,
+      "payload": {
+        "mv": 15,
+        "commandPayload": {
+          "imageIds": ["image-one"]
+        }
+      },
+      "clientTs": 1000
+    }
+  ],
+  "observedCurrentModel": {
+    "status": "observed_baseline",
+    "packageVersion": "1.14.0",
+    "schemaVersion": 14,
+    "method": "unwrap fixture records only; omit model version; run existing replayCommands and sequential processCommand",
+    "valid": true,
+    "commands": 3,
+    "sequentialEqualsReplay": true,
+    "inputStateUnchanged": true,
+    "finalStateRef": "../observed/resource-use-clear-delete.state.json",
+    "finalStateSha256": "3d5c7cc080d6a2e0eeb11144dca7484b66919ef407d0fe623e24587bf4c43428"
+  },
+  "expectedFuture": {
+    "result": "accept",
+    "historyDependencyRule": "validate use-image against the prefix containing image-one, never latest main state after delete-image",
+    "finalImageOneExists": false,
+    "finalLineOneActions": {},
+    "fullReloadEqualsWarmCheckpoint": true,
+    "lazySceneReloadEqualsChronologicalReplay": true
+  },
+  "negativeSuffix": {
+    "record": {
+      "id": "use-deleted-image",
+      "projectId": "project-one",
+      "userId": "actor-one",
+      "partition": "s:783Kx5",
+      "type": "line.update_actions",
+      "schemaVersion": 2,
+      "payload": {
+        "mv": 15,
+        "commandPayload": {
+          "lineId": "line-one",
+          "data": {
+            "background": {
+              "resourceId": "image-one",
+              "opacity": 1
+            }
+          }
+        }
+      },
+      "clientTs": 1000
+    },
+    "expectedFuture": {
+      "result": "reject",
+      "stage": "precondition_validation",
+      "newRowsAccepted": 0
+    }
+  }
+}

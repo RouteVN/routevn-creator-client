@@ -1,0 +1,193 @@
+{
+  "fixtureFormat": "routevn.validation-preparation.authoring.v1",
+  "futureContract": {
+    "status": "expected_future_not_executed",
+    "supportedStrictModelVersions": [15],
+    "symbolicModelVersion": "M",
+    "illustrativeModelVersion": 15
+  },
+  "seedStateRef": "../seeds/project-one.state.json",
+  "baseRequest": {
+    "type": "line.update_actions",
+    "payload": {
+      "lineId": "line-one",
+      "data": {
+        "dialogue": {
+          "content": [
+            {
+              "text": "Valid new input"
+            }
+          ]
+        }
+      }
+    }
+  },
+  "cases": [
+    {
+      "id": "omitted-caller-version",
+      "requestVersionFields": "none",
+      "expectedFuture": {
+        "result": "accept",
+        "persistedSchemaVersion": 2,
+        "persistedMv": 15,
+        "strictEvenOnOldProject": true
+      }
+    },
+    {
+      "id": "spoof-legacy-envelope",
+      "addRequestFields": {
+        "schemaVersion": 1
+      },
+      "expectedFuture": {
+        "result": "reject",
+        "acceptedRows": 0,
+        "callerSelectsHistoricalPath": false
+      }
+    },
+    {
+      "id": "spoof-model-version",
+      "addRequestFields": {
+        "modelSchemaVersion": 14
+      },
+      "expectedFuture": {
+        "result": "reject",
+        "acceptedRows": 0
+      }
+    },
+    {
+      "id": "spoof-wrapper-model-version",
+      "addRequestFields": {
+        "mv": 14
+      },
+      "expectedFuture": {
+        "result": "reject",
+        "acceptedRows": 0
+      }
+    },
+    {
+      "id": "unknown-action-update",
+      "replacePayload": {
+        "lineId": "line-one",
+        "data": {
+          "unrecognizedLegacyAction": {
+            "oldValue": true
+          }
+        }
+      },
+      "expectedFuture": {
+        "result": "reject",
+        "path": "payload.data.unrecognizedLegacyAction",
+        "acceptedRows": 0
+      }
+    },
+    {
+      "id": "scalar-dialogue-update",
+      "replacePayload": {
+        "lineId": "line-one",
+        "data": {
+          "dialogue": 42
+        }
+      },
+      "expectedFuture": {
+        "result": "reject",
+        "path": "payload.data.dialogue",
+        "acceptedRows": 0
+      }
+    },
+    {
+      "id": "unknown-nested-field",
+      "replacePayload": {
+        "lineId": "line-one",
+        "data": {
+          "dialogue": {
+            "content": [
+              {
+                "text": "Text"
+              }
+            ],
+            "unusedLegacyField": true
+          }
+        }
+      },
+      "expectedFuture": {
+        "result": "reject",
+        "path": "payload.data.dialogue.unusedLegacyField",
+        "acceptedRows": 0
+      }
+    },
+    {
+      "id": "unknown-action-create",
+      "replaceRequest": {
+        "type": "line.create",
+        "payload": {
+          "sectionId": "section-one",
+          "lines": [
+            {
+              "lineId": "line-three",
+              "data": {
+                "actions": {
+                  "unrecognizedLegacyAction": {
+                    "oldValue": true
+                  }
+                }
+              }
+            }
+          ]
+        }
+      },
+      "expectedFuture": {
+        "result": "reject",
+        "acceptedRows": 0
+      }
+    },
+    {
+      "id": "new-complete-state",
+      "replaceRequestFromStateRef": {
+        "type": "project.create",
+        "stateRef": "../seeds/project-one.state.json"
+      },
+      "expectedFuture": {
+        "result": "accept",
+        "wholeStateStrictValidation": true,
+        "persistedSchemaVersion": 2,
+        "persistedMv": 15
+      }
+    },
+    {
+      "id": "invalid-new-complete-state",
+      "replaceRequestFromStateRef": {
+        "type": "project.create",
+        "stateRef": "../seeds/project-one.state.json"
+      },
+      "replaceStatePath": {
+        "path": "/scenes/items/scene-one/sections/items/section-one/lines/items/line-one/actions",
+        "value": {
+          "unrecognizedLegacyAction": {
+            "oldValue": true
+          }
+        }
+      },
+      "expectedFuture": {
+        "result": "reject",
+        "newProjectActivated": false,
+        "acceptedRows": 0
+      }
+    }
+  ],
+  "entryPoints": [
+    "UI command API",
+    "projectService.submitCommand",
+    "direct session submitCommand/submitCommands",
+    "submitEvent authoring path",
+    "native bootstrap draft insert",
+    "web bootstrap applyCommittedBatch",
+    "resource-package command plan",
+    "future API",
+    "copy/paste/duplicate"
+  ],
+  "historicalImportIsSeparateCompatibilityOperation": true,
+  "observedCurrent": {
+    "status": "proposed_boundary_cases_not_executed",
+    "note": "Unknown line-action examples are accepted by model14; current client authoring gates do not implement this future envelope contract."
+  }
+}

@@ -65,3 +65,7 @@ src/setup.js
 /ios/routevn/**/*.xcuserdata
 /ios/routevn/**/xcuserdata/
 /ios/routevn/**/*.xcuserstate
+
+# Disposable compatibility runs; immutable fixtures live under tests/fixtures.
+/.compatibility-artifacts/
+/tests/fixtures/legacy-projects/

@@ -1,0 +1,279 @@
+{
+  "project": {},
+  "story": {
+    "initialSceneId": null
+  },
+  "tags": {
+    "images": {
+      "items": {},
+      "tree": []
+    },
+    "sounds": {
+      "items": {},
+      "tree": []
+    },
+    "videos": {
+      "items": {},
+      "tree": []
+    },
+    "characters": {
+      "items": {},
+      "tree": []
+    },
+    "fonts": {
+      "items": {},
+      "tree": []
+    },
+    "transforms": {
+      "items": {},
+      "tree": []
+    },
+    "colors": {
+      "items": {},
+      "tree": []
+    },
+    "textStyles": {
+      "items": {},
+      "tree": []
+    },
+    "variables": {
+      "items": {},
+      "tree": []
+    },
+    "layouts": {
+      "items": {},
+      "tree": []
+    },
+    "controls": {
+      "items": {},
+      "tree": []
+    },
+    "animations": {
+      "items": {},
+      "tree": []
+    },
+    "audioEffects": {
+      "items": {},
+      "tree": []
+    },
+    "particles": {
+      "items": {},
+      "tree": []
+    },
+    "spritesheets": {
+      "items": {},
+      "tree": []
+    }
+  },
+  "scenes": {
+    "items": {
+      "scene-one": {
+        "id": "scene-one",
+        "type": "scene",
+        "name": "Scene One",
+        "sections": {
+          "items": {
+            "section-three": {
+              "id": "section-three",
+              "name": "Section Three",
+              "lines": {
+                "items": {},
+                "tree": []
+              }
+            }
+          },
+          "tree": [
+            {
+              "id": "section-three",
+              "children": []
+            }
+          ]
+        }
+      },
+      "scene-two": {
+        "id": "scene-two",
+        "type": "scene",
+        "name": "Scene Two",
+        "sections": {
+          "items": {
+            "section-two": {
+              "id": "section-two",
+              "name": "Section Two",
+              "lines": {
+                "items": {},
+                "tree": []
+              }
+            },
+            "section-one": {
+              "id": "section-one",
+              "name": "Section One",
+              "lines": {
+                "items": {
+                  "line-one": {
+                    "id": "line-one",
+                    "actions": {
+                      "dialogue": {
+                        "content": [
+                          {
+                            "text": "First"
+                          }
+                        ]
+                      }
+                    }
+                  },
+                  "line-two": {
+                    "id": "line-two",
+                    "actions": {
+                      "dialogue": {
+                        "content": [
+                          {
+                            "text": "Second"
+                          }
+                        ]
+                      }
+                    }
+                  }
+                },
+                "tree": [
+                  {
+                    "id": "line-one"
+                  },
+                  {
+                    "id": "line-two"
+                  }
+                ]
+              }
+            }
+          },
+          "tree": [
+            {
+              "id": "section-two",
+              "children": []
+            },
+            {
+              "id": "section-one",
+              "children": []
+            }
+          ]
+        }
+      }
+    },
+    "tree": [
+      {
+        "id": "scene-one",
+        "children": []
+      },
+      {
+        "id": "scene-two",
+        "children": []
+      }
+    ]
+  },
+  "files": {
+    "items": {
+      "file-one": {
+        "id": "file-one",
+        "mimeType": "image/png",
+        "size": 128,
+        "sha256": "fixture-image-sha256"
+      }
+    },
+    "tree": [
+      {
+        "id": "file-one",
+        "children": []
+      }
+    ]
+  },
+  "images": {
+    "items": {
+      "image-one": {
+        "id": "image-one",
+        "type": "image",
+        "name": "Image One",
+        "fileId": "file-one"
+      }
+    },
+    "tree": [
+      {
+        "id": "image-one",
+        "children": []
+      }
+    ]
+  },
+  "spritesheets": {
+    "items": {},
+    "tree": []
+  },
+  "sounds": {
+    "items": {},
+    "tree": []
+  },
+  "voices": {
+    "items": {},
+    "tree": []
+  },
+  "videos": {
+    "items": {},
+    "tree": []
+  },
+  "animations": {
+    "items": {},
+    "tree": []
+  },
+  "audioEffects": {
+    "items": {},
+    "tree": []
+  },
+  "particles": {
+    "items": {},
+    "tree": []
+  },
+  "characters": {
+    "items": {
+      "character-one": {
+        "id": "character-one",
+        "type": "character",
+        "name": "Character One",
+        "sprites": {
+          "items": {},
+          "tree": []
+        }
+      }
+    },
+    "tree": [
+      {
+        "id": "character-one",
+        "children": []
+      }
+    ]
+  },
+  "fonts": {
+    "items": {},
+    "tree": []
+  },
+  "transforms": {
+    "items": {},
+    "tree": []
+  },
+  "colors": {
+    "items": {},
+    "tree": []
+  },
+  "textStyles": {
+    "items": {},
+    "tree": []
+  },
+  "variables": {
+    "items": {},
+    "tree": []
+  },
+  "layouts": {
+    "items": {},
+    "tree": []
+  },
+  "controls": {
+    "items": {},
+    "tree": []
+  }
+}

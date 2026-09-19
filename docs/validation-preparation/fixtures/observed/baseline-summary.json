@@ -1,0 +1,97 @@
+{
+  "status": "observed_baseline",
+  "date": "2026-09-13",
+  "model": {
+    "packageVersion": "1.14.0",
+    "schemaVersion": 14,
+    "versionArgument": "omitted"
+  },
+  "sourceFixtures": [
+    {
+      "path": "legacy/schema-14/states/minimal-project.yaml",
+      "valid": true
+    },
+    {
+      "path": "legacy/schema-14/states/cross-referenced-project.yaml",
+      "valid": true
+    },
+    {
+      "path": "legacy/schema-14/payloads/line.create/minimal.yaml",
+      "valid": true
+    },
+    {
+      "path": "legacy/schema-14/payloads/line.create/full.yaml",
+      "valid": true
+    },
+    {
+      "path": "legacy/schema-14/streams/story-crud.yaml",
+      "valid": true,
+      "commandCount": 14,
+      "finalStateSha256": "ebc35592581a5ce8287c254d004522b5236177954465890d99b02ca247c408b6",
+      "finalStateRef": "observed/source-story-crud.state.json",
+      "archivedExpectedFinalStatePresent": false,
+      "sequentialEqualsReplay": true
+    },
+    {
+      "path": "legacy/schema-14/streams/media-crud.yaml",
+      "valid": true,
+      "commandCount": 30,
+      "finalStateSha256": "7e8e2103777fb8ce8e1e1c1703661a2f189fbe864d07e85ff88c12b18d6a9674",
+      "finalStateRef": "observed/source-media-crud.state.json",
+      "archivedExpectedFinalStatePresent": false,
+      "sequentialEqualsReplay": true
+    }
+  ],
+  "seed": {
+    "setupCommands": 9,
+    "sequentialEqualsReplay": true,
+    "finalStateSha256": "ef3ea7c0e6ba9c2c67a075aa4b015fa956b0bb2a405d3b9a31e2e0ccf403587a"
+  },
+  "scenarios": [
+    {
+      "id": "mixed-history",
+      "commands": 2,
+      "finalStateSha256": "66ff01a24431e2fd9417fa0c9816a7f6ac64a4ff5d7b2009cb5888789a2ed229"
+    },
+    {
+      "id": "merge-and-replace",
+      "commands": 3,
+      "finalStateSha256": "04380463dc5a1a6c17594184eec91dad9ae85cdf87f068fbd943c2fa3499eeaa"
+    },
+    {
+      "id": "preserve-valid",
+      "commands": 1,
+      "finalStateSha256": "06bbd6ab273838303ee2165514f29c7843933810feb63a61889a11d74d812ca4"
+    },
+    {
+      "id": "preserve-invalid",
+      "commands": 2,
+      "finalStateSha256": "6dc6976c9c82ee540c28cc26345dd016175ecb6752fc12749e0bbf927bf18a17"
+    },
+    {
+      "id": "resource-use-clear-delete",
+      "commands": 3,
+      "finalStateSha256": "3d5c7cc080d6a2e0eeb11144dca7484b66919ef407d0fe623e24587bf4c43428"
+    },
+    {
+      "id": "section-move-direct",
+      "commands": 3,
+      "finalStateSha256": "69802253091a7969422ff6ddc8a41f087335bbdf8ca736d8535c21bbf07f3365"
+    },
+    {
+      "id": "section-move-emitter",
+      "commands": 3,
+      "finalStateSha256": "c515ac7f8601fff9d484b2fb77f718e9e28c733f0aee931e2909a994f086ded6"
+    },
+    {
+      "id": "section-move-legacy-preserved",
+      "commands": 2,
+      "finalStateSha256": "47573779b7aa738ac7e9c12f376f83c755e92dfe506499e020a11e4d6a9f4bb8"
+    }
+  ],
+  "characterSpritesheet": {
+    "rawModelAccepted": false,
+    "clientAdapterAccepted": true
+  },
+  "measurementScope": "pure local APIs only; not strict implementation, platform UI, published model15, or storage/concurrency acceptance tests"
+}

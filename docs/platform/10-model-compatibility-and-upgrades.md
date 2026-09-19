@@ -2,6 +2,12 @@
 
 Date baseline: April 9, 2026.
 
+For the proposed envelope-2 payload wrapper and strict validation of newly
+authored commands without a SQLite schema migration, see
+[Versioned Command Validation Specification](../command-schema-validation-spec.md).
+That document is a proposal; the historical implementation analysis below is
+not a description of an implemented envelope-2 system.
+
 This document describes how RouteVN Creator currently behaves when
 `@routevn/creator-model` changes, what is and is not backward compatible today,
 and the issues that need to be resolved if model updates should be smooth for

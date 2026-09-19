@@ -1,0 +1,98 @@
+{
+  "fixtureFormat": "routevn.validation-preparation.history.v1",
+  "dataOrigin": "synthetic neutral commands; no actual user project",
+  "futureContract": {
+    "status": "expected_future_not_executed",
+    "supportedStrictModelVersions": [15],
+    "symbolicModelVersion": "M",
+    "illustrativeModelVersion": 15
+  },
+  "bootstrap": {
+    "id": "bootstrap-one",
+    "projectId": "project-one",
+    "userId": "actor-one",
+    "partition": "m",
+    "type": "project.create",
+    "schemaVersion": 1,
+    "clientTs": 999,
+    "stateRef": "../seeds/project-one.state.json"
+  },
+  "id": "mixed-history",
+  "records": [
+    {
+      "id": "legacy-edit",
+      "projectId": "project-one",
+      "userId": "actor-one",
+      "partition": "s:783Kx5",
+      "type": "line.update_actions",
+      "schemaVersion": 1,
+      "payload": {
+        "lineId": "line-one",
+        "data": {
+          "unrecognizedLegacyAction": {
+            "oldValue": true
+          },
+          "dialogue": {
+            "content": [
+              {
+                "text": "Legacy"
+              }
+            ],
+            "unusedLegacyField": true
+          }
+        }
+      },
+      "clientTs": 1000
+    },
+    {
+      "id": "strict-edit",
+      "projectId": "project-one",
+      "userId": "actor-one",
+      "partition": "s:783Kx5",
+      "type": "line.update_actions",
+      "schemaVersion": 2,
+      "payload": {
+        "mv": 15,
+        "commandPayload": {
+          "lineId": "line-two",
+          "data": {
+            "dialogue": {
+              "content": [
+                {
+                  "text": "Current"
+                }
+              ]
+            }
+          }
+        }
+      },
+      "clientTs": 1000
+    }
+  ],
+  "observedCurrentModel": {
+    "status": "observed_baseline",
+    "packageVersion": "1.14.0",
+    "schemaVersion": 14,
+    "method": "unwrap fixture records only; omit model version; run existing replayCommands and sequential processCommand",
+    "valid": true,
+    "commands": 2,
+    "sequentialEqualsReplay": true,
+    "inputStateUnchanged": true,
+    "finalStateRef": "../observed/mixed-history.state.json",
+    "finalStateSha256": "66ff01a24431e2fd9417fa0c9816a7f6ac64a4ff5d7b2009cb5888789a2ed229"
+  },
+  "expectedFuture": {
+    "result": "accept",
+    "strictRecordIds": ["strict-edit"],
+    "unchangedLegacyPaths": [
+      "/scenes/items/scene-one/sections/items/section-one/lines/items/line-one/actions"
+    ],
+    "rawRowsUnchanged": true,
+    "fullReloadEqualsWarmCheckpoint": true
+  },
+  "storageLayouts": [
+    "all_drafts",
+    "bootstrap_and_legacy_committed_strict_draft",
+    "all_committed"
+  ]
+}

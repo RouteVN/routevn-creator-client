@@ -1,0 +1,122 @@
+{
+  "fixtureFormat": "routevn.validation-preparation.storage.v1",
+  "futureContract": {
+    "status": "expected_future_not_executed",
+    "supportedStrictModelVersions": [15],
+    "symbolicModelVersion": "M",
+    "illustrativeModelVersion": 15
+  },
+  "seedStateRef": "../seeds/project-one.state.json",
+  "canonicalCommand": {
+    "type": "line.delete",
+    "modelSchemaVersion": 15,
+    "payload": {
+      "lineIds": ["line-one"]
+    }
+  },
+  "encodedRecord": {
+    "id": "wrapper-one",
+    "projectId": "project-one",
+    "userId": "actor-one",
+    "partition": "s:783Kx5",
+    "type": "line.delete",
+    "schemaVersion": 2,
+    "payload": {
+      "mv": 15,
+      "commandPayload": {
+        "lineIds": ["line-one"]
+      }
+    },
+    "clientTs": 1000
+  },
+  "expectedFuture": {
+    "sqliteSchemaChanges": 0,
+    "tables": ["local_drafts", "committed_events"],
+    "payloadEncoding": "existing JSON BLOB codec",
+    "draftRoundTrip": {
+      "schemaVersion": 2,
+      "payload": {
+        "mv": 15,
+        "commandPayload": {
+          "lineIds": ["line-one"]
+        }
+      }
+    },
+    "committedRoundTrip": {
+      "schemaVersion": 2,
+      "payload": {
+        "mv": 15,
+        "commandPayload": {
+          "lineIds": ["line-one"]
+        }
+      }
+    },
+    "decode": {
+      "type": "line.delete",
+      "modelSchemaVersion": 15,
+      "payload": {
+        "lineIds": ["line-one"]
+      }
+    },
+    "modelMetadataInDomainState": false,
+    "roundTripPlatforms": [
+      "web IndexedDB",
+      "Tauri SQLite",
+      "Android SQLite",
+      "iOS SQLite"
+    ],
+    "exactRetry": "same id, payload and envelope/model versions: one accepted record",
+    "conflictingRetry": "same id, altered payload or mv: explicit identity conflict",
+    "retryAfterModelUpgrade": "persisted mv=15 remains 15 even when current authoring version becomes 16",
+    "draftPromotion": "remove matching draft only when committed identity has matching canonical content; never validate/apply twice",
+    "backupRestore": "preserve recorded version and wrapper; equal decoded state"
+  },
+  "conflictingRecords": [
+    {
+      "id": "wrapper-one",
+      "projectId": "project-one",
+      "userId": "actor-one",
+      "partition": "s:783Kx5",
+      "type": "line.delete",
+      "schemaVersion": 2,
+      "payload": {
+        "mv": 16,
+        "commandPayload": {
+          "lineIds": ["line-one"]
+        }
+      },
+      "clientTs": 1000
+    },
+    {
+      "id": "wrapper-one",
+      "projectId": "project-one",
+      "userId": "actor-one",
+      "partition": "s:783Kx5",
+      "type": "line.delete",
+      "schemaVersion": 2,
+      "payload": {
+        "mv": 15,
+        "commandPayload": {
+          "lineIds": ["line-two"]
+        }
+      },
+      "clientTs": 1000
+    }
+  ],
+  "legacyRetry": {
+    "id": "legacy-retry",
+    "projectId": "project-one",
+    "userId": "actor-one",
+    "partition": "s:783Kx5",
+    "type": "line.delete",
+    "schemaVersion": 1,
+    "payload": {
+      "lineIds": ["line-one"]
+    },
+    "clientTs": 1000
+  },
+  "observedCurrent": {
+    "status": "not_run_as_a_storage_roundtrip_in_this_preparation",
+    "note": "Current model has no strict codec. This file specifies the future real-platform tests, not their result."
+  }
+}

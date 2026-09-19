@@ -1,0 +1,278 @@
+{
+  "fixtureFormat": "routevn.validation-preparation.ordered-identity.v1",
+  "status": "expected_future_not_executed",
+  "futureContract": {
+    "symbolicModelVersion": "M",
+    "illustrativeModelVersion": 15,
+    "supportedStrictModelVersions": [15]
+  },
+  "initialStateRef": "../seeds/project-one.state.json",
+  "baseRecord": {
+    "id": "sprite-create",
+    "projectId": "project-one",
+    "userId": "actor-one",
+    "partition": "m",
+    "type": "character.sprite.create",
+    "schemaVersion": 2,
+    "payload": {
+      "mv": 15,
+      "commandPayload": {
+        "characterId": "character-one",
+        "spriteId": "sprite-one",
+        "data": {
+          "type": "spritesheet",
+          "name": "Sprite One",
+          "fileId": "file-one",
+          "sheetWidth": 32,
+          "sheetHeight": 16,
+          "frameCount": 2,
+          "width": 16,
+          "height": 16,
+          "jsonData": {
+            "meta": {
+              "image": "image-one.png"
+            },
+            "frames": {
+              "frame-one": {
+                "frame": {
+                  "x": 0,
+                  "y": 0,
+                  "w": 16,
+                  "h": 16
+                }
+              },
+              "frame-two": {
+                "frame": {
+                  "x": 16,
+                  "y": 0,
+                  "w": 16,
+                  "h": 16
+                }
+              }
+            }
+          },
+          "animations": {
+            "idle": {
+              "frames": [0, 1],
+              "fps": 12,
+              "loop": true
+            }
+          }
+        }
+      }
+    },
+    "clientTs": 1000
+  },
+  "reorderedFramesRecord": {
+    "id": "sprite-create",
+    "projectId": "project-one",
+    "userId": "actor-one",
+    "partition": "m",
+    "type": "character.sprite.create",
+    "schemaVersion": 2,
+    "payload": {
+      "mv": 15,
+      "commandPayload": {
+        "characterId": "character-one",
+        "spriteId": "sprite-one",
+        "data": {
+          "type": "spritesheet",
+          "name": "Sprite One",
+          "fileId": "file-one",
+          "sheetWidth": 32,
+          "sheetHeight": 16,
+          "frameCount": 2,
+          "width": 16,
+          "height": 16,
+          "jsonData": {
+            "meta": {
+              "image": "image-one.png"
+            },
+            "frames": {
+              "frame-two": {
+                "frame": {
+                  "x": 16,
+                  "y": 0,
+                  "w": 16,
+                  "h": 16
+                }
+              },
+              "frame-one": {
+                "frame": {
+                  "x": 0,
+                  "y": 0,
+                  "w": 16,
+                  "h": 16
+                }
+              }
+            }
+          },
+          "animations": {
+            "idle": {
+              "frames": [0, 1],
+              "fps": 12,
+              "loop": true
+            }
+          }
+        }
+      }
+    },
+    "clientTs": 1000
+  },
+  "wrapperKeyOrderOnlyRecord": {
+    "id": "sprite-create",
+    "projectId": "project-one",
+    "userId": "actor-one",
+    "partition": "m",
+    "type": "character.sprite.create",
+    "schemaVersion": 2,
+    "payload": {
+      "commandPayload": {
+        "characterId": "character-one",
+        "spriteId": "sprite-one",
+        "data": {
+          "type": "spritesheet",
+          "name": "Sprite One",
+          "fileId": "file-one",
+          "sheetWidth": 32,
+          "sheetHeight": 16,
+          "frameCount": 2,
+          "width": 16,
+          "height": 16,
+          "jsonData": {
+            "meta": {
+              "image": "image-one.png"
+            },
+            "frames": {
+              "frame-one": {
+                "frame": {
+                  "x": 0,
+                  "y": 0,
+                  "w": 16,
+                  "h": 16
+                }
+              },
+              "frame-two": {
+                "frame": {
+                  "x": 16,
+                  "y": 0,
+                  "w": 16,
+                  "h": 16
+                }
+              }
+            }
+          },
+          "animations": {
+            "idle": {
+              "frames": [0, 1],
+              "fps": 12,
+              "loop": true
+            }
+          }
+        }
+      },
+      "mv": 15
+    },
+    "clientTs": 1000
+  },
+  "domainFieldOrderOnlyRecord": {
+    "id": "sprite-create",
+    "projectId": "project-one",
+    "userId": "actor-one",
+    "partition": "m",
+    "type": "character.sprite.create",
+    "schemaVersion": 2,
+    "payload": {
+      "mv": 15,
+      "commandPayload": {
+        "characterId": "character-one",
+        "spriteId": "sprite-one",
+        "data": {
+          "animations": {
+            "idle": {
+              "frames": [0, 1],
+              "fps": 12,
+              "loop": true
+            }
+          },
+          "jsonData": {
+            "meta": {
+              "image": "image-one.png"
+            },
+            "frames": {
+              "frame-one": {
+                "frame": {
+                  "x": 0,
+                  "y": 0,
+                  "w": 16,
+                  "h": 16
+                }
+              },
+              "frame-two": {
+                "frame": {
+                  "x": 16,
+                  "y": 0,
+                  "w": 16,
+                  "h": 16
+                }
+              }
+            }
+          },
+          "height": 16,
+          "width": 16,
+          "frameCount": 2,
+          "sheetHeight": 16,
+          "sheetWidth": 32,
+          "fileId": "file-one",
+          "name": "Sprite One",
+          "type": "spritesheet"
+        }
+      }
+    },
+    "clientTs": 1000
+  },
+  "orderedPayloadEvidence": {
+    "baseSha256": "898f1259fd585da3d49321a83c42093fdda4408c5475bfe826a396e20e58e6f6",
+    "reorderedFramesSha256": "ca0f7c360697a20a167e637d5db2f871cff224884a1b97c4bd9542bf77e6eddc",
+    "baseFrameNames": ["frame-one", "frame-two"],
+    "reorderedFrameNames": ["frame-two", "frame-one"],
+    "baseClipFrameZero": {
+      "name": "frame-one",
+      "frame": {
+        "x": 0,
+        "y": 0,
+        "w": 16,
+        "h": 16
+      }
+    },
+    "reorderedClipFrameZero": {
+      "name": "frame-two",
+      "frame": {
+        "x": 16,
+        "y": 0,
+        "w": 16,
+        "h": 16
+      }
+    }
+  },
+  "expectedFuture": {
+    "sameIdReorderedFrames": "command_identity_conflict before Insieme; preserve original record",
+    "sameIdDomainFieldOrderOnly": "command_identity_conflict even when that particular field order does not change rendering",
+    "sameIdWrapperKeyOrderOnly": "exact retry; decode and fingerprint a fixed wrapper without changing domain key order; preserve the already stored row",
+    "newSubmissionBoundary": "compare saved identity before persisting or accepting the retry",
+    "committedBatchBoundary": "reject conflicting same-id domain payload before applyCommittedBatch/cursor advancement",
+    "promotionBoundary": "reject altered domain order before applySubmitResult or draft removal; preserve original draft",
+    "frontierDigest": "changes when domain dictionary order changes; same fixed-envelope content with only wrapper key order changed has the same fingerprint",
+    "cachedStateDigest": "retain dictionary order throughout full cached state; reordered atlas frames invalidate the cached-state digest and require reconstruction from original source",
+    "historicalRowsRewritten": false,
+    "upstreamCanonicalizerChangeRequired": false
+  },
+  "fingerprintContract": {
+    "domainPayload": "Order-preserving JSON.stringify semantics after safe parsed/plain-JSON validation; never recursively sort domain dictionaries.",
+    "recordFields": "Use the fixed-order identity/type/partition/envelope/mv/timestamp tuple specified by replay-and-acceptance; preserve stable identity fields when comparing a stored draft to promotion.",
+    "wrapper": "Rebuild wrapper in fixed order for fingerprint only; wrapper key order is not domain meaning.",
+    "state": "Order-preserving serialized domain state plus the separately validated source frontier/policy.",
+    "scope": "Creator gate runs before Insieme identity comparisons involving envelope 2; Insieme sorted comparison alone is insufficient. Preserve existing legacy-only duplicate/recovery behavior without new load failures."
+  },
+  "baselineNote": "Existing sorted-key observation hashes remain unchanged as structural baseline checks. They cannot establish ordered-domain identity or atlas frame-index equivalence; assert the explicit key orders above as well."
+}
