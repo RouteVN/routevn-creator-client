@@ -14,6 +14,8 @@ propsSchema:
       type: string
     dialogHeight:
       type: string
+    compact:
+      type: boolean
     dialogPadding:
       type: string
       enum:

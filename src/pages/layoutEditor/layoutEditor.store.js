@@ -28,6 +28,7 @@ const arePreviewDataEqual = (left, right) => {
 const selectLayoutEditorCanvasMaxWidth = ({ state }) => {
   return formatHalfViewportCanvasMaxWidth(
     state.projectResolution ?? DEFAULT_PROJECT_RESOLUTION,
+    { heightUnit: state.isTouchMode ? "cqh" : "vh" },
   );
 };
 
@@ -629,6 +630,7 @@ export const selectViewData = ({ state, constants, i18n }) => {
     contextMenuItems,
     emptyContextMenuItems,
     layoutState,
+    canvasWorkspaceStyle: state.isTouchMode ? "container-type: size;" : "",
     layoutEditorCanvasMaxWidth: selectLayoutEditorCanvasMaxWidth({ state }),
     previewData: state.previewData,
     initialPreviewData: state.initialPreviewData,

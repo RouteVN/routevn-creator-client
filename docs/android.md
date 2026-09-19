@@ -369,9 +369,11 @@ safe bridge.
 
 The Android document uses a restrictive Content Security Policy: scripts must
 come from the document origin, frames and objects are disabled, and inline
-scripts are not permitted. Internal-file CORS responses name the one expected
-origin for the build. Direct `file://` and `content://` access, automatic
-JavaScript windows, and third-party cookies are disabled.
+scripts are not permitted. `connect-src` permits `blob:` and `data:` so the
+graphics renderer can fetch local project images and initialize its image
+decoder. Internal-file CORS responses name the one expected origin for the build.
+Direct `file://` and `content://` access, automatic JavaScript windows, and
+third-party cookies are disabled.
 
 Authentication and refresh tokens are removed from the serialized
 `userConfig` value before `app.db` is written. The opaque session JSON is
