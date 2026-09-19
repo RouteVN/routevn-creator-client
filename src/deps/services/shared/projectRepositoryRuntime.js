@@ -254,6 +254,7 @@ const getReplayFailedCommandIndex = (error) => {
 
 const isDuplicateFileCreateReplayFailure = ({ event, error } = {}) => {
   return (
+    event?.schemaVersion === 1 &&
     event?.type === "file.create" &&
     String(error?.message || "").includes(
       "payload.fileId must not already exist",
@@ -290,6 +291,7 @@ const canSkipDuplicateFileCreateDuringReplay = ({
 };
 
 const isDuplicateResourceCreateReplayFailure = ({ event, error } = {}) => {
+  if (event?.schemaVersion !== 1) return false;
   const replayDefinition = RESOURCE_CREATE_REPLAY_DEFINITIONS[event?.type];
   if (!replayDefinition) {
     return false;

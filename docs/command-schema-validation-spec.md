@@ -1,8 +1,10 @@
 # Versioned Command Validation Specification
 
-Status: behavior reviewed and approved; implementation in progress. The
-old-project compatibility baseline is executable. Strict validation and its
-reader/writer rollout are not yet implemented by this branch.
+Status: the strict model, client acceptance path, storage version preservation,
+and literal-object runtime changes are implemented on their feature branches.
+Production dependency pins and reader/writer delivery are still pending. See
+[implementation and release status](./validation-preparation/implementation-status.md)
+for the exact test evidence and remaining release gates.
 
 Date: September 13, 2026.
 

@@ -71,9 +71,14 @@ try {
     };
     const service = createProjectRepositoryService({
       router: { getPayload: () => ({}) },
-      db: {},
+      db: { get: async () => undefined, set: async () => {} },
       creatorVersion: 2,
       storageAdapter: {
+        createAcceptanceLease: async () => ({
+          writable: true,
+          withLock: (operation) => operation(),
+          close: async () => {},
+        }),
         resolveProjectReferenceByProjectId: async () => reference,
         createStore: async () => store,
         readCreatorVersionByReference: async () =>
@@ -105,7 +110,8 @@ try {
       }),
     });
     // Preserve the original history-only oracle as a separate observation.
-    const historyState = await repository.loadState();
+    const historyState = await (repository.loadHistoryState?.() ??
+      repository.loadState());
     const historyScenes = Object.fromEntries(
       Object.values(historyState.scenes.items)
         .filter((scene) => scene.type === "scene")

@@ -1,107 +1,114 @@
-# Implementation status
+# Strict validation implementation and release status
 
-The old-project compatibility baseline is implemented. Strict schema validation
-and the reader/writer rollout remain incomplete. No client production behavior
-or dependency version has changed in this slice.
+Updated September 19, 2026. Implementation branch: `feat/strict-schema-validation`.
 
-## Implemented and verified
+The domain validator and client acceptance path are implemented. Production
+activation is **pending**, not delivered: the client still pins creator-model
+`1.15.0`, Insieme `2.1.1`, and route-engine-js `1.46.1`. No package publication,
+application release, deployment, or dependency patch was performed.
 
-- 27 immutable SQLite project packs and 23 applicable portable IndexedDB packs,
-  authored using independently installed schema-14/schema-15 clients. They are
-  stored in a deterministic ZIP with a readable provenance/hash manifest; tests
-  verify and extract it automatically. All 319 original files are byte-identical.
-  An additional 54 native and 46 browser files freeze resolved-state/runtime
-  observations and their provenance without replacing any original oracle.
-- Pinned previous-reader comparisons against the candidate through production
-  repository loading, storage codecs, projections and model reducers.
-- Cold, warm and cache-cleared opens; exact original row bytes and storage types;
-  preserved unknown legacy data, ordered atlas keys, metadata and recovery sources.
-- Real PNG/audio/font assets, old draft-skip/duplicate/obsolete-event behavior,
-  checkpoint-only recovery, malformed legacy version values, avatar data,
-  10,000-edit history and an oversized historical bootstrap.
-- Logical preview/export comparisons in native-bridge and browser lanes.
-  Graphics output and packaged-player delivery are separate checks.
-- Native and browser resolved-state/runtime checks hydrate all scenes from the opened
-  repository, including checkpoint-only recovery. History replay is checked
-  separately. Each cold/warm/cache-cleared expectation comes from the pinned
-  previous reader, preserving its phase-specific results.
-- Fifteen comparator/recovery checks and real-browser dump self-tests covering
-  typed binary data, Blob/File metadata, sparse arrays, compound keys, property
-  order and advanced key generators.
-- A real IndexedDB negative control corrupts P09's cached layout while preserving
-  source history. Both readers in Chromium and WebKit detect the changed opened
-  state and runtime projection even though history-based observations still match.
-- A separate CI job, executable browser artifacts, machine-readable
-  reports, and retained failure databases/profiles.
+## Owning changes
 
-The model owner has four adopted, independently captured domain streams with
-source provenance and exact sequential/batch comparisons. Original schema
-archives 1–15 are unchanged. The engine owner has an unreleased literal-object
-operation implementation with tests for legacy interpolation, inert JSON,
-callbacks, permissions, save/load and rollback. Both are isolated owner work;
-the client continues to consume its published dependencies.
+| Repository     | Change                                                                                                                                                                                                                             | Review                                                            |
+| -------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ----------------------------------------------------------------- |
+| Creator model  | Schema 16 version dispatch; raw JSON, size/work limits, closed payloads, action contracts, expressions, references and affected-state transition validation; historical contracts retained                                         | [PR 80](https://github.com/RouteVN/routevn-creator-model/pull/80) |
+| Insieme        | Opt-in original driver schema versions and reader capability across SQLite/libSQL/async SQLite/IndexedDB; exact new-version writes; configurable command-session batch limits                                                      | [PR 42](https://github.com/yuusoft-org/insieme/pull/42)           |
+| Route Engine   | Explicit literal object/array variable values, preserving existing expression behavior                                                                                                                                             | [PR 351](https://github.com/RouteVN/route-engine/pull/351)        |
+| Creator client | Versioned codec, complete accepted project state, serialized validation/persistence/reconciliation, guarded public store APIs, sync ingestion, recovery/cache policy, native and browser ownership, UI outcomes, integration tests | This branch                                                       |
 
-Local owner branches now retain the tested commits:
+Model domain fixtures remain in the model repository. The client's frozen old
+project archive and previous-reader oracles were not regenerated or modified.
+The earlier legacy-domain adoption remains in merged
+[model PR 79](https://github.com/RouteVN/routevn-creator-model/pull/79); its original
+seed and expected bytes remain unchanged.
 
-- `routevn-creator-model`: `feat/versioned-command-validation`, `0d03c97`.
-- `route-engine`: `feat/literal-object-variable-values`, `75f99e5`.
+## Implemented client behavior
 
-Their existing working checkouts and untracked files were preserved. Those two
-branches remain unpublished; no package was published.
+New commands receive envelope version 2 and model version 16 inside the acceptance
+service. Callers cannot supply a legacy version or storage envelope. Raw values are
+validated before cloning; a complete logical batch is checked before writing.
+The complete project state includes inactive scenes. Browser Web Locks serialize
+operations across tabs; native OS locks reserve editing for one application
+window/process and the local queue covers refresh, validation, persistence and
+publication. Network waits are outside that queue.
 
-The merged [model PR #79](https://github.com/RouteVN/routevn-creator-model/pull/79)
-moved the legacy section-move scenario out of client preparation documents into
-model-owned compatibility tests. It preserves the original seed/expected bytes
-and tests complete sequential/batch results, legacy line data and input
-immutability. Its merged commit is `7569f0f`; validation passed 4,253 model
-tests and all 3,465 compatibility checks.
-The client catalog and manifest link to that pinned owner copy.
+Both committed batches and submit acknowledgements validate the resulting ordered
+history before changing it. Exact retries preserve identity; missing committed
+ranges trigger resynchronization. Failed writes are reconciled against actual
+storage: full persistence succeeds once, a contiguous prefix returns
+`partial_write`, and unreadable or inconsistent outcomes pause writes. Failed save
+results retain `retryRequests` with original IDs and payloads, also retained by the
+collaboration session's last error. Callers must use those requests for retry;
+there is no automatic retry with new identities.
 
-## Verification from this implementation run
+Historical rows keep their recorded contracts. Checkpoint-backed projects retain
+the previous reader's resolved state and original recovery sources. First strict
+edits are preflighted against replayable history. Disposable accepted-state caches
+use a separate policy namespace, preserve legacy own-undefined values, and require
+content fingerprints plus provenance held outside exported project storage.
+Cache failure after a successful save shows a rebuild notice; it does not report
+the save as lost. Partial and uncertain saves use separate localized notices.
 
-| Check                                                          | Result                                                                                                                                                                     |
-| -------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| Combined compatibility command                                 | Passed: 162 SQLite open phases, 276 browser open phases, both browser dump checks, 4 cached-layout corruption controls, 15 comparator/recovery checks and 6 archive checks |
-| Client smoke, integration, convergence, collaboration adapters | Passed                                                                                                                                                                     |
-| Client Puty storage suite                                      | 5 passed                                                                                                                                                                   |
-| Client lint and new harness formatting                         | Passed                                                                                                                                                                     |
-| Model full suite                                               | 4,258 passed, including 3,462 archived cases and 8 adopted-project tests                                                                                                   |
-| Engine full suite                                              | 2,182 passed, including 20 literal-value tests                                                                                                                             |
-| Engine lint, disabled-test checks and package build            | Passed                                                                                                                                                                     |
+## Executed verification
 
-The archive packaging rerun used only the committed ZIP with a fresh extraction
-cache. All 319 extracted files matched their original hashes, and repacking
-produced identical ZIP and manifest bytes. Six additional archive tests cover
-determinism, concurrent extraction, corrupt archives/caches, unsafe paths and
-preservation of frozen files. The readable manifest and update workflow are
-linked from the harness README. The browser projection extension preserves all
-373 preceding files and adds 46 immutable supplemental files; both browser
-engines verify per-phase opened state and runtime expectations from this archive.
+These results used the owner feature branches through ordinary local `file:`
+dependencies in an isolated client checkout. Published pins in the main working
+tree remain unchanged. No installed dependency sources were edited.
 
-The combined command was run in the existing Playwright Linux container with
-read-only source/dependency mounts and writable temporary test caches. Chromium
-and WebKit used separate persistent profiles; WebKit private contexts reject
-Blob storage. The native lane uses actual SQLite with production Tauri store
-logic and a driver bridge. This is not a desktop/mobile binary certification.
+| Check                     | Result                                                                                                                     |
+| ------------------------- | -------------------------------------------------------------------------------------------------------------------------- |
+| Model complete suite      | 4,652 passing tests, including 126 strict cases and metadata-downgrade negative controls                                   |
+| Insieme complete suite    | 335 passing tests across 36 files; type checking and lint pass                                                             |
+| Engine complete suite     | 2,182 passing tests, including 20 literal-value cases; lint and build pass                                                 |
+| Client strict suites      | Codec, acceptance, authority, cache integrity, actual SQLite recovery/bootstrap/sync and public authoring integration pass |
+| Strict browser acceptance | Chromium and WebKit pass: two competing tabs, actual IndexedDB/Web Locks, invalid-batch zero writes, exact retry, reload   |
+| Frozen native corpus      | 162 previous/candidate cold/warm/cache-cleared checks pass                                                                 |
+| Frozen browser corpus     | WebKit corpus passes; Chromium cases pass across the full run and a successful P10 rerun after an environment interruption |
+| Existing client checks    | Smoke, collaboration adapters, lint/format pass                                                                            |
+| Native ownership          | Rust and Java ownership tests pass, including actual competing child processes; Tauri `cargo check --lib --offline` passes |
 
-Run the client gate with `bun run test:project-compatibility`. See
-[the harness README](../../tests/projectCompatibility/README.md) for prerequisites,
-focused runs, immutable capture rules and report locations.
+Run the client checks after consuming the owner packages:
 
-## Remaining work
+```bash
+bun run test:strict-validation
+bun run test:strict-browser
+bun run test:strict-browser --webkit
+bun run test:project-compatibility
+bun run test:smoke
+bun run test:collab-adapters
+bun run lint
+```
 
-1. Complete model version dispatch, strict action/context contracts, affected
-   results, supported extensions and reference-impact validation.
-2. Implement Insieme's raw-preserving version path and strict authoring checks.
-3. Finish/release the engine prerequisite and verify exported/native players.
-4. Implement the client codec, authoritative replay, acceptance coordinator,
-   platform locks, authoring composition and user-facing validation errors.
-5. Add the strict edit/rejection, failed-write, upgrade backup/restore,
-   concurrency and future-version tests against that implementation.
-6. Publish owner dependencies and complete device, performance and R/W release
-   checks before enabling strict writes.
+CI now requires strict tests as well as the frozen compatibility gate. The strict
+suite deliberately fails with the old production dependency pins; it cannot
+silently claim schema-16 coverage using schema 15. Keep the client PR in draft
+until normal published dependencies can be pinned and this job passes.
 
-The fixture gate deliberately reports `strictWritesTested: false`; these future
-checks are not represented by skipped or falsely passing tests. The known old
-SQLite acknowledgment failure and exact recovery checkpoint metadata updates remain
-explicit baseline outcomes, rather than being silently repaired by the harness.
+For local validation, use a separate checkout and normal `file:` dependencies
+pointing to the three owner checkouts; install with Bun and build the engine.
+Do not commit these development pins, edit `node_modules`, rewrite historical
+fixtures, or replace frozen expected results to make the gate pass.
+
+## Remaining release gates
+
+1. Review/merge and publish the model, Insieme and engine packages, then update the
+   client package pins and lockfile through the package manager. Verify all runtime
+   bundles and export/player targets consume the new engine.
+2. Complete the reader-first release/rollback sequence in
+   [upstream and rollout](./upstream-and-rollout.md#5-reader-first-delivery).
+   Model availability activates this branch's strict authoring path; do not ship
+   its dependency upgrade ahead of the supported reader rollout.
+3. Build and exercise Android and iOS native bridges on devices, including opening
+   the same project twice and renderer reload. Java process-lock tests are not an
+   Android application build. This Linux environment has no Xcode/iOS toolchain;
+   no device refresh or iPhone verification was completed.
+4. Complete the broader release acceptance matrix for UI authoring surfaces,
+   import/export/backup, runtime targets and large-project performance. The tests
+   above substantiate their named paths; they do not imply every platform or UI
+   branch has been exercised.
+
+Expected user impact after activation: invalid new edits are rejected before they
+reach project history, old projects remain readable through their original
+contracts, competing writes are coordinated, and storage failures report what
+actually persisted. This is not a migration or a cleanup of old content. Before
+activation, the published dependency pins keep existing authoring behavior.

@@ -119,6 +119,15 @@ export const createCommandApiShared = ({
             partitions,
           );
 
+    if (context.repository.acceptedAuthority) {
+      return {
+        id: commandId ?? createId(),
+        partition: resolvedPartition,
+        type,
+        payload,
+      };
+    }
+
     return createCommandEnvelope({
       id: commandId ?? createId(),
       projectId: context.projectId,
@@ -220,6 +229,13 @@ export const createCommandApiShared = ({
       basePartition,
     });
 
+    if (context.repository.acceptedAuthority) {
+      const result = await context.session.submitCommand(command);
+      if (result.valid)
+        context.state = await context.repository.getContextState();
+      return result;
+    }
+
     const validationResult = validateCommandsAgainstContext({
       context,
       commands: [command],
@@ -276,6 +292,13 @@ export const createCommandApiShared = ({
         commandIds: [],
         eventCount: 0,
       };
+    }
+
+    if (context.repository.acceptedAuthority) {
+      const result = await context.session.submitCommands(normalizedCommands);
+      if (result.valid)
+        context.state = await context.repository.getContextState();
+      return result;
     }
 
     const validationResult = validateCommandsAgainstContext({

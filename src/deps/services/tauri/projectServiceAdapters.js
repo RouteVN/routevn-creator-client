@@ -1,4 +1,12 @@
 import {
+  initializeAcceptedProject,
+  strictProjectValidationEnabled,
+} from "../shared/acceptedProjectRepository.js";
+import {
+  canonicalProjectPath,
+  createTauriProjectAcceptanceLease,
+} from "../../clients/tauri/projectAcceptanceLock.js";
+import {
   mkdir,
   writeFile,
   readFile,
@@ -997,6 +1005,8 @@ export const createTauriProjectServiceAdapters = ({
   };
 
   const storageAdapter = {
+    createAcceptanceLease: ({ reference }) =>
+      createTauriProjectAcceptanceLease({ projectPath: reference.projectPath }),
     resolveProjectReferenceByProjectId: async ({ db, projectId }) => {
       const projects = (await db.get("projectEntries")) || [];
       const project = projects.find((entry) => entry.id === projectId);
@@ -1004,18 +1014,26 @@ export const createTauriProjectServiceAdapters = ({
         throw new Error("project not found");
       }
 
+      const projectPath = strictProjectValidationEnabled
+        ? await canonicalProjectPath(project.projectPath)
+        : project.projectPath;
       return {
-        projectPath: project.projectPath,
-        cacheKey: project.projectPath,
+        projectPath,
+        cacheKey: projectPath,
         repositoryProjectId: projectId,
       };
     },
 
-    resolveProjectReferenceByPath: async ({ projectPath }) => ({
-      projectPath,
-      cacheKey: projectPath,
-      repositoryProjectId: projectPath,
-    }),
+    resolveProjectReferenceByPath: async ({ projectPath }) => {
+      const canonical = strictProjectValidationEnabled
+        ? await canonicalProjectPath(projectPath)
+        : projectPath;
+      return {
+        projectPath: canonical,
+        cacheKey: canonical,
+        repositoryProjectId: canonical,
+      };
+    },
 
     readCreatorVersionByReference: async ({ reference }) => {
       const creatorVersion = await readProjectAppValueByReference({
@@ -1104,22 +1122,40 @@ export const createTauriProjectServiceAdapters = ({
         projectPath,
         projectId,
       });
-      const initialClientTs = Date.now();
-      const initialEvent = createProjectCreateRepositoryEvent({
-        projectId,
-        state: templateData,
-        clientTs: initialClientTs,
-      });
+      if (strictProjectValidationEnabled) {
+        const canonicalPath = await canonicalProjectPath(projectPath);
+        const reference = {
+          projectPath: canonicalPath,
+          cacheKey: canonicalPath,
+          repositoryProjectId: projectId,
+        };
+        const lease = await createTauriProjectAcceptanceLease({
+          projectPath: canonicalPath,
+        });
+        await initializeAcceptedProject({
+          reference,
+          store,
+          lease,
+          state: templateData,
+        });
+      } else {
+        const initialClientTs = Date.now();
+        const initialEvent = createProjectCreateRepositoryEvent({
+          projectId,
+          state: templateData,
+          clientTs: initialClientTs,
+        });
 
-      await store.insertDraft(toBootstrappedDraftEvent(initialEvent, 0));
-      await store.saveMaterializedViewCheckpoint({
-        viewName: MAIN_VIEW_NAME,
-        partition: MAIN_PARTITION,
-        viewVersion: MAIN_VIEW_VERSION,
-        lastCommittedId: 1,
-        value: createMainProjectionState(templateData),
-        updatedAt: Date.now(),
-      });
+        await store.insertDraft(toBootstrappedDraftEvent(initialEvent, 0));
+        await store.saveMaterializedViewCheckpoint({
+          viewName: MAIN_VIEW_NAME,
+          partition: MAIN_PARTITION,
+          viewVersion: MAIN_VIEW_VERSION,
+          lastCommittedId: 1,
+          value: createMainProjectionState(templateData),
+          updatedAt: Date.now(),
+        });
+      }
 
       await store.app.set(CREATOR_VERSION_KEY, creatorVersion);
       await store.app.set(PROJECT_INFO_KEY, normalizeProjectInfo(projectInfo));

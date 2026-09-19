@@ -1240,9 +1240,10 @@ export const createStoryCommandApi = (shared) => {
         typeof sceneId === "string" &&
         typeof sourceSceneId === "string" &&
         sceneId !== sourceSceneId;
-      const movedSectionLineSets = isCrossSceneMove
-        ? buildMovedSectionLineSets(sectionLocation)
-        : [];
+      const movedSectionLineSets =
+        isCrossSceneMove && !context.repository.acceptedAuthority
+          ? buildMovedSectionLineSets(sectionLocation)
+          : [];
       const movedLineIds = movedSectionLineSets.flatMap((entry) =>
         entry.lines.map((line) => line.lineId),
       );
@@ -1281,7 +1282,11 @@ export const createStoryCommandApi = (shared) => {
         payload.sceneId = sceneId;
       }
 
-      if (isCrossSceneMove && movedLineIds.length > 0) {
+      if (
+        !context.repository.acceptedAuthority &&
+        isCrossSceneMove &&
+        movedLineIds.length > 0
+      ) {
         const commands = [
           {
             scope: "story",

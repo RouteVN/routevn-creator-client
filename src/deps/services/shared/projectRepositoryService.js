@@ -2,6 +2,9 @@ import {
   assertSupportedProjectState,
   createProjectRepository,
 } from "./projectRepository.js";
+import { SCHEMA_VERSION as MODEL_SCHEMA_VERSION } from "@routevn/creator-model";
+import { STRICT_MODEL_SCHEMA_VERSION } from "../../../internal/projectCompatibility.js";
+import { createAcceptedProjectRepository } from "./acceptedProjectRepository.js";
 import { getOrCreateLocked } from "./getOrCreateLocked.js";
 import { generateId as generateBaseId } from "../../../internal/id.js";
 import {
@@ -56,6 +59,8 @@ export const createProjectRepositoryService = ({
   idGenerator = generateBaseId,
   storageAdapter,
   collabAdapter,
+  onCacheError = () => {},
+  onWriteError = () => {},
 }) => {
   const CURRENT_CREATOR_VERSION = creatorVersion;
   const CREATOR_VERSION_KEY = "creatorVersion";
@@ -77,6 +82,30 @@ export const createProjectRepositoryService = ({
   const referencesByProject = new Map();
   const storeLocksByCacheKey = new Map();
   const repositoryLocksByCacheKey = new Map();
+  const publicStores = new WeakMap();
+  const exposeStore = (store, reference) => {
+    if (!store || MODEL_SCHEMA_VERSION < STRICT_MODEL_SCHEMA_VERSION)
+      return store;
+    if (publicStores.has(store)) return publicStores.get(store);
+    const rejectDirectWrite = async () => {
+      throw new Error("Project writes must pass through command acceptance");
+    };
+    const facade = {
+      ...store,
+      insertDraft: rejectDirectWrite,
+      insertDrafts: rejectDirectWrite,
+      async applyCommittedBatch(input) {
+        const repository = await getRepositoryByReference(reference);
+        return repository.applyCommittedBatch(input);
+      },
+      async applySubmitResult(input) {
+        const repository = await getRepositoryByReference(reference);
+        return repository.applySubmitResult(input);
+      },
+    };
+    publicStores.set(store, facade);
+    return facade;
+  };
 
   let currentRepository;
   let currentProjectId;
@@ -389,6 +418,7 @@ export const createProjectRepositoryService = ({
       try {
         await flushRepositoryForRelease(repository);
       } catch {}
+      await repository.close?.();
     }
 
     const store =
@@ -671,12 +701,14 @@ export const createProjectRepositoryService = ({
 
   const resolveProjectReferenceByPath = async (projectPath) => {
     assertProjectPathSupport();
-    return normalizeReference(
+    const reference = normalizeReference(
       await storageAdapter.resolveProjectReferenceByPath({
         projectPath,
       }),
       projectPath,
     );
+    reference.requestedProjectPath = projectPath;
+    return reference;
   };
 
   const resolveCurrentProjectReference = async (projectId) => {
@@ -686,7 +718,10 @@ export const createProjectRepositoryService = ({
     }
 
     const cachedReference = referencesByProject.get(projectId);
-    if (cachedReference?.projectPath === projectPath) {
+    if (
+      (cachedReference?.requestedProjectPath ??
+        cachedReference?.projectPath) === projectPath
+    ) {
       return cachedReference;
     }
 
@@ -1091,6 +1126,59 @@ export const createProjectRepositoryService = ({
           reference,
           async (store) => {
             await ensureStoreOpenCompatible(store);
+            if (MODEL_SCHEMA_VERSION >= STRICT_MODEL_SCHEMA_VERSION) {
+              const lease = storageAdapter.createAcceptanceLease
+                ? await storageAdapter.createAcceptanceLease({ reference })
+                : {
+                    writable: false,
+                    withLock: async () => {
+                      throw new Error(
+                        "Project editing coordination is unavailable",
+                      );
+                    },
+                    close: async () => {},
+                  };
+              try {
+                const repository = await createAcceptedProjectRepository({
+                  reference,
+                  store,
+                  lease,
+                  generateId,
+                  onCacheError,
+                  onWriteError,
+                  // Cache provenance lives outside exported project storage.
+                  // A copied/imported checkpoint cannot grant itself trust.
+                  readCacheTrust: () =>
+                    db.get(`projectAcceptanceCache:${reference.cacheKey}`),
+                  writeCacheTrust: (digest) =>
+                    db.set(
+                      `projectAcceptanceCache:${reference.cacheKey}`,
+                      digest,
+                    ),
+                  isCurrent: () =>
+                    getCurrentProjectId() === reference.projectId &&
+                    currentReference?.cacheKey === reference.cacheKey &&
+                    (!getCurrentProjectPath() ||
+                      getCurrentProjectPath() ===
+                        (currentReference.requestedProjectPath ??
+                          currentReference.projectPath)),
+                });
+                if (reference.projectId) {
+                  storesByProject.set(reference.projectId, store);
+                  referencesByProject.set(reference.projectId, reference);
+                }
+                await collabAdapter.afterCreateRepository({
+                  projectId: reference.projectId,
+                  reference,
+                  store,
+                  repository,
+                });
+                return { repository };
+              } catch (error) {
+                await lease.close();
+                throw error;
+              }
+            }
             let events;
             let initialRevision;
             let currentHistoryStats;
@@ -1283,7 +1371,9 @@ export const createProjectRepositoryService = ({
 
     const projectPath = getCurrentProjectPath();
     const isCurrentReferenceSelected =
-      !projectPath || currentReference?.projectPath === projectPath;
+      !projectPath ||
+      (currentReference?.requestedProjectPath ??
+        currentReference?.projectPath) === projectPath;
     if (
       currentProjectId === projectId &&
       currentRepository &&
@@ -1330,7 +1420,7 @@ export const createProjectRepositoryService = ({
     await syncProjectEntryProjectInfo(
       projectId,
       projectInfo,
-      reference.projectPath,
+      reference.requestedProjectPath ?? reference.projectPath,
     );
     emitRepositoryLoadStage(onLoadStage, {
       stage: "repository_ready",
@@ -1353,7 +1443,9 @@ export const createProjectRepositoryService = ({
 
     const projectPath = getCurrentProjectPath();
     const isCurrentReferenceSelected =
-      !projectPath || currentReference?.projectPath === projectPath;
+      !projectPath ||
+      (currentReference?.requestedProjectPath ??
+        currentReference?.projectPath) === projectPath;
     let repository =
       targetProjectId === currentProjectId && isCurrentReferenceSelected
         ? currentRepository
@@ -1381,7 +1473,9 @@ export const createProjectRepositoryService = ({
     if (
       !currentRepository ||
       currentProjectId !== projectId ||
-      (projectPath && currentReference?.projectPath !== projectPath)
+      (projectPath &&
+        (currentReference?.requestedProjectPath ??
+          currentReference?.projectPath) !== projectPath)
     ) {
       throw new Error(
         "Repository not initialized. Call ensureRepository() first.",
@@ -1396,7 +1490,9 @@ export const createProjectRepositoryService = ({
     if (
       !currentStore ||
       currentProjectId !== projectId ||
-      (projectPath && currentReference?.projectPath !== projectPath)
+      (projectPath &&
+        (currentReference?.requestedProjectPath ??
+          currentReference?.projectPath) !== projectPath)
     ) {
       throw new Error(
         "Adapter not initialized. Call ensureRepository() first.",
@@ -1411,7 +1507,9 @@ export const createProjectRepositoryService = ({
     if (
       !currentReference ||
       currentProjectId !== projectId ||
-      (projectPath && currentReference.projectPath !== projectPath)
+      (projectPath &&
+        (currentReference.requestedProjectPath ??
+          currentReference.projectPath) !== projectPath)
     ) {
       throw new Error(
         "Project reference not initialized. Call ensureRepository() first.",
@@ -1425,10 +1523,12 @@ export const createProjectRepositoryService = ({
       projectId === getCurrentProjectId() ? getCurrentProjectPath() : "";
     if (selectedProjectPath) {
       const selectedReference =
-        currentReference?.projectPath === selectedProjectPath
+        (currentReference?.requestedProjectPath ??
+          currentReference?.projectPath) === selectedProjectPath
           ? currentReference
           : referencesByProject.get(projectId);
-      return selectedReference?.projectPath === selectedProjectPath
+      return (selectedReference?.requestedProjectPath ??
+        selectedReference?.projectPath) === selectedProjectPath
         ? selectedReference.cacheKey
         : selectedProjectPath;
     }
@@ -1463,14 +1563,20 @@ export const createProjectRepositoryService = ({
     createPlatformDetailsByProjectId,
     updatePlatformDetailsByProjectId,
     resolveProjectReferenceByProjectId,
-    getStoreByProject,
+    async getStoreByProject(projectId) {
+      const store = await getStoreByProject(projectId);
+      return exposeStore(store, referencesByProject.get(projectId));
+    },
     getStoreByProjectSync(projectId) {
-      return storesByProject.get(projectId);
+      return exposeStore(
+        storesByProject.get(projectId),
+        referencesByProject.get(projectId),
+      );
     },
     getCurrentRepository: ensureRepository,
     releaseCurrentRepository,
     getCachedRepository,
-    getCachedStore,
+    getCachedStore: () => exposeStore(getCachedStore(), currentReference),
     getCachedReference,
     async getRepository() {
       return ensureRepository();
@@ -1480,7 +1586,10 @@ export const createProjectRepositoryService = ({
     },
     getRepositoryByProject,
     getAdapterById(projectId) {
-      return storesByProject.get(projectId);
+      return exposeStore(
+        storesByProject.get(projectId),
+        referencesByProject.get(projectId),
+      );
     },
     async releaseRepositoryByProjectId(projectId) {
       return releaseRepositoryByProjectId(projectId);

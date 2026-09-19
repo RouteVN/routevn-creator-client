@@ -22,6 +22,12 @@ jobs:
       - run: bunx playwright install --with-deps chromium webkit
       - name: Frozen old-project compatibility
         run: bun run test:project-compatibility
+      - name: Strict schema validation and persisted acceptance
+        run: bun run test:strict-validation
+      - name: Strict browser acceptance
+        run: |
+          bun run test:strict-browser
+          bun run test:strict-browser --webkit
       - uses: actions/upload-artifact@v4
         if: always()
         with:
