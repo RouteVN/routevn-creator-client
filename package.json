@@ -113,7 +113,9 @@
     "player-template:build:win": "bun run build:bundle && node scripts/build-windows-player-template.js",
     "player-template:build:win:docker": "./scripts/build-windows-player-template-docker.sh",
     "player-template:prepare:mac": "bun run build:bundle && node scripts/build-macos-player-template.js --prepare-only",
-    "player-template:build:mac": "bun run build:bundle && node scripts/build-macos-player-template.js"
+    "player-template:build:mac": "bun run build:bundle && node scripts/build-macos-player-template.js",
+    "test:strict-validation": "node --import ./tests/projectCompatibility/nativeHooks.mjs --test scripts/test-strict-validation.js scripts/test-project-acceptance.js scripts/test-project-authority.js scripts/test-accepted-cache.js scripts/test-strict-project-integration.js",
+    "test:strict-browser": "node scripts/test-strict-browser.js"
   },
   "devDependencies": {
     "@tauri-apps/cli": "2.11.1",

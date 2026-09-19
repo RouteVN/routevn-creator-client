@@ -157,6 +157,7 @@ export const initializeProject = async ({
   projectResolution,
   creatorVersion,
   rawClientStore,
+  persistInitialState,
 }) => {
   if (!template) {
     throw new Error("Template is required for project initialization");
@@ -188,28 +189,32 @@ export const initializeProject = async ({
 
   assertSupportedProjectState(templateData);
 
-  const initialClientTs = Date.now();
-  const initialEvent = createProjectCreateRepositoryEvent({
-    projectId,
-    state: templateData,
-    clientTs: initialClientTs,
-  });
-  if (typeof rawClientStore.applyCommittedBatch !== "function") {
-    throw new Error(
-      "rawClientStore.applyCommittedBatch is required for web project initialization",
-    );
+  if (persistInitialState) {
+    await persistInitialState({ store: adapter, state: templateData });
+  } else {
+    const initialClientTs = Date.now();
+    const initialEvent = createProjectCreateRepositoryEvent({
+      projectId,
+      state: templateData,
+      clientTs: initialClientTs,
+    });
+    if (typeof rawClientStore.applyCommittedBatch !== "function") {
+      throw new Error(
+        "rawClientStore.applyCommittedBatch is required for web project initialization",
+      );
+    }
+    await rawClientStore.applyCommittedBatch({
+      events: [toBootstrappedCommittedEvent(initialEvent, 0)],
+    });
+    await adapter.saveMaterializedViewCheckpoint({
+      viewName: MAIN_VIEW_NAME,
+      partition: MAIN_PARTITION,
+      viewVersion: MAIN_VIEW_VERSION,
+      lastCommittedId: 1,
+      value: createMainProjectionState(templateData),
+      updatedAt: Date.now(),
+    });
   }
-  await rawClientStore.applyCommittedBatch({
-    events: [toBootstrappedCommittedEvent(initialEvent, 0)],
-  });
-  await adapter.saveMaterializedViewCheckpoint({
-    viewName: MAIN_VIEW_NAME,
-    partition: MAIN_PARTITION,
-    viewVersion: MAIN_VIEW_VERSION,
-    lastCommittedId: 1,
-    value: createMainProjectionState(templateData),
-    updatedAt: Date.now(),
-  });
 
   await adapter.app.set("creatorVersion", creatorVersion);
   await adapter.app.set(PROJECT_INFO_KEY, normalizeProjectInfo(projectInfo));
@@ -283,6 +288,7 @@ export const createInsiemeWebStoreAdapter = async (
 
   return {
     // Insieme store interface
+    ...rawClientStore,
     async listCommittedAfter({ sinceCommittedId, limit } = {}) {
       const committed = await rawClientStore.listCommittedAfter({
         sinceCommittedId,
@@ -533,6 +539,10 @@ export const createInsiemeWebStoreAdapter = async (
         request.onsuccess = () => resolve();
         request.onerror = (event) => reject(event.target.error);
       });
+    },
+    async close() {
+      db.close();
+      await rawClientStore.close();
     },
   };
 };

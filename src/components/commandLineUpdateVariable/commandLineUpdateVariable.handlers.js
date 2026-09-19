@@ -426,6 +426,16 @@ export const handleSubmitClick = (deps, payload) => {
         return result;
       }
 
+      if (varType === "object") {
+        if (op.op !== "set" || !op.value || typeof op.value !== "object") {
+          hasInvalidOperationValue = true;
+          return undefined;
+        }
+        result.value = structuredClone(op.value);
+        result.valueMode = "literal";
+        return result;
+      }
+
       if (op.value !== "" && op.value !== undefined) {
         result.value = op.value;
       }

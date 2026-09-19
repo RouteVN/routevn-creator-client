@@ -297,6 +297,7 @@ const shouldSkipObsoleteSceneReplayEvent = ({
   repositoryState,
   error,
 }) => {
+  if (event?.schemaVersion !== 1) return false;
   const { command, lineId, sectionId, sectionIds } =
     getSceneProjectionDebugDetails(event);
   if (command?.type?.startsWith("section.")) {

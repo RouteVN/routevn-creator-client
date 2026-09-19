@@ -3,6 +3,7 @@ import { createAssetPackageExportService } from "./assetPackageExportService.js"
 import { createProjectCollabCore } from "./projectCollabCore.js";
 import { createProjectExportService } from "./projectExportService.js";
 import { createProjectRepositoryService } from "./projectRepositoryService.js";
+import { createProjectCollabService } from "./collab/createProjectCollabService.js";
 import { createResourcePackageImportService } from "./resourcePackageImportService.js";
 import { importImageFile as importProjectImageFile } from "./resourceImports.js";
 import {
@@ -53,6 +54,7 @@ export const createProjectServiceCore = ({
   collabAdapter,
   shouldApplyProjectContentPatchesOnEnsure = () => true,
 }) => {
+  let persistenceIssueListener = () => {};
   const repositoryService = createProjectRepositoryService({
     router,
     db,
@@ -60,6 +62,8 @@ export const createProjectServiceCore = ({
     idGenerator,
     storageAdapter,
     collabAdapter,
+    onCacheError: () => persistenceIssueListener("cache_stale"),
+    onWriteError: (code) => persistenceIssueListener(code),
   });
 
   const assetService = createProjectAssetService({
@@ -82,8 +86,29 @@ export const createProjectServiceCore = ({
     getRepositoryByProject: repositoryService.getRepositoryByProject,
     getAdapterByProject: repositoryService.getStoreByProjectSync,
     getProjectCacheKey: repositoryService.getProjectCacheKey,
-    createSessionForProject: (payload) =>
-      collabAdapter.createSessionForProject({
+    createSessionForProject: async (payload) => {
+      const repository = await repositoryService.getRepositoryByProject(
+        payload.projectId,
+      );
+      if (repository.acceptedAuthority) {
+        const session = createProjectCollabService({
+          projectId: payload.projectId,
+          token: payload.token,
+          actor: { userId: payload.userId, clientId: payload.clientId },
+          clientStore: await repositoryService.getStoreByProject(
+            payload.projectId,
+          ),
+          acceptance: repository,
+          logger: (entry) => collabLog("debug", "sync-client", entry),
+        });
+        await session.start();
+        if (payload.endpointUrl)
+          await session.setOnlineTransport(
+            collabAdapter.createTransport({ endpointUrl: payload.endpointUrl }),
+          );
+        return session;
+      }
+      return collabAdapter.createSessionForProject({
         ...payload,
         getRepositoryByProject: repositoryService.getRepositoryByProject,
         getStoreByProject: repositoryService.getStoreByProject,
@@ -91,7 +116,8 @@ export const createProjectServiceCore = ({
         resolveProjectReferenceByProjectId:
           repositoryService.resolveProjectReferenceByProjectId,
         collabLog,
-      }),
+      });
+    },
     createTransport: collabAdapter.createTransport,
     onEnsureLocalSession: collabAdapter.onEnsureLocalSession,
     onSessionCleared: collabAdapter.onSessionCleared,
@@ -568,6 +594,9 @@ export const createProjectServiceCore = ({
   };
 
   return {
+    onPersistenceIssue(listener) {
+      persistenceIssueListener = listener;
+    },
     getRepository: repositoryService.getRepository,
     getRepositoryById: repositoryService.getRepositoryById,
     getAdapterById: repositoryService.getAdapterById,

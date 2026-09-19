@@ -1,5 +1,6 @@
 import AVFoundation
 import Foundation
+import Darwin
 import CryptoKit
 import PhotosUI
 import SQLite3
@@ -44,6 +45,7 @@ final class RouteVNViewController: UIViewController, WKNavigationDelegate, WKScr
     private var projectFolderSetup: ProjectFolderSetup { storage.projectFolderSetup }
     private var webView: WKWebView!
     private var sqliteDatabases: [String: OpaquePointer] = [:]
+    private let projectAcceptanceLocks = ProjectAcceptanceLocks()
     private var appActive = false
     private var canGoBackInWebApp = false
     private var pendingDocumentPicker: PendingDocumentPicker?
@@ -392,6 +394,15 @@ final class RouteVNViewController: UIViewController, WKNavigationDelegate, WKScr
 
     private func handleBridgeMethod(_ method: String, payload: [String: Any]) throws -> Any {
         switch method {
+        case "projectAcceptancePath":
+            return try storage.databaseURL(dbPath: "projects/\(requiredString(payload, "projectId"))/project.db").deletingLastPathComponent().resolvingSymlinksInPath().path
+        case "acquireProjectAcceptanceLock":
+            let directory = try storage.databaseURL(dbPath: "projects/\(requiredString(payload, "projectId"))/project.db").deletingLastPathComponent()
+            return try projectAcceptanceLocks.acquire(directory: directory, ownerId: requiredString(payload, "ownerId"))
+        case "releaseProjectAcceptanceLock":
+            let directory = try storage.databaseURL(dbPath: "projects/\(requiredString(payload, "projectId"))/project.db").deletingLastPathComponent()
+            projectAcceptanceLocks.release(directory: directory, ownerId: try requiredString(payload, "ownerId"))
+            return true
         #if DEBUG
         case "devError":
             if devServerURL != nil {
@@ -2883,4 +2894,42 @@ private func resolveProjectExportFolderName(projectInfo: [String: Any]) -> Strin
     formatter.locale = Locale(identifier: "en_US_POSIX")
     formatter.dateFormat = "yyyyMMdd-HHmmss"
     return "\(title)-\(formatter.string(from: Date()))"
+}
+
+// Session ownership uses an OS lock on a stable file. Suspending the app does
+// not release it; teardown/process exit closes the descriptor.
+private final class ProjectAcceptanceLocks {
+    private var owners: [String: (id: String, descriptor: Int32)] = [:]
+    private let mutex = NSLock()
+
+    func acquire(directory: URL, ownerId: String) throws -> Bool {
+        mutex.lock()
+        defer { mutex.unlock() }
+        let path = directory.resolvingSymlinksInPath().path
+        if let owner = owners[path] { return owner.id == ownerId }
+        let descriptor = Darwin.open(path + "/project.acceptance.lock", O_RDWR | O_CREAT, S_IRUSR | S_IWUSR)
+        guard descriptor >= 0 else { throw NSError(domain: NSPOSIXErrorDomain, code: Int(errno)) }
+        if Darwin.flock(descriptor, LOCK_EX | LOCK_NB) != 0 {
+            let code = errno
+            Darwin.close(descriptor)
+            if code == EWOULDBLOCK { return false }
+            throw NSError(domain: NSPOSIXErrorDomain, code: Int(code))
+        }
+        owners[path] = (ownerId, descriptor)
+        return true
+    }
+
+    func release(directory: URL, ownerId: String) {
+        mutex.lock()
+        defer { mutex.unlock() }
+        let path = directory.resolvingSymlinksInPath().path
+        if let owner = owners[path], owner.id == ownerId {
+            Darwin.close(owner.descriptor)
+            owners.removeValue(forKey: path)
+        }
+    }
+
+    deinit {
+        for owner in owners.values { Darwin.close(owner.descriptor) }
+    }
 }

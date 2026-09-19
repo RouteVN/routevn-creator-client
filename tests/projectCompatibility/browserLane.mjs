@@ -142,9 +142,15 @@ export function createBrowserLane(api) {
       };
       const service = api.createProjectRepositoryService({
         router: { getPayload: () => ({}) },
-        db: {},
+        db: { get: async () => undefined, set: async () => {} },
         creatorVersion: 2,
         storageAdapter: {
+          createAcceptanceLease: async () => ({
+            writable: true,
+            withLock: (operation) =>
+              navigator.locks.request(`routevn:accept:${names[1]}`, operation),
+            close: async () => {},
+          }),
           resolveProjectReferenceByProjectId: async () => reference,
           createStore: async () => store,
           readCreatorVersionByReference: () => store.app.get("creatorVersion"),
@@ -170,7 +176,8 @@ export function createBrowserLane(api) {
         runtime: observeRuntime({ state: openedState, ...api }),
       });
       // Keep the original frozen history-only observations independently checked.
-      const historyState = await repository.loadState();
+      const historyState = await (repository.loadHistoryState?.() ??
+        repository.loadState());
       const historyReplay = await encodeIdbValue({
         state: historyState,
         scenes: Object.fromEntries(

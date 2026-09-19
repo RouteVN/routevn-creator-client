@@ -1,7 +1,7 @@
 # Upstream work and rollout sequence
 
-Status: implementation has resumed with the executable old-project baseline
-and isolated owner work. No package release, client dependency upgrade, strict
+Status: implementation is available on the client and owner feature branches.
+See [implementation status](./implementation-status.md) for changes and test evidence. No package release, client dependency upgrade, strict
 write enablement, application release, or deployment has been performed.
 
 The storage contract remains envelope 2 with `{ mv, commandPayload }` inside

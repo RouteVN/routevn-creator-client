@@ -192,6 +192,7 @@ public class MainActivity extends Activity {
     private final Handler mainHandler = new Handler(Looper.getMainLooper());
     private final ExecutorService bridgeExecutor =
         Executors.newSingleThreadExecutor();
+    private final ProjectAcceptanceLocks projectAcceptanceLocks = new ProjectAcceptanceLocks();
     private final Runnable finishSplashRunnable = this::finishSplash;
     private final Map<String, SQLiteDatabase> sqliteDatabases = new HashMap<>();
     private final Map<String, ProjectFileWriteSession> projectFileWriteSessions =
@@ -809,6 +810,7 @@ public class MainActivity extends Activity {
         bridgeExecutor.execute(() -> {
             projectBackup.cleanupAfterClose();
             closeSqliteDatabases();
+            projectAcceptanceLocks.close();
             closeProjectFileWriteSessions();
             cleanupPendingSaveDocuments();
         });
@@ -1099,6 +1101,13 @@ public class MainActivity extends Activity {
         JSONObject payload = new JSONObject(payloadJson);
         AndroidBridge bridge = new AndroidBridge();
         switch (method) {
+            case "projectAcceptancePath":
+                return bridgeSuccess(resolveProjectDatabaseFileForBridge("projects/" + safePathSegment(payload.getString("projectId")) + "/project.db").getParentFile().getCanonicalPath());
+            case "acquireProjectAcceptanceLock":
+                return bridgeSuccess(projectAcceptanceLocks.acquire(resolveProjectDatabaseFileForBridge("projects/" + safePathSegment(payload.getString("projectId")) + "/project.db").getParentFile(), payload.getString("ownerId")));
+            case "releaseProjectAcceptanceLock":
+                projectAcceptanceLocks.release(resolveProjectDatabaseFileForBridge("projects/" + safePathSegment(payload.getString("projectId")) + "/project.db").getParentFile(), payload.getString("ownerId"));
+                return bridgeSuccess(true);
             case "getBackupStatus":
                 return bridgeSuccess(projectBackup.status());
             case "configureBackup":

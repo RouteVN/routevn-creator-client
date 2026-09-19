@@ -3,6 +3,10 @@ import {
   commandToSyncEvent as mapCommandToSyncEvent,
 } from "insieme/client";
 import { COMMAND_EVENT_MODEL } from "../../../../internal/project/commands.js";
+import {
+  decodeCommandEnvelope,
+  encodeCommandEnvelope,
+} from "./commandCodec.js";
 
 const normalizeSchemaVersion = (value) => {
   const parsed = Number(value);
@@ -24,7 +28,11 @@ const normalizeCommandEnvelope = (command) => {
 };
 
 export const commandToSyncEvent = (command) => {
-  return mapCommandToSyncEvent(command, {
+  const encoded =
+    Object.hasOwn(command, "modelSchemaVersion") || command.schemaVersion === 2
+      ? encodeCommandEnvelope(command)
+      : command;
+  return mapCommandToSyncEvent(encoded, {
     defaultSchemaVersion:
       normalizeSchemaVersion(command?.schemaVersion) ??
       COMMAND_EVENT_MODEL.schemaVersion,
@@ -32,8 +40,12 @@ export const commandToSyncEvent = (command) => {
 };
 
 export const committedEventToCommand = (committedEvent) => {
-  const command = committedSyncEventToCommand(committedEvent);
+  const decoded = decodeCommandEnvelope(committedEvent);
+  const command = committedSyncEventToCommand(decoded);
   if (!command) return null;
-
-  return normalizeCommandEnvelope(command);
+  const envelope = normalizeCommandEnvelope(command);
+  if (Object.hasOwn(decoded, "modelSchemaVersion")) {
+    envelope.modelSchemaVersion = decoded.modelSchemaVersion;
+  }
+  return envelope;
 };

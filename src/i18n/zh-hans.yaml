@@ -231,6 +231,9 @@ appPage:
   failedLoadAppSettings: "无法加载应用设置。将使用默认值。"
   failedOpenLink: "无法打开链接。"
   failedSaveAppSettings: "无法保存应用设置。"
+  projectViewsRebuildNotice: "更改已保存。重新打开项目时，部分视图将重新生成。"
+  projectPartialSaveNotice: 此次更改仅保存了一部分。请先检查项目，再重试。
+  projectUnknownSaveNotice: 无法确认是否已保存。请重新打开项目，检查已保存的更改。
   failedUpdateStatusBar: "无法更新状态栏。请重启应用。"
   failedRevealEditorCaret: "无法滚动到光标位置。请重启应用。"
   failedSaveProjectIcon: "项目已创建，但无法保存项目图标。"

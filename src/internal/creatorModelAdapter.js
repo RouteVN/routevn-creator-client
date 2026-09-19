@@ -1,8 +1,10 @@
 import {
+  SCHEMA_VERSION as CREATOR_MODEL_SCHEMA_VERSION,
   normalizeState as normalizeCreatorModelState,
   processCommand as processCreatorModelCommand,
   replayCommands as replayCreatorModelCommands,
 } from "@routevn/creator-model";
+import { STRICT_MODEL_SCHEMA_VERSION } from "./projectCompatibility.js";
 
 class CreatorModelAdapterError extends Error {
   constructor(message) {
@@ -1378,6 +1380,7 @@ const toCreatorModelInvalidResult = (error) => {
   if (error?.kind) {
     normalizedError.kind = error.kind;
   }
+  if (error?.path) normalizedError.path = error.path;
 
   if (error?.details && typeof error.details === "object") {
     normalizedError.details = error.details;
@@ -2077,6 +2080,30 @@ export const applyCommandToRepositoryStateWithCreatorModel = ({
   command,
 } = {}) => {
   return captureCreatorModelResult(() => {
+    if (command && Object.hasOwn(command, "modelSchemaVersion")) {
+      if (CREATOR_MODEL_SCHEMA_VERSION < STRICT_MODEL_SCHEMA_VERSION) {
+        return toCreatorModelInvalidResult({
+          code: "unsupported_model_schema_version",
+          message:
+            "This application does not yet include the required command schema",
+          path: "modelSchemaVersion",
+        });
+      }
+      // Strict commands must reach the owner with complete domain data. Never
+      // strip extensions, clone unchecked input, or run a client-side reducer.
+      const result = processCreatorModelCommand({
+        state: repositoryState,
+        command,
+      });
+      if (!result.valid) return toCreatorModelResult(result);
+      return {
+        valid: true,
+        creatorModelCommand: command,
+        nextCreatorModelState: result.state,
+        repositoryState: result.state,
+        validationWork: result.validationWork,
+      };
+    }
     const creatorModelCommand = commandToCreatorModelCommand({
       command,
     });
@@ -2146,12 +2173,17 @@ export const applyCommandsToRepositoryStateWithCreatorModel = ({
 } = {}) => {
   return captureCreatorModelResult(() => {
     const normalizedCommands = Array.isArray(commands) ? commands : [];
-    const requiresSequentialProjection = normalizedCommands.some((command) =>
-      requiresClientModelCharacterSpriteProjection({
-        command,
-        repositoryState,
-      }),
+    const hasStrictCommands = normalizedCommands.some(
+      (command) => command && Object.hasOwn(command, "modelSchemaVersion"),
     );
+    const requiresSequentialProjection =
+      hasStrictCommands ||
+      normalizedCommands.some((command) =>
+        requiresClientModelCharacterSpriteProjection({
+          command,
+          repositoryState,
+        }),
+      );
 
     if (requiresSequentialProjection) {
       const creatorModelCommands = commandsToCreatorModelCommands({
@@ -2172,7 +2204,9 @@ export const applyCommandsToRepositoryStateWithCreatorModel = ({
       return {
         valid: true,
         creatorModelCommands,
-        nextCreatorModelState: toCreatorModelState(nextState),
+        nextCreatorModelState: hasStrictCommands
+          ? nextState
+          : toCreatorModelState(nextState),
         repositoryState: nextState,
       };
     }

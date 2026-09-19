@@ -231,6 +231,9 @@ appPage:
   failedLoadAppSettings: "Failed to load app settings. Using defaults."
   failedOpenLink: "Failed to open link."
   failedSaveAppSettings: "Failed to save app settings."
+  projectViewsRebuildNotice: "Your changes are saved. Some project views will be rebuilt when you reopen."
+  projectPartialSaveNotice: Only part of this change was saved. Review the project before trying again.
+  projectUnknownSaveNotice: We could not confirm the save. Reopen the project to check its saved changes.
   failedUpdateStatusBar: "Could not update the status bar. Please restart the app."
   failedRevealEditorCaret: "Could not scroll to the cursor. Please restart the app."
   failedSaveProjectIcon: "The project was created, but its icon could not be saved."
