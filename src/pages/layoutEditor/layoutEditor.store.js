@@ -28,6 +28,7 @@ const arePreviewDataEqual = (left, right) => {
 const selectLayoutEditorCanvasMaxWidth = ({ state }) => {
   return formatHalfViewportCanvasMaxWidth(
     state.projectResolution ?? DEFAULT_PROJECT_RESOLUTION,
+    { dynamicViewport: state.isTouchMode },
   );
 };
 

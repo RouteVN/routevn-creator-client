@@ -139,23 +139,17 @@ describe("systemActions view", () => {
     expect(systemActionsView).toContain(
       ":dialogPadding=${actionsDialogPadding}",
     );
-    expect(systemActionsView).toContain(
-      ":panelTop=${actionsDialogPanelTop}",
-    );
+    expect(systemActionsView).toContain(":panelTop=${actionsDialogPanelTop}");
     expect(systemActionsView).toContain(
       ":panelBottom=${actionsDialogPanelBottom}",
     );
     expect(systemActionsView).toContain("overflow-x: hidden");
     expect(systemActionsView).toContain("overflow-y: auto");
     expect(systemActionsView).toContain("overscroll-behavior: contain");
-    expect(systemActionsView).toContain(
-      "top: calc(var(--spacing-md) - 2px)",
-    );
+    expect(systemActionsView).toContain("top: calc(var(--spacing-md) - 2px)");
     expect(systemActionsView).toContain("top: var(--spacing-md)");
     expect(systemActionsView).toContain("right: var(--spacing-md);");
-    expect(systemActionsView).toContain(
-      "w=28 h=28 sm-w=24 sm-h=24",
-    );
+    expect(systemActionsView).toContain("w=28 h=28 sm-w=24 sm-h=24");
     expect(sceneEditorLexicalView).toContain(
       "dialog-variant=scene-editor-left",
     );
@@ -189,9 +183,9 @@ describe("systemActions view", () => {
     );
 
     expect(dialogSurfaceView).toContain(
-      "rtgl-dialog#dialog ?open=${open} s=${dialogSize}",
+      "rtgl-dialog#dialog ?open=${open} layout=fixed bare",
     );
-    expect(dialogSurfaceView).toContain("overflow-x: hidden");
+    expect(dialogSurfaceView).toContain("max-height: 100%;");
     expect(dialogSurfaceView).toContain("touch-action: pan-y");
   });
 });

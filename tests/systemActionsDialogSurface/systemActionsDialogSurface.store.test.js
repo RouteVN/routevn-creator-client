@@ -16,10 +16,10 @@ describe("systemActionsDialogSurface.store", () => {
       variant: "default",
       isSceneEditorLeft: false,
       isSceneEditorMobile: false,
+      compact: false,
       fullscreen: false,
       fullscreenHorizontalInset: "0px",
-      dialogWidth: "800",
-      dialogSize: undefined,
+      dialogWidth: "800px",
       dialogHeight: "80vh",
       dialogPadding: "lg",
       panelWidth: "50vw",
@@ -45,7 +45,7 @@ describe("systemActionsDialogSurface.store", () => {
     expect(viewData.dialogPadding).toBe("none");
   });
 
-  it("uses the md dialog size for touch-width content", () => {
+  it("preserves full-width touch content", () => {
     const viewData = selectViewData({
       state: createInitialState(),
       props: {
@@ -54,7 +54,6 @@ describe("systemActionsDialogSurface.store", () => {
     });
 
     expect(viewData.dialogWidth).toBe("100%");
-    expect(viewData.dialogSize).toBe("md");
   });
 
   it("normalizes the scene editor left panel variant", () => {
