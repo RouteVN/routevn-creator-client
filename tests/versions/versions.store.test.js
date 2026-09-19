@@ -31,6 +31,13 @@ describe("versions store form", () => {
     });
 
     expect(viewData.versionForm.title).toBe("New Version");
+    expect(viewData.versionForm.fields[0]).toEqual({
+      name: "name",
+      type: "input-text",
+      label: "Name",
+      description: EN_I18N.versionsPage.nameDescription,
+      required: true,
+    });
     expect(viewData.versionForm.actions).toEqual({
       buttons: [
         {

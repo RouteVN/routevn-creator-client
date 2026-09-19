@@ -786,7 +786,9 @@ const prepareExportConfirmation = async (
     macosExportForm.reset();
     macosExportForm.setValues({
       values: {
-        version: version.name ?? "",
+        version: isValidMacosApplicationVersion(version?.name)
+          ? version.name
+          : "",
         buildNumber: "",
       },
     });
