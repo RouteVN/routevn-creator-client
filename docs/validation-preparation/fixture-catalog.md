@@ -1,8 +1,10 @@
 # Validation fixture catalog
 
-Status: Phase 1 preparation only, September 13, 2026. These are data fixtures
-and recorded baseline observations. No strict validator, application codec,
-storage migration, or active test runner has been added.
+This catalog records the September 13 preparation fixtures and their historical
+baseline observations. The legacy section-move scenario is now owned and tested
+in the model repository; whole-project compatibility coverage lives in the
+client harness linked below. Strict validation remains separate implementation
+work.
 
 The [manifest](./fixtures/manifest.json) records exact source revisions, source
 and artifact SHA-256 hashes, and the model-version binding. `M` means the first
@@ -26,11 +28,27 @@ Marked expectations remain unexecuted until the engine feature exists.
 
 ## Whole-project compatibility coverage
 
-The [old-project test plan](./legacy-project-test-plan.md) defines the missing
+The [old-project test plan](./legacy-project-test-plan.md) defines the
 whole-project layer: immutable native folders and lossless IndexedDB captures,
 pinned old-reader oracles, exact row preservation, and the open/edit/reopen
-matrix. Its P01–P10 packs are planned, not existing project archives. The domain
-fixtures below are input material for that capture work, not a substitute for it.
+matrix. The P01–P10 packs are now implemented in
+[the client compatibility harness](../../tests/projectCompatibility/README.md).
+The preparation domain fixtures below record earlier observations.
+
+## Model-owned section-move fixture
+
+[Model PR #79](https://github.com/RouteVN/routevn-creator-model/pull/79) adopts
+[the legacy section-move fixture](https://github.com/RouteVN/routevn-creator-model/tree/80f653e66c67980593ef1e770513b1804f7a2176/tests/compat/section-move-legacy-preserved)
+and its executable model test. The seed and expected state retain their original
+bytes; the two commands contain only model types and domain payloads. Sequential
+processing and batch replay must preserve the complete state, line IDs/order,
+unknown actions and dialogue fields, and input immutability.
+
+The duplicated client scenario and observed state have been removed. This
+catalog and `manifest.json` retain a pinned owner reference and the original
+artifact hashes. The historical baseline summary remains unchanged. The shared
+client seed stays because other client integration recipes use it; model tests
+have their own frozen copy and never read a sibling client checkout.
 
 ## Provenance and reuse
 
@@ -81,7 +99,7 @@ the expected accepted state of the strict implementation.
 | [Resource use, clear, delete](./fixtures/scenarios/resource-use-clear-delete.json)        | Validate a historical image reference at its event prefix; later valid deletion must not break reload. A new use after deletion rejects                      | Full state; three commands                                                      |
 | [Direct section move](./fixtures/scenarios/section-move-direct.json)                      | Replay original ownership before and after cross-scene movement; preserve lines and chronological dependencies                                               | Full state; three commands                                                      |
 | [Current section-move emitter](./fixtures/scenarios/section-move-emitter.json)            | Preserve stored envelope-1 delete/move/recreate sequences; change future authoring to the existing direct model move                                         | Full state; three commands; clean result equals one direct move                 |
-| [Move unchanged legacy lines](./fixtures/scenarios/section-move-legacy-preserved.json)    | A new direct move retains legacy action data and line identities; copy/duplicate remains strict new-content creation                                         | Full state; two commands                                                        |
+| [Move unchanged legacy lines][legacy-section-move]                                        | A new direct move retains legacy action data and line identities; copy/duplicate remains strict new-content creation                                         | Model-owned test; original full state and two domain commands                   |
 | [Character spritesheet adapter](./fixtures/scenarios/character-spritesheet-adapter.json)  | Keep historical spritesheet data during replay and ordinary updates; strict authoring requires model-owned support                                           | Raw model rejects; current client adapter accepts create then rename            |
 | [Envelope/version failures](./fixtures/scenarios/envelope-and-version-errors.json)        | Preserve existing historical legacy version reads; reject malformed strict versions/wrappers and future `mv` without legacy fallback                         | Existing storage coercion documented; future decoder cases are unexecuted       |
 | [Persistence round trip](./fixtures/scenarios/persistence-roundtrip.json)                 | Both draft and committed tables retain the same wrapper; stable retries, promotion, backup, and engine-facing decoding preserve the correct identity/version | Declarative platform test cases                                                 |
@@ -235,3 +253,5 @@ every action field, runtime limit, UI emitter, or platform fault. Those cases
 must be derived from the separate action contract inventory when the model
 tests are implemented. Shipped templates and actual project distributions
 have not been measured by these synthetic fixtures.
+
+[legacy-section-move]: https://github.com/RouteVN/routevn-creator-model/tree/80f653e66c67980593ef1e770513b1804f7a2176/tests/compat/section-move-legacy-preserved

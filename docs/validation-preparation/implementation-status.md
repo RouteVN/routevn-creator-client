@@ -46,8 +46,16 @@ Local owner branches now retain the tested commits:
 - `routevn-creator-model`: `feat/versioned-command-validation`, `0d03c97`.
 - `route-engine`: `feat/literal-object-variable-values`, `75f99e5`.
 
-Their existing working checkouts and untracked files were preserved. No owner
-branch was pushed and no package was published.
+Their existing working checkouts and untracked files were preserved. Those two
+branches remain unpublished; no package was published.
+
+The separate [model PR #79](https://github.com/RouteVN/routevn-creator-model/pull/79)
+moves the legacy section-move scenario out of client preparation documents into
+model-owned compatibility tests. It preserves the original seed/expected bytes
+and tests complete sequential/batch results, legacy line data and input
+immutability. Its branch is `test/legacy-section-move-compatibility`, commit
+`80f653e`; it passes 4,253 model tests and all 3,465 compatibility checks.
+The client catalog and manifest link to that pinned owner copy.
 
 ## Verification from this implementation run
 
