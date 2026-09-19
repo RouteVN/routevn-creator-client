@@ -211,13 +211,13 @@ export const formatProjectResolutionAspectRatio = (resolution) => {
 
 export const formatHalfViewportCanvasMaxWidth = (
   resolution,
-  { dynamicViewport = false } = {},
+  { heightUnit = "vh" } = {},
 ) => {
   const requiredResolution = requireProjectResolution(resolution);
   const widthMultiplier = requiredResolution.width / requiredResolution.height;
-  const maxWidthVh = Number((widthMultiplier * 50).toFixed(4));
+  const maxWidth = Number((widthMultiplier * 50).toFixed(4));
 
-  return `min(100%, ${maxWidthVh}${dynamicViewport ? "dvh" : "vh"})`;
+  return `min(100%, ${maxWidth}${heightUnit})`;
 };
 
 export const requireProjectResolution = (

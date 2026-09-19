@@ -320,11 +320,10 @@ export const selectViewData = ({ state, props, props: attrs, i18n }) => {
       : transformEditorOpen
         ? "100%"
         : "800px",
-    // Reserve the 48px editor navbar, 64px tabs, and safe areas before halving.
     actionsDialogHeight: transformEditorOpen
       ? "100vh"
       : state.isTouchMode
-        ? "calc((100dvh - 48px - 64px - env(safe-area-inset-top, 0px) - env(safe-area-inset-bottom, 0px)) / 2)"
+        ? "min(56dvh, 480px)"
         : "80vh",
     actionsDialogPanelWidth: state.isTouchMode
       ? "100vw"
