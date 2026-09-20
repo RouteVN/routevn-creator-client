@@ -1274,8 +1274,11 @@ least 120 seconds per asset operation; size adds 30 seconds per 50 MiB, capped
 at 120 seconds. These are per-operation limits, not a deadline for the whole
 project. `src/internal/asyncOperation.js` owns the shared policy and abortable
 wait. A timeout releases queues even when the underlying native API ignores
-cancellation. Late file URLs are revoked and late renderer initialization is
-destroyed without attaching to the editor. JavaScript deadlines cannot preempt
+cancellation. Late file URLs are revoked. Cancelled renderer sessions are
+invalidated immediately; renderer destruction waits for the underlying
+initialization to settle (success or failure), without attaching to the editor
+or touching a replacement renderer. Cleanup failures must not replace the
+original cancellation/timeout error. JavaScript deadlines cannot preempt
 a decoder or script that blocks the main thread synchronously.
 
 Closing fullscreen preview aborts its session, including pending hydration and
@@ -1297,8 +1300,11 @@ and font stacks, using the same once-per-editor warning policy.
 
 Graphics service initialization and destruction share a serialized lifecycle
 queue. Overlapping calls must finish initializing and release each renderer
-before creating its replacement. `node tests/graphicsService/lifecycle.browser.mjs`
-checks real renderer-context cleanup across repeated overlapping initializations.
+before creating its replacement, except cancelled/timed-out initialization:
+its session is released immediately and its renderer alone is cleaned up once
+the underlying initialization settles. `node tests/graphicsService/lifecycle.browser.mjs`
+checks real renderer-context cleanup across repeated overlapping initializations
+and cancellation before Pixi has created its renderer, including late rejection.
 
 Scene editor and fullscreen preview asset warnings share
 `src/internal/ui/assetLoadFeedback.js`. Resolve file IDs against authoring

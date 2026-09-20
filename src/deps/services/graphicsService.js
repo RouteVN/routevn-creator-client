@@ -2231,6 +2231,8 @@ export const createGraphicsService = async ({
         }
 
         options.signal?.throwIfAborted();
+        let activeRouteGraphics;
+        let rendererInitialization;
         routeGraphicsInitPromise = (async () => {
           ticker = new Ticker();
           ticker.start();
@@ -2264,9 +2266,6 @@ export const createGraphicsService = async ({
               onAudioOutputError?.(error);
             });
           }
-          const activeRouteGraphics = createRouteGraphics();
-          routeGraphics = activeRouteGraphics;
-
           const plugins = await runAsyncOperation(loadGraphicsEnginePlugins, {
             signal: options.signal,
             label: "Load graphics plugins",
@@ -2274,89 +2273,94 @@ export const createGraphicsService = async ({
 
           await runWithNonPassiveWheelListeners(() =>
             runAsyncOperation(
-              () =>
-                activeRouteGraphics.init({
-                  width: renderWidth,
-                  height: renderHeight,
-                  plugins,
-                  eventHandler: (eventName, payload) => {
-                    if (
-                      routeGraphics !== activeRouteGraphics ||
-                      options.signal?.aborted
-                    )
-                      return;
-                    const eventId = payload?._event?.id;
-                    const actions = getRuntimeEventActions(payload);
-                    const layoutEditorDragTarget =
-                      isLayoutEditorDragTarget(eventId);
-                    if (eventName === "dragMove") {
-                      if (layoutEditorDragTarget) {
-                        subject.dispatch(
-                          "border-drag-move",
-                          createLayoutEditorDragPayload(payload, {
-                            includePosition: true,
-                          }),
-                        );
+              () => {
+                activeRouteGraphics = createRouteGraphics();
+                routeGraphics = activeRouteGraphics;
+                rendererInitialization = Promise.resolve().then(() =>
+                  activeRouteGraphics.init({
+                    width: renderWidth,
+                    height: renderHeight,
+                    plugins,
+                    eventHandler: (eventName, payload) => {
+                      if (
+                        routeGraphics !== activeRouteGraphics ||
+                        options.signal?.aborted
+                      )
+                        return;
+                      const eventId = payload?._event?.id;
+                      const actions = getRuntimeEventActions(payload);
+                      const layoutEditorDragTarget =
+                        isLayoutEditorDragTarget(eventId);
+                      if (eventName === "dragMove") {
+                        if (layoutEditorDragTarget) {
+                          subject.dispatch(
+                            "border-drag-move",
+                            createLayoutEditorDragPayload(payload, {
+                              includePosition: true,
+                            }),
+                          );
+                        }
+                      } else if (eventName === "dragStart") {
+                        if (layoutEditorDragTarget) {
+                          subject.dispatch(
+                            "border-drag-start",
+                            createLayoutEditorDragPayload(payload),
+                          );
+                        }
+                      } else if (eventName === "dragEnd") {
+                        if (layoutEditorDragTarget) {
+                          subject.dispatch(
+                            "border-drag-end",
+                            createLayoutEditorDragPayload(payload),
+                          );
+                        }
                       }
-                    } else if (eventName === "dragStart") {
-                      if (layoutEditorDragTarget) {
-                        subject.dispatch(
-                          "border-drag-start",
-                          createLayoutEditorDragPayload(payload),
-                        );
-                      }
-                    } else if (eventName === "dragEnd") {
-                      if (layoutEditorDragTarget) {
-                        subject.dispatch(
-                          "border-drag-end",
-                          createLayoutEditorDragPayload(payload),
-                        );
-                      }
-                    }
 
-                    if (!runtimeInteractionsEnabled) {
-                      return;
-                    }
-
-                    if (!engine) {
-                      return;
-                    }
-
-                    if (eventName === "renderComplete") {
-                      if (payload?.aborted === true) {
+                      if (!runtimeInteractionsEnabled) {
                         return;
                       }
-                      engine.handleActions({
-                        markLineCompleted: {},
-                      });
-                      return;
-                    }
 
-                    if (actions && engine) {
-                      const eventContext = createRuntimeEventContext(payload);
+                      if (!engine) {
+                        return;
+                      }
 
-                      const interactionId =
-                        eventContext?._event?.id ?? "__unknown__";
+                      if (eventName === "renderComplete") {
+                        if (payload?.aborted === true) {
+                          return;
+                        }
+                        engine.handleActions({
+                          markLineCompleted: {},
+                        });
+                        return;
+                      }
 
-                      if (isRuntimeRightClickEvent(eventName)) {
-                        clearPendingClickInteraction(interactionId);
+                      if (actions && engine) {
+                        const eventContext = createRuntimeEventContext(payload);
+
+                        const interactionId =
+                          eventContext?._event?.id ?? "__unknown__";
+
+                        if (isRuntimeRightClickEvent(eventName)) {
+                          clearPendingClickInteraction(interactionId);
+                          enqueueInteractionActions(actions, eventContext);
+                          return;
+                        }
+
+                        if (eventName === "click") {
+                          scheduleClickInteraction(actions, eventContext);
+                          return;
+                        }
+
                         enqueueInteractionActions(actions, eventContext);
-                        return;
                       }
-
-                      if (eventName === "click") {
-                        scheduleClickInteraction(actions, eventContext);
-                        return;
-                      }
-
-                      enqueueInteractionActions(actions, eventContext);
-                    }
-                  },
-                }),
+                    },
+                  }),
+                );
+                return rendererInitialization;
+              },
               {
                 signal: options.signal,
                 label: "Initialize graphics",
-                onLateResolve: () => activeRouteGraphics.destroy(),
               },
             ),
           );
@@ -2370,7 +2374,33 @@ export const createGraphicsService = async ({
         try {
           await routeGraphicsInitPromise;
         } catch (error) {
-          await runDestroyRuntime();
+          // Invalidate this session immediately, but never destroy Pixi while
+          // Application.init is pending. Its renderer does not exist yet.
+          routeGraphics = undefined;
+          if (rendererInitialization) {
+            const destroyFailedRenderer = () => {
+              activeRouteGraphics.setAnimationPlaybackMode?.("manual");
+              activeRouteGraphics.destroy();
+            };
+            // Use the underlying promise, including rejection, rather than the
+            // abortable wait. Cleanup owns only this renderer, not its replacement.
+            void rendererInitialization
+              .then(destroyFailedRenderer, destroyFailedRenderer)
+              .catch((cleanupError) => {
+                console.error(
+                  "[graphicsService] Failed to release abandoned renderer",
+                  cleanupError,
+                );
+              });
+          }
+          try {
+            await runDestroyRuntime();
+          } catch (cleanupError) {
+            console.error(
+              "[graphicsService] Failed to release initialization resources",
+              cleanupError,
+            );
+          }
           throw error;
         } finally {
           routeGraphicsInitPromise = undefined;

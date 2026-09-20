@@ -49,13 +49,99 @@ for (const [engineName, engine] of Object.entries({ chromium, webkit })) {
         return result;
       };
       const { createGraphicsService } = await import(modulePath);
+      const moduleSource = await (await fetch(modulePath)).text();
+      const graphicsModule = moduleSource.match(
+        /from ["']([^"']*route-graphics[^"']*)["']/,
+      )[1];
+      const { Application } = await import(graphicsModule);
       const service = await createGraphicsService({
         subject: { dispatch() {} },
       });
       const host = document.createElement("div");
       document.body.append(host);
       const activeCounts = [];
+      const cancellations = [];
       try {
+        for (const rejectLate of [false, true]) {
+          let release;
+          let started;
+          let abandonedApp;
+          let settled = false;
+          let destroyCount = 0;
+          let earlyDestroyCount = 0;
+          let abandonedCanvas;
+          const gate = new Promise((resolve) => {
+            release = resolve;
+          });
+          const entered = new Promise((resolve) => {
+            started = resolve;
+          });
+          const originalInit = Application.prototype.init;
+          const originalDestroy = Application.prototype.destroy;
+          Application.prototype.init = async function (...args) {
+            if (abandonedApp) return originalInit.apply(this, args);
+            abandonedApp = this;
+            started();
+            // Hold the real Pixi Application before it has a renderer. Calling
+            // destroy here clears its stage and breaks the subsequent init.
+            await gate;
+            try {
+              await originalInit.apply(this, args);
+              abandonedCanvas = this.canvas;
+              if (rejectLate) throw new Error("Late initialization failure");
+            } finally {
+              settled = true;
+            }
+          };
+          Application.prototype.destroy = function (...args) {
+            if (this === abandonedApp) {
+              destroyCount += 1;
+              if (!settled) earlyDestroyCount += 1;
+            }
+            return originalDestroy.apply(this, args);
+          };
+          try {
+            const controller = new AbortController();
+            const opening = service
+              .init({
+                canvas: host,
+                width: 64,
+                height: 64,
+                signal: controller.signal,
+              })
+              .catch((error) => error.name);
+            await entered;
+            controller.abort();
+            const errorName = await opening;
+            const destroysBeforeSettled = destroyCount;
+            await service.destroy();
+            await service.init({ canvas: host, width: 64, height: 64 });
+            const replacement = service.getCanvas();
+            release();
+            // Wait for the actual late Application and RouteGraphics cleanup.
+            for (let i = 0; i < 100 && (destroyCount === 0 || !settled); i++) {
+              await new Promise((resolve) => setTimeout(resolve, 10));
+            }
+            cancellations.push({
+              rejectLate,
+              errorName,
+              destroysBeforeSettled,
+              earlyDestroyCount,
+              destroyCount,
+              settled,
+              lateContextReleased:
+                contexts.get(abandonedCanvas)?.isContextLost() === true,
+              replacementAttached: host.firstChild === replacement,
+              replacementActive:
+                contexts.get(replacement)?.isContextLost() === false,
+            });
+          } finally {
+            release();
+            Application.prototype.init = originalInit;
+            Application.prototype.destroy = originalDestroy;
+            await service.destroy();
+          }
+        }
         for (let i = 0; i < 5; i++) {
           const options = { canvas: host, width: 64, height: 64 };
           await Promise.all([
@@ -82,6 +168,7 @@ for (const [engineName, engine] of Object.entries({ chromium, webkit })) {
       }
       return {
         activeCounts,
+        cancellations,
         created: contexts.size,
         rendererCount: rendererCanvases.size,
         activeRenderers: [...rendererCanvases].filter(
@@ -89,6 +176,19 @@ for (const [engineName, engine] of Object.entries({ chromium, webkit })) {
         ).length,
       };
     }, `/@fs${process.cwd()}/src/deps/services/graphicsService.js`);
+    for (const cancellation of result.cancellations) {
+      assert.deepEqual(cancellation, {
+        rejectLate: cancellation.rejectLate,
+        errorName: "AbortError",
+        destroysBeforeSettled: 0,
+        earlyDestroyCount: 0,
+        destroyCount: 1,
+        settled: true,
+        lateContextReleased: true,
+        replacementAttached: true,
+        replacementActive: true,
+      });
+    }
     assert.ok(result.created >= 15);
     assert.equal(result.rendererCount, 15);
     assert.equal(result.activeRenderers, 0);
@@ -98,7 +198,7 @@ for (const [engineName, engine] of Object.entries({ chromium, webkit })) {
     );
     assert.deepEqual(errors, []);
     console.log(
-      `${engineName}: 15 overlapping renderer initializations; zero active renderer contexts after cleanup`,
+      `${engineName}: cancelled real Pixi initialization resolves/rejects safely; 15 overlapping renderer initializations; zero active renderer contexts after cleanup`,
     );
   } finally {
     await browser.close();

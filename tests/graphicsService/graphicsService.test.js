@@ -317,42 +317,92 @@ describe("graphicsService", () => {
     expect(service.hasLoadedAsset("image-1")).toBe(false);
   });
 
-  it("cancels a hanging initialization, restores another renderer, and destroys the late result", async () => {
-    let release;
-    const stuck = {
-      ...routeGraphicsInstance,
-      init: vi.fn(
-        () =>
-          new Promise((resolve) => {
-            release = resolve;
-          }),
-      ),
-      destroy: vi.fn(),
-      canvas: { style: {} },
-    };
-    const replacement = { ...routeGraphicsInstance, destroy: vi.fn() };
-    createRouteGraphicsMock
-      .mockReturnValueOnce(stuck)
-      .mockReturnValueOnce(replacement);
-    const { createGraphicsService } = await import(
-      "../../src/deps/services/graphicsService.js"
-    );
-    const service = await createGraphicsService({
-      subject: { dispatch: vi.fn() },
+  it.each([
+    ["abort", "resolve"],
+    ["abort", "reject"],
+    ["timeout", "resolve"],
+    ["timeout", "reject"],
+  ])(
+    "defers abandoned renderer destruction until initialization settles: %s then %s",
+    async (cancellation, outcome) => {
+      let release;
+      let fail;
+      const stuck = {
+        ...routeGraphicsInstance,
+        init: vi.fn(
+          () =>
+            new Promise((resolve, reject) => {
+              release = resolve;
+              fail = reject;
+            }),
+        ),
+        destroy: vi.fn(),
+        canvas: { style: {} },
+      };
+      const replacement = { ...routeGraphicsInstance, destroy: vi.fn() };
+      createRouteGraphicsMock
+        .mockReturnValueOnce(stuck)
+        .mockReturnValueOnce(replacement);
+      const { createGraphicsService } = await import(
+        "../../src/deps/services/graphicsService.js"
+      );
+      const service = await createGraphicsService({
+        subject: { dispatch: vi.fn() },
+      });
+      const controller = new AbortController();
+      if (cancellation === "timeout") vi.useFakeTimers();
+      try {
+        const opening = service
+          .init({ width: 1280, height: 720, signal: controller.signal })
+          .catch((error) => error);
+        await vi.waitFor(() => expect(stuck.init).toHaveBeenCalledOnce());
+        if (cancellation === "timeout")
+          await vi.advanceTimersByTimeAsync(30_000);
+        else controller.abort();
+        expect((await opening).name).toBe(
+          cancellation === "timeout" ? "TimeoutError" : "AbortError",
+        );
+      } finally {
+        vi.useRealTimers();
+      }
+      expect(stuck.destroy).not.toHaveBeenCalled();
+      await service.destroy();
+      await service.init({ width: 1280, height: 720 });
+      expect(stuck.destroy).not.toHaveBeenCalled();
+      if (outcome === "reject") fail(new Error("Late initialization failure"));
+      else release();
+      await vi.waitFor(() => expect(stuck.destroy).toHaveBeenCalledOnce());
+      expect(service.getCanvas()).toBe(replacement.canvas);
+      expect(replacement.destroy).not.toHaveBeenCalled();
+      await service.destroy();
+    },
+  );
+
+  it("preserves the initialization error if renderer cleanup throws", async () => {
+    const failure = new Error("Initialization failed");
+    const cleanupFailure = new Error("Renderer cleanup failed");
+    routeGraphicsInstance.init.mockRejectedValueOnce(failure);
+    routeGraphicsInstance.destroy.mockImplementationOnce(() => {
+      throw cleanupFailure;
     });
-    const controller = new AbortController();
-    const opening = service
-      .init({ width: 1280, height: 720, signal: controller.signal })
-      .catch((error) => error);
-    await vi.waitFor(() => expect(stuck.init).toHaveBeenCalledOnce());
-    controller.abort();
-    expect((await opening).name).toBe("AbortError");
-    await service.init({ width: 1280, height: 720 });
-    release();
-    await vi.waitFor(() => expect(stuck.destroy).toHaveBeenCalledTimes(2));
-    expect(service.getCanvas()).toBe(replacement.canvas);
-    expect(replacement.destroy).not.toHaveBeenCalled();
-    await service.destroy();
+    const log = vi.spyOn(console, "error").mockImplementation(() => {});
+    try {
+      const { createGraphicsService } = await import(
+        "../../src/deps/services/graphicsService.js"
+      );
+      const service = await createGraphicsService({});
+      await expect(service.init({ width: 64, height: 64 })).rejects.toBe(
+        failure,
+      );
+      expect(log).toHaveBeenCalledWith(
+        "[graphicsService] Failed to release abandoned renderer",
+        cleanupFailure,
+      );
+      await service.init({ width: 64, height: 64 });
+      await service.destroy();
+    } finally {
+      log.mockRestore();
+    }
   });
 
   it("releases the asset queue after a decoder hangs so the next request can retry", async () => {
