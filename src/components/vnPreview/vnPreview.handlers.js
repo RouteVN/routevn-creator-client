@@ -1,4 +1,5 @@
 import { runAsyncOperation } from "../../internal/asyncOperation.js";
+import { getErrorMessage } from "../../internal/errorMessage.js";
 import {
   getPreviewSignal,
   syncPreviewLoadingDetails,
@@ -27,7 +28,6 @@ import {
   withPreviewEntryPoint,
 } from "./support/vnPreviewProjectData.js";
 import { remapRotatedPreviewEventCoordinates } from "./support/vnPreviewPointerCoordinates.js";
-import { selectSceneEditorCopy } from "../../internal/ui/sceneEditor/sceneEditorCopy.js";
 import {
   getAssetLoadFailures,
   showAssetLoadFailures,
@@ -669,6 +669,7 @@ export const handleBeforeMount = (deps) => {
   store.setUiConfig({ uiConfig });
   function handleKeyDown(event) {
     if (event.key !== "Escape") {
+      if (getPreviewSignal(store)?.aborted) return;
       if (
         shouldForwardPreviewKeyEvent(event, refs) &&
         forwardPreviewKeyEvent(event, refs)
@@ -684,6 +685,7 @@ export const handleBeforeMount = (deps) => {
   }
 
   function handleKeyUp(event) {
+    if (getPreviewSignal(store)?.aborted) return;
     if (!shouldForwardPreviewKeyEvent(event, refs)) {
       return;
     }
@@ -756,30 +758,23 @@ export const handleRotatePreview = (deps, payload) => {
 };
 
 export const handleAfterMount = async (deps) => {
-  const { appService, dispatchEvent, i18n, store, render } = deps;
+  const { dispatchEvent, store, render } = deps;
   const startup = startPreviewStartup(deps);
   try {
     await initializePreview(deps, startup);
   } catch (error) {
     if (startup.signal.aborted) return;
-    store.setAssetLoading({ isLoading: false });
-    store.setPreviewReady({ isPreviewReady: false });
-    render();
     console.error("[vnPreview] Failed to initialize preview", error);
-    if (error.name === "TimeoutError") {
-      appService.showAlert({
-        title: i18n?.resourcePages?.warningTitle ?? "Warning",
-        message: startup.timeoutMessage(error),
-      });
-    } else if (!error.reported) {
-      const copy = selectSceneEditorCopy(i18n);
-      appService.showToast({
-        message: copy.failedOpenPreview ?? "Failed to open preview",
-        status: "error",
-      });
-    }
     cancelPreviewStartup(store);
-    dispatchEvent(new CustomEvent("close"));
+    // Named asset failures already explain how to repair the project.
+    if (error?.reported) {
+      store.setAssetLoading({ isLoading: false });
+      store.setPreviewReady({ isPreviewReady: false });
+      dispatchEvent(new CustomEvent("close"));
+      return;
+    }
+    store.setPreviewFailure({ message: getErrorMessage(error) });
+    render();
   }
 };
 

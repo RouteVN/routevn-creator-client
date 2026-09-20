@@ -15,6 +15,7 @@ import {
   selectWarnedAssetFileIds,
   markAssetWarningsShown,
 } from "../../src/pages/sceneEditorLexical/sceneEditorLexical.store.js";
+import { startSceneInitialization } from "../../src/internal/ui/sceneEditor/initialization.js";
 
 const createWarningStore = () => {
   const context = { state: { warnedAssetFileIds: [] } };
@@ -1419,6 +1420,67 @@ describe("renderSceneEditorState", () => {
     expect(graphicsService.attachCanvas).not.toHaveBeenCalledWith(
       transformEditorCanvasRoot,
     );
+  });
+
+  it("cancels redraws sharing an old session's asset load without warnings or painting", async () => {
+    const projectData = createProjectData();
+    projectData.resources.images.background = {
+      id: "background",
+      fileId: "cancelled-redraw.png",
+    };
+    projectData.story.scenes["scene-1"].sections[
+      "section-1"
+    ].lines[1].actions.background = { resourceId: "background" };
+    let releaseRead;
+    const pendingRead = new Promise((resolve) => {
+      releaseRead = resolve;
+    });
+    const store = {
+      ...createWarningStore(),
+      selectIsScenePageLoading: () => false,
+      selectPreviewScene: () => ({ previewVisible: false }),
+      selectSceneId: () => "scene-1",
+      selectSelectedSectionId: () => "section-1",
+      selectSelectedLineId: () => "line-2",
+      selectProjectData: () => projectData,
+      selectTemporaryPresentationState: () => ({}),
+    };
+    const graphicsService = createGraphicsService();
+    graphicsService.loadAssets = vi.fn();
+    graphicsService.attachCanvas = vi.fn();
+    graphicsService.engineRenderCurrentState = vi.fn();
+    const deps = {
+      store,
+      graphicsService,
+      projectService: { getFileContent: vi.fn(() => pendingRead) },
+      appService: { showAlert: vi.fn() },
+      render: vi.fn(),
+      refs: {
+        previewCanvasHost: {
+          getCanvasRoot: () => ({ isConnected: true }),
+        },
+      },
+    };
+    const signal = startSceneInitialization(store, "scene-1");
+    const restoring = renderSceneEditorCanvas({ ...deps, signal }, {});
+    await vi.waitFor(() =>
+      expect(deps.projectService.getFileContent).toHaveBeenCalledTimes(1),
+    );
+    // Ordinary redraws do not receive an explicit signal from their callers.
+    const redraw = renderSceneEditorCanvas(deps, {});
+    expect(deps.projectService.getFileContent).toHaveBeenCalledTimes(1);
+
+    const replacementSignal = startSceneInitialization(store, "scene-1");
+    releaseRead({ url: "asset://cancelled-redraw.png" });
+    await Promise.all([restoring, redraw]);
+
+    expect(signal.aborted).toBe(true);
+    expect(replacementSignal.aborted).toBe(false);
+    expect(deps.appService.showAlert).not.toHaveBeenCalled();
+    expect(graphicsService.loadAssets).not.toHaveBeenCalled();
+    expect(graphicsService.attachCanvas).not.toHaveBeenCalled();
+    expect(graphicsService.engineRenderCurrentState).not.toHaveBeenCalled();
+    expect(deps.render).not.toHaveBeenCalled();
   });
 
   it("immediately retries a failed scene video and caches it after recovery", async () => {

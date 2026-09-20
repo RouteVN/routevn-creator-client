@@ -250,45 +250,60 @@ describe("vnPreview.handlers", () => {
     resolveSceneIdForSectionIdMock.mockReturnValue(undefined);
   });
 
-  it("reports startup failure and exits the unusable preview", async () => {
-    const { handleAfterMount } = await import(
-      "../../src/components/vnPreview/vnPreview.handlers.js"
-    );
-    const failure = new Error("Preview initialization failed");
-    const log = vi.spyOn(console, "error").mockImplementation(() => {});
-    const deps = {
-      projectService: {
-        ensureRepository: vi.fn().mockRejectedValue(failure),
-      },
-      refs: { previewSurface: { focus: vi.fn() } },
-      appService: { showToast: vi.fn() },
-      store: {
-        setAssetLoading: vi.fn(),
-        setLoadingProgress: vi.fn(),
-        selectIsPreviewLoading: vi.fn(() => false),
-        setLoadingDetailsVisible: vi.fn(),
-        selectLoadingDescription: vi.fn(() => "Opening project..."),
-        setPreviewReady: vi.fn(),
-      },
-      render: vi.fn(),
-      dispatchEvent: vi.fn(),
-      i18n: {
-        resourcePages: {},
-        scenesPage: {},
-        sceneEditorPage: { failedOpenPreview: "Failed to open preview" },
-      },
-    };
-    try {
-      await handleAfterMount(deps);
-      expect(deps.appService.showToast).toHaveBeenCalledWith({
-        message: "Failed to open preview",
-        status: "error",
-      });
-      expect(deps.dispatchEvent.mock.calls[0][0].type).toBe("close");
-    } finally {
-      log.mockRestore();
-    }
-  });
+  it.each([
+    new Error("Preview initialization failed"),
+    Object.assign(
+      new Error("Initialize graphics timed out after 30 seconds."),
+      { name: "TimeoutError" },
+    ),
+    "Native graphics failure",
+    {},
+  ])(
+    "keeps startup failure visible until explicitly closed: %s",
+    async (failure) => {
+      const { handleAfterMount, handleClosePreview } = await import(
+        "../../src/components/vnPreview/vnPreview.handlers.js"
+      );
+      const log = vi.spyOn(console, "error").mockImplementation(() => {});
+      const deps = {
+        projectService: {
+          ensureRepository: vi.fn().mockRejectedValue(failure),
+        },
+        refs: { previewSurface: { focus: vi.fn() } },
+        appService: { showToast: vi.fn() },
+        store: {
+          setPreviewFailure: vi.fn(),
+          setAssetLoading: vi.fn(),
+          setLoadingProgress: vi.fn(),
+          selectIsPreviewLoading: vi.fn(() => false),
+          setLoadingDetailsVisible: vi.fn(),
+          selectLoadingDescription: vi.fn(() => "Opening project..."),
+          setPreviewReady: vi.fn(),
+        },
+        render: vi.fn(),
+        dispatchEvent: vi.fn(),
+        i18n: {
+          resourcePages: {},
+          scenesPage: {},
+          sceneEditorPage: { failedOpenPreview: "Failed to open preview" },
+        },
+      };
+      try {
+        await handleAfterMount(deps);
+        expect(deps.appService.showToast).not.toHaveBeenCalled();
+        expect(deps.store.setPreviewFailure).toHaveBeenCalledWith({
+          message: typeof failure === "string" ? failure : failure?.message,
+        });
+        expect(deps.dispatchEvent).not.toHaveBeenCalled();
+        handleClosePreview(deps, {
+          _event: { preventDefault() {}, stopPropagation() {} },
+        });
+        expect(deps.dispatchEvent.mock.calls[0][0].type).toBe("close");
+      } finally {
+        log.mockRestore();
+      }
+    },
+  );
 
   it("clears the scene editor mute override when mounting full-screen preview", async () => {
     const { handleAfterMount } = await import(

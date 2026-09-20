@@ -55,7 +55,7 @@ it("times out a stuck stage after 30 seconds and names that stage", async () => 
   await vi.advanceTimersByTimeAsync(1);
   const error = await result;
   expect(error.name).toBe("TimeoutError");
-  expect(startup.timeoutMessage(error)).toContain("Initializing graphics...");
+  expect(error.message).toBe("graphics timed out after 30 seconds.");
   expect(vi.getTimerCount()).toBe(0);
 });
 

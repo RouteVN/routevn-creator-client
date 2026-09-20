@@ -743,6 +743,9 @@ export const createInitialState = () => ({
   sceneLoadingProgress: { stage: "repository" },
   sceneLoadingDetailsVisible: false,
   isScenePageLoading: true,
+  sceneInitializationStatus: "loading",
+  sceneInitializationMessage: undefined,
+  sceneInitializationDiagnostics: "",
   isSceneAssetLoading: false,
   warnedAssetFileIds: [],
   lockingLineId: null, // Lock to prevent duplicate split/merge operations
@@ -1117,6 +1120,24 @@ export const setSceneLoadingDetailsVisible = ({ state }, { visible }) => {
 export const setSceneLoadingProgress = ({ state }, progress) => {
   state.sceneLoadingProgress = progress;
 };
+
+export const setSceneInitializationStatus = (
+  { state },
+  { status, message, diagnostics = "" },
+) => {
+  state.sceneInitializationStatus = status;
+  state.sceneInitializationMessage = message;
+  state.sceneInitializationDiagnostics = diagnostics;
+};
+
+export const selectSceneInitializationStatus = ({ state }) =>
+  state.sceneInitializationStatus;
+
+export const selectSceneLoadingProgress = ({ state }) =>
+  state.sceneLoadingProgress;
+
+export const selectSceneInitializationDiagnostics = ({ state }) =>
+  state.sceneInitializationDiagnostics;
 
 export const setScenePageLoading = ({ state }, { isLoading } = {}) => {
   state.isScenePageLoading = isLoading;
@@ -1953,6 +1974,21 @@ const selectBackgroundTransformEditorViewData = ({ state }) => {
   };
 };
 
+const selectSceneInitializationViewData = ({ state, copy }) => ({
+  sceneInitializationFailed: state.sceneInitializationStatus === "failed",
+  sceneEditorUnavailable:
+    state.sceneInitializationStatus !== "ready" || state.isScenePageLoading,
+  sceneEditorVisibility:
+    state.sceneInitializationStatus === "failed" ? "hidden" : "visible",
+  sceneRecoveryPosition: state.isTouchMode ? "fix" : "abs",
+  sceneRecoveryBottom: state.isTouchMode
+    ? selectMobileSceneEditorBottomInset({ state })
+    : "0px",
+  sceneInitializationError:
+    state.sceneInitializationMessage ?? copy.sceneInitializationError,
+  backToScenesButton: copy.backToScenesButton,
+});
+
 export const selectViewData = ({ state, i18n }) => {
   const timingStartedAt = getSceneEditorTimingNow();
   const copy = selectSceneEditorCopy(i18n);
@@ -2029,6 +2065,7 @@ export const selectViewData = ({ state, i18n }) => {
       linesEditorKey: `document-${state.sceneSettings.showLineNumbers ? "line-numbers-show" : "line-numbers-hide"}`,
       sceneSettingsDialog: state.sceneSettingsDialog,
       sceneSettingsForm: { fields: [], actions: { buttons: [] } },
+      ...selectSceneInitializationViewData({ state, copy }),
       isScenePageLoading: state.isScenePageLoading,
       isSceneAssetLoading: state.isSceneAssetLoading,
       deadEndTooltip: state.deadEndTooltip,
@@ -2427,6 +2464,7 @@ export const selectViewData = ({ state, i18n }) => {
     linesEditorKey: `document-${state.sceneSettings.showLineNumbers ? "line-numbers-show" : "line-numbers-hide"}`,
     sceneSettingsDialog: state.sceneSettingsDialog,
     sceneSettingsForm: localizeSceneEditorForm(sceneSettingsForm, copy),
+    ...selectSceneInitializationViewData({ state, copy }),
     isScenePageLoading: state.isScenePageLoading,
     isSceneAssetLoading: state.isSceneAssetLoading,
     deadEndTooltip: state.deadEndTooltip,

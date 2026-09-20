@@ -28,6 +28,7 @@ import {
   syncSceneEditorRoutePayload,
 } from "../../src/pages/sceneEditorLexical/sceneEditorLexical.handlers.js";
 import { EN_I18N } from "../support/i18n.js";
+import { startSceneInitialization } from "../../src/internal/ui/sceneEditor/initialization.js";
 
 describe("sceneEditorLexical.handlers mobile keyboard state", () => {
   it("reports normalized keyboard visibility to the app shell", () => {
@@ -69,6 +70,7 @@ describe("sceneEditorLexical.handlers navigation preparation", () => {
   it("does not rewrite scene statistics on repeated unchanged backup checks", async () => {
     const deps = {
       store: {
+        selectSceneInitializationStatus: () => "ready",
         selectSelectedSectionId: vi.fn(() => undefined),
         selectDraftSaveTimerId: vi.fn(() => undefined),
         selectPendingDraftSections: vi.fn(() => []),
@@ -102,6 +104,7 @@ describe("sceneEditorLexical.handlers navigation preparation", () => {
     );
     const deps = {
       store: {
+        selectSceneInitializationStatus: () => "ready",
         selectSceneId: vi.fn(() => "scene-1"),
         selectSelectedSectionId: vi.fn(() => undefined),
         selectDraftSaveTimerId: vi.fn(() => undefined),
@@ -151,6 +154,7 @@ describe("sceneEditorLexical.handlers navigation preparation", () => {
   it("does not flush when only the active scene-editor route changes", async () => {
     const deps = {
       store: {
+        selectSceneInitializationStatus: () => "ready",
         refreshSceneTextStats: vi.fn(),
       },
       projectService: {
@@ -171,6 +175,7 @@ describe("sceneEditorLexical.handlers navigation preparation", () => {
   it("flushes before the scene-editor route switches projects", async () => {
     const deps = {
       store: {
+        selectSceneInitializationStatus: () => "ready",
         selectSceneId: vi.fn(() => "scene-1"),
         selectSelectedSectionId: vi.fn(() => undefined),
         selectDraftSaveTimerId: vi.fn(() => undefined),
@@ -306,6 +311,10 @@ describe("sceneEditorLexical.handlers preview", () => {
       render: vi.fn(),
     };
 
+    const restorationSignal = startSceneInitialization(store, "scene-1");
+    restorationSignal.addEventListener("abort", () =>
+      calls.push("cancel-restoration"),
+    );
     handlePreviewClick(deps, {});
     await waitForAsyncHandler();
 
@@ -318,7 +327,12 @@ describe("sceneEditorLexical.handlers preview", () => {
       sectionId: "section-1",
       lineId: "line-1",
     });
-    expect(calls).toEqual(["editor-blur", "app-blur", "show-preview"]);
+    expect(calls).toEqual([
+      "editor-blur",
+      "app-blur",
+      "cancel-restoration",
+      "show-preview",
+    ]);
   });
 });
 

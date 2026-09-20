@@ -5,6 +5,10 @@ refs:
     eventListeners:
       click:
         handler: handleRotatePreview
+  closeFailedPreviewButton:
+    eventListeners:
+      click:
+        handler: handleClosePreview
   closePreviewButton:
     eventListeners:
       click:
@@ -27,7 +31,7 @@ styles:
     transform: rotate(90deg)
 template:
   - 'rtgl-view#previewSurface pos=fix edge=f tabindex=-1 style="display: flex; justify-content: center; align-items: center; overflow: hidden; background: black; outline: none; min-width: 0; min-height: 0;" z=3500 data-preview-ready=${isPreviewReady}':
-      - 'rtgl-view style="${previewStageStyle}"':
+      - 'rtgl-view ?inert=${previewFailed} style="${previewStageStyle}; visibility: ${previewContentVisibility};"':
           - 'div#canvas data-preview-rotated=${isRotated} style="${previewCanvasHostStyle}"': null
           - 'rtgl-view style="${previewFrameStyle}"': null
           - $if isPreviewLoading:
@@ -36,7 +40,12 @@ template:
                       - rtgl-text s=md fw=400 c=fg: ${loadingPreviewLabel}
                       - $if loadingPreviewAssetLabel:
                           - 'rtgl-text s=sm c=fg style="overflow-wrap: anywhere;"': ${loadingPreviewAssetLabel}
-      - 'rtgl-view pos=abs z=3 d=h g=sm style="top: calc(env(safe-area-inset-top, 0px) + 12px); right: calc(env(safe-area-inset-right, 0px) + 12px);"':
-          - $if showRotatePreviewButton:
-              - 'rtgl-button#rotatePreviewButton sq pre=rotate v=se aria-label="${rotatePreviewLabel}" title="${rotatePreviewLabel}" aria-pressed=${isRotated}': null
-          - 'rtgl-button#closePreviewButton sq pre=x v=se aria-label="${closePreviewLabel}" title="${closePreviewLabel}"': null
+      - $if previewFailed:
+          - rtgl-view#previewError pos=abs edge=f bgc=bg av=c ah=c g=lg p=lg z=4 role=alert:
+              - 'div#previewErrorMessage style="width: 100%; max-width: 720px; max-height: 40vh; overflow: auto; white-space: pre-wrap; overflow-wrap: anywhere; text-align: center; user-select: text;"': ${previewErrorMessage}
+              - rtgl-button#closeFailedPreviewButton: ${closeFailedPreviewLabel}
+        $else:
+          - 'rtgl-view pos=abs z=3 d=h g=sm style="top: calc(env(safe-area-inset-top, 0px) + 12px); right: calc(env(safe-area-inset-right, 0px) + 12px);"':
+              - $if showRotatePreviewButton:
+                  - 'rtgl-button#rotatePreviewButton sq pre=rotate v=se aria-label="${rotatePreviewLabel}" title="${rotatePreviewLabel}" aria-pressed=${isRotated}': null
+              - 'rtgl-button#closePreviewButton sq pre=x v=se aria-label="${closePreviewLabel}" title="${closePreviewLabel}"': null

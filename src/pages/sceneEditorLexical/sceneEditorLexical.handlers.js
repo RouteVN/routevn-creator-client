@@ -1,5 +1,12 @@
+import {
+  startSceneInitialization,
+  cancelSceneInitialization,
+  getSceneInitializationTarget,
+} from "../../internal/ui/sceneEditor/initialization.js";
 import { setSceneEditorPageLoading } from "../../internal/ui/sceneEditor/loadingProgress.js";
 import { mountSceneEditorWindowLayout } from "./support/windowLayout.js";
+import { formatSceneInitializationDiagnostics } from "./support/initializationDiagnostics.js";
+import { getErrorMessage } from "../../internal/errorMessage.js";
 import { filter, tap } from "rxjs";
 import { createProjectStateStream } from "../../deps/services/shared/projectStateStream.js";
 import { generateId } from "../../internal/id.js";
@@ -762,6 +769,7 @@ const refreshSceneEditorStateFromProject = async (deps) => {
 
 const syncSceneEditorProjectPayload = async (deps, payload = {}) => {
   const { store, render, subject } = deps;
+  if (store.selectSceneInitializationStatus() !== "ready") return;
   const pendingDraftSections = store.selectPendingDraftSections?.() || [];
   const hadPendingSessionChanges =
     pendingDraftSections.length > 0 ||
@@ -812,6 +820,15 @@ export const prepareSceneEditorNavigation = async (
   deps,
   { path, payload, reason } = {},
 ) => {
+  const { store, projectService, appService } = deps;
+  if (store.selectSceneInitializationStatus() !== "ready") {
+    const sameScene =
+      normalizeRoutePath(path) === "/project/scene-editor" &&
+      payload?.p === projectService.getEnsuredProjectId() &&
+      payload?.s === getSceneInitializationTarget(store);
+    if (reason !== "backup" && !sameScene) cancelSceneInitialization(store);
+    return;
+  }
   if (reason === "backup") {
     // A real draft flush updates its stats cache through onDidFlush. Rewriting
     // that cache without edits would itself make the next backup dirty.
@@ -819,8 +836,8 @@ export const prepareSceneEditorNavigation = async (
     return;
   }
   const currentProjectId =
-    deps.projectService.getEnsuredProjectId?.() ??
-    deps.appService?.getCurrentProjectId?.();
+    projectService.getEnsuredProjectId?.() ??
+    appService?.getCurrentProjectId?.();
   if (
     normalizeRoutePath(path) === "/project/scene-editor" &&
     payload?.p === currentProjectId
@@ -828,7 +845,7 @@ export const prepareSceneEditorNavigation = async (
     return;
   }
 
-  cancelSceneTextStatsRefresh(deps.store);
+  cancelSceneTextStatsRefresh(store);
   await flushSceneEditorDrafts(deps, { force: true });
   refreshSceneTextStatsNow(deps, { render: false });
   await cacheCurrentSceneTextStats(deps);
@@ -1668,6 +1685,7 @@ export const handleActionTransformEditorDone = (deps, payload) => {
 export const handleBeforeMount = (deps) => {
   const { projectService, appService, store, uiConfig, subject } = deps;
   let routeSyncSequence = 0;
+  store.setSceneInitializationStatus({ status: "loading" });
   setSceneEditorPageLoading(deps, true);
   store.setUiConfig({ uiConfig });
   const cleanupWindowLayout = mountSceneEditorWindowLayout(deps);
@@ -1706,6 +1724,20 @@ export const handleBeforeMount = (deps) => {
       tap(({ payload }) => {
         const routePayload = getSceneEditorRoutePayload(payload);
         const routeSyncId = ++routeSyncSequence;
+        if (store.selectSceneInitializationStatus() !== "ready") {
+          // Requests arrive before the router updates its payload. Initialize
+          // the requested scene, and ignore duplicate events for the same load.
+          if (
+            routePayload.p !== projectService.getEnsuredProjectId() ||
+            routePayload.s === getSceneInitializationTarget(store)
+          )
+            return;
+          void initializeSceneEditor(deps, {
+            reset: true,
+            payload: routePayload,
+          });
+          return;
+        }
         void syncSceneEditorRoutePayload(deps, routePayload, {
           shouldContinue: () => routeSyncId === routeSyncSequence,
         }).catch((error) => {
@@ -1721,6 +1753,7 @@ export const handleBeforeMount = (deps) => {
     .subscribe();
 
   return async () => {
+    cancelSceneInitialization(store);
     cleanupWindowLayout?.();
     unregisterBeforeNavigation();
     projectSubscription.unsubscribe();
@@ -1728,38 +1761,109 @@ export const handleBeforeMount = (deps) => {
     cleanupRuntimeSubscriptions();
     cleanupBackgroundTransformEditorSubscriptions();
     cancelSceneTextStatsRefresh(store);
+    if (store.selectSceneInitializationStatus() !== "ready") {
+      // Queue teardown now, before another page can initialize the shared renderer.
+      await Promise.all([
+        resetSceneEditorRuntime(deps),
+        projectService.clearActiveSceneId(),
+      ]);
+      return;
+    }
     await flushSceneEditorDrafts(deps, { force: true });
     await projectService.clearActiveSceneId().catch(() => {});
     await resetSceneEditorRuntime(deps);
   };
 };
 
-export const handleAfterMount = async (deps) => {
-  const { projectService, appService, store, render } = deps;
-  try {
-    await initializeSceneEditorPage({
-      ...deps,
-      syncProjectState: syncStoreProjectState,
-    });
-    const projectInfo = await projectService.getCurrentProjectInfo();
-    store.setProjectLanguage({ language: projectInfo.language });
-    reconcileCurrentEditorSession(deps);
-    refreshSceneTextStatsNow(deps, { render: false });
-    render();
-    await cacheCurrentSceneTextStats(deps);
-    scrollEntrySelectionIntoView(deps);
-  } catch (error) {
-    if (!isMissingProjectResolutionError(error)) {
-      throw error;
-    }
+const showSceneInitializationFailure = (deps, error) => {
+  const { store, render, appService } = deps;
+  cancelSceneInitialization(store);
+  console.error("[sceneEditor] Failed to initialize scene", error);
+  store.setSceneInitializationStatus({
+    status: "failed",
+    message: getErrorMessage(error),
+    diagnostics: formatSceneInitializationDiagnostics({
+      error,
+      progress: store.selectSceneLoadingProgress(),
+    }),
+  });
+  store.setSceneAssetLoading({ isLoading: false });
+  setSceneEditorPageLoading(deps, false);
+  render();
 
+  if (isMissingProjectResolutionError(error)) {
     const copy = selectCopy(deps);
-    appService?.showAlert({
+    appService.showAlert({
       message:
         copy.missingProjectResolution ?? MISSING_PROJECT_RESOLUTION_MESSAGE,
       title: copy.errorTitle ?? "Error",
     });
-    appService?.navigate("/projects");
+    appService.navigate("/projects");
+  }
+};
+
+const initializeSceneEditor = async (deps, { reset = false, payload } = {}) => {
+  const { projectService, appService, store, render } = deps;
+  const scenePayload = payload ?? appService.getPayload();
+  const signal = startSceneInitialization(store, scenePayload.s);
+  store.setSceneInitializationStatus({ status: "loading" });
+  setSceneEditorPageLoading(deps, true);
+  render();
+  try {
+    if (reset) {
+      store.setSceneLoadingProgress({ stage: "cleanup" });
+      await resetSceneEditorRuntime(deps, { dispose: false });
+      signal.throwIfAborted();
+    }
+    await initializeSceneEditorPage({
+      ...deps,
+      signal,
+      scenePayload,
+      syncProjectState: syncStoreProjectState,
+    });
+    signal.throwIfAborted();
+    store.setSceneLoadingProgress({ stage: "projectInfo" });
+    const projectInfo = await projectService.getCurrentProjectInfo();
+    signal.throwIfAborted();
+    store.setSceneLoadingProgress({ stage: "editor" });
+    store.setProjectLanguage({ language: projectInfo.language });
+    reconcileCurrentEditorSession(deps);
+    refreshSceneTextStatsNow(deps, { render: false });
+    store.setSceneInitializationStatus({ status: "ready" });
+    setSceneEditorPageLoading(deps, false);
+    render();
+    scrollEntrySelectionIntoView(deps);
+  } catch (error) {
+    if (signal.aborted) return;
+    showSceneInitializationFailure(deps, error);
+    return;
+  }
+
+  // This optional cache must never replace a working editor with a load error.
+  await cacheCurrentSceneTextStats(deps);
+};
+
+export const handleAfterMount = (deps) => initializeSceneEditor(deps);
+
+export const handleRetrySceneInitialization = (deps) => {
+  const { store } = deps;
+  if (store.selectSceneInitializationStatus() !== "failed") return;
+  return initializeSceneEditor(deps, { reset: true });
+};
+
+export const handleCopySceneErrorDetails = async (deps) => {
+  const { store, appService } = deps;
+  const diagnostics = store.selectSceneInitializationDiagnostics();
+  if (!diagnostics) return;
+  const copy = selectCopy(deps);
+  try {
+    await appService.copyText(diagnostics);
+    appService.showToast({ message: copy.sceneErrorDetailsCopied });
+  } catch {
+    appService.showToast({
+      message: copy.failedCopySceneErrorDetails,
+      status: "error",
+    });
   }
 };
 
@@ -3574,6 +3678,9 @@ export const handlePreviewClick = (deps, payload) => {
       store.setSkipNextEditorBlurDraftFlush({ value: true });
       blurLinesEditorFocus(deps.refs);
       appService?.blurActiveElement?.();
+      // Fullscreen now owns the shared renderer. Stop any unfinished editor
+      // restoration before it can load assets or attach fullscreen's canvas.
+      cancelSceneInitialization(store);
       store.showPreviewSceneId({ sceneId, sectionId, lineId });
       store.setSkipNextEditorBlurDraftFlush({ value: false });
       render();
@@ -3781,7 +3888,17 @@ export const handleLineDeleteActionItem = async (deps, payload) => {
 };
 
 export const handleHidePreviewScene = async (deps) => {
-  await restoreSceneEditorFromPreview(deps);
+  const { store, render } = deps;
+  const signal = startSceneInitialization(store, store.selectSceneId());
+  // Reveal the already initialized editor immediately while its canvas rebuilds.
+  try {
+    await restoreSceneEditorFromPreview({ ...deps, signal });
+    signal.throwIfAborted();
+    render();
+  } catch (error) {
+    if (signal.aborted) return;
+    showSceneInitializationFailure(deps, error);
+  }
 };
 
 export const handlePreviewCurrentLineChanged = (deps, payload) => {

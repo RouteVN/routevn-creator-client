@@ -1,5 +1,4 @@
 import { runAsyncOperation } from "../../../internal/asyncOperation.js";
-import { formatI18nCopy } from "../../../internal/ui/i18nCopy.js";
 
 // Controllers belong to this component's async orchestration, never render state.
 const sessions = new WeakMap();
@@ -38,7 +37,7 @@ export const cancelPreviewStartup = (store) => {
   clearLoadingDetails(store);
 };
 
-export const startPreviewStartup = ({ store, render, i18n }) => {
+export const startPreviewStartup = ({ store, render }) => {
   cancelPreviewStartup(store);
   const controller = new AbortController();
   sessions.set(store, controller);
@@ -61,14 +60,5 @@ export const startPreviewStartup = ({ store, render, i18n }) => {
       signal.throwIfAborted();
       return value;
     },
-    timeoutMessage: (error) =>
-      formatI18nCopy(
-        i18n?.vnPreview?.timeout ??
-          "Preview could not start. Timed out after {seconds} seconds.\n\n{step}\n\nTry previewing again.",
-        {
-          seconds: error.timeoutMs / 1000,
-          step: store.selectLoadingDescription(),
-        },
-      ),
   };
 };

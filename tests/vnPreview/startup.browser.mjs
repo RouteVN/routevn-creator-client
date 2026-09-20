@@ -124,12 +124,19 @@ for (const [engineName, engine] of Object.entries({ chromium })) {
     // Restore the adapter immediately; the already pending call remains stalled.
     await page.evaluate(() => window.restorePreviewRepository());
     await page
-      .locator("#vnPreview")
-      .waitFor({ state: "detached", timeout: 40000 });
-    const alerts = await page.evaluate(() => window.previewTimeoutAlerts);
-    assert.equal(alerts.length, 1);
-    assert.match(alerts[0].message, /30 seconds/);
-    assert.match(alerts[0].message, /Opening project/);
+      .locator("#previewError")
+      .waitFor({ state: "visible", timeout: 40000 });
+    assert.match(
+      await page.locator("#previewErrorMessage").innerText(),
+      /repository timed out after 30 seconds/,
+    );
+    assert.equal(await loading.count(), 0);
+    assert.deepEqual(
+      await page.evaluate(() => window.previewTimeoutAlerts),
+      [],
+    );
+    await page.locator("#closeFailedPreviewButton").click();
+    await page.locator("#vnPreview").waitFor({ state: "detached" });
     await page
       .locator("#previewCanvasHost canvas")
       .waitFor({ state: "visible" });

@@ -131,6 +131,8 @@ export const createInitialState = () => ({
   loadingDetailsVisible: false,
   isAssetLoading: false,
   isPreviewReady: false,
+  previewFailed: false,
+  previewErrorMessage: undefined,
   isRotated: false,
   isTouchMode: false,
   assetLoadCache: createEmptyAssetLoadCache(),
@@ -143,7 +145,14 @@ export const setLoadingDetailsVisible = ({ state }, { visible }) => {
 };
 
 export const selectIsPreviewLoading = ({ state }) =>
-  !state.isPreviewReady || state.isAssetLoading;
+  !state.previewFailed && (!state.isPreviewReady || state.isAssetLoading);
+
+export const setPreviewFailure = ({ state }, { message }) => {
+  state.previewFailed = true;
+  state.previewErrorMessage = message;
+  state.isAssetLoading = false;
+  state.isPreviewReady = false;
+};
 
 export const setLoadingProgress = ({ state }, progress) => {
   state.loadingProgress = progress;
@@ -234,7 +243,11 @@ export const selectViewData = ({ props: attrs, state, i18n }) => {
     sectionId: attrs.sectionId,
     lineId: attrs.lineId,
     isAssetLoading: state.isAssetLoading,
-    isPreviewLoading: !state.isPreviewReady || state.isAssetLoading,
+    isPreviewLoading: selectIsPreviewLoading({ state }),
+    previewFailed: state.previewFailed,
+    previewContentVisibility: state.previewFailed ? "hidden" : "visible",
+    previewErrorMessage: state.previewErrorMessage ?? copy.failedStart,
+    closeFailedPreviewLabel: copy.closeFailedPreviewButton,
     isPreviewReady: state.isPreviewReady,
     canvasAspectRatio: formatProjectResolutionAspectRatio(
       state.projectResolution,

@@ -7,6 +7,9 @@ export const formatLoadingProgress = (
 ) => {
   const { stage, completed = 0, total = 0, assetName = "" } = progress;
   const defaults = {
+    cleanup: "Resetting scene preview...",
+    projectInfo: "Reading project information...",
+    editor: "Preparing scene editor...",
     repository: "Opening project...",
     scenes: "Preparing scenes...",
     graphics: "Initializing graphics...",

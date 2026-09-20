@@ -1172,6 +1172,31 @@ window. The same minimum-interval check runs inside the queued draft-flush task
 before `syncSectionLinesSnapshot()` is called, so a task already accepted by the
 latest-task queue still reschedules instead of writing too soon.
 
+### Scene Initialization Recovery
+
+Scene editor initialization has explicit loading, ready, and failed states.
+The editor remains inert until initialization succeeds. An unexpected startup
+error replaces the loading overlay with a localized failure screen offering
+Back to Scene Map; it does not expose a partially initialized editor or
+change saved project content. Missing resolution retains its existing alert and
+redirect. Isolated media failures retain the asset warning-and-continue policy.
+
+The failure screen shows only the original error message, with a localized
+fallback when no message is available, and a single Back to Scene Map action.
+The original error remains available in the developer console.
+
+Users can return to the scene map and reopen the scene. Leaving during
+initialization aborts the attempt; late continuations cannot render or attach
+to a replacement page. The previous graphics runtime is cleaned up on exit.
+Initialization cancellation is scoped to reads/rendering and does not cancel or
+retry project writes. Optional statistics-cache failures after startup do not
+put a working editor into the failed state.
+
+Run `node tests/sceneEditor/initializationRecovery.browser.mjs` against the
+existing watch server for Chromium/WebKit failure injection, reopening scenes,
+navigation, the single recovery action, and late-result isolation checks. The
+test uses isolated storage.
+
 ### Scene Asset Loading
 
 Scene and preview asset loading has a performance-sensitive contract.
@@ -1257,8 +1282,12 @@ checks graphics initialization and named file/decode progress in Chromium and We
 
 Fullscreen preview uses the same five-second reveal delay, displaying “Loading
 preview…” initially. Successful loading or closing cancels its timer; reopening
-and later asset-loading periods start a fresh delay. Timeout diagnostics always
-include the current stage, even while loading details are hidden.
+and later asset-loading periods start a fresh delay. Unexpected startup failures
+and timeouts replace loading with the original error message and a single Close
+Preview action. The unfinished canvas is hidden and inert; its session is
+cancelled so late work cannot mark it ready. Closing returns to the originating
+Scene Map or Scene Editor. Named asset failures retain their repair alert and
+automatic close behavior.
 
 Fullscreen startup displays its current project, scene, graphics, file-check,
 asset-load, playback, and first-frame stages. File progress includes counts and
@@ -1283,10 +1312,25 @@ a decoder or script that blocks the main thread synchronously.
 
 Closing fullscreen preview aborts its session, including pending hydration and
 asset waits. Cancelled startup cannot start the engine or mark the preview ready.
-The close control remains available on desktop as well as touch devices. Timeout
-feedback includes the stalled stage/current asset and returns to the editor.
+The close control remains available on desktop as well as touch devices. Scene
+Editor is revealed immediately while its canvas rebuilds, without a page-loading
+overlay. It uses the same failure screen as initial editor startup if rebuilding
+its renderer fails. Navigating away
+cancels that restoration as well.
 `node tests/vnPreview/startup.browser.mjs` checks named progress, close during a
 pending file read, late-result isolation, and a real 30-second startup deadline.
+`node tests/vnPreview/recovery.browser.mjs` verifies failure screens from both
+launch locations, returning/reopening, and editor restoration failure in Chromium
+and WebKit. Opening fullscreen preview cancels any outstanding editor startup
+or restoration before mounting the preview. This transfers ownership of the
+shared renderer; late editor reads cannot repopulate its asset cache or move
+fullscreen's canvas back to the editor. Direct and queued editor redraws retain
+the same session signal: a redraw sharing a cancelled restoration's pending
+asset load must stop without displaying an asset-failure warning or painting
+onto fullscreen's renderer. `node tests/vnPreview/reopen.browser.mjs` checks
+repeated immediate reopening, paused restoration reads with a concurrent redraw,
+canvas ownership, asset-failure alerts, and missing-cache warnings in Chromium
+and WebKit.
 
 Fullscreen startup uses `vnPreviewAssets.js` to continue checking after a failed
 file and isolate batch decoder failures. The scene editor remains available to
