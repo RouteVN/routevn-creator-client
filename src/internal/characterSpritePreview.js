@@ -13,7 +13,10 @@ const getFirstSpritesheetAnimationEntry = (item = {}) => {
   return entries[0] ?? [];
 };
 
-export const buildCharacterSpritePreviewLayer = (item) => {
+export const buildCharacterSpritePreviewLayer = (
+  item,
+  { source = "thumbnail" } = {},
+) => {
   if (!isCharacterSpriteResourceItem(item) || !item.fileId) {
     return undefined;
   }
@@ -38,11 +41,13 @@ export const buildCharacterSpritePreviewLayer = (item) => {
     };
   }
 
+  const fileId =
+    source === "original" ? item.fileId : (item.thumbnailFileId ?? item.fileId);
   return {
     kind: "image",
     itemId: item.id,
-    fileId: item.fileId,
-    previewKey: ["image", item.id, item.fileId].join(":"),
+    fileId,
+    previewKey: ["image", item.id, fileId].join(":"),
   };
 };
 

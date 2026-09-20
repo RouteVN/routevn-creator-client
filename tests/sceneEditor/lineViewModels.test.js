@@ -171,6 +171,7 @@ describe("sceneEditor.lineDecorations", () => {
           id: "sprite-neutral",
           type: "image",
           fileId: "file-sprite-neutral",
+          thumbnailFileId: "thumb-sprite-neutral",
         },
       },
       tree: [{ id: "sprite-neutral" }],
@@ -215,15 +216,15 @@ describe("sceneEditor.lineDecorations", () => {
     });
 
     const expectedPreview = {
-      fileId: "file-sprite-neutral",
-      spriteFileIds: ["file-sprite-neutral"],
+      fileId: "thumb-sprite-neutral",
+      spriteFileIds: ["thumb-sprite-neutral"],
       spritePreviewBr: "none",
       spritePreviewLayers: [
         {
           kind: "image",
           itemId: "sprite-neutral",
-          fileId: "file-sprite-neutral",
-          previewKey: "image:sprite-neutral:file-sprite-neutral",
+          fileId: "thumb-sprite-neutral",
+          previewKey: "image:sprite-neutral:thumb-sprite-neutral",
         },
       ],
     };

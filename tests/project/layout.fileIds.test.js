@@ -191,7 +191,7 @@ describe("layout file id extraction", () => {
       },
     };
 
-    expect(extractFileIdsForLayouts(projectData, ["layout-main"])).toEqual([
+    const expected = [
       {
         url: "file-primary",
         type: "font/ttf",
@@ -201,7 +201,33 @@ describe("layout file id extraction", () => {
         url: "file-fallback",
         type: "font/woff2",
       },
-    ]);
+    ];
+    expect(extractFileIdsForLayouts(projectData, ["layout-main"])).toEqual(
+      expected,
+    );
+    projectData.story = {
+      scenes: {
+        "scene-one": {
+          sections: {
+            "section-one": {
+              lines: [
+                {
+                  actions: {
+                    background: {
+                      resourceId: "layout-main",
+                      resourceType: "layout",
+                    },
+                  },
+                },
+              ],
+            },
+          },
+        },
+      },
+    };
+    expect(extractFileIdsForScenes(projectData, ["scene-one"])).toEqual(
+      expected,
+    );
   });
 
   it("includes character action item ids when extracting temporary presentation assets", () => {

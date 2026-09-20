@@ -1,3 +1,10 @@
+import { runAsyncOperation } from "../../internal/asyncOperation.js";
+import {
+  getPreviewSignal,
+  syncPreviewLoadingDetails,
+  startPreviewStartup,
+  cancelPreviewStartup,
+} from "./support/vnPreviewStartup.js";
 import { filter, tap } from "rxjs";
 import { constructProjectData } from "../../internal/project/projection.js";
 import {
@@ -21,8 +28,12 @@ import {
 } from "./support/vnPreviewProjectData.js";
 import { remapRotatedPreviewEventCoordinates } from "./support/vnPreviewPointerCoordinates.js";
 import { selectSceneEditorCopy } from "../../internal/ui/sceneEditor/sceneEditorCopy.js";
-import { getFontAssetMessage } from "../../internal/ui/fontAssetFeedback.js";
+import {
+  getAssetLoadFailures,
+  showAssetLoadFailures,
+} from "../../internal/ui/assetLoadFeedback.js";
 import { isFontAssetError } from "../../internal/fontAssetError.js";
+import { loadPreviewStartupAssets } from "./support/vnPreviewAssets.js";
 
 const FORWARDED_PREVIEW_KEY_EVENT = "__rvnForwardedPreviewKeyEvent";
 const PREVIEW_FORWARDED_KEYS = new Set(["Enter"]);
@@ -229,13 +240,21 @@ const waitForBrowserPaint = async () => {
  * @returns {Promise<Object>} Loaded assets
  */
 const loadAssets = async (deps, fileReferences) => {
-  const { projectService } = deps;
+  const { projectService, store } = deps;
+  const signal = getPreviewSignal(store);
+  signal?.throwIfAborted();
   const assets = {};
   const contents = [];
+  let currentFileId;
   try {
     for (const fileObj of fileReferences) {
       const { url: fileId, type } = fileObj;
-      const result = await projectService.getFileContent(fileId);
+      currentFileId = fileId;
+      const result = await projectService.getFileContent(fileId, {
+        verifyImageIntegrity: true,
+        signal,
+      });
+      signal?.throwIfAborted();
       contents.push(result);
       assets[fileId] = {
         url: result.url,
@@ -247,26 +266,24 @@ const loadAssets = async (deps, fileReferences) => {
     return assets;
   } catch (error) {
     contents.forEach((content) => content.revoke?.());
-    throw error;
+    if (isFontAssetError(error)) throw error;
+    const failure = new Error(`Unable to read asset ${currentFileId}.`, {
+      cause: error,
+    });
+    failure.fileId = currentFileId;
+    throw failure;
   }
 };
 
-const reportFontFailure = (deps, error, projectData) => {
-  const message = getFontAssetMessage({
-    error,
-    fonts: projectData?.resources?.fonts,
-    i18n: deps.i18n,
-    projectService: deps.projectService,
-  });
-  if (!message) return false;
-  if (!error.reported) {
-    deps.appService.showAlert({
-      message,
-      title: deps.i18n?.resourcePages?.warningTitle ?? "Warning",
-    });
-    error.reported = true;
-  }
-  return true;
+const reportAssetFailure = (deps, error, projectData, options) => {
+  if (error.reported) return;
+  showAssetLoadFailures(
+    deps,
+    getAssetLoadFailures(error),
+    projectData?.resources,
+    options,
+  );
+  error.reported = true;
 };
 
 const resetAssetLoadCache = (store) => {
@@ -275,7 +292,10 @@ const resetAssetLoadCache = (store) => {
 
 const setAssetLoading = (deps, isLoading) => {
   const { store, render } = deps;
+  if (getPreviewSignal(store)?.aborted) return;
+  if (isLoading) store.setLoadingProgress({ stage: "loading" });
   store.setAssetLoading({ isLoading: isLoading });
+  syncPreviewLoadingDetails(deps);
   render();
 };
 
@@ -285,7 +305,7 @@ async function loadAssetsForSceneIds(
   sceneIds,
   { showLoading = true } = {},
 ) {
-  const { appService, store } = deps;
+  const { store } = deps;
   const allScenes = projectData?.story?.scenes || {};
 
   const uniqueSceneIds = Array.from(new Set(sceneIds || [])).filter(
@@ -318,7 +338,10 @@ async function loadAssetsForSceneIds(
     if (missingFileReferences.length > 0) {
       const assets = await loadAssets(deps, missingFileReferences);
       const { graphicsService } = deps;
-      await graphicsService.loadAssets(assets);
+      await graphicsService.loadAssets(assets, {
+        signal: getPreviewSignal(store),
+      });
+      getPreviewSignal(store)?.throwIfAborted();
 
       store.markAssetFileIdsLoaded({
         fileIds: Object.keys(assets),
@@ -329,13 +352,9 @@ async function loadAssetsForSceneIds(
       sceneIds: uniqueSceneIds,
     });
   } catch (error) {
-    if (reportFontFailure(deps, error, projectData)) throw error;
-    const copy = selectSceneEditorCopy(deps.i18n);
-    appService?.showAlert({
-      message:
-        copy.failedLoadPreviewAssets ?? "Failed to load some preview assets",
-      title: copy.warningTitle ?? "Warning",
-    });
+    if (getPreviewSignal(store)?.aborted) throw error;
+    reportAssetFailure(deps, error, projectData);
+    if (isFontAssetError(error)) throw error;
     console.error("[vnPreview] Failed to load scene assets:", error);
   } finally {
     if (shouldShowLoading) {
@@ -385,16 +404,21 @@ const preloadLayoutAssetsByIds = async (deps, projectData, layoutIds) => {
   try {
     const assets = await loadAssets(deps, missingFileReferences);
     const { graphicsService } = deps;
-    await graphicsService.loadAssets(assets);
+    await graphicsService.loadAssets(assets, {
+      signal: getPreviewSignal(store),
+    });
+    getPreviewSignal(store)?.throwIfAborted();
 
     store.markAssetFileIdsLoaded({ fileIds: Object.keys(assets) });
   } catch (error) {
-    reportFontFailure(deps, error, projectData);
+    if (getPreviewSignal(store)?.aborted) throw error;
+    reportAssetFailure(deps, error, projectData);
     throw error;
   }
 };
 
 const applyHydrationResult = (deps, runtime, hydrationResult) => {
+  getPreviewSignal(deps.store)?.throwIfAborted();
   if (!hydrationResult?.didLoad) {
     return false;
   }
@@ -452,16 +476,20 @@ const hydratePreviewTargets = async (
   }
 
   try {
-    const hydrationResult = await ensurePreviewProjectDataTargets({
-      repository,
-      projectData: runtime.projectData,
-      loadedSceneIds: Array.from(runtime.loadedSceneIds),
-      sceneIds: missingSceneIds,
-      sectionIds: missingSectionIds,
-      initialSceneId,
-      initialSectionId,
-      initialLineId,
-    });
+    const hydrationResult = await runAsyncOperation(
+      () =>
+        ensurePreviewProjectDataTargets({
+          repository,
+          projectData: runtime.projectData,
+          loadedSceneIds: Array.from(runtime.loadedSceneIds),
+          sceneIds: missingSceneIds,
+          sectionIds: missingSectionIds,
+          initialSceneId,
+          initialSectionId,
+          initialLineId,
+        }),
+      { signal: getPreviewSignal(deps.store), label: "Prepare preview scenes" },
+    );
     applyHydrationResult(deps, runtime, hydrationResult);
     return hydrationResult;
   } finally {
@@ -546,6 +574,7 @@ const createSceneTargetPrefetcher = (
       })
       .catch((error) => {
         prefetchedSceneIds.delete(sceneId);
+        if (getPreviewSignal(deps.store)?.aborted) return;
         console.error("[vnPreview] Failed to prefetch scene targets:", error);
       });
   };
@@ -557,13 +586,20 @@ const createBeforeHandleActionsHook = (
 ) => {
   return async (actions, eventContext) => {
     const { eventData, preparedActions, resolvedActions } =
-      await prepareRuntimeInteractionExecution({
-        actions,
-        eventContext,
-        graphicsService: deps.graphicsService,
-        canvasRoot: deps.refs?.canvas,
-        resolveEventBindings,
-      });
+      await runAsyncOperation(
+        () =>
+          prepareRuntimeInteractionExecution({
+            actions,
+            eventContext,
+            graphicsService: deps.graphicsService,
+            canvasRoot: deps.refs?.canvas,
+            resolveEventBindings,
+          }),
+        {
+          signal: getPreviewSignal(deps.store),
+          label: "Prepare preview interaction",
+        },
+      );
     const referencedSceneIds = collectSceneIdsFromValue(
       resolvedActions,
       eventData,
@@ -610,6 +646,7 @@ const createBeforeHandleActionsHook = (
     );
 
     if (transitionSceneIds.length === 0) {
+      getPreviewSignal(deps.store)?.throwIfAborted();
       return preparedActions;
     }
 
@@ -621,6 +658,7 @@ const createBeforeHandleActionsHook = (
       runtime.projectData,
       transitionSceneIds,
     );
+    getPreviewSignal(deps.store)?.throwIfAborted();
     return preparedActions;
   };
 };
@@ -641,6 +679,7 @@ export const handleBeforeMount = (deps) => {
     }
 
     suppressPreviewKeyboardEvent(event);
+    cancelPreviewStartup(store);
     dispatchEvent(new CustomEvent("close"));
   }
 
@@ -669,6 +708,7 @@ export const handleBeforeMount = (deps) => {
       filter(({ action }) => action === "app.nativeBack"),
       tap(({ payload }) => {
         payload?.handle?.();
+        cancelPreviewStartup(store);
         dispatchEvent(new CustomEvent("close"));
       }),
     )
@@ -681,6 +721,7 @@ export const handleBeforeMount = (deps) => {
   });
 
   return () => {
+    cancelPreviewStartup(store);
     store.setAssetLoading({ isLoading: false });
     store.setPreviewReady({ isPreviewReady: false });
     resetAssetLoadCache(store);
@@ -694,9 +735,13 @@ export const handleBeforeMount = (deps) => {
   };
 };
 
-export const handleClosePreview = ({ dispatchEvent }, { _event: event }) => {
+export const handleClosePreview = (
+  { dispatchEvent, store },
+  { _event: event },
+) => {
   event.preventDefault();
   event.stopPropagation();
+  cancelPreviewStartup(store);
   dispatchEvent(new CustomEvent("close"));
 };
 
@@ -712,25 +757,33 @@ export const handleRotatePreview = (deps, payload) => {
 
 export const handleAfterMount = async (deps) => {
   const { appService, dispatchEvent, i18n, store, render } = deps;
+  const startup = startPreviewStartup(deps);
   try {
-    await initializePreview(deps);
+    await initializePreview(deps, startup);
   } catch (error) {
+    if (startup.signal.aborted) return;
     store.setAssetLoading({ isLoading: false });
     store.setPreviewReady({ isPreviewReady: false });
     render();
     console.error("[vnPreview] Failed to initialize preview", error);
-    if (!isFontAssetError(error)) {
+    if (error.name === "TimeoutError") {
+      appService.showAlert({
+        title: i18n?.resourcePages?.warningTitle ?? "Warning",
+        message: startup.timeoutMessage(error),
+      });
+    } else if (!error.reported) {
       const copy = selectSceneEditorCopy(i18n);
       appService.showToast({
         message: copy.failedOpenPreview ?? "Failed to open preview",
         status: "error",
       });
     }
+    cancelPreviewStartup(store);
     dispatchEvent(new CustomEvent("close"));
   }
 };
 
-const initializePreview = async (deps) => {
+const initializePreview = async (deps, startup) => {
   const {
     dispatchEvent,
     projectService,
@@ -741,7 +794,9 @@ const initializePreview = async (deps) => {
   } = deps;
   focusPreviewSurface(refs);
 
-  const repository = await projectService.ensureRepository();
+  const repository = await startup.step("repository", () =>
+    projectService.ensureRepository(),
+  );
   const { canvas } = refs;
   graphicsService.setEngineAudioMuted?.(false);
   store.setPreviewReady({ isPreviewReady: false });
@@ -752,9 +807,11 @@ const initializePreview = async (deps) => {
 
   const state =
     typeof sceneId === "string" && sceneId.length > 0
-      ? await repository.getContextState({
-          sceneIds: [sceneId],
-        })
+      ? await startup.step("scenes", () =>
+          repository.getContextState({
+            sceneIds: [sceneId],
+          }),
+        )
       : projectService.getRepositoryState();
 
   const projectData = constructProjectData(state, {
@@ -774,16 +831,18 @@ const initializePreview = async (deps) => {
     typeof sceneId === "string" && sceneId.length > 0 ? [sceneId] : [];
 
   if (initialSceneIds.length > 0) {
-    const hydrationResult = await ensurePreviewProjectDataTargets({
-      repository,
-      projectData: projectDataWithInitial,
-      loadedSceneIds,
-      sceneIds: initialSceneIds,
-      sectionIds: [],
-      initialSceneId: sceneId,
-      initialSectionId: sectionId,
-      initialLineId: lineId,
-    });
+    const hydrationResult = await startup.step("scenes", () =>
+      ensurePreviewProjectDataTargets({
+        repository,
+        projectData: projectDataWithInitial,
+        loadedSceneIds,
+        sceneIds: initialSceneIds,
+        sectionIds: [],
+        initialSceneId: sceneId,
+        initialSectionId: sectionId,
+        initialLineId: lineId,
+      }),
+    );
 
     if (hydrationResult.didLoad) {
       projectDataWithInitial = hydrationResult.projectData;
@@ -820,70 +879,100 @@ const initializePreview = async (deps) => {
     },
   });
   deps.render();
-  await graphicsService.init({
-    canvas: canvas,
-    beforeHandleActions,
-    width: previewWidth,
-    height: previewHeight,
-  });
+  await startup.step("graphics", () =>
+    graphicsService.init({
+      signal: startup.signal,
+      canvas: canvas,
+      beforeHandleActions,
+      width: previewWidth,
+      height: previewHeight,
+    }),
+  );
   resetAssetLoadCache(store);
   store.setAssetLoading({ isLoading: false });
 
-  await loadAssetsForSceneIds(deps, projectDataWithInitial, initialSceneIds, {
-    showLoading: true,
-  });
-  await preloadLayoutAssetsByIds(
-    deps,
-    projectDataWithInitial,
-    Object.keys(projectDataWithInitial?.resources?.layouts || {}),
-  );
+  setAssetLoading(deps, true);
+  try {
+    const fileIds = await loadPreviewStartupAssets(
+      deps,
+      [
+        ...extractFileIdsForScenes(projectDataWithInitial, initialSceneIds),
+        ...extractFileIdsForLayouts(
+          projectDataWithInitial,
+          Object.keys(projectDataWithInitial?.resources?.layouts ?? {}),
+        ),
+      ],
+      {
+        signal: startup.signal,
+        onProgress: startup.progress,
+        resources: projectDataWithInitial.resources,
+      },
+    );
+    startup.signal.throwIfAborted();
+    if (fileIds.length > 0) store.markAssetFileIdsLoaded({ fileIds });
+    if (initialSceneIds.length > 0) {
+      store.markAssetSceneIdsLoaded({ sceneIds: initialSceneIds });
+    }
+  } catch (error) {
+    if (startup.signal.aborted || error.name === "TimeoutError") throw error;
+    reportAssetFailure(deps, error, projectDataWithInitial, {
+      previewBlocked: true,
+    });
+    throw error;
+  } finally {
+    if (!startup.signal.aborted) setAssetLoading(deps, false);
+  }
 
-  await graphicsService.initRouteEngine(runtime.projectData, {
-    handleEffects: true,
-    onRenderState: ({ systemState }) => {
-      const { currentPointer } = selectCurrentPointerSnapshot(systemState);
-      const currentSectionId = currentPointer?.sectionId;
-      const currentLineId = currentPointer?.lineId;
-      const currentLineKey =
-        currentSectionId && currentLineId
-          ? `${currentSectionId}:${currentLineId}`
-          : undefined;
+  await startup.step("engine", () =>
+    graphicsService.initRouteEngine(runtime.projectData, {
+      handleEffects: true,
+      onRenderState: ({ systemState }) => {
+        const { currentPointer } = selectCurrentPointerSnapshot(systemState);
+        const currentSectionId = currentPointer?.sectionId;
+        const currentLineId = currentPointer?.lineId;
+        const currentLineKey =
+          currentSectionId && currentLineId
+            ? `${currentSectionId}:${currentLineId}`
+            : undefined;
 
-      if (currentLineKey && currentLineKey !== lastDispatchedLineKey) {
-        lastDispatchedLineKey = currentLineKey;
-        dispatchEvent(
-          new CustomEvent("current-line-changed", {
-            detail: {
-              sectionId: currentSectionId,
-              lineId: currentLineId,
-            },
-            bubbles: true,
-            composed: true,
-          }),
+        if (currentLineKey && currentLineKey !== lastDispatchedLineKey) {
+          lastDispatchedLineKey = currentLineKey;
+          dispatchEvent(
+            new CustomEvent("current-line-changed", {
+              detail: {
+                sectionId: currentSectionId,
+                lineId: currentLineId,
+              },
+              bubbles: true,
+              composed: true,
+            }),
+          );
+        }
+
+        const currentSceneId = resolveSceneIdForSectionId(
+          runtime.projectData,
+          currentSectionId,
         );
-      }
 
-      const currentSceneId = resolveSceneIdForSectionId(
-        runtime.projectData,
-        currentSectionId,
-      );
+        if (!currentSceneId || currentSceneId === lastRenderedSceneId) {
+          return;
+        }
 
-      if (!currentSceneId || currentSceneId === lastRenderedSceneId) {
-        return;
-      }
-
-      lastRenderedSceneId = currentSceneId;
-      scheduleSceneTargetPrefetch(currentSceneId);
-    },
-  });
-  await waitForBrowserPaint();
+        lastRenderedSceneId = currentSceneId;
+        scheduleSceneTargetPrefetch(currentSceneId);
+      },
+    }),
+  );
+  await startup.step("paint", waitForBrowserPaint);
   store.setPreviewReady({ isPreviewReady: true });
+  syncPreviewLoadingDetails(deps);
   deps.render();
   void preloadDirectTransitionScenes(
     deps,
     runtime.projectData,
     initialSceneIds,
-  ).catch((error) =>
-    console.error("[vnPreview] Failed to prefetch scene assets:", error),
-  );
+  ).catch((error) => {
+    if (!startup.signal.aborted)
+      console.error("[vnPreview] Failed to prefetch scene assets:", error);
+  });
 };

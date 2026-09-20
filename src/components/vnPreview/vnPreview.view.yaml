@@ -32,9 +32,11 @@ template:
           - 'rtgl-view style="${previewFrameStyle}"': null
           - $if isPreviewLoading:
               - rtgl-view#previewLoading pos=abs edge=f w=f h=f av=c ah=c z=2 role=status:
-                  - rtgl-view bgc=bg ph=lg pv=md br=sm:
+                  - 'rtgl-view bgc=bg ph=lg pv=md br=sm g=sm ah=c style="max-width: 80vw;"':
                       - rtgl-text s=md fw=400 c=fg: ${loadingPreviewLabel}
-      - $if showRotatePreviewButton:
-          - 'rtgl-view pos=abs z=3 d=h g=sm style="top: calc(env(safe-area-inset-top, 0px) + 12px); right: calc(env(safe-area-inset-right, 0px) + 12px);"':
+                      - $if loadingPreviewAssetLabel:
+                          - 'rtgl-text s=sm c=fg style="overflow-wrap: anywhere;"': ${loadingPreviewAssetLabel}
+      - 'rtgl-view pos=abs z=3 d=h g=sm style="top: calc(env(safe-area-inset-top, 0px) + 12px); right: calc(env(safe-area-inset-right, 0px) + 12px);"':
+          - $if showRotatePreviewButton:
               - 'rtgl-button#rotatePreviewButton sq pre=rotate v=se aria-label="${rotatePreviewLabel}" title="${rotatePreviewLabel}" aria-pressed=${isRotated}': null
-              - 'rtgl-button#closePreviewButton sq pre=x v=se aria-label="${closePreviewLabel}" title="${closePreviewLabel}"': null
+          - 'rtgl-button#closePreviewButton sq pre=x v=se aria-label="${closePreviewLabel}" title="${closePreviewLabel}"': null

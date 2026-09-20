@@ -251,7 +251,7 @@ template:
                                       - $if selectedItemId:
                                           - $if selectedPreviewFileId:
                                               - 'div#detailImagePreview.imageDetailPreviewFrame.imagePreviewTransparencyGrid slot="image-file-id"':
-                                                  - rvn-file-image fileId=${selectedPreviewFileId} w=f h=f: null
+                                                  - rvn-file-image fileId=${selectedPreviewFileId} originalFileId=${selectedOriginalFileId} show-error-message w=f h=f: null
                                           - rtgl-tag-select#detailTagSelect key=${selectedItemId} slot="image-tags" w=f :options=${tagFilterOptions} :selectedValues=${selectedItemTagIds} :draftSelectedValues=${detailTagDraftValues} :open=${isDetailTagSelectOpen} :addOption=${detailTagAddOption} :placeholder=${addTagPlaceholder}: null
                             $else:
                               - rtgl-view wh=f av=c ah=c bgc=mu-fg:

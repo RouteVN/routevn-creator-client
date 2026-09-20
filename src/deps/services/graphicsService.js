@@ -1,3 +1,7 @@
+import {
+  runAsyncOperation,
+  getAssetTimeoutMs,
+} from "../../internal/asyncOperation.js";
 import createRouteGraphics, {
   Assets,
   AudioAsset,
@@ -551,10 +555,17 @@ const installManagedAudioAsset = () => {
     }
 
     const currentResetToken = managedAudioResetToken;
-    const nextPendingLoad = decodeAudioBuffer({
-      audioContext: decodeContext,
-      arrayBuffer: decodeSource,
-    })
+    const nextPendingLoad = runAsyncOperation(
+      () =>
+        decodeAudioBuffer({
+          audioContext: decodeContext,
+          arrayBuffer: decodeSource,
+        }),
+      {
+        timeoutMs: getAssetTimeoutMs({ size: decodeSource.byteLength }),
+        label: `Decode audio ${key}`,
+      },
+    )
       .then((audioBuffer) => {
         if (managedAudioResetToken !== currentResetToken) {
           return undefined;
@@ -564,8 +575,11 @@ const installManagedAudioAsset = () => {
         return audioBuffer;
       })
       .catch((error) => {
-        console.error(`AudioAsset.load: Failed to decode ${key}:`, error);
-        return undefined;
+        const failure = new Error(`Unable to decode audio asset ${key}.`, {
+          cause: error,
+        });
+        failure.fileId = key;
+        throw failure;
       })
       .finally(() => {
         managedAudioPendingLoads.delete(key);
@@ -628,6 +642,12 @@ export const createGraphicsService = async ({
   let routeGraphics;
   let routeGraphicsInitPromise;
   let destroyRuntimePromise;
+  let graphicsLifecycleQueue = Promise.resolve();
+  const queueGraphicsLifecycle = (operation) => {
+    const pending = graphicsLifecycleQueue.then(operation);
+    graphicsLifecycleQueue = pending.catch(() => {});
+    return pending;
+  };
   let engine;
   let engineGeneration = 0;
   let assetBufferManager;
@@ -702,7 +722,16 @@ export const createGraphicsService = async ({
       return;
     }
 
-    await Promise.all(loadPromises);
+    const results = await Promise.allSettled(loadPromises);
+    const errors = results
+      .filter((result) => result.status === "rejected")
+      .map((result) => result.reason);
+    if (errors.length === 1) {
+      throw errors[0];
+    }
+    if (errors.length > 1) {
+      throw new AggregateError(errors, "Unable to decode audio assets.");
+    }
   };
 
   const setRuntimeInteractionsEnabled = (value) => {
@@ -1525,7 +1554,9 @@ export const createGraphicsService = async ({
     await Promise.all(
       pixiAssetKeys.map(async (key) => {
         if (!Assets.cache?.has || Assets.cache.has(key)) {
-          await Assets.unload(key).catch((error) => {
+          await runAsyncOperation(() => Assets.unload(key), {
+            label: `Unload image ${key}`,
+          }).catch((error) => {
             console.error(
               `[graphicsService] Failed to unload asset ${key}`,
               error,
@@ -1547,7 +1578,13 @@ export const createGraphicsService = async ({
     }
 
     if (typeof AudioAsset?.unload === "function") {
-      await Promise.all(audioKeys.map((key) => AudioAsset.unload(key)));
+      await Promise.all(
+        audioKeys.map((key) =>
+          runAsyncOperation(() => AudioAsset.unload(key), {
+            label: `Unload audio ${key}`,
+          }),
+        ),
+      );
       return { count: audioKeys.length, strategy: "unload" };
     }
 
@@ -1599,14 +1636,19 @@ export const createGraphicsService = async ({
       activeRouteGraphics.destroy();
     }
 
-    await unloadTrackedPixiAssets();
-    await unloadTrackedAudioAssets();
-    clearLoadedFonts();
-    loadedAssetTypes = new Map();
-    assetBufferManager?.clear();
-    assetBufferManager = undefined;
+    try {
+      await Promise.all([
+        unloadTrackedPixiAssets(),
+        unloadTrackedAudioAssets(),
+      ]);
+    } finally {
+      clearLoadedFonts();
+      loadedAssetTypes = new Map();
+      assetBufferManager?.clear();
+      assetBufferManager = undefined;
 
-    ticker = undefined;
+      ticker = undefined;
+    }
   };
 
   const runDestroyRuntime = () => {
@@ -1623,14 +1665,19 @@ export const createGraphicsService = async ({
     bufferManager,
     assets,
     retryCount = 1,
+    options = {},
   ) => {
     let attempt = 0;
     while (attempt <= retryCount) {
       try {
-        await bufferManager.load(assets);
+        await runAsyncOperation(() => bufferManager.load(assets), options);
         return;
       } catch (error) {
-        if (attempt >= retryCount) {
+        if (
+          attempt >= retryCount ||
+          error.name === "TimeoutError" ||
+          options.signal?.aborted
+        ) {
           throw error;
         }
         attempt += 1;
@@ -1638,7 +1685,17 @@ export const createGraphicsService = async ({
     }
   };
 
-  const runAssetLoad = async (assets, runtimeVersion) => {
+  const runAssetLoad = async (assets, runtimeVersion, { signal } = {}) => {
+    signal?.throwIfAborted();
+    const timeoutMs = Math.max(
+      ...Object.values(assets).map(getAssetTimeoutMs),
+      30_000,
+    );
+    const operationOptions = {
+      signal,
+      timeoutMs,
+      label: `Load assets ${Object.keys(assets).join(", ")}`,
+    };
     const activeBufferManager = assetBufferManager;
     if (!activeBufferManager || runtimeVersion !== assetLoadRuntimeVersion) {
       return;
@@ -1695,7 +1752,12 @@ export const createGraphicsService = async ({
 
     try {
       if (bufferedAssetEntriesToFetch.length > 0) {
-        await loadBuffersWithRetry(activeBufferManager, bufferedAssets);
+        await loadBuffersWithRetry(
+          activeBufferManager,
+          bufferedAssets,
+          1,
+          operationOptions,
+        );
       }
     } finally {
       blobUrlsToRevoke.forEach((url) => {
@@ -1704,6 +1766,7 @@ export const createGraphicsService = async ({
     }
 
     if (
+      signal?.aborted ||
       runtimeVersion !== assetLoadRuntimeVersion ||
       assetBufferManager !== activeBufferManager
     ) {
@@ -1741,10 +1804,20 @@ export const createGraphicsService = async ({
     const audioAssetEntries = Object.entries(deltaBufferMap).filter(
       ([, value]) => classifyAsset(value?.type) === "audio",
     );
+    let audioLoadError;
     if (audioAssetEntries.length > 0) {
-      await decodeAudioAssetEntries(audioAssetEntries);
+      try {
+        await runAsyncOperation(
+          () => decodeAudioAssetEntries(audioAssetEntries),
+          operationOptions,
+        );
+      } catch (error) {
+        // Finish loading the working assets before reporting damaged audio.
+        audioLoadError = error;
+      }
 
       if (
+        signal?.aborted ||
         runtimeVersion !== assetLoadRuntimeVersion ||
         assetBufferManager !== activeBufferManager
       ) {
@@ -1756,15 +1829,21 @@ export const createGraphicsService = async ({
       ([, value]) => classifyAsset(value?.type) === "font",
     );
     if (fontAssetEntries.length > 0) {
-      await Promise.all(
-        fontAssetEntries.map(([key, value]) =>
-          loadFontBuffer(key, value.buffer, value.type, {
-            weight: value.fontWeightDescriptor,
-          }),
-        ),
+      await runAsyncOperation(
+        () =>
+          Promise.all(
+            fontAssetEntries.map(([key, value]) =>
+              loadFontBuffer(key, value.buffer, value.type, {
+                weight: value.fontWeightDescriptor,
+                signal,
+              }),
+            ),
+          ),
+        operationOptions,
       );
 
       if (
+        signal?.aborted ||
         runtimeVersion !== assetLoadRuntimeVersion ||
         assetBufferManager !== activeBufferManager
       ) {
@@ -1785,18 +1864,26 @@ export const createGraphicsService = async ({
       if (!activeRouteGraphics) {
         return;
       }
-      await activeRouteGraphics.loadAssets(renderAssetBufferMap);
+      await runAsyncOperation(
+        () => activeRouteGraphics.loadAssets(renderAssetBufferMap),
+        operationOptions,
+      );
 
       if (
+        signal?.aborted ||
         runtimeVersion !== assetLoadRuntimeVersion ||
         routeGraphics !== activeRouteGraphics
       ) {
         return;
       }
 
-      await warmVideoAssetsForPlayback(renderAssetEntries);
+      await runAsyncOperation(
+        () => warmVideoAssetsForPlayback(renderAssetEntries),
+        operationOptions,
+      );
 
       if (
+        signal?.aborted ||
         runtimeVersion !== assetLoadRuntimeVersion ||
         routeGraphics !== activeRouteGraphics
       ) {
@@ -1805,11 +1892,18 @@ export const createGraphicsService = async ({
     }
 
     assetEntriesToLoad.forEach(([key, asset]) => {
-      loadedAssetTypes.set(key, classifyAsset(asset?.type));
+      const assetType = classifyAsset(asset?.type);
+      if (assetType !== "audio" || AudioAsset.getAsset?.(key)) {
+        loadedAssetTypes.set(key, assetType);
+      }
     });
+    if (audioLoadError) {
+      throw audioLoadError;
+    }
   };
 
   const runInteractionActions = async (actions, eventContext) => {
+    const generation = engineGeneration;
     let nextActions = actions;
 
     if (beforeHandleActions) {
@@ -1819,7 +1913,7 @@ export const createGraphicsService = async ({
       }
     }
 
-    if (!engine) {
+    if (!engine || generation !== engineGeneration) {
       return;
     }
 
@@ -2048,6 +2142,7 @@ export const createGraphicsService = async ({
   };
 
   const waitUntilReady = async () => {
+    await graphicsLifecycleQueue;
     if (!routeGraphicsInitPromise) {
       return;
     }
@@ -2120,151 +2215,214 @@ export const createGraphicsService = async ({
   };
 
   return {
-    init: async (options = {}) => {
-      if (routeGraphicsInitPromise) {
-        await routeGraphicsInitPromise;
-      }
+    init: (options = {}) =>
+      queueGraphicsLifecycle(async () => {
+        options.signal?.throwIfAborted();
+        if (routeGraphicsInitPromise) {
+          await routeGraphicsInitPromise;
+        }
 
-      if (destroyRuntimePromise) {
-        await destroyRuntimePromise;
-      }
+        if (destroyRuntimePromise) {
+          await destroyRuntimePromise;
+        }
 
-      if (routeGraphics) {
-        await runDestroyRuntime();
-      }
+        if (routeGraphics) {
+          await runDestroyRuntime();
+        }
 
-      routeGraphicsInitPromise = (async () => {
-        ticker = new Ticker();
-        ticker.start();
-        const { canvas, beforeHandleActions: onBeforeHandleActions } = options;
-        const { width: renderWidth, height: renderHeight } =
-          requireProjectResolution(
-            {
-              width: options.width,
-              height: options.height,
-            },
-            "Graphics runtime resolution",
-          );
-        beforeHandleActions = onBeforeHandleActions;
-        actionQueue = Promise.resolve();
-        assetLoadQueue = Promise.resolve();
-        assetLoadRuntimeVersion += 1;
-        invalidateDeferredAudioRender();
-        clearAllPendingClickInteractions();
-        runtimeInteractionsEnabled = true;
-        loadedAssetTypes = new Map();
-        assetBufferManager = createAssetBufferManager();
-        // Media playback can remain pending until the browser produces audio.
-        // It must not hold up canvas creation, asset loading, or teardown.
-        if (audioOutput) {
-          void audioOutput.resume().catch((error) => {
-            console.error(
-              "[graphicsService] Failed to start audio output",
-              error,
+        options.signal?.throwIfAborted();
+        routeGraphicsInitPromise = (async () => {
+          ticker = new Ticker();
+          ticker.start();
+          const { canvas, beforeHandleActions: onBeforeHandleActions } =
+            options;
+          const { width: renderWidth, height: renderHeight } =
+            requireProjectResolution(
+              {
+                width: options.width,
+                height: options.height,
+              },
+              "Graphics runtime resolution",
             );
-            onAudioOutputError?.(error);
+          beforeHandleActions = onBeforeHandleActions;
+          actionQueue = Promise.resolve();
+          assetLoadQueue = Promise.resolve();
+          assetLoadRuntimeVersion += 1;
+          invalidateDeferredAudioRender();
+          clearAllPendingClickInteractions();
+          runtimeInteractionsEnabled = true;
+          loadedAssetTypes = new Map();
+          assetBufferManager = createAssetBufferManager();
+          // Media playback can remain pending until the browser produces audio.
+          // It must not hold up canvas creation, asset loading, or teardown.
+          if (audioOutput) {
+            void audioOutput.resume().catch((error) => {
+              console.error(
+                "[graphicsService] Failed to start audio output",
+                error,
+              );
+              onAudioOutputError?.(error);
+            });
+          }
+          const activeRouteGraphics = createRouteGraphics();
+          routeGraphics = activeRouteGraphics;
+
+          const plugins = await runAsyncOperation(loadGraphicsEnginePlugins, {
+            signal: options.signal,
+            label: "Load graphics plugins",
           });
+
+          await runWithNonPassiveWheelListeners(() =>
+            runAsyncOperation(
+              () =>
+                activeRouteGraphics.init({
+                  width: renderWidth,
+                  height: renderHeight,
+                  plugins,
+                  eventHandler: (eventName, payload) => {
+                    if (
+                      routeGraphics !== activeRouteGraphics ||
+                      options.signal?.aborted
+                    )
+                      return;
+                    const eventId = payload?._event?.id;
+                    const actions = getRuntimeEventActions(payload);
+                    const layoutEditorDragTarget =
+                      isLayoutEditorDragTarget(eventId);
+                    if (eventName === "dragMove") {
+                      if (layoutEditorDragTarget) {
+                        subject.dispatch(
+                          "border-drag-move",
+                          createLayoutEditorDragPayload(payload, {
+                            includePosition: true,
+                          }),
+                        );
+                      }
+                    } else if (eventName === "dragStart") {
+                      if (layoutEditorDragTarget) {
+                        subject.dispatch(
+                          "border-drag-start",
+                          createLayoutEditorDragPayload(payload),
+                        );
+                      }
+                    } else if (eventName === "dragEnd") {
+                      if (layoutEditorDragTarget) {
+                        subject.dispatch(
+                          "border-drag-end",
+                          createLayoutEditorDragPayload(payload),
+                        );
+                      }
+                    }
+
+                    if (!runtimeInteractionsEnabled) {
+                      return;
+                    }
+
+                    if (!engine) {
+                      return;
+                    }
+
+                    if (eventName === "renderComplete") {
+                      if (payload?.aborted === true) {
+                        return;
+                      }
+                      engine.handleActions({
+                        markLineCompleted: {},
+                      });
+                      return;
+                    }
+
+                    if (actions && engine) {
+                      const eventContext = createRuntimeEventContext(payload);
+
+                      const interactionId =
+                        eventContext?._event?.id ?? "__unknown__";
+
+                      if (isRuntimeRightClickEvent(eventName)) {
+                        clearPendingClickInteraction(interactionId);
+                        enqueueInteractionActions(actions, eventContext);
+                        return;
+                      }
+
+                      if (eventName === "click") {
+                        scheduleClickInteraction(actions, eventContext);
+                        return;
+                      }
+
+                      enqueueInteractionActions(actions, eventContext);
+                    }
+                  },
+                }),
+              {
+                signal: options.signal,
+                label: "Initialize graphics",
+                onLateResolve: () => activeRouteGraphics.destroy(),
+              },
+            ),
+          );
+
+          options.signal?.throwIfAborted();
+          if (canvas) {
+            await attachCanvas(canvas);
+          }
+        })();
+
+        try {
+          await routeGraphicsInitPromise;
+        } catch (error) {
+          await runDestroyRuntime();
+          throw error;
+        } finally {
+          routeGraphicsInitPromise = undefined;
         }
-        routeGraphics = createRouteGraphics();
-
-        const plugins = await loadGraphicsEnginePlugins();
-
-        await runWithNonPassiveWheelListeners(() =>
-          routeGraphics.init({
-            width: renderWidth,
-            height: renderHeight,
-            plugins,
-            eventHandler: (eventName, payload) => {
-              const eventId = payload?._event?.id;
-              const actions = getRuntimeEventActions(payload);
-              const layoutEditorDragTarget = isLayoutEditorDragTarget(eventId);
-              if (eventName === "dragMove") {
-                if (layoutEditorDragTarget) {
-                  subject.dispatch(
-                    "border-drag-move",
-                    createLayoutEditorDragPayload(payload, {
-                      includePosition: true,
-                    }),
-                  );
-                }
-              } else if (eventName === "dragStart") {
-                if (layoutEditorDragTarget) {
-                  subject.dispatch(
-                    "border-drag-start",
-                    createLayoutEditorDragPayload(payload),
-                  );
-                }
-              } else if (eventName === "dragEnd") {
-                if (layoutEditorDragTarget) {
-                  subject.dispatch(
-                    "border-drag-end",
-                    createLayoutEditorDragPayload(payload),
-                  );
-                }
-              }
-
-              if (!runtimeInteractionsEnabled) {
-                return;
-              }
-
-              if (!engine) {
-                return;
-              }
-
-              if (eventName === "renderComplete") {
-                if (payload?.aborted === true) {
-                  return;
-                }
-                engine.handleActions({
-                  markLineCompleted: {},
-                });
-                return;
-              }
-
-              if (actions && engine) {
-                const eventContext = createRuntimeEventContext(payload);
-
-                const interactionId = eventContext?._event?.id ?? "__unknown__";
-
-                if (isRuntimeRightClickEvent(eventName)) {
-                  clearPendingClickInteraction(interactionId);
-                  enqueueInteractionActions(actions, eventContext);
-                  return;
-                }
-
-                if (eventName === "click") {
-                  scheduleClickInteraction(actions, eventContext);
-                  return;
-                }
-
-                enqueueInteractionActions(actions, eventContext);
-              }
-            },
-          }),
-        );
-
-        if (canvas) {
-          await attachCanvas(canvas);
-        }
-      })();
-
-      try {
-        await routeGraphicsInitPromise;
-      } catch (error) {
-        await runDestroyRuntime();
-        throw error;
-      } finally {
-        routeGraphicsInitPromise = undefined;
-      }
-    },
-    loadAssets: async (assets) => {
-      await waitUntilReady();
+      }),
+    loadAssets: async (assets, options = {}) => {
+      await runAsyncOperation(waitUntilReady, {
+        signal: options.signal,
+        label: "Wait for graphics",
+      });
       const runtimeVersion = assetLoadRuntimeVersion;
-      const queuedLoad = assetLoadQueue.then(() =>
-        runAssetLoad(assets, runtimeVersion),
-      );
+      const queuedLoad = assetLoadQueue.then(async () => {
+        options.signal?.throwIfAborted();
+        if (!options.onProgress)
+          return runAssetLoad(assets, runtimeVersion, options);
+        const entries = Object.entries(assets);
+        let completed = 0;
+        const failures = [];
+        // Report the asset actually being decoded. Keep the shared queue so
+        // background prefetch cannot interleave with this startup batch.
+        for (const [fileId, asset] of entries) {
+          options.signal?.throwIfAborted();
+          options.onProgress({ completed, total: entries.length, fileId });
+          try {
+            await runAssetLoad({ [fileId]: asset }, runtimeVersion, options);
+            completed += 1;
+          } catch (error) {
+            if (options.signal?.aborted || error.name === "TimeoutError")
+              throw error;
+            const failure = new Error(`Unable to load asset ${fileId}.`, {
+              cause: error,
+            });
+            failure.fileId = fileId;
+            failures.push(failure);
+          }
+        }
+        options.onProgress({ completed, total: entries.length });
+        if (failures.length)
+          throw new AggregateError(failures, "Assets could not be loaded.");
+      });
       assetLoadQueue = queuedLoad.catch(() => {});
-      return queuedLoad;
+      return runAsyncOperation(() => queuedLoad, {
+        signal: options.signal,
+        // Each asset/stage has its own deadline. This bounds time in the queue.
+        timeoutMs:
+          30_000 +
+          Object.values(assets).reduce(
+            (sum, asset) => sum + getAssetTimeoutMs(asset) * 4,
+            0,
+          ),
+        label: "Wait for asset loading",
+      });
     },
     extractBase64: async (label) => {
       if (!routeGraphics || typeof routeGraphics.extractBase64 !== "function") {
@@ -2462,12 +2620,13 @@ export const createGraphicsService = async ({
     parse: (payload) => routeGraphics?.parse(payload),
     hitTestElementBounds: (point) =>
       routeGraphics?.hitTestElementBounds(point) ?? [],
-    destroy: async () => {
-      if (routeGraphicsInitPromise) {
-        await routeGraphicsInitPromise.catch(() => {});
-      }
+    destroy: () =>
+      queueGraphicsLifecycle(async () => {
+        if (routeGraphicsInitPromise) {
+          await routeGraphicsInitPromise.catch(() => {});
+        }
 
-      await runDestroyRuntime();
-    },
+        await runDestroyRuntime();
+      }),
   };
 };

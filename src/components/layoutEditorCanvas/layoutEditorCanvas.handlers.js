@@ -1,3 +1,4 @@
+import { loadAvailableLayoutEditorAssets } from "./support/layoutEditorAssetFeedback.js";
 import { debounceTime, filter, fromEvent, tap } from "rxjs";
 import {
   DEFAULT_PROJECT_RESOLUTION,
@@ -16,7 +17,7 @@ import {
   createLayoutEditorHoverOverlay,
   createLayoutEditorRenderedElements,
   createLayoutEditorSelectionRenderState,
-  loadLayoutEditorAssets,
+  omitUnavailableLayoutElements,
 } from "./support/layoutEditorCanvasRender.js";
 import {
   resolveLayoutEditorCanvasHitPath,
@@ -971,16 +972,11 @@ const prefetchLayoutEditorAssets = async (
       return;
     }
 
-    const assets = await loadLayoutEditorAssets({
-      projectService: deps.projectService,
-      selectCachedFileContent: deps.store.selectCachedFileContent,
-      clearCachedFileContent: deps.store.clearCachedFileContent,
-      cacheFileContent: deps.store.cacheFileContent,
-      hasLoadedAsset: deps.graphicsService.hasLoadedAsset,
+    await loadAvailableLayoutEditorAssets(
+      deps,
       fileReferences,
-      fontsItems: repositoryState?.fonts?.items || {},
-    });
-    await deps.graphicsService.loadAssets(assets);
+      repositoryState,
+    );
   } catch (error) {
     console.error("[layoutEditorCanvas] Failed to prefetch assets", error);
   }
@@ -1057,51 +1053,28 @@ const renderLayoutEditorCanvas = async (
       });
     }
 
-    let assets = await loadLayoutEditorAssets({
-      projectService: deps.projectService,
-      selectCachedFileContent: deps.store.selectCachedFileContent,
-      clearCachedFileContent: deps.store.clearCachedFileContent,
-      cacheFileContent: deps.store.cacheFileContent,
-      hasLoadedAsset: deps.graphicsService.hasLoadedAsset,
+    const failedFileIds = await loadAvailableLayoutEditorAssets(
+      deps,
       fileReferences,
-      fontsItems: repositoryState?.fonts?.items || {},
-    });
-    if (finishStaleCanvasRender(deps, renderRequestId)) {
-      return;
-    }
-    try {
-      await deps.graphicsService.loadAssets(assets);
-      if (finishStaleCanvasRender(deps, renderRequestId)) {
-        return;
-      }
-    } catch {
-      deps.store.clearFileContentCache();
-      assets = await loadLayoutEditorAssets({
-        projectService: deps.projectService,
-        selectCachedFileContent: deps.store.selectCachedFileContent,
-        clearCachedFileContent: deps.store.clearCachedFileContent,
-        cacheFileContent: deps.store.cacheFileContent,
-        hasLoadedAsset: deps.graphicsService.hasLoadedAsset,
-        fileReferences,
-        fontsItems: repositoryState?.fonts?.items || {},
-      });
-      if (finishStaleCanvasRender(deps, renderRequestId)) {
-        return;
-      }
-      await deps.graphicsService.loadAssets(assets);
-      if (finishStaleCanvasRender(deps, renderRequestId)) {
-        return;
-      }
-    }
+      repositoryState,
+    );
+    if (finishStaleCanvasRender(deps, renderRequestId)) return;
+    const availableElements = omitUnavailableLayoutElements(
+      elements,
+      failedFileIds,
+    );
 
     deps.graphicsService.render({
-      elements,
+      elements: availableElements,
       animations: [],
     });
     deps.store.setCanvasRenderState({
-      elements,
-      baseElements,
-      parsedElements,
+      elements: availableElements,
+      baseElements: omitUnavailableLayoutElements(baseElements, failedFileIds),
+      parsedElements: omitUnavailableLayoutElements(
+        parsedElements,
+        failedFileIds,
+      ),
       canvasUnitsPerCssPixel,
     });
     deps.store.setSelectionOccurrences({

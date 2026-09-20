@@ -1,4 +1,12 @@
 template:
   - 'rtgl-view#main data-preview-status="${status}" style="${widthStyle} ${heightStyle} min-width: 0; min-height: 0; overflow: hidden;"':
-      - $if isReady:
+      - $if hasError:
+          - 'rtgl-view w=f h=f av=c ah=c g=xs role=img aria-label="${unavailableLabel}. ${reuploadMessage}" title="${reuploadMessage}"':
+              - 'rtgl-svg svg=warning-dead-end wh=24 aria-hidden=true style="flex-shrink: 0; color: #f59e0b;"': null
+              - $if showErrorMessage:
+                  - rtgl-text s=xs ta=c w=f: ${unavailableLabel}
+                  - rtgl-text s=xs ta=c w=f: ${reuploadMessage}
+                $else:
+                  - rtgl-text s=xs ta=c w=f: ${reuploadLabel}
+        $elif isReady:
           - 'rvn-route-graphics-text-preview :preview=${routeGraphicsPreview}': null

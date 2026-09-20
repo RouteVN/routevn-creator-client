@@ -1007,6 +1007,30 @@ time, but they are the current standard.
 
 Resource pages should stay explicit at the page level.
 
+Static image cards, sprite pickers, and compact sprite/texture previews prefer
+`thumbnailFileId`, falling back to `fileId` only when no thumbnail is recorded.
+Full-size image previews use the original file. Animated spritesheet previews
+also use the original atlas because their frame coordinates refer to that image.
+Character avatars have their own uploaded file and no separate thumbnail.
+
+Images and character sprite cards and detail panels pass the original file ID
+to `rvn-file-image` for integrity checks. The preview stays hidden until the
+thumbnail and original pass their saved size/SHA-256 checks. Missing or changed
+files show a warning and re-upload guidance instead of a stale thumbnail.
+Checks read bytes without decoding the original image, run serially, and share
+in-flight requests. Legacy records without a saved hash cannot detect same-size
+changes; checking never creates a new baseline. Replacing the original triggers
+a fresh check even when its thumbnail ID stays the same.
+
+`node tests/images/images.integrity.browser.mjs` verifies warnings, recovery,
+and the absence of thumbnail flashes against the running watch server.
+
+Font previews use the existing verified font reader and show a warning with
+re-upload guidance when loading fails. The Fonts grid, detail panel, and edit
+preview share this behavior. A replacement file ID starts a fresh check and
+clears the warning on success. `node tests/fonts/fonts.integrity.browser.mjs`
+checks missing/changed fonts and replacement recovery.
+
 Touch resource grids default to two columns below 768 CSS pixels of viewport
 width and six columns at 768px or wider. Phone/tablet sizing is separate from
 touch input mode. Omit `default-items-per-row` on touch page branches so the
@@ -1177,6 +1201,139 @@ Why this matters:
 If this asset-loading behavior changes, document the reason in the same PR and
 re-check scene-editor memory behavior before merging.
 
+Scene editor and fullscreen asset readers request `verifyImageIntegrity` when
+calling `getFileContent`. Images must match their saved size/SHA-256 before
+graphics receives their URL, even when modified bytes still decode. Verification
+reads bytes serially and releases them after hashing; images remain URL-backed
+for rendering, without additional Blob copies or retained buffers. This extra
+read prevents changed files from bypassing checks simply because they can decode.
+Already loaded assets retain the existing scene cache behavior. Reopen the editor
+to check files changed externally during an editing session.
+
+`node tests/assetLoadFeedback/imageIntegrity.browser.mjs` verifies that a valid,
+decodable image with a mismatched saved hash is omitted in both preview surfaces.
+
+### Asset Failure Policy
+
+Keep errors explicit at the service boundary; recover at the UI boundary only
+when the failed work can be isolated. For editor media loading, the policy is
+**report the failure, omit the unavailable media, and continue useful work**.
+A corrupt sound must not prevent users from seeing the scene or reaching the
+controls needed to replace it. Continuing with partial media is degraded preview
+behavior, not a successful load of the damaged asset.
+
+This is a scoped exception to stopping on errors, not a general catch-and-continue
+rule. Do not apply it to failed saves, imports, project hydration, or unexpected
+invariant violations without an explicit recovery contract. If an operation
+cannot produce a valid result or preserve data integrity, stop that operation
+and show the failure. Never replace saved references, delete damaged files, or
+persist fallback values merely to make a preview load.
+
+Current recovery boundaries:
+
+| Boundary | Behavior on failure |
+| --- | --- |
+| Asset readers and decoders | Reject with the asset identity and original cause. Do not return success for corrupt data. |
+| Graphics audio batch | Wait for all sound decodes to settle, finish unaffected fonts and visuals, then reject with the audio error or an aggregate of audio errors. Cache successful assets; failed audio remains unavailable. |
+| Scene editor asset loading | Isolate failed entries, show a warning, and keep editing and working assets available, including when a font fails. |
+| Scene editor audio warm-up | Keep painting after a decode retry fails. Preserve diagnostics without duplicating the warning already shown by preloading. |
+| Layout editor canvas | Collect read/integrity/decode failures, warn once per failed file per mounted canvas, omit affected render elements, and keep unaffected elements editable. Retry on subsequent requests without changing the saved layout. |
+| Fullscreen startup | Check the combined initial scene and layout assets, collect all read/integrity/decode failures, and show one deduplicated warning stating playback is blocked. Any failure closes the preview before starting the engine. |
+| Fullscreen later scene/layout loading | Retain the existing transition/prefetch handling: report scene failures, propagate font/layout failures. |
+
+The scene editor's page and canvas loading overlays display the same localized
+stages, checked/loaded counts, and separate asset-name line as fullscreen preview.
+For the first five seconds of each continuous scene-editor loading period, keep
+the original “Loading scene…” or “Loading assets…” text and hide asset names.
+After five seconds, reveal the latest progress even if no new progress event
+arrives. Stage changes and overlapping loads do not restart the delay. Completing
+loading or unmounting cancels the timer; each later loading period starts fresh.
+`assetLoadingProgress.js` shares the formatting. Foreground loads explicitly opt
+into progress reporting; background transition prefetch cannot overwrite the
+visible stage. Counts are per current asset batch, include layout/font checks,
+and decoded counts include only successful assets. Editor failures retain the
+existing warning-and-continue behavior. `node tests/sceneEditor/loadingProgress.browser.mjs`
+checks graphics initialization and named file/decode progress in Chromium and WebKit.
+
+Fullscreen preview uses the same five-second reveal delay, displaying “Loading
+preview…” initially. Successful loading or closing cancels its timer; reopening
+and later asset-loading periods start a fresh delay. Timeout diagnostics always
+include the current stage, even while loading details are hidden.
+
+Fullscreen startup displays its current project, scene, graphics, file-check,
+asset-load, playback, and first-frame stages. File progress includes counts and
+resource names. Startup graphics loading processes entries within one shared
+queue to identify the exact current decoder while retaining direct image/video
+URLs. Successfully loaded entries are cached; failures are collected without
+reloading healthy entries solely to identify a bad file.
+
+Preview async operations default to a 30-second deadline per blocking step.
+File reads, integrity verification, buffer loading, audio/font decoding, renderer
+initialization, asset loading, and teardown waits are bounded. Videos get at
+least 120 seconds per asset operation; size adds 30 seconds per 50 MiB, capped
+at 120 seconds. These are per-operation limits, not a deadline for the whole
+project. `src/internal/asyncOperation.js` owns the shared policy and abortable
+wait. A timeout releases queues even when the underlying native API ignores
+cancellation. Late file URLs are revoked and late renderer initialization is
+destroyed without attaching to the editor. JavaScript deadlines cannot preempt
+a decoder or script that blocks the main thread synchronously.
+
+Closing fullscreen preview aborts its session, including pending hydration and
+asset waits. Cancelled startup cannot start the engine or mark the preview ready.
+The close control remains available on desktop as well as touch devices. Timeout
+feedback includes the stalled stage/current asset and returns to the editor.
+`node tests/vnPreview/startup.browser.mjs` checks named progress, close during a
+pending file read, late-result isolation, and a real 30-second startup deadline.
+
+Fullscreen startup uses `vnPreviewAssets.js` to continue checking after a failed
+file and isolate batch decoder failures. The scene editor remains available to
+repair assets. `node tests/assetLoadFeedback/blockedPreview.browser.mjs` checks
+that a failed font and two failed images appear in one blocked-playback warning.
+
+`node tests/layoutEditor/assetFailure.browser.mjs` checks that unavailable fonts
+do not abort layout canvas rendering or repeat warnings on subsequent loads.
+Scene loading follows background layout references through their text styles
+and font stacks, using the same once-per-editor warning policy.
+
+Graphics service initialization and destruction share a serialized lifecycle
+queue. Overlapping calls must finish initializing and release each renderer
+before creating its replacement. `node tests/graphicsService/lifecycle.browser.mjs`
+checks real renderer-context cleanup across repeated overlapping initializations.
+
+Scene editor and fullscreen preview asset warnings share
+`src/internal/ui/assetLoadFeedback.js`. Resolve file IDs against authoring
+resource names (including character sprite names); runtime projections may omit
+those names. Preserve `fileId` on file-read/audio-decode errors and use
+route-graphics' `details.assetKey` and `AggregateError.errors` for graphics
+failures. Show the file ID when no resource name is available, and keep raw
+decoder errors in diagnostics. Do not guess which file failed when an error
+contains no identity.
+
+Asset warnings list all failed assets, including fonts, on individual bullet
+lines with resource type and name, followed by shared replacement guidance. Rendering those line breaks in the standard
+alert is supported by `@rettangoli/ui` 1.22.5, which includes
+[Rettangoli PR #483](https://github.com/yuusoft-org/rettangoli/pull/483).
+
+The scene editor reports isolated failures while keeping working assets and
+editing available. Failed assets are eligible for retry on the next load request,
+without a cooldown. Successful assets remain cached and in-flight loads are
+shared. Each failed file is warned about only once per mounted scene editor,
+including across returns from fullscreen preview. Warning history is local page
+state: reopening the editor allows warnings again, and a different failed file
+still gets its own warning. Fullscreen preview reports named scene/layout failures
+and avoids a
+second generic startup toast for an already reported failure. Font integrity and
+decoding checks remain independent of the shared warning format.
+
+`node tests/assetLoadFeedback/assetLoadFeedback.browser.mjs` validates these
+warnings in Chromium against the running watch server (port 3001 by
+default, overridable with `ASSET_TEST_ORIGIN`). It uses isolated web storage and
+injects file failures in memory, without changing user projects.
+
+`node tests/graphicsService/audioAssetFailure.browser.mjs` uses the same watch
+server to verify a real audio decode rejection alongside a valid image, including
+checking that the image paints correctly after the batch reports the failure.
+
 ### Font Integrity and Loading
 
 `projectAssetService.getFileContent()` checks font bytes against the saved file
@@ -1188,7 +1345,7 @@ video assets retain their existing direct URL path.
 
 New uploads and replacements use browser font decoding validation, including
 replacement files with a cached family name. The shared browser font loader has
-a 15-second deadline; late results are not registered. This deadline bounds the
+a 30-second default deadline; late results are not registered. This deadline bounds the
 asynchronous wait but cannot interrupt a decoder blocking the JavaScript thread.
 
 Scene loading isolates a bad font, identifies it in a warning, and keeps the

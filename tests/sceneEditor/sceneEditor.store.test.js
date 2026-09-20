@@ -10,6 +10,9 @@ import {
   selectSectionTransitionsDAG,
   setRepositoryState,
   setSceneId,
+  setSceneLoadingProgress,
+  setSceneLoadingDetailsVisible,
+  setScenePageLoading,
   setPresentationState,
   setMobileKeyboardState,
   setUiConfig,
@@ -25,6 +28,28 @@ import {
 import { EN_I18N } from "../support/i18n.js";
 
 describe("sceneEditorLexical.store", () => {
+  it("shows the loading stage and asset name separately, then clears stale details for another scene", () => {
+    const state = createInitialState();
+    setSceneLoadingProgress(
+      { state },
+      {
+        stage: "reading",
+        completed: 2,
+        total: 5,
+        assetName: "Images: Image One",
+      },
+    );
+    setSceneLoadingDetailsVisible({ state }, { visible: true });
+    let view = selectViewData({ state, i18n: EN_I18N });
+    expect(view.loadingSceneLabel).toBe("Checking assets: 2 / 5");
+    expect(view.loadingAssetsLabel).toBe(view.loadingSceneLabel);
+    expect(view.loadingAssetName).toBe("Images: Image One");
+    setScenePageLoading({ state }, { isLoading: true });
+    view = selectViewData({ state, i18n: EN_I18N });
+    expect(view.loadingSceneLabel).toBe("Preparing scenes...");
+    expect(view.loadingAssetName).toBeUndefined();
+  });
+
   it.each([
     ["hidden", { isVisible: false }, "48px"],
     ["overlay", { isVisible: true, keyboardInset: 380, bottom: 380 }, "428px"],

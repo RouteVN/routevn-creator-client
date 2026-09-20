@@ -171,8 +171,10 @@ template:
                               - 'div style="position: relative; width: ${mobilePreviewCanvasMaxWidth}; max-width: 100%; margin-left: auto; margin-right: auto;"':
                                   - 'rvn-scene-editor-preview-canvas#previewCanvasHost style="display: block; width: 100%;" canvas-aspect-ratio="${canvasAspectRatio}"': null
                                   - $if isSceneAssetLoading:
-                                      - rtgl-view pos=abs cor=full w=f h=f bgc=bg op=0.7 av=c ah=c:
-                                          - rtgl-text s=h3: ${loadingAssetsLabel}
+                                      - rtgl-view pos=abs cor=full w=f h=f bgc=bg op=0.7 av=c ah=c g=sm role=status:
+                                          - rtgl-text s=sm: ${loadingAssetsLabel}
+                                          - $if loadingAssetName:
+                                              - rtgl-text s=sm c=mu-fg: ${loadingAssetName}
                       - 'rtgl-view#mobilePresentationState w=f p=${mobilePresentationStatePadding} g=md style="${mobilePresentationStateStyle}"':
                           - $if mobileSideBySide:
                               - 'rtgl-text#mobilePresentationStateTitle s=sm c=mu-fg style="flex-shrink: 0;"': ${stateTitle}
@@ -232,8 +234,10 @@ template:
                               - 'div style="position: relative; width: ${previewCanvasMaxWidth}; max-width: 100%; margin-left: auto; margin-right: auto;"':
                                   - 'rvn-scene-editor-preview-canvas#previewCanvasHost style="display: block; width: 100%;" canvas-aspect-ratio="${canvasAspectRatio}"': null
                                   - $if isSceneAssetLoading:
-                                      - rtgl-view pos=abs cor=full w=f h=f bgc=bg op=0.7 av=c ah=c:
-                                          - rtgl-text s=h3: ${loadingAssetsLabel}
+                                      - rtgl-view pos=abs cor=full w=f h=f bgc=bg op=0.7 av=c ah=c g=sm role=status:
+                                          - rtgl-text s=sm: ${loadingAssetsLabel}
+                                          - $if loadingAssetName:
+                                              - rtgl-text s=sm c=mu-fg: ${loadingAssetName}
                       - rtgl-view w=f h=1 bgc=mu: null
                       - rtgl-view w=f m=md:
                           - rtgl-view d=h av=c:
@@ -266,8 +270,12 @@ template:
           - rvn-vn-preview#vnPreview scene-id="${previewSceneId}" section-id="${previewSectionId}" line-id="${previewLineId}": null
       - $if isScenePageLoading:
           - $if isTouchMode:
-              - 'rtgl-view#scenePageLoading pos=fix bgc=bg av=c ah=c role=status style="z-index: 1101; left: 0; right: 0; top: 0; bottom: ${mobileSceneEditorBottomInset}; pointer-events: auto;"':
+              - 'rtgl-view#scenePageLoading pos=fix bgc=bg av=c ah=c g=sm role=status style="z-index: 1101; left: 0; right: 0; top: 0; bottom: ${mobileSceneEditorBottomInset}; pointer-events: auto;"':
                   - rtgl-text s=sm c=mu-fg: ${loadingSceneLabel}
+                  - $if loadingAssetName:
+                      - rtgl-text s=sm c=mu-fg: ${loadingAssetName}
             $else:
-              - 'rtgl-view#scenePageLoading pos=abs edge=f z=1000 bgc=bg av=c ah=c role=status style="pointer-events: auto;"':
+              - 'rtgl-view#scenePageLoading pos=abs edge=f z=1000 bgc=bg av=c ah=c g=sm role=status style="pointer-events: auto;"':
                   - rtgl-text s=sm c=mu-fg: ${loadingSceneLabel}
+                  - $if loadingAssetName:
+                      - rtgl-text s=sm c=mu-fg: ${loadingAssetName}

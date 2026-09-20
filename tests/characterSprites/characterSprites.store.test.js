@@ -114,6 +114,9 @@ describe("characterSprites store", () => {
     expect(
       viewDataAfterPending.mediaGroups[0].children.map((child) => child.id),
     ).toEqual(["sprite-1"]);
+    expect(viewDataAfterPending.mediaGroups[0].children[0].previewFileId).toBe(
+      "thumb-1",
+    );
   });
 
   it("filters and searches sprites by tags", () => {

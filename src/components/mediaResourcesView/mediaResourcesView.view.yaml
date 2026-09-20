@@ -193,15 +193,15 @@ template:
                                                             $elif item.useFullWidthImageCard:
                                                               - 'div.mediaImageThumbnailTransparencyGrid style="display: block; width: 100%; aspect-ratio: ${item.previewAspectRatio}; overflow: hidden;"':
                                                                   - $if lazyImageCards && item.shouldLazyLoadPreview:
-                                                                      - rvn-file-image w=f h=f fileId=${item.previewFileId} lazy: null
+                                                                      - rvn-file-image w=f h=f fileId=${item.previewFileId} originalFileId=${item.fileId} show-error-message lazy: null
                                                                     $else:
-                                                                      - rvn-file-image w=f h=f fileId=${item.previewFileId}: null
+                                                                      - rvn-file-image w=f h=f fileId=${item.previewFileId} originalFileId=${item.fileId} show-error-message: null
                                                             $else:
                                                               - 'div.mediaImageThumbnailTransparencyGrid style="display: block; width: 100%; height: ${imageHeight}px; overflow: hidden;"':
                                                                   - $if lazyImageCards && item.shouldLazyLoadPreview:
-                                                                      - rvn-file-image w=f h=f fileId=${item.previewFileId} lazy: null
+                                                                      - rvn-file-image w=f h=f fileId=${item.previewFileId} originalFileId=${item.fileId} show-error-message lazy: null
                                                                     $else:
-                                                                      - rvn-file-image w=f h=f fileId=${item.previewFileId}: null
+                                                                      - rvn-file-image w=f h=f fileId=${item.previewFileId} originalFileId=${item.fileId} show-error-message: null
                                                       - $if item.showPreviewIcon:
                                                           - 'rtgl-view#previewActionRef${gIndex}x${itemIndex} data-item-id=${item.id} br=f w=32 h=32 pos=abs z=2 ah=c av=c cur=pointer style="top: 6px; right: 6px; background-color: #000;"':
                                                               - rtgl-svg svg=zoomIn wh=22 c=white: null

@@ -53,15 +53,20 @@ vi.mock(
 );
 
 describe("vnPreview.handlers", () => {
-  it("names a damaged layout font and closes the preview without starting its engine", async () => {
+  it("lists a failed font and both images once, then closes without starting playback", async () => {
     const { handleAfterMount } = await import(
       "../../src/components/vnPreview/vnPreview.handlers.js"
     );
-    const { extractFileIdsForLayouts } = await import(
+    const { extractFileIdsForLayouts, extractFileIdsForScenes } = await import(
       "../../src/internal/project/layout.js"
     );
     vi.mocked(extractFileIdsForLayouts).mockReturnValueOnce([
       { url: "font-one", type: "font/ttf" },
+    ]);
+    vi.mocked(extractFileIdsForScenes).mockReturnValueOnce([
+      { url: "font-one", type: "font/ttf" },
+      { url: "image-one", type: "image/png" },
+      { url: "image-two", type: "image/png" },
     ]);
     constructProjectDataMock.mockReturnValue({
       screen: { width: 1280, height: 720 },
@@ -80,6 +85,12 @@ describe("vnPreview.handlers", () => {
         ensureRepository: vi.fn(async () => ({})),
         getRepositoryState: vi.fn(() => ({
           fonts: { items: { font: { name: "Font One", fileId: "font-one" } } },
+          images: {
+            items: {
+              one: { name: "Image One", fileId: "image-one" },
+              two: { name: "Image Two", fileId: "image-two" },
+            },
+          },
         })),
         getFileContent: vi.fn(async () => {
           throw error;
@@ -94,6 +105,10 @@ describe("vnPreview.handlers", () => {
       store: {
         setProjectResolution: vi.fn(),
         setAssetLoading: vi.fn(),
+        setLoadingProgress: vi.fn(),
+        selectIsPreviewLoading: vi.fn(() => false),
+        setLoadingDetailsVisible: vi.fn(),
+        selectLoadingDescription: vi.fn(() => "Opening project..."),
         setPreviewReady: vi.fn(),
         resetAssetLoadCache: vi.fn(),
         selectHasLoadedAssetFileId: vi.fn(() => false),
@@ -106,11 +121,18 @@ describe("vnPreview.handlers", () => {
     await handleAfterMount(deps);
     expect(deps.appService.showAlert).toHaveBeenCalledOnce();
     expect(deps.appService.showAlert.mock.calls[0][0].message).toContain(
-      '"Font One"',
+      "Fonts: Font One",
     );
     expect(deps.appService.showAlert.mock.calls[0][0].message).toContain(
       "replace",
     );
+    expect(deps.appService.showAlert.mock.calls[0][0].message).toContain(
+      "Preview cannot be played",
+    );
+    expect(deps.appService.showAlert.mock.calls[0][0].message).toContain(
+      "• Fonts: Font One\n• Images: Image One\n• Images: Image Two",
+    );
+    expect(deps.projectService.getFileContent).toHaveBeenCalledTimes(3);
     expect(deps.dispatchEvent.mock.calls[0][0].type).toBe("close");
     expect(deps.graphicsService.initRouteEngine).not.toHaveBeenCalled();
     expect(deps.graphicsService.loadAssets).not.toHaveBeenCalled();
@@ -118,6 +140,84 @@ describe("vnPreview.handlers", () => {
       isLoading: false,
     });
   });
+
+  it.each(["file", "graphics", "layout"])(
+    "names a failed %s asset in fullscreen preview",
+    async (phase) => {
+      const { handleAfterMount } = await import(
+        "../../src/components/vnPreview/vnPreview.handlers.js"
+      );
+      const { extractFileIdsForScenes, extractFileIdsForLayouts } =
+        await import("../../src/internal/project/layout.js");
+      const references = [{ url: "image-file", type: "image/png" }];
+      const extract =
+        phase === "layout" ? extractFileIdsForLayouts : extractFileIdsForScenes;
+      vi.mocked(extract).mockReturnValueOnce(references);
+      extractInitialHybridSceneIdsMock.mockReturnValue(["scene-one"]);
+      constructProjectDataMock.mockReturnValue({
+        screen: { width: 1280, height: 720 },
+        story: { scenes: { "scene-one": {} } },
+        resources: {
+          images: { image: { fileId: "image-file" } },
+          layouts: { dialogue: {} },
+        },
+      });
+      const deps = {
+        projectService: {
+          ensureRepository: vi.fn(async () => ({})),
+          getRepositoryState: vi.fn(() => ({
+            images: {
+              items: { image: { name: "Image One", fileId: "image-file" } },
+            },
+          })),
+          getFileContent: vi.fn(async () => {
+            if (phase === "file") throw new Error("File not found");
+            return { url: "asset://image-file", type: "image/png" };
+          }),
+        },
+        appService: { showAlert: vi.fn(), showToast: vi.fn() },
+        graphicsService: {
+          init: vi.fn(async () => {}),
+          initRouteEngine: vi.fn(),
+          loadAssets: vi.fn(async () => {
+            throw Object.assign(new Error("Invalid image"), {
+              details: { assetKey: "image-file" },
+            });
+          }),
+        },
+        store: {
+          setProjectResolution: vi.fn(),
+          setAssetLoading: vi.fn(),
+          setLoadingProgress: vi.fn(),
+          selectIsPreviewLoading: vi.fn(() => false),
+          setLoadingDetailsVisible: vi.fn(),
+          selectLoadingDescription: vi.fn(() => "Opening project..."),
+          setPreviewReady: vi.fn(),
+          resetAssetLoadCache: vi.fn(),
+          selectHasLoadedAssetFileId: vi.fn(() => false),
+          selectHasLoadedAssetSceneId: vi.fn(() => false),
+          markAssetSceneIdsLoaded: vi.fn(),
+        },
+        props: {},
+        refs: { canvas: {} },
+        render: vi.fn(),
+        dispatchEvent: vi.fn(),
+      };
+      const log = vi.spyOn(console, "error").mockImplementation(() => {});
+      try {
+        await handleAfterMount(deps);
+        expect(deps.appService.showAlert).toHaveBeenCalledOnce();
+        expect(deps.appService.showAlert.mock.calls[0][0].message).toContain(
+          "Images: Image One",
+        );
+        expect(deps.appService.showToast).not.toHaveBeenCalled();
+        expect(deps.graphicsService.initRouteEngine).not.toHaveBeenCalled();
+        expect(deps.dispatchEvent.mock.calls[0][0].type).toBe("close");
+      } finally {
+        log.mockRestore();
+      }
+    },
+  );
 
   afterEach(() => {
     vi.unstubAllGlobals();
@@ -162,7 +262,14 @@ describe("vnPreview.handlers", () => {
       },
       refs: { previewSurface: { focus: vi.fn() } },
       appService: { showToast: vi.fn() },
-      store: { setAssetLoading: vi.fn(), setPreviewReady: vi.fn() },
+      store: {
+        setAssetLoading: vi.fn(),
+        setLoadingProgress: vi.fn(),
+        selectIsPreviewLoading: vi.fn(() => false),
+        setLoadingDetailsVisible: vi.fn(),
+        selectLoadingDescription: vi.fn(() => "Opening project..."),
+        setPreviewReady: vi.fn(),
+      },
       render: vi.fn(),
       dispatchEvent: vi.fn(),
       i18n: {
@@ -210,6 +317,10 @@ describe("vnPreview.handlers", () => {
       store: {
         setProjectResolution: vi.fn(),
         setAssetLoading: vi.fn(),
+        setLoadingProgress: vi.fn(),
+        selectIsPreviewLoading: vi.fn(() => false),
+        setLoadingDetailsVisible: vi.fn(),
+        selectLoadingDescription: vi.fn(() => "Opening project..."),
         setPreviewReady: vi.fn(),
         resetAssetLoadCache: vi.fn(),
         selectHasLoadedAssetFileId: vi.fn(() => false),
@@ -298,6 +409,10 @@ describe("vnPreview.handlers", () => {
       store: {
         setProjectResolution: vi.fn(),
         setAssetLoading: vi.fn(),
+        setLoadingProgress: vi.fn(),
+        selectIsPreviewLoading: vi.fn(() => false),
+        setLoadingDetailsVisible: vi.fn(),
+        selectLoadingDescription: vi.fn(() => "Opening project..."),
         setPreviewReady: vi.fn(),
         resetAssetLoadCache: vi.fn(),
         selectHasLoadedAssetFileId: vi.fn(() => false),
@@ -403,6 +518,10 @@ describe("vnPreview.handlers", () => {
         selectIsPreviewRotated: vi.fn(() => false),
         setUiConfig: vi.fn(),
         setAssetLoading: vi.fn(),
+        setLoadingProgress: vi.fn(),
+        selectIsPreviewLoading: vi.fn(() => false),
+        setLoadingDetailsVisible: vi.fn(),
+        selectLoadingDescription: vi.fn(() => "Opening project..."),
         setPreviewReady: vi.fn(),
         resetAssetLoadCache: vi.fn(),
       },
@@ -584,6 +703,10 @@ describe("vnPreview.handlers", () => {
         selectIsPreviewRotated: vi.fn(() => true),
         setUiConfig: vi.fn(),
         setAssetLoading: vi.fn(),
+        setLoadingProgress: vi.fn(),
+        selectIsPreviewLoading: vi.fn(() => false),
+        setLoadingDetailsVisible: vi.fn(),
+        selectLoadingDescription: vi.fn(() => "Opening project..."),
         setPreviewReady: vi.fn(),
         resetAssetLoadCache: vi.fn(),
       },

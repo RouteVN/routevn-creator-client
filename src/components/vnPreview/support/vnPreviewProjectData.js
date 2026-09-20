@@ -1,3 +1,4 @@
+import { runAsyncOperation } from "../../../internal/asyncOperation.js";
 import { constructProjectData } from "../../../internal/project/projection.js";
 
 const toElementList = (value) => {
@@ -211,10 +212,14 @@ export const ensurePreviewProjectDataTargets = async ({
     };
   }
 
-  const contextState = await repository.getContextState({
-    sceneIds: [...new Set([...knownLoadedSceneIds, ...missingSceneIds])],
-    sectionIds: nextSectionIds,
-  });
+  const contextState = await runAsyncOperation(
+    () =>
+      repository.getContextState({
+        sceneIds: [...new Set([...knownLoadedSceneIds, ...missingSceneIds])],
+        sectionIds: nextSectionIds,
+      }),
+    { label: "Prepare preview scenes" },
+  );
   const nextProjectData = withPreviewEntryPoint(
     constructProjectData(contextState, {
       initialSceneId,

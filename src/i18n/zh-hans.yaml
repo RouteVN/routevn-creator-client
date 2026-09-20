@@ -514,9 +514,20 @@ webServerPage:
   unsupportedTitle: "不支持"
   urlLabel: "URL"
   warningTitle: "警告"
+fontPreview:
+  reuploadLabel: "重新上传字体"
+  unavailableLabel: "字体不可用"
+  reuploadMessage: "请打开“字体”，重新上传受影响的字体文件。"
+fileImage:
+  unavailableLabel: "图片不可用"
+  reuploadMessage: "请打开“编辑”，重新上传此图片文件。"
+assetLoadFeedback:
+  previewBlocked: "由于无法加载以下素材，预览无法播放。"
+  voices: "语音"
+  file: "素材文件：{fileId}"
+  unknown: "无法识别的素材"
+  failed: "无法加载以下素材：\n{assets}\n\n请检查对应文件，并在需要时替换为有效的文件。"
 resourcePages:
-  damagedFontMessage: "字体“{fontName}”的文件已被更改或损坏。请打开“字体”，用一份新的副本替换该文件。"
-  unavailableFontMessage: "无法加载字体“{fontName}”。请打开“字体”，用有效的文件替换它。"
   damagedFontImportMessage: "字体“{fontName}”已损坏或无法读取。请选择一份新的 TTF、OTF 或 WOFF2 文件。"
   selectorEmptyMessage: "没有可供选择的项目。"
   selectorNoResultsMessage: "没有符合搜索条件的项目。"
@@ -786,6 +797,14 @@ actionTransformEditor:
   unnamedTarget: "当前项目"
   visualTarget: "视觉元素"
 vnPreview:
+  repository: "正在打开项目..."
+  scenes: "正在准备场景..."
+  graphics: "正在初始化图形..."
+  reading: "正在检查素材：{completed} / {total}"
+  decoding: "正在加载素材：{completed} / {total}"
+  engine: "正在开始播放..."
+  paint: "正在绘制首帧..."
+  timeout: "无法启动预览。等待 {seconds} 秒后超时。\n\n{step}\n\n请重试预览。"
   closeButton: "退出全屏"
   loading: "正在加载预览..."
   restoreOrientationButton: "恢复预览方向"

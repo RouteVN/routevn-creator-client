@@ -1468,6 +1468,7 @@ export const selectViewData = ({ state, i18n }) => {
       selectedItem?.type === "image"
         ? getPreviewFileId(selectedItem)
         : undefined,
+    selectedOriginalFileId: selectedItem?.fileId,
     selectedItemType: selectedItem?.type,
     detailClipOptions: detailSelection.clipOptions,
     detailSelectedClipName,
