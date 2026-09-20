@@ -1192,6 +1192,14 @@ Initialization cancellation is scoped to reads/rendering and does not cancel or
 retry project writes. Optional statistics-cache failures after startup do not
 put a working editor into the failed state.
 
+Before enabling editing, initialization synchronously refreshes the repository
+snapshot and reconciles selection and drafts. Project updates received during
+async startup must be visible immediately; a changed revision also schedules a
+canvas refresh. A mounted editor remembers whether it has ever become ready.
+If later preview restoration fails, navigation, backups, and unmount still await
+forced draft persistence, including edits made while the canvas was rebuilding.
+Only an editor that never became usable may skip that persistence barrier.
+
 Run `node tests/sceneEditor/initializationRecovery.browser.mjs` against the
 existing watch server for Chromium/WebKit failure injection, reopening scenes,
 navigation, the single recovery action, and late-result isolation checks. The

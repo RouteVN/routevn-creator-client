@@ -827,6 +827,11 @@ export const prepareSceneEditorNavigation = async (
       payload?.p === projectService.getEnsuredProjectId() &&
       payload?.s === getSceneInitializationTarget(store);
     if (reason !== "backup" && !sameScene) cancelSceneInitialization(store);
+    // A failed canvas restoration can follow edits in the already usable editor.
+    // Preserve the persistence barrier even though rendering is now unavailable.
+    if (store.selectHasInitializedSceneEditor()) {
+      await flushSceneEditorDrafts(deps, { force: true });
+    }
     return;
   }
   if (reason === "backup") {
@@ -1761,7 +1766,7 @@ export const handleBeforeMount = (deps) => {
     cleanupRuntimeSubscriptions();
     cleanupBackgroundTransformEditorSubscriptions();
     cancelSceneTextStatsRefresh(store);
-    if (store.selectSceneInitializationStatus() !== "ready") {
+    if (!store.selectHasInitializedSceneEditor()) {
       // Queue teardown now, before another page can initialize the shared renderer.
       await Promise.all([
         resetSceneEditorRuntime(deps),
@@ -1803,7 +1808,7 @@ const showSceneInitializationFailure = (deps, error) => {
 };
 
 const initializeSceneEditor = async (deps, { reset = false, payload } = {}) => {
-  const { projectService, appService, store, render } = deps;
+  const { projectService, appService, store, render, subject } = deps;
   const scenePayload = payload ?? appService.getPayload();
   const signal = startSceneInitialization(store, scenePayload.s);
   store.setSceneInitializationStatus({ status: "loading" });
@@ -1827,12 +1832,23 @@ const initializeSceneEditor = async (deps, { reset = false, payload } = {}) => {
     signal.throwIfAborted();
     store.setSceneLoadingProgress({ stage: "editor" });
     store.setProjectLanguage({ language: projectInfo.language });
+    // Project events received while loading are not replayed by the stream.
+    // Take the latest snapshot synchronously before enabling editing, including
+    // updates that arrived during the last awaited startup step.
+    const loadedRevision = store.selectRepositoryRevision();
+    syncStoreProjectState(store, projectService);
+    reconcileSceneEditorSelection(store);
     reconcileCurrentEditorSession(deps);
     refreshSceneTextStatsNow(deps, { render: false });
     store.setSceneInitializationStatus({ status: "ready" });
     setSceneEditorPageLoading(deps, false);
     render();
     scrollEntrySelectionIntoView(deps);
+    if (store.selectRepositoryRevision() !== loadedRevision) {
+      subject.dispatch("sceneEditor.renderCanvas", {
+        skipAnimations: true,
+      });
+    }
   } catch (error) {
     if (signal.aborted) return;
     showSceneInitializationFailure(deps, error);

@@ -744,6 +744,7 @@ export const createInitialState = () => ({
   sceneLoadingDetailsVisible: false,
   isScenePageLoading: true,
   sceneInitializationStatus: "loading",
+  hasInitializedSceneEditor: false,
   sceneInitializationMessage: undefined,
   sceneInitializationDiagnostics: "",
   isSceneAssetLoading: false,
@@ -1126,12 +1127,16 @@ export const setSceneInitializationStatus = (
   { status, message, diagnostics = "" },
 ) => {
   state.sceneInitializationStatus = status;
+  if (status === "ready") state.hasInitializedSceneEditor = true;
   state.sceneInitializationMessage = message;
   state.sceneInitializationDiagnostics = diagnostics;
 };
 
 export const selectSceneInitializationStatus = ({ state }) =>
   state.sceneInitializationStatus;
+
+export const selectHasInitializedSceneEditor = ({ state }) =>
+  state.hasInitializedSceneEditor;
 
 export const selectSceneLoadingProgress = ({ state }) =>
   state.sceneLoadingProgress;

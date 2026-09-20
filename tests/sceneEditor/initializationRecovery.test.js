@@ -1,7 +1,9 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
+import { Subject } from "rxjs";
 import * as sceneStore from "../../src/pages/sceneEditorLexical/sceneEditorLexical.store.js";
 import {
   handleAfterMount,
+  handleBeforeMount,
   handleHidePreviewScene,
   handleCopySceneErrorDetails,
   handleRetrySceneInitialization,
@@ -9,6 +11,7 @@ import {
 } from "../../src/pages/sceneEditorLexical/sceneEditorLexical.handlers.js";
 import {
   initializeSceneEditorPage,
+  mountSceneEditorSubscriptions,
   resetSceneEditorRuntime,
   restoreSceneEditorFromPreview,
 } from "../../src/internal/ui/sceneEditor/runtime.js";
@@ -21,6 +24,7 @@ vi.mock(
   async (importOriginal) => ({
     ...(await importOriginal()),
     initializeSceneEditorPage: vi.fn(),
+    mountSceneEditorSubscriptions: vi.fn(),
     resetSceneEditorRuntime: vi.fn(),
     restoreSceneEditorFromPreview: vi.fn(),
   }),
@@ -36,16 +40,29 @@ const createDeps = () => {
     ]),
   );
   stores.push(store);
+  const subject = new Subject();
+  subject.dispatch = vi.fn();
+  vi.mocked(mountSceneEditorSubscriptions).mockReturnValue(() => {});
   return {
     store,
+    subject,
     refs: {},
     render: vi.fn(),
     i18n: EN_I18N,
     projectService: {
+      getRepositoryState: vi.fn(() => ({})),
+      getDomainState: vi.fn(() => ({})),
+      getRepositoryRevision: vi.fn(() => 0),
+      getEnsuredProjectId: () => "project-one",
+      subscribeProjectState: vi.fn(() => () => {}),
+      clearActiveSceneId: vi.fn(async () => {}),
+      syncSectionLinesSnapshot: vi.fn(),
       getCurrentProjectInfo: vi.fn(async () => ({ language: "en" })),
       cacheSceneTextStats: vi.fn(),
     },
     appService: {
+      getUserConfig: vi.fn(),
+      registerBeforeNavigation: vi.fn(() => () => {}),
       copyText: vi.fn(),
       showToast: vi.fn(),
       showAlert: vi.fn(),
@@ -53,6 +70,29 @@ const createDeps = () => {
       getPayload: () => ({ s: "scene-one" }),
     },
   };
+};
+
+const sceneSnapshot = (text, lineId = "line-one") => ({
+  scenes: {
+    "scene-one": { id: "scene-one", sectionIds: ["section-one"] },
+  },
+  sections: {
+    "section-one": { id: "section-one", lineIds: [lineId] },
+  },
+  lines: {
+    [lineId]: {
+      id: lineId,
+      sectionId: "section-one",
+      actions: { dialogue: { content: [{ text }] } },
+    },
+  },
+});
+
+const selectInitialScene = (store, domainState) => {
+  store.setSceneId({ sceneId: "scene-one" });
+  store.setDomainState({ domainState });
+  store.setSelectedSectionId({ selectedSectionId: "section-one" });
+  store.setSelectedLineId({ selectedLineId: "line-one" });
 };
 
 afterEach(() => {
@@ -64,6 +104,129 @@ afterEach(() => {
 });
 
 describe("scene initialization recovery", () => {
+  it("applies the latest project snapshot before enabling editing after startup", async () => {
+    const deps = createDeps();
+    let publish;
+    deps.projectService.subscribeProjectState.mockImplementation((next) => {
+      publish = next;
+      return () => {};
+    });
+    const cleanup = handleBeforeMount(deps);
+    let finishGraphics;
+    vi.mocked(initializeSceneEditorPage).mockImplementationOnce(() => {
+      selectInitialScene(deps.store, sceneSnapshot("Original"));
+      return new Promise((resolve) => {
+        finishGraphics = resolve;
+      });
+    });
+    let finishProjectInfo;
+    deps.projectService.getCurrentProjectInfo.mockImplementationOnce(
+      () =>
+        new Promise((resolve) => {
+          finishProjectInfo = resolve;
+        }),
+    );
+    const loading = handleAfterMount(deps);
+    const update = (revision, text, lineId) => {
+      const domainState = sceneSnapshot(text, lineId);
+      deps.projectService.getDomainState.mockReturnValue(domainState);
+      deps.projectService.getRepositoryRevision.mockReturnValue(revision);
+      publish({ repositoryState: {}, domainState, revision });
+    };
+    update(1, "During graphics", "line-two");
+    finishGraphics();
+    await vi.waitFor(() => expect(finishProjectInfo).toBeDefined());
+    update(2, "Latest collaboration update", "line-three");
+    expect(deps.store.selectSceneInitializationStatus()).toBe("loading");
+    finishProjectInfo({ language: "en" });
+    await loading;
+
+    expect(deps.store.selectSceneInitializationStatus()).toBe("ready");
+    expect(deps.store.selectRepositoryRevision()).toBe(2);
+    expect(deps.store.selectSelectedLineId()).toBe("line-three");
+    expect(
+      deps.store.selectDraftSection().lines[0].actions.dialogue.content,
+    ).toEqual([{ text: "Latest collaboration update" }]);
+    expect(deps.subject.dispatch).toHaveBeenCalledWith(
+      "sceneEditor.renderCanvas",
+      { skipAnimations: true },
+    );
+    await cleanup();
+  });
+
+  it.each(["backup", "navigation", "unmount"])(
+    "awaits drafts entered during failed restoration before %s",
+    async (operation) => {
+      const deps = createDeps();
+      const cleanup = handleBeforeMount(deps);
+      const initial = sceneSnapshot("Original");
+      deps.projectService.getDomainState.mockReturnValue(initial);
+      selectInitialScene(deps.store, initial);
+      deps.store.setSceneInitializationStatus({ status: "ready" });
+      deps.store.setScenePageLoading({ isLoading: false });
+      let failRestoration;
+      vi.mocked(restoreSceneEditorFromPreview).mockImplementationOnce(
+        () =>
+          new Promise((resolve, reject) => {
+            failRestoration = reject;
+          }),
+      );
+      const restoration = handleHidePreviewScene(deps);
+      const edited = sceneSnapshot("Typed while restoring");
+      deps.store.setDraftSection({
+        draftSection: {
+          sceneId: "scene-one",
+          sectionId: "section-one",
+          baseRevision: 0,
+          dirty: true,
+          isComposing: false,
+          lastSource: "text",
+          lines: [edited.lines["line-one"]],
+        },
+      });
+      failRestoration(new Error("Renderer restore failed"));
+      await restoration;
+      let finishSave;
+      deps.projectService.syncSectionLinesSnapshot.mockImplementationOnce(
+        () =>
+          new Promise((resolve) => {
+            finishSave = () => {
+              deps.projectService.getDomainState.mockReturnValue(edited);
+              deps.projectService.getRepositoryRevision.mockReturnValue(1);
+              resolve();
+            };
+          }),
+      );
+      const barrier =
+        operation === "unmount"
+          ? cleanup()
+          : prepareSceneEditorNavigation(
+              deps,
+              operation === "backup"
+                ? { reason: "backup" }
+                : { path: "/project/scenes" },
+            );
+      let completed = false;
+      barrier.then(() => {
+        completed = true;
+      });
+      await vi.waitFor(() => expect(finishSave).toBeDefined());
+      expect(completed).toBe(false);
+      expect(deps.projectService.clearActiveSceneId).not.toHaveBeenCalled();
+      expect(resetSceneEditorRuntime).not.toHaveBeenCalled();
+      expect(deps.projectService.syncSectionLinesSnapshot).toHaveBeenCalledWith(
+        {
+          sectionId: "section-one",
+          lines: [edited.lines["line-one"]],
+        },
+      );
+      finishSave();
+      await barrier;
+      expect(deps.store.selectPendingDraftSections()).toEqual([]);
+      if (operation !== "unmount") await cleanup();
+    },
+  );
+
   it("replaces a rejected initialization with a localized, non-editable failure state", async () => {
     const deps = createDeps();
     vi.mocked(initializeSceneEditorPage).mockRejectedValue(
