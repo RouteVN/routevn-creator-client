@@ -54,6 +54,10 @@ const createStore = (props) => {
 
   return {
     state,
+    selectWarnedAssetFileIds: bindSelector(
+      canvasStore.selectWarnedAssetFileIds,
+    ),
+    markAssetWarningsShown: bindAction(canvasStore.markAssetWarningsShown),
     setGraphicsReady: bindAction(canvasStore.setGraphicsReady),
     selectIsGraphicsReady: bindSelector(canvasStore.selectIsGraphicsReady),
     setActiveRenderRequestId: bindAction(canvasStore.setActiveRenderRequestId),

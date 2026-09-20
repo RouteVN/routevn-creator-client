@@ -8,7 +8,7 @@ const source = `/@fs${process.cwd()}`;
 const html = `<!doctype html><meta name="viewport" content="width=device-width,initial-scale=1">
 <link rel="stylesheet" href="/public/theme.css">
 <style>body{margin:0}#outside{height:250px;background:#ddd}#owner{display:block;width:60%}</style>
-<script src="/public/@rettangoli/ui@1.22.2/dist/rettangoli-iife-ui.min.js"></script>
+<script src="/public/@rettangoli/ui@1.22.5/dist/rettangoli-iife-ui.min.js"></script>
 <rvn-lexical-scene-document-editor id="owner"></rvn-lexical-scene-document-editor>
 <div id="outside">Outside the editor</div><input id="other" aria-label="Other input">
 <script type="module">

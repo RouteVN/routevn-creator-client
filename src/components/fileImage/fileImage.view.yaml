@@ -4,7 +4,13 @@ refs:
       dragstart:
         handler: handleImageDragStart
 template:
-  - $if hasSrc:
+  - $if hasError:
+      - 'rtgl-view#image bc=${borderColor} ${containerAttrString} av=c ah=c g=xs bgc=bg title="${reuploadMessage}" role=img aria-label="${unavailableLabel}. ${reuploadMessage}"':
+          - 'rtgl-svg svg=warning-dead-end wh=24 aria-hidden=true style="flex-shrink: 0; color: #f59e0b;"': null
+          - $if showErrorMessage:
+              - rtgl-text s=xs ta=c w=f: ${unavailableLabel}
+              - rtgl-text s=xs ta=c w=f: ${reuploadMessage}
+    $elif hasSrc:
       - rtgl-image#image src=${src} bc=${borderColor} of=con ${containerAttrString}: null
     $else:
       - rtgl-view#image bc=${borderColor} ${containerAttrString}: null

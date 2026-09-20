@@ -53,6 +53,10 @@ const buildDetailFields = ({ item, selectedFontInfo, copy = {} } = {}) => {
     selectedFontInfo?.itemId === item.id ? selectedFontInfo : undefined;
   return [
     {
+      type: "slot",
+      slot: "font-preview",
+    },
+    {
       type: "description",
       value: item.description ?? "",
     },
@@ -215,6 +219,9 @@ const {
       isModalOpen: state.isModalOpen,
       selectedFontInfo,
       modalFontInfo,
+      selectedFontWeight: selectedItem?.defaultWeight ?? "normal",
+      selectedFontWeightDescriptor:
+        getFontFaceWeightDescriptor(selectedItem) ?? "",
       centerItemContextMenuItems: [
         {
           label: copy.editMenuItem ?? "Edit",

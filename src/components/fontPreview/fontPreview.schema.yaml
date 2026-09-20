@@ -2,6 +2,9 @@ componentName: rvn-font-preview
 propsSchema:
   type: object
   properties:
+    showErrorMessage:
+      type: boolean
+      description: Show detailed re-upload guidance when the font cannot load
     previewText:
       type: string
       description: Text to display in preview

@@ -200,9 +200,12 @@ const resetToPlaceholder = (store) => {
   }
 
   revokeBlobUrl(currentSrc);
+  store.invalidateLoad();
+  store.setLoadError({ hasError: false });
   store.setSrc({ src: EMPTY_SRC });
   store.setIsLoading({ isLoading: false });
   store.setLoadedFileId({ fileId: undefined });
+  store.setLoadedOriginalFileId({ fileId: undefined });
   return true;
 };
 
@@ -212,7 +215,11 @@ const loadCurrentFile = async (deps, { attrs = deps.props } = {}) => {
   const currentSrc = store.selectSrc();
   const loadedFileId = store.selectLoadedFileId();
 
-  if (fileId && fileId === loadedFileId) {
+  if (
+    fileId &&
+    fileId === loadedFileId &&
+    attrs.originalFileId === store.selectLoadedOriginalFileId()
+  ) {
     return;
   }
 
@@ -222,6 +229,9 @@ const loadCurrentFile = async (deps, { attrs = deps.props } = {}) => {
     return;
   }
 
+  store.beginLoad();
+  const loadSequence = store.selectLoadSequence();
+  const isCurrentLoad = () => store.selectLoadSequence() === loadSequence;
   store.setIsLoading({ isLoading: true });
   render();
 
@@ -229,7 +239,7 @@ const loadCurrentFile = async (deps, { attrs = deps.props } = {}) => {
     const { url } = await projectService.getFileContent(fileId);
     const latestFileId = getFileIdFromProps(deps.props, projectService);
 
-    if (latestFileId !== fileId) {
+    if (!isCurrentLoad() || latestFileId !== fileId) {
       revokeBlobUrl(url);
       return;
     }
@@ -237,12 +247,27 @@ const loadCurrentFile = async (deps, { attrs = deps.props } = {}) => {
     revokeBlobUrl(currentSrc);
     store.setSrc({ src: url });
     store.setLoadedFileId({ fileId });
+    store.setLoadedOriginalFileId({ fileId: attrs.originalFileId });
     render();
+    if (attrs.originalFileId) {
+      await Promise.all(
+        [...new Set([fileId, attrs.originalFileId])].map((id) =>
+          projectService.checkFileIntegrity(id),
+        ),
+      );
+    }
   } catch (error) {
-    console.error(error);
+    if (isCurrentLoad()) {
+      console.error("[fileImage] Image unavailable", { fileId, error });
+      store.setLoadError({ hasError: true });
+      store.setLoadedFileId({ fileId });
+      store.setLoadedOriginalFileId({ fileId: attrs.originalFileId });
+    }
   } finally {
-    store.setIsLoading({ isLoading: false });
-    render();
+    if (isCurrentLoad()) {
+      store.setIsLoading({ isLoading: false });
+      render();
+    }
   }
 };
 
@@ -326,6 +351,7 @@ export const handleBeforeMount = (deps) => {
   store.setIsLazyObserved({ isLazyObserved: false });
 
   return () => {
+    store.invalidateLoad();
     revokeBlobUrl(store.selectSrc());
   };
 };
@@ -365,7 +391,11 @@ export const handleOnUpdate = async (deps, payload) => {
   const loadedFileId = store.selectLoadedFileId();
   const lazyEnabled = isLazyEnabled(attrs);
 
-  if (fileId && fileId === loadedFileId) {
+  if (
+    fileId &&
+    fileId === loadedFileId &&
+    attrs.originalFileId === store.selectLoadedOriginalFileId()
+  ) {
     return;
   }
 

@@ -1,4 +1,8 @@
 import {
+  runAsyncOperation,
+  getAssetTimeoutMs,
+} from "../../../internal/asyncOperation.js";
+import {
   createFontAssetError,
   isFontAssetError,
 } from "../../../internal/fontAssetError.js";
@@ -9,7 +13,7 @@ const normalizeFontFamily = (value) =>
 export const loadFont = async (
   fontName,
   fontUrl,
-  { weight: fontWeightDescriptor, cache = true } = {},
+  { weight: fontWeightDescriptor, cache = true, signal, timeoutMs } = {},
 ) => {
   const existingFont = Array.from(document.fonts).find(
     (font) =>
@@ -25,25 +29,21 @@ export const loadFont = async (
   if (fontWeightDescriptor !== undefined) {
     descriptors.weight = fontWeightDescriptor;
   }
-  let timeout;
   try {
     const fontFace = new FontFace(fontName, `url(${fontUrl})`, descriptors);
-    await Promise.race([
-      fontFace.load(),
-      new Promise((_, reject) => {
-        timeout = setTimeout(
-          () => reject(createFontAssetError(fontName, "font_load_timeout")),
-          15000,
-        );
-      }),
-    ]);
+    await runAsyncOperation(() => fontFace.load(), {
+      signal,
+      timeoutMs,
+      label: `Decode font ${fontName}`,
+    });
     document.fonts.add(fontFace);
     return fontFace;
   } catch (error) {
+    if (signal?.aborted) throw error;
+    if (error.name === "TimeoutError")
+      throw createFontAssetError(fontName, "font_load_timeout", error);
     if (isFontAssetError(error)) throw error;
     throw createFontAssetError(fontName, "font_load_failed", error);
-  } finally {
-    clearTimeout(timeout);
   }
 };
 
@@ -60,7 +60,10 @@ export const loadFontBuffer = async (
   );
 
   try {
-    return await loadFont(fontName, fontUrl, options);
+    return await loadFont(fontName, fontUrl, {
+      timeoutMs: getAssetTimeoutMs({ size: fontBuffer.byteLength }),
+      ...options,
+    });
   } finally {
     URL.revokeObjectURL(fontUrl);
   }

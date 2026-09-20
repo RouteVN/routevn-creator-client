@@ -29,7 +29,7 @@ describe("fontLoader", () => {
       code: "font_load_timeout",
       fileId: "font-one",
     });
-    await vi.advanceTimersByTimeAsync(15000);
+    await vi.advanceTimersByTimeAsync(30000);
     await assertion;
     finish();
     await Promise.resolve();

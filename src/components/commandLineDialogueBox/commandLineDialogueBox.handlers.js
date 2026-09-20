@@ -1145,7 +1145,9 @@ export const handleSpriteItemDoubleClick = (deps, payload) => {
     return;
   }
 
-  const previewLayer = buildCharacterSpritePreviewLayer(sprite);
+  const previewLayer = buildCharacterSpritePreviewLayer(sprite, {
+    source: "original",
+  });
   store.setTempSelectedSpriteId({
     groupId: store.selectSelectedSpriteGroupId(),
     spriteId,

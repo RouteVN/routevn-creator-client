@@ -57,6 +57,7 @@ It should solve it by keeping the default experience simple while allowing users
 - Once features and formats are established, they should keep working for many years.
 - Data formats, project behavior, and core workflows should not break casually.
 - User trust depends on the product being dependable over time, not only pleasant in the moment.
+- A damaged media asset should not prevent users from opening the editor to repair it. Show a clear warning and keep unaffected editing and preview content available when safe. Continue only when the failure can be isolated; operations that cannot complete correctly must still fail visibly, without claiming success or changing saved data to hide the problem. See the [asset failure policy](engineering.md#asset-failure-policy).
 - Product concepts should exist as real product data, not as UI-only reinterpretations of a different underlying resource.
 - If users see and manage a first-class concept such as `controls`, the repository/model should also represent it as a first-class concept.
 - We should not hide schema gaps by treating one resource as another in the UI and translating it later during export or projection.

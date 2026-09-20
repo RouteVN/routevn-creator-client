@@ -58,7 +58,7 @@ const getContrastBackground = (color) => {
   return "transparent";
 };
 
-export const selectViewData = ({ props: attrs, state }) => {
+export const selectViewData = ({ props: attrs, state, i18n = {} }) => {
   const height = attrs.height ? Number.parseInt(attrs.height, 10) : undefined;
   const width =
     attrs.width === "f" ? undefined : Number.parseInt(attrs.width, 10);
@@ -128,6 +128,13 @@ export const selectViewData = ({ props: attrs, state }) => {
   return {
     status: state.status ?? "idle",
     isReady: state.status === "ready",
+    hasError: state.status === "error",
+    showErrorMessage: attrs.showErrorMessage,
+    reuploadLabel: i18n.fontPreview?.reuploadLabel ?? "Re-upload font",
+    unavailableLabel: i18n.fontPreview?.unavailableLabel ?? "Font unavailable",
+    reuploadMessage:
+      i18n.fontPreview?.reuploadMessage ??
+      "Open Fonts and re-upload the affected font file.",
     widthStyle:
       attrs.width === "f" ? "width: 100%;" : `width: ${width || 200}px;`,
     heightStyle: height ? `height: ${height}px;` : "height: 100%;",

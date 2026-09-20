@@ -4,6 +4,12 @@ propsSchema:
   properties:
     fileId:
       type: string
+    originalFileId:
+      type: string
+      description: Checks this original and the displayed thumbnail against their saved hashes without decoding the original.
+    showErrorMessage:
+      type: boolean
+      description: Shows re-upload guidance with the warning icon when an image cannot be read or verified.
     imageId:
       type: string
     source:

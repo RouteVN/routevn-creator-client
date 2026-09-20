@@ -1,3 +1,7 @@
+import {
+  runAsyncOperation,
+  getAssetTimeoutMs,
+} from "../../../internal/asyncOperation.js";
 import { Observable } from "rxjs";
 import {
   getImageDimensions,
@@ -72,6 +76,74 @@ export const createProjectAssetService = ({
   resolveFileMetadata,
 }) => {
   const resourceImportFileIdsByPlan = new Map();
+  const pendingIntegrityChecks = new Map();
+  let integrityCheckQueue = Promise.resolve();
+
+  const checkFileIntegrity = (fileId) => {
+    const metadata = resolveFileMetadata?.(fileId) ?? {};
+    const reference = getCurrentReference?.();
+    const store = getCurrentStore?.();
+    const key = JSON.stringify([
+      reference,
+      fileId,
+      metadata.sha256,
+      metadata.size,
+    ]);
+    if (pendingIntegrityChecks.has(key)) return pendingIntegrityChecks.get(key);
+
+    // Read one original at a time without decoding it. Capture its project now
+    // so queued work cannot follow navigation.
+    const check = integrityCheckQueue.then(async () => {
+      let content;
+      try {
+        content = await runAsyncOperation(
+          () =>
+            fileAdapter.getFileContent({
+              fileId,
+              fileMetadata: metadata,
+              getCurrentReference: () => reference,
+              getCurrentStore: () => store,
+              getStoreByProject,
+            }),
+          {
+            timeoutMs: getAssetTimeoutMs(metadata),
+            label: `Read asset ${fileId}`,
+            onLateResolve: (content) => content.revoke?.(),
+          },
+        );
+        return await runAsyncOperation(
+          async (signal) => {
+            const response = await fetch(content.url, {
+              signal,
+              cache: "no-store",
+            });
+            if (!response.ok)
+              throw new Error("The image file could not be read.");
+            const bytes = await response.arrayBuffer();
+            await verifyFileIntegrity(bytes, metadata, computeSha256);
+            return { verified: Boolean(metadata.sha256) };
+          },
+          {
+            timeoutMs: getAssetTimeoutMs(metadata),
+            label: `Verify asset ${fileId}`,
+          },
+        );
+      } catch (cause) {
+        const error = new Error("The image file could not be verified.", {
+          cause,
+        });
+        error.fileId = fileId;
+        error.code = cause.code ?? "file_unavailable";
+        throw error;
+      } finally {
+        content?.revoke?.();
+        pendingIntegrityChecks.delete(key);
+      }
+    });
+    pendingIntegrityChecks.set(key, check);
+    integrityCheckQueue = check.catch(() => {});
+    return check;
+  };
 
   const getResourceImportFileEntry = (planId, projectReference) => {
     if (!planId) return undefined;
@@ -169,7 +241,10 @@ export const createProjectAssetService = ({
     };
   };
 
-  const getFileContent = async (fileId) => {
+  const getFileContent = async (
+    fileId,
+    { verifyImageIntegrity = false, signal } = {},
+  ) => {
     const fileMetadata = resolveFileMetadata?.(fileId);
     const payload = {
       fileId,
@@ -183,33 +258,54 @@ export const createProjectAssetService = ({
     let fontType = normalizeFontFileType({ fileType: fileMetadata?.mimeType });
     let content;
     try {
-      content = await fileAdapter.getFileContent(payload);
+      content = await runAsyncOperation(
+        () => fileAdapter.getFileContent(payload),
+        {
+          signal,
+          timeoutMs: getAssetTimeoutMs(fileMetadata),
+          label: `Read asset ${fileId}`,
+          onLateResolve: (content) => content.revoke?.(),
+        },
+      );
       fontType = fontType || normalizeFontFileType({ fileType: content.type });
-      if (!fontType) return content;
+      if (!fontType) {
+        const type = fileMetadata?.mimeType ?? content.type;
+        if (verifyImageIntegrity && type?.startsWith("image/")) {
+          await checkFileIntegrity(fileId);
+        }
+        return content;
+      }
 
       // Check the exact bytes we hand to decoders. Fetching the original URL
       // again afterwards would allow a changed file to bypass the check.
-      const controller = new AbortController();
-      const timeout = setTimeout(() => controller.abort(), 30000);
-      let bytes;
-      try {
-        const response = await fetch(content.url, {
-          signal: controller.signal,
-        });
-        if (!response.ok)
-          throw new Error(`Font read failed (${response.status}).`);
-        bytes = await response.arrayBuffer();
-      } finally {
-        clearTimeout(timeout);
-      }
-      try {
-        await verifyFileIntegrity(bytes, fileMetadata, computeSha256);
-      } catch (error) {
-        if (error.code === "file_integrity_mismatch") {
-          throw createFontAssetError(fileId, "font_integrity_mismatch", error);
-        }
-        throw error;
-      }
+      const bytes = await runAsyncOperation(
+        async (operationSignal) => {
+          const response = await fetch(content.url, {
+            signal: operationSignal,
+          });
+          if (!response.ok)
+            throw new Error(`Font read failed (${response.status}).`);
+          const bytes = await response.arrayBuffer();
+          try {
+            await verifyFileIntegrity(bytes, fileMetadata, computeSha256);
+          } catch (error) {
+            if (error.code === "file_integrity_mismatch") {
+              throw createFontAssetError(
+                fileId,
+                "font_integrity_mismatch",
+                error,
+              );
+            }
+            throw error;
+          }
+          return bytes;
+        },
+        {
+          signal,
+          timeoutMs: getAssetTimeoutMs(fileMetadata),
+          label: `Verify font ${fileId}`,
+        },
+      );
       const url = URL.createObjectURL(new Blob([bytes], { type: fontType }));
       return {
         url,
@@ -218,6 +314,7 @@ export const createProjectAssetService = ({
         revoke: () => URL.revokeObjectURL(url),
       };
     } catch (error) {
+      if (!fontType) content?.revoke?.();
       if (fontType && !isFontAssetError(error)) {
         throw createFontAssetError(fileId, "font_file_unavailable", error);
       }
@@ -590,9 +687,9 @@ export const createProjectAssetService = ({
       if (planId) resourceImportFileIdsByPlan.delete(planId);
     },
 
-    async getFileContent(fileId) {
-      return getFileContent(fileId);
-    },
+    getFileContent,
+
+    checkFileIntegrity,
 
     observeFileUrls(fileIds) {
       return new Observable((subscriber) => {

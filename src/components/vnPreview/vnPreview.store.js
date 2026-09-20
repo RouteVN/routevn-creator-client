@@ -1,3 +1,4 @@
+import { formatLoadingProgress } from "../../internal/ui/assetLoadingProgress.js";
 import {
   DEFAULT_PROJECT_RESOLUTION,
   formatProjectResolutionAspectRatio,
@@ -126,6 +127,8 @@ const ensureAssetLoadCache = (state) => {
 };
 
 export const createInitialState = () => ({
+  loadingProgress: { stage: "repository" },
+  loadingDetailsVisible: false,
   isAssetLoading: false,
   isPreviewReady: false,
   isRotated: false,
@@ -134,6 +137,20 @@ export const createInitialState = () => ({
   projectResolution: DEFAULT_PROJECT_RESOLUTION,
   viewportSize: createViewportSize(),
 });
+
+export const setLoadingDetailsVisible = ({ state }, { visible }) => {
+  state.loadingDetailsVisible = visible;
+};
+
+export const selectIsPreviewLoading = ({ state }) =>
+  !state.isPreviewReady || state.isAssetLoading;
+
+export const setLoadingProgress = ({ state }, progress) => {
+  state.loadingProgress = progress;
+};
+
+export const selectLoadingDescription = ({ state, i18n }) =>
+  formatLoadingProgress(state.loadingProgress, i18n?.vnPreview ?? {});
 
 export const setUiConfig = ({ state }, { uiConfig } = {}) => {
   state.isTouchMode = isTouchUiConfig(uiConfig);
@@ -228,7 +245,12 @@ export const selectViewData = ({ props: attrs, state, i18n }) => {
       ? (copy.restoreOrientationButton ?? "Restore preview orientation")
       : (copy.rotateButton ?? "Rotate preview 90 degrees"),
     closePreviewLabel: copy.closeButton ?? "Exit full screen",
-    loadingPreviewLabel: copy.loading ?? "Loading preview...",
+    loadingPreviewLabel: state.loadingDetailsVisible
+      ? formatLoadingProgress(state.loadingProgress, copy, false)
+      : (copy.loading ?? "Loading preview..."),
+    loadingPreviewAssetLabel: state.loadingDetailsVisible
+      ? state.loadingProgress.assetName
+      : undefined,
     ...previewLayout,
   };
 };

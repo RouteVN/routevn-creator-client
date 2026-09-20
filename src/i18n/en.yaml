@@ -514,9 +514,20 @@ webServerPage:
   unsupportedTitle: "Unsupported"
   urlLabel: "URL"
   warningTitle: "Warning"
+fontPreview:
+  reuploadLabel: "Re-upload font"
+  unavailableLabel: "Font unavailable"
+  reuploadMessage: "Open Fonts and re-upload the affected font file."
+fileImage:
+  unavailableLabel: "Image unavailable"
+  reuploadMessage: "Open Edit and re-upload this image file."
+assetLoadFeedback:
+  previewBlocked: "Preview cannot be played because these assets could not be loaded."
+  voices: "Voices"
+  file: "Asset file: {fileId}"
+  unknown: "An unidentified asset"
+  failed: "Could not load these assets:\n{assets}\n\nCheck their files and replace them with valid copies if needed."
 resourcePages:
-  damagedFontMessage: "The font \"{fontName}\" has changed or is damaged. Open Fonts and replace its file with a fresh copy."
-  unavailableFontMessage: "The font \"{fontName}\" could not be loaded. Open Fonts and replace its file with a valid copy."
   damagedFontImportMessage: "The font \"{fontName}\" is damaged or unreadable. Please choose a fresh TTF, OTF, or WOFF2 file."
   selectorEmptyMessage: "No items available to select."
   selectorNoResultsMessage: "No items match your search."
@@ -786,6 +797,14 @@ actionTransformEditor:
   unnamedTarget: "Current item"
   visualTarget: "Visual"
 vnPreview:
+  repository: "Opening project..."
+  scenes: "Preparing scenes..."
+  graphics: "Initializing graphics..."
+  reading: "Checking assets: {completed} / {total}"
+  decoding: "Loading assets: {completed} / {total}"
+  engine: "Starting playback..."
+  paint: "Drawing first frame..."
+  timeout: "Preview could not start. Timed out after {seconds} seconds.\n\n{step}\n\nTry previewing again."
   closeButton: "Exit full screen"
   loading: "Loading preview..."
   restoreOrientationButton: "Restore preview orientation"

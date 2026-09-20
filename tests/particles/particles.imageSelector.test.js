@@ -98,6 +98,21 @@ describe("particle texture image selector", () => {
       target: "texture",
       selectedImageId: IMAGE_ID,
     });
+    state.data = {
+      items: {
+        "particle-one": {
+          id: "particle-one",
+          type: "particle",
+          name: "Particle One",
+          modules: { appearance: { texture: IMAGE_ID } },
+        },
+      },
+      tree: [{ id: "particle-one" }],
+    };
+    state.selectedItemId = "particle-one";
+    expect(
+      selectViewData({ state, i18n: EN_I18N }).selectedTextureImageFileId,
+    ).toBe("thumbnail-one");
     expect(selectViewData({ state, i18n: EN_I18N }).dialogTextureImage).toEqual(
       {
         imageId: IMAGE_ID,

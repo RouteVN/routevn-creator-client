@@ -669,6 +669,7 @@ export const createProjectServiceCore = ({
     },
     getFileContent: assetService.getFileContent,
     observeFileUrls: assetService.observeFileUrls,
+    checkFileIntegrity: assetService.checkFileIntegrity,
     createAssetPackageBundle:
       assetPackageExportService.createAssetPackageBundle,
     downloadMetadata: assetService.downloadMetadata,

@@ -12,7 +12,7 @@ import { loadViewTemplate } from "../support/renderView.js";
 
 afterEach(() => vi.unstubAllGlobals());
 
-it("opens and reopens mobile keyframe dialogs after the real Zoom popover wraps its content", async () => {
+it("opens and reopens mobile keyframe dialogs with the real Zoom popover mounted", async () => {
   const dom = new JSDOM("<body><div id='root'></div></body>");
   for (const name of [
     "document",
@@ -76,10 +76,11 @@ it("opens and reopens mobile keyframe dialogs after the real Zoom popover wraps 
       render();
       const zoom = dom.window.document.querySelector("#timelineZoomPopover");
       const slider = zoom.querySelector("#timelineZoomSlider");
-      // The published popover reparents app content into its own wrapper.
-      expect(
-        zoom.querySelector("[data-rtgl-popover-content] #timelineZoomSlider"),
-      ).toBe(slider);
+      expect(slider).not.toBeNull();
+      // The published popover keeps caller-owned content in the light DOM.
+      expect(zoom.querySelector("#timelineZoomContent").parentElement).toBe(
+        zoom,
+      );
       const authored = structuredClone(state.tweenBySection);
       for (let cycle = 0; cycle < 2; cycle++) {
         const selection = { side, property, index: 0 };

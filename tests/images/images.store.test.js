@@ -286,30 +286,33 @@ describe("images store preview navigation", () => {
     );
   });
 
-  it("uses the original image file for grid thumbnails so transparency can show", () => {
-    const context = createContext();
-
-    setItems(context, {
-      data: {
-        tree: [{ id: "image-1" }],
-        items: {
-          "image-1": {
-            id: "image-1",
-            type: "image",
-            name: "Transparent Image",
-            fileId: "original-file",
-            thumbnailFileId: "opaque-thumbnail-file",
+  it.each([
+    ["thumbnail-file", "thumbnail-file"],
+    [undefined, "original-file"],
+  ])(
+    "uses grid preview %s with fallback to the original",
+    (thumbnailFileId, expectedFileId) => {
+      const context = createContext();
+      setItems(context, {
+        data: {
+          tree: [{ id: "image-1" }],
+          items: {
+            "image-1": {
+              id: "image-1",
+              type: "image",
+              name: "Image One",
+              fileId: "original-file",
+              thumbnailFileId,
+            },
           },
         },
-      },
-    });
-
-    const viewData = selectViewData(context);
-
-    expect(viewData.mediaGroups[0].children[0].previewFileId).toBe(
-      "original-file",
-    );
-  });
+      });
+      const viewData = selectViewData(context);
+      expect(viewData.mediaGroups[0].children[0].previewFileId).toBe(
+        expectedFileId,
+      );
+    },
+  );
 
   it("uses the original file for the full preview overlay", () => {
     const context = createContext();
