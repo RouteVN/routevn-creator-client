@@ -105,9 +105,6 @@ export const toRepositoryEvent = (
     meta: item.meta ? structuredClone(item.meta) : {},
     ...(created !== undefined ? { serverTs: created } : {}),
   };
-  if (Object.hasOwn(item, "rawSchemaVersion")) {
-    repositoryEvent.rawSchemaVersion = item.rawSchemaVersion;
-  }
 
   if (Number.isFinite(Number(repositoryRevision))) {
     repositoryEvent.repositoryRevision = Math.max(

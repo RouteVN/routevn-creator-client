@@ -90,7 +90,6 @@ for (const fixture of [
       await evictPersistedTauriProjectStoreCache({ projectPath: dir });
     };
     await open();
-    assert.equal(store.rawSchemaVersionAvailable, true);
     const before = readSourceRecords(join(dir, "project.db"));
     const original = await repository.getContextState();
     const invalid = await repository.submitCommands(

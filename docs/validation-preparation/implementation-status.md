@@ -1,73 +1,91 @@
 # Strict validation implementation and release status
 
-Updated September 19, 2026. Implementation branch: `feat/strict-schema-validation`.
+Updated September 21, 2026. Implementation branch: `feat/strict-schema-validation`.
 
-The domain validator and client acceptance path are implemented. Production
-activation is **pending**, not delivered: the client still pins creator-model
-`1.15.0`, Insieme `2.1.1`, and route-engine-js `1.46.1`. No package publication,
-application release, deployment, or dependency patch was performed.
+The strict model and client acceptance path are implemented. Production activation
+is **pending**. The client pins creator-model `1.15.0`, Insieme `2.1.2`, and
+route-engine-js `1.46.1`. Insieme is now a normal published dependency; the strict
+model release is still pending. No dependency patches or development pins are
+committed, and no application release or deployment has been performed.
+
+**Compatibility blocker:** Insieme 2.1.2 rejects malformed historical schema
+versions that its previous reader accepted. Frozen P08 projects containing `1.5`
+and `"1junk"` fail candidate opening with `invalid_schema_version`. Their original
+rows and previous-reader expectations remain unchanged. This conflicts with the
+approved old-project compatibility policy and must be resolved before merging.
 
 ## Owning changes
 
-| Repository     | Change                                                                                                                                                                                                                             | Review                                                            |
-| -------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ----------------------------------------------------------------- |
-| Creator model  | Schema 16 version dispatch; raw JSON, size/work limits, closed payloads, action contracts, expressions, references and affected-state transition validation; historical contracts retained                                         | [PR 80](https://github.com/RouteVN/routevn-creator-model/pull/80) |
-| Insieme        | Opt-in original driver schema versions and reader capability across SQLite/libSQL/async SQLite/IndexedDB; exact new-version writes; configurable command-session batch limits                                                      | [PR 42](https://github.com/yuusoft-org/insieme/pull/42)           |
-| Route Engine   | Explicit literal object/array variable values, preserving existing expression behavior                                                                                                                                             | [PR 351](https://github.com/RouteVN/route-engine/pull/351)        |
-| Creator client | Versioned codec, complete accepted project state, serialized validation/persistence/reconciliation, guarded public store APIs, sync ingestion, recovery/cache policy, native and browser ownership, UI outcomes, integration tests | This branch                                                       |
+| Repository     | Change                                                                                                                                                                | Review                                                            |
+| -------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ----------------------------------------------------------------- |
+| Creator model  | Schema 16 dispatch; bounded JSON, closed payloads, action contracts, expressions, references and affected-state validation; historical contracts retained             | [PR 80](https://github.com/RouteVN/routevn-creator-model/pull/80) |
+| Insieme        | Published 2.1.2: exact numeric schema versions on writes and storage reads, configurable command-session batch limits                                                 | [Merged PR 42](https://github.com/yuusoft-org/insieme/pull/42)    |
+| Creator client | Versioned codec, complete accepted state, serialized validation/persistence/reconciliation, sync ingestion, recovery/cache policy, platform ownership and UI outcomes | This branch                                                       |
+
+The proposed literal-object feature is removed from this work. Object assignments
+retain the existing representation and interpolation. Re-saving an action does
+not add `valueMode`; strict validation rejects that unknown operation field. The
+engine stays at `1.46.1`; [engine PR 351](https://github.com/RouteVN/route-engine/pull/351)
+is deferred and is not a release prerequisite.
 
 Model domain fixtures remain in the model repository. The client's frozen old
-project archive and previous-reader oracles were not regenerated or modified.
-The earlier legacy-domain adoption remains in merged
-[model PR 79](https://github.com/RouteVN/routevn-creator-model/pull/79); its original
-seed and expected bytes remain unchanged.
+project archive and previous-reader oracles are unchanged. The earlier
+legacy-domain adoption is in merged
+[model PR 79](https://github.com/RouteVN/routevn-creator-model/pull/79).
 
 ## Implemented client behavior
 
 New commands receive envelope version 2 and model version 16 inside the acceptance
-service. Callers cannot supply a legacy version or storage envelope. Raw values are
-validated before cloning; a complete logical batch is checked before writing.
-The complete project state includes inactive scenes. Browser Web Locks serialize
-operations across tabs; native OS locks reserve editing for one application
-window/process and the local queue covers refresh, validation, persistence and
-publication. Network waits are outside that queue.
+service. Callers cannot select a legacy version or storage envelope. Raw values
+are checked before cloning; a complete logical batch is checked against complete
+project state, including inactive scenes, before writing.
 
-Both committed batches and submit acknowledgements validate the resulting ordered
-history before changing it. Exact retries preserve identity; missing committed
-ranges trigger resynchronization. Failed writes are reconciled against actual
-storage: full persistence succeeds once, a contiguous prefix returns
-`partial_write`, and unreadable or inconsistent outcomes pause writes. Failed save
-results retain `retryRequests` with original IDs and payloads, also retained by the
-collaboration session's last error. Callers must use those requests for retry;
-there is no automatic retry with new identities.
+Browser Web Locks serialize operations across tabs. Native OS locks reserve editing
+for one window/process, and the local queue covers refresh, validation, persistence
+and publication. Network waits remain outside that queue.
 
-Historical rows keep their recorded contracts. Checkpoint-backed projects retain
-the previous reader's resolved state and original recovery sources. First strict
-edits are preflighted against replayable history. Disposable accepted-state caches
-use a separate policy namespace, preserve legacy own-undefined values, and require
-content fingerprints plus provenance held outside exported project storage.
-Cache failure after a successful save shows a rebuild notice; it does not report
-the save as lost. Partial and uncertain saves use separate localized notices.
+Committed batches and submit acknowledgements validate the resulting ordered
+history before changing it. Exact retries preserve identity. Failed writes are
+reconciled against actual storage: full persistence succeeds once, a contiguous
+prefix reports `partial_write`, and unreadable or inconsistent outcomes pause
+writes. Failed saves retain original retry IDs and payloads; there is no automatic
+retry with new identities.
+
+Accepted-state caches use a separate policy namespace, preserve legacy
+own-undefined values, and require content fingerprints plus provenance outside
+exported project storage. Checkpoint recovery sources are preserved. Cache failure
+after a successful save reports a rebuild notice, not a lost save. Partial and
+uncertain saves have separate localized notices.
+
+Insieme 2.1.2 validates driver schema versions itself. Its released API has no
+raw-version option or reader-capability flag; the client uses its exact numeric
+versions. This removes the obsolete development-only API checks, but does not
+resolve the historical P08 incompatibility described above.
 
 ## Executed verification
 
-These results used the owner feature branches through ordinary local `file:`
-dependencies in an isolated client checkout. Published pins in the main working
-tree remain unchanged. No installed dependency sources were edited.
+September 21 checks use published Insieme `2.1.2` and engine `1.46.1`. Strict client
+tests use the model owner checkout through a normal `file:` dependency in an
+isolated development checkout. No custom model import resolver is required.
 
-| Check                     | Result                                                                                                                     |
-| ------------------------- | -------------------------------------------------------------------------------------------------------------------------- |
-| Model complete suite      | 4,652 passing tests, including 126 strict cases and metadata-downgrade negative controls                                   |
-| Insieme complete suite    | 335 passing tests across 36 files; type checking and lint pass                                                             |
-| Engine complete suite     | 2,182 passing tests, including 20 literal-value cases; lint and build pass                                                 |
-| Client strict suites      | Codec, acceptance, authority, cache integrity, actual SQLite recovery/bootstrap/sync and public authoring integration pass |
-| Strict browser acceptance | Chromium and WebKit pass: two competing tabs, actual IndexedDB/Web Locks, invalid-batch zero writes, exact retry, reload   |
-| Frozen native corpus      | 162 previous/candidate cold/warm/cache-cleared checks pass                                                                 |
-| Frozen browser corpus     | WebKit corpus passes; Chromium cases pass across the full run and a successful P10 rerun after an environment interruption |
-| Existing client checks    | Smoke, integration, convergence, collaboration adapters, five Puty storage cases, and lint/format pass                     |
-| Native ownership          | Rust and Java ownership tests pass, including actual competing child processes; Tauri `cargo check --lib --offline` passes |
+| Check                         | Result                                                                                                                                           |
+| ----------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------ |
+| Model complete suite          | 4,669 passing tests, including 143 strict cases                                                                                                  |
+| Client strict suites          | 75 passing tests: codec, acceptance, authority, caches, SQLite recovery/bootstrap/sync and object re-save/runtime behavior                       |
+| Existing engine behavior      | Nested object/array templates and whole-object bindings retain their results through editor re-save and envelope round trips using engine 1.46.1 |
+| Strict browser acceptance     | Chromium and WebKit pass: two tabs, actual IndexedDB/Web Locks, invalid-batch zero writes, exact retry and reload                                |
+| Frozen P07 recovery cases     | All three projects pass previous/candidate cold, warm and cache-cleared comparisons with source preservation                                     |
+| Frozen P09 cached projects    | Committed, draft and mixed histories pass previous/candidate cold, warm and cache-cleared comparisons                                            |
+| Frozen P08 malformed versions | FAIL: previous reader opens; candidate throws `invalid_schema_version`                                                                           |
+| Existing client suites        | Smoke, integration, convergence, collaboration adapters, five Puty storage cases and client lint/format pass                                     |
 
-Run the client checks after consuming the owner packages:
+The earlier September 19 verification included a passing full frozen native/browser
+corpus and native Rust/Java ownership tests, plus Tauri library checking. Those
+runs used the earlier Insieme development API and **do not establish compatibility
+for 2.1.2**. Native/device code did not change in this follow-up.
+
+Run after consuming the published strict model, or in a separate development
+checkout with only the model dependency pointing to its owner checkout:
 
 ```bash
 bun run test:strict-validation
@@ -79,36 +97,26 @@ bun run test:collab-adapters
 bun run lint
 ```
 
-CI now requires strict tests as well as the frozen compatibility gate. The strict
-suite deliberately fails with the old production dependency pins; it cannot
-silently claim schema-16 coverage using schema 15. Keep the client PR in draft
-until normal published dependencies can be pinned and this job passes.
-
-For local validation, use a separate checkout and normal `file:` dependencies
-pointing to the three owner checkouts; install with Bun and build the engine.
-Do not commit these development pins, edit `node_modules`, rewrite historical
-fixtures, or replace frozen expected results to make the gate pass.
+The strict suite deliberately fails with model 1.15.0; it must not claim schema-16
+coverage through historical validation. Keep the client PR in draft until a normal
+published model version is pinned and the required CI gates pass. Do not commit
+local `file:` pins, edit `node_modules`, or rewrite frozen fixtures/oracles.
 
 ## Remaining release gates
 
-1. Review/merge and publish the model, Insieme and engine packages, then update the
-   client package pins and lockfile through the package manager. Verify all runtime
-   bundles and export/player targets consume the new engine.
-2. Complete the reader-first release/rollback sequence in
-   [upstream and rollout](./upstream-and-rollout.md#5-reader-first-delivery).
-   Model availability activates this branch's strict authoring path; do not ship
-   its dependency upgrade ahead of the supported reader rollout.
-3. Build and exercise Android and iOS native bridges on devices, including opening
-   the same project twice and renderer reload. Java process-lock tests are not an
-   Android application build. This Linux environment has no Xcode/iOS toolchain;
-   no device refresh or iPhone verification was completed.
-4. Complete the broader release acceptance matrix for UI authoring surfaces,
-   import/export/backup, runtime targets and large-project performance. The tests
-   above substantiate their named paths; they do not imply every platform or UI
-   branch has been exercised.
+1. Resolve the Insieme 2.1.2 old-project compatibility failure without weakening
+   the frozen P08 expectations. No silent repair or legacy data migration is part
+   of this validation change.
+2. Merge/publish the model change and consume its normal package release. Follow
+   the [reader-first rollout](./upstream-and-rollout.md#5-reader-first-delivery)
+   before activating strict authoring. No engine release is required.
+3. Exercise the Android/iOS native bridges on devices, including competing opens
+   and renderer reload. Earlier Java/Rust tests are not device verification; this
+   Linux environment has no Xcode/iOS toolchain.
+4. Complete the wider UI, import/export/backup, runtime and large-project release
+   matrix. The named checks above do not imply all platform paths were exercised.
 
-Expected user impact after activation: invalid new edits are rejected before they
-reach project history, old projects remain readable through their original
-contracts, competing writes are coordinated, and storage failures report what
-actually persisted. This is not a migration or a cleanup of old content. Before
-activation, the published dependency pins keep existing authoring behavior.
+Intended user impact after activation: invalid new edits are rejected before
+history changes, existing game behavior is preserved, competing writes are
+coordinated, and save failures report what actually persisted. Old-project
+availability remains a release requirement, currently blocked by the P08 failure.

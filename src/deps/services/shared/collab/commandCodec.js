@@ -29,43 +29,12 @@ const requireModelVersion = (version) => {
   }
 };
 
-// SQLite drivers can expose integer columns as strings or bigints. Conversion
-// must be lossless; Number()/parseInt() alone would accept fractions/prefixes.
-const driverInteger = (value) => {
-  if (typeof value === "number") {
-    return Number.isSafeInteger(value) && value > 0 ? value : undefined;
-  }
-  if (typeof value === "bigint") {
-    return value > 0n && value <= BigInt(Number.MAX_SAFE_INTEGER)
-      ? Number(value)
-      : undefined;
-  }
-  if (typeof value === "string" && /^[1-9][0-9]*$/.test(value)) {
-    const number = Number(value);
-    if (Number.isSafeInteger(number) && String(number) === value) return number;
-  }
-  return undefined;
-};
-
+// Insieme 2.1.2 handles exact driver decoding before exposing stored rows.
+// Incoming wire records must already use the same numeric representation.
 export const readCommandEnvelopeVersion = (record) => {
-  const stored = Object.hasOwn(record, "rawSchemaVersion");
-  const raw = stored ? record.rawSchemaVersion : record.schemaVersion;
-  const exact = stored
-    ? driverInteger(raw)
-    : typeof raw === "number" && Number.isSafeInteger(raw) && raw > 0
-      ? raw
-      : undefined;
-  if (exact === 1 || exact === STRICT_COMMAND_ENVELOPE_VERSION) return exact;
-  // Only a stored row already interpreted as envelope 1 by its old reader
-  // receives historical tolerance. This never promotes malformed data to 2.
-  if (
-    stored &&
-    record.schemaVersion === 1 &&
-    ["number", "string", "bigint"].includes(typeof raw) &&
-    Number.parseInt(raw, 10) === 1
-  ) {
-    return 1;
-  }
+  const version = record.schemaVersion;
+  if (version === 1 || version === STRICT_COMMAND_ENVELOPE_VERSION)
+    return version;
   throw commandCompatibilityError(
     "unsupported_command_envelope_version",
     "schemaVersion",
@@ -143,7 +112,6 @@ export const encodeCommandEnvelope = (command) => {
     },
   };
   delete record.modelSchemaVersion;
-  delete record.rawSchemaVersion;
   return record;
 };
 

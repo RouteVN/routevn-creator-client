@@ -81,22 +81,8 @@ export const createAcceptedProjectRepository = async ({
         trustedDigest: await readCacheTrust(),
       }),
   });
-  const readHistory = async () => {
-    const history = await readProjectHistory(store);
-    if (
-      store.rawSchemaVersionAvailable !== true &&
-      [...history.committed, ...history.drafts].some(
-        (row) => row.schemaVersion !== 1,
-      )
-    ) {
-      const error = new Error(
-        "This project requires a storage reader with exact schema versions",
-      );
-      error.code = "unsupported_storage_reader";
-      throw error;
-    }
-    return history;
-  };
+  // Insieme 2.1.2 validates driver values and returns exact numeric versions.
+  const readHistory = () => readProjectHistory(store);
   const open = async () => {
     const history = await readHistory();
     return { history, accepted: await authority.resolve(history) };
@@ -178,21 +164,15 @@ export const createAcceptedProjectRepository = async ({
       await saveCache();
     },
   });
-  const readOnly = () =>
-    lease.writable !== true || store.rawSchemaVersionAvailable !== true;
+  const readOnly = () => lease.writable !== true;
   const submitCommands = async (requests, actor) => {
     if (readOnly())
       return {
         valid: false,
         error: {
-          code:
-            lease.writable !== true
-              ? "project_read_only"
-              : "unsupported_storage_reader",
+          code: "project_read_only",
           message:
-            lease.writable !== true
-              ? "This project is open read-only because another window owns editing"
-              : "Update the storage reader before editing this project",
+            "This project is open read-only because another window owns editing",
         },
       };
     const result = await coordinator.submit(requests, { actor });

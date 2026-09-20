@@ -20,11 +20,12 @@ symbolic `15` examples when adopting them; do not relabel the original captures.
 
 [Contract refresh](./fixtures/scenarios/september-18-contract-refresh.json)
 adds independent authoring/runtime cases for avatar previews, default avatar
-transforms, and marked literal object writes. Its setup requirements describe
+transforms, and existing interpolated object writes. Its setup requirements describe
 neutral resources to construct through model commands in the future harness;
 they are not replacement project snapshots or persisted event fields. It also
 records the actually reproduced engine-1.46.1 unmarked interpolation result.
-Marked expectations remain unexecuted until the engine feature exists.
+The September 21 scope correction replaces proposed marked-value cases with
+existing-format cases. Captured historical runtime observations are unchanged.
 
 ## Whole-project compatibility coverage
 

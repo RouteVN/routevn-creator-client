@@ -27,11 +27,9 @@ Original schema-14 captures and symbolic version-15 scenarios are retained;
 they must not be mistaken for the current implementation or strict registry.
 
 The refreshed catalog covers persisted dialogue avatar previews and
-`project.set_default_dialogue_avatar_transform`. Literal object writes require
-an explicit `valueMode: "literal"` operation field implemented in both model
-and engine. The engine currently templates unmarked object strings; that legacy
-behavior remains unchanged. The rollout now includes the engine release and
-browser/native player artifact checks.
+`project.set_default_dialogue_avatar_transform`. September 21 scope correction: object
+assignments retain the existing format and runtime interpolation. The proposed
+literal-object feature is deferred; strict validation requires no engine upgrade.
 
 The [refresh scenario](./fixtures/scenarios/september-18-contract-refresh.json)
 contains new contract cases and a reproduced engine baseline. Its future
@@ -129,7 +127,7 @@ behavior still require implementation tests before release.
 | [Old-project test plan](./legacy-project-test-plan.md)     | Repository ownership, frozen project packs, previous-reader oracles, real-storage upgrade checks, and the T0 baseline gate                            |
 | [Fixture manifest](./fixtures/manifest.json)               | Exact artifact/source hashes, model-version binding, and provenance                                                                                   |
 | [Replay and acceptance](./replay-and-acceptance.md)        | Complete chronological authority, same-identity moves, platform coordination, write recovery, acknowledgment promotion, and retained recovery sources |
-| [Upstream and rollout](./upstream-and-rollout.md)          | Creator-model, Insieme, and engine PR scopes, release prerequisites, client slices, reader/writer delivery, and rollback                              |
+| [Upstream and rollout](./upstream-and-rollout.md)          | Creator-model and Insieme scopes, release prerequisites, client slices, reader/writer delivery, and rollback                                          |
 
 ## Decisions made during preparation
 
@@ -182,13 +180,13 @@ when implementation exists.
 
 Implementation resumed at the user’s request on
 `docs/versioned-schema-validation-plan`. The executable compatibility baseline
-and frozen project packs are implemented. Model domain-fixture adoption and
-the engine literal-value prerequisite are being developed in their owning
-checkouts. The full strict validator, storage version handling, client
-coordination/integration, and release enablement are not complete.
+and frozen project packs are implemented. Model domain-fixture adoption is merged upstream. Strict model and client
+acceptance changes are implemented; see [implementation status](./implementation-status.md)
+for current verification and release blockers. Insieme 2.1.2 is pinned; the
+engine remains at 1.46.1.
 
 Keep the T0 executable compatibility baseline passing throughout implementation.
-Complete the model, Insieme, and engine owner changes,
+Complete the model release and resolve the Insieme compatibility gate,
 then integrate the client in the documented order. The remaining gates are
 implementation, published dependencies, and feature/platform verification;
 the additional T0 test-preparation gate above must pass before validator changes.

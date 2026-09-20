@@ -7,8 +7,9 @@ stored project. It supplements the [versioned-command specification](../command-
 September 18 refresh: the implementation baseline is client main `4d1fe31f`,
 creator-model `1.15.0` / schema `15`, and route-engine-js `1.46.1`. The original
 source fingerprints below remain historical evidence. The refresh adds avatar
-preview data, the default-avatar-transform command, and an explicit engine
-prerequisite for literal object writes. See the [refresh fixtures](./fixtures/scenarios/september-18-contract-refresh.json).
+preview data and the default-avatar-transform command. September 21 scope
+correction: object assignments keep existing runtime interpolation; no new
+operation marker or engine release is required. See the [refresh fixtures](./fixtures/scenarios/september-18-contract-refresh.json).
 
 The original source baseline is the client-pinned `route-engine-js@1.46.1` and the
 reviewed sibling engine source at `7c8eb55d19b511de5f07dbd95af24fd991d5d892`
@@ -371,53 +372,38 @@ and [audio rendering](../../../route-engine/src/stores/constructRenderState.js).
 
 `VariableOperation` is exactly `{variableId!: Ref(variables), op!:
 "set"|"increment"|"decrement"|"multiply"|"divide"|"toggle", value?:
-typed operand, roundTo?: integer 0..12, valueMode?: "literal"}`. The variable must be non-computed and
+typed operand, roundTo?: integer 0..12}`. The variable must be non-computed and
 writable; scope is context/device/account as supported by the model/export
 contract. A runtime field ID is not a writable variable.
 
-| Variable type | Allowed operations and exact value rules                                                                                                                                                                                                                                                       |
-| ------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| number        | set/multiply/divide require Number (or an explicitly permitted numeric binding). increment/decrement may omit value, meaning 1, or provide Number/binding. divide rejects literal 0 and runtime-resolved 0. roundTo is allowed only for divide, default 2.                                     |
-| boolean       | set requires Bool/binding; toggle omits value and roundTo.                                                                                                                                                                                                                                     |
-| string        | set requires TextTemplate/binding, including the empty string; all arithmetic/toggle and roundTo are invalid. If enumValues is declared, static value must be one of them; a dynamic value must satisfy the enum at execution.                                                                 |
-| object        | set requires an object or array LiteralJSON value. This is literal data, not condition/action syntax. `null` requires a separately declared nullable variable contract; the current object-variable contract does not grant it. No arithmetic, toggle, roundTo, or whole-event object binding. |
+| Variable type | Allowed operations and exact value rules                                                                                                                                                                                                                   |
+| ------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| number        | set/multiply/divide require Number (or an explicitly permitted numeric binding). increment/decrement may omit value, meaning 1, or provide Number/binding. divide rejects literal 0 and runtime-resolved 0. roundTo is allowed only for divide, default 2. |
+| boolean       | set requires Bool/binding; toggle omits value and roundTo.                                                                                                                                                                                                 |
+| string        | set requires TextTemplate/binding, including the empty string; all arithmetic/toggle and roundTo are invalid. If enumValues is declared, static value must be one of them; a dynamic value must satisfy the enum at execution.                             |
+| object        | set requires a bounded object/array or a complete binding to an object variable. Nested strings retain supported template/event binding behavior. Root null, arithmetic, toggle and roundTo are invalid.                                                   |
 
-### Literal object writes and engine compatibility
+### Object assignments and existing runtime behavior
 
-For strict `M`, an object-variable `set` requires `valueMode: "literal"` and an
-object/array `LiteralJSON` value. The marker is forbidden for other variable
-types or operations. Omission is an error on a new strict object write; it is
-not silently supplied by the validator. Trusted UI composition adds the marker
-when constructing that operation. API authors provide the same explicit field.
+Strict `M` validates the existing object-assignment format. It adds no operation
+marker and requires no engine upgrade. `valueMode` is an unknown operation field.
+The editor must not rewrite an existing object assignment when saving it.
 
-This is a new model-and-engine contract, not behavior supplied by the current
-engine. A probe against installed route-engine-js `1.46.1` showed that an
-unmarked `{text: "${variables.source}"}` becomes `{text: "REPLACED"}` when
-`source` is `"REPLACED"`. `_event.*` strings inside such objects are also resolved.
+Object and array values retain the interpolation performed by route-engine-js
+`1.46.1`: `${variables.source}` resolves the declared variable, and `_event.value`
+requires an enclosing event context. Nested strings follow the same binding
+rules. A complete `${variables.objectSource}` binding may supply the whole value
+when that variable has object type. Validate these references without evaluating
+or rewriting stored strings; track nested references for deletion checks.
 
-The engine owner must recognize the marker before recursive template processing,
-validate its exact spelling and operation/value shape, and copy that operation's
-`value` without interpolation, event resolution, or action interpretation at any
-depth. Other operation fields retain their existing handling. Runtime variable
-type/permission checks still run; the marker cannot authorize an object write to
-a non-object or read-only variable. Unknown marker values fail explicitly.
-The marker must survive deferred callbacks, conditional branches, preview,
-export, save/load, and rollback. It is ordinary action data, not the persistence
-`mv` wrapper, and must not be stripped by client projection.
+Keys such as `actions` and `confirmActions` remain ordinary data, not executable
+action holders. Apply bounded JSON checks and preserve own data keys. A string
+inside that data is still subject to the existing runtime interpolation rules;
+it is not a new literal-string escape mechanism.
 
-Unmarked historical operations keep existing engine template behavior. Do not
-add markers while loading or projecting legacy actions, or globally disable
-object interpolation in mixed projects. An explicit strict edit/copy of an
-object operation must supply the literal form; warn on validation failure rather
-than silently converting a preserved old operation. A marked literal branch may
-contain keys such as `actions`, `valueMode`, or `__proto__` as inert own data;
-no path traversal or prototype mutation is permitted during copying.
-
-Ship the owning engine release before any supported reader previews/exports
-marked actions or the writer emits them. Both browser bundles and packaged
-players must contain it. The [rollout](./upstream-and-rollout.md#31-engine-implementation-pr)
-names the owner, compatibility cases, and release gate. Model-only acceptance
-cannot establish literal execution semantics.
+Tests must demonstrate unchanged editor re-save, versioned persistence and
+runtime results with the existing published engine. The proposed literal-object
+feature is deferred and is not a dependency of strict validation.
 
 No operation changes the project's variable definition/default during authoring;
 these are player instructions. Static validation checks permissions, declared
@@ -898,10 +884,10 @@ above. The fixture matrix must also include all these cross-cutting cases:
   empty valid inheritance configurations, illegal direct actions alias,
   keyboard and keyup dictionaries, input-field mappings, and forbidden
   runtime-generated request metadata.
-- Marked literal object/array writes preserve template-looking strings and
-  event selectors recursively; unmarked historical operations retain existing
-  interpolation. Test missing/wrong marker, wrong variable type, nested callback,
-  mixed marked/unmarked operations, export, save/load, and rollback.
+- Object/array assignments and whole-object bindings preserve existing
+  interpolation through re-save and versioned persistence. Reject unknown
+  operation fields, incompatible variable types, missing nested references and
+  unavailable event contexts. Test against the existing published engine.
 - Avatar preview save/reopen with a different speaker and sprite owner, optional
   transform, invalid sprite/transform refs, and unknown nested fields; project
   default-avatar-transform set/replace/clear and deletion cleanup.

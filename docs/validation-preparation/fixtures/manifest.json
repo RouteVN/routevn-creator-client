@@ -338,7 +338,7 @@
     "Observed snapshots intentionally retain current permissive behavior in negative future cases; do not adopt them as expected accepted strict states.",
     "No application code, test runner, dependency, user project, or historical row was changed.",
     "Post-review compatibility requirement: preserve previous-reader legacy loading/recovery, including missing scene sources and previously tolerated legacy version representations. New strict commands and invalid/unsupported strict history keep strict checks. Updated future expectations only; copied legacy sources and recorded baseline observations remain unchanged.",
-    "September 18 refresh adds contract cases without rewriting copied sources or observed snapshots; current model schema 15 is not the first strict schema. Engine literal behavior requires an explicit new marker and published runtime support."
+    "September 18 refresh adds contract cases without rewriting copied sources or observed snapshots; current model schema 15 is not the first strict schema. September 21 scope correction removes the proposed literal-object feature and engine prerequisite; existing interpolation is retained."
   ],
   "implementationRefresh": {
     "date": "2026-09-18",
@@ -351,7 +351,7 @@
     "requiredContracts": [
       "PreviewDialogue.character.sprite and shared preview line shape",
       "project.set_default_dialogue_avatar_transform and project.defaultDialogueAvatarTransformId",
-      "VariableOperation.valueMode literal marker requires model and engine releases"
+      "Object assignments retain existing interpolation; no engine release required"
     ],
     "remainingBeforeEnforcement": "Rerun complete emitter inventory against the implementation revision; preserve all original archived observations.",
     "scenario": "scenarios/september-18-contract-refresh.json"

@@ -1,8 +1,9 @@
 # Upstream work and rollout sequence
 
 Status: implementation is available on the client and owner feature branches.
-See [implementation status](./implementation-status.md) for changes and test evidence. No package release, client dependency upgrade, strict
-write enablement, application release, or deployment has been performed.
+See [implementation status](./implementation-status.md) for changes and test evidence. Insieme 2.1.2 is now pinned. Model publication, compatibility resolution and
+reader/writer delivery remain pending; no application release or deployment
+has been performed.
 
 The storage contract remains envelope 2 with `{ mv, commandPayload }` inside
 the existing payload value. There is no SQLite schema migration or application
@@ -14,8 +15,8 @@ server work.
 | -------------- | --------------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------- |
 | Creator client | Main `4d1fe31f` (September 18 implementation refresh)                             | This repository: composition, codec, coordination, authoritative replay, projections, platform integration, UI errors         |
 | Creator model  | Installed package `1.15.0`, schema `15`; original schema-14 observations retained | `../routevn-creator-model`: all strict domain schemas, version dispatch, transition/reference rules, shipped model extensions |
-| Insieme        | Installed package `2.1.1`                                                         | Repository recorded by that package: `yuusoft-org/insieme`; exact event-version parsing across its client stores              |
-| Route Engine   | Installed `route-engine-js@1.46.1`                                                | `../route-engine`: explicit literal object-write mode, legacy runtime compatibility, packaged-player delivery                 |
+| Insieme        | Installed package `2.1.2`                                                         | Repository recorded by that package: `yuusoft-org/insieme`; exact event-version parsing across its client stores              |
+| Route Engine   | Installed `route-engine-js@1.46.1`                                                | Existing runtime contract; no engine change or release prerequisite                                                           |
 
 The package version numbers here identify inspected dependencies, not a claim
 about the latest published versions. An Insieme sibling checkout was not present
@@ -85,95 +86,54 @@ Required evidence before release:
 Release through the normal model publishing workflow. A local `file:` link may
 be used for development validation later, but is not a published client fix.
 
-## 3. Insieme implementation PR
+## 3. Published Insieme dependency
 
-Proposed scope: **Expose original event versions for strict decoding while
-preserving existing legacy storage reads.**
+The client now pins Insieme `2.1.2`, released from
+[PR 42](https://github.com/yuusoft-org/insieme/pull/42). The released API validates
+positive safe integer schema versions before writes and normalizes exact driver
+integer representations on reads. It has no raw-version metadata or opt-in
+reader capability. The client uses its numeric `schemaVersion` directly.
 
-The installed readers can turn raw `1.5` or `"1junk"` into version `1`, and
-`2.9` or `"2junk"` into `2`. The application codec cannot detect the discarded
-information. Correct this in the owner, without changing its SQLite schema or
-unconditionally rejecting historical representations the old reader accepted.
+This release differs from the original raw-preserving reader proposal below:
+it rejects malformed historical versions too. The frozen P08 fixtures contain
+`1.5` and `"1junk"`, which the previous reader opened as envelope 1. Their
+candidate opens now fail with `invalid_schema_version`. This is an unresolved
+compatibility blocker under the approved old-project policy, not an expected
+baseline change. Do not rewrite those rows, regenerate their expected output,
+or patch the dependency to make the test pass. Resolve the owning API/recovery
+policy before merging the client upgrade.
 
-Required contract:
+Verify valid versions and wrapped payloads through insertion, promotion, reload
+and sync using actual storage adapters. Future strict malformed versions must
+still fail closed. The upgrade requires no SQLite schema migration or server
+protocol change.
 
-- Provide a supported raw-preserving read path alongside existing legacy
-  behavior. Keep malformed versions distinguishable from absence and from a
-  valid integer so the Creator boundary can apply the appropriate policy.
-  Do not force every historical row through a new strict parser. Insieme
-  need not hard-code Creator envelope 1 or 2.
-- Newly authored writes and the Creator envelope-2 path validate positive safe integers
-  exactly. JSON input uses numbers; driver integer representations require
-  lossless conversion. `2.9` / `"2junk"` must never become envelope 2.
-  Unsupported versions remain the Creator codec's decision.
-- The existing historical-load/import/retry path retains only the old
-  reader's legacy interpretation, including historical `1.5` / `"1junk"`
-  where it already yielded envelope 1. Preserve stored bytes and old payload
-  validation. This is not a fallback after strict failure, a caller-selected
-  authoring mode, or proof that an imported database is strictly valid.
-  Existing legacy retransmission/promotion preserves its recorded values;
-  it is not newly authored data.
-- Cover synchronous SQLite, LibSQL, asynchronous SQLite, IndexedDB, and their
-  relevant draft and committed record readers. Verify writes before adapter
-  conversion as well as raw-preserving reads of existing malformed rows.
-- Preserve exact valid envelope/payload values through insertion, load,
-  acknowledgment promotion, committed batches, and identity comparison.
-- Do not alter unrelated timestamp parsing or database `PRAGMA user_version`
-  as a side effect of this correction.
+## 3.1 Existing engine contract
 
-Required evidence: actual raw-row tests for fractions, numeric prefixes,
-unsupported integer ranges, driver integer representations, and both draft
-and committed tables/stores. Compare old/new legacy reader outcomes and
-separately assert exact strict rejection and absence of an authoring bypass.
-Also exercise a wrapped payload with `mv` through
-promotion and reload, retaining payload compression behavior.
+Strict validation uses `route-engine-js@1.46.1` without an engine change. Object
+assignments remain unmarked and retain recursive template/event interpolation.
+The validator checks the existing data format; the editor does not add an
+operation marker when re-saving old actions.
 
-Publish the normal compatible package release chosen by that repository's
-maintainers. This task does not prescribe a new transport protocol or a server
-upgrade. App-owned ingestion interception can use the existing injected store
-interface for both `applyCommittedBatch` and `applySubmitResult`; no new hook
-is assumed necessary for that interception.
-
-## 3.1 Engine implementation PR
-
-Proposed scope: **Preserve literal values in explicitly marked object-variable
-writes without changing unmarked historical actions.** Model and engine support
-must agree on `VariableOperation.valueMode: "literal"` before client integration.
-
-- Validate the marker and `set` object/array shape before action template
-  traversal. Copy the marked value as inert JSON without evaluating templates
-  or event selectors, including nested arrays and operator/action-like keys.
-- Retain existing template resolution for unmarked operations and type,
-  computed/read-only, scope, and runtime validation for all operations.
-- Preserve the marker through nested immediate/deferred actions and runtime
-  save/load/rollback. Do not infer behavior from a project's newest `mv`, because
-  mixed projects contain both representations and runtime receives domain data.
-- Prove marked/unmarked behavior side by side against engine `1.46.1`, including
-  `${variables.source}`, `_event.value`, missing event context, and prototype-like
-  own data keys. Unknown markers and marked non-object writes must reject.
-
-Publish the normal engine package release. Both reader R and writer W must use
-it in Creator preview, browser exports, and every packaged native player before
-handling marked actions. Pin/verify player template artifacts as well as the
-client package; upgrading only Creator is insufficient. If an artifact is still
-on the old engine, that release gate remains blocked, not silently downgraded.
+The literal-object feature from
+[engine PR 351](https://github.com/RouteVN/route-engine/pull/351) is deferred and
+is not a release prerequisite. Regression tests exercise existing interpolation
+through strict authoring and persistence using the current published package.
 
 ## 4. Client implementation slices
 
-Model, Insieme, and engine work can proceed independently after agreeing on
-the literal-operation field contract. Client implementation may
-be developed against their source checkouts through the repository's normal
+Client implementation may be developed against the model source checkout through the repository's normal
 local validation workflow, but the final client dependency change waits for
 published versions. No dependency patch, copied fork, install rewrite, or
 edited cached bundle is acceptable.
 
-| Slice                               | Concrete work                                                                                                                                                                   | Exit evidence                                                                                                             |
-| ----------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------- |
-| C1: reader and codec                | Preserved legacy reads, exact strict envelope branching, `mv` mapping, identities, raw-before-domain boundaries, compatibility errors                                           | Previous-reader parity for legacy values; strict/future-version errors; actual SQLite/IndexedDB round trips               |
-| C2: authority and recovery          | Existing legacy loading/skip/recovery behavior, chronological strict suffix validation, coherent projections, retained recovery sources                                         | Old-reader state and availability preserved, including missing-scene recovery; valid edit/reload; original rows unchanged |
-| C3: acceptance ownership            | Shared coordinator, platform locks, refresh/preflight/write/state advancement, partial/unknown-write recovery, both sync ingestion methods                                      | Competing tabs/processes, exact retry, failure injection, acknowledgment-before-broadcast                                 |
-| C4: current authoring               | Current versions stamped internally; template/emitter composition covers avatar previews, the default-transform command, and literal object markers; direct same-identity moves | Every inventoried writer covered; no alternate new envelope-1 route after enforcement                                     |
-| C5: error/UI and release validation | Stable localized errors, preserved unsaved drafts, backups/imports, platform compatibility and performance checks                                                               | Appropriate client script/Puty/UI/platform tests; device tests when native behavior is implemented                        |
+| Slice                               | Concrete work                                                                                                                                                                                | Exit evidence                                                                                                             |
+| ----------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------- |
+| C1: reader and codec                | Preserved legacy reads, exact strict envelope branching, `mv` mapping, identities, raw-before-domain boundaries, compatibility errors                                                        | Previous-reader parity for legacy values; strict/future-version errors; actual SQLite/IndexedDB round trips               |
+| C2: authority and recovery          | Existing legacy loading/skip/recovery behavior, chronological strict suffix validation, coherent projections, retained recovery sources                                                      | Old-reader state and availability preserved, including missing-scene recovery; valid edit/reload; original rows unchanged |
+| C3: acceptance ownership            | Shared coordinator, platform locks, refresh/preflight/write/state advancement, partial/unknown-write recovery, both sync ingestion methods                                                   | Competing tabs/processes, exact retry, failure injection, acknowledgment-before-broadcast                                 |
+| C4: current authoring               | Current versions stamped internally; template/emitter composition covers avatar previews and the default-transform command; existing object values are preserved; direct same-identity moves | Every inventoried writer covered; no alternate new envelope-1 route after enforcement                                     |
+| C5: error/UI and release validation | Stable localized errors, preserved unsaved drafts, backups/imports, platform compatibility and performance checks                                                                            | Appropriate client script/Puty/UI/platform tests; device tests when native behavior is implemented                        |
 
 The [replay and acceptance contract](./replay-and-acceptance.md) selects concrete
 ownership, lock lifetimes, cache handling, and failure semantics. Implementers
@@ -193,7 +153,7 @@ must not acquire a new load failure.
 Use two application release stages; this is a build/release decision, not a
 user-selectable per-command validation setting:
 
-1. **Reader release R:** consume the published model, Insieme, and engine dependencies; support both
+1. **Reader release R:** consume the published model and Insieme dependencies; support both
    envelope versions, chronological strict replay, safe recovery sources,
    coordination, and errors. Before cutover, projects authored entirely under
    the old format can continue their existing authoring contract. On encountering
@@ -245,7 +205,7 @@ availability must be preserved; strict suffixes must retain their recorded
 contracts. Any regression blocks this release, rather than requiring users
 to repair legacy data. Additional legacy integrity hardening is separate work.
 
-Final publication requires actual model/Insieme/engine releases, engine/player and model/client/platform
+Final publication requires the published model release, compatible Insieme behavior, runtime and model/client/platform
 tests, supported R/W compatibility checks, and measured loading/editing behavior.
 These are implementation/release validations, not additional pre-implementation
 design tasks or permission requests.

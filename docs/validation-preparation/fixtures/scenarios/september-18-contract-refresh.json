@@ -11,7 +11,7 @@
     "status": "expected_future_not_executed",
     "symbolicModelVersion": "M",
     "minimumModelSchemaExclusive": 15,
-    "engineLiteralModeRelease": "required_not_yet_implemented"
+    "objectAssignmentScope": "Existing unmarked format and interpolation; no engine upgrade (September 21 correction)"
   },
   "setupRequirements": {
     "rule": "Construct valid complete fixtures through ordinary model commands; these declarations are harness instructions, not persisted state. Run cases independently unless a sequence is explicitly listed.",
@@ -244,9 +244,9 @@
       }
     }
   ],
-  "literalObjectCases": [
+  "objectAssignmentCases": [
     {
-      "id": "marked-literal-value",
+      "id": "existing-object-value",
       "actions": {
         "updateVariable": {
           "id": "update1",
@@ -256,44 +256,6 @@
               "op": "set",
               "value": {
                 "text": "${variables.source}",
-                "event": "_event.value",
-                "nested": [
-                  {
-                    "actions": "${variables.source}"
-                  }
-                ]
-              },
-              "valueMode": "literal"
-            }
-          ]
-        }
-      },
-      "expectedFuture": {
-        "modelAcceptsUnderM": true,
-        "runtimeObjectValue": {
-          "text": "${variables.source}",
-          "event": "_event.value",
-          "nested": [
-            {
-              "actions": "${variables.source}"
-            }
-          ]
-        },
-        "requiresPublishedEngineSupport": true
-      }
-    },
-    {
-      "id": "unmarked-historical-value",
-      "actions": {
-        "updateVariable": {
-          "id": "update1",
-          "operations": [
-            {
-              "variableId": "object-one",
-              "op": "set",
-              "value": {
-                "text": "${variables.source}",
-                "event": "_event.value",
                 "nested": [
                   {
                     "actions": "${variables.source}"
@@ -308,87 +270,63 @@
         "historicalRowsUnchanged": true,
         "runtimeObjectValue": {
           "text": "REPLACED",
-          "event": "EVENT",
           "nested": [
             {
               "actions": "REPLACED"
             }
           ]
         },
-        "newStrictInputRejectsMissingMarker": true
+        "modelAcceptsUnderM": true
       }
     },
     {
-      "id": "wrong-marker",
-      "basedOn": "marked-literal-value",
+      "id": "removed-marker",
+      "basedOn": "existing-object-value",
       "replacePath": "updateVariable.operations.0.valueMode",
-      "value": "template",
+      "value": "literal",
       "expectedFuture": {
-        "modelRejects": true,
-        "engineRejects": true
+        "modelRejects": true
       }
     },
     {
-      "id": "marked-non-object-write",
-      "basedOn": "marked-literal-value",
+      "id": "wrong-target-type",
+      "basedOn": "existing-object-value",
       "replacePath": "updateVariable.operations.0.variableId",
       "value": "source",
       "expectedFuture": {
-        "modelRejects": true,
-        "engineRejects": true
+        "modelRejects": true
       }
     },
     {
-      "id": "marked-array-value",
-      "basedOn": "marked-literal-value",
+      "id": "array-value",
+      "basedOn": "existing-object-value",
       "replacePath": "updateVariable.operations.0.value",
-      "value": ["${variables.source}", "_event.value"],
+      "value": ["${variables.source}"],
       "expectedFuture": {
-        "runtimeObjectValue": ["${variables.source}", "_event.value"]
+        "modelAcceptsUnderM": true,
+        "runtimeObjectValue": ["REPLACED"]
       }
     },
     {
-      "id": "marked-data-keys",
-      "basedOn": "marked-literal-value",
+      "id": "missing-reference",
+      "basedOn": "existing-object-value",
       "replacePath": "updateVariable.operations.0.value",
       "value": {
-        "__proto__": {
-          "polluted": true
-        },
-        "constructor": "${variables.source}",
-        "valueMode": "template",
-        "actions": {
-          "nextLine": {}
-        }
+        "nested": ["${variables.missing}"]
       },
       "expectedFuture": {
-        "keysRetainedAsOwnData": true,
-        "prototypeUnchanged": true,
-        "noActionExecution": true,
-        "noTemplateEvaluation": true
+        "modelRejects": true
       }
     },
     {
-      "id": "callback-and-persistence-matrix",
-      "reuse": "marked-literal-value",
-      "contexts": [
-        "line",
-        "conditional branch",
-        "choice click",
-        "form submit",
-        "confirm callback"
-      ],
-      "paths": [
-        "Creator preview",
-        "browser export",
-        "native player export",
-        "save/load",
-        "rollback"
-      ],
+      "id": "missing-event-context",
+      "basedOn": "existing-object-value",
+      "replacePath": "updateVariable.operations.0.value",
+      "value": {
+        "event": "_event.value"
+      },
       "expectedFuture": {
-        "literalValuePreserved": true,
-        "unmarkedBehaviorPreservedInSameProject": true,
-        "missingEventContextDoesNotFailMarkedValue": true
+        "modelRejectsInLineContext": true
       }
     }
   ],

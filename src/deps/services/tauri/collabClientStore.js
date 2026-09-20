@@ -677,7 +677,6 @@ export const createPersistedTauriProjectStore = async ({
       }),
       {
         materializedViews,
-        includeRawSchemaVersion: true,
         applyPragmas: true,
         journalMode: "WAL",
         synchronous: "FULL",

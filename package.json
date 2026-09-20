@@ -38,7 +38,7 @@
     "file-type": "21.3.4",
     "fontkit": "2.0.4",
     "immer": "10.2.0",
-    "insieme": "2.1.1",
+    "insieme": "2.1.2",
     "jempl": "1.1.2",
     "js-yaml": "4.1.1",
     "jsdom": "26.1.0",
@@ -114,7 +114,7 @@
     "player-template:build:win:docker": "./scripts/build-windows-player-template-docker.sh",
     "player-template:prepare:mac": "bun run build:bundle && node scripts/build-macos-player-template.js --prepare-only",
     "player-template:build:mac": "bun run build:bundle && node scripts/build-macos-player-template.js",
-    "test:strict-validation": "node --import ./tests/projectCompatibility/nativeHooks.mjs --test scripts/test-strict-validation.js scripts/test-project-acceptance.js scripts/test-project-authority.js scripts/test-accepted-cache.js scripts/test-strict-project-integration.js",
+    "test:strict-validation": "node --import ./tests/projectCompatibility/nativeHooks.mjs --test scripts/test-strict-validation.js scripts/test-project-acceptance.js scripts/test-project-authority.js scripts/test-accepted-cache.js scripts/test-strict-project-integration.js scripts/test-strict-object-assignments.js",
     "test:strict-browser": "node scripts/test-strict-browser.js"
   },
   "devDependencies": {

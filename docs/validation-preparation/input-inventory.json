@@ -9183,7 +9183,7 @@
     "requiredContracts": [
       "PreviewDialogue.character.sprite and shared preview line shape",
       "project.set_default_dialogue_avatar_transform and project.defaultDialogueAvatarTransformId",
-      "VariableOperation.valueMode literal marker requires model and engine releases"
+      "Object assignments retain existing interpolation; no engine release required"
     ],
     "remainingBeforeEnforcement": "Rerun complete emitter inventory against the implementation revision; preserve all original archived observations."
   }

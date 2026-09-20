@@ -28,7 +28,7 @@ are part of the test input.
 | `../routevn-creator-model`      | Extend `tests/compat/schema-<n>/` and `tests/compatibility-fixtures.test.js`; adopt domain states/streams and add strict affected-result cases | Historical domain commands, normalization, references, and reducers retain their contract; strict commands validate their affected content |
 | Creator client, this repository | Frozen project folders/databases and browser-store captures; real repository load/edit/reopen tests; error and preview/export checks           | The app preserves metadata, versions, history ordering, recovery, and usable project behavior across the upgrade                           |
 | Insieme owner                   | Raw SQLite/IndexedDB version and payload fixtures, promotion and duplicate tests                                                               | Storage retains the information the client needs before decoding; no lossy strict-version coercion                                         |
-| Route Engine owner              | Old unmarked and new marked object-operation fixtures; runtime round trips                                                                     | Legacy interpolation and explicit literal execution retain their distinct behavior                                                         |
+| Route Engine owner              | Existing object-operation interpolation through authoring and runtime round trips                                                              | Existing runtime behavior is preserved without an engine upgrade                                                                           |
 
 Model tests must not import the client or depend on SQLite/browser APIs. Client
 tests use the published or explicitly linked development model and the actual
@@ -266,7 +266,7 @@ open path in tests that claim backward compatibility.
 | Client browser     | Real IndexedDB in Chromium and WebKit, normal repository load/edit/reopen; no fake-indexeddb-only signoff                       | Every client compatibility PR             |
 | Insieme            | Real raw-row/store round trips for exact versions, bytes, and draft promotion                                                   | Every upstream storage PR                 |
 | Native application | Same fixture packs through actual desktop, Android, and iOS adapters and app open flows                                         | Before enabling strict writes and release |
-| Runtime/player     | Representative legacy and marked actions through Creator preview, browser export, and packaged native player                    | Engine changes and release                |
+| Runtime/player     | Representative existing actions through Creator preview, browser export, and packaged native player                             | Existing published engine                 |
 
 Puty remains the home for declarative SQLite row assertions. Extend
 `tests/puty/insiemeStorageScenario.js` only where its existing committed-store

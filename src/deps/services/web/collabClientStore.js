@@ -12,7 +12,6 @@ export const createPersistedInMemoryClientStore = async ({
   logger = () => {},
 }) => {
   const store = createIndexedDbClientStore({
-    includeRawSchemaVersion: true,
     dbName: buildClientStoreDbName(projectId),
     materializedViews,
   });

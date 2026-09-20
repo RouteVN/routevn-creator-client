@@ -182,7 +182,6 @@ export const createPersistedIOSProjectStore = async ({
       }),
       {
         materializedViews,
-        includeRawSchemaVersion: true,
         applyPragmas: true,
         journalMode: "WAL",
         synchronous: "FULL",

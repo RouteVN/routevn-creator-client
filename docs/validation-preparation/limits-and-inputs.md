@@ -13,7 +13,8 @@ or conversion helper does not itself make an action supported.
 September 18 refresh: this remains the original measured corpus, not a rescan
 of current main. The [refresh scenario](./fixtures/scenarios/september-18-contract-refresh.json)
 and input inventory's `implementationRefresh` record current schema 15, avatar
-preview/default-transform coverage, and the new literal-operation requirement.
+preview/default-transform coverage. The September 21 scope correction removes
+the proposed literal-object mode; object assignments retain runtime interpolation.
 Retain historical hashes; refresh the full emitter inventory before enforcement.
 
 ## Corpus and reproducibility
@@ -198,7 +199,7 @@ strings, arbitrary `_event` objects, or missing static references in new
 Creator input. Contextual slot actions and built-in container bindings must
 validate against their actual enclosing layout/control context.
 
-Literal object-variable data is another distinct context. A data key named
+Object-variable data is another distinct context. A data key named
 `actions` or `confirmActions` remains data where the variable schema permits
 bounded JSON. Validators must not recursively reinterpret every object with
 such a key as executable content.

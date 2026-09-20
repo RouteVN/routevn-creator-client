@@ -76,7 +76,6 @@ try {
   const drafts = await first.evaluate(() => window.strictProject.drafts());
   assert.equal(drafts.length, 1);
   assert.equal(drafts[0].schemaVersion, 2);
-  assert.equal(drafts[0].rawSchemaVersion, 2);
   assert.equal(drafts[0].payload.mv, 16);
   for (const page of [first, second]) {
     const state = await page.evaluate(() => window.strictProject.state());

@@ -1,8 +1,9 @@
 # Versioned Command Validation Specification
 
-Status: the strict model, client acceptance path, storage version preservation,
-and literal-object runtime changes are implemented on their feature branches.
-Production dependency pins and reader/writer delivery are still pending. See
+Status: the strict model and client acceptance path are implemented on their
+feature branches. Insieme 2.1.2 is pinned; its stricter historical version parsing
+fails the frozen P08 compatibility cases. Model publication, compatibility
+resolution and reader/writer delivery are pending. No engine upgrade is required. See
 [implementation and release status](./validation-preparation/implementation-status.md)
 for the exact test evidence and remaining release gates.
 
@@ -18,8 +19,9 @@ September 18 review refresh: this branch now includes client main `4d1fe31f`.
 The implementation baseline uses creator-model `1.15.0` / schema `15`; M must
 be a later release. Original schema-14 observations and illustrative `15`
 fixture values remain archival evidence, not a strict-version registry. The
-catalog now includes avatar previews/default-transform commands and an engine
-release prerequisite for explicit literal object writes. No feature code was
+catalog now includes avatar previews/default-transform commands. The September
+21 scope correction removes the proposed literal-object feature and engine
+release prerequisite; existing object interpolation remains unchanged. No feature code was
 implemented by these documentation corrections.
 
 Preparation status: Phase 1 contracts and fixture artifacts are documented in
@@ -559,8 +561,8 @@ silently become a free-form Creator action.
 - Do not automatically coerce strings into numbers or remove unknown fields
   in an authoring request.
 
-Explicit literal-data fields, such as an object variable's supported literal
-value, may allow bounded JSON data. Their keys are data, not action names.
+Explicit data fields, including object-variable values, may allow bounded
+JSON data. Object-assignment strings retain existing runtime interpolation. Their keys are data, not action names.
 Do not recursively interpret or strip those keys as if they were schema
 fields, and do not execute them as actions.
 
@@ -691,7 +693,13 @@ dependencies or add an unsynchronized side table.
 
 ### 11.1 Preserve raw versions and existing legacy reads
 
-The installed Insieme SQLite/LibSQL and IndexedDB readers currently parse
+September 21 implementation status: this is the original compatibility
+requirement. Published Insieme 2.1.2 instead rejects malformed historical values
+and has no raw-version API. The frozen P08 gate fails; see the
+[owning dependency blocker](./validation-preparation/upstream-and-rollout.md#3-published-insieme-dependency).
+The requirement below remains unresolved, not silently relaxed.
+
+The preparation baseline Insieme SQLite/LibSQL and IndexedDB readers currently parse
 event schema versions with `parseInt`. Raw `1.5` or `"1junk"` can therefore
 become envelope `1` before the application codec sees them. A strict codec
 above that conversion cannot recover the original invalid value.
@@ -979,10 +987,9 @@ generic framework or duplicate validators.
 Engine action schemas and the client action emitters are reference material
 for the field catalog, not an invitation to import runtime-specific behavior
 into persistence adapters. Model rules must be released from the model repo
-and consumed through a normal dependency version. The literal object-write
-contract additionally needs the owning engine release and updated exported player
-artifacts; the [rollout](./validation-preparation/upstream-and-rollout.md#31-engine-implementation-pr)
-specifies that dependency without changing unmarked legacy runtime behavior.
+and consumed through a normal dependency version. Object assignments retain
+the existing engine contract; no runtime feature or player upgrade is needed
+for this validation change.
 
 ## 17. Implementation sequence
 
@@ -1037,17 +1044,12 @@ from the candidate. Strict assertions follow during implementation.
 Exit: old fixtures retain behavior, strict cases pass/fail as specified, and
 mixed-state command sequences are covered.
 
-### Phase 2b: engine literal-value support
+### Runtime compatibility check
 
-- Implement the catalog's explicit `valueMode: "literal"` object-set contract
-  in the engine before recursive template resolution.
-- Preserve unmarked historical operations, mixed execution, callbacks, and
-  save/load/rollback behavior; release through the owning engine repository.
-- Carry the field through client projection without exposing storage wrappers.
-  Verify Creator preview and browser/native exported players all use the release.
-
-Exit: literal values stay literal end to end, legacy interpolation is unchanged,
-and supported R/W player artifacts recognize the marker.
+Validate the existing object-assignment format without adding a marker or
+changing interpolation. Verify editor re-save and versioned persistence against
+the published engine already used by the client. No engine implementation or
+release is part of this work.
 
 ### Phase 3: client readers and codec
 

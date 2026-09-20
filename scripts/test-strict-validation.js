@@ -4,7 +4,6 @@ import {
   commandDomainIdentity,
   decodeCommandEnvelope,
   encodeCommandEnvelope,
-  readCommandEnvelopeVersion,
 } from "../src/deps/services/shared/collab/commandCodec.js";
 import {
   commandToSyncEvent,
@@ -76,44 +75,6 @@ for (const version of [
     );
   });
 }
-for (const raw of [1.5, "1junk", "1.5"]) {
-  test(`stored legacy representation ${raw} retains previous-reader interpretation`, () => {
-    const record = {
-      ...encoded(),
-      schemaVersion: 1,
-      rawSchemaVersion: raw,
-      payload: { old: true },
-    };
-    assert.equal(readCommandEnvelopeVersion(record), 1);
-    assert.deepEqual(decodeCommandEnvelope(record).payload, { old: true });
-  });
-}
-for (const raw of [
-  2.9,
-  "2junk",
-  "2.0",
-  "02",
-  " 2",
-  undefined,
-  null,
-  Number.MAX_SAFE_INTEGER + 1,
-  9007199254740993n,
-]) {
-  test(`stored malformed version ${String(raw)} cannot be promoted to envelope 2`, () => {
-    assert.throws(
-      () => decodeCommandEnvelope({ ...encoded(), rawSchemaVersion: raw }),
-      { code: "unsupported_command_envelope_version" },
-    );
-  });
-}
-for (const raw of [2, "2", 2n])
-  test(`lossless stored integer ${String(raw)} (${typeof raw}) is supported`, () => {
-    assert.equal(
-      decodeCommandEnvelope({ ...encoded(), rawSchemaVersion: raw })
-        .modelSchemaVersion,
-      16,
-    );
-  });
 for (const payload of [
   {},
   { mv: 16 },
