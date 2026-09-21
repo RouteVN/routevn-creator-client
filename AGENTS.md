@@ -225,6 +225,14 @@ If you need deeper or broader Rettangoli framework reference material, use
   - move/reorder (`handleTargetChanged`)
 - `variables` supports folder tree operations, including drag/drop move.
 
+## Application Configuration
+
+- All application settings, preferences, and onboarding/dismissal flags must use the existing JS app config API on every platform: `appService.getUserConfig(key)` and `appService.setUserConfig(key, value)`.
+- The shared JS user-config service owns these values inside the global app DB's `userConfig` entry. Platform-specific settings, such as `androidBackupOnboarding`, follow the same rule.
+- Do not create alternative config stores using Android SharedPreferences, iOS UserDefaults, localStorage, native KV implementations, or separate DB keys. Writing directly from native code into the same app DB also bypasses the required JS config API.
+- Await `appService.flushUserConfig()` when a workflow requires the setting to be durable before completion, navigation, or restart. Surface persistence failures instead of reporting success.
+- Document new config paths in `docs/platform/07-persisted-key-catalog.md`.
+
 ## Project Data Ownership
 
 - Project `name`, `description`, `language`, and `iconFileId` are owned by the project-specific DB `app` store as `projectInfo`, not repository/insieme state.

@@ -562,13 +562,30 @@ Handler-facing facade for:
 - file picking
 - app/platform metadata
 
-`appService` user config should be exposed as a synchronous read API backed by
-an in-memory cache, even when the persistence layer is async. The supported
-contract is:
+All application configuration must use the existing JS app config API through
+`appService`. This includes settings, preferences, and onboarding/dismissal flags
+on every platform, including platform-specific flags such as
+`androidBackupOnboarding`. The shared implementation in
+`src/deps/services/shared/userConfigService.js` owns the in-memory cache and
+persistence inside the global app DB's `userConfig` entry.
 
-- async boot/load from the global app DB
-- sync reads in handlers/components
-- async persistence on writes
+The supported contract is:
+
+- async boot/load from the global app DB through `initUserConfig()`
+- synchronous reads through `getUserConfig(key)`
+- immediate cache updates and scheduled async persistence through
+  `setUserConfig(key, value)`
+- awaited `flushUserConfig()` when a workflow requires durable settings before
+  completion, navigation, or restart; persistence failures must surface to the
+  caller instead of reporting success
+
+Do not introduce alternative app config stores in Android SharedPreferences,
+iOS UserDefaults, localStorage, native KV implementations, or separate DB keys.
+Direct native writes into the same app DB also bypass the JS config API and its
+cache/change notifications. Platform storage adapters provide the backend for
+the shared service; application config reads and writes belong to the JS API.
+Register new config paths in
+[`platform/07-persisted-key-catalog.md`](platform/07-persisted-key-catalog.md).
 
 Config orders Language, Asset Package, Help Button, and Appearance. The Asset Package
 preference uses `release.assetPackageEnabled` inside the global app KV

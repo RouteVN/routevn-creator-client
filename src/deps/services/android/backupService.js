@@ -5,6 +5,7 @@ export const BACKUP_RESUME_DELAY_MS = 5 * 1000;
 
 export const createBackupService = ({
   client,
+  userConfig,
   backupProject,
   beforeBackup,
   notify,
@@ -54,14 +55,38 @@ export const createBackupService = ({
   };
 
   const publish = (status) => {
-    state.next(status);
-    return status;
+    const nextStatus = {
+      ...status,
+      skipped:
+        !status.configured &&
+        userConfig.getUserConfig("androidBackupOnboarding") === true,
+    };
+    state.next(nextStatus);
+    return nextStatus;
+  };
+  const completeOnboarding = async () => {
+    const previous = userConfig.getUserConfig("androidBackupOnboarding");
+    userConfig.setUserConfig("androidBackupOnboarding", true);
+    try {
+      await userConfig.flushUserConfig();
+    } catch (error) {
+      userConfig.setUserConfig("androidBackupOnboarding", previous);
+      throw error;
+    }
   };
   const refresh = async () => {
+    let status = state.value;
     try {
-      return publish(await client.status());
+      status = await client.status();
+      if (
+        userConfig.getUserConfig("androidBackupOnboarding") === undefined &&
+        (status.configured || status.skipped)
+      ) {
+        await completeOnboarding();
+      }
+      return publish(status);
     } catch {
-      return publish({ ...state.value, error: "failed", running: false });
+      return publish({ ...status, error: "failed", running: false });
     }
   };
   const warn = (error) => {
@@ -138,12 +163,18 @@ export const createBackupService = ({
       if (operation) await operation;
       const status = await client.configure(payload);
       if (status.needsExistingConfirmation) return status;
-      publish(status);
-      void run(true);
+      try {
+        await completeOnboarding();
+      } finally {
+        // Native configuration is committed even if saving onboarding fails.
+        publish(status);
+        void run(true);
+      }
       return status;
     },
     async skip() {
-      return publish(await client.skip());
+      await completeOnboarding();
+      return publish(state.value);
     },
     disable() {
       if (disableOperation) return disableOperation;
@@ -153,9 +184,14 @@ export const createBackupService = ({
         // the pass before forgetting its destination.
         if (operation) await operation;
         const status = await client.disable();
-        lastLocalAttemptAt = 0;
-        lastWarning = undefined;
-        return publish(status);
+        try {
+          await completeOnboarding();
+        } finally {
+          lastLocalAttemptAt = 0;
+          lastWarning = undefined;
+          publish(status);
+        }
+        return state.value;
       })().finally(() => {
         disableOperation = undefined;
         scheduleNext();

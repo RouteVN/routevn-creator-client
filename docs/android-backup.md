@@ -113,7 +113,14 @@ Copy:
 - Secondary action: **Skip for now**
 
 Show setup on first use or when explicitly opened from Projects/settings.
-Remember an explicit skip so setup is not shown on every launch. Configure
+Remember completion or an explicit skip in `userConfig.androidBackupOnboarding`
+through the standard JS app config API (`getUserConfig`, `setUserConfig`,
+`flushUserConfig`). Flush the flag before completing configure, skip, or disable.
+When the flag is absent, an existing configured folder or legacy native skip is
+migrated into JS config. An explicit JS value takes precedence over legacy state.
+The native backup code no longer writes onboarding choices; native folder grants,
+backup scheduling metadata, and publication checkpoints keep their existing
+storage. There is no separate native KV implementation for onboarding. Configure
 startup routing at the app level. Skipping must leave ordinary project creation
 and editing available.
 

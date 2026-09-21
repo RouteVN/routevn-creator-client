@@ -119,6 +119,7 @@ final class ProjectBackup {
         JSONObject status = new JSONObject();
         String uri = prefs.getString("uri", "");
         status.put("configured", !uri.isEmpty());
+        // Read-only compatibility for JS to migrate an existing onboarding choice.
         status.put("skipped", prefs.getBoolean("skipped", false));
         status.put("folder", new JSONObject().put("uri", uri)
             .put("displayPath", uri.isEmpty() ? "" : displayFolderPath(backupRoot())));
@@ -199,22 +200,16 @@ final class ProjectBackup {
             }
             save(editor.putString("uri", value).putString("directory", destination.toString())
                 .putString("name", name(destination))
-                .putBoolean("skipped", false).putLong("lastAttemptAt", 0));
+                .putLong("lastAttemptAt", 0));
             return status();
         } finally { PUBLICATION_LOCK.release(); }
-    }
-
-    JSONObject skip() throws Exception {
-        if (prefs.getString("uri", "").isEmpty()) save(prefs.edit().putBoolean("skipped", true));
-        return status();
     }
 
     JSONObject disable() throws Exception {
         if (prepared != null || !PUBLICATION_LOCK.tryAcquire()) throw new Failure("busy");
         try {
             SharedPreferences.Editor editor = prefs.edit()
-                .remove("uri").remove("directory").remove("name").remove("lastAttemptAt")
-                .putBoolean("skipped", true);
+                .remove("uri").remove("directory").remove("name").remove("lastAttemptAt");
             for (String key : prefs.getAll().keySet()) {
                 if (key.startsWith("success:") || key.startsWith("folder:") || key.startsWith("error:")) editor.remove(key);
             }

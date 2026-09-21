@@ -19,6 +19,13 @@ This document does not list repository resource ids such as `sceneId`,
 The global app DB is app-owned storage for project discovery and app-level
 settings/cache.
 
+All application settings, preferences, and onboarding/dismissal flags belong
+inside `userConfig` and must use the JS `appService.getUserConfig(key)` /
+`appService.setUserConfig(key, value)` API on every platform. Await
+`appService.flushUserConfig()` when completion requires durable persistence.
+Do not add standalone DB keys or native/browser config stores for these values.
+See the [app service contract](../engineering.md#appservice).
+
 Storage location:
 
 - desktop: global SQLite `app.db`
@@ -41,6 +48,12 @@ Current keys:
 - `userConfig`
   - global app-level user/session/UI config object
   - current nested keys:
+    - `androidBackupOnboarding`
+      - purpose: remembers completing or explicitly skipping Android backup setup
+      - scope: global, Android only
+      - boolean; written through the JS user-config service and flushed before
+        completing the setup action
+      - existing native configured/skipped states initialize it only when absent
     - `groupImagesView.zoomLevel`
       - purpose: grouped image/media zoom preference
       - scope: global

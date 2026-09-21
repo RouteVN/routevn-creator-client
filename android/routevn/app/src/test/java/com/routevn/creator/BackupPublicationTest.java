@@ -122,7 +122,6 @@ public class BackupPublicationTest {
         backup.markAssetChange("one");
         JSONObject disabled = backup.disable();
         assertFalse(disabled.getBoolean("configured"));
-        assertTrue(disabled.getBoolean("skipped"));
         assertEquals("", disabled.getJSONArray("projects").getJSONObject(0).getString("snapshotAt"));
         assertEquals("", disabled.getJSONArray("projects").getJSONObject(0).getString("backupFolderPath"));
         assertEquals(1L, backup.assetRevision("one"));
