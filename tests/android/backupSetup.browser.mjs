@@ -64,11 +64,8 @@ try {
           case "getBackupStatus":
             value = state();
             break;
-          case "skipBackupSetup":
-            value = save({ ...state(), skipped: true });
-            break;
           case "disableBackup":
-            value = save({ configured: false, skipped: true, projects: [] });
+            value = save({ configured: false, projects: [] });
             break;
           case "openFolderPicker":
             queueMicrotask(() =>
@@ -143,6 +140,19 @@ try {
     .locator("rvn-android-backup-status")
     .getByText("Set up backup folder", { exact: true })
     .waitFor();
+  assert.equal(
+    await page.evaluate(
+      () =>
+        JSON.parse(localStorage.getItem("db:userConfig"))
+          .androidBackupOnboarding,
+    ),
+    true,
+  );
+  assert.ok(
+    !(await page.evaluate(() => window.backupTrial.calls)).includes(
+      "skipBackupSetup",
+    ),
+  );
   await page.reload();
   await page
     .locator("rvn-android-backup-status")

@@ -270,6 +270,7 @@ export const createAppService = (params) => {
 
   const backup = createBackupService({
     client: createAndroidBackupClient(params.appActivity),
+    userConfig: appService,
     backupProject: (id) => params.projectService.backupProject(id),
     beforeBackup: () => appService.prepareNavigation({ reason: "backup" }),
     notify: (options) => appService.showToast(options),

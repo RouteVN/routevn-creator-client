@@ -1,4 +1,5 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
+import { createUserConfigService } from "../../src/deps/services/shared/userConfigService.js";
 import {
   createBackupService,
   BACKUP_INTERVAL_MS,
@@ -30,10 +31,7 @@ const fixture = async ({ lastAttemptAt = 1000000 } = {}) => {
     configure: vi.fn(
       async () => (status = { ...status, configured: true, lastAttemptAt: 0 }),
     ),
-    skip: vi.fn(async () => (status = { ...status, skipped: true })),
-    disable: vi.fn(
-      async () => (status = { configured: false, skipped: true, projects: [] }),
-    ),
+    disable: vi.fn(async () => (status = { configured: false, projects: [] })),
     isActive: () => active,
     subscribeActive: (fn) => {
       listener = fn;
@@ -49,6 +47,7 @@ const fixture = async ({ lastAttemptAt = 1000000 } = {}) => {
   });
   const service = createBackupService({
     client,
+    userConfig: createUserConfigService({ db: { set: vi.fn() } }),
     backupProject,
     beforeBackup,
     notify,

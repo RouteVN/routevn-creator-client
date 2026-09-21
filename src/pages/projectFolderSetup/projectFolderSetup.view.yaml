@@ -53,7 +53,7 @@ template:
               - $if hasSavedFolder:
                   - rtgl-button#continueFolderButton w=f ?disabled=${isBusy}: ${copy.continue}
               - $if isBackup && !hasSavedFolder:
-                  - rtgl-button#skipBackupButton w=f v=tx ?disabled=${isBusy}: ${copy.skip}
+                  - rtgl-button#skipBackupButton w=f v=se ?disabled=${isBusy}: ${copy.skip}
               - $if isBackup && hasSavedFolder:
                   - rtgl-button#stopBackupButton w=f v=tx ?disabled=${isBusy}: ${copy.stop}
   - $if isBackup:

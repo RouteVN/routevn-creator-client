@@ -173,7 +173,11 @@ const appService = createAppService({
 });
 await appService.initUserConfig();
 const backupStatus = await appService.initializeBackup();
-if (!backupStatus.configured && !backupStatus.skipped && !backupStatus.error) {
+if (
+  !backupStatus.configured &&
+  !appService.getUserConfig("androidBackupOnboarding") &&
+  !backupStatus.error
+) {
   router.replace("/project-folder-setup");
 }
 
