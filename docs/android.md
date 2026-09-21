@@ -310,8 +310,11 @@ Image/video-only uploads first show the app's JS `showFormDialog`, with Gallery
 and File picker buttons in a vertical layout. The chosen `source` is passed to
 the native file-picker bridge. Native code only launches the selected OS picker;
 it must not provide the app's source-choice UI. Gallery uses the Photo Picker on
-supported Android 13+ devices, falling back to installed gallery apps on older
-devices. File picker uses `ACTION_OPEN_DOCUMENT`. Mixed requests (such as a
+supported Android 13+ devices for single MIME filters, preserving exact types
+such as `image/png` and `video/mp4`. Restricted MIME lists use `ACTION_GET_CONTENT`
+with `EXTRA_MIME_TYPES`, preferring installed gallery apps. Older devices retain
+exact single-type filters through `ACTION_PICK`. File picker uses
+`ACTION_OPEN_DOCUMENT`. Mixed requests (such as a
 spritesheet PNG plus JSON) go directly to the file picker. Both sources share
 the existing result import and cancellation flow.
 

@@ -22,8 +22,12 @@ final class MediaPickerIntents {
             images |= type.startsWith("image/");
             videos |= type.startsWith("video/");
         }
-        String type = images && videos ? "*/*" : videos ? "video/*" : "image/*";
-        if (Build.VERSION.SDK_INT >= 33) {
+        String type = mimeTypes.length == 1
+            ? mimeTypes[0]
+            : images && videos ? "*/*" : videos ? "video/*" : "image/*";
+        // Photo Picker accepts one MIME filter, not EXTRA_MIME_TYPES. Keep
+        // restricted lists on GET_CONTENT instead of broadening the filter.
+        if (Build.VERSION.SDK_INT >= 33 && mimeTypes.length == 1) {
             Intent photoPicker = new Intent(MediaStore.ACTION_PICK_IMAGES);
             if (!type.equals("*/*")) photoPicker.setType(type);
             if (photoPicker.resolveActivity(context.getPackageManager()) != null) {
@@ -32,16 +36,23 @@ final class MediaPickerIntents {
             }
         }
 
-        Intent pick = new Intent(Intent.ACTION_PICK);
-        pick.setDataAndType(
-            type.equals("video/*") ? MediaStore.Video.Media.EXTERNAL_CONTENT_URI : MediaStore.Images.Media.EXTERNAL_CONTENT_URI,
-            type
-        );
+        Intent pick;
+        if (mimeTypes.length > 1) {
+            pick = new Intent(Intent.ACTION_GET_CONTENT);
+            pick.addCategory(Intent.CATEGORY_OPENABLE);
+            pick.setType(type);
+            pick.putExtra(Intent.EXTRA_MIME_TYPES, mimeTypes);
+        } else {
+            pick = new Intent(Intent.ACTION_PICK);
+            pick.setDataAndType(
+                videos && !images ? MediaStore.Video.Media.EXTERNAL_CONTENT_URI : MediaStore.Images.Media.EXTERNAL_CONTENT_URI,
+                type
+            );
+        }
         pick.addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION);
         pick.putExtra(Intent.EXTRA_ALLOW_MULTIPLE, multiple);
-        pick.putExtra(Intent.EXTRA_MIME_TYPES, mimeTypes);
 
-        // Older devices may route ACTION_PICK to a file manager. Prefer apps
+        // Devices may route media requests to a file manager. Prefer apps
         // advertising themselves as galleries, without hard-coding OEM packages.
         PackageManager packages = context.getPackageManager();
         Set<String> galleries = new HashSet<>();
