@@ -65,6 +65,45 @@ const i18n = {
 };
 
 describe("commandLineSoundEffects.store", () => {
+  it("offers unused numbered channels in order and restores deleted choices", () => {
+    const state = createInitialState();
+    const choices = () =>
+      sfxStore
+        .selectAddChannelMenuItems({ state, i18n })
+        .map((item) => item.key);
+    expect(choices()).toEqual([
+      "1",
+      "2",
+      "3",
+      "4",
+      "5",
+      "6",
+      "7",
+      "8",
+      "9",
+      "custom",
+    ]);
+    for (const id of ["1", "5", "9", "Weather"]) addChannel({ state }, { id });
+    expect(choices()).toEqual(["2", "3", "4", "6", "7", "8", "custom"]);
+    removeChannel({ state }, { channelId: "5" });
+    expect(choices()).toEqual(["2", "3", "4", "5", "6", "7", "8", "custom"]);
+  });
+
+  it("keeps the localized custom option when every numbered channel exists", () => {
+    const state = createInitialState();
+    for (let number = 1; number <= 9; number += 1)
+      addChannel({ state }, { id: String(number) });
+    expect(
+      sfxStore.selectAddChannelMenuItems({
+        state,
+        i18n: {
+          ...i18n,
+          commandLinePage: { "Custom channel name": "自定义通道名称" },
+        },
+      }),
+    ).toEqual([{ type: "item", label: "自定义通道名称", key: "custom" }]);
+  });
+
   it("uses two audio columns and hides the explorer in touch mode", () => {
     const state = createInitialState();
 

@@ -1,5 +1,6 @@
 import { describe, expect, it, vi } from "vitest";
 import {
+  handleAddChannelClick,
   handleAddChannelFormAction,
   handleButtonSelectClick,
   handleChannelClick,
@@ -67,7 +68,7 @@ const createStore = (state) => {
     if (name === "createInitialState" || name === "selectViewData") {
       continue;
     }
-    store[name] = (payload) => implementation({ state }, payload);
+    store[name] = (payload) => implementation({ state, i18n }, payload);
   }
   return store;
 };
@@ -79,6 +80,86 @@ const createState = () => {
 };
 
 describe("commandLineSoundEffects.handlers", () => {
+  it.each(["1", "9"])(
+    "adds numbered channel %s without opening the name form",
+    async (channelId) => {
+      const state = createState();
+      const store = createStore(state);
+      const render = vi.fn();
+      const showDropdownMenu = vi
+        .fn()
+        .mockResolvedValue({ item: { key: channelId } });
+
+      await handleAddChannelClick(
+        { store, render, appService: { showDropdownMenu } },
+        { _event: { clientX: 100, clientY: 200 } },
+      );
+
+      expect(state.channels.map((channel) => channel.id)).toEqual([channelId]);
+      expect(state.selectedChannelId).toBe(channelId);
+      expect(state.addChannelPopover.isOpen).toBe(false);
+      expect(render).toHaveBeenCalledOnce();
+      expect(showDropdownMenu).toHaveBeenCalledWith({
+        items: expect.arrayContaining([
+          { type: "item", key: channelId, label: channelId },
+        ]),
+        x: 100,
+        y: 200,
+        place: "bs",
+      });
+    },
+  );
+
+  it("opens the existing name form only for the custom choice", async () => {
+    const state = createState();
+    const store = createStore(state);
+    const render = vi.fn();
+
+    await handleAddChannelClick(
+      {
+        store,
+        render,
+        appService: {
+          showDropdownMenu: vi
+            .fn()
+            .mockResolvedValue({ item: { key: "custom" } }),
+        },
+      },
+      {
+        _event: {
+          currentTarget: {
+            getBoundingClientRect: () => ({ left: 30, bottom: 80 }),
+          },
+        },
+      },
+    );
+
+    expect(state.channels).toEqual([]);
+    expect(state.addChannelPopover).toMatchObject({
+      isOpen: true,
+      position: { x: 30, y: 80 },
+    });
+    expect(render).toHaveBeenCalledOnce();
+  });
+
+  it("leaves channels and the name form unchanged when the menu is dismissed", async () => {
+    const state = createState();
+    const render = vi.fn();
+
+    await handleAddChannelClick(
+      {
+        store: createStore(state),
+        render,
+        appService: { showDropdownMenu: vi.fn().mockResolvedValue(undefined) },
+      },
+      { _event: { clientX: 100, clientY: 200 } },
+    );
+
+    expect(state.channels).toEqual([]);
+    expect(state.addChannelPopover.isOpen).toBe(false);
+    expect(render).not.toHaveBeenCalled();
+  });
+
   it("opens the gallery from an empty channel and closes after adding", () => {
     const state = createState();
     const store = createStore(state);
