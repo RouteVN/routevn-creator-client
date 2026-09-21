@@ -1926,6 +1926,7 @@ export const selectViewData = ({ state, props, constants, i18n }) => {
 
   return {
     values: state.values,
+    showTrailingDivider: props.mode !== "transform",
     actionsData: state.actionsEditorActions,
     hiddenSystemActionModes: [...HIDDEN_LAYOUT_ACTION_MODES],
     config: {
