@@ -36,7 +36,7 @@ template:
                       - rtgl-text s=md fw=400 c=fg: ${loadingPreviewLabel}
                       - $if loadingPreviewAssetLabel:
                           - 'rtgl-text s=sm c=fg style="overflow-wrap: anywhere;"': ${loadingPreviewAssetLabel}
-      - 'rtgl-view pos=abs z=3 d=h g=sm style="top: calc(env(safe-area-inset-top, 0px) + 12px); right: calc(env(safe-area-inset-right, 0px) + 12px);"':
+      - 'rtgl-view pos=abs z=3 d=h g=sm style="top: calc(max(env(safe-area-inset-top, 0px), var(--rvn-window-content-offset, 0px)) + 12px); right: calc(env(safe-area-inset-right, 0px) + 12px);"':
           - $if showRotatePreviewButton:
               - 'rtgl-button#rotatePreviewButton sq pre=rotate v=se aria-label="${rotatePreviewLabel}" title="${rotatePreviewLabel}" aria-pressed=${isRotated}': null
           - 'rtgl-button#closePreviewButton sq pre=x v=se aria-label="${closePreviewLabel}" title="${closePreviewLabel}"': null
