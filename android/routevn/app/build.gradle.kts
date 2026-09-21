@@ -36,8 +36,8 @@ android {
         applicationId = "com.routevn.creator"
         minSdk = 24
         targetSdk = 37
-        versionCode = 10
-        versionName = "1.16.0"
+        versionCode = 11
+        versionName = "1.16.1"
         buildConfigField("boolean", "GOOGLE_PLAY_UPDATES", (routevnDistribution == "google-play").toString())
         manifestPlaceholders["usesCleartextTraffic"] = "false"
     }
