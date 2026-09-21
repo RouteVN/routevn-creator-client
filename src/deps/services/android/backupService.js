@@ -75,8 +75,9 @@ export const createBackupService = ({
     }
   };
   const refresh = async () => {
+    let status = state.value;
     try {
-      const status = await client.status();
+      status = await client.status();
       if (
         userConfig.getUserConfig("androidBackupOnboarding") === undefined &&
         (status.configured || status.skipped)
@@ -85,7 +86,7 @@ export const createBackupService = ({
       }
       return publish(status);
     } catch {
-      return publish({ ...state.value, error: "failed", running: false });
+      return publish({ ...status, error: "failed", running: false });
     }
   };
   const warn = (error) => {
@@ -162,9 +163,13 @@ export const createBackupService = ({
       if (operation) await operation;
       const status = await client.configure(payload);
       if (status.needsExistingConfirmation) return status;
-      await completeOnboarding();
-      publish(status);
-      void run(true);
+      try {
+        await completeOnboarding();
+      } finally {
+        // Native configuration is committed even if saving onboarding fails.
+        publish(status);
+        void run(true);
+      }
       return status;
     },
     async skip() {
@@ -179,10 +184,14 @@ export const createBackupService = ({
         // the pass before forgetting its destination.
         if (operation) await operation;
         const status = await client.disable();
-        await completeOnboarding();
-        lastLocalAttemptAt = 0;
-        lastWarning = undefined;
-        return publish(status);
+        try {
+          await completeOnboarding();
+        } finally {
+          lastLocalAttemptAt = 0;
+          lastWarning = undefined;
+          publish(status);
+        }
+        return state.value;
       })().finally(() => {
         disableOperation = undefined;
         scheduleNext();

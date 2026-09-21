@@ -71,6 +71,27 @@ describe("Android backup onboarding app config", () => {
     expect(f.db.set).not.toHaveBeenCalled();
   });
 
+  it("publishes current native status when saving migrated onboarding fails", async () => {
+    const f = await fixture();
+    const folder = { uri: "content://folder", displayPath: "Backups" };
+    f.client.status.mockResolvedValue({
+      configured: true,
+      folder,
+      projects: [],
+    });
+    f.db.set.mockRejectedValueOnce(new Error("disk full"));
+    await f.service.refresh();
+    expect(f.service.getStatus()).toMatchObject({
+      configured: true,
+      folder,
+      error: "failed",
+    });
+    expect(
+      f.userConfig.getUserConfig("androidBackupOnboarding"),
+    ).toBeUndefined();
+    await f.userConfig.flushUserConfig();
+  });
+
   it("completes onboarding only after folder configuration succeeds", async () => {
     const f = await fixture();
     f.client.configure.mockResolvedValueOnce({

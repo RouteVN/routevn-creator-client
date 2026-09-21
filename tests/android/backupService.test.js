@@ -8,12 +8,13 @@ import {
 
 afterEach(() => vi.useRealTimers());
 
-const fixture = async ({ lastAttemptAt = 1000000 } = {}) => {
+const fixture = async ({ lastAttemptAt = 1000000, configured = true } = {}) => {
   vi.useFakeTimers();
   vi.setSystemTime(1000000);
   let active = true;
   let listener;
-  let status = { configured: true, lastAttemptAt, projects: [] };
+  let status = { configured, lastAttemptAt, projects: [] };
+  const db = { set: vi.fn() };
   const unsubscribe = vi.fn();
   const calls = [];
   const client = {
@@ -47,7 +48,7 @@ const fixture = async ({ lastAttemptAt = 1000000 } = {}) => {
   });
   const service = createBackupService({
     client,
-    userConfig: createUserConfigService({ db: { set: vi.fn() } }),
+    userConfig: createUserConfigService({ db }),
     backupProject,
     beforeBackup,
     notify,
@@ -58,6 +59,7 @@ const fixture = async ({ lastAttemptAt = 1000000 } = {}) => {
   }));
   return {
     service,
+    db,
     client,
     backupProject,
     beforeBackup,
@@ -77,6 +79,37 @@ const fixture = async ({ lastAttemptAt = 1000000 } = {}) => {
 };
 
 describe("Android disaster backup scheduling", () => {
+  it("starts and schedules committed backups when saving onboarding fails", async () => {
+    const f = await fixture({ configured: false });
+    const error = new Error("disk full");
+    f.db.set.mockRejectedValue(error);
+    f.projects([{ id: "one", pending: true }]);
+    await expect(f.service.configure({ uri: "content://test" })).rejects.toBe(
+      error,
+    );
+    await f.service.run();
+    expect(f.service.getStatus()).toMatchObject({ configured: true });
+    expect(f.backupProject).toHaveBeenCalledWith("one");
+    await f.advance();
+    expect(f.client.beginPass).toHaveBeenCalledTimes(2);
+    f.stop();
+  });
+
+  it("stops scheduled backups when native disable succeeds but saving onboarding fails", async () => {
+    const f = await fixture();
+    const error = new Error("disk full");
+    f.db.set.mockRejectedValue(error);
+    await expect(f.service.disable()).rejects.toBe(error);
+    expect(f.service.getStatus().configured).toBe(false);
+    f.active(false);
+    f.active(true);
+    await f.advance(BACKUP_INTERVAL_MS * 3);
+    await f.service.run(true);
+    expect(f.client.beginPass).not.toHaveBeenCalled();
+    expect(vi.getTimerCount()).toBe(0);
+    f.stop();
+  });
+
   it("stays disabled across timers and resumes until explicitly configured again", async () => {
     const f = await fixture();
     await f.service.disable();
