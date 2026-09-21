@@ -14,6 +14,8 @@ styles:
     box-sizing: border-box
   ".commandPanel.edgePanel":
     padding-bottom: env(safe-area-inset-bottom, 0px)
+  ".commandPanel.fullscreenPanel":
+    padding-top: var(--rvn-mobile-overlay-top-inset, env(safe-area-inset-top, 0px))
   "[autofocus]:focus-visible":
     --focus-ring-outline: none
     --focus-ring-box-shadow: none
@@ -23,7 +25,7 @@ template:
           - rtgl-dialog#dialog ?open=${open} layout=fixed bare p=${dialogPadding}:
               - 'rtgl-view slot=content tabindex=-1 autofocus pos=rel wh=f style="min-width: 0; min-height: 0; overflow: hidden; outline: none;"':
                   - 'rtgl-view#overlay pos=fix edge=f style="z-index: 2000; background: transparent;"': null
-                  - 'rtgl-view class="commandPanel edgePanel" pos=fix bgc=bg style="left: ${fullscreenHorizontalInset}; top: var(--rvn-window-content-offset, 0px); right: 0; bottom: 0; min-width: 0; min-height: 0; overflow: hidden; z-index: 2002;"':
+                  - 'rtgl-view class="commandPanel edgePanel fullscreenPanel" pos=fix bgc=bg style="left: ${fullscreenHorizontalInset}; top: var(--rvn-window-content-offset, 0px); right: 0; bottom: 0; min-width: 0; min-height: 0; overflow: hidden; z-index: 2002;"':
                       - slot name=content: null
         $elif isSceneEditorLeft:
           - rtgl-dialog#dialog ?open=${open} layout=fixed bare p=${dialogPadding}:
