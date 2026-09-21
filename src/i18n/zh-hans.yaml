@@ -213,6 +213,9 @@ projectPage:
   warningTitle: "警告"
   wordsLabel: "词数"
 appPage:
+  filePickerSourceTitle: 选择来源
+  filePickerGallery: 相册
+  filePickerFiles: 文件选择器
   pressEscapeAgainFullscreen: "快速按两次 Esc 退出全屏"
   failedExitFullscreen: "无法退出全屏。请使用窗口按钮。"
   failedStartPreviewAudio: "无法播放预览音频。请关闭预览后重新打开。"

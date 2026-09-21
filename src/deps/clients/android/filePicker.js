@@ -246,6 +246,7 @@ const requestNativeAndroidFilePicker = (options = {}) => {
         requestId,
         multiple: options.multiple ?? false,
         accept: resolveAccept(options),
+        source: options.source ?? "files",
       }),
     ).catch((error) => {
       pendingAndroidFilePickers.delete(requestId);

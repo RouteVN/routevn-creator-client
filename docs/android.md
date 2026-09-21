@@ -304,7 +304,16 @@ The native bridge in `MainActivity.java` handles:
 - project-only SQLite open/query/exec/close
 - project file read/write/metadata
 - download writes
-- Android document picker results
+- Android gallery and document picker results
+
+Image/video-only uploads first show the app's JS `showFormDialog`, with Gallery
+and File picker buttons in a vertical layout. The chosen `source` is passed to
+the native file-picker bridge. Native code only launches the selected OS picker;
+it must not provide the app's source-choice UI. Gallery uses the Photo Picker on
+supported Android 13+ devices, falling back to installed gallery apps on older
+devices. File picker uses `ACTION_OPEN_DOCUMENT`. Mixed requests (such as a
+spritesheet PNG plus JSON) go directly to the file picker. Both sources share
+the existing result import and cancellation flow.
 
 ## Private Storage Layout
 
