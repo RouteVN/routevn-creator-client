@@ -1577,7 +1577,7 @@ public class MainActivity extends Activity {
                 String accept = payload.optString("accept", "");
 
                 runOnUiThread(() ->
-                    launchAndroidFilePicker(requestId, multiple, accept)
+                    launchAndroidFilePicker(requestId, multiple, accept, payload.optString("source", "files"))
                 );
                 return bridgeSuccess(true);
             } catch (Exception error) {
@@ -3816,7 +3816,8 @@ public class MainActivity extends Activity {
     private void launchAndroidFilePicker(
         String requestId,
         boolean multiple,
-        String accept
+        String accept,
+        String source
     ) {
         if (pendingAndroidFilePickerRequestId != null) {
             sendAndroidFilePickerError(
@@ -3851,6 +3852,9 @@ public class MainActivity extends Activity {
         }
 
         try {
+            if ("gallery".equals(source)) {
+                intent = MediaPickerIntents.createGallery(this, mimeTypes, multiple);
+            }
             startActivityForResult(intent, ANDROID_FILE_PICKER_REQUEST_CODE);
         } catch (ActivityNotFoundException error) {
             clearPendingAndroidFilePicker();

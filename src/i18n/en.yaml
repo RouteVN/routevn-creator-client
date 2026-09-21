@@ -213,6 +213,9 @@ projectPage:
   warningTitle: "Warning"
   wordsLabel: "Words"
 appPage:
+  filePickerSourceTitle: Choose source
+  filePickerGallery: Gallery
+  filePickerFiles: File picker
   pressEscapeAgainFullscreen: "Press Esc twice quickly to exit fullscreen"
   failedExitFullscreen: "Could not exit fullscreen. Please use the window controls."
   failedStartPreviewAudio: "Could not start preview audio. Close and reopen the preview."

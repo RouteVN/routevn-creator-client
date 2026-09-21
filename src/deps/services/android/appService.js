@@ -8,6 +8,25 @@ import { copyTextToClipboard } from "../../../internal/copyText.js";
 import { createNativeApplicationIdentifier } from "../../../internal/nativeApplicationIdentifier.js";
 import { normalizeProjectLanguage } from "../../../internal/projectLanguage.js";
 
+const isMediaPickerRequest = (options) => {
+  const acceptedTypes = options.accept?.trim()
+    ? options.accept.split(",")
+    : (options.filters ?? []).flatMap((filter) =>
+        (filter.extensions ?? []).map((extension) => `.${extension}`),
+      );
+  return (
+    acceptedTypes.length > 0 &&
+    acceptedTypes.every((value) => {
+      const type = value.trim().toLowerCase();
+      return (
+        type.startsWith("image/") ||
+        type.startsWith("video/") ||
+        [".jpg", ".jpeg", ".png", ".webp", ".mp4"].includes(type)
+      );
+    })
+  );
+};
+
 const normalizeFolderSelection = (selection) => {
   if (typeof selection === "string") {
     return {
@@ -255,10 +274,39 @@ export const createAppService = (params) => {
       return fullProject;
     },
 
-    selectFiles: ({ options, multiple, filePicker }) => {
+    selectFiles: async ({ options, multiple, filePicker }) => {
+      let source = "files";
+      if (isMediaPickerRequest(options)) {
+        const copy = appService.getAppCopy();
+        const result = await globalUI.showFormDialog({
+          size: "sm",
+          form: {
+            title: copy.filePickerSourceTitle ?? "Choose source",
+            fields: [],
+            actions: {
+              layout: "vertical",
+              buttons: [
+                {
+                  id: "gallery",
+                  label: copy.filePickerGallery ?? "Gallery",
+                  variant: "se",
+                },
+                {
+                  id: "files",
+                  label: copy.filePickerFiles ?? "File picker",
+                  variant: "se",
+                },
+              ],
+            },
+          },
+        });
+        if (!result) return multiple ? [] : undefined;
+        source = result.actionId;
+      }
       return filePicker.openFilePicker({
         ...options,
         multiple,
+        source,
       });
     },
   };

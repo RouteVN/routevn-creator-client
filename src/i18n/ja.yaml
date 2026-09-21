@@ -213,6 +213,9 @@ projectPage:
   warningTitle: "警告"
   wordsLabel: "単語数"
 appPage:
+  filePickerSourceTitle: 選択元
+  filePickerGallery: 写真ライブラリ
+  filePickerFiles: ファイルを選択
   pressEscapeAgainFullscreen: "Esc キーをすばやく2回押すとフルスクリーンを終了します"
   failedExitFullscreen: "フルスクリーンを終了できませんでした。ウィンドウのボタンを使用してください。"
   failedStartPreviewAudio: "プレビューの音声を再生できませんでした。プレビューを閉じて、もう一度開いてください。"
