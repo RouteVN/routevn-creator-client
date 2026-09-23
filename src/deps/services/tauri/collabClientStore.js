@@ -11,6 +11,7 @@ import { getManagedSqliteConnection } from "../../clients/tauri/sqliteConnection
 import {
   areRepositoryHistoryStatsEqual,
   getRepositoryHistoryLength,
+  getLegacyRecoveryPrefixStats,
   loadCommittedEventsFromClientStore,
   loadDraftEventsFromClientStore,
   loadRepositoryEventsFromClientStore,
@@ -751,10 +752,15 @@ export const createPersistedTauriProjectStore = async ({
             Number(currentHistoryStats?.draftCount ?? 0) > 0
           ) {
             checkpoint = await loadMainCheckpoint();
+            const recoveryPrefixStats = getLegacyRecoveryPrefixStats({
+              checkpoint,
+              committed: committedEvents,
+              drafts: draftEvents,
+            });
             if (
               isCurrentMainCheckpointCompatibleWithHistory({
                 checkpoint,
-                historyStats: currentHistoryStats,
+                historyStats: recoveryPrefixStats ?? currentHistoryStats,
               })
             ) {
               console.warn("Using checkpoint-backed project history", {

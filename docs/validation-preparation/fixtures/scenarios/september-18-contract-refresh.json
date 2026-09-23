@@ -1,0 +1,355 @@
+{
+  "fixtureFormat": "routevn.validation-preparation.contract-refresh.v1",
+  "prepared": "2026-09-18",
+  "implementationBaseline": {
+    "clientMain": "4d1fe31f96ff7a8f4eebf2b58679755a827a8851",
+    "modelPackage": "1.15.0",
+    "modelSchema": 15,
+    "enginePackage": "1.46.1"
+  },
+  "futureContract": {
+    "status": "expected_future_not_executed",
+    "symbolicModelVersion": "M",
+    "minimumModelSchemaExclusive": 15,
+    "objectAssignmentScope": "Existing unmarked format and interpolation; no engine upgrade (September 21 correction)"
+  },
+  "setupRequirements": {
+    "rule": "Construct valid complete fixtures through ordinary model commands; these declarations are harness instructions, not persisted state. Run cases independently unless a sequence is explicitly listed.",
+    "resources": [
+      {
+        "kind": "characters",
+        "id": "speaker-one",
+        "name": "Speaker One"
+      },
+      {
+        "kind": "characters",
+        "id": "avatar-owner",
+        "name": "Character One"
+      },
+      {
+        "kind": "character-image-sprite",
+        "id": "sprite-one",
+        "owner": "avatar-owner",
+        "validImageFile": "image-file-one"
+      },
+      {
+        "kind": "transforms",
+        "id": "transform-one",
+        "name": "Transform One",
+        "parentId": "transform-folder"
+      },
+      {
+        "kind": "transforms",
+        "id": "transform-two",
+        "name": "Transform Two"
+      },
+      {
+        "kind": "transform-folder",
+        "id": "transform-folder",
+        "name": "Folder One"
+      },
+      {
+        "kind": "layouts",
+        "id": "layout-one",
+        "layoutType": "dialogue-adv",
+        "name": "Layout One"
+      }
+    ],
+    "runtimeVariables": {
+      "source": {
+        "type": "string",
+        "scope": "context",
+        "default": "REPLACED"
+      },
+      "object-one": {
+        "type": "object",
+        "scope": "context",
+        "default": {}
+      }
+    },
+    "runtimeEvent": {
+      "value": "EVENT"
+    }
+  },
+  "previewCases": [
+    {
+      "id": "different-speaker-avatar-owner",
+      "request": {
+        "type": "layout.update",
+        "payload": {
+          "layoutId": "layout-one",
+          "data": {
+            "preview": {
+              "dialogue": {
+                "characterId": "speaker-one",
+                "character": {
+                  "name": "Speaker One",
+                  "sprite": {
+                    "transformId": "transform-one",
+                    "items": [
+                      {
+                        "id": "base",
+                        "resourceId": "sprite-one"
+                      }
+                    ]
+                  }
+                },
+                "content": [
+                  {
+                    "text": "Preview text"
+                  }
+                ]
+              }
+            }
+          }
+        }
+      },
+      "expectedFuture": {
+        "result": "accept",
+        "saveReloadPreservesSprite": true,
+        "speakerOwnsSpriteRequired": false
+      }
+    },
+    {
+      "id": "preview-avatar-without-transform",
+      "basedOn": "different-speaker-avatar-owner",
+      "removePath": "payload.data.preview.dialogue.character.sprite.transformId",
+      "expectedFuture": {
+        "result": "accept",
+        "previewOnlyException": true,
+        "ordinaryNonemptyDialogueSpriteStillRequiresTransform": true
+      }
+    },
+    {
+      "id": "clear-preview-avatar",
+      "basedOn": "different-speaker-avatar-owner",
+      "replacePath": "payload.data.preview.dialogue.character.sprite.items",
+      "value": [],
+      "expectedFuture": {
+        "result": "accept"
+      }
+    },
+    {
+      "id": "missing-preview-transform",
+      "basedOn": "different-speaker-avatar-owner",
+      "replacePath": "payload.data.preview.dialogue.character.sprite.transformId",
+      "value": "missing-transform",
+      "expectedFuture": {
+        "result": "reject",
+        "acceptedRows": 0
+      }
+    },
+    {
+      "id": "unknown-preview-sprite-field",
+      "basedOn": "different-speaker-avatar-owner",
+      "replacePath": "payload.data.preview.dialogue.character.sprite.unexpected",
+      "value": true,
+      "expectedFuture": {
+        "result": "reject",
+        "acceptedRows": 0
+      }
+    },
+    {
+      "id": "missing-preview-sprite",
+      "basedOn": "different-speaker-avatar-owner",
+      "replacePath": "payload.data.preview.dialogue.character.sprite.items.0.resourceId",
+      "value": "missing-sprite",
+      "expectedFuture": {
+        "result": "reject",
+        "acceptedRows": 0
+      }
+    }
+  ],
+  "defaultTransformCases": [
+    {
+      "id": "set-replace-clear",
+      "requests": [
+        {
+          "type": "project.set_default_dialogue_avatar_transform",
+          "payload": {
+            "transformId": "transform-one"
+          }
+        },
+        {
+          "type": "project.set_default_dialogue_avatar_transform",
+          "payload": {
+            "transformId": "transform-two"
+          }
+        },
+        {
+          "type": "project.set_default_dialogue_avatar_transform",
+          "payload": {
+            "transformId": null
+          }
+        }
+      ],
+      "expectedFuture": {
+        "result": "accept",
+        "intermediateStateValues": ["transform-one", "transform-two", "absent"],
+        "allNewCommandsEnvelope": 2,
+        "allNewCommandsModelVersion": "M",
+        "mixedLegacyReloadPreservesResults": true,
+        "existingAvatarSelectionsUnchanged": true
+      }
+    },
+    {
+      "id": "invalid-payloads",
+      "type": "project.set_default_dialogue_avatar_transform",
+      "payloads": [
+        {},
+        {
+          "transformId": ""
+        },
+        {
+          "transformId": "null"
+        },
+        {
+          "transformId": "missing-transform"
+        },
+        {
+          "transformId": "transform-folder"
+        },
+        {
+          "transformId": "transform-one",
+          "extra": true
+        }
+      ],
+      "expectedFuture": {
+        "result": "reject_each",
+        "acceptedRows": 0
+      }
+    },
+    {
+      "id": "recursive-delete-clears-preference",
+      "precondition": "Select transform-one as the project default; no actions/previews reference it in this independent case.",
+      "request": {
+        "type": "transform.delete",
+        "payload": {
+          "transformIds": ["transform-folder"]
+        }
+      },
+      "expectedFuture": {
+        "result": "accept",
+        "defaultPropertyAbsent": true,
+        "unrelatedLegacyActionsNotStrictlyRevalidated": true
+      }
+    },
+    {
+      "id": "new-project-default",
+      "stateProperty": "project.defaultDialogueAvatarTransformId",
+      "acceptValues": ["transform-one", "omitted"],
+      "rejectValues": [null, "", "missing-transform", "transform-folder"],
+      "expectedFuture": {
+        "projectCreateUsesStrictCompleteState": true
+      }
+    }
+  ],
+  "objectAssignmentCases": [
+    {
+      "id": "existing-object-value",
+      "actions": {
+        "updateVariable": {
+          "id": "update1",
+          "operations": [
+            {
+              "variableId": "object-one",
+              "op": "set",
+              "value": {
+                "text": "${variables.source}",
+                "nested": [
+                  {
+                    "actions": "${variables.source}"
+                  }
+                ]
+              }
+            }
+          ]
+        }
+      },
+      "expectedFuture": {
+        "historicalRowsUnchanged": true,
+        "runtimeObjectValue": {
+          "text": "REPLACED",
+          "nested": [
+            {
+              "actions": "REPLACED"
+            }
+          ]
+        },
+        "modelAcceptsUnderM": true
+      }
+    },
+    {
+      "id": "removed-marker",
+      "basedOn": "existing-object-value",
+      "replacePath": "updateVariable.operations.0.valueMode",
+      "value": "literal",
+      "expectedFuture": {
+        "modelRejects": true
+      }
+    },
+    {
+      "id": "wrong-target-type",
+      "basedOn": "existing-object-value",
+      "replacePath": "updateVariable.operations.0.variableId",
+      "value": "source",
+      "expectedFuture": {
+        "modelRejects": true
+      }
+    },
+    {
+      "id": "array-value",
+      "basedOn": "existing-object-value",
+      "replacePath": "updateVariable.operations.0.value",
+      "value": ["${variables.source}"],
+      "expectedFuture": {
+        "modelAcceptsUnderM": true,
+        "runtimeObjectValue": ["REPLACED"]
+      }
+    },
+    {
+      "id": "missing-reference",
+      "basedOn": "existing-object-value",
+      "replacePath": "updateVariable.operations.0.value",
+      "value": {
+        "nested": ["${variables.missing}"]
+      },
+      "expectedFuture": {
+        "modelRejects": true
+      }
+    },
+    {
+      "id": "missing-event-context",
+      "basedOn": "existing-object-value",
+      "replacePath": "updateVariable.operations.0.value",
+      "value": {
+        "event": "_event.value"
+      },
+      "expectedFuture": {
+        "modelRejectsInLineContext": true
+      }
+    }
+  ],
+  "observedCurrentEngine": {
+    "status": "reproduced_installed_engine_1.46.1",
+    "actions": {
+      "updateVariable": {
+        "id": "update1",
+        "operations": [
+          {
+            "variableId": "object-one",
+            "op": "set",
+            "value": {
+              "text": "${variables.source}"
+            }
+          }
+        ]
+      }
+    },
+    "sourceVariableValue": "REPLACED",
+    "resultObjectValue": {
+      "text": "REPLACED"
+    },
+    "meaning": "The unmarked legacy runtime templates object strings. This is not an observed result for the future literal marker."
+  }
+}

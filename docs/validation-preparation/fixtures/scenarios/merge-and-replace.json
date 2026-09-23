@@ -1,0 +1,130 @@
+{
+  "fixtureFormat": "routevn.validation-preparation.history.v1",
+  "dataOrigin": "synthetic neutral commands; no actual user project",
+  "futureContract": {
+    "status": "expected_future_not_executed",
+    "supportedStrictModelVersions": [15],
+    "symbolicModelVersion": "M",
+    "illustrativeModelVersion": 15
+  },
+  "bootstrap": {
+    "id": "bootstrap-one",
+    "projectId": "project-one",
+    "userId": "actor-one",
+    "partition": "m",
+    "type": "project.create",
+    "schemaVersion": 1,
+    "clientTs": 999,
+    "stateRef": "../seeds/project-one.state.json"
+  },
+  "id": "merge-and-replace",
+  "records": [
+    {
+      "id": "legacy-edit",
+      "projectId": "project-one",
+      "userId": "actor-one",
+      "partition": "s:783Kx5",
+      "type": "line.update_actions",
+      "schemaVersion": 1,
+      "payload": {
+        "lineId": "line-one",
+        "data": {
+          "unrecognizedLegacyAction": {
+            "oldValue": true
+          },
+          "dialogue": {
+            "content": [
+              {
+                "text": "Legacy"
+              }
+            ],
+            "unusedLegacyField": true
+          }
+        }
+      },
+      "clientTs": 1000
+    },
+    {
+      "id": "merge-dialogue",
+      "projectId": "project-one",
+      "userId": "actor-one",
+      "partition": "s:783Kx5",
+      "type": "line.update_actions",
+      "schemaVersion": 2,
+      "payload": {
+        "mv": 15,
+        "commandPayload": {
+          "lineId": "line-one",
+          "data": {
+            "dialogue": {
+              "content": [
+                {
+                  "text": "Replacement dialogue"
+                }
+              ]
+            }
+          }
+        }
+      },
+      "clientTs": 1000
+    },
+    {
+      "id": "replace-map",
+      "projectId": "project-one",
+      "userId": "actor-one",
+      "partition": "s:783Kx5",
+      "type": "line.update_actions",
+      "schemaVersion": 2,
+      "payload": {
+        "mv": 15,
+        "commandPayload": {
+          "lineId": "line-one",
+          "data": {
+            "dialogue": {
+              "content": [
+                {
+                  "text": "Complete replacement"
+                }
+              ]
+            }
+          },
+          "replace": true
+        }
+      },
+      "clientTs": 1000
+    }
+  ],
+  "observedCurrentModel": {
+    "status": "observed_baseline",
+    "packageVersion": "1.14.0",
+    "schemaVersion": 14,
+    "method": "unwrap fixture records only; omit model version; run existing replayCommands and sequential processCommand",
+    "valid": true,
+    "commands": 3,
+    "sequentialEqualsReplay": true,
+    "inputStateUnchanged": true,
+    "finalStateRef": "../observed/merge-and-replace.state.json",
+    "finalStateSha256": "04380463dc5a1a6c17594184eec91dad9ae85cdf87f068fbd943c2fa3499eeaa"
+  },
+  "expectedFuture": {
+    "result": "accept",
+    "afterRecord": {
+      "merge-dialogue": {
+        "retainedSibling": "unrecognizedLegacyAction",
+        "removedNestedField": "dialogue.unusedLegacyField"
+      },
+      "replace-map": {
+        "actions": {
+          "dialogue": {
+            "content": [
+              {
+                "text": "Complete replacement"
+              }
+            ]
+          }
+        }
+      }
+    },
+    "shallowMergeUnit": "action name; no recursive dialogue-field merge"
+  }
+}

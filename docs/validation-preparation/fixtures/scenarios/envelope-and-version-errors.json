@@ -1,0 +1,307 @@
+{
+  "fixtureFormat": "routevn.validation-preparation.cases.v1",
+  "futureContract": {
+    "status": "expected_future_not_executed",
+    "supportedStrictModelVersions": [15],
+    "symbolicModelVersion": "M",
+    "illustrativeModelVersion": 15
+  },
+  "scope": "raw persisted record boundary before row normalization; historical legacy compatibility is separate from exact strict decoding and current authoring; cover drafts and committed rows in SQLite and IndexedDB",
+  "baseRecord": {
+    "id": "wrapper-one",
+    "projectId": "project-one",
+    "userId": "actor-one",
+    "partition": "s:783Kx5",
+    "type": "line.delete",
+    "schemaVersion": 2,
+    "payload": {
+      "mv": 15,
+      "commandPayload": {
+        "lineIds": ["line-one"]
+      }
+    },
+    "clientTs": 1000
+  },
+  "cases": [
+    {
+      "id": "raw-envelope-1",
+      "replace": {
+        "schemaVersion": 1.5,
+        "payload": {
+          "lineIds": ["line-one"]
+        }
+      },
+      "expectedFuture": {
+        "result": "decode_legacy",
+        "stage": "existing_legacy_read",
+        "decodedEnvelopeVersion": 1,
+        "modelSchemaVersion": "omitted",
+        "domainPayloadValidation": "existing legacy rules; do not unwrap by shape",
+        "storedBytesUnchanged": true,
+        "sameRawRecordAsNewAuthoring": "reject; caller cannot select historical mode or storage version"
+      },
+      "observedLibraryParseIntResult": 1,
+      "operation": "existing_historical_open_or_restore"
+    },
+    {
+      "id": "raw-envelope-2",
+      "replace": {
+        "schemaVersion": "1junk",
+        "payload": {
+          "lineIds": ["line-one"]
+        }
+      },
+      "expectedFuture": {
+        "result": "decode_legacy",
+        "stage": "existing_legacy_read",
+        "decodedEnvelopeVersion": 1,
+        "modelSchemaVersion": "omitted",
+        "domainPayloadValidation": "existing legacy rules; do not unwrap by shape",
+        "storedBytesUnchanged": true,
+        "sameRawRecordAsNewAuthoring": "reject; caller cannot select historical mode or storage version"
+      },
+      "observedLibraryParseIntResult": 1,
+      "operation": "existing_historical_open_or_restore"
+    },
+    {
+      "id": "raw-envelope-3",
+      "replace": {
+        "schemaVersion": 2.9
+      },
+      "expectedFuture": {
+        "result": "reject",
+        "stage": "envelope_decode"
+      },
+      "observedLibraryParseIntResult": 2
+    },
+    {
+      "id": "raw-envelope-4",
+      "replace": {
+        "schemaVersion": "2junk"
+      },
+      "expectedFuture": {
+        "result": "reject",
+        "stage": "envelope_decode"
+      },
+      "observedLibraryParseIntResult": 2
+    },
+    {
+      "id": "raw-envelope-5",
+      "replace": {
+        "schemaVersion": null
+      },
+      "expectedFuture": {
+        "result": "reject",
+        "stage": "envelope_decode"
+      },
+      "observedLibraryParseIntResult": 0
+    },
+    {
+      "id": "raw-envelope-6",
+      "replace": {
+        "schemaVersion": 0
+      },
+      "expectedFuture": {
+        "result": "reject",
+        "stage": "envelope_decode"
+      },
+      "observedLibraryParseIntResult": 0
+    },
+    {
+      "id": "raw-envelope-7",
+      "replace": {
+        "schemaVersion": -1
+      },
+      "expectedFuture": {
+        "result": "reject",
+        "stage": "envelope_decode"
+      },
+      "observedLibraryParseIntResult": -1
+    },
+    {
+      "id": "raw-envelope-8",
+      "replace": {
+        "schemaVersion": 3
+      },
+      "expectedFuture": {
+        "result": "reject",
+        "stage": "envelope_decode"
+      },
+      "observedLibraryParseIntResult": 3
+    },
+    {
+      "id": "numeric-string-envelope",
+      "scope": ["direct JSON", "IndexedDB raw row"],
+      "replace": {
+        "schemaVersion": "2"
+      },
+      "expectedFuture": {
+        "result": "reject",
+        "stage": "envelope_decode"
+      },
+      "sqliteAffinityNote": "Binding canonical numeric string 2 to an INTEGER-affinity column can produce SQL INTEGER 2; no decoder can infer the original string after SQLite has converted it. Test malformed SQLite TEXT and REAL cases separately."
+    },
+    {
+      "id": "missing-envelope",
+      "omit": ["schemaVersion"],
+      "expectedFuture": {
+        "result": "reject",
+        "stage": "envelope_decode"
+      }
+    },
+    {
+      "id": "model-version-1",
+      "replace": {
+        "payload.mv": null
+      },
+      "expectedFuture": {
+        "result": "reject",
+        "legacyFallback": false
+      }
+    },
+    {
+      "id": "model-version-2",
+      "replace": {
+        "payload.mv": "15"
+      },
+      "expectedFuture": {
+        "result": "reject",
+        "legacyFallback": false
+      }
+    },
+    {
+      "id": "model-version-3",
+      "replace": {
+        "payload.mv": 15.5
+      },
+      "expectedFuture": {
+        "result": "reject",
+        "legacyFallback": false
+      }
+    },
+    {
+      "id": "model-version-4",
+      "replace": {
+        "payload.mv": 0
+      },
+      "expectedFuture": {
+        "result": "reject",
+        "legacyFallback": false
+      }
+    },
+    {
+      "id": "model-version-5",
+      "replace": {
+        "payload.mv": -1
+      },
+      "expectedFuture": {
+        "result": "reject",
+        "legacyFallback": false
+      }
+    },
+    {
+      "id": "model-version-6",
+      "replace": {
+        "payload.mv": 14
+      },
+      "expectedFuture": {
+        "result": "reject",
+        "legacyFallback": false
+      }
+    },
+    {
+      "id": "model-version-7",
+      "replace": {
+        "payload.mv": 16
+      },
+      "expectedFuture": {
+        "result": "reject",
+        "legacyFallback": false
+      }
+    },
+    {
+      "id": "model-version-8",
+      "replace": {
+        "payload.mv": 9007199254740992
+      },
+      "expectedFuture": {
+        "result": "reject",
+        "legacyFallback": false
+      }
+    },
+    {
+      "id": "missing-model-version",
+      "omit": ["payload.mv"],
+      "expectedFuture": {
+        "result": "reject",
+        "legacyFallback": false
+      }
+    },
+    {
+      "id": "missing-command-payload",
+      "omit": ["payload.commandPayload"],
+      "expectedFuture": {
+        "result": "reject"
+      }
+    },
+    {
+      "id": "null-command-payload",
+      "replace": {
+        "payload.commandPayload": null
+      },
+      "expectedFuture": {
+        "result": "reject"
+      }
+    },
+    {
+      "id": "array-command-payload",
+      "replace": {
+        "payload.commandPayload": []
+      },
+      "expectedFuture": {
+        "result": "reject"
+      }
+    },
+    {
+      "id": "extra-wrapper-field",
+      "replace": {
+        "payload.extra": true
+      },
+      "expectedFuture": {
+        "result": "reject"
+      }
+    },
+    {
+      "id": "double-wrapper",
+      "replace": {
+        "payload.commandPayload": {
+          "mv": 15,
+          "commandPayload": {
+            "lineIds": ["line-one"]
+          }
+        }
+      },
+      "expectedFuture": {
+        "result": "reject",
+        "stage": "command_payload_validation"
+      }
+    },
+    {
+      "id": "legacy-wrapper-looking-payload",
+      "replace": {
+        "schemaVersion": 1,
+        "payload": {
+          "mv": 15,
+          "commandPayload": {
+            "lineIds": ["line-one"]
+          }
+        }
+      },
+      "expectedFuture": {
+        "decode": "legacy payload remains unchanged with no model version",
+        "payloadValidation": "legacy line.delete rejects these unexpected keys; never unwrap by shape"
+      }
+    }
+  ],
+  "observationCaveat": "parseInt entries describe the installed libsql-driver helper only, not proof of a complete project open; IndexedDB clamps negative values to zero. Historical values the previous reader interprets as envelope 1 retain that read interpretation and existing payload validation. Strict-like malformed versions reject before lossy conversion. SQLite INTEGER affinity may normalize a canonical numeric string before JavaScript sees it, so string-type rejection is asserted at JSON/IndexedDB boundaries. Actual previous/candidate reader comparisons remain required implementation tests."
+}

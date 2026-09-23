@@ -38,7 +38,7 @@
     "file-type": "21.3.4",
     "fontkit": "2.0.4",
     "immer": "10.2.0",
-    "insieme": "2.1.1",
+    "insieme": "2.1.2",
     "jempl": "1.1.2",
     "js-yaml": "4.1.1",
     "jsdom": "26.1.0",
@@ -84,6 +84,7 @@
     "test:integration": "node scripts/test-integration.js",
     "test:collab-adapters": "node scripts/test-collab-adapters.js",
     "test:puty": "vitest run tests/puty",
+    "test:project-compatibility": "node scripts/test-project-compatibility.js --prepare --all",
     "test:mobile-keyboard:android": "node scripts/mobile-keyboard-screenshot-android.js",
     "check:contracts": "rtgl check --dir src/components --dir src/pages",
     "vt:generate": "bun run build:web && bash ./scripts/run-vt-docker.sh vt screenshot",
@@ -112,7 +113,9 @@
     "player-template:build:win": "bun run build:bundle && node scripts/build-windows-player-template.js",
     "player-template:build:win:docker": "./scripts/build-windows-player-template-docker.sh",
     "player-template:prepare:mac": "bun run build:bundle && node scripts/build-macos-player-template.js --prepare-only",
-    "player-template:build:mac": "bun run build:bundle && node scripts/build-macos-player-template.js"
+    "player-template:build:mac": "bun run build:bundle && node scripts/build-macos-player-template.js",
+    "test:strict-validation": "node --import ./tests/projectCompatibility/nativeHooks.mjs --test scripts/test-strict-validation.js scripts/test-project-acceptance.js scripts/test-project-authority.js scripts/test-accepted-cache.js scripts/test-strict-project-integration.js scripts/test-strict-object-assignments.js",
+    "test:strict-browser": "node scripts/test-strict-browser.js"
   },
   "devDependencies": {
     "@tauri-apps/cli": "2.11.1",

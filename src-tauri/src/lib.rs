@@ -1,4 +1,3 @@
-#[cfg(any(debug_assertions, target_os = "macos"))]
 use tauri::Manager;
 
 #[cfg(any(target_os = "windows", target_os = "macos", target_os = "linux"))]
@@ -16,10 +15,45 @@ mod export_zip;
 mod linux_desktop_integration;
 #[cfg(target_os = "macos")]
 mod macos_fullscreen_escape;
+mod project_acceptance_lock;
 mod project_file_protocol;
 mod project_media_server;
 mod static_web_server;
 mod windows_system_menu;
+
+#[tauri::command]
+fn canonical_project_path(project_path: String) -> Result<String, String> {
+    project_acceptance_lock::ProjectAcceptanceLocks::canonical_path(std::path::Path::new(
+        &project_path,
+    ))
+    .map(|path| path.to_string_lossy().into_owned())
+}
+
+#[tauri::command]
+fn acquire_project_acceptance_lock(
+    window: tauri::Window,
+    project_path: String,
+    owner_id: String,
+    locks: tauri::State<'_, project_acceptance_lock::ProjectAcceptanceLocks>,
+) -> Result<bool, String> {
+    locks.acquire(
+        std::path::Path::new(&project_path),
+        &format!("{}:{owner_id}", window.label()),
+    )
+}
+
+#[tauri::command]
+fn release_project_acceptance_lock(
+    window: tauri::Window,
+    project_path: String,
+    owner_id: String,
+    locks: tauri::State<'_, project_acceptance_lock::ProjectAcceptanceLocks>,
+) -> Result<(), String> {
+    locks.release(
+        std::path::Path::new(&project_path),
+        &format!("{}:{owner_id}", window.label()),
+    )
+}
 
 #[cfg(target_os = "linux")]
 fn configure_linux_graphics_workarounds() {
@@ -52,6 +86,7 @@ pub fn run() {
     }
 
     let builder = tauri::Builder::default()
+        .manage(project_acceptance_lock::ProjectAcceptanceLocks::default())
         .manage(project_media_server::ProjectMediaServerState::new())
         .manage(static_web_server::StaticWebServerState::new())
         .register_uri_scheme_protocol("project-file", project_file_protocol::handle);
@@ -67,7 +102,17 @@ pub fn run() {
         .plugin(tauri_plugin_updater::Builder::new().build())
         .plugin(tauri_plugin_process::init())
         .plugin(tauri_plugin_persisted_scope::init())
+        .on_window_event(|window, event| {
+            if matches!(event, tauri::WindowEvent::Destroyed) {
+                window
+                    .state::<project_acceptance_lock::ProjectAcceptanceLocks>()
+                    .release_window(window.label());
+            }
+        })
         .invoke_handler(tauri::generate_handler![
+            canonical_project_path,
+            acquire_project_acceptance_lock,
+            release_project_acceptance_lock,
             export_macos::export_macos_application,
             export_macos::get_macos_export_host_capabilities,
             export_zip::create_distribution_zip_streamed,

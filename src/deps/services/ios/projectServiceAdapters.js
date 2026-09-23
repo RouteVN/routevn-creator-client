@@ -1,3 +1,11 @@
+import {
+  initializeAcceptedProject,
+  strictProjectValidationEnabled,
+} from "../shared/acceptedProjectRepository.js";
+import {
+  createIOSProjectAcceptanceLease,
+  getIOSProjectAcceptancePath,
+} from "../../clients/ios/projectAcceptanceLock.js";
 import JSZip from "jszip";
 import {
   loadTemplate,
@@ -563,9 +571,13 @@ export const createIOSProjectServiceAdapters = ({
   const projectFileUrlByCacheKey = new Map();
 
   const storageAdapter = {
+    createAcceptanceLease: ({ reference }) =>
+      createIOSProjectAcceptanceLease({ projectId: reference.projectId }),
     resolveProjectReferenceByProjectId: async ({ projectId }) => ({
       projectId,
-      cacheKey: projectId,
+      cacheKey: strictProjectValidationEnabled
+        ? await getIOSProjectAcceptancePath(projectId)
+        : projectId,
       repositoryProjectId: projectId,
     }),
 
@@ -650,22 +662,39 @@ export const createIOSProjectServiceAdapters = ({
       const store = await createPersistedIOSProjectStore({
         projectId: safeProjectId,
       });
-      const initialClientTs = Date.now();
-      const initialEvent = createProjectCreateRepositoryEvent({
-        projectId: safeProjectId,
-        state: templateData,
-        clientTs: initialClientTs,
-      });
+      if (strictProjectValidationEnabled) {
+        const reference = {
+          projectId: safeProjectId,
+          cacheKey: await getIOSProjectAcceptancePath(safeProjectId),
+          repositoryProjectId: safeProjectId,
+        };
+        const lease = await createIOSProjectAcceptanceLease({
+          projectId: safeProjectId,
+        });
+        await initializeAcceptedProject({
+          reference,
+          store,
+          lease,
+          state: templateData,
+        });
+      } else {
+        const initialClientTs = Date.now();
+        const initialEvent = createProjectCreateRepositoryEvent({
+          projectId: safeProjectId,
+          state: templateData,
+          clientTs: initialClientTs,
+        });
 
-      await store.insertDraft(toBootstrappedDraftEvent(initialEvent, 0));
-      await store.saveMaterializedViewCheckpoint({
-        viewName: MAIN_VIEW_NAME,
-        partition: MAIN_PARTITION,
-        viewVersion: MAIN_VIEW_VERSION,
-        lastCommittedId: 1,
-        value: createMainProjectionState(templateData),
-        updatedAt: Date.now(),
-      });
+        await store.insertDraft(toBootstrappedDraftEvent(initialEvent, 0));
+        await store.saveMaterializedViewCheckpoint({
+          viewName: MAIN_VIEW_NAME,
+          partition: MAIN_PARTITION,
+          viewVersion: MAIN_VIEW_VERSION,
+          lastCommittedId: 1,
+          value: createMainProjectionState(templateData),
+          updatedAt: Date.now(),
+        });
+      }
 
       await store.app.set(CREATOR_VERSION_KEY, creatorVersion);
       await store.app.set(PROJECT_INFO_KEY, normalizeProjectInfo(projectInfo));

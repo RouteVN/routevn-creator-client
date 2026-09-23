@@ -14,6 +14,13 @@ export const SCENE_OVERVIEW_VIEW_NAME =
 export const SCENE_TEXT_STATS_VIEW_NAME =
   "project_repository_scene_text_stats_state";
 export const MAIN_VIEW_VERSION = "1";
+// Validation policy caches never replace the legacy checkpoint recovery source.
+export const ACCEPTED_VIEW_POLICY = "1";
+export const ACCEPTED_MAIN_VIEW_NAME = "project_accepted_main_state";
+export const ACCEPTED_SCENE_VIEW_NAME = "project_accepted_scene_state";
+export const ACCEPTED_OVERVIEW_VIEW_NAME = "project_accepted_scene_overview";
+export const ACCEPTED_TEXT_STATS_VIEW_NAME =
+  "project_accepted_scene_text_stats";
 export const SCENE_VIEW_VERSION = "2";
 export const SCENE_OVERVIEW_VIEW_VERSION = "1";
 export const SCENE_TEXT_STATS_VIEW_VERSION = "3";

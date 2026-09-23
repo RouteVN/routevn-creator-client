@@ -234,6 +234,9 @@ appPage:
   failedLoadAppSettings: "アプリ設定を読み込めませんでした。既定値を使用します。"
   failedOpenLink: "リンクを開けませんでした。"
   failedSaveAppSettings: "アプリ設定を保存できませんでした。"
+  projectViewsRebuildNotice: "変更は保存されています。一部のプロジェクト表示は、再度開いたときに再構築されます。"
+  projectPartialSaveNotice: 変更の一部のみが保存されました。再試行する前にプロジェクトを確認してください。
+  projectUnknownSaveNotice: 保存を確認できませんでした。プロジェクトを開き直し、保存された変更を確認してください。
   failedUpdateStatusBar: "ステータスバーを更新できませんでした。アプリを再起動してください。"
   failedRevealEditorCaret: "カーソルの位置までスクロールできませんでした。アプリを再起動してください。"
   failedSaveProjectIcon: "プロジェクトは作成されましたが、プロジェクトアイコンを保存できませんでした。"

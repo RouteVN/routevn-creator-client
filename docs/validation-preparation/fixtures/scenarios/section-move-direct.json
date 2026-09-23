@@ -1,0 +1,110 @@
+{
+  "fixtureFormat": "routevn.validation-preparation.history.v1",
+  "dataOrigin": "synthetic neutral commands; no actual user project",
+  "futureContract": {
+    "status": "expected_future_not_executed",
+    "supportedStrictModelVersions": [15],
+    "symbolicModelVersion": "M",
+    "illustrativeModelVersion": 15
+  },
+  "bootstrap": {
+    "id": "bootstrap-one",
+    "projectId": "project-one",
+    "userId": "actor-one",
+    "partition": "m",
+    "type": "project.create",
+    "schemaVersion": 1,
+    "clientTs": 999,
+    "stateRef": "../seeds/project-one.state.json"
+  },
+  "id": "section-move-direct",
+  "records": [
+    {
+      "id": "before-move",
+      "projectId": "project-one",
+      "userId": "actor-one",
+      "partition": "s:783Kx5",
+      "type": "line.update_actions",
+      "schemaVersion": 2,
+      "payload": {
+        "mv": 15,
+        "commandPayload": {
+          "lineId": "line-one",
+          "data": {
+            "dialogue": {
+              "content": [
+                {
+                  "text": "Before move"
+                }
+              ]
+            }
+          }
+        }
+      },
+      "clientTs": 1000
+    },
+    {
+      "id": "move-section",
+      "projectId": "project-one",
+      "userId": "actor-one",
+      "partition": "m",
+      "type": "section.move",
+      "schemaVersion": 2,
+      "payload": {
+        "mv": 15,
+        "commandPayload": {
+          "sectionId": "section-one",
+          "sceneId": "scene-two",
+          "position": "last"
+        }
+      },
+      "clientTs": 1000
+    },
+    {
+      "id": "after-move",
+      "projectId": "project-one",
+      "userId": "actor-one",
+      "partition": "s:6cQQTH",
+      "type": "line.update_actions",
+      "schemaVersion": 2,
+      "payload": {
+        "mv": 15,
+        "commandPayload": {
+          "lineId": "line-two",
+          "data": {
+            "dialogue": {
+              "content": [
+                {
+                  "text": "After move"
+                }
+              ]
+            }
+          }
+        }
+      },
+      "clientTs": 1000
+    }
+  ],
+  "observedCurrentModel": {
+    "status": "observed_baseline",
+    "packageVersion": "1.14.0",
+    "schemaVersion": 14,
+    "method": "unwrap fixture records only; omit model version; run existing replayCommands and sequential processCommand",
+    "valid": true,
+    "commands": 3,
+    "sequentialEqualsReplay": true,
+    "inputStateUnchanged": true,
+    "finalStateRef": "../observed/section-move-direct.state.json",
+    "finalStateSha256": "69802253091a7969422ff6ddc8a41f087335bbdf8ca736d8535c21bbf07f3365"
+  },
+  "expectedFuture": {
+    "result": "accept",
+    "finalOwner": {
+      "sectionId": "section-one",
+      "sceneId": "scene-two",
+      "lineIds": ["line-one", "line-two"]
+    },
+    "validateOriginalOwnershipAtEachPrefix": true,
+    "deletedSceneOrSectionCannotCauseSkippedStrictRecords": true
+  }
+}

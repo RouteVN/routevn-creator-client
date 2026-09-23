@@ -9,6 +9,7 @@ export const createProjectCollabService = ({
   clientStore,
   logger = () => {},
   onCommittedCommand = () => {},
+  acceptance,
 }) => {
   let lastError = null;
   let session = null;
@@ -28,6 +29,17 @@ export const createProjectCollabService = ({
   };
 
   const submitValidatedCommands = async (commands) => {
+    if (acceptance) {
+      const result = await acceptance.submitCommands(commands, actor);
+      if (result.valid) {
+        // Local acceptance has released its operation lock. Delivery can wait
+        // for the network without blocking another local edit.
+        void session.flushDrafts().catch((error) => {
+          lastError = createSubmitErrorResult(error).error;
+        });
+      } else lastError = structuredClone(result.error);
+      return result;
+    }
     const normalizedCommands = Array.isArray(commands)
       ? commands.filter(Boolean)
       : [];
@@ -60,8 +72,27 @@ export const createProjectCollabService = ({
     actor,
     projectId,
     transport: transport || undefined,
-    store: clientStore || undefined,
+    store: acceptance
+      ? {
+          ...clientStore,
+          insertDraft: async () => {
+            throw new Error(
+              "Direct event authoring is not supported; submit a command request",
+            );
+          },
+          insertDrafts: async () => {
+            throw new Error(
+              "Direct event authoring is not supported; submit command requests",
+            );
+          },
+          applyCommittedBatch: (input) => acceptance.applyCommittedBatch(input),
+          applySubmitResult: (input) => acceptance.applySubmitResult(input),
+        }
+      : clientStore || undefined,
     logger,
+    submitBatch: acceptance
+      ? { maxEvents: 16_384, maxBytes: 67_108_864 }
+      : undefined,
     mapCommandToSyncEvent: commandToSyncEvent,
     mapCommittedToCommand: committedEventToCommand,
     reconnect: {
@@ -79,6 +110,7 @@ export const createProjectCollabService = ({
       sourceType,
       isFromCurrentActor,
     }) => {
+      if (acceptance) return;
       void onCommittedCommand({
         command: structuredClone(command),
         committedEvent: structuredClone(committedEvent),
@@ -90,6 +122,7 @@ export const createProjectCollabService = ({
 
   return {
     async start() {
+      if (acceptance?.isReadOnly()) return;
       await session.start();
     },
 
@@ -104,7 +137,7 @@ export const createProjectCollabService = ({
       }
 
       return {
-        valid: true,
+        ...submitResult,
         commandId: command.id,
       };
     },
@@ -114,14 +147,24 @@ export const createProjectCollabService = ({
     },
 
     async submitEvent(input) {
+      if (acceptance)
+        return {
+          valid: false,
+          error: {
+            code: "invalid_command_request",
+            message: "Submit domain command requests instead of stored events",
+          },
+        };
       return session.submitEvent(input);
     },
 
     async syncNow(options = {}) {
+      if (acceptance?.isReadOnly()) return;
       await session.syncNow(options);
     },
 
     async flushDrafts() {
+      if (acceptance?.isReadOnly()) return;
       await session.flushDrafts();
     },
 
@@ -144,6 +187,7 @@ export const createProjectCollabService = ({
     },
 
     async setOnlineTransport(nextTransport) {
+      if (acceptance?.isReadOnly()) return;
       await session.setOnlineTransport(nextTransport);
     },
   };

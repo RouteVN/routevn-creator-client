@@ -1003,6 +1003,20 @@ For the current full contract, see
 row value contract is in
 `docs/platform/12-windows-player-runtime-key-value-contract.md`.
 
+### Strict Command Acceptance
+
+When the strict model dependency is available, `acceptedProjectRepository` owns
+complete accepted project state and `projectAcceptanceCoordinator` serializes
+refresh, validation, persistence and reconciliation. UI command APIs submit bare
+requests through this service. Public store facades cannot insert authored events
+directly; both synchronization ingestion paths use the same acceptance boundary.
+
+Domain schemas and transition rules belong to creator-model. Platform clients own
+browser/OS editing coordination. Historical project recovery remains in the old
+reader, while new accepted-state caches use independent namespaces and external
+provenance. See `docs/validation-preparation/implementation-status.md` for tested
+behavior and the pending dependency/rollout gates.
+
 ### Exceptional Project Content Patches
 
 Project content patches are narrowly scoped repairs for specific data written

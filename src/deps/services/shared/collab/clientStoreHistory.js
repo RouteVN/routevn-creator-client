@@ -2,6 +2,7 @@ import {
   applyRepositoryEventsToRepositoryState,
   initialProjectData,
 } from "../projectRepository.js";
+import { readCommandEnvelopeVersion } from "./commandCodec.js";
 
 export const DRAFT_HISTORY_MODE_SNAPSHOT_ARCHIVE = "snapshot_archive";
 
@@ -35,6 +36,40 @@ export const areRepositoryHistoryStatsEqual = (left, right) => {
     normalizedLeft.draftCount === normalizedRight.draftCount &&
     normalizedLeft.latestDraftClock === normalizedRight.latestDraftClock
   );
+};
+
+// A recovery checkpoint describes its original legacy prefix even after strict
+// drafts have been appended. Do not compare it with the enlarged total history,
+// or overwrite its rows with a synthesized bootstrap.
+export const getLegacyRecoveryPrefixStats = ({
+  checkpoint,
+  committed,
+  drafts,
+}) => {
+  if (committed.length || !checkpoint) return undefined;
+  const count =
+    checkpoint.meta?.historyStats?.draftCount ??
+    Number(checkpoint.lastCommittedId);
+  if (!Number.isSafeInteger(count) || count <= 0 || count >= drafts.length)
+    return undefined;
+  const prefix = drafts.slice(0, count);
+  if (
+    prefix.some((row) => readCommandEnvelopeVersion(row) !== 1) ||
+    drafts.slice(count).some((row) => readCommandEnvelopeVersion(row) !== 2)
+  )
+    return undefined;
+  const stats = {
+    committedCount: 0,
+    latestCommittedId: 0,
+    draftCount: count,
+    latestDraftClock: prefix.at(-1).draftClock,
+  };
+  if (
+    checkpoint.meta?.historyStats &&
+    !areRepositoryHistoryStatsEqual(checkpoint.meta.historyStats, stats)
+  )
+    return undefined;
+  return stats;
 };
 
 export const toRepositoryEvent = (
@@ -194,6 +229,7 @@ const assertDraftCanBeIgnoredDuringLoad = ({
   failedDraft,
   error,
 }) => {
+  if (failedDraft?.schemaVersion !== 1) throw error;
   if (failedDraft?.type !== "project.create") {
     return;
   }

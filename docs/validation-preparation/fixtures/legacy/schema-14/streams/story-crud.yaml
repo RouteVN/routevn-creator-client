@@ -1,0 +1,353 @@
+schemaVersion: 14
+initialState:
+  project: {}
+  story:
+    initialSceneId: null
+  tags:
+    images:
+      items: {}
+      tree: []
+    sounds:
+      items: {}
+      tree: []
+    videos:
+      items: {}
+      tree: []
+    characters:
+      items: {}
+      tree: []
+    fonts:
+      items: {}
+      tree: []
+    transforms:
+      items: {}
+      tree: []
+    colors:
+      items: {}
+      tree: []
+    textStyles:
+      items: {}
+      tree: []
+    variables:
+      items: {}
+      tree: []
+    layouts:
+      items: {}
+      tree: []
+    controls:
+      items: {}
+      tree: []
+    animations:
+      items: {}
+      tree: []
+    audioEffects:
+      items: {}
+      tree: []
+    particles:
+      items: {}
+      tree: []
+    spritesheets:
+      items: {}
+      tree: []
+  scenes:
+    items: {}
+    tree: []
+  files:
+    items: {}
+    tree: []
+  images:
+    items: {}
+    tree: []
+  spritesheets:
+    items: {}
+    tree: []
+  sounds:
+    items: {}
+    tree: []
+  voices:
+    items: {}
+    tree: []
+  videos:
+    items: {}
+    tree: []
+  animations:
+    items: {}
+    tree: []
+  audioEffects:
+    items: {}
+    tree: []
+  particles:
+    items: {}
+    tree: []
+  characters:
+    items: {}
+    tree: []
+  fonts:
+    items: {}
+    tree: []
+  transforms:
+    items: {}
+    tree: []
+  colors:
+    items: {}
+    tree: []
+  textStyles:
+    items: {}
+    tree: []
+  variables:
+    items: {}
+    tree: []
+  layouts:
+    items: {}
+    tree: []
+  controls:
+    items: {}
+    tree: []
+commands:
+  - type: project.create
+    payload:
+      state:
+        project: {}
+        story:
+          initialSceneId: scene-a
+        tags:
+          images:
+            items: {}
+            tree: []
+          sounds:
+            items: {}
+            tree: []
+          videos:
+            items: {}
+            tree: []
+          characters:
+            items: {}
+            tree: []
+          fonts:
+            items: {}
+            tree: []
+          transforms:
+            items: {}
+            tree: []
+          colors:
+            items: {}
+            tree: []
+          textStyles:
+            items: {}
+            tree: []
+          variables:
+            items: {}
+            tree: []
+          layouts:
+            items: {}
+            tree: []
+          controls:
+            items: {}
+            tree: []
+          animations:
+            items: {}
+            tree: []
+          audioEffects:
+            items: {}
+            tree: []
+          particles:
+            items: {}
+            tree: []
+          spritesheets:
+            items: {}
+            tree: []
+        scenes:
+          items:
+            scene-a:
+              id: scene-a
+              type: scene
+              name: Intro
+              sections:
+                items:
+                  section-a:
+                    id: section-a
+                    name: Section A
+                    lines:
+                      items:
+                        line-a:
+                          id: line-a
+                          actions:
+                            say: hello
+                        line-b:
+                          id: line-b
+                          actions:
+                            say: bye
+                      tree:
+                        - id: line-a
+                          children: []
+                        - id: line-b
+                          children: []
+                  section-b:
+                    id: section-b
+                    name: Section B
+                    lines:
+                      items:
+                        line-other:
+                          id: line-other
+                          actions:
+                            say: other
+                      tree:
+                        - id: line-other
+                          children: []
+                tree:
+                  - id: section-a
+                    children: []
+                  - id: section-b
+                    children: []
+            folder-scenes:
+              id: folder-scenes
+              type: folder
+              name: Folder
+            scene-b:
+              id: scene-b
+              type: scene
+              name: Middle
+              sections:
+                items:
+                  section-other:
+                    id: section-other
+                    name: Other
+                    lines:
+                      items: {}
+                      tree: []
+                tree:
+                  - id: section-other
+                    children: []
+          tree:
+            - id: scene-a
+              children: []
+            - id: folder-scenes
+              children:
+                - id: scene-b
+                  children: []
+        files:
+          items: {}
+          tree: []
+        images:
+          items: {}
+          tree: []
+        spritesheets:
+          items: {}
+          tree: []
+        sounds:
+          items: {}
+          tree: []
+        voices:
+          items: {}
+          tree: []
+        videos:
+          items: {}
+          tree: []
+        animations:
+          items: {}
+          tree: []
+        audioEffects:
+          items: {}
+          tree: []
+        particles:
+          items: {}
+          tree: []
+        characters:
+          items: {}
+          tree: []
+        fonts:
+          items: {}
+          tree: []
+        transforms:
+          items: {}
+          tree: []
+        colors:
+          items: {}
+          tree: []
+        textStyles:
+          items: {}
+          tree: []
+        variables:
+          items: {}
+          tree: []
+        layouts:
+          items: {}
+          tree: []
+        controls:
+          items: {}
+          tree: []
+  - type: story.update
+    payload:
+      data:
+        initialSceneId: scene-b
+  - type: scene.create
+    payload:
+      sceneId: scene-c
+      parentId: folder-scenes
+      data:
+        name: Flashback
+  - type: scene.update
+    payload:
+      sceneId: scene-a
+      data:
+        description: Updated scene summary
+  - type: scene.move
+    payload:
+      sceneId: scene-c
+      position: after
+      positionTargetId: scene-a
+  - type: section.create
+    payload:
+      sectionId: section-c
+      sceneId: scene-a
+      data:
+        name: Section C
+  - type: section.update
+    payload:
+      sectionId: section-a
+      data:
+        name: Section A Updated
+  - type: section.move
+    payload:
+      sectionId: section-b
+      position: before
+      positionTargetId: section-a
+  - type: line.create
+    payload:
+      sectionId: section-a
+      lines:
+        - lineId: line-c
+          data:
+            actions:
+              say: new
+  - type: line.update_actions
+    payload:
+      lineId: line-a
+      data:
+        mood: tense
+        background:
+          resourceId: image-rich
+          opacity: 0.5
+          blur:
+            x: 6
+            "y": 9
+            quality: 3
+            kernelSize: 9
+            repeatEdgePixels: true
+  - type: line.move
+    payload:
+      lineId: line-b
+      toSectionId: section-b
+      position: last
+  - type: line.delete
+    payload:
+      lineIds:
+        - line-c
+  - type: section.delete
+    payload:
+      sectionIds:
+        - section-c
+  - type: scene.delete
+    payload:
+      sceneIds:
+        - scene-c

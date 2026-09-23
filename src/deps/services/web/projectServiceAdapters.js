@@ -1,4 +1,9 @@
+import {
+  initializeAcceptedProject,
+  strictProjectValidationEnabled,
+} from "../shared/acceptedProjectRepository.js";
 import JSZip from "jszip";
+import { createWebProjectAcceptanceLease } from "../../clients/web/projectAcceptanceLock.js";
 import {
   createInsiemeWebStoreAdapter,
   initializeProject as initializeWebProject,
@@ -6,7 +11,10 @@ import {
 } from "../../clients/web/webRepositoryAdapter.js";
 import { createProjectCollabService } from "../shared/collab/createProjectCollabService.js";
 import { createWebSocketTransport } from "./collab/createWebSocketTransport.js";
-import { createPersistedInMemoryClientStore } from "./collabClientStore.js";
+import {
+  buildClientStoreDbName,
+  createPersistedInMemoryClientStore,
+} from "./collabClientStore.js";
 import { listIndexedDbDatabaseNames } from "../../clients/web/indexedDb.js";
 import {
   clearCommittedCursor,
@@ -152,6 +160,10 @@ export const createWebProjectServiceAdapters = ({
   };
 
   const storageAdapter = {
+    createAcceptanceLease: ({ reference }) =>
+      createWebProjectAcceptanceLease({
+        databaseName: buildClientStoreDbName(reference.projectId),
+      }),
     resolveProjectReferenceByProjectId: async ({ projectId }) => ({
       cacheKey: projectId,
       projectId,
@@ -172,7 +184,11 @@ export const createWebProjectServiceAdapters = ({
       });
     },
 
-    evictStoreByReference: async () => {},
+    evictStoreByReference: async ({ reference }) => {
+      const projectId = reference.projectId;
+      collabClientStoresByProject.delete(projectId);
+      clearProjectCollabCaches(projectId);
+    },
 
     initializeProject: async ({
       projectId,
@@ -202,6 +218,24 @@ export const createWebProjectServiceAdapters = ({
         projectResolution,
         creatorVersion,
         rawClientStore,
+        persistInitialState: strictProjectValidationEnabled
+          ? async ({ store, state }) => {
+              const reference = {
+                projectId,
+                cacheKey: projectId,
+                repositoryProjectId: projectId,
+              };
+              const lease = createWebProjectAcceptanceLease({
+                databaseName: buildClientStoreDbName(projectId),
+              });
+              await initializeAcceptedProject({
+                reference,
+                store,
+                lease,
+                state,
+              });
+            }
+          : undefined,
       });
     },
   };

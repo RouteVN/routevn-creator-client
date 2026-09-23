@@ -58,6 +58,25 @@ export const createAppServiceCore = ({
     audioService,
   });
 
+  projectService?.onPersistenceIssue?.((code) => {
+    const copy = appShellService.getAppCopy();
+    const message =
+      code === "partial_write"
+        ? (copy.projectPartialSaveNotice ??
+          "Only part of this change was saved. Review the project before trying again.")
+        : code === "write_outcome_unknown" ||
+            code === "write_reconciliation_failed"
+          ? (copy.projectUnknownSaveNotice ??
+            "We could not confirm the save. Reopen the project to check its saved changes.")
+          : (copy.projectViewsRebuildNotice ??
+            "Your changes are saved. Some project views will be rebuilt when you reopen.");
+    appShellService.showToast({
+      title: copy.warningTitle ?? "Notice",
+      message,
+      status: "warning",
+    });
+  });
+
   const userConfigService = createUserConfigService({
     db,
     onChange: ({ key }) => {
