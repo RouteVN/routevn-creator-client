@@ -172,14 +172,9 @@ const appService = createAppService({
   subject,
 });
 await appService.initUserConfig();
-const backupStatus = await appService.initializeBackup();
-if (
-  !backupStatus.configured &&
-  !appService.getUserConfig("androidBackupOnboarding") &&
-  !backupStatus.error
-) {
-  router.replace("/project-folder-setup");
-}
+// Startup lands directly on Projects; the backup status card in its footer is
+// the persistent entry point for backup setup.
+await appService.initializeBackup();
 
 const apiService = createApiService({
   baseUrl: readAndroidEnv(

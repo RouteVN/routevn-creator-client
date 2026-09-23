@@ -41,6 +41,7 @@ final class ProjectBackup {
     interface Storage {
         JSONArray projects() throws Exception;
         File root(String projectId) throws Exception;
+        String name(String projectId) throws Exception;
         String counter(String projectId) throws Exception;
         void snapshot(String projectId, File destination) throws Exception;
     }
@@ -201,6 +202,7 @@ final class ProjectBackup {
             save(editor.putString("uri", value).putString("directory", destination.toString())
                 .putString("name", name(destination))
                 .putLong("lastAttemptAt", 0));
+            if (changed) adoptExistingProjects(destination);
             return status();
         } finally { PUBLICATION_LOCK.release(); }
     }
@@ -400,32 +402,107 @@ final class ProjectBackup {
             name(directory); // Lost access must not cause a silent replacement.
             return directory;
         }
-        // Stable identity-based names avoid rename collisions and never claim an old backup.
-        String folderName = "Project-" + projectId;
-        if (children(parent).containsKey(folderName)) throw new Failure("nameConflict");
+        // The persisted mapping owns folder identity; the display label is a
+        // creation-time snapshot, so project renames never move folders.
+        String folderName = backupFolderName(projectId);
+        Uri existing = children(parent).get(folderName);
+        if (existing != null) {
+            Uri adopted = adoptExisting(existing, projectId);
+            if (adopted == null) throw new Failure("nameConflict");
+            return adopted;
+        }
         Uri directory = create(parent, folderName, true);
         save(prefs.edit().putString("folder:" + projectId, directory.toString()));
         return directory;
     }
 
+    private String backupFolderName(String projectId) throws Exception {
+        // The id suffix keeps same-named projects distinct without rename logic.
+        return sanitizeFolderTitle(storage.name(projectId), "Project") + "-" + projectId;
+    }
+
+    // A folder is claimable only when its backup.json proves this project's
+    // lineage. Import never reuses ids, so a declared match is ownership proof.
+    private Uri adoptExisting(Uri folder, String projectId) throws Exception {
+        JSONObject metadata = readableBackupMetadata(folder);
+        if (metadata == null || !projectId.equals(metadata.optString("projectId"))) return null;
+        save(prefs.edit()
+            .putString("folder:" + projectId, folder.toString())
+            .putString("success:" + projectId, metadata.toString())
+            .remove("error:" + projectId));
+        return folder;
+    }
+
+    // Runs after an explicit existing-folder confirmation. Re-adopts folders
+    // whose metadata proves they belong to a local project; foreign or
+    // unreadable folders stay untouched and are never adopted by name alone.
+    private void adoptExistingProjects(Uri destination) throws Exception {
+        Map<String, Uri> folders = new LinkedHashMap<>();
+        Map<String, JSONObject> metadataById = new LinkedHashMap<>();
+        for (Map.Entry<String, Uri> entry : children(destination).entrySet()) {
+            try {
+                JSONObject metadata = readableBackupMetadata(entry.getValue());
+                if (metadata == null) continue;
+                String id = metadata.optString("projectId");
+                if (id.isEmpty() || folders.containsKey(id)) continue;
+                folders.put(id, entry.getValue());
+                metadataById.put(id, metadata);
+            } catch (Exception error) {
+                // Skip unreadable candidates; the destination itself was verified.
+            }
+        }
+        if (folders.isEmpty()) return;
+        SharedPreferences.Editor editor = prefs.edit();
+        boolean adopted = false;
+        JSONArray projects = storage.projects();
+        for (int i = 0; i < projects.length(); i++) {
+            String id = projects.getJSONObject(i).getString("id");
+            Uri folder = folders.get(id);
+            if (folder == null) continue;
+            editor.putString("folder:" + id, folder.toString())
+                .putString("success:" + id, metadataById.get(id).toString())
+                .remove("error:" + id);
+            adopted = true;
+        }
+        if (adopted) save(editor);
+    }
+
+    private JSONObject readableBackupMetadata(Uri folder) throws Exception {
+        Map<String, Uri> entries;
+        try { entries = children(folder); }
+        catch (Exception error) { return null; } // Files or unreadable entries are not backups.
+        if (!entries.containsKey("project.db") || !entries.containsKey("files") ||
+            !entries.containsKey("file-metadata")) return null;
+        return readBackupMetadata(entries.get("backup.json"));
+    }
+
     private boolean metadataMatches(Uri uri, JSONObject saved) throws Exception {
-        if (uri == null || !saved.has("databaseSha256")) return false;
+        if (!saved.has("databaseSha256")) return false;
+        JSONObject metadata = readBackupMetadata(uri);
+        return metadata != null &&
+            saved.optString("projectId").equals(metadata.optString("projectId")) &&
+            saved.optString("changeCounter").equals(metadata.optString("changeCounter")) &&
+            saved.optString("databaseSha256").equals(metadata.optString("databaseSha256"));
+    }
+
+    // Capped parse plus structural validation; unreadable or foreign formats yield null.
+    private JSONObject readBackupMetadata(Uri uri) throws Exception {
+        if (uri == null) return null;
         try (InputStream in = resolver.openInputStream(uri)) {
             if (in == null) throw new Failure("reconnect");
             java.io.ByteArrayOutputStream bytes = new java.io.ByteArrayOutputStream();
             byte[] buffer = new byte[1024];
             int count;
             while ((count = in.read(buffer)) != -1) {
-                if (bytes.size() + count > 16384) return false;
+                if (bytes.size() + count > 16384) return null;
                 bytes.write(buffer, 0, count);
             }
             JSONObject metadata;
             try { metadata = new JSONObject(bytes.toString("UTF-8")); }
-            catch (org.json.JSONException error) { return false; }
-            return metadata.optInt("formatVersion") == 1 &&
-                saved.optString("projectId").equals(metadata.optString("projectId")) &&
-                saved.optString("changeCounter").equals(metadata.optString("changeCounter")) &&
-                saved.optString("databaseSha256").equals(metadata.optString("databaseSha256"));
+            catch (org.json.JSONException error) { return null; }
+            if (metadata.optInt("formatVersion") != 1) return null;
+            if (metadata.optString("projectId").trim().isEmpty()) return null;
+            return metadata;
         }
     }
 
@@ -453,6 +530,19 @@ final class ProjectBackup {
 
     static void requireSpace(long available, long additional) throws Exception {
         if (additional < 0 || available < RESERVE_BYTES || available - RESERVE_BYTES < additional) throw new Failure("lowSpace");
+    }
+
+    // Shared folder-title rules for export and backup destinations.
+    static String sanitizeFolderTitle(String title, String fallback) {
+        String resolvedTitle = title == null ? "" : title.trim();
+        if (resolvedTitle.isEmpty()) resolvedTitle = fallback;
+        resolvedTitle = resolvedTitle.replaceAll("[\\\\/:*?\"<>|\\r\\n\\t]+", " ");
+        resolvedTitle = resolvedTitle.replaceAll("\\s+", " ").trim();
+        resolvedTitle = resolvedTitle.replaceAll("^\\.+", "");
+        resolvedTitle = resolvedTitle.replaceAll("\\.+$", "").trim();
+        if (resolvedTitle.isEmpty()) resolvedTitle = fallback;
+        if (resolvedTitle.length() > 80) resolvedTitle = resolvedTitle.substring(0, 80).trim();
+        return resolvedTitle;
     }
 
     private long[] probeSpace(Uri directory) throws Exception {

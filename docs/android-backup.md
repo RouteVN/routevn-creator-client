@@ -112,16 +112,18 @@ Copy:
 - Primary action: **Choose backup folder**
 - Secondary action: **Skip for now**
 
-Show setup on first use or when explicitly opened from Projects/settings.
-Remember completion or an explicit skip in `userConfig.androidBackupOnboarding`
+Open setup only explicitly from the Projects card or settings; Android startup
+goes directly to Projects with no first-run setup redirect. The footer card's
+warning state is the persistent setup prompt. Remember completion or an explicit
+skip in `userConfig.androidBackupOnboarding`
 through the standard JS app config API (`getUserConfig`, `setUserConfig`,
 `flushUserConfig`). Flush the flag before completing configure, skip, or disable.
 When the flag is absent, an existing configured folder or legacy native skip is
 migrated into JS config. An explicit JS value takes precedence over legacy state.
 The native backup code no longer writes onboarding choices; native folder grants,
 backup scheduling metadata, and publication checkpoints keep their existing
-storage. There is no separate native KV implementation for onboarding. Configure
-startup routing at the app level. Skipping must leave ordinary project creation
+storage. There is no separate native KV implementation for onboarding. Skipping
+must leave ordinary project creation
 and editing available.
 
 Reuse iOS's presentation, not its requirement for available external working
@@ -295,7 +297,7 @@ Each project has a separate directory under the selected backup folder:
 
 ```text
 RouteVN Backups/
-  Project-<projectId>/
+  <Project Name>-<projectId>/
     project.db
     files/
       <fileId>
@@ -304,10 +306,16 @@ RouteVN Backups/
     backup.json
 ```
 
-Folders use stable `Project-<projectId>` names. Settings shows the project names
-and last snapshot times. The persisted mapping survives project renames. An
-existing unmapped directory is never adopted or overwritten; select another
-backup destination on a name conflict.
+Folders are labeled with the sanitized project name plus the project id at
+first backup (`Project-<projectId>` when the name is empty); the id suffix
+keeps same-named projects distinct. Labels are creation-time snapshots: the
+persisted mapping owns folder identity, so project renames never move folders,
+and Settings keeps showing live names and last snapshot times. An unmapped
+folder is adopted only when its `backup.json` declares the local project id —
+after the user confirms reuse of a non-empty destination, or on the next
+backup. Unproven same-named folders still refuse with a name conflict instead
+of overwriting; import never reuses ids, so a metadata id match is lineage
+proof.
 
 Preserve the complete project database, including project-owned app records and
 local drafts, plus asset bytes and MIME sidecars. Do not back up the global

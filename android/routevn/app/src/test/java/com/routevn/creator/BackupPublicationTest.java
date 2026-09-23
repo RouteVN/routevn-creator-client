@@ -47,6 +47,7 @@ public class BackupPublicationTest {
     ProjectBackup backup;
     ProjectBackup.Storage storage;
     String revision = "1:0";
+    String projectName = "Project One";
     String revokedTreeId;
 
     private void requireAccessibleTree(Uri uri) {
@@ -103,8 +104,9 @@ public class BackupPublicationTest {
         ShadowStatFs.registerStats(context.getFilesDir().getAbsolutePath(), 10000000, 9000000, 9000000);
         ShadowStatFs.registerStats(context.getNoBackupFilesDir().getAbsolutePath(), 10000000, 9000000, 9000000);
         storage = new ProjectBackup.Storage() {
-            public JSONArray projects() throws Exception { return new JSONArray().put(new JSONObject().put("id", "one").put("name", "Project One")); }
+            public JSONArray projects() throws Exception { return new JSONArray().put(new JSONObject().put("id", "one").put("name", projectName)); }
             public File root(String id) { return source; }
+            public String name(String id) { return projectName; }
             public String counter(String id) { return revision; }
             public void snapshot(String id, File target) throws Exception {
                 Files.copy(new File(source, "project.db").toPath(), new File(target, "project.db").toPath());
@@ -113,7 +115,7 @@ public class BackupPublicationTest {
         backup = new ProjectBackup(context, storage);
     }
     @After public void tearDown() { backup.close(); backup.cleanupAfterClose(); }
-    private File output(String name) { return new File(destination, "Project-one/" + name); }
+    private File output(String name) { return new File(destination, "Project One-one/" + name); }
     private void publish() throws Exception { backup.prepare("one"); backup.publish("one"); }
     @Test public void disablingPersistsAndPreservesExistingBackupFiles() throws Exception {
         publish();
@@ -161,7 +163,7 @@ public class BackupPublicationTest {
         assertFalse(result.optBoolean("needsExistingConfirmation"));
         assertTrue(result.getJSONObject("folder").getString("displayPath").endsWith("/RouteVN Backups"));
         publish();
-        ProjectBackup.validateDatabase(new File(destination, "RouteVN Backups/Project-one/project.db"), "one");
+        ProjectBackup.validateDatabase(new File(destination, "RouteVN Backups/Project One-one/project.db"), "one");
         assertFalse(output("project.db").exists());
         assertEquals("keep", Files.readString(new File(destination, "unrelated.txt").toPath()));
     }
@@ -212,6 +214,7 @@ public class BackupPublicationTest {
         ProjectBackup.Storage slowStorage = new ProjectBackup.Storage() {
             public JSONArray projects() throws Exception { return storage.projects(); }
             public File root(String id) throws Exception { return storage.root(id); }
+            public String name(String id) throws Exception { return storage.name(id); }
             public String counter(String id) throws Exception { return storage.counter(id); }
             public void snapshot(String id, File target) throws Exception {
                 storage.snapshot(id, target);
@@ -306,11 +309,96 @@ public class BackupPublicationTest {
         backup.configure(selectFolder("/new-location"), false);
         assertEquals(1, backup.pendingProjects().getJSONArray("projectIds").length());
         publish();
-        ProjectBackup.validateDatabase(new File(selected, "Project-one/project.db"), "one");
+        ProjectBackup.validateDatabase(new File(selected, "Project One-one/project.db"), "one");
         assertFalse(new File(selected, "RouteVN Backups").exists());
         assertEquals(previousDatabase, backup.hash(output("project.db")));
         assertEquals(previousMetadata, Files.readString(output("backup.json").toPath()));
         assertArrayEquals(new byte[] {1,2,3}, Files.readAllBytes(output("files/asset").toPath()));
+    }
+    @Test public void reEnablingSameDestinationAdoptsExistingBackups() throws Exception {
+        backup.configure(selectFolder(""), false);
+        publish();
+        String metadata = Files.readString(new File(destination, "RouteVN Backups/Project One-one/backup.json").toPath());
+        backup.disable();
+        assertEquals("", backup.status().getJSONArray("projects").getJSONObject(0).getString("backupFolderPath"));
+        assertTrue(backup.configure(selectFolder(""), true).getBoolean("configured"));
+        JSONObject project = backup.status().getJSONArray("projects").getJSONObject(0);
+        assertTrue(project.getString("backupFolderPath").endsWith("RouteVN Backups/Project One-one"));
+        assertFalse(project.getString("snapshotAt").isEmpty());
+        JSONObject adopted = new JSONObject(
+            context.getSharedPreferences("project-backup", 0).getString("success:one", "{}"));
+        JSONObject published = new JSONObject(metadata);
+        assertEquals(published.getString("projectId"), adopted.getString("projectId"));
+        assertEquals(published.getString("changeCounter"), adopted.getString("changeCounter"));
+        assertEquals(published.getString("snapshotAt"), adopted.getString("snapshotAt"));
+        assertEquals(published.getString("databaseSha256"), adopted.getString("databaseSha256"));
+        assertEquals(0, backup.pendingProjects().getJSONArray("projectIds").length());
+        revision = "2:0";
+        publish();
+        ProjectBackup.validateDatabase(new File(destination, "RouteVN Backups/Project One-one/project.db"), "one");
+        assertEquals(1, new File(destination, "RouteVN Backups").list().length);
+    }
+    @Test public void switchingBackToPreviousDestinationReadoptsItsBackups() throws Exception {
+        backup.configure(selectFolder(""), false);
+        publish();
+        File secondLocation = new File(destination, "new-location"); secondLocation.mkdirs();
+        backup.configure(selectFolder("/new-location"), false);
+        assertEquals(1, backup.pendingProjects().getJSONArray("projectIds").length());
+        publish();
+        ProjectBackup.validateDatabase(new File(secondLocation, "Project One-one/project.db"), "one");
+        backup.configure(selectFolder(""), true);
+        assertEquals(0, backup.pendingProjects().getJSONArray("projectIds").length());
+        assertTrue(backup.status().getJSONArray("projects").getJSONObject(0).getString("backupFolderPath").endsWith("RouteVN Backups/Project One-one"));
+        revision = "2:0";
+        publish();
+        assertEquals("2:0", new JSONObject(Files.readString(new File(destination, "RouteVN Backups/Project One-one/backup.json").toPath())).getString("changeCounter"));
+        assertEquals("1:0", new JSONObject(Files.readString(new File(secondLocation, "Project One-one/backup.json").toPath())).getString("changeCounter"));
+    }
+    @Test public void foreignAndUnreadableFoldersAreNeverAdopted() throws Exception {
+        File backups = new File(destination, "RouteVN Backups"); backups.mkdirs();
+        File foreign = new File(backups, "Someone Else");
+        new File(foreign, "files").mkdirs(); new File(foreign, "file-metadata").mkdirs();
+        Files.writeString(new File(foreign, "project.db").toPath(), "not sqlite");
+        Files.writeString(new File(foreign, "backup.json").toPath(),
+            "{\"formatVersion\":1,\"projectId\":\"other\",\"changeCounter\":\"1:0\",\"snapshotAt\":\"x\",\"completedAt\":\"x\",\"databaseBytes\":1,\"databaseSha256\":\"deadbeef\"}");
+        File garbage = new File(backups, "notes"); garbage.mkdirs();
+        Files.writeString(new File(garbage, "todo.txt").toPath(), "keep");
+        assertTrue(backup.configure(selectFolder(""), true).getBoolean("configured"));
+        JSONObject project = backup.status().getJSONArray("projects").getJSONObject(0);
+        assertEquals("", project.getString("backupFolderPath"));
+        assertTrue(project.getBoolean("pending"));
+        publish();
+        ProjectBackup.validateDatabase(new File(backups, "Project One-one/project.db"), "one");
+        assertEquals("keep", Files.readString(new File(garbage, "todo.txt").toPath()));
+        assertEquals("not sqlite", Files.readString(new File(foreign, "project.db").toPath()));
+    }
+    @Test public void unprovenSameNamedFolderStillRefuses() throws Exception {
+        File backups = new File(destination, "RouteVN Backups"); backups.mkdirs();
+        File squatter = new File(backups, "Project One-one"); squatter.mkdirs();
+        Files.writeString(new File(squatter, "keep.txt").toPath(), "keep");
+        Files.writeString(new File(squatter, "backup.json").toPath(), "{\"formatVersion\":1,\"projectId\":\"someone-else\"}");
+        assertTrue(backup.configure(selectFolder(""), true).getBoolean("configured"));
+        try { backup.prepare("one"); fail("claimed an unproven folder"); }
+        catch (ProjectBackup.Failure error) { assertEquals("nameConflict", error.code); }
+        assertEquals("keep", Files.readString(new File(squatter, "keep.txt").toPath()));
+    }
+    @Test public void emptyProjectNameFallsBackToStableFolderName() throws Exception {
+        projectName = "";
+        publish();
+        ProjectBackup.validateDatabase(new File(destination, "Project-one/project.db"), "one");
+    }
+    @Test public void renamedProjectKeepsBackingUpToItsAdoptedFolder() throws Exception {
+        backup.configure(selectFolder(""), false);
+        publish();
+        backup.disable();
+        projectName = "Renamed Novel";
+        assertTrue(backup.configure(selectFolder(""), true).getBoolean("configured"));
+        revision = "2:0";
+        publish();
+        File backups = new File(destination, "RouteVN Backups");
+        assertEquals(1, backups.list().length);
+        ProjectBackup.validateDatabase(new File(backups, "Project One-one/project.db"), "one");
+        assertFalse(new File(backups, "Renamed Novel-one").exists());
     }
     @Test public void publishesOrdinaryProjectAndSkipsUnchanged() throws Exception {
         publish();
@@ -424,7 +512,7 @@ public class BackupPublicationTest {
         java.lang.reflect.Method method = MainActivity.class.getDeclaredMethod("copyImportDatabase", Uri.class, File.class);
         method.setAccessible(true);
         Uri root = DocumentsContract.buildDocumentUriUsingTree(
-            DocumentsContract.buildTreeDocumentUri(BackupDocumentsProvider.AUTHORITY, "primary:Documents"), "primary:Documents/Project-one");
+            DocumentsContract.buildTreeDocumentUri(BackupDocumentsProvider.AUTHORITY, "primary:Documents"), "primary:Documents/Project One-one");
         File imported = (File) method.invoke(activity, root, new File(context.getCacheDir(), "import"));
         ProjectBackup.validateDatabase(imported, "one");
         assertEquals(previousHash, backup.hash(output("project.db.previous")));

@@ -115,14 +115,21 @@ try {
     };
   });
   await page.goto(origin + "/android/index.html");
+  // Startup goes straight to Projects; the footer card owns setup entry now.
   await page
-    .getByText("Setup backup folder", { exact: true })
+    .locator("rvn-android-backup-status")
+    .getByText("Set up backup folder", { exact: true })
     .waitFor({ timeout: 10000 })
     .catch(async (error) => {
       console.error(await page.locator("body").innerText());
       console.error(await page.evaluate(() => window.backupTrial));
       throw error;
     });
+  await page
+    .locator("rvn-android-backup-status")
+    .getByText("Set up backup folder", { exact: true })
+    .click();
+  await page.getByText("Setup backup folder", { exact: true }).waitFor();
   await page.locator("#setupFolderButton").click();
   assert.equal(await page.locator("#continueFolderButton").count(), 0);
   await page.locator("#skipBackupButton").click();
