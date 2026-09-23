@@ -11,24 +11,46 @@ private let sqliteTransient = unsafeBitCast(-1, to: sqlite3_destructor_type.self
 
 @main
 final class RouteVNAppDelegate: UIResponder, UIApplicationDelegate {
-    var window: UIWindow?
-
     func application(
         _ application: UIApplication,
         didFinishLaunchingWithOptions launchOptions: [UIApplication.LaunchOptionsKey: Any]?
     ) -> Bool {
-        let window = UIWindow(frame: UIScreen.main.bounds)
+        true
+    }
+
+    // iOS 27 aborts scene creation when the app does not adopt the scene
+    // lifecycle, so the window lives in the scene delegate below.
+    func application(
+        _ application: UIApplication,
+        configurationForConnecting connectingSceneSession: UISceneSession,
+        options: UIScene.ConnectionOptions
+    ) -> UISceneConfiguration {
+        let configuration = UISceneConfiguration(name: nil, sessionRole: connectingSceneSession.role)
+        configuration.delegateClass = RouteVNSceneDelegate.self
+        return configuration
+    }
+}
+
+final class RouteVNSceneDelegate: UIResponder, UIWindowSceneDelegate {
+    var window: UIWindow?
+
+    func scene(
+        _ scene: UIScene,
+        willConnectTo session: UISceneSession,
+        options connectionOptions: UIScene.ConnectionOptions
+    ) {
+        guard let windowScene = scene as? UIWindowScene else { return }
+        let window = UIWindow(windowScene: windowScene)
         window.rootViewController = RouteVNViewController()
         self.window = window
         window.makeKeyAndVisible()
-        return true
     }
 
-    func applicationWillResignActive(_ application: UIApplication) {
+    func sceneWillResignActive(_ scene: UIScene) {
         (window?.rootViewController as? RouteVNViewController)?.setAppActive(false)
     }
 
-    func applicationDidBecomeActive(_ application: UIApplication) {
+    func sceneDidBecomeActive(_ scene: UIScene) {
         (window?.rootViewController as? RouteVNViewController)?.setAppActive(true)
     }
 }

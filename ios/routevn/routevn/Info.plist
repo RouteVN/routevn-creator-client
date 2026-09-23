@@ -31,6 +31,11 @@
 	</dict>
 	<key>NSLocalNetworkUsageDescription</key>
 	<string>Connect to the development server on your Mac to preview app changes.</string>
+	<key>UIApplicationSceneManifest</key>
+	<dict>
+		<key>UIApplicationSupportsMultipleScenes</key>
+		<false/>
+	</dict>
 	<key>UIApplicationSupportsIndirectInputEvents</key>
 	<true/>
 	<key>UIFileSharingEnabled</key>
