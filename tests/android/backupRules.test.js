@@ -36,9 +36,7 @@ describe("Android backup policy", () => {
     expect(manifest).toContain(
       'android:dataExtractionRules="@xml/data_extraction_rules"',
     );
-    expect(manifest).toContain(
-      'android:fullBackupContent="@xml/backup_rules"',
-    );
+    expect(manifest).toContain('android:fullBackupContent="@xml/backup_rules"');
   });
 
   it("excludes all cloud data and transfers only complete project roots on Android 12+", async () => {
@@ -49,14 +47,10 @@ describe("Android backup policy", () => {
     const transferRules = readXmlSection(rules, "device-transfer");
 
     for (const domain of ALL_BACKUP_DOMAINS) {
-      expect(cloudRules).toContain(
-        `<exclude domain="${domain}" path="." />`,
-      );
+      expect(cloudRules).toContain(`<exclude domain="${domain}" path="." />`);
     }
     expect(cloudRules).not.toContain("<include");
-    expect(transferRules).toBe(
-      '<include domain="file" path="projects/" />',
-    );
+    expect(transferRules).toBe('<include domain="file" path="projects/" />');
   });
 
   it("uses D2D-only project transfer on Android 9-11 and no backup on older devices", async () => {
@@ -70,15 +64,11 @@ describe("Android backup policy", () => {
     );
 
     for (const domain of ALL_BACKUP_DOMAINS) {
-      expect(legacyRules).toContain(
-        `<exclude domain="${domain}" path="." />`,
-      );
+      expect(legacyRules).toContain(`<exclude domain="${domain}" path="." />`);
     }
     expect(legacyRules).not.toContain("<include");
     expect(d2dRules).toContain('domain="file"');
     expect(d2dRules).toContain('path="projects/"');
-    expect(d2dRules).toContain(
-      'requireFlags="deviceToDeviceTransfer"',
-    );
+    expect(d2dRules).toContain('requireFlags="deviceToDeviceTransfer"');
   });
 });
