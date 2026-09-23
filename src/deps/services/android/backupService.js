@@ -1,11 +1,10 @@
 import { BehaviorSubject } from "rxjs";
 
-export const BACKUP_INTERVAL_MS = 10 * 60 * 1000;
+export const BACKUP_INTERVAL_MS = 5 * 60 * 1000;
 export const BACKUP_RESUME_DELAY_MS = 5 * 1000;
 
 export const createBackupService = ({
   client,
-  userConfig,
   backupProject,
   beforeBackup,
   notify,
@@ -19,6 +18,8 @@ export const createBackupService = ({
   let cleanup;
   let lastWarning;
   let timer;
+  // A new project waiting for a pass that skips the cooldown.
+  let newProjectPending = false;
   let lastLocalAttemptAt = 0;
   let getCopy = () => ({});
 
@@ -48,46 +49,28 @@ export const createBackupService = ({
     timer = schedule(
       () => {
         timer = undefined;
-        void run();
+        void run(newProjectPending);
       },
-      Math.max(minimumDelay, remainingCooldown()),
+      Math.max(minimumDelay, newProjectPending ? 0 : remainingCooldown()),
     );
   };
 
   const publish = (status) => {
-    const nextStatus = {
-      ...status,
-      skipped:
-        !status.configured &&
-        userConfig.getUserConfig("androidBackupOnboarding") === true,
-    };
-    state.next(nextStatus);
-    return nextStatus;
-  };
-  const completeOnboarding = async () => {
-    const previous = userConfig.getUserConfig("androidBackupOnboarding");
-    userConfig.setUserConfig("androidBackupOnboarding", true);
-    try {
-      await userConfig.flushUserConfig();
-    } catch (error) {
-      userConfig.setUserConfig("androidBackupOnboarding", previous);
-      throw error;
-    }
+    state.next(status);
+    return status;
   };
   const refresh = async () => {
-    let status = state.value;
     try {
-      status = await client.status();
-      if (
-        userConfig.getUserConfig("androidBackupOnboarding") === undefined &&
-        (status.configured || status.skipped)
-      ) {
-        await completeOnboarding();
-      }
-      return publish(status);
+      return publish(await client.status());
     } catch {
-      return publish({ ...status, error: "failed", running: false });
+      return publish({ ...state.value, error: "failed", running: false });
     }
+  };
+  const initialize = async () => {
+    const status = await refresh();
+    // Startup does not wait for native status; schedule once it arrives.
+    scheduleNext(BACKUP_RESUME_DELAY_MS);
+    return status;
   };
   const warn = (error) => {
     if (error === lastWarning) return;
@@ -110,6 +93,8 @@ export const createBackupService = ({
       return Promise.resolve();
     }
     cancelTimer();
+    // This pass lists pending projects afresh, including any new project.
+    newProjectPending = false;
     // Keep failures throttled even if the bridge cannot persist/read the claim.
     lastLocalAttemptAt = now();
     operation = (async () => {
@@ -153,7 +138,7 @@ export const createBackupService = ({
   };
 
   return {
-    initialize: refresh,
+    initialize,
     getStatus: () => state.value,
     subscribe: (listener) => state.subscribe(listener),
     refresh,
@@ -163,18 +148,16 @@ export const createBackupService = ({
       if (operation) await operation;
       const status = await client.configure(payload);
       if (status.needsExistingConfirmation) return status;
-      try {
-        await completeOnboarding();
-      } finally {
-        // Native configuration is committed even if saving onboarding fails.
-        publish(status);
-        void run(true);
-      }
+      publish(status);
+      void run(true);
       return status;
     },
-    async skip() {
-      await completeOnboarding();
-      return publish(state.value);
+    // Back up a newly created or imported project after the screen settles,
+    // without waiting for the interval. A running pass may have listed its
+    // projects already, so the follow-up pass starts when it finishes.
+    backupNewProject() {
+      newProjectPending = true;
+      scheduleNext(BACKUP_RESUME_DELAY_MS);
     },
     disable() {
       if (disableOperation) return disableOperation;
@@ -184,14 +167,10 @@ export const createBackupService = ({
         // the pass before forgetting its destination.
         if (operation) await operation;
         const status = await client.disable();
-        try {
-          await completeOnboarding();
-        } finally {
-          lastLocalAttemptAt = 0;
-          lastWarning = undefined;
-          publish(status);
-        }
-        return state.value;
+        newProjectPending = false;
+        lastLocalAttemptAt = 0;
+        lastWarning = undefined;
+        return publish(status);
       })().finally(() => {
         disableOperation = undefined;
         scheduleNext();

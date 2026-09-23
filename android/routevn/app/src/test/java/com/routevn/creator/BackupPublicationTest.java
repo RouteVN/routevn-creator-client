@@ -315,30 +315,23 @@ public class BackupPublicationTest {
         assertEquals(previousMetadata, Files.readString(output("backup.json").toPath()));
         assertArrayEquals(new byte[] {1,2,3}, Files.readAllBytes(output("files/asset").toPath()));
     }
-    @Test public void reEnablingSameDestinationAdoptsExistingBackups() throws Exception {
+    @Test public void reEnablingSameDestinationReclaimsFolderAndRepublishes() throws Exception {
         backup.configure(selectFolder(""), false);
         publish();
-        String metadata = Files.readString(new File(destination, "RouteVN Backups/Project One-one/backup.json").toPath());
         backup.disable();
-        assertEquals("", backup.status().getJSONArray("projects").getJSONObject(0).getString("backupFolderPath"));
         assertTrue(backup.configure(selectFolder(""), true).getBoolean("configured"));
+        // Reclaiming never trusts the old checkpoint; the next pass re-verifies it.
         JSONObject project = backup.status().getJSONArray("projects").getJSONObject(0);
-        assertTrue(project.getString("backupFolderPath").endsWith("RouteVN Backups/Project One-one"));
-        assertFalse(project.getString("snapshotAt").isEmpty());
-        JSONObject adopted = new JSONObject(
-            context.getSharedPreferences("project-backup", 0).getString("success:one", "{}"));
-        JSONObject published = new JSONObject(metadata);
-        assertEquals(published.getString("projectId"), adopted.getString("projectId"));
-        assertEquals(published.getString("changeCounter"), adopted.getString("changeCounter"));
-        assertEquals(published.getString("snapshotAt"), adopted.getString("snapshotAt"));
-        assertEquals(published.getString("databaseSha256"), adopted.getString("databaseSha256"));
-        assertEquals(0, backup.pendingProjects().getJSONArray("projectIds").length());
-        revision = "2:0";
+        assertEquals("", project.getString("snapshotAt"));
+        assertEquals(1, backup.pendingProjects().getJSONArray("projectIds").length());
         publish();
+        project = backup.status().getJSONArray("projects").getJSONObject(0);
+        assertTrue(project.getString("backupFolderPath").endsWith("RouteVN Backups/Project One-one"));
+        assertEquals(0, backup.pendingProjects().getJSONArray("projectIds").length());
         ProjectBackup.validateDatabase(new File(destination, "RouteVN Backups/Project One-one/project.db"), "one");
         assertEquals(1, new File(destination, "RouteVN Backups").list().length);
     }
-    @Test public void switchingBackToPreviousDestinationReadoptsItsBackups() throws Exception {
+    @Test public void switchingBackToPreviousDestinationReclaimsItsBackups() throws Exception {
         backup.configure(selectFolder(""), false);
         publish();
         File secondLocation = new File(destination, "new-location"); secondLocation.mkdirs();
@@ -347,12 +340,70 @@ public class BackupPublicationTest {
         publish();
         ProjectBackup.validateDatabase(new File(secondLocation, "Project One-one/project.db"), "one");
         backup.configure(selectFolder(""), true);
-        assertEquals(0, backup.pendingProjects().getJSONArray("projectIds").length());
-        assertTrue(backup.status().getJSONArray("projects").getJSONObject(0).getString("backupFolderPath").endsWith("RouteVN Backups/Project One-one"));
         revision = "2:0";
         publish();
+        assertTrue(backup.status().getJSONArray("projects").getJSONObject(0).getString("backupFolderPath").endsWith("RouteVN Backups/Project One-one"));
+        assertEquals(1, new File(destination, "RouteVN Backups").list().length);
         assertEquals("2:0", new JSONObject(Files.readString(new File(destination, "RouteVN Backups/Project One-one/backup.json").toPath())).getString("changeCounter"));
         assertEquals("1:0", new JSONObject(Files.readString(new File(secondLocation, "Project One-one/backup.json").toPath())).getString("changeCounter"));
+    }
+    @Test public void reclaimedFolderIsVerifiedBeforeItCountsAsBackedUp() throws Exception {
+        backup.configure(selectFolder(""), false);
+        publish();
+        File folder = new File(destination, "RouteVN Backups/Project One-one");
+        backup.disable();
+        Files.writeString(new File(folder, "project.db").toPath(), "truncated");
+        backup.configure(selectFolder(""), true);
+        assertEquals(1, backup.pendingProjects().getJSONArray("projectIds").length());
+        try { publish(); fail("trusted a corrupt backup"); }
+        catch (ProjectBackup.Failure error) { assertEquals("invalidBackup", error.code); }
+        JSONObject project = backup.status().getJSONArray("projects").getJSONObject(0);
+        assertEquals("", project.getString("snapshotAt"));
+        assertTrue(project.getBoolean("pending"));
+        assertEquals("truncated", Files.readString(new File(folder, "project.db").toPath()));
+    }
+    @Test public void interruptedFirstBackupsAreReclaimedAfterMappingsReset() throws Exception {
+        backup.configure(selectFolder(""), false);
+        File folder = new File(destination, "RouteVN Backups/Project One-one");
+        CapacityShadow.available = 999_999_999L;
+        try { publish(); fail("low space accepted"); }
+        catch (ProjectBackup.Failure error) { assertEquals("lowSpace", error.code); }
+        assertEquals(0, folder.list().length);
+        backup.disable();
+        CapacityShadow.available = 10_000_000_000L;
+        backup.configure(selectFolder(""), true);
+        provider.failRename = "backup.json";
+        try { publish(); fail("expected interruption"); } catch (Exception expected) { }
+        assertFalse(new File(folder, "backup.json").exists());
+        backup.disable();
+        provider.failRename = null;
+        backup.configure(selectFolder(""), true);
+        publish();
+        ProjectBackup.validateDatabase(new File(folder, "project.db"), "one");
+        assertEquals("one", new JSONObject(Files.readString(new File(folder, "backup.json").toPath())).getString("projectId"));
+        assertEquals(1, new File(destination, "RouteVN Backups").list().length);
+    }
+    private void claimedFolder(File folder) throws Exception {
+        folder.mkdirs();
+        Files.writeString(new File(folder, "backup.json").toPath(), "{\"formatVersion\":1,\"projectId\":\"one\"}");
+    }
+    @Test public void reclaimsOnlyUnambiguousFoldersEndingInTheProjectId() throws Exception {
+        backup.configure(selectFolder(""), false);
+        File backups = new File(destination, "RouteVN Backups");
+        claimedFolder(new File(backups, "Legacy-one"));
+        claimedFolder(new File(backups, "Project One-one"));
+        claimedFolder(new File(backups, "Project One-one copy"));
+        publish();
+        ProjectBackup.validateDatabase(new File(backups, "Project One-one/project.db"), "one");
+        assertFalse(new File(backups, "Legacy-one/project.db").exists());
+        assertFalse(new File(backups, "Project One-one copy/project.db").exists());
+        backup.disable();
+        projectName = "Renamed Novel";
+        backup.configure(selectFolder(""), true);
+        try { publish(); fail("guessed between duplicate backups"); }
+        catch (ProjectBackup.Failure error) { assertEquals("nameConflict", error.code); }
+        assertFalse(new File(backups, "Renamed Novel-one").exists());
+        assertEquals("", backup.status().getJSONArray("projects").getJSONObject(0).getString("backupFolderPath"));
     }
     @Test public void foreignAndUnreadableFoldersAreNeverAdopted() throws Exception {
         File backups = new File(destination, "RouteVN Backups"); backups.mkdirs();
@@ -374,13 +425,36 @@ public class BackupPublicationTest {
     }
     @Test public void unprovenSameNamedFolderStillRefuses() throws Exception {
         File backups = new File(destination, "RouteVN Backups"); backups.mkdirs();
-        File squatter = new File(backups, "Project One-one"); squatter.mkdirs();
+        File squatter = new File(backups, "Project One-one");
+        new File(squatter, "files").mkdirs(); new File(squatter, "file-metadata").mkdirs();
+        // Complete backup structure, even this project's database: only the
+        // declared project id may refuse the folder.
+        Files.copy(new File(source, "project.db").toPath(), new File(squatter, "project.db").toPath());
         Files.writeString(new File(squatter, "keep.txt").toPath(), "keep");
         Files.writeString(new File(squatter, "backup.json").toPath(), "{\"formatVersion\":1,\"projectId\":\"someone-else\"}");
         assertTrue(backup.configure(selectFolder(""), true).getBoolean("configured"));
         try { backup.prepare("one"); fail("claimed an unproven folder"); }
         catch (ProjectBackup.Failure error) { assertEquals("nameConflict", error.code); }
         assertEquals("keep", Files.readString(new File(squatter, "keep.txt").toPath()));
+        assertEquals(1, backups.list().length);
+    }
+    @Test public void unreadableMetadataIsANameConflictNotLostAccess() throws Exception {
+        File folder = new File(destination, "Project One-one");
+        new File(folder, "backup.json").mkdirs();
+        new File(folder, "files").mkdirs(); new File(folder, "file-metadata").mkdirs();
+        Files.copy(new File(source, "project.db").toPath(), new File(folder, "project.db").toPath());
+        try { publish(); fail("claimed a folder with unreadable metadata"); }
+        catch (ProjectBackup.Failure error) { assertEquals("nameConflict", error.code); }
+        assertTrue(new File(folder, "backup.json").isDirectory());
+    }
+    @Test public void folderTitlesSurviveProviderNameRules() {
+        assertEquals("A B", ProjectBackup.sanitizeFolderTitle("A\u0001B\u007f", "Project"));
+        assertEquals("x y", ProjectBackup.sanitizeFolderTitle("x\uD800y", "Project"));
+        String emoji = "a".repeat(79) + "\uD83D\uDE00";
+        assertEquals(emoji, ProjectBackup.sanitizeFolderTitle(emoji + "tail", "Project"));
+        String wide = ProjectBackup.sanitizeFolderTitle("\u6f22".repeat(80), "Project");
+        assertEquals("\u6f22".repeat(66), wide);
+        assertEquals("Project", ProjectBackup.sanitizeFolderTitle("\u0000", "Project"));
     }
     @Test public void emptyProjectNameFallsBackToStableFolderName() throws Exception {
         projectName = "";
@@ -522,7 +596,7 @@ public class BackupPublicationTest {
         catch (java.lang.reflect.InvocationTargetException expected) { }
     }
 
-    @Test public void persistsTenMinuteThrottleBeforeSnapshotWork() throws Exception {
+    @Test public void persistsFiveMinuteThrottleBeforeSnapshotWork() throws Exception {
         assertTrue(backup.beginPass(false).getBoolean("due"));
         assertFalse(backup.beginPass(false).getBoolean("due"));
         assertTrue(backup.beginPass(true).getBoolean("due"));

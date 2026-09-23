@@ -1,5 +1,4 @@
 import { afterEach, expect, it, vi } from "vitest";
-import { createUserConfigService } from "../../src/deps/services/shared/userConfigService.js";
 import { createAndroidAudioRuntime } from "../../src/deps/clients/android/audioRuntime.js";
 import { createAndroidBackupClient } from "../../src/deps/clients/android/backup.js";
 import {
@@ -44,7 +43,6 @@ it("cancels and resumes backups through the native lifecycle even when WebView v
   });
   const service = createBackupService({
     client,
-    userConfig: createUserConfigService({ db: { set: vi.fn() } }),
     beforeBackup,
     backupProject: vi.fn(),
     notify: vi.fn(),
@@ -67,7 +65,7 @@ it("cancels and resumes backups through the native lifecycle even when WebView v
     expect(beforeBackup).toHaveBeenCalledOnce();
 
     windowTarget.routeVNSetAppActive(false);
-    await vi.advanceTimersByTimeAsync(9 * 60 * 1000);
+    await vi.advanceTimersByTimeAsync(BACKUP_INTERVAL_MS - 60 * 1000);
     windowTarget.routeVNSetAppActive(true);
     await vi.advanceTimersByTimeAsync(60 * 1000);
     expect(beforeBackup).toHaveBeenCalledTimes(2);

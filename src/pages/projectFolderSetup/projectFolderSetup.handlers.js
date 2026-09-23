@@ -133,16 +133,8 @@ export const handleConfirmStop = async (deps) => {
   }
 };
 
-export const handleConfirmSkip = async (deps) => {
-  const { appService, store, render } = deps;
-  if (store.selectIsBusy()) return;
+export const handleConfirmSkip = ({ appService, store, render }) => {
   store.setSkipDialogOpen({ open: false });
-  store.setBusy({ isBusy: true });
   render();
-  try {
-    await appService.skipBackupSetup();
-    appService.navigate("/projects", undefined, { historyMode: "replace" });
-  } catch (error) {
-    showSetupError(deps, error, "confirmError");
-  }
+  appService.navigate("/projects", undefined, { historyMode: "replace" });
 };

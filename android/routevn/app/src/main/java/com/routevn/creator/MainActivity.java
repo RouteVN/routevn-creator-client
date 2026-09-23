@@ -218,7 +218,9 @@ public class MainActivity extends Activity {
             public JSONArray projects() throws Exception { return listProjectFolders(); }
             public File root(String id) throws Exception { return getProjectRoot(id); }
             public String name(String id) throws Exception {
-                return readProjectInfoFromDatabaseFile(getProjectDatabaseFile(id)).optString("name", "");
+                JSONObject info = readProjectInfoFromDatabaseFile(getProjectDatabaseFile(id));
+                // optString turns a JSON null into the text "null".
+                return info.isNull("name") ? "" : info.optString("name", "");
             }
             public String counter(String id) throws Exception {
                 SQLiteDatabase database = openProjectDatabaseForBridge(getProjectDatabasePath(id));

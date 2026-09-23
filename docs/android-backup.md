@@ -25,7 +25,8 @@ Decisions:
   introduce database deltas or a custom archive format.
 - Write the new database first, then use renames for publication and recovery.
 - Store backup timestamps and other metadata in `backup.json`.
-- Check for changed projects every 10 minutes while the app is active.
+- Check for changed projects every 5 minutes while the app is active, and back
+  up newly created or imported projects without waiting for the interval.
 - Reserve 1 GB of free space after accounting for backup space requirements.
 - Reuse the iOS folder-setup UI with Android backup wording and a skip flow.
 - Show a card at the bottom of Projects when backups are not configured, the
@@ -34,7 +35,7 @@ Decisions:
 A backup on the same device protects against app uninstall and app-data
 clearing. It does not protect against device loss, factory reset, storage
 failure, or the user deleting the backup folder. Recovery reaches the latest
-completed backup. Ten minutes is a scheduling interval, not a guaranteed maximum
+completed backup. Five minutes is a scheduling interval, not a guaranteed maximum
 data-loss window: copying, suspension, failures, and unavailable storage can
 extend it.
 
@@ -113,18 +114,12 @@ Copy:
 - Secondary action: **Skip for now**
 
 Open setup only explicitly from the Projects card or settings; Android startup
-goes directly to Projects with no first-run setup redirect. The footer card's
-warning state is the persistent setup prompt. Remember completion or an explicit
-skip in `userConfig.androidBackupOnboarding`
-through the standard JS app config API (`getUserConfig`, `setUserConfig`,
-`flushUserConfig`). Flush the flag before completing configure, skip, or disable.
-When the flag is absent, an existing configured folder or legacy native skip is
-migrated into JS config. An explicit JS value takes precedence over legacy state.
-The native backup code no longer writes onboarding choices; native folder grants,
-backup scheduling metadata, and publication checkpoints keep their existing
-storage. There is no separate native KV implementation for onboarding. Skipping
-must leave ordinary project creation
-and editing available.
+goes directly to Projects with no first-run setup redirect and does not wait for
+backup status. The footer card's warning state is the persistent setup prompt, so
+no onboarding choice is persisted: skipping returns to Projects and records
+nothing. Native folder grants, backup scheduling metadata, and publication
+checkpoints keep their existing storage. Skipping must leave ordinary project
+creation and editing available.
 
 Reuse iOS's presentation, not its requirement for available external working
 storage. Backup failure or lost access must never block Android startup, project
@@ -145,9 +140,9 @@ Clicking **Skip for now** opens a warning dialog:
   cannot be recovered.**
 - Destructive action: **Continue without backups**
 
-Emphasize **ALL PROJECTS**. Closing the dialog returns to setup without recording
-a skip. Record the choice only when the user confirms. Use the dialog close
-affordance rather than adding a redundant Cancel button.
+Emphasize **ALL PROJECTS**. Closing the dialog returns to setup; confirming
+returns to Projects. Use the dialog close affordance rather than adding a
+redundant Cancel button.
 
 ### Projects Card
 
@@ -203,17 +198,17 @@ backups remain but may be outdated. Canceling keeps backup enabled.
 Stopping waits for the current project's publication, skips remaining projects,
 cancels scheduling, and durably forgets the destination and per-project backup
 status. Keep project data, asset revision counters, existing backup files, and
-shared URI grants intact. Mark setup skipped so restarting does not reopen
-onboarding; Projects and Config show **No backup set up** and offer setup again.
+shared URI grants intact. Projects and Config show **No backup set up** and
+offer setup again.
 A failed stop retains the configuration and reports an error. Only explicit
 folder setup re-enables backups.
 
 | Event                               | Behavior                                                                        |
 | ----------------------------------- | ------------------------------------------------------------------------------- |
 | Initial folder setup                | Immediately queue all existing projects once.                                   |
-| Every 10 minutes while active       | Check for changed projects; back them up sequentially.                          |
+| Every 5 minutes while active        | Check for changed projects; back them up sequentially.                          |
 | No project data changes             | Check destination access/existence only; skip snapshots and asset scans.        |
-| Project creation/import             | Mark pending for the next scheduled pass.                                       |
+| Project creation/import             | Back up five seconds later, skipping the interval cooldown.                     |
 | App launch/resume                   | Allow five seconds for the screen to settle; check once the remaining cooldown expires. |
 | Project switch or app backgrounding | Do not trigger an extra backup.                                                 |
 | Failure or low space                | Keep pending; retry at the next scheduled check.                                |
@@ -223,8 +218,8 @@ retry a failed backup on every resume or run multiple catch-up passes for missed
 intervals. Persist enough scheduling state to preserve that behavior across
 restarts. No 30-second debounce or two-minute backup schedule is intended.
 
-Use one cancellable timeout aimed at the persisted last attempt plus ten minutes,
-not a new ten-minute interval on every launch/resume. Resuming nine minutes after
+Use one cancellable timeout aimed at the persisted last attempt plus five minutes,
+not a new five-minute interval on every launch/resume. Resuming four minutes after
 the last attempt schedules a check one minute later. An overdue check waits five
 seconds after launch/resume and never blocks route setup or navigation. Cancel
 the timeout while hidden and on teardown; an in-flight pass must not recreate it
@@ -289,7 +284,7 @@ A background WorkManager schedule is not required for the first version.
 Foreground/resume scheduling is the agreed behavior. If background catch-up is
 added later, it must respect Android's inexact execution and the
 [15-minute periodic minimum](https://developer.android.com/reference/androidx/work/PeriodicWorkRequest).
-Do not promise unattended backups every 10 minutes while the app is closed.
+Do not promise unattended backups every 5 minutes while the app is closed.
 
 ## Backup Contents And Metadata
 
@@ -310,12 +305,16 @@ Folders are labeled with the sanitized project name plus the project id at
 first backup (`Project-<projectId>` when the name is empty); the id suffix
 keeps same-named projects distinct. Labels are creation-time snapshots: the
 persisted mapping owns folder identity, so project renames never move folders,
-and Settings keeps showing live names and last snapshot times. An unmapped
-folder is adopted only when its `backup.json` declares the local project id —
-after the user confirms reuse of a non-empty destination, or on the next
-backup. Unproven same-named folders still refuse with a name conflict instead
-of overwriting; import never reuses ids, so a metadata id match is lineage
-proof.
+and Settings keeps showing live names and last snapshot times. When a project
+has no mapping (after stopping backups or switching destinations), its next
+backup reclaims an existing `<label>-<projectId>` folder, preferring the current
+label, only with ownership proof: `backup.json` declares the project id, a
+`project.db` or `project.db.previous` holds that project's database, or the
+folder holds only what an interrupted first backup leaves behind. Import never
+reuses ids, so an id match is lineage proof. Reclaiming restores the mapping,
+not the old checkpoint: that backup publishes and verifies a fresh baseline
+before Settings reports it. Unproven, unreadable, or ambiguous duplicate folders
+are never overwritten; the backup refuses with a name conflict.
 
 Preserve the complete project database, including project-owned app records and
 local drafts, plus asset bytes and MIME sidecars. Do not back up the global
@@ -488,7 +487,7 @@ and handle write failures because free space can change after preflight.
 
 Perform space estimation only for due, changed projects. Insufficient space
 skips backup without altering the previous successful backup or clearing pending
-changes. Retry at the next 10-minute check.
+changes. Retry at the next 5-minute check.
 
 Android providers may return unknown space through the optional
 [`COLUMN_AVAILABLE_BYTES`](https://developer.android.com/reference/android/provider/DocumentsContract.Root#COLUMN_AVAILABLE_BYTES).
@@ -503,7 +502,7 @@ Warning copy:
 > folder. Last successful backup: today at 14:30.
 
 Use **Never backed up** when appropriate. Show a toast on entering the failure
-state, not every 10 minutes, and keep status visible in Projects/settings.
+state, not every 5 minutes, and keep status visible in Projects/settings.
 Clear the warning after a successful retry. Unknown capacity and lost permission
 need their own explicit messages rather than an inaccurate low-space message.
 
@@ -523,11 +522,11 @@ to record backup completion.
 
 Before shipping, validate:
 
-- Setup reuse, picker cancellation, confirmed skip persistence, and Projects card
+- Setup reuse, picker cancellation, confirmed skip, and Projects card
   placement/status in the UI; add VT coverage where practical.
 - No changed data means no snapshots or asset scans; changes to every durable
   project data category mark pending reliably across restart.
-- Ten-minute foreground cadence, resume catch-up, sequential execution, manual
+- Five-minute foreground cadence, resume catch-up, sequential execution, manual
   backup, and edits during copying without losing pending changes; one broken
   project must not starve the rest of the queue.
 - Successful import of the ordinary backup folder after uninstall/reinstall on
@@ -564,9 +563,9 @@ separate; see [Backup and device transfer](android.md#backup-and-device-transfer
   export, or active asset write. It checkpoints/closes/copies/reopens SQLite on
   the storage executor, then publishes on a separate native executor.
 - `backupService.js` owns one foreground queue. Native preferences claim each
-  ten-minute attempt before editor drafts are flushed, so failed saves are also
-  throttled. Dirty detection happens after that flush. Folder setup and manual
-  backup bypass the interval, never the capacity guard.
+  five-minute attempt before editor drafts are flushed, so failed saves are also
+  throttled. Dirty detection happens after that flush. Folder setup, manual
+  backup, and new projects bypass the interval, never the capacity guard.
 - Only Android's local external-storage DocumentsProvider is accepted. A small
   disposable file tests IO and rename behavior; `fstatvfs` measures the actual
   destination. Primary emulated storage and internal staging share one capacity
@@ -596,12 +595,14 @@ internal/emulated storage.
 Native regressions also cover reconnecting after revoking the original tree
 grant, retaining checkpoint/document identities, cancellation while preparation
 holds its monitor, cancellation during hashing, and cleanup of an unpublished
-snapshot without stranding the publication lock.
+snapshot without stranding the publication lock. Reclaiming covers interrupted
+first backups, re-verification of reclaimed folders, and refusing foreign,
+unreadable, or ambiguous folders.
 
 After `bun run build:android`, serve `_site` locally and run
 `ANDROID_TEST_ORIGIN=http://127.0.0.1:3017 node tests/android/backupSetup.browser.mjs`.
 This exercises the packaged UI with a fixture native bridge, including picker
-cancellation, closing/confirming skip, skip persistence, low-space warnings,
+cancellation, closing/confirming skip, low-space warnings,
 and Settings. It does not exercise Android's real picker or URI grants.
 
 Vivo validation on 2026-09-18: the initial backup failed because `Os.link`

@@ -172,9 +172,9 @@ const appService = createAppService({
   subject,
 });
 await appService.initUserConfig();
-// Startup lands directly on Projects; the backup status card in its footer is
-// the persistent entry point for backup setup.
-await appService.initializeBackup();
+// Startup lands directly on Projects without waiting for native backup status;
+// the footer backup card is the entry point for backup setup.
+void appService.initializeBackup();
 
 const apiService = createApiService({
   baseUrl: readAndroidEnv(

@@ -18,7 +18,6 @@ const fixture = () => {
   const appService = {
     getProjectFolderSetup: () => ({ isBackup: true, configured: false }),
     showDialog: vi.fn(async () => false),
-    skipBackupSetup: vi.fn(async () => {}),
     disableBackup: vi.fn(async () => {}),
     navigate: vi.fn(),
     showToast: vi.fn(),
@@ -92,18 +91,16 @@ describe("Android backup setup", () => {
   it("renders backup wording and requires an explicit skip confirmation", async () => {
     const deps = fixture();
     expect(deps.store.selectViewData().title).toBe("Setup backup folder");
-    await handlers.handleSkip(deps);
-    expect(deps.appService.skipBackupSetup).not.toHaveBeenCalled();
+    handlers.handleSkip(deps);
     expect(deps.store.selectViewData().copy.skipWarning).toContain(
       "ALL PROJECTS",
     );
     expect(deps.state.skipDialogOpen).toBe(true);
     handlers.handleCloseSkip(deps);
     expect(deps.state.skipDialogOpen).toBe(false);
-    expect(deps.appService.skipBackupSetup).not.toHaveBeenCalled();
+    expect(deps.appService.navigate).not.toHaveBeenCalled();
     handlers.handleSkip(deps);
-    await handlers.handleConfirmSkip(deps);
-    expect(deps.appService.skipBackupSetup).toHaveBeenCalledOnce();
+    handlers.handleConfirmSkip(deps);
     expect(deps.appService.navigate).toHaveBeenCalledWith(
       "/projects",
       undefined,

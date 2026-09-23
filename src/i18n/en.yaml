@@ -2536,7 +2536,7 @@ androidBackup:
   upToDate: Up to date
   never: Never backed up
   lastBackup: 'Last backup:'
-  schedule: Automatic backup every 10 minutes
+  schedule: Automatic backup every 5 minutes
 androidBackupErrors:
   failed: Backup could not finish. Your previous backup is kept. Try again or choose another local folder.
   lowSpace: Backup paused. Free up space on your device or backup storage. At least 1 GB must remain free after the backup.
