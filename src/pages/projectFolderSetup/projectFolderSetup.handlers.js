@@ -136,5 +136,8 @@ export const handleConfirmStop = async (deps) => {
 export const handleConfirmSkip = ({ appService, store, render }) => {
   store.setSkipDialogOpen({ open: false });
   render();
+  if (appService.getPayload().from === "config" && appService.canGoBack()) {
+    return appService.back();
+  }
   appService.navigate("/projects", undefined, { historyMode: "replace" });
 };

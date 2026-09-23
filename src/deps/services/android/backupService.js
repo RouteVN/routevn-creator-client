@@ -12,7 +12,13 @@ export const createBackupService = ({
   unschedule = clearTimeout,
   now = Date.now,
 }) => {
-  const state = new BehaviorSubject({ configured: false, projects: [] });
+  // Loading until native status arrives, so the UI never shows an
+  // unconfigured state for a configured folder.
+  const state = new BehaviorSubject({
+    configured: false,
+    projects: [],
+    loading: true,
+  });
   let operation;
   let disableOperation;
   let cleanup;
@@ -63,7 +69,12 @@ export const createBackupService = ({
     try {
       return publish(await client.status());
     } catch {
-      return publish({ ...state.value, error: "failed", running: false });
+      return publish({
+        ...state.value,
+        loading: false,
+        error: "failed",
+        running: false,
+      });
     }
   };
   const initialize = async () => {
@@ -93,8 +104,6 @@ export const createBackupService = ({
       return Promise.resolve();
     }
     cancelTimer();
-    // This pass lists pending projects afresh, including any new project.
-    newProjectPending = false;
     // Keep failures throttled even if the bridge cannot persist/read the claim.
     lastLocalAttemptAt = now();
     operation = (async () => {
@@ -105,6 +114,9 @@ export const createBackupService = ({
         if (disableOperation || !client.isActive()) return;
         await beforeBackup();
         if (disableOperation || !client.isActive()) return;
+        // This listing includes any new project; a pass that stops earlier
+        // keeps the new project waiting for the next one.
+        newProjectPending = false;
         const { projectIds } = await client.pendingProjects();
         if (projectIds.length) {
           publish({ ...state.value, running: true });
@@ -121,6 +133,8 @@ export const createBackupService = ({
         }
       } catch (error) {
         passError = error.code ?? "failed";
+        // A failed pass falls back to the interval instead of retrying at once.
+        newProjectPending = false;
       } finally {
         const status = await refresh();
         const error =

@@ -48,9 +48,8 @@ top-level `Documents` folder, create/use `Documents/RouteVN Backups`. Use every
 other selected folder directly, including an existing `RouteVN Backups` folder.
 Persist the selected parent grant separately from the actual backup directory.
 When the user reconnects the same destination through a different tree grant,
-rebuild every saved project-folder URI using the new tree and its existing
-document ID. Preserve project mappings and successful snapshot counters; never
-keep using a revoked grant embedded in an old URI.
+keep successful snapshot counters and resolve project folders through the new
+grant; never keep using a revoked grant embedded in an old URI.
 Existing configurations keep their current destination until explicitly changed.
 On first-time setup, request Documents as the initial picker location using
 `DocumentsContract.EXTRA_INITIAL_URI` on Android 8+. The system picker may fall
@@ -82,7 +81,7 @@ docs rather than this confirmation. Never treat a fresh installation's empty pro
 to delete existing backups. Reuse ordinary project-folder import for recovery;
 no bulk-restore wizard or automatic merge is required. The current Android import
 creates a new project identity, so the imported project receives a new backup
-mapping rather than automatically overwriting its source backup.
+folder rather than automatically overwriting its source backup.
 Ignore unrelated files in the selected parent when deciding whether this
 confirmation is needed. A file named `RouteVN Backups` is a conflict; preserve it
 and the previous configuration.
@@ -115,9 +114,9 @@ Copy:
 
 Open setup only explicitly from the Projects card or settings; Android startup
 goes directly to Projects with no first-run setup redirect and does not wait for
-backup status. The footer card's warning state is the persistent setup prompt, so
-no onboarding choice is persisted: skipping returns to Projects and records
-nothing. Native folder grants, backup scheduling metadata, and publication
+backup status; the backup card stays hidden until status loads. The footer
+card's warning state is the persistent setup prompt, so no onboarding choice is
+persisted: skipping returns to where setup was opened and records nothing. Native folder grants, backup scheduling metadata, and publication
 checkpoints keep their existing storage. Skipping must leave ordinary project
 creation and editing available.
 
@@ -141,8 +140,8 @@ Clicking **Skip for now** opens a warning dialog:
 - Destructive action: **Continue without backups**
 
 Emphasize **ALL PROJECTS**. Closing the dialog returns to setup; confirming
-returns to Projects. Use the dialog close affordance rather than adding a
-redundant Cancel button.
+returns to where setup was opened. Use the dialog close affordance rather than
+adding a redundant Cancel button.
 
 ### Projects Card
 
@@ -303,18 +302,21 @@ RouteVN Backups/
 
 Folders are labeled with the sanitized project name plus the project id at
 first backup (`Project-<projectId>` when the name is empty); the id suffix
-keeps same-named projects distinct. Labels are creation-time snapshots: the
-persisted mapping owns folder identity, so project renames never move folders,
-and Settings keeps showing live names and last snapshot times. When a project
-has no mapping (after stopping backups or switching destinations), its next
-backup reclaims an existing `<label>-<projectId>` folder, preferring the current
-label, only with ownership proof: `backup.json` declares the project id, a
-`project.db` or `project.db.previous` holds that project's database, or the
-folder holds only what an interrupted first backup leaves behind. Import never
-reuses ids, so an id match is lineage proof. Reclaiming restores the mapping,
-not the old checkpoint: that backup publishes and verifies a fresh baseline
-before Settings reports it. Unproven, unreadable, or ambiguous duplicate folders
-are never overwritten; the backup refuses with a name conflict.
+keeps same-named projects distinct. Each backup finds the project's folder in
+the destination by its `-<projectId>` suffix and creates `<label>-<projectId>`
+only when none exists; no per-project folder mapping is stored. Labels are
+creation-time snapshots: project renames keep the original folder, and Settings
+keeps showing live names and last snapshot times. Stopping and re-enabling,
+switching destinations back, and `Project-<projectId>` folders from earlier
+versions all resolve to the same folder. A folder with the project's id suffix
+is used even when another installation wrote it, such as after a device
+transfer; publication keeps the previous database as `project.db.previous` and
+never replaces a database that belongs to a different project. When several
+folders share the id suffix, the one whose `backup.json` or `project.db` changed
+most recently is used (ties go to the first name) and the others are left
+untouched. Stopping or switching destinations clears successful checkpoints,
+so the next backup publishes and verifies a fresh baseline before Settings
+reports it.
 
 Preserve the complete project database, including project-owned app records and
 local drafts, plus asset bytes and MIME sidecars. Do not back up the global
@@ -595,9 +597,10 @@ internal/emulated storage.
 Native regressions also cover reconnecting after revoking the original tree
 grant, retaining checkpoint/document identities, cancellation while preparation
 holds its monitor, cancellation during hashing, and cleanup of an unpublished
-snapshot without stranding the publication lock. Reclaiming covers interrupted
-first backups, re-verification of reclaimed folders, and refusing foreign,
-unreadable, or ambiguous folders.
+snapshot without stranding the publication lock. Folder lookup covers
+re-enabling and switching back, interrupted first backups, re-verifying a
+reused folder, earlier `Project-<projectId>` folders, choosing the newest of
+duplicate id suffixes, and never replacing another project's database.
 
 After `bun run build:android`, serve `_site` locally and run
 `ANDROID_TEST_ORIGIN=http://127.0.0.1:3017 node tests/android/backupSetup.browser.mjs`.

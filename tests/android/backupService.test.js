@@ -95,8 +95,10 @@ describe("Android disaster backup scheduling", () => {
       notify: vi.fn(),
     });
     const stop = service.start(() => ({}));
+    expect(service.getStatus().loading).toBe(true);
     expect(vi.getTimerCount()).toBe(0);
     await service.initialize();
+    expect(service.getStatus().loading).toBeUndefined();
     await vi.advanceTimersByTimeAsync(BACKUP_RESUME_DELAY_MS);
     expect(client.beginPass).toHaveBeenCalledOnce();
     stop();
@@ -233,6 +235,31 @@ describe("Android disaster backup scheduling", () => {
     await f.advance(0);
     expect(f.client.beginPass).toHaveBeenCalledTimes(2);
     expect(f.backupProject.mock.calls).toEqual([["one"], ["new"]]);
+    f.stop();
+  });
+
+  it("keeps a new project waiting when a pass stops before listing projects", async () => {
+    const f = await fixture();
+    f.projects([{ id: "new", pending: true }]);
+    f.beforeBackup.mockImplementationOnce(async () => f.active(false));
+    f.service.backupNewProject();
+    await f.advance(BACKUP_RESUME_DELAY_MS);
+    expect(f.client.pendingProjects).not.toHaveBeenCalled();
+    f.active(true);
+    await f.advance(BACKUP_RESUME_DELAY_MS);
+    expect(f.backupProject).toHaveBeenCalledWith("new");
+    f.stop();
+  });
+
+  it("falls back to the interval when a new-project pass fails", async () => {
+    const f = await fixture();
+    f.beforeBackup.mockRejectedValueOnce(new Error("save failed"));
+    f.service.backupNewProject();
+    await f.advance(BACKUP_RESUME_DELAY_MS);
+    await f.advance(BACKUP_RESUME_DELAY_MS);
+    expect(f.client.beginPass).toHaveBeenCalledOnce();
+    await f.advance(BACKUP_INTERVAL_MS);
+    expect(f.client.beginPass).toHaveBeenCalledTimes(2);
     f.stop();
   });
 

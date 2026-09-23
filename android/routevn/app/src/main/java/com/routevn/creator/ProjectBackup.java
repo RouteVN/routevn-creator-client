@@ -124,6 +124,11 @@ final class ProjectBackup {
             .put("displayPath", uri.isEmpty() ? "" : displayFolderPath(backupRoot())));
         status.put("lastAttemptAt", prefs.getLong("lastAttemptAt", 0));
         status.put("running", prepared != null);
+        Map<String, Uri> folders = new LinkedHashMap<>();
+        if (!uri.isEmpty()) {
+            try { folders = children(backupRoot()); }
+            catch (Exception error) { } // Lost access is reported by the next pass.
+        }
         JSONArray projects = storage.projects();
         for (int i = 0; i < projects.length(); i++) {
             JSONObject project = projects.getJSONObject(i);
@@ -135,8 +140,10 @@ final class ProjectBackup {
             project.put("pending", pending);
             project.put("snapshotAt", saved.optString("snapshotAt"));
             project.put("error", prefs.getString("error:" + id, ""));
-            String backupFolder = prefs.getString("folder:" + id, "");
-            project.put("backupFolderPath", backupFolder.isEmpty() ? "" : displayFolderPath(Uri.parse(backupFolder)));
+            Uri backupFolder = null;
+            try { backupFolder = projectFolder(folders, id); }
+            catch (Exception error) { } // Lost access is reported by the next pass.
+            project.put("backupFolderPath", backupFolder == null ? "" : displayFolderPath(backupFolder));
         }
         status.put("projects", projects);
         return status;
@@ -188,13 +195,9 @@ final class ProjectBackup {
                 }
             } else {
                 // The same folder may be selected through a different tree grant.
-                // Preserve project identities/checkpoints, but stop using the old
-                // grant embedded in every saved document URI.
+                // Keep checkpoints; drop project-folder URIs saved by older versions.
                 for (String key : prefs.getAll().keySet()) {
-                    if (!key.startsWith("folder:")) continue;
-                    Uri mapped = Uri.parse(prefs.getString(key, ""));
-                    editor.putString(key, DocumentsContract.buildDocumentUriUsingTree(
-                        tree, DocumentsContract.getDocumentId(mapped)).toString());
+                    if (key.startsWith("folder:")) editor.remove(key);
                 }
             }
             save(editor.putString("uri", value).putString("directory", destination.toString())
@@ -231,14 +234,16 @@ final class ProjectBackup {
     JSONObject pendingProjects() throws Exception {
         JSONArray projects = storage.projects();
         JSONArray pending = new JSONArray();
+        Map<String, Uri> folders = null;
         for (int i = 0; i < projects.length(); i++) {
             String id = projects.getJSONObject(i).getString("id");
             try {
+                if (folders == null) folders = children(backupRoot());
                 JSONObject saved = savedProject(id);
-                String folder = prefs.getString("folder:" + id, "");
+                Uri folder = projectFolder(folders, id);
                 boolean intact = false;
-                if (!folder.isEmpty()) {
-                    Map<String, Uri> entries = children(Uri.parse(folder));
+                if (folder != null) {
+                    Map<String, Uri> entries = children(folder);
                     intact = entries.containsKey("project.db") && entries.containsKey("files") &&
                         entries.containsKey("file-metadata") && metadataMatches(entries.get("backup.json"), saved);
                 }
@@ -258,10 +263,7 @@ final class ProjectBackup {
         Prepared next = new Prepared();
         try {
             next.projectId = projectId;
-            next.staging = new File(context.getNoBackupFilesDir(), "project-backup-staging");
-            removeTree(next.staging);
-            if (!next.staging.mkdirs()) throw new Failure("failed");
-            next.directory = projectDirectory(projectId, next.staging);
+            next.directory = projectDirectory(projectId);
             long[] destinationSpace = probeSpace(next.directory);
             next.destinationDevice = destinationSpace[1];
             File source = storage.root(projectId);
@@ -285,6 +287,9 @@ final class ProjectBackup {
             }
             requireSpace(destinationSpace[0], required);
             requireSpace(new StatFs(context.getFilesDir().getAbsolutePath()).getAvailableBytes(), localRequired);
+            next.staging = new File(context.getNoBackupFilesDir(), "project-backup-staging");
+            removeTree(next.staging);
+            if (!next.staging.mkdirs()) throw new Failure("failed");
             next.database = new File(next.staging, "project.db");
             storage.snapshot(projectId, next.staging);
             checkActive();
@@ -391,36 +396,49 @@ final class ProjectBackup {
         }
     }
 
-    private Uri projectDirectory(String projectId, File scratch) throws Exception {
+    // A project's backup folder is the one whose name ends in "-<projectId>".
+    // The label before it is the project name at creation, so renames keep the
+    // original folder, and stopping, re-enabling, or switching back finds it again.
+    private Uri projectDirectory(String projectId) throws Exception {
         Uri parent = backupRoot();
-        String mapped = prefs.getString("folder:" + projectId, "");
-        if (!mapped.isEmpty()) {
-            Uri directory = Uri.parse(mapped);
-            name(directory); // Lost access must not cause a silent replacement.
-            return directory;
+        Uri folder = projectFolder(children(parent), projectId);
+        return folder != null ? folder : create(parent, backupFolderName(projectId), true);
+    }
+
+    // With several matching folders, use the one whose backup.json or project.db
+    // changed most recently; ties go to the first name so the choice is stable.
+    // The other folders are never touched.
+    private Uri projectFolder(Map<String, Uri> entries, String projectId) throws Exception {
+        List<String> names = new ArrayList<>();
+        for (Map.Entry<String, Uri> entry : entries.entrySet()) {
+            if (entry.getKey().endsWith("-" + projectId) && isDirectory(entry.getValue())) names.add(entry.getKey());
         }
-        // The persisted mapping owns folder identity; the label is a creation-time
-        // snapshot, so project renames never move folders. Without a mapping
-        // (stopped backups, a destination switch), reclaim this project's own
-        // "<label>-<projectId>" folder, preferring the current label. Only the
-        // mapping is reclaimed: the next publication re-verifies its contents.
-        String folderName = backupFolderName(projectId);
-        Map<String, Uri> entries = children(parent);
-        Uri current = entries.get(folderName);
-        Uri directory = current != null && ownsFolder(current, projectId, scratch) ? current : null;
-        if (directory == null) {
-            List<Uri> owned = new ArrayList<>();
-            for (Map.Entry<String, Uri> entry : entries.entrySet()) {
-                if (!entry.getKey().equals(folderName) && entry.getKey().endsWith("-" + projectId) &&
-                    ownsFolder(entry.getValue(), projectId, scratch)) owned.add(entry.getValue());
+        if (names.size() < 2) return names.isEmpty() ? null : entries.get(names.get(0));
+        java.util.Collections.sort(names);
+        String newest = names.get(0);
+        long newestWrite = lastBackupWrite(entries.get(newest));
+        for (String name : names.subList(1, names.size())) {
+            long write = lastBackupWrite(entries.get(name));
+            if (write > newestWrite) { newest = name; newestWrite = write; }
+        }
+        return entries.get(newest);
+    }
+
+    private long lastBackupWrite(Uri folder) throws Exception {
+        Uri uri = DocumentsContract.buildChildDocumentsUriUsingTree(folder, DocumentsContract.getDocumentId(folder));
+        long latest = 0;
+        try (Cursor cursor = resolver.query(uri, new String[] {
+            DocumentsContract.Document.COLUMN_DISPLAY_NAME, DocumentsContract.Document.COLUMN_LAST_MODIFIED
+        }, null, null, null)) {
+            if (cursor == null) throw new Failure("reconnect");
+            while (cursor.moveToNext()) {
+                String name = cursor.getString(0);
+                if ((name.equals("backup.json") || name.equals("project.db")) && !cursor.isNull(1)) {
+                    latest = Math.max(latest, cursor.getLong(1));
+                }
             }
-            checkActive();
-            // Ambiguous copies or an unproven same-named folder are never guessed at.
-            if (owned.size() > 1 || (owned.isEmpty() && current != null)) throw new Failure("nameConflict");
-            directory = owned.isEmpty() ? create(parent, folderName, true) : owned.get(0);
         }
-        save(prefs.edit().putString("folder:" + projectId, directory.toString()));
-        return directory;
+        return latest;
     }
 
     private String backupFolderName(String projectId) throws Exception {
@@ -428,59 +446,24 @@ final class ProjectBackup {
         return sanitizeFolderTitle(storage.name(projectId), "Project") + "-" + projectId;
     }
 
-    // backup.json and project.db only appear by renaming verified .next files,
-    // so a present one must name this project; unreadable ones prove nothing.
-    // Without either, the folder may hold only what an interrupted first
-    // backup leaves behind (possibly nothing). Import never reuses ids.
-    private boolean ownsFolder(Uri folder, String projectId, File scratch) throws Exception {
-        Map<String, Uri> entries;
-        try {
-            requireDirectory(folder);
-            entries = children(folder);
-        } catch (Failure error) { return false; }
-        try {
-            if (entries.containsKey("backup.json")) {
-                JSONObject metadata = readBackupMetadata(entries.get("backup.json"));
-                return metadata != null && projectId.equals(metadata.optString("projectId"));
-            }
-            for (String name : new String[] {"project.db", "project.db.previous"}) {
-                if (validDocumentDatabase(entries.get(name), projectId, scratch)) return true;
-            }
-        } catch (Exception error) { return false; }
-        for (String name : entries.keySet()) {
-            if (!name.equals("files") && !name.equals("file-metadata") &&
-                !name.endsWith(".next") && !name.startsWith(".routevn-space-")) return false;
-        }
-        return true;
-    }
-
     private boolean metadataMatches(Uri uri, JSONObject saved) throws Exception {
-        if (!saved.has("databaseSha256")) return false;
-        JSONObject metadata = readBackupMetadata(uri);
-        return metadata != null &&
-            saved.optString("projectId").equals(metadata.optString("projectId")) &&
-            saved.optString("changeCounter").equals(metadata.optString("changeCounter")) &&
-            saved.optString("databaseSha256").equals(metadata.optString("databaseSha256"));
-    }
-
-    // Capped parse plus structural validation; unreadable or foreign formats yield null.
-    private JSONObject readBackupMetadata(Uri uri) throws Exception {
-        if (uri == null) return null;
+        if (uri == null || !saved.has("databaseSha256")) return false;
         try (InputStream in = resolver.openInputStream(uri)) {
             if (in == null) throw new Failure("reconnect");
             java.io.ByteArrayOutputStream bytes = new java.io.ByteArrayOutputStream();
             byte[] buffer = new byte[1024];
             int count;
             while ((count = in.read(buffer)) != -1) {
-                if (bytes.size() + count > 16384) return null;
+                if (bytes.size() + count > 16384) return false;
                 bytes.write(buffer, 0, count);
             }
             JSONObject metadata;
             try { metadata = new JSONObject(bytes.toString("UTF-8")); }
-            catch (org.json.JSONException error) { return null; }
-            if (metadata.optInt("formatVersion") != 1) return null;
-            if (metadata.optString("projectId").trim().isEmpty()) return null;
-            return metadata;
+            catch (org.json.JSONException error) { return false; }
+            return metadata.optInt("formatVersion") == 1 &&
+                saved.optString("projectId").equals(metadata.optString("projectId")) &&
+                saved.optString("changeCounter").equals(metadata.optString("changeCounter")) &&
+                saved.optString("databaseSha256").equals(metadata.optString("databaseSha256"));
         }
     }
 
@@ -517,9 +500,9 @@ final class ProjectBackup {
         // Providers rewrite control characters and unpaired surrogates; a
         // rewritten name would no longer match the requested folder name.
         resolvedTitle = resolvedTitle.replaceAll("[\\\\/:*?\"<>|\\p{Cntrl}\\p{Cs}]+", " ");
-        resolvedTitle = resolvedTitle.replaceAll("\\s+", " ").trim();
-        resolvedTitle = resolvedTitle.replaceAll("^\\.+", "");
-        resolvedTitle = resolvedTitle.replaceAll("\\.+$", "").trim();
+        resolvedTitle = resolvedTitle.replaceAll("\\s+", " ");
+        // Strip dots and spaces from both ends; a leading dot hides the folder.
+        resolvedTitle = resolvedTitle.replaceAll("^[.\\s]+|[.\\s]+$", "");
         if (resolvedTitle.isEmpty()) resolvedTitle = fallback;
         // Cut whole code points: at most 80, and 200 UTF-8 bytes so a suffix
         // still fits the 255-byte file name limit.
@@ -745,9 +728,13 @@ final class ProjectBackup {
     }
 
     private void requireDirectory(Uri uri) throws Exception {
+        if (!isDirectory(uri)) throw new Failure("nameConflict");
+    }
+
+    private boolean isDirectory(Uri uri) throws Exception {
         try (Cursor cursor = resolver.query(uri, new String[] {DocumentsContract.Document.COLUMN_MIME_TYPE}, null, null, null)) {
             if (cursor == null || !cursor.moveToFirst()) throw new Failure("reconnect");
-            if (!DocumentsContract.Document.MIME_TYPE_DIR.equals(cursor.getString(0))) throw new Failure("nameConflict");
+            return DocumentsContract.Document.MIME_TYPE_DIR.equals(cursor.getString(0));
         }
     }
 

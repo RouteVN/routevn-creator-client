@@ -29,6 +29,7 @@ public class BackupDocumentsProvider extends DocumentsProvider {
                 case Document.COLUMN_DISPLAY_NAME: row.add(file.getName()); break;
                 case Document.COLUMN_MIME_TYPE: row.add(file.isDirectory() ? Document.MIME_TYPE_DIR : "application/octet-stream"); break;
                 case Document.COLUMN_SIZE: row.add(file.length()); break;
+                case Document.COLUMN_LAST_MODIFIED: row.add(file.lastModified()); break;
                 case Document.COLUMN_FLAGS: row.add(Document.FLAG_SUPPORTS_WRITE | Document.FLAG_SUPPORTS_RENAME | Document.FLAG_SUPPORTS_DELETE | Document.FLAG_DIR_SUPPORTS_CREATE); break;
                 default: row.add(null);
             }

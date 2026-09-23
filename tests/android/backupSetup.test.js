@@ -20,6 +20,9 @@ const fixture = () => {
     showDialog: vi.fn(async () => false),
     disableBackup: vi.fn(async () => {}),
     navigate: vi.fn(),
+    getPayload: vi.fn(() => ({})),
+    canGoBack: vi.fn(() => true),
+    back: vi.fn(),
     showToast: vi.fn(),
     pickProjectFolderSetup: vi.fn(async () => undefined),
     confirmProjectFolderSetup: vi.fn(async () => ({
@@ -106,6 +109,12 @@ describe("Android backup setup", () => {
       undefined,
       { historyMode: "replace" },
     );
+    // Setup opened from the Projects card or Config returns to where it opened.
+    deps.appService.getPayload.mockReturnValue({ from: "config" });
+    handlers.handleSkip(deps);
+    handlers.handleConfirmSkip(deps);
+    expect(deps.appService.back).toHaveBeenCalledOnce();
+    expect(deps.appService.navigate).toHaveBeenCalledOnce();
   });
   it("cancellation preserves setup and existing backups require confirmation", async () => {
     const deps = fixture();
@@ -133,6 +142,9 @@ describe("Android backup setup", () => {
     };
     const view = () =>
       selectViewData({ state: { status }, props: { settings: false }, i18n });
+    status.loading = true;
+    expect(view().visible).toBe(false);
+    delete status.loading;
     expect(view().visible).toBe(true);
     expect(view().title).toBe("Local backups");
     expect(view().showWarning).toBe(false);
