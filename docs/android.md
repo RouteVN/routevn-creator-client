@@ -414,7 +414,8 @@ The configured policy is:
   backed up or transferred
 
 The [Android project backup system](android-backup.md) copies changed projects
-to a user-selected local folder about every 10 minutes while the app is active.
+to a user-selected local folder about every 5 minutes while the app is active,
+and backs up newly created or imported projects shortly after they are added.
 Launch/resume checks use the remaining cooldown, with a five-second grace period
 before overdue work starts. They do not block navigation; backgrounding cancels
 the pending timer rather than starting an exit backup.

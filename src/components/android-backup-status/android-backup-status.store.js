@@ -30,7 +30,7 @@ export const selectViewData = ({ state, props, i18n }) => {
         ? copy.title
         : copy.configuredTitle,
     showWarning: !status.configured || Boolean(error),
-    visible: true,
+    visible: !status.loading,
     settings: props.settings,
     configured: status.configured,
     busy: status.running,

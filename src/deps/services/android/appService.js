@@ -318,7 +318,6 @@ export const createAppService = (params) => {
 
   const backup = createBackupService({
     client: createAndroidBackupClient(params.appActivity),
-    userConfig: appService,
     backupProject: (id) => params.projectService.backupProject(id),
     beforeBackup: () => appService.prepareNavigation({ reason: "backup" }),
     notify: (options) => appService.showToast(options),
@@ -340,7 +339,6 @@ export const createAppService = (params) => {
         startInDocuments: !backup.getStatus().configured,
       }),
     confirmProjectFolderSetup: backup.configure,
-    skipBackupSetup: backup.skip,
     disableBackup: backup.disable,
 
     showProgressDialog(options) {
@@ -350,6 +348,18 @@ export const createAppService = (params) => {
     async loadAllProjects() {
       await syncAndroidProjectEntriesFromStorage();
       return appService.loadAllProjects();
+    },
+
+    async createNewProject(payload) {
+      const project = await appService.createNewProject(payload);
+      backup.backupNewProject();
+      return project;
+    },
+
+    async openExistingProject(folderPath) {
+      const project = await appService.openExistingProject(folderPath);
+      backup.backupNewProject();
+      return project;
     },
 
     async deleteProject(projectId) {

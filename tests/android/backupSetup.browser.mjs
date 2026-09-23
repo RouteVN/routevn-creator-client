@@ -115,44 +115,33 @@ try {
     };
   });
   await page.goto(origin + "/android/index.html");
+  // Startup goes straight to Projects; the footer card owns setup entry now.
   await page
-    .getByText("Setup backup folder", { exact: true })
+    .locator("rvn-android-backup-status")
+    .getByText("Set up backup folder", { exact: true })
     .waitFor({ timeout: 10000 })
     .catch(async (error) => {
       console.error(await page.locator("body").innerText());
       console.error(await page.evaluate(() => window.backupTrial));
       throw error;
     });
+  await page
+    .locator("rvn-android-backup-status")
+    .getByText("Set up backup folder", { exact: true })
+    .click();
+  await page.getByText("Setup backup folder", { exact: true }).waitFor();
   await page.locator("#setupFolderButton").click();
   assert.equal(await page.locator("#continueFolderButton").count(), 0);
   await page.locator("#skipBackupButton").click();
   await page.getByText("Continue without backups?", { exact: true }).waitFor();
   await page.keyboard.press("Escape");
   await page.getByText("Setup backup folder", { exact: true }).waitFor();
-  assert.ok(
-    !(await page.evaluate(() => window.backupTrial.calls)).includes(
-      "skipBackupSetup",
-    ),
-  );
   await page.locator("#skipBackupButton").click();
   await page.getByText("Continue without backups", { exact: true }).click();
   await page
     .locator("rvn-android-backup-status")
     .getByText("Set up backup folder", { exact: true })
     .waitFor();
-  assert.equal(
-    await page.evaluate(
-      () =>
-        JSON.parse(localStorage.getItem("db:userConfig"))
-          .androidBackupOnboarding,
-    ),
-    true,
-  );
-  assert.ok(
-    !(await page.evaluate(() => window.backupTrial.calls)).includes(
-      "skipBackupSetup",
-    ),
-  );
   await page.reload();
   await page
     .locator("rvn-android-backup-status")
@@ -221,7 +210,7 @@ try {
     });
   assert.deepEqual(errors, []);
   console.log(
-    "Android backup setup, cancellation, skip persistence, low-space card and settings passed.",
+    "Android backup setup, cancellation, skip, low-space card and settings passed.",
   );
 } finally {
   await browser.close();

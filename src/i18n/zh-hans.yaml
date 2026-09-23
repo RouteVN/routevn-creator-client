@@ -2536,7 +2536,7 @@ androidBackup:
   upToDate: 已备份
   never: 尚未备份
   lastBackup: 上次备份：
-  schedule: 应用打开期间，每10分钟备份有更改的项目。
+  schedule: 应用打开期间，每5分钟备份有更改的项目。
 androidBackupErrors:
   failed: 无法完成备份。之前的备份已保留。请重试或选择其他本地文件夹。
   lowSpace: 备份已暂停。请释放设备或备份存储空间，确保备份完成后至少还有1 GB可用空间。

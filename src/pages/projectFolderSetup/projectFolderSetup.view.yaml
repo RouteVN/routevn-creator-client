@@ -50,12 +50,12 @@ template:
               - $if errorMessage:
                   - rtgl-text#projectFolderError role=alert s=sm: ${errorMessage}
               - rtgl-button#setupFolderButton w=f v=${setupVariant} ?disabled=${isBusy}: ${setupLabel}
+              - $if isBackup && hasSavedFolder:
+                  - rtgl-button#stopBackupButton w=f v=se ?disabled=${isBusy}: ${copy.stop}
               - $if hasSavedFolder:
                   - rtgl-button#continueFolderButton w=f ?disabled=${isBusy}: ${copy.continue}
               - $if isBackup && !hasSavedFolder:
                   - rtgl-button#skipBackupButton w=f v=se ?disabled=${isBusy}: ${copy.skip}
-              - $if isBackup && hasSavedFolder:
-                  - rtgl-button#stopBackupButton w=f v=tx ?disabled=${isBusy}: ${copy.stop}
   - $if isBackup:
       - rtgl-dialog#stopBackupDialog ?open=${stopDialogOpen} s=sm:
           - rtgl-view slot=content g=lg:
