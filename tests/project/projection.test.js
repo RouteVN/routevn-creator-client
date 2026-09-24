@@ -1,9 +1,10 @@
-import { describe, expect, it } from "vitest";
+import { describe, expect, it, vi } from "vitest";
 import createRouteEngine, { resolveLayoutReferences } from "route-engine-js";
 import {
   buildFilteredStateForExport,
   collectUsedResourcesForExport,
   constructProjectData,
+  constructReleaseProjectData,
   getSectionPresentation,
   projectRepositoryStateToDomainState,
 } from "../../src/internal/project/projection.js";
@@ -688,6 +689,315 @@ describe("constructProjectData", () => {
       { text: ". Score: " },
       { text: 7 },
     ]);
+  });
+
+  it("keeps a styled dialogue run unstyled when the dialogue text has no base style", () => {
+    const repositoryState = createExportRepositoryState({
+      layouts: createTreeCollection(
+        {
+          "dialogue-layout": {
+            id: "dialogue-layout",
+            type: "layout",
+            name: "Dialogue Layout",
+            layoutType: "dialogue-adv",
+            elements: createTreeCollection(
+              {
+                "dialogue-text": {
+                  id: "dialogue-text",
+                  type: "text-revealing-ref-dialogue-content",
+                  name: "Dialogue Text",
+                  width: 800,
+                  height: 160,
+                },
+              },
+              [{ id: "dialogue-text" }],
+            ),
+          },
+        },
+        [{ id: "dialogue-layout" }],
+      ),
+      scenes: createTreeCollection(
+        {
+          "scene-1": {
+            id: "scene-1",
+            type: "scene",
+            name: "Scene 1",
+            initialSectionId: "section-1",
+            sections: createTreeCollection(
+              {
+                "section-1": {
+                  id: "section-1",
+                  type: "section",
+                  name: "Section 1",
+                  lines: createTreeCollection(
+                    {
+                      "line-1": {
+                        id: "line-1",
+                        actions: {
+                          dialogue: {
+                            ui: { resourceId: "dialogue-layout" },
+                            content: [
+                              {
+                                text: "Bold",
+                                textStyle: { fontWeight: "bold" },
+                              },
+                            ],
+                          },
+                        },
+                      },
+                    },
+                    [{ id: "line-1" }],
+                  ),
+                },
+              },
+              [{ id: "section-1" }],
+            ),
+          },
+        },
+        [{ id: "scene-1" }],
+      ),
+    });
+    const warn = vi.spyOn(console, "warn").mockImplementation(() => {});
+
+    try {
+      const usage = collectUsedResourcesForExport(repositoryState);
+      const filteredState = buildFilteredStateForExport(repositoryState, usage);
+      const projectData = constructReleaseProjectData(filteredState);
+      const [run] =
+        projectData.story.scenes["scene-1"].sections["section-1"].lines[0]
+          .actions.dialogue.content;
+
+      expect(run).toEqual({ text: "Bold" });
+      expect(warn).toHaveBeenCalledWith(
+        expect.stringContaining("no base text style"),
+      );
+      expect(warn).toHaveBeenCalledTimes(1);
+    } finally {
+      warn.mockRestore();
+    }
+  });
+
+  it("converts dialogue run formatting to text style resources for release export", () => {
+    const baseColorId = "__release_dialogue_color_1";
+    const baseTextStyleId = "__release_dialogue_style_1";
+    const repositoryState = createExportRepositoryState({
+      files: createTreeCollection(
+        {
+          "dialogue-font-file": {
+            id: "dialogue-font-file",
+            type: "font",
+            mimeType: "font/woff2",
+            size: 128,
+          },
+        },
+        [{ id: "dialogue-font-file" }],
+      ),
+      fonts: createTreeCollection(
+        {
+          "dialogue-font": {
+            id: "dialogue-font",
+            type: "font",
+            fileId: "dialogue-font-file",
+          },
+        },
+        [{ id: "dialogue-font" }],
+      ),
+      colors: createTreeCollection(
+        {
+          [baseColorId]: {
+            id: baseColorId,
+            type: "color",
+            hex: "#111111",
+          },
+        },
+        [{ id: baseColorId }],
+      ),
+      textStyles: createTreeCollection(
+        {
+          [baseTextStyleId]: {
+            id: baseTextStyleId,
+            type: "textStyle",
+            fontId: "dialogue-font",
+            colorId: baseColorId,
+            fontSize: 24,
+            fontWeight: "400",
+            fontStyle: "normal",
+            lineHeight: 1.2,
+          },
+        },
+        [{ id: baseTextStyleId }],
+      ),
+      layouts: createTreeCollection(
+        {
+          "dialogue-layout": {
+            id: "dialogue-layout",
+            type: "layout",
+            name: "Dialogue Layout",
+            layoutType: "dialogue-adv",
+            elements: createTreeCollection(
+              {
+                "dialogue-text": {
+                  id: "dialogue-text",
+                  type: "text-revealing-ref-dialogue-content",
+                  name: "Dialogue Text",
+                  textStyleId: baseTextStyleId,
+                  width: 800,
+                  height: 160,
+                },
+              },
+              [{ id: "dialogue-text" }],
+            ),
+          },
+        },
+        [{ id: "dialogue-layout" }],
+      ),
+      scenes: createTreeCollection(
+        {
+          "scene-1": {
+            id: "scene-1",
+            type: "scene",
+            name: "Scene 1",
+            initialSectionId: "section-1",
+            sections: createTreeCollection(
+              {
+                "section-1": {
+                  id: "section-1",
+                  type: "section",
+                  name: "Section 1",
+                  lines: createTreeCollection(
+                    {
+                      "line-1": {
+                        id: "line-1",
+                        actions: {
+                          dialogue: {
+                            ui: { resourceId: "dialogue-layout" },
+                            content: [
+                              {
+                                text: "Bold",
+                                textStyle: { fontWeight: "bold" },
+                              },
+                              {
+                                text: "Italic",
+                                textStyle: { fontStyle: "italic" },
+                              },
+                              {
+                                text: "Colored",
+                                textStyle: { fill: "#336699" },
+                              },
+                              {
+                                text: "Underlined",
+                                textStyle: { textDecoration: "underline" },
+                              },
+                              {
+                                text: "Bold and colored",
+                                textStyle: {
+                                  fontWeight: "bold",
+                                  fill: "#336699",
+                                },
+                              },
+                              {
+                                text: "Bold again",
+                                textStyle: { fontWeight: "bold" },
+                              },
+                            ],
+                          },
+                        },
+                      },
+                    },
+                    [{ id: "line-1" }],
+                  ),
+                },
+              },
+              [{ id: "section-1" }],
+            ),
+          },
+        },
+        [{ id: "scene-1" }],
+      ),
+    });
+    const warn = vi.spyOn(console, "warn").mockImplementation(() => {});
+
+    try {
+      const usage = collectUsedResourcesForExport(repositoryState);
+      const filteredState = buildFilteredStateForExport(repositoryState, usage);
+      const unchangedProjectData = constructProjectData(filteredState);
+      expect(
+        unchangedProjectData.story.scenes["scene-1"].sections["section-1"]
+          .lines[0].actions.dialogue.content[0].textStyle,
+      ).toEqual({ fontWeight: "bold" });
+      const projectData = constructReleaseProjectData(filteredState);
+      const dialogue =
+        projectData.story.scenes["scene-1"].sections["section-1"].lines[0]
+          .actions.dialogue;
+      const boldStyleId = dialogue.content[0].textStyleId;
+      const italicStyleId = dialogue.content[1].textStyleId;
+      const colorStyleId = dialogue.content[2].textStyleId;
+      const boldColorStyleId = dialogue.content[4].textStyleId;
+      const derivedStyleIds = [
+        boldStyleId,
+        italicStyleId,
+        colorStyleId,
+        boldColorStyleId,
+      ];
+
+      expect(dialogue.content.map((item) => item.text)).toEqual([
+        "Bold",
+        "Italic",
+        "Colored",
+        "Underlined",
+        "Bold and colored",
+        "Bold again",
+      ]);
+      expect(
+        dialogue.content.every((item) => !Object.hasOwn(item, "textStyle")),
+      ).toBe(true);
+      expect(new Set(derivedStyleIds).size).toBe(4);
+      expect(dialogue.content[5].textStyleId).toBe(boldStyleId);
+      expect(derivedStyleIds).not.toContain(baseTextStyleId);
+      expect(projectData.resources.textStyles[baseTextStyleId].colorId).toBe(
+        baseColorId,
+      );
+      expect(projectData.resources.textStyles[colorStyleId].colorId).toBe(
+        projectData.resources.textStyles[boldColorStyleId].colorId,
+      );
+      expect(projectData.resources.textStyles[colorStyleId].colorId).not.toBe(
+        baseColorId,
+      );
+      expect(
+        projectData.resources.colors[
+          projectData.resources.textStyles[colorStyleId].colorId
+        ].hex,
+      ).toBe("#336699");
+      expect(warn).toHaveBeenCalledWith(
+        expect.stringContaining("underline formatting was dropped"),
+      );
+      expect(warn).toHaveBeenCalledTimes(1);
+
+      const renderState = selectRouteEngineRenderState(projectData);
+      const dialogueText = findRenderElementById(
+        renderState.elements,
+        "dialogue-text",
+      );
+
+      expect(dialogueText.content[0].textStyle).toMatchObject({
+        fontWeight: "bold",
+      });
+      expect(dialogueText.content[1].textStyle).toMatchObject({
+        fontStyle: "italic",
+      });
+      expect(dialogueText.content[2].textStyle).toMatchObject({
+        fill: "#336699",
+      });
+      expect(dialogueText.content[3]).not.toHaveProperty(
+        "textStyle.textDecoration",
+      );
+      expect(dialogueText.content[4].textStyle).toMatchObject({
+        fontWeight: "bold",
+        fill: "#336699",
+      });
+    } finally {
+      warn.mockRestore();
+    }
   });
 
   it("projects line voice resources grouped by scene for route-engine", () => {
