@@ -1473,9 +1473,12 @@ const addDialogueRunStylesForRelease = (projectData, sourceState) => {
     const runBaseTextStyleId = item.textStyleId ?? baseTextStyleId;
     const baseTextStyle = resources.textStyles[runBaseTextStyleId];
     if (!baseTextStyle) {
-      throw new Error(
-        "Styled dialogue runs require a base text style on the selected layout.",
+      // Without a base style there is nothing to derive from; keep the run
+      // unstyled rather than failing the whole export.
+      console.warn(
+        "Dialogue run formatting was dropped because the dialogue text has no base text style.",
       );
+      return engineItem;
     }
 
     const styleKey = JSON.stringify({

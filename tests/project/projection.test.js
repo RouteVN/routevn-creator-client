@@ -691,6 +691,92 @@ describe("constructProjectData", () => {
     ]);
   });
 
+  it("keeps a styled dialogue run unstyled when the dialogue text has no base style", () => {
+    const repositoryState = createExportRepositoryState({
+      layouts: createTreeCollection(
+        {
+          "dialogue-layout": {
+            id: "dialogue-layout",
+            type: "layout",
+            name: "Dialogue Layout",
+            layoutType: "dialogue-adv",
+            elements: createTreeCollection(
+              {
+                "dialogue-text": {
+                  id: "dialogue-text",
+                  type: "text-revealing-ref-dialogue-content",
+                  name: "Dialogue Text",
+                  width: 800,
+                  height: 160,
+                },
+              },
+              [{ id: "dialogue-text" }],
+            ),
+          },
+        },
+        [{ id: "dialogue-layout" }],
+      ),
+      scenes: createTreeCollection(
+        {
+          "scene-1": {
+            id: "scene-1",
+            type: "scene",
+            name: "Scene 1",
+            initialSectionId: "section-1",
+            sections: createTreeCollection(
+              {
+                "section-1": {
+                  id: "section-1",
+                  type: "section",
+                  name: "Section 1",
+                  lines: createTreeCollection(
+                    {
+                      "line-1": {
+                        id: "line-1",
+                        actions: {
+                          dialogue: {
+                            ui: { resourceId: "dialogue-layout" },
+                            content: [
+                              {
+                                text: "Bold",
+                                textStyle: { fontWeight: "bold" },
+                              },
+                            ],
+                          },
+                        },
+                      },
+                    },
+                    [{ id: "line-1" }],
+                  ),
+                },
+              },
+              [{ id: "section-1" }],
+            ),
+          },
+        },
+        [{ id: "scene-1" }],
+      ),
+    });
+    const warn = vi.spyOn(console, "warn").mockImplementation(() => {});
+
+    try {
+      const usage = collectUsedResourcesForExport(repositoryState);
+      const filteredState = buildFilteredStateForExport(repositoryState, usage);
+      const projectData = constructReleaseProjectData(filteredState);
+      const [run] =
+        projectData.story.scenes["scene-1"].sections["section-1"].lines[0]
+          .actions.dialogue.content;
+
+      expect(run).toEqual({ text: "Bold" });
+      expect(warn).toHaveBeenCalledWith(
+        expect.stringContaining("no base text style"),
+      );
+      expect(warn).toHaveBeenCalledTimes(1);
+    } finally {
+      warn.mockRestore();
+    }
+  });
+
   it("converts dialogue run formatting to text style resources for release export", () => {
     const baseColorId = "__release_dialogue_color_1";
     const baseTextStyleId = "__release_dialogue_style_1";
