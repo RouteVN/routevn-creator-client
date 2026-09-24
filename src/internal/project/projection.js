@@ -1377,6 +1377,207 @@ export function constructProjectData(state, options = {}) {
   };
 }
 
+const collectReleaseProjectIds = (value, ids) => {
+  if (Array.isArray(value)) {
+    value.forEach((item) => collectReleaseProjectIds(item, ids));
+    return;
+  }
+
+  if (!isObjectRecord(value)) {
+    return;
+  }
+
+  if (typeof value.id === "string") {
+    ids.add(value.id);
+  }
+
+  Object.entries(value).forEach(([key, item]) => {
+    if (key === "items" && isObjectRecord(item)) {
+      Object.keys(item).forEach((id) => ids.add(id));
+    }
+    if (key.endsWith("Id") && typeof item === "string") {
+      ids.add(item);
+    }
+    collectReleaseProjectIds(item, ids);
+  });
+};
+
+const findDialogueContentTextElement = (elements = []) => {
+  for (const element of elements) {
+    if (
+      element?.type === "text-revealing" &&
+      element.content === "${dialogue.content}"
+    ) {
+      return element;
+    }
+
+    const child = findDialogueContentTextElement(element?.children);
+    if (child) {
+      return child;
+    }
+  }
+
+  return undefined;
+};
+
+const addDialogueRunStylesForRelease = (projectData, sourceState) => {
+  const resources = projectData.resources;
+  const usedIds = new Set();
+  collectReleaseProjectIds(sourceState, usedIds);
+  Object.values(resources).forEach((resourceMap) => {
+    if (isObjectRecord(resourceMap)) {
+      Object.keys(resourceMap).forEach((id) => usedIds.add(id));
+    }
+  });
+
+  const allocateId = (prefix) => {
+    for (let suffix = 1; ; suffix += 1) {
+      const id = `__release_dialogue_${prefix}_${suffix}`;
+      if (usedIds.has(id)) {
+        continue;
+      }
+
+      usedIds.add(id);
+      return id;
+    }
+  };
+
+  const colorIdsByFill = new Map();
+  const textStyleIdsByRunStyle = new Map();
+
+  const convertRunStyle = (item, baseTextStyleId) => {
+    if (!isObjectRecord(item) || !Object.hasOwn(item, "textStyle")) {
+      return item;
+    }
+
+    const inlineStyle = isObjectRecord(item.textStyle) ? item.textStyle : {};
+    if (inlineStyle.textDecoration === "underline") {
+      // The runtime text style format has no underline field yet; add support after it does.
+      console.warn(
+        "Dialogue run underline formatting was dropped because text styles do not support underline yet.",
+      );
+    }
+
+    const fontWeight = inlineStyle.fontWeight === "bold" ? "bold" : undefined;
+    const fontStyle = inlineStyle.fontStyle === "italic" ? "italic" : undefined;
+    const fill =
+      typeof inlineStyle.fill === "string" && inlineStyle.fill.length > 0
+        ? inlineStyle.fill
+        : undefined;
+    const { textStyle: _textStyle, ...engineItem } = item;
+
+    if (!fontWeight && !fontStyle && !fill) {
+      return engineItem;
+    }
+
+    const runBaseTextStyleId = item.textStyleId ?? baseTextStyleId;
+    const baseTextStyle = resources.textStyles[runBaseTextStyleId];
+    if (!baseTextStyle) {
+      throw new Error(
+        "Styled dialogue runs require a base text style on the selected layout.",
+      );
+    }
+
+    const styleKey = JSON.stringify({
+      baseTextStyleId: runBaseTextStyleId,
+      fontWeight,
+      fontStyle,
+      fill,
+    });
+    let textStyleId = textStyleIdsByRunStyle.get(styleKey);
+
+    if (!textStyleId) {
+      const textStyle = {
+        ...baseTextStyle,
+      };
+
+      if (fontWeight) {
+        textStyle.fontWeight = fontWeight;
+      }
+      if (fontStyle) {
+        textStyle.fontStyle = fontStyle;
+      }
+      if (fill) {
+        let colorId = colorIdsByFill.get(fill);
+        if (!colorId) {
+          colorId = allocateId("color");
+          resources.colors[colorId] = { hex: fill };
+          colorIdsByFill.set(fill, colorId);
+        }
+        textStyle.colorId = colorId;
+      }
+
+      textStyleId = allocateId("style");
+      resources.textStyles[textStyleId] = textStyle;
+      textStyleIdsByRunStyle.set(styleKey, textStyleId);
+    }
+
+    engineItem.textStyleId = textStyleId;
+    return engineItem;
+  };
+
+  const convertContent = (content, baseTextStyleId) => {
+    if (!Array.isArray(content)) {
+      return content;
+    }
+
+    return content.map((item) => {
+      let convertedItem = convertRunStyle(item, baseTextStyleId);
+      if (isObjectRecord(item?.furigana)) {
+        const furigana = convertRunStyle(item.furigana, baseTextStyleId);
+        if (furigana !== item.furigana) {
+          convertedItem = {
+            ...convertedItem,
+            furigana,
+          };
+        }
+      }
+      return convertedItem;
+    });
+  };
+
+  Object.values(projectData.story.scenes).forEach((scene) => {
+    Object.values(scene.sections).forEach((section) => {
+      section.lines.forEach((line) => {
+        const dialogue = line.actions.dialogue;
+        if (!isObjectRecord(dialogue)) {
+          return;
+        }
+
+        const layoutId = dialogue.ui?.resourceId;
+        const layout = resources.layouts[layoutId];
+        const textElement = findDialogueContentTextElement(layout?.elements);
+        const baseTextStyleId = textElement?.textStyleId;
+        if (!textElement) {
+          return;
+        }
+
+        ["content", "initialRevealedContent"].forEach((key) => {
+          if (Array.isArray(dialogue[key])) {
+            dialogue[key] = convertContent(dialogue[key], baseTextStyleId);
+          }
+        });
+        if (Array.isArray(dialogue.lines)) {
+          dialogue.lines.forEach((dialogueLine) => {
+            if (Array.isArray(dialogueLine.content)) {
+              dialogueLine.content = convertContent(
+                dialogueLine.content,
+                baseTextStyleId,
+              );
+            }
+          });
+        }
+      });
+    });
+  });
+};
+
+export const constructReleaseProjectData = (state) => {
+  const projectData = constructProjectData(state);
+  addDialogueRunStylesForRelease(projectData, state);
+  return projectData;
+};
+
 const createTransitionKey = (transition) => {
   if (!transition) {
     return null;
