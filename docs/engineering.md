@@ -599,32 +599,23 @@ and mobile and persist across navigation and restarts. The app shell listens
 for `app.userConfig.changed` from the app service and removes or restores the
 floating help button without changing its existing position.
 
-Update availability is a platform capability. Direct desktop and Google Play
-Android adapters share the automatic update schedule in
-`src/deps/clients/automaticUpdateChecks.js`. Android's Play adapter lives in
-`src/deps/clients/android/updater.js`, with native Play operations in
-`GooglePlayUpdater.java`. Play update requests must not block the native storage
-executor. Direct Android release builds and release installations outside Play do
-not enable this adapter. Debug builds enable real Play checks with an enabled Play
-Store even when installed through USB; an unavailable/unowned response must retain
-the manual check capability for retry. About uses the capability instead of a
-desktop-only platform check.
-iOS checks RouteVN release metadata and opens the App Store for installation.
-Before completing an Android update, drain mounted editors through `registerBeforeNavigation` and
-await `flushUserConfig()`. Layout/Control Editor registers its persistence drain
-with this hook. Explicit settings flushes reject database write failures;
-background autosaves report them without an unhandled rejection. A failed editor
-or settings save must abort installation and retain pending changes for retry.
-Android update prompts must also preserve unsubmitted input in global dialogs.
+Update availability is a platform capability. Direct desktop, Google Play
+Android builds, and iOS share the automatic schedule in
+`src/deps/clients/automaticUpdateChecks.js`. Mobile update decisions come only
+from the RouteVN API. `src/deps/clients/storeUpdater.js` owns the shared metadata
+check, loading state, confirmation, and store URL handoff. Android does not call
+the Google Play update API; confirmation opens the API's validated Play Store
+URL. iOS opens the API's App Store URL. Direct Android builds keep updates
+disabled. About uses this capability instead of a desktop-only platform check.
+Mobile update prompts preserve unsubmitted input in global dialogs.
 The app-owned `src/deps/clients/globalUI.js` adapter tracks dialog and dropdown
 promises through the published UI API. Update confirmations and alerts run only
 after that surface is idle, allowing result handlers to open follow-up dialogs
 first and rechecking foreground visibility before showing a prompt.
-Android `showProgressDialog()` uses the same adapter: each creation/import/export
-operation blocks updates until its own controller is closed, even if another
-progress dialog replaces its DOM. Recheck this barrier after saving and before
-native restart. The updater's own installation indicator is excluded so it
-cannot wait on itself.
+Mobile `showProgressDialog()` uses the same adapter: each creation/import/export
+operation delays update prompts until its own controller is closed, even if
+another progress dialog replaces its DOM. Store handoff does not install or
+restart the running app.
 
 #### `projectService`
 
@@ -1248,15 +1239,15 @@ persist fallback values merely to make a preview load.
 
 Current recovery boundaries:
 
-| Boundary | Behavior on failure |
-| --- | --- |
-| Asset readers and decoders | Reject with the asset identity and original cause. Do not return success for corrupt data. |
-| Graphics audio batch | Wait for all sound decodes to settle, finish unaffected fonts and visuals, then reject with the audio error or an aggregate of audio errors. Cache successful assets; failed audio remains unavailable. |
-| Scene editor asset loading | Isolate failed entries, show a warning, and keep editing and working assets available, including when a font fails. |
-| Scene editor audio warm-up | Keep painting after a decode retry fails. Preserve diagnostics without duplicating the warning already shown by preloading. |
-| Layout editor canvas | Collect read/integrity/decode failures, warn once per failed file per mounted canvas, omit affected render elements, and keep unaffected elements editable. Retry on subsequent requests without changing the saved layout. |
-| Fullscreen startup | Check the combined initial scene and layout assets, collect all read/integrity/decode failures, and show one deduplicated warning stating playback is blocked. Any failure closes the preview before starting the engine. |
-| Fullscreen later scene/layout loading | Retain the existing transition/prefetch handling: report scene failures, propagate font/layout failures. |
+| Boundary                              | Behavior on failure                                                                                                                                                                                                         |
+| ------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Asset readers and decoders            | Reject with the asset identity and original cause. Do not return success for corrupt data.                                                                                                                                  |
+| Graphics audio batch                  | Wait for all sound decodes to settle, finish unaffected fonts and visuals, then reject with the audio error or an aggregate of audio errors. Cache successful assets; failed audio remains unavailable.                     |
+| Scene editor asset loading            | Isolate failed entries, show a warning, and keep editing and working assets available, including when a font fails.                                                                                                         |
+| Scene editor audio warm-up            | Keep painting after a decode retry fails. Preserve diagnostics without duplicating the warning already shown by preloading.                                                                                                 |
+| Layout editor canvas                  | Collect read/integrity/decode failures, warn once per failed file per mounted canvas, omit affected render elements, and keep unaffected elements editable. Retry on subsequent requests without changing the saved layout. |
+| Fullscreen startup                    | Check the combined initial scene and layout assets, collect all read/integrity/decode failures, and show one deduplicated warning stating playback is blocked. Any failure closes the preview before starting the engine.   |
+| Fullscreen later scene/layout loading | Retain the existing transition/prefetch handling: report scene failures, propagate font/layout failures.                                                                                                                    |
 
 The scene editor's page and canvas loading overlays display the same localized
 stages, checked/loaded counts, and separate asset-name line as fullscreen preview.

@@ -70,12 +70,7 @@ describe("iOS update prompts", () => {
     },
   );
 
-  it.each([
-    "noCompatibleRelease",
-    "unsupportedClient",
-    "offline",
-    "olderShell",
-  ])(
+  it.each(["offline", "olderShell"])(
     "retains a manual store fallback for %s without claiming latest",
     async (reason) => {
       const result =
@@ -97,6 +92,30 @@ describe("iOS update prompts", () => {
         expect.objectContaining({ message: copy.retrieveUpdateInfoFallback }),
       );
       expect(openUrl).toHaveBeenCalledWith(ROUTEVN_CREATOR_APP_STORE_URL);
+    },
+  );
+
+  it.each([
+    {
+      result: { status: "noUpdate", reason: "noCompatibleRelease" },
+      message: copy.noCompatibleUpdateMessage,
+    },
+    {
+      result: { status: "unsupportedClient" },
+      message: copy.updateUnsupportedMessage,
+    },
+  ])(
+    "uses neutral feedback when the API declines an update",
+    async ({ result, message }) => {
+      const { updater, rawUI, openUrl } = setup({ result });
+      await updater.checkForUpdates(true);
+      expect(rawUI.showAlert).not.toHaveBeenCalled();
+      await updater.checkForUpdates(false);
+      expect(rawUI.showAlert).toHaveBeenCalledExactlyOnceWith(
+        expect.objectContaining({ message }),
+      );
+      expect(rawUI.showConfirm).not.toHaveBeenCalled();
+      expect(openUrl).not.toHaveBeenCalled();
     },
   );
 

@@ -41,7 +41,6 @@ android {
         versionCode = 12
         versionName = "1.16.2"
         buildConfigField("String", "UPDATE_DISTRIBUTION", javaString(routevnDistribution))
-        buildConfigField("boolean", "GOOGLE_PLAY_UPDATES", (routevnDistribution == "google-play").toString())
         manifestPlaceholders["usesCleartextTraffic"] = "false"
     }
 
@@ -58,7 +57,6 @@ android {
 
     buildTypes {
         debug {
-            buildConfigField("boolean", "GOOGLE_PLAY_UPDATES", "true")
             manifestPlaceholders["usesCleartextTraffic"] = "true"
         }
 
@@ -98,23 +96,6 @@ tasks.matching {
 dependencies {
     testImplementation("junit:junit:4.13.2")
     testImplementation("org.robolectric:robolectric:4.17")
-
-    constraints {
-        implementation("androidx.fragment:fragment:1.9.0") {
-            because("Google Play In-App Updates transitively requests an outdated Fragment release")
-        }
-        implementation("com.google.android.gms:play-services-basement:18.11.0") {
-            because("Use current Play Services stability fixes with In-App Updates")
-        }
-        implementation("com.google.android.gms:play-services-tasks:18.4.1") {
-            because("Keep the In-App Updates task runtime on the current stable release")
-        }
-        implementation("com.google.android.play:core-common:2.0.4") {
-            because("Use the current Play Core common runtime with In-App Updates")
-        }
-    }
-
-    implementation("com.google.android.play:app-update:2.1.0")
     implementation("androidx.core:core:1.19.0")
     implementation("androidx.core:core-splashscreen:1.2.0")
     implementation("androidx.webkit:webkit:1.17.0")

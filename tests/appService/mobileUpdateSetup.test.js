@@ -4,21 +4,45 @@ import { JSDOM } from "jsdom";
 import yaml from "js-yaml";
 import { parseAndRender } from "jempl";
 import { produce } from "immer";
-import * as layoutStore from "../../src/pages/layoutEditor/layoutEditor.store.js";
 import * as aboutStore from "../../src/pages/about/about.store.js";
 import {
   handleBeforeMount as mountAbout,
   handleCheckForUpdates as checkAboutUpdates,
 } from "../../src/pages/about/about.handlers.js";
 import { ROUTEVN_CREATOR_APP_STORE_URL } from "../../src/internal/routevnUrls.js";
-import {
-  handleBeforeMount as mountLayoutEditor,
-  handleLayoutEditorCanvasDragUpdate,
-} from "../../src/pages/layoutEditor/layoutEditor.handlers.js";
-import { createLayoutEditorRepositoryStoreData } from "../../src/pages/layoutEditor/support/layoutEditorRepositoryState.js";
 import { handleCreateDialogSubmit } from "../../src/pages/projects/projects.handlers.js";
 import { handleDownloadAssetPackageButtonClick } from "../../src/pages/assetPackage/assetPackage.handlers.js";
 import { EN_I18N } from "../support/i18n.js";
+
+const offeredPlayUrl =
+  "https://play.google.com/store/apps/details?id=com.routevn.creator";
+const availableAndroidUpdate = {
+  status: "updateAvailable",
+  release: {
+    version: "1.15.0",
+    changelog: "Improved editing",
+    publishedAt: "2026-09-01T00:00:00Z",
+    installation: { type: "googlePlay", url: offeredPlayUrl, build: "10" },
+  },
+};
+const nativeAndroidInfo = (distribution = "google-play") => ({
+  version: "1.14.0",
+  arch: "aarch64",
+  distribution,
+  build: "9",
+  model: "Example device",
+  osVersion: "18.0",
+});
+const stubUpdateFetch = (result) => {
+  const fetchMock = vi.fn(
+    async () =>
+      new Response(JSON.stringify({ jsonrpc: "2.0", id: 1, result }), {
+        status: 200,
+      }),
+  );
+  vi.stubGlobal("fetch", fetchMock);
+  return fetchMock;
+};
 
 const mocked = vi.hoisted(() => ({
   db: { init: vi.fn(), get: vi.fn(), getOrSet: vi.fn(), set: vi.fn() },
@@ -89,8 +113,6 @@ const bindStore = (module) => {
 };
 
 let dom;
-let cleanupEditor;
-
 beforeEach(() => {
   vi.resetModules();
   vi.resetAllMocks();
@@ -102,97 +124,40 @@ beforeEach(() => {
   vi.stubGlobal("window", dom.window);
   vi.stubGlobal("document", dom.window.document);
   vi.spyOn(console, "error").mockImplementation(() => {});
-  mocked.globalUI.showConfirm.mockResolvedValue(true);
+  mocked.globalUI.showConfirm.mockResolvedValue(false);
   mocked.globalUI.showAlert.mockResolvedValue(undefined);
   mocked.bridge.mockImplementation(async (method) => {
-    if (method === "getAppUpdateSupport") return { status: "supported" };
-    if (method === "checkAppUpdate")
-      return { status: "downloaded", versionCode: 6 };
-    if (method === "completeAppUpdate") return { status: "installing" };
+    if (method === "getAppUpdateDeviceInfo") return nativeAndroidInfo();
     if (method === "isDebugBuild") return false;
-    if (["updateBackState", "markSplashReady"].includes(method)) return;
+    if (
+      ["updateBackState", "markSplashReady", "openExternalUrl"].includes(method)
+    )
+      return;
     throw new Error(`Unexpected bridge method: ${method}`);
   });
+  stubUpdateFetch(availableAndroidUpdate);
 });
 
-afterEach(async () => {
-  await cleanupEditor?.();
-  cleanupEditor = undefined;
+afterEach(() => {
   dom.window.close();
   vi.unstubAllGlobals();
   vi.restoreAllMocks();
 });
 
-const openEditor = (pages, resourceType) => {
-  let repositoryState = {
-    project: { resolution: { width: 1920, height: 1080 } },
-    [resourceType]: {
-      items: {
-        "layout-1": {
-          elements: {
-            tree: [{ id: "item-1" }],
-            items: {
-              "item-1": {
-                type: "container",
-                name: "Container One",
-                x: 0,
-                y: 0,
-              },
-            },
-          },
-        },
-      },
-    },
-  };
-  mocked.projectService.getRepositoryState.mockImplementation(
-    () => repositoryState,
-  );
-  const updateElement =
-    resourceType === "controls"
-      ? mocked.projectService.updateControlElement
-      : mocked.projectService.updateLayoutElement;
-  updateElement.mockImplementation(async ({ data }) => {
-    repositoryState = produce(repositoryState, (draft) => {
-      Object.assign(
-        draft[resourceType].items["layout-1"].elements.items["item-1"],
-        data,
-      );
-    });
-    return { valid: true };
-  });
-  pages.appService.replace("/project/layout-editor", {
-    p: "project-1",
-    [resourceType === "controls" ? "c" : "l"]: "layout-1",
-  });
-  const store = bindStore(layoutStore);
-  store.syncRepositoryState(
-    createLayoutEditorRepositoryStoreData({
-      repositoryState,
-      layoutId: "layout-1",
-      resourceType,
-    }),
-  );
-  const deps = { ...pages, store, render: vi.fn(), refs: {}, i18n: EN_I18N };
-  cleanupEditor = mountLayoutEditor(deps);
-  handleLayoutEditorCanvasDragUpdate(deps, {
-    _event: {
-      detail: {
-        itemId: "item-1",
-        updatedItem: {
-          id: "item-1",
-          type: "container",
-          name: "Container One",
-          x: 24,
-          y: 0,
-        },
-      },
-    },
-  });
-  return { store, updateElement };
+const assertNoPlayUpdateBridgeCalls = () => {
+  const methods = mocked.bridge.mock.calls.map(([method]) => method);
+  expect(methods).not.toContain("getAppUpdateSupport");
+  expect(methods).not.toContain("checkAppUpdate");
+  expect(methods).not.toContain("startAppUpdate");
+  expect(methods).not.toContain("completeAppUpdate");
 };
 
-describe("mobile setup update persistence", () => {
-  it("waits for project creation to finish before offering restart", async () => {
+const releaseMessage = EN_I18N.appPage.updateAvailableMessage
+  .replace("{version}", "1.15.0")
+  .replace("{releaseNotes}", "Improved editing");
+
+describe("Android API update setup", () => {
+  it("waits for project creation before showing the API release prompt", async () => {
     const {
       deps: { pages },
     } = await import("../../src/setup.android.js");
@@ -219,31 +184,32 @@ describe("mobile setup update persistence", () => {
       },
     );
     await vi.waitFor(() => expect(finishCreation).toBeTypeOf("function"));
-    const updating = pages.updaterService.checkForUpdates(true);
+    const checking = pages.updaterService.checkForUpdates(true, {
+      copy: EN_I18N.appPage,
+    });
     await new Promise((resolve) => setTimeout(resolve, 10));
-    try {
-      expect(mocked.globalUI.showConfirm).not.toHaveBeenCalled();
-      expect(mocked.bridge).not.toHaveBeenCalledWith("completeAppUpdate");
-    } finally {
-      finishCreation({ id: "project-1", name: "Project One" });
-      await creating;
-      await updating;
-    }
+    expect(mocked.globalUI.showConfirm).not.toHaveBeenCalled();
+    finishCreation({ id: "project-1", name: "Project One" });
+    await creating;
+    await checking;
     expect(store.addProject).toHaveBeenCalledOnce();
     expect(store.addProject.mock.invocationCallOrder[0]).toBeLessThan(
       mocked.globalUI.showConfirm.mock.invocationCallOrder[0],
     );
-    expect(mocked.bridge).toHaveBeenCalledWith("completeAppUpdate");
+    expect(mocked.globalUI.showConfirm).toHaveBeenCalledWith(
+      expect.objectContaining({ message: releaseMessage }),
+    );
+    assertNoPlayUpdateBridgeCalls();
   });
 
-  it("releases failed creation progress and waits for its error feedback before prompting", async () => {
+  it("waits for failed creation feedback to close before prompting", async () => {
     const {
       deps: { pages },
     } = await import("../../src/setup.android.js");
     let rejectCreation;
     vi.spyOn(pages.appService, "createNewProject").mockImplementation(
       () =>
-        new Promise((resolve, reject) => {
+        new Promise((_resolve, reject) => {
           rejectCreation = reject;
         }),
     );
@@ -268,23 +234,21 @@ describe("mobile setup update persistence", () => {
       },
     );
     await vi.waitFor(() => expect(rejectCreation).toBeTypeOf("function"));
-    const updating = pages.updaterService.checkForUpdates(true);
+    const checking = pages.updaterService.checkForUpdates(true, {
+      copy: EN_I18N.appPage,
+    });
     rejectCreation(new Error("Template copy failed"));
     await creating;
-    await new Promise((resolve) => setTimeout(resolve, 10));
-    try {
-      expect(document.querySelector("#routevn-progress-dialog")).toBeNull();
-      expect(closeError).toBeTypeOf("function");
-      expect(mocked.globalUI.showConfirm).not.toHaveBeenCalled();
-      expect(mocked.bridge).not.toHaveBeenCalledWith("completeAppUpdate");
-    } finally {
-      closeError();
-      await updating;
-    }
-    expect(mocked.bridge).toHaveBeenCalledWith("completeAppUpdate");
+    await vi.waitFor(() => expect(closeError).toBeTypeOf("function"));
+    expect(mocked.globalUI.showConfirm).not.toHaveBeenCalled();
+    closeError();
+    await checking;
+    expect(mocked.globalUI.showConfirm).toHaveBeenCalledWith(
+      expect.objectContaining({ message: releaseMessage }),
+    );
   });
 
-  it("waits for asset package generation and output writing before offering restart", async () => {
+  it("waits for asset package output before showing the API release prompt", async () => {
     const {
       deps: { pages },
     } = await import("../../src/setup.android.js");
@@ -337,30 +301,29 @@ describe("mobile setup update persistence", () => {
       },
     });
     await vi.waitFor(() => expect(finishBundle).toBeTypeOf("function"));
-    const updating = pages.updaterService.checkForUpdates(true);
+    const checking = pages.updaterService.checkForUpdates(true, {
+      copy: EN_I18N.appPage,
+    });
     await new Promise((resolve) => setTimeout(resolve, 10));
-    try {
-      expect(mocked.globalUI.showConfirm).not.toHaveBeenCalled();
-      finishBundle(new Blob(["package"]));
-      await vi.waitFor(() => expect(finishWrite).toBeTypeOf("function"));
-      expect(mocked.globalUI.showConfirm).not.toHaveBeenCalled();
-      expect(mocked.bridge).not.toHaveBeenCalledWith("completeAppUpdate");
-    } finally {
-      finishBundle(new Blob(["package"]));
-      await vi.waitFor(() => expect(finishWrite).toBeTypeOf("function"));
-      finishWrite("/tmp/package.zip");
-      await exporting;
-      await updating;
-    }
+    expect(mocked.globalUI.showConfirm).not.toHaveBeenCalled();
+    finishBundle(new Blob(["package"]));
+    await vi.waitFor(() => expect(finishWrite).toBeTypeOf("function"));
+    expect(mocked.globalUI.showConfirm).not.toHaveBeenCalled();
+    finishWrite("/tmp/package.zip");
+    await exporting;
+    await checking;
     expect(writeFile).toHaveBeenCalledOnce();
     expect(mocked.globalUI.showAlert.mock.invocationCallOrder[0]).toBeLessThan(
       mocked.globalUI.showConfirm.mock.invocationCallOrder[0],
     );
-    expect(mocked.bridge).toHaveBeenCalledWith("completeAppUpdate");
+    expect(mocked.globalUI.showConfirm).toHaveBeenCalledWith(
+      expect.objectContaining({ message: releaseMessage }),
+    );
+    assertNoPlayUpdateBridgeCalls();
   });
 
   it.each([0, 1])(
-    "waits for all overlapping progress owners when closing owner %s first",
+    "waits for all overlapping progress owners when owner %s closes first",
     async (first) => {
       const {
         deps: { pages },
@@ -369,155 +332,42 @@ describe("mobile setup update persistence", () => {
         pages.appService.showProgressDialog({ title: "Creating project" }),
         pages.appService.showProgressDialog({ title: "Exporting project" }),
       ];
-      const updating = pages.updaterService.checkForUpdates(true);
+      const checking = pages.updaterService.checkForUpdates(true, {
+        copy: EN_I18N.appPage,
+      });
       progress[first].close();
       progress[first].close();
       await new Promise((resolve) => setTimeout(resolve, 10));
-      try {
-        expect(mocked.globalUI.showConfirm).not.toHaveBeenCalled();
-        expect(mocked.bridge).not.toHaveBeenCalledWith("completeAppUpdate");
-      } finally {
-        progress[1 - first].close();
-        await updating;
-      }
+      expect(mocked.globalUI.showConfirm).not.toHaveBeenCalled();
+      progress[1 - first].close();
+      await checking;
       expect(mocked.globalUI.showConfirm).toHaveBeenCalledOnce();
-      expect(mocked.bridge).toHaveBeenCalledWith("completeAppUpdate");
+      assertNoPlayUpdateBridgeCalls();
     },
   );
 
-  it("rechecks progress work before native restart without waiting on its own progress dialog", async () => {
+  it("leaves pending user settings untouched when opening the offered store URL", async () => {
     const {
       deps: { pages },
     } = await import("../../src/setup.android.js");
-    let progress;
-    const unregister = pages.appService.registerBeforeNavigation(() => {
-      progress = pages.appService.showProgressDialog({
-        title: "Exporting project",
-      });
-    });
-    const updating = pages.updaterService.checkForUpdates(false);
-    await vi.waitFor(() => expect(progress).toBeDefined());
-    try {
-      expect(mocked.globalUI.showConfirm).toHaveBeenCalledOnce();
-      expect(
-        document.querySelector("#routevn-update-progress-dialog[open]"),
-      ).not.toBeNull();
-      expect(mocked.bridge).not.toHaveBeenCalledWith("completeAppUpdate");
-    } finally {
-      progress.close();
-      unregister();
-      await updating;
-    }
-    expect(mocked.bridge).toHaveBeenCalledWith("completeAppUpdate");
-    expect(
-      document.querySelector("#routevn-update-progress-dialog"),
-    ).toBeNull();
-  });
-
-  it.each(["layouts", "controls"])(
-    "waits for queued %s edits and settings before installing",
-    async (resourceType) => {
-      const {
-        deps: { pages },
-      } = await import("../../src/setup.android.js");
-      const { store, updateElement } = openEditor(pages, resourceType);
-      const save = updateElement.getMockImplementation();
-      let finishSave;
-      updateElement.mockImplementationOnce(async (payload) => {
-        await new Promise((resolve) => {
-          finishSave = resolve;
-        });
-        return save(payload);
-      });
-      pages.appService.setUserConfig("appearance.theme", "light");
-      const updating = pages.updaterService.checkForUpdates(false);
-      try {
-        await vi.waitFor(() => expect(finishSave).toBeTypeOf("function"));
-        expect(mocked.bridge).not.toHaveBeenCalledWith("completeAppUpdate");
-        expect(store.selectPendingPersistPayload()).toBeDefined();
-      } finally {
-        finishSave?.();
-        await updating;
-      }
-      expect(store.selectPendingPersistPayload()).toBeUndefined();
-      expect(mocked.db.set).toHaveBeenCalledWith(
-        "userConfig",
-        expect.objectContaining({ appearance: { theme: "light" } }),
-      );
-      expect(mocked.bridge).toHaveBeenCalledWith("completeAppUpdate");
-      expect(mocked.db.set.mock.invocationCallOrder.at(-1)).toBeLessThan(
-        mocked.bridge.mock.invocationCallOrder.at(-1),
-      );
-
-      await cleanupEditor();
-      cleanupEditor = undefined;
-      const pending = { persistenceRequestId: "unmounted-edit" };
-      store.setPendingPersistPayload({ payload: pending });
-      await pages.appService.prepareNavigation({ path: "/projects" });
-      expect(store.selectPendingPersistPayload()).toEqual(pending);
-    },
-  );
-
-  it.each(["layouts", "controls"])(
-    "aborts installation on a failed %s save and retains the edit for retry",
-    async (resourceType) => {
-      const {
-        deps: { pages },
-      } = await import("../../src/setup.android.js");
-      pages.appService.setAppCopyProvider(() => EN_I18N.appPage);
-      const { store, updateElement } = openEditor(pages, resourceType);
-      updateElement.mockResolvedValueOnce({
-        valid: false,
-        error: { message: "Save failed" },
-      });
-      await pages.updaterService.checkForUpdates(false);
-      expect(mocked.bridge).not.toHaveBeenCalledWith("completeAppUpdate");
-      expect(store.selectPendingPersistPayload()).toBeDefined();
-      expect(mocked.globalUI.showAlert).toHaveBeenCalledWith(
-        expect.objectContaining({
-          message: EN_I18N.appPage.googlePlayUpdateFailed,
-        }),
-      );
-      expect(
-        document.querySelector("#routevn-update-progress-dialog"),
-      ).toBeNull();
-
-      updateElement.mockRejectedValueOnce(new Error("Database write failed"));
-      await pages.updaterService.checkForUpdates(false);
-      expect(mocked.bridge).not.toHaveBeenCalledWith("completeAppUpdate");
-      expect(store.selectPendingPersistPayload()).toBeDefined();
-
-      await pages.updaterService.checkForUpdates(false);
-      expect(store.selectPendingPersistPayload()).toBeUndefined();
-      expect(mocked.bridge).toHaveBeenCalledWith("completeAppUpdate");
-    },
-  );
-
-  it("aborts on a settings write failure and saves retained settings on retry", async () => {
-    const {
-      deps: { pages },
-    } = await import("../../src/setup.android.js");
-    pages.appService.setAppCopyProvider(() => EN_I18N.appPage);
     pages.appService.setUserConfig("appearance.theme", "light");
-    mocked.db.set.mockRejectedValueOnce(new Error("Database write failed"));
-    await pages.updaterService.checkForUpdates(false);
-    expect(mocked.bridge).not.toHaveBeenCalledWith("completeAppUpdate");
-    expect(mocked.globalUI.showAlert).toHaveBeenCalledWith(
-      expect.objectContaining({
-        message: EN_I18N.appPage.googlePlayUpdateFailed,
-      }),
-    );
+    mocked.globalUI.showConfirm.mockResolvedValue(true);
+    await pages.updaterService.checkForUpdates(false, {
+      copy: EN_I18N.appPage,
+    });
+    expect(mocked.bridge).toHaveBeenCalledWith("openExternalUrl", {
+      url: offeredPlayUrl,
+    });
     expect(pages.appService.getUserConfig("appearance.theme")).toBe("light");
-
-    await pages.updaterService.checkForUpdates(false);
-    expect(mocked.db.set).toHaveBeenLastCalledWith(
+    await pages.appService.flushUserConfig();
+    expect(mocked.db.set).toHaveBeenCalledWith(
       "userConfig",
       expect.objectContaining({ appearance: { theme: "light" } }),
     );
-    expect(mocked.bridge).toHaveBeenCalledWith("completeAppUpdate");
+    assertNoPlayUpdateBridgeCalls();
   });
 
-  it("opens the App Store from the About update button with the actual iOS setup dependencies", async () => {
+  it("opens the App Store from the About update button with actual iOS setup dependencies", async () => {
     const {
       deps: { pages },
     } = await import("../../src/setup.ios.js");
@@ -536,6 +386,7 @@ describe("mobile setup update persistence", () => {
     const openUrl = vi
       .spyOn(pages.appService, "openUrl")
       .mockResolvedValue(undefined);
+    mocked.globalUI.showConfirm.mockResolvedValueOnce(true);
     await checkAboutUpdates({ ...pages, store, render: vi.fn() });
     expect(openUrl).toHaveBeenCalledExactlyOnceWith(
       ROUTEVN_CREATOR_APP_STORE_URL,
@@ -544,17 +395,6 @@ describe("mobile setup update persistence", () => {
 });
 
 describe("mobile update API setup", () => {
-  const stubUpdateFetch = (result) => {
-    const fetchMock = vi.fn(
-      async () =>
-        new Response(JSON.stringify({ jsonrpc: "2.0", id: 1, result }), {
-          status: 200,
-        }),
-    );
-    vi.stubGlobal("fetch", fetchMock);
-    return fetchMock;
-  };
-
   const nativeInfo = (platform, distribution) => {
     const info = {
       version: "1.14.0",
@@ -574,21 +414,14 @@ describe("mobile update API setup", () => {
     async (distribution) => {
       const fetchMock = stubUpdateFetch({
         status: "noUpdate",
-        reason: "noCompatibleRelease",
+        reason: "upToDate",
       });
       const original = mocked.bridge.getMockImplementation();
       mocked.bridge.mockImplementation(async (method, params) => {
         if (method === "getAppUpdateDeviceInfo")
           return nativeInfo("android", distribution);
-        if (method === "getAppUpdateSupport")
-          return {
-            status: distribution === "direct" ? "unsupported" : "supported",
-          };
-        if (method === "checkAppUpdate")
-          return { status: "available", versionCode: 10 };
         return original(method, params);
       });
-      mocked.globalUI.showConfirm.mockResolvedValue(false);
       const {
         deps: { pages },
       } = await import("../../src/setup.android.js");
@@ -613,23 +446,25 @@ describe("mobile update API setup", () => {
           params: {
             appId: "routevn-creator",
             target: "android",
+            distribution: "google-play",
             currentBuild: "9",
-            availableBuild: "10",
             device: {
               id: expect.stringMatching(/^[1-9A-HJ-NP-Za-km-z]{12}$/),
             },
           },
         });
-        expect(mocked.globalUI.showConfirm).toHaveBeenCalledWith(
+        expect(mocked.globalUI.showConfirm).not.toHaveBeenCalled();
+        expect(mocked.globalUI.showAlert).toHaveBeenCalledWith(
           expect.objectContaining({
-            message: EN_I18N.appPage.googlePlayUpdateAvailable,
+            message: EN_I18N.appPage.latestVersionMessage,
           }),
         );
       }
+      assertNoPlayUpdateBridgeCalls();
     },
   );
 
-  it("keeps Google Play checks usable on an unfamiliar Android architecture", async () => {
+  it("leaves an unfamiliar Android architecture without an updater", async () => {
     const fetchMock = stubUpdateFetch({
       status: "noUpdate",
       reason: "upToDate",
@@ -641,25 +476,14 @@ describe("mobile update API setup", () => {
         info.arch = "unknown";
         return info;
       }
-      if (method === "checkAppUpdate")
-        return { status: "available", versionCode: 10 };
       return original(method, params);
     });
-    mocked.globalUI.showConfirm.mockResolvedValue(false);
     const {
       deps: { pages },
     } = await import("../../src/setup.android.js");
-
-    await pages.updaterService.checkForUpdates(false, {
-      copy: EN_I18N.appPage,
-    });
-
+    expect(pages.updaterService).toBeUndefined();
     expect(fetchMock).not.toHaveBeenCalled();
-    expect(mocked.globalUI.showConfirm).toHaveBeenCalledWith(
-      expect.objectContaining({
-        message: EN_I18N.appPage.googlePlayUpdateAvailable,
-      }),
-    );
+    assertNoPlayUpdateBridgeCalls();
   });
 
   it("uses native iOS version and sends About through WebView fetch", async () => {

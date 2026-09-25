@@ -76,7 +76,6 @@ X-RouteVN-RPC: 1
     "distribution": "google-play",
     "channel": "stable",
     "currentBuild": "9",
-    "availableBuild": "10",
     "device": {
       "id": "123456789ABC",
       "model": "Pixel 9",
@@ -86,13 +85,14 @@ X-RouteVN-RPC: 1
 }
 ```
 
-Android's optional `availableBuild` is the exact build offered by Google Play.
-iOS sends `target: ios`, `distribution: app-store`, and omits both build fields.
+Android sends its installed `currentBuild`; the API selects the newest eligible
+catalog build. The client does not query Google Play or send `availableBuild`.
+iOS sends `target: ios`, `distribution: app-store`, and omits build fields.
 Native shells supply installed-version and device facts. Shared JavaScript builds
 and validates the RPC request and result. WebView `fetch` sends a bounded request
 without credentials; the dedicated mobile endpoint must allow anonymous CORS
-from packaged Android and iOS origins. Android installation still uses Google
-Play, and iOS opens the App Store.
+from packaged Android and iOS origins. On confirmation, each platform opens the
+validated store URL returned by the API.
 Mobile development checks default to
 `http://127.0.0.1:8787/system/updates/v1/routevn-creator/mobile`;
 production checks use
@@ -104,16 +104,17 @@ RPC results distinguish `updateAvailable`, `noUpdate` (reason `upToDate` or
 `noCompatibleRelease`), and `unsupportedClient`. An available result contains
 `release: {version, changelog, publishedAt, installation}`.
 
-| Distribution        | Installation                                                                   |
-| ------------------- | ------------------------------------------------------------------------------ |
-| Desktop direct      | `{type: tauri, url, signature}`; Tauri verifies and installs.                  |
-| Android Google Play | `{type: googlePlay, url, build}`; Play controls availability and installation. |
-| iOS App Store       | `{type: appStore, url}`; confirmation opens the app's store page.              |
+| Distribution        | Installation                                                                                             |
+| ------------------- | -------------------------------------------------------------------------------------------------------- |
+| Desktop direct      | `{type: tauri, url, signature}`; Tauri verifies and installs.                                            |
+| Android Google Play | `{type: googlePlay, url, build}`; the API controls the offer, and confirmation opens the Play Store URL. |
+| iOS App Store       | `{type: appStore, url}`; confirmation opens the app's store page.                                        |
 
-Store responses omit signatures. Android displays API release notes only when
-the returned build matches Play's offer; metadata failures do not block a valid
-Play update. Direct APK updating is not implemented. Steam and web retain their
-existing distribution behavior.
+Store responses omit signatures. The RouteVN API is the source of truth for
+update availability, version, and release notes on both mobile platforms. API
+failures do not produce an update offer or an up-to-date claim. There are no
+native Google Play update checks or in-app installation flows. Direct APK
+updating is not implemented. Steam and web retain their existing behavior.
 
 ## Mock endpoint
 

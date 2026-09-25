@@ -172,7 +172,6 @@ public class MainActivity extends Activity {
 
     private WebView webView;
     private String lastReportedWindowMetrics = "";
-    private GooglePlayUpdater googlePlayUpdater;
     private ProjectBackup projectBackup;
     private final ExecutorService backupExecutor = Executors.newSingleThreadExecutor();
     private final Set<String> projectTransactions = java.util.concurrent.ConcurrentHashMap.newKeySet();
@@ -206,14 +205,6 @@ public class MainActivity extends Activity {
 
         super.onCreate(savedInstanceState);
 
-        googlePlayUpdater = new GooglePlayUpdater(this, state -> {
-            if (webView != null) {
-                webView.evaluateJavascript(
-                    "window.dispatchEvent(new CustomEvent('routevn:android-update', {detail:" + state + "}))",
-                    null
-                );
-            }
-        });
         projectBackup = new ProjectBackup(this, new ProjectBackup.Storage() {
             public JSONArray projects() throws Exception { return listProjectFolders(); }
             public File root(String id) throws Exception { return getProjectRoot(id); }
@@ -773,7 +764,6 @@ public class MainActivity extends Activity {
     protected void onResume() {
         super.onResume();
         appResumed = true;
-        googlePlayUpdater.onResume();
         if (webView != null) {
             webView.onResume();
             notifyAudioLifecycle();
@@ -783,7 +773,6 @@ public class MainActivity extends Activity {
     @Override
     protected void onPause() {
         appResumed = false;
-        googlePlayUpdater.onPause();
         notifyAudioLifecycle();
         if (webView != null) {
             webView.onPause();
@@ -802,7 +791,6 @@ public class MainActivity extends Activity {
 
     @Override
     protected void onDestroy() {
-        googlePlayUpdater.destroy();
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
             unregisterBackInvokedCallback();
         }
@@ -1046,30 +1034,6 @@ public class MainActivity extends Activity {
             JSONObject payload = request.optJSONObject("payload");
             if (payload == null) {
                 payload = new JSONObject();
-            }
-
-            if ("getAppUpdateSupport".equals(method) || "checkAppUpdate".equals(method) ||
-                "startAppUpdate".equals(method) || "completeAppUpdate".equals(method)) {
-                String updateRequestId = requestId;
-                mainHandler.post(() -> {
-                    try {
-                        googlePlayUpdater.handle(method)
-                            .addOnCompleteListener(task -> {
-                                String result;
-                                try {
-                                    result = task.isSuccessful()
-                                        ? bridgeSuccess(task.getResult())
-                                        : bridgeFailure(task.getException());
-                                } catch (Exception error) {
-                                    result = bridgeFailure(error);
-                                }
-                                reply.accept(attachBridgeResponseMetadata(updateRequestId, result));
-                            });
-                    } catch (Exception error) {
-                        reply.accept(attachBridgeResponseMetadata(updateRequestId, bridgeFailure(error)));
-                    }
-                });
-                return;
             }
 
             if ("publishProjectBackup".equals(method)) {

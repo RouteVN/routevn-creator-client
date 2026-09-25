@@ -79,10 +79,10 @@ const updateContext = await readClientUpdateContext(
 const appVersion = updateContext?.currentVersion ?? tauriConfig.version;
 const creatorVersion = deriveProjectFormatVersionFromAppVersion(appVersion);
 
-const updater = await createAndroidUpdater({
+const updater = createAndroidUpdater({
   globalUI,
   keyValueStore: appDb,
-  browserEventsClient,
+  distribution: updateContext?.distribution,
   metadataClient: updateContext
     ? createClientUpdates({
         context: updateContext,
@@ -94,10 +94,7 @@ const updater = await createAndroidUpdater({
       })
     : undefined,
   getCopy: () => appService.getAppCopy(),
-  beforeInstall: async () => {
-    await appService.prepareNavigation({ path: "/projects" });
-    await appService.flushUserConfig();
-  },
+  openUrl: (url) => appService.openUrl(url),
 });
 
 const subject = new Subject();

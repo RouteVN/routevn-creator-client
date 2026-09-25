@@ -2,554 +2,186 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 import { JSDOM } from "jsdom";
 import { createAndroidUpdater } from "../../src/deps/clients/android/updater.js";
 import { createGlobalUIClient } from "../../src/deps/clients/globalUI.js";
-import { resolveUpdatesEnabled } from "../../src/internal/updates.js";
+import { ROUTEVN_CREATOR_PLAY_STORE_URL } from "../../src/internal/routevnUrls.js";
 import { EN_I18N } from "../support/i18n.js";
 
-const setup = async ({
-  status = "up-to-date",
-  support = "supported",
-  confirmed = false,
-  metadataClient,
-} = {}) => {
-  const dom = new JSDOM("<!doctype html><html><body></body></html>");
-  vi.stubGlobal("document", dom.window.document);
-  const globalUI = {
-    showConfirm: vi.fn(async () => confirmed),
-    showAlert: vi.fn(async () => {}),
-  };
-  const bridge = vi.fn(async (method) => {
-    if (method === "getAppUpdateSupport") return { status: support };
-    if (method === "checkAppUpdate") return { status, versionCode: 5 };
-    if (method === "startAppUpdate")
-      return { status: "downloading", versionCode: 5 };
-    if (method === "completeAppUpdate")
-      return { status: "installing", versionCode: 5 };
-    throw new Error(`Unexpected method: ${method}`);
-  });
-  let listener;
-  const beforeInstall = vi.fn(async () => {});
-  const isForeground = vi.fn(() => true);
-  const deps = {
-    globalUI: createGlobalUIClient({ globalUI }),
-    bridge,
-    beforeInstall,
-    metadataClient,
-    isForeground,
-    getCopy: () => EN_I18N.appPage,
-    keyValueStore: { get: vi.fn(), set: vi.fn() },
-    browserEventsClient: {
-      subscribeWindowEvent: vi.fn((subscription) => {
-        listener = subscription.listener;
-      }),
-    },
-  };
-  const updater = await createAndroidUpdater(deps);
-  return {
-    updater,
-    deps,
-    bridge,
-    globalUI,
-    beforeInstall,
-    isForeground,
-    emit: (detail) => listener({ detail }),
-  };
+const copy = EN_I18N.appPage;
+const storeUrl = `${ROUTEVN_CREATOR_PLAY_STORE_URL}&hl=en`;
+const available = {
+  status: "updateAvailable",
+  release: {
+    version: "1.17.0",
+    changelog: "Improved editing",
+    installation: { type: "googlePlay", build: "20", url: storeUrl },
+  },
 };
 
+const setup = ({
+  result = available,
+  confirmed = false,
+  distribution = "google-play",
+} = {}) => {
+  const metadataClient = { check: vi.fn().mockResolvedValue(result) };
+  const rawUI = {
+    showConfirm: vi.fn().mockResolvedValue(confirmed),
+    showAlert: vi.fn().mockResolvedValue(undefined),
+  };
+  const globalUI = createGlobalUIClient({ globalUI: rawUI });
+  const openUrl = vi.fn().mockResolvedValue(undefined);
+  const isForeground = vi.fn(() => true);
+  const updater = createAndroidUpdater({
+    distribution,
+    globalUI,
+    keyValueStore: { get: vi.fn(), set: vi.fn() },
+    metadataClient,
+    openUrl,
+    getCopy: () => copy,
+    isForeground,
+  });
+  return { updater, metadataClient, rawUI, globalUI, openUrl, isForeground };
+};
+
+let dom;
 afterEach(() => {
+  dom?.window.close();
+  dom = undefined;
   vi.useRealTimers();
   vi.unstubAllGlobals();
-  vi.restoreAllMocks();
 });
 
-describe("Android Google Play updater", () => {
-  it("disables updates for unsupported installations without calling Play", async () => {
-    const { updater, bridge, deps } = await setup({ support: "unsupported" });
-    expect(updater).toBeUndefined();
-    expect(bridge).toHaveBeenCalledTimes(1);
-    expect(
-      deps.browserEventsClient.subscribeWindowEvent,
-    ).not.toHaveBeenCalled();
-    expect(
-      resolveUpdatesEnabled({
-        appService: { getPlatform: () => "android" },
-        updaterService: updater,
-      }),
-    ).toBe(false);
-  });
-
-  it("keeps old shells working when the update bridge is unavailable", async () => {
-    expect(
-      await createAndroidUpdater({
-        bridge: vi
-          .fn()
-          .mockRejectedValue(new Error("Unsupported bridge method")),
-      }),
-    ).toBeUndefined();
-  });
-
-  it("shows the latest-version message only for manual checks", async () => {
-    const { updater, globalUI } = await setup();
-    await updater.checkForUpdates(true);
-    expect(globalUI.showAlert).not.toHaveBeenCalled();
-    await updater.checkForUpdates(false);
-    expect(globalUI.showAlert).toHaveBeenCalledWith(
-      expect.objectContaining({
-        message: EN_I18N.appPage.latestVersionMessage,
-      }),
-    );
-  });
-
-  it("prompts automatically but respects Later", async () => {
-    const { updater, globalUI, bridge } = await setup({ status: "available" });
-    await updater.checkForUpdates(true);
-    expect(globalUI.showConfirm).toHaveBeenCalledWith(
-      expect.objectContaining({
-        message: EN_I18N.appPage.googlePlayUpdateAvailable,
-      }),
-    );
-    expect(bridge).not.toHaveBeenCalledWith("startAppUpdate");
-  });
-
-  it("starts a flexible update only after confirmation", async () => {
-    const { updater, bridge, beforeInstall } = await setup({
-      status: "available",
-      confirmed: true,
-    });
-    await updater.checkForUpdates(false);
-    expect(bridge).toHaveBeenCalledWith("startAppUpdate");
-    expect(beforeInstall).not.toHaveBeenCalled();
-    expect(bridge).not.toHaveBeenCalledWith("completeAppUpdate");
-  });
-
-  it("allows cancellation in the Google Play dialog", async () => {
-    const { updater, bridge, globalUI } = await setup({
-      status: "available",
-      confirmed: true,
-    });
-    bridge
-      .mockResolvedValueOnce({ status: "available" })
-      .mockResolvedValueOnce({ status: "cancelled" });
-    await updater.checkForUpdates(false);
-    expect(globalUI.showAlert).not.toHaveBeenCalled();
-  });
-
-  it("does not report errors as being up to date", async () => {
-    const { updater, bridge, globalUI } = await setup();
-    vi.spyOn(console, "error").mockImplementation(() => {});
-    bridge.mockRejectedValue(new Error("Play offline"));
-    await updater.checkForUpdates(true);
-    expect(globalUI.showAlert).not.toHaveBeenCalled();
-    await updater.checkForUpdates(false);
-    expect(globalUI.showAlert).toHaveBeenCalledWith(
-      expect.objectContaining({
-        message: EN_I18N.appPage.googlePlayUpdateFailed,
-      }),
-    );
-  });
-
-  it.each(["not-allowed", "unknown", "failed"])(
-    "reports unavailable update state %s on manual checks",
-    async (status) => {
-      const { updater, globalUI } = await setup({ status });
-      await updater.checkForUpdates(false);
-      expect(globalUI.showAlert).toHaveBeenCalledWith(
-        expect.objectContaining({
-          message: EN_I18N.appPage.googlePlayUpdateFailed,
-        }),
-      );
+describe("Android API-owned updates", () => {
+  it.each(["direct", "unknown"])(
+    "does not offer Play Store updates for %s distributions",
+    (distribution) => {
+      const { updater, metadataClient } = setup({ distribution });
+      expect(updater).toBeUndefined();
+      expect(metadataClient.check).not.toHaveBeenCalled();
     },
   );
 
-  it("disables future checks when Play reports an unsupported installation", async () => {
-    const { updater, globalUI, bridge } = await setup({
-      status: "unsupported",
-    });
-    await updater.checkForUpdates(false);
-    expect(updater.isSupported()).toBe(false);
-    expect(globalUI.showAlert).toHaveBeenCalledWith(
-      expect.objectContaining({
-        message: EN_I18N.appPage.googlePlayUpdatesUnavailable,
-      }),
-    );
-    bridge.mockClear();
-    await updater.checkForUpdates(true);
-    expect(bridge).not.toHaveBeenCalled();
-  });
+  it.each([true, false])(
+    "uses the API release and opens its Store URL only after confirmation %s",
+    async (confirmed) => {
+      const { updater, metadataClient, rawUI, openUrl } = setup({ confirmed });
 
-  it("keeps manual checks visible and retryable when Play is unavailable on debug", async () => {
-    const { updater, globalUI, bridge } = await setup({
-      status: "unavailable",
+      await updater.checkForUpdates(false);
+
+      expect(metadataClient.check).toHaveBeenCalledExactlyOnceWith();
+      expect(rawUI.showConfirm).toHaveBeenCalledWith(
+        expect.objectContaining({
+          message: copy.updateAvailableMessage
+            .replace("{version}", "1.17.0")
+            .replace("{releaseNotes}", "Improved editing"),
+        }),
+      );
+      expect(updater.getUpdateInfo()).toEqual(available);
+      expect(updater.isUpdateAvailable()).toBe(true);
+      if (confirmed) expect(openUrl).toHaveBeenCalledExactlyOnceWith(storeUrl);
+      else expect(openUrl).not.toHaveBeenCalled();
+    },
+  );
+
+  it("uses only a successful API upToDate decision to report the latest version", async () => {
+    const { updater, metadataClient, rawUI } = setup();
+    await updater.checkForUpdates(true);
+    metadataClient.check.mockResolvedValue({
+      status: "noUpdate",
+      reason: "upToDate",
     });
     await updater.checkForUpdates(true);
-    expect(globalUI.showAlert).not.toHaveBeenCalled();
-    await updater.checkForUpdates(false);
-    expect(globalUI.showAlert).toHaveBeenCalledWith(
-      expect.objectContaining({
-        message: EN_I18N.appPage.googlePlayUpdatesUnavailable,
-      }),
-    );
-    expect(
-      resolveUpdatesEnabled({
-        appService: { getPlatform: () => "android" },
-        updaterService: updater,
-      }),
-    ).toBe(true);
+    expect(rawUI.showAlert).not.toHaveBeenCalled();
     expect(updater.isUpdateAvailable()).toBe(false);
-    expect(bridge).not.toHaveBeenCalledWith("startAppUpdate");
-    expect(bridge).not.toHaveBeenCalledWith("completeAppUpdate");
 
-    bridge.mockResolvedValueOnce({ status: "up-to-date" });
     await updater.checkForUpdates(false);
-    expect(globalUI.showAlert).toHaveBeenLastCalledWith(
+    expect(rawUI.showAlert).toHaveBeenCalledExactlyOnceWith(
       expect.objectContaining({
-        message: EN_I18N.appPage.latestVersionMessage,
+        message: copy.latestVersionMessage,
       }),
     );
   });
 
-  it("coalesces concurrent checks so prompts cannot stack", async () => {
-    const { updater, bridge, globalUI } = await setup({ status: "available" });
-    await Promise.all([
-      updater.checkForUpdates(true),
-      updater.checkForUpdates(false),
-    ]);
-    expect(
-      bridge.mock.calls.filter(([method]) => method === "checkAppUpdate"),
-    ).toHaveLength(1);
-    expect(globalUI.showConfirm).toHaveBeenCalledTimes(1);
+  it.each(["offline", "noCompatibleRelease", "unsupportedClient"])(
+    "does not invent an update when API decision is %s",
+    async (reason) => {
+      const { updater, metadataClient, rawUI, openUrl } = setup({
+        confirmed: false,
+      });
+      if (reason === "offline")
+        metadataClient.check.mockRejectedValue(new Error("Offline"));
+      else if (reason === "unsupportedClient")
+        metadataClient.check.mockResolvedValue({ status: reason });
+      else
+        metadataClient.check.mockResolvedValue({ status: "noUpdate", reason });
+
+      await updater.checkForUpdates(true);
+      expect(rawUI.showConfirm).not.toHaveBeenCalled();
+      await updater.checkForUpdates(false);
+
+      expect(rawUI.showConfirm).not.toHaveBeenCalled();
+      const messages = {
+        offline: copy.retrieveUpdateInfoFallback,
+        noCompatibleRelease: copy.noCompatibleUpdateMessage,
+        unsupportedClient: copy.updateUnsupportedMessage,
+      };
+      expect(rawUI.showAlert).toHaveBeenCalledExactlyOnceWith(
+        expect.objectContaining({
+          message: messages[reason],
+        }),
+      );
+      expect(openUrl).not.toHaveBeenCalled();
+      expect(updater.isUpdateAvailable()).toBe(false);
+    },
+  );
+
+  it("clears stale availability after an API error", async () => {
+    const { updater, metadataClient } = setup();
+    await updater.checkForUpdates(true);
+    metadataClient.check.mockRejectedValue(new Error("Offline"));
+    await updater.checkForUpdates(true);
+    expect(updater.getUpdateInfo()).toBeUndefined();
+    expect(updater.isUpdateAvailable()).toBe(false);
   });
 
-  it("gives manual feedback when joining an automatic check", async () => {
-    const { updater, globalUI } = await setup();
-    await Promise.all([
-      updater.checkForUpdates(true),
-      updater.checkForUpdates(false),
-    ]);
-    expect(globalUI.showAlert).toHaveBeenCalledTimes(1);
-    expect(globalUI.showAlert).toHaveBeenCalledWith(
-      expect.objectContaining({
-        message: EN_I18N.appPage.latestVersionMessage,
-      }),
-    );
-  });
-
-  it("saves before completing a downloaded update and blocks editing while saving", async () => {
-    const { updater, bridge, beforeInstall } = await setup({
-      status: "downloaded",
-      confirmed: true,
-    });
-    let finishSave;
-    beforeInstall.mockImplementation(
+  it("shares one pending API request and closes its loading dialog before the result", async () => {
+    dom = new JSDOM("<body></body>");
+    vi.stubGlobal("document", dom.window.document);
+    vi.useFakeTimers();
+    const { updater, metadataClient, rawUI } = setup();
+    let resolveCheck;
+    metadataClient.check.mockImplementation(
       () =>
         new Promise((resolve) => {
-          finishSave = resolve;
+          resolveCheck = resolve;
         }),
     );
-    const updating = updater.checkForUpdates(false);
-    await vi.waitFor(() => expect(beforeInstall).toHaveBeenCalled());
-    expect(
-      document.querySelector("#routevn-update-progress-dialog[open]"),
-    ).not.toBeNull();
-    expect(bridge).not.toHaveBeenCalledWith("completeAppUpdate");
-    finishSave();
-    await updating;
-    expect(bridge).toHaveBeenCalledWith("completeAppUpdate");
-    expect(
-      document.querySelector("#routevn-update-progress-dialog"),
-    ).toBeNull();
-  });
-
-  it("does not restart if saving fails", async () => {
-    const { updater, bridge, beforeInstall, globalUI } = await setup({
-      status: "downloaded",
-      confirmed: true,
-    });
-    vi.spyOn(console, "error").mockImplementation(() => {});
-    beforeInstall.mockRejectedValue(new Error("Save failed"));
-    await updater.checkForUpdates(false);
-    expect(bridge).not.toHaveBeenCalledWith("completeAppUpdate");
-    expect(globalUI.showAlert).toHaveBeenCalled();
-  });
-
-  it("handles downloaded events once and leaves Later accessible through manual checks", async () => {
-    const { updater, globalUI, emit } = await setup({ status: "downloaded" });
-    emit({ status: "downloaded", versionCode: 5 });
-    await vi.waitFor(() =>
-      expect(globalUI.showConfirm).toHaveBeenCalledTimes(1),
-    );
-    await updater.checkForUpdates(true);
-    emit({ status: "downloaded", versionCode: 5 });
-    expect(globalUI.showConfirm).toHaveBeenCalledTimes(1);
-    await updater.checkForUpdates(false);
-    expect(globalUI.showConfirm).toHaveBeenCalledTimes(2);
-  });
-
-  it("waits for the Play consent result before showing a download completion prompt", async () => {
-    const { updater, bridge, globalUI, emit } = await setup({
-      status: "available",
-      confirmed: true,
-    });
-    let acceptPlay;
-    bridge
-      .mockResolvedValueOnce({ status: "available", versionCode: 5 })
-      .mockImplementationOnce(
-        () =>
-          new Promise((resolve) => {
-            acceptPlay = resolve;
-          }),
-      );
-    const checking = updater.checkForUpdates(false);
-    await vi.waitFor(() => expect(acceptPlay).toBeTypeOf("function"));
-    emit({ status: "downloaded", versionCode: 5 });
-    expect(globalUI.showConfirm).toHaveBeenCalledTimes(1);
-    acceptPlay({ status: "downloading" });
-    await checking;
-    await vi.waitFor(() =>
-      expect(globalUI.showConfirm).toHaveBeenCalledTimes(2),
-    );
-  });
-
-  it("does not check or prompt in the background", async () => {
-    const { updater, bridge, globalUI, isForeground, emit } = await setup();
-    isForeground.mockReturnValue(false);
-    bridge.mockClear();
-    await updater.checkForUpdates(true);
-    emit({ status: "downloaded", versionCode: 5 });
-    expect(bridge).not.toHaveBeenCalled();
-    expect(globalUI.showConfirm).not.toHaveBeenCalled();
-  });
-});
-
-describe("Google Play metadata enrichment", () => {
-  const release = { version: "1.16.0", changelog: "Improved editing" };
-  it("uses notes only for the build still offered by Play", async () => {
-    const metadataClient = {
-      check: vi.fn().mockResolvedValue({ status: "updateAvailable", release }),
-    };
-    const { updater, globalUI, bridge } = await setup({
-      status: "available",
-      metadataClient,
-      confirmed: true,
-    });
-    await updater.checkForUpdates(false);
-    expect(metadataClient.check).toHaveBeenCalledWith({ availableBuild: "5" });
-    expect(globalUI.showConfirm).toHaveBeenCalledWith(
-      expect.objectContaining({ message: expect.stringContaining("1.16.0") }),
-    );
-    expect(bridge).toHaveBeenCalledWith("startAppUpdate");
-  });
-
-  it.each(["missing", "outage", "mismatch"])(
-    "preserves the generic Play installation flow for %s metadata",
-    async (kind) => {
-      const metadataClient = {
-        check: vi.fn().mockResolvedValue({
-          status: "noUpdate",
-          reason: "noCompatibleRelease",
-        }),
-      };
-      if (kind !== "missing")
-        metadataClient.check.mockRejectedValue(new Error(kind));
-      const { updater, globalUI, bridge } = await setup({
-        status: "available",
-        metadataClient,
-        confirmed: true,
-      });
-      await updater.checkForUpdates(false);
-      expect(globalUI.showConfirm).toHaveBeenCalledExactlyOnceWith(
-        expect.objectContaining({
-          message: EN_I18N.appPage.googlePlayUpdateAvailable,
-        }),
-      );
-      expect(bridge).toHaveBeenCalledWith("startAppUpdate");
-    },
-  );
-
-  it("discards notes when Play changes the offered build", async () => {
-    const metadataClient = {
-      check: vi.fn().mockResolvedValue({ status: "updateAvailable", release }),
-    };
-    const { updater, globalUI, bridge } = await setup({
-      status: "available",
-      metadataClient,
-    });
-    bridge
-      .mockResolvedValueOnce({ status: "available", versionCode: 5 })
-      .mockResolvedValueOnce({ status: "available", versionCode: 6 });
-    await updater.checkForUpdates(false);
-    expect(globalUI.showConfirm).toHaveBeenCalledExactlyOnceWith(
-      expect.objectContaining({
-        message: EN_I18N.appPage.googlePlayUpdateAvailable,
-      }),
-    );
-  });
-
-  it("recovers a downloaded update discovered during metadata lookup without another offer", async () => {
-    const metadataClient = {
-      check: vi.fn().mockResolvedValue({ status: "updateAvailable", release }),
-    };
-    const { updater, globalUI, bridge, beforeInstall } = await setup({
-      status: "available",
-      metadataClient,
-      confirmed: true,
-    });
-    bridge
-      .mockResolvedValueOnce({ status: "available", versionCode: 5 })
-      .mockResolvedValueOnce({ status: "downloaded", versionCode: 5 });
-    await updater.checkForUpdates(false);
-    expect(globalUI.showConfirm).toHaveBeenCalledExactlyOnceWith(
-      expect.objectContaining({
-        message: EN_I18N.appPage.googlePlayUpdateReady,
-      }),
-    );
-    expect(beforeInstall).toHaveBeenCalledOnce();
-    expect(bridge).toHaveBeenCalledWith("completeAppUpdate");
-    expect(bridge).not.toHaveBeenCalledWith("startAppUpdate");
-  });
-
-  it("never requests metadata before offering already downloaded recovery", async () => {
-    const metadataClient = {
-      check: vi.fn().mockRejectedValue(new Error("Offline")),
-    };
-    const { updater, bridge } = await setup({
-      status: "downloaded",
-      metadataClient,
-      confirmed: true,
-    });
-    await updater.checkForUpdates(false);
-    expect(metadataClient.check).not.toHaveBeenCalled();
-    expect(bridge).toHaveBeenCalledWith("completeAppUpdate");
-  });
-  it("retains manual status feedback when the Play offer disappears", async () => {
-    const metadataClient = {
-      check: vi.fn().mockResolvedValue({ status: "updateAvailable", release }),
-    };
-    const { updater, globalUI, bridge } = await setup({
-      status: "available",
-      metadataClient,
-    });
-    bridge
-      .mockResolvedValueOnce({ status: "available", versionCode: 5 })
-      .mockResolvedValueOnce({ status: "up-to-date" });
-    await updater.checkForUpdates(false);
-    expect(globalUI.showConfirm).not.toHaveBeenCalled();
-    expect(globalUI.showAlert).toHaveBeenCalledWith(
-      expect.objectContaining({
-        message: EN_I18N.appPage.latestVersionMessage,
-      }),
-    );
-  });
-});
-
-describe("Android update check progress", () => {
-  it("shows one delayed dialog when a manual check joins a pending automatic check", async () => {
-    let resolveMetadata;
-    const metadataClient = {
-      check: vi.fn(
-        () =>
-          new Promise((resolve) => {
-            resolveMetadata = resolve;
-          }),
-      ),
-    };
-    const { updater, globalUI, bridge } = await setup({
-      status: "available",
-      metadataClient,
-    });
-    vi.useFakeTimers();
-    globalUI.showConfirm.mockImplementation(() => {
+    rawUI.showAlert.mockImplementation(async () => {
       expect(document.querySelector("#routevn-update-check-dialog")).toBeNull();
-      return Promise.resolve(false);
     });
 
     const automatic = updater.checkForUpdates(true);
-    await vi.advanceTimersByTimeAsync(200);
-    expect(document.querySelector("#routevn-update-check-dialog")).toBeNull();
     const manual = updater.checkForUpdates(false);
+    expect(manual).toBe(automatic);
     await vi.advanceTimersByTimeAsync(200);
     expect(
-      document.querySelectorAll("#routevn-update-check-dialog[open]"),
-    ).toHaveLength(1);
-    expect(metadataClient.check).toHaveBeenCalledOnce();
-    expect(
-      bridge.mock.calls.filter(([method]) => method === "checkAppUpdate"),
-    ).toHaveLength(1);
-
-    resolveMetadata({ status: "noUpdate", reason: "noCompatibleRelease" });
-    await Promise.all([automatic, manual]);
+      document.querySelector("#routevn-update-check-dialog"),
+    ).not.toBeNull();
+    expect(metadataClient.check).toHaveBeenCalledExactlyOnceWith();
+    resolveCheck({ status: "noUpdate", reason: "upToDate" });
+    await manual;
+    expect(rawUI.showAlert).toHaveBeenCalledOnce();
     expect(document.querySelector("#routevn-update-check-dialog")).toBeNull();
-    expect(globalUI.showConfirm).toHaveBeenCalledOnce();
   });
 
-  it("does not flash a dialog for a quick manual check", async () => {
-    const { updater } = await setup();
-    vi.useFakeTimers();
+  it("reports a failed Store handoff without reporting an API failure", async () => {
+    const { updater, openUrl, rawUI } = setup({ confirmed: true });
+    openUrl.mockRejectedValue(new Error("Store unavailable"));
+
     await updater.checkForUpdates(false);
-    await vi.advanceTimersByTimeAsync(200);
-    expect(document.querySelector("#routevn-update-check-dialog")).toBeNull();
-  });
 
-  it("closes the dialog when Play changes from an offer to a ready update", async () => {
-    let resolveMetadata;
-    const metadataClient = {
-      check: vi.fn(
-        () =>
-          new Promise((resolve) => {
-            resolveMetadata = resolve;
-          }),
-      ),
-    };
-    const { updater, bridge, globalUI } = await setup({
-      status: "available",
-      metadataClient,
-    });
-    bridge
-      .mockResolvedValueOnce({ status: "available", versionCode: 5 })
-      .mockResolvedValueOnce({ status: "downloaded", versionCode: 5 });
-    vi.useFakeTimers();
-    globalUI.showConfirm.mockImplementation(() => {
-      expect(document.querySelector("#routevn-update-check-dialog")).toBeNull();
-      return Promise.resolve(false);
-    });
-
-    const checking = updater.checkForUpdates(false);
-    await vi.advanceTimersByTimeAsync(200);
-    expect(
-      document.querySelector("#routevn-update-check-dialog[open]"),
-    ).not.toBeNull();
-    resolveMetadata({
-      status: "updateAvailable",
-      release: { version: "1.16.0" },
-    });
-    await checking;
-    expect(globalUI.showConfirm).toHaveBeenCalledOnce();
-    expect(document.querySelector("#routevn-update-check-dialog")).toBeNull();
-  });
-
-  it("closes the dialog before showing a failed Play check", async () => {
-    const { updater, bridge, globalUI } = await setup();
-    let rejectCheck;
-    bridge.mockImplementationOnce(
-      () =>
-        new Promise((resolve, reject) => {
-          rejectCheck = reject;
-        }),
+    expect(rawUI.showAlert).toHaveBeenCalledExactlyOnceWith(
+      expect.objectContaining({
+        message: copy.failedOpenLink,
+      }),
     );
-    vi.spyOn(console, "error").mockImplementation(() => {});
-    vi.useFakeTimers();
-    globalUI.showAlert.mockImplementation(() => {
-      expect(document.querySelector("#routevn-update-check-dialog")).toBeNull();
-      return Promise.resolve();
-    });
-
-    const checking = updater.checkForUpdates(false);
-    await vi.advanceTimersByTimeAsync(200);
-    expect(
-      document.querySelector("#routevn-update-check-dialog[open]"),
-    ).not.toBeNull();
-    rejectCheck(new Error("Play offline"));
-    await checking;
-    expect(globalUI.showAlert).toHaveBeenCalledOnce();
-    expect(document.querySelector("#routevn-update-check-dialog")).toBeNull();
   });
 });

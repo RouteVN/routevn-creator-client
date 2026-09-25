@@ -3,6 +3,9 @@ import {
   isUpdateVersion,
 } from "../../internal/updateVersion.js";
 import { getDeviceId, isDeviceMetadataText } from "./deviceIdentity.js";
+import { ROUTEVN_CREATOR_PLAY_STORE_URL } from "../../internal/routevnUrls.js";
+
+const playStoreDestination = new URL(ROUTEVN_CREATOR_PLAY_STORE_URL);
 
 const invalid = () => {
   throw new Error("Invalid client update metadata.");
@@ -42,6 +45,18 @@ const validInstallationUrl = (value) => {
   } catch {
     return false;
   }
+};
+
+const validPlayStoreUrl = (value) => {
+  if (!validInstallationUrl(value)) return false;
+  const url = new URL(value);
+  const ids = url.searchParams.getAll("id");
+  return (
+    url.origin === playStoreDestination.origin &&
+    url.pathname === playStoreDestination.pathname &&
+    ids.length === 1 &&
+    ids[0] === playStoreDestination.searchParams.get("id")
+  );
 };
 
 const validateContext = (context) => {
@@ -108,7 +123,7 @@ export const readClientUpdateContext = async (bridge, target) => {
   }
 };
 
-const validateResult = (result, context, availableBuild) => {
+const validateResult = (result, context) => {
   if (result?.status === "unsupportedClient") {
     exactFields(result, ["status"]);
   } else if (result?.status === "noUpdate") {
@@ -144,10 +159,9 @@ const validateResult = (result, context, availableBuild) => {
       exactFields(action, ["type", "url", "build"]);
       if (
         action.type !== "googlePlay" ||
-        !validInstallationUrl(action.url) ||
+        !validPlayStoreUrl(action.url) ||
         !validBuild(action.build) ||
         Number(action.build) <= Number(context.currentBuild) ||
-        (availableBuild !== undefined && action.build !== availableBuild) ||
         compareUpdateVersions(release.version, context.currentVersion) < 0
       )
         invalid();
@@ -173,7 +187,7 @@ export const createClientUpdates = ({
   validateContext(context);
   let retryAt = 0;
   return {
-    async check({ availableBuild } = {}) {
+    async check() {
       if (now() < retryAt)
         throw new Error("Client update check is temporarily deferred.");
       const params = {
@@ -191,16 +205,6 @@ export const createClientUpdates = ({
       };
       if (context.target === "android")
         params.currentBuild = context.currentBuild;
-      if (availableBuild !== undefined) {
-        if (
-          context.target !== "android" ||
-          context.distribution !== "google-play" ||
-          !validBuild(availableBuild) ||
-          Number(availableBuild) <= Number(context.currentBuild)
-        )
-          invalid();
-        params.availableBuild = availableBuild;
-      }
       const response = await request(
         JSON.stringify({
           jsonrpc: "2.0",
@@ -232,7 +236,7 @@ export const createClientUpdates = ({
       const envelope = JSON.parse(response.body);
       exactFields(envelope, ["jsonrpc", "id", "result"]);
       if (envelope.jsonrpc !== "2.0" || envelope.id !== 1) invalid();
-      return validateResult(envelope.result, context, availableBuild);
+      return validateResult(envelope.result, context);
     },
   };
 };

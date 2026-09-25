@@ -119,7 +119,7 @@ describe("mock update protocol over HTTP", () => {
       keyValueStore: { get: async () => "123456789ABC" },
     });
 
-    const result = await client.check({ availableBuild: "10" });
+    const result = await client.check();
 
     expect(result.status).toBe("updateAvailable");
     expect(result.release.installation.build).toBe("10");

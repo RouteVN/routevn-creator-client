@@ -250,7 +250,7 @@ describe("mobile update metadata protocol", () => {
       { status: "updateAvailable", release: next },
       android,
     );
-    expect(await client.check({ availableBuild: "10" })).toMatchObject({
+    expect(await client.check()).toMatchObject({
       release: next,
     });
     expect(JSON.parse(request.mock.calls[0][0])).toEqual({
@@ -259,15 +259,37 @@ describe("mobile update metadata protocol", () => {
       method: "system.getClientUpdate",
       params: {
         ...android,
-        availableBuild: "10",
         device: { ...android.device, id: deviceId },
       },
     });
-    await expect(client.check({ availableBuild: "11" })).rejects.toThrow();
     for (const build of ["9", "01", "0", "2100000001", "10\n"]) {
-      await expect(client.check({ availableBuild: build })).rejects.toThrow();
+      next.installation.build = build;
+      const invalid = setup(
+        { status: "updateAvailable", release: next },
+        android,
+      );
+      await expect(invalid.client.check()).rejects.toThrow();
     }
   });
+
+  it.each([
+    "https://example.com/update",
+    "https://play.google.com/store/apps/details?id=com.example.other",
+    "https://play.google.com/store/apps/details?id=com.routevn.creator&id=com.example.other",
+    "https://play.google.com/store/apps/other?id=com.routevn.creator",
+  ])(
+    "rejects a Google Play action for the wrong destination %s",
+    async (url) => {
+      const next = release();
+      next.installation = { type: "googlePlay", url, build: "10" };
+      await expect(
+        setup(
+          { status: "updateAvailable", release: next },
+          android,
+        ).client.check(),
+      ).rejects.toThrow();
+    },
+  );
 
   it("never offers an installer to direct Android or an iOS simulator", async () => {
     const result = { status: "updateAvailable", release: release() };

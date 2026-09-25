@@ -5,7 +5,6 @@ import { JSDOM } from "jsdom";
 import { produce } from "immer";
 import { createAndroidUpdater } from "../../src/deps/clients/android/updater.js";
 import { createGlobalUIClient } from "../../src/deps/clients/globalUI.js";
-import { createBrowserEventsClient } from "../../src/deps/clients/browserEvents.js";
 import { EN_I18N } from "../support/i18n.js";
 
 const uiSource = pathToFileURL(
@@ -30,7 +29,21 @@ afterEach(async () => {
   vi.restoreAllMocks();
 });
 
-const setup = async ({ status = "downloaded" } = {}) => {
+const offeredPlayUrl =
+  "https://play.google.com/store/apps/details?id=com.routevn.creator";
+const available = {
+  status: "updateAvailable",
+  release: {
+    version: "1.15.0",
+    changelog: "Improved editing",
+    installation: { type: "googlePlay", url: offeredPlayUrl, build: "10" },
+  },
+};
+const releaseMessage = EN_I18N.appPage.updateAvailableMessage
+  .replace("{version}", "1.15.0")
+  .replace("{releaseNotes}", "Improved editing");
+
+const setup = async ({ result = available } = {}) => {
   const dom = new JSDOM("<body></body>", { pretendToBeVisual: true });
   const { document } = dom.window;
   vi.stubGlobal("document", document);
@@ -62,8 +75,6 @@ const setup = async ({ status = "downloaded" } = {}) => {
   const refs = { componentDialogBodyHost: document.createElement("div") };
   document.body.append(refs.componentDialogBodyHost);
   let formKey;
-  // Only rendering is simplified. Show/close/submit behavior and promises use
-  // the installed Rettangoli implementation, including its replacement logic.
   const render = () => {
     if (store.selectIsOpen() && store.selectUiType() === "formDialog") {
       const config = store.selectFormDialogConfig();
@@ -87,22 +98,16 @@ const setup = async ({ status = "downloaded" } = {}) => {
   }
   const globalUI = createGlobalUIClient({ globalUI: rawUI });
   const isForeground = vi.fn(() => true);
-  const bridge = vi.fn(async (method) => {
-    if (method === "getAppUpdateSupport") return { status: "supported" };
-    if (method === "checkAppUpdate") return { status, versionCode: 7 };
-    if (method === "startAppUpdate") return { status: "downloading" };
-    throw new Error(`Unexpected bridge method: ${method}`);
-  });
-  const updater = await createAndroidUpdater({
+  const metadataClient = { check: vi.fn().mockResolvedValue(result) };
+  const openUrl = vi.fn().mockResolvedValue(undefined);
+  const updater = createAndroidUpdater({
     globalUI,
-    bridge,
+    distribution: "google-play",
+    metadataClient,
+    openUrl,
     isForeground,
-    beforeInstall: vi.fn(),
     getCopy: () => EN_I18N.appPage,
     keyValueStore: new Map(),
-    browserEventsClient: createBrowserEventsClient({
-      windowTarget: dom.window,
-    }),
   });
   cleanup = async () => {
     isForeground.mockReturnValue(false);
@@ -112,7 +117,7 @@ const setup = async ({ status = "downloaded" } = {}) => {
   };
 
   const openEditor = async (type) => {
-    const result =
+    const editorResult =
       type === "componentDialog"
         ? globalUI.showComponentDialog({
             title: "Create Image",
@@ -130,7 +135,7 @@ const setup = async ({ status = "downloaded" } = {}) => {
           })
         : globalUI.showFormDialog({ form: { title: "Create Particle" } });
     const settled = vi.fn();
-    void result.then(settled, settled);
+    void editorResult.then(settled, settled);
     await vi.waitFor(() =>
       expect(document.querySelector("input")).toBeTruthy(),
     );
@@ -138,7 +143,7 @@ const setup = async ({ status = "downloaded" } = {}) => {
     input.value = "Unsubmitted name";
     return {
       input,
-      result,
+      result: editorResult,
       settled,
       submit: () =>
         type === "componentDialog"
@@ -155,71 +160,48 @@ const setup = async ({ status = "downloaded" } = {}) => {
   return {
     globalUI,
     store,
-    bridge,
     updater,
+    metadataClient,
+    openUrl,
     isForeground,
     openEditor,
     cancel: () => handlers.handleCancel(uiDeps),
-    emit: (detail = { status: "downloaded", versionCode: 7 }) =>
-      dom.window.dispatchEvent(
-        new dom.window.CustomEvent("routevn:android-update", { detail }),
-      ),
   };
 };
-
 const allowPendingWork = () =>
   new Promise((resolve) => setTimeout(resolve, 10));
 
-describe("Android updates with real global dialog handlers", () => {
+describe("Android API updates with real global dialog handlers", () => {
   it.each(["componentDialog", "formDialog"])(
     "preserves unsubmitted %s input until submission before prompting once",
     async (type) => {
-      const { openEditor, emit, store, cancel, updater } = await setup();
+      const { openEditor, store, cancel, updater, metadataClient } =
+        await setup();
       const editor = await openEditor(type);
-      emit();
-      emit();
+      const checking = updater.checkForUpdates(true);
+      const duplicate = updater.checkForUpdates(true);
       await allowPendingWork();
       expect(editor.settled).not.toHaveBeenCalled();
       expect(editor.input.isConnected).toBe(true);
       expect(editor.input.value).toBe("Unsubmitted name");
       expect(store.selectUiType()).toBe(type);
+      expect(metadataClient.check).toHaveBeenCalledOnce();
 
       await editor.submit();
       await expect(editor.result).resolves.toMatchObject({
         values: { name: "Unsubmitted name" },
       });
       await vi.waitFor(() =>
-        expect(store.selectConfig().message).toBe(
-          EN_I18N.appPage.googlePlayUpdateReady,
-        ),
+        expect(store.selectConfig().message).toBe(releaseMessage),
       );
       cancel();
-      await updater.checkForUpdates(true);
-      emit();
-      await allowPendingWork();
+      await Promise.all([checking, duplicate]);
       expect(store.selectIsOpen()).toBe(false);
     },
   );
 
-  it.each(["available", "downloaded"])(
-    "defers automatic %s checks behind an open editor",
-    async (status) => {
-      const { openEditor, store, updater, cancel } = await setup({ status });
-      const editor = await openEditor("formDialog");
-      const checking = updater.checkForUpdates(true);
-      await allowPendingWork();
-      expect(editor.settled).not.toHaveBeenCalled();
-      expect(editor.input.isConnected).toBe(true);
-      await editor.submit();
-      await vi.waitFor(() => expect(store.selectIsOpen()).toBe(true));
-      expect(store.selectUiType()).toBe("dialog");
-      cancel();
-      await checking;
-    },
-  );
-
-  it("waits for a follow-up editing dialog opened by the first result handler", async () => {
-    const { openEditor, emit, globalUI, store, cancel } = await setup();
+  it("waits for an editing dialog opened by the first result handler", async () => {
+    const { openEditor, updater, globalUI, store, cancel } = await setup();
     const editor = await openEditor("formDialog");
     const next = editor.result.then(async () => {
       await Promise.resolve();
@@ -227,24 +209,25 @@ describe("Android updates with real global dialog handlers", () => {
     });
     const nextSettled = vi.fn();
     void next.then(nextSettled);
-    emit();
+    const checking = updater.checkForUpdates(true);
     await editor.submit();
     await allowPendingWork();
     expect(nextSettled).not.toHaveBeenCalled();
     expect(store.selectUiType()).toBe("formDialog");
     expect(store.selectFormDialogConfig().form.title).toBe("Next Step");
     await globalUI.closeAll();
-    await vi.waitFor(() => expect(store.selectIsOpen()).toBe(true));
-    expect(store.selectConfig().message).toBe(
-      EN_I18N.appPage.googlePlayUpdateReady,
+    await vi.waitFor(() =>
+      expect(store.selectConfig().message).toBe(releaseMessage),
     );
     cancel();
+    await checking;
   });
 
-  it("preserves a dialog opened while a manual Play check is in flight", async () => {
-    const { openEditor, bridge, updater, store, cancel } = await setup();
+  it("preserves a dialog opened while a manual API check is in flight", async () => {
+    const { openEditor, metadataClient, updater, store, cancel } =
+      await setup();
     let finishCheck;
-    bridge.mockImplementationOnce(
+    metadataClient.check.mockImplementationOnce(
       () =>
         new Promise((resolve) => {
           finishCheck = resolve;
@@ -252,67 +235,101 @@ describe("Android updates with real global dialog handlers", () => {
     );
     const checking = updater.checkForUpdates(false);
     const editor = await openEditor("componentDialog");
-    finishCheck({ status: "downloaded", versionCode: 7 });
+    finishCheck(available);
     await allowPendingWork();
     expect(editor.settled).not.toHaveBeenCalled();
     expect(editor.input.isConnected).toBe(true);
     await editor.submit();
-    await vi.waitFor(() => expect(store.selectIsOpen()).toBe(true));
-    expect(store.selectConfig().message).toBe(
-      EN_I18N.appPage.googlePlayUpdateReady,
+    await vi.waitFor(() =>
+      expect(store.selectConfig().message).toBe(releaseMessage),
     );
     cancel();
     await checking;
   });
 
-  it("releases a deferred update after a component dialog reports an error", async () => {
-    const { openEditor, emit, store, cancel, updater } = await setup();
+  it("releases a deferred prompt after a component dialog reports an error", async () => {
+    const { openEditor, updater, store, cancel } = await setup();
     const editor = await openEditor("componentDialog");
     const error = new Error("Could not read form values");
     editor.input.parentElement.getValues = () => {
       throw error;
     };
     const rejected = expect(editor.result).rejects.toBe(error);
-    emit();
+    const checking = updater.checkForUpdates(true);
     await editor.submit();
     await rejected;
-    await vi.waitFor(() => expect(store.selectIsOpen()).toBe(true));
-    expect(store.selectConfig().message).toBe(
-      EN_I18N.appPage.googlePlayUpdateReady,
+    await vi.waitFor(() =>
+      expect(store.selectConfig().message).toBe(releaseMessage),
     );
     cancel();
-    await updater.checkForUpdates(true);
+    await checking;
   });
 
-  it("does not show a deferred prompt after backgrounding or mark it as shown", async () => {
-    const { openEditor, emit, store, isForeground, updater, cancel } =
+  it("does not show a deferred prompt after backgrounding, then offers it on the next check", async () => {
+    const { openEditor, updater, store, isForeground, cancel, metadataClient } =
       await setup();
     const editor = await openEditor("formDialog");
-    emit();
+    const checking = updater.checkForUpdates(true);
     isForeground.mockReturnValue(false);
     await editor.submit();
-    await allowPendingWork();
+    await checking;
     expect(store.selectIsOpen()).toBe(false);
     isForeground.mockReturnValue(true);
-    emit();
-    await vi.waitFor(() => expect(store.selectIsOpen()).toBe(true));
+    const nextCheck = updater.checkForUpdates(true);
+    await vi.waitFor(() =>
+      expect(store.selectConfig().message).toBe(releaseMessage),
+    );
+    expect(metadataClient.check).toHaveBeenCalledTimes(2);
     cancel();
-    await updater.checkForUpdates(true);
+    await nextCheck;
   });
 
-  it("defers asynchronous failure alerts without cancelling an editor", async () => {
-    const { openEditor, emit, store, globalUI } = await setup();
+  it("defers a manual API failure alert without cancelling an editor", async () => {
+    const { openEditor, updater, metadataClient, store, cancel, openUrl } =
+      await setup();
+    metadataClient.check.mockRejectedValueOnce(new Error("Offline"));
     const editor = await openEditor("componentDialog");
-    emit({ status: "failed" });
+    const checking = updater.checkForUpdates(false);
     await allowPendingWork();
     expect(editor.settled).not.toHaveBeenCalled();
     expect(editor.input.isConnected).toBe(true);
     await editor.submit();
     await vi.waitFor(() =>
       expect(store.selectConfig().message).toBe(
-        EN_I18N.appPage.googlePlayUpdateFailed,
+        EN_I18N.appPage.retrieveUpdateInfoFallback,
       ),
     );
-    await globalUI.closeAll();
+    cancel();
+    await checking;
+    expect(openUrl).not.toHaveBeenCalled();
+  });
+
+  it.each([
+    [
+      { status: "noUpdate", reason: "noCompatibleRelease" },
+      "noCompatibleUpdateMessage",
+    ],
+    [{ status: "unsupportedClient" }, "updateUnsupportedMessage"],
+  ])("shows an explicit manual alert for %o", async (result, copyKey) => {
+    const { updater, store, cancel, openUrl } = await setup({ result });
+    const checking = updater.checkForUpdates(false);
+    await vi.waitFor(() =>
+      expect(store.selectConfig().message).toBe(EN_I18N.appPage[copyKey]),
+    );
+    cancel();
+    await checking;
+    expect(openUrl).not.toHaveBeenCalled();
+  });
+
+  it("keeps automatic API failures quiet while an editor is open", async () => {
+    const { openEditor, updater, metadataClient, store } = await setup();
+    metadataClient.check.mockRejectedValueOnce(new Error("Offline"));
+    const editor = await openEditor("formDialog");
+    await updater.checkForUpdates(true);
+    expect(store.selectUiType()).toBe("formDialog");
+    expect(editor.settled).not.toHaveBeenCalled();
+    await editor.submit();
+    await allowPendingWork();
+    expect(store.selectIsOpen()).toBe(false);
   });
 });
