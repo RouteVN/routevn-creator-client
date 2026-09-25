@@ -8,24 +8,24 @@ stay in their existing UI flows.
 
 ## Build configuration
 
-One variable, `ROUTEVN_SENTRY_DSN`, is defined in two environment files:
+One variable, `ROUTEVN_SENTRY_DSN`, configures both SDKs:
 
-- `.env.development`: the local API DSN, used by `tauri:dev:*`, Cargo tests,
-  and debug builds.
+- Development uses the local API DSN by default, with no env file required:
+  `http://11111111111111111111111111111111@127.0.0.1:3000/system/sentry/1`.
+  Set `ROUTEVN_SENTRY_DSN` in the local `.env` or shell to use another local port.
 - `.env.production`: the production API DSN, used by `tauri:build`, platform
   release scripts, and Steam release builds.
 
-`src-tauri/build.rs` reads the matching file automatically using Tauri's build
+`src-tauri/build.rs` selects this configuration automatically using Tauri's build
 mode. The same selection applies to every desktop build entry point, including
 the Linux Docker build. A Tauri development run with the release profile still
-uses `.env.development`. Edit the value in the relevant file and rebuild;
-Cargo watches these files for changes. No script edits or manual exports are
-needed. The selected file is authoritative, so an inherited value from `.env`
-or the shell cannot override it.
+uses the development default. For production, edit `.env.production` and
+rebuild; Cargo watches it for changes. That file is authoritative for release
+builds, so an inherited value from `.env` or the shell cannot override it.
 
-Both files contain public routing DSNs and are checked in. Keep signing keys
-and other secrets in the ignored `.env`, not in these files. Missing files or
-missing/empty DSNs fail the build.
+Only `.env.production` is checked in for collector configuration; its DSN is
+public routing data. Keep signing keys and other secrets in the ignored `.env`.
+A missing production file or missing/empty production DSN fails the build.
 
 Tauri injects the compiled DSN into the webview before application scripts run,
 along with the release, build ID, and environment label. The injected object is

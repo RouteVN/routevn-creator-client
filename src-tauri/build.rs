@@ -18,14 +18,20 @@ fn main() {
         } else {
             "development"
         };
-        let env_file = format!("../.env.{environment}");
-        println!("cargo:rerun-if-changed={env_file}");
-        let dsn = dotenvy::from_path_iter(&env_file)
-            .expect("Missing desktop build environment file")
-            .map(|entry| entry.expect("Invalid desktop build environment file"))
-            .find(|(key, _)| key == "ROUTEVN_SENTRY_DSN")
-            .expect("ROUTEVN_SENTRY_DSN must be set in the desktop build environment file")
-            .1;
+        let dsn = if production {
+            println!("cargo:rerun-if-changed=../.env.production");
+            dotenvy::from_path_iter("../.env.production")
+                .expect("Missing .env.production")
+                .map(|entry| entry.expect("Invalid .env.production"))
+                .find(|(key, _)| key == "ROUTEVN_SENTRY_DSN")
+                .expect("ROUTEVN_SENTRY_DSN must be set in .env.production")
+                .1
+        } else {
+            println!("cargo:rerun-if-env-changed=ROUTEVN_SENTRY_DSN");
+            std::env::var("ROUTEVN_SENTRY_DSN").unwrap_or_else(|_| {
+                "http://11111111111111111111111111111111@127.0.0.1:3000/system/sentry/1".to_owned()
+            })
+        };
         assert!(!dsn.is_empty(), "ROUTEVN_SENTRY_DSN must not be empty");
         if !production {
             let url = url::Url::parse(&dsn).expect("Invalid development error collector DSN");
