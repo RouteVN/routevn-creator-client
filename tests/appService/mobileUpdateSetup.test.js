@@ -367,7 +367,7 @@ describe("Android API update setup", () => {
     assertNoPlayUpdateBridgeCalls();
   });
 
-  it("opens the App Store from the About update button with actual iOS setup dependencies", async () => {
+  it("shows the common manual error when iOS update metadata is unavailable", async () => {
     const {
       deps: { pages },
     } = await import("../../src/setup.ios.js");
@@ -386,10 +386,12 @@ describe("Android API update setup", () => {
     const openUrl = vi
       .spyOn(pages.appService, "openUrl")
       .mockResolvedValue(undefined);
-    mocked.globalUI.showConfirm.mockResolvedValueOnce(true);
     await checkAboutUpdates({ ...pages, store, render: vi.fn() });
-    expect(openUrl).toHaveBeenCalledExactlyOnceWith(
-      ROUTEVN_CREATOR_APP_STORE_URL,
+    expect(openUrl).not.toHaveBeenCalled();
+    expect(mocked.globalUI.showAlert).toHaveBeenCalledWith(
+      expect.objectContaining({
+        message: EN_I18N.appPage.retrieveUpdateInfoFallback,
+      }),
     );
   });
 });

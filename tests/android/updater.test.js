@@ -118,14 +118,10 @@ describe("Android API-owned updates", () => {
       await updater.checkForUpdates(false);
 
       expect(rawUI.showConfirm).not.toHaveBeenCalled();
-      const messages = {
-        offline: copy.retrieveUpdateInfoFallback,
-        noCompatibleRelease: copy.noCompatibleUpdateMessage,
-        unsupportedClient: copy.updateUnsupportedMessage,
-      };
       expect(rawUI.showAlert).toHaveBeenCalledExactlyOnceWith(
         expect.objectContaining({
-          message: messages[reason],
+          title: copy.errorTitle,
+          message: copy.retrieveUpdateInfoFallback,
         }),
       );
       expect(openUrl).not.toHaveBeenCalled();

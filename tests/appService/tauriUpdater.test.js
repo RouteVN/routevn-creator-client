@@ -409,8 +409,7 @@ describe("tauri updater", () => {
       await updater.checkForUpdates(false);
       expect(globalUI.showAlert).toHaveBeenCalledWith({
         title: "Error",
-        message:
-          "Failed to check for updates: Could not retrieve update information.",
+        message: "Could not retrieve update information.",
       });
       expect(updater.isUpdateAvailable()).toBe(false);
       expect(globalUI.showConfirm).not.toHaveBeenCalled();

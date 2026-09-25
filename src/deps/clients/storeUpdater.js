@@ -8,7 +8,6 @@ export const createStoreUpdater = ({
   metadataClient,
   openUrl,
   getCopy,
-  fallbackStoreUrl,
   isForeground = () => globalThis.document?.visibilityState !== "hidden",
 }) => {
   let operation;
@@ -39,30 +38,15 @@ export const createStoreUpdater = ({
     }
   };
 
-  const offerStoreFallback = async (copy) => {
-    if (!fallbackStoreUrl) {
-      await showWhenIdle(() =>
-        globalUI.showAlert({
-          title: copy.errorTitle ?? "Error",
-          message:
-            copy.retrieveUpdateInfoFallback ??
-            "Could not retrieve update information.",
-        }),
-      );
-      return;
-    }
-    const accepted = await showWhenIdle(() =>
-      globalUI.showConfirm({
+  const showCheckError = (copy) =>
+    showWhenIdle(() =>
+      globalUI.showAlert({
         title: copy.errorTitle ?? "Error",
         message:
           copy.retrieveUpdateInfoFallback ??
           "Could not retrieve update information.",
-        confirmText: copy.updateNowButton ?? "Update Now",
-        cancelText: copy.laterButton ?? "Later",
       }),
     );
-    if (accepted) await openStore(copy, fallbackStoreUrl);
-  };
 
   const performCheck = async (silent, copy) => {
     updateInfo = undefined;
@@ -72,7 +56,7 @@ export const createStoreUpdater = ({
       closeCheckProgress();
     } catch {
       closeCheckProgress();
-      if (!silent || manualCheckRequested) await offerStoreFallback(copy);
+      if (!silent || manualCheckRequested) await showCheckError(copy);
       return;
     }
     if (updateInfo.status === "updateAvailable") {
@@ -99,19 +83,7 @@ export const createStoreUpdater = ({
               "You are already on the latest version",
           }),
         );
-      } else {
-        await showWhenIdle(() =>
-          globalUI.showAlert({
-            title: copy.updateUnavailableTitle ?? "Updates unavailable",
-            message:
-              updateInfo.status === "unsupportedClient"
-                ? (copy.updateUnsupportedMessage ??
-                  "Update checks are not supported for this installation.")
-                : (copy.noCompatibleUpdateMessage ??
-                  "No compatible update is available for this installation."),
-          }),
-        );
-      }
+      } else await showCheckError(copy);
     }
     return updateInfo;
   };

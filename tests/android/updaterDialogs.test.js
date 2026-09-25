@@ -305,16 +305,15 @@ describe("Android API updates with real global dialog handlers", () => {
   });
 
   it.each([
-    [
-      { status: "noUpdate", reason: "noCompatibleRelease" },
-      "noCompatibleUpdateMessage",
-    ],
-    [{ status: "unsupportedClient" }, "updateUnsupportedMessage"],
-  ])("shows an explicit manual alert for %o", async (result, copyKey) => {
+    { status: "noUpdate", reason: "noCompatibleRelease" },
+    { status: "unsupportedClient" },
+  ])("shows the common manual error for %o", async (result) => {
     const { updater, store, cancel, openUrl } = await setup({ result });
     const checking = updater.checkForUpdates(false);
     await vi.waitFor(() =>
-      expect(store.selectConfig().message).toBe(EN_I18N.appPage[copyKey]),
+      expect(store.selectConfig().message).toBe(
+        EN_I18N.appPage.retrieveUpdateInfoFallback,
+      ),
     );
     cancel();
     await checking;

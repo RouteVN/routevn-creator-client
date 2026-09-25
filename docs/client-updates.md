@@ -6,6 +6,10 @@ channel, and device metadata. Checks work before account sign-in.
 `google-play` and `direct` flavours.
 Manual checks show an indeterminate progress dialog after 200 ms and close it
 before showing the result. Automatic checks do not show the dialog.
+Automatic checks stay silent unless an update is available. Manual check failures,
+including unsupported clients and no compatible release, show the same error:
+“Could not retrieve update information.” A successful up-to-date result still
+shows the latest-version confirmation for manual checks.
 
 ## Device metadata
 

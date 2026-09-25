@@ -173,15 +173,10 @@ const createUpdater = ({ globalUI, keyValueStore }) => {
         console.error("Failed to check for updates:", error);
         if (manualCheckRequested && globalUI) {
           const copy = activeCopy;
-          const message =
-            copy.retrieveUpdateInfoFallback ??
-            "Could not retrieve update information.";
           await globalUI.showAlert({
-            message: formatUpdaterCopy(
-              copy.failedCheckUpdatesMessage ??
-                "Failed to check for updates: {message}",
-              { message },
-            ),
+            message:
+              copy.retrieveUpdateInfoFallback ??
+              "Could not retrieve update information.",
             title: copy.errorTitle ?? "Error",
           });
         }

@@ -2,7 +2,6 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 import { JSDOM } from "jsdom";
 import { createIOSUpdater } from "../../src/deps/clients/ios/updater.js";
 import { createGlobalUIClient } from "../../src/deps/clients/globalUI.js";
-import { ROUTEVN_CREATOR_APP_STORE_URL } from "../../src/internal/routevnUrls.js";
 import { EN_I18N } from "../support/i18n.js";
 
 const copy = EN_I18N.appPage;
@@ -70,8 +69,13 @@ describe("iOS update prompts", () => {
     },
   );
 
-  it.each(["offline", "olderShell"])(
-    "retains a manual store fallback for %s without claiming latest",
+  it.each([
+    "offline",
+    "olderShell",
+    "noCompatibleRelease",
+    "unsupportedClient",
+  ])(
+    "keeps automatic %s checks quiet and shows the common manual error",
     async (reason) => {
       const result =
         reason === "unsupportedClient"
@@ -86,34 +90,12 @@ describe("iOS update prompts", () => {
         metadataClient.check.mockRejectedValue(new Error("Unavailable"));
       await updater.checkForUpdates(true);
       expect(rawUI.showConfirm).not.toHaveBeenCalled();
-      await updater.checkForUpdates(false);
-      expect(rawUI.showAlert).not.toHaveBeenCalled();
-      expect(rawUI.showConfirm).toHaveBeenCalledWith(
-        expect.objectContaining({ message: copy.retrieveUpdateInfoFallback }),
-      );
-      expect(openUrl).toHaveBeenCalledWith(ROUTEVN_CREATOR_APP_STORE_URL);
-    },
-  );
-
-  it.each([
-    {
-      result: { status: "noUpdate", reason: "noCompatibleRelease" },
-      message: copy.noCompatibleUpdateMessage,
-    },
-    {
-      result: { status: "unsupportedClient" },
-      message: copy.updateUnsupportedMessage,
-    },
-  ])(
-    "uses neutral feedback when the API declines an update",
-    async ({ result, message }) => {
-      const { updater, rawUI, openUrl } = setup({ result });
-      await updater.checkForUpdates(true);
       expect(rawUI.showAlert).not.toHaveBeenCalled();
       await updater.checkForUpdates(false);
-      expect(rawUI.showAlert).toHaveBeenCalledExactlyOnceWith(
-        expect.objectContaining({ message }),
-      );
+      expect(rawUI.showAlert).toHaveBeenCalledExactlyOnceWith({
+        title: copy.errorTitle,
+        message: copy.retrieveUpdateInfoFallback,
+      });
       expect(rawUI.showConfirm).not.toHaveBeenCalled();
       expect(openUrl).not.toHaveBeenCalled();
     },
@@ -249,7 +231,7 @@ describe("iOS update check progress", () => {
     expect(document.querySelector("#routevn-update-check-dialog")).toBeNull();
   });
 
-  it("closes the dialog before showing the API error fallback", async () => {
+  it("closes the loading dialog before showing the common error", async () => {
     useProgressDom();
     const { updater, metadataClient, rawUI } = setup();
     let rejectCheck;
@@ -260,9 +242,9 @@ describe("iOS update check progress", () => {
         }),
     );
     vi.useFakeTimers();
-    rawUI.showConfirm.mockImplementation(() => {
+    rawUI.showAlert.mockImplementation(() => {
       expect(document.querySelector("#routevn-update-check-dialog")).toBeNull();
-      return Promise.resolve(false);
+      return Promise.resolve();
     });
 
     const checking = updater.checkForUpdates(false);
@@ -272,7 +254,8 @@ describe("iOS update check progress", () => {
     ).not.toBeNull();
     rejectCheck(new Error("Offline"));
     await checking;
-    expect(rawUI.showConfirm).toHaveBeenCalledOnce();
+    expect(rawUI.showAlert).toHaveBeenCalledOnce();
+    expect(rawUI.showConfirm).not.toHaveBeenCalled();
     expect(document.querySelector("#routevn-update-check-dialog")).toBeNull();
   });
 });
