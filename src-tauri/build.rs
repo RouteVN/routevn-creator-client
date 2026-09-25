@@ -11,7 +11,6 @@ fn main() {
         std::env::var("CARGO_CFG_TARGET_OS").as_deref(),
         Ok("windows" | "macos" | "linux")
     ) {
-        println!("cargo:rerun-if-env-changed=ROUTEVN_SENTRY_DEVELOPMENT_DSN");
         let production =
             !tauri_build::is_dev() && std::env::var("PROFILE").as_deref() == Ok("release");
         let environment = if production {
@@ -19,19 +18,21 @@ fn main() {
         } else {
             "development"
         };
-        let dsn = if production {
-            "https://4a1f0f2f77f130fd8366487119b90a7d@api1.routevn.com/system/sentry/1".to_owned()
+        let dsn_variable = if production {
+            "ROUTEVN_SENTRY_PRODUCTION_DSN"
         } else {
-            let dsn = std::env::var("ROUTEVN_SENTRY_DEVELOPMENT_DSN").unwrap_or_else(|_| {
-                "http://11111111111111111111111111111111@127.0.0.1:3000/system/sentry/1".to_owned()
-            });
+            "ROUTEVN_SENTRY_DEVELOPMENT_DSN"
+        };
+        println!("cargo:rerun-if-env-changed={dsn_variable}");
+        let dsn = std::env::var(dsn_variable).expect(dsn_variable);
+        assert!(!dsn.is_empty(), "{dsn_variable} must not be empty");
+        if !production {
             let url = url::Url::parse(&dsn).expect("Invalid development error collector DSN");
             assert!(
                 url.scheme() == "http" && matches!(url.host_str(), Some("localhost" | "127.0.0.1")),
                 "Development error reporting must use the local API"
             );
-            dsn
-        };
+        }
         println!("cargo:rustc-env=ROUTEVN_SENTRY_DSN={dsn}");
         println!("cargo:rustc-env=ROUTEVN_SENTRY_ENVIRONMENT={environment}");
     }
