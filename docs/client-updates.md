@@ -38,7 +38,7 @@ Desktop includes Tauri's installation `bundleType` and device metadata in the
 query. The updater endpoint is assembled at check time so the persisted device
 ID can be included. Device values are URL-encoded once. Artifact downloads do
 not include device metadata.
-Development Tauri builds use the localhost mock by default. Production builds
+Development Tauri builds use the localhost API by default. Production builds
 use `api1.routevn.com`.
 Restart the Tauri shell after changing updater configuration or native commands;
 `watch:tauri` refreshes only the frontend.
@@ -120,12 +120,13 @@ failures do not produce an update offer or an up-to-date claim. There are no
 native Google Play update checks or in-app installation flows. Direct APK
 updating is not implemented. Steam and web retain their existing behavior.
 
-## Mock endpoint
+## Development and tests
 
-Run `bun run mock:updates` to serve the development updater endpoints at
-`http://127.0.0.1:8787`. Use `--scenario no-update`,
-`no-compatible-release`, `unavailable`, or `rate-limited` to select a response.
-Default desktop fixtures contain placeholder artifacts and cannot install.
+Run the RouteVN API locally at `http://127.0.0.1:8787` to test development
+update checks against its release catalog. API setup and catalog configuration
+live in the `routevn-api-2` repository.
+
+Run `bun run test:updates` for client updater regression tests in `tests/updates`.
 
 Production endpoints must support these request fields before this client ships.
 Existing desktop clients discover the first dynamic-update build through their
