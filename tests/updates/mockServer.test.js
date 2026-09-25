@@ -1,5 +1,10 @@
-import { afterEach, describe, expect, it } from "vitest";
+import { afterEach, describe, expect, it, vi } from "vitest";
 import { readFileSync } from "node:fs";
+import {
+  createClientUpdates,
+  readClientUpdateContext,
+} from "../../src/deps/clients/clientUpdates.js";
+import { createMobileUpdateRequest } from "../../src/deps/clients/mobileUpdateRequest.js";
 import {
   createMockUpdateServer,
   createMockReleases,
@@ -69,6 +74,52 @@ const rpc = (origin, params) =>
   });
 
 describe("mock update protocol over HTTP", () => {
+  it("accepts the shared JS request through a capability-only HTTP bridge", async () => {
+    const origin = await start();
+    const bridge = vi.fn(async (method, payload) => {
+      if (method === "getAppUpdateDeviceInfo") {
+        return {
+          version: "1.15.1",
+          arch: "aarch64",
+          distribution: "google-play",
+          build: "9",
+          model: "Example device",
+          osVersion: "18.0",
+        };
+      }
+      const response = await fetch(payload.url, {
+        method: payload.method,
+        headers: payload.headers,
+        body: payload.body,
+      });
+      return { status: response.status, body: await response.text() };
+    });
+    const context = await readClientUpdateContext(bridge, "android");
+    const request = createMobileUpdateRequest({
+      bridge,
+      debug: true,
+      override: `${origin}/system/rpc`,
+    });
+    const client = createClientUpdates({
+      context,
+      request,
+      keyValueStore: { get: async () => "123456789ABC" },
+    });
+
+    const result = await client.check({ availableBuild: "10" });
+
+    expect(result.status).toBe("updateAvailable");
+    expect(result.release.installation.build).toBe("10");
+    expect(bridge).toHaveBeenCalledWith(
+      "httpRequest",
+      expect.objectContaining({
+        url: `${origin}/system/rpc`,
+        method: "POST",
+        body: expect.stringContaining('"method":"system.getClientUpdate"'),
+      }),
+    );
+  });
+
   it("requires bounded device metadata on both transports", async () => {
     const origin = await start();
     for (const patch of [

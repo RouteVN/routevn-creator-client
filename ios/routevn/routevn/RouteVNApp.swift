@@ -62,7 +62,7 @@ final class RouteVNViewController: UIViewController, WKNavigationDelegate, WKScr
 
     private var statusBarStyle: UIStatusBarStyle = .lightContent
     private var lastReportedWindowSize: CGSize = .zero
-    private let clientUpdateApi = ClientUpdateApi()
+    private let httpRequestBridge = HttpRequestBridge()
     private let storage = RouteVNNativeStorage()
     private var projectFolderSetup: ProjectFolderSetup { storage.projectFolderSetup }
     private var webView: WKWebView!
@@ -107,7 +107,7 @@ final class RouteVNViewController: UIViewController, WKNavigationDelegate, WKScr
     }
 
     deinit {
-        clientUpdateApi.close()
+        httpRequestBridge.close()
         closeSqliteDatabases()
         webView?.configuration.userContentController.removeScriptMessageHandler(forName: "RouteVNIOS")
     }
@@ -363,8 +363,8 @@ final class RouteVNViewController: UIViewController, WKNavigationDelegate, WKScr
         let requestId = body["id"] as? String
         let payload = body["payload"] as? [String: Any] ?? [:]
 
-        if method == "requestClientUpdate" {
-            clientUpdateApi.request(payload: payload) { [weak self] result in
+        if method == "httpRequest" {
+            httpRequestBridge.request(payload: payload) { [weak self] result in
                 DispatchQueue.main.async { [weak self] in
                     guard let self, let requestId else { return }
                     switch result {
@@ -436,8 +436,13 @@ final class RouteVNViewController: UIViewController, WKNavigationDelegate, WKScr
             }
             return true
         #endif
-        case "getAppUpdateContext":
-            return try ClientUpdateApi.context()
+        case "getAppUpdateDeviceInfo":
+            return try AppDeviceInfo.read()
+        case "getUpdateApiUrlOverride":
+            if let override = AppDeviceInfo.updateApiUrlOverride() {
+                return override
+            }
+            return NSNull()
         case "isDebugBuild":
             #if DEBUG
             return true

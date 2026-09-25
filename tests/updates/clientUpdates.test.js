@@ -20,6 +20,17 @@ const android = {
   distribution: "google-play",
   currentBuild: "9",
 };
+const iosInfo = {
+  version: "1.15.1",
+  arch: "aarch64",
+  model: "iPhone17,1",
+  osVersion: "18.0",
+};
+const androidInfo = {
+  ...iosInfo,
+  distribution: "google-play",
+  build: "9",
+};
 const release = () => ({
   version: "1.16.0",
   changelog: "Release notes",
@@ -42,45 +53,56 @@ const setup = (result, context = ios) => {
 
 describe("mobile update metadata protocol", () => {
   it("reads native context and tolerates older shells", async () => {
-    const bridge = vi.fn().mockResolvedValue(android);
-    expect(await readClientUpdateContext(bridge)).toEqual(android);
-    expect(bridge).toHaveBeenCalledWith("getAppUpdateContext", {});
+    const bridge = vi.fn().mockResolvedValue(androidInfo);
+    expect(await readClientUpdateContext(bridge, "android")).toEqual(android);
+    expect(bridge).toHaveBeenCalledWith("getAppUpdateDeviceInfo", {});
+    bridge.mockResolvedValue(iosInfo);
+    expect(await readClientUpdateContext(bridge, "ios")).toEqual(ios);
     bridge.mockRejectedValue(new Error("Unknown method"));
-    expect(await readClientUpdateContext(bridge)).toBeUndefined();
-    bridge.mockResolvedValue({ ...ios, currentVersion: "invalid" });
-    expect(await readClientUpdateContext(bridge)).toBeUndefined();
+    expect(await readClientUpdateContext(bridge, "ios")).toBeUndefined();
+    bridge.mockResolvedValue({ ...iosInfo, version: "invalid" });
+    expect(await readClientUpdateContext(bridge, "ios")).toBeUndefined();
   });
 
   it.each([
-    { model: "" },
-    { model: " " },
-    { model: "x".repeat(257) },
-    { model: "device\nname" },
-    { osVersion: undefined },
-    { osVersion: 18 },
-  ])("rejects invalid native device metadata %j", async (patch) => {
-    expect(
-      await readClientUpdateContext(async () => ({
-        ...ios,
-        device: { ...ios.device, ...patch },
-      })),
-    ).toBeUndefined();
-  });
+    { patch: { model: "" }, field: "model" },
+    { patch: { model: " " }, field: "model" },
+    { patch: { model: "x".repeat(257) }, field: "model" },
+    { patch: { model: "device\nname" }, field: "model" },
+    { patch: { osVersion: undefined }, field: "osVersion" },
+    { patch: { osVersion: 18 }, field: "osVersion" },
+  ])(
+    "normalizes unavailable native device metadata %j",
+    async ({ patch, field }) => {
+      const context = await readClientUpdateContext(
+        async () => ({ ...iosInfo, ...patch }),
+        "ios",
+      );
+      expect(context?.device).toEqual({
+        model: field === "model" ? "unknown" : iosInfo.model,
+        osVersion: field === "osVersion" ? "unknown" : iosInfo.osVersion,
+      });
+    },
+  );
 
-  it("rejects flat or extended native device metadata", async () => {
+  it("rejects app fields in native device facts", async () => {
     expect(
-      await readClientUpdateContext(async () => ({
-        ...ios,
-        device: undefined,
-        deviceModel: ios.device.model,
-        osVersion: ios.device.osVersion,
-      })),
+      await readClientUpdateContext(
+        async () => ({
+          ...iosInfo,
+          appId: "routevn-creator",
+        }),
+        "ios",
+      ),
     ).toBeUndefined();
     expect(
-      await readClientUpdateContext(async () => ({
-        ...ios,
-        device: { ...ios.device, id: "123456789ABC" },
-      })),
+      await readClientUpdateContext(
+        async () => ({
+          ...iosInfo,
+          target: "ios",
+        }),
+        "ios",
+      ),
     ).toBeUndefined();
   });
 
@@ -108,7 +130,15 @@ describe("mobile update metadata protocol", () => {
   ])("keeps the result decision $status distinct", async (result) => {
     const { client, request } = setup(result);
     expect(await client.check()).toEqual(result);
-    expect(request).toHaveBeenCalledExactlyOnceWith({ deviceId });
+    expect(JSON.parse(request.mock.calls[0][0])).toEqual({
+      jsonrpc: "2.0",
+      id: 1,
+      method: "system.getClientUpdate",
+      params: {
+        ...ios,
+        device: { ...ios.device, id: deviceId },
+      },
+    });
   });
 
   it.each([
@@ -223,7 +253,16 @@ describe("mobile update metadata protocol", () => {
     expect(await client.check({ availableBuild: "10" })).toMatchObject({
       release: next,
     });
-    expect(request).toHaveBeenCalledWith({ availableBuild: "10", deviceId });
+    expect(JSON.parse(request.mock.calls[0][0])).toEqual({
+      jsonrpc: "2.0",
+      id: 1,
+      method: "system.getClientUpdate",
+      params: {
+        ...android,
+        availableBuild: "10",
+        device: { ...android.device, id: deviceId },
+      },
+    });
     await expect(client.check({ availableBuild: "11" })).rejects.toThrow();
     for (const build of ["9", "01", "0", "2100000001", "10\n"]) {
       await expect(client.check({ availableBuild: build })).rejects.toThrow();

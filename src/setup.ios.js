@@ -30,6 +30,7 @@ import {
   createClientUpdates,
   readClientUpdateContext,
 } from "./deps/clients/clientUpdates.js";
+import { createMobileUpdateRequest } from "./deps/clients/mobileUpdateRequest.js";
 import { createIOSUpdater } from "./deps/clients/ios/updater.js";
 
 registerPrimitives();
@@ -83,9 +84,20 @@ const windowMetricsClient = createWindowMetricsClient({
   loadMetrics: () => callIOSBridge("getWindowMetrics"),
 });
 
-const updateContext = await readClientUpdateContext(callIOSBridge);
+const updateContext = await readClientUpdateContext(callIOSBridge, "ios");
 const appVersion = updateContext?.currentVersion ?? tauriConfig.version;
 const creatorVersion = deriveProjectFormatVersionFromAppVersion(appVersion);
+const updateDebug = updateContext ? await callIOSBridge("isDebugBuild") : false;
+const updateApiUrlOverride = updateDebug
+  ? await callIOSBridge("getUpdateApiUrlOverride")
+  : undefined;
+const updateRequest = updateContext
+  ? createMobileUpdateRequest({
+      bridge: callIOSBridge,
+      debug: updateDebug,
+      override: updateApiUrlOverride,
+    })
+  : undefined;
 
 const updater = createIOSUpdater({
   globalUI,
@@ -94,7 +106,7 @@ const updater = createIOSUpdater({
     ? createClientUpdates({
         context: updateContext,
         keyValueStore: appDb,
-        request: (params) => callIOSBridge("requestClientUpdate", params),
+        request: updateRequest,
       })
     : undefined,
   openUrl: (url) => appService.openUrl(url),

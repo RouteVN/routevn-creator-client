@@ -27,6 +27,7 @@ import {
   createClientUpdates,
   readClientUpdateContext,
 } from "./deps/clients/clientUpdates.js";
+import { createMobileUpdateRequest } from "./deps/clients/mobileUpdateRequest.js";
 
 registerPrimitives();
 
@@ -71,7 +72,10 @@ const windowMetricsClient = createWindowMetricsClient({
   loadMetrics: () => callAndroidBridge("getWindowMetrics"),
 });
 
-const updateContext = await readClientUpdateContext(callAndroidBridge);
+const updateContext = await readClientUpdateContext(
+  callAndroidBridge,
+  "android",
+);
 const appVersion = updateContext?.currentVersion ?? tauriConfig.version;
 const creatorVersion = deriveProjectFormatVersionFromAppVersion(appVersion);
 
@@ -83,7 +87,11 @@ const updater = await createAndroidUpdater({
     ? createClientUpdates({
         context: updateContext,
         keyValueStore: appDb,
-        request: (params) => callAndroidBridge("requestClientUpdate", params),
+        request: createMobileUpdateRequest({
+          bridge: callAndroidBridge,
+          debug: isAndroidDebugBuild,
+          override: readAndroidEnv("ROUTEVN_UPDATE_API_URL", undefined),
+        }),
       })
     : undefined,
   getCopy: () => appService.getAppCopy(),

@@ -79,9 +79,30 @@ const validateContext = (context) => {
 };
 
 // Older installed shells do not expose the metadata bridge yet.
-export const readClientUpdateContext = async (bridge) => {
+export const readClientUpdateContext = async (bridge, target) => {
   try {
-    return validateContext(await bridge("getAppUpdateContext", {}));
+    const info = await bridge("getAppUpdateDeviceInfo", {});
+    const fields =
+      target === "android"
+        ? ["version", "arch", "distribution", "build", "model", "osVersion"]
+        : ["version", "arch", "model", "osVersion"];
+    exactFields(info, fields);
+    const context = {
+      appId: "routevn-creator",
+      currentVersion: info.version,
+      target,
+      arch: info.arch,
+      distribution: target === "android" ? info.distribution : "app-store",
+      channel: "stable",
+      device: {
+        model: isDeviceMetadataText(info.model) ? info.model : "unknown",
+        osVersion: isDeviceMetadataText(info.osVersion)
+          ? info.osVersion
+          : "unknown",
+      },
+    };
+    if (target === "android") context.currentBuild = info.build;
+    return validateContext(context);
   } catch {
     return undefined;
   }
@@ -155,7 +176,21 @@ export const createClientUpdates = ({
     async check({ availableBuild } = {}) {
       if (now() < retryAt)
         throw new Error("Client update check is temporarily deferred.");
-      const params = {};
+      const params = {
+        appId: context.appId,
+        currentVersion: context.currentVersion,
+        target: context.target,
+        arch: context.arch,
+        distribution: context.distribution,
+        channel: context.channel,
+        device: {
+          id: await getDeviceId(keyValueStore),
+          model: context.device.model,
+          osVersion: context.device.osVersion,
+        },
+      };
+      if (context.target === "android")
+        params.currentBuild = context.currentBuild;
       if (availableBuild !== undefined) {
         if (
           context.target !== "android" ||
@@ -166,8 +201,14 @@ export const createClientUpdates = ({
           invalid();
         params.availableBuild = availableBuild;
       }
-      params.deviceId = await getDeviceId(keyValueStore);
-      const response = await request(params);
+      const response = await request(
+        JSON.stringify({
+          jsonrpc: "2.0",
+          id: 1,
+          method: "system.getClientUpdate",
+          params,
+        }),
+      );
       if (
         [429, 503].includes(response?.status) &&
         /^[1-9][0-9]*$/.test(response.retryAfter ?? "")

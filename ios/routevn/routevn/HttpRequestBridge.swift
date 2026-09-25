@@ -1,106 +1,78 @@
 import Foundation
-import Darwin
 
-/// Fetches bounded update metadata. Store installation remains outside this client.
-final class ClientUpdateApi: NSObject, URLSessionDataDelegate {
+/// Sends bounded HTTP requests from the JavaScript environment.
+final class HttpRequestBridge: NSObject, URLSessionDataDelegate {
     static let maximumResponseBytes = 64 * 1024
-    private let queue = DispatchQueue(label: "com.routevn.creator.updates")
+    private let queue = DispatchQueue(label: "com.routevn.creator.http")
     private var session: URLSession?
     private var completion: ((Result<[String: Any], Error>) -> Void)?
     private var response: HTTPURLResponse?
     private var body = Data()
     private var timeout: DispatchWorkItem?
 
-    static func context(bundle: Bundle = .main) throws -> [String: Any] {
-        guard let version = bundle.object(forInfoDictionaryKey: "CFBundleShortVersionString") as? String,
-              !version.isEmpty else {
-            throw failure("Installed application version is missing.")
+    private static func isLocalHost(_ host: String) -> Bool {
+        let name = host.lowercased().trimmingCharacters(in: CharacterSet(charactersIn: "[]"))
+        if name == "localhost" || name.hasSuffix(".local") || name == "::1" {
+            return true
         }
-        #if arch(arm64)
-        let architecture = "aarch64"
-        #elseif arch(x86_64)
-        let architecture = "x86_64"
-        #else
-        throw failure("Unsupported iOS architecture.")
-        #endif
-        let systemVersion = ProcessInfo.processInfo.operatingSystemVersion
-        let osVersion = "\(systemVersion.majorVersion).\(systemVersion.minorVersion).\(systemVersion.patchVersion)"
-        return [
-            "appId": "routevn-creator", "currentVersion": version,
-            "target": "ios", "arch": architecture,
-            "distribution": "app-store", "channel": "stable",
-            "device": ["model": hardwareModel(), "osVersion": osVersion],
-        ]
+        if name.contains(":"), let first = name.split(separator: ":").first,
+           let prefix = UInt16(first, radix: 16) {
+            return (prefix & 0xfe00) == 0xfc00 || (prefix & 0xffc0) == 0xfe80
+        }
+        let parts = name.split(separator: ".", omittingEmptySubsequences: false)
+        guard parts.count == 4 else { return false }
+        let octets = parts.compactMap { part -> UInt8? in
+            let text = String(part)
+            if text.isEmpty || !text.utf8.allSatisfy({ $0 >= 48 && $0 <= 57 }) ||
+               (text != "0" && text.hasPrefix("0")) { return nil }
+            return UInt8(text)
+        }
+        guard octets.count == 4 else { return false }
+        return octets[0] == 10 || octets[0] == 127 ||
+            (octets[0] == 172 && (16...31).contains(octets[1])) ||
+            (octets[0] == 192 && octets[1] == 168) ||
+            (octets[0] == 169 && octets[1] == 254)
     }
 
-    private static func hardwareModel() -> String {
-        var information = utsname()
-        guard uname(&information) == 0 else {
-            return "unknown"
+    static func makeRequest(payload: [String: Any]) throws -> URLRequest {
+        guard payload.count == 4,
+              let urlString = payload["url"] as? String,
+              let url = URL(string: urlString),
+              let host = url.host,
+              url.user == nil, url.password == nil, url.fragment == nil,
+              payload["method"] as? String == "POST",
+              let headers = payload["headers"] as? [String: String],
+              headers.count == 2,
+              headers["Content-Type"] == "application/json",
+              headers["X-RouteVN-RPC"] == "1",
+              let body = payload["body"] as? String,
+              !body.isEmpty, body.utf8.count <= maximumResponseBytes else {
+            throw failure("Invalid HTTP request.")
         }
-        let capacity = MemoryLayout.size(ofValue: information.machine)
-        let model = withUnsafePointer(to: &information.machine) { pointer in
-            pointer.withMemoryRebound(to: CChar.self, capacity: capacity) { String(cString: $0) }
-        }
-        return deviceMetadata(model)
-    }
-
-    static func deviceMetadata(_ value: String?) -> String {
-        guard let value, !value.isEmpty, value.utf16.count <= 256,
-              !value.unicodeScalars.contains(where: { $0.value <= 0x1f || $0.value == 0x7f }),
-              value.unicodeScalars.contains(where: {
-                  !CharacterSet.whitespacesAndNewlines.contains($0) && $0.value != 0xfeff
-              }) else {
-            return "unknown"
-        }
-        return value
-    }
-
-    static func endpoint() throws -> URL {
-        var value = "https://api1.routevn.com/system/rpc"
+        let production = url.scheme == "https" && host == "api1.routevn.com" &&
+            (url.port == nil || url.port == 443)
         #if DEBUG
-        value = "http://127.0.0.1:8787/system/rpc"
-        if let configured = ProcessInfo.processInfo.environment["ROUTEVN_UPDATE_API_URL"], !configured.isEmpty {
-            value = configured
-        }
-        let allowedSchemes = ["https", "http"]
+        let development = url.scheme == "http" && isLocalHost(host)
         #else
-        let allowedSchemes = ["https"]
+        let development = false
         #endif
-        guard let url = URL(string: value), let scheme = url.scheme,
-              allowedSchemes.contains(scheme), url.host != nil,
-              url.user == nil, url.password == nil else {
-            throw failure("Invalid update API endpoint.")
+        guard production || development else {
+            throw failure("HTTP endpoint is not allowed.")
         }
-        return url
-    }
-
-    static func makeRequest(payload: [String: Any], bundle: Bundle = .main) throws -> URLRequest {
-        guard payload.count == 1, let deviceId = payload["deviceId"] as? String,
-              deviceId.utf8.count == 12,
-              deviceId.range(of: "^[1-9A-HJ-NP-Za-km-z]{12}$", options: .regularExpression) != nil else {
-            throw failure("Invalid update request parameter.")
-        }
-        var params = try context(bundle: bundle)
-        var device = params["device"] as! [String: Any]
-        device["id"] = deviceId
-        params["device"] = device
-        var request = URLRequest(url: try endpoint(), cachePolicy: .reloadIgnoringLocalCacheData, timeoutInterval: 10)
+        var request = URLRequest(url: url, cachePolicy: .reloadIgnoringLocalCacheData, timeoutInterval: 10)
         request.httpMethod = "POST"
         request.httpShouldHandleCookies = false
         request.setValue("application/json", forHTTPHeaderField: "Content-Type")
         request.setValue("1", forHTTPHeaderField: "X-RouteVN-RPC")
         request.setValue("no-store", forHTTPHeaderField: "Cache-Control")
-        request.httpBody = try JSONSerialization.data(withJSONObject: [
-            "jsonrpc": "2.0", "id": 1, "method": "system.getClientUpdate", "params": params,
-        ])
+        request.httpBody = Data(body.utf8)
         return request
     }
 
     func request(payload: [String: Any], completion: @escaping (Result<[String: Any], Error>) -> Void) {
         queue.async {
             guard self.completion == nil else {
-                completion(.failure(Self.failure("An update request is already running.")))
+                completion(.failure(Self.failure("An HTTP request is already running.")))
                 return
             }
             do {
@@ -121,7 +93,7 @@ final class ClientUpdateApi: NSObject, URLSessionDataDelegate {
                 let session = URLSession(configuration: configuration, delegate: self, delegateQueue: delegates)
                 self.session = session
                 let timeout = DispatchWorkItem { [weak self] in
-                    self?.finish(.failure(Self.failure("Update request timed out.")))
+                    self?.finish(.failure(Self.failure("HTTP request timed out.")))
                 }
                 self.timeout = timeout
                 self.queue.asyncAfter(deadline: .now() + 10, execute: timeout)
@@ -133,7 +105,7 @@ final class ClientUpdateApi: NSObject, URLSessionDataDelegate {
     }
 
     func close() {
-        queue.async { self.finish(.failure(Self.failure("Update request cancelled."))) }
+        queue.async { self.finish(.failure(Self.failure("HTTP request cancelled."))) }
     }
 
     private func finish(_ result: Result<[String: Any], Error>) {
@@ -173,7 +145,7 @@ final class ClientUpdateApi: NSObject, URLSessionDataDelegate {
         guard let http = response as? HTTPURLResponse,
               response.expectedContentLength <= Int64(Self.maximumResponseBytes) else {
             completionHandler(.cancel)
-            finish(.failure(Self.failure("Invalid or oversized update response.")))
+            finish(.failure(Self.failure("Invalid or oversized HTTP response.")))
             return
         }
         self.response = http
@@ -183,7 +155,7 @@ final class ClientUpdateApi: NSObject, URLSessionDataDelegate {
     func urlSession(_ session: URLSession, dataTask: URLSessionDataTask, didReceive data: Data) {
         guard session === self.session else { return }
         guard data.count <= Self.maximumResponseBytes - body.count else {
-            finish(.failure(Self.failure("Update response is too large.")))
+            finish(.failure(Self.failure("HTTP response is too large.")))
             return
         }
         body.append(data)
@@ -193,7 +165,7 @@ final class ClientUpdateApi: NSObject, URLSessionDataDelegate {
         guard session === self.session else { return }
         if let error { finish(.failure(error)); return }
         guard let response, let text = String(data: body, encoding: .utf8) else {
-            finish(.failure(Self.failure("Invalid update response.")))
+            finish(.failure(Self.failure("Invalid HTTP response.")))
             return
         }
         var result: [String: Any] = ["status": response.statusCode, "body": text]
@@ -204,6 +176,6 @@ final class ClientUpdateApi: NSObject, URLSessionDataDelegate {
     }
 
     private static func failure(_ message: String) -> NSError {
-        NSError(domain: "com.routevn.creator.updates", code: 1, userInfo: [NSLocalizedDescriptionKey: message])
+        NSError(domain: "com.routevn.creator.http", code: 1, userInfo: [NSLocalizedDescriptionKey: message])
     }
 }

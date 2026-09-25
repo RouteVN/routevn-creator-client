@@ -544,18 +544,18 @@ describe("mobile setup update persistence", () => {
 });
 
 describe("mobile update API setup", () => {
-  const nativeContext = (platform, distribution) => {
-    const context = {
-      appId: "routevn-creator",
-      currentVersion: "1.14.0",
-      target: platform,
+  const nativeInfo = (platform, distribution) => {
+    const info = {
+      version: "1.14.0",
       arch: "aarch64",
-      distribution,
-      channel: "stable",
-      device: { model: "Example device", osVersion: "18.0" },
+      model: "Example device",
+      osVersion: "18.0",
     };
-    if (platform === "android") context.currentBuild = "9";
-    return context;
+    if (platform === "android") {
+      info.distribution = distribution;
+      info.build = "9";
+    }
+    return info;
   };
 
   it.each(["google-play", "direct"])(
@@ -563,15 +563,15 @@ describe("mobile update API setup", () => {
     async (distribution) => {
       const original = mocked.bridge.getMockImplementation();
       mocked.bridge.mockImplementation(async (method, params) => {
-        if (method === "getAppUpdateContext")
-          return nativeContext("android", distribution);
+        if (method === "getAppUpdateDeviceInfo")
+          return nativeInfo("android", distribution);
         if (method === "getAppUpdateSupport")
           return {
             status: distribution === "direct" ? "unsupported" : "supported",
           };
         if (method === "checkAppUpdate")
           return { status: "available", versionCode: 10 };
-        if (method === "requestClientUpdate")
+        if (method === "httpRequest")
           return {
             status: 200,
             body: JSON.stringify({
@@ -591,16 +591,31 @@ describe("mobile update API setup", () => {
       if (distribution === "direct") {
         expect(pages.updaterService).toBeUndefined();
         expect(mocked.bridge).not.toHaveBeenCalledWith(
-          "requestClientUpdate",
+          "httpRequest",
           expect.anything(),
         );
       } else {
         await pages.updaterService.checkForUpdates(false, {
           copy: EN_I18N.appPage,
         });
-        expect(mocked.bridge).toHaveBeenCalledWith("requestClientUpdate", {
-          availableBuild: "10",
-          deviceId: expect.stringMatching(/^[1-9A-HJ-NP-Za-km-z]{12}$/),
+        const updateCall = mocked.bridge.mock.calls.find(
+          ([method]) => method === "httpRequest",
+        );
+        expect(updateCall?.[1]).toMatchObject({
+          url: "https://api1.routevn.com/system/rpc",
+          method: "POST",
+        });
+        expect(JSON.parse(updateCall[1].body)).toMatchObject({
+          method: "system.getClientUpdate",
+          params: {
+            appId: "routevn-creator",
+            target: "android",
+            currentBuild: "9",
+            availableBuild: "10",
+            device: {
+              id: expect.stringMatching(/^[1-9A-HJ-NP-Za-km-z]{12}$/),
+            },
+          },
         });
         expect(mocked.globalUI.showConfirm).toHaveBeenCalledWith(
           expect.objectContaining({
@@ -614,9 +629,10 @@ describe("mobile update API setup", () => {
   it("uses native iOS version and sends About through the metadata bridge", async () => {
     const original = mocked.bridge.getMockImplementation();
     mocked.bridge.mockImplementation(async (method, params) => {
-      if (method === "getAppUpdateContext")
-        return nativeContext("ios", "app-store");
-      if (method === "requestClientUpdate")
+      if (method === "getAppUpdateDeviceInfo")
+        return nativeInfo("ios", "app-store");
+      if (method === "getUpdateApiUrlOverride") return undefined;
+      if (method === "httpRequest")
         return {
           status: 200,
           body: JSON.stringify({
@@ -641,8 +657,23 @@ describe("mobile update API setup", () => {
       render: vi.fn(),
       i18n: EN_I18N,
     });
-    expect(mocked.bridge).toHaveBeenCalledWith("requestClientUpdate", {
-      deviceId: expect.stringMatching(/^[1-9A-HJ-NP-Za-km-z]{12}$/),
+    const updateCall = mocked.bridge.mock.calls.find(
+      ([method]) => method === "httpRequest",
+    );
+    expect(updateCall?.[1]).toMatchObject({
+      url: "https://api1.routevn.com/system/rpc",
+      method: "POST",
+    });
+    expect(JSON.parse(updateCall[1].body)).toMatchObject({
+      method: "system.getClientUpdate",
+      params: {
+        appId: "routevn-creator",
+        target: "ios",
+        distribution: "app-store",
+        device: {
+          id: expect.stringMatching(/^[1-9A-HJ-NP-Za-km-z]{12}$/),
+        },
+      },
     });
     expect(mocked.globalUI.showAlert).toHaveBeenCalledWith(
       expect.objectContaining({
@@ -655,9 +686,10 @@ describe("mobile update API setup", () => {
   it("keeps iOS automatic prompts behind appService progress work", async () => {
     const original = mocked.bridge.getMockImplementation();
     mocked.bridge.mockImplementation(async (method, params) => {
-      if (method === "getAppUpdateContext")
-        return nativeContext("ios", "app-store");
-      if (method === "requestClientUpdate")
+      if (method === "getAppUpdateDeviceInfo")
+        return nativeInfo("ios", "app-store");
+      if (method === "getUpdateApiUrlOverride") return undefined;
+      if (method === "httpRequest")
         return {
           status: 200,
           body: JSON.stringify({

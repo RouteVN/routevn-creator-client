@@ -88,8 +88,14 @@ X-RouteVN-RPC: 1
 
 Android's optional `availableBuild` is the exact build offered by Google Play.
 iOS sends `target: ios`, `distribution: app-store`, and omits both build fields.
-Native shells supply installed-version and device metadata and construct
-requests without account credentials or cookies.
+Native shells supply installed-version and device facts. Shared JavaScript builds
+and validates the RPC request and result; the mobile HTTP bridge sends only the
+provided request through a bounded, cookie-free transport. Android installation
+still uses Google Play, and iOS opens the App Store.
+Mobile development checks default to `http://127.0.0.1:8787/system/rpc`;
+production checks use `https://api1.routevn.com/system/rpc`. Reverse TCP 8787
+with `adb reverse` for a connected Android device. A physical iPhone needs a
+reachable LAN URL through `ROUTEVN_UPDATE_API_URL` when launching the debug app.
 
 RPC results distinguish `updateAvailable`, `noUpdate` (reason `upToDate` or
 `noCompatibleRelease`), and `unsupportedClient`. An available result contains
