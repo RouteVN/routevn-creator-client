@@ -59,6 +59,7 @@ final class ClientUpdateApi: NSObject, URLSessionDataDelegate {
     static func endpoint() throws -> URL {
         var value = "https://api1.routevn.com/system/rpc"
         #if DEBUG
+        value = "http://127.0.0.1:8787/system/rpc"
         if let configured = ProcessInfo.processInfo.environment["ROUTEVN_UPDATE_API_URL"], !configured.isEmpty {
             value = configured
         }

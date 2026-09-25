@@ -54,9 +54,12 @@ struct ClientUpdateApiNativeTests {
             } catch { }
         }
         #if DEBUG
-        setenv("ROUTEVN_UPDATE_API_URL", "http://127.0.0.1:8787/system/rpc", 1)
+        unsetenv("ROUTEVN_UPDATE_API_URL")
+        let defaultDebugEndpoint = try ClientUpdateApi.endpoint()
+        precondition(defaultDebugEndpoint.absoluteString == "http://127.0.0.1:8787/system/rpc")
+        setenv("ROUTEVN_UPDATE_API_URL", "http://dev-mac.local:8787/system/rpc", 1)
         let debugEndpoint = try ClientUpdateApi.endpoint()
-        precondition(debugEndpoint.absoluteString == "http://127.0.0.1:8787/system/rpc")
+        precondition(debugEndpoint.absoluteString == "http://dev-mac.local:8787/system/rpc")
         setenv("ROUTEVN_UPDATE_API_URL", "file:///tmp/update.json", 1)
         do {
             _ = try ClientUpdateApi.endpoint()

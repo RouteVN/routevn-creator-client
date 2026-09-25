@@ -21,7 +21,7 @@ require(routevnDistribution in setOf("direct", "google-play")) {
 }
 
 val routevnUpdateApiUrl = providers.gradleProperty("routevnUpdateApiUrl")
-    .orElse("https://api1.routevn.com/system/rpc").get()
+    .orElse("http://127.0.0.1:8787/system/rpc").get()
 fun javaString(value: String) = "\"" + value.replace("\\", "\\\\").replace("\"", "\\\"") + "\""
 
 val buildAndroidRust by tasks.registering(Exec::class) {

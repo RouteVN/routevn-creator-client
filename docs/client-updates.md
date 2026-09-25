@@ -34,7 +34,8 @@ Desktop includes Tauri's installation `bundleType` and device metadata in the
 query. The updater endpoint is assembled at check time so the persisted device
 ID can be included. Device values are URL-encoded once. Artifact downloads do
 not include device metadata.
-Development and production Tauri builds use `api1.routevn.com` by default.
+Development Tauri builds use the localhost mock by default. Production builds
+use `api1.routevn.com`.
 Restart the Tauri shell after changing updater configuration or native commands;
 `watch:tauri` refreshes only the frontend.
 
@@ -107,8 +108,8 @@ existing distribution behavior.
 
 ## Mock endpoint
 
-Run `bun run mock:updates` and pass `--config src-tauri/tauri.mock.conf.json`
-to `tauri dev` to use the local mock at `http://127.0.0.1:8787`. Use `--scenario no-update`,
+Run `bun run mock:updates` to serve the development updater endpoints at
+`http://127.0.0.1:8787`. Use `--scenario no-update`,
 `no-compatible-release`, `unavailable`, or `rate-limited` to select a response.
 Default desktop fixtures contain placeholder artifacts and cannot install.
 

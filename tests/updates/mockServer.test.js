@@ -254,7 +254,7 @@ describe("mock update protocol over HTTP", () => {
     expect((await desktopFetch(origin + "/system/rpc")).status).toBe(405);
   });
 
-  it("uses the production endpoint by default and keeps the mock opt-in", () => {
+  it("uses localhost for development and the API host for production", () => {
     const load = (name) =>
       JSON.parse(
         readFileSync(
@@ -264,8 +264,7 @@ describe("mock update protocol over HTTP", () => {
       ).plugins.updater;
     const development = load("tauri.conf.json");
     const production = load("tauri.prod.conf.json");
-    const mock = load("tauri.mock.conf.json");
-    for (const config of [development, production, mock]) {
+    for (const config of [development, production]) {
       const url = new URL(config.endpoints[0]);
       expect(url.pathname).toBe("/system/updates/v1/routevn-creator/tauri");
       expect(Object.fromEntries(url.searchParams)).toEqual({
@@ -277,14 +276,11 @@ describe("mock update protocol over HTTP", () => {
         bundleType: "{{bundle_type}}",
       });
     }
-    expect(new URL(development.endpoints[0]).hostname).toBe("api1.routevn.com");
+    expect(new URL(development.endpoints[0]).hostname).toBe("127.0.0.1");
     expect(new URL(production.endpoints[0]).hostname).toBe("api1.routevn.com");
-    expect(new URL(mock.endpoints[0]).hostname).toBe("127.0.0.1");
-    expect(development.pubkey).toBe(production.pubkey);
+    expect(development.pubkey).not.toBe(production.pubkey);
     expect(production.dangerousInsecureTransportProtocol).toBe(false);
-    expect(development.dangerousInsecureTransportProtocol).toBe(false);
-    expect(mock.dangerousInsecureTransportProtocol).toBe(true);
-    expect(mock.pubkey).not.toBe(production.pubkey);
+    expect(development.dangerousInsecureTransportProtocol).toBe(true);
     expect(load("tauri.steam.conf.json").endpoints).toEqual([]);
   });
 });
