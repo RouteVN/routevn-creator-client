@@ -10,6 +10,8 @@ mod discord_presence {
         Err("Discord presence is unavailable on this platform.".to_string())
     }
 }
+#[cfg(any(target_os = "windows", target_os = "macos", target_os = "linux"))]
+mod error_reporting;
 mod export_macos;
 mod export_windows;
 mod export_zip;
@@ -38,6 +40,8 @@ fn configure_linux_graphics_workarounds() {}
 
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
+    #[cfg(any(target_os = "windows", target_os = "macos", target_os = "linux"))]
+    let _error_reporting = error_reporting::init();
     configure_linux_graphics_workarounds();
 
     // Enable WebKit inspector for WSL

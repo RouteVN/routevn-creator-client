@@ -2,6 +2,9 @@
 
 set -e
 
+source scripts/desktop-sentry-env.sh
+configure_desktop_sentry development
+
 RTGL_BIN="node_modules/.bin/rtgl"
 
 if [ ! -x "${RTGL_BIN}" ]; then

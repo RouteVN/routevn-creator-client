@@ -43,6 +43,8 @@ if [ -f ".env" ]; then
   set +a
 fi
 
+export ROUTEVN_SENTRY_BUILD_ENV=production
+
 if [ -z "${APPLE_SIGNING_IDENTITY:-}" ]; then
   echo "Error: APPLE_SIGNING_IDENTITY is not set. Add it to .env."
   exit 1

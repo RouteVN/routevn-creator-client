@@ -228,6 +228,7 @@ write_appimage_checksum() {
 }
 
 load_env
+export ROUTEVN_SENTRY_BUILD_ENV=production
 
 if ! command -v patchelf >/dev/null 2>&1; then
   echo "Error: patchelf is required for AppImage media framework bundling."

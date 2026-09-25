@@ -29,6 +29,10 @@ Desktop shell:
 
 - `Tauri`
 
+Desktop error reporting uses separate browser and Rust SDKs. See
+[Desktop error reporting](desktop-error-reporting.md) for build-time DSN
+selection, capture boundaries, and privacy rules.
+
 Local-first collaboration:
 
 - `insieme`
