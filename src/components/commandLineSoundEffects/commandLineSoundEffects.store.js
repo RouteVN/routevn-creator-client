@@ -306,6 +306,20 @@ export const selectSelectedChannelId = ({ state }) => {
   return state.selectedChannelId;
 };
 
+export const selectAddChannelMenuItems = ({ state, i18n }) => {
+  const copy = selectCommandLineCopy(i18n);
+  const channelIds = new Set(state.channels.map((channel) => channel.id));
+  const items = Array.from({ length: 9 }, (_, index) => String(index + 1))
+    .filter((id) => !channelIds.has(id))
+    .map((id) => ({ type: "item", label: id, key: id }));
+  items.push({
+    type: "item",
+    label: localizeCommandLineText("Custom channel name", copy),
+    key: "custom",
+  });
+  return items;
+};
+
 export const selectSelectedSoundId = ({ state }) => state.selectedSoundId;
 
 export const selectEditingChannelId = ({ state }) => state.editingChannelId;
@@ -529,9 +543,10 @@ export const selectViewData = ({ state, i18n }) => {
     showResourceSelectorFileExplorer: resourceSelectorLayout.showFileExplorer,
     resourceSelectorColumns: resourceSelectorLayout.columns,
     resourceSelectorGridStyle: resourceSelectorLayout.gridStyle,
-    resourceSelectorItemStyle: resourceSelectorLayout.itemStyle,
-    resourceSelectorCardStyle: resourceSelectorLayout.cardStyle,
-    resourceSelectorPreviewStyle: resourceSelectorLayout.previewStyle,
+    resourceSelectorHorizontalPadding: state.isTouchMode ? "none" : "md",
+    resourceSelectorCardStyle: state.isTouchMode
+      ? resourceSelectorLayout.cardStyle
+      : "width: 200px; min-width: 0; max-width: 100%; box-sizing: border-box;",
     channels,
     editorChannel,
     isChannelEditorOpen: editorChannel !== undefined,

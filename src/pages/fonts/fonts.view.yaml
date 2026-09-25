@@ -150,6 +150,7 @@ template:
                                       - rtgl-svg svg=edit wh=16: null
                                   - rvn-detail-view#detailView key=${selectedDetailId} w=f h=1fg :fields=${detailFields}:
                                       - $if selectedItemId:
+                                          - rvn-font-preview#detailFontPreview show-error-message slot="font-preview" fileId=${selectedPreviewFileId} :fontWeightDescriptor=${selectedFontWeightDescriptor} fontWeight=${selectedFontWeight} previewText="Aa" fontSize=60 width=f height=140 av=c ah=c: null
                                           - rtgl-tag-select#detailTagSelect slot="font-tags" w=f :options=${tagFilterOptions} :selectedValues=${selectedItemTagIds} :draftSelectedValues=${detailTagDraftValues} :open=${isDetailTagSelectOpen} :addOption=${detailTagAddOption} placeholder="${addTagPlaceholder}": null
                             $else:
                               - rtgl-view wh=f av=c ah=c bgc=mu-fg:
@@ -172,13 +173,14 @@ template:
                   - rtgl-button#mobileDetailDeleteButton w=1fg v=se pre=trash: ${deleteButton}
               - 'rtgl-view w=f h=1fg sv style="min-height: 0;"':
                   - rvn-detail-view#mobileDetailView key=${selectedItemId} w=f :fields=${mobileDetailFields} :fillHeight=${mobileDetailFillHeight}:
+                      - rvn-font-preview show-error-message slot="font-preview" fileId=${selectedPreviewFileId} :fontWeightDescriptor=${selectedFontWeightDescriptor} fontWeight=${selectedFontWeight} previewText="Aa" fontSize=60 width=f height=140 av=c ah=c: null
                       - rtgl-tag-select#detailTagSelect slot="font-tags" w=f :options=${tagFilterOptions} :selectedValues=${selectedItemTagIds} :draftSelectedValues=${detailTagDraftValues} :open=${isDetailTagSelectOpen} :addOption=${detailTagAddOption} placeholder="${addTagPlaceholder}": null
   - rtgl-dialog#editDialog ?open=${isEditDialogOpen} s=md md-layout=fixed-top:
       - rtgl-view slot=content d=v w=f h=f overflow=hidden:
           - rtgl-form#editForm key=${isEditDialogOpen} :defaultValues=${editDefaultValues} :form=${editForm} sticky bottom-spacer=96 w=f h=f:
               - $if editPreviewFileId:
                   - 'rtgl-view#editDialogFontPreview slot="font-slot" w=f bw=xs bc=bo br=md p=md cur=pointer style="min-width: 0; max-width: 100%; box-sizing: border-box; overflow: hidden;"':
-                      - rvn-font-preview mode=live fileId=${editPreviewFileId} :fontFamily=${editPreviewFontFamily} :fontWeightDescriptor=${editPreviewFontWeightDescriptor} fontWeight=${editPreviewFontWeight} previewText="Aa" fontSize=60 width=f height=120 av=c ah=c: null
+                      - rvn-font-preview show-error-message mode=live fileId=${editPreviewFileId} :fontFamily=${editPreviewFontFamily} :fontWeightDescriptor=${editPreviewFontWeightDescriptor} fontWeight=${editPreviewFontWeight} previewText="Aa" fontSize=60 width=f height=120 av=c ah=c: null
                 $else:
                   - rtgl-view#editDialogFontPreviewPlaceholder slot="font-slot" w=f h=120 bw=xs bc=bo br=md av=c ah=c cur=pointer:
                       - rtgl-text c=mu-fg s=sm: ${clickToUploadLabel}

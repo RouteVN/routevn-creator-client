@@ -102,7 +102,7 @@ describe("imageSelector.store", () => {
     expect(view.groups[0].children[0]).toMatchObject({
       id: "sprite-1",
       thumbnailFileId: "thumbnail-file",
-      preview: { kind: "image", fileId: "image-file" },
+      preview: { kind: "image", fileId: "thumbnail-file" },
     });
     expect(view.groups[1].children[0].preview).toMatchObject({
       kind: "spritesheet",

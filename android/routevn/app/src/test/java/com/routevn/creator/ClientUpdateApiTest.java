@@ -31,9 +31,14 @@ public class ClientUpdateApiTest {
         assertEquals(1, request.getInt("id"));
         assertEquals("10", request.getJSONObject("params").getString("availableBuild"));
         assertEquals("google-play", play.getString("distribution"));
-        assertEquals(DEVICE_ID, request.getJSONObject("params").getString("deviceId"));
-        assertEquals(android.os.Build.MODEL, play.getString("deviceModel"));
-        assertEquals(android.os.Build.VERSION.RELEASE, play.getString("osVersion"));
+        JSONObject params = request.getJSONObject("params");
+        assertEquals(DEVICE_ID, params.getJSONObject("device").getString("id"));
+        assertEquals(3, params.getJSONObject("device").length());
+        assertEquals(android.os.Build.MODEL, play.getJSONObject("device").getString("model"));
+        assertEquals(android.os.Build.VERSION.RELEASE, play.getJSONObject("device").getString("osVersion"));
+        assertFalse(params.has("deviceId"));
+        assertFalse(params.has("deviceModel"));
+        assertFalse(params.has("osVersion"));
     }
 
     @Test public void rejectsStoreBuildHintsForDirectAndInvalidPlayBuilds() throws Exception {
@@ -48,21 +53,21 @@ public class ClientUpdateApiTest {
 
     @Test public void reportsDeviceMetadataAndFallsBackWhenUnavailable() throws Exception {
         JSONObject context = ClientUpdateApi.context("1.15.1", 9, "arm64-v8a", "direct", "Pixel 9", "16");
-        assertEquals("Pixel 9", context.getString("deviceModel"));
-        assertEquals("16", context.getString("osVersion"));
+        assertEquals("Pixel 9", context.getJSONObject("device").getString("model"));
+        assertEquals("16", context.getJSONObject("device").getString("osVersion"));
         JSONObject request = ClientUpdateApi.requestBody(context, payload());
-        assertEquals(DEVICE_ID, request.getJSONObject("params").getString("deviceId"));
+        assertEquals(DEVICE_ID, request.getJSONObject("params").getJSONObject("device").getString("id"));
         assertFalse(request.getJSONObject("params").has("availableBuild"));
         for (String value : new String[] { null, "", " ", "\u00a0", "\ufeff", "a".repeat(257),
                 "Pixel\n9", "Pixel" + (char) 0, "Pixel" + (char) 31, "Pixel" + (char) 127 }) {
             JSONObject missingModel = ClientUpdateApi.context(
                 "1.15.1", 9, "arm64-v8a", "direct", value, "16");
-            assertEquals("unknown", missingModel.getString("deviceModel"));
-            assertEquals("16", missingModel.getString("osVersion"));
+            assertEquals("unknown", missingModel.getJSONObject("device").getString("model"));
+            assertEquals("16", missingModel.getJSONObject("device").getString("osVersion"));
             JSONObject missingVersion = ClientUpdateApi.context(
                 "1.15.1", 9, "arm64-v8a", "direct", "Pixel 9", value);
-            assertEquals("unknown", missingVersion.getString("osVersion"));
-            assertEquals("Pixel 9", missingVersion.getString("deviceModel"));
+            assertEquals("unknown", missingVersion.getJSONObject("device").getString("osVersion"));
+            assertEquals("Pixel 9", missingVersion.getJSONObject("device").getString("model"));
         }
     }
 
@@ -74,7 +79,7 @@ public class ClientUpdateApiTest {
             assertThrows(IllegalArgumentException.class, () -> ClientUpdateApi.requestBody(
                 context, new JSONObject().put("deviceId", value)));
         }
-        for (String key : new String[] { "deviceModel", "osVersion", "distribution", "currentVersion" }) {
+        for (String key : new String[] { "device", "deviceModel", "osVersion", "distribution", "currentVersion" }) {
             assertThrows(IllegalArgumentException.class, () -> ClientUpdateApi.requestBody(
                 context, payload().put(key, "caller-supplied")));
         }

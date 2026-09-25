@@ -7,12 +7,12 @@ import {
 
 afterEach(() => vi.useRealTimers());
 
-const fixture = async ({ lastAttemptAt = 1000000 } = {}) => {
+const fixture = async ({ lastAttemptAt = 1000000, configured = true } = {}) => {
   vi.useFakeTimers();
   vi.setSystemTime(1000000);
   let active = true;
   let listener;
-  let status = { configured: true, lastAttemptAt, projects: [] };
+  let status = { configured, lastAttemptAt, projects: [] };
   const unsubscribe = vi.fn();
   const calls = [];
   const client = {
@@ -30,10 +30,7 @@ const fixture = async ({ lastAttemptAt = 1000000 } = {}) => {
     configure: vi.fn(
       async () => (status = { ...status, configured: true, lastAttemptAt: 0 }),
     ),
-    skip: vi.fn(async () => (status = { ...status, skipped: true })),
-    disable: vi.fn(
-      async () => (status = { configured: false, skipped: true, projects: [] }),
-    ),
+    disable: vi.fn(async () => (status = { configured: false, projects: [] })),
     isActive: () => active,
     subscribeActive: (fn) => {
       listener = fn;
@@ -78,6 +75,35 @@ const fixture = async ({ lastAttemptAt = 1000000 } = {}) => {
 };
 
 describe("Android disaster backup scheduling", () => {
+  it("schedules backups once status loads after startup did not wait for it", async () => {
+    vi.useFakeTimers();
+    vi.setSystemTime(1000000);
+    const client = {
+      status: vi.fn(async () => ({
+        configured: true,
+        lastAttemptAt: 1,
+        projects: [],
+      })),
+      beginPass: vi.fn(async () => ({ due: false })),
+      isActive: () => true,
+      subscribeActive: () => () => {},
+    };
+    const service = createBackupService({
+      client,
+      backupProject: vi.fn(),
+      beforeBackup: vi.fn(),
+      notify: vi.fn(),
+    });
+    const stop = service.start(() => ({}));
+    expect(service.getStatus().loading).toBe(true);
+    expect(vi.getTimerCount()).toBe(0);
+    await service.initialize();
+    expect(service.getStatus().loading).toBeUndefined();
+    await vi.advanceTimersByTimeAsync(BACKUP_RESUME_DELAY_MS);
+    expect(client.beginPass).toHaveBeenCalledOnce();
+    stop();
+  });
+
   it("stays disabled across timers and resumes until explicitly configured again", async () => {
     const f = await fixture();
     await f.service.disable();
@@ -161,11 +187,11 @@ describe("Android disaster backup scheduling", () => {
     f.stop();
   });
 
-  it("resumes nine minutes into the persisted cooldown and runs one minute later", async () => {
+  it("resumes one minute before the persisted cooldown ends and runs then", async () => {
     const f = await fixture();
     f.active(false);
     expect(vi.getTimerCount()).toBe(0);
-    await f.advance(9 * 60 * 1000);
+    await f.advance(BACKUP_INTERVAL_MS - 60 * 1000);
     f.active(true);
     await f.advance(60 * 1000 - 1);
     expect(f.client.beginPass).not.toHaveBeenCalled();
@@ -176,8 +202,71 @@ describe("Android disaster backup scheduling", () => {
     f.stop();
   });
 
+  it("backs up a new project shortly without waiting for the interval", async () => {
+    const f = await fixture();
+    f.projects([{ id: "new", pending: true }]);
+    f.service.backupNewProject();
+    await f.advance(BACKUP_RESUME_DELAY_MS - 1);
+    expect(f.client.beginPass).not.toHaveBeenCalled();
+    await f.advance(1);
+    expect(f.client.beginPass).toHaveBeenCalledWith(true);
+    expect(f.backupProject).toHaveBeenCalledWith("new");
+    f.stop();
+  });
+
+  it("runs a follow-up pass for a project created during a pass", async () => {
+    const f = await fixture({ lastAttemptAt: 1 });
+    f.projects([{ id: "one", pending: true }]);
+    let release;
+    f.backupProject.mockImplementationOnce(
+      () =>
+        new Promise((resolve) => {
+          release = resolve;
+        }),
+    );
+    await f.advance(BACKUP_RESUME_DELAY_MS);
+    expect(f.backupProject).toHaveBeenCalledWith("one");
+    f.projects([
+      { id: "one", pending: false },
+      { id: "new", pending: true },
+    ]);
+    f.service.backupNewProject();
+    release();
+    await f.advance(0);
+    expect(f.client.beginPass).toHaveBeenCalledTimes(2);
+    expect(f.backupProject.mock.calls).toEqual([["one"], ["new"]]);
+    f.stop();
+  });
+
+  it("keeps a new project waiting when a pass stops before listing projects", async () => {
+    const f = await fixture();
+    f.projects([{ id: "new", pending: true }]);
+    f.beforeBackup.mockImplementationOnce(async () => f.active(false));
+    f.service.backupNewProject();
+    await f.advance(BACKUP_RESUME_DELAY_MS);
+    expect(f.client.pendingProjects).not.toHaveBeenCalled();
+    f.active(true);
+    await f.advance(BACKUP_RESUME_DELAY_MS);
+    expect(f.backupProject).toHaveBeenCalledWith("new");
+    f.stop();
+  });
+
+  it("falls back to the interval when a new-project pass fails", async () => {
+    const f = await fixture();
+    f.beforeBackup.mockRejectedValueOnce(new Error("save failed"));
+    f.service.backupNewProject();
+    await f.advance(BACKUP_RESUME_DELAY_MS);
+    await f.advance(BACKUP_RESUME_DELAY_MS);
+    expect(f.client.beginPass).toHaveBeenCalledOnce();
+    await f.advance(BACKUP_INTERVAL_MS);
+    expect(f.client.beginPass).toHaveBeenCalledTimes(2);
+    f.stop();
+  });
+
   it("uses the remaining persisted cooldown on a fresh launch", async () => {
-    const f = await fixture({ lastAttemptAt: 1000000 - 9 * 60 * 1000 });
+    const f = await fixture({
+      lastAttemptAt: 1000000 - (BACKUP_INTERVAL_MS - 60 * 1000),
+    });
     await f.advance(60 * 1000 - 1);
     expect(f.client.beginPass).not.toHaveBeenCalled();
     await f.advance(1);
@@ -255,7 +344,7 @@ describe("Android disaster backup scheduling", () => {
     expect(vi.getTimerCount()).toBe(0);
   });
 
-  it("checks after ten minutes, flushes drafts before dirty detection, and skips unchanged projects", async () => {
+  it("checks after five minutes, flushes drafts before dirty detection, and skips unchanged projects", async () => {
     const f = await fixture();
     await f.service.run();
     await f.advance(BACKUP_INTERVAL_MS - 1);

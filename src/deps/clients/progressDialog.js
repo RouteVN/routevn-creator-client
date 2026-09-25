@@ -25,6 +25,7 @@ export const createProgressDialog = (
     message = "",
     status,
     progress,
+    announceTitle = false,
   } = {},
   root = typeof document === "undefined" ? undefined : document,
 ) => {
@@ -53,7 +54,16 @@ export const createProgressDialog = (
     g: "lg",
   });
   const header = createRtglElement(root, "rtgl-view", { g: "sm", w: "f" });
-  const titleText = createRtglElement(root, "rtgl-text", { s: "lg" }, title);
+  const titleText = createRtglElement(
+    root,
+    "rtgl-text",
+    {
+      s: "lg",
+      role: announceTitle ? "status" : undefined,
+      "aria-atomic": announceTitle ? "true" : undefined,
+    },
+    title,
+  );
   const messageText = createRtglElement(
     root,
     "rtgl-text",

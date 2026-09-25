@@ -213,6 +213,9 @@ projectPage:
   warningTitle: "警告"
   wordsLabel: "単語数"
 appPage:
+  filePickerSourceTitle: 選択元
+  filePickerGallery: 写真ライブラリ
+  filePickerFiles: ファイルを選択
   pressEscapeAgainFullscreen: "Esc キーをすばやく2回押すとフルスクリーンを終了します"
   failedExitFullscreen: "フルスクリーンを終了できませんでした。ウィンドウのボタンを使用してください。"
   failedStartPreviewAudio: "プレビューの音声を再生できませんでした。プレビューを閉じて、もう一度開いてください。"
@@ -247,6 +250,7 @@ appPage:
   releaseTab: "公開"
   refreshingProjectEntry: "プロジェクト情報を更新しています..."
   retrieveUpdateInfoFallback: "アップデート情報を取得できませんでした。"
+  checkingForUpdates: "アップデートを確認しています..."
   sceneMapTab: "シーンマップ"
   settingsTab: "設定"
   updateDownloadMessage: "アップデートの準備が完了すると RouteVN Creator が再起動します。このまま開いたままにしてください。"
@@ -514,9 +518,20 @@ webServerPage:
   unsupportedTitle: "未対応"
   urlLabel: "URL"
   warningTitle: "警告"
+fontPreview:
+  reuploadLabel: "フォントを再アップロード"
+  unavailableLabel: "フォントを読み込めません"
+  reuploadMessage: "「フォント」を開き、該当するフォントファイルを再アップロードしてください。"
+fileImage:
+  unavailableLabel: "画像を読み込めません"
+  reuploadMessage: "「編集」を開き、画像ファイルを再アップロードしてください。"
+assetLoadFeedback:
+  previewBlocked: "次の素材を読み込めないため、プレビューを再生できません。"
+  voices: "ボイス"
+  file: "素材ファイル: {fileId}"
+  unknown: "特定できない素材"
+  failed: "次の素材を読み込めませんでした:\n{assets}\n\nファイルを確認し、必要に応じて有効なファイルに差し替えてください。"
 resourcePages:
-  damagedFontMessage: "フォント「{fontName}」のファイルが変更されているか、破損しています。「フォント」を開き、新しいコピーでファイルを置き換えてください。"
-  unavailableFontMessage: "フォント「{fontName}」を読み込めませんでした。「フォント」を開き、有効なファイルで置き換えてください。"
   damagedFontImportMessage: "フォント「{fontName}」が破損しているか、読み込めません。新しい TTF、OTF、または WOFF2 ファイルを選択してください。"
   selectorEmptyMessage: "選択できるアイテムがありません。"
   selectorNoResultsMessage: "検索条件に一致するアイテムがありません。"
@@ -786,6 +801,14 @@ actionTransformEditor:
   unnamedTarget: "現在の項目"
   visualTarget: "ビジュアル"
 vnPreview:
+  repository: "プロジェクトを開いています..."
+  scenes: "シーンを準備しています..."
+  graphics: "グラフィックスを初期化しています..."
+  reading: "素材を確認しています: {completed} / {total}"
+  decoding: "素材を読み込んでいます: {completed} / {total}"
+  engine: "プレビューを開始しています..."
+  paint: "最初のフレームを描画しています..."
+  timeout: "プレビューを開始できませんでした。{seconds}秒でタイムアウトしました。\n\n{step}\n\nもう一度プレビューをお試しください。"
   closeButton: "全画面表示を終了"
   loading: "プレビューを読み込み中..."
   restoreOrientationButton: "プレビューの向きを元に戻す"
@@ -2000,6 +2023,7 @@ commandLinePage:
   "Add Option": "オプションを追加"
   "+ Add Channel": "+ チャンネルを追加"
   "Add Channel": "チャンネルを追加"
+  "Custom channel name": "チャンネル名を指定"
   "Add BGM audio": "BGM音声を追加"
   "Add audio after": "後ろに音声を追加"
   "Add audio before": "前に音声を追加"
@@ -2513,7 +2537,7 @@ androidBackup:
   upToDate: バックアップ済み
   never: 未バックアップ
   lastBackup: '前回のバックアップ：'
-  schedule: アプリを開いている間、変更を10分ごとにバックアップします。
+  schedule: アプリを開いている間、変更を5分ごとにバックアップします。
 androidBackupErrors:
   failed: バックアップを完了できませんでした。前回のバックアップは保持されています。再試行するか、別のローカルフォルダーを選んでください。
   lowSpace: 空き容量不足のためバックアップを停止しました。バックアップ後に1 GB以上の空き容量が残るよう、端末または保存先の容量を確保してください。

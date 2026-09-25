@@ -12,8 +12,7 @@ const ios = {
   arch: "aarch64",
   distribution: "app-store",
   channel: "stable",
-  deviceModel: "iPhone17,1",
-  osVersion: "18.0",
+  device: { model: "iPhone17,1", osVersion: "18.0" },
 };
 const android = {
   ...ios,
@@ -53,15 +52,35 @@ describe("mobile update metadata protocol", () => {
   });
 
   it.each([
-    { deviceModel: "" },
-    { deviceModel: " " },
-    { deviceModel: "x".repeat(257) },
-    { deviceModel: "device\nname" },
+    { model: "" },
+    { model: " " },
+    { model: "x".repeat(257) },
+    { model: "device\nname" },
     { osVersion: undefined },
     { osVersion: 18 },
   ])("rejects invalid native device metadata %j", async (patch) => {
     expect(
-      await readClientUpdateContext(async () => ({ ...ios, ...patch })),
+      await readClientUpdateContext(async () => ({
+        ...ios,
+        device: { ...ios.device, ...patch },
+      })),
+    ).toBeUndefined();
+  });
+
+  it("rejects flat or extended native device metadata", async () => {
+    expect(
+      await readClientUpdateContext(async () => ({
+        ...ios,
+        device: undefined,
+        deviceModel: ios.device.model,
+        osVersion: ios.device.osVersion,
+      })),
+    ).toBeUndefined();
+    expect(
+      await readClientUpdateContext(async () => ({
+        ...ios,
+        device: { ...ios.device, id: "123456789ABC" },
+      })),
     ).toBeUndefined();
   });
 
@@ -131,7 +150,6 @@ describe("mobile update metadata protocol", () => {
     { version: "invalid" },
     { changelog: "é".repeat(16385) },
     { publishedAt: "yesterday" },
-    { installation: { type: "appStore", url: "https://example.com/app" } },
     {
       installation: {
         type: "appStore",
@@ -155,12 +173,47 @@ describe("mobile update metadata protocol", () => {
     ).rejects.toThrow();
   });
 
-  it("accepts Android build upgrades with unchanged marketing versions and exact Play matches", async () => {
+  it.each([
+    "http://apps.apple.com/app/id6810571721",
+    "https://",
+    "https://user@apps.apple.com/app/id6810571721",
+    "https://user:pass@apps.apple.com/app/id6810571721",
+    "https://apps.apple.com/app/has space",
+    "https://apps.apple.com/app/line\nbreak",
+    "https://apps.apple.com/app/é",
+    "https://apps.apple.com/app/\x7f",
+    `https://apps.apple.com/${"a".repeat(2049)}`,
+  ])("rejects invalid installation URLs %j", async (url) => {
+    const iosRelease = release();
+    iosRelease.installation.url = url;
+    await expect(
+      setup({ status: "updateAvailable", release: iosRelease }).client.check(),
+    ).rejects.toThrow();
+
+    const androidRelease = release();
+    androidRelease.installation = { type: "googlePlay", url, build: "10" };
+    await expect(
+      setup(
+        { status: "updateAvailable", release: androidRelease },
+        android,
+      ).client.check(),
+    ).rejects.toThrow();
+  });
+
+  it("accepts changed HTTPS store URLs within the API length limit", async () => {
+    const next = release();
+    next.installation.url = `https://apps.apple.com/${"a".repeat(2048 - "https://apps.apple.com/".length)}`;
+    await expect(
+      setup({ status: "updateAvailable", release: next }).client.check(),
+    ).resolves.toMatchObject({ release: next });
+  });
+
+  it("accepts Android build upgrades with unchanged marketing versions and changed Play URLs", async () => {
     const next = release();
     next.version = android.currentVersion;
     next.installation = {
       type: "googlePlay",
-      url: "https://play.google.com/store/apps/details?id=com.routevn.creator",
+      url: "https://play.google.com/store/apps/details?id=com.routevn.creator&hl=en",
       build: "10",
     };
     const { client, request } = setup(

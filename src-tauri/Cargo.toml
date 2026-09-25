@@ -1,6 +1,6 @@
 [package]
 name = "routevn-creator"
-version = "1.15.1"
+version = "1.16.2"
 description = "RouteVN Creator. Follow us on social media to stay updated."
 authors = ["Yuusoft"]
 license = "MIT"
@@ -32,6 +32,7 @@ tauri-plugin-updater = "=2.10.1"
 tauri-plugin-process = "=2.3.1"
 tauri-plugin-opener = "=2.5.4"
 tauri-plugin-persisted-scope = { version = "=2.3.4", features = ["protocol-asset"] }
+time = { version = "0.3", features = ["formatting"] }
 url = "2"
 urlencoding = "2.1"
 routevn-exporter = { path = "../crates/routevn-exporter" }

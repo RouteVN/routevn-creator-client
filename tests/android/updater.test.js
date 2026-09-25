@@ -56,6 +56,7 @@ const setup = async ({
 };
 
 afterEach(() => {
+  vi.useRealTimers();
   vi.unstubAllGlobals();
   vi.restoreAllMocks();
 });
@@ -437,5 +438,118 @@ describe("Google Play metadata enrichment", () => {
         message: EN_I18N.appPage.latestVersionMessage,
       }),
     );
+  });
+});
+
+describe("Android update check progress", () => {
+  it("shows one delayed dialog when a manual check joins a pending automatic check", async () => {
+    let resolveMetadata;
+    const metadataClient = {
+      check: vi.fn(
+        () =>
+          new Promise((resolve) => {
+            resolveMetadata = resolve;
+          }),
+      ),
+    };
+    const { updater, globalUI, bridge } = await setup({
+      status: "available",
+      metadataClient,
+    });
+    vi.useFakeTimers();
+    globalUI.showConfirm.mockImplementation(() => {
+      expect(document.querySelector("#routevn-update-check-dialog")).toBeNull();
+      return Promise.resolve(false);
+    });
+
+    const automatic = updater.checkForUpdates(true);
+    await vi.advanceTimersByTimeAsync(200);
+    expect(document.querySelector("#routevn-update-check-dialog")).toBeNull();
+    const manual = updater.checkForUpdates(false);
+    await vi.advanceTimersByTimeAsync(200);
+    expect(
+      document.querySelectorAll("#routevn-update-check-dialog[open]"),
+    ).toHaveLength(1);
+    expect(metadataClient.check).toHaveBeenCalledOnce();
+    expect(
+      bridge.mock.calls.filter(([method]) => method === "checkAppUpdate"),
+    ).toHaveLength(1);
+
+    resolveMetadata({ status: "noUpdate", reason: "noCompatibleRelease" });
+    await Promise.all([automatic, manual]);
+    expect(document.querySelector("#routevn-update-check-dialog")).toBeNull();
+    expect(globalUI.showConfirm).toHaveBeenCalledOnce();
+  });
+
+  it("does not flash a dialog for a quick manual check", async () => {
+    const { updater } = await setup();
+    vi.useFakeTimers();
+    await updater.checkForUpdates(false);
+    await vi.advanceTimersByTimeAsync(200);
+    expect(document.querySelector("#routevn-update-check-dialog")).toBeNull();
+  });
+
+  it("closes the dialog when Play changes from an offer to a ready update", async () => {
+    let resolveMetadata;
+    const metadataClient = {
+      check: vi.fn(
+        () =>
+          new Promise((resolve) => {
+            resolveMetadata = resolve;
+          }),
+      ),
+    };
+    const { updater, bridge, globalUI } = await setup({
+      status: "available",
+      metadataClient,
+    });
+    bridge
+      .mockResolvedValueOnce({ status: "available", versionCode: 5 })
+      .mockResolvedValueOnce({ status: "downloaded", versionCode: 5 });
+    vi.useFakeTimers();
+    globalUI.showConfirm.mockImplementation(() => {
+      expect(document.querySelector("#routevn-update-check-dialog")).toBeNull();
+      return Promise.resolve(false);
+    });
+
+    const checking = updater.checkForUpdates(false);
+    await vi.advanceTimersByTimeAsync(200);
+    expect(
+      document.querySelector("#routevn-update-check-dialog[open]"),
+    ).not.toBeNull();
+    resolveMetadata({
+      status: "updateAvailable",
+      release: { version: "1.16.0" },
+    });
+    await checking;
+    expect(globalUI.showConfirm).toHaveBeenCalledOnce();
+    expect(document.querySelector("#routevn-update-check-dialog")).toBeNull();
+  });
+
+  it("closes the dialog before showing a failed Play check", async () => {
+    const { updater, bridge, globalUI } = await setup();
+    let rejectCheck;
+    bridge.mockImplementationOnce(
+      () =>
+        new Promise((resolve, reject) => {
+          rejectCheck = reject;
+        }),
+    );
+    vi.spyOn(console, "error").mockImplementation(() => {});
+    vi.useFakeTimers();
+    globalUI.showAlert.mockImplementation(() => {
+      expect(document.querySelector("#routevn-update-check-dialog")).toBeNull();
+      return Promise.resolve();
+    });
+
+    const checking = updater.checkForUpdates(false);
+    await vi.advanceTimersByTimeAsync(200);
+    expect(
+      document.querySelector("#routevn-update-check-dialog[open]"),
+    ).not.toBeNull();
+    rejectCheck(new Error("Play offline"));
+    await checking;
+    expect(globalUI.showAlert).toHaveBeenCalledOnce();
+    expect(document.querySelector("#routevn-update-check-dialog")).toBeNull();
   });
 });

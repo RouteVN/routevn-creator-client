@@ -4,6 +4,8 @@ const blacklistedAttrs = [
   "source",
   "lazy",
   "lazyRootMargin",
+  "originalFileId",
+  "showErrorMessage",
 ];
 
 const stringifyAttrs = (attrs) => {
@@ -36,7 +38,32 @@ export const createInitialState = () => ({
   loadedFileId: undefined,
   shouldLoad: false,
   isLazyObserved: false,
+  hasError: false,
+  loadSequence: 0,
+  loadedOriginalFileId: undefined,
 });
+
+export const beginLoad = ({ state }) => {
+  state.loadSequence += 1;
+  state.hasError = false;
+};
+
+export const invalidateLoad = ({ state }) => {
+  state.loadSequence += 1;
+};
+
+export const selectLoadSequence = ({ state }) => state.loadSequence;
+
+export const setLoadError = ({ state }, { hasError }) => {
+  state.hasError = hasError;
+};
+
+export const setLoadedOriginalFileId = ({ state }, { fileId }) => {
+  state.loadedOriginalFileId = fileId;
+};
+
+export const selectLoadedOriginalFileId = ({ state }) =>
+  state.loadedOriginalFileId;
 
 export const setSrc = ({ state }, { src } = {}) => {
   state.src = src;
@@ -78,11 +105,17 @@ export const selectIsLazyObserved = ({ state }) => {
   return state.isLazyObserved;
 };
 
-export const selectViewData = ({ state, props: attrs }) => {
+export const selectViewData = ({ state, props: attrs, i18n = {} }) => {
   const { style: _style, bc = "fg", ...restAttrs } = attrs;
   return {
     src: state.src,
-    hasSrc: Boolean(state.src),
+    hasSrc: Boolean(state.src) && (!attrs.originalFileId || !state.isLoading),
+    hasError: state.hasError,
+    showErrorMessage: attrs.showErrorMessage,
+    unavailableLabel: i18n.fileImage?.unavailableLabel ?? "Image unavailable",
+    reuploadMessage:
+      i18n.fileImage?.reuploadMessage ??
+      "Open Edit and re-upload this image file.",
     isLoading: state.isLoading,
     borderColor: bc,
     containerAttrString: stringifyAttrs(restAttrs),

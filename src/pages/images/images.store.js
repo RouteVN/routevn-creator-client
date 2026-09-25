@@ -77,7 +77,8 @@ const buildMediaItem = (item) => ({
   id: item.id,
   name: item.name,
   cardKind: "image",
-  previewFileId: item.fileId ?? item.thumbnailFileId,
+  fileId: item.fileId,
+  previewFileId: item.thumbnailFileId ?? item.fileId,
   previewAspectRatio: resolveImageAspectRatio(item),
   canPreview: false,
 });
@@ -235,7 +236,7 @@ const {
     tagFilterPlaceholder: "",
   },
   hiddenMobileDetailSlots: ["image-file-id"],
-  extendViewData: ({ state, baseViewData, copy }) => {
+  extendViewData: ({ state, selectedItem, baseViewData, copy }) => {
     const previewItemId = state.fullImagePreviewItemId ?? state.selectedItemId;
     const previewImage = state.data?.items?.[previewItemId];
     const previewFlatItem = baseViewData.flatItems.find(
@@ -284,6 +285,7 @@ const {
       ? `"${deleteDialogItem.name}"`
       : copy.deleteTargetFallback;
     viewData.deleteDialogOpen = state.deleteDialogOpen;
+    viewData.selectedOriginalFileId = selectedItem?.fileId;
     viewData.deleteDialogTitle = copy.deleteTitle;
     viewData.deleteDialogMessage = copy.deleteMessage.replace(
       "{itemName}",

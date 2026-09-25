@@ -56,8 +56,9 @@ final class ClientUpdateApi implements AutoCloseable {
             .put("arch", architecture(abi))
             .put("distribution", distribution)
             .put("channel", "stable")
-            .put("deviceModel", deviceMetadata(deviceModel))
-            .put("osVersion", deviceMetadata(osVersion));
+            .put("device", new JSONObject()
+                .put("model", deviceMetadata(deviceModel))
+                .put("osVersion", deviceMetadata(osVersion)));
     }
 
     private static String deviceMetadata(String value) {
@@ -81,7 +82,7 @@ final class ClientUpdateApi implements AutoCloseable {
         if (payload.length() != (payload.has("availableBuild") ? 2 : 1)) {
             throw new IllegalArgumentException("Unexpected update request parameter.");
         }
-        params.put("deviceId", deviceId);
+        params.getJSONObject("device").put("id", deviceId);
         if (payload.has("availableBuild")) {
             Object value = payload.get("availableBuild");
             if (!"google-play".equals(params.getString("distribution")) ||

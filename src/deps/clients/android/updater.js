@@ -2,6 +2,7 @@ import { callAndroidBridge } from "./bridge.js";
 import { createAutomaticUpdateChecks } from "../automaticUpdateChecks.js";
 import { createProgressDialog } from "../progressDialog.js";
 import { formatUpdateMessage } from "../clientUpdates.js";
+import { createUpdateCheckProgress } from "../updateCheckProgress.js";
 
 export const createAndroidUpdater = async ({
   globalUI,
@@ -27,6 +28,14 @@ export const createAndroidUpdater = async ({
   let pendingReady;
   let lastReadyPromptVersion;
   let manualCheckRequested = false;
+  let checkingResponse = false;
+  let checkProgress;
+
+  const closeCheckProgress = () => {
+    checkingResponse = false;
+    checkProgress?.close();
+    checkProgress = undefined;
+  };
 
   const showWhenIdle = (show) =>
     globalUI.runWhenIdle(() => {
@@ -81,6 +90,7 @@ export const createAndroidUpdater = async ({
     let userAccepted = false;
     try {
       updateInfo = checkedInfo ?? (await bridge("checkAppUpdate"));
+      if (updateInfo.status !== "available") closeCheckProgress();
       if (!isForeground()) return updateInfo;
       const { status } = updateInfo;
       if (status === "unsupported" || status === "unavailable") {
@@ -123,6 +133,7 @@ export const createAndroidUpdater = async ({
           // issuing another check or entering the available branch again.
           return performCheck(silent, copy, updateInfo);
         }
+        closeCheckProgress();
         userAccepted = await showConfirm({
           title: copy.updateAvailableTitle ?? "Update Available",
           message: release
@@ -163,6 +174,7 @@ export const createAndroidUpdater = async ({
       }
       return updateInfo;
     } catch (error) {
+      closeCheckProgress();
       console.error("Google Play update failed:", error);
       if (!silent || manualCheckRequested || userAccepted)
         await showError(copy);
@@ -172,8 +184,16 @@ export const createAndroidUpdater = async ({
   const checkForUpdates = (silent = false, options = {}) => {
     if (!supported || !isForeground()) return Promise.resolve();
     if (!silent) manualCheckRequested = true;
-    if (operation) return operation;
-    operation = performCheck(silent, options.copy ?? getCopy()).finally(() => {
+    if (operation) {
+      if (!silent && checkingResponse)
+        checkProgress ??= createUpdateCheckProgress(options.copy ?? getCopy());
+      return operation;
+    }
+    const copy = options.copy ?? getCopy();
+    checkingResponse = true;
+    if (!silent) checkProgress = createUpdateCheckProgress(copy);
+    operation = performCheck(silent, copy).finally(() => {
+      closeCheckProgress();
       operation = undefined;
       manualCheckRequested = false;
       const ready = pendingReady;

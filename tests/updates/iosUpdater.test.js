@@ -6,9 +6,14 @@ import { ROUTEVN_CREATOR_APP_STORE_URL } from "../../src/internal/routevnUrls.js
 import { EN_I18N } from "../support/i18n.js";
 
 const copy = EN_I18N.appPage;
+const offeredStoreUrl = "https://apps.apple.com/us/app/id6810571721";
 const available = {
   status: "updateAvailable",
-  release: { version: "1.16.0", changelog: "Improved editing" },
+  release: {
+    version: "1.16.0",
+    changelog: "Improved editing",
+    installation: { type: "appStore", url: offeredStoreUrl },
+  },
 };
 const setup = ({
   result = available,
@@ -33,14 +38,22 @@ const setup = ({
   });
   return { updater, metadataClient, rawUI, globalUI, openUrl, isForeground };
 };
+let progressDom;
 afterEach(() => {
+  progressDom?.window.close();
+  progressDom = undefined;
   vi.useRealTimers();
   vi.unstubAllGlobals();
 });
 
+const useProgressDom = () => {
+  progressDom = new JSDOM("<body></body>");
+  vi.stubGlobal("document", progressDom.window.document);
+};
+
 describe("iOS update prompts", () => {
   it.each([true, false])(
-    "opens the configured App Store only with confirmation %s",
+    "opens the offered App Store URL only with confirmation %s",
     async (confirmed) => {
       const { updater, rawUI, openUrl } = setup({ confirmed });
       await updater.checkForUpdates(true);
@@ -52,9 +65,7 @@ describe("iOS update prompts", () => {
         }),
       );
       if (confirmed)
-        expect(openUrl).toHaveBeenCalledExactlyOnceWith(
-          ROUTEVN_CREATOR_APP_STORE_URL,
-        );
+        expect(openUrl).toHaveBeenCalledExactlyOnceWith(offeredStoreUrl);
       else expect(openUrl).not.toHaveBeenCalled();
     },
   );
@@ -170,5 +181,79 @@ describe("iOS update prompts", () => {
     expect(rawUI.showAlert).toHaveBeenCalledWith(
       expect.objectContaining({ message: copy.failedOpenLink }),
     );
+  });
+});
+
+describe("iOS update check progress", () => {
+  it("shows one delayed dialog when a manual check joins a pending automatic check", async () => {
+    useProgressDom();
+    const { updater, metadataClient, rawUI } = setup({
+      result: { status: "noUpdate", reason: "upToDate" },
+    });
+    let resolveCheck;
+    metadataClient.check.mockImplementation(
+      () =>
+        new Promise((resolve) => {
+          resolveCheck = resolve;
+        }),
+    );
+    vi.useFakeTimers();
+    rawUI.showAlert.mockImplementation(() => {
+      expect(document.querySelector("#routevn-update-check-dialog")).toBeNull();
+      return Promise.resolve();
+    });
+
+    const automatic = updater.checkForUpdates(true);
+    await vi.advanceTimersByTimeAsync(200);
+    expect(document.querySelector("#routevn-update-check-dialog")).toBeNull();
+    const manual = updater.checkForUpdates(false);
+    await vi.advanceTimersByTimeAsync(200);
+    expect(
+      document.querySelectorAll("#routevn-update-check-dialog[open]"),
+    ).toHaveLength(1);
+    expect(metadataClient.check).toHaveBeenCalledOnce();
+
+    resolveCheck({ status: "noUpdate", reason: "upToDate" });
+    await Promise.all([automatic, manual]);
+    expect(document.querySelector("#routevn-update-check-dialog")).toBeNull();
+    expect(rawUI.showAlert).toHaveBeenCalledOnce();
+  });
+
+  it("does not flash a dialog for a quick manual check", async () => {
+    useProgressDom();
+    const { updater } = setup({
+      result: { status: "noUpdate", reason: "upToDate" },
+    });
+    vi.useFakeTimers();
+    await updater.checkForUpdates(false);
+    await vi.advanceTimersByTimeAsync(200);
+    expect(document.querySelector("#routevn-update-check-dialog")).toBeNull();
+  });
+
+  it("closes the dialog before showing the API error fallback", async () => {
+    useProgressDom();
+    const { updater, metadataClient, rawUI } = setup();
+    let rejectCheck;
+    metadataClient.check.mockImplementation(
+      () =>
+        new Promise((resolve, reject) => {
+          rejectCheck = reject;
+        }),
+    );
+    vi.useFakeTimers();
+    rawUI.showConfirm.mockImplementation(() => {
+      expect(document.querySelector("#routevn-update-check-dialog")).toBeNull();
+      return Promise.resolve(false);
+    });
+
+    const checking = updater.checkForUpdates(false);
+    await vi.advanceTimersByTimeAsync(200);
+    expect(
+      document.querySelector("#routevn-update-check-dialog[open]"),
+    ).not.toBeNull();
+    rejectCheck(new Error("Offline"));
+    await checking;
+    expect(rawUI.showConfirm).toHaveBeenCalledOnce();
+    expect(document.querySelector("#routevn-update-check-dialog")).toBeNull();
   });
 });

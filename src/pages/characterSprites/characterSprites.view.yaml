@@ -281,7 +281,7 @@ template:
                                           - $if selectedItemType == 'image':
                                               - $if selectedPreviewFileId:
                                                   - 'div#detailImage.imageDetailPreviewFrame.imagePreviewTransparencyGrid slot="image-file-id"':
-                                                      - rvn-file-image fileId=${selectedPreviewFileId} w=f h=f: null
+                                                      - rvn-file-image fileId=${selectedPreviewFileId} originalFileId=${selectedOriginalFileId} show-error-message w=f h=f: null
                                           - $if selectedItemType == 'spritesheet':
                                               - 'rvn-spritesheet-preview slot="spritesheet-preview" key=${detailPreviewKey} fileId=${detailPreviewFileId} :atlas=${detailPreviewAtlas} :animation=${detailPreviewAnimation} :paused=${detailPreviewPaused} h=220 :emptyLabel=${emptyPreviewLabel}': null
                                           - rtgl-tag-select#detailTagSelect key=${selectedItemId} slot="sprite-tags" w=f :options=${tagFilterOptions} :selectedValues=${selectedItemTagIds} :draftSelectedValues=${detailTagDraftValues} :open=${isDetailTagSelectOpen} :addOption=${detailTagAddOption} :placeholder=${addTagPlaceholder}: null

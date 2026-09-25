@@ -943,7 +943,7 @@ export const loadLayoutEditorAssets = async ({
   const uniqueFileReferences = dedupeFileReferences(fileReferences);
   const fontAssetMetadataByFileId = createFontAssetMetadataByFileId(fontsItems);
 
-  const assetEntries = await Promise.all(
+  const assetEntries = await Promise.allSettled(
     uniqueFileReferences.map(async (fileReference) => {
       const { url: fileId, type: fileType } = fileReference;
       const cacheKey = fileId;
@@ -976,7 +976,9 @@ export const loadLayoutEditorAssets = async ({
       }
 
       if (!url) {
-        const result = await projectService.getFileContent(fileId);
+        const result = await projectService.getFileContent(fileId, {
+          verifyImageIntegrity: true,
+        });
         url = result.url;
         if (!isBlobUrl(url)) {
           cacheFileContent?.({ fileId: cacheKey, url });
@@ -992,7 +994,16 @@ export const loadLayoutEditorAssets = async ({
     }),
   );
 
-  for (const assetEntry of assetEntries) {
+  const failures = [];
+  for (const [index, result] of assetEntries.entries()) {
+    if (result.status === "rejected") {
+      failures.push({
+        fileId: uniqueFileReferences[index].url,
+        error: result.reason,
+      });
+      continue;
+    }
+    const assetEntry = result.value;
     if (assetEntry.alreadyLoaded) {
       continue;
     }
@@ -1004,7 +1015,24 @@ export const loadLayoutEditorAssets = async ({
     };
   }
 
-  return assets;
+  return { assets, failures };
+};
+
+export const omitUnavailableLayoutElements = (elements, failedFileIds) => {
+  const failed = new Set(failedFileIds);
+  const filterElements = (items) =>
+    items.flatMap((element) => {
+      const { children, ...ownProperties } = element;
+      if (
+        extractFileIdsFromRenderState(ownProperties).some(({ url }) =>
+          failed.has(url),
+        )
+      )
+        return [];
+      if (!Array.isArray(children)) return [element];
+      return [{ ...element, children: filterElements(children) }];
+    });
+  return filterElements(elements);
 };
 
 export const createLayoutEditorRenderState = ({

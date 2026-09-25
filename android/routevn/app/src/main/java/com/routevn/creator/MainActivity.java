@@ -218,6 +218,11 @@ public class MainActivity extends Activity {
         projectBackup = new ProjectBackup(this, new ProjectBackup.Storage() {
             public JSONArray projects() throws Exception { return listProjectFolders(); }
             public File root(String id) throws Exception { return getProjectRoot(id); }
+            public String name(String id) throws Exception {
+                JSONObject info = readProjectInfoFromDatabaseFile(getProjectDatabaseFile(id));
+                // optString turns a JSON null into the text "null".
+                return info.isNull("name") ? "" : info.optString("name", "");
+            }
             public String counter(String id) throws Exception {
                 SQLiteDatabase database = openProjectDatabaseForBridge(getProjectDatabasePath(id));
                 return ProjectBackup.databaseRevision(database) + ":" + projectBackup.assetRevision(id);
@@ -1118,8 +1123,6 @@ public class MainActivity extends Activity {
                 return bridgeSuccess(projectBackup.status());
             case "configureBackup":
                 return bridgeSuccess(projectBackup.configure(payload.getString("uri"), payload.optBoolean("acceptExisting")));
-            case "skipBackupSetup":
-                return bridgeSuccess(projectBackup.skip());
             case "disableBackup":
                 return bridgeSuccess(projectBackup.disable());
             case "beginBackupPass":
@@ -1608,7 +1611,7 @@ public class MainActivity extends Activity {
                 String accept = payload.optString("accept", "");
 
                 runOnUiThread(() ->
-                    launchAndroidFilePicker(requestId, multiple, accept)
+                    launchAndroidFilePicker(requestId, multiple, accept, payload.optString("source", "files"))
                 );
                 return bridgeSuccess(true);
             } catch (Exception error) {
@@ -3484,7 +3487,7 @@ public class MainActivity extends Activity {
     }
 
     private String resolveProjectExportFolderName(JSONObject projectInfo) {
-        String title = sanitizeExportFolderTitle(projectInfo.optString("name", ""));
+        String title = ProjectBackup.sanitizeFolderTitle(projectInfo.optString("name", ""), "RouteVN Project");
         String timestamp = new SimpleDateFormat(
             "yyyyMMdd-HHmmss",
             Locale.US
@@ -3864,7 +3867,8 @@ public class MainActivity extends Activity {
     private void launchAndroidFilePicker(
         String requestId,
         boolean multiple,
-        String accept
+        String accept,
+        String source
     ) {
         if (pendingAndroidFilePickerRequestId != null) {
             sendAndroidFilePickerError(
@@ -3899,6 +3903,9 @@ public class MainActivity extends Activity {
         }
 
         try {
+            if ("gallery".equals(source)) {
+                intent = MediaPickerIntents.createGallery(this, mimeTypes, multiple);
+            }
             startActivityForResult(intent, ANDROID_FILE_PICKER_REQUEST_CODE);
         } catch (ActivityNotFoundException error) {
             clearPendingAndroidFilePicker();
@@ -4693,25 +4700,6 @@ public class MainActivity extends Activity {
             resolvedFilename = "file";
         }
         return resolvedFilename.replaceAll("[\\\\/]+", "-");
-    }
-
-    private String sanitizeExportFolderTitle(String title) {
-        String resolvedTitle = title == null ? "" : title.trim();
-        if (resolvedTitle.isEmpty()) {
-            resolvedTitle = "RouteVN Project";
-        }
-
-        resolvedTitle = resolvedTitle.replaceAll("[\\\\/:*?\"<>|\\r\\n\\t]+", " ");
-        resolvedTitle = resolvedTitle.replaceAll("\\s+", " ").trim();
-        resolvedTitle = resolvedTitle.replaceAll("^\\.+", "");
-        resolvedTitle = resolvedTitle.replaceAll("\\.+$", "").trim();
-        if (resolvedTitle.isEmpty()) {
-            resolvedTitle = "RouteVN Project";
-        }
-        if (resolvedTitle.length() > 80) {
-            resolvedTitle = resolvedTitle.substring(0, 80).trim();
-        }
-        return resolvedTitle;
     }
 
     private JSONObject createPickerFileResult(

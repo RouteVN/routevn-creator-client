@@ -166,7 +166,7 @@ describe("layoutEditorPreview", () => {
   });
 
   it("loads font assets with their persisted weight descriptor", async () => {
-    const assets = await loadLayoutEditorAssets({
+    const { assets } = await loadLayoutEditorAssets({
       projectService: {
         getFileContent: async () => ({ url: "font://semibold" }),
       },

@@ -1,3 +1,4 @@
+import { setSceneEditorPageLoading } from "../../internal/ui/sceneEditor/loadingProgress.js";
 import { mountSceneEditorWindowLayout } from "./support/windowLayout.js";
 import { filter, tap } from "rxjs";
 import { createProjectStateStream } from "../../deps/services/shared/projectStateStream.js";
@@ -846,7 +847,7 @@ export const syncSceneEditorRoutePayload = async (
     return;
   }
 
-  store.setScenePageLoading({ isLoading: true });
+  setSceneEditorPageLoading(deps, true);
   store.hidePreviewScene?.();
   store.closeSectionsOverviewPanel?.();
   store.hideDropdownMenu?.();
@@ -914,7 +915,7 @@ export const syncSceneEditorRoutePayload = async (
       return;
     }
 
-    store.setScenePageLoading({ isLoading: false });
+    setSceneEditorPageLoading(deps, false);
     render();
     scrollEntrySelectionIntoView(deps);
     subject.dispatch("sceneEditor.renderCanvas", {
@@ -922,7 +923,7 @@ export const syncSceneEditorRoutePayload = async (
     });
   } catch (error) {
     if (canContinue()) {
-      store.setScenePageLoading({ isLoading: false });
+      setSceneEditorPageLoading(deps, false);
       render();
     }
     throw error;
@@ -1667,7 +1668,7 @@ export const handleActionTransformEditorDone = (deps, payload) => {
 export const handleBeforeMount = (deps) => {
   const { projectService, appService, store, uiConfig, subject } = deps;
   let routeSyncSequence = 0;
-  store.setScenePageLoading({ isLoading: true });
+  setSceneEditorPageLoading(deps, true);
   store.setUiConfig({ uiConfig });
   const cleanupWindowLayout = mountSceneEditorWindowLayout(deps);
   const showLineNumbers =

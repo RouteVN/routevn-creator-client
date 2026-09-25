@@ -3,12 +3,17 @@ import { JSDOM } from "jsdom";
 
 const checkMock = vi.hoisted(() => vi.fn());
 const invokeMock = vi.hoisted(() => vi.fn());
+const deviceInfoMock = vi.hoisted(() => vi.fn());
 const relaunchMock = vi.hoisted(() => vi.fn());
 
 vi.mock("@tauri-apps/api/core", () => ({ invoke: invokeMock }));
 
 vi.mock("@tauri-apps/plugin-updater", () => ({
-  check: checkMock,
+  Update: class {
+    constructor(metadata) {
+      Object.assign(this, metadata);
+    }
+  },
 }));
 
 vi.mock("@tauri-apps/plugin-process", () => ({
@@ -27,17 +32,19 @@ const createUpdate = ({
   date = "2026-07-03",
   body = "Fix packaging.",
   downloadAndInstall = vi.fn(() => Promise.resolve()),
+  close = vi.fn(() => Promise.resolve()),
 } = {}) => ({
   version,
   date,
   body,
   downloadAndInstall,
+  close,
 });
 
-const expectedHeaders = {
-  "X-RouteVN-Device-Id": "123456789ABC",
-  "X-RouteVN-Device-Model": "Example%20Model",
-  "X-RouteVN-OS-Version": "Linux%206.8",
+const expectedDevice = {
+  deviceId: "123456789ABC",
+  deviceModel: "Example Model",
+  osVersion: "Linux 6.8",
 };
 
 const createKeyValueStore = (entries = [["deviceId", "123456789ABC"]]) => {
@@ -82,15 +89,117 @@ describe("tauri updater", () => {
   beforeEach(() => {
     checkMock.mockReset();
     invokeMock.mockReset();
-    invokeMock.mockResolvedValue({
+    deviceInfoMock.mockReset();
+    deviceInfoMock.mockResolvedValue({
       deviceModel: "Example Model",
       osVersion: "Linux 6.8",
+    });
+    invokeMock.mockImplementation((command) => {
+      if (command === "get_update_device_info") return deviceInfoMock();
+      if (command === "check_client_update") return checkMock();
+      throw new Error(`Unexpected command: ${command}`);
     });
     relaunchMock.mockReset();
   });
 
   afterEach(() => {
+    vi.useRealTimers();
     vi.unstubAllGlobals();
+  });
+
+  it("shows a delayed accessible check dialog and closes it before the result", async () => {
+    vi.useFakeTimers();
+    const document = setupDocument();
+    const globalUI = createGlobalUI();
+    globalUI.showAlert.mockImplementation(async () => {
+      expect(document.getElementById("routevn-update-check-dialog")).toBeNull();
+    });
+    const { updater } = createUpdaterClient({ globalUI, update: null });
+    let finishCheck;
+    checkMock.mockImplementation(
+      () =>
+        new Promise((resolve) => {
+          finishCheck = resolve;
+        }),
+    );
+
+    const checking = updater.checkForUpdates(false, {
+      copy: { checkingForUpdates: "Checking for updates..." },
+    });
+    await vi.advanceTimersByTimeAsync(199);
+    expect(document.getElementById("routevn-update-check-dialog")).toBeNull();
+    await vi.advanceTimersByTimeAsync(1);
+    const dialog = document.getElementById("routevn-update-check-dialog");
+    expect(dialog?.textContent).toContain("Checking for updates...");
+    expect(
+      dialog?.querySelector('[role="status"]')?.getAttribute("aria-atomic"),
+    ).toBe("true");
+    expect(dialog?.querySelector('[role="progressbar"]')).not.toBeNull();
+
+    finishCheck(null);
+    await checking;
+    expect(document.getElementById("routevn-update-check-dialog")).toBeNull();
+    expect(globalUI.showAlert).toHaveBeenCalledOnce();
+  });
+
+  it("skips the check dialog for fast and automatic checks", async () => {
+    vi.useFakeTimers();
+    const document = setupDocument();
+    const { updater } = createUpdaterClient({ update: null });
+
+    await updater.checkForUpdates(false);
+    await vi.advanceTimersByTimeAsync(200);
+    expect(document.getElementById("routevn-update-check-dialog")).toBeNull();
+
+    let finishCheck;
+    checkMock.mockImplementation(
+      () =>
+        new Promise((resolve) => {
+          finishCheck = resolve;
+        }),
+    );
+    const checking = updater.checkForUpdates(true);
+    await vi.advanceTimersByTimeAsync(200);
+    expect(document.getElementById("routevn-update-check-dialog")).toBeNull();
+    finishCheck(null);
+    await checking;
+  });
+
+  it("reuses an automatic check when manually requested and closes the dialog on error", async () => {
+    vi.useFakeTimers();
+    const document = setupDocument();
+    const globalUI = createGlobalUI();
+    globalUI.showAlert.mockImplementation(async () => {
+      expect(document.getElementById("routevn-update-check-dialog")).toBeNull();
+    });
+    const { updater } = createUpdaterClient({ globalUI, update: null });
+    let failCheck;
+    checkMock.mockImplementation(
+      () =>
+        new Promise((_, reject) => {
+          failCheck = reject;
+        }),
+    );
+    const log = vi.spyOn(console, "error").mockImplementation(() => {});
+    try {
+      const automatic = updater.checkForUpdates(true);
+      const manual = updater.checkForUpdates(false);
+      const repeated = updater.checkForUpdates(false);
+      expect(manual).toBe(automatic);
+      expect(repeated).toBe(automatic);
+      await vi.advanceTimersByTimeAsync(200);
+      expect(
+        document.getElementById("routevn-update-check-dialog"),
+      ).not.toBeNull();
+      expect(checkMock).toHaveBeenCalledOnce();
+
+      failCheck(new Error("Update service unavailable"));
+      await automatic;
+      expect(document.getElementById("routevn-update-check-dialog")).toBeNull();
+      expect(globalUI.showAlert).toHaveBeenCalledOnce();
+    } finally {
+      log.mockRestore();
+    }
   });
 
   it("downloads and installs Linux updates through the Tauri updater", async () => {
@@ -101,9 +210,10 @@ describe("tauri updater", () => {
 
     const globalUI = createGlobalUI();
     const downloadAndInstall = vi.fn(() => Promise.resolve());
+    const close = vi.fn(() => Promise.resolve());
     const { updater } = createUpdaterClient({
       globalUI,
-      update: createUpdate({ downloadAndInstall }),
+      update: createUpdate({ downloadAndInstall, close }),
     });
 
     const result = await updater.checkForUpdates(false, {
@@ -121,10 +231,10 @@ describe("tauri updater", () => {
       date: "2026-07-03",
       body: "Fix packaging.",
     });
-    expect(checkMock).toHaveBeenCalledWith({
-      timeout: 10_000,
-      headers: expectedHeaders,
-    });
+    expect(invokeMock).toHaveBeenCalledWith(
+      "check_client_update",
+      expectedDevice,
+    );
     expect(globalUI.showConfirm).toHaveBeenCalledWith({
       message: "Update 1.7.3 is available.\nFix packaging.",
       title: "Update Available",
@@ -136,6 +246,22 @@ describe("tauri updater", () => {
       headers: {},
     });
     expect(relaunchMock).toHaveBeenCalled();
+    expect(close).toHaveBeenCalledOnce();
+  });
+
+  it("releases the checked update when installation is postponed", async () => {
+    const globalUI = createGlobalUI();
+    globalUI.showConfirm.mockResolvedValue(false);
+    const close = vi.fn(() => Promise.resolve());
+    const { updater } = createUpdaterClient({
+      globalUI,
+      update: createUpdate({ close }),
+    });
+
+    await updater.checkForUpdates(false);
+
+    expect(close).toHaveBeenCalledOnce();
+    expect(relaunchMock).not.toHaveBeenCalled();
   });
 
   it("shows a blocking Rettangoli dialog while downloading an update", async () => {
@@ -249,10 +375,10 @@ describe("tauri updater", () => {
     const result = await updater.checkForUpdates(false);
 
     expect(result).toBeUndefined();
-    expect(checkMock).toHaveBeenCalledWith({
-      timeout: 10_000,
-      headers: expectedHeaders,
-    });
+    expect(invokeMock).toHaveBeenCalledWith(
+      "check_client_update",
+      expectedDevice,
+    );
     expect(globalUI.showConfirm).not.toHaveBeenCalled();
     expect(globalUI.showAlert).toHaveBeenCalledWith({
       message: "You are already on the latest version",
@@ -297,7 +423,7 @@ describe("tauri updater", () => {
     const keyValueStore = createKeyValueStore([]);
     const globalUI = createGlobalUI();
     globalUI.showConfirm.mockResolvedValue(false);
-    invokeMock.mockResolvedValue({
+    deviceInfoMock.mockResolvedValue({
       deviceModel: "メーカー Model / Pro",
       osVersion: "Windows 24H2 (build 26100)",
     });
@@ -305,56 +431,53 @@ describe("tauri updater", () => {
     await first.updater.checkForUpdates(true);
     const second = createUpdaterClient({ keyValueStore, globalUI });
     await second.updater.checkForUpdates(true);
-    const firstHeaders = checkMock.mock.calls[0][0].headers;
-    expect(firstHeaders["X-RouteVN-Device-Id"]).toMatch(
-      /^[1-9A-HJ-NP-Za-km-z]{12}$/,
+    const checks = invokeMock.mock.calls.filter(
+      ([command]) => command === "check_client_update",
     );
-    expect(firstHeaders["X-RouteVN-Device-Model"]).toBe(
-      encodeURIComponent("メーカー Model / Pro"),
-    );
-    expect(firstHeaders["X-RouteVN-OS-Version"]).toBe(
-      encodeURIComponent("Windows 24H2 (build 26100)"),
-    );
-    expect(checkMock.mock.calls[1][0].headers).toEqual(firstHeaders);
+    const firstDevice = checks[0][1];
+    expect(firstDevice.deviceId).toMatch(/^[1-9A-HJ-NP-Za-km-z]{12}$/);
+    expect(firstDevice.deviceModel).toBe("メーカー Model / Pro");
+    expect(firstDevice.osVersion).toBe("Windows 24H2 (build 26100)");
+    expect(checks[1][1]).toEqual(firstDevice);
     expect(keyValueStore.getOrSet).toHaveBeenCalledTimes(1);
     expect(invokeMock).toHaveBeenCalledWith("get_update_device_info");
   });
 
   it("uses unknown for unavailable native metadata without blocking update checks", async () => {
     const { updater } = createUpdaterClient({ update: null });
-    invokeMock.mockResolvedValueOnce({
+    deviceInfoMock.mockResolvedValueOnce({
       deviceModel: "Model",
       osVersion: "bad\nheader",
     });
     await updater.checkForUpdates(true);
-    expect(checkMock.mock.calls[0][0].headers).toEqual({
-      "X-RouteVN-Device-Id": "123456789ABC",
-      "X-RouteVN-Device-Model": "Model",
-      "X-RouteVN-OS-Version": "unknown",
+    const checks = () =>
+      invokeMock.mock.calls.filter(
+        ([command]) => command === "check_client_update",
+      );
+    expect(checks()[0][1]).toEqual({
+      deviceId: "123456789ABC",
+      deviceModel: "Model",
+      osVersion: "unknown",
     });
-    invokeMock.mockRejectedValueOnce(new Error("Native metadata unavailable"));
+    deviceInfoMock.mockRejectedValueOnce(
+      new Error("Native metadata unavailable"),
+    );
     await updater.checkForUpdates(true);
-    expect(checkMock.mock.calls[1][0].headers).toEqual({
-      "X-RouteVN-Device-Id": "123456789ABC",
-      "X-RouteVN-Device-Model": "unknown",
-      "X-RouteVN-OS-Version": "unknown",
+    expect(checks()[1][1]).toEqual({
+      deviceId: "123456789ABC",
+      deviceModel: "unknown",
+      osVersion: "unknown",
     });
   });
 
-  it("keeps using the universal updater target on macOS", async () => {
-    vi.stubGlobal("navigator", {
-      platform: "MacIntel",
-      userAgent: "RouteVN Creator macOS",
-    });
-
+  it("passes device data to the native check without extra selectors", async () => {
     const { updater } = createUpdaterClient();
 
     await updater.checkForUpdates(true);
 
-    expect(checkMock).toHaveBeenCalledWith({
-      target: "macos-universal",
-      timeout: 10_000,
-      headers: expectedHeaders,
-    });
+    expect(invokeMock).toHaveBeenCalledWith(
+      "check_client_update",
+      expectedDevice,
+    );
   });
 });

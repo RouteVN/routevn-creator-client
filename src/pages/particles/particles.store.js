@@ -245,7 +245,9 @@ const {
         (item) => item.type === "folder",
       ),
       selectedPreviewAspectRatio: formatParticleAspectRatio(selectedItem),
-      selectedTextureImageFileId: selectedTextureImageItem?.fileId,
+      selectedTextureImageFileId:
+        selectedTextureImageItem?.thumbnailFileId ??
+        selectedTextureImageItem?.fileId,
       selectedTextureImageName: selectedTextureImageItem?.name ?? "",
       isCreateTagDialogOpen: state.isCreateTagDialogOpen,
       createTagDefaultValues: state.createTagDefaultValues,

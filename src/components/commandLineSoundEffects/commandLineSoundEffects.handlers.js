@@ -391,11 +391,25 @@ export const handleChannelFormChange = (deps, payload) => {
   render();
 };
 
-export const handleAddChannelClick = (deps, payload) => {
-  const { store, render } = deps;
-  store.openAddChannelPopover({
-    position: getDropdownPositionFromEvent(payload._event),
+export const handleAddChannelClick = async (deps, payload) => {
+  const { store, render, appService } = deps;
+  const position = getDropdownPositionFromEvent(payload._event);
+  const result = await appService.showDropdownMenu({
+    items: store.selectAddChannelMenuItems(),
+    x: position.x,
+    y: position.y,
+    place: "bs",
   });
+  const channelId = result?.item?.key;
+  if (!channelId) {
+    return;
+  }
+  if (channelId === "custom") {
+    store.openAddChannelPopover({ position });
+  } else {
+    store.addChannel({ id: channelId });
+    store.setSelectedChannel({ channelId });
+  }
   render();
 };
 

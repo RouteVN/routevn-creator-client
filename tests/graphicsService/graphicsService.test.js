@@ -317,6 +317,171 @@ describe("graphicsService", () => {
     expect(service.hasLoadedAsset("image-1")).toBe(false);
   });
 
+  it.each([
+    ["abort", "resolve"],
+    ["abort", "reject"],
+    ["timeout", "resolve"],
+    ["timeout", "reject"],
+  ])(
+    "defers abandoned renderer destruction until initialization settles: %s then %s",
+    async (cancellation, outcome) => {
+      let release;
+      let fail;
+      const stuck = {
+        ...routeGraphicsInstance,
+        init: vi.fn(
+          () =>
+            new Promise((resolve, reject) => {
+              release = resolve;
+              fail = reject;
+            }),
+        ),
+        destroy: vi.fn(),
+        canvas: { style: {} },
+      };
+      const replacement = { ...routeGraphicsInstance, destroy: vi.fn() };
+      createRouteGraphicsMock
+        .mockReturnValueOnce(stuck)
+        .mockReturnValueOnce(replacement);
+      const { createGraphicsService } = await import(
+        "../../src/deps/services/graphicsService.js"
+      );
+      const service = await createGraphicsService({
+        subject: { dispatch: vi.fn() },
+      });
+      const controller = new AbortController();
+      if (cancellation === "timeout") vi.useFakeTimers();
+      try {
+        const opening = service
+          .init({ width: 1280, height: 720, signal: controller.signal })
+          .catch((error) => error);
+        await vi.waitFor(() => expect(stuck.init).toHaveBeenCalledOnce());
+        if (cancellation === "timeout")
+          await vi.advanceTimersByTimeAsync(30_000);
+        else controller.abort();
+        expect((await opening).name).toBe(
+          cancellation === "timeout" ? "TimeoutError" : "AbortError",
+        );
+      } finally {
+        vi.useRealTimers();
+      }
+      expect(stuck.destroy).not.toHaveBeenCalled();
+      await service.destroy();
+      await service.init({ width: 1280, height: 720 });
+      expect(stuck.destroy).not.toHaveBeenCalled();
+      if (outcome === "reject") fail(new Error("Late initialization failure"));
+      else release();
+      await vi.waitFor(() => expect(stuck.destroy).toHaveBeenCalledOnce());
+      expect(service.getCanvas()).toBe(replacement.canvas);
+      expect(replacement.destroy).not.toHaveBeenCalled();
+      await service.destroy();
+    },
+  );
+
+  it("preserves the initialization error if renderer cleanup throws", async () => {
+    const failure = new Error("Initialization failed");
+    const cleanupFailure = new Error("Renderer cleanup failed");
+    routeGraphicsInstance.init.mockRejectedValueOnce(failure);
+    routeGraphicsInstance.destroy.mockImplementationOnce(() => {
+      throw cleanupFailure;
+    });
+    const log = vi.spyOn(console, "error").mockImplementation(() => {});
+    try {
+      const { createGraphicsService } = await import(
+        "../../src/deps/services/graphicsService.js"
+      );
+      const service = await createGraphicsService({});
+      await expect(service.init({ width: 64, height: 64 })).rejects.toBe(
+        failure,
+      );
+      expect(log).toHaveBeenCalledWith(
+        "[graphicsService] Failed to release abandoned renderer",
+        cleanupFailure,
+      );
+      await service.init({ width: 64, height: 64 });
+      await service.destroy();
+    } finally {
+      log.mockRestore();
+    }
+  });
+
+  it("releases the asset queue after a decoder hangs so the next request can retry", async () => {
+    const manager = {
+      has: () => false,
+      load: vi.fn(async () => {}),
+      getBufferMap: () => ({}),
+      clear: vi.fn(),
+    };
+    createAssetBufferManagerMock.mockReturnValue(manager);
+    const { createGraphicsService } = await import(
+      "../../src/deps/services/graphicsService.js"
+    );
+    const service = await createGraphicsService({
+      subject: { dispatch: vi.fn() },
+    });
+    await service.init({ width: 1280, height: 720 });
+    routeGraphicsInstance.loadAssets.mockImplementationOnce(
+      () => new Promise(() => {}),
+    );
+    vi.useFakeTimers();
+    try {
+      const assets = {
+        image: { buffer: new ArrayBuffer(4), type: "image/png" },
+      };
+      const first = service.loadAssets(assets).catch((error) => error);
+      await vi.advanceTimersByTimeAsync(30_000);
+      expect((await first).name).toBe("TimeoutError");
+      await service.loadAssets(assets);
+      expect(routeGraphicsInstance.loadAssets).toHaveBeenCalledTimes(2);
+      await service.destroy();
+      expect(vi.getTimerCount()).toBe(0);
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+
+  it("destroys every renderer when initialization requests overlap", async () => {
+    let release;
+    const gate = new Promise((resolve) => {
+      release = resolve;
+    });
+    let releaseSecond;
+    const secondGate = new Promise((resolve) => {
+      releaseSecond = resolve;
+    });
+    const renderers = Array.from({ length: 3 }, (_, index) => ({
+      ...routeGraphicsInstance,
+      init: vi.fn(async () => {
+        if (index === 0) await gate;
+        if (index === 1) await secondGate;
+      }),
+      destroy: vi.fn(),
+      canvas: { style: {} },
+    }));
+    for (const renderer of renderers)
+      createRouteGraphicsMock.mockReturnValueOnce(renderer);
+    const { createGraphicsService } = await import(
+      "../../src/deps/services/graphicsService.js"
+    );
+    const service = await createGraphicsService({
+      subject: { dispatch: vi.fn() },
+    });
+    const options = { width: 1280, height: 720 };
+    const first = service.init(options);
+    await vi.waitFor(() => expect(renderers[0].init).toHaveBeenCalled());
+    const second = service.init(options);
+    const third = service.init(options);
+    release();
+    await vi.waitFor(() => expect(renderers[1].init).toHaveBeenCalled());
+    const prematureDestroy = renderers[1].destroy.mock.calls.length;
+    releaseSecond();
+    await Promise.all([first, second, third]);
+    await service.destroy();
+    expect(prematureDestroy).toBe(0);
+    for (const renderer of renderers)
+      expect(renderer.destroy).toHaveBeenCalledOnce();
+  });
+
   it("waits for in-flight destroy before reinitializing the runtime", async () => {
     let resolveUnload;
     const bufferManager = {
@@ -1030,6 +1195,104 @@ describe("graphicsService", () => {
     expect(audioAssetApi.load).toHaveBeenCalledWith("sound-1", audioBuffer);
     expect(routeGraphicsInstance.loadAssets).not.toHaveBeenCalled();
   });
+
+  it.each([1, 2])(
+    "loads valid visuals, fonts and audio despite %s damaged sounds, then retries only failures",
+    async (failureCount) => {
+      const { createGraphicsService } = await import(
+        "../../src/deps/services/graphicsService.js"
+      );
+      const failures = Array.from({ length: failureCount }, (_, index) =>
+        Object.assign(new Error("Invalid audio bytes"), {
+          fileId: `damaged-sound-${index}`,
+        }),
+      );
+      const failedIds = new Set(failures.map((error) => error.fileId));
+      const decodedKeys = new Set();
+      audioAssetApi.getAsset = vi.fn((key) =>
+        decodedKeys.has(key) ? { key } : undefined,
+      );
+      audioAssetApi.load = vi.fn(async (key) => {
+        if (failedIds.has(key)) {
+          throw failures.find((error) => error.fileId === key);
+        }
+        decodedKeys.add(key);
+        return { key };
+      });
+      const fontFaces = new Set();
+      vi.stubGlobal("document", {
+        fonts: fontFaces,
+        addEventListener: vi.fn(),
+        removeEventListener: vi.fn(),
+      });
+      vi.stubGlobal(
+        "FontFace",
+        class {
+          constructor(family) {
+            this.family = family;
+          }
+          async load() {
+            return this;
+          }
+        },
+      );
+      createAssetBufferManagerMock.mockReturnValue({
+        has: vi.fn(() => false),
+        getBufferMap: () => ({}),
+        clear: vi.fn(),
+      });
+      routeGraphicsInstance.loadAssets.mockImplementationOnce(
+        async (assets) => {
+          for (const key of Object.keys(assets))
+            assetsCache.set(key, { source: {} });
+        },
+      );
+      const assets = {
+        "image-one": { buffer: new ArrayBuffer(8), type: "image/png" },
+        "font-one": { buffer: new ArrayBuffer(8), type: "font/woff2" },
+        "sound-one": { buffer: new ArrayBuffer(8), type: "audio/mpeg" },
+      };
+      for (const key of failedIds) {
+        assets[key] = { buffer: new ArrayBuffer(8), type: "audio/mpeg" };
+      }
+      const service = await createGraphicsService({});
+      try {
+        await service.init({ width: 1920, height: 1080 });
+        const failure = await service
+          .loadAssets(assets)
+          .catch((error) => error);
+        if (failureCount === 1) {
+          expect(failure).toBe(failures[0]);
+        } else {
+          expect(failure).toBeInstanceOf(AggregateError);
+          expect(failure.errors).toEqual(failures);
+        }
+        expect(routeGraphicsInstance.loadAssets).toHaveBeenCalledWith({
+          "image-one": assets["image-one"],
+        });
+        for (const key of ["image-one", "font-one", "sound-one"]) {
+          expect(service.hasLoadedAsset(key)).toBe(true);
+        }
+        for (const key of failedIds)
+          expect(service.hasLoadedAsset(key)).toBe(false);
+        expect(fontFaces.size).toBe(1);
+
+        failedIds.clear();
+        audioAssetApi.load.mockClear();
+        await service.loadAssets(assets);
+        expect(audioAssetApi.load.mock.calls.map(([key]) => key)).toEqual(
+          failures.map((error) => error.fileId),
+        );
+        expect(routeGraphicsInstance.loadAssets).toHaveBeenCalledOnce();
+        expect(fontFaces.size).toBe(1);
+        for (const key of Object.keys(assets))
+          expect(service.hasLoadedAsset(key)).toBe(true);
+      } finally {
+        await service.destroy();
+        vi.unstubAllGlobals();
+      }
+    },
+  );
 
   it("waits for destination channel audio before rendering an animated engine state", async () => {
     const bgmBuffer = new ArrayBuffer(8);

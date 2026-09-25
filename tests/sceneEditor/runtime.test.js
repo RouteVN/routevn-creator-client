@@ -11,6 +11,20 @@ import {
   updateSceneEditorSectionChanges,
 } from "../../src/internal/ui/sceneEditor/runtime.js";
 
+import {
+  selectWarnedAssetFileIds,
+  markAssetWarningsShown,
+} from "../../src/pages/sceneEditorLexical/sceneEditorLexical.store.js";
+
+const createWarningStore = () => {
+  const context = { state: { warnedAssetFileIds: [] } };
+  return {
+    selectWarnedAssetFileIds: () => selectWarnedAssetFileIds(context),
+    markAssetWarningsShown: (payload) =>
+      markAssetWarningsShown(context, payload),
+  };
+};
+
 const createProjectData = () => {
   return {
     screen: {
@@ -136,72 +150,158 @@ const createGraphicsService = () => {
 };
 
 describe("renderSceneEditorState", () => {
-  it("keeps the scene editable and reports a damaged font once without sending it to graphics", async () => {
+  it("still paints when the audio warm-up retries a damaged sound", async () => {
     const projectData = createProjectData();
-    projectData.resources.fonts["font-one"] = {
-      id: "font-one",
-      fileId: "font-file-one",
-      fileType: "font/ttf",
-      name: "Font One",
-    };
-    projectData.resources.colors["color-one"] = { hex: "#ffffff" };
-    projectData.resources.textStyles["style-one"] = {
-      fontId: ["font-one"],
-      fontSize: 24,
-      colorId: "color-one",
-    };
-    projectData.resources.layouts.adv.elements[0].textStyleId = "style-one";
     const graphicsService = createGraphicsService();
-    graphicsService.loadAssets = vi.fn(async () => {});
-    const projectService = {
-      getFileContent: vi.fn(async () => {
-        throw Object.assign(new Error("checksum mismatch"), {
-          fileId: "font-file-one",
-          code: "font_integrity_mismatch",
-        });
-      }),
-    };
-    const store = {
-      selectIsScenePageLoading: () => false,
-      selectPreviewScene: () => ({ previewVisible: false }),
-      selectSceneId: () => "scene-1",
-      selectSelectedSectionId: () => "section-1",
-      selectSelectedLineId: () => "line-2",
-      selectProjectData: () => projectData,
-      selectTemporaryPresentationState: () => ({}),
-      selectIsBackgroundTransformEditorOpen: () => false,
-      selectScene: () => ({ sections: [{ id: "section-1" }] }),
-      selectIsMuted: () => true,
-      setPresentationState: vi.fn(),
-      setSectionLineChanges: vi.fn(),
-    };
-    const deps = {
-      store,
-      projectService,
-      graphicsService,
-      render: vi.fn(),
-      appService: { showAlert: vi.fn() },
-      refs: {
-        previewCanvasHost: { getCanvasRoot: () => ({ isConnected: true }) },
-      },
-    };
-    const original = structuredClone(projectData);
-    await renderSceneEditorCanvas(deps, {
-      skipRender: true,
-      skipAnimations: true,
+    const failure = Object.assign(new Error("Invalid audio bytes"), {
+      fileId: "sound-one",
     });
-    await renderSceneEditorCanvas(deps, {
-      skipRender: true,
-      skipAnimations: true,
-    });
-    expect(projectService.getFileContent).toHaveBeenCalledOnce();
-    expect(graphicsService.loadAssets).not.toHaveBeenCalled();
-    expect(deps.appService.showAlert).toHaveBeenCalledOnce();
-    expect(deps.appService.showAlert.mock.calls[0][0].message).toContain(
-      '"Font One"',
-    );
-    expect(projectData).toEqual(original);
+    graphicsService.collectRenderStateAudioKeys = () => ["sound-one"];
+    graphicsService.ensureAudioAssetsLoaded = vi
+      .fn()
+      .mockRejectedValue(failure);
+    graphicsService.engineRenderCurrentState = vi.fn();
+    const log = vi.spyOn(console, "error").mockImplementation(() => {});
+    const showAlert = vi.fn();
+    try {
+      await renderSceneEditorState({
+        graphicsService,
+        appService: { showAlert },
+        store: {
+          selectSceneId: () => "scene-1",
+          selectSelectedSectionId: () => "section-1",
+          selectSelectedLineId: () => "line-1",
+          selectProjectData: () => projectData,
+          selectTemporaryPresentationState: () => ({}),
+          selectIsMuted: () => false,
+          setPresentationState: vi.fn(),
+        },
+      });
+      expect(graphicsService.ensureAudioAssetsLoaded).toHaveBeenCalledWith([
+        "sound-one",
+      ]);
+      expect(graphicsService.engineRenderCurrentState).toHaveBeenCalledOnce();
+      expect(showAlert).not.toHaveBeenCalled();
+      expect(log).toHaveBeenCalledWith(
+        "[sceneEditor] Failed to warm up audio assets",
+        failure,
+      );
+    } finally {
+      log.mockRestore();
+    }
   });
+
+  it.each(["dialogue", "background"])(
+    "warns once for a damaged font in a %s layout and retries on the next render",
+    async (usage) => {
+      const projectData = createProjectData();
+      projectData.resources.fonts["font-one"] = {
+        id: "font-one",
+        fileId: "font-file-one",
+        fileType: "font/ttf",
+        name: "Font One",
+      };
+      projectData.resources.colors["color-one"] = { hex: "#ffffff" };
+      projectData.resources.textStyles["style-one"] = {
+        fontId: ["font-one"],
+        fontSize: 24,
+        colorId: "color-one",
+      };
+      projectData.resources.layouts.adv.elements[0].textStyleId = "style-one";
+      if (usage === "background") {
+        projectData.resources.layouts["background-layout"] = {
+          id: "background-layout",
+          type: "layout",
+          elements: [
+            {
+              id: "text-one",
+              type: "text",
+              content: "Text",
+              textStyleId: "style-one",
+            },
+          ],
+        };
+        delete projectData.resources.layouts.adv.elements[0].textStyleId;
+        projectData.story.scenes["scene-1"].sections[
+          "section-1"
+        ].lines[0].actions.background = {
+          resourceId: "background-layout",
+          resourceType: "layout",
+        };
+      }
+      const graphicsService = createGraphicsService();
+      graphicsService.loadAssets = vi.fn(async () => {});
+      const projectService = {
+        getFileContent: vi.fn(async () => {
+          throw Object.assign(new Error("checksum mismatch"), {
+            fileId: "font-file-one",
+            code: "font_integrity_mismatch",
+          });
+        }),
+      };
+      const store = {
+        ...createWarningStore(),
+        selectIsScenePageLoading: () => false,
+        selectPreviewScene: () => ({ previewVisible: false }),
+        selectSceneId: () => "scene-1",
+        selectSelectedSectionId: () => "section-1",
+        selectSelectedLineId: () => "line-2",
+        selectProjectData: () => projectData,
+        selectTemporaryPresentationState: () => ({}),
+        selectIsBackgroundTransformEditorOpen: () => false,
+        selectScene: () => ({ sections: [{ id: "section-1" }] }),
+        selectIsMuted: () => true,
+        setPresentationState: vi.fn(),
+        setSectionLineChanges: vi.fn(),
+      };
+      const deps = {
+        store,
+        projectService,
+        graphicsService,
+        render: vi.fn(),
+        appService: { showAlert: vi.fn() },
+        refs: {
+          previewCanvasHost: { getCanvasRoot: () => ({ isConnected: true }) },
+        },
+      };
+      const original = structuredClone(projectData);
+      await renderSceneEditorCanvas(deps, {
+        skipRender: true,
+        skipAnimations: true,
+      });
+      const firstReadCount = projectService.getFileContent.mock.calls.length;
+      const firstAlertCount = deps.appService.showAlert.mock.calls.length;
+      await renderSceneEditorCanvas(deps, {
+        skipRender: true,
+        skipAnimations: true,
+      });
+      expect(projectService.getFileContent.mock.calls.length).toBeGreaterThan(
+        firstReadCount,
+      );
+      expect(graphicsService.loadAssets).not.toHaveBeenCalled();
+      expect(firstAlertCount).toBe(1);
+      expect(deps.appService.showAlert).toHaveBeenCalledOnce();
+      expect(deps.appService.showAlert.mock.calls[0][0].message).toContain(
+        "Fonts: Font One",
+      );
+      expect(projectData).toEqual(original);
+
+      projectData.resources.fonts["font-one"].fileId = "font-file-two";
+      await renderSceneEditorCanvas(deps, {
+        skipRender: true,
+        skipAnimations: true,
+      });
+      expect(deps.appService.showAlert).toHaveBeenCalledTimes(2);
+
+      // A newly mounted editor gets fresh local warning state.
+      deps.store = { ...store, ...createWarningStore() };
+      await renderSceneEditorCanvas(deps, {
+        skipRender: true,
+        skipAnimations: true,
+      });
+      expect(deps.appService.showAlert).toHaveBeenCalledTimes(3);
+    },
+  );
 
   it("resolves the configured target-section entry and ignores stale line payload", () => {
     const scene = {
@@ -620,6 +720,7 @@ describe("renderSceneEditorState", () => {
       engine.handleActions(actions, eventContext, options);
     graphicsService.engineRenderCurrentState = vi.fn();
     const store = {
+      ...createWarningStore(),
       canvasAudioPreviewKey: undefined,
       selectSceneId: () => "scene-1",
       selectSelectedSectionId: () => "section-1",
@@ -678,7 +779,12 @@ describe("renderSceneEditorState", () => {
     };
 
     await expect(
-      renderSceneEditorState({ store, graphicsService, projectService }),
+      renderSceneEditorState({
+        store,
+        graphicsService,
+        projectService,
+        appService: { showAlert: vi.fn() },
+      }),
     ).resolves.toBeUndefined();
     expect(initializedProjectData[0].resources.audioEffects["fade-in"]).toEqual(
       expect.objectContaining({
@@ -729,7 +835,12 @@ describe("renderSceneEditorState", () => {
 
     graphicsService.engineRenderCurrentState.mockClear();
     await expect(
-      renderSceneEditorState({ store, graphicsService, projectService }),
+      renderSceneEditorState({
+        store,
+        graphicsService,
+        projectService,
+        appService: { showAlert: vi.fn() },
+      }),
     ).resolves.toBeUndefined();
     const secondRenderOptions =
       graphicsService.engineRenderCurrentState.mock.calls[0][0];
@@ -784,8 +895,15 @@ describe("renderSceneEditorState", () => {
       },
     };
 
+    graphicsService.loadAssets = vi.fn(async () => {});
     await expect(
-      renderSceneEditorState({ store, graphicsService }),
+      renderSceneEditorState({
+        store,
+        graphicsService,
+        projectService: {
+          getFileContent: async (fileId) => ({ url: `asset://${fileId}` }),
+        },
+      }),
     ).resolves.toBeUndefined();
     expect(store.presentationState.bgm.volume).toBe(18);
     expect(store.presentationState.bgm.sounds[0].volume).toBe(100);
@@ -837,8 +955,15 @@ describe("renderSceneEditorState", () => {
       },
     };
 
+    graphicsService.loadAssets = vi.fn(async () => {});
     await expect(
-      renderSceneEditorState({ store, graphicsService }),
+      renderSceneEditorState({
+        store,
+        graphicsService,
+        projectService: {
+          getFileContent: async (fileId) => ({ url: `asset://${fileId}` }),
+        },
+      }),
     ).resolves.toBeUndefined();
     expect(graphicsService.engineSelectPresentationState().bgm.volume).toBe(35);
   });
@@ -1296,7 +1421,7 @@ describe("renderSceneEditorState", () => {
     );
   });
 
-  it("backs off failed scene video asset loads after the first attempt", async () => {
+  it("immediately retries a failed scene video and caches it after recovery", async () => {
     const projectData = createProjectData();
     projectData.resources.videos["intro-video"] = {
       id: "intro-video",
@@ -1326,6 +1451,7 @@ describe("renderSceneEditorState", () => {
       })),
     };
     const store = {
+      ...createWarningStore(),
       selectIsScenePageLoading: () => false,
       selectPreviewScene: () => ({
         previewVisible: false,
@@ -1346,6 +1472,7 @@ describe("renderSceneEditorState", () => {
       setSectionLineChanges: vi.fn(),
     };
     const deps = {
+      appService: { showAlert: vi.fn() },
       store,
       render: vi.fn(),
       graphicsService,
@@ -1363,13 +1490,30 @@ describe("renderSceneEditorState", () => {
       skipRender: true,
       skipAnimations: true,
     });
+    const firstReadCount = projectService.getFileContent.mock.calls.length;
+    const firstAlertCount = deps.appService.showAlert.mock.calls.length;
+    expect(firstReadCount).toBeGreaterThan(0);
+    graphicsService.loadAssets.mockResolvedValue(undefined);
+
     await renderSceneEditorCanvas(deps, {
       skipRender: true,
       skipAnimations: true,
     });
 
-    expect(graphicsService.loadAssets).toHaveBeenCalledTimes(1);
-    expect(projectService.getFileContent).toHaveBeenCalledTimes(1);
+    expect(projectService.getFileContent).toHaveBeenCalledTimes(
+      firstReadCount + 1,
+    );
+    expect(deps.appService.showAlert).toHaveBeenCalledTimes(firstAlertCount);
+    expect(deps.appService.showAlert.mock.calls[0][0].message).toContain(
+      "Videos:",
+    );
+    await renderSceneEditorCanvas(deps, {
+      skipRender: true,
+      skipAnimations: true,
+    });
+    expect(projectService.getFileContent).toHaveBeenCalledTimes(
+      firstReadCount + 1,
+    );
   });
 
   it("uses project file metadata for scene videos when resource fileType is missing", async () => {
@@ -1500,6 +1644,7 @@ describe("renderSceneEditorState", () => {
       })),
     };
     const store = {
+      ...createWarningStore(),
       selectIsScenePageLoading: () => false,
       selectPreviewScene: () => ({
         previewVisible: false,
@@ -1520,6 +1665,7 @@ describe("renderSceneEditorState", () => {
       setSectionLineChanges: vi.fn(),
     };
     const deps = {
+      appService: { showAlert: vi.fn() },
       store,
       render: vi.fn(),
       graphicsService,
@@ -1537,22 +1683,31 @@ describe("renderSceneEditorState", () => {
       skipRender: true,
       skipAnimations: true,
     });
+    const firstLoadCount = graphicsService.loadAssets.mock.calls.length;
     await renderSceneEditorCanvas(deps, {
       skipRender: true,
       skipAnimations: true,
     });
 
-    const loadedAssetCallKeys = graphicsService.loadAssets.mock.calls.map(
-      ([assets]) => Object.keys(assets),
+    expect(graphicsService.loadAssets.mock.calls.length).toBeGreaterThan(
+      firstLoadCount,
     );
-    expect(loadedAssetCallKeys).toEqual([
-      ["good-video.mp4", "bad-video.mp4"],
-      ["good-video.mp4"],
-      ["bad-video.mp4"],
-    ]);
+    expect(
+      graphicsService.loadAssets.mock.calls
+        .slice(firstLoadCount)
+        .map(([assets]) => Object.keys(assets)),
+    ).toEqual([["bad-video.mp4"], ["bad-video.mp4"]]);
     expect(loadedAssetIds.has("good-video.mp4")).toBe(true);
     expect(loadedAssetIds.has("bad-video.mp4")).toBe(false);
-    expect(projectService.getFileContent).toHaveBeenCalledTimes(2);
+    expect(deps.appService.showAlert).toHaveBeenCalledOnce();
+    expect(deps.appService.showAlert.mock.calls[0][0].message).toContain(
+      "Videos:",
+    );
+    expect(
+      projectService.getFileContent.mock.calls.filter(
+        ([fileId]) => fileId === "good-video.mp4",
+      ),
+    ).toHaveLength(1);
   });
 
   it("does not reload scene audio after decoded audio is pruned", async () => {

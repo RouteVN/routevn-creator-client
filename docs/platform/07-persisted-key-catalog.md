@@ -19,6 +19,13 @@ This document does not list repository resource ids such as `sceneId`,
 The global app DB is app-owned storage for project discovery and app-level
 settings/cache.
 
+All application settings, preferences, and onboarding/dismissal flags belong
+inside `userConfig` and must use the JS `appService.getUserConfig(key)` /
+`appService.setUserConfig(key, value)` API on every platform. Await
+`appService.flushUserConfig()` when completion requires durable persistence.
+Do not add standalone DB keys or native/browser config stores for these values.
+See the [app service contract](../engineering.md#appservice).
+
 Storage location:
 
 - desktop: global SQLite `app.db`

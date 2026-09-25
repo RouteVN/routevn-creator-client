@@ -23,7 +23,7 @@
     "@lexical/utils": "0.22.0",
     "@noble/hashes": "2.4.0",
     "@rettangoli/fe": "1.4.1",
-    "@rettangoli/ui": "1.22.2",
+    "@rettangoli/ui": "1.22.5",
     "@rettangoli/vt": "1.1.0",
     "@routevn/creator-model": "1.15.0",
     "@tauri-apps/api": "2.11.0",

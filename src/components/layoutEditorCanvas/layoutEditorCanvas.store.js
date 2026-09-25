@@ -13,6 +13,7 @@ export const createInitialState = () => ({
   dragRenderState: undefined,
   pendingUpdatedItem: undefined,
   fileContentCacheById: {},
+  warnedAssetFileIds: [],
   activeRenderRequestId: undefined,
   selectionOccurrencesById: {},
   selectionOccurrenceIdsByOwner: {},
@@ -30,6 +31,13 @@ export const createInitialState = () => ({
   canvasParsedElements: [],
   canvasUnitsPerCssPixel: 1,
 });
+
+export const selectWarnedAssetFileIds = ({ state }) => state.warnedAssetFileIds;
+export const markAssetWarningsShown = ({ state }, { fileIds }) => {
+  state.warnedAssetFileIds = [
+    ...new Set([...state.warnedAssetFileIds, ...fileIds]),
+  ];
+};
 
 export const setGraphicsReady = ({ state }, { value = false } = {}) => {
   state.isGraphicsReady = value === true;

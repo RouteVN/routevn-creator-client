@@ -510,6 +510,15 @@ steps:
     steps:
       - action: click
   - action: waitFor
+    selector: 'rtgl-global-ui rtgl-dropdown-menu#dropdownMenu [role="menuitem"]:has-text("Custom channel name")'
+    state: visible
+    timeoutMs: 5000
+  - action: screenshot
+  - action: select
+    selector: 'rtgl-global-ui rtgl-dropdown-menu#dropdownMenu [role="menuitem"]:has-text("Custom channel name")'
+    steps:
+      - action: click
+  - action: waitFor
     selector: "rvn-command-line-sound-effects#commandLineSoundEffects rtgl-form#addChannelForm rtgl-input#field0 input"
     state: visible
     timeoutMs: 5000
@@ -544,6 +553,7 @@ steps:
     selector: "rvn-command-line-sound-effects#commandLineSoundEffects #resourceItem0x0"
     steps:
       - action: click
+  - action: screenshot
   - action: select
     selector: "rvn-command-line-sound-effects#commandLineSoundEffects #buttonSelect"
     steps:
@@ -565,4 +575,35 @@ steps:
   - action: wait
     ms: 300
   - action: screenshot
+  - action: select
+    selector: "rvn-command-line-sound-effects#commandLineSoundEffects #addChannelButton"
+    steps:
+      - action: click
+  - action: waitFor
+    selector: 'rtgl-global-ui rtgl-dropdown-menu#dropdownMenu [role="menuitem"]:text-is("1")'
+    state: visible
+    timeoutMs: 5000
+  - action: select
+    selector: 'rtgl-global-ui rtgl-dropdown-menu#dropdownMenu [role="menuitem"]:text-is("1")'
+    steps:
+      - action: click
+  - action: waitFor
+    selector: 'rvn-command-line-sound-effects#commandLineSoundEffects #sfxChannel1[data-channel-id="1"]'
+    state: visible
+    timeoutMs: 5000
+  - action: select
+    selector: "rvn-command-line-sound-effects#commandLineSoundEffects #addChannelButton"
+    steps:
+      - action: click
+  - action: waitFor
+    selector: 'rtgl-global-ui rtgl-dropdown-menu#dropdownMenu [role="menuitem"]:has-text("Custom channel name")'
+    state: visible
+    timeoutMs: 5000
+  - action: waitFor
+    selector: 'rtgl-global-ui rtgl-dropdown-menu#dropdownMenu [role="menuitem"]:text-is("1")'
+    state: hidden
+    timeoutMs: 5000
+  - action: screenshot
+  - action: keypress
+    key: Escape
 ---

@@ -2,12 +2,8 @@ import {
   compareUpdateVersions,
   isUpdateVersion,
 } from "../../internal/updateVersion.js";
-import { ROUTEVN_CREATOR_APP_STORE_URL } from "../../internal/routevnUrls.js";
-
 import { getDeviceId, isDeviceMetadataText } from "./deviceIdentity.js";
 
-const PLAY_STORE_URL =
-  "https://play.google.com/store/apps/details?id=com.routevn.creator";
 const invalid = () => {
   throw new Error("Invalid client update metadata.");
 };
@@ -27,6 +23,26 @@ const validBuild = (value) =>
   Number(value) <= 2100000000 &&
   String(Number(value)) === value;
 const byteLength = (value) => new TextEncoder().encode(value).length;
+const validInstallationUrl = (value) => {
+  if (
+    typeof value !== "string" ||
+    value.length > 2048 ||
+    !value.startsWith("https://") ||
+    !/^[\x21-\x7e]+$/.test(value)
+  )
+    return false;
+  try {
+    const url = new URL(value);
+    return (
+      url.protocol === "https:" &&
+      url.hostname !== "" &&
+      url.username === "" &&
+      url.password === ""
+    );
+  } catch {
+    return false;
+  }
+};
 
 const validateContext = (context) => {
   const fields = [
@@ -36,14 +52,14 @@ const validateContext = (context) => {
     "arch",
     "distribution",
     "channel",
-    "deviceModel",
-    "osVersion",
+    "device",
   ];
   if (context?.target === "android") fields.push("currentBuild");
   exactFields(context, fields);
+  exactFields(context.device, ["model", "osVersion"]);
   if (
-    !isDeviceMetadataText(context.deviceModel) ||
-    !isDeviceMetadataText(context.osVersion) ||
+    !isDeviceMetadataText(context.device.model) ||
+    !isDeviceMetadataText(context.device.osVersion) ||
     context.appId !== "routevn-creator" ||
     !isUpdateVersion(context.currentVersion) ||
     !["stable", "beta"].includes(context.channel) ||
@@ -107,7 +123,7 @@ const validateResult = (result, context, availableBuild) => {
       exactFields(action, ["type", "url", "build"]);
       if (
         action.type !== "googlePlay" ||
-        action.url !== PLAY_STORE_URL ||
+        !validInstallationUrl(action.url) ||
         !validBuild(action.build) ||
         Number(action.build) <= Number(context.currentBuild) ||
         (availableBuild !== undefined && action.build !== availableBuild) ||
@@ -118,7 +134,7 @@ const validateResult = (result, context, availableBuild) => {
       exactFields(action, ["type", "url"]);
       if (
         action.type !== "appStore" ||
-        action.url !== ROUTEVN_CREATOR_APP_STORE_URL ||
+        !validInstallationUrl(action.url) ||
         compareUpdateVersions(release.version, context.currentVersion) <= 0
       )
         invalid();

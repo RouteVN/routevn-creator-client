@@ -1,3 +1,4 @@
+import { formatLoadingProgress } from "../../internal/ui/assetLoadingProgress.js";
 import {
   buildLayoutElements,
   isFragmentLayout,
@@ -739,8 +740,11 @@ export const createInitialState = () => ({
   sectionLineChanges: {},
   sectionLineChangesBySectionId: {},
   isMuted: false,
+  sceneLoadingProgress: { stage: "repository" },
+  sceneLoadingDetailsVisible: false,
   isScenePageLoading: true,
   isSceneAssetLoading: false,
+  warnedAssetFileIds: [],
   lockingLineId: null, // Lock to prevent duplicate split/merge operations
   actionTargetLineId: undefined,
   deadEndTooltip: {
@@ -1106,8 +1110,17 @@ export const setSectionLineChangesBySectionId = (
   syncPresentationStateFromSelectedLineChanges(state);
 };
 
+export const setSceneLoadingDetailsVisible = ({ state }, { visible }) => {
+  state.sceneLoadingDetailsVisible = visible;
+};
+
+export const setSceneLoadingProgress = ({ state }, progress) => {
+  state.sceneLoadingProgress = progress;
+};
+
 export const setScenePageLoading = ({ state }, { isLoading } = {}) => {
   state.isScenePageLoading = isLoading;
+  if (isLoading) state.sceneLoadingProgress = { stage: "scenes" };
 };
 
 export const selectIsScenePageLoading = ({ state }) => {
@@ -1120,6 +1133,18 @@ export const setSceneAssetLoading = ({ state }, { isLoading } = {}) => {
 
 export const selectIsSceneAssetLoading = ({ state }) => {
   return state.isSceneAssetLoading;
+};
+
+export const selectWarnedAssetFileIds = ({ state }) => {
+  return state.warnedAssetFileIds;
+};
+
+export const markAssetWarningsShown = ({ state }, { fileIds }) => {
+  for (const fileId of fileIds) {
+    if (!state.warnedAssetFileIds.includes(fileId)) {
+      state.warnedAssetFileIds.push(fileId);
+    }
+  }
 };
 
 export const selectSectionLineChanges = ({ state }) => {
@@ -2016,8 +2041,23 @@ export const selectViewData = ({ state, i18n }) => {
       }),
       isTouchMode: state.isTouchMode,
       ...selectMobileWorkspaceLayout({ state }),
-      loadingAssetsLabel: copy.loadingAssetsLabel ?? "Loading assets...",
-      loadingSceneLabel: copy.loadingSceneLabel ?? "Loading scene...",
+      loadingAssetsLabel: state.sceneLoadingDetailsVisible
+        ? formatLoadingProgress(
+            state.sceneLoadingProgress,
+            i18n?.vnPreview,
+            false,
+          )
+        : (copy.loadingAssetsLabel ?? "Loading assets..."),
+      loadingSceneLabel: state.sceneLoadingDetailsVisible
+        ? formatLoadingProgress(
+            state.sceneLoadingProgress,
+            i18n?.vnPreview,
+            false,
+          )
+        : (copy.loadingSceneLabel ?? "Loading scene..."),
+      loadingAssetName: state.sceneLoadingDetailsVisible
+        ? state.sceneLoadingProgress?.assetName
+        : undefined,
       previewButton: copy.previewButton ?? "Preview",
       downloadCanvasButton: copy.downloadCanvasButton ?? "Download canvas",
       sectionsTitle: copy.sectionsLabel ?? "Sections",
@@ -2399,8 +2439,23 @@ export const selectViewData = ({ state, i18n }) => {
     }),
     isTouchMode: state.isTouchMode,
     ...selectMobileWorkspaceLayout({ state }),
-    loadingAssetsLabel: copy.loadingAssetsLabel ?? "Loading assets...",
-    loadingSceneLabel: copy.loadingSceneLabel ?? "Loading scene...",
+    loadingAssetsLabel: state.sceneLoadingDetailsVisible
+      ? formatLoadingProgress(
+          state.sceneLoadingProgress,
+          i18n?.vnPreview,
+          false,
+        )
+      : (copy.loadingAssetsLabel ?? "Loading assets..."),
+    loadingSceneLabel: state.sceneLoadingDetailsVisible
+      ? formatLoadingProgress(
+          state.sceneLoadingProgress,
+          i18n?.vnPreview,
+          false,
+        )
+      : (copy.loadingSceneLabel ?? "Loading scene..."),
+    loadingAssetName: state.sceneLoadingDetailsVisible
+      ? state.sceneLoadingProgress?.assetName
+      : undefined,
     previewButton: copy.previewButton ?? "Preview",
     downloadCanvasButton: copy.downloadCanvasButton ?? "Download canvas",
     sectionsTitle: copy.sectionsLabel ?? "Sections",

@@ -90,6 +90,7 @@ describe("android file picker", () => {
     });
     mocked.callAndroidBridge.mockImplementation((method, payload) => {
       if (method === "openFilePicker") {
+        expect(payload.source).toBe("gallery");
         Promise.resolve().then(() => {
           window.__routeVNAndroidFilePickerResult({
             requestId: payload.requestId,
@@ -117,6 +118,7 @@ describe("android file picker", () => {
 
     const file = await createAndroidFilePicker().openFilePicker({
       multiple: false,
+      source: "gallery",
     });
 
     expect(file.name).toBe("hello.txt");

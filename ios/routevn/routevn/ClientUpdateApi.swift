@@ -29,7 +29,7 @@ final class ClientUpdateApi: NSObject, URLSessionDataDelegate {
             "appId": "routevn-creator", "currentVersion": version,
             "target": "ios", "arch": architecture,
             "distribution": "app-store", "channel": "stable",
-            "deviceModel": hardwareModel(), "osVersion": osVersion,
+            "device": ["model": hardwareModel(), "osVersion": osVersion],
         ]
     }
 
@@ -57,7 +57,7 @@ final class ClientUpdateApi: NSObject, URLSessionDataDelegate {
     }
 
     static func endpoint() throws -> URL {
-        var value = "https://api.routevn.com/system/rpc"
+        var value = "https://api1.routevn.com/system/rpc"
         #if DEBUG
         if let configured = ProcessInfo.processInfo.environment["ROUTEVN_UPDATE_API_URL"], !configured.isEmpty {
             value = configured
@@ -81,7 +81,9 @@ final class ClientUpdateApi: NSObject, URLSessionDataDelegate {
             throw failure("Invalid update request parameter.")
         }
         var params = try context(bundle: bundle)
-        params["deviceId"] = deviceId
+        var device = params["device"] as! [String: Any]
+        device["id"] = deviceId
+        params["device"] = device
         var request = URLRequest(url: try endpoint(), cachePolicy: .reloadIgnoringLocalCacheData, timeoutInterval: 10)
         request.httpMethod = "POST"
         request.httpShouldHandleCookies = false

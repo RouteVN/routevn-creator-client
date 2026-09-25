@@ -21,7 +21,7 @@ require(routevnDistribution in setOf("direct", "google-play")) {
 }
 
 val routevnUpdateApiUrl = providers.gradleProperty("routevnUpdateApiUrl")
-    .orElse("http://127.0.0.1:8787/system/rpc").get()
+    .orElse("https://api1.routevn.com/system/rpc").get()
 fun javaString(value: String) = "\"" + value.replace("\\", "\\\\").replace("\"", "\\\"") + "\""
 
 val buildAndroidRust by tasks.registering(Exec::class) {
@@ -40,10 +40,10 @@ android {
         applicationId = "com.routevn.creator"
         minSdk = 24
         targetSdk = 37
-        versionCode = 9
-        versionName = "1.15.1"
+        versionCode = 12
+        versionName = "1.16.2"
         buildConfigField("String", "UPDATE_DISTRIBUTION", javaString(routevnDistribution))
-        buildConfigField("String", "UPDATE_API_URL", "\"https://api.routevn.com/system/rpc\"")
+        buildConfigField("String", "UPDATE_API_URL", "\"https://api1.routevn.com/system/rpc\"")
         buildConfigField("boolean", "GOOGLE_PLAY_UPDATES", (routevnDistribution == "google-play").toString())
         manifestPlaceholders["usesCleartextTraffic"] = "false"
     }

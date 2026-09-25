@@ -24,12 +24,15 @@ struct ClientUpdateApiNativeTests {
         precondition(context["target"] as? String == "ios")
         precondition(context["channel"] as? String == "stable")
         precondition(context["currentBuild"] == nil && context["availableBuild"] == nil)
-        precondition(context["deviceId"] as? String == deviceId)
-        let deviceModel = context["deviceModel"] as! String
+        let device = context["device"] as! [String: Any]
+        precondition(device["id"] as? String == deviceId)
+        precondition(device.count == 3)
+        let deviceModel = device["model"] as! String
         precondition(!deviceModel.isEmpty && deviceModel.count <= 256)
         let systemVersion = ProcessInfo.processInfo.operatingSystemVersion
-        precondition(context["osVersion"] as? String ==
+        precondition(device["osVersion"] as? String ==
             "\(systemVersion.majorVersion).\(systemVersion.minorVersion).\(systemVersion.patchVersion)")
+        precondition(context["deviceId"] == nil && context["deviceModel"] == nil && context["osVersion"] == nil)
         precondition(ClientUpdateApi.deviceMetadata("iPhone17,1") == "iPhone17,1")
         precondition(ClientUpdateApi.deviceMetadata(String(repeating: "a", count: 256)).count == 256)
         let unavailableMetadata: [String?] = [nil, "", " ", "\u{a0}", "\u{feff}",
@@ -41,7 +44,7 @@ struct ClientUpdateApiNativeTests {
             "I23456789AbC", "l23456789AbC", "O23456789AbC", deviceId + "\n", 123, NSNull()]
         var invalidPayloads = invalidIds.map { ["deviceId": $0] }
         invalidPayloads.append([:])
-        for key in ["deviceModel", "osVersion", "availableBuild", "endpoint", "distribution"] {
+        for key in ["device", "deviceModel", "osVersion", "availableBuild", "endpoint", "distribution"] {
             invalidPayloads.append(["deviceId": deviceId, key: "caller-supplied"])
         }
         for payload in invalidPayloads {
@@ -62,7 +65,7 @@ struct ClientUpdateApiNativeTests {
         #else
         setenv("ROUTEVN_UPDATE_API_URL", "http://127.0.0.1:8787/system/rpc", 1)
         let releaseEndpoint = try ClientUpdateApi.endpoint()
-        precondition(releaseEndpoint.absoluteString == "https://api.routevn.com/system/rpc")
+        precondition(releaseEndpoint.absoluteString == "https://api1.routevn.com/system/rpc")
         #endif
         print("Client update native request checks passed")
     }

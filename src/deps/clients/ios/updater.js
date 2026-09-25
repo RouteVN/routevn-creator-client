@@ -1,5 +1,6 @@
 import { createAutomaticUpdateChecks } from "../automaticUpdateChecks.js";
 import { formatUpdateMessage } from "../clientUpdates.js";
+import { createUpdateCheckProgress } from "../updateCheckProgress.js";
 import { ROUTEVN_CREATOR_APP_STORE_URL } from "../../../internal/routevnUrls.js";
 
 export const createIOSUpdater = ({
@@ -13,14 +14,21 @@ export const createIOSUpdater = ({
   let operation;
   let updateInfo;
   let manualCheckRequested = false;
+  let checkingResponse = false;
+  let checkProgress;
+  const closeCheckProgress = () => {
+    checkingResponse = false;
+    checkProgress?.close();
+    checkProgress = undefined;
+  };
   const showWhenIdle = (show) =>
     globalUI.runWhenIdle(() => {
       if (isForeground()) return show();
     });
 
-  const openStore = async (copy) => {
+  const openStore = async (copy, url) => {
     try {
-      if (isForeground()) await openUrl(ROUTEVN_CREATOR_APP_STORE_URL);
+      if (isForeground()) await openUrl(url);
     } catch {
       await showWhenIdle(() =>
         globalUI.showAlert({
@@ -42,7 +50,7 @@ export const createIOSUpdater = ({
         cancelText: copy.laterButton ?? "Later",
       }),
     );
-    if (accepted) await openStore(copy);
+    if (accepted) await openStore(copy, ROUTEVN_CREATOR_APP_STORE_URL);
   };
 
   const performCheck = async (silent, copy) => {
@@ -51,7 +59,9 @@ export const createIOSUpdater = ({
       if (!metadataClient)
         throw new Error("Update metadata bridge unavailable.");
       updateInfo = await metadataClient.check();
+      closeCheckProgress();
     } catch {
+      closeCheckProgress();
       if (!silent || manualCheckRequested) await offerStoreFallback(copy);
       return;
     }
@@ -64,7 +74,7 @@ export const createIOSUpdater = ({
           cancelText: copy.laterButton ?? "Later",
         }),
       );
-      if (accepted) await openStore(copy);
+      if (accepted) await openStore(copy, updateInfo.release.installation.url);
     } else if (!silent || manualCheckRequested) {
       if (
         updateInfo.status === "noUpdate" &&
@@ -87,8 +97,16 @@ export const createIOSUpdater = ({
   const checkForUpdates = (silent = false, options = {}) => {
     if (!isForeground()) return Promise.resolve();
     if (!silent) manualCheckRequested = true;
-    if (operation) return operation;
-    operation = performCheck(silent, options.copy ?? getCopy()).finally(() => {
+    if (operation) {
+      if (!silent && checkingResponse)
+        checkProgress ??= createUpdateCheckProgress(options.copy ?? getCopy());
+      return operation;
+    }
+    const copy = options.copy ?? getCopy();
+    checkingResponse = true;
+    if (!silent) checkProgress = createUpdateCheckProgress(copy);
+    operation = performCheck(silent, copy).finally(() => {
+      closeCheckProgress();
       operation = undefined;
       manualCheckRequested = false;
     });

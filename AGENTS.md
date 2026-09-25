@@ -190,6 +190,10 @@ If you need deeper or broader Rettangoli framework reference material, use
 
 ## UX/Error Handling
 
+- App-owned menus, dialogs, and source choices belong in the existing JS UI.
+  Do not implement them with Android native UI such as `AlertDialog`. Native
+  adapters should only launch the OS surfaces required by the selected action,
+  such as the gallery or file picker.
 - Do not silently swallow errors with `console.error` only for user actions; show user-facing feedback via `appService.showToast(...)`.
 - Prefer stable, explicit toast messages over raw `error?.message` text.
 - If async picker/upload fails, toast and return early. Do not continue with partial state.
@@ -224,6 +228,14 @@ If you need deeper or broader Rettangoli framework reference material, use
   - duplicate
   - move/reorder (`handleTargetChanged`)
 - `variables` supports folder tree operations, including drag/drop move.
+
+## Application Configuration
+
+- All application settings, preferences, and onboarding/dismissal flags must use the existing JS app config API on every platform: `appService.getUserConfig(key)` and `appService.setUserConfig(key, value)`.
+- The shared JS user-config service owns these values inside the global app DB's `userConfig` entry. Platform-specific settings, such as `androidBackupOnboarding`, follow the same rule.
+- Do not create alternative config stores using Android SharedPreferences, iOS UserDefaults, localStorage, native KV implementations, or separate DB keys. Writing directly from native code into the same app DB also bypasses the required JS config API.
+- Await `appService.flushUserConfig()` when a workflow requires the setting to be durable before completion, navigation, or restart. Surface persistence failures instead of reporting success.
+- Document new config paths in `docs/platform/07-persisted-key-catalog.md`.
 
 ## Project Data Ownership
 

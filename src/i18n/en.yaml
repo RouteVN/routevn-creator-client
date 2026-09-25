@@ -213,6 +213,9 @@ projectPage:
   warningTitle: "Warning"
   wordsLabel: "Words"
 appPage:
+  filePickerSourceTitle: Choose source
+  filePickerGallery: Gallery
+  filePickerFiles: File picker
   pressEscapeAgainFullscreen: "Press Esc twice quickly to exit fullscreen"
   failedExitFullscreen: "Could not exit fullscreen. Please use the window controls."
   failedStartPreviewAudio: "Could not start preview audio. Close and reopen the preview."
@@ -247,6 +250,7 @@ appPage:
   releaseTab: "Release"
   refreshingProjectEntry: "Refreshing project entry..."
   retrieveUpdateInfoFallback: "Could not retrieve update information."
+  checkingForUpdates: "Checking for updates..."
   sceneMapTab: "Scene Map"
   settingsTab: "Settings"
   updateDownloadMessage: "Keep RouteVN Creator open. It will restart when the update is ready."
@@ -514,9 +518,20 @@ webServerPage:
   unsupportedTitle: "Unsupported"
   urlLabel: "URL"
   warningTitle: "Warning"
+fontPreview:
+  reuploadLabel: "Re-upload font"
+  unavailableLabel: "Font unavailable"
+  reuploadMessage: "Open Fonts and re-upload the affected font file."
+fileImage:
+  unavailableLabel: "Image unavailable"
+  reuploadMessage: "Open Edit and re-upload this image file."
+assetLoadFeedback:
+  previewBlocked: "Preview cannot be played because these assets could not be loaded."
+  voices: "Voices"
+  file: "Asset file: {fileId}"
+  unknown: "An unidentified asset"
+  failed: "Could not load these assets:\n{assets}\n\nCheck their files and replace them with valid copies if needed."
 resourcePages:
-  damagedFontMessage: "The font \"{fontName}\" has changed or is damaged. Open Fonts and replace its file with a fresh copy."
-  unavailableFontMessage: "The font \"{fontName}\" could not be loaded. Open Fonts and replace its file with a valid copy."
   damagedFontImportMessage: "The font \"{fontName}\" is damaged or unreadable. Please choose a fresh TTF, OTF, or WOFF2 file."
   selectorEmptyMessage: "No items available to select."
   selectorNoResultsMessage: "No items match your search."
@@ -786,6 +801,14 @@ actionTransformEditor:
   unnamedTarget: "Current item"
   visualTarget: "Visual"
 vnPreview:
+  repository: "Opening project..."
+  scenes: "Preparing scenes..."
+  graphics: "Initializing graphics..."
+  reading: "Checking assets: {completed} / {total}"
+  decoding: "Loading assets: {completed} / {total}"
+  engine: "Starting playback..."
+  paint: "Drawing first frame..."
+  timeout: "Preview could not start. Timed out after {seconds} seconds.\n\n{step}\n\nTry previewing again."
   closeButton: "Exit full screen"
   loading: "Loading preview..."
   restoreOrientationButton: "Restore preview orientation"
@@ -2000,6 +2023,7 @@ commandLinePage:
   "Add Option": "Add Option"
   "+ Add Channel": "+ Add Channel"
   "Add Channel": "Add Channel"
+  "Custom channel name": "Custom channel name"
   "Add BGM audio": "Add BGM audio"
   "Add audio after": "Add audio after"
   "Add audio before": "Add audio before"
@@ -2513,7 +2537,7 @@ androidBackup:
   upToDate: Up to date
   never: Never backed up
   lastBackup: 'Last backup:'
-  schedule: Automatic backup every 10 minutes
+  schedule: Automatic backup every 5 minutes
 androidBackupErrors:
   failed: Backup could not finish. Your previous backup is kept. Try again or choose another local folder.
   lowSpace: Backup paused. Free up space on your device or backup storage. At least 1 GB must remain free after the backup.

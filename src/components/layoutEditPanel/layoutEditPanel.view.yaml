@@ -477,7 +477,8 @@ template:
                                       - rtgl-text key=${part.key} s=sm c=mu-fg: ${part.text}
                                     $else:
                                       - rtgl-text key=${part.key} s=sm: ${part.text}
-  - rtgl-view h=1 w=f bgc=mu mv=lg: null
+  - $if showTrailingDivider:
+      - rtgl-view h=1 w=f bgc=mu mv=lg: null
   - rvn-system-actions#systemActions :actions=${actionsData} actionType=system :hiddenModes=${hiddenSystemActionModes}: null
   - rtgl-popover#popoverForm ?open=${popover.open} place=b x=${popover.x} y=${popover.y}:
       - $if popover.open:

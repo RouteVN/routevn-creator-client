@@ -22,9 +22,8 @@ const fields = [
   "channel",
   "currentBuild",
   "availableBuild",
-  "deviceId",
-  "deviceModel",
-  "osVersion",
+  "bundleType",
+  "device",
 ];
 const targets = [
   "windows",
@@ -94,22 +93,36 @@ export const createMockReleases = () => {
   ];
 };
 
-const validParams = (params) => {
+const validParams = (params, desktop) => {
   if (!params || typeof params !== "object" || Array.isArray(params))
     return false;
   if (Object.keys(params).some((key) => !fields.includes(key))) return false;
   if (
-    !Object.values(params).every(
-      (value) => typeof value === "string" && value.length > 0,
+    !params.device ||
+    typeof params.device !== "object" ||
+    Array.isArray(params.device)
+  )
+    return false;
+  if (
+    Object.keys(params.device).length !== 3 ||
+    ["id", "model", "osVersion"].some(
+      (key) => !Object.hasOwn(params.device, key),
+    ) ||
+    Object.entries(params).some(
+      ([key, value]) =>
+        key !== "device" && (typeof value !== "string" || value.length === 0),
     )
   )
     return false;
   if (
-    !isDeviceId(params.deviceId) ||
-    !isDeviceMetadataText(params.deviceModel) ||
-    !isDeviceMetadataText(params.osVersion)
+    !isDeviceId(params.device.id) ||
+    !isDeviceMetadataText(params.device.model) ||
+    !isDeviceMetadataText(params.device.osVersion)
   )
     return false;
+  if (desktop) {
+    if (!/^[a-z0-9]{1,32}$/.test(params.bundleType ?? "")) return false;
+  } else if (params.bundleType !== undefined) return false;
   if (!params.appId || !isUpdateVersion(params.currentVersion)) return false;
   if (!targets.includes(params.target) || !architectures.includes(params.arch))
     return false;
@@ -257,7 +270,7 @@ export const createMockUpdateServer = ({
       );
       response.setHeader(
         "Access-Control-Allow-Headers",
-        "Content-Type, X-RouteVN-RPC, X-RouteVN-Device-Id, X-RouteVN-Device-Model, X-RouteVN-OS-Version",
+        "Content-Type, X-RouteVN-RPC",
       );
       return send(204);
     }
@@ -282,23 +295,18 @@ export const createMockUpdateServer = ({
     if (desktop) {
       if (/%(?![0-9a-f]{2})/i.test(url.search))
         return httpError(400, "invalidRequest");
-      try {
-        params = {
-          appId: "routevn-creator",
-          deviceId: request.headers["x-routevn-device-id"],
-          deviceModel: decodeURIComponent(
-            request.headers["x-routevn-device-model"] ?? "",
-          ),
-          osVersion: decodeURIComponent(
-            request.headers["x-routevn-os-version"] ?? "",
-          ),
-        };
-      } catch {
-        return httpError(400, "invalidRequest");
-      }
+      params = { appId: "routevn-creator", device: {} };
       for (const [key, value] of url.searchParams) {
-        if (Object.hasOwn(params, key)) return httpError(400, "invalidRequest");
-        params[key] = value;
+        if (key.startsWith("device.")) {
+          const field = key.slice("device.".length);
+          if (Object.hasOwn(params.device, field))
+            return httpError(400, "invalidRequest");
+          params.device[field] = value;
+        } else {
+          if (Object.hasOwn(params, key))
+            return httpError(400, "invalidRequest");
+          params[key] = value;
+        }
       }
     } else {
       if (
@@ -325,7 +333,7 @@ export const createMockUpdateServer = ({
         return rpcError(-32601, "Method not found");
       params = rpc.params;
     }
-    if (!validParams(params))
+    if (!validParams(params, desktop))
       return desktop
         ? httpError(400, "invalidRequest")
         : rpcError(-32602, "Invalid params");

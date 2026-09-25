@@ -6,17 +6,11 @@ import {
 } from "../../scripts/mock-updates.js";
 
 const metadata = {
-  deviceId: "123456789ABC",
-  deviceModel: "Example device",
+  id: "123456789ABC",
+  model: "Example device",
   osVersion: "18.0",
 };
-const desktopHeaders = {
-  "X-RouteVN-Device-Id": metadata.deviceId,
-  "X-RouteVN-Device-Model": encodeURIComponent(metadata.deviceModel),
-  "X-RouteVN-OS-Version": encodeURIComponent(metadata.osVersion),
-};
-const desktopFetch = (url, options = {}) =>
-  fetch(url, { headers: desktopHeaders, ...options });
+const desktopFetch = fetch;
 const servers = [];
 afterEach(async () => {
   await Promise.all(
@@ -44,11 +38,15 @@ const desktopParams = {
   arch: "x86_64",
   distribution: "direct",
   channel: "stable",
+  bundleType: "nsis",
+  "device.id": metadata.id,
+  "device.model": metadata.model,
+  "device.osVersion": metadata.osVersion,
 };
 const desktopPath = (params = desktopParams) =>
   `/system/updates/v1/routevn-creator/tauri?${new URLSearchParams(params)}`;
 const androidParams = {
-  ...metadata,
+  device: metadata,
   appId: "routevn-creator",
   currentVersion: "1.15.1",
   currentBuild: "9",
@@ -74,38 +72,43 @@ describe("mock update protocol over HTTP", () => {
   it("requires bounded device metadata on both transports", async () => {
     const origin = await start();
     for (const patch of [
-      { deviceId: undefined },
-      { deviceId: "123456789ABC\n" },
-      { deviceId: "not-valid" },
-      { deviceModel: "" },
-      { deviceModel: "x".repeat(257) },
-      { osVersion: undefined },
-      { osVersion: "18\n0" },
+      { device: undefined },
+      { device: { ...metadata, id: "123456789ABC\n" } },
+      { device: { ...metadata, id: "not-valid" } },
+      { device: { ...metadata, model: "" } },
+      { device: { ...metadata, model: "x".repeat(257) } },
+      { device: { ...metadata, osVersion: undefined } },
+      { device: { ...metadata, osVersion: "18\n0" } },
+      { deviceId: metadata.id },
     ]) {
       const result = await (
         await rpc(origin, { ...androidParams, ...patch })
       ).json();
       expect(result.error.code).toBe(-32602);
     }
-    expect((await fetch(origin + desktopPath())).status).toBe(400);
-    for (const headers of [
-      { ...desktopHeaders, "X-RouteVN-Device-Model": "%ZZ" },
-      { ...desktopHeaders, "X-RouteVN-OS-Version": "%0A" },
-      { ...desktopHeaders, "X-RouteVN-Device-Id": "invalid" },
-    ]) {
-      expect((await fetch(origin + desktopPath(), { headers })).status).toBe(
-        400,
-      );
-    }
-    const encoded = {
-      ...desktopHeaders,
-      "X-RouteVN-Device-Model": encodeURIComponent("Device 模型 / 2"),
-    };
     expect(
-      (await fetch(origin + desktopPath(), { headers: encoded })).status,
+      (await fetch(origin + desktopPath({ currentVersion: "1.15.1" }))).status,
+    ).toBe(400);
+    for (const params of [
+      { ...desktopParams, "device.model": "" },
+      { ...desktopParams, "device.osVersion": "18\n0" },
+      { ...desktopParams, "device.id": "invalid" },
+    ]) {
+      expect((await fetch(origin + desktopPath(params))).status).toBe(400);
+    }
+    expect(
+      (
+        await fetch(
+          origin +
+            desktopPath({
+              ...desktopParams,
+              "device.model": "Device 模型 / 2",
+            }),
+        )
+      ).status,
     ).toBe(200);
     expect(
-      (await desktopFetch(origin + desktopPath() + "&deviceId=123456789ABC"))
+      (await desktopFetch(origin + desktopPath() + "&device.id=123456789ABC"))
         .status,
     ).toBe(400);
   });
@@ -174,7 +177,7 @@ describe("mock update protocol over HTTP", () => {
   it("returns iOS store metadata and never a direct installer to another distribution", async () => {
     const origin = await start();
     const ios = {
-      ...metadata,
+      device: metadata,
       appId: "routevn-creator",
       currentVersion: "1.15.1",
       target: "ios",
@@ -251,7 +254,7 @@ describe("mock update protocol over HTTP", () => {
     expect((await desktopFetch(origin + "/system/rpc")).status).toBe(405);
   });
 
-  it("uses the same query selectors in development and production config without changing trust", () => {
+  it("uses the production endpoint by default and keeps the mock opt-in", () => {
     const load = (name) =>
       JSON.parse(
         readFileSync(
@@ -261,7 +264,8 @@ describe("mock update protocol over HTTP", () => {
       ).plugins.updater;
     const development = load("tauri.conf.json");
     const production = load("tauri.prod.conf.json");
-    for (const config of [development, production]) {
+    const mock = load("tauri.mock.conf.json");
+    for (const config of [development, production, mock]) {
       const url = new URL(config.endpoints[0]);
       expect(url.pathname).toBe("/system/updates/v1/routevn-creator/tauri");
       expect(Object.fromEntries(url.searchParams)).toEqual({
@@ -270,10 +274,17 @@ describe("mock update protocol over HTTP", () => {
         arch: "{{arch}}",
         distribution: "direct",
         channel: "stable",
+        bundleType: "{{bundle_type}}",
       });
     }
+    expect(new URL(development.endpoints[0]).hostname).toBe("api1.routevn.com");
+    expect(new URL(production.endpoints[0]).hostname).toBe("api1.routevn.com");
+    expect(new URL(mock.endpoints[0]).hostname).toBe("127.0.0.1");
+    expect(development.pubkey).toBe(production.pubkey);
     expect(production.dangerousInsecureTransportProtocol).toBe(false);
-    expect(production.pubkey).not.toBe(development.pubkey);
+    expect(development.dangerousInsecureTransportProtocol).toBe(false);
+    expect(mock.dangerousInsecureTransportProtocol).toBe(true);
+    expect(mock.pubkey).not.toBe(production.pubkey);
     expect(load("tauri.steam.conf.json").endpoints).toEqual([]);
   });
 });

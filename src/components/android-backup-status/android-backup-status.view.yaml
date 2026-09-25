@@ -4,7 +4,7 @@ refs:
       click:
         handler: handleSetup
 template:
-  - $if settings:
+  - $if settings && visible:
       - rtgl-view w=f g=lg:
           - rtgl-text s=h4: ${copy.settingsTitle}
           - rtgl-view w=f g=md:

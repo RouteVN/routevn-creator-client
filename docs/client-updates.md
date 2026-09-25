@@ -4,6 +4,8 @@ Update checks send the installed version, platform, architecture, distribution,
 channel, and device metadata. Checks work before account sign-in.
 `distribution` identifies the installation source, including Android's
 `google-play` and `direct` flavours.
+Manual checks show an indeterminate progress dialog after 200 ms and close it
+before showing the result. Automatic checks do not show the dialog.
 
 ## Device metadata
 
@@ -24,17 +26,17 @@ ASCII control characters. These fields do not change the response shape.
 ## Desktop
 
 ```http
-GET /system/updates/v1/routevn-creator/tauri?currentVersion=1.15.1&target=windows&arch=x86_64&distribution=direct&channel=stable
-Host: api.routevn.com
-X-RouteVN-Device-Id: 123456789ABC
-X-RouteVN-Device-Model: Example%20device
-X-RouteVN-OS-Version: 10.0.26100
+GET /system/updates/v1/routevn-creator/tauri?currentVersion=1.15.1&target=windows&arch=x86_64&distribution=direct&channel=stable&bundleType=nsis&device.id=123456789ABC&device.model=Example%20device&device.osVersion=10.0.26100
+Host: api1.routevn.com
 ```
 
-Desktop sends device metadata as headers supported by Tauri's updater.
-`deviceModel` and `osVersion` are UTF-8 percent-encoded with
-`encodeURIComponent`; the server decodes them once. Device headers are excluded
-from artifact downloads.
+Desktop includes Tauri's installation `bundleType` and device metadata in the
+query. The updater endpoint is assembled at check time so the persisted device
+ID can be included. Device values are URL-encoded once. Artifact downloads do
+not include device metadata.
+Development and production Tauri builds use `api1.routevn.com` by default.
+Restart the Tauri shell after changing updater configuration or native commands;
+`watch:tauri` refreshes only the frontend.
 
 An available release returns HTTP 200 with Tauri's flat response:
 
@@ -55,7 +57,7 @@ Tauri verifies the artifact signature before installation.
 ## Mobile
 
 ```http
-POST https://api.routevn.com/system/rpc
+POST https://api1.routevn.com/system/rpc
 Content-Type: application/json
 X-RouteVN-RPC: 1
 ```
@@ -74,9 +76,11 @@ X-RouteVN-RPC: 1
     "channel": "stable",
     "currentBuild": "9",
     "availableBuild": "10",
-    "deviceId": "123456789ABC",
-    "deviceModel": "Pixel 9",
-    "osVersion": "16"
+    "device": {
+      "id": "123456789ABC",
+      "model": "Pixel 9",
+      "osVersion": "16"
+    }
   }
 }
 ```
@@ -103,8 +107,8 @@ existing distribution behavior.
 
 ## Mock endpoint
 
-Run `bun run mock:updates` to serve the same interfaces at
-`http://127.0.0.1:8787`. Use `--scenario no-update`,
+Run `bun run mock:updates` and pass `--config src-tauri/tauri.mock.conf.json`
+to `tauri dev` to use the local mock at `http://127.0.0.1:8787`. Use `--scenario no-update`,
 `no-compatible-release`, `unavailable`, or `rate-limited` to select a response.
 Default desktop fixtures contain placeholder artifacts and cannot install.
 

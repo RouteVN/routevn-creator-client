@@ -1,10 +1,10 @@
-import { check } from "@tauri-apps/plugin-updater";
+import { Update } from "@tauri-apps/plugin-updater";
 import { invoke } from "@tauri-apps/api/core";
 import { relaunch } from "@tauri-apps/plugin-process";
 import { createProgressDialog } from "../progressDialog.js";
-import { isMacosHost } from "./platform.js";
 import { createAutomaticUpdateChecks } from "../automaticUpdateChecks.js";
 import { getDeviceId, isDeviceMetadataText } from "../deviceIdentity.js";
+import { createUpdateCheckProgress } from "../updateCheckProgress.js";
 
 const formatUpdaterCopy = (template, values = {}) => {
   return String(template || "").replace(/\{([A-Za-z0-9_]+)\}/g, (match, key) =>
@@ -69,93 +69,131 @@ const createUpdater = ({ globalUI, keyValueStore }) => {
   let updateAvailable = false;
   let updateInfo;
   let downloadProgress = 0;
+  let checkOperation;
+  let checkProgress;
+  let checkingMetadata = false;
+  let manualCheckRequested = false;
+  let activeCopy;
 
-  const checkForUpdates = async (silent = false, options = {}) => {
-    const copy = resolveUpdaterCopy(options);
-    try {
-      const [deviceId, deviceInfo] = await Promise.all([
-        getDeviceId(keyValueStore),
-        invoke("get_update_device_info").catch(() => ({})),
-      ]);
-      const deviceModel = isDeviceMetadataText(deviceInfo?.deviceModel)
-        ? deviceInfo.deviceModel
-        : "unknown";
-      const osVersion = isDeviceMetadataText(deviceInfo?.osVersion)
-        ? deviceInfo.osVersion
-        : "unknown";
-      const checkOptions = {
-        timeout: 10_000,
-        headers: {
-          "X-RouteVN-Device-Id": deviceId,
-          "X-RouteVN-Device-Model": encodeURIComponent(deviceModel),
-          "X-RouteVN-OS-Version": encodeURIComponent(osVersion),
-        },
-      };
-      if (isMacosHost()) checkOptions.target = "macos-universal";
-      const update = await check(checkOptions);
+  const closeCheckProgress = () => {
+    checkingMetadata = false;
+    checkProgress?.close();
+    checkProgress = undefined;
+  };
 
-      if (!update) {
+  const checkForUpdates = (silent = false, options = {}) => {
+    if (!silent) {
+      manualCheckRequested = true;
+      activeCopy = resolveUpdaterCopy(options);
+      if (checkingMetadata && !checkProgress)
+        checkProgress = createUpdateCheckProgress(activeCopy);
+    }
+    if (checkOperation) return checkOperation;
+
+    activeCopy = resolveUpdaterCopy(options);
+    checkingMetadata = true;
+    if (!silent) checkProgress = createUpdateCheckProgress(activeCopy);
+    checkOperation = (async () => {
+      try {
+        const [deviceId, deviceInfo] = await Promise.all([
+          getDeviceId(keyValueStore),
+          invoke("get_update_device_info").catch(() => ({})),
+        ]);
+        const deviceModel = isDeviceMetadataText(deviceInfo?.deviceModel)
+          ? deviceInfo.deviceModel
+          : "unknown";
+        const osVersion = isDeviceMetadataText(deviceInfo?.osVersion)
+          ? deviceInfo.osVersion
+          : "unknown";
+        const checkOptions = {
+          deviceId,
+          deviceModel,
+          osVersion,
+        };
+        const metadata = await invoke("check_client_update", checkOptions);
+        const update = metadata ? new Update(metadata) : undefined;
+        closeCheckProgress();
+        const copy = activeCopy;
+
+        if (!update) {
+          updateAvailable = false;
+          updateInfo = undefined;
+          downloadProgress = 0;
+          if (manualCheckRequested && globalUI) {
+            await globalUI.showAlert({
+              message:
+                copy.latestVersionMessage ??
+                "You are already on the latest version",
+              title: copy.upToDateTitle ?? "Up to Date",
+            });
+          }
+          return;
+        }
+
+        try {
+          updateAvailable = true;
+          updateInfo = {
+            version: update.version,
+            date: update.date,
+            body: update.body,
+          };
+
+          if (globalUI) {
+            const shouldUpdate = await globalUI.showConfirm({
+              message: formatUpdaterCopy(
+                copy.updateAvailableMessage ??
+                  "Update {version} is available!\n\nRelease notes:\n{releaseNotes}",
+                {
+                  version: update.version,
+                  releaseNotes: update.body ?? "",
+                },
+              ),
+              title: copy.updateAvailableTitle ?? "Update Available",
+              confirmText: copy.updateNowButton ?? "Update Now",
+              cancelText: copy.laterButton ?? "Later",
+            });
+
+            if (shouldUpdate) {
+              await downloadAndInstall(update, copy);
+            }
+          }
+
+          return updateInfo;
+        } finally {
+          try {
+            await update.close();
+          } catch (error) {
+            console.error("Failed to release update metadata:", error);
+          }
+        }
+      } catch (error) {
+        closeCheckProgress();
         updateAvailable = false;
         updateInfo = undefined;
-        downloadProgress = 0;
-        if (!silent && globalUI) {
+        console.error("Failed to check for updates:", error);
+        if (manualCheckRequested && globalUI) {
+          const copy = activeCopy;
+          const message =
+            copy.retrieveUpdateInfoFallback ??
+            "Could not retrieve update information.";
           await globalUI.showAlert({
-            message:
-              copy.latestVersionMessage ??
-              "You are already on the latest version",
-            title: copy.upToDateTitle ?? "Up to Date",
+            message: formatUpdaterCopy(
+              copy.failedCheckUpdatesMessage ??
+                "Failed to check for updates: {message}",
+              { message },
+            ),
+            title: copy.errorTitle ?? "Error",
           });
         }
         return;
       }
-
-      updateAvailable = true;
-      updateInfo = {
-        version: update.version,
-        date: update.date,
-        body: update.body,
-      };
-
-      if (globalUI) {
-        const shouldUpdate = await globalUI.showConfirm({
-          message: formatUpdaterCopy(
-            copy.updateAvailableMessage ??
-              "Update {version} is available!\n\nRelease notes:\n{releaseNotes}",
-            {
-              version: update.version,
-              releaseNotes: update.body ?? "",
-            },
-          ),
-          title: copy.updateAvailableTitle ?? "Update Available",
-          confirmText: copy.updateNowButton ?? "Update Now",
-          cancelText: copy.laterButton ?? "Later",
-        });
-
-        if (shouldUpdate) {
-          await downloadAndInstall(update, copy);
-        }
-      }
-
-      return updateInfo;
-    } catch (error) {
-      updateAvailable = false;
-      updateInfo = undefined;
-      console.error("Failed to check for updates:", error);
-      if (!silent && globalUI) {
-        const message =
-          copy.retrieveUpdateInfoFallback ??
-          "Could not retrieve update information.";
-        await globalUI.showAlert({
-          message: formatUpdaterCopy(
-            copy.failedCheckUpdatesMessage ??
-              "Failed to check for updates: {message}",
-            { message },
-          ),
-          title: copy.errorTitle ?? "Error",
-        });
-      }
-      return;
-    }
+    })().finally(() => {
+      closeCheckProgress();
+      checkOperation = undefined;
+      manualCheckRequested = false;
+      activeCopy = undefined;
+    });
+    return checkOperation;
   };
 
   const downloadAndInstall = async (update, copy = {}) => {

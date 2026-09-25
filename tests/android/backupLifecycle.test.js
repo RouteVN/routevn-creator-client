@@ -65,7 +65,7 @@ it("cancels and resumes backups through the native lifecycle even when WebView v
     expect(beforeBackup).toHaveBeenCalledOnce();
 
     windowTarget.routeVNSetAppActive(false);
-    await vi.advanceTimersByTimeAsync(9 * 60 * 1000);
+    await vi.advanceTimersByTimeAsync(BACKUP_INTERVAL_MS - 60 * 1000);
     windowTarget.routeVNSetAppActive(true);
     await vi.advanceTimersByTimeAsync(60 * 1000);
     expect(beforeBackup).toHaveBeenCalledTimes(2);

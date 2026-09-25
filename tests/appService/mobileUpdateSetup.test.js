@@ -552,8 +552,7 @@ describe("mobile update API setup", () => {
       arch: "aarch64",
       distribution,
       channel: "stable",
-      deviceModel: "Example device",
-      osVersion: "18.0",
+      device: { model: "Example device", osVersion: "18.0" },
     };
     if (platform === "android") context.currentBuild = "9";
     return context;
