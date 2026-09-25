@@ -4,6 +4,8 @@ propsSchema:
   properties:
     selectedLineId:
       type: string
+    authoredDialogue:
+      type: object
     layouts:
       type: array
       items:

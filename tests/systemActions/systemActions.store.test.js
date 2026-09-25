@@ -21,6 +21,45 @@ const selectViewData = (deps) =>
   selectViewDataBase({ ...deps, i18n: TEST_I18N });
 
 describe("systemActions.store", () => {
+  it("passes authored dialogue separately from the temporary dialogue preview", () => {
+    const state = createInitialState();
+    setRepositoryState(
+      { state },
+      {
+        repositoryState: {
+          layouts: {
+            items: {
+              "dialogue-layout": {
+                id: "dialogue-layout",
+                name: "Dialogue Layout",
+              },
+            },
+          },
+        },
+      },
+    );
+    const authoredDialogue = {
+      ui: { resourceId: "dialogue-layout" },
+      character: { name: "Speaker One" },
+    };
+    const previewDialogue = {
+      ui: { resourceId: "dialogue-layout" },
+      character: { name: "Preview Name" },
+    };
+    updateActions({ state }, { dialogue: authoredDialogue });
+
+    const viewData = selectViewData({
+      state,
+      props: {
+        actionType: "presentation",
+        presentationState: { dialogue: previewDialogue },
+      },
+    });
+
+    expect(viewData.authoredDialogue).toEqual(authoredDialogue);
+    expect(viewData.actions.dialogue).toEqual(previewDialogue);
+  });
+
   it("expands the dialog for the dedicated action transform editor", () => {
     const state = createInitialState();
     const viewData = selectViewData({
