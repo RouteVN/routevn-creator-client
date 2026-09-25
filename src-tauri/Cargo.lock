@@ -4143,6 +4143,7 @@ dependencies = [
  "tauri-plugin-sql",
  "tauri-plugin-updater",
  "tempfile",
+ "time",
  "url",
  "urlencoding",
  "windows",

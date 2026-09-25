@@ -10,6 +10,7 @@ mod discord_presence {
         Err("Discord presence is unavailable on this platform.".to_string())
     }
 }
+mod client_update;
 mod export_macos;
 mod export_windows;
 mod export_zip;
@@ -19,6 +20,7 @@ mod macos_fullscreen_escape;
 mod project_file_protocol;
 mod project_media_server;
 mod static_web_server;
+mod update_device_info;
 mod windows_system_menu;
 
 #[cfg(target_os = "linux")]
@@ -84,6 +86,8 @@ pub fn run() {
             static_web_server::start_static_web_server,
             static_web_server::stop_static_web_server,
             static_web_server::list_static_web_servers,
+            update_device_info::get_update_device_info,
+            client_update::check_client_update,
             windows_system_menu::show_windows_system_menu
         ])
         .setup(|_app| {

@@ -43,9 +43,6 @@ try {
           case "isDebugBuild":
             value = true;
             break;
-          case "getAppUpdateSupport":
-            value = { status: "unsupported" };
-            break;
           case "getWindowMetrics":
             value = { width: 390, height: 844 };
             break;

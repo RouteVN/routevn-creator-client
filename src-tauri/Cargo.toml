@@ -32,6 +32,7 @@ tauri-plugin-updater = "=2.10.1"
 tauri-plugin-process = "=2.3.1"
 tauri-plugin-opener = "=2.5.4"
 tauri-plugin-persisted-scope = { version = "=2.3.4", features = ["protocol-asset"] }
+time = { version = "0.3", features = ["formatting"] }
 url = "2"
 urlencoding = "2.1"
 routevn-exporter = { path = "../crates/routevn-exporter" }
@@ -45,5 +46,6 @@ discord-rich-presence = "=1.1.0"
 [target.'cfg(target_os = "windows")'.dependencies]
 windows = { version = "=0.61.3", features = [
     "Win32_Foundation",
+    "Win32_System_Registry",
     "Win32_UI_WindowsAndMessaging",
 ] }

@@ -23,6 +23,11 @@ import { deriveProjectFormatVersionFromAppVersion } from "./internal/projectComp
 import { registerPrimitives } from "./primitives/registerPrimitives.js";
 import { setAndroidDebugBuild } from "./internal/navigationTiming.js";
 import tauriConfig from "../src-tauri/tauri.conf.json";
+import {
+  createClientUpdates,
+  readClientUpdateContext,
+} from "./deps/clients/clientUpdates.js";
+import { createMobileUpdateRequest } from "./deps/clients/mobileUpdateRequest.js";
 
 registerPrimitives();
 
@@ -67,18 +72,29 @@ const windowMetricsClient = createWindowMetricsClient({
   loadMetrics: () => callAndroidBridge("getWindowMetrics"),
 });
 
-const appVersion = tauriConfig.version;
+const updateContext = await readClientUpdateContext(
+  callAndroidBridge,
+  "android",
+);
+const appVersion = updateContext?.currentVersion ?? tauriConfig.version;
 const creatorVersion = deriveProjectFormatVersionFromAppVersion(appVersion);
 
-const updater = await createAndroidUpdater({
+const updater = createAndroidUpdater({
   globalUI,
   keyValueStore: appDb,
-  browserEventsClient,
+  distribution: updateContext?.distribution,
+  metadataClient: updateContext
+    ? createClientUpdates({
+        context: updateContext,
+        keyValueStore: appDb,
+        request: createMobileUpdateRequest({
+          debug: isAndroidDebugBuild,
+          override: readAndroidEnv("ROUTEVN_UPDATE_API_URL", undefined),
+        }),
+      })
+    : undefined,
   getCopy: () => appService.getAppCopy(),
-  beforeInstall: async () => {
-    await appService.prepareNavigation({ path: "/projects" });
-    await appService.flushUserConfig();
-  },
+  openUrl: (url) => appService.openUrl(url),
 });
 
 const subject = new Subject();
@@ -165,6 +181,7 @@ const appService = createAppService({
   openUrl,
   appVersion,
   platform: "android",
+  distribution: updateContext?.distribution,
   updatesEnabled: Boolean(updater),
   updater,
   audioService,
