@@ -29,12 +29,20 @@ public class AppDeviceInfoTest {
         assertEquals("x86_64", play.getString("arch"));
     }
 
-    @Test public void mapsSupportedABIs() {
+    @Test public void mapsSupportedAndUnavailableABIs() throws Exception {
         assertEquals("aarch64", AppDeviceInfo.architecture("arm64-v8a"));
         assertEquals("armv7", AppDeviceInfo.architecture("armeabi-v7a"));
         assertEquals("i686", AppDeviceInfo.architecture("x86"));
         assertEquals("x86_64", AppDeviceInfo.architecture("x86_64"));
-        assertThrows(IllegalArgumentException.class, () -> AppDeviceInfo.architecture("unknown"));
+        assertEquals("unknown", AppDeviceInfo.architecture("unknown"));
+        assertEquals("unknown", AppDeviceInfo.architecture(null));
+        assertNull(AppDeviceInfo.primaryAbi(new String[0]));
+        assertNull(AppDeviceInfo.primaryAbi(null));
+        assertEquals("arm64-v8a", AppDeviceInfo.primaryAbi(new String[] { "arm64-v8a" }));
+        JSONObject missing = AppDeviceInfo.create("1.16.2", 12,
+            AppDeviceInfo.primaryAbi(new String[0]), "direct", "Pixel 9", "16");
+        assertEquals(6, missing.length());
+        assertEquals("unknown", missing.getString("arch"));
     }
 
     @Test public void retainsNullablePlatformFieldsForJsNormalization() throws Exception {

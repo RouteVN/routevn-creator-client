@@ -16,7 +16,6 @@
 		2A0000010000000000000007 /* SaveFileDestinations.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2A0000010000000000000018 /* SaveFileDestinations.swift */; };
 		2A0000010000000000000008 /* ProjectDatabaseReader.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2A0000010000000000000019 /* ProjectDatabaseReader.swift */; };
 		2A0000010000000000000009 /* PrivacyInfo.xcprivacy in Resources */ = {isa = PBXBuildFile; fileRef = 2A000001000000000000001A /* PrivacyInfo.xcprivacy */; };
-		2A000001000000000000000A /* HttpRequestBridge.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2A000001000000000000001B /* HttpRequestBridge.swift */; };
 		2A000001000000000000000B /* AppDeviceInfo.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2A000001000000000000001C /* AppDeviceInfo.swift */; };
 /* End PBXBuildFile section */
 
@@ -32,7 +31,6 @@
 		2A0000010000000000000018 /* SaveFileDestinations.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SaveFileDestinations.swift; sourceTree = "<group>"; };
 		2A0000010000000000000019 /* ProjectDatabaseReader.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ProjectDatabaseReader.swift; sourceTree = "<group>"; };
 		2A000001000000000000001A /* PrivacyInfo.xcprivacy */ = {isa = PBXFileReference; lastKnownFileType = text.xml; path = PrivacyInfo.xcprivacy; sourceTree = "<group>"; };
-		2A000001000000000000001B /* HttpRequestBridge.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HttpRequestBridge.swift; sourceTree = "<group>"; };
 		2A000001000000000000001C /* AppDeviceInfo.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppDeviceInfo.swift; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
@@ -59,7 +57,6 @@
 			isa = PBXGroup;
 			children = (
 				2A0000010000000000000011 /* RouteVNApp.swift */,
-				2A000001000000000000001B /* HttpRequestBridge.swift */,
 				2A000001000000000000001C /* AppDeviceInfo.swift */,
 				2A0000010000000000000016 /* ProjectFolderSetup.swift */,
 				2A0000010000000000000017 /* ProjectStoragePaths.swift */,
@@ -155,7 +152,6 @@
 			buildActionMask = 2147483647;
 			files = (
 				2A0000010000000000000001 /* RouteVNApp.swift in Sources */,
-				2A000001000000000000000A /* HttpRequestBridge.swift in Sources */,
 				2A000001000000000000000B /* AppDeviceInfo.swift in Sources */,
 				2A0000010000000000000005 /* ProjectFolderSetup.swift in Sources */,
 				2A0000010000000000000006 /* ProjectStoragePaths.swift in Sources */,

@@ -150,8 +150,9 @@ Then run the Android frontend watch server:
 bun run watch:android
 ```
 
-`watch:android` prepares `_site`, runs `adb reverse tcp:3001 tcp:3001` when a
-device is connected, and starts `rtgl fe watch` with `src/setup.android.js`.
+`watch:android` prepares `_site`, reverses TCP 3001 for the frontend and TCP
+8787 for the local update mock when a device is connected, and starts
+`rtgl fe watch` with `src/setup.android.js`.
 After the server is ready, launch the installed debug app with the explicit
 development extra:
 

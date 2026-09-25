@@ -8,18 +8,23 @@ final class AppDeviceInfo {
     private AppDeviceInfo() {}
 
     static String architecture(String abi) {
+        if (abi == null) return "unknown";
         switch (abi) {
             case "arm64-v8a": return "aarch64";
             case "armeabi-v7a": return "armv7";
             case "x86_64": return "x86_64";
             case "x86": return "i686";
-            default: throw new IllegalArgumentException("Unsupported Android architecture.");
+            default: return "unknown";
         }
+    }
+
+    static String primaryAbi(String[] abis) {
+        return abis == null || abis.length == 0 ? null : abis[0];
     }
 
     static JSONObject read() throws Exception {
         return create(BuildConfig.VERSION_NAME, BuildConfig.VERSION_CODE,
-            (android.os.Process.is64Bit() ? Build.SUPPORTED_64_BIT_ABIS : Build.SUPPORTED_32_BIT_ABIS)[0],
+            primaryAbi(android.os.Process.is64Bit() ? Build.SUPPORTED_64_BIT_ABIS : Build.SUPPORTED_32_BIT_ABIS),
             BuildConfig.UPDATE_DISTRIBUTION, Build.MODEL, Build.VERSION.RELEASE);
     }
 

@@ -544,6 +544,17 @@ describe("mobile setup update persistence", () => {
 });
 
 describe("mobile update API setup", () => {
+  const stubUpdateFetch = (result) => {
+    const fetchMock = vi.fn(
+      async () =>
+        new Response(JSON.stringify({ jsonrpc: "2.0", id: 1, result }), {
+          status: 200,
+        }),
+    );
+    vi.stubGlobal("fetch", fetchMock);
+    return fetchMock;
+  };
+
   const nativeInfo = (platform, distribution) => {
     const info = {
       version: "1.14.0",
@@ -561,6 +572,10 @@ describe("mobile update API setup", () => {
   it.each(["google-play", "direct"])(
     "uses native Android version and %s distribution",
     async (distribution) => {
+      const fetchMock = stubUpdateFetch({
+        status: "noUpdate",
+        reason: "noCompatibleRelease",
+      });
       const original = mocked.bridge.getMockImplementation();
       mocked.bridge.mockImplementation(async (method, params) => {
         if (method === "getAppUpdateDeviceInfo")
@@ -571,15 +586,6 @@ describe("mobile update API setup", () => {
           };
         if (method === "checkAppUpdate")
           return { status: "available", versionCode: 10 };
-        if (method === "httpRequest")
-          return {
-            status: 200,
-            body: JSON.stringify({
-              jsonrpc: "2.0",
-              id: 1,
-              result: { status: "noUpdate", reason: "noCompatibleRelease" },
-            }),
-          };
         return original(method, params);
       });
       mocked.globalUI.showConfirm.mockResolvedValue(false);
@@ -590,22 +596,19 @@ describe("mobile update API setup", () => {
       expect(pages.appService.getDistribution()).toBe(distribution);
       if (distribution === "direct") {
         expect(pages.updaterService).toBeUndefined();
-        expect(mocked.bridge).not.toHaveBeenCalledWith(
-          "httpRequest",
-          expect.anything(),
-        );
+        expect(fetchMock).not.toHaveBeenCalled();
       } else {
         await pages.updaterService.checkForUpdates(false, {
           copy: EN_I18N.appPage,
         });
-        const updateCall = mocked.bridge.mock.calls.find(
-          ([method]) => method === "httpRequest",
+        expect(fetchMock).toHaveBeenCalledWith(
+          "https://api1.routevn.com/system/updates/v1/routevn-creator/mobile",
+          expect.objectContaining({
+            method: "POST",
+            credentials: "omit",
+          }),
         );
-        expect(updateCall?.[1]).toMatchObject({
-          url: "https://api1.routevn.com/system/rpc",
-          method: "POST",
-        });
-        expect(JSON.parse(updateCall[1].body)).toMatchObject({
+        expect(JSON.parse(fetchMock.mock.calls[0][1].body)).toMatchObject({
           method: "system.getClientUpdate",
           params: {
             appId: "routevn-creator",
@@ -626,21 +629,49 @@ describe("mobile update API setup", () => {
     },
   );
 
-  it("uses native iOS version and sends About through the metadata bridge", async () => {
+  it("keeps Google Play checks usable on an unfamiliar Android architecture", async () => {
+    const fetchMock = stubUpdateFetch({
+      status: "noUpdate",
+      reason: "upToDate",
+    });
+    const original = mocked.bridge.getMockImplementation();
+    mocked.bridge.mockImplementation(async (method, params) => {
+      if (method === "getAppUpdateDeviceInfo") {
+        const info = nativeInfo("android", "google-play");
+        info.arch = "unknown";
+        return info;
+      }
+      if (method === "checkAppUpdate")
+        return { status: "available", versionCode: 10 };
+      return original(method, params);
+    });
+    mocked.globalUI.showConfirm.mockResolvedValue(false);
+    const {
+      deps: { pages },
+    } = await import("../../src/setup.android.js");
+
+    await pages.updaterService.checkForUpdates(false, {
+      copy: EN_I18N.appPage,
+    });
+
+    expect(fetchMock).not.toHaveBeenCalled();
+    expect(mocked.globalUI.showConfirm).toHaveBeenCalledWith(
+      expect.objectContaining({
+        message: EN_I18N.appPage.googlePlayUpdateAvailable,
+      }),
+    );
+  });
+
+  it("uses native iOS version and sends About through WebView fetch", async () => {
+    const fetchMock = stubUpdateFetch({
+      status: "noUpdate",
+      reason: "upToDate",
+    });
     const original = mocked.bridge.getMockImplementation();
     mocked.bridge.mockImplementation(async (method, params) => {
       if (method === "getAppUpdateDeviceInfo")
         return nativeInfo("ios", "app-store");
       if (method === "getUpdateApiUrlOverride") return undefined;
-      if (method === "httpRequest")
-        return {
-          status: 200,
-          body: JSON.stringify({
-            jsonrpc: "2.0",
-            id: 1,
-            result: { status: "noUpdate", reason: "upToDate" },
-          }),
-        };
       return original(method, params);
     });
     const {
@@ -657,14 +688,14 @@ describe("mobile update API setup", () => {
       render: vi.fn(),
       i18n: EN_I18N,
     });
-    const updateCall = mocked.bridge.mock.calls.find(
-      ([method]) => method === "httpRequest",
+    expect(fetchMock).toHaveBeenCalledWith(
+      "https://api1.routevn.com/system/updates/v1/routevn-creator/mobile",
+      expect.objectContaining({
+        method: "POST",
+        credentials: "omit",
+      }),
     );
-    expect(updateCall?.[1]).toMatchObject({
-      url: "https://api1.routevn.com/system/rpc",
-      method: "POST",
-    });
-    expect(JSON.parse(updateCall[1].body)).toMatchObject({
+    expect(JSON.parse(fetchMock.mock.calls[0][1].body)).toMatchObject({
       method: "system.getClientUpdate",
       params: {
         appId: "routevn-creator",
@@ -684,31 +715,23 @@ describe("mobile update API setup", () => {
   });
 
   it("keeps iOS automatic prompts behind appService progress work", async () => {
+    stubUpdateFetch({
+      status: "updateAvailable",
+      release: {
+        version: "1.16.0",
+        changelog: "Improved editing",
+        publishedAt: "2026-09-01T00:00:00Z",
+        installation: {
+          type: "appStore",
+          url: ROUTEVN_CREATOR_APP_STORE_URL,
+        },
+      },
+    });
     const original = mocked.bridge.getMockImplementation();
     mocked.bridge.mockImplementation(async (method, params) => {
       if (method === "getAppUpdateDeviceInfo")
         return nativeInfo("ios", "app-store");
       if (method === "getUpdateApiUrlOverride") return undefined;
-      if (method === "httpRequest")
-        return {
-          status: 200,
-          body: JSON.stringify({
-            jsonrpc: "2.0",
-            id: 1,
-            result: {
-              status: "updateAvailable",
-              release: {
-                version: "1.16.0",
-                changelog: "Improved editing",
-                publishedAt: "2026-09-01T00:00:00Z",
-                installation: {
-                  type: "appStore",
-                  url: ROUTEVN_CREATOR_APP_STORE_URL,
-                },
-              },
-            },
-          }),
-        };
       return original(method, params);
     });
     mocked.globalUI.showConfirm.mockResolvedValue(false);

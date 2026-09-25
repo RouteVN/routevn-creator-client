@@ -13,6 +13,7 @@ import {
 } from "../src/deps/clients/deviceIdentity.js";
 
 const tauriPath = "/system/updates/v1/routevn-creator/tauri";
+const mobilePath = "/system/updates/v1/routevn-creator/mobile";
 const fields = [
   "appId",
   "currentVersion",
@@ -261,7 +262,7 @@ export const createMockUpdateServer = ({
       return httpError(414, "requestTooLong");
     const url = new URL(request.url, "http://localhost");
     const desktop = url.pathname === tauriPath;
-    if (!desktop && url.pathname !== "/system/rpc")
+    if (!desktop && ![mobilePath, "/system/rpc"].includes(url.pathname))
       return httpError(404, "notFound");
     if (request.method === "OPTIONS") {
       response.setHeader(

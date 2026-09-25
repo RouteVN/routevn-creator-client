@@ -173,7 +173,6 @@ public class MainActivity extends Activity {
     private WebView webView;
     private String lastReportedWindowMetrics = "";
     private GooglePlayUpdater googlePlayUpdater;
-    private final HttpRequestBridge httpRequestBridge = new HttpRequestBridge();
     private ProjectBackup projectBackup;
     private final ExecutorService backupExecutor = Executors.newSingleThreadExecutor();
     private final Set<String> projectTransactions = java.util.concurrent.ConcurrentHashMap.newKeySet();
@@ -804,7 +803,6 @@ public class MainActivity extends Activity {
     @Override
     protected void onDestroy() {
         googlePlayUpdater.destroy();
-        httpRequestBridge.close();
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
             unregisterBackInvokedCallback();
         }
@@ -1048,17 +1046,6 @@ public class MainActivity extends Activity {
             JSONObject payload = request.optJSONObject("payload");
             if (payload == null) {
                 payload = new JSONObject();
-            }
-
-            if ("httpRequest".equals(method)) {
-                String httpRequestId = requestId;
-                httpRequestBridge.request(payload, (value, error) -> {
-                    String result;
-                    try { result = error == null ? bridgeSuccess(value) : bridgeFailure(error); }
-                    catch (Exception failure) { result = bridgeFailure(failure); }
-                    reply.accept(attachBridgeResponseMetadata(httpRequestId, result));
-                });
-                return;
             }
 
             if ("getAppUpdateSupport".equals(method) || "checkAppUpdate".equals(method) ||

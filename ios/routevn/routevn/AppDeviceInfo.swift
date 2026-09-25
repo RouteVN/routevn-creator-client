@@ -13,7 +13,7 @@ enum AppDeviceInfo {
         #elseif arch(x86_64)
         let architecture = "x86_64"
         #else
-        throw failure("Unsupported iOS architecture.")
+        let architecture = "unknown"
         #endif
         let systemVersion = ProcessInfo.processInfo.operatingSystemVersion
         let osVersion = "\(systemVersion.majorVersion).\(systemVersion.minorVersion).\(systemVersion.patchVersion)"

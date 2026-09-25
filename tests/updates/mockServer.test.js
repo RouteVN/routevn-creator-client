@@ -62,7 +62,7 @@ const androidParams = {
   channel: "stable",
 };
 const rpc = (origin, params) =>
-  fetch(`${origin}/system/rpc`, {
+  fetch(`${origin}/system/updates/v1/routevn-creator/mobile`, {
     method: "POST",
     headers: { "Content-Type": "application/json", "X-RouteVN-RPC": "1" },
     body: JSON.stringify({
@@ -74,31 +74,44 @@ const rpc = (origin, params) =>
   });
 
 describe("mock update protocol over HTTP", () => {
-  it("accepts the shared JS request through a capability-only HTTP bridge", async () => {
+  it("allows credential-free mobile preflight from an opaque app origin", async () => {
     const origin = await start();
-    const bridge = vi.fn(async (method, payload) => {
-      if (method === "getAppUpdateDeviceInfo") {
-        return {
-          version: "1.15.1",
-          arch: "aarch64",
-          distribution: "google-play",
-          build: "9",
-          model: "Example device",
-          osVersion: "18.0",
-        };
-      }
-      const response = await fetch(payload.url, {
-        method: payload.method,
-        headers: payload.headers,
-        body: payload.body,
-      });
-      return { status: response.status, body: await response.text() };
-    });
+    const response = await fetch(
+      `${origin}/system/updates/v1/routevn-creator/mobile`,
+      {
+        method: "OPTIONS",
+        headers: {
+          Origin: "null",
+          "Access-Control-Request-Method": "POST",
+          "Access-Control-Request-Headers": "content-type,x-routevn-rpc",
+        },
+      },
+    );
+
+    expect(response.status).toBe(204);
+    expect(response.headers.get("access-control-allow-origin")).toBe("*");
+    expect(response.headers.get("access-control-allow-credentials")).toBeNull();
+    expect(response.headers.get("access-control-expose-headers")).toBe(
+      "Retry-After",
+    );
+  });
+
+  it("accepts the shared JS request through browser fetch", async () => {
+    const origin = await start();
+    const bridge = vi.fn(async () => ({
+      version: "1.15.1",
+      arch: "aarch64",
+      distribution: "google-play",
+      build: "9",
+      model: "Example device",
+      osVersion: "18.0",
+    }));
+    const fetchImpl = vi.fn((...args) => fetch(...args));
     const context = await readClientUpdateContext(bridge, "android");
     const request = createMobileUpdateRequest({
-      bridge,
       debug: true,
-      override: `${origin}/system/rpc`,
+      override: `${origin}/system/updates/v1/routevn-creator/mobile`,
+      fetchImpl,
     });
     const client = createClientUpdates({
       context,
@@ -110,10 +123,13 @@ describe("mock update protocol over HTTP", () => {
 
     expect(result.status).toBe("updateAvailable");
     expect(result.release.installation.build).toBe("10");
-    expect(bridge).toHaveBeenCalledWith(
-      "httpRequest",
+    expect(bridge).toHaveBeenCalledExactlyOnceWith(
+      "getAppUpdateDeviceInfo",
+      {},
+    );
+    expect(fetchImpl).toHaveBeenCalledWith(
+      `${origin}/system/updates/v1/routevn-creator/mobile`,
       expect.objectContaining({
-        url: `${origin}/system/rpc`,
         method: "POST",
         body: expect.stringContaining('"method":"system.getClientUpdate"'),
       }),

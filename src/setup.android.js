@@ -88,7 +88,6 @@ const updater = await createAndroidUpdater({
         context: updateContext,
         keyValueStore: appDb,
         request: createMobileUpdateRequest({
-          bridge: callAndroidBridge,
           debug: isAndroidDebugBuild,
           override: readAndroidEnv("ROUTEVN_UPDATE_API_URL", undefined),
         }),

@@ -93,7 +93,6 @@ const updateApiUrlOverride = updateDebug
   : undefined;
 const updateRequest = updateContext
   ? createMobileUpdateRequest({
-      bridge: callIOSBridge,
       debug: updateDebug,
       override: updateApiUrlOverride,
     })

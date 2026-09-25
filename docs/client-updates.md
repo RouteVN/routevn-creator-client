@@ -58,7 +58,7 @@ Tauri verifies the artifact signature before installation.
 ## Mobile
 
 ```http
-POST https://api1.routevn.com/system/rpc
+POST https://api1.routevn.com/system/updates/v1/routevn-creator/mobile
 Content-Type: application/json
 X-RouteVN-RPC: 1
 ```
@@ -89,11 +89,14 @@ X-RouteVN-RPC: 1
 Android's optional `availableBuild` is the exact build offered by Google Play.
 iOS sends `target: ios`, `distribution: app-store`, and omits both build fields.
 Native shells supply installed-version and device facts. Shared JavaScript builds
-and validates the RPC request and result; the mobile HTTP bridge sends only the
-provided request through a bounded, cookie-free transport. Android installation
-still uses Google Play, and iOS opens the App Store.
-Mobile development checks default to `http://127.0.0.1:8787/system/rpc`;
-production checks use `https://api1.routevn.com/system/rpc`. Reverse TCP 8787
+and validates the RPC request and result. WebView `fetch` sends a bounded request
+without credentials; the dedicated mobile endpoint must allow anonymous CORS
+from packaged Android and iOS origins. Android installation still uses Google
+Play, and iOS opens the App Store.
+Mobile development checks default to
+`http://127.0.0.1:8787/system/updates/v1/routevn-creator/mobile`;
+production checks use
+`https://api1.routevn.com/system/updates/v1/routevn-creator/mobile`. Reverse TCP 8787
 with `adb reverse` for a connected Android device. A physical iPhone needs a
 reachable LAN URL through `ROUTEVN_UPDATE_API_URL` when launching the debug app.
 

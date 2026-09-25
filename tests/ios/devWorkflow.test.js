@@ -143,7 +143,8 @@ if (args.includes("--upload")) fs.copyFileSync(args[args.indexOf("--upload") + 1
       PATH: `${bin}:${process.env.PATH}`,
       TEST_COMMAND_LOG: log,
       TEST_DEVICE_CONFIG: config,
-      ROUTEVN_UPDATE_API_URL: "http://dev-mac.local:8787/system/rpc",
+      ROUTEVN_UPDATE_API_URL:
+        "http://dev-mac.local:8787/system/updates/v1/routevn-creator/mobile",
     };
     execFileSync(
       "bash",
@@ -177,7 +178,7 @@ if (args.includes("--upload")) fs.copyFileSync(args[args.indexOf("--upload") + 1
       if (call.includes("--bundle")) {
         expect(call).toContain("--noinstall");
         expect(call[call.indexOf("--envs") + 1]).toContain(
-          "ROUTEVN_UPDATE_API_URL=http://dev-mac.local:8787/system/rpc",
+          "ROUTEVN_UPDATE_API_URL=http://dev-mac.local:8787/system/updates/v1/routevn-creator/mobile",
         );
       } else expect(call).toContain("--upload");
       expect(call).not.toContain("--uninstall");
