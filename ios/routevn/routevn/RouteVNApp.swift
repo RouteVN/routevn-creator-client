@@ -421,6 +421,13 @@ final class RouteVNViewController: UIViewController, WKNavigationDelegate, WKScr
             }
             return true
         #endif
+        case "getAppUpdateDeviceInfo":
+            return try AppDeviceInfo.read()
+        case "getUpdateApiUrlOverride":
+            if let override = AppDeviceInfo.updateApiUrlOverride() {
+                return override
+            }
+            return NSNull()
         case "isDebugBuild":
             #if DEBUG
             return true

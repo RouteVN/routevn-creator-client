@@ -90,6 +90,28 @@ export const createDb = ({ path, projectPath, withEvents = false }) => {
       });
     },
 
+    async getOrSet(key, value) {
+      if (typeof key !== "string" || key.length === 0) {
+        throw new Error("Db key must be a non-empty string");
+      }
+      const valueJson = JSON.stringify(value);
+      if (valueJson === undefined) {
+        throw new Error("Db value must be JSON-serializable");
+      }
+      return queueDbOperation(async () => {
+        ensureInitialized();
+        await db.execute(
+          "INSERT OR IGNORE INTO kv (key, value) VALUES (?, ?)",
+          [key, valueJson],
+        );
+        const rows = await db.select("SELECT value FROM kv WHERE key = ?", [
+          key,
+        ]);
+        if (!rows?.length) throw new Error("Db value was not persisted");
+        return JSON.parse(rows[0].value);
+      });
+    },
+
     async remove(key) {
       return queueDbOperation(async () => {
         ensureInitialized();

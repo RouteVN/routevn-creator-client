@@ -22,12 +22,7 @@ Gradle pins.
 - NDK: `29.0.14206865`
 - AndroidX Core: `1.19.0`
 - AndroidX Core Splashscreen: `1.2.0`
-- AndroidX Fragment: `1.9.0` (constraint for Google Play In-App Updates' transitive dependency)
 - AndroidX WebKit: `1.17.0`
-- Google Play In-App Updates: `2.1.0`
-- Google Play Core Common: `2.0.4` (transitive constraint)
-- Google Play Services Basement: `18.11.0` (transitive constraint)
-- Google Play Services Tasks: `18.4.1` (transitive constraint)
 
 ## Local Setup
 
@@ -150,8 +145,9 @@ Then run the Android frontend watch server:
 bun run watch:android
 ```
 
-`watch:android` prepares `_site`, runs `adb reverse tcp:3001 tcp:3001` when a
-device is connected, and starts `rtgl fe watch` with `src/setup.android.js`.
+`watch:android` prepares `_site`, reverses TCP 3001 for the frontend and TCP
+8787 for the local update mock when a device is connected, and starts
+`rtgl fe watch` with `src/setup.android.js`.
 After the server is ready, launch the installed debug app with the explicit
 development extra:
 
@@ -213,62 +209,38 @@ Build a release app bundle to validate packaged web assets:
 bun run android:bundle
 ```
 
-### Google Play Updates
+### Android Updates
 
 `android:bundle` sets `-ProutevnDistribution=google-play`. Other Gradle builds
-default to `direct`; direct release builds do not enable the Play updater. To build a
-Play APK explicitly, use `./gradlew :app:assembleRelease -ProutevnDistribution=google-play`.
-Keep increasing Android `versionCode` for each published release.
+default to `direct`. To build a Play APK explicitly, use
+`./gradlew :app:assembleRelease -ProutevnDistribution=google-play`. Keep
+increasing Android `versionCode` for each published release.
 
-The native adapter requires an enabled Play Store. Release builds additionally
-require the app's installing package to be `com.android.vending`; other release
-distributions continue working with update controls hidden. An unavailable Play
-API or an unowned app disables checking for the session in release builds.
+The RouteVN update API is the sole source of update availability and release
+metadata. The native shell supplies the installed version, build, architecture,
+distribution, and device facts through `getAppUpdateDeviceInfo`. JavaScript
+checks the API, validates its response, and offers the returned update. It does
+not query the Google Play In-App Updates API or inspect the installing package.
 
-Debug builds enable the Play updater even when installed through USB. About keeps
-**Check for Updates** available after Play reports an unavailable API or an unowned
-app, so developers can retry. Checks still use the real Play API and its eligibility
-rules. Unavailable updates and network/check failures remain silent for automatic
-checks and show feedback for manual checks.
+For a Google Play release, accepting the update opens the validated HTTPS Play
+Store URL from the API response. The Play Store handles download and
+installation after the user leaves the app. An API offer can precede Play's
+availability for a particular account or device; validate Play delivery
+separately before publishing the release.
 
 Android and direct desktop builds share `automaticUpdateChecks.js`: check at
 startup, then poll every ten minutes and check again once more than two hours
-have elapsed. About exposes **Check for Updates** when the adapter supports it.
-Android skips background checks without advancing the last-check timestamp.
+have elapsed. About exposes **Check for Updates**. Android skips background
+checks without advancing the last-check timestamp. Automatic check failures
+remain silent; manual checks show feedback.
 
-Android uses Google's flexible update flow. Downloading allows continued editing;
-the downloaded update asks the user to restart. Restart first runs the existing
-pre-navigation save hooks and flushes user settings. Save failures prevent the
-restart. Update requests are asynchronous and do not block the native storage
-executor. A native install listener and resume check recover completed downloads.
-
-Validate actual Play delivery using
-[internal app sharing](https://developer.android.com/guide/playcore/in-app-updates/test):
-
-1. The Play Console account owner must accept the Internal App Sharing terms.
-2. Enable Internal App Sharing in the phone's Play Store settings. Tap the Play
-   Store version seven times under About to expose its developer options.
-3. Upload and install a lower-version-code Play build from its sharing link. It
-   must already contain the updater. Export local projects before uninstalling a
-   development build with a different signing certificate.
-4. Upload a higher-version-code build to Internal App Sharing. Open its sharing
-   link on the phone, but do not install it from the Play Store page.
-5. Return to RouteVN and use About's Check for Updates action. Accept the download,
-   then accept Restart and Update when it is ready.
-
-Both builds need matching application IDs/signing certificates, and the tester's
-Google account must have downloaded the app from Play at least once. The Android
-`versionCode` determines update eligibility; About currently displays the shared
-app version, which can stay unchanged when only native test versions are changed.
-A locally sideloaded debug APK can exercise checks and unavailable-install
-feedback. Use the Play installation steps above to validate actual update delivery.
-
-Run `bunx vitest run tests/android/updater.test.js tests/appService/mobileUpdateSetup.test.js`
-for update-flow and save-before-restart coverage. Shared alert/confirm spacing is
-owned and visually tested by Rettangoli; the client must consume its fix through
-a published dependency version, as required by the
-[dependency ownership rules](engineering.md#dependency-ownership). The app-owned
-progress dialog uses the dialog primitive's single layer of padding.
+Use `./gradlew :app:installDebug -ProutevnDistribution=google-play` from
+`android/routevn`, then run the local RouteVN API on port 8787 and the Android dev server to
+validate API check and prompt behavior. The usual direct debug build keeps
+updates disabled. Test the returned Play Store URL on a
+device, then validate the released app's installation through Play separately.
+Run `bun run test:updates`
+for update-flow coverage.
 
 ## Release Signing
 

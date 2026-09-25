@@ -64,6 +64,11 @@ Currently approved lengths:
   - use `generateId()`
   - also acceptable for standard generated suffixes inside a larger composite
     identifier when the code wants to make that contract explicit
+- `24`
+  - app-installation device IDs sent to the update API
+  - use `generateId(24)` for more random bits across installations
+  - existing 12-character device IDs remain valid and are reused to preserve
+    installation identity
 
 If a new use case needs a different length, document the reason in this file in
 the same PR.

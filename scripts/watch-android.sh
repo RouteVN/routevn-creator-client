@@ -67,13 +67,15 @@ if command -v adb >/dev/null 2>&1; then
   fi
 
   if adb "${ADB_ARGS[@]}" get-state >/dev/null 2>&1; then
-    if adb "${ADB_ARGS[@]}" reverse "tcp:${PORT}" "tcp:${PORT}" >/dev/null 2>&1; then
-      echo "ADB reverse active: tcp:${PORT} -> tcp:${PORT}"
-    else
-      echo "Warning: failed to configure adb reverse for tcp:${PORT}."
-    fi
+    for REVERSE_PORT in "${PORT}" 8787; do
+      if adb "${ADB_ARGS[@]}" reverse "tcp:${REVERSE_PORT}" "tcp:${REVERSE_PORT}" >/dev/null 2>&1; then
+        echo "ADB reverse active: tcp:${REVERSE_PORT} -> tcp:${REVERSE_PORT}"
+      else
+        echo "Warning: failed to configure adb reverse for tcp:${REVERSE_PORT}."
+      fi
+    done
   else
-    echo "No Android device detected for adb reverse. Connect a device or run: adb reverse tcp:${PORT} tcp:${PORT}"
+    echo "No Android device detected for adb reverse. Connect a device or reverse TCP ${PORT} and 8787 manually."
   fi
 else
   echo "adb not found. Install Android platform tools or run adb reverse manually."

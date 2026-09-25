@@ -360,7 +360,10 @@ export const createAppService = (params) => {
     },
 
     showProgressDialog(options) {
-      return createProgressDialog(options);
+      return (
+        params.globalUI.showProgressDialog?.(options) ??
+        createProgressDialog(options)
+      );
     },
 
     async loadAllProjects() {
