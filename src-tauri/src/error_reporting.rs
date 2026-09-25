@@ -67,10 +67,21 @@ fn scrub_event(event: Event<'static>) -> Event<'static> {
     safe
 }
 
-pub fn init() -> Option<sentry::ClientInitGuard> {
-    let dsn = option_env!("ROUTEVN_SENTRY_DSN")?;
+pub fn webview_init_script() -> String {
+    let config = serde_json::json!({
+        "dsn": env!("ROUTEVN_SENTRY_DSN"),
+        "release": format!("routevn-creator@{}", env!("CARGO_PKG_VERSION")),
+        "environment": env!("ROUTEVN_SENTRY_ENVIRONMENT"),
+        "dist": env!("ROUTEVN_BUILD_ID"),
+    });
+    format!(
+        "Object.defineProperty(window, '__ROUTEVN_ERROR_REPORTING__', {{ value: Object.freeze({config}) }});"
+    )
+}
+
+pub fn init() -> sentry::ClientInitGuard {
     let options = sentry::ClientOptions::new()
-        .dsn(dsn)
+        .dsn(env!("ROUTEVN_SENTRY_DSN"))
         .release(format!("routevn-creator@{}", env!("CARGO_PKG_VERSION")))
         .environment(env!("ROUTEVN_SENTRY_ENVIRONMENT"))
         .send_default_pii(false)
@@ -82,7 +93,7 @@ pub fn init() -> Option<sentry::ClientInitGuard> {
         .before_send(|event| Some(scrub_event(event)))
         .shutdown_timeout(Duration::from_secs(2));
 
-    Some(sentry::init(options))
+    sentry::init(options)
 }
 
 #[cfg(test)]
@@ -133,7 +144,8 @@ mod tests {
     #[test]
     #[ignore = "requires the local API collector"]
     fn sends_one_panic_to_local_collector() {
-        let _guard = init().expect("development DSN must be set at build time");
+        assert_eq!(env!("ROUTEVN_SENTRY_ENVIRONMENT"), "development");
+        let _guard = init();
         assert!(
             std::panic::catch_unwind(|| {
                 panic!("private@example.com token=should-not-store");

@@ -4,11 +4,9 @@ import {
   globalHandlersIntegration,
   init,
 } from "@sentry/browser";
-import tauriConfig from "../../../../src-tauri/tauri.conf.json";
-
-const sentryDsn = import.meta.env?.VITE_ROUTEVN_SENTRY_DSN;
-const environment = import.meta.env?.VITE_ROUTEVN_SENTRY_ENVIRONMENT;
-const buildId = import.meta.env?.VITE_ROUTEVN_BUILD_ID;
+// Tauri injects the compiled configuration before any webview scripts run.
+const { dsn, release, environment, dist } =
+  globalThis.__ROUTEVN_ERROR_REPORTING__ ?? {};
 
 const safeIdentifier = (value) =>
   typeof value === "string" && /^[A-Za-z0-9_.$-]{1,100}$/.test(value)
@@ -48,9 +46,9 @@ export const scrubErrorEvent = (event) => ({
   timestamp: event.timestamp,
   platform: "javascript",
   level: "error",
-  release: `routevn-creator@${tauriConfig.version}`,
+  release,
   environment,
-  dist: buildId,
+  dist,
   message: "Unhandled webview error",
   exception: event.exception?.values
     ? {
@@ -63,12 +61,12 @@ export const scrubErrorEvent = (event) => ({
     : undefined,
 });
 
-if (sentryDsn) {
+if (dsn) {
   init({
-    dsn: sentryDsn,
-    release: `routevn-creator@${tauriConfig.version}`,
+    dsn,
+    release,
     environment,
-    dist: buildId,
+    dist,
     sendDefaultPii: false,
     maxBreadcrumbs: 25,
     defaultIntegrations: false,
@@ -84,4 +82,4 @@ if (sentryDsn) {
   });
 }
 
-export const flushDesktopErrors = () => (sentryDsn ? flush(2000) : undefined);
+export const flushDesktopErrors = () => (dsn ? flush(2000) : undefined);

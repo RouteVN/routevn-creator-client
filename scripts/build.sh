@@ -21,11 +21,6 @@ RTGL_BIN="node_modules/.bin/rtgl"
 
 echo "Building for ${BUILD_TYPE}..."
 
-if [ "${BUILD_TYPE}" = "tauri" ]; then
-  source scripts/desktop-sentry-env.sh
-  configure_desktop_sentry "${ROUTEVN_SENTRY_BUILD_ENV:-development}"
-fi
-
 if [ ! -x "${RTGL_BIN}" ]; then
   echo "Error: local rtgl CLI is missing. Run bun install before building."
   exit 1

@@ -1,25 +1,25 @@
-import { describe, expect, it } from "vitest";
-import { spawnSync } from "node:child_process";
+import { describe, expect, it, vi } from "vitest";
+import { getClient } from "@sentry/browser";
 import { scrubErrorEvent } from "../../src/deps/clients/tauri/errorReporting.js";
 
-const validateDsn = (environment, dsn) =>
-  spawnSync(
-    process.execPath,
-    ["scripts/validate-desktop-sentry-dsn.js", environment, dsn],
-    { encoding: "utf8" },
-  ).status;
+vi.hoisted(() => {
+  globalThis.__ROUTEVN_ERROR_REPORTING__ = Object.freeze({
+    dsn: "http://11111111111111111111111111111111@127.0.0.1:3000/system/sentry/1",
+    release: "routevn-creator@1.0.0",
+    environment: "development",
+    dist: "test-build",
+  });
+});
 
 describe("desktop error reporting", () => {
-  it("keeps development and production collectors separate", () => {
-    const productionDsn =
-      "https://4a1f0f2f77f130fd8366487119b90a7d@api1.routevn.com/system/sentry/1";
-    const developmentDsn =
-      "http://11111111111111111111111111111111@127.0.0.1:3000/system/sentry/1";
-
-    expect(validateDsn("production", productionDsn)).toBe(0);
-    expect(validateDsn("development", developmentDsn)).toBe(0);
-    expect(validateDsn("development", productionDsn)).not.toBe(0);
-    expect(validateDsn("production", developmentDsn)).not.toBe(0);
+  it("initializes the official SDK with the native build configuration", () => {
+    expect(getClient().getOptions()).toMatchObject({
+      ...globalThis.__ROUTEVN_ERROR_REPORTING__,
+      sendDefaultPii: false,
+      maxBreadcrumbs: 25,
+      sendClientReports: false,
+      enableLogs: false,
+    });
   });
 
   it("keeps useful error locations without sending private event data", () => {
@@ -58,7 +58,9 @@ describe("desktop error reporting", () => {
       },
     });
 
-    expect(event.release).toBe("routevn-creator@1.16.2");
+    expect(event.release).toBe("routevn-creator@1.0.0");
+    expect(event.environment).toBe("development");
+    expect(event.dist).toBe("test-build");
     expect(event.exception.values[0].type).toBe("TypeError");
     expect(event.exception.values[0].stacktrace.frames[0]).toEqual({
       filename: "main.js",

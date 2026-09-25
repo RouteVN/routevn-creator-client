@@ -2,8 +2,6 @@
 
 set -euo pipefail
 
-export ROUTEVN_SENTRY_BUILD_ENV=production
-
 WINDOWS_RELEASE_DIR="src-tauri/target/x86_64-pc-windows-msvc/release"
 
 export VITE_ROUTEVN_DISTRIBUTION=steam
