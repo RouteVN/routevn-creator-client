@@ -1,4 +1,5 @@
 import { getCurrentWindow } from "@tauri-apps/api/window";
+import { flushDesktopErrors } from "./errorReporting.js";
 
 export async function setupCloseListener(deps) {
   const { globalUI } = deps;
@@ -20,6 +21,11 @@ export async function setupCloseListener(deps) {
 
       if (confirmQuit) {
         isClosing = true; // Set flag to prevent loop
+        try {
+          await flushDesktopErrors();
+        } catch {
+          // Error reporting must not prevent the app from closing.
+        }
         await appWindow.close();
         isClosing = false; // Reset flag (though window will be closed)
       }

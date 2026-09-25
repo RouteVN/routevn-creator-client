@@ -11,6 +11,8 @@ mod discord_presence {
     }
 }
 mod client_update;
+#[cfg(any(target_os = "windows", target_os = "macos", target_os = "linux"))]
+mod error_reporting;
 mod export_macos;
 mod export_windows;
 mod export_zip;
@@ -53,13 +55,18 @@ pub fn run() {
         }
     }
 
+    #[cfg(any(target_os = "windows", target_os = "macos", target_os = "linux"))]
+    let _error_reporting = error_reporting::init();
+
     let builder = tauri::Builder::default()
         .manage(project_media_server::ProjectMediaServerState::new())
         .manage(static_web_server::StaticWebServerState::new())
         .register_uri_scheme_protocol("project-file", project_file_protocol::handle);
 
     #[cfg(any(target_os = "windows", target_os = "macos", target_os = "linux"))]
-    let builder = builder.manage(discord_presence::DiscordPresenceState::new());
+    let builder = builder
+        .manage(discord_presence::DiscordPresenceState::new())
+        .append_invoke_initialization_script(error_reporting::webview_init_script());
 
     builder
         .plugin(tauri_plugin_opener::init())
