@@ -528,6 +528,26 @@ src/setup.android.js` and include the configured `i18n` block. If it does not,
   action sheet. Direct route navigation can miss action-sheet timing and mounted
   mobile layout state.
 
+### Dialogue Form Drafts During Keyboard Resize
+
+Opening the Android keyboard resizes the WebView and can update the Scene Editor's
+temporary dialogue preview. On a line without an authored dialogue action, the
+`dialogue` prop can change from a layout and mode to include
+`character: { name: "" }` and `persistCharacter: false`. That prop change still
+belongs to the same selected line. Reinitializing the Dialogue Box form from it
+turns an unsaved **Custom name: Yes** back to **No** because an empty character
+name is interpreted as no custom name. The Speaker Name input is then removed,
+which closes the keyboard.
+
+`rvn-system-actions` passes `selectedLineId` to
+`rvn-command-line-dialogue-box`. The dialogue box keeps its local form draft
+through prop changes for the same line and reloads the form when the selected
+line changes. For a regression check, open Dialogue Box on a line without a
+dialogue action, choose **Custom name: Yes**, and tap Speaker Name once. Confirm
+that Yes remains selected, the input stays mounted, and the keyboard stays open.
+Check a normal launcher start after rebuilding and installing the debug APK;
+normal debug launches use packaged frontend assets.
+
 ### Performance
 
 The working goal for mobile navigation is under 500 ms from user action to a

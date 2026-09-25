@@ -11,6 +11,7 @@ import {
   handleFormChange,
   handleFormInput,
   handleFormSectionAction,
+  handleOnUpdate,
   handleRemoveCustomTextSpeedClick,
   handleSpriteGroupTabClick,
   handleSpriteItemClick,
@@ -209,6 +210,60 @@ const mountDialogue = (deps) =>
   });
 
 describe("commandLineDialogueBox.handlers", () => {
+  it("keeps unsaved custom naming when the current line's dialogue prop changes", () => {
+    const state = createInitialState();
+    const refs = createFormRefs();
+    setCustomCharacterName({ state }, { customCharacterName: true });
+    setCharacterName({ state }, { characterName: "Speaker One" });
+
+    handleOnUpdate(
+      {
+        props: { layouts, characters },
+        refs,
+        store: createStore(state),
+      },
+      {
+        oldProps: {
+          selectedLineId: "line-one",
+          dialogue: { mode: "adv" },
+        },
+        newProps: {
+          selectedLineId: "line-one",
+          dialogue: { mode: "adv", character: { name: "" } },
+        },
+      },
+    );
+
+    expect(state.customCharacterName).toBe(true);
+    expect(state.characterName).toBe("Speaker One");
+    expect(refs.dialogueForm.reset).not.toHaveBeenCalled();
+  });
+
+  it("loads the next line's dialogue when the selected line changes", () => {
+    const state = createInitialState();
+    const refs = createFormRefs();
+    setCustomCharacterName({ state }, { customCharacterName: true });
+
+    handleOnUpdate(
+      {
+        props: { layouts, characters, animations },
+        refs,
+        store: createStore(state),
+      },
+      {
+        oldProps: { selectedLineId: "line-one", dialogue: {} },
+        newProps: {
+          selectedLineId: "line-two",
+          dialogue: { character: { name: "Speaker Two" } },
+        },
+      },
+    );
+
+    expect(state.customCharacterName).toBe(true);
+    expect(state.characterName).toBe("Speaker Two");
+    expect(refs.dialogueForm.reset).toHaveBeenCalledOnce();
+  });
+
   it("renders the dialogue sprite content through the form slot", () => {
     const view = readFileSync(
       new URL(

@@ -738,7 +738,14 @@ export const handleAfterMount = (deps) => {
 };
 
 export const handleOnUpdate = (deps, changes) => {
-  syncDialogueStateFromProps(deps, changes?.newProps?.dialogue);
+  const { oldProps, newProps } = changes;
+  // Parent preview updates can change dialogue props while this line's form is open.
+  // Keep the local draft until the editor selects a different line.
+  if (oldProps?.selectedLineId === newProps?.selectedLineId) {
+    return;
+  }
+
+  syncDialogueStateFromProps(deps, newProps?.dialogue);
   syncDialogueFormValues(deps);
 };
 
