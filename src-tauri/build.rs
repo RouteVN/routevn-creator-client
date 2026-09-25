@@ -18,8 +18,14 @@ fn main() {
         } else {
             "development"
         };
-        println!("cargo:rerun-if-env-changed=ROUTEVN_SENTRY_DSN");
-        let dsn = std::env::var("ROUTEVN_SENTRY_DSN").expect("ROUTEVN_SENTRY_DSN");
+        let env_file = format!("../.env.{environment}");
+        println!("cargo:rerun-if-changed={env_file}");
+        let dsn = dotenvy::from_path_iter(&env_file)
+            .expect("Missing desktop build environment file")
+            .map(|entry| entry.expect("Invalid desktop build environment file"))
+            .find(|(key, _)| key == "ROUTEVN_SENTRY_DSN")
+            .expect("ROUTEVN_SENTRY_DSN must be set in the desktop build environment file")
+            .1;
         assert!(!dsn.is_empty(), "ROUTEVN_SENTRY_DSN must not be empty");
         if !production {
             let url = url::Url::parse(&dsn).expect("Invalid development error collector DSN");

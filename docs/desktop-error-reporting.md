@@ -8,31 +8,28 @@ stay in their existing UI flows.
 
 ## Build configuration
 
-Set one build-time variable, `ROUTEVN_SENTRY_DSN`, in the environment file
-loaded by the build. The variable name stays the same; only its value changes.
+One variable, `ROUTEVN_SENTRY_DSN`, is defined in two environment files:
 
-Development (`.env.example` provides this value):
+- `.env.development`: the local API DSN, used by `tauri:dev:*`, Cargo tests,
+  and debug builds.
+- `.env.production`: the production API DSN, used by `tauri:build`, platform
+  release scripts, and Steam release builds.
 
-```dotenv
-ROUTEVN_SENTRY_DSN="http://11111111111111111111111111111111@127.0.0.1:3000/system/sentry/1"
-```
+`src-tauri/build.rs` reads the matching file automatically using Tauri's build
+mode. The same selection applies to every desktop build entry point, including
+the Linux Docker build. A Tauri development run with the release profile still
+uses `.env.development`. Edit the value in the relevant file and rebuild;
+Cargo watches these files for changes. No script edits or manual exports are
+needed. The selected file is authoritative, so an inherited value from `.env`
+or the shell cannot override it.
 
-Production:
+Both files contain public routing DSNs and are checked in. Keep signing keys
+and other secrets in the ignored `.env`, not in these files. Missing files or
+missing/empty DSNs fail the build.
 
-```dotenv
-ROUTEVN_SENTRY_DSN="https://4a1f0f2f77f130fd8366487119b90a7d@api1.routevn.com/system/sentry/1"
-```
-
-The `bun run tauri:*` commands read the local `.env`; build systems can export
-the variable directly. Direct Cargo commands require it to be exported. A
-missing or empty DSN fails the build. Replace the value and rebuild to change
-the collector; no source-code edit is needed.
-
-`src-tauri/build.rs` embeds the supplied DSN once for both SDKs. Tauri injects
-it into the webview before application scripts run, along with the release,
-build ID, and environment label. The injected object is read-only. Tauri
-development mode and debug builds use the `development` label; packaged
-releases use `production`.
+Tauri injects the compiled DSN into the webview before application scripts run,
+along with the release, build ID, and environment label. The injected object is
+read-only. Both official SDKs receive the same configuration.
 
 Use the development DSN printed by `python3 scripts/dev.py` in `routevn-api-2`.
 Development builds reject DSNs outside HTTP on `localhost` or `127.0.0.1`, so

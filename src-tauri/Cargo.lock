@@ -4349,6 +4349,7 @@ version = "1.16.2"
 dependencies = [
  "cc",
  "discord-rich-presence",
+ "dotenvy",
  "log",
  "plist",
  "routevn-exporter",
