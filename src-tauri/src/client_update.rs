@@ -16,7 +16,7 @@ pub struct ClientUpdateMetadata {
 }
 
 fn valid_device_id(value: &str) -> bool {
-    value.len() == 12
+    matches!(value.len(), 12 | 24)
         && value.bytes().all(|byte| {
             matches!(byte, b'1'..=b'9' | b'A'..=b'H' | b'J'..=b'N' | b'P'..=b'Z' | b'a'..=b'k' | b'm'..=b'z')
         })
@@ -111,7 +111,7 @@ mod tests {
         let endpoint = Url::parse("https://api1.routevn.com/system/updates/v1/routevn-creator/tauri?currentVersion={{current_version}}&target={{target}}&arch={{arch}}&bundleType={{bundle_type}}").unwrap();
         let endpoint = endpoint_with_device(
             endpoint,
-            "123456789ABC",
+            "123456789ABC123456789ABC",
             "メーカー Model / Pro",
             "Windows 24H2 (build 26100)",
         );
@@ -129,7 +129,7 @@ mod tests {
         assert!(
             query
                 .iter()
-                .any(|(key, value)| key == "device.id" && value == "123456789ABC")
+                .any(|(key, value)| key == "device.id" && value == "123456789ABC123456789ABC")
         );
         assert!(
             query
@@ -146,7 +146,13 @@ mod tests {
 
     #[test]
     fn rejects_invalid_device_metadata() {
+        assert!(valid_device_id("123456789ABC123456789ABC"));
         assert!(valid_device_id("123456789ABC"));
+        assert!(!valid_device_id("123456789ABCDEFG"));
+        assert!(!valid_device_id(&"1".repeat(23)));
+        assert!(!valid_device_id(&"1".repeat(25)));
+        assert!(!valid_device_id("123456789ABC123456789AB\n"));
+        assert!(!valid_device_id("O23456789ABC123456789ABC"));
         assert!(!valid_device_id("000000000000"));
         assert!(!valid_device_id("123456789AB"));
         assert!(valid_device_text("メーカー Model / Pro"));

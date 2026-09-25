@@ -41,7 +41,7 @@ const response = (result) => ({
   status: 200,
   body: JSON.stringify({ jsonrpc: "2.0", id: 1, result }),
 });
-const deviceId = "123456789ABC";
+const deviceId = "123456789ABC123456789ABC";
 const keyValueStore = { get: async () => deviceId };
 const setup = (result, context = ios) => {
   const request = vi.fn().mockResolvedValue(response(result));

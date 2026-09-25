@@ -65,12 +65,15 @@ describe.each([
       expect(firstInsert).toHaveBeenCalledTimes(1);
       expect(secondInsert).toHaveBeenCalledTimes(1);
       expect(isDeviceId(a)).toBe(true);
+      expect(a).toHaveLength(24);
       expect(b).toBe(a);
       expect(await first.get("deviceId")).toBe(a);
       const reopened = createDb({ path });
       await reopened.init();
       expect(await getDeviceId(reopened)).toBe(a);
-      expect(await reopened.getOrSet("deviceId", "123456789ABC")).toBe(a);
+      expect(
+        await reopened.getOrSet("deviceId", "123456789ABC123456789ABC"),
+      ).toBe(a);
     });
   },
 );

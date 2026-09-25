@@ -451,7 +451,7 @@ describe("mobile update API setup", () => {
             distribution: "google-play",
             currentBuild: "9",
             device: {
-              id: expect.stringMatching(/^[1-9A-HJ-NP-Za-km-z]{12}$/),
+              id: expect.stringMatching(/^[1-9A-HJ-NP-Za-km-z]{24}$/),
             },
           },
         });
@@ -528,7 +528,7 @@ describe("mobile update API setup", () => {
         target: "ios",
         distribution: "app-store",
         device: {
-          id: expect.stringMatching(/^[1-9A-HJ-NP-Za-km-z]{12}$/),
+          id: expect.stringMatching(/^[1-9A-HJ-NP-Za-km-z]{24}$/),
         },
       },
     });

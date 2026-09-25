@@ -42,12 +42,14 @@ const createUpdate = ({
 });
 
 const expectedDevice = {
-  deviceId: "123456789ABC",
+  deviceId: "123456789ABC123456789ABC",
   deviceModel: "Example Model",
   osVersion: "Linux 6.8",
 };
 
-const createKeyValueStore = (entries = [["deviceId", "123456789ABC"]]) => {
+const createKeyValueStore = (
+  entries = [["deviceId", "123456789ABC123456789ABC"]],
+) => {
   const values = new Map(entries);
   return {
     get: vi.fn(async (key) => values.get(key)),
@@ -434,7 +436,7 @@ describe("tauri updater", () => {
       ([command]) => command === "check_client_update",
     );
     const firstDevice = checks[0][1];
-    expect(firstDevice.deviceId).toMatch(/^[1-9A-HJ-NP-Za-km-z]{12}$/);
+    expect(firstDevice.deviceId).toMatch(/^[1-9A-HJ-NP-Za-km-z]{24}$/);
     expect(firstDevice.deviceModel).toBe("メーカー Model / Pro");
     expect(firstDevice.osVersion).toBe("Windows 24H2 (build 26100)");
     expect(checks[1][1]).toEqual(firstDevice);
@@ -454,7 +456,7 @@ describe("tauri updater", () => {
         ([command]) => command === "check_client_update",
       );
     expect(checks()[0][1]).toEqual({
-      deviceId: "123456789ABC",
+      deviceId: "123456789ABC123456789ABC",
       deviceModel: "Model",
       osVersion: "unknown",
     });
@@ -463,7 +465,7 @@ describe("tauri updater", () => {
     );
     await updater.checkForUpdates(true);
     expect(checks()[1][1]).toEqual({
-      deviceId: "123456789ABC",
+      deviceId: "123456789ABC123456789ABC",
       deviceModel: "unknown",
       osVersion: "unknown",
     });

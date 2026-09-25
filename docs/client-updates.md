@@ -15,7 +15,7 @@ shows the latest-version confirmation for manual checks.
 
 | Field         | Meaning                                                                                                          |
 | ------------- | ---------------------------------------------------------------------------------------------------------------- |
-| `deviceId`    | Random 12-character Base58 ID generated through the shared Nano ID helper and saved in the app's local database. |
+| `deviceId`    | Random 24-character Base58 ID generated through the shared Nano ID helper and saved in the app's local database. |
 | `deviceModel` | Native hardware model, such as `Pixel 9` or `iPhone17,1`; `unknown` when unavailable.                            |
 | `osVersion`   | Native operating-system version; `unknown` when unavailable.                                                     |
 
@@ -23,6 +23,8 @@ The ID is reused across checks, launches, and app upgrades while local app data
 is retained. It identifies an app installation, independently of accounts and
 hardware identifiers. Clearing its local data generates a new ID. Restoring a
 backup containing the database also restores the ID.
+Existing 12-character IDs remain valid and are reused; only newly generated IDs
+use 24 characters.
 
 Model and OS version are nonblank strings of at most 256 characters, without
 ASCII control characters. These fields do not change the response shape.
@@ -30,7 +32,7 @@ ASCII control characters. These fields do not change the response shape.
 ## Desktop
 
 ```http
-GET /system/updates/v1/routevn-creator/tauri?currentVersion=1.15.1&target=windows&arch=x86_64&distribution=direct&channel=stable&bundleType=nsis&device.id=123456789ABC&device.model=Example%20device&device.osVersion=10.0.26100
+GET /system/updates/v1/routevn-creator/tauri?currentVersion=1.15.1&target=windows&arch=x86_64&distribution=direct&channel=stable&bundleType=nsis&device.id=123456789ABC123456789ABC&device.model=Example%20device&device.osVersion=10.0.26100
 Host: api1.routevn.com
 ```
 
@@ -81,7 +83,7 @@ X-RouteVN-RPC: 1
     "channel": "stable",
     "currentBuild": "9",
     "device": {
-      "id": "123456789ABC",
+      "id": "123456789ABC123456789ABC",
       "model": "Pixel 9",
       "osVersion": "16"
     }

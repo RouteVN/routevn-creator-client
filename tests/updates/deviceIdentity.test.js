@@ -17,10 +17,18 @@ describe("app-local device identity", () => {
     const values = new Map();
     const first = store(values);
     const id = await getDeviceId(first);
+    expect(id).toHaveLength(24);
     expect(isDeviceId(id)).toBe(true);
     expect(await getDeviceId(first)).toBe(id);
     expect(await getDeviceId(store(values))).toBe(id);
     expect(first.getOrSet).toHaveBeenCalledExactlyOnceWith("deviceId", id);
+  });
+
+  it("preserves an existing 12-character installation identity", async () => {
+    const id = "123456789ABC";
+    const db = store(new Map([["deviceId", id]]));
+    expect(await getDeviceId(db)).toBe(id);
+    expect(db.getOrSet).not.toHaveBeenCalled();
   });
 
   it("coalesces concurrent first checks", async () => {
@@ -40,7 +48,17 @@ describe("app-local device identity", () => {
   });
 
   it("does not overwrite an invalid stored identity", async () => {
-    for (const invalid of [123, "", "123456789ABC\n", "OOOOOOOOOOOO"]) {
+    for (const invalid of [
+      123,
+      "",
+      "123456789ABCDEFG",
+      "1".repeat(23),
+      "1".repeat(25),
+      `${"1".repeat(23)}\n`,
+      "123456789ABC123456789ABC\n",
+      "OOOOOOOOOOOO",
+      `O${"1".repeat(23)}`,
+    ]) {
       const db = store(new Map([["deviceId", invalid]]));
       await expect(getDeviceId(db)).rejects.toThrow(
         "Invalid persisted device ID",

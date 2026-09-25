@@ -4,8 +4,9 @@ const pendingIds = new WeakMap();
 
 export const isDeviceId = (value) =>
   typeof value === "string" &&
-  value.length === 12 &&
-  /^[1-9A-HJ-NP-Za-km-z]{12}$/.test(value);
+  // Preserve installation identities created before the 24-character format.
+  (value.length === 12 || value.length === 24) &&
+  !/[^1-9A-HJ-NP-Za-km-z]/.test(value);
 
 export const isDeviceMetadataText = (value) =>
   typeof value === "string" &&
@@ -25,7 +26,7 @@ export const getDeviceId = (keyValueStore) => {
     if (isDeviceId(existing)) return existing;
     if (existing !== undefined && existing !== null)
       throw new Error("Invalid persisted device ID.");
-    const deviceId = await keyValueStore.getOrSet("deviceId", generateId());
+    const deviceId = await keyValueStore.getOrSet("deviceId", generateId(24));
     if (!isDeviceId(deviceId)) throw new Error("Invalid persisted device ID.");
     return deviceId;
   })();
