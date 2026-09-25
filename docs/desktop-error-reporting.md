@@ -8,28 +8,36 @@ stay in their existing UI flows.
 
 ## Build configuration
 
-`src-tauri/build.rs` selects the DSN once for both SDKs. Tauri development mode
-and debug builds always use the local collector. Packaged release builds use
-production. No frontend environment flag or release-script configuration is
-needed: Tauri injects the compiled DSN, release, environment, and build ID into
-the webview before application scripts run. The injected object is read-only.
+Set one build-time variable, `ROUTEVN_SENTRY_DSN`, in the environment file
+loaded by the build. The variable name stays the same; only its value changes.
 
-Set these two build-time environment variables (also shown in `.env.example`):
+Development (`.env.example` provides this value):
 
 ```dotenv
-ROUTEVN_SENTRY_DEVELOPMENT_DSN="http://11111111111111111111111111111111@127.0.0.1:3000/system/sentry/1"
-ROUTEVN_SENTRY_PRODUCTION_DSN="https://4a1f0f2f77f130fd8366487119b90a7d@api1.routevn.com/system/sentry/1"
+ROUTEVN_SENTRY_DSN="http://11111111111111111111111111111111@127.0.0.1:3000/system/sentry/1"
 ```
 
-Keep them in the local `.env` when using the `bun run tauri:*` commands, or
-export them in the build environment. Direct Cargo commands require the
-selected variable to be exported. A missing or empty selected DSN fails the
-build. To change a collector URL or public key, replace its environment variable
-value and rebuild; no source-code edit is needed.
+Production:
+
+```dotenv
+ROUTEVN_SENTRY_DSN="https://4a1f0f2f77f130fd8366487119b90a7d@api1.routevn.com/system/sentry/1"
+```
+
+The `bun run tauri:*` commands read the local `.env`; build systems can export
+the variable directly. Direct Cargo commands require it to be exported. A
+missing or empty DSN fails the build. Replace the value and rebuild to change
+the collector; no source-code edit is needed.
+
+`src-tauri/build.rs` embeds the supplied DSN once for both SDKs. Tauri injects
+it into the webview before application scripts run, along with the release,
+build ID, and environment label. The injected object is read-only. Tauri
+development mode and debug builds use the `development` label; packaged
+releases use `production`.
 
 Use the development DSN printed by `python3 scripts/dev.py` in `routevn-api-2`.
-Development DSNs must use HTTP on `localhost` or `127.0.0.1`. The SDK parses the
-remaining DSN fields. Each build reads only its selected variable.
+Development builds reject DSNs outside HTTP on `localhost` or `127.0.0.1`, so
+loading production settings by mistake cannot send development errors there.
+The SDK parses the remaining DSN fields.
 
 The key is public SDK routing data; it is never a RouteVN bearer credential.
 Do not add RouteVN authentication headers, cookies, or RPC tokens to SDK

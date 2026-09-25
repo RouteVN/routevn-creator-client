@@ -18,14 +18,9 @@ fn main() {
         } else {
             "development"
         };
-        let dsn_variable = if production {
-            "ROUTEVN_SENTRY_PRODUCTION_DSN"
-        } else {
-            "ROUTEVN_SENTRY_DEVELOPMENT_DSN"
-        };
-        println!("cargo:rerun-if-env-changed={dsn_variable}");
-        let dsn = std::env::var(dsn_variable).expect(dsn_variable);
-        assert!(!dsn.is_empty(), "{dsn_variable} must not be empty");
+        println!("cargo:rerun-if-env-changed=ROUTEVN_SENTRY_DSN");
+        let dsn = std::env::var("ROUTEVN_SENTRY_DSN").expect("ROUTEVN_SENTRY_DSN");
+        assert!(!dsn.is_empty(), "ROUTEVN_SENTRY_DSN must not be empty");
         if !production {
             let url = url::Url::parse(&dsn).expect("Invalid development error collector DSN");
             assert!(
