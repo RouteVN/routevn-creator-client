@@ -1,6 +1,6 @@
 [package]
 name = "routevn-creator"
-version = "1.16.2"
+version = "1.17.0"
 description = "RouteVN Creator. Follow us on social media to stay updated."
 authors = ["Yuusoft"]
 license = "MIT"
