@@ -2,6 +2,10 @@ componentName: rvn-command-line-dialogue-box
 propsSchema:
   type: object
   properties:
+    selectedLineId:
+      type: string
+    authoredDialogue:
+      type: object
     layouts:
       type: array
       items:

@@ -11,6 +11,7 @@ import {
   handleFormChange,
   handleFormInput,
   handleFormSectionAction,
+  handleOnUpdate,
   handleRemoveCustomTextSpeedClick,
   handleSpriteGroupTabClick,
   handleSpriteItemClick,
@@ -209,6 +210,128 @@ const mountDialogue = (deps) =>
   });
 
 describe("commandLineDialogueBox.handlers", () => {
+  it("keeps unsaved custom naming when the current line's dialogue prop changes", () => {
+    const state = createInitialState();
+    const refs = createFormRefs();
+    setCustomCharacterName({ state }, { customCharacterName: true });
+    setCharacterName({ state }, { characterName: "Speaker One" });
+
+    handleOnUpdate(
+      {
+        props: { layouts, characters },
+        refs,
+        store: createStore(state),
+      },
+      {
+        oldProps: {
+          selectedLineId: "line-one",
+          authoredDialogue: undefined,
+          dialogue: { mode: "adv" },
+        },
+        newProps: {
+          selectedLineId: "line-one",
+          authoredDialogue: undefined,
+          dialogue: { mode: "adv", character: { name: "" } },
+        },
+      },
+    );
+
+    expect(state.customCharacterName).toBe(true);
+    expect(state.characterName).toBe("Speaker One");
+    expect(refs.dialogueForm.reset).not.toHaveBeenCalled();
+  });
+
+  it("reloads the current line when its authored dialogue changes", () => {
+    const state = createInitialState();
+    const refs = createFormRefs();
+    setCustomCharacterName({ state }, { customCharacterName: true });
+    setCharacterName({ state }, { characterName: "Unsaved Name" });
+
+    handleOnUpdate(
+      {
+        props: { layouts, characters, animations },
+        refs,
+        store: createStore(state),
+      },
+      {
+        oldProps: {
+          selectedLineId: "line-one",
+          authoredDialogue: { character: { name: "Speaker One" } },
+          dialogue: { character: { name: "Speaker One" } },
+        },
+        newProps: {
+          selectedLineId: "line-one",
+          authoredDialogue: { character: { name: "Speaker Two" } },
+          dialogue: { character: { name: "Preview Name" } },
+        },
+      },
+    );
+
+    expect(state.customCharacterName).toBe(true);
+    expect(state.characterName).toBe("Speaker Two");
+    expect(refs.dialogueForm.reset).toHaveBeenCalledOnce();
+  });
+
+  it("clears the current line's form when its authored dialogue is removed", () => {
+    const state = createInitialState();
+    const refs = createFormRefs();
+    setCustomCharacterName({ state }, { customCharacterName: true });
+    setCharacterName({ state }, { characterName: "Speaker One" });
+
+    handleOnUpdate(
+      {
+        props: { layouts, characters, animations },
+        refs,
+        store: createStore(state),
+      },
+      {
+        oldProps: {
+          selectedLineId: "line-one",
+          authoredDialogue: { character: { name: "Speaker One" } },
+        },
+        newProps: {
+          selectedLineId: "line-one",
+          authoredDialogue: undefined,
+          dialogue: { character: { name: "Stale Preview" } },
+        },
+      },
+    );
+
+    expect(state.customCharacterName).toBe(false);
+    expect(state.characterName).toBe("");
+    expect(refs.dialogueForm.reset).toHaveBeenCalledOnce();
+  });
+
+  it("loads the next line's dialogue when the selected line changes", () => {
+    const state = createInitialState();
+    const refs = createFormRefs();
+    setCustomCharacterName({ state }, { customCharacterName: true });
+
+    handleOnUpdate(
+      {
+        props: { layouts, characters, animations },
+        refs,
+        store: createStore(state),
+      },
+      {
+        oldProps: {
+          selectedLineId: "line-one",
+          authoredDialogue: {},
+          dialogue: {},
+        },
+        newProps: {
+          selectedLineId: "line-two",
+          authoredDialogue: { character: { name: "Speaker Two" } },
+          dialogue: { character: { name: "Speaker Two" } },
+        },
+      },
+    );
+
+    expect(state.customCharacterName).toBe(true);
+    expect(state.characterName).toBe("Speaker Two");
+    expect(refs.dialogueForm.reset).toHaveBeenCalledOnce();
+  });
+
   it("renders the dialogue sprite content through the form slot", () => {
     const view = readFileSync(
       new URL(

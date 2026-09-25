@@ -738,7 +738,20 @@ export const handleAfterMount = (deps) => {
 };
 
 export const handleOnUpdate = (deps, changes) => {
-  syncDialogueStateFromProps(deps, changes?.newProps?.dialogue);
+  const { oldProps, newProps } = changes;
+  const selectedLineChanged =
+    oldProps?.selectedLineId !== newProps?.selectedLineId;
+  const authoredDialogueChanged =
+    JSON.stringify(oldProps?.authoredDialogue) !==
+    JSON.stringify(newProps?.authoredDialogue);
+  if (!selectedLineChanged && !authoredDialogueChanged) {
+    return;
+  }
+
+  syncDialogueStateFromProps(
+    deps,
+    selectedLineChanged ? newProps?.dialogue : newProps?.authoredDialogue,
+  );
   syncDialogueFormValues(deps);
 };
 

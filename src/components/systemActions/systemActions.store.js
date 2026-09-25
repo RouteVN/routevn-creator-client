@@ -205,8 +205,9 @@ const resolveBackgroundPreviewAction = ({ actions, presentationState }) => {
 export const selectViewData = ({ state, props, props: attrs, i18n }) => {
   const copy = selectCommandLineCopy(i18n);
   const displayActions = selectDisplayActions({ state });
+  const authoredActions = selectAction({ state });
   const actionProps = { ...props };
-  actionProps.actions = selectAction({ state });
+  actionProps.actions = authoredActions;
   actionProps.authoredDialogueWasCleared =
     state.authoredDialogueWasCleared === true;
   const { actions: actionsObject, preview } = selectActionsData({
@@ -282,6 +283,7 @@ export const selectViewData = ({ state, props, props: attrs, i18n }) => {
     showHelpButton: state.showHelpButton,
     dropdownMenu: localizeCommandLineDropdownMenu(state.dropdownMenu, copy),
     displayActions,
+    authoredDialogue: authoredActions.dialogue,
     actions: actionsObject,
     runtimeAction: actionsObject[state.mode] ?? {},
     preview,
