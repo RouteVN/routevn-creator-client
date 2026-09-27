@@ -28,8 +28,10 @@ if ! command -v docker >/dev/null 2>&1; then
   exit 1
 fi
 
-if [ ! -f "${ROOT_DIR}/.env" ]; then
-  echo "Error: ${ROOT_DIR}/.env is required because the AppImage build signs updater artifacts."
+# The updater signing key comes from the environment (passed to the container by
+# name, so it never appears on the command line) or, as before, from .env.
+if [ -z "${TAURI_SIGNING_PRIVATE_KEY:-}" ] && ! grep -q '^TAURI_SIGNING_PRIVATE_KEY=' "${ROOT_DIR}/.env" 2>/dev/null; then
+  echo "Error: set TAURI_SIGNING_PRIVATE_KEY or define it in ${ROOT_DIR}/.env because the AppImage build signs updater artifacts."
   exit 1
 fi
 
@@ -50,6 +52,12 @@ docker_run_args=(
   -v routevn-appimage-${LINUX_RELEASE_ARCH}-cargo-target:/cache/cargo-target
   -v routevn-appimage-${LINUX_RELEASE_ARCH}-tauri-cache:/cache/xdg
 )
+
+for name in TAURI_SIGNING_PRIVATE_KEY TAURI_SIGNING_PRIVATE_KEY_PASSWORD; do
+  if [ -n "${!name+x}" ]; then
+    docker_run_args+=(-e "${name}")
+  fi
+done
 
 if [ -d "${HOST_TAURI_CACHE_DIR}" ]; then
   docker_run_args+=(-v "${HOST_TAURI_CACHE_DIR}:/host-tauri-cache:ro")
