@@ -245,7 +245,7 @@ if [ ! -x "/usr/bin/xdg-open" ]; then
 fi
 
 if [ -z "${TAURI_SIGNING_PRIVATE_KEY:-}" ]; then
-  echo "Error: TAURI_SIGNING_PRIVATE_KEY is not set. Add it to .env before building the AppImage."
+  echo "Error: TAURI_SIGNING_PRIVATE_KEY is not set. Set it in the environment or .env before building the AppImage."
   exit 1
 fi
 
