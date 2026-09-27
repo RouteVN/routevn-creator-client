@@ -31,6 +31,12 @@ compatible release baseline:
 bun run tauri:build:linux:appimage:docker
 ```
 
+Both builds sign the updater artifact, so `TAURI_SIGNING_PRIVATE_KEY` (and
+`TAURI_SIGNING_PRIVATE_KEY_PASSWORD`, if the key has one) must be set in the
+environment or in `.env`. The Docker build passes these variables into the
+container by name, so the key is not written to disk or shown on the command
+line.
+
 The Docker-built AppImage, updater signature, and checksum are copied to:
 
 - `src-tauri/target/release/bundle/appimage/linux-x86_64-<version>/`

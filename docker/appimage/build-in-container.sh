@@ -27,13 +27,8 @@ if [ ! -f "${SRC_DIR}/package.json" ]; then
   exit 1
 fi
 
-if [ ! -f "${SRC_DIR}/.env" ]; then
-  echo "Error: ${SRC_DIR}/.env is required because the AppImage build signs updater artifacts."
-  exit 1
-fi
-
-if ! grep -q '^TAURI_SIGNING_PRIVATE_KEY=' "${SRC_DIR}/.env"; then
-  echo "Error: .env must define TAURI_SIGNING_PRIVATE_KEY."
+if [ -z "${TAURI_SIGNING_PRIVATE_KEY:-}" ] && ! grep -q '^TAURI_SIGNING_PRIVATE_KEY=' "${SRC_DIR}/.env" 2>/dev/null; then
+  echo "Error: set TAURI_SIGNING_PRIVATE_KEY or define it in .env because the AppImage build signs updater artifacts."
   exit 1
 fi
 
