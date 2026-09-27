@@ -28,6 +28,14 @@ const syncActions = (store, value) => {
   store.updateActions(normalizeActionsObject(actions));
 };
 
+const areActionsEqual = (left, right) => {
+  return (
+    left === right ||
+    JSON.stringify(normalizeActionsObject(left)) ===
+      JSON.stringify(normalizeActionsObject(right))
+  );
+};
+
 const mergeActions = (currentActions, nextPartialActions) => {
   return {
     ...toPlainObject(currentActions),
@@ -119,9 +127,15 @@ export const handleBeforeMount = (deps) => {
 
 export const handleOnUpdate = (deps, changes) => {
   const { render, store } = deps;
-  const { newProps } = changes;
+  const { oldProps, newProps } = changes;
   syncRepositoryState(deps);
-  syncActions(store, newProps.actions);
+
+  // Local actions can hold an unsubmitted edit, such as a custom transform
+  // applied from the transform editor. Unrelated prop updates (the editor
+  // closing, presentation previews) must not replace it with the saved line.
+  if (!areActionsEqual(oldProps?.actions, newProps.actions)) {
+    syncActions(store, newProps.actions);
+  }
 
   if (
     !isBooleanPropEnabled(newProps?.suppressDialogClose) &&
@@ -135,8 +149,10 @@ export const handleOnUpdate = (deps, changes) => {
 
 export const handleBackToActions = (deps, payload) => {
   payload?._event?.stopPropagation?.();
-  const { store, render } = deps;
+  const { props, store, render } = deps;
   dispatchTemporaryPresentationStateChange(deps, {});
+  // Leaving a command line without submitting discards its unsaved edits.
+  syncActions(store, props.actions);
   store.setMode({ mode: "actions" });
   render();
 };
@@ -391,6 +407,7 @@ export const handleActionsDialogClose = (deps, payload) => {
     return;
   }
   dispatchTemporaryPresentationStateChange(deps, {});
+  syncActions(store, props?.actions);
   store.hideActionsDialog();
   render();
   dispatchEvent(new CustomEvent("close"));

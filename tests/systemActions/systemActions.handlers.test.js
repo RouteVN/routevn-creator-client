@@ -14,6 +14,7 @@ import {
   handleActionItemClick,
   handleAddActionButtonClicked,
   handleBackgroundTransformCustomize,
+  handleBackToActions,
   handleGetBackgroundTransformPreviewCanvasRoot,
   handleEmbeddedCloseClick,
   handleOnUpdate,
@@ -777,8 +778,17 @@ describe("systemActions.handlers", () => {
   it("clears temporary presentation state when the actions dialog closes", () => {
     const dispatchedEvents = [];
     const state = createInitialState();
+    updateActions(
+      { state },
+      { background: { resourceId: "bg-school", scaleX: 2, scaleY: 2 } },
+    );
 
     const deps = {
+      props: {
+        actions: {
+          background: { resourceId: "bg-school", transformId: "bg-center" },
+        },
+      },
       store: {
         hideActionsDialog: () => {
           state.isActionsDialogOpen = false;
@@ -786,6 +796,9 @@ describe("systemActions.handlers", () => {
         setMode: ({ mode }) => {
           state.mode = mode;
         },
+        setAuthoredDialogueWasCleared: (payload) =>
+          setAuthoredDialogueWasCleared({ state }, payload),
+        updateActions: (payload) => updateActions({ state }, payload),
       },
       render: () => {},
       dispatchEvent: (event) => {
@@ -799,6 +812,10 @@ describe("systemActions.handlers", () => {
     handleActionsDialogClose(deps);
 
     expect(state.isActionsDialogOpen).toBe(false);
+    // Unsubmitted edits are discarded in favor of the saved line actions.
+    expect(selectAction({ state })).toEqual({
+      background: { resourceId: "bg-school", transformId: "bg-center" },
+    });
     expect(dispatchedEvents).toHaveLength(2);
     expect(dispatchedEvents[0].type).toBe(
       "temporary-presentation-state-change",
@@ -993,5 +1010,83 @@ describe("systemActions.handlers", () => {
       fileId: "file-voice-line-1",
     });
     expect(render).toHaveBeenCalledTimes(1);
+  });
+
+  describe("local action edits", () => {
+    const savedActions = {
+      background: { resourceId: "bg-school", transformId: "bg-center" },
+    };
+    const editedBackground = {
+      resourceId: "bg-school",
+      x: 960,
+      y: 540,
+      scaleX: 2,
+      scaleY: 2,
+    };
+
+    const createDeps = (state) => ({
+      props: { actions: savedActions },
+      projectService: { getRepositoryState: () => ({}) },
+      store: {
+        setRepositoryState: (payload) => setRepositoryState({ state }, payload),
+        setAuthoredDialogueWasCleared: (payload) =>
+          setAuthoredDialogueWasCleared({ state }, payload),
+        updateActions: (payload) => updateActions({ state }, payload),
+        setMode: ({ mode }) => {
+          state.mode = mode;
+        },
+      },
+      render: vi.fn(),
+      dispatchEvent: vi.fn(),
+    });
+
+    it("keeps an applied custom transform when unrelated props update", () => {
+      const state = createInitialState();
+      updateActions({ state }, { background: editedBackground });
+
+      // Closing the transform editor re-renders the page with the saved line
+      // actions as a fresh but equal object.
+      handleOnUpdate(createDeps(state), {
+        oldProps: {
+          actions: savedActions,
+          backgroundTransformEditor: { isOpen: true },
+        },
+        newProps: {
+          actions: structuredClone(savedActions),
+          backgroundTransformEditor: { isOpen: false },
+        },
+      });
+
+      expect(selectAction({ state })).toEqual({
+        background: editedBackground,
+      });
+    });
+
+    it("replaces local actions when the saved line actions change", () => {
+      const state = createInitialState();
+      updateActions({ state }, { background: editedBackground });
+      const nextSavedActions = {
+        background: { resourceId: "bg-station", transformId: "bg-center" },
+      };
+
+      handleOnUpdate(createDeps(state), {
+        oldProps: { actions: savedActions },
+        newProps: { actions: nextSavedActions },
+      });
+
+      expect(selectAction({ state })).toEqual(nextSavedActions);
+    });
+
+    it("discards unsubmitted edits when returning to the actions list", () => {
+      const state = createInitialState();
+      updateActions({ state }, { background: editedBackground });
+
+      handleBackToActions(createDeps(state), {
+        _event: { stopPropagation: vi.fn() },
+      });
+
+      expect(state.mode).toBe("actions");
+      expect(selectAction({ state })).toEqual(savedActions);
+    });
   });
 });

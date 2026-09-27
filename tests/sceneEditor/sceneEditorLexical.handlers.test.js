@@ -1180,8 +1180,11 @@ describe("sceneEditorLexical.handlers actions dialog", () => {
   });
 
   it("closes only the background transform editor when Done is clicked", () => {
+    const callOrder = [];
     const handleSetBackgroundCustomTransform = vi.fn();
-    const open = vi.fn();
+    const open = vi.fn(() => {
+      callOrder.push("open");
+    });
     const preventDefault = vi.fn();
     const stopPropagation = vi.fn();
     const stopImmediatePropagation = vi.fn();
@@ -1225,7 +1228,9 @@ describe("sceneEditorLexical.handlers actions dialog", () => {
         suppressNextActionsDialogClose: vi.fn(),
         clearSuppressNextActionsDialogClose: vi.fn(),
       },
-      render: vi.fn(),
+      render: vi.fn(() => {
+        callOrder.push("render");
+      }),
       subject: {
         dispatch: vi.fn(),
       },
@@ -1289,6 +1294,9 @@ describe("sceneEditorLexical.handlers actions dialog", () => {
     });
     expect(deps.store.closeBackgroundTransformEditor).toHaveBeenCalledTimes(1);
     expect(deps.render).toHaveBeenCalledTimes(2);
+    // The command line mounts during the closing render, so it must be
+    // reopened with the edited background first.
+    expect(callOrder).toEqual(["open", "render", "render"]);
     expect(deps.subject.dispatch).toHaveBeenCalledWith(
       "sceneEditor.renderCanvas",
       {
@@ -1450,7 +1458,7 @@ describe("sceneEditorLexical.handlers actions dialog", () => {
         },
       });
       expect(deps.render).toHaveBeenCalledTimes(1);
-      expect(callOrder).toEqual(["render", "open"]);
+      expect(callOrder).toEqual(["open", "render"]);
       expect(deps.subject.dispatch).toHaveBeenCalledWith(
         "sceneEditor.renderCanvas",
         {
@@ -1573,7 +1581,7 @@ describe("sceneEditorLexical.handlers actions dialog", () => {
         },
       );
       expect(deps.render).toHaveBeenCalledTimes(1);
-      expect(callOrder).toEqual(["render", "open"]);
+      expect(callOrder).toEqual(["open", "render"]);
     } finally {
       setTimeoutSpy.mockRestore();
     }
