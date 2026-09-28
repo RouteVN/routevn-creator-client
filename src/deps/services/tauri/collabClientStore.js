@@ -4,7 +4,6 @@ import { Subject, asyncScheduler, throttleTime } from "rxjs";
 import {
   SQLITE_BUSY_TIMEOUT_MS,
   isSqliteLockError,
-  isSqliteNoActiveTransactionError,
   withSqliteLockRetry,
 } from "../../../internal/sqliteLocking.js";
 import { getManagedSqliteConnection } from "../../clients/tauri/sqliteConnectionManager.js";
@@ -271,13 +270,8 @@ const normalizeSqlArg = (value) => {
   return value;
 };
 
-const isSqliteCommitStatement = (sql) =>
-  /^COMMIT\b/.test(
-    String(sql ?? "")
-      .trim()
-      .toUpperCase(),
-  );
-
+// A COMMIT that reports "no transaction is active" did not commit anything, so it
+// is surfaced as an error rather than treated as a successful commit.
 export const executeTauriSqlStatement = async ({
   db,
   sql,
@@ -286,21 +280,10 @@ export const executeTauriSqlStatement = async ({
   onRetry,
 } = {}) => {
   const resolvedArgs = Array.isArray(args) ? args : [];
-  return withSqliteLockRetry(
-    () => db.execute(sql, resolvedArgs),
-    isSqliteCommitStatement(sql)
-      ? {
-          retryDelaysMs,
-          onRetry,
-          shouldRecoverError: (error) =>
-            isSqliteNoActiveTransactionError(error),
-          recoverValue: { rowsAffected: 0 },
-        }
-      : {
-          retryDelaysMs,
-          onRetry,
-        },
-  );
+  return withSqliteLockRetry(() => db.execute(sql, resolvedArgs), {
+    retryDelaysMs,
+    onRetry,
+  });
 };
 
 const createLibsqlLikeClient = ({ runSelect, runExecute }) => {
