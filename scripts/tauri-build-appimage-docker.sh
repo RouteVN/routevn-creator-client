@@ -59,6 +59,13 @@ for name in TAURI_SIGNING_PRIVATE_KEY TAURI_SIGNING_PRIVATE_KEY_PASSWORD; do
   fi
 done
 
+# The container copies the source without .git, so pass the error-reporting
+# build ID in from the host checkout.
+build_id="${ROUTEVN_BUILD_ID:-$(git -C "${ROOT_DIR}" rev-parse --short=12 HEAD 2>/dev/null || true)}"
+if [ -n "${build_id}" ]; then
+  docker_run_args+=(-e ROUTEVN_BUILD_ID="${build_id}")
+fi
+
 if [ -d "${HOST_TAURI_CACHE_DIR}" ]; then
   docker_run_args+=(-v "${HOST_TAURI_CACHE_DIR}:/host-tauri-cache:ro")
 fi

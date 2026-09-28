@@ -12,7 +12,8 @@ One variable, `ROUTEVN_SENTRY_DSN`, configures both SDKs:
 
 - Development uses the local API DSN by default, with no env file required:
   `http://11111111111111111111111111111111@127.0.0.1:3000/system/sentry/1`.
-  Set `ROUTEVN_SENTRY_DSN` in the local `.env` or shell to use another local port.
+  Export `ROUTEVN_SENTRY_DSN` in the shell that runs the Tauri development build
+  to use another local port. Development builds do not read `.env`.
 - `.env.production`: the production API DSN, used by `tauri:build`, platform
   release scripts, and Steam release builds.
 
@@ -32,9 +33,10 @@ along with the release, build ID, and environment label. The injected object is
 read-only. Both official SDKs receive the same configuration.
 
 Use the development DSN printed by `python3 scripts/dev.py` in `routevn-api-2`.
-Development builds reject DSNs outside HTTP on `localhost` or `127.0.0.1`, so
-loading production settings by mistake cannot send development errors there.
-The SDK parses the remaining DSN fields.
+Development builds reject DSNs outside HTTP on `127.0.0.1`, the only local host
+the webview CSP allows, so loading production settings by mistake cannot send
+development errors there. Every build parses the DSN with the Sentry DSN parser
+and fails on an invalid value instead of shipping an app that panics at startup.
 
 The key is public SDK routing data; it is never a RouteVN bearer credential.
 Do not add RouteVN authentication headers, cookies, or RPC tokens to SDK
@@ -42,28 +44,32 @@ transport requests. Passing configuration to the webview does not forward
 webview errors through Rust; each official SDK sends its own events directly.
 
 Both SDKs tag errors with `routevn-creator@<appVersion>`, the build environment,
-and the Git revision as `dist` where the SDK supports it. Rust adds its build
-revision to the event. The current collector has no symbolication; builds do
-not upload source maps. Keep release and build identifiers so future tooling can
-match a report to its build.
+and a build ID as `dist`. Production builds use the 12-character Git revision,
+or `ROUTEVN_BUILD_ID` when set; the Docker AppImage build passes the host
+revision this way because its source copy has no `.git`. Development builds use
+`local`. The current collector has no symbolication; builds do not upload source
+maps. Keep release and build identifiers so future tooling can match a report
+to its build.
 
 ## Collection and privacy
 
 The webview enables only the global uncaught-error and unhandled-rejection
-handlers, plus event deduplication. Rust enables only the panic integration and
-the SDK's normal HTTP transport. Tracing, profiling, replay, feedback,
-logs/metrics forwarding, screenshots, view hierarchy, attachments, browser
-sessions, and browser client reports are disabled by options or excluded
-features. The Rust SDK has no client-report switch; it may attach a loss report
-to a later error envelope, which the collector discards. Neither SDK sets a
-user identity.
+handlers, plus event deduplication, and sends at most 10 events per app session.
+Rust enables only the panic integration, stack frame in-app classification, and
+the SDK's normal HTTP transport over rustls. Tracing, profiling, replay,
+feedback, logs/metrics forwarding, screenshots, view hierarchy, attachments,
+browser sessions, and browser client reports are disabled by options or
+excluded features. The Rust SDK has no client-report switch; it may attach a
+loss report to a later error envelope, which the collector discards. Neither
+SDK sets a user identity.
 
-`beforeSend` on each side retains the error category and bounded stack location
-while discarding request metadata, headers, cookies, body/response dumps,
-tokens, emails, object snapshots, local variables, and arbitrary error message
-text. `beforeBreadcrumb` drops breadcrumbs. SDK shutdown is bounded to about
-two seconds. There is no app-level retry or forwarding path; the SDK handles
-collector rate limits and transport errors.
+`beforeSend` on each side retains the error category, level, capture mechanism
+type and handled flag, and bounded stack location (Rust frames also keep their
+instruction address) while discarding request metadata, headers, cookies,
+body/response dumps, tokens, emails, object snapshots, local variables, and
+arbitrary error message text. Both SDKs keep zero breadcrumbs. SDK shutdown is
+bounded to about two seconds. There is no app-level retry or forwarding path;
+the SDK handles collector rate limits and transport errors.
 
 ## Local verification
 

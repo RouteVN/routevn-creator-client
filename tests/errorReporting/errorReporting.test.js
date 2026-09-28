@@ -5,7 +5,7 @@ import { scrubErrorEvent } from "../../src/deps/clients/tauri/errorReporting.js"
 vi.hoisted(() => {
   globalThis.__ROUTEVN_ERROR_REPORTING__ = Object.freeze({
     dsn: "http://11111111111111111111111111111111@127.0.0.1:3000/system/sentry/1",
-    release: "routevn-creator@1.0.0",
+    release: "app-one@1.0.0",
     environment: "development",
     dist: "test-build",
   });
@@ -16,7 +16,7 @@ describe("desktop error reporting", () => {
     expect(getClient().getOptions()).toMatchObject({
       ...globalThis.__ROUTEVN_ERROR_REPORTING__,
       sendDefaultPii: false,
-      maxBreadcrumbs: 25,
+      maxBreadcrumbs: 0,
       sendClientReports: false,
       enableLogs: false,
     });
@@ -41,16 +41,23 @@ describe("desktop error reporting", () => {
           {
             type: "TypeError",
             value: '{"email":"user@example.com"}',
+            mechanism: {
+              type: "auto.browser.global_handlers.onerror",
+              handled: false,
+              data: { url: "file:///Users/user@example.com/app/main.js" },
+            },
             stacktrace: {
               frames: [
                 {
-                  filename: "file:///Users/user@example.com/app/main.js?token=secret-token",
+                  filename:
+                    "file:///Users/user@example.com/app/main.js?token=secret-token",
                   function: "loadProject",
                   lineno: 42,
                   colno: 2,
                   vars: { password: "secret-password" },
                   context_line: "password=secret-password",
                 },
+                { filename: "main.js", function: "?", lineno: 7, colno: 1 },
               ],
             },
           },
@@ -58,7 +65,7 @@ describe("desktop error reporting", () => {
       },
     });
 
-    expect(event.release).toBe("routevn-creator@1.0.0");
+    expect(event.release).toBe("app-one@1.0.0");
     expect(event.environment).toBe("development");
     expect(event.dist).toBe("test-build");
     expect(event.exception.values[0].type).toBe("TypeError");
@@ -69,10 +76,27 @@ describe("desktop error reporting", () => {
       colno: 2,
       in_app: undefined,
     });
+    expect(event.exception.values[0].stacktrace.frames[1].function).toBe(
+      undefined,
+    );
+    expect(event.exception.values[0].mechanism).toEqual({
+      type: "auto.browser.global_handlers.onerror",
+      handled: false,
+    });
     const encoded = JSON.stringify(event);
     expect(encoded).not.toContain("user@example.com");
     expect(encoded).not.toContain("secret-token");
     expect(encoded).not.toContain("secret-password");
     expect(encoded).not.toContain("secret-cookie");
+  });
+
+  it("stops sending after the per-session event limit", () => {
+    const { beforeSend } = getClient().getOptions();
+    const sent = Array.from({ length: 12 }, () =>
+      beforeSend({ exception: { values: [{ type: "TypeError" }] } }),
+    );
+
+    expect(sent.filter(Boolean)).toHaveLength(10);
+    expect(sent.at(-1)).toBe(null);
   });
 });

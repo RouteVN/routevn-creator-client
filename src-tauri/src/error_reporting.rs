@@ -1,7 +1,10 @@
 use std::time::Duration;
 
+use sentry::integrations::backtrace::ProcessStacktraceIntegration;
 use sentry::integrations::panic::PanicIntegration;
-use sentry::protocol::{Event, Frame, Stacktrace};
+use sentry::protocol::{Event, Frame, Mechanism, Stacktrace};
+
+const RELEASE: &str = concat!("routevn-creator@", env!("CARGO_PKG_VERSION"));
 
 fn safe_identifier(value: &str) -> Option<String> {
     (value.len() <= 200
@@ -31,6 +34,7 @@ fn scrub_stacktrace(stacktrace: &mut Stacktrace) {
             lineno: frame.lineno,
             colno: frame.colno,
             in_app: frame.in_app,
+            instruction_addr: frame.instruction_addr,
             ..Frame::default()
         };
     }
@@ -39,10 +43,10 @@ fn scrub_stacktrace(stacktrace: &mut Stacktrace) {
 fn scrub_event(event: Event<'static>) -> Event<'static> {
     let mut safe = Event {
         event_id: event.event_id,
-        level: sentry::Level::Error,
+        level: event.level,
         timestamp: event.timestamp,
         platform: "rust".into(),
-        release: Some(format!("routevn-creator@{}", env!("CARGO_PKG_VERSION")).into()),
+        release: Some(RELEASE.into()),
         environment: Some(env!("ROUTEVN_SENTRY_ENVIRONMENT").into()),
         dist: Some(env!("ROUTEVN_BUILD_ID").into()),
         message: Some("Rust panic".to_owned()),
@@ -56,7 +60,11 @@ fn scrub_event(event: Event<'static>) -> Event<'static> {
         exception.value = Some("Rust panic".to_owned());
         exception.module = None;
         exception.raw_stacktrace = None;
-        exception.mechanism = None;
+        exception.mechanism = exception.mechanism.take().map(|mechanism| Mechanism {
+            ty: mechanism.ty,
+            handled: mechanism.handled,
+            ..Mechanism::default()
+        });
         if let Some(stacktrace) = &mut exception.stacktrace {
             scrub_stacktrace(stacktrace);
         }
@@ -70,7 +78,7 @@ fn scrub_event(event: Event<'static>) -> Event<'static> {
 pub fn webview_init_script() -> String {
     let config = serde_json::json!({
         "dsn": env!("ROUTEVN_SENTRY_DSN"),
-        "release": format!("routevn-creator@{}", env!("CARGO_PKG_VERSION")),
+        "release": RELEASE,
         "environment": env!("ROUTEVN_SENTRY_ENVIRONMENT"),
         "dist": env!("ROUTEVN_BUILD_ID"),
     });
@@ -80,16 +88,18 @@ pub fn webview_init_script() -> String {
 }
 
 pub fn init() -> sentry::ClientInitGuard {
+    // The transport uses rustls without a bundled provider; the updater installs
+    // the same ring provider when it has not been set yet.
+    let _ = rustls::crypto::ring::default_provider().install_default();
     let options = sentry::ClientOptions::new()
         .dsn(env!("ROUTEVN_SENTRY_DSN"))
-        .release(format!("routevn-creator@{}", env!("CARGO_PKG_VERSION")))
+        .release(RELEASE)
         .environment(env!("ROUTEVN_SENTRY_ENVIRONMENT"))
         .send_default_pii(false)
-        .max_breadcrumbs(25)
-        .traces_sample_rate(0.0)
+        .max_breadcrumbs(0)
         .default_integrations(false)
         .add_integration(PanicIntegration::new())
-        .before_breadcrumb(|_| None)
+        .add_integration(ProcessStacktraceIntegration::new())
         .before_send(|event| Some(scrub_event(event)))
         .shutdown_timeout(Duration::from_secs(2));
 
@@ -104,6 +114,7 @@ mod tests {
     #[test]
     fn removes_untrusted_panic_details() {
         let mut event = Event {
+            level: sentry::Level::Fatal,
             message: Some("user@example.com token=secret".to_owned()),
             ..Event::default()
         };
@@ -124,6 +135,12 @@ mod tests {
         event.exception.values.push(Exception {
             ty: "Panic".to_owned(),
             value: Some("user@example.com token=secret".to_owned()),
+            mechanism: Some(Mechanism {
+                ty: "panic".to_owned(),
+                handled: Some(false),
+                description: Some("user@example.com token=secret".to_owned()),
+                ..Mechanism::default()
+            }),
             stacktrace: Some(Stacktrace {
                 frames: vec![frame],
                 ..Stacktrace::default()
@@ -132,6 +149,10 @@ mod tests {
         });
 
         let safe = scrub_event(event);
+        assert_eq!(safe.level, sentry::Level::Fatal);
+        let mechanism = safe.exception.values[0].mechanism.as_ref().unwrap();
+        assert_eq!(mechanism.ty, "panic");
+        assert_eq!(mechanism.handled, Some(false));
         let encoded = serde_json::to_string(&safe).unwrap();
         assert!(!encoded.contains("user@example.com"));
         assert!(!encoded.contains("token=secret"));

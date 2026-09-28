@@ -1,9 +1,30 @@
+use sentry_types::{Dsn, Scheme};
+
 fn git_value(args: &[&str]) -> Option<String> {
     let output = std::process::Command::new("git").args(args).output().ok()?;
     if !output.status.success() {
         return None;
     }
     Some(String::from_utf8(output.stdout).ok()?.trim().to_owned())
+}
+
+fn release_build_id() -> String {
+    // Builds without Git metadata, such as the Docker AppImage build, pass the
+    // revision in explicitly.
+    println!("cargo:rerun-if-env-changed=ROUTEVN_BUILD_ID");
+    if let Ok(build_id) = std::env::var("ROUTEVN_BUILD_ID") {
+        return build_id;
+    }
+    // Watch HEAD and its reflog instead of the branch ref file, which is removed
+    // when refs are packed. Cargo reruns on every build if a watched file is missing.
+    for name in ["HEAD", "logs/HEAD"] {
+        if let Some(path) = git_value(&["rev-parse", "--git-path", name]) {
+            if std::path::Path::new(&path).exists() {
+                println!("cargo:rerun-if-changed={path}");
+            }
+        }
+    }
+    git_value(&["rev-parse", "--short=12", "HEAD"]).unwrap_or_else(|| "local".to_owned())
 }
 
 fn main() {
@@ -32,28 +53,22 @@ fn main() {
                 "http://11111111111111111111111111111111@127.0.0.1:3000/system/sentry/1".to_owned()
             })
         };
-        assert!(!dsn.is_empty(), "ROUTEVN_SENTRY_DSN must not be empty");
-        if !production {
-            let url = url::Url::parse(&dsn).expect("Invalid development error collector DSN");
-            assert!(
-                url.scheme() == "http" && matches!(url.host_str(), Some("localhost" | "127.0.0.1")),
-                "Development error reporting must use the local API"
-            );
-        }
+        // The SDK panics at startup on a DSN it cannot parse, so reject it here.
+        let parsed: Dsn = dsn.parse().expect("Invalid ROUTEVN_SENTRY_DSN");
+        // The webview CSP allows local connections only to 127.0.0.1.
+        assert!(
+            production || (parsed.scheme() == Scheme::Http && parsed.host() == "127.0.0.1"),
+            "Development error reporting must use the local API on http://127.0.0.1"
+        );
+        let build_id = if production {
+            release_build_id()
+        } else {
+            "local".to_owned()
+        };
         println!("cargo:rustc-env=ROUTEVN_SENTRY_DSN={dsn}");
         println!("cargo:rustc-env=ROUTEVN_SENTRY_ENVIRONMENT={environment}");
+        println!("cargo:rustc-env=ROUTEVN_BUILD_ID={build_id}");
     }
-    if let Some(path) = git_value(&["rev-parse", "--git-path", "HEAD"]) {
-        println!("cargo:rerun-if-changed={path}");
-    }
-    if let Some(reference) = git_value(&["symbolic-ref", "-q", "HEAD"]) {
-        if let Some(path) = git_value(&["rev-parse", "--git-path", &reference]) {
-            println!("cargo:rerun-if-changed={path}");
-        }
-    }
-    let build_id =
-        git_value(&["rev-parse", "--short=12", "HEAD"]).unwrap_or_else(|| "local".to_owned());
-    println!("cargo:rustc-env=ROUTEVN_BUILD_ID={build_id}");
 
     println!("cargo:rerun-if-changed=src/macos_fullscreen_escape.m");
     if std::env::var("CARGO_CFG_TARGET_OS").as_deref() == Ok("macos") {

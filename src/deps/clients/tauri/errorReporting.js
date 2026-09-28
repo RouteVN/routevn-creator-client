@@ -7,11 +7,14 @@ import {
 // Tauri injects the compiled configuration before any webview scripts run.
 const { dsn, release, environment, dist } =
   globalThis.__ROUTEVN_ERROR_REPORTING__ ?? {};
+// Deduplication only drops back-to-back repeats, so also cap each session.
+const MAX_EVENTS_PER_SESSION = 10;
+let sentEvents = 0;
 
 const safeIdentifier = (value) =>
   typeof value === "string" && /^[A-Za-z0-9_.$-]{1,100}$/.test(value)
     ? value
-    : "UnknownError";
+    : undefined;
 
 const safeFilename = (value) => {
   if (typeof value !== "string") {
@@ -41,6 +44,11 @@ const scrubStacktrace = (stacktrace) => {
   };
 };
 
+const scrubMechanism = (mechanism) =>
+  mechanism
+    ? { type: safeIdentifier(mechanism.type), handled: mechanism.handled }
+    : undefined;
+
 export const scrubErrorEvent = (event) => ({
   event_id: event.event_id,
   timestamp: event.timestamp,
@@ -53,13 +61,22 @@ export const scrubErrorEvent = (event) => ({
   exception: event.exception?.values
     ? {
         values: event.exception.values.map((exception) => ({
-          type: safeIdentifier(exception.type),
+          type: safeIdentifier(exception.type) ?? "UnknownError",
           value: "Unhandled webview error",
+          mechanism: scrubMechanism(exception.mechanism),
           stacktrace: scrubStacktrace(exception.stacktrace),
         })),
       }
     : undefined,
 });
+
+const sendErrorEvent = (event) => {
+  if (sentEvents >= MAX_EVENTS_PER_SESSION) {
+    return null;
+  }
+  sentEvents += 1;
+  return scrubErrorEvent(event);
+};
 
 if (dsn) {
   init({
@@ -68,17 +85,12 @@ if (dsn) {
     environment,
     dist,
     sendDefaultPii: false,
-    maxBreadcrumbs: 25,
+    maxBreadcrumbs: 0,
     defaultIntegrations: false,
     integrations: [globalHandlersIntegration(), dedupeIntegration()],
-    tracesSampleRate: 0,
-    profilesSampleRate: 0,
-    replaysSessionSampleRate: 0,
-    replaysOnErrorSampleRate: 0,
     sendClientReports: false,
     enableLogs: false,
-    beforeBreadcrumb: () => null,
-    beforeSend: scrubErrorEvent,
+    beforeSend: sendErrorEvent,
   });
 }
 

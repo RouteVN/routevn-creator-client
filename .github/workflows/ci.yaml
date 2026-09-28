@@ -60,6 +60,9 @@ jobs:
       - name: Lint
         run: bun run lint
 
+      - name: Error reporting tests
+        run: bun run test:error-reporting
+
       - name: Install editor test browsers
         run: bunx playwright install --with-deps chromium webkit
 
