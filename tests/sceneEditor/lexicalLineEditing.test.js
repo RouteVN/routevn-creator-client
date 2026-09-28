@@ -5438,63 +5438,77 @@ describe("lexical scene document editor line editing", () => {
     }
   });
 
-  it("suppresses delayed insertText beforeinput after printable fallback insertion", async () => {
-    vi.useFakeTimers();
-    try {
-      const { LexicalSceneDocumentEditorElement } = await import(
-        "../../src/primitives/lexicalSceneDocumentEditor.js"
-      );
-      const editorElement = Object.create(
-        LexicalSceneDocumentEditorElement.prototype,
-      );
-      const preventDefault = vi.fn();
-      const stopPropagation = vi.fn();
-      const stopImmediatePropagation = vi.fn();
+  it.each([
+    [10000, 10030],
+    [0, 10030],
+    [10000, 0],
+    [0, 0],
+  ])(
+    "suppresses delayed insertText after fallback with timestamps %s and %s (TXT-B018)",
+    async (keydownTimeStamp, inputTimeStamp) => {
+      const restoreDomGlobals = installDomGlobals();
+      vi.useFakeTimers();
+      const clock = vi.spyOn(performance, "now").mockReturnValue(10000);
+      try {
+        const { LexicalSceneDocumentEditorElement } = await import(
+          "../../src/primitives/lexicalSceneDocumentEditor.js"
+        );
+        const editorElement = Object.create(
+          LexicalSceneDocumentEditorElement.prototype,
+        );
+        const preventDefault = vi.fn();
+        const stopPropagation = vi.fn();
+        const stopImmediatePropagation = vi.fn();
 
-      editorElement.state = {
-        mode: "text-editor",
-      };
-      Object.defineProperty(editorElement, "isConnected", {
-        configurable: true,
-        value: true,
-      });
-      editorElement.isEditorActiveElement = vi.fn(() => true);
-      editorElement.hideSelectionPopover = vi.fn();
-      editorElement.clearSelectedReferenceNodeKey = vi.fn();
-      editorElement.insertPlainText = vi.fn();
+        editorElement.state = {
+          mode: "text-editor",
+        };
+        Object.defineProperty(editorElement, "isConnected", {
+          configurable: true,
+          value: true,
+        });
+        editorElement.isEditorActiveElement = vi.fn(() => true);
+        editorElement.hideSelectionPopover = vi.fn();
+        editorElement.clearSelectedReferenceNodeKey = vi.fn();
+        editorElement.insertPlainText = vi.fn();
+        editorElement.getNativeLineRangeSelectionContext = vi.fn();
 
-      editorElement.updatePendingTextInputFallback({
-        key: "/",
-        defaultPrevented: false,
-        isComposing: false,
-        ctrlKey: false,
-        metaKey: false,
-        timeStamp: 10,
-      });
+        editorElement.updatePendingTextInputFallback({
+          key: "/",
+          defaultPrevented: false,
+          isComposing: false,
+          ctrlKey: false,
+          metaKey: false,
+          timeStamp: keydownTimeStamp,
+        });
 
-      vi.runOnlyPendingTimers();
+        vi.runOnlyPendingTimers();
+        clock.mockReturnValue(10030);
 
-      editorElement.handleNativeBeforeInput({
-        inputType: "insertText",
-        data: "/",
-        isComposing: false,
-        defaultPrevented: false,
-        timeStamp: 12,
-        preventDefault,
-        stopPropagation,
-        stopImmediatePropagation,
-      });
+        editorElement.handleNativeBeforeInput({
+          inputType: "insertText",
+          data: "/",
+          isComposing: false,
+          defaultPrevented: false,
+          timeStamp: inputTimeStamp,
+          preventDefault,
+          stopPropagation,
+          stopImmediatePropagation,
+        });
 
-      expect(editorElement.insertPlainText).toHaveBeenCalledTimes(1);
-      expect(editorElement.insertPlainText).toHaveBeenCalledWith("/");
-      expect(preventDefault).toHaveBeenCalledTimes(1);
-      expect(stopPropagation).toHaveBeenCalledTimes(1);
-      expect(stopImmediatePropagation).toHaveBeenCalledTimes(1);
-      expect(editorElement.lastCommittedTextInputFallback).toBeUndefined();
-    } finally {
-      vi.useRealTimers();
-    }
-  });
+        expect(editorElement.insertPlainText).toHaveBeenCalledTimes(1);
+        expect(editorElement.insertPlainText).toHaveBeenCalledWith("/");
+        expect(preventDefault).toHaveBeenCalledTimes(1);
+        expect(stopPropagation).toHaveBeenCalledTimes(1);
+        expect(stopImmediatePropagation).toHaveBeenCalledTimes(1);
+        expect(editorElement.lastCommittedTextInputFallback).toBeUndefined();
+      } finally {
+        clock.mockRestore();
+        vi.useRealTimers();
+        restoreDomGlobals();
+      }
+    },
+  );
 
   it("keeps different delayed insertText beforeinput after printable fallback insertion", async () => {
     vi.useFakeTimers();

@@ -16,6 +16,7 @@ const checks = [
   [process.execPath, ["tests/sceneEditor/lexicalEditingContracts.browser.mjs"]],
   [process.execPath, ["tests/sceneEditor/lexicalShortcutFocus.browser.mjs"]],
   [process.execPath, ["tests/sceneEditor/lexicalTouchReturn.browser.mjs"]],
+  [process.execPath, ["tests/sceneEditor/lexicalTouchTyping.browser.mjs"]],
   [process.execPath, ["tests/sceneEditor/lexicalTouchSelection.browser.mjs"]],
   [process.execPath, ["tests/sceneEditor/lexicalCaretRecovery.browser.mjs"]],
   [process.execPath, ["tests/sceneEditor/lexicalImeConfirmation.browser.mjs"]],
