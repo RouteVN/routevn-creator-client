@@ -69,6 +69,7 @@ try {
       for (const { scenario, entryPath } of [
         "native",
         "legacy-stylesheets",
+        "legacy-stylesheets-colors",
       ].flatMap((scenario) =>
         ["/", "/projects"].map((entryPath) => ({ scenario, entryPath })),
       )) {
@@ -158,6 +159,20 @@ try {
           },
           { scenario, appVersion },
         );
+        if (scenario === "legacy-stylesheets-colors") {
+          // Unsupported functions remain valid custom-property token streams,
+          // then invalidate consuming declarations. @supports must also fail.
+          await page.route("**/public/theme.css", async (route) => {
+            const response = await route.fetch();
+            await route.fulfill({
+              response,
+              body: (await response.text()).replace(
+                /\b(?:oklch|color-mix)\(/g,
+                "unsupported-color(",
+              ),
+            });
+          });
+        }
         let failure;
         try {
           await page.goto(new URL(entryPath, origin).href);
