@@ -215,7 +215,8 @@ body {
 
 /* Older macOS WebKit retains unsupported color functions in custom properties.
    Gate sRGB equivalents explicitly so consuming declarations remain valid. */
-@supports not (color: oklch(0 0 0)) {
+@supports (not (color: oklch(0 0 0))) or
+  (not (color: color-mix(in oklch, black, white))) {
   :root {
     --background: #f5f7f9;
     --surface: #fbfcfe;
@@ -310,7 +311,8 @@ body {
   );
 }
 
-@supports not (color: oklch(0 0 0)) {
+@supports (not (color: oklch(0 0 0))) or
+  (not (color: color-mix(in oklch, black, white))) {
   .theme-black {
     --background: #0a0a0a;
     --surface: #121212;

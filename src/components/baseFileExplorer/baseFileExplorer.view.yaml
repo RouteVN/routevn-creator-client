@@ -79,7 +79,7 @@ styles:
     padding: "0"
     transition: opacity 120ms ease
     width: 20px
-  "[data-file-explorer-item='true']:hover .visibilityAction, .visibilityAction:focus-visible, .visibilityAction[data-always-visible='true']":
+  "[data-file-explorer-item='true']:hover .visibilityAction, .visibilityAction:focus, .visibilityAction[data-always-visible='true']":
     opacity: "1"
 template:
   - 'rtgl-view#root w=f h=f d=v sv style="min-width: 0; overflow-x: hidden;"':

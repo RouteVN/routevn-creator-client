@@ -80,3 +80,4 @@ jobs:
           bun run build:tauri
           node tests/tauri/startup.browser.mjs
           node tests/tauri/theme.browser.mjs
+          node tests/tauri/cssCompatibility.browser.mjs

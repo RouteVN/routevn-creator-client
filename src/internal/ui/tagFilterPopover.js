@@ -10,9 +10,6 @@ const buildTagFilterTagStyle = ({ isSelected = false } = {}) => {
     style.push("--muted: var(--accent)");
     style.push("--muted-foreground: white");
   } else {
-    style.push(
-      "--muted: color-mix(in srgb, var(--muted) 82%, var(--background) 18%)",
-    );
     style.push("--muted-foreground: var(--foreground)");
   }
 

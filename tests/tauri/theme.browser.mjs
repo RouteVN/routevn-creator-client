@@ -70,12 +70,17 @@ for (const [engineName, engine] of Object.entries({ chromium, webkit })) {
   try {
     const page = await browser.newPage();
     const nativePixels = new Map();
-    for (const legacy of [false, true]) {
+    for (const scenario of ["native", "no-color-mix", "no-modern-colors"]) {
+      const legacy = scenario !== "native";
       // Unknown color functions are retained in custom properties, just as in
       // older WebKit, and invalidate consuming declarations at computed time.
       // Replacing the @supports predicate also activates the legacy palette.
+      const unsupported =
+        scenario === "no-color-mix"
+          ? /\bcolor-mix\(/g
+          : /\b(?:oklch|color-mix)\(/g;
       const css = legacy
-        ? stylesheet.replace(/\b(?:oklch|color-mix)\(/g, "unsupported-color(")
+        ? stylesheet.replace(unsupported, "unsupported-color(")
         : stylesheet;
       await page.setContent(`<style>${css}</style><div>Projects</div>`);
       for (const palette of palettes) {
@@ -112,17 +117,19 @@ for (const [engineName, engine] of Object.entries({ chromium, webkit })) {
           },
           { classes: palette.classes, colorProperties },
         );
-        const label = `${engineName} ${legacy ? "legacy" : "native"} ${palette.name}`;
-        assert.equal(
-          result.background,
-          legacy ? palette.legacyBackground : palette.background,
-          `${label}: page background`,
-        );
-        assert.equal(
-          result.foreground,
-          legacy ? palette.legacyForeground : palette.foreground,
-          `${label}: readable page text`,
-        );
+        const label = `${engineName} ${scenario} ${palette.name}`;
+        if (scenario !== "no-color-mix") {
+          assert.equal(
+            result.background,
+            legacy ? palette.legacyBackground : palette.background,
+            `${label}: page background`,
+          );
+          assert.equal(
+            result.foreground,
+            legacy ? palette.legacyForeground : palette.foreground,
+            `${label}: readable page text`,
+          );
+        }
         for (const [property, color] of Object.entries(result.colors)) {
           assert.notEqual(
             color,
