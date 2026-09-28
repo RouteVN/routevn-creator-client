@@ -1035,6 +1035,8 @@ const selectTransformResourceById = (store, transformId) => {
   return transforms?.items?.[transformId] ?? transforms?.[transformId];
 };
 
+// Reopen before the render that closes the transform editor: the command line
+// mounts during that render and only reads its initial state on mount.
 const reopenBackgroundCommandLine = ({ refs, store, background } = {}) => {
   const selectedLine = store.selectSelectedLine?.();
   const actions = {
@@ -1515,13 +1517,13 @@ const closeActionTransformEditor = (deps, payload) => {
     action,
   });
   store.closeBackgroundTransformEditor?.();
-  render();
   reopenActionTransformCommandLine({
     refs,
     store,
     actionKey,
     action: nextAction,
   });
+  render();
   requestBackgroundTransformEditorCanvasRender(subject);
   globalThis.setTimeout?.(() => {
     store.clearSuppressNextActionsDialogClose?.();
@@ -1557,12 +1559,12 @@ export const handleBackgroundTransformEditorCloseClick = (deps, payload) => {
     },
   );
   store.closeBackgroundTransformEditor?.();
-  render();
   reopenBackgroundCommandLine({
     refs,
     store,
     background: nextBackground,
   });
+  render();
   requestBackgroundTransformEditorCanvasRender(subject);
   globalThis.setTimeout?.(() => {
     store.clearSuppressNextActionsDialogClose?.();
@@ -1591,8 +1593,8 @@ export const handleBackgroundTransformEditorCancel = (deps, payload) => {
         background,
       },
     });
-    render();
     reopenBackgroundCommandLine({ refs, store, background });
+    render();
     requestTemporaryPresentationCanvasRender(subject, { skipAnimations: true });
     globalThis.setTimeout?.(() => {
       store.clearSuppressNextActionsDialogClose?.();
@@ -1608,13 +1610,13 @@ export const handleBackgroundTransformEditorCancel = (deps, payload) => {
       [actionKey]: action,
     },
   });
-  render();
   reopenActionTransformCommandLine({
     refs,
     store,
     actionKey,
     action,
   });
+  render();
   requestTemporaryPresentationCanvasRender(subject, { skipAnimations: true });
   globalThis.setTimeout?.(() => {
     store.clearSuppressNextActionsDialogClose?.();
