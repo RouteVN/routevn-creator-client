@@ -30,6 +30,7 @@ Selections across separate section editors are outside this contract.
 | TXT-012 | Serialized dialogue preserves edits, soft breaks, line IDs, and retained actions. Reloading the serialized document must preserve content. Draft persistence remains covered separately from browser input. | `lexicalDraftPersistence.test.js`; `lexicalEditingContracts.browser.mjs`; `lexicalNewlineInput.test.js` |
 | TXT-013 | In block mode, `o` inserts a scene line after the selected line and `O` inserts before it, then enters text mode on the new line. A newer selection supersedes pending page focus; after focus succeeds, subsequent typing, arrow movement, or Escape must not be undone by a second page focus. | `lexicalShortcutFocus.browser.mjs` TXT-B011; `sceneEditorLexical.handlers.test.js` |
 | TXT-014 | In touch text-editing mode, long-press/right-click must keep native selection and the native context menu. Do not open rich-text/furigana/reference dropdowns, cancel the contextmenu event, or replace the selected range. Desktop/pointer menus remain available. | `lexicalTouchSelection.browser.mjs`; `richTextContextMenu.browser.mjs` |
+| TXT-015 | Each printable key inserts once when a matching beforeinput follows the keydown fallback within the duplicate-suppression window, including software-keyboard events whose timestamp is zero. Preserve legitimate repeated characters, beforeinput-only edits after the duplicate window, caret position, and serialized content. | `lexicalLineEditing.test.js` TXT-B018; `lexicalTouchTyping.browser.mjs` |
 
 All test paths above are under `tests/sceneEditor/`.
 
@@ -59,6 +60,24 @@ bug below; browser coverage is not a substitute for those release checks.
 | TXT-B015 | On macOS with Apple Pinyin, type `ni` then Space at `a\|b`. The candidate committed but an extra space produced `a你 b` instead of `a你b`. | WebKit delivers the confirming Space after compositionend with `isComposing: false` but keyCode/which 229. Exclude process keys from the printable fallback. | TXT-010; `lexicalImeConfirmation.browser.mjs` checks committed text, deferred Space, subsequent ordinary Space/typing, and exact caret in both engines. Unit tests cover both process-key markers and digit keys. Native Apple Pinyin before/after verification is recorded in `notes/macos-tauri-lexical-selection.md`. |
 | TXT-B016 | On Android/Gboard, place the caret at the start of a loaded empty scene line and press Backspace once. The line remained; a second press merged it. | Lexical deleted the invisible caret anchor before the app handler ran. Handle collapsed logical line-start Backspace in the existing window capture path, before Lexical character deletion. Preserve IME composition, modified keys, and native text selections. | `lexicalEmptyLineBackspace.browser.mjs` covers loaded/new empty lines, deleting the last character, consecutive empty lines, nonempty line starts, and subsequent typing/caret in Chromium and WebKit. Verified on the connected Vivo V2309A using native Gboard taps. |
 | TXT-B017 | Leave an unchanged scene editor open with Android backups enabled. Each scheduled check rewrote the text-statistics checkpoint and made the database appear dirty. | Backup preparation passes an explicit backup reason and only flushes pending drafts; actual saves retain their normal statistics update, while navigation still caches statistics before leaving. | `sceneEditorLexical.handlers.test.js` checks repeated unchanged preparation; `projectEntryLanguagePlatforms.test.js` checks the Android preparation payload; `lexicalDraftPersistence.test.js` covers save/cache completion. |
+| TXT-B018 | On the iPad Air simulator / iPadOS 17.5, tap the software keyboard to type `hello hi yay`. Letters doubled (`hello` became `hheelllloo`); the same keys worked in a plain textarea. | Software keydown reported timeStamp 0, while a matching beforeinput arrived about 30ms later with a page-relative timestamp. The fallback inserted first, but the mixed timestamps made the later event appear outside the duplicate window. Normalize zero timestamps to performance.now() before comparing ages. | TXT-015; unit tests cover positive/zero timestamp pairs. `lexicalTouchTyping.browser.mjs` replays the observed ordering in Chromium/WebKit and checks repeated letters, fallback-only input, expiry, exact content/caret, subsequent native browser typing, and serialized reload. |
+
+TXT-B018 was reproduced on an iPad Air (5th generation) simulator with iPadOS
+17.5 (21F79). On 2026-09-28, the fix passed native software typing and prediction
+in the isolated primitive, plus typing, single-character Backspace, and scene
+reopening in the packaged Debug app. The same checks passed on iPad Air 11-inch
+(M4) simulators running 26.5 (23F77) and 27.0 (24A434), which reported positive
+keyboard timestamps. Exact iPadOS 17.6.1 and a physical iPad remain untested.
+
+A heavily instrumented 27.0 run duplicated a letter when beforeinput arrived
+934ms after keydown, beyond the existing 250ms duplicate window. Replaying that
+timestamp pair against baseline and fixed suppression logic gave the same
+result. Buffered diagnostics and the packaged app passed; the contribution of
+logging to the stall was not measured. This long-stall limitation remains.
+
+The 17.5 rerun also lost a final edit on a forced app restart before the preview
+updated. Retyping, leaving text mode, and restarting preserved it. Persistence
+of an edit still pending when the app is terminated has not been established.
 
 TXT-B012 was verified in a packaged Debug app on that same physical iPhone on
 2026-09-17. Four native software Return activations, including automatically
@@ -107,6 +126,10 @@ The command runs:
    native Space and ordinary typing retain their normal content/caret behavior.
 9. Single Backspace merges empty and nonempty scene lines at the logical start;
    subsequent typing stays at the join, including after consecutive empty lines.
+10. Replayed iPad software-keyboard events with zero keydown timestamps insert
+    each character once even when the fallback runs before beforeinput. Check
+    repeated letters, fallback-only input, expiry, subsequent native typing,
+    exact caret/content, and serialized reload in both engines.
 
 The browser suites bundle the production primitive into temporary fixtures with
 nested shadow roots. They need no app build, running development server, or user

@@ -981,6 +981,11 @@ const isImeProcessKeyboardEvent = (event) => {
 
 const getEventTimestamp = (event) => {
   const timestamp = Number(event?.timeStamp);
+  // iPadOS 17 software-keyboard events can report 0. Use the page clock
+  // so the fallback timestamp can be compared with beforeinput.
+  if (timestamp === 0) {
+    return performance.now();
+  }
   return Number.isFinite(timestamp) ? timestamp : undefined;
 };
 
