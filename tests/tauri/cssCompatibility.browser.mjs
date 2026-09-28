@@ -37,14 +37,18 @@ const { styles } = yaml.load(
     "utf8",
   ),
 );
-const explorerCss = Object.entries(styles)
-  .map(
-    ([selector, declarations]) =>
-      `${selector} { ${Object.entries(declarations)
-        .map(([name, value]) => `${name}: ${value};`)
-        .join(" ")} }`,
-  )
-  .join("\n");
+const toCss = (rules) =>
+  Object.entries(rules)
+    .map(([selector, declarations]) => {
+      const body = selector.startsWith("@")
+        ? toCss(declarations)
+        : Object.entries(declarations)
+            .map(([name, value]) => `${name}: ${value};`)
+            .join(" ");
+      return `${selector} { ${body} }`;
+    })
+    .join("\n");
+const explorerCss = toCss(styles);
 const emulateLegacy = (css) =>
   css
     .replace(/\b(?:oklch|color-mix)\(/g, "unsupported-color(")
@@ -73,6 +77,7 @@ for (const [engineName, engine] of Object.entries({ chromium, webkit })) {
         </style>
         ${previews.map(({ name, value }) => `<div data-preview="${name}" style="background-color: ${legacy ? emulateLegacy(value) : value}"></div>`).join("")}
         ${tagFilterPopover.options.map(({ value, tagStyle }) => `<div data-tag="${value}" style="${legacy ? emulateLegacy(tagStyle) : tagStyle} background-color: var(--muted);">Tag</div>`).join("")}
+        <button id="focusStart">Start</button>
         <div data-file-explorer-item="true"><button class="visibilityAction">Toggle</button></div>
         <div data-file-explorer-item="true"><button class="visibilityAction" data-always-visible="true">Hidden item</button></div>
       `;
@@ -97,7 +102,7 @@ for (const [engineName, engine] of Object.entries({ chromium, webkit })) {
         check(color !== "rgba(0, 0, 0, 0)", true, `${name} remains visible`);
       }
       for (const [tag, expected] of [
-        ["plain", "rgb(51, 51, 51)"],
+        ["plain", "rgba(0, 0, 0, 0)"],
         ["selected", "rgb(74, 74, 74)"],
       ]) {
         const color = await page
@@ -111,7 +116,17 @@ for (const [engineName, engine] of Object.entries({ chromium, webkit })) {
       check(await opacity(), "0", "inactive visibility action stays hidden");
       await page.locator("[data-file-explorer-item]").first().hover();
       check(await opacity(), "1", "hover reveals visibility action");
+      await action.click();
+      await action.focus();
       await page.mouse.move(400, 400);
+      check(
+        await opacity(),
+        legacy ? "1" : "0",
+        "pointer focus preserves modern visibility behavior",
+      );
+      await page.locator("#focusStart").click();
+      await page.keyboard.press("Tab");
+      // Set keyboard modality without depending on macOS Full Keyboard Access.
       await action.focus();
       check(await opacity(), "1", "keyboard focus reveals visibility action");
       const alwaysVisible = await page
