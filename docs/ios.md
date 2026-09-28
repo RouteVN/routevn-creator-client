@@ -62,8 +62,8 @@ bun run ios:devices
 The iOS, web, and desktop HTML load `construct-style-sheets-polyfill` before
 Rettangoli so WebKit before 16.4 (iOS 16.0–16.3 and older macOS) can construct
 and adopt stylesheets. `scripts/prepare-browser-assets.js` copies the published
-polyfill to `/public/adoptedStyleSheets.js` for offline startup; the build and
-watch scripts run it. Android WebView does not need it.
+polyfill to `/public/adoptedStyleSheets.js` for offline startup; `build.sh` and
+`watch-ios.sh` run it. Android WebView does not need it.
 
 Asset uploads use Web Crypto for SHA-256 when available and the bundled
 `@noble/hashes` implementation otherwise. The LAN HTTP watch URL does not expose
