@@ -6,9 +6,6 @@ const rootDir = dirname(dirname(fileURLToPath(import.meta.url)));
 const siteDir = join(rootDir, "_site");
 const staticIOSDir = join(rootDir, "static", "ios");
 const assetsDir = join(rootDir, "ios", "routevn", "routevn", "web");
-const stylesheetPolyfill = fileURLToPath(
-  import.meta.resolve("construct-style-sheets-polyfill"),
-);
 
 const copyIfPresent = async (from, to) => {
   try {
@@ -40,13 +37,6 @@ try {
     join(staticIOSDir, "index.html"),
     join(assetsDir, "ios", "index.html"),
   );
-}
-
-// Keep the polyfill local for offline startup and include it only in iOS output.
-for (const outputDir of [siteDir, assetsDir]) {
-  const iosDir = join(outputDir, "ios");
-  await mkdir(iosDir, { recursive: true });
-  await cp(stylesheetPolyfill, join(iosDir, "adoptedStyleSheets.js"));
 }
 
 console.log(`iOS WKWebView assets copied to ${assetsDir}`);

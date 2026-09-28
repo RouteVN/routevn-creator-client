@@ -168,16 +168,8 @@ body {
 
   --scrollbar-size: 6px;
   --scrollbar-track: transparent;
-  --scrollbar-thumb: color-mix(
-    in oklch,
-    var(--background) 82%,
-    var(--foreground) 18%
-  );
-  --scrollbar-thumb-hover: color-mix(
-    in oklch,
-    var(--background) 76%,
-    var(--foreground) 24%
-  );
+  --scrollbar-thumb: oklch(0.8373 0.0054 250);
+  --scrollbar-thumb-hover: oklch(0.7914 0.0059 250);
 }
 
 .dark {
@@ -211,53 +203,6 @@ body {
     0px 10px 24px rgba(0, 0, 0, 0.45), 0px 3px 5px rgba(0, 0, 0, 0.35),
     inset 0px 0.5px 0px rgba(255, 255, 255, 0.08),
     inset 0px 0px 0.5px rgba(255, 255, 255, 0.35);
-}
-
-/* Older macOS WebKit retains unsupported color functions in custom properties.
-   Gate sRGB equivalents explicitly so consuming declarations remain valid. */
-@supports (not (color: oklch(0 0 0))) or
-  (not (color: color-mix(in oklch, black, white))) {
-  :root {
-    --background: #f5f7f9;
-    --surface: #fbfcfe;
-    --foreground: #14191e;
-    --primary: #2c343c;
-    --primary-foreground: #f9fafc;
-    --secondary: #eaedf1;
-    --secondary-foreground: #1d2227;
-    --muted: #e8ebef;
-    --muted-foreground: #555c63;
-    --accent: #d7dfe8;
-    --accent-foreground: #181e24;
-    --destructive: #e7000b;
-    --destructive-foreground: #0a0a0a;
-    --border: #c5cbd2;
-    --input: #dde2e6;
-    --ring: #718295;
-    --scrollbar-thumb: #c7cacd;
-    --scrollbar-thumb-hover: #b8bbbf;
-  }
-
-  .dark {
-    --background: #1f1f1f;
-    --surface: #282828;
-    --foreground: #f2f2f2;
-    --primary: #dedede;
-    --primary-foreground: #292929;
-    --secondary: #383838;
-    --secondary-foreground: #f2f2f2;
-    --muted: #333333;
-    --muted-foreground: #b4b4b4;
-    --accent: #4a4a4a;
-    --accent-foreground: #f8f8f8;
-    --destructive: #ff6366;
-    --destructive-foreground: white;
-    --border: rgba(255, 255, 255, 0.14);
-    --input: rgba(255, 255, 255, 0.18);
-    --ring: #8c8c8c;
-    --scrollbar-thumb: #555555;
-    --scrollbar-thumb-hover: #717171;
-  }
 }
 
 .theme-catppuccin-mocha {
@@ -299,38 +244,6 @@ body {
   --border: oklch(1 0 0 / 10%);
   --input: oklch(1 0 0 / 15%);
   --ring: oklch(0.556 0 0);
-  --scrollbar-thumb: color-mix(
-    in oklch,
-    var(--background) 82%,
-    var(--foreground) 18%
-  );
-  --scrollbar-thumb-hover: color-mix(
-    in oklch,
-    var(--background) 76%,
-    var(--foreground) 24%
-  );
-}
-
-@supports (not (color: oklch(0 0 0))) or
-  (not (color: color-mix(in oklch, black, white))) {
-  .theme-black {
-    --background: #0a0a0a;
-    --surface: #121212;
-    --foreground: #fafafa;
-    --primary: #e5e5e5;
-    --primary-foreground: #2f2f2f;
-    --secondary: #262626;
-    --secondary-foreground: #fafafa;
-    --muted: #262626;
-    --muted-foreground: #a1a1a1;
-    --accent: #404040;
-    --accent-foreground: #fafafa;
-    --destructive: #ff6467;
-    --destructive-foreground: #0a0a0a;
-    --border: rgba(255, 255, 255, 0.1);
-    --input: rgba(255, 255, 255, 0.15);
-    --ring: #737373;
-    --scrollbar-thumb: #2d2d2d;
-    --scrollbar-thumb-hover: #3a3a3a;
-  }
+  --scrollbar-thumb: oklch(0.2962 0 0);
+  --scrollbar-thumb-hover: oklch(0.3466 0 0);
 }

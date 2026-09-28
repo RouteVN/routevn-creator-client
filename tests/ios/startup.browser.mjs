@@ -1,41 +1,12 @@
 // After build:ios: node tests/ios/startup.browser.mjs
 // Runs the packaged iOS frontend with native bridge responses for folder setup.
 import assert from "node:assert/strict";
-import { readFile } from "node:fs/promises";
-import { createServer } from "node:http";
-import path from "node:path";
 import { chromium, webkit } from "playwright";
+import { serveStatic } from "../support/staticServer.js";
 
-const root = path.resolve(
+const server = await serveStatic(
   process.env.IOS_TEST_WEB_ROOT ?? "ios/routevn/routevn/web",
 );
-const mimeTypes = {
-  ".html": "text/html",
-  ".js": "text/javascript",
-  ".css": "text/css",
-  ".json": "application/json",
-  ".svg": "image/svg+xml",
-  ".wasm": "application/wasm",
-};
-const server = createServer(async (request, response) => {
-  const pathname = new URL(request.url, "http://localhost").pathname;
-  const filename = path.resolve(root, `.${pathname}`);
-  if (!filename.startsWith(`${root}${path.sep}`)) {
-    response.writeHead(403).end();
-    return;
-  }
-  try {
-    const body = await readFile(filename);
-    response.setHeader(
-      "Content-Type",
-      mimeTypes[path.extname(filename)] ?? "application/octet-stream",
-    );
-    response.end(body);
-  } catch {
-    response.writeHead(404).end();
-  }
-});
-await new Promise((resolve) => server.listen(0, "127.0.0.1", resolve));
 
 try {
   for (const browserType of [chromium, webkit]) {
@@ -106,9 +77,7 @@ try {
             },
           };
         }, scenario);
-        await page.goto(
-          `http://127.0.0.1:${server.address().port}/ios/index.html`,
-        );
+        await page.goto(`${server.origin}/ios/index.html`);
         if (scenario.configured) {
           await page.locator("rvn-projects").waitFor({ state: "attached" });
           await page.waitForFunction(() =>

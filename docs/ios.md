@@ -59,11 +59,11 @@ bun run ios:devices
 - `scripts/ios.sh`: command-line build/install/launch helper.
 - `ios/routevn`: native iOS project.
 
-The iOS HTML loads `construct-style-sheets-polyfill` before Rettangoli so
-WebKit on iOS 16.0–16.3 can construct and adopt stylesheets. The iOS build and
-watch scripts copy the published polyfill into the local `/ios/` assets for
-offline startup. It is only loaded by `static/ios/index.html`; other platform
-entrypoints do not load it.
+The iOS, web, and desktop HTML load `construct-style-sheets-polyfill` before
+Rettangoli so WebKit before 16.4 (iOS 16.0–16.3 and older macOS) can construct
+and adopt stylesheets. `scripts/prepare-browser-assets.js` copies the published
+polyfill to `/public/adoptedStyleSheets.js` for offline startup; the build and
+watch scripts run it. Android WebView does not need it.
 
 Asset uploads use Web Crypto for SHA-256 when available and the bundled
 `@noble/hashes` implementation otherwise. The LAN HTTP watch URL does not expose
@@ -194,7 +194,7 @@ source snapshot so the shared `_site` output is not replaced underneath watch:
 
 ```bash
 bun run build:ios
-release_dir=".artifacts/ios-release/1.17.0-9"
+release_dir=".artifacts/ios-release/1.17.1-10"
 mkdir -p "$release_dir"
 xcodebuild -project ios/routevn/routevn.xcodeproj -scheme routevn \
   -configuration Release -sdk iphoneos -destination 'generic/platform=iOS' \

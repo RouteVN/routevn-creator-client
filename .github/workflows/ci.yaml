@@ -75,9 +75,7 @@ jobs:
       - name: Build Web
         run: bun run build:web
 
-      - name: Desktop startup regression test
+      - name: Desktop startup regression tests
         run: |
           bun run build:tauri
-          node tests/tauri/startup.browser.mjs
-          node tests/tauri/theme.browser.mjs
-          node tests/tauri/cssCompatibility.browser.mjs
+          bun run test:desktop-startup

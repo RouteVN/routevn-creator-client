@@ -55,7 +55,7 @@ describe("iPhone development workflow", () => {
     await mkdir(join(cwd, "static/ios"), { recursive: true });
     await writeFile(
       join(cwd, "static/ios/index.html"),
-      '<html><head><script src="/ios/adoptedStyleSheets.js"></script></head><body>Project One</body></html>',
+      '<html><head><script src="/public/adoptedStyleSheets.js"></script></head><body>Project One</body></html>',
     );
     const token = "test-command-token";
     const server = await createServer({
@@ -79,7 +79,7 @@ describe("iPhone development workflow", () => {
     await writeFile(statePath, JSON.stringify({ url: origin, token }));
     const html = await (await fetch(`${origin}/ios/index.html`)).text();
     expect(html).toContain("/@vite/client");
-    expect(html).toContain("/ios/adoptedStyleSheets.js");
+    expect(html).toContain("/public/adoptedStyleSheets.js");
     expect(
       (await fetch(`${origin}/__routevn_ios_dev/refresh`, { method: "POST" }))
         .status,
