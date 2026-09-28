@@ -96,6 +96,11 @@ const settingsItems = [
     name: "Config",
     path: "/project/config",
   },
+  {
+    id: "tutorials",
+    name: "Tutorials",
+    path: "/project/tutorials",
+  },
   // {
   //   id: "user",
   //   name: "User",

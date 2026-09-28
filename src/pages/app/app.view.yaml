@@ -78,6 +78,8 @@ template:
                   - rvn-about: []
                 $elif currentRoutePattern == "/project/config":
                   - rvn-config: []
+                $elif currentRoutePattern == "/project/tutorials":
+                  - rvn-tutorials: []
                 $elif currentRoutePattern == "/project/asset-package":
                   - rvn-asset-package: []
                 $elif currentRoutePattern == "/project/user":

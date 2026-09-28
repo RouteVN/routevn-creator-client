@@ -1,0 +1,4 @@
+componentName: rvn-tutorials
+propsSchema:
+  type: object
+  properties: {}

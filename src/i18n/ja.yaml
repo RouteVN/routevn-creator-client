@@ -611,6 +611,7 @@ resourceTypes:
   videos: "動画"
   about: "情報"
   config: "環境設定"
+  tutorials: "チュートリアル"
   assetPackage: "アセットパッケージ"
   versions: "バージョン"
   webServer: "Webサーバー"
@@ -2366,6 +2367,10 @@ aboutPage:
   contactTitle: "お問い合わせ"
   title: "情報"
   versionInformationTitle: "バージョン情報"
+tutorialsPage:
+  title: "チュートリアル"
+  description: "ステップごとの動画で RouteVN Creator の使い方を学べます。"
+  watchTutorialsButton: "動画チュートリアルを見る"
 settingsUserPage:
   placeholderMessage: "ユーザー設定の内容はここに表示されます"
   placeholderNote: "これはユーザー設定画面のプレースホルダーです"
