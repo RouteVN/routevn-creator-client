@@ -5713,7 +5713,7 @@ dependencies = [
 [[package]]
 name = "tauri-plugin-sql"
 version = "2.3.2-patched.1"
-source = "git+https://github.com/han4wluc/plugins-workspace.git?rev=4f9cdc691a68655688caf8d82f6c510cea793ce2#4f9cdc691a68655688caf8d82f6c510cea793ce2"
+source = "git+https://github.com/han4wluc/plugins-workspace.git?rev=8d06eabf5159a13ef90cf8a2e3433bf43063b34c#8d06eabf5159a13ef90cf8a2e3433bf43063b34c"
 dependencies = [
  "futures-core",
  "indexmap 2.12.0",
