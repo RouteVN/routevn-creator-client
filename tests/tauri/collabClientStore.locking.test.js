@@ -259,7 +259,7 @@ describe("tauri collab client store locking", () => {
     await store.close();
   });
 
-  it("recovers a commit retry that loses transaction state", async () => {
+  it("retries a locked commit and reports a lost transaction as an error", async () => {
     vi.useFakeTimers();
     const fakeDb = {
       execute: vi
@@ -279,16 +279,17 @@ describe("tauri collab client store locking", () => {
       sql: "COMMIT",
       retryDelaysMs: [10],
     });
+    const outcome = expect(pending).rejects.toThrow("no transaction is active");
 
     await Promise.resolve();
     expect(fakeDb.execute).toHaveBeenCalledTimes(1);
 
     await vi.advanceTimersByTimeAsync(10);
-    await expect(pending).resolves.toEqual({ rowsAffected: 0 });
+    await outcome;
     expect(fakeDb.execute).toHaveBeenCalledTimes(2);
   });
 
-  it("recovers a commit that reports no active transaction immediately", async () => {
+  it("does not treat a commit without an active transaction as committed", async () => {
     const fakeDb = {
       execute: vi
         .fn()
@@ -306,7 +307,7 @@ describe("tauri collab client store locking", () => {
         db: fakeDb,
         sql: "COMMIT",
       }),
-    ).resolves.toEqual({ rowsAffected: 0 });
+    ).rejects.toThrow("no transaction is active");
     expect(fakeDb.execute).toHaveBeenCalledTimes(1);
   });
 
