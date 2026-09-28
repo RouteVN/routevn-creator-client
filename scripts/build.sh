@@ -92,6 +92,8 @@ else
   echo "Rettangoli UI v${RETTANGOLI_VERSION} already exists."
 fi
 
+node scripts/prepare-browser-assets.js
+
 # Clean and prepare site directory
 rm -rf _site
 mkdir -p _site

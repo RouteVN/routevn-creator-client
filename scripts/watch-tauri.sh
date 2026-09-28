@@ -10,6 +10,7 @@ if [ ! -x "${RTGL_BIN}" ]; then
 fi
 
 echo "Preparing Tauri watch static assets..."
+node scripts/prepare-browser-assets.js
 mkdir -p _site
 cp -rf static/. _site/
 
