@@ -35,8 +35,7 @@ git.
 security find-identity -v -p codesigning
 ```
 
-3. Copy `.env.example` to `.env`.
-4. Fill in local-only values:
+3. Create the Git-ignored `.env` in the repository root with your local values:
 
 ```env
 APPLE_SIGNING_IDENTITY="Developer ID Application: Example Company, Inc. (TEAMID1234)"

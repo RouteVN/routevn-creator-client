@@ -1,3 +1,4 @@
+import "./deps/clients/tauri/errorReporting.js";
 import { createGlobalUI } from "@rettangoli/ui";
 
 import { getVersion } from "@tauri-apps/api/app";

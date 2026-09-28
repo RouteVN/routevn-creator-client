@@ -38,8 +38,8 @@ android {
         applicationId = "com.routevn.creator"
         minSdk = 24
         targetSdk = 37
-        versionCode = 12
-        versionName = "1.16.2"
+        versionCode = 13
+        versionName = "1.17.0"
         buildConfigField("String", "UPDATE_DISTRIBUTION", javaString(routevnDistribution))
         manifestPlaceholders["usesCleartextTraffic"] = "false"
     }

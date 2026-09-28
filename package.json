@@ -22,10 +22,11 @@
     "@lexical/selection": "0.22.0",
     "@lexical/utils": "0.22.0",
     "@noble/hashes": "2.4.0",
-    "@rettangoli/fe": "1.4.1",
+    "@rettangoli/fe": "1.4.3",
     "@rettangoli/ui": "1.22.5",
     "@rettangoli/vt": "1.1.0",
     "@routevn/creator-model": "1.15.0",
+    "@sentry/browser": "10.44.0",
     "@tauri-apps/api": "2.11.0",
     "@tauri-apps/plugin-dialog": "2.4.2",
     "@tauri-apps/plugin-fs": "2.5.1",
@@ -55,6 +56,7 @@
   },
   "scripts": {
     "test:updates": "vitest run tests/updates",
+    "test:error-reporting": "vitest run tests/errorReporting",
     "build:bundle": "vite build --config scripts/vite.bundle.config.js && vite build --config scripts/vite.player-runtime-host.config.js",
     "build:web": "./scripts/build.sh web",
     "build:tauri": "./scripts/build.sh tauri",
@@ -123,7 +125,7 @@
     "oxlint": "1.65.0",
     "prettier": "3.6.2",
     "puty": "0.1.2",
-    "rtgl": "2.1.2",
+    "rtgl": "2.1.5",
     "vitest": "3.2.4"
   },
   "overrides": {
