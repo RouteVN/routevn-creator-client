@@ -19,6 +19,7 @@ describe("desktop error reporting", () => {
       maxBreadcrumbs: 0,
       sendClientReports: false,
       enableLogs: false,
+      enableMetrics: false,
     });
   });
 

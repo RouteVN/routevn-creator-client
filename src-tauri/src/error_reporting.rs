@@ -1,3 +1,4 @@
+use std::sync::atomic::{AtomicUsize, Ordering};
 use std::time::Duration;
 
 use sentry::integrations::backtrace::ProcessStacktraceIntegration;
@@ -5,6 +6,9 @@ use sentry::integrations::panic::PanicIntegration;
 use sentry::protocol::{Event, Frame, Mechanism, Stacktrace};
 
 const RELEASE: &str = concat!("routevn-creator@", env!("CARGO_PKG_VERSION"));
+// Matches the webview limit; the panic hook also blocks while each event is sent.
+const MAX_EVENTS_PER_SESSION: usize = 10;
+static SENT_EVENTS: AtomicUsize = AtomicUsize::new(0);
 
 fn safe_identifier(value: &str) -> Option<String> {
     (value.len() <= 200
@@ -45,7 +49,7 @@ fn scrub_event(event: Event<'static>) -> Event<'static> {
         event_id: event.event_id,
         level: event.level,
         timestamp: event.timestamp,
-        platform: "rust".into(),
+        platform: event.platform,
         release: Some(RELEASE.into()),
         environment: Some(env!("ROUTEVN_SENTRY_ENVIRONMENT").into()),
         dist: Some(env!("ROUTEVN_BUILD_ID").into()),
@@ -75,6 +79,11 @@ fn scrub_event(event: Event<'static>) -> Event<'static> {
     safe
 }
 
+fn send_event(event: Event<'static>) -> Option<Event<'static>> {
+    (SENT_EVENTS.fetch_add(1, Ordering::Relaxed) < MAX_EVENTS_PER_SESSION)
+        .then(|| scrub_event(event))
+}
+
 pub fn webview_init_script() -> String {
     let config = serde_json::json!({
         "dsn": env!("ROUTEVN_SENTRY_DSN"),
@@ -82,8 +91,9 @@ pub fn webview_init_script() -> String {
         "environment": env!("ROUTEVN_SENTRY_ENVIRONMENT"),
         "dist": env!("ROUTEVN_BUILD_ID"),
     });
+    // Tauri appends this to its IPC bootstrap without a separator.
     format!(
-        "Object.defineProperty(window, '__ROUTEVN_ERROR_REPORTING__', {{ value: Object.freeze({config}) }});"
+        ";\nObject.defineProperty(window, '__ROUTEVN_ERROR_REPORTING__', {{ value: Object.freeze({config}) }});\n"
     )
 }
 
@@ -100,7 +110,7 @@ pub fn init() -> sentry::ClientInitGuard {
         .default_integrations(false)
         .add_integration(PanicIntegration::new())
         .add_integration(ProcessStacktraceIntegration::new())
-        .before_send(|event| Some(scrub_event(event)))
+        .before_send(send_event)
         .shutdown_timeout(Duration::from_secs(2));
 
     sentry::init(options)
@@ -160,6 +170,15 @@ mod tests {
         assert!(!encoded.contains("password"));
         assert!(encoded.contains("main.rs"));
         assert!(encoded.contains("Rust panic"));
+    }
+
+    #[test]
+    fn stops_sending_after_the_session_limit() {
+        let sent: Vec<_> = (0..MAX_EVENTS_PER_SESSION + 2)
+            .map(|_| send_event(Event::default()))
+            .collect();
+        assert!(sent[0].is_some());
+        assert!(sent[MAX_EVENTS_PER_SESSION..].iter().all(Option::is_none));
     }
 
     #[test]

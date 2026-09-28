@@ -90,6 +90,7 @@ if (dsn) {
     integrations: [globalHandlersIntegration(), dedupeIntegration()],
     sendClientReports: false,
     enableLogs: false,
+    enableMetrics: false,
     beforeSend: sendErrorEvent,
   });
 }

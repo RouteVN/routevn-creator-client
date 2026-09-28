@@ -12,7 +12,17 @@ fn release_build_id() -> String {
     // Builds without Git metadata, such as the Docker AppImage build, pass the
     // revision in explicitly.
     println!("cargo:rerun-if-env-changed=ROUTEVN_BUILD_ID");
-    if let Ok(build_id) = std::env::var("ROUTEVN_BUILD_ID") {
+    if let Some(build_id) = std::env::var("ROUTEVN_BUILD_ID")
+        .ok()
+        .filter(|build_id| !build_id.is_empty())
+    {
+        assert!(
+            build_id.len() <= 64
+                && build_id
+                    .bytes()
+                    .all(|byte| byte.is_ascii_alphanumeric() || b"._-".contains(&byte)),
+            "ROUTEVN_BUILD_ID must be at most 64 ASCII letters, digits, '.', '_' or '-'"
+        );
         return build_id;
     }
     // Watch HEAD and its reflog instead of the branch ref file, which is removed
@@ -55,11 +65,18 @@ fn main() {
         };
         // The SDK panics at startup on a DSN it cannot parse, so reject it here.
         let parsed: Dsn = dsn.parse().expect("Invalid ROUTEVN_SENTRY_DSN");
-        // The webview CSP allows local connections only to 127.0.0.1.
-        assert!(
-            production || (parsed.scheme() == Scheme::Http && parsed.host() == "127.0.0.1"),
-            "Development error reporting must use the local API on http://127.0.0.1"
-        );
+        if production {
+            assert!(
+                parsed.scheme() == Scheme::Https,
+                "Production error reporting must use an HTTPS DSN"
+            );
+        } else {
+            // The webview CSP allows local connections only to 127.0.0.1.
+            assert!(
+                parsed.scheme() == Scheme::Http && parsed.host() == "127.0.0.1",
+                "Development error reporting must use the local API on http://127.0.0.1"
+            );
+        }
         let build_id = if production {
             release_build_id()
         } else {
