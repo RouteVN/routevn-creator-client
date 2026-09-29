@@ -2,8 +2,11 @@ use std::sync::atomic::{AtomicUsize, Ordering};
 use std::time::Duration;
 
 use sentry::integrations::backtrace::ProcessStacktraceIntegration;
+use sentry::integrations::debug_images::DebugImagesIntegration;
 use sentry::integrations::panic::PanicIntegration;
-use sentry::protocol::{Event, Frame, Mechanism, Stacktrace};
+use sentry::protocol::{
+    DebugImage, DebugMeta, Event, Frame, Mechanism, Stacktrace, SymbolicDebugImage,
+};
 
 const RELEASE: &str = concat!("routevn-creator@", env!("CARGO_PKG_VERSION"));
 // Matches the webview limit; the panic hook also blocks while each event is sent.
@@ -27,6 +30,50 @@ fn safe_filename(value: &str) -> Option<String> {
             .bytes()
             .all(|byte| byte.is_ascii_alphanumeric() || b"_.-".contains(&byte)))
     .then(|| basename.to_owned())
+}
+
+// Image names are file paths; keep only a plain basename, which may have spaces.
+fn safe_image_name(value: &str) -> Option<String> {
+    let basename = value.rsplit(['/', '\\']).next()?;
+    (basename.len() <= 120
+        && !basename.is_empty()
+        && basename
+            .bytes()
+            .all(|byte| byte.is_ascii_alphanumeric() || b" _.-".contains(&byte)))
+    .then(|| basename.to_owned())
+}
+
+// Keep the loaded images that a sent frame points into, so its address can be
+// matched to that build's symbols by debug ID. Paths are reduced to basenames.
+fn scrub_debug_meta(debug_meta: &DebugMeta, addresses: &[u64]) -> DebugMeta {
+    let images = debug_meta
+        .images
+        .iter()
+        .filter_map(|image| match image {
+            DebugImage::Symbolic(image) => {
+                let start = image.image_addr.0;
+                addresses
+                    .iter()
+                    .any(|address| {
+                        address
+                            .checked_sub(start)
+                            .is_some_and(|offset| offset < image.image_size)
+                    })
+                    .then(|| {
+                        DebugImage::Symbolic(SymbolicDebugImage {
+                            name: safe_image_name(&image.name).unwrap_or_default(),
+                            debug_file: image.debug_file.as_deref().and_then(safe_image_name),
+                            ..image.clone()
+                        })
+                    })
+            }
+            _ => None,
+        })
+        .collect();
+    DebugMeta {
+        images,
+        ..DebugMeta::default()
+    }
 }
 
 fn scrub_stacktrace(stacktrace: &mut Stacktrace) {
@@ -76,6 +123,16 @@ fn scrub_event(event: Event<'static>) -> Event<'static> {
     if let Some(stacktrace) = &mut safe.stacktrace {
         scrub_stacktrace(stacktrace);
     }
+    let addresses: Vec<u64> = safe
+        .exception
+        .values
+        .iter()
+        .filter_map(|exception| exception.stacktrace.as_ref())
+        .chain(safe.stacktrace.as_ref())
+        .flat_map(|stacktrace| &stacktrace.frames)
+        .filter_map(|frame| frame.instruction_addr.map(|address| address.0))
+        .collect();
+    safe.debug_meta = std::borrow::Cow::Owned(scrub_debug_meta(&event.debug_meta, &addresses));
     safe
 }
 
@@ -110,6 +167,9 @@ pub fn init() -> sentry::ClientInitGuard {
         .default_integrations(false)
         .add_integration(PanicIntegration::new())
         .add_integration(ProcessStacktraceIntegration::new())
+        // Attaches the loaded images' debug IDs, which match the kept dSYM, PDB
+        // or debug file of the build that crashed.
+        .add_integration(DebugImagesIntegration::new())
         .before_send(send_event)
         .shutdown_timeout(Duration::from_secs(2));
 
@@ -119,7 +179,8 @@ pub fn init() -> sentry::ClientInitGuard {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use sentry::protocol::{Exception, User};
+    use sentry::protocol::{Addr, Exception, User};
+    use sentry::types::DebugId;
 
     #[test]
     fn removes_untrusted_panic_details() {
@@ -170,6 +231,60 @@ mod tests {
         assert!(!encoded.contains("password"));
         assert!(encoded.contains("main.rs"));
         assert!(encoded.contains("Rust panic"));
+    }
+
+    #[test]
+    fn keeps_only_the_images_sent_frames_point_into() {
+        let image = |name: &str, start: u64, id: &str| {
+            DebugImage::Symbolic(SymbolicDebugImage {
+                name: name.to_owned(),
+                arch: Some("arm64".to_owned()),
+                image_addr: Addr(start),
+                image_size: 0x1000,
+                image_vmaddr: Addr(0),
+                id: id.parse::<DebugId>().unwrap(),
+                code_id: None,
+                debug_file: Some(format!("{name}.pdb")),
+            })
+        };
+        let mut event = Event::default();
+        event.debug_meta = std::borrow::Cow::Owned(DebugMeta {
+            images: vec![
+                image(
+                    "/Users/user@example.com/RouteVN Creator.app/Contents/MacOS/RouteVN Creator",
+                    0x10000,
+                    "0f6b1c3e-2a4d-4c8b-9e7f-1a2b3c4d5e6f",
+                ),
+                image(
+                    "/usr/lib/libunrelated.dylib",
+                    0x90000,
+                    "11111111-2222-4333-8444-555555555555",
+                ),
+            ],
+            ..DebugMeta::default()
+        });
+        event.exception.values.push(Exception {
+            ty: "Panic".to_owned(),
+            stacktrace: Some(Stacktrace {
+                frames: vec![Frame {
+                    instruction_addr: Some(Addr(0x10400)),
+                    ..Frame::default()
+                }],
+                ..Stacktrace::default()
+            }),
+            ..Exception::default()
+        });
+
+        let safe = scrub_event(event);
+        let [DebugImage::Symbolic(kept)] = safe.debug_meta.images.as_slice() else {
+            panic!("expected one symbolic image");
+        };
+        assert_eq!(kept.name, "RouteVN Creator");
+        assert_eq!(kept.debug_file.as_deref(), Some("RouteVN Creator.pdb"));
+        assert_eq!(kept.id.to_string(), "0f6b1c3e-2a4d-4c8b-9e7f-1a2b3c4d5e6f");
+        let encoded = serde_json::to_string(&safe).unwrap();
+        assert!(!encoded.contains("user@example.com"));
+        assert!(!encoded.contains("libunrelated"));
     }
 
     #[test]
