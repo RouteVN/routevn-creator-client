@@ -1,3 +1,5 @@
+import java.net.URI
+
 plugins {
     id("com.android.application")
 }
@@ -23,16 +25,29 @@ require(routevnDistribution in setOf("direct", "google-play")) {
 // Native crash reports go to the same public collector as the desktop app.
 // Release builds always use the production DSN. Debug builds report only when
 // `-ProutevnSentryDsn=<dsn>` is passed, for local collector checks.
-val productionSentryDsn: String by lazy {
-    val dsn = repoRoot.resolve(".env.production").readLines()
-        .firstOrNull { it.startsWith("ROUTEVN_SENTRY_DSN=") }
-        ?.substringAfter("=")
-        ?.trim()
-        ?.trim('"')
-    require(!dsn.isNullOrBlank()) { "ROUTEVN_SENTRY_DSN must be set in .env.production" }
-    dsn
+fun validatedSentryDsn(dsn: String, production: Boolean): String {
+    val uri = runCatching { URI(dsn) }.getOrNull()
+    val schemes = if (production) setOf("https") else setOf("http", "https")
+    require(
+        uri != null && uri.scheme in schemes && !uri.host.isNullOrBlank() &&
+            !uri.rawUserInfo?.substringBefore(":").isNullOrBlank() &&
+            uri.rawPath?.substringAfterLast("/")?.matches(Regex("[0-9]+")) == true &&
+            uri.rawQuery == null && uri.rawFragment == null &&
+            (uri.port == -1 || uri.port in 1..65535) && dsn.none { it.isWhitespace() }
+    ) { "Invalid ROUTEVN_SENTRY_DSN: expected a Sentry DSN (HTTPS required for Release)" }
+    return dsn
 }
-val debugSentryDsn = providers.gradleProperty("routevnSentryDsn").orElse("").get()
+
+val productionSentryDsn: String by lazy {
+    val entries = repoRoot.resolve(".env.production").readLines()
+        .mapNotNull { Regex("\\s*ROUTEVN_SENTRY_DSN\\s*=\\s*(.*?)\\s*").matchEntire(it)?.groupValues?.get(1) }
+    require(entries.size == 1) { "Set ROUTEVN_SENTRY_DSN exactly once in .env.production" }
+    val dsn = entries.single().removeSurrounding("\"").removeSurrounding("'")
+    validatedSentryDsn(dsn, production = true)
+}
+val debugSentryDsn = providers.gradleProperty("routevnSentryDsn").orElse("").get().let {
+    if (it.isEmpty()) it else validatedSentryDsn(it, production = false)
+}
 
 fun javaString(value: String) = "\"" + value.replace("\\", "\\\\").replace("\"", "\\\"") + "\""
 
