@@ -19,6 +19,16 @@ RETTANGOLI_FILE="${RETTANGOLI_DIR}/rettangoli-iife-ui.min.js"
 LOCK_FILE="/tmp/routevn-creator-client-build.lock"
 RTGL_BIN="node_modules/.bin/rtgl"
 
+# Opt-in source maps for symbolicating error reports. The app bundle gets a
+# debug ID and its maps are moved to SOURCEMAP_DIR before _site is copied into
+# or embedded in any app, so maps are never shipped.
+ROUTEVN_SOURCEMAPS=${ROUTEVN_SOURCEMAPS:-0}
+if [ "${ROUTEVN_SOURCEMAPS}" != 0 ] && [ "${ROUTEVN_SOURCEMAPS}" != 1 ]; then
+  echo "Error: ROUTEVN_SOURCEMAPS must be 0 or 1."
+  exit 1
+fi
+SOURCEMAP_DIR=${ROUTEVN_SOURCEMAP_DIR:-.artifacts/sourcemaps/${BUILD_TYPE}}
+
 echo "Building for ${BUILD_TYPE}..."
 
 if [ ! -x "${RTGL_BIN}" ]; then
@@ -132,7 +142,27 @@ fi
 
 # Build frontend bundle
 echo "Building frontend bundle with ${SETUP_FILE}..."
-"${RTGL_BIN}" fe build -s "${SETUP_FILE}"
+FE_BUILD_ARGS=(-s "${SETUP_FILE}")
+if [ "${ROUTEVN_SOURCEMAPS}" = 1 ]; then
+  FE_BUILD_ARGS+=(--sourcemap hidden)
+fi
+"${RTGL_BIN}" fe build "${FE_BUILD_ARGS[@]}"
+
+if [ "${ROUTEVN_SOURCEMAPS}" = 1 ]; then
+  # Only the default directory is cleared; a caller's directory must be empty.
+  if [ -z "${ROUTEVN_SOURCEMAP_DIR:-}" ]; then
+    rm -rf "${SOURCEMAP_DIR}"
+  elif [ -n "$(ls -A "${SOURCEMAP_DIR}" 2>/dev/null)" ]; then
+    echo "Error: ROUTEVN_SOURCEMAP_DIR must be empty or absent."
+    exit 1
+  fi
+  node scripts/inject-debug-ids.js _site "${SOURCEMAP_DIR}"
+fi
+
+if [ -n "$(find _site -name '*.map' -print -quit)" ]; then
+  echo "Error: source maps must not be shipped in _site."
+  exit 1
+fi
 
 # Prevent stale browser caches from serving an old /public/main.js bundle.
 BUILD_REV=$(date +%s)

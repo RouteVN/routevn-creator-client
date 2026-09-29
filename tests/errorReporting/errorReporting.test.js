@@ -263,4 +263,45 @@ describe("explicit error reporting through the SDK", () => {
     });
     expect(getClient().getOptions().dist).toBe("0123456789ab");
   });
+
+  it("keeps source map debug IDs only for files in the sent stack", async () => {
+    const mainDebugId = "0F6B1C3E-2A4D-4C8B-9E7F-1A2B3C4D5E6F";
+    // Registered the way the injected build snippet does: stack -> debug ID.
+    globalThis._sentryDebugIds = {
+      "Error\n    at https://app.test/public/main.js?v=1:1:10": mainDebugId,
+      "Error\n    at https://app.test/public/chunks/other-abc.js:1:10":
+        "11111111-2222-4333-8444-555555555555",
+    };
+    try {
+      const reporter = createErrorReporter({
+        dsn: TEST_DSN,
+        runtime: "web",
+        captureGlobal: false,
+      });
+      const events = collectSentEvents();
+      const error = new Error("secret");
+      error.stack =
+        "Error: secret\n    at openProject (https://app.test/public/main.js?v=1:1:2048)";
+
+      reporter.capture(error, { operation: "route.projectOpen" });
+      await reporter.flush();
+
+      expect(events).toHaveLength(1);
+      expect(events[0].exception.values[0].stacktrace.frames).toMatchObject([
+        { filename: "main.js", function: "openProject", lineno: 1, colno: 2048 },
+      ]);
+      expect(events[0].debug_meta).toEqual({
+        images: [
+          {
+            type: "sourcemap",
+            code_file: "main.js",
+            debug_id: mainDebugId.toLowerCase(),
+          },
+        ],
+      });
+      expect(JSON.stringify(events)).not.toContain("app.test");
+    } finally {
+      delete globalThis._sentryDebugIds;
+    }
+  });
 });

@@ -47,6 +47,38 @@ const scrubStacktrace = (stacktrace) => {
   };
 };
 
+const DEBUG_ID_PATTERN =
+  /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+
+// Keep the source map debug IDs of files in the sent stack, with the same
+// basename as their frames, so frames can be matched to the build's private
+// source maps. Other images are dropped.
+const scrubDebugMeta = (debugMeta, exceptions) => {
+  const filenames = new Set();
+  for (const exception of exceptions ?? []) {
+    for (const frame of exception.stacktrace?.frames ?? []) {
+      filenames.add(frame.filename);
+    }
+  }
+
+  const images = [];
+  for (const image of debugMeta?.images ?? []) {
+    const codeFile = safeFilename(image.code_file);
+    if (
+      image.type === "sourcemap" &&
+      filenames.has(codeFile) &&
+      DEBUG_ID_PATTERN.test(image.debug_id ?? "")
+    ) {
+      images.push({
+        type: "sourcemap",
+        code_file: codeFile,
+        debug_id: image.debug_id.toLowerCase(),
+      });
+    }
+  }
+  return images.length > 0 ? { images } : undefined;
+};
+
 const scrubMechanism = (mechanism) =>
   mechanism
     ? { type: safeIdentifier(mechanism.type), handled: mechanism.handled }
@@ -101,6 +133,12 @@ export const createErrorReporter = ({
     const values = event.exception?.values;
     const handled = values?.some((exception) => exception.mechanism?.handled);
     const message = handled ? HANDLED_MESSAGE : UNHANDLED_MESSAGE;
+    const exceptions = values?.map((exception) => ({
+      type: safeIdentifier(exception.type) ?? "UnknownError",
+      value: message,
+      mechanism: scrubMechanism(exception.mechanism),
+      stacktrace: scrubStacktrace(exception.stacktrace),
+    }));
     return {
       event_id: event.event_id,
       timestamp: event.timestamp,
@@ -111,16 +149,8 @@ export const createErrorReporter = ({
       dist,
       tags: scrubTags(event.tags),
       message,
-      exception: values
-        ? {
-            values: values.map((exception) => ({
-              type: safeIdentifier(exception.type) ?? "UnknownError",
-              value: message,
-              mechanism: scrubMechanism(exception.mechanism),
-              stacktrace: scrubStacktrace(exception.stacktrace),
-            })),
-          }
-        : undefined,
+      exception: exceptions ? { values: exceptions } : undefined,
+      debug_meta: scrubDebugMeta(event.debug_meta, exceptions),
     };
   };
 
