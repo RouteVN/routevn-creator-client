@@ -52,9 +52,32 @@ and a build ID as `dist`. Production builds use the 12-character Git revision,
 or `ROUTEVN_BUILD_ID` when set to a non-empty value of at most 64 ASCII
 letters, digits, `.`, `_`, or `-`. The Docker AppImage build passes the host
 revision this way because its source copy has no `.git`. Development builds use
-`local`. The current collector has no symbolication; builds do not upload source
-maps. Keep release and build identifiers so future tooling can match a report
-to its build.
+`local`. Keep release and build identifiers so tooling can match a report to
+its build.
+
+## Source maps
+
+JavaScript stacks from release bundles are minified. Set `ROUTEVN_SOURCEMAPS=1`
+for `scripts/build.sh` (any target) to keep hidden source maps for the app
+bundle and its chunks:
+
+- `rtgl fe build --sourcemap hidden` writes the maps without a
+  `sourceMappingURL` comment.
+- `scripts/inject-debug-ids.js` stamps each mapped bundle with a debug ID, the
+  convention the Sentry JavaScript SDK reads, and records the same ID in its
+  map. It then moves the maps to `ROUTEVN_SOURCEMAP_DIR` (default
+  `.artifacts/sourcemaps/<target>`, cleared on each build; a caller-supplied
+  directory must be empty) with `debug-ids.json` listing file → debug ID.
+- This happens before `_site` is copied into the Android or iOS app or embedded
+  by Tauri. Every build fails if any `.map` remains in `_site`, so maps are
+  never shipped.
+
+Each target (web, Tauri, Android, iOS) is a different bundle with different
+debug IDs, so keep the maps from the exact build that ships. Uploading them is
+the release pipeline's job. Reports carry the debug IDs in `debug_meta` as
+`sourcemap` images with basename file names, matching their frames. The player
+bundles in `static/bundle` run in exported games, which do not report errors,
+so they get no maps.
 
 ## Collection and privacy
 
