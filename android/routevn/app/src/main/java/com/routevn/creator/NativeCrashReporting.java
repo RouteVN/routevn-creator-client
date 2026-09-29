@@ -4,6 +4,7 @@ import android.content.Context;
 import android.util.Log;
 import io.sentry.Sentry;
 import io.sentry.android.core.SentryAndroid;
+import java.util.concurrent.ThreadFactory;
 
 /** Best-effort diagnostics must not delay or prevent the app from opening. */
 final class NativeCrashReporting {
@@ -15,9 +16,13 @@ final class NativeCrashReporting {
     }
 
     static void start(Runnable initializeSdk) {
+        start(initializeSdk, task -> new Thread(task, "RouteVNCrashReporting"));
+    }
+
+    static void start(Runnable initializeSdk, ThreadFactory threads) {
         // SDK startup may wait for cached crashes or native libraries. Never
         // run that work on the UI thread, and never retry a failed init here.
-        Thread worker = new Thread(() -> {
+        Runnable initialize = () -> {
             try {
                 initializeSdk.run();
             } catch (RuntimeException | LinkageError error) {
@@ -28,9 +33,15 @@ final class NativeCrashReporting {
                     Log.w("RouteVN", "Crash reporting cleanup failed.");
                 }
             }
-        }, "RouteVNCrashReporting");
-        worker.setDaemon(true);
-        worker.start();
+        };
+        try {
+            Thread worker = threads.newThread(initialize);
+            worker.setDaemon(true);
+            worker.start();
+        } catch (RuntimeException | LinkageError error) {
+            // No SDK has started, so there is nothing to close on the UI thread.
+            Log.w("RouteVN", "Crash reporting worker could not start; continuing without it.");
+        }
     }
 
     private static void initialize(Context context) {

@@ -42,8 +42,10 @@ There is no crash-free-rate metric because sessions are disabled.
 
 - Android initializes reporting once on a background thread. SDK cache-flush
   and native-library waits do not block `Application.onCreate`. Recoverable
-  initialization errors disable reporting for that launch; there is no retry
-  loop. Crashes before the background initializer finishes may be missed.
+  initialization errors, including worker creation/start failures, disable
+  reporting for that launch; there is no retry loop. Fatal VM errors such as
+  out-of-memory are not swallowed. Crashes before the background initializer
+  finishes may be missed.
 - Android's normal envelope cache and transport queue are each limited to ten
   entries. Connection and read timeouts are five seconds each, and the event
   flush timeout is one second. These are separate limits, not an overall
