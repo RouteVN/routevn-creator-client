@@ -49,10 +49,10 @@ elif [ ! -f "${RETTANGOLI_FILE}" ]; then
   cp "${LOCAL_RETTANGOLI_FILE}" "${RETTANGOLI_FILE}"
 fi
 
+node scripts/prepare-browser-assets.js
 rm -rf _site
 mkdir -p _site
 cp -rf static/* _site/
-cp node_modules/construct-style-sheets-polyfill/dist/adoptedStyleSheets.js _site/ios/adoptedStyleSheets.js
 
 "${RTGL_BIN}" ui build-svg
 mkdir -p _site/public

@@ -86,11 +86,7 @@
     }
 
     #${WINDOW_CHROME_ID}[data-focused="false"] {
-      color: color-mix(
-        in srgb,
-        #f5f5f5 62%,
-        transparent
-      );
+      color: rgba(245, 245, 245, 0.62);
     }
 
     #${WINDOW_CHROME_ID} .rvn-window-chrome-drag-region {
@@ -187,11 +183,7 @@
 
     #${WINDOW_CHROME_ID} .rvn-window-chrome-control:active {
       transition-duration: 0ms;
-      background-color: color-mix(
-        in srgb,
-        #f5f5f5 18%,
-        transparent
-      );
+      background-color: rgba(245, 245, 245, 0.18);
     }
 
     #${WINDOW_CHROME_ID} .rvn-window-chrome-control:focus-visible {

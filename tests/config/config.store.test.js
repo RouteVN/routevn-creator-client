@@ -61,12 +61,12 @@ describe("config store", () => {
 
     const viewData = selectViewData({ state, i18n: EN_I18N });
 
-    expect(viewData.themes[0].previewPrimary).toBe("oklch(0.9 0 0)");
-    expect(viewData.themes[0].previewInput).toBe("oklch(1 0 0 / 18%)");
-    expect(viewData.themes[1].previewPrimary).toBe("oklch(0.922 0 0)");
-    expect(viewData.themes[1].previewInput).toBe("oklch(1 0 0 / 15%)");
-    expect(viewData.themes[2].previewPrimary).toBe("oklch(0.32 0.018 250)");
-    expect(viewData.themes[2].previewInput).toBe("oklch(0.91 0.008 250)");
+    expect(viewData.themes[0].previewPrimary).toBe("oklch(90% 0 0)");
+    expect(viewData.themes[0].previewInput).toBe("oklch(100% 0 0 / 18%)");
+    expect(viewData.themes[1].previewPrimary).toBe("oklch(92.2% 0 0)");
+    expect(viewData.themes[1].previewInput).toBe("oklch(100% 0 0 / 15%)");
+    expect(viewData.themes[2].previewPrimary).toBe("oklch(32% 0.018 250)");
+    expect(viewData.themes[2].previewInput).toBe("oklch(91% 0.008 250)");
   });
 
   it.each([
