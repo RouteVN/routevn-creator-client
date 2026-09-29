@@ -82,7 +82,8 @@ styles:
   "[data-file-explorer-item='true']:hover .visibilityAction, .visibilityAction:focus-visible, .visibilityAction[data-always-visible='true']":
     opacity: "1"
 template:
-  - 'rtgl-view#root w=f h=f d=v sv style="min-width: 0; overflow-x: hidden;"':
+  # Touch holds are owned by this explorer's own recognizers.
+  - 'rtgl-view#root data-long-press-ignore=true w=f h=f d=v sv style="min-width: 0; overflow-x: hidden;"':
       - 'rtgl-view w=f h=1fg d=v g=sm pos=rel style="min-height: 0;"':
           - $if items.length == 0 && !noEmptyMessage:
               - rtgl-view#emptyMessage w=f h=1fg d=f av=c ah=c p=xl cur=pointer:
@@ -110,8 +111,11 @@ template:
                               - $if item.visibilityToggle:
                                   - 'button#visibilityRef${i}.visibilityAction type=button data-item-id=${item.id} data-file-explorer-action=true data-always-visible="${item.visibilityToggleAlwaysVisible}" aria-label="${item.visibilityLabel}" title="${item.visibilityLabel}" style="color: ${item.iconCssColor};"':
                                       - rtgl-svg svg=${item.visibilityIcon} wh=16 c=${item.iconColor} aria-hidden=true: null
-                              - $if item.showMenuAction:
-                                  - 'rtgl-button#itemMenuRef${i} data-item-id=${item.id} data-file-explorer-action=true sq s=sm v=gh pre=ellipsis aria-label="${itemActionsLabel}" title="${itemActionsLabel}" aria-haspopup=menu': null
+                          - $if item.showMenuAction:
+                              # The 24px button is too small to tap. This area spans the
+                              # row's height and right padding so nearby taps open the menu.
+                              - 'rtgl-view#itemMenuRef${i} data-item-id=${item.id} data-file-explorer-action=true d=h av=c ah=c cur=pointer style="flex: 0 0 auto; align-self: stretch; padding: 0 8px 0 12px; margin: -8px -8px -8px 0;"':
+                                  - 'rtgl-button sq s=sm v=gh pre=ellipsis aria-label="${itemActionsLabel}" title="${itemActionsLabel}" aria-haspopup=menu': null
                   - 'div#container style="width: 100%; height: ${bottomEmptySpaceHeight}; min-height: ${bottomEmptySpaceHeight}; flex: 0 0 ${bottomEmptySpaceHeight}; pointer-events: none;"': null
           - $if targetDragIndex != -2 && targetDropPosition != 'inside':
               - 'rtgl-view pos=abs bgc=fg h=2 style="top: ${targetDragPosition}px; left: ${targetDragLeftOffset}px; width: calc(100% - ${targetDragLeftOffset}px); z-index: 1000;"': null
