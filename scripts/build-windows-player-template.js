@@ -100,7 +100,7 @@ const ensureBuildTooling = async () => {
 };
 
 const stagePlayerFrontend = async () => {
-  const bundleMainJsPath = path.join(rootDir, "static/bundle/main.js");
+  const bundleMainJsPath = path.join(rootDir, "static/bundle/player-main.js");
   const persistenceHostPath = path.join(
     rootDir,
     "static/bundle/player-runtime-persistence-host.js",

@@ -450,6 +450,8 @@ public class MainActivity extends Activity {
             return;
         }
 
+        configureWebViewCrashReporting();
+
         webView.setWebViewClient(new RouteVNWebViewClient());
         webView.setWebChromeClient(new RouteVNWebChromeClient());
         webView.loadUrl(getInitialAppUrl());
@@ -579,6 +581,34 @@ public class MainActivity extends Activity {
         CookieManager cookieManager = CookieManager.getInstance();
         cookieManager.setAcceptCookie(true);
         cookieManager.setAcceptThirdPartyCookies(webView, false);
+    }
+
+    // Best effort: an older WebView without document-start scripts still runs
+    // the app, only without JavaScript crash reports.
+    private void configureWebViewCrashReporting() {
+        if (BuildConfig.SENTRY_DSN.isEmpty()) return;
+        if (!WebViewFeature.isFeatureSupported(WebViewFeature.DOCUMENT_START_SCRIPT)) {
+            Log.w(TAG, "WebView JavaScript crash reporting is unavailable on this WebView");
+            return;
+        }
+
+        try {
+            JSONObject config = new JSONObject();
+            config.put("dsn", BuildConfig.SENTRY_DSN);
+            config.put("release", "routevn-creator@" + BuildConfig.VERSION_NAME);
+            config.put("dist", String.valueOf(BuildConfig.VERSION_CODE));
+            config.put("environment", BuildConfig.SENTRY_ENVIRONMENT);
+            Set<String> origins = new HashSet<>();
+            origins.add(APP_ORIGIN);
+            if (shouldUseDebugDevServer()) origins.add(DEV_SERVER_ORIGIN);
+            WebViewCompat.addDocumentStartJavaScript(
+                webView,
+                "Object.defineProperty(window, '__ROUTEVN_ERROR_REPORTING__', { value: Object.freeze(" + config + ") });",
+                origins
+            );
+        } catch (JSONException error) {
+            throw new IllegalStateException("Invalid crash reporting configuration.", error);
+        }
     }
 
     private boolean configureSecureAndroidBridge() {

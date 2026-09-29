@@ -33,6 +33,7 @@ val productionSentryDsn: String by lazy {
     dsn
 }
 val debugSentryDsn = providers.gradleProperty("routevnSentryDsn").orElse("").get()
+val proguardUuid = java.util.UUID.randomUUID().toString()
 
 fun javaString(value: String) = "\"" + value.replace("\\", "\\\\").replace("\"", "\\\"") + "\""
 
@@ -56,6 +57,7 @@ android {
         versionName = "1.17.1"
         buildConfigField("String", "UPDATE_DISTRIBUTION", javaString(routevnDistribution))
         manifestPlaceholders["usesCleartextTraffic"] = "false"
+        manifestPlaceholders["proguardUuid"] = ""
     }
 
     signingConfigs {
@@ -79,6 +81,7 @@ android {
         release {
             buildConfigField("String", "SENTRY_DSN", javaString(productionSentryDsn))
             buildConfigField("String", "SENTRY_ENVIRONMENT", javaString("production"))
+            manifestPlaceholders["proguardUuid"] = proguardUuid
             // Keep native symbol tables so crash addresses can be decoded later.
             ndk { debugSymbolLevel = "SYMBOL_TABLE" }
             isMinifyEnabled = true
@@ -113,14 +116,29 @@ tasks.matching {
     dependsOn(buildAndroidRust)
 }
 
-// The collector does not decode stacks, so keep each release's R8 mapping and
-// native symbol tables. See docs/mobile-crash-reporting.md.
+// Keep the exact R8 mapping, UUID, and unstripped JNI libraries for this build.
 val archiveReleaseCrashSymbols by tasks.registering(Copy::class) {
     val version = "${android.defaultConfig.versionName}-${android.defaultConfig.versionCode}"
+    val symbolsDir = repoRoot.resolve(".artifacts/android-crash-symbols/$version")
     from(layout.buildDirectory.file("outputs/mapping/release/mapping.txt"))
     from(layout.buildDirectory.file("outputs/native-debug-symbols/release/native-debug-symbols.zip"))
-    into(repoRoot.resolve(".artifacts/android-crash-symbols/$version"))
+    from(repoRoot.resolve(".artifacts/android-rust")) {
+        include("*/release/libroutevn_exporter_jni.so")
+        into("native")
+    }
+    into(symbolsDir)
+    dependsOn(buildAndroidRust)
+    outputs.upToDateWhen { false }
+    doFirst { symbolsDir.deleteRecursively() }
+    doLast { symbolsDir.resolve("proguard-uuid.txt").writeText("$proguardUuid\n") }
 }
+
+// Project.exec is removed in Gradle 9, so the upload is its own Exec task.
+val uploadReleaseCrashSymbols by tasks.registering(Exec::class) {
+    workingDir = repoRoot
+    commandLine("bash", "scripts/upload-crash-symbols.sh", "android")
+}
+archiveReleaseCrashSymbols.configure { finalizedBy(uploadReleaseCrashSymbols) }
 
 tasks.matching { it.name == "bundleRelease" || it.name == "assembleRelease" }.configureEach {
     finalizedBy(archiveReleaseCrashSymbols)

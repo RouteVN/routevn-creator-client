@@ -13,7 +13,7 @@ export default defineConfig({
     outDir: path.resolve(rootDir, "static/bundle"),
     emptyOutDir: false,
     minify: "esbuild",
-    sourcemap: false,
+    sourcemap: process.env.ROUTEVN_CRASH_SYMBOLS === "1" ? "hidden" : false,
     target: "esnext",
     rollupOptions: {
       input: path.resolve(

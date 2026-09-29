@@ -1,3 +1,4 @@
+# syntax=docker/dockerfile:1
 FROM ubuntu:22.04
 
 ARG BUN_VERSION=1.3.11
@@ -19,6 +20,7 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     build-essential \
     pkg-config \
     git \
+    openssh-client \
     rsync \
     xz-utils \
     unzip \
@@ -48,6 +50,13 @@ RUN curl -fsSL "https://deb.nodesource.com/setup_${NODE_MAJOR}.x" | bash - \
 RUN curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs \
   | sh -s -- -y --profile minimal --default-toolchain "${RUST_TOOLCHAIN}" \
   && chmod -R a+rwx /opt/rustup /opt/cargo
+
+# Pin the uploader to a reviewed commit of RouteVN/routevn-observability, e.g.
+# `--build-arg ROUTEVN_SYMBOLS_REV=$(git -C ../routevn-observability rev-parse main)`.
+ARG ROUTEVN_SYMBOLS_REV
+RUN test -n "${ROUTEVN_SYMBOLS_REV}" || { echo "Set --build-arg ROUTEVN_SYMBOLS_REV to a routevn-observability commit" >&2; exit 1; }
+RUN --mount=type=ssh,required=true GIT_SSH_COMMAND='ssh -o StrictHostKeyChecking=accept-new' cargo install --locked \
+  --git ssh://git@github.com/RouteVN/routevn-observability --rev "${ROUTEVN_SYMBOLS_REV}" --bin routevn-symbols
 
 RUN curl -fsSL https://bun.sh/install | bash -s "bun-v${BUN_VERSION}" \
   && chmod -R a+rx /opt/bun \

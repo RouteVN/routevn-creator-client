@@ -18,8 +18,10 @@ breadcrumbs, screenshots, view hierarchies, swizzling, network tracking,
 performance tracing, client reports and replay are disabled. The aggregate
 `sentry-android` artifact is not used because it also ships replay.
 
-WebView JavaScript errors are separate: `appService.reportError` is a no-op on
-Android and iOS.
+Uncaught WebView JavaScript errors and unhandled rejections use the same
+privacy-scrubbed browser reporter as desktop, with the native release, dist,
+environment and DSN injected at document start. Each webview session sends at
+most 10 JavaScript events.
 
 ### Android WebView renderer loss
 
@@ -84,20 +86,36 @@ the client scrubbing is required.
 
 ## Symbols
 
-The collector does not decode stacks and has no symbol upload API. Keep each
-release's symbol files so reports can be decoded manually:
+Release builds retain matching JavaScript maps under
+`.artifacts/crash-symbols/<platform>/<release>-<dist>/js/`, outside packaged
+assets. They also retain native symbols:
 
 - **Android:** release builds keep line numbers
   (`-keepattributes SourceFile,LineNumberTable`) and native symbol tables
   (`debugSymbolLevel = "SYMBOL_TABLE"`). `bundleRelease`/`assembleRelease` copy
-  `mapping.txt` and `native-debug-symbols.zip` to
-  `.artifacts/android-crash-symbols/<versionName>-<versionCode>/`. Decode JVM
-  stacks with R8 `retrace` and native frames with `llvm-symbolizer`.
+  `mapping.txt`, its generated ProGuard UUID, unstripped JNI libraries, and
+  `native-debug-symbols.zip` to
+  `.artifacts/android-crash-symbols/<versionName>-<versionCode>/`.
+  The JNI libraries are built with full debug info (the crate's own
+  `[profile.release]`); Android Gradle strips the copy it packages, and the
+  unstripped copies are the ones archived and uploaded. After a real build,
+  confirm the packaged `.so` has no `.debug_info`
+  (`llvm-readelf -S libroutevn_exporter_jni.so`) and the same build ID as the
+  archived one (`llvm-readelf -n`).
 - **iOS:** keep the release `.xcarchive`; its `dSYMs/` folder matches the
-  shipped build. Decode frames with `atos`.
+  shipped build.
 
-`.artifacts/` is local and ignored by git. Copy each release's symbols to
-durable storage before cleaning it.
+The uploader writes `javascript` plus `cocoa` (iOS), or `javascript`, `java`,
+and `native` (Android) manifests to match the event platforms.
+
+Install `routevn-symbols` from the observability repository and set
+`ROUTEVN_SYMBOLS_AWS_PROFILE`. Android's `bundleRelease`/`assembleRelease`
+finalizer invokes the uploader. For iOS, run
+`ROUTEVN_CRASH_SYMBOLS=1 bun run build:ios`, archive as shown in
+[iOS release instructions](ios.md), then run
+`bash scripts/upload-crash-symbols.sh ios` before export. By default the
+uploader prints a plan; set `ROUTEVN_SYMBOLS_UPLOAD=1` to upload, with failures
+stopping the release. `.artifacts/` is local and ignored by git.
 
 ## Store disclosures
 

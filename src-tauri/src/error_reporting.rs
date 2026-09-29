@@ -1,9 +1,11 @@
+use std::borrow::Cow;
 use std::sync::atomic::{AtomicUsize, Ordering};
 use std::time::Duration;
 
 use sentry::integrations::backtrace::ProcessStacktraceIntegration;
+use sentry::integrations::debug_images::DebugImagesIntegration;
 use sentry::integrations::panic::PanicIntegration;
-use sentry::protocol::{Event, Frame, Mechanism, Stacktrace};
+use sentry::protocol::{DebugImage, DebugMeta, Event, Frame, Mechanism, Stacktrace};
 
 const RELEASE: &str = concat!("routevn-creator@", env!("CARGO_PKG_VERSION"));
 // Matches the webview limit; the panic hook also blocks while each event is sent.
@@ -44,18 +46,74 @@ fn scrub_stacktrace(stacktrace: &mut Stacktrace) {
     }
 }
 
+fn frame_addresses(stacktrace: Option<&Stacktrace>) -> Vec<u64> {
+    stacktrace
+        .map(|trace| {
+            trace
+                .frames
+                .iter()
+                .filter_map(|frame| frame.instruction_addr.map(|address| address.0))
+                .collect()
+        })
+        .unwrap_or_default()
+}
+
+fn scrub_image(image: &DebugImage, addresses: &[u64]) -> Option<DebugImage> {
+    let (start, size) = match image {
+        DebugImage::Apple(value) => (value.image_addr.0, value.image_size),
+        DebugImage::Symbolic(value) => (value.image_addr.0, value.image_size),
+        _ => return None,
+    };
+    if !addresses
+        .iter()
+        .any(|address| *address >= start && *address - start < size)
+    {
+        return None;
+    }
+    match image {
+        DebugImage::Apple(value) => {
+            let mut safe = value.clone();
+            safe.name = safe_filename(&value.name)?;
+            safe.cpu_type = None;
+            safe.cpu_subtype = None;
+            Some(DebugImage::Apple(safe))
+        }
+        DebugImage::Symbolic(value) => {
+            let mut safe = value.clone();
+            safe.name = safe_filename(&value.name)?;
+            safe.debug_file = value.debug_file.as_deref().and_then(safe_filename);
+            Some(DebugImage::Symbolic(safe))
+        }
+        _ => None,
+    }
+}
+
 fn scrub_event(event: Event<'static>) -> Event<'static> {
+    let mut addresses = frame_addresses(event.stacktrace.as_ref());
+    for exception in &event.exception.values {
+        addresses.extend(frame_addresses(exception.stacktrace.as_ref()));
+    }
+    let images = event
+        .debug_meta
+        .images
+        .iter()
+        .filter_map(|image| scrub_image(image, &addresses))
+        .collect();
     let mut safe = Event {
         event_id: event.event_id,
         level: event.level,
         timestamp: event.timestamp,
-        platform: event.platform,
+        platform: "native".into(),
         release: Some(RELEASE.into()),
         environment: Some(env!("ROUTEVN_SENTRY_ENVIRONMENT").into()),
         dist: Some(env!("ROUTEVN_BUILD_ID").into()),
         message: Some("Rust panic".to_owned()),
         exception: event.exception,
         stacktrace: event.stacktrace,
+        debug_meta: Cow::Owned(DebugMeta {
+            images,
+            sdk_info: None,
+        }),
         ..Event::default()
     };
 
@@ -110,6 +168,7 @@ pub fn init() -> sentry::ClientInitGuard {
         .default_integrations(false)
         .add_integration(PanicIntegration::new())
         .add_integration(ProcessStacktraceIntegration::new())
+        .add_integration(DebugImagesIntegration::new())
         .before_send(send_event)
         .shutdown_timeout(Duration::from_secs(2));
 
@@ -119,7 +178,7 @@ pub fn init() -> sentry::ClientInitGuard {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use sentry::protocol::{Exception, User};
+    use sentry::protocol::{Exception, SymbolicDebugImage, User};
 
     #[test]
     fn removes_untrusted_panic_details() {
@@ -160,6 +219,7 @@ mod tests {
 
         let safe = scrub_event(event);
         assert_eq!(safe.level, sentry::Level::Fatal);
+        assert_eq!(safe.platform.as_ref(), "native");
         let mechanism = safe.exception.values[0].mechanism.as_ref().unwrap();
         assert_eq!(mechanism.ty, "panic");
         assert_eq!(mechanism.handled, Some(false));
@@ -179,6 +239,114 @@ mod tests {
             .collect();
         assert!(sent[0].is_some());
         assert!(sent[MAX_EVENTS_PER_SESSION..].iter().all(Option::is_none));
+    }
+
+    #[test]
+    fn keeps_only_images_containing_a_retained_instruction_address() {
+        let image = |start: u64, name: &str| {
+            DebugImage::Symbolic(SymbolicDebugImage {
+                name: name.to_owned(),
+                arch: Some("arm64".to_owned()),
+                image_addr: start.into(),
+                image_size: 0x100,
+                image_vmaddr: 0x4000u64.into(),
+                id: "12345678-1234-1234-1234-123456789abc".parse().unwrap(),
+                code_id: None,
+                debug_file: Some("/Users/private/app.debug".to_owned()),
+            })
+        };
+        let event = Event {
+            stacktrace: Some(Stacktrace {
+                frames: vec![Frame {
+                    instruction_addr: Some(0x1080u64.into()),
+                    ..Frame::default()
+                }],
+                ..Stacktrace::default()
+            }),
+            debug_meta: Cow::Owned(DebugMeta {
+                images: vec![
+                    image(0x1000u64, "/Users/private/app"),
+                    image(0x2000u64, "/Users/private/unrelated"),
+                ],
+                ..DebugMeta::default()
+            }),
+            ..Event::default()
+        };
+        let safe = scrub_event(event);
+        assert_eq!(safe.debug_meta.images.len(), 1);
+        let DebugImage::Symbolic(image) = &safe.debug_meta.images[0] else {
+            panic!("expected symbolic image");
+        };
+        assert_eq!(image.name, "app");
+        assert_eq!(image.debug_file.as_deref(), Some("app.debug"));
+        assert_eq!(image.image_addr.0, 0x1000);
+        assert_eq!(image.image_size, 0x100);
+        assert_eq!(image.image_vmaddr.0, 0x4000);
+        assert_eq!(image.id.to_string(), "12345678-1234-1234-1234-123456789abc");
+    }
+
+    #[test]
+    fn keeps_images_for_exception_frames_and_drops_all_without_frames() {
+        let image = |start: u64| {
+            DebugImage::Symbolic(SymbolicDebugImage {
+                name: "app".to_owned(),
+                arch: None,
+                image_addr: start.into(),
+                image_size: 0x100,
+                image_vmaddr: 0.into(),
+                id: "12345678-1234-1234-1234-123456789abc".parse().unwrap(),
+                code_id: None,
+                debug_file: None,
+            })
+        };
+        let meta = || {
+            Cow::Owned(DebugMeta {
+                images: vec![image(0x1000), image(0x2000)],
+                ..DebugMeta::default()
+            })
+        };
+        let exception = Exception {
+            ty: "panic".to_owned(),
+            stacktrace: Some(Stacktrace {
+                frames: vec![Frame {
+                    instruction_addr: Some(0x20ffu64.into()),
+                    ..Frame::default()
+                }],
+                ..Stacktrace::default()
+            }),
+            ..Exception::default()
+        };
+        let with_frame = Event {
+            exception: vec![exception].into(),
+            debug_meta: meta(),
+            ..Event::default()
+        };
+        let safe = scrub_event(with_frame);
+        assert_eq!(safe.debug_meta.images.len(), 1);
+        let DebugImage::Symbolic(kept) = &safe.debug_meta.images[0] else {
+            panic!("expected symbolic image");
+        };
+        assert_eq!(kept.image_addr.0, 0x2000);
+
+        // The address one past the image end does not belong to it.
+        let boundary = Event {
+            stacktrace: Some(Stacktrace {
+                frames: vec![Frame {
+                    instruction_addr: Some(0x1100u64.into()),
+                    ..Frame::default()
+                }],
+                ..Stacktrace::default()
+            }),
+            debug_meta: meta(),
+            ..Event::default()
+        };
+        assert!(scrub_event(boundary).debug_meta.images.is_empty());
+
+        let without_frames = Event {
+            debug_meta: meta(),
+            ..Event::default()
+        };
+        assert!(scrub_event(without_frames).debug_meta.images.is_empty());
     }
 
     #[test]

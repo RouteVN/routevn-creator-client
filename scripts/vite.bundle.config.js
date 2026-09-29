@@ -13,13 +13,13 @@ export default defineConfig({
     outDir: path.resolve(rootDir, "static/bundle"),
     emptyOutDir: false,
     minify: "esbuild",
-    sourcemap: false,
+    sourcemap: process.env.ROUTEVN_CRASH_SYMBOLS === "1" ? "hidden" : false,
     target: "esnext",
     rollupOptions: {
       input: path.resolve(rootDir, "scripts/main.js"),
       output: {
         format: "es",
-        entryFileNames: "main.js",
+        entryFileNames: "player-main.js",
         chunkFileNames: "chunks/[name]-[hash].js",
         assetFileNames: "assets/[name]-[hash][extname]",
         inlineDynamicImports: true,

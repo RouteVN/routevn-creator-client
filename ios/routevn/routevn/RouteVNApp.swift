@@ -129,6 +129,26 @@ final class RouteVNViewController: UIViewController, WKNavigationDelegate, WKScr
         configuration.defaultWebpagePreferences = preferences
 
         let contentController = WKUserContentController()
+        if let dsn = Bundle.main.object(forInfoDictionaryKey: "RouteVNSentryDSN") as? String,
+           !dsn.isEmpty,
+           let version = Bundle.main.object(forInfoDictionaryKey: "CFBundleShortVersionString") as? String,
+           let dist = Bundle.main.object(forInfoDictionaryKey: "CFBundleVersion") as? String,
+           let environment = Bundle.main.object(forInfoDictionaryKey: "RouteVNSentryEnvironment") as? String {
+            let config = [
+                "dsn": dsn,
+                "release": "routevn-creator@\(version)",
+                "dist": dist,
+                "environment": environment,
+            ]
+            if let data = try? JSONSerialization.data(withJSONObject: config, options: [.sortedKeys]),
+               let json = String(data: data, encoding: .utf8) {
+                contentController.addUserScript(WKUserScript(
+                    source: "Object.defineProperty(window, '__ROUTEVN_ERROR_REPORTING__', { value: Object.freeze(\(json)) });",
+                    injectionTime: .atDocumentStart,
+                    forMainFrameOnly: true
+                ))
+            }
+        }
         #if DEBUG
         if devServerURL != nil {
             contentController.addUserScript(WKUserScript(

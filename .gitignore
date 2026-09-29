@@ -13,7 +13,9 @@ static/public/rtgl-icons.js
 static/public/adoptedStyleSheets.js
 static/public/@rettangoli
 static/bundle/main.js
+static/bundle/player-main.js
 static/bundle/player-runtime-persistence-host.js
+static/bundle/*.map
 /task
 /keys
 /temp

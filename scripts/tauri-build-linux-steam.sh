@@ -65,10 +65,20 @@ if [ ! -x "/usr/bin/xdg-open" ]; then
 fi
 
 export VITE_ROUTEVN_DISTRIBUTION=steam
+export ROUTEVN_CRASH_SYMBOLS=1
+export CARGO_PROFILE_RELEASE_SPLIT_DEBUGINFO=off
 export NO_STRIP="${NO_STRIP:-1}"
 
 bun run build:tauri
 tauri build \
+  --config src-tauri/tauri.steam.conf.json \
+  --no-bundle
+
+bash scripts/strip-shipped-binary.sh linux
+if [ "${ROUTEVN_SYMBOLS_DEFER_UPLOAD:-0}" != 1 ]; then
+  bash scripts/upload-crash-symbols.sh linux
+fi
+tauri bundle \
   --config src-tauri/tauri.steam.conf.json \
   --bundles appimage
 

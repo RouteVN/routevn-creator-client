@@ -66,8 +66,17 @@ else
 fi
 
 node scripts/prepare-macos-player-template-release.js
+export VITE_ROUTEVN_DISTRIBUTION=direct
+export ROUTEVN_CRASH_SYMBOLS=1
 bun run build:tauri
 tauri build \
+  --config src-tauri/tauri.prod.conf.json \
+  --config src-tauri/tauri.macos-release.conf.json \
+  --target universal-apple-darwin \
+  --no-bundle
+bash scripts/strip-shipped-binary.sh macos
+bash scripts/upload-crash-symbols.sh macos
+tauri bundle \
   --config src-tauri/tauri.prod.conf.json \
   --config src-tauri/tauri.macos-release.conf.json \
   --target universal-apple-darwin \

@@ -201,7 +201,7 @@ Stop watch mode before building in this checkout, or build from a separate
 source snapshot so the shared `_site` output is not replaced underneath watch:
 
 ```bash
-bun run build:ios
+ROUTEVN_CRASH_SYMBOLS=1 bun run build:ios
 release_dir=".artifacts/ios-release/1.17.1-10"
 mkdir -p "$release_dir"
 xcodebuild -project ios/routevn/routevn.xcodeproj -scheme routevn \
@@ -209,6 +209,7 @@ xcodebuild -project ios/routevn/routevn.xcodeproj -scheme routevn \
   -derivedDataPath "$release_dir/DerivedData" \
   -archivePath "$release_dir/RouteVN-Creator.xcarchive" \
   -allowProvisioningUpdates DEVELOPMENT_TEAM=YOUR_TEAM_ID archive
+bash scripts/upload-crash-symbols.sh ios
 ```
 
 For a local IPA, create an `ExportOptions.plist` with `method=app-store-connect`,

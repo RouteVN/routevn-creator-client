@@ -3,6 +3,7 @@
 set -euo pipefail
 
 ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
+export VITE_ROUTEVN_DISTRIBUTION=direct
 LINUX_RELEASE_ARCH="x86_64"
 DOCKER_PLATFORM="linux/amd64"
 read_tauri_config_value() {
@@ -35,7 +36,9 @@ if [ -z "${TAURI_SIGNING_PRIVATE_KEY:-}" ] && ! grep -q '^TAURI_SIGNING_PRIVATE_
   exit 1
 fi
 
-mkdir -p "${OUT_DIR}"
+SYMBOLS_OUT_DIR="${ROOT_DIR}/.artifacts/docker-crash-symbols"
+rm -rf "${SYMBOLS_OUT_DIR}"
+mkdir -p "${OUT_DIR}" "${SYMBOLS_OUT_DIR}"
 
 docker_run_args=(
   --rm
@@ -47,6 +50,7 @@ docker_run_args=(
   -e NO_STRIP="${NO_STRIP:-1}"
   -v "${ROOT_DIR}:/src:ro"
   -v "${OUT_DIR}:/out"
+  -v "${SYMBOLS_OUT_DIR}:/symbols-out"
   -v routevn-appimage-${LINUX_RELEASE_ARCH}-bun-cache:/cache/bun
   -v routevn-appimage-${LINUX_RELEASE_ARCH}-cargo-home:/cache/cargo-home
   -v routevn-appimage-${LINUX_RELEASE_ARCH}-cargo-target:/cache/cargo-target
@@ -70,12 +74,23 @@ if [ -d "${HOST_TAURI_CACHE_DIR}" ]; then
   docker_run_args+=(-v "${HOST_TAURI_CACHE_DIR}:/host-tauri-cache:ro")
 fi
 
+: "${ROUTEVN_SYMBOLS_REV:?Set ROUTEVN_SYMBOLS_REV to the routevn-observability commit that provides routevn-symbols}"
 docker build \
+  --ssh default \
+  --build-arg ROUTEVN_SYMBOLS_REV="${ROUTEVN_SYMBOLS_REV}" \
   --platform "${DOCKER_PLATFORM}" \
   -f "${ROOT_DIR}/docker/appimage/ubuntu-22.04.Dockerfile" \
   -t "${IMAGE_NAME}" \
   "${ROOT_DIR}"
 
 docker run "${docker_run_args[@]}" "${IMAGE_NAME}"
+
+IFS=$'\t' read -r symbol_release symbol_dist < <(node "${ROOT_DIR}/scripts/crash-symbols-info.js" linux)
+host_js_dir="${ROOT_DIR}/.artifacts/crash-symbols/linux/${symbol_release}-${symbol_dist}/js"
+mkdir -p "$(dirname "${host_js_dir}")"
+rm -rf "${host_js_dir}"
+cp -a "${SYMBOLS_OUT_DIR}/js" "${host_js_dir}"
+ROUTEVN_SYMBOLS_NATIVE_FILE="${SYMBOLS_OUT_DIR}/routevn-creator.debug" \
+  bash "${ROOT_DIR}/scripts/upload-crash-symbols.sh" linux
 
 echo "Linux AppImage ${LINUX_RELEASE_ARCH} artifacts are in ${OUT_DIR}"

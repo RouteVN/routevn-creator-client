@@ -271,7 +271,7 @@ globalThis.fetch = async (input, init) => {
     return new Response("<!doctype html><html><body>bundle</body></html>");
   }
 
-  if (input === "/bundle/main.js") {
+  if (input === "/bundle/player-main.js") {
     return new Response("console.log('bundle runtime');");
   }
 

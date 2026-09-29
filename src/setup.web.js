@@ -1,3 +1,4 @@
+import "./deps/clients/errorReporting.js";
 import { createGlobalUI } from "@rettangoli/ui";
 
 // Infra - Web

@@ -1147,7 +1147,7 @@ const getBundleStaticFiles = async (projectData) => {
   let mainJs;
 
   try {
-    const mainJsResponse = await fetch("/bundle/main.js");
+    const mainJsResponse = await fetch("/bundle/player-main.js");
     if (mainJsResponse.ok) {
       mainJs = await mainJsResponse.text();
     }

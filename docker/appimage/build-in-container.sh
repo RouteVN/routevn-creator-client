@@ -44,6 +44,7 @@ rsync -a --delete \
   --exclude '.git' \
   --exclude 'node_modules' \
   --exclude '_site' \
+  --exclude '.artifacts' \
   --exclude '.rettangoli/vt/_site' \
   --exclude 'src-tauri/target' \
   --exclude 'test-results' \
@@ -52,7 +53,16 @@ rsync -a --delete \
 cd "${WORK_DIR}"
 
 bun install --frozen-lockfile
+export ROUTEVN_SYMBOLS_DEFER_UPLOAD=1
 bun run tauri:build:linux:appimage
+
+# Debug files must not land in OUT_DIR, which is the folder that gets published.
+SYMBOLS_OUT_DIR="${ROUTEVN_SYMBOLS_OUT_DIR:-/symbols-out}"
+IFS=$'\t' read -r symbol_release symbol_dist < <(node scripts/crash-symbols-info.js linux)
+symbol_js_dir=".artifacts/crash-symbols/linux/${symbol_release}-${symbol_dist}/js"
+rm -rf "${SYMBOLS_OUT_DIR:?}/js" "${SYMBOLS_OUT_DIR:?}/routevn-creator.debug"
+cp -a "${symbol_js_dir}" "${SYMBOLS_OUT_DIR}/js"
+cp "${CARGO_TARGET_DIR%/}/release/routevn-creator.debug" "${SYMBOLS_OUT_DIR}/routevn-creator.debug"
 
 BUNDLE_DIR="${CARGO_TARGET_DIR%/}/release/bundle/appimage"
 if [ ! -d "${BUNDLE_DIR}" ]; then
@@ -69,7 +79,7 @@ find "${BUNDLE_DIR}" -maxdepth 1 -type f \
   -exec cp -a {} "${OUT_DIR}/" \;
 
 if [ -n "${HOST_UID}" ] && [ -n "${HOST_GID}" ]; then
-  chown -R "${HOST_UID}:${HOST_GID}" "${OUT_DIR}"
+  chown -R "${HOST_UID}:${HOST_GID}" "${OUT_DIR}" "${SYMBOLS_OUT_DIR}"
 fi
 
 echo "AppImage artifacts copied to ${OUT_DIR}:"

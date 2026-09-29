@@ -37,6 +37,32 @@ describe("desktop error reporting", () => {
       user: { email: "user@example.com" },
       extra: { response: { access_token: "secret-token" } },
       breadcrumbs: [{ data: { cookie: "secret-cookie" } }],
+      debug_meta: {
+        images: [
+          {
+            type: "sourcemap",
+            debug_id: "12345678-1234-1234-1234-123456789abc",
+            code_file:
+              "file:///Users/user@example.com/app/main.js?token=secret-token",
+            extra: "secret-password",
+          },
+          {
+            type: "sourcemap",
+            debug_id: "87654321-1234-1234-1234-123456789abc",
+            code_file: "file:///Users/user@example.com/app/unrelated.js",
+          },
+          {
+            type: "sourcemap",
+            debug_id: "aaaaaaaa-1234-1234-1234-123456789abc",
+            code_file: "file:///Another/App/main.js",
+          },
+          {
+            type: "symbolic",
+            debug_id: "12345678-1234-1234-1234-123456789abc",
+            code_file: "main.js",
+          },
+        ],
+      },
       exception: {
         values: [
           {
@@ -83,6 +109,15 @@ describe("desktop error reporting", () => {
     expect(event.exception.values[0].mechanism).toEqual({
       type: "auto.browser.global_handlers.onerror",
       handled: false,
+    });
+    expect(event.debug_meta).toEqual({
+      images: [
+        {
+          type: "sourcemap",
+          debug_id: "12345678-1234-1234-1234-123456789abc",
+          code_file: "main.js",
+        },
+      ],
     });
     const encoded = JSON.stringify(event);
     expect(encoded).not.toContain("user@example.com");

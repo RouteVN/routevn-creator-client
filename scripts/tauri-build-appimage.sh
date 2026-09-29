@@ -258,11 +258,18 @@ fi
 export TAURI_SIGNING_PRIVATE_KEY_PASSWORD="${TAURI_SIGNING_PRIVATE_KEY_PASSWORD:-}"
 
 bun run tauri:validate:linux-packaging
+export VITE_ROUTEVN_DISTRIBUTION=direct
+export ROUTEVN_CRASH_SYMBOLS=1
+export CARGO_PROFILE_RELEASE_SPLIT_DEBUGINFO=off
+export NO_STRIP="${NO_STRIP:-1}"
 bun run build:tauri
 
-export NO_STRIP="${NO_STRIP:-1}"
-
 clean_appimage_bundle_dir
-tauri build --config src-tauri/tauri.prod.conf.json --bundles appimage
+tauri build --config src-tauri/tauri.prod.conf.json --no-bundle
+bash scripts/strip-shipped-binary.sh linux
+if [ "${ROUTEVN_SYMBOLS_DEFER_UPLOAD:-0}" != 1 ]; then
+  bash scripts/upload-crash-symbols.sh linux
+fi
+tauri bundle --config src-tauri/tauri.prod.conf.json --bundles appimage
 repack_appimage
 write_appimage_checksum

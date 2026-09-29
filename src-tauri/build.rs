@@ -77,8 +77,22 @@ fn main() {
                 "Development error reporting must use the local API on http://127.0.0.1"
             );
         }
+        println!("cargo:rerun-if-env-changed=VITE_ROUTEVN_DISTRIBUTION");
         let build_id = if production {
-            release_build_id()
+            let revision = release_build_id();
+            let distribution =
+                if std::env::var("VITE_ROUTEVN_DISTRIBUTION").as_deref() == Ok("steam") {
+                    "steam"
+                } else {
+                    "direct"
+                };
+            let target_os = std::env::var("CARGO_CFG_TARGET_OS").expect("Missing target OS");
+            let dist = format!("{revision}-{target_os}-{distribution}");
+            assert!(
+                dist.len() <= 64,
+                "Crash-reporting dist must be at most 64 characters"
+            );
+            dist
         } else {
             "local".to_owned()
         };

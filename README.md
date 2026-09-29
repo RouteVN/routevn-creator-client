@@ -212,6 +212,11 @@ Build the desktop application:
 bun run tauri:build
 ```
 
+Desktop, Android, iOS and web release builds generate crash symbols and need
+`routevn-symbols` and `ROUTEVN_SYMBOLS_AWS_PROFILE`; the Docker AppImage build
+also needs an SSH agent that can read the observability repository. See
+[desktop error reporting](docs/desktop-error-reporting.md#symbols).
+
 Build the Linux AppImage on the host:
 
 ```shell

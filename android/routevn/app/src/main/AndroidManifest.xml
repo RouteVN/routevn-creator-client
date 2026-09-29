@@ -35,6 +35,7 @@
         android:usesCleartextTraffic="${usesCleartextTraffic}">
         <!-- Initialized in RouteVNApplication so events are scrubbed first. -->
         <meta-data android:name="io.sentry.auto-init" android:value="false" />
+        <meta-data android:name="io.sentry.proguard-uuid" android:value="${proguardUuid}" />
         <activity
             android:name=".MainActivity"
             android:configChanges="keyboard|keyboardHidden|orientation|screenLayout|screenSize|smallestScreenSize|uiMode"

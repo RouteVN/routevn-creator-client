@@ -47,7 +47,21 @@ discord-rich-presence = "=1.1.0"
 # Use rustls with ring, matching tauri-plugin-updater, so the shared reqwest
 # build does not switch the updater to native TLS or link OpenSSL.
 rustls = { version = "0.23", default-features = false, features = ["ring"] }
-sentry = { version = "=0.49.3", default-features = false, features = ["panic", "backtrace", "reqwest", "rustls-no-provider"] }
+sentry = { version = "=0.49.3", default-features = false, features = ["panic", "backtrace", "debug-images", "reqwest", "rustls-no-provider"] }
+
+# Release builds keep full debug info so it can be uploaded for crash
+# symbolication, but the shipped binary must not contain it. This crate is its
+# own Cargo root (there is no workspace), so the profile applies here.
+# - macOS: "packed" writes a dSYM; scripts/strip-shipped-binary.sh macos then
+#   strips the binary.
+# - Windows: the PDB is always a separate file, and strip must stay "none" or
+#   rustc links with /DEBUG:NONE and writes no PDB.
+# - Linux: the release scripts set CARGO_PROFILE_RELEASE_SPLIT_DEBUGINFO=off,
+#   then scripts/strip-shipped-binary.sh linux splits <binary>.debug and strips.
+[profile.release]
+debug = "full"
+strip = "none"
+split-debuginfo = "packed"
 
 [target.'cfg(target_os = "windows")'.dependencies]
 windows = { version = "=0.61.3", features = [

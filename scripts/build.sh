@@ -21,6 +21,30 @@ RTGL_BIN="node_modules/.bin/rtgl"
 
 echo "Building for ${BUILD_TYPE}..."
 
+if [ "${ROUTEVN_CRASH_SYMBOLS:-0}" = "1" ]; then
+  command -v routevn-symbols >/dev/null || { echo "routevn-symbols is required for release maps" >&2; exit 1; }
+  case "${BUILD_TYPE}" in
+    tauri)
+      SYMBOL_PLATFORM="${ROUTEVN_SYMBOLS_PLATFORM:-}"
+      if [ -z "${SYMBOL_PLATFORM}" ]; then
+        case "$(uname -s)" in
+          Darwin) SYMBOL_PLATFORM=macos ;;
+          Linux) SYMBOL_PLATFORM=linux ;;
+          *) SYMBOL_PLATFORM=windows ;;
+        esac
+      fi
+      ;;
+    *) SYMBOL_PLATFORM="${BUILD_TYPE}" ;;
+  esac
+  IFS=$'\t' read -r SYMBOL_RELEASE SYMBOL_DIST < <(node scripts/crash-symbols-info.js "${SYMBOL_PLATFORM}")
+  if [ "${BUILD_TYPE}" = web ]; then
+    : "${VITE_ROUTEVN_SENTRY_DSN:?Set VITE_ROUTEVN_SENTRY_DSN for a web release}"
+    export VITE_ROUTEVN_SENTRY_RELEASE="${SYMBOL_RELEASE}"
+    export VITE_ROUTEVN_SENTRY_ENVIRONMENT=production
+    export VITE_ROUTEVN_BUILD_ID="${SYMBOL_DIST}"
+  fi
+fi
+
 if [ ! -x "${RTGL_BIN}" ]; then
   echo "Error: local rtgl CLI is missing. Run bun install before building."
   exit 1
@@ -47,6 +71,10 @@ fi
 
 echo "Generating bundle file..."
 bun run build:bundle
+rm -f static/bundle/main.js
+if [ "${ROUTEVN_CRASH_SYMBOLS:-0}" != "1" ]; then
+  find static/bundle -type f -name '*.map' -delete
+fi
 
 # Prepare Rettangoli UI if needed. Local file dependencies are recopied on
 # every build so rebuilding the sibling package is immediately reflected here.
@@ -107,7 +135,20 @@ cp -f static/public/rtgl-icons.js _site/public/rtgl-icons.js
 
 # Build frontend bundle
 echo "Building frontend bundle with ${SETUP_FILE}..."
-"${RTGL_BIN}" fe build -s "${SETUP_FILE}"
+if [ "${ROUTEVN_CRASH_SYMBOLS:-0}" = "1" ]; then
+  node scripts/build-rettangoli-with-maps.js "${SETUP_FILE}"
+  routevn-symbols inject-js _site
+  SYMBOL_JS_DIR=".artifacts/crash-symbols/${SYMBOL_PLATFORM}/${SYMBOL_RELEASE}-${SYMBOL_DIST}/js"
+  rm -rf "${SYMBOL_JS_DIR}"
+  find _site -type f -name '*.map' -print0 | while IFS= read -r -d '' map; do
+    relative_path="${map#_site/}"
+    mkdir -p "${SYMBOL_JS_DIR}/$(dirname "${relative_path}")"
+    mv "${map}" "${SYMBOL_JS_DIR}/${relative_path}"
+  done
+  find static/bundle -type f -name '*.map' -delete
+else
+  "${RTGL_BIN}" fe build -s "${SETUP_FILE}"
+fi
 
 # Prevent stale browser caches from serving an old /public/main.js bundle.
 BUILD_REV=$(date +%s)
