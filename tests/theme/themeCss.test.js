@@ -18,7 +18,8 @@ const getThemeTokens = (themeBlock) => {
 };
 
 const getOklchLightness = (value) => {
-  return Number(value.match(/^oklch\(([\d.]+)/)?.[1]);
+  const [, lightness, percentage] = value.match(/^oklch\(([\d.]+)(%?)/);
+  return Number(lightness) / (percentage ? 100 : 1);
 };
 
 describe("theme css", () => {
@@ -60,32 +61,32 @@ describe("theme css", () => {
     expect(themeCss).not.toContain(".theme-neutral-light");
     expect(themeCss).not.toContain(".theme-soft-dark");
     expect(darkTokens).toMatchObject({
-      "--background": "oklch(0.24 0 0)",
-      "--surface": "oklch(0.2775 0 0)",
-      "--foreground": "oklch(0.96 0 0)",
-      "--primary": "oklch(0.9 0 0)",
-      "--primary-foreground": "oklch(0.28 0 0)",
-      "--secondary": "oklch(0.34 0 0)",
-      "--secondary-foreground": "oklch(0.96 0 0)",
-      "--muted": "oklch(0.32 0 0)",
-      "--muted-foreground": "oklch(0.77 0 0)",
-      "--accent": "oklch(0.41 0 0)",
-      "--accent-foreground": "oklch(0.98 0 0)",
-      "--destructive": "oklch(0.7 0.19 22.216)",
+      "--background": "oklch(24% 0 0)",
+      "--surface": "oklch(27.75% 0 0)",
+      "--foreground": "oklch(96% 0 0)",
+      "--primary": "oklch(90% 0 0)",
+      "--primary-foreground": "oklch(28% 0 0)",
+      "--secondary": "oklch(34% 0 0)",
+      "--secondary-foreground": "oklch(96% 0 0)",
+      "--muted": "oklch(32% 0 0)",
+      "--muted-foreground": "oklch(77% 0 0)",
+      "--accent": "oklch(41% 0 0)",
+      "--accent-foreground": "oklch(98% 0 0)",
+      "--destructive": "oklch(70% 0.19 22.216)",
       "--destructive-foreground": "white",
-      "--border": "oklch(1 0 0 / 14%)",
-      "--input": "oklch(1 0 0 / 18%)",
-      "--ring": "oklch(0.64 0 0)",
-      "--scrollbar-thumb": "oklch(0.45 0 0)",
-      "--scrollbar-thumb-hover": "oklch(0.55 0 0)",
+      "--border": "oklch(100% 0 0 / 14%)",
+      "--input": "oklch(100% 0 0 / 18%)",
+      "--ring": "oklch(64% 0 0)",
+      "--scrollbar-thumb": "oklch(45% 0 0)",
+      "--scrollbar-thumb-hover": "oklch(55% 0 0)",
     });
     expect(blackTokens).toMatchObject({
-      "--background": "oklch(0.145 0 0)",
-      "--surface": "oklch(0.18 0 0)",
-      "--foreground": "oklch(0.985 0 0)",
-      "--primary": "oklch(0.922 0 0)",
-      "--input": "oklch(1 0 0 / 15%)",
-      "--border": "oklch(1 0 0 / 10%)",
+      "--background": "oklch(14.5% 0 0)",
+      "--surface": "oklch(18% 0 0)",
+      "--foreground": "oklch(98.5% 0 0)",
+      "--primary": "oklch(92.2% 0 0)",
+      "--input": "oklch(100% 0 0 / 15%)",
+      "--border": "oklch(100% 0 0 / 10%)",
     });
     expect(
       getOklchLightness(darkTokens["--background"]) -
