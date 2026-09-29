@@ -16,7 +16,7 @@ pub struct ClientUpdateMetadata {
 }
 
 fn valid_device_id(value: &str) -> bool {
-    matches!(value.len(), 12 | 24)
+    value.len() == 24
         && value.bytes().all(|byte| {
             matches!(byte, b'1'..=b'9' | b'A'..=b'H' | b'J'..=b'N' | b'P'..=b'Z' | b'a'..=b'k' | b'm'..=b'z')
         })
@@ -147,7 +147,7 @@ mod tests {
     #[test]
     fn rejects_invalid_device_metadata() {
         assert!(valid_device_id("123456789ABC123456789ABC"));
-        assert!(valid_device_id("123456789ABC"));
+        assert!(!valid_device_id("123456789ABC"));
         assert!(!valid_device_id("123456789ABCDEFG"));
         assert!(!valid_device_id(&"1".repeat(23)));
         assert!(!valid_device_id(&"1".repeat(25)));

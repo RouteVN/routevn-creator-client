@@ -24,10 +24,18 @@ describe("app-local device identity", () => {
     expect(first.getOrSet).toHaveBeenCalledExactlyOnceWith("deviceId", id);
   });
 
-  it("preserves an existing 12-character installation identity", async () => {
-    const id = "123456789ABC";
+  it("preserves an existing installation identity", async () => {
+    const id = "123456789ABC123456789ABC";
     const db = store(new Map([["deviceId", id]]));
     expect(await getDeviceId(db)).toBe(id);
+    expect(db.getOrSet).not.toHaveBeenCalled();
+  });
+
+  it("rejects a stored 12-character identity", async () => {
+    const db = store(new Map([["deviceId", "123456789ABC"]]));
+    await expect(getDeviceId(db)).rejects.toThrow(
+      "Invalid persisted device ID",
+    );
     expect(db.getOrSet).not.toHaveBeenCalled();
   });
 

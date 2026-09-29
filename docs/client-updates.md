@@ -23,8 +23,7 @@ The ID is reused across checks, launches, and app upgrades while local app data
 is retained. It identifies an app installation, independently of accounts and
 hardware identifiers. Clearing its local data generates a new ID. Restoring a
 backup containing the database also restores the ID.
-Existing 12-character IDs remain valid and are reused; only newly generated IDs
-use 24 characters.
+IDs are 24 Base58 characters; the update API rejects any other length.
 
 Model and OS version are nonblank strings of at most 256 characters, without
 ASCII control characters. These fields do not change the response shape.
