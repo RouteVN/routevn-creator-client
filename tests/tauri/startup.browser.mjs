@@ -1,6 +1,6 @@
 // After build:tauri: node tests/tauri/startup.browser.mjs
 // Runs the packaged frontend with an in-memory Tauri bridge. The legacy
-// scenario removes constructable stylesheets, as on macOS WebKit 15.4-16.3.
+// scenario removes constructable stylesheets and rejects numeric OKLCH lightness.
 import assert from "node:assert/strict";
 import { readFile } from "node:fs/promises";
 import { chromium, webkit } from "playwright";
@@ -14,6 +14,7 @@ const server = await serveStatic("_site");
 try {
   for (const [engineName, engine] of Object.entries({ chromium, webkit })) {
     const browser = await engine.launch({ headless: true });
+    const nativeColours = new Map();
     try {
       for (const legacy of [false, true]) {
         const label = `${engineName} ${legacy ? "legacy" : "native"}`;
@@ -100,6 +101,20 @@ try {
           { legacy, appVersion },
         );
 
+        if (legacy) {
+          // Safari 15.4–16.1 accepts percentage lightness, but not numbers.
+          await page.route("**/public/theme.css", async (route) => {
+            const response = await route.fetch();
+            await route.fulfill({
+              response,
+              body: (await response.text()).replace(
+                /\boklch\((?=\s*[\d.]+\s)/g,
+                "unsupported-color(",
+              ),
+            });
+          });
+        }
+
         await page.goto(server.origin);
         const createButton = page.locator(
           '[data-testid="create-project-button"]',
@@ -120,6 +135,51 @@ try {
         );
         await nameInput.fill("Project One");
         assert.equal(await nameInput.inputValue(), "Project One", label);
+        for (const theme of [
+          "light",
+          "dark",
+          "theme-black",
+          "theme-catppuccin-mocha",
+        ]) {
+          await page.evaluate((theme) => {
+            for (const element of [document.documentElement, document.body]) {
+              element.classList.remove(
+                "dark",
+                "theme-black",
+                "theme-catppuccin-mocha",
+              );
+              if (theme !== "light") element.classList.add("dark");
+              if (theme.startsWith("theme-")) element.classList.add(theme);
+            }
+          }, theme);
+          const colours = [];
+          for (const surface of [
+            page.locator("body"),
+            createButton.locator(".surface"),
+            page.locator('#createProjectDialog slot[name="content"]'),
+            nameInput,
+          ]) {
+            const colour = await surface.evaluate((el) => {
+              const style = getComputedStyle(el);
+              return [style.backgroundColor, style.color, style.borderTopColor];
+            });
+            assert.notEqual(
+              colour[0],
+              "rgba(0, 0, 0, 0)",
+              `${label} ${theme}: missing background`,
+            );
+            colours.push(colour);
+          }
+          if (legacy) {
+            assert.deepEqual(
+              colours,
+              nativeColours.get(theme),
+              `${label} ${theme}`,
+            );
+          } else {
+            nativeColours.set(theme, colours);
+          }
+        }
         await page.keyboard.press("Escape");
         await page
           .locator("#createProjectDialog")

@@ -26,4 +26,13 @@ describe("older WebKit CSS compatibility", () => {
 
     expect(offenders).toEqual([]);
   });
+
+  it("uses percentage OKLCH lightness for WebKit 15.4–16.1", () => {
+    for (const file of [
+      "static/public/theme.css",
+      "src/pages/config/config.store.js",
+    ]) {
+      expect(readFileSync(file, "utf8")).not.toMatch(/\boklch\(\s*[\d.]+\s/);
+    }
+  });
 });
