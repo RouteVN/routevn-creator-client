@@ -13,6 +13,7 @@ import {
 import {
   getProjectOpenErrorMessage,
   isIncompatibleProjectOpenError,
+  isProjectStorageUnavailableError,
 } from "../../internal/projectOpenErrors.js";
 import {
   createNavigationTiming,
@@ -510,7 +511,9 @@ export const createRouteTransitionRunner = (deps) => {
           status: "error",
         });
       } else {
-        appService.reportError(error, { operation: "route.projectOpen" });
+        if (!isProjectStorageUnavailableError(error)) {
+          appService.reportError(error, { operation: "route.projectOpen" });
+        }
         appService.showAlert({ message: getProjectOpenErrorMessage(error) });
       }
       appService.redirect("/projects");

@@ -1,4 +1,5 @@
 import {
+  captureEvent,
   captureException,
   dedupeIntegration,
   flush,
@@ -8,7 +9,10 @@ import {
 } from "@sentry/browser";
 
 // Deduplication only drops back-to-back repeats, so also cap each session.
+// Explicit reports and uncaught errors are capped separately, so repeated
+// handled failures cannot use up the budget for a later crash.
 const MAX_EVENTS_PER_SESSION = 10;
+const CAPTURE_MECHANISM_TYPE = "routevn.capture";
 
 const safeIdentifier = (value) =>
   typeof value === "string" && /^[A-Za-z0-9_.$-]{1,100}$/.test(value)
@@ -51,7 +55,7 @@ const scrubMechanism = (mechanism) =>
 // Only stable identifiers from our own code may become tags; never free text.
 const scrubTags = (tags) => {
   const scrubbed = {};
-  for (const key of ["runtime", "operation", "code"]) {
+  for (const key of ["runtime", "operation", "code", "valueKind"]) {
     const value = safeIdentifier(tags?.[key]);
     if (value) {
       scrubbed[key] = value;
@@ -62,6 +66,23 @@ const scrubTags = (tags) => {
 
 const UNHANDLED_MESSAGE = "Unhandled webview error";
 const HANDLED_MESSAGE = "Captured app error";
+
+const isExplicitReport = (event) =>
+  event.exception?.values?.some(
+    (exception) => exception.mechanism?.type === CAPTURE_MECHANISM_TYPE,
+  );
+
+// Describe a thrown non-Error value without reading its contents.
+const getValueKind = (value) => {
+  if (value === null) {
+    return "null";
+  }
+  if (typeof value !== "object") {
+    return typeof value;
+  }
+  const name = Object.getPrototypeOf(value)?.constructor?.name;
+  return name && name !== "Object" ? name : "object";
+};
 
 // Create the app-facing reporter around the official browser SDK.
 // `captureGlobal` installs the uncaught-error and unhandled-rejection handlers;
@@ -74,7 +95,7 @@ export const createErrorReporter = ({
   runtime,
   captureGlobal,
 }) => {
-  let sentEvents = 0;
+  const sentEvents = { explicit: 0, global: 0 };
 
   const scrubErrorEvent = (event) => {
     const values = event.exception?.values;
@@ -104,10 +125,11 @@ export const createErrorReporter = ({
   };
 
   const sendErrorEvent = (event) => {
-    if (sentEvents >= MAX_EVENTS_PER_SESSION) {
+    const source = isExplicitReport(event) ? "explicit" : "global";
+    if (sentEvents[source] >= MAX_EVENTS_PER_SESSION) {
       return null;
     }
-    sentEvents += 1;
+    sentEvents[source] += 1;
     return scrubErrorEvent(event);
   };
 
@@ -141,12 +163,31 @@ export const createErrorReporter = ({
       return;
     }
 
+    const hint = { mechanism: { type: CAPTURE_MECHANISM_TYPE, handled: true } };
     withScope((scope) => {
       scope.setTag("operation", operation);
       scope.setTag("code", code ?? error?.code);
-      captureException(error instanceof Error ? error : new Error("Unknown"), {
-        mechanism: { type: "routevn.capture", handled: true },
-      });
+      if (error instanceof Error) {
+        captureException(error, hint);
+        return;
+      }
+
+      // Tauri `invoke` rejects with strings or plain objects. Send only the
+      // value's kind, without a stack: one created here would only point at
+      // this file.
+      const valueKind = getValueKind(error);
+      scope.setTag("valueKind", valueKind);
+      captureEvent(
+        {
+          level: "error",
+          exception: {
+            values: [
+              { type: "NonErrorValue", value: `Non-error ${valueKind}` },
+            ],
+          },
+        },
+        hint,
+      );
     });
   };
 

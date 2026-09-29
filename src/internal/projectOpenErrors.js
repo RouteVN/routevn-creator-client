@@ -65,13 +65,25 @@ const isMissingProjectResolutionError = (error) => {
   );
 };
 
+// SQLite code 14 (SQLITE_CANTOPEN): the project folder was moved, deleted, or
+// cannot be accessed. The Tauri adapter throws `project_database_missing` when
+// project.db is gone; plugin-sql rejects with the SQLite message as a string.
 const isProjectDatabaseOpenError = (error) => {
-  const message = String(error?.message ?? "").toLowerCase();
+  if (error?.code === "project_database_missing") {
+    return true;
+  }
+
+  const message = String(error?.message ?? error ?? "").toLowerCase();
   return (
     message.includes("unable to open database file") ||
     message.includes("(code: 14)")
   );
 };
+
+// Expected environment failures: the project database cannot be opened or
+// browser storage is full. Show them, but do not report them as app errors.
+export const isProjectStorageUnavailableError = (error) =>
+  isProjectDatabaseOpenError(error) || error?.name === "QuotaExceededError";
 
 const isProjectDataStructureValidationError = (error) => {
   const code = String(error?.code ?? "");

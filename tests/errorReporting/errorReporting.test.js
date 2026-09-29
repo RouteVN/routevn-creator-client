@@ -1,7 +1,28 @@
-import { describe, expect, it, vi } from "vitest";
+import { afterEach, describe, expect, it, vi } from "vitest";
 import { getClient } from "@sentry/browser";
 import { scrubErrorEvent } from "../../src/deps/clients/tauri/errorReporting.js";
 import { createErrorReporter } from "../../src/deps/clients/errorReporting.js";
+import { createWebErrorReporter } from "../../src/deps/clients/web/errorReporting.js";
+
+const TEST_DSN =
+  "http://11111111111111111111111111111111@127.0.0.1:3000/system/sentry/1";
+
+// Collect the events the current SDK client would send, instead of sending
+// them, so tests exercise the SDK's full event pipeline including beforeSend.
+const collectSentEvents = () => {
+  const events = [];
+  vi.spyOn(getClient().getTransport(), "send").mockImplementation(
+    async (envelope) => {
+      for (const [header, payload] of envelope[1]) {
+        if (header.type === "event") {
+          events.push(payload);
+        }
+      }
+      return {};
+    },
+  );
+  return events;
+};
 
 vi.hoisted(() => {
   globalThis.__ROUTEVN_ERROR_REPORTING__ = Object.freeze({
@@ -138,5 +159,108 @@ describe("explicit error reporting", () => {
 
   it("ignores explicit reports when no DSN is configured", () => {
     expect(() => webReporter.capture(new Error("secret"))).not.toThrow();
+  });
+});
+
+// Each test initializes its own SDK client, replacing the desktop one above.
+describe("explicit error reporting through the SDK", () => {
+  afterEach(() => {
+    vi.restoreAllMocks();
+    vi.unstubAllEnvs();
+  });
+
+  it("caps explicit reports separately from uncaught errors", async () => {
+    const reporter = createErrorReporter({
+      dsn: TEST_DSN,
+      runtime: "tauri",
+      captureGlobal: true,
+    });
+    const events = collectSentEvents();
+
+    for (let index = 0; index < 12; index += 1) {
+      reporter.capture(new Error(`save failed ${index}`), {
+        operation: "resourcePage.mutation",
+      });
+    }
+    globalThis.onerror("Uncaught Error: crash", "main.js", 1, 1, new Error());
+    await reporter.flush();
+
+    const explicit = events.filter((event) => event.tags.operation);
+    const uncaught = events.filter((event) => !event.tags.operation);
+    expect(explicit).toHaveLength(10);
+    expect(uncaught).toHaveLength(1);
+    expect(uncaught[0].exception.values[0].mechanism).toEqual({
+      type: "auto.browser.global_handlers.onerror",
+      handled: false,
+    });
+  });
+
+  it("reports non-Error values by kind without contents or a stack", async () => {
+    const reporter = createErrorReporter({
+      dsn: TEST_DSN,
+      runtime: "tauri",
+      captureGlobal: false,
+    });
+    const events = collectSentEvents();
+    class CommandFailure {
+      path = "/Users/user@example.com/Project One";
+    }
+
+    reporter.capture("unable to open /Users/user@example.com/project.db", {
+      operation: "route.projectOpen",
+    });
+    reporter.capture(
+      { code: "ENOENT", message: "missing /Users/user@example.com" },
+      { operation: "route.projectOpen" },
+    );
+    reporter.capture(new CommandFailure(), { operation: "route.projectOpen" });
+    await reporter.flush();
+
+    expect(events.map((event) => event.tags)).toEqual([
+      { runtime: "tauri", operation: "route.projectOpen", valueKind: "string" },
+      {
+        runtime: "tauri",
+        operation: "route.projectOpen",
+        code: "ENOENT",
+        valueKind: "object",
+      },
+      {
+        runtime: "tauri",
+        operation: "route.projectOpen",
+        valueKind: "CommandFailure",
+      },
+    ]);
+    for (const event of events) {
+      expect(event.message).toBe("Captured app error");
+      expect(event.exception.values).toEqual([
+        {
+          type: "NonErrorValue",
+          value: "Captured app error",
+          mechanism: { type: "routevn.capture", handled: true },
+          stacktrace: undefined,
+        },
+      ]);
+    }
+    expect(JSON.stringify(events)).not.toContain("user@example.com");
+  });
+
+  it("tags web reports with the build ID as dist", async () => {
+    vi.stubEnv("VITE_ROUTEVN_SENTRY_DSN", TEST_DSN);
+    vi.stubEnv("VITE_ROUTEVN_SENTRY_ENVIRONMENT", "production");
+    vi.stubEnv("VITE_ROUTEVN_BUILD_ID", "0123456789ab");
+    const reporter = createWebErrorReporter({ release: "app-one@1.0.0" });
+    const events = collectSentEvents();
+
+    reporter.capture(new Error("secret"), { operation: "route.projectOpen" });
+    await reporter.flush();
+
+    expect(events).toHaveLength(1);
+    expect(events[0]).toMatchObject({
+      release: "app-one@1.0.0",
+      environment: "production",
+      dist: "0123456789ab",
+      tags: { runtime: "web", operation: "route.projectOpen" },
+    });
+    expect(getClient().getOptions().dist).toBe("0123456789ab");
   });
 });

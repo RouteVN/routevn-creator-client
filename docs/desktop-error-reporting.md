@@ -59,10 +59,12 @@ The webview enables only the global uncaught-error and unhandled-rejection
 handlers, plus event deduplication. Rust enables only the panic integration,
 stack frame in-app classification, and the SDK's normal HTTP transport over
 rustls. Each side sends at most 10 events per app session; the Rust panic hook
-blocks the panicking thread while its event is sent. Tracing, profiling, replay,
-feedback, logs/metrics forwarding, screenshots, view hierarchy, attachments,
-browser sessions, and browser client reports are disabled by options or
-excluded features. The Rust SDK has no client-report switch; it may attach a
+blocks the panicking thread while its event is sent. The webview's explicit
+reports (below) have their own budget of 10, so handled failures cannot use up
+the budget for uncaught errors. Tracing, profiling, replay, feedback,
+logs/metrics forwarding, screenshots, view hierarchy, attachments, browser
+sessions, and browser client reports are disabled by options or excluded
+features. The Rust SDK has no client-report switch; it may attach a
 loss report to a later error envelope, which the collector discards. Neither
 SDK sets a user identity.
 
@@ -118,9 +120,22 @@ already handled. It never shows UI. Handled errors are still shown through
   collector must accept browser cross-origin requests from the web origin.
 - Web and desktop share the same environment. Events carry a `runtime` tag
   (`web` or `tauri`) to tell them apart.
+- Web builds use the same `release` and choose `dist` like desktop release
+  builds: `ROUTEVN_BUILD_ID` when set, otherwise the 12-character Git revision.
+  Without Git metadata, and on dev servers, it is `local`.
 - Explicit events keep only the error type, stack locations, and the stable
   `runtime`, `operation`, and `code` identifiers. Use a fixed `operation` string;
   never put user text, paths, or ids into it.
+- Non-`Error` values, such as the strings and plain objects Tauri `invoke`
+  rejects with, are sent as a `NonErrorValue` event with no stack and a
+  `valueKind` tag (`string`, `object`, or a class name). Their contents are
+  not sent; only a `code` that passes the identifier check is kept.
 - `AbortError` is ignored. Do not report expected validation or auth failures.
+- Do not report expected environment failures. `isProjectStorageUnavailableError`
+  in `src/internal/projectOpenErrors.js` matches a project database that cannot
+  be opened because its folder was moved, deleted, or is inaccessible (code
+  `project_database_missing`, or SQLite code 14 in plugin-sql's message), and
+  full browser storage (`QuotaExceededError`).
 - Current call sites: project-open route failures and `runResourcePageMutation`
-  thrown errors.
+  thrown errors. Both skip expected environment failures; incompatible projects
+  are not reported either.

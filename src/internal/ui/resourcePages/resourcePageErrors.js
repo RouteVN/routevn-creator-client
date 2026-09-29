@@ -1,3 +1,5 @@
+import { isProjectStorageUnavailableError } from "../../projectOpenErrors.js";
+
 export const getResourcePageErrorMessage = (errorOrResult, fallbackMessage) => {
   if (typeof errorOrResult === "string") {
     return errorOrResult;
@@ -56,7 +58,9 @@ export const runResourcePageMutation = async ({
     };
   } catch (error) {
     console.error(logLabel, error);
-    appService.reportError(error, { operation: "resourcePage.mutation" });
+    if (!isProjectStorageUnavailableError(error)) {
+      appService.reportError(error, { operation: "resourcePage.mutation" });
+    }
     showResourcePageError({
       appService,
       errorOrResult: error,

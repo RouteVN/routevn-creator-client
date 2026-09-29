@@ -455,11 +455,7 @@ describe("app route transitions", () => {
     },
   );
 
-  it("returns to projects when project route validation fails", async () => {
-    const error = new Error(
-      "state.story.initialSceneId must reference an existing scene",
-    );
-    error.code = "state_validation_failed";
+  const openProjectWithFailure = async (error) => {
     const appService = {
       prepareNavigation: vi.fn(async () => {}),
       redirect: vi.fn(),
@@ -495,6 +491,16 @@ describe("app route transitions", () => {
       payload: { p: "project-1" },
     });
 
+    return deps;
+  };
+
+  it("returns to projects when project route validation fails", async () => {
+    const error = new Error(
+      "state.story.initialSceneId must reference an existing scene",
+    );
+    error.code = "state_validation_failed";
+    const { appService, store } = await openProjectWithFailure(error);
+
     expect(appService.reportError).toHaveBeenCalledWith(error, {
       operation: "route.projectOpen",
     });
@@ -503,11 +509,41 @@ describe("app route transitions", () => {
         "RouteVN Creator couldn't safely open this project because its saved project history is inconsistent.\n\nPlease make sure you're using the latest version of RouteVN Creator. If the problem continues, please reach out to RouteVN for support.\n\nTechnical details: state.story.initialSceneId must reference an existing scene",
     });
     expect(appService.redirect).toHaveBeenCalledWith("/projects");
-    expect(deps.store.setCurrentRoute).toHaveBeenCalledWith({
+    expect(store.setCurrentRoute).toHaveBeenCalledWith({
       route: "/projects",
       payload: {},
     });
   });
+
+  const missingDatabaseError = new Error(
+    "error returned from database: (code: 14) unable to open database file",
+  );
+  missingDatabaseError.code = "project_database_missing";
+
+  it.each([
+    ["the project database is missing", missingDatabaseError],
+    [
+      "the database cannot be opened",
+      "error returned from database: (code: 14) unable to open database file",
+    ],
+    [
+      "browser storage is full",
+      new DOMException("Quota exceeded", "QuotaExceededError"),
+    ],
+  ])(
+    "does not report expected project open failures when %s",
+    async (_label, error) => {
+      const { appService, store } = await openProjectWithFailure(error);
+
+      expect(appService.reportError).not.toHaveBeenCalled();
+      expect(appService.showAlert).toHaveBeenCalledTimes(1);
+      expect(appService.redirect).toHaveBeenCalledWith("/projects");
+      expect(store.setCurrentRoute).toHaveBeenCalledWith({
+        route: "/projects",
+        payload: {},
+      });
+    },
+  );
 
   it("reloads the repository when a same-id local route selects another path", async () => {
     const appService = {
