@@ -1,5 +1,10 @@
 import { describe, expect, it, vi } from "vitest";
 import { produce } from "immer";
+import * as panelStore from "../../src/components/layoutEditPanel/layoutEditPanel.store.js";
+import {
+  handleSoundFormAction,
+  handleOptionSelected,
+} from "../../src/components/layoutEditPanel/layoutEditPanel.handlers.js";
 import { EN_I18N } from "../support/i18n.js";
 import * as layoutEditorStore from "../../src/pages/layoutEditor/layoutEditor.store.js";
 import { createLayoutEditorRepositoryStoreData } from "../../src/pages/layoutEditor/support/layoutEditorRepositoryState.js";
@@ -136,7 +141,7 @@ const createLayoutEditorDeps = ({
   };
 };
 
-const createDraftReconciliationHarness = (resourceType) => {
+const createDraftReconciliationHarness = (resourceType, initialItem = {}) => {
   const deps = createLayoutEditorDeps({ resourceType });
   let repositoryState = {
     project: { resolution: { width: 1920, height: 1080 } },
@@ -152,6 +157,7 @@ const createDraftReconciliationHarness = (resourceType) => {
                 x: 0,
                 y: 0,
                 paginationMode: "continuous",
+                ...initialItem,
               },
             },
           },
@@ -793,6 +799,129 @@ describe("layoutEditor.handleSaveButtonClick", () => {
     }
   });
 });
+
+describe.each(["layouts", "controls"])(
+  "layoutEditor %s revealing sound persistence",
+  (resourceType) => {
+    const createSoundHarness = (stopTiming = "immediate") => {
+      const harness = createDraftReconciliationHarness(resourceType, {
+        type: "text-revealing",
+        revealSoundId: "sound-one",
+        revealSoundStopTiming: stopTiming,
+      });
+      let panelState = panelStore.createInitialState();
+      const pendingUpdates = [];
+      const panel = {
+        store: {},
+        render: vi.fn(),
+        dispatchEvent: (event) => {
+          pendingUpdates.push(
+            handleLayoutEditPanelUpdateHandler(harness.deps, { _event: event }),
+          );
+        },
+      };
+      for (const name of [
+        "selectValues",
+        "selectSoundFormDialog",
+        "openSoundFormDialog",
+        "closeSoundFormDialog",
+        "updateValueProperty",
+        "setSoundFormDialogSoundId",
+        "closePopoverForm",
+      ]) {
+        panel.store[name] = (payload) =>
+          panelStore[name]({ state: panelState }, payload);
+      }
+      const reselect = () => {
+        harness.deps.store.setSelectedItemId({ itemId: undefined });
+        harness.deps.store.syncRepositoryState(
+          createLayoutEditorRepositoryStoreData({
+            repositoryState: harness.deps.projectService.getRepositoryState(),
+            layoutId: "layout-1",
+            resourceType,
+          }),
+        );
+        harness.deps.store.setSelectedItemId({ itemId: "item-1" });
+        panelState = panelStore.createInitialState();
+        panelStore.setValues(
+          { state: panelState },
+          {
+            values: harness.deps.store.selectSelectedItemData(),
+          },
+        );
+        panel.store.openSoundFormDialog({
+          name: "revealSoundId",
+          stopTimingName: "revealSoundStopTiming",
+        });
+        return panel.store.selectSoundFormDialog();
+      };
+      reselect();
+      return {
+        ...harness,
+        panel,
+        reselect,
+        save: async (stopTiming) => {
+          panel.store.setSoundFormDialogSoundId({ soundId: "sound-two" });
+          handleSoundFormAction(panel, {
+            _event: { detail: { actionId: "submit", values: { stopTiming } } },
+          });
+          await Promise.all(pendingUpdates);
+          await handleBackClick(harness.deps);
+        },
+        remove: async () => {
+          handleOptionSelected(panel, {
+            _event: {
+              currentTarget: { dataset: { name: "revealSoundId" } },
+              detail: { item: { value: "" } },
+            },
+          });
+          await Promise.all(pendingUpdates);
+          await handleBackClick(harness.deps);
+        },
+      };
+    };
+
+    it("saves Loop End through panel events and restores it on reselection", async () => {
+      const { save, savedItem, reselect } = createSoundHarness();
+      await save("loopEnd");
+      expect(savedItem()).toMatchObject({
+        revealSoundId: "sound-two",
+        revealSoundStopTiming: "loopEnd",
+      });
+      expect(reselect()).toMatchObject({
+        selectedSoundId: "sound-two",
+        stopTiming: "loopEnd",
+      });
+      await save("immediate");
+      expect(savedItem().revealSoundStopTiming).toBe("immediate");
+      expect(reselect().stopTiming).toBe("immediate");
+    });
+
+    it("removes the saved Stop setting so a new sound uses Immediate", async () => {
+      const { save, remove, savedItem, reselect } =
+        createSoundHarness("loopEnd");
+      await remove();
+      expect(savedItem()).not.toHaveProperty("revealSoundId");
+      expect(savedItem()).not.toHaveProperty("revealSoundStopTiming");
+      const dialog = reselect();
+      expect(dialog.stopTiming).toBe("immediate");
+      await save(dialog.stopTiming);
+      expect(savedItem()).toMatchObject({
+        revealSoundId: "sound-two",
+        revealSoundStopTiming: "immediate",
+      });
+    });
+
+    it.each([undefined, "", "invalid"])(
+      "normalizes invalid Stop value %s before persistence",
+      async (value) => {
+        const { save, savedItem } = createSoundHarness("loopEnd");
+        await save(value);
+        expect(savedItem().revealSoundStopTiming).toBe("immediate");
+      },
+    );
+  },
+);
 
 describe("layoutEditor.handleLayoutEditPanelUpdateHandler", () => {
   it("queues click sound ID and volume in one atomic update", async () => {

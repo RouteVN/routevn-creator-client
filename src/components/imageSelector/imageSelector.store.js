@@ -1,3 +1,7 @@
+import {
+  parseSelectorColumnCount,
+  createSelectorGridStyle,
+} from "../../internal/ui/resourcePages/selectorGrid.js";
 import { selectResourceSelectorEmptyMessage } from "../../internal/ui/resourcePages/selectorEmptyState.js";
 import { toFlatGroups, toFlatItems } from "../../internal/project/tree.js";
 import { buildCharacterSpritePreviewLayer } from "../../internal/characterSpritePreview.js";
@@ -33,25 +37,18 @@ const matchesSearch = (item, searchQuery) => {
   return name.includes(searchQuery) || description.includes(searchQuery);
 };
 
-const parseColumnCount = (value) => {
-  const columns = Number(value);
-  return Number.isInteger(columns) && columns > 0 ? columns : undefined;
-};
-
 export const selectViewData = ({ state, props = {}, i18n = {} }) => {
   const images = state.images ?? { items: {}, tree: [] };
   const selectedImageId = state.selectedImageId;
   const searchQuery = (props.searchQuery ?? "").toLowerCase().trim();
-  const columns = parseColumnCount(props.columns);
+  const columns = parseSelectorColumnCount(props.columns);
   let imageSelectorLabel = i18n.imagesPage?.title ?? "Images";
   if (props.resourceTarget === "characters") {
     imageSelectorLabel = i18n.charactersPage.title;
   } else if (props.resourceTarget === "characterSprites") {
     imageSelectorLabel = i18n.characterSpritesPage.title;
   }
-  const imageGridStyle = columns
-    ? `display: grid; grid-template-columns: repeat(${columns}, minmax(0, 1fr));`
-    : "";
+  const imageGridStyle = createSelectorGridStyle(columns);
 
   const resourceGroups = toFlatGroups(images);
   const rootItems = toFlatItems(images).filter(

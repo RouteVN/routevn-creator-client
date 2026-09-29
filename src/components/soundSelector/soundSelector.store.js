@@ -1,3 +1,7 @@
+import {
+  parseSelectorColumnCount,
+  createSelectorGridStyle,
+} from "../../internal/ui/resourcePages/selectorGrid.js";
 import { selectResourceSelectorEmptyMessage } from "../../internal/ui/resourcePages/selectorEmptyState.js";
 import { toFlatGroups } from "../../internal/project/tree.js";
 import { prependRootItemsGroup } from "../../internal/ui/resourcePages/rootGroups.js";
@@ -33,19 +37,12 @@ const matchesSearch = (item, searchQuery) => {
   return name.includes(searchQuery) || description.includes(searchQuery);
 };
 
-const parseColumnCount = (value) => {
-  const columns = Number(value);
-  return Number.isInteger(columns) && columns > 0 ? columns : undefined;
-};
-
 export const selectViewData = ({ state, props = {}, i18n }) => {
   const sounds = state.sounds ?? { items: {}, tree: [] };
   const selectedSoundId = state.selectedSoundId;
   const searchQuery = (props.searchQuery ?? "").toLowerCase().trim();
-  const columns = parseColumnCount(props.columns);
-  const soundGridStyle = columns
-    ? `display: grid; grid-template-columns: repeat(${columns}, minmax(0, 1fr));`
-    : "";
+  const columns = parseSelectorColumnCount(props.columns);
+  const soundGridStyle = createSelectorGridStyle(columns);
   const soundPreviewStyle = columns
     ? "aspect-ratio: 16 / 9;"
     : "height: 120px;";

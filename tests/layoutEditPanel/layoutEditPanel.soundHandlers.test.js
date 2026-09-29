@@ -7,7 +7,6 @@ import {
   openSoundSelectorDialog,
   selectSoundFormDialog,
   selectSoundOptions,
-  selectSoundSelectorDialog,
   selectTempSelectedSoundId,
   setSoundFormDialogSoundId,
   setSoundFormDialogValidationErrors,
@@ -67,7 +66,6 @@ const createDeps = ({
       selectValues: () => state.values,
       selectSoundOptions: () => selectSoundOptions({ state }),
       selectSoundFormDialog: () => selectSoundFormDialog({ state }),
-      selectSoundSelectorDialog: () => selectSoundSelectorDialog({ state }),
       selectTempSelectedSoundId: () => selectTempSelectedSoundId({ state }),
       setTempSelectedSoundId: (payload) =>
         setTempSelectedSoundId({ state }, payload),
@@ -161,8 +159,6 @@ describe("layoutEditPanel sound handlers", () => {
 
     expect(deps.state.soundSelectorDialog).toMatchObject({
       open: true,
-      name: "hoverSoundId",
-      source: "soundForm",
     });
     expect(deps.dispatchEvent).not.toHaveBeenCalled();
   });
@@ -173,10 +169,7 @@ describe("layoutEditPanel sound handlers", () => {
       name: "hoverSoundId",
       volumeName: "hover.soundVolume",
     });
-    deps.store.openSoundSelectorDialog({
-      name: "hoverSoundId",
-      source: "soundForm",
-    });
+    deps.store.openSoundSelectorDialog({});
     deps.store.setTempSelectedSoundId({
       soundId: "sound-hover",
     });
