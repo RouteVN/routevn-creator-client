@@ -11,7 +11,7 @@ export const createWebErrorReporter = ({ release }) =>
     release,
     environment: import.meta.env?.VITE_ROUTEVN_SENTRY_ENVIRONMENT,
     // Like desktop development builds, unbuilt dev servers use `local`.
-    dist: import.meta.env?.VITE_ROUTEVN_BUILD_ID ?? "local",
+    dist: import.meta.env?.VITE_ROUTEVN_SENTRY_DIST ?? "local",
     runtime: "web",
     captureGlobal: false,
   });

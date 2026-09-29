@@ -37,6 +37,23 @@ fn release_build_id() -> String {
     git_value(&["rev-parse", "--short=12", "HEAD"]).unwrap_or_else(|| "local".to_owned())
 }
 
+// `dist` names one shipped build. Symbols are uploaded per build, and each OS
+// and distribution builds different binaries and bundles, so the build ID alone
+// would give them all the same `dist`.
+fn release_dist(build_id: &str, target_os: &str) -> String {
+    println!("cargo:rerun-if-env-changed=VITE_ROUTEVN_DISTRIBUTION");
+    let dist = match std::env::var("VITE_ROUTEVN_DISTRIBUTION").as_deref() {
+        Ok("steam") => format!("{build_id}-{target_os}-steam"),
+        _ => format!("{build_id}-{target_os}"),
+    };
+    // Sentry limits `dist` to 64 characters.
+    assert!(
+        dist.len() <= 64,
+        "The error reporting dist {dist} is longer than 64 characters; shorten ROUTEVN_BUILD_ID"
+    );
+    dist
+}
+
 fn main() {
     if matches!(
         std::env::var("CARGO_CFG_TARGET_OS").as_deref(),
@@ -77,14 +94,15 @@ fn main() {
                 "Development error reporting must use the local API on http://127.0.0.1"
             );
         }
-        let build_id = if production {
-            release_build_id()
+        let dist = if production {
+            let target_os = std::env::var("CARGO_CFG_TARGET_OS").expect("CARGO_CFG_TARGET_OS");
+            release_dist(&release_build_id(), &target_os)
         } else {
             "local".to_owned()
         };
         println!("cargo:rustc-env=ROUTEVN_SENTRY_DSN={dsn}");
         println!("cargo:rustc-env=ROUTEVN_SENTRY_ENVIRONMENT={environment}");
-        println!("cargo:rustc-env=ROUTEVN_BUILD_ID={build_id}");
+        println!("cargo:rustc-env=ROUTEVN_SENTRY_DIST={dist}");
     }
 
     println!("cargo:rerun-if-changed=src/macos_fullscreen_escape.m");

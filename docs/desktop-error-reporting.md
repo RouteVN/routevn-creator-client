@@ -48,12 +48,16 @@ transport requests. Passing configuration to the webview does not forward
 webview errors through Rust; each official SDK sends its own events directly.
 
 Both SDKs tag errors with `routevn-creator@<appVersion>`, the build environment,
-and a build ID as `dist`. Production builds use the 12-character Git revision,
-or `ROUTEVN_BUILD_ID` when set to a non-empty value of at most 64 ASCII
-letters, digits, `.`, `_`, or `-`. The Docker AppImage build passes the host
-revision this way because its source copy has no `.git`. Development builds use
-`local`. Keep release and build identifiers so tooling can match a report to
-its build.
+and `dist`, which names the exact shipped build: `<build-id>-<target>`. The build
+ID is the 12-character Git revision, or `ROUTEVN_BUILD_ID` when set to a
+non-empty value of at most 64 ASCII letters, digits, `.`, `_`, or `-`. The
+Docker AppImage build passes the host revision this way because its source copy
+has no `.git`. The target is `macos`, `windows`, or `linux` for desktop (from
+`src-tauri/build.rs`, with `-steam` appended for Steam builds) and `web` for the
+web build (from `scripts/build.sh`). Each OS and distribution ships a different
+binary and bundle, and symbols are uploaded per `dist`, so they must not share
+one. The whole value may not exceed Sentry's 64-character `dist` limit.
+Development builds use `local`.
 
 ## Source maps
 
