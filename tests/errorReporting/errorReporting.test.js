@@ -1,6 +1,7 @@
 import { describe, expect, it, vi } from "vitest";
 import { getClient } from "@sentry/browser";
 import { scrubErrorEvent } from "../../src/deps/clients/tauri/errorReporting.js";
+import { createErrorReporter } from "../../src/deps/clients/errorReporting.js";
 
 vi.hoisted(() => {
   globalThis.__ROUTEVN_ERROR_REPORTING__ = Object.freeze({
@@ -99,5 +100,43 @@ describe("desktop error reporting", () => {
 
     expect(sent.filter(Boolean)).toHaveLength(10);
     expect(sent.at(-1)).toBe(null);
+  });
+});
+
+describe("explicit error reporting", () => {
+  // No DSN, so this reporter never replaces the SDK client initialized above.
+  const webReporter = createErrorReporter({
+    runtime: "web",
+    captureGlobal: false,
+  });
+
+  it("keeps only stable identifiers from explicit reports", () => {
+    const event = webReporter.scrubErrorEvent({
+      event_id: "event-one",
+      tags: {
+        runtime: "web",
+        operation: "project.open",
+        code: "Bearer secret-token for user@example.com",
+      },
+      exception: {
+        values: [
+          {
+            type: "ProjectError",
+            value: "user@example.com",
+            mechanism: { type: "routevn.capture", handled: true },
+          },
+        ],
+      },
+    });
+
+    expect(event.tags).toEqual({ runtime: "web", operation: "project.open" });
+    expect(event.message).toBe("Captured app error");
+    expect(event.exception.values[0].mechanism.handled).toBe(true);
+    expect(JSON.stringify(event)).not.toContain("user@example.com");
+    expect(JSON.stringify(event)).not.toContain("secret-token");
+  });
+
+  it("ignores explicit reports when no DSN is configured", () => {
+    expect(() => webReporter.capture(new Error("secret"))).not.toThrow();
   });
 });

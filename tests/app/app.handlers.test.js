@@ -468,6 +468,7 @@ describe("app route transitions", () => {
       refreshCurrentProjectEntry: vi.fn(async () => {}),
       getPlatform: vi.fn(() => "tauri"),
       showAlert: vi.fn(),
+      reportError: vi.fn(),
     };
     const deps = {
       appService,
@@ -494,6 +495,9 @@ describe("app route transitions", () => {
       payload: { p: "project-1" },
     });
 
+    expect(appService.reportError).toHaveBeenCalledWith(error, {
+      operation: "route.projectOpen",
+    });
     expect(appService.showAlert).toHaveBeenCalledWith({
       message:
         "RouteVN Creator couldn't safely open this project because its saved project history is inconsistent.\n\nPlease make sure you're using the latest version of RouteVN Creator. If the problem continues, please reach out to RouteVN for support.\n\nTechnical details: state.story.initialSceneId must reference an existing scene",

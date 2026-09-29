@@ -100,3 +100,27 @@ cargo test --manifest-path src-tauri/Cargo.toml --lib \
   error_reporting::tests::sends_one_panic_to_local_collector -- \
   --ignored --exact
 ```
+
+## Explicit reporting (web and desktop)
+
+`appService.reportError(error, { operation, code })` sends an error the app
+already handled. It never shows UI. Handled errors are still shown through
+`showToast` or `showAlert` separately.
+
+- The web build does not install global handlers, so uncaught browser errors
+  are not reported. Only `reportError` calls send anything.
+- `scripts/build.sh web` reads the public production DSN from
+  `.env.production` and exposes it as `VITE_ROUTEVN_SENTRY_DSN` with
+  `VITE_ROUTEVN_SENTRY_ENVIRONMENT=production`. Exporting `VITE_ROUTEVN_SENTRY_DSN`
+  first overrides it. Watch-mode dev servers (`watch:web`) and visual test runs
+  have no DSN, so reporting is a no-op there.
+- Web pages set no Content-Security-Policy, so nothing needs allowing. The
+  collector must accept browser cross-origin requests from the web origin.
+- Web and desktop share the same environment. Events carry a `runtime` tag
+  (`web` or `tauri`) to tell them apart.
+- Explicit events keep only the error type, stack locations, and the stable
+  `runtime`, `operation`, and `code` identifiers. Use a fixed `operation` string;
+  never put user text, paths, or ids into it.
+- `AbortError` is ignored. Do not report expected validation or auth failures.
+- Current call sites: project-open route failures and `runResourcePageMutation`
+  thrown errors.

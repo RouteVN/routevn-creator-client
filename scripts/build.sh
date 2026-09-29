@@ -103,6 +103,18 @@ echo "Building UI components..."
 mkdir -p _site/public
 cp -f static/public/rtgl-icons.js _site/public/rtgl-icons.js
 
+# Web builds report explicitly captured errors to the production collector.
+# The DSN is public routing data, shared with the desktop release builds.
+if [ "${BUILD_TYPE}" = "web" ] && [ -z "${VITE_ROUTEVN_SENTRY_DSN:-}" ]; then
+  WEB_SENTRY_DSN=$(sed -n 's/^ROUTEVN_SENTRY_DSN=//p' .env.production | head -n 1 | tr -d '"')
+  if [ -z "${WEB_SENTRY_DSN}" ]; then
+    echo "Error: ROUTEVN_SENTRY_DSN is missing from .env.production."
+    exit 1
+  fi
+  export VITE_ROUTEVN_SENTRY_DSN="${WEB_SENTRY_DSN}"
+  export VITE_ROUTEVN_SENTRY_ENVIRONMENT=production
+fi
+
 # Build frontend bundle
 echo "Building frontend bundle with ${SETUP_FILE}..."
 "${RTGL_BIN}" fe build -s "${SETUP_FILE}"

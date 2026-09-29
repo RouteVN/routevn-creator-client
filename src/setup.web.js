@@ -6,6 +6,7 @@ import { createWebFilePicker } from "./deps/clients/web/filePicker.js";
 import { installVtBridge } from "./deps/clients/web/vtBridge.js";
 import { resetWebAppStateForVisualTests } from "./deps/clients/web/vtAppStateReset.js";
 import { createBrowserEventsClient } from "./deps/clients/browserEvents.js";
+import { createWebErrorReporter } from "./deps/clients/web/errorReporting.js";
 
 // Services - Web
 import { createAppService } from "./deps/services/web/appService.js";
@@ -66,6 +67,9 @@ const audioService = createAudioService();
 const browserEventsClient = createBrowserEventsClient();
 
 const appVersion = tauriConfig.version;
+const errorReporter = createWebErrorReporter({
+  release: `routevn-creator@${appVersion}`,
+});
 const creatorVersion = deriveProjectFormatVersionFromAppVersion(appVersion);
 
 const updater = {
@@ -107,6 +111,7 @@ const appService = createAppService({
   audioService,
   projectService,
   subject,
+  errorTracker: errorReporter,
 });
 await appService.initUserConfig();
 

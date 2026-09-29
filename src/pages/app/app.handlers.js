@@ -510,6 +510,7 @@ export const createRouteTransitionRunner = (deps) => {
           status: "error",
         });
       } else {
+        appService.reportError(error, { operation: "route.projectOpen" });
         appService.showAlert({ message: getProjectOpenErrorMessage(error) });
       }
       appService.redirect("/projects");

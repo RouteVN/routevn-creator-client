@@ -56,6 +56,7 @@ export const runResourcePageMutation = async ({
     };
   } catch (error) {
     console.error(logLabel, error);
+    appService.reportError(error, { operation: "resourcePage.mutation" });
     showResourcePageError({
       appService,
       errorOrResult: error,
