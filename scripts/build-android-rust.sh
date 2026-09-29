@@ -167,8 +167,12 @@ build_abi() {
   export "CC_${cc_env}=${clang}"
   export "AR_${cc_env}=${ANDROID_AR}"
   export "CARGO_TARGET_${cargo_env}_LINKER=${clang}"
+  # A GNU build ID ties the library the app ships (stripped when packaged) to
+  # this unstripped copy, which is kept to symbolicate native crashes. Line
+  # tables give its crash frames file and line numbers.
+  export "CARGO_TARGET_${cargo_env}_RUSTFLAGS=-C link-arg=-Wl,--build-id=sha1"
 
-  cargo build \
+  CARGO_PROFILE_RELEASE_DEBUG=line-tables-only cargo build \
     --manifest-path "${CRATE_MANIFEST}" \
     --target "${rust_target}" \
     --release \

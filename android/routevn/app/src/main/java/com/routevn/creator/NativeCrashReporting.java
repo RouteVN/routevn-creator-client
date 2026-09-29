@@ -53,7 +53,12 @@ final class NativeCrashReporting {
         SentryAndroid.init(context, options -> {
             options.setDsn(BuildConfig.SENTRY_DSN);
             options.setRelease("routevn-creator@" + BuildConfig.VERSION_NAME);
-            options.setDist(String.valueOf(BuildConfig.VERSION_CODE));
+            // Each distribution runs R8 separately, so its symbols need their own dist.
+            options.setDist(BuildConfig.VERSION_CODE + "-" + BuildConfig.UPDATE_DISTRIBUTION);
+            // Tags JVM crashes with the R8 mapping kept for this build.
+            if (!BuildConfig.PROGUARD_UUID.isEmpty()) {
+                options.setProguardUuid(BuildConfig.PROGUARD_UUID);
+            }
             options.setEnvironment(BuildConfig.SENTRY_ENVIRONMENT);
             options.setSendDefaultPii(false);
             options.setSendClientReports(false);
