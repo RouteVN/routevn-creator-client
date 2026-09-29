@@ -55,3 +55,10 @@ windows = { version = "=0.61.3", features = [
     "Win32_System_Registry",
     "Win32_UI_WindowsAndMessaging",
 ] }
+
+# Release builds keep line tables only for this crate when the release pipeline
+# turns them on (CARGO_PROFILE_RELEASE_DEBUG). Dependencies keep function names
+# from the symbol table, which keeps each symbol cache within the collector's
+# limit. See docs/desktop-error-reporting.md.
+[profile.release.package."*"]
+debug = false

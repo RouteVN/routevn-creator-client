@@ -92,19 +92,29 @@ keep only the images that a sent frame's address falls in, as `symbolic`
 images whose `name` and `debug_file` are reduced to basenames. The debug ID
 names the separate debug file of the exact binary that crashed.
 
-Release builds keep line tables only in that separate debug file when built
-with:
+Release builds keep line tables in that separate debug file when built with:
 
 ```bash
 CARGO_PROFILE_RELEASE_DEBUG=line-tables-only
 CARGO_PROFILE_RELEASE_SPLIT_DEBUGINFO=packed
+# macOS only: turning on debug info stops Cargo's default stripping, which
+# would leave a debug map with build-machine paths in the shipped binary.
+# On Windows this setting would disable the PDB.
+CARGO_PROFILE_RELEASE_STRIP=debuginfo
 ```
+
+Only this crate gets line tables: `[profile.release.package."*"]` in
+`src-tauri/Cargo.toml` keeps dependencies without debug info, so their frames
+resolve to function names from the symbol table. Dependency code inlined or
+instantiated in this crate keeps its lines. Full debug info for every
+dependency makes the symbol cache (about 61 MiB for arm64) exceed the 48 MiB
+limit of `routevn-symbols`; this crate alone is about 33 MiB.
 
 On macOS, each architecture of the universal build then gets
 `src-tauri/target/<arch>-apple-darwin/release/routevn-creator.dSYM` with the
 same UUID as that architecture's slice of the shipped binary, which carries no
-DWARF. The release pipeline keeps those dSYMs, like the source maps. Windows
-PDBs and Linux debug files are not kept yet.
+DWARF or debug map. The release pipeline keeps those dSYMs, like the source
+maps. Windows PDBs and Linux debug files are not kept yet.
 
 ## Collection and privacy
 
