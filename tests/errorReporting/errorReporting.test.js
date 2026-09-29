@@ -244,10 +244,10 @@ describe("explicit error reporting through the SDK", () => {
     expect(JSON.stringify(events)).not.toContain("user@example.com");
   });
 
-  it("tags web reports with the build ID as dist", async () => {
+  it("tags web reports with the web build's dist", async () => {
     vi.stubEnv("VITE_ROUTEVN_SENTRY_DSN", TEST_DSN);
     vi.stubEnv("VITE_ROUTEVN_SENTRY_ENVIRONMENT", "production");
-    vi.stubEnv("VITE_ROUTEVN_BUILD_ID", "0123456789ab");
+    vi.stubEnv("VITE_ROUTEVN_SENTRY_DIST", "0123456789ab-web");
     const reporter = createWebErrorReporter({ release: "app-one@1.0.0" });
     const events = collectSentEvents();
 
@@ -258,10 +258,10 @@ describe("explicit error reporting through the SDK", () => {
     expect(events[0]).toMatchObject({
       release: "app-one@1.0.0",
       environment: "production",
-      dist: "0123456789ab",
+      dist: "0123456789ab-web",
       tags: { runtime: "web", operation: "route.projectOpen" },
     });
-    expect(getClient().getOptions().dist).toBe("0123456789ab");
+    expect(getClient().getOptions().dist).toBe("0123456789ab-web");
   });
 
   it("keeps source map debug IDs only for files in the sent stack", async () => {

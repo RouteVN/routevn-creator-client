@@ -66,6 +66,29 @@ if [ -n "${build_id}" ]; then
   docker_run_args+=(-e ROUTEVN_BUILD_ID="${build_id}")
 fi
 
+# Source maps are written in the container; keep them on the host by mounting
+# the map directory, with the same rules as scripts/build.sh.
+ROUTEVN_SOURCEMAPS="${ROUTEVN_SOURCEMAPS:-0}"
+if [ "${ROUTEVN_SOURCEMAPS}" != 0 ] && [ "${ROUTEVN_SOURCEMAPS}" != 1 ]; then
+  echo "Error: ROUTEVN_SOURCEMAPS must be 0 or 1."
+  exit 1
+fi
+if [ "${ROUTEVN_SOURCEMAPS}" = 1 ]; then
+  sourcemap_dir="${ROUTEVN_SOURCEMAP_DIR:-${ROOT_DIR}/.artifacts/sourcemaps/tauri}"
+  if [ -z "${ROUTEVN_SOURCEMAP_DIR:-}" ]; then
+    rm -rf "${sourcemap_dir}"
+  elif [ -n "$(ls -A "${sourcemap_dir}" 2>/dev/null)" ]; then
+    echo "Error: ROUTEVN_SOURCEMAP_DIR must be empty or absent."
+    exit 1
+  fi
+  mkdir -p "${sourcemap_dir}"
+  docker_run_args+=(
+    -e ROUTEVN_SOURCEMAPS=1
+    -e ROUTEVN_SOURCEMAP_DIR=/sourcemaps
+    -v "$(cd "${sourcemap_dir}" && pwd):/sourcemaps"
+  )
+fi
+
 if [ -d "${HOST_TAURI_CACHE_DIR}" ]; then
   docker_run_args+=(-v "${HOST_TAURI_CACHE_DIR}:/host-tauri-cache:ro")
 fi

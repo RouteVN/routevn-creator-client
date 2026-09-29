@@ -127,8 +127,9 @@ if [ "${BUILD_TYPE}" = "web" ] && [ -z "${VITE_ROUTEVN_SENTRY_DSN:-}" ]; then
   export VITE_ROUTEVN_SENTRY_ENVIRONMENT=production
 fi
 
-# Tag web reports with a build ID as `dist`, chosen like desktop release builds
-# in src-tauri/build.rs: ROUTEVN_BUILD_ID, else the 12-character Git revision.
+# Tag web reports with `<build-id>-web` as `dist`, like desktop release builds in
+# src-tauri/build.rs: ROUTEVN_BUILD_ID, else the 12-character Git revision, then
+# the target, so each shipped bundle has its own `dist` for its symbols.
 if [ "${BUILD_TYPE}" = "web" ]; then
   WEB_BUILD_ID="${ROUTEVN_BUILD_ID:-}"
   if [ -z "${WEB_BUILD_ID}" ]; then
@@ -137,7 +138,13 @@ if [ "${BUILD_TYPE}" = "web" ]; then
     echo "Error: ROUTEVN_BUILD_ID must be at most 64 ASCII letters, digits, '.', '_' or '-'."
     exit 1
   fi
-  export VITE_ROUTEVN_BUILD_ID="${WEB_BUILD_ID}"
+  WEB_DIST="${WEB_BUILD_ID}-web"
+  # Sentry limits `dist` to 64 characters.
+  if [ "${#WEB_DIST}" -gt 64 ]; then
+    echo "Error: the web dist ${WEB_DIST} is longer than 64 characters; shorten ROUTEVN_BUILD_ID."
+    exit 1
+  fi
+  export VITE_ROUTEVN_SENTRY_DIST="${WEB_DIST}"
 fi
 
 # Build frontend bundle

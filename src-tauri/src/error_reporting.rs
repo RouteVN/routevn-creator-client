@@ -52,7 +52,7 @@ fn scrub_event(event: Event<'static>) -> Event<'static> {
         platform: event.platform,
         release: Some(RELEASE.into()),
         environment: Some(env!("ROUTEVN_SENTRY_ENVIRONMENT").into()),
-        dist: Some(env!("ROUTEVN_BUILD_ID").into()),
+        dist: Some(env!("ROUTEVN_SENTRY_DIST").into()),
         message: Some("Rust panic".to_owned()),
         exception: event.exception,
         stacktrace: event.stacktrace,
@@ -89,7 +89,7 @@ pub fn webview_init_script() -> String {
         "dsn": env!("ROUTEVN_SENTRY_DSN"),
         "release": RELEASE,
         "environment": env!("ROUTEVN_SENTRY_ENVIRONMENT"),
-        "dist": env!("ROUTEVN_BUILD_ID"),
+        "dist": env!("ROUTEVN_SENTRY_DIST"),
     });
     // Tauri appends this to its IPC bootstrap without a separator.
     format!(
