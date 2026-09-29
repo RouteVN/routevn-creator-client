@@ -106,8 +106,12 @@ light system-bar icons. Do not restore app-owned `setStatusBarColor`,
 The root view applies the union of system-bar and display-cutout insets as
 padding, including side cutouts in landscape. It subtracts that padding from
 the insets dispatched to the WebView, so web safe-area CSS does not apply it a
-second time. Remaining keyboard insets still reach the WebView; the Activity
-uses `adjustResize`, and frontend visual-viewport/keyboard handling remains
+second time. On Android 11 and later the keyboard (IME) inset is passed through
+unreduced: Chromium measures it from the window bottom and intersects it with
+the WebView's own bounds, so subtracting the navigation bar from it would count
+that bar twice and leave the visual viewport extending behind the keyboard
+(the scene editor toolbar ended up partly covered). The Activity uses
+`adjustResize`, and frontend visual-viewport/keyboard handling remains
 responsible for keeping editing controls above the keyboard. Native window
 metrics continue to exclude system bars and cutouts, independently of keyboard
 visibility.

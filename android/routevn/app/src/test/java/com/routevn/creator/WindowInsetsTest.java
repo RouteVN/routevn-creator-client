@@ -105,7 +105,9 @@ public class WindowInsetsTest {
 
     @Test
     @Config(sdk = {33, 35})
-    public void keyboardInsetsReachWebViewWithoutDuplicatingNavigationPadding() {
+    public void keyboardInsetReachesWebViewWithoutNavigationBarSubtracted() {
+        // Chromium measures the IME inset from the window bottom and intersects
+        // it with its own bounds; a reduced inset double-counts the nav bar.
         WindowInsetsCompat insets = new WindowInsetsCompat.Builder()
             .setInsets(WindowInsetsCompat.Type.statusBars(), Insets.of(0, 24, 0, 0))
             .setInsets(WindowInsetsCompat.Type.navigationBars(), Insets.of(0, 0, 0, 16))
@@ -117,7 +119,7 @@ public class WindowInsetsTest {
 
         assertEquals(16, root.getPaddingBottom());
         assertTrue(remaining.isVisible(WindowInsetsCompat.Type.ime()));
-        assertEquals(284, remaining.getInsets(WindowInsetsCompat.Type.ime()).bottom);
+        assertEquals(300, remaining.getInsets(WindowInsetsCompat.Type.ime()).bottom);
     }
 
     @Test

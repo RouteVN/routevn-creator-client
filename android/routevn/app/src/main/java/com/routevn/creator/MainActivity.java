@@ -526,11 +526,22 @@ public class MainActivity extends Activity {
             systemInsetsApplied = true;
             finishSplashIfReady();
             // The WebView already sits inside this safe area. Pass only the
-            // remaining insets so it does not apply system bars/cutouts twice,
-            // while preserving keyboard insets relative to its own bounds.
+            // remaining insets so it does not apply system bars/cutouts twice.
             WindowInsetsCompat remaining = insets.inset(
                 safeArea.left, safeArea.top, safeArea.right, safeArea.bottom
             );
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
+                // Chromium measures the keyboard inset from the window bottom
+                // and intersects it with its own bounds. Reducing it by the
+                // navigation bar would subtract that bar twice and leave the
+                // visual viewport extending behind the keyboard.
+                remaining = new WindowInsetsCompat.Builder(remaining)
+                    .setInsets(
+                        WindowInsetsCompat.Type.ime(),
+                        insets.getInsets(WindowInsetsCompat.Type.ime())
+                    )
+                    .build();
+            }
             if (Build.VERSION.SDK_INT == Build.VERSION_CODES.P) {
                 // Compat.inset() cannot adjust display cutouts on Android 9.
                 return remaining.consumeDisplayCutout();
