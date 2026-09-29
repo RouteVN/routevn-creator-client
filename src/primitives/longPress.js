@@ -1,18 +1,29 @@
 const LONG_PRESS_DELAY_MS = 500;
-const MOVE_TOLERANCE_PX = 8;
+// Matches UIKit's long-press drift allowance; iPad finger holds can pass 8px.
+const MOVE_TOLERANCE_PX = 10;
 const RELEASE_CLICK_WINDOW_MS = 1000;
 const TARGET_SELECTOR = '[data-long-press="true"]';
+// Editable surfaces keep native selection unless they opt in to menu holds.
 const CONTROL_SELECTOR =
-  'button, input, textarea, select, a, [contenteditable="true"], [data-long-press-ignore]';
+  'button, input, textarea, select, a, [contenteditable="true"]:not([data-long-press-menu="true"]), [data-long-press-ignore]';
 const registrations = new WeakMap();
 
+// iPadOS reports a desktop platform, so touch support identifies it.
+const isAppleTouchDevice = ({ userAgent, platform, maxTouchPoints }) =>
+  /iPad|iPhone|iPod/.test(userAgent) ||
+  (platform === "MacIntel" && maxTouchPoints > 1);
+
 // Delegation crosses component shadow roots and also covers cards rendered later.
-// Only explicitly opted-in surfaces participate; normal taps and scrolling stay native.
+// Opted-in surfaces receive `long-press`. On iOS, where WebKit never sends
+// `contextmenu` for a touch hold, other holds emit the touch `contextmenu`
+// Android sends natively. Normal taps and scrolling stay native.
 export const installLongPress = (documentTarget = document) => {
   if (registrations.has(documentTarget))
     return registrations.get(documentTarget);
 
-  const pointers = new Set();
+  const emulateContextMenu = isAppleTouchDevice(
+    documentTarget.defaultView.navigator,
+  );
   let press;
   let consumedPress;
   let lastTouch;
@@ -29,6 +40,13 @@ export const installLongPress = (documentTarget = document) => {
     }
   };
 
+  const findContextMenuTarget = (event) => {
+    if (!emulateContextMenu) return;
+    const path = event.composedPath();
+    if (path.some((element) => element.matches?.(CONTROL_SELECTOR))) return;
+    return path[0];
+  };
+
   const suppress = (event) => {
     event.preventDefault();
     event.stopImmediatePropagation();
@@ -42,15 +60,22 @@ export const installLongPress = (documentTarget = document) => {
       return;
     }
 
-    pointers.add(event.pointerId);
     cancelPress();
-    const target = findTarget(event);
-    lastTouch = { target, until: Date.now() + RELEASE_CLICK_WINDOW_MS };
-    if (pointers.size !== 1 || event.button !== 0 || !target) return;
+    const longPressTarget = findTarget(event);
+    lastTouch = {
+      target: longPressTarget,
+      until: Date.now() + RELEASE_CLICK_WINDOW_MS,
+    };
+    const contextMenu = !longPressTarget;
+    const target = longPressTarget ?? findContextMenuTarget(event);
+    // WebKit may deliver a touch's pointerup only to its removed target, so
+    // tracking active pointers can leak; a second finger is never primary.
+    if (!event.isPrimary || event.button !== 0 || !target) return;
 
     const rect = target.getBoundingClientRect();
     const current = {
       target,
+      contextMenu,
       pointerId: event.pointerId,
       pointerType: event.pointerType,
       x: event.clientX,
@@ -64,11 +89,35 @@ export const installLongPress = (documentTarget = document) => {
       const nextRect = target.getBoundingClientRect();
       if (
         !target.isConnected ||
-        !target.matches(TARGET_SELECTOR) ||
+        (!contextMenu && !target.matches(TARGET_SELECTOR)) ||
         Math.hypot(nextRect.top - current.top, nextRect.left - current.left) >
           MOVE_TOLERANCE_PX
       ) {
         cancelPress();
+        return;
+      }
+
+      if (contextMenu) {
+        const menuEvent = new documentTarget.defaultView.PointerEvent(
+          "contextmenu",
+          {
+            clientX: current.x,
+            clientY: current.y,
+            pointerId: current.pointerId,
+            pointerType: current.pointerType,
+            isPrimary: true,
+            button: 2,
+            bubbles: true,
+            cancelable: true,
+            composed: true,
+          },
+        );
+        target.dispatchEvent(menuEvent);
+        // Only a handled menu consumes the release click.
+        if (!menuEvent.defaultPrevented) return;
+        current.fired = true;
+        consumedPress = current;
+        consumedPress.until = Infinity;
         return;
       }
 
@@ -101,7 +150,6 @@ export const installLongPress = (documentTarget = document) => {
   };
 
   const handlePointerEnd = (event) => {
-    pointers.delete(event.pointerId);
     if (consumedPress?.pointerId === event.pointerId) {
       consumedPress.until = Date.now() + RELEASE_CLICK_WINDOW_MS;
     }
@@ -148,7 +196,6 @@ export const installLongPress = (documentTarget = document) => {
 
   const reset = () => {
     cancelPress();
-    pointers.clear();
     consumedPress = undefined;
     lastTouch = undefined;
   };

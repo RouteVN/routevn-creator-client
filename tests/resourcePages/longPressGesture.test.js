@@ -23,6 +23,7 @@ describe("delegated long-press gestures", () => {
     Object.defineProperties(event, {
       pointerId: { value: options.pointerId ?? 1 },
       pointerType: { value: options.pointerType ?? "touch" },
+      isPrimary: { value: options.isPrimary ?? true },
     });
     target.dispatchEvent(event);
     return event;
@@ -102,14 +103,33 @@ describe("delegated long-press gestures", () => {
 
   it("cancels when a second finger lands outside the card", () => {
     pointer("pointerdown");
-    pointer("pointerdown", { pointerId: 2 }, document.body);
-    pointer("pointerup", { pointerId: 2 }, document.body);
+    pointer("pointerdown", { pointerId: 2, isPrimary: false }, document.body);
+    pointer("pointerup", { pointerId: 2, isPrimary: false }, document.body);
     vi.advanceTimersByTime(500);
     expect(activate).not.toHaveBeenCalled();
     pointer("pointerup");
     pointer("pointerdown");
     vi.advanceTimersByTime(500);
     expect(activate).toHaveBeenCalledOnce();
+  });
+
+  it("does not recognize a non-primary finger on the card", () => {
+    pointer("pointerdown", { pointerId: 2, isPrimary: false });
+    vi.advanceTimersByTime(500);
+    expect(activate).not.toHaveBeenCalled();
+    pointer("pointerup", { pointerId: 2, isPrimary: false });
+  });
+
+  it("cancels the primary hold when a second finger lands on the same card", () => {
+    pointer("pointerdown");
+    vi.advanceTimersByTime(250);
+    pointer("pointerdown", { pointerId: 2, isPrimary: false });
+    vi.advanceTimersByTime(500);
+    expect(activate).not.toHaveBeenCalled();
+    pointer("pointerup", { pointerId: 2, isPrimary: false });
+    pointer("pointerup");
+    expect(tapClick().defaultPrevented).toBe(false);
+    expect(click).toHaveBeenCalledOnce();
   });
 
   it("suppresses the release click but allows the next intentional tap", () => {
@@ -216,5 +236,151 @@ describe("delegated long-press gestures", () => {
     pointer("pointerdown");
     vi.advanceTimersByTime(500);
     expect(activate).not.toHaveBeenCalled();
+  });
+
+  it("does not emit contextmenu for unmarked holds outside iOS", () => {
+    const plain = document.createElement("div");
+    const menu = vi.fn();
+    plain.addEventListener("contextmenu", menu);
+    document.body.append(plain);
+    pointer("pointerdown", {}, plain);
+    vi.advanceTimersByTime(500);
+    expect(menu).not.toHaveBeenCalled();
+  });
+});
+
+describe("iOS touch contextmenu emulation", () => {
+  let dom;
+  let document;
+  let cleanup;
+  let row;
+  let card;
+  let editor;
+  let line;
+  let menu;
+  let menus;
+  let click;
+
+  const pointer = (type, options = {}, target = row) => {
+    const event = new dom.window.MouseEvent(type, {
+      bubbles: true,
+      composed: true,
+      cancelable: true,
+      clientX: 30,
+      clientY: 40,
+      ...options,
+    });
+    Object.defineProperties(event, {
+      pointerId: { value: 1 },
+      pointerType: { value: "touch" },
+      isPrimary: { value: true },
+    });
+    target.dispatchEvent(event);
+    return event;
+  };
+
+  beforeEach(() => {
+    vi.useFakeTimers();
+    dom = new JSDOM("<body><div id='component'></div></body>");
+    const { window } = dom;
+    Object.defineProperty(window.navigator, "userAgent", {
+      value:
+        "Mozilla/5.0 (iPad; CPU OS 18_7 like Mac OS X) AppleWebKit/605.1.15",
+    });
+    window.PointerEvent = class extends window.MouseEvent {
+      constructor(type, init = {}) {
+        super(type, init);
+        this.pointerId = init.pointerId;
+        this.pointerType = init.pointerType;
+        this.isPrimary = init.isPrimary;
+      }
+    };
+    document = window.document;
+    const root = document
+      .getElementById("component")
+      .attachShadow({ mode: "open" });
+    root.innerHTML = `
+      <div id="row"><span>Character One</span></div>
+      <div id="card" data-long-press="true"><span>Resource One</span></div>
+      <div id="editor" contenteditable="true"><p>Line One</p></div>`;
+    row = root.getElementById("row").firstElementChild;
+    card = root.getElementById("card");
+    editor = root.getElementById("editor");
+    line = editor.firstElementChild;
+    menus = [];
+    // composedPath() is only populated while the event is dispatching.
+    menu = vi.fn((event) => {
+      menus.push({
+        target: event.composedPath()[0],
+        clientX: event.clientX,
+        clientY: event.clientY,
+        pointerType: event.pointerType,
+        button: event.button,
+      });
+      event.preventDefault();
+    });
+    click = vi.fn();
+    root.addEventListener("contextmenu", menu);
+    root.addEventListener("click", click);
+    cleanup = installLongPress(document);
+  });
+
+  afterEach(() => {
+    cleanup();
+    dom.window.close();
+    vi.useRealTimers();
+  });
+
+  it("emits the touch contextmenu Android sends natively", () => {
+    pointer("pointerdown");
+    vi.advanceTimersByTime(499);
+    expect(menu).not.toHaveBeenCalled();
+    vi.advanceTimersByTime(1);
+    expect(menus).toEqual([
+      {
+        target: row,
+        clientX: 30,
+        clientY: 40,
+        pointerType: "touch",
+        button: 2,
+      },
+    ]);
+  });
+
+  it("suppresses the release click only after a handled menu", () => {
+    pointer("pointerdown");
+    vi.advanceTimersByTime(500);
+    pointer("pointerup");
+    expect(pointer("click", { detail: 1 }).defaultPrevented).toBe(true);
+    expect(click).not.toHaveBeenCalled();
+
+    menu.mockImplementation(() => {});
+    click.mockClear();
+    pointer("pointerdown");
+    vi.advanceTimersByTime(500);
+    pointer("pointerup");
+    expect(pointer("click", { detail: 1 }).defaultPrevented).toBe(false);
+    expect(click).toHaveBeenCalledOnce();
+  });
+
+  it("keeps long-press for opted-in cards instead of emitting contextmenu", () => {
+    const activate = vi.fn();
+    card.addEventListener("long-press", activate);
+    pointer("pointerdown", {}, card.firstElementChild);
+    vi.advanceTimersByTime(500);
+    expect(activate).toHaveBeenCalledOnce();
+    expect(menu).not.toHaveBeenCalled();
+  });
+
+  it("leaves editable text native unless the editor opts in to menu holds", () => {
+    pointer("pointerdown", {}, line);
+    vi.advanceTimersByTime(500);
+    pointer("pointerup", {}, line);
+    expect(menu).not.toHaveBeenCalled();
+
+    editor.dataset.longPressMenu = "true";
+    pointer("pointerdown", {}, line);
+    vi.advanceTimersByTime(500);
+    expect(menus.map(({ target }) => target)).toEqual([line]);
   });
 });

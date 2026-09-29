@@ -83,7 +83,11 @@ describe("baseFileExplorer view", () => {
     expect(view).toContain("itemMenu*:");
     expect(view).toContain("handler: handleItemMenuClick");
     expect(view).toContain("$if item.showMenuAction");
-    expect(view).toContain("rtgl-button#itemMenuRef${i}");
+    // The ref is the padded touch area around the small ellipsis button.
+    expect(view).toContain(
+      "rtgl-view#itemMenuRef${i} data-item-id=${item.id} data-file-explorer-action=true",
+    );
+    expect(view).toContain("rtgl-button sq s=sm v=gh pre=ellipsis");
     expect(view).toContain("data-file-explorer-action=true");
     expect(view).toContain("pre=ellipsis");
     expect(view).toContain('aria-label="${itemActionsLabel}"');
