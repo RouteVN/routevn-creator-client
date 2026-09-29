@@ -1,10 +1,11 @@
 // After build:tauri: node tests/tauri/startup.browser.mjs
 // Runs the packaged frontend with an in-memory Tauri bridge. The legacy
-// scenario removes constructable stylesheets and rejects numeric OKLCH lightness.
+// scenario removes constructable stylesheets and rejects numeric OKLab lightness.
 import assert from "node:assert/strict";
 import { readFile } from "node:fs/promises";
 import { chromium, webkit } from "playwright";
 import { serveStatic } from "../support/staticServer.js";
+import { numericLightnessPattern } from "../support/legacyWebKitCss.js";
 
 const appVersion = JSON.parse(
   await readFile(new URL("../../src-tauri/tauri.conf.json", import.meta.url)),
@@ -101,21 +102,32 @@ try {
           { legacy, appVersion },
         );
 
+        let legacyThemeRequests = 0;
         if (legacy) {
           // Safari 15.4–16.1 accepts percentage lightness, but not numbers.
-          await page.route("**/public/theme.css", async (route) => {
-            const response = await route.fetch();
-            await route.fulfill({
-              response,
-              body: (await response.text()).replace(
-                /\boklch\((?=\s*[\d.]+\s)/g,
-                "unsupported-color(",
-              ),
-            });
-          });
+          await page.route(
+            (url) => url.pathname === "/public/theme.css",
+            async (route) => {
+              legacyThemeRequests++;
+              const response = await route.fetch();
+              await route.fulfill({
+                response,
+                body: (await response.text()).replace(
+                  numericLightnessPattern,
+                  "unsupported-color(",
+                ),
+              });
+            },
+          );
         }
 
         await page.goto(server.origin);
+        if (legacy) {
+          assert.ok(
+            legacyThemeRequests > 0,
+            `${label}: theme stylesheet was not intercepted`,
+          );
+        }
         const createButton = page.locator(
           '[data-testid="create-project-button"]',
         );
