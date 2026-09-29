@@ -9,6 +9,7 @@ export const ROUTEVN_ASSET_STORE_URL =
   "https://routevn.com/en/creator/asset-store/";
 export const ROUTEVN_CREATOR_DOCS_URL = `${ROUTEVN_CREATOR_DOCS_BASE_URL}/introduction/`;
 export const ROUTEVN_CREATOR_DOCS_PAGE_INDEX_URL = `${ROUTEVN_CREATOR_DOCS_BASE_URL}/page-index/`;
+export const ROUTEVN_CREATOR_VIDEO_TUTORIALS_URL = `${ROUTEVN_CREATOR_DOCS_BASE_URL}/video-tutorials/`;
 
 const creatorDocsPathByRoutePattern = {
   "/project": "/projects/",
@@ -37,6 +38,7 @@ const creatorDocsPathByRoutePattern = {
   "/project/releases/web-server": "/web-server/",
   "/project/about": "/page-index/#settings",
   "/project/config": "/page-index/#settings",
+  "/project/tutorials": "/video-tutorials/",
   "/project/appearance": "/page-index/#settings",
   "/project/language": "/page-index/#settings",
   "/project/asset-package": "/page-index/#release",

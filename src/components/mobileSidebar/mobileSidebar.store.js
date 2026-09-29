@@ -142,6 +142,12 @@ const settingsItems = [
     path: "/project/config",
     icon: "settings",
   },
+  {
+    id: "tutorials",
+    label: "Tutorials",
+    path: "/project/tutorials",
+    icon: "play-circle",
+  },
 ];
 
 const assetsSections = [

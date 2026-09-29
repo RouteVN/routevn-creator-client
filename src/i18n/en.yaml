@@ -611,6 +611,7 @@ resourceTypes:
   videos: "Videos"
   about: "About"
   config: "Config"
+  tutorials: "Tutorials"
   assetPackage: "Asset Package"
   versions: "Versions"
   webServer: "Web Server"
@@ -2366,6 +2367,10 @@ aboutPage:
   contactTitle: "Contact Us"
   title: "About"
   versionInformationTitle: "Version Information"
+tutorialsPage:
+  title: "Tutorials"
+  description: "Learn RouteVN Creator with step-by-step videos."
+  watchTutorialsButton: "Watch Video Tutorials"
 settingsUserPage:
   placeholderMessage: "User settings content will go here"
   placeholderNote: "This is a placeholder for the user settings interface"

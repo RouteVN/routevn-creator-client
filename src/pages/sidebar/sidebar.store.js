@@ -173,6 +173,7 @@ export const selectViewData = ({ state, props = {}, i18n }) => {
     if (
       currentPath === "/project/about" ||
       currentPath === "/project/config" ||
+      currentPath === "/project/tutorials" ||
       currentPath === "/project/user"
     ) {
       const settingsItem = state.items.find(

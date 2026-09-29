@@ -611,6 +611,7 @@ resourceTypes:
   videos: "视频"
   about: "关于"
   config: "偏好设置"
+  tutorials: "教程"
   assetPackage: "资源包"
   versions: "版本"
   webServer: "Web 服务器"
@@ -2366,6 +2367,10 @@ aboutPage:
   contactTitle: "联系我们"
   title: "关于"
   versionInformationTitle: "版本信息"
+tutorialsPage:
+  title: "教程"
+  description: "通过分步视频学习 RouteVN Creator 的使用方法。"
+  watchTutorialsButton: "观看视频教程"
 settingsUserPage:
   placeholderMessage: "用户设置内容会显示在这里"
   placeholderNote: "这是用户设置界面的占位内容"
