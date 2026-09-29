@@ -6,3 +6,6 @@ propsSchema:
       type: string
     searchQuery:
       type: string
+    columns:
+      type: integer
+      minimum: 1

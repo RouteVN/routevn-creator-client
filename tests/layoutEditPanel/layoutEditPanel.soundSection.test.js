@@ -211,16 +211,55 @@ describe("layoutEditPanel sound section", () => {
       soundName: "Hover Sound",
       waveformDataFileId: "waveform-hover",
     });
-    expect(revealingSection?.items[2]).toMatchObject({
-      type: "segmented-control",
-      label: "Stop",
-      name: "revealSoundStopTiming",
-      value: "immediate",
-      options: [
-        { label: "Immediate", value: "immediate" },
-        { label: "Loop End", value: "loopEnd" },
-      ],
+    // Stop timing is edited in the reveal sound dialog, not inline.
+    expect(revealingSection?.items).toHaveLength(2);
+  });
+
+  it("builds the reveal sound dialog form with sound and stop timing", () => {
+    const state = createInitialState();
+    setValues(
+      { state },
+      {
+        values: {
+          type: "text-revealing",
+          text: "hello",
+          revealSoundId: "sound-hover",
+          revealSoundStopTiming: "loopEnd",
+        },
+      },
+    );
+    setSoundsData({ state }, { soundsData: SOUNDS_DATA });
+    openSoundFormDialog(
+      { state },
+      {
+        name: "revealSoundId",
+        stopTimingName: "revealSoundStopTiming",
+      },
+    );
+
+    const viewData = selectViewData({
+      state,
+      props: createProps("text-revealing"),
+      constants: LAYOUT_EDIT_PANEL_CONSTANTS,
+      i18n: EN_I18N,
     });
+
+    expect(viewData.soundForm.title).toBe("Revealing Sound");
+    expect(viewData.soundForm.fields).toEqual([
+      { type: "slot", slot: "sound-item", label: "Sound" },
+      {
+        name: "stopTiming",
+        type: "segmented-control",
+        label: "Stop",
+        clearable: false,
+        options: [
+          { label: "Immediate", value: "immediate" },
+          { label: "Loop End", value: "loopEnd" },
+        ],
+      },
+    ]);
+    expect(viewData.soundFormDefaults.stopTiming).toBe("loopEnd");
+    expect(viewData.soundFormSoundItem?.id).toBe("sound-hover");
   });
 
   it("offers adding a reveal sound from the revealing section", () => {

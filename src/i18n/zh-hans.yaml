@@ -1641,6 +1641,7 @@ layoutEditPanel:
   revealSoundStopLoopEnd: "循环结束时"
   revealingIndicatorTitle: "显示中指示器"
   revealingLabel: "显示中"
+  revealingSoundLabel: "显示中音频"
   rightClickLabel: "右键点击"
   rightOption: "右"
   saveBlurButton: "保存模糊"

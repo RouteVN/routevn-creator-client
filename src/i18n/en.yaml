@@ -1641,6 +1641,7 @@ layoutEditPanel:
   revealSoundStopLoopEnd: "Loop End"
   revealingIndicatorTitle: "Revealing Indicator"
   revealingLabel: "Revealing"
+  revealingSoundLabel: "Revealing Sound"
   rightClickLabel: "Right Click"
   rightOption: "Right"
   saveBlurButton: "Save Blur"

@@ -73,6 +73,9 @@ const SOUND_FORM_CONFIG_BY_ID_FIELD = {
   clickSoundId: {
     volumeName: "click.soundVolume",
   },
+  revealSoundId: {
+    stopTimingName: "revealSoundStopTiming",
+  },
 };
 const SIZE_FIELDS = new Set(["width", "height"]);
 const CONDITIONAL_OVERRIDE_IMAGE_FIELDS = new Set([
@@ -629,6 +632,7 @@ const openSoundForm = (deps, { name } = {}) => {
   store.openSoundFormDialog({
     name,
     volumeName: config.volumeName,
+    stopTimingName: config.stopTimingName,
   });
   render();
 };
@@ -644,10 +648,14 @@ const removeSoundVariant = (deps, { name } = {}) => {
     name,
     value: undefined,
   });
-  store.updateValueProperty({
-    name: config.volumeName,
-    value: undefined,
-  });
+  for (const optionName of [config.volumeName, config.stopTimingName]) {
+    if (optionName) {
+      store.updateValueProperty({
+        name: optionName,
+        value: undefined,
+      });
+    }
+  }
   render();
   emitPanelUpdate(deps, {
     name,
@@ -1414,20 +1422,25 @@ export const handleSectionActionClick = async (deps, payload) => {
     store.openSpriteBlurDialog();
     render();
   } else if (id === "textRevealing") {
-    if (store.selectSoundOptions().length === 0) {
-      appService.showAlert({
-        message:
-          copy.noSoundsAvailable ??
-          "No sounds available. Create a sound resource first.",
-        title: copy.warningTitle ?? "Warning",
-      });
+    const result = await appService.showDropdownMenu({
+      items: [
+        {
+          type: "item",
+          label: copy.revealingSoundLabel ?? "Revealing Sound",
+          key: "revealSoundId",
+        },
+      ],
+      x: _event.clientX,
+      y: _event.clientY,
+      place: "bs",
+    });
+    if (!result?.item?.key) {
       return;
     }
 
-    store.openSoundSelectorDialog({
-      name: "revealSoundId",
+    openSoundForm(deps, {
+      name: result.item.key,
     });
-    render();
   } else if (id === "textRevealIndicator") {
     const currentValues = store.selectValues();
     const items = createTextRevealIndicatorAddItems(currentValues.indicator, {
@@ -2512,19 +2525,30 @@ export const handleSoundFormAction = (deps, payload) => {
     return;
   }
 
-  const parsedVolume = Number(values.volume);
-  const volume = Number.isFinite(parsedVolume)
-    ? Math.max(0, Math.min(100, Math.round(parsedVolume)))
-    : 100;
-
   store.updateValueProperty({
     name: dialog.name,
     value: dialog.selectedSoundId,
   });
-  store.updateValueProperty({
-    name: dialog.volumeName,
-    value: volume,
-  });
+
+  if (dialog.volumeName) {
+    const parsedVolume = Number(values.volume);
+    const volume = Number.isFinite(parsedVolume)
+      ? Math.max(0, Math.min(100, Math.round(parsedVolume)))
+      : 100;
+
+    store.updateValueProperty({
+      name: dialog.volumeName,
+      value: volume,
+    });
+  }
+
+  if (dialog.stopTimingName) {
+    store.updateValueProperty({
+      name: dialog.stopTimingName,
+      value: values.stopTiming,
+    });
+  }
+
   store.closeSoundFormDialog();
   render();
   emitPanelUpdate(deps, {

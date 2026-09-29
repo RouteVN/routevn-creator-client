@@ -244,3 +244,69 @@ describe("mobile image selector file explorers", () => {
     },
   );
 });
+
+describe("mobile layout edit panel sound and spritesheet selectors", () => {
+  const view = readView(
+    "../../src/components/layoutEditPanel/layoutEditPanel.view.yaml",
+  );
+
+  it.each([
+    {
+      name: "sound",
+      start: "rtgl-dialog#soundSelectorDialog",
+      end: "rtgl-dialog#spritesheetSelectorDialog",
+      guard: "$if showSoundSelectorFileExplorer",
+      explorer: "rvn-base-file-explorer#soundSelectorFileExplorer",
+    },
+    {
+      name: "spritesheet",
+      start: "rtgl-dialog#spritesheetSelectorDialog",
+      end: "$when: fullImagePreviewVisible",
+      guard: "$if showSpritesheetSelectorFileExplorer",
+      explorer: "rvn-base-file-explorer#spritesheetSelectorFileExplorer",
+    },
+  ])(
+    "guards the $name file explorer, passes columns, and confirms with Select",
+    ({ start, end, guard, explorer }) => {
+      const branch = sliceBranch(view, start, end);
+      const guardIndex = branch.indexOf(guard);
+
+      expect(guardIndex).toBeGreaterThan(-1);
+      expect(branch.indexOf(explorer)).toBeGreaterThan(guardIndex);
+      expect(branch).toContain(":columns=${selectorColumns}");
+      expect(branch).toContain("variant=pr: ${selectButton}");
+    },
+  );
+
+  it("uses two columns without file explorers in touch mode", () => {
+    const state = createLayoutEditPanelState();
+    const selectViewData = () =>
+      selectLayoutEditPanelViewData({
+        state,
+        props: createLayoutEditPanelProps(),
+        constants: LAYOUT_EDIT_PANEL_CONSTANTS,
+        i18n: EN_I18N,
+      });
+
+    expect(selectViewData()).toMatchObject({
+      showSoundSelectorFileExplorer: true,
+      showSpritesheetSelectorFileExplorer: true,
+      selectorColumns: undefined,
+    });
+
+    setLayoutEditPanelUiConfig(
+      { state },
+      {
+        uiConfig: {
+          inputMode: "touch",
+        },
+      },
+    );
+
+    expect(selectViewData()).toMatchObject({
+      showSoundSelectorFileExplorer: false,
+      showSpritesheetSelectorFileExplorer: false,
+      selectorColumns: 2,
+    });
+  });
+});

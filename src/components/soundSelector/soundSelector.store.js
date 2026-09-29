@@ -33,10 +33,22 @@ const matchesSearch = (item, searchQuery) => {
   return name.includes(searchQuery) || description.includes(searchQuery);
 };
 
+const parseColumnCount = (value) => {
+  const columns = Number(value);
+  return Number.isInteger(columns) && columns > 0 ? columns : undefined;
+};
+
 export const selectViewData = ({ state, props = {}, i18n }) => {
   const sounds = state.sounds ?? { items: {}, tree: [] };
   const selectedSoundId = state.selectedSoundId;
   const searchQuery = (props.searchQuery ?? "").toLowerCase().trim();
+  const columns = parseColumnCount(props.columns);
+  const soundGridStyle = columns
+    ? `display: grid; grid-template-columns: repeat(${columns}, minmax(0, 1fr));`
+    : "";
+  const soundPreviewStyle = columns
+    ? "aspect-ratio: 16 / 9;"
+    : "height: 120px;";
   const sourceGroups = prependRootItemsGroup({
     data: sounds,
     groups: toFlatGroups(sounds),
@@ -55,7 +67,7 @@ export const selectViewData = ({ state, props = {}, i18n }) => {
           const selectedSoundInsetStyle = isSelected
             ? " box-shadow: inset 0 0 0 1px var(--color-pr);"
             : "";
-          const soundCardStyle = `max-width: 100%; box-sizing: border-box;${selectedSoundInsetStyle}`;
+          const soundCardStyle = `width: ${columns ? "100%" : "220px"}; min-width: 0; max-width: 100%; box-sizing: border-box;${selectedSoundInsetStyle}`;
 
           return {
             ...child,
@@ -76,6 +88,8 @@ export const selectViewData = ({ state, props = {}, i18n }) => {
 
   return {
     groups,
+    soundGridStyle,
+    soundPreviewStyle,
     selectorEmptyMessage: selectResourceSelectorEmptyMessage({
       groups: groups,
       searchQuery: searchQuery,

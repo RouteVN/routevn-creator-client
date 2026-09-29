@@ -250,9 +250,12 @@ describe("layoutEditPanel sound handlers", () => {
     expect(deps.dispatchEvent).not.toHaveBeenCalled();
   });
 
-  it("opens the selector directly for the text reveal sound variant", async () => {
+  it("opens the reveal sound form from the Revealing Sound menu", async () => {
     const deps = createDeps({
       itemType: "text-revealing",
+    });
+    deps.appService.showDropdownMenu.mockResolvedValueOnce({
+      item: { key: "revealSoundId" },
     });
 
     await handleSectionActionClick(deps, {
@@ -267,22 +270,30 @@ describe("layoutEditPanel sound handlers", () => {
       },
     });
 
-    expect(deps.appService.showDropdownMenu).not.toHaveBeenCalled();
-    expect(deps.state.soundSelectorDialog).toMatchObject({
+    expect(deps.appService.showDropdownMenu).toHaveBeenCalledWith({
+      items: [
+        {
+          type: "item",
+          label: "Revealing Sound",
+          key: "revealSoundId",
+        },
+      ],
+      x: 10,
+      y: 20,
+      place: "bs",
+    });
+    expect(deps.state.soundFormDialog).toMatchObject({
       open: true,
       name: "revealSoundId",
-      source: "value",
+      stopTimingName: "revealSoundStopTiming",
+      stopTiming: "immediate",
     });
-    expect(deps.state.soundFormDialog.open).toBe(false);
+    expect(deps.state.soundSelectorDialog.open).toBe(false);
   });
 
-  it("shows an alert when no reveal sounds are available", async () => {
+  it("does nothing when the Revealing menu is dismissed", async () => {
     const deps = createDeps({
       itemType: "text-revealing",
-      soundsData: {
-        items: {},
-        tree: [],
-      },
     });
 
     await handleSectionActionClick(deps, {
@@ -295,11 +306,88 @@ describe("layoutEditPanel sound handlers", () => {
       },
     });
 
-    expect(deps.appService.showAlert).toHaveBeenCalledWith({
-      message: "No sounds available. Create a sound resource first.",
-      title: "Warning",
-    });
+    expect(deps.state.soundFormDialog.open).toBe(false);
     expect(deps.state.soundSelectorDialog.open).toBe(false);
+  });
+
+  it("applies the submitted reveal sound and stop timing", () => {
+    const deps = createDeps({
+      itemType: "text-revealing",
+    });
+    deps.store.openSoundFormDialog({
+      name: "revealSoundId",
+      stopTimingName: "revealSoundStopTiming",
+    });
+    deps.store.setSoundFormDialogSoundId({ soundId: "sound-hover" });
+
+    handleSoundFormAction(deps, {
+      _event: {
+        detail: {
+          actionId: "submit",
+          values: {
+            stopTiming: "loopEnd",
+          },
+        },
+      },
+    });
+
+    expect(deps.state.values).toMatchObject({
+      revealSoundId: "sound-hover",
+      revealSoundStopTiming: "loopEnd",
+    });
+    expect(deps.state.soundFormDialog.open).toBe(false);
+    expect(deps.dispatchEvent.mock.calls[0][0].detail).toMatchObject({
+      name: "revealSoundId",
+      value: "sound-hover",
+    });
+  });
+
+  it("prefills an existing reveal sound and stop timing when editing", () => {
+    const deps = createDeps({
+      itemType: "text-revealing",
+      values: {
+        revealSoundId: "sound-hover",
+        revealSoundStopTiming: "loopEnd",
+      },
+    });
+
+    deps.store.openSoundFormDialog({
+      name: "revealSoundId",
+      stopTimingName: "revealSoundStopTiming",
+    });
+
+    expect(deps.state.soundFormDialog).toMatchObject({
+      selectedSoundId: "sound-hover",
+      stopTiming: "loopEnd",
+    });
+  });
+
+  it("clears the reveal sound and its stop timing", () => {
+    const deps = createDeps({
+      itemType: "text-revealing",
+      values: {
+        revealSoundId: "sound-hover",
+        revealSoundStopTiming: "loopEnd",
+      },
+    });
+
+    handleOptionSelected(deps, {
+      _event: {
+        currentTarget: {
+          dataset: {
+            name: "revealSoundId",
+          },
+        },
+        detail: {
+          item: {
+            value: "",
+          },
+        },
+      },
+    });
+
+    expect(deps.state.values).not.toHaveProperty("revealSoundId");
+    expect(deps.state.values).not.toHaveProperty("revealSoundStopTiming");
   });
 
   it("clears the selected hover sound and its volume", () => {
