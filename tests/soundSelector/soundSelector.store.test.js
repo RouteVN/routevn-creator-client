@@ -61,4 +61,35 @@ describe("soundSelector.store", () => {
       itemBorderColor: "bo",
     });
   });
+
+  it("lays sounds out in a full-width grid when columns are set", () => {
+    const state = createInitialState();
+    setSounds(
+      { state },
+      {
+        sounds: {
+          items: {
+            "sound-one": { id: "sound-one", type: "sound", name: "Sound One" },
+          },
+          tree: [{ id: "sound-one" }],
+        },
+      },
+    );
+
+    const fixedWidth = selectViewData({ state });
+    expect(fixedWidth.soundGridStyle).toBe("");
+    expect(fixedWidth.soundPreviewStyle).toBe("height: 120px;");
+    expect(fixedWidth.groups[0].children[0].soundCardStyle).toContain(
+      "width: 220px;",
+    );
+
+    const twoColumns = selectViewData({ state, props: { columns: 2 } });
+    expect(twoColumns.soundGridStyle).toBe(
+      "display: grid; grid-template-columns: repeat(2, minmax(0, 1fr));",
+    );
+    expect(twoColumns.soundPreviewStyle).toBe("aspect-ratio: 16 / 9;");
+    expect(twoColumns.groups[0].children[0].soundCardStyle).toContain(
+      "width: 100%;",
+    );
+  });
 });

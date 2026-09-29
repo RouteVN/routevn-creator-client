@@ -1,3 +1,7 @@
+import {
+  parseSelectorColumnCount,
+  createSelectorGridStyle,
+} from "../../internal/ui/resourcePages/selectorGrid.js";
 import { selectResourceSelectorEmptyMessage } from "../../internal/ui/resourcePages/selectorEmptyState.js";
 import {
   parseSpritesheetAnimationSelectionValue,
@@ -36,11 +40,6 @@ const matchesSearch = (item, searchQuery) => {
     animationName.includes(searchQuery) ||
     description.includes(searchQuery)
   );
-};
-
-const parseColumnCount = (value) => {
-  const columns = Number(value);
-  return Number.isInteger(columns) && columns > 0 ? columns : undefined;
 };
 
 const createAnimationItems = (spritesheet = {}, selectedSpritesheetValue) => {
@@ -107,10 +106,8 @@ export const selectViewData = ({ state, props = {}, i18n }) => {
   const selectedSpritesheetValue =
     props.selectedSpritesheetValue ?? state.selectedSpritesheetValue;
   const searchQuery = (props.searchQuery ?? "").toLowerCase().trim();
-  const columns = parseColumnCount(props.columns);
-  const spritesheetGridStyle = columns
-    ? `display: grid; grid-template-columns: repeat(${columns}, minmax(0, 1fr));`
-    : "";
+  const columns = parseSelectorColumnCount(props.columns);
+  const spritesheetGridStyle = createSelectorGridStyle(columns);
   const { resourceId, animationName } = parseSpritesheetAnimationSelectionValue(
     selectedSpritesheetValue,
   );

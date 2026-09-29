@@ -373,7 +373,6 @@ export const toInspectorValues = ({
     hoverSoundId: values?.hoverSoundId ?? "",
     clickSoundId: values?.clickSoundId ?? "",
     revealSoundId: values?.revealSoundId ?? "",
-    revealSoundStopTiming: values?.revealSoundStopTiming ?? "immediate",
     conditionalOverrides: normalizeConditionalOverrideRules(
       values?.conditionalOverrides,
     ),

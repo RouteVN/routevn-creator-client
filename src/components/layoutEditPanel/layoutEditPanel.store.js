@@ -13,6 +13,7 @@ import { getFragmentLayoutOptions } from "../../pages/layoutEditor/support/layou
 import { getLayoutEditorElementDefinition } from "../../internal/layoutEditorElementRegistry.js";
 import { splitLayoutConditionFromWhen } from "../../internal/layoutConditions.js";
 import { formatI18nCopy } from "../../internal/ui/i18nCopy.js";
+import { createCommandLineResourceSelectorLayout } from "../../internal/ui/sceneEditor/commandLineResourceSelectorLayout.js";
 import { isTouchUiConfig } from "../../internal/ui/resourcePages/mobileResourcePage.js";
 import { normalizeLayoutRotation } from "../../internal/project/layout.js";
 import {
@@ -75,6 +76,7 @@ import { selectLayoutEditPanelCopy } from "./support/layoutEditPanelCopy.js";
 const HIDDEN_LAYOUT_ACTION_MODES = new Set(["conditional"]);
 const POSITION_POPOVER_NAMES = new Set(["x", "y"]);
 const DEFAULT_INTERACTION_SOUND_VOLUME = 100;
+const DEFAULT_REVEAL_SOUND_STOP_TIMING = "immediate";
 const TEXT_CONTENT_MENTION_VARIABLE_TYPES = new Set([
   "string",
   "number",
@@ -290,23 +292,33 @@ const normalizeInteractionSoundVolume = (
   return Math.max(0, Math.min(100, Math.round(parsedVolume)));
 };
 
-const createSoundForm = (copy = {}) => ({
-  title: copy.soundLabel ?? "Sound",
+const createSoundForm = (copy = {}, { stopTimingName } = {}) => ({
+  title: stopTimingName
+    ? (copy.revealingSoundLabel ?? "Revealing Sound")
+    : (copy.soundLabel ?? "Sound"),
   fields: [
     {
       type: "slot",
       slot: "sound-item",
       label: copy.soundLabel ?? "Sound",
     },
-    {
-      name: "volume",
-      type: "slider-with-input",
-      label: copy.volumeLabel ?? "Volume",
-      min: 0,
-      max: 100,
-      step: 1,
-      required: true,
-    },
+    stopTimingName
+      ? {
+          name: "stopTiming",
+          type: "segmented-control",
+          label: copy.stopLabel ?? "Stop",
+          clearable: false,
+          options: createRevealSoundStopTimingOptions(copy),
+        }
+      : {
+          name: "volume",
+          type: "slider-with-input",
+          label: copy.volumeLabel ?? "Volume",
+          min: 0,
+          max: 100,
+          step: 1,
+          required: true,
+        },
   ],
   actions: {
     layout: "",
@@ -728,18 +740,16 @@ const resetSelectionUiState = (state) => {
     name: undefined,
     source: undefined,
   };
-  state.soundSelectorDialog = {
-    open: false,
-    name: undefined,
-    source: undefined,
-  };
+  state.soundSelectorDialog = { open: false };
   state.soundFormDialog = {
     open: false,
     key: 0,
     name: undefined,
     volumeName: undefined,
+    stopTimingName: undefined,
     selectedSoundId: undefined,
     volume: DEFAULT_INTERACTION_SOUND_VOLUME,
+    stopTiming: DEFAULT_REVEAL_SOUND_STOP_TIMING,
     validationErrors: {},
   };
   state.spritesheetSelectorDialog = {
@@ -1237,29 +1247,22 @@ export const closeImageSelectorDialog = ({ state }, _payload = {}) => {
 
 export const openSoundSelectorDialog = (
   { state },
-  { name, selectedSoundId, source = "value" } = {},
+  { selectedSoundId } = {},
 ) => {
-  state.soundSelectorDialog = {
-    open: true,
-    name,
-    source,
-  };
-  state.tempSelectedSoundId =
-    selectedSoundId ??
-    (typeof name === "string" ? getValueAtPath(state.values, name) : undefined);
+  state.soundSelectorDialog = { open: true };
+  state.tempSelectedSoundId = selectedSoundId;
 };
 
 export const closeSoundSelectorDialog = ({ state }, _payload = {}) => {
-  state.soundSelectorDialog = {
-    open: false,
-    name: undefined,
-    source: undefined,
-  };
+  state.soundSelectorDialog = { open: false };
   state.tempSelectedSoundId = undefined;
 };
 
-export const openSoundFormDialog = ({ state }, { name, volumeName } = {}) => {
-  if (!name || !volumeName) {
+export const openSoundFormDialog = (
+  { state },
+  { name, volumeName, stopTimingName } = {},
+) => {
+  if (!name || (!volumeName && !stopTimingName)) {
     return;
   }
 
@@ -1268,10 +1271,15 @@ export const openSoundFormDialog = ({ state }, { name, volumeName } = {}) => {
     key: state.soundFormDialog.key + 1,
     name,
     volumeName,
+    stopTimingName,
     selectedSoundId: getValueAtPath(state.values, name),
     volume: normalizeInteractionSoundVolume(
-      getValueAtPath(state.values, volumeName),
+      volumeName ? getValueAtPath(state.values, volumeName) : undefined,
     ),
+    stopTiming:
+      getValueAtPath(state.values, stopTimingName) === "loopEnd"
+        ? "loopEnd"
+        : DEFAULT_REVEAL_SOUND_STOP_TIMING,
     validationErrors: {},
   };
 };
@@ -1282,8 +1290,10 @@ export const closeSoundFormDialog = ({ state }, _payload = {}) => {
     key: state.soundFormDialog.key,
     name: undefined,
     volumeName: undefined,
+    stopTimingName: undefined,
     selectedSoundId: undefined,
     volume: DEFAULT_INTERACTION_SOUND_VOLUME,
+    stopTiming: DEFAULT_REVEAL_SOUND_STOP_TIMING,
     validationErrors: {},
   };
 };
@@ -1436,10 +1446,6 @@ export const setTempSelectedSpritesheetValue = (
 
 export const selectImageSelectorDialog = ({ state }) => {
   return state.imageSelectorDialog;
-};
-
-export const selectSoundSelectorDialog = ({ state }) => {
-  return state.soundSelectorDialog;
 };
 
 export const selectSoundFormDialog = ({ state }) => {
@@ -1636,6 +1642,7 @@ export const selectViewData = ({ state, props, constants, i18n }) => {
     { label: copy.noneOption ?? "None", value: "" },
     ...soundItems,
   ];
+  const selectorLayout = createCommandLineResourceSelectorLayout(state);
   const soundFormSoundItem =
     state.soundsData?.items?.[state.soundFormDialog.selectedSoundId];
   const variableOptions = getVariableOptions(state.variablesData, {
@@ -1782,7 +1789,6 @@ export const selectViewData = ({ state, props, constants, i18n }) => {
         `${selectedSpritesheetPreview.fileId ?? ""}:${selectedSpritesheetPreview.animation?.frames?.join(",") ?? ""}:${selectedSpritesheetPreview.animation?.fps ?? ""}`,
       fragmentLayoutOptions,
       values,
-      revealSoundStopTimingOptions: createRevealSoundStopTimingOptions(copy),
       showLayoutSizeSection,
       supportsWidthMode,
       stackWidthMode,
@@ -2020,19 +2026,23 @@ export const selectViewData = ({ state, props, constants, i18n }) => {
     imageSelectorDialog: state.imageSelectorDialog,
     tempSelectedImageId: state.tempSelectedImageId,
     imageFolderItems,
-    showImageSelectorFileExplorer: !state.isTouchMode,
+    showImageSelectorFileExplorer: selectorLayout.showFileExplorer,
+    selectorColumns: selectorLayout.columns,
     soundSelectorDialog: state.soundSelectorDialog,
     tempSelectedSoundId: state.tempSelectedSoundId,
     soundFolderItems,
+    showSoundSelectorFileExplorer: selectorLayout.showFileExplorer,
     soundFormDialog: state.soundFormDialog,
-    soundForm: createSoundForm(copy),
+    soundForm: createSoundForm(copy, state.soundFormDialog),
     soundFormDefaults: {
       volume: state.soundFormDialog.volume,
+      stopTiming: state.soundFormDialog.stopTiming,
     },
     soundFormSoundItem,
     spritesheetSelectorDialog: state.spritesheetSelectorDialog,
     tempSelectedSpritesheetValue: state.tempSelectedSpritesheetValue,
     spritesheetFolderItems,
+    showSpritesheetSelectorFileExplorer: selectorLayout.showFileExplorer,
     fullImagePreviewVisible: state.fullImagePreviewVisible,
     fullImagePreviewImageId: state.fullImagePreviewImageId,
     addAttributeButton: copy.addAttributeButton ?? "Add Attribute",
@@ -2042,7 +2052,6 @@ export const selectViewData = ({ state, props, constants, i18n }) => {
     noAttributesYet: copy.noAttributesYet ?? "No attributes yet",
     noPreviewLabel: copy.noPreviewLabel ?? "No preview",
     notSetLabel: copy.notSetLabel ?? "Not set",
-    okButton: copy.okButton ?? "OK",
     removeButton: copy.removeButton ?? "Remove",
     selectButton: copy.selectButton ?? "Select",
     selectSpritesheetAnimationLabel:

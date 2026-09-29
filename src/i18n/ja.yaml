@@ -1642,6 +1642,7 @@ layoutEditPanel:
   revealSoundStopLoopEnd: "ループ終了時"
   revealingIndicatorTitle: "表示中インジケーター"
   revealingLabel: "表示中"
+  revealingSoundLabel: "表示中の音声"
   rightClickLabel: "右クリック"
   rightOption: "右"
   saveBlurButton: "ぼかしを保存"

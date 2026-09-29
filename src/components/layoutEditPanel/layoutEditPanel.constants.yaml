@@ -487,12 +487,6 @@ layoutSections:
         options: "${revealEffectOptions}"
       - type: list-bar
         items: "${values.textRevealSoundItems}"
-      - "$when": "values.revealSoundId"
-        type: segmented-control
-        label: Stop
-        name: revealSoundStopTiming
-        value: "${values.revealSoundStopTiming}"
-        options: "${revealSoundStopTimingOptions}"
   - "$when": "supportsTextRevealIndicator"
     id: textRevealIndicator
     label: Indicator

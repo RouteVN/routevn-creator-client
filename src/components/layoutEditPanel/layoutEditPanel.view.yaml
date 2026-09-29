@@ -558,7 +558,7 @@ template:
                       - 'rtgl-view w=300 h=f style="min-width: 0; min-height: 0;"':
                           - rvn-base-file-explorer#imageSelectorFileExplorer :items=${imageFolderItems} shrinkable: null
                   - 'rtgl-view w=1fg h=f style="min-width: 0; min-height: 0;"':
-                      - rvn-image-selector#imageSelector selectedImageId=${tempSelectedImageId}: null
+                      - rvn-image-selector#imageSelector selectedImageId=${tempSelectedImageId} :columns=${selectorColumns}: null
               - rtgl-view d=h g=sm w=f ah=e:
                   - rtgl-button#confirmImageSelection variant=pr: ${selectButton}
   - rtgl-dialog#soundFormDialog ?open=${soundFormDialog.open} s=sm:
@@ -585,23 +585,25 @@ template:
       - $if soundSelectorDialog.open:
           - rtgl-view slot=content d=v w=f g=md:
               - 'rtgl-view d=h w=f h=70vh g=lg style="min-width: 0; min-height: 0;"':
-                  - 'rtgl-view w=300 h=f style="min-width: 0; min-height: 0;"':
-                      - rvn-base-file-explorer#soundSelectorFileExplorer :items=${soundFolderItems} shrinkable: null
+                  - $if showSoundSelectorFileExplorer:
+                      - 'rtgl-view w=300 h=f style="min-width: 0; min-height: 0;"':
+                          - rvn-base-file-explorer#soundSelectorFileExplorer :items=${soundFolderItems} shrinkable: null
                   - 'rtgl-view w=1fg h=f style="min-width: 0; min-height: 0;"':
-                      - rvn-sound-selector#soundSelector selectedSoundId=${tempSelectedSoundId}: null
+                      - rvn-sound-selector#soundSelector selectedSoundId=${tempSelectedSoundId} :columns=${selectorColumns}: null
               - rtgl-view d=h g=sm w=f ah=e:
-                  - rtgl-button#confirmSoundSelection variant=pr: ${okButton}
+                  - rtgl-button#confirmSoundSelection variant=pr: ${selectButton}
   - rtgl-dialog#spritesheetSelectorDialog ?open=${spritesheetSelectorDialog.open} s=lg:
       - $if spritesheetSelectorDialog.open:
           - rtgl-view slot=content d=v w=f g=md:
               - 'rtgl-view d=h w=f h=70vh g=lg style="min-width: 0; min-height: 0;"':
-                  - 'rtgl-view w=300 h=f style="min-width: 0; min-height: 0;"':
-                      - rvn-base-file-explorer#spritesheetSelectorFileExplorer :items=${spritesheetFolderItems} shrinkable: null
+                  - $if showSpritesheetSelectorFileExplorer:
+                      - 'rtgl-view w=300 h=f style="min-width: 0; min-height: 0;"':
+                          - rvn-base-file-explorer#spritesheetSelectorFileExplorer :items=${spritesheetFolderItems} shrinkable: null
                   - 'rtgl-view w=1fg h=f style="min-width: 0; min-height: 0;"':
-                      - rvn-spritesheet-selector#spritesheetSelector selectedSpritesheetValue=${tempSelectedSpritesheetValue}: null
+                      - rvn-spritesheet-selector#spritesheetSelector selectedSpritesheetValue=${tempSelectedSpritesheetValue} :columns=${selectorColumns}: null
               - rtgl-view d=h g=sm w=f ah=e:
                   - rtgl-button#cancelSpritesheetSelection variant=se: ${cancelButton}
-                  - rtgl-button#confirmSpritesheetSelection variant=pr: ${okButton}
+                  - rtgl-button#confirmSpritesheetSelection variant=pr: ${selectButton}
   - $when: fullImagePreviewVisible
     rtgl-dialog#fullPreviewDialog open layout=fixed bare p=none:
       - rtgl-view#previewOverlay slot=content pos=fix edge=f z=3000 cur=pointer:
