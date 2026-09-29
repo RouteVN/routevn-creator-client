@@ -74,7 +74,7 @@ if [ -d "${HOST_TAURI_CACHE_DIR}" ]; then
   docker_run_args+=(-v "${HOST_TAURI_CACHE_DIR}:/host-tauri-cache:ro")
 fi
 
-: "${ROUTEVN_SYMBOLS_REV:?Set ROUTEVN_SYMBOLS_REV to the routevn-observability commit that provides routevn-symbols}"
+: "${ROUTEVN_SYMBOLS_REV:?Set ROUTEVN_SYMBOLS_REV to the routevn-obs commit that provides routevn-symbols}"
 docker build \
   --ssh default \
   --build-arg ROUTEVN_SYMBOLS_REV="${ROUTEVN_SYMBOLS_REV}" \

@@ -110,11 +110,11 @@ different basename from Rettangoli's `main.js`; exported players still use
 `main.js`.
 
 Install `routevn-symbols` with
-`cargo install --locked --git ssh://git@github.com/RouteVN/routevn-observability --bin routevn-symbols`, set
+`cargo install --locked --git ssh://git@github.com/RouteVN/routevn-obs --bin routevn-symbols`, set
 `ROUTEVN_SYMBOLS_AWS_PROFILE` (only needed to upload), and run the release
 script. Its upload call prints a plan by default without touching AWS; set
 `ROUTEVN_SYMBOLS_UPLOAD=1` to upload. The Linux Docker build also needs
-`ROUTEVN_SYMBOLS_REV`, the `routevn-observability` commit that provides
+`ROUTEVN_SYMBOLS_REV`, the `routevn-obs` commit that provides
 `routevn-symbols`. Release
 scripts stop if an enabled upload fails. For a web release, set
 `VITE_ROUTEVN_SENTRY_DSN`, run `ROUTEVN_CRASH_SYMBOLS=1 bun run build:web`,
