@@ -4,8 +4,7 @@ const pendingIds = new WeakMap();
 
 export const isDeviceId = (value) =>
   typeof value === "string" &&
-  // Preserve installation identities created before the 24-character format.
-  (value.length === 12 || value.length === 24) &&
+  value.length === 24 &&
   !/[^1-9A-HJ-NP-Za-km-z]/.test(value);
 
 export const isDeviceMetadataText = (value) =>

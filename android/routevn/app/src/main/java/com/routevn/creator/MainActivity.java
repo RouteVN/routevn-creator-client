@@ -1788,7 +1788,7 @@ public class MainActivity extends Activity {
         // Keep this operation scoped to installation identity. App preferences
         // must continue through writeAppDatabaseValue's secure auth handling.
         if (!"deviceId".equals(safeKey) || valueJson == null ||
-            !valueJson.matches("\"[1-9A-HJ-NP-Za-km-z]{12}\"")) {
+            !valueJson.matches("\"[1-9A-HJ-NP-Za-km-z]{24}\"")) {
             throw new IllegalArgumentException("Invalid device identity value.");
         }
         openDatabase(APP_DATABASE_NAME).execSQL(
