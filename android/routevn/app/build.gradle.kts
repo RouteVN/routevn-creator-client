@@ -20,6 +20,20 @@ require(routevnDistribution in setOf("direct", "google-play")) {
     "routevnDistribution must be direct or google-play"
 }
 
+// Native crash reports go to the same public collector as the desktop app.
+// Release builds always use the production DSN. Debug builds report only when
+// `-ProutevnSentryDsn=<dsn>` is passed, for local collector checks.
+val productionSentryDsn: String by lazy {
+    val dsn = repoRoot.resolve(".env.production").readLines()
+        .firstOrNull { it.startsWith("ROUTEVN_SENTRY_DSN=") }
+        ?.substringAfter("=")
+        ?.trim()
+        ?.trim('"')
+    require(!dsn.isNullOrBlank()) { "ROUTEVN_SENTRY_DSN must be set in .env.production" }
+    dsn
+}
+val debugSentryDsn = providers.gradleProperty("routevnSentryDsn").orElse("").get()
+
 fun javaString(value: String) = "\"" + value.replace("\\", "\\\\").replace("\"", "\\\"") + "\""
 
 val buildAndroidRust by tasks.registering(Exec::class) {
@@ -57,10 +71,16 @@ android {
 
     buildTypes {
         debug {
+            buildConfigField("String", "SENTRY_DSN", javaString(debugSentryDsn))
+            buildConfigField("String", "SENTRY_ENVIRONMENT", javaString("development"))
             manifestPlaceholders["usesCleartextTraffic"] = "true"
         }
 
         release {
+            buildConfigField("String", "SENTRY_DSN", javaString(productionSentryDsn))
+            buildConfigField("String", "SENTRY_ENVIRONMENT", javaString("production"))
+            // Keep native symbol tables so crash addresses can be decoded later.
+            ndk { debugSymbolLevel = "SYMBOL_TABLE" }
             isMinifyEnabled = true
             isShrinkResources = true
             proguardFiles(
@@ -93,10 +113,26 @@ tasks.matching {
     dependsOn(buildAndroidRust)
 }
 
+// The collector does not decode stacks, so keep each release's R8 mapping and
+// native symbol tables. See docs/mobile-crash-reporting.md.
+val archiveReleaseCrashSymbols by tasks.registering(Copy::class) {
+    val version = "${android.defaultConfig.versionName}-${android.defaultConfig.versionCode}"
+    from(layout.buildDirectory.file("outputs/mapping/release/mapping.txt"))
+    from(layout.buildDirectory.file("outputs/native-debug-symbols/release/native-debug-symbols.zip"))
+    into(repoRoot.resolve(".artifacts/android-crash-symbols/$version"))
+}
+
+tasks.matching { it.name == "bundleRelease" || it.name == "assembleRelease" }.configureEach {
+    finalizedBy(archiveReleaseCrashSymbols)
+}
+
 dependencies {
     testImplementation("junit:junit:4.13.2")
     testImplementation("org.robolectric:robolectric:4.17")
     implementation("androidx.core:core:1.19.0")
     implementation("androidx.core:core-splashscreen:1.2.0")
     implementation("androidx.webkit:webkit:1.17.0")
+    // Core and NDK only; the aggregate sentry-android artifact also ships replay.
+    implementation("io.sentry:sentry-android-core:8.58.0")
+    implementation("io.sentry:sentry-android-ndk:8.58.0")
 }

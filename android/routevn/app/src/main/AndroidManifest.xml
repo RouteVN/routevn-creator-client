@@ -23,6 +23,7 @@
     </queries>
 
     <application
+        android:name=".RouteVNApplication"
         android:allowBackup="true"
         android:dataExtractionRules="@xml/data_extraction_rules"
         android:fullBackupContent="@xml/backup_rules"
@@ -32,6 +33,8 @@
         android:supportsRtl="true"
         android:theme="@style/Theme.RouteVNCreator.Starting"
         android:usesCleartextTraffic="${usesCleartextTraffic}">
+        <!-- Initialized in RouteVNApplication so events are scrubbed first. -->
+        <meta-data android:name="io.sentry.auto-init" android:value="false" />
         <activity
             android:name=".MainActivity"
             android:configChanges="keyboard|keyboardHidden|orientation|screenLayout|screenSize|smallestScreenSize|uiMode"
