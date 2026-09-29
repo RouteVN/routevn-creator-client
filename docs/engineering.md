@@ -1061,10 +1061,25 @@ Resource holds use `src/primitives/longPress.js`, installed once per document by
 `registerPrimitives()`. The shared resource views opt interactive touch cards in
 with `data-long-press="true"` and handle the resulting `long-press` event. The
 recognizer follows pointer events across shadow roots, waits 500ms, and cancels
-on movement, scrolling, multiple pointers, or cancellation. It suppresses native
-touch context menus and the release click, including when the action opens an
-overlay. Mouse and keyboard context menus keep their normal behavior. Keep
-gesture timers out of individual resource pages and handlers.
+on movement beyond 10px, scrolling, a non-primary pointer, or cancellation. It
+does not track active pointer ids: WebKit can deliver a touch's `pointerup` only
+to a removed target, which would leave a stale pointer and block later holds. It
+suppresses native touch context menus and the release click, including when the
+action opens an overlay. Mouse and keyboard context menus keep their normal
+behavior. Keep gesture timers out of individual resource pages and handlers.
+
+iOS WebKit never dispatches `contextmenu` for a touch hold. On iPhone and iPad
+the recognizer therefore dispatches the touch `contextmenu` Android sends
+natively for holds outside opted-in cards, so existing right-click menus work
+without per-view wiring. A handled (default-prevented) menu consumes the release
+click; an unhandled one leaves it alone. Native controls and editable text keep
+their native behavior unless an editable surface opts in with
+`data-long-press-menu="true"`, as the scene editor does only in block mode
+(TXT-016).
+`static/public/theme.css` sets `-webkit-touch-callout: none` on `body`; the
+property inherits through shadow roots, so images do not show WebKit's
+save/share callout. Do not make thumbnails `pointer-events: none` to avoid it:
+hosts such as edit-dialog images and project icons handle their own clicks.
 
 Local and cloud cards on the Projects page use this same recognizer to open
 their project dropdown menu. A normal tap opens the project; releasing a hold

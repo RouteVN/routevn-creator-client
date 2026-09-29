@@ -46,6 +46,9 @@ body::-webkit-scrollbar {
 }
 
 body {
+  /* Touch holds open app menus, not WebKit's link/image callout. The property
+     inherits, so it also reaches images inside component shadow roots. */
+  -webkit-touch-callout: none;
   -ms-overflow-style: none;
   scrollbar-width: none;
   height: 100%;

@@ -575,6 +575,13 @@ const STYLES = `
     background: ${BLOCK_ROW_BACKGROUND};
   }
 
+  /* A touch hold on the selected block opens its line menu. Without text to
+     select there, iOS does not focus the editor and raise the keyboard. */
+  .editor[data-long-press-menu="true"] .editor-paragraph[data-selected="true"] {
+    user-select: none;
+    -webkit-user-select: none;
+  }
+
   .gutter {
     position: absolute;
     top: 0;
@@ -1860,6 +1867,7 @@ export class LexicalSceneDocumentEditorElement extends HTMLElement {
     }
     if (this.refs.editor) {
       this.refs.editor.dataset.mode = nextMode;
+      this.refs.editor.dataset.longPressMenu = String(nextMode === "block");
     }
   }
 
@@ -8109,6 +8117,9 @@ export class LexicalSceneDocumentEditorElement extends HTMLElement {
     this.dataset.compactPreviews = String(this.state.compactPreviews);
     this.refs.surface.dataset.mode = this.state.mode;
     this.refs.editor.dataset.mode = this.state.mode;
+    this.refs.editor.dataset.longPressMenu = String(
+      this.state.mode === "block",
+    );
     this.style.setProperty(
       "--left-gutter-width",
       `${this.state.showLineNumbers ? LEFT_GUTTER_WIDTH_WITH_NUMBERS : LEFT_GUTTER_WIDTH_WITHOUT_NUMBERS}px`,
