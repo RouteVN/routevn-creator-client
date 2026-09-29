@@ -2580,3 +2580,10 @@ androidBackupSetup:
   lowSpaceError: 可用空间不足。备份完成后至少需要保留1 GB可用空间。
   unknownSpaceError: 无法检查可用空间。请选择其他本地文件夹。
   busyError: 正在备份。请等待完成后再更改文件夹。
+
+imageUploadValidation:
+  title: "图片上传失败"
+  checkFailed: "无法检查图片尺寸，请重试。"
+  file: "{name}（{width} × {height}）"
+  rejected: "此设备的尺寸上限：{limit} × {limit} 像素。\n{files}"
+  runtimeSize: "{width} × {height}；上限为 {limit} × {limit} 像素"

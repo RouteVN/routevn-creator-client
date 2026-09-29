@@ -6,6 +6,12 @@ export const getAssetLoadFailures = (error) => {
   if (error instanceof AggregateError) {
     return error.errors.flatMap(getAssetLoadFailures);
   }
+  if (error?.cause instanceof AggregateError) {
+    return getAssetLoadFailures(error.cause).map((failure) => ({
+      fileId: failure.fileId ?? error.fileId,
+      error: failure.error,
+    }));
+  }
   return [{ fileId: error?.fileId ?? error?.details?.assetKey, error }];
 };
 
@@ -67,12 +73,18 @@ export const showAssetLoadFailures = (
     failures.map((failure) => [failure.fileId ?? failure.error, failure]),
   );
   const assetNames = [];
-  for (const { fileId } of uniqueFailures.values()) {
+  for (const { fileId, error } of uniqueFailures.values()) {
     if (fileId) {
-      assetNames.push(
+      let name =
         names.get(fileId) ??
-          formatI18nCopy(copy.file ?? "Asset file: {fileId}", { fileId }),
-      );
+        formatI18nCopy(copy.file ?? "Asset file: {fileId}", { fileId });
+      let cause = error;
+      while (cause && cause.code !== "image_texture_too_large")
+        cause = cause.cause;
+      if (cause) {
+        name += ` — ${formatI18nCopy(i18n.imageUploadValidation.runtimeSize, cause)}`;
+      }
+      assetNames.push(name);
     } else {
       assetNames.push(copy.unknown ?? "An unidentified asset");
     }

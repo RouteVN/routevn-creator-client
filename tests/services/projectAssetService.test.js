@@ -19,6 +19,14 @@ vi.mock("../../src/deps/clients/web/fileProcessors.js", () => ({
   extractVideoThumbnail: mocked.extractVideoThumbnail,
 }));
 
+vi.mock(
+  "../../src/deps/clients/web/imageTexture.js",
+  async (importOriginal) => ({
+    ...(await importOriginal()),
+    getMaxTextureSize: () => 4096,
+  }),
+);
+
 import { createProjectAssetService } from "../../src/deps/services/shared/projectAssetService.js";
 
 describe("projectAssetService", () => {
@@ -162,7 +170,7 @@ describe("projectAssetService", () => {
     expect(mocked.extractImageThumbnail).not.toHaveBeenCalled();
   });
 
-  it("tracks a stored import blob when image decoding fails before staging returns", async () => {
+  it("does not store an import blob when image decoding fails", async () => {
     const deleteStoredFiles = vi.fn(async () => {});
     let projectReference = {
       projectId: "project-one",
@@ -200,7 +208,7 @@ describe("projectAssetService", () => {
 
     expect(deleteStoredFiles).toHaveBeenCalledWith(
       expect.objectContaining({
-        fileIds: ["file-original"],
+        fileIds: [],
         projectReference: {
           projectId: "project-one",
           repositoryProjectId: "project-one",
@@ -369,5 +377,44 @@ describe("projectAssetService", () => {
         mimeType: "font/ttf",
       }),
     ]);
+  });
+});
+
+describe("image texture upload limits", () => {
+  it("accepts the exact limit and collects oversized widths and heights in selection order", async () => {
+    const files = ["edge.png", "tall.png", "wide.png", "small.png"].map(
+      (name) => new File([name], name, { type: "image/png" }),
+    );
+    mocked.getImageDimensions.mockReset();
+    for (const dimensions of [
+      { width: 4096, height: 4096 },
+      { width: 1920, height: 4130 },
+      { width: 4097, height: 1 },
+      { width: 64, height: 64 },
+    ])
+      mocked.getImageDimensions.mockResolvedValueOnce(dimensions);
+    const storeFile = vi.fn();
+    const service = createProjectAssetService({ fileAdapter: { storeFile } });
+    const result = await service.validateImageUploadFiles(files);
+    expect(result.files).toEqual([files[0], files[3]]);
+    expect(result.rejected).toEqual([
+      { file: files[1], width: 1920, height: 4130 },
+      { file: files[2], width: 4097, height: 1 },
+    ]);
+    expect(result.limit).toBe(4096);
+    expect(storeFile).not.toHaveBeenCalled();
+  });
+
+  it("rejects an oversized atlas before writing originals or thumbnails even without UI validation", async () => {
+    mocked.detectFileType.mockReturnValue("image");
+    mocked.getImageDimensions.mockResolvedValue({ width: 8192, height: 256 });
+    const storeFile = vi.fn();
+    const service = createProjectAssetService({ fileAdapter: { storeFile } });
+    await expect(
+      service.uploadFiles([
+        new File(["atlas"], "sheet.png", { type: "image/png" }),
+      ]),
+    ).rejects.toMatchObject({ code: "image_texture_too_large", limit: 4096 });
+    expect(storeFile).not.toHaveBeenCalled();
   });
 });

@@ -1,4 +1,8 @@
 import {
+  getMaxTextureSize,
+  validateImageTextureSource,
+} from "../clients/web/imageTexture.js";
+import {
   runAsyncOperation,
   getAssetTimeoutMs,
 } from "../../internal/asyncOperation.js";
@@ -1708,7 +1712,7 @@ export const createGraphicsService = async ({
       ],
     );
     const normalizedAssetsByKey = new Map(normalizedAssetEntries);
-    const assetEntriesToLoad = normalizedAssetEntries.filter(([key, asset]) => {
+    let assetEntriesToLoad = normalizedAssetEntries.filter(([key, asset]) => {
       if (asset.buffer || isDataUrl(asset?.url)) {
         return !hasLoadedAsset(key);
       }
@@ -1718,6 +1722,31 @@ export const createGraphicsService = async ({
 
     if (assetEntriesToLoad.length === 0) {
       return;
+    }
+
+    const imageFailures = [];
+    const rejectedImageKeys = new Set();
+    for (const [fileId, asset] of assetEntriesToLoad) {
+      if (!asset.type?.startsWith("image/")) continue;
+      try {
+        await validateImageTextureSource(asset, {
+          limit: getMaxTextureSize(routeGraphics.canvas),
+          signal,
+        });
+      } catch (error) {
+        if (signal?.aborted || error.name === "TimeoutError") throw error;
+        error.fileId = fileId;
+        imageFailures.push(error);
+        rejectedImageKeys.add(fileId);
+        if (isBlobUrl(asset.url)) URL.revokeObjectURL(asset.url);
+      }
+    }
+    if (runtimeVersion !== assetLoadRuntimeVersion) return;
+    assetEntriesToLoad = assetEntriesToLoad.filter(
+      ([key]) => !rejectedImageKeys.has(key),
+    );
+    if (assetEntriesToLoad.length === 0) {
+      throw new AggregateError(imageFailures, "Images could not be loaded.");
     }
 
     const directAssetEntries = assetEntriesToLoad.filter(
@@ -1897,6 +1926,10 @@ export const createGraphicsService = async ({
         loadedAssetTypes.set(key, assetType);
       }
     });
+    if (imageFailures.length > 0) {
+      if (audioLoadError) imageFailures.push(audioLoadError);
+      throw new AggregateError(imageFailures, "Assets could not be loaded.");
+    }
     if (audioLoadError) {
       throw audioLoadError;
     }

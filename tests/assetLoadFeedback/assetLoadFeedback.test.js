@@ -131,3 +131,26 @@ describe("asset load feedback", () => {
     },
   );
 });
+
+it("preserves dimensions through progress-wrapped graphics failures", () => {
+  const i18n = yaml.load(readFileSync("src/i18n/en.yaml", "utf8"));
+  const deps = createDeps({}, i18n);
+  const sizeError = Object.assign(new Error("texture rejected"), {
+    code: "image_texture_too_large",
+    fileId: "large",
+    width: 1920,
+    height: 4130,
+    limit: 4096,
+  });
+  const wrapped = new Error("load failed", {
+    cause: new AggregateError([sizeError]),
+  });
+  wrapped.fileId = "large";
+  showAssetLoadFailures(
+    deps,
+    getAssetLoadFailures(new AggregateError([wrapped])),
+  );
+  expect(message(deps)).toContain("1920 × 4130");
+  expect(message(deps)).toContain("4096");
+  expect(deps.appService.showAlert).toHaveBeenCalledOnce();
+});

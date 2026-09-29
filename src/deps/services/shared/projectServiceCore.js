@@ -657,6 +657,7 @@ export const createProjectServiceCore = ({
     submitCommand: collabService.submitCommand,
     storeFile: assetService.storeFile,
     storeFileForProject: assetService.storeFileForProject,
+    validateImageUploadFiles: assetService.validateImageUploadFiles,
     uploadFiles: assetService.uploadFiles,
     async importImageFile({ file, parentId, imageId } = {}) {
       return importProjectImageFile({
