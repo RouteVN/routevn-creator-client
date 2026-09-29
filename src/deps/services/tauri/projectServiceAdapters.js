@@ -255,10 +255,13 @@ const parseStoredAppValue = (value) => {
   }
 };
 
-const createProjectDatabaseOpenError = () =>
-  new Error(
+const createProjectDatabaseOpenError = () => {
+  const error = new Error(
     "error returned from database: (code: 14) unable to open database file",
   );
+  error.code = "project_database_missing";
+  return error;
+};
 
 const createLocalSubmitError = (error) => ({
   code: error?.code || "submit_failed",

@@ -105,6 +105,31 @@ echo "Building UI components..."
 mkdir -p _site/public
 cp -f static/public/rtgl-icons.js _site/public/rtgl-icons.js
 
+# Web builds report explicitly captured errors to the production collector.
+# The DSN is public routing data, shared with the desktop release builds.
+if [ "${BUILD_TYPE}" = "web" ] && [ -z "${VITE_ROUTEVN_SENTRY_DSN:-}" ]; then
+  WEB_SENTRY_DSN=$(sed -n 's/^ROUTEVN_SENTRY_DSN=//p' .env.production | head -n 1 | tr -d '"')
+  if [ -z "${WEB_SENTRY_DSN}" ]; then
+    echo "Error: ROUTEVN_SENTRY_DSN is missing from .env.production."
+    exit 1
+  fi
+  export VITE_ROUTEVN_SENTRY_DSN="${WEB_SENTRY_DSN}"
+  export VITE_ROUTEVN_SENTRY_ENVIRONMENT=production
+fi
+
+# Tag web reports with a build ID as `dist`, chosen like desktop release builds
+# in src-tauri/build.rs: ROUTEVN_BUILD_ID, else the 12-character Git revision.
+if [ "${BUILD_TYPE}" = "web" ]; then
+  WEB_BUILD_ID="${ROUTEVN_BUILD_ID:-}"
+  if [ -z "${WEB_BUILD_ID}" ]; then
+    WEB_BUILD_ID=$(git rev-parse --short=12 HEAD 2>/dev/null || echo local)
+  elif ! [[ "${WEB_BUILD_ID}" =~ ^[A-Za-z0-9._-]{1,64}$ ]]; then
+    echo "Error: ROUTEVN_BUILD_ID must be at most 64 ASCII letters, digits, '.', '_' or '-'."
+    exit 1
+  fi
+  export VITE_ROUTEVN_BUILD_ID="${WEB_BUILD_ID}"
+fi
+
 # Build frontend bundle
 echo "Building frontend bundle with ${SETUP_FILE}..."
 "${RTGL_BIN}" fe build -s "${SETUP_FILE}"

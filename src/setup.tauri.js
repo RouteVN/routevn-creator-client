@@ -1,4 +1,4 @@
-import "./deps/clients/tauri/errorReporting.js";
+import { errorReporter } from "./deps/clients/tauri/errorReporting.js";
 import { createGlobalUI } from "@rettangoli/ui";
 
 import { getVersion } from "@tauri-apps/api/app";
@@ -91,6 +91,7 @@ const appService = createAppService({
   audioService,
   projectService,
   subject,
+  errorTracker: errorReporter,
 });
 await appService.initUserConfig();
 

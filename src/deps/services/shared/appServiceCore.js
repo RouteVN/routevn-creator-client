@@ -4,6 +4,7 @@ import { createProjectEntriesService } from "./projectEntriesService.js";
 import { createUserConfigService } from "./userConfigService.js";
 import { getLocalProjectPathFromPayload } from "../../../internal/localProjectRoute.js";
 import { normalizeTheme } from "../../../internal/theme.js";
+import { noopErrorTracker } from "../../clients/errorReporting.js";
 
 export const createAppServiceCore = ({
   db,
@@ -19,6 +20,7 @@ export const createAppServiceCore = ({
   audioService,
   projectService,
   subject,
+  errorTracker = noopErrorTracker,
   platformAdapter = {},
 }) => {
   const getCurrentProjectId = () => {
@@ -103,6 +105,11 @@ export const createAppServiceCore = ({
       const userConfig = await userConfigService.initUserConfig();
       applyTheme(getTheme());
       return userConfig;
+    },
+
+    // Report an already-handled error; this never shows UI.
+    reportError(error, context) {
+      errorTracker.capture(error, context);
     },
 
     getTheme,
