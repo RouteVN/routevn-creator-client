@@ -32,17 +32,43 @@ report only shows WebView internals. `MainActivity` handles
 as before, and the report names the cause. iOS WebView content process
 termination is not handled yet.
 
-Both SDKs write every report to local storage before sending it and delete it
-only after the collector accepts it. A crash report is saved before the process
-exits; if it cannot be sent then, it is sent from local storage on the next
-launch. A user who never reopens the app produces no report. There is no
-crash-free-rate metric because sessions are disabled.
+Native crash reports are saved locally and delivery is attempted on a later
+launch. Delivery is best effort: storage failures, cache eviction and rejected
+requests can discard reports. Reports are not guaranteed to remain until the
+collector accepts them. A user who never reopens the app may produce no report.
+There is no crash-free-rate metric because sessions are disabled.
+
+## Resource and startup safeguards
+
+- Android initializes reporting once on a background thread. SDK cache-flush
+  and native-library waits do not block `Application.onCreate`. Recoverable
+  initialization errors disable reporting for that launch; there is no retry
+  loop. Crashes before the background initializer finishes may be missed.
+- Android's normal envelope cache and transport queue are each limited to ten
+  entries. Connection and read timeouts are five seconds each, and the event
+  flush timeout is one second. These are separate limits, not an overall
+  deadline or a disk-byte quota.
+- iOS's envelope cache is limited to ten entries. The SDK also limits its raw
+  crash store separately. Logs, metrics and attachments are explicitly disabled
+  on both platforms, alongside the other disabled features listed above.
+- No application-owned event history or automatic app restart is maintained.
+
+Known SDK gaps remain with the published versions above: Android's native
+outbox is separate from its bounded envelope cache, has no enforced retention
+limit, and reads envelopes into memory before parsing. Cocoa may synchronously
+flush a startup crash for up to five seconds. Fixes must be released upstream
+before this app can enable outbox byte/age limits and asynchronous iOS startup
+crash delivery; changing `maxCacheItems` alone does not fix those paths.
+
+The collector's 256 KiB request limit does not limit local disk use or memory
+allocated before sending. These safeguards do not establish a hard quota over
+all SDK files or prove the absence of SDK memory leaks.
 
 ## Configuration
 
 | Build   | Android                                                                                                                                                                  | iOS                                                                                                                                                           |
 | ------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| Release | `app/build.gradle.kts` reads `ROUTEVN_SENTRY_DSN` from `.env.production` into `BuildConfig.SENTRY_DSN`; environment `production`. The build fails if the DSN is missing. | `Configure crash reporting` reads `ROUTEVN_SENTRY_DSN` from `.env.production`; environment `production`. Missing, empty or invalid HTTPS DSNs fail the build. |
+| Release | `app/build.gradle.kts` reads `ROUTEVN_SENTRY_DSN` from `.env.production` into `BuildConfig.SENTRY_DSN`; environment `production`. Missing, empty or malformed DSNs and non-HTTPS Release DSNs fail the build. | `Configure crash reporting` reads `ROUTEVN_SENTRY_DSN` from `.env.production`; environment `production`. Missing, empty or invalid HTTPS DSNs fail the build. |
 | Debug   | No DSN, so nothing is reported. Pass `-ProutevnSentryDsn=<dsn>` to report to a collector; environment `development`.                                                     | `ROUTEVN_SENTRY_DSN` is empty. Pass `ROUTEVN_SENTRY_DSN=<dsn>` to `xcodebuild` to report; environment `development`.                                          |
 
 The iOS Xcode build phase runs `scripts/configure-ios-crash-reporting.py` with
@@ -57,6 +83,8 @@ Run the configuration regression checks with:
 
 ```bash
 python3 tests/ios/crashReportingConfiguration.py
+# Requires JAVA_HOME (JDK 17) and ANDROID_HOME:
+python3 tests/android/crashReportingConfiguration.py
 ```
 
 Release name is `routevn-creator@<version>`, matching desktop. `dist` is the
@@ -75,9 +103,9 @@ Android `versionCode` or the iOS `CFBundleVersion`.
 
 It drops message and exception text (replaced with `App crash`), user,
 request, tags, extras, breadcrumbs, server name, modules, device name and other
-device state, frame variables and source context, and absolute paths. Limiting
-debug images also keeps reports under the collector's 256 KiB event limit;
-larger reports are rejected, not truncated.
+device state, frame variables and source context, and absolute paths. Filtering
+debug images reduces report size but does not guarantee the collector's 256 KiB
+event limit; larger reports are rejected, not truncated.
 
 The collector's server-side redaction only removes fixed structural fields, so
 the client scrubbing is required.

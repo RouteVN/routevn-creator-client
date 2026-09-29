@@ -20,6 +20,10 @@ enum NativeCrashReporting {
             options.sendDefaultPii = false
             options.sendClientReports = false
             options.maxBreadcrumbs = 0
+            options.maxCacheItems = 10
+            options.maxAttachmentSize = 0
+            options.enableLogs = false
+            options.enableMetrics = false
 
             // Crashes only.
             options.enableCrashHandler = true
