@@ -183,6 +183,14 @@ The Release target supports iPhone and iPad in one archive (`TARGETED_DEVICE_FAM
 = 1,2`) and requires iOS/iPadOS 16 or newer. It bundles the frontend and compiles
 out the development-server configuration and Safari inspection support.
 
+The `Configure crash reporting` build phase reads `ROUTEVN_SENTRY_DSN` from the
+repository's `.env.production` and writes it into a generated `Info.plist` before
+signing. Release builds and archives fail if the file or DSN is missing, empty,
+or not a valid HTTPS Sentry DSN. No command-line DSN is needed, and Release
+ignores overrides. Debug reports nothing by default; an explicit
+`ROUTEVN_SENTRY_DSN=<test-dsn>` argument to `xcodebuild` enables a test collector.
+See [mobile crash reporting](mobile-crash-reporting.md) for privacy and symbols.
+
 An existing development certificate can build an archive, but App Store export
 also needs distribution signing. Automatic export requires the signing team's
 Apple Developer Program account in Xcode Settings → Apple Accounts. For manual

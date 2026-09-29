@@ -1,5 +1,8 @@
 # Desktop error reporting
 
+Android and iOS native crashes are covered in
+[mobile crash reporting](mobile-crash-reporting.md).
+
 The Tauri desktop app sends uncaught webview errors, unhandled promise
 rejections, and Rust panics to the Sentry-compatible collector in
 `routevn-api-2`. Browser and Rust use separate official SDKs and their normal

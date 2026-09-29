@@ -33,6 +33,7 @@ import android.webkit.ConsoleMessage;
 import android.webkit.CookieManager;
 import android.webkit.ValueCallback;
 import android.webkit.WebChromeClient;
+import android.webkit.RenderProcessGoneDetail;
 import android.webkit.WebResourceError;
 import android.webkit.WebResourceRequest;
 import android.webkit.WebResourceResponse;
@@ -845,7 +846,38 @@ public class MainActivity extends Activity {
         fileChooserCallback = null;
     }
 
+    // Android kills the WebView renderer under memory pressure, and it can
+    // also crash. Unhandled, Chromium aborts the app with a SIGTRAP whose
+    // report only shows WebView internals. Crash the app ourselves instead,
+    // with an exception that names the cause. The crash reporter saves it
+    // locally before the process exits and sends it now or on the next launch.
+    private boolean crashForRenderProcessGone(WebView deadView, boolean didCrash) {
+        // The dead WebView cannot be drawn again before the crash runs.
+        if (deadView.getParent() instanceof ViewGroup parent) {
+            parent.removeView(deadView);
+        }
+        deadView.destroy();
+        webView = null;
+        RuntimeException crash = didCrash
+            ? new WebViewRendererCrashedException()
+            : new WebViewRendererKilledException();
+        // Throw from the main looper, not from inside WebView's callback.
+        mainHandler.post(() -> {
+            throw crash;
+        });
+        return true;
+    }
+
+    static final class WebViewRendererCrashedException extends RuntimeException {}
+
+    static final class WebViewRendererKilledException extends RuntimeException {}
+
     private final class RouteVNWebViewClient extends WebViewClient {
+        @Override
+        public boolean onRenderProcessGone(WebView view, RenderProcessGoneDetail detail) {
+            return crashForRenderProcessGone(view, detail.didCrash());
+        }
+
         @Override
         public void onPageFinished(WebView view, String url) {
             super.onPageFinished(view, url);

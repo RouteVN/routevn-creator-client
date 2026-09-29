@@ -15,7 +15,8 @@ final class RouteVNAppDelegate: UIResponder, UIApplicationDelegate {
         _ application: UIApplication,
         didFinishLaunchingWithOptions launchOptions: [UIApplication.LaunchOptionsKey: Any]?
     ) -> Bool {
-        true
+        NativeCrashReporting.start()
+        return true
     }
 
     // iOS 27 aborts scene creation when the app does not adopt the scene
