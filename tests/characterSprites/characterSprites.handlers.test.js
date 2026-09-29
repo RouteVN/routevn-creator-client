@@ -384,6 +384,11 @@ const createUploadDeps = ({
     })),
   };
   const projectService = {
+    validateImageUploadFiles: vi.fn(async (files) => ({
+      files,
+      rejected: [],
+      limit: 4096,
+    })),
     uploadFiles: vi.fn(async ([file]) => [
       uploadResults.find((result) => result.sourceFile === file) ?? {
         fileId: `${file.name}-file`,
@@ -419,6 +424,7 @@ const createUploadDeps = ({
     updatePendingUpload: vi.fn(),
     setCharacterId: vi.fn(),
     setCharacterName: vi.fn(),
+    setCharacterSpriteGroups: vi.fn(),
     setTagsData: vi.fn(),
     setItems: vi.fn(),
     setProjectResolution: vi.fn(),
@@ -521,4 +527,48 @@ describe("characterSprites upload handlers", () => {
     expect(deps.projectService.uploadFiles).not.toHaveBeenCalled();
     expect(deps.store.setEditUpload).not.toHaveBeenCalled();
   });
+});
+
+it("uploads valid character sprites and shows one warning for multiple oversized files", async () => {
+  const files = ["Small.png", "Tall.png", "Wide.png"].map(
+    (name) => new File([], name, { type: "image/png" }),
+  );
+  const deps = createUploadDeps({ files });
+  deps.projectService.validateImageUploadFiles.mockResolvedValue({
+    files: [files[0]],
+    limit: 4096,
+    rejected: [
+      { file: files[1], width: 1, height: 5000 },
+      { file: files[2], width: 5000, height: 1 },
+    ],
+  });
+  await handleUploadClick(deps, {
+    _event: { currentTarget: {}, detail: { groupId: "root" } },
+  });
+  expect(deps.projectService.uploadFiles).toHaveBeenCalledOnce();
+  expect(deps.projectService.uploadFiles).toHaveBeenCalledWith([files[0]]);
+  expect(deps.appService.showAlert.mock.calls).toEqual([
+    [expect.objectContaining({ title: EN_I18N.imageUploadValidation.title })],
+  ]);
+  expect(deps.appService.showAlert.mock.calls[0][0].message).toContain(
+    "Tall.png",
+  );
+  expect(deps.appService.showAlert.mock.calls[0][0].message).toContain(
+    "Wide.png",
+  );
+});
+
+it("leaves a character sprite replacement untouched when oversized", async () => {
+  const file = new File([], "Tall.png", { type: "image/png" });
+  const deps = createUploadDeps({ files: file });
+  deps.store.setEditUpload = vi.fn();
+  deps.projectService.validateImageUploadFiles.mockResolvedValue({
+    files: [],
+    limit: 4096,
+    rejected: [{ file, width: 1, height: 5000 }],
+  });
+  await handleEditDialogImageClick(deps);
+  expect(deps.projectService.uploadFiles).not.toHaveBeenCalled();
+  expect(deps.store.setEditUpload).not.toHaveBeenCalled();
+  expect(deps.appService.showAlert).toHaveBeenCalledOnce();
 });

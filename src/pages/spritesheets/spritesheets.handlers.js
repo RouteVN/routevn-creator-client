@@ -1,3 +1,4 @@
+import { filterImageUploadFiles } from "../../internal/ui/imageUploadValidation.js";
 import { generateId } from "../../internal/id.js";
 import { tap } from "rxjs";
 import { createProjectStateStream } from "../../deps/services/shared/projectStateStream.js";
@@ -453,15 +454,13 @@ const buildSpritesheetPayload = ({
   return payload;
 };
 
-const uploadSpritesheetSource = async ({
-  appService,
-  copy,
-  pngFile,
-  projectService,
-} = {}) => {
+const uploadSpritesheetSource = async (deps, { copy, pngFile } = {}) => {
+  const { appService, projectService } = deps;
   if (!pngFile) {
     return undefined;
   }
+
+  if ((await filterImageUploadFiles(deps, [pngFile])).length === 0) return null;
 
   try {
     const uploadedFiles = await projectService.uploadFiles([pngFile]);
@@ -908,11 +907,9 @@ export const handleDialogFormAction = async (deps, payload) => {
     return;
   }
 
-  const uploadResult = await uploadSpritesheetSource({
-    appService,
+  const uploadResult = await uploadSpritesheetSource(deps, {
     copy,
     pngFile: dialogSourceFiles?.pngFile,
-    projectService,
   });
   if (uploadResult === null) {
     return;

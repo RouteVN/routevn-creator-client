@@ -1,3 +1,4 @@
+import { filterImageUploadFiles } from "../../internal/ui/imageUploadValidation.js";
 import { generateId, generatePrefixedId } from "../../internal/id.js";
 import { processWithConcurrency } from "../../internal/processWithConcurrency.js";
 import { createCharacterSpritesFileExplorerHandlers } from "../../internal/ui/fileExplorer.js";
@@ -184,12 +185,10 @@ const validateImageFileExtension = ({ appService, copy, file } = {}) => {
   return false;
 };
 
-const uploadImageFile = async ({
-  appService,
-  copy,
-  file,
-  projectService,
-} = {}) => {
+const uploadImageFile = async (deps, { copy, file } = {}) => {
+  const { appService, projectService } = deps;
+  if ((await filterImageUploadFiles(deps, [file])).length === 0) return null;
+
   try {
     const uploadResults = await projectService.uploadFiles([file]);
     return uploadResults?.[0];
@@ -789,15 +788,13 @@ const buildSpritesheetPayload = ({
   return payload;
 };
 
-const uploadSpritesheetSource = async ({
-  appService,
-  copy,
-  pngFile,
-  projectService,
-} = {}) => {
+const uploadSpritesheetSource = async (deps, { copy, pngFile } = {}) => {
+  const { appService, projectService } = deps;
   if (!pngFile) {
     return undefined;
   }
+
+  if ((await filterImageUploadFiles(deps, [pngFile])).length === 0) return null;
 
   try {
     const uploadedFiles = await projectService.uploadFiles([pngFile]);
@@ -829,7 +826,13 @@ const createImageSpritesFromFiles = async ({
     return;
   }
 
-  const imageFiles = filterImageFilesByExtension({ appService, copy, files });
+  const selectedFiles = filterImageFilesByExtension({
+    appService,
+    copy,
+    files,
+  });
+  if (selectedFiles.length === 0) return;
+  const imageFiles = await filterImageUploadFiles(deps, selectedFiles);
   if (imageFiles.length === 0) {
     return;
   }
@@ -1569,11 +1572,9 @@ export const handleFormExtraEvent = async (deps) => {
     return;
   }
 
-  const uploadResult = await uploadImageFile({
-    appService,
+  const uploadResult = await uploadImageFile(deps, {
     copy,
     file,
-    projectService,
   });
 
   if (uploadResult === null) {
@@ -1631,7 +1632,7 @@ export const handleEditFormAddOptionClick = (deps) => {
 };
 
 export const handleEditDialogImageClick = async (deps) => {
-  const { appService, projectService, store, render } = deps;
+  const { appService, store, render } = deps;
   const copy = selectCopy(deps);
   let file;
 
@@ -1657,11 +1658,9 @@ export const handleEditDialogImageClick = async (deps) => {
     return;
   }
 
-  const uploadResult = await uploadImageFile({
-    appService,
+  const uploadResult = await uploadImageFile(deps, {
     copy,
     file,
-    projectService,
   });
 
   if (uploadResult === null) {
@@ -1898,11 +1897,9 @@ export const handleSpritesheetDialogFormAction = async (deps, payload) => {
     createParentId = uploadTarget.parentId;
   }
 
-  const uploadResult = await uploadSpritesheetSource({
-    appService,
+  const uploadResult = await uploadSpritesheetSource(deps, {
     copy,
     pngFile: dialogSourceFiles?.pngFile,
-    projectService,
   });
   if (uploadResult === null) {
     return;

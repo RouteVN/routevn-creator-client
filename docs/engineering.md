@@ -1387,3 +1387,20 @@ It must not:
 - scan the DOM for mounted pages
 - know page tags or page handler names
 - call page handlers directly
+
+### Image Texture Size Validation
+
+`src/deps/clients/web/imageTexture.js` owns WebGL capability queries and image
+texture dimension checks. Upload preflight is exposed through
+`projectService.validateImageUploadFiles`; `imageUploadValidation.js` owns the
+shared, localized batch warning. Asset processing enforces the same rule before
+writing originals or thumbnails. See `docs/upload-file-types.md` for batch and
+replacement behavior.
+
+The graphics service checks incoming images against its active WebGL context
+before GPU upload, so projects created on a more capable device cannot silently
+produce black rectangles. Checks load image metadata through a temporary image
+element, release it immediately, and retain direct URL-backed rendering without
+copying URL assets into JS buffers. Failures retain their file identity and use
+the existing warning-and-continue / blocked-fullscreen policies. Successful
+assets retain the existing cache and are not rechecked on every frame.

@@ -1,3 +1,4 @@
+import { filterImageUploadFiles } from "../../internal/ui/imageUploadValidation.js";
 import { generateId } from "../../internal/id.js";
 import { createMediaPageHandlers } from "../../internal/ui/resourcePages/media/createMediaPageHandlers.js";
 import { processPendingUploads } from "../../internal/ui/resourcePages/media/processPendingUploads.js";
@@ -70,11 +71,8 @@ const validateImageFiles = ({ appService, files, copy } = {}) => {
   return false;
 };
 
-const pickAndUploadImage = async ({
-  appService,
-  projectService,
-  copy,
-} = {}) => {
+const pickAndUploadImage = async (deps, copy) => {
+  const { appService, projectService } = deps;
   let file;
 
   try {
@@ -91,6 +89,10 @@ const pickAndUploadImage = async ({
   }
 
   if (!validateImageFiles({ appService, files: [file], copy })) {
+    return { errorType: "validation-failed" };
+  }
+
+  if ((await filterImageUploadFiles(deps, [file])).length === 0) {
     return { errorType: "validation-failed" };
   }
 
@@ -579,9 +581,12 @@ const createImagesFromFiles = async ({ deps, files, parentId } = {}) => {
     return;
   }
 
+  const acceptedFiles = await filterImageUploadFiles(deps, files);
+  if (acceptedFiles.length === 0) return;
+
   await processPendingUploads({
     deps,
-    files,
+    files: acceptedFiles,
     parentId,
     pendingIdPrefix: "pending-image",
     concurrency: MAX_PARALLEL_UPLOADS,
@@ -862,10 +867,10 @@ export const handleFileExplorerKeyboardScopeKeyDown = (deps, payload) => {
 };
 
 export const handleEditDialogImageClick = async (deps) => {
-  const { appService, projectService, store, render } = deps;
+  const { appService, store, render } = deps;
   const copy = selectCopy(deps);
 
-  const result = await pickAndUploadImage({ appService, projectService, copy });
+  const result = await pickAndUploadImage(deps, copy);
   if (result.cancelled) {
     return;
   }

@@ -269,3 +269,27 @@ When adding or changing an uploadable file type:
   documented here in the same change.
 - Sounds currently show copy that mentions `OGG (Windows only)`, but the upload
   surface itself does not enforce a platform-specific OGG restriction.
+
+## Device Image Dimension Limits
+
+Images, character sprite images, and spritesheet atlas images must fit within
+this device's WebGL `MAX_TEXTURE_SIZE` on both axes. The exact limit is allowed.
+The limit is queried at runtime, never saved in project settings, and never
+inferred from a device model. Upload pages probe a temporary WebGL context once
+per session and immediately release it. Failure to determine the limit blocks
+image upload with visible feedback.
+
+Picker and drag/drop batches are checked before storing files. Oversized files
+are excluded, supported files continue, and one warning lists all oversized
+filenames and dimensions plus the device limit. An entirely rejected selection
+creates no resources and shows no additional generic upload failure. Replacement
+uploads retain the existing resource when rejected. Spritesheets are checked by
+the full PNG atlas dimensions; users must re-export the atlas and JSON together.
+Shared asset processing also checks dimensions before writing original files or
+thumbnails, including image package imports.
+
+This is a device capability check, not a cross-device compatibility guarantee or
+a GPU memory guarantee. Existing images loaded into the shared graphics service
+are checked against the active renderer's limit, including files imported on
+another device. Oversized textures are omitted and reported through the existing
+asset-failure UI. Saved originals and references are not modified.

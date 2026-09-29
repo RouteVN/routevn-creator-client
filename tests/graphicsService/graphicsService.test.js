@@ -1,5 +1,10 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
+vi.mock("../../src/deps/clients/web/imageTexture.js", () => ({
+  getMaxTextureSize: () => 4096,
+  validateImageTextureSource: vi.fn(async () => {}),
+}));
+
 const createAssetBufferManagerMock = vi.fn();
 const createRouteGraphicsMock = vi.fn();
 const createRouteEngineMock = vi.fn();

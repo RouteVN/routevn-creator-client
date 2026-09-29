@@ -620,6 +620,11 @@ describe("images handlers", () => {
         showAlert: vi.fn(),
       },
       projectService: {
+        validateImageUploadFiles: vi.fn(async (files) => ({
+          files,
+          rejected: [],
+          limit: 4096,
+        })),
         importImageFile: vi.fn(async () => ({
           valid: true,
           imageId: "image-123",

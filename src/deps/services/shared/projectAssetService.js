@@ -1,4 +1,8 @@
 import {
+  getMaxTextureSize,
+  assertImageTextureDimensions,
+} from "../../clients/web/imageTexture.js";
+import {
   runAsyncOperation,
   getAssetTimeoutMs,
 } from "../../../internal/asyncOperation.js";
@@ -328,22 +332,15 @@ export const createProjectAssetService = ({
     const fileType = detectFileType(file);
 
     if (fileType === "image") {
-      const [dimensionsResult, storedResult] = await Promise.allSettled([
-        getImageDimensions(file),
-        storeFileWithRecord({
-          file,
-          projectId: options.projectId,
-          projectPath: options.projectPath,
-          targetFileId: options.targetFileId,
-          onStoredFileId: options.onStoredFileId,
-        }),
-      ]);
-      if (storedResult.status === "rejected") throw storedResult.reason;
-      if (dimensionsResult.status === "rejected") {
-        throw dimensionsResult.reason;
-      }
-      const stored = storedResult.value;
-      const dimensions = dimensionsResult.value;
+      const dimensions = await getImageDimensions(file);
+      assertImageTextureDimensions(dimensions, getMaxTextureSize());
+      const stored = await storeFileWithRecord({
+        file,
+        projectId: options.projectId,
+        projectPath: options.projectPath,
+        targetFileId: options.targetFileId,
+        onStoredFileId: options.onStoredFileId,
+      });
 
       if (shouldSkipImageThumbnail(options)) {
         return {
@@ -505,12 +502,27 @@ export const createProjectAssetService = ({
   };
 
   return {
+    async validateImageUploadFiles(files) {
+      const limit = getMaxTextureSize();
+      const accepted = [];
+      const rejected = [];
+      for (const file of files) {
+        const dimensions = await getImageDimensions(file);
+        try {
+          assertImageTextureDimensions(dimensions, limit);
+          accepted.push(file);
+        } catch (error) {
+          if (error.code !== "image_texture_too_large") throw error;
+          rejected.push({ file, width: error.width, height: error.height });
+        }
+      }
+      return { files: accepted, rejected, limit };
+    },
+
     async validateResourceImportFile({ file, validationKind } = {}) {
       if (validationKind === "image") {
         const dimensions = await getImageDimensions(file);
-        if (!dimensions) {
-          throw new Error("Unable to decode image file.");
-        }
+        assertImageTextureDimensions(dimensions, getMaxTextureSize());
         return;
       }
       if (validationKind === "audio") {
@@ -582,7 +594,10 @@ export const createProjectAssetService = ({
               ...result,
             };
           } catch (error) {
-            if (fileAdapter.continueOnUploadError === false) {
+            if (
+              error.code === "image_texture_too_large" ||
+              fileAdapter.continueOnUploadError === false
+            ) {
               throw error;
             }
             console.error(`Failed to upload ${file.name}:`, error);
