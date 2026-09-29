@@ -26,11 +26,11 @@ final class NativeCrashReporting {
             try {
                 initializeSdk.run();
             } catch (RuntimeException | LinkageError error) {
-                Log.w("RouteVN", "Crash reporting could not start; continuing without it.");
+                Log.w("RouteVN", "Crash reporting could not start (" + describe(error) + "); continuing without it.");
                 try {
                     Sentry.close();
                 } catch (RuntimeException | LinkageError cleanupError) {
-                    Log.w("RouteVN", "Crash reporting cleanup failed.");
+                    Log.w("RouteVN", "Crash reporting cleanup failed (" + describe(cleanupError) + ").");
                 }
             }
         };
@@ -40,8 +40,13 @@ final class NativeCrashReporting {
             worker.start();
         } catch (RuntimeException | LinkageError error) {
             // No SDK has started, so there is nothing to close on the UI thread.
-            Log.w("RouteVN", "Crash reporting worker could not start; continuing without it.");
+            Log.w("RouteVN", "Crash reporting worker could not start (" + describe(error) + "); continuing without it.");
         }
+    }
+
+    // The class alone identifies the failure; messages may contain the DSN.
+    private static String describe(Throwable error) {
+        return error.getClass().getName();
     }
 
     private static void initialize(Context context) {
@@ -60,7 +65,10 @@ final class NativeCrashReporting {
             options.setMaxAttachmentSize(0);
             options.setConnectionTimeoutMillis(5000);
             options.setReadTimeoutMillis(5000);
-            options.setFlushTimeoutMillis(1000);
+            // A crash is stored by the single transport thread, which may be
+            // sending a cached report for up to 5s + 5s on a slow network.
+            // Wait past that so the new crash is not dropped (SDK default).
+            options.setFlushTimeoutMillis(15000);
             options.getLogs().setEnabled(false);
             options.getMetrics().setEnabled(false);
 

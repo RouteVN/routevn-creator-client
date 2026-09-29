@@ -47,9 +47,11 @@ There is no crash-free-rate metric because sessions are disabled.
   out-of-memory are not swallowed. Crashes before the background initializer
   finishes may be missed.
 - Android's normal envelope cache and transport queue are each limited to ten
-  entries. Connection and read timeouts are five seconds each, and the event
-  flush timeout is one second. These are separate limits, not an overall
-  deadline or a disk-byte quota.
+  entries. Connection and read timeouts are five seconds each. The flush
+  timeout stays at the SDK default of 15 seconds: a crash is stored by the same
+  single transport thread that may be sending a cached report, so a shorter
+  wait can drop the new crash while the app is exiting. These are separate
+  limits, not an overall deadline or a disk-byte quota.
 - iOS's envelope cache is limited to ten entries. The SDK also limits its raw
   crash store separately. Logs, metrics and attachments are explicitly disabled
   on both platforms, alongside the other disabled features listed above.
@@ -159,3 +161,15 @@ A signed Debug build has an empty DSN and was installed and launched on the
 physical iPad. The six configuration regression tests cover missing files,
 invalid values, Debug overrides and incremental-build changes. These checks do
 not replace a Release crash-delivery test.
+
+Android crash delivery verified on 2026-09-29 on a Redmi K30 5G (Android 12)
+with the background initializer: a Debug build using the development DSN
+`http://11111111111111111111111111111111@127.0.0.1:3000/system/sentry/1`, sending
+through `adb reverse` to a local envelope sink rather than `routevn-api-2`.
+A JVM crash (`am crash`, surfacing as the WebView renderer-loss exception) was
+delivered to `/system/sentry/api/1/envelope/` while the process exited; a
+`kill -SEGV` native crash was delivered after relaunch. Both events contained
+only release, dist, environment, level, platform, SDK, fingerprint, the scrubbed
+exception (`App crash`), frames, device architecture/manufacturer/model, OS
+name/version and, for the native crash, basename-only debug images. This does
+not replace the Release-build qualification against the collector.
