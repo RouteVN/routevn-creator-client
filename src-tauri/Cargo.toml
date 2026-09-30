@@ -56,9 +56,21 @@ windows = { version = "=0.61.3", features = [
     "Win32_UI_WindowsAndMessaging",
 ] }
 
-# Release builds keep line tables only for this crate when the release pipeline
-# turns them on (CARGO_PROFILE_RELEASE_DEBUG). Dependencies keep function names
+# When the release pipeline turns on line tables (CARGO_PROFILE_RELEASE_DEBUG),
+# only RouteVN's crates keep them. Third-party dependencies keep function names
 # from the symbol table, which keeps each symbol cache within the collector's
 # limit. See docs/desktop-error-reporting.md.
+[profile.release]
+# Debug info in any package stops Cargo's implicit stripping, which removes the
+# debug map naming the build machine's object files, so strip explicitly.
+# rustc ignores this on Windows, where the PDB is always written.
+strip = "debuginfo"
+
 [profile.release.package."*"]
 debug = false
+
+[profile.release.package.routevn-exporter]
+debug = "line-tables-only"
+
+[profile.release.package.routevn-packager]
+debug = "line-tables-only"

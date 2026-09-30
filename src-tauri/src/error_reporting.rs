@@ -1,3 +1,4 @@
+use std::borrow::Cow;
 use std::sync::atomic::{AtomicUsize, Ordering};
 use std::time::Duration;
 
@@ -61,7 +62,8 @@ fn scrub_debug_meta(debug_meta: &DebugMeta, addresses: &[u64]) -> DebugMeta {
                     })
                     .then(|| {
                         DebugImage::Symbolic(SymbolicDebugImage {
-                            name: safe_image_name(&image.name).unwrap_or_default(),
+                            name: safe_image_name(&image.name)
+                                .unwrap_or_else(|| "unknown".to_owned()),
                             debug_file: image.debug_file.as_deref().and_then(safe_image_name),
                             ..image.clone()
                         })
@@ -132,7 +134,7 @@ fn scrub_event(event: Event<'static>) -> Event<'static> {
         .flat_map(|stacktrace| &stacktrace.frames)
         .filter_map(|frame| frame.instruction_addr.map(|address| address.0))
         .collect();
-    safe.debug_meta = std::borrow::Cow::Owned(scrub_debug_meta(&event.debug_meta, &addresses));
+    safe.debug_meta = Cow::Owned(scrub_debug_meta(&event.debug_meta, &addresses));
     safe
 }
 
@@ -248,7 +250,7 @@ mod tests {
             })
         };
         let mut event = Event::default();
-        event.debug_meta = std::borrow::Cow::Owned(DebugMeta {
+        event.debug_meta = Cow::Owned(DebugMeta {
             images: vec![
                 image(
                     "/Users/user@example.com/RouteVN Creator.app/Contents/MacOS/RouteVN Creator",
@@ -285,6 +287,50 @@ mod tests {
         let encoded = serde_json::to_string(&safe).unwrap();
         assert!(!encoded.contains("user@example.com"));
         assert!(!encoded.contains("libunrelated"));
+    }
+
+    #[test]
+    fn matches_top_level_frames_within_the_image_range() {
+        let event_at = |address: u64| {
+            let mut event = Event::default();
+            event.debug_meta = Cow::Owned(DebugMeta {
+                images: vec![DebugImage::Symbolic(SymbolicDebugImage {
+                    name: "C:\\Users\\user\\RouteVN Creator.exe".to_owned(),
+                    arch: None,
+                    image_addr: Addr(0x10000),
+                    image_size: 0x1000,
+                    image_vmaddr: Addr(0),
+                    id: "0f6b1c3e-2a4d-4c8b-9e7f-1a2b3c4d5e6f"
+                        .parse::<DebugId>()
+                        .unwrap(),
+                    code_id: None,
+                    debug_file: None,
+                })],
+                ..DebugMeta::default()
+            });
+            event.stacktrace = Some(Stacktrace {
+                frames: vec![Frame {
+                    instruction_addr: Some(Addr(address)),
+                    ..Frame::default()
+                }],
+                ..Stacktrace::default()
+            });
+            scrub_event(event)
+        };
+
+        // An image covers [image_addr, image_addr + image_size).
+        for (address, kept) in [(0xffff, 0), (0x10000, 1), (0x10fff, 1), (0x11000, 0)] {
+            assert_eq!(
+                event_at(address).debug_meta.images.len(),
+                kept,
+                "{address:#x}"
+            );
+        }
+        let safe = event_at(0x10000);
+        let [DebugImage::Symbolic(image)] = safe.debug_meta.images.as_slice() else {
+            panic!("expected one symbolic image");
+        };
+        assert_eq!(image.name, "RouteVN Creator.exe");
     }
 
     #[test]

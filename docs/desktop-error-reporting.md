@@ -92,29 +92,35 @@ keep only the images that a sent frame's address falls in, as `symbolic`
 images whose `name` and `debug_file` are reduced to basenames. The debug ID
 names the separate debug file of the exact binary that crashed.
 
-Release builds keep line tables in that separate debug file when built with:
+On macOS, release builds keep line tables in a separate dSYM when built with:
 
 ```bash
 CARGO_PROFILE_RELEASE_DEBUG=line-tables-only
 CARGO_PROFILE_RELEASE_SPLIT_DEBUGINFO=packed
-# macOS only: turning on debug info stops Cargo's default stripping, which
-# would leave a debug map with build-machine paths in the shipped binary.
-# On Windows this setting would disable the PDB.
-CARGO_PROFILE_RELEASE_STRIP=debuginfo
 ```
 
-Only this crate gets line tables: `[profile.release.package."*"]` in
-`src-tauri/Cargo.toml` keeps dependencies without debug info, so their frames
-resolve to function names from the symbol table. Dependency code inlined or
-instantiated in this crate keeps its lines. Full debug info for every
-dependency makes the symbol cache (about 61 MiB for arm64) exceed the 48 MiB
-limit of `routevn-symbols`; this crate alone is about 33 MiB.
-
-On macOS, each architecture of the universal build then gets
+Each architecture of the universal build then gets
 `src-tauri/target/<arch>-apple-darwin/release/routevn-creator.dSYM` with the
-same UUID as that architecture's slice of the shipped binary, which carries no
-DWARF or debug map. The release pipeline keeps those dSYMs, like the source
-maps. Windows PDBs and Linux debug files are not kept yet.
+same UUID as that architecture's slice of the shipped binary. The release
+pipeline keeps those dSYMs, like the source maps. Windows PDBs and Linux debug
+files are not kept yet.
+
+`src-tauri/Cargo.toml` sets the rest of the release profile:
+
+- Only RouteVN's crates get line tables: this crate, `routevn-exporter` and
+  `routevn-packager`. Third-party dependencies get no debug info, so their
+  frames resolve to function names from the symbol table; their code inlined or
+  instantiated in RouteVN's crates keeps its lines. With line tables for every
+  dependency, the arm64 symbol cache is about 61 MiB, over the 48 MiB limit of
+  `routevn-symbols`; with RouteVN's crates only it is about 34 MiB.
+- `strip = "debuginfo"` is set explicitly. Cargo only strips by default when no
+  package has debug info, and the shipped binary must carry no DWARF or debug
+  map naming the build machine's object files. rustc ignores `strip` on
+  Windows, where it always writes the PDB and records only its file name in the
+  executable.
+
+Builds without those variables still ship a binary with no DWARF or debug map;
+the first-party line tables are removed when it is linked.
 
 ## Collection and privacy
 
@@ -133,14 +139,14 @@ Neither SDK sets a user identity.
 
 `beforeSend` on each side retains the error category, capture mechanism type and
 handled flag, and bounded stack location (Rust frames also keep their
-instruction address, and the debug images those addresses fall in) while
-discarding request metadata, headers, cookies, body/response dumps, tokens,
-emails, object snapshots, local variables, and arbitrary error message text.
-Rust keeps the SDK level, `fatal` for panics; the webview reports every event at
-level `error`. Both SDKs keep zero breadcrumbs. The webview flush on quit and
-the Rust send after each panic wait at most about two seconds. There is no
-app-level retry or forwarding path; the SDK handles collector rate limits and
-transport errors.
+instruction address, and the debug images those addresses fall in, which can
+include a system library and so identify the OS build) while discarding request
+metadata, headers, cookies, body/response dumps, tokens, emails, object
+snapshots, local variables, and arbitrary error message text. Rust keeps the SDK
+level, `fatal` for panics; the webview reports every event at level `error`.
+Both SDKs keep zero breadcrumbs. The webview flush on quit and the Rust send
+after each panic wait at most about two seconds. There is no app-level retry or
+forwarding path; the SDK handles collector rate limits and transport errors.
 
 ## Local verification
 
