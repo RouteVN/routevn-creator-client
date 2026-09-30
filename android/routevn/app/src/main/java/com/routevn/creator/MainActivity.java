@@ -935,16 +935,11 @@ public class MainActivity extends Activity {
         });
     }
 
-    // execSQL runs the page's BEGIN, COMMIT and ROLLBACK as Android
-    // transactions on this bridge thread, so ending them here without marking
-    // them successful rolls them back. Closing the connection would not:
-    // Android keeps a connection open, and its write lock held, until its
-    // transaction ends.
     private synchronized void rollBackOpenTransactions() {
         for (String dbPath : projectTransactions.toArray(new String[0])) {
             SQLiteDatabase database = sqliteDatabases.get(dbPath);
-            while (database != null && database.isOpen() && database.inTransaction()) {
-                database.endTransaction();
+            if (database != null) {
+                rollBackTransactions(database);
             }
             projectTransactions.remove(dbPath);
         }
@@ -2294,6 +2289,7 @@ public class MainActivity extends Activity {
         projectTransactions.remove(dbPath);
         SQLiteDatabase database = sqliteDatabases.remove(dbPath);
         if (database != null && database.isOpen()) {
+            rollBackTransactions(database);
             database.close();
         }
     }
@@ -2301,10 +2297,23 @@ public class MainActivity extends Activity {
     private synchronized void closeSqliteDatabases() {
         for (SQLiteDatabase database : sqliteDatabases.values()) {
             if (database != null && database.isOpen()) {
+                rollBackTransactions(database);
                 database.close();
             }
         }
         sqliteDatabases.clear();
+    }
+
+    // execSQL runs the page's BEGIN, COMMIT and ROLLBACK as Android
+    // transactions on the bridge thread. Android keeps a connection open, and
+    // its write lock held, until its transaction ends, so closing it is not
+    // enough; ending the transaction without marking it successful rolls it
+    // back. Only the thread that began a transaction sees it, so this does
+    // nothing when called from any other thread.
+    private static void rollBackTransactions(SQLiteDatabase database) {
+        while (database.isOpen() && database.inTransaction()) {
+            database.endTransaction();
+        }
     }
 
     private JSONArray queryDatabase(
