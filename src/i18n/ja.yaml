@@ -1927,6 +1927,7 @@ scenesPage:
   updateFolderDescription: "フォルダーの詳細を更新"
   updateSceneDescription: "シーンの詳細を更新"
 sceneEditorPage:
+  failedOpenScene: "シーンを開けませんでした。"
   actionsLabel: "アクション"
   addSectionMenuItem: "セクションを追加"
   addSectionAboveMenuItem: "上にセクションを追加"

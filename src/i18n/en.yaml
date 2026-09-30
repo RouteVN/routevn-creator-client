@@ -1927,6 +1927,7 @@ scenesPage:
   updateFolderDescription: "Update folder details"
   updateSceneDescription: "Update scene details"
 sceneEditorPage:
+  failedOpenScene: "Could not open the scene."
   actionsLabel: "Actions"
   addSectionMenuItem: "Add section"
   addSectionAboveMenuItem: "Add section above"

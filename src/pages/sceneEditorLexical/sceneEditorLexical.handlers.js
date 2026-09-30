@@ -1669,6 +1669,7 @@ export const handleActionTransformEditorDone = (deps, payload) => {
 
 export const handleBeforeMount = (deps) => {
   const { projectService, appService, store, uiConfig, subject } = deps;
+  store.advanceMountVersion();
   let routeSyncSequence = 0;
   setSceneEditorPageLoading(deps, true);
   store.setUiConfig({ uiConfig });
@@ -1723,6 +1724,7 @@ export const handleBeforeMount = (deps) => {
     .subscribe();
 
   return async () => {
+    store.advanceMountVersion();
     cleanupWindowLayout?.();
     unregisterBeforeNavigation();
     projectSubscription.unsubscribe();
@@ -1738,6 +1740,7 @@ export const handleBeforeMount = (deps) => {
 
 export const handleAfterMount = async (deps) => {
   const { projectService, appService, store, render } = deps;
+  const mountVersion = store.selectMountVersion();
   try {
     await initializeSceneEditorPage({
       ...deps,
@@ -1751,8 +1754,17 @@ export const handleAfterMount = async (deps) => {
     await cacheCurrentSceneTextStats(deps);
     scrollEntrySelectionIntoView(deps);
   } catch (error) {
+    if (mountVersion !== store.selectMountVersion()) return;
     if (!isMissingProjectResolutionError(error)) {
-      throw error;
+      console.error("[sceneEditor] Failed to open scene", error);
+      setSceneEditorPageLoading(deps, false);
+      appService.showToast({
+        message:
+          selectCopy(deps).failedOpenScene ?? "Could not open the scene.",
+        status: "error",
+      });
+      appService.navigate("/project", appService.getPayload());
+      return;
     }
 
     const copy = selectCopy(deps);
