@@ -1,4 +1,5 @@
 import { expect, it, vi } from "vitest";
+import { resolveComputedVariables } from "route-engine-js";
 import { handleAfterMount } from "../../src/pages/sceneEditorLexical/sceneEditorLexical.handlers.js";
 import { initializeSceneEditorPage } from "../../src/internal/ui/sceneEditor/runtime.js";
 import { EN_I18N } from "../support/i18n.js";
@@ -11,42 +12,100 @@ vi.mock(
   }),
 );
 
-it("leaves failed scene startup and reports the error without keeping the loading overlay", async () => {
-  const error = new Error("Computed variable has a non-finite result");
-  vi.mocked(initializeSceneEditorPage).mockRejectedValueOnce(error);
-  let isLoading = true;
-  const payload = { p: "project-one", s: "scene-one" };
-  const deps = {
-    projectService: {},
-    store: {
-      selectMountVersion: () => 1,
-      setScenePageLoading: vi.fn(({ isLoading: value }) => {
-        isLoading = value;
-      }),
-      selectIsScenePageLoading: () => isLoading,
-      selectIsSceneAssetLoading: () => false,
-    },
-    appService: {
-      showToast: vi.fn(),
-      getPayload: () => payload,
-      navigate: vi.fn(),
-    },
-    i18n: EN_I18N,
-    render: vi.fn(),
-  };
-  const log = vi.spyOn(console, "error").mockImplementation(() => {});
-  try {
-    await expect(handleAfterMount(deps)).resolves.toBeUndefined();
-    expect(isLoading).toBe(false);
-    expect(deps.appService.showToast).toHaveBeenCalledWith({
-      message: "Could not open the scene.",
-      status: "error",
+it.each([
+  {
+    reason: "a non-finite computed number",
+    computed: { expr: { div: [1, { var: "variables.denominator" }] } },
+    message:
+      "Computed variable “Reciprocal” produced an invalid number. Check its formula in Variables.",
+  },
+  {
+    reason: "a computed result with the wrong type",
+    computed: { value: "text" },
+    message:
+      "Could not calculate computed variable “Reciprocal”. Check its formula in Variables.",
+  },
+  {
+    reason: "an unknown variable reference",
+    computed: { expr: { div: [1, { var: "variables.missing" }] } },
+    message:
+      "Could not calculate computed variable “Reciprocal”. Check its formula in Variables.",
+  },
+  {
+    reason: "a computed variable that is no longer in the repository",
+    computed: { expr: { div: [1, { var: "variables.denominator" }] } },
+    repositoryId: "another-variable",
+    message: "Could not open the scene.",
+  },
+  {
+    reason: "an unrelated startup error",
+    message: "Could not open the scene.",
+  },
+])(
+  "recovers from $reason and shows the relevant error",
+  async ({ computed, message, repositoryId = "reciprocal" }) => {
+    vi.mocked(initializeSceneEditorPage).mockImplementationOnce(() => {
+      if (computed) {
+        resolveComputedVariables({
+          variableConfigs: {
+            denominator: { type: "number", scope: "context", default: 0 },
+            reciprocal: { type: "number", scope: "context", computed },
+          },
+          variables: { denominator: 0 },
+        });
+      }
+      throw new Error("Startup failed");
     });
-    expect(deps.appService.navigate).toHaveBeenCalledWith("/project", payload);
-  } finally {
-    log.mockRestore();
-  }
-});
+    let isLoading = true;
+    const payload = { p: "project-one", s: "scene-one" };
+    const deps = {
+      projectService: {
+        getRepositoryState: () => ({
+          variables: {
+            items: {
+              [repositoryId]: {
+                type: "variable",
+                name: "Reciprocal",
+                variableType: "number",
+                computed,
+              },
+            },
+          },
+        }),
+      },
+      store: {
+        selectMountVersion: () => 1,
+        setScenePageLoading: vi.fn(({ isLoading: value }) => {
+          isLoading = value;
+        }),
+        selectIsScenePageLoading: () => isLoading,
+        selectIsSceneAssetLoading: () => false,
+      },
+      appService: {
+        showToast: vi.fn(),
+        getPayload: () => payload,
+        navigate: vi.fn(),
+      },
+      i18n: EN_I18N,
+      render: vi.fn(),
+    };
+    const log = vi.spyOn(console, "error").mockImplementation(() => {});
+    try {
+      await expect(handleAfterMount(deps)).resolves.toBeUndefined();
+      expect(isLoading).toBe(false);
+      expect(deps.appService.showToast).toHaveBeenCalledWith({
+        message,
+        status: "error",
+      });
+      expect(deps.appService.navigate).toHaveBeenCalledWith(
+        "/project",
+        payload,
+      );
+    } finally {
+      log.mockRestore();
+    }
+  },
+);
 
 it("ignores a startup error from an editor that has been unmounted", async () => {
   let rejectStartup;

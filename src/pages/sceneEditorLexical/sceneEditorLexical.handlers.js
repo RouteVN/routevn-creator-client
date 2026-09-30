@@ -1,5 +1,6 @@
 import { setSceneEditorPageLoading } from "../../internal/ui/sceneEditor/loadingProgress.js";
 import { mountSceneEditorWindowLayout } from "./support/windowLayout.js";
+import { getSceneStartupErrorMessage } from "./support/startupError.js";
 import { filter, tap } from "rxjs";
 import { createProjectStateStream } from "../../deps/services/shared/projectStateStream.js";
 import { generateId } from "../../internal/id.js";
@@ -1739,7 +1740,7 @@ export const handleBeforeMount = (deps) => {
 };
 
 export const handleAfterMount = async (deps) => {
-  const { projectService, appService, store, render } = deps;
+  const { projectService, appService, store, render, i18n } = deps;
   const mountVersion = store.selectMountVersion();
   try {
     await initializeSceneEditorPage({
@@ -1759,8 +1760,11 @@ export const handleAfterMount = async (deps) => {
       console.error("[sceneEditor] Failed to open scene", error);
       setSceneEditorPageLoading(deps, false);
       appService.showToast({
-        message:
-          selectCopy(deps).failedOpenScene ?? "Could not open the scene.",
+        message: getSceneStartupErrorMessage({
+          error,
+          repositoryState: projectService.getRepositoryState(),
+          i18n,
+        }),
         status: "error",
       });
       appService.navigate("/project", appService.getPayload());
