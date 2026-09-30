@@ -84,6 +84,7 @@ export const createAppShellService = ({
   updatesEnabled = false,
   updater,
   audioService,
+  triggerTestCrash,
 }) => {
   const resolvedUpdater = {
     ...createNoopUpdater(),
@@ -287,6 +288,17 @@ export const createAppShellService = ({
 
     getDistribution() {
       return distribution;
+    },
+
+    // Asks the native app to crash on purpose for a test crash project. Resolves
+    // false where the platform cannot, including an app shell older than this
+    // bundle, so the caller carries on normally.
+    async triggerTestCrash(kind) {
+      try {
+        return Boolean(await triggerTestCrash?.(kind));
+      } catch {
+        return false;
+      }
     },
 
     areUpdatesEnabled() {

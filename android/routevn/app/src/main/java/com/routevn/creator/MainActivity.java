@@ -883,6 +883,37 @@ public class MainActivity extends Activity {
 
     static final class WebViewRendererKilledException extends RuntimeException {}
 
+    static final class TestCrashException extends RuntimeException {}
+
+    // Crashes the app on purpose so crash reporting can be checked on release
+    // builds, where no debugger or shell signal can do it. Only a project created
+    // with a test crash name reaches this (see src/internal/testCrashes.js).
+    // Returns false for an unknown kind, so the app carries on normally.
+    private boolean triggerTestCrash(String kind) {
+        switch (kind) {
+            case "panic":
+                NativeExporter.testCrash(0);
+                break;
+            case "native":
+                NativeExporter.testCrash(1);
+                break;
+            case "app":
+                runOnUiThread(() -> {
+                    throw new TestCrashException();
+                });
+                break;
+            case "webview":
+                // Chromium crashes the renderer, which onRenderProcessGone reports.
+                runOnUiThread(() -> {
+                    if (webView != null) webView.loadUrl("chrome://crash");
+                });
+                break;
+            default:
+                return false;
+        }
+        return true;
+    }
+
     private final class RouteVNWebViewClient extends WebViewClient {
         @Override
         public boolean onRenderProcessGone(WebView view, RenderProcessGoneDetail detail) {
@@ -1135,6 +1166,8 @@ public class MainActivity extends Activity {
             case "openExternalUrl":
                 bridge.openExternalUrl(payload.getString("url"));
                 return bridgeSuccess(true);
+            case "triggerTestCrash":
+                return bridgeSuccess(triggerTestCrash(payload.getString("kind")));
             case "markSplashReady":
                 bridge.markSplashReady();
                 return bridgeSuccess(true);

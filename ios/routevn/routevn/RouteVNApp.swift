@@ -413,6 +413,29 @@ final class RouteVNViewController: UIViewController, WKNavigationDelegate, WKScr
         ]
     }
 
+    // Crashes the app on purpose so crash reporting can be checked on release
+    // builds, where no debugger can do it. Only a project created with a test
+    // crash name reaches this (see src/internal/testCrashes.js). Returns false
+    // for kinds iOS cannot produce, so the app carries on normally.
+    private func triggerTestCrash(_ kind: String) -> Bool {
+        guard ["panic", "native", "app"].contains(kind) else { return false }
+        DispatchQueue.main.async {
+            switch kind {
+            case "panic":
+                fatalError("RouteVN test panic")
+            case "native":
+                UnsafeMutablePointer<UInt8>(bitPattern: 8)!.pointee = 1
+            default:
+                NSException(
+                    name: NSExceptionName("RouteVNTestCrash"),
+                    reason: "RouteVN test crash",
+                    userInfo: nil
+                ).raise()
+            }
+        }
+        return true
+    }
+
     private func handleBridgeMethod(_ method: String, payload: [String: Any]) throws -> Any {
         switch method {
         #if DEBUG
@@ -457,6 +480,8 @@ final class RouteVNViewController: UIViewController, WKNavigationDelegate, WKScr
                 setNeedsStatusBarAppearanceUpdate()
             }
             return true
+        case "triggerTestCrash":
+            return triggerTestCrash(try requiredString(payload, "kind"))
         case "openExternalUrl":
             let urlString = stringValue(payload["url"])
             guard let url = URL(string: urlString), !urlString.isEmpty else {

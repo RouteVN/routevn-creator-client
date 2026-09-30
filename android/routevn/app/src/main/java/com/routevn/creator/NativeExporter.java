@@ -13,6 +13,12 @@ final class NativeExporter {
         return nativeSelfTest();
     }
 
+    // Crashes the process inside the native library: a Rust panic for kind 0,
+    // otherwise an invalid memory write. Only test crash projects call it.
+    static void testCrash(int kind) {
+        nativeTestCrash(kind);
+    }
+
     static JSONObject createDistributionZipStreamed(JSONObject payload)
         throws Exception {
         String rawResult = nativeCreateDistributionZipStreamed(payload.toString());
@@ -28,6 +34,8 @@ final class NativeExporter {
     }
 
     private static native String nativeSelfTest();
+
+    private static native void nativeTestCrash(int kind);
 
     private static native String nativeCreateDistributionZipStreamed(
         String payloadJson

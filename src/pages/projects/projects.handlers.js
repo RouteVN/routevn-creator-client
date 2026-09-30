@@ -15,6 +15,7 @@ import {
 } from "../../internal/projectResolution.js";
 import { createProjectRoutePayload } from "../../internal/localProjectRoute.js";
 import { resolveUpdatesEnabled } from "../../internal/updates.js";
+import { readTestCrashKind } from "../../internal/testCrashes.js";
 import {
   activateAppLocale,
   DEFAULT_APP_LOCALE,
@@ -223,6 +224,11 @@ const createProjectFromValues = async (deps, values = {}) => {
 
     if (name === "_TEST_FILE_PERMISSIONS_") {
       window.location.href = "/test-permissions.html";
+      return;
+    }
+
+    const testCrashKind = readTestCrashKind(name);
+    if (testCrashKind && (await appService.triggerTestCrash(testCrashKind))) {
       return;
     }
 

@@ -175,6 +175,27 @@ describe("appShellService", () => {
     expect(deps.subject.dispatch).not.toHaveBeenCalled();
   });
 
+  it("asks the platform for a test crash, or answers false without one", async () => {
+    const deps = createDeps();
+    await expect(
+      createAppShellService(deps).triggerTestCrash("panic"),
+    ).resolves.toBe(false);
+
+    const triggerTestCrash = vi.fn(async () => true);
+    const service = createAppShellService({ ...deps, triggerTestCrash });
+    await expect(service.triggerTestCrash("native")).resolves.toBe(true);
+    expect(triggerTestCrash).toHaveBeenCalledWith("native");
+
+    // An older native shell rejects the unknown bridge method.
+    const olderShell = createAppShellService({
+      ...deps,
+      triggerTestCrash: vi.fn(async () => {
+        throw new Error("Unsupported Android bridge method.");
+      }),
+    });
+    await expect(olderShell.triggerTestCrash("app")).resolves.toBe(false);
+  });
+
   it("forwards alert dialogs through showAlert", async () => {
     const deps = createDeps();
     const service = createAppShellService(deps);
