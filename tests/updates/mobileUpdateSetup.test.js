@@ -429,39 +429,35 @@ describe("mobile update API setup", () => {
       } = await import("../../src/setup.android.js");
       expect(pages.appService.getAppVersion()).toBe("1.14.0");
       expect(pages.appService.getDistribution()).toBe(distribution);
-      if (distribution === "direct") {
-        expect(pages.updaterService).toBeUndefined();
-        expect(fetchMock).not.toHaveBeenCalled();
-      } else {
-        await pages.updaterService.checkForUpdates(false, {
-          copy: EN_I18N.appPage,
-        });
-        expect(fetchMock).toHaveBeenCalledWith(
-          "https://api1.routevn.com/system/updates/v1/routevn-creator/mobile",
-          expect.objectContaining({
-            method: "POST",
-            credentials: "omit",
-          }),
-        );
-        expect(JSON.parse(fetchMock.mock.calls[0][1].body)).toMatchObject({
-          method: "system.getClientUpdate",
-          params: {
-            appId: "routevn-creator",
-            target: "android",
-            distribution: "google-play",
-            currentBuild: "9",
-            device: {
-              id: expect.stringMatching(/^[1-9A-HJ-NP-Za-km-z]{24}$/),
-            },
+      // Both distributions ask RouteVN's update service.
+      await pages.updaterService.checkForUpdates(false, {
+        copy: EN_I18N.appPage,
+      });
+      expect(fetchMock).toHaveBeenCalledWith(
+        "https://api1.routevn.com/system/updates/v1/routevn-creator/mobile",
+        expect.objectContaining({
+          method: "POST",
+          credentials: "omit",
+        }),
+      );
+      expect(JSON.parse(fetchMock.mock.calls[0][1].body)).toMatchObject({
+        method: "system.getClientUpdate",
+        params: {
+          appId: "routevn-creator",
+          target: "android",
+          distribution,
+          currentBuild: "9",
+          device: {
+            id: expect.stringMatching(/^[1-9A-HJ-NP-Za-km-z]{24}$/),
           },
-        });
-        expect(mocked.globalUI.showConfirm).not.toHaveBeenCalled();
-        expect(mocked.globalUI.showAlert).toHaveBeenCalledWith(
-          expect.objectContaining({
-            message: EN_I18N.appPage.latestVersionMessage,
-          }),
-        );
-      }
+        },
+      });
+      expect(mocked.globalUI.showConfirm).not.toHaveBeenCalled();
+      expect(mocked.globalUI.showAlert).toHaveBeenCalledWith(
+        expect.objectContaining({
+          message: EN_I18N.appPage.latestVersionMessage,
+        }),
+      );
       assertNoPlayUpdateBridgeCalls();
     },
   );

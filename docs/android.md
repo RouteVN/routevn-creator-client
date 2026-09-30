@@ -240,8 +240,10 @@ remain silent; manual checks show feedback.
 
 Use `./gradlew :app:installDebug -ProutevnDistribution=google-play` from
 `android/routevn`, then run the local RouteVN API on port 8787 and the Android dev server to
-validate API check and prompt behavior. The usual direct debug build keeps
-updates disabled. Test the returned Play Store URL on a
+validate API check and prompt behavior. The usual direct debug build
+(`android:install`) also checks the local API at startup, so reverse its port
+with `adb reverse tcp:8787 tcp:8787` or expect a silent failed check and an
+error on a manual check. Test the returned Play Store or download URL on a
 device, then validate the released app's installation through Play separately.
 Run `bun run test:updates`
 for update-flow coverage.

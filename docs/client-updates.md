@@ -109,17 +109,21 @@ RPC results distinguish `updateAvailable`, `noUpdate` (reason `upToDate` or
 `noCompatibleRelease`), and `unsupportedClient`. An available result contains
 `release: {version, changelog, publishedAt, installation}`.
 
-| Distribution        | Installation                                                                                             |
-| ------------------- | -------------------------------------------------------------------------------------------------------- |
-| Desktop direct      | `{type: tauri, url, signature}`; Tauri verifies and installs.                                            |
-| Android Google Play | `{type: googlePlay, url, build}`; the API controls the offer, and confirmation opens the Play Store URL. |
-| iOS App Store       | `{type: appStore, url}`; confirmation opens the app's store page.                                        |
+| Distribution        | Installation                                                                                                                |
+| ------------------- | --------------------------------------------------------------------------------------------------------------------------- |
+| Desktop direct      | `{type: tauri, url, signature}`; Tauri verifies and installs.                                                               |
+| Android Google Play | `{type: googlePlay, url, build}`; the API controls the offer, and confirmation opens the Play Store URL.                    |
+| Android direct      | `{type: download, url, build}`; confirmation opens the RouteVN download page (`routevn.com` or a subdomain) in the browser. |
+| iOS App Store       | `{type: appStore, url}`; confirmation opens the app's store page.                                                           |
 
 Store responses omit signatures. The RouteVN API is the source of truth for
 update availability, version, and release notes on both mobile platforms. API
 failures do not produce an update offer or an up-to-date claim. There are no
-native Google Play update checks or in-app installation flows. Direct APK
-updating is not implemented. Steam and web retain their existing behavior.
+native Google Play update checks or in-app installation flows, and a direct APK
+is installed by the user from the download page. The API must serve Android
+direct before a direct build with this updater ships; until then it answers
+`unsupportedClient`, and a manual check reports that update information could
+not be retrieved. Steam and web retain their existing behavior.
 
 ## Development and tests
 

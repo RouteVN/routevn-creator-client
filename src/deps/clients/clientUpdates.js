@@ -3,7 +3,10 @@ import {
   isUpdateVersion,
 } from "../../internal/updateVersion.js";
 import { getDeviceId, isDeviceMetadataText } from "./deviceIdentity.js";
-import { ROUTEVN_CREATOR_PLAY_STORE_URL } from "../../internal/routevnUrls.js";
+import {
+  ROUTEVN_CREATOR_PLAY_STORE_URL,
+  ROUTEVN_DOWNLOAD_DOMAIN,
+} from "../../internal/routevnUrls.js";
 
 const playStoreDestination = new URL(ROUTEVN_CREATOR_PLAY_STORE_URL);
 
@@ -45,6 +48,15 @@ const validInstallationUrl = (value) => {
   } catch {
     return false;
   }
+};
+
+const validDownloadUrl = (value) => {
+  if (!validInstallationUrl(value)) return false;
+  const { hostname } = new URL(value);
+  return (
+    hostname === ROUTEVN_DOWNLOAD_DOMAIN ||
+    hostname.endsWith(`.${ROUTEVN_DOWNLOAD_DOMAIN}`)
+  );
 };
 
 const validPlayStoreUrl = (value) => {
@@ -160,6 +172,20 @@ const validateResult = (result, context) => {
       if (
         action.type !== "googlePlay" ||
         !validPlayStoreUrl(action.url) ||
+        !validBuild(action.build) ||
+        Number(action.build) <= Number(context.currentBuild) ||
+        compareUpdateVersions(release.version, context.currentVersion) < 0
+      )
+        invalid();
+    } else if (
+      context.target === "android" &&
+      context.distribution === "direct"
+    ) {
+      // A direct build is updated from a RouteVN download page in the browser.
+      exactFields(action, ["type", "url", "build"]);
+      if (
+        action.type !== "download" ||
+        !validDownloadUrl(action.url) ||
         !validBuild(action.build) ||
         Number(action.build) <= Number(context.currentBuild) ||
         compareUpdateVersions(release.version, context.currentVersion) < 0
