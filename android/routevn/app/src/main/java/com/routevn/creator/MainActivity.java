@@ -18,6 +18,7 @@ import android.os.Bundle;
 import android.os.Environment;
 import android.os.Handler;
 import android.os.Looper;
+import android.os.SystemClock;
 import android.provider.OpenableColumns;
 import android.provider.MediaStore;
 import android.provider.DocumentsContract;
@@ -54,6 +55,9 @@ import androidx.core.view.WindowCompat;
 import androidx.core.view.WindowInsetsCompat;
 import androidx.core.view.WindowInsetsControllerCompat;
 import androidx.webkit.JavaScriptReplyProxy;
+import io.sentry.Sentry;
+import io.sentry.SentryEvent;
+import io.sentry.SentryLevel;
 import androidx.webkit.WebViewAssetLoader;
 import androidx.webkit.WebViewCompat;
 import androidx.webkit.WebViewFeature;
@@ -108,6 +112,10 @@ public class MainActivity extends Activity {
     private static final int ANDROID_SAVE_FILE_PICKER_REQUEST_CODE = 3713;
     private static final int ANDROID_FOLDER_PICKER_REQUEST_CODE = 3714;
     private static final long SPLASH_READY_TIMEOUT_MS = 5000L;
+    // A renderer lost this soon after its page started loading counts as a
+    // rapid loss; this many in a row means the page cannot start.
+    private static final long RAPID_RENDERER_LOSS_MS = 30_000L;
+    private static final int RAPID_RENDERER_LOSS_LIMIT = 2;
     private static final String DEBUG_VALIDATION_PREFS = "debug-validation";
     private static final String NATIVE_EXPORTER_SMOKE_LAST_UPDATE_KEY =
         "nativeExporterSmokeLastUpdateTime";
@@ -172,6 +180,9 @@ public class MainActivity extends Activity {
     }
 
     private WebView webView;
+    private long pageLoadStartedAt;
+    private int rapidRendererLosses = 0;
+    private boolean webViewRecoveryPending = false;
     private String lastReportedWindowMetrics = "";
     private ProjectBackup projectBackup;
     private final ExecutorService backupExecutor = Executors.newSingleThreadExecutor();
@@ -452,6 +463,10 @@ public class MainActivity extends Activity {
 
         webView.setWebViewClient(new RouteVNWebViewClient());
         webView.setWebChromeClient(new RouteVNWebChromeClient());
+        // A replacement WebView starts a new page with nothing reported to it.
+        lastReportedWindowMetrics = "";
+        canGoBackInWebApp = false;
+        pageLoadStartedAt = SystemClock.elapsedRealtime();
         webView.loadUrl(getInitialAppUrl());
 
         FrameLayout rootView = new FrameLayout(this);
@@ -616,6 +631,7 @@ public class MainActivity extends Activity {
                 String messageData = message.getData();
                 if (messageData == null) {
                     postBridgeResponse(
+                        view,
                         replyProxy,
                         bridgeFailure(
                             new IllegalArgumentException(
@@ -628,7 +644,7 @@ public class MainActivity extends Activity {
 
                 bridgeExecutor.execute(() -> {
                     dispatchAndroidBridgeMessage(messageData, response ->
-                        postBridgeResponse(replyProxy, response)
+                        postBridgeResponse(view, replyProxy, response)
                     );
                 });
             }
@@ -678,11 +694,13 @@ public class MainActivity extends Activity {
     }
 
     private void postBridgeResponse(
+        WebView source,
         JavaScriptReplyProxy replyProxy,
         String response
     ) {
         mainHandler.post(() -> {
-            if (webView != null) {
+            // Replies to a page whose renderer was lost are dropped.
+            if (webView == source) {
                 replyProxy.postMessage(response);
             }
         });
@@ -776,7 +794,10 @@ public class MainActivity extends Activity {
     protected void onResume() {
         super.onResume();
         appResumed = true;
-        if (webView != null) {
+        if (webViewRecoveryPending) {
+            webViewRecoveryPending = false;
+            configureWebView();
+        } else if (webView != null) {
             webView.onResume();
             notifyAudioLifecycle();
         }
@@ -857,26 +878,71 @@ public class MainActivity extends Activity {
         fileChooserCallback = null;
     }
 
-    // Android kills the WebView renderer under memory pressure, and it can
-    // also crash. Unhandled, Chromium aborts the app with a SIGTRAP whose
-    // report only shows WebView internals. Crash the app ourselves instead,
-    // with an exception that names the cause. The crash reporter saves it
-    // locally before the process exits and sends it now or on the next launch.
-    private boolean crashForRenderProcessGone(WebView deadView, boolean didCrash) {
-        // The dead WebView cannot be drawn again before the crash runs.
+    // Android kills the WebView renderer to reclaim memory, and the renderer can
+    // also crash, while the app keeps running. Unhandled, Chromium aborts the
+    // app. Load the app again in a new WebView instead (see "WebView renderer
+    // loss" in docs/mobile-crash-reporting.md). Only a renderer crash is
+    // reported. If the renderer keeps dying right after its page starts
+    // loading, crash with an exception that names the cause, so a page that
+    // cannot start does not reload forever.
+    private boolean recoverFromRenderProcessGone(WebView deadView, boolean didCrash) {
+        // The dead WebView can never be drawn or used again.
         if (deadView.getParent() instanceof ViewGroup parent) {
             parent.removeView(deadView);
         }
         deadView.destroy();
         webView = null;
-        RuntimeException crash = didCrash
+        fileChooserCallback = null;
+
+        RuntimeException loss = didCrash
             ? new WebViewRendererCrashedException()
             : new WebViewRendererKilledException();
-        // Throw from the main looper, not from inside WebView's callback.
-        mainHandler.post(() -> {
-            throw crash;
-        });
+        boolean rapid =
+            SystemClock.elapsedRealtime() - pageLoadStartedAt < RAPID_RENDERER_LOSS_MS;
+        rapidRendererLosses = rapid ? rapidRendererLosses + 1 : 0;
+        if (rapidRendererLosses >= RAPID_RENDERER_LOSS_LIMIT) {
+            // Throw from the main looper, not from inside WebView's callback.
+            mainHandler.post(() -> {
+                throw loss;
+            });
+            return true;
+        }
+
+        // The app keeps running, so this is recorded at level error, not fatal.
+        // The SDK sets a level only on crashes, so set it here.
+        if (didCrash) {
+            SentryEvent event = new SentryEvent(loss);
+            event.setLevel(SentryLevel.ERROR);
+            Sentry.captureEvent(event);
+        }
+        resetDeadPageState();
+        if (appResumed) {
+            configureWebView();
+        } else {
+            webViewRecoveryPending = true;
+        }
         return true;
+    }
+
+    // Undo what only the dead page could have finished, as a fresh launch
+    // would. This runs on the bridge thread, so it comes after every call the
+    // dead page made and before any call from the new page.
+    private void resetDeadPageState() {
+        bridgeExecutor.execute(() -> {
+            rollBackOpenTransactions();
+            closeProjectFileWriteSessions();
+            cleanupPendingSaveDocuments();
+        });
+    }
+
+    private synchronized void rollBackOpenTransactions() {
+        for (String dbPath : projectTransactions.toArray(new String[0])) {
+            SQLiteDatabase database = sqliteDatabases.get(dbPath);
+            if (database != null) {
+                rollBackTransactions(database);
+            }
+            projectTransactions.remove(dbPath);
+        }
     }
 
     static final class WebViewRendererCrashedException extends RuntimeException {}
@@ -917,7 +983,7 @@ public class MainActivity extends Activity {
     private final class RouteVNWebViewClient extends WebViewClient {
         @Override
         public boolean onRenderProcessGone(WebView view, RenderProcessGoneDetail detail) {
-            return crashForRenderProcessGone(view, detail.didCrash());
+            return recoverFromRenderProcessGone(view, detail.didCrash());
         }
 
         @Override
@@ -2223,6 +2289,7 @@ public class MainActivity extends Activity {
         projectTransactions.remove(dbPath);
         SQLiteDatabase database = sqliteDatabases.remove(dbPath);
         if (database != null && database.isOpen()) {
+            rollBackTransactions(database);
             database.close();
         }
     }
@@ -2230,10 +2297,23 @@ public class MainActivity extends Activity {
     private synchronized void closeSqliteDatabases() {
         for (SQLiteDatabase database : sqliteDatabases.values()) {
             if (database != null && database.isOpen()) {
+                rollBackTransactions(database);
                 database.close();
             }
         }
         sqliteDatabases.clear();
+    }
+
+    // execSQL runs the page's BEGIN, COMMIT and ROLLBACK as Android
+    // transactions on the bridge thread. Android keeps a connection open, and
+    // its write lock held, until its transaction ends, so closing it is not
+    // enough; ending the transaction without marking it successful rolls it
+    // back. Only the thread that began a transaction sees it, so this does
+    // nothing when called from any other thread.
+    private static void rollBackTransactions(SQLiteDatabase database) {
+        while (database.isOpen() && database.inTransaction()) {
+            database.endTransaction();
+        }
     }
 
     private JSONArray queryDatabase(

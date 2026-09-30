@@ -68,6 +68,13 @@ final class RouteVNViewController: UIViewController, WKNavigationDelegate, WKScr
     private var webView: WKWebView!
     private var sqliteDatabases: [String: OpaquePointer] = [:]
     private var appActive = false
+    // A content process lost this soon after its page started loading counts
+    // as a rapid loss; this many in a row means the page cannot start.
+    private static let rapidContentProcessLossSeconds: TimeInterval = 30
+    private static let rapidContentProcessLossLimit = 2
+    private var pageLoadStartedAt: TimeInterval = 0
+    private var rapidContentProcessLosses = 0
+    private var reloadWhenActive = false
     private var canGoBackInWebApp = false
     private var pendingDocumentPicker: PendingDocumentPicker?
     private let saveFileDestinations = SaveFileDestinations()
@@ -190,6 +197,12 @@ final class RouteVNViewController: UIViewController, WKNavigationDelegate, WKScr
 
     func setAppActive(_ active: Bool) {
         appActive = active
+        if active, reloadWhenActive {
+            // The page is gone. didFinish sets the active state on the new one.
+            reloadWhenActive = false
+            loadInitialAppURL()
+            return
+        }
         if active {
             webView.setAllMediaPlaybackSuspended(false) { [weak self] in
                 guard let self, self.appActive else { return }
@@ -210,6 +223,7 @@ final class RouteVNViewController: UIViewController, WKNavigationDelegate, WKScr
     }
 
     private func loadInitialAppURL() {
+        pageLoadStartedAt = ProcessInfo.processInfo.systemUptime
         if let url = devServerURL {
             recordDevEvent("Loading \(url.absoluteString)")
             webView.load(URLRequest(url: url, cachePolicy: .reloadIgnoringLocalCacheData, timeoutInterval: 15))
@@ -274,6 +288,29 @@ final class RouteVNViewController: UIViewController, WKNavigationDelegate, WKScr
             recordDevEvent("Document loaded: \(webView.url?.absoluteString ?? "")")
         }
         runSmokeTestIfNeeded()
+    }
+
+    // The system can end WebKit's content process to reclaim memory, and the
+    // process can crash; the page goes blank but the web view stays usable.
+    // Load the app again (see "WebView renderer loss" in
+    // docs/mobile-crash-reporting.md). Nothing is reported, since WebKit does
+    // not say which it was. If the process keeps dying right after its page
+    // starts loading, crash, so a page that cannot start does not reload forever.
+    func webViewWebContentProcessDidTerminate(_ webView: WKWebView) {
+        let sinceLoad = ProcessInfo.processInfo.systemUptime - pageLoadStartedAt
+        let rapid = sinceLoad < Self.rapidContentProcessLossSeconds
+        rapidContentProcessLosses = rapid ? rapidContentProcessLosses + 1 : 0
+        if rapidContentProcessLosses >= Self.rapidContentProcessLossLimit {
+            fatalError("WebKit content process lost repeatedly")
+        }
+        // Page SQL runs on this main thread. Roll back any transaction the dead
+        // page left open and close its handles, as a fresh launch would.
+        closeSqliteDatabases()
+        if appActive {
+            loadInitialAppURL()
+        } else {
+            reloadWhenActive = true
+        }
     }
 
     func webView(_ webView: WKWebView, didFailProvisionalNavigation navigation: WKNavigation!, withError error: Error) {
@@ -794,6 +831,11 @@ final class RouteVNViewController: UIViewController, WKNavigationDelegate, WKScr
 
     private func closeSqliteDatabases() {
         for database in sqliteDatabases.values {
+            // End a transaction a dead page left open first, so its write lock
+            // is released even if the handle cannot close.
+            if sqlite3_get_autocommit(database) == 0 {
+                sqlite3_exec(database, "ROLLBACK", nil, nil, nil)
+            }
             sqlite3_close(database)
         }
         sqliteDatabases.removeAll()
