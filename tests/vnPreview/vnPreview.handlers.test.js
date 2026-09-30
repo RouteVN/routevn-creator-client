@@ -42,7 +42,8 @@ vi.mock("../../src/internal/runtime/graphicsEngineRuntime.js", () => ({
 
 vi.mock(
   "../../src/components/vnPreview/support/vnPreviewProjectData.js",
-  () => ({
+  async (importOriginal) => ({
+    ...(await importOriginal()),
     collectPreviewMissingTargets: collectPreviewMissingTargetsMock,
     collectSceneIdsFromValue: vi.fn(() => []),
     collectSectionIdsFromValue: vi.fn(() => []),
@@ -284,6 +285,74 @@ describe("vnPreview.handlers", () => {
         message: "Failed to open preview",
         status: "error",
       });
+      expect(deps.dispatchEvent.mock.calls[0][0].type).toBe("close");
+    } finally {
+      log.mockRestore();
+    }
+  });
+
+  it("names the looping line and closes before initializing graphics or playback", async () => {
+    const { handleAfterMount } = await import(
+      "../../src/components/vnPreview/vnPreview.handlers.js"
+    );
+    constructProjectDataMock.mockReturnValue({
+      story: {
+        initialSceneId: "scene-one",
+        scenes: {
+          "scene-one": {
+            name: "Scene One",
+            initialSectionId: "section-one",
+            sections: {
+              "section-one": {
+                name: "Section One",
+                lines: [
+                  {
+                    id: "line-one",
+                    actions: {
+                      dialogue: { content: "Hello" },
+                      control: { resourceId: "control-one" },
+                      sectionTransition: { sectionId: "section-one" },
+                    },
+                  },
+                ],
+              },
+            },
+          },
+        },
+      },
+    });
+    const deps = {
+      projectService: {
+        ensureRepository: vi.fn(async () => ({})),
+        getRepositoryState: vi.fn(() => ({})),
+      },
+      graphicsService: { init: vi.fn(), initRouteEngine: vi.fn() },
+      appService: { showAlert: vi.fn(), showToast: vi.fn() },
+      store: {
+        setAssetLoading: vi.fn(),
+        setPreviewReady: vi.fn(),
+        setLoadingProgress: vi.fn(),
+        selectIsPreviewLoading: vi.fn(() => false),
+        setLoadingDetailsVisible: vi.fn(),
+      },
+      props: {},
+      refs: {},
+      render: vi.fn(),
+      dispatchEvent: vi.fn(),
+      i18n: {
+        vnPreview: { transitionLoop: "Loop: {scene}, {section}, line {line}" },
+      },
+    };
+    const log = vi.spyOn(console, "error").mockImplementation(() => {});
+    try {
+      await handleAfterMount(deps);
+      expect(deps.appService.showAlert).toHaveBeenCalledWith({
+        title: "Warning",
+        message: "Loop: Scene One, Section One, line 1",
+      });
+      expect(deps.appService.showToast).not.toHaveBeenCalled();
+      expect(deps.graphicsService.init).not.toHaveBeenCalled();
+      expect(deps.graphicsService.initRouteEngine).not.toHaveBeenCalled();
       expect(deps.dispatchEvent.mock.calls[0][0].type).toBe("close");
     } finally {
       log.mockRestore();

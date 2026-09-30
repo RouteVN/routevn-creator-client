@@ -9,6 +9,7 @@ import {
   hasPreviewSceneLines,
   hasPreviewSectionLines,
   withPreviewEntryPoint,
+  assertPreviewEntryDoesNotLoop,
 } from "../../src/components/vnPreview/support/vnPreviewProjectData.js";
 
 const createRepositoryState = ({ sceneIds }) => ({
@@ -68,6 +69,102 @@ const createRepositoryState = ({ sceneIds }) => ({
 });
 
 describe("vnPreview project data helpers", () => {
+  const createTransitionProject = () => ({
+    story: {
+      initialSceneId: "scene-one",
+      scenes: {
+        "scene-one": {
+          name: "Scene One",
+          initialSectionId: "section-one",
+          sections: {
+            "section-one": {
+              name: "Section One",
+              lines: [
+                {
+                  id: "line-one",
+                  actions: {
+                    dialogue: { content: "Hello" },
+                    control: { resourceId: "control-one" },
+                    sectionTransition: { sectionId: "section-one" },
+                  },
+                },
+              ],
+            },
+          },
+        },
+      },
+    },
+  });
+
+  it("rejects a direct transition loop with the authoring location", () => {
+    const project = createTransitionProject();
+    const original = structuredClone(project);
+    expect(() => assertPreviewEntryDoesNotLoop(project)).toThrow(
+      expect.objectContaining({
+        code: "preview_transition_loop",
+        location: { scene: "Scene One", section: "Section One", line: 1 },
+      }),
+    );
+    expect(project).toEqual(original);
+  });
+
+  it("follows transitions across scenes and reports the repeated line", () => {
+    const project = createTransitionProject();
+    const section = project.story.scenes["scene-one"].sections["section-one"];
+    section.lines[0].actions.sectionTransition.sectionId = "section-two";
+    project.story.scenes["scene-two"] = {
+      name: "Scene Two",
+      initialSectionId: "section-two",
+      sections: {
+        "section-two": {
+          name: "Section Two",
+          lines: [
+            {
+              id: "line-two",
+              actions: { sectionTransition: { sectionId: "section-one" } },
+            },
+          ],
+        },
+      },
+    };
+    expect(() => assertPreviewEntryDoesNotLoop(project)).toThrow(
+      expect.objectContaining({ code: "preview_transition_loop" }),
+    );
+  });
+
+  it.each(["conditional", "choice", "random", "updateVariable"])(
+    "leaves %s actions to the runtime instead of guessing their outcome",
+    (action) => {
+      const project = createTransitionProject();
+      project.story.scenes["scene-one"].sections[
+        "section-one"
+      ].lines[0].actions[action] = {};
+      expect(() => assertPreviewEntryDoesNotLoop(project)).not.toThrow();
+    },
+  );
+
+  it("allows dialogue before a later transition back to the section", () => {
+    const project = createTransitionProject();
+    const section = project.story.scenes["scene-one"].sections["section-one"];
+    section.lines.unshift({
+      id: "reader-line",
+      actions: { dialogue: { content: "Continue" } },
+    });
+    section.initialLineId = "line-one";
+    expect(() => assertPreviewEntryDoesNotLoop(project)).not.toThrow();
+  });
+
+  it("allows a finite transition and an unloaded target", () => {
+    const project = createTransitionProject();
+    const section = project.story.scenes["scene-one"].sections["section-one"];
+    section.lines[0].actions.sectionTransition.sectionId = "other-section";
+    expect(() => assertPreviewEntryDoesNotLoop(project)).not.toThrow();
+    project.story.scenes["scene-one"].sections["other-section"] = {
+      lines: [{ id: "other-line", actions: { dialogue: { content: "Done" } } }],
+    };
+    expect(() => assertPreviewEntryDoesNotLoop(project)).not.toThrow();
+  });
+
   it("collects target scene ids from nested fullscreen preview actions", () => {
     const sceneIds = collectSceneIdsFromValue(
       {

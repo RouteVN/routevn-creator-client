@@ -257,7 +257,10 @@ const attachGraphicsCanvasToMountedRoot = async (deps, maxFrames = 10) => {
     maxFrames,
     { preferTransformEditorCanvas },
   );
-  if (!mountedCanvasRoot?.isConnected) {
+  if (
+    !mountedCanvasRoot?.isConnected ||
+    isSceneEditorPreviewVisible(deps.store)
+  ) {
     return mountedCanvasRoot;
   }
 
@@ -1352,6 +1355,7 @@ const prepareTemporaryPresentationProjectData = async (
 
 export const renderSceneEditorState = async (deps, payload = {}) => {
   const { store, graphicsService, refs } = deps;
+  if (isSceneEditorPreviewVisible(store)) return;
   const {
     preserveAnimationPlayback = false,
     skipAnimations = true,
@@ -1458,6 +1462,7 @@ export const renderSceneEditorState = async (deps, payload = {}) => {
     : undefined;
   if (syncCommittedSectionChanges) {
     await updateSceneEditorSectionChanges(deps);
+    if (isSceneEditorPreviewVisible(store)) return;
   }
   const temporaryPresentationState = selectTemporaryPresentationState(store);
   const temporaryPresentationStateStartedAt = shouldMeasure ? getDebugNow() : 0;
@@ -1467,6 +1472,7 @@ export const renderSceneEditorState = async (deps, payload = {}) => {
     selection,
     temporaryPresentationState,
   );
+  if (isSceneEditorPreviewVisible(store)) return;
   renderProjectData = createProjectDataWithBackgroundTransformEditor(
     renderProjectData,
     selection,
@@ -1541,6 +1547,7 @@ export const renderSceneEditorState = async (deps, payload = {}) => {
       reportProgress,
     },
   );
+  if (isSceneEditorPreviewVisible(store)) return;
 
   if (reportProgress) setSceneLoadingProgress(deps, { stage: "paint" });
   const activeAudioFileIds = skipAudio
@@ -1553,6 +1560,7 @@ export const renderSceneEditorState = async (deps, payload = {}) => {
     // Asset preloading reports failures above; a warm-up retry must not block paint.
     console.error("[sceneEditor] Failed to warm up audio assets", error);
   }
+  if (isSceneEditorPreviewVisible(store)) return;
   const audioLoadDurationMs = shouldMeasure
     ? getDebugDurationMs(audioLoadStartedAt)
     : undefined;
@@ -1560,7 +1568,9 @@ export const renderSceneEditorState = async (deps, payload = {}) => {
   let canvasPaintDurationMs = 0;
   if (!skipCanvasPaint) {
     await graphicsService.warmRenderStateVideoAssets?.(currentRenderState);
+    if (isSceneEditorPreviewVisible(store)) return;
     await attachGraphicsCanvasToMountedRoot(deps, 2);
+    if (isSceneEditorPreviewVisible(store)) return;
     const canvasPaintStartedAt = shouldMeasure ? getDebugNow() : 0;
     if (backgroundTransformEditorOpen) {
       const backgroundTransformEditor =
@@ -1893,6 +1903,7 @@ export const restoreSceneEditorFromPreview = async (deps) => {
   const previewWidth = projectData?.screen?.width;
   const previewHeight = projectData?.screen?.height;
   const mountedCanvasRoot = await waitForMountedCanvasRoot(refs);
+  if (isSceneEditorPreviewVisible(store)) return;
   if (!mountedCanvasRoot?.isConnected) {
     throw new Error("Scene editor canvas failed to mount");
   }
@@ -1905,6 +1916,7 @@ export const restoreSceneEditorFromPreview = async (deps) => {
     width: previewWidth,
     height: previewHeight,
   });
+  if (isSceneEditorPreviewVisible(store)) return;
   store.setCanvasAudioPreviewKey?.({ previewKey: undefined });
 
   const initialProjectData = createProjectDataWithSelectedEntryPoint(
@@ -1920,12 +1932,14 @@ export const restoreSceneEditorFromPreview = async (deps) => {
   await loadAssetsForSceneIds(deps, projectData, initialSceneIds, {
     showLoading: false,
   });
+  if (isSceneEditorPreviewVisible(store)) return;
   void preloadDirectTransitionScenes(deps, projectData, initialSceneIds);
   await preloadLayoutAssetsByIds(
     deps,
     projectData,
     Object.keys(projectData?.resources?.layouts || {}),
   );
+  if (isSceneEditorPreviewVisible(store)) return;
 
   const onRenderState = createRuntimeCurrentLineRenderStateHandler(deps);
   initRouteEngineWithDiagnostics(graphicsService, initialProjectData, {

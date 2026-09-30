@@ -795,6 +795,7 @@ actionTransformEditor:
   unnamedTarget: "Current item"
   visualTarget: "Visual"
 vnPreview:
+  transitionLoop: "Preview stopped because transitions repeat without waiting.\n\n{scene} / {section}, line {line}"
   repository: "Opening project..."
   scenes: "Preparing scenes..."
   graphics: "Initializing graphics..."

@@ -181,6 +181,63 @@ export const withPreviewEntryPoint = (
   return nextProjectData;
 };
 
+export const assertPreviewEntryDoesNotLoop = (projectData) => {
+  const immediateActions = new Set([
+    "sectionTransition",
+    "dialogue",
+    "control",
+    "background",
+    "character",
+    "visual",
+    "layout",
+    "bgm",
+    "voice",
+    "sfx",
+  ]);
+  const scenes = projectData.story?.scenes ?? {};
+  const sections = new Map();
+  for (const [sceneId, scene] of Object.entries(scenes)) {
+    for (const [sectionId, section] of Object.entries(scene.sections ?? {})) {
+      sections.set(sectionId, {
+        section,
+        scene: scene.name ?? sceneId,
+        sectionId,
+      });
+    }
+  }
+  const initialScene = scenes[projectData.story?.initialSceneId];
+  let current = sections.get(initialScene?.initialSectionId);
+  let line = current?.section.initialLineId
+    ? current.section.lines?.find(
+        ({ id }) => id === current.section.initialLineId,
+      )
+    : current?.section.lines?.[0];
+  const visited = new Set();
+  while (line) {
+    if (visited.has(line)) {
+      const error = new Error(
+        "Preview entry contains an unconditional transition loop",
+      );
+      error.code = "preview_transition_loop";
+      error.location = {
+        scene: current.scene,
+        section: current.section.name ?? current.sectionId,
+        line: current.section.lines.indexOf(line) + 1,
+      };
+      throw error;
+    }
+    visited.add(line);
+    const actions = line.actions ?? {};
+    // Only follow plain transitions; decisions and other actions need the runtime.
+    if (Object.keys(actions).some((key) => !immediateActions.has(key))) return;
+    const transition = actions.sectionTransition;
+    if (!transition || transition.screen) return;
+    current = sections.get(transition.sectionId);
+    // Section transitions always enter the first line, regardless of the preview entry.
+    line = current?.section.lines?.[0];
+  }
+};
+
 export const ensurePreviewProjectDataTargets = async ({
   repository,
   projectData,

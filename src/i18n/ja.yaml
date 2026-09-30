@@ -795,6 +795,7 @@ actionTransformEditor:
   unnamedTarget: "現在の項目"
   visualTarget: "ビジュアル"
 vnPreview:
+  transitionLoop: "待機せずに遷移が繰り返されるため、プレビューを停止しました。\n\n{scene} / {section}、{line}行目"
   repository: "プロジェクトを開いています..."
   scenes: "シーンを準備しています..."
   graphics: "グラフィックスを初期化しています..."

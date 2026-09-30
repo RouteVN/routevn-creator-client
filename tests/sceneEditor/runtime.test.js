@@ -8,6 +8,7 @@ import {
   renderSceneEditorCanvas,
   renderSceneEditorState,
   resolveSceneEditorEntrySelection,
+  restoreSceneEditorFromPreview,
   updateSceneEditorSectionChanges,
 } from "../../src/internal/ui/sceneEditor/runtime.js";
 
@@ -148,6 +149,107 @@ const createGraphicsService = () => {
     setEngineAudioMuted,
   };
 };
+
+describe("restoreSceneEditorFromPreview", () => {
+  it.each([
+    "init",
+    "getFileContent",
+    "ensureAudioAssetsLoaded",
+    "warmRenderStateVideoAssets",
+    undefined,
+  ])(
+    "preserves canvas ownership when preview reopens during %s",
+    async (pendingOperation) => {
+      const projectData = createProjectData();
+      projectData.resources.images["image-one"] = {
+        id: "image-one",
+        fileId: "file-one",
+        fileType: "image/png",
+      };
+      projectData.story.scenes["scene-1"].sections[
+        "section-1"
+      ].lines[0].actions.background = {
+        resourceId: "image-one",
+      };
+      const graphicsService = createGraphicsService();
+      graphicsService.init = vi.fn(async () => {});
+      graphicsService.initRouteEngine = vi.fn(graphicsService.initRouteEngine);
+      graphicsService.loadAssets = vi.fn(async () => {});
+      graphicsService.hasLoadedAsset = () => false;
+      graphicsService.warmRenderStateVideoAssets = vi.fn(async () => {});
+      graphicsService.attachCanvas = vi.fn(async () => {});
+      graphicsService.engineRenderCurrentState = vi.fn();
+      const projectService = {
+        getFileContent: async () => ({
+          url: "fixture:image-one",
+          type: "image/png",
+        }),
+      };
+      let previewVisible = true;
+      const deps = {
+        graphicsService,
+        projectService,
+        render: vi.fn(),
+        subject: { dispatch: vi.fn() },
+        refs: {
+          previewCanvasHost: { getCanvasRoot: () => ({ isConnected: true }) },
+        },
+        store: {
+          selectPreviewScene: () => ({ previewVisible }),
+          hidePreviewScene: () => {
+            previewVisible = false;
+          },
+          selectSceneId: () => "scene-1",
+          selectSelectedSectionId: () => "section-1",
+          selectSelectedLineId: () => "line-1",
+          selectProjectData: () => projectData,
+          selectTemporaryPresentationState: () => ({}),
+          selectIsMuted: () => false,
+          setPresentationState: vi.fn(),
+          setSceneAssetLoading: vi.fn(),
+          selectIsScenePageLoading: () => false,
+          selectIsSceneAssetLoading: () => false,
+        },
+      };
+      let release;
+      let started;
+      const pending = new Promise((resolve) => {
+        release = resolve;
+      });
+      const entered = new Promise((resolve) => {
+        started = resolve;
+      });
+      if (pendingOperation) {
+        const service =
+          pendingOperation === "getFileContent"
+            ? projectService
+            : graphicsService;
+        const original = service[pendingOperation];
+        service[pendingOperation] = async (...args) => {
+          started();
+          await pending;
+          return original(...args);
+        };
+      }
+      const restoring = restoreSceneEditorFromPreview(deps);
+      if (pendingOperation) {
+        await entered;
+        previewVisible = true;
+        graphicsService.initRouteEngine.mockClear();
+        release();
+      }
+      await restoring;
+      if (pendingOperation) {
+        expect(graphicsService.initRouteEngine).not.toHaveBeenCalled();
+        expect(graphicsService.attachCanvas).not.toHaveBeenCalled();
+        expect(graphicsService.engineRenderCurrentState).not.toHaveBeenCalled();
+      } else {
+        expect(graphicsService.attachCanvas).toHaveBeenCalledOnce();
+        expect(graphicsService.engineRenderCurrentState).toHaveBeenCalledOnce();
+      }
+    },
+  );
+});
 
 describe("renderSceneEditorState", () => {
   it("still paints when the audio warm-up retries a damaged sound", async () => {

@@ -25,9 +25,11 @@ import {
   ensurePreviewProjectDataTargets,
   resolveSceneIdForSectionId,
   withPreviewEntryPoint,
+  assertPreviewEntryDoesNotLoop,
 } from "./support/vnPreviewProjectData.js";
 import { remapRotatedPreviewEventCoordinates } from "./support/vnPreviewPointerCoordinates.js";
 import { selectSceneEditorCopy } from "../../internal/ui/sceneEditor/sceneEditorCopy.js";
+import { formatI18nCopy } from "../../internal/ui/i18nCopy.js";
 import {
   getAssetLoadFailures,
   showAssetLoadFailures,
@@ -766,7 +768,16 @@ export const handleAfterMount = async (deps) => {
     store.setPreviewReady({ isPreviewReady: false });
     render();
     console.error("[vnPreview] Failed to initialize preview", error);
-    if (error.name === "TimeoutError") {
+    if (error.code === "preview_transition_loop") {
+      appService.showAlert({
+        title: i18n?.resourcePages?.warningTitle ?? "Warning",
+        message: formatI18nCopy(
+          i18n?.vnPreview?.transitionLoop ??
+            "Preview stopped because transitions repeat without waiting.\n\n{scene} / {section}, line {line}",
+          error.location,
+        ),
+      });
+    } else if (error.name === "TimeoutError") {
       appService.showAlert({
         title: i18n?.resourcePages?.warningTitle ?? "Warning",
         message: startup.timeoutMessage(error),
@@ -849,6 +860,8 @@ const initializePreview = async (deps, startup) => {
       loadedSceneIds = hydrationResult.loadedSceneIds;
     }
   }
+
+  assertPreviewEntryDoesNotLoop(projectDataWithInitial);
 
   const runtime = {
     projectData: projectDataWithInitial,
