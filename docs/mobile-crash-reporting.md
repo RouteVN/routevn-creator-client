@@ -13,6 +13,9 @@ official Sentry SDK with a thin wrapper, following the collector's
 | Android  | `io.sentry:sentry-android-core` and `sentry-android-ndk` 8.58.0 | Uncaught JVM exceptions and native signal crashes, including crashes in `libroutevn_exporter_jni.so`. |
 | iOS      | `sentry-cocoa` 9.29.2 (Swift Package, exact version)            | Signals, Mach exceptions, uncaught `NSException`s and Swift runtime traps.                            |
 
+Android also reports WebView renderer crashes that the app recovers from, at
+level `error` (see [WebView renderer loss](#webview-renderer-loss)).
+
 Crash reporting only. Sessions, ANRs/app hangs, watchdog terminations,
 breadcrumbs, screenshots, view hierarchies, swizzling, network tracking,
 performance tracing, client reports and replay are disabled. The aggregate
@@ -21,16 +24,66 @@ performance tracing, client reports and replay are disabled. The aggregate
 WebView JavaScript errors are separate: `appService.reportError` is a no-op on
 Android and iOS.
 
-### Android WebView renderer loss
+### WebView renderer loss
 
-Android kills the WebView renderer under memory pressure, and the renderer can
-also crash. Left unhandled, Chromium aborts the app with a `SIGTRAP` whose
-report only shows WebView internals. `MainActivity` handles
-`onRenderProcessGone` by destroying the dead WebView and crashing the app with
-`MainActivity$WebViewRendererKilledException` (memory kill) or
-`MainActivity$WebViewRendererCrashedException`. The user sees the app close,
-as before, and the report names the cause. iOS WebView content process
-termination is not handled yet.
+The app's interface runs in a WebView whose page runs in a separate process:
+the Chromium renderer on Android, the WebKit content process on iOS. The system
+can kill that process to reclaim memory, and it can crash, while the app
+process keeps running. Left unhandled on Android, Chromium then aborts the app
+with a `SIGTRAP` whose report only shows WebView internals; on iOS the page goes
+blank. Following
+[Android's guidance](https://developer.android.com/develop/ui/views/layout/webapps/handle-termination),
+both apps recover by loading the app again instead of closing:
+
+| Case                                                                                                        | What the user sees                                                                           | Reported                                                        |
+| ----------------------------------------------------------------------------------------------------------- | -------------------------------------------------------------------------------------------- | --------------------------------------------------------------- |
+| Android: renderer killed by the system (`didCrash() == false`)                                              | The app loads again at its start page. In the background, loading waits until it is resumed. | Nothing                                                         |
+| Android: renderer crashed (`didCrash() == true`)                                                            | The same reload                                                                              | `MainActivity$WebViewRendererCrashedException` at level `error` |
+| iOS: content process ended (`webViewWebContentProcessDidTerminate`); WebKit does not say whether it crashed | The same reload; in the background it waits until the app is active                          | Nothing                                                         |
+| The process is lost again within 30 seconds of the page loading, twice in a row                             | The app closes                                                                               | A crash at level `fatal` (below)                                |
+
+Memory kills are not reported on either platform. They are normal system
+behaviour, most often while the app is in the background, and there is nothing
+in them to fix. This matches the mainstream tools, which record memory
+terminations separately from crashes and only while the app is in use (Sentry's
+iOS watchdog terminations, which are disabled here). A renderer crash is
+reported because it is a real failure, at level `error` because the app kept
+running. The crash reporter sets `fatal` on crashes that close the app, so in
+obs the level, or the exception type, separates recovered renderer crashes from
+crashes. The event passes through the same `beforeSend` scrubbing as a crash,
+so it carries only the exception type, stack, release, device and OS.
+
+Recovery on Android (`MainActivity.onRenderProcessGone`, which always returns
+`true`):
+
+1. Remove and destroy the dead WebView. It is never reused.
+2. Reset the native state that only the dead page could have finished, as a
+   fresh launch would. On the bridge thread, so it runs before any call from the
+   new page: close the SQLite connections with an open transaction, which rolls
+   the transaction back; abandon unfinished project file writes; and delete
+   partially saved documents. Replies to calls from the dead page are dropped.
+   Native project exports and open pickers carry on; their results go to the
+   new page, which ignores results it did not request.
+3. Create a new WebView exactly as at startup and load the start page, at once
+   if the activity is resumed, otherwise in `onResume`.
+
+Recovery on iOS (`RouteVNViewController.webViewWebContentProcessDidTerminate`):
+WebKit keeps the `WKWebView` usable, so the controller closes its SQLite handles
+on the main thread, where page SQL runs, which rolls back an open transaction,
+then loads the start page again, at once if the app is active, otherwise when it
+next becomes active.
+
+A loss within 30 seconds of the page starting to load counts as rapid. After two
+rapid losses in a row the app stops reloading, so a page that cannot start does
+not loop: Android throws `MainActivity$WebViewRendererKilledException` or
+`MainActivity$WebViewRendererCrashedException` from the main looper, and iOS
+calls `fatalError` in `webViewWebContentProcessDidTerminate`. Both reach the
+crash reporter as ordinary `fatal` crashes.
+
+Anything unsaved on the page is lost, as in a crash, and an edit whose SQL
+transaction had not committed is rolled back. Saved project data is not
+affected. On Android 7 the WebView runs inside the app's process, so a renderer
+crash there is a native app crash and cannot be recovered.
 
 Native crash reports are saved locally and delivery is attempted on a later
 launch. Delivery is best effort: storage failures, cache eviction and rejected
@@ -70,10 +123,10 @@ all SDK files or prove the absence of SDK memory leaks.
 
 ## Configuration
 
-| Build   | Android                                                                                                                                                                  | iOS                                                                                                                                                           |
-| ------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Build   | Android                                                                                                                                                                                                       | iOS                                                                                                                                                           |
+| ------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | Release | `app/build.gradle.kts` reads `ROUTEVN_SENTRY_DSN` from `.env.production` into `BuildConfig.SENTRY_DSN`; environment `production`. Missing, empty or malformed DSNs and non-HTTPS Release DSNs fail the build. | `Configure crash reporting` reads `ROUTEVN_SENTRY_DSN` from `.env.production`; environment `production`. Missing, empty or invalid HTTPS DSNs fail the build. |
-| Debug   | No DSN, so nothing is reported. Pass `-ProutevnSentryDsn=<dsn>` to report to a collector; environment `development`.                                                     | `ROUTEVN_SENTRY_DSN` is empty. Pass `ROUTEVN_SENTRY_DSN=<dsn>` to `xcodebuild` to report; environment `development`.                                          |
+| Debug   | No DSN, so nothing is reported. Pass `-ProutevnSentryDsn=<dsn>` to report to a collector; environment `development`.                                                                                          | `ROUTEVN_SENTRY_DSN` is empty. Pass `ROUTEVN_SENTRY_DSN=<dsn>` to `xcodebuild` to report; environment `development`.                                          |
 
 The iOS Xcode build phase runs `scripts/configure-ios-crash-reporting.py` with
 Xcode's Python 3. It generates an intermediate `Info.plist` that Xcode processes
@@ -152,12 +205,12 @@ Release builds have no debugger, and `adb` cannot signal a non-debuggable app,
 so the apps crash on purpose when a project is created with one of these names.
 The project is not created:
 
-| Project name                 | Android                                                                                  | iOS                                            |
-| ---------------------------- | ---------------------------------------------------------------------------------------- | ---------------------------------------------- |
-| `ROUTEVN_TEST_PANIC_CRASH`   | Rust panic in `libroutevn_exporter_jni.so`, which aborts (`SIGABRT`)                     | Swift `fatalError`                             |
-| `ROUTEVN_TEST_NATIVE_CRASH`  | Invalid memory write in `libroutevn_exporter_jni.so` (`SIGSEGV`)                         | Invalid memory write (`EXC_BAD_ACCESS`)        |
-| `ROUTEVN_TEST_APP_CRASH`     | Uncaught `MainActivity$TestCrashException` on the main thread                            | Uncaught `NSException` (`RouteVNTestCrash`)    |
-| `ROUTEVN_TEST_WEBVIEW_CRASH` | WebView renderer crash (`chrome://crash`), reported as `WebViewRendererCrashedException` | Not available; the project is created normally |
+| Project name                 | Android                                                                                                                   | iOS                                            |
+| ---------------------------- | ------------------------------------------------------------------------------------------------------------------------- | ---------------------------------------------- |
+| `ROUTEVN_TEST_PANIC_CRASH`   | Rust panic in `libroutevn_exporter_jni.so`, which aborts (`SIGABRT`)                                                      | Swift `fatalError`                             |
+| `ROUTEVN_TEST_NATIVE_CRASH`  | Invalid memory write in `libroutevn_exporter_jni.so` (`SIGSEGV`)                                                          | Invalid memory write (`EXC_BAD_ACCESS`)        |
+| `ROUTEVN_TEST_APP_CRASH`     | Uncaught `MainActivity$TestCrashException` on the main thread                                                             | Uncaught `NSException` (`RouteVNTestCrash`)    |
+| `ROUTEVN_TEST_WEBVIEW_CRASH` | WebView renderer crash (`chrome://crash`); the app reloads and reports `WebViewRendererCrashedException` at level `error` | Not available; the project is created normally |
 
 Reopen the app after a native crash so the saved report is sent. These are real
 reports, so use them only when testing. In production they are told apart by
