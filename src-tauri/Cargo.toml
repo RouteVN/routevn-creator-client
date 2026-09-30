@@ -47,7 +47,7 @@ discord-rich-presence = "=1.1.0"
 # Use rustls with ring, matching tauri-plugin-updater, so the shared reqwest
 # build does not switch the updater to native TLS or link OpenSSL.
 rustls = { version = "0.23", default-features = false, features = ["ring"] }
-sentry = { version = "=0.49.3", default-features = false, features = ["panic", "backtrace", "reqwest", "rustls-no-provider"] }
+sentry = { version = "=0.49.3", default-features = false, features = ["panic", "backtrace", "debug-images", "reqwest", "rustls-no-provider"] }
 
 [target.'cfg(target_os = "windows")'.dependencies]
 windows = { version = "=0.61.3", features = [
@@ -55,3 +55,22 @@ windows = { version = "=0.61.3", features = [
     "Win32_System_Registry",
     "Win32_UI_WindowsAndMessaging",
 ] }
+
+# When the release pipeline turns on line tables (CARGO_PROFILE_RELEASE_DEBUG),
+# only RouteVN's crates keep them. Third-party dependencies keep function names
+# from the symbol table, which keeps each symbol cache within the collector's
+# limit. See docs/desktop-error-reporting.md.
+[profile.release]
+# Debug info in any package stops Cargo's implicit stripping, which removes the
+# debug map naming the build machine's object files, so strip explicitly.
+# rustc ignores this on Windows, where the PDB is always written.
+strip = "debuginfo"
+
+[profile.release.package."*"]
+debug = false
+
+[profile.release.package.routevn-exporter]
+debug = "line-tables-only"
+
+[profile.release.package.routevn-packager]
+debug = "line-tables-only"

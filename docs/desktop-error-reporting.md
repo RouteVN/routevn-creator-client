@@ -83,30 +83,70 @@ the release pipeline's job. Reports carry the debug IDs in `debug_meta` as
 bundles in `static/bundle` run in exported games, which do not report errors,
 so they get no maps.
 
+## Native symbols
+
+Rust panic frames carry instruction addresses. The Rust SDK's debug-images
+integration lists the loaded binaries with their debug IDs: the Mach-O UUID on
+macOS, the PDB GUID and age on Windows, and the GNU build ID on Linux. Events
+keep only the images that a sent frame's address falls in, as `symbolic`
+images whose `name` and `debug_file` are reduced to basenames. The debug ID
+names the separate debug file of the exact binary that crashed.
+
+On macOS, release builds keep line tables in a separate dSYM when built with:
+
+```bash
+CARGO_PROFILE_RELEASE_DEBUG=line-tables-only
+CARGO_PROFILE_RELEASE_SPLIT_DEBUGINFO=packed
+```
+
+Each architecture of the universal build then gets
+`src-tauri/target/<arch>-apple-darwin/release/routevn-creator.dSYM` with the
+same UUID as that architecture's slice of the shipped binary. The release
+pipeline keeps those dSYMs, like the source maps. Windows PDBs and Linux debug
+files are not kept yet.
+
+`src-tauri/Cargo.toml` sets the rest of the release profile:
+
+- Only RouteVN's crates get line tables: this crate, `routevn-exporter` and
+  `routevn-packager`. Third-party dependencies get no debug info, so their
+  frames resolve to function names from the symbol table; their code inlined or
+  instantiated in RouteVN's crates keeps its lines. With line tables for every
+  dependency, the arm64 symbol cache is about 61 MiB, over the 48 MiB limit of
+  `routevn-symbols`; with RouteVN's crates only it is about 34 MiB.
+- `strip = "debuginfo"` is set explicitly. Cargo only strips by default when no
+  package has debug info, and the shipped binary must carry no DWARF or debug
+  map naming the build machine's object files. rustc ignores `strip` on
+  Windows, where it always writes the PDB and records only its file name in the
+  executable.
+
+Builds without those variables still ship a binary with no DWARF or debug map;
+the first-party line tables are removed when it is linked.
+
 ## Collection and privacy
 
 The webview enables only the global uncaught-error and unhandled-rejection
 handlers, plus event deduplication. Rust enables only the panic integration,
-stack frame in-app classification, and the SDK's normal HTTP transport over
-rustls. Each side sends at most 10 events per app session; the Rust panic hook
-blocks the panicking thread while its event is sent. The webview's explicit
-reports (below) have their own budget of 10, so handled failures cannot use up
-the budget for uncaught errors. Tracing, profiling, replay, feedback,
-logs/metrics forwarding, screenshots, view hierarchy, attachments, browser
-sessions, and browser client reports are disabled by options or excluded
-features. The Rust SDK has no client-report switch; it may attach a
-loss report to a later error envelope, which the collector discards. Neither
-SDK sets a user identity.
+stack frame in-app classification, debug images, and the SDK's normal HTTP
+transport over rustls. Each side sends at most 10 events per app session; the
+Rust panic hook blocks the panicking thread while its event is sent. The
+webview's explicit reports (below) have their own budget of 10, so handled
+failures cannot use up the budget for uncaught errors. Tracing, profiling,
+replay, feedback, logs/metrics forwarding, screenshots, view hierarchy,
+attachments, browser sessions, and browser client reports are disabled by
+options or excluded features. The Rust SDK has no client-report switch; it may
+attach a loss report to a later error envelope, which the collector discards.
+Neither SDK sets a user identity.
 
-`beforeSend` on each side retains the error category, capture mechanism type
-and handled flag, and bounded stack location (Rust frames also keep their
-instruction address) while discarding request metadata, headers, cookies,
-body/response dumps, tokens, emails, object snapshots, local variables, and
-arbitrary error message text. Rust keeps the SDK level, `fatal` for panics;
-the webview reports every event at level `error`. Both SDKs keep zero
-breadcrumbs. The webview flush on quit and the Rust send after each panic wait
-at most about two seconds. There is no app-level retry or forwarding path; the
-SDK handles collector rate limits and transport errors.
+`beforeSend` on each side retains the error category, capture mechanism type and
+handled flag, and bounded stack location (Rust frames also keep their
+instruction address, and the debug images those addresses fall in, which can
+include a system library and so identify the OS build) while discarding request
+metadata, headers, cookies, body/response dumps, tokens, emails, object
+snapshots, local variables, and arbitrary error message text. Rust keeps the SDK
+level, `fatal` for panics; the webview reports every event at level `error`.
+Both SDKs keep zero breadcrumbs. The webview flush on quit and the Rust send
+after each panic wait at most about two seconds. There is no app-level retry or
+forwarding path; the SDK handles collector rate limits and transport errors.
 
 ## Local verification
 
