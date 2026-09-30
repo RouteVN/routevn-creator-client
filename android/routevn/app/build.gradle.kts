@@ -48,6 +48,13 @@ val productionSentryDsn: String by lazy {
 val debugSentryDsn = providers.gradleProperty("routevnSentryDsn").orElse("").get().let {
     if (it.isEmpty()) it else validatedSentryDsn(it, production = false)
 }
+// The release launcher passes a new UUID for each build and keeps that build's
+// R8 mapping.txt under it; crash reports carry it so JVM stacks can be decoded.
+val proguardUuid = providers.gradleProperty("routevnProguardUuid").orElse("").get().also {
+    require(it.isEmpty() || it.matches(Regex("[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}"))) {
+        "routevnProguardUuid must be a lowercase UUID"
+    }
+}
 
 fun javaString(value: String) = "\"" + value.replace("\\", "\\\\").replace("\"", "\\\"") + "\""
 
@@ -70,6 +77,7 @@ android {
         versionCode = 14
         versionName = "1.17.1"
         buildConfigField("String", "UPDATE_DISTRIBUTION", javaString(routevnDistribution))
+        buildConfigField("String", "PROGUARD_UUID", javaString(proguardUuid))
         manifestPlaceholders["usesCleartextTraffic"] = "false"
     }
 

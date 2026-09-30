@@ -92,7 +92,9 @@ python3 tests/android/crashReportingConfiguration.py
 ```
 
 Release name is `routevn-creator@<version>`, matching desktop. `dist` is the
-Android `versionCode` or the iOS `CFBundleVersion`.
+iOS `CFBundleVersion`, or on Android `<versionCode>-<distribution>` (`direct` or
+`google-play`): each distribution runs R8 separately, so its symbols need their
+own `dist`.
 
 ## Collection and privacy
 
@@ -125,6 +127,13 @@ release's symbol files so reports can be decoded manually:
   `mapping.txt` and `native-debug-symbols.zip` to
   `.artifacts/android-crash-symbols/<versionName>-<versionCode>/`. Decode JVM
   stacks with R8 `retrace` and native frames with `llvm-symbolizer`.
+  - Pass `-ProutevnProguardUuid=<uuid>` (lowercase) to tag that build's JVM
+    crashes with a ProGuard debug image, and keep the build's `mapping.txt`
+    under the same UUID. Builds without it send no ProGuard image.
+  - `scripts/build-android-rust.sh` links `libroutevn_exporter_jni.so` with a
+    GNU build ID and line tables. Packaging strips the shipped copy; the
+    unstripped `.artifacts/android-rust/<target>/release/` copy has the same
+    build ID, so it is the symbol file for native frames in that library.
 - **iOS:** keep the release `.xcarchive`; its `dSYMs/` folder matches the
   shipped build. Decode frames with `atos`.
 
