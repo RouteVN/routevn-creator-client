@@ -9,6 +9,7 @@ const createAssetBufferManagerMock = vi.fn();
 const createRouteGraphicsMock = vi.fn();
 const createRouteEngineMock = vi.fn();
 const createEffectsHandlerMock = vi.fn(() => vi.fn());
+const tickerCallbacks = new Set();
 let routeGraphicsInitOptions;
 
 const routeGraphicsInstance = {
@@ -70,12 +71,19 @@ vi.mock("pixi.js", () => ({
   Ticker: class Ticker {
     start() {}
     stop() {}
+    add(callback) {
+      tickerCallbacks.add(callback);
+    }
+    remove(callback) {
+      tickerCallbacks.delete(callback);
+    }
   },
 }));
 
 describe("graphicsService", () => {
   beforeEach(() => {
     routeGraphicsInitOptions = undefined;
+    tickerCallbacks.clear();
     assetsCache.clear();
     audioAssetApi.getAsset = vi.fn(() => undefined);
     audioAssetApi.load = vi.fn(async () => {});
@@ -2074,6 +2082,180 @@ describe("graphicsService", () => {
         audio: [],
       });
     });
+  });
+
+  it("reports runtime action failures to the owning preview", async () => {
+    const { createGraphicsService } = await import(
+      "../../src/deps/services/graphicsService.js"
+    );
+    const service = await createGraphicsService();
+    const onInteractionError = vi.fn();
+    const error = new Error("Synchronous execution limit exceeded");
+    const log = vi.spyOn(console, "error").mockImplementation(() => {});
+    try {
+      await service.init({ width: 1920, height: 1080, onInteractionError });
+      service.initRouteEngine({
+        screen: { width: 1920, height: 1080 },
+        story: { scenes: {} },
+        resources: {},
+      });
+      createRouteEngineMock.mock.results
+        .at(-1)
+        .value.handleActions.mockImplementation(() => {
+          throw error;
+        });
+      routeGraphicsInitOptions.eventHandler("change", {
+        actions: { nextLine: {} },
+      });
+      await vi.waitFor(() =>
+        expect(onInteractionError).toHaveBeenCalledWith(error),
+      );
+    } finally {
+      log.mockRestore();
+    }
+  });
+
+  it("reports automatic playback failures and removes the wrapped ticker callback", async () => {
+    const { createGraphicsService } = await import(
+      "../../src/deps/services/graphicsService.js"
+    );
+    const service = await createGraphicsService();
+    const onInteractionError = vi.fn();
+    await service.init({ width: 1920, height: 1080, onInteractionError });
+    service.initRouteEngine({ screen: { width: 1920, height: 1080 } });
+    const { ticker } = createEffectsHandlerMock.mock.calls.at(-1)[0];
+    const error = new Error("Synchronous execution limit exceeded");
+    const callback = vi.fn(() => {
+      throw error;
+    });
+    ticker.add(callback);
+    const log = vi.spyOn(console, "error").mockImplementation(() => {});
+    try {
+      expect(() => [...tickerCallbacks][0]({ deltaMS: 1000 })).not.toThrow();
+      expect(onInteractionError).toHaveBeenCalledWith(error);
+      ticker.remove(callback);
+      expect(tickerCallbacks.size).toBe(0);
+    } finally {
+      log.mockRestore();
+    }
+  });
+
+  it("runs current playback ticks and ignores callbacks from a replaced engine", async () => {
+    const { createGraphicsService } = await import(
+      "../../src/deps/services/graphicsService.js"
+    );
+    const service = await createGraphicsService();
+    const onInteractionError = vi.fn();
+    await service.init({ width: 1920, height: 1080, onInteractionError });
+    const projectData = { screen: { width: 1920, height: 1080 } };
+    service.initRouteEngine(projectData);
+    const { ticker } = createEffectsHandlerMock.mock.calls.at(-1)[0];
+    const callback = vi.fn();
+    ticker.add(callback);
+    const tick = [...tickerCallbacks][0];
+    const frame = { deltaMS: 16 };
+    tick(frame);
+    expect(callback).toHaveBeenCalledWith(frame);
+    service.initRouteEngine(projectData);
+    tick(frame);
+    expect(callback).toHaveBeenCalledOnce();
+    expect(onInteractionError).not.toHaveBeenCalled();
+  });
+
+  it.each([false, true])(
+    "handles render completion failures synchronously (preview recovery: %s)",
+    async (recoverPreview) => {
+      const { createGraphicsService } = await import(
+        "../../src/deps/services/graphicsService.js"
+      );
+      const service = await createGraphicsService();
+      const onInteractionError = recoverPreview ? vi.fn() : undefined;
+      await service.init({ width: 1920, height: 1080, onInteractionError });
+      service.initRouteEngine({ screen: { width: 1920, height: 1080 } });
+      const error = new Error("Render completion failed");
+      createRouteEngineMock.mock.results
+        .at(-1)
+        .value.handleActions.mockImplementation(() => {
+          throw error;
+        });
+      const complete = () =>
+        routeGraphicsInitOptions.eventHandler("renderComplete", {});
+      const log = vi.spyOn(console, "error").mockImplementation(() => {});
+      try {
+        if (recoverPreview) {
+          expect(complete).not.toThrow();
+          expect(onInteractionError).toHaveBeenCalledWith(error);
+        } else {
+          expect(complete).toThrow(error);
+        }
+      } finally {
+        log.mockRestore();
+      }
+    },
+  );
+
+  it("preserves engine initialization failures for the startup boundary", async () => {
+    const { createGraphicsService } = await import(
+      "../../src/deps/services/graphicsService.js"
+    );
+    const service = await createGraphicsService();
+    const onInteractionError = vi.fn();
+    await service.init({ width: 1920, height: 1080, onInteractionError });
+    const error = new Error("Engine initialization failed");
+    createRouteEngineMock.mockReturnValueOnce({
+      init: () => {
+        throw error;
+      },
+    });
+    expect(() =>
+      service.initRouteEngine({ screen: { width: 1920, height: 1080 } }),
+    ).toThrow(error);
+    expect(onInteractionError).not.toHaveBeenCalled();
+  });
+
+  it("does not report an abandoned interaction to a replacement preview", async () => {
+    const { createGraphicsService } = await import(
+      "../../src/deps/services/graphicsService.js"
+    );
+    const service = await createGraphicsService();
+    let rejectPreparation;
+    const onInteractionError = vi.fn();
+    const replacementError = vi.fn();
+    const beforeHandleActions = vi.fn(
+      () =>
+        new Promise((_, reject) => {
+          rejectPreparation = reject;
+        }),
+    );
+    await service.init({
+      width: 1920,
+      height: 1080,
+      onInteractionError,
+      beforeHandleActions,
+    });
+    service.initRouteEngine({
+      screen: { width: 1920, height: 1080 },
+      story: { scenes: {} },
+      resources: {},
+    });
+    routeGraphicsInitOptions.eventHandler("change", {
+      actions: { nextLine: {} },
+    });
+    await vi.waitFor(() => expect(beforeHandleActions).toHaveBeenCalledOnce());
+    await service.init({
+      width: 1920,
+      height: 1080,
+      onInteractionError: replacementError,
+    });
+    const log = vi.spyOn(console, "error").mockImplementation(() => {});
+    try {
+      rejectPreparation(new Error("Old asset read failed"));
+      await new Promise((resolve) => setTimeout(resolve, 0));
+      expect(onInteractionError).not.toHaveBeenCalled();
+      expect(replacementError).not.toHaveBeenCalled();
+    } finally {
+      log.mockRestore();
+    }
   });
 
   it("uses actions returned from beforeHandleActions without mutating the original interaction payload", async () => {

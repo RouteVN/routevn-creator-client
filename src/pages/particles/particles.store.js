@@ -291,6 +291,8 @@ export const createInitialState = () => {
     editMode: false,
     editItemId: undefined,
     projectResolution,
+    previewMounted: false,
+    previewRequestId: 0,
     previewRuntimeTarget: undefined,
     previewRuntimeWidth: undefined,
     previewRuntimeHeight: undefined,
@@ -619,9 +621,18 @@ export const setPreviewRuntime = (
 };
 
 export const clearPreviewRuntime = ({ state }, _payload = {}) => {
+  state.previewRequestId += 1;
   state.previewRuntimeTarget = undefined;
   state.previewRuntimeWidth = undefined;
   state.previewRuntimeHeight = undefined;
+};
+
+export const setPreviewMounted = ({ state }, { mounted } = {}) => {
+  state.previewMounted = mounted;
+};
+
+export const startPreviewRequest = ({ state }, _payload = {}) => {
+  state.previewRequestId += 1;
 };
 
 export const setDialogPreviewBackgroundImage = (
@@ -689,6 +700,9 @@ export const selectPreviewRuntime = ({ state }) => ({
   width: state.previewRuntimeWidth,
   height: state.previewRuntimeHeight,
 });
+export const selectPreviewRequestId = ({ state }) => state.previewRequestId;
+export const selectIsPreviewRequestCurrent = ({ state }, { requestId }) =>
+  state.previewMounted && state.previewRequestId === requestId;
 
 export const selectViewData = (context) => {
   const viewData = selectCatalogViewData(context);

@@ -661,6 +661,7 @@ export const createGraphicsService = async ({
   // Create dedicated ticker for auto mode
   let ticker;
   let beforeHandleActions;
+  let onInteractionError;
   let actionQueue = Promise.resolve();
   let assetLoadQueue = Promise.resolve();
   let assetLoadRuntimeVersion = 0;
@@ -1629,6 +1630,7 @@ export const createGraphicsService = async ({
     routeEngineProjectData = undefined;
     enableGlobalKeyboardBindings = true;
     beforeHandleActions = undefined;
+    onInteractionError = undefined;
     actionQueue = Promise.resolve();
     assetLoadQueue = Promise.resolve();
 
@@ -2133,13 +2135,29 @@ export const createGraphicsService = async ({
   };
 
   const enqueueInteractionActions = (actions, eventContext) => {
+    const generation = engineGeneration;
     actionQueue = actionQueue
       .then(() => {
+        if (generation !== engineGeneration) return;
         return runInteractionActions(actions, eventContext);
       })
       .catch((error) => {
+        if (generation !== engineGeneration) return;
         console.error("[graphicsService] Failed to process interaction", error);
+        onInteractionError?.(error);
       });
+  };
+
+  const runPlaybackCallback = (callback, generation = engineGeneration) => {
+    if (generation !== engineGeneration) return;
+    try {
+      return callback();
+    } catch (error) {
+      if (generation !== engineGeneration) return;
+      if (!onInteractionError) throw error;
+      console.error("[graphicsService] Failed to advance playback", error);
+      onInteractionError(error);
+    }
   };
 
   const clearPendingClickInteraction = (interactionId) => {
@@ -2280,6 +2298,7 @@ export const createGraphicsService = async ({
               "Graphics runtime resolution",
             );
           beforeHandleActions = onBeforeHandleActions;
+          onInteractionError = options.onInteractionError;
           actionQueue = Promise.resolve();
           assetLoadQueue = Promise.resolve();
           assetLoadRuntimeVersion += 1;
@@ -2361,9 +2380,9 @@ export const createGraphicsService = async ({
                         if (payload?.aborted === true) {
                           return;
                         }
-                        engine.handleActions({
-                          markLineCompleted: {},
-                        });
+                        runPlaybackCallback(() =>
+                          engine.handleActions({ markLineCompleted: {} }),
+                        );
                         return;
                       }
 
@@ -2529,6 +2548,26 @@ export const createGraphicsService = async ({
           : (options.persistence ??
             (namespace ? undefined : createNoopRouteEnginePersistence()));
 
+      let playbackTicker = routeEngineTicker;
+      if (onInteractionError) {
+        const callbacks = new Map();
+        playbackTicker = {
+          add(callback) {
+            const wrapped = (frame) =>
+              runPlaybackCallback(
+                () => callback(frame),
+                currentEngineGeneration,
+              );
+            callbacks.set(callback, wrapped);
+            routeEngineTicker.add(wrapped);
+          },
+          remove(callback) {
+            routeEngineTicker.remove(callbacks.get(callback) ?? callback);
+            callbacks.delete(callback);
+          },
+        };
+      }
+
       let routeEngine;
       const handleExternalEffects = createEffectsHandler({
         getEngine: () => routeEngine,
@@ -2553,7 +2592,7 @@ export const createGraphicsService = async ({
         },
         namespace,
         persistence,
-        ticker: routeEngineTicker,
+        ticker: playbackTicker,
       });
       const handlePendingEffects = (effects) => {
         if (currentEngineGeneration !== engineGeneration) {

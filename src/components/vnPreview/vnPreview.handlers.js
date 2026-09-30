@@ -796,7 +796,9 @@ export const handleAfterMount = async (deps) => {
 
 const initializePreview = async (deps, startup) => {
   const {
+    appService,
     dispatchEvent,
+    i18n,
     projectService,
     graphicsService,
     refs,
@@ -897,6 +899,21 @@ const initializePreview = async (deps, startup) => {
       signal: startup.signal,
       canvas: canvas,
       beforeHandleActions,
+      onInteractionError: (error) => {
+        if (startup.signal.aborted) return;
+        cancelPreviewStartup(store);
+        store.setAssetLoading({ isLoading: false });
+        store.setPreviewReady({ isPreviewReady: false });
+        if (!error.reported) {
+          appService.showAlert({
+            title: i18n?.resourcePages?.warningTitle ?? "Warning",
+            message:
+              i18n?.vnPreview?.playbackFailed ??
+              "Preview stopped because an error occurred.",
+          });
+        }
+        dispatchEvent(new CustomEvent("close"));
+      },
       width: previewWidth,
       height: previewHeight,
     }),

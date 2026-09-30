@@ -1,5 +1,5 @@
 use tauri::{
-    Runtime, UriSchemeContext, Url,
+    Url,
     http::{
         Request, Response, StatusCode,
         header::{
@@ -70,10 +70,11 @@ fn is_allowed_project_file_path(path: &str) -> bool {
     path.contains("\\files\\") || path.contains("/files/")
 }
 
-pub fn handle<R: Runtime>(
-    _ctx: UriSchemeContext<'_, R>,
-    request: Request<Vec<u8>>,
-) -> Response<Vec<u8>> {
+pub fn handle(request: Request<Vec<u8>>, respond: impl FnOnce(Response<Vec<u8>>) + Send + 'static) {
+    tauri::async_runtime::spawn_blocking(move || respond(build_response(request)));
+}
+
+fn build_response(request: Request<Vec<u8>>) -> Response<Vec<u8>> {
     if request.method() == "OPTIONS" {
         return Response::builder()
             .status(StatusCode::NO_CONTENT)
@@ -126,4 +127,87 @@ pub fn handle<R: Runtime>(
         .header(CONTENT_TYPE, content_type)
         .body(bytes)
         .unwrap()
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use std::{sync::mpsc, thread, time::Duration};
+
+    fn request(uri: &str) -> Request<Vec<u8>> {
+        Request::builder().uri(uri).body(Vec::new()).unwrap()
+    }
+
+    fn response_for(request: Request<Vec<u8>>) -> Response<Vec<u8>> {
+        let (sender, receiver) = mpsc::channel();
+        handle(request, move |response| sender.send(response).unwrap());
+        receiver.recv_timeout(Duration::from_secs(5)).unwrap()
+    }
+
+    #[test]
+    fn serves_media_off_the_request_thread() {
+        let directory = tempfile::tempdir().unwrap();
+        let files = directory.path().join("files");
+        std::fs::create_dir(&files).unwrap();
+        let path = files.join("image.png");
+        std::fs::write(&path, b"media bytes").unwrap();
+        let uri = format!(
+            "/image.PNG?path={}",
+            urlencoding::encode(path.to_str().unwrap())
+        );
+        let request_thread = thread::current().id();
+        let (sender, receiver) = mpsc::channel();
+
+        handle(request(&uri), move |response| {
+            sender.send((thread::current().id(), response)).unwrap();
+        });
+
+        let (response_thread, response) = receiver.recv_timeout(Duration::from_secs(5)).unwrap();
+        assert_ne!(response_thread, request_thread);
+        assert_eq!(response.status(), StatusCode::OK);
+        assert_eq!(response.body(), b"media bytes");
+        assert_eq!(response.headers()[CONTENT_TYPE], "image/png");
+        assert_eq!(response.headers()[ACCESS_CONTROL_ALLOW_ORIGIN], "*");
+        assert_eq!(response.headers()[CACHE_CONTROL], "no-store");
+    }
+
+    #[test]
+    fn preserves_preflight_and_request_errors() {
+        let preflight = Request::builder()
+            .method("OPTIONS")
+            .uri("/image.png")
+            .body(Vec::new())
+            .unwrap();
+        let response = response_for(preflight);
+        assert_eq!(response.status(), StatusCode::NO_CONTENT);
+        assert!(response.body().is_empty());
+        assert_eq!(
+            response.headers()[ACCESS_CONTROL_ALLOW_METHODS],
+            "GET, OPTIONS"
+        );
+
+        for (uri, status, message) in [
+            ("/image.png", StatusCode::BAD_REQUEST, "Missing file path"),
+            (
+                "/image.png?path=/other/image.png",
+                StatusCode::BAD_REQUEST,
+                "Unsupported file path",
+            ),
+            (
+                "/image.txt?path=/project/files/image.txt",
+                StatusCode::BAD_REQUEST,
+                "Unsupported media extension",
+            ),
+            (
+                "/image.png?path=/missing-project/files/image.png",
+                StatusCode::NOT_FOUND,
+                "File not found",
+            ),
+        ] {
+            let response = response_for(request(uri));
+            assert_eq!(response.status(), status);
+            assert_eq!(response.body(), message.as_bytes());
+            assert_eq!(response.headers()[ACCESS_CONTROL_ALLOW_ORIGIN], "*");
+        }
+    }
 }

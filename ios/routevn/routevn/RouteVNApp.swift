@@ -1451,7 +1451,7 @@ final class RouteVNViewController: UIViewController, WKNavigationDelegate, WKScr
                         contentTypes: pending.contentTypes,
                         index: index
                     )
-                    files.append(try createPickerFileResult(
+                    files.append(try await createPickerFileResult(
                         requestId: pending.requestId,
                         data: photo.data,
                         displayName: photo.filename,
@@ -1494,7 +1494,7 @@ final class RouteVNViewController: UIViewController, WKNavigationDelegate, WKScr
 
         if let sourceType = UTType(filenameExtension: sourceURL.pathExtension),
            pending.contentTypes.contains(where: { sourceType.conforms(to: $0) }) {
-            return try createPickerFileResult(requestId: pending.requestId, sourceURL: sourceURL, index: index)
+            return try await createPickerFileResult(requestId: pending.requestId, sourceURL: sourceURL, index: index)
         }
 
         // Camera videos are commonly MOV; the Videos page accepts MP4 only.
@@ -1512,7 +1512,7 @@ final class RouteVNViewController: UIViewController, WKNavigationDelegate, WKScr
         guard exporter.status == .completed else {
             throw exporter.error ?? RouteVNError.message("The selected video could not be converted to MP4.")
         }
-        return try createPickerFileResult(requestId: pending.requestId, sourceURL: outputURL, index: index)
+        return try await createPickerFileResult(requestId: pending.requestId, sourceURL: outputURL, index: index)
     }
 
     private func readPickedPhoto(
@@ -1643,14 +1643,20 @@ final class RouteVNViewController: UIViewController, WKNavigationDelegate, WKScr
             switch pending.kind {
             case .file:
                 let selectedURLs = pending.multiple ? urls : Array(urls.prefix(1))
-                var files: [[String: Any]] = []
-                for (index, url) in selectedURLs.enumerated() {
-                    files.append(try createPickerFileResult(requestId: pending.requestId, sourceURL: url, index: index))
+                Task { @MainActor in
+                    do {
+                        var files: [[String: Any]] = []
+                        for (index, url) in selectedURLs.enumerated() {
+                            files.append(try await createPickerFileResult(requestId: pending.requestId, sourceURL: url, index: index))
+                        }
+                        sendFilePickerResult(["requestId": pending.requestId, "files": files])
+                    } catch {
+                        backgroundBridgeQueue.async {
+                            try? self.storage.deletePickerRequestFiles(requestId: pending.requestId)
+                            self.sendFilePickerError(requestId: pending.requestId, message: "Failed to read selected file.")
+                        }
+                    }
                 }
-                sendFilePickerResult([
-                    "requestId": pending.requestId,
-                    "files": files
-                ])
             case .folder:
                 guard let url = urls.first else {
                     sendFolderPickerResult([
@@ -1704,24 +1710,28 @@ final class RouteVNViewController: UIViewController, WKNavigationDelegate, WKScr
         ]
     }
 
-    private func createPickerFileResult(requestId: String, sourceURL: URL, index: Int) throws -> [String: Any] {
-        let displayName = sourceURL.lastPathComponent.isEmpty ? "file-\(index)" : sourceURL.lastPathComponent
-        let mimeType = mimeTypeForURL(sourceURL, fallbackName: displayName)
-        let didAccess = sourceURL.startAccessingSecurityScopedResource()
-        defer {
-            if didAccess {
-                sourceURL.stopAccessingSecurityScopedResource()
+    private func createPickerFileResult(requestId: String, sourceURL: URL, index: Int) async throws -> [String: Any] {
+        try await withCheckedThrowingContinuation { continuation in
+            backgroundBridgeQueue.async {
+                do {
+                    let displayName = sourceURL.lastPathComponent.isEmpty ? "file-\(index)" : sourceURL.lastPathComponent
+                    let mimeType = mimeTypeForURL(sourceURL, fallbackName: displayName)
+                    let didAccess = sourceURL.startAccessingSecurityScopedResource()
+                    defer {
+                        if didAccess { sourceURL.stopAccessingSecurityScopedResource() }
+                    }
+                    let fileId = "file-\(index)"
+                    let size = try self.storage.copyPickerFile(
+                        requestId: requestId, fileId: fileId, sourceURL: sourceURL, mimeType: mimeType
+                    )
+                    continuation.resume(returning: self.pickerFileResult(
+                        requestId: requestId, fileId: fileId, displayName: displayName, mimeType: mimeType, size: size
+                    ))
+                } catch {
+                    continuation.resume(throwing: error)
+                }
             }
         }
-
-        let data = try Data(contentsOf: sourceURL)
-        return try createPickerFileResult(
-            requestId: requestId,
-            data: data,
-            displayName: displayName,
-            mimeType: mimeType,
-            index: index
-        )
     }
 
     private func createPickerFileResult(
@@ -1730,21 +1740,31 @@ final class RouteVNViewController: UIViewController, WKNavigationDelegate, WKScr
         displayName: String,
         mimeType: String,
         index: Int
-    ) throws -> [String: Any] {
-        let fileId = try storage.safePathSegment("file-\(index)")
-        try storage.writePickerFile(
-            requestId: requestId,
-            fileId: fileId,
-            data: data,
-            mimeType: mimeType
-        )
+    ) async throws -> [String: Any] {
+        try await withCheckedThrowingContinuation { continuation in
+            backgroundBridgeQueue.async {
+                do {
+                    let fileId = "file-\(index)"
+                    try self.storage.writePickerFile(requestId: requestId, fileId: fileId, data: data, mimeType: mimeType)
+                    continuation.resume(returning: self.pickerFileResult(
+                        requestId: requestId, fileId: fileId, displayName: displayName, mimeType: mimeType, size: data.count
+                    ))
+                } catch {
+                    continuation.resume(throwing: error)
+                }
+            }
+        }
+    }
 
-        return [
+    private func pickerFileResult(
+        requestId: String, fileId: String, displayName: String, mimeType: String, size: Int
+    ) -> [String: Any] {
+        [
             "requestId": requestId,
             "fileId": fileId,
             "name": displayName,
             "type": mimeType,
-            "size": NSNumber(value: data.count),
+            "size": NSNumber(value: size),
             "url": "routevn://app/ios-files/picker/\(requestId)/files/\(fileId)"
         ]
     }
@@ -2412,45 +2432,62 @@ private final class RouteVNZipStreamWriter {
 
 final class RouteVNSchemeHandler: NSObject, WKURLSchemeHandler {
     private let storage: RouteVNNativeStorage
+    private let fileQueue = DispatchQueue(label: "com.routevn.creator.ios.files", qos: .userInitiated, attributes: .concurrent)
+    private var activeTasks = Set<ObjectIdentifier>()
 
     init(storage: RouteVNNativeStorage) {
         self.storage = storage
     }
 
     func webView(_ webView: WKWebView, start urlSchemeTask: WKURLSchemeTask) {
-        do {
-            guard let url = urlSchemeTask.request.url else {
-                throw RouteVNError.message("Invalid routevn URL.")
+        let url = urlSchemeTask.request.url
+        activeTasks.insert(ObjectIdentifier(urlSchemeTask))
+        fileQueue.async {
+            do {
+                guard self.deliver(to: urlSchemeTask, {}) else { return }
+                guard let url else {
+                    throw RouteVNError.message("Invalid routevn URL.")
+                }
+                let resolved = try self.storage.resolveRouteVNURL(url)
+                let handle = try FileHandle(forReadingFrom: resolved.url)
+                defer { try? handle.close() }
+                let size = try resolved.url.resourceValues(forKeys: [.fileSizeKey]).fileSize ?? 0
+                let response = HTTPURLResponse(
+                    url: url,
+                    statusCode: 200,
+                    httpVersion: "HTTP/1.1",
+                    headerFields: [
+                        "Content-Type": resolved.mimeType,
+                        "Content-Length": String(size),
+                        "Access-Control-Allow-Origin": "*",
+                        "Cross-Origin-Resource-Policy": "cross-origin"
+                    ]
+                ) ?? URLResponse(url: url, mimeType: resolved.mimeType, expectedContentLength: size, textEncodingName: nil)
+                guard self.deliver(to: urlSchemeTask, { urlSchemeTask.didReceive(response) }) else { return }
+                while let data = try handle.read(upToCount: 64 * 1024), !data.isEmpty {
+                    guard self.deliver(to: urlSchemeTask, { urlSchemeTask.didReceive(data) }) else { return }
+                }
+                self.deliver(to: urlSchemeTask, finished: true) { urlSchemeTask.didFinish() }
+            } catch {
+                self.deliver(to: urlSchemeTask, finished: true) { urlSchemeTask.didFailWithError(error) }
             }
-
-            let resolved = try storage.resolveRouteVNURL(url)
-            let data = try Data(contentsOf: resolved.url)
-            let response = HTTPURLResponse(
-                url: url,
-                statusCode: 200,
-                httpVersion: "HTTP/1.1",
-                headerFields: [
-                    "Content-Type": resolved.mimeType,
-                    "Content-Length": String(data.count),
-                    "Access-Control-Allow-Origin": "*",
-                    "Cross-Origin-Resource-Policy": "cross-origin"
-                ]
-            ) ?? URLResponse(
-                url: url,
-                mimeType: resolved.mimeType,
-                expectedContentLength: data.count,
-                textEncodingName: nil
-            )
-
-            urlSchemeTask.didReceive(response)
-            urlSchemeTask.didReceive(data)
-            urlSchemeTask.didFinish()
-        } catch {
-            urlSchemeTask.didFailWithError(error)
         }
     }
 
-    func webView(_ webView: WKWebView, stop urlSchemeTask: WKURLSchemeTask) {}
+    @discardableResult
+    private func deliver(to task: WKURLSchemeTask, finished: Bool = false, _ callback: () -> Void) -> Bool {
+        DispatchQueue.main.sync {
+            let id = ObjectIdentifier(task)
+            guard activeTasks.contains(id) else { return false }
+            if finished { activeTasks.remove(id) }
+            callback()
+            return true
+        }
+    }
+
+    func webView(_ webView: WKWebView, stop urlSchemeTask: WKURLSchemeTask) {
+        activeTasks.remove(ObjectIdentifier(urlSchemeTask))
+    }
 }
 
 final class RouteVNNativeStorage {
@@ -2607,6 +2644,18 @@ final class RouteVNNativeStorage {
         try FileManager.default.createDirectory(at: metadataRoot, withIntermediateDirectories: true)
         try data.write(to: try safeRelativeURL(root: filesRoot, relativePath: fileId), options: .atomic)
         try writeMimeType(mimeType, metadataRoot: metadataRoot, fileId: fileId)
+    }
+
+    func copyPickerFile(requestId: String, fileId: String, sourceURL: URL, mimeType: String) throws -> Int {
+        let requestRoot = try pickerRequestRoot(requestId: requestId)
+        let filesRoot = requestRoot.appendingPathComponent("files", isDirectory: true)
+        let metadataRoot = requestRoot.appendingPathComponent("file-metadata", isDirectory: true)
+        let destination = try safeRelativeURL(root: filesRoot, relativePath: fileId)
+        try FileManager.default.createDirectory(at: filesRoot, withIntermediateDirectories: true)
+        try FileManager.default.createDirectory(at: metadataRoot, withIntermediateDirectories: true)
+        try FileManager.default.copyItem(at: sourceURL, to: destination)
+        try writeMimeType(mimeType, metadataRoot: metadataRoot, fileId: fileId)
+        return try destination.resourceValues(forKeys: [.fileSizeKey]).fileSize ?? 0
     }
 
     func deletePickerRequestFiles(requestId: String) throws {

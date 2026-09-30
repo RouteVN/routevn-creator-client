@@ -3919,6 +3919,17 @@ public class MainActivity extends Activity {
             return;
         }
 
+        bridgeExecutor.execute(() ->
+            readAndroidFilePickerResult(requestId, multiple, resultCode, data)
+        );
+    }
+
+    private void readAndroidFilePickerResult(
+        String requestId,
+        boolean multiple,
+        int resultCode,
+        Intent data
+    ) {
         try {
             JSONObject result = new JSONObject();
             result.put("requestId", requestId);
@@ -4890,16 +4901,17 @@ public class MainActivity extends Activity {
     }
 
     private void sendAndroidFilePickerResult(JSONObject result) {
-        if (webView == null) {
-            return;
-        }
-
-        webView.evaluateJavascript(
-            "(function(result){if(window.__routeVNAndroidFilePickerResult){window.__routeVNAndroidFilePickerResult(result);}})(" +
-            result.toString() +
-            ");",
-            null
-        );
+        runOnUiThread(() -> {
+            if (webView == null) {
+                return;
+            }
+            webView.evaluateJavascript(
+                "(function(result){if(window.__routeVNAndroidFilePickerResult){window.__routeVNAndroidFilePickerResult(result);}})(" +
+                result.toString() +
+                ");",
+                null
+            );
+        });
     }
 
     private void sendAndroidSaveFilePickerError(String requestId, String message) {

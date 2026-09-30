@@ -795,6 +795,7 @@ actionTransformEditor:
   unnamedTarget: "当前项目"
   visualTarget: "视觉元素"
 vnPreview:
+  playbackFailed: "发生错误，预览已停止。"
   transitionLoop: "跳转在没有等待的情况下不断重复，预览已停止。\n\n{scene} / {section}，第 {line} 行"
   repository: "正在打开项目..."
   scenes: "正在准备场景..."
@@ -1928,6 +1929,7 @@ scenesPage:
   updateFolderDescription: "更新文件夹详情"
   updateSceneDescription: "更新场景详情"
 sceneEditorPage:
+  failedOpenScene: "无法打开场景。"
   actionsLabel: "动作"
   addSectionMenuItem: "添加段落"
   addSectionAboveMenuItem: "在上方添加段落"

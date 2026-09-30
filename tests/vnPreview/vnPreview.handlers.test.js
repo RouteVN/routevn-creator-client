@@ -359,6 +359,67 @@ describe("vnPreview.handlers", () => {
     }
   });
 
+  it("reports a playback failure and closes once, ignoring later errors from that preview", async () => {
+    const { handleAfterMount } = await import(
+      "../../src/components/vnPreview/vnPreview.handlers.js"
+    );
+    const deps = {
+      projectService: {
+        ensureRepository: vi.fn(async () => ({})),
+        getRepositoryState: vi.fn(() => ({})),
+      },
+      appService: { showAlert: vi.fn(), showToast: vi.fn() },
+      graphicsService: {
+        init: vi.fn(async () => {}),
+        initRouteEngine: vi.fn(),
+        engineHandleActions: vi.fn(),
+      },
+      refs: { canvas: {} },
+      props: {},
+      store: {
+        setProjectResolution: vi.fn(),
+        setAssetLoading: vi.fn(),
+        setLoadingProgress: vi.fn(),
+        selectIsPreviewLoading: vi.fn(() => false),
+        setLoadingDetailsVisible: vi.fn(),
+        setPreviewReady: vi.fn(),
+        resetAssetLoadCache: vi.fn(),
+        selectHasLoadedAssetSceneId: vi.fn(() => false),
+      },
+      i18n: {
+        vnPreview: {
+          playbackFailed: "Preview stopped because an error occurred.",
+        },
+      },
+      render: vi.fn(),
+      dispatchEvent: vi.fn(),
+    };
+    await handleAfterMount(deps);
+    const { onInteractionError } = deps.graphicsService.init.mock.calls[0][0];
+    expect(onInteractionError).toBeTypeOf("function");
+    const error = new Error("Synchronous execution limit exceeded");
+    const log = vi.spyOn(console, "error").mockImplementation(() => {});
+    try {
+      onInteractionError(error);
+      onInteractionError(error);
+      expect(deps.appService.showAlert).toHaveBeenCalledOnce();
+      expect(deps.appService.showAlert).toHaveBeenCalledWith({
+        title: "Warning",
+        message: "Preview stopped because an error occurred.",
+      });
+      expect(deps.dispatchEvent).toHaveBeenCalledOnce();
+      expect(deps.dispatchEvent.mock.calls[0][0].type).toBe("close");
+      expect(deps.store.setPreviewReady).toHaveBeenLastCalledWith({
+        isPreviewReady: false,
+      });
+      expect(deps.store.setAssetLoading).toHaveBeenLastCalledWith({
+        isLoading: false,
+      });
+    } finally {
+      log.mockRestore();
+    }
+  });
+
   it("clears the scene editor mute override when mounting full-screen preview", async () => {
     const { handleAfterMount } = await import(
       "../../src/components/vnPreview/vnPreview.handlers.js"

@@ -84,8 +84,12 @@ const {
   keyboardScopeRefName: "imageSelectorKeyboardScope",
 });
 
-const loadParticlePreviewAssets = async ({ deps, renderState } = {}) => {
-  const { graphicsService, projectService } = deps;
+const loadParticlePreviewAssets = async ({
+  deps,
+  renderState,
+  requestId,
+} = {}) => {
+  const { graphicsService, projectService, store } = deps;
   const fileReferences = extractFileIdsFromRenderState(renderState?.elements);
 
   if (fileReferences.length === 0) {
@@ -101,6 +105,10 @@ const loadParticlePreviewAssets = async ({ deps, renderState } = {}) => {
     }
 
     const result = await projectService.getFileContent(fileId);
+    if (!store.selectIsPreviewRequestCurrent({ requestId })) {
+      result.revoke?.();
+      return;
+    }
     assets[fileId] = {
       url: result.url,
       type: fileReference.type || result.type || "image/png",
@@ -127,12 +135,17 @@ const ensurePreviewRuntime = async ({
   target,
   width,
   height,
+  requestId,
   forceInit = false,
 } = {}) => {
   const { graphicsService, refs, store } = deps;
   const canvas = getPreviewCanvasRef(refs, target);
 
-  if (!graphicsService || !canvas) {
+  if (
+    !graphicsService ||
+    !canvas ||
+    !store.selectIsPreviewRequestCurrent({ requestId })
+  ) {
     return false;
   }
 
@@ -152,6 +165,9 @@ const ensurePreviewRuntime = async ({
     width,
     height,
   });
+  if (!store.selectIsPreviewRequestCurrent({ requestId })) {
+    return false;
+  }
   store.setPreviewRuntime({
     target,
     width,
@@ -170,6 +186,8 @@ const renderParticlePreview = async ({
   if (!graphicsService || !particleData) {
     return;
   }
+  store.startPreviewRequest();
+  const requestId = store.selectPreviewRequestId();
 
   const renderableParticle = createRenderableParticleData(
     particleData,
@@ -185,10 +203,11 @@ const renderParticlePreview = async ({
     target,
     width,
     height,
+    requestId,
     forceInit,
   });
 
-  if (!isReady) {
+  if (!isReady || !store.selectIsPreviewRequestCurrent({ requestId })) {
     return;
   }
 
@@ -201,7 +220,11 @@ const renderParticlePreview = async ({
   await loadParticlePreviewAssets({
     deps,
     renderState: previewState,
+    requestId,
   });
+  if (!store.selectIsPreviewRequestCurrent({ requestId })) {
+    return;
+  }
   graphicsService.render(previewState);
 };
 
@@ -226,6 +249,8 @@ const showParticleThumbnailError = ({
 const captureParticleThumbnail = async ({ deps, particleData } = {}) => {
   const { appService, graphicsService, projectService, refs, store } = deps;
   const copy = selectCopy(deps);
+  store.startPreviewRequest();
+  const requestId = store.selectPreviewRequestId();
 
   let renderableParticle;
   try {
@@ -257,6 +282,7 @@ const captureParticleThumbnail = async ({ deps, particleData } = {}) => {
       target: "dialog",
       width,
       height,
+      requestId,
     });
   } catch (error) {
     showParticleThumbnailError({
@@ -270,6 +296,9 @@ const captureParticleThumbnail = async ({ deps, particleData } = {}) => {
     return;
   }
 
+  if (!store.selectIsPreviewRequestCurrent({ requestId })) {
+    return;
+  }
   if (!isReady) {
     showParticleThumbnailError({
       appService,
@@ -300,6 +329,7 @@ const captureParticleThumbnail = async ({ deps, particleData } = {}) => {
     await loadParticlePreviewAssets({
       deps,
       renderState: previewState,
+      requestId,
     });
   } catch (error) {
     showParticleThumbnailError({
@@ -313,6 +343,9 @@ const captureParticleThumbnail = async ({ deps, particleData } = {}) => {
     return;
   }
 
+  if (!store.selectIsPreviewRequestCurrent({ requestId })) {
+    return;
+  }
   try {
     graphicsService.render(previewState);
   } catch (error) {
@@ -678,11 +711,14 @@ const refreshParticleData = async (deps, options = {}) => {
 };
 
 export const handleBeforeMount = (deps) => {
+  const { store } = deps;
+  store.setPreviewMounted({ mounted: true });
   const cleanupBase = handleBeforeMountBase(deps);
 
   return () => {
     cleanupBase?.();
-    deps.store.clearPreviewRuntime();
+    store.setPreviewMounted({ mounted: false });
+    store.clearPreviewRuntime();
   };
 };
 

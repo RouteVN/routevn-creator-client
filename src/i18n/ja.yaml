@@ -795,6 +795,7 @@ actionTransformEditor:
   unnamedTarget: "現在の項目"
   visualTarget: "ビジュアル"
 vnPreview:
+  playbackFailed: "エラーが発生したため、プレビューを停止しました。"
   transitionLoop: "待機せずに遷移が繰り返されるため、プレビューを停止しました。\n\n{scene} / {section}、{line}行目"
   repository: "プロジェクトを開いています..."
   scenes: "シーンを準備しています..."
@@ -1928,6 +1929,7 @@ scenesPage:
   updateFolderDescription: "フォルダーの詳細を更新"
   updateSceneDescription: "シーンの詳細を更新"
 sceneEditorPage:
+  failedOpenScene: "シーンを開けませんでした。"
   actionsLabel: "アクション"
   addSectionMenuItem: "セクションを追加"
   addSectionAboveMenuItem: "上にセクションを追加"

@@ -795,6 +795,7 @@ actionTransformEditor:
   unnamedTarget: "Current item"
   visualTarget: "Visual"
 vnPreview:
+  playbackFailed: "Preview stopped because an error occurred."
   transitionLoop: "Preview stopped because transitions repeat without waiting.\n\n{scene} / {section}, line {line}"
   repository: "Opening project..."
   scenes: "Preparing scenes..."
@@ -1928,6 +1929,7 @@ scenesPage:
   updateFolderDescription: "Update folder details"
   updateSceneDescription: "Update scene details"
 sceneEditorPage:
+  failedOpenScene: "Could not open the scene."
   actionsLabel: "Actions"
   addSectionMenuItem: "Add section"
   addSectionAboveMenuItem: "Add section above"
