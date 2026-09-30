@@ -291,13 +291,40 @@ describe("mobile update metadata protocol", () => {
     },
   );
 
-  it("never offers an installer to direct Android or an iOS simulator", async () => {
+  it("never offers an installer to an iOS simulator", async () => {
     const result = { status: "updateAvailable", release: release() };
     await expect(
-      setup(result, { ...android, distribution: "direct" }).client.check(),
-    ).rejects.toThrow();
-    await expect(
       setup(result, { ...ios, arch: "x86_64" }).client.check(),
+    ).rejects.toThrow();
+  });
+
+  it("offers a direct Android build only a newer browser download", async () => {
+    const direct = { ...android, distribution: "direct" };
+    const offer = (installation, version = "1.16.0") => ({
+      status: "updateAvailable",
+      release: { ...release(), version, installation },
+    });
+    const browser = {
+      type: "browser",
+      url: "https://routevn.com/download",
+      build: "10",
+    };
+    await expect(setup(offer(browser), direct).client.check()).resolves.toEqual(
+      offer(browser),
+    );
+    for (const installation of [
+      release().installation,
+      { ...browser, type: "googlePlay" },
+      { ...browser, url: "http://routevn.com/download" },
+      { ...browser, build: "9" },
+      { type: "browser", url: browser.url },
+    ]) {
+      await expect(
+        setup(offer(installation), direct).client.check(),
+      ).rejects.toThrow();
+    }
+    await expect(
+      setup(offer(browser, "1.15.0"), direct).client.check(),
     ).rejects.toThrow();
   });
 

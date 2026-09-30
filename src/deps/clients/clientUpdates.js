@@ -165,6 +165,20 @@ const validateResult = (result, context) => {
         compareUpdateVersions(release.version, context.currentVersion) < 0
       )
         invalid();
+    } else if (
+      context.target === "android" &&
+      context.distribution === "direct"
+    ) {
+      // A direct build is updated from a download page opened in the browser.
+      exactFields(action, ["type", "url", "build"]);
+      if (
+        action.type !== "browser" ||
+        !validInstallationUrl(action.url) ||
+        !validBuild(action.build) ||
+        Number(action.build) <= Number(context.currentBuild) ||
+        compareUpdateVersions(release.version, context.currentVersion) < 0
+      )
+        invalid();
     } else if (context.target === "ios" && context.arch === "aarch64") {
       exactFields(action, ["type", "url"]);
       if (

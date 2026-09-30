@@ -50,12 +50,35 @@ afterEach(() => {
 });
 
 describe("Android API-owned updates", () => {
-  it.each(["direct", "unknown"])(
-    "does not offer Play Store updates for %s distributions",
-    (distribution) => {
-      const { updater, metadataClient } = setup({ distribution });
-      expect(updater).toBeUndefined();
-      expect(metadataClient.check).not.toHaveBeenCalled();
+  it("does not offer updates for unknown distributions", () => {
+    const { updater, metadataClient } = setup({ distribution: "unknown" });
+    expect(updater).toBeUndefined();
+    expect(metadataClient.check).not.toHaveBeenCalled();
+  });
+
+  it.each([true, false])(
+    "opens a direct build's download page in the browser only after confirmation %s",
+    async (confirmed) => {
+      const downloadUrl = "https://routevn.com/download";
+      const { updater, metadataClient, openUrl } = setup({
+        confirmed,
+        distribution: "direct",
+        result: {
+          status: "updateAvailable",
+          release: {
+            version: "1.17.2",
+            changelog: "Fixes",
+            installation: { type: "browser", build: "15", url: downloadUrl },
+          },
+        },
+      });
+
+      await updater.checkForUpdates(false);
+
+      expect(metadataClient.check).toHaveBeenCalledExactlyOnceWith();
+      if (confirmed)
+        expect(openUrl).toHaveBeenCalledExactlyOnceWith(downloadUrl);
+      else expect(openUrl).not.toHaveBeenCalled();
     },
   );
 
