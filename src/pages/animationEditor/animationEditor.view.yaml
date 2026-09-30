@@ -559,6 +559,9 @@ refs:
         handler: handleMaskImagePreviewOverlayClick
   canvas: {}
 styles:
+  'rtgl-dialog rtgl-view[sv]:not([sh])::part(scrollbar-track-vertical)':
+    opacity: "1"
+    pointer-events: auto
   "[data-camera-value]":
     appearance: none
     background: var(--muted)

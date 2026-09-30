@@ -242,6 +242,9 @@ refs:
       item-click:
         handler: handleContextMenuClickItem
 styles:
+  rtgl-dialog rtgl-view[sv]:not([sh])::part(scrollbar-track-vertical):
+    opacity: "1"
+    pointer-events: auto
   '[data-long-press="true"]':
     user-select: none
     "-webkit-user-select": none

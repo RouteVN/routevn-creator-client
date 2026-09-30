@@ -210,6 +210,9 @@ refs:
       form-action:
         handler: handleClipFpsFormAction
 styles:
+  'rtgl-dialog rtgl-view[sv]:not([sh])::part(scrollbar-track-vertical)':
+    opacity: "1"
+    pointer-events: auto
   "#previewOverlay":
     user-select: none
     "-webkit-user-select": none

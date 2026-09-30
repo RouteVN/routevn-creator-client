@@ -160,6 +160,10 @@ refs:
         handler: handleMobileKeyboardToolbarActionClick
       keyboard-state-change:
         handler: handleMobileKeyboardStateChange
+styles:
+  'rtgl-dialog rtgl-view[sv]:not([sh])::part(scrollbar-track-vertical)':
+    opacity: "1"
+    pointer-events: auto
 template:
   - 'rtgl-view pos=rel w=f h=f style="min-width: 0; min-height: 0;"':
       - $if isTouchMode:
