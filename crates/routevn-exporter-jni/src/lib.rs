@@ -1,6 +1,6 @@
 use jni::JNIEnv;
 use jni::objects::{JClass, JString};
-use jni::sys::jstring;
+use jni::sys::{jint, jstring};
 use routevn_exporter::{ZipAssetInput, ZipExportStats};
 use serde::{Deserialize, Serialize};
 
@@ -110,4 +110,22 @@ pub extern "system" fn Java_com_routevn_creator_NativeExporter_nativeCreateDistr
     };
 
     new_java_string(&mut env, response)
+}
+
+/// Crashes the app on purpose so native crash reporting, and this library's
+/// symbols, can be checked on a release build. Only a project created with a
+/// test crash name reaches it (see src/internal/testCrashes.js).
+#[unsafe(no_mangle)]
+pub extern "system" fn Java_com_routevn_creator_NativeExporter_nativeTestCrash(
+    _env: JNIEnv,
+    _class: JClass,
+    kind: jint,
+) {
+    if kind == 0 {
+        // A panic cannot unwind out of an `extern "system"` function, so the
+        // process aborts inside this library.
+        panic!("RouteVN test panic");
+    }
+    // A write to an unmapped address raises SIGSEGV in this library.
+    unsafe { std::ptr::without_provenance_mut::<u8>(8).write_volatile(1) };
 }

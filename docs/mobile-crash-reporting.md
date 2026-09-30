@@ -70,10 +70,10 @@ all SDK files or prove the absence of SDK memory leaks.
 
 ## Configuration
 
-| Build   | Android                                                                                                                                                                  | iOS                                                                                                                                                           |
-| ------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Build   | Android                                                                                                                                                                                                       | iOS                                                                                                                                                           |
+| ------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | Release | `app/build.gradle.kts` reads `ROUTEVN_SENTRY_DSN` from `.env.production` into `BuildConfig.SENTRY_DSN`; environment `production`. Missing, empty or malformed DSNs and non-HTTPS Release DSNs fail the build. | `Configure crash reporting` reads `ROUTEVN_SENTRY_DSN` from `.env.production`; environment `production`. Missing, empty or invalid HTTPS DSNs fail the build. |
-| Debug   | No DSN, so nothing is reported. Pass `-ProutevnSentryDsn=<dsn>` to report to a collector; environment `development`.                                                     | `ROUTEVN_SENTRY_DSN` is empty. Pass `ROUTEVN_SENTRY_DSN=<dsn>` to `xcodebuild` to report; environment `development`.                                          |
+| Debug   | No DSN, so nothing is reported. Pass `-ProutevnSentryDsn=<dsn>` to report to a collector; environment `development`.                                                                                          | `ROUTEVN_SENTRY_DSN` is empty. Pass `ROUTEVN_SENTRY_DSN=<dsn>` to `xcodebuild` to report; environment `development`.                                          |
 
 The iOS Xcode build phase runs `scripts/configure-ios-crash-reporting.py` with
 Xcode's Python 3. It generates an intermediate `Info.plist` that Xcode processes
@@ -145,6 +145,23 @@ durable storage before cleaning it.
 Before shipping, declare crash data in the App Store privacy labels
 (Diagnostics → Crash Data) and in the Google Play Data safety form (App info
 and performance → Crash logs). No identifiers are collected.
+
+## Test crashes
+
+Release builds have no debugger, and `adb` cannot signal a non-debuggable app,
+so the apps crash on purpose when a project is created with one of these names.
+The project is not created:
+
+| Project name                 | Android                                                                                  | iOS                                            |
+| ---------------------------- | ---------------------------------------------------------------------------------------- | ---------------------------------------------- |
+| `ROUTEVN_TEST_PANIC_CRASH`   | Rust panic in `libroutevn_exporter_jni.so`, which aborts (`SIGABRT`)                     | Swift `fatalError`                             |
+| `ROUTEVN_TEST_NATIVE_CRASH`  | Invalid memory write in `libroutevn_exporter_jni.so` (`SIGSEGV`)                         | Invalid memory write (`EXC_BAD_ACCESS`)        |
+| `ROUTEVN_TEST_APP_CRASH`     | Uncaught `MainActivity$TestCrashException` on the main thread                            | Uncaught `NSException` (`RouteVNTestCrash`)    |
+| `ROUTEVN_TEST_WEBVIEW_CRASH` | WebView renderer crash (`chrome://crash`), reported as `WebViewRendererCrashedException` | Not available; the project is created normally |
+
+Reopen the app after a native crash so the saved report is sent. These are real
+reports, so use them only when testing. Web and desktop create such projects
+normally. The names are listed in `src/internal/testCrashes.js`.
 
 ## Verification
 

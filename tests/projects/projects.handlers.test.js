@@ -47,6 +47,7 @@ const createDeps = ({
       projectPath: "/projects/new-project",
     })),
     showAlert: vi.fn(),
+    triggerTestCrash: vi.fn(async () => true),
     showProgressDialog: vi.fn(() => progressDialog),
     showToast: vi.fn(),
     deleteProject: vi.fn(async () => ({ deleted: true })),
@@ -489,6 +490,44 @@ describe("projects create dialog", () => {
       deps.appService.showProgressDialog.mock.invocationCallOrder[0],
     ).toBeLessThan(
       deps.appService.createNewProject.mock.invocationCallOrder[0],
+    );
+  });
+
+  it("crashes the app instead of creating a test crash project", async () => {
+    const deps = createDeps({ platform: "android" });
+
+    await handleCreateDialogSubmit(deps, {
+      _event: {
+        detail: {
+          values: { name: "ROUTEVN_TEST_PANIC_CRASH", resolution: "1920x1080" },
+        },
+      },
+    });
+
+    expect(deps.appService.triggerTestCrash).toHaveBeenCalledWith("panic");
+    expect(deps.appService.showProgressDialog).not.toHaveBeenCalled();
+    expect(deps.appService.createNewProject).not.toHaveBeenCalled();
+  });
+
+  it("creates a test crash project normally where the platform cannot crash", async () => {
+    const deps = createDeps({ platform: "android" });
+    deps.appService.triggerTestCrash.mockResolvedValue(false);
+
+    await handleCreateDialogSubmit(deps, {
+      _event: {
+        detail: {
+          values: {
+            name: "ROUTEVN_TEST_WEBVIEW_CRASH",
+            template: "default",
+            resolution: "1920x1080",
+          },
+        },
+      },
+    });
+
+    expect(deps.appService.triggerTestCrash).toHaveBeenCalledWith("webview");
+    expect(deps.appService.createNewProject).toHaveBeenCalledWith(
+      expect.objectContaining({ name: "ROUTEVN_TEST_WEBVIEW_CRASH" }),
     );
   });
 

@@ -22,6 +22,7 @@ export const createAppServiceCore = ({
   subject,
   errorTracker = noopErrorTracker,
   platformAdapter = {},
+  triggerTestCrash,
 }) => {
   const getCurrentProjectId = () => {
     return router.getPayload()?.p ?? "";
@@ -58,6 +59,7 @@ export const createAppServiceCore = ({
     updatesEnabled,
     updater,
     audioService,
+    triggerTestCrash,
   });
 
   const userConfigService = createUserConfigService({

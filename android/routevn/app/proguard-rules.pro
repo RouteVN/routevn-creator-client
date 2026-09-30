@@ -4,3 +4,4 @@
 
 # Keep the reported exception type readable in crash reports.
 -keepnames class com.routevn.creator.MainActivity$WebViewRenderer*Exception
+-keepnames class com.routevn.creator.MainActivity$TestCrashException

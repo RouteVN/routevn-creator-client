@@ -187,6 +187,7 @@ const appService = createAppService({
   audioService,
   projectService,
   subject,
+  triggerTestCrash: (kind) => callAndroidBridge("triggerTestCrash", { kind }),
 });
 await appService.initUserConfig();
 // Startup lands directly on Projects without waiting for native backup status;

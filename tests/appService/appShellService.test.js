@@ -175,6 +175,18 @@ describe("appShellService", () => {
     expect(deps.subject.dispatch).not.toHaveBeenCalled();
   });
 
+  it("asks the platform for a test crash, or answers false without one", async () => {
+    const deps = createDeps();
+    await expect(
+      createAppShellService(deps).triggerTestCrash("panic"),
+    ).resolves.toBe(false);
+
+    const triggerTestCrash = vi.fn(async () => true);
+    const service = createAppShellService({ ...deps, triggerTestCrash });
+    await expect(service.triggerTestCrash("native")).resolves.toBe(true);
+    expect(triggerTestCrash).toHaveBeenCalledWith("native");
+  });
+
   it("forwards alert dialogs through showAlert", async () => {
     const deps = createDeps();
     const service = createAppShellService(deps);
