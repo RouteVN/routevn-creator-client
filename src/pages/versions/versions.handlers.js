@@ -4,7 +4,7 @@ import { normalizeExportFileMimeType } from "../../internal/bundleRuntimeAssets.
 import {
   buildFilteredStateForExport,
   collectUsedResourcesForExport,
-  constructProjectData,
+  constructReleaseProjectData,
 } from "../../internal/project/projection.js";
 import { createBundleInstructions } from "../../deps/services/shared/projectExportService.js";
 import { selectVersionsPageCopy } from "./support/versionsPageCopy.js";
@@ -505,7 +505,7 @@ const createVersionExportData = async ({
   );
   const usage = collectUsedResourcesForExport(repositoryState);
   const filteredState = buildFilteredStateForExport(repositoryState, usage);
-  const constructedProjectData = constructProjectData(filteredState);
+  const constructedProjectData = constructReleaseProjectData(filteredState);
   const fileEntries = usage.fileIds.map((fileId) => {
     const fileRecord = filteredState.files?.items?.[fileId];
     const normalizedMimeType = normalizeExportFileMimeType({
