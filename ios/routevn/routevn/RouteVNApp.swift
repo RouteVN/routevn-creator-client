@@ -303,8 +303,8 @@ final class RouteVNViewController: UIViewController, WKNavigationDelegate, WKScr
         if rapidContentProcessLosses >= Self.rapidContentProcessLossLimit {
             fatalError("WebKit content process lost repeatedly")
         }
-        // Page SQL runs on this main thread. Closing a handle rolls back the
-        // transaction the dead page left open on it.
+        // Page SQL runs on this main thread. Roll back any transaction the dead
+        // page left open and close its handles, as a fresh launch would.
         closeSqliteDatabases()
         if appActive {
             loadInitialAppURL()
@@ -831,6 +831,11 @@ final class RouteVNViewController: UIViewController, WKNavigationDelegate, WKScr
 
     private func closeSqliteDatabases() {
         for database in sqliteDatabases.values {
+            // End a transaction a dead page left open first, so its write lock
+            // is released even if the handle cannot close.
+            if sqlite3_get_autocommit(database) == 0 {
+                sqlite3_exec(database, "ROLLBACK", nil, nil, nil)
+            }
             sqlite3_close(database)
         }
         sqliteDatabases.removeAll()

@@ -56,6 +56,8 @@ import androidx.core.view.WindowInsetsCompat;
 import androidx.core.view.WindowInsetsControllerCompat;
 import androidx.webkit.JavaScriptReplyProxy;
 import io.sentry.Sentry;
+import io.sentry.SentryEvent;
+import io.sentry.SentryLevel;
 import androidx.webkit.WebViewAssetLoader;
 import androidx.webkit.WebViewCompat;
 import androidx.webkit.WebViewFeature;
@@ -907,8 +909,11 @@ public class MainActivity extends Activity {
         }
 
         // The app keeps running, so this is recorded at level error, not fatal.
+        // The SDK sets a level only on crashes, so set it here.
         if (didCrash) {
-            Sentry.captureException(loss);
+            SentryEvent event = new SentryEvent(loss);
+            event.setLevel(SentryLevel.ERROR);
+            Sentry.captureEvent(event);
         }
         resetDeadPageState();
         if (appResumed) {
@@ -924,13 +929,25 @@ public class MainActivity extends Activity {
     // dead page made and before any call from the new page.
     private void resetDeadPageState() {
         bridgeExecutor.execute(() -> {
-            // Closing a connection rolls back the transaction left open on it.
-            for (String dbPath : projectTransactions.toArray(new String[0])) {
-                closeDatabase(dbPath);
-            }
+            rollBackOpenTransactions();
             closeProjectFileWriteSessions();
             cleanupPendingSaveDocuments();
         });
+    }
+
+    // execSQL runs the page's BEGIN, COMMIT and ROLLBACK as Android
+    // transactions on this bridge thread, so ending them here without marking
+    // them successful rolls them back. Closing the connection would not:
+    // Android keeps a connection open, and its write lock held, until its
+    // transaction ends.
+    private synchronized void rollBackOpenTransactions() {
+        for (String dbPath : projectTransactions.toArray(new String[0])) {
+            SQLiteDatabase database = sqliteDatabases.get(dbPath);
+            while (database != null && database.isOpen() && database.inTransaction()) {
+                database.endTransaction();
+            }
+            projectTransactions.remove(dbPath);
+        }
     }
 
     static final class WebViewRendererCrashedException extends RuntimeException {}

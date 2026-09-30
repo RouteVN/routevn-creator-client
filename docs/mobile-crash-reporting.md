@@ -59,8 +59,9 @@ Recovery on Android (`MainActivity.onRenderProcessGone`, which always returns
 1. Remove and destroy the dead WebView. It is never reused.
 2. Reset the native state that only the dead page could have finished, as a
    fresh launch would. On the bridge thread, so it runs before any call from the
-   new page: close the SQLite connections with an open transaction, which rolls
-   the transaction back; abandon unfinished project file writes; and delete
+   new page: roll back its open SQL transactions by ending them without marking
+   them successful (closing the connection would not: Android keeps it, and
+   its write lock, until the transaction ends); abandon unfinished project file writes; and delete
    partially saved documents. Replies to calls from the dead page are dropped.
    Native project exports and open pickers carry on; their results go to the
    new page, which ignores results it did not request.
@@ -68,10 +69,10 @@ Recovery on Android (`MainActivity.onRenderProcessGone`, which always returns
    if the activity is resumed, otherwise in `onResume`.
 
 Recovery on iOS (`RouteVNViewController.webViewWebContentProcessDidTerminate`):
-WebKit keeps the `WKWebView` usable, so the controller closes its SQLite handles
-on the main thread, where page SQL runs, which rolls back an open transaction,
-then loads the start page again, at once if the app is active, otherwise when it
-next becomes active.
+WebKit keeps the `WKWebView` usable, so the controller rolls back any open SQL
+transaction and closes its SQLite handles on the main thread, where page SQL
+runs, then loads the start page again, at once if the app is active, otherwise
+when it next becomes active.
 
 A loss within 30 seconds of the page starting to load counts as rapid. After two
 rapid losses in a row the app stops reloading, so a page that cannot start does
