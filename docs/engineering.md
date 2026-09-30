@@ -603,14 +603,15 @@ and mobile and persist across navigation and restarts. The app shell listens
 for `app.userConfig.changed` from the app service and removes or restores the
 floating help button without changing its existing position.
 
-Update availability is a platform capability. Direct desktop, Google Play
-Android builds, and iOS share the automatic schedule in
+Update availability is a platform capability. Direct desktop, Android (Google
+Play and direct), and iOS share the automatic schedule in
 `src/deps/clients/automaticUpdateChecks.js`. Mobile update decisions come only
 from the RouteVN API. `src/deps/clients/storeUpdater.js` owns the shared metadata
 check, loading state, confirmation, and store URL handoff. Android does not call
 the Google Play update API; confirmation opens the API's validated Play Store
-URL. iOS opens the API's App Store URL. Direct Android builds keep updates
-disabled. About uses this capability instead of a desktop-only platform check.
+URL. Direct Android builds open the API's RouteVN download page in the browser.
+iOS opens the API's App Store URL. About uses this capability instead of a
+desktop-only platform check.
 Mobile update prompts preserve unsubmitted input in global dialogs.
 The app-owned `src/deps/clients/globalUI.js` adapter tracks dialog and dropdown
 promises through the published UI API. Update confirmations and alerts run only

@@ -68,7 +68,7 @@ describe("Android API-owned updates", () => {
           release: {
             version: "1.17.2",
             changelog: "Fixes",
-            installation: { type: "browser", build: "15", url: downloadUrl },
+            installation: { type: "download", build: "15", url: downloadUrl },
           },
         },
       });

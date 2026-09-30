@@ -298,33 +298,56 @@ describe("mobile update metadata protocol", () => {
     ).rejects.toThrow();
   });
 
-  it("offers a direct Android build only a newer browser download", async () => {
+  it("offers a direct Android build only a newer RouteVN download", async () => {
     const direct = { ...android, distribution: "direct" };
     const offer = (installation, version = "1.16.0") => ({
       status: "updateAvailable",
       release: { ...release(), version, installation },
     });
-    const browser = {
-      type: "browser",
+    const download = {
+      type: "download",
       url: "https://routevn.com/download",
       build: "10",
     };
-    await expect(setup(offer(browser), direct).client.check()).resolves.toEqual(
-      offer(browser),
-    );
+    for (const url of [download.url, "https://static-1.routevn.com/a.apk"]) {
+      const installation = { ...download, url };
+      await expect(
+        setup(offer(installation), direct).client.check(),
+      ).resolves.toEqual(offer(installation));
+    }
     for (const installation of [
       release().installation,
-      { ...browser, type: "googlePlay" },
-      { ...browser, url: "http://routevn.com/download" },
-      { ...browser, build: "9" },
-      { type: "browser", url: browser.url },
+      { ...download, type: "googlePlay" },
+      { ...download, type: "browser" },
+      { ...download, url: "http://routevn.com/download" },
+      { ...download, url: "https://evil.example/app.apk" },
+      { ...download, url: "https://routevn.com.evil.example/app.apk" },
+      { ...download, url: "https://evilroutevn.com/app.apk" },
+      { ...download, url: "https://evil.example\\@routevn.com/" },
+      { ...download, url: "javascript:alert(1)" },
+      { ...download, build: "9" },
+      { type: "download", url: download.url },
     ]) {
       await expect(
         setup(offer(installation), direct).client.check(),
       ).rejects.toThrow();
     }
     await expect(
-      setup(offer(browser, "1.15.0"), direct).client.check(),
+      setup(offer(download, "1.15.0"), direct).client.check(),
+    ).rejects.toThrow();
+  });
+
+  it("offers a Play build only its Play listing, not a download page", async () => {
+    const installation = {
+      type: "download",
+      url: "https://routevn.com/download",
+      build: "10",
+    };
+    await expect(
+      setup(
+        { status: "updateAvailable", release: { ...release(), installation } },
+        android,
+      ).client.check(),
     ).rejects.toThrow();
   });
 
