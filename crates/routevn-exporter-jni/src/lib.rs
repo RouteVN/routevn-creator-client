@@ -126,6 +126,7 @@ pub extern "system" fn Java_com_routevn_creator_NativeExporter_nativeTestCrash(
         // process aborts inside this library.
         panic!("RouteVN test panic");
     }
-    // A write to an unmapped address raises SIGSEGV in this library.
+    // A write to an unmapped address raises SIGSEGV in this library. The fault is
+    // the point: `write_volatile` keeps the store, and address 8 is never mapped.
     unsafe { std::ptr::without_provenance_mut::<u8>(8).write_volatile(1) };
 }

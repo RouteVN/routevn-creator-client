@@ -70,10 +70,10 @@ all SDK files or prove the absence of SDK memory leaks.
 
 ## Configuration
 
-| Build   | Android                                                                                                                                                                                                       | iOS                                                                                                                                                           |
-| ------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Build   | Android                                                                                                                                                                  | iOS                                                                                                                                                           |
+| ------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | Release | `app/build.gradle.kts` reads `ROUTEVN_SENTRY_DSN` from `.env.production` into `BuildConfig.SENTRY_DSN`; environment `production`. Missing, empty or malformed DSNs and non-HTTPS Release DSNs fail the build. | `Configure crash reporting` reads `ROUTEVN_SENTRY_DSN` from `.env.production`; environment `production`. Missing, empty or invalid HTTPS DSNs fail the build. |
-| Debug   | No DSN, so nothing is reported. Pass `-ProutevnSentryDsn=<dsn>` to report to a collector; environment `development`.                                                                                          | `ROUTEVN_SENTRY_DSN` is empty. Pass `ROUTEVN_SENTRY_DSN=<dsn>` to `xcodebuild` to report; environment `development`.                                          |
+| Debug   | No DSN, so nothing is reported. Pass `-ProutevnSentryDsn=<dsn>` to report to a collector; environment `development`.                                                     | `ROUTEVN_SENTRY_DSN` is empty. Pass `ROUTEVN_SENTRY_DSN=<dsn>` to `xcodebuild` to report; environment `development`.                                          |
 
 The iOS Xcode build phase runs `scripts/configure-ios-crash-reporting.py` with
 Xcode's Python 3. It generates an intermediate `Info.plist` that Xcode processes
@@ -160,14 +160,20 @@ The project is not created:
 | `ROUTEVN_TEST_WEBVIEW_CRASH` | WebView renderer crash (`chrome://crash`), reported as `WebViewRendererCrashedException` | Not available; the project is created normally |
 
 Reopen the app after a native crash so the saved report is sent. These are real
-reports, so use them only when testing. Web and desktop create such projects
-normally. The names are listed in `src/internal/testCrashes.js`.
+reports, so use them only when testing. In production they are told apart by
+exception type (`MainActivity$TestCrashException`, `RouteVNTestCrash`) or, for
+native crashes, by the `nativeTestCrash` frame on Android and the
+`triggerTestCrash` frame on iOS. Web and desktop, and an app shell too old to
+know the names, create such projects normally. On Android 7 the WebView runs in
+the app's process, so `ROUTEVN_TEST_WEBVIEW_CRASH` crashes the app natively
+instead. The names are listed in `src/internal/testCrashes.js`.
 
 ## Verification
 
 Each platform must be qualified against the collector before it is claimed as
 supported: a real crash in a release-configured build, delivery after relaunch,
-and a check that the stored row contains only the fields listed above.
+and a check that the stored row contains only the fields listed above. Use the
+[test crash names](#test-crashes) to crash a release build.
 
 - Android: run `python3 scripts/dev.py` in `routevn-api-2`, then
   `adb reverse tcp:3000 tcp:3000` and install a debug build with

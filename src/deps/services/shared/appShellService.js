@@ -291,9 +291,14 @@ export const createAppShellService = ({
     },
 
     // Asks the native app to crash on purpose for a test crash project. Resolves
-    // false where the platform cannot, so the caller carries on normally.
+    // false where the platform cannot, including an app shell older than this
+    // bundle, so the caller carries on normally.
     async triggerTestCrash(kind) {
-      return Boolean(await triggerTestCrash?.(kind));
+      try {
+        return Boolean(await triggerTestCrash?.(kind));
+      } catch {
+        return false;
+      }
     },
 
     areUpdatesEnabled() {
