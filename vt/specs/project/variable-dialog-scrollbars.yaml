@@ -1,0 +1,156 @@
+---
+title: Mobile Variable Dialog Scrollbars
+description: Shows the computed-variable scrollbar before and after scrolling, with the Add action pinned and the operation control reachable.
+url: /projects?vt-input-mode=touch
+skipInitialScreenshot: true
+viewport:
+  id: mobile
+  width: 360
+  height: 800
+steps:
+  - action: waitFor
+    selector: "#mobileCreateMenuButton"
+    state: visible
+    timeoutMs: 5000
+  - action: select
+    selector: "#mobileCreateMenuButton"
+    steps:
+      - action: click
+  - action: waitFor
+    selector: "#mobileActionMenu [role='menuitem']:has-text('Create Project')"
+    state: visible
+    timeoutMs: 5000
+  - action: select
+    selector: "#mobileActionMenu [role='menuitem']:has-text('Create Project')"
+    steps:
+      - action: click
+  - action: waitFor
+    selector: rtgl-form#createProjectForm rtgl-input#field0 input
+    state: attached
+    timeoutMs: 5000
+  - action: select
+    selector: rtgl-form#createProjectForm rtgl-input#field0 input
+    steps:
+      - action: clear
+      - action: write
+        value: Project One
+  - action: select
+    selector: rtgl-form#createProjectForm rtgl-button[data-action-id=submit]
+    steps:
+      - action: click
+  - action: waitFor
+    selector: "#projectItem0"
+    state: visible
+    timeoutMs: 30000
+  - action: select
+    selector: "#projectItem0"
+    steps:
+      - action: click
+  - action: waitFor
+    selector: rvn-project
+    state: attached
+    timeoutMs: 10000
+  - action: customEvent
+    name: routevn:vt:navigate
+    detail:
+      path: /project/variables
+  - action: waitFor
+    selector: "rvn-variables #addVariableButtonRef0"
+    state: visible
+    timeoutMs: 10000
+  - action: select
+    selector: "rvn-variables #addVariableButtonRef0"
+    steps:
+      - action: click
+  - action: waitFor
+    selector: "rtgl-global-ui rtgl-dropdown-menu#dropdownMenu [role='menuitem']:has-text('Computed')"
+    state: visible
+    timeoutMs: 5000
+  - action: select
+    selector: "rtgl-global-ui rtgl-dropdown-menu#dropdownMenu [role='menuitem']:has-text('Computed')"
+    steps:
+      - action: click
+  - action: waitFor
+    selector: "#computedDialog[open] #computedFormScrollContainer"
+    state: visible
+    timeoutMs: 5000
+  # Move away so desktop hover emulation cannot reveal the scrollbar for us.
+  - action: move
+    x: 0
+    y: 0
+  - action: wait
+    ms: 250
+  - action: assert
+    type: js
+    fn: eval
+    args:
+      - |
+        (() => {
+          const deepQuery = (root, selector) => {
+            const direct = root.querySelector(selector);
+            if (direct) return direct;
+            for (const node of root.querySelectorAll('*')) {
+              const found = node.shadowRoot && deepQuery(node.shadowRoot, selector);
+              if (found) return found;
+            }
+          };
+          const dialog = deepQuery(document, '#computedDialog');
+          const scroller = dialog.querySelector('#computedFormScrollContainer');
+          const track = scroller.shadowRoot.querySelector('[part~="scrollbar-track-vertical"]');
+          const action = dialog.querySelector('#computedSubmitButton').getBoundingClientRect();
+          return scroller.scrollHeight > scroller.clientHeight &&
+            scroller.scrollTop === 0 && !scroller.matches(':hover') &&
+            getComputedStyle(track).opacity === '1' &&
+            track.getBoundingClientRect().height > 0 &&
+            action.top >= 0 && action.bottom <= innerHeight;
+        })()
+    value: true
+  - action: screenshot
+  - action: select
+    selector: "#computedFormScrollContainer"
+    steps:
+      - action: hover
+      - action: scroll
+        deltaX: 0
+        deltaY: 1200
+  - action: move
+    x: 0
+    y: 0
+  - action: wait
+    ms: 250
+  - action: assert
+    type: js
+    fn: eval
+    args:
+      - |
+        (() => {
+          const deepQuery = (root, selector) => {
+            const direct = root.querySelector(selector);
+            if (direct) return direct;
+            for (const node of root.querySelectorAll('*')) {
+              const found = node.shadowRoot && deepQuery(node.shadowRoot, selector);
+              if (found) return found;
+            }
+          };
+          const dialog = deepQuery(document, '#computedDialog');
+          const scroller = dialog.querySelector('#computedFormScrollContainer');
+          const viewport = scroller.getBoundingClientRect();
+          const operation = dialog.querySelector('#addOperationButton').getBoundingClientRect();
+          const action = dialog.querySelector('#computedSubmitButton').getBoundingClientRect();
+          const track = scroller.shadowRoot.querySelector('[part~="scrollbar-track-vertical"]');
+          return scroller.scrollTop > 0 &&
+            operation.top >= viewport.top && operation.bottom <= viewport.bottom &&
+            action.top >= 0 && action.bottom <= innerHeight &&
+            !scroller.matches(':hover') && getComputedStyle(track).opacity === '1';
+        })()
+    value: true
+  - action: screenshot
+  - action: select
+    selector: "#computedDialog #addOperationButton"
+    steps:
+      - action: click
+  - action: waitFor
+    selector: "#operationChoiceMenu[open] [role='menuitem']:has-text('If')"
+    state: visible
+    timeoutMs: 5000
+---
