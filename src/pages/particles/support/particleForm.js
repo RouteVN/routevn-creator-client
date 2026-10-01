@@ -23,6 +23,11 @@ const createDurationModeOptions = (copy = {}) => [
   { id: "timed", label: copy.durationModeTimed ?? "Timed", value: "timed" },
 ];
 
+const createOpacityModeOptions = (copy = {}) => [
+  { id: "fixed", label: copy.opacityModeFixed ?? "Fixed", value: "fixed" },
+  { id: "curve", label: copy.opacityModeCurve ?? "Curve", value: "curve" },
+];
+
 const createSourceKindOptions = (copy = {}) => [
   { id: "point", label: copy.sourceKindPoint ?? "Point", value: "point" },
   {
@@ -168,6 +173,34 @@ const resolveScaleRange = (scale) => {
   }
 
   return resolveRange(scale, 0.4, 1);
+};
+
+const DEFAULT_OPACITY_FADE_PERCENT = 10;
+
+const toLifetimePercent = (time) => Math.round(time * 1000) / 10;
+
+// The form shows an opacity curve as fade in, peak, fade out: the shape the
+// presets use.
+const resolveOpacityValues = (alpha) => {
+  if (alpha?.mode !== "curve") {
+    return {
+      opacityMode: "fixed",
+      opacity: toTextValue(alpha?.value ?? 1),
+      opacityFadeIn: toTextValue(DEFAULT_OPACITY_FADE_PERCENT),
+      opacityFadeOut: toTextValue(DEFAULT_OPACITY_FADE_PERCENT),
+    };
+  }
+
+  const peak = Math.max(...alpha.keys.map((key) => key.value));
+  const peakStart = alpha.keys.find((key) => key.value === peak).time;
+  const fadeOutStart =
+    [...alpha.keys].reverse().find((key) => key.value > 0)?.time ?? 1;
+  return {
+    opacityMode: "curve",
+    opacity: toTextValue(peak),
+    opacityFadeIn: toTextValue(toLifetimePercent(peakStart)),
+    opacityFadeOut: toTextValue(toLifetimePercent(1 - fadeOutStart)),
+  };
 };
 
 const resolveTextureFields = (texture) => {
@@ -800,6 +833,54 @@ const createParticleFieldsByTab = ({ tagOptions = [], copy = {} } = {}) => {
         step: 0.05,
         required: false,
       },
+      {
+        name: "opacityMode",
+        type: "segmented-control",
+        label: copy.opacityLabel ?? "Opacity",
+        description:
+          copy.opacityModeDescription ??
+          "Keep one opacity for each particle's whole life, or fade it in and out.",
+        options: createOpacityModeOptions(copy),
+        required: true,
+      },
+      {
+        name: "opacity",
+        type: "input-number",
+        label: copy.opacityValueLabel ?? "Opacity Value",
+        description:
+          copy.opacityValueDescription ??
+          "From 0 (invisible) to 1 (fully visible). With Curve, this is the highest opacity reached.",
+        min: 0,
+        max: 1,
+        step: 0.05,
+        required: false,
+      },
+      {
+        name: "opacityFadeIn",
+        type: "input-number",
+        label: copy.opacityFadeInLabel ?? "Fade In %",
+        description:
+          copy.opacityFadeInDescription ??
+          "Share of each particle's lifetime spent fading in from invisible.",
+        min: 0,
+        max: 100,
+        step: 1,
+        required: false,
+        $when: "opacityMode == 'curve'",
+      },
+      {
+        name: "opacityFadeOut",
+        type: "input-number",
+        label: copy.opacityFadeOutLabel ?? "Fade Out %",
+        description:
+          copy.opacityFadeOutDescription ??
+          "Share of each particle's lifetime spent fading out at the end.",
+        min: 0,
+        max: 100,
+        step: 1,
+        required: false,
+        $when: "opacityMode == 'curve'",
+      },
     ],
   };
 
@@ -919,6 +1000,7 @@ export const buildParticleFormValues = ({
     ...textureFields,
     scaleMin: toTextValue(scale.min),
     scaleMax: toTextValue(scale.max),
+    ...resolveOpacityValues(appearance.alpha),
   };
 };
 
@@ -942,6 +1024,44 @@ const buildScaleDefinition = (values = {}) => {
     mode: "range",
     min,
     max,
+  };
+};
+
+const buildOpacityDefinition = (values = {}) => {
+  // A cleared field means fully visible, not invisible.
+  const opacity = Math.min(
+    1,
+    Math.max(0, toOptionalNumber(values.opacity) ?? 1),
+  );
+  if (values.opacityMode !== "curve") {
+    return {
+      mode: "single",
+      value: opacity,
+    };
+  }
+
+  let fadeIn =
+    Math.min(100, toNonNegativeNumber(values.opacityFadeIn, 0)) / 100;
+  let fadeOut =
+    Math.min(100, toNonNegativeNumber(values.opacityFadeOut, 0)) / 100;
+  // Fades that overlap meet at a single peak, in proportion.
+  if (fadeIn + fadeOut > 1) {
+    const total = fadeIn + fadeOut;
+    fadeIn /= total;
+    fadeOut /= total;
+  }
+  const points = [
+    [0, fadeIn > 0 ? 0 : opacity],
+    [fadeIn, opacity],
+    [Math.max(fadeIn, 1 - fadeOut), opacity],
+    [1, fadeOut > 0 ? 0 : opacity],
+  ];
+
+  return {
+    mode: "curve",
+    keys: points
+      .filter(([time], index) => index === 0 || time !== points[index - 1][0])
+      .map(([time, value]) => ({ time, value })),
   };
 };
 
@@ -1166,6 +1286,18 @@ export const buildParticlePayload = ({
     );
   } else {
     modules.appearance.scale = buildScaleDefinition(values);
+  }
+
+  // Keep the saved opacity, including a preset curve, until the author edits it.
+  if (
+    !areFieldsEqual(values, baseValues, [
+      "opacityMode",
+      "opacity",
+      "opacityFadeIn",
+      "opacityFadeOut",
+    ])
+  ) {
+    modules.appearance.alpha = buildOpacityDefinition(values);
   }
 
   const payload = {
