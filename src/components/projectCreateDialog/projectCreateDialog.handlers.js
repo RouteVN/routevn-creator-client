@@ -2,6 +2,7 @@ import {
   createProjectResolutionFormValues,
   CUSTOM_PROJECT_RESOLUTION_PRESET,
 } from "../../internal/projectResolution.js";
+import { readTestCrashKind } from "../../internal/testCrashes.js";
 
 const ICON_VALIDATIONS = [
   {
@@ -220,7 +221,13 @@ export const handleValidate = (deps) => {
   Object.assign(errors, formValidation.errors);
   const customErrors = {};
 
-  if (store.selectPlatform() === "tauri" && !store.selectProjectPath()) {
+  // Test crash names need no location. One this platform cannot trigger still
+  // stops at the page's location check before a project is created.
+  if (
+    store.selectPlatform() === "tauri" &&
+    !store.selectProjectPath() &&
+    !readTestCrashKind(handleGetValues(deps).name)
+  ) {
     customErrors.projectPath = copy.projectLocationRequiredAlert;
     errors.projectPath = customErrors.projectPath;
   }
