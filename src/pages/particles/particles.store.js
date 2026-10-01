@@ -229,7 +229,9 @@ const {
       showParticleFormTabs: state.dialogStep === PARTICLE_EDITOR_STEP,
       particleFormTabs: createParticleFormTabs(copy),
       selectedParticleFormTab: state.dialogFormTab,
-      particleFormKey: `particle-form-${state.dialogStep}-${state.dialogFormTab}`,
+      // rtgl-form seeds only the fields visible when it mounts, so remount
+      // when Opacity switches mode to show the fade fields' values.
+      particleFormKey: `particle-form-${state.dialogStep}-${state.dialogFormTab}-${state.dialogFormValues.opacityMode}`,
       particleForm,
       particleSubmitButtonLabel: particleSubmitButton?.label ?? "Submit",
       dialogFormValues: state.dialogFormValues,

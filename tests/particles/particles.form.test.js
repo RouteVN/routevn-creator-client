@@ -5,6 +5,12 @@ import {
   createParticleForm,
 } from "../../src/pages/particles/support/particleForm.js";
 import { createParticlePreset } from "../../src/pages/particles/support/particlePresets.js";
+import {
+  createInitialState,
+  selectViewData,
+  setDialogFormValues,
+} from "../../src/pages/particles/particles.store.js";
+import { EN_I18N } from "../support/i18n.js";
 
 const createSnowFormValues = () =>
   buildParticleFormValues({
@@ -191,6 +197,19 @@ describe("particle form", () => {
       expect(
         savedOpacity(createFixedOpacityParticle(0.72), { opacity: "2" }),
       ).toEqual({ mode: "single", value: 1 });
+    });
+
+    it("remounts the form when Opacity switches mode, so revealed fades show their values", () => {
+      const state = createInitialState();
+      const formKeyFor = (opacityMode) => {
+        setDialogFormValues(
+          { state },
+          { values: { ...state.dialogFormValues, opacityMode } },
+        );
+        return selectViewData({ state, i18n: EN_I18N }).particleFormKey;
+      };
+
+      expect(formKeyFor("fixed")).not.toBe(formKeyFor("curve"));
     });
 
     it("treats a cleared opacity as fully visible", () => {
