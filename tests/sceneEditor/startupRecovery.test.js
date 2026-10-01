@@ -17,19 +17,19 @@ it.each([
     reason: "a non-finite computed number",
     computed: { expr: { div: [1, { var: "variables.denominator" }] } },
     message:
-      "Could not calculate computed variable “Reciprocal”. Check its formula in Variables.",
+      "Could not calculate computed variable “Reciprocal”. Its formula may have divided by zero or produced the wrong type of value. Check the formula and the variables it uses in Variables.",
   },
   {
     reason: "a computed result with the wrong type",
     computed: { value: "text" },
     message:
-      "Could not calculate computed variable “Reciprocal”. Check its formula in Variables.",
+      "Could not calculate computed variable “Reciprocal”. Its formula may have divided by zero or produced the wrong type of value. Check the formula and the variables it uses in Variables.",
   },
   {
     reason: "an unknown variable reference",
     computed: { expr: { div: [1, { var: "variables.missing" }] } },
     message:
-      "Could not calculate computed variable “Reciprocal”. Check its formula in Variables.",
+      "Could not calculate computed variable “Reciprocal”. Its formula may have divided by zero or produced the wrong type of value. Check the formula and the variables it uses in Variables.",
   },
   {
     reason: "a computed variable that is no longer in the repository",

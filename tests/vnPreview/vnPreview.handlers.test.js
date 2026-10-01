@@ -413,7 +413,7 @@ describe("vnPreview.handlers", () => {
       const computedAlert = {
         title: "Preview stopped",
         message:
-          "Could not calculate computed variable “Reciprocal”. Check its formula in Variables.",
+          "Could not calculate computed variable “Reciprocal”. Its formula may have divided by zero or produced the wrong type of value. Check the formula and the variables it uses in Variables.",
       };
 
       // The engine's own error for 1 / 0.

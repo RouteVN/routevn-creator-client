@@ -806,7 +806,7 @@ vnPreview:
   stoppedTitle: "Preview stopped"
   transitionLoop: "Transitions kept repeating without waiting for the player. Make sure your transitions don't cause an infinite loop."
   playbackFailed: "Something went wrong while playing the preview."
-  computedVariableFailed: "Could not calculate computed variable “{name}”. Check its formula in Variables."
+  computedVariableFailed: "Could not calculate computed variable “{name}”. Its formula may have divided by zero or produced the wrong type of value. Check the formula and the variables it uses in Variables."
   closeButton: "Exit full screen"
   loading: "Loading preview..."
   restoreOrientationButton: "Restore preview orientation"
@@ -1932,7 +1932,7 @@ scenesPage:
   updateSceneDescription: "Update scene details"
 sceneEditorPage:
   failedOpenScene: "Could not open the scene."
-  failedOpenSceneComputedVariable: "Could not calculate computed variable “{name}”. Check its formula in Variables."
+  failedOpenSceneComputedVariable: "Could not calculate computed variable “{name}”. Its formula may have divided by zero or produced the wrong type of value. Check the formula and the variables it uses in Variables."
   actionsLabel: "Actions"
   addSectionMenuItem: "Add section"
   addSectionAboveMenuItem: "Add section above"
