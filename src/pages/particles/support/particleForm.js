@@ -177,29 +177,59 @@ const resolveScaleRange = (scale) => {
 
 const DEFAULT_OPACITY_FADE_PERCENT = 10;
 
-const toLifetimePercent = (time) => Math.round(time * 1000) / 10;
+const clampUnit = (value) => Math.min(1, Math.max(0, value));
+
+// Saved times and values keep 4 decimals, so arithmetic leaves no float noise.
+const roundOpacityNumber = (value) => Math.round(value * 10000) / 10000;
+
+const toLifetimePercent = (time) => Math.round(clampUnit(time) * 1000) / 10;
+
+// Saved data can come from imports or other clients, so keep only usable keys,
+// in time order, within 0-1.
+const readOpacityCurveKeys = (alpha) =>
+  (Array.isArray(alpha?.keys) ? alpha.keys : [])
+    .map((key) => ({ time: Number(key?.time), value: Number(key?.value) }))
+    .filter((key) => Number.isFinite(key.time) && Number.isFinite(key.value))
+    .map((key) => ({ time: clampUnit(key.time), value: clampUnit(key.value) }))
+    .sort((a, b) => a.time - b.time);
+
+const readOpacityCurve = (alpha) => {
+  if (alpha?.mode !== "curve") {
+    return undefined;
+  }
+  const keys = readOpacityCurveKeys(alpha);
+  if (keys.length === 0) {
+    return undefined;
+  }
+  const peak = resolveCurveRange({ keys }, 1).max;
+  const visibleKeys = keys.filter((key) => key.value > 0);
+  return {
+    keys,
+    peak,
+    peakStart: keys.find((key) => key.value === peak)?.time ?? 0,
+    fadeOutStart: visibleKeys[visibleKeys.length - 1]?.time ?? 1,
+  };
+};
 
 // The form shows an opacity curve as fade in, peak, fade out: the shape the
 // presets use.
 const resolveOpacityValues = (alpha) => {
-  if (alpha?.mode !== "curve") {
+  const curve = readOpacityCurve(alpha);
+  if (!curve) {
+    const value = Number(alpha?.value);
     return {
       opacityMode: "fixed",
-      opacity: toTextValue(alpha?.value ?? 1),
+      opacity: toTextValue(Number.isFinite(value) ? clampUnit(value) : 1),
       opacityFadeIn: toTextValue(DEFAULT_OPACITY_FADE_PERCENT),
       opacityFadeOut: toTextValue(DEFAULT_OPACITY_FADE_PERCENT),
     };
   }
 
-  const peak = Math.max(...alpha.keys.map((key) => key.value));
-  const peakStart = alpha.keys.find((key) => key.value === peak).time;
-  const fadeOutStart =
-    [...alpha.keys].reverse().find((key) => key.value > 0)?.time ?? 1;
   return {
     opacityMode: "curve",
-    opacity: toTextValue(peak),
-    opacityFadeIn: toTextValue(toLifetimePercent(peakStart)),
-    opacityFadeOut: toTextValue(toLifetimePercent(1 - fadeOutStart)),
+    opacity: toTextValue(curve.peak),
+    opacityFadeIn: toTextValue(toLifetimePercent(curve.peakStart)),
+    opacityFadeOut: toTextValue(toLifetimePercent(1 - curve.fadeOutStart)),
   };
 };
 
@@ -842,6 +872,7 @@ const createParticleFieldsByTab = ({ tagOptions = [], copy = {} } = {}) => {
           "Keep one opacity for each particle's whole life, or fade it in and out.",
         options: createOpacityModeOptions(copy),
         required: true,
+        clearable: false,
       },
       {
         name: "opacity",
@@ -1027,16 +1058,35 @@ const buildScaleDefinition = (values = {}) => {
   };
 };
 
-const buildOpacityDefinition = (values = {}) => {
+const buildOpacityDefinition = ({ values, baseValues, baseAlpha }) => {
   // A cleared field means fully visible, not invisible.
-  const opacity = Math.min(
-    1,
-    Math.max(0, toOptionalNumber(values.opacity) ?? 1),
+  const opacity = roundOpacityNumber(
+    clampUnit(toOptionalNumber(values.opacity) ?? 1),
   );
   if (values.opacityMode !== "curve") {
     return {
       mode: "single",
       value: opacity,
+    };
+  }
+
+  // Changing only the peak scales the saved curve, so its shape is kept.
+  const baseCurve = readOpacityCurve(baseAlpha);
+  if (
+    baseCurve?.peak > 0 &&
+    areFieldsEqual(values, baseValues, [
+      "opacityMode",
+      "opacityFadeIn",
+      "opacityFadeOut",
+    ])
+  ) {
+    const scale = opacity / baseCurve.peak;
+    return {
+      mode: "curve",
+      keys: baseCurve.keys.map((key) => ({
+        time: key.time,
+        value: roundOpacityNumber(clampUnit(key.value * scale)),
+      })),
     };
   }
 
@@ -1050,11 +1100,13 @@ const buildOpacityDefinition = (values = {}) => {
     fadeIn /= total;
     fadeOut /= total;
   }
+  const fadeInEnd = roundOpacityNumber(fadeIn);
+  const fadeOutStart = roundOpacityNumber(Math.max(fadeIn, 1 - fadeOut));
   const points = [
-    [0, fadeIn > 0 ? 0 : opacity],
-    [fadeIn, opacity],
-    [Math.max(fadeIn, 1 - fadeOut), opacity],
-    [1, fadeOut > 0 ? 0 : opacity],
+    [0, fadeInEnd > 0 ? 0 : opacity],
+    [fadeInEnd, opacity],
+    [fadeOutStart, opacity],
+    [1, fadeOutStart < 1 ? 0 : opacity],
   ];
 
   return {
@@ -1288,16 +1340,18 @@ export const buildParticlePayload = ({
     modules.appearance.scale = buildScaleDefinition(values);
   }
 
-  // Keep the saved opacity, including a preset curve, until the author edits it.
-  if (
-    !areFieldsEqual(values, baseValues, [
-      "opacityMode",
-      "opacity",
-      "opacityFadeIn",
-      "opacityFadeOut",
-    ])
-  ) {
-    modules.appearance.alpha = buildOpacityDefinition(values);
+  // Keep the saved opacity, including a preset curve, until the author edits
+  // it. The fade fields only count while Curve is selected.
+  const opacityFields =
+    values?.opacityMode === "curve"
+      ? ["opacityMode", "opacity", "opacityFadeIn", "opacityFadeOut"]
+      : ["opacityMode", "opacity"];
+  if (!areFieldsEqual(values, baseValues, opacityFields)) {
+    modules.appearance.alpha = buildOpacityDefinition({
+      values: values ?? {},
+      baseValues,
+      baseAlpha: resolvedBaseParticle.modules?.appearance?.alpha,
+    });
   }
 
   const payload = {

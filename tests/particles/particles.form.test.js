@@ -75,6 +75,8 @@ describe("particle form", () => {
           { label: "Curve", value: "curve" },
         ],
       });
+      // Clicking the selected mode again must not clear it.
+      expect(field("opacityMode").clearable).toBe(false);
       expect(field("opacity")).toMatchObject({ min: 0, max: 1 });
       expect(field("opacity")).not.toHaveProperty("$when");
       expect(field("opacityFadeIn").$when).toBe("opacityMode == 'curve'");
@@ -123,7 +125,7 @@ describe("particle form", () => {
       ).toEqual({ mode: "single", value: 0.5 });
     });
 
-    it("keeps the fade timing when the curve's peak changes", () => {
+    it("scales the whole curve when only the peak changes, keeping Snow's dip", () => {
       expect(
         savedOpacity(createParticlePreset({ presetId: "snow" }), {
           opacity: "0.5",
@@ -133,7 +135,102 @@ describe("particle form", () => {
         keys: [
           { time: 0, value: 0 },
           { time: 0.08, value: 0.5 },
-          { time: 0.9, value: 0.5 },
+          // 0.78 * 0.5 / 0.92, rounded to 4 decimals.
+          { time: 0.9, value: 0.4239 },
+          { time: 1, value: 0 },
+        ],
+      });
+    });
+
+    it("rebuilds the fade shape when a fade changes", () => {
+      expect(
+        savedOpacity(createParticlePreset({ presetId: "snow" }), {
+          opacityFadeIn: "5",
+        }),
+      ).toEqual({
+        mode: "curve",
+        keys: [
+          { time: 0, value: 0 },
+          { time: 0.05, value: 0.92 },
+          { time: 0.9, value: 0.92 },
+          { time: 1, value: 0 },
+        ],
+      });
+    });
+
+    it("ignores the hidden fade fields while Fixed is selected", () => {
+      const particle = createParticlePreset({ presetId: "rain" });
+      delete particle.modules.appearance.alpha;
+
+      expect(
+        savedOpacity(particle, { opacityMode: "fixed", opacityFadeIn: "25" }),
+      ).toBeUndefined();
+    });
+
+    it.each([
+      ["Fade Out 7%", { opacityFadeOut: "7" }, [0, 0.1, 0.93, 1]],
+      [
+        "fades that meet at 30%",
+        { opacityFadeIn: "30", opacityFadeOut: "70" },
+        [0, 0.3, 1],
+      ],
+    ])("saves times without float noise for %s", (_, changes, times) => {
+      const { keys } = savedOpacity(createFixedOpacityParticle(0.8), {
+        opacityMode: "curve",
+        ...changes,
+      });
+
+      expect(keys.map((key) => key.time)).toEqual(times);
+    });
+
+    it.each([
+      ["a curve without keys", { mode: "curve" }],
+      ["a curve with empty keys", { mode: "curve", keys: [] }],
+      ["a curve with keys that aren't a list", { mode: "curve", keys: "bad" }],
+      [
+        "a curve with unusable keys",
+        { mode: "curve", keys: [{ time: "x", value: null }, undefined] },
+      ],
+      ["a non-numeric fixed value", { mode: "single", value: "abc" }],
+      ["a value that isn't an object", "bad"],
+      ["null", null],
+    ])("opens and saves %s without crashing", (_, alpha) => {
+      const particle = createParticlePreset({ presetId: "rain" });
+      particle.modules.appearance.alpha = alpha;
+
+      expect(buildParticleFormValues({ particle })).toMatchObject({
+        opacityMode: "fixed",
+        opacity: "1",
+      });
+      expect(savedOpacity(particle, {})).toEqual(alpha);
+      expect(savedOpacity(particle, { opacity: "0.5" })).toEqual({
+        mode: "single",
+        value: 0.5,
+      });
+    });
+
+    it("reads an unsorted, out-of-range curve and saves it sorted and in range", () => {
+      const particle = createParticlePreset({ presetId: "rain" });
+      particle.modules.appearance.alpha = {
+        mode: "curve",
+        keys: [
+          { time: 1, value: 0 },
+          { time: 0.5, value: 2 },
+          { time: -1, value: 0 },
+        ],
+      };
+
+      expect(buildParticleFormValues({ particle })).toMatchObject({
+        opacityMode: "curve",
+        opacity: "1",
+        opacityFadeIn: "50",
+        opacityFadeOut: "50",
+      });
+      expect(savedOpacity(particle, { opacity: "0.5" })).toEqual({
+        mode: "curve",
+        keys: [
+          { time: 0, value: 0 },
+          { time: 0.5, value: 0.5 },
           { time: 1, value: 0 },
         ],
       });
