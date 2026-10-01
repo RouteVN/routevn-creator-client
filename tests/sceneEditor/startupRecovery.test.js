@@ -114,9 +114,11 @@ it.each([
         message,
         title: "Error",
       });
+      // Leave the way the editor's Back button does.
       expect(deps.appService.navigate).toHaveBeenCalledWith(
-        "/project",
+        "/project/scenes",
         payload,
+        { historyMode: "replace" },
       );
     } finally {
       log.mockRestore();

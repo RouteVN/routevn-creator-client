@@ -1739,6 +1739,12 @@ export const handleBeforeMount = (deps) => {
   };
 };
 
+const leaveToScenes = (appService) => {
+  appService.navigate("/project/scenes", appService.getPayload(), {
+    historyMode: "replace",
+  });
+};
+
 export const handleAfterMount = async (deps) => {
   const { projectService, appService, store, render, i18n } = deps;
   const mountVersion = store.selectMountVersion();
@@ -1764,7 +1770,7 @@ export const handleAfterMount = async (deps) => {
         message: getSceneStartupErrorMessage({ error, projectService, i18n }),
         title: copy.errorTitle ?? "Error",
       });
-      appService.navigate("/project", appService.getPayload());
+      leaveToScenes(appService);
       return;
     }
 
@@ -3814,9 +3820,7 @@ export const handlePreviewCurrentLineChanged = (deps, payload) => {
 
 export const handleBackClick = (deps) => {
   const { appService } = deps;
-  appService.navigate("/project/scenes", appService.getPayload(), {
-    historyMode: "replace",
-  });
+  leaveToScenes(appService);
 };
 
 export const handleSystemActionsActionDelete = async (deps, payload) => {
