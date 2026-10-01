@@ -1,4 +1,5 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import { resolveComputedVariables } from "route-engine-js";
 import { EN_I18N } from "../support/i18n.js";
 
 const constructProjectDataMock = vi.fn();
@@ -383,7 +384,7 @@ describe("vnPreview.handlers", () => {
       // Same text as the loop error, but only the code identifies a loop.
       ["an error without the loop code", () => new Error(loopError.message)],
       ["a thrown non-error value", () => undefined],
-    ])("keeps playing and shows a toast for %s", async (_, createError) => {
+    ])("stops with the general message for %s", async (_, createError) => {
       const { handleAfterMount } = await import(
         "../../src/components/vnPreview/vnPreview.handlers.js"
       );
@@ -393,14 +394,89 @@ describe("vnPreview.handlers", () => {
 
       onPlaybackError(createError());
 
-      expect(deps.appService.showToast).toHaveBeenCalledWith({
+      expect(deps.appService.showAlert).toHaveBeenCalledWith({
+        title: "Preview stopped",
         message: "Something went wrong while playing the preview.",
-        status: "error",
       });
-      expect(deps.appService.showAlert).not.toHaveBeenCalled();
-      expect(deps.dispatchEvent).not.toHaveBeenCalled();
-      expect(deps.store.setPreviewReady).toHaveBeenLastCalledWith({
-        isPreviewReady: true,
+      expect(deps.appService.showToast).not.toHaveBeenCalled();
+      expect(deps.dispatchEvent).toHaveBeenCalledOnce();
+      expect(deps.dispatchEvent.mock.calls[0][0].type).toBe("close");
+    });
+
+    describe("computed variables", () => {
+      const reciprocal = {
+        type: "variable",
+        name: "Reciprocal",
+        variableType: "number",
+        computed: { expr: { div: [1, { var: "variables.denominator" }] } },
+      };
+      const computedAlert = {
+        title: "Preview stopped",
+        message:
+          "Could not calculate computed variable “Reciprocal”. Check its formula in Variables.",
+      };
+
+      // The engine's own error for 1 / 0.
+      const createDivideByZeroError = () => {
+        try {
+          resolveComputedVariables({
+            variableConfigs: {
+              denominator: { type: "number", scope: "context", default: 0 },
+              reciprocal: {
+                type: "number",
+                scope: "context",
+                computed: reciprocal.computed,
+              },
+            },
+            variables: { denominator: 0 },
+          });
+        } catch (error) {
+          return error;
+        }
+      };
+
+      const withReciprocal = (deps) => {
+        deps.projectService.getRepositoryState = vi.fn(() => ({
+          variables: { items: { reciprocal } },
+        }));
+        return deps;
+      };
+
+      it("stops and names the variable when it fails during playback", async () => {
+        const { handleAfterMount } = await import(
+          "../../src/components/vnPreview/vnPreview.handlers.js"
+        );
+        const deps = withReciprocal(createPlaybackDeps());
+        await handleAfterMount(deps);
+        const { onPlaybackError } = deps.graphicsService.init.mock.calls[0][0];
+
+        onPlaybackError(createDivideByZeroError());
+
+        expect(deps.appService.showAlert).toHaveBeenCalledWith(computedAlert);
+        expect(deps.dispatchEvent).toHaveBeenCalledOnce();
+        expect(deps.dispatchEvent.mock.calls[0][0].type).toBe("close");
+      });
+
+      it("names the variable when it fails during startup", async () => {
+        const { handleAfterMount } = await import(
+          "../../src/components/vnPreview/vnPreview.handlers.js"
+        );
+        const deps = withReciprocal(
+          createPlaybackDeps({
+            initRouteEngine: vi.fn(() => {
+              throw createDivideByZeroError();
+            }),
+          }),
+        );
+        const log = vi.spyOn(console, "error").mockImplementation(() => {});
+        try {
+          await handleAfterMount(deps);
+          expect(deps.appService.showAlert).toHaveBeenCalledWith(computedAlert);
+          expect(deps.appService.showToast).not.toHaveBeenCalled();
+          expect(deps.dispatchEvent.mock.calls[0][0].type).toBe("close");
+        } finally {
+          log.mockRestore();
+        }
       });
     });
 

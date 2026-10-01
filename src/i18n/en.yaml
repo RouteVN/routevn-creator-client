@@ -806,6 +806,7 @@ vnPreview:
   stoppedTitle: "Preview stopped"
   transitionLoop: "Transitions kept repeating without waiting for the player. Make sure your transitions don't cause an infinite loop."
   playbackFailed: "Something went wrong while playing the preview."
+  computedVariableFailed: "Could not calculate computed variable “{name}”. Check its formula in Variables."
   closeButton: "Exit full screen"
   loading: "Loading preview..."
   restoreOrientationButton: "Restore preview orientation"

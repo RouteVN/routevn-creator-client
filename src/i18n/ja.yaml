@@ -806,6 +806,7 @@ vnPreview:
   stoppedTitle: "プレビューを停止しました"
   transitionLoop: "プレイヤーの操作を待たずに遷移が繰り返されました。遷移が無限ループにならないようにしてください。"
   playbackFailed: "プレビューの再生中に問題が発生しました。"
+  computedVariableFailed: "計算変数「{name}」の値を計算できませんでした。「変数」で計算式を確認してください。"
   closeButton: "全画面表示を終了"
   loading: "プレビューを読み込み中..."
   restoreOrientationButton: "プレビューの向きを元に戻す"
