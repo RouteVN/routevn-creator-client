@@ -133,7 +133,7 @@ template:
   - $if isVersionDialogOpen:
       - rtgl-dialog#versionDialog ?open=${isVersionDialogOpen} s=md md-layout=fixed-top:
           - rtgl-view slot=content d=v w=f h=f overflow=hidden:
-              - rtgl-form#versionForm key=${isVersionDialogOpen} :form=${versionForm} sticky bottom-spacer=96 w=f h=f: null
+              - rtgl-form#versionForm key=${isVersionDialogOpen} :form=${versionForm} sticky sbv=touch bottom-spacer=96 w=f h=f: null
   - $if isExportConfirmationOpen:
       - rtgl-dialog#exportConfirmationDialog ?open=${isExportConfirmationOpen} s=md:
           - rtgl-view slot=content w=f p=lg g=lg:

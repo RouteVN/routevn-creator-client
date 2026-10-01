@@ -870,7 +870,7 @@ template:
   - $if showEditKeyframeDialog:
       - rtgl-dialog#editKeyframeDialog ?open=${showEditKeyframeDialog} s=sm md-layout=fixed-top:
           - rtgl-view slot=content d=v w=f h=f overflow=hidden:
-              - rtgl-form#editKeyframeForm :form=${updateKeyframeForm} :defaultValues=${editKeyframeDefaultValues} sticky bottom-spacer=96 w=f h=f:
+              - rtgl-form#editKeyframeForm :form=${updateKeyframeForm} :defaultValues=${editKeyframeDefaultValues} sticky sbv=touch bottom-spacer=96 w=f h=f:
                   - $if selectedKeyframeEditor.camera:
                       - 'button#adjustCameraKeyframeDialog data-camera-value=true slot=camera-value type=button aria-haspopup=dialog title="${adjustCameraButton}" aria-label="${adjustCameraButton}: ${selectedKeyframeEditor.cameraValueLabel}"': ${selectedKeyframeEditor.cameraValueLabel}
   - $if showEditAutoDialog:

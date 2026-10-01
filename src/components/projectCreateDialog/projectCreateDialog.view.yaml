@@ -26,7 +26,7 @@ refs:
       confirm:
         handler: handleIconCropDialogConfirm
 template:
-  - rtgl-form#createProjectForm key=${formKey} :defaultValues=${defaultValues} :form=${form} :context=${context} sticky w=f h=f:
+  - rtgl-form#createProjectForm key=${formKey} :defaultValues=${defaultValues} :form=${form} :context=${context} sticky sbv=touch w=f h=f:
       - $if platform == 'ios':
           - 'rtgl-view#iosProjectLocation slot=ios-project-location w=f aria-live=polite style="min-width: 0;"':
               - $if projectLocation:
