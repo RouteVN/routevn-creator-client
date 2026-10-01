@@ -342,46 +342,66 @@ describe("vnPreview.handlers", () => {
       i18n: EN_I18N,
     });
 
-    it("stops on a transition loop once and returns to the editor", async () => {
-      const { handleAfterMount } = await import(
-        "../../src/components/vnPreview/vnPreview.handlers.js"
-      );
-      const deps = createPlaybackDeps();
-      await handleAfterMount(deps);
-      const { onPlaybackError } = deps.graphicsService.init.mock.calls[0][0];
+    it.each([
+      ["the engine error", () => loopError],
+      [
+        "an error wrapping it",
+        () =>
+          new AggregateError(
+            [loopError, new Error("Schedule invalidation failed")],
+            "Playback work and schedule invalidation both failed",
+          ),
+      ],
+    ])(
+      "stops on a transition loop from %s once and returns to the editor",
+      async (_, createError) => {
+        const { handleAfterMount } = await import(
+          "../../src/components/vnPreview/vnPreview.handlers.js"
+        );
+        const deps = createPlaybackDeps();
+        await handleAfterMount(deps);
+        const { onPlaybackError } = deps.graphicsService.init.mock.calls[0][0];
 
-      onPlaybackError(loopError);
-      onPlaybackError(new Error("Later failure from the same preview"));
+        onPlaybackError(createError());
+        onPlaybackError(new Error("Later failure from the same preview"));
 
-      expect(deps.appService.showAlert).toHaveBeenCalledOnce();
-      expect(deps.appService.showAlert).toHaveBeenCalledWith(loopAlert);
-      expect(deps.appService.showToast).not.toHaveBeenCalled();
-      expect(deps.dispatchEvent).toHaveBeenCalledOnce();
-      expect(deps.dispatchEvent.mock.calls[0][0].type).toBe("close");
-      expect(deps.store.setPreviewReady).toHaveBeenLastCalledWith({
-        isPreviewReady: false,
-      });
-      expect(deps.store.setAssetLoading).toHaveBeenLastCalledWith({
-        isLoading: false,
-      });
-    });
+        expect(deps.appService.showAlert).toHaveBeenCalledOnce();
+        expect(deps.appService.showAlert).toHaveBeenCalledWith(loopAlert);
+        expect(deps.appService.showToast).not.toHaveBeenCalled();
+        expect(deps.dispatchEvent).toHaveBeenCalledOnce();
+        expect(deps.dispatchEvent.mock.calls[0][0].type).toBe("close");
+        expect(deps.store.setPreviewReady).toHaveBeenLastCalledWith({
+          isPreviewReady: false,
+        });
+        expect(deps.store.setAssetLoading).toHaveBeenLastCalledWith({
+          isLoading: false,
+        });
+      },
+    );
 
-    it("stops with the general message for other playback failures", async () => {
-      const { handleAfterMount } = await import(
-        "../../src/components/vnPreview/vnPreview.handlers.js"
-      );
-      const deps = createPlaybackDeps();
-      await handleAfterMount(deps);
-      const { onPlaybackError } = deps.graphicsService.init.mock.calls[0][0];
-
+    it.each([
       // Same text as the loop error, but only the code identifies a loop.
-      onPlaybackError(new Error(loopError.message));
+      ["an error without the loop code", () => new Error(loopError.message)],
+      ["a thrown non-error value", () => undefined],
+    ])("keeps playing and shows a toast for %s", async (_, createError) => {
+      const { handleAfterMount } = await import(
+        "../../src/components/vnPreview/vnPreview.handlers.js"
+      );
+      const deps = createPlaybackDeps();
+      await handleAfterMount(deps);
+      const { onPlaybackError } = deps.graphicsService.init.mock.calls[0][0];
 
-      expect(deps.appService.showAlert).toHaveBeenCalledWith({
-        title: "Preview stopped",
+      onPlaybackError(createError());
+
+      expect(deps.appService.showToast).toHaveBeenCalledWith({
         message: "Something went wrong while playing the preview.",
+        status: "error",
       });
-      expect(deps.dispatchEvent.mock.calls[0][0].type).toBe("close");
+      expect(deps.appService.showAlert).not.toHaveBeenCalled();
+      expect(deps.dispatchEvent).not.toHaveBeenCalled();
+      expect(deps.store.setPreviewReady).toHaveBeenLastCalledWith({
+        isPreviewReady: true,
+      });
     });
 
     it("shows the loop alert when the preview entry loops during startup", async () => {

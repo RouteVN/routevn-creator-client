@@ -33,6 +33,7 @@ import {
   showAssetLoadFailures,
 } from "../../internal/ui/assetLoadFeedback.js";
 import { isFontAssetError } from "../../internal/fontAssetError.js";
+import { isRoutingCycleError } from "../../internal/routingCycleError.js";
 import { loadPreviewStartupAssets } from "./support/vnPreviewAssets.js";
 
 const FORWARDED_PREVIEW_KEY_EVENT = "__rvnForwardedPreviewKeyEvent";
@@ -755,57 +756,66 @@ export const handleRotatePreview = (deps, payload) => {
   focusPreviewSurface(refs);
 };
 
-const isTransitionLoopError = (error) => error.code === "routing_cycle";
-
-const showPreviewStoppedAlert = ({ appService, i18n }, error) => {
-  appService.showAlert({
-    title: i18n?.vnPreview?.stoppedTitle ?? "Preview stopped",
-    message: isTransitionLoopError(error)
-      ? (i18n?.vnPreview?.transitionLoop ??
-        "Transitions kept repeating without waiting for the player. Make sure your transitions don't cause an infinite loop.")
-      : (i18n?.vnPreview?.playbackFailed ??
-        "Something went wrong while playing the preview."),
-  });
-};
-
-const stopPreviewAfterPlaybackError = (deps, error) => {
+const closePreview = (deps, showFeedback) => {
   const { dispatchEvent, store, render } = deps;
-  if (getPreviewSignal(store)?.aborted) return;
   cancelPreviewStartup(store);
   store.setAssetLoading({ isLoading: false });
   store.setPreviewReady({ isPreviewReady: false });
   render();
-  showPreviewStoppedAlert(deps, error);
+  showFeedback();
   dispatchEvent(new CustomEvent("close"));
 };
 
+const showTransitionLoopAlert = ({ appService, i18n }) => {
+  appService.showAlert({
+    title: i18n?.vnPreview?.stoppedTitle ?? "Preview stopped",
+    message:
+      i18n?.vnPreview?.transitionLoop ??
+      "Transitions kept repeating without waiting for the player. Make sure your transitions don't cause an infinite loop.",
+  });
+};
+
+// The engine suspends playback after a routing cycle, so the preview closes.
+// Other engine failures may leave it usable, so the author decides.
+const handlePlaybackError = (deps, error) => {
+  const { appService, i18n, store } = deps;
+  if (getPreviewSignal(store)?.aborted) return;
+  if (isRoutingCycleError(error)) {
+    closePreview(deps, () => showTransitionLoopAlert(deps));
+    return;
+  }
+  appService.showToast({
+    message:
+      i18n?.vnPreview?.playbackFailed ??
+      "Something went wrong while playing the preview.",
+    status: "error",
+  });
+};
+
 export const handleAfterMount = async (deps) => {
-  const { appService, dispatchEvent, i18n, store, render } = deps;
+  const { appService, i18n } = deps;
   const startup = startPreviewStartup(deps);
   try {
     await initializePreview(deps, startup);
   } catch (error) {
     if (startup.signal.aborted) return;
-    store.setAssetLoading({ isLoading: false });
-    store.setPreviewReady({ isPreviewReady: false });
-    render();
     console.error("[vnPreview] Failed to initialize preview", error);
-    if (isTransitionLoopError(error)) {
-      showPreviewStoppedAlert(deps, error);
-    } else if (error.name === "TimeoutError") {
-      appService.showAlert({
-        title: i18n?.resourcePages?.warningTitle ?? "Warning",
-        message: startup.timeoutMessage(error),
-      });
-    } else if (!error.reported) {
-      const copy = selectSceneEditorCopy(i18n);
-      appService.showToast({
-        message: copy.failedOpenPreview ?? "Failed to open preview",
-        status: "error",
-      });
-    }
-    cancelPreviewStartup(store);
-    dispatchEvent(new CustomEvent("close"));
+    closePreview(deps, () => {
+      if (isRoutingCycleError(error)) {
+        showTransitionLoopAlert(deps);
+      } else if (error.name === "TimeoutError") {
+        appService.showAlert({
+          title: i18n?.resourcePages?.warningTitle ?? "Warning",
+          message: startup.timeoutMessage(error),
+        });
+      } else if (!error.reported) {
+        const copy = selectSceneEditorCopy(i18n);
+        appService.showToast({
+          message: copy.failedOpenPreview ?? "Failed to open preview",
+          status: "error",
+        });
+      }
+    });
   }
 };
 
@@ -910,7 +920,7 @@ const initializePreview = async (deps, startup) => {
       signal: startup.signal,
       canvas: canvas,
       beforeHandleActions,
-      onPlaybackError: (error) => stopPreviewAfterPlaybackError(deps, error),
+      onPlaybackError: (error) => handlePlaybackError(deps, error),
       width: previewWidth,
       height: previewHeight,
     }),
