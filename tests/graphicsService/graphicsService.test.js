@@ -2082,8 +2082,14 @@ describe("graphicsService", () => {
   });
 
   describe("playback errors", () => {
-    const loopError = new Error(
-      'RouteEngine exceeded 1000 synchronous effect batches at section "section-one", line "line-one". Check for an immediate routing cycle.',
+    const loopError = Object.assign(
+      new Error(
+        'RouteEngine exceeded 1000 synchronous effect batches at section "section-one", line "line-one". Check for an immediate routing cycle.',
+      ),
+      {
+        code: "routing_cycle",
+        pointer: { sectionId: "section-one", lineId: "line-one" },
+      },
     );
     const projectData = {
       screen: { width: 1920, height: 1080 },

@@ -755,9 +755,7 @@ export const handleRotatePreview = (deps, payload) => {
   focusPreviewSurface(refs);
 };
 
-// route-engine-js reports an immediate routing cycle only through this message.
-const isTransitionLoopError = (error) =>
-  /exceeded \d+ synchronous effect batches/.test(error.message);
+const isTransitionLoopError = (error) => error.code === "routing_cycle";
 
 const showPreviewStoppedAlert = ({ appService, i18n }, error) => {
   appService.showAlert({

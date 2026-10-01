@@ -292,8 +292,14 @@ describe("vnPreview.handlers", () => {
   });
 
   describe("playback errors", () => {
-    const loopError = new Error(
-      'RouteEngine exceeded 1000 synchronous effect batches at section "section-one", line "line-one". Check for an immediate routing cycle.',
+    const loopError = Object.assign(
+      new Error(
+        'RouteEngine exceeded 1000 synchronous effect batches at section "section-one", line "line-one". Check for an immediate routing cycle.',
+      ),
+      {
+        code: "routing_cycle",
+        pointer: { sectionId: "section-one", lineId: "line-one" },
+      },
     );
     const loopAlert = {
       title: "Preview stopped",
@@ -368,7 +374,8 @@ describe("vnPreview.handlers", () => {
       await handleAfterMount(deps);
       const { onPlaybackError } = deps.graphicsService.init.mock.calls[0][0];
 
-      onPlaybackError(new Error("Unexpected engine failure"));
+      // Same text as the loop error, but only the code identifies a loop.
+      onPlaybackError(new Error(loopError.message));
 
       expect(deps.appService.showAlert).toHaveBeenCalledWith({
         title: "Preview stopped",
