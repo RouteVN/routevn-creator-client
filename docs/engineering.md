@@ -565,6 +565,7 @@ Handler-facing facade for:
 - project entry management
 - file picking
 - app/platform metadata
+- the touch landscape layout flag (see [Layout Modes](#layout-modes))
 
 All application configuration must use the existing JS app config API through
 `appService`. This includes settings, preferences, and onboarding/dismissal flags
@@ -1024,22 +1025,43 @@ The app has three layouts:
 - mobile: the touch UI (`uiConfig.id === "touch"`), chosen at startup
 - touch landscape: the touch UI on a tablet in landscape
 
-Check touch landscape only with `isTouchLandscape` from
-`src/internal/touchLayout.js`; do not repeat its thresholds. It requires an
-app window at least 768 logical pixels wide and wider than it is tall. The
-minimum width checks that the window has tablet-sized room for side-by-side
-panes; the aspect ratio checks that it is landscape. Unlike the other two
-layouts, touch landscape changes at runtime as the device rotates or the window
-resizes. Subscribe to `windowMetricsClient`, keep its bounds in the store, and
-derive the flag in a selector, as the scene editor does. Change styles rather
-than remounting when the flag flips.
+Touch landscape requires an app window at least 768 logical pixels wide and
+wider than it is tall. The minimum width checks that the window has
+tablet-sized room for side-by-side panes; the aspect ratio checks that it is
+landscape. Unlike the other two layouts, it changes at runtime as the device
+rotates or the window resizes.
 
-Pass the full app-window bounds from `windowMetricsClient`, which ignore
-keyboard occlusion. Do not use `screen.orientation`, `window.orientation`,
-screen dimensions, or device sensors: they describe the device, not the
-window, so they are wrong in iPad Split View, Stage Manager, and Android
-multi-window. Only iOS and Android provide window metrics, so web and desktop
-never enter touch landscape.
+To adapt UI for tablets, read the flag from `appService`:
+
+- `appService.isTouchLandscape()` returns the current flag.
+- `appService.subscribeTouchLandscape(listener)` calls `listener` with the
+  flag once window metrics load, then only when it flips. It returns an
+  unsubscribe function.
+
+Keep the flag in the store and subscribe from `handleBeforeMount`:
+
+```js
+export const handleBeforeMount = (deps) => {
+  const { appService, store, render } = deps;
+  return appService.subscribeTouchLandscape((isTouchLandscape) => {
+    store.setTouchLandscape({ isTouchLandscape });
+    render();
+  });
+};
+```
+
+Change styles rather than remounting when the flag flips. Only iOS and Android
+report window metrics, so the flag is always `false` on web and desktop.
+
+The flag comes from `src/deps/services/shared/touchLayoutService.js`, which
+applies `isTouchLandscape` from `src/internal/touchLayout.js` to the full
+app-window bounds from `windowMetricsClient`. Those bounds ignore keyboard
+occlusion. The thresholds live only in `touchLayout.js`; code that already
+keeps window metrics for other sizing, such as the scene editor, calls
+`isTouchLandscape` directly. Do not use `screen.orientation`,
+`window.orientation`, screen dimensions, or device sensors: they describe the
+device, not the window, so they are wrong in iPad Split View, Stage Manager,
+and Android multi-window.
 
 Phones are locked to portrait, so they never enter touch landscape. Width
 cannot separate phones from tablets in landscape, where a large phone is about
