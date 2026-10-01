@@ -223,7 +223,7 @@ template:
                           - rtgl-text s=xs c=mu-fg: ${noAnimationsFound}
         $else:
           - 'rtgl-view slot="content" w=f h=f pv=md pos=rel style="min-width: 0; min-height: 0; overflow: hidden;"':
-              - 'rtgl-view h=1fg sv w=f style="min-height: 0;"':
+              - 'rtgl-view h=1fg sv sbv=touch w=f style="min-height: 0;"':
                   - 'rtgl-view d=h lg-d=v w=f g=lg ph=md style="min-width: min(960px, 100vw - 64px);"':
                       - rtgl-view w=5fg lg-w=f d=v g=md:
                           - rtgl-view d=v g=xs:

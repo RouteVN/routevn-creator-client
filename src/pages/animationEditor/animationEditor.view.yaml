@@ -946,7 +946,7 @@ template:
       - $if isPreviewDialogOpen:
           - 'rtgl-view slot=content d=v w=f g=md style="max-width: calc(100vw - 32px); max-height: calc(100vh - 96px);"':
               - rtgl-text: ${previewTitle}
-              - 'rtgl-view w=f h=1fg sv style="min-height: 0;"':
+              - 'rtgl-view w=f h=1fg sv sbv=touch style="min-height: 0;"':
                   - rtgl-view d=v w=f g=md:
                       - $for item, i in previewPanel.items:
                           - rtgl-view d=v w=f g=xs:

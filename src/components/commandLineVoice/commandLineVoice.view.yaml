@@ -220,7 +220,7 @@ template:
   - rtgl-dialog#channelEditorDialog ?open=${isChannelEditorOpen} s=lg p=md close-button:
       - 'rtgl-view slot=content d=v w=f h=80vh g=lg style="min-width: 0; min-height: 0; overflow: hidden;"':
           - rtgl-text s=lg: ${channelEditorTitle}
-          - 'rtgl-view h=1fg sv w=f g=lg style="min-height: 0;"':
+          - 'rtgl-view h=1fg sv sbv=touch w=f g=lg style="min-height: 0;"':
               - rtgl-view w=f ph=md:
                   - 'rtgl-view#editorChannel.voiceChannel w=f d=v pos=rel bgc=bg bw=xs bc=bo br=sm style="height: ${channelHeightPx}px;"':
                       - div.voiceChannelHeader:

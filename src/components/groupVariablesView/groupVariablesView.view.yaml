@@ -365,7 +365,7 @@ template:
   - $if !readonly:
       - rtgl-dialog#variableDialog s=md md-layout=fixed-top p=none ?open=${isVariableDialogOpen}:
           - 'rtgl-view slot=content d=v w=f h=f pv=md pos=rel style="min-width: 0; min-height: 0; overflow: hidden;"':
-              - 'rtgl-view w=f h=1fg sv style="min-height: 0;"':
+              - 'rtgl-view w=f h=1fg sv sbv=touch style="min-height: 0;"':
                   - rtgl-form#variableForm key=variable-${dialogKey} :defaultValues=${defaultValues} :form=${variableForm} w=f ph=md :context=${context}:
                       - 'rtgl-view slot="enum-values" d=v w=f g=sm':
                           - $if enumValues.length > 0:
@@ -382,7 +382,7 @@ template:
                   - rtgl-button#variableSubmitButton v=pr: ${variableSubmitLabel}
       - rtgl-dialog#computedDialog s=lg md-layout=fixed-top p=none ?open=${isComputedDialogOpen}:
           - 'rtgl-view class=computedDialogContent slot=content w=f h=70vh md-h=f pv=md style="display: grid; grid-template-columns: minmax(0, 1fr) 1px 280px; grid-template-rows: minmax(0, 1fr) auto; column-gap: var(--spacing-lg); min-width: 0; min-height: 0; overflow: hidden;"':
-              - 'rtgl-view#computedFormScrollContainer w=1fg h=f sv ph=md style="grid-column: 1; grid-row: 1; min-width: 0; min-height: 0;"':
+              - 'rtgl-view#computedFormScrollContainer w=1fg h=f sv sbv=touch ph=md style="grid-column: 1; grid-row: 1; min-width: 0; min-height: 0;"':
                   - 'rtgl-form#computedForm key=computed-${dialogKey} :defaultValues=${defaultValues} :form=${computedForm} :context=${context}':
                       - 'rtgl-view slot="operation" d=v w=f g=sm pb=lg':
                           - rtgl-view d=h w=f av=c g=sm:
@@ -464,7 +464,7 @@ template:
                       - rtgl-text w=1fg s=lg fw=b: ${computedExamplesLabel}
                       - 'rtgl-button#addComputedExampleButton sq v=se pre=plus aria-label="${computedExampleAddLabel}" title="${computedExampleAddLabel}"': null
                   - $if computedExamples.length > 0:
-                      - 'rtgl-view w=f h=1fg d=v g=sm sv style="min-height: 0;"':
+                      - 'rtgl-view w=f h=1fg d=v g=sm sv sbv=touch style="min-height: 0;"':
                           - $for example, i in computedExamples:
                               - 'rtgl-view#computedExampleItem${i} data-example-id=${example.id} role=button tabindex=0 w=f d=v g=sm p=md bw=xs bc=bo h-bc=pr br=md cur=pointer style="box-sizing: border-box;"':
                                   - rtgl-text fw=b: ${example.label}

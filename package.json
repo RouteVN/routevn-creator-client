@@ -126,7 +126,7 @@
     "oxlint": "1.65.0",
     "prettier": "3.6.2",
     "puty": "0.1.2",
-    "rtgl": "2.2.0",
+    "rtgl": "2.2.1",
     "vitest": "3.2.4"
   },
   "overrides": {

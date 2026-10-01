@@ -140,7 +140,7 @@ template:
               - rtgl-view d=v g=xs:
                   - rtgl-text s=lg: ${exportConfirmationTitle}
                   - rtgl-text c=mu-fg: ${exportConfirmationMessage}
-              - 'rtgl-view w=f sv style="max-height: 50vh;"':
+              - 'rtgl-view w=f sv sbv=touch style="max-height: 50vh;"':
                   - rvn-detail-view#exportConfirmationDetail key=${exportConfirmationKey} w=f :fields=${exportConfirmationFields} :fillHeight=${false}:
                       - $if exportConfirmationIconFileId:
                           - rvn-file-image slot=export-confirmation-icon fileId=${exportConfirmationIconFileId} w=96 h=96 bw=xs bc=bo br=md: null
