@@ -9,6 +9,7 @@ const createAssetBufferManagerMock = vi.fn();
 const createRouteGraphicsMock = vi.fn();
 const createRouteEngineMock = vi.fn();
 const createEffectsHandlerMock = vi.fn(() => vi.fn());
+const tickerCallbacks = new Set();
 let routeGraphicsInitOptions;
 
 const routeGraphicsInstance = {
@@ -70,12 +71,19 @@ vi.mock("pixi.js", () => ({
   Ticker: class Ticker {
     start() {}
     stop() {}
+    add(callback) {
+      tickerCallbacks.add(callback);
+    }
+    remove(callback) {
+      tickerCallbacks.delete(callback);
+    }
   },
 }));
 
 describe("graphicsService", () => {
   beforeEach(() => {
     routeGraphicsInitOptions = undefined;
+    tickerCallbacks.clear();
     assetsCache.clear();
     audioAssetApi.getAsset = vi.fn(() => undefined);
     audioAssetApi.load = vi.fn(async () => {});
@@ -2073,6 +2081,207 @@ describe("graphicsService", () => {
         ...animatedRenderState,
         audio: [],
       });
+    });
+  });
+
+  describe("playback errors", () => {
+    const loopError = Object.assign(
+      new Error(
+        'RouteEngine exceeded 1000 synchronous effect batches at section "section-one", line "line-one". Check for an immediate routing cycle.',
+      ),
+      {
+        code: "routing_cycle",
+        pointer: { sectionId: "section-one", lineId: "line-one" },
+      },
+    );
+    const projectData = {
+      screen: { width: 1920, height: 1080 },
+      story: { scenes: {} },
+      resources: {},
+    };
+
+    const startPlayback = async (options) => {
+      const { createGraphicsService } = await import(
+        "../../src/deps/services/graphicsService.js"
+      );
+      const service = await createGraphicsService();
+      await service.init({ width: 1920, height: 1080, ...options });
+      service.initRouteEngine(projectData);
+      const engine = createRouteEngineMock.mock.results.at(-1).value;
+      const { ticker } = createEffectsHandlerMock.mock.calls.at(-1)[0];
+      return { service, engine, ticker };
+    };
+
+    const silenceConsoleError = () =>
+      vi.spyOn(console, "error").mockImplementation(() => {});
+
+    // The owner hears about a failure only after the engine call unwinds.
+    const flushPlaybackErrors = () =>
+      new Promise((resolve) => setTimeout(resolve, 0));
+
+    it("reports an engine failure from an interaction to the opted-in owner", async () => {
+      const onPlaybackError = vi.fn();
+      const { service, engine } = await startPlayback({ onPlaybackError });
+      engine.handleActions.mockImplementation(() => {
+        throw loopError;
+      });
+      const log = silenceConsoleError();
+      try {
+        routeGraphicsInitOptions.eventHandler("change", {
+          actions: { nextLine: {} },
+        });
+        await vi.waitFor(() =>
+          expect(onPlaybackError).toHaveBeenCalledWith(loopError),
+        );
+        expect(onPlaybackError).toHaveBeenCalledOnce();
+      } finally {
+        log.mockRestore();
+      }
+      await service.destroy();
+    });
+
+    it("keeps interaction preparation failures out of playback errors", async () => {
+      const onPlaybackError = vi.fn();
+      const preparationError = new Error("Asset read failed");
+      const { service, engine } = await startPlayback({
+        onPlaybackError,
+        beforeHandleActions: async () => {
+          throw preparationError;
+        },
+      });
+      const log = silenceConsoleError();
+      try {
+        routeGraphicsInitOptions.eventHandler("change", {
+          actions: { nextLine: {} },
+        });
+        await vi.waitFor(() =>
+          expect(log).toHaveBeenCalledWith(
+            "[graphicsService] Failed to process interaction",
+            preparationError,
+          ),
+        );
+        await flushPlaybackErrors();
+        expect(engine.handleActions).not.toHaveBeenCalled();
+        expect(onPlaybackError).not.toHaveBeenCalled();
+      } finally {
+        log.mockRestore();
+      }
+      await service.destroy();
+    });
+
+    it.each([true, false])(
+      "routes a line completion failure (opted in: %s)",
+      async (optedIn) => {
+        const onPlaybackError = optedIn ? vi.fn() : undefined;
+        const { service, engine } = await startPlayback({ onPlaybackError });
+        engine.handleActions.mockImplementation(() => {
+          throw loopError;
+        });
+        const complete = () =>
+          routeGraphicsInitOptions.eventHandler("renderComplete", {});
+        const log = silenceConsoleError();
+        try {
+          if (optedIn) {
+            expect(complete).not.toThrow();
+            expect(onPlaybackError).not.toHaveBeenCalled();
+            await vi.waitFor(() =>
+              expect(onPlaybackError).toHaveBeenCalledWith(loopError),
+            );
+          } else {
+            expect(complete).toThrow(loopError);
+          }
+        } finally {
+          log.mockRestore();
+        }
+        await service.destroy();
+      },
+    );
+
+    it.each([true, false])(
+      "routes an Auto or Skip step failure (opted in: %s)",
+      async (optedIn) => {
+        const onPlaybackError = optedIn ? vi.fn() : undefined;
+        const { service, ticker } = await startPlayback({ onPlaybackError });
+        const step = vi.fn(() => {
+          throw loopError;
+        });
+        ticker.add(step);
+        const [tick] = tickerCallbacks;
+        const frame = { deltaMS: 16 };
+        const log = silenceConsoleError();
+        try {
+          if (optedIn) {
+            expect(() => tick(frame)).not.toThrow();
+            expect(onPlaybackError).not.toHaveBeenCalled();
+            await vi.waitFor(() =>
+              expect(onPlaybackError).toHaveBeenCalledWith(loopError),
+            );
+          } else {
+            expect(() => tick(frame)).toThrow(loopError);
+          }
+          expect(step).toHaveBeenCalledWith(frame);
+        } finally {
+          log.mockRestore();
+        }
+        ticker.remove(step);
+        expect(tickerCallbacks.size).toBe(0);
+        await service.destroy();
+      },
+    );
+
+    it("gives every engine on one Pixi ticker the same playback ticker", async () => {
+      // route-engine coordinates Auto and Skip per ticker object.
+      const { service, ticker } = await startPlayback({
+        onPlaybackError: vi.fn(),
+      });
+      service.initRouteEngine(projectData);
+      expect(createEffectsHandlerMock.mock.calls.at(-1)[0].ticker).toBe(ticker);
+      await service.destroy();
+    });
+
+    it("does not report a failure from a replaced engine", async () => {
+      const onPlaybackError = vi.fn();
+      const { service, ticker } = await startPlayback({ onPlaybackError });
+      ticker.add(() => {
+        throw loopError;
+      });
+      const [tick] = tickerCallbacks;
+      service.initRouteEngine(projectData);
+      const log = silenceConsoleError();
+      try {
+        expect(() => tick({ deltaMS: 16 })).not.toThrow();
+        await flushPlaybackErrors();
+        expect(onPlaybackError).not.toHaveBeenCalled();
+      } finally {
+        log.mockRestore();
+      }
+      await service.destroy();
+    });
+
+    it("keeps a failing owner handler out of the frame loop", async () => {
+      const handlerError = new Error("Handler failed");
+      const { service, ticker } = await startPlayback({
+        onPlaybackError: () => {
+          throw handlerError;
+        },
+      });
+      ticker.add(() => {
+        throw loopError;
+      });
+      const [tick] = tickerCallbacks;
+      const log = silenceConsoleError();
+      try {
+        expect(() => tick({ deltaMS: 16 })).not.toThrow();
+        await vi.waitFor(() =>
+          expect(log).toHaveBeenCalledWith(
+            "[graphicsService] Playback error handler failed",
+            handlerError,
+          ),
+        );
+      } finally {
+        log.mockRestore();
+      }
+      await service.destroy();
     });
   });
 

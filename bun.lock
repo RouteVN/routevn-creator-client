@@ -36,8 +36,8 @@
         "lexical": "0.22.0",
         "nanoid": "5.1.11",
         "ogg-opus-decoder": "1.7.5",
-        "route-engine-js": "1.46.1",
-        "route-graphics": "1.44.3",
+        "route-engine-js": "1.46.5",
+        "route-graphics": "1.45.1",
         "rxjs": "7.8.2",
         "snabbdom": "3.6.3",
         "snabbdom-to-html": "7.1.0",
@@ -855,9 +855,9 @@
 
     "rollup": ["rollup@4.60.4", "", { "dependencies": { "@types/estree": "1.0.8" }, "optionalDependencies": { "@rollup/rollup-android-arm-eabi": "4.60.4", "@rollup/rollup-android-arm64": "4.60.4", "@rollup/rollup-darwin-arm64": "4.60.4", "@rollup/rollup-darwin-x64": "4.60.4", "@rollup/rollup-freebsd-arm64": "4.60.4", "@rollup/rollup-freebsd-x64": "4.60.4", "@rollup/rollup-linux-arm-gnueabihf": "4.60.4", "@rollup/rollup-linux-arm-musleabihf": "4.60.4", "@rollup/rollup-linux-arm64-gnu": "4.60.4", "@rollup/rollup-linux-arm64-musl": "4.60.4", "@rollup/rollup-linux-loong64-gnu": "4.60.4", "@rollup/rollup-linux-loong64-musl": "4.60.4", "@rollup/rollup-linux-ppc64-gnu": "4.60.4", "@rollup/rollup-linux-ppc64-musl": "4.60.4", "@rollup/rollup-linux-riscv64-gnu": "4.60.4", "@rollup/rollup-linux-riscv64-musl": "4.60.4", "@rollup/rollup-linux-s390x-gnu": "4.60.4", "@rollup/rollup-linux-x64-gnu": "4.60.4", "@rollup/rollup-linux-x64-musl": "4.60.4", "@rollup/rollup-openbsd-x64": "4.60.4", "@rollup/rollup-openharmony-arm64": "4.60.4", "@rollup/rollup-win32-arm64-msvc": "4.60.4", "@rollup/rollup-win32-ia32-msvc": "4.60.4", "@rollup/rollup-win32-x64-gnu": "4.60.4", "@rollup/rollup-win32-x64-msvc": "4.60.4", "fsevents": "~2.3.2" }, "bin": { "rollup": "dist/bin/rollup" } }, "sha512-WHeFSbZYsPu3+bLoNRUuAO+wavNlocOPf3wSHTP7hcFKVnJeWsYlCDbr3mTS14FCizf9ccIxXA8sGL8zKeQN3g=="],
 
-    "route-engine-js": ["route-engine-js@1.46.1", "", { "dependencies": { "immer": "^10.1.1", "jempl": "1.1.1", "js-yaml": "^4.1.0", "puty": "^0.1.1", "unicode-segmenter": "^0.17.0" } }, "sha512-G/XNXD5GZPkQxGnZuuldLMjLNpxbfYkfkfXbNX6NmRtrG9lh11y429VKo70OdXe7aPMQkTxpOuigSvTf3LMGYg=="],
+    "route-engine-js": ["route-engine-js@1.46.5", "", { "dependencies": { "immer": "^10.1.1", "jempl": "1.1.2", "js-yaml": "^4.1.0", "puty": "^0.1.1", "unicode-segmenter": "^0.17.0" } }, "sha512-iOfL3YTzk9MxVbDR5chogKFutrQJBagHtVP/330dqZ2ri//A6uJFQzKPvHdPhWXl7Rlb8sBQDqCSFAYFkR56ag=="],
 
-    "route-graphics": ["route-graphics@1.44.3", "", { "dependencies": { "@wasm-audio-decoders/ogg-vorbis": "^0.1.20", "gsap": "3.15.0", "hotkeys-js": "^4.0.0-beta.7", "js-yaml": "^4.1.0", "ogg-opus-decoder": "^1.7.3", "pixi.js": "8.10.2", "playwright": "1.57.0" }, "bin": { "route-graphics": "bin/route-graphics.js" } }, "sha512-Bha3vqFkbgu2wVLqhZcJxRi6Er5KGYqicEEeeQjEVYEYaCcPZet68vl8PkSCacvYVgsZSOyaK8vgXuASra05bg=="],
+    "route-graphics": ["route-graphics@1.45.1", "", { "dependencies": { "@wasm-audio-decoders/ogg-vorbis": "^0.1.20", "gsap": "3.15.0", "hotkeys-js": "^4.0.0-beta.7", "js-yaml": "^4.1.0", "ogg-opus-decoder": "^1.7.3", "pixi.js": "8.10.2", "playwright": "1.57.0" }, "bin": { "route-graphics": "bin/route-graphics.js" } }, "sha512-AfndM2tCzXd9yati6JzAMDjafZcGGTybtqiGTXtkhxmi3/k3s74o4hmd1BOyuQixyIZu5UeD3ZUDYq7rmvX85g=="],
 
     "rrweb-cssom": ["rrweb-cssom@0.8.0", "", {}, "sha512-guoltQEx+9aMf2gDZ0s62EcV8lsXR+0w8915TC3ITdn2YueuNjdAYh/levpU9nFaoChh9RUS5ZdQMrKfVEN9tw=="],
 
@@ -1062,8 +1062,6 @@
     "postcss/nanoid": ["nanoid@3.3.12", "", { "bin": { "nanoid": "bin/nanoid.cjs" } }, "sha512-ZB9RH/39qpq5Vu6Y+NmUaFhQR6pp+M2Xt76XBnEwDaGcVAqhlvxrl3B2bKS5D3NH3QR76v3aSrKaF/Kiy7lEtQ=="],
 
     "rolldown/@oxc-project/types": ["@oxc-project/types@0.139.0", "", {}, "sha512-r9gHphtCs+1M7J0pw6Sn/hh/Wpa/iQrOOkrNAlVLF/gHq+/CJmHIWKKUUhdWjcD6CIa8idarspCsASiXCXvFUw=="],
-
-    "route-engine-js/jempl": ["jempl@1.1.1", "", {}, "sha512-/BmsJz+JUw07cV3ZY8FNtqjEZ1uiIm0EGAu6u8HbqZVT3Y4NHCtleaTGRmotbgvWcG83a5DMFZPAdS3JF5KaTw=="],
 
     "rtgl/@rettangoli/vt": ["@rettangoli/vt@1.1.1", "", { "dependencies": { "commander": "^13.1.0", "js-yaml": "^4.1.0", "liquidjs": "^10.21.0", "parse5": "^7.3.0", "pixelmatch": "^7.1.0", "playwright": "1.57.0", "sharp": "^0.34.5", "shiki": "^3.3.0" } }, "sha512-e5oxcwu1Sc5p+QTIGTDFbBVB6u1UHoDeursath2fAL3M2UY7DqRGMUeByjFwFHckvHO+yHsY8Psd51zlwod0Eg=="],
 
