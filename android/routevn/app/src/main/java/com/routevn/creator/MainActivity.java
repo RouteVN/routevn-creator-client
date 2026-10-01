@@ -142,6 +142,8 @@ public class MainActivity extends Activity {
         "ROUTEVN_EXPORT_INCOMPLETE.txt";
     private static final String EXPORT_INCOMPLETE_MARKER_CONTENT =
         "This RouteVN project export is incomplete. Do not import or edit it.";
+    // Android's phone/tablet boundary, matching the sw600dp resource qualifier.
+    private static final int TABLET_MIN_SMALLEST_WIDTH_DP = 600;
 
     private static final class ProjectFileWriteSession {
         private final String writeId;
@@ -216,6 +218,7 @@ public class MainActivity extends Activity {
         splashScreen.setKeepOnScreenCondition(() -> !splashReady);
 
         super.onCreate(savedInstanceState);
+        applyPhonePortraitLock();
 
         projectBackup = new ProjectBackup(this, new ProjectBackup.Storage() {
             public JSONArray projects() throws Exception { return listProjectFolders(); }
@@ -563,6 +566,43 @@ public class MainActivity extends Activity {
             }
             return remaining;
         });
+    }
+
+    @Override
+    public void onConfigurationChanged(android.content.res.Configuration newConfig) {
+        super.onConfigurationChanged(newConfig);
+        // Folding or unfolding a device changes its display.
+        applyPhonePortraitLock();
+    }
+
+    // Phones stay portrait so only tablets reach the touch landscape layout.
+    // Measure the display, not this window: split screen shrinks the window,
+    // and a tablet must not stay locked after leaving it.
+    private void applyPhonePortraitLock() {
+        int orientation = requestedOrientationFor(smallestDisplayWidthDp());
+        if (getRequestedOrientation() != orientation) {
+            setRequestedOrientation(orientation);
+        }
+    }
+
+    @SuppressWarnings("deprecation") // getMaximumWindowMetrics() starts at API 30.
+    private int smallestDisplayWidthDp() {
+        android.graphics.Rect bounds;
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
+            bounds = getWindowManager().getMaximumWindowMetrics().getBounds();
+        } else {
+            android.graphics.Point size = new android.graphics.Point();
+            getWindowManager().getDefaultDisplay().getRealSize(size);
+            bounds = new android.graphics.Rect(0, 0, size.x, size.y);
+        }
+        float density = getResources().getDisplayMetrics().density;
+        return Math.round(Math.min(bounds.width(), bounds.height()) / density);
+    }
+
+    static int requestedOrientationFor(int smallestDisplayWidthDp) {
+        return smallestDisplayWidthDp < TABLET_MIN_SMALLEST_WIDTH_DP
+            ? android.content.pm.ActivityInfo.SCREEN_ORIENTATION_PORTRAIT
+            : android.content.pm.ActivityInfo.SCREEN_ORIENTATION_UNSPECIFIED;
     }
 
     private JSONObject currentWindowMetrics() throws JSONException {

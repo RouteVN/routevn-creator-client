@@ -45,7 +45,7 @@ import {
   DEFAULT_PROJECT_LANGUAGE,
   normalizeProjectLanguage,
 } from "../../internal/projectLanguage.js";
-import { isMobileSceneEditorSideBySide } from "../../internal/sceneEditorLayout.js";
+import { isTouchLandscape } from "../../internal/touchLayout.js";
 
 const INACTIVE_SECTION_EDITOR_SELECTED_LINE_ID = "";
 
@@ -771,7 +771,7 @@ export const setAppWindowMetrics = ({ state }, { width, height }) => {
 };
 
 const selectMobileSideBySide = ({ state }) =>
-  isMobileSceneEditorSideBySide({
+  isTouchLandscape({
     isTouchMode: state.isTouchMode,
     width: state.appWindowMetrics.width,
     height: state.appWindowMetrics.height,

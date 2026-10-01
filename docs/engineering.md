@@ -1016,6 +1016,42 @@ These are the current patterns we want new work to align with. They are more
 implementation-shaped than the stable boundaries above, so they may evolve over
 time, but they are the current standard.
 
+### Layout Modes
+
+The app has three layouts:
+
+- desktop: the pointer UI (`uiConfig.id === "normal"`), chosen at startup
+- mobile: the touch UI (`uiConfig.id === "touch"`), chosen at startup
+- touch landscape: the touch UI on a tablet in landscape
+
+Check touch landscape only with `isTouchLandscape` from
+`src/internal/touchLayout.js`; do not repeat its thresholds. It requires an
+app window at least 768 logical pixels wide and wider than it is tall. The
+minimum width checks that the window has tablet-sized room for side-by-side
+panes; the aspect ratio checks that it is landscape. Unlike the other two
+layouts, touch landscape changes at runtime as the device rotates or the window
+resizes. Subscribe to `windowMetricsClient`, keep its bounds in the store, and
+derive the flag in a selector, as the scene editor does. Change styles rather
+than remounting when the flag flips.
+
+Pass the full app-window bounds from `windowMetricsClient`, which ignore
+keyboard occlusion. Do not use `screen.orientation`, `window.orientation`,
+screen dimensions, or device sensors: they describe the device, not the
+window, so they are wrong in iPad Split View, Stage Manager, and Android
+multi-window. Only iOS and Android provide window metrics, so web and desktop
+never enter touch landscape.
+
+Phones are locked to portrait, so they never enter touch landscape. Width
+cannot separate phones from tablets in landscape, where a large phone is about
+956 wide and a small Android tablet about 960, so the lock uses the shorter
+side:
+
+- iOS: `UISupportedInterfaceOrientations` lists only portrait for iPhone, and
+  `UISupportedInterfaceOrientations~ipad` keeps every orientation.
+- Android: `MainActivity` requests portrait while the display's smallest width
+  is below 600dp, Android's `sw600dp` tablet boundary. See
+  [Android orientation](android.md#orientation).
+
 ### Resource Pages
 
 Resource pages should stay explicit at the page level.
@@ -1133,8 +1169,8 @@ Resource center components must stay presentational.
 ### Scene Editor
 
 The native iOS and Android touch editor uses a 60% lines / 40% preview grid
-when the app window is at least 768 logical pixels wide and wider than it is
-tall. Portrait and narrower split windows retain the stacked touch layout;
+in touch landscape (see [Layout Modes](#layout-modes)). Portrait and narrower
+split windows retain the stacked touch layout;
 web and desktop retain their existing layouts. `windowMetricsClient` supplies
 full app-window bounds through the native `getWindowMetrics` bridge method and
 `routevn:window-metrics` events. Keyboard occlusion must not change those bounds

@@ -507,6 +507,13 @@ platforms do not install it. The shell allows inline media, and preview videos
 set `playsinline` to avoid a second native fullscreen player. Close controls
 respect top/side/bottom safe areas; closing pauses the video before removal.
 
+### Orientation
+
+iPhone is portrait-only: `UISupportedInterfaceOrientations` in `Info.plist`
+lists only portrait. iPad keeps every orientation under
+`UISupportedInterfaceOrientations~ipad` and can use the touch landscape layout
+(see [Layout Modes](engineering.md#layout-modes)).
+
 ### Status Bar Theme
 
 The native status-bar foreground follows Config's theme independently of the

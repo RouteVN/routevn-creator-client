@@ -126,6 +126,23 @@ and keyboard-open dialogs on both pre-Android-15 and Android-15+ devices. Google
 Play's warning status must be checked against the newly uploaded release bundle;
 updating source does not change findings attached to an older release.
 
+### Orientation
+
+Phones are portrait-only; tablets rotate freely and can use the touch landscape
+layout (see [Layout Modes](engineering.md#layout-modes)). `MainActivity`
+requests portrait while the display's smallest width is below 600dp and
+re-checks on every configuration change, so unfolding a foldable unlocks it and
+folding locks it again. It measures the display rather than the app window, so
+split screen on a tablet does not lock it.
+
+Do not lock orientation in the manifest: Android 15 and earlier would apply the
+lock to tablets as well. With target API 37, Android 16 and later ignore
+orientation requests on displays whose smallest width is at least 600dp, so the
+runtime lock only affects phones there.
+
+Run `./gradlew :app:testDebugUnitTest --tests com.routevn.creator.PhonePortraitLockTest`
+from `android/routevn` to cover phones, tablets, and folding on Android 9 and 15.
+
 ## Build And Install
 
 ### Android JS Watch Mode
