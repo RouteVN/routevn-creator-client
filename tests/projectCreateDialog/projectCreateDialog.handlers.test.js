@@ -214,4 +214,48 @@ describe("projectCreateDialog handlers", () => {
       },
     });
   });
+
+  const createDesktopDialog = (name) => ({
+    dispatchEvent: vi.fn(),
+    i18n: EN_I18N,
+    refs: {
+      createProjectForm: {
+        getValues: () => ({ name }),
+        validate: () => ({ valid: true, errors: {} }),
+      },
+    },
+    render: vi.fn(),
+    store: {
+      selectDefaultValues: () => ({}),
+      selectIconFile: () => undefined,
+      selectPlatform: () => "tauri",
+      selectProjectPath: () => "",
+      setValidationErrors: vi.fn(),
+    },
+  });
+
+  it("requires a desktop project location for ordinary names", () => {
+    const deps = createDesktopDialog("Project One");
+
+    handleFormAction(deps, { _event: { detail: { actionId: "submit" } } });
+
+    expect(deps.store.setValidationErrors).toHaveBeenCalledWith({
+      errors: {
+        projectPath: EN_I18N.projectsPage.projectLocationRequiredAlert,
+      },
+    });
+    expect(deps.dispatchEvent).not.toHaveBeenCalled();
+  });
+
+  it("submits a test crash name on desktop without a project location", () => {
+    const deps = createDesktopDialog("ROUTEVN_TEST_PANIC_CRASH");
+
+    handleFormAction(deps, { _event: { detail: { actionId: "submit" } } });
+
+    expect(deps.store.setValidationErrors).toHaveBeenCalledWith({ errors: {} });
+    expect(deps.dispatchEvent.mock.calls[0][0].detail.values).toMatchObject({
+      name: "ROUTEVN_TEST_PANIC_CRASH",
+      projectPath: "",
+    });
+  });
 });

@@ -204,23 +204,28 @@ and performance → Crash logs). No identifiers are collected.
 
 Release builds have no debugger, and `adb` cannot signal a non-debuggable app,
 so the apps crash on purpose when a project is created with one of these names.
-The project is not created:
+The project is not created. On desktop, these names can be submitted without a
+project location:
 
-| Project name                 | Android                                                                                                                   | iOS                                            |
-| ---------------------------- | ------------------------------------------------------------------------------------------------------------------------- | ---------------------------------------------- |
-| `ROUTEVN_TEST_PANIC_CRASH`   | Rust panic in `libroutevn_exporter_jni.so`, which aborts (`SIGABRT`)                                                      | Swift `fatalError`                             |
-| `ROUTEVN_TEST_NATIVE_CRASH`  | Invalid memory write in `libroutevn_exporter_jni.so` (`SIGSEGV`)                                                          | Invalid memory write (`EXC_BAD_ACCESS`)        |
-| `ROUTEVN_TEST_APP_CRASH`     | Uncaught `MainActivity$TestCrashException` on the main thread                                                             | Uncaught `NSException` (`RouteVNTestCrash`)    |
-| `ROUTEVN_TEST_WEBVIEW_CRASH` | WebView renderer crash (`chrome://crash`); the app reloads and reports `WebViewRendererCrashedException` at level `error` | Not available; the project is created normally |
+| Project name                 | Android                                                                                                                   | iOS                                            | Desktop                                                                                       |
+| ---------------------------- | ------------------------------------------------------------------------------------------------------------------------- | ---------------------------------------------- | --------------------------------------------------------------------------------------------- |
+| `ROUTEVN_TEST_PANIC_CRASH`   | Rust panic in `libroutevn_exporter_jni.so`, which aborts (`SIGABRT`)                                                      | Swift `fatalError`                             | Rust panic in the `trigger_test_crash` command, reported at level `fatal`; the app then exits |
+| `ROUTEVN_TEST_NATIVE_CRASH`  | Invalid memory write in `libroutevn_exporter_jni.so` (`SIGSEGV`)                                                          | Invalid memory write (`EXC_BAD_ACCESS`)        | Not available; the project is created normally                                                |
+| `ROUTEVN_TEST_APP_CRASH`     | Uncaught `MainActivity$TestCrashException` on the main thread                                                             | Uncaught `NSException` (`RouteVNTestCrash`)    | Uncaught webview error (`RouteVNTestCrash`), reported at level `error`; the app keeps running |
+| `ROUTEVN_TEST_WEBVIEW_CRASH` | WebView renderer crash (`chrome://crash`); the app reloads and reports `WebViewRendererCrashedException` at level `error` | Not available; the project is created normally | Not available; the project is created normally                                                |
 
-Reopen the app after a native crash so the saved report is sent. These are real
-reports, so use them only when testing. In production they are told apart by
-exception type (`MainActivity$TestCrashException`, `RouteVNTestCrash`) or, for
-native crashes, by the `nativeTestCrash` frame on Android and the
-`triggerTestCrash` frame on iOS. Web and desktop, and an app shell too old to
-know the names, create such projects normally. On Android 7 the WebView runs in
-the app's process, so `ROUTEVN_TEST_WEBVIEW_CRASH` crashes the app natively
-instead. The names are listed in `src/internal/testCrashes.js`.
+Reopen the mobile app after a native crash so the saved report is sent.
+Desktop sends each report before the app exits or carries on, so it needs no
+relaunch. These are real reports, so use them only when testing. In production
+they are told apart by exception type (`MainActivity$TestCrashException`,
+`RouteVNTestCrash`) or, for native crashes and panics, by the `nativeTestCrash`
+frame on Android, the `triggerTestCrash` frame on iOS and the
+`trigger_test_crash` frame on desktop. Desktop does not report native crashes
+or webview renderer crashes (see
+[desktop error reporting](desktop-error-reporting.md)). Web, and an app shell
+too old to know the names, create such projects normally. On Android 7 the
+WebView runs in the app's process, so `ROUTEVN_TEST_WEBVIEW_CRASH` crashes the
+app natively instead. The names are listed in `src/internal/testCrashes.js`.
 
 ## Verification
 

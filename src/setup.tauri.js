@@ -12,6 +12,7 @@ import { setupFileDropNavigationGuard } from "./deps/clients/tauri/fileDropNavig
 import createUpdater from "./deps/clients/tauri/updater";
 import { setupCloseListener } from "./deps/clients/tauri/windowClose";
 import { createFullscreenEscapeClient } from "./deps/clients/tauri/fullscreenEscape.js";
+import { triggerTestCrash } from "./deps/clients/tauri/testCrash.js";
 import { createBrowserEventsClient } from "./deps/clients/browserEvents.js";
 
 // Services
@@ -92,6 +93,7 @@ const appService = createAppService({
   projectService,
   subject,
   errorTracker: errorReporter,
+  triggerTestCrash,
 });
 await appService.initUserConfig();
 

@@ -164,6 +164,11 @@ development build when qualifying a release. Each should create one row from
 its own SDK. Avoid repeated failures: the collector's request budget is shared
 across users.
 
+Release builds have the same checks without a disposable build: create a
+project named `ROUTEVN_TEST_PANIC_CRASH` for a Rust panic or
+`ROUTEVN_TEST_APP_CRASH` for an uncaught webview error. No project location is
+needed. See [test crashes](mobile-crash-reporting.md#test-crashes).
+
 For the Rust panic path, an ignored smoke test sends one synthetic panic through
 the configured SDK:
 
