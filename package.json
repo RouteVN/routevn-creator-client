@@ -47,7 +47,7 @@
     "lexical": "0.22.0",
     "nanoid": "5.1.11",
     "ogg-opus-decoder": "1.7.5",
-    "route-engine-js": "1.46.4",
+    "route-engine-js": "1.46.5",
     "route-graphics": "1.45.1",
     "rxjs": "7.8.2",
     "snabbdom": "3.6.3",
