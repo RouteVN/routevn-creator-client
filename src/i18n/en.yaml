@@ -1931,7 +1931,6 @@ scenesPage:
   updateSceneDescription: "Update scene details"
 sceneEditorPage:
   failedOpenScene: "Could not open the scene."
-  failedOpenSceneInvalidNumber: "Computed variable “{name}” produced an invalid number. Check its formula in Variables."
   failedOpenSceneComputedVariable: "Could not calculate computed variable “{name}”. Check its formula in Variables."
   actionsLabel: "Actions"
   addSectionMenuItem: "Add section"

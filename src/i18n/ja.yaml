@@ -1931,7 +1931,6 @@ scenesPage:
   updateSceneDescription: "シーンの詳細を更新"
 sceneEditorPage:
   failedOpenScene: "シーンを開けませんでした。"
-  failedOpenSceneInvalidNumber: "計算変数「{name}」の結果が有効な数値ではありません。「変数」で計算式を確認してください。"
   failedOpenSceneComputedVariable: "計算変数「{name}」の値を計算できませんでした。「変数」で計算式を確認してください。"
   actionsLabel: "アクション"
   addSectionMenuItem: "セクションを追加"

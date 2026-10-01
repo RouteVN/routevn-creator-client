@@ -17,7 +17,7 @@ it.each([
     reason: "a non-finite computed number",
     computed: { expr: { div: [1, { var: "variables.denominator" }] } },
     message:
-      "Computed variable “Reciprocal” produced an invalid number. Check its formula in Variables.",
+      "Could not calculate computed variable “Reciprocal”. Check its formula in Variables.",
   },
   {
     reason: "a computed result with the wrong type",
@@ -41,9 +41,19 @@ it.each([
     reason: "an unrelated startup error",
     message: "Could not open the scene.",
   },
+  {
+    reason: "a failure before the project loaded",
+    repositoryUnavailable: true,
+    message: "Could not open the scene.",
+  },
 ])(
   "recovers from $reason and shows the relevant error",
-  async ({ computed, message, repositoryId = "reciprocal" }) => {
+  async ({
+    computed,
+    message,
+    repositoryId = "reciprocal",
+    repositoryUnavailable = false,
+  }) => {
     vi.mocked(initializeSceneEditorPage).mockImplementationOnce(() => {
       if (computed) {
         resolveComputedVariables({
@@ -60,18 +70,25 @@ it.each([
     const payload = { p: "project-one", s: "scene-one" };
     const deps = {
       projectService: {
-        getRepositoryState: () => ({
-          variables: {
-            items: {
-              [repositoryId]: {
-                type: "variable",
-                name: "Reciprocal",
-                variableType: "number",
-                computed,
+        getRepositoryState: () => {
+          if (repositoryUnavailable) {
+            throw new Error(
+              "Repository not initialized. Call ensureRepository() first.",
+            );
+          }
+          return {
+            variables: {
+              items: {
+                [repositoryId]: {
+                  type: "variable",
+                  name: "Reciprocal",
+                  variableType: "number",
+                  computed,
+                },
               },
             },
-          },
-        }),
+          };
+        },
       },
       store: {
         selectMountVersion: () => 1,
@@ -82,7 +99,7 @@ it.each([
         selectIsSceneAssetLoading: () => false,
       },
       appService: {
-        showToast: vi.fn(),
+        showAlert: vi.fn(),
         getPayload: () => payload,
         navigate: vi.fn(),
       },
@@ -93,9 +110,9 @@ it.each([
     try {
       await expect(handleAfterMount(deps)).resolves.toBeUndefined();
       expect(isLoading).toBe(false);
-      expect(deps.appService.showToast).toHaveBeenCalledWith({
+      expect(deps.appService.showAlert).toHaveBeenCalledWith({
         message,
-        status: "error",
+        title: "Error",
       });
       expect(deps.appService.navigate).toHaveBeenCalledWith(
         "/project",
@@ -124,7 +141,7 @@ it("ignores a startup error from an editor that has been unmounted", async () =>
       selectIsSceneAssetLoading: () => false,
     },
     appService: {
-      showToast: vi.fn(),
+      showAlert: vi.fn(),
       navigate: vi.fn(),
       getPayload: () => ({ p: "project-one" }),
     },
@@ -134,6 +151,6 @@ it("ignores a startup error from an editor that has been unmounted", async () =>
   mountVersion += 1;
   rejectStartup(new Error("Abandoned startup failed"));
   await expect(pending).resolves.toBeUndefined();
-  expect(deps.appService.showToast).not.toHaveBeenCalled();
+  expect(deps.appService.showAlert).not.toHaveBeenCalled();
   expect(deps.appService.navigate).not.toHaveBeenCalled();
 });

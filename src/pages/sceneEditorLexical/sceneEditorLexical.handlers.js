@@ -1756,22 +1756,18 @@ export const handleAfterMount = async (deps) => {
     scrollEntrySelectionIntoView(deps);
   } catch (error) {
     if (mountVersion !== store.selectMountVersion()) return;
+    const copy = selectCopy(deps);
     if (!isMissingProjectResolutionError(error)) {
       console.error("[sceneEditor] Failed to open scene", error);
       setSceneEditorPageLoading(deps, false);
-      appService.showToast({
-        message: getSceneStartupErrorMessage({
-          error,
-          repositoryState: projectService.getRepositoryState(),
-          i18n,
-        }),
-        status: "error",
+      appService.showAlert({
+        message: getSceneStartupErrorMessage({ error, projectService, i18n }),
+        title: copy.errorTitle ?? "Error",
       });
       appService.navigate("/project", appService.getPayload());
       return;
     }
 
-    const copy = selectCopy(deps);
     appService?.showAlert({
       message:
         copy.missingProjectResolution ?? MISSING_PROJECT_RESOLUTION_MESSAGE,
