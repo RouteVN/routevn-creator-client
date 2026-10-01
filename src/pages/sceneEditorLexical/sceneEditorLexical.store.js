@@ -743,6 +743,7 @@ export const createInitialState = () => ({
   sceneLoadingProgress: { stage: "repository" },
   sceneLoadingDetailsVisible: false,
   isScenePageLoading: true,
+  mountVersion: 0,
   isSceneAssetLoading: false,
   warnedAssetFileIds: [],
   lockingLineId: null, // Lock to prevent duplicate split/merge operations
@@ -1122,6 +1123,12 @@ export const setScenePageLoading = ({ state }, { isLoading } = {}) => {
   state.isScenePageLoading = isLoading;
   if (isLoading) state.sceneLoadingProgress = { stage: "scenes" };
 };
+
+export const advanceMountVersion = ({ state }) => {
+  state.mountVersion += 1;
+};
+
+export const selectMountVersion = ({ state }) => state.mountVersion;
 
 export const selectIsScenePageLoading = ({ state }) => {
   return state.isScenePageLoading;

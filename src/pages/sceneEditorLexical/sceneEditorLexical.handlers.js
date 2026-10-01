@@ -1,5 +1,6 @@
 import { setSceneEditorPageLoading } from "../../internal/ui/sceneEditor/loadingProgress.js";
 import { mountSceneEditorWindowLayout } from "./support/windowLayout.js";
+import { getSceneStartupErrorMessage } from "./support/startupError.js";
 import { filter, tap } from "rxjs";
 import { createProjectStateStream } from "../../deps/services/shared/projectStateStream.js";
 import { generateId } from "../../internal/id.js";
@@ -1669,6 +1670,7 @@ export const handleActionTransformEditorDone = (deps, payload) => {
 
 export const handleBeforeMount = (deps) => {
   const { projectService, appService, store, uiConfig, subject } = deps;
+  store.advanceMountVersion();
   let routeSyncSequence = 0;
   setSceneEditorPageLoading(deps, true);
   store.setUiConfig({ uiConfig });
@@ -1723,6 +1725,7 @@ export const handleBeforeMount = (deps) => {
     .subscribe();
 
   return async () => {
+    store.advanceMountVersion();
     cleanupWindowLayout?.();
     unregisterBeforeNavigation();
     projectSubscription.unsubscribe();
@@ -1736,8 +1739,15 @@ export const handleBeforeMount = (deps) => {
   };
 };
 
+const leaveToScenes = (appService) => {
+  appService.navigate("/project/scenes", appService.getPayload(), {
+    historyMode: "replace",
+  });
+};
+
 export const handleAfterMount = async (deps) => {
-  const { projectService, appService, store, render } = deps;
+  const { projectService, appService, store, render, i18n } = deps;
+  const mountVersion = store.selectMountVersion();
   try {
     await initializeSceneEditorPage({
       ...deps,
@@ -1751,11 +1761,19 @@ export const handleAfterMount = async (deps) => {
     await cacheCurrentSceneTextStats(deps);
     scrollEntrySelectionIntoView(deps);
   } catch (error) {
+    if (mountVersion !== store.selectMountVersion()) return;
+    const copy = selectCopy(deps);
     if (!isMissingProjectResolutionError(error)) {
-      throw error;
+      console.error("[sceneEditor] Failed to open scene", error);
+      setSceneEditorPageLoading(deps, false);
+      appService.showAlert({
+        message: getSceneStartupErrorMessage({ error, projectService, i18n }),
+        title: copy.errorTitle ?? "Error",
+      });
+      leaveToScenes(appService);
+      return;
     }
 
-    const copy = selectCopy(deps);
     appService?.showAlert({
       message:
         copy.missingProjectResolution ?? MISSING_PROJECT_RESOLUTION_MESSAGE,
@@ -3802,9 +3820,7 @@ export const handlePreviewCurrentLineChanged = (deps, payload) => {
 
 export const handleBackClick = (deps) => {
   const { appService } = deps;
-  appService.navigate("/project/scenes", appService.getPayload(), {
-    historyMode: "replace",
-  });
+  leaveToScenes(appService);
 };
 
 export const handleSystemActionsActionDelete = async (deps, payload) => {

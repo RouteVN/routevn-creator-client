@@ -34,6 +34,10 @@ import {
 } from "../../internal/ui/assetLoadFeedback.js";
 import { isFontAssetError } from "../../internal/fontAssetError.js";
 import { isRoutingCycleError } from "../../internal/routingCycleError.js";
+import {
+  getComputedVariableErrorId,
+  getComputedVariableErrorName,
+} from "../../internal/computedVariableError.js";
 import { loadPreviewStartupAssets } from "./support/vnPreviewAssets.js";
 
 const FORWARDED_PREVIEW_KEY_EVENT = "__rvnForwardedPreviewKeyEvent";
@@ -766,30 +770,40 @@ const closePreview = (deps, showFeedback) => {
   dispatchEvent(new CustomEvent("close"));
 };
 
-const showTransitionLoopAlert = ({ appService, i18n }) => {
+const getPreviewStoppedMessage = ({ i18n, projectService }, error) => {
+  if (isRoutingCycleError(error)) {
+    return (
+      i18n?.vnPreview?.transitionLoop ??
+      "Transitions kept repeating without waiting for the player. Make sure your transitions don't cause an infinite loop."
+    );
+  }
+  const variableName = getComputedVariableErrorName(error, () =>
+    projectService.getRepositoryState(),
+  );
+  if (variableName) {
+    return (
+      i18n?.vnPreview?.computedVariableFailed ??
+      "Could not calculate computed variable “{name}”. Its formula may have divided by zero or produced the wrong type of value. Check the formula and the variables it uses in Variables."
+    ).replaceAll("{name}", () => variableName);
+  }
+  return (
+    i18n?.vnPreview?.playbackFailed ??
+    "Something went wrong while playing the preview."
+  );
+};
+
+const showPreviewStoppedAlert = (deps, error) => {
+  const { appService, i18n } = deps;
   appService.showAlert({
     title: i18n?.vnPreview?.stoppedTitle ?? "Preview stopped",
-    message:
-      i18n?.vnPreview?.transitionLoop ??
-      "Transitions kept repeating without waiting for the player. Make sure your transitions don't cause an infinite loop.",
+    message: getPreviewStoppedMessage(deps, error),
   });
 };
 
-// The engine suspends playback after a routing cycle, so the preview closes.
-// Other engine failures may leave it usable, so the author decides.
 const handlePlaybackError = (deps, error) => {
-  const { appService, i18n, store } = deps;
+  const { store } = deps;
   if (getPreviewSignal(store)?.aborted) return;
-  if (isRoutingCycleError(error)) {
-    closePreview(deps, () => showTransitionLoopAlert(deps));
-    return;
-  }
-  appService.showToast({
-    message:
-      i18n?.vnPreview?.playbackFailed ??
-      "Something went wrong while playing the preview.",
-    status: "error",
-  });
+  closePreview(deps, () => showPreviewStoppedAlert(deps, error));
 };
 
 export const handleAfterMount = async (deps) => {
@@ -801,8 +815,8 @@ export const handleAfterMount = async (deps) => {
     if (startup.signal.aborted) return;
     console.error("[vnPreview] Failed to initialize preview", error);
     closePreview(deps, () => {
-      if (isRoutingCycleError(error)) {
-        showTransitionLoopAlert(deps);
+      if (isRoutingCycleError(error) || getComputedVariableErrorId(error)) {
+        showPreviewStoppedAlert(deps, error);
       } else if (error.name === "TimeoutError") {
         appService.showAlert({
           title: i18n?.resourcePages?.warningTitle ?? "Warning",
