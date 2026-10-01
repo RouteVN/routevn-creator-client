@@ -227,7 +227,7 @@ template:
       - 'rtgl-view slot="content" d=v w=f h=f pv=md pos=rel style="min-width: 0; min-height: 0; overflow: hidden;"':
           - $if isDialogOpen:
               - $if !isPreviewOnlyDialog:
-                  - 'rtgl-view h=1fg sv w=f style="min-height: 0;"':
+                  - 'rtgl-view h=1fg sv sbv=touch w=f style="min-height: 0;"':
                       - 'rtgl-view d=h lg-d=v ah=c g=lg w=f ph=md style="min-width: 0; min-height: 0;"':
                           - 'rtgl-view w=4fg lg-w=f d=v g=md style="min-width: 0; min-height: 0;"':
                               - rtgl-form#particleForm key=${particleFormKey} :defaultValues=${dialogFormValues} :form=${particleForm} w=f:
@@ -273,7 +273,7 @@ template:
                   - 'rtgl-view d=h av=c ah=e w=f g=lg ph=md pt=md style="flex: 0 0 auto;"':
                       - rtgl-button#particleSubmitButton v=pr: ${particleSubmitButtonLabel}
                 $else:
-                  - 'rtgl-view h=1fg sv w=f ph=md style="min-height: 0;"':
+                  - 'rtgl-view h=1fg sv sbv=touch w=f ph=md style="min-height: 0;"':
                       - 'rtgl-view w=f pos=rel br=md bw=xs bc=bo style="aspect-ratio: ${dialogPreviewAspectRatio}; overflow: hidden; background: #000;"':
                           - rtgl-view pos=abs cor=full:
                               - 'div#dialogCanvas style="width: 100%; height: 100%; display: flex; overflow: hidden;"': null
