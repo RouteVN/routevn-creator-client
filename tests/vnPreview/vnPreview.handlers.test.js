@@ -1,4 +1,5 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import { EN_I18N } from "../support/i18n.js";
 
 const constructProjectDataMock = vi.fn();
 const extractInitialHybridSceneIdsMock = vi.fn(() => []);
@@ -288,6 +289,115 @@ describe("vnPreview.handlers", () => {
     } finally {
       log.mockRestore();
     }
+  });
+
+  describe("playback errors", () => {
+    const loopError = new Error(
+      'RouteEngine exceeded 1000 synchronous effect batches at section "section-one", line "line-one". Check for an immediate routing cycle.',
+    );
+    const loopAlert = {
+      title: "Preview stopped",
+      message:
+        "Transitions kept repeating without waiting for the player. Make sure your transitions don't cause an infinite loop.",
+    };
+
+    const createPlaybackDeps = (graphicsService) => ({
+      projectService: {
+        ensureRepository: vi.fn(async () => ({})),
+        getRepositoryState: vi.fn(() => ({})),
+      },
+      graphicsService: {
+        setEngineAudioMuted: vi.fn(),
+        init: vi.fn(async () => {}),
+        initRouteEngine: vi.fn(async () => {}),
+        loadAssets: vi.fn(async () => {}),
+        engineHandleActions: vi.fn(),
+        ...graphicsService,
+      },
+      appService: { showAlert: vi.fn(), showToast: vi.fn() },
+      refs: { canvas: {}, previewSurface: { focus: vi.fn() } },
+      props: {},
+      store: {
+        setProjectResolution: vi.fn(),
+        setAssetLoading: vi.fn(),
+        setLoadingProgress: vi.fn(),
+        selectIsPreviewLoading: vi.fn(() => false),
+        setLoadingDetailsVisible: vi.fn(),
+        selectLoadingDescription: vi.fn(() => "Opening project..."),
+        setPreviewReady: vi.fn(),
+        resetAssetLoadCache: vi.fn(),
+        selectHasLoadedAssetFileId: vi.fn(() => false),
+        selectHasLoadedAssetSceneId: vi.fn(() => false),
+        markAssetFileIdsLoaded: vi.fn(),
+        markAssetSceneIdsLoaded: vi.fn(),
+      },
+      render: vi.fn(),
+      dispatchEvent: vi.fn(),
+      i18n: EN_I18N,
+    });
+
+    it("stops on a transition loop once and returns to the editor", async () => {
+      const { handleAfterMount } = await import(
+        "../../src/components/vnPreview/vnPreview.handlers.js"
+      );
+      const deps = createPlaybackDeps();
+      await handleAfterMount(deps);
+      const { onPlaybackError } = deps.graphicsService.init.mock.calls[0][0];
+
+      onPlaybackError(loopError);
+      onPlaybackError(new Error("Later failure from the same preview"));
+
+      expect(deps.appService.showAlert).toHaveBeenCalledOnce();
+      expect(deps.appService.showAlert).toHaveBeenCalledWith(loopAlert);
+      expect(deps.appService.showToast).not.toHaveBeenCalled();
+      expect(deps.dispatchEvent).toHaveBeenCalledOnce();
+      expect(deps.dispatchEvent.mock.calls[0][0].type).toBe("close");
+      expect(deps.store.setPreviewReady).toHaveBeenLastCalledWith({
+        isPreviewReady: false,
+      });
+      expect(deps.store.setAssetLoading).toHaveBeenLastCalledWith({
+        isLoading: false,
+      });
+    });
+
+    it("stops with the general message for other playback failures", async () => {
+      const { handleAfterMount } = await import(
+        "../../src/components/vnPreview/vnPreview.handlers.js"
+      );
+      const deps = createPlaybackDeps();
+      await handleAfterMount(deps);
+      const { onPlaybackError } = deps.graphicsService.init.mock.calls[0][0];
+
+      onPlaybackError(new Error("Unexpected engine failure"));
+
+      expect(deps.appService.showAlert).toHaveBeenCalledWith({
+        title: "Preview stopped",
+        message: "Something went wrong while playing the preview.",
+      });
+      expect(deps.dispatchEvent.mock.calls[0][0].type).toBe("close");
+    });
+
+    it("shows the loop alert when the preview entry loops during startup", async () => {
+      const { handleAfterMount } = await import(
+        "../../src/components/vnPreview/vnPreview.handlers.js"
+      );
+      const deps = createPlaybackDeps({
+        initRouteEngine: vi.fn(() => {
+          throw loopError;
+        }),
+      });
+      const log = vi.spyOn(console, "error").mockImplementation(() => {});
+      try {
+        await handleAfterMount(deps);
+        expect(deps.appService.showAlert).toHaveBeenCalledOnce();
+        expect(deps.appService.showAlert).toHaveBeenCalledWith(loopAlert);
+        expect(deps.appService.showToast).not.toHaveBeenCalled();
+        expect(deps.dispatchEvent).toHaveBeenCalledOnce();
+        expect(deps.dispatchEvent.mock.calls[0][0].type).toBe("close");
+      } finally {
+        log.mockRestore();
+      }
+    });
   });
 
   it("clears the scene editor mute override when mounting full-screen preview", async () => {

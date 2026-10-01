@@ -661,6 +661,7 @@ export const createGraphicsService = async ({
   // Create dedicated ticker for auto mode
   let ticker;
   let beforeHandleActions;
+  let onPlaybackError;
   let actionQueue = Promise.resolve();
   let assetLoadQueue = Promise.resolve();
   let assetLoadRuntimeVersion = 0;
@@ -1629,6 +1630,7 @@ export const createGraphicsService = async ({
     routeEngineProjectData = undefined;
     enableGlobalKeyboardBindings = true;
     beforeHandleActions = undefined;
+    onPlaybackError = undefined;
     actionQueue = Promise.resolve();
     assetLoadQueue = Promise.resolve();
 
@@ -1935,6 +1937,37 @@ export const createGraphicsService = async ({
     }
   };
 
+  // A caller that passes onPlaybackError owns recovery from engine failures
+  // during playback, such as an immediate routing cycle. Other callers keep the
+  // thrown error.
+  const runEnginePlayback = (callback, generation = engineGeneration) => {
+    try {
+      return callback();
+    } catch (error) {
+      if (!onPlaybackError) throw error;
+      console.error("[graphicsService] Playback failed", error);
+      if (generation === engineGeneration) onPlaybackError(error);
+    }
+  };
+
+  // The engine schedules Auto and Skip steps on this ticker. A throw would
+  // escape Pixi's frame loop and stop the ticker without telling anyone.
+  const createPlaybackTicker = (sourceTicker, generation) => {
+    const wrappedCallbacks = new Map();
+    return {
+      add: (callback) => {
+        const wrapped = (frame) =>
+          runEnginePlayback(() => callback(frame), generation);
+        wrappedCallbacks.set(callback, wrapped);
+        sourceTicker.add(wrapped);
+      },
+      remove: (callback) => {
+        sourceTicker.remove(wrappedCallbacks.get(callback) ?? callback);
+        wrappedCallbacks.delete(callback);
+      },
+    };
+  };
+
   const runInteractionActions = async (actions, eventContext) => {
     const generation = engineGeneration;
     let nextActions = actions;
@@ -1950,7 +1983,10 @@ export const createGraphicsService = async ({
       return;
     }
 
-    engine.handleActions(nextActions, eventContext);
+    runEnginePlayback(
+      () => engine.handleActions(nextActions, eventContext),
+      generation,
+    );
     return {
       actions: nextActions,
       eventContext,
@@ -2280,6 +2316,7 @@ export const createGraphicsService = async ({
               "Graphics runtime resolution",
             );
           beforeHandleActions = onBeforeHandleActions;
+          onPlaybackError = options.onPlaybackError;
           actionQueue = Promise.resolve();
           assetLoadQueue = Promise.resolve();
           assetLoadRuntimeVersion += 1;
@@ -2361,9 +2398,9 @@ export const createGraphicsService = async ({
                         if (payload?.aborted === true) {
                           return;
                         }
-                        engine.handleActions({
-                          markLineCompleted: {},
-                        });
+                        runEnginePlayback(() =>
+                          engine.handleActions({ markLineCompleted: {} }),
+                        );
                         return;
                       }
 
@@ -2553,7 +2590,10 @@ export const createGraphicsService = async ({
         },
         namespace,
         persistence,
-        ticker: routeEngineTicker,
+        ticker: createPlaybackTicker(
+          routeEngineTicker,
+          currentEngineGeneration,
+        ),
       });
       const handlePendingEffects = (effects) => {
         if (currentEngineGeneration !== engineGeneration) {

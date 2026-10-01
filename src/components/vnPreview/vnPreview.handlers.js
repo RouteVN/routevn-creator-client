@@ -755,6 +755,32 @@ export const handleRotatePreview = (deps, payload) => {
   focusPreviewSurface(refs);
 };
 
+// route-engine-js reports an immediate routing cycle only through this message.
+const isTransitionLoopError = (error) =>
+  /exceeded \d+ synchronous effect batches/.test(error.message);
+
+const showPreviewStoppedAlert = ({ appService, i18n }, error) => {
+  appService.showAlert({
+    title: i18n?.vnPreview?.stoppedTitle ?? "Preview stopped",
+    message: isTransitionLoopError(error)
+      ? (i18n?.vnPreview?.transitionLoop ??
+        "Transitions kept repeating without waiting for the player. Make sure your transitions don't cause an infinite loop.")
+      : (i18n?.vnPreview?.playbackFailed ??
+        "Something went wrong while playing the preview."),
+  });
+};
+
+const stopPreviewAfterPlaybackError = (deps, error) => {
+  const { dispatchEvent, store, render } = deps;
+  if (getPreviewSignal(store)?.aborted) return;
+  cancelPreviewStartup(store);
+  store.setAssetLoading({ isLoading: false });
+  store.setPreviewReady({ isPreviewReady: false });
+  render();
+  showPreviewStoppedAlert(deps, error);
+  dispatchEvent(new CustomEvent("close"));
+};
+
 export const handleAfterMount = async (deps) => {
   const { appService, dispatchEvent, i18n, store, render } = deps;
   const startup = startPreviewStartup(deps);
@@ -766,7 +792,9 @@ export const handleAfterMount = async (deps) => {
     store.setPreviewReady({ isPreviewReady: false });
     render();
     console.error("[vnPreview] Failed to initialize preview", error);
-    if (error.name === "TimeoutError") {
+    if (isTransitionLoopError(error)) {
+      showPreviewStoppedAlert(deps, error);
+    } else if (error.name === "TimeoutError") {
       appService.showAlert({
         title: i18n?.resourcePages?.warningTitle ?? "Warning",
         message: startup.timeoutMessage(error),
@@ -884,6 +912,7 @@ const initializePreview = async (deps, startup) => {
       signal: startup.signal,
       canvas: canvas,
       beforeHandleActions,
+      onPlaybackError: (error) => stopPreviewAfterPlaybackError(deps, error),
       width: previewWidth,
       height: previewHeight,
     }),
