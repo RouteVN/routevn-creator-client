@@ -6024,6 +6024,12 @@ export class LexicalSceneDocumentEditorElement extends HTMLElement {
   }
 
   getSelectedLineIdSnapshot() {
+    // In block mode the highlighted line is the selection. Lexical's range
+    // selection is only the text caret and can still be on an earlier line.
+    if (this.state.mode === "block" && this.state.selectedLineId) {
+      return this.state.selectedLineId;
+    }
+
     return this.readEditorSnapshot().selectedLineId;
   }
 
