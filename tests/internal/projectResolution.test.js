@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 import {
   createProjectResolutionFormValues,
+  formatCanvasMaxWidth,
   formatHalfViewportCanvasMaxWidth,
   PROJECT_RESOLUTION_OPTIONS,
   resolveProjectResolution,
@@ -15,6 +16,18 @@ describe("project resolution presets", () => {
     expect(
       formatHalfViewportCanvasMaxWidth({ width: 1080, height: 1920 }),
     ).toBe("min(100%, 28.125vh)");
+  });
+
+  it("limits a canvas to any share of a container height in the requested unit", () => {
+    expect(
+      formatCanvasMaxWidth(
+        { width: 1920, height: 1080 },
+        { heightUnit: "cqh", heightPercent: 92 },
+      ),
+    ).toBe("min(100%, 163.5556cqh)");
+    expect(formatCanvasMaxWidth({ width: 1080, height: 1920 })).toBe(
+      "min(100%, 28.125vh)",
+    );
   });
 
   it("includes a portrait 1080p option", () => {

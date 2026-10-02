@@ -1074,6 +1074,35 @@ scroll containers, and scrollbars still span the window; the column comes from
 `mountMobileResourceWindowLayout(deps)`. Portrait, phone, and desktop layouts
 are unchanged.
 
+On touch layouts (phone and tablet) the layout editor shows its element list
+inline below the canvas instead of in a full-page overlay. The panel under the
+canvas takes turns showing the Preview section, the **Elements** list, and the
+selected element's edit panel, and the page opens on the Elements list. The
+header **Elements** button toggles the list and is highlighted while it is
+open. Going to the list, from that button or from the back button in an
+element's edit panel header (styled like the navbar's), unselects the element on
+the canvas. Square up and down arrow buttons on the right of the list title step
+the highlighted element through the visible rows (the explorer's
+`navigateSelection`, which marks its `item-click` with `source: "navigation"`),
+so the list stays open while the canvas selection follows. Picking an element
+closes the list and shows its edit panel; **Preview** returns to the Preview
+section. The Preview section stays mounted but
+hidden behind the other two, so unsaved preview settings survive. On tablet
+landscape the Elements list is instead a persistent 300px pane on the left (with
+the same step buttons), the header **Elements** button is hidden, and selecting
+there goes straight to the element's edit panel.
+
+On desktop and tablet landscape the edit panel and the Preview both live in a
+right panel (`rvn-resizable-panel` with `show-on-touch`), with an **Edit** |
+**Preview** toggle (`rtgl-segmented-control`) at the top; **Save Preview** sits
+beside the toggle while Preview is showing. Both bodies stay mounted and are
+shown or hidden by style so unsaved preview settings and scroll positions
+survive. Selecting an element (explorer, canvas, or stepping) switches to Edit
+and clearing the selection switches back to Preview. With the panels out of the
+center column, the canvas is vertically centered in a workspace-height box
+(`container-type: size`) and sized from the full height (`formatCanvasMaxWidth`);
+phone and portrait keep the stacked half-height layout.
+
 `rvn-mobile-sheet` is capped at 640px (the Projects page content width) and
 centered, so the bottom-tab sheets and every page's item detail sheet stay
 compact on tablets; phones are narrower than the cap and keep the full-width

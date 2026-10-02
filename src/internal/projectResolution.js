@@ -209,16 +209,22 @@ export const formatProjectResolutionAspectRatio = (resolution) => {
   return `${requiredResolution.width} / ${requiredResolution.height}`;
 };
 
-export const formatHalfViewportCanvasMaxWidth = (
+// Widest canvas that still fits `heightPercent` of the given height unit.
+export const formatCanvasMaxWidth = (
   resolution,
-  { heightUnit = "vh" } = {},
+  { heightUnit = "vh", heightPercent = 50 } = {},
 ) => {
   const requiredResolution = requireProjectResolution(resolution);
   const widthMultiplier = requiredResolution.width / requiredResolution.height;
-  const maxWidth = Number((widthMultiplier * 50).toFixed(4));
+  const maxWidth = Number((widthMultiplier * heightPercent).toFixed(4));
 
   return `min(100%, ${maxWidth}${heightUnit})`;
 };
+
+export const formatHalfViewportCanvasMaxWidth = (
+  resolution,
+  { heightUnit = "vh" } = {},
+) => formatCanvasMaxWidth(resolution, { heightUnit, heightPercent: 50 });
 
 export const requireProjectResolution = (
   resolution,

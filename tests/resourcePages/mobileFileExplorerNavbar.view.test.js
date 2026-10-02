@@ -26,11 +26,6 @@ const mobileFileExplorerPages = [
   ["controls", "controls/controls.view.yaml", "$if showMobileFileExplorer"],
   ["fonts", "fonts/fonts.view.yaml", "$if showMobileFileExplorer"],
   ["images", "images/images.view.yaml", "$if showMobileFileExplorer"],
-  [
-    "layout editor",
-    "layoutEditor/layoutEditor.view.yaml",
-    "$if showMobileNodeExplorer",
-  ],
   ["layouts", "layouts/layouts.view.yaml", "$if showMobileFileExplorer"],
   ["particles", "particles/particles.view.yaml", "$if showMobileFileExplorer"],
   ["scenes", "scenes/scenes.view.yaml", "$if showMobileFileExplorer"],
@@ -54,12 +49,9 @@ const mobileFileExplorerPages = [
   ["videos", "videos/videos.view.yaml", "$if showMobileFileExplorer"],
 ];
 
-// These pages use a node explorer instead of the resource file explorer, so
-// they do not render the persistent tablet landscape explorer pane.
-const pagesWithoutTabletLandscapeExplorer = new Set([
-  "layout editor",
-  "scenes",
-]);
+// These pages use a different explorer instead of the resource file explorer,
+// so they do not render the persistent tablet landscape explorer pane.
+const pagesWithoutTabletLandscapeExplorer = new Set(["scenes"]);
 
 describe("mobile file explorer navbar", () => {
   it("enables the overlay top inset only in the iOS shell", () => {

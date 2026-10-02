@@ -9,6 +9,10 @@ import {
   setLayout,
   setSelectedItemId,
   setDetailPanelSelectedItemId,
+  openMobileFileExplorer,
+  setRightPanelMode,
+  setAppWindowMetrics,
+  selectIsTabletLandscape,
   setPreviewData,
   setUiConfig,
   setPendingPersistPayload,
@@ -603,7 +607,7 @@ describe("layoutEditor.store", () => {
     });
 
     expect(viewData.showExplorerPanel).toBe(false);
-    expect(viewData.showDetailPanel).toBe(false);
+    expect(viewData.showRightPanel).toBe(false);
     expect(viewData.showPreviewHeader).toBe(false);
     expect(viewData.showMobileNodeButton).toBe(true);
     expect(viewData.showMobilePreviewButton).toBe(true);
@@ -613,7 +617,7 @@ describe("layoutEditor.store", () => {
       backgroundImageId: "unsaved-preview-image",
     });
     expect(viewData.initialPreviewData).toEqual({});
-    expect(viewData.nodeButtonLabel).toBe("Node");
+    expect(viewData.nodeButtonLabel).toBe("Elements");
     expect(viewData.previewTitle).toBe("Preview");
     expect(viewData.item.name).toBe("Node 1");
   });
@@ -636,5 +640,190 @@ describe("layoutEditor.store", () => {
     expect(viewData.previewHydrationData).toEqual(viewData.previewData);
     expect(viewData.previewTitle).toBe("Preview");
     expect(viewData.savePreviewButton).toBe("Save Preview");
+  });
+  it("shows the node explorer in place of the preview and node detail on touch layouts", () => {
+    const state = createInitialState();
+
+    syncRepositoryState(
+      { state },
+      {
+        projectResolution: { width: 1920, height: 1080 },
+        layoutId: "layout-1",
+        layout: {
+          id: "layout-1",
+          layoutType: "general",
+        },
+        layoutData: {
+          items: {
+            "node-1": {
+              type: "container",
+              name: "Node 1",
+            },
+          },
+          tree: [{ id: "node-1" }],
+        },
+      },
+    );
+    setUiConfig({ state }, { uiConfig: { inputMode: "touch" } });
+    setSelectedItemId({ state }, { itemId: "node-1" });
+    setDetailPanelSelectedItemId({ state }, { itemId: "node-1" });
+
+    const select = () =>
+      selectViewData({ state, constants: TEST_CONSTANTS, i18n: EN_I18N });
+
+    expect(select().showMobileNodeExplorer).toBe(false);
+    expect(select().showMobileSelectedNodeDetail).toBe(true);
+    expect(select().nodeButtonVariant).toBe("se");
+
+    openMobileFileExplorer({ state });
+    const viewData = select();
+
+    expect(viewData.showMobileNodeExplorer).toBe(true);
+    expect(viewData.showMobileSelectedNodeDetail).toBe(false);
+    expect(viewData.showMobilePreviewButton).toBe(true);
+    expect(viewData.previewPanelVisibilityStyle).toBe("display: none;");
+    expect(viewData.nodeButtonVariant).toBe("pr");
+    expect(viewData.nodeExplorerTitle).toBe("Elements");
+    expect(viewData.nodeMovePreviousLabel).toBe("Previous element");
+    expect(viewData.nodeMoveNextLabel).toBe("Next element");
+  });
+
+  it("keeps the preview hidden but mounted while the node explorer is open without a selection", () => {
+    const state = createInitialState();
+
+    setUiConfig({ state }, { uiConfig: { inputMode: "touch" } });
+    openMobileFileExplorer({ state });
+
+    const viewData = selectViewData({
+      state,
+      constants: TEST_CONSTANTS,
+      i18n: EN_I18N,
+    });
+
+    expect(viewData.showMobileNodeExplorer).toBe(true);
+    expect(viewData.showMobilePreviewButton).toBe(false);
+    expect(viewData.previewPanelVisibilityStyle).toBe("display: none;");
+    expect(viewData.isPreviewMounted).toBe(false);
+  });
+
+  it("shows the Elements list as a left pane on tablet landscape instead of under the canvas", () => {
+    const state = createInitialState();
+
+    setUiConfig({ state }, { uiConfig: { inputMode: "touch" } });
+    openMobileFileExplorer({ state });
+    setAppWindowMetrics({ state }, { width: 1408, height: 880 });
+
+    const select = () =>
+      selectViewData({ state, constants: TEST_CONSTANTS, i18n: EN_I18N });
+    const landscape = select();
+
+    expect(selectIsTabletLandscape({ state })).toBe(true);
+    expect(landscape.showTabletLandscapeExplorer).toBe(true);
+    expect(landscape.tabletLandscapeExplorerWidth).toBe(300);
+    expect(landscape.showMobileNodeExplorer).toBe(false);
+    expect(landscape.showMobileNodeButton).toBe(false);
+    expect(landscape.previewPanelVisibilityStyle).toBe("");
+
+    setAppWindowMetrics({ state }, { width: 880, height: 1408 });
+    const portrait = select();
+
+    expect(selectIsTabletLandscape({ state })).toBe(false);
+    expect(portrait.showTabletLandscapeExplorer).toBe(false);
+    expect(portrait.showMobileNodeExplorer).toBe(true);
+    expect(portrait.showMobileNodeButton).toBe(true);
+  });
+
+  it("keeps the edit panel and preview in the right panel on tablet landscape", () => {
+    const state = createInitialState();
+
+    syncRepositoryState(
+      { state },
+      {
+        projectResolution: { width: 1920, height: 1080 },
+        layoutId: "layout-1",
+        layout: { id: "layout-1", layoutType: "general" },
+        layoutData: {
+          items: { "node-1": { type: "container", name: "Node 1" } },
+          tree: [{ id: "node-1" }],
+        },
+      },
+    );
+    setUiConfig({ state }, { uiConfig: { inputMode: "touch" } });
+    setAppWindowMetrics({ state }, { width: 1408, height: 880 });
+    setSelectedItemId({ state }, { itemId: "node-1" });
+    setDetailPanelSelectedItemId({ state }, { itemId: "node-1" });
+
+    const viewData = selectViewData({
+      state,
+      constants: TEST_CONSTANTS,
+      i18n: EN_I18N,
+    });
+
+    expect(viewData.showRightPanel).toBe(true);
+    expect(viewData.showMobilePanels).toBe(false);
+    expect(viewData.showMobileSelectedNodeDetail).toBe(false);
+    expect(viewData.showMobileNodeExplorer).toBe(false);
+    expect(viewData.showMobilePreviewButton).toBe(false);
+    expect(viewData.showMobileNodeButton).toBe(false);
+    expect(viewData.detailPanelSelectedItemId).toBe("node-1");
+  });
+
+  it("offers an Edit and Preview toggle in the right panel that starts on Preview", () => {
+    const state = createInitialState();
+    const select = () =>
+      selectViewData({ state, constants: TEST_CONSTANTS, i18n: EN_I18N });
+
+    expect(select().showRightPanel).toBe(true);
+    expect(select().rightPanelMode).toBe("preview");
+    expect(select().rightPanelModeOptions).toEqual([
+      { label: "Edit", value: "edit" },
+      { label: "Preview", value: "preview" },
+    ]);
+    expect(select().showRightPanelSaveButton).toBe(true);
+    expect(select().rightPanelEditStyle).toBe("display: none;");
+    expect(select().rightPanelPreviewStyle).toBe("");
+
+    setRightPanelMode({ state }, { mode: "edit" });
+
+    expect(select().rightPanelMode).toBe("edit");
+    expect(select().showRightPanelSaveButton).toBe(false);
+    expect(select().rightPanelEditStyle).toBe("");
+    expect(select().rightPanelPreviewStyle).toBe("display: none;");
+
+    setRightPanelMode({ state }, { mode: "unknown" });
+
+    expect(select().rightPanelMode).toBe("edit");
+  });
+
+  it("uses the whole workspace height for the canvas whenever there is a right panel", () => {
+    const state = createInitialState();
+    const select = () =>
+      selectViewData({ state, constants: TEST_CONSTANTS, i18n: EN_I18N });
+
+    expect(select().layoutEditorCanvasMaxWidth).toBe("min(100%, 163.5556cqh)");
+    expect(select().canvasBackgroundStyle).toContain("justify-content: center");
+    expect(select().canvasWorkspaceStyle).toBe("container-type: size;");
+
+    setUiConfig({ state }, { uiConfig: { inputMode: "touch" } });
+    expect(select().layoutEditorCanvasMaxWidth).toBe("min(100%, 88.8889cqh)");
+    expect(select().canvasBackgroundStyle).toBe("");
+
+    setAppWindowMetrics({ state }, { width: 1408, height: 880 });
+    expect(select().layoutEditorCanvasMaxWidth).toBe("min(100%, 163.5556cqh)");
+  });
+
+  it("never shows the node explorer on desktop layouts", () => {
+    const state = createInitialState();
+
+    openMobileFileExplorer({ state });
+
+    const viewData = selectViewData({
+      state,
+      constants: TEST_CONSTANTS,
+      i18n: EN_I18N,
+    });
+
+    expect(viewData.showMobileNodeExplorer).toBe(false);
+    expect(viewData.previewPanelVisibilityStyle).toBe("");
   });
 });

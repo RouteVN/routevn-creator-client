@@ -1,5 +1,8 @@
 // Real layout-editor and canvas views/stores, without project persistence or GPU
 // setup. Check available workspace geometry as the same mounted editor resizes.
+// Touch layouts stack the panels under the canvas (half height); desktop and
+// tablet landscape keep them in a right panel, so the canvas fills the
+// workspace height and is vertically centered.
 import assert from "node:assert/strict";
 import { execFileSync } from "node:child_process";
 import { mkdtemp, readFile, writeFile, rm } from "node:fs/promises";
@@ -41,7 +44,7 @@ try {
     );
     const store =
       name === "layoutEditor"
-        ? `{...layoutEditorStore,createInitialState:()=>({...layoutEditorStore.createInitialState(),isTouchMode:touch,projectResolution:resolution,layout:{id:'layout-one',name:'Layout One'},isPreviewMounted:true})}`
+        ? `{...layoutEditorStore,createInitialState:()=>({...layoutEditorStore.createInitialState(),isTouchMode:touch,appWindowMetrics:tablet?{width:1133,height:744}:{width:0,height:0},projectResolution:resolution,layout:{id:'layout-one',name:'Layout One'},isPreviewMounted:true})}`
         : "layoutEditorCanvasStore";
     registrations.push(
       `customElements.define(${JSON.stringify(config.schema.componentName)},createComponent({...${JSON.stringify(config)},store:${store}},deps));`,
@@ -51,7 +54,7 @@ try {
   const bundle = join(directory, "fixture.js");
   await writeFile(
     entry,
-    `${imports.join("\n")}\nexport const register=(deps,touch,resolution)=>{${registrations.join("\n")}};`,
+    `${imports.join("\n")}\nexport const register=(deps,touch,resolution,tablet)=>{${registrations.join("\n")}};`,
   );
   execFileSync("bun", [
     "build",
@@ -78,13 +81,18 @@ try {
 <script type="module">
 import {register} from '/fixture.js';
 const query=new URLSearchParams(location.search);
-register({__rtglI18nRuntime:{locale:'en',getMessages:()=>(${JSON.stringify(EN_I18N)})}},query.get('touch')==='true',JSON.parse(query.get('resolution')));
+register({__rtglI18nRuntime:{locale:'en',getMessages:()=>(${JSON.stringify(EN_I18N)})}},query.get('touch')==='true',JSON.parse(query.get('resolution')),query.get('tablet')==='true');
 document.querySelector('#page').append(document.createElement('rvn-layout-editor'));
 </script>`;
   for (const [engineName, engine] of Object.entries({ chromium, webkit })) {
     const browser = await engine.launch({ headless: true });
     try {
-      for (const touch of [true, false]) {
+      for (const { name, touch, tablet } of [
+        { name: "touch", touch: true, tablet: false },
+        { name: "desktop", touch: false, tablet: false },
+        { name: "tablet landscape", touch: true, tablet: true },
+      ]) {
+        const rightPanel = !touch || tablet;
         for (const resolution of [
           { width: 1920, height: 1080 },
           { width: 1080, height: 1920 },
@@ -107,7 +115,7 @@ document.querySelector('#page').append(document.createElement('rvn-layout-editor
             });
           });
           await page.goto(
-            `http://fixture.test/?touch=${touch}&resolution=${encodeURIComponent(JSON.stringify(resolution))}`,
+            `http://fixture.test/?touch=${touch}&tablet=${tablet}&resolution=${encodeURIComponent(JSON.stringify(resolution))}`,
           );
           const surface = page.locator(
             'rvn-layout-editor-canvas rtgl-view[bgc="mu"]',
@@ -121,6 +129,14 @@ document.querySelector('#page').append(document.createElement('rvn-layout-editor
             { width: 360, height: 764 },
             { width: 764, height: 360 },
           ]) {
+            // The metrics are fixed for this fixture, so only check the
+            // viewports where the layout can really be tablet landscape.
+            if (
+              tablet &&
+              !(viewport.width >= 768 && viewport.width > viewport.height)
+            ) {
+              continue;
+            }
             await page.setViewportSize(viewport);
             await page.evaluate(
               () =>
@@ -137,7 +153,9 @@ document.querySelector('#page').append(document.createElement('rvn-layout-editor
               return {
                 canvas: canvasBounds.toJSON(),
                 workspace: workspaceBounds.toJSON(),
-                preview: workspace.children[1].getBoundingClientRect().toJSON(),
+                preview: workspace.children[1]
+                  ?.getBoundingClientRect()
+                  .toJSON(),
               };
             });
             assert.ok(
@@ -156,7 +174,32 @@ document.querySelector('#page').append(document.createElement('rvn-layout-editor
               ) < 0.02,
               "Canvas aspect ratio must be preserved",
             );
-            if (touch) {
+            if (rightPanel) {
+              assert.equal(
+                geometry.preview,
+                undefined,
+                "The preview lives in the right panel, not under the canvas",
+              );
+              assert.ok(
+                geometry.canvas.height <= geometry.workspace.height + 1,
+                `${engineName}: canvas exceeds the workspace height`,
+              );
+              assert.ok(
+                Math.abs(
+                  geometry.canvas.top +
+                    geometry.canvas.height / 2 -
+                    (geometry.workspace.top + geometry.workspace.height / 2),
+                ) <= 2,
+                `${engineName} ${name} ${JSON.stringify(viewport)}: canvas must be vertically centered in the workspace (canvas ${JSON.stringify(geometry.canvas)}, workspace ${JSON.stringify(geometry.workspace)})`,
+              );
+              // Whichever dimension limits the canvas, it should fill it: either
+              // the width of the workspace or most of its height.
+              assert.ok(
+                geometry.canvas.width >= geometry.workspace.width - 2 ||
+                  geometry.canvas.height >= geometry.workspace.height * 0.9,
+                `${engineName}: canvas should fill the workspace`,
+              );
+            } else {
               assert.ok(
                 geometry.canvas.height <= geometry.workspace.height / 2 + 1,
                 `${engineName}: canvas exceeds half the usable editor height`,
@@ -165,20 +208,10 @@ document.querySelector('#page').append(document.createElement('rvn-layout-editor
                 geometry.preview.height >= geometry.workspace.height / 2 - 1,
                 "Preview must retain at least half the usable editor height",
               );
-            } else {
-              assert.ok(
-                geometry.canvas.height <= viewport.height / 2 + 1,
-                "Desktop keeps its existing viewport cap",
-              );
             }
           }
           assert.deepEqual(errors, []);
-          console.log(
-            engineName,
-            touch ? "touch" : "desktop",
-            resolution,
-            "canvas sizing passed",
-          );
+          console.log(engineName, name, resolution, "canvas sizing passed");
           await page.close();
         }
       }

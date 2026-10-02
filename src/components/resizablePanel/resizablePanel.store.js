@@ -90,8 +90,13 @@ export const initializePanelWidth = (
 
 export const selectViewData = ({ state, props: attrs }) => {
   const panelType = attrs.panelType || "file-explorer";
+  const showOnTouch =
+    attrs.showOnTouch !== undefined &&
+    attrs.showOnTouch !== false &&
+    attrs.showOnTouch !== "false";
   const shouldHideForTouch =
     state.isTouchMode &&
+    !showOnTouch &&
     (panelType === "file-explorer" || panelType === "detail-panel");
 
   return {
