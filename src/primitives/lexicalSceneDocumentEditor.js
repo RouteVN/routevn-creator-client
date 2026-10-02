@@ -594,6 +594,9 @@ const STYLES = `
     left: 0;
     width: var(--left-gutter-width);
     pointer-events: auto;
+    /* The tap listener is on the whole gutter, so WebKit's tap highlight
+       would flash every line number. The tapped row shows its selection. */
+    -webkit-tap-highlight-color: transparent;
   }
 
   .gutter-right {
