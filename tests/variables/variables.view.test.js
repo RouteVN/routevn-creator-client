@@ -11,12 +11,12 @@ describe("variables.view", () => {
     const mobileGroupViewLine = lines.find(
       (line) =>
         line.includes("rvn-group-variables-view#groupview") &&
-        line.includes("show-menu-button"),
+        line.includes(":showMenuButton=${showMobileMenuButton}"),
     );
     const desktopGroupViewLine = lines.find(
       (line) =>
         line.includes("rvn-group-variables-view#groupview") &&
-        !line.includes("show-menu-button"),
+        !line.includes(":showMenuButton=${showMobileMenuButton}"),
     );
 
     expect(mobileGroupViewLine).toContain(":mobileLayout=${mobileLayout}");

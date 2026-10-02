@@ -1,5 +1,18 @@
+import { isMobileSceneEditorSideBySide } from "../../sceneEditorLayout.js";
+
 export const isTouchUiConfig = (uiConfig) =>
   uiConfig?.id === "touch" || uiConfig?.inputMode === "touch";
+
+export const TABLET_LANDSCAPE_EXPLORER_WIDTH = 300;
+
+// Shares the scene editor's side-by-side breakpoint: touch windows at least
+// 768 logical pixels wide and wider than tall.
+const isTabletLandscapeState = (state) =>
+  isMobileSceneEditorSideBySide({
+    isTouchMode: state.isTouchMode,
+    width: state.appWindowMetrics.width,
+    height: state.appWindowMetrics.height,
+  });
 
 export const MOBILE_RESOURCE_SCROLL_BOTTOM_PADDING =
   "calc(96px + env(safe-area-inset-bottom))";
@@ -19,11 +32,37 @@ export const resolveResourceScrollBottomPadding = ({
   );
 };
 
+// Matches the Projects page content column.
+export const TABLET_LANDSCAPE_CONTENT_WIDTH = 640;
+
+// Centers a content column on tablet landscape with horizontal padding, so the
+// scroll container and its scrollbar keep spanning the full window.
+export const buildTabletLandscapeContentColumnStyle = (
+  state,
+  { minGutter = "0px" } = {},
+) => {
+  if (!isTabletLandscapeState(state)) {
+    return "";
+  }
+
+  const gutter = `max(${minGutter}, calc((100% - ${TABLET_LANDSCAPE_CONTENT_WIDTH}px) / 2))`;
+  return `padding-left: ${gutter}; padding-right: ${gutter};`;
+};
+
 export const createMobileResourcePageState = () => ({
   isTouchMode: false,
+  appWindowMetrics: { width: 0, height: 0 },
   isMobileFileExplorerOpen: false,
   suppressMobileDetailSheet: false,
 });
+
+export const setMobileResourcePageWindowMetricsState = (
+  state,
+  { width, height } = {},
+) => {
+  state.appWindowMetrics.width = width;
+  state.appWindowMetrics.height = height;
+};
 
 export const setMobileResourcePageUiConfigState = (
   state,
@@ -54,6 +93,9 @@ export const setMobileResourceDetailSheetSuppressedState = (
 
 export const selectIsTouchModeState = ({ state }) => state.isTouchMode;
 
+export const selectIsTabletLandscapeState = ({ state }) =>
+  isTabletLandscapeState(state);
+
 export const selectIsMobileFileExplorerOpenState = ({ state }) =>
   state.isMobileFileExplorerOpen;
 
@@ -69,6 +111,7 @@ export const buildMobileResourcePageViewData = ({
   const mobileDetailFields = detailFields.filter(
     (field) => !hiddenSlotSet.has(field?.slot),
   );
+  const showTabletLandscapeExplorer = isTabletLandscapeState(state);
 
   return {
     isTouchMode: state.isTouchMode,
@@ -76,11 +119,17 @@ export const buildMobileResourcePageViewData = ({
     showDetailPanel: !state.isTouchMode,
     showMobileTopTabs: state.isTouchMode,
     mobileLayout: state.isTouchMode,
+    showTabletLandscapeExplorer,
+    tabletLandscapeExplorerWidth: TABLET_LANDSCAPE_EXPLORER_WIDTH,
+    showMobileMenuButton: state.isTouchMode && !showTabletLandscapeExplorer,
     showMobileDetailSheet:
       state.isTouchMode &&
       Boolean(state.selectedItemId) &&
       !state.suppressMobileDetailSheet,
-    showMobileFileExplorer: state.isTouchMode && state.isMobileFileExplorerOpen,
+    showMobileFileExplorer:
+      state.isTouchMode &&
+      !showTabletLandscapeExplorer &&
+      state.isMobileFileExplorerOpen,
     mobileDetailFillHeight: false,
     mobileDetailFields,
     contentLeftPadding: state.isTouchMode ? "0" : "sm",
@@ -91,12 +140,25 @@ export const syncMobileResourcePageUiConfig = (deps) => {
   deps.store.setUiConfig?.({ uiConfig: deps.uiConfig });
 };
 
+export const mountMobileResourceWindowLayout = ({
+  windowMetricsClient,
+  store,
+  render,
+}) =>
+  windowMetricsClient?.subscribe((metrics) => {
+    store.setAppWindowMetrics(metrics);
+    render();
+  });
+
 export const shouldSuppressMobileDetailSheetForFileExplorerSelection = (
   deps,
 ) => {
+  // Tablet landscape implies touch, so pages that do not expose
+  // selectIsTouchMode still suppress the sheet beside the persistent explorer.
   return (
-    deps.store.selectIsTouchMode?.() &&
-    deps.store.selectIsMobileFileExplorerOpen?.()
+    deps.store.selectIsTabletLandscape?.() ||
+    (deps.store.selectIsTouchMode?.() &&
+      deps.store.selectIsMobileFileExplorerOpen?.())
   );
 };
 

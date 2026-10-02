@@ -16,6 +16,7 @@ import {
   handleMobileResourceDetailSheetClose,
   handleMobileResourceFileExplorerClose,
   handleMobileResourceFileExplorerOpen,
+  mountMobileResourceWindowLayout,
   shouldSuppressMobileDetailSheetForFileExplorerSelection,
   syncMobileResourcePageUiConfig,
 } from "../../internal/ui/resourcePages/mobileResourcePage.js";
@@ -534,9 +535,11 @@ export const handleBeforeMount = (deps) => {
       }),
     )
     .subscribe();
+  const cleanupWindowLayout = mountMobileResourceWindowLayout(deps);
 
   return () => {
     subscription.unsubscribe();
+    cleanupWindowLayout?.();
     revokeDialogPreviewUrl(store);
   };
 };

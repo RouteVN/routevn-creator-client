@@ -10,6 +10,14 @@ describe("mobileSheet.store", () => {
     });
   });
 
+  it("caps the sheet width by default and lets callers override it", () => {
+    // Matches the 640px content column on the Projects page.
+    expect(selectViewData({ props: { open: true } }).maxWidth).toBe("640px");
+    expect(
+      selectViewData({ props: { open: true, maxWidth: "480px" } }).maxWidth,
+    ).toBe("480px");
+  });
+
   it("allows callers to override stacking layers", () => {
     expect(
       selectViewData({

@@ -6,6 +6,7 @@ import { tap } from "rxjs";
 import { createResourcePageTagHandlers } from "../tags.js";
 import {
   closeMobileResourceFileExplorerAfterSelection,
+  mountMobileResourceWindowLayout,
   shouldSuppressMobileDetailSheetForFileExplorerSelection,
 } from "../mobileResourcePage.js";
 import { handleResourceZoomShortcutKeyDown } from "../zoomShortcuts.js";
@@ -221,7 +222,13 @@ export const createMediaPageHandlers = ({
 
   const handleBeforeMount = (deps) => {
     deps.store.setUiConfig?.({ uiConfig: deps.uiConfig });
-    return mountSubscriptions(deps);
+    const cleanupSubscriptions = mountSubscriptions(deps);
+    const cleanupWindowLayout = mountMobileResourceWindowLayout(deps);
+
+    return () => {
+      cleanupSubscriptions?.();
+      cleanupWindowLayout?.();
+    };
   };
 
   const handleAfterMount = (deps) => {

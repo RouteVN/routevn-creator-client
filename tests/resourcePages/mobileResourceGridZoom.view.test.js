@@ -47,6 +47,9 @@ const mobileMenuResourcePages = [
   ["variables", "variables/variables.view.yaml"],
 ];
 
+// The hamburger is bound so it can hide beside the tablet landscape explorer.
+const mobileMenuButtonBinding = ":showMenuButton=${showMobileMenuButton}";
+
 const readMobileBranch = (relativePath) => {
   const view = readFileSync(
     new URL(`../../src/pages/${relativePath}`, import.meta.url),
@@ -88,7 +91,7 @@ describe("mobile resource grid zoom wiring", () => {
     (_name, relativePath) => {
       const mobileBranch = readMobileBranch(relativePath);
 
-      expect(mobileBranch).toContain("show-menu-button");
+      expect(mobileBranch).toContain(mobileMenuButtonBinding);
       expect(mobileBranch).toContain("menu-button-placement=trailing");
     },
   );

@@ -1052,6 +1052,38 @@ resize or Split View changes. Explicit defaults and saved `.mobileItemsPerRow`
 preferences take precedence; automatic defaults are not persisted. Desktop
 defaults and full-width resource lists keep their existing behavior.
 
+The Images page shows its file explorer as a persistent 300px left pane on
+tablet landscape instead of the hamburger-opened overlay. It uses the scene
+editor's breakpoint: touch windows at least 768 logical pixels wide and wider
+than tall, measured from native window metrics (`windowMetricsClient`). Portrait
+and phone windows keep the hamburger and overlay. `mobileResourcePage.js` owns
+the state and the `showTabletLandscapeExplorer` / `showMobileMenuButton` view
+flags; a page opts in by exposing `setAppWindowMetrics` and
+`selectIsTabletLandscape` from its store and calling
+`mountMobileResourceWindowLayout(deps)` from `handleBeforeMount`. Selecting an
+item in the pane syncs the grid but keeps the mobile detail sheet suppressed,
+matching the overlay explorer. Other resource pages are unchanged until they
+opt in.
+
+On tablet landscape the About, Config, Tutorials, and Project pages center
+their content in a 640px column (the Projects page column width). Their headers,
+scroll containers, and scrollbars still span the window; the column comes from
+`buildTabletLandscapeContentColumnStyle`, which adds horizontal padding of
+`max(gutter, (100% - 640px) / 2)`. Each store tracks window metrics through
+`setAppWindowMetrics`, and each page mounts them with
+`mountMobileResourceWindowLayout(deps)`. Portrait, phone, and desktop layouts
+are unchanged.
+
+`rvn-mobile-sheet` is capped at 640px (the Projects page content width) and
+centered, so the bottom-tab sheets and every page's item detail sheet stay
+compact on tablets; phones are narrower than the cap and keep the full-width
+sheet. Override it with the `maxWidth` prop. The bottom tab row in
+`app.view.yaml` uses the same cap and centering, while its bar background and
+top border still span the window. Do not put `w=f` on an `rtgl-view` that needs
+an inline `max-width`: `w=f` sets `max-width: unset` in the element's own
+stylesheet and overrides the inline value, so size such rows with an inline
+`width: 100%` instead.
+
 On touch devices, long-pressing a resource card runs only its primary action
 (preview, play, edit, or open). Do not emit a preliminary `item-click` selection
 event: it opens the selected-item action sheet before the primary action runs.

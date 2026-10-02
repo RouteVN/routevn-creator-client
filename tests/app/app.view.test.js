@@ -1,7 +1,22 @@
 import { readFileSync } from "node:fs";
 import { describe, expect, it } from "vitest";
+import { selectViewData as selectMobileSheetViewData } from "../../src/components/mobileSheet/mobileSheet.store.js";
 
 describe("app view", () => {
+  it("centers the mobile tabs at the same max width as the mobile sheet", () => {
+    const appView = readFileSync(
+      new URL("../../src/pages/app/app.view.yaml", import.meta.url),
+      "utf8",
+    );
+    const { maxWidth } = selectMobileSheetViewData({ props: { open: true } });
+
+    // `w=f` makes rtgl-view set `max-width: unset`, which overrides the inline
+    // cap, so the row sizes itself with an inline width instead.
+    expect(appView).toContain(
+      `rtgl-view h=64 d=h av=c style="width: 100%; max-width: ${maxWidth}; margin-left: auto; margin-right: auto;"`,
+    );
+  });
+
   it("passes the committed route to the sidebar", () => {
     const appView = readFileSync(
       new URL("../../src/pages/app/app.view.yaml", import.meta.url),

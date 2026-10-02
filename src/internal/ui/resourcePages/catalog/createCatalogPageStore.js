@@ -30,10 +30,12 @@ import {
   createMobileResourcePageState,
   openMobileResourceFileExplorerState,
   selectIsMobileFileExplorerOpenState,
+  selectIsTabletLandscapeState,
   selectIsTouchModeState,
   selectSuppressMobileDetailSheetState,
   setMobileResourceDetailSheetSuppressedState,
   setMobileResourcePageUiConfigState,
+  setMobileResourcePageWindowMetricsState,
 } from "../mobileResourcePage.js";
 
 const EMPTY_TREE = { tree: [], items: {} };
@@ -250,6 +252,8 @@ export const createCatalogPageStore = ({
 
   const selectIsTouchMode = selectIsTouchModeState;
 
+  const selectIsTabletLandscape = selectIsTabletLandscapeState;
+
   const selectIsMobileFileExplorerOpen = selectIsMobileFileExplorerOpenState;
 
   const selectSuppressMobileDetailSheet = selectSuppressMobileDetailSheetState;
@@ -288,6 +292,10 @@ export const createCatalogPageStore = ({
     setMobileResourcePageUiConfigState(state, {
       uiConfig,
     });
+  };
+
+  const setAppWindowMetrics = ({ state }, { width, height } = {}) => {
+    setMobileResourcePageWindowMetricsState(state, { width, height });
   };
 
   const openMobileFileExplorer = ({ state }, _payload = {}) => {
@@ -533,6 +541,7 @@ export const createCatalogPageStore = ({
     setSelectedItemId,
     setSelectedFolderId,
     setUiConfig,
+    setAppWindowMetrics,
     openMobileFileExplorer,
     closeMobileFileExplorer,
     selectSelectedItem,
@@ -542,6 +551,7 @@ export const createCatalogPageStore = ({
     selectSelectedFolderId,
     selectFolderNameDialogItemId,
     selectIsTouchMode,
+    selectIsTabletLandscape,
     selectIsMobileFileExplorerOpen,
     selectSuppressMobileDetailSheet,
     setSearchQuery,

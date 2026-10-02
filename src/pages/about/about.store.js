@@ -1,3 +1,7 @@
+import {
+  buildTabletLandscapeContentColumnStyle,
+  setMobileResourcePageWindowMetricsState,
+} from "../../internal/ui/resourcePages/mobileResourcePage.js";
 import { formatI18nCopy } from "../../internal/ui/i18nCopy.js";
 import { selectAboutPageCopy } from "./support/aboutPageCopy.js";
 
@@ -50,6 +54,7 @@ export const createInitialState = () => ({
   platform: "tauri",
   updatesEnabled: false,
   isTouchMode: false,
+  appWindowMetrics: { width: 0, height: 0 },
 });
 
 export const selectSocial = (_, payload) => {
@@ -70,6 +75,9 @@ export const selectViewData = ({ state, i18n }) => {
     contentPadding: state.isTouchMode ? "0" : "lg",
     contentBodyPadding: state.isTouchMode ? "md" : "0",
     contentBodyMarginTop: state.isTouchMode ? "0" : "lg",
+    tabletLandscapeContentStyle: buildTabletLandscapeContentColumnStyle(state, {
+      minGutter: "var(--spacing-md)",
+    }),
     title: copy.title ?? "About",
     versionInformationTitle:
       copy.versionInformationTitle ?? "Version Information",
@@ -108,4 +116,8 @@ export const setUpdatesEnabled = ({ state }, { updatesEnabled } = {}) => {
 export const setUiConfig = ({ state }, { uiConfig } = {}) => {
   state.isTouchMode =
     uiConfig?.id === "touch" || uiConfig?.inputMode === "touch";
+};
+
+export const setAppWindowMetrics = ({ state }, { width, height } = {}) => {
+  setMobileResourcePageWindowMetricsState(state, { width, height });
 };

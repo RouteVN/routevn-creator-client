@@ -75,7 +75,7 @@ describe("images view", () => {
       desktopBranchStart,
     );
 
-    expect(mobileBranch).toContain("show-menu-button");
+    expect(mobileBranch).toContain(":showMenuButton=${showMobileMenuButton}");
     expect(mobileBranch).toContain("menu-button-placement=trailing");
   });
 
@@ -109,7 +109,7 @@ describe("images view", () => {
     expect(mobileExplorerBranch).toContain("bottom-empty-space-height=80vh");
   });
 
-  it("enables per-item action menus only in the mobile file explorer", () => {
+  it("enables per-item action menus only in the touch file explorers", () => {
     const imagesView = readFileSync(
       new URL("../../src/pages/images/images.view.yaml", import.meta.url),
       "utf8",
@@ -126,8 +126,16 @@ describe("images view", () => {
       mobileExplorerStart,
       mobileDetailSheetStart,
     );
-    const desktopExplorerBranch = imagesView.slice(0, mobileExplorerStart);
+    const tabletExplorerStart = imagesView.indexOf(
+      "$if showTabletLandscapeExplorer",
+    );
+    const desktopExplorerBranch = imagesView.slice(0, tabletExplorerStart);
+    const tabletExplorerBranch = imagesView.slice(
+      tabletExplorerStart,
+      mobileExplorerStart,
+    );
 
+    expect(tabletExplorerBranch).toContain("show-item-menu-actions");
     expect(mobileExplorerBranch).toContain("show-item-menu-actions");
     expect(mobileExplorerBranch).toContain(
       ":folderContextMenuItems=${folderContextMenuItems}",

@@ -1,3 +1,4 @@
+import { mountMobileResourceWindowLayout } from "../../internal/ui/resourcePages/mobileResourcePage.js";
 import {
   activateAppLocale,
   resolveAppLocale,
@@ -32,6 +33,7 @@ export const handleBeforeMount = (deps) => {
   store.setCurrentLocale({
     locale: resolveAppLocale({ appService, localeService: locale }),
   });
+  return mountMobileResourceWindowLayout(deps);
 };
 
 export const handleAfterMount = async (deps) => {
