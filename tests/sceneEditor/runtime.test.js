@@ -565,7 +565,7 @@ describe("renderSceneEditorState", () => {
     const failure = new Error("Canvas render failed");
     const appService = {
       reportError: vi.fn(),
-      showToast: vi.fn(),
+      showAlert: vi.fn(),
     };
     const consoleError = vi
       .spyOn(console, "error")
@@ -576,7 +576,10 @@ describe("renderSceneEditorState", () => {
       i18n: {
         resourcePages: { errorTitle: "Error title" },
         scenesPage: {},
-        sceneEditorPage: { failedRenderCanvas: "Canvas message" },
+        sceneEditorPage: {
+          errorDetailsLabel: "Details label",
+          failedRenderCanvas: "Canvas message",
+        },
       },
       store: {
         selectIsScenePageLoading: () => {
@@ -592,10 +595,9 @@ describe("renderSceneEditorState", () => {
       });
 
       await vi.waitFor(() => {
-        expect(appService.showToast).toHaveBeenCalledWith({
+        expect(appService.showAlert).toHaveBeenCalledWith({
           title: "Error title",
-          message: "Canvas message",
-          status: "error",
+          message: "Canvas message\n\nDetails label:\nCanvas render failed",
         });
       });
       expect(appService.reportError).toHaveBeenCalledWith(failure, {

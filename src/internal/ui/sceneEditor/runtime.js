@@ -56,6 +56,7 @@ import {
   isDebugEnabled,
 } from "../../../deps/services/shared/debugLog.js";
 import { selectSceneEditorCopy } from "./sceneEditorCopy.js";
+import { withErrorDetails } from "../../errorDetails.js";
 import {
   emitSceneEditorTiming,
   shouldMeasureSceneEditorTiming,
@@ -2383,10 +2384,13 @@ const showCanvasRenderFailure = (deps, error) => {
   console.error("[sceneEditor] Failed to render canvas", error);
   appService.reportError(error, { operation: "sceneEditor.renderCanvas" });
   const copy = selectSceneEditorCopy(i18n);
-  appService.showToast({
+  appService.showAlert({
     title: copy.errorTitle ?? "Error",
-    message: copy.failedRenderCanvas ?? "Could not update the canvas.",
-    status: "error",
+    message: withErrorDetails(
+      copy.failedRenderCanvas ?? "Could not update the canvas.",
+      error,
+      copy.errorDetailsLabel ?? "Details",
+    ),
   });
 };
 

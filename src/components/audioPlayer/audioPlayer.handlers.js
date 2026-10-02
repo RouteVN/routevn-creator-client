@@ -1,3 +1,5 @@
+import { withErrorDetails } from "../../internal/errorDetails.js";
+
 const OPEN_DIALOG_SELECTOR = "dialog[open], rtgl-dialog[open]";
 
 const isEscapeFromOpenDialog = (event) =>
@@ -78,11 +80,13 @@ export const handleBeforeMount = (deps) => {
     store.setLoading({ isLoading: false });
     store.setPlaying({ isPlaying: false });
     render();
-    appService.showToast({
+    appService.showAlert({
       title: copy.errorTitle ?? "Error",
-      message:
+      message: withErrorDetails(
         copy.failedPlayback ?? "Could not play this audio. Please try again.",
-      status: "error",
+        error,
+        copy.errorDetailsLabel ?? "Details",
+      ),
     });
   };
   audioService.on("error", handleError);

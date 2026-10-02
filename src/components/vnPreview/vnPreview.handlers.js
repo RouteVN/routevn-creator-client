@@ -34,6 +34,7 @@ import {
 } from "../../internal/ui/assetLoadFeedback.js";
 import { isFontAssetError } from "../../internal/fontAssetError.js";
 import { isRoutingCycleError } from "../../internal/routingCycleError.js";
+import { withErrorDetails } from "../../internal/errorDetails.js";
 import {
   getComputedVariableErrorId,
   getComputedVariableErrorName,
@@ -786,9 +787,11 @@ const getPreviewStoppedMessage = ({ i18n, projectService }, error) => {
       "Could not calculate computed variable “{name}”. Its formula may have divided by zero or produced the wrong type of value. Check the formula and the variables it uses in Variables."
     ).replaceAll("{name}", () => variableName);
   }
-  return (
+  return withErrorDetails(
     i18n?.vnPreview?.playbackFailed ??
-    "Something went wrong while playing the preview."
+      "Something went wrong while playing the preview.",
+    error,
+    selectSceneEditorCopy(i18n).errorDetailsLabel ?? "Details",
   );
 };
 
@@ -824,9 +827,13 @@ export const handleAfterMount = async (deps) => {
         });
       } else if (!error.reported) {
         const copy = selectSceneEditorCopy(i18n);
-        appService.showToast({
-          message: copy.failedOpenPreview ?? "Failed to open preview",
-          status: "error",
+        appService.showAlert({
+          title: copy.errorTitle ?? "Error",
+          message: withErrorDetails(
+            copy.failedOpenPreview ?? "Failed to open preview",
+            error,
+            copy.errorDetailsLabel ?? "Details",
+          ),
         });
       }
     });

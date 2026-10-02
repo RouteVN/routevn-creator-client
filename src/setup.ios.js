@@ -23,6 +23,7 @@ import { createGraphicsService } from "./deps/services/graphicsService.js";
 import { createBundleInstructions } from "./deps/services/shared/projectExportService.js";
 import { deriveProjectFormatVersionFromAppVersion } from "./internal/projectCompatibility.js";
 import { DEFAULT_PROJECT_RESOLUTION } from "./internal/projectResolution.js";
+import { withErrorDetails } from "./internal/errorDetails.js";
 import { registerPrimitives } from "./primitives/registerPrimitives.js";
 import tauriConfig from "../src-tauri/tauri.conf.json";
 import { createGlobalUIClient } from "./deps/clients/globalUI.js";
@@ -311,13 +312,16 @@ const apiService = createApiService({
 const graphicsService = await createGraphicsService({
   subject,
   audioOutput: iosGraphicsAudioOutput,
-  onAudioOutputError: () => {
+  onAudioOutputError: (error) => {
     const copy = appService.getAppCopy();
-    appService.showToast({
-      message:
+    appService.showAlert({
+      title: copy.errorTitle ?? "Error",
+      message: withErrorDetails(
         copy.failedStartPreviewAudio ??
-        "Could not start preview audio. Close and reopen the preview.",
-      status: "error",
+          "Could not start preview audio. Close and reopen the preview.",
+        error,
+        copy.errorDetailsLabel ?? "Details",
+      ),
     });
   },
 });

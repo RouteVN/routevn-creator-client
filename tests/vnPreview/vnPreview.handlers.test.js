@@ -263,7 +263,7 @@ describe("vnPreview.handlers", () => {
         ensureRepository: vi.fn().mockRejectedValue(failure),
       },
       refs: { previewSurface: { focus: vi.fn() } },
-      appService: { showToast: vi.fn() },
+      appService: { showAlert: vi.fn(), showToast: vi.fn() },
       store: {
         setAssetLoading: vi.fn(),
         setLoadingProgress: vi.fn(),
@@ -282,10 +282,12 @@ describe("vnPreview.handlers", () => {
     };
     try {
       await handleAfterMount(deps);
-      expect(deps.appService.showToast).toHaveBeenCalledWith({
-        message: "Failed to open preview",
-        status: "error",
+      expect(deps.appService.showAlert).toHaveBeenCalledWith({
+        title: "Error",
+        message:
+          "Failed to open preview\n\nDetails:\nPreview initialization failed",
       });
+      expect(deps.appService.showToast).not.toHaveBeenCalled();
       expect(deps.dispatchEvent.mock.calls[0][0].type).toBe("close");
     } finally {
       log.mockRestore();
@@ -382,26 +384,37 @@ describe("vnPreview.handlers", () => {
 
     it.each([
       // Same text as the loop error, but only the code identifies a loop.
-      ["an error without the loop code", () => new Error(loopError.message)],
-      ["a thrown non-error value", () => undefined],
-    ])("stops with the general message for %s", async (_, createError) => {
-      const { handleAfterMount } = await import(
-        "../../src/components/vnPreview/vnPreview.handlers.js"
-      );
-      const deps = createPlaybackDeps();
-      await handleAfterMount(deps);
-      const { onPlaybackError } = deps.graphicsService.init.mock.calls[0][0];
+      [
+        "an error without the loop code",
+        () => new Error(loopError.message),
+        `Something went wrong while playing the preview.\n\nDetails:\n${loopError.message}`,
+      ],
+      [
+        "a thrown non-error value",
+        () => undefined,
+        "Something went wrong while playing the preview.",
+      ],
+    ])(
+      "stops with the general message for %s",
+      async (_, createError, message) => {
+        const { handleAfterMount } = await import(
+          "../../src/components/vnPreview/vnPreview.handlers.js"
+        );
+        const deps = createPlaybackDeps();
+        await handleAfterMount(deps);
+        const { onPlaybackError } = deps.graphicsService.init.mock.calls[0][0];
 
-      onPlaybackError(createError());
+        onPlaybackError(createError());
 
-      expect(deps.appService.showAlert).toHaveBeenCalledWith({
-        title: "Preview stopped",
-        message: "Something went wrong while playing the preview.",
-      });
-      expect(deps.appService.showToast).not.toHaveBeenCalled();
-      expect(deps.dispatchEvent).toHaveBeenCalledOnce();
-      expect(deps.dispatchEvent.mock.calls[0][0].type).toBe("close");
-    });
+        expect(deps.appService.showAlert).toHaveBeenCalledWith({
+          title: "Preview stopped",
+          message,
+        });
+        expect(deps.appService.showToast).not.toHaveBeenCalled();
+        expect(deps.dispatchEvent).toHaveBeenCalledOnce();
+        expect(deps.dispatchEvent.mock.calls[0][0].type).toBe("close");
+      },
+    );
 
     describe("computed variables", () => {
       const reciprocal = {
