@@ -1425,6 +1425,7 @@ export const renderSceneEditorState = async (deps, payload = {}) => {
       handoffPreview.projectData,
       {
         enableGlobalKeyboardBindings: false,
+        audioEffectsMode: "snapshot",
         onSuppressedRenderState: captureSuppressedAudioEffectRenderState,
         suppressRenderEffects: true,
         onRenderState,

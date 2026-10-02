@@ -2774,6 +2774,58 @@ describe("graphicsService", () => {
     );
   });
 
+  it("uses renderer snapshot mode for editor frames and completion callbacks only", async () => {
+    audioAssetApi.getAsset.mockReturnValue({});
+    const { createGraphicsService } = await import(
+      "../../src/deps/services/graphicsService.js"
+    );
+    const service = await createGraphicsService({ subject: { dispatch() {} } });
+    await service.init({ width: 64, height: 64 });
+    const projectData = { resources: {}, story: { scenes: {} } };
+    const state = {
+      elements: [],
+      animations: [],
+      audio: [{ id: "bgm:main", type: "sound", src: "track-one" }],
+      audioEffects: [
+        {
+          id: "fade-one",
+          type: "audio-transition",
+          targetId: "bgm:main",
+          properties: {
+            volume: { enter: { keyframes: [{ value: 100, duration: 1000 }] } },
+          },
+        },
+      ],
+    };
+    service.initRouteEngine(projectData, { audioEffectsMode: "snapshot" });
+    service.engineRenderCurrentState({ renderState: state });
+    expect(routeGraphicsInstance.render).toHaveBeenLastCalledWith(state, {
+      audioEffectsMode: "snapshot",
+    });
+    createEffectsHandlerMock.mock.lastCall[0].routeGraphics.render(state);
+    expect(routeGraphicsInstance.render).toHaveBeenLastCalledWith(state, {
+      audioEffectsMode: "snapshot",
+    });
+
+    service.setEngineAudioMuted(true);
+    service.engineRenderCurrentState({ renderState: state });
+    expect(routeGraphicsInstance.render).toHaveBeenLastCalledWith(
+      { ...state, audio: [], audioEffects: [] },
+      { audioEffectsMode: "snapshot" },
+    );
+    createEffectsHandlerMock.mock.lastCall[0].routeGraphics.render(state);
+    expect(routeGraphicsInstance.render).toHaveBeenLastCalledWith(
+      { ...state, audio: [], audioEffects: [] },
+      { audioEffectsMode: "snapshot" },
+    );
+
+    service.setEngineAudioMuted(false);
+    service.initRouteEngine(projectData);
+    service.engineRenderCurrentState({ renderState: state });
+    expect(routeGraphicsInstance.render).toHaveBeenLastCalledWith(state);
+    await service.destroy();
+  });
+
   it("ignores delayed render effects from a replaced engine", async () => {
     const effectsHandlerOptions = [];
     const effectsHandlers = [];

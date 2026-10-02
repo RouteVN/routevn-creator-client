@@ -96,7 +96,17 @@ custom menu closed, and preserved the selected offsets 1–4. Browser tests also
 cover native right-click and replacement typing. An actual finger long-press
 was not automated. No Android device was connected for verification.
 
+## Preview navigation regression
+
+| Bug | Reproduction and former result | Cause/fix | Regression |
+| --- | --- | --- | --- |
+| PREVIEW-B001 | Start a line with a music fade, select a later line using the same sound, then return. The canvas froze and clicks could not advance it. | The new engine emitted an entry fade for retained audio. Use Route Graphics snapshot rendering so the renderer applies fades only to the actual audio lifecycle. | `previewNavigation.browser.mjs` checks repainting and click advancement, mute/unmute, and sound replacement with the real engine and renderer. Service tests cover snapshot mode and mute; Route Graphics tests cover audio lifecycle reconciliation. |
+
 ## Running the regression gate
+
+For the preview music-fade regression, keep `bun run watch:web` running and run
+`node tests/sceneEditor/previewNavigation.browser.mjs`. Set
+`SCENE_EDITOR_TEST_ORIGIN` if the watch server is not on port 3001.
 
 Install the matching browser engines once (CI installs them with OS dependencies):
 
