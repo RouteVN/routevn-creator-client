@@ -8,10 +8,55 @@ import {
   handleMobileDeleteDialogConfirm,
   handleMobileDetailDeleteClick,
   handleMobileDetailPlayClick,
+  handleSoundItemClick,
   handleSoundItemPreview,
 } from "../../src/pages/sounds/sounds.handlers.js";
 
 describe("sounds handlers", () => {
+  it.each([
+    ["application/octet-stream", 1],
+    ["audio/ogg", 0],
+  ])(
+    "repairs a tapped sound stored as %s only when its type is generic",
+    async (fileType, repairCount) => {
+      const deps = {
+        i18n: EN_I18N,
+        appService: { showToast: vi.fn() },
+        projectService: {
+          getState: () => ({ sounds: { tree: [], items: {} } }),
+          repairSoundFileType: vi.fn(async () => {}),
+        },
+        store: {
+          selectSoundItemById: () => ({ id: "sound-1", fileType }),
+          setSelectedItemId: vi.fn(),
+          setTagsData: vi.fn(),
+          setItems: vi.fn(),
+        },
+        refs: { fileExplorer: { selectItem: vi.fn() } },
+        render: vi.fn(),
+      };
+
+      handleSoundItemClick(deps, {
+        _event: { detail: { itemId: "sound-1" } },
+      });
+      await vi.waitFor(() =>
+        expect(deps.projectService.repairSoundFileType).toHaveBeenCalledTimes(
+          repairCount,
+        ),
+      );
+
+      expect(deps.store.setSelectedItemId).toHaveBeenCalledWith({
+        itemId: "sound-1",
+      });
+      if (repairCount > 0) {
+        expect(deps.projectService.repairSoundFileType).toHaveBeenCalledWith({
+          soundId: "sound-1",
+        });
+      }
+      expect(deps.appService.showToast).not.toHaveBeenCalled();
+    },
+  );
+
   it("hydrates sound file metadata from repository files on refresh", async () => {
     const repositoryState = {
       files: {

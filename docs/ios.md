@@ -102,6 +102,13 @@ required for device installation.
 To install an already built shell, use `bun run ios:install`. To launch the
 installed shell without building or installing, use `bun run ios:launch`.
 
+On an iOS 16 device, Xcode 27 does not ship the legacy developer disk image that
+`ios-deploy` needs to start a debug launch. `ios:run`, `ios:launch`, and
+`ios:dev` then report `Unable to locate DeviceSupport directory with suffix
+'DeveloperDiskImage.dmg'` followed by `Launch did not complete` and exit
+non-zero. The build, the install, and any saved dev-server setting have still
+succeeded: unlock the phone and open RouteVN Creator by hand.
+
 ## Physical iPhone: Daily Frontend Development
 
 Keep the Mac and iPhone on the same Wi-Fi/local network. USB is used to
@@ -171,6 +178,14 @@ app container. To retrieve that log without attaching a debugger:
 ios-deploy --id DEVICE_UDID --bundle_id com.routevn.creator \
   --download=/Library/Caches/routevn-dev.log --to /tmp/routevn-ios-logs
 ```
+
+That log records only uncaught errors and unhandled rejections. Errors the app
+catches and reports in an alert, such as asset load failures, do not appear
+there. Vite forwards the phone's `console.error` output to the `watch:ios`
+terminal with a `[console.error]` prefix. While investigating a caught error,
+temporarily log its message, `code`, `details`, and `cause` chain from the
+handler that shows the alert, and read them in the watch output. Remove such
+diagnostics before committing.
 
 Watch mode prepares the static bundles once at startup. For changes to the
 bundle build inputs or static icons, restart `watch:ios`; for a native or
@@ -424,6 +439,15 @@ detach its input. On an OGG failure, the identification packet selects the
 published Vorbis/Opus decoder even if the picker supplied an unknown MIME type.
 Decoders are freed after use; invalid input still fails, and stored uploads keep
 their original bytes. Real codec fixtures live in `tests/fixtures/audio/`.
+
+The iOS 16 file picker has no MIME type for `.ogg` and reports such files as
+`application/octet-stream`. Decoding is not the only consumer of that type: the
+graphics service routes assets by MIME type, and an OGG sound stored with the
+generic type used to reach the image loader and fail in `createImageBitmap`.
+Audio uploads now store the format detected from the file bytes and reject
+anything that is not MP3, WAV, or OGG. A sound already stored with the generic
+type is repaired when it is tapped on the Sounds page. See
+[Audio Content Validation](upload-file-types.md#audio-content-validation).
 
 ### Scene Editor Keyboard And Navigation
 

@@ -29,6 +29,17 @@ vi.mock(
 
 import { createProjectAssetService } from "../../src/deps/services/shared/projectAssetService.js";
 
+const ascii = (text) => Array.from(text, (char) => char.charCodeAt(0));
+const wavBytes = new Uint8Array([
+  ...ascii("RIFF"),
+  0,
+  0,
+  0,
+  0,
+  ...ascii("WAVE"),
+]);
+const oggBytes = new Uint8Array([...ascii("OggS"), 0, 2]);
+
 describe("projectAssetService", () => {
   afterEach(() => vi.unstubAllGlobals());
 
@@ -94,7 +105,7 @@ describe("projectAssetService", () => {
     });
 
     const [result] = await service.uploadFiles([
-      new File(["audio-bytes"], "Sound One.wav", { type: "audio/wav" }),
+      new File([wavBytes], "Sound One.wav", { type: "audio/wav" }),
     ]);
 
     expect(result).toMatchObject({
@@ -118,6 +129,46 @@ describe("projectAssetService", () => {
     expect(JSON.parse(await storedFiles[1].file.text()).amplitudes).toEqual([
       0, 128, 255,
     ]);
+  });
+
+  it("stores the detected audio type when the picker reports a generic type", async () => {
+    mocked.detectFileType.mockReturnValue("audio");
+    mocked.extractWaveformDataFromArrayBuffer.mockResolvedValue(undefined);
+    const storedFiles = [];
+    const service = createProjectAssetService({
+      fileAdapter: {
+        storeFile: async ({ file }) => {
+          storedFiles.push(file);
+          return { fileId: `file-${storedFiles.length}` };
+        },
+      },
+    });
+
+    const [result] = await service.uploadFiles([
+      new File([oggBytes], "Sound One.ogg", {
+        type: "application/octet-stream",
+      }),
+    ]);
+
+    expect(storedFiles[0].type).toBe("audio/ogg");
+    expect(result.fileRecords).toEqual([
+      expect.objectContaining({ id: "file-1", mimeType: "audio/ogg" }),
+    ]);
+  });
+
+  it("rejects audio uploads whose bytes are not a supported format", async () => {
+    mocked.detectFileType.mockReturnValue("audio");
+    mocked.extractWaveformDataFromArrayBuffer.mockClear();
+    const storeFile = vi.fn();
+    const service = createProjectAssetService({ fileAdapter: { storeFile } });
+
+    await expect(
+      service.uploadFiles([
+        new File(["not audio"], "Sound One.mp3", { type: "audio/mpeg" }),
+      ]),
+    ).rejects.toMatchObject({ code: "unsupported_audio_format" });
+    expect(storeFile).not.toHaveBeenCalled();
+    expect(mocked.extractWaveformDataFromArrayBuffer).not.toHaveBeenCalled();
   });
 
   it("can skip thumbnail generation for image uploads through the shared upload path", async () => {

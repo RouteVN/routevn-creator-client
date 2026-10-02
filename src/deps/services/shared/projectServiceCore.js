@@ -18,7 +18,10 @@ import {
   extractFontWeightCapabilities,
   isStrictFontMimeType,
 } from "../../../internal/fontCapabilities.js";
-import { normalizeFontFileType } from "../../../internal/fileTypes.js";
+import {
+  detectAudioMimeTypeFromBytes,
+  normalizeFontFileType,
+} from "../../../internal/fileTypes.js";
 
 // Exceptional shipped-data repair. Keep its marker, legacy predicates,
 // collaboration gate, and lifecycle aligned with
@@ -338,6 +341,31 @@ export const createProjectServiceCore = ({
     await applyFontWeightMetadataPatch(repository);
   };
 
+  // Older sound uploads can have an application/octet-stream file record.
+  // File records are immutable, so store the same bytes with the type detected
+  // from them and point the sound at the new file.
+  const repairSoundFileType = async ({ soundId } = {}) => {
+    const sound = getRepositoryState().sounds.items[soundId];
+    const content = await assetService.getFileContent(sound.fileId);
+    const response = await fetch(content.url);
+    const bytes = await response.arrayBuffer();
+    content.revoke?.();
+    const mimeType = detectAudioMimeTypeFromBytes(bytes);
+    if (!mimeType) {
+      return;
+    }
+
+    const stored = await assetService.storeFile({
+      file: new File([bytes], sound.name, { type: mimeType }),
+      bytes,
+    });
+    await collabService.commandApi.updateSound({
+      soundId,
+      data: { fileId: stored.fileId },
+      fileRecords: stored.fileRecords,
+    });
+  };
+
   const ensureContentPatches = async (repository) => {
     const projectId = getCurrentProjectId();
     const existingPatches = contentPatchesByProject.get(projectId);
@@ -643,6 +671,7 @@ export const createProjectServiceCore = ({
     deleteVersionFromProject: collabService.deleteVersionFromProject,
     deleteImageIfUnused,
     deleteSoundIfUnused: collabService.deleteSoundIfUnused,
+    repairSoundFileType,
     deleteVideoIfUnused: collabService.deleteVideoIfUnused,
     async initializeProject(payload) {
       await repositoryService.releaseRepositoryByProjectId(payload?.projectId);

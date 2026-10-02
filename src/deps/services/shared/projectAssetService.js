@@ -17,6 +17,7 @@ import {
 } from "../../clients/web/fileProcessors.js";
 import { processWithConcurrency } from "../../../internal/processWithConcurrency.js";
 import {
+  detectAudioMimeTypeFromBytes,
   getFileType as getFontFileType,
   normalizeFontFileType,
 } from "../../../internal/fileTypes.js";
@@ -376,11 +377,23 @@ export const createProjectAssetService = ({
 
     if (fileType === "audio") {
       const arrayBuffer = await file.arrayBuffer();
+      // Check the bytes, not the reported type: native pickers can report
+      // OGG as application/octet-stream, and renamed files must not get in.
+      const mimeType = detectAudioMimeTypeFromBytes(arrayBuffer);
+      if (!mimeType) {
+        const error = new Error("Only MP3, WAV, and OGG sounds are supported.");
+        error.code = "unsupported_audio_format";
+        throw error;
+      }
+      const audioFile =
+        file.type === mimeType
+          ? file
+          : new File([arrayBuffer], file.name, { type: mimeType });
 
       const [waveformData, stored] = await Promise.all([
         extractWaveformDataFromArrayBuffer(arrayBuffer),
         storeFileWithRecord({
-          file,
+          file: audioFile,
           bytes: arrayBuffer,
           timings: {},
         }),
@@ -596,6 +609,7 @@ export const createProjectAssetService = ({
           } catch (error) {
             if (
               error.code === "image_texture_too_large" ||
+              error.code === "unsupported_audio_format" ||
               fileAdapter.continueOnUploadError === false
             ) {
               throw error;
