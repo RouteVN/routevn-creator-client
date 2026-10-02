@@ -219,5 +219,8 @@ already handled. It never shows UI. Handled errors are still shown through
   `project_database_missing`, or SQLite code 14 in plugin-sql's message), and
   full browser storage (`QuotaExceededError`).
 - Current call sites: project-open route failures, `runResourcePageMutation`
-  thrown errors, and engine render failures (`operation` `graphics.render`). Both skip expected environment failures; incompatible projects
-  are not reported either.
+  thrown errors, engine render failures (`operation` `graphics.render`), and
+  scene editor canvas renders that throw with no caller waiting for them
+  (`sceneEditor.renderCanvas`, which also shows an error toast). The first two
+  skip expected environment failures; incompatible projects are not reported
+  either.

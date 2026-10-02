@@ -2377,6 +2377,19 @@ const handleCanvasForwardNavigationFallback = async (deps, payload = {}) => {
   });
 };
 
+// A queued canvas render has no caller to receive its error.
+const showCanvasRenderFailure = (deps, error) => {
+  const { appService, i18n } = deps;
+  console.error("[sceneEditor] Failed to render canvas", error);
+  appService.reportError(error, { operation: "sceneEditor.renderCanvas" });
+  const copy = selectSceneEditorCopy(i18n);
+  appService.showToast({
+    title: copy.errorTitle ?? "Error",
+    message: copy.failedRenderCanvas ?? "Could not update the canvas.",
+    status: "error",
+  });
+};
+
 export const mountSceneEditorSubscriptions = (deps) => {
   const { subject } = deps;
   const canvasRuntimeLineSyncGate = createCanvasRuntimeLineSyncGate(deps.store);
@@ -2426,7 +2439,7 @@ export const mountSceneEditorSubscriptions = (deps) => {
             return;
           }
 
-          throw error;
+          showCanvasRenderFailure(deps, error);
         }
       }),
     ),
