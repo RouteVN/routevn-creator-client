@@ -55,6 +55,28 @@ describe("backgroundTransformEditor", () => {
     ).toBe(36);
   });
 
+  it("leaves audio and its effects out of the editor canvas", () => {
+    // Route Graphics rejects effects whose target audio is absent.
+    const { renderState } = createBackgroundTransformEditorCanvasState({
+      renderState: {
+        id: "scene-editor",
+        elements: [],
+        audio: [
+          {
+            id: "channel:bgm",
+            type: "audio-channel",
+            children: [{ id: "bgm:main", type: "sound", src: "song.ogg" }],
+          },
+        ],
+        audioEffects: [{ id: "audio-effect:1", targetId: "bgm:main" }],
+      },
+      editorState: {},
+    });
+
+    expect(renderState.audio).toEqual([]);
+    expect(renderState.audioEffects).toEqual([]);
+  });
+
   it("uses RouteGraphics world bounds for the background selection", () => {
     const renderedBounds = {
       x: -960,
