@@ -444,9 +444,9 @@ The iOS 16 file picker has no MIME type for `.ogg` and reports such files as
 `application/octet-stream`. Decoding is not the only consumer of that type: the
 graphics service routes assets by MIME type, and an OGG sound stored with the
 generic type used to reach the image loader and fail in `createImageBitmap`.
-Audio uploads now store the format detected from the file bytes and reject
-anything that is not MP3, WAV, or OGG. A sound already stored with the generic
-type is repaired when it is tapped on the Sounds page. See
+Audio uploads now reject files that do not decode and store the format
+detected from the file bytes. A sound already stored with the generic type is
+repaired when it is tapped on the Sounds page. See
 [Audio Content Validation](upload-file-types.md#audio-content-validation).
 
 ### Scene Editor Keyboard And Navigation

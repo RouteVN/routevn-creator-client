@@ -372,22 +372,21 @@ export {
   handleCreateTagFormAction,
 };
 
-// Older uploads can store sounds as application/octet-stream. Fix the stored
-// type when the sound is tapped.
+// Older uploads can store sounds as application/octet-stream. The service
+// fixes the stored type when such a sound is tapped.
 const repairSoundFileType = async (deps, itemId) => {
-  const { appService, projectService, store } = deps;
-  const soundItem = store.selectSoundItemById({ itemId });
-  if (soundItem?.fileType !== "application/octet-stream") {
-    return;
-  }
-
+  const { appService, projectService } = deps;
+  let repaired;
   try {
-    await projectService.repairSoundFileType({ soundId: itemId });
+    repaired = await projectService.repairSoundFileType({ soundId: itemId });
   } catch {
     appService.showToast({ message: selectCopy(deps).failedUpdateSound });
     return;
   }
-  await handleDataChanged(deps);
+
+  if (repaired) {
+    await handleDataChanged(deps);
+  }
 };
 
 export const handleSoundItemClick = (deps, payload) => {
@@ -398,7 +397,7 @@ export const handleSoundItemClick = (deps, payload) => {
 export const handleFileExplorerSelectionChanged = (deps, payload) => {
   handleMediaFileExplorerSelectionChanged(deps, payload);
   const { itemId, isFolder } = payload._event.detail;
-  if (!isFolder) {
+  if (itemId && !isFolder) {
     void repairSoundFileType(deps, itemId);
   }
 };

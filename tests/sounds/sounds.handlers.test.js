@@ -14,20 +14,27 @@ import {
 
 describe("sounds handlers", () => {
   it.each([
-    ["application/octet-stream", 1],
-    ["audio/ogg", 0],
+    ["refreshes the page after", async () => true, 1, 0],
+    ["does not refresh the page after a skipped", async () => false, 0, 0],
+    [
+      "shows a toast after a failed",
+      async () => {
+        throw new Error("Failed to repair sound file type.");
+      },
+      0,
+      1,
+    ],
   ])(
-    "repairs a tapped sound stored as %s only when its type is generic",
-    async (fileType, repairCount) => {
+    "%s sound file type repair on tap",
+    async (_label, repairSoundFileType, refreshCount, toastCount) => {
       const deps = {
         i18n: EN_I18N,
         appService: { showToast: vi.fn() },
         projectService: {
           getState: () => ({ sounds: { tree: [], items: {} } }),
-          repairSoundFileType: vi.fn(async () => {}),
+          repairSoundFileType: vi.fn(repairSoundFileType),
         },
         store: {
-          selectSoundItemById: () => ({ id: "sound-1", fileType }),
           setSelectedItemId: vi.fn(),
           setTagsData: vi.fn(),
           setItems: vi.fn(),
@@ -39,21 +46,22 @@ describe("sounds handlers", () => {
       handleSoundItemClick(deps, {
         _event: { detail: { itemId: "sound-1" } },
       });
-      await vi.waitFor(() =>
-        expect(deps.projectService.repairSoundFileType).toHaveBeenCalledTimes(
-          repairCount,
-        ),
-      );
+      // Let the repair and the follow-up refresh settle.
+      await new Promise((resolve) => setTimeout(resolve, 0));
 
       expect(deps.store.setSelectedItemId).toHaveBeenCalledWith({
         itemId: "sound-1",
       });
-      if (repairCount > 0) {
-        expect(deps.projectService.repairSoundFileType).toHaveBeenCalledWith({
-          soundId: "sound-1",
+      expect(deps.projectService.repairSoundFileType).toHaveBeenCalledWith({
+        soundId: "sound-1",
+      });
+      expect(deps.store.setItems).toHaveBeenCalledTimes(refreshCount);
+      expect(deps.appService.showToast).toHaveBeenCalledTimes(toastCount);
+      if (toastCount > 0) {
+        expect(deps.appService.showToast).toHaveBeenCalledWith({
+          message: "Failed to update sound.",
         });
       }
-      expect(deps.appService.showToast).not.toHaveBeenCalled();
     },
   );
 

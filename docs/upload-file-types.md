@@ -99,9 +99,18 @@ Current shared type fallbacks are intentionally narrower than before:
 
 Picker-reported audio MIME types are not trusted. The iOS 16 file picker has
 no MIME type for `.ogg` and reports it as `application/octet-stream`, and a
-renamed file can carry any extension. Audio uploads therefore identify their
-format from the file bytes with `detectAudioMimeTypeFromBytes(...)` in
-`src/internal/fileTypes.js`:
+renamed file can carry any extension.
+
+An audio upload is accepted only if it decodes. `processFile(...)` decodes the
+file for its waveform before storing anything. If decoding fails, it throws an
+error with code `unsupported_audio_format`, and `uploadFiles(...)` rethrows it
+the same way as `image_texture_too_large`, so the failure is never silently
+filtered. The Sounds page shows its localized unsupported-format alert for this
+code, and the scene editor voice upload shows its invalid-format alert.
+
+An accepted file is stored with a MIME type taken from its bytes by
+`detectAudioMimeTypeFromBytes(...)` in `src/internal/fileTypes.js`, not the
+picker-reported type:
 
 | Format | Signature                                               | Stored MIME  |
 | ------ | ------------------------------------------------------- | ------------ |
@@ -109,26 +118,29 @@ format from the file bytes with `detectAudioMimeTypeFromBytes(...)` in
 | WAV    | `RIFF` with `WAVE` at byte 8                            | `audio/wav`  |
 | MP3    | `ID3` tag, or an MPEG audio frame sync with a layer set | `audio/mpeg` |
 
-AAC ADTS frames share the MPEG sync bits but use layer 0; they are not MP3 and
-are rejected.
+AAC ADTS frames share the MPEG sync bits but use layer 0, so they do not match
+the MP3 signature. When decodable bytes match no signature, such as an MP3 with
+leading padding, the type comes from the `.mp3`, `.wav`, or `.ogg` extension.
+Sound and voice resources derive `fileType` from the stored file record.
 
-- A file whose bytes match none of these signatures is rejected before any
-  bytes are stored. `processFile(...)` throws an error with code
-  `unsupported_audio_format`, and `uploadFiles(...)` rethrows it the same way
-  as `image_texture_too_large`, so the failure is never silently filtered.
-- The Sounds page shows its localized unsupported-format alert for this code.
-  The scene editor voice upload shows its invalid-format alert.
-- An accepted file is stored with the detected MIME type, not the
-  picker-reported type. Sound and voice resources derive `fileType` from that
-  file record.
-- Sounds uploaded before this check may have `application/octet-stream`
-  records, which the graphics service routes to the image loader. Tapping such
-  a sound on the Sounds page calls `projectService.repairSoundFileType(...)`.
-  File records are immutable, so it stores the same bytes with the detected
-  type and points the sound at the new file; the old file is left unreferenced,
-  as with a sound replacement. Untapped sounds stay broken in Preview until
-  then. Exported players already resolve generic bundle MIME types from file
-  bytes through `resolveBundleAssetMimeType(...)`.
+Sounds uploaded before this check may have `application/octet-stream` records,
+which the graphics service routes to the image loader. Tapping a sound on the
+Sounds page calls `projectService.repairSoundFileType(...)`:
+
+- It does nothing unless the sound's current file record is
+  `application/octet-stream` and its bytes match a signature.
+- File records are immutable, so it stores the same bytes with the detected
+  type and points the sound at the new file. The old file is left unreferenced,
+  as with a sound replacement.
+- It re-checks the sound's file just before `updateSound`, so a sound replaced
+  or deleted during the copy is not overwritten. A rejected update shows the
+  "Failed to update sound." toast.
+- Repairs run one at a time, and repeated taps on a sound being repaired are
+  ignored.
+
+Untapped sounds stay broken in Preview until then, and voices have no repair
+path. Exported players already resolve generic bundle MIME types from file
+bytes through `resolveBundleAssetMimeType(...)`.
 
 ### 5. Pending Upload Reconciliation
 

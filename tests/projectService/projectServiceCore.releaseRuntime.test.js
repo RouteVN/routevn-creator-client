@@ -48,6 +48,7 @@ const mocked = vi.hoisted(() => ({
       updateTextStyle: vi.fn(),
       updateLayoutElement: vi.fn(),
       updateFont: vi.fn(),
+      updateSound: vi.fn(),
       deleteSceneItem: vi.fn(),
     },
     addVersionToProject: vi.fn(),
@@ -153,6 +154,8 @@ describe("projectServiceCore releaseProjectRuntime", () => {
     mocked.collabService.commandApi.updateTextStyle.mockReset();
     mocked.collabService.commandApi.updateLayoutElement.mockReset();
     mocked.collabService.commandApi.updateFont.mockReset();
+    mocked.collabService.commandApi.updateSound.mockReset();
+    mocked.assetService.storeFile.mockReset();
     mocked.collabService.commandApi.deleteSceneItem.mockReset();
     mocked.assetService.getFileContent.mockReset();
     mocked.extractFontWeightCapabilities.mockReset();
@@ -1501,6 +1504,120 @@ describe("projectServiceCore releaseProjectRuntime", () => {
     ).toHaveBeenCalledWith({
       sceneIds: ["scene-1"],
       voiceIds: ["voice-scene-1"],
+    });
+  });
+
+  describe("repairSoundFileType", () => {
+    const oggBytes = new Uint8Array([0x4f, 0x67, 0x67, 0x53, 0, 2, 0, 0]);
+    let state;
+    let revoke;
+
+    beforeEach(() => {
+      state = {
+        sounds: { items: { "sound-1": { name: "Theme", fileId: "file-1" } } },
+        files: {
+          items: {
+            "file-1": { id: "file-1", mimeType: "application/octet-stream" },
+          },
+        },
+      };
+      revoke = vi.fn();
+      mocked.repositoryService.getCachedRepository.mockReturnValue({
+        getState: () => state,
+      });
+      mocked.assetService.getFileContent.mockResolvedValue({
+        url: "blob:sound-1",
+        revoke,
+      });
+      mocked.fetch.mockResolvedValue({
+        ok: true,
+        blob: async () => new Blob([oggBytes]),
+      });
+      mocked.assetService.storeFile.mockResolvedValue({
+        fileId: "file-2",
+        fileRecords: [{ id: "file-2", mimeType: "audio/ogg" }],
+      });
+      mocked.collabService.commandApi.updateSound.mockResolvedValue({
+        valid: true,
+      });
+    });
+
+    it("stores the sound bytes with the detected type and points the sound at them", async () => {
+      const service = createTestProjectService();
+
+      await expect(
+        service.repairSoundFileType({ soundId: "sound-1" }),
+      ).resolves.toBe(true);
+
+      const [{ file }] = mocked.assetService.storeFile.mock.calls[0];
+      expect(file.type).toBe("audio/ogg");
+      expect(new Uint8Array(await file.arrayBuffer())).toEqual(oggBytes);
+      expect(mocked.collabService.commandApi.updateSound).toHaveBeenCalledWith({
+        soundId: "sound-1",
+        data: { fileId: "file-2" },
+        fileRecords: [{ id: "file-2", mimeType: "audio/ogg" }],
+      });
+      expect(revoke).toHaveBeenCalledOnce();
+    });
+
+    it("skips sounds whose file record already has a specific type", async () => {
+      state.files.items["file-1"].mimeType = "audio/ogg";
+      const service = createTestProjectService();
+
+      await expect(
+        service.repairSoundFileType({ soundId: "sound-1" }),
+      ).resolves.toBe(false);
+      expect(mocked.assetService.getFileContent).not.toHaveBeenCalled();
+    });
+
+    it("does not overwrite a sound whose file changed while its bytes were copied", async () => {
+      mocked.assetService.storeFile.mockImplementation(async () => {
+        state.sounds.items["sound-1"].fileId = "file-3";
+        return { fileId: "file-2", fileRecords: [{ id: "file-2" }] };
+      });
+      const service = createTestProjectService();
+
+      await expect(
+        service.repairSoundFileType({ soundId: "sound-1" }),
+      ).resolves.toBe(false);
+      expect(
+        mocked.collabService.commandApi.updateSound,
+      ).not.toHaveBeenCalled();
+    });
+
+    it("rejects when the sound update is not accepted", async () => {
+      mocked.collabService.commandApi.updateSound.mockResolvedValue({
+        valid: false,
+        error: { message: "Sound not found." },
+      });
+      const service = createTestProjectService();
+
+      await expect(
+        service.repairSoundFileType({ soundId: "sound-1" }),
+      ).rejects.toThrow("Sound not found.");
+    });
+
+    it("revokes the file URL and rejects when the file cannot be read", async () => {
+      mocked.fetch.mockResolvedValue({ ok: false, status: 404 });
+      const service = createTestProjectService();
+
+      await expect(
+        service.repairSoundFileType({ soundId: "sound-1" }),
+      ).rejects.toThrow("HTTP 404");
+      expect(revoke).toHaveBeenCalledOnce();
+      expect(mocked.assetService.storeFile).not.toHaveBeenCalled();
+    });
+
+    it("ignores repeated requests while a sound is being repaired", async () => {
+      const service = createTestProjectService();
+
+      const results = await Promise.all([
+        service.repairSoundFileType({ soundId: "sound-1" }),
+        service.repairSoundFileType({ soundId: "sound-1" }),
+      ]);
+
+      expect(results).toEqual([true, false]);
+      expect(mocked.assetService.storeFile).toHaveBeenCalledOnce();
     });
   });
 });

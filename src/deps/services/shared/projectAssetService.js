@@ -48,6 +48,20 @@ const getFileRecordMimeType = ({ file, bytes } = {}) => {
   return file.type || "application/octet-stream";
 };
 
+const AUDIO_MIME_TYPE_BY_EXTENSION = {
+  mp3: "audio/mpeg",
+  ogg: "audio/ogg",
+  wav: "audio/wav",
+};
+
+const createUnsupportedAudioError = (cause) => {
+  const error = new Error("Only MP3, WAV, and OGG sounds are supported.", {
+    cause,
+  });
+  error.code = "unsupported_audio_format";
+  return error;
+};
+
 const getNow = () => {
   if (
     typeof performance !== "undefined" &&
@@ -377,27 +391,30 @@ export const createProjectAssetService = ({
 
     if (fileType === "audio") {
       const arrayBuffer = await file.arrayBuffer();
-      // Check the bytes, not the reported type: native pickers can report
-      // OGG as application/octet-stream, and renamed files must not get in.
-      const mimeType = detectAudioMimeTypeFromBytes(arrayBuffer);
-      if (!mimeType) {
-        const error = new Error("Only MP3, WAV, and OGG sounds are supported.");
-        error.code = "unsupported_audio_format";
-        throw error;
+      // Decode before storing so files that cannot play never get in.
+      let waveformData;
+      try {
+        waveformData = await extractWaveformDataFromArrayBuffer(arrayBuffer);
+      } catch (cause) {
+        throw createUnsupportedAudioError(cause);
       }
-      const audioFile =
-        file.type === mimeType
-          ? file
-          : new File([arrayBuffer], file.name, { type: mimeType });
+      // Native pickers can report OGG as application/octet-stream. Store the
+      // type from the file signature, or from the extension when decodable
+      // bytes have no known signature (such as an MP3 with leading padding).
+      const extension = file.name.split(".").pop().toLowerCase();
+      const mimeType =
+        detectAudioMimeTypeFromBytes(arrayBuffer) ??
+        AUDIO_MIME_TYPE_BY_EXTENSION[extension];
+      if (!mimeType) {
+        throw createUnsupportedAudioError();
+      }
 
-      const [waveformData, stored] = await Promise.all([
-        extractWaveformDataFromArrayBuffer(arrayBuffer),
-        storeFileWithRecord({
-          file: audioFile,
-          bytes: arrayBuffer,
-          timings: {},
-        }),
-      ]);
+      const stored = await storeFileWithRecord({
+        file:
+          file.type === mimeType ? file : file.slice(0, file.size, mimeType),
+        bytes: arrayBuffer,
+        timings: {},
+      });
 
       let waveformDataFileId = null;
       let waveformResult = null;

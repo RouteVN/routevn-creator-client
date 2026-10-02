@@ -156,19 +156,49 @@ describe("projectAssetService", () => {
     ]);
   });
 
-  it("rejects audio uploads whose bytes are not a supported format", async () => {
+  it("accepts decodable audio without a known signature by its extension", async () => {
     mocked.detectFileType.mockReturnValue("audio");
-    mocked.extractWaveformDataFromArrayBuffer.mockClear();
+    mocked.extractWaveformDataFromArrayBuffer.mockResolvedValue(undefined);
+    const storedFiles = [];
+    const service = createProjectAssetService({
+      fileAdapter: {
+        storeFile: async ({ file }) => {
+          storedFiles.push(file);
+          return { fileId: `file-${storedFiles.length}` };
+        },
+      },
+    });
+
+    const [result] = await service.uploadFiles([
+      new File([new Uint8Array([0, 0, 0, 0xff, 0xfb])], "Sound One.mp3", {
+        type: "application/octet-stream",
+      }),
+    ]);
+
+    expect(storedFiles[0].type).toBe("audio/mpeg");
+    expect(result.fileRecords).toEqual([
+      expect.objectContaining({ id: "file-1", mimeType: "audio/mpeg" }),
+    ]);
+  });
+
+  it("rejects audio uploads that cannot be decoded before storing them", async () => {
+    mocked.detectFileType.mockReturnValue("audio");
+    const decodeError = new Error("Failed to decode audio file");
+    mocked.extractWaveformDataFromArrayBuffer.mockRejectedValueOnce(
+      decodeError,
+    );
     const storeFile = vi.fn();
     const service = createProjectAssetService({ fileAdapter: { storeFile } });
 
     await expect(
       service.uploadFiles([
-        new File(["not audio"], "Sound One.mp3", { type: "audio/mpeg" }),
+        new File([oggBytes], "Sound One.ogg", { type: "audio/ogg" }),
       ]),
-    ).rejects.toMatchObject({ code: "unsupported_audio_format" });
+    ).rejects.toMatchObject({
+      code: "unsupported_audio_format",
+      cause: decodeError,
+    });
     expect(storeFile).not.toHaveBeenCalled();
-    expect(mocked.extractWaveformDataFromArrayBuffer).not.toHaveBeenCalled();
   });
 
   it("can skip thumbnail generation for image uploads through the shared upload path", async () => {
