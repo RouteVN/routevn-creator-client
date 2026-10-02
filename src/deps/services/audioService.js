@@ -132,7 +132,9 @@ export const createAudioService = ({
     } catch (error) {
       if (isCurrent()) {
         service.pause();
-        emit("error", error);
+        // A start refused for lack of a gesture is not a failure: the player
+        // stays paused, and its play button starts it.
+        if (error?.name !== "NotAllowedError") emit("error", error);
       }
       return false;
     }

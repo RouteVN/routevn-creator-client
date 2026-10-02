@@ -327,7 +327,7 @@ describe("iOS media output lifecycle", () => {
     }
   });
 
-  it("starts refused media playback on the next tap instead of reporting an error", async () => {
+  it("pauses a refused start without an error until the next play press", async () => {
     const h = createHarness();
     try {
       await h.service.loadAudio("blob:sound-one");
@@ -340,13 +340,56 @@ describe("iOS media output lifecycle", () => {
       h.service.on("error", onError);
       await h.service.play();
       expect(onError).not.toHaveBeenCalled();
-      expect(h.elements[0].paused).toBe(true);
-      h.documentTarget.dispatchEvent(new Event("pointerdown"));
-      await Promise.resolve();
+      expect(h.service.isPlaying()).toBe(false);
+      expect(h.sources).toHaveLength(0);
+      // A tap alone does not start the player; its play button does.
+      h.documentTarget.dispatchEvent(new Event("touchend"));
+      expect(h.elements[0].play).toHaveBeenCalledOnce();
+      await h.service.play();
+      expect(h.service.isPlaying()).toBe(true);
       expect(h.elements[0].paused).toBe(false);
     } finally {
       h.release();
     }
+  });
+
+  it("does not wait for a tap after an output closes", async () => {
+    const documentTarget = Object.assign(new EventTarget(), {
+      body: { append: vi.fn() },
+      createElement: () => element,
+    });
+    let refuse;
+    const element = {
+      paused: true,
+      play: vi.fn(
+        () =>
+          new Promise((_, reject) => {
+            refuse = () =>
+              reject(
+                Object.assign(new Error("Refused"), {
+                  name: "NotAllowedError",
+                }),
+              );
+          }),
+      ),
+      pause: vi.fn(),
+      remove: vi.fn(),
+    };
+    const output = createIOSAudioOutput(
+      {
+        createMediaStreamDestination: () => ({
+          stream: { getTracks: () => [] },
+          disconnect: vi.fn(),
+        }),
+      },
+      { documentTarget, retryOnActivation: true },
+    );
+    const pending = output.resume();
+    output.close();
+    refuse();
+    await pending;
+    documentTarget.dispatchEvent(new Event("touchend"));
+    expect(element.play).toHaveBeenCalledOnce();
   });
 
   it("silences output before background suspension and preserves the playback position", async () => {

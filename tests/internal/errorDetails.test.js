@@ -27,6 +27,21 @@ describe("describeError", () => {
     expect(describeError(new Error("   "))).toBe("Error");
   });
 
+  it("never throws on values that cannot be stringified", () => {
+    const circular = { code: "loop" };
+    circular.self = circular;
+    expect(describeError(circular)).toBe("[object Object]");
+    expect(describeError({ size: 1n })).toBe("[object Object]");
+    expect(describeError({ toJSON: () => undefined })).toBe("[object Object]");
+  });
+
+  it("stops at a missing or repeated cause", () => {
+    expect(describeError(new Error("Failed", { cause: null }))).toBe("Failed");
+    const error = new Error("Loops");
+    error.cause = error;
+    expect(describeError(error)).toBe("Loops");
+  });
+
   it("adds up to two causes", () => {
     const error = new Error("Could not start", {
       cause: new TypeError("Missing stream", {
@@ -43,12 +58,12 @@ describe("describeError", () => {
 describe("withErrorDetails", () => {
   it("appends the description under a label", () => {
     expect(
-      withErrorDetails("Preview stopped.", new Error("Boom"), "Details"),
-    ).toBe("Preview stopped.\n\nDetails:\nBoom");
+      withErrorDetails("Preview stopped.", new Error("Boom"), "詳細："),
+    ).toBe("Preview stopped.\n\n詳細：\nBoom");
   });
 
   it("leaves the message alone without an error", () => {
-    expect(withErrorDetails("Preview stopped.", undefined, "Details")).toBe(
+    expect(withErrorDetails("Preview stopped.", undefined, "Details:")).toBe(
       "Preview stopped.",
     );
   });

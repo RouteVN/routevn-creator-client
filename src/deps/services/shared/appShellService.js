@@ -228,6 +228,16 @@ export const createAppShellService = ({
       return globalUI.showAlert(options);
     },
 
+    // An alert for a failure raised in the background. Showing an alert closes
+    // any open global dialog, so the mobile UI client waits until none is
+    // open; the desktop and web UI have no queue and show it immediately.
+    showAlertWhenIdle(options) {
+      if (globalUI.runWhenIdle) {
+        return globalUI.runWhenIdle(() => globalUI.showAlert(options));
+      }
+      return globalUI.showAlert(options);
+    },
+
     showToast(options) {
       return globalUI.showToast(options);
     },

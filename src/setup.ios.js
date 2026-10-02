@@ -314,13 +314,13 @@ const graphicsService = await createGraphicsService({
   audioOutput: iosGraphicsAudioOutput,
   onAudioOutputError: (error) => {
     const copy = appService.getAppCopy();
-    appService.showAlert({
+    appService.showAlertWhenIdle({
       title: copy.errorTitle ?? "Error",
       message: withErrorDetails(
         copy.failedStartPreviewAudio ??
           "Could not start preview audio. Close and reopen the preview.",
         error,
-        copy.errorDetailsLabel ?? "Details",
+        copy.errorDetailsLabel ?? "Details:",
       ),
     });
   },

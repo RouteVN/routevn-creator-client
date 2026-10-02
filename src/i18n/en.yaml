@@ -213,7 +213,7 @@ projectPage:
   warningTitle: "Warning"
   wordsLabel: "Words"
 appPage:
-  errorDetailsLabel: "Details"
+  errorDetailsLabel: "Details:"
   filePickerSourceTitle: Choose source
   filePickerGallery: Gallery
   filePickerFiles: File picker
@@ -1942,7 +1942,7 @@ scenesPage:
   updateFolderDescription: "Update folder details"
   updateSceneDescription: "Update scene details"
 sceneEditorPage:
-  errorDetailsLabel: "Details"
+  errorDetailsLabel: "Details:"
   failedOpenScene: "Could not open the scene."
   failedOpenSceneComputedVariable: "Could not calculate computed variable “{name}”. Its formula may have divided by zero or produced the wrong type of value. Check the formula and the variables it uses in Variables."
   actionsLabel: "Actions"
@@ -2374,7 +2374,7 @@ commandLinePage:
   "true": "true"
 audioPlayerPage:
   seekLabel: "Seek audio"
-  errorDetailsLabel: "Details"
+  errorDetailsLabel: "Details:"
   errorTitle: "Error"
   failedPlayback: "Could not play this audio. Please try again."
   missingFileId: "Missing fileId"

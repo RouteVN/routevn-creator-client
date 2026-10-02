@@ -3608,7 +3608,7 @@ export const handlePreviewClick = (deps, payload) => {
             : (copy.failedSaveBeforePreview ??
                 "Failed to save scene changes before preview"),
           error,
-          copy.errorDetailsLabel ?? "Details",
+          copy.errorDetailsLabel ?? "Details:",
         ),
         title: copy.errorTitle ?? "Error",
       });

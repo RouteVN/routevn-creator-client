@@ -1,21 +1,31 @@
-// Gestures that let WebKit start a media element.
-const ACTIVATION_EVENTS = ["pointerdown", "touchend", "keydown"];
-
+// Gestures that let WebKit start a media element. On touch, pointerdown does
+// not count as a gesture; pointerup and touchend do.
+const ACTIVATION_EVENTS = ["pointerdown", "pointerup", "touchend", "keydown"];
 const ACTIVATION_LISTENER_OPTIONS = { capture: true };
 
-const isActivationRequired = (error) => error?.name === "NotAllowedError";
+// play() was refused because it did not run inside a user gesture.
+export const isMediaActivationRequired = (error) =>
+  error?.name === "NotAllowedError";
+
+// play() was interrupted by pause(); this is not a playback failure.
+const isPlaybackInterrupted = (error) => error?.name === "AbortError";
 
 // iOS 16 Web Audio uses ambient output even when the native shell requests
 // media playback. Route its signal through an audio element instead.
 //
 // WebKit can refuse to start that element outside a user gesture
-// (NotAllowedError), even when the web view allows autoplay; iPadOS 27 does.
-// After the element has started inside a gesture, later starts are allowed.
-// So the element starts on the first tap or key press, even before anything
-// needs to play, and a refused start waits for the next one.
+// (NotAllowedError), even when the web view allows audio without one;
+// iPadOS 27 does. A refused resume() rejects with that error. With
+// retryOnActivation, the element also starts on the next tap or key press
+// while playback is still wanted. Once it has started, WebKit lets the same
+// element start again without a gesture.
 export const createIOSAudioOutput = (
   context,
-  { documentTarget = globalThis.document, subscribeActivity } = {},
+  {
+    documentTarget = globalThis.document,
+    subscribeActivity,
+    retryOnActivation = false,
+  } = {},
 ) => {
   const destination = context.createMediaStreamDestination();
   const element = documentTarget.createElement("audio");
@@ -25,8 +35,11 @@ export const createIOSAudioOutput = (
   let wantsPlayback = false;
   let closed = false;
   let active = true;
+  let waitingForActivation = false;
 
   const stopWaitingForActivation = () => {
+    if (!waitingForActivation) return;
+    waitingForActivation = false;
     for (const eventName of ACTIVATION_EVENTS) {
       documentTarget.removeEventListener(
         eventName,
@@ -37,6 +50,8 @@ export const createIOSAudioOutput = (
   };
 
   const waitForActivation = () => {
+    if (waitingForActivation || closed) return;
+    waitingForActivation = true;
     for (const eventName of ACTIVATION_EVENTS) {
       documentTarget.addEventListener(
         eventName,
@@ -48,7 +63,11 @@ export const createIOSAudioOutput = (
 
   // Runs inside the gesture: play() must be called before any await.
   const handleActivation = () => {
-    if (closed) return;
+    if (closed || !wantsPlayback) {
+      stopWaitingForActivation();
+      return;
+    }
+    if (!active) return;
     element.play().then(
       () => {
         stopWaitingForActivation();
@@ -64,16 +83,15 @@ export const createIOSAudioOutput = (
       await element.play();
       stopWaitingForActivation();
     } catch (error) {
-      if (isActivationRequired(error)) {
+      if (!active || !wantsPlayback || closed) return;
+      if (isPlaybackInterrupted(error)) return;
+      if (isMediaActivationRequired(error) && retryOnActivation) {
         waitForActivation();
-        return;
       }
-      if (active && wantsPlayback && !closed) throw error;
+      throw error;
     }
     if (!active || !wantsPlayback || closed) element.pause();
   };
-
-  waitForActivation();
 
   const unsubscribeActivity = subscribeActivity?.(async (value) => {
     active = value;
@@ -90,8 +108,6 @@ export const createIOSAudioOutput = (
   return {
     destination,
 
-    // Resolves without playing when WebKit needs a gesture first; the next
-    // tap or key press starts playback.
     async resume() {
       if (closed) return;
       wantsPlayback = true;
@@ -100,13 +116,14 @@ export const createIOSAudioOutput = (
 
     pause() {
       wantsPlayback = false;
+      stopWaitingForActivation();
       element.pause();
     },
 
     close() {
       if (closed) return;
-      closed = true;
       stopWaitingForActivation();
+      closed = true;
       unsubscribeActivity?.();
       wantsPlayback = false;
       element.pause();

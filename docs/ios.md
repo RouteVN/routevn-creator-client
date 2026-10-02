@@ -399,19 +399,19 @@ The native WebView allows audio playback without a user gesture
 (`mediaTypesRequiringUserActionForPlayback = .video`). That was enough on
 iPadOS 26.4, but iPadOS 27 still rejects `play()` on the media-stream audio
 element with `NotAllowedError` outside a gesture. WebKit lets an element start
-on its own only after it has started inside a gesture, so
-`createIOSAudioOutput`:
+on its own once it has started inside a gesture, so:
 
-- starts its element inside the first tap or key press (`pointerdown`,
-  `touchend`, `keydown`), even before anything needs to play, then pauses it
-  again;
-- treats a refused start as waiting for the next tap, not as an error.
+- The scene editor and fullscreen preview share one media element across
+  previews. Closing a preview pauses it instead of replacing it; it is replaced
+  only after a failure other than `NotAllowedError`. A refused start keeps the
+  preview waiting, and the next tap or key press (`pointerdown`, `pointerup`,
+  `touchend`, `keydown`) starts it inside that gesture. Taps start nothing
+  while no preview wants audio, so other apps' audio is not interrupted.
+- The Sounds and action audio players pause a refused start without an error,
+  and their play button starts it.
 
-The scene editor and fullscreen preview share one media element for the app
-session: closing a preview pauses it instead of replacing it, so one tap covers
-every later preview. The Sounds player's element is replaced when its last
-player closes and unlocks again on the next tap. Other playback failures show an
-alert with the error details.
+Other playback failures show an alert with the error details. Alerts raised in
+the background wait until no global dialog is open.
 
 On iOS 16.3, direct Web Audio can be silent under the Ring/Silent switch even
 while playback advances. The iOS output adapter routes the gain node through a

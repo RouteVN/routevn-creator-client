@@ -80,12 +80,12 @@ export const handleBeforeMount = (deps) => {
     store.setLoading({ isLoading: false });
     store.setPlaying({ isPlaying: false });
     render();
-    appService.showAlert({
+    appService.showAlertWhenIdle({
       title: copy.errorTitle ?? "Error",
       message: withErrorDetails(
         copy.failedPlayback ?? "Could not play this audio. Please try again.",
         error,
-        copy.errorDetailsLabel ?? "Details",
+        copy.errorDetailsLabel ?? "Details:",
       ),
     });
   };

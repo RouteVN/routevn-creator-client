@@ -791,7 +791,7 @@ const getPreviewStoppedMessage = ({ i18n, projectService }, error) => {
     i18n?.vnPreview?.playbackFailed ??
       "Something went wrong while playing the preview.",
     error,
-    selectSceneEditorCopy(i18n).errorDetailsLabel ?? "Details",
+    selectSceneEditorCopy(i18n).errorDetailsLabel ?? "Details:",
   );
 };
 
@@ -832,7 +832,7 @@ export const handleAfterMount = async (deps) => {
           message: withErrorDetails(
             copy.failedOpenPreview ?? "Failed to open preview",
             error,
-            copy.errorDetailsLabel ?? "Details",
+            copy.errorDetailsLabel ?? "Details:",
           ),
         });
       }
