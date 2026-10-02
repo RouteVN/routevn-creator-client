@@ -107,6 +107,10 @@ was not automated. No Android device was connected for verification.
 For the preview music-fade regression, keep `bun run watch:web` running and run
 `node tests/sceneEditor/previewNavigation.browser.mjs`. Set
 `SCENE_EDITOR_TEST_ORIGIN` if the watch server is not on port 3001.
+`node tests/sceneEditor/audioEffectPreview.browser.mjs` needs no server: it
+bundles the scene editor runtime with the real engine and renderer, decodes
+generated audio in Chromium, and checks that fade-ins, crossfades, re-renders,
+and muted renders of BGM audio effects all render.
 
 Install the matching browser engines once (CI installs them with OS dependencies):
 
