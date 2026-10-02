@@ -289,7 +289,7 @@ export const handleWindowPointerCancel = (deps, payload) => {
 };
 
 export const handleSoundDoubleClick = (deps, payload) => {
-  const { store, render } = deps;
+  const { store, render, audioService } = deps;
   payload._event.stopPropagation();
   const soundId = selectSoundFromEvent(store, payload._event);
   const sound = store.selectVoiceSoundById({ soundId });
@@ -299,6 +299,9 @@ export const handleSoundDoubleClick = (deps, payload) => {
     return;
   }
 
+  // Start audio inside the tap. The player starts only after loading its
+  // file, and iOS can refuse a start outside a tap.
+  void audioService.unlock();
   store.openAudioPlayer({
     fileId: resource.fileId,
     fileName: resource.name,

@@ -1,30 +1,26 @@
+import { isMediaActivationRequired } from "../../../internal/errorDetails.js";
+
 // Gestures that let WebKit start a media element. On touch, pointerdown does
 // not count as a gesture; pointerup and touchend do.
 const ACTIVATION_EVENTS = ["pointerdown", "pointerup", "touchend", "keydown"];
 const ACTIVATION_LISTENER_OPTIONS = { capture: true };
 
-// play() was refused because it did not run inside a user gesture.
-export const isMediaActivationRequired = (error) =>
-  error?.name === "NotAllowedError";
-
-// play() was interrupted by pause(); this is not a playback failure.
-const isPlaybackInterrupted = (error) => error?.name === "AbortError";
-
 // iOS 16 Web Audio uses ambient output even when the native shell requests
 // media playback. Route its signal through an audio element instead.
 //
-// WebKit can refuse to start that element outside a user gesture
-// (NotAllowedError), even when the web view allows audio without one;
-// iPadOS 27 does. A refused resume() rejects with that error. With
-// retryOnActivation, the element also starts on the next tap or key press
-// while playback is still wanted. Once it has started, WebKit lets the same
-// element start again without a gesture.
+// resume() starts the audio context and the element. WebKit can refuse either
+// outside a user gesture (NotAllowedError), even when the web view allows
+// audio without one; iPadOS 27 does. A refused resume() rejects with that
+// error. With retryOnActivation, both start again on the next tap or key
+// press while playback is still wanted, and a failure there goes to onError.
+// Once the element has started, WebKit lets it start again without a gesture.
 export const createIOSAudioOutput = (
   context,
   {
     documentTarget = globalThis.document,
     subscribeActivity,
     retryOnActivation = false,
+    onError,
   } = {},
 ) => {
   const destination = context.createMediaStreamDestination();
@@ -32,10 +28,16 @@ export const createIOSAudioOutput = (
   element.hidden = true;
   element.srcObject = destination.stream;
   documentTarget.body.append(element);
+  // resume(), pause() and close() each start a new request. A start that
+  // settles after a newer request neither reports nor changes anything.
+  let request = 0;
   let wantsPlayback = false;
   let closed = false;
   let active = true;
   let waitingForActivation = false;
+  let startingFromActivation = false;
+
+  const canPlay = () => wantsPlayback && active && !closed;
 
   const stopWaitingForActivation = () => {
     if (!waitingForActivation) return;
@@ -61,36 +63,47 @@ export const createIOSAudioOutput = (
     }
   };
 
-  // Runs inside the gesture: play() must be called before any await.
-  const handleActivation = () => {
-    if (closed || !wantsPlayback) {
-      stopWaitingForActivation();
-      return;
-    }
-    if (!active) return;
-    element.play().then(
-      () => {
-        stopWaitingForActivation();
-        if (!active || !wantsPlayback || closed) element.pause();
-      },
-      () => {},
-    );
-  };
+  // Both calls run before the first await, so a gesture that calls this
+  // covers both.
+  const startContextAndMedia = () =>
+    Promise.all([
+      context.state === "suspended" ? context.resume() : undefined,
+      element.play(),
+    ]);
 
-  const playMedia = async () => {
-    if (!active || closed || !wantsPlayback) return;
+  const start = async (requestId, startPlayback) => {
     try {
-      await element.play();
-      stopWaitingForActivation();
+      await startPlayback();
     } catch (error) {
-      if (!active || !wantsPlayback || closed) return;
-      if (isPlaybackInterrupted(error)) return;
+      if (requestId !== request || !canPlay()) return;
       if (isMediaActivationRequired(error) && retryOnActivation) {
         waitForActivation();
+      } else {
+        stopWaitingForActivation();
       }
       throw error;
     }
-    if (!active || !wantsPlayback || closed) element.pause();
+    stopWaitingForActivation();
+    if (!canPlay()) element.pause();
+  };
+
+  // Runs inside the gesture: the start calls must come before any await.
+  const handleActivation = () => {
+    if (!wantsPlayback || closed) {
+      stopWaitingForActivation();
+      return;
+    }
+    // One tap sends several activation events; start once.
+    if (!active || startingFromActivation) return;
+    startingFromActivation = true;
+    start(request, startContextAndMedia)
+      .catch((error) => {
+        // A refusal keeps waiting for the next tap.
+        if (!isMediaActivationRequired(error)) onError?.(error);
+      })
+      .finally(() => {
+        startingFromActivation = false;
+      });
   };
 
   const unsubscribeActivity = subscribeActivity?.(async (value) => {
@@ -99,10 +112,12 @@ export const createIOSAudioOutput = (
       element.pause();
       return;
     }
-    if (!wantsPlayback || closed) return;
-    // Wait for the producer before restarting its media stream.
-    if (context.state === "suspended") await context.resume();
-    await playMedia();
+    if (!canPlay()) return;
+    await start(request, async () => {
+      // Wait for the producer before restarting its media stream.
+      if (context.state === "suspended") await context.resume();
+      await element.play();
+    });
   });
 
   return {
@@ -110,11 +125,15 @@ export const createIOSAudioOutput = (
 
     async resume() {
       if (closed) return;
+      request += 1;
       wantsPlayback = true;
-      await playMedia();
+      // A background resume starts when the app returns to the foreground.
+      if (!active) return;
+      await start(request, startContextAndMedia);
     },
 
     pause() {
+      request += 1;
       wantsPlayback = false;
       stopWaitingForActivation();
       element.pause();
@@ -122,6 +141,7 @@ export const createIOSAudioOutput = (
 
     close() {
       if (closed) return;
+      request += 1;
       stopWaitingForActivation();
       closed = true;
       unsubscribeActivity?.();

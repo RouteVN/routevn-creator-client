@@ -195,7 +195,14 @@ If you need deeper or broader Rettangoli framework reference material, use
   adapters should only launch the OS surfaces required by the selected action,
   such as the gallery or file picker.
 - Do not silently swallow errors with `console.error` only for user actions; show user-facing feedback via `appService.showToast(...)`.
-- Prefer stable, explicit toast messages over raw `error?.message` text.
+- Lead with a stable, localized message; never show raw `error?.message` text
+  as the whole message.
+- When an unexpected failure stops something the user started (preview
+  startup, playback, canvas rendering), show an alert instead of a toast and
+  append the technical details with `withErrorDetails(message, error, label)`
+  from `src/internal/errorDetails.js`, using the localized `errorDetailsLabel`.
+  For a failure raised in the background, use `appService.showAlertWhenIdle`
+  so the alert does not replace an open dialog.
 - If async picker/upload fails, toast and return early. Do not continue with partial state.
 
 ## Event/Data Access

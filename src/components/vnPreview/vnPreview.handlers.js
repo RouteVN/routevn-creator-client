@@ -820,12 +820,12 @@ export const handleAfterMount = async (deps) => {
     closePreview(deps, () => {
       if (isRoutingCycleError(error) || getComputedVariableErrorId(error)) {
         showPreviewStoppedAlert(deps, error);
-      } else if (error.name === "TimeoutError") {
+      } else if (error?.name === "TimeoutError") {
         appService.showAlert({
           title: i18n?.resourcePages?.warningTitle ?? "Warning",
           message: startup.timeoutMessage(error),
         });
-      } else if (!error.reported) {
+      } else if (!error?.reported) {
         const copy = selectSceneEditorCopy(i18n);
         appService.showAlert({
           title: copy.errorTitle ?? "Error",

@@ -1,3 +1,4 @@
+import { isMediaActivationRequired } from "../../internal/errorDetails.js";
 import { decodeAudioBuffer } from "../clients/audioDecoder.js";
 
 /**
@@ -123,18 +124,21 @@ export const createAudioService = ({
       output === audioOutput &&
       requestId === playbackRequestId;
     try {
-      // Start both requests in the user gesture, before yielding to a promise.
-      await Promise.all([
-        context.state === "suspended" ? context.resume() : undefined,
-        output?.resume(),
-      ]);
+      // Start within the user gesture, before yielding to a promise. An
+      // output resumes the context together with its media element.
+      if (output) await output.resume();
+      else if (context.state === "suspended") await context.resume();
       return isCurrent();
     } catch (error) {
       if (isCurrent()) {
         service.pause();
-        // A start refused for lack of a gesture is not a failure: the player
-        // stays paused, and its play button starts it.
-        if (error?.name !== "NotAllowedError") emit("error", error);
+        if (isMediaActivationRequired(error)) {
+          // Not a failure: the player shows that it is paused, and pressing
+          // its play button starts it within a tap.
+          console.warn("[audioService] Audio start needs a tap", error);
+        } else {
+          emit("error", error);
+        }
       }
       return false;
     }

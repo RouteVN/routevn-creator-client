@@ -294,6 +294,48 @@ describe("vnPreview.handlers", () => {
     }
   });
 
+  it("exits the preview when startup fails without an error value", async () => {
+    const { handleAfterMount } = await import(
+      "../../src/components/vnPreview/vnPreview.handlers.js"
+    );
+    const log = vi.spyOn(console, "error").mockImplementation(() => {});
+    const deps = {
+      projectService: { ensureRepository: vi.fn() },
+      refs: {
+        previewSurface: {
+          focus: vi.fn(() => {
+            throw undefined;
+          }),
+        },
+      },
+      appService: { showAlert: vi.fn(), showToast: vi.fn() },
+      store: {
+        setAssetLoading: vi.fn(),
+        setLoadingProgress: vi.fn(),
+        selectIsPreviewLoading: vi.fn(() => false),
+        setLoadingDetailsVisible: vi.fn(),
+        setPreviewReady: vi.fn(),
+      },
+      render: vi.fn(),
+      dispatchEvent: vi.fn(),
+      i18n: {
+        resourcePages: {},
+        scenesPage: {},
+        sceneEditorPage: { failedOpenPreview: "Failed to open preview" },
+      },
+    };
+    try {
+      await handleAfterMount(deps);
+      expect(deps.appService.showAlert).toHaveBeenCalledWith({
+        title: "Error",
+        message: "Failed to open preview",
+      });
+      expect(deps.dispatchEvent.mock.calls[0][0].type).toBe("close");
+    } finally {
+      log.mockRestore();
+    }
+  });
+
   describe("playback errors", () => {
     const loopError = Object.assign(
       new Error(

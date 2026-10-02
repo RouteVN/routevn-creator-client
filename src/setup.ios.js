@@ -39,6 +39,7 @@ registerPrimitives();
 const iosAudioRuntime = createMobileAudioRuntime();
 const iosGraphicsAudioOutput = createIOSGraphicsAudioOutput({
   runtime: iosAudioRuntime,
+  onError: (error) => alertPreviewAudioFailure(error),
 });
 configureAudioRuntime(iosGraphicsAudioOutput.graphicsRuntime);
 
@@ -309,21 +310,23 @@ const apiService = createApiService({
   baseUrl: readIOSEnv("ROUTEVN_API_ENDPOINT", "https://api.example.invalid"),
 });
 
+const alertPreviewAudioFailure = (error) => {
+  const copy = appService.getAppCopy();
+  appService.showAlertWhenIdle({
+    title: copy.errorTitle ?? "Error",
+    message: withErrorDetails(
+      copy.failedStartPreviewAudio ??
+        "Could not start preview audio. Close and reopen the preview.",
+      error,
+      copy.errorDetailsLabel ?? "Details:",
+    ),
+  });
+};
+
 const graphicsService = await createGraphicsService({
   subject,
   audioOutput: iosGraphicsAudioOutput,
-  onAudioOutputError: (error) => {
-    const copy = appService.getAppCopy();
-    appService.showAlertWhenIdle({
-      title: copy.errorTitle ?? "Error",
-      message: withErrorDetails(
-        copy.failedStartPreviewAudio ??
-          "Could not start preview audio. Close and reopen the preview.",
-        error,
-        copy.errorDetailsLabel ?? "Details:",
-      ),
-    });
-  },
+  onAudioOutputError: alertPreviewAudioFailure,
 });
 const dialogueQueueService = createPendingQueueService({ debounceMs: 2000 });
 

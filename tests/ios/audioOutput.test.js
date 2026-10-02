@@ -338,8 +338,10 @@ describe("iOS media output lifecycle", () => {
       );
       const onError = vi.fn();
       h.service.on("error", onError);
+      const warn = vi.spyOn(console, "warn").mockImplementation(() => {});
       await h.service.play();
       expect(onError).not.toHaveBeenCalled();
+      expect(warn).toHaveBeenCalledOnce();
       expect(h.service.isPlaying()).toBe(false);
       expect(h.sources).toHaveLength(0);
       // A tap alone does not start the player; its play button does.

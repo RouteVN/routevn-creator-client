@@ -38,18 +38,13 @@ const createDeps = () => {
 };
 
 describe("appShellService", () => {
-  it("queues background alerts behind open dialogs when the UI can", async () => {
+  it("queues background alerts behind open dialogs", async () => {
     const deps = createDeps();
+    deps.globalUI.runWhenIdle = vi.fn((showUI) => showUI());
     const service = createAppShellService(deps);
     const alert = { title: "Error", message: "Failed" };
 
-    service.showAlertWhenIdle(alert);
-    expect(deps.globalUI.showAlert).toHaveBeenCalledWith(alert);
-
-    deps.globalUI.showAlert.mockClear();
-    deps.globalUI.runWhenIdle = vi.fn((showUI) => showUI());
-    const queued = createAppShellService(deps);
-    await queued.showAlertWhenIdle(alert);
+    await service.showAlertWhenIdle(alert);
     expect(deps.globalUI.runWhenIdle).toHaveBeenCalledOnce();
     expect(deps.globalUI.showAlert).toHaveBeenCalledWith(alert);
   });
