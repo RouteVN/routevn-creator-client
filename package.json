@@ -48,7 +48,7 @@
     "nanoid": "5.1.11",
     "ogg-opus-decoder": "1.7.5",
     "route-engine-js": "1.46.5",
-    "route-graphics": "1.45.1",
+    "route-graphics": "1.46.0",
     "rxjs": "7.8.2",
     "snabbdom": "3.6.3",
     "snabbdom-to-html": "7.1.0",
