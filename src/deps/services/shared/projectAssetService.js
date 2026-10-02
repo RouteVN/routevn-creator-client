@@ -17,6 +17,7 @@ import {
 } from "../../clients/web/fileProcessors.js";
 import { processWithConcurrency } from "../../../internal/processWithConcurrency.js";
 import {
+  detectAudioMimeTypeFromBytes,
   getFileType as getFontFileType,
   normalizeFontFileType,
 } from "../../../internal/fileTypes.js";
@@ -45,6 +46,20 @@ const getFileRecordMimeType = ({ file, bytes } = {}) => {
   }
 
   return file.type || "application/octet-stream";
+};
+
+const AUDIO_MIME_TYPE_BY_EXTENSION = {
+  mp3: "audio/mpeg",
+  ogg: "audio/ogg",
+  wav: "audio/wav",
+};
+
+const createUnsupportedAudioError = (cause) => {
+  const error = new Error("Only MP3, WAV, and OGG sounds are supported.", {
+    cause,
+  });
+  error.code = "unsupported_audio_format";
+  return error;
 };
 
 const getNow = () => {
@@ -376,15 +391,30 @@ export const createProjectAssetService = ({
 
     if (fileType === "audio") {
       const arrayBuffer = await file.arrayBuffer();
+      // Decode before storing so files that cannot play never get in.
+      let waveformData;
+      try {
+        waveformData = await extractWaveformDataFromArrayBuffer(arrayBuffer);
+      } catch (cause) {
+        throw createUnsupportedAudioError(cause);
+      }
+      // Native pickers can report OGG as application/octet-stream. Store the
+      // type from the file signature, or from the extension when decodable
+      // bytes have no known signature (such as an MP3 with leading padding).
+      const extension = file.name.split(".").pop().toLowerCase();
+      const mimeType =
+        detectAudioMimeTypeFromBytes(arrayBuffer) ??
+        AUDIO_MIME_TYPE_BY_EXTENSION[extension];
+      if (!mimeType) {
+        throw createUnsupportedAudioError();
+      }
 
-      const [waveformData, stored] = await Promise.all([
-        extractWaveformDataFromArrayBuffer(arrayBuffer),
-        storeFileWithRecord({
-          file,
-          bytes: arrayBuffer,
-          timings: {},
-        }),
-      ]);
+      const stored = await storeFileWithRecord({
+        file:
+          file.type === mimeType ? file : file.slice(0, file.size, mimeType),
+        bytes: arrayBuffer,
+        timings: {},
+      });
 
       let waveformDataFileId = null;
       let waveformResult = null;
@@ -596,6 +626,7 @@ export const createProjectAssetService = ({
           } catch (error) {
             if (
               error.code === "image_texture_too_large" ||
+              error.code === "unsupported_audio_format" ||
               fileAdapter.continueOnUploadError === false
             ) {
               throw error;

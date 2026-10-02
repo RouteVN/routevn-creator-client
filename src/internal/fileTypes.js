@@ -79,6 +79,51 @@ const detectFontMimeTypeFromBytes = (result) => {
   return "";
 };
 
+const hasAsciiAt = (bytes, text, offset = 0) => {
+  if (bytes.length < offset + text.length) {
+    return false;
+  }
+
+  for (let index = 0; index < text.length; index += 1) {
+    if (bytes[offset + index] !== text.charCodeAt(index)) {
+      return false;
+    }
+  }
+
+  return true;
+};
+
+// Native pickers can report audio as application/octet-stream (iOS 16 has no
+// OGG MIME type), so identify supported audio containers by their signature.
+export const detectAudioMimeTypeFromBytes = (buffer) => {
+  const bytes = ArrayBuffer.isView(buffer)
+    ? new Uint8Array(buffer.buffer, buffer.byteOffset, buffer.byteLength)
+    : new Uint8Array(buffer ?? new ArrayBuffer(0));
+
+  if (hasAsciiAt(bytes, "OggS")) {
+    return "audio/ogg";
+  }
+
+  if (hasAsciiAt(bytes, "RIFF") && hasAsciiAt(bytes, "WAVE", 8)) {
+    return "audio/wav";
+  }
+
+  if (hasAsciiAt(bytes, "ID3")) {
+    return "audio/mpeg";
+  }
+
+  // MPEG audio frame sync with a layer set. AAC ADTS uses layer 0.
+  if (
+    bytes[0] === 0xff &&
+    (bytes[1] & 0xe0) === 0xe0 &&
+    (bytes[1] & 0x06) !== 0
+  ) {
+    return "audio/mpeg";
+  }
+
+  return undefined;
+};
+
 export const normalizeFontFileType = ({ fileType, fileName } = {}) => {
   const normalizedType = fileType?.trim().toLowerCase() ?? "";
   if (

@@ -95,6 +95,53 @@ Current shared type fallbacks are intentionally narrower than before:
 - audio: `.mp3`, `.wav`, `.ogg`
 - video: `.mp4`
 
+#### Audio Content Validation
+
+Picker-reported audio MIME types are not trusted. The iOS 16 file picker has
+no MIME type for `.ogg` and reports it as `application/octet-stream`, and a
+renamed file can carry any extension.
+
+An audio upload is accepted only if it decodes. `processFile(...)` decodes the
+file for its waveform before storing anything. If decoding fails, it throws an
+error with code `unsupported_audio_format`, and `uploadFiles(...)` rethrows it
+the same way as `image_texture_too_large`, so the failure is never silently
+filtered. The Sounds page shows its localized unsupported-format alert for this
+code, and the scene editor voice upload shows its invalid-format alert.
+
+An accepted file is stored with a MIME type taken from its bytes by
+`detectAudioMimeTypeFromBytes(...)` in `src/internal/fileTypes.js`, not the
+picker-reported type:
+
+| Format | Signature                                               | Stored MIME  |
+| ------ | ------------------------------------------------------- | ------------ |
+| OGG    | `OggS`                                                  | `audio/ogg`  |
+| WAV    | `RIFF` with `WAVE` at byte 8                            | `audio/wav`  |
+| MP3    | `ID3` tag, or an MPEG audio frame sync with a layer set | `audio/mpeg` |
+
+AAC ADTS frames share the MPEG sync bits but use layer 0, so they do not match
+the MP3 signature. When decodable bytes match no signature, such as an MP3 with
+leading padding, the type comes from the `.mp3`, `.wav`, or `.ogg` extension.
+Sound and voice resources derive `fileType` from the stored file record.
+
+Sounds uploaded before this check may have `application/octet-stream` records,
+which the graphics service routes to the image loader. Tapping a sound on the
+Sounds page calls `projectService.repairSoundFileType(...)`:
+
+- It does nothing unless the sound's current file record is
+  `application/octet-stream` and its bytes match a signature.
+- File records are immutable, so it stores the same bytes with the detected
+  type and points the sound at the new file. The old file is left unreferenced,
+  as with a sound replacement.
+- It re-checks the sound's file just before `updateSound`, so a sound replaced
+  or deleted during the copy is not overwritten. A rejected update shows the
+  "Failed to update sound." toast.
+- Repairs run one at a time, and repeated taps on a sound being repaired are
+  ignored.
+
+Untapped sounds stay broken in Preview until then, and voices have no repair
+path. Exported players already resolve generic bundle MIME types from file
+bytes through `resolveBundleAssetMimeType(...)`.
+
 ### 5. Pending Upload Reconciliation
 
 Media resource pages render temporary processing cards from local
@@ -124,7 +171,7 @@ same time.
 | Spritesheets page      | `.png` + `.json`                                   | explicit pair + format toast  | picker and drag-drop import one PNG sheet plus one atlas JSON  |
 | Character sprites page | `.jpg`, `.jpeg`, `.png`, `.webp`; `.png` + `.json` | explicit pair + format toast  | upload menu supports image or spritesheet; edit/replace images |
 | Videos page            | `.mp4`                                             | explicit invalid-format toast | picker, center drag-drop, edit/replace                         |
-| Sounds page            | `.mp3`, `.wav`, `.ogg`                             | explicit invalid-format toast | picker, center drag-drop, edit/replace                         |
+| Sounds page            | `.mp3`, `.wav`, `.ogg`                             | invalid-format alert + bytes  | picker, center drag-drop, edit/replace; see audio validation   |
 | Fonts page             | `.ttf`, `.otf`, `.woff2`                           | format + weight metadata      | picker, center drag-drop, edit/replace                         |
 
 For iOS Photo Library selections, the native picker preserves supported JPEG,
@@ -140,6 +187,7 @@ The returned files still pass the same page and upload-service validations.
 | Project icon upload (create dialog) | `image/*`                | `image-min-size` + square crop dialog | projects page create dialog                |
 | Project icon upload (settings)      | `image/*`                | `square`                              | project settings dialog                    |
 | Text styles add-font dialog         | `.ttf`, `.otf`, `.woff2` | format + weight metadata              | matches the Fonts page                     |
+| Scene editor voice upload           | `.mp3`, `.wav`, `.ogg`   | invalid-format alert + bytes          | see audio validation; matches Sounds page  |
 
 ### Import Packages
 
@@ -200,7 +248,8 @@ downloaded or stored.
 
 ### Shared Enforcement
 
-- extension accept / matching: `src/internal/fileTypes.js`
+- extension accept / matching and audio byte signatures:
+  `src/internal/fileTypes.js`
 - media center drag-drop: `src/components/mediaResourcesView/mediaResourcesView.handlers.js`
 - generic drag-drop: `src/components/dragDrop/dragDrop.handlers.js`
 - picker validation flow: `src/deps/services/shared/fileSelectionService.js`
@@ -267,8 +316,6 @@ When adding or changing an uploadable file type:
   of an explicit extension list.
   If stricter control is required, those surfaces should be narrowed and
   documented here in the same change.
-- Sounds currently show copy that mentions `OGG (Windows only)`, but the upload
-  surface itself does not enforce a platform-specific OGG restriction.
 
 ## Device Image Dimension Limits
 
