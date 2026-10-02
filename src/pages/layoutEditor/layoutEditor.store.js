@@ -50,6 +50,16 @@ const selectLayoutEditorCanvasMaxWidth = ({ state }) => {
   return formatHalfViewportCanvasMaxWidth(resolution, { heightUnit: "cqh" });
 };
 
+// Canvas zoom is relative to the canvas fitted to the workspace (1 = fit).
+// The renderer draws at the project resolution and the page scales it, so
+// higher levels look soft.
+const CANVAS_ZOOM_LEVELS = Object.freeze([0.5, 0.75, 1, 1.5, 2, 3, 4, 5]);
+
+// Only the right-panel layouts (desktop and tablet landscape) give the canvas
+// a scrolling workspace, so other layouts always show it fitted.
+const selectCanvasZoom = ({ state }) =>
+  selectShowRightPanel({ state }) ? state.canvasZoom : 1;
+
 const RIGHT_PANEL_MODES = new Set(["edit", "preview"]);
 
 const CREATE_TYPE_LABEL_KEYS = Object.freeze({
@@ -187,11 +197,39 @@ export const createInitialState = () => {
     appWindowMetrics: { width: 0, height: 0 },
     isMobileFileExplorerOpen: false,
     rightPanelMode: "preview",
+    canvasZoom: 1,
+    isCanvasPanMode: false,
     projectResolution: DEFAULT_PROJECT_RESOLUTION,
     selectedElementMetrics: undefined,
     lastPersistErrorAt: 0,
     pendingPersistPayload: undefined,
   };
+};
+
+export const zoomCanvasIn = ({ state }) => {
+  state.canvasZoom =
+    CANVAS_ZOOM_LEVELS.find((level) => level > state.canvasZoom) ??
+    state.canvasZoom;
+};
+
+export const zoomCanvasOut = ({ state }) => {
+  state.canvasZoom =
+    CANVAS_ZOOM_LEVELS.findLast((level) => level < state.canvasZoom) ??
+    state.canvasZoom;
+  if (state.canvasZoom <= 1) {
+    state.isCanvasPanMode = false;
+  }
+};
+
+export const resetCanvasZoom = ({ state }) => {
+  state.canvasZoom = 1;
+  state.isCanvasPanMode = false;
+};
+
+// Touch pans a zoomed canvas in pan mode: the renderer canvas blocks touch
+// scrolling, so a layer above it takes drags while edits are paused.
+export const toggleCanvasPanMode = ({ state }) => {
+  state.isCanvasPanMode = !state.isCanvasPanMode && state.canvasZoom > 1;
 };
 
 export const setItems = ({ state }, { layoutData } = {}) => {
@@ -656,6 +694,10 @@ export const selectViewData = ({ state, constants, i18n }) => {
   const previewHydrationData = state.isTouchMode
     ? state.previewData
     : state.initialPreviewData;
+  const canvasZoom = selectCanvasZoom({ state });
+  const canvasFitWidth = selectLayoutEditorCanvasMaxWidth({ state });
+  const showCanvasPanButton = state.isTouchMode && canvasZoom > 1;
+  const isCanvasPanMode = showCanvasPanButton && state.isCanvasPanMode;
 
   return {
     item,
@@ -677,10 +719,26 @@ export const selectViewData = ({ state, constants, i18n }) => {
     layoutState,
     // The canvas is sized in container height units on every layout.
     canvasWorkspaceStyle: "container-type: size;",
+    // A zoomed canvas scrolls inside the workspace. Auto margins center it
+    // and still let it scroll to every edge when it overflows.
     canvasBackgroundStyle: showRightPanel
-      ? "flex: 1 1 auto; min-height: 0; flex-direction: column; justify-content: center;"
+      ? "flex: 1 1 auto; min-height: 0; flex-direction: column; overflow: auto;"
       : "",
-    layoutEditorCanvasMaxWidth: selectLayoutEditorCanvasMaxWidth({ state }),
+    layoutEditorCanvasWidth:
+      canvasZoom === 1
+        ? canvasFitWidth
+        : `calc(${canvasFitWidth} * ${canvasZoom})`,
+    showCanvasZoomControls: showRightPanel,
+    canvasZoomLabel: `${Math.round(canvasZoom * 100)}%`,
+    canvasZoomInDisabled: canvasZoom >= CANVAS_ZOOM_LEVELS.at(-1),
+    canvasZoomOutDisabled: canvasZoom <= CANVAS_ZOOM_LEVELS[0],
+    canvasZoomInLabel: copy.canvasZoomInLabel ?? "Zoom in",
+    canvasZoomOutLabel: copy.canvasZoomOutLabel ?? "Zoom out",
+    canvasZoomFitLabel: copy.canvasZoomFitLabel ?? "Fit to view",
+    showCanvasPanButton,
+    isCanvasPanMode,
+    canvasPanButtonVariant: isCanvasPanMode ? "pr" : "ol",
+    canvasPanLabel: copy.canvasPanLabel ?? "Pan",
     previewData: state.previewData,
     initialPreviewData: state.initialPreviewData,
     previewHydrationData,

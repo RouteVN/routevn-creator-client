@@ -17,6 +17,10 @@ import {
   setUiConfig,
   setPendingPersistPayload,
   clearPendingPersistPayload,
+  resetCanvasZoom,
+  toggleCanvasPanMode,
+  zoomCanvasIn,
+  zoomCanvasOut,
 } from "../../src/pages/layoutEditor/layoutEditor.store.js";
 
 const TEST_CONSTANTS = {
@@ -800,16 +804,119 @@ describe("layoutEditor.store", () => {
     const select = () =>
       selectViewData({ state, constants: TEST_CONSTANTS, i18n: EN_I18N });
 
-    expect(select().layoutEditorCanvasMaxWidth).toBe("min(100%, 163.5556cqh)");
-    expect(select().canvasBackgroundStyle).toContain("justify-content: center");
+    expect(select().layoutEditorCanvasWidth).toBe("min(100%, 163.5556cqh)");
+    expect(select().canvasBackgroundStyle).toContain("overflow: auto");
     expect(select().canvasWorkspaceStyle).toBe("container-type: size;");
 
     setUiConfig({ state }, { uiConfig: { inputMode: "touch" } });
-    expect(select().layoutEditorCanvasMaxWidth).toBe("min(100%, 88.8889cqh)");
+    expect(select().layoutEditorCanvasWidth).toBe("min(100%, 88.8889cqh)");
     expect(select().canvasBackgroundStyle).toBe("");
 
     setAppWindowMetrics({ state }, { width: 1408, height: 880 });
-    expect(select().layoutEditorCanvasMaxWidth).toBe("min(100%, 163.5556cqh)");
+    expect(select().layoutEditorCanvasWidth).toBe("min(100%, 163.5556cqh)");
+  });
+
+  describe("canvas zoom", () => {
+    const select = (state) =>
+      selectViewData({ state, constants: TEST_CONSTANTS, i18n: EN_I18N });
+
+    it("steps through zoom levels relative to the fitted canvas", () => {
+      const state = createInitialState();
+      expect(select(state)).toMatchObject({
+        showCanvasZoomControls: true,
+        canvasZoomLabel: "100%",
+        layoutEditorCanvasWidth: "min(100%, 163.5556cqh)",
+        canvasZoomFitLabel: "Fit to view",
+      });
+
+      zoomCanvasIn({ state });
+      zoomCanvasIn({ state });
+      expect(select(state)).toMatchObject({
+        canvasZoomLabel: "200%",
+        layoutEditorCanvasWidth: "calc(min(100%, 163.5556cqh) * 2)",
+      });
+
+      zoomCanvasIn({ state });
+      expect(select(state).canvasZoomLabel).toBe("300%");
+      expect(select(state).canvasZoomInDisabled).toBe(false);
+
+      zoomCanvasIn({ state });
+      zoomCanvasIn({ state });
+      expect(select(state).canvasZoomLabel).toBe("500%");
+      expect(select(state).canvasZoomInDisabled).toBe(true);
+      zoomCanvasIn({ state });
+      expect(select(state).canvasZoomLabel).toBe("500%");
+
+      resetCanvasZoom({ state });
+      for (let step = 0; step < 4; step += 1) zoomCanvasOut({ state });
+      expect(select(state)).toMatchObject({
+        canvasZoomLabel: "50%",
+        canvasZoomOutDisabled: true,
+        canvasZoomInDisabled: false,
+      });
+    });
+
+    it("shows a fitted canvas without zoom controls when panels sit under it", () => {
+      const state = createInitialState();
+      zoomCanvasIn({ state });
+      setUiConfig({ state }, { uiConfig: { inputMode: "touch" } });
+
+      expect(select(state)).toMatchObject({
+        showCanvasZoomControls: false,
+        layoutEditorCanvasWidth: "min(100%, 88.8889cqh)",
+        showCanvasPanButton: false,
+      });
+
+      setAppWindowMetrics({ state }, { width: 1408, height: 880 });
+      expect(select(state).layoutEditorCanvasWidth).toBe(
+        "calc(min(100%, 163.5556cqh) * 1.5)",
+      );
+    });
+
+    it("offers pan mode on touch only while the canvas is zoomed in", () => {
+      const state = createInitialState();
+      setUiConfig({ state }, { uiConfig: { inputMode: "touch" } });
+      setAppWindowMetrics({ state }, { width: 1408, height: 880 });
+
+      toggleCanvasPanMode({ state });
+      expect(select(state)).toMatchObject({
+        showCanvasPanButton: false,
+        isCanvasPanMode: false,
+      });
+
+      zoomCanvasIn({ state });
+      toggleCanvasPanMode({ state });
+      expect(select(state)).toMatchObject({
+        showCanvasPanButton: true,
+        isCanvasPanMode: true,
+        canvasPanButtonVariant: "pr",
+      });
+
+      // Rotating to a stacked layout fits the canvas and pauses pan mode.
+      setAppWindowMetrics({ state }, { width: 820, height: 1180 });
+      expect(select(state).isCanvasPanMode).toBe(false);
+      setAppWindowMetrics({ state }, { width: 1408, height: 880 });
+      expect(select(state).isCanvasPanMode).toBe(true);
+
+      zoomCanvasOut({ state });
+      expect(select(state)).toMatchObject({
+        showCanvasPanButton: false,
+        isCanvasPanMode: false,
+      });
+      zoomCanvasIn({ state });
+      expect(select(state).isCanvasPanMode).toBe(false);
+    });
+
+    it("never offers pan mode on desktop, where scrolling pans", () => {
+      const state = createInitialState();
+      zoomCanvasIn({ state });
+      toggleCanvasPanMode({ state });
+
+      expect(select(state)).toMatchObject({
+        showCanvasPanButton: false,
+        isCanvasPanMode: false,
+      });
+    });
   });
 
   it("never shows the node explorer on desktop layouts", () => {

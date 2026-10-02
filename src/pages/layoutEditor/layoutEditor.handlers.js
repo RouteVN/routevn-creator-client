@@ -37,6 +37,7 @@ import { createLayoutElementsFileExplorerHandlers } from "../../internal/ui/file
 import { createLayoutEditorRepositoryStoreData } from "./support/layoutEditorRepositoryState.js";
 import { formatI18nCopy } from "../../internal/ui/i18nCopy.js";
 import { selectLayoutEditorPageCopy } from "./support/layoutEditorPageCopy.js";
+import { keepViewportCenter } from "./support/layoutEditorCanvasZoom.js";
 
 const mountSubscriptions = (deps) => {
   const streams = subscriptions(deps) || [];
@@ -895,6 +896,32 @@ export const handlePreviewButtonClick = (deps) => {
 
   store.closeMobileFileExplorer();
   store.setDetailPanelSelectedItemId({ itemId: undefined });
+  render();
+};
+
+const changeCanvasZoom = (deps, change) => {
+  const { store, refs, render } = deps;
+  keepViewportCenter(refs.layoutEditorCanvasBackground, () => {
+    change(store);
+    render();
+  });
+};
+
+export const handleCanvasZoomInClick = (deps) => {
+  changeCanvasZoom(deps, (store) => store.zoomCanvasIn());
+};
+
+export const handleCanvasZoomOutClick = (deps) => {
+  changeCanvasZoom(deps, (store) => store.zoomCanvasOut());
+};
+
+export const handleCanvasZoomResetClick = (deps) => {
+  changeCanvasZoom(deps, (store) => store.resetCanvasZoom());
+};
+
+export const handleCanvasPanButtonClick = (deps) => {
+  const { store, render } = deps;
+  store.toggleCanvasPanMode();
   render();
 };
 

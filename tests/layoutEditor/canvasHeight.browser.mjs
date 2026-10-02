@@ -44,7 +44,7 @@ try {
     );
     const store =
       name === "layoutEditor"
-        ? `{...layoutEditorStore,createInitialState:()=>({...layoutEditorStore.createInitialState(),isTouchMode:touch,appWindowMetrics:tablet?{width:1133,height:744}:{width:0,height:0},projectResolution:resolution,layout:{id:'layout-one',name:'Layout One'},isPreviewMounted:true})}`
+        ? `{...layoutEditorStore,createInitialState:()=>({...layoutEditorStore.createInitialState(),isTouchMode:touch,appWindowMetrics:tablet?{width:1133,height:744}:{width:0,height:0},projectResolution:resolution,canvasZoom:zoom,isCanvasPanMode:pan,layout:{id:'layout-one',name:'Layout One'},isPreviewMounted:true})}`
         : "layoutEditorCanvasStore";
     registrations.push(
       `customElements.define(${JSON.stringify(config.schema.componentName)},createComponent({...${JSON.stringify(config)},store:${store}},deps));`,
@@ -54,7 +54,7 @@ try {
   const bundle = join(directory, "fixture.js");
   await writeFile(
     entry,
-    `${imports.join("\n")}\nexport const register=(deps,touch,resolution,tablet)=>{${registrations.join("\n")}};`,
+    `${imports.join("\n")}\nexport const register=(deps,touch,resolution,tablet,zoom=1,pan=false)=>{${registrations.join("\n")}};`,
   );
   execFileSync("bun", [
     "build",
@@ -81,12 +81,154 @@ try {
 <script type="module">
 import {register} from '/fixture.js';
 const query=new URLSearchParams(location.search);
-register({__rtglI18nRuntime:{locale:'en',getMessages:()=>(${JSON.stringify(EN_I18N)})}},query.get('touch')==='true',JSON.parse(query.get('resolution')),query.get('tablet')==='true');
+register({__rtglI18nRuntime:{locale:'en',getMessages:()=>(${JSON.stringify(EN_I18N)})}},query.get('touch')==='true',JSON.parse(query.get('resolution')),query.get('tablet')==='true',Number(query.get('zoom')??1),query.get('pan')==='true');
 document.querySelector('#page').append(document.createElement('rvn-layout-editor'));
 </script>`;
+  const openEditor = async (
+    browser,
+    { touch, tablet, resolution, zoom = 1, pan = false },
+  ) => {
+    const page = await browser.newPage();
+    const errors = [];
+    page.on("pageerror", (error) => {
+      errors.push(error.message);
+      console.error(error.stack);
+    });
+    await page.route("http://fixture.test/**", (route) => {
+      const path = new URL(route.request().url()).pathname;
+      return route.fulfill({
+        contentType: path.endsWith(".js")
+          ? "text/javascript"
+          : path.endsWith(".css")
+            ? "text/css"
+            : "text/html",
+        body: assets.get(path) ?? html,
+      });
+    });
+    await page.setViewportSize({ width: 1133, height: 744 });
+    await page.goto(
+      `http://fixture.test/?touch=${touch}&tablet=${tablet}&zoom=${zoom}&pan=${pan}&resolution=${encodeURIComponent(JSON.stringify(resolution))}`,
+    );
+    const surface = page.locator(
+      'rvn-layout-editor-canvas rtgl-view[bgc="mu"]',
+    );
+    await surface.waitFor({ state: "visible", timeout: 5000 });
+    await page.evaluate(
+      () =>
+        new Promise((resolve) =>
+          requestAnimationFrame(() => requestAnimationFrame(resolve)),
+        ),
+    );
+    return { page, surface, errors };
+  };
+  // Geometry of the canvas inside its scrolling workspace, scrolled to the
+  // start and to the end.
+  const measureZoomedCanvas = (surface) =>
+    surface.evaluate((canvas) => {
+      const component = canvas.getRootNode().host;
+      const background = component.parentElement.parentElement;
+      const bounds = () => ({
+        canvas: canvas.getBoundingClientRect().toJSON(),
+        background: background.getBoundingClientRect().toJSON(),
+      });
+      background.scrollTo(0, 0);
+      const start = bounds();
+      background.scrollTo(background.scrollWidth, background.scrollHeight);
+      const end = bounds();
+      const panLayer = component.parentElement.querySelector("#canvasPanLayer");
+      return {
+        start,
+        end,
+        scrollable:
+          background.scrollWidth > background.clientWidth ||
+          background.scrollHeight > background.clientHeight,
+        panLayer: panLayer && {
+          bounds: panLayer.getBoundingClientRect().toJSON(),
+          touchAction: getComputedStyle(panLayer).touchAction,
+        },
+      };
+    });
+
   for (const [engineName, engine] of Object.entries({ chromium, webkit })) {
     const browser = await engine.launch({ headless: true });
     try {
+      for (const { name, touch, tablet } of [
+        { name: "desktop", touch: false, tablet: false },
+        { name: "tablet landscape", touch: true, tablet: true },
+      ]) {
+        const resolution = { width: 1920, height: 1080 };
+        const fitted = await openEditor(browser, { touch, tablet, resolution });
+        const fit = await measureZoomedCanvas(fitted.surface);
+        assert.equal(fit.scrollable, false, "A fitted canvas must not scroll");
+        await fitted.page.close();
+
+        const zoomed = await openEditor(browser, {
+          touch,
+          tablet,
+          resolution,
+          zoom: 2,
+          pan: touch,
+        });
+        const geometry = await measureZoomedCanvas(zoomed.surface);
+        const label = `${engineName} ${name} zoom 2`;
+        assert.ok(
+          Math.abs(geometry.start.canvas.width - fit.start.canvas.width * 2) <=
+            2,
+          `${label}: canvas must be twice the fitted width (${geometry.start.canvas.width} vs ${fit.start.canvas.width})`,
+        );
+        assert.ok(geometry.scrollable, `${label}: workspace must scroll`);
+        // Every edge must be reachable: auto margins, not justify-content,
+        // center the canvas, so its overflow stays scrollable.
+        assert.ok(
+          geometry.start.canvas.top >= geometry.start.background.top - 1 &&
+            geometry.start.canvas.left >= geometry.start.background.left - 1,
+          `${label}: top-left edge must be reachable (${JSON.stringify(geometry.start)})`,
+        );
+        assert.ok(
+          geometry.end.canvas.bottom <= geometry.end.background.bottom + 1 &&
+            geometry.end.canvas.right <= geometry.end.background.right + 1,
+          `${label}: bottom-right edge must be reachable (${JSON.stringify(geometry.end)})`,
+        );
+        if (touch) {
+          assert.ok(geometry.panLayer, `${label}: pan mode adds a pan layer`);
+          assert.equal(geometry.panLayer.touchAction, "pan-x pan-y");
+          assert.ok(
+            Math.abs(
+              geometry.panLayer.bounds.width - geometry.end.canvas.width,
+            ) <= 1 &&
+              Math.abs(
+                geometry.panLayer.bounds.height - geometry.end.canvas.height,
+              ) <= 1,
+            `${label}: the pan layer must cover the canvas`,
+          );
+        } else {
+          assert.equal(geometry.panLayer, null, "Desktop pans by scrolling");
+        }
+        assert.deepEqual(zoomed.errors, []);
+        await zoomed.page.close();
+
+        const small = await openEditor(browser, {
+          touch,
+          tablet,
+          resolution,
+          zoom: 0.5,
+        });
+        const half = await measureZoomedCanvas(small.surface);
+        const centerOffset = (axis, size) =>
+          Math.abs(
+            half.start.canvas[axis] +
+              half.start.canvas[size] / 2 -
+              (half.start.background[axis] + half.start.background[size] / 2),
+          );
+        assert.ok(
+          centerOffset("left", "width") <= 2 &&
+            centerOffset("top", "height") <= 2,
+          `${engineName} ${name} zoom 0.5: canvas must stay centered`,
+        );
+        await small.page.close();
+        console.log(engineName, name, "canvas zoom passed");
+      }
+
       for (const { name, touch, tablet } of [
         { name: "touch", touch: true, tablet: false },
         { name: "desktop", touch: false, tablet: false },
