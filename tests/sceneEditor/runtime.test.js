@@ -560,6 +560,53 @@ describe("renderSceneEditorState", () => {
     }
   });
 
+  it("reports a failed canvas render that no caller is waiting for", async () => {
+    const subject = new Subject();
+    const failure = new Error("Canvas render failed");
+    const appService = {
+      reportError: vi.fn(),
+      showToast: vi.fn(),
+    };
+    const consoleError = vi
+      .spyOn(console, "error")
+      .mockImplementation(() => {});
+    const unmount = mountSceneEditorSubscriptions({
+      subject,
+      appService,
+      i18n: {
+        resourcePages: { errorTitle: "Error title" },
+        scenesPage: {},
+        sceneEditorPage: { failedRenderCanvas: "Canvas message" },
+      },
+      store: {
+        selectIsScenePageLoading: () => {
+          throw failure;
+        },
+      },
+    });
+
+    try {
+      subject.next({
+        action: "sceneEditor.renderCanvas",
+        payload: { flush: true },
+      });
+
+      await vi.waitFor(() => {
+        expect(appService.showToast).toHaveBeenCalledWith({
+          title: "Error title",
+          message: "Canvas message",
+          status: "error",
+        });
+      });
+      expect(appService.reportError).toHaveBeenCalledWith(failure, {
+        operation: "sceneEditor.renderCanvas",
+      });
+    } finally {
+      unmount();
+      consoleError.mockRestore();
+    }
+  });
+
   it("skips inline canvas renders while full-screen preview is visible", async () => {
     const render = vi.fn();
     const store = {

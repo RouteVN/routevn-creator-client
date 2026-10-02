@@ -1963,6 +1963,7 @@ sceneEditorPage:
   failedLoadSceneAssets: "无法加载部分场景素材。"
   failedMoveSection: "无法移动段落。"
   failedOpenPreview: "无法打开预览。"
+  failedRenderCanvas: "无法更新画布。"
   failedSaveBeforePreview: "预览前无法保存场景更改。"
   failedSaveSceneChanges: "无法保存场景更改。"
   failedSaveDialogueAction: "无法保存对话动作。"

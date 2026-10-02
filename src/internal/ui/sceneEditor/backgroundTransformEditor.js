@@ -949,6 +949,7 @@ export const createBackgroundTransformEditorCanvasState = ({
       id: createTransformEditorRenderStateId(renderState, editorState),
       global: stripRenderStateGlobalInteractions(renderState.global),
       audio: [],
+      audioEffects: [],
       animations: [],
       elements: elementsWithOverlay,
     },

@@ -1963,6 +1963,7 @@ sceneEditorPage:
   failedLoadSceneAssets: "一部のシーン素材を読み込めませんでした。"
   failedMoveSection: "セクションを移動できませんでした。"
   failedOpenPreview: "プレビューを開けませんでした。"
+  failedRenderCanvas: "キャンバスを更新できませんでした。"
   failedSaveBeforePreview: "プレビュー前にシーン変更を保存できませんでした。"
   failedSaveSceneChanges: "シーン変更を保存できませんでした。"
   failedSaveDialogueAction: "会話アクションを保存できませんでした。"

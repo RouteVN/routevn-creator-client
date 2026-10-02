@@ -1963,6 +1963,7 @@ sceneEditorPage:
   failedLoadSceneAssets: "Failed to load some scene assets"
   failedMoveSection: "Failed to move section"
   failedOpenPreview: "Failed to open preview"
+  failedRenderCanvas: "Could not update the canvas."
   failedSaveBeforePreview: "Failed to save scene changes before preview"
   failedSaveSceneChanges: "Failed to save scene changes"
   failedSaveDialogueAction: "Failed to save dialogue action"
