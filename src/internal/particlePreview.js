@@ -80,7 +80,7 @@ export const createParticlePreviewState = (
     modules: structuredClone(particle.modules ?? {}),
   };
 
-  if (particle.seed !== undefined && particle.seed !== null) {
+  if (Number.isFinite(particle.seed)) {
     element.seed = particle.seed;
   }
 
