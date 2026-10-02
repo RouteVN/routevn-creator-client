@@ -642,6 +642,7 @@ export const createGraphicsService = async ({
   projectMediaOrigin,
   audioOutput,
   onAudioOutputError,
+  onRenderError,
 } = {}) => {
   let routeGraphics;
   let routeGraphicsInitPromise;
@@ -2155,7 +2156,14 @@ export const createGraphicsService = async ({
       return;
     }
 
-    routeGraphics.render(nextRenderState);
+    // render() is async. Left alone, a failed render is only an anonymous
+    // unhandled rejection, so hand it to the owner when there is one.
+    Promise.resolve(routeGraphics.render(nextRenderState)).catch((error) => {
+      if (!onRenderError) {
+        throw error;
+      }
+      onRenderError(error);
+    });
     void pruneDecodedAudioCache(retainedAudioKeys);
   };
 

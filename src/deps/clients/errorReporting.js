@@ -31,6 +31,64 @@ const safeFilename = (value) => {
     : undefined;
 };
 
+const MAX_MESSAGE_LENGTH = 200;
+const IDENTIFIER_IN_QUOTES = /^[A-Za-z_$][\w$.[\]]{0,59}$/;
+// Sentry describes a thrown non-Error with a serialization of its contents.
+const SERIALIZED_VALUE_MESSAGE = /^(?:Non-Error|Object captured|Event `)/;
+
+// Keep what explains a failure, such as what threw and on which API or property,
+// and drop what can identify a person or their work: secrets, emails, URLs,
+// file paths (reduced to a plain file name), quoted text and long numbers or
+// IDs. Avoids lookbehind, which iOS 16.0-16.3 WebViews cannot parse.
+export const sanitizeErrorMessage = (message) => {
+  if (typeof message !== "string" || SERIALIZED_VALUE_MESSAGE.test(message)) {
+    return undefined;
+  }
+
+  const sanitized = message
+    .slice(0, 1000)
+    .replace(/\b(?:bearer|basic)\s+\S+/gi, "<secret>")
+    .replace(
+      /\b(?:token|password|passwd|secret|api[_-]?key|authorization|cookie)\b\s*[=:]\s*\S+/gi,
+      "<secret>",
+    )
+    .replace(/[^\s@'"`()<>]+@[^\s@'"`()<>]+\.[^\s@'"`()<>]+/g, "<email>")
+    .replace(/\b[a-z][a-z0-9+.-]*:\/\/[^\s'"`)]+/gi, "<url>")
+    // A rooted path can contain spaces, such as a project folder name, and
+    // nothing says where an unquoted one ends, so it runs to the next quote.
+    .replace(
+      /(?:[A-Za-z]:\\|\/(?:Users|home|Volumes|private|var|tmp|mnt|opt|root)\/)[^'"`\n]*/g,
+      (path) => (/\s/.test(path) ? "<path>" : (safeFilename(path) ?? "<path>")),
+    )
+    .replace(
+      /[A-Za-z]:\\(?:[^\\\s'"`]+\\)*[^\\\s'"`]*/g,
+      (path) => safeFilename(path) ?? "<path>",
+    )
+    .replace(
+      /(^|[\s('"`])(\/(?:[^/\s'"`]+\/)+[^/\s'"`]*)/g,
+      (_, before, path) => `${before}${safeFilename(path) ?? "<path>"}`,
+    )
+    .replace(/"[^"]*"|`[^`]*`/g, '"…"')
+    .replace(/'([^']*)'/g, (quoted, inner) =>
+      IDENTIFIER_IN_QUOTES.test(inner) ? quoted : "'…'",
+    )
+    .replace(
+      /\b[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}\b/gi,
+      "<id>",
+    )
+    .replace(/\b[0-9a-f]{16,}\b/gi, "<id>")
+    .replace(/\d{6,}/g, "<n>")
+    .replace(/\s+/g, " ")
+    .trim();
+
+  if (!sanitized) {
+    return undefined;
+  }
+  return sanitized.length > MAX_MESSAGE_LENGTH
+    ? `${sanitized.slice(0, MAX_MESSAGE_LENGTH - 1)}…`
+    : sanitized;
+};
+
 const scrubStacktrace = (stacktrace) => {
   if (!Array.isArray(stacktrace?.frames)) {
     return undefined;
@@ -132,10 +190,10 @@ export const createErrorReporter = ({
   const scrubErrorEvent = (event) => {
     const values = event.exception?.values;
     const handled = values?.some((exception) => exception.mechanism?.handled);
-    const message = handled ? HANDLED_MESSAGE : UNHANDLED_MESSAGE;
+    const fallbackMessage = handled ? HANDLED_MESSAGE : UNHANDLED_MESSAGE;
     const exceptions = values?.map((exception) => ({
       type: safeIdentifier(exception.type) ?? "UnknownError",
-      value: message,
+      value: sanitizeErrorMessage(exception.value) ?? fallbackMessage,
       mechanism: scrubMechanism(exception.mechanism),
       stacktrace: scrubStacktrace(exception.stacktrace),
     }));
@@ -148,7 +206,7 @@ export const createErrorReporter = ({
       environment,
       dist,
       tags: scrubTags(event.tags),
-      message,
+      message: exceptions?.[0]?.value ?? fallbackMessage,
       exception: exceptions ? { values: exceptions } : undefined,
       debug_meta: scrubDebugMeta(event.debug_meta, exceptions),
     };

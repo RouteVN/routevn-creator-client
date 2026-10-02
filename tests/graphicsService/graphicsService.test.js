@@ -214,6 +214,58 @@ describe("graphicsService", () => {
     }
   });
 
+  it("hands a failed engine render to the owner instead of leaving an unhandled rejection", async () => {
+    const failure = new Error("Render failed");
+    const onRenderError = vi.fn();
+    createAssetBufferManagerMock.mockReturnValue({ clear: vi.fn() });
+    createRouteEngineMock.mockReturnValue({
+      init: vi.fn(),
+      selectRenderState: vi.fn(() => ({
+        id: "render-failure",
+        elements: [],
+        audio: [],
+        animations: [],
+      })),
+      selectPresentationState: vi.fn(() => undefined),
+      selectPresentationChanges: vi.fn(() => undefined),
+      selectSectionLineChanges: vi.fn(() => []),
+      handleActions: vi.fn(),
+    });
+    const { createGraphicsService } = await import(
+      "../../src/deps/services/graphicsService.js"
+    );
+    const service = await createGraphicsService({
+      subject: { dispatch: vi.fn() },
+      onRenderError,
+    });
+    try {
+      await service.init({
+        canvas: {
+          children: [],
+          appendChild: vi.fn(),
+          removeChild: vi.fn(),
+        },
+        width: 1920,
+        height: 1080,
+      });
+      service.initRouteEngine({
+        screen: { width: 1920, height: 1080 },
+        story: { scenes: {} },
+        resources: {},
+      });
+      routeGraphicsInstance.render.mockClear();
+      routeGraphicsInstance.render.mockRejectedValueOnce(failure);
+
+      service.engineRenderCurrentState();
+
+      await vi.waitFor(() => {
+        expect(onRenderError).toHaveBeenCalledWith(failure);
+      });
+    } finally {
+      await service.destroy();
+    }
+  });
+
   it("ignores stale queued asset loads after runtime destroy", async () => {
     let resolveLoad;
     const bufferManager = {

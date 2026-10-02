@@ -102,6 +102,10 @@ const apiService = createApiService();
 const graphicsService = await createGraphicsService({
   subject,
   projectMediaOrigin,
+  onRenderError: (error) => {
+    console.error(error);
+    errorReporter.capture(error, { operation: "graphics.render" });
+  },
 });
 
 // Create dialogue queue service for debounced writes

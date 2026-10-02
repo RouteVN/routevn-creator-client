@@ -142,8 +142,14 @@ handled flag, and bounded stack location (Rust frames also keep their
 instruction address, and the debug images those addresses fall in, which can
 include a system library and so identify the OS build) while discarding request
 metadata, headers, cookies, body/response dumps, tokens, emails, object
-snapshots, local variables, and arbitrary error message text. Rust keeps the SDK
-level, `fatal` for panics; the webview reports every event at level `error`.
+snapshots, and local variables. The webview keeps a sanitized error message
+(`sanitizeErrorMessage` in `src/deps/clients/errorReporting.js`): at most 200
+characters, with secrets, emails, URLs, file paths, quoted text that is not an
+identifier, UUIDs, long hex strings and long numbers replaced by placeholders;
+it falls back to a fixed message when nothing is left, and never sends the
+serialization of a thrown non-`Error` value. Rust still sends no message: it
+keeps the SDK level, `fatal` for panics; the webview reports every event at
+level `error`.
 Both SDKs keep zero breadcrumbs. The webview flush on quit and the Rust send
 after each panic wait at most about two seconds. There is no app-level retry or
 forwarding path; the SDK handles collector rate limits and transport errors.
@@ -198,9 +204,10 @@ already handled. It never shows UI. Handled errors are still shown through
 - Web builds use the same `release` and choose `dist` like desktop release
   builds: `ROUTEVN_BUILD_ID` when set, otherwise the 12-character Git revision.
   Without Git metadata, and on dev servers, it is `local`.
-- Explicit events keep only the error type, stack locations, and the stable
-  `runtime`, `operation`, and `code` identifiers. Use a fixed `operation` string;
-  never put user text, paths, or ids into it.
+- Explicit events keep the error type, stack locations, a sanitized message (see
+  Collection and privacy), and the stable `runtime`, `operation`, and `code`
+  identifiers. Use a fixed `operation` string; never put user text, paths, or
+  ids into it.
 - Non-`Error` values, such as the strings and plain objects Tauri `invoke`
   rejects with, are sent as a `NonErrorValue` event with no stack and a
   `valueKind` tag (`string`, `object`, or a class name). Their contents are
@@ -211,6 +218,6 @@ already handled. It never shows UI. Handled errors are still shown through
   be opened because its folder was moved, deleted, or is inaccessible (code
   `project_database_missing`, or SQLite code 14 in plugin-sql's message), and
   full browser storage (`QuotaExceededError`).
-- Current call sites: project-open route failures and `runResourcePageMutation`
-  thrown errors. Both skip expected environment failures; incompatible projects
+- Current call sites: project-open route failures, `runResourcePageMutation`
+  thrown errors, and engine render failures (`operation` `graphics.render`). Both skip expected environment failures; incompatible projects
   are not reported either.
