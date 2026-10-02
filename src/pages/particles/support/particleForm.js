@@ -5,7 +5,9 @@ import {
 } from "./particlePresets.js";
 import {
   MAX_PARTICLE_COUNT,
+  MAX_PARTICLE_RATE,
   isBuiltinParticleTextureName,
+  normalizeParticleModules,
 } from "../../../internal/particles.js";
 
 const createEmissionModeOptions = (copy = {}) => [
@@ -571,6 +573,7 @@ const createParticleFieldsByTab = ({ tagOptions = [], copy = {} } = {}) => {
           copy.emissionRateDescription ??
           "How many particles spawn each second in continuous mode.",
         min: 0,
+        max: MAX_PARTICLE_RATE,
         step: 1,
         required: false,
         $when: "emissionMode == 'continuous'",
@@ -1358,6 +1361,8 @@ export const buildParticlePayload = ({
       baseAlpha: resolvedBaseParticle.modules?.appearance?.alpha,
     });
   }
+
+  normalizeParticleModules(modules);
 
   const payload = {
     name: values?.name?.trim() ?? "",

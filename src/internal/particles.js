@@ -4,22 +4,79 @@ import { toFlatItems } from "./project/tree.js";
 // hangs the webview for over a minute, and above about 20,000 a burst drops
 // below 40 fps in WebKit. The shipped presets use 60 to 240.
 export const MAX_PARTICLE_COUNT = 20000;
+// A rate of 1,000,000,000 per second runs at 3 fps and 1e20 hangs the webview;
+// 1,000,000 still renders at full speed.
+export const MAX_PARTICLE_RATE = 100000;
 
-// Lowers an oversized Max Active or Burst count in place, including ones saved
-// before the form had a limit, without changing the stored particle.
-export const clampParticleEmissionCounts = (modules) => {
-  const emission = modules?.emission;
-  if (!emission || typeof emission !== "object") {
+const isPlainObject = (value) =>
+  value !== null && typeof value === "object" && !Array.isArray(value);
+
+// route-graphics rejects a range whose min is greater than its max.
+const swapReversedRanges = (value) => {
+  if (Array.isArray(value)) {
+    value.forEach(swapReversedRanges);
+    return;
+  }
+  if (!isPlainObject(value)) {
+    return;
+  }
+  if (
+    Number.isFinite(value.min) &&
+    Number.isFinite(value.max) &&
+    value.min > value.max
+  ) {
+    [value.min, value.max] = [value.max, value.min];
+  }
+  Object.values(value).forEach(swapReversedRanges);
+};
+
+// Repairs, in place, every value that route-graphics rejects or that hangs the
+// webview and that the model's shallow validation lets through: reversed
+// ranges, a negative max speed, an inner radius outside 0..radius, and
+// oversized counts or rates. It runs when the form saves and again when a
+// saved particle is rendered, so data saved earlier is repaired without being
+// rewritten. Callers pass a copy.
+export const normalizeParticleModules = (modules) => {
+  if (!isPlainObject(modules)) {
     return modules;
   }
-  for (const key of ["maxActive", "burstCount"]) {
+
+  const emission = modules.emission;
+  if (isPlainObject(emission)) {
+    for (const key of ["maxActive", "burstCount"]) {
+      if (
+        typeof emission[key] === "number" &&
+        emission[key] > MAX_PARTICLE_COUNT
+      ) {
+        emission[key] = MAX_PARTICLE_COUNT;
+      }
+    }
     if (
-      typeof emission[key] === "number" &&
-      emission[key] > MAX_PARTICLE_COUNT
+      typeof emission.rate === "number" &&
+      emission.rate > MAX_PARTICLE_RATE
     ) {
-      emission[key] = MAX_PARTICLE_COUNT;
+      emission.rate = MAX_PARTICLE_RATE;
+    }
+    const source = emission.source;
+    if (
+      source?.kind === "circle" &&
+      isPlainObject(source.data) &&
+      Number.isFinite(source.data.radius) &&
+      Number.isFinite(source.data.innerRadius)
+    ) {
+      source.data.innerRadius = Math.min(
+        Math.max(source.data.innerRadius, 0),
+        source.data.radius,
+      );
     }
   }
+
+  const movement = modules.movement;
+  if (isPlainObject(movement) && Number.isFinite(movement.maxSpeed)) {
+    movement.maxSpeed = Math.max(movement.maxSpeed, 0);
+  }
+
+  swapReversedRanges(modules);
   return modules;
 };
 
@@ -114,7 +171,7 @@ export const createRenderableParticleData = (
   imageItems = {},
 ) => {
   const nextParticle = structuredClone(particle ?? {});
-  clampParticleEmissionCounts(nextParticle.modules);
+  normalizeParticleModules(nextParticle.modules);
   const appearance = nextParticle?.modules?.appearance;
 
   if (!appearance || typeof appearance !== "object") {
