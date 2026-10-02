@@ -122,7 +122,7 @@ describe("iOS scene engine audio output", () => {
     expect(h.elements[0].paused).toBe(false);
   });
 
-  it("pauses the sink before disposing producers and recreates it for the next preview", async () => {
+  it("pauses the sink before stopping silence and reuses it for the next preview", async () => {
     const h = createHarness();
     await h.output.resume();
     h.calls.length = 0;
@@ -130,15 +130,16 @@ describe("iOS scene engine audio output", () => {
     expect(h.calls.indexOf("pause")).toBeLessThan(
       h.calls.indexOf("silence.stop"),
     );
-    expect(h.elements[0].srcObject).toBeNull();
-    expect(h.elements[0].remove).toHaveBeenCalledOnce();
-    expect(h.streams[0].stream.getTracks()[0].stop).toHaveBeenCalledOnce();
+    expect(h.elements[0].paused).toBe(true);
+    expect(h.elements[0].remove).not.toHaveBeenCalled();
+    expect(h.streams[0].stream.getTracks()[0].stop).not.toHaveBeenCalled();
     h.output.close();
     expect(h.sources[0].stop).toHaveBeenCalledOnce();
     await h.output.resume();
-    expect(h.elements).toHaveLength(2);
-    expect(h.output.graphicsRuntime.context.destination).toBe(h.streams[1]);
-    expect(h.elements[1].paused).toBe(false);
+    expect(h.elements).toHaveLength(1);
+    expect(h.output.graphicsRuntime.context.destination).toBe(h.streams[0]);
+    expect(h.sources[1].connect).toHaveBeenCalledWith(h.streams[0]);
+    expect(h.elements[0].paused).toBe(false);
   });
 
   it("pauses before background suspension and only resumes an open preview", async () => {
@@ -169,15 +170,42 @@ describe("iOS scene engine audio output", () => {
     expect(h.elements[0].paused).toBe(false);
   });
 
-  it("cleans up failed playback and allows retrying", async () => {
+  it("stops silence after failed playback and allows retrying", async () => {
     const h = createHarness();
     void h.output.graphicsRuntime.context.destination;
-    h.elements[0].play.mockRejectedValue(new Error("Playback denied"));
+    h.elements[0].play.mockRejectedValueOnce(new Error("Playback denied"));
     await expect(h.output.resume()).rejects.toThrow("Playback denied");
-    expect(h.elements[0].remove).toHaveBeenCalledOnce();
     expect(h.sources[0].stop).toHaveBeenCalledOnce();
     await h.output.resume();
-    expect(h.elements[1].paused).toBe(false);
+    expect(h.elements).toHaveLength(1);
+    expect(h.elements[0].paused).toBe(false);
+  });
+
+  it("waits for a tap when WebKit refuses to start without one", async () => {
+    const h = createHarness();
+    const refused = Object.assign(new Error("The request is not allowed"), {
+      name: "NotAllowedError",
+    });
+    h.elements[0].play.mockRejectedValueOnce(refused);
+    await expect(h.output.resume()).resolves.toBeUndefined();
+    expect(h.elements[0].paused).toBe(true);
+    h.documentTarget.dispatchEvent(new Event("pointerdown"));
+    await Promise.resolve();
+    expect(h.elements[0].paused).toBe(false);
+  });
+
+  it("starts the sink inside the first tap so later previews need none", async () => {
+    const h = createHarness();
+    h.documentTarget.dispatchEvent(new Event("touchend"));
+    expect(h.elements[0].play).toHaveBeenCalledOnce();
+    await Promise.resolve();
+    await Promise.resolve();
+    // Nothing needed audio yet, so the started sink is paused again.
+    expect(h.elements[0].paused).toBe(true);
+    h.documentTarget.dispatchEvent(new Event("pointerdown"));
+    expect(h.elements[0].play).toHaveBeenCalledOnce();
+    await h.output.resume();
+    expect(h.elements[0].paused).toBe(false);
   });
 
   it("cannot restart media after a pending play completes for a closed preview", async () => {

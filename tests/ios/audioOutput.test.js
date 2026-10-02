@@ -119,6 +119,7 @@ const createHarness = () => {
     elements,
     outputs,
     windowTarget,
+    documentTarget,
     setHidden,
   };
 };
@@ -321,6 +322,28 @@ describe("iOS media output lifecycle", () => {
       expect(h.sources).toHaveLength(0);
       expect(h.service.isPlaying()).toBe(false);
       expect(h.elements[0].paused).toBe(true);
+    } finally {
+      h.release();
+    }
+  });
+
+  it("starts refused media playback on the next tap instead of reporting an error", async () => {
+    const h = createHarness();
+    try {
+      await h.service.loadAudio("blob:sound-one");
+      h.elements[0].play.mockRejectedValueOnce(
+        Object.assign(new Error("The request is not allowed"), {
+          name: "NotAllowedError",
+        }),
+      );
+      const onError = vi.fn();
+      h.service.on("error", onError);
+      await h.service.play();
+      expect(onError).not.toHaveBeenCalled();
+      expect(h.elements[0].paused).toBe(true);
+      h.documentTarget.dispatchEvent(new Event("pointerdown"));
+      await Promise.resolve();
+      expect(h.elements[0].paused).toBe(false);
     } finally {
       h.release();
     }

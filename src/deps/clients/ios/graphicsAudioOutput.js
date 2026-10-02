@@ -7,15 +7,17 @@ export const createIOSGraphicsAudioOutput = ({
   documentTarget = globalThis.document,
 }) => {
   const context = runtime.graphicsRuntime.context;
-  let output;
+  // One media sink for the app session. WebKit lets it start on its own only
+  // after it has started inside a gesture, so a new sink per preview would
+  // need another tap; closing a preview pauses it instead.
+  const output = createIOSAudioOutput(context, {
+    documentTarget,
+    subscribeActivity: runtime.subscribeActivity,
+  });
   let silence;
 
   const ensureOutput = () => {
-    if (!output) {
-      output = createIOSAudioOutput(context, {
-        documentTarget,
-        subscribeActivity: runtime.subscribeActivity,
-      });
+    if (!silence) {
       // Keep producing zero-valued frames between sounds. An idle WebKit
       // media stream can otherwise repeat its last buffered audio samples.
       silence = context.createConstantSource();
@@ -27,9 +29,8 @@ export const createIOSGraphicsAudioOutput = ({
   };
 
   const close = () => {
-    // Pause and release the media sink before disconnecting its producers.
-    output?.close();
-    output = undefined;
+    // Pause the media sink before stopping its producers.
+    output.pause();
     silence?.stop();
     silence?.disconnect();
     silence = undefined;
@@ -50,12 +51,11 @@ export const createIOSGraphicsAudioOutput = ({
     },
 
     async resume() {
-      const currentOutput = ensureOutput();
+      ensureOutput();
       try {
         if (context.state === "suspended") await context.resume();
-        await currentOutput.resume();
+        await output.resume();
       } catch (error) {
-        if (currentOutput !== output) return;
         close();
         throw error;
       }
