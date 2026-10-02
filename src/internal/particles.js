@@ -1,5 +1,28 @@
 import { toFlatItems } from "./project/tree.js";
 
+// route-graphics sizes its particle pool from these counts: 1,000,000 or more
+// hangs the webview for over a minute, and above about 20,000 a burst drops
+// below 40 fps in WebKit. The shipped presets use 60 to 240.
+export const MAX_PARTICLE_COUNT = 20000;
+
+// Lowers an oversized Max Active or Burst count in place, including ones saved
+// before the form had a limit, without changing the stored particle.
+export const clampParticleEmissionCounts = (modules) => {
+  const emission = modules?.emission;
+  if (!emission || typeof emission !== "object") {
+    return modules;
+  }
+  for (const key of ["maxActive", "burstCount"]) {
+    if (
+      typeof emission[key] === "number" &&
+      emission[key] > MAX_PARTICLE_COUNT
+    ) {
+      emission[key] = MAX_PARTICLE_COUNT;
+    }
+  }
+  return modules;
+};
+
 const BUILTIN_PARTICLE_TEXTURE_NAMES = new Set([
   "circle",
   "snowflake",
@@ -91,6 +114,7 @@ export const createRenderableParticleData = (
   imageItems = {},
 ) => {
   const nextParticle = structuredClone(particle ?? {});
+  clampParticleEmissionCounts(nextParticle.modules);
   const appearance = nextParticle?.modules?.appearance;
 
   if (!appearance || typeof appearance !== "object") {

@@ -3,7 +3,10 @@ import {
   createParticlePresetOptions,
   createParticlePreset,
 } from "./particlePresets.js";
-import { isBuiltinParticleTextureName } from "../../../internal/particles.js";
+import {
+  MAX_PARTICLE_COUNT,
+  isBuiltinParticleTextureName,
+} from "../../../internal/particles.js";
 
 const createEmissionModeOptions = (copy = {}) => [
   {
@@ -580,6 +583,7 @@ const createParticleFieldsByTab = ({ tagOptions = [], copy = {} } = {}) => {
           copy.burstCountDescription ??
           "How many particles spawn each time a burst is emitted.",
         min: 1,
+        max: MAX_PARTICLE_COUNT,
         step: 1,
         required: true,
         $when: "emissionMode == 'burst'",
@@ -592,6 +596,7 @@ const createParticleFieldsByTab = ({ tagOptions = [], copy = {} } = {}) => {
           copy.maxActiveDescription ??
           "Limit how many particles can exist at the same time.",
         min: 1,
+        max: MAX_PARTICLE_COUNT,
         step: 1,
         required: false,
         $when: "emissionMode == 'continuous'",
@@ -1279,17 +1284,17 @@ export const buildParticlePayload = ({
   };
 
   if (modules.emission.mode === "burst") {
-    modules.emission.burstCount = Math.max(
-      1,
-      Math.round(toPositiveNumber(values?.burstCount, 1)),
+    modules.emission.burstCount = Math.min(
+      MAX_PARTICLE_COUNT,
+      Math.max(1, Math.round(toPositiveNumber(values?.burstCount, 1))),
     );
     delete modules.emission.rate;
     delete modules.emission.maxActive;
     delete modules.emission.duration;
   } else {
-    modules.emission.maxActive = Math.max(
-      1,
-      Math.round(toPositiveNumber(values?.maxActive, 60)),
+    modules.emission.maxActive = Math.min(
+      MAX_PARTICLE_COUNT,
+      Math.max(1, Math.round(toPositiveNumber(values?.maxActive, 60))),
     );
     modules.emission.duration =
       durationMode === "timed"

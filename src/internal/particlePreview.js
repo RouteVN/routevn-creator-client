@@ -1,3 +1,5 @@
+import { clampParticleEmissionCounts } from "./particles.js";
+
 const PREVIEW_BACKGROUND = "#000000";
 const FALLBACK_ASPECT_RATIO = "16 / 9";
 
@@ -77,7 +79,9 @@ export const createParticlePreviewState = (
     y: 0,
     width,
     height,
-    modules: structuredClone(particle.modules ?? {}),
+    modules: clampParticleEmissionCounts(
+      structuredClone(particle.modules ?? {}),
+    ),
   };
 
   if (Number.isFinite(particle.seed)) {
