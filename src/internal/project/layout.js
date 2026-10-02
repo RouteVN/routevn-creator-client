@@ -1432,7 +1432,9 @@ const applyParticleNode = ({ element, node, context }) => {
     modules: structuredClone(renderableParticle.modules ?? {}),
   };
 
-  if (renderableParticle.seed !== undefined) {
+  // A blank Seed field is saved as null, which route-graphics rejects with
+  // "seed must be a number" and which then fails every render of the scene.
+  if (Number.isFinite(renderableParticle.seed)) {
     nextElement.seed = renderableParticle.seed;
   }
 
