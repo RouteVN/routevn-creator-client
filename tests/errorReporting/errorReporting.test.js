@@ -151,7 +151,7 @@ describe("explicit error reporting", () => {
     });
 
     expect(event.tags).toEqual({ runtime: "web", operation: "project.open" });
-    expect(event.message).toBe("Captured app error");
+    expect(event.message).toBe("<email>");
     expect(event.exception.values[0].mechanism.handled).toBe(true);
     expect(JSON.stringify(event)).not.toContain("user@example.com");
     expect(JSON.stringify(event)).not.toContain("secret-token");
@@ -230,12 +230,13 @@ describe("explicit error reporting through the SDK", () => {
         valueKind: "CommandFailure",
       },
     ]);
-    for (const event of events) {
-      expect(event.message).toBe("Captured app error");
+    const kinds = ["string", "object", "CommandFailure"];
+    for (const [index, event] of events.entries()) {
+      expect(event.message).toBe(`Non-error ${kinds[index]}`);
       expect(event.exception.values).toEqual([
         {
           type: "NonErrorValue",
-          value: "Captured app error",
+          value: `Non-error ${kinds[index]}`,
           mechanism: { type: "routevn.capture", handled: true },
           stacktrace: undefined,
         },
@@ -288,7 +289,12 @@ describe("explicit error reporting through the SDK", () => {
 
       expect(events).toHaveLength(1);
       expect(events[0].exception.values[0].stacktrace.frames).toMatchObject([
-        { filename: "main.js", function: "openProject", lineno: 1, colno: 2048 },
+        {
+          filename: "main.js",
+          function: "openProject",
+          lineno: 1,
+          colno: 2048,
+        },
       ]);
       expect(events[0].debug_meta).toEqual({
         images: [

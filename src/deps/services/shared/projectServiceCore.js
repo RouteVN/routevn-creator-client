@@ -18,7 +18,10 @@ import {
   extractFontWeightCapabilities,
   isStrictFontMimeType,
 } from "../../../internal/fontCapabilities.js";
-import { normalizeFontFileType } from "../../../internal/fileTypes.js";
+import {
+  detectAudioMimeTypeFromBytes,
+  normalizeFontFileType,
+} from "../../../internal/fileTypes.js";
 
 // Exceptional shipped-data repair. Keep its marker, legacy predicates,
 // collaboration gate, and lifecycle aligned with
@@ -338,6 +341,77 @@ export const createProjectServiceCore = ({
     await applyFontWeightMetadataPatch(repository);
   };
 
+  const repairingSoundIds = new Set();
+  let soundRepairQueue = Promise.resolve();
+
+  // Older sound uploads can have an application/octet-stream file record.
+  // File records are immutable, so store the same bytes with the type detected
+  // from them and point the sound at the new file.
+  const runSoundFileTypeRepair = async (soundId) => {
+    const getSoundFileId = () =>
+      getRepositoryState().sounds.items[soundId]?.fileId;
+    const fileId = getSoundFileId();
+    const fileRecord = getRepositoryState().files.items[fileId];
+    if (fileRecord?.mimeType !== "application/octet-stream") {
+      return false;
+    }
+
+    const content = await assetService.getFileContent(fileId);
+    let blob;
+    try {
+      const response = await fetch(content.url);
+      if (!response.ok) {
+        throw new Error(`Failed to read sound file (HTTP ${response.status}).`);
+      }
+      blob = await response.blob();
+    } finally {
+      content.revoke?.();
+    }
+
+    const mimeType = detectAudioMimeTypeFromBytes(
+      await blob.slice(0, 12).arrayBuffer(),
+    );
+    if (!mimeType) {
+      return false;
+    }
+
+    const stored = await assetService.storeFile({
+      file: blob.slice(0, blob.size, mimeType),
+    });
+    // The sound may have been replaced or deleted while its bytes were copied.
+    if (getSoundFileId() !== fileId) {
+      return false;
+    }
+
+    const result = await collabService.commandApi.updateSound({
+      soundId,
+      data: { fileId: stored.fileId },
+      fileRecords: stored.fileRecords,
+    });
+    if (result?.valid === false) {
+      throw new Error(
+        result.error?.message || "Failed to repair sound file type.",
+      );
+    }
+
+    return true;
+  };
+
+  // Repairs run one at a time, and repeated taps on a sound being repaired
+  // are ignored, so selecting through many sounds does not copy them at once.
+  const repairSoundFileType = ({ soundId } = {}) => {
+    if (repairingSoundIds.has(soundId)) {
+      return Promise.resolve(false);
+    }
+
+    repairingSoundIds.add(soundId);
+    const repair = soundRepairQueue
+      .then(() => runSoundFileTypeRepair(soundId))
+      .finally(() => repairingSoundIds.delete(soundId));
+    soundRepairQueue = repair.catch(() => {});
+    return repair;
+  };
+
   const ensureContentPatches = async (repository) => {
     const projectId = getCurrentProjectId();
     const existingPatches = contentPatchesByProject.get(projectId);
@@ -643,6 +717,7 @@ export const createProjectServiceCore = ({
     deleteVersionFromProject: collabService.deleteVersionFromProject,
     deleteImageIfUnused,
     deleteSoundIfUnused: collabService.deleteSoundIfUnused,
+    repairSoundFileType,
     deleteVideoIfUnused: collabService.deleteVideoIfUnused,
     async initializeProject(payload) {
       await repositoryService.releaseRepositoryByProjectId(payload?.projectId);

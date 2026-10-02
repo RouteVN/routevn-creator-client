@@ -1,4 +1,4 @@
-import { isMobileSceneEditorSideBySide } from "../../internal/sceneEditorLayout.js";
+import { isTouchLandscape } from "../../internal/touchLayout.js";
 
 export const createInitialState = () => ({
   platform: "web",
@@ -341,7 +341,7 @@ export const selectViewData = ({ state, i18n }) => {
     state.isTouchMode &&
     (state.platform === "android" || state.platform === "ios") &&
     currentRoutePattern === "/project/scene-editor" &&
-    !isMobileSceneEditorSideBySide({
+    !isTouchLandscape({
       isTouchMode: state.isTouchMode,
       width: state.appWindowMetrics.width,
       height: state.appWindowMetrics.height,

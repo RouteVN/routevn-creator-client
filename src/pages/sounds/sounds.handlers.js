@@ -35,6 +35,14 @@ const showUnsupportedFormatToast = (appService, copy, message) => {
   });
 };
 
+const getSoundUploadErrorMessage = (error, copy) => {
+  if (error?.code === "unsupported_audio_format") {
+    return copy.unsupportedFormatMessage;
+  }
+
+  return getResourcePageErrorMessage(error, copy.unsupportedFormatMessage);
+};
+
 const validateSoundFiles = ({ appService, files, copy } = {}) => {
   const invalidFiles = Array.from(files ?? []).filter(
     (file) => !file.name.match(SOUND_FILE_PATTERN),
@@ -137,7 +145,7 @@ const createSoundsFromFiles = async ({ deps, files, parentId } = {}) => {
       showUnsupportedFormatToast(
         appService,
         copy,
-        getResourcePageErrorMessage(error, copy.unsupportedFormatMessage),
+        getSoundUploadErrorMessage(error, copy),
       );
     },
     onNoSuccessfulUploads: () => {
@@ -246,7 +254,7 @@ const {
   handleBeforeMount: handleMediaBeforeMount,
   handleAfterMount,
   refreshData: handleDataChanged,
-  handleFileExplorerSelectionChanged,
+  handleFileExplorerSelectionChanged: handleMediaFileExplorerSelectionChanged,
   handleFileExplorerAction,
   handleFileExplorerTargetChanged,
   handleFileExplorerKeyboardScopeClick,
@@ -254,7 +262,7 @@ const {
   handleResourceViewBackgroundClick,
   handleEditDialogClose,
   handleSearchInput,
-  handleItemClick: handleSoundItemClick,
+  handleItemClick: handleMediaItemClick,
   handleItemEdit: handleSoundItemEdit,
   handleMobileFileExplorerOpen,
   handleMobileFileExplorerClose,
@@ -341,7 +349,6 @@ export const handleBeforeMount = (deps) => {
 export {
   handleAfterMount,
   handleDataChanged,
-  handleFileExplorerSelectionChanged,
   handleFileExplorerAction,
   handleFileExplorerTargetChanged,
   handleFileExplorerKeyboardScopeClick,
@@ -349,7 +356,6 @@ export {
   handleResourceViewBackgroundClick,
   handleEditDialogClose,
   handleSearchInput,
-  handleSoundItemClick,
   handleSoundItemEdit,
   handleMobileFileExplorerOpen,
   handleMobileFileExplorerClose,
@@ -364,6 +370,36 @@ export {
   handleDetailTagOpenChange,
   handleDetailTagValueChange,
   handleCreateTagFormAction,
+};
+
+// Older uploads can store sounds as application/octet-stream. The service
+// fixes the stored type when such a sound is tapped.
+const repairSoundFileType = async (deps, itemId) => {
+  const { appService, projectService } = deps;
+  let repaired;
+  try {
+    repaired = await projectService.repairSoundFileType({ soundId: itemId });
+  } catch {
+    appService.showToast({ message: selectCopy(deps).failedUpdateSound });
+    return;
+  }
+
+  if (repaired) {
+    await handleDataChanged(deps);
+  }
+};
+
+export const handleSoundItemClick = (deps, payload) => {
+  handleMediaItemClick(deps, payload);
+  void repairSoundFileType(deps, payload._event.detail.itemId);
+};
+
+export const handleFileExplorerSelectionChanged = (deps, payload) => {
+  handleMediaFileExplorerSelectionChanged(deps, payload);
+  const { itemId, isFolder } = payload._event.detail;
+  if (itemId && !isFolder) {
+    void repairSoundFileType(deps, itemId);
+  }
 };
 
 export const handleFileExplorerFolderCollapseChange = (deps, payload) => {
@@ -592,7 +628,7 @@ export const handleEditDialogSoundClick = async (deps) => {
     showUnsupportedFormatToast(
       appService,
       copy,
-      getResourcePageErrorMessage(result.error, copy.unsupportedFormatMessage),
+      getSoundUploadErrorMessage(result.error, copy),
     );
     return;
   }

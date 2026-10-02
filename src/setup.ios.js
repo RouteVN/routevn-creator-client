@@ -200,6 +200,8 @@ const appService = createAppService({
   audioService,
   projectService,
   subject,
+  windowMetricsClient,
+  uiConfig,
   triggerTestCrash: (kind) => callIOSBridge("triggerTestCrash", { kind }),
 });
 await appService.initUserConfig();

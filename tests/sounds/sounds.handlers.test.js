@@ -8,10 +8,63 @@ import {
   handleMobileDeleteDialogConfirm,
   handleMobileDetailDeleteClick,
   handleMobileDetailPlayClick,
+  handleSoundItemClick,
   handleSoundItemPreview,
 } from "../../src/pages/sounds/sounds.handlers.js";
 
 describe("sounds handlers", () => {
+  it.each([
+    ["refreshes the page after", async () => true, 1, 0],
+    ["does not refresh the page after a skipped", async () => false, 0, 0],
+    [
+      "shows a toast after a failed",
+      async () => {
+        throw new Error("Failed to repair sound file type.");
+      },
+      0,
+      1,
+    ],
+  ])(
+    "%s sound file type repair on tap",
+    async (_label, repairSoundFileType, refreshCount, toastCount) => {
+      const deps = {
+        i18n: EN_I18N,
+        appService: { showToast: vi.fn() },
+        projectService: {
+          getState: () => ({ sounds: { tree: [], items: {} } }),
+          repairSoundFileType: vi.fn(repairSoundFileType),
+        },
+        store: {
+          setSelectedItemId: vi.fn(),
+          setTagsData: vi.fn(),
+          setItems: vi.fn(),
+        },
+        refs: { fileExplorer: { selectItem: vi.fn() } },
+        render: vi.fn(),
+      };
+
+      handleSoundItemClick(deps, {
+        _event: { detail: { itemId: "sound-1" } },
+      });
+      // Let the repair and the follow-up refresh settle.
+      await new Promise((resolve) => setTimeout(resolve, 0));
+
+      expect(deps.store.setSelectedItemId).toHaveBeenCalledWith({
+        itemId: "sound-1",
+      });
+      expect(deps.projectService.repairSoundFileType).toHaveBeenCalledWith({
+        soundId: "sound-1",
+      });
+      expect(deps.store.setItems).toHaveBeenCalledTimes(refreshCount);
+      expect(deps.appService.showToast).toHaveBeenCalledTimes(toastCount);
+      if (toastCount > 0) {
+        expect(deps.appService.showToast).toHaveBeenCalledWith({
+          message: "Failed to update sound.",
+        });
+      }
+    },
+  );
+
   it("hydrates sound file metadata from repository files on refresh", async () => {
     const repositoryState = {
       files: {

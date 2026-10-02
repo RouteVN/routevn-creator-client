@@ -118,7 +118,13 @@ await appService.initUserConfig();
 const apiService = createApiService();
 
 // Initialize async resources first
-const graphicsService = await createGraphicsService({ subject });
+const graphicsService = await createGraphicsService({
+  subject,
+  onRenderError: (error) => {
+    console.error(error);
+    errorReporter.capture(error, { operation: "graphics.render" });
+  },
+});
 
 // Create dialogue queue service for debounced writes
 const dialogueQueueService = createPendingQueueService({ debounceMs: 2000 });

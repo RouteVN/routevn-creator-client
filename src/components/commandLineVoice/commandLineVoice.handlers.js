@@ -54,9 +54,14 @@ const pickAndCreateVoice = async (deps) => {
       multiple: false,
       upload: true,
     });
-  } catch {
+  } catch (error) {
     showAlert(appService, {
-      message: localizeCommandLineText("Failed to upload voice.", copy),
+      message: localizeCommandLineText(
+        error?.code === "unsupported_audio_format"
+          ? "Invalid file format. Please upload an audio file (.mp3, .wav, or .ogg)."
+          : "Failed to upload voice.",
+        copy,
+      ),
       title: localizeCommandLineText("Error", copy),
     });
     return;
