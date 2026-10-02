@@ -18,7 +18,12 @@ try {
   const imports = [
     `import createComponent from ${JSON.stringify(resolve("node_modules/@rettangoli/fe/src/createComponent.js"))};`,
   ];
-  const registrations = [];
+  imports.push(
+    `import { ZoomViewportElement } from ${JSON.stringify(resolve("src/primitives/zoomViewport.js"))};`,
+  );
+  const registrations = [
+    `customElements.define("rvn-zoom-viewport", ZoomViewportElement);`,
+  ];
   for (const [folder, name] of [
     ["pages", "layoutEditor"],
     ["components", "layoutEditorCanvas"],
@@ -136,15 +141,16 @@ document.querySelector('#page').append(document.createElement('rvn-layout-editor
       background.scrollTo(background.scrollWidth, background.scrollHeight);
       const end = bounds();
       const panLayer = component.parentElement.querySelector("#canvasPanLayer");
+      const touchAction = getComputedStyle(background).touchAction;
       return {
         start,
         end,
         scrollable:
           background.scrollWidth > background.clientWidth ||
           background.scrollHeight > background.clientHeight,
+        touchAction,
         panLayer: panLayer && {
           bounds: panLayer.getBoundingClientRect().toJSON(),
-          touchAction: getComputedStyle(panLayer).touchAction,
         },
       };
     });
@@ -191,7 +197,6 @@ document.querySelector('#page').append(document.createElement('rvn-layout-editor
         );
         if (touch) {
           assert.ok(geometry.panLayer, `${label}: pan mode adds a pan layer`);
-          assert.equal(geometry.panLayer.touchAction, "pan-x pan-y");
           assert.ok(
             Math.abs(
               geometry.panLayer.bounds.width - geometry.end.canvas.width,
@@ -204,8 +209,153 @@ document.querySelector('#page').append(document.createElement('rvn-layout-editor
         } else {
           assert.equal(geometry.panLayer, null, "Desktop pans by scrolling");
         }
+        // The viewport handles touch itself: the renderer canvas blocks it.
+        assert.equal(geometry.touchAction, "none");
         assert.deepEqual(zoomed.errors, []);
         await zoomed.page.close();
+
+        // Pinch from 100 px to 200 px apart while the midpoint moves 40 px.
+        const pinched = await openEditor(browser, {
+          touch,
+          tablet,
+          resolution,
+        });
+        const pinch = await pinched.surface.evaluate((canvas) => {
+          const viewport =
+            canvas.getRootNode().host.parentElement.parentElement;
+          const reports = [];
+          viewport.addEventListener("zoom-change", (event) =>
+            reports.push(event.detail.zoom),
+          );
+          const fire = (type, pointerId, x, y) =>
+            canvas.dispatchEvent(
+              new PointerEvent(type, {
+                bubbles: true,
+                cancelable: true,
+                composed: true,
+                pointerId,
+                pointerType: "touch",
+                isPrimary: pointerId === 1,
+                clientX: x,
+                clientY: y,
+              }),
+            );
+          const before = canvas.getBoundingClientRect();
+          const start = {
+            x: before.left + before.width / 2,
+            y: before.top + before.height / 2,
+          };
+          const fraction = {
+            x: (start.x - before.left) / before.width,
+            y: (start.y - before.top) / before.height,
+          };
+          fire("pointerdown", 1, start.x - 50, start.y);
+          fire("pointerdown", 2, start.x + 50, start.y);
+          const end = { x: start.x + 40, y: start.y + 20 };
+          fire("pointermove", 1, end.x - 100, end.y);
+          fire("pointermove", 2, end.x + 100, end.y);
+          const after = canvas.getBoundingClientRect();
+          fire("pointerup", 2, end.x + 100, end.y);
+          fire("pointerup", 1, end.x - 100, end.y);
+          return {
+            ratio: after.width / before.width,
+            drift: {
+              x: after.left + fraction.x * after.width - end.x,
+              y: after.top + fraction.y * after.height - end.y,
+            },
+            reports,
+          };
+        });
+        const pinchLabel = `${engineName} ${name} pinch`;
+        assert.ok(
+          Math.abs(pinch.ratio - 2) < 0.02,
+          `${pinchLabel}: canvas must double (${pinch.ratio})`,
+        );
+        assert.ok(
+          Math.abs(pinch.drift.x) <= 1 && Math.abs(pinch.drift.y) <= 1,
+          `${pinchLabel}: the pinched point must stay under the fingers (${JSON.stringify(pinch.drift)})`,
+        );
+        assert.deepEqual(pinch.reports, [2]);
+
+        // A trackpad pinch zooms around the pointer.
+        const wheel = await pinched.surface.evaluate((canvas) => {
+          const viewport =
+            canvas.getRootNode().host.parentElement.parentElement;
+          const before = canvas.getBoundingClientRect();
+          const point = { x: before.left + 30, y: before.top + 30 };
+          const fraction = {
+            x: (point.x - before.left) / before.width,
+            y: (point.y - before.top) / before.height,
+          };
+          viewport.dispatchEvent(
+            new WheelEvent("wheel", {
+              bubbles: true,
+              cancelable: true,
+              ctrlKey: true,
+              deltaY: -Math.log(1.5) / 0.01,
+              clientX: point.x,
+              clientY: point.y,
+            }),
+          );
+          const after = canvas.getBoundingClientRect();
+          return {
+            ratio: after.width / before.width,
+            drift: {
+              x: after.left + fraction.x * after.width - point.x,
+              y: after.top + fraction.y * after.height - point.y,
+            },
+          };
+        });
+        assert.ok(
+          Math.abs(wheel.ratio - 1.5) < 0.02,
+          `${engineName} ${name} trackpad pinch: canvas must grow 1.5x (${wheel.ratio})`,
+        );
+        assert.ok(
+          Math.abs(wheel.drift.x) <= 1 && Math.abs(wheel.drift.y) <= 1,
+          `${engineName} ${name} trackpad pinch: the pointer must stay over the same point (${JSON.stringify(wheel.drift)})`,
+        );
+        assert.deepEqual(pinched.errors, []);
+        await pinched.page.close();
+
+        if (touch) {
+          // In pan mode one finger on the canvas pans.
+          const panning = await openEditor(browser, {
+            touch,
+            tablet,
+            resolution,
+            zoom: 2,
+            pan: true,
+          });
+          const pan = await panning.surface.evaluate((canvas) => {
+            const host = canvas.getRootNode().host;
+            const viewport = host.parentElement.parentElement;
+            const layer = host.parentElement.querySelector("#canvasPanLayer");
+            viewport.scrollTo(100, 50);
+            const fire = (type, x, y) =>
+              layer.dispatchEvent(
+                new PointerEvent(type, {
+                  bubbles: true,
+                  cancelable: true,
+                  composed: true,
+                  pointerId: 1,
+                  pointerType: "touch",
+                  isPrimary: true,
+                  clientX: x,
+                  clientY: y,
+                }),
+              );
+            fire("pointerdown", 400, 400);
+            fire("pointermove", 340, 420);
+            fire("pointerup", 340, 420);
+            return [viewport.scrollLeft, viewport.scrollTop];
+          });
+          assert.deepEqual(
+            pan,
+            [160, 30],
+            `${engineName} ${name}: pan mode must scroll with one finger`,
+          );
+          await panning.page.close();
+        }
 
         const small = await openEditor(browser, {
           touch,

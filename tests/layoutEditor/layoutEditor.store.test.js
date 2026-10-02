@@ -18,6 +18,7 @@ import {
   setPendingPersistPayload,
   clearPendingPersistPayload,
   resetCanvasZoom,
+  setCanvasZoom,
   toggleCanvasPanMode,
   zoomCanvasIn,
   zoomCanvasOut,
@@ -804,16 +805,22 @@ describe("layoutEditor.store", () => {
     const select = () =>
       selectViewData({ state, constants: TEST_CONSTANTS, i18n: EN_I18N });
 
-    expect(select().layoutEditorCanvasWidth).toBe("min(100%, 163.5556cqh)");
+    expect(select().layoutEditorCanvasWidth).toBe(
+      "calc(min(100%, 163.5556cqh) * var(--canvas-zoom, 1))",
+    );
     expect(select().canvasBackgroundStyle).toContain("overflow: auto");
     expect(select().canvasWorkspaceStyle).toBe("container-type: size;");
 
     setUiConfig({ state }, { uiConfig: { inputMode: "touch" } });
-    expect(select().layoutEditorCanvasWidth).toBe("min(100%, 88.8889cqh)");
+    expect(select().layoutEditorCanvasWidth).toBe(
+      "calc(min(100%, 88.8889cqh) * var(--canvas-zoom, 1))",
+    );
     expect(select().canvasBackgroundStyle).toBe("");
 
     setAppWindowMetrics({ state }, { width: 1408, height: 880 });
-    expect(select().layoutEditorCanvasWidth).toBe("min(100%, 163.5556cqh)");
+    expect(select().layoutEditorCanvasWidth).toBe(
+      "calc(min(100%, 163.5556cqh) * var(--canvas-zoom, 1))",
+    );
   });
 
   describe("canvas zoom", () => {
@@ -824,28 +831,27 @@ describe("layoutEditor.store", () => {
       const state = createInitialState();
       expect(select(state)).toMatchObject({
         showCanvasZoomControls: true,
+        canvasZoom: 1,
         canvasZoomLabel: "100%",
-        layoutEditorCanvasWidth: "min(100%, 163.5556cqh)",
         canvasZoomFitLabel: "Fit to view",
       });
 
       zoomCanvasIn({ state });
       zoomCanvasIn({ state });
       expect(select(state)).toMatchObject({
+        canvasZoom: 2,
         canvasZoomLabel: "200%",
-        layoutEditorCanvasWidth: "calc(min(100%, 163.5556cqh) * 2)",
       });
 
       zoomCanvasIn({ state });
       expect(select(state).canvasZoomLabel).toBe("300%");
       expect(select(state).canvasZoomInDisabled).toBe(false);
 
-      zoomCanvasIn({ state });
-      zoomCanvasIn({ state });
-      expect(select(state).canvasZoomLabel).toBe("500%");
+      for (let step = 0; step < 5; step += 1) zoomCanvasIn({ state });
+      expect(select(state).canvasZoomLabel).toBe("1000%");
       expect(select(state).canvasZoomInDisabled).toBe(true);
       zoomCanvasIn({ state });
-      expect(select(state).canvasZoomLabel).toBe("500%");
+      expect(select(state).canvasZoomLabel).toBe("1000%");
 
       resetCanvasZoom({ state });
       for (let step = 0; step < 4; step += 1) zoomCanvasOut({ state });
@@ -863,14 +869,45 @@ describe("layoutEditor.store", () => {
 
       expect(select(state)).toMatchObject({
         showCanvasZoomControls: false,
-        layoutEditorCanvasWidth: "min(100%, 88.8889cqh)",
+        canvasZoom: 1,
         showCanvasPanButton: false,
       });
 
       setAppWindowMetrics({ state }, { width: 1408, height: 880 });
-      expect(select(state).layoutEditorCanvasWidth).toBe(
-        "calc(min(100%, 163.5556cqh) * 1.5)",
-      );
+      expect(select(state).canvasZoom).toBe(1.5);
+    });
+
+    it("keeps a gesture zoom in range and steps from it with the buttons", () => {
+      const state = createInitialState();
+
+      setCanvasZoom({ state }, { zoom: 1.37 });
+      expect(select(state)).toMatchObject({
+        canvasZoom: 1.37,
+        canvasZoomLabel: "137%",
+      });
+      zoomCanvasIn({ state });
+      expect(select(state).canvasZoom).toBe(1.5);
+      setCanvasZoom({ state }, { zoom: 1.37 });
+      zoomCanvasOut({ state });
+      expect(select(state).canvasZoom).toBe(1);
+
+      setCanvasZoom({ state }, { zoom: 12 });
+      expect(select(state).canvasZoom).toBe(10);
+      setCanvasZoom({ state }, { zoom: 0.1 });
+      expect(select(state).canvasZoom).toBe(0.5);
+    });
+
+    it("leaves pan mode when a gesture zooms back to fit", () => {
+      const state = createInitialState();
+      setUiConfig({ state }, { uiConfig: { inputMode: "touch" } });
+      setAppWindowMetrics({ state }, { width: 1408, height: 880 });
+      setCanvasZoom({ state }, { zoom: 2 });
+      toggleCanvasPanMode({ state });
+      expect(select(state).isCanvasPanMode).toBe(true);
+
+      setCanvasZoom({ state }, { zoom: 0.9 });
+      setCanvasZoom({ state }, { zoom: 2 });
+      expect(select(state).isCanvasPanMode).toBe(false);
     });
 
     it("offers pan mode on touch only while the canvas is zoomed in", () => {

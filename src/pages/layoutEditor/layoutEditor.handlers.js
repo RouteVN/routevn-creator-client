@@ -37,7 +37,6 @@ import { createLayoutElementsFileExplorerHandlers } from "../../internal/ui/file
 import { createLayoutEditorRepositoryStoreData } from "./support/layoutEditorRepositoryState.js";
 import { formatI18nCopy } from "../../internal/ui/i18nCopy.js";
 import { selectLayoutEditorPageCopy } from "./support/layoutEditorPageCopy.js";
-import { keepViewportCenter } from "./support/layoutEditorCanvasZoom.js";
 
 const mountSubscriptions = (deps) => {
   const streams = subscriptions(deps) || [];
@@ -899,24 +898,30 @@ export const handlePreviewButtonClick = (deps) => {
   render();
 };
 
-const changeCanvasZoom = (deps, change) => {
-  const { store, refs, render } = deps;
-  keepViewportCenter(refs.layoutEditorCanvasBackground, () => {
-    change(store);
-    render();
-  });
-};
-
+// rvn-zoom-viewport keeps the point in view centered when the zoom changes.
 export const handleCanvasZoomInClick = (deps) => {
-  changeCanvasZoom(deps, (store) => store.zoomCanvasIn());
+  const { store, render } = deps;
+  store.zoomCanvasIn();
+  render();
 };
 
 export const handleCanvasZoomOutClick = (deps) => {
-  changeCanvasZoom(deps, (store) => store.zoomCanvasOut());
+  const { store, render } = deps;
+  store.zoomCanvasOut();
+  render();
 };
 
 export const handleCanvasZoomResetClick = (deps) => {
-  changeCanvasZoom(deps, (store) => store.resetCanvasZoom());
+  const { store, render } = deps;
+  store.resetCanvasZoom();
+  render();
+};
+
+export const handleCanvasZoomGesture = (deps, payload) => {
+  const { store, render } = deps;
+  const { zoom } = payload._event.detail;
+  store.setCanvasZoom({ zoom });
+  render();
 };
 
 export const handleCanvasPanButtonClick = (deps) => {

@@ -259,9 +259,13 @@ describe("layoutEditor.view", () => {
 
     const backgroundLine = layoutEditorView
       .split("\n")
-      .find((line) => line.includes("rtgl-view#layoutEditorCanvasBackground"));
+      .find((line) =>
+        line.includes("rvn-zoom-viewport#layoutEditorCanvasBackground"),
+      );
 
     expect(backgroundLine).toContain("${canvasBackgroundStyle}");
+    expect(backgroundLine).toContain("zoom=${canvasZoom}");
+    expect(backgroundLine).toContain("?gestures=${showCanvasZoomControls}");
     expect(layoutEditorView).toContain("${canvasWorkspaceStyle}");
   });
 

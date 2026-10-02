@@ -88,6 +88,8 @@ refs:
     eventListeners:
       click:
         handler: handleLayoutEditorCanvasBackgroundClick
+      zoom-change:
+        handler: handleCanvasZoomGesture
 template:
   - 'rtgl-view d=h w=f h=f style="min-width: 0; min-height: 0;"':
       - $if showExplorerPanel:
@@ -121,11 +123,11 @@ template:
               - $if showMobilePreviewButton:
                   - rtgl-button#previewButton ml=sm v=se: ${previewTitle}
           - 'rtgl-view d=v h=1fg w=f style="min-height: 0; ${canvasWorkspaceStyle}"':
-              - 'rtgl-view#layoutEditorCanvasBackground bgc=bg style="width: 100%; min-width: 0; ${canvasBackgroundStyle} background-image: radial-gradient(circle, var(--input) 1px, transparent 1px); background-size: 24px 24px;"':
+              - 'rvn-zoom-viewport#layoutEditorCanvasBackground zoom=${canvasZoom} ?gestures=${showCanvasZoomControls} style="display: flex; flex-direction: column; width: 100%; min-width: 0; background-color: var(--background); ${canvasBackgroundStyle} background-image: radial-gradient(circle, var(--input) 1px, transparent 1px); background-size: 24px 24px;"':
                   - 'div style="position: relative; width: ${layoutEditorCanvasWidth}; flex-shrink: 0; margin: auto;"':
                       - 'rvn-layout-editor-canvas#layoutEditorCanvas style="display: block; width: 100%;" :resolution=${projectResolution} :layoutState=${layoutState} selectedItemId=${selectedItemId} :previewData=${previewData} :disableMoveDrag=${selectedItemIsInsideDirectedContainer} :disableInteraction=${selectedItemIsEffectivelyHidden}': null
                       - $if isCanvasPanMode:
-                          - 'div#canvasPanLayer style="position: absolute; inset: 0; z-index: 1; touch-action: pan-x pan-y; cursor: grab;"': null
+                          - 'div#canvasPanLayer data-pan-surface style="position: absolute; inset: 0; z-index: 1; cursor: grab;"': null
               - $if showMobilePanels:
                   - 'rtgl-view h=1fg w=f sv style="min-height: 0; ${previewPanelVisibilityStyle}"':
                       - $if showPreviewHeader:

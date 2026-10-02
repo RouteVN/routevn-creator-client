@@ -51,9 +51,12 @@ const selectLayoutEditorCanvasMaxWidth = ({ state }) => {
 };
 
 // Canvas zoom is relative to the canvas fitted to the workspace (1 = fit).
-// The renderer draws at the project resolution and the page scales it, so
-// higher levels look soft.
-const CANVAS_ZOOM_LEVELS = Object.freeze([0.5, 0.75, 1, 1.5, 2, 3, 4, 5]);
+// The buttons step through these levels; gestures set any zoom in their
+// range, which matches rvn-zoom-viewport. The renderer draws at the project
+// resolution and the page scales it, so higher levels look soft.
+const CANVAS_ZOOM_LEVELS = Object.freeze([
+  0.5, 0.75, 1, 1.5, 2, 3, 4, 5, 6, 8, 10,
+]);
 
 // Only the right-panel layouts (desktop and tablet landscape) give the canvas
 // a scrolling workspace, so other layouts always show it fitted.
@@ -221,13 +224,23 @@ export const zoomCanvasOut = ({ state }) => {
   }
 };
 
+export const setCanvasZoom = ({ state }, { zoom } = {}) => {
+  state.canvasZoom = Math.min(
+    CANVAS_ZOOM_LEVELS.at(-1),
+    Math.max(CANVAS_ZOOM_LEVELS[0], zoom),
+  );
+  if (state.canvasZoom <= 1) {
+    state.isCanvasPanMode = false;
+  }
+};
+
 export const resetCanvasZoom = ({ state }) => {
   state.canvasZoom = 1;
   state.isCanvasPanMode = false;
 };
 
-// Touch pans a zoomed canvas in pan mode: the renderer canvas blocks touch
-// scrolling, so a layer above it takes drags while edits are paused.
+// In pan mode, one finger pans a zoomed canvas instead of editing it: a
+// layer above the canvas takes the drags.
 export const toggleCanvasPanMode = ({ state }) => {
   state.isCanvasPanMode = !state.isCanvasPanMode && state.canvasZoom > 1;
 };
@@ -724,10 +737,9 @@ export const selectViewData = ({ state, constants, i18n }) => {
     canvasBackgroundStyle: showRightPanel
       ? "flex: 1 1 auto; min-height: 0; flex-direction: column; overflow: auto;"
       : "",
-    layoutEditorCanvasWidth:
-      canvasZoom === 1
-        ? canvasFitWidth
-        : `calc(${canvasFitWidth} * ${canvasZoom})`,
+    // rvn-zoom-viewport sets --canvas-zoom, also live during a pinch.
+    layoutEditorCanvasWidth: `calc(${canvasFitWidth} * var(--canvas-zoom, 1))`,
+    canvasZoom,
     showCanvasZoomControls: showRightPanel,
     canvasZoomLabel: `${Math.round(canvasZoom * 100)}%`,
     canvasZoomInDisabled: canvasZoom >= CANVAS_ZOOM_LEVELS.at(-1),
