@@ -14,6 +14,7 @@ import { setupCloseListener } from "./deps/clients/tauri/windowClose";
 import { createFullscreenEscapeClient } from "./deps/clients/tauri/fullscreenEscape.js";
 import { triggerTestCrash } from "./deps/clients/tauri/testCrash.js";
 import { createBrowserEventsClient } from "./deps/clients/browserEvents.js";
+import { createGlobalUIClient } from "./deps/clients/globalUI.js";
 
 // Services
 import { createAppService } from "./deps/services/appService";
@@ -43,7 +44,9 @@ await appDb.init();
 const router = new Router();
 const filePicker = createTauriFilePicker();
 const globalUIElement = document.querySelector("rtgl-global-ui");
-const globalUI = createGlobalUI(globalUIElement);
+const globalUI = createGlobalUIClient({
+  globalUI: createGlobalUI(globalUIElement),
+});
 const audioService = createAudioService();
 const browserEventsClient = createBrowserEventsClient();
 const fullscreenEscapeClient = createFullscreenEscapeClient();

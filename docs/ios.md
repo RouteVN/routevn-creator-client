@@ -396,10 +396,33 @@ See Apple's [directory-access guidance](https://developer.apple.com/documentatio
 ### Audio Playback
 
 The native WebView allows audio playback without a user gesture
-(`mediaTypesRequiringUserActionForPlayback = .video`). Fullscreen preview
-replaces the editor's audio element after asynchronous preparation; requiring
-a gesture rejects that new element's `play()` with `NotAllowedError` on iPad.
-This setting requires rebuilding and installing the native shell.
+(`mediaTypesRequiringUserActionForPlayback = .video`). That was enough on
+iPadOS 26.4, but iPadOS 27 still rejects `play()` on the media-stream audio
+element with `NotAllowedError` outside a gesture. WebKit lets an element start
+on its own once it has started inside a gesture, so:
+
+- Every graphics page shares one media element, because graphicsService
+  requests audio whenever it starts: the scene editor and fullscreen preview,
+  and also pages that never play sound, such as Transforms, Particles, and
+  Layouts. Destroying the graphics runtime pauses the element instead of
+  replacing it; it is replaced only after a failure other than
+  `NotAllowedError`. A refused start, of the element or of the audio context,
+  waits, and the next tap or key press (`pointerdown`, `pointerup`,
+  `touchend`, `keydown`) starts both inside that gesture. A failure on that
+  tap shows the preview audio alert.
+- That tap starts silent media playback, which can pause another app's audio,
+  as the immediate start did on iPadOS 26.4. Taps start nothing after the
+  graphics runtime is destroyed, but Transforms, Particles, Animations, the
+  animation editor, and the audio effects editor never destroy it. After a
+  refusal there, a tap still starts it after leaving the page, until another
+  graphics page starts or closes.
+- Opening a sound from the Sounds page or a BGM, sound effect, or voice action
+  starts audio inside that tap, so the player can start on its own after
+  loading. A refused start leaves the player paused, without an alert, and
+  its play button starts it.
+
+Other playback failures show an alert with the error details. Alerts raised in
+the background wait until no global dialog is open.
 
 On iOS 16.3, direct Web Audio can be silent under the Ring/Silent switch even
 while playback advances. The iOS output adapter routes the gain node through a
@@ -415,9 +438,9 @@ or replace a newer seek target. Failures leave the UI stopped and show an error.
 
 `graphicsAudioOutput.js` connects the published `configureAudioRuntime` hook to
 the same media output. It preserves native context methods and the mobile clock.
-Each preview gets a fresh stream and a zero-valued constant source to avoid
-stale buffer repetition between sounds. Close the output before destroying
-renderer sources. Media playback starts without blocking renderer initialization
+A zero-valued constant source keeps feeding the stream, also while it is paused
+between previews, to avoid stale buffer repetition. Close the output before
+destroying renderer sources. Media playback starts without blocking renderer initialization
 on its promise; pending playback must not prevent rendering or closing a preview.
 
 Android and iOS share `mobileAudioRuntime.js`. Audio runs only while both native
@@ -472,7 +495,7 @@ After keyboard or Up/Down changes, reveal the caret inside the dialogue
 scroller. On iOS 16, shadow selection may appear as a zero-sized range on `body`.
 Try DOM geometry first, then the native `getCaretRect` fallback using public
 [`UITextInput`](https://developer.apple.com/documentation/uikit/uitextinput/selectedtextrange)
-and [`caretRect(for:)`](https://developer.apple.com/documentation/uikit/uitextinput/caretrect(for:))
+and [`caretRect(for:)`](<https://developer.apple.com/documentation/uikit/uitextinput/caretrect(for:)>)
 APIs. UIKit already converts the rectangle into WebView coordinates: apply only
 the CSS-pixel scale, without adding visual viewport offsets again. Discard replies
 after superseding keys, changed focus, later taps, dismissal, or teardown.
@@ -559,24 +582,24 @@ bunx vitest run tests/ios tests/vnPreview tests/sceneEditor tests/audioPlayer te
 
 With `watch:ios` running, run the relevant browser script with `node`:
 
-| Script | Regression coverage |
-| --- | --- |
-| `tests/ios/projectFolderSetup.browser.mjs` | Setup, cancellation/errors, Config return, readable paths, Projects clicks/scrolling |
-| `tests/ios/projectCreation.browser.mjs` | Destination preview, sanitized names, stable typing |
-| `tests/ios/mobileNavigation.browser.mjs` | Menus without a loaded repository, backdrop dismissal |
-| `tests/ios/appWidth.browser.mjs` | App and Projects width as containers resize |
-| `tests/ios/resourceGridDefaults.browser.mjs` | Phone/tablet defaults and saved grid preferences |
-| `tests/ios/sceneCreation.browser.mjs` | Scene forms and canvas long press |
-| `tests/ios/sceneCanvasNavigation.browser.mjs` | Canvas/line synchronization and editor focus |
-| `tests/ios/sceneEditorNavigation.browser.mjs` | Cross-section navigation with hidden DOM selection |
-| `tests/sceneEditor/canvasActivation.browser.mjs` | Valid activation versus cancelled/outside releases |
-| `tests/sceneEditor/keyboardDismiss.browser.mjs` | Focus transfer, dismissal, re-entry |
-| `tests/sceneEditor/sceneEditorScroll.browser.mjs` | Maximum scroll and portrait/landscape keyboard geometry |
-| `tests/sceneEditor/windowLayout.browser.mjs` | Editor/canvas preservation through rotation and split windows |
-| `tests/ios/graphicsAudioOutput.browser.mjs` | Real engine output, stop/end silence, lifecycle/cleanup |
-| `tests/ios/scenePreview.browser.mjs` | Preview initialization while audio playback is pending |
-| `tests/vnPreview/loadingClose.browser.mjs` | Touch dismissal during initialization and asset loading |
-| `tests/squareImageCropper/squareImageCropper.browser.mjs` | Resizing, gestures, stable selection, exported pixels |
+| Script                                                    | Regression coverage                                                                  |
+| --------------------------------------------------------- | ------------------------------------------------------------------------------------ |
+| `tests/ios/projectFolderSetup.browser.mjs`                | Setup, cancellation/errors, Config return, readable paths, Projects clicks/scrolling |
+| `tests/ios/projectCreation.browser.mjs`                   | Destination preview, sanitized names, stable typing                                  |
+| `tests/ios/mobileNavigation.browser.mjs`                  | Menus without a loaded repository, backdrop dismissal                                |
+| `tests/ios/appWidth.browser.mjs`                          | App and Projects width as containers resize                                          |
+| `tests/ios/resourceGridDefaults.browser.mjs`              | Phone/tablet defaults and saved grid preferences                                     |
+| `tests/ios/sceneCreation.browser.mjs`                     | Scene forms and canvas long press                                                    |
+| `tests/ios/sceneCanvasNavigation.browser.mjs`             | Canvas/line synchronization and editor focus                                         |
+| `tests/ios/sceneEditorNavigation.browser.mjs`             | Cross-section navigation with hidden DOM selection                                   |
+| `tests/sceneEditor/canvasActivation.browser.mjs`          | Valid activation versus cancelled/outside releases                                   |
+| `tests/sceneEditor/keyboardDismiss.browser.mjs`           | Focus transfer, dismissal, re-entry                                                  |
+| `tests/sceneEditor/sceneEditorScroll.browser.mjs`         | Maximum scroll and portrait/landscape keyboard geometry                              |
+| `tests/sceneEditor/windowLayout.browser.mjs`              | Editor/canvas preservation through rotation and split windows                        |
+| `tests/ios/graphicsAudioOutput.browser.mjs`               | Real engine output, stop/end silence, lifecycle/cleanup                              |
+| `tests/ios/scenePreview.browser.mjs`                      | Preview initialization while audio playback is pending                               |
+| `tests/vnPreview/loadingClose.browser.mjs`                | Touch dismissal during initialization and asset loading                              |
+| `tests/squareImageCropper/squareImageCropper.browser.mjs` | Resizing, gestures, stable selection, exported pixels                                |
 
 Native filesystem checks use disposable fixtures on macOS and require access to
 the host file coordination service:

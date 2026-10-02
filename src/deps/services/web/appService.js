@@ -2,7 +2,6 @@ import { createAppServiceCore } from "../shared/appServiceCore.js";
 import { generateId } from "../../../internal/id.js";
 import { copyTextToClipboard } from "../../../internal/copyText.js";
 import { createNativeApplicationIdentifier } from "../../../internal/nativeApplicationIdentifier.js";
-import { createProgressDialog } from "../../clients/progressDialog.js";
 
 export const createAppService = (params) => {
   const platformAdapter = {
@@ -145,8 +144,9 @@ export const createAppService = (params) => {
   return {
     ...appService,
 
+    // Through the UI client, so background alerts wait for it to close.
     showProgressDialog(options) {
-      return createProgressDialog(options);
+      return params.globalUI.showProgressDialog(options);
     },
 
     copyText(value) {

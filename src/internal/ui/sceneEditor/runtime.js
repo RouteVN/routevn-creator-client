@@ -56,6 +56,7 @@ import {
   isDebugEnabled,
 } from "../../../deps/services/shared/debugLog.js";
 import { selectSceneEditorCopy } from "./sceneEditorCopy.js";
+import { withErrorDetails } from "../../errorDetails.js";
 import {
   emitSceneEditorTiming,
   shouldMeasureSceneEditorTiming,
@@ -2378,20 +2379,30 @@ const handleCanvasForwardNavigationFallback = async (deps, payload = {}) => {
 };
 
 // A queued canvas render has no caller to receive its error.
-const showCanvasRenderFailure = (deps, error) => {
-  const { appService, i18n } = deps;
+const reportCanvasRenderFailure = (deps, error) => {
   console.error("[sceneEditor] Failed to render canvas", error);
-  appService.reportError(error, { operation: "sceneEditor.renderCanvas" });
+  deps.appService.reportError(error, {
+    operation: "sceneEditor.renderCanvas",
+  });
+};
+
+const alertCanvasRenderFailure = (deps, error) => {
+  const { appService, i18n } = deps;
   const copy = selectSceneEditorCopy(i18n);
-  appService.showToast({
+  appService.showAlertWhenIdle({
     title: copy.errorTitle ?? "Error",
-    message: copy.failedRenderCanvas ?? "Could not update the canvas.",
-    status: "error",
+    message: withErrorDetails(
+      copy.failedRenderCanvas ?? "Could not update the canvas.",
+      error,
+      copy.errorDetailsLabel ?? "Details:",
+    ),
   });
 };
 
 export const mountSceneEditorSubscriptions = (deps) => {
   const { subject } = deps;
+  // Edits keep re-rendering the canvas, so alert once until a render succeeds.
+  let canvasFailureAlerted = false;
   const canvasRuntimeLineSyncGate = createCanvasRuntimeLineSyncGate(deps.store);
   const queueRenderCanvas = createSceneEditorRenderQueue((payload) =>
     renderSceneEditorCanvas(deps, payload),
@@ -2432,6 +2443,7 @@ export const mountSceneEditorSubscriptions = (deps) => {
             skipCanvasPaint: payload?.skipCanvasPaint === true,
             syncPresentationState: payload?.syncPresentationState === true,
           });
+          canvasFailureAlerted = false;
           completion?.resolve();
         } catch (error) {
           if (completion) {
@@ -2439,7 +2451,11 @@ export const mountSceneEditorSubscriptions = (deps) => {
             return;
           }
 
-          showCanvasRenderFailure(deps, error);
+          reportCanvasRenderFailure(deps, error);
+          if (!canvasFailureAlerted) {
+            canvasFailureAlerted = true;
+            alertCanvasRenderFailure(deps, error);
+          }
         }
       }),
     ),

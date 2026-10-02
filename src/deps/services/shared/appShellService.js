@@ -228,6 +228,12 @@ export const createAppShellService = ({
       return globalUI.showAlert(options);
     },
 
+    // An alert for a failure raised in the background. Showing an alert closes
+    // any open global dialog, so wait until none is open.
+    showAlertWhenIdle(options) {
+      return globalUI.runWhenIdle(() => globalUI.showAlert(options));
+    },
+
     showToast(options) {
       return globalUI.showToast(options);
     },

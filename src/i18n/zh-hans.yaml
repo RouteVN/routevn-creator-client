@@ -213,6 +213,7 @@ projectPage:
   warningTitle: "警告"
   wordsLabel: "词数"
 appPage:
+  errorDetailsLabel: "详细信息："
   filePickerSourceTitle: 选择来源
   filePickerGallery: 相册
   filePickerFiles: 文件选择器
@@ -1941,6 +1942,7 @@ scenesPage:
   updateFolderDescription: "更新文件夹详情"
   updateSceneDescription: "更新场景详情"
 sceneEditorPage:
+  errorDetailsLabel: "详细信息："
   failedOpenScene: "无法打开场景。"
   failedOpenSceneComputedVariable: "无法算出计算变量“{name}”的值。其公式可能除以了零，或得出了类型不符的值。请在“变量”中检查该公式及其使用的变量。"
   actionsLabel: "动作"
@@ -2372,6 +2374,7 @@ commandLinePage:
   "true": "true"
 audioPlayerPage:
   seekLabel: "播放位置"
+  errorDetailsLabel: "详细信息："
   errorTitle: "错误"
   failedPlayback: "无法播放此音频。请重试。"
   missingFileId: "缺少 fileId"

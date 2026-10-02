@@ -6,6 +6,7 @@ import { createWebFilePicker } from "./deps/clients/web/filePicker.js";
 import { installVtBridge } from "./deps/clients/web/vtBridge.js";
 import { resetWebAppStateForVisualTests } from "./deps/clients/web/vtAppStateReset.js";
 import { createBrowserEventsClient } from "./deps/clients/browserEvents.js";
+import { createGlobalUIClient } from "./deps/clients/globalUI.js";
 import { createWebErrorReporter } from "./deps/clients/web/errorReporting.js";
 
 // Services - Web
@@ -62,7 +63,9 @@ await appDb.init();
 const router = new Router();
 const filePicker = createWebFilePicker();
 const globalUIElement = document.querySelector("rtgl-global-ui");
-const globalUI = createGlobalUI(globalUIElement);
+const globalUI = createGlobalUIClient({
+  globalUI: createGlobalUI(globalUIElement),
+});
 const audioService = createAudioService();
 const browserEventsClient = createBrowserEventsClient();
 
