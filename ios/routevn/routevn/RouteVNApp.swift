@@ -2042,8 +2042,9 @@ final class RouteVNViewController: UIViewController, WKNavigationDelegate, WKScr
      takes an already-accessible project folder URL, copies project.db (+
      sidecars), files/ and file-metadata/ into app storage, normalizes the
      copied file names (Rule A), restores the project identity, and returns
-     the registered entry. The alreadyImported idempotency check keeps a
-     repeated import of the same project a no-op.
+     the registered entry. A project whose id is already in the library
+     (project.db and files/ present) is never modified: the import is
+     reported with alreadyImported = true and the incoming source is dropped.
      */
     private func importAccessibleProjectFolder(
         folderURL: URL,
@@ -2074,12 +2075,7 @@ final class RouteVNViewController: UIViewController, WKNavigationDelegate, WKScr
                 FileManager.default.fileExists(atPath: targetDbURL.path) &&
                 FileManager.default.fileExists(atPath: targetFilesURL.path)
 
-            if alreadyImported {
-                // Rule A always checks the app-owned copy, even for an
-                // already-imported project. Never modify the source folder,
-                // and never delete a project that was already there.
-                _ = try ProjectFileNames.normalize(filesDirectory: targetFilesURL)
-            } else {
+            if !alreadyImported {
                 closeDatabase(dbPath: projectDbPath)
                 try FileManager.default.removeItemIfExists(at: targetDbURL.deletingLastPathComponent())
                 try FileManager.default.removeItemIfExists(at: targetProjectRoot)
@@ -2119,7 +2115,16 @@ final class RouteVNViewController: UIViewController, WKNavigationDelegate, WKScr
                 try storage.recordProjectDirectory(projectId: projectId, directory: targetProjectRoot)
             }
 
-            var result = projectEntry(projectId: projectId, projectInfo: projectInfo, databaseURL: targetDbURL)
+            // A project that is already in the library is left exactly as it
+            // is: no copy, no Rule A renames, nothing deleted. The incoming
+            // source is ignored, and the result describes the library's own
+            // copy, so the name and metadata of the incoming project never
+            // replace the existing ones. JavaScript decides whether to tell
+            // the user it already exists or to restore a hidden entry.
+            let resultInfo = alreadyImported
+                ? ((try? readProjectInfo(databaseURL: targetDbURL)) ?? projectInfo)
+                : projectInfo
+            var result = projectEntry(projectId: projectId, projectInfo: resultInfo, databaseURL: targetDbURL)
             result["sourceUri"] = sourceUri
             result["sourceName"] = sourceName
             result["alreadyImported"] = alreadyImported
