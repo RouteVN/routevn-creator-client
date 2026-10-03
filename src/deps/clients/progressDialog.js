@@ -70,12 +70,10 @@ export const createProgressDialog = (
     { c: "mu-fg" },
     message,
   );
-  // A status may contain a line break (for example after "Downloading…"), so
-  // its wrapping is chosen by the copy and not left to the width of the dialog.
   const statusText = createRtglElement(
     root,
     "rtgl-text",
-    { c: "mu-fg", style: "white-space: pre-line;" },
+    { c: "mu-fg" },
     status,
   );
   const progressTrack = createRtglElement(root, "rtgl-view", {
@@ -111,8 +109,19 @@ export const createProgressDialog = (
       statusText.remove();
       return;
     }
-    statusText.textContent = value;
-    progressTrack.setAttribute("aria-valuetext", value);
+    // A status may contain line breaks (for example after "Downloading…"), so
+    // where it wraps is chosen by the copy and not by the width of the dialog.
+    // rtgl-text ignores an inline white-space rule, so each break becomes a
+    // <br> element, which renders the same everywhere.
+    const nodes = [];
+    value.split("\n").forEach((line, index) => {
+      if (index > 0) {
+        nodes.push(root.createElement("br"));
+      }
+      nodes.push(root.createTextNode(line));
+    });
+    statusText.replaceChildren(...nodes);
+    progressTrack.setAttribute("aria-valuetext", value.replaceAll("\n", " "));
     if (statusText.parentNode !== content) {
       content.append(statusText);
     }
