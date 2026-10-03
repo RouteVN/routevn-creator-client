@@ -71,6 +71,7 @@ import java.net.URLConnection;
 import java.nio.charset.StandardCharsets;
 import java.security.KeyStore;
 import java.text.SimpleDateFormat;
+import java.util.Collections;
 import java.util.Date;
 import java.util.HashMap;
 import java.util.Iterator;
@@ -79,6 +80,7 @@ import java.util.Map;
 import java.util.HashSet;
 import java.util.Set;
 import java.util.UUID;
+import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.function.Consumer;
@@ -94,6 +96,9 @@ import org.json.JSONException;
 
 public class MainActivity extends Activity {
     private static final String TAG = "RouteVNAndroid";
+    /** Process-wide ids with an archive import in progress; the sweep never touches them. */
+    private static final Set<String> ACTIVE_PROJECT_IMPORTS =
+        Collections.newSetFromMap(new ConcurrentHashMap<>());
     private static final String APP_ASSET_HOST = "appassets.androidplatform.net";
     private static final String APP_URL = "https://" + APP_ASSET_HOST + "/web/index.html";
     private static final String DEV_SERVER_HOST = "127.0.0.1";
@@ -111,6 +116,7 @@ public class MainActivity extends Activity {
     private static final int ANDROID_FILE_PICKER_REQUEST_CODE = 3712;
     private static final int ANDROID_SAVE_FILE_PICKER_REQUEST_CODE = 3713;
     private static final int ANDROID_FOLDER_PICKER_REQUEST_CODE = 3714;
+    private static final int ANDROID_ARCHIVE_PICKER_REQUEST_CODE = 3715;
     private static final long SPLASH_READY_TIMEOUT_MS = 5000L;
     // A renderer lost this soon after its page started loading counts as a
     // rapid loss; this many in a row means the page cannot start.
@@ -202,6 +208,7 @@ public class MainActivity extends Activity {
     private boolean pendingAndroidFilePickerMultiple = false;
     private String pendingAndroidSaveFilePickerRequestId;
     private String pendingAndroidFolderPickerRequestId;
+    private String pendingAndroidArchivePickerRequestId;
     private final Handler mainHandler = new Handler(Looper.getMainLooper());
     private final ExecutorService bridgeExecutor =
         Executors.newSingleThreadExecutor();
@@ -909,6 +916,11 @@ public class MainActivity extends Activity {
             return;
         }
 
+        if (requestCode == ANDROID_ARCHIVE_PICKER_REQUEST_CODE) {
+            handleAndroidArchivePickerActivityResult(resultCode, data);
+            return;
+        }
+
         if (requestCode != FILE_CHOOSER_REQUEST_CODE || fileChooserCallback == null) {
             return;
         }
@@ -1337,8 +1349,14 @@ public class MainActivity extends Activity {
                 return bridge.openSaveFilePicker(payloadJson);
             case "openFolderPicker":
                 return bridge.openFolderPicker(payloadJson);
+            case "openArchivePicker":
+                return bridge.openArchivePicker(payloadJson);
             case "importProjectFolder":
                 return bridge.importProjectFolder(payloadJson);
+            case "importProjectArchive":
+                return bridge.importProjectArchive(payloadJson);
+            case "importProjectArchiveFromUrl":
+                return bridge.importProjectArchiveFromUrl(payloadJson);
             case "exportProjectFolder":
                 return bridge.exportProjectFolder(payloadJson);
             case "deletePickerRequest":
@@ -1785,6 +1803,18 @@ public class MainActivity extends Activity {
             }
         }
 
+        public String openArchivePicker(String payloadJson) {
+            try {
+                JSONObject payload = new JSONObject(payloadJson);
+                String requestId = safePathSegment(payload.getString("requestId"));
+
+                runOnUiThread(() -> launchAndroidArchivePicker(requestId));
+                return bridgeSuccess(true);
+            } catch (Exception error) {
+                return bridgeFailure(error);
+            }
+        }
+
         public String importProjectFolder(String payloadJson) {
             try {
                 JSONObject payload = new JSONObject(payloadJson);
@@ -1795,6 +1825,32 @@ public class MainActivity extends Activity {
                 return bridgeSuccess(result);
             } catch (Exception error) {
                 return bridgeFailure(error);
+            }
+        }
+
+        public String importProjectArchive(String payloadJson) {
+            try {
+                JSONObject payload = new JSONObject(payloadJson);
+                JSONObject result = importProjectArchiveFromUri(
+                    payload.getString("uri"),
+                    payload.getString("projectId")
+                );
+                return bridgeSuccess(result);
+            } catch (Throwable error) {
+                return bridgeFailure(ProjectArchiveImports.wrapUnexpected(error));
+            }
+        }
+
+        public String importProjectArchiveFromUrl(String payloadJson) {
+            try {
+                JSONObject payload = new JSONObject(payloadJson);
+                JSONObject result = MainActivity.this.importProjectArchiveFromUrl(
+                    payload.getString("url"),
+                    payload.getString("projectId")
+                );
+                return bridgeSuccess(result);
+            } catch (Throwable error) {
+                return bridgeFailure(ProjectArchiveImports.wrapUnexpected(error));
             }
         }
 
@@ -3392,21 +3448,11 @@ public class MainActivity extends Activity {
 
         File importRoot = new File(getCacheDir(), "project-import");
         File importWorkDir = new File(importRoot, projectId);
+        sweepStaleProjectImportDirs();
         deleteRecursively(importWorkDir);
 
         try {
-            File tempDbFile = copyImportDatabase(rootDocumentUri, importWorkDir);
-
-            JSONObject projectInfo = readProjectInfoFromDatabaseFile(tempDbFile);
-            String sourceProjectId = safePathSegment(
-                projectInfo.optString("id", "")
-            );
-            rewriteImportedProjectIdentity(
-                tempDbFile,
-                sourceProjectId,
-                projectId
-            );
-            projectInfo.put("id", projectId);
+            copyImportDatabase(rootDocumentUri, importWorkDir);
 
             File stagedFilesRoot = new File(importWorkDir, "files");
             File stagedMetadataRoot = new File(importWorkDir, "file-metadata");
@@ -3417,27 +3463,222 @@ public class MainActivity extends Activity {
                 throw new IllegalStateException("Cannot create imported file metadata directory.");
             }
 
-            JSONObject result = new JSONObject();
-            result.put("id", projectId);
-            result.put("name", projectInfo.optString("name", ""));
-            result.put("description", projectInfo.optString("description", ""));
-            result.put("language", projectInfo.optString("language", ""));
-            if (projectInfo.has("iconFileId") && !projectInfo.isNull("iconFileId")) {
-                result.put("iconFileId", projectInfo.optString("iconFileId", ""));
-            } else {
-                result.put("iconFileId", JSONObject.NULL);
-            }
-            result.put("sourceUri", normalizedUri);
-            result.put(
-                "sourceName",
-                resolveDocumentDisplayName(rootDocumentUri, "Selected Folder")
+            return finalizeImportedProject(
+                importWorkDir,
+                projectId,
+                normalizedUri,
+                resolveDocumentDisplayName(rootDocumentUri, "Selected Folder"),
+                false
             );
-
-            promoteImportedProject(importWorkDir, projectRoot);
-            return result;
         } finally {
             deleteRecursively(importWorkDir);
         }
+    }
+
+    /**
+     * Shared tail for every staged import (folder, archive, URL). The work
+     * directory already holds project.db (+ sidecars), files/ and
+     * file-metadata/. Reads and rewrites the project identity, normalizes
+     * imported file names (Rule A: on-disk name equals file id), builds the
+     * bridge result, and promotes the staging directory into app storage.
+     */
+    private JSONObject finalizeImportedProject(
+        File importWorkDir,
+        String projectId,
+        String sourceUri,
+        String sourceName,
+        boolean archiveErrorContract
+    )
+        throws Exception {
+        File projectRoot = getProjectRoot(projectId);
+        if (projectRoot.exists()) {
+            throw new IllegalArgumentException(
+                "Generated Android project storage already exists."
+            );
+        }
+
+        File tempDbFile = new File(importWorkDir, "project.db");
+        JSONObject projectInfo = archiveErrorContract
+            ? ProjectArchiveImports.readProjectInfo(
+                tempDbFile,
+                this::readProjectInfoFromDatabaseFile
+            )
+            : readProjectInfoFromDatabaseFile(tempDbFile);
+        String sourceProjectId = safePathSegment(
+            projectInfo.optString("id", "")
+        );
+        if (archiveErrorContract) {
+            ProjectArchiveImports.rewriteIdentity(
+                tempDbFile,
+                sourceProjectId,
+                projectId,
+                this::rewriteImportedProjectIdentity
+            );
+        } else {
+            rewriteImportedProjectIdentity(
+                tempDbFile,
+                sourceProjectId,
+                projectId
+            );
+        }
+        projectInfo.put("id", projectId);
+
+        // Rule A: every staged asset name must equal its file id.
+        ProjectFileNames.normalize(new File(importWorkDir, "files"));
+
+        JSONObject result = new JSONObject();
+        result.put("id", projectId);
+        result.put("name", projectInfo.optString("name", ""));
+        result.put("description", projectInfo.optString("description", ""));
+        result.put("language", projectInfo.optString("language", ""));
+        if (projectInfo.has("iconFileId") && !projectInfo.isNull("iconFileId")) {
+            result.put("iconFileId", projectInfo.optString("iconFileId", ""));
+        } else {
+            result.put("iconFileId", JSONObject.NULL);
+        }
+        result.put("sourceUri", sourceUri);
+        result.put("sourceName", sourceName);
+
+        promoteImportedProject(importWorkDir, projectRoot);
+        return result;
+    }
+
+    private JSONObject importProjectArchiveFromUri(
+        String uriString,
+        String requestedProjectId
+    )
+        throws Exception {
+        String normalizedUri = uriString == null ? "" : uriString.trim();
+        if (normalizedUri.isEmpty()) {
+            throw new ProjectImportException("invalidArchive", "Project archive is required.");
+        }
+        String projectId = safePathSegment(requestedProjectId);
+        if (getProjectRoot(projectId).exists()) {
+            throw new ProjectImportException("projectExists", projectId);
+        }
+
+        // The picked zip is copied into a sibling archive dir
+        // (project-import/<projectId>.archive/archive.zip), never into the
+        // work dir that is promoted into project storage; the stager
+        // verifies the promoted directory holds only the project payload.
+        ProjectArchiveStager stager = new ProjectArchiveStager(
+            new File(getCacheDir(), "project-import"),
+            projectId
+        );
+        ProjectImportProgress progress = createProjectImportProgress(projectId);
+        ACTIVE_PROJECT_IMPORTS.add(projectId);
+        try {
+            sweepStaleProjectImportDirs();
+            stager.prepare();
+            Uri archiveUri = Uri.parse(normalizedUri);
+            try (InputStream input = getContentResolver().openInputStream(archiveUri)) {
+                if (input == null) {
+                    throw new ProjectImportException(
+                        "invalidArchive",
+                        "Failed to read selected project archive."
+                    );
+                }
+                stager.copyArchive(input, ProjectArchiveStager.DEFAULT_MAX_ARCHIVE_BYTES);
+            }
+            stager.extractArchive(EXPORT_INCOMPLETE_MARKER_NAME, progress);
+            progress.finish("finishing", 0, 0);
+            return finalizeImportedProject(
+                stager.promotableDirectory(),
+                projectId,
+                normalizedUri,
+                resolveContentDisplayName(archiveUri, "Project Archive"),
+                true
+            );
+        } finally {
+            stager.cleanup();
+            ACTIVE_PROJECT_IMPORTS.remove(projectId);
+        }
+    }
+
+    private JSONObject importProjectArchiveFromUrl(
+        String urlString,
+        String requestedProjectId
+    )
+        throws Exception {
+        String normalizedUrl = urlString == null ? "" : urlString.trim();
+        if (normalizedUrl.isEmpty()) {
+            throw new ProjectImportException("invalidUrl", "Project archive URL is required.");
+        }
+        String projectId = safePathSegment(requestedProjectId);
+        if (getProjectRoot(projectId).exists()) {
+            throw new ProjectImportException("projectExists", projectId);
+        }
+
+        // The archive is downloaded into the sibling archive dir, then
+        // extracted and promoted; both staging dirs are deleted in finally.
+        ProjectArchiveStager stager = new ProjectArchiveStager(
+            new File(getCacheDir(), "project-import"),
+            projectId
+        );
+        ProjectImportProgress progress = createProjectImportProgress(projectId);
+        ACTIVE_PROJECT_IMPORTS.add(projectId);
+        try {
+            sweepStaleProjectImportDirs();
+            stager.prepare();
+            new ProjectArchiveDownloader().download(
+                normalizedUrl,
+                stager.archiveFile(),
+                progress
+            );
+            stager.extractArchive(EXPORT_INCOMPLETE_MARKER_NAME, progress);
+            progress.finish("finishing", 0, 0);
+            return finalizeImportedProject(
+                stager.promotableDirectory(),
+                projectId,
+                normalizedUrl,
+                archiveSourceNameFromUrl(normalizedUrl),
+                true
+            );
+        } finally {
+            stager.cleanup();
+            ACTIVE_PROJECT_IMPORTS.remove(projectId);
+        }
+    }
+
+    private String archiveSourceNameFromUrl(String url) {
+        String suggestedName = ProjectArchiveDownloader.suggestArchiveName(url);
+        return sanitizeDownloadFilename(suggestedName == null ? "Project Archive" : suggestedName);
+    }
+
+    /**
+     * Best-effort sweep of import staging dirs left behind by interrupted
+     * imports older than 24 hours: both the <projectId> work dirs and the
+     * sibling <projectId>.archive dirs live under project-import/. Ids
+     * with an import still in progress in any Activity instance, and
+     * their .archive siblings, are never swept.
+     */
+    private void sweepStaleProjectImportDirs() {
+        sweepStaleImportDirs(new File(getCacheDir(), "project-import"), ACTIVE_PROJECT_IMPORTS);
+    }
+
+    static void sweepStaleImportDirs(File importRoot, Set<String> activeProjectIds) {
+        File[] children = importRoot.listFiles();
+        if (children == null) {
+            return;
+        }
+        long cutoffMillis = System.currentTimeMillis() - 24 * 60 * 60 * 1000L;
+        for (File child : children) {
+            if (!child.isDirectory() || child.lastModified() >= cutoffMillis) {
+                continue;
+            }
+            if (isActiveImportDir(child.getName(), activeProjectIds)) {
+                continue;
+            }
+            ProjectArchiveStager.deleteRecursively(child);
+        }
+    }
+
+    private static boolean isActiveImportDir(String name, Set<String> activeProjectIds) {
+        if (activeProjectIds.contains(name)) {
+            return true;
+        }
+        return name.endsWith(".archive") &&
+            activeProjectIds.contains(name.substring(0, name.length() - ".archive".length()));
     }
 
     private File copyImportDatabase(Uri root, File staging) throws Exception {
@@ -4271,6 +4512,89 @@ public class MainActivity extends Activity {
 
     private void clearPendingAndroidFolderPicker() {
         pendingAndroidFolderPickerRequestId = null;
+    }
+
+    private void launchAndroidArchivePicker(String requestId) {
+        if (pendingAndroidArchivePickerRequestId != null) {
+            sendAndroidArchivePickerError(
+                requestId,
+                "Another archive picker is already open."
+            );
+            return;
+        }
+
+        pendingAndroidArchivePickerRequestId = requestId;
+
+        // The picked zip is copied out of its content URI immediately during
+        // import, so no persistable permission is taken.
+        Intent intent = new Intent(Intent.ACTION_OPEN_DOCUMENT);
+        intent.addCategory(Intent.CATEGORY_OPENABLE);
+        intent.addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION);
+        intent.setType("*/*");
+        intent.putExtra(
+            Intent.EXTRA_MIME_TYPES,
+            new String[] {
+                "application/zip",
+                "application/x-zip-compressed",
+                "application/octet-stream",
+            }
+        );
+
+        try {
+            startActivityForResult(intent, ANDROID_ARCHIVE_PICKER_REQUEST_CODE);
+        } catch (ActivityNotFoundException error) {
+            clearPendingAndroidArchivePicker();
+            sendAndroidArchivePickerError(
+                requestId,
+                "No archive picker is available."
+            );
+        }
+    }
+
+    private void handleAndroidArchivePickerActivityResult(
+        int resultCode,
+        Intent data
+    ) {
+        String requestId = pendingAndroidArchivePickerRequestId;
+        clearPendingAndroidArchivePicker();
+
+        if (requestId == null) {
+            return;
+        }
+
+        try {
+            JSONObject result = new JSONObject();
+            result.put("requestId", requestId);
+
+            if (resultCode != RESULT_OK || data == null || data.getData() == null) {
+                result.put("archive", JSONObject.NULL);
+                result.put("uri", JSONObject.NULL);
+                result.put("name", JSONObject.NULL);
+                sendAndroidArchivePickerResult(result);
+                return;
+            }
+
+            Uri archiveUri = data.getData();
+            String archiveName = resolveContentDisplayName(archiveUri, "Project Archive");
+            JSONObject archive = new JSONObject();
+            archive.put("uri", archiveUri.toString());
+            archive.put("name", archiveName);
+            result.put("archive", archive);
+            result.put("uri", archiveUri.toString());
+            result.put("name", archiveName);
+            sendAndroidArchivePickerResult(result);
+        } catch (Exception error) {
+            sendAndroidArchivePickerError(
+                requestId,
+                error.getMessage() == null
+                    ? "Failed to select archive."
+                    : error.getMessage()
+            );
+        }
+    }
+
+    private void clearPendingAndroidArchivePicker() {
+        pendingAndroidArchivePickerRequestId = null;
     }
 
     private void persistTreePermission(Uri treeUri, int flags) {
@@ -5107,6 +5431,32 @@ public class MainActivity extends Activity {
         );
     }
 
+    private void sendAndroidArchivePickerError(String requestId, String message) {
+        try {
+            JSONObject result = new JSONObject();
+            JSONObject error = new JSONObject();
+            result.put("requestId", requestId);
+            error.put("message", message);
+            result.put("error", error);
+            sendAndroidArchivePickerResult(result);
+        } catch (Exception ignored) {
+            // Nothing useful to report if JSON construction fails.
+        }
+    }
+
+    private void sendAndroidArchivePickerResult(JSONObject result) {
+        if (webView == null) {
+            return;
+        }
+
+        webView.evaluateJavascript(
+            "(function(result){if(window.__routeVNAndroidArchivePickerResult){window.__routeVNAndroidArchivePickerResult(result);}})(" +
+            result.toString() +
+            ");",
+            null
+        );
+    }
+
     private void sendAndroidProjectExportError(
         String requestId,
         String message,
@@ -5123,6 +5473,36 @@ public class MainActivity extends Activity {
         } catch (Exception ignored) {
             // Nothing useful to report if JSON construction fails.
         }
+    }
+
+    /**
+     * Progress for archive imports, delivered to the optional JS callback
+     * window.__routeVNAndroidProjectImportProgress keyed by the import's
+     * project id. Events are throttled and never fail the import.
+     */
+    private ProjectImportProgress createProjectImportProgress(String projectId) {
+        return new ProjectImportProgressReporter((stage, current, total) -> {
+            JSONObject event = new JSONObject();
+            event.put("projectId", projectId);
+            event.put("stage", stage);
+            event.put("current", current);
+            event.put("total", total);
+            sendAndroidProjectImportProgress(event);
+        });
+    }
+
+    private void sendAndroidProjectImportProgress(JSONObject event) {
+        mainHandler.post(() -> {
+            if (webView == null) {
+                return;
+            }
+            webView.evaluateJavascript(
+                "(function(event){if(window.__routeVNAndroidProjectImportProgress){window.__routeVNAndroidProjectImportProgress(event);}})(" +
+                event.toString() +
+                ");",
+                null
+            );
+        });
     }
 
     private void sendAndroidProjectExportResult(JSONObject result) {
