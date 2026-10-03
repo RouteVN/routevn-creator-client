@@ -39,11 +39,14 @@ export const runProjectImport = async (deps, { run, status }) => {
   } catch (error) {
     progressDialog.close();
     if (getProjectImportErrorCode(error) === "projectExists") {
-      // Nothing was imported and nothing was changed: say so, without the
-      // failure alert or the success toast.
-      appService.showToast({
-        message: copy.importProjectExists,
-        status: "info",
+      // Nothing was imported and nothing was changed, so this is not the
+      // failure alert: it names the situation and explains what happened.
+      appService.showAlert({
+        title: copy.importProjectExistsTitle,
+        message: createProjectExistsMessage({
+          copy,
+          platform: appService.getPlatform(),
+        }),
       });
       return;
     }
@@ -59,6 +62,19 @@ export const runProjectImport = async (deps, { run, status }) => {
       projectName: importedProject.name,
     }),
   });
+};
+
+// What an "already added" alert says. Importing never replaces a project. On
+// iOS a project is recognized by the id inside project.db, so the user may be
+// holding a different version of the project they already have, and the only
+// way to use it is to delete the existing project first. Elsewhere the same
+// folder was added twice and there is nothing to replace.
+const createProjectExistsMessage = ({ copy, platform }) => {
+  const parts = [copy.importProjectExists, copy.importProjectExistsExplanation];
+  if (platform === "ios") {
+    parts.push(copy.importProjectExistsLibraryHint);
+  }
+  return parts.join("\n\n");
 };
 
 const isGoogleDriveFailure = ({ url, error }) => {

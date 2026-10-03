@@ -265,9 +265,14 @@ library like this:
 
 - **Listed project:** nothing is copied, nothing is renamed, nothing is deleted and the
   list entry is not touched. The incoming source (the folder, the unzipped archive or the
-  download) is ignored. The import ends with `projectExists`, and the user sees the
-  "This project has already been added." message as an info toast, not as a failure alert
-  and not as the success toast.
+  download) is ignored. The import ends with `projectExists`, and the user sees an alert
+  titled "Project Already Added", not a success toast and not the failure alert. It says
+  that nothing was imported, that the existing project was left exactly as it was and
+  that importing never replaces an existing project. On iOS it also explains that a
+  project is recognized by its ID and that the way to use the incoming copy instead is to
+  delete the existing project first and import again. Desktop shows the same alert
+  without that hint, because there the same folder was added twice and there is nothing
+  to replace.
 - **Hidden project:** a project that was removed from the list but is still on disk is
   restored by importing it again. The restored entry describes the library's own copy
   (its own name, description and icon), never the incoming one, and Rule A does not run.

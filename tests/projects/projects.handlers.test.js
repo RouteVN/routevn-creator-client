@@ -1816,22 +1816,31 @@ describe("projects import picker failures", () => {
 
 describe("projects import of a project that already exists", () => {
   const EXISTS = "projectExists: This project is already in the library.";
+  const BASE = "This project has already been added.";
+  const EXPLANATION =
+    "Nothing was imported, and the project you already have was left exactly as it was. Importing never replaces an existing project.";
+  const LIBRARY_HINT =
+    "A project is recognized by its ID, and a project with this ID is already in your library. To use this copy instead, delete the existing project first, then import it again.";
 
-  const expectToastOnly = (deps) => {
+  const expectExistsAlert = (deps, { withLibraryHint }) => {
     const progressDialog =
       deps.appService.showProgressDialog.mock.results[0].value;
     expect(progressDialog.close).toHaveBeenCalledOnce();
-    expect(deps.appService.showToast).toHaveBeenCalledTimes(1);
-    expect(deps.appService.showToast).toHaveBeenCalledWith({
-      message: "This project has already been added.",
-      status: "info",
+    expect(deps.appService.showAlert).toHaveBeenCalledTimes(1);
+    expect(deps.appService.showAlert).toHaveBeenCalledWith({
+      title: "Project Already Added",
+      message: [
+        BASE,
+        EXPLANATION,
+        ...(withLibraryHint ? [LIBRARY_HINT] : []),
+      ].join("\n\n"),
     });
-    expect(deps.appService.showAlert).not.toHaveBeenCalled();
+    expect(deps.appService.showToast).not.toHaveBeenCalled();
     expect(deps.appService.loadAllProjects).not.toHaveBeenCalled();
     expect(deps.store.setProjects).not.toHaveBeenCalled();
   };
 
-  it("shows the existing message as an info toast for a zip import", async () => {
+  it("explains it in an alert for a zip import on iOS, including how to use the other copy", async () => {
     const deps = createDeps({ platform: "ios" });
     deps.appService.showFormDialog.mockResolvedValue({
       actionId: "import-zip",
@@ -1849,10 +1858,10 @@ describe("projects import of a project that already exists", () => {
       createMenuClickPayload("import-local"),
     );
 
-    expectToastOnly(deps);
+    expectExistsAlert(deps, { withLibraryHint: true });
   });
 
-  it("shows the same toast for a URL import", async () => {
+  it("shows the same alert for a URL import on iOS", async () => {
     const deps = createDeps({ platform: "ios" });
     deps.appService.importProjectFromUrl.mockRejectedValue(new Error(EXISTS));
 
@@ -1861,10 +1870,10 @@ describe("projects import of a project that already exists", () => {
       createUrlFormPayload("https://example.com/project-one.zip"),
     );
 
-    expectToastOnly(deps);
+    expectExistsAlert(deps, { withLibraryHint: true });
   });
 
-  it("shows the same toast for a folder import", async () => {
+  it("shows the same alert for a folder import on iOS", async () => {
     const deps = createDeps({ platform: "ios" });
     deps.appService.showFormDialog.mockResolvedValue({
       actionId: "import-folder",
@@ -1877,10 +1886,10 @@ describe("projects import of a project that already exists", () => {
       createMenuClickPayload("import-local"),
     );
 
-    expectToastOnly(deps);
+    expectExistsAlert(deps, { withLibraryHint: true });
   });
 
-  it("also covers the duplicate error raised when a project entry is added twice", async () => {
+  it("leaves out the delete-first hint on desktop, where it is the same folder added twice", async () => {
     const deps = createDeps({ platform: "tauri" });
     deps.appService.openFolderPicker.mockResolvedValue("/projects/project-one");
     deps.appService.openExistingProject.mockRejectedValue(
@@ -1892,10 +1901,10 @@ describe("projects import of a project that already exists", () => {
       createMenuClickPayload("import-local"),
     );
 
-    expectToastOnly(deps);
+    expectExistsAlert(deps, { withLibraryHint: false });
   });
 
-  it("keeps showing a failure alert for other errors", async () => {
+  it("keeps the failure alert, without this title, for other errors", async () => {
     const deps = createDeps({ platform: "ios" });
     deps.appService.importProjectFromUrl.mockRejectedValue(
       new Error("importFailed: Cannot write the download: disk full"),
@@ -1907,6 +1916,7 @@ describe("projects import of a project that already exists", () => {
     );
 
     expect(deps.appService.showAlert).toHaveBeenCalledTimes(1);
+    expect(deps.appService.showAlert.mock.calls[0][0].title).toBeUndefined();
     expect(deps.appService.showToast).not.toHaveBeenCalled();
   });
 });
