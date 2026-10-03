@@ -74,6 +74,10 @@ refs:
     eventListeners:
       update:
         handler: handleLayoutEditPanelUpdateHandler
+      preview:
+        handler: handleLayoutEditPanelPreview
+      preview-cancel:
+        handler: handleLayoutEditPanelPreviewCancel
   layoutEditorCanvas:
     eventListeners:
       selection-change:

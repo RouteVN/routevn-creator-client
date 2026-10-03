@@ -202,6 +202,7 @@ export const createInitialState = () => {
     rightPanelMode: "preview",
     canvasZoom: 1,
     isCanvasPanMode: false,
+    canvasPreviewItem: undefined,
     projectResolution: DEFAULT_PROJECT_RESOLUTION,
     selectedElementMetrics: undefined,
     lastPersistErrorAt: 0,
@@ -301,6 +302,9 @@ export const setProjectResolution = ({ state }, { projectResolution } = {}) => {
 };
 
 export const setSelectedItemId = ({ state }, { itemId } = {}) => {
+  if (itemId !== state.selectedItemId) {
+    state.canvasPreviewItem = undefined;
+  }
   state.selectedItemId = itemId;
   state.selectedElementMetrics = undefined;
 
@@ -356,8 +360,24 @@ export const closeMobileFileExplorer = ({ state }, _payload = {}) => {
   state.isMobileFileExplorerOpen = false;
 };
 
+// An edit panel value shown on the canvas before it is submitted. Only the
+// canvas and preview see it; a saved update or a cancel replaces it.
+export const setCanvasPreviewItem = ({ state }, { itemId, item } = {}) => {
+  state.canvasPreviewItem = { itemId, item };
+};
+
+export const clearCanvasPreviewItem = ({ state }) => {
+  state.canvasPreviewItem = undefined;
+};
+
+export const selectHasCanvasPreviewItem = ({ state }) =>
+  state.canvasPreviewItem !== undefined;
+
 export const updateSelectedItem = ({ state }, { itemId, updatedItem } = {}) => {
   const targetItemId = itemId ?? state.selectedItemId;
+  if (state.canvasPreviewItem?.itemId === targetItemId) {
+    state.canvasPreviewItem = undefined;
+  }
 
   if (targetItemId && state.layoutData && state.layoutData.items) {
     state.layoutData.items[targetItemId] = updatedItem;
@@ -655,7 +675,15 @@ export const selectViewData = ({ state, constants, i18n }) => {
       id: layout.id,
       layoutType: layout.layoutType,
       layoutSchemaVersion: layout.layoutSchemaVersion,
-      elements: state.layoutData,
+      elements: state.canvasPreviewItem
+        ? {
+            ...state.layoutData,
+            items: {
+              ...state.layoutData.items,
+              [state.canvasPreviewItem.itemId]: state.canvasPreviewItem.item,
+            },
+          }
+        : state.layoutData,
     };
   }
 

@@ -461,19 +461,44 @@ const applySizeModeUpdate = (deps, { name, value } = {}) => {
   });
 };
 
-const applyPanelValueUpdate = (
-  deps,
-  { name, value, closePopover = false, closeImageSelector = false } = {},
-) => {
-  const { store, render } = deps;
-  let normalizedValue =
+const normalizePanelValue = (name, value) => {
+  const normalizedValue =
     INTEGER_ONLY_FIELDS.has(name) && Number.isFinite(Number(value))
       ? Math.round(Number(value))
       : value;
 
   if (name === "rotation" && Number.isFinite(Number(normalizedValue))) {
-    normalizedValue = normalizeLayoutRotation(Number(normalizedValue));
+    return normalizeLayoutRotation(Number(normalizedValue));
   }
+  return normalizedValue;
+};
+
+// Show a popover value on the canvas while it is chosen. The owner keeps it
+// out of the saved layout until an update arrives, and drops it on
+// preview-cancel. Only plain numbers preview; a variable is applied on save.
+const emitPanelPreview = (deps, { name, value } = {}) => {
+  const { dispatchEvent, store } = deps;
+  if (!name || value === "" || !Number.isFinite(Number(value))) {
+    return;
+  }
+
+  dispatchEvent(
+    new CustomEvent("preview", {
+      detail: {
+        formValues: store.selectValues(),
+        name,
+        value: normalizePanelValue(name, Number(value)),
+      },
+    }),
+  );
+};
+
+const applyPanelValueUpdate = (
+  deps,
+  { name, value, closePopover = false, closeImageSelector = false } = {},
+) => {
+  const { store, render } = deps;
+  let normalizedValue = normalizePanelValue(name, value);
 
   if (
     SOUND_ID_FIELDS.has(name) &&
@@ -971,10 +996,12 @@ export const handleBlurItemRightClick = async (deps, payload) => {
   });
 };
 
+// Closing the popover without submitting it drops its canvas preview.
 export const handlePopverFormClose = (deps) => {
-  const { render, store } = deps;
+  const { dispatchEvent, render, store } = deps;
   store.closePopoverForm();
   render();
+  dispatchEvent(new CustomEvent("preview-cancel"));
 };
 
 export const handleVisibilityConditionDialogClose = (deps) => {
@@ -2201,6 +2228,14 @@ export const handleListBarItemClick = async (deps, payload) => {
   render();
 };
 
+// Live while a slider moves or a value is typed. It must not rebuild the
+// popover form, which would end the slider drag.
+export const handlePopoverFormInput = (deps, payload) => {
+  const { store } = deps;
+  const { name } = store.selectPopoverForm();
+  emitPanelPreview(deps, { name, value: payload._event.detail.values.value });
+};
+
 export const handlePopoverFormChange = async (deps, payload) => {
   const { props, store, render } = deps;
   const { _event } = payload;
@@ -2213,6 +2248,7 @@ export const handlePopoverFormChange = async (deps, payload) => {
     copy: selectCopy(deps),
   });
   render();
+  emitPanelPreview(deps, { name, value: _event.detail.values.value });
 };
 
 export const handlePopoverPresetClick = (deps, payload) => {
@@ -2236,6 +2272,7 @@ export const handlePopoverPresetClick = (deps, payload) => {
     copy: selectCopy(deps),
   });
   render();
+  emitPanelPreview(deps, { name, value });
 };
 
 export const handleListBarItemRightClick = async (deps, payload) => {

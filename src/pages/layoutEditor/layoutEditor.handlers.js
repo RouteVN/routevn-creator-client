@@ -2006,16 +2006,9 @@ export const handleLayoutEditorPreviewPlay = (deps) => {
   refs.layoutEditorCanvas.restartPreview();
 };
 
-export const handleLayoutEditPanelUpdateHandler = async (deps, payload) => {
-  const { store, render } = deps;
-  const layoutId = store.selectLayoutId();
-  const resourceType = store.selectLayoutResourceType();
-  const selectedItemId = store.selectSelectedItemId();
-  const detail = payload._event.detail;
-  const currentItem = store.selectSelectedItemData();
-  if (!currentItem) {
-    return;
-  }
+// The selected item with an edit panel value applied, for saving it or for
+// previewing it on the canvas.
+const buildPanelUpdatedItem = (store, detail, currentItem) => {
   const nextAspectRatioLock =
     Number.isFinite(detail.formValues?.aspectRatioLock) &&
     detail.formValues.aspectRatioLock > 0
@@ -2095,6 +2088,21 @@ export const handleLayoutEditPanelUpdateHandler = async (deps, payload) => {
     }
   }
 
+  return updatedItem;
+};
+
+export const handleLayoutEditPanelUpdateHandler = async (deps, payload) => {
+  const { store, render } = deps;
+  const layoutId = store.selectLayoutId();
+  const resourceType = store.selectLayoutResourceType();
+  const selectedItemId = store.selectSelectedItemId();
+  const detail = payload._event.detail;
+  const currentItem = store.selectSelectedItemData();
+  if (!currentItem) {
+    return;
+  }
+  const updatedItem = buildPanelUpdatedItem(store, detail, currentItem);
+
   if (areLayoutEditorItemsEquivalent(currentItem, updatedItem)) {
     return;
   }
@@ -2121,5 +2129,31 @@ export const handleLayoutEditPanelUpdateHandler = async (deps, payload) => {
     subject.dispatch("layoutEditor.updateElement", pendingPayload);
   }
 
+  render();
+};
+
+// A popover value shown on the canvas before it is submitted. It never
+// reaches the saved layout: an update replaces it, and preview-cancel drops it.
+export const handleLayoutEditPanelPreview = (deps, payload) => {
+  const { store, render } = deps;
+  const currentItem = store.selectSelectedItemData();
+  if (!currentItem) {
+    return;
+  }
+
+  store.setCanvasPreviewItem({
+    itemId: store.selectSelectedItemId(),
+    item: buildPanelUpdatedItem(store, payload._event.detail, currentItem),
+  });
+  render();
+};
+
+export const handleLayoutEditPanelPreviewCancel = (deps) => {
+  const { store, render } = deps;
+  if (!store.selectHasCanvasPreviewItem()) {
+    return;
+  }
+
+  store.clearCanvasPreviewItem();
   render();
 };

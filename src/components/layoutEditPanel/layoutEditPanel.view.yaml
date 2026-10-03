@@ -57,6 +57,8 @@ refs:
     eventListeners:
       form-action:
         handler: handleFormActions
+      form-input:
+        handler: handlePopoverFormInput
       form-change:
         handler: handlePopoverFormChange
   visibilityConditionForm:
