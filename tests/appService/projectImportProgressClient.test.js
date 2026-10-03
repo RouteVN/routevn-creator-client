@@ -3,6 +3,9 @@ import { createProjectImportProgressClient } from "../../src/deps/clients/projec
 
 const CALLBACK = "__routeVNTestProjectImportProgress";
 
+const createClient = () =>
+  createProjectImportProgressClient({ callbackName: CALLBACK });
+
 beforeEach(() => {
   vi.stubGlobal("window", {});
 });
@@ -12,104 +15,69 @@ afterEach(() => {
 });
 
 describe("project import progress client", () => {
-  it("delivers native events to a subscriber", () => {
-    const client = createProjectImportProgressClient({
-      callbackName: CALLBACK,
-    });
+  it("delivers the events of its own staging folder", () => {
     const onProgress = vi.fn();
 
-    client.subscribe({ onProgress });
-    window[CALLBACK]({
-      projectId: "project-one",
-      stage: "downloading",
-      current: 5,
-      total: 10,
-    });
+    createClient().subscribe({ stagingId: "staging-one", onProgress });
+    window[CALLBACK]({ stagingId: "staging-one", current: 5, total: 10 });
 
-    expect(onProgress).toHaveBeenCalledWith({
-      stage: "downloading",
-      current: 5,
-      total: 10,
-    });
+    expect(onProgress).toHaveBeenCalledWith({ current: 5, total: 10 });
   });
 
-  it("only delivers events for the subscribed project id", () => {
-    const client = createProjectImportProgressClient({
-      callbackName: CALLBACK,
-    });
+  it("ignores the events of another staging folder", () => {
     const onProgress = vi.fn();
 
-    client.subscribe({ projectId: "project-one", onProgress });
-    window[CALLBACK]({
-      projectId: "project-two",
-      stage: "extracting",
-      current: 1,
-      total: 2,
-    });
-    window[CALLBACK]({
-      projectId: "project-one",
-      stage: "extracting",
-      current: 2,
-      total: 2,
-    });
+    createClient().subscribe({ stagingId: "staging-one", onProgress });
+    window[CALLBACK]({ stagingId: "staging-two", current: 1, total: 2 });
+    window[CALLBACK]({ current: 1, total: 2 });
 
-    expect(onProgress).toHaveBeenCalledTimes(1);
-    expect(onProgress).toHaveBeenCalledWith({
-      stage: "extracting",
-      current: 2,
-      total: 2,
-    });
+    expect(onProgress).not.toHaveBeenCalled();
   });
 
-  it("accepts events without a project id when none is required", () => {
-    const client = createProjectImportProgressClient({
-      callbackName: CALLBACK,
-    });
-    const onProgress = vi.fn();
+  it("serves several subscribers at once, each with its own events", () => {
+    const client = createClient();
+    const first = vi.fn();
+    const second = vi.fn();
 
-    client.subscribe({ onProgress });
-    window[CALLBACK]({ stage: "finishing", current: 0, total: 0 });
+    client.subscribe({ stagingId: "staging-one", onProgress: first });
+    client.subscribe({ stagingId: "staging-two", onProgress: second });
+    window[CALLBACK]({ stagingId: "staging-two", current: 3, total: 4 });
 
-    expect(onProgress).toHaveBeenCalledTimes(1);
+    expect(first).not.toHaveBeenCalled();
+    expect(second).toHaveBeenCalledWith({ current: 3, total: 4 });
   });
 
   it("stops delivering after unsubscribe", () => {
-    const client = createProjectImportProgressClient({
-      callbackName: CALLBACK,
-    });
     const onProgress = vi.fn();
 
-    const unsubscribe = client.subscribe({ onProgress });
+    const unsubscribe = createClient().subscribe({
+      stagingId: "staging-one",
+      onProgress,
+    });
     unsubscribe();
-    window[CALLBACK]({ stage: "downloading", current: 1, total: 2 });
+    window[CALLBACK]({ stagingId: "staging-one", current: 1, total: 2 });
 
     expect(onProgress).not.toHaveBeenCalled();
   });
 
   it("keeps delivering to other subscribers when one throws", () => {
-    const client = createProjectImportProgressClient({
-      callbackName: CALLBACK,
-    });
+    const client = createClient();
     const failing = vi.fn(() => {
       throw new Error("view failed");
     });
     const healthy = vi.fn();
 
-    client.subscribe({ onProgress: failing });
-    client.subscribe({ onProgress: healthy });
+    client.subscribe({ stagingId: "staging-one", onProgress: failing });
+    client.subscribe({ stagingId: "staging-one", onProgress: healthy });
 
     expect(() =>
-      window[CALLBACK]({ stage: "downloading", current: 1, total: 2 }),
+      window[CALLBACK]({ stagingId: "staging-one", current: 1, total: 2 }),
     ).not.toThrow();
     expect(healthy).toHaveBeenCalledTimes(1);
   });
 
   it("does not install the callback without a listener", () => {
-    const client = createProjectImportProgressClient({
-      callbackName: CALLBACK,
-    });
-
-    const unsubscribe = client.subscribe({});
+    const unsubscribe = createClient().subscribe({});
 
     expect(window[CALLBACK]).toBeUndefined();
     expect(() => unsubscribe()).not.toThrow();

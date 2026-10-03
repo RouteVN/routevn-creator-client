@@ -1,6 +1,7 @@
-// Native archive imports report progress through a window callback. Only one
-// archive import runs at a time, so a subscription receives every event, or
-// only the events carrying its project id when the platform sends one.
+// Native import calls report progress through a window callback with
+// `{ stagingId, current, total }`. A subscription receives only the events of
+// its own staging folder, so a late event of an earlier import never moves the
+// current progress bar.
 export const createProjectImportProgressClient = ({ callbackName }) => {
   const listeners = new Set();
 
@@ -15,20 +16,16 @@ export const createProjectImportProgressClient = ({ callbackName }) => {
   };
 
   return {
-    subscribe({ projectId, onProgress } = {}) {
+    subscribe({ stagingId, onProgress } = {}) {
       if (typeof onProgress !== "function") {
         return () => {};
       }
 
       const listener = (event = {}) => {
-        if (projectId !== undefined && event.projectId !== projectId) {
+        if (event.stagingId !== stagingId) {
           return;
         }
-        onProgress({
-          stage: event.stage,
-          current: event.current,
-          total: event.total,
-        });
+        onProgress({ current: event.current, total: event.total });
       };
       listeners.add(listener);
       window[callbackName] = dispatch;

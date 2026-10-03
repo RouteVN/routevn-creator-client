@@ -1,13 +1,13 @@
 import { createAppServiceCore } from "../shared/appServiceCore.js";
 import { callIOSBridge } from "../../clients/ios/bridge.js";
-import { iosProjectImportProgress } from "../../clients/ios/projectImportProgress.js";
+import { iosProjectImportHost } from "../../clients/ios/projectImportHost.js";
+import { createProjectImportService } from "../shared/projectImportService.js";
 import { getIOSProjectFileUrl } from "./projectFileUrls.js";
 import { generateId } from "../../../internal/id.js";
 import { copyTextToClipboard } from "../../../internal/copyText.js";
 import { createNativeApplicationIdentifier } from "../../../internal/nativeApplicationIdentifier.js";
 import { normalizeProjectLanguage } from "../../../internal/projectLanguage.js";
 import { isDarkTheme } from "../../../internal/theme.js";
-import { parseProjectImportUrl } from "../../../internal/projectImportUrl.js";
 import { createProgressDialog } from "../../clients/progressDialog.js";
 import { createIOSProjectFolderSetup } from "../../clients/ios/projectFolderSetup.js";
 
@@ -155,6 +155,9 @@ const createRegisterImportedIOSProject = ({ appDb, getFileDisplayPath }) => {
 
 export const createAppService = (params) => {
   const appDb = params.db;
+  const projectImport = createProjectImportService({
+    host: iosProjectImportHost,
+  });
   const projectFolderSetup = createIOSProjectFolderSetup({
     filePicker: params.filePicker,
   });
@@ -258,8 +261,18 @@ export const createAppService = (params) => {
         throw new Error("Project folder is required.");
       }
 
+      // Rule A: the library copy stores each file under its file id. The copy
+      // is renamed, never the folder the user picked.
+      const fileRenames = await projectImport.planFolderFileRenames({
+        list: (path) =>
+          iosProjectImportHost.listDirectory(
+            { uri: folderSelection.uri },
+            path,
+          ),
+      });
       const importedProject = await callIOSBridge("importProjectFolder", {
         uri: folderSelection.uri,
+        fileRenames,
       });
 
       return registerImportedIOSProject({
@@ -375,6 +388,24 @@ export const createAppService = (params) => {
     },
   };
 
+  // Zip and URL imports end the same way: the extracted staging folder goes
+  // through the bridge's storage step, then the project is registered.
+  const importStagedProject = async ({ run }) => {
+    const importedProject = await run(({ staging, path }) =>
+      callIOSBridge("importProjectFolder", {
+        stagingId: staging.stagingId,
+        path,
+      }),
+    );
+
+    return registerImportedIOSProject({
+      importedProject,
+      addProjectEntry: appService.addProjectEntry,
+      loadProjectIcon: platformAdapter.loadProjectIcon,
+      projectService: params.projectService,
+    });
+  };
+
   const appService = createAppServiceCore({
     ...params,
     platformAdapter,
@@ -413,42 +444,16 @@ export const createAppService = (params) => {
         throw new Error("importFailed: Archive uri is required.");
       }
 
-      const unsubscribe = iosProjectImportProgress.subscribe({ onProgress });
-      let importedProject;
-      try {
-        importedProject = await callIOSBridge("importProjectArchive", {
-          uri,
-        });
-      } finally {
-        unsubscribe();
-      }
-
-      return registerImportedIOSProject({
-        importedProject,
-        addProjectEntry: appService.addProjectEntry,
-        loadProjectIcon: platformAdapter.loadProjectIcon,
-        projectService: params.projectService,
+      return importStagedProject({
+        run: (finish) =>
+          projectImport.importFromArchive({ uri, onProgress, finish }),
       });
     },
 
     async importProjectFromUrl({ url, onProgress } = {}) {
-      const normalizedUrl = parseProjectImportUrl(url);
-
-      const unsubscribe = iosProjectImportProgress.subscribe({ onProgress });
-      let importedProject;
-      try {
-        importedProject = await callIOSBridge("importProjectArchiveFromUrl", {
-          url: normalizedUrl,
-        });
-      } finally {
-        unsubscribe();
-      }
-
-      return registerImportedIOSProject({
-        importedProject,
-        addProjectEntry: appService.addProjectEntry,
-        loadProjectIcon: platformAdapter.loadProjectIcon,
-        projectService: params.projectService,
+      return importStagedProject({
+        run: (finish) =>
+          projectImport.importFromUrl({ url, onProgress, finish }),
       });
     },
 

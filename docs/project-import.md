@@ -68,27 +68,29 @@ folders and are still found.
 
 ## Extension stripping (Rule A)
 
-Every import renames the files directly inside `files/` so the on-disk name
-equals the file id. Desktop folder import renames inside the folder the user
-picked, so it changes that folder. Android and iOS rename only the app-private
-copy; the user's source folder is never modified. Source comments refer to this
-rule, the zip rules, and the URL rules as Rule A, Rule B, and Rule C.
+Every import stores the files directly inside `files/` under their file id. The rule
+lives in `planFileRenames` (`src/internal/projectImportPlan.js`); native code only
+performs the renames it is given. For a project folder, JavaScript lists `files/` and
+sends the plan along: desktop renames inside the folder the user picked, so it changes
+that folder, while Android and iOS apply the renames to their own copy and never touch
+the user's source folder. For a zip, the plan is applied while extracting: each file is
+written straight to its final name, so nothing is renamed afterwards.
 
-Desktop and iOS refuse a `files` folder that is itself a symlink, so a rename can
-never reach outside the project folder. Symlinks and directories inside `files/` are
-never renamed, but they still occupy their name: `abc.png` next to a link called `abc`
-fails with `fileNameConflict` instead of replacing the link.
+A `files` folder that is itself a link is refused on every platform, so a rename can
+never reach outside the project. Links and directories inside `files/` are never
+renamed, but they still occupy their name: `abc.png` next to a link called `abc` fails
+with `fileNameConflict` instead of replacing the link.
 
 - The file id is the name up to, but not including, the first `.`. Names with no
   `.` are unchanged.
 - Names that start with `.` (`.DS_Store`, `._x`) and sub-directories are left
   alone.
-- If the resulting id is not a valid file id, the import fails with
-  `invalidFileName`.
+- If the resulting id is not a valid file id (`[A-Za-z0-9_-]{1,128}`), the import
+  fails with `invalidFileName`.
 - If two names map to the same id, compared case-insensitively, or the target
-  name already exists as another file, the import fails with `fileNameConflict`
-  before anything is renamed. If a rename fails partway, the renames already
-  applied are rolled back on a best-effort basis.
+  name is already taken by a directory or link, the import fails with
+  `fileNameConflict` before anything is renamed. On desktop, if a rename fails partway,
+  the renames already made are undone.
 - `file-metadata/` is never touched.
 
 | Name                  | Result             |
@@ -101,74 +103,65 @@ fails with `fileNameConflict` instead of replacing the link.
 
 ## Zip layout and safety (Rule B)
 
+JavaScript reads the zip's entry table and decides what to extract
+(`planArchiveExtraction`). Native code lists the entries and extracts the ones it is
+asked for, and nothing else.
+
 A zip is accepted when its root, or its single top-level folder, contains
 `project.db`. `__MACOSX/` and dot-entries are ignored. A missing `files/` is
-treated as empty. Only `project.db` and its sidecars, `files/<name>` and
-`file-metadata/<name>` are extracted; everything else is skipped. An archive that
-contains the incomplete-export marker, as a file or a directory, is rejected.
+treated as empty. Only `project.db` and its sidecars (`-wal`, `-shm`, `-journal`),
+`files/<name>` and `file-metadata/<name>` are extracted; everything else is skipped,
+including anything nested deeper. An archive that contains the incomplete-export
+marker, as a file or a directory, is rejected with `invalidArchive`.
 
-Archives are untrusted, so extraction checks the entry table before it writes
-anything:
+JavaScript checks the entry table before anything is written:
 
 - Entry names containing a backslash, NUL, or `:`, and names with an empty, `.`,
-  or `..` segment, are rejected as `unsafeArchiveEntry`. So are absolute paths and
-  symlink or other special entries.
-- Duplicate entries are rejected as `invalidArchive`, whether the raw names match
-  or only the normalized, case-insensitive paths do, so one entry can never
-  silently replace another.
-- The entry count and central-directory size are read from the end-of-archive
-  record and checked before the directory is parsed.
-- Every extracted entry's CRC32 and byte count must match its header, otherwise
+  or `..` segment (including a leading `/` or `./`), are rejected as
+  `unsafeArchiveEntry`.
+- Entries whose paths differ only by case are rejected as `invalidArchive`, so one
+  entry can never silently replace another.
+- More than 50,000 entries, or more than 8 GiB declared for the entries to extract,
+  is rejected (`invalidArchive`, `archiveTooLarge`).
+- Rule A is applied to the destination names, so a name clash or an invalid file id
+  fails before the first byte is written.
+
+Native extraction keeps the filesystem and the byte counts honest:
+
+- Every destination `path` must be relative and made of plain names, otherwise
+  `unsafeArchiveEntry`.
+- Output files are created exclusively, so an existing file or a planted symlink is an
+  error and is never written through, and no folder on the way may be a symlink.
+- Every extracted entry's byte count and CRC32 must match its header, otherwise
   `invalidArchive`.
-- Desktop checks that `project.db` starts with the SQLite header before anything is
-  promoted into the chosen folder, so a zip with a non-database `project.db` fails as
-  `invalidArchive` and leaves no folder behind. Android and iOS read the project info
-  from the database before they promote.
-- Output files are created exclusively, so an existing file or a planted symlink is
-  an error and is never written through.
+- The bytes actually written are counted against the limit (8 GiB), so a header that
+  lies about its size cannot fill the disk (`archiveTooLarge`).
+- When extraction fails, everything it created is removed.
 
-Limits, enforced on the bytes actually written:
+The downloaded or picked zip itself is limited to 4 GiB.
 
-- 50,000 entries
-- 64 MiB central directory
-- 8 GiB uncompressed
-- 4 GiB archive, whether downloaded or picked from the device
-
-### Archives the importer rejects on purpose
-
-The importer fails closed on layouts it cannot check completely. Each of these
-reports `invalidArchive` or `unsafeArchiveEntry` with a localized message instead of
-importing partially:
-
-- entry names that start with `./` (for example Python `zipfile` with an explicit
-  `./project.db` arcname) or contain a backslash (some older Windows zippers)
-- archives with data in front of the first entry, such as self-extracting stubs
-- archives with a central-directory digital signature record, or with the optional
-  ZIP64 comment records that the `zip` crate writes after `set_zip64_comment`
-- encrypted entries, and compression methods other than stored and deflate
-- an archive that is not exactly one end-of-central-directory record with a central
-  directory that ends where it starts
-
-Re-zipping the project folder with the system's normal "compress" command produces
-an accepted archive. Rejection is always safe: nothing is written to app storage or
-to the chosen folder.
-
-Two rare cases are known and accepted. A cancelled desktop command cannot stop an
-import that has already begun extracting, so the finished project can appear in the
-chosen folder even though the app did not report it. A skipped entry such as
-`__MACOSX/link` with unusual host metadata is ignored rather than rejected, and is
-never extracted.
+Entries that are not regular files are not special-cased: a zip library writes a
+symlink entry as an ordinary small file, and iOS and desktop reject a requested symlink
+entry. Android 14 and later refuse to open a zip that has an entry name with `..` or a
+leading `/`; the import reports that as `invalidArchive` instead of
+`unsafeArchiveEntry`. The platform zip libraries also decide how encrypted entries,
+unusual compression methods and duplicate raw entry names behave (the desktop library
+shows duplicate names as one entry, iOS rejects them), and a failure there is reported
+as `invalidArchive`. Re-zipping the project folder with the system's normal "compress"
+command produces an accepted archive. A rejection is always safe: nothing reaches app
+storage or the chosen folder.
 
 ## URL download (Rule C)
 
-The URL is assumed to be a zip. Only `https:` is accepted; `http:` is accepted
-only for `localhost`, `127.0.0.1`, and `[::1]`. URLs with embedded credentials
-are rejected. At most 5 redirects are followed, and every hop must pass the same
-check. On desktop and Android, connections time out after 15 seconds and stalled
-reads after 30 seconds. iOS has no separate connect timeout, so its single
-30-second idle timeout covers both. There is no overall deadline. The archive streams to a temporary file and is
-never held in memory. The server's `Content-Type` is not trusted; the file is
-validated by parsing it as a zip.
+The URL is assumed to be a zip. `parseProjectImportUrl` (`src/internal/projectImportUrl.js`)
+accepts only `https:`; `http:` is accepted only for `localhost`, `127.0.0.1`, and
+`[::1]`. URLs with embedded credentials are rejected. Native code enforces the same
+rule on every hop of the download: at most 5 redirects, each one re-checked. On desktop
+and Android, connections time out after 15 seconds and stalled reads after 30 seconds.
+iOS has no separate connect timeout, so its single 30-second idle timeout covers both.
+There is no overall deadline. The archive streams to a temporary file and is never held
+in memory. The server's `Content-Type` is not trusted; the file is validated by parsing
+it as a zip.
 
 ### Google Drive links
 
@@ -195,10 +188,10 @@ and gives the same result when applied to its own output.
 - This relies on Drive's public download endpoint, which is not a documented API
   and can change.
 
-On Android, the two import bridge calls opt out of the JavaScript bridge's default
-30-minute response timeout, because a large archive on a slow connection can
-legitimately take longer. The native side bounds the call itself with the connect and
-stall timeouts.
+On Android, the calls that move a lot of data (`downloadImportFile`, `copyImportFile`
+and the storage step) opt out of the JavaScript bridge's default 30-minute response
+timeout, because a large archive on a slow connection can legitimately take longer. The
+native side bounds the download itself with the connect and stall timeouts.
 
 Downloads and extraction run natively, not through the WebView, because most
 hosts do not send CORS headers and a WebView fetch would buffer the whole archive
@@ -216,58 +209,55 @@ stages. Folder imports show no stage.
 | (start, zip)  | Preparing…                         | Indeterminate while the zip is copied into staging                                                |
 | `downloading` | Downloading… 76 MB of 195 MB (39%) | Bytes received of `Content-Length`; indeterminate with the size so far when the length is unknown |
 | `extracting`  | Extracting files… 83%              | Uncompressed bytes written of the declared total of the extracted entries                         |
-| `finishing`   | Finishing up…                      | Indeterminate: Rule A renames, copy or rename into place, registration                            |
+| `finishing`   | Finishing up…                      | Indeterminate: moving or copying into place and registration                                      |
 
-Native code reports `{ stage, current, total }`:
-
-- The first event of a stage has `current` 0 and is sent as soon as the stage starts. Events
-  inside a stage are throttled to one per 100 ms, and the last event of a stage is always
-  sent (`current` equals `total` for `extracting`).
-- `downloading` reports bytes written to the temporary archive; `total` is 0 when the server
-  sends no length. `extracting` counts bytes actually written, chunk by chunk, so one large
-  file advances smoothly. `finishing` has `current` and `total` 0.
-- Progress is best effort. A failure to deliver an event never changes the import result.
+Native calls report only `{ current, total }` in bytes (see "Progress events" below).
+`projectImportService` knows which call it is waiting for and turns the numbers into
+`{ stage, current, total }` for the dialog, adding the `finishing` event itself before the
+storage step. `downloading` reports bytes written to the temporary archive; `total` is 0
+when the server sends no length. `extracting` counts bytes actually written, chunk by
+chunk, so one large file advances smoothly. `finishing` has `current` and `total` 0.
+Progress is best effort. A failure to deliver an event never changes the import result.
 
 Delivery per platform:
 
-- Desktop: `download_project_archive` takes a Tauri `Channel` argument named `onProgress`.
-  JavaScript adds its own `finishing` event after the command returns, for the Rule A rename
-  and registration that happen in JavaScript.
-- Android: the native side calls `window.__routeVNAndroidProjectImportProgress` with the
-  event plus the `projectId` of the import call; JavaScript only accepts events for its own
-  `projectId`.
-- iOS: the native side calls `window.__routeVNIOSProjectImportProgress`. The iOS bridge does
-  not receive a project id from JavaScript, so events are accepted without one, which is safe
-  because only one archive import runs at a time.
+- Desktop: `download_file` and `extract_archive` take a Tauri `Channel` argument named
+  `onProgress`.
+- Android and iOS: the native side calls `window.__routeVNAndroidProjectImportProgress` or
+  `window.__routeVNIOSProjectImportProgress` with `{ stagingId, current, total }`;
+  JavaScript only accepts events for the staging folder of its own import.
 
-The listener is registered for the duration of one import and removed when it settles, whether
-it succeeds or fails. The status text lives in the `projectsPage` i18n catalogs
+The listener is registered for the duration of one native call and removed when it settles,
+whether it succeeds or fails. The status text lives in the `projectsPage` i18n catalogs
 (`importConnectingStatus`, `importPreparingStatus`, `importDownloadingStatus`,
 `importDownloadingUnknownStatus`, `importExtractingStatus`, `importFinishingStatus`).
 
 ## Temporary data
 
-Temporary data is always deleted on success, failure, and cancellation.
+JavaScript removes the staging folder when an import settles, on success and on failure.
+There is no cancel button, so there is no cancelled state.
 
-| Platform | Archive                                                   | Extraction                                                                                 |
-| -------- | --------------------------------------------------------- | ------------------------------------------------------------------------------------------ |
-| Desktop  | OS temp directory (`tempfile`)                            | Hidden `.routevn-import-<random>` folder inside the chosen parent, then renamed into place |
-| Android  | `cacheDir/project-import/<projectId>.archive/archive.zip` | `cacheDir/project-import/<projectId>/`, then promoted into `files/projects/<projectId>`    |
-| iOS      | `tmp/project-import/<uuid>/archive.zip`                   | `tmp/project-import/<uuid>/extracted`, then copied into app storage                        |
+| Platform | Staging folder (holds `archive.zip` and `extracted/`)          | Then                                                                  |
+| -------- | -------------------------------------------------------------- | --------------------------------------------------------------------- |
+| Desktop  | `routevn-import-<random>` folder inside the chosen destination | `extracted/` is moved into place beside it, which stays on one volume |
+| Android  | `cacheDir/project-import/<stagingId>/`                         | The payload is moved into `files/projects/<projectId>`                |
+| iOS      | `tmp/project-import/<stagingId>/`                              | The payload is copied into the project library folder                 |
 
-The archive is always kept outside the folder that is promoted, so it can never end
-up inside a project. Android deletes it as soon as extraction finishes.
+The archive is always kept outside `extracted/`, the folder that becomes the project, so
+it can never end up inside a project. The extracted folder holds only the files the plan
+asked for.
 
-On desktop the extraction folder is created beside the destination so the final
-rename stays on one volume. The extracted project folder is the imported project;
-only the downloaded zip is deleted. The destination folder name comes from the
-server's `Content-Disposition` filename, else the last URL path segment, else
-`RouteVN Project`. Windows reserved device names are prefixed with `_`. If the name
-is taken, ` 2`, ` 3`, and so on are tried, and the name is claimed atomically so an
-existing folder is never overwritten or merged.
+On desktop the staging folder is visible while the import runs, because the fs plugin's
+scope does not match names with a leading dot. If the app is killed mid-import the
+folder stays in the destination and can be deleted by hand. The destination folder name
+comes from the server's `Content-Disposition` filename, else the last URL path segment,
+else `RouteVN Project` (`deriveImportFolderName`). Unsafe characters become `-`, spaces
+and dots at the ends are trimmed, the name is limited to 180 bytes, and Windows reserved
+device names are prefixed with `_`. If the name is taken, ` 2`, ` 3`, and so on are tried
+so an existing folder is never overwritten or merged. If registering the project fails,
+the moved folder is removed again.
 
-Android and iOS also remove stale `project-import` directories older than 24 hours
-at the start of an import.
+Android and iOS also remove staging folders older than 24 hours when a new one is created.
 
 ## Importing a project that already exists
 
@@ -309,27 +299,135 @@ entry appears.
 
 ## Errors
 
-Native failures start their message with a stable code, then `: `, then a
-technical detail. The client maps the code to a localized message and appends the
-detail with `withErrorDetails`.
+Every import failure is an `Error` whose message starts with a stable code, then `: `,
+then a technical detail. The client maps the code to a localized message and appends the
+detail with `withErrorDetails` (`src/internal/projectImportErrors.js`).
 
 `invalidUrl`, `downloadFailed`, `archiveTooLarge`, `invalidArchive`,
 `unsafeArchiveEntry`, `invalidFileName`, `fileNameConflict`, `projectExists`,
-`importFailed`.
+`importFailed`, `unsupportedUrl`, `googleDriveFailed`.
 
-Two more codes are raised in JavaScript before or after the native call:
-`unsupportedUrl` (for example a Drive folder link) and `googleDriveFailed` (see
-Google Drive links above).
+Native code raises only `invalidUrl`, `downloadFailed`, `archiveTooLarge`,
+`invalidArchive`, `unsafeArchiveEntry` and `importFailed`. The rest are raised in
+JavaScript: `invalidFileName`, `fileNameConflict` (Rule A), `unsupportedUrl` (for
+example a Drive folder link), `googleDriveFailed` (see Google Drive links above),
+`projectExists`, and the layout failures of the zip plan (`invalidArchive`,
+`unsafeArchiveEntry`, `archiveTooLarge`). A redirect loop is `downloadFailed` on iOS and
+`invalidUrl` on Android; both end in the same alert.
+
+Android and iOS report any failure of the storage step as `importFailed`, so a
+`project.db` that cannot be read shows as an import failure with its detail.
+
+## Native contract
+
+Import is app logic, so it lives in JavaScript. Native code only exposes basic
+operations that a WebView cannot do itself (stream a large download to disk, read and
+extract a zip, touch the app's private files) and never decides what a project is or
+how it is named. JavaScript decides the zip layout, the file names, the limits, the
+progress stages, the folder names and the error to show.
+
+Every native error message is `<code>: <detail>` using only these codes:
+`invalidUrl`, `downloadFailed`, `archiveTooLarge`, `invalidArchive`,
+`unsafeArchiveEntry`, `importFailed`.
+
+### Progress events
+
+A call that moves bytes (`download`, `extract`) reports `{ current, total }` in bytes;
+`total` is 0 when unknown. The first event is sent as soon as the work starts with
+`current` 0 (for a download, once the server's response headers have arrived, so the
+app can show "Connecting" until then), events inside the call are throttled to one per
+100 ms, and the last event is always sent. Progress is best effort: failing to deliver an
+event never changes the result. JavaScript knows which call it is waiting for, so events
+carry no stage name.
+
+### Desktop (Tauri commands)
+
+Paths are absolute. JavaScript creates folders, renames and removes with the Tauri fs
+plugin (the `fs:allow-rename` permission is in `src-tauri/capabilities/default.json`);
+native code only provides these three commands.
+
+| Command           | Arguments                                                                                                  | Result                                       |
+| ----------------- | ---------------------------------------------------------------------------------------------------------- | -------------------------------------------- |
+| `download_file`   | `url`, `destination` (new file, parent exists), `maxBytes`, `onProgress` (Channel)                         | `{ finalUrl, contentDisposition?, bytes }`   |
+| `list_archive`    | `archive`, `maxEntries`                                                                                    | `{ entries: [{ name, size, isDirectory }] }` |
+| `extract_archive` | `archive`, `destination` (existing folder), `files: [{ entry, path }]`, `maxBytes`, `onProgress` (Channel) | `{ files, bytes }`                           |
+
+### Android and iOS (bridge methods)
+
+The two bridges expose the same methods with the same payloads. A **staging folder**
+is a native-owned temporary folder, addressed by an opaque `stagingId`; all `path`
+values are relative to it. Native rejects any path that is absolute or has an empty,
+`.` or `..` segment, a backslash, `:` or NUL, so JavaScript can never leave it.
+
+| Method                 | Payload                                                                                          | Result                                                                                     |
+| ---------------------- | ------------------------------------------------------------------------------------------------ | ------------------------------------------------------------------------------------------ |
+| `createImportStaging`  | none                                                                                             | `{ stagingId }`. Also removes staging folders older than 24 hours.                         |
+| `removeImportStaging`  | `stagingId`                                                                                      | `{}`. Idempotent.                                                                          |
+| `downloadImportFile`   | `stagingId`, `url`, `path`, `maxBytes`                                                           | `{ finalUrl, contentDisposition?, bytes }`. Progress events.                               |
+| `copyImportFile`       | `stagingId`, `uri` (picked file), `path`, `maxBytes`                                             | `{ bytes }`                                                                                |
+| `listImportArchive`    | `stagingId`, `path`, `maxEntries`                                                                | `{ entries: [{ name, size, isDirectory }] }`                                               |
+| `extractImportArchive` | `stagingId`, `path`, `destination`, `files: [{ entry, path }]`, `maxBytes`                       | `{ files, bytes }`. Progress events.                                                       |
+| `listImportDirectory`  | `{ stagingId, path }` or `{ uri, path }` (a picked folder); an empty `path` is the folder itself | `{ entries: [{ name, kind, size }] }`, `kind` is `file`, `directory`, `symlink` or `other` |
+| `importProjectFolder`  | `{ stagingId, path }` or `{ uri }`, `projectId` (Android only), `fileRenames?: [{ from, to }]`   | The registered project, as before                                                          |
+
+Progress events are delivered to `window.__routeVNAndroidProjectImportProgress` and
+`window.__routeVNIOSProjectImportProgress` as `{ stagingId, current, total }`.
+
+`importProjectFolder` is the platform's storage step: it copies or moves the project
+into the app's project storage, restores the identity, and reports the project. When
+the source is a staging folder and `files/` or `file-metadata/` is missing from it, the
+copy gets an empty one (an archive may legitimately hold no assets). It applies
+`fileRenames` to the files directly inside the copy's `files/` (each `from` becomes
+`to`, never overwriting) and does not decide which renames are needed.
+
+### Native download and extraction rules
+
+These are transport and filesystem safety, so they stay native:
+
+- Download: `https:` only (`http:` for `localhost`, `127.0.0.1`, `[::1]`), no
+  credentials in the URL, at most 5 redirects with every hop passing the same check,
+  15 s connect and 30 s stalled-read timeouts, streamed to the new file and never held
+  in memory, `archiveTooLarge` past `maxBytes`. The new file must not already exist.
+- `list_archive` / `listImportArchive` reads the zip's entry table and returns raw
+  names; it fails with `invalidArchive` for a file that is not a readable zip or has
+  more than `maxEntries` entries.
+- `extract_archive` / `extractImportArchive` writes only the requested entries, each to
+  the requested relative `path`. It creates missing folders, creates files exclusively
+  (an existing file or symlink is an error, never written through), refuses a
+  destination `path` that is unsafe (`unsafeArchiveEntry`), checks each entry's CRC32
+  and size (`invalidArchive`), and fails with `archiveTooLarge` once the bytes
+  actually written pass `maxBytes`.
+- Temporary data is removed by JavaScript when an import settles; a staging folder that
+  is left behind by a crash is removed by the 24-hour sweep.
+
+### What JavaScript owns
+
+- URL parsing and Google Drive links (`src/internal/projectImportUrl.js`).
+- Zip layout, entry-name checks, limits, and Rule A names
+  (`src/internal/projectImportPlan.js`).
+- The import sequence, progress stages and cleanup
+  (`src/deps/services/shared/projectImportService.js`), written once and driven
+  through a small per-platform host in `src/deps/clients/<platform>/projectImportHost.js`.
+- Folder naming on desktop, and which error to show.
 
 ## Implementation map
 
 - UI flow: `src/pages/projects/` (progress dialog updates in `support/projectImportFlows.js`,
   status text in `src/internal/projectImportProgress.js`)
-- URL validation and Google Drive link rewriting: `src/internal/projectImportUrl.js`
-- Progress listeners: `src/deps/clients/projectImportProgress.js` with the Android and iOS wrappers
-- Desktop: `src-tauri/src/project_import.rs`
-  (`download_project_archive`, `normalize_project_file_names`)
-- Android: `importProjectArchive`, `importProjectArchiveFromUrl`,
-  `openArchivePicker` in `MainActivity.java`
-- iOS: the same bridge names in `RouteVNApp.swift`, with ZIPFoundation for
-  extraction
+- Rules: `src/internal/projectImportUrl.js` (URL checks, Google Drive links),
+  `src/internal/projectImportPlan.js` (zip layout, entry names, Rule A, limits),
+  `src/internal/projectImportFolderName.js` (desktop folder names),
+  `src/internal/projectImportErrors.js`
+- Sequence and cleanup: `src/deps/services/shared/projectImportService.js`
+- Platform hosts (thin mappings onto the native operations):
+  `src/deps/clients/tauri/projectImportHost.js`,
+  `src/deps/clients/mobileProjectImportHost.js` with the Android and iOS wrappers in
+  `src/deps/clients/{android,ios}/projectImportHost.js`
+- Progress listeners: `src/deps/clients/projectImportProgress.js`
+- Desktop native: `src-tauri/src/project_import.rs` (`download_file`, `list_archive`,
+  `extract_archive`)
+- Android native: `ImportStaging`, `ImportDownloader`, `ImportArchive`, `ImportProject`
+  and `ImportProgress` in `android/routevn/app/src/main/java/com/routevn/creator/`, with the
+  bridge methods in `MainActivity.java`
+- iOS native: `ImportStaging.swift`, `ImportDownloader.swift`, `ImportArchive.swift`
+  (ZIPFoundation) and the bridge methods in `RouteVNApp.swift`

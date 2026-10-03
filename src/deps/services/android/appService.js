@@ -5,13 +5,13 @@ import {
   NO_BRIDGE_TIMEOUT,
   callAndroidBridge,
 } from "../../clients/android/bridge.js";
-import { androidProjectImportProgress } from "../../clients/android/projectImportProgress.js";
+import { androidProjectImportHost } from "../../clients/android/projectImportHost.js";
+import { createProjectImportService } from "../shared/projectImportService.js";
 import { getAndroidProjectFileUrl } from "./projectFileUrls.js";
 import { generateId } from "../../../internal/id.js";
 import { copyTextToClipboard } from "../../../internal/copyText.js";
 import { createNativeApplicationIdentifier } from "../../../internal/nativeApplicationIdentifier.js";
 import { normalizeProjectLanguage } from "../../../internal/projectLanguage.js";
-import { parseProjectImportUrl } from "../../../internal/projectImportUrl.js";
 
 const isMediaPickerRequest = (options) => {
   const acceptedTypes = options.accept?.trim()
@@ -122,6 +122,9 @@ const registerImportedAndroidProject = async ({
 export const createAppService = (params) => {
   const appDb = params.db;
   const { globalUI } = params;
+  const projectImport = createProjectImportService({
+    host: androidProjectImportHost,
+  });
 
   const syncAndroidProjectEntriesFromStorage = async () => {
     const discoveredProjects = await listAndroidProjectFolders();
@@ -191,10 +194,21 @@ export const createAppService = (params) => {
         throw new Error("Project folder is required.");
       }
 
+      // Rule A: the app copy stores each file under its file id. The copy is
+      // renamed, never the folder the user picked.
+      const fileRenames = await projectImport.planFolderFileRenames({
+        list: (path) =>
+          androidProjectImportHost.listDirectory(
+            { uri: folderSelection.uri },
+            path,
+          ),
+      });
+
       const projectId = generateId();
       const importedProject = await callAndroidBridge("importProjectFolder", {
         uri: folderSelection.uri,
         projectId,
+        fileRenames,
       });
       if (importedProject.id !== projectId) {
         throw new Error("Imported project identity does not match.");
@@ -334,6 +348,33 @@ export const createAppService = (params) => {
     },
   };
 
+  // Zip and URL imports end the same way: the extracted staging folder goes
+  // through the bridge's storage step with a new project id, then the project
+  // is registered.
+  const importStagedProject = async ({ run }) => {
+    const projectId = generateId();
+    const importedProject = await run(({ staging, path }) =>
+      callAndroidBridge(
+        "importProjectFolder",
+        { stagingId: staging.stagingId, path, projectId },
+        { timeoutMs: NO_BRIDGE_TIMEOUT },
+      ),
+    );
+    if (importedProject.id !== projectId) {
+      throw new Error("importFailed: Imported project identity mismatch.");
+    }
+
+    const project = await registerImportedAndroidProject({
+      importedProject,
+      projectId,
+      addProjectEntry: appService.addProjectEntry,
+      loadProjectIcon: platformAdapter.loadProjectIcon,
+      projectService: params.projectService,
+    });
+    backup.backupNewProject();
+    return project;
+  };
+
   const appService = createAppServiceCore({
     ...params,
     platformAdapter,
@@ -395,67 +436,17 @@ export const createAppService = (params) => {
         throw new Error("importFailed: Archive uri is required.");
       }
 
-      const projectId = generateId();
-      const unsubscribe = androidProjectImportProgress.subscribe({
-        projectId,
-        onProgress,
+      return importStagedProject({
+        run: (finish) =>
+          projectImport.importFromArchive({ uri, onProgress, finish }),
       });
-      let importedProject;
-      try {
-        importedProject = await callAndroidBridge(
-          "importProjectArchive",
-          { uri, projectId },
-          { timeoutMs: NO_BRIDGE_TIMEOUT },
-        );
-      } finally {
-        unsubscribe();
-      }
-      if (importedProject.id !== projectId) {
-        throw new Error("importFailed: Imported project identity mismatch.");
-      }
-
-      const project = await registerImportedAndroidProject({
-        importedProject,
-        projectId,
-        addProjectEntry: appService.addProjectEntry,
-        loadProjectIcon: platformAdapter.loadProjectIcon,
-        projectService: params.projectService,
-      });
-      backup.backupNewProject();
-      return project;
     },
 
     async importProjectFromUrl({ url, onProgress } = {}) {
-      const normalizedUrl = parseProjectImportUrl(url);
-
-      const projectId = generateId();
-      const unsubscribe = androidProjectImportProgress.subscribe({
-        projectId,
-        onProgress,
+      return importStagedProject({
+        run: (finish) =>
+          projectImport.importFromUrl({ url, onProgress, finish }),
       });
-      let importedProject;
-      try {
-        importedProject = await callAndroidBridge(
-          "importProjectArchiveFromUrl",
-          { url: normalizedUrl, projectId },
-          { timeoutMs: NO_BRIDGE_TIMEOUT },
-        );
-      } finally {
-        unsubscribe();
-      }
-      if (importedProject.id !== projectId) {
-        throw new Error("importFailed: Imported project identity mismatch.");
-      }
-
-      const project = await registerImportedAndroidProject({
-        importedProject,
-        projectId,
-        addProjectEntry: appService.addProjectEntry,
-        loadProjectIcon: platformAdapter.loadProjectIcon,
-        projectService: params.projectService,
-      });
-      backup.backupNewProject();
-      return project;
     },
 
     async deleteProject(projectId) {

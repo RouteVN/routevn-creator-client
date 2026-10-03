@@ -115,7 +115,7 @@ describe("Android WebMessage bridge client", () => {
       let settled = false;
 
       const pending = callAndroidBridge(
-        "importProjectArchiveFromUrl",
+        "downloadImportFile",
         {},
         { timeoutMs: NO_BRIDGE_TIMEOUT },
       ).finally(() => {
