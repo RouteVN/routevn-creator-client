@@ -371,10 +371,24 @@ document.querySelector('#page').append(document.createElement('rvn-layout-editor
                 at: [rect.left, rect.top],
               };
             });
+          // A focused tab must not see Space or its repeats: it would switch
+          // and re-render the page on every repeat, which flickers.
+          await page.locator("rtgl-tabs [data-id=edit]").click();
+          await page.locator("rtgl-tabs").evaluate((tabs) => {
+            window.tabClicks = 0;
+            tabs.addEventListener("item-click", () => (window.tabClicks += 1));
+          });
           await page.mouse.move(center.x, center.y);
           const start = await readPan();
           await page.keyboard.down("Space");
+          await page.keyboard.down("Space");
+          await page.keyboard.down("Space");
           const held = await readPan();
+          assert.equal(
+            await page.evaluate(() => window.tabClicks),
+            0,
+            `${label}: Space must not reach the focused tab`,
+          );
           await page.mouse.down();
           await page.mouse.move(center.x - 120, center.y - 80, { steps: 4 });
           const dragging = await readPan();

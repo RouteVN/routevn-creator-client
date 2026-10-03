@@ -46,8 +46,9 @@ const isTextEntryFocused = () => {
 //   reaches the content unchanged.
 // - As on the scene map, the left mouse button or a pen pans anywhere while
 //   Space is held, with a grab cursor over the workspace that blocks the
-//   content; releasing Space ends the drag. The middle mouse button pans
-//   anywhere.
+//   content; releasing Space ends the drag. Space starts this only while the
+//   pointer is over the workspace and no field is focused, and is then kept
+//   from the rest of the page. The middle mouse button pans anywhere.
 // - In the space around the content, the wheel zooms a step around the
 //   pointer, as on the scene map. Over the content it reaches the content
 //   unchanged and moves nothing. ctrl + wheel (a trackpad pinch) zooms around
@@ -64,6 +65,7 @@ export class ZoomViewportElement extends HTMLElement {
     this.y = 0;
     this.centered = true;
     this.spacePan = false;
+    this.pointerInside = false;
     this.touches = new Map();
     this.ownedPointers = new Set();
     this.syntheticEvents = new WeakSet();
@@ -86,6 +88,12 @@ export class ZoomViewportElement extends HTMLElement {
     this.handleWindowBlur = () => this.endSpacePan();
 
     const capture = { capture: true };
+    this.addEventListener("pointerenter", () => {
+      this.pointerInside = true;
+    });
+    this.addEventListener("pointerleave", () => {
+      this.pointerInside = false;
+    });
     this.addEventListener(
       "pointerdown",
       (event) => this.handlePointerDown(event),
@@ -120,16 +128,17 @@ export class ZoomViewportElement extends HTMLElement {
     if (this.firstElementChild) {
       this.resizeObserver.observe(this.firstElementChild);
     }
-    window.addEventListener("keydown", this.handleWindowKeyDown);
-    window.addEventListener("keyup", this.handleWindowKeyUp);
+    // Capture, so Space is handled before a focused control sees it.
+    window.addEventListener("keydown", this.handleWindowKeyDown, true);
+    window.addEventListener("keyup", this.handleWindowKeyUp, true);
     window.addEventListener("blur", this.handleWindowBlur);
   }
 
   disconnectedCallback() {
     clearTimeout(this.wheelTimer);
     this.resizeObserver.disconnect();
-    window.removeEventListener("keydown", this.handleWindowKeyDown);
-    window.removeEventListener("keyup", this.handleWindowKeyUp);
+    window.removeEventListener("keydown", this.handleWindowKeyDown, true);
+    window.removeEventListener("keyup", this.handleWindowKeyUp, true);
     window.removeEventListener("blur", this.handleWindowBlur);
     this.resetGestures();
   }
@@ -292,18 +301,19 @@ export class ZoomViewportElement extends HTMLElement {
 
   handleKeyDown(event) {
     if (!this.gesturesEnabled || !isSpaceKey(event)) return;
-    if (!this.spacePan && isTextEntryFocused()) return;
-    // Also for the repeats while Space is held, so it never presses a focused
-    // button or scrolls.
-    event.preventDefault();
-    if (this.spacePan) return;
-    this.spacePan = true;
-    this.syncPanLayer();
+    if (!this.spacePan) {
+      if (!this.pointerInside || isTextEntryFocused()) return;
+      this.spacePan = true;
+      this.syncPanLayer();
+    }
+    // A held key repeats. Keep Space and its repeats from a focused tab or
+    // button, which would act and re-render the page on every repeat.
+    this.swallow(event);
   }
 
   handleKeyUp(event) {
     if (!this.spacePan || !isSpaceKey(event)) return;
-    event.preventDefault();
+    this.swallow(event);
     this.endSpacePan();
   }
 

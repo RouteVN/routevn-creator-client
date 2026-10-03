@@ -1168,9 +1168,13 @@ fitted size). The workspace is `rvn-zoom-viewport` (`src/primitives/`), which
 places the canvas with a translate and no bounds, like a design tool canvas: two
 fingers pinch around the point between them and drag to pan, and one finger
 pans from the empty workspace. As on the scene map, the mouse or a pen pans only
-while Space is held (not while typing in a field), anywhere in the workspace:
-a layer in the viewport's shadow root then covers the canvas with the grab
-cursor, and releasing Space ends the drag. The middle mouse button pans
+while Space is held, anywhere in the workspace: a layer in the viewport's shadow
+root then covers the canvas with the grab cursor, and releasing Space ends the
+drag. Space starts this only while the pointer is over the workspace and no
+field is focused. The viewport then takes Space and its key repeats in the
+window's capture phase, so a focused tab or button never acts on them; acting
+on every repeat re-renders the page and makes the canvas flicker. The middle
+mouse button pans
 anywhere. The wheel never pans: over the empty workspace it zooms 10% per
 step around the pointer, as on the scene map, and over the canvas it reaches the
 canvas unchanged. ctrl + wheel (a trackpad pinch) zooms anywhere. One finger

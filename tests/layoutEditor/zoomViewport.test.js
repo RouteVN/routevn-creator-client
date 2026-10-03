@@ -78,7 +78,7 @@ const pointer = (target, type, pointerId, x, y, init = {}) => {
 const mouse = (target, type, x, y, button = 0) =>
   pointer(target, type, 1, x, y, { pointerType: "mouse", button });
 
-const key = (type, init = {}) => {
+const key = (type, init = {}, target = window) => {
   const event = new KeyboardEvent(type, {
     bubbles: true,
     cancelable: true,
@@ -86,9 +86,12 @@ const key = (type, init = {}) => {
     key: " ",
     ...init,
   });
-  window.dispatchEvent(event);
+  target.dispatchEvent(event);
   return event;
 };
+
+const hover = (viewport) =>
+  viewport.dispatchEvent(new PointerEvent("pointerenter"));
 
 const wheel = (target, init) => {
   const event = new WheelEvent("wheel", {
@@ -261,6 +264,7 @@ describe("rvn-zoom-viewport", () => {
     expect(clicks).toHaveBeenCalledOnce();
     expect(panLayer.style.display).toBe("none");
 
+    hover(viewport);
     expect(key("keydown").defaultPrevented).toBe(true);
     expect(key("keydown", { repeat: true }).defaultPrevented).toBe(true);
     expect([panLayer.style.display, panLayer.style.cursor]).toEqual([
@@ -295,6 +299,7 @@ describe("rvn-zoom-viewport", () => {
     const canvasMoves = vi.fn();
     canvas.addEventListener("pointermove", canvasMoves);
 
+    hover(viewport);
     key("keydown");
     mouse(panLayer, "pointerdown", 100, 100);
     mouse(panLayer, "pointermove", 120, 100);
@@ -317,9 +322,40 @@ describe("rvn-zoom-viewport", () => {
     const input = document.createElement("input");
     document.body.append(input);
     input.focus();
+    hover(viewport);
 
     expect(key("keydown").defaultPrevented).toBe(false);
     expect(panLayer.style.display).toBe("none");
+  });
+
+  it("keeps Space and its repeats from a focused tab or button", () => {
+    const { viewport } = createViewport();
+    const tab = document.createElement("div");
+    tab.tabIndex = 0;
+    document.body.append(tab);
+    tab.focus();
+    const tabKeys = vi.fn();
+    tab.addEventListener("keydown", tabKeys);
+    tab.addEventListener("keyup", tabKeys);
+    hover(viewport);
+
+    key("keydown", {}, tab);
+    key("keydown", { repeat: true }, tab);
+    key("keyup", {}, tab);
+
+    expect(tabKeys).not.toHaveBeenCalled();
+  });
+
+  it("leaves Space to the page while the pointer is outside the workspace", () => {
+    const { viewport } = createViewport();
+    const panLayer = viewport.shadowRoot.querySelector("div");
+
+    expect(key("keydown").defaultPrevented).toBe(false);
+    expect(panLayer.style.display).toBe("none");
+
+    hover(viewport);
+    viewport.dispatchEvent(new PointerEvent("pointerleave"));
+    expect(key("keydown").defaultPrevented).toBe(false);
   });
 
   it("pans with the middle mouse button anywhere", () => {
