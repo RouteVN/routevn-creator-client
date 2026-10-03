@@ -49,6 +49,12 @@ const OVERLAY_ANCHOR_CIRCLE_FILL = {
   ],
 };
 const OVERLAY_ANCHOR_SIZE = 8;
+// The renderer draws one pixel per canvas unit, at the project resolution.
+// Zoomed in past that, a CSS pixel is under one unit and a line that thin
+// fades out, so overlay strokes stay at least one unit wide.
+const MIN_OVERLAY_STROKE_UNITS = 1;
+const getOverlayStrokeUnits = (canvasUnitsPerCssPixel) =>
+  Math.max(canvasUnitsPerCssPixel, MIN_OVERLAY_STROKE_UNITS);
 const OVERLAY_RESIZE_HANDLE_SIZE = 12;
 const OVERLAY_ROTATION_HANDLE_SIZE = 16;
 export const formatLayoutEditorPreviewDate = formatDate;
@@ -456,7 +462,8 @@ const buildOverlayOuterRect = ({
     return undefined;
   }
 
-  const borderWidth = OVERLAY_OUTER_BORDER.width * canvasUnitsPerCssPixel;
+  const borderWidth =
+    OVERLAY_OUTER_BORDER.width * getOverlayStrokeUnits(canvasUnitsPerCssPixel);
   const borderOffset = borderWidth / 2;
 
   return {
@@ -483,17 +490,18 @@ const buildOverlayInnerRect = ({
     return undefined;
   }
 
+  const strokeUnits = getOverlayStrokeUnits(canvasUnitsPerCssPixel);
   return {
     id: `${overlayId}-inner`,
     type: "rect",
-    x: canvasUnitsPerCssPixel / 2,
-    y: canvasUnitsPerCssPixel / 2,
-    width: Math.max(0, element.width - canvasUnitsPerCssPixel),
-    height: Math.max(0, element.height - canvasUnitsPerCssPixel),
+    x: strokeUnits / 2,
+    y: strokeUnits / 2,
+    width: Math.max(0, element.width - strokeUnits),
+    height: Math.max(0, element.height - strokeUnits),
     fill: OVERLAY_FILL,
     border: {
       ...OVERLAY_INNER_BORDER,
-      width: OVERLAY_INNER_BORDER.width * canvasUnitsPerCssPixel,
+      width: OVERLAY_INNER_BORDER.width * strokeUnits,
     },
   };
 };
@@ -888,7 +896,8 @@ export const createLayoutEditorHoverOverlay = ({
     y: (bottomLeft.y - topLeft.y) / height,
   };
   const rotation = (Math.atan2(unitX.y, unitX.x) * 180) / Math.PI;
-  const halfStroke = canvasUnitsPerCssPixel / 2;
+  const strokeUnits = getOverlayStrokeUnits(canvasUnitsPerCssPixel);
+  const halfStroke = strokeUnits / 2;
   const toOffsetPoint = (distance) => ({
     x: topLeft.x + unitX.x * distance + unitY.x * distance,
     y: topLeft.y + unitX.y * distance + unitY.y * distance,
@@ -902,13 +911,13 @@ export const createLayoutEditorHoverOverlay = ({
       type: "rect",
       x: outerPosition.x,
       y: outerPosition.y,
-      width: width + canvasUnitsPerCssPixel,
-      height: height + canvasUnitsPerCssPixel,
+      width: width + strokeUnits,
+      height: height + strokeUnits,
       rotation,
       fill: OVERLAY_FILL,
       border: {
         color: "#ffffff",
-        width: canvasUnitsPerCssPixel,
+        width: strokeUnits,
         alpha: 1,
       },
     },
@@ -917,13 +926,13 @@ export const createLayoutEditorHoverOverlay = ({
       type: "rect",
       x: innerPosition.x,
       y: innerPosition.y,
-      width: Math.max(0, width - canvasUnitsPerCssPixel),
-      height: Math.max(0, height - canvasUnitsPerCssPixel),
+      width: Math.max(0, width - strokeUnits),
+      height: Math.max(0, height - strokeUnits),
       rotation,
       fill: OVERLAY_FILL,
       border: {
         color: OVERLAY_INNER_COLOR,
-        width: canvasUnitsPerCssPixel,
+        width: strokeUnits,
         alpha: 1,
       },
     },
