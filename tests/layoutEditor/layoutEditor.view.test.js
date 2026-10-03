@@ -199,8 +199,8 @@ describe("layoutEditor.view", () => {
     expect(paneStart).toBeLessThan(centerStart);
     expect(pane).toContain("w=${tabletLandscapeExplorerWidth}");
     expect(pane).toContain("${nodeExplorerTitle}");
-    expect(pane).toContain("rtgl-button#nodeMovePreviousButton");
-    expect(pane).toContain("rtgl-button#nodeMoveNextButton");
+    expect(pane).not.toContain("rtgl-button#nodeMovePreviousButton");
+    expect(pane).not.toContain("rtgl-button#nodeMoveNextButton");
     expect(explorerLine).toContain("show-item-menu-actions");
     expect(explorerLine).toContain(
       ":emptyContextMenuItems=${emptyContextMenuItems}",
