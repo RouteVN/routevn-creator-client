@@ -269,7 +269,7 @@ library like this:
   titled "Project Already Added", not a success toast and not the failure alert. It says
   in one sentence that the project has already been added, so nothing was imported and the
   existing project was not changed. On iOS a second sentence says how to use the incoming
-  copy instead: delete the existing project first, then import again. Desktop shows the
+  copy instead: remove the existing project first, then import again. Desktop shows the
   alert without that sentence, because there the same folder was added twice and there is
   nothing to replace.
 - **Hidden project:** a project that was removed from the list but is still on disk is

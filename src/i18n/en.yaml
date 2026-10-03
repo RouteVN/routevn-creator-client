@@ -95,7 +95,7 @@ projectsPage:
   importProjectExists: "This project has already been added."
   importProjectExistsTitle: "Project Already Added"
   importProjectExistsExplanation: "This project has already been added, so nothing was imported and the existing project was not changed."
-  importProjectExistsLibraryHint: "To use this copy instead, delete the existing project first, then import it again."
+  importProjectExistsLibraryHint: "To use this copy instead, remove the existing project first, then import it again."
   importFromLocalMenuItem: "From local"
   importFromLocalTitle: "Import from local"
   importLocalFolderButton: "Project folder"

@@ -95,7 +95,7 @@ projectsPage:
   importProjectExists: "このプロジェクトは既に追加されています。"
   importProjectExistsTitle: "プロジェクトは追加済みです"
   importProjectExistsExplanation: "このプロジェクトは追加済みのため、何も取り込まれず、既存のプロジェクトも変更されていません。"
-  importProjectExistsLibraryHint: "このコピーを使うには、先に既存のプロジェクトを削除してから、もう一度取り込んでください。"
+  importProjectExistsLibraryHint: "このコピーを使うには、先に既存のプロジェクトを一覧から削除してから、もう一度取り込んでください。"
   importFromLocalMenuItem: "ローカルから"
   importFromLocalTitle: "ローカルから取り込む"
   importLocalFolderButton: "プロジェクトフォルダー"

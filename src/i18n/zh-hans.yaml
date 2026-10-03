@@ -95,7 +95,7 @@ projectsPage:
   importProjectExists: "此项目已添加。"
   importProjectExistsTitle: "项目已添加"
   importProjectExistsExplanation: "此项目已添加，因此未导入任何内容，现有项目也未更改。"
-  importProjectExistsLibraryHint: "若要改用这份副本，请先删除现有项目，然后再次导入。"
+  importProjectExistsLibraryHint: "若要改用这份副本，请先移除现有项目，然后再次导入。"
   importFromLocalMenuItem: "从本地"
   importFromLocalTitle: "从本地导入"
   importLocalFolderButton: "项目文件夹"
