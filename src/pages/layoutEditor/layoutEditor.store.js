@@ -201,7 +201,6 @@ export const createInitialState = () => {
     isMobileFileExplorerOpen: false,
     rightPanelMode: "preview",
     canvasZoom: 1,
-    isCanvasPanMode: false,
     canvasPreviewItem: undefined,
     projectResolution: DEFAULT_PROJECT_RESOLUTION,
     selectedElementMetrics: undefined,
@@ -220,9 +219,6 @@ export const zoomCanvasOut = ({ state }) => {
   state.canvasZoom =
     CANVAS_ZOOM_LEVELS.findLast((level) => level < state.canvasZoom) ??
     state.canvasZoom;
-  if (state.canvasZoom <= 1) {
-    state.isCanvasPanMode = false;
-  }
 };
 
 export const setCanvasZoom = ({ state }, { zoom } = {}) => {
@@ -230,20 +226,10 @@ export const setCanvasZoom = ({ state }, { zoom } = {}) => {
     CANVAS_ZOOM_LEVELS.at(-1),
     Math.max(CANVAS_ZOOM_LEVELS[0], zoom),
   );
-  if (state.canvasZoom <= 1) {
-    state.isCanvasPanMode = false;
-  }
 };
 
 export const resetCanvasZoom = ({ state }) => {
   state.canvasZoom = 1;
-  state.isCanvasPanMode = false;
-};
-
-// In pan mode, one finger pans a zoomed canvas instead of editing it: a
-// layer above the canvas takes the drags.
-export const toggleCanvasPanMode = ({ state }) => {
-  state.isCanvasPanMode = !state.isCanvasPanMode && state.canvasZoom > 1;
 };
 
 export const setItems = ({ state }, { layoutData } = {}) => {
@@ -737,8 +723,6 @@ export const selectViewData = ({ state, constants, i18n }) => {
     : state.initialPreviewData;
   const canvasZoom = selectCanvasZoom({ state });
   const canvasFitWidth = selectLayoutEditorCanvasMaxWidth({ state });
-  const showCanvasPanButton = state.isTouchMode && canvasZoom > 1;
-  const isCanvasPanMode = showCanvasPanButton && state.isCanvasPanMode;
 
   return {
     item,
@@ -777,10 +761,6 @@ export const selectViewData = ({ state, constants, i18n }) => {
     canvasZoomInLabel: copy.canvasZoomInLabel ?? "Zoom in",
     canvasZoomOutLabel: copy.canvasZoomOutLabel ?? "Zoom out",
     canvasZoomFitLabel: copy.canvasZoomFitLabel ?? "Fit to view",
-    showCanvasPanButton,
-    isCanvasPanMode,
-    canvasPanButtonVariant: isCanvasPanMode ? "pr" : "ol",
-    canvasPanLabel: copy.canvasPanLabel ?? "Pan",
     previewData: state.previewData,
     initialPreviewData: state.initialPreviewData,
     previewHydrationData,

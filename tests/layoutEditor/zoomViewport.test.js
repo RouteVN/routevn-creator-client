@@ -32,9 +32,7 @@ const createViewport = ({ gestures = true } = {}) => {
   if (gestures) viewport.setAttribute("gestures", "");
   const content = document.createElement("div");
   const canvas = document.createElement("div");
-  const panLayer = document.createElement("div");
-  panLayer.setAttribute("data-pan-surface", "");
-  content.append(canvas, panLayer);
+  content.append(canvas);
   viewport.append(content);
   Object.defineProperties(viewport, {
     clientWidth: { value: 400 },
@@ -58,7 +56,7 @@ const createViewport = ({ gestures = true } = {}) => {
   });
   document.body.append(viewport);
   const resize = resizeCallbacks.at(-1);
-  return { viewport, content, canvas, panLayer, resize };
+  return { viewport, content, canvas, resize };
 };
 
 const pointer = (target, type, pointerId, x, y, init = {}) => {
@@ -220,12 +218,12 @@ describe("rvn-zoom-viewport", () => {
     expect([viewport.x, viewport.y]).toEqual([0, 0]);
   });
 
-  it("pans without limits from a pan surface or the space around the content", () => {
-    const { viewport, panLayer } = createViewport();
+  it("pans without limits with one finger on the space around the content", () => {
+    const { viewport } = createViewport();
 
-    pointer(panLayer, "pointerdown", 1, 200, 200);
-    pointer(panLayer, "pointermove", 1, -300, -200);
-    pointer(panLayer, "pointerup", 1, -300, -200);
+    pointer(viewport, "pointerdown", 1, 200, 200);
+    pointer(viewport, "pointermove", 1, -300, -200);
+    pointer(viewport, "pointerup", 1, -300, -200);
     expect([viewport.x, viewport.y]).toEqual([-500, -400]);
 
     pointer(viewport, "pointerdown", 2, 10, 10);

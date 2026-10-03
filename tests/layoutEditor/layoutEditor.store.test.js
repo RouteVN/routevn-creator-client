@@ -19,7 +19,6 @@ import {
   clearPendingPersistPayload,
   resetCanvasZoom,
   setCanvasZoom,
-  toggleCanvasPanMode,
   zoomCanvasIn,
   zoomCanvasOut,
 } from "../../src/pages/layoutEditor/layoutEditor.store.js";
@@ -873,7 +872,6 @@ describe("layoutEditor.store", () => {
       expect(select(state)).toMatchObject({
         showCanvasZoomControls: false,
         canvasZoom: 1,
-        showCanvasPanButton: false,
       });
 
       setAppWindowMetrics({ state }, { width: 1408, height: 880 });
@@ -898,64 +896,6 @@ describe("layoutEditor.store", () => {
       expect(select(state).canvasZoom).toBe(10);
       setCanvasZoom({ state }, { zoom: 0.05 });
       expect(select(state).canvasZoom).toBe(0.1);
-    });
-
-    it("leaves pan mode when a gesture zooms back to fit", () => {
-      const state = createInitialState();
-      setUiConfig({ state }, { uiConfig: { inputMode: "touch" } });
-      setAppWindowMetrics({ state }, { width: 1408, height: 880 });
-      setCanvasZoom({ state }, { zoom: 2 });
-      toggleCanvasPanMode({ state });
-      expect(select(state).isCanvasPanMode).toBe(true);
-
-      setCanvasZoom({ state }, { zoom: 0.9 });
-      setCanvasZoom({ state }, { zoom: 2 });
-      expect(select(state).isCanvasPanMode).toBe(false);
-    });
-
-    it("offers pan mode on touch only while the canvas is zoomed in", () => {
-      const state = createInitialState();
-      setUiConfig({ state }, { uiConfig: { inputMode: "touch" } });
-      setAppWindowMetrics({ state }, { width: 1408, height: 880 });
-
-      toggleCanvasPanMode({ state });
-      expect(select(state)).toMatchObject({
-        showCanvasPanButton: false,
-        isCanvasPanMode: false,
-      });
-
-      zoomCanvasIn({ state });
-      toggleCanvasPanMode({ state });
-      expect(select(state)).toMatchObject({
-        showCanvasPanButton: true,
-        isCanvasPanMode: true,
-        canvasPanButtonVariant: "pr",
-      });
-
-      // Rotating to a stacked layout fits the canvas and pauses pan mode.
-      setAppWindowMetrics({ state }, { width: 820, height: 1180 });
-      expect(select(state).isCanvasPanMode).toBe(false);
-      setAppWindowMetrics({ state }, { width: 1408, height: 880 });
-      expect(select(state).isCanvasPanMode).toBe(true);
-
-      zoomCanvasOut({ state });
-      expect(select(state)).toMatchObject({
-        showCanvasPanButton: false,
-        isCanvasPanMode: false,
-      });
-      zoomCanvasIn({ state });
-      expect(select(state).isCanvasPanMode).toBe(false);
-    });
-
-    it("never offers pan mode on desktop, where scrolling pans", () => {
-      const state = createInitialState();
-      zoomCanvasIn({ state });
-      toggleCanvasPanMode({ state });
-
-      expect(select(state)).toMatchObject({
-        showCanvasPanButton: false,
-        isCanvasPanMode: false,
-      });
     });
   });
 

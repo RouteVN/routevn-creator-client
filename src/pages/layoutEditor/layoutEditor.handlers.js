@@ -925,12 +925,6 @@ export const handleCanvasZoomGesture = (deps, payload) => {
   render();
 };
 
-export const handleCanvasPanButtonClick = (deps) => {
-  const { store, render } = deps;
-  store.toggleCanvasPanMode();
-  render();
-};
-
 export const handleRightPanelModeChange = (deps, payload) => {
   const { render, store } = deps;
   const { item, value } = payload._event.detail;

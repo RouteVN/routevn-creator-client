@@ -27,8 +27,8 @@ const getMidpoint = (a, b) => ({ x: (a.x + b.x) / 2, y: (a.y + b.y) / 2 });
 // native touch scrolling:
 // - Two fingers pinch to zoom around the point between them and drag to pan.
 // - One finger, a pen, or the left mouse button pans from the space around
-//   the content or a [data-pan-surface] layer; on the content it reaches the
-//   content unchanged. The middle mouse button pans anywhere.
+//   the content; on the content it reaches the content unchanged. The middle
+//   mouse button pans anywhere.
 // - The wheel pans, and ctrl + wheel (a trackpad pinch) zooms around the
 //   pointer.
 // A gesture reports its final zoom with a zoom-change event. Until one moves
@@ -198,13 +198,6 @@ export class ZoomViewportElement extends HTMLElement {
     if (event.cancelable) event.preventDefault();
   }
 
-  isPanSurface(event) {
-    return (
-      event.target === this ||
-      Boolean(event.target.closest?.("[data-pan-surface]"))
-    );
-  }
-
   startPan(event) {
     this.pan = {
       pointerId: event.pointerId,
@@ -223,7 +216,7 @@ export class ZoomViewportElement extends HTMLElement {
     }
 
     const middle = event.button === MIDDLE_BUTTON;
-    if (!middle && !(event.button === 0 && this.isPanSurface(event))) return;
+    if (!middle && !(event.button === 0 && event.target === this)) return;
     this.suppressClick = false;
     this.startPan(event);
     // Keep receiving the drag when the pointer leaves the workspace.
@@ -253,7 +246,7 @@ export class ZoomViewportElement extends HTMLElement {
     }
 
     this.suppressClick = false;
-    if (this.isPanSurface(event)) this.startPan(event);
+    if (event.target === this) this.startPan(event);
   }
 
   startPinch() {

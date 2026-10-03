@@ -1,6 +1,5 @@
 import { describe, expect, it, vi } from "vitest";
 import {
-  handleCanvasPanButtonClick,
   handleCanvasZoomGesture,
   handleCanvasZoomInClick,
   handleCanvasZoomOutClick,
@@ -13,7 +12,6 @@ const createDeps = () => ({
     zoomCanvasOut: vi.fn(),
     resetCanvasZoom: vi.fn(),
     setCanvasZoom: vi.fn(),
-    toggleCanvasPanMode: vi.fn(),
   },
   refs: { layoutEditorCanvasBackground: { centerContent: vi.fn() } },
   render: vi.fn(),
@@ -24,7 +22,6 @@ describe("layout editor canvas zoom handlers", () => {
     [handleCanvasZoomInClick, "zoomCanvasIn"],
     [handleCanvasZoomOutClick, "zoomCanvasOut"],
     [handleCanvasZoomResetClick, "resetCanvasZoom"],
-    [handleCanvasPanButtonClick, "toggleCanvasPanMode"],
   ])("updates the store from a button and renders", (handler, action) => {
     const deps = createDeps();
 

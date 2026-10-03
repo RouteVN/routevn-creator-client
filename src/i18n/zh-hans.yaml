@@ -1485,7 +1485,6 @@ layoutEditorPage:
   layoutMissing: "缺少布局。"
   loadingPreviewLabel: "正在加载预览"
   markLayoutAsFragmentFirst: "请先将布局标记为片段。"
-  canvasPanLabel: "平移视图"
   canvasZoomFitLabel: "适应视图"
   canvasZoomInLabel: "放大"
   canvasZoomOutLabel: "缩小"

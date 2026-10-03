@@ -49,7 +49,7 @@ try {
     );
     const store =
       name === "layoutEditor"
-        ? `{...layoutEditorStore,createInitialState:()=>({...layoutEditorStore.createInitialState(),isTouchMode:touch,appWindowMetrics:tablet?{width:1133,height:744}:{width:0,height:0},projectResolution:resolution,canvasZoom:zoom,isCanvasPanMode:pan,layout:{id:'layout-one',name:'Layout One'},isPreviewMounted:true})}`
+        ? `{...layoutEditorStore,createInitialState:()=>({...layoutEditorStore.createInitialState(),isTouchMode:touch,appWindowMetrics:tablet?{width:1133,height:744}:{width:0,height:0},projectResolution:resolution,canvasZoom:zoom,layout:{id:'layout-one',name:'Layout One'},isPreviewMounted:true})}`
         : "layoutEditorCanvasStore";
     registrations.push(
       `customElements.define(${JSON.stringify(config.schema.componentName)},createComponent({...${JSON.stringify(config)},store:${store}},deps));`,
@@ -59,7 +59,7 @@ try {
   const bundle = join(directory, "fixture.js");
   await writeFile(
     entry,
-    `${imports.join("\n")}\nexport const register=(deps,touch,resolution,tablet,zoom=1,pan=false)=>{${registrations.join("\n")}};`,
+    `${imports.join("\n")}\nexport const register=(deps,touch,resolution,tablet,zoom=1)=>{${registrations.join("\n")}};`,
   );
   execFileSync("bun", [
     "build",
@@ -86,12 +86,12 @@ try {
 <script type="module">
 import {register} from '/fixture.js';
 const query=new URLSearchParams(location.search);
-register({__rtglI18nRuntime:{locale:'en',getMessages:()=>(${JSON.stringify(EN_I18N)})}},query.get('touch')==='true',JSON.parse(query.get('resolution')),query.get('tablet')==='true',Number(query.get('zoom')??1),query.get('pan')==='true');
+register({__rtglI18nRuntime:{locale:'en',getMessages:()=>(${JSON.stringify(EN_I18N)})}},query.get('touch')==='true',JSON.parse(query.get('resolution')),query.get('tablet')==='true',Number(query.get('zoom')??1));
 document.querySelector('#page').append(document.createElement('rvn-layout-editor'));
 </script>`;
   const openEditor = async (
     browser,
-    { touch, tablet, resolution, zoom = 1, pan = false },
+    { touch, tablet, resolution, zoom = 1 },
   ) => {
     const page = await browser.newPage();
     const errors = [];
@@ -112,7 +112,7 @@ document.querySelector('#page').append(document.createElement('rvn-layout-editor
     });
     await page.setViewportSize({ width: 1133, height: 744 });
     await page.goto(
-      `http://fixture.test/?touch=${touch}&tablet=${tablet}&zoom=${zoom}&pan=${pan}&resolution=${encodeURIComponent(JSON.stringify(resolution))}`,
+      `http://fixture.test/?touch=${touch}&tablet=${tablet}&zoom=${zoom}&resolution=${encodeURIComponent(JSON.stringify(resolution))}`,
     );
     const surface = page.locator(
       'rvn-layout-editor-canvas rtgl-view[bgc="mu"]',
@@ -131,12 +131,10 @@ document.querySelector('#page').append(document.createElement('rvn-layout-editor
     surface.evaluate((canvas) => {
       const component = canvas.getRootNode().host;
       const viewport = component.parentElement.parentElement;
-      const panLayer = component.parentElement.querySelector("#canvasPanLayer");
       return {
         canvas: canvas.getBoundingClientRect().toJSON(),
         viewport: viewport.getBoundingClientRect().toJSON(),
         touchAction: getComputedStyle(viewport).touchAction,
-        panLayer: panLayer?.getBoundingClientRect().toJSON() ?? null,
       };
     });
   const assertCentered = ({ canvas, viewport }, label) =>
@@ -177,7 +175,6 @@ document.querySelector('#page').append(document.createElement('rvn-layout-editor
             tablet,
             resolution,
             zoom,
-            pan: touch,
           });
           const geometry = await measureCanvas(zoomed.surface);
           assert.ok(
@@ -185,18 +182,6 @@ document.querySelector('#page').append(document.createElement('rvn-layout-editor
             `${label} zoom ${zoom}: canvas must be ${zoom}x the fitted width`,
           );
           assertCentered(geometry, `${label} zoom ${zoom}`);
-          if (touch && zoom > 1) {
-            assert.ok(
-              geometry.panLayer &&
-                Math.abs(geometry.panLayer.width - geometry.canvas.width) <=
-                  1 &&
-                Math.abs(geometry.panLayer.height - geometry.canvas.height) <=
-                  1,
-              `${label}: the pan layer must cover the canvas`,
-            );
-          } else {
-            assert.equal(geometry.panLayer, null);
-          }
           assert.deepEqual(zoomed.errors, []);
           await zoomed.page.close();
         }
@@ -312,40 +297,48 @@ document.querySelector('#page').append(document.createElement('rvn-layout-editor
         await editor.page.close();
 
         if (touch) {
-          // In pan mode one finger on the canvas pans, past every edge.
+          // Zoomed in, the canvas covers the workspace, so two fingers on it
+          // pan, past every edge.
           const panning = await openEditor(browser, {
             touch,
             tablet,
             resolution,
             zoom: 2,
-            pan: true,
           });
           const pan = await panning.surface.evaluate((canvas) => {
-            const host = canvas.getRootNode().host;
-            const layer = host.parentElement.querySelector("#canvasPanLayer");
-            const fire = (type, x, y) =>
-              layer.dispatchEvent(
+            const fire = (type, pointerId, x, y) =>
+              canvas.dispatchEvent(
                 new PointerEvent(type, {
                   bubbles: true,
                   cancelable: true,
                   composed: true,
-                  pointerId: 1,
+                  pointerId,
                   pointerType: "touch",
-                  isPrimary: true,
+                  isPrimary: pointerId === 1,
                   clientX: x,
                   clientY: y,
                 }),
               );
             const before = canvas.getBoundingClientRect();
-            fire("pointerdown", 400, 400);
-            fire("pointermove", 1300, 1100);
-            fire("pointerup", 1300, 1100);
+            fire("pointerdown", 1, 400, 400);
+            fire("pointerdown", 2, 500, 400);
+            fire("pointermove", 1, 1300, 1100);
+            fire("pointermove", 2, 1400, 1100);
+            fire("pointerup", 2, 1400, 1100);
+            fire("pointerup", 1, 1300, 1100);
             const after = canvas.getBoundingClientRect();
-            return [after.left - before.left, after.top - before.top].map(
-              Math.round,
-            );
+            return {
+              pan: [after.left - before.left, after.top - before.top].map(
+                Math.round,
+              ),
+              ratio: after.width / before.width,
+            };
           });
-          assert.deepEqual(pan, [900, 700], `${label}: pan mode`);
+          assert.deepEqual(pan.pan, [900, 700], `${label}: two-finger pan`);
+          assert.ok(
+            Math.abs(pan.ratio - 1) < 0.01,
+            `${label}: a two-finger pan keeps the zoom (${pan.ratio})`,
+          );
           await panning.page.close();
         }
         console.log(engineName, name, "canvas zoom passed");
