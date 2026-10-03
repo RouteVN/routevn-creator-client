@@ -154,14 +154,15 @@ describe("layoutEditor.view", () => {
     expect(titleIndex).toBeGreaterThan(-1);
     expect(upIndex).toBeGreaterThan(titleIndex);
     expect(downIndex).toBeGreaterThan(upIndex);
-    expect(explorerBranch).toContain("sq pre=arrowUp");
-    expect(explorerBranch).toContain("sq pre=arrowDown");
-    // The icon registry is generated from svg/, so the sources must exist.
-    for (const icon of ["arrowUp", "arrowDown"]) {
-      expect(
-        existsSync(new URL(`../../svg/${icon}.svg`, import.meta.url)),
-      ).toBe(true);
-    }
+    // Both reuse the chevron icon; the previous one turns it upside down.
+    expect(explorerBranch).toMatch(
+      /'rtgl-view style="transform: rotate\(180deg\);"':\n\s+- rtgl-svg svg=chevronDown wh=18: null/,
+    );
+    expect(explorerBranch).toContain("sq pre=chevronDown");
+    // The icon registry is generated from svg/, so the source must exist.
+    expect(
+      existsSync(new URL("../../svg/chevronDown.svg", import.meta.url)),
+    ).toBe(true);
     expect(explorerBranch).toContain('aria-label="${nodeMovePreviousLabel}"');
     expect(explorerBranch).toContain('aria-label="${nodeMoveNextLabel}"');
     expect(layoutEditorView).toMatch(

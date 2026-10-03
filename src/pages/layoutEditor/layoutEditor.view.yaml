@@ -138,8 +138,10 @@ template:
                       - 'rtgl-view d=v h=1fg w=f style="min-height: 0;"':
                           - rtgl-view h=48 w=f d=h bgc=bg bwt=xs bwb=xs ph=md av=c:
                               - rtgl-text w=1fg s=lg ellipsis=true: ${nodeExplorerTitle}
-                              - 'rtgl-button#nodeMovePreviousButton sq pre=arrowUp v=ol ml=sm aria-label="${nodeMovePreviousLabel}" title="${nodeMovePreviousLabel}"': null
-                              - 'rtgl-button#nodeMoveNextButton sq pre=arrowDown v=ol ml=sm aria-label="${nodeMoveNextLabel}" title="${nodeMoveNextLabel}"': null
+                              - 'rtgl-button#nodeMovePreviousButton sq v=ol ml=sm aria-label="${nodeMovePreviousLabel}" title="${nodeMovePreviousLabel}"':
+                                  - 'rtgl-view style="transform: rotate(180deg);"':
+                                      - rtgl-svg svg=chevronDown wh=18: null
+                              - 'rtgl-button#nodeMoveNextButton sq pre=chevronDown v=ol ml=sm aria-label="${nodeMoveNextLabel}" title="${nodeMoveNextLabel}"': null
                           - 'rtgl-view w=f h=1fg style="min-height: 0;"':
                               - rvn-base-file-explorer#fileExplorer :items=${flatItems} shrinkable dropdown-menu allowDrag show-item-menu-actions bottom-empty-space-height=32vh :contextMenuItems=${contextMenuItems} :emptyContextMenuItems=${emptyContextMenuItems}: null
                   - $if showMobileSelectedNodeDetail:
