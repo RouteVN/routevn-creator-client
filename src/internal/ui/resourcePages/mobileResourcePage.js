@@ -1,14 +1,14 @@
-import { isMobileSceneEditorSideBySide } from "../../sceneEditorLayout.js";
+import { isTouchLandscape } from "../../touchLayout.js";
 
 export const isTouchUiConfig = (uiConfig) =>
   uiConfig?.id === "touch" || uiConfig?.inputMode === "touch";
 
 export const TABLET_LANDSCAPE_EXPLORER_WIDTH = 300;
 
-// Shares the scene editor's side-by-side breakpoint: touch windows at least
-// 768 logical pixels wide and wider than tall.
+// The app's touch landscape layout: touch windows at least 768 logical
+// pixels wide and wider than tall.
 const isTabletLandscapeState = (state) =>
-  isMobileSceneEditorSideBySide({
+  isTouchLandscape({
     isTouchMode: state.isTouchMode,
     width: state.appWindowMetrics.width,
     height: state.appWindowMetrics.height,
