@@ -14,6 +14,8 @@ import {
   resolveProjectResolution,
 } from "../../internal/projectResolution.js";
 import { createProjectRoutePayload } from "../../internal/localProjectRoute.js";
+import { parseProjectImportUrl } from "../../internal/projectImportUrl.js";
+import { getProjectImportErrorMessage } from "../../internal/projectImportErrors.js";
 import { resolveUpdatesEnabled } from "../../internal/updates.js";
 import { readTestCrashKind } from "../../internal/testCrashes.js";
 import {
@@ -21,10 +23,11 @@ import {
   DEFAULT_APP_LOCALE,
   resolveAppLocale,
 } from "../../internal/ui/appLocale.js";
+import { selectProjectsPageCopy } from "./support/projectsPageCopy.js";
 import {
-  formatProjectsPageCopy,
-  selectProjectsPageCopy,
-} from "./support/projectsPageCopy.js";
+  importProjectFromLocal,
+  importProjectFromUrl,
+} from "./support/projectImportFlows.js";
 
 const mapCloudProject = (project, copy) => {
   const projectId = project?.id;
@@ -409,50 +412,117 @@ export const handleCloudCreateFormAction = async (deps, payload) => {
   }
 };
 
-export const handleOpenButtonClick = async (deps) => {
-  const { appService, store, render, i18n } = deps;
-  const copy = selectProjectsPageCopy(i18n);
-  const platform = appService.getPlatform();
-  if (platform !== "tauri" && platform !== "android" && platform !== "ios") {
+// Leaf import actions shared by the desktop Open button menu and the second
+// level of the mobile Create menu. "From local" covers folders and, on mobile,
+// zip files; every platform can import from a URL.
+const createImportMenuItems = (copy) => {
+  return [
+    {
+      label: copy.importFromLocalMenuItem,
+      type: "item",
+      value: "import-local",
+    },
+    {
+      label: copy.importFromUrlMenuItem,
+      type: "item",
+      value: "import-url",
+    },
+  ];
+};
+
+const runImportMenuAction = async (deps, value) => {
+  const { store, render } = deps;
+
+  if (value === "import-url") {
+    store.openUrlImportDialog();
+    render();
     return;
   }
 
+  if (value === "import-local") {
+    await importProjectFromLocal(deps);
+  }
+};
+
+export const handleOpenButtonClick = (deps, payload) => {
+  const { appService, store, render, i18n } = deps;
+  const copy = selectProjectsPageCopy(i18n);
+  if (appService.getPlatform() !== "tauri") {
+    return;
+  }
+
+  const rect = payload._event.currentTarget.getBoundingClientRect();
+  store.openImportSourceMenu({
+    x: rect.left,
+    y: rect.bottom,
+    items: createImportMenuItems(copy),
+  });
+  render();
+};
+
+export const handleImportSourceMenuClose = (deps) => {
+  const { store, render } = deps;
+  if (!store.selectIsImportSourceMenuOpen()) {
+    return;
+  }
+  store.closeImportSourceMenu();
+  render();
+};
+
+export const handleImportSourceMenuClickItem = async (deps, payload) => {
+  const { store, render } = deps;
+  const detail = payload._event.detail;
+  const item = detail.item || detail;
+
+  store.closeImportSourceMenu();
+  render();
+
+  await runImportMenuAction(deps, item.value);
+};
+
+export const handleUrlImportDialogClose = (deps) => {
+  const { store, render } = deps;
+  if (!store.selectIsUrlImportDialogOpen()) {
+    return;
+  }
+  store.closeUrlImportDialog();
+  render();
+};
+
+export const handleUrlImportFormAction = async (deps, payload) => {
+  const { appService, store, render, i18n } = deps;
+  const copy = selectProjectsPageCopy(i18n);
+  const detail = payload?._event?.detail || {};
+  const actionId = detail.actionId;
+
+  if (actionId !== "import-url") {
+    return;
+  }
+
+  let url;
   try {
-    const selectedPath = await appService.openFolderPicker({
-      title: copy.selectExistingProjectFolderTitle,
-    });
-
-    if (!selectedPath) {
-      return;
-    }
-
-    const progressDialog = appService.showProgressDialog({
-      title: copy.importingProjectTitle,
-      message: copy.importingProjectMessage,
-      progress: {},
-    });
-
-    let importedProject;
-    try {
-      await progressDialog.waitForPaint();
-      importedProject = await appService.openExistingProject(selectedPath);
-      const projects = await appService.loadAllProjects();
-      store.setProjects({ projects });
-      render();
-    } finally {
-      progressDialog.close();
-    }
-
-    appService.showToast({
-      message: formatProjectsPageCopy(copy.importedProjectMessage, {
-        projectName: importedProject.name,
-      }),
-    });
+    url = parseProjectImportUrl(detail?.values?.url);
   } catch (error) {
     appService.showAlert({
-      message: error?.message || copy.failedImportProject,
+      message: getProjectImportErrorMessage(error, copy),
     });
+    return;
   }
+
+  store.closeUrlImportDialog();
+  render();
+
+  let destinationFolder;
+  if (appService.getPlatform() === "tauri") {
+    destinationFolder = await appService.openFolderPicker({
+      title: copy.selectImportDestinationTitle,
+    });
+    if (!destinationFolder) {
+      return;
+    }
+  }
+
+  await importProjectFromUrl(deps, { url, destinationFolder });
 };
 
 export const handleMobileCreateMenuButtonClick = (deps, payload) => {
@@ -474,8 +544,8 @@ export const handleMobileCreateMenuButtonClick = (deps, payload) => {
       {
         label: copy.importProjectMenuItem,
         type: "item",
-        value: "import-project",
         disabled: !canImportProjects,
+        items: createImportMenuItems(copy),
       },
     ],
   };
@@ -502,15 +572,12 @@ export const handleMobileActionMenuClickItem = async (deps, payload) => {
 
   if (item.value === "create-project") {
     store.openCreateDialog();
-  }
-
-  if (item.value === "import-project") {
     render();
-    await handleOpenButtonClick(deps);
     return;
   }
 
   render();
+  await runImportMenuAction(deps, item.value);
 };
 
 export const handleAppVersionClick = (deps, payload) => {

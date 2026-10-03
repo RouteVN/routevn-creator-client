@@ -9,6 +9,20 @@ refs:
       click:
         required: true
         handler: handleOpenButtonClick
+  importSourceMenu:
+    eventListeners:
+      close:
+        handler: handleImportSourceMenuClose
+      item-click:
+        handler: handleImportSourceMenuClickItem
+  urlImportDialog:
+    eventListeners:
+      close:
+        handler: handleUrlImportDialogClose
+  urlImportForm:
+    eventListeners:
+      form-action:
+        handler: handleUrlImportFormAction
   mobileCreateMenuButton:
     eventListeners:
       click:
@@ -272,6 +286,10 @@ template:
           - rtgl-form#addMemberForm key=${addMemberDialog.formKey} :form=${addMemberForm} :defaultValues=${addMemberDialog.defaultValues} w=f: null
   - rtgl-dropdown-menu#dropdownMenu ?open=${dropdownMenu.isOpen} x=${dropdownMenu.x} y=${dropdownMenu.y} :items=${dropdownMenu.items}: null
   - rtgl-dropdown-menu#mobileActionMenu ?open=${mobileActionMenu.isOpen} x=${mobileActionMenu.x} y=${mobileActionMenu.y} place=be :items=${mobileActionMenu.items}: null
+  - rtgl-dropdown-menu#importSourceMenu ?open=${importSourceMenu.isOpen} x=${importSourceMenu.x} y=${importSourceMenu.y} place=be :items=${importSourceMenu.items}: null
+  - rtgl-dialog#urlImportDialog ?open=${urlImportDialog.isOpen} s=sm:
+      - rtgl-view slot=content w=f p=lg:
+          - rtgl-form#urlImportForm key=${urlImportDialog.formKey} :form=${urlImportForm} :defaultValues=${urlImportDialog.defaultValues} w=f: null
   - rtgl-dropdown-menu#appVersionDropdownMenu ?open=${appVersionMenu.isOpen} x=${appVersionMenu.x} y=${appVersionMenu.y} place=t :items=${appVersionMenu.items}: null
   - rtgl-dropdown-menu#profileDropdownMenu ?open=${profileMenu.isOpen} x=${profileMenu.x} y=${profileMenu.y} :items=${profileMenu.items}: null
   - rtgl-dialog#languageDialog ?open=${languageDialog.isOpen} s=sm:

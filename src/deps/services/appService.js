@@ -1,12 +1,13 @@
 import { readDir, exists } from "@tauri-apps/plugin-fs";
 import { join } from "@tauri-apps/api/path";
-import { convertFileSrc, invoke } from "@tauri-apps/api/core";
+import { Channel, convertFileSrc, invoke } from "@tauri-apps/api/core";
 import { createAppServiceCore } from "./shared/appServiceCore.js";
 import { generateId } from "../../internal/id.js";
 import { assertSafeProjectFileId } from "../../internal/projectFileIds.js";
 import { copyTextToClipboard } from "../../internal/copyText.js";
 import { createNativeApplicationIdentifier } from "../../internal/nativeApplicationIdentifier.js";
 import { normalizeProjectLanguage } from "../../internal/projectLanguage.js";
+import { parseProjectImportUrl } from "../../internal/projectImportUrl.js";
 import { setDiscordPresenceDetails as setDiscordPresenceDetailsClient } from "../clients/tauri/discordPresence.js";
 
 const deriveProjectNameFromPath = (projectPath) => {
@@ -97,6 +98,12 @@ export const createAppService = (params) => {
       loadProjectIcon,
       projectService,
     }) => {
+      // Local folder imports normalize file ids in place (extension
+      // stripping) before the folder is validated and registered.
+      await invoke("normalize_project_file_names", {
+        projectPath: folderPath,
+      });
+
       const validation =
         await platformAdapter.validateProjectFolder(folderPath);
       if (!validation.isValid) {
@@ -262,6 +269,42 @@ export const createAppService = (params) => {
 
     setDiscordPresenceDetails(options) {
       return setDiscordPresenceDetailsClient(options);
+    },
+
+    async openArchivePicker() {
+      throw new Error("Archive import is not supported on the desktop app.");
+    },
+
+    async importProjectFromArchive() {
+      throw new Error("Archive import is not supported on the desktop app.");
+    },
+
+    // URL import on desktop: the archive is downloaded and extracted into a
+    // new subfolder of the chosen destination parent by the native side,
+    // then the extracted project folder is registered in place.
+    async importProjectFromUrl({ url, destinationFolder, onProgress } = {}) {
+      const normalizedUrl = parseProjectImportUrl(url);
+      if (!destinationFolder) {
+        throw new Error("importFailed: Destination folder is required.");
+      }
+
+      // The command requires a channel; progress events are optional.
+      const progressChannel = new Channel();
+      progressChannel.onmessage = (event) => {
+        onProgress?.(event);
+      };
+      const result = await invoke("download_project_archive", {
+        url: normalizedUrl,
+        destinationParent: destinationFolder,
+        onProgress: progressChannel,
+      });
+      const projectPath = result?.projectPath ?? "";
+      if (!projectPath) {
+        throw new Error("importFailed: Imported project path is missing.");
+      }
+
+      onProgress?.({ stage: "finishing", current: 0, total: 0 });
+      return appService.openExistingProject(projectPath);
     },
 
     async startStaticWebServer({ rootPath } = {}) {

@@ -4,13 +4,16 @@ const ANDROID_FILE_PICKER_INPUT_ID = "routevnAndroidFilePickerInput";
 const ANDROID_FILE_PICKER_CALLBACK = "__routeVNAndroidFilePickerResult";
 const ANDROID_SAVE_FILE_PICKER_CALLBACK = "__routeVNAndroidSaveFileResult";
 const ANDROID_FOLDER_PICKER_CALLBACK = "__routeVNAndroidFolderPickerResult";
+const ANDROID_ARCHIVE_PICKER_CALLBACK = "__routeVNAndroidArchivePickerResult";
 
 let nextAndroidFilePickerRequestId = 1;
 let nextAndroidSaveFilePickerRequestId = 1;
 let nextAndroidFolderPickerRequestId = 1;
+let nextAndroidArchivePickerRequestId = 1;
 const pendingAndroidFilePickers = new Map();
 const pendingAndroidSaveFilePickers = new Map();
 const pendingAndroidFolderPickers = new Map();
+const pendingAndroidArchivePickers = new Map();
 
 const isTruthyFlag = (value) => {
   if (typeof value === "boolean") {
@@ -166,6 +169,12 @@ const createAndroidFolderPickerRequestId = () => {
   return requestId;
 };
 
+const createAndroidArchivePickerRequestId = () => {
+  const requestId = `archive-${nextAndroidArchivePickerRequestId}`;
+  nextAndroidArchivePickerRequestId += 1;
+  return requestId;
+};
+
 const resolveSaveFilename = (options = {}) => {
   return options.defaultPath || options.filename || "download";
 };
@@ -234,6 +243,26 @@ const ensureAndroidFolderPickerCallback = () => {
   };
 };
 
+const ensureAndroidArchivePickerCallback = () => {
+  window[ANDROID_ARCHIVE_PICKER_CALLBACK] = (result = {}) => {
+    const requestId = result.requestId;
+    const pending = pendingAndroidArchivePickers.get(requestId);
+    if (!pending) {
+      return;
+    }
+
+    pendingAndroidArchivePickers.delete(requestId);
+    if (result.error) {
+      pending.reject(
+        new Error(result.error.message || "Failed to select archive."),
+      );
+      return;
+    }
+
+    pending.resolve(result.archive ?? null);
+  };
+};
+
 const requestNativeAndroidFilePicker = (options = {}) => {
   const requestId = createAndroidFilePickerRequestId();
   ensureAndroidFilePickerCallback();
@@ -275,6 +304,29 @@ const requestNativeAndroidFolderPicker = (options = {}) => {
       }),
     ).catch((error) => {
       pendingAndroidFolderPickers.delete(requestId);
+      reject(error);
+    });
+  });
+};
+
+const requestNativeAndroidArchivePicker = (options = {}) => {
+  if (isVtMode()) {
+    return Promise.resolve(null);
+  }
+
+  const requestId = createAndroidArchivePickerRequestId();
+  ensureAndroidArchivePickerCallback();
+
+  return new Promise((resolve, reject) => {
+    pendingAndroidArchivePickers.set(requestId, { resolve, reject });
+
+    void Promise.resolve(
+      callAndroidBridge("openArchivePicker", {
+        requestId,
+        title: options.title || "Select Zip File",
+      }),
+    ).catch((error) => {
+      pendingAndroidArchivePickers.delete(requestId);
       reject(error);
     });
   });
@@ -413,6 +465,10 @@ export const createAndroidFilePicker = () => {
   return {
     async openFolderPicker(options = {}) {
       return requestNativeAndroidFolderPicker(options);
+    },
+
+    async openArchivePicker(options = {}) {
+      return requestNativeAndroidArchivePicker(options);
     },
 
     async openFilePicker(options = {}) {

@@ -2,11 +2,13 @@ import { createAndroidBackupClient } from "../../clients/android/backup.js";
 import { createBackupService } from "./backupService.js";
 import { createAppServiceCore } from "../shared/appServiceCore.js";
 import { callAndroidBridge } from "../../clients/android/bridge.js";
+import { androidProjectImportProgress } from "../../clients/android/projectImportProgress.js";
 import { getAndroidProjectFileUrl } from "./projectFileUrls.js";
 import { generateId } from "../../../internal/id.js";
 import { copyTextToClipboard } from "../../../internal/copyText.js";
 import { createNativeApplicationIdentifier } from "../../../internal/nativeApplicationIdentifier.js";
 import { normalizeProjectLanguage } from "../../../internal/projectLanguage.js";
+import { parseProjectImportUrl } from "../../../internal/projectImportUrl.js";
 
 const isMediaPickerRequest = (options) => {
   const acceptedTypes = options.accept?.trim()
@@ -69,6 +71,49 @@ const toAndroidProjectEntry = ({ project, existingEntry } = {}) => {
     createdAt: existingEntry?.createdAt ?? Date.now(),
     lastOpenedAt: existingEntry?.lastOpenedAt ?? null,
   };
+};
+
+// Shared registration tail for every Android import source (folder, zip,
+// URL): build the project entry from the bridge result and register it.
+const registerImportedAndroidProject = async ({
+  importedProject,
+  projectId,
+  addProjectEntry,
+  loadProjectIcon,
+  projectService,
+}) => {
+  const importedName = importedProject.name?.trim?.() ?? "";
+  let projectName = "Untitled Project";
+  if (importedName) {
+    projectName = importedName;
+  }
+
+  const projectEntry = {
+    id: projectId,
+    name: projectName,
+    description: importedProject.description ?? "",
+    language: normalizeProjectLanguage(importedProject.language),
+    iconFileId: importedProject.iconFileId ?? null,
+    createdAt: Date.now(),
+    lastOpenedAt: null,
+  };
+
+  await addProjectEntry(projectEntry);
+
+  const fullProject = { ...projectEntry };
+  if (projectEntry.iconFileId) {
+    const iconResult = await loadProjectIcon({
+      entry: projectEntry,
+      projectService,
+    });
+    if (typeof iconResult === "string") {
+      fullProject.iconUrl = iconResult;
+    } else if (iconResult?.url) {
+      fullProject.iconUrl = iconResult.url;
+    }
+  }
+
+  return fullProject;
 };
 
 export const createAppService = (params) => {
@@ -152,38 +197,13 @@ export const createAppService = (params) => {
         throw new Error("Imported project identity does not match.");
       }
 
-      const importedName = importedProject.name?.trim?.() ?? "";
-      let projectName = "Untitled Project";
-      if (importedName) {
-        projectName = importedName;
-      }
-
-      const projectEntry = {
-        id: projectId,
-        name: projectName,
-        description: importedProject.description ?? "",
-        language: normalizeProjectLanguage(importedProject.language),
-        iconFileId: importedProject.iconFileId ?? null,
-        createdAt: Date.now(),
-        lastOpenedAt: null,
-      };
-
-      await addProjectEntry(projectEntry);
-
-      const fullProject = { ...projectEntry };
-      if (projectEntry.iconFileId) {
-        const iconResult = await loadProjectIcon({
-          entry: projectEntry,
-          projectService,
-        });
-        if (typeof iconResult === "string") {
-          fullProject.iconUrl = iconResult;
-        } else if (iconResult?.url) {
-          fullProject.iconUrl = iconResult.url;
-        }
-      }
-
-      return fullProject;
+      return registerImportedAndroidProject({
+        importedProject,
+        projectId,
+        addProjectEntry,
+        loadProjectIcon,
+        projectService,
+      });
     },
 
     createNewProject: async ({
@@ -358,6 +378,77 @@ export const createAppService = (params) => {
 
     async openExistingProject(folderPath) {
       const project = await appService.openExistingProject(folderPath);
+      backup.backupNewProject();
+      return project;
+    },
+
+    async openArchivePicker(options = {}) {
+      const archive = await params.filePicker.openArchivePicker(options);
+      return archive ?? undefined;
+    },
+
+    async importProjectFromArchive({ uri, onProgress } = {}) {
+      if (!uri) {
+        throw new Error("importFailed: Archive uri is required.");
+      }
+
+      const projectId = generateId();
+      const unsubscribe = androidProjectImportProgress.subscribe({
+        projectId,
+        onProgress,
+      });
+      let importedProject;
+      try {
+        importedProject = await callAndroidBridge("importProjectArchive", {
+          uri,
+          projectId,
+        });
+      } finally {
+        unsubscribe();
+      }
+      if (importedProject.id !== projectId) {
+        throw new Error("importFailed: Imported project identity mismatch.");
+      }
+
+      const project = await registerImportedAndroidProject({
+        importedProject,
+        projectId,
+        addProjectEntry: appService.addProjectEntry,
+        loadProjectIcon: platformAdapter.loadProjectIcon,
+        projectService: params.projectService,
+      });
+      backup.backupNewProject();
+      return project;
+    },
+
+    async importProjectFromUrl({ url, onProgress } = {}) {
+      const normalizedUrl = parseProjectImportUrl(url);
+
+      const projectId = generateId();
+      const unsubscribe = androidProjectImportProgress.subscribe({
+        projectId,
+        onProgress,
+      });
+      let importedProject;
+      try {
+        importedProject = await callAndroidBridge(
+          "importProjectArchiveFromUrl",
+          { url: normalizedUrl, projectId },
+        );
+      } finally {
+        unsubscribe();
+      }
+      if (importedProject.id !== projectId) {
+        throw new Error("importFailed: Imported project identity mismatch.");
+      }
+
+      const project = await registerImportedAndroidProject({
+        importedProject,
+        projectId,
+        addProjectEntry: appService.addProjectEntry,
+        loadProjectIcon: platformAdapter.loadProjectIcon,
+        projectService: params.projectService,
+      });
       backup.backupNewProject();
       return project;
     },

@@ -65,6 +65,21 @@ export const createInitialState = () => ({
     items: [],
   },
 
+  importSourceMenu: {
+    isOpen: false,
+    x: 0,
+    y: 0,
+    items: [],
+  },
+
+  urlImportDialog: {
+    isOpen: false,
+    formKey: 0,
+    defaultValues: {
+      url: "",
+    },
+  },
+
   appVersionMenu: {
     isOpen: false,
     x: 0,
@@ -285,6 +300,40 @@ export const closeMobileActionMenu = ({ state }, _payload = {}) => {
 
 export const selectIsMobileActionMenuOpen = ({ state }) => {
   return Boolean(state.mobileActionMenu?.isOpen);
+};
+
+export const openImportSourceMenu = ({ state }, { x, y, items } = {}) => {
+  state.importSourceMenu.isOpen = true;
+  state.importSourceMenu.x = x;
+  state.importSourceMenu.y = y;
+  state.importSourceMenu.items = Array.isArray(items) ? items : [];
+};
+
+export const closeImportSourceMenu = ({ state }, _payload = {}) => {
+  state.importSourceMenu.isOpen = false;
+  state.importSourceMenu.x = 0;
+  state.importSourceMenu.y = 0;
+  state.importSourceMenu.items = [];
+};
+
+export const selectIsImportSourceMenuOpen = ({ state }) => {
+  return Boolean(state.importSourceMenu?.isOpen);
+};
+
+export const openUrlImportDialog = ({ state }, _payload = {}) => {
+  state.urlImportDialog.isOpen = true;
+  state.urlImportDialog.formKey += 1;
+  state.urlImportDialog.defaultValues = {
+    url: "",
+  };
+};
+
+export const closeUrlImportDialog = ({ state }, _payload = {}) => {
+  state.urlImportDialog.isOpen = false;
+};
+
+export const selectIsUrlImportDialogOpen = ({ state }) => {
+  return Boolean(state.urlImportDialog?.isOpen);
 };
 
 export const openAppVersionMenu = ({ state }, { x, y, items } = {}) => {
@@ -664,6 +713,35 @@ export const selectViewData = ({ state, i18n }) => {
       ],
     },
   };
+  const urlImportForm = {
+    title: copy.importFromUrlTitle,
+    fields: [
+      {
+        name: "url",
+        type: "input-text",
+        label: copy.importUrlLabel,
+        description: copy.importUrlDescription,
+        required: true,
+        validations: [
+          {
+            rule: /^.+$/,
+            message: copy.importUrlRequiredMessage,
+          },
+        ],
+      },
+    ],
+    actions: {
+      buttons: [
+        {
+          id: "import-url",
+          variant: "pr",
+          label: copy.importUrlSubmitButton,
+          type: "submit",
+          validate: true,
+        },
+      ],
+    },
+  };
   const languageForm = {
     title: copy.languageTitle,
     fields: [
@@ -822,6 +900,7 @@ export const selectViewData = ({ state, i18n }) => {
         : copy.cloudEmptyDescription,
     cloudCreateForm,
     addMemberForm,
+    urlImportForm,
     languageForm,
     appearanceForm,
     profileDialogForm,

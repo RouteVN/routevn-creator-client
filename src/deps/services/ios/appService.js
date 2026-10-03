@@ -1,11 +1,13 @@
 import { createAppServiceCore } from "../shared/appServiceCore.js";
 import { callIOSBridge } from "../../clients/ios/bridge.js";
+import { iosProjectImportProgress } from "../../clients/ios/projectImportProgress.js";
 import { getIOSProjectFileUrl } from "./projectFileUrls.js";
 import { generateId } from "../../../internal/id.js";
 import { copyTextToClipboard } from "../../../internal/copyText.js";
 import { createNativeApplicationIdentifier } from "../../../internal/nativeApplicationIdentifier.js";
 import { normalizeProjectLanguage } from "../../../internal/projectLanguage.js";
 import { isDarkTheme } from "../../../internal/theme.js";
+import { parseProjectImportUrl } from "../../../internal/projectImportUrl.js";
 import { createProgressDialog } from "../../clients/progressDialog.js";
 import { createIOSProjectFolderSetup } from "../../clients/ios/projectFolderSetup.js";
 
@@ -69,6 +71,69 @@ const toIOSProjectEntry = ({ project, existingEntry } = {}) => {
   };
 };
 
+// Shared registration tail for every iOS import source (folder, zip, URL):
+// build the project entry from the bridge result, register it, and restore
+// it to discovery if it had been removed before.
+const createRegisterImportedIOSProject = ({ appDb, getFileDisplayPath }) => {
+  return async ({
+    importedProject,
+    addProjectEntry,
+    loadProjectIcon,
+    projectService,
+  }) => {
+    const projectId = importedProject.id;
+    if (!projectId) {
+      throw new Error("Imported project is missing an id.");
+    }
+
+    const importedName = importedProject.name?.trim?.() ?? "";
+    let projectName = "Untitled Project";
+    if (importedName) {
+      projectName = importedName;
+    }
+
+    const projectEntry = {
+      id: projectId,
+      projectFilePath: importedProject.projectFilePath,
+      name: projectName,
+      description: importedProject.description ?? "",
+      language: normalizeProjectLanguage(importedProject.language),
+      iconFileId: importedProject.iconFileId ?? null,
+      createdAt: Date.now(),
+      lastOpenedAt: null,
+    };
+
+    await addProjectEntry(projectEntry);
+
+    // Explicitly importing a removed project restores it to discovery.
+    const removedProjectIds = (await appDb.get("iosRemovedProjectIds")) ?? [];
+    if (removedProjectIds.includes(projectId)) {
+      await appDb.set(
+        "iosRemovedProjectIds",
+        removedProjectIds.filter((id) => id !== projectId),
+      );
+    }
+
+    const fullProject = {
+      ...projectEntry,
+      projectFileDisplayPath: getFileDisplayPath(projectEntry.projectFilePath),
+    };
+    if (projectEntry.iconFileId) {
+      const iconResult = await loadProjectIcon({
+        entry: projectEntry,
+        projectService,
+      });
+      if (typeof iconResult === "string") {
+        fullProject.iconUrl = iconResult;
+      } else if (iconResult?.url) {
+        fullProject.iconUrl = iconResult.url;
+      }
+    }
+
+    return fullProject;
+  };
+};
+
 export const createAppService = (params) => {
   const appDb = params.db;
   const projectFolderSetup = createIOSProjectFolderSetup({
@@ -79,6 +144,11 @@ export const createAppService = (params) => {
       filePath,
       projectFolderSetup.getStatus().deviceName ?? "iPhone",
     );
+
+  const registerImportedIOSProject = createRegisterImportedIOSProject({
+    appDb,
+    getFileDisplayPath,
+  });
 
   const syncIOSProjectEntriesFromStorage = async () => {
     const discoveredProjects = await callIOSBridge("listProjectFolders");
@@ -172,58 +242,13 @@ export const createAppService = (params) => {
       const importedProject = await callIOSBridge("importProjectFolder", {
         uri: folderSelection.uri,
       });
-      const projectId = importedProject.id;
-      if (!projectId) {
-        throw new Error("Imported project is missing an id.");
-      }
 
-      const importedName = importedProject.name?.trim?.() ?? "";
-      let projectName = "Untitled Project";
-      if (importedName) {
-        projectName = importedName;
-      }
-
-      const projectEntry = {
-        id: projectId,
-        projectFilePath: importedProject.projectFilePath,
-        name: projectName,
-        description: importedProject.description ?? "",
-        language: normalizeProjectLanguage(importedProject.language),
-        iconFileId: importedProject.iconFileId ?? null,
-        createdAt: Date.now(),
-        lastOpenedAt: null,
-      };
-
-      await addProjectEntry(projectEntry);
-
-      // Explicitly importing a removed project restores it to discovery.
-      const removedProjectIds = (await appDb.get("iosRemovedProjectIds")) ?? [];
-      if (removedProjectIds.includes(projectId)) {
-        await appDb.set(
-          "iosRemovedProjectIds",
-          removedProjectIds.filter((id) => id !== projectId),
-        );
-      }
-
-      const fullProject = {
-        ...projectEntry,
-        projectFileDisplayPath: getFileDisplayPath(
-          projectEntry.projectFilePath,
-        ),
-      };
-      if (projectEntry.iconFileId) {
-        const iconResult = await loadProjectIcon({
-          entry: projectEntry,
-          projectService,
-        });
-        if (typeof iconResult === "string") {
-          fullProject.iconUrl = iconResult;
-        } else if (iconResult?.url) {
-          fullProject.iconUrl = iconResult.url;
-        }
-      }
-
-      return fullProject;
+      return registerImportedIOSProject({
+        importedProject,
+        addProjectEntry,
+        loadProjectIcon,
+        projectService,
+      });
     },
 
     createNewProject: async ({
@@ -357,6 +382,55 @@ export const createAppService = (params) => {
       return projectFolderSetup.getStatus().configured
         ? path
         : "/project-folder-setup";
+    },
+
+    async openArchivePicker(options = {}) {
+      const archive = await params.filePicker.openArchivePicker(options);
+      return archive ?? undefined;
+    },
+
+    async importProjectFromArchive({ uri, onProgress } = {}) {
+      if (!uri) {
+        throw new Error("importFailed: Archive uri is required.");
+      }
+
+      const unsubscribe = iosProjectImportProgress.subscribe({ onProgress });
+      let importedProject;
+      try {
+        importedProject = await callIOSBridge("importProjectArchive", {
+          uri,
+        });
+      } finally {
+        unsubscribe();
+      }
+
+      return registerImportedIOSProject({
+        importedProject,
+        addProjectEntry: appService.addProjectEntry,
+        loadProjectIcon: platformAdapter.loadProjectIcon,
+        projectService: params.projectService,
+      });
+    },
+
+    async importProjectFromUrl({ url, onProgress } = {}) {
+      const normalizedUrl = parseProjectImportUrl(url);
+
+      const unsubscribe = iosProjectImportProgress.subscribe({ onProgress });
+      let importedProject;
+      try {
+        importedProject = await callIOSBridge("importProjectArchiveFromUrl", {
+          url: normalizedUrl,
+        });
+      } finally {
+        unsubscribe();
+      }
+
+      return registerImportedIOSProject({
+        importedProject,
+        addProjectEntry: appService.addProjectEntry,
+        loadProjectIcon: platformAdapter.loadProjectIcon,
+        projectService: params.projectService,
+      });
     },
 
     showProgressDialog(options) {

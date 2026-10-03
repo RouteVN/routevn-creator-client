@@ -220,6 +220,84 @@ describe("android file picker", () => {
     });
   });
 
+  it("opens the native archive picker and resolves the picked zip", async () => {
+    let archivePayload;
+    mocked.callAndroidBridge.mockImplementation((method, payload) => {
+      if (method === "openArchivePicker") {
+        archivePayload = payload;
+        Promise.resolve().then(() => {
+          window.__routeVNAndroidArchivePickerResult({
+            requestId: payload.requestId,
+            archive: {
+              uri: "content://archives/project-one.zip",
+              name: "project-one.zip",
+            },
+            uri: "content://archives/project-one.zip",
+            name: "project-one.zip",
+          });
+        });
+        return true;
+      }
+
+      throw new Error(`Unexpected bridge method: ${method}`);
+    });
+
+    const archive = await createAndroidFilePicker().openArchivePicker({
+      title: "Select Project Zip File",
+    });
+
+    expect(archive).toEqual({
+      uri: "content://archives/project-one.zip",
+      name: "project-one.zip",
+    });
+    expect(archivePayload).toEqual({
+      requestId: "archive-1",
+      title: "Select Project Zip File",
+    });
+  });
+
+  it("resolves a cancelled archive picker as null", async () => {
+    mocked.callAndroidBridge.mockImplementation((method, payload) => {
+      if (method === "openArchivePicker") {
+        Promise.resolve().then(() => {
+          window.__routeVNAndroidArchivePickerResult({
+            requestId: payload.requestId,
+            archive: null,
+            uri: null,
+            name: null,
+          });
+        });
+        return true;
+      }
+
+      throw new Error(`Unexpected bridge method: ${method}`);
+    });
+
+    await expect(
+      createAndroidFilePicker().openArchivePicker({}),
+    ).resolves.toBeNull();
+  });
+
+  it("rejects the archive picker promise when the bridge reports an error", async () => {
+    mocked.callAndroidBridge.mockImplementation((method, payload) => {
+      if (method === "openArchivePicker") {
+        Promise.resolve().then(() => {
+          window.__routeVNAndroidArchivePickerResult({
+            requestId: payload.requestId,
+            error: { message: "archive picker unavailable" },
+          });
+        });
+        return true;
+      }
+
+      throw new Error(`Unexpected bridge method: ${method}`);
+    });
+
+    await expect(
+      createAndroidFilePicker().openArchivePicker({}),
+    ).rejects.toThrow("archive picker unavailable");
+  });
+
   it("writes supplied blobs to Android downloads", async () => {
     let writePayload;
     mocked.callAndroidBridge.mockImplementation((method, payload) => {

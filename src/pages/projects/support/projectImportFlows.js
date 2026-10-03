@@ -1,0 +1,172 @@
+import {
+  getProjectImportErrorCode,
+  getProjectImportErrorMessage,
+} from "../../../internal/projectImportErrors.js";
+import { createProjectImportProgressView } from "../../../internal/projectImportProgress.js";
+import { isGoogleDriveImportUrl } from "../../../internal/projectImportUrl.js";
+import {
+  formatProjectsPageCopy,
+  selectProjectsPageCopy,
+} from "./projectsPageCopy.js";
+
+// Shared tail for every import run: keep a progress dialog visible through
+// the import and the list refresh, then toast the imported project. `run`
+// receives an `onProgress` callback that turns native download, extraction
+// and finishing events into the dialog's status line and progress bar. Failures
+// close the progress dialog first and surface a localized alert built from
+// the stable native error codes.
+export const runProjectImport = async (deps, { run, status }) => {
+  const { appService, store, render, i18n } = deps;
+  const copy = selectProjectsPageCopy(i18n);
+
+  const progressDialog = appService.showProgressDialog({
+    title: copy.importingProjectTitle,
+    message: copy.importingProjectMessage,
+    status,
+    progress: {},
+  });
+  const onProgress = (event) => {
+    progressDialog.update(createProjectImportProgressView({ copy, event }));
+  };
+
+  let importedProject;
+  try {
+    await progressDialog.waitForPaint();
+    importedProject = await run({ onProgress });
+    const projects = await appService.loadAllProjects();
+    store.setProjects({ projects });
+    render();
+  } catch (error) {
+    progressDialog.close();
+    appService.showAlert({
+      message: getProjectImportErrorMessage(error, copy),
+    });
+    return;
+  }
+  progressDialog.close();
+
+  appService.showToast({
+    message: formatProjectsPageCopy(copy.importedProjectMessage, {
+      projectName: importedProject.name,
+    }),
+  });
+};
+
+// Desktop and mobile folder import: pick a project folder, then register it.
+// A cancelled picker returns silently.
+export const importProjectFromFolder = async (deps) => {
+  const { appService, i18n } = deps;
+  const copy = selectProjectsPageCopy(i18n);
+
+  const selectedPath = await appService.openFolderPicker({
+    title: copy.selectExistingProjectFolderTitle,
+  });
+  if (!selectedPath) {
+    return;
+  }
+
+  await runProjectImport(deps, {
+    run: () => appService.openExistingProject(selectedPath),
+  });
+};
+
+// Mobile zip import: pick a local zip archive, then import it into app
+// storage. A cancelled picker returns silently.
+export const importProjectFromZip = async (deps) => {
+  const { appService, i18n } = deps;
+  const copy = selectProjectsPageCopy(i18n);
+
+  const archive = await appService.openArchivePicker({
+    title: copy.selectProjectArchiveTitle,
+  });
+  if (!archive?.uri) {
+    return;
+  }
+
+  await runProjectImport(deps, {
+    status: copy.importPreparingStatus,
+    run: ({ onProgress }) =>
+      appService.importProjectFromArchive({ uri: archive.uri, onProgress }),
+  });
+};
+
+// "From local": desktop opens the folder picker. Android and iOS have no
+// single system picker for a folder or a zip file, so they first ask which one
+// with the same vertical-button source dialog the media pickers use. Dismissing
+// the dialog returns silently.
+export const importProjectFromLocal = async (deps) => {
+  const { appService, i18n } = deps;
+  const copy = selectProjectsPageCopy(i18n);
+  const platform = appService.getPlatform();
+
+  if (platform !== "android" && platform !== "ios") {
+    await importProjectFromFolder(deps);
+    return;
+  }
+
+  const result = await appService.showFormDialog({
+    size: "sm",
+    form: {
+      title: copy.importFromLocalTitle,
+      fields: [],
+      actions: {
+        layout: "vertical",
+        buttons: [
+          {
+            id: "import-folder",
+            label: copy.importLocalFolderButton,
+            variant: "se",
+          },
+          {
+            id: "import-zip",
+            label: copy.importLocalZipButton,
+            variant: "se",
+          },
+        ],
+      },
+    },
+  });
+
+  if (result?.actionId === "import-folder") {
+    await importProjectFromFolder(deps);
+    return;
+  }
+
+  if (result?.actionId === "import-zip") {
+    await importProjectFromZip(deps);
+  }
+};
+
+// URL import: desktop receives the chosen destination parent folder; mobile
+// imports straight into app storage.
+export const importProjectFromUrl = async (
+  deps,
+  { url, destinationFolder },
+) => {
+  const { appService, i18n } = deps;
+  const copy = selectProjectsPageCopy(i18n);
+
+  await runProjectImport(deps, {
+    status: copy.importConnectingStatus,
+    run: async ({ onProgress }) => {
+      try {
+        return await appService.importProjectFromUrl({
+          url,
+          destinationFolder,
+          onProgress,
+        });
+      } catch (error) {
+        // Drive answers with a web page instead of the file when it is private
+        // or past its download limit, so say what to check.
+        const code = getProjectImportErrorCode(error);
+        if (
+          isGoogleDriveImportUrl(url) &&
+          (code === "invalidArchive" || code === "downloadFailed")
+        ) {
+          throw new Error(`googleDriveFailed: ${error.message}`);
+        }
+        throw error;
+      }
+    },
+  });
+};
