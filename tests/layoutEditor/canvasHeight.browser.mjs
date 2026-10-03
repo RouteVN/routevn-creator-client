@@ -169,7 +169,7 @@ document.querySelector('#page').append(document.createElement('rvn-layout-editor
         assert.equal(fit.touchAction, "none");
         await fitted.page.close();
 
-        for (const zoom of [0.5, 2]) {
+        for (const zoom of [0.5, 2, 4]) {
           const zoomed = await openEditor(browser, {
             touch,
             tablet,
@@ -177,11 +177,35 @@ document.querySelector('#page').append(document.createElement('rvn-layout-editor
             zoom,
           });
           const geometry = await measureCanvas(zoomed.surface);
+          // The surface's 1px margin and borders do not scale.
           assert.ok(
-            Math.abs(geometry.canvas.width - fit.canvas.width * zoom) <= 2,
-            `${label} zoom ${zoom}: canvas must be ${zoom}x the fitted width`,
+            Math.abs(geometry.canvas.width - fit.canvas.width * zoom) <=
+              1 + zoom,
+            `${label} zoom ${zoom}: canvas must be ${zoom}x the fitted width (${geometry.canvas.width} vs ${fit.canvas.width})`,
           );
           assertCentered(geometry, `${label} zoom ${zoom}`);
+          // The renderer's canvas, drawn at the project resolution and styled
+          // to fill its box, must fill the surface past that size too.
+          const drawing = await zoomed.surface.evaluate(
+            async (surface, { width, height }) => {
+              const canvas = document.createElement("canvas");
+              canvas.width = width;
+              canvas.height = height;
+              canvas.style.cssText =
+                "width: 100%; height: 100%; display: block;";
+              surface.getRootNode().querySelector("#canvas").append(canvas);
+              await new Promise((done) => requestAnimationFrame(done));
+              return {
+                canvas: canvas.getBoundingClientRect().width,
+                surface: surface.clientWidth,
+              };
+            },
+            resolution,
+          );
+          assert.ok(
+            Math.abs(drawing.canvas - drawing.surface) <= 2,
+            `${label} zoom ${zoom}: the drawing must fill the canvas (${JSON.stringify(drawing)})`,
+          );
           assert.deepEqual(zoomed.errors, []);
           await zoomed.page.close();
         }

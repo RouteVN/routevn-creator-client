@@ -17,5 +17,5 @@ refs:
         handler: handleCanvasDoubleClick
 template:
   - 'rtgl-view w=f bgc=mu pos=rel bwl=xs bwr=xs bc=bo style="margin-left: 1px; aspect-ratio: ${canvasAspectRatio};"':
-      - rtgl-view pos=abs cor=full:
+      - rtgl-view pos=abs cor=full w=f h=f:
           - 'div#canvas style="width: 100%; height: 100%;display: flex; cursor: ${canvasCursor}"': null
