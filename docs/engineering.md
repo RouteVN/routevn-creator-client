@@ -1088,20 +1088,41 @@ so the list stays open while the canvas selection follows. Picking an element
 closes the list and shows its edit panel; **Preview** returns to the Preview
 section. The Preview section stays mounted but
 hidden behind the other two, so unsaved preview settings survive. On tablet
-landscape the Elements list is instead a persistent 300px pane on the left (with
-the same step buttons), the header **Elements** button is hidden, and selecting
-there goes straight to the element's edit panel.
+landscape the Elements list is instead a persistent 300px pane on the left
+(without the step buttons), the header **Elements** button is hidden, and
+selecting there goes straight to the element's edit panel.
 
 On desktop and tablet landscape the edit panel and the Preview both live in a
-right panel (`rvn-resizable-panel` with `show-on-touch`), with an **Edit** |
-**Preview** toggle (`rtgl-segmented-control`) at the top; **Save Preview** sits
-beside the toggle while Preview is showing. Both bodies stay mounted and are
+right panel (`rvn-resizable-panel` with `show-on-touch`), with **Edit** and
+**Preview** tabs (`rtgl-tabs`) at the top; a secondary save icon button (**Save
+Preview**) sits on the right of the header while Preview is showing. Both
+bodies stay mounted and are
 shown or hidden by style so unsaved preview settings and scroll positions
 survive. Selecting an element (explorer, canvas, or stepping) switches to Edit
 and clearing the selection switches back to Preview. With the panels out of the
 center column, the canvas is vertically centered in a workspace-height box
 (`container-type: size`) and sized from the full height (`formatCanvasMaxWidth`);
 phone and portrait keep the stacked half-height layout.
+
+In those right-panel layouts the canvas header has zoom out, zoom in, and a zoom
+level that fits and recenters the canvas when pressed (10% to 1000% of the
+fitted size). The workspace is `rvn-zoom-viewport` (`src/primitives/`), which
+places the canvas with a translate and no bounds, like a design tool canvas: two
+fingers pinch around the point between them and drag to pan, one finger or the
+left mouse button pans from the empty workspace, the middle mouse button pans
+anywhere, the wheel pans, and ctrl + wheel (a trackpad pinch) zooms. One finger
+on the canvas still edits; a first finger that already touched it gets a
+`pointercancel` when the second lands. The viewport keeps `--canvas-zoom`,
+`--canvas-x`, and `--canvas-y` in its shadow root, reports a gesture's final
+zoom with `zoom-change`, and keeps the canvas centered until a gesture moves it.
+The canvas draws at the project resolution, so high zoom looks soft.
+
+Number fields in the edit panel's popovers (X, Y, and the other transform
+values) preview on the canvas while you slide, type, or pick a preset: the panel
+emits `preview` from the form's live `form-input` events and `preview-cancel`
+when the popover closes. The page keeps the previewed item as an overlay on the
+canvas state only, so nothing is saved until **Submit**; closing the popover
+without submitting puts the element back.
 
 `rvn-mobile-sheet` is capped at 640px (the Projects page content width) and
 centered, so the bottom-tab sheets and every page's item detail sheet stay
