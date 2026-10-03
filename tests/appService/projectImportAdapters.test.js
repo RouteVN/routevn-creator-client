@@ -711,26 +711,44 @@ describe("ios project import adapters", () => {
 
         await expect(run(appService)).rejects.toThrow(/^projectExists: /);
 
+        expect(mocked.iosBridge).not.toHaveBeenCalledWith(
+          "renameLegacyProjectFolder",
+          expect.anything(),
+        );
+
         expect(await db.get("projectEntries")).toEqual([existingEntry]);
         expect(await db.get("iosRemovedProjectIds")).toEqual([]);
         expect(db.set).not.toHaveBeenCalled();
       },
     );
 
-    it("restores a hidden project instead of rejecting it, keeping its entry dates", async () => {
+    it("restores a hidden project, renaming its id-named folder after the project, and keeps its entry dates", async () => {
       const { db, appService } = await createExistingSetup({
         removed: ["project-one"],
       });
-      mocked.iosBridge.mockImplementation(async () => ({
-        ...importPayload(),
-        name: "Existing Name",
-        alreadyImported: true,
-      }));
+      mocked.iosBridge.mockImplementation(async (method) => {
+        if (method === "renameLegacyProjectFolder") {
+          return {
+            ...importPayload(),
+            name: "Existing Name",
+            projectFilePath: "/projects/Existing Name/project.db",
+          };
+        }
+        return {
+          ...importPayload(),
+          name: "Existing Name",
+          alreadyImported: true,
+        };
+      });
 
       const project = await appService.importProjectFromArchive({
         uri: "file:///tmp/project-one.zip",
       });
 
+      expect(mocked.iosBridge).toHaveBeenCalledWith(
+        "renameLegacyProjectFolder",
+        { projectId: "project-one" },
+      );
       expect(project.id).toBe("project-one");
       expect(await db.get("iosRemovedProjectIds")).toEqual([]);
       const entries = await db.get("projectEntries");
@@ -738,9 +756,30 @@ describe("ios project import adapters", () => {
       expect(entries[0]).toMatchObject({
         id: "project-one",
         name: "Existing Name",
+        projectFilePath: "/projects/Existing Name/project.db",
         createdAt: 111,
         lastOpenedAt: 222,
       });
+    });
+
+    it("does not rename anything when the import is a new project", async () => {
+      const db = createDb();
+      const appService = createIOSAppService(
+        createParams({ db, projectService: createProjectService() }),
+      );
+      mocked.iosBridge.mockImplementation(async () => ({
+        ...importPayload(),
+        alreadyImported: false,
+      }));
+
+      await appService.importProjectFromArchive({
+        uri: "file:///tmp/project-one.zip",
+      });
+
+      expect(mocked.iosBridge).not.toHaveBeenCalledWith(
+        "renameLegacyProjectFolder",
+        expect.anything(),
+      );
     });
 
     it("still imports a project that is not in the library yet", async () => {

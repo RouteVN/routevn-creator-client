@@ -96,6 +96,16 @@ const createRegisterImportedIOSProject = ({ appDb, getFileDisplayPath }) => {
       throw new Error("projectExists: This project is already in the library.");
     }
 
+    // A hidden project is restored where it is. Older builds named its folder
+    // after the id, so rename it after the project, like every other import.
+    let projectFilePath = importedProject.projectFilePath;
+    if (importedProject.alreadyImported === true) {
+      const renamed = await callIOSBridge("renameLegacyProjectFolder", {
+        projectId,
+      });
+      projectFilePath = renamed.projectFilePath;
+    }
+
     const importedName = importedProject.name?.trim?.() ?? "";
     let projectName = "Untitled Project";
     if (importedName) {
@@ -104,7 +114,7 @@ const createRegisterImportedIOSProject = ({ appDb, getFileDisplayPath }) => {
 
     const projectEntry = {
       id: projectId,
-      projectFilePath: importedProject.projectFilePath,
+      projectFilePath,
       name: projectName,
       description: importedProject.description ?? "",
       language: normalizeProjectLanguage(importedProject.language),

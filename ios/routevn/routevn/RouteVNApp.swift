@@ -617,6 +617,8 @@ final class RouteVNViewController: UIViewController, WKNavigationDelegate, WKScr
                 urlSpec: requiredString(payload, "url"),
                 projectId: stringValue(payload["projectId"])
             )
+        case "renameLegacyProjectFolder":
+            return try renameLegacyProjectFolder(projectId: requiredString(payload, "projectId"))
         case "exportProjectFolder":
             return try exportProjectFolder(
                 projectId: requiredString(payload, "projectId"),
@@ -633,7 +635,7 @@ final class RouteVNViewController: UIViewController, WKNavigationDelegate, WKScr
     private func shouldHandleBridgeMethodInBackground(_ method: String) -> Bool {
         switch method {
         case "createDistributionZipStreamedToUri", "importProjectFolder", "importProjectArchive",
-             "importProjectArchiveFromUrl", "exportProjectFolder",
+             "importProjectArchiveFromUrl", "exportProjectFolder", "renameLegacyProjectFolder",
              "getProjectFolderSetup", "previewProjectFolderSetup", "confirmProjectFolderSetup":
             return true
         default:
@@ -2144,6 +2146,29 @@ final class RouteVNViewController: UIViewController, WKNavigationDelegate, WKScr
         }
     }
 
+    /**
+     Restoring a hidden project whose folder is still named after its id (made
+     by older builds): rename the folder after the project, like every other
+     import, and report the project at its new path. A folder with any other
+     name is left alone.
+     */
+    private func renameLegacyProjectFolder(projectId: String) throws -> [String: Any] {
+        let safeProjectId = try storage.safePathSegment(projectId)
+        let projectDbPath = storage.projectDatabasePath(projectId: safeProjectId)
+        let currentDbURL = try storage.databaseURL(dbPath: projectDbPath)
+        let projectInfo = try readProjectInfo(databaseURL: currentDbURL)
+        closeDatabase(dbPath: projectDbPath)
+        let directory = try storage.renameLegacyIdFolder(
+            projectId: safeProjectId,
+            projectName: stringValue(projectInfo["name"])
+        )
+        return projectEntry(
+            projectId: safeProjectId,
+            projectInfo: projectInfo,
+            databaseURL: directory.appendingPathComponent("project.db")
+        )
+    }
+
     private func importProjectArchive(uriString: String, projectId: String) throws -> [String: Any] {
         let archiveAccess = try accessFolderURL(
             uriString: uriString,
@@ -2916,6 +2941,10 @@ final class RouteVNNativeStorage {
 
     func createProjectDirectory(projectId: String, projectName: String) throws -> URL {
         try projectStoragePaths.createProjectDirectory(projectId: safePathSegment(projectId), projectName: projectName)
+    }
+
+    func renameLegacyIdFolder(projectId: String, projectName: String) throws -> URL {
+        try projectStoragePaths.renameLegacyIdFolder(projectId: safePathSegment(projectId), projectName: projectName)
     }
 
     func projectStorageStatus(projectId: String) throws -> [String: Any] {

@@ -293,6 +293,9 @@ library like this:
 - **Hidden project:** a project that was removed from the list but is still on disk is
   restored by importing it again. The restored entry describes the library's own copy
   (its own name, description and icon), never the incoming one, and Rule A does not run.
+  If its folder is still named after the id, as older builds made them, the folder is
+  renamed after the project (sanitized, with ` (2)` when taken), so the result looks like
+  every other import. A folder with any other name is left alone.
 - **Unfinished folder:** a folder with `project.db` but no `files/` is not a project the
   app lists. It is treated as an unfinished earlier import, removed, and replaced by the
   incoming copy in a new folder named after the project, so the result never keeps the

@@ -187,6 +187,35 @@ final class ProjectStoragePaths {
         return created
     }
 
+    /// Renames a project folder that is still named after its id, as older
+    /// builds created them, to a name based on the project name (sanitized,
+    /// with " (2)" and so on when taken). A folder with any other name is left
+    /// alone. The identity file moves with the folder, so the project is still
+    /// found by its id. Returns the folder the project now lives in.
+    func renameLegacyIdFolder(projectId: String, projectName: String) throws -> URL {
+        lock.lock()
+        defer { lock.unlock() }
+        let current = try location(projectId: projectId).directory
+        guard current.lastPathComponent == projectId else { return current }
+        let root = try libraryFolder().resolvingSymlinksInPath().standardizedFileURL
+        var renamed: URL?
+        var coordinationError: NSError?
+        var operationError: Error?
+        NSFileCoordinator().coordinate(writingItemAt: root, options: .forMerging, error: &coordinationError) { coordinatedRoot in
+            do {
+                let target = try self.availableDirectory(projectName: projectName, root: coordinatedRoot)
+                try FileManager.default.moveItem(at: current, to: target)
+                try self.recordIdentity(projectId: projectId, directory: target)
+                renamed = target
+            } catch { operationError = error }
+        }
+        if let coordinationError { throw coordinationError }
+        if let operationError { throw operationError }
+        guard let renamed else { throw CocoaError(.fileWriteUnknown) }
+        discoveriesByRoot.removeValue(forKey: root.path)
+        return renamed
+    }
+
     func ensureDirectories(projectId: String, createProject: Bool, projectName: String? = nil) throws {
         lock.lock()
         defer { lock.unlock() }
