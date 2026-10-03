@@ -251,6 +251,33 @@ existing folder is never overwritten or merged.
 Android and iOS also remove stale `project-import` directories older than 24 hours
 at the start of an import.
 
+## Importing a project that already exists
+
+| Platform | Importing the same project again                                                                                                               |
+| -------- | ---------------------------------------------------------------------------------------------------------------------------------------------- |
+| Android  | Always a new project: every import gets a new random id, so nothing is overwritten.                                                            |
+| Desktop  | Projects are registered by folder path. The same folder twice reports `projectExists`; the same project in another folder is a separate entry. |
+| iOS      | The id inside `project.db` is the project's identity and its folder name in the library. See below.                                            |
+
+On iOS, a project is "in the library" when its folder has both `project.db` and `files/`.
+Folder, zip and URL imports share one tail, which treats an id that is already in the
+library like this:
+
+- **Listed project:** nothing is copied, nothing is renamed, nothing is deleted and the
+  list entry is not touched. The incoming source (the folder, the unzipped archive or the
+  download) is ignored. The import ends with `projectExists`, and the user sees the
+  "This project has already been added." message as an info toast, not as a failure alert
+  and not as the success toast.
+- **Hidden project:** a project that was removed from the list but is still on disk is
+  restored by importing it again. The restored entry describes the library's own copy
+  (its own name, description and icon), never the incoming one, and Rule A does not run.
+- **Unfinished folder:** a folder with `project.db` but no `files/` is not a project the
+  app lists. It is still treated as an unfinished earlier import and replaced by the
+  incoming copy.
+
+`projectExists` is raised in JavaScript, by the iOS registration and by the duplicate check
+when a project entry is added twice, and is mapped like the native error codes.
+
 ## Errors
 
 Native failures start their message with a stable code, then `: `, then a

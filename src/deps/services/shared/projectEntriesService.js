@@ -373,7 +373,7 @@ export const createProjectEntriesService = ({
       entry: normalizedEntry,
     });
     if (isDuplicate) {
-      throw new Error("This project has already been added.");
+      throw new Error("projectExists: This project has already been added.");
     }
 
     entries.push(normalizedEntry);

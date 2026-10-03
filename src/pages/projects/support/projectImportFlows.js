@@ -38,6 +38,15 @@ export const runProjectImport = async (deps, { run, status }) => {
     render();
   } catch (error) {
     progressDialog.close();
+    if (getProjectImportErrorCode(error) === "projectExists") {
+      // Nothing was imported and nothing was changed: say so, without the
+      // failure alert or the success toast.
+      appService.showToast({
+        message: copy.importProjectExists,
+        status: "info",
+      });
+      return;
+    }
     appService.showAlert({
       message: getProjectImportErrorMessage(error, copy),
     });

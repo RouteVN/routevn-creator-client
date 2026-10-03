@@ -653,6 +653,115 @@ describe("ios project import adapters", () => {
     },
   );
 
+  describe("a project that is already in the library", () => {
+    const existingEntry = {
+      id: "project-one",
+      projectFilePath: "/projects/project-one/project.db",
+      name: "Existing Name",
+      description: "Existing description",
+      language: "en",
+      iconFileId: null,
+      createdAt: 111,
+      lastOpenedAt: 222,
+    };
+
+    const incoming = () => ({
+      ...importPayload(),
+      name: "Incoming Name",
+      description: "Incoming description",
+      alreadyImported: true,
+    });
+
+    const createExistingSetup = async ({ removed = [] } = {}) => {
+      const db = createDb();
+      await db.set("projectEntries", [existingEntry]);
+      await db.set("iosRemovedProjectIds", removed);
+      const appService = createIOSAppService(
+        createParams({ db, projectService: createProjectService() }),
+      );
+      return { db, appService };
+    };
+
+    it.each([
+      [
+        "archive",
+        "importProjectArchive",
+        (appService) =>
+          appService.importProjectFromArchive({
+            uri: "file:///tmp/project-one.zip",
+          }),
+      ],
+      [
+        "URL",
+        "importProjectArchiveFromUrl",
+        (appService) =>
+          appService.importProjectFromUrl({
+            url: "https://example.com/project-one.zip",
+          }),
+      ],
+    ])(
+      "rejects a listed project from a %s import without touching its entry",
+      async (_label, method, run) => {
+        const { db, appService } = await createExistingSetup();
+        db.set.mockClear();
+        mocked.iosBridge.mockImplementation(async (calledMethod) => {
+          expect(calledMethod).toBe(method);
+          return incoming();
+        });
+
+        await expect(run(appService)).rejects.toThrow(/^projectExists: /);
+
+        expect(await db.get("projectEntries")).toEqual([existingEntry]);
+        expect(await db.get("iosRemovedProjectIds")).toEqual([]);
+        expect(db.set).not.toHaveBeenCalled();
+      },
+    );
+
+    it("restores a hidden project instead of rejecting it, keeping its entry dates", async () => {
+      const { db, appService } = await createExistingSetup({
+        removed: ["project-one"],
+      });
+      mocked.iosBridge.mockImplementation(async () => ({
+        ...importPayload(),
+        name: "Existing Name",
+        alreadyImported: true,
+      }));
+
+      const project = await appService.importProjectFromArchive({
+        uri: "file:///tmp/project-one.zip",
+      });
+
+      expect(project.id).toBe("project-one");
+      expect(await db.get("iosRemovedProjectIds")).toEqual([]);
+      const entries = await db.get("projectEntries");
+      expect(entries).toHaveLength(1);
+      expect(entries[0]).toMatchObject({
+        id: "project-one",
+        name: "Existing Name",
+        createdAt: 111,
+        lastOpenedAt: 222,
+      });
+    });
+
+    it("still imports a project that is not in the library yet", async () => {
+      const db = createDb();
+      const appService = createIOSAppService(
+        createParams({ db, projectService: createProjectService() }),
+      );
+      mocked.iosBridge.mockImplementation(async () => ({
+        ...importPayload(),
+        alreadyImported: false,
+      }));
+
+      const project = await appService.importProjectFromArchive({
+        uri: "file:///tmp/project-one.zip",
+      });
+
+      expect(project.name).toBe("Project One");
+      expect((await db.get("projectEntries"))[0].id).toBe("project-one");
+    });
+  });
+
   it("restores a previously removed project when it is imported again", async () => {
     const db = createDb();
     await db.set("iosRemovedProjectIds", ["project-one"]);

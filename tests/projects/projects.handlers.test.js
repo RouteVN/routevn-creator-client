@@ -1241,11 +1241,6 @@ describe("projects import source choice", () => {
       "The project contains files that resolve to the same name.",
     ],
     [
-      "projectExists",
-      "projectExists: project already added",
-      "This project has already been added.",
-    ],
-    [
       "importFailed",
       "importFailed: rename rolled back",
       "Failed to import project. Please select a valid project folder.",
@@ -1816,6 +1811,103 @@ describe("projects import picker failures", () => {
     expect(deps.appService.showAlert).toHaveBeenCalledTimes(1);
     expect(deps.appService.importProjectFromUrl).not.toHaveBeenCalled();
     expect(deps.appService.showProgressDialog).not.toHaveBeenCalled();
+  });
+});
+
+describe("projects import of a project that already exists", () => {
+  const EXISTS = "projectExists: This project is already in the library.";
+
+  const expectToastOnly = (deps) => {
+    const progressDialog =
+      deps.appService.showProgressDialog.mock.results[0].value;
+    expect(progressDialog.close).toHaveBeenCalledOnce();
+    expect(deps.appService.showToast).toHaveBeenCalledTimes(1);
+    expect(deps.appService.showToast).toHaveBeenCalledWith({
+      message: "This project has already been added.",
+      status: "info",
+    });
+    expect(deps.appService.showAlert).not.toHaveBeenCalled();
+    expect(deps.appService.loadAllProjects).not.toHaveBeenCalled();
+    expect(deps.store.setProjects).not.toHaveBeenCalled();
+  };
+
+  it("shows the existing message as an info toast for a zip import", async () => {
+    const deps = createDeps({ platform: "ios" });
+    deps.appService.showFormDialog.mockResolvedValue({
+      actionId: "import-zip",
+    });
+    deps.appService.openArchivePicker.mockResolvedValue({
+      uri: "file:///tmp/project-one.zip",
+      name: "project-one.zip",
+    });
+    deps.appService.importProjectFromArchive.mockRejectedValue(
+      new Error(EXISTS),
+    );
+
+    await handleMobileActionMenuClickItem(
+      deps,
+      createMenuClickPayload("import-local"),
+    );
+
+    expectToastOnly(deps);
+  });
+
+  it("shows the same toast for a URL import", async () => {
+    const deps = createDeps({ platform: "ios" });
+    deps.appService.importProjectFromUrl.mockRejectedValue(new Error(EXISTS));
+
+    await handleUrlImportFormAction(
+      deps,
+      createUrlFormPayload("https://example.com/project-one.zip"),
+    );
+
+    expectToastOnly(deps);
+  });
+
+  it("shows the same toast for a folder import", async () => {
+    const deps = createDeps({ platform: "ios" });
+    deps.appService.showFormDialog.mockResolvedValue({
+      actionId: "import-folder",
+    });
+    deps.appService.openFolderPicker.mockResolvedValue("/projects/project-one");
+    deps.appService.openExistingProject.mockRejectedValue(new Error(EXISTS));
+
+    await handleMobileActionMenuClickItem(
+      deps,
+      createMenuClickPayload("import-local"),
+    );
+
+    expectToastOnly(deps);
+  });
+
+  it("also covers the duplicate error raised when a project entry is added twice", async () => {
+    const deps = createDeps({ platform: "tauri" });
+    deps.appService.openFolderPicker.mockResolvedValue("/projects/project-one");
+    deps.appService.openExistingProject.mockRejectedValue(
+      new Error("projectExists: This project has already been added."),
+    );
+
+    await handleImportSourceMenuClickItem(
+      deps,
+      createMenuClickPayload("import-local"),
+    );
+
+    expectToastOnly(deps);
+  });
+
+  it("keeps showing a failure alert for other errors", async () => {
+    const deps = createDeps({ platform: "ios" });
+    deps.appService.importProjectFromUrl.mockRejectedValue(
+      new Error("importFailed: Cannot write the download: disk full"),
+    );
+
+    await handleUrlImportFormAction(
+      deps,
+      createUrlFormPayload("https://example.com/project-one.zip"),
+    );
+
+    expect(deps.appService.showAlert).toHaveBeenCalledTimes(1);
+    expect(deps.appService.showToast).not.toHaveBeenCalled();
   });
 });
 

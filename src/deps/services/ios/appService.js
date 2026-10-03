@@ -86,6 +86,16 @@ const createRegisterImportedIOSProject = ({ appDb, getFileDisplayPath }) => {
       throw new Error("Imported project is missing an id.");
     }
 
+    // Native reports alreadyImported when the library already holds this
+    // project. A listed project is left alone: no list entry merge, nothing
+    // changed on disk. Only a project that was removed from the list is
+    // restored by importing it again.
+    const removedProjectIds = (await appDb.get("iosRemovedProjectIds")) ?? [];
+    const isRemoved = removedProjectIds.includes(projectId);
+    if (importedProject.alreadyImported === true && !isRemoved) {
+      throw new Error("projectExists: This project is already in the library.");
+    }
+
     const importedName = importedProject.name?.trim?.() ?? "";
     let projectName = "Untitled Project";
     if (importedName) {
@@ -106,8 +116,7 @@ const createRegisterImportedIOSProject = ({ appDb, getFileDisplayPath }) => {
     await addProjectEntry(projectEntry);
 
     // Explicitly importing a removed project restores it to discovery.
-    const removedProjectIds = (await appDb.get("iosRemovedProjectIds")) ?? [];
-    if (removedProjectIds.includes(projectId)) {
+    if (isRemoved) {
       await appDb.set(
         "iosRemovedProjectIds",
         removedProjectIds.filter((id) => id !== projectId),
