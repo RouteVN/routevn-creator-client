@@ -19,19 +19,19 @@ public class ProjectImportExceptionFormatTest {
         assertEquals("unsafeArchiveEntry: boom", new ProjectImportException("unsafeArchiveEntry", "boom").getMessage());
     }
 
-    @Test public void outOfMemoryErrorIsWrappedAsImportFailed() {
-        ProjectImportException wrapped = ProjectArchiveImports.wrapUnexpected(new OutOfMemoryError());
+    @Test public void unexpectedErrorsBecomeImportFailedWithTheirMessage() {
+        assertEquals("importFailed: heap", ProjectImportException.of(new OutOfMemoryError("heap")).getMessage());
+        assertEquals("importFailed: disk full", ProjectImportException.of(new IllegalStateException("disk full")).getMessage());
+    }
+
+    @Test public void unexpectedErrorsWithoutAMessageUseTheirClassName() {
+        ProjectImportException wrapped = ProjectImportException.of(new OutOfMemoryError());
         assertEquals("importFailed", wrapped.code);
-        assertTrue(wrapped.getMessage().startsWith("importFailed: "));
+        assertEquals("importFailed: OutOfMemoryError", wrapped.getMessage());
     }
 
-    @Test public void outOfMemoryErrorWithMessageKeepsDetail() {
-        ProjectImportException wrapped = ProjectArchiveImports.wrapUnexpected(new OutOfMemoryError("heap"));
-        assertEquals("importFailed: heap", wrapped.getMessage());
-    }
-
-    @Test public void projectImportExceptionPassesThroughWrapUnexpected() {
-        ProjectImportException original = new ProjectImportException("projectExists", "p1");
-        assertSame(original, ProjectArchiveImports.wrapUnexpected(original));
+    @Test public void importExceptionsPassThroughUnchanged() {
+        ProjectImportException original = new ProjectImportException("downloadFailed", "HTTP 404");
+        assertSame(original, ProjectImportException.of(original));
     }
 }

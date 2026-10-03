@@ -1,13 +1,9 @@
 package com.routevn.creator;
 
 /**
- * Import pipeline failure whose message always starts with a stable error
- * code followed by ": " and a short technical detail. The JS layer maps the
- * text before the first colon to a localized message and appends the detail.
- *
- * Codes: invalidUrl, downloadFailed, archiveTooLarge, invalidArchive,
- * unsafeArchiveEntry, invalidFileName, fileNameConflict, projectExists,
- * importFailed.
+ * Import failure whose message is always "<code>: <detail>". The code is one
+ * of invalidUrl, downloadFailed, archiveTooLarge, invalidArchive,
+ * unsafeArchiveEntry or importFailed; JavaScript maps it to the text shown.
  */
 class ProjectImportException extends Exception {
     final String code;
@@ -15,5 +11,19 @@ class ProjectImportException extends Exception {
     ProjectImportException(String code, String detail) {
         super(code + ": " + (detail == null || detail.isEmpty() ? "failed" : detail));
         this.code = code;
+    }
+
+    /** Keeps an import exception as it is; anything else becomes importFailed. */
+    static ProjectImportException of(Throwable error) {
+        if (error instanceof ProjectImportException) {
+            return (ProjectImportException) error;
+        }
+        String message = error.getMessage();
+        return new ProjectImportException(
+            "importFailed",
+            message == null || message.trim().isEmpty()
+                ? error.getClass().getSimpleName()
+                : message
+        );
     }
 }
