@@ -1886,7 +1886,7 @@ describe("projects import of a project that already exists", () => {
     expectExistsAlert(deps, { withLibraryHint: true });
   });
 
-  it("leaves out the delete-first hint on desktop, where it is the same folder added twice", async () => {
+  it("leaves out the delete-first hint on desktop, where there is nothing to replace", async () => {
     const deps = createDeps({ platform: "tauri" });
     deps.appService.openFolderPicker.mockResolvedValue("/projects/project-one");
     deps.appService.openExistingProject.mockRejectedValue(

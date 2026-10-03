@@ -271,11 +271,11 @@ at the start of an import.
 
 ## Importing a project that already exists
 
-| Platform | Importing the same project again                                                                                                               |
-| -------- | ---------------------------------------------------------------------------------------------------------------------------------------------- |
-| Android  | Always a new project: every import gets a new random id, so nothing is overwritten.                                                            |
-| Desktop  | Projects are registered by folder path. The same folder twice reports `projectExists`; the same project in another folder is a separate entry. |
-| iOS      | The id inside `project.db` is the project's identity, whatever its folder is called. See below.                                                |
+| Platform | Importing the same project again                                                                                                                                                          |
+| -------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Android  | Always a new project: every import gets a new random id, so nothing is overwritten.                                                                                                       |
+| Desktop  | Projects are registered by folder path. The same folder again refreshes the existing entry and shows the normal "imported" toast; the same project in another folder is a separate entry. |
+| iOS      | The id inside `project.db` is the project's identity, whatever its folder is called. See below.                                                                                           |
 
 On iOS, a project is "in the library" when its folder has both `project.db` and `files/`.
 Folder, zip and URL imports share one tail, which treats an id that is already in the
@@ -287,9 +287,9 @@ library like this:
   titled "Project Already Added", not a success toast and not the failure alert. It says
   in one sentence that the project has already been added, so nothing was imported and the
   existing project was not changed. On iOS a second sentence says how to use the incoming
-  copy instead: remove the existing project first, then import again. Desktop shows the
-  alert without that sentence, because there the same folder was added twice and there is
-  nothing to replace.
+  copy instead: remove the existing project first, then import again. Desktop only raises
+  it when a different project turns up at a path that is already listed, and shows the
+  alert without that sentence because there is nothing to replace.
 - **Hidden project:** a project that was removed from the list but is still on disk is
   restored by importing it again. The restored entry describes the library's own copy
   (its own name, description and icon), never the incoming one, and Rule A does not run.
@@ -302,7 +302,10 @@ library like this:
   leftover's name (older builds named imported folders after the id).
 
 `projectExists` is raised in JavaScript, by the iOS registration and by the duplicate check
-when a project entry is added twice, and is mapped like the native error codes.
+when a different project is added at a path that is already listed, and is mapped like the
+native error codes. Importing the very same folder again on desktop is not an error: it
+refreshes the existing entry, so the user sees the usual "imported" toast and no second
+entry appears.
 
 ## Errors
 
