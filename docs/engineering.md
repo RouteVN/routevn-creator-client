@@ -1167,8 +1167,10 @@ level that fits and recenters the canvas when pressed (10% to 1000% of the
 fitted size). The workspace is `rvn-zoom-viewport` (`src/primitives/`), which
 places the canvas with a translate and no bounds, like a design tool canvas: two
 fingers pinch around the point between them and drag to pan, one finger or the
-left mouse button pans from the empty workspace, the middle mouse button pans
-anywhere, the wheel pans, and ctrl + wheel (a trackpad pinch) zooms. One finger
+left mouse button pans from the empty workspace, and the middle mouse button
+pans anywhere. The wheel never pans: over the empty workspace it zooms 10% per
+step around the pointer, as on the scene map, and over the canvas it reaches the
+canvas unchanged. ctrl + wheel (a trackpad pinch) zooms anywhere. One finger
 on the canvas still edits; a first finger that already touched it gets a
 `pointercancel` when the second lands. The viewport keeps `--canvas-zoom`,
 `--canvas-x`, and `--canvas-y` in its shadow root, reports a gesture's final

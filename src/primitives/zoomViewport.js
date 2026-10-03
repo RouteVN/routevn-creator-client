@@ -6,6 +6,8 @@ export const MAX_ZOOM = 10;
 const CLICK_SLOP_PX = 4;
 const WHEEL_ZOOM_SETTLE_MS = 150;
 const WHEEL_ZOOM_RATE = 0.01;
+// The scene map's zoom step for one wheel notch.
+const WHEEL_ZOOM_STEP = 0.1;
 const WHEEL_LINE_PX = 16;
 const MIDDLE_BUTTON = 1;
 
@@ -29,8 +31,10 @@ const getMidpoint = (a, b) => ({ x: (a.x + b.x) / 2, y: (a.y + b.y) / 2 });
 // - One finger, a pen, or the left mouse button pans from the space around
 //   the content; on the content it reaches the content unchanged. The middle
 //   mouse button pans anywhere.
-// - The wheel pans, and ctrl + wheel (a trackpad pinch) zooms around the
-//   pointer.
+// - In the space around the content, the wheel zooms a step around the
+//   pointer, as on the scene map. Over the content it reaches the content
+//   unchanged and moves nothing. ctrl + wheel (a trackpad pinch) zooms around
+//   the pointer anywhere.
 // A gesture reports its final zoom with a zoom-change event. Until one moves
 // the content, it stays centered while the workspace or content resizes.
 export class ZoomViewportElement extends HTMLElement {
@@ -341,33 +345,36 @@ export class ZoomViewportElement extends HTMLElement {
 
   handleWheel(event) {
     if (!this.gesturesEnabled) return;
-    event.preventDefault();
-    const unit =
-      event.deltaMode === 1
-        ? WHEEL_LINE_PX
-        : event.deltaMode === 2
-          ? this.clientHeight
-          : 1;
 
     if (event.ctrlKey) {
-      this.centered = false;
-      this.zoomAround(
-        clampZoom(this.zoom * Math.exp(-event.deltaY * unit * WHEEL_ZOOM_RATE)),
-        { x: event.clientX, y: event.clientY },
-      );
-      clearTimeout(this.wheelTimer);
-      this.wheelTimer = setTimeout(
-        () => this.reportZoom(),
-        WHEEL_ZOOM_SETTLE_MS,
+      event.preventDefault();
+      const unit =
+        event.deltaMode === 1
+          ? WHEEL_LINE_PX
+          : event.deltaMode === 2
+            ? this.clientHeight
+            : 1;
+      this.zoomWithWheel(
+        this.zoom * Math.exp(-event.deltaY * unit * WHEEL_ZOOM_RATE),
+        event,
       );
       return;
     }
 
-    // Shift turns a vertical mouse wheel into horizontal panning.
-    const horizontal = event.shiftKey && event.deltaX === 0;
-    this.panBy(
-      -(horizontal ? event.deltaY : event.deltaX) * unit,
-      -(horizontal ? 0 : event.deltaY) * unit,
+    if (event.target !== this) return;
+    event.preventDefault();
+    if (event.deltaY === 0) return;
+    this.zoomWithWheel(
+      this.zoom *
+        (event.deltaY < 0 ? 1 + WHEEL_ZOOM_STEP : 1 - WHEEL_ZOOM_STEP),
+      event,
     );
+  }
+
+  zoomWithWheel(zoom, event) {
+    this.centered = false;
+    this.zoomAround(clampZoom(zoom), { x: event.clientX, y: event.clientY });
+    clearTimeout(this.wheelTimer);
+    this.wheelTimer = setTimeout(() => this.reportZoom(), WHEEL_ZOOM_SETTLE_MS);
   }
 }

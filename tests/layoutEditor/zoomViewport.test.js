@@ -78,13 +78,13 @@ const pointer = (target, type, pointerId, x, y, init = {}) => {
 const mouse = (target, type, x, y, button = 0) =>
   pointer(target, type, 1, x, y, { pointerType: "mouse", button });
 
-const wheel = (viewport, init) => {
+const wheel = (target, init) => {
   const event = new WheelEvent("wheel", {
     bubbles: true,
     cancelable: true,
     ...init,
   });
-  viewport.dispatchEvent(event);
+  target.dispatchEvent(event);
   return event;
 };
 
@@ -116,7 +116,9 @@ describe("rvn-zoom-viewport", () => {
     resize();
     expect([viewport.x, viewport.y]).toEqual([-200, -150]);
 
-    wheel(viewport, { deltaX: 30, deltaY: 40 });
+    mouse(viewport, "pointerdown", 100, 100);
+    mouse(viewport, "pointermove", 70, 60);
+    mouse(viewport, "pointerup", 70, 60);
     resize();
     expect([viewport.x, viewport.y]).toEqual([-230, -190]);
 
@@ -252,32 +254,50 @@ describe("rvn-zoom-viewport", () => {
     expect(canvasDowns).not.toHaveBeenCalled();
   });
 
-  it("pans with the wheel and zooms with a trackpad pinch", () => {
+  it("leaves the wheel over the content to it and never pans with it", () => {
+    const { viewport, canvas } = createViewport();
+
+    expect(wheel(canvas, { deltaX: 10, deltaY: 20 }).defaultPrevented).toBe(
+      false,
+    );
+    expect([viewport.zoom, viewport.x, viewport.y]).toEqual([1, 0, 0]);
+  });
+
+  it("zooms a step around the pointer with the wheel around the content", () => {
     const { viewport } = createViewport();
     const reported = [];
     viewport.addEventListener("zoom-change", (event) =>
       reported.push(event.detail.zoom),
     );
 
-    expect(wheel(viewport, { deltaX: 10, deltaY: 20 }).defaultPrevented).toBe(
-      true,
-    );
-    expect([viewport.x, viewport.y]).toEqual([-10, -20]);
-    wheel(viewport, { deltaY: 30, shiftKey: true });
-    expect([viewport.x, viewport.y]).toEqual([-40, -20]);
-    wheel(viewport, { deltaY: 2, deltaMode: 1 });
-    expect([viewport.x, viewport.y]).toEqual([-40, -52]);
+    // The middle of the content stays under the pointer: 200 - 360 / 2 = 20
+    // and 150 - 270 / 2 = 15.
+    const down = wheel(viewport, { deltaY: 100, clientX: 200, clientY: 150 });
+    expect(down.defaultPrevented).toBe(true);
+    expect([viewport.zoom, viewport.x, viewport.y]).toEqual([0.9, 20, 15]);
+    // The step is the same however far one notch scrolls.
+    wheel(viewport, { deltaY: -3, clientX: 200, clientY: 150 });
+    expect(viewport.zoom).toBe(0.99);
+    // Sideways scrolling moves nothing.
+    wheel(viewport, { deltaX: 40, clientX: 200, clientY: 150 });
+    expect(viewport.zoom).toBe(0.99);
 
-    wheel(viewport, {
+    expect(reported).toEqual([]);
+    vi.advanceTimersByTime(150);
+    expect(reported).toEqual([0.99]);
+  });
+
+  it("zooms with a trackpad pinch anywhere", () => {
+    const { viewport, canvas } = createViewport();
+
+    const pinch = wheel(canvas, {
       ctrlKey: true,
       deltaY: -Math.log(1.5) / 0.01,
       clientX: 0,
       clientY: 0,
     });
-    expect(viewport.zoom).toBe(1.5);
-    expect(reported).toEqual([]);
-    vi.advanceTimersByTime(150);
-    expect(reported).toEqual([1.5]);
+    expect(pinch.defaultPrevented).toBe(true);
+    expect([viewport.zoom, viewport.x, viewport.y]).toEqual([1.5, 0, 0]);
   });
 
   it("handles nothing without the gestures attribute", () => {

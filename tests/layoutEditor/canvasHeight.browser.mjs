@@ -242,53 +242,83 @@ document.querySelector('#page').append(document.createElement('rvn-layout-editor
         assertNoDrift(pinch, `${label} pinch near a corner`);
         assert.deepEqual(pinch.reports, [3]);
 
-        // The wheel pans without limits, and a trackpad pinch zooms around
-        // the pointer.
+        // A trackpad pinch zooms around the pointer, also over the canvas.
+        // The wheel leaves the canvas alone and, around it, zooms a step
+        // around the pointer as on the scene map.
         const wheel = await editor.surface.evaluate((canvas) => {
           const viewport =
             canvas.getRootNode().host.parentElement.parentElement;
-          const send = (init) =>
-            viewport.dispatchEvent(
-              new WheelEvent("wheel", {
-                bubbles: true,
-                cancelable: true,
-                ...init,
-              }),
-            );
+          const send = (target, init) => {
+            const event = new WheelEvent("wheel", {
+              bubbles: true,
+              cancelable: true,
+              composed: true,
+              ...init,
+            });
+            target.dispatchEvent(event);
+            return event;
+          };
           const content = canvas.getRootNode().host.parentElement;
-          const before = content.getBoundingClientRect();
-          send({ deltaX: 50, deltaY: 5000 });
-          const panned = content.getBoundingClientRect();
-          const point = { x: panned.left + 30, y: panned.top + 30 };
-          const fraction = {
-            x: (point.x - panned.left) / panned.width,
-            y: (point.y - panned.top) / panned.height,
+          const measure = (point, run) => {
+            const before = content.getBoundingClientRect();
+            const fraction = {
+              x: (point.x - before.left) / before.width,
+              y: (point.y - before.top) / before.height,
+            };
+            const event = run();
+            const after = content.getBoundingClientRect();
+            return {
+              prevented: event.defaultPrevented,
+              moved: [after.left - before.left, after.top - before.top],
+              ratio: after.width / before.width,
+              drift: {
+                x: after.left + fraction.x * after.width - point.x,
+                y: after.top + fraction.y * after.height - point.y,
+              },
+            };
           };
-          send({
-            ctrlKey: true,
-            deltaY: Math.log(2) / 0.01,
-            clientX: point.x,
-            clientY: point.y,
-          });
-          const zoomed = content.getBoundingClientRect();
+          const start = content.getBoundingClientRect();
+          const point = { x: start.left + 30, y: start.top + 30 };
+          const pinch = measure(point, () =>
+            send(canvas, {
+              ctrlKey: true,
+              deltaY: Math.log(6) / 0.01,
+              clientX: point.x,
+              clientY: point.y,
+            }),
+          );
           viewport.centerContent();
-          return {
-            pan: [panned.left - before.left, panned.top - before.top].map(
-              Math.round,
-            ),
-            ratio: zoomed.width / panned.width,
-            drift: {
-              x: zoomed.left + fraction.x * zoomed.width - point.x,
-              y: zoomed.top + fraction.y * zoomed.height - point.y,
-            },
-          };
+          const overCanvas = measure(point, () =>
+            send(canvas, { deltaX: 50, deltaY: 5000 }),
+          );
+          const corner = viewport.getBoundingClientRect();
+          const outside = { x: corner.left + 10, y: corner.top + 10 };
+          const step = measure(outside, () =>
+            send(viewport, {
+              deltaY: 100,
+              clientX: outside.x,
+              clientY: outside.y,
+            }),
+          );
+          viewport.centerContent();
+          return { pinch, overCanvas, step };
         });
-        assert.deepEqual(wheel.pan, [-50, -5000], `${label}: wheel pan`);
         assert.ok(
-          Math.abs(wheel.ratio - 0.5) < 0.02,
-          `${label} trackpad pinch: canvas must halve (${wheel.ratio})`,
+          Math.abs(wheel.pinch.ratio - 1 / 6) < 0.01,
+          `${label} trackpad pinch: canvas must shrink to a sixth (${wheel.pinch.ratio})`,
         );
-        assertNoDrift(wheel, `${label} trackpad pinch`);
+        assertNoDrift(wheel.pinch, `${label} trackpad pinch`);
+        assert.deepEqual(
+          [wheel.overCanvas.prevented, ...wheel.overCanvas.moved],
+          [false, 0, 0],
+          `${label}: the wheel over the canvas must leave it alone`,
+        );
+        assert.equal(wheel.overCanvas.ratio, 1);
+        assert.ok(
+          wheel.step.prevented && Math.abs(wheel.step.ratio - 0.9) < 0.01,
+          `${label} wheel around the canvas: one step out (${wheel.step.ratio})`,
+        );
+        assertNoDrift(wheel.step, `${label} wheel around the canvas`);
         assertCentered(
           await measureCanvas(editor.surface),
           `${label} fit after moving`,
