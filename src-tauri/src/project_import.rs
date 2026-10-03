@@ -381,15 +381,14 @@ fn list_file_entries(dir: &Path) -> Result<Option<Vec<FileEntry>>, String> {
                 format!("non-UTF-8 name in {}", dir.display()),
             )
         })?;
-        // file_type() never follows symlinks; symlink and other special
-        // children are left untouched, like dotfiles.
+        // file_type() never follows symlinks. Symlink and other special
+        // children are never renamed, but they still occupy their name, so
+        // they are planned like directories: a file such as abc.png must not
+        // be renamed over a link called abc.
         let file_type = entry.file_type().map_err(|e| err(IMPORT_FAILED, e))?;
-        if !file_type.is_dir() && !file_type.is_file() {
-            continue;
-        }
         entries.push(FileEntry {
             name,
-            is_dir: file_type.is_dir(),
+            is_dir: !file_type.is_file(),
         });
     }
     entries.sort_by(|a, b| a.name.cmp(&b.name));
@@ -1024,6 +1023,7 @@ fn import_archive_with_hooks(
     normalize_files_dir(&staging.path().join("files"))?;
     // Single top-level folder archives nest under a subfolder of staging.
     let extracted_root = staging_project_root(staging.path())?;
+    verify_project_database(&extracted_root)?;
     progress.begin("finishing", 0);
     before_claim();
     promote_staging(
@@ -1032,6 +1032,22 @@ fn import_archive_with_hooks(
         folder_name,
         after_claim,
     )
+}
+
+const SQLITE_HEADER: &[u8; 16] = b"SQLite format 3\0";
+
+// A structurally valid zip whose project.db is not a database must fail before
+// anything is promoted into the destination, so a failed import leaves no
+// folder behind.
+fn verify_project_database(project_root: &Path) -> Result<(), String> {
+    let not_sqlite = || err(INVALID_ARCHIVE, "project.db is not a SQLite database");
+    let mut file = File::open(project_root.join("project.db")).map_err(|_| not_sqlite())?;
+    let mut header = [0u8; 16];
+    file.read_exact(&mut header).map_err(|_| not_sqlite())?;
+    if &header != SQLITE_HEADER {
+        return Err(not_sqlite());
+    }
+    Ok(())
 }
 
 fn staging_project_root(staging: &Path) -> Result<PathBuf, String> {
@@ -2314,11 +2330,19 @@ mod tests {
         assert!(error.starts_with("unsafeArchiveEntry"), "{error}");
     }
 
+    // Imports verify the SQLite header of project.db before promoting.
+    const SQLITE_FIXTURE: &[u8] = b"SQLite format 3\0fixture";
+
     fn write_sample_project_zip(path: &Path) {
         write_test_zip(
             path,
             &[
-                ("project.db", b"db", None, zip::CompressionMethod::Stored),
+                (
+                    "project.db",
+                    SQLITE_FIXTURE,
+                    None,
+                    zip::CompressionMethod::Stored,
+                ),
                 ("files/x.png", b"x", None, zip::CompressionMethod::Stored),
                 (
                     "file-metadata/x.mime",
@@ -2339,7 +2363,7 @@ mod tests {
             &[
                 (
                     "My Project/project.db",
-                    b"db",
+                    SQLITE_FIXTURE,
                     None,
                     zip::CompressionMethod::Stored,
                 ),
@@ -2844,11 +2868,107 @@ mod tests {
             &mut ProgressSink::new(None),
         )
         .unwrap();
-        assert_eq!(fs::read(imported.join("project.db")).unwrap(), b"db");
+        assert_eq!(
+            fs::read(imported.join("project.db")).unwrap(),
+            SQLITE_FIXTURE
+        );
         assert_eq!(fs::read(imported.join("files/x")).unwrap(), b"x");
         assert_eq!(
             fs::read(imported.join("file-metadata/x.mime")).unwrap(),
             b"image/png"
+        );
+    }
+
+    #[test]
+    fn import_rejects_a_project_db_that_is_not_sqlite_and_leaves_nothing_behind() {
+        let archive_dir = tempfile::tempdir().unwrap();
+        let zip_path = archive_dir.path().join("a.zip");
+        write_test_zip(
+            &zip_path,
+            &[
+                (
+                    "project.db",
+                    b"definitely not a database",
+                    None,
+                    zip::CompressionMethod::Stored,
+                ),
+                ("files/x.png", b"x", None, zip::CompressionMethod::Stored),
+            ],
+        );
+        let parent = tempfile::tempdir().unwrap();
+        let error = import_archive_from_disk(
+            &zip_path,
+            parent.path(),
+            "Imported",
+            &ImportLimits::default(),
+            &mut ProgressSink::new(None),
+        )
+        .unwrap_err();
+        assert!(error.starts_with("invalidArchive: "), "{error}");
+        assert_eq!(fs::read_dir(parent.path()).unwrap().count(), 0);
+    }
+
+    #[test]
+    fn import_rejects_a_project_db_shorter_than_the_sqlite_header() {
+        let archive_dir = tempfile::tempdir().unwrap();
+        let zip_path = archive_dir.path().join("a.zip");
+        write_test_zip(
+            &zip_path,
+            &[("project.db", b"db", None, zip::CompressionMethod::Stored)],
+        );
+        let parent = tempfile::tempdir().unwrap();
+        let error = import_archive_from_disk(
+            &zip_path,
+            parent.path(),
+            "Imported",
+            &ImportLimits::default(),
+            &mut ProgressSink::new(None),
+        )
+        .unwrap_err();
+        assert!(error.starts_with("invalidArchive: "), "{error}");
+        assert_eq!(fs::read_dir(parent.path()).unwrap().count(), 0);
+    }
+
+    #[cfg(unix)]
+    #[test]
+    fn normalize_never_renames_a_file_over_a_symlink_with_the_target_name() {
+        let project = tempfile::tempdir().unwrap();
+        let files = project.path().join("files");
+        fs::create_dir(&files).unwrap();
+        fs::write(files.join("abc.png"), b"png").unwrap();
+        fs::write(files.join("other"), b"other").unwrap();
+        std::os::unix::fs::symlink("other", files.join("abc")).unwrap();
+
+        let error = normalize_files_dir(&files).unwrap_err();
+
+        assert!(error.starts_with("fileNameConflict: "), "{error}");
+        assert_eq!(fs::read(files.join("abc.png")).unwrap(), b"png");
+        let link = fs::symlink_metadata(files.join("abc")).unwrap();
+        assert!(link.file_type().is_symlink());
+        assert_eq!(
+            fs::read_link(files.join("abc")).unwrap(),
+            Path::new("other")
+        );
+    }
+
+    #[cfg(unix)]
+    #[test]
+    fn normalize_still_leaves_unrelated_symlinks_untouched() {
+        let project = tempfile::tempdir().unwrap();
+        let files = project.path().join("files");
+        fs::create_dir(&files).unwrap();
+        fs::write(files.join("abc.png"), b"png").unwrap();
+        std::os::unix::fs::symlink("/nowhere/target", files.join("link.png")).unwrap();
+
+        let renamed = normalize_files_dir(&files).unwrap();
+
+        assert_eq!(renamed, 1);
+        assert!(files.join("abc").is_file());
+        assert!(
+            fs::symlink_metadata(files.join("link.png"))
+                .unwrap()
+                .file_type()
+                .is_symlink()
         );
     }
 }
