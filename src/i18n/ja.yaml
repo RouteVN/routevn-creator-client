@@ -88,8 +88,12 @@ projectsPage:
   importingProjectTitle: "プロジェクトを取り込み中…"
   importConnectingStatus: "接続中…"
   importPreparingStatus: "準備中…"
-  importDownloadingStatus: "ダウンロード中… {received} / {total}（{percent}%）"
-  importDownloadingUnknownStatus: "ダウンロード中… {received}"
+  importDownloadingStatus: |-
+    ダウンロード中…
+    {received} / {total}（{percent}%）
+  importDownloadingUnknownStatus: |-
+    ダウンロード中…
+    {received}
   importExtractingStatus: "ファイルを展開中… {percent}%"
   importFinishingStatus: "仕上げ中…"
   importProjectExists: "このプロジェクトは既に追加されています。"

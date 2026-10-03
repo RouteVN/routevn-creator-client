@@ -88,8 +88,12 @@ projectsPage:
   importingProjectTitle: "Importing Project…"
   importConnectingStatus: "Connecting…"
   importPreparingStatus: "Preparing…"
-  importDownloadingStatus: "Downloading… {received} of {total} ({percent}%)"
-  importDownloadingUnknownStatus: "Downloading… {received}"
+  importDownloadingStatus: |-
+    Downloading…
+    {received} of {total} ({percent}%)
+  importDownloadingUnknownStatus: |-
+    Downloading…
+    {received}
   importExtractingStatus: "Extracting files… {percent}%"
   importFinishingStatus: "Finishing up…"
   importProjectExists: "This project has already been added."

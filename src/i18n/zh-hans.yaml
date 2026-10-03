@@ -88,8 +88,12 @@ projectsPage:
   importingProjectTitle: "正在导入项目…"
   importConnectingStatus: "正在连接…"
   importPreparingStatus: "正在准备…"
-  importDownloadingStatus: "正在下载… {received} / {total}（{percent}%）"
-  importDownloadingUnknownStatus: "正在下载… {received}"
+  importDownloadingStatus: |-
+    正在下载…
+    {received} / {total}（{percent}%）
+  importDownloadingUnknownStatus: |-
+    正在下载…
+    {received}
   importExtractingStatus: "正在解压文件… {percent}%"
   importFinishingStatus: "正在完成…"
   importProjectExists: "此项目已添加。"

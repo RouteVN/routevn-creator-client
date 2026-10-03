@@ -70,10 +70,12 @@ export const createProgressDialog = (
     { c: "mu-fg" },
     message,
   );
+  // A status may contain a line break (for example after "Downloading…"), so
+  // its wrapping is chosen by the copy and not left to the width of the dialog.
   const statusText = createRtglElement(
     root,
     "rtgl-text",
-    { c: "mu-fg" },
+    { c: "mu-fg", style: "white-space: pre-line;" },
     status,
   );
   const progressTrack = createRtglElement(root, "rtgl-view", {

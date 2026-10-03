@@ -1965,11 +1965,11 @@ describe("projects import progress dialog", () => {
       deps.appService.showProgressDialog.mock.results[0].value;
     expect(progressDialog.update.mock.calls.map(([view]) => view)).toEqual([
       {
-        status: "Downloading… 0 B of 200 MB (0%)",
+        status: "Downloading…\n0 B of 200 MB (0%)",
         progress: { current: 0, total: 200 * MB },
       },
       {
-        status: "Downloading… 50 MB of 200 MB (25%)",
+        status: "Downloading…\n50 MB of 200 MB (25%)",
         progress: { current: 50 * MB, total: 200 * MB },
       },
       {
