@@ -264,9 +264,12 @@ describe("rvn-zoom-viewport", () => {
     expect(clicks).toHaveBeenCalledOnce();
     expect(panLayer.style.display).toBe("none");
 
+    // Space is not canceled, so macOS keeps showing the cursor, and focus
+    // moves to the pan layer, where Space's default action does nothing.
     hover(viewport);
-    expect(key("keydown").defaultPrevented).toBe(true);
-    expect(key("keydown", { repeat: true }).defaultPrevented).toBe(true);
+    expect(key("keydown").defaultPrevented).toBe(false);
+    expect(key("keydown", { repeat: true }).defaultPrevented).toBe(false);
+    expect(viewport.shadowRoot.activeElement).toBe(panLayer);
     expect([panLayer.style.display, panLayer.style.cursor]).toEqual([
       "block",
       "grab",
@@ -355,7 +358,8 @@ describe("rvn-zoom-viewport", () => {
 
     hover(viewport);
     viewport.dispatchEvent(new PointerEvent("pointerleave"));
-    expect(key("keydown").defaultPrevented).toBe(false);
+    key("keydown");
+    expect(panLayer.style.display).toBe("none");
   });
 
   it("pans with the middle mouse button anywhere", () => {

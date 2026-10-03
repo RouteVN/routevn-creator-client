@@ -378,6 +378,16 @@ document.querySelector('#page').append(document.createElement('rvn-layout-editor
             window.tabClicks = 0;
             tabs.addEventListener("item-click", () => (window.tabClicks += 1));
           });
+          // macOS WebKit hides the cursor after every key press the page
+          // cancels, so Space and its repeats must not be canceled.
+          await page.evaluate(() => {
+            window.spaceCanceled = [];
+            window.addEventListener(
+              "keydown",
+              (event) => window.spaceCanceled.push(event.defaultPrevented),
+              true,
+            );
+          });
           await page.mouse.move(center.x, center.y);
           const start = await readPan();
           await page.keyboard.down("Space");
@@ -388,6 +398,19 @@ document.querySelector('#page').append(document.createElement('rvn-layout-editor
             await page.evaluate(() => window.tabClicks),
             0,
             `${label}: Space must not reach the focused tab`,
+          );
+          assert.deepEqual(
+            await page.evaluate(() => {
+              const path = [];
+              let active = document.activeElement;
+              while (active?.shadowRoot?.activeElement) {
+                active = active.shadowRoot.activeElement;
+                path.push(active.tagName);
+              }
+              return [...window.spaceCanceled, path.slice(-2).join(" > ")];
+            }),
+            [false, false, false, "RVN-ZOOM-VIEWPORT > DIV"],
+            `${label}: Space is not canceled and focus leaves the tab`,
           );
           await page.mouse.down();
           await page.mouse.move(center.x - 120, center.y - 80, { steps: 4 });

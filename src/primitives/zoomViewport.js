@@ -76,7 +76,9 @@ export class ZoomViewportElement extends HTMLElement {
     // or cursor; pointer events on it target this element.
     this.panLayer = document.createElement("div");
     this.panLayer.style.cssText =
-      "position: absolute; inset: 0; z-index: 10; display: none;";
+      "position: absolute; inset: 0; z-index: 10; display: none; outline: none;";
+    // Takes focus while Space is held; see handleKeyDown.
+    this.panLayer.tabIndex = -1;
     this.shadowRoot.append(
       this.hostStyle,
       document.createElement("slot"),
@@ -305,10 +307,17 @@ export class ZoomViewportElement extends HTMLElement {
       if (!this.pointerInside || isTextEntryFocused()) return;
       this.spacePan = true;
       this.syncPanLayer();
+      // Space's default action scrolls from the focused element, or else
+      // the last one clicked, and acts on a focused button. The pan layer
+      // has neither, so taking focus leaves Space with nothing to do.
+      this.panLayer.focus({ preventScroll: true });
     }
     // A held key repeats. Keep Space and its repeats from a focused tab or
-    // button, which would act and re-render the page on every repeat.
-    this.swallow(event);
+    // button, which would act and re-render the page on every repeat. Do not
+    // cancel them: macOS WebKit hides the cursor until the mouse moves after
+    // every key press the page handles, so the hand would vanish on press
+    // and flicker through a drag.
+    event.stopPropagation();
   }
 
   handleKeyUp(event) {

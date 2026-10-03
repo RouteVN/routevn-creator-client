@@ -1171,11 +1171,14 @@ pans from the empty workspace. As on the scene map, the mouse or a pen pans only
 while Space is held, anywhere in the workspace: a layer in the viewport's shadow
 root then covers the canvas with the grab cursor, and releasing Space ends the
 drag. Space starts this only while the pointer is over the workspace and no
-field is focused. The viewport then takes Space and its key repeats in the
+field is focused. The viewport then stops Space and its key repeats in the
 window's capture phase, so a focused tab or button never acts on them; acting
-on every repeat re-renders the page and makes the canvas flicker. The middle
-mouse button pans
-anywhere. The wheel never pans: over the empty workspace it zooms 10% per
+on every repeat re-renders the page and makes the canvas flicker. It does not
+cancel them: macOS WebKit hides the cursor until the mouse moves after every
+key press a page handles, which hides the hand and makes it flicker through a
+drag. Instead focus moves to the pan layer, so Space's default action (scrolling
+from the focused or last clicked element, or pressing a focused button) has
+nothing to do. The middle mouse button pans anywhere. The wheel never pans: over the empty workspace it zooms 10% per
 step around the pointer, as on the scene map, and over the canvas it reaches the
 canvas unchanged. ctrl + wheel (a trackpad pinch) zooms anywhere. One finger
 on the canvas still edits; a first finger that already touched it gets a
