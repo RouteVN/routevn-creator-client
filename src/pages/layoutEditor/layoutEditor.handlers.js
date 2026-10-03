@@ -927,9 +927,9 @@ export const handleCanvasZoomGesture = (deps, payload) => {
 
 export const handleRightPanelModeChange = (deps, payload) => {
   const { render, store } = deps;
-  const { item, value } = payload._event.detail;
+  const { id } = payload._event.detail;
 
-  store.setRightPanelMode({ mode: item?.value ?? value });
+  store.setRightPanelMode({ mode: id });
   render();
 };
 

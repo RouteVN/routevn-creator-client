@@ -772,16 +772,16 @@ describe("layoutEditor.store", () => {
     expect(viewData.detailPanelSelectedItemId).toBe("node-1");
   });
 
-  it("offers an Edit and Preview toggle in the right panel that starts on Preview", () => {
+  it("offers Edit and Preview tabs in the right panel that start on Preview", () => {
     const state = createInitialState();
     const select = () =>
       selectViewData({ state, constants: TEST_CONSTANTS, i18n: EN_I18N });
 
     expect(select().showRightPanel).toBe(true);
     expect(select().rightPanelMode).toBe("preview");
-    expect(select().rightPanelModeOptions).toEqual([
-      { label: "Edit", value: "edit" },
-      { label: "Preview", value: "preview" },
+    expect(select().rightPanelModeTabs).toEqual([
+      { id: "edit", label: "Edit" },
+      { id: "preview", label: "Preview" },
     ]);
     expect(select().showRightPanelSaveButton).toBe(true);
     expect(select().rightPanelEditStyle).toBe("display: none;");

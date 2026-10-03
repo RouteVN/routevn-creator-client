@@ -785,9 +785,9 @@ export const selectViewData = ({ state, constants, i18n }) => {
     showExplorerPanel: !state.isTouchMode,
     showRightPanel,
     rightPanelMode: state.rightPanelMode,
-    rightPanelModeOptions: [
-      { label: copy.editModeLabel ?? "Edit", value: "edit" },
-      { label: copy.previewTitle ?? "Preview", value: "preview" },
+    rightPanelModeTabs: [
+      { id: "edit", label: copy.editModeLabel ?? "Edit" },
+      { id: "preview", label: copy.previewTitle ?? "Preview" },
     ],
     rightPanelEditStyle:
       state.rightPanelMode === "edit" ? "" : "display: none;",

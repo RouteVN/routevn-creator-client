@@ -62,9 +62,9 @@ refs:
     eventListeners:
       click:
         handler: handleCanvasZoomInClick
-  rightPanelModeToggle:
+  rightPanelModeTabs:
     eventListeners:
-      value-change:
+      item-click:
         handler: handleRightPanelModeChange
   layoutEditPanel:
     eventListeners:
@@ -157,7 +157,8 @@ template:
           - rvn-resizable-panel#resizableDetailPanel panel-type=detail-panel show-on-touch w=300 min-w=200 max-w=500 resize-side="left":
               - rtgl-view d=v wh=f slot="content":
                   - rtgl-view h=48 w=f d=h bgc=bg bwb=xs ph=md av=c:
-                      - rtgl-segmented-control#rightPanelModeToggle w=1fg s=sm no-clear :selectedValue=${rightPanelMode} :options=${rightPanelModeOptions}: null
+                      - 'rtgl-view w=1fg style="min-width: 0;"':
+                          - rtgl-tabs#rightPanelModeTabs s=sm selected-tab=${rightPanelMode} :items=${rightPanelModeTabs}: null
                       - $if showRightPanelSaveButton:
                           - 'rtgl-button#saveButton sq pre=save v=se ml=sm aria-label="${savePreviewButton}" title="${savePreviewButton}"': null
                   - 'rtgl-view d=v w=f h=1fg style="min-height: 0; ${rightPanelEditStyle}"':

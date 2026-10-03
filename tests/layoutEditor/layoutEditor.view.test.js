@@ -207,7 +207,7 @@ describe("layoutEditor.view", () => {
     );
   });
 
-  it("puts the edit panel and the preview in a right panel with an Edit and Preview toggle", () => {
+  it("puts the edit panel and the preview in a right panel with Edit and Preview tabs", () => {
     const layoutEditorView = readFileSync(
       new URL(
         "../../src/pages/layoutEditor/layoutEditor.view.yaml",
@@ -232,9 +232,9 @@ describe("layoutEditor.view", () => {
     expect(rightPanel).toContain(
       "rvn-resizable-panel#resizableDetailPanel panel-type=detail-panel show-on-touch",
     );
-    expect(rightPanel).toContain("rtgl-segmented-control#rightPanelModeToggle");
-    expect(rightPanel).toContain(":selectedValue=${rightPanelMode}");
-    expect(rightPanel).toContain(":options=${rightPanelModeOptions}");
+    expect(rightPanel).toContain(
+      "rtgl-tabs#rightPanelModeTabs s=sm selected-tab=${rightPanelMode} :items=${rightPanelModeTabs}",
+    );
     // Both bodies stay mounted and are shown or hidden by style, so unsaved
     // preview settings and scroll positions survive switching modes.
     expect(rightPanel).toContain("${rightPanelEditStyle}");
@@ -247,7 +247,7 @@ describe("layoutEditor.view", () => {
       'rtgl-button#saveButton sq pre=save v=se ml=sm aria-label="${savePreviewButton}" title="${savePreviewButton}"',
     );
     expect(layoutEditorView).toMatch(
-      /rightPanelModeToggle:\n\s+eventListeners:\n\s+value-change:\n\s+handler: handleRightPanelModeChange/,
+      /rightPanelModeTabs:\n\s+eventListeners:\n\s+item-click:\n\s+handler: handleRightPanelModeChange/,
     );
   });
 

@@ -1727,13 +1727,13 @@ describe("layoutEditor right panel mode", () => {
     ...overrides,
   });
 
-  it("switches the right panel when the toggle changes", () => {
+  it("switches the right panel when a tab is picked", () => {
     const store = createModeStore();
     const render = vi.fn();
 
     handleRightPanelModeChange(
       { store, render },
-      { _event: { detail: { value: "edit", item: { value: "edit" } } } },
+      { _event: { detail: { id: "edit" } } },
     );
 
     expect(store.setRightPanelMode).toHaveBeenCalledWith({ mode: "edit" });
