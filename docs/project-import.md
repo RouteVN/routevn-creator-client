@@ -46,7 +46,25 @@ replaces the first. The leaves are **From local** and **From URL**:
   JavaScript UI, not a second dropdown.
 
 Desktop registers the imported folder where it is. Android and iOS copy the
-project into app-private storage and keep no reference to the source.
+project and keep no reference to the source: Android into app-private storage, iOS
+into the project library folder chosen in Files.
+
+### Where the imported project lives
+
+| Platform | Folder                                                                                                                                                                |
+| -------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Desktop  | A picked folder stays where it is. For a URL import, a new subfolder of the chosen parent named after the downloaded file (see URL download below).                   |
+| Android  | `files/projects/<random id>`. Every import gets a new random id, written into the project's database.                                                                 |
+| iOS      | A folder in the library named after the **project name**, sanitized, with ` (2)`, ` (3)` and so on when the name is taken, exactly like a project created in the app. |
+
+On iOS the folder name is only for people. The project's identity is the id inside
+`project.db`, and a hidden `.routevn-project.json` file in the folder maps that id to
+the folder, so the app finds the project whatever the folder is called, even after it
+is renamed in Files. The name is sanitized by replacing `< > : " / \ | ? *` and control
+characters with `-`, trimming spaces and dots, limiting it to 180 bytes, prefixing
+Windows reserved names with `_`, and using "Untitled Project" when nothing is left.
+Non-Latin names are kept. Projects imported by earlier builds keep their id-named
+folders and are still found.
 
 ## Extension stripping (Rule A)
 
@@ -257,7 +275,7 @@ at the start of an import.
 | -------- | ---------------------------------------------------------------------------------------------------------------------------------------------- |
 | Android  | Always a new project: every import gets a new random id, so nothing is overwritten.                                                            |
 | Desktop  | Projects are registered by folder path. The same folder twice reports `projectExists`; the same project in another folder is a separate entry. |
-| iOS      | The id inside `project.db` is the project's identity and its folder name in the library. See below.                                            |
+| iOS      | The id inside `project.db` is the project's identity, whatever its folder is called. See below.                                                |
 
 On iOS, a project is "in the library" when its folder has both `project.db` and `files/`.
 Folder, zip and URL imports share one tail, which treats an id that is already in the

@@ -157,6 +157,36 @@ final class ProjectStoragePaths {
         discoveriesByRoot.removeValue(forKey: root.path)
     }
 
+    /// Creates the folder for an imported project and records its identity.
+    /// The folder is named after the project (sanitized, with " (2)" and so on
+    /// when the name is taken), like a project created in the app. Only the
+    /// folder is created, so the import can copy files/ into it.
+    func createProjectDirectory(projectId: String, projectName: String) throws -> URL {
+        lock.lock()
+        defer { lock.unlock() }
+        let root = try libraryFolder().resolvingSymlinksInPath().standardizedFileURL
+        var created: URL?
+        var coordinationError: NSError?
+        var operationError: Error?
+        NSFileCoordinator().coordinate(writingItemAt: root, options: .forMerging, error: &coordinationError) { coordinatedRoot in
+            do {
+                let directory = try self.availableDirectory(projectName: projectName, root: coordinatedRoot)
+                try FileManager.default.createDirectory(at: directory, withIntermediateDirectories: false)
+                do {
+                    try self.recordIdentity(projectId: projectId, directory: directory)
+                } catch {
+                    try? FileManager.default.removeItem(at: directory)
+                    throw error
+                }
+                created = directory
+            } catch { operationError = error }
+        }
+        if let coordinationError { throw coordinationError }
+        if let operationError { throw operationError }
+        guard let created else { throw CocoaError(.fileWriteUnknown) }
+        return created
+    }
+
     func ensureDirectories(projectId: String, createProject: Bool, projectName: String? = nil) throws {
         lock.lock()
         defer { lock.unlock() }

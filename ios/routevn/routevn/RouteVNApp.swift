@@ -2067,31 +2067,40 @@ final class RouteVNViewController: UIViewController, WKNavigationDelegate, WKScr
             let projectInfo = try readProjectInfo(databaseURL: projectDbURL)
             let projectId = try storage.safePathSegment(stringValue(projectInfo["id"]))
             let projectDbPath = storage.projectDatabasePath(projectId: projectId)
-            let targetDbURL = try storage.databaseURL(dbPath: projectDbPath)
-            let targetProjectRoot = try storage.projectRoot(projectId: projectId)
-            let targetFilesURL = try storage.projectFilesRoot(projectId: projectId)
-            let targetMetadataURL = try storage.projectMetadataRoot(projectId: projectId)
+            // Where the library already keeps this project, whatever its folder
+            // is called (an identity file maps the id to it), or the legacy
+            // id-named path when there is none.
+            var targetProjectRoot = try storage.projectRoot(projectId: projectId)
+            var targetDbURL = targetProjectRoot.appendingPathComponent("project.db")
+            var targetFilesURL = targetProjectRoot.appendingPathComponent("files", isDirectory: true)
+            var targetMetadataURL = targetProjectRoot.appendingPathComponent("file-metadata", isDirectory: true)
             let alreadyImported =
                 FileManager.default.fileExists(atPath: targetDbURL.path) &&
                 FileManager.default.fileExists(atPath: targetFilesURL.path)
 
             if !alreadyImported {
                 closeDatabase(dbPath: projectDbPath)
-                try FileManager.default.removeItemIfExists(at: targetDbURL.deletingLastPathComponent())
-                try FileManager.default.removeItemIfExists(at: targetProjectRoot)
-                do {
-                    try FileManager.default.createDirectory(
-                        at: targetDbURL.deletingLastPathComponent(),
-                        withIntermediateDirectories: true
+                if FileManager.default.fileExists(atPath: targetProjectRoot.path) {
+                    // An unfinished earlier import of this project (project.db
+                    // without files/) is replaced where it is.
+                    try FileManager.default.removeItemIfExists(at: targetProjectRoot)
+                    try FileManager.default.createDirectory(at: targetProjectRoot, withIntermediateDirectories: true)
+                } else {
+                    // A new project gets a folder named after it, like a project
+                    // created in the app: sanitized, with " (2)" when taken.
+                    targetProjectRoot = try storage.createProjectDirectory(
+                        projectId: projectId,
+                        projectName: stringValue(projectInfo["name"])
                     )
+                }
+                targetDbURL = targetProjectRoot.appendingPathComponent("project.db")
+                targetFilesURL = targetProjectRoot.appendingPathComponent("files", isDirectory: true)
+                targetMetadataURL = targetProjectRoot.appendingPathComponent("file-metadata", isDirectory: true)
+                do {
                     try FileManager.default.copyItem(at: projectDbURL, to: targetDbURL)
                     try copySidecarIfPresent(source: projectDbURL, suffix: "-wal", target: targetDbURL)
                     try copySidecarIfPresent(source: projectDbURL, suffix: "-shm", target: targetDbURL)
                     try copySidecarIfPresent(source: projectDbURL, suffix: "-journal", target: targetDbURL)
-                    try FileManager.default.createDirectory(
-                        at: targetFilesURL.deletingLastPathComponent(),
-                        withIntermediateDirectories: true
-                    )
                     try FileManager.default.copyItem(at: sourceFilesURL, to: targetFilesURL)
 
                     let sourceMetadataURL = folderURL.appendingPathComponent("file-metadata")
@@ -2106,12 +2115,12 @@ final class RouteVNViewController: UIViewController, WKNavigationDelegate, WKScr
                     // retry would see project.db and files and report success
                     // for an incomplete import.
                     closeDatabase(dbPath: projectDbPath)
-                    try? FileManager.default.removeItemIfExists(at: targetDbURL.deletingLastPathComponent())
                     try? FileManager.default.removeItemIfExists(at: targetProjectRoot)
                     throw error
                 }
-                // Re-import can replace a partially initialized named folder.
-                // Restore its identity after replacing the directory contents.
+                // The folder keeps its name, so the identity file is what maps
+                // the id to it. Writing it again is harmless for a new folder
+                // and restores it after a replaced unfinished import.
                 try storage.recordProjectDirectory(projectId: projectId, directory: targetProjectRoot)
             }
 
@@ -2902,6 +2911,10 @@ final class RouteVNNativeStorage {
 
     func recordProjectDirectory(projectId: String, directory: URL) throws {
         try projectStoragePaths.recordIdentity(projectId: projectId, directory: directory)
+    }
+
+    func createProjectDirectory(projectId: String, projectName: String) throws -> URL {
+        try projectStoragePaths.createProjectDirectory(projectId: safePathSegment(projectId), projectName: projectName)
     }
 
     func projectStorageStatus(projectId: String) throws -> [String: Any] {
