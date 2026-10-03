@@ -2080,19 +2080,20 @@ final class RouteVNViewController: UIViewController, WKNavigationDelegate, WKScr
 
             if !alreadyImported {
                 closeDatabase(dbPath: projectDbPath)
+                // An unfinished earlier import of this project (project.db
+                // without files/) is not a project the app lists. It is removed
+                // first, so the new copy gets a folder named after the project
+                // instead of inheriting the leftover's name, which is the id for
+                // imports made by older builds.
                 if FileManager.default.fileExists(atPath: targetProjectRoot.path) {
-                    // An unfinished earlier import of this project (project.db
-                    // without files/) is replaced where it is.
                     try FileManager.default.removeItemIfExists(at: targetProjectRoot)
-                    try FileManager.default.createDirectory(at: targetProjectRoot, withIntermediateDirectories: true)
-                } else {
-                    // A new project gets a folder named after it, like a project
-                    // created in the app: sanitized, with " (2)" when taken.
-                    targetProjectRoot = try storage.createProjectDirectory(
-                        projectId: projectId,
-                        projectName: stringValue(projectInfo["name"])
-                    )
                 }
+                // A new project gets a folder named after it, like a project
+                // created in the app: sanitized, with " (2)" when taken.
+                targetProjectRoot = try storage.createProjectDirectory(
+                    projectId: projectId,
+                    projectName: stringValue(projectInfo["name"])
+                )
                 targetDbURL = targetProjectRoot.appendingPathComponent("project.db")
                 targetFilesURL = targetProjectRoot.appendingPathComponent("files", isDirectory: true)
                 targetMetadataURL = targetProjectRoot.appendingPathComponent("file-metadata", isDirectory: true)
@@ -2118,9 +2119,9 @@ final class RouteVNViewController: UIViewController, WKNavigationDelegate, WKScr
                     try? FileManager.default.removeItemIfExists(at: targetProjectRoot)
                     throw error
                 }
-                // The folder keeps its name, so the identity file is what maps
-                // the id to it. Writing it again is harmless for a new folder
-                // and restores it after a replaced unfinished import.
+                // The folder is not named after the id, so the identity file is
+                // what maps the id to it. It was written when the folder was
+                // created; writing it again is a harmless safeguard.
                 try storage.recordProjectDirectory(projectId: projectId, directory: targetProjectRoot)
             }
 

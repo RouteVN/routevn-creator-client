@@ -294,8 +294,9 @@ library like this:
   restored by importing it again. The restored entry describes the library's own copy
   (its own name, description and icon), never the incoming one, and Rule A does not run.
 - **Unfinished folder:** a folder with `project.db` but no `files/` is not a project the
-  app lists. It is still treated as an unfinished earlier import and replaced by the
-  incoming copy.
+  app lists. It is treated as an unfinished earlier import, removed, and replaced by the
+  incoming copy in a new folder named after the project, so the result never keeps the
+  leftover's name (older builds named imported folders after the id).
 
 `projectExists` is raised in JavaScript, by the iOS registration and by the duplicate check
 when a project entry is added twice, and is mapped like the native error codes.
