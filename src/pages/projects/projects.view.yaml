@@ -211,9 +211,11 @@ template:
                                                   - rtgl-svg wh=14 svg=folder c=mu-fg: null
                                                   - 'rtgl-view d=h av=c w=1fg style="min-width: 0;"':
                                                       - $if project.projectFileDisplayPrefix:
-                                                          - 'rtgl-text s=xs c=mu-fg ellipsis style="min-width: 0;"': ${project.projectFileDisplayPrefix}
+                                                          - 'rtgl-view style="flex: 0 1 auto; min-width: 0; overflow: hidden;"':
+                                                              - 'rtgl-text s=xs c=mu-fg ellipsis w=f': ${project.projectFileDisplayPrefix}
                                                           - 'rtgl-text s=xs c=mu-fg style="flex-shrink: 0;"': /
-                                                      - 'rtgl-text s=xs c=mu-fg style="white-space: nowrap; flex-shrink: 0;"': ${project.projectFileDisplaySuffix}
+                                                      - 'rtgl-view style="flex: 0 0 auto; max-width: 100%; min-width: 0; overflow: hidden;"':
+                                                          - 'rtgl-text s=xs c=mu-fg ellipsis w=f': ${project.projectFileDisplaySuffix}
                                             $elif platform != 'android' && platform != 'ios' && project.projectPath:
                                               - 'rtgl-view d=h g=sm av=c mt=xs w=f style="min-width: 0;"':
                                                   - rtgl-svg wh=14 svg=folder c=mu-fg: null
