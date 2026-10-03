@@ -5,7 +5,7 @@ export const createProjectImportProgressClient = ({ callbackName }) => {
   const listeners = new Set();
 
   const dispatch = (event) => {
-    for (const listener of [...listeners]) {
+    for (const listener of listeners) {
       try {
         listener(event);
       } catch {
