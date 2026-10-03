@@ -323,6 +323,54 @@ document.querySelector('#page').append(document.createElement('rvn-layout-editor
           await measureCanvas(editor.surface),
           `${label} fit after moving`,
         );
+        if (!touch) {
+          // As on the scene map, a mouse drag pans only while Space is held,
+          // over the canvas too, with a grab cursor that blocks the canvas.
+          const { page } = editor;
+          const box = await editor.surface.boundingBox();
+          const center = {
+            x: box.x + box.width / 2,
+            y: box.y + box.height / 2,
+          };
+          const readPan = () =>
+            editor.surface.evaluate((canvas) => {
+              const viewport =
+                canvas.getRootNode().host.parentElement.parentElement;
+              const layer = viewport.shadowRoot.querySelector("div");
+              const content = canvas.getRootNode().host.parentElement;
+              const rect = content.getBoundingClientRect();
+              return {
+                cursor:
+                  getComputedStyle(layer).display === "none"
+                    ? "none"
+                    : getComputedStyle(layer).cursor,
+                at: [rect.left, rect.top],
+              };
+            });
+          await page.mouse.move(center.x, center.y);
+          const start = await readPan();
+          await page.keyboard.down("Space");
+          const held = await readPan();
+          await page.mouse.down();
+          await page.mouse.move(center.x - 120, center.y - 80, { steps: 4 });
+          const dragging = await readPan();
+          await page.mouse.up();
+          await page.keyboard.up("Space");
+          const released = await readPan();
+          assert.deepEqual(
+            [start.cursor, held.cursor, dragging.cursor, released.cursor],
+            ["none", "grab", "grabbing", "none"],
+            `${label}: Space pan cursors`,
+          );
+          assert.deepEqual(
+            [
+              Math.round(released.at[0] - start.at[0]),
+              Math.round(released.at[1] - start.at[1]),
+            ],
+            [-120, -80],
+            `${label}: Space pan`,
+          );
+        }
         assert.deepEqual(editor.errors, []);
         await editor.page.close();
 

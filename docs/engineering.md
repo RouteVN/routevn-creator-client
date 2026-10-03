@@ -1166,9 +1166,12 @@ In those right-panel layouts the canvas header has zoom out, zoom in, and a zoom
 level that fits and recenters the canvas when pressed (10% to 1000% of the
 fitted size). The workspace is `rvn-zoom-viewport` (`src/primitives/`), which
 places the canvas with a translate and no bounds, like a design tool canvas: two
-fingers pinch around the point between them and drag to pan, one finger or the
-left mouse button pans from the empty workspace, and the middle mouse button
-pans anywhere. The wheel never pans: over the empty workspace it zooms 10% per
+fingers pinch around the point between them and drag to pan, and one finger
+pans from the empty workspace. As on the scene map, the mouse or a pen pans only
+while Space is held (not while typing in a field), anywhere in the workspace:
+a layer in the viewport's shadow root then covers the canvas with the grab
+cursor, and releasing Space ends the drag. The middle mouse button pans
+anywhere. The wheel never pans: over the empty workspace it zooms 10% per
 step around the pointer, as on the scene map, and over the canvas it reaches the
 canvas unchanged. ctrl + wheel (a trackpad pinch) zooms anywhere. One finger
 on the canvas still edits; a first finger that already touched it gets a

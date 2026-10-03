@@ -18,6 +18,20 @@ const getDistance = (a, b) => Math.hypot(a.x - b.x, a.y - b.y);
 
 const getMidpoint = (a, b) => ({ x: (a.x + b.x) / 2, y: (a.y + b.y) / 2 });
 
+const isSpaceKey = (event) => event.code === "Space" || event.key === " ";
+
+// Space types in a focused field instead of starting a pan.
+const isTextEntryFocused = () => {
+  let active = document.activeElement;
+  while (active?.shadowRoot?.activeElement) {
+    active = active.shadowRoot.activeElement;
+  }
+  return (
+    Boolean(active?.isContentEditable) ||
+    ["INPUT", "TEXTAREA", "SELECT"].includes(active?.tagName)
+  );
+};
+
 // Owns a canvas workspace: the zoom of its content and, with the gestures
 // attribute, where the content sits. The content sizes itself from the
 // --canvas-zoom variable and, in that mode, places itself at --canvas-x and
@@ -28,9 +42,12 @@ const getMidpoint = (a, b) => ({ x: (a.x + b.x) / 2, y: (a.y + b.y) / 2 });
 // input in the workspace is handled here, because the renderer canvas blocks
 // native touch scrolling:
 // - Two fingers pinch to zoom around the point between them and drag to pan.
-// - One finger, a pen, or the left mouse button pans from the space around
-//   the content; on the content it reaches the content unchanged. The middle
-//   mouse button pans anywhere.
+// - One finger pans from the space around the content; on the content it
+//   reaches the content unchanged.
+// - As on the scene map, the left mouse button or a pen pans anywhere while
+//   Space is held, with a grab cursor over the workspace that blocks the
+//   content; releasing Space ends the drag. The middle mouse button pans
+//   anywhere.
 // - In the space around the content, the wheel zooms a step around the
 //   pointer, as on the scene map. Over the content it reaches the content
 //   unchanged and moves nothing. ctrl + wheel (a trackpad pinch) zooms around
@@ -46,14 +63,27 @@ export class ZoomViewportElement extends HTMLElement {
     this.x = 0;
     this.y = 0;
     this.centered = true;
+    this.spacePan = false;
     this.touches = new Map();
     this.ownedPointers = new Set();
     this.syntheticEvents = new WeakSet();
     // The owner sets the inline style, so keep these variables out of it.
     this.attachShadow({ mode: "open" });
     this.hostStyle = document.createElement("style");
-    this.shadowRoot.append(this.hostStyle, document.createElement("slot"));
+    // Covers the content while Space is held, so the content takes no input
+    // or cursor; pointer events on it target this element.
+    this.panLayer = document.createElement("div");
+    this.panLayer.style.cssText =
+      "position: absolute; inset: 0; z-index: 10; display: none;";
+    this.shadowRoot.append(
+      this.hostStyle,
+      document.createElement("slot"),
+      this.panLayer,
+    );
     this.syncHostStyle();
+    this.handleWindowKeyDown = (event) => this.handleKeyDown(event);
+    this.handleWindowKeyUp = (event) => this.handleKeyUp(event);
+    this.handleWindowBlur = () => this.endSpacePan();
 
     const capture = { capture: true };
     this.addEventListener(
@@ -90,11 +120,17 @@ export class ZoomViewportElement extends HTMLElement {
     if (this.firstElementChild) {
       this.resizeObserver.observe(this.firstElementChild);
     }
+    window.addEventListener("keydown", this.handleWindowKeyDown);
+    window.addEventListener("keyup", this.handleWindowKeyUp);
+    window.addEventListener("blur", this.handleWindowBlur);
   }
 
   disconnectedCallback() {
     clearTimeout(this.wheelTimer);
     this.resizeObserver.disconnect();
+    window.removeEventListener("keydown", this.handleWindowKeyDown);
+    window.removeEventListener("keyup", this.handleWindowKeyUp);
+    window.removeEventListener("blur", this.handleWindowBlur);
     this.resetGestures();
   }
 
@@ -121,7 +157,15 @@ export class ZoomViewportElement extends HTMLElement {
   }
 
   syncHostStyle() {
-    this.hostStyle.textContent = `:host { --canvas-zoom: ${this.zoom}; --canvas-x: ${this.x}px; --canvas-y: ${this.y}px;${this.gesturesEnabled ? " touch-action: none;" : ""} }`;
+    this.hostStyle.textContent = `:host { --canvas-zoom: ${this.zoom}; --canvas-x: ${this.x}px; --canvas-y: ${this.y}px;${this.gesturesEnabled ? " position: relative; touch-action: none;" : ""} }`;
+  }
+
+  // Shows the pan layer with the grab cursor while Space is held, and the
+  // grabbing cursor during a mouse or pen drag.
+  syncPanLayer() {
+    const dragging = this.pan !== undefined && this.pan.pointerType !== "touch";
+    this.panLayer.style.display = this.spacePan || dragging ? "block" : "none";
+    this.panLayer.style.cursor = dragging ? "grabbing" : "grab";
   }
 
   resetGestures() {
@@ -129,6 +173,8 @@ export class ZoomViewportElement extends HTMLElement {
     this.ownedPointers.clear();
     this.pinch = undefined;
     this.pan = undefined;
+    this.spacePan = false;
+    this.syncPanLayer();
   }
 
   setView({ zoom = this.zoom, x = this.x, y = this.y }) {
@@ -205,11 +251,23 @@ export class ZoomViewportElement extends HTMLElement {
   startPan(event) {
     this.pan = {
       pointerId: event.pointerId,
+      pointerType: event.pointerType,
+      button: event.button,
       x: event.clientX,
       y: event.clientY,
       distance: 0,
     };
     this.ownedPointers.add(event.pointerId);
+  }
+
+  endPan() {
+    const { pointerId } = this.pan;
+    this.pan = undefined;
+    this.ownedPointers.delete(pointerId);
+    if (this.hasPointerCapture?.(pointerId)) {
+      this.releasePointerCapture(pointerId);
+    }
+    this.syncPanLayer();
   }
 
   handlePointerDown(event) {
@@ -219,13 +277,44 @@ export class ZoomViewportElement extends HTMLElement {
       return;
     }
 
-    const middle = event.button === MIDDLE_BUTTON;
-    if (!middle && !(event.button === 0 && event.target === this)) return;
     this.suppressClick = false;
+    const middle = event.button === MIDDLE_BUTTON;
+    const spaceDrag = event.button === 0 && this.spacePan;
+    if (!middle && !spaceDrag) return;
+    // A click while Space is held only pans, so it selects nothing.
+    this.suppressClick = spaceDrag;
     this.startPan(event);
     // Keep receiving the drag when the pointer leaves the workspace.
     this.setPointerCapture?.(event.pointerId);
-    if (middle) this.swallow(event);
+    this.swallow(event);
+    this.syncPanLayer();
+  }
+
+  handleKeyDown(event) {
+    if (!this.gesturesEnabled || !isSpaceKey(event)) return;
+    if (!this.spacePan && isTextEntryFocused()) return;
+    // Also for the repeats while Space is held, so it never presses a focused
+    // button or scrolls.
+    event.preventDefault();
+    if (this.spacePan) return;
+    this.spacePan = true;
+    this.syncPanLayer();
+  }
+
+  handleKeyUp(event) {
+    if (!this.spacePan || !isSpaceKey(event)) return;
+    event.preventDefault();
+    this.endSpacePan();
+  }
+
+  // Releasing Space, or leaving the window, ends a drag it started.
+  endSpacePan() {
+    if (!this.spacePan) return;
+    this.spacePan = false;
+    if (this.pan?.pointerType !== "touch" && this.pan?.button === 0) {
+      this.endPan();
+    }
+    this.syncPanLayer();
   }
 
   handleTouchDown(event) {
@@ -328,12 +417,7 @@ export class ZoomViewportElement extends HTMLElement {
       this.suppressClick = true;
       this.reportZoom();
     }
-    if (this.pan?.pointerId === event.pointerId) {
-      this.pan = undefined;
-      if (this.hasPointerCapture?.(event.pointerId)) {
-        this.releasePointerCapture(event.pointerId);
-      }
-    }
+    if (this.pan?.pointerId === event.pointerId) this.endPan();
   }
 
   handleClick(event) {

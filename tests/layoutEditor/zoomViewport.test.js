@@ -78,6 +78,18 @@ const pointer = (target, type, pointerId, x, y, init = {}) => {
 const mouse = (target, type, x, y, button = 0) =>
   pointer(target, type, 1, x, y, { pointerType: "mouse", button });
 
+const key = (type, init = {}) => {
+  const event = new KeyboardEvent(type, {
+    bubbles: true,
+    cancelable: true,
+    code: "Space",
+    key: " ",
+    ...init,
+  });
+  window.dispatchEvent(event);
+  return event;
+};
+
 const wheel = (target, init) => {
   const event = new WheelEvent("wheel", {
     bubbles: true,
@@ -116,9 +128,9 @@ describe("rvn-zoom-viewport", () => {
     resize();
     expect([viewport.x, viewport.y]).toEqual([-200, -150]);
 
-    mouse(viewport, "pointerdown", 100, 100);
-    mouse(viewport, "pointermove", 70, 60);
-    mouse(viewport, "pointerup", 70, 60);
+    pointer(viewport, "pointerdown", 1, 100, 100);
+    pointer(viewport, "pointermove", 1, 70, 60);
+    pointer(viewport, "pointerup", 1, 70, 60);
     resize();
     expect([viewport.x, viewport.y]).toEqual([-230, -190]);
 
@@ -233,25 +245,96 @@ describe("rvn-zoom-viewport", () => {
     expect([viewport.x, viewport.y]).toEqual([700, 500]);
   });
 
-  it("pans with the mouse from the background or the middle button anywhere", () => {
-    const { viewport, canvas } = createViewport();
+  it("pans with the mouse only while Space is held, with a grab cursor over the content", () => {
+    const { viewport } = createViewport();
+    const panLayer = viewport.shadowRoot.querySelector("div");
     const clicks = vi.fn();
     viewport.addEventListener("click", clicks);
 
+    // Without Space, a drag on the space around the content moves nothing,
+    // and its click still reaches the page, which deselects.
     mouse(viewport, "pointerdown", 100, 100);
     mouse(viewport, "pointermove", 140, 130);
     mouse(viewport, "pointerup", 140, 130);
     viewport.click();
+    expect([viewport.x, viewport.y]).toEqual([0, 0]);
+    expect(clicks).toHaveBeenCalledOnce();
+    expect(panLayer.style.display).toBe("none");
+
+    expect(key("keydown").defaultPrevented).toBe(true);
+    expect(key("keydown", { repeat: true }).defaultPrevented).toBe(true);
+    expect([panLayer.style.display, panLayer.style.cursor]).toEqual([
+      "block",
+      "grab",
+    ]);
+
+    // The layer covers the content, so a press anywhere lands on it.
+    const down = mouse(panLayer, "pointerdown", 100, 100);
+    expect(down.defaultPrevented).toBe(true);
+    expect(panLayer.style.cursor).toBe("grabbing");
+    mouse(panLayer, "pointermove", 140, 130);
+    mouse(panLayer, "pointerup", 140, 130);
+    viewport.click();
     expect([viewport.x, viewport.y]).toEqual([40, 30]);
-    expect(clicks).not.toHaveBeenCalled();
+    expect(clicks).toHaveBeenCalledOnce();
+    expect(panLayer.style.cursor).toBe("grab");
+
+    // A click without moving pans nothing and selects nothing either.
+    mouse(panLayer, "pointerdown", 100, 100);
+    mouse(panLayer, "pointerup", 100, 100);
+    viewport.click();
+    expect(clicks).toHaveBeenCalledOnce();
+
+    expect(key("keyup").defaultPrevented).toBe(true);
+    expect(panLayer.style.display).toBe("none");
+  });
+
+  it("ends a Space drag when Space is released or the window loses focus", () => {
+    const { viewport, canvas } = createViewport();
+    const panLayer = viewport.shadowRoot.querySelector("div");
+    const canvasMoves = vi.fn();
+    canvas.addEventListener("pointermove", canvasMoves);
+
+    key("keydown");
+    mouse(panLayer, "pointerdown", 100, 100);
+    mouse(panLayer, "pointermove", 120, 100);
+    key("keyup");
+    mouse(canvas, "pointermove", 160, 100);
+    expect(viewport.x).toBe(20);
+    expect(canvasMoves).toHaveBeenCalledOnce();
+
+    key("keydown");
+    mouse(panLayer, "pointerdown", 100, 100);
+    window.dispatchEvent(new Event("blur"));
+    expect(panLayer.style.display).toBe("none");
+    mouse(canvas, "pointermove", 160, 100);
+    expect(viewport.x).toBe(20);
+  });
+
+  it("types Space into a focused field instead of panning", () => {
+    const { viewport } = createViewport();
+    const panLayer = viewport.shadowRoot.querySelector("div");
+    const input = document.createElement("input");
+    document.body.append(input);
+    input.focus();
+
+    expect(key("keydown").defaultPrevented).toBe(false);
+    expect(panLayer.style.display).toBe("none");
+  });
+
+  it("pans with the middle mouse button anywhere", () => {
+    const { viewport, canvas } = createViewport();
 
     const canvasDowns = vi.fn();
     canvas.addEventListener("pointerdown", canvasDowns);
     const middle = mouse(canvas, "pointerdown", 100, 100, 1);
     mouse(canvas, "pointermove", 90, 120, 1);
-    expect([viewport.x, viewport.y]).toEqual([30, 50]);
+    expect([viewport.x, viewport.y]).toEqual([-10, 20]);
     expect(middle.defaultPrevented).toBe(true);
     expect(canvasDowns).not.toHaveBeenCalled();
+    expect(viewport.shadowRoot.querySelector("div").style.cursor).toBe(
+      "grabbing",
+    );
   });
 
   it("leaves the wheel over the content to it and never pans with it", () => {
