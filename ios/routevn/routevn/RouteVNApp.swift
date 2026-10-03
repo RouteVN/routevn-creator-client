@@ -590,6 +590,9 @@ final class RouteVNViewController: UIViewController, WKNavigationDelegate, WKScr
         case "openFolderPicker":
             try launchFolderPicker(payload)
             return true
+        case "openArchivePicker":
+            try launchArchivePicker(payload)
+            return true
         case "getProjectFolderSetup":
             return projectFolderSetup.status()
         case "previewProjectFolderSetup", "confirmProjectFolderSetup":
@@ -604,6 +607,16 @@ final class RouteVNViewController: UIViewController, WKNavigationDelegate, WKScr
             return candidate
         case "importProjectFolder":
             return try importProjectFolder(uriString: requiredString(payload, "uri"))
+        case "importProjectArchive":
+            return try importProjectArchive(
+                uriString: requiredString(payload, "uri"),
+                projectId: stringValue(payload["projectId"])
+            )
+        case "importProjectArchiveFromUrl":
+            return try importProjectArchiveFromUrl(
+                urlSpec: requiredString(payload, "url"),
+                projectId: stringValue(payload["projectId"])
+            )
         case "exportProjectFolder":
             return try exportProjectFolder(
                 projectId: requiredString(payload, "projectId"),
@@ -619,7 +632,8 @@ final class RouteVNViewController: UIViewController, WKNavigationDelegate, WKScr
 
     private func shouldHandleBridgeMethodInBackground(_ method: String) -> Bool {
         switch method {
-        case "createDistributionZipStreamedToUri", "importProjectFolder", "exportProjectFolder",
+        case "createDistributionZipStreamedToUri", "importProjectFolder", "importProjectArchive",
+             "importProjectArchiveFromUrl", "exportProjectFolder",
              "getProjectFolderSetup", "previewProjectFolderSetup", "confirmProjectFolderSetup":
             return true
         default:
@@ -1675,6 +1689,31 @@ final class RouteVNViewController: UIViewController, WKNavigationDelegate, WKScr
         present(picker, animated: true)
     }
 
+    private func launchArchivePicker(_ payload: [String: Any]) throws {
+        guard pendingDocumentPicker == nil else {
+            throw RouteVNError.message("Another document picker is already open.")
+        }
+
+        let requestId = try storage.safePathSegment(requiredString(payload, "requestId"))
+        pendingDocumentPicker = PendingDocumentPicker(
+            kind: .archive,
+            requestId: requestId,
+            multiple: false,
+            writable: false,
+            contentTypes: Self.archiveContentTypes
+        )
+
+        let picker = UIDocumentPickerViewController(forOpeningContentTypes: Self.archiveContentTypes)
+        picker.allowsMultipleSelection = false
+        picker.title = stringValue(payload["title"])
+        picker.delegate = self
+        present(picker, animated: true)
+    }
+
+    /// Zip content types with the generic archive fallback, mirroring the
+    /// Android picker's application/zip plus octet-stream fallbacks.
+    private static let archiveContentTypes: [UTType] = [.zip, .archive]
+
     func documentPickerWasCancelled(_ controller: UIDocumentPickerViewController) {
         guard let pending = pendingDocumentPicker else {
             return
@@ -1691,6 +1730,11 @@ final class RouteVNViewController: UIViewController, WKNavigationDelegate, WKScr
             sendFolderPickerResult([
                 "requestId": pending.requestId,
                 "folder": NSNull()
+            ])
+        case .archive:
+            sendArchivePickerResult([
+                "requestId": pending.requestId,
+                "archive": NSNull()
             ])
         case .save:
             sendSaveFilePickerResult([
@@ -1731,6 +1775,19 @@ final class RouteVNViewController: UIViewController, WKNavigationDelegate, WKScr
                     "requestId": pending.requestId,
                     "folder": folderResult
                 ])
+            case .archive:
+                guard let url = urls.first else {
+                    sendArchivePickerResult([
+                        "requestId": pending.requestId,
+                        "archive": NSNull()
+                    ])
+                    return
+                }
+                let archiveResult = try createArchivePickerResult(requestId: pending.requestId, sourceURL: url)
+                sendArchivePickerResult([
+                    "requestId": pending.requestId,
+                    "archive": archiveResult
+                ])
             case .save(let filename):
                 guard let folder = urls.first else {
                     sendSaveFilePickerResult([
@@ -1751,6 +1808,8 @@ final class RouteVNViewController: UIViewController, WKNavigationDelegate, WKScr
                 sendFilePickerError(requestId: pending.requestId, message: error.localizedDescription)
             case .folder:
                 sendFolderPickerError(requestId: pending.requestId, message: error.localizedDescription)
+            case .archive:
+                sendArchivePickerError(requestId: pending.requestId, message: error.localizedDescription)
             case .save:
                 sendSaveFilePickerResult([
                     "requestId": pending.requestId,
@@ -1768,6 +1827,21 @@ final class RouteVNViewController: UIViewController, WKNavigationDelegate, WKScr
             "uri": securityScopedFolderURI(requestId: safeRequestId),
             "name": sourceURL.lastPathComponent,
             "sourceUri": sourceURL.absoluteString
+        ]
+    }
+
+    /**
+     Keeps the picked zip behind the same security-scoped URI scheme as the
+     folder picker; the archive importer resolves it back through
+     accessFolderURL later.
+     */
+    private func createArchivePickerResult(requestId: String, sourceURL: URL) throws -> [String: Any] {
+        let safeRequestId = try storage.safePathSegment(requestId)
+        storeSecurityScopedFolderSelection(requestId: safeRequestId, url: sourceURL)
+
+        return [
+            "uri": securityScopedFolderURI(requestId: safeRequestId),
+            "name": sourceURL.lastPathComponent
         ]
     }
 
@@ -1902,6 +1976,23 @@ final class RouteVNViewController: UIViewController, WKNavigationDelegate, WKScr
         evaluateJavaScriptCallback(name: "__routeVNIOSFolderPickerResult", result: result)
     }
 
+    private func sendArchivePickerError(requestId: String, message: String) {
+        sendArchivePickerResult([
+            "requestId": requestId,
+            "error": ["message": message]
+        ])
+    }
+
+    private func sendArchivePickerResult(_ result: [String: Any]) {
+        evaluateJavaScriptCallback(name: "__routeVNIOSArchivePickerResult", result: result)
+    }
+
+    private func projectImportProgressReporter(projectId: String) -> ProjectImportProgressReporter {
+        ProjectImportProgressReporter(projectId: projectId) { [weak self] event in
+            self?.evaluateJavaScriptCallback(name: "__routeVNIOSProjectImportProgress", result: event)
+        }
+    }
+
     private func listProjectFolders() throws -> [[String: Any]] {
         var projects: [[String: Any]] = []
 
@@ -1939,58 +2030,257 @@ final class RouteVNViewController: UIViewController, WKNavigationDelegate, WKScr
             folderAccess.stop()
         }
 
-        let projectDbURL = folderURL.appendingPathComponent("project.db")
-        let sourceFilesURL = folderURL.appendingPathComponent("files")
-        guard FileManager.default.fileExists(atPath: projectDbURL.path) else {
-            throw RouteVNError.message("Selected folder is missing project.db.")
-        }
-        guard FileManager.default.fileExists(atPath: sourceFilesURL.path) else {
-            throw RouteVNError.message("Selected folder is missing files.")
-        }
+        return try importAccessibleProjectFolder(
+            folderURL: folderURL,
+            sourceUri: folderURL.absoluteString,
+            sourceName: folderURL.lastPathComponent
+        )
+    }
 
-        let projectInfo = try readProjectInfo(databaseURL: projectDbURL)
-        let projectId = try storage.safePathSegment(stringValue(projectInfo["id"]))
-        let projectDbPath = storage.projectDatabasePath(projectId: projectId)
-        let targetDbURL = try storage.databaseURL(dbPath: projectDbPath)
-        let targetProjectRoot = try storage.projectRoot(projectId: projectId)
-        let targetFilesURL = try storage.projectFilesRoot(projectId: projectId)
-        let targetMetadataURL = try storage.projectMetadataRoot(projectId: projectId)
-        let alreadyImported =
-            FileManager.default.fileExists(atPath: targetDbURL.path) &&
-            FileManager.default.fileExists(atPath: targetFilesURL.path)
-
-        if !alreadyImported {
-            closeDatabase(dbPath: projectDbPath)
-            try FileManager.default.removeItemIfExists(at: targetDbURL.deletingLastPathComponent())
-            try FileManager.default.removeItemIfExists(at: targetProjectRoot)
-            try FileManager.default.createDirectory(
-                at: targetDbURL.deletingLastPathComponent(),
-                withIntermediateDirectories: true
-            )
-            try FileManager.default.copyItem(at: projectDbURL, to: targetDbURL)
-            try copySidecarIfPresent(source: projectDbURL, suffix: "-wal", target: targetDbURL)
-            try copySidecarIfPresent(source: projectDbURL, suffix: "-shm", target: targetDbURL)
-            try copySidecarIfPresent(source: projectDbURL, suffix: "-journal", target: targetDbURL)
-            try FileManager.default.createDirectory(
-                at: targetFilesURL.deletingLastPathComponent(),
-                withIntermediateDirectories: true
-            )
-            try FileManager.default.copyItem(at: sourceFilesURL, to: targetFilesURL)
-
-            let sourceMetadataURL = folderURL.appendingPathComponent("file-metadata")
-            if FileManager.default.fileExists(atPath: sourceMetadataURL.path) {
-                try FileManager.default.copyItem(at: sourceMetadataURL, to: targetMetadataURL)
+    /**
+     Shared import tail for every source (picked folder, local zip, URL):
+     takes an already-accessible project folder URL, copies project.db (+
+     sidecars), files/ and file-metadata/ into app storage, normalizes the
+     copied file names (Rule A), restores the project identity, and returns
+     the registered entry. The alreadyImported idempotency check keeps a
+     repeated import of the same project a no-op.
+     */
+    private func importAccessibleProjectFolder(
+        folderURL: URL,
+        sourceUri: String,
+        sourceName: String
+    ) throws -> [String: Any] {
+        do {
+            let projectDbURL = folderURL.appendingPathComponent("project.db")
+            let sourceFilesURL = folderURL.appendingPathComponent("files")
+            guard FileManager.default.fileExists(atPath: projectDbURL.path) else {
+                throw ProjectImportError("importFailed", "Selected folder is missing project.db.")
             }
-            // Re-import can replace a partially initialized named folder.
-            // Restore its identity after replacing the directory contents.
-            try storage.recordProjectDirectory(projectId: projectId, directory: targetProjectRoot)
+            guard FileManager.default.fileExists(atPath: sourceFilesURL.path) else {
+                throw ProjectImportError("importFailed", "Selected folder is missing files.")
+            }
+
+            let projectInfo = try readProjectInfo(databaseURL: projectDbURL)
+            let projectId = try storage.safePathSegment(stringValue(projectInfo["id"]))
+            let projectDbPath = storage.projectDatabasePath(projectId: projectId)
+            let targetDbURL = try storage.databaseURL(dbPath: projectDbPath)
+            let targetProjectRoot = try storage.projectRoot(projectId: projectId)
+            let targetFilesURL = try storage.projectFilesRoot(projectId: projectId)
+            let targetMetadataURL = try storage.projectMetadataRoot(projectId: projectId)
+            let alreadyImported =
+                FileManager.default.fileExists(atPath: targetDbURL.path) &&
+                FileManager.default.fileExists(atPath: targetFilesURL.path)
+
+            if !alreadyImported {
+                closeDatabase(dbPath: projectDbPath)
+                try FileManager.default.removeItemIfExists(at: targetDbURL.deletingLastPathComponent())
+                try FileManager.default.removeItemIfExists(at: targetProjectRoot)
+                try FileManager.default.createDirectory(
+                    at: targetDbURL.deletingLastPathComponent(),
+                    withIntermediateDirectories: true
+                )
+                try FileManager.default.copyItem(at: projectDbURL, to: targetDbURL)
+                try copySidecarIfPresent(source: projectDbURL, suffix: "-wal", target: targetDbURL)
+                try copySidecarIfPresent(source: projectDbURL, suffix: "-shm", target: targetDbURL)
+                try copySidecarIfPresent(source: projectDbURL, suffix: "-journal", target: targetDbURL)
+                try FileManager.default.createDirectory(
+                    at: targetFilesURL.deletingLastPathComponent(),
+                    withIntermediateDirectories: true
+                )
+                try FileManager.default.copyItem(at: sourceFilesURL, to: targetFilesURL)
+
+                let sourceMetadataURL = folderURL.appendingPathComponent("file-metadata")
+                if FileManager.default.fileExists(atPath: sourceMetadataURL.path) {
+                    try FileManager.default.copyItem(at: sourceMetadataURL, to: targetMetadataURL)
+                }
+            }
+
+            do {
+                // Rule A always checks the app-owned copy, even for an
+                // already-imported project. Never modify the source folder.
+                _ = try ProjectFileNames.normalize(filesDirectory: targetFilesURL)
+            } catch {
+                if !alreadyImported {
+                    closeDatabase(dbPath: projectDbPath)
+                    try? FileManager.default.removeItemIfExists(at: targetDbURL.deletingLastPathComponent())
+                    try? FileManager.default.removeItemIfExists(at: targetProjectRoot)
+                }
+                throw error
+            }
+            if !alreadyImported {
+                // Re-import can replace a partially initialized named folder.
+                // Restore its identity after replacing the directory contents.
+                try storage.recordProjectDirectory(projectId: projectId, directory: targetProjectRoot)
+            }
+
+            var result = projectEntry(projectId: projectId, projectInfo: projectInfo, databaseURL: targetDbURL)
+            result["sourceUri"] = sourceUri
+            result["sourceName"] = sourceName
+            result["alreadyImported"] = alreadyImported
+            return result
+        } catch {
+            throw codedImportError(error)
+        }
+    }
+
+    private func importProjectArchive(uriString: String, projectId: String) throws -> [String: Any] {
+        let archiveAccess = try accessFolderURL(
+            uriString: uriString,
+            missingMessage: "Project archive is required."
+        )
+        defer { archiveAccess.stop() }
+        let archiveSourceURL = archiveAccess.url
+        let sourceName = archiveSourceURL.lastPathComponent
+        let sourceUri = archiveSourceURL.absoluteString
+        let progressReporter = projectImportProgressReporter(projectId: projectId)
+        do {
+            sweepStaleProjectImportWorkDirectories()
+            let workDirectory = try makeProjectImportWorkDirectory()
+            // The whole <uuid> directory (archive.zip + extracted/) goes away
+            // on success, failure, and cancellation paths.
+            defer {
+                try? FileManager.default.removeItem(at: workDirectory)
+            }
+
+            // The picked zip is copied bounded into app-managed temp storage
+            // so the extractor never touches the user's source file.
+            let archiveURL = workDirectory.appendingPathComponent("archive.zip")
+            try ProjectArchiveDownloader.copyArchive(from: archiveSourceURL, to: archiveURL)
+            let extractedRoot = try extractProjectArchive(
+                at: archiveURL,
+                in: workDirectory,
+                progressReporter: progressReporter
+            )
+            progressReporter.start(.finishing)
+            return try importAccessibleProjectFolder(
+                folderURL: extractedRoot,
+                sourceUri: sourceUri,
+                sourceName: sourceName
+            )
+        } catch {
+            throw codedImportError(error)
+        }
+    }
+
+    private func importProjectArchiveFromUrl(urlSpec: String, projectId: String) throws -> [String: Any] {
+        let validatedURL: URL
+        let progressReporter = projectImportProgressReporter(projectId: projectId)
+        do {
+            validatedURL = try ProjectArchiveDownloader.validateUrl(urlSpec)
+        } catch {
+            throw error
         }
 
-        var result = projectEntry(projectId: projectId, projectInfo: projectInfo, databaseURL: targetDbURL)
-        result["sourceUri"] = folderURL.absoluteString
-        result["sourceName"] = folderURL.lastPathComponent
-        result["alreadyImported"] = alreadyImported
-        return result
+        do {
+            sweepStaleProjectImportWorkDirectories()
+            let workDirectory = try makeProjectImportWorkDirectory()
+            // The whole <uuid> directory (archive.zip + extracted/) goes away
+            // on success, failure, and cancellation paths.
+            defer {
+                try? FileManager.default.removeItem(at: workDirectory)
+            }
+
+            let archiveURL = workDirectory.appendingPathComponent("archive.zip")
+            let downloader = ProjectArchiveDownloader(progressReporter: progressReporter)
+            try downloader.download(urlSpec: urlSpec, to: archiveURL)
+            let extractedRoot = try extractProjectArchive(
+                at: archiveURL,
+                in: workDirectory,
+                progressReporter: progressReporter
+            )
+            progressReporter.start(.finishing)
+            return try importAccessibleProjectFolder(
+                folderURL: extractedRoot,
+                sourceUri: validatedURL.absoluteString,
+                sourceName: ProjectArchiveDownloader.suggestArchiveName(urlSpec) ?? "archive.zip"
+            )
+        } catch {
+            throw codedImportError(error)
+        }
+    }
+
+    /**
+     Extracts a staged archive into workDirectory/extracted/ and asserts the
+     staged root contains only the expected project files. The extracted
+     directory is a sibling of archive.zip, never inside it, so the promoted
+     project never contains the archive itself.
+     */
+    private func extractProjectArchive(
+        at archiveURL: URL,
+        in workDirectory: URL,
+        progressReporter: ProjectImportProgressReporter? = nil
+    ) throws -> URL {
+        let extractedRoot = workDirectory.appendingPathComponent("extracted", isDirectory: true)
+        do {
+            try ProjectArchiveExtractor.extract(
+                archiveAt: archiveURL,
+                to: extractedRoot,
+                progressReporter: progressReporter
+            )
+        } catch let error as ProjectImportError {
+            throw error
+        } catch {
+            throw ProjectImportError("invalidArchive", error.localizedDescription)
+        }
+        return extractedRoot
+    }
+
+    /**
+     Every failure in the archive/URL import paths carries a stable
+     "code: detail" message; unexpected native failures fold into
+     importFailed.
+     */
+    private func codedImportError(_ error: Error) -> Error {
+        if error is ProjectImportError {
+            return error
+        }
+        let detail = (error as? LocalizedError)?.errorDescription ?? String(describing: error)
+        return ProjectImportError("importFailed", detail)
+    }
+
+    /**
+     Import staging lives in temporaryDirectory/project-import/<uuid>/ with
+     archive.zip and extracted/ inside; stale directories older than 24 hours
+     are swept best-effort at the start of each import.
+     */
+    private static let projectImportTempRootName = "project-import"
+    private static let projectImportSweepInterval: TimeInterval = 24 * 60 * 60
+
+    private func makeProjectImportWorkDirectory() throws -> URL {
+        let importRoot = FileManager.default.temporaryDirectory
+            .appendingPathComponent(Self.projectImportTempRootName, isDirectory: true)
+        try FileManager.default.createDirectory(at: importRoot, withIntermediateDirectories: true)
+        let workDirectory = importRoot.appendingPathComponent(UUID().uuidString, isDirectory: true)
+        try FileManager.default.createDirectory(at: workDirectory, withIntermediateDirectories: true)
+        return workDirectory
+    }
+
+    private func sweepStaleProjectImportWorkDirectories() {
+        let importRoot = FileManager.default.temporaryDirectory
+            .appendingPathComponent(Self.projectImportTempRootName, isDirectory: true)
+        let fileManager = FileManager.default
+        guard
+            let children = try? fileManager.contentsOfDirectory(
+                at: importRoot,
+                includingPropertiesForKeys: [.isDirectoryKey, .contentModificationDateKey],
+                options: [.skipsHiddenFiles]
+            )
+        else {
+            return
+        }
+
+        let cutoff = Date().addingTimeInterval(-Self.projectImportSweepInterval)
+        for child in children {
+            guard
+                let values = try? child.resourceValues(forKeys: [.isDirectoryKey, .contentModificationDateKey]),
+                values.isDirectory == true,
+                let modified = values.contentModificationDate,
+                modified < cutoff
+            else {
+                continue
+            }
+            try? fileManager.removeItem(at: child)
+        }
     }
 
     private func exportProjectFolder(projectId: String, destinationUriString: String) throws -> [String: Any] {
@@ -2190,6 +2480,7 @@ private enum RouteVNError: LocalizedError {
 private enum PendingDocumentPickerKind {
     case file
     case folder
+    case archive
     case save(filename: String)
 }
 
