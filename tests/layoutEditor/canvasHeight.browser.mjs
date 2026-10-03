@@ -126,34 +126,34 @@ document.querySelector('#page').append(document.createElement('rvn-layout-editor
     );
     return { page, surface, errors };
   };
-  // Geometry of the canvas inside its scrolling workspace, scrolled to the
-  // start and to the end.
-  const measureZoomedCanvas = (surface) =>
+  // The canvas and its workspace on screen.
+  const measureCanvas = (surface) =>
     surface.evaluate((canvas) => {
       const component = canvas.getRootNode().host;
-      const background = component.parentElement.parentElement;
-      const bounds = () => ({
-        canvas: canvas.getBoundingClientRect().toJSON(),
-        background: background.getBoundingClientRect().toJSON(),
-      });
-      background.scrollTo(0, 0);
-      const start = bounds();
-      background.scrollTo(background.scrollWidth, background.scrollHeight);
-      const end = bounds();
+      const viewport = component.parentElement.parentElement;
       const panLayer = component.parentElement.querySelector("#canvasPanLayer");
-      const touchAction = getComputedStyle(background).touchAction;
       return {
-        start,
-        end,
-        scrollable:
-          background.scrollWidth > background.clientWidth ||
-          background.scrollHeight > background.clientHeight,
-        touchAction,
-        panLayer: panLayer && {
-          bounds: panLayer.getBoundingClientRect().toJSON(),
-        },
+        canvas: canvas.getBoundingClientRect().toJSON(),
+        viewport: viewport.getBoundingClientRect().toJSON(),
+        touchAction: getComputedStyle(viewport).touchAction,
+        panLayer: panLayer?.getBoundingClientRect().toJSON() ?? null,
       };
     });
+  const assertCentered = ({ canvas, viewport }, label) =>
+    assert.ok(
+      Math.abs(
+        canvas.left + canvas.width / 2 - (viewport.left + viewport.width / 2),
+      ) <= 2 &&
+        Math.abs(
+          canvas.top + canvas.height / 2 - (viewport.top + viewport.height / 2),
+        ) <= 2,
+      `${label}: canvas must be centered (${JSON.stringify({ canvas, viewport })})`,
+    );
+  const assertNoDrift = ({ drift }, label) =>
+    assert.ok(
+      Math.abs(drift.x) <= 1 && Math.abs(drift.y) <= 1,
+      `${label}: the point must stay under the gesture (${JSON.stringify(drift)})`,
+    );
 
   for (const [engineName, engine] of Object.entries({ chromium, webkit })) {
     const browser = await engine.launch({ headless: true });
@@ -163,64 +163,48 @@ document.querySelector('#page').append(document.createElement('rvn-layout-editor
         { name: "tablet landscape", touch: true, tablet: true },
       ]) {
         const resolution = { width: 1920, height: 1080 };
+        const label = `${engineName} ${name}`;
         const fitted = await openEditor(browser, { touch, tablet, resolution });
-        const fit = await measureZoomedCanvas(fitted.surface);
-        assert.equal(fit.scrollable, false, "A fitted canvas must not scroll");
+        const fit = await measureCanvas(fitted.surface);
+        assertCentered(fit, `${label} fit`);
+        // The viewport handles touch itself: the renderer canvas blocks it.
+        assert.equal(fit.touchAction, "none");
         await fitted.page.close();
 
-        const zoomed = await openEditor(browser, {
-          touch,
-          tablet,
-          resolution,
-          zoom: 2,
-          pan: touch,
-        });
-        const geometry = await measureZoomedCanvas(zoomed.surface);
-        const label = `${engineName} ${name} zoom 2`;
-        assert.ok(
-          Math.abs(geometry.start.canvas.width - fit.start.canvas.width * 2) <=
-            2,
-          `${label}: canvas must be twice the fitted width (${geometry.start.canvas.width} vs ${fit.start.canvas.width})`,
-        );
-        assert.ok(geometry.scrollable, `${label}: workspace must scroll`);
-        // Every edge must be reachable: auto margins, not justify-content,
-        // center the canvas, so its overflow stays scrollable.
-        assert.ok(
-          geometry.start.canvas.top >= geometry.start.background.top - 1 &&
-            geometry.start.canvas.left >= geometry.start.background.left - 1,
-          `${label}: top-left edge must be reachable (${JSON.stringify(geometry.start)})`,
-        );
-        assert.ok(
-          geometry.end.canvas.bottom <= geometry.end.background.bottom + 1 &&
-            geometry.end.canvas.right <= geometry.end.background.right + 1,
-          `${label}: bottom-right edge must be reachable (${JSON.stringify(geometry.end)})`,
-        );
-        if (touch) {
-          assert.ok(geometry.panLayer, `${label}: pan mode adds a pan layer`);
+        for (const zoom of [0.5, 2]) {
+          const zoomed = await openEditor(browser, {
+            touch,
+            tablet,
+            resolution,
+            zoom,
+            pan: touch,
+          });
+          const geometry = await measureCanvas(zoomed.surface);
           assert.ok(
-            Math.abs(
-              geometry.panLayer.bounds.width - geometry.end.canvas.width,
-            ) <= 1 &&
-              Math.abs(
-                geometry.panLayer.bounds.height - geometry.end.canvas.height,
-              ) <= 1,
-            `${label}: the pan layer must cover the canvas`,
+            Math.abs(geometry.canvas.width - fit.canvas.width * zoom) <= 2,
+            `${label} zoom ${zoom}: canvas must be ${zoom}x the fitted width`,
           );
-        } else {
-          assert.equal(geometry.panLayer, null, "Desktop pans by scrolling");
+          assertCentered(geometry, `${label} zoom ${zoom}`);
+          if (touch && zoom > 1) {
+            assert.ok(
+              geometry.panLayer &&
+                Math.abs(geometry.panLayer.width - geometry.canvas.width) <=
+                  1 &&
+                Math.abs(geometry.panLayer.height - geometry.canvas.height) <=
+                  1,
+              `${label}: the pan layer must cover the canvas`,
+            );
+          } else {
+            assert.equal(geometry.panLayer, null);
+          }
+          assert.deepEqual(zoomed.errors, []);
+          await zoomed.page.close();
         }
-        // The viewport handles touch itself: the renderer canvas blocks it.
-        assert.equal(geometry.touchAction, "none");
-        assert.deepEqual(zoomed.errors, []);
-        await zoomed.page.close();
 
-        // Pinch from 100 px to 200 px apart while the midpoint moves 40 px.
-        const pinched = await openEditor(browser, {
-          touch,
-          tablet,
-          resolution,
-        });
-        const pinch = await pinched.surface.evaluate((canvas) => {
+        const editor = await openEditor(browser, { touch, tablet, resolution });
+        // Pinch near the canvas corner to 3x while the midpoint moves: the
+        // canvas follows the fingers past the workspace edges.
+        const pinch = await editor.surface.evaluate((canvas) => {
           const viewport =
             canvas.getRootNode().host.parentElement.parentElement;
           const reports = [];
@@ -240,23 +224,23 @@ document.querySelector('#page').append(document.createElement('rvn-layout-editor
                 clientY: y,
               }),
             );
-          const before = canvas.getBoundingClientRect();
-          const start = {
-            x: before.left + before.width / 2,
-            y: before.top + before.height / 2,
-          };
+          // The wrapper the viewport sizes and places; the canvas surface in
+          // it has borders that do not scale.
+          const content = canvas.getRootNode().host.parentElement;
+          const before = content.getBoundingClientRect();
+          const start = { x: before.left + 40, y: before.top + 30 };
           const fraction = {
             x: (start.x - before.left) / before.width,
             y: (start.y - before.top) / before.height,
           };
-          fire("pointerdown", 1, start.x - 50, start.y);
-          fire("pointerdown", 2, start.x + 50, start.y);
-          const end = { x: start.x + 40, y: start.y + 20 };
-          fire("pointermove", 1, end.x - 100, end.y);
-          fire("pointermove", 2, end.x + 100, end.y);
-          const after = canvas.getBoundingClientRect();
-          fire("pointerup", 2, end.x + 100, end.y);
-          fire("pointerup", 1, end.x - 100, end.y);
+          fire("pointerdown", 1, start.x - 30, start.y);
+          fire("pointerdown", 2, start.x + 30, start.y);
+          const end = { x: start.x + 60, y: start.y + 40 };
+          fire("pointermove", 1, end.x - 90, end.y);
+          fire("pointermove", 2, end.x + 90, end.y);
+          const after = content.getBoundingClientRect();
+          fire("pointerup", 2, end.x + 90, end.y);
+          fire("pointerup", 1, end.x - 90, end.y);
           return {
             ratio: after.width / before.width,
             drift: {
@@ -266,59 +250,69 @@ document.querySelector('#page').append(document.createElement('rvn-layout-editor
             reports,
           };
         });
-        const pinchLabel = `${engineName} ${name} pinch`;
         assert.ok(
-          Math.abs(pinch.ratio - 2) < 0.02,
-          `${pinchLabel}: canvas must double (${pinch.ratio})`,
+          Math.abs(pinch.ratio - 3) < 0.03,
+          `${label} pinch: canvas must triple (${pinch.ratio})`,
         );
-        assert.ok(
-          Math.abs(pinch.drift.x) <= 1 && Math.abs(pinch.drift.y) <= 1,
-          `${pinchLabel}: the pinched point must stay under the fingers (${JSON.stringify(pinch.drift)})`,
-        );
-        assert.deepEqual(pinch.reports, [2]);
+        assertNoDrift(pinch, `${label} pinch near a corner`);
+        assert.deepEqual(pinch.reports, [3]);
 
-        // A trackpad pinch zooms around the pointer.
-        const wheel = await pinched.surface.evaluate((canvas) => {
+        // The wheel pans without limits, and a trackpad pinch zooms around
+        // the pointer.
+        const wheel = await editor.surface.evaluate((canvas) => {
           const viewport =
             canvas.getRootNode().host.parentElement.parentElement;
-          const before = canvas.getBoundingClientRect();
-          const point = { x: before.left + 30, y: before.top + 30 };
+          const send = (init) =>
+            viewport.dispatchEvent(
+              new WheelEvent("wheel", {
+                bubbles: true,
+                cancelable: true,
+                ...init,
+              }),
+            );
+          const content = canvas.getRootNode().host.parentElement;
+          const before = content.getBoundingClientRect();
+          send({ deltaX: 50, deltaY: 5000 });
+          const panned = content.getBoundingClientRect();
+          const point = { x: panned.left + 30, y: panned.top + 30 };
           const fraction = {
-            x: (point.x - before.left) / before.width,
-            y: (point.y - before.top) / before.height,
+            x: (point.x - panned.left) / panned.width,
+            y: (point.y - panned.top) / panned.height,
           };
-          viewport.dispatchEvent(
-            new WheelEvent("wheel", {
-              bubbles: true,
-              cancelable: true,
-              ctrlKey: true,
-              deltaY: -Math.log(1.5) / 0.01,
-              clientX: point.x,
-              clientY: point.y,
-            }),
-          );
-          const after = canvas.getBoundingClientRect();
+          send({
+            ctrlKey: true,
+            deltaY: Math.log(2) / 0.01,
+            clientX: point.x,
+            clientY: point.y,
+          });
+          const zoomed = content.getBoundingClientRect();
+          viewport.centerContent();
           return {
-            ratio: after.width / before.width,
+            pan: [panned.left - before.left, panned.top - before.top].map(
+              Math.round,
+            ),
+            ratio: zoomed.width / panned.width,
             drift: {
-              x: after.left + fraction.x * after.width - point.x,
-              y: after.top + fraction.y * after.height - point.y,
+              x: zoomed.left + fraction.x * zoomed.width - point.x,
+              y: zoomed.top + fraction.y * zoomed.height - point.y,
             },
           };
         });
+        assert.deepEqual(wheel.pan, [-50, -5000], `${label}: wheel pan`);
         assert.ok(
-          Math.abs(wheel.ratio - 1.5) < 0.02,
-          `${engineName} ${name} trackpad pinch: canvas must grow 1.5x (${wheel.ratio})`,
+          Math.abs(wheel.ratio - 0.5) < 0.02,
+          `${label} trackpad pinch: canvas must halve (${wheel.ratio})`,
         );
-        assert.ok(
-          Math.abs(wheel.drift.x) <= 1 && Math.abs(wheel.drift.y) <= 1,
-          `${engineName} ${name} trackpad pinch: the pointer must stay over the same point (${JSON.stringify(wheel.drift)})`,
+        assertNoDrift(wheel, `${label} trackpad pinch`);
+        assertCentered(
+          await measureCanvas(editor.surface),
+          `${label} fit after moving`,
         );
-        assert.deepEqual(pinched.errors, []);
-        await pinched.page.close();
+        assert.deepEqual(editor.errors, []);
+        await editor.page.close();
 
         if (touch) {
-          // In pan mode one finger on the canvas pans.
+          // In pan mode one finger on the canvas pans, past every edge.
           const panning = await openEditor(browser, {
             touch,
             tablet,
@@ -328,9 +322,7 @@ document.querySelector('#page').append(document.createElement('rvn-layout-editor
           });
           const pan = await panning.surface.evaluate((canvas) => {
             const host = canvas.getRootNode().host;
-            const viewport = host.parentElement.parentElement;
             const layer = host.parentElement.querySelector("#canvasPanLayer");
-            viewport.scrollTo(100, 50);
             const fire = (type, x, y) =>
               layer.dispatchEvent(
                 new PointerEvent(type, {
@@ -344,38 +336,18 @@ document.querySelector('#page').append(document.createElement('rvn-layout-editor
                   clientY: y,
                 }),
               );
+            const before = canvas.getBoundingClientRect();
             fire("pointerdown", 400, 400);
-            fire("pointermove", 340, 420);
-            fire("pointerup", 340, 420);
-            return [viewport.scrollLeft, viewport.scrollTop];
+            fire("pointermove", 1300, 1100);
+            fire("pointerup", 1300, 1100);
+            const after = canvas.getBoundingClientRect();
+            return [after.left - before.left, after.top - before.top].map(
+              Math.round,
+            );
           });
-          assert.deepEqual(
-            pan,
-            [160, 30],
-            `${engineName} ${name}: pan mode must scroll with one finger`,
-          );
+          assert.deepEqual(pan, [900, 700], `${label}: pan mode`);
           await panning.page.close();
         }
-
-        const small = await openEditor(browser, {
-          touch,
-          tablet,
-          resolution,
-          zoom: 0.5,
-        });
-        const half = await measureZoomedCanvas(small.surface);
-        const centerOffset = (axis, size) =>
-          Math.abs(
-            half.start.canvas[axis] +
-              half.start.canvas[size] / 2 -
-              (half.start.background[axis] + half.start.background[size] / 2),
-          );
-        assert.ok(
-          centerOffset("left", "width") <= 2 &&
-            centerOffset("top", "height") <= 2,
-          `${engineName} ${name} zoom 0.5: canvas must stay centered`,
-        );
-        await small.page.close();
         console.log(engineName, name, "canvas zoom passed");
       }
 

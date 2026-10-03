@@ -805,22 +805,21 @@ describe("layoutEditor.store", () => {
     const select = () =>
       selectViewData({ state, constants: TEST_CONSTANTS, i18n: EN_I18N });
 
-    expect(select().layoutEditorCanvasWidth).toBe(
-      "calc(min(100%, 163.5556cqh) * var(--canvas-zoom, 1))",
-    );
-    expect(select().canvasBackgroundStyle).toContain("overflow: auto");
+    // The canvas moves freely: rvn-zoom-viewport sets its zoom and place.
+    const freeCanvas =
+      "position: absolute; left: 0; top: 0; width: calc(min(100%, 163.5556cqh) * var(--canvas-zoom, 1)); transform: translate(var(--canvas-x, 0px), var(--canvas-y, 0px));";
+    expect(select().canvasWrapperStyle).toBe(freeCanvas);
+    expect(select().canvasBackgroundStyle).toContain("overflow: hidden");
     expect(select().canvasWorkspaceStyle).toBe("container-type: size;");
 
     setUiConfig({ state }, { uiConfig: { inputMode: "touch" } });
-    expect(select().layoutEditorCanvasWidth).toBe(
-      "calc(min(100%, 88.8889cqh) * var(--canvas-zoom, 1))",
+    expect(select().canvasWrapperStyle).toBe(
+      "position: relative; width: min(100%, 88.8889cqh); margin-left: auto; margin-right: auto;",
     );
     expect(select().canvasBackgroundStyle).toBe("");
 
     setAppWindowMetrics({ state }, { width: 1408, height: 880 });
-    expect(select().layoutEditorCanvasWidth).toBe(
-      "calc(min(100%, 163.5556cqh) * var(--canvas-zoom, 1))",
-    );
+    expect(select().canvasWrapperStyle).toBe(freeCanvas);
   });
 
   describe("canvas zoom", () => {
@@ -854,9 +853,13 @@ describe("layoutEditor.store", () => {
       expect(select(state).canvasZoomLabel).toBe("1000%");
 
       resetCanvasZoom({ state });
-      for (let step = 0; step < 4; step += 1) zoomCanvasOut({ state });
+      zoomCanvasOut({ state });
+      zoomCanvasOut({ state });
+      expect(select(state).canvasZoomLabel).toBe("50%");
+      zoomCanvasOut({ state });
+      zoomCanvasOut({ state });
       expect(select(state)).toMatchObject({
-        canvasZoomLabel: "50%",
+        canvasZoomLabel: "10%",
         canvasZoomOutDisabled: true,
         canvasZoomInDisabled: false,
       });
@@ -893,8 +896,8 @@ describe("layoutEditor.store", () => {
 
       setCanvasZoom({ state }, { zoom: 12 });
       expect(select(state).canvasZoom).toBe(10);
-      setCanvasZoom({ state }, { zoom: 0.1 });
-      expect(select(state).canvasZoom).toBe(0.5);
+      setCanvasZoom({ state }, { zoom: 0.05 });
+      expect(select(state).canvasZoom).toBe(0.1);
     });
 
     it("leaves pan mode when a gesture zooms back to fit", () => {

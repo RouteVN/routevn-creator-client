@@ -15,6 +15,7 @@ const createDeps = () => ({
     setCanvasZoom: vi.fn(),
     toggleCanvasPanMode: vi.fn(),
   },
+  refs: { layoutEditorCanvasBackground: { centerContent: vi.fn() } },
   render: vi.fn(),
 });
 
@@ -31,6 +32,21 @@ describe("layout editor canvas zoom handlers", () => {
 
     expect(deps.store[action]).toHaveBeenCalledOnce();
     expect(deps.render).toHaveBeenCalledOnce();
+  });
+
+  it("moves the canvas back to the middle when fitting it", () => {
+    const deps = createDeps();
+    deps.render.mockImplementation(() =>
+      expect(
+        deps.refs.layoutEditorCanvasBackground.centerContent,
+      ).not.toHaveBeenCalled(),
+    );
+
+    handleCanvasZoomResetClick(deps);
+
+    expect(
+      deps.refs.layoutEditorCanvasBackground.centerContent,
+    ).toHaveBeenCalledOnce();
   });
 
   it("stores the zoom a gesture ends on", () => {

@@ -55,7 +55,7 @@ const selectLayoutEditorCanvasMaxWidth = ({ state }) => {
 // range, which matches rvn-zoom-viewport. The renderer draws at the project
 // resolution and the page scales it, so higher levels look soft.
 const CANVAS_ZOOM_LEVELS = Object.freeze([
-  0.5, 0.75, 1, 1.5, 2, 3, 4, 5, 6, 8, 10,
+  0.1, 0.25, 0.5, 0.75, 1, 1.5, 2, 3, 4, 5, 6, 8, 10,
 ]);
 
 // Only the right-panel layouts (desktop and tablet landscape) give the canvas
@@ -732,13 +732,15 @@ export const selectViewData = ({ state, constants, i18n }) => {
     layoutState,
     // The canvas is sized in container height units on every layout.
     canvasWorkspaceStyle: "container-type: size;",
-    // A zoomed canvas scrolls inside the workspace. Auto margins center it
-    // and still let it scroll to every edge when it overflows.
+    // With a right panel the canvas moves freely in the workspace:
+    // rvn-zoom-viewport sets its zoom and position, also live during a
+    // gesture, and the dot grid moves with it. Other layouts keep it fitted.
     canvasBackgroundStyle: showRightPanel
-      ? "flex: 1 1 auto; min-height: 0; flex-direction: column; overflow: auto;"
+      ? "flex: 1 1 auto; min-height: 0; position: relative; overflow: hidden; background-position: var(--canvas-x, 0px) var(--canvas-y, 0px);"
       : "",
-    // rvn-zoom-viewport sets --canvas-zoom, also live during a pinch.
-    layoutEditorCanvasWidth: `calc(${canvasFitWidth} * var(--canvas-zoom, 1))`,
+    canvasWrapperStyle: showRightPanel
+      ? `position: absolute; left: 0; top: 0; width: calc(${canvasFitWidth} * var(--canvas-zoom, 1)); transform: translate(var(--canvas-x, 0px), var(--canvas-y, 0px));`
+      : `position: relative; width: ${canvasFitWidth}; margin-left: auto; margin-right: auto;`,
     canvasZoom,
     showCanvasZoomControls: showRightPanel,
     canvasZoomLabel: `${Math.round(canvasZoom * 100)}%`,

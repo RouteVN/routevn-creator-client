@@ -898,7 +898,7 @@ export const handlePreviewButtonClick = (deps) => {
   render();
 };
 
-// rvn-zoom-viewport keeps the point in view centered when the zoom changes.
+// rvn-zoom-viewport keeps the point in view in place when the zoom changes.
 export const handleCanvasZoomInClick = (deps) => {
   const { store, render } = deps;
   store.zoomCanvasIn();
@@ -912,9 +912,10 @@ export const handleCanvasZoomOutClick = (deps) => {
 };
 
 export const handleCanvasZoomResetClick = (deps) => {
-  const { store, render } = deps;
+  const { store, refs, render } = deps;
   store.resetCanvasZoom();
   render();
+  refs.layoutEditorCanvasBackground.centerContent();
 };
 
 export const handleCanvasZoomGesture = (deps, payload) => {

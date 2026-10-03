@@ -124,7 +124,7 @@ template:
                   - rtgl-button#previewButton ml=sm v=se: ${previewTitle}
           - 'rtgl-view d=v h=1fg w=f style="min-height: 0; ${canvasWorkspaceStyle}"':
               - 'rvn-zoom-viewport#layoutEditorCanvasBackground zoom=${canvasZoom} ?gestures=${showCanvasZoomControls} style="display: flex; flex-direction: column; width: 100%; min-width: 0; background-color: var(--background); ${canvasBackgroundStyle} background-image: radial-gradient(circle, var(--input) 1px, transparent 1px); background-size: 24px 24px;"':
-                  - 'div style="position: relative; width: ${layoutEditorCanvasWidth}; flex-shrink: 0; margin: auto;"':
+                  - 'div style="${canvasWrapperStyle}"':
                       - 'rvn-layout-editor-canvas#layoutEditorCanvas style="display: block; width: 100%;" :resolution=${projectResolution} :layoutState=${layoutState} selectedItemId=${selectedItemId} :previewData=${previewData} :disableMoveDrag=${selectedItemIsInsideDirectedContainer} :disableInteraction=${selectedItemIsEffectivelyHidden}': null
                       - $if isCanvasPanMode:
                           - 'div#canvasPanLayer data-pan-surface style="position: absolute; inset: 0; z-index: 1; cursor: grab;"': null
