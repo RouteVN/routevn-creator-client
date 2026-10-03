@@ -213,6 +213,7 @@ projectPage:
   warningTitle: "Warning"
   wordsLabel: "Words"
 appPage:
+  errorDetailsLabel: "Details:"
   filePickerSourceTitle: Choose source
   filePickerGallery: Gallery
   filePickerFiles: File picker
@@ -1947,6 +1948,7 @@ scenesPage:
   updateFolderDescription: "Update folder details"
   updateSceneDescription: "Update scene details"
 sceneEditorPage:
+  errorDetailsLabel: "Details:"
   failedOpenScene: "Could not open the scene."
   failedOpenSceneComputedVariable: "Could not calculate computed variable “{name}”. Its formula may have divided by zero or produced the wrong type of value. Check the formula and the variables it uses in Variables."
   actionsLabel: "Actions"
@@ -1969,6 +1971,7 @@ sceneEditorPage:
   failedLoadSceneAssets: "Failed to load some scene assets"
   failedMoveSection: "Failed to move section"
   failedOpenPreview: "Failed to open preview"
+  failedRenderCanvas: "Could not update the canvas."
   failedSaveBeforePreview: "Failed to save scene changes before preview"
   failedSaveSceneChanges: "Failed to save scene changes"
   failedSaveDialogueAction: "Failed to save dialogue action"
@@ -2377,6 +2380,7 @@ commandLinePage:
   "true": "true"
 audioPlayerPage:
   seekLabel: "Seek audio"
+  errorDetailsLabel: "Details:"
   errorTitle: "Error"
   failedPlayback: "Could not play this audio. Please try again."
   missingFileId: "Missing fileId"

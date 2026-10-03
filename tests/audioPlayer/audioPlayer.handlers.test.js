@@ -7,6 +7,7 @@ const originalCustomEvent = globalThis.CustomEvent;
 const createDeps = () => ({
   appService: {
     showAlert: vi.fn(),
+    showAlertWhenIdle: vi.fn(),
     showToast: vi.fn(),
   },
   audioService: {
@@ -131,6 +132,7 @@ describe("audio player handlers", () => {
     const deps = createDeps();
     deps.i18n = {
       audioPlayerPage: {
+        errorDetailsLabel: "Details:",
         errorTitle: "Error",
         failedPlayback: "Playback failed.",
       },
@@ -142,11 +144,11 @@ describe("audio player handlers", () => {
     handleError(new Error("Media element rejected playback"));
     expect(deps.store.setPlaying).toHaveBeenCalledWith({ isPlaying: false });
     expect(deps.store.setLoading).toHaveBeenCalledWith({ isLoading: false });
-    expect(deps.appService.showToast).toHaveBeenCalledWith({
+    expect(deps.appService.showAlertWhenIdle).toHaveBeenCalledWith({
       title: "Error",
-      message: "Playback failed.",
-      status: "error",
+      message: "Playback failed.\n\nDetails:\nMedia element rejected playback",
     });
+    expect(deps.appService.showToast).not.toHaveBeenCalled();
     cleanup();
   });
 

@@ -50,6 +50,7 @@ import {
   selectSceneEditorSection,
 } from "../../internal/ui/sceneEditor/sectionOperations.js";
 import { selectSceneEditorCopy } from "../../internal/ui/sceneEditor/sceneEditorCopy.js";
+import { withErrorDetails } from "../../internal/errorDetails.js";
 import {
   createSceneCanvasFileName,
   dataUrlToBlob,
@@ -3597,13 +3598,18 @@ export const handlePreviewClick = (deps, payload) => {
       store.showPreviewSceneId({ sceneId, sectionId, lineId });
       store.setSkipNextEditorBlurDraftFlush({ value: false });
       render();
-    } catch {
+    } catch (error) {
       store.setSkipNextEditorBlurDraftFlush({ value: false });
+      console.error("[sceneEditor] Failed to open preview", error);
       appService?.showAlert({
-        message: didPersistDraft
-          ? (copy.failedOpenPreview ?? "Failed to open preview")
-          : (copy.failedSaveBeforePreview ??
-            "Failed to save scene changes before preview"),
+        message: withErrorDetails(
+          didPersistDraft
+            ? (copy.failedOpenPreview ?? "Failed to open preview")
+            : (copy.failedSaveBeforePreview ??
+                "Failed to save scene changes before preview"),
+          error,
+          copy.errorDetailsLabel ?? "Details:",
+        ),
         title: copy.errorTitle ?? "Error",
       });
     }

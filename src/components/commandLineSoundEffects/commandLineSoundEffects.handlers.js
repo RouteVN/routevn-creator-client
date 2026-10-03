@@ -253,7 +253,7 @@ export const handleWindowPointerCancel = (deps, payload) => {
 };
 
 export const handleSoundDoubleClick = (deps, payload) => {
-  const { store, render } = deps;
+  const { store, render, audioService } = deps;
   payload._event.stopPropagation();
   const { channelId, soundId } = selectSoundFromEvent(store, payload._event);
   const sound = store.selectSoundById({ channelId, soundId });
@@ -263,6 +263,9 @@ export const handleSoundDoubleClick = (deps, payload) => {
     return;
   }
 
+  // Start audio inside the tap. The player starts only after loading its
+  // file, and iOS can refuse a start outside a tap.
+  void audioService.unlock();
   store.openAudioPlayer({
     fileId: resource.fileId,
     fileName: resource.name,
@@ -455,7 +458,7 @@ export const handleResourceItemClick = (deps, payload) => {
 };
 
 export const handleResourceItemDoubleClick = (deps, payload) => {
-  const { store, render } = deps;
+  const { store, render, audioService } = deps;
   const resourceId = payload._event.currentTarget.dataset.resourceId;
   const selectedItem = store.selectSoundItemById({ itemId: resourceId });
 
@@ -464,6 +467,9 @@ export const handleResourceItemDoubleClick = (deps, payload) => {
   }
 
   store.setTempSelectedResource({ resourceId });
+  // Start audio inside the tap. The player starts only after loading its
+  // file, and iOS can refuse a start outside a tap.
+  void audioService.unlock();
   store.openAudioPlayer({
     fileId: selectedItem.fileId,
     fileName: selectedItem.name,

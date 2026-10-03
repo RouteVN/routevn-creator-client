@@ -1,6 +1,7 @@
 import { createAppShellService } from "./appShellService.js";
 import { createFileSelectionService } from "./fileSelectionService.js";
 import { createProjectEntriesService } from "./projectEntriesService.js";
+import { createTouchLayoutService } from "./touchLayoutService.js";
 import { createUserConfigService } from "./userConfigService.js";
 import { getLocalProjectPathFromPayload } from "../../../internal/localProjectRoute.js";
 import { normalizeTheme } from "../../../internal/theme.js";
@@ -23,6 +24,8 @@ export const createAppServiceCore = ({
   errorTracker = noopErrorTracker,
   platformAdapter = {},
   triggerTestCrash,
+  windowMetricsClient,
+  uiConfig,
 }) => {
   const getCurrentProjectId = () => {
     return router.getPayload()?.p ?? "";
@@ -87,6 +90,11 @@ export const createAppServiceCore = ({
     },
   });
 
+  const touchLayoutService = createTouchLayoutService({
+    windowMetricsClient,
+    uiConfig,
+  });
+
   const getTheme = () => {
     return normalizeTheme(userConfigService.getUserConfig("appearance.theme"));
   };
@@ -102,6 +110,7 @@ export const createAppServiceCore = ({
     ...fileSelectionService,
     ...appShellService,
     ...userConfigService,
+    ...touchLayoutService,
 
     async initUserConfig() {
       const userConfig = await userConfigService.initUserConfig();

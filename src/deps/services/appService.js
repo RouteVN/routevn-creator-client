@@ -7,7 +7,6 @@ import { assertSafeProjectFileId } from "../../internal/projectFileIds.js";
 import { copyTextToClipboard } from "../../internal/copyText.js";
 import { createNativeApplicationIdentifier } from "../../internal/nativeApplicationIdentifier.js";
 import { normalizeProjectLanguage } from "../../internal/projectLanguage.js";
-import { createProgressDialog } from "../clients/progressDialog.js";
 import { setDiscordPresenceDetails as setDiscordPresenceDetailsClient } from "../clients/tauri/discordPresence.js";
 
 const deriveProjectNameFromPath = (projectPath) => {
@@ -252,8 +251,9 @@ export const createAppService = (params) => {
   return {
     ...appService,
 
+    // Through the UI client, so background alerts wait for it to close.
     showProgressDialog(options) {
-      return createProgressDialog(options);
+      return params.globalUI.showProgressDialog(options);
     },
 
     copyText(value) {

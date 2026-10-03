@@ -23,6 +23,7 @@ import { createGraphicsService } from "./deps/services/graphicsService.js";
 import { createBundleInstructions } from "./deps/services/shared/projectExportService.js";
 import { deriveProjectFormatVersionFromAppVersion } from "./internal/projectCompatibility.js";
 import { DEFAULT_PROJECT_RESOLUTION } from "./internal/projectResolution.js";
+import { withErrorDetails } from "./internal/errorDetails.js";
 import { registerPrimitives } from "./primitives/registerPrimitives.js";
 import tauriConfig from "../src-tauri/tauri.conf.json";
 import { createGlobalUIClient } from "./deps/clients/globalUI.js";
@@ -38,6 +39,7 @@ registerPrimitives();
 const iosAudioRuntime = createMobileAudioRuntime();
 const iosGraphicsAudioOutput = createIOSGraphicsAudioOutput({
   runtime: iosAudioRuntime,
+  onError: (error) => alertPreviewAudioFailure(error),
 });
 configureAudioRuntime(iosGraphicsAudioOutput.graphicsRuntime);
 
@@ -200,6 +202,8 @@ const appService = createAppService({
   audioService,
   projectService,
   subject,
+  windowMetricsClient,
+  uiConfig,
   triggerTestCrash: (kind) => callIOSBridge("triggerTestCrash", { kind }),
 });
 await appService.initUserConfig();
@@ -306,18 +310,23 @@ const apiService = createApiService({
   baseUrl: readIOSEnv("ROUTEVN_API_ENDPOINT", "https://api.example.invalid"),
 });
 
+const alertPreviewAudioFailure = (error) => {
+  const copy = appService.getAppCopy();
+  appService.showAlertWhenIdle({
+    title: copy.errorTitle ?? "Error",
+    message: withErrorDetails(
+      copy.failedStartPreviewAudio ??
+        "Could not start preview audio. Close and reopen the preview.",
+      error,
+      copy.errorDetailsLabel ?? "Details:",
+    ),
+  });
+};
+
 const graphicsService = await createGraphicsService({
   subject,
   audioOutput: iosGraphicsAudioOutput,
-  onAudioOutputError: () => {
-    const copy = appService.getAppCopy();
-    appService.showToast({
-      message:
-        copy.failedStartPreviewAudio ??
-        "Could not start preview audio. Close and reopen the preview.",
-      status: "error",
-    });
-  },
+  onAudioOutputError: alertPreviewAudioFailure,
 });
 const dialogueQueueService = createPendingQueueService({ debounceMs: 2000 });
 

@@ -214,6 +214,58 @@ describe("graphicsService", () => {
     }
   });
 
+  it("hands a failed engine render to the owner instead of leaving an unhandled rejection", async () => {
+    const failure = new Error("Render failed");
+    const onRenderError = vi.fn();
+    createAssetBufferManagerMock.mockReturnValue({ clear: vi.fn() });
+    createRouteEngineMock.mockReturnValue({
+      init: vi.fn(),
+      selectRenderState: vi.fn(() => ({
+        id: "render-failure",
+        elements: [],
+        audio: [],
+        animations: [],
+      })),
+      selectPresentationState: vi.fn(() => undefined),
+      selectPresentationChanges: vi.fn(() => undefined),
+      selectSectionLineChanges: vi.fn(() => []),
+      handleActions: vi.fn(),
+    });
+    const { createGraphicsService } = await import(
+      "../../src/deps/services/graphicsService.js"
+    );
+    const service = await createGraphicsService({
+      subject: { dispatch: vi.fn() },
+      onRenderError,
+    });
+    try {
+      await service.init({
+        canvas: {
+          children: [],
+          appendChild: vi.fn(),
+          removeChild: vi.fn(),
+        },
+        width: 1920,
+        height: 1080,
+      });
+      service.initRouteEngine({
+        screen: { width: 1920, height: 1080 },
+        story: { scenes: {} },
+        resources: {},
+      });
+      routeGraphicsInstance.render.mockClear();
+      routeGraphicsInstance.render.mockRejectedValueOnce(failure);
+
+      service.engineRenderCurrentState();
+
+      await vi.waitFor(() => {
+        expect(onRenderError).toHaveBeenCalledWith(failure);
+      });
+    } finally {
+      await service.destroy();
+    }
+  });
+
   it("ignores stale queued asset loads after runtime destroy", async () => {
     let resolveLoad;
     const bufferManager = {
@@ -2772,6 +2824,58 @@ describe("graphicsService", () => {
     expect(routeGraphicsInstance.render).toHaveBeenCalledWith(
       transitionRenderState,
     );
+  });
+
+  it("uses renderer snapshot mode for editor frames and completion callbacks only", async () => {
+    audioAssetApi.getAsset.mockReturnValue({});
+    const { createGraphicsService } = await import(
+      "../../src/deps/services/graphicsService.js"
+    );
+    const service = await createGraphicsService({ subject: { dispatch() {} } });
+    await service.init({ width: 64, height: 64 });
+    const projectData = { resources: {}, story: { scenes: {} } };
+    const state = {
+      elements: [],
+      animations: [],
+      audio: [{ id: "bgm:main", type: "sound", src: "track-one" }],
+      audioEffects: [
+        {
+          id: "fade-one",
+          type: "audio-transition",
+          targetId: "bgm:main",
+          properties: {
+            volume: { enter: { keyframes: [{ value: 100, duration: 1000 }] } },
+          },
+        },
+      ],
+    };
+    service.initRouteEngine(projectData, { audioEffectsMode: "snapshot" });
+    service.engineRenderCurrentState({ renderState: state });
+    expect(routeGraphicsInstance.render).toHaveBeenLastCalledWith(state, {
+      audioEffectsMode: "snapshot",
+    });
+    createEffectsHandlerMock.mock.lastCall[0].routeGraphics.render(state);
+    expect(routeGraphicsInstance.render).toHaveBeenLastCalledWith(state, {
+      audioEffectsMode: "snapshot",
+    });
+
+    service.setEngineAudioMuted(true);
+    service.engineRenderCurrentState({ renderState: state });
+    expect(routeGraphicsInstance.render).toHaveBeenLastCalledWith(
+      { ...state, audio: [], audioEffects: [] },
+      { audioEffectsMode: "snapshot" },
+    );
+    createEffectsHandlerMock.mock.lastCall[0].routeGraphics.render(state);
+    expect(routeGraphicsInstance.render).toHaveBeenLastCalledWith(
+      { ...state, audio: [], audioEffects: [] },
+      { audioEffectsMode: "snapshot" },
+    );
+
+    service.setEngineAudioMuted(false);
+    service.initRouteEngine(projectData);
+    service.engineRenderCurrentState({ renderState: state });
+    expect(routeGraphicsInstance.render).toHaveBeenLastCalledWith(state);
+    await service.destroy();
   });
 
   it("ignores delayed render effects from a replaced engine", async () => {

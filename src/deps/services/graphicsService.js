@@ -642,6 +642,7 @@ export const createGraphicsService = async ({
   projectMediaOrigin,
   audioOutput,
   onAudioOutputError,
+  onRenderError,
 } = {}) => {
   let routeGraphics;
   let routeGraphicsInitPromise;
@@ -653,6 +654,7 @@ export const createGraphicsService = async ({
     return pending;
   };
   let engine;
+  let engineAudioEffectsMode;
   let engineGeneration = 0;
   let assetBufferManager;
   let loadedAssetTypes = new Map();
@@ -1627,6 +1629,7 @@ export const createGraphicsService = async ({
     routeGraphics = undefined;
     engineGeneration += 1;
     engine = undefined;
+    engineAudioEffectsMode = undefined;
     routeEngineProjectData = undefined;
     enableGlobalKeyboardBindings = true;
     beforeHandleActions = undefined;
@@ -2087,14 +2090,15 @@ export const createGraphicsService = async ({
 
     if (
       effectiveSkipAudio &&
-      Array.isArray(nextRenderState?.audio) &&
-      nextRenderState.audio.length > 0
+      (nextRenderState?.audio?.length > 0 ||
+        nextRenderState?.audioEffects?.length > 0)
     ) {
       invalidateDeferredAudioRender();
       nextRenderState = {
         ...nextRenderState,
         audio: [],
       };
+      if (nextRenderState.audioEffects) nextRenderState.audioEffects = [];
     }
 
     const requestedAudioKeys = getRenderStateAudioKeys(nextRenderState);
@@ -2155,7 +2159,20 @@ export const createGraphicsService = async ({
       return;
     }
 
-    routeGraphics.render(nextRenderState);
+    const rendered =
+      engineAudioEffectsMode === "snapshot"
+        ? routeGraphics.render(nextRenderState, {
+            audioEffectsMode: "snapshot",
+          })
+        : routeGraphics.render(nextRenderState);
+    // render() is async. Left alone, a failed render is only an anonymous
+    // unhandled rejection, so hand it to the owner when there is one.
+    Promise.resolve(rendered).catch((error) => {
+      if (!onRenderError) {
+        throw error;
+      }
+      onRenderError(error);
+    });
     void pruneDecodedAudioCache(retainedAudioKeys);
   };
 
@@ -2575,6 +2592,7 @@ export const createGraphicsService = async ({
       engineGeneration += 1;
       const currentEngineGeneration = engineGeneration;
       routeEngineProjectData = projectData;
+      engineAudioEffectsMode = options.audioEffectsMode;
       enableGlobalKeyboardBindings =
         options.enableGlobalKeyboardBindings ?? true;
       const suppressRenderEffects = options.suppressRenderEffects === true;

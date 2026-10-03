@@ -1,3 +1,5 @@
+import { normalizeParticleModules } from "./particles.js";
+
 const PREVIEW_BACKGROUND = "#000000";
 const FALLBACK_ASPECT_RATIO = "16 / 9";
 
@@ -77,10 +79,10 @@ export const createParticlePreviewState = (
     y: 0,
     width,
     height,
-    modules: structuredClone(particle.modules ?? {}),
+    modules: normalizeParticleModules(structuredClone(particle.modules ?? {})),
   };
 
-  if (particle.seed !== undefined && particle.seed !== null) {
+  if (Number.isFinite(particle.seed)) {
     element.seed = particle.seed;
   }
 
