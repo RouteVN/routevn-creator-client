@@ -7,6 +7,11 @@ import {
   handleCheckForUpdates,
   handleBeforeMount,
 } from "../../src/pages/about/about.handlers.js";
+import {
+  createInitialState,
+  selectViewData,
+} from "../../src/pages/about/about.store.js";
+import { EN_I18N } from "../support/i18n.js";
 
 const defaultCapability = JSON.parse(
   readFileSync(
@@ -75,5 +80,23 @@ describe("about handlers", () => {
     expect(openerPermission.allow).toContainEqual({
       url: "http://localhost:3003/*",
     });
+  });
+
+  it("allows every social link through the Tauri opener", () => {
+    const { allow } = defaultCapability.permissions.find(
+      (permission) => permission.identifier === "opener:allow-open-url",
+    );
+    const isAllowed = (href) =>
+      allow.some(({ url }) =>
+        url.endsWith("*") ? href.startsWith(url.slice(0, -1)) : href === url,
+      );
+    const { social } = selectViewData({
+      state: createInitialState(),
+      i18n: EN_I18N,
+    });
+
+    expect(
+      social.map(({ href }) => href).filter((href) => !isAllowed(href)),
+    ).toEqual([]);
   });
 });

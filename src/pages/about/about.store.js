@@ -38,6 +38,18 @@ const social = [
     href: "https://x.com/routevn",
   },
   {
+    id: "instagram",
+    label: "Instagram",
+    svg: "instagram",
+    href: "https://www.instagram.com/routevn",
+  },
+  {
+    id: "tiktok",
+    label: "TikTok",
+    svg: "tiktok",
+    href: "https://www.tiktok.com/@routevn",
+  },
+  {
     id: "all-social",
     label: "All social media",
     svg: "",
