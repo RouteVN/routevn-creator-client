@@ -410,9 +410,23 @@ const getEditorPayload = (appService) =>
   resolveLayoutEditorPayload(appService.getPayload() || {});
 
 const queuePendingLayoutEditorPersist = (
-  store,
+  deps,
   { layoutId, resourceType, selectedItemId, updatedItem, replace } = {},
 ) => {
+  const { store } = deps;
+  // Only one edit waits for the debounced save. An edit to another element
+  // would replace it unsaved, so save the waiting one now. Saves run in
+  // order, and the newer edit stays on top when this one finishes.
+  const waitingPayload = store.selectPendingPersistPayload();
+  if (
+    waitingPayload &&
+    (waitingPayload.layoutId !== layoutId ||
+      waitingPayload.resourceType !== resourceType ||
+      waitingPayload.selectedItemId !== selectedItemId)
+  ) {
+    void handleDebouncedUpdate(deps, waitingPayload);
+  }
+
   const pendingPayload = {
     layoutId,
     resourceType,
@@ -1905,7 +1919,7 @@ export const handleLayoutEditorCanvasDragUpdate = (deps, payload) => {
   const resourceType = store.selectLayoutResourceType();
   const selectedItemId = payload._event.detail?.itemId || updatedItem.id;
   const currentItem = store.selectItemDataById({ itemId: selectedItemId });
-  const pendingPayload = queuePendingLayoutEditorPersist(store, {
+  const pendingPayload = queuePendingLayoutEditorPersist(deps, {
     layoutId,
     resourceType,
     selectedItemId,
@@ -1942,7 +1956,7 @@ export const handleLayoutEditorCanvasUpdate = async (deps, payload) => {
   const layoutId = store.selectLayoutId();
   const resourceType = store.selectLayoutResourceType();
   const selectedItemId = payload._event.detail?.itemId || updatedItem.id;
-  const pendingPayload = queuePendingLayoutEditorPersist(store, {
+  const pendingPayload = queuePendingLayoutEditorPersist(deps, {
     layoutId,
     resourceType,
     selectedItemId,
@@ -2105,7 +2119,7 @@ export const handleLayoutEditPanelUpdateHandler = async (deps, payload) => {
     updatedItem: updatedItem,
   });
 
-  const pendingPayload = queuePendingLayoutEditorPersist(store, {
+  const pendingPayload = queuePendingLayoutEditorPersist(deps, {
     layoutId,
     resourceType,
     selectedItemId,
