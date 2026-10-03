@@ -159,7 +159,7 @@ template:
                   - rtgl-view h=48 w=f d=h bgc=bg bwb=xs ph=md av=c:
                       - rtgl-segmented-control#rightPanelModeToggle w=1fg s=sm no-clear :selectedValue=${rightPanelMode} :options=${rightPanelModeOptions}: null
                       - $if showRightPanelSaveButton:
-                          - rtgl-button#saveButton ml=sm: ${savePreviewButton}
+                          - 'rtgl-button#saveButton sq pre=save v=se ml=sm aria-label="${savePreviewButton}" title="${savePreviewButton}"': null
                   - 'rtgl-view d=v w=f h=1fg style="min-height: 0; ${rightPanelEditStyle}"':
                       - $if detailPanelSelectedItemId:
                           - rtgl-view d=v w=f h=f:
