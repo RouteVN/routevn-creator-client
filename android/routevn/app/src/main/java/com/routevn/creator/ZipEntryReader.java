@@ -222,7 +222,7 @@ final class ZipEntryReader implements Closeable {
                         "invalidArchive",
                         "Entry needs a preset dictionary: " + entry.name
                     );
-                } else if (inflater.needsInput() && inputRemaining == 0) {
+                } else if (!inflater.finished() && inflater.needsInput() && inputRemaining == 0) {
                     throw new ProjectImportException(
                         "invalidArchive",
                         "Deflate stream is truncated: " + entry.name

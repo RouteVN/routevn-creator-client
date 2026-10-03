@@ -152,6 +152,19 @@ public class ProjectArchiveExtractorTest {
         assertFalse(staging.toPath().resolve("files/abc").toFile().exists());
     }
 
+    @Test public void extractsEmptyDeflatedEntries() throws Exception {
+        // ZipOutputStream and Python's zipfile write a two-byte deflate stream
+        // for an empty entry; the inflater finishes without producing output.
+        File staging = extract(new TestZipArchive()
+            .addStored("project.db", new byte[] { 1 }, UNIX_REGULAR)
+            .addDeflated("project.db-wal", new byte[0], UNIX_REGULAR)
+            .addDeflated("files/empty", new byte[0], UNIX_REGULAR));
+
+        assertEquals(0, staging.toPath().resolve("project.db-wal").toFile().length());
+        assertTrue(staging.toPath().resolve("files/empty").toFile().isFile());
+        assertEquals(0, staging.toPath().resolve("files/empty").toFile().length());
+    }
+
     @Test public void extractsProjectAtZipRoot() throws Exception {
         byte[] database = new byte[] { 1, 2, 3 };
         File staging = extract(new TestZipArchive()
