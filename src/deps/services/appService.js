@@ -7,7 +7,10 @@ import { assertSafeProjectFileId } from "../../internal/projectFileIds.js";
 import { copyTextToClipboard } from "../../internal/copyText.js";
 import { createNativeApplicationIdentifier } from "../../internal/nativeApplicationIdentifier.js";
 import { normalizeProjectLanguage } from "../../internal/projectLanguage.js";
+import { deriveImportFolderName } from "../../internal/projectImportFolderName.js";
 import { setDiscordPresenceDetails as setDiscordPresenceDetailsClient } from "../clients/tauri/discordPresence.js";
+import { createTauriProjectImportHost } from "../clients/tauri/projectImportHost.js";
+import { createProjectImportService } from "./shared/projectImportService.js";
 
 const deriveProjectNameFromPath = (projectPath) => {
   if (typeof projectPath !== "string" || projectPath.length === 0) {
@@ -27,6 +30,26 @@ const cloneRunningStaticWebServers = () => {
 };
 
 export const createAppService = (params) => {
+  const projectImportHost = createTauriProjectImportHost();
+  const projectImport = createProjectImportService({
+    host: projectImportHost,
+  });
+
+  // Rule A for a project folder on disk: the files directly inside `files/`
+  // are renamed in place so each is stored under its file id.
+  const normalizeProjectFileNames = async (folderPath) => {
+    const renames = await projectImport.planFolderFileRenames({
+      list: projectImportHost.createFolderLister(folderPath),
+    });
+    if (renames.length === 0) {
+      return;
+    }
+    await projectImportHost.applyFileRenames({
+      directory: await join(folderPath, "files"),
+      renames,
+    });
+  };
+
   const platformAdapter = {
     isDuplicateProjectEntry: ({ entries, entry }) => {
       return entries.some(
@@ -97,6 +120,10 @@ export const createAppService = (params) => {
       loadProjectIcon,
       projectService,
     }) => {
+      // Local folder imports normalize file ids in place (extension
+      // stripping) before the folder is validated and registered.
+      await normalizeProjectFileNames(folderPath);
+
       const validation =
         await platformAdapter.validateProjectFolder(folderPath);
       if (!validation.isValid) {
@@ -262,6 +289,51 @@ export const createAppService = (params) => {
 
     setDiscordPresenceDetails(options) {
       return setDiscordPresenceDetailsClient(options);
+    },
+
+    async openArchivePicker() {
+      throw new Error("Archive import is not supported on the desktop app.");
+    },
+
+    async importProjectFromArchive() {
+      throw new Error("Archive import is not supported on the desktop app.");
+    },
+
+    // URL import on desktop: the archive is downloaded into a temporary staging
+    // folder inside the chosen destination, extracted, and the project folder
+    // is moved into a new subfolder named after the download. The folder is
+    // registered in place, and removed again if registering fails.
+    async importProjectFromUrl({ url, destinationFolder, onProgress } = {}) {
+      if (!destinationFolder) {
+        throw new Error("importFailed: Destination folder is required.");
+      }
+
+      return projectImport.importFromUrl({
+        url,
+        parent: destinationFolder,
+        onProgress,
+        finish: async ({ staging, path, meta }) => {
+          const projectPath = await projectImportHost.moveToAvailableFolder({
+            staging,
+            path,
+            parent: destinationFolder,
+            name: deriveImportFolderName(meta),
+          });
+          try {
+            return await appService.openExistingProject(projectPath);
+          } catch (error) {
+            try {
+              await projectImportHost.removeFolder(projectPath);
+            } catch (removeError) {
+              console.error(
+                "Failed to remove the imported folder:",
+                removeError,
+              );
+            }
+            throw error;
+          }
+        },
+      });
     },
 
     async startStaticWebServer({ rootPath } = {}) {

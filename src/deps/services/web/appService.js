@@ -153,6 +153,20 @@ export const createAppService = (params) => {
       return copyTextToClipboard(value);
     },
 
+    async openArchivePicker() {
+      throw new Error("Archive import is not supported on the web.");
+    },
+
+    async importProjectFromArchive() {
+      throw new Error("Archive import is not supported on the web.");
+    },
+
+    async importProjectFromUrl() {
+      throw new Error(
+        "Importing projects from a URL is not supported on the web.",
+      );
+    },
+
     async startStaticWebServer() {
       throw new Error(
         "Static web server is only available in the desktop app.",

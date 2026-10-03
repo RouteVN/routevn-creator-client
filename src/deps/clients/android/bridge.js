@@ -6,6 +6,11 @@ import {
 const BRIDGE_PROTOCOL_VERSION = 1;
 const BRIDGE_RESPONSE_TIMEOUT_MS = 30 * 60 * 1000;
 
+// For native calls that legitimately outlive the default response timeout, such
+// as downloading and importing a large archive over a slow connection. The
+// native side bounds those calls itself (connect and stall timeouts).
+export const NO_BRIDGE_TIMEOUT = Number.POSITIVE_INFINITY;
+
 let nextBridgeRequestId = 1;
 let configuredBridge;
 const pendingBridgeRequests = new Map();
@@ -71,7 +76,11 @@ const ensureAndroidBridgeListener = () => {
   return bridge;
 };
 
-export const callAndroidBridge = async (method, payload = {}) => {
+export const callAndroidBridge = async (
+  method,
+  payload = {},
+  { timeoutMs = BRIDGE_RESPONSE_TIMEOUT_MS } = {},
+) => {
   const startedAt = getNavigationTimingNow();
   const bridge = ensureAndroidBridgeListener();
 
@@ -83,10 +92,12 @@ export const callAndroidBridge = async (method, payload = {}) => {
     nextBridgeRequestId += 1;
 
     const value = await new Promise((resolve, reject) => {
-      const timeoutId = setTimeout(() => {
-        pendingBridgeRequests.delete(requestId);
-        reject(new Error(`Android bridge call timed out: ${method}`));
-      }, BRIDGE_RESPONSE_TIMEOUT_MS);
+      const timeoutId = Number.isFinite(timeoutMs)
+        ? setTimeout(() => {
+            pendingBridgeRequests.delete(requestId);
+            reject(new Error(`Android bridge call timed out: ${method}`));
+          }, timeoutMs)
+        : undefined;
 
       pendingBridgeRequests.set(requestId, {
         method,

@@ -19,6 +19,7 @@
 15. [macOS Player Export Plan](./macos-player-export-plan.md)
 16. [Android Project Backup Design](./android-backup.md)
 17. [Client Updates And Mock Server](./client-updates.md)
+18. [Project Import](./project-import.md)
 
 ## Runbooks
 

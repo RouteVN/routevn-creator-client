@@ -1,5 +1,7 @@
 import { createAppServiceCore } from "../shared/appServiceCore.js";
 import { callIOSBridge } from "../../clients/ios/bridge.js";
+import { iosProjectImportHost } from "../../clients/ios/projectImportHost.js";
+import { createProjectImportService } from "../shared/projectImportService.js";
 import { getIOSProjectFileUrl } from "./projectFileUrls.js";
 import { generateId } from "../../../internal/id.js";
 import { copyTextToClipboard } from "../../../internal/copyText.js";
@@ -69,8 +71,93 @@ const toIOSProjectEntry = ({ project, existingEntry } = {}) => {
   };
 };
 
+// Shared registration tail for every iOS import source (folder, zip, URL):
+// build the project entry from the bridge result, register it, and restore
+// it to discovery if it had been removed before.
+const createRegisterImportedIOSProject = ({ appDb, getFileDisplayPath }) => {
+  return async ({
+    importedProject,
+    addProjectEntry,
+    loadProjectIcon,
+    projectService,
+  }) => {
+    const projectId = importedProject.id;
+    if (!projectId) {
+      throw new Error("Imported project is missing an id.");
+    }
+
+    // Native reports alreadyImported when the library already holds this
+    // project. A listed project is left alone: no list entry merge, nothing
+    // changed on disk. Only a project that was removed from the list is
+    // restored by importing it again.
+    const removedProjectIds = (await appDb.get("iosRemovedProjectIds")) ?? [];
+    const isRemoved = removedProjectIds.includes(projectId);
+    if (importedProject.alreadyImported === true && !isRemoved) {
+      throw new Error("projectExists: This project is already in the library.");
+    }
+
+    // A hidden project is restored where it is. Older builds named its folder
+    // after the id, so rename it after the project, like every other import.
+    let projectFilePath = importedProject.projectFilePath;
+    if (importedProject.alreadyImported === true) {
+      const renamed = await callIOSBridge("renameLegacyProjectFolder", {
+        projectId,
+      });
+      projectFilePath = renamed.projectFilePath;
+    }
+
+    const importedName = importedProject.name?.trim?.() ?? "";
+    let projectName = "Untitled Project";
+    if (importedName) {
+      projectName = importedName;
+    }
+
+    const projectEntry = {
+      id: projectId,
+      projectFilePath,
+      name: projectName,
+      description: importedProject.description ?? "",
+      language: normalizeProjectLanguage(importedProject.language),
+      iconFileId: importedProject.iconFileId ?? null,
+      createdAt: Date.now(),
+      lastOpenedAt: null,
+    };
+
+    await addProjectEntry(projectEntry);
+
+    // Explicitly importing a removed project restores it to discovery.
+    if (isRemoved) {
+      await appDb.set(
+        "iosRemovedProjectIds",
+        removedProjectIds.filter((id) => id !== projectId),
+      );
+    }
+
+    const fullProject = {
+      ...projectEntry,
+      projectFileDisplayPath: getFileDisplayPath(projectEntry.projectFilePath),
+    };
+    if (projectEntry.iconFileId) {
+      const iconResult = await loadProjectIcon({
+        entry: projectEntry,
+        projectService,
+      });
+      if (typeof iconResult === "string") {
+        fullProject.iconUrl = iconResult;
+      } else if (iconResult?.url) {
+        fullProject.iconUrl = iconResult.url;
+      }
+    }
+
+    return fullProject;
+  };
+};
+
 export const createAppService = (params) => {
   const appDb = params.db;
+  const projectImport = createProjectImportService({
+    host: iosProjectImportHost,
+  });
   const projectFolderSetup = createIOSProjectFolderSetup({
     filePicker: params.filePicker,
   });
@@ -79,6 +166,11 @@ export const createAppService = (params) => {
       filePath,
       projectFolderSetup.getStatus().deviceName ?? "iPhone",
     );
+
+  const registerImportedIOSProject = createRegisterImportedIOSProject({
+    appDb,
+    getFileDisplayPath,
+  });
 
   const syncIOSProjectEntriesFromStorage = async () => {
     const discoveredProjects = await callIOSBridge("listProjectFolders");
@@ -169,61 +261,26 @@ export const createAppService = (params) => {
         throw new Error("Project folder is required.");
       }
 
+      // Rule A: the library copy stores each file under its file id. The copy
+      // is renamed, never the folder the user picked.
+      const fileRenames = await projectImport.planFolderFileRenames({
+        list: (path) =>
+          iosProjectImportHost.listDirectory(
+            { uri: folderSelection.uri },
+            path,
+          ),
+      });
       const importedProject = await callIOSBridge("importProjectFolder", {
         uri: folderSelection.uri,
+        fileRenames,
       });
-      const projectId = importedProject.id;
-      if (!projectId) {
-        throw new Error("Imported project is missing an id.");
-      }
 
-      const importedName = importedProject.name?.trim?.() ?? "";
-      let projectName = "Untitled Project";
-      if (importedName) {
-        projectName = importedName;
-      }
-
-      const projectEntry = {
-        id: projectId,
-        projectFilePath: importedProject.projectFilePath,
-        name: projectName,
-        description: importedProject.description ?? "",
-        language: normalizeProjectLanguage(importedProject.language),
-        iconFileId: importedProject.iconFileId ?? null,
-        createdAt: Date.now(),
-        lastOpenedAt: null,
-      };
-
-      await addProjectEntry(projectEntry);
-
-      // Explicitly importing a removed project restores it to discovery.
-      const removedProjectIds = (await appDb.get("iosRemovedProjectIds")) ?? [];
-      if (removedProjectIds.includes(projectId)) {
-        await appDb.set(
-          "iosRemovedProjectIds",
-          removedProjectIds.filter((id) => id !== projectId),
-        );
-      }
-
-      const fullProject = {
-        ...projectEntry,
-        projectFileDisplayPath: getFileDisplayPath(
-          projectEntry.projectFilePath,
-        ),
-      };
-      if (projectEntry.iconFileId) {
-        const iconResult = await loadProjectIcon({
-          entry: projectEntry,
-          projectService,
-        });
-        if (typeof iconResult === "string") {
-          fullProject.iconUrl = iconResult;
-        } else if (iconResult?.url) {
-          fullProject.iconUrl = iconResult.url;
-        }
-      }
-
-      return fullProject;
+      return registerImportedIOSProject({
+        importedProject,
+        addProjectEntry,
+        loadProjectIcon,
+        projectService,
+      });
     },
 
     createNewProject: async ({
@@ -331,6 +388,24 @@ export const createAppService = (params) => {
     },
   };
 
+  // Zip and URL imports end the same way: the extracted staging folder goes
+  // through the bridge's storage step, then the project is registered.
+  const importStagedProject = async ({ run }) => {
+    const importedProject = await run(({ staging, path }) =>
+      callIOSBridge("importProjectFolder", {
+        stagingId: staging.stagingId,
+        path,
+      }),
+    );
+
+    return registerImportedIOSProject({
+      importedProject,
+      addProjectEntry: appService.addProjectEntry,
+      loadProjectIcon: platformAdapter.loadProjectIcon,
+      projectService: params.projectService,
+    });
+  };
+
   const appService = createAppServiceCore({
     ...params,
     platformAdapter,
@@ -357,6 +432,29 @@ export const createAppService = (params) => {
       return projectFolderSetup.getStatus().configured
         ? path
         : "/project-folder-setup";
+    },
+
+    async openArchivePicker(options = {}) {
+      const archive = await params.filePicker.openArchivePicker(options);
+      return archive ?? undefined;
+    },
+
+    async importProjectFromArchive({ uri, onProgress } = {}) {
+      if (!uri) {
+        throw new Error("importFailed: Archive uri is required.");
+      }
+
+      return importStagedProject({
+        run: (finish) =>
+          projectImport.importFromArchive({ uri, onProgress, finish }),
+      });
+    },
+
+    async importProjectFromUrl({ url, onProgress } = {}) {
+      return importStagedProject({
+        run: (finish) =>
+          projectImport.importFromUrl({ url, onProgress, finish }),
+      });
     },
 
     showProgressDialog(options) {

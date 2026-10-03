@@ -167,6 +167,7 @@ describe("iOS project file paths", () => {
     const values = new Map();
     callIOSBridge.mockImplementation(async (method) => {
       if (method === "listProjectFolders") return structuredClone(projects);
+      if (method === "listImportDirectory") return { entries: [] };
       if (method === "importProjectFolder") return projects[0];
       throw new Error(`Unexpected bridge call: ${method}`);
     });

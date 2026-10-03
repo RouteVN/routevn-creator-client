@@ -71,14 +71,17 @@ import java.net.URLConnection;
 import java.nio.charset.StandardCharsets;
 import java.security.KeyStore;
 import java.text.SimpleDateFormat;
+import java.util.ArrayList;
 import java.util.Date;
 import java.util.HashMap;
 import java.util.Iterator;
+import java.util.List;
 import java.util.Locale;
 import java.util.Map;
 import java.util.HashSet;
 import java.util.Set;
 import java.util.UUID;
+import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.function.Consumer;
@@ -111,6 +114,7 @@ public class MainActivity extends Activity {
     private static final int ANDROID_FILE_PICKER_REQUEST_CODE = 3712;
     private static final int ANDROID_SAVE_FILE_PICKER_REQUEST_CODE = 3713;
     private static final int ANDROID_FOLDER_PICKER_REQUEST_CODE = 3714;
+    private static final int ANDROID_ARCHIVE_PICKER_REQUEST_CODE = 3715;
     private static final long SPLASH_READY_TIMEOUT_MS = 5000L;
     // A renderer lost this soon after its page started loading counts as a
     // rapid loss; this many in a row means the page cannot start.
@@ -202,8 +206,13 @@ public class MainActivity extends Activity {
     private boolean pendingAndroidFilePickerMultiple = false;
     private String pendingAndroidSaveFilePickerRequestId;
     private String pendingAndroidFolderPickerRequestId;
+    private String pendingAndroidArchivePickerRequestId;
     private final Handler mainHandler = new Handler(Looper.getMainLooper());
     private final ExecutorService bridgeExecutor =
+        Executors.newSingleThreadExecutor();
+    // Downloads and archive extraction can run for minutes; keep them off the
+    // bridge thread so the rest of the app's bridge calls are not held up.
+    private final ExecutorService importExecutor =
         Executors.newSingleThreadExecutor();
     private final Runnable finishSplashRunnable = this::finishSplash;
     private final Map<String, SQLiteDatabase> sqliteDatabases = new HashMap<>();
@@ -870,6 +879,7 @@ public class MainActivity extends Activity {
 
         projectBackup.close();
         backupExecutor.shutdownNow();
+        importExecutor.shutdownNow();
         // Cancellation is immediate; cleanup must wait behind storage work on
         // its own thread, not hold Activity destruction on media copies/hashes.
         bridgeExecutor.execute(() -> {
@@ -906,6 +916,11 @@ public class MainActivity extends Activity {
 
         if (requestCode == ANDROID_FOLDER_PICKER_REQUEST_CODE) {
             handleAndroidFolderPickerActivityResult(resultCode, data);
+            return;
+        }
+
+        if (requestCode == ANDROID_ARCHIVE_PICKER_REQUEST_CODE) {
+            handleAndroidArchivePickerActivityResult(resultCode, data);
             return;
         }
 
@@ -1228,6 +1243,25 @@ public class MainActivity extends Activity {
                 return;
             }
 
+            switch (method) {
+                case "createImportStaging":
+                case "removeImportStaging":
+                case "downloadImportFile":
+                case "copyImportFile":
+                case "listImportArchive":
+                case "extractImportArchive":
+                case "listImportDirectory":
+                    String importRequestId = requestId;
+                    JSONObject importPayload = payload;
+                    importExecutor.execute(() -> reply.accept(attachBridgeResponseMetadata(
+                        importRequestId,
+                        runImportMethod(method, importPayload)
+                    )));
+                    return;
+                default:
+                    break;
+            }
+
             String result = dispatchAndroidBridgeMethod(
                 method,
                 payload.toString()
@@ -1337,6 +1371,8 @@ public class MainActivity extends Activity {
                 return bridge.openSaveFilePicker(payloadJson);
             case "openFolderPicker":
                 return bridge.openFolderPicker(payloadJson);
+            case "openArchivePicker":
+                return bridge.openArchivePicker(payloadJson);
             case "importProjectFolder":
                 return bridge.importProjectFolder(payloadJson);
             case "exportProjectFolder":
@@ -1785,16 +1821,25 @@ public class MainActivity extends Activity {
             }
         }
 
-        public String importProjectFolder(String payloadJson) {
+        public String openArchivePicker(String payloadJson) {
             try {
                 JSONObject payload = new JSONObject(payloadJson);
-                JSONObject result = importProjectFolderFromTreeUri(
-                    payload.getString("uri"),
-                    payload.getString("projectId")
-                );
-                return bridgeSuccess(result);
+                String requestId = safePathSegment(payload.getString("requestId"));
+
+                runOnUiThread(() -> launchAndroidArchivePicker(requestId));
+                return bridgeSuccess(true);
             } catch (Exception error) {
                 return bridgeFailure(error);
+            }
+        }
+
+        public String importProjectFolder(String payloadJson) {
+            try {
+                return bridgeSuccess(
+                    MainActivity.this.importProjectFolder(new JSONObject(payloadJson))
+                );
+            } catch (Throwable error) {
+                return bridgeFailure(ProjectImportException.of(error));
             }
         }
 
@@ -3365,16 +3410,231 @@ public class MainActivity extends Activity {
         }
     }
 
-    private JSONObject importProjectFolderFromTreeUri(
-        String uriString,
-        String requestedProjectId
+    private File importRoot() {
+        return new File(getCacheDir(), "project-import");
+    }
+
+    private ImportStaging importStaging() {
+        return new ImportStaging(importRoot());
+    }
+
+    private ImportProgress importProgress(String stagingId) {
+        return new ImportProgress((current, total) -> {
+            JSONObject event = new JSONObject();
+            event.put("stagingId", stagingId);
+            event.put("current", current);
+            event.put("total", total);
+            sendAndroidProjectImportProgress(event);
+        });
+    }
+
+    /**
+     * The native import operations. JavaScript decides what to download,
+     * extract and rename; native only moves bytes and keeps paths inside the
+     * staging folder. Every failure message is "<code>: <detail>".
+     */
+    private String runImportMethod(String method, JSONObject payload) {
+        try {
+            JSONObject result = new JSONObject();
+            ImportStaging staging = importStaging();
+            String stagingId = payload.optString("stagingId");
+            switch (method) {
+                case "createImportStaging":
+                    result.put("stagingId", staging.create());
+                    break;
+                case "removeImportStaging":
+                    staging.remove(stagingId);
+                    break;
+                case "downloadImportFile": {
+                    ImportDownloader.Result download = new ImportDownloader().download(
+                        payload.getString("url"),
+                        staging.resolve(stagingId, payload.getString("path")),
+                        payload.getLong("maxBytes"),
+                        importProgress(stagingId)
+                    );
+                    result.put("finalUrl", download.finalUrl);
+                    if (download.contentDisposition != null) {
+                        result.put("contentDisposition", download.contentDisposition);
+                    }
+                    result.put("bytes", download.bytes);
+                    break;
+                }
+                case "copyImportFile": {
+                    File destination = staging.resolve(stagingId, payload.getString("path"));
+                    Uri uri = Uri.parse(payload.getString("uri"));
+                    try (InputStream input = getContentResolver().openInputStream(uri)) {
+                        if (input == null) {
+                            throw new ProjectImportException("importFailed", "Cannot read the selected file.");
+                        }
+                        result.put(
+                            "bytes",
+                            ImportStaging.copy(input, destination, payload.getLong("maxBytes"))
+                        );
+                    }
+                    break;
+                }
+                case "listImportArchive": {
+                    JSONArray entries = new JSONArray();
+                    for (ImportArchive.Entry entry : ImportArchive.list(
+                        staging.resolve(stagingId, payload.getString("path")),
+                        payload.getInt("maxEntries")
+                    )) {
+                        entries.put(new JSONObject()
+                            .put("name", entry.name)
+                            .put("size", entry.size)
+                            .put("isDirectory", entry.isDirectory));
+                    }
+                    result.put("entries", entries);
+                    break;
+                }
+                case "extractImportArchive": {
+                    JSONArray files = payload.getJSONArray("files");
+                    List<ImportArchive.Item> items = new ArrayList<>();
+                    for (int index = 0; index < files.length(); index += 1) {
+                        JSONObject file = files.getJSONObject(index);
+                        items.add(new ImportArchive.Item(file.getString("entry"), file.getString("path")));
+                    }
+                    result.put(
+                        "bytes",
+                        ImportArchive.extract(
+                            staging.resolve(stagingId, payload.getString("path")),
+                            staging.resolveDirectory(stagingId, payload.optString("destination")),
+                            items,
+                            payload.getLong("maxBytes"),
+                            importProgress(stagingId)
+                        )
+                    );
+                    result.put("files", items.size());
+                    break;
+                }
+                case "listImportDirectory": {
+                    String path = payload.optString("path");
+                    List<ImportStaging.Child> children = !payload.isNull("stagingId")
+                        ? ImportStaging.list(staging.resolveDirectory(stagingId, path))
+                        : listPickedDirectory(payload.getString("uri"), path);
+                    JSONArray entries = new JSONArray();
+                    for (ImportStaging.Child child : children) {
+                        entries.put(new JSONObject()
+                            .put("name", child.name)
+                            .put("kind", child.kind)
+                            .put("size", child.size));
+                    }
+                    result.put("entries", entries);
+                    break;
+                }
+                default:
+                    throw new IllegalArgumentException("Unsupported import method.");
+            }
+            return bridgeSuccess(result);
+        } catch (Throwable error) {
+            return bridgeFailure(ProjectImportException.of(error));
+        }
+    }
+
+    /** Lists a folder inside a picked tree uri; an empty path is the tree root. */
+    private List<ImportStaging.Child> listPickedDirectory(String treeUri, String path)
+        throws Exception {
+        Uri directory = getTreeRootDocumentUri(Uri.parse(treeUri));
+        if (!path.isEmpty()) {
+            if (!ImportStaging.isSafePath(path)) {
+                throw new ProjectImportException("importFailed", "Invalid folder path.");
+            }
+            for (String segment : path.split("/")) {
+                directory = findChildDocument(directory, segment, true);
+                if (directory == null) {
+                    throw new ProjectImportException("importFailed", "Folder not found.");
+                }
+            }
+        }
+        List<ImportStaging.Child> children = new ArrayList<>();
+        forEachChildDocument(directory, (childUri, name, mimeType, size) -> {
+            boolean isDirectory = DocumentsContract.Document.MIME_TYPE_DIR.equals(mimeType);
+            children.add(new ImportStaging.Child(name, isDirectory ? "directory" : "file", isDirectory ? 0 : size));
+            return false;
+        });
+        children.sort((a, b) -> a.name.compareTo(b.name));
+        return children;
+    }
+
+    /**
+     * Imports a project folder, either a picked folder ({uri}) or one that
+     * JavaScript prepared in a staging folder ({stagingId, path}), into app
+     * storage under a new project id. fileRenames are applied to files/ first.
+     */
+    private JSONObject importProjectFolder(JSONObject payload) throws Exception {
+        String projectId = safePathSegment(payload.getString("projectId"));
+        JSONArray renameArray = payload.optJSONArray("fileRenames");
+        List<String[]> renames = new ArrayList<>();
+        for (int index = 0; renameArray != null && index < renameArray.length(); index += 1) {
+            JSONObject rename = renameArray.getJSONObject(index);
+            renames.add(new String[] { rename.getString("from"), rename.getString("to") });
+        }
+        if (getProjectRoot(projectId).exists()) {
+            throw new IllegalArgumentException(
+                "Generated Android project storage already exists."
+            );
+        }
+
+        File importWorkDir = new File(importRoot(), projectId);
+        ImportStaging.deleteRecursively(importWorkDir);
+        try {
+            String sourceUri = "";
+            String sourceName = "";
+            if (!payload.isNull("stagingId")) {
+                ImportProject.moveProject(
+                    importStaging().resolveDirectory(
+                        payload.getString("stagingId"),
+                        payload.optString("path")
+                    ),
+                    importWorkDir
+                );
+            } else {
+                sourceUri = payload.getString("uri").trim();
+                if (sourceUri.isEmpty()) {
+                    throw new IllegalArgumentException("Project folder is required.");
+                }
+                sourceName = copyPickedProject(sourceUri, importWorkDir);
+            }
+            ImportProject.applyRenames(new File(importWorkDir, "files"), renames);
+            return finalizeImportedProject(importWorkDir, projectId, sourceUri, sourceName);
+        } finally {
+            ImportStaging.deleteRecursively(importWorkDir);
+        }
+    }
+
+    /** Copies a picked project folder into the work directory; returns its display name. */
+    private String copyPickedProject(String uriString, File importWorkDir) throws Exception {
+        Uri rootDocumentUri = getTreeRootDocumentUri(Uri.parse(uriString));
+        Uri filesUri = requireChildDocument(rootDocumentUri, "files", true);
+        Uri metadataUri = findChildDocument(rootDocumentUri, "file-metadata", true);
+        if (findChildDocument(rootDocumentUri, EXPORT_INCOMPLETE_MARKER_NAME, false) != null) {
+            throw new IllegalArgumentException("Selected project export is incomplete.");
+        }
+
+        copyImportDatabase(rootDocumentUri, importWorkDir);
+        copyDocumentDirectoryContents(filesUri, new File(importWorkDir, "files"));
+        File stagedMetadataRoot = new File(importWorkDir, "file-metadata");
+        if (metadataUri != null) {
+            copyDocumentDirectoryContents(metadataUri, stagedMetadataRoot);
+        } else if (!stagedMetadataRoot.mkdirs()) {
+            throw new IllegalStateException("Cannot create imported file metadata directory.");
+        }
+        return resolveDocumentDisplayName(rootDocumentUri, "Selected Folder");
+    }
+
+    /**
+     * Shared tail of a project import. The work directory already holds
+     * project.db (+ sidecars), files/ and file-metadata/. Reads and rewrites
+     * the project identity, builds the bridge result, and promotes the work
+     * directory into app storage.
+     */
+    private JSONObject finalizeImportedProject(
+        File importWorkDir,
+        String projectId,
+        String sourceUri,
+        String sourceName
     )
         throws Exception {
-        String normalizedUri = uriString == null ? "" : uriString.trim();
-        if (normalizedUri.isEmpty()) {
-            throw new IllegalArgumentException("Project folder is required.");
-        }
-        String projectId = safePathSegment(requestedProjectId);
         File projectRoot = getProjectRoot(projectId);
         if (projectRoot.exists()) {
             throw new IllegalArgumentException(
@@ -3382,62 +3642,33 @@ public class MainActivity extends Activity {
             );
         }
 
-        Uri treeUri = Uri.parse(normalizedUri);
-        Uri rootDocumentUri = getTreeRootDocumentUri(treeUri);
-        Uri filesUri = requireChildDocument(rootDocumentUri, "files", true);
-        Uri metadataUri = findChildDocument(rootDocumentUri, "file-metadata", true);
-        if (findChildDocument(rootDocumentUri, EXPORT_INCOMPLETE_MARKER_NAME, false) != null) {
-            throw new IllegalArgumentException("Selected project export is incomplete.");
+        File tempDbFile = new File(importWorkDir, "project.db");
+        JSONObject projectInfo = readProjectInfoFromDatabaseFile(tempDbFile);
+        String sourceProjectId = safePathSegment(
+            projectInfo.optString("id", "")
+        );
+        rewriteImportedProjectIdentity(
+            tempDbFile,
+            sourceProjectId,
+            projectId
+        );
+        projectInfo.put("id", projectId);
+
+        JSONObject result = new JSONObject();
+        result.put("id", projectId);
+        result.put("name", projectInfo.optString("name", ""));
+        result.put("description", projectInfo.optString("description", ""));
+        result.put("language", projectInfo.optString("language", ""));
+        if (projectInfo.has("iconFileId") && !projectInfo.isNull("iconFileId")) {
+            result.put("iconFileId", projectInfo.optString("iconFileId", ""));
+        } else {
+            result.put("iconFileId", JSONObject.NULL);
         }
+        result.put("sourceUri", sourceUri);
+        result.put("sourceName", sourceName);
 
-        File importRoot = new File(getCacheDir(), "project-import");
-        File importWorkDir = new File(importRoot, projectId);
-        deleteRecursively(importWorkDir);
-
-        try {
-            File tempDbFile = copyImportDatabase(rootDocumentUri, importWorkDir);
-
-            JSONObject projectInfo = readProjectInfoFromDatabaseFile(tempDbFile);
-            String sourceProjectId = safePathSegment(
-                projectInfo.optString("id", "")
-            );
-            rewriteImportedProjectIdentity(
-                tempDbFile,
-                sourceProjectId,
-                projectId
-            );
-            projectInfo.put("id", projectId);
-
-            File stagedFilesRoot = new File(importWorkDir, "files");
-            File stagedMetadataRoot = new File(importWorkDir, "file-metadata");
-            copyDocumentDirectoryContents(filesUri, stagedFilesRoot);
-            if (metadataUri != null) {
-                copyDocumentDirectoryContents(metadataUri, stagedMetadataRoot);
-            } else if (!stagedMetadataRoot.mkdirs()) {
-                throw new IllegalStateException("Cannot create imported file metadata directory.");
-            }
-
-            JSONObject result = new JSONObject();
-            result.put("id", projectId);
-            result.put("name", projectInfo.optString("name", ""));
-            result.put("description", projectInfo.optString("description", ""));
-            result.put("language", projectInfo.optString("language", ""));
-            if (projectInfo.has("iconFileId") && !projectInfo.isNull("iconFileId")) {
-                result.put("iconFileId", projectInfo.optString("iconFileId", ""));
-            } else {
-                result.put("iconFileId", JSONObject.NULL);
-            }
-            result.put("sourceUri", normalizedUri);
-            result.put(
-                "sourceName",
-                resolveDocumentDisplayName(rootDocumentUri, "Selected Folder")
-            );
-
-            promoteImportedProject(importWorkDir, projectRoot);
-            return result;
-        } finally {
-            deleteRecursively(importWorkDir);
-        }
+        promoteImportedProject(importWorkDir, projectRoot);
+        return result;
     }
 
     private File copyImportDatabase(Uri root, File staging) throws Exception {
@@ -4273,6 +4504,89 @@ public class MainActivity extends Activity {
         pendingAndroidFolderPickerRequestId = null;
     }
 
+    private void launchAndroidArchivePicker(String requestId) {
+        if (pendingAndroidArchivePickerRequestId != null) {
+            sendAndroidArchivePickerError(
+                requestId,
+                "Another archive picker is already open."
+            );
+            return;
+        }
+
+        pendingAndroidArchivePickerRequestId = requestId;
+
+        // The picked zip is copied out of its content URI immediately during
+        // import, so no persistable permission is taken.
+        Intent intent = new Intent(Intent.ACTION_OPEN_DOCUMENT);
+        intent.addCategory(Intent.CATEGORY_OPENABLE);
+        intent.addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION);
+        intent.setType("*/*");
+        intent.putExtra(
+            Intent.EXTRA_MIME_TYPES,
+            new String[] {
+                "application/zip",
+                "application/x-zip-compressed",
+                "application/octet-stream",
+            }
+        );
+
+        try {
+            startActivityForResult(intent, ANDROID_ARCHIVE_PICKER_REQUEST_CODE);
+        } catch (ActivityNotFoundException error) {
+            clearPendingAndroidArchivePicker();
+            sendAndroidArchivePickerError(
+                requestId,
+                "No archive picker is available."
+            );
+        }
+    }
+
+    private void handleAndroidArchivePickerActivityResult(
+        int resultCode,
+        Intent data
+    ) {
+        String requestId = pendingAndroidArchivePickerRequestId;
+        clearPendingAndroidArchivePicker();
+
+        if (requestId == null) {
+            return;
+        }
+
+        try {
+            JSONObject result = new JSONObject();
+            result.put("requestId", requestId);
+
+            if (resultCode != RESULT_OK || data == null || data.getData() == null) {
+                result.put("archive", JSONObject.NULL);
+                result.put("uri", JSONObject.NULL);
+                result.put("name", JSONObject.NULL);
+                sendAndroidArchivePickerResult(result);
+                return;
+            }
+
+            Uri archiveUri = data.getData();
+            String archiveName = resolveContentDisplayName(archiveUri, "Project Archive");
+            JSONObject archive = new JSONObject();
+            archive.put("uri", archiveUri.toString());
+            archive.put("name", archiveName);
+            result.put("archive", archive);
+            result.put("uri", archiveUri.toString());
+            result.put("name", archiveName);
+            sendAndroidArchivePickerResult(result);
+        } catch (Exception error) {
+            sendAndroidArchivePickerError(
+                requestId,
+                error.getMessage() == null
+                    ? "Failed to select archive."
+                    : error.getMessage()
+            );
+        }
+    }
+
+    private void clearPendingAndroidArchivePicker() {
+        pendingAndroidArchivePickerRequestId = null;
+    }
+
     private void persistTreePermission(Uri treeUri, int flags) {
         if (treeUri == null) {
             return;
@@ -4328,48 +4642,56 @@ public class MainActivity extends Activity {
         );
     }
 
-    private Uri findChildDocument(
-        Uri parentDocumentUri,
-        String childName,
-        boolean shouldBeDirectory
-    ) throws Exception {
+    private interface ChildVisitor {
+        /** Returns true to stop visiting. */
+        boolean visit(Uri childUri, String name, String mimeType, long size) throws Exception;
+    }
+
+    /** Visits the children of a document folder through DocumentsContract. */
+    private void forEachChildDocument(Uri directoryUri, ChildVisitor visitor)
+        throws Exception {
         String[] projection = new String[] {
             DocumentsContract.Document.COLUMN_DOCUMENT_ID,
             DocumentsContract.Document.COLUMN_DISPLAY_NAME,
             DocumentsContract.Document.COLUMN_MIME_TYPE,
+            DocumentsContract.Document.COLUMN_SIZE,
         };
-        Uri childrenUri = getChildDocumentsUri(parentDocumentUri);
+        Uri childrenUri = getChildDocumentsUri(directoryUri);
 
         try (
             Cursor cursor = getContentResolver()
                 .query(childrenUri, projection, null, null, null)
         ) {
-            if (cursor == null) {
-                return null;
-            }
-
-            while (cursor.moveToNext()) {
-                String displayName = cursor.getString(1);
-                if (!childName.equals(displayName)) {
-                    continue;
-                }
-
-                String mimeType = cursor.getString(2);
-                boolean isDirectory = DocumentsContract.Document.MIME_TYPE_DIR.equals(
-                    mimeType
-                );
-                if (shouldBeDirectory != isDirectory) {
-                    return null;
-                }
-
-                return DocumentsContract.buildDocumentUriUsingTree(
-                    parentDocumentUri,
+            while (cursor != null && cursor.moveToNext()) {
+                Uri childUri = DocumentsContract.buildDocumentUriUsingTree(
+                    directoryUri,
                     cursor.getString(0)
                 );
+                long size = cursor.isNull(3) ? 0 : cursor.getLong(3);
+                if (visitor.visit(childUri, cursor.getString(1), cursor.getString(2), size)) {
+                    return;
+                }
             }
         }
+    }
 
-        return null;
+    private Uri findChildDocument(
+        Uri parentDocumentUri,
+        String childName,
+        boolean shouldBeDirectory
+    ) throws Exception {
+        Uri[] found = new Uri[1];
+        forEachChildDocument(parentDocumentUri, (childUri, name, mimeType, size) -> {
+            if (!childName.equals(name)) {
+                return false;
+            }
+            boolean isDirectory = DocumentsContract.Document.MIME_TYPE_DIR.equals(mimeType);
+            if (shouldBeDirectory == isDirectory) {
+                found[0] = childUri;
+            }
+            return true;
+        });
+        return found[0];
     }
 
     private Uri requireChildDocument(
@@ -4526,41 +4848,18 @@ public class MainActivity extends Activity {
             throw new IllegalStateException("Failed to create import directory.");
         }
 
-        String[] projection = new String[] {
-            DocumentsContract.Document.COLUMN_DOCUMENT_ID,
-            DocumentsContract.Document.COLUMN_DISPLAY_NAME,
-            DocumentsContract.Document.COLUMN_MIME_TYPE,
-        };
-        Uri childrenUri = getChildDocumentsUri(directoryUri);
-
-        try (
-            Cursor cursor = getContentResolver()
-                .query(childrenUri, projection, null, null, null)
-        ) {
-            if (cursor == null) {
-                return;
+        forEachChildDocument(directoryUri, (childUri, name, mimeType, size) -> {
+            File outputFile = resolveSafeRelativeFile(
+                outputDirectory,
+                sanitizeImportedFilename(name)
+            );
+            if (DocumentsContract.Document.MIME_TYPE_DIR.equals(mimeType)) {
+                copyDocumentDirectoryContents(childUri, outputFile);
+            } else {
+                copyDocumentToFile(childUri, outputFile);
             }
-
-            while (cursor.moveToNext()) {
-                String childDocumentId = cursor.getString(0);
-                String displayName = sanitizeImportedFilename(cursor.getString(1));
-                String mimeType = cursor.getString(2);
-                Uri childUri = DocumentsContract.buildDocumentUriUsingTree(
-                    directoryUri,
-                    childDocumentId
-                );
-                File outputFile = resolveSafeRelativeFile(
-                    outputDirectory,
-                    displayName
-                );
-
-                if (DocumentsContract.Document.MIME_TYPE_DIR.equals(mimeType)) {
-                    copyDocumentDirectoryContents(childUri, outputFile);
-                } else {
-                    copyDocumentToFile(childUri, outputFile);
-                }
-            }
-        }
+            return false;
+        });
     }
 
     private void copyDocumentToFile(Uri documentUri, File outputFile)
@@ -5107,6 +5406,32 @@ public class MainActivity extends Activity {
         );
     }
 
+    private void sendAndroidArchivePickerError(String requestId, String message) {
+        try {
+            JSONObject result = new JSONObject();
+            JSONObject error = new JSONObject();
+            result.put("requestId", requestId);
+            error.put("message", message);
+            result.put("error", error);
+            sendAndroidArchivePickerResult(result);
+        } catch (Exception ignored) {
+            // Nothing useful to report if JSON construction fails.
+        }
+    }
+
+    private void sendAndroidArchivePickerResult(JSONObject result) {
+        if (webView == null) {
+            return;
+        }
+
+        webView.evaluateJavascript(
+            "(function(result){if(window.__routeVNAndroidArchivePickerResult){window.__routeVNAndroidArchivePickerResult(result);}})(" +
+            result.toString() +
+            ");",
+            null
+        );
+    }
+
     private void sendAndroidProjectExportError(
         String requestId,
         String message,
@@ -5123,6 +5448,24 @@ public class MainActivity extends Activity {
         } catch (Exception ignored) {
             // Nothing useful to report if JSON construction fails.
         }
+    }
+
+    /**
+     * Delivers import progress {stagingId, current, total} to the optional JS
+     * callback window.__routeVNAndroidProjectImportProgress.
+     */
+    private void sendAndroidProjectImportProgress(JSONObject event) {
+        mainHandler.post(() -> {
+            if (webView == null) {
+                return;
+            }
+            webView.evaluateJavascript(
+                "(function(event){if(window.__routeVNAndroidProjectImportProgress){window.__routeVNAndroidProjectImportProgress(event);}})(" +
+                event.toString() +
+                ");",
+                null
+            );
+        });
     }
 
     private void sendAndroidProjectExportResult(JSONObject result) {

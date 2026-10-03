@@ -4255,8 +4255,10 @@ dependencies = [
  "cc",
  "discord-rich-presence",
  "dotenvy",
+ "futures-util",
  "log",
  "plist",
+ "reqwest",
  "routevn-exporter",
  "routevn-packager",
  "rustls",
@@ -4276,9 +4278,11 @@ dependencies = [
  "tauri-plugin-updater",
  "tempfile",
  "time",
+ "tokio",
  "url",
  "urlencoding",
  "windows",
+ "zip 4.6.1",
 ]
 
 [[package]]
