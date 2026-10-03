@@ -19,6 +19,26 @@ mod export_zip;
 mod linux_desktop_integration;
 #[cfg(target_os = "macos")]
 mod macos_fullscreen_escape;
+#[cfg(any(target_os = "windows", target_os = "macos", target_os = "linux"))]
+mod project_import;
+#[cfg(not(any(target_os = "windows", target_os = "macos", target_os = "linux")))]
+mod project_import {
+    use serde_json::Value;
+
+    #[tauri::command]
+    pub async fn download_project_archive(
+        _url: String,
+        _destination_parent: String,
+        _on_progress: tauri::ipc::Channel<serde_json::Value>,
+    ) -> Result<Value, String> {
+        Err("importFailed: project archive import is unavailable on this platform".to_string())
+    }
+
+    #[tauri::command]
+    pub async fn normalize_project_file_names(_project_path: String) -> Result<Value, String> {
+        Err("importFailed: project archive import is unavailable on this platform".to_string())
+    }
+}
 mod project_file_protocol;
 mod project_media_server;
 mod static_web_server;
@@ -89,6 +109,8 @@ pub fn run() {
             linux_desktop_integration::get_linux_appimage_desktop_integration_status,
             linux_desktop_integration::install_linux_appimage_desktop_integration,
             linux_desktop_integration::restart_linux_appimage_from_desktop_integration,
+            project_import::download_project_archive,
+            project_import::normalize_project_file_names,
             project_media_server::get_project_media_server_origin,
             discord_presence::set_discord_presence_details,
             static_web_server::start_static_web_server,

@@ -44,6 +44,14 @@ plist = "=1.8.0"
 
 [target.'cfg(any(target_os = "windows", target_os = "macos", target_os = "linux"))'.dependencies]
 discord-rich-presence = "=1.1.0"
+zip = { version = "4", default-features = false, features = ["deflate"] }
+# Async file writes for the project import download path.
+tokio = { version = "1", features = ["fs", "io-util"] }
+# Same reqwest rustls setup as sentry/tauri-plugin-updater: no-provider TLS
+# build that uses the process-wide rustls ring provider from the rustls dep
+# below, so the shared reqwest build never switches to native TLS or aws-lc-rs.
+reqwest = { version = "0.13", default-features = false, features = ["rustls-no-provider", "stream"] }
+futures-util = { version = "0.3", default-features = false, features = ["std"] }
 # Use rustls with ring, matching tauri-plugin-updater, so the shared reqwest
 # build does not switch the updater to native TLS or link OpenSSL.
 rustls = { version = "0.23", default-features = false, features = ["ring"] }
