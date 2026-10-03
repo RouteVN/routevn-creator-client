@@ -1816,11 +1816,10 @@ describe("projects import picker failures", () => {
 
 describe("projects import of a project that already exists", () => {
   const EXISTS = "projectExists: This project is already in the library.";
-  const BASE = "This project has already been added.";
   const EXPLANATION =
-    "Nothing was imported, and the project you already have was left exactly as it was. Importing never replaces an existing project.";
+    "This project has already been added, so nothing was imported and the existing project was not changed.";
   const LIBRARY_HINT =
-    "A project is recognized by its ID, and a project with this ID is already in your library. To use this copy instead, delete the existing project first, then import it again.";
+    "To use this copy instead, delete the existing project first, then import it again.";
 
   const expectExistsAlert = (deps, { withLibraryHint }) => {
     const progressDialog =
@@ -1829,11 +1828,9 @@ describe("projects import of a project that already exists", () => {
     expect(deps.appService.showAlert).toHaveBeenCalledTimes(1);
     expect(deps.appService.showAlert).toHaveBeenCalledWith({
       title: "Project Already Added",
-      message: [
-        BASE,
-        EXPLANATION,
-        ...(withLibraryHint ? [LIBRARY_HINT] : []),
-      ].join("\n\n"),
+      message: [EXPLANATION, ...(withLibraryHint ? [LIBRARY_HINT] : [])].join(
+        "\n\n",
+      ),
     });
     expect(deps.appService.showToast).not.toHaveBeenCalled();
     expect(deps.appService.loadAllProjects).not.toHaveBeenCalled();

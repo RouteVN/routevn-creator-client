@@ -70,7 +70,7 @@ export const runProjectImport = async (deps, { run, status }) => {
 // way to use it is to delete the existing project first. Elsewhere the same
 // folder was added twice and there is nothing to replace.
 const createProjectExistsMessage = ({ copy, platform }) => {
-  const parts = [copy.importProjectExists, copy.importProjectExistsExplanation];
+  const parts = [copy.importProjectExistsExplanation];
   if (platform === "ios") {
     parts.push(copy.importProjectExistsLibraryHint);
   }
