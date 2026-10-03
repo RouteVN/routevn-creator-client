@@ -10,6 +10,7 @@ const mocked = vi.hoisted(() => ({
 }));
 
 vi.mock("../../src/deps/clients/android/bridge.js", () => ({
+  NO_BRIDGE_TIMEOUT: Number.POSITIVE_INFINITY,
   callAndroidBridge: mocked.androidBridge,
 }));
 
@@ -316,10 +317,14 @@ describe("android project import adapters", () => {
       uri: "content://archives/project-one.zip",
     });
 
-    expect(mocked.androidBridge).toHaveBeenCalledWith("importProjectArchive", {
-      uri: "content://archives/project-one.zip",
-      projectId: project.id,
-    });
+    expect(mocked.androidBridge).toHaveBeenCalledWith(
+      "importProjectArchive",
+      {
+        uri: "content://archives/project-one.zip",
+        projectId: project.id,
+      },
+      { timeoutMs: Number.POSITIVE_INFINITY },
+    );
     expect(project.name).toBe("Project One");
     const entries = await db.get("projectEntries");
     expect(entries[0].id).toBe(project.id);
@@ -348,6 +353,7 @@ describe("android project import adapters", () => {
         url: "https://example.com/project-one.zip",
         projectId: project.id,
       },
+      { timeoutMs: Number.POSITIVE_INFINITY },
     );
     const entries = await db.get("projectEntries");
     expect(entries[0].id).toBe(project.id);

@@ -9,6 +9,7 @@ const mocked = vi.hoisted(() => ({
 }));
 
 vi.mock("../../src/deps/clients/android/bridge.js", () => ({
+  NO_BRIDGE_TIMEOUT: Number.POSITIVE_INFINITY,
   callAndroidBridge: mocked.androidBridge,
 }));
 

@@ -52,15 +52,47 @@ export const runProjectImport = async (deps, { run, status }) => {
   });
 };
 
+const isGoogleDriveFailure = ({ url, error }) => {
+  if (!isGoogleDriveImportUrl(url)) {
+    return false;
+  }
+  const code = getProjectImportErrorCode(error);
+  // Every platform words an HTTP failure as "HTTP <status>", unlike a network
+  // failure, so only a response from Drive (403 quota, 404, a page that is not
+  // a zip) earns the sharing hint.
+  return (
+    code === "invalidArchive" ||
+    (code === "downloadFailed" && /\bHTTP \d{3}\b/.test(error.message))
+  );
+};
+
+// Runs a picker and turns a rejection (for example iOS failing to read the
+// chosen file) into the same localized alert as an import failure. A cancelled
+// picker, or a failed one, resolves to undefined so callers return early.
+const pickOrAlert = async (deps, pick) => {
+  const { appService, i18n } = deps;
+  const copy = selectProjectsPageCopy(i18n);
+
+  try {
+    return await pick();
+  } catch (error) {
+    appService.showAlert({
+      message: getProjectImportErrorMessage(error, copy),
+    });
+  }
+};
+
 // Desktop and mobile folder import: pick a project folder, then register it.
 // A cancelled picker returns silently.
 export const importProjectFromFolder = async (deps) => {
   const { appService, i18n } = deps;
   const copy = selectProjectsPageCopy(i18n);
 
-  const selectedPath = await appService.openFolderPicker({
-    title: copy.selectExistingProjectFolderTitle,
-  });
+  const selectedPath = await pickOrAlert(deps, () =>
+    appService.openFolderPicker({
+      title: copy.selectExistingProjectFolderTitle,
+    }),
+  );
   if (!selectedPath) {
     return;
   }
@@ -76,9 +108,11 @@ export const importProjectFromZip = async (deps) => {
   const { appService, i18n } = deps;
   const copy = selectProjectsPageCopy(i18n);
 
-  const archive = await appService.openArchivePicker({
-    title: copy.selectProjectArchiveTitle,
-  });
+  const archive = await pickOrAlert(deps, () =>
+    appService.openArchivePicker({
+      title: copy.selectProjectArchiveTitle,
+    }),
+  );
   if (!archive?.uri) {
     return;
   }
@@ -137,14 +171,23 @@ export const importProjectFromLocal = async (deps) => {
   }
 };
 
-// URL import: desktop receives the chosen destination parent folder; mobile
-// imports straight into app storage.
-export const importProjectFromUrl = async (
-  deps,
-  { url, destinationFolder },
-) => {
+// URL import: desktop asks for a destination parent folder first (a cancelled
+// pick returns silently); mobile imports straight into app storage.
+export const importProjectFromUrl = async (deps, { url }) => {
   const { appService, i18n } = deps;
   const copy = selectProjectsPageCopy(i18n);
+
+  let destinationFolder;
+  if (appService.getPlatform() === "tauri") {
+    destinationFolder = await pickOrAlert(deps, () =>
+      appService.openFolderPicker({
+        title: copy.selectImportDestinationTitle,
+      }),
+    );
+    if (!destinationFolder) {
+      return;
+    }
+  }
 
   await runProjectImport(deps, {
     status: copy.importConnectingStatus,
@@ -157,12 +200,9 @@ export const importProjectFromUrl = async (
         });
       } catch (error) {
         // Drive answers with a web page instead of the file when it is private
-        // or past its download limit, so say what to check.
-        const code = getProjectImportErrorCode(error);
-        if (
-          isGoogleDriveImportUrl(url) &&
-          (code === "invalidArchive" || code === "downloadFailed")
-        ) {
+        // or past its download limit, so say what to check. A download that
+        // never reached Drive (offline, timeout) keeps its own message.
+        if (isGoogleDriveFailure({ url, error })) {
           throw new Error(`googleDriveFailed: ${error.message}`);
         }
         throw error;

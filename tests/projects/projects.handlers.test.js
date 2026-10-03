@@ -1665,6 +1665,23 @@ describe("projects Google Drive URL import", () => {
     },
   );
 
+  it("keeps the download message when Drive was never reached", async () => {
+    const deps = createDeps({ platform: "android" });
+    deps.appService.importProjectFromUrl.mockRejectedValue(
+      new Error("downloadFailed: Network error: SocketTimeoutException"),
+    );
+
+    await handleUrlImportFormAction(
+      deps,
+      createUrlFormPayload(DRIVE_SHARE_URL),
+    );
+
+    expect(deps.appService.showAlert).toHaveBeenCalledWith({
+      message:
+        "Could not download the project archive. Check the URL and your connection, then try again.\n\nDetails:\ndownloadFailed: Network error: SocketTimeoutException",
+    });
+  });
+
   it("keeps other Drive import errors unchanged", async () => {
     const deps = createDeps({ platform: "android" });
     deps.appService.importProjectFromUrl.mockRejectedValue(
@@ -1738,6 +1755,67 @@ describe("projects Google Drive URL import", () => {
       destinationFolder: "/projects",
       onProgress: expect.any(Function),
     });
+  });
+});
+
+describe("projects import picker failures", () => {
+  const FAILURE =
+    "Failed to import project. Please select a valid project folder.";
+
+  it("alerts when the folder picker rejects", async () => {
+    const deps = createDeps({ platform: "tauri" });
+    deps.appService.openFolderPicker.mockRejectedValue(
+      new Error("importFailed: Cannot open the folder picker."),
+    );
+
+    await handleImportSourceMenuClickItem(
+      deps,
+      createMenuClickPayload("import-local"),
+    );
+
+    expect(deps.appService.showAlert).toHaveBeenCalledWith({
+      message: `${FAILURE}\n\nDetails:\nimportFailed: Cannot open the folder picker.`,
+    });
+    expect(deps.appService.showProgressDialog).not.toHaveBeenCalled();
+    expect(deps.appService.openExistingProject).not.toHaveBeenCalled();
+  });
+
+  it("alerts when the archive picker rejects", async () => {
+    const deps = createDeps({ platform: "ios" });
+    deps.appService.showFormDialog.mockResolvedValue({
+      actionId: "import-zip",
+    });
+    deps.appService.openArchivePicker.mockRejectedValue(
+      new Error("invalidArchive: Failed to read selected project archive."),
+    );
+
+    await handleMobileActionMenuClickItem(
+      deps,
+      createMenuClickPayload("import-local"),
+    );
+
+    expect(deps.appService.showAlert).toHaveBeenCalledWith({
+      message:
+        "This archive is not a valid RouteVN project export.\n\nDetails:\ninvalidArchive: Failed to read selected project archive.",
+    });
+    expect(deps.appService.showProgressDialog).not.toHaveBeenCalled();
+    expect(deps.appService.importProjectFromArchive).not.toHaveBeenCalled();
+  });
+
+  it("alerts when the desktop destination picker rejects", async () => {
+    const deps = createDeps({ platform: "tauri" });
+    deps.appService.openFolderPicker.mockRejectedValue(
+      new Error("importFailed: Cannot open the folder picker."),
+    );
+
+    await handleUrlImportFormAction(
+      deps,
+      createUrlFormPayload("https://example.com/project-one.zip"),
+    );
+
+    expect(deps.appService.showAlert).toHaveBeenCalledTimes(1);
+    expect(deps.appService.importProjectFromUrl).not.toHaveBeenCalled();
+    expect(deps.appService.showProgressDialog).not.toHaveBeenCalled();
   });
 });
 

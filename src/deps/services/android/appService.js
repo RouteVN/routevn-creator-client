@@ -1,7 +1,10 @@
 import { createAndroidBackupClient } from "../../clients/android/backup.js";
 import { createBackupService } from "./backupService.js";
 import { createAppServiceCore } from "../shared/appServiceCore.js";
-import { callAndroidBridge } from "../../clients/android/bridge.js";
+import {
+  NO_BRIDGE_TIMEOUT,
+  callAndroidBridge,
+} from "../../clients/android/bridge.js";
 import { androidProjectImportProgress } from "../../clients/android/projectImportProgress.js";
 import { getAndroidProjectFileUrl } from "./projectFileUrls.js";
 import { generateId } from "../../../internal/id.js";
@@ -399,10 +402,11 @@ export const createAppService = (params) => {
       });
       let importedProject;
       try {
-        importedProject = await callAndroidBridge("importProjectArchive", {
-          uri,
-          projectId,
-        });
+        importedProject = await callAndroidBridge(
+          "importProjectArchive",
+          { uri, projectId },
+          { timeoutMs: NO_BRIDGE_TIMEOUT },
+        );
       } finally {
         unsubscribe();
       }
@@ -434,6 +438,7 @@ export const createAppService = (params) => {
         importedProject = await callAndroidBridge(
           "importProjectArchiveFromUrl",
           { url: normalizedUrl, projectId },
+          { timeoutMs: NO_BRIDGE_TIMEOUT },
         );
       } finally {
         unsubscribe();

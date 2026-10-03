@@ -512,17 +512,7 @@ export const handleUrlImportFormAction = async (deps, payload) => {
   store.closeUrlImportDialog();
   render();
 
-  let destinationFolder;
-  if (appService.getPlatform() === "tauri") {
-    destinationFolder = await appService.openFolderPicker({
-      title: copy.selectImportDestinationTitle,
-    });
-    if (!destinationFolder) {
-      return;
-    }
-  }
-
-  await importProjectFromUrl(deps, { url, destinationFolder });
+  await importProjectFromUrl(deps, { url });
 };
 
 export const handleMobileCreateMenuButtonClick = (deps, payload) => {

@@ -56,9 +56,10 @@ picked, so it changes that folder. Android and iOS rename only the app-private
 copy; the user's source folder is never modified. Source comments refer to this
 rule, the zip rules, and the URL rules as Rule A, Rule B, and Rule C.
 
-Desktop refuses a `files` entry that is itself a symlink, and leaves symlinks and
-directories inside `files/` untouched, so a rename can never reach outside the
-project folder.
+Desktop and iOS refuse a `files` folder that is itself a symlink, so a rename can
+never reach outside the project folder. Symlinks and directories inside `files/` are
+never renamed, but they still occupy their name: `abc.png` next to a link called `abc`
+fails with `fileNameConflict` instead of replacing the link.
 
 - The file id is the name up to, but not including, the first `.`. Names with no
   `.` are unchanged.
@@ -101,6 +102,10 @@ anything:
   record and checked before the directory is parsed.
 - Every extracted entry's CRC32 and byte count must match its header, otherwise
   `invalidArchive`.
+- Desktop checks that `project.db` starts with the SQLite header before anything is
+  promoted into the chosen folder, so a zip with a non-database `project.db` fails as
+  `invalidArchive` and leaves no folder behind. Android and iOS read the project info
+  from the database before they promote.
 - Output files are created exclusively, so an existing file or a planted symlink is
   an error and is never written through.
 
@@ -141,8 +146,9 @@ never extracted.
 The URL is assumed to be a zip. Only `https:` is accepted; `http:` is accepted
 only for `localhost`, `127.0.0.1`, and `[::1]`. URLs with embedded credentials
 are rejected. At most 5 redirects are followed, and every hop must pass the same
-check. Connections time out after 15 seconds and stalled reads after 30 seconds;
-there is no overall deadline. The archive streams to a temporary file and is
+check. On desktop and Android, connections time out after 15 seconds and stalled
+reads after 30 seconds. iOS has no separate connect timeout, so its single
+30-second idle timeout covers both. There is no overall deadline. The archive streams to a temporary file and is
 never held in memory. The server's `Content-Type` is not trusted; the file is
 validated by parsing it as a zip.
 
@@ -170,6 +176,11 @@ and gives the same result when applied to its own output.
   says to check the sharing setting and the download limit.
 - This relies on Drive's public download endpoint, which is not a documented API
   and can change.
+
+On Android, the two import bridge calls opt out of the JavaScript bridge's default
+30-minute response timeout, because a large archive on a slow connection can
+legitimately take longer. The native side bounds the call itself with the connect and
+stall timeouts.
 
 Downloads and extraction run natively, not through the WebView, because most
 hosts do not send CORS headers and a WebView fetch would buffer the whole archive
