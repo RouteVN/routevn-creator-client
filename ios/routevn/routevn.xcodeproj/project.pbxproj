@@ -20,9 +20,9 @@
 		2A000001000000000000000C /* Sentry in Frameworks */ = {isa = PBXBuildFile; productRef = 2A00000100000000000000A1 /* Sentry */; };
 		2A000001000000000000000D /* NativeCrashReporting.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2A000001000000000000001D /* NativeCrashReporting.swift */; };
 		2A000001000000000000000E /* ZIPFoundation in Frameworks */ = {isa = PBXBuildFile; productRef = 2A00000100000000000000A2 /* ZIPFoundation */; };
-		2A0000010000000000000024 /* ProjectFileNames.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2A0000010000000000000021 /* ProjectFileNames.swift */; };
-		2A0000010000000000000025 /* ProjectArchiveExtractor.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2A0000010000000000000022 /* ProjectArchiveExtractor.swift */; };
-		2A0000010000000000000026 /* ProjectArchiveDownloader.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2A0000010000000000000023 /* ProjectArchiveDownloader.swift */; };
+		2A0000010000000000000024 /* ImportStaging.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2A0000010000000000000021 /* ImportStaging.swift */; };
+		2A0000010000000000000025 /* ImportArchive.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2A0000010000000000000022 /* ImportArchive.swift */; };
+		2A0000010000000000000026 /* ImportDownloader.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2A0000010000000000000023 /* ImportDownloader.swift */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXFileReference section */
@@ -39,9 +39,9 @@
 		2A000001000000000000001A /* PrivacyInfo.xcprivacy */ = {isa = PBXFileReference; lastKnownFileType = text.xml; path = PrivacyInfo.xcprivacy; sourceTree = "<group>"; };
 		2A000001000000000000001C /* AppDeviceInfo.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppDeviceInfo.swift; sourceTree = "<group>"; };
 		2A000001000000000000001D /* NativeCrashReporting.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = NativeCrashReporting.swift; sourceTree = "<group>"; };
-		2A0000010000000000000021 /* ProjectFileNames.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ProjectFileNames.swift; sourceTree = "<group>"; };
-		2A0000010000000000000022 /* ProjectArchiveExtractor.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ProjectArchiveExtractor.swift; sourceTree = "<group>"; };
-		2A0000010000000000000023 /* ProjectArchiveDownloader.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ProjectArchiveDownloader.swift; sourceTree = "<group>"; };
+		2A0000010000000000000021 /* ImportStaging.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ImportStaging.swift; sourceTree = "<group>"; };
+		2A0000010000000000000022 /* ImportArchive.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ImportArchive.swift; sourceTree = "<group>"; };
+		2A0000010000000000000023 /* ImportDownloader.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ImportDownloader.swift; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -75,9 +75,9 @@
 				2A0000010000000000000017 /* ProjectStoragePaths.swift */,
 				2A0000010000000000000018 /* SaveFileDestinations.swift */,
 				2A0000010000000000000019 /* ProjectDatabaseReader.swift */,
-				2A0000010000000000000021 /* ProjectFileNames.swift */,
-				2A0000010000000000000022 /* ProjectArchiveExtractor.swift */,
-				2A0000010000000000000023 /* ProjectArchiveDownloader.swift */,
+				2A0000010000000000000021 /* ImportStaging.swift */,
+				2A0000010000000000000022 /* ImportArchive.swift */,
+				2A0000010000000000000023 /* ImportDownloader.swift */,
 				2A0000010000000000000012 /* Info.plist */,
 				2A000001000000000000001A /* PrivacyInfo.xcprivacy */,
 				2A0000010000000000000015 /* Assets.xcassets */,
@@ -205,9 +205,9 @@
 				2A0000010000000000000006 /* ProjectStoragePaths.swift in Sources */,
 				2A0000010000000000000007 /* SaveFileDestinations.swift in Sources */,
 				2A0000010000000000000008 /* ProjectDatabaseReader.swift in Sources */,
-				2A0000010000000000000024 /* ProjectFileNames.swift in Sources */,
-				2A0000010000000000000025 /* ProjectArchiveExtractor.swift in Sources */,
-				2A0000010000000000000026 /* ProjectArchiveDownloader.swift in Sources */,
+				2A0000010000000000000024 /* ImportStaging.swift in Sources */,
+				2A0000010000000000000025 /* ImportArchive.swift in Sources */,
+				2A0000010000000000000026 /* ImportDownloader.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
