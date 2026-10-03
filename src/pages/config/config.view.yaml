@@ -34,7 +34,7 @@ template:
                               - rtgl-text: ${title}
                 $else:
                   - rtgl-text s=h2: ${title}
-              - 'rtgl-view w=f h=1fg mt=${contentBodyMarginTop} p=${contentBodyPadding} sv style="min-width: 0; min-height: 0;"':
+              - 'rtgl-view w=f h=1fg mt=${contentBodyMarginTop} p=${contentBodyPadding} sv style="min-width: 0; min-height: 0; ${tabletLandscapeContentStyle}"':
                   - rtgl-view#languageSection w=f g=lg:
                       - rtgl-text s=h4: ${languageTitle}
                       - 'rtgl-view w=560 sm-w=f style="max-width: 100%;"':

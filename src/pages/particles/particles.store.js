@@ -147,6 +147,8 @@ const {
   setSelectedItemId: setBaseSelectedItemId,
   setSelectedFolderId: setBaseSelectedFolderId,
   setUiConfig,
+  setAppWindowMetrics,
+  selectIsTabletLandscape,
   openMobileFileExplorer,
   closeMobileFileExplorer,
   selectSelectedItem,
@@ -436,6 +438,8 @@ export {
   selectSelectedItemId,
   setSearchQuery,
   setUiConfig,
+  setAppWindowMetrics,
+  selectIsTabletLandscape,
 };
 
 export const selectParticleItemById = selectItemById;

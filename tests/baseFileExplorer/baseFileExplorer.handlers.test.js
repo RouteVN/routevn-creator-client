@@ -743,6 +743,26 @@ describe("baseFileExplorer handlers", () => {
     expect(deps.dispatchEvent.mock.calls[1][0].detail.itemId).toBe("item-1");
   });
 
+  it("marks navigation selections so listeners can tell them from taps", () => {
+    const deps = createDeps({
+      selectedItemId: "item-3",
+    });
+
+    handleNavigateSelection(deps, {
+      _event: {
+        detail: {
+          direction: "next",
+        },
+      },
+    });
+
+    expect(deps.dispatchEvent.mock.calls[0][0].type).toBe("item-click");
+    expect(deps.dispatchEvent.mock.calls[0][0].detail).toMatchObject({
+      itemId: "item-4",
+      source: "navigation",
+    });
+  });
+
   it("keeps one-step navigation as a no-op past the visible list bounds", () => {
     const deps = createDeps({
       selectedItemId: "item-3",

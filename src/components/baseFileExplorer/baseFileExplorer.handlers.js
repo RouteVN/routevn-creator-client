@@ -138,23 +138,25 @@ const getVisibleItems = (allItems, collapsedIds) => {
   });
 };
 
-const emitItemClick = ({ dispatchEvent, item } = {}) => {
+// `source` marks selections made by stepping through the list (for example the
+// layout editor's up/down buttons) so listeners can tell them from taps.
+const emitItemClick = ({ dispatchEvent, item, source } = {}) => {
   if (!item) {
     return;
   }
 
   const isFolder = item?.type === "folder";
+  const detail = {
+    id: item.id,
+    itemId: item.id,
+    item,
+    isFolder,
+  };
+  if (source) {
+    detail.source = source;
+  }
 
-  dispatchEvent(
-    new CustomEvent("item-click", {
-      detail: {
-        id: item.id,
-        itemId: item.id,
-        item,
-        isFolder,
-      },
-    }),
-  );
+  dispatchEvent(new CustomEvent("item-click", { detail }));
 };
 
 const emitSelectionCleared = ({ dispatchEvent } = {}) => {
@@ -223,7 +225,12 @@ const scrollItemIntoView = ({ deps, itemId } = {}) => {
   });
 };
 
-const selectVisibleItem = ({ deps, item, emitSelectionEvent = false } = {}) => {
+const selectVisibleItem = ({
+  deps,
+  item,
+  emitSelectionEvent = false,
+  source,
+} = {}) => {
   const { dispatchEvent, store, render } = deps;
   if (!item?.id) {
     return undefined;
@@ -234,7 +241,7 @@ const selectVisibleItem = ({ deps, item, emitSelectionEvent = false } = {}) => {
   render();
   scrollItemIntoView({ deps, itemId: item.id });
   if (emitSelectionEvent) {
-    emitItemClick({ dispatchEvent, item });
+    emitItemClick({ dispatchEvent, item, source });
   }
   return item;
 };
@@ -1841,6 +1848,7 @@ export const handleNavigateSelection = (deps, payload) => {
     deps,
     item: nextItem,
     emitSelectionEvent: true,
+    source: "navigation",
   });
   if (!selectedItem) {
     return undefined;

@@ -9,10 +9,18 @@ import {
   setLayout,
   setSelectedItemId,
   setDetailPanelSelectedItemId,
+  openMobileFileExplorer,
+  setRightPanelMode,
+  setAppWindowMetrics,
+  selectIsTabletLandscape,
   setPreviewData,
   setUiConfig,
   setPendingPersistPayload,
   clearPendingPersistPayload,
+  resetCanvasZoom,
+  setCanvasZoom,
+  zoomCanvasIn,
+  zoomCanvasOut,
 } from "../../src/pages/layoutEditor/layoutEditor.store.js";
 
 const TEST_CONSTANTS = {
@@ -603,7 +611,7 @@ describe("layoutEditor.store", () => {
     });
 
     expect(viewData.showExplorerPanel).toBe(false);
-    expect(viewData.showDetailPanel).toBe(false);
+    expect(viewData.showRightPanel).toBe(false);
     expect(viewData.showPreviewHeader).toBe(false);
     expect(viewData.showMobileNodeButton).toBe(true);
     expect(viewData.showMobilePreviewButton).toBe(true);
@@ -613,7 +621,7 @@ describe("layoutEditor.store", () => {
       backgroundImageId: "unsaved-preview-image",
     });
     expect(viewData.initialPreviewData).toEqual({});
-    expect(viewData.nodeButtonLabel).toBe("Node");
+    expect(viewData.nodeButtonLabel).toBe("Elements");
     expect(viewData.previewTitle).toBe("Preview");
     expect(viewData.item.name).toBe("Node 1");
   });
@@ -636,5 +644,273 @@ describe("layoutEditor.store", () => {
     expect(viewData.previewHydrationData).toEqual(viewData.previewData);
     expect(viewData.previewTitle).toBe("Preview");
     expect(viewData.savePreviewButton).toBe("Save Preview");
+  });
+  it("shows the node explorer in place of the preview and node detail on touch layouts", () => {
+    const state = createInitialState();
+
+    syncRepositoryState(
+      { state },
+      {
+        projectResolution: { width: 1920, height: 1080 },
+        layoutId: "layout-1",
+        layout: {
+          id: "layout-1",
+          layoutType: "general",
+        },
+        layoutData: {
+          items: {
+            "node-1": {
+              type: "container",
+              name: "Node 1",
+            },
+          },
+          tree: [{ id: "node-1" }],
+        },
+      },
+    );
+    setUiConfig({ state }, { uiConfig: { inputMode: "touch" } });
+    setSelectedItemId({ state }, { itemId: "node-1" });
+    setDetailPanelSelectedItemId({ state }, { itemId: "node-1" });
+
+    const select = () =>
+      selectViewData({ state, constants: TEST_CONSTANTS, i18n: EN_I18N });
+
+    expect(select().showMobileNodeExplorer).toBe(false);
+    expect(select().showMobileSelectedNodeDetail).toBe(true);
+    expect(select().nodeButtonVariant).toBe("se");
+
+    openMobileFileExplorer({ state });
+    const viewData = select();
+
+    expect(viewData.showMobileNodeExplorer).toBe(true);
+    expect(viewData.showMobileSelectedNodeDetail).toBe(false);
+    expect(viewData.showMobilePreviewButton).toBe(true);
+    expect(viewData.previewPanelVisibilityStyle).toBe("display: none;");
+    expect(viewData.nodeButtonVariant).toBe("pr");
+    expect(viewData.nodeExplorerTitle).toBe("Elements");
+    expect(viewData.nodeMovePreviousLabel).toBe("Previous element");
+    expect(viewData.nodeMoveNextLabel).toBe("Next element");
+  });
+
+  it("keeps the preview hidden but mounted while the node explorer is open without a selection", () => {
+    const state = createInitialState();
+
+    setUiConfig({ state }, { uiConfig: { inputMode: "touch" } });
+    openMobileFileExplorer({ state });
+
+    const viewData = selectViewData({
+      state,
+      constants: TEST_CONSTANTS,
+      i18n: EN_I18N,
+    });
+
+    expect(viewData.showMobileNodeExplorer).toBe(true);
+    expect(viewData.showMobilePreviewButton).toBe(false);
+    expect(viewData.previewPanelVisibilityStyle).toBe("display: none;");
+    expect(viewData.isPreviewMounted).toBe(false);
+  });
+
+  it("shows the Elements list as a left pane on tablet landscape instead of under the canvas", () => {
+    const state = createInitialState();
+
+    setUiConfig({ state }, { uiConfig: { inputMode: "touch" } });
+    openMobileFileExplorer({ state });
+    setAppWindowMetrics({ state }, { width: 1408, height: 880 });
+
+    const select = () =>
+      selectViewData({ state, constants: TEST_CONSTANTS, i18n: EN_I18N });
+    const landscape = select();
+
+    expect(selectIsTabletLandscape({ state })).toBe(true);
+    expect(landscape.showTabletLandscapeExplorer).toBe(true);
+    expect(landscape.tabletLandscapeExplorerWidth).toBe(300);
+    expect(landscape.showMobileNodeExplorer).toBe(false);
+    expect(landscape.showMobileNodeButton).toBe(false);
+    expect(landscape.previewPanelVisibilityStyle).toBe("");
+
+    setAppWindowMetrics({ state }, { width: 880, height: 1408 });
+    const portrait = select();
+
+    expect(selectIsTabletLandscape({ state })).toBe(false);
+    expect(portrait.showTabletLandscapeExplorer).toBe(false);
+    expect(portrait.showMobileNodeExplorer).toBe(true);
+    expect(portrait.showMobileNodeButton).toBe(true);
+  });
+
+  it("keeps the edit panel and preview in the right panel on tablet landscape", () => {
+    const state = createInitialState();
+
+    syncRepositoryState(
+      { state },
+      {
+        projectResolution: { width: 1920, height: 1080 },
+        layoutId: "layout-1",
+        layout: { id: "layout-1", layoutType: "general" },
+        layoutData: {
+          items: { "node-1": { type: "container", name: "Node 1" } },
+          tree: [{ id: "node-1" }],
+        },
+      },
+    );
+    setUiConfig({ state }, { uiConfig: { inputMode: "touch" } });
+    setAppWindowMetrics({ state }, { width: 1408, height: 880 });
+    setSelectedItemId({ state }, { itemId: "node-1" });
+    setDetailPanelSelectedItemId({ state }, { itemId: "node-1" });
+
+    const viewData = selectViewData({
+      state,
+      constants: TEST_CONSTANTS,
+      i18n: EN_I18N,
+    });
+
+    expect(viewData.showRightPanel).toBe(true);
+    expect(viewData.showMobilePanels).toBe(false);
+    expect(viewData.showMobileSelectedNodeDetail).toBe(false);
+    expect(viewData.showMobileNodeExplorer).toBe(false);
+    expect(viewData.showMobilePreviewButton).toBe(false);
+    expect(viewData.showMobileNodeButton).toBe(false);
+    expect(viewData.detailPanelSelectedItemId).toBe("node-1");
+  });
+
+  it("offers Edit and Preview tabs in the right panel that start on Preview", () => {
+    const state = createInitialState();
+    const select = () =>
+      selectViewData({ state, constants: TEST_CONSTANTS, i18n: EN_I18N });
+
+    expect(select().showRightPanel).toBe(true);
+    expect(select().rightPanelMode).toBe("preview");
+    expect(select().rightPanelModeTabs).toEqual([
+      { id: "edit", label: "Edit" },
+      { id: "preview", label: "Preview" },
+    ]);
+    expect(select().showRightPanelSaveButton).toBe(true);
+    expect(select().rightPanelEditStyle).toBe("display: none;");
+    expect(select().rightPanelPreviewStyle).toBe("");
+
+    setRightPanelMode({ state }, { mode: "edit" });
+
+    expect(select().rightPanelMode).toBe("edit");
+    expect(select().showRightPanelSaveButton).toBe(false);
+    expect(select().rightPanelEditStyle).toBe("");
+    expect(select().rightPanelPreviewStyle).toBe("display: none;");
+
+    setRightPanelMode({ state }, { mode: "unknown" });
+
+    expect(select().rightPanelMode).toBe("edit");
+  });
+
+  it("uses the whole workspace height for the canvas whenever there is a right panel", () => {
+    const state = createInitialState();
+    const select = () =>
+      selectViewData({ state, constants: TEST_CONSTANTS, i18n: EN_I18N });
+
+    // The canvas moves freely: rvn-zoom-viewport sets its zoom and place.
+    const freeCanvas =
+      "position: absolute; left: 0; top: 0; width: calc(min(100%, 163.5556cqh) * var(--canvas-zoom, 1)); transform: translate(var(--canvas-x, 0px), var(--canvas-y, 0px));";
+    expect(select().canvasWrapperStyle).toBe(freeCanvas);
+    expect(select().canvasBackgroundStyle).toContain("overflow: hidden");
+    expect(select().canvasWorkspaceStyle).toBe("container-type: size;");
+
+    setUiConfig({ state }, { uiConfig: { inputMode: "touch" } });
+    expect(select().canvasWrapperStyle).toBe(
+      "position: relative; width: min(100%, 88.8889cqh); margin-left: auto; margin-right: auto;",
+    );
+    expect(select().canvasBackgroundStyle).toBe("");
+
+    setAppWindowMetrics({ state }, { width: 1408, height: 880 });
+    expect(select().canvasWrapperStyle).toBe(freeCanvas);
+  });
+
+  describe("canvas zoom", () => {
+    const select = (state) =>
+      selectViewData({ state, constants: TEST_CONSTANTS, i18n: EN_I18N });
+
+    it("steps through zoom levels relative to the fitted canvas", () => {
+      const state = createInitialState();
+      expect(select(state)).toMatchObject({
+        showCanvasZoomControls: true,
+        canvasZoom: 1,
+        canvasZoomLabel: "100%",
+        canvasZoomFitLabel: "Fit to view",
+      });
+
+      zoomCanvasIn({ state });
+      zoomCanvasIn({ state });
+      expect(select(state)).toMatchObject({
+        canvasZoom: 2,
+        canvasZoomLabel: "200%",
+      });
+
+      zoomCanvasIn({ state });
+      expect(select(state).canvasZoomLabel).toBe("300%");
+      expect(select(state).canvasZoomInDisabled).toBe(false);
+
+      for (let step = 0; step < 5; step += 1) zoomCanvasIn({ state });
+      expect(select(state).canvasZoomLabel).toBe("1000%");
+      expect(select(state).canvasZoomInDisabled).toBe(true);
+      zoomCanvasIn({ state });
+      expect(select(state).canvasZoomLabel).toBe("1000%");
+
+      resetCanvasZoom({ state });
+      zoomCanvasOut({ state });
+      zoomCanvasOut({ state });
+      expect(select(state).canvasZoomLabel).toBe("50%");
+      zoomCanvasOut({ state });
+      zoomCanvasOut({ state });
+      expect(select(state)).toMatchObject({
+        canvasZoomLabel: "10%",
+        canvasZoomOutDisabled: true,
+        canvasZoomInDisabled: false,
+      });
+    });
+
+    it("shows a fitted canvas without zoom controls when panels sit under it", () => {
+      const state = createInitialState();
+      zoomCanvasIn({ state });
+      setUiConfig({ state }, { uiConfig: { inputMode: "touch" } });
+
+      expect(select(state)).toMatchObject({
+        showCanvasZoomControls: false,
+        canvasZoom: 1,
+      });
+
+      setAppWindowMetrics({ state }, { width: 1408, height: 880 });
+      expect(select(state).canvasZoom).toBe(1.5);
+    });
+
+    it("keeps a gesture zoom in range and steps from it with the buttons", () => {
+      const state = createInitialState();
+
+      setCanvasZoom({ state }, { zoom: 1.37 });
+      expect(select(state)).toMatchObject({
+        canvasZoom: 1.37,
+        canvasZoomLabel: "137%",
+      });
+      zoomCanvasIn({ state });
+      expect(select(state).canvasZoom).toBe(1.5);
+      setCanvasZoom({ state }, { zoom: 1.37 });
+      zoomCanvasOut({ state });
+      expect(select(state).canvasZoom).toBe(1);
+
+      setCanvasZoom({ state }, { zoom: 12 });
+      expect(select(state).canvasZoom).toBe(10);
+      setCanvasZoom({ state }, { zoom: 0.05 });
+      expect(select(state).canvasZoom).toBe(0.1);
+    });
+  });
+
+  it("never shows the node explorer on desktop layouts", () => {
+    const state = createInitialState();
+
+    openMobileFileExplorer({ state });
+
+    const viewData = selectViewData({
+      state,
+      constants: TEST_CONSTANTS,
+      i18n: EN_I18N,
+    });
+
+    expect(viewData.showMobileNodeExplorer).toBe(false);
+    expect(viewData.previewPanelVisibilityStyle).toBe("");
   });
 });

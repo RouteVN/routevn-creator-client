@@ -88,7 +88,7 @@ template:
           - $if showNativeProjectActions:
               - 'rtgl-button#projectActionsButton sq pre=ellipsis v=ol title="${i18n.projectPage.exportProject}" aria-label="${i18n.projectPage.exportProject}"': null
   - 'rtgl-view#projectPageScroll w=f h=1fg sv style="min-height: 0;"':
-      - rtgl-view w=f d=v g=xl pb=xl:
+      - 'rtgl-view w=f d=v g=xl pb=xl style="${tabletLandscapeContentStyle}"':
           - rtgl-view w=f d=v pt=md:
               - rvn-detail-view#detailView w=f :fields=${detailFields} :fillHeight=${false}:
                   - rtgl-view#projectTitle slot=project-title cur=pointer:

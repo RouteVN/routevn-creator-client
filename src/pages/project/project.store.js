@@ -13,7 +13,11 @@ import {
   selectProjectLanguageCopy,
   selectProjectLanguageLabel,
 } from "../../internal/ui/projectLanguage.js";
-import { isTouchUiConfig } from "../../internal/ui/resourcePages/mobileResourcePage.js";
+import {
+  buildTabletLandscapeContentColumnStyle,
+  isTouchUiConfig,
+  setMobileResourcePageWindowMetricsState,
+} from "../../internal/ui/resourcePages/mobileResourcePage.js";
 import { buildProjectAnalytics } from "./support/projectAnalytics.js";
 import { selectProjectPageCopy } from "./support/projectPageCopy.js";
 
@@ -23,6 +27,7 @@ const formatCount = (value) =>
 export const createInitialState = () => ({
   platform: "web",
   isTouchMode: false,
+  appWindowMetrics: { width: 0, height: 0 },
   project: {
     name: "",
     description: "",
@@ -58,6 +63,10 @@ export const setPlatform = ({ state }, { platform } = {}) => {
 
 export const setUiConfig = ({ state }, { uiConfig } = {}) => {
   state.isTouchMode = isTouchUiConfig(uiConfig);
+};
+
+export const setAppWindowMetrics = ({ state }, { width, height } = {}) => {
+  setMobileResourcePageWindowMetricsState(state, { width, height });
 };
 
 export const setCurrentProject = ({ state }, { project } = {}) => {
@@ -282,6 +291,7 @@ export const selectViewData = ({ state, i18n }) => {
     projectExportLoadingStatusText: copy.exportingProject,
     projectSource: state.project.source,
     projectActionMenu: state.projectActionMenu,
+    tabletLandscapeContentStyle: buildTabletLandscapeContentColumnStyle(state),
     resourceGridStyle: state.isTouchMode
       ? "display: grid; grid-template-columns: repeat(2, minmax(0, 1fr));"
       : "",

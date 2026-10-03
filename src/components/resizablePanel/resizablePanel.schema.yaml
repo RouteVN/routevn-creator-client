@@ -29,3 +29,7 @@ propsSchema:
         - detail-panel
         - transform-editor
       description: Type of panel for userConfig key differentiation
+    show-on-touch:
+      type: boolean
+      default: false
+      description: Keep file-explorer and detail panels visible on touch layouts

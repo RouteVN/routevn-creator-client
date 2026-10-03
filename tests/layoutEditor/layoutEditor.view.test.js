@@ -1,4 +1,4 @@
-import { readFileSync } from "node:fs";
+import { existsSync, readFileSync } from "node:fs";
 import { describe, expect, it } from "vitest";
 
 describe("layoutEditor.view", () => {
@@ -32,7 +32,7 @@ describe("layoutEditor.view", () => {
       previewPanelStart,
     );
     const detailPanelStart = layoutEditorView.indexOf(
-      "$if showDetailPanel",
+      "$if showRightPanel",
       mobileDetailStart,
     );
     const mobileCenterBranch = layoutEditorView.slice(
@@ -55,6 +55,222 @@ describe("layoutEditor.view", () => {
     expect(mobileCenterBranch).toContain(
       "rvn-layout-editor-preview#layoutEditorPreview",
     );
+  });
+
+  it("shows the node explorer inline below the canvas instead of a full-page overlay", () => {
+    const layoutEditorView = readFileSync(
+      new URL(
+        "../../src/pages/layoutEditor/layoutEditor.view.yaml",
+        import.meta.url,
+      ),
+      "utf8",
+    );
+
+    const canvasStart = layoutEditorView.indexOf(
+      "rvn-layout-editor-canvas#layoutEditorCanvas",
+    );
+    const explorerStart = layoutEditorView.indexOf(
+      "$if showMobileNodeExplorer",
+    );
+    const detailStart = layoutEditorView.indexOf(
+      "$if showMobileSelectedNodeDetail",
+    );
+    const explorerBranch = layoutEditorView.slice(explorerStart, detailStart);
+
+    expect(canvasStart).toBeGreaterThan(-1);
+    expect(explorerStart).toBeGreaterThan(canvasStart);
+    expect(layoutEditorView.match(/\$if showMobileNodeExplorer/g)).toHaveLength(
+      1,
+    );
+    expect(explorerBranch).toContain("${nodeExplorerTitle}");
+    expect(explorerBranch).toContain("rvn-base-file-explorer#fileExplorer");
+    expect(explorerBranch).toContain("show-item-menu-actions");
+    expect(layoutEditorView).toContain("v=${nodeButtonVariant}");
+    expect(layoutEditorView).not.toContain("mobileFileExplorerClose");
+    expect(layoutEditorView).not.toContain("pos=fix");
+  });
+
+  it("puts the navbar's back button before the selected node name and opens the explorer", () => {
+    const layoutEditorView = readFileSync(
+      new URL(
+        "../../src/pages/layoutEditor/layoutEditor.view.yaml",
+        import.meta.url,
+      ),
+      "utf8",
+    );
+
+    const navbarBackButton = layoutEditorView
+      .split("\n")
+      .find((line) => line.includes("rtgl-button#backButton"));
+    const detailStart = layoutEditorView.indexOf(
+      "$if showMobileSelectedNodeDetail",
+    );
+    const detailHeader = layoutEditorView.slice(
+      detailStart,
+      layoutEditorView.indexOf(
+        "rvn-layout-edit-panel#layoutEditPanel",
+        detailStart,
+      ),
+    );
+    const detailBackButton = detailHeader
+      .split("\n")
+      .find((line) => line.includes("rtgl-button#nodeDetailBackButton"));
+
+    expect(navbarBackButton).toContain("sq pre=chevronLeft v=ol mr=sm");
+    expect(detailBackButton).toContain("sq pre=chevronLeft v=ol mr=sm");
+    expect(detailHeader.indexOf("nodeDetailBackButton")).toBeLessThan(
+      detailHeader.indexOf("${item.name}"),
+    );
+    expect(layoutEditorView).toMatch(
+      /nodeDetailBackButton:\n\s+eventListeners:\n\s+click:\n\s+handler: handleNodeDetailBackClick/,
+    );
+  });
+
+  it("puts square up and down step buttons on the right of the Elements title", () => {
+    const layoutEditorView = readFileSync(
+      new URL(
+        "../../src/pages/layoutEditor/layoutEditor.view.yaml",
+        import.meta.url,
+      ),
+      "utf8",
+    );
+
+    const explorerStart = layoutEditorView.indexOf(
+      "$if showMobileNodeExplorer",
+    );
+    const explorerBranch = layoutEditorView.slice(
+      explorerStart,
+      layoutEditorView.indexOf(
+        "rvn-base-file-explorer#fileExplorer",
+        explorerStart,
+      ),
+    );
+    const titleIndex = explorerBranch.indexOf("${nodeExplorerTitle}");
+    const upIndex = explorerBranch.indexOf(
+      "rtgl-button#nodeMovePreviousButton",
+    );
+    const downIndex = explorerBranch.indexOf("rtgl-button#nodeMoveNextButton");
+
+    expect(titleIndex).toBeGreaterThan(-1);
+    expect(upIndex).toBeGreaterThan(titleIndex);
+    expect(downIndex).toBeGreaterThan(upIndex);
+    // Both reuse the chevron icon; the previous one turns it upside down.
+    expect(explorerBranch).toMatch(
+      /'rtgl-view style="transform: rotate\(180deg\);"':\n\s+- rtgl-svg svg=chevronDown wh=18: null/,
+    );
+    expect(explorerBranch).toContain("sq pre=chevronDown");
+    // The icon registry is generated from svg/, so the source must exist.
+    expect(
+      existsSync(new URL("../../svg/chevronDown.svg", import.meta.url)),
+    ).toBe(true);
+    expect(explorerBranch).toContain('aria-label="${nodeMovePreviousLabel}"');
+    expect(explorerBranch).toContain('aria-label="${nodeMoveNextLabel}"');
+    expect(layoutEditorView).toMatch(
+      /nodeMovePreviousButton:\n\s+eventListeners:\n\s+click:\n\s+handler: handleNodeMovePreviousClick/,
+    );
+    expect(layoutEditorView).toMatch(
+      /nodeMoveNextButton:\n\s+eventListeners:\n\s+click:\n\s+handler: handleNodeMoveNextClick/,
+    );
+  });
+
+  it("renders a persistent Elements pane to the left of the canvas on tablet landscape", () => {
+    const layoutEditorView = readFileSync(
+      new URL(
+        "../../src/pages/layoutEditor/layoutEditor.view.yaml",
+        import.meta.url,
+      ),
+      "utf8",
+    );
+
+    const paneStart = layoutEditorView.indexOf(
+      "$if showTabletLandscapeExplorer",
+    );
+    const centerStart = layoutEditorView.indexOf(
+      "rtgl-view h=48 bwb=xs bc=bo d=h av=c w=f ph=md",
+    );
+    const pane = layoutEditorView.slice(paneStart, centerStart);
+    const explorerLine = pane
+      .split("\n")
+      .find((line) => line.includes("rvn-base-file-explorer#fileExplorer"));
+
+    expect(
+      layoutEditorView.match(/\$if showTabletLandscapeExplorer/g),
+    ).toHaveLength(1);
+    expect(paneStart).toBeGreaterThan(-1);
+    expect(paneStart).toBeLessThan(centerStart);
+    expect(pane).toContain("w=${tabletLandscapeExplorerWidth}");
+    expect(pane).toContain("${nodeExplorerTitle}");
+    expect(pane).not.toContain("rtgl-button#nodeMovePreviousButton");
+    expect(pane).not.toContain("rtgl-button#nodeMoveNextButton");
+    expect(explorerLine).toContain("show-item-menu-actions");
+    expect(explorerLine).toContain(
+      ":emptyContextMenuItems=${emptyContextMenuItems}",
+    );
+  });
+
+  it("puts the edit panel and the preview in a right panel with Edit and Preview tabs", () => {
+    const layoutEditorView = readFileSync(
+      new URL(
+        "../../src/pages/layoutEditor/layoutEditor.view.yaml",
+        import.meta.url,
+      ),
+      "utf8",
+    );
+
+    const rightStart = layoutEditorView.indexOf("$if showRightPanel");
+    const mobileStart = layoutEditorView.indexOf("$if showMobilePanels");
+    const rightPanel = layoutEditorView.slice(rightStart);
+    const previewIndex = rightPanel.indexOf(
+      "rvn-layout-editor-preview#layoutEditorPreview",
+    );
+    const editIndex = rightPanel.indexOf(
+      "rvn-layout-edit-panel#layoutEditPanel",
+    );
+
+    expect(mobileStart).toBeGreaterThan(-1);
+    expect(rightStart).toBeGreaterThan(mobileStart);
+    expect(layoutEditorView.match(/\$if showRightPanel:/g)).toHaveLength(1);
+    expect(rightPanel).toContain(
+      "rvn-resizable-panel#resizableDetailPanel panel-type=detail-panel show-on-touch",
+    );
+    expect(rightPanel).toContain(
+      "rtgl-tabs#rightPanelModeTabs s=sm selected-tab=${rightPanelMode} :items=${rightPanelModeTabs}",
+    );
+    // Both bodies stay mounted and are shown or hidden by style, so unsaved
+    // preview settings and scroll positions survive switching modes.
+    expect(rightPanel).toContain("${rightPanelEditStyle}");
+    expect(rightPanel).toContain("${rightPanelPreviewStyle}");
+    expect(editIndex).toBeGreaterThan(-1);
+    expect(previewIndex).toBeGreaterThan(editIndex);
+    expect(rightPanel).toContain("$if showRightPanelSaveButton");
+    // The save button is an icon, named for screen readers and on hover.
+    expect(rightPanel).toContain(
+      'rtgl-button#saveButton sq pre=save v=se ml=sm aria-label="${savePreviewButton}" title="${savePreviewButton}"',
+    );
+    expect(layoutEditorView).toMatch(
+      /rightPanelModeTabs:\n\s+eventListeners:\n\s+item-click:\n\s+handler: handleRightPanelModeChange/,
+    );
+  });
+
+  it("centers the canvas vertically in its workspace", () => {
+    const layoutEditorView = readFileSync(
+      new URL(
+        "../../src/pages/layoutEditor/layoutEditor.view.yaml",
+        import.meta.url,
+      ),
+      "utf8",
+    );
+
+    const backgroundLine = layoutEditorView
+      .split("\n")
+      .find((line) =>
+        line.includes("rvn-zoom-viewport#layoutEditorCanvasBackground"),
+      );
+
+    expect(backgroundLine).toContain("${canvasBackgroundStyle}");
+    expect(backgroundLine).toContain("zoom=${canvasZoom}");
+    expect(backgroundLine).toContain("?gestures=${showCanvasZoomControls}");
+    expect(layoutEditorView).toContain("${canvasWorkspaceStyle}");
   });
 
   it("draws the preview header divider above and below", () => {

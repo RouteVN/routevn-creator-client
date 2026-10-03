@@ -34,18 +34,46 @@ refs:
     eventListeners:
       click:
         handler: handleNodeButtonClick
+  nodeDetailBackButton:
+    eventListeners:
+      click:
+        handler: handleNodeDetailBackClick
+  nodeMovePreviousButton:
+    eventListeners:
+      click:
+        handler: handleNodeMovePreviousClick
+  nodeMoveNextButton:
+    eventListeners:
+      click:
+        handler: handleNodeMoveNextClick
   previewButton:
     eventListeners:
       click:
         handler: handlePreviewButtonClick
-  mobileFileExplorerClose:
+  canvasZoomOutButton:
     eventListeners:
       click:
-        handler: handleMobileFileExplorerClose
+        handler: handleCanvasZoomOutClick
+  canvasZoomResetButton:
+    eventListeners:
+      click:
+        handler: handleCanvasZoomResetClick
+  canvasZoomInButton:
+    eventListeners:
+      click:
+        handler: handleCanvasZoomInClick
+  rightPanelModeTabs:
+    eventListeners:
+      item-click:
+        handler: handleRightPanelModeChange
   layoutEditPanel:
     eventListeners:
       update:
         handler: handleLayoutEditPanelUpdateHandler
+      preview:
+        handler: handleLayoutEditPanelPreview
+      preview-cancel:
+        handler: handleLayoutEditPanelPreviewCancel
   layoutEditorCanvas:
     eventListeners:
       selection-change:
@@ -60,6 +88,8 @@ refs:
     eventListeners:
       click:
         handler: handleLayoutEditorCanvasBackgroundClick
+      zoom-change:
+        handler: handleCanvasZoomGesture
 template:
   - 'rtgl-view d=h w=f h=f style="min-width: 0; min-height: 0;"':
       - $if showExplorerPanel:
@@ -68,59 +98,88 @@ template:
                   - rtgl-view slot="content" w=f h=f:
                       - rvn-resource-types :resourceCategory=${resourceCategory} :selectedResourceId=${selectedResourceId}: null
                       - rvn-base-file-explorer#fileExplorer :items=${flatItems} shrinkable dropdown-menu allowDrag :contextMenuItems=${contextMenuItems} :emptyContextMenuItems=${emptyContextMenuItems}: null
+      - $if showTabletLandscapeExplorer:
+          - 'rtgl-view w=${tabletLandscapeExplorerWidth} h=f d=v bwr=xs style="flex: 0 0 auto; min-width: 0; min-height: 0;"':
+              - rtgl-view h=48 w=f d=h bgc=bg bwb=xs ph=md av=c:
+                  - rtgl-text w=1fg s=lg ellipsis=true: ${nodeExplorerTitle}
+              - 'rtgl-view w=f h=1fg style="min-height: 0;"':
+                  - rvn-base-file-explorer#fileExplorer :items=${flatItems} shrinkable dropdown-menu allowDrag show-item-menu-actions bottom-empty-space-height=32vh :contextMenuItems=${contextMenuItems} :emptyContextMenuItems=${emptyContextMenuItems}: null
       - 'rtgl-view w=1fg h=f style="min-width: 0; min-height: 0;"':
           - rtgl-view h=48 bwb=xs bc=bo d=h av=c w=f ph=md:
               - rtgl-button#backButton sq pre=chevronLeft v=ol mr=sm: null
               - 'rtgl-view w=1fg style="min-width: 0;"':
                   - rtgl-text w=f ellipsis=true: ${layout.name}
+              - $if showCanvasZoomControls:
+                  - rtgl-view d=h av=c g=xs ml=sm:
+                      - 'rtgl-button#canvasZoomOutButton sq pre=zoomOut v=ol ?disabled=${canvasZoomOutDisabled} aria-label="${canvasZoomOutLabel}" title="${canvasZoomOutLabel}"': null
+                      - 'rtgl-button#canvasZoomResetButton v=gh style="min-width: 64px;" aria-label="${canvasZoomFitLabel}" title="${canvasZoomFitLabel}"': ${canvasZoomLabel}
+                      - 'rtgl-button#canvasZoomInButton sq pre=zoomIn v=ol ?disabled=${canvasZoomInDisabled} aria-label="${canvasZoomInLabel}" title="${canvasZoomInLabel}"': null
               - $if showMobileNodeButton:
-                  - rtgl-button#nodeButton ml=sm v=se: ${nodeButtonLabel}
+                  - rtgl-button#nodeButton ml=sm v=${nodeButtonVariant}: ${nodeButtonLabel}
               - $if showMobilePreviewButton:
                   - rtgl-button#previewButton ml=sm v=se: ${previewTitle}
           - 'rtgl-view d=v h=1fg w=f style="min-height: 0; ${canvasWorkspaceStyle}"':
-              - 'rtgl-view#layoutEditorCanvasBackground w=f bgc=bg style="min-width: 0; background-image: radial-gradient(circle, var(--input) 1px, transparent 1px); background-size: 24px 24px;"':
-                  - 'div style="position: relative; width: ${layoutEditorCanvasMaxWidth}; max-width: 100%; margin-left: auto; margin-right: auto;"':
+              - 'rvn-zoom-viewport#layoutEditorCanvasBackground zoom=${canvasZoom} ?gestures=${showCanvasZoomControls} style="display: flex; flex-direction: column; width: 100%; min-width: 0; background-color: var(--background); ${canvasBackgroundStyle} background-image: radial-gradient(circle, var(--input) 1px, transparent 1px); background-size: 24px 24px;"':
+                  - 'div style="${canvasWrapperStyle}"':
                       - 'rvn-layout-editor-canvas#layoutEditorCanvas style="display: block; width: 100%;" :resolution=${projectResolution} :layoutState=${layoutState} selectedItemId=${selectedItemId} :previewData=${previewData} :disableMoveDrag=${selectedItemIsInsideDirectedContainer} :disableInteraction=${selectedItemIsEffectivelyHidden}': null
-              - 'rtgl-view h=1fg w=f sv style="min-height: 0; ${previewPanelVisibilityStyle}"':
-                  - $if showPreviewHeader:
-                      - 'rtgl-view h=48 w=f d=h bgc=bg bwt=xs bwb=xs ph=md av=c style="position: sticky; top: 0px; z-index: 1000;"':
-                          - rtgl-text w=1fg s=lg ellipsis=true: ${previewTitle}
-                          - rtgl-button#saveButton ml=sm: ${savePreviewButton}
-                  - $if isPreviewMounted:
-                      - rvn-layout-editor-preview#layoutEditorPreview :layoutState=${layoutState} :initialPreviewData=${previewHydrationData} :charactersData=${charactersData}: null
-                    $else:
-                      - rtgl-view wh=f av=c ah=c bgc=mu-fg:
-                          - rtgl-text s=sm c=mu-fg: ${loadingPreviewLabel}
-                  - 'rtgl-view w=f h=32vh style="flex-shrink: 0;"': null
-              - $if showMobileSelectedNodeDetail:
-                  - 'rtgl-view d=v h=1fg w=f style="min-height: 0;"':
-                      - rtgl-view h=48 w=f d=h bgc=bg bwb=xs ph=md av=c:
-                          - 'rtgl-view d=h av=c w=1fg g=xs style="min-width: 0;"':
-                              - rtgl-text w=1fg ellipsis=true: ${item.name}
-                              - $if itemRoleLabel:
-                                  - rtgl-text s=xs c=mu-fg: ${itemRoleLabel}
-                      - 'rtgl-view w=f h=1fg sv pv=md style="min-height: 0;"':
-                          - rvn-layout-edit-panel#layoutEditPanel layout-type=${layout.layoutType} resource-type=${layout.resourceType} item-type=${item.type} :projectResolution=${projectResolution} :selectedElementMetrics=${selectedElementMetrics} :isInsideSaveLoadSlot=${isInsideSaveLoadSlot} :isInsideDirectedContainer=${isInsideDirectedContainer} :values=${item} :imagesData=${imagesData} :soundsData=${soundsData} :spritesheetsData=${spritesheetsData} :particlesData=${particlesData} :charactersData=${charactersData} :textStylesData=${textStylesData} :variablesData=${variablesData} :layoutsData=${layoutsData}: null
-                          - 'rtgl-view w=f h=32vh style="flex-shrink: 0;"': null
-      - $if showDetailPanel:
-          - rvn-resizable-panel#resizableDetailPanel panel-type=detail-panel w=300 min-w=200 max-w=500 resize-side="left":
-              - rtgl-view wh=f slot="content":
-                  - $if detailPanelSelectedItemId:
-                      - rtgl-view d=v w=f h=f:
+              - $if showMobilePanels:
+                  - 'rtgl-view h=1fg w=f sv style="min-height: 0; ${previewPanelVisibilityStyle}"':
+                      - $if showPreviewHeader:
+                          - 'rtgl-view h=48 w=f d=h bgc=bg bwt=xs bwb=xs ph=md av=c style="position: sticky; top: 0px; z-index: 1000;"':
+                              - rtgl-text w=1fg s=lg ellipsis=true: ${previewTitle}
+                              - rtgl-button#saveButton ml=sm: ${savePreviewButton}
+                      - $if isPreviewMounted:
+                          - rvn-layout-editor-preview#layoutEditorPreview :layoutState=${layoutState} :initialPreviewData=${previewHydrationData} :charactersData=${charactersData}: null
+                        $else:
+                          - rtgl-view wh=f av=c ah=c bgc=mu-fg:
+                              - rtgl-text s=sm c=mu-fg: ${loadingPreviewLabel}
+                      - 'rtgl-view w=f h=32vh style="flex-shrink: 0;"': null
+                  - $if showMobileNodeExplorer:
+                      - 'rtgl-view d=v h=1fg w=f style="min-height: 0;"':
+                          - rtgl-view h=48 w=f d=h bgc=bg bwt=xs bwb=xs ph=md av=c:
+                              - rtgl-text w=1fg s=lg ellipsis=true: ${nodeExplorerTitle}
+                              - 'rtgl-button#nodeMovePreviousButton sq v=ol ml=sm aria-label="${nodeMovePreviousLabel}" title="${nodeMovePreviousLabel}"':
+                                  - 'rtgl-view style="transform: rotate(180deg);"':
+                                      - rtgl-svg svg=chevronDown wh=18: null
+                              - 'rtgl-button#nodeMoveNextButton sq pre=chevronDown v=ol ml=sm aria-label="${nodeMoveNextLabel}" title="${nodeMoveNextLabel}"': null
+                          - 'rtgl-view w=f h=1fg style="min-height: 0;"':
+                              - rvn-base-file-explorer#fileExplorer :items=${flatItems} shrinkable dropdown-menu allowDrag show-item-menu-actions bottom-empty-space-height=32vh :contextMenuItems=${contextMenuItems} :emptyContextMenuItems=${emptyContextMenuItems}: null
+                  - $if showMobileSelectedNodeDetail:
+                      - 'rtgl-view d=v h=1fg w=f style="min-height: 0;"':
                           - rtgl-view h=48 w=f d=h bgc=bg bwb=xs ph=md av=c:
-                              - rtgl-view d=h av=c w=1fg g=xs:
+                              - rtgl-button#nodeDetailBackButton sq pre=chevronLeft v=ol mr=sm: null
+                              - 'rtgl-view d=h av=c w=1fg g=xs style="min-width: 0;"':
                                   - rtgl-text w=1fg ellipsis=true: ${item.name}
                                   - $if itemRoleLabel:
                                       - rtgl-text s=xs c=mu-fg: ${itemRoleLabel}
-                          - rtgl-view w=f h=1fg sv pv=md:
+                          - 'rtgl-view w=f h=1fg sv pv=md style="min-height: 0;"':
                               - rvn-layout-edit-panel#layoutEditPanel layout-type=${layout.layoutType} resource-type=${layout.resourceType} item-type=${item.type} :projectResolution=${projectResolution} :selectedElementMetrics=${selectedElementMetrics} :isInsideSaveLoadSlot=${isInsideSaveLoadSlot} :isInsideDirectedContainer=${isInsideDirectedContainer} :values=${item} :imagesData=${imagesData} :soundsData=${soundsData} :spritesheetsData=${spritesheetsData} :particlesData=${particlesData} :charactersData=${charactersData} :textStylesData=${textStylesData} :variablesData=${variablesData} :layoutsData=${layoutsData}: null
-                    $else:
-                      - rtgl-view wh=f av=c ah=c bgc=mu-fg:
-                          - rtgl-text s=md c=mu-fg: ${noSelectionLabel}
-  - $if showMobileNodeExplorer:
-      - 'rtgl-view pos=fix edge=f z=1250 bgc=bg d=v style="min-width: 0; min-height: 0; padding-top: var(--rvn-mobile-overlay-top-inset, 0px); padding-bottom: env(safe-area-inset-bottom); box-sizing: border-box;"':
-          - rtgl-view h=48 w=f d=h av=c ph=md bgc=bg bwb=xs g=md:
-              - rtgl-text w=1fg s=md: ${nodeExplorerTitle}
-              - rtgl-button#mobileFileExplorerClose sq pre=x v=ol: null
-          - 'rtgl-view w=f h=1fg style="min-height: 0;"':
-              - rvn-base-file-explorer#fileExplorer :items=${flatItems} shrinkable dropdown-menu allowDrag show-item-menu-actions bottom-empty-space-height=80vh :contextMenuItems=${contextMenuItems} :emptyContextMenuItems=${emptyContextMenuItems}: null
+                              - 'rtgl-view w=f h=32vh style="flex-shrink: 0;"': null
+      - $if showRightPanel:
+          - rvn-resizable-panel#resizableDetailPanel panel-type=detail-panel show-on-touch w=300 min-w=200 max-w=500 resize-side="left":
+              - rtgl-view d=v wh=f slot="content":
+                  - rtgl-view h=48 w=f d=h bgc=bg bwb=xs ph=md av=c:
+                      - 'rtgl-view w=1fg style="min-width: 0;"':
+                          - rtgl-tabs#rightPanelModeTabs s=sm selected-tab=${rightPanelMode} :items=${rightPanelModeTabs}: null
+                      - $if showRightPanelSaveButton:
+                          - 'rtgl-button#saveButton sq pre=save v=se ml=sm aria-label="${savePreviewButton}" title="${savePreviewButton}"': null
+                  - 'rtgl-view d=v w=f h=1fg style="min-height: 0; ${rightPanelEditStyle}"':
+                      - $if detailPanelSelectedItemId:
+                          - rtgl-view d=v w=f h=f:
+                              - rtgl-view h=48 w=f d=h bgc=bg bwb=xs ph=md av=c:
+                                  - rtgl-view d=h av=c w=1fg g=xs:
+                                      - rtgl-text w=1fg ellipsis=true: ${item.name}
+                                      - $if itemRoleLabel:
+                                          - rtgl-text s=xs c=mu-fg: ${itemRoleLabel}
+                              - rtgl-view w=f h=1fg sv pv=md:
+                                  - rvn-layout-edit-panel#layoutEditPanel layout-type=${layout.layoutType} resource-type=${layout.resourceType} item-type=${item.type} :projectResolution=${projectResolution} :selectedElementMetrics=${selectedElementMetrics} :isInsideSaveLoadSlot=${isInsideSaveLoadSlot} :isInsideDirectedContainer=${isInsideDirectedContainer} :values=${item} :imagesData=${imagesData} :soundsData=${soundsData} :spritesheetsData=${spritesheetsData} :particlesData=${particlesData} :charactersData=${charactersData} :textStylesData=${textStylesData} :variablesData=${variablesData} :layoutsData=${layoutsData}: null
+                        $else:
+                          - rtgl-view wh=f av=c ah=c bgc=mu-fg:
+                              - rtgl-text s=md c=mu-fg: ${noSelectionLabel}
+                  - 'rtgl-view w=f h=1fg sv style="min-height: 0; ${rightPanelPreviewStyle}"':
+                      - $if isPreviewMounted:
+                          - rvn-layout-editor-preview#layoutEditorPreview :layoutState=${layoutState} :initialPreviewData=${previewHydrationData} :charactersData=${charactersData}: null
+                        $else:
+                          - rtgl-view wh=f av=c ah=c bgc=mu-fg:
+                              - rtgl-text s=sm c=mu-fg: ${loadingPreviewLabel}
+                      - 'rtgl-view w=f h=32vh style="flex-shrink: 0;"': null

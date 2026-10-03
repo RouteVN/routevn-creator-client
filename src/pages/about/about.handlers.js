@@ -1,3 +1,4 @@
+import { mountMobileResourceWindowLayout } from "../../internal/ui/resourcePages/mobileResourcePage.js";
 import {
   ROUTEVN_CONTACT_URL,
   ROUTEVN_CREATOR_APP_STORE_URL,
@@ -18,6 +19,7 @@ export const handleBeforeMount = (deps) => {
   }
 
   store.setPlatform({ platform });
+  return mountMobileResourceWindowLayout(deps);
 };
 
 export const handleDataChanged = () => {

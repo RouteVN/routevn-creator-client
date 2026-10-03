@@ -34,10 +34,12 @@ import {
   createMobileResourcePageState,
   openMobileResourceFileExplorerState,
   selectIsMobileFileExplorerOpenState,
+  selectIsTabletLandscapeState,
   selectIsTouchModeState,
   selectSuppressMobileDetailSheetState,
   setMobileResourceDetailSheetSuppressedState,
   setMobileResourcePageUiConfigState,
+  setMobileResourcePageWindowMetricsState,
 } from "../../internal/ui/resourcePages/mobileResourcePage.js";
 import {
   buildTagViewData,
@@ -653,6 +655,12 @@ export const setUiConfig = ({ state }, { uiConfig } = {}) => {
     uiConfig,
   });
 };
+
+export const setAppWindowMetrics = ({ state }, { width, height } = {}) => {
+  setMobileResourcePageWindowMetricsState(state, { width, height });
+};
+
+export const selectIsTabletLandscape = selectIsTabletLandscapeState;
 
 export const openMobileFileExplorer = ({ state }, _payload = {}) => {
   openMobileResourceFileExplorerState(state);

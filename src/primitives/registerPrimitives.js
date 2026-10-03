@@ -15,12 +15,16 @@ import {
   VISIBILITY_OBSERVER_TAG_NAME,
 } from "./visibilityObserver.js";
 import { CameraViewportElement } from "./cameraViewport.js";
+import { ZoomViewportElement, ZOOM_VIEWPORT_TAG_NAME } from "./zoomViewport.js";
 import { installLongPress } from "./longPress.js";
 
 export const registerPrimitives = () => {
   installLongPress();
   if (!customElements.get("rvn-camera-viewport")) {
     customElements.define("rvn-camera-viewport", CameraViewportElement);
+  }
+  if (!customElements.get(ZOOM_VIEWPORT_TAG_NAME)) {
+    customElements.define(ZOOM_VIEWPORT_TAG_NAME, ZoomViewportElement);
   }
   if (!customElements.get(LEXICAL_SCENE_DOCUMENT_EDITOR_TAG_NAME)) {
     customElements.define(

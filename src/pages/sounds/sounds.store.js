@@ -124,6 +124,8 @@ const {
   closeFolderNameDialog,
   setEditUpload,
   setUiConfig,
+  setAppWindowMetrics,
+  selectIsTabletLandscape,
   openMobileFileExplorer,
   closeMobileFileExplorer,
   selectItemById,
@@ -173,11 +175,19 @@ const {
       ? `"${deleteDialogItem.name}"`
       : copy.deleteTargetFallback;
 
+    // Touch players span the window, except beside the tablet explorer pane.
+    let touchAudioPlayerLeft = 0;
+    if (baseViewData.showTabletLandscapeExplorer) {
+      touchAudioPlayerLeft = baseViewData.tabletLandscapeExplorerWidth;
+    }
+
     return {
       ...baseViewData,
       playingSound: state.playingSound,
       showAudioPlayer: state.showAudioPlayer,
-      audioPlayerLeft: state.isTouchMode ? 0 : state.audioPlayerLeft,
+      audioPlayerLeft: state.isTouchMode
+        ? touchAudioPlayerLeft
+        : state.audioPlayerLeft,
       audioPlayerRight: state.isTouchMode ? 0 : state.audioPlayerRight,
       audioPlayerBottom: state.isTouchMode
         ? "calc(64px + env(safe-area-inset-bottom))"
@@ -219,6 +229,8 @@ export {
   closeFolderNameDialog,
   setEditUpload,
   setUiConfig,
+  setAppWindowMetrics,
+  selectIsTabletLandscape,
   openMobileFileExplorer,
   closeMobileFileExplorer,
   selectFolderById,

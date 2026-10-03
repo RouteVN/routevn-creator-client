@@ -1,3 +1,4 @@
+import { mountMobileResourceWindowLayout } from "../../internal/ui/resourcePages/mobileResourcePage.js";
 import { requireProjectResolution } from "../../internal/projectResolution.js";
 import { requireProjectLanguage } from "../../internal/projectLanguage.js";
 import { createProjectStateStream } from "../../deps/services/shared/projectStateStream.js";
@@ -181,12 +182,14 @@ export const handleBeforeMount = (deps) => {
       }),
     )
     .subscribe();
+  const cleanupWindowLayout = mountMobileResourceWindowLayout(deps);
 
   return () => {
     store.setProjectAnalyticsRequestId({
       requestId: store.selectProjectAnalyticsRequestId() + 1,
     });
     subscription.unsubscribe();
+    cleanupWindowLayout?.();
   };
 };
 

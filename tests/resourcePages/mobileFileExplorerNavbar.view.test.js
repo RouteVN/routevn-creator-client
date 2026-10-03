@@ -26,11 +26,6 @@ const mobileFileExplorerPages = [
   ["controls", "controls/controls.view.yaml", "$if showMobileFileExplorer"],
   ["fonts", "fonts/fonts.view.yaml", "$if showMobileFileExplorer"],
   ["images", "images/images.view.yaml", "$if showMobileFileExplorer"],
-  [
-    "layout editor",
-    "layoutEditor/layoutEditor.view.yaml",
-    "$if showMobileNodeExplorer",
-  ],
   ["layouts", "layouts/layouts.view.yaml", "$if showMobileFileExplorer"],
   ["particles", "particles/particles.view.yaml", "$if showMobileFileExplorer"],
   ["scenes", "scenes/scenes.view.yaml", "$if showMobileFileExplorer"],
@@ -53,6 +48,10 @@ const mobileFileExplorerPages = [
   ["variables", "variables/variables.view.yaml", "$if showMobileFileExplorer"],
   ["videos", "videos/videos.view.yaml", "$if showMobileFileExplorer"],
 ];
+
+// These pages use a different explorer instead of the resource file explorer,
+// so they do not render the persistent tablet landscape explorer pane.
+const pagesWithoutTabletLandscapeExplorer = new Set(["scenes"]);
 
 describe("mobile file explorer navbar", () => {
   it("enables the overlay top inset only in the iOS shell", () => {
@@ -98,7 +97,7 @@ describe("mobile file explorer navbar", () => {
 
   it.each(mobileFileExplorerPages)(
     "exposes the empty-space menu in the mobile explorer for %s",
-    (_name, relativePath, explorerCondition) => {
+    (name, relativePath, explorerCondition) => {
       const view = readFileSync(
         new URL(`../../src/pages/${relativePath}`, import.meta.url),
         "utf8",
@@ -113,7 +112,9 @@ describe("mobile file explorer navbar", () => {
       expect(explorerLine).toContain(
         ":emptyContextMenuItems=${emptyContextMenuItems}",
       );
-      expect(view.match(/show-item-menu-actions/g)).toHaveLength(1);
+      expect(view.match(/show-item-menu-actions/g)).toHaveLength(
+        pagesWithoutTabletLandscapeExplorer.has(name) ? 1 : 2,
+      );
     },
   );
 });

@@ -1,4 +1,5 @@
 import { describe, expect, it, vi } from "vitest";
+import { Subject } from "rxjs";
 import { produce } from "immer";
 import * as panelStore from "../../src/components/layoutEditPanel/layoutEditPanel.store.js";
 import {
@@ -10,6 +11,7 @@ import * as layoutEditorStore from "../../src/pages/layoutEditor/layoutEditor.st
 import { createLayoutEditorRepositoryStoreData } from "../../src/pages/layoutEditor/support/layoutEditorRepositoryState.js";
 import {
   handleBackClick,
+  handleBeforeMount,
   handleFileExplorerAction,
   handleFileExplorerItemClick,
   handleFileExplorerVisibilityToggle,
@@ -18,7 +20,12 @@ import {
   handleLayoutEditorCanvasMetricsChange,
   handleLayoutEditorCanvasSelectionChange,
   handleLayoutEditPanelUpdateHandler,
+  handleNodeButtonClick,
+  handleNodeDetailBackClick,
+  handleNodeMoveNextClick,
+  handleNodeMovePreviousClick,
   handlePreviewButtonClick,
+  handleRightPanelModeChange,
   handleSaveButtonClick,
 } from "../../src/pages/layoutEditor/layoutEditor.handlers.js";
 import { enqueueLayoutEditorPersistence } from "../../src/pages/layoutEditor/support/layoutEditorPersistenceQueue.js";
@@ -783,6 +790,7 @@ describe("layoutEditor.handleSaveButtonClick", () => {
       deps.store.selectSelectedItemId = vi.fn(() => "node-1");
       deps.store.setSelectedItemId = vi.fn();
       deps.store.setDetailPanelSelectedItemId = vi.fn();
+      deps.store.setRightPanelMode = vi.fn();
 
       await handleSaveButtonClick(deps);
 
@@ -1131,6 +1139,7 @@ describe("layoutEditor.handleFileExplorerAction", () => {
       selectedItemId = itemId;
     });
     deps.store.setDetailPanelSelectedItemId = vi.fn();
+    deps.store.setRightPanelMode = vi.fn();
     deps.refs.fileExplorer = {
       selectItem: vi.fn(),
     };
@@ -1272,6 +1281,7 @@ describe("layoutEditor.handleFileExplorerItemClick", () => {
     const store = {
       setSelectedItemId: vi.fn(),
       setDetailPanelSelectedItemId: vi.fn(),
+      setRightPanelMode: vi.fn(),
     };
     const render = vi.fn();
 
@@ -1299,6 +1309,7 @@ describe("layoutEditor.handleFileExplorerItemClick", () => {
       selectIsTouchMode: vi.fn(() => true),
       selectIsMobileFileExplorerOpen: vi.fn(() => true),
       setDetailPanelSelectedItemId: vi.fn(),
+      setRightPanelMode: vi.fn(),
       closeMobileFileExplorer: vi.fn(),
     };
     const render = vi.fn();
@@ -1323,12 +1334,93 @@ describe("layoutEditor.handleFileExplorerItemClick", () => {
   });
 });
 
+describe("layoutEditor.handleFileExplorerItemClick (stepping)", () => {
+  it("keeps the Elements list open when the selection comes from the up/down buttons", async () => {
+    const store = {
+      setSelectedItemId: vi.fn(),
+      selectSelectedItemId: vi.fn(() => undefined),
+      selectIsTouchMode: vi.fn(() => true),
+      selectIsMobileFileExplorerOpen: vi.fn(() => true),
+      setDetailPanelSelectedItemId: vi.fn(),
+      setRightPanelMode: vi.fn(),
+      closeMobileFileExplorer: vi.fn(),
+    };
+    const render = vi.fn();
+
+    await handleFileExplorerItemClick(
+      { store, refs: {}, render },
+      {
+        _event: {
+          detail: {
+            itemId: "node-2",
+            source: "navigation",
+          },
+        },
+      },
+    );
+
+    expect(store.setSelectedItemId).toHaveBeenCalledWith({ itemId: "node-2" });
+    expect(store.setDetailPanelSelectedItemId).toHaveBeenCalledWith({
+      itemId: "node-2",
+    });
+    expect(store.closeMobileFileExplorer).not.toHaveBeenCalled();
+    expect(render).toHaveBeenCalledTimes(1);
+  });
+});
+
+describe("layoutEditor.handleFileExplorerItemClick (tablet landscape pane)", () => {
+  it("selects straight into the detail panel without needing the inline list to be open", async () => {
+    const store = {
+      setSelectedItemId: vi.fn(),
+      selectSelectedItemId: vi.fn(() => undefined),
+      selectIsTouchMode: vi.fn(() => true),
+      selectIsMobileFileExplorerOpen: vi.fn(() => false),
+      selectIsTabletLandscape: vi.fn(() => true),
+      setDetailPanelSelectedItemId: vi.fn(),
+      setRightPanelMode: vi.fn(),
+      closeMobileFileExplorer: vi.fn(),
+    };
+    const render = vi.fn();
+
+    await handleFileExplorerItemClick(
+      { store, refs: {}, render },
+      { _event: { detail: { itemId: "node-3" } } },
+    );
+
+    expect(store.setSelectedItemId).toHaveBeenCalledWith({ itemId: "node-3" });
+    expect(store.setDetailPanelSelectedItemId).toHaveBeenCalledWith({
+      itemId: "node-3",
+    });
+    expect(render).toHaveBeenCalledTimes(1);
+  });
+});
+
+describe("layoutEditor.handleNodeMove*Click", () => {
+  it.each([
+    ["previous", handleNodeMovePreviousClick],
+    ["next", handleNodeMoveNextClick],
+  ])(
+    "steps the highlighted element %s without wrapping",
+    (direction, handler) => {
+      const navigateSelection = vi.fn();
+
+      handler({ refs: { fileExplorer: { navigateSelection } } });
+
+      expect(navigateSelection).toHaveBeenCalledWith({
+        direction,
+        clamp: true,
+      });
+    },
+  );
+});
+
 describe("layoutEditor.handleLayoutEditorCanvasBackgroundClick", () => {
   it("clears node and explorer selection after clicking outside the canvas", () => {
     const background = {};
     const store = {
       setSelectedItemId: vi.fn(),
       setDetailPanelSelectedItemId: vi.fn(),
+      setRightPanelMode: vi.fn(),
     };
     const refs = {
       fileExplorer: {
@@ -1387,6 +1479,7 @@ describe("layoutEditor.handleLayoutEditorCanvasSelectionChange", () => {
       setSelectedItemId: vi.fn(),
       selectIsTouchMode: vi.fn(() => true),
       setDetailPanelSelectedItemId: vi.fn(),
+      setRightPanelMode: vi.fn(),
     };
     const refs = {
       fileExplorer: {
@@ -1421,6 +1514,7 @@ describe("layoutEditor.handleLayoutEditorCanvasSelectionChange", () => {
     const store = {
       setSelectedItemId: vi.fn(),
       setDetailPanelSelectedItemId: vi.fn(),
+      setRightPanelMode: vi.fn(),
     };
     const refs = {
       fileExplorer: {
@@ -1454,15 +1548,290 @@ describe("layoutEditor.handleLayoutEditorCanvasSelectionChange", () => {
 describe("layoutEditor.handlePreviewButtonClick", () => {
   it("returns mobile node detail back to the preview pane", () => {
     const store = {
+      closeMobileFileExplorer: vi.fn(),
       setDetailPanelSelectedItemId: vi.fn(),
+      setRightPanelMode: vi.fn(),
     };
     const render = vi.fn();
 
     handlePreviewButtonClick({ store, render });
 
+    expect(store.closeMobileFileExplorer).toHaveBeenCalled();
     expect(store.setDetailPanelSelectedItemId).toHaveBeenCalledWith({
       itemId: undefined,
     });
     expect(render).toHaveBeenCalledTimes(1);
   });
+});
+
+describe("layoutEditor.handleNodeButtonClick", () => {
+  it("opens the Elements list and clears the selected node", () => {
+    const store = {
+      selectIsMobileFileExplorerOpen: vi.fn(() => false),
+      openMobileFileExplorer: vi.fn(),
+      closeMobileFileExplorer: vi.fn(),
+      setSelectedItemId: vi.fn(),
+      setDetailPanelSelectedItemId: vi.fn(),
+      setRightPanelMode: vi.fn(),
+    };
+    const render = vi.fn();
+
+    handleNodeButtonClick({ store, render, refs: {} });
+
+    expect(store.setSelectedItemId).toHaveBeenCalledWith({
+      itemId: undefined,
+    });
+    expect(store.setDetailPanelSelectedItemId).toHaveBeenCalledWith({
+      itemId: undefined,
+    });
+    expect(store.openMobileFileExplorer).toHaveBeenCalled();
+    expect(store.closeMobileFileExplorer).not.toHaveBeenCalled();
+    expect(render).toHaveBeenCalledTimes(1);
+  });
+
+  it("returns to the Elements list from the selected node's back button and unselects the node", () => {
+    const calls = [];
+    const store = {
+      selectIsMobileFileExplorerOpen: vi.fn(() => false),
+      openMobileFileExplorer: vi.fn(() => calls.push("open")),
+      closeMobileFileExplorer: vi.fn(),
+      setSelectedItemId: vi.fn(() => calls.push("deselect")),
+      setDetailPanelSelectedItemId: vi.fn(() => calls.push("clear-detail")),
+      setRightPanelMode: vi.fn(),
+    };
+    const render = vi.fn(() => calls.push("render"));
+
+    handleNodeDetailBackClick({ store, render, refs: {} });
+
+    expect(store.setSelectedItemId).toHaveBeenCalledWith({
+      itemId: undefined,
+    });
+    expect(store.setDetailPanelSelectedItemId).toHaveBeenCalledWith({
+      itemId: undefined,
+    });
+    expect(store.closeMobileFileExplorer).not.toHaveBeenCalled();
+    expect(calls).toEqual(["deselect", "clear-detail", "open", "render"]);
+  });
+
+  it("closes the node explorer when it is already open", () => {
+    const store = {
+      selectIsMobileFileExplorerOpen: vi.fn(() => true),
+      selectSelectedItemId: vi.fn(() => "node-1"),
+      openMobileFileExplorer: vi.fn(),
+      closeMobileFileExplorer: vi.fn(),
+    };
+    const render = vi.fn();
+
+    handleNodeButtonClick({ store, render, refs: {} });
+
+    expect(store.closeMobileFileExplorer).toHaveBeenCalled();
+    expect(store.openMobileFileExplorer).not.toHaveBeenCalled();
+    expect(render).toHaveBeenCalledTimes(1);
+  });
+});
+
+describe("layoutEditor.handleBeforeMount", () => {
+  const createMountDeps = ({ isTouchMode }) => ({
+    appService: { registerBeforeNavigation: vi.fn(() => vi.fn()) },
+    store: {
+      setUiConfig: vi.fn(),
+      selectIsTouchMode: vi.fn(() => isTouchMode),
+      openMobileFileExplorer: vi.fn(),
+    },
+    uiConfig: { inputMode: isTouchMode ? "touch" : "mouse" },
+    subject: new Subject(),
+  });
+
+  it("starts touch layouts on the node explorer instead of the preview", () => {
+    const deps = createMountDeps({ isTouchMode: true });
+
+    handleBeforeMount(deps);
+
+    expect(deps.store.setUiConfig).toHaveBeenCalledWith({
+      uiConfig: deps.uiConfig,
+    });
+    expect(deps.store.openMobileFileExplorer).toHaveBeenCalledTimes(1);
+  });
+
+  it("keeps the window metrics in the store for the tablet landscape layout", () => {
+    const deps = createMountDeps({ isTouchMode: true });
+    let publish;
+    deps.windowMetricsClient = {
+      subscribe: vi.fn((listener) => {
+        publish = listener;
+        return vi.fn();
+      }),
+    };
+    deps.store.setAppWindowMetrics = vi.fn();
+    deps.store.selectSelectedItemId = vi.fn(() => undefined);
+    deps.render = vi.fn();
+
+    handleBeforeMount(deps);
+    publish({ width: 1408, height: 880 });
+
+    expect(deps.store.setAppWindowMetrics).toHaveBeenCalledWith({
+      width: 1408,
+      height: 880,
+    });
+    expect(deps.render).toHaveBeenCalledTimes(1);
+  });
+
+  it("re-highlights the selected element in the explorer that appears after rotating", () => {
+    vi.useFakeTimers();
+
+    try {
+      const selectItem = vi.fn();
+      const deps = createMountDeps({ isTouchMode: true });
+      let publish;
+      deps.windowMetricsClient = {
+        subscribe: vi.fn((listener) => {
+          publish = listener;
+          return vi.fn();
+        }),
+      };
+      deps.store.setAppWindowMetrics = vi.fn();
+      deps.store.selectSelectedItemId = vi.fn(() => "node-1");
+      deps.render = vi.fn();
+      deps.refs = { fileExplorer: { selectItem } };
+
+      handleBeforeMount(deps);
+      publish({ width: 1408, height: 880 });
+
+      expect(selectItem).not.toHaveBeenCalled();
+
+      vi.runAllTimers();
+
+      expect(selectItem).toHaveBeenCalledWith({ itemId: "node-1" });
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+
+  it("does not open the mobile node explorer on desktop layouts", () => {
+    const deps = createMountDeps({ isTouchMode: false });
+
+    handleBeforeMount(deps);
+
+    expect(deps.store.openMobileFileExplorer).not.toHaveBeenCalled();
+  });
+});
+
+describe("layoutEditor right panel mode", () => {
+  const createModeStore = (overrides = {}) => ({
+    setSelectedItemId: vi.fn(),
+    selectSelectedItemId: vi.fn(() => undefined),
+    selectIsTouchMode: vi.fn(() => false),
+    setDetailPanelSelectedItemId: vi.fn(),
+    setRightPanelMode: vi.fn(),
+    closeMobileFileExplorer: vi.fn(),
+    ...overrides,
+  });
+
+  it("switches the right panel when a tab is picked", () => {
+    const store = createModeStore();
+    const render = vi.fn();
+
+    handleRightPanelModeChange(
+      { store, render },
+      { _event: { detail: { id: "edit" } } },
+    );
+
+    expect(store.setRightPanelMode).toHaveBeenCalledWith({ mode: "edit" });
+    expect(render).toHaveBeenCalledTimes(1);
+  });
+
+  it("shows Edit as soon as an element is picked on a touch layout", async () => {
+    const store = createModeStore({
+      selectIsTouchMode: vi.fn(() => true),
+      selectIsMobileFileExplorerOpen: vi.fn(() => false),
+      selectIsTabletLandscape: vi.fn(() => true),
+    });
+
+    await handleFileExplorerItemClick(
+      { store, refs: {}, render: vi.fn() },
+      { _event: { detail: { itemId: "node-1" } } },
+    );
+
+    expect(store.setRightPanelMode).toHaveBeenCalledWith({ mode: "edit" });
+  });
+
+  it("shows Edit when the canvas selects an element and Preview when it clears", () => {
+    const store = createModeStore({ selectIsTouchMode: vi.fn(() => true) });
+    const refs = {
+      fileExplorer: { selectItem: vi.fn(), clearSelection: vi.fn() },
+    };
+
+    handleLayoutEditorCanvasSelectionChange(
+      { store, refs, render: vi.fn() },
+      { _event: { detail: { itemId: "node-1" } } },
+    );
+    expect(store.setRightPanelMode).toHaveBeenLastCalledWith({ mode: "edit" });
+
+    handleLayoutEditorCanvasSelectionChange(
+      { store, refs, render: vi.fn() },
+      { _event: { detail: {} } },
+    );
+    expect(store.setRightPanelMode).toHaveBeenLastCalledWith({
+      mode: "preview",
+    });
+  });
+
+  it("shows Preview again after clearing the selection from the explorer or canvas background", async () => {
+    const store = createModeStore();
+    const refs = { fileExplorer: { clearSelection: vi.fn() } };
+
+    await handleFileExplorerItemClick(
+      { store, refs, render: vi.fn() },
+      { _event: { detail: {} } },
+    );
+    expect(store.setRightPanelMode).toHaveBeenLastCalledWith({
+      mode: "preview",
+    });
+
+    store.setRightPanelMode.mockClear();
+    const background = {};
+    handleLayoutEditorCanvasBackgroundClick(
+      { store, refs, render: vi.fn() },
+      { _event: { target: background, currentTarget: background } },
+    );
+    expect(store.setRightPanelMode).toHaveBeenCalledWith({ mode: "preview" });
+  });
+
+  it.each([
+    ["is already loaded in the detail panel", "node-1"],
+    ["has not loaded in the detail panel yet", undefined],
+  ])(
+    "shows Edit on desktop when the clicked element %s",
+    async (_name, loadedDetailId) => {
+      vi.useFakeTimers();
+
+      try {
+        let requestId;
+        const store = createModeStore({
+          requestDetailPanelSelectionSync: vi.fn((payload) => {
+            requestId = payload.requestId;
+          }),
+          selectDetailPanelSelectionRequestId: vi.fn(() => requestId),
+          selectSelectedItemId: vi.fn(() => "node-1"),
+          selectDetailPanelSelectedItemId: vi.fn(() => loadedDetailId),
+        });
+        const render = vi.fn();
+
+        await handleFileExplorerItemClick(
+          { store, refs: {}, render },
+          { _event: { detail: { itemId: "node-1" } } },
+        );
+        vi.runAllTimers();
+
+        expect(store.setRightPanelMode).toHaveBeenCalledWith({ mode: "edit" });
+        if (loadedDetailId === undefined) {
+          expect(store.setDetailPanelSelectedItemId).toHaveBeenCalledWith({
+            itemId: "node-1",
+          });
+        }
+      } finally {
+        vi.useRealTimers();
+      }
+    },
+  );
 });

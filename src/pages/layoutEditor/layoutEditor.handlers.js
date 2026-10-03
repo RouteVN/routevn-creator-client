@@ -1,4 +1,5 @@
 import { generateId } from "../../internal/id.js";
+import { mountMobileResourceWindowLayout } from "../../internal/ui/resourcePages/mobileResourcePage.js";
 import { concatMap, debounceTime, filter, from } from "rxjs";
 import {
   createCollabRemoteRefreshStream,
@@ -457,11 +458,38 @@ const flushQueuedLayoutEditorUpdates = async (deps) => {
   }
 };
 
+// Rotating swaps between the left pane and the inline list. Whichever one
+// mounts has no selection of its own, so point it at the selected element.
+const syncExplorerSelectionAfterLayoutChange = (deps) => {
+  const { refs, store } = deps;
+  const selectedItemId = store.selectSelectedItemId();
+
+  if (!selectedItemId) {
+    return;
+  }
+
+  scheduleAfterNextPaint(() => {
+    refs.fileExplorer?.selectItem?.({ itemId: selectedItemId });
+  });
+};
+
 export const handleBeforeMount = (deps) => {
   const { appService, store, uiConfig } = deps;
   store.setUiConfig({ uiConfig });
+  // Touch layouts start on the node explorer instead of the Preview section.
+  if (store.selectIsTouchMode()) {
+    store.openMobileFileExplorer();
+  }
 
   const cleanupSubscriptions = mountSubscriptions(deps);
+  const cleanupWindowLayout = mountMobileResourceWindowLayout({
+    windowMetricsClient: deps.windowMetricsClient,
+    store,
+    render: () => {
+      deps.render();
+      syncExplorerSelectionAfterLayoutChange(deps);
+    },
+  });
   const unregisterBeforeNavigation = appService.registerBeforeNavigation(
     async () => {
       const flushResult = await flushQueuedLayoutEditorUpdates(deps);
@@ -474,6 +502,7 @@ export const handleBeforeMount = (deps) => {
     unregisterBeforeNavigation();
     await flushQueuedLayoutEditorUpdates(deps);
     cleanupSubscriptions?.();
+    cleanupWindowLayout?.();
   };
 };
 
@@ -620,7 +649,9 @@ const scheduleDetailPanelSelectionRender = (deps, { itemId } = {}) => {
       return;
     }
 
+    store.setRightPanelMode({ mode: "edit" });
     if (store.selectDetailPanelSelectedItemId?.() === itemId) {
+      render();
       return;
     }
 
@@ -647,6 +678,7 @@ export const handleFileExplorerItemClick = async (deps, payload) => {
   if (!itemId) {
     store.setSelectedItemId({ itemId: undefined });
     store.setDetailPanelSelectedItemId({ itemId: undefined });
+    store.setRightPanelMode({ mode: "preview" });
     render();
     return;
   }
@@ -656,11 +688,19 @@ export const handleFileExplorerItemClick = async (deps, payload) => {
   }
 
   store.setSelectedItemId({ itemId: itemId });
-  if (store.selectIsTouchMode?.() && store.selectIsMobileFileExplorerOpen?.()) {
+  if (
+    store.selectIsTouchMode?.() &&
+    (store.selectIsMobileFileExplorerOpen?.() ||
+      store.selectIsTabletLandscape?.())
+  ) {
     store.setDetailPanelSelectedItemId({
       itemId,
     });
-    store.closeMobileFileExplorer();
+    store.setRightPanelMode({ mode: "edit" });
+    // Stepping with the up/down buttons keeps the Elements list open.
+    if (detail.source !== "navigation") {
+      store.closeMobileFileExplorer();
+    }
     render();
     return;
   }
@@ -678,6 +718,7 @@ export const handleLayoutEditorCanvasSelectionChange = (deps, payload) => {
   if (!itemId) {
     store.setSelectedItemId({ itemId: undefined });
     store.setDetailPanelSelectedItemId({ itemId: undefined });
+    store.setRightPanelMode({ mode: "preview" });
     refs.fileExplorer?.clearSelection?.();
     render();
     return;
@@ -688,6 +729,7 @@ export const handleLayoutEditorCanvasSelectionChange = (deps, payload) => {
 
   if (store.selectIsTouchMode?.()) {
     store.setDetailPanelSelectedItemId({ itemId });
+    store.setRightPanelMode({ mode: "edit" });
     render();
     return;
   }
@@ -706,6 +748,7 @@ export const handleLayoutEditorCanvasBackgroundClick = (deps, payload) => {
 
   store.setSelectedItemId({ itemId: undefined });
   store.setDetailPanelSelectedItemId({ itemId: undefined });
+  store.setRightPanelMode({ mode: "preview" });
   refs.fileExplorer?.clearSelection?.();
   render();
 };
@@ -808,31 +851,85 @@ export const handleFileExplorerVisibilityToggle = async (deps, payload) => {
   }
 };
 
-export const handleNodeButtonClick = (deps) => {
-  const { refs, render, store } = deps;
-  const selectedItemId = store.selectSelectedItemId();
+// Going to the Elements list leaves nothing selected on the canvas.
+const openMobileNodeExplorer = (deps) => {
+  const { render, store } = deps;
 
+  store.setSelectedItemId({ itemId: undefined });
+  store.setDetailPanelSelectedItemId({ itemId: undefined });
+  store.setRightPanelMode({ mode: "preview" });
   store.openMobileFileExplorer();
   render();
+};
 
-  if (selectedItemId) {
-    scheduleAfterNextPaint(() => {
-      refs.fileExplorer?.selectItem?.({ itemId: selectedItemId });
-    });
+export const handleNodeButtonClick = (deps) => {
+  const { render, store } = deps;
+
+  if (store.selectIsMobileFileExplorerOpen()) {
+    store.closeMobileFileExplorer();
+    render();
+    return;
   }
+
+  openMobileNodeExplorer(deps);
+};
+
+export const handleNodeDetailBackClick = openMobileNodeExplorer;
+
+const stepMobileNodeSelection = (deps, direction) => {
+  const { refs } = deps;
+
+  refs.fileExplorer.navigateSelection({ direction, clamp: true });
+};
+
+export const handleNodeMovePreviousClick = (deps) => {
+  stepMobileNodeSelection(deps, "previous");
+};
+
+export const handleNodeMoveNextClick = (deps) => {
+  stepMobileNodeSelection(deps, "next");
 };
 
 export const handlePreviewButtonClick = (deps) => {
   const { render, store } = deps;
 
+  store.closeMobileFileExplorer();
   store.setDetailPanelSelectedItemId({ itemId: undefined });
   render();
 };
 
-export const handleMobileFileExplorerClose = (deps) => {
-  const { render, store } = deps;
+// rvn-zoom-viewport keeps the point in view in place when the zoom changes.
+export const handleCanvasZoomInClick = (deps) => {
+  const { store, render } = deps;
+  store.zoomCanvasIn();
+  render();
+};
 
-  store.closeMobileFileExplorer();
+export const handleCanvasZoomOutClick = (deps) => {
+  const { store, render } = deps;
+  store.zoomCanvasOut();
+  render();
+};
+
+export const handleCanvasZoomResetClick = (deps) => {
+  const { store, refs, render } = deps;
+  store.resetCanvasZoom();
+  render();
+  refs.layoutEditorCanvasBackground.centerContent();
+};
+
+export const handleCanvasZoomGesture = (deps, payload) => {
+  const { store, render } = deps;
+  const { zoom } = payload._event.detail;
+  store.setCanvasZoom({ zoom });
+  render();
+};
+
+export const handleRightPanelModeChange = (deps, payload) => {
+  const { render, store } = deps;
+  const { id } = payload._event.detail;
+
+  store.setRightPanelMode({ mode: id });
   render();
 };
 
@@ -853,6 +950,7 @@ const refreshLayoutEditorData = async (deps, payload = {}) => {
     store.setSelectedItemId({ itemId: payload.selectedItemId });
     if (payload.syncDetailPanel !== false) {
       store.setDetailPanelSelectedItemId({ itemId: payload.selectedItemId });
+      store.setRightPanelMode({ mode: "edit" });
     }
   }
   render();
@@ -1902,16 +2000,9 @@ export const handleLayoutEditorPreviewPlay = (deps) => {
   refs.layoutEditorCanvas.restartPreview();
 };
 
-export const handleLayoutEditPanelUpdateHandler = async (deps, payload) => {
-  const { store, render } = deps;
-  const layoutId = store.selectLayoutId();
-  const resourceType = store.selectLayoutResourceType();
-  const selectedItemId = store.selectSelectedItemId();
-  const detail = payload._event.detail;
-  const currentItem = store.selectSelectedItemData();
-  if (!currentItem) {
-    return;
-  }
+// The selected item with an edit panel value applied, for saving it or for
+// previewing it on the canvas.
+const buildPanelUpdatedItem = (store, detail, currentItem) => {
   const nextAspectRatioLock =
     Number.isFinite(detail.formValues?.aspectRatioLock) &&
     detail.formValues.aspectRatioLock > 0
@@ -1991,6 +2082,21 @@ export const handleLayoutEditPanelUpdateHandler = async (deps, payload) => {
     }
   }
 
+  return updatedItem;
+};
+
+export const handleLayoutEditPanelUpdateHandler = async (deps, payload) => {
+  const { store, render } = deps;
+  const layoutId = store.selectLayoutId();
+  const resourceType = store.selectLayoutResourceType();
+  const selectedItemId = store.selectSelectedItemId();
+  const detail = payload._event.detail;
+  const currentItem = store.selectSelectedItemData();
+  if (!currentItem) {
+    return;
+  }
+  const updatedItem = buildPanelUpdatedItem(store, detail, currentItem);
+
   if (areLayoutEditorItemsEquivalent(currentItem, updatedItem)) {
     return;
   }
@@ -2017,5 +2123,31 @@ export const handleLayoutEditPanelUpdateHandler = async (deps, payload) => {
     subject.dispatch("layoutEditor.updateElement", pendingPayload);
   }
 
+  render();
+};
+
+// A popover value shown on the canvas before it is submitted. It never
+// reaches the saved layout: an update replaces it, and preview-cancel drops it.
+export const handleLayoutEditPanelPreview = (deps, payload) => {
+  const { store, render } = deps;
+  const currentItem = store.selectSelectedItemData();
+  if (!currentItem) {
+    return;
+  }
+
+  store.setCanvasPreviewItem({
+    itemId: store.selectSelectedItemId(),
+    item: buildPanelUpdatedItem(store, payload._event.detail, currentItem),
+  });
+  render();
+};
+
+export const handleLayoutEditPanelPreviewCancel = (deps) => {
+  const { store, render } = deps;
+  if (!store.selectHasCanvasPreviewItem()) {
+    return;
+  }
+
+  store.clearCanvasPreviewItem();
   render();
 };

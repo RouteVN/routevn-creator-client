@@ -17,7 +17,7 @@ refs:
         handler: handleClickContactButton
 template:
   - 'rtgl-view d=h w=f h=f style="min-width: 0; min-height: 0;"':
-      - 'rtgl-view d=h h=f style="min-width: 0; min-height: 0;"':
+      - 'rtgl-view d=h w=f h=f style="min-width: 0; min-height: 0;"':
           - $if showExplorerPanel:
               - rvn-resizable-panel#fileExplorer w=300 min-w=200 max-w=500 resize-side="right":
                   - rtgl-view slot="content" w=f h=f:
@@ -30,7 +30,7 @@ template:
                               - rtgl-text: ${title}
                 $else:
                   - rtgl-text s=h2: ${title}
-              - 'rtgl-view g=xl mt=${contentBodyMarginTop} h=1fg sv p=${contentBodyPadding} style="min-height: 0;"':
+              - 'rtgl-view w=f g=xl mt=${contentBodyMarginTop} h=1fg sv p=${contentBodyPadding} style="min-height: 0; ${tabletLandscapeContentStyle}"':
                   - rtgl-view g=lg:
                       - rtgl-text s=h4: ${versionInformationTitle}
                       - rtgl-view av=c g=sm:

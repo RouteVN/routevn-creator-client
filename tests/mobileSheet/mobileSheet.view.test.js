@@ -17,4 +17,17 @@ describe("mobileSheet view", () => {
     expect(view).toContain("box-shadow: 0 -16px 40px rgba(0, 0, 0, 0.22);");
     expect(view).not.toContain("rgba(15, 23, 42");
   });
+
+  it("caps the sheet width and centers it on wide windows", () => {
+    const view = readFileSync(
+      new URL(
+        "../../src/components/mobileSheet/mobileSheet.view.yaml",
+        import.meta.url,
+      ),
+      "utf8",
+    );
+
+    expect(view).toContain("max-width: ${maxWidth};");
+    expect(view).toContain("margin-left: auto; margin-right: auto;");
+  });
 });

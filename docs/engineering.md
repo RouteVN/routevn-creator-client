@@ -1110,6 +1110,100 @@ resize or Split View changes. Explicit defaults and saved `.mobileItemsPerRow`
 preferences take precedence; automatic defaults are not persisted. Desktop
 defaults and full-width resource lists keep their existing behavior.
 
+The Images page shows its file explorer as a persistent 300px left pane on
+tablet landscape instead of the hamburger-opened overlay. It uses the scene
+editor's breakpoint: touch windows at least 768 logical pixels wide and wider
+than tall, measured from native window metrics (`windowMetricsClient`). Portrait
+and phone windows keep the hamburger and overlay. `mobileResourcePage.js` owns
+the state and the `showTabletLandscapeExplorer` / `showMobileMenuButton` view
+flags; a page opts in by exposing `setAppWindowMetrics` and
+`selectIsTabletLandscape` from its store and calling
+`mountMobileResourceWindowLayout(deps)` from `handleBeforeMount`. Selecting an
+item in the pane syncs the grid but keeps the mobile detail sheet suppressed,
+matching the overlay explorer. Other resource pages are unchanged until they
+opt in.
+
+On tablet landscape the About, Config, Tutorials, and Project pages center
+their content in a 640px column (the Projects page column width). Their headers,
+scroll containers, and scrollbars still span the window; the column comes from
+`buildTabletLandscapeContentColumnStyle`, which adds horizontal padding of
+`max(gutter, (100% - 640px) / 2)`. Each store tracks window metrics through
+`setAppWindowMetrics`, and each page mounts them with
+`mountMobileResourceWindowLayout(deps)`. Portrait, phone, and desktop layouts
+are unchanged.
+
+On touch layouts (phone and tablet) the layout editor shows its element list
+inline below the canvas instead of in a full-page overlay. The panel under the
+canvas takes turns showing the Preview section, the **Elements** list, and the
+selected element's edit panel, and the page opens on the Elements list. The
+header **Elements** button toggles the list and is highlighted while it is
+open. Going to the list, from that button or from the back button in an
+element's edit panel header (styled like the navbar's), unselects the element on
+the canvas. Square up and down arrow buttons on the right of the list title step
+the highlighted element through the visible rows (the explorer's
+`navigateSelection`, which marks its `item-click` with `source: "navigation"`),
+so the list stays open while the canvas selection follows. Picking an element
+closes the list and shows its edit panel; **Preview** returns to the Preview
+section. The Preview section stays mounted but
+hidden behind the other two, so unsaved preview settings survive. On tablet
+landscape the Elements list is instead a persistent 300px pane on the left
+(without the step buttons), the header **Elements** button is hidden, and
+selecting there goes straight to the element's edit panel.
+
+On desktop and tablet landscape the edit panel and the Preview both live in a
+right panel (`rvn-resizable-panel` with `show-on-touch`), with **Edit** and
+**Preview** tabs (`rtgl-tabs`) at the top; a secondary save icon button (**Save
+Preview**) sits on the right of the header while Preview is showing. Both
+bodies stay mounted and are
+shown or hidden by style so unsaved preview settings and scroll positions
+survive. Selecting an element (explorer, canvas, or stepping) switches to Edit
+and clearing the selection switches back to Preview. With the panels out of the
+center column, the canvas is vertically centered in a workspace-height box
+(`container-type: size`) and sized from the full height (`formatCanvasMaxWidth`);
+phone and portrait keep the stacked half-height layout.
+
+In those right-panel layouts the canvas header has zoom out, zoom in, and a zoom
+level that fits and recenters the canvas when pressed (10% to 1000% of the
+fitted size). The workspace is `rvn-zoom-viewport` (`src/primitives/`), which
+places the canvas with a translate and no bounds, like a design tool canvas: two
+fingers pinch around the point between them and drag to pan, and one finger
+pans from the empty workspace. As on the scene map, the mouse or a pen pans only
+while Space is held, anywhere in the workspace: a layer in the viewport's shadow
+root then covers the canvas with the grab cursor, and releasing Space ends the
+drag. Space starts this only while the pointer is over the workspace and no
+field is focused. The viewport then stops Space and its key repeats in the
+window's capture phase, so a focused tab or button never acts on them; acting
+on every repeat re-renders the page and makes the canvas flicker. It does not
+cancel them: macOS WebKit hides the cursor until the mouse moves after every
+key press a page handles, which hides the hand and makes it flicker through a
+drag. Instead focus moves to the pan layer, so Space's default action (scrolling
+from the focused or last clicked element, or pressing a focused button) has
+nothing to do. The middle mouse button pans anywhere. The wheel never pans: over the empty workspace it zooms 10% per
+step around the pointer, as on the scene map, and over the canvas it reaches the
+canvas unchanged. ctrl + wheel (a trackpad pinch) zooms anywhere. One finger
+on the canvas still edits; a first finger that already touched it gets a
+`pointercancel` when the second lands. The viewport keeps `--canvas-zoom`,
+`--canvas-x`, and `--canvas-y` in its shadow root, reports a gesture's final
+zoom with `zoom-change`, and keeps the canvas centered until a gesture moves it.
+The canvas draws at the project resolution, so high zoom looks soft.
+
+Number fields in the edit panel's popovers (X, Y, and the other transform
+values) preview on the canvas while you slide, type, or pick a preset: the panel
+emits `preview` from the form's live `form-input` events and `preview-cancel`
+when the popover closes. The page keeps the previewed item as an overlay on the
+canvas state only, so nothing is saved until **Submit**; closing the popover
+without submitting puts the element back.
+
+`rvn-mobile-sheet` is capped at 640px (the Projects page content width) and
+centered, so the bottom-tab sheets and every page's item detail sheet stay
+compact on tablets; phones are narrower than the cap and keep the full-width
+sheet. Override it with the `maxWidth` prop. The bottom tab row in
+`app.view.yaml` uses the same cap and centering, while its bar background and
+top border still span the window. Do not put `w=f` on an `rtgl-view` that needs
+an inline `max-width`: `w=f` sets `max-width: unset` in the element's own
+stylesheet and overrides the inline value, so size such rows with an inline
+`width: 100%` instead.
+
 On touch devices, long-pressing a resource card runs only its primary action
 (preview, play, edit, or open). Do not emit a preliminary `item-click` selection
 event: it opens the selected-item action sheet before the primary action runs.

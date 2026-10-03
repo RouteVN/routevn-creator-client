@@ -272,6 +272,64 @@ describe("layoutEditorPreview", () => {
     expect(selectionAnchor.border).toBeUndefined();
   });
 
+  it("keeps overlay strokes one renderer pixel wide when zoomed past the project resolution", () => {
+    // Four CSS pixels per canvas unit: a one-CSS-pixel line would be a
+    // quarter of a renderer pixel and fade out.
+    const [hoverOuter, hoverInner] = createLayoutEditorHoverOverlay({
+      bounds: {
+        corners: [
+          { x: 10, y: 20 },
+          { x: 110, y: 20 },
+          { x: 110, y: 60 },
+          { x: 10, y: 60 },
+        ],
+      },
+      canvasUnitsPerCssPixel: 0.25,
+    });
+    expect(hoverOuter).toMatchObject({
+      x: 9.5,
+      y: 19.5,
+      width: 101,
+      height: 41,
+      border: { width: 1 },
+    });
+    expect(hoverInner).toMatchObject({
+      x: 10.5,
+      y: 20.5,
+      width: 99,
+      height: 39,
+      border: { width: 1 },
+    });
+
+    const [selection] = createLayoutEditorSelectionOverlay({
+      selectedItemId: "selected",
+      occurrencesById: { selected: { ownerItemId: "selected" } },
+      occurrenceIdsByOwner: { selected: ["selected"] },
+      selectedItem: { type: "container-ref-choice-item" },
+      parsedElements: [
+        { id: "selected", type: "rect", width: 100, height: 40 },
+      ],
+      canvasUnitsPerCssPixel: 0.25,
+    });
+    const [outer, inner, , anchor] = selection.children;
+    expect(outer).toMatchObject({
+      x: -0.5,
+      y: -0.5,
+      width: 101,
+      height: 41,
+      border: { width: 1 },
+    });
+    expect(inner).toMatchObject({
+      x: 0.5,
+      y: 0.5,
+      width: 99,
+      height: 39,
+      border: { width: 1 },
+    });
+    // Handles keep their CSS size; they are several pixels wide.
+    expect(anchor).toMatchObject({ width: 2, height: 2 });
+  });
+
   it("formats the authored English and CJK date presets", () => {
     const timestamp = new Date(2026, 11, 31, 12).getTime();
 

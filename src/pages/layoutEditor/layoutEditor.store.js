@@ -2,10 +2,16 @@ import { parseAndRender } from "jempl";
 import { toFlatItems } from "../../internal/project/tree.js";
 import {
   DEFAULT_PROJECT_RESOLUTION,
+  formatCanvasMaxWidth,
   formatHalfViewportCanvasMaxWidth,
   requireProjectResolution,
 } from "../../internal/projectResolution.js";
-import { isTouchUiConfig } from "../../internal/ui/resourcePages/mobileResourcePage.js";
+import {
+  TABLET_LANDSCAPE_EXPLORER_WIDTH,
+  isTouchUiConfig,
+  selectIsTabletLandscapeState,
+  setMobileResourcePageWindowMetricsState,
+} from "../../internal/ui/resourcePages/mobileResourcePage.js";
 import {
   isItemDirectChildOfDirectedContainer,
   isItemInsideSaveLoadSlot,
@@ -25,12 +31,39 @@ const arePreviewDataEqual = (left, right) => {
   return JSON.stringify(left ?? {}) === JSON.stringify(right ?? {});
 };
 
+// Desktop and tablet landscape keep the edit panel and preview in a right
+// panel, so the canvas can use the whole workspace height. Other touch layouts
+// stack the panels under the canvas and give it half the height.
+const selectShowRightPanel = ({ state }) =>
+  !state.isTouchMode || selectIsTabletLandscapeState({ state });
+
 const selectLayoutEditorCanvasMaxWidth = ({ state }) => {
-  return formatHalfViewportCanvasMaxWidth(
-    state.projectResolution ?? DEFAULT_PROJECT_RESOLUTION,
-    { heightUnit: state.isTouchMode ? "cqh" : "vh" },
-  );
+  const resolution = state.projectResolution ?? DEFAULT_PROJECT_RESOLUTION;
+
+  if (selectShowRightPanel({ state })) {
+    return formatCanvasMaxWidth(resolution, {
+      heightUnit: "cqh",
+      heightPercent: 92,
+    });
+  }
+
+  return formatHalfViewportCanvasMaxWidth(resolution, { heightUnit: "cqh" });
 };
+
+// Canvas zoom is relative to the canvas fitted to the workspace (1 = fit).
+// The buttons step through these levels; gestures set any zoom in their
+// range, which matches rvn-zoom-viewport. The renderer draws at the project
+// resolution and the page scales it, so higher levels look soft.
+const CANVAS_ZOOM_LEVELS = Object.freeze([
+  0.1, 0.25, 0.5, 0.75, 1, 1.5, 2, 3, 4, 5, 6, 8, 10,
+]);
+
+// Only the right-panel layouts (desktop and tablet landscape) give the canvas
+// a scrolling workspace, so other layouts always show it fitted.
+const selectCanvasZoom = ({ state }) =>
+  selectShowRightPanel({ state }) ? state.canvasZoom : 1;
+
+const RIGHT_PANEL_MODES = new Set(["edit", "preview"]);
 
 const CREATE_TYPE_LABEL_KEYS = Object.freeze({
   container: "containerMenuItem",
@@ -164,12 +197,39 @@ export const createInitialState = () => {
     initialPreviewData: {},
     isPreviewMounted: false,
     isTouchMode: false,
+    appWindowMetrics: { width: 0, height: 0 },
     isMobileFileExplorerOpen: false,
+    rightPanelMode: "preview",
+    canvasZoom: 1,
+    canvasPreviewItem: undefined,
     projectResolution: DEFAULT_PROJECT_RESOLUTION,
     selectedElementMetrics: undefined,
     lastPersistErrorAt: 0,
     pendingPersistPayload: undefined,
   };
+};
+
+export const zoomCanvasIn = ({ state }) => {
+  state.canvasZoom =
+    CANVAS_ZOOM_LEVELS.find((level) => level > state.canvasZoom) ??
+    state.canvasZoom;
+};
+
+export const zoomCanvasOut = ({ state }) => {
+  state.canvasZoom =
+    CANVAS_ZOOM_LEVELS.findLast((level) => level < state.canvasZoom) ??
+    state.canvasZoom;
+};
+
+export const setCanvasZoom = ({ state }, { zoom } = {}) => {
+  state.canvasZoom = Math.min(
+    CANVAS_ZOOM_LEVELS.at(-1),
+    Math.max(CANVAS_ZOOM_LEVELS[0], zoom),
+  );
+};
+
+export const resetCanvasZoom = ({ state }) => {
+  state.canvasZoom = 1;
 };
 
 export const setItems = ({ state }, { layoutData } = {}) => {
@@ -228,6 +288,9 @@ export const setProjectResolution = ({ state }, { projectResolution } = {}) => {
 };
 
 export const setSelectedItemId = ({ state }, { itemId } = {}) => {
+  if (itemId !== state.selectedItemId) {
+    state.canvasPreviewItem = undefined;
+  }
   state.selectedItemId = itemId;
   state.selectedElementMetrics = undefined;
 
@@ -265,6 +328,16 @@ export const setUiConfig = ({ state }, { uiConfig } = {}) => {
   state.isTouchMode = isTouchUiConfig(uiConfig);
 };
 
+export const setRightPanelMode = ({ state }, { mode } = {}) => {
+  if (RIGHT_PANEL_MODES.has(mode)) {
+    state.rightPanelMode = mode;
+  }
+};
+
+export const setAppWindowMetrics = ({ state }, { width, height } = {}) => {
+  setMobileResourcePageWindowMetricsState(state, { width, height });
+};
+
 export const openMobileFileExplorer = ({ state }, _payload = {}) => {
   state.isMobileFileExplorerOpen = true;
 };
@@ -273,8 +346,24 @@ export const closeMobileFileExplorer = ({ state }, _payload = {}) => {
   state.isMobileFileExplorerOpen = false;
 };
 
+// An edit panel value shown on the canvas before it is submitted. Only the
+// canvas and preview see it; a saved update or a cancel replaces it.
+export const setCanvasPreviewItem = ({ state }, { itemId, item } = {}) => {
+  state.canvasPreviewItem = { itemId, item };
+};
+
+export const clearCanvasPreviewItem = ({ state }) => {
+  state.canvasPreviewItem = undefined;
+};
+
+export const selectHasCanvasPreviewItem = ({ state }) =>
+  state.canvasPreviewItem !== undefined;
+
 export const updateSelectedItem = ({ state }, { itemId, updatedItem } = {}) => {
   const targetItemId = itemId ?? state.selectedItemId;
+  if (state.canvasPreviewItem?.itemId === targetItemId) {
+    state.canvasPreviewItem = undefined;
+  }
 
   if (targetItemId && state.layoutData && state.layoutData.items) {
     state.layoutData.items[targetItemId] = updatedItem;
@@ -514,6 +603,7 @@ export const selectInitialPreviewData = ({ state }) => {
 
 export const selectIsPreviewMounted = ({ state }) => state.isPreviewMounted;
 export const selectIsTouchMode = ({ state }) => state.isTouchMode;
+export const selectIsTabletLandscape = selectIsTabletLandscapeState;
 export const selectIsMobileFileExplorerOpen = ({ state }) =>
   state.isMobileFileExplorerOpen;
 
@@ -571,7 +661,15 @@ export const selectViewData = ({ state, constants, i18n }) => {
       id: layout.id,
       layoutType: layout.layoutType,
       layoutSchemaVersion: layout.layoutSchemaVersion,
-      elements: state.layoutData,
+      elements: state.canvasPreviewItem
+        ? {
+            ...state.layoutData,
+            items: {
+              ...state.layoutData.items,
+              [state.canvasPreviewItem.itemId]: state.canvasPreviewItem.item,
+            },
+          }
+        : state.layoutData,
     };
   }
 
@@ -605,21 +703,35 @@ export const selectViewData = ({ state, constants, i18n }) => {
           parentIdById,
           itemId: item?.id,
         });
-  const showMobileSelectedNodeDetail = state.isTouchMode && Boolean(item);
-  const previewPanelVisibilityStyle = showMobileSelectedNodeDetail
-    ? "display: none;"
-    : "";
+  // Tablet landscape keeps the Elements list in a persistent left pane, so the
+  // inline list under the canvas is only for narrower touch layouts.
+  const showTabletLandscapeExplorer = selectIsTabletLandscapeState({ state });
+  const showRightPanel = selectShowRightPanel({ state });
+  const showMobilePanels = !showRightPanel;
+  const showMobileNodeExplorer =
+    showMobilePanels && state.isMobileFileExplorerOpen;
+  // The node explorer and the selected node detail take turns in the panel
+  // below the canvas. The preview stays mounted but hidden behind either one.
+  const showMobileSelectedNodeDetail =
+    showMobilePanels && Boolean(item) && !showMobileNodeExplorer;
+  const previewPanelVisibilityStyle =
+    showMobileSelectedNodeDetail || showMobileNodeExplorer
+      ? "display: none;"
+      : "";
   const previewHydrationData = state.isTouchMode
     ? state.previewData
     : state.initialPreviewData;
+  const canvasZoom = selectCanvasZoom({ state });
+  const canvasFitWidth = selectLayoutEditorCanvasMaxWidth({ state });
 
   return {
     item,
     itemRoleLabel: selectItemRoleLabel(item?.type, copy),
     loadingPreviewLabel: copy.loadingPreviewLabel,
     noSelectionLabel: copy.noSelectionLabel,
-    nodeButtonLabel: copy.nodeButtonLabel ?? "Node",
-    nodeExplorerTitle: copy.nodeExplorerTitle ?? copy.nodeButtonLabel ?? "Node",
+    nodeButtonLabel: copy.nodeButtonLabel ?? "Elements",
+    nodeExplorerTitle:
+      copy.nodeExplorerTitle ?? copy.nodeButtonLabel ?? "Elements",
     previewTitle: copy.previewTitle ?? "Preview",
     savePreviewButton: copy.savePreviewButton,
     flatItems,
@@ -630,8 +742,25 @@ export const selectViewData = ({ state, constants, i18n }) => {
     contextMenuItems,
     emptyContextMenuItems,
     layoutState,
-    canvasWorkspaceStyle: state.isTouchMode ? "container-type: size;" : "",
-    layoutEditorCanvasMaxWidth: selectLayoutEditorCanvasMaxWidth({ state }),
+    // The canvas is sized in container height units on every layout.
+    canvasWorkspaceStyle: "container-type: size;",
+    // With a right panel the canvas moves freely in the workspace:
+    // rvn-zoom-viewport sets its zoom and position, also live during a
+    // gesture, and the dot grid moves with it. Other layouts keep it fitted.
+    canvasBackgroundStyle: showRightPanel
+      ? "flex: 1 1 auto; min-height: 0; position: relative; overflow: hidden; background-position: var(--canvas-x, 0px) var(--canvas-y, 0px);"
+      : "",
+    canvasWrapperStyle: showRightPanel
+      ? `position: absolute; left: 0; top: 0; width: calc(${canvasFitWidth} * var(--canvas-zoom, 1)); transform: translate(var(--canvas-x, 0px), var(--canvas-y, 0px));`
+      : `position: relative; width: ${canvasFitWidth}; margin-left: auto; margin-right: auto;`,
+    canvasZoom,
+    showCanvasZoomControls: showRightPanel,
+    canvasZoomLabel: `${Math.round(canvasZoom * 100)}%`,
+    canvasZoomInDisabled: canvasZoom >= CANVAS_ZOOM_LEVELS.at(-1),
+    canvasZoomOutDisabled: canvasZoom <= CANVAS_ZOOM_LEVELS[0],
+    canvasZoomInLabel: copy.canvasZoomInLabel ?? "Zoom in",
+    canvasZoomOutLabel: copy.canvasZoomOutLabel ?? "Zoom out",
+    canvasZoomFitLabel: copy.canvasZoomFitLabel ?? "Fit to view",
     previewData: state.previewData,
     initialPreviewData: state.initialPreviewData,
     previewHydrationData,
@@ -654,11 +783,27 @@ export const selectViewData = ({ state, constants, i18n }) => {
     isInsideDirectedContainer: detailPanelIsInsideDirectedContainer,
     isTouchMode: state.isTouchMode,
     showExplorerPanel: !state.isTouchMode,
-    showDetailPanel: !state.isTouchMode,
+    showRightPanel,
+    rightPanelMode: state.rightPanelMode,
+    rightPanelModeTabs: [
+      { id: "edit", label: copy.editModeLabel ?? "Edit" },
+      { id: "preview", label: copy.previewTitle ?? "Preview" },
+    ],
+    rightPanelEditStyle:
+      state.rightPanelMode === "edit" ? "" : "display: none;",
+    rightPanelPreviewStyle:
+      state.rightPanelMode === "preview" ? "" : "display: none;",
+    showRightPanelSaveButton: state.rightPanelMode === "preview",
     showPreviewHeader: !showMobileSelectedNodeDetail,
-    showMobileNodeButton: state.isTouchMode,
-    showMobilePreviewButton: showMobileSelectedNodeDetail,
-    showMobileNodeExplorer: state.isTouchMode && state.isMobileFileExplorerOpen,
+    showTabletLandscapeExplorer,
+    tabletLandscapeExplorerWidth: TABLET_LANDSCAPE_EXPLORER_WIDTH,
+    showMobilePanels,
+    showMobileNodeButton: showMobilePanels,
+    nodeButtonVariant: showMobileNodeExplorer ? "pr" : "se",
+    nodeMovePreviousLabel: copy.previousElementLabel ?? "Previous element",
+    nodeMoveNextLabel: copy.nextElementLabel ?? "Next element",
+    showMobilePreviewButton: showMobilePanels && Boolean(item),
+    showMobileNodeExplorer,
     showMobileSelectedNodeDetail,
     previewPanelVisibilityStyle,
   };

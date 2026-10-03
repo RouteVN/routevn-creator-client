@@ -1,4 +1,8 @@
 import {
+  buildTabletLandscapeContentColumnStyle,
+  setMobileResourcePageWindowMetricsState,
+} from "../../internal/ui/resourcePages/mobileResourcePage.js";
+import {
   APP_LOCALE_OPTIONS,
   DEFAULT_APP_LOCALE,
 } from "../../internal/ui/appLocale.js";
@@ -69,6 +73,7 @@ export const createInitialState = () => ({
   assetPackageEnabled: false,
   showHelpButton: true,
   isTouchMode: false,
+  appWindowMetrics: { width: 0, height: 0 },
   showProjectFolder: false,
   projectFolderPath: undefined,
   showAndroidBackup: false,
@@ -86,6 +91,10 @@ export const setCurrentTheme = ({ state }, { theme } = {}) => {
 export const setUiConfig = ({ state }, { uiConfig } = {}) => {
   state.isTouchMode =
     uiConfig?.id === "touch" || uiConfig?.inputMode === "touch";
+};
+
+export const setAppWindowMetrics = ({ state }, { width, height } = {}) => {
+  setMobileResourcePageWindowMetricsState(state, { width, height });
 };
 
 export const selectViewData = ({ state, i18n }) => {
@@ -113,6 +122,9 @@ export const selectViewData = ({ state, i18n }) => {
     contentPadding: state.isTouchMode ? "0" : "lg",
     contentBodyPadding: state.isTouchMode ? "md" : "0",
     contentBodyMarginTop: state.isTouchMode ? "0" : "lg",
+    tabletLandscapeContentStyle: buildTabletLandscapeContentColumnStyle(state, {
+      minGutter: "var(--spacing-md)",
+    }),
     themeGridColumns,
     themeGridSmallColumns: state.isTouchMode ? "2" : themeGridColumns,
     themePreviewAspectRatio: "16 / 9",

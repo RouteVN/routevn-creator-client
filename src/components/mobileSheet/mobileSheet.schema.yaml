@@ -6,6 +6,8 @@ propsSchema:
       type: boolean
     height:
       type: string
+    maxWidth:
+      type: string
     overlayZ:
       type: string
     sheetZ:

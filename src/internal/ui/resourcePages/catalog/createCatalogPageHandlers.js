@@ -5,6 +5,7 @@ import { tap } from "rxjs";
 import { createResourcePageTagHandlers } from "../tags.js";
 import {
   closeMobileResourceFileExplorerAfterSelection,
+  mountMobileResourceWindowLayout,
   shouldRevealSuppressedMobileDetailSheet,
   shouldSuppressMobileDetailSheetForFileExplorerSelection,
 } from "../mobileResourcePage.js";
@@ -72,9 +73,11 @@ export const createCatalogPageHandlers = ({
         }),
       )
       .subscribe();
+    const cleanupWindowLayout = mountMobileResourceWindowLayout(deps);
 
     return () => {
       subscription.unsubscribe();
+      cleanupWindowLayout?.();
     };
   };
 
