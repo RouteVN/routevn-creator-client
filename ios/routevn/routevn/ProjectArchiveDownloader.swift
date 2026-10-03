@@ -105,6 +105,7 @@ final class ProjectArchiveDownloader: NSObject {
     private var writtenBytes: UInt64 = 0
     private var expectedBytes: UInt64 = 0
     private var exceededSizeCap = false
+    private var writeFailure: String?
 
     init(
         maxArchiveBytes: UInt64 = ProjectArchiveDownloader.defaultMaxArchiveBytes,
@@ -235,22 +236,41 @@ final class ProjectArchiveDownloader: NSObject {
 
         let inputHandle = try FileHandle(forReadingFrom: sourceURL)
         defer {
-            inputHandle.closeFile()
+            try? inputHandle.close()
         }
         fileManager.createFile(atPath: destinationURL.path, contents: nil)
         let outputHandle = try FileHandle(forWritingTo: destinationURL)
         defer {
-            outputHandle.closeFile()
+            try? outputHandle.close()
         }
 
         let bufferLength = 256 * 1024
         var totalBytes: UInt64 = 0
         while true {
-            let chunk = inputHandle.readData(ofLength: bufferLength)
+            // The throwing read and write APIs: the legacy readData(ofLength:)
+            // and write(_:) raise Objective-C exceptions on I/O failures (a
+            // full disk, a vanished file), which Swift cannot catch.
+            let chunk: Data
+            do {
+                chunk = try inputHandle.read(upToCount: bufferLength) ?? Data()
+            } catch {
+                throw ProjectImportError(
+                    "invalidArchive",
+                    "Failed to read selected project archive: \(error.localizedDescription)"
+                )
+            }
             if chunk.isEmpty {
                 return
             }
-            outputHandle.write(chunk)
+            do {
+                try outputHandle.write(contentsOf: chunk)
+            } catch {
+                try? fileManager.removeItem(at: destinationURL)
+                throw ProjectImportError(
+                    "importFailed",
+                    "Cannot write the archive copy: \(error.localizedDescription)"
+                )
+            }
             totalBytes += UInt64(chunk.count)
             if totalBytes > maxArchiveBytes {
                 try? fileManager.removeItem(at: destinationURL)
@@ -274,6 +294,7 @@ final class ProjectArchiveDownloader: NSObject {
         writtenBytes = 0
         expectedBytes = 0
         exceededSizeCap = false
+        writeFailure = nil
         outputHandle?.closeFile()
         stateLock.unlock()
 
@@ -303,8 +324,12 @@ final class ProjectArchiveDownloader: NSObject {
         let response = currentResponse
         let transportError = currentError
         let oversize = exceededSizeCap
+        let writeFailureMessage = writeFailure
         stateLock.unlock()
 
+        if let writeFailureMessage {
+            throw ProjectImportError("importFailed", "Cannot write the download: \(writeFailureMessage)")
+        }
         if oversize {
             throw ProjectImportError(
                 "archiveTooLarge",
@@ -376,7 +401,18 @@ final class ProjectArchiveDownloader: NSObject {
         guard shouldWrite, let handle, !data.isEmpty else {
             return
         }
-        handle.write(data)
+        do {
+            // Throwing API: the legacy write(_:) raises an uncatchable
+            // Objective-C exception when the disk is full.
+            try handle.write(contentsOf: data)
+        } catch {
+            stateLock.lock()
+            writeFailure = error.localizedDescription
+            writingAllowed = false
+            stateLock.unlock()
+            dataTask.cancel()
+            return
+        }
         stateLock.lock()
         writtenBytes += UInt64(data.count)
         let receivedBytes = writtenBytes

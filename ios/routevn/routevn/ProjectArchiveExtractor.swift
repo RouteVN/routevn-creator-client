@@ -635,7 +635,16 @@ enum ProjectArchiveExtractor {
                         "Archive expands beyond \(maxTotalUncompressedBytes) bytes."
                     )
                 }
-                outputHandle.write(data)
+                // The throwing API: the legacy write(_:) raises an Objective-C
+                // exception when the disk is full, which Swift cannot catch.
+                do {
+                    try outputHandle.write(contentsOf: data)
+                } catch {
+                    throw ProjectImportError(
+                        "importFailed",
+                        "Cannot write extracted file: \(error.localizedDescription)"
+                    )
+                }
                 writtenBytes = nextWrittenBytes
                 writtenTotal = nextTotal
                 progressReporter?.update(current: writtenTotal)

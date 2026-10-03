@@ -2059,6 +2059,9 @@ final class RouteVNViewController: UIViewController, WKNavigationDelegate, WKScr
             guard FileManager.default.fileExists(atPath: sourceFilesURL.path) else {
                 throw ProjectImportError("importFailed", "Selected folder is missing files.")
             }
+            // copyItem keeps a symlink as a symlink, so a linked files folder
+            // would make Rule A rename the original assets.
+            try ProjectFileNames.assertRealDirectory(sourceFilesURL)
 
             let projectInfo = try readProjectInfo(databaseURL: projectDbURL)
             let projectId = try storage.safePathSegment(stringValue(projectInfo["id"]))
@@ -2071,43 +2074,46 @@ final class RouteVNViewController: UIViewController, WKNavigationDelegate, WKScr
                 FileManager.default.fileExists(atPath: targetDbURL.path) &&
                 FileManager.default.fileExists(atPath: targetFilesURL.path)
 
-            if !alreadyImported {
+            if alreadyImported {
+                // Rule A always checks the app-owned copy, even for an
+                // already-imported project. Never modify the source folder,
+                // and never delete a project that was already there.
+                _ = try ProjectFileNames.normalize(filesDirectory: targetFilesURL)
+            } else {
                 closeDatabase(dbPath: projectDbPath)
                 try FileManager.default.removeItemIfExists(at: targetDbURL.deletingLastPathComponent())
                 try FileManager.default.removeItemIfExists(at: targetProjectRoot)
-                try FileManager.default.createDirectory(
-                    at: targetDbURL.deletingLastPathComponent(),
-                    withIntermediateDirectories: true
-                )
-                try FileManager.default.copyItem(at: projectDbURL, to: targetDbURL)
-                try copySidecarIfPresent(source: projectDbURL, suffix: "-wal", target: targetDbURL)
-                try copySidecarIfPresent(source: projectDbURL, suffix: "-shm", target: targetDbURL)
-                try copySidecarIfPresent(source: projectDbURL, suffix: "-journal", target: targetDbURL)
-                try FileManager.default.createDirectory(
-                    at: targetFilesURL.deletingLastPathComponent(),
-                    withIntermediateDirectories: true
-                )
-                try FileManager.default.copyItem(at: sourceFilesURL, to: targetFilesURL)
+                do {
+                    try FileManager.default.createDirectory(
+                        at: targetDbURL.deletingLastPathComponent(),
+                        withIntermediateDirectories: true
+                    )
+                    try FileManager.default.copyItem(at: projectDbURL, to: targetDbURL)
+                    try copySidecarIfPresent(source: projectDbURL, suffix: "-wal", target: targetDbURL)
+                    try copySidecarIfPresent(source: projectDbURL, suffix: "-shm", target: targetDbURL)
+                    try copySidecarIfPresent(source: projectDbURL, suffix: "-journal", target: targetDbURL)
+                    try FileManager.default.createDirectory(
+                        at: targetFilesURL.deletingLastPathComponent(),
+                        withIntermediateDirectories: true
+                    )
+                    try FileManager.default.copyItem(at: sourceFilesURL, to: targetFilesURL)
 
-                let sourceMetadataURL = folderURL.appendingPathComponent("file-metadata")
-                if FileManager.default.fileExists(atPath: sourceMetadataURL.path) {
-                    try FileManager.default.copyItem(at: sourceMetadataURL, to: targetMetadataURL)
-                }
-            }
+                    let sourceMetadataURL = folderURL.appendingPathComponent("file-metadata")
+                    if FileManager.default.fileExists(atPath: sourceMetadataURL.path) {
+                        try FileManager.default.copyItem(at: sourceMetadataURL, to: targetMetadataURL)
+                    }
 
-            do {
-                // Rule A always checks the app-owned copy, even for an
-                // already-imported project. Never modify the source folder.
-                _ = try ProjectFileNames.normalize(filesDirectory: targetFilesURL)
-            } catch {
-                if !alreadyImported {
+                    _ = try ProjectFileNames.normalize(filesDirectory: targetFilesURL)
+                } catch {
+                    // Any failure while building the copy (a full disk, a name
+                    // conflict) removes the partial project. Left behind, a
+                    // retry would see project.db and files and report success
+                    // for an incomplete import.
                     closeDatabase(dbPath: projectDbPath)
                     try? FileManager.default.removeItemIfExists(at: targetDbURL.deletingLastPathComponent())
                     try? FileManager.default.removeItemIfExists(at: targetProjectRoot)
+                    throw error
                 }
-                throw error
-            }
-            if !alreadyImported {
                 // Re-import can replace a partially initialized named folder.
                 // Restore its identity after replacing the directory contents.
                 try storage.recordProjectDirectory(projectId: projectId, directory: targetProjectRoot)

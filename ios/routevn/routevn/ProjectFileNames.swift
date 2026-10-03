@@ -74,7 +74,23 @@ enum ProjectFileNames {
         try apply(renames: plan(filesDirectory: filesDirectory))
     }
 
+    /**
+     Rule A renames files in place, so the directory must be a real folder: a
+     symlinked files directory would send the renames into whatever it points
+     at, which can be the user's own source folder.
+     */
+    static func assertRealDirectory(_ directory: URL) throws {
+        let values = try? directory.resourceValues(forKeys: [.isSymbolicLinkKey])
+        if values?.isSymbolicLink == true {
+            throw ProjectImportError(
+                "importFailed",
+                "\(directory.lastPathComponent) is a symbolic link."
+            )
+        }
+    }
+
     static func plan(filesDirectory: URL) throws -> [Rename] {
+        try assertRealDirectory(filesDirectory)
         var renames: [Rename] = []
         // Case-insensitive id map: macOS and Windows file systems (where
         // these folders usually come from) treat ABC.png and abc.png as the
