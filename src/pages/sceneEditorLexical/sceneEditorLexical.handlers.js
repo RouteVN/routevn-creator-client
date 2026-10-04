@@ -2838,6 +2838,11 @@ export const handleMobileKeyboardToolbarActionClick = (deps, payload) => {
     return;
   }
 
+  if (actionId === "undo" || actionId === "redo") {
+    runSceneEditorHistoryStep(deps, actionId);
+    return;
+  }
+
   if (actionId === "sections-overview") {
     handleSectionsOverviewClick(deps, payload);
     return;

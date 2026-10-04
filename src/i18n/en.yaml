@@ -1995,6 +1995,7 @@ sceneEditorPage:
   loadingSceneLabel: "Loading scene..."
   leftLabel: "Left"
   missingProjectResolution: "Project is missing required resolution settings."
+  moreLabel: "More"
   moveButton: "Move"
   moveSectionTitle: "Move Section"
   moveToSceneMenuItem: "Move to scene"

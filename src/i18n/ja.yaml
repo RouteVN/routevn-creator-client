@@ -1995,6 +1995,7 @@ sceneEditorPage:
   loadingSceneLabel: "シーンを読み込み中..."
   leftLabel: "左"
   missingProjectResolution: "プロジェクトの解像度設定がありません。"
+  moreLabel: "その他"
   moveButton: "移動"
   moveSectionTitle: "セクションを移動"
   moveToSceneMenuItem: "シーンへ移動"

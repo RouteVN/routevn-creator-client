@@ -51,6 +51,20 @@ describe("sceneEditorLexical view", () => {
     }
   });
 
+  it("gives the phone toolbar the undo and redo state", () => {
+    const view = readFileSync(
+      new URL(
+        "../../src/pages/sceneEditorLexical/sceneEditorLexical.view.yaml",
+        import.meta.url,
+      ),
+      "utf8",
+    );
+
+    expect(view).toContain(
+      "rvn-mobile-keyboard-toolbar#mobileKeyboardToolbar width=${mobileToolbarWidth} :undoDisabled=${undoDisabled} :redoDisabled=${redoDisabled}",
+    );
+  });
+
   it("renders a matching canvas download button after preview", () => {
     const view = readFileSync(
       new URL(

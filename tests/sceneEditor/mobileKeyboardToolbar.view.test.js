@@ -19,4 +19,22 @@ describe("mobileKeyboardToolbar view", () => {
     expect(view).toContain("h=48 bgc=bg bwb=xs bc=bo");
     expect(view).not.toContain("h=48 bgc=bg bw=xs bc=bo");
   });
+
+  it("opens the More menu upward from the toolbar", () => {
+    const view = readFileSync(
+      new URL(
+        "../../src/components/mobileKeyboardToolbar/mobileKeyboardToolbar.view.yaml",
+        import.meta.url,
+      ),
+      "utf8",
+    );
+
+    expect(view).toContain(
+      "rtgl-dropdown-menu#moreMenu :items=${moreMenuItems} ?open=${moreMenu.open} x=${moreMenu.x} y=${moreMenu.y} place=te",
+    );
+    expect(view).toMatch(
+      /moreMenu:\n\s+eventListeners:\n\s+close:\n\s+handler: handleMoreMenuClose\n\s+item-click:\n\s+handler: handleMoreMenuItemClick/,
+    );
+    expect(view).toContain('aria-disabled="${item.disabled}"');
+  });
 });

@@ -5,6 +5,7 @@ import {
   handleEditHistoryShortcutKeyDown,
   handleEditorCompositionStateChanged,
   handleEditorDataChanged,
+  handleMobileKeyboardToolbarActionClick,
   handleNewLine,
   handleRedoButtonClick,
   handleSystemActionsActionDelete,
@@ -526,6 +527,24 @@ describe("scene editor undo and redo", () => {
     handleEditHistoryShortcutKeyDown(page.deps, {
       _event: shortcut([editorText, editor], { shiftKey: true }),
     });
+    expect(page.pageLines()[0].text).toBe("Hello there");
+  });
+
+  it("undoes and redoes from the phone toolbar", async () => {
+    const page = createPage();
+    await page.type("line-1", "Hello there");
+    const toolbar = (actionId) =>
+      handleMobileKeyboardToolbarActionClick(page.deps, {
+        _event: {
+          detail: { actionId },
+          preventDefault: vi.fn(),
+          stopPropagation: vi.fn(),
+        },
+      });
+
+    toolbar("undo");
+    expect(page.pageLines()[0].text).toBe("Hello world");
+    toolbar("redo");
     expect(page.pageLines()[0].text).toBe("Hello there");
   });
 

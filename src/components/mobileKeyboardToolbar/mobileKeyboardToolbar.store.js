@@ -1,4 +1,5 @@
 import { selectSceneEditorCopy } from "../../internal/ui/sceneEditor/sceneEditorCopy.js";
+import { selectEditHistoryCopy } from "../../internal/ui/editHistory.js";
 
 const toolbarItems = [
   {
@@ -44,18 +45,19 @@ const toolbarItems = [
     title: "Preview",
   },
   {
-    id: "sections-overview",
-    icon: "hamburger",
+    id: "undo",
+    icon: "undo",
     iconStyle: "",
     width: "40",
-    title: "Sections",
+    title: "Undo",
   },
+  // Sections, settings, and redo, which do not fit on a phone.
   {
-    id: "scene-settings",
-    icon: "settings",
+    id: "more",
+    icon: "ellipsisLarge",
     iconStyle: "",
     width: "40",
-    title: "Settings",
+    title: "More",
   },
 ];
 
@@ -71,6 +73,11 @@ export const createInitialState = () => ({
   visualHeight: 0,
   layoutHeight: 0,
   pressedActionId: undefined,
+  moreMenu: {
+    open: false,
+    x: undefined,
+    y: undefined,
+  },
   arrowRepeat: {
     direction: undefined,
     pointerId: undefined,
@@ -122,6 +129,21 @@ export const selectKeyboardState = ({ state }) => {
   };
 };
 
+// Opens the More menu, or moves it, above the point it hangs from.
+export const openMoreMenu = ({ state }, { x, y } = {}) => {
+  state.moreMenu.open = true;
+  state.moreMenu.x = x;
+  state.moreMenu.y = y;
+};
+
+export const closeMoreMenu = ({ state }) => {
+  state.moreMenu.open = false;
+  state.moreMenu.x = undefined;
+  state.moreMenu.y = undefined;
+};
+
+export const selectIsMoreMenuOpen = ({ state }) => state.moreMenu.open;
+
 export const setPressedActionId = ({ state }, { actionId } = {}) => {
   state.pressedActionId = actionId;
 };
@@ -165,7 +187,10 @@ export const selectArrowRepeatState = ({ state }) => {
   };
 };
 
-const createToolbarViewItems = (items, copy = {}, pressedActionId) => {
+const createToolbarViewItems = (
+  items,
+  { copy, editHistoryCopy, pressedActionId, undoDisabled },
+) => {
   const labels = {
     "arrow-left": copy.leftLabel ?? "Left",
     "arrow-up": copy.upLabel ?? "Up",
@@ -173,19 +198,25 @@ const createToolbarViewItems = (items, copy = {}, pressedActionId) => {
     "arrow-right": copy.rightLabel ?? "Right",
     actions: copy.actionsLabel ?? "Actions",
     preview: copy.previewButton ?? "Preview",
-    "sections-overview": copy.sectionsLabel ?? "Sections",
-    "scene-settings": copy.settingsTitle ?? "Settings",
+    undo: editHistoryCopy.undoLabel,
+    more: copy.moreLabel ?? "More",
   };
 
-  return items.map((item) => ({
-    ...item,
-    bgColor: item.id === pressedActionId ? "ac" : "mu",
-    title: labels[item.id] ?? item.title,
-  }));
+  return items.map((item) => {
+    const disabled = item.id === "undo" && undoDisabled === true;
+    return {
+      ...item,
+      bgColor: item.id === pressedActionId ? "ac" : "mu",
+      title: labels[item.id] ?? item.title,
+      disabled,
+      opacity: disabled ? "0.4" : "1",
+    };
+  });
 };
 
 export const selectViewData = ({ state, props = {}, i18n }) => {
   const copy = selectSceneEditorCopy(i18n);
+  const editHistoryCopy = selectEditHistoryCopy(i18n);
   const visualViewportBottom =
     Number(state.visualOffsetTop) + Number(state.visualHeight);
   const toolbarTop = Number.isFinite(visualViewportBottom)
@@ -201,10 +232,34 @@ export const selectViewData = ({ state, props = {}, i18n }) => {
     toolbarTopStyle: `${toolbarTop}px`,
     toolbarPositionStyle,
     toolbarWidth: props.width ?? "100%",
-    toolbarItems: createToolbarViewItems(
-      toolbarItems,
+    toolbarItems: createToolbarViewItems(toolbarItems, {
       copy,
-      state.pressedActionId,
-    ),
+      editHistoryCopy,
+      pressedActionId: state.pressedActionId,
+      undoDisabled: props.undoDisabled,
+    }),
+    moreMenu: state.moreMenu,
+    moreMenuLabel: copy.moreLabel ?? "More",
+    moreMenuItems: [
+      {
+        type: "item",
+        label: copy.sectionsLabel ?? "Sections",
+        icon: "hamburger",
+        value: "sections-overview",
+      },
+      {
+        type: "item",
+        label: copy.settingsTitle ?? "Settings",
+        icon: "settings",
+        value: "scene-settings",
+      },
+      {
+        type: "item",
+        label: editHistoryCopy.redoLabel,
+        icon: "redo",
+        value: "redo",
+        disabled: props.redoDisabled === true,
+      },
+    ],
   };
 };

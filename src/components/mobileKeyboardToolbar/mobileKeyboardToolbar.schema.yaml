@@ -4,6 +4,10 @@ propsSchema:
   properties:
     width:
       type: string
+    undoDisabled:
+      type: boolean
+    redoDisabled:
+      type: boolean
 events:
   action-click:
     type: object
