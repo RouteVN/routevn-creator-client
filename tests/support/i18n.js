@@ -12,3 +12,4 @@ const loadI18n = (locale) =>
 export const EN_I18N = loadI18n("en");
 export const JA_I18N = loadI18n("ja");
 export const ZH_HANS_I18N = loadI18n("zh-hans");
+export const ES_I18N = loadI18n("es");
