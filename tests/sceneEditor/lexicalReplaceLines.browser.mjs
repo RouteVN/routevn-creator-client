@@ -70,10 +70,24 @@ try {
         `${name}: replaceLines reports no change`,
       );
 
-      // Typing continues from the restored caret.
+      // Typing continues from the restored caret, and a key typed before
+      // the next frame is reported. The paused clock holds the frame back.
+      await page.clock.install();
+      await page.clock.pauseAt(new Date(Date.now() + 1000));
+      await page.evaluate(() => {
+        window.owner.replaceLines(window.lineWith("Second"), {
+          lineId: "line-2",
+          cursorPosition: 6,
+        });
+      });
       await page.keyboard.type("!");
-      await page.waitForTimeout(50);
+      await page.clock.runFor(50);
       assert.deepEqual((await snapshot()).text, ["Hello world", "Second!"]);
+      assert.deepEqual(
+        await page.evaluate(() => window.changes),
+        ["text"],
+        `${name}: a key right after replaceLines is reported`,
+      );
 
       // In block mode it selects the line and stays in block mode.
       await page.keyboard.press("Escape");
@@ -82,7 +96,7 @@ try {
           lineId: "line-1",
         }),
       );
-      await page.waitForTimeout(50);
+      await page.clock.runFor(50);
       const blockState = await page.evaluate(() => ({
         text: window.owner
           .getLinesSnapshot()

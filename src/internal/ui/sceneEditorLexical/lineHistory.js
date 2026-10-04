@@ -11,25 +11,44 @@ import { cloneSceneEditorLine } from "./draftSection.js";
 // the line does not exist. Restoring a step removes every line it covers and
 // puts its version of them back by index.
 
+// A line's actions apart from its text. A dialogue with only text counts as
+// no dialogue, since the editor adds an empty one to lines without it.
 const getActionsWithoutDialogueContent = (line) => {
   const { dialogue, ...actions } = line?.actions ?? {};
-  if (dialogue) {
-    const { content: _content, ...dialogueFields } = dialogue;
+  const { content: _content, ...dialogueFields } = dialogue ?? {};
+  if (Object.keys(dialogueFields).length > 0) {
     actions.dialogue = dialogueFields;
   }
   return actions;
 };
 
+// Lines are compared on every keystroke. Store lines are frozen, so their
+// actions are written out once, and lines whose actions read the same are
+// equal without a closer look.
+const actionsTextByLine = new WeakMap();
+const getActionsText = (line) => {
+  const cached = actionsTextByLine.get(line);
+  if (cached !== undefined) {
+    return cached;
+  }
+  const text = JSON.stringify(line.actions ?? {});
+  if (Object.isFrozen(line)) {
+    actionsTextByLine.set(line, text);
+  }
+  return text;
+};
+
 // Two versions of a line hold the same text and actions.
 export const areSceneEditorLineVersionsEqual = (left, right) =>
-  areContentsEqual(
+  getActionsText(left) === getActionsText(right) ||
+  (areContentsEqual(
     getLineDialogueContent(left),
     getLineDialogueContent(right),
   ) &&
-  areEditHistoryValuesEqual(
-    getActionsWithoutDialogueContent(left),
-    getActionsWithoutDialogueContent(right),
-  );
+    areEditHistoryValuesEqual(
+      getActionsWithoutDialogueContent(left),
+      getActionsWithoutDialogueContent(right),
+    ));
 
 // The positions, in `values`, of a longest run of increasing values.
 const getLongestIncreasingRun = (values) => {

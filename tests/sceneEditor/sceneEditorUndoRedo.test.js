@@ -24,7 +24,7 @@ const toLineItems = (lines) => ({
 
 // The scene editor on its real store, with one scene of two sections and an
 // editor element per section.
-const createPage = () => {
+const createPage = ({ secondLine = dialogueLine("line-2", "Second") } = {}) => {
   let state = sceneEditorStore.createInitialState();
   const store = new Proxy(
     {},
@@ -57,7 +57,7 @@ const createPage = () => {
                   dialogueLine("line-1", "Hello world", {
                     background: { resourceId: "bg-1" },
                   }),
-                  dialogueLine("line-2", "Second"),
+                  secondLine,
                 ]),
               },
               "section-2": {
@@ -155,14 +155,17 @@ const createPage = () => {
       .sections.find((section) => section.id === sectionId)
       .lines.map((line) => ({
         id: line.id,
-        text: line.actions.dialogue.content.map((item) => item.text).join(""),
+        text: (line.actions.dialogue?.content ?? [])
+          .map((item) => item.text)
+          .join(""),
       }));
   const editorLines = (sectionId = "section-1") =>
     store
       .selectScene()
       .sections.find((section) => section.id === sectionId)
       .lines.map((line) => ({ ...line, sectionId }));
-  // The editor reporting its lines after typing.
+  // The editor reporting its lines after typing. Like the editor, it gives
+  // every line a dialogue.
   const type = (lineId, text, sectionId = "section-1") =>
     handleEditorDataChanged(deps, {
       _event: {
@@ -170,22 +173,40 @@ const createPage = () => {
         detail: {
           reason: "text",
           selectedLineId: lineId,
-          lines: editorLines(sectionId).map((line) =>
-            line.id === lineId
-              ? {
-                  ...line,
-                  actions: {
-                    ...line.actions,
-                    dialogue: { content: text ? [{ text }] : [] },
-                  },
-                }
-              : line,
-          ),
+          lines: editorLines(sectionId).map((line) => ({
+            ...line,
+            actions: {
+              ...line.actions,
+              dialogue: {
+                ...line.actions.dialogue,
+                content:
+                  line.id === lineId
+                    ? text
+                      ? [{ text }]
+                      : []
+                    : (line.actions.dialogue?.content ?? []),
+              },
+            },
+          })),
         },
       },
     });
   const view = () => sceneEditorStore.selectViewData({ state, i18n: EN_I18N });
-  return { deps, store, editors, pageLines, type, view, updateRepository };
+  const savedLine = (lineId) =>
+    Object.values(
+      deps.projectService.getRepositoryState().scenes.items["scene-1"].sections
+        .items,
+    ).find((section) => section.lines.items[lineId]).lines.items[lineId];
+  return {
+    deps,
+    store,
+    editors,
+    pageLines,
+    type,
+    view,
+    updateRepository,
+    savedLine,
+  };
 };
 
 const shortcut = (path, init) => ({
@@ -360,6 +381,110 @@ describe("scene editor undo and redo", () => {
 
     handleUndoButtonClick(page.deps);
     expect(page.pageLines()[0].text).toBe("Hello world");
+  });
+
+  it("keeps a burst of typing one step when another line has no dialogue", async () => {
+    const page = createPage({
+      secondLine: {
+        id: "line-2",
+        actions: { background: { resourceId: "b" } },
+      },
+    });
+    for (const text of ["Hello world!", "Hello world!!", "Hello world!!!"]) {
+      await page.type("line-1", text);
+      vi.advanceTimersByTime(100);
+    }
+
+    handleUndoButtonClick(page.deps);
+
+    expect(page.pageLines()[0].text).toBe("Hello world");
+  });
+
+  it("acts on the line it was started for when the selection moves while drafts save", async () => {
+    const page = createPage();
+    await page.type("line-1", "Hello there");
+    const sync = page.deps.projectService.syncSectionLinesSnapshot;
+    const save = sync.getMockImplementation();
+    sync.mockImplementationOnce(async (args) => {
+      const result = await save(args);
+      page.store.setSelectedLineId({ selectedLineId: "line-2" });
+      return result;
+    });
+
+    await handleSystemActionsActionDelete(page.deps, {
+      _event: { detail: { actionType: "background" } },
+    });
+
+    expect(page.savedLine("line-1").actions.background).toEqual({});
+    expect(page.savedLine("line-2").actions.background).toBeUndefined();
+  });
+
+  it("shows a line action edit at once and keeps it its own step when typing goes on while drafts save", async () => {
+    const page = createPage();
+    // The save interval counts from the last save, so start past it.
+    vi.advanceTimersByTime(30000);
+    await page.type("line-1", "Hello there");
+    const sync = page.deps.projectService.syncSectionLinesSnapshot;
+    const save = sync.getMockImplementation();
+    sync.mockImplementationOnce(async (args) => {
+      const result = await save(args);
+      await page.type("line-1", "Hello there!");
+      return result;
+    });
+
+    await handleSystemActionsActionDelete(page.deps, {
+      _event: { detail: { actionType: "background" } },
+    });
+    const line = () => page.store.selectScene().sections[0].lines[0];
+    expect(line().actions.background).toEqual({});
+
+    handleUndoButtonClick(page.deps);
+    expect(line().actions.background).toEqual({ resourceId: "bg-1" });
+    expect(page.pageLines()[0].text).toBe("Hello there!");
+  });
+
+  it("does not run a line action edit when saving the drafts before it fails", async () => {
+    const page = createPage();
+    await page.type("line-1", "Hello there");
+    page.deps.projectService.syncSectionLinesSnapshot.mockRejectedValueOnce(
+      new Error("Storage is full"),
+    );
+
+    await handleSystemActionsActionDelete(page.deps, {
+      _event: { detail: { actionType: "background" } },
+    });
+
+    expect(page.deps.appService.showAlert).toHaveBeenCalledOnce();
+    expect(page.deps.projectService.updateLineActions).not.toHaveBeenCalled();
+  });
+
+  it("waits while the actions dialog is open", async () => {
+    const page = createPage();
+    await page.type("line-1", "Hello there");
+    page.store.setActionTargetLineId({ lineId: "line-1" });
+
+    handleUndoButtonClick(page.deps);
+    expect(page.pageLines()[0].text).toBe("Hello there");
+
+    page.store.clearActionTargetLineId();
+    handleUndoButtonClick(page.deps);
+    expect(page.pageLines()[0].text).toBe("Hello world");
+  });
+
+  it("moves the caret to a change undone in another section", async () => {
+    const page = createPage();
+    await page.type("line-3", "Third line", "section-2");
+    page.store.setSelectedSectionId({ selectedSectionId: "section-1" });
+    page.store.setSelectedLineId({ selectedLineId: "line-1" });
+
+    handleUndoButtonClick(page.deps);
+
+    expect(page.pageLines("section-2")[0].text).toBe("Third");
+    expect(page.editors[1].focusLine).toHaveBeenCalledWith({
+      sectionId: "section-2",
+      lineId: "line-3",
+      cursorPosition: 5,
+    });
   });
 
   it("drops a step whose section is gone", async () => {

@@ -2186,6 +2186,9 @@ export class LexicalSceneDocumentEditorElement extends HTMLElement {
         ? { lineId, start: 0, end: 0 }
         : this.getCurrentSelectionSnapshot(),
     });
+    // The load has applied, so the next keystroke is the user's and must be
+    // reported, not kept quiet until the next frame.
+    this.isApplyingExternalLines = false;
     if (!lineId) {
       return;
     }
@@ -2195,6 +2198,7 @@ export class LexicalSceneDocumentEditorElement extends HTMLElement {
       this.restoreLineSelection({ lineId, cursorPosition });
       return;
     }
+    this.scrollLineIntoView({ lineId });
     this.scheduleRender();
   }
 

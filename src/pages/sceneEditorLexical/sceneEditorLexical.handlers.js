@@ -7,6 +7,7 @@ import { generateId } from "../../internal/id.js";
 import { captureCanvasImage } from "../../internal/runtime/graphicsEngineRuntime.js";
 import {
   areSceneEditorLinesEqual,
+  cloneSceneEditorLine,
   cloneSceneEditorLines,
   ensureSceneEditorDraftSection,
   hasPendingSceneEditorDraftChanges,
@@ -14,7 +15,11 @@ import {
   setSceneEditorDraftSectionCompositionState,
 } from "../../internal/ui/sceneEditorLexical/draftSection.js";
 import { createSceneEditorDraftPersistence } from "../../internal/ui/sceneEditorLexical/draftPersistence.js";
-import { createEmptyContent } from "../../internal/ui/sceneEditorLexical/contentModel.js";
+import {
+  createEmptyContent,
+  getLineDialogueContent,
+  setLineDialogueContent,
+} from "../../internal/ui/sceneEditorLexical/contentModel.js";
 import {
   diffSceneEditorSectionLines,
   getSceneEditorLineEditMergeKey,
@@ -821,20 +826,73 @@ const recordSceneEditorLineEdit = (deps, draftSection) => {
   });
 };
 
-// Runs a line action command as an undo step. Drafts are saved first, without
-// waiting for the save interval, so the command applies to the lines the page
-// shows and the step holds exactly its change.
-const runRecordedLineCommand = async (deps, command) => {
+const findSceneLine = (store, lineId) =>
+  store
+    .selectScene()
+    ?.sections?.flatMap((section) => section.lines ?? [])
+    .find((line) => line.id === lineId);
+
+// A dirty draft hides its section's saved lines, actions included. After a
+// command saved a line's actions, a draft that is still dirty, such as from
+// typing while drafts saved, takes them and keeps its unsaved text.
+const takeSavedLineActionsIntoDraft = (deps, lineId) => {
+  const { store } = deps;
+  const sectionId = findSectionIdForLine(store, lineId);
+  const draftSection = store.selectDraftSectionBySectionId({ sectionId });
+  const savedLine = store
+    .selectCommittedScene()
+    ?.sections?.find((section) => section.id === sectionId)
+    ?.lines?.find((line) => line.id === lineId);
+  if (!draftSection?.dirty || !savedLine) {
+    return;
+  }
+  const lines = draftSection.lines.map((line) =>
+    line.id === lineId
+      ? setLineDialogueContent(
+          cloneSceneEditorLine({
+            id: lineId,
+            sectionId: line.sectionId,
+            actions: savedLine.actions ?? {},
+          }),
+          getLineDialogueContent(line),
+        )
+      : line,
+  );
+  store.setDraftSection({
+    draftSection: replaceSceneEditorDraftSectionLines(draftSection, {
+      lines,
+      source: draftSection.lastSource,
+      dirty: true,
+    }),
+  });
+};
+
+// Runs a line action command for `lineId` as an undo step. The line is read
+// before anything is awaited, since the selection can move meanwhile. Pending
+// drafts are saved first, without waiting for the save interval, so the
+// command applies to the lines the page shows and the step holds exactly its
+// change; when that save fails, which it reports, the command does not run.
+const runRecordedLineCommand = async (deps, { lineId }, command) => {
   const { store } = deps;
   store.setLineCommandRunning({ running: true });
   try {
-    await flushSceneEditorDrafts(deps, {
-      force: true,
-      deferIfInFlight: false,
-      enforceMinInterval: false,
-    }).catch(() => {});
+    if (store.selectPendingDraftSections().length > 0) {
+      try {
+        await flushSceneEditorDrafts(deps, {
+          force: true,
+          deferIfInFlight: false,
+          enforceMinInterval: false,
+        });
+      } catch {
+        return undefined;
+      }
+    }
     store.setEditHistoryBaselines({ baselines: selectPageSectionLines(store) });
-    return await command();
+    try {
+      return await command({ lineId, line: findSceneLine(store, lineId) });
+    } finally {
+      takeSavedLineActionsIntoDraft(deps, lineId);
+    }
   } finally {
     recordSceneEditorLineEdits(deps, selectPageSectionLines(store));
     store.setLineCommandRunning({ running: false });
@@ -908,6 +966,7 @@ const runSceneEditorHistoryStep = (deps, direction) => {
     target,
     previous,
   });
+  const previousSectionId = store.selectSelectedSectionId();
   if (focus) {
     selectEditorTarget(deps, {
       sectionId: focus.sectionId,
@@ -929,6 +988,10 @@ const runSceneEditorHistoryStep = (deps, direction) => {
       lineId: isFocusSection ? focus.lineId : undefined,
       cursorPosition: isFocusSection ? focus.cursorPosition : undefined,
     });
+  }
+  // A change in another section moves the caret there.
+  if (focus && focus.sectionId !== previousSectionId) {
+    focusLinesEditorLine(refs, focus);
   }
   scheduleSceneTextStatsRefresh(deps);
   subject.dispatch("sceneEditor.renderCanvas", {
@@ -2069,10 +2132,9 @@ const openSectionTabDropdown = (deps, event) => {
   render();
 };
 
-const submitSceneEditorCommandLine = async (deps, payload) => {
+const submitSceneEditorCommandLine = async (deps, payload, { lineId }) => {
   const { store, render, projectService, subject, appService } = deps;
   const copy = selectCopy(deps);
-  const lineId = resolveActionTargetLineId(store);
   if (lineId) {
     store.setSelectedLineId({ selectedLineId: lineId });
   }
@@ -2324,8 +2386,10 @@ const submitSceneEditorCommandLine = async (deps, payload) => {
 };
 
 export const handleCommandLineSubmit = (deps, payload) =>
-  runRecordedLineCommand(deps, () =>
-    submitSceneEditorCommandLine(deps, payload),
+  runRecordedLineCommand(
+    deps,
+    { lineId: resolveActionTargetLineId(deps.store) },
+    ({ lineId }) => submitSceneEditorCommandLine(deps, payload, { lineId }),
   );
 
 export const handleEditorDataChanged = async (deps, payload) => {
@@ -2657,14 +2721,13 @@ export const handleDownloadCanvasButtonMouseDown = (_deps, payload) => {
   payload?._event?.preventDefault?.();
 };
 
-const setDialogueCharacterFromShortcut = async (deps, payload) => {
+const setDialogueCharacterFromShortcut = async (deps, payload, { lineId }) => {
   const { store, projectService, render, subject } = deps;
   if (isSectionsOverviewOpen(store)) {
     return;
   }
 
   const detail = payload?._event?.detail || {};
-  const lineId = detail.lineId || store.selectSelectedLineId();
   const shortcut = detail.shortcut;
   if (!lineId || !shortcut) {
     return;
@@ -2734,8 +2797,13 @@ const setDialogueCharacterFromShortcut = async (deps, payload) => {
 };
 
 export const handleDialogueCharacterShortcut = (deps, payload) =>
-  runRecordedLineCommand(deps, () =>
-    setDialogueCharacterFromShortcut(deps, payload),
+  runRecordedLineCommand(
+    deps,
+    {
+      lineId:
+        payload?._event?.detail?.lineId || deps.store.selectSelectedLineId(),
+    },
+    ({ lineId }) => setDialogueCharacterFromShortcut(deps, payload, { lineId }),
   );
 
 export const handleAddActionsButtonClick = (deps) => {
@@ -3272,13 +3340,16 @@ const moveSceneEditorSectionWithinScene = async (
 };
 
 // Deletes an action of the selected line from the line's action menu.
-const deleteSelectedLineActions = async (deps, actionsType) => {
-  const { projectService, store, subject } = deps;
-  const selectedLineId = store.selectSelectedLineId();
-  const selectedSectionId = store.selectSelectedSectionId?.();
-  const selectedLine = store.selectSelectedLine();
+const deleteSelectedLineActions = async (
+  deps,
+  actionsType,
+  { lineId, line },
+) => {
+  const { projectService, subject } = deps;
+  const selectedLineId = lineId;
+  const selectedLine = line;
 
-  if (actionsType && selectedLineId && selectedSectionId) {
+  if (actionsType && selectedLineId && selectedLine) {
     // Keep editable content while clearing the dialogue presentation.
     if (actionsType === "dialogue") {
       const currentDialogue = selectedLine?.actions?.dialogue;
@@ -3471,8 +3542,11 @@ export const handleDropdownMenuClickItem = async (deps, payload) => {
   } else if (action === "delete-line") {
     await deleteSceneEditorLine(deps, lineId);
   } else if (action === "delete-actions") {
-    await runRecordedLineCommand(deps, () =>
-      deleteSelectedLineActions(deps, actionsType),
+    await runRecordedLineCommand(
+      deps,
+      { lineId: store.selectSelectedLineId() },
+      ({ lineId, line }) =>
+        deleteSelectedLineActions(deps, actionsType, { lineId, line }),
     );
   }
 
@@ -4004,11 +4078,10 @@ export const handleLineContextMenuDismiss = (deps) => {
   render();
 };
 
-const deleteLineActionItem = async (deps, payload) => {
-  const { store, subject, render, projectService } = deps;
+const deleteLineActionItem = async (deps, payload, { line }) => {
+  const { subject, render, projectService } = deps;
   const { actionType } = payload._event.detail;
-  // Get current selected line
-  const selectedLine = store.selectSelectedLine();
+  const selectedLine = line;
   if (!selectedLine || !selectedLine.actions) {
     return;
   }
@@ -4048,7 +4121,11 @@ const deleteLineActionItem = async (deps, payload) => {
 };
 
 export const handleLineDeleteActionItem = (deps, payload) =>
-  runRecordedLineCommand(deps, () => deleteLineActionItem(deps, payload));
+  runRecordedLineCommand(
+    deps,
+    { lineId: deps.store.selectSelectedLineId() },
+    ({ line }) => deleteLineActionItem(deps, payload, { line }),
+  );
 
 export const handleHidePreviewScene = async (deps) => {
   await restoreSceneEditorFromPreview(deps);
@@ -4073,11 +4150,10 @@ export const handleBackClick = (deps) => {
   leaveToScenes(appService);
 };
 
-const deleteSystemAction = async (deps, payload) => {
-  const { store, render, projectService, subject } = deps;
+const deleteSystemAction = async (deps, payload, { line }) => {
+  const { render, projectService, subject } = deps;
   const { actionType } = payload._event.detail;
-  // Get current selected line
-  const selectedLine = store.selectSelectedLine();
+  const selectedLine = line;
   if (!selectedLine) {
     return;
   }
@@ -4141,4 +4217,8 @@ const deleteSystemAction = async (deps, payload) => {
 };
 
 export const handleSystemActionsActionDelete = (deps, payload) =>
-  runRecordedLineCommand(deps, () => deleteSystemAction(deps, payload));
+  runRecordedLineCommand(
+    deps,
+    { lineId: deps.store.selectSelectedLineId() },
+    ({ line }) => deleteSystemAction(deps, payload, { line }),
+  );

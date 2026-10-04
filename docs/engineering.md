@@ -1253,9 +1253,11 @@ apart is one step. Undo and redo put the lines into the section drafts at once
 and load them into the editor with `replaceLines`, since setting `lines` keeps
 a focused editor's own text; the caret goes where the text changed. The draft
 flush saves them, and restored lines are marked (`actionLineIds`) so it saves
-their whole actions, not only their dialogue. Before a line action command,
-the page saves pending drafts without waiting for the save interval, so the
-command never acts on lines the page has not saved and its step holds only its
+their whole actions, not only their dialogue. A line action command reads its
+line before anything is awaited, then saves pending drafts without waiting for
+the save interval, and does not run when that save fails. A draft that is still
+dirty afterwards, from typing during the save, takes the command's saved
+actions for its line, so the command shows at once and its step holds only its
 change. The shortcuts also work in the editor's own text, through
 `resolveEditHistoryShortcut`'s `textEditorTagName`; Lexical's own undo stays
 off. Touch mode has no undo buttons yet.

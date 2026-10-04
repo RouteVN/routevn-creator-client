@@ -796,11 +796,13 @@ export const selectLineEditBaselines = ({ state }, { sectionIds } = {}) => {
   return baselines;
 };
 
-// Undo and redo wait while a line action command runs, the preview is open,
-// or text is being composed.
+// Undo and redo wait while a line action command runs, the preview, the
+// actions dialog or a transform editor is open, or text is being composed.
 export const selectIsEditHistoryBlocked = ({ state }) =>
   state.isLineCommandRunning ||
   state.previewVisible ||
+  state.actionTargetLineId !== undefined ||
+  state.backgroundTransformEditor.isOpen ||
   getDraftSections(state).some((draftSection) => draftSection.isComposing);
 
 // Records an edit to the lines, when it touched any, and takes the sections'

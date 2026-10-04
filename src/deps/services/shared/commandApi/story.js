@@ -685,9 +685,9 @@ export const createStoryCommandApi = (shared) => {
         const desiredLine = desiredLineById.get(lineId);
         const currentLine = currentLineItems[lineId];
         if (fullActionLineIds.has(lineId)) {
-          const desiredActions = desiredLine?.actions || {};
+          const desiredActions = desiredLine?.actions ?? {};
           if (
-            JSON.stringify(currentLine?.actions || {}) ===
+            JSON.stringify(currentLine?.actions ?? {}) ===
             JSON.stringify(desiredActions)
           ) {
             continue;

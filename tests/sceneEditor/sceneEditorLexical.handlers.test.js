@@ -29,9 +29,16 @@ import {
 } from "../../src/pages/sceneEditorLexical/sceneEditorLexical.handlers.js";
 import { EN_I18N } from "../support/i18n.js";
 
-// The page's undo history calls, for tests about other behavior.
-const editHistoryStore = () => ({
-  selectScene: vi.fn(() => undefined),
+// The page's undo history calls, for tests about other behavior. Line
+// action commands read their line from the scene, by its id.
+const editHistoryStore = ({ line } = {}) => ({
+  selectScene: vi.fn(() =>
+    line ? { sections: [{ id: "section-1", lines: [line] }] } : undefined,
+  ),
+  selectSelectedLineId: vi.fn(() => line?.id),
+  selectPendingDraftSections: vi.fn(() => []),
+  selectDraftSectionBySectionId: vi.fn(() => undefined),
+  selectCommittedScene: vi.fn(() => undefined),
   selectLineEditBaselines: vi.fn(() => ({})),
   recordLineEdit: vi.fn(),
   setLineCommandRunning: vi.fn(),
@@ -1937,19 +1944,20 @@ describe("sceneEditorLexical.handlers actions dialog", () => {
     const updateLineDialogueAction = vi.fn(async () => {
       throw saveError;
     });
-    const store = {
-      ...editHistoryStore(),
-      selectSelectedLine: vi.fn(() => ({
-        id: "line-1",
-        actions: {
-          dialogue: {
-            ui: {
-              resourceId: "dialogue-layout",
-            },
-            content: [{ text: "Keep writing" }],
+    const selectedLine = {
+      id: "line-1",
+      actions: {
+        dialogue: {
+          ui: {
+            resourceId: "dialogue-layout",
           },
+          content: [{ text: "Keep writing" }],
         },
-      })),
+      },
+    };
+    const store = {
+      ...editHistoryStore({ line: selectedLine }),
+      selectSelectedLine: vi.fn(() => selectedLine),
       selectDraftSection: vi.fn(() => undefined),
     };
 
@@ -1995,14 +2003,15 @@ describe("sceneEditorLexical.handlers actions dialog", () => {
     const updateLineActions = vi.fn(async () => {
       throw saveError;
     });
+    const selectedLine = {
+      id: "line-1",
+      actions: {
+        dialogue: { content: [{ text: "Still raining" }] },
+      },
+    };
     const store = {
-      ...editHistoryStore(),
-      selectSelectedLine: vi.fn(() => ({
-        id: "line-1",
-        actions: {
-          dialogue: { content: [{ text: "Still raining" }] },
-        },
-      })),
+      ...editHistoryStore({ line: selectedLine }),
+      selectSelectedLine: vi.fn(() => selectedLine),
       selectDraftSection: vi.fn(() => undefined),
     };
 
@@ -2037,8 +2046,19 @@ describe("sceneEditorLexical.handlers actions dialog", () => {
     const updateLineDialogueAction = vi.fn(async () => {
       throw saveError;
     });
+    const selectedLine = {
+      id: "line-1",
+      actions: {
+        dialogue: {
+          ui: {
+            resourceId: "dialogue-layout",
+          },
+          content: [{ text: "Keep writing" }],
+        },
+      },
+    };
     const store = {
-      ...editHistoryStore(),
+      ...editHistoryStore({ line: selectedLine }),
       selectDropdownMenu: vi.fn(() => ({
         actionsType: "dialogue",
         lineId: "line-1",
@@ -2047,17 +2067,7 @@ describe("sceneEditorLexical.handlers actions dialog", () => {
       hideDropdownMenu: vi.fn(),
       selectSelectedLineId: vi.fn(() => "line-1"),
       selectSelectedSectionId: vi.fn(() => "section-1"),
-      selectSelectedLine: vi.fn(() => ({
-        id: "line-1",
-        actions: {
-          dialogue: {
-            ui: {
-              resourceId: "dialogue-layout",
-            },
-            content: [{ text: "Keep writing" }],
-          },
-        },
-      })),
+      selectSelectedLine: vi.fn(() => selectedLine),
       selectDraftSection: vi.fn(() => undefined),
     };
 
