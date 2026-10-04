@@ -253,7 +253,7 @@ describe("audioEffectsEditor.handlers", () => {
   });
 
   it("adds and selects a default audio keyframe without opening a dialog", () => {
-    const store = { addKeyframe: vi.fn() };
+    const store = { addKeyframe: vi.fn(), selectEditHistoryBaseline: vi.fn() };
     const render = vi.fn();
 
     handleAddKeyframeFromTimeline(
@@ -288,7 +288,7 @@ describe("audioEffectsEditor.handlers", () => {
   });
 
   it("adds and selects an intermediate transition volume keyframe", () => {
-    const store = { addKeyframe: vi.fn() };
+    const store = { addKeyframe: vi.fn(), selectEditHistoryBaseline: vi.fn() };
     const render = vi.fn();
 
     handleAddKeyframeFromTimeline(
@@ -365,6 +365,7 @@ describe("audioEffectsEditor.handlers", () => {
 
   it("edits the selected property value source and initial value", () => {
     const store = {
+      selectEditHistoryBaseline: vi.fn(),
       setSelectedPropertyInitialValue: vi.fn(),
       setSelectedPropertyValueSource: vi.fn(),
     };
@@ -430,6 +431,7 @@ describe("audioEffectsEditor.handlers", () => {
     ["add-right", 2],
   ])("adds a default transition keyframe for %s", (value, expectedIndex) => {
     const store = {
+      selectEditHistoryBaseline: vi.fn(),
       addKeyframe: vi.fn(),
       closeKeyframeMenu: vi.fn(),
       selectKeyframeMenu: vi.fn(() => ({
@@ -462,6 +464,7 @@ describe("audioEffectsEditor.handlers", () => {
   it("opens the keyframe form from the context menu and deletes through menu actions", () => {
     const keyframeForm = { reset: vi.fn(), setValues: vi.fn() };
     const store = {
+      selectEditHistoryBaseline: vi.fn(),
       closeKeyframeMenu: vi.fn(),
       removeKeyframe: vi.fn(),
       selectKeyframeMenu: vi.fn(() => ({
@@ -545,6 +548,7 @@ describe("audioEffectsEditor.handlers", () => {
 
   it("commits right-panel timing changes without opening a dialog", () => {
     const store = {
+      selectEditHistoryBaseline: vi.fn(),
       setSelectedKeyframeDelay: vi.fn(),
     };
     const render = vi.fn();
@@ -560,6 +564,7 @@ describe("audioEffectsEditor.handlers", () => {
 
   it("adds, edits, and removes a selected keyframe start value", () => {
     const store = {
+      selectEditHistoryBaseline: vi.fn(),
       closeSelectedKeyframeAddMenu: vi.fn(),
       openSelectedKeyframeAddMenu: vi.fn(),
       selectDefaultSelectedKeyframeStartValue: vi.fn(() => 75),
@@ -679,7 +684,10 @@ describe("audioEffectsEditor.handlers", () => {
   });
 
   it("updates transition timing directly from its timeline", () => {
-    const store = { updateKeyframeTiming: vi.fn() };
+    const store = {
+      updateKeyframeTiming: vi.fn(),
+      selectEditHistoryBaseline: vi.fn(),
+    };
     const render = vi.fn();
 
     handleKeyframeDurationChange(
@@ -713,6 +721,7 @@ describe("audioEffectsEditor.handlers", () => {
       i18n: EN_I18N,
       appService: { showAlert: vi.fn() },
       store: {
+        selectEditHistoryBaseline: vi.fn(),
         selectKeyframeDialogIsFinal: vi.fn(() => false),
         selectKeyframeDialogProperty: vi.fn(() => "pan"),
         selectKeyframeDialogSide: vi.fn(() => "update"),

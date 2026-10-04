@@ -3,6 +3,14 @@ refs:
     eventListeners:
       click:
         handler: handleBackClick
+  undoButton:
+    eventListeners:
+      click:
+        handler: handleUndoButtonClick
+  redoButton:
+    eventListeners:
+      click:
+        handler: handleRedoButtonClick
   playButton:
     eventListeners:
       click:
@@ -223,6 +231,9 @@ template:
               - 'rtgl-view d=h av=c g=sm w=1fg style="min-width: 0;"':
                   - rtgl-text ellipsis=true: ${audioEffectName}
                   - rtgl-text s=xs c=mu-fg: ${effectTypeLabel}
+              - rtgl-view d=h av=c g=xs:
+                  - 'rtgl-button#undoButton sq pre=undo v=ol ?disabled=${undoDisabled} aria-label="${undoLabel}" title="${undoLabel}"': null
+                  - 'rtgl-button#redoButton sq pre=redo v=ol ?disabled=${redoDisabled} aria-label="${redoLabel}" title="${redoLabel}"': null
               - 'rtgl-button#previewLoopButton sq v=${previewLoopButtonVariant} pre=loop aria-label="${loopPreviewLabel}" aria-pressed="${previewLoopEnabled}" title="${loopPreviewLabel}"': null
               - $if playButtonDisabledReason:
                   - 'rtgl-view#playButtonTooltipTrigger role=group tabindex=0 aria-label="${playButton}: ${playButtonDisabledReason}" d=h av=c':

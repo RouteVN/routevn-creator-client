@@ -119,4 +119,34 @@ describe("audioEffectsEditor view", () => {
     expect(view).not.toContain("transitionForm");
     expect(view).not.toContain("editorDescription");
   });
+
+  it("offers undo and redo in the header between the name and preview controls", () => {
+    const view = readFileSync(
+      new URL(
+        "../../src/pages/audioEffectsEditor/audioEffectsEditor.view.yaml",
+        import.meta.url,
+      ),
+      "utf8",
+    );
+    const template = view.slice(view.indexOf("template:"));
+
+    expect(template).toContain(
+      'rtgl-button#undoButton sq pre=undo v=ol ?disabled=${undoDisabled} aria-label="${undoLabel}" title="${undoLabel}"',
+    );
+    expect(template).toContain(
+      'rtgl-button#redoButton sq pre=redo v=ol ?disabled=${redoDisabled} aria-label="${redoLabel}" title="${redoLabel}"',
+    );
+    expect(template.indexOf("${effectTypeLabel}")).toBeLessThan(
+      template.indexOf("#undoButton"),
+    );
+    expect(template.indexOf("#redoButton")).toBeLessThan(
+      template.indexOf("#previewLoopButton"),
+    );
+    expect(view).toMatch(
+      /undoButton:\n\s+eventListeners:\n\s+click:\n\s+handler: handleUndoButtonClick/,
+    );
+    expect(view).toMatch(
+      /redoButton:\n\s+eventListeners:\n\s+click:\n\s+handler: handleRedoButtonClick/,
+    );
+  });
 });

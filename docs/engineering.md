@@ -1229,6 +1229,16 @@ playhead are not part of the history, and undo and redo are off while a video
 export runs. The shortcuts step aside only for text fields, so they still work
 after a slider, checkbox, or select change.
 
+The audio effects editor has undo and redo the same way. It keeps edits on the
+page and saves the whole audio effect when the page is left, so a step holds
+the audio effect (tracks and keyframes per side) before and after an edit,
+recorded where every edit handler ends (`commitAudioEffectEdit`). Edits merge
+into steps and select keyframes as in the animation editor. Undo and redo put
+the snapshot back at once, and the page saves it on leaving with its other
+edits; the page compares it with what was last saved, so undoing back to that
+saves nothing. Preview sounds, which Save Preview saves, and view state such as
+the tab and zoom are not part of the history.
+
 `rvn-mobile-sheet` is capped at 640px (the Projects page content width) and
 centered, so the bottom-tab sheets and every page's item detail sheet stay
 compact on tablets; phones are narrower than the cap and keep the full-width

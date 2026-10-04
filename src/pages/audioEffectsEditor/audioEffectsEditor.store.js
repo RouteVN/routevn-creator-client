@@ -10,6 +10,14 @@ import {
   SUPPORTED_AUDIO_EFFECT_EASINGS,
 } from "./audioEffectsEditor.constants.js";
 import { selectAudioEffectsEditorPageCopy } from "./support/audioEffectsEditorPageCopy.js";
+import {
+  areEditHistoryValuesEqual,
+  createEditHistory,
+  getEditHistoryStep,
+  moveEditHistoryStep as moveHistoryStep,
+  recordEditHistoryStep as recordHistoryStep,
+} from "../../internal/editHistory.js";
+import { selectEditHistoryCopy } from "../../internal/ui/editHistory.js";
 
 const TIMELINE_ZOOM_DEFAULT = 2;
 const TIMELINE_ZOOM_MIN = 0.25;
@@ -275,6 +283,12 @@ export const createInitialState = () => ({
   isTouchMode: false,
   dirty: false,
   saving: false,
+  // The audio effect as last saved, so an undo back to it saves nothing.
+  savedDefinition: undefined,
+  // Undo and redo for edits made since the page opened. The baseline is the
+  // audio effect as of the last recorded edit, the before of the next one.
+  editHistory: createEditHistory(),
+  editHistoryBaseline: undefined,
   timelineDuration: 1000,
   timelineZoom: TIMELINE_ZOOM_DEFAULT,
   timelineViewportWidth: undefined,
@@ -348,6 +362,9 @@ export const loadAudioEffect = ({ state }, { item } = {}) => {
   state.addPropertySideMenu.y = undefined;
   closeKeyframeMenu({ state });
   state.dirty = false;
+  state.savedDefinition = state.definition;
+  state.editHistory = createEditHistory();
+  state.editHistoryBaseline = state.definition;
 };
 
 export const selectAudioEffectId = ({ state }) => state.audioEffectId;
@@ -423,8 +440,32 @@ export const setSaving = ({ state }, { saving } = {}) => {
   state.saving = saving === true;
 };
 
-export const markSaved = ({ state }) => {
-  state.dirty = false;
+// Takes the audio effect that was saved, since edits made while the save ran
+// are still unsaved.
+export const markSaved = ({ state }, { definition } = {}) => {
+  state.savedDefinition = structuredClone(definition);
+  state.dirty = !areEditHistoryValuesEqual(state.definition, definition);
+};
+
+export const selectEditHistoryBaseline = ({ state }) =>
+  state.editHistoryBaseline;
+
+export const setEditHistoryBaseline = ({ state }, { definition } = {}) => {
+  state.editHistoryBaseline = definition;
+};
+
+export const recordEditHistoryStep = (
+  { state },
+  { before, after, mergeKey, time } = {},
+) => {
+  recordHistoryStep(state.editHistory, { before, after, mergeKey, time });
+};
+
+export const selectEditHistoryStep = ({ state }, { direction } = {}) =>
+  getEditHistoryStep(state.editHistory, direction);
+
+export const moveEditHistoryStep = ({ state }, { direction } = {}) => {
+  moveHistoryStep(state.editHistory, direction);
 };
 
 export const setSoundsData = ({ state }, { soundsData } = {}) => {
@@ -698,6 +739,55 @@ export const closeAddPropertySideMenu = ({ state }) => {
   state.addPropertySideMenu.open = false;
   state.addPropertySideMenu.x = undefined;
   state.addPropertySideMenu.y = undefined;
+};
+
+// Puts back an undone or redone version of the audio effect, and closes the
+// keyframe and add menus. Keyframes are selected by index, so a selected
+// keyframe is cleared when it no longer exists, or when the restore changed
+// other keyframes in its track, since the index may then point at a
+// different one.
+export const restoreAudioEffectHistorySnapshot = (
+  { state },
+  { definition } = {},
+) => {
+  const { selectedKeyframe, selectedProperty } = state;
+  // A JSON copy, since state here is a store draft that structuredClone
+  // cannot read; keyframes are plain JSON data.
+  const previousKeyframes = selectedKeyframe
+    ? JSON.parse(
+        JSON.stringify(getMutableKeyframes(state, selectedKeyframe) ?? []),
+      )
+    : undefined;
+
+  state.definition = definition;
+  state.editHistoryBaseline = definition;
+  state.dirty = !areEditHistoryValuesEqual(definition, state.savedDefinition);
+  state.timelineDuration = Math.max(
+    state.timelineDuration,
+    resolveTimelineDuration(definition),
+  );
+  closeKeyframeMenu({ state });
+  closeSelectedKeyframeAddMenu({ state });
+  closeAddPropertySideMenu({ state });
+
+  if (selectedKeyframe) {
+    const { index } = selectedKeyframe;
+    const keyframes = getMutableKeyframes(state, selectedKeyframe);
+    if (
+      !keyframes?.[index] ||
+      previousKeyframes.length !== keyframes.length ||
+      previousKeyframes.some(
+        (keyframe, keyframeIndex) =>
+          keyframeIndex !== index &&
+          !areEditHistoryValuesEqual(keyframe, keyframes[keyframeIndex]),
+      )
+    ) {
+      state.selectedKeyframe = undefined;
+    }
+  }
+  if (selectedProperty && !getMutablePropertyConfig(state, selectedProperty)) {
+    state.selectedProperty = undefined;
+  }
 };
 
 export const addAudioEffectProperty = (
@@ -1389,6 +1479,7 @@ const buildSelectedPropertyPanelData = (state, copy = {}) => {
 
 export const selectViewData = ({ state, i18n }) => {
   const copy = selectAudioEffectsEditorPageCopy(i18n);
+  const editHistoryCopy = selectEditHistoryCopy(i18n);
   const isTransition = state.definition.type === "transition";
   const tween = isTransition ? {} : state.definition.tween;
   const addPropertySide = isTransition ? state.addPropertySide : "update";
@@ -1577,6 +1668,10 @@ export const selectViewData = ({ state, i18n }) => {
     selectedResourceId: "audio-effects-editor",
     showExplorerPanel: !state.isTouchMode,
     audioEffectName: state.audioEffectName,
+    undoDisabled: state.editHistory.undo.length === 0,
+    redoDisabled: state.editHistory.redo.length === 0,
+    undoLabel: editHistoryCopy.undoLabel,
+    redoLabel: editHistoryCopy.redoLabel,
     effectTypeLabel: isTransition
       ? (copy.transitionType ?? "Transition")
       : (copy.updateType ?? "Update"),
