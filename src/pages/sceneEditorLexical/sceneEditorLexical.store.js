@@ -847,9 +847,6 @@ export const setLineCommandRunning = ({ state }, { running } = {}) => {
   state.isLineCommandRunning = running === true;
 };
 
-export const selectIsLineCommandRunning = ({ state }) =>
-  state.isLineCommandRunning;
-
 export const setUiConfig = ({ state }, { uiConfig } = {}) => {
   state.isTouchMode =
     uiConfig?.id === "touch" || uiConfig?.inputMode === "touch";
