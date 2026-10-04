@@ -73,6 +73,10 @@ export const createTauriProjectImportHost = () => ({
       maxBytes,
       onProgress: createProgressChannel(onProgress),
     });
+    // Native extraction only creates the folders its files need, but a project
+    // always has a `files` folder, even when it has no assets (Android and iOS
+    // create it natively).
+    await mkdir(await join(destinationPath, "files"), { recursive: true });
   },
 
   // Moves the extracted project folder out of staging into `parent`, under

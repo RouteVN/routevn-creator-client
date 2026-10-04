@@ -213,7 +213,7 @@ describe("desktop project import adapters", () => {
     );
 
   describe("a picked folder", () => {
-    it("renames files to their file ids before validating the folder", async () => {
+    it("renames files to their file ids once the folder is known to be a project", async () => {
       const db = createDb();
       mockDirectories({
         "/projects/project-one": [directory("files"), file("project.db")],
@@ -229,6 +229,37 @@ describe("desktop project import adapters", () => {
       );
       const entries = await db.get("projectEntries");
       expect(entries[0].projectPath).toBe("/projects/project-one");
+    });
+
+    it("renames nothing in a folder that is not a project", async () => {
+      mockDirectories({
+        "/projects/not-a-project": [directory("files")],
+        "/projects/not-a-project/files": [file("photo.jpg")],
+      });
+      mocked.exists.mockImplementation(async (path) => path.endsWith("/files"));
+
+      await expect(
+        createService().openExistingProject("/projects/not-a-project"),
+      ).rejects.toThrow("Missing project.db");
+      expect(mocked.rename).not.toHaveBeenCalled();
+    });
+
+    it("renames nothing when the project database cannot be read", async () => {
+      mockDirectories({
+        "/projects/project-one": [directory("files"), file("project.db")],
+        "/projects/project-one/files": [file("abc.png")],
+      });
+      const projectService = createProjectService();
+      projectService.getProjectInfoByPath.mockRejectedValue(
+        new Error("file is not a database"),
+      );
+
+      await expect(
+        createService({ projectService }).openExistingProject(
+          "/projects/project-one",
+        ),
+      ).rejects.toThrow("file is not a database");
+      expect(mocked.rename).not.toHaveBeenCalled();
     });
 
     it("renames nothing when two names would become the same id", async () => {
@@ -357,6 +388,43 @@ describe("desktop project import adapters", () => {
       expect(project.projectPath).toBe("/projects/parent/Project One");
       const entries = await db.get("projectEntries");
       expect(entries[0].projectPath).toBe("/projects/parent/Project One");
+    });
+
+    it("creates the files folder when the archive holds no assets", async () => {
+      const db = createDb();
+      mockNative({
+        entries: [
+          { name: "Project One/project.db", size: 100, isDirectory: false },
+        ],
+      });
+      // A folder exists only once it was created, and moves with its parent.
+      const folders = new Set();
+      mocked.mkdir.mockImplementation(async (path) => {
+        folders.add(path);
+      });
+      mocked.rename.mockImplementation(async (from, to) => {
+        for (const path of [...folders]) {
+          if (path === from || path.startsWith(`${from}/`)) {
+            folders.delete(path);
+            folders.add(`${to}${path.slice(from.length)}`);
+          }
+        }
+      });
+      mocked.exists.mockImplementation(
+        async (path) => path.endsWith("/project.db") || folders.has(path),
+      );
+
+      const project = await importFromUrl(createService({ db }));
+
+      expect(project.projectPath).toBe("/projects/parent/Project One");
+      expect(mocked.mkdir).toHaveBeenCalledWith(
+        expect.stringMatching(/\/extracted\/files$/),
+        { recursive: true },
+      );
+      expect(mocked.remove).not.toHaveBeenCalledWith(
+        "/projects/parent/Project One",
+        expect.anything(),
+      );
     });
 
     it("rewrites a Google Drive link before downloading", async () => {

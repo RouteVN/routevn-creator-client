@@ -79,6 +79,11 @@ const createProjectExistsMessage = ({ copy, platform }) => {
   return parts.join("\n\n");
 };
 
+// Tauri's invoke rejects with a plain string, not an Error, so the native
+// "<code>: <detail>" text is the error itself on desktop.
+const getErrorDetail = (error) =>
+  typeof error?.message === "string" ? error.message : String(error);
+
 const isGoogleDriveFailure = ({ url, error }) => {
   if (!isGoogleDriveImportUrl(url)) {
     return false;
@@ -89,7 +94,7 @@ const isGoogleDriveFailure = ({ url, error }) => {
   // a zip) earns the sharing hint.
   return (
     code === "invalidArchive" ||
-    (code === "downloadFailed" && /\bHTTP \d{3}\b/.test(error.message))
+    (code === "downloadFailed" && /\bHTTP \d{3}\b/.test(getErrorDetail(error)))
   );
 };
 
@@ -230,7 +235,7 @@ export const importProjectFromUrl = async (deps, { url }) => {
         // or past its download limit, so say what to check. A download that
         // never reached Drive (offline, timeout) keeps its own message.
         if (isGoogleDriveFailure({ url, error })) {
-          throw new Error(`googleDriveFailed: ${error.message}`);
+          throw new Error(`googleDriveFailed: ${getErrorDetail(error)}`);
         }
         throw error;
       }

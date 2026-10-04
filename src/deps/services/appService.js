@@ -120,10 +120,6 @@ export const createAppService = (params) => {
       loadProjectIcon,
       projectService,
     }) => {
-      // Local folder imports normalize file ids in place (extension
-      // stripping) before the folder is validated and registered.
-      await normalizeProjectFileNames(folderPath);
-
       const validation =
         await platformAdapter.validateProjectFolder(folderPath);
       if (!validation.isValid) {
@@ -132,6 +128,11 @@ export const createAppService = (params) => {
 
       const projectData = await projectService.getProjectInfoByPath(folderPath);
       const projectId = projectData.id;
+
+      // Local folder imports normalize file ids in place (extension
+      // stripping), but only once the folder is known to be a project, so a
+      // wrong folder is never touched.
+      await normalizeProjectFileNames(folderPath);
 
       const projectEntry = {
         id: projectId,

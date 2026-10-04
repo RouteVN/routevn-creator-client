@@ -205,11 +205,15 @@ export const createAppService = (params) => {
       });
 
       const projectId = generateId();
-      const importedProject = await callAndroidBridge("importProjectFolder", {
-        uri: folderSelection.uri,
-        projectId,
-        fileRenames,
-      });
+      const importedProject = await callAndroidBridge(
+        "importProjectFolder",
+        {
+          uri: folderSelection.uri,
+          projectId,
+          fileRenames,
+        },
+        { timeoutMs: NO_BRIDGE_TIMEOUT },
+      );
       if (importedProject.id !== projectId) {
         throw new Error("Imported project identity does not match.");
       }

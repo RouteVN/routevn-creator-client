@@ -1634,15 +1634,26 @@ describe("projects Google Drive URL import", () => {
     });
   });
 
-  it.each([
-    "invalidArchive: End of central directory record not found.",
-    "downloadFailed: HTTP 403",
-  ])(
-    "explains what to check when Drive does not return a zip (%s)",
-    async (nativeMessage) => {
+  // iOS and Android reject with an Error; Tauri's invoke rejects with the
+  // native "<code>: <detail>" text itself.
+  const REJECTION_SHAPES = [
+    ["an Error", (message) => new Error(message)],
+    ["a plain string", (message) => message],
+  ];
+
+  it.each(
+    [
+      "invalidArchive: End of central directory record not found.",
+      "downloadFailed: HTTP 403",
+    ].flatMap((nativeMessage) =>
+      REJECTION_SHAPES.map(([shape, reject]) => [nativeMessage, shape, reject]),
+    ),
+  )(
+    "explains what to check when Drive does not return a zip (%s, rejected with %s)",
+    async (nativeMessage, _shape, reject) => {
       const deps = createDeps({ platform: "ios" });
       deps.appService.importProjectFromUrl.mockRejectedValue(
-        new Error(nativeMessage),
+        reject(nativeMessage),
       );
 
       await handleUrlImportFormAction(
