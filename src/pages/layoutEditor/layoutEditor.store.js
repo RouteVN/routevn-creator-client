@@ -20,6 +20,15 @@ import {
   toLayoutEditorExplorerItems,
 } from "./support/layoutEditorViewData.js";
 import { selectLayoutEditorPageCopy } from "./support/layoutEditorPageCopy.js";
+import { selectEditHistoryCopy } from "../../internal/ui/editHistory.js";
+import {
+  createEditHistory,
+  getEditHistoryStep,
+  dropEditHistoryStep as dropHistoryStep,
+  moveEditHistoryStep as moveHistoryStep,
+  recordEditHistoryStep as recordHistoryStep,
+} from "../../internal/editHistory.js";
+import { restoreLayoutElementSnapshot } from "../../internal/project/layout.js";
 
 const normalizePreviewData = (previewData) => {
   return previewData && typeof previewData === "object"
@@ -202,6 +211,15 @@ export const createInitialState = () => {
     rightPanelMode: "preview",
     canvasZoom: 1,
     canvasPreviewItem: undefined,
+    // Undo and redo for edits made since the page opened.
+    editHistory: createEditHistory(),
+    // Undone or redone steps not saved yet, kept on top of repository data.
+    pendingHistoryRestores: [],
+    // While an explorer action runs, undo and redo wait, so its step holds
+    // only its own change.
+    isStructureEditRunning: false,
+    // Edits sent to save early, kept on top of repository data until saved.
+    savingPersistPayloads: [],
     projectResolution: DEFAULT_PROJECT_RESOLUTION,
     selectedElementMetrics: undefined,
     lastPersistErrorAt: 0,
@@ -376,6 +394,64 @@ export const setSelectedElementMetrics = ({ state }, { metrics } = {}) => {
   state.selectedElementMetrics = metrics;
 };
 
+export const recordEditHistoryStep = (
+  { state },
+  { before, after, mergeKey, time } = {},
+) => {
+  recordHistoryStep(state.editHistory, { before, after, mergeKey, time });
+};
+
+export const selectEditHistoryStep = ({ state }, { direction } = {}) =>
+  getEditHistoryStep(state.editHistory, direction);
+
+export const moveEditHistoryStep = ({ state }, { direction } = {}) => {
+  moveHistoryStep(state.editHistory, direction);
+};
+
+export const dropEditHistoryStep = ({ state }, { direction } = {}) => {
+  dropHistoryStep(state.editHistory, direction);
+};
+
+export const setStructureEditRunning = ({ state }, { running } = {}) => {
+  state.isStructureEditRunning = running;
+};
+
+export const selectIsStructureEditRunning = ({ state }) =>
+  state.isStructureEditRunning;
+
+export const addSavingPersistPayload = ({ state }, { payload } = {}) => {
+  state.savingPersistPayloads.push(payload);
+};
+
+export const removeSavingPersistPayload = (
+  { state },
+  { persistenceRequestId } = {},
+) => {
+  state.savingPersistPayloads = state.savingPersistPayloads.filter(
+    (payload) => payload.persistenceRequestId !== persistenceRequestId,
+  );
+};
+
+export const selectLayoutElements = ({ state }) => state.layoutData;
+
+// Shows an undone or redone step before it is saved. It stays on top of
+// repository data until clearPendingHistoryRestore.
+export const applyHistoryRestore = (
+  { state },
+  { restoreId, target, elements } = {},
+) => {
+  state.layoutData = elements;
+  if (restoreId) {
+    state.pendingHistoryRestores.push({ restoreId, target });
+  }
+};
+
+export const clearPendingHistoryRestore = ({ state }, { restoreId } = {}) => {
+  state.pendingHistoryRestores = state.pendingHistoryRestores.filter(
+    (restore) => restore.restoreId !== restoreId,
+  );
+};
+
 export const setLastPersistErrorAt = ({ state }, { timestamp } = {}) => {
   state.lastPersistErrorAt = Number.isFinite(timestamp) ? timestamp : 0;
 };
@@ -477,19 +553,32 @@ export const syncRepositoryState = ({ state }, payload = {}) => {
     resourceType,
   });
   state.layoutData = layoutData ?? { items: {}, tree: [] };
-  const pending = state.pendingPersistPayload;
-  if (
-    pending &&
-    pending.layoutId === layoutId &&
-    pending.resourceType === resourceType &&
-    state.layoutData.items[pending.selectedItemId]
-  ) {
-    // An earlier save can finish while a newer drag position is still queued.
-    // Copy the item map so preserving the draft never mutates repository data.
-    const items = Object.assign({}, state.layoutData.items);
-    items[pending.selectedItemId] = pending.updatedItem;
-    state.layoutData = { tree: state.layoutData.tree, items };
+  // Unsaved changes stay on top, oldest first: edits sent to save early,
+  // undone or redone steps, then the edit waiting to save.
+  const overlayEdit = (payload) => {
+    if (
+      payload &&
+      payload.layoutId === layoutId &&
+      payload.resourceType === resourceType &&
+      state.layoutData.items[payload.selectedItemId]
+    ) {
+      // Copy the item map so the overlay never mutates repository data.
+      const items = Object.assign({}, state.layoutData.items);
+      items[payload.selectedItemId] = payload.updatedItem;
+      state.layoutData = { tree: state.layoutData.tree, items };
+    }
+  };
+  state.savingPersistPayloads.forEach(overlayEdit);
+  for (const { target } of state.pendingHistoryRestores) {
+    const restore = restoreLayoutElementSnapshot({
+      elements: state.layoutData,
+      target,
+    });
+    if (restore.valid) {
+      state.layoutData = restore.elements;
+    }
   }
+  overlayEdit(state.pendingPersistPayload);
   state.images = images ?? { items: {}, tree: [] };
   state.soundsData = soundsData ?? { items: {}, tree: [] };
   state.spritesheetsData = spritesheetsData ?? { items: {}, tree: [] };
@@ -609,6 +698,7 @@ export const selectIsMobileFileExplorerOpen = ({ state }) =>
 
 export const selectViewData = ({ state, constants, i18n }) => {
   const copy = selectLayoutEditorPageCopy(i18n);
+  const editHistoryCopy = selectEditHistoryCopy(i18n);
   const selectedItem = selectItemDataById(
     { state },
     { itemId: state.selectedItemId },
@@ -761,6 +851,10 @@ export const selectViewData = ({ state, constants, i18n }) => {
     canvasZoomInLabel: copy.canvasZoomInLabel ?? "Zoom in",
     canvasZoomOutLabel: copy.canvasZoomOutLabel ?? "Zoom out",
     canvasZoomFitLabel: copy.canvasZoomFitLabel ?? "Fit to view",
+    undoDisabled: state.editHistory.undo.length === 0,
+    redoDisabled: state.editHistory.redo.length === 0,
+    undoLabel: editHistoryCopy.undoLabel,
+    redoLabel: editHistoryCopy.redoLabel,
     previewData: state.previewData,
     initialPreviewData: state.initialPreviewData,
     previewHydrationData,

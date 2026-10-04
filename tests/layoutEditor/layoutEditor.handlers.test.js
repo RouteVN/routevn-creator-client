@@ -74,6 +74,12 @@ const createLayoutEditorDeps = ({
       y: 0,
     })),
     updateSelectedItem: vi.fn(),
+    selectLayoutElements: vi.fn(() => ({ items: {}, tree: [] })),
+    recordEditHistoryStep: vi.fn(),
+    addSavingPersistPayload: vi.fn(),
+    removeSavingPersistPayload: vi.fn(),
+    setStructureEditRunning: vi.fn(),
+    selectIsStructureEditRunning: vi.fn(() => false),
   };
 
   const appService = {
@@ -122,6 +128,12 @@ const createLayoutEditorDeps = ({
     updateControlElement,
     updateLayoutItem,
     updateControlItem,
+    createLayoutElement: vi.fn(async () => ({ valid: true })),
+    deleteLayoutElement: vi.fn(async () => ({ valid: true })),
+    moveLayoutElement: vi.fn(async () => ({ valid: true })),
+    createControlElement: vi.fn(async () => ({ valid: true })),
+    deleteControlElement: vi.fn(async () => ({ valid: true })),
+    moveControlElement: vi.fn(async () => ({ valid: true })),
     storeFile: vi.fn(async () => ({
       fileId: "file-layout-thumb",
       fileRecords: [{ id: "file-layout-thumb" }],
@@ -1640,6 +1652,7 @@ describe("layoutEditor.handleBeforeMount", () => {
     },
     uiConfig: { inputMode: isTouchMode ? "touch" : "mouse" },
     subject: new Subject(),
+    browserEventsClient: { subscribeWindowEvent: vi.fn(() => vi.fn()) },
   });
 
   it("starts touch layouts on the node explorer instead of the preview", () => {

@@ -34,3 +34,7 @@ methods:
       description: Uses the first rendered occurrence for the currently selected authored item.
       params: []
       returns: void
+    discardPendingUpdate:
+      description: Drops the item the canvas is moving before the page has it, so the next render shows the page's item, as after an undo.
+      params: []
+      returns: void

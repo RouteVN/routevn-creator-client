@@ -1194,6 +1194,24 @@ when the popover closes. The page keeps the previewed item as an overlay on the
 canvas state only, so nothing is saved until **Submit**; closing the popover
 without submitting puts the element back.
 
+The layout editor has undo and redo for element edits made since the page
+opened: canvas moves, resizes, rotations and nudges, edit panel fields, show and
+hide, and the explorer's create, rename, delete and reorder. The history lives
+in the page store (`src/internal/editHistory.js` for the steps,
+`src/internal/project/layout.js` for element snapshots), so leaving the page
+drops it. Each step holds snapshots of the elements an edit touched, from the
+page's own data before and after; edits to one element less than a second apart
+are one step. Undo and redo behave like an edit: the page applies the restored
+elements at once, then saves them. A step that only changes element data goes
+through the waiting-edit path, so undoing an edit not saved yet writes nothing;
+a step that creates, deletes or moves elements is saved through the page's save
+queue, and the store keeps it on top of repository data until it is saved.
+Cmd/Ctrl+Z undoes and Shift+Cmd/Ctrl+Z or Ctrl+Y redoes, by the letter the
+keyboard layout types, except in a focused field, which keeps its own text
+undo, or in an open dialog. An explorer action first saves edits waiting to
+save, and undo and redo wait while it runs, so its step holds only its own
+change. Save Preview and preview data are not part of the history.
+
 `rvn-mobile-sheet` is capped at 640px (the Projects page content width) and
 centered, so the bottom-tab sheets and every page's item detail sheet stay
 compact on tablets; phones are narrower than the cap and keep the full-width

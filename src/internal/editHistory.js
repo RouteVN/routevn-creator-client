@@ -1,0 +1,86 @@
+// Undo and redo steps for an editor page, kept in its store while the page
+// is open. A step holds snapshots of the items an edit touched, keyed by id,
+// from before and after the edit. Edits with the same merge key less than a
+// second apart are one step: a drag, keyboard nudges, or a form that saves
+// several fields at once.
+export const EDIT_HISTORY_MERGE_WINDOW_MS = 1000;
+const MAX_EDIT_HISTORY_STEPS = 100;
+
+export const areEditHistoryValuesEqual = (a, b) => {
+  if (Object.is(a, b)) {
+    return true;
+  }
+  if (
+    typeof a !== "object" ||
+    typeof b !== "object" ||
+    a === null ||
+    b === null ||
+    Array.isArray(a) !== Array.isArray(b)
+  ) {
+    return false;
+  }
+  const keys = Object.keys(a);
+  return (
+    keys.length === Object.keys(b).length &&
+    keys.every(
+      (key) =>
+        Object.hasOwn(b, key) && areEditHistoryValuesEqual(a[key], b[key]),
+    )
+  );
+};
+
+export const createEditHistory = () => ({ undo: [], redo: [] });
+
+// Adds an edit to `history`. A new edit clears redo.
+export const recordEditHistoryStep = (
+  history,
+  { before, after, mergeKey, time },
+) => {
+  const lastStep = history.undo.at(-1);
+  if (
+    mergeKey !== undefined &&
+    lastStep?.mergeKey === mergeKey &&
+    !lastStep.sealed &&
+    time - lastStep.time <= EDIT_HISTORY_MERGE_WINDOW_MS
+  ) {
+    lastStep.before = { ...before, ...lastStep.before };
+    lastStep.after = { ...lastStep.after, ...after };
+    lastStep.time = time;
+    // Edits that cancel out, such as hiding and showing again, leave
+    // nothing to undo.
+    if (areEditHistoryValuesEqual(lastStep.before, lastStep.after)) {
+      history.undo.pop();
+    }
+  } else if (areEditHistoryValuesEqual(before, after)) {
+    return;
+  } else {
+    history.undo.push({ before, after, mergeKey, time });
+    if (history.undo.length > MAX_EDIT_HISTORY_STEPS) {
+      history.undo.shift();
+    }
+  }
+  history.redo = [];
+};
+
+export const getEditHistoryStep = (history, direction) =>
+  history[direction].at(-1);
+
+// Removes the latest undo or redo step, for a step that can no longer apply.
+export const dropEditHistoryStep = (history, direction) => {
+  history[direction].pop();
+};
+
+// Moves the latest undo or redo step to the other stack. The step now on top
+// of undo stays its own step, so a later edit does not merge into it.
+export const moveEditHistoryStep = (history, direction) => {
+  const [from, to] = direction === "undo" ? ["undo", "redo"] : ["redo", "undo"];
+  const step = history[from].pop();
+  if (!step) {
+    return;
+  }
+  history[to].push(step);
+  const lastStep = history.undo.at(-1);
+  if (lastStep) {
+    lastStep.sealed = true;
+  }
+};

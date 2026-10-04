@@ -21,7 +21,17 @@ import {
   enqueueLayoutEditorPersistence,
   waitForLayoutEditorPersistenceIdle,
 } from "./support/layoutEditorPersistenceQueue.js";
-import { isFragmentLayout } from "../../internal/project/layout.js";
+import {
+  captureLayoutElementSnapshot,
+  getChangedLayoutElementIds,
+  isFragmentLayout,
+  restoreLayoutElementSnapshot,
+} from "../../internal/project/layout.js";
+import {
+  resolveEditHistoryShortcut,
+  selectEditHistoryCopy,
+} from "../../internal/ui/editHistory.js";
+import { withErrorDetails } from "../../internal/errorDetails.js";
 import {
   getFirstSpritesheetAnimationSelectionValue,
   getSpritesheetResourceDefaultSize,
@@ -142,6 +152,15 @@ const getLayoutEditorOwnerConfig = (
     updateElement: isControls
       ? projectService.updateControlElement.bind(projectService)
       : projectService.updateLayoutElement.bind(projectService),
+    createElement: isControls
+      ? projectService.createControlElement.bind(projectService)
+      : projectService.createLayoutElement.bind(projectService),
+    deleteElement: isControls
+      ? projectService.deleteControlElement.bind(projectService)
+      : projectService.deleteLayoutElement.bind(projectService),
+    moveElement: isControls
+      ? projectService.moveControlElement.bind(projectService)
+      : projectService.moveLayoutElement.bind(projectService),
   };
 };
 
@@ -410,9 +429,24 @@ const getEditorPayload = (appService) =>
   resolveLayoutEditorPayload(appService.getPayload() || {});
 
 const queuePendingLayoutEditorPersist = (
-  store,
+  deps,
   { layoutId, resourceType, selectedItemId, updatedItem, replace } = {},
 ) => {
+  const { store } = deps;
+  // Only one edit waits for the debounced save. An edit to another element
+  // would replace it unsaved, so save the waiting one now. Saves run in
+  // order, and the newer edit stays on top when this one finishes.
+  const waitingPayload = store.selectPendingPersistPayload();
+  if (
+    waitingPayload &&
+    (waitingPayload.layoutId !== layoutId ||
+      waitingPayload.resourceType !== resourceType ||
+      waitingPayload.selectedItemId !== selectedItemId)
+  ) {
+    store.addSavingPersistPayload({ payload: waitingPayload });
+    void handleDebouncedUpdate(deps, waitingPayload);
+  }
+
   const pendingPayload = {
     layoutId,
     resourceType,
@@ -458,6 +492,251 @@ const flushQueuedLayoutEditorUpdates = async (deps) => {
   }
 };
 
+// Records an edit the page makes to its elements, from what it shows before
+// and after, so the edit can be undone before it is saved.
+const recordLayoutEditorEdit = (
+  deps,
+  { elementIds, apply, time = Date.now() },
+) => {
+  const { store } = deps;
+  const before = captureLayoutElementSnapshot(
+    store.selectLayoutElements(),
+    elementIds,
+  );
+  apply();
+  store.recordEditHistoryStep({
+    before,
+    after: captureLayoutElementSnapshot(
+      store.selectLayoutElements(),
+      elementIds,
+    ),
+    // Quick edits to one element, such as a drag, are one step.
+    mergeKey: elementIds.length === 1 ? `element:${elementIds[0]}` : undefined,
+    time,
+  });
+};
+
+// Explorer actions change the tree and then refresh from the repository, so
+// they are recorded as every element that changed. Edits waiting to save are
+// saved first, so the action's writes come after them, and undo and redo wait
+// while it runs, so the step holds only the action's change.
+const recordLayoutEditorStructureEdit = async (deps, run) => {
+  const { render, store } = deps;
+  const flushResult = await flushQueuedLayoutEditorUpdates(deps);
+  if (flushResult.ok === false) {
+    return;
+  }
+  const before = store.selectLayoutElements();
+  store.setStructureEditRunning({ running: true });
+  try {
+    await run();
+  } finally {
+    store.setStructureEditRunning({ running: false });
+  }
+  const after = store.selectLayoutElements();
+  const elementIds = getChangedLayoutElementIds(before, after);
+  store.recordEditHistoryStep({
+    before: captureLayoutElementSnapshot(before, elementIds),
+    after: captureLayoutElementSnapshot(after, elementIds),
+    time: Date.now(),
+  });
+  render();
+};
+
+// An undo or redo can remove the selected element, as when it undoes the
+// element's create.
+const clearMissingLayoutEditorSelection = (deps) => {
+  const { refs, store } = deps;
+  const selectedItemId = store.selectSelectedItemId();
+  if (!selectedItemId || store.selectItemDataById({ itemId: selectedItemId })) {
+    return;
+  }
+  store.setSelectedItemId({ itemId: undefined });
+  store.setDetailPanelSelectedItemId({ itemId: undefined });
+  store.setRightPanelMode({ mode: "preview" });
+  refs.fileExplorer?.clearSelection?.();
+};
+
+// Saves the creates, deletes, and moves of an undone or redone step after
+// any save already queued. Until then the store keeps the step on top of
+// repository data; after, the page shows what is stored.
+const saveLayoutEditorHistoryRestore = async (
+  deps,
+  { restoreId, operations },
+) => {
+  const { appService, projectService, render, store } = deps;
+  const copy = selectCopy(deps);
+  const layoutId = store.selectLayoutId();
+  const resourceType = store.selectLayoutResourceType();
+  const owner = getLayoutEditorOwnerConfig(resourceType, projectService, copy);
+  const saveOperation = {
+    create: owner.createElement,
+    delete: owner.deleteElement,
+    move: owner.moveElement,
+    update: owner.updateElement,
+  };
+
+  const result = await runLayoutEditorPersistence(deps, async () => {
+    try {
+      for (const { type, ...operation } of operations) {
+        const saveResult = await saveOperation[type]({
+          [owner.ownerPayloadKey]: layoutId,
+          ...operation,
+        });
+        if (saveResult?.valid === false) {
+          return { ok: false, error: saveResult.error };
+        }
+      }
+      return { ok: true };
+    } catch (error) {
+      return { ok: false, error };
+    }
+  });
+
+  store.clearPendingHistoryRestore({ restoreId });
+  if (!result.ok) {
+    console.error("[layoutEditor] Failed to save an undo or redo", {
+      error: result.error,
+      layoutId,
+      resourceType,
+    });
+    // It fails in the background, after the undo was shown.
+    appService.showAlertWhenIdle({
+      title: copy.errorTitle ?? "Error",
+      message: withErrorDetails(
+        isSqliteLockError(result.error)
+          ? (copy.databaseBusySaveLayoutChanges ??
+              "The project database is busy. RouteVN couldn't save the latest layout changes. Please wait a moment and try again.")
+          : (copy.failedSaveLayoutChanges ?? "Failed to save layout changes."),
+        result.error,
+        deps.i18n.appPage.errorDetailsLabel,
+      ),
+    });
+  }
+  store.syncRepositoryState(
+    createLayoutEditorRepositoryStoreData({
+      repositoryState: projectService.getRepositoryState(),
+      layoutId,
+      resourceType,
+    }),
+  );
+  clearMissingLayoutEditorSelection(deps);
+  render();
+};
+
+// Undo and redo behave like an edit: the page shows the result at once and
+// saves it in the background, after any edit waiting to save.
+const runLayoutEditorHistoryStep = (deps, direction) => {
+  const { appService, i18n, refs, render, store, subject } = deps;
+  if (store.selectIsStructureEditRunning()) {
+    return;
+  }
+  const getTarget = (step) => (direction === "undo" ? step.before : step.after);
+
+  // A step whose elements already match changes nothing, such as one whose
+  // save failed and was put back; pass over it to the next.
+  let step = store.selectEditHistoryStep({ direction });
+  let restore;
+  while (step) {
+    restore = restoreLayoutElementSnapshot({
+      elements: store.selectLayoutElements(),
+      target: getTarget(step),
+    });
+    if (!restore.valid || restore.operations.length > 0) {
+      break;
+    }
+    store.moveEditHistoryStep({ direction });
+    step = store.selectEditHistoryStep({ direction });
+  }
+  if (!step) {
+    render();
+    return;
+  }
+  if (!restore.valid) {
+    const copy = selectEditHistoryCopy(i18n);
+    store.dropEditHistoryStep({ direction });
+    appService.showToast({
+      message:
+        direction === "undo"
+          ? copy.undoUnavailableMessage
+          : copy.redoUnavailableMessage,
+      status: "warning",
+    });
+    render();
+    return;
+  }
+  store.moveEditHistoryStep({ direction });
+
+  // The canvas keeps the item it is moving until the page has its position;
+  // drop it so the canvas shows the restored item.
+  refs.layoutEditorCanvas.discardPendingUpdate();
+  if (restore.operations.every(({ type }) => type === "update")) {
+    // Each restored element is a waiting edit, so an edit not saved yet is
+    // replaced instead of saved and then undone.
+    const layoutId = store.selectLayoutId();
+    const resourceType = store.selectLayoutResourceType();
+    for (const { elementId } of restore.operations) {
+      const updatedItem = restore.elements.items[elementId];
+      store.updateSelectedItem({ itemId: elementId, updatedItem });
+      subject.dispatch(
+        "layoutEditor.updateElement",
+        queuePendingLayoutEditorPersist(deps, {
+          layoutId,
+          resourceType,
+          selectedItemId: elementId,
+          updatedItem,
+        }),
+      );
+    }
+  } else {
+    const target = getTarget(step);
+    const restoreId = generateId();
+    store.applyHistoryRestore({
+      restoreId,
+      target,
+      elements: restore.elements,
+    });
+    // An edit still waiting to save for a restored element would otherwise
+    // land on top of the restore.
+    const waitingPayload = store.selectPendingPersistPayload();
+    if (
+      waitingPayload &&
+      Object.hasOwn(target, waitingPayload.selectedItemId)
+    ) {
+      const updatedItem = restore.elements.items[waitingPayload.selectedItemId];
+      if (updatedItem) {
+        subject.dispatch(
+          "layoutEditor.updateElement",
+          queuePendingLayoutEditorPersist(deps, {
+            layoutId: waitingPayload.layoutId,
+            resourceType: waitingPayload.resourceType,
+            selectedItemId: waitingPayload.selectedItemId,
+            updatedItem,
+          }),
+        );
+      } else {
+        store.clearPendingPersistPayload({
+          persistenceRequestId: waitingPayload.persistenceRequestId,
+        });
+      }
+    }
+    void saveLayoutEditorHistoryRestore(deps, {
+      restoreId,
+      operations: restore.operations,
+    });
+  }
+  clearMissingLayoutEditorSelection(deps);
+  render();
+};
+
+export const handleUndoButtonClick = (deps) => {
+  runLayoutEditorHistoryStep(deps, "undo");
+};
+
+export const handleRedoButtonClick = (deps) => {
+  runLayoutEditorHistoryStep(deps, "redo");
+};
+
 // Rotating swaps between the left pane and the inline list. Whichever one
 // mounts has no selection of its own, so point it at the selected element.
 const syncExplorerSelectionAfterLayoutChange = (deps) => {
@@ -474,7 +753,7 @@ const syncExplorerSelectionAfterLayoutChange = (deps) => {
 };
 
 export const handleBeforeMount = (deps) => {
-  const { appService, store, uiConfig } = deps;
+  const { appService, browserEventsClient, store, uiConfig } = deps;
   store.setUiConfig({ uiConfig });
   // Touch layouts start on the node explorer instead of the Preview section.
   if (store.selectIsTouchMode()) {
@@ -490,6 +769,18 @@ export const handleBeforeMount = (deps) => {
       syncExplorerSelectionAfterLayoutChange(deps);
     },
   });
+  const unsubscribeHistoryShortcuts = browserEventsClient.subscribeWindowEvent({
+    type: "keydown",
+    options: { capture: true },
+    listener: (event) => {
+      const direction = resolveEditHistoryShortcut(event);
+      if (!direction) {
+        return;
+      }
+      event.preventDefault();
+      runLayoutEditorHistoryStep(deps, direction);
+    },
+  });
   const unregisterBeforeNavigation = appService.registerBeforeNavigation(
     async () => {
       const flushResult = await flushQueuedLayoutEditorUpdates(deps);
@@ -499,6 +790,7 @@ export const handleBeforeMount = (deps) => {
     },
   );
   return async () => {
+    unsubscribeHistoryShortcuts();
     unregisterBeforeNavigation();
     await flushQueuedLayoutEditorUpdates(deps);
     cleanupSubscriptions?.();
@@ -778,9 +1070,13 @@ export const handleFileExplorerVisibilityToggle = async (deps, payload) => {
     ...currentItem,
     hidden,
   };
-  store.updateSelectedItem({
-    itemId,
-    updatedItem,
+  // A rollback records at the same time, so it merges into this step and
+  // cancels it however long the save took.
+  const toggleTime = Date.now();
+  recordLayoutEditorEdit(deps, {
+    elementIds: [itemId],
+    apply: () => store.updateSelectedItem({ itemId, updatedItem }),
+    time: toggleTime,
   });
   render();
 
@@ -791,9 +1087,11 @@ export const handleFileExplorerVisibilityToggle = async (deps, payload) => {
   );
 
   const rollback = () => {
-    store.updateSelectedItem({
-      itemId,
-      updatedItem: currentItem,
+    recordLayoutEditorEdit(deps, {
+      elementIds: [itemId],
+      apply: () =>
+        store.updateSelectedItem({ itemId, updatedItem: currentItem }),
+      time: toggleTime,
     });
     render();
   };
@@ -967,7 +1265,7 @@ const refreshLayoutEditorData = async (deps, payload = {}) => {
 
 const {
   handleFileExplorerAction: handleBaseFileExplorerAction,
-  handleFileExplorerTargetChanged,
+  handleFileExplorerTargetChanged: handleBaseFileExplorerTargetChanged,
 } = createLayoutElementsFileExplorerHandlers({
   getLayoutId: ({ store }) => store.selectLayoutId(),
   getResourceType: ({ store }) => store.selectLayoutResourceType(),
@@ -1732,7 +2030,9 @@ const handleFileExplorerActionUnsafe = async (deps, payload) => {
 export const handleFileExplorerAction = async (deps, payload) => {
   const copy = selectCopy(deps);
   try {
-    await handleFileExplorerActionUnsafe(deps, payload);
+    await recordLayoutEditorStructureEdit(deps, () =>
+      handleFileExplorerActionUnsafe(deps, payload),
+    );
   } catch (error) {
     console.error("[layoutEditor] Failed to create layout item", {
       error,
@@ -1751,7 +2051,10 @@ export const handleFileExplorerAction = async (deps, payload) => {
   }
 };
 
-export { handleFileExplorerTargetChanged };
+export const handleFileExplorerTargetChanged = (deps, payload) =>
+  recordLayoutEditorStructureEdit(deps, () =>
+    handleBaseFileExplorerTargetChanged(deps, payload),
+  );
 
 export const handleDataChanged = refreshLayoutEditorData;
 
@@ -1856,6 +2159,12 @@ async function handleDebouncedUpdate(deps, payload) {
       return {
         ok: false,
       };
+    } finally {
+      // Saved or not, the repository now decides what an edit sent early
+      // shows.
+      store.removeSavingPersistPayload({
+        persistenceRequestId: payload.persistenceRequestId,
+      });
     }
   });
 }
@@ -1905,16 +2214,17 @@ export const handleLayoutEditorCanvasDragUpdate = (deps, payload) => {
   const resourceType = store.selectLayoutResourceType();
   const selectedItemId = payload._event.detail?.itemId || updatedItem.id;
   const currentItem = store.selectItemDataById({ itemId: selectedItemId });
-  const pendingPayload = queuePendingLayoutEditorPersist(store, {
+  const pendingPayload = queuePendingLayoutEditorPersist(deps, {
     layoutId,
     resourceType,
     selectedItemId,
     updatedItem,
   });
 
-  store.updateSelectedItem({
-    itemId: selectedItemId,
-    updatedItem,
+  recordLayoutEditorEdit(deps, {
+    elementIds: [selectedItemId],
+    apply: () =>
+      store.updateSelectedItem({ itemId: selectedItemId, updatedItem }),
   });
 
   const transientValues = {};
@@ -1942,16 +2252,17 @@ export const handleLayoutEditorCanvasUpdate = async (deps, payload) => {
   const layoutId = store.selectLayoutId();
   const resourceType = store.selectLayoutResourceType();
   const selectedItemId = payload._event.detail?.itemId || updatedItem.id;
-  const pendingPayload = queuePendingLayoutEditorPersist(store, {
+  const pendingPayload = queuePendingLayoutEditorPersist(deps, {
     layoutId,
     resourceType,
     selectedItemId,
     updatedItem,
   });
 
-  store.updateSelectedItem({
-    itemId: selectedItemId,
-    updatedItem,
+  recordLayoutEditorEdit(deps, {
+    elementIds: [selectedItemId],
+    apply: () =>
+      store.updateSelectedItem({ itemId: selectedItemId, updatedItem }),
   });
   render();
 
@@ -2101,11 +2412,12 @@ export const handleLayoutEditPanelUpdateHandler = async (deps, payload) => {
     return;
   }
 
-  store.updateSelectedItem({
-    updatedItem: updatedItem,
+  recordLayoutEditorEdit(deps, {
+    elementIds: [selectedItemId],
+    apply: () => store.updateSelectedItem({ updatedItem }),
   });
 
-  const pendingPayload = queuePendingLayoutEditorPersist(store, {
+  const pendingPayload = queuePendingLayoutEditorPersist(deps, {
     layoutId,
     resourceType,
     selectedItemId,

@@ -17,6 +17,7 @@ import {
   withInteractionPayload,
 } from "./interactionPayload.js";
 import { generateId } from "../id.js";
+import { areEditHistoryValuesEqual } from "../editHistory.js";
 import { toRouteGraphicsLayoutTextContent } from "../layoutTextContent.js";
 import { normalizeSaveLoadDateFormat } from "../saveLoadDateFormats.js";
 import { toFontIds } from "../fontIds.js";
@@ -2953,4 +2954,303 @@ export const layoutHierarchyStructureToRenderState = (
     fontsData,
     options,
   );
+};
+
+// Undo history for layout and control elements. A snapshot records, for each
+// element, its data, parent and index in a layout's { items, tree }, or null
+// where it does not exist. restoreLayoutElementSnapshot brings elements back
+// to a snapshot and lists the operations that save the same change.
+// Copies plain data. Unlike structuredClone it also reads store drafts, which
+// pages pass while a store action runs.
+const cloneHistoryValue = (value) => {
+  if (Array.isArray(value)) {
+    return value.map(cloneHistoryValue);
+  }
+  if (value !== null && typeof value === "object") {
+    return Object.fromEntries(
+      Object.entries(value).map(([key, entry]) => [
+        key,
+        cloneHistoryValue(entry),
+      ]),
+    );
+  }
+  return value;
+};
+
+const findElementTreeLocation = (nodes, elementId, parentId = null) => {
+  for (const [index, node] of (nodes ?? []).entries()) {
+    if (node.id === elementId) {
+      return { node, parentId, index };
+    }
+    const location = findElementTreeLocation(node.children, elementId, node.id);
+    if (location) {
+      return location;
+    }
+  }
+  return undefined;
+};
+
+const collectElementTreeIds = (node, ids = []) => {
+  ids.push(node.id);
+  for (const child of node.children ?? []) {
+    collectElementTreeIds(child, ids);
+  }
+  return ids;
+};
+
+export const captureLayoutElementSnapshot = (elements, elementIds) => {
+  const snapshot = {};
+  for (const elementId of elementIds) {
+    const item = elements?.items?.[elementId];
+    const location = findElementTreeLocation(elements?.tree, elementId);
+    if (!item || !location) {
+      snapshot[elementId] = null;
+      continue;
+    }
+    const { id: _id, ...data } = item;
+    snapshot[elementId] = {
+      parentId: location.parentId,
+      index: location.index,
+      data: cloneHistoryValue(data),
+    };
+  }
+  return snapshot;
+};
+
+// Every element whose data, parent or index differs between two versions of
+// a layout's elements.
+export const getChangedLayoutElementIds = (before, after) => {
+  const elementIds = [
+    ...new Set([
+      ...Object.keys(before?.items ?? {}),
+      ...Object.keys(after?.items ?? {}),
+    ]),
+  ];
+  const beforeSnapshot = captureLayoutElementSnapshot(before, elementIds);
+  const afterSnapshot = captureLayoutElementSnapshot(after, elementIds);
+  return elementIds.filter(
+    (id) => !areEditHistoryValuesEqual(beforeSnapshot[id], afterSnapshot[id]),
+  );
+};
+
+const cloneElementTree = (nodes) =>
+  (nodes ?? []).map((node) => ({
+    ...node,
+    children: cloneElementTree(node.children),
+  }));
+
+const removeElementTreeNode = (nodes, elementId) => {
+  for (const [index, node] of nodes.entries()) {
+    if (node.id === elementId) {
+      nodes.splice(index, 1);
+      return node;
+    }
+    const removed = removeElementTreeNode(node.children, elementId);
+    if (removed) {
+      return removed;
+    }
+  }
+  return undefined;
+};
+
+const insertElementTreeNode = (tree, node, parentId, index) => {
+  const siblings =
+    parentId === null
+      ? tree
+      : findElementTreeLocation(tree, parentId).node.children;
+  siblings.splice(Math.min(Math.max(index, 0), siblings.length), 0, node);
+};
+
+// Applies one operation the way the model's element commands do, to
+// elements whose items and tree this code owns.
+const applyLayoutElementOperation = (elements, operation) => {
+  const { type, elementId } = operation;
+  if (type === "create") {
+    elements.items[elementId] = {
+      id: elementId,
+      ...cloneHistoryValue(operation.data),
+    };
+    insertElementTreeNode(
+      elements.tree,
+      { id: elementId, children: [] },
+      operation.parentId,
+      operation.index,
+    );
+  } else if (type === "delete") {
+    for (const id of operation.elementIds) {
+      const node = removeElementTreeNode(elements.tree, id);
+      for (const removedId of node ? collectElementTreeIds(node) : []) {
+        delete elements.items[removedId];
+      }
+    }
+  } else if (type === "move") {
+    const node = removeElementTreeNode(elements.tree, elementId);
+    insertElementTreeNode(
+      elements.tree,
+      node,
+      operation.parentId,
+      operation.index,
+    );
+  } else if (type === "update") {
+    elements.items[elementId] = operation.replace
+      ? { id: elementId, ...cloneHistoryValue(operation.data) }
+      : { ...elements.items[elementId], ...cloneHistoryValue(operation.data) };
+  }
+};
+
+// Brings the elements in `target` back to how it records them. Returns the
+// restored elements and the create, delete, move, and update operations that
+// save the change, in order. Returns valid: false when a restored element's
+// parent would not exist, or when a delete would remove an element the target
+// does not cover.
+export const restoreLayoutElementSnapshot = ({ elements, target }) => {
+  const working = {
+    items: { ...elements?.items },
+    tree: cloneElementTree(elements?.tree),
+  };
+  const operations = [];
+  const run = (operation) => {
+    operations.push(operation);
+    applyLayoutElementOperation(working, operation);
+  };
+  const locate = (id) => findElementTreeLocation(working.tree, id);
+  const elementIds = Object.keys(target);
+  const stays = (id) => Boolean(target[id]);
+  const restoredIds = elementIds.filter(stays);
+  const removed = new Set(
+    elementIds.filter((id) => target[id] === null && locate(id)),
+  );
+
+  // Each restored element's parent must stay or be restored.
+  for (const id of restoredIds) {
+    const { parentId } = target[id];
+    if (
+      parentId !== null &&
+      !stays(parentId) &&
+      (!locate(parentId) || removed.has(parentId))
+    ) {
+      return { valid: false };
+    }
+  }
+  // A delete takes the descendants with it, so each must be covered: removed
+  // too, or restored elsewhere, which takes its own children along.
+  const coversDescendants = (node) =>
+    node.children.every(
+      (child) =>
+        stays(child.id) ||
+        (Object.hasOwn(target, child.id) && coversDescendants(child)),
+    );
+  for (const id of removed) {
+    if (!coversDescendants(locate(id).node)) {
+      return { valid: false };
+    }
+  }
+
+  // Where an element ends up: its target parent, or where it is now.
+  const getFinalParentId = (id) =>
+    stays(id) ? target[id].parentId : (locate(id)?.parentId ?? null);
+  const getFinalDepth = (parentId) => {
+    let depth = 0;
+    const visited = new Set();
+    for (let id = parentId; id !== null; id = getFinalParentId(id)) {
+      if (visited.has(id)) {
+        return undefined;
+      }
+      visited.add(id);
+      depth += 1;
+    }
+    return depth;
+  };
+  const isInsideRemoved = (id) => {
+    for (let parentId = locate(id)?.parentId ?? null; parentId !== null; ) {
+      if (removed.has(parentId)) {
+        return true;
+      }
+      parentId = locate(parentId)?.parentId ?? null;
+    }
+    return false;
+  };
+  const holdsRestored = (node) =>
+    node.children.some((child) => stays(child.id) || holdsRestored(child));
+
+  // Delete first what holds nothing that stays, so siblings close up.
+  const deletedFirst = [...removed].filter(
+    (id) => !isInsideRemoved(id) && !holdsRestored(locate(id).node),
+  );
+  if (deletedFirst.length > 0) {
+    run({ type: "delete", elementIds: deletedFirst });
+  }
+
+  // Then place each parent's children, parents nearest the root first, so a
+  // parent exists before its children and nothing moves into its own
+  // descendant. Within a list, elements the target does not cover keep their
+  // order and fill the indexes the target leaves free; each element is moved
+  // or created only if it is not already in place.
+  const parentIds = [...new Set(restoredIds.map((id) => target[id].parentId))];
+  const depths = new Map(parentIds.map((id) => [id, getFinalDepth(id)]));
+  if ([...depths.values()].includes(undefined)) {
+    return { valid: false };
+  }
+  parentIds.sort((a, b) => depths.get(a) - depths.get(b));
+  for (const parentId of parentIds) {
+    const children =
+      parentId === null ? working.tree : locate(parentId).node.children;
+    const kept = children
+      .map((node) => node.id)
+      .filter((id) => !Object.hasOwn(target, id));
+    const placed = restoredIds
+      .filter((id) => target[id].parentId === parentId)
+      .sort((a, b) => target[a].index - target[b].index);
+    const order = [];
+    while (kept.length > 0 || placed.length > 0) {
+      const takePlaced =
+        placed.length > 0 &&
+        (kept.length === 0 || target[placed[0]].index <= order.length);
+      order.push(takePlaced ? placed.shift() : kept.shift());
+    }
+    for (const [index, id] of order.entries()) {
+      const location = locate(id);
+      if (!location) {
+        run({
+          type: "create",
+          elementId: id,
+          parentId,
+          index,
+          data: target[id].data,
+        });
+      } else if (location.parentId !== parentId || location.index !== index) {
+        run({ type: "move", elementId: id, parentId, index });
+      }
+    }
+  }
+
+  // Restore each element's data.
+  for (const id of restoredIds) {
+    const { data } = target[id];
+    const { id: _id, ...currentData } = working.items[id];
+    if (areEditHistoryValuesEqual(currentData, data)) {
+      continue;
+    }
+    if (data.type !== "folder") {
+      run({ type: "update", elementId: id, data, replace: true });
+      continue;
+    }
+    // Folders accept only name and hidden, and a replace would drop their
+    // type. A key cannot be removed, so a cleared hidden becomes false.
+    const folderData = { name: data.name };
+    if (Object.hasOwn(data, "hidden") || Object.hasOwn(currentData, "hidden")) {
+      folderData.hidden = data.hidden === true;
+    }
+    run({ type: "update", elementId: id, data: folderData, replace: false });
+  }
+
+  // Last, delete what held elements that have now moved out.
+  const deletedLast = [...removed].filter(
+    (id) => locate(id) && !isInsideRemoved(id),
+  );
+  if (deletedLast.length > 0) {
+    run({ type: "delete", elementIds: deletedLast });
+  }
+
+  return { valid: true, elements: working, operations };
 };

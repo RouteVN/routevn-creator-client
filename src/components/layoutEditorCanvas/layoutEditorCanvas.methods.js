@@ -9,3 +9,7 @@ export function captureThumbnailImage() {
 export function useDefaultSelectionOccurrence() {
   return this.transformedHandlers.handleUseDefaultSelectionOccurrence({});
 }
+
+export function discardPendingUpdate() {
+  this.transformedHandlers.handleDiscardPendingUpdate({});
+}

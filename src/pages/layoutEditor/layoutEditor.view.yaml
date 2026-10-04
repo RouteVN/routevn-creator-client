@@ -50,6 +50,14 @@ refs:
     eventListeners:
       click:
         handler: handlePreviewButtonClick
+  undoButton:
+    eventListeners:
+      click:
+        handler: handleUndoButtonClick
+  redoButton:
+    eventListeners:
+      click:
+        handler: handleRedoButtonClick
   canvasZoomOutButton:
     eventListeners:
       click:
@@ -109,6 +117,9 @@ template:
               - rtgl-button#backButton sq pre=chevronLeft v=ol mr=sm: null
               - 'rtgl-view w=1fg style="min-width: 0;"':
                   - rtgl-text w=f ellipsis=true: ${layout.name}
+              - rtgl-view d=h av=c g=xs ml=sm:
+                  - 'rtgl-button#undoButton sq pre=undo v=ol ?disabled=${undoDisabled} aria-label="${undoLabel}" title="${undoLabel}"': null
+                  - 'rtgl-button#redoButton sq pre=redo v=ol ?disabled=${redoDisabled} aria-label="${redoLabel}" title="${redoLabel}"': null
               - $if showCanvasZoomControls:
                   - rtgl-view d=h av=c g=xs ml=sm:
                       - 'rtgl-button#canvasZoomOutButton sq pre=zoomOut v=ol ?disabled=${canvasZoomOutDisabled} aria-label="${canvasZoomOutLabel}" title="${canvasZoomOutLabel}"': null
