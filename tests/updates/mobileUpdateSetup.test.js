@@ -83,6 +83,7 @@ vi.mock("../../src/deps/clients/ios/db.js", () => ({
   createDb: () => mocked.db,
 }));
 vi.mock("../../src/deps/clients/android/bridge.js", () => ({
+  NO_BRIDGE_TIMEOUT: Number.POSITIVE_INFINITY,
   callAndroidBridge: mocked.bridge,
 }));
 vi.mock("../../src/deps/clients/ios/bridge.js", () => ({

@@ -9,6 +9,7 @@ const mocked = vi.hoisted(() => ({
 }));
 
 vi.mock("../../src/deps/clients/android/bridge.js", () => ({
+  NO_BRIDGE_TIMEOUT: Number.POSITIVE_INFINITY,
   callAndroidBridge: mocked.androidBridge,
 }));
 
@@ -342,6 +343,9 @@ describe("project-entry language platform propagation", () => {
   it("assigns a fresh local id when importing an Android project", async () => {
     let importPayload;
     mocked.androidBridge.mockImplementation((method, payload) => {
+      if (method === "listImportDirectory") {
+        return { entries: [] };
+      }
       if (method !== "importProjectFolder") {
         throw new Error(`Unexpected Android bridge method: ${method}`);
       }
@@ -368,6 +372,7 @@ describe("project-entry language platform propagation", () => {
     expect(importPayload).toEqual({
       uri: "content://projects/imported-project",
       projectId: project.id,
+      fileRenames: [],
     });
     expect(project.id).toMatch(/^[1-9A-HJ-NP-Za-km-z]{12}$/);
     await expect(db.get("projectEntries")).resolves.toEqual([
@@ -379,9 +384,11 @@ describe("project-entry language platform propagation", () => {
   });
 
   it("rejects an Android import that returns a different project id", async () => {
-    mocked.androidBridge.mockResolvedValue({
-      id: "unexpected-project-id",
-      name: "Imported Project",
+    mocked.androidBridge.mockImplementation(async (method) => {
+      if (method === "listImportDirectory") {
+        return { entries: [] };
+      }
+      return { id: "unexpected-project-id", name: "Imported Project" };
     });
     const db = createDb();
     const appService = createAndroidAppService(

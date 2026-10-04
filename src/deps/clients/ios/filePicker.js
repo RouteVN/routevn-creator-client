@@ -4,13 +4,16 @@ const IOS_FILE_PICKER_INPUT_ID = "routevnIOSFilePickerInput";
 const IOS_FILE_PICKER_CALLBACK = "__routeVNIOSFilePickerResult";
 const IOS_SAVE_FILE_PICKER_CALLBACK = "__routeVNIOSSaveFileResult";
 const IOS_FOLDER_PICKER_CALLBACK = "__routeVNIOSFolderPickerResult";
+const IOS_ARCHIVE_PICKER_CALLBACK = "__routeVNIOSArchivePickerResult";
 
 let nextIOSFilePickerRequestId = 1;
 let nextIOSSaveFilePickerRequestId = 1;
 let nextIOSFolderPickerRequestId = 1;
+let nextIOSArchivePickerRequestId = 1;
 const pendingIOSFilePickers = new Map();
 const pendingIOSSaveFilePickers = new Map();
 const pendingIOSFolderPickers = new Map();
+const pendingIOSArchivePickers = new Map();
 
 const isTruthyFlag = (value) => {
   if (typeof value === "boolean") {
@@ -166,6 +169,12 @@ const createIOSFolderPickerRequestId = () => {
   return requestId;
 };
 
+const createIOSArchivePickerRequestId = () => {
+  const requestId = `archive-${nextIOSArchivePickerRequestId}`;
+  nextIOSArchivePickerRequestId += 1;
+  return requestId;
+};
+
 const resolveSaveFilename = (options = {}) => {
   return options.defaultPath || options.filename || "download";
 };
@@ -234,6 +243,26 @@ const ensureIOSFolderPickerCallback = () => {
   };
 };
 
+const ensureIOSArchivePickerCallback = () => {
+  window[IOS_ARCHIVE_PICKER_CALLBACK] = (result = {}) => {
+    const requestId = result.requestId;
+    const pending = pendingIOSArchivePickers.get(requestId);
+    if (!pending) {
+      return;
+    }
+
+    pendingIOSArchivePickers.delete(requestId);
+    if (result.error) {
+      pending.reject(
+        new Error(result.error.message || "Failed to select archive."),
+      );
+      return;
+    }
+
+    pending.resolve(result.archive ?? undefined);
+  };
+};
+
 const requestNativeIOSFilePicker = (options = {}) => {
   const requestId = createIOSFilePickerRequestId();
   ensureIOSFilePickerCallback();
@@ -269,6 +298,27 @@ const requestNativeIOSFolderPicker = (options = {}) => {
       writable: options.writable === true,
     }).catch((error) => {
       pendingIOSFolderPickers.delete(requestId);
+      reject(error);
+    });
+  });
+};
+
+const requestNativeIOSArchivePicker = (options = {}) => {
+  if (isVtMode()) {
+    return Promise.resolve(undefined);
+  }
+
+  const requestId = createIOSArchivePickerRequestId();
+  ensureIOSArchivePickerCallback();
+
+  return new Promise((resolve, reject) => {
+    pendingIOSArchivePickers.set(requestId, { resolve, reject });
+
+    callIOSBridge("openArchivePicker", {
+      requestId,
+      title: options.title ?? "Select Zip File",
+    }).catch((error) => {
+      pendingIOSArchivePickers.delete(requestId);
       reject(error);
     });
   });
@@ -404,6 +454,10 @@ export const createIOSFilePicker = () => {
   return {
     async openFolderPicker(options = {}) {
       return requestNativeIOSFolderPicker(options);
+    },
+
+    async openArchivePicker(options = {}) {
+      return requestNativeIOSArchivePicker(options);
     },
 
     async openFilePicker(options = {}) {

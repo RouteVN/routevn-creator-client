@@ -19,7 +19,7 @@ describe("Android project import identity", () => {
     );
     expect(activity).toContain('"collab.lastCommittedId:" + sourceProjectId');
     expect(activity).toContain(
-      "File importWorkDir = new File(importRoot, projectId)",
+      "File importWorkDir = new File(importRoot(), projectId)",
     );
     expect(activity).toContain("assertDatabaseIntegrity(database)");
     expect(activity).toContain(

@@ -19,6 +19,12 @@
 		2A000001000000000000000B /* AppDeviceInfo.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2A000001000000000000001C /* AppDeviceInfo.swift */; };
 		2A000001000000000000000C /* Sentry in Frameworks */ = {isa = PBXBuildFile; productRef = 2A00000100000000000000A1 /* Sentry */; };
 		2A000001000000000000000D /* NativeCrashReporting.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2A000001000000000000001D /* NativeCrashReporting.swift */; };
+		2A000001000000000000000E /* ZIPFoundation in Frameworks */ = {isa = PBXBuildFile; productRef = 2A00000100000000000000A2 /* ZIPFoundation */; };
+		2A0000010000000000000024 /* TempFolders.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2A0000010000000000000021 /* TempFolders.swift */; };
+		2A0000010000000000000025 /* ImportArchive.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2A0000010000000000000022 /* ImportArchive.swift */; };
+		2A0000010000000000000026 /* FileDownloader.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2A0000010000000000000023 /* FileDownloader.swift */; };
+		2A0000010000000000000028 /* CodedError.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2A0000010000000000000027 /* CodedError.swift */; };
+		2A000001000000000000002A /* TransferProgress.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2A0000010000000000000029 /* TransferProgress.swift */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXFileReference section */
@@ -35,6 +41,11 @@
 		2A000001000000000000001A /* PrivacyInfo.xcprivacy */ = {isa = PBXFileReference; lastKnownFileType = text.xml; path = PrivacyInfo.xcprivacy; sourceTree = "<group>"; };
 		2A000001000000000000001C /* AppDeviceInfo.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppDeviceInfo.swift; sourceTree = "<group>"; };
 		2A000001000000000000001D /* NativeCrashReporting.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = NativeCrashReporting.swift; sourceTree = "<group>"; };
+		2A0000010000000000000021 /* TempFolders.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TempFolders.swift; sourceTree = "<group>"; };
+		2A0000010000000000000022 /* ImportArchive.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ImportArchive.swift; sourceTree = "<group>"; };
+		2A0000010000000000000023 /* FileDownloader.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FileDownloader.swift; sourceTree = "<group>"; };
+		2A0000010000000000000027 /* CodedError.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CodedError.swift; sourceTree = "<group>"; };
+		2A0000010000000000000029 /* TransferProgress.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TransferProgress.swift; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -43,6 +54,7 @@
 			buildActionMask = 2147483647;
 			files = (
 				2A000001000000000000000C /* Sentry in Frameworks */,
+				2A000001000000000000000E /* ZIPFoundation in Frameworks */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -67,6 +79,11 @@
 				2A0000010000000000000017 /* ProjectStoragePaths.swift */,
 				2A0000010000000000000018 /* SaveFileDestinations.swift */,
 				2A0000010000000000000019 /* ProjectDatabaseReader.swift */,
+				2A0000010000000000000021 /* TempFolders.swift */,
+				2A0000010000000000000022 /* ImportArchive.swift */,
+				2A0000010000000000000023 /* FileDownloader.swift */,
+				2A0000010000000000000027 /* CodedError.swift */,
+				2A0000010000000000000029 /* TransferProgress.swift */,
 				2A0000010000000000000012 /* Info.plist */,
 				2A000001000000000000001A /* PrivacyInfo.xcprivacy */,
 				2A0000010000000000000015 /* Assets.xcassets */,
@@ -103,6 +120,7 @@
 			name = routevn;
 			packageProductDependencies = (
 				2A00000100000000000000A1 /* Sentry */,
+				2A00000100000000000000A2 /* ZIPFoundation */,
 			);
 			productName = routevn;
 			productReference = 2A0000010000000000000010 /* routevn.app */;
@@ -134,6 +152,7 @@
 			mainGroup = 2A0000010000000000000030;
 			packageReferences = (
 				2A00000100000000000000A0 /* XCRemoteSwiftPackageReference "sentry-cocoa" */,
+				2A00000100000000000000B0 /* XCRemoteSwiftPackageReference "ZIPFoundation" */,
 			);
 			productRefGroup = 2A0000010000000000000032 /* Products */;
 			projectDirPath = "";
@@ -192,6 +211,11 @@
 				2A0000010000000000000006 /* ProjectStoragePaths.swift in Sources */,
 				2A0000010000000000000007 /* SaveFileDestinations.swift in Sources */,
 				2A0000010000000000000008 /* ProjectDatabaseReader.swift in Sources */,
+				2A0000010000000000000024 /* TempFolders.swift in Sources */,
+				2A0000010000000000000025 /* ImportArchive.swift in Sources */,
+				2A0000010000000000000026 /* FileDownloader.swift in Sources */,
+				2A0000010000000000000028 /* CodedError.swift in Sources */,
+				2A000001000000000000002A /* TransferProgress.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -386,6 +410,14 @@
 				version = 9.29.2;
 			};
 		};
+		2A00000100000000000000B0 /* XCRemoteSwiftPackageReference "ZIPFoundation" */ = {
+			isa = XCRemoteSwiftPackageReference;
+			repositoryURL = "https://github.com/weichsel/ZIPFoundation.git";
+			requirement = {
+				kind = exactVersion;
+				version = 0.9.20;
+			};
+		};
 /* End XCRemoteSwiftPackageReference section */
 
 /* Begin XCSwiftPackageProductDependency section */
@@ -393,6 +425,11 @@
 			isa = XCSwiftPackageProductDependency;
 			package = 2A00000100000000000000A0 /* XCRemoteSwiftPackageReference "sentry-cocoa" */;
 			productName = Sentry;
+		};
+		2A00000100000000000000A2 /* ZIPFoundation */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = 2A00000100000000000000B0 /* XCRemoteSwiftPackageReference "ZIPFoundation" */;
+			productName = ZIPFoundation;
 		};
 /* End XCSwiftPackageProductDependency section */
 	};

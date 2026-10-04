@@ -1,6 +1,9 @@
-import { afterEach, describe, expect, it, vi } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
-import { callAndroidBridge } from "../../src/deps/clients/android/bridge.js";
+import {
+  NO_BRIDGE_TIMEOUT,
+  callAndroidBridge,
+} from "../../src/deps/clients/android/bridge.js";
 
 const originalWindow = globalThis.window;
 
@@ -64,5 +67,58 @@ describe("Android WebMessage bridge client", () => {
     expect(error.message).toBe("Unsupported Android bridge method.");
     expect(error.code).toBe("IllegalArgumentException");
     expect(Object.keys(bridge)).toEqual(["postMessage", "onmessage"]);
+  });
+
+  describe("response timeout", () => {
+    const installSilentBridge = () => {
+      const bridge = { postMessage: vi.fn() };
+      globalThis.window = { RouteVNAndroid: bridge };
+      return bridge;
+    };
+
+    beforeEach(() => {
+      vi.useFakeTimers();
+    });
+
+    afterEach(() => {
+      vi.useRealTimers();
+    });
+
+    it("rejects a call that gets no response within the default 30 minutes", async () => {
+      installSilentBridge();
+
+      const pending = callAndroidBridge("slowCall").catch((error) => error);
+      await vi.advanceTimersByTimeAsync(30 * 60 * 1000);
+
+      expect((await pending).message).toBe(
+        "Android bridge call timed out: slowCall",
+      );
+    });
+
+    it("never times out a call that opts out, and still resolves it", async () => {
+      const bridge = installSilentBridge();
+      let settled = false;
+
+      const pending = callAndroidBridge(
+        "downloadFile",
+        {},
+        { timeoutMs: NO_BRIDGE_TIMEOUT },
+      ).finally(() => {
+        settled = true;
+      });
+      await vi.advanceTimersByTimeAsync(6 * 60 * 60 * 1000);
+      expect(settled).toBe(false);
+
+      const request = JSON.parse(bridge.postMessage.mock.calls[0][0]);
+      bridge.onmessage({
+        data: JSON.stringify({
+          version: 1,
+          id: request.id,
+          ok: true,
+          value: { id: "project-one" },
+        }),
+      });
+      await expect(pending).resolves.toEqual({ id: "project-one" });
+    });
   });
 });

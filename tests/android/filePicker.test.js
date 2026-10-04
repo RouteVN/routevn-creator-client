@@ -220,6 +220,58 @@ describe("android file picker", () => {
     });
   });
 
+  // The native archive picker answers through its window callback.
+  const answerArchivePicker = (result) => {
+    const payloads = [];
+    mocked.callAndroidBridge.mockImplementation((method, payload) => {
+      if (method !== "openArchivePicker") {
+        throw new Error(`Unexpected bridge method: ${method}`);
+      }
+      payloads.push(payload);
+      Promise.resolve().then(() => {
+        window.__routeVNAndroidArchivePickerResult({
+          requestId: payload.requestId,
+          ...result,
+        });
+      });
+      return true;
+    });
+    return payloads;
+  };
+
+  it("opens the native archive picker and resolves the picked zip", async () => {
+    const archive = {
+      uri: "content://archives/project-one.zip",
+      name: "project-one.zip",
+    };
+    const payloads = answerArchivePicker({ archive });
+
+    await expect(
+      createAndroidFilePicker().openArchivePicker({
+        title: "Select Project Zip File",
+      }),
+    ).resolves.toEqual(archive);
+    expect(payloads).toEqual([
+      { requestId: "archive-1", title: "Select Project Zip File" },
+    ]);
+  });
+
+  it("resolves a cancelled archive picker as null", async () => {
+    answerArchivePicker({ archive: null });
+
+    await expect(
+      createAndroidFilePicker().openArchivePicker({}),
+    ).resolves.toBeNull();
+  });
+
+  it("rejects the archive picker promise when the bridge reports an error", async () => {
+    answerArchivePicker({ error: { message: "archive picker unavailable" } });
+
+    await expect(
+      createAndroidFilePicker().openArchivePicker({}),
+    ).rejects.toThrow("archive picker unavailable");
+  });
+
   it("writes supplied blobs to Android downloads", async () => {
     let writePayload;
     mocked.callAndroidBridge.mockImplementation((method, payload) => {

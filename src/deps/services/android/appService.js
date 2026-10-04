@@ -1,7 +1,12 @@
 import { createAndroidBackupClient } from "../../clients/android/backup.js";
 import { createBackupService } from "./backupService.js";
 import { createAppServiceCore } from "../shared/appServiceCore.js";
-import { callAndroidBridge } from "../../clients/android/bridge.js";
+import {
+  NO_BRIDGE_TIMEOUT,
+  callAndroidBridge,
+} from "../../clients/android/bridge.js";
+import { androidProjectImportHost } from "../../clients/android/projectImportHost.js";
+import { createProjectImportService } from "../shared/projectImportService.js";
 import { getAndroidProjectFileUrl } from "./projectFileUrls.js";
 import { generateId } from "../../../internal/id.js";
 import { copyTextToClipboard } from "../../../internal/copyText.js";
@@ -71,9 +76,55 @@ const toAndroidProjectEntry = ({ project, existingEntry } = {}) => {
   };
 };
 
+// Shared registration tail for every Android import source (folder, zip,
+// URL): build the project entry from the bridge result and register it.
+const registerImportedAndroidProject = async ({
+  importedProject,
+  projectId,
+  addProjectEntry,
+  loadProjectIcon,
+  projectService,
+}) => {
+  const importedName = importedProject.name?.trim?.() ?? "";
+  let projectName = "Untitled Project";
+  if (importedName) {
+    projectName = importedName;
+  }
+
+  const projectEntry = {
+    id: projectId,
+    name: projectName,
+    description: importedProject.description ?? "",
+    language: normalizeProjectLanguage(importedProject.language),
+    iconFileId: importedProject.iconFileId ?? null,
+    createdAt: Date.now(),
+    lastOpenedAt: null,
+  };
+
+  await addProjectEntry(projectEntry);
+
+  const fullProject = { ...projectEntry };
+  if (projectEntry.iconFileId) {
+    const iconResult = await loadProjectIcon({
+      entry: projectEntry,
+      projectService,
+    });
+    if (typeof iconResult === "string") {
+      fullProject.iconUrl = iconResult;
+    } else if (iconResult?.url) {
+      fullProject.iconUrl = iconResult.url;
+    }
+  }
+
+  return fullProject;
+};
+
 export const createAppService = (params) => {
   const appDb = params.db;
   const { globalUI } = params;
+  const projectImport = createProjectImportService({
+    host: androidProjectImportHost,
+  });
 
   const syncAndroidProjectEntriesFromStorage = async () => {
     const discoveredProjects = await listAndroidProjectFolders();
@@ -143,47 +194,37 @@ export const createAppService = (params) => {
         throw new Error("Project folder is required.");
       }
 
-      const projectId = generateId();
-      const importedProject = await callAndroidBridge("importProjectFolder", {
-        uri: folderSelection.uri,
-        projectId,
+      // Rule A: the app copy stores each file under its file id. The copy is
+      // renamed, never the folder the user picked.
+      const fileRenames = await projectImport.planFolderFileRenames({
+        list: (path) =>
+          androidProjectImportHost.listDirectory(
+            { uri: folderSelection.uri },
+            path,
+          ),
       });
+
+      const projectId = generateId();
+      const importedProject = await callAndroidBridge(
+        "importProjectFolder",
+        {
+          uri: folderSelection.uri,
+          projectId,
+          fileRenames,
+        },
+        { timeoutMs: NO_BRIDGE_TIMEOUT },
+      );
       if (importedProject.id !== projectId) {
         throw new Error("Imported project identity does not match.");
       }
 
-      const importedName = importedProject.name?.trim?.() ?? "";
-      let projectName = "Untitled Project";
-      if (importedName) {
-        projectName = importedName;
-      }
-
-      const projectEntry = {
-        id: projectId,
-        name: projectName,
-        description: importedProject.description ?? "",
-        language: normalizeProjectLanguage(importedProject.language),
-        iconFileId: importedProject.iconFileId ?? null,
-        createdAt: Date.now(),
-        lastOpenedAt: null,
-      };
-
-      await addProjectEntry(projectEntry);
-
-      const fullProject = { ...projectEntry };
-      if (projectEntry.iconFileId) {
-        const iconResult = await loadProjectIcon({
-          entry: projectEntry,
-          projectService,
-        });
-        if (typeof iconResult === "string") {
-          fullProject.iconUrl = iconResult;
-        } else if (iconResult?.url) {
-          fullProject.iconUrl = iconResult.url;
-        }
-      }
-
-      return fullProject;
+      return registerImportedAndroidProject({
+        importedProject,
+        projectId,
+        addProjectEntry,
+        loadProjectIcon,
+        projectService,
+      });
     },
 
     createNewProject: async ({
@@ -311,6 +352,33 @@ export const createAppService = (params) => {
     },
   };
 
+  // Zip and URL imports end the same way: the extracted staging folder goes
+  // through the bridge's storage step with a new project id, then the project
+  // is registered.
+  const importStagedProject = async ({ run }) => {
+    const projectId = generateId();
+    const importedProject = await run(({ staging, path }) =>
+      callAndroidBridge(
+        "importProjectFolder",
+        { tempFolderId: staging.tempFolderId, path, projectId },
+        { timeoutMs: NO_BRIDGE_TIMEOUT },
+      ),
+    );
+    if (importedProject.id !== projectId) {
+      throw new Error("importFailed: Imported project identity mismatch.");
+    }
+
+    const project = await registerImportedAndroidProject({
+      importedProject,
+      projectId,
+      addProjectEntry: appService.addProjectEntry,
+      loadProjectIcon: platformAdapter.loadProjectIcon,
+      projectService: params.projectService,
+    });
+    backup.backupNewProject();
+    return project;
+  };
+
   const appService = createAppServiceCore({
     ...params,
     platformAdapter,
@@ -360,6 +428,29 @@ export const createAppService = (params) => {
       const project = await appService.openExistingProject(folderPath);
       backup.backupNewProject();
       return project;
+    },
+
+    async openArchivePicker(options = {}) {
+      const archive = await params.filePicker.openArchivePicker(options);
+      return archive ?? undefined;
+    },
+
+    async importProjectFromArchive({ uri, onProgress } = {}) {
+      if (!uri) {
+        throw new Error("importFailed: Archive uri is required.");
+      }
+
+      return importStagedProject({
+        run: (finish) =>
+          projectImport.importFromArchive({ uri, onProgress, finish }),
+      });
+    },
+
+    async importProjectFromUrl({ url, onProgress } = {}) {
+      return importStagedProject({
+        run: (finish) =>
+          projectImport.importFromUrl({ url, onProgress, finish }),
+      });
     },
 
     async deleteProject(projectId) {
