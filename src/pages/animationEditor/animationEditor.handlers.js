@@ -14,6 +14,8 @@ import {
 import { resolveResourceFileType } from "../../internal/resourceFileMetadata.js";
 import { createFileExplorerKeyboardScopeHandlers } from "../../internal/ui/fileExplorerKeyboardScope.js";
 import { runResourcePageMutation } from "../../internal/ui/resourcePages/resourcePageErrors.js";
+import { getEditHistoryChangeKey } from "../../internal/editHistory.js";
+import { resolveEditHistoryShortcut } from "../../internal/ui/editHistory.js";
 import {
   addKeyframeDefaultValues,
   AUTO_TWEEN_DEFAULT_DURATION,
@@ -725,12 +727,109 @@ const flushQueuedAutosave = async ({ deps, force = false } = {}) => {
   }
 };
 
-const queueEditorAutosave = ({ deps } = {}) => {
+const scheduleEditorAutosave = ({ deps } = {}) => {
   const { store } = deps;
   store.queueAutosave();
   if (store.selectAutosavePersistedVersion() < store.selectAutosaveVersion()) {
     scheduleQueuedAutosave({ deps });
   }
+};
+
+const getAnimationEditorPersistFingerprint = (deps) =>
+  createAnimationPersistFingerprint(
+    createAnimationPersistSnapshot({
+      copy: selectCopy(deps),
+      store: deps.store,
+    }),
+  );
+
+// Undo starts from the animation as the page has it now.
+const setAnimationEditorHistoryBaseline = (deps) => {
+  const { store } = deps;
+  store.setEditHistoryBaseline({
+    snapshot: store.selectAnimationHistorySnapshot(),
+    fingerprint: getAnimationEditorPersistFingerprint(deps),
+  });
+};
+
+// Records the animation as it is now against the last recorded version.
+// Repeated edits to the same values, such as typing a number, are one step.
+// An edit that changes nothing autosave saves is not a step.
+const recordAnimationEditorEdit = (deps) => {
+  const { store } = deps;
+  const before = store.selectEditHistoryBaseline();
+  // The baseline is set once the page has opened the animation.
+  if (!before) {
+    return;
+  }
+  const beforeFingerprint = store.selectEditHistoryBaselineFingerprint();
+  const after = store.selectAnimationHistorySnapshot();
+  const afterFingerprint = getAnimationEditorPersistFingerprint(deps);
+  store.setEditHistoryBaseline({
+    snapshot: after,
+    fingerprint: afterFingerprint,
+  });
+  if (afterFingerprint === beforeFingerprint) {
+    return;
+  }
+  store.recordEditHistoryStep({
+    before: { animation: before },
+    after: { animation: after },
+    mergeKey: getEditHistoryChangeKey(before, after),
+    time: Date.now(),
+  });
+};
+
+// Every saved edit passes here, so this is where it enters the undo history.
+const queueEditorAutosave = ({ deps } = {}) => {
+  recordAnimationEditorEdit(deps);
+  scheduleEditorAutosave({ deps });
+};
+
+// Undo and redo behave like an edit: the page shows the restored animation
+// at once and autosave saves it. Autosave saves the whole animation and skips
+// what is already saved, so undoing an edit not saved yet writes nothing.
+const runAnimationEditorHistoryStep = async (deps, direction) => {
+  const { render, store } = deps;
+  if (store.selectAnimationVideoExportInProgress()) {
+    return;
+  }
+  const step = store.selectEditHistoryStep({ direction });
+  if (!step) {
+    return;
+  }
+
+  store.moveEditHistoryStep({ direction });
+  const snapshot = (direction === "undo" ? step.before : step.after).animation;
+  const playheadTimeMs = store.selectPreviewPlayheadTimeMs();
+  store.restoreAnimationHistorySnapshot({ snapshot });
+  setAnimationEditorHistoryBaseline(deps);
+  invalidatePreview({ store });
+  render();
+  scheduleEditorAutosave({ deps });
+  if (
+    Object.values(snapshot.tweenBySection).some(
+      (properties) => properties?.camera,
+    )
+  ) {
+    await refreshCameraPreview(deps, playheadTimeMs ?? 0);
+  }
+};
+
+export const handleUndoButtonClick = (deps) =>
+  runAnimationEditorHistoryStep(deps, "undo");
+
+export const handleRedoButtonClick = (deps) =>
+  runAnimationEditorHistoryStep(deps, "redo");
+
+export const handleEditHistoryShortcutKeyDown = (deps, payload) => {
+  const event = payload._event;
+  const direction = resolveEditHistoryShortcut(event);
+  if (!direction) {
+    return;
+  }
+  event.preventDefault();
+  void runAnimationEditorHistoryStep(deps, direction);
 };
 
 const initializePreview = async ({ deps } = {}) => {
@@ -838,8 +937,13 @@ const syncEditorState = async ({ deps, repositoryState } = {}) => {
     store.setAnimationDescription({
       description: description ?? "",
     });
-    store.setAutosavePersistedFingerprint({ fingerprint: undefined });
+    // Nothing is saved for a new animation until it differs from how it
+    // opened, so undoing back to that creates nothing.
+    store.setAutosavePersistedFingerprint({
+      fingerprint: getAnimationEditorPersistFingerprint(deps),
+    });
   }
+  setAnimationEditorHistoryBaseline(deps);
 
   render();
   await initializePreview({ deps });
@@ -853,6 +957,9 @@ const mountTimelinePanSubscriptions = (deps) => {
       type: "keydown",
       options: { capture: true },
       listener: (event) => {
+        handleEditHistoryShortcutKeyDown(deps, {
+          _event: event,
+        });
         handleCopyAnimationJsonShortcutKeyDown(deps, {
           _event: event,
         });

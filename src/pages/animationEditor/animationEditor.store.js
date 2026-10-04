@@ -46,6 +46,14 @@ import {
 } from "./animationEditor.constants.js";
 import { selectAnimationEditorPageCopy } from "./support/animationEditorPageCopy.js";
 import {
+  areEditHistoryValuesEqual,
+  createEditHistory,
+  getEditHistoryStep,
+  moveEditHistoryStep as moveHistoryStep,
+  recordEditHistoryStep as recordHistoryStep,
+} from "../../internal/editHistory.js";
+import { selectEditHistoryCopy } from "../../internal/ui/editHistory.js";
+import {
   cameraTimelineProperties,
   createCameraPose,
   expandCameraTrack,
@@ -1376,6 +1384,12 @@ export const createInitialState = () => ({
   animationCanvasCaptureInProgress: false,
   animationVideoShortcutStartedAt: undefined,
   animationVideoExportInProgress: false,
+  // Undo and redo for edits made since the page opened. The baseline is the
+  // animation as of the last recorded edit, the before of the next one, with
+  // the fingerprint of what autosave would save for it.
+  editHistory: createEditHistory(),
+  editHistoryBaseline: undefined,
+  editHistoryBaselineFingerprint: undefined,
   autosaveVersion: 0,
   autosavePersistedVersion: 0,
   autosaveInFlight: false,
@@ -2211,6 +2225,110 @@ export const setPopover = ({ state }, { mode, x, y, payload } = {}) => {
   state.popover.x = x;
   state.popover.y = y;
   state.popover.payload = payload ?? {};
+};
+
+// The parts of the page's animation that autosave saves, for undo and redo.
+export const selectAnimationHistorySnapshot = ({ state }) =>
+  structuredClone({
+    tweenBySection: state.tweenBySection,
+    transitionMask: state.transitionMask,
+    additionalTransitionMasks: state.additionalTransitionMasks,
+    cameraTracksAuthored: state.cameraTracksAuthored,
+  });
+
+export const selectEditHistoryBaseline = ({ state }) =>
+  state.editHistoryBaseline;
+
+export const selectEditHistoryBaselineFingerprint = ({ state }) =>
+  state.editHistoryBaselineFingerprint;
+
+export const setEditHistoryBaseline = (
+  { state },
+  { snapshot, fingerprint } = {},
+) => {
+  state.editHistoryBaseline = snapshot;
+  state.editHistoryBaselineFingerprint = fingerprint;
+};
+
+export const recordEditHistoryStep = (
+  { state },
+  { before, after, mergeKey, time } = {},
+) => {
+  recordHistoryStep(state.editHistory, { before, after, mergeKey, time });
+};
+
+export const selectEditHistoryStep = ({ state }, { direction } = {}) =>
+  getEditHistoryStep(state.editHistory, direction);
+
+export const moveEditHistoryStep = ({ state }, { direction } = {}) => {
+  moveHistoryStep(state.editHistory, direction);
+};
+
+// Puts back an undone or redone version of the animation, and closes any
+// popover or camera editor. Keyframes and masks are selected by index, so a
+// selection is cleared when it no longer exists, or when the restore moved
+// or changed other keyframes in its track, or other masks, since the index
+// may then point at a different one.
+export const restoreAnimationHistorySnapshot = (
+  { state },
+  { snapshot } = {},
+) => {
+  const { selectedKeyframe, selectedProperty } = state;
+  const getKeyframes = () =>
+    getSectionProperties(state, selectedKeyframe.side)[
+      selectedKeyframe.property
+    ]?.keyframes;
+  // A JSON copy, since state here is a store draft that structuredClone
+  // cannot read; keyframes and masks are plain JSON data.
+  const copyJson = (value) => JSON.parse(JSON.stringify(value));
+  const previousKeyframes = selectedKeyframe
+    ? copyJson(getKeyframes() ?? [])
+    : undefined;
+  const previousMasks = state.selectedMask
+    ? copyJson(getTransitionMasks(state))
+    : undefined;
+
+  state.tweenBySection = snapshot.tweenBySection;
+  state.transitionMask = snapshot.transitionMask;
+  state.additionalTransitionMasks = snapshot.additionalTransitionMasks;
+  state.cameraTracksAuthored = snapshot.cameraTracksAuthored;
+  state.editHistoryBaseline = snapshot;
+  state.cameraEditor = undefined;
+  closePopover({ state });
+
+  const othersChanged = (previous, next, index) =>
+    !next?.[index] ||
+    previous.length !== next.length ||
+    previous.some(
+      (item, itemIndex) =>
+        itemIndex !== index &&
+        !areEditHistoryValuesEqual(item, next[itemIndex]),
+    );
+  if (
+    selectedKeyframe &&
+    othersChanged(previousKeyframes, getKeyframes(), selectedKeyframe.index)
+  ) {
+    state.selectedKeyframe = undefined;
+  }
+  if (
+    selectedProperty &&
+    !getSectionProperties(state, selectedProperty.side)[
+      selectedProperty.property
+    ]
+  ) {
+    state.selectedProperty = undefined;
+  }
+  if (
+    state.selectedMask &&
+    othersChanged(
+      previousMasks,
+      getTransitionMasks(state),
+      state.selectedMaskIndex,
+    )
+  ) {
+    state.selectedMask = false;
+    state.selectedMaskIndex = undefined;
+  }
 };
 
 export const closePopover = ({ state }, _payload = {}) => {
@@ -3922,6 +4040,7 @@ export const selectTimelinePlayheadVisible = ({ state }) => {
 
 export const selectViewData = ({ state, i18n }) => {
   const copy = selectAnimationEditorPageCopy(i18n);
+  const editHistoryCopy = selectEditHistoryCopy(i18n);
   const previewPlaying = selectPreviewPlaying({ state });
   const propertyFieldConfig = getLocalizedPropertyFieldConfig(state, copy);
   const defaultInitialValuesByProperty = getDefaultInitialValues(state);
@@ -4293,6 +4412,15 @@ export const selectViewData = ({ state, i18n }) => {
     previewPlayheadVisible: state.previewPlayheadVisible,
     previewLoopEnabled: state.previewLoopEnabled,
     previewLoopButtonVariant: state.previewLoopEnabled ? "pr" : "ol",
+    // Undo and redo are unavailable while a video export reads the animation.
+    undoDisabled:
+      state.editHistory.undo.length === 0 ||
+      state.animationVideoExportInProgress,
+    redoDisabled:
+      state.editHistory.redo.length === 0 ||
+      state.animationVideoExportInProgress,
+    undoLabel: editHistoryCopy.undoLabel,
+    redoLabel: editHistoryCopy.redoLabel,
     showMobileEditorMenu: state.isTouchMode,
     showInlineTimelineZoom: !state.isTouchMode,
     mobileEditorMenuLabel: copy.actionsLabel,

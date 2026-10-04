@@ -3,6 +3,7 @@ import {
   areEditHistoryValuesEqual,
   createEditHistory,
   dropEditHistoryStep,
+  getEditHistoryChangeKey,
   getEditHistoryStep,
   moveEditHistoryStep,
   recordEditHistoryStep,
@@ -177,6 +178,40 @@ describe("edit history", () => {
   });
 });
 
+describe("edit history change keys", () => {
+  const animation = (value, extra = {}) => ({
+    update: { x: { keyframes: [{ value, duration: 1000, ...extra }] } },
+  });
+
+  it("names the values an edit changed", () => {
+    expect(getEditHistoryChangeKey(animation(1), animation(2))).toBe(
+      "/update/x/keyframes/0/value",
+    );
+    expect(
+      getEditHistoryChangeKey(animation(1), animation(2, { duration: 500 })),
+    ).toBe("/update/x/keyframes/0/value|/update/x/keyframes/0/duration");
+    expect(getEditHistoryChangeKey(animation(1), animation(1))).toBe("");
+  });
+
+  it("gives edits that add or remove list items no key, so they never merge", () => {
+    const twoKeyframes = {
+      update: {
+        x: {
+          keyframes: [
+            { value: 1, duration: 1000 },
+            { value: 2, duration: 1000 },
+          ],
+        },
+      },
+    };
+
+    expect(getEditHistoryChangeKey(animation(1), twoKeyframes)).toBeUndefined();
+    expect(
+      getEditHistoryChangeKey(animation(1), animation(1, { startValue: 0 })),
+    ).toBe("/update/x/keyframes/0/startValue");
+  });
+});
+
 describe("edit history shortcuts", () => {
   const press = (init) =>
     resolveEditHistoryShortcut({
@@ -205,6 +240,24 @@ describe("edit history shortcuts", () => {
     expect(press({ ctrlKey: true, key: "я", code: "KeyZ" })).toBe("undo");
   });
 
+  it("keeps working after a slider, checkbox, or select change", () => {
+    for (const node of [
+      { tagName: "INPUT", type: "range" },
+      { tagName: "INPUT", type: "checkbox" },
+      { tagName: "SELECT" },
+      { tagName: "RTGL-SELECT" },
+    ]) {
+      expect(
+        press({
+          metaKey: true,
+          key: "z",
+          code: "KeyZ",
+          composedPath: () => [node],
+        }),
+      ).toBe("undo");
+    }
+  });
+
   it("leaves the keys to fields and open dialogs", () => {
     expect(
       press({
@@ -222,5 +275,20 @@ describe("edit history shortcuts", () => {
         composedPath: () => [{ tagName: "BUTTON" }, { tagName: "DIALOG" }],
       }),
     ).toBeUndefined();
+    for (const node of [
+      { tagName: "INPUT", type: "text" },
+      { tagName: "INPUT", type: "number" },
+      { tagName: "TEXTAREA" },
+      { tagName: "DIV", isContentEditable: true },
+    ]) {
+      expect(
+        press({
+          metaKey: true,
+          key: "z",
+          code: "KeyZ",
+          composedPath: () => [node],
+        }),
+      ).toBeUndefined();
+    }
   });
 });

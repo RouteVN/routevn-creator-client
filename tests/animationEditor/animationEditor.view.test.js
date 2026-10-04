@@ -106,6 +106,36 @@ describe("animationEditor view", () => {
     );
   });
 
+  it("offers undo and redo in the header after the animation name", () => {
+    const view = readFileSync(
+      new URL(
+        "../../src/pages/animationEditor/animationEditor.view.yaml",
+        import.meta.url,
+      ),
+      "utf8",
+    );
+    const template = view.slice(view.indexOf("template:"));
+
+    expect(template).toContain(
+      'rtgl-button#undoButton sq pre=undo v=ol ?disabled=${undoDisabled} aria-label="${undoLabel}" title="${undoLabel}"',
+    );
+    expect(template).toContain(
+      'rtgl-button#redoButton sq pre=redo v=ol ?disabled=${redoDisabled} aria-label="${redoLabel}" title="${redoLabel}"',
+    );
+    expect(template.indexOf("${animationName}")).toBeLessThan(
+      template.indexOf("#undoButton"),
+    );
+    expect(template.indexOf("#redoButton")).toBeLessThan(
+      template.indexOf("$if showMobileEditorMenu"),
+    );
+    expect(view).toMatch(
+      /undoButton:\n\s+eventListeners:\n\s+click:\n\s+handler: handleUndoButtonClick/,
+    );
+    expect(view).toMatch(
+      /redoButton:\n\s+eventListeners:\n\s+click:\n\s+handler: handleRedoButtonClick/,
+    );
+  });
+
   it("keeps the keyframe dialog available for touch and context-menu edits", () => {
     const view = readFileSync(
       new URL(
