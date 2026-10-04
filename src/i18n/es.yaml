@@ -1995,6 +1995,7 @@ sceneEditorPage:
   loadingSceneLabel: "Cargando escena..."
   leftLabel: "Izquierda"
   missingProjectResolution: "Al proyecto le falta la configuración de resolución necesaria."
+  moreLabel: "Más"
   moveButton: "Mover"
   moveSectionTitle: "Mover sección"
   moveToSceneMenuItem: "Mover a otra escena"
