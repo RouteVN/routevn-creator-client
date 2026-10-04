@@ -11,12 +11,11 @@ import java.util.UUID;
 import java.util.regex.Pattern;
 
 /**
- * Native-owned temporary folders for imports, addressed by an opaque
- * stagingId under the cache directory. Only the stagingId and a validated
- * relative path ever cross the bridge, so JavaScript cannot leave a staging
- * folder.
+ * Native-owned temporary folders, addressed by an opaque tempFolderId under a
+ * root directory. Only the tempFolderId and a validated relative path ever
+ * cross the bridge, so JavaScript cannot leave its temporary folder.
  */
-final class ImportStaging {
+final class TempFolders {
     static final long MAX_AGE_MS = 24L * 60 * 60 * 1000;
     private static final Pattern ID = Pattern.compile(
         "[0-9a-fA-F]{8}(-[0-9a-fA-F]{4}){3}-[0-9a-fA-F]{12}"
@@ -37,43 +36,43 @@ final class ImportStaging {
 
     private final File root;
 
-    ImportStaging(File root) {
+    TempFolders(File root) {
         this.root = root;
     }
 
-    /** Creates a staging folder after removing the ones older than 24 hours. */
-    String create() throws ProjectImportException {
+    /** Creates a temporary folder after removing the ones older than 24 hours. */
+    String create() throws CodedException {
         sweep(root, System.currentTimeMillis() - MAX_AGE_MS);
-        String stagingId = UUID.randomUUID().toString();
-        if (!new File(root, stagingId).mkdirs()) {
-            throw new ProjectImportException("importFailed", "Cannot create the staging folder.");
+        String tempFolderId = UUID.randomUUID().toString();
+        if (!new File(root, tempFolderId).mkdirs()) {
+            throw new CodedException("importFailed", "Cannot create the temporary folder.");
         }
-        return stagingId;
+        return tempFolderId;
     }
 
-    /** Removes a staging folder; unknown ids are fine. */
-    void remove(String stagingId) throws ProjectImportException {
-        deleteRecursively(new File(root, validId(stagingId)));
+    /** Removes a temporary folder; unknown ids are fine. */
+    void remove(String tempFolderId) throws CodedException {
+        deleteRecursively(new File(root, validId(tempFolderId)));
     }
 
-    /** A new or existing file path inside the staging folder; the path must be safe. */
-    File resolve(String stagingId, String path) throws ProjectImportException {
+    /** A new or existing file path inside the temporary folder; the path must be safe. */
+    File resolve(String tempFolderId, String path) throws CodedException {
         if (!isSafePath(path)) {
-            throw new ProjectImportException("importFailed", "Invalid staging path.");
+            throw new CodedException("importFailed", "Invalid path.");
         }
-        return new File(resolveDirectory(stagingId, ""), path);
+        return new File(resolveDirectory(tempFolderId, ""), path);
     }
 
-    /** An existing folder inside the staging folder; an empty path is the staging folder. */
-    File resolveDirectory(String stagingId, String path) throws ProjectImportException {
-        File directory = new File(root, validId(stagingId));
+    /** An existing folder inside the temporary folder; an empty path is the folder itself. */
+    File resolveDirectory(String tempFolderId, String path) throws CodedException {
+        File directory = new File(root, validId(tempFolderId));
         if (!directory.isDirectory()) {
-            throw new ProjectImportException("importFailed", "Staging folder not found.");
+            throw new CodedException("importFailed", "Temporary folder not found.");
         }
         if (path == null || path.isEmpty()) {
             return directory;
         }
-        return resolve(stagingId, path);
+        return resolve(tempFolderId, path);
     }
 
     /**
@@ -99,10 +98,10 @@ final class ImportStaging {
     }
 
     /** The entries of a folder sorted by name, without following symlinks. */
-    static List<Child> list(File directory) throws ProjectImportException {
+    static List<Child> list(File directory) throws CodedException {
         File[] files = directory.isDirectory() ? directory.listFiles() : null;
         if (files == null) {
-            throw new ProjectImportException("importFailed", "Folder not found.");
+            throw new CodedException("importFailed", "Folder not found.");
         }
         List<Child> children = new ArrayList<>();
         for (File file : files) {
@@ -116,23 +115,23 @@ final class ImportStaging {
     }
 
     /** Creates {@code destination}, and its parent folder, as a new file; an existing file is an error. */
-    static void createNewFile(File destination) throws ProjectImportException {
+    static void createNewFile(File destination) throws CodedException {
         File parent = destination.getParentFile();
         if (parent != null) {
             parent.mkdirs();
         }
         try {
             if (!destination.createNewFile()) {
-                throw new ProjectImportException("importFailed", "Destination already exists.");
+                throw new CodedException("writeFailed", "Destination already exists.");
             }
         } catch (IOException error) {
-            throw new ProjectImportException("importFailed", "Cannot create the destination file.");
+            throw new CodedException("writeFailed", "Cannot create the destination file.");
         }
     }
 
     /** Copies a stream into a new file, at most maxBytes; the file is removed when this fails. */
     static long copy(InputStream input, File destination, long maxBytes)
-        throws ProjectImportException {
+        throws CodedException {
         createNewFile(destination);
         boolean done = false;
         try (OutputStream output = new FileOutputStream(destination)) {
@@ -142,8 +141,8 @@ final class ImportStaging {
             while ((read = input.read(buffer)) != -1) {
                 bytes += read;
                 if (bytes > maxBytes) {
-                    throw new ProjectImportException(
-                        "archiveTooLarge",
+                    throw new CodedException(
+                        "tooLarge",
                         "File exceeds " + maxBytes + " bytes."
                     );
                 }
@@ -152,8 +151,8 @@ final class ImportStaging {
             done = true;
             return bytes;
         } catch (IOException error) {
-            throw new ProjectImportException(
-                "importFailed",
+            throw new CodedException(
+                "writeFailed",
                 "Cannot copy the file: " + error.getClass().getSimpleName()
             );
         } finally {
@@ -199,10 +198,10 @@ final class ImportStaging {
         }
     }
 
-    private static String validId(String stagingId) throws ProjectImportException {
-        if (stagingId == null || !ID.matcher(stagingId).matches()) {
-            throw new ProjectImportException("importFailed", "Invalid staging id.");
+    private static String validId(String tempFolderId) throws CodedException {
+        if (tempFolderId == null || !ID.matcher(tempFolderId).matches()) {
+            throw new CodedException("importFailed", "Invalid temporary folder id.");
         }
-        return stagingId;
+        return tempFolderId;
     }
 }

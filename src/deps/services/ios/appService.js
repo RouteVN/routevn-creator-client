@@ -393,7 +393,7 @@ export const createAppService = (params) => {
   const importStagedProject = async ({ run }) => {
     const importedProject = await run(({ staging, path }) =>
       callIOSBridge("importProjectFolder", {
-        stagingId: staging.stagingId,
+        tempFolderId: staging.tempFolderId,
         path,
       }),
     );

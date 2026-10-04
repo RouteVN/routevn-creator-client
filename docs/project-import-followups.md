@@ -15,7 +15,7 @@ Line numbers are not given because they drift; each item names the file and func
 
 ### iOS: downloads fail when the screen locks or the app goes to the background
 
-- **Where:** `ImportDownloader.swift`, the download task.
+- **Where:** `FileDownloader.swift`, the download task.
 - **What happens:** the download is a plain `URLSession` data task on a blocked bridge thread,
   with no background task and no idle-timer control anywhere in `ios/`. When the app is
   suspended the connection is lost and the import ends with `downloadFailed`. A 500 MB import
@@ -38,7 +38,7 @@ Line numbers are not given because they drift; each item names the file and func
 
 ### iOS: picked folders are copied without file coordination
 
-- **Where:** `RouteVNApp.swift` (the copy of a picked folder), `ImportStaging.swift`
+- **Where:** `RouteVNApp.swift` (the copy of a picked folder), `TempFolders.swift`
   (`listDirectory`).
 - **What happens:** the folder is read without `NSFileCoordinator`. A project folder in iCloud
   Drive with "Optimize Storage" shows undownloaded files as `.name.icloud` placeholders. Rule A
@@ -66,7 +66,7 @@ Line numbers are not given because they drift; each item names the file and func
   `recoverFromRenderProcessGone` / `resetDeadPageState`).
 - **What happens:** if the renderer is killed in the background, the old download keeps running
   on the single import executor with its progress and reply dropped. A retry's
-  `createImportStaging` waits behind it, so the dialog sits on "Connecting…" and may time out,
+  `createTempFolder` waits behind it, so the dialog sits on "Connecting…" and may time out,
   and the dead page's staging folder (possibly GBs) stays until a sweep at least 24 hours later.
 - **Idea:** track active import calls, cancel them when the page state is reset, and remove
   their staging folders.
@@ -74,12 +74,10 @@ Line numbers are not given because they drift; each item names the file and func
 
 ## Android (lower priority)
 
-- **A full disk during a download is reported as a download failure** with the reason dropped
-  (`ImportDownloader.java`, `ImportStaging.java`), and some errors pass raw messages through, so
-  absolute app-private paths can appear in the alert details (`ImportArchive.java`,
-  `ProjectImportException.of`).
+- **Some errors pass raw messages through**, so absolute app-private paths can appear in the
+  alert details (`ImportArchive.java`, `CodedException.of`).
 - **`java.net.URI` rejects URLs that JavaScript accepts:** `|`, `{ }`, `^`, backtick, `[ ]` in a
-  path, `%zz`, host names with underscores (`ImportDownloader.java`). A redirect `Location` with
+  path, `%zz`, host names with underscores (`FileDownloader.java`). A redirect `Location` with
   a raw space fails, and a query-only `Location: ?token=x` resolves to the wrong URL.
 - **Zips with non-UTF-8 entry names are rejected whole** (for example an older Windows Explorer
   zip with a Japanese folder name). Desktop and iOS fall back to CP437 and accept them; retrying
@@ -89,8 +87,6 @@ Line numbers are not given because they drift; each item names the file and func
 - **A picked-folder file name with a trailing space fails:** renames are planned from the raw
   name but the copy trims it (`listPickedDirectory`, `sanitizeImportedFilename`,
   `ImportProject.applyRenames`).
-- **A redirect loop gives `invalidUrl`**, while desktop and iOS give `downloadFailed`, so the
-  alert text differs (`ImportDownloader.java`).
 - **Release builds block `http://localhost`** (`usesCleartextTraffic=false`), although the URL
   rules and the docs allow loopback http.
 - **A failure after the native storage step leaves the project in app storage** when the
@@ -111,11 +107,11 @@ Line numbers are not given because they drift; each item names the file and func
   carry no import code (`ProjectStoragePaths.swift`, `RouteVNApp.swift`).
 - **An orphaned download can block the bridge queue:** the serial `backgroundBridgeQueue` has no
   cancellation, so if the WebView process dies mid-download, startup and any retry wait for the
-  old download (`RouteVNApp.swift`, `ImportDownloader.swift`).
+  old download (`RouteVNApp.swift`, `FileDownloader.swift`).
 - **`closeDatabase` runs on the background queue** against the `sqliteDatabases` dictionary that
   the main thread owns, a possible data race (`RouteVNApp.swift`; partly pre-existing).
 - **On iOS 16, a redirect `Location` with raw spaces or non-ASCII characters fails** because
-  `URL(string:)` returns nil; iOS 17 follows it (`ImportDownloader.swift`).
+  `URL(string:)` returns nil; iOS 17 follows it (`FileDownloader.swift`).
 - **ZIPFoundation's overflow traps should be reported upstream.** The app now checks archives
   before opening them, but the library still traps on offsets above `Int64.max`.
 

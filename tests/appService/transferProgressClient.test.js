@@ -1,10 +1,10 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import { createProjectImportProgressClient } from "../../src/deps/clients/projectImportProgress.js";
+import { createTransferProgressClient } from "../../src/deps/clients/transferProgress.js";
 
-const CALLBACK = "__routeVNTestProjectImportProgress";
+const CALLBACK = "__routeVNTestTransferProgress";
 
 const createClient = () =>
-  createProjectImportProgressClient({ callbackName: CALLBACK });
+  createTransferProgressClient({ callbackName: CALLBACK });
 
 beforeEach(() => {
   vi.stubGlobal("window", {});
@@ -20,9 +20,9 @@ describe("project import progress client", () => {
     const first = vi.fn();
     const second = vi.fn();
 
-    client.subscribe({ stagingId: "staging-one", onProgress: first });
-    client.subscribe({ stagingId: "staging-two", onProgress: second });
-    window[CALLBACK]({ stagingId: "staging-two", current: 3, total: 4 });
+    client.subscribe({ tempFolderId: "staging-one", onProgress: first });
+    client.subscribe({ tempFolderId: "staging-two", onProgress: second });
+    window[CALLBACK]({ tempFolderId: "staging-two", current: 3, total: 4 });
     window[CALLBACK]({ current: 1, total: 2 });
 
     expect(first).not.toHaveBeenCalled();
@@ -33,11 +33,11 @@ describe("project import progress client", () => {
     const onProgress = vi.fn();
 
     const unsubscribe = createClient().subscribe({
-      stagingId: "staging-one",
+      tempFolderId: "staging-one",
       onProgress,
     });
     unsubscribe();
-    window[CALLBACK]({ stagingId: "staging-one", current: 1, total: 2 });
+    window[CALLBACK]({ tempFolderId: "staging-one", current: 1, total: 2 });
 
     expect(onProgress).not.toHaveBeenCalled();
   });

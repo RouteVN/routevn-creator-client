@@ -7,14 +7,14 @@ import java.util.List;
 import java.util.concurrent.atomic.AtomicLong;
 import org.junit.Test;
 
-public class ImportProgressTest {
+public class TransferProgressTest {
     @Test public void deliversTheFirstReportThrottlesTheRestAndAlwaysTheFinish() {
         List<String> events = new ArrayList<>();
         AtomicLong clock = new AtomicLong(1_000);
-        ImportProgress progress = new ImportProgress((current, total) -> events.add(current + "/" + total), clock::get);
+        TransferProgress progress = new TransferProgress((current, total) -> events.add(current + "/" + total), clock::get);
 
         progress.report(0, 100);
-        clock.addAndGet(ImportProgress.MIN_INTERVAL_MS - 1);
+        clock.addAndGet(TransferProgress.MIN_INTERVAL_MS - 1);
         progress.report(10, 100);
         clock.addAndGet(1);
         progress.report(40, 100);
@@ -25,7 +25,7 @@ public class ImportProgressTest {
     }
 
     @Test public void aFailingSinkNeverEscapes() {
-        ImportProgress progress = new ImportProgress((current, total) -> {
+        TransferProgress progress = new TransferProgress((current, total) -> {
             throw new IllegalStateException("sink down");
         });
         progress.report(0, 1);

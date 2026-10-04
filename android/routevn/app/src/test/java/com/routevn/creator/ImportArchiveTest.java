@@ -47,15 +47,15 @@ public class ImportArchiveTest {
         return items;
     }
 
-    private static void assertCode(String code, ProjectImportException error) {
+    private static void assertCode(String code, CodedException error) {
         assertEquals(code, error.code);
         assertTrue(error.getMessage(), error.getMessage().startsWith(code + ": "));
     }
 
     private static void assertExtractFails(String code, File zip, File root, long maxBytes, String... pairs) {
         assertCode(code, assertThrows(
-            ProjectImportException.class,
-            () -> ImportArchive.extract(zip, root, items(pairs), maxBytes, ImportProgress.NONE)
+            CodedException.class,
+            () -> ImportArchive.extract(zip, root, items(pairs), maxBytes, TransferProgress.NONE)
         ));
     }
 
@@ -79,7 +79,7 @@ public class ImportArchiveTest {
         File notZip = folder.newFile();
         Files.write(notZip.toPath(), bytes("not a zip at all"));
         for (File file : new File[] { zip, notZip, new File(folder.getRoot(), "missing.zip") }) {
-            assertCode("invalidArchive", assertThrows(ProjectImportException.class, () -> ImportArchive.list(file, 3)));
+            assertCode("invalidArchive", assertThrows(CodedException.class, () -> ImportArchive.list(file, 3)));
         }
     }
 
@@ -95,7 +95,7 @@ public class ImportArchiveTest {
                 "Project One/", "file-metadata"
             ),
             LIMIT,
-            ImportProgress.NONE
+            TransferProgress.NONE
         );
 
         assertEquals(13, bytes);
@@ -166,7 +166,7 @@ public class ImportArchiveTest {
             .addStored("project.db", bytes("db"))
             .addDeflated("files/big", new byte[200_000]));
 
-        assertExtractFails("archiveTooLarge", zip, root, 100_000, "project.db", "project.db", "files/big", "files/big");
+        assertExtractFails("tooLarge", zip, root, 100_000, "project.db", "project.db", "files/big", "files/big");
 
         assertFalse("created folders and files are removed", new File(folder.getRoot(), "parent").exists());
     }

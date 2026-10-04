@@ -12,20 +12,20 @@ import org.junit.Rule;
 import org.junit.Test;
 import org.junit.rules.TemporaryFolder;
 
-public class ImportStagingTest {
+public class TempFoldersTest {
     @Rule
     public TemporaryFolder folder = new TemporaryFolder();
 
     private File root;
-    private ImportStaging staging;
+    private TempFolders folders;
 
     @Before
     public void setUp() {
         root = new File(folder.getRoot(), "project-import");
-        staging = new ImportStaging(root);
+        folders = new TempFolders(root);
     }
 
-    private static void assertCode(String code, ProjectImportException error) {
+    private static void assertCode(String code, CodedException error) {
         assertEquals(code, error.code);
         assertTrue(error.getMessage().startsWith(code + ": "));
     }
@@ -35,10 +35,10 @@ public class ImportStagingTest {
     }
 
     @Test public void createMakesAUuidFolder() throws Exception {
-        String stagingId = staging.create();
-        assertTrue(Pattern.matches("[0-9a-f]{8}(-[0-9a-f]{4}){3}-[0-9a-f]{12}", stagingId));
-        assertTrue(new File(root, stagingId).isDirectory());
-        assertNotEquals(stagingId, staging.create());
+        String tempFolderId = folders.create();
+        assertTrue(Pattern.matches("[0-9a-f]{8}(-[0-9a-f]{4}){3}-[0-9a-f]{12}", tempFolderId));
+        assertTrue(new File(root, tempFolderId).isDirectory());
+        assertNotEquals(tempFolderId, folders.create());
     }
 
     @Test public void createRemovesFoldersOlderThanADayAndKeepsRecentOnes() throws Exception {
@@ -50,60 +50,60 @@ public class ImportStagingTest {
         age(old, 25L * 60 * 60 * 1000);
         age(recent, 23L * 60 * 60 * 1000);
 
-        staging.create();
+        folders.create();
 
         assertFalse(old.exists());
         assertTrue(recent.exists());
     }
 
-    @Test public void resolveStaysInsideTheStagingFolder() throws Exception {
-        String stagingId = staging.create();
-        File directory = new File(root, stagingId);
-        assertEquals(new File(directory, "files/a b.png"), staging.resolve(stagingId, "files/a b.png"));
-        assertEquals(directory, staging.resolveDirectory(stagingId, ""));
+    @Test public void resolveStaysInsideTheTempFolder() throws Exception {
+        String tempFolderId = folders.create();
+        File directory = new File(root, tempFolderId);
+        assertEquals(new File(directory, "files/a b.png"), folders.resolve(tempFolderId, "files/a b.png"));
+        assertEquals(directory, folders.resolveDirectory(tempFolderId, ""));
         for (String path : new String[] { "", "/etc/passwd", "../a", "a/./b" }) {
             assertCode("importFailed", assertThrows(
                 "path accepted: " + path,
-                ProjectImportException.class,
-                () -> staging.resolve(stagingId, path)
+                CodedException.class,
+                () -> folders.resolve(tempFolderId, path)
             ));
         }
     }
 
-    @Test public void stagingIdsMustBeUuidsOfExistingFolders() throws Exception {
-        staging.create();
-        for (String stagingId : new String[] {
+    @Test public void tempFolderIdsMustBeUuidsOfExistingFolders() throws Exception {
+        folders.create();
+        for (String tempFolderId : new String[] {
             "../project-import", "not-a-uuid", "00000000-0000-0000-0000-000000000000",
         }) {
             assertCode("importFailed", assertThrows(
-                "id accepted: " + stagingId,
-                ProjectImportException.class,
-                () -> staging.resolve(stagingId, "a.zip")
+                "id accepted: " + tempFolderId,
+                CodedException.class,
+                () -> folders.resolve(tempFolderId, "a.zip")
             ));
         }
     }
 
     @Test public void removeDeletesRecursivelyAndIsIdempotent() throws Exception {
-        String stagingId = staging.create();
-        File file = staging.resolve(stagingId, "files/a.bin");
+        String tempFolderId = folders.create();
+        File file = folders.resolve(tempFolderId, "files/a.bin");
         assertTrue(file.getParentFile().mkdirs());
         assertTrue(file.createNewFile());
 
-        staging.remove(stagingId);
-        assertFalse(new File(root, stagingId).exists());
-        staging.remove(stagingId);
+        folders.remove(tempFolderId);
+        assertFalse(new File(root, tempFolderId).exists());
+        folders.remove(tempFolderId);
 
-        assertThrows(ProjectImportException.class, () -> staging.remove("../x"));
+        assertThrows(CodedException.class, () -> folders.remove("../x"));
     }
 
     @Test public void listReportsKindAndSizeSortedByName() throws Exception {
-        String stagingId = staging.create();
-        File directory = staging.resolveDirectory(stagingId, "");
+        String tempFolderId = folders.create();
+        File directory = folders.resolveDirectory(tempFolderId, "");
         Files.write(new File(directory, "project.db").toPath(), new byte[] { 1, 2, 3 });
         assertTrue(new File(directory, "files").mkdir());
         assertTrue(new File(directory, "a.txt").createNewFile());
 
-        List<ImportStaging.Child> children = ImportStaging.list(directory);
+        List<TempFolders.Child> children = TempFolders.list(directory);
 
         assertEquals(3, children.size());
         assertEquals("a.txt", children.get(0).name);
@@ -117,13 +117,13 @@ public class ImportStagingTest {
 
     @Test public void copyWritesANewFileAndRemovesItPastTheLimit() throws Exception {
         File destination = new File(folder.getRoot(), "in/archive.zip");
-        assertEquals(3, ImportStaging.copy(new ByteArrayInputStream(new byte[] { 1, 2, 3 }), destination, 10));
+        assertEquals(3, TempFolders.copy(new ByteArrayInputStream(new byte[] { 1, 2, 3 }), destination, 10));
         assertArrayEquals(new byte[] { 1, 2, 3 }, Files.readAllBytes(destination.toPath()));
 
         File partial = new File(folder.getRoot(), "partial");
-        assertCode("archiveTooLarge", assertThrows(
-            ProjectImportException.class,
-            () -> ImportStaging.copy(new ByteArrayInputStream(new byte[100]), partial, 99)
+        assertCode("tooLarge", assertThrows(
+            CodedException.class,
+            () -> TempFolders.copy(new ByteArrayInputStream(new byte[100]), partial, 99)
         ));
         assertFalse(partial.exists());
     }

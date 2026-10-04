@@ -605,7 +605,7 @@ final class RouteVNViewController: UIViewController, WKNavigationDelegate, WKScr
             var candidate = try projectFolderSetup.preview(selection: access.url)
             candidate["uri"] = uri
             return candidate
-        case "createImportStaging", "removeImportStaging", "downloadImportFile", "copyImportFile",
+        case "createTempFolder", "removeTempFolder", "downloadFile", "copyImportFile",
              "listImportArchive", "extractImportArchive", "listImportDirectory", "importProjectFolder":
             return try handleImportBridgeMethod(method, payload: payload)
         case "renameLegacyProjectFolder":
@@ -627,8 +627,8 @@ final class RouteVNViewController: UIViewController, WKNavigationDelegate, WKScr
         switch method {
         case "createDistributionZipStreamedToUri", "importProjectFolder", "exportProjectFolder",
              "renameLegacyProjectFolder", "getProjectFolderSetup", "previewProjectFolderSetup",
-             "confirmProjectFolderSetup", "createImportStaging", "removeImportStaging",
-             "downloadImportFile", "copyImportFile", "listImportArchive", "extractImportArchive",
+             "confirmProjectFolderSetup", "createTempFolder", "removeTempFolder",
+             "downloadFile", "copyImportFile", "listImportArchive", "extractImportArchive",
              "listImportDirectory":
             return true
         default:
@@ -1982,10 +1982,10 @@ final class RouteVNViewController: UIViewController, WKNavigationDelegate, WKScr
         evaluateJavaScriptCallback(name: "__routeVNIOSArchivePickerResult", result: result)
     }
 
-    private func importProgress(stagingId: String) -> ImportProgress {
-        ImportProgress { [weak self] current, total in
-            self?.evaluateJavaScriptCallback(name: "__routeVNIOSProjectImportProgress", result: [
-                "stagingId": stagingId,
+    private func transferProgress(tempFolderId: String) -> TransferProgress {
+        TransferProgress { [weak self] current, total in
+            self?.evaluateJavaScriptCallback(name: "__routeVNIOSTransferProgress", result: [
+                "tempFolderId": tempFolderId,
                 "current": NSNumber(value: current),
                 "total": NSNumber(value: total)
             ])
@@ -2020,7 +2020,7 @@ final class RouteVNViewController: UIViewController, WKNavigationDelegate, WKScr
     }
 
     /**
-     The import bridge methods: basic file operations on native-owned staging
+     The import bridge methods: basic file operations on native-owned temporary
      folders and picked files. JavaScript decides what to download, which zip
      entries to extract and what a project is. Every failure leaves here as
      "<code>: <detail>" with one of the import error codes.
@@ -2028,20 +2028,20 @@ final class RouteVNViewController: UIViewController, WKNavigationDelegate, WKScr
     private func handleImportBridgeMethod(_ method: String, payload: [String: Any]) throws -> Any {
         do {
             switch method {
-            case "createImportStaging":
-                return ["stagingId": try ImportStaging.create()]
-            case "removeImportStaging":
-                try ImportStaging.remove(stagingId: requiredString(payload, "stagingId"))
+            case "createTempFolder":
+                return ["tempFolderId": try TempFolders.create()]
+            case "removeTempFolder":
+                try TempFolders.remove(tempFolderId: requiredString(payload, "tempFolderId"))
                 return [String: Any]()
-            case "downloadImportFile":
-                let stagingId = try requiredString(payload, "stagingId")
-                let destination = try ImportStaging.resolveNewFile(
-                    stagingId: stagingId,
+            case "downloadFile":
+                let tempFolderId = try requiredString(payload, "tempFolderId")
+                let destination = try TempFolders.resolveNewFile(
+                    tempFolderId: tempFolderId,
                     path: requiredString(payload, "path")
                 )
-                let downloader = ImportDownloader(
+                let downloader = FileDownloader(
                     maxBytes: try importLimit(payload, "maxBytes"),
-                    progress: importProgress(stagingId: stagingId)
+                    progress: transferProgress(tempFolderId: tempFolderId)
                 )
                 let download = try downloader.download(url: requiredString(payload, "url"), to: destination)
                 var result: [String: Any] = [
@@ -2051,8 +2051,8 @@ final class RouteVNViewController: UIViewController, WKNavigationDelegate, WKScr
                 result["contentDisposition"] = download.contentDisposition
                 return result
             case "copyImportFile":
-                let destination = try ImportStaging.resolveNewFile(
-                    stagingId: requiredString(payload, "stagingId"),
+                let destination = try TempFolders.resolveNewFile(
+                    tempFolderId: requiredString(payload, "tempFolderId"),
                     path: requiredString(payload, "path")
                 )
                 let access = try accessFolderURL(
@@ -2060,27 +2060,27 @@ final class RouteVNViewController: UIViewController, WKNavigationDelegate, WKScr
                     missingMessage: "Select a file first."
                 )
                 defer { access.stop() }
-                let bytes = try ImportFiles.copy(
+                let bytes = try FileOps.copy(
                     from: access.url,
                     to: destination,
                     maxBytes: importLimit(payload, "maxBytes")
                 )
                 return ["bytes": NSNumber(value: bytes)]
             case "listImportArchive":
-                let archiveURL = try ImportStaging.resolve(
-                    stagingId: requiredString(payload, "stagingId"),
+                let archiveURL = try TempFolders.resolve(
+                    tempFolderId: requiredString(payload, "tempFolderId"),
                     path: requiredString(payload, "path")
                 )
                 let maxEntries = Int(clamping: try importLimit(payload, "maxEntries"))
                 return ["entries": try ImportArchive.list(archiveURL, maxEntries: maxEntries)]
             case "extractImportArchive":
-                let stagingId = try requiredString(payload, "stagingId")
+                let tempFolderId = try requiredString(payload, "tempFolderId")
                 let result = try ImportArchive.extract(
-                    ImportStaging.resolve(stagingId: stagingId, path: requiredString(payload, "path")),
-                    to: ImportStaging.resolve(stagingId: stagingId, path: requiredString(payload, "destination")),
+                    TempFolders.resolve(tempFolderId: tempFolderId, path: requiredString(payload, "path")),
+                    to: TempFolders.resolve(tempFolderId: tempFolderId, path: requiredString(payload, "destination")),
                     files: try importFileRequests(payload["files"]),
                     maxBytes: importLimit(payload, "maxBytes"),
-                    progress: importProgress(stagingId: stagingId)
+                    progress: transferProgress(tempFolderId: tempFolderId)
                 )
                 return ["files": result.files, "bytes": NSNumber(value: result.bytes)]
             case "listImportDirectory":
@@ -2097,47 +2097,47 @@ final class RouteVNViewController: UIViewController, WKNavigationDelegate, WKScr
 
     private func importLimit(_ payload: [String: Any], _ key: String) throws -> UInt64 {
         guard let number = payload[key] as? NSNumber, number.doubleValue >= 0 else {
-            throw ProjectImportError("importFailed", "\(key) is required.")
+            throw CodedError("importFailed", "\(key) is required.")
         }
         return number.uint64Value
     }
 
     private func importFileRequests(_ value: Any?) throws -> [(entry: String, path: String)] {
         guard let items = value as? [[String: Any]] else {
-            throw ProjectImportError("importFailed", "files must be a list of { entry, path }.")
+            throw CodedError("importFailed", "files must be a list of { entry, path }.")
         }
         return try items.map { item in
             (try requiredString(item, "entry"), try requiredString(item, "path"))
         }
     }
 
-    /// An empty path lists the folder itself: the staging folder or the picked folder.
+    /// An empty path lists the folder itself: the temporary folder or the picked folder.
     private func listImportDirectory(_ payload: [String: Any]) throws -> [String: Any] {
         let path = stringValue(payload["path"])
-        let names = path.isEmpty ? [] : try ImportStaging.segments(of: path)
+        let names = path.isEmpty ? [] : try TempFolders.segments(of: path)
         var created: [URL] = []
         if let uri = optionalString(payload, key: "uri"), !uri.isEmpty {
             let access = try accessFolderURL(uriString: uri, missingMessage: "Select a project folder first.")
             defer { access.stop() }
-            let folder = try ImportFiles.walk(access.url, names, create: false, created: &created)
-            return ["entries": try ImportFiles.listDirectory(folder)]
+            let folder = try FileOps.walk(access.url, names, create: false, created: &created)
+            return ["entries": try FileOps.listDirectory(folder)]
         }
-        let staging = try ImportStaging.existingFolder(stagingId: requiredString(payload, "stagingId"))
-        let folder = try ImportFiles.walk(staging, names, create: false, created: &created)
-        return ["entries": try ImportFiles.listDirectory(folder)]
+        let temporary = try TempFolders.existingFolder(tempFolderId: requiredString(payload, "tempFolderId"))
+        let folder = try FileOps.walk(temporary, names, create: false, created: &created)
+        return ["entries": try FileOps.listDirectory(folder)]
     }
 
     /**
      Imports the project folder JavaScript points at: a picked folder ({ uri })
-     or a folder inside a staging folder ({ stagingId, path }). fileRenames are
+     or a folder inside a temporary folder ({ tempFolderId, path }). fileRenames are
      applied to the copy's files/ only.
      */
     private func importProjectFolder(_ payload: [String: Any]) throws -> [String: Any] {
         var renames: [(from: String, to: String)] = []
         for item in payload["fileRenames"] as? [[String: Any]] ?? [] {
             let names = [try requiredString(item, "from"), try requiredString(item, "to")]
-            for name in names where try ImportStaging.segments(of: name).count != 1 {
-                throw ProjectImportError("importFailed", "A file rename needs plain names: \(name)")
+            for name in names where try TempFolders.segments(of: name).count != 1 {
+                throw CodedError("importFailed", "A file rename needs plain names: \(name)")
             }
             renames.append((names[0], names[1]))
         }
@@ -2153,8 +2153,8 @@ final class RouteVNViewController: UIViewController, WKNavigationDelegate, WKScr
                 isStaged: false
             )
         }
-        let folder = try ImportStaging.resolve(
-            stagingId: requiredString(payload, "stagingId"),
+        let folder = try TempFolders.resolve(
+            tempFolderId: requiredString(payload, "tempFolderId"),
             path: requiredString(payload, "path")
         )
         return try importAccessibleProjectFolder(
@@ -2188,16 +2188,16 @@ final class RouteVNViewController: UIViewController, WKNavigationDelegate, WKScr
             let projectDbURL = folderURL.appendingPathComponent("project.db")
             let sourceFilesURL = folderURL.appendingPathComponent("files")
             guard FileManager.default.fileExists(atPath: projectDbURL.path) else {
-                throw ProjectImportError("importFailed", "Selected folder is missing project.db.")
+                throw CodedError("importFailed", "Selected folder is missing project.db.")
             }
             // copyItem keeps a symlink as a symlink, so a linked files folder
             // would make the renames touch the original assets.
-            let sourceFilesType = ImportFiles.fileType(sourceFilesURL)
+            let sourceFilesType = FileOps.fileType(sourceFilesURL)
             if sourceFilesType == nil && !isStaged {
-                throw ProjectImportError("importFailed", "Selected folder is missing files.")
+                throw CodedError("importFailed", "Selected folder is missing files.")
             }
             if let sourceFilesType, sourceFilesType != mode_t(S_IFDIR) {
-                throw ProjectImportError("importFailed", "Selected folder's files is not a regular folder.")
+                throw CodedError("importFailed", "Selected folder's files is not a regular folder.")
             }
 
             let projectInfo = try readProjectInfo(databaseURL: projectDbURL)
@@ -2223,12 +2223,12 @@ final class RouteVNViewController: UIViewController, WKNavigationDelegate, WKScr
                 // imports made by older builds. Anything else at the id's
                 // location (the user's own folder or file named like the id)
                 // is never removed: the import stops instead.
-                if ImportFiles.fileType(targetProjectRoot) != nil {
+                if FileOps.fileType(targetProjectRoot) != nil {
                     let isLeftover = storage.isUnfinishedImport(projectId: projectId, directory: targetProjectRoot) { database in
                         (try? readProjectInfo(databaseURL: database)).map { stringValue($0["id"]) }
                     }
                     guard isLeftover else {
-                        throw ProjectImportError("importFailed", "An item in the library already uses this project's id and was not changed.")
+                        throw CodedError("importFailed", "An item in the library already uses this project's id and was not changed.")
                     }
                     try FileManager.default.removeItem(at: targetProjectRoot)
                 }
@@ -2259,7 +2259,7 @@ final class RouteVNViewController: UIViewController, WKNavigationDelegate, WKScr
                         try FileManager.default.createDirectory(at: targetMetadataURL, withIntermediateDirectories: false)
                     }
 
-                    try ImportFiles.rename(fileRenames, in: targetFilesURL)
+                    try FileOps.rename(fileRenames, in: targetFilesURL)
                 } catch {
                     // Any failure while building the copy (a full disk, a name
                     // conflict) removes the partial project. Left behind, a
@@ -2323,11 +2323,11 @@ final class RouteVNViewController: UIViewController, WKNavigationDelegate, WKScr
      importFailed.
      */
     private func codedImportError(_ error: Error) -> Error {
-        if error is ProjectImportError {
+        if error is CodedError {
             return error
         }
         let detail = (error as? LocalizedError)?.errorDescription ?? String(describing: error)
-        return ProjectImportError("importFailed", detail)
+        return CodedError("importFailed", detail)
     }
 
     private func exportProjectFolder(projectId: String, destinationUriString: String) throws -> [String: Any] {

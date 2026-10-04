@@ -451,7 +451,7 @@ const iosImportPayload = () => ({
 const ANDROID = {
   label: "android",
   bridge: mocked.androidBridge,
-  progressCallback: "__routeVNAndroidProjectImportProgress",
+  progressCallback: "__routeVNAndroidTransferProgress",
   createAppService: createAndroidAppService,
   // Android's storage step answers with the project id the app chose.
   storeProject: (payload) => ({
@@ -466,7 +466,7 @@ const ANDROID = {
 const IOS = {
   label: "ios",
   bridge: mocked.iosBridge,
-  progressCallback: "__routeVNIOSProjectImportProgress",
+  progressCallback: "__routeVNIOSTransferProgress",
   createAppService: createIOSAppService,
   storeProject: iosImportPayload,
   finishOptions: undefined,
@@ -483,22 +483,22 @@ const mockMobileNative = (
   { entries = PROJECT_ZIP_ENTRIES, folders = {}, answers = {} } = {},
 ) => {
   const { bridge, progressCallback } = platform;
-  const report = (stagingId, current, total) => {
-    window[progressCallback]({ stagingId, current, total });
+  const report = (tempFolderId, current, total) => {
+    window[progressCallback]({ tempFolderId, current, total });
   };
   const handlers = {
-    createImportStaging: () => ({ stagingId: "staging-one" }),
-    removeImportStaging: () => ({}),
-    downloadImportFile: (payload) => {
+    createTempFolder: () => ({ tempFolderId: "staging-one" }),
+    removeTempFolder: () => ({}),
+    downloadFile: (payload) => {
       report("someone-else", 1, 9);
-      report(payload.stagingId, 0, 10);
-      report(payload.stagingId, 10, 10);
+      report(payload.tempFolderId, 0, 10);
+      report(payload.tempFolderId, 10, 10);
       return { finalUrl: payload.url, bytes: 10 };
     },
     copyImportFile: () => ({ bytes: 10 }),
     listImportArchive: () => ({ entries }),
     extractImportArchive: (payload) => {
-      report(payload.stagingId, 5, 18);
+      report(payload.tempFolderId, 5, 18);
       return { files: PLANNED_FILES.length, bytes: 18 };
     },
     listImportDirectory: (payload) => ({
@@ -532,38 +532,38 @@ describe.each([ANDROID, IOS])("$label project import adapters", (platform) => {
     });
 
     expect(methodsOf(calls)).toEqual([
-      "createImportStaging",
+      "createTempFolder",
       "copyImportFile",
       "listImportArchive",
       "extractImportArchive",
       "importProjectFolder",
-      "removeImportStaging",
+      "removeTempFolder",
     ]);
     expect(calls[1].payload).toEqual({
-      stagingId: "staging-one",
+      tempFolderId: "staging-one",
       uri: "content://archives/project-one.zip",
       path: "archive.zip",
       maxBytes: 4 * GIB,
     });
     expect(calls[3].payload).toEqual({
-      stagingId: "staging-one",
+      tempFolderId: "staging-one",
       path: "archive.zip",
       destination: "extracted",
       files: PLANNED_FILES,
       maxBytes: 8 * GIB,
     });
     expect(calls[4].payload).toMatchObject({
-      stagingId: "staging-one",
+      tempFolderId: "staging-one",
       path: "extracted",
     });
     // Android never times out the storage step of a large project.
     expect(calls[4].options).toEqual(platform.finishOptions);
-    expect(calls[5].payload).toEqual({ stagingId: "staging-one" });
+    expect(calls[5].payload).toEqual({ tempFolderId: "staging-one" });
     expect(project.name).toBe("Project One");
     expect((await db.get("projectEntries"))[0].name).toBe("Project One");
   });
 
-  it("downloads a URL, registers the project and forwards progress for its own staging folder only", async () => {
+  it("downloads a URL, registers the project and forwards progress for its own temporary folder only", async () => {
     const db = createDb();
     const calls = mockMobileNative(platform);
     const events = [];
@@ -574,16 +574,16 @@ describe.each([ANDROID, IOS])("$label project import adapters", (platform) => {
     });
 
     expect(methodsOf(calls)).toEqual([
-      "createImportStaging",
-      "downloadImportFile",
+      "createTempFolder",
+      "downloadFile",
       "listImportArchive",
       "extractImportArchive",
       "importProjectFolder",
-      "removeImportStaging",
+      "removeTempFolder",
     ]);
     expect(await db.get("projectEntries")).toHaveLength(1);
     expect(calls[1].payload).toEqual({
-      stagingId: "staging-one",
+      tempFolderId: "staging-one",
       url: "https://example.com/project-one.zip",
       path: "archive.zip",
       maxBytes: 4 * GIB,
@@ -634,7 +634,7 @@ describe("mobile project import failures", () => {
     [
       "the download fails",
       {
-        downloadImportFile: () => {
+        downloadFile: () => {
           throw new Error("downloadFailed: HTTP 500");
         },
       },
@@ -665,12 +665,12 @@ describe("mobile project import failures", () => {
       ).rejects.toThrow(error);
       onProgress.mockClear();
       window[ANDROID.progressCallback]({
-        stagingId: "staging-one",
+        tempFolderId: "staging-one",
         current: 1,
         total: 2,
       });
 
-      expect(methodsOf(calls).at(-1)).toBe("removeImportStaging");
+      expect(methodsOf(calls).at(-1)).toBe("removeTempFolder");
       expect(onProgress).not.toHaveBeenCalled();
       expect(await db.get("projectEntries")).toEqual([]);
     },
@@ -679,7 +679,7 @@ describe("mobile project import failures", () => {
   it("does not fail the import when the staging cleanup fails", async () => {
     mockMobileNative(ANDROID, {
       answers: {
-        removeImportStaging: () => {
+        removeTempFolder: () => {
           throw new Error("cannot delete");
         },
       },

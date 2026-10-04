@@ -3,18 +3,18 @@
 // bridge call; `noTimeout` is set for calls that may outlive the default
 // response timeout, such as a large download on a slow connection (the native
 // side bounds those calls itself). `progressClient` delivers native progress
-// events for a staging folder.
+// events for a temporary folder.
 export const createMobileProjectImportHost = ({
   callBridge,
   progressClient,
 }) => {
   const callWithProgress = async ({
-    stagingId,
+    tempFolderId,
     method,
     payload,
     onProgress,
   }) => {
-    const unsubscribe = progressClient.subscribe({ stagingId, onProgress });
+    const unsubscribe = progressClient.subscribe({ tempFolderId, onProgress });
     try {
       return await callBridge(method, payload, { noTimeout: true });
     } finally {
@@ -23,30 +23,30 @@ export const createMobileProjectImportHost = ({
   };
 
   return {
-    createStaging: () => callBridge("createImportStaging"),
+    createStaging: () => callBridge("createTempFolder"),
 
-    removeStaging: async ({ stagingId }) => {
-      await callBridge("removeImportStaging", { stagingId });
+    removeStaging: async ({ tempFolderId }) => {
+      await callBridge("removeTempFolder", { tempFolderId });
     },
 
-    download: ({ stagingId }, { url, path, maxBytes, onProgress }) =>
+    download: ({ tempFolderId }, { url, path, maxBytes, onProgress }) =>
       callWithProgress({
-        stagingId,
-        method: "downloadImportFile",
-        payload: { stagingId, url, path, maxBytes },
+        tempFolderId,
+        method: "downloadFile",
+        payload: { tempFolderId, url, path, maxBytes },
         onProgress,
       }),
 
-    copyFile: ({ stagingId }, { uri, path, maxBytes }) =>
+    copyFile: ({ tempFolderId }, { uri, path, maxBytes }) =>
       callBridge(
         "copyImportFile",
-        { stagingId, uri, path, maxBytes },
+        { tempFolderId, uri, path, maxBytes },
         { noTimeout: true },
       ),
 
-    listArchive: async ({ stagingId }, { path, maxEntries }) => {
+    listArchive: async ({ tempFolderId }, { path, maxEntries }) => {
       const result = await callBridge("listImportArchive", {
-        stagingId,
+        tempFolderId,
         path,
         maxEntries,
       });
@@ -54,21 +54,21 @@ export const createMobileProjectImportHost = ({
     },
 
     extractArchive: (
-      { stagingId },
+      { tempFolderId },
       { path, destination, files, maxBytes, onProgress },
     ) =>
       callWithProgress({
-        stagingId,
+        tempFolderId,
         method: "extractImportArchive",
-        payload: { stagingId, path, destination, files, maxBytes },
+        payload: { tempFolderId, path, destination, files, maxBytes },
         onProgress,
       }),
 
-    // `source` is `{ stagingId }` for a staged folder or `{ uri }` for a picked
+    // `source` is `{ tempFolderId }` for a staged folder or `{ uri }` for a picked
     // folder; `path` is relative to it.
     listDirectory: async (source, path) => {
       const result = await callBridge("listImportDirectory", {
-        stagingId: source.stagingId,
+        tempFolderId: source.tempFolderId,
         uri: source.uri,
         path,
       });

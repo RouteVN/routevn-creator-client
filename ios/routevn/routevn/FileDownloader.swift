@@ -1,15 +1,17 @@
 import Foundation
 
 /**
- Streams one URL into a NEW file; nothing is held in memory. Only https URLs
- are accepted (http for localhost, 127.0.0.1 and [::1]), without credentials.
- Redirects are followed by hand, at most five times, and every hop passes the
- same check. URLSession has no separate connect timeout, so the single 30 s
- idle interval covers connecting and stalls; there is no overall deadline
- because a large file can make steady progress for longer. The partial file is
- deleted on every failure.
+ Streams one URL into a NEW file; it knows nothing about what is downloaded and
+ nothing is held in memory. Only https URLs are accepted (http for localhost,
+ 127.0.0.1 and [::1]), without credentials. Redirects are followed by hand, at
+ most five times, and every hop passes the same check. URLSession has no
+ separate connect timeout, so the single 30 s idle interval covers connecting
+ and stalls; there is no overall deadline because a large file can make steady
+ progress for longer. The bytes are saved as the server sends them and the
+ partial file is deleted on every failure. Errors are invalidUrl,
+ downloadFailed, tooLarge and writeFailed.
  */
-final class ImportDownloader: NSObject, URLSessionDataDelegate {
+final class FileDownloader: NSObject, URLSessionDataDelegate {
     struct Result {
         let finalUrl: String
         let contentDisposition: String?
@@ -20,16 +22,16 @@ final class ImportDownloader: NSObject, URLSessionDataDelegate {
     private static let idleTimeout: TimeInterval = 30
 
     private let maxBytes: UInt64
-    private let progress: ImportProgress?
+    private let progress: TransferProgress?
     private let lock = NSLock()
     private var finished = DispatchSemaphore(value: 0)
     private var response: HTTPURLResponse?
     private var transportError: Error?
-    private var failure: ProjectImportError?
+    private var failure: CodedError?
     private var output: FileHandle?
     private var written: UInt64 = 0
 
-    init(maxBytes: UInt64, progress: ImportProgress? = nil) {
+    init(maxBytes: UInt64, progress: TransferProgress? = nil) {
         self.maxBytes = maxBytes
         self.progress = progress
     }
@@ -40,17 +42,17 @@ final class ImportDownloader: NSObject, URLSessionDataDelegate {
             let url = URL(string: spec.trimmingCharacters(in: .whitespacesAndNewlines)),
             let scheme = url.scheme?.lowercased()
         else {
-            throw ProjectImportError("invalidUrl", "URL cannot be parsed.")
+            throw CodedError("invalidUrl", "URL cannot be parsed.")
         }
         guard url.user == nil, url.password == nil else {
-            throw ProjectImportError("invalidUrl", "URL must not contain credentials.")
+            throw CodedError("invalidUrl", "URL must not contain credentials.")
         }
         guard let host = url.host?.lowercased(), !host.isEmpty else {
-            throw ProjectImportError("invalidUrl", "URL is missing a host.")
+            throw CodedError("invalidUrl", "URL is missing a host.")
         }
         let isLoopback = ["localhost", "127.0.0.1", "::1", "[::1]"].contains(host)
         guard scheme == "https" || (scheme == "http" && isLoopback) else {
-            throw ProjectImportError("invalidUrl", "Only https URLs (or http on localhost) are allowed.")
+            throw CodedError("invalidUrl", "Only https URLs (or http on localhost) are allowed.")
         }
         return url
     }
@@ -58,7 +60,7 @@ final class ImportDownloader: NSObject, URLSessionDataDelegate {
     /// Downloads to `destination`, which must not exist yet.
     func download(url spec: String, to destination: URL) throws -> Result {
         var url = try Self.validate(spec)
-        let handle = try ImportFiles.createExclusive(destination)
+        let handle = try FileOps.createExclusive(destination)
         lock.lock()
         output = handle
         lock.unlock()
@@ -94,11 +96,11 @@ final class ImportDownloader: NSObject, URLSessionDataDelegate {
                         .trimmingCharacters(in: .whitespacesAndNewlines),
                     let next = URL(string: location, relativeTo: url)?.absoluteURL
                 else {
-                    throw ProjectImportError("downloadFailed", "HTTP \(status)")
+                    throw CodedError("downloadFailed", "HTTP \(status)")
                 }
                 redirects += 1
                 guard redirects <= Self.maxRedirects else {
-                    throw ProjectImportError("downloadFailed", "Too many redirects.")
+                    throw CodedError("downloadFailed", "Too many redirects.")
                 }
                 url = try Self.validate(next.absoluteString)
             }
@@ -122,6 +124,8 @@ final class ImportDownloader: NSObject, URLSessionDataDelegate {
 
         var request = URLRequest(url: url)
         request.setValue("*/*", forHTTPHeaderField: "Accept")
+        // The bytes are saved as the server sends them, on every platform.
+        request.setValue("identity", forHTTPHeaderField: "Accept-Encoding")
         session.dataTask(with: request).resume()
         done.wait()
 
@@ -132,10 +136,10 @@ final class ImportDownloader: NSObject, URLSessionDataDelegate {
         }
         guard let response else {
             let reason = transportError?.localizedDescription ?? "The URL did not return an HTTP response."
-            throw ProjectImportError("downloadFailed", "Network error: \(reason)")
+            throw CodedError("downloadFailed", "Network error: \(reason)")
         }
         if (200..<300).contains(response.statusCode), let transportError {
-            throw ProjectImportError("downloadFailed", "Network error: \(transportError.localizedDescription)")
+            throw CodedError("downloadFailed", "Network error: \(transportError.localizedDescription)")
         }
         return response
     }
@@ -168,7 +172,7 @@ final class ImportDownloader: NSObject, URLSessionDataDelegate {
         let length = http.expectedContentLength > 0 ? UInt64(http.expectedContentLength) : 0
         let isSuccess = (200..<300).contains(http.statusCode)
         if isSuccess && length > maxBytes {
-            failure = ProjectImportError("archiveTooLarge", "Download is larger than \(maxBytes) bytes.")
+            failure = CodedError("tooLarge", "Download is larger than \(maxBytes) bytes.")
         }
         let proceed = isSuccess && failure == nil
         lock.unlock()
@@ -190,7 +194,7 @@ final class ImportDownloader: NSObject, URLSessionDataDelegate {
         }
         written += UInt64(data.count)
         if written > maxBytes {
-            failure = ProjectImportError("archiveTooLarge", "Download is larger than \(maxBytes) bytes.")
+            failure = CodedError("tooLarge", "Download is larger than \(maxBytes) bytes.")
         } else {
             do {
                 // The throwing API: the legacy write(_:) raises an uncatchable
@@ -198,7 +202,7 @@ final class ImportDownloader: NSObject, URLSessionDataDelegate {
                 try output.write(contentsOf: data)
                 progress?.update(current: written)
             } catch {
-                failure = ProjectImportError("importFailed", "Cannot write the download: \(error.localizedDescription)")
+                failure = CodedError("writeFailed", "Cannot write the download: \(error.localizedDescription)")
             }
         }
         if failure != nil {

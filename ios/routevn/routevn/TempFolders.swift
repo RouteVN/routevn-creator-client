@@ -2,76 +2,57 @@ import Foundation
 import Darwin
 
 /**
- Import failure whose message is always "<code>: <detail>". The code is one of
- invalidUrl, downloadFailed, archiveTooLarge, invalidArchive,
- unsafeArchiveEntry or importFailed; JavaScript maps it to a localized message.
+ Native-owned temporary folders, addressed by an opaque UUID:
+ tmp/project-import/<tempFolderId>/. JavaScript decides what goes inside; every
+ path it passes is relative to its temporary folder and validated here.
  */
-struct ProjectImportError: LocalizedError {
-    let code: String
-    let detail: String
-
-    init(_ code: String, _ detail: String = "") {
-        self.code = code
-        self.detail = detail
-    }
-
-    var errorDescription: String? {
-        detail.isEmpty ? code : "\(code): \(detail)"
-    }
-}
-
-/**
- Native-owned temporary folders for imports, addressed by an opaque UUID:
- tmp/project-import/<stagingId>/. JavaScript decides what goes inside; every
- path it passes is relative to the staging folder and validated here.
- */
-enum ImportStaging {
+enum TempFolders {
     private static let maxAge: TimeInterval = 24 * 60 * 60
 
     static var root: URL {
         FileManager.default.temporaryDirectory.appendingPathComponent("project-import", isDirectory: true)
     }
 
-    /// Creates a staging folder after removing the ones older than 24 hours.
+    /// Creates a temporary folder after removing the ones older than 24 hours.
     static func create() throws -> String {
         sweep()
-        let stagingId = UUID().uuidString
+        let tempFolderId = UUID().uuidString
         do {
             try FileManager.default.createDirectory(
-                at: root.appendingPathComponent(stagingId, isDirectory: true),
+                at: root.appendingPathComponent(tempFolderId, isDirectory: true),
                 withIntermediateDirectories: true
             )
         } catch {
-            throw ProjectImportError("importFailed", "Cannot create the import folder: \(error.localizedDescription)")
+            throw CodedError("importFailed", "Cannot create the temporary folder: \(error.localizedDescription)")
         }
-        return stagingId
+        return tempFolderId
     }
 
-    /// Deletes a staging folder recursively. A folder that is already gone is fine.
-    static func remove(stagingId: String) throws {
-        let folder = try folderURL(stagingId: stagingId)
-        guard ImportFiles.fileType(folder) != nil else {
+    /// Deletes a temporary folder recursively. A folder that is already gone is fine.
+    static func remove(tempFolderId: String) throws {
+        let folder = try folderURL(tempFolderId: tempFolderId)
+        guard FileOps.fileType(folder) != nil else {
             return
         }
         do {
             try FileManager.default.removeItem(at: folder)
         } catch {
-            throw ProjectImportError("importFailed", "Cannot remove the import folder: \(error.localizedDescription)")
+            throw CodedError("importFailed", "Cannot remove the temporary folder: \(error.localizedDescription)")
         }
     }
 
-    /// The staging folder itself; it must exist.
-    static func existingFolder(stagingId: String) throws -> URL {
-        let folder = try folderURL(stagingId: stagingId)
-        guard ImportFiles.fileType(folder) == mode_t(S_IFDIR) else {
-            throw ProjectImportError("importFailed", "The import folder does not exist.")
+    /// The temporary folder itself; it must exist.
+    static func existingFolder(tempFolderId: String) throws -> URL {
+        let folder = try folderURL(tempFolderId: tempFolderId)
+        guard FileOps.fileType(folder) == mode_t(S_IFDIR) else {
+            throw CodedError("importFailed", "The temporary folder does not exist.")
         }
         return folder
     }
 
-    /// A location inside a staging folder. The location itself may not exist yet.
-    static func resolve(stagingId: String, path: String) throws -> URL {
-        var url = try existingFolder(stagingId: stagingId)
+    /// A location inside a temporary folder. The location itself may not exist yet.
+    static func resolve(tempFolderId: String, path: String) throws -> URL {
+        var url = try existingFolder(tempFolderId: tempFolderId)
         for segment in try segments(of: path) {
             url.appendPathComponent(segment)
         }
@@ -79,11 +60,11 @@ enum ImportStaging {
     }
 
     /// Like resolve, for a file that is about to be created: missing parent folders are created.
-    static func resolveNewFile(stagingId: String, path: String) throws -> URL {
+    static func resolveNewFile(tempFolderId: String, path: String) throws -> URL {
         let names = try segments(of: path)
         var created: [URL] = []
-        let parent = try ImportFiles.walk(
-            try existingFolder(stagingId: stagingId),
+        let parent = try FileOps.walk(
+            try existingFolder(tempFolderId: tempFolderId),
             Array(names.dropLast()),
             create: true,
             created: &created
@@ -101,16 +82,16 @@ enum ImportStaging {
         let isUnsafe = path.unicodeScalars.contains { $0 == "\0" || $0 == "\\" || $0 == ":" }
             || names.contains { $0.isEmpty || $0 == "." || $0 == ".." }
         if isUnsafe {
-            throw ProjectImportError(code, "Unsafe path: \(path)")
+            throw CodedError(code, "Unsafe path: \(path)")
         }
         return names
     }
 
-    private static func folderURL(stagingId: String) throws -> URL {
-        guard UUID(uuidString: stagingId) != nil else {
-            throw ProjectImportError("importFailed", "Invalid staging id.")
+    private static func folderURL(tempFolderId: String) throws -> URL {
+        guard UUID(uuidString: tempFolderId) != nil else {
+            throw CodedError("importFailed", "Invalid temporary folder id.")
         }
-        return root.appendingPathComponent(stagingId, isDirectory: true)
+        return root.appendingPathComponent(tempFolderId, isDirectory: true)
     }
 
     private static func sweep() {
@@ -131,8 +112,8 @@ enum ImportStaging {
     }
 }
 
-/// Small filesystem operations shared by the import bridge methods.
-enum ImportFiles {
+/// Small filesystem operations shared by the bridge methods.
+enum FileOps {
     /// The lstat file type (S_IFDIR, S_IFLNK, ...), or nil when nothing is there.
     static func fileType(_ url: URL) -> mode_t? {
         var info = stat()
@@ -147,7 +128,7 @@ enum ImportFiles {
         let descriptor = open(url.path, O_WRONLY | O_CREAT | O_EXCL | O_NOFOLLOW, mode_t(0o600))
         guard descriptor >= 0 else {
             let reason = errno == EEXIST ? "it already exists" : String(cString: strerror(errno))
-            throw ProjectImportError("importFailed", "Cannot create \(url.lastPathComponent): \(reason)")
+            throw CodedError("writeFailed", "Cannot create \(url.lastPathComponent): \(reason)")
         }
         return FileHandle(fileDescriptor: descriptor, closeOnDealloc: true)
     }
@@ -165,16 +146,16 @@ enum ImportFiles {
             case mode_t(S_IFDIR):
                 continue
             case mode_t(S_IFLNK):
-                throw ProjectImportError("unsafeArchiveEntry", "Folder is a symbolic link: \(name)")
+                throw CodedError("unsafeArchiveEntry", "Folder is a symbolic link: \(name)")
             case nil where create:
                 guard mkdir(url.path, mode_t(0o700)) == 0 else {
-                    throw ProjectImportError("importFailed", "Cannot create folder \(name): \(String(cString: strerror(errno)))")
+                    throw CodedError("importFailed", "Cannot create folder \(name): \(String(cString: strerror(errno)))")
                 }
                 created.append(url)
             case nil:
-                throw ProjectImportError("importFailed", "Folder not found: \(name)")
+                throw CodedError("importFailed", "Folder not found: \(name)")
             default:
-                throw ProjectImportError("importFailed", "Not a folder: \(name)")
+                throw CodedError("importFailed", "Not a folder: \(name)")
             }
         }
         return url
@@ -183,13 +164,13 @@ enum ImportFiles {
     /// Copies a file into a NEW file with a size limit. The partial copy is removed on failure.
     static func copy(from source: URL, to destination: URL, maxBytes: UInt64) throws -> UInt64 {
         if let size = (try? source.resourceValues(forKeys: [.fileSizeKey]))?.fileSize, UInt64(size) > maxBytes {
-            throw ProjectImportError("archiveTooLarge", "The file is larger than \(maxBytes) bytes.")
+            throw CodedError("tooLarge", "The file is larger than \(maxBytes) bytes.")
         }
         let input: FileHandle
         do {
             input = try FileHandle(forReadingFrom: source)
         } catch {
-            throw ProjectImportError("importFailed", "Cannot read the selected file: \(error.localizedDescription)")
+            throw CodedError("importFailed", "Cannot read the selected file: \(error.localizedDescription)")
         }
         defer { try? input.close() }
         let output = try createExclusive(destination)
@@ -201,7 +182,7 @@ enum ImportFiles {
             while let chunk = try input.read(upToCount: 256 * 1024), !chunk.isEmpty {
                 total += UInt64(chunk.count)
                 if total > maxBytes {
-                    throw ProjectImportError("archiveTooLarge", "The file is larger than \(maxBytes) bytes.")
+                    throw CodedError("tooLarge", "The file is larger than \(maxBytes) bytes.")
                 }
                 try output.write(contentsOf: chunk)
             }
@@ -246,54 +227,12 @@ enum ImportFiles {
             let source = directory.appendingPathComponent(rename.from)
             let target = directory.appendingPathComponent(rename.to)
             guard fileType(source) != nil else {
-                throw ProjectImportError("importFailed", "Cannot rename \(rename.from): it does not exist.")
+                throw CodedError("importFailed", "Cannot rename \(rename.from): it does not exist.")
             }
             guard fileType(target) == nil else {
-                throw ProjectImportError("importFailed", "Cannot rename \(rename.from) to \(rename.to): the name is taken.")
+                throw CodedError("importFailed", "Cannot rename \(rename.from) to \(rename.to): the name is taken.")
             }
             try FileManager.default.moveItem(at: source, to: target)
         }
-    }
-}
-
-/**
- Sends { current, total } to the delivery closure: the first event is sent by
- start (current 0), events in between at most once per 100 ms, and finish
- always sends. Delivery is fire and forget, so it can never fail an import.
- */
-final class ImportProgress {
-    private let deliver: (_ current: UInt64, _ total: UInt64) -> Void
-    private let lock = NSLock()
-    private var total: UInt64 = 0
-    private var lastEventAt: TimeInterval = 0
-
-    init(deliver: @escaping (_ current: UInt64, _ total: UInt64) -> Void) {
-        self.deliver = deliver
-    }
-
-    func start(total: UInt64 = 0) {
-        send(current: 0, total: total, force: true)
-    }
-
-    func update(current: UInt64) {
-        send(current: current, total: nil, force: false)
-    }
-
-    func finish(current: UInt64) {
-        send(current: current, total: nil, force: true)
-    }
-
-    private func send(current: UInt64, total newTotal: UInt64?, force: Bool) {
-        lock.lock()
-        defer { lock.unlock() }
-        if let newTotal {
-            total = newTotal
-        }
-        let now = ProcessInfo.processInfo.systemUptime
-        guard force || now - lastEventAt >= 0.1 else {
-            return
-        }
-        lastEventAt = now
-        deliver(current, total)
     }
 }

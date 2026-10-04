@@ -12,6 +12,8 @@ mod discord_presence {
 }
 mod client_update;
 #[cfg(any(target_os = "windows", target_os = "macos", target_os = "linux"))]
+mod download;
+#[cfg(any(target_os = "windows", target_os = "macos", target_os = "linux"))]
 mod error_reporting;
 mod export_macos;
 mod export_windows;
@@ -22,11 +24,8 @@ mod macos_fullscreen_escape;
 #[cfg(any(target_os = "windows", target_os = "macos", target_os = "linux"))]
 mod project_import;
 #[cfg(not(any(target_os = "windows", target_os = "macos", target_os = "linux")))]
-mod project_import {
+mod download {
     use serde_json::Value;
-
-    const UNAVAILABLE: &str =
-        "importFailed: project import commands are unavailable on this platform";
 
     #[tauri::command]
     pub async fn download_file(
@@ -35,8 +34,15 @@ mod project_import {
         _max_bytes: u64,
         _on_progress: tauri::ipc::Channel<Value>,
     ) -> Result<Value, String> {
-        Err(UNAVAILABLE.to_string())
+        Err("downloadFailed: downloads are unavailable on this platform".to_string())
     }
+}
+#[cfg(not(any(target_os = "windows", target_os = "macos", target_os = "linux")))]
+mod project_import {
+    use serde_json::Value;
+
+    const UNAVAILABLE: &str =
+        "importFailed: project import commands are unavailable on this platform";
 
     #[tauri::command]
     pub async fn list_archive(_archive: String, _max_entries: u64) -> Result<Value, String> {
@@ -124,7 +130,7 @@ pub fn run() {
             linux_desktop_integration::get_linux_appimage_desktop_integration_status,
             linux_desktop_integration::install_linux_appimage_desktop_integration,
             linux_desktop_integration::restart_linux_appimage_from_desktop_integration,
-            project_import::download_file,
+            download::download_file,
             project_import::list_archive,
             project_import::extract_archive,
             project_media_server::get_project_media_server_origin,

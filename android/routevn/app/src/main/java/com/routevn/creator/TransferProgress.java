@@ -7,24 +7,24 @@ import java.util.function.LongSupplier;
  * delivered, later ones at most once per {@link #MIN_INTERVAL_MS}, and
  * {@link #finish} always. A failing sink never affects the call.
  */
-final class ImportProgress {
+final class TransferProgress {
     interface Sink {
         void emit(long current, long total) throws Exception;
     }
 
     static final long MIN_INTERVAL_MS = 100;
-    static final ImportProgress NONE = new ImportProgress((current, total) -> {});
+    static final TransferProgress NONE = new TransferProgress((current, total) -> {});
 
     private final Sink sink;
     private final LongSupplier clockMillis;
     private boolean sentAny;
     private long lastEmitMillis;
 
-    ImportProgress(Sink sink) {
+    TransferProgress(Sink sink) {
         this(sink, () -> System.nanoTime() / 1_000_000L);
     }
 
-    ImportProgress(Sink sink, LongSupplier clockMillis) {
+    TransferProgress(Sink sink, LongSupplier clockMillis) {
         this.sink = sink;
         this.clockMillis = clockMillis;
     }

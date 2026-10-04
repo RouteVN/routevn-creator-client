@@ -16,12 +16,12 @@ final class ImportProject {
      * {@code source} into the new {@code workDir}; a missing files/ or
      * file-metadata/ becomes an empty folder. Nothing else in the source moves.
      */
-    static void moveProject(File source, File workDir) throws ProjectImportException {
+    static void moveProject(File source, File workDir) throws CodedException {
         if (!new File(source, "project.db").isFile()) {
-            throw new ProjectImportException("invalidArchive", "Project folder has no project.db.");
+            throw new CodedException("invalidArchive", "Project folder has no project.db.");
         }
         if (!workDir.mkdirs()) {
-            throw new ProjectImportException("importFailed", "Cannot create the import work folder.");
+            throw new CodedException("importFailed", "Cannot create the import work folder.");
         }
         for (String suffix : new String[] { "", "-wal", "-shm", "-journal" }) {
             File sidecar = new File(source, "project.db" + suffix);
@@ -35,9 +35,9 @@ final class ImportProject {
             if (folder.isDirectory()) {
                 move(folder, target);
             } else if (folder.exists()) {
-                throw new ProjectImportException("invalidArchive", name + " is not a folder.");
+                throw new CodedException("invalidArchive", name + " is not a folder.");
             } else if (!target.mkdir()) {
-                throw new ProjectImportException("importFailed", "Cannot create " + name + ".");
+                throw new CodedException("importFailed", "Cannot create " + name + ".");
             }
         }
     }
@@ -47,30 +47,30 @@ final class ImportProject {
      * {@code from} must exist and each {@code to} must not; nothing is overwritten.
      */
     static void applyRenames(File filesDirectory, List<String[]> renames)
-        throws ProjectImportException {
+        throws CodedException {
         for (String[] rename : renames) {
             File from = plainChild(filesDirectory, rename[0]);
             File to = plainChild(filesDirectory, rename[1]);
             if (!from.exists()) {
-                throw new ProjectImportException("importFailed", "Cannot rename " + rename[0] + ": it does not exist.");
+                throw new CodedException("importFailed", "Cannot rename " + rename[0] + ": it does not exist.");
             }
-            if (to.exists() || ImportStaging.isSymlink(to)) {
-                throw new ProjectImportException("importFailed", "Cannot rename to " + rename[1] + ": it already exists.");
+            if (to.exists() || TempFolders.isSymlink(to)) {
+                throw new CodedException("importFailed", "Cannot rename to " + rename[1] + ": it already exists.");
             }
             move(from, to);
         }
     }
 
-    private static File plainChild(File directory, String name) throws ProjectImportException {
-        if (name == null || name.indexOf('/') >= 0 || !ImportStaging.isSafePath(name)) {
-            throw new ProjectImportException("importFailed", "Invalid file name: " + name);
+    private static File plainChild(File directory, String name) throws CodedException {
+        if (name == null || name.indexOf('/') >= 0 || !TempFolders.isSafePath(name)) {
+            throw new CodedException("importFailed", "Invalid file name: " + name);
         }
         return new File(directory, name);
     }
 
-    private static void move(File from, File to) throws ProjectImportException {
+    private static void move(File from, File to) throws CodedException {
         if (!from.renameTo(to)) {
-            throw new ProjectImportException("importFailed", "Cannot move " + from.getName() + ".");
+            throw new CodedException("importFailed", "Cannot move " + from.getName() + ".");
         }
     }
 }

@@ -9,11 +9,13 @@ const IMPORT_ERROR_COPY_KEYS = {
   googleDriveFailed: "googleDriveImportFailed",
   downloadFailed: "failedImportDownload",
   archiveTooLarge: "importArchiveTooLarge",
+  tooLarge: "importArchiveTooLarge",
   invalidArchive: "invalidImportArchive",
   unsafeArchiveEntry: "unsafeImportArchiveEntry",
   invalidFileName: "invalidImportFileName",
   fileNameConflict: "importFileNameConflict",
   projectExists: "importProjectExists",
+  writeFailed: "failedImportProject",
   importFailed: "failedImportProject",
 };
 

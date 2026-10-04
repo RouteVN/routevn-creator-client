@@ -1170,6 +1170,11 @@ describe("projects import source choice", () => {
       "The project archive is too large to import.",
     ],
     [
+      "tooLarge",
+      "tooLarge: download passed the limit of 4294967296 bytes",
+      "The project archive is too large to import.",
+    ],
+    [
       "invalidArchive",
       "invalidArchive: not a zip file",
       "This archive is not a valid RouteVN project export.",
@@ -1189,6 +1194,7 @@ describe("projects import source choice", () => {
       "fileNameConflict: abc.png and abc.jpg both map to abc",
       "The project contains files that resolve to the same name.",
     ],
+    ["writeFailed", "writeFailed: cannot create out.zip", IMPORT_FAILED],
     ["importFailed", "importFailed: rename rolled back", IMPORT_FAILED],
     ["unknown code", "Something else went wrong", IMPORT_FAILED],
   ])(

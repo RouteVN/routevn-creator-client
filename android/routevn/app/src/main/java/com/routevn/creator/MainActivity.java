@@ -1244,9 +1244,9 @@ public class MainActivity extends Activity {
             }
 
             switch (method) {
-                case "createImportStaging":
-                case "removeImportStaging":
-                case "downloadImportFile":
+                case "createTempFolder":
+                case "removeTempFolder":
+                case "downloadFile":
                 case "copyImportFile":
                 case "listImportArchive":
                 case "extractImportArchive":
@@ -1839,7 +1839,7 @@ public class MainActivity extends Activity {
                     MainActivity.this.importProjectFolder(new JSONObject(payloadJson))
                 );
             } catch (Throwable error) {
-                return bridgeFailure(ProjectImportException.of(error));
+                return bridgeFailure(CodedException.of(error));
             }
         }
 
@@ -3414,43 +3414,43 @@ public class MainActivity extends Activity {
         return new File(getCacheDir(), "project-import");
     }
 
-    private ImportStaging importStaging() {
-        return new ImportStaging(importRoot());
+    private TempFolders tempFolders() {
+        return new TempFolders(importRoot());
     }
 
-    private ImportProgress importProgress(String stagingId) {
-        return new ImportProgress((current, total) -> {
+    private TransferProgress transferProgress(String tempFolderId) {
+        return new TransferProgress((current, total) -> {
             JSONObject event = new JSONObject();
-            event.put("stagingId", stagingId);
+            event.put("tempFolderId", tempFolderId);
             event.put("current", current);
             event.put("total", total);
-            sendAndroidProjectImportProgress(event);
+            sendAndroidTransferProgress(event);
         });
     }
 
     /**
      * The native import operations. JavaScript decides what to download,
      * extract and rename; native only moves bytes and keeps paths inside the
-     * staging folder. Every failure message is "<code>: <detail>".
+     * temporary folder. Every failure message is "<code>: <detail>".
      */
     private String runImportMethod(String method, JSONObject payload) {
         try {
             JSONObject result = new JSONObject();
-            ImportStaging staging = importStaging();
-            String stagingId = payload.optString("stagingId");
+            TempFolders folders = tempFolders();
+            String tempFolderId = payload.optString("tempFolderId");
             switch (method) {
-                case "createImportStaging":
-                    result.put("stagingId", staging.create());
+                case "createTempFolder":
+                    result.put("tempFolderId", folders.create());
                     break;
-                case "removeImportStaging":
-                    staging.remove(stagingId);
+                case "removeTempFolder":
+                    folders.remove(tempFolderId);
                     break;
-                case "downloadImportFile": {
-                    ImportDownloader.Result download = new ImportDownloader().download(
+                case "downloadFile": {
+                    FileDownloader.Result download = new FileDownloader().download(
                         payload.getString("url"),
-                        staging.resolve(stagingId, payload.getString("path")),
+                        folders.resolve(tempFolderId, payload.getString("path")),
                         payload.getLong("maxBytes"),
-                        importProgress(stagingId)
+                        transferProgress(tempFolderId)
                     );
                     result.put("finalUrl", download.finalUrl);
                     if (download.contentDisposition != null) {
@@ -3460,15 +3460,15 @@ public class MainActivity extends Activity {
                     break;
                 }
                 case "copyImportFile": {
-                    File destination = staging.resolve(stagingId, payload.getString("path"));
+                    File destination = folders.resolve(tempFolderId, payload.getString("path"));
                     Uri uri = Uri.parse(payload.getString("uri"));
                     try (InputStream input = getContentResolver().openInputStream(uri)) {
                         if (input == null) {
-                            throw new ProjectImportException("importFailed", "Cannot read the selected file.");
+                            throw new CodedException("importFailed", "Cannot read the selected file.");
                         }
                         result.put(
                             "bytes",
-                            ImportStaging.copy(input, destination, payload.getLong("maxBytes"))
+                            TempFolders.copy(input, destination, payload.getLong("maxBytes"))
                         );
                     }
                     break;
@@ -3476,7 +3476,7 @@ public class MainActivity extends Activity {
                 case "listImportArchive": {
                     JSONArray entries = new JSONArray();
                     for (ImportArchive.Entry entry : ImportArchive.list(
-                        staging.resolve(stagingId, payload.getString("path")),
+                        folders.resolve(tempFolderId, payload.getString("path")),
                         payload.getInt("maxEntries")
                     )) {
                         entries.put(new JSONObject()
@@ -3497,11 +3497,11 @@ public class MainActivity extends Activity {
                     result.put(
                         "bytes",
                         ImportArchive.extract(
-                            staging.resolve(stagingId, payload.getString("path")),
-                            staging.resolveDirectory(stagingId, payload.optString("destination")),
+                            folders.resolve(tempFolderId, payload.getString("path")),
+                            folders.resolveDirectory(tempFolderId, payload.optString("destination")),
                             items,
                             payload.getLong("maxBytes"),
-                            importProgress(stagingId)
+                            transferProgress(tempFolderId)
                         )
                     );
                     result.put("files", items.size());
@@ -3509,11 +3509,11 @@ public class MainActivity extends Activity {
                 }
                 case "listImportDirectory": {
                     String path = payload.optString("path");
-                    List<ImportStaging.Child> children = !payload.isNull("stagingId")
-                        ? ImportStaging.list(staging.resolveDirectory(stagingId, path))
+                    List<TempFolders.Child> children = !payload.isNull("tempFolderId")
+                        ? TempFolders.list(folders.resolveDirectory(tempFolderId, path))
                         : listPickedDirectory(payload.getString("uri"), path);
                     JSONArray entries = new JSONArray();
-                    for (ImportStaging.Child child : children) {
+                    for (TempFolders.Child child : children) {
                         entries.put(new JSONObject()
                             .put("name", child.name)
                             .put("kind", child.kind)
@@ -3527,29 +3527,29 @@ public class MainActivity extends Activity {
             }
             return bridgeSuccess(result);
         } catch (Throwable error) {
-            return bridgeFailure(ProjectImportException.of(error));
+            return bridgeFailure(CodedException.of(error));
         }
     }
 
     /** Lists a folder inside a picked tree uri; an empty path is the tree root. */
-    private List<ImportStaging.Child> listPickedDirectory(String treeUri, String path)
+    private List<TempFolders.Child> listPickedDirectory(String treeUri, String path)
         throws Exception {
         Uri directory = getTreeRootDocumentUri(Uri.parse(treeUri));
         if (!path.isEmpty()) {
-            if (!ImportStaging.isSafePath(path)) {
-                throw new ProjectImportException("importFailed", "Invalid folder path.");
+            if (!TempFolders.isSafePath(path)) {
+                throw new CodedException("importFailed", "Invalid folder path.");
             }
             for (String segment : path.split("/")) {
                 directory = findChildDocument(directory, segment, true);
                 if (directory == null) {
-                    throw new ProjectImportException("importFailed", "Folder not found.");
+                    throw new CodedException("importFailed", "Folder not found.");
                 }
             }
         }
-        List<ImportStaging.Child> children = new ArrayList<>();
+        List<TempFolders.Child> children = new ArrayList<>();
         forEachChildDocument(directory, (childUri, name, mimeType, size) -> {
             boolean isDirectory = DocumentsContract.Document.MIME_TYPE_DIR.equals(mimeType);
-            children.add(new ImportStaging.Child(name, isDirectory ? "directory" : "file", isDirectory ? 0 : size));
+            children.add(new TempFolders.Child(name, isDirectory ? "directory" : "file", isDirectory ? 0 : size));
             return false;
         });
         children.sort((a, b) -> a.name.compareTo(b.name));
@@ -3558,7 +3558,7 @@ public class MainActivity extends Activity {
 
     /**
      * Imports a project folder, either a picked folder ({uri}) or one that
-     * JavaScript prepared in a staging folder ({stagingId, path}), into app
+     * JavaScript prepared in a staging folder ({tempFolderId, path}), into app
      * storage under a new project id. fileRenames are applied to files/ first.
      */
     private JSONObject importProjectFolder(JSONObject payload) throws Exception {
@@ -3576,14 +3576,14 @@ public class MainActivity extends Activity {
         }
 
         File importWorkDir = new File(importRoot(), projectId);
-        ImportStaging.deleteRecursively(importWorkDir);
+        TempFolders.deleteRecursively(importWorkDir);
         try {
             String sourceUri = "";
             String sourceName = "";
-            if (!payload.isNull("stagingId")) {
+            if (!payload.isNull("tempFolderId")) {
                 ImportProject.moveProject(
-                    importStaging().resolveDirectory(
-                        payload.getString("stagingId"),
+                    tempFolders().resolveDirectory(
+                        payload.getString("tempFolderId"),
                         payload.optString("path")
                     ),
                     importWorkDir
@@ -3598,7 +3598,7 @@ public class MainActivity extends Activity {
             ImportProject.applyRenames(new File(importWorkDir, "files"), renames);
             return finalizeImportedProject(importWorkDir, projectId, sourceUri, sourceName);
         } finally {
-            ImportStaging.deleteRecursively(importWorkDir);
+            TempFolders.deleteRecursively(importWorkDir);
         }
     }
 
@@ -5451,16 +5451,16 @@ public class MainActivity extends Activity {
     }
 
     /**
-     * Delivers import progress {stagingId, current, total} to the optional JS
-     * callback window.__routeVNAndroidProjectImportProgress.
+     * Delivers import progress {tempFolderId, current, total} to the optional JS
+     * callback window.__routeVNAndroidTransferProgress.
      */
-    private void sendAndroidProjectImportProgress(JSONObject event) {
+    private void sendAndroidTransferProgress(JSONObject event) {
         mainHandler.post(() -> {
             if (webView == null) {
                 return;
             }
             webView.evaluateJavascript(
-                "(function(event){if(window.__routeVNAndroidProjectImportProgress){window.__routeVNAndroidProjectImportProgress(event);}})(" +
+                "(function(event){if(window.__routeVNAndroidTransferProgress){window.__routeVNAndroidTransferProgress(event);}})(" +
                 event.toString() +
                 ");",
                 null

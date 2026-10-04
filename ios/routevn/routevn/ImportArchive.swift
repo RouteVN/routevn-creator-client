@@ -36,7 +36,7 @@ enum ImportArchive {
         to root: URL,
         files: [(entry: String, path: String)],
         maxBytes: UInt64,
-        progress: ImportProgress?
+        progress: TransferProgress?
     ) throws -> (files: Int, bytes: UInt64) {
         let (archive, declared) = try openArchive(archiveURL, maxEntries: entryLimit)
         let wanted = Set(files.map(\.entry))
@@ -46,7 +46,7 @@ enum ImportArchive {
             seen += 1
             guard wanted.contains(entry.path) else { continue }
             guard found.updateValue(entry, forKey: entry.path) == nil else {
-                throw ProjectImportError("invalidArchive", "The zip has several entries named \(entry.path).")
+                throw CodedError("invalidArchive", "The zip has several entries named \(entry.path).")
             }
         }
         try checkComplete(seen, declared)
@@ -56,23 +56,23 @@ enum ImportArchive {
         var destinations = Set<String>()
         var total: UInt64 = 0
         for file in files {
-            let names = try ImportStaging.segments(of: file.path, code: "unsafeArchiveEntry")
+            let names = try TempFolders.segments(of: file.path, code: "unsafeArchiveEntry")
             guard root.appendingPathComponent(file.path).isContained(in: root) else {
-                throw ProjectImportError("unsafeArchiveEntry", "Unsafe destination: \(file.path)")
+                throw CodedError("unsafeArchiveEntry", "Unsafe destination: \(file.path)")
             }
             let key = file.path.precomposedStringWithCanonicalMapping.lowercased()
             guard destinations.insert(key).inserted else {
-                throw ProjectImportError("invalidArchive", "Two entries extract to \(file.path).")
+                throw CodedError("invalidArchive", "Two entries extract to \(file.path).")
             }
             guard let entry = found[file.entry] else {
-                throw ProjectImportError("invalidArchive", "The zip has no entry named \(file.entry).")
+                throw CodedError("invalidArchive", "The zip has no entry named \(file.entry).")
             }
             if entry.type == .symlink {
-                throw ProjectImportError("unsafeArchiveEntry", "Entry is a symbolic link: \(file.entry)")
+                throw CodedError("unsafeArchiveEntry", "Entry is a symbolic link: \(file.entry)")
             }
             let (sum, overflow) = total.addingReportingOverflow(entry.uncompressedSize)
             guard !overflow, sum <= maxBytes else {
-                throw ProjectImportError("archiveTooLarge", "The entries expand beyond \(maxBytes) bytes.")
+                throw CodedError("tooLarge", "The entries expand beyond \(maxBytes) bytes.")
             }
             total = sum
             plan.append((entry, names))
@@ -81,7 +81,7 @@ enum ImportArchive {
         // The topmost folder this call creates, so a failure can remove all of it.
         var topmost: URL?
         var probe = root
-        while ImportFiles.fileType(probe) == nil {
+        while FileOps.fileType(probe) == nil {
             topmost = probe
             probe = probe.deletingLastPathComponent()
         }
@@ -89,18 +89,18 @@ enum ImportArchive {
         var written: UInt64 = 0
         do {
             try FileManager.default.createDirectory(at: root, withIntermediateDirectories: true)
-            guard ImportFiles.fileType(root) == mode_t(S_IFDIR) else {
-                throw ProjectImportError("importFailed", "The destination is not a folder.")
+            guard FileOps.fileType(root) == mode_t(S_IFDIR) else {
+                throw CodedError("importFailed", "The destination is not a folder.")
             }
             progress?.start(total: total)
             for item in plan {
                 if item.entry.type == .directory {
-                    _ = try ImportFiles.walk(root, item.names, create: true, created: &created)
+                    _ = try FileOps.walk(root, item.names, create: true, created: &created)
                     continue
                 }
-                let parent = try ImportFiles.walk(root, Array(item.names.dropLast()), create: true, created: &created)
+                let parent = try FileOps.walk(root, Array(item.names.dropLast()), create: true, created: &created)
                 let target = parent.appendingPathComponent(item.names[item.names.count - 1])
-                let output = try ImportFiles.createExclusive(target)
+                let output = try FileOps.createExclusive(target)
                 created.append(target)
                 try write(item.entry, from: archive, to: output, written: &written, maxBytes: maxBytes, progress: progress)
             }
@@ -120,14 +120,14 @@ enum ImportArchive {
 
     /// Opens the zip after checkStructure, with the number of entries it declares.
     private static func openArchive(_ url: URL, maxEntries: Int) throws -> (archive: Archive, declared: Int) {
-        guard ImportFiles.fileType(url) == mode_t(S_IFREG) else {
-            throw ProjectImportError("importFailed", "The archive file does not exist.")
+        guard FileOps.fileType(url) == mode_t(S_IFREG) else {
+            throw CodedError("importFailed", "The archive file does not exist.")
         }
         let declared = try checkStructure(url, maxEntries: maxEntries)
         do {
             return (try Archive(url: url, accessMode: .read), declared)
         } catch {
-            throw ProjectImportError("invalidArchive", "The file is not a readable zip.")
+            throw CodedError("invalidArchive", "The file is not a readable zip.")
         }
     }
 
@@ -135,7 +135,7 @@ enum ImportArchive {
     /// read, such as an encrypted one, so a short list means a damaged zip.
     private static func checkComplete(_ seen: Int, _ declared: Int) throws {
         guard seen == declared else {
-            throw ProjectImportError("invalidArchive", "Incomplete entry list: read \(seen) of \(declared) entries.")
+            throw CodedError("invalidArchive", "Incomplete entry list: read \(seen) of \(declared) entries.")
         }
     }
 
@@ -160,14 +160,14 @@ enum ImportArchive {
        stay inside the file or within Int64.
      */
     private static func checkStructure(_ url: URL, maxEntries: Int) throws -> Int {
-        func invalid(_ detail: String) -> ProjectImportError {
-            ProjectImportError("invalidArchive", detail)
+        func invalid(_ detail: String) -> CodedError {
+            CodedError("invalidArchive", detail)
         }
         let file: FileHandle
         do {
             file = try FileHandle(forReadingFrom: url)
         } catch {
-            throw ProjectImportError("importFailed", "Cannot read the archive: \(error.localizedDescription)")
+            throw CodedError("importFailed", "Cannot read the archive: \(error.localizedDescription)")
         }
         defer { try? file.close() }
         func read(at offset: UInt64, count: Int) throws -> [UInt8] {
@@ -297,7 +297,7 @@ enum ImportArchive {
     /// The little-endian unsigned integer of `width` bytes at `at`.
     private static func uint(_ bytes: [UInt8], _ at: Int, _ width: Int) throws -> UInt64 {
         guard at >= 0, width <= 8, at <= bytes.count - width else {
-            throw ProjectImportError("invalidArchive", "The zip is truncated.")
+            throw CodedError("invalidArchive", "The zip is truncated.")
         }
         var value: UInt64 = 0
         for index in (at..<at + width).reversed() {
@@ -313,7 +313,7 @@ enum ImportArchive {
         to output: FileHandle,
         written: inout UInt64,
         maxBytes: UInt64,
-        progress: ImportProgress?
+        progress: TransferProgress?
     ) throws {
         defer { try? output.close() }
         var entryBytes: UInt64 = 0
@@ -327,35 +327,35 @@ enum ImportArchive {
                 // reading empty chunks up to the size in the central directory.
                 chunks += 1
                 if data.isEmpty, !entry.isCompressed, chunks > 1 {
-                    throw ProjectImportError("invalidArchive", "Entry data ends early: \(entry.path)")
+                    throw CodedError("invalidArchive", "Entry data ends early: \(entry.path)")
                 }
                 entryBytes += UInt64(data.count)
                 total += UInt64(data.count)
                 guard total <= maxBytes else {
-                    throw ProjectImportError("archiveTooLarge", "The entries expand beyond \(maxBytes) bytes.")
+                    throw CodedError("tooLarge", "The entries expand beyond \(maxBytes) bytes.")
                 }
                 guard entryBytes <= entry.uncompressedSize else {
-                    throw ProjectImportError("invalidArchive", "Entry is larger than declared: \(entry.path)")
+                    throw CodedError("invalidArchive", "Entry is larger than declared: \(entry.path)")
                 }
                 do {
                     // The throwing API: the legacy write(_:) raises an uncatchable
                     // Objective-C exception when the disk is full.
                     try output.write(contentsOf: data)
                 } catch {
-                    throw ProjectImportError("importFailed", "Cannot write \(entry.path): \(error.localizedDescription)")
+                    throw CodedError("importFailed", "Cannot write \(entry.path): \(error.localizedDescription)")
                 }
                 progress?.update(current: total)
             }
-        } catch let error as ProjectImportError {
+        } catch let error as CodedError {
             throw error
         } catch {
-            throw ProjectImportError("invalidArchive", "Entry is unreadable: \(entry.path)")
+            throw CodedError("invalidArchive", "Entry is unreadable: \(entry.path)")
         }
         guard entryBytes == entry.uncompressedSize else {
-            throw ProjectImportError("invalidArchive", "Size mismatch for \(entry.path): \(entryBytes) of \(entry.uncompressedSize) bytes.")
+            throw CodedError("invalidArchive", "Size mismatch for \(entry.path): \(entryBytes) of \(entry.uncompressedSize) bytes.")
         }
         guard checksum == entry.checksum else {
-            throw ProjectImportError("invalidArchive", "CRC32 mismatch for \(entry.path).")
+            throw CodedError("invalidArchive", "CRC32 mismatch for \(entry.path).")
         }
         written = total
     }

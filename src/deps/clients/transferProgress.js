@@ -1,8 +1,8 @@
-// Native import calls report progress through a window callback with
-// `{ stagingId, current, total }`. A subscription receives only the events of
-// its own staging folder, so a late event of an earlier import never moves the
-// current progress bar.
-export const createProjectImportProgressClient = ({ callbackName }) => {
+// Long native calls (a download, an archive extraction) report byte progress
+// through a window callback with `{ tempFolderId, current, total }`. A
+// subscription receives only the events of its own temporary folder, so a late
+// event of an earlier call never moves the current progress bar.
+export const createTransferProgressClient = ({ callbackName }) => {
   const listeners = new Set();
 
   const dispatch = (event) => {
@@ -16,13 +16,13 @@ export const createProjectImportProgressClient = ({ callbackName }) => {
   };
 
   return {
-    subscribe({ stagingId, onProgress } = {}) {
+    subscribe({ tempFolderId, onProgress } = {}) {
       if (typeof onProgress !== "function") {
         return () => {};
       }
 
       const listener = (event = {}) => {
-        if (event.stagingId !== stagingId) {
+        if (event.tempFolderId !== tempFolderId) {
           return;
         }
         onProgress({ current: event.current, total: event.total });

@@ -15,7 +15,7 @@ import org.junit.Rule;
 import org.junit.Test;
 import org.junit.rules.TemporaryFolder;
 
-public class ImportDownloaderTest {
+public class FileDownloaderTest {
     private static final long LIMIT = 1_000_000;
 
     private TestHttpServer server;
@@ -41,7 +41,7 @@ public class ImportDownloaderTest {
         return new File(folder.newFolder(), "archive.zip");
     }
 
-    private static void assertCode(String code, String detailPart, ProjectImportException error) {
+    private static void assertCode(String code, String detailPart, CodedException error) {
         assertEquals(code, error.code);
         assertTrue(error.getMessage(), error.getMessage().startsWith(code + ": "));
         if (detailPart != null) {
@@ -53,8 +53,8 @@ public class ImportDownloaderTest {
     private void assertDownloadFails(String code, String detailPart, String url, long maxBytes) throws IOException {
         File destination = destination();
         assertCode(code, detailPart, assertThrows(
-            ProjectImportException.class,
-            () -> new ImportDownloader().download(url, destination, maxBytes, ImportProgress.NONE)
+            CodedException.class,
+            () -> new FileDownloader().download(url, destination, maxBytes, TransferProgress.NONE)
         ));
         assertFalse(destination.exists());
     }
@@ -63,13 +63,13 @@ public class ImportDownloaderTest {
         for (String url : new String[] {
             "https://example.com/one.zip", "http://localhost:3001/one.zip", "http://[::1]:8080/one.zip",
         }) {
-            assertEquals(url, ImportDownloader.validateUrl(url).toString());
+            assertEquals(url, FileDownloader.validateUrl(url).toString());
         }
         for (String url : new String[] { "http://example.com/one.zip", "file:///tmp/one.zip", "https://", "not a url" }) {
             assertCode("invalidUrl", null, assertThrows(
                 "url accepted: " + url,
-                ProjectImportException.class,
-                () -> ImportDownloader.validateUrl(url)
+                CodedException.class,
+                () -> FileDownloader.validateUrl(url)
             ));
         }
     }
@@ -82,8 +82,8 @@ public class ImportDownloaderTest {
             : new TestHttpServer.Response(200, body, "Content-Disposition: " + header));
         File destination = destination();
 
-        ImportDownloader.Result result = new ImportDownloader()
-            .download(server.url("/redirect"), destination, LIMIT, ImportProgress.NONE);
+        FileDownloader.Result result = new FileDownloader()
+            .download(server.url("/redirect"), destination, LIMIT, TransferProgress.NONE);
 
         assertArrayEquals(body, Files.readAllBytes(destination.toPath()));
         assertEquals(body.length, result.bytes);
@@ -107,10 +107,10 @@ public class ImportDownloaderTest {
         });
         File destination = destination();
 
-        new ImportDownloader().download(server.url("/hop/0"), destination, LIMIT, ImportProgress.NONE);
+        new FileDownloader().download(server.url("/hop/0"), destination, LIMIT, TransferProgress.NONE);
 
         assertArrayEquals(body, Files.readAllBytes(destination.toPath()));
-        assertDownloadFails("invalidUrl", "redirects", server.url("/hop/-1"), LIMIT);
+        assertDownloadFails("downloadFailed", "redirects", server.url("/hop/-1"), LIMIT);
     }
 
     @Test public void urlsWithCredentialsFailBeforeAnythingIsCreated() throws Exception {
@@ -121,20 +121,33 @@ public class ImportDownloaderTest {
         server.setHandler(requestLine -> new TestHttpServer.Response(404, new byte[0]));
         File destination = destination();
         List<long[]> events = new ArrayList<>();
-        ImportProgress progress = new ImportProgress((current, total) -> events.add(new long[] { current, total }));
+        TransferProgress progress = new TransferProgress((current, total) -> events.add(new long[] { current, total }));
 
         assertCode("downloadFailed", "HTTP 404", assertThrows(
-            ProjectImportException.class,
-            () -> new ImportDownloader().download(server.url("/missing.zip"), destination, LIMIT, progress)
+            CodedException.class,
+            () -> new FileDownloader().download(server.url("/missing.zip"), destination, LIMIT, progress)
         ));
 
         assertFalse(destination.exists());
         assertTrue(events.isEmpty());
     }
 
+    @Test public void anExistingDestinationIsNeverOverwritten() throws Exception {
+        server.setHandler(requestLine -> TestHttpServer.Response.ok(bytes("new")));
+        File destination = destination();
+        Files.write(destination.toPath(), bytes("old"));
+
+        assertCode("writeFailed", "already exists", assertThrows(
+            CodedException.class,
+            () -> new FileDownloader().download(server.url("/a.zip"), destination, LIMIT, TransferProgress.NONE)
+        ));
+
+        assertArrayEquals(bytes("old"), Files.readAllBytes(destination.toPath()));
+    }
+
     @Test public void tooLargeADownloadFailsAndRemovesThePartialFile() throws Exception {
         server.setHandler(requestLine -> TestHttpServer.Response.ok(new byte[4096]));
-        assertDownloadFails("archiveTooLarge", null, server.url("/big.zip"), 1024);
+        assertDownloadFails("tooLarge", null, server.url("/big.zip"), 1024);
     }
 
     @Test public void reportsProgressFromZeroToTheFinalByteCount() throws Exception {
@@ -143,12 +156,12 @@ public class ImportDownloaderTest {
         AtomicLong clock = new AtomicLong();
         List<long[]> events = new ArrayList<>();
         // Every call is 100 ms after the last one, so nothing is throttled.
-        ImportProgress progress = new ImportProgress(
+        TransferProgress progress = new TransferProgress(
             (current, total) -> events.add(new long[] { current, total }),
-            () -> clock.addAndGet(ImportProgress.MIN_INTERVAL_MS)
+            () -> clock.addAndGet(TransferProgress.MIN_INTERVAL_MS)
         );
 
-        new ImportDownloader().download(server.url("/big.zip"), destination(), LIMIT, progress);
+        new FileDownloader().download(server.url("/big.zip"), destination(), LIMIT, progress);
 
         assertEquals(0, events.get(0)[0]);
         long previous = -1;

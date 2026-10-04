@@ -34,7 +34,7 @@ public class ImportProjectTest {
         return Arrays.asList(names);
     }
 
-    private static void assertCode(String code, ProjectImportException error) {
+    private static void assertCode(String code, CodedException error) {
         assertEquals(code, error.code);
         assertTrue(error.getMessage(), error.getMessage().startsWith(code + ": "));
     }
@@ -98,7 +98,7 @@ public class ImportProjectTest {
         }) {
             assertCode("importFailed", assertThrows(
                 Arrays.toString(rename),
-                ProjectImportException.class,
+                CodedException.class,
                 () -> ImportProject.applyRenames(files, Collections.singletonList(rename))
             ));
         }

@@ -49,7 +49,7 @@ final class ImportArchive {
     private ImportArchive() {}
 
     /** Raw entry names; invalidArchive when it is not a readable zip or has too many entries. */
-    static List<Entry> list(File zip, int maxEntries) throws ProjectImportException {
+    static List<Entry> list(File zip, int maxEntries) throws CodedException {
         try (ZipFile archive = new ZipFile(zip)) {
             if (archive.size() > maxEntries) {
                 throw invalid("Archive has more than " + maxEntries + " entries.");
@@ -74,12 +74,12 @@ final class ImportArchive {
         File destinationRoot,
         List<Item> items,
         long maxBytes,
-        ImportProgress progress
-    ) throws ProjectImportException {
+        TransferProgress progress
+    ) throws CodedException {
         Set<String> destinations = new HashSet<>();
         for (Item item : items) {
-            if (!ImportStaging.isSafePath(item.path)) {
-                throw new ProjectImportException(
+            if (!TempFolders.isSafePath(item.path)) {
+                throw new CodedException(
                     "unsafeArchiveEntry",
                     "Unsafe destination path: " + item.path
                 );
@@ -125,7 +125,7 @@ final class ImportArchive {
         } catch (ZipException error) {
             throw invalid("Cannot read the archive: " + error.getMessage());
         } catch (IOException | RuntimeException error) {
-            throw ProjectImportException.of(error);
+            throw CodedException.of(error);
         } finally {
             if (!done) {
                 removeCreated(created);
@@ -141,9 +141,9 @@ final class ImportArchive {
         long written,
         long total,
         long maxBytes,
-        ImportProgress progress,
+        TransferProgress progress,
         List<File> created
-    ) throws IOException, ProjectImportException {
+    ) throws IOException, CodedException {
         String[] segments = path.split("/");
         File parent = root;
         for (int index = 0; index < segments.length - 1; index += 1) {
@@ -157,7 +157,7 @@ final class ImportArchive {
 
         File target = new File(parent, name);
         if (!target.createNewFile()) {
-            throw new ProjectImportException("importFailed", "Destination already exists: " + path);
+            throw new CodedException("importFailed", "Destination already exists: " + path);
         }
         created.add(target);
         CRC32 crc = new CRC32();
@@ -170,8 +170,8 @@ final class ImportArchive {
             int read;
             while ((read = input.read(buffer)) != -1) {
                 if (written + count + read > maxBytes) {
-                    throw new ProjectImportException(
-                        "archiveTooLarge",
+                    throw new CodedException(
+                        "tooLarge",
                         "Archive expands past " + maxBytes + " bytes."
                     );
                 }
@@ -189,14 +189,14 @@ final class ImportArchive {
     }
 
     /** Creates {@code root} and any missing parents, returning its canonical file. */
-    private static File makeDirectories(File root, List<File> created) throws ProjectImportException, IOException {
+    private static File makeDirectories(File root, List<File> created) throws CodedException, IOException {
         List<File> missing = new ArrayList<>();
         for (File file = root; !file.exists(); file = file.getParentFile()) {
             missing.add(0, file);
         }
         for (File directory : missing) {
             if (!directory.mkdir()) {
-                throw new ProjectImportException("importFailed", "Cannot create the destination folder.");
+                throw new CodedException("importFailed", "Cannot create the destination folder.");
             }
             created.add(directory);
         }
@@ -205,17 +205,17 @@ final class ImportArchive {
 
     /** Returns parent/name as a real folder, creating it; a symlink or a file in the way fails. */
     private static File childDirectory(File parent, String name, List<File> created)
-        throws ProjectImportException {
+        throws CodedException {
         File directory = new File(parent, name);
-        if (ImportStaging.isSymlink(directory)) {
-            throw new ProjectImportException(
+        if (TempFolders.isSymlink(directory)) {
+            throw new CodedException(
                 "unsafeArchiveEntry",
                 "Destination folder is a symlink: " + name
             );
         }
         if (!directory.exists()) {
             if (!directory.mkdir()) {
-                throw new ProjectImportException("importFailed", "Cannot create the folder " + name + ".");
+                throw new CodedException("importFailed", "Cannot create the folder " + name + ".");
             }
             created.add(directory);
         } else if (!directory.isDirectory()) {
@@ -230,7 +230,7 @@ final class ImportArchive {
         }
     }
 
-    private static ProjectImportException invalid(String detail) {
-        return new ProjectImportException("invalidArchive", detail);
+    private static CodedException invalid(String detail) {
+        return new CodedException("invalidArchive", detail);
     }
 }

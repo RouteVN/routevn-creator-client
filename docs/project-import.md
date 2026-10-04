@@ -97,8 +97,8 @@ The URL is assumed to be a zip. `parseProjectImportUrl` (`src/internal/projectIm
 `https:` (`http:` only for `localhost`, `127.0.0.1`, `[::1]`) and rejects embedded credentials. Native code
 enforces the same rule on every hop: at most 5 redirects, each re-checked. Connect timeout 15 s and stalled
 read 30 s (iOS has one 30 s idle timeout); no overall deadline. The archive streams to a file and is never
-held in memory, and `Content-Type` is not trusted. Downloads run natively because most hosts send no CORS
-headers and a WebView fetch would buffer the whole archive.
+held in memory, and `Content-Type` is not trusted. Downloads run natively because a WebView `fetch` only works
+when the host sends CORS headers, and many do not (see **Native contract** for what the download does).
 
 **Google Drive.** Share links open a viewer page and old download links stop at a virus-scan page, so the URL
 check rewrites them (same result on every platform, idempotent):
@@ -113,7 +113,7 @@ must be shared as "Anyone with the link". When a Drive import ends in `invalidAr
 `downloadFailed`, the error is reported as `googleDriveFailed` with a message to check sharing and the
 download limit. This relies on Drive's public download endpoint, which is not a documented API.
 
-On Android the calls that move a lot of data (`downloadImportFile`, `copyImportFile`, `extractImportArchive`
+On Android the calls that move a lot of data (`downloadFile`, `copyImportFile`, `extractImportArchive`
 and the storage step, staged or picked) opt out of the bridge's 30-minute response timeout.
 
 ## Progress
@@ -133,8 +133,8 @@ which call it waits for, adds the stage and the `finishing` event, and passes `{
 the dialog. The first event is sent when the work starts (for a download, once headers arrive), events are
 throttled to one per 100 ms and the last is always sent. Progress is best effort: failing to deliver an
 event never changes the result. Desktop passes a Tauri `Channel` named `onProgress`; Android and iOS call
-`window.__routeVNAndroidProjectImportProgress` / `window.__routeVNIOSProjectImportProgress` with
-`{ stagingId, current, total }`, and JavaScript accepts only its own staging id. The listener lives for one
+`window.__routeVNAndroidTransferProgress` / `window.__routeVNIOSTransferProgress` with
+`{ tempFolderId, current, total }`, and JavaScript accepts only its own temporary folder id. The listener lives for one
 native call. Status text is in the `projectsPage` i18n catalogs (`import*Status`).
 
 ## Temporary data
@@ -145,8 +145,8 @@ Android and iOS also sweep staging folders older than 24 hours when a new one is
 | Platform | Staging folder (`archive.zip` and `extracted/`)                | Then                                                   |
 | -------- | -------------------------------------------------------------- | ------------------------------------------------------ |
 | Desktop  | `routevn-import-<random>` folder inside the chosen destination | `extracted/` is moved into place beside it             |
-| Android  | `cacheDir/project-import/<stagingId>/`                         | The payload is moved into `files/projects/<projectId>` |
-| iOS      | `tmp/project-import/<stagingId>/`                              | The payload is copied into the project library folder  |
+| Android  | `cacheDir/project-import/<tempFolderId>/`                      | The payload is moved into `files/projects/<projectId>` |
+| iOS      | `tmp/project-import/<tempFolderId>/`                           | The payload is copied into the project library folder  |
 
 The archive stays outside `extracted/`, so it can never end up inside a project. On desktop the staging folder
 is visible while the import runs (the fs plugin scope does not match leading-dot names) and stays if the app
@@ -186,11 +186,12 @@ detail; the client maps the code to a localized alert and appends the detail wit
 alert with their text as the detail (Tauri's `invoke` rejects with plain text; picked-desktop-folder checks, the
 project service and some storage-step errors are uncoded).
 
-Native code raises only `invalidUrl`, `downloadFailed`, `archiveTooLarge`, `invalidArchive`,
+Native code raises only `invalidUrl`, `downloadFailed`, `tooLarge`, `writeFailed`, `invalidArchive`,
 `unsafeArchiveEntry` and `importFailed`. JavaScript raises `invalidFileName`, `fileNameConflict` (Rule A),
-`unsupportedUrl`, `googleDriveFailed`, `projectExists` and the layout failures of the zip plan. A redirect loop
-is `downloadFailed` on desktop and iOS and `invalidUrl` on Android. Android and iOS report any storage-step
-failure as `importFailed`.
+`unsupportedUrl`, `googleDriveFailed`, `projectExists`, `archiveTooLarge` (the zip plan's size limit) and the
+layout failures of the zip plan. A redirect loop is `downloadFailed` on every platform. `tooLarge` and
+`archiveTooLarge` show the same message, and so do `writeFailed` and `importFailed`. Android and iOS report any
+storage-step failure as `importFailed`.
 
 ## Native contract
 
@@ -204,7 +205,17 @@ names the library folder, decides "already in the library" and removes an unfini
 `renameLegacyProjectFolder` for a hidden project; on Android a picked folder with the incomplete-export marker
 is rejected there. Picking a zip goes through the platform's `openArchivePicker`, outside this contract.
 
-Every native error message is `<code>: <detail>` using only the six native codes above.
+Every native error message is `<code>: <detail>` using only the seven native codes above.
+
+**The download is a general operation.** `download_file` / `downloadFile` is a plain GET of one URL into a new
+file. It knows nothing about projects, zips or Google Drive: link rewriting, the zip's meaning and the Drive
+error hint are JavaScript (`projectImportUrl.js`, `projectImportFlows.js`). Every caller gets the same rules: https
+only (http for loopback hosts), no credentials in the URL, at most 5 redirects with every hop checked again,
+15 s connect and 30 s stalled-read timeouts, `Accept-Encoding: identity` (the bytes are saved as sent), a
+`maxBytes` limit, a destination that must not exist (it is never overwritten) and the partial file removed on
+failure. It returns `{ finalUrl, contentDisposition?, bytes }` and reports `{ current, total }` progress. Its
+errors are `invalidUrl`, `downloadFailed` (network, a non-2xx status, redirect problems), `tooLarge` and
+`writeFailed`. It sends no request headers or cookies; a caller that needs them adds an optional argument.
 
 **Desktop (Tauri commands).** Paths are absolute. JavaScript creates, renames and removes folders with the Tauri
 fs plugin (`fs:allow-rename` is in `src-tauri/capabilities/default.json`); native code provides three commands:
@@ -215,20 +226,20 @@ fs plugin (`fs:allow-rename` is in `src-tauri/capabilities/default.json`); nativ
 | `list_archive`    | `archive`, `maxEntries`                                                                                    | `{ entries: [{ name, size, isDirectory }] }` |
 | `extract_archive` | `archive`, `destination` (existing folder), `files: [{ entry, path }]`, `maxBytes`, `onProgress` (Channel) | `{ files, bytes }`                           |
 
-**Android and iOS (bridge methods).** Same methods and payloads on both. A staging folder is native-owned and
-addressed by an opaque `stagingId`; every `path` is relative to it, and native rejects absolute paths and
+**Android and iOS (bridge methods).** Same methods and payloads on both. A temporary folder is native-owned and
+addressed by an opaque `tempFolderId`; every `path` is relative to it, and native rejects absolute paths and
 empty, `.` or `..` segments, backslash, `:` and NUL.
 
-| Method                 | Payload                                                                                        | Result                                                                                     |
-| ---------------------- | ---------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------ |
-| `createImportStaging`  | none                                                                                           | `{ stagingId }`; also removes staging older than 24 hours                                  |
-| `removeImportStaging`  | `stagingId`                                                                                    | `{}`; idempotent                                                                           |
-| `downloadImportFile`   | `stagingId`, `url`, `path`, `maxBytes`                                                         | `{ finalUrl, contentDisposition?, bytes }`; progress events                                |
-| `copyImportFile`       | `stagingId`, `uri` (picked file), `path`, `maxBytes`                                           | `{ bytes }`                                                                                |
-| `listImportArchive`    | `stagingId`, `path`, `maxEntries`                                                              | `{ entries: [{ name, size, isDirectory }] }`                                               |
-| `extractImportArchive` | `stagingId`, `path`, `destination`, `files: [{ entry, path }]`, `maxBytes`                     | `{ files, bytes }`; progress events                                                        |
-| `listImportDirectory`  | `{ stagingId, path }` or `{ uri, path }` (picked folder); an empty `path` is the folder itself | `{ entries: [{ name, kind, size }] }`, `kind` is `file`, `directory`, `symlink` or `other` |
-| `importProjectFolder`  | `{ stagingId, path }` or `{ uri }`, `projectId` (Android only), `fileRenames?: [{ from, to }]` | The registered project                                                                     |
+| Method                 | Payload                                                                                           | Result                                                                                     |
+| ---------------------- | ------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------ |
+| `createTempFolder`     | none                                                                                              | `{ tempFolderId }`; also removes temporary folders older than 24 hours                     |
+| `removeTempFolder`     | `tempFolderId`                                                                                    | `{}`; idempotent                                                                           |
+| `downloadFile`         | `tempFolderId`, `url`, `path`, `maxBytes`                                                         | `{ finalUrl, contentDisposition?, bytes }`; progress events                                |
+| `copyImportFile`       | `tempFolderId`, `uri` (picked file), `path`, `maxBytes`                                           | `{ bytes }`                                                                                |
+| `listImportArchive`    | `tempFolderId`, `path`, `maxEntries`                                                              | `{ entries: [{ name, size, isDirectory }] }`                                               |
+| `extractImportArchive` | `tempFolderId`, `path`, `destination`, `files: [{ entry, path }]`, `maxBytes`                     | `{ files, bytes }`; progress events                                                        |
+| `listImportDirectory`  | `{ tempFolderId, path }` or `{ uri, path }` (picked folder); an empty `path` is the folder itself | `{ entries: [{ name, kind, size }] }`, `kind` is `file`, `directory`, `symlink` or `other` |
+| `importProjectFolder`  | `{ tempFolderId, path }` or `{ uri }`, `projectId` (Android only), `fileRenames?: [{ from, to }]` | The registered project                                                                     |
 
 `importProjectFolder` copies or moves the project into app storage, restores the identity and reports it. For a
 staging source with no `files/` or `file-metadata/` the copy gets an empty one. It applies `fileRenames` to the
@@ -242,9 +253,9 @@ files directly inside the copy's `files/` (never overwriting) and does not decid
   `projectImportErrors.js`
 - Sequence and cleanup: `src/deps/services/shared/projectImportService.js`; platform hosts
   `src/deps/clients/tauri/projectImportHost.js`, `mobileProjectImportHost.js` and the Android/iOS wrappers;
-  progress listeners `src/deps/clients/projectImportProgress.js`
-- Desktop native: `src-tauri/src/project_import.rs`
-- Android native: `Import*.java` in `android/routevn/app/src/main/java/com/routevn/creator/` and the bridge methods
+  progress listeners `src/deps/clients/transferProgress.js`
+- Desktop native: `src-tauri/src/download.rs` (the download) and `src-tauri/src/project_import.rs` (zip list and extract)
+- Android native: `FileDownloader.java`, `TempFolders.java`, `TransferProgress.java`, `CodedException.java`, `ImportArchive.java` and `ImportProject.java` in `android/routevn/app/src/main/java/com/routevn/creator/` and the bridge methods
   in `MainActivity.java`
-- iOS native: `ImportStaging.swift`, `ImportDownloader.swift`, `ImportArchive.swift` (ZIPFoundation) and the bridge
+- iOS native: `FileDownloader.swift`, `TempFolders.swift`, `TransferProgress.swift`, `CodedError.swift`, `ImportArchive.swift` (ZIPFoundation) and the bridge
   methods in `RouteVNApp.swift`

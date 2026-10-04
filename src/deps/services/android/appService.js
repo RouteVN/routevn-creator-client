@@ -360,7 +360,7 @@ export const createAppService = (params) => {
     const importedProject = await run(({ staging, path }) =>
       callAndroidBridge(
         "importProjectFolder",
-        { stagingId: staging.stagingId, path, projectId },
+        { tempFolderId: staging.tempFolderId, path, projectId },
         { timeoutMs: NO_BRIDGE_TIMEOUT },
       ),
     );

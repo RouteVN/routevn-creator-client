@@ -155,8 +155,8 @@ final class ProjectStoragePaths {
     func isUnfinishedImport(projectId: String, directory: URL, databaseProjectId: (URL) -> String?) -> Bool {
         lock.lock()
         defer { lock.unlock() }
-        guard ImportFiles.fileType(directory) == mode_t(S_IFDIR),
-              ImportFiles.fileType(directory.appendingPathComponent("files")) == nil else {
+        guard FileOps.fileType(directory) == mode_t(S_IFDIR),
+              FileOps.fileType(directory.appendingPathComponent("files")) == nil else {
             return false
         }
         let identity: String?
@@ -170,7 +170,7 @@ final class ProjectStoragePaths {
         }
         let database = directory.appendingPathComponent("project.db")
         return directory.lastPathComponent == projectId
-            && ImportFiles.fileType(database) == mode_t(S_IFREG)
+            && FileOps.fileType(database) == mode_t(S_IFREG)
             && databaseProjectId(database) == projectId
     }
 
