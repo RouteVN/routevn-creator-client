@@ -443,6 +443,9 @@ These are transport and filesystem safety, so they stay native:
   through a small per-platform host in `src/deps/clients/<platform>/projectImportHost.js`.
 - Folder naming on desktop, and which error to show.
 
+Findings from the review that were not fixed in the first release are listed in
+`docs/project-import-followups.md`.
+
 ## Implementation map
 
 - UI flow: `src/pages/projects/` (progress dialog updates in `support/projectImportFlows.js`,
