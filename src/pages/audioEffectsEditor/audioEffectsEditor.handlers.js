@@ -3,6 +3,7 @@ import {
   getAudioEffectsEditorBackPath,
   resolveAudioEffectsEditorPayload,
 } from "../../internal/audioEffectsEditorRoute.js";
+import { resolveEditHistoryShortcut } from "../../internal/ui/editHistory.js";
 import { runResourcePageMutation } from "../../internal/ui/resourcePages/resourcePageErrors.js";
 import { AUDIO_EFFECT_PROPERTY_CONFIG } from "./audioEffectsEditor.constants.js";
 import {
@@ -38,6 +39,7 @@ const persistAudioEffect = async (deps, { notify = false } = {}) => {
     return true;
   }
 
+  const audioEffect = store.selectAudioEffectDefinition();
   store.setSaving({ saving: true });
   render();
   const updateAttempt = await runResourcePageMutation({
@@ -48,13 +50,13 @@ const persistAudioEffect = async (deps, { notify = false } = {}) => {
       projectService.updateAudioEffect({
         audioEffectId,
         data: {
-          audioEffect: store.selectAudioEffectDefinition(),
+          audioEffect,
         },
       }),
   });
   store.setSaving({ saving: false });
   if (updateAttempt.ok) {
-    store.markSaved();
+    store.markSaved({ definition: audioEffect });
     if (notify) {
       appService.showToast({
         message: copy.audioEffectSaved ?? "Audio effect saved.",
@@ -72,6 +74,12 @@ export const handleBeforeMount = (deps) => {
     type: "resize",
     listener: () => handleTimelineViewportResize(deps),
   });
+  const cleanupHistoryShortcuts = browserEventsClient.subscribeWindowEvent({
+    type: "keydown",
+    options: { capture: true },
+    listener: (event) =>
+      handleEditHistoryShortcutKeyDown(deps, { _event: event }),
+  });
   const unregisterBeforeNavigation = appService.registerBeforeNavigation(
     async () => {
       const saved = await persistAudioEffect(deps);
@@ -84,6 +92,7 @@ export const handleBeforeMount = (deps) => {
   return async () => {
     unregisterBeforeNavigation();
     cleanupWindowResize();
+    cleanupHistoryShortcuts();
     await stopAudioEffectPreview(deps);
     const saved = await persistAudioEffect(deps);
     if (!saved) {
@@ -116,6 +125,45 @@ export const handleAfterMount = async (deps) => {
   store.loadAudioEffect({ item });
   render();
   handleTimelineViewportResize(deps);
+};
+
+// Every edit to the audio effect ends here, so this is where it enters the
+// undo history.
+const commitAudioEffectEdit = (deps) => {
+  const { render, store } = deps;
+  store.recordAudioEffectEdit({
+    definition: store.selectAudioEffectDefinition(),
+    time: Date.now(),
+  });
+  render();
+};
+
+// Undo and redo behave like an edit: the page shows the restored audio
+// effect at once and saves it with its other edits when it leaves. An undo
+// back to the saved audio effect leaves nothing to save.
+const runAudioEffectHistoryStep = (deps, direction) => {
+  const { render, store } = deps;
+  if (!store.selectEditHistoryStep({ direction })) {
+    return;
+  }
+  store.applyEditHistoryStep({ direction });
+  render();
+};
+
+export const handleUndoButtonClick = (deps) =>
+  runAudioEffectHistoryStep(deps, "undo");
+
+export const handleRedoButtonClick = (deps) =>
+  runAudioEffectHistoryStep(deps, "redo");
+
+export const handleEditHistoryShortcutKeyDown = (deps, payload) => {
+  const event = payload._event;
+  const direction = resolveEditHistoryShortcut(event);
+  if (!direction) {
+    return;
+  }
+  event.preventDefault();
+  runAudioEffectHistoryStep(deps, direction);
 };
 
 export const handleBackClick = async (deps) => {
@@ -399,7 +447,7 @@ export const handleAddPropertyDialogClose = (deps) => {
 };
 
 export const handleAddPropertyFormAction = (deps, payload) => {
-  const { render, store } = deps;
+  const { store } = deps;
   const { actionId, values } = payload._event.detail;
   if (actionId !== "submit") {
     return;
@@ -408,11 +456,11 @@ export const handleAddPropertyFormAction = (deps, payload) => {
     property: values.property,
     side: store.selectAddPropertySide(),
   });
-  render();
+  commitAudioEffectEdit(deps);
 };
 
 export const handleRemovePropertyClick = (deps) => {
-  const { appService, render, store } = deps;
+  const { appService, store } = deps;
   const copy = selectCopy(deps);
   if (!store.selectViewData().canRemoveSelectedProperty) {
     appService.showAlert({
@@ -429,7 +477,7 @@ export const handleRemovePropertyClick = (deps) => {
     return;
   }
   store.removeAudioEffectProperty(selectedProperty);
-  render();
+  commitAudioEffectEdit(deps);
 };
 
 const openKeyframeForm = (
@@ -462,7 +510,7 @@ const openKeyframeForm = (
 };
 
 export const handleAddKeyframeFromTimeline = (deps, payload) => {
-  const { render, store } = deps;
+  const { store } = deps;
   const { delay, duration, followingDelay, index, property, side } =
     payload._event.detail;
   if (
@@ -494,7 +542,7 @@ export const handleAddKeyframeFromTimeline = (deps, payload) => {
     property,
     side,
   });
-  render();
+  commitAudioEffectEdit(deps);
 };
 
 export const handleKeyframeClick = (deps, payload) => {
@@ -574,7 +622,7 @@ export const handleKeyframeDropdownItemClick = (deps, payload) => {
   }
 
   store.closeKeyframeMenu();
-  render();
+  commitAudioEffectEdit(deps);
 };
 
 export const handleSelectedKeyframeEditClick = (deps) => {
@@ -611,7 +659,7 @@ export const handlePropertyNameClick = (deps, payload) => {
 };
 
 export const handleKeyframeDurationChange = (deps, payload) => {
-  const { render, store } = deps;
+  const { store } = deps;
   const { delay, duration, followingDelay, index, property, side } =
     payload._event.detail;
   store.updateKeyframeTiming({
@@ -622,7 +670,7 @@ export const handleKeyframeDurationChange = (deps, payload) => {
     followingDelay,
     side,
   });
-  render();
+  commitAudioEffectEdit(deps);
 };
 
 export const handleTimelineDurationExtend = (deps, payload) => {
@@ -639,33 +687,28 @@ const resolveValueChange = (payload) => {
   );
 };
 
-const commitSelectedKeyframeChange = (deps) => {
-  const { render } = deps;
-  render();
-};
-
 export const handleSelectedKeyframeDelayChange = (deps, payload) => {
   const { store } = deps;
   store.setSelectedKeyframeDelay({ delay: resolveValueChange(payload) });
-  commitSelectedKeyframeChange(deps);
+  commitAudioEffectEdit(deps);
 };
 
 export const handleSelectedKeyframeDurationChange = (deps, payload) => {
   const { store } = deps;
   store.setSelectedKeyframeDuration({ duration: resolveValueChange(payload) });
-  commitSelectedKeyframeChange(deps);
+  commitAudioEffectEdit(deps);
 };
 
 export const handleSelectedKeyframeEasingChange = (deps, payload) => {
   const { store } = deps;
   store.setSelectedKeyframeEasing({ easing: resolveValueChange(payload) });
-  commitSelectedKeyframeChange(deps);
+  commitAudioEffectEdit(deps);
 };
 
 export const handleSelectedKeyframeValueChange = (deps, payload) => {
   const { store } = deps;
   store.setSelectedKeyframeValue({ value: resolveValueChange(payload) });
-  commitSelectedKeyframeChange(deps);
+  commitAudioEffectEdit(deps);
 };
 
 export const handleSelectedKeyframeStartValueChange = (deps, payload) => {
@@ -673,13 +716,13 @@ export const handleSelectedKeyframeStartValueChange = (deps, payload) => {
   store.setSelectedKeyframeStartValue({
     startValue: resolveValueChange(payload),
   });
-  commitSelectedKeyframeChange(deps);
+  commitAudioEffectEdit(deps);
 };
 
 export const handleSelectedKeyframeRemoveStartValueClick = (deps) => {
   const { store } = deps;
   store.setSelectedKeyframeStartValue({ startValue: undefined });
-  commitSelectedKeyframeChange(deps);
+  commitAudioEffectEdit(deps);
 };
 
 export const handleSelectedKeyframeAddClick = (deps, payload) => {
@@ -697,7 +740,7 @@ export const handleSelectedKeyframeAddClick = (deps, payload) => {
 };
 
 export const handleSelectedKeyframeAddMenuItemClick = (deps, payload) => {
-  const { render, store } = deps;
+  const { store } = deps;
   if (payload._event.detail.item.value !== "start-value") {
     return;
   }
@@ -706,7 +749,7 @@ export const handleSelectedKeyframeAddMenuItemClick = (deps, payload) => {
     startValue: store.selectDefaultSelectedKeyframeStartValue(),
   });
   store.closeSelectedKeyframeAddMenu();
-  render();
+  commitAudioEffectEdit(deps);
 };
 
 export const handleSelectedKeyframeAddMenuClose = (deps) => {
@@ -718,23 +761,23 @@ export const handleSelectedKeyframeAddMenuClose = (deps) => {
 export const handleSelectedKeyframeRelativeChange = (deps, payload) => {
   const { store } = deps;
   store.setSelectedKeyframeRelative({ relative: resolveValueChange(payload) });
-  commitSelectedKeyframeChange(deps);
+  commitAudioEffectEdit(deps);
 };
 
 export const handleSelectedPropertyInitialValueChange = (deps, payload) => {
-  const { render, store } = deps;
+  const { store } = deps;
   store.setSelectedPropertyInitialValue({
     initialValue: resolveValueChange(payload),
   });
-  render();
+  commitAudioEffectEdit(deps);
 };
 
 export const handleSelectedPropertyValueSourceChange = (deps, payload) => {
-  const { render, store } = deps;
+  const { store } = deps;
   store.setSelectedPropertyValueSource({
     valueSource: resolveValueChange(payload),
   });
-  render();
+  commitAudioEffectEdit(deps);
 };
 
 export const handleKeyframeDialogClose = (deps) => {
@@ -744,7 +787,7 @@ export const handleKeyframeDialogClose = (deps) => {
 };
 
 export const handleKeyframeFormAction = (deps, payload) => {
-  const { appService, render, store } = deps;
+  const { appService, store } = deps;
   const copy = selectCopy(deps);
   const { actionId, values } = payload._event.detail;
   if (actionId === "delete") {
@@ -754,7 +797,7 @@ export const handleKeyframeFormAction = (deps, payload) => {
       index: store.selectSelectedKeyframe()?.index,
     });
     store.closeKeyframeDialog();
-    render();
+    commitAudioEffectEdit(deps);
     return;
   }
   if (actionId !== "submit") {
@@ -776,5 +819,5 @@ export const handleKeyframeFormAction = (deps, payload) => {
   }
 
   store.applyKeyframe({ keyframe: result.keyframe });
-  render();
+  commitAudioEffectEdit(deps);
 };
