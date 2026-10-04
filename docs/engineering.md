@@ -1260,7 +1260,9 @@ dirty afterwards, from typing during the save, takes the command's saved
 actions for its line, so the command shows at once and its step holds only its
 change. The shortcuts also work in the editor's own text, through
 `resolveEditHistoryShortcut`'s `textEditorTagName`; Lexical's own undo stays
-off. Touch mode has no undo buttons yet.
+off. On phones the keyboard toolbar has Undo, which keeps the keyboard open,
+and a More menu with Sections, Settings, and Redo; the menu closes the
+keyboard and follows the toolbar down.
 
 `rvn-mobile-sheet` is capped at 640px (the Projects page content width) and
 centered, so the bottom-tab sheets and every page's item detail sheet stay

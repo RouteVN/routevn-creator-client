@@ -30,7 +30,10 @@ describe("mobileKeyboardToolbar view", () => {
     );
 
     expect(view).toContain(
-      "rtgl-dropdown-menu#moreMenu :items=${moreMenuItems} ?open=${moreMenu.open} x=${moreMenu.x} y=${moreMenu.y} place=te",
+      "rtgl-dropdown-menu#moreMenu :items=${moreMenuItems} ?open=${moreMenu.open} x=${moreMenu.x} y=${moreMenu.y} place=te w=220 h=fit-content",
+    );
+    expect(view).toMatch(
+      /pointerdown:\n\s+handler: handleToolbarItemPointerDown\n\s+mousedown:\n\s+handler: handleToolbarItemMouseDown/,
     );
     expect(view).toMatch(
       /moreMenu:\n\s+eventListeners:\n\s+close:\n\s+handler: handleMoreMenuClose\n\s+item-click:\n\s+handler: handleMoreMenuItemClick/,

@@ -3,6 +3,8 @@ refs:
     eventListeners:
       pointerdown:
         handler: handleToolbarItemPointerDown
+      mousedown:
+        handler: handleToolbarItemMouseDown
       pointerup:
         handler: handleToolbarItemPointerUp
       pointercancel:
@@ -32,4 +34,4 @@ template:
               - 'rtgl-view#toolbarItem${i} data-action-id=${item.id} title="${item.title}" aria-label="${item.title}" aria-disabled="${item.disabled}" role=button w=${item.width} h=42 br=md av=c ah=c bgc=${item.bgColor} h-bgc=ac cur=pointer style="touch-action: none; user-select: none; -webkit-user-select: none; -webkit-touch-callout: none;"':
                   - 'rtgl-view op=${item.opacity} style="${item.iconStyle}"':
                       - rtgl-svg svg=${item.icon} wh=20 c=mu-fg: null
-  - 'rtgl-dropdown-menu#moreMenu :items=${moreMenuItems} ?open=${moreMenu.open} x=${moreMenu.x} y=${moreMenu.y} place=te aria-label="${moreMenuLabel}"': null
+  - 'rtgl-dropdown-menu#moreMenu :items=${moreMenuItems} ?open=${moreMenu.open} x=${moreMenu.x} y=${moreMenu.y} place=te w=220 h=fit-content aria-label="${moreMenuLabel}"': null

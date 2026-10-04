@@ -3,6 +3,7 @@ import { describe, expect, it, vi } from "vitest";
 import {
   handleMoreMenuItemClick,
   handleToolbarItemClick,
+  handleToolbarItemMouseDown,
   handleToolbarItemLostPointerCapture,
   handleToolbarItemPointerCancel,
   handleToolbarItemPointerDown,
@@ -217,6 +218,14 @@ describe("mobileKeyboardToolbar undo and More menu", () => {
       });
     return { restoreDomGlobals, field, deps, click };
   };
+
+  it("keeps the text focused through the mouse press a tap sends", () => {
+    const event = { preventDefault: vi.fn() };
+
+    handleToolbarItemMouseDown({}, { _event: event });
+
+    expect(event.preventDefault).toHaveBeenCalledOnce();
+  });
 
   it("undoes without closing the keyboard", () => {
     const { restoreDomGlobals, field, deps, click } = setUp("undo");

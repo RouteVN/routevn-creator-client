@@ -532,6 +532,13 @@ export const handleToolbarItemPointerDown = ({ store, render }, payload) => {
   startArrowRepeat(store, direction, event.pointerId);
 };
 
+// A tap also sends a mouse press after the touch, which would move focus off
+// the text and close the keyboard. Undo keeps the keyboard open; the other
+// actions close it themselves.
+export const handleToolbarItemMouseDown = (_deps, payload) => {
+  payload._event.preventDefault();
+};
+
 const stopToolbarPointerAction = ({ store, render }, payload) => {
   const event = payload._event;
   event.preventDefault();
