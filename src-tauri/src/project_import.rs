@@ -6,7 +6,7 @@
 use std::collections::HashSet;
 use std::fmt::Display;
 use std::fs::{self, File, OpenOptions};
-use std::io::{ErrorKind, Read, Write};
+use std::io::{ErrorKind, Read, Seek, SeekFrom, Write};
 use std::path::{Path, PathBuf};
 use std::time::{Duration, Instant};
 
@@ -24,6 +24,11 @@ const IMPORT_FAILED: &str = "importFailed";
 
 const MAX_REDIRECTS: u32 = 5;
 const PROGRESS_INTERVAL: Duration = Duration::from_millis(100);
+
+const MAX_ZIP_COMMENT_BYTES: u64 = 1024;
+const MAX_CENTRAL_DIRECTORY_BYTES: u64 = 64 * 1024 * 1024;
+const MAX_ENTRY_NAME_BYTES: u64 = 4096;
+const MAX_EXTRA_FIELDS_PER_ENTRY: u32 = 16;
 
 fn err(code: &str, detail: impl Display) -> String {
     format!("{code}: {detail}")
@@ -280,27 +285,298 @@ pub struct ArchiveListing {
     pub entries: Vec<ArchiveEntry>,
 }
 
-fn open_archive(archive: &Path) -> Result<zip::ZipArchive<File>, String> {
-    let file = File::open(archive).map_err(|error| {
+/// Where the central directory is, read from the records at the end of a zip.
+#[derive(Debug, PartialEq)]
+struct DirectoryLocation {
+    entries: u64,
+    start: u64,
+    size: u64,
+    /// Bytes in front of the zip data, such as a self-extractor stub.
+    archive_offset: u64,
+    end_record: u64,
+}
+
+/// Little-endian field of `width` bytes at `offset`; never panics.
+fn le(bytes: &[u8], offset: usize, width: usize) -> u64 {
+    bytes
+        .iter()
+        .skip(offset)
+        .take(width)
+        .rev()
+        .fold(0, |value, byte| value << 8 | u64::from(*byte))
+}
+
+/// Reads the end records from `tail`, the last bytes of a `file_len`-byte
+/// file. The last end-record signature in the file must be the end record,
+/// with its comment ending exactly at the end of the file, and the central
+/// directory must sit right in front of it (or in front of the zip64 end
+/// record), so no offset in the file is trusted to find it.
+fn locate_directory(
+    tail: &[u8],
+    file_len: u64,
+    max_entries: u64,
+) -> Result<DirectoryLocation, String> {
+    let invalid = |detail: String| err(INVALID_ARCHIVE, detail);
+    let eocd_at = tail
+        .windows(4)
+        .rposition(|window| window == b"PK\x05\x06")
+        .ok_or_else(|| invalid("end of central directory record not found".into()))?;
+    let eocd = tail.get(eocd_at..).unwrap_or_default();
+    let comment_len = le(eocd, 20, 2);
+    if eocd.len() < 22 || eocd.len() as u64 != 22 + comment_len {
+        return Err(invalid(
+            "end of central directory record does not end the file".into(),
+        ));
+    }
+    if comment_len > MAX_ZIP_COMMENT_BYTES {
+        return Err(invalid(format!(
+            "zip comment is {comment_len} bytes, limit is {MAX_ZIP_COMMENT_BYTES}"
+        )));
+    }
+    let eocd_pos = file_len
+        .saturating_sub(tail.len() as u64)
+        .saturating_add(eocd_at as u64);
+    let (mut entries, mut size, mut offset) = (le(eocd, 10, 2), le(eocd, 12, 4), le(eocd, 16, 4));
+    let mut end = eocd_pos;
+    let mut zip64_offset = None;
+    // Single-disk writers repeat the entry count in entries-on-this-disk,
+    // which is the count the zip crate reads from this record.
+    if le(eocd, 8, 2) != entries {
+        return Err(invalid("multi-disk archives are not supported".into()));
+    }
+    let has_locator = eocd_at
+        .checked_sub(20)
+        .and_then(|at| tail.get(at..))
+        .is_some_and(|bytes| bytes.starts_with(b"PK\x06\x07"));
+    if has_locator || entries == 0xFFFF || size == 0xFFFF_FFFF || offset == 0xFFFF_FFFF {
+        // A 56-byte zip64 end record, then the 20-byte locator, then the end record.
+        let (record, locator) = eocd_at
+            .checked_sub(76)
+            .and_then(|at| tail.get(at..eocd_at))
+            .filter(|bytes| bytes.starts_with(b"PK\x06\x06") && le(bytes, 4, 8) == 44)
+            .map(|bytes| bytes.split_at(56))
+            .filter(|(_, locator)| locator.starts_with(b"PK\x06\x07"))
+            .ok_or_else(|| invalid("zip64 end of central directory not found".into()))?;
+        if le(locator, 4, 4) != 0
+            || le(locator, 16, 4) > 1
+            || le(record, 16, 4) != 0
+            || le(record, 20, 4) != 0
+            || le(record, 24, 8) != le(record, 32, 8)
+        {
+            return Err(invalid("multi-disk archives are not supported".into()));
+        }
+        let (entries64, size64, offset64) =
+            (le(record, 32, 8), le(record, 40, 8), le(record, 48, 8));
+        if (entries != 0xFFFF && entries != entries64)
+            || (size != 0xFFFF_FFFF && size != size64)
+            || (offset != 0xFFFF_FFFF && offset != offset64)
+        {
+            return Err(invalid("zip64 end records disagree".into()));
+        }
+        (entries, size, offset) = (entries64, size64, offset64);
+        end = eocd_pos.saturating_sub(76);
+        // The locator points at the zip64 record relative to the zip data.
+        zip64_offset = Some(
+            end.checked_sub(le(locator, 8, 8))
+                .ok_or_else(|| invalid("zip64 locator points past the zip64 end record".into()))?,
+        );
+    } else if le(eocd, 4, 2) != 0 || le(eocd, 6, 2) != 0 {
+        return Err(invalid("multi-disk archives are not supported".into()));
+    }
+    if entries > max_entries {
+        return Err(invalid(format!(
+            "archive has {entries} entries, limit is {max_entries}"
+        )));
+    }
+    if size > MAX_CENTRAL_DIRECTORY_BYTES {
+        return Err(invalid(format!(
+            "central directory is {size} bytes, limit is {MAX_CENTRAL_DIRECTORY_BYTES}"
+        )));
+    }
+    // Every central directory record takes at least 46 bytes.
+    if entries.checked_mul(46).is_none_or(|least| least > size) {
+        return Err(invalid(format!(
+            "central directory of {size} bytes cannot hold {entries} entries"
+        )));
+    }
+    let start = end
+        .checked_sub(size)
+        .ok_or_else(|| invalid("central directory does not fit in the file".into()))?;
+    let archive_offset = start
+        .checked_sub(offset)
+        .ok_or_else(|| invalid("central directory offset is past the directory".into()))?;
+    if zip64_offset.is_some_and(|zip64_offset| zip64_offset != archive_offset) {
+        return Err(invalid("zip64 end records disagree".into()));
+    }
+    Ok(DirectoryLocation {
+        entries,
+        start,
+        size,
+        archive_offset,
+        end_record: eocd_pos,
+    })
+}
+
+/// The file as the zip crate sees it during the check: the bytes from the
+/// central directory to the end, with zeros in front of them. A read that lies
+/// entirely in front fails, and so does, once the crate has read the end
+/// record, a read that starts at another end-record signature. If the crate
+/// gives up on the checked directory, its search for another end record
+/// therefore skips each candidate at once and stops at the directory start.
+struct DirectoryView {
+    start: u64,
+    end_record: u64,
+    end_record_read: bool,
+    bytes: Vec<u8>,
+    pos: u64,
+}
+
+impl Read for DirectoryView {
+    fn read(&mut self, buf: &mut [u8]) -> std::io::Result<usize> {
+        if self.pos < self.start {
+            let hidden = self.start - self.pos;
+            if hidden >= buf.len() as u64 {
+                return Err(std::io::Error::other("read before the central directory"));
+            }
+            buf[..hidden as usize].fill(0);
+            self.pos = self.start;
+            return Ok(hidden as usize);
+        }
+        let offset = usize::try_from(self.pos - self.start).unwrap_or(usize::MAX);
+        let rest = self.bytes.get(offset..).unwrap_or_default();
+        if self.pos == self.end_record {
+            self.end_record_read = true;
+        } else if self.end_record_read && rest.starts_with(b"PK\x05\x06") {
+            return Err(std::io::Error::other("read at another end record"));
+        }
+        let count = rest.len().min(buf.len());
+        buf[..count].copy_from_slice(&rest[..count]);
+        self.pos += count as u64;
+        Ok(count)
+    }
+}
+
+impl Seek for DirectoryView {
+    fn seek(&mut self, from: SeekFrom) -> std::io::Result<u64> {
+        let len = self.start + self.bytes.len() as u64;
+        let pos = match from {
+            SeekFrom::Start(pos) => Some(pos),
+            SeekFrom::End(delta) => len.checked_add_signed(delta),
+            SeekFrom::Current(delta) => self.pos.checked_add_signed(delta),
+        };
+        self.pos = pos.ok_or_else(|| std::io::Error::new(ErrorKind::InvalidInput, "bad seek"))?;
+        Ok(self.pos)
+    }
+}
+
+/// Checks a zip cheaply before the zip crate opens it. The crate retries every
+/// end-record signature it finds, scanning backwards over the whole file, and
+/// loads every directory record before the entry count can be checked, so a
+/// small crafted file could keep it busy for hours or make it allocate
+/// gigabytes. This accepts one exact end record and at most `max_entries`
+/// entries in a bounded directory right in front of it. The crate then parses
+/// that directory through a `DirectoryView`, so a record it rejects cannot send
+/// it searching through the rest of the file. The returned config pins the
+/// directory position, and the real open makes the same reads as that parse,
+/// so it succeeds on the first end record.
+fn check_archive_layout(file: &mut File, max_entries: u64) -> Result<zip::read::Config, String> {
+    let read_failed =
+        |error: std::io::Error| err(IMPORT_FAILED, format!("cannot read archive: {error}"));
+    let file_len = file.metadata().map_err(read_failed)?.len();
+    let mut tail = vec![0; file_len.min(22 + 0xFFFF) as usize];
+    file.seek(SeekFrom::Start(file_len - tail.len() as u64))
+        .and_then(|_| file.read_exact(&mut tail))
+        .map_err(read_failed)?;
+    let location = locate_directory(&tail, file_len, max_entries)?;
+
+    let mut bytes = vec![0; file_len.saturating_sub(location.start) as usize];
+    file.seek(SeekFrom::Start(location.start))
+        .and_then(|_| file.read_exact(&mut bytes))
+        .map_err(read_failed)?;
+    let mut at = 0u64;
+    for index in 0..location.entries {
+        let record = bytes
+            .get(at as usize..)
+            .and_then(|rest| rest.get(..46))
+            .filter(|record| record.starts_with(b"PK\x01\x02") && at + 46 <= location.size)
+            .ok_or_else(|| {
+                err(
+                    INVALID_ARCHIVE,
+                    format!("central directory record {index} is malformed"),
+                )
+            })?;
+        let (name_len, extra_len) = (le(record, 28, 2), le(record, 30, 2));
+        if name_len > MAX_ENTRY_NAME_BYTES {
+            return Err(err(
+                INVALID_ARCHIVE,
+                format!("entry name is {name_len} bytes, limit is {MAX_ENTRY_NAME_BYTES}"),
+            ));
+        }
+        // The zip crate keeps a 32-byte entry for every tiny timestamp field
+        // and copies the whole extra data for every zip64 field it strips, so
+        // thousands of small fields cost memory or quadratic time.
+        let extra = bytes
+            .get((at + 46 + name_len) as usize..)
+            .and_then(|rest| rest.get(..extra_len as usize))
+            .unwrap_or_default();
+        let (mut field, mut fields, mut zip64_fields) = (0, 0, 0);
+        while let Some(header) = extra.get(field..field + 4) {
+            fields += 1;
+            zip64_fields += u32::from(le(header, 0, 2) == 1);
+            field += 4 + le(header, 2, 2) as usize;
+        }
+        if fields > MAX_EXTRA_FIELDS_PER_ENTRY || zip64_fields > 1 {
+            return Err(err(
+                INVALID_ARCHIVE,
+                format!(
+                    "central directory record {index} has {fields} extra fields, \
+                     {zip64_fields} of them zip64"
+                ),
+            ));
+        }
+        at += 46 + name_len + extra_len + le(record, 32, 2);
+    }
+    if at != location.size {
+        return Err(err(
+            INVALID_ARCHIVE,
+            "central directory size does not match its records",
+        ));
+    }
+
+    let config = zip::read::Config {
+        archive_offset: zip::read::ArchiveOffset::Known(location.archive_offset),
+    };
+    let view = DirectoryView {
+        start: location.start,
+        end_record: location.end_record,
+        end_record_read: false,
+        bytes,
+        pos: 0,
+    };
+    zip::ZipArchive::with_config(config, view).map_err(|error| match error {
+        // The view only fails a read once the crate gave up on this directory.
+        zip::result::ZipError::Io(_) => {
+            err(INVALID_ARCHIVE, "zip reader rejected the central directory")
+        }
+        error => err(INVALID_ARCHIVE, error),
+    })?;
+    Ok(config)
+}
+
+/// `max_entries` is checked before the central directory is read.
+fn open_archive(archive: &Path, max_entries: u64) -> Result<zip::ZipArchive<File>, String> {
+    let mut file = File::open(archive).map_err(|error| {
         err(
             IMPORT_FAILED,
             format!("cannot open {}: {error}", archive.display()),
         )
     })?;
-    zip::ZipArchive::new(file).map_err(|error| err(INVALID_ARCHIVE, error))
+    let config = check_archive_layout(&mut file, max_entries)?;
+    zip::ZipArchive::with_config(config, file).map_err(|error| err(INVALID_ARCHIVE, error))
 }
 
 fn list(archive_path: &Path, max_entries: u64) -> Result<ArchiveListing, String> {
-    let mut archive = open_archive(archive_path)?;
-    if archive.len() as u64 > max_entries {
-        return Err(err(
-            INVALID_ARCHIVE,
-            format!(
-                "archive has {} entries, limit is {max_entries}",
-                archive.len()
-            ),
-        ));
-    }
+    let mut archive = open_archive(archive_path, max_entries)?;
     let mut entries = Vec::with_capacity(archive.len());
     for index in 0..archive.len() {
         let entry = archive
@@ -529,7 +805,9 @@ fn extract(
     max_bytes: u64,
     progress: &mut ProgressSink,
 ) -> Result<ExtractResult, String> {
-    let mut archive = open_archive(archive_path)?;
+    // extract_archive takes no entry limit: JavaScript lists the same archive
+    // with its limit first, and the directory size cap bounds the rest.
+    let mut archive = open_archive(archive_path, u64::MAX)?;
     if !destination.is_dir() {
         return Err(err(
             IMPORT_FAILED,
@@ -980,6 +1258,379 @@ mod tests {
         let dir = tempfile::tempdir().unwrap();
         let error = list(&dir.path().join("missing.zip"), 10).unwrap_err();
         assert!(error.starts_with("importFailed: "), "{error}");
+    }
+
+    // ----- archive layout check -----
+
+    fn end_record(entries: u16, size: u32, offset: u32, comment: &[u8]) -> Vec<u8> {
+        let mut record = b"PK\x05\x06\0\0\0\0".to_vec();
+        record.extend_from_slice(&entries.to_le_bytes());
+        record.extend_from_slice(&entries.to_le_bytes());
+        record.extend_from_slice(&size.to_le_bytes());
+        record.extend_from_slice(&offset.to_le_bytes());
+        record.extend_from_slice(&(comment.len() as u16).to_le_bytes());
+        record.extend_from_slice(comment);
+        record
+    }
+
+    // A directory record for an empty stored entry whose local header would be
+    // at offset 0. Opening an archive never reads local headers.
+    fn central_record(name: impl AsRef<[u8]>) -> Vec<u8> {
+        let name = name.as_ref();
+        let mut record = b"PK\x01\x02\x14\0\x14\0".to_vec();
+        record.extend_from_slice(&[0; 20]);
+        record.extend_from_slice(&(name.len() as u16).to_le_bytes());
+        record.extend_from_slice(&[0; 16]);
+        record.extend_from_slice(name);
+        record
+    }
+
+    // A zip64 end record, its locator and an end record full of markers.
+    fn zip64_end(entries: u64, size: u64, offset: u64, record_offset: u64) -> Vec<u8> {
+        let mut bytes = b"PK\x06\x06".to_vec();
+        bytes.extend_from_slice(&44u64.to_le_bytes());
+        bytes.extend_from_slice(&[45, 0, 45, 0, 0, 0, 0, 0, 0, 0, 0, 0]);
+        for value in [entries, entries, size, offset] {
+            bytes.extend_from_slice(&value.to_le_bytes());
+        }
+        bytes.extend_from_slice(b"PK\x06\x07\0\0\0\0");
+        bytes.extend_from_slice(&record_offset.to_le_bytes());
+        bytes.extend_from_slice(&1u32.to_le_bytes());
+        bytes.extend(end_record(u16::MAX, u32::MAX, u32::MAX, b""));
+        bytes
+    }
+
+    // Puts `stub` in front of a zip written without a comment and gives it
+    // `comment`. `zip64` adds zip64 end records, with markers in the 32-bit
+    // end record (`Some(true)`) or with its real values (`Some(false)`).
+    fn rewrite_end(zip: &[u8], stub: &[u8], comment: &[u8], zip64: Option<bool>) -> Vec<u8> {
+        let (body, eocd) = zip.split_at(zip.len() - 22);
+        let (entries, size, offset) = (le(eocd, 10, 2), le(eocd, 12, 4), le(eocd, 16, 4));
+        let mut bytes = [stub, body].concat();
+        if let Some(markers) = zip64 {
+            let zip64 = zip64_end(entries, size, offset, body.len() as u64);
+            bytes.extend_from_slice(&zip64[..zip64.len() - 22]);
+            if markers {
+                bytes.extend(end_record(u16::MAX, u32::MAX, u32::MAX, comment));
+                return bytes;
+            }
+        }
+        bytes.extend(end_record(
+            entries as u16,
+            size as u32,
+            offset as u32,
+            comment,
+        ));
+        bytes
+    }
+
+    // Both commands open an archive through the same check.
+    fn assert_rejected_quickly(bytes: &[u8]) -> String {
+        let dir = tempfile::tempdir().unwrap();
+        let archive = write_archive(dir.path(), bytes);
+        let started = Instant::now();
+        let error = list(&archive, 50_000).unwrap_err();
+        let extract_error = run_extract(&archive, dir.path(), &[], 1024).unwrap_err();
+        let elapsed = started.elapsed();
+        assert!(error.starts_with("invalidArchive: "), "{error}");
+        assert!(
+            extract_error.starts_with("invalidArchive: "),
+            "{extract_error}"
+        );
+        assert!(elapsed < Duration::from_secs(2), "took {elapsed:?}");
+        error
+    }
+
+    fn passes_layout_check(bytes: &[u8]) -> bool {
+        let dir = tempfile::tempdir().unwrap();
+        let mut file = File::open(write_archive(dir.path(), bytes)).unwrap();
+        check_archive_layout(&mut file, 50_000).is_ok()
+    }
+
+    #[test]
+    fn rejects_a_declared_entry_count_over_the_limit_before_reading_the_directory() {
+        // Only an end record that claims 60,000 entries; there is no directory.
+        let error = assert_rejected_quickly(&end_record(60_000, 60_000 * 46, 0, b""));
+        assert!(
+            error.contains("archive has 60000 entries, limit is 50000"),
+            "{error}"
+        );
+    }
+
+    #[test]
+    fn rejects_a_file_of_repeated_end_records_quickly() {
+        // The zip crate alone tries every one of these in turn.
+        assert_rejected_quickly(&end_record(1, 46, 0, b"").repeat(2 * 1024 * 1024 / 22));
+    }
+
+    #[test]
+    fn rejects_fake_end_records_after_a_valid_directory_quickly() {
+        let count = 2000u16;
+        let directory: Vec<u8> = (0..count)
+            .flat_map(|index| central_record(format!("{index:05}")))
+            .collect();
+        let size = directory.len() as u32;
+        assert!(passes_layout_check(
+            &[&directory[..], &end_record(count, size, 0, b"")].concat()
+        ));
+        // Each fake claims one entry more than the directory holds.
+        let fake = end_record(count + 1, size, 0, b"");
+        let comment = fake.repeat(1024 / fake.len());
+        assert_rejected_quickly(&[&directory[..], &end_record(count, size, 0, &comment)].concat());
+        assert_rejected_quickly(
+            &[
+                &directory[..],
+                &end_record(count, size, 0, b""),
+                &fake.repeat(2000),
+            ]
+            .concat(),
+        );
+    }
+
+    #[test]
+    fn rejects_a_record_the_zip_crate_refuses_without_searching_the_entry_data() {
+        // Entry data holding a run of directory records and many end records
+        // that point at it, then a directory whose only record the zip crate
+        // refuses: AES compression without the AES extra field. On a refusal
+        // the crate alone goes on to try every planted end record.
+        let planted: Vec<u8> = (0..3000)
+            .flat_map(|index| central_record(format!("{index:05}")))
+            .collect();
+        let mut bytes = planted.clone();
+        bytes.extend(end_record(3001, planted.len() as u32, 0, b"").repeat(3000));
+        let start = bytes.len() as u32;
+        let mut record = central_record("Project One/project.db");
+        record[10] = 99;
+        bytes.extend_from_slice(&record);
+        bytes.extend(end_record(1, record.len() as u32, start, b""));
+        let error = assert_rejected_quickly(&bytes);
+        assert!(error.contains("rejected the central directory"), "{error}");
+    }
+
+    #[test]
+    fn accepts_a_directory_that_contains_an_end_record_signature() {
+        // The CRC-32 of these four bytes is the end-record signature.
+        let payload = [0x93, 0x4f, 0xb0, 0x9e];
+        let dir = tempfile::tempdir().unwrap();
+        let archive = write_archive(
+            dir.path(),
+            &stored_zip(&[
+                ("Project One/project.db", &payload),
+                ("Project One/PK\x05\x06.txt", b"a"),
+            ]),
+        );
+        assert_eq!(list(&archive, 10).unwrap().entries.len(), 2);
+        let destination = dir.path().join("out");
+        fs::create_dir(&destination).unwrap();
+        let files = [file("Project One/project.db", "project.db")];
+        run_extract(&archive, &destination, &files, 1024).unwrap();
+        assert_eq!(fs::read(destination.join("project.db")).unwrap(), payload);
+
+        // An entry comment that makes the zip crate's first 2,048-byte search
+        // window start right at that CRC.
+        let zip = stored_zip(&[("a", &payload)]);
+        let start = zip.len() - 22 - 47;
+        let mut bytes = zip[..zip.len() - 22].to_vec();
+        bytes[start + 32..start + 34].copy_from_slice(&1995u16.to_le_bytes());
+        bytes.extend([b'c'; 1995]);
+        bytes.extend(end_record(1, 47 + 1995, start as u32, b""));
+        assert_eq!(&bytes[bytes.len() - 2048..][..4], b"PK\x05\x06");
+        let archive = write_archive(dir.path(), &bytes);
+        assert_eq!(list(&archive, 10).unwrap().entries[0].name, "a");
+    }
+
+    #[test]
+    fn rejects_end_records_planted_in_the_directory_quickly() {
+        // A run of 2,000 records, a record the zip crate refuses, then names
+        // full of end records that claim the run and the refused record. On
+        // a refusal the crate alone would read the run again for each one.
+        let mut directory: Vec<u8> = (0..2000)
+            .flat_map(|index| central_record(format!("{index:05}")))
+            .collect();
+        let mut refused = central_record("Project One/project.db");
+        refused[10] = 99;
+        directory.extend(refused);
+        let fake = end_record(2001, 0, 0, b"");
+        directory.extend((0..11).flat_map(|_| central_record(fake.repeat(186))));
+        let end = end_record(2012, directory.len() as u32, 0, b"");
+        let error = assert_rejected_quickly(&[directory, end].concat());
+        assert!(error.contains("rejected the central directory"), "{error}");
+    }
+
+    #[test]
+    fn rejects_many_extra_fields_and_repeated_zip64_fields() {
+        let with_extra = |extra: &[u8], count: u16| {
+            let mut record = central_record("Project One/project.db");
+            record[30..32].copy_from_slice(&(extra.len() as u16).to_le_bytes());
+            record.extend_from_slice(extra);
+            let directory = record.repeat(count.into());
+            let end = end_record(count, directory.len() as u32, 0, b"");
+            [directory, end].concat()
+        };
+        // An empty timestamp field and an empty zip64 field.
+        let (timestamp, zip64) = ([0x55, 0x54, 1, 0, 0], [1, 0, 0, 0]);
+        let allowed = [timestamp.repeat(15), zip64.to_vec()].concat();
+        assert!(passes_layout_check(&with_extra(&allowed, 1)));
+        // The zip crate copies the extra data once per zip64 field it strips
+        // and keeps 32 bytes per timestamp field.
+        for (extra, count, detail) in [
+            (
+                zip64.repeat(16383),
+                20,
+                "16383 extra fields, 16383 of them zip64",
+            ),
+            (
+                timestamp.repeat(13107),
+                20,
+                "13107 extra fields, 0 of them zip64",
+            ),
+            (timestamp.repeat(17), 1, "17 extra fields"),
+            (zip64.repeat(2), 1, "2 extra fields, 2 of them zip64"),
+        ] {
+            let error = assert_rejected_quickly(&with_extra(&extra, count));
+            assert!(error.contains(detail), "{detail}: {error}");
+        }
+    }
+
+    #[test]
+    fn rejects_a_zip_comment_over_1024_bytes() {
+        let dir = tempfile::tempdir().unwrap();
+        let zip = stored_zip(&[("a.txt", b"a")]);
+        let archive = write_archive(dir.path(), &rewrite_end(&zip, b"", &[b'c'; 1024], None));
+        assert_eq!(list(&archive, 10).unwrap().entries.len(), 1);
+        let error = assert_rejected_quickly(&rewrite_end(&zip, b"", &[b'c'; 1025], None));
+        assert!(error.contains("zip comment is 1025 bytes"), "{error}");
+    }
+
+    #[test]
+    fn rejects_an_entry_name_over_4096_bytes() {
+        let dir = tempfile::tempdir().unwrap();
+        let name = "a".repeat(4096);
+        let archive = write_archive(dir.path(), &stored_zip(&[(&name, b"a")]));
+        assert_eq!(list(&archive, 10).unwrap().entries[0].name, name);
+        let error = assert_rejected_quickly(&stored_zip(&[(&"a".repeat(4097), b"a")]));
+        assert!(error.contains("entry name is 4097 bytes"), "{error}");
+    }
+
+    #[test]
+    fn rejects_a_central_directory_over_the_size_cap() {
+        let error = assert_rejected_quickly(&end_record(1, 64 * 1024 * 1024 + 1, 0, b""));
+        assert!(
+            error.contains("central directory is 67108865 bytes"),
+            "{error}"
+        );
+    }
+
+    #[test]
+    fn accepts_comments_prepended_data_zip64_end_records_and_empty_archives() {
+        let zip = zip_bytes(
+            &[
+                ("Project One/", b""),
+                ("Project One/project.db", b"database"),
+                ("Project One/files/abc", b"picture"),
+            ],
+            zip::CompressionMethod::Deflated,
+        );
+        let stub = b"#!/bin/sh\necho Project One\n".repeat(40);
+        for (stub, comment, zip64) in [
+            (&b""[..], &b""[..], None),
+            (&stub[..], &b"Project One export"[..], None),
+            (&b""[..], &b""[..], Some(true)),
+            (&stub[..], &b"Project One export"[..], Some(true)),
+            (&stub[..], &b""[..], Some(false)),
+        ] {
+            let dir = tempfile::tempdir().unwrap();
+            let archive = write_archive(dir.path(), &rewrite_end(&zip, stub, comment, zip64));
+            let listing = list(&archive, 3).unwrap();
+            let names: Vec<&str> = listing.entries.iter().map(|e| e.name.as_str()).collect();
+            assert_eq!(
+                names,
+                [
+                    "Project One/",
+                    "Project One/project.db",
+                    "Project One/files/abc"
+                ]
+            );
+            let destination = dir.path().join("out");
+            fs::create_dir(&destination).unwrap();
+            let files = [
+                file("Project One/project.db", "project.db"),
+                file("Project One/files/abc", "files/abc"),
+            ];
+            assert_eq!(
+                run_extract(&archive, &destination, &files, 1024)
+                    .unwrap()
+                    .bytes,
+                15
+            );
+            assert_eq!(fs::read(destination.join("files/abc")).unwrap(), b"picture");
+        }
+        let empty = zip::ZipWriter::new(Cursor::new(Vec::new()))
+            .finish()
+            .unwrap()
+            .into_inner();
+        let dir = tempfile::tempdir().unwrap();
+        let archive = write_archive(dir.path(), &empty);
+        assert!(list(&archive, 0).unwrap().entries.is_empty());
+    }
+
+    #[test]
+    fn locate_directory_reads_a_consistent_zip64_end_and_rejects_an_inconsistent_one() {
+        // A 10-byte stub, 100 bytes of entry data and a 46-byte directory
+        // before the zip64 end record, so the directory is at 110.
+        let build = |entries: u64, offset: u64, record_offset: u64| {
+            [vec![0; 156], zip64_end(entries, 46, offset, record_offset)].concat()
+        };
+        let locate = |bytes: &[u8]| locate_directory(bytes, bytes.len() as u64, 10);
+        let expected = DirectoryLocation {
+            entries: 1,
+            start: 110,
+            size: 46,
+            archive_offset: 10,
+            end_record: 232,
+        };
+        let bytes = build(1, 100, 146);
+        assert_eq!(locate(&bytes), Ok(expected));
+        // Only the end of the file is read; positions stay absolute.
+        assert_eq!(locate_directory(&bytes[150..], 254, 10).unwrap().start, 110);
+        // Zip64 end records with real values instead of markers.
+        let real = [&bytes[..232], &end_record(1, 46, 100, b"")].concat();
+        assert_eq!(locate(&real).unwrap().start, 110);
+
+        let patched = |at: usize, value: u8| {
+            let mut bytes = build(1, 100, 146);
+            bytes[at] = value;
+            bytes
+        };
+        for (bytes, reason) in [
+            (build(1, 100, 145), "zip64 end records disagree"),
+            (build(1, 100, 157), "locator points past"),
+            (build(1, 111, 146), "offset is past the directory"),
+            (build(2, 100, 146), "cannot hold 2 entries"),
+            (build(11, 100, 146), "11 entries, limit is 10"),
+            (
+                patched(156, b'X'),
+                "zip64 end of central directory not found",
+            ),
+            (patched(160, 45), "zip64 end of central directory not found"),
+            (
+                patched(212, b'X'),
+                "zip64 end of central directory not found",
+            ),
+            (patched(172, 1), "multi-disk"),
+            // The 32-bit entries-on-this-disk must repeat the entry count.
+            (patched(240, 2), "multi-disk"),
+            // A 32-bit field that is not a marker must match the zip64 one.
+            (patched(244, 2), "zip64 end records disagree"),
+            (
+                end_record(u16::MAX, u32::MAX, u32::MAX, b""),
+                "zip64 end of central directory not found",
+            ),
+        ] {
+            let error = locate(&bytes).unwrap_err();
+            assert!(error.starts_with("invalidArchive: "), "{reason}: {error}");
+            assert!(error.contains(reason), "{reason}: {error}");
+        }
     }
 
     // ----- extract_archive -----
