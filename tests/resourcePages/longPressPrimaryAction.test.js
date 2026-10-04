@@ -4,7 +4,6 @@ import { handleItemLongPress as handleMediaLongPress } from "../../src/component
 import { handleItemLongPress as handleCatalogLongPress } from "../../src/components/catalogResourcesView/catalogResourcesView.handlers.js";
 import { handleVideoItemDoubleClick } from "../../src/pages/videos/videos.handlers.js";
 import { handleFontItemDoubleClick } from "../../src/pages/fonts/fonts.handlers.js";
-import { handleTransformItemDoubleClick } from "../../src/pages/transforms/transforms.handlers.js";
 import { handleParticleItemDoubleClick } from "../../src/pages/particles/particles.handlers.js";
 import { handleSpritesheetItemDoubleClick } from "../../src/pages/spritesheets/spritesheets.handlers.js";
 import { handleSpriteItemDoubleClick } from "../../src/pages/characterSprites/characterSprites.handlers.js";
@@ -38,13 +37,6 @@ describe.each([
     "setModalOpen",
   ],
   [
-    "transforms",
-    handleCatalogLongPress,
-    handleTransformItemDoubleClick,
-    "selectTransformItemById",
-    "openTransformPreviewDialog",
-  ],
-  [
     "particles",
     handleCatalogLongPress,
     handleParticleItemDoubleClick,
@@ -76,7 +68,6 @@ describe.each([
           colors: "color",
           videos: "video",
           fonts: "font",
-          transforms: "transform",
           particles: "particle",
           spritesheets: "spritesheet",
           "character spritesheets": "spritesheet",

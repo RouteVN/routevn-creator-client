@@ -1,0 +1,215 @@
+refs:
+  backButton:
+    eventListeners:
+      click:
+        handler: handleBackClick
+  undoButton:
+    eventListeners:
+      click:
+        handler: handleUndoButtonClick
+  redoButton:
+    eventListeners:
+      click:
+        handler: handleRedoButtonClick
+  canvasZoomOutButton:
+    eventListeners:
+      click:
+        handler: handleCanvasZoomOutClick
+  canvasZoomResetButton:
+    eventListeners:
+      click:
+        handler: handleCanvasZoomResetClick
+  canvasZoomInButton:
+    eventListeners:
+      click:
+        handler: handleCanvasZoomInClick
+  canvasBackground:
+    eventListeners:
+      zoom-change:
+        handler: handleCanvasZoomGesture
+  canvas: {}
+  rightPanelModeTabs:
+    eventListeners:
+      item-click:
+        handler: handleRightPanelModeChange
+  savePreviewButton:
+    eventListeners:
+      click:
+        handler: handleSavePreviewClick
+  transformInspector:
+    eventListeners:
+      update:
+        handler: handleInspectorUpdate
+      preview:
+        handler: handleInspectorPreview
+      preview-cancel:
+        handler: handleInspectorPreviewCancel
+  previewImageButton*:
+    eventListeners:
+      click:
+        handler: handlePreviewImageClick
+      contextmenu:
+        handler: handlePreviewImageContextMenu
+  previewImageMenu:
+    eventListeners:
+      close:
+        handler: handlePreviewImageMenuClose
+      item-click:
+        handler: handlePreviewImageMenuItemClick
+  imageSelectorDialog:
+    eventListeners:
+      close:
+        handler: handleImageSelectorDialogClose
+  imageSelectorKeyboardScope:
+    eventListeners:
+      click:
+        handler: handleImageSelectorKeyboardScopeClick
+      keydown:
+        handler: handleImageSelectorKeyboardScopeKeyDown
+  imageSelector:
+    eventListeners:
+      image-selected:
+        handler: handleImageSelectorImageSelected
+      image-dblclick:
+        handler: handleImageSelectorImageDoubleClick
+  imageSelectorFileExplorer:
+    eventListeners:
+      item-click:
+        handler: handleImageSelectorFileExplorerItemClick
+  confirmImageSelection:
+    eventListeners:
+      click:
+        handler: handleImageSelectorConfirmClick
+  fullPreviewDialog:
+    eventListeners:
+      close:
+        handler: handleFullImagePreviewClose
+        stopPropagation: true
+  previewOverlay:
+    eventListeners:
+      click:
+        handler: handleFullImagePreviewClose
+styles:
+  "#previewOverlay":
+    user-select: none
+    "-webkit-user-select": none
+    --focus-ring-outline: none
+    --focus-ring-box-shadow: none
+  ".transformImageThumbnailTransparencyGrid":
+    background-color: "#eef2f7"
+    background-image: 'linear-gradient(45deg, #94a3b8 25%, transparent 25%), linear-gradient(-45deg, #94a3b8 25%, transparent 25%), linear-gradient(45deg, transparent 75%, #94a3b8 75%), linear-gradient(-45deg, transparent 75%, #94a3b8 75%)'
+    background-position: "0 0, 0 6px, 6px -6px, -6px 0"
+    background-repeat: repeat
+    background-size: 12px 12px
+template:
+  - 'rtgl-view d=h w=f h=f style="min-width: 0; min-height: 0;"':
+      - $if showExplorerPanel:
+          - rvn-resizable-panel w=300 min-w=200 max-w=500 resize-side="right":
+              - rtgl-view slot="content" w=f h=f:
+                  - rvn-resource-types :resourceCategory=${resourceCategory} :selectedResourceId=${selectedResourceId}: null
+      - 'rtgl-view w=1fg h=f d=v style="min-width: 0; min-height: 0;"':
+          - rtgl-view h=48 bwb=xs bc=bo d=h av=c w=f ph=md:
+              - rtgl-button#backButton sq pre=chevronLeft v=ol mr=sm: null
+              - 'rtgl-view w=1fg style="min-width: 0;"':
+                  - rtgl-text w=f ellipsis=true: ${transformName}
+              - rtgl-view d=h av=c g=xs ml=sm:
+                  - 'rtgl-button#undoButton sq pre=undo v=ol ?disabled=${undoDisabled} aria-label="${undoLabel}" title="${undoLabel}"': null
+                  - 'rtgl-button#redoButton sq pre=redo v=ol ?disabled=${redoDisabled} aria-label="${redoLabel}" title="${redoLabel}"': null
+              - $if showCanvasZoomControls:
+                  - rtgl-view d=h av=c g=xs ml=sm:
+                      - 'rtgl-button#canvasZoomOutButton sq pre=zoomOut v=ol ?disabled=${canvasZoomOutDisabled} aria-label="${canvasZoomOutLabel}" title="${canvasZoomOutLabel}"': null
+                      - 'rtgl-button#canvasZoomResetButton v=gh style="min-width: 64px;" aria-label="${canvasZoomFitLabel}" title="${canvasZoomFitLabel}"': ${canvasZoomLabel}
+                      - 'rtgl-button#canvasZoomInButton sq pre=zoomIn v=ol ?disabled=${canvasZoomInDisabled} aria-label="${canvasZoomInLabel}" title="${canvasZoomInLabel}"': null
+          - $if isTouchMode:
+              - 'rtgl-view w=f h=1fg d=v style="min-width: 0; min-height: 0;"':
+                  - 'rtgl-view w=f p=md bgc=bg ah=c style="flex: 0 0 auto; min-width: 0; background-image: radial-gradient(circle, var(--input) 1px, transparent 1px); background-size: 24px 24px;"':
+                      - 'div style="${canvasWrapperStyle}"':
+                          - 'rtgl-view w=f bwl=xs bwr=xs bc=bo style="aspect-ratio: ${canvasAspectRatio}; overflow: hidden;"':
+                              - 'div#canvas style="width: 100%; height: 100%; display: flex; background: #000;"': null
+                  - 'rtgl-view w=f h=1fg d=v bwt=xs style="min-height: 0;"':
+                      - rtgl-view h=48 w=f d=h bgc=bg bwb=xs ph=md av=c:
+                          - 'rtgl-view w=1fg style="min-width: 0;"':
+                              - rtgl-tabs#rightPanelModeTabs s=sm selected-tab=${rightPanelMode} :items=${rightPanelModeTabs}: null
+                          - $if showSavePreviewButton:
+                              - 'rtgl-button#savePreviewButton sq pre=save v=se ml=sm aria-label="${savePreviewButton}" title="${savePreviewButton}"': null
+                      - 'rtgl-view w=f h=1fg sv pv=md style="min-height: 0; ${rightPanelEditStyle}"':
+                          - rvn-layout-edit-panel#transformInspector mode=transform :projectResolution=${projectResolution} :selectedElementMetrics=${selectedElementMetrics} :values=${inspectorValues}: null
+                          - 'rtgl-view h=25vh aria-hidden=true style="flex-shrink: 0;"': null
+                      - 'rtgl-view w=f h=1fg sv pv=md style="min-height: 0; ${rightPanelPreviewStyle}"':
+                          - rtgl-view w=f g=md ph=md:
+                              - rtgl-text s=sm: ${previewImagesTitle}
+                              - rtgl-view d=h w=f g=md:
+                                  - $for item, i in previewImageSlots:
+                                      - 'rtgl-view d=v w=1fg g=sm style="min-width: 0;"':
+                                          - rtgl-text s=xs c=mu: ${item.label}
+                                          - $if item.image:
+                                              - 'rtgl-view#previewImageButton${i} data-slot=${item.slot} w=f cur=pointer bw=xs bc=bo h-bc=ac br=md overflow=hidden style="box-sizing: border-box;"':
+                                                  - $if item.image.previewFileId:
+                                                      - 'div.transformImageThumbnailTransparencyGrid style="display: block; width: 100%; aspect-ratio: 16 / 9; overflow: hidden;"':
+                                                          - rvn-file-image w=f h=f fileId=${item.image.previewFileId}: null
+                                                    $else:
+                                                      - 'rtgl-view w=f av=c ah=c style="aspect-ratio: 16 / 9; overflow: hidden;"':
+                                                          - rtgl-text s=xs c=mu-fg: ${noPreviewLabel}
+                                                  - rtgl-view w=f ph=sm pv=xs:
+                                                      - rtgl-text s=xs c=mu-fg ellipsis w=f: ${item.image.name}
+                                            $else:
+                                              - 'rtgl-view#previewImageButton${i} data-slot=${item.slot} w=f av=c ah=c bgc=mu bc=bo bw=xs br=md cur=pointer h-bc=ac style="aspect-ratio: 16 / 9; box-sizing: border-box;"':
+                                                  - rtgl-text c=mu-fg s=xs: ${selectImageLabel}
+                          - 'rtgl-view h=25vh aria-hidden=true style="flex-shrink: 0;"': null
+            $else:
+              - 'rtgl-view d=v h=1fg w=f style="min-height: 0; container-type: size;"':
+                  - 'rvn-zoom-viewport#canvasBackground zoom=${canvasZoom} gestures style="display: flex; flex-direction: column; flex: 1 1 auto; width: 100%; min-width: 0; min-height: 0; position: relative; overflow: hidden; background-color: var(--background); background-image: radial-gradient(circle, var(--input) 1px, transparent 1px); background-size: 24px 24px; background-position: var(--canvas-x, 0px) var(--canvas-y, 0px);"':
+                      - 'div style="${canvasWrapperStyle}"':
+                          - 'rtgl-view w=f bwl=xs bwr=xs bc=bo style="aspect-ratio: ${canvasAspectRatio}; overflow: hidden;"':
+                              - 'div#canvas style="width: 100%; height: 100%; display: flex; background: #000;"': null
+      - $if showRightPanel:
+          - rvn-resizable-panel panel-type=detail-panel w=300 min-w=200 max-w=500 resize-side="left":
+              - 'rtgl-view slot=content d=v w=f h=f style="min-width: 0; min-height: 0;"':
+                  - rtgl-view h=48 w=f d=h bgc=bg bwb=xs ph=md av=c:
+                      - 'rtgl-view w=1fg style="min-width: 0;"':
+                          - rtgl-tabs#rightPanelModeTabs s=sm selected-tab=${rightPanelMode} :items=${rightPanelModeTabs}: null
+                      - $if showSavePreviewButton:
+                          - 'rtgl-button#savePreviewButton sq pre=save v=se ml=sm aria-label="${savePreviewButton}" title="${savePreviewButton}"': null
+                  - 'rtgl-view w=f h=1fg sv pv=md style="min-height: 0; ${rightPanelEditStyle}"':
+                      - rvn-layout-edit-panel#transformInspector mode=transform :projectResolution=${projectResolution} :selectedElementMetrics=${selectedElementMetrics} :values=${inspectorValues}: null
+                      - 'rtgl-view h=25vh aria-hidden=true style="flex-shrink: 0;"': null
+                  - 'rtgl-view w=f h=1fg sv pv=md style="min-height: 0; ${rightPanelPreviewStyle}"':
+                      - rtgl-view w=f g=md ph=md:
+                          - rtgl-text s=sm: ${previewImagesTitle}
+                          - rtgl-view d=h w=f g=md:
+                              - $for item, i in previewImageSlots:
+                                  - 'rtgl-view d=v w=1fg g=sm style="min-width: 0;"':
+                                      - rtgl-text s=xs c=mu: ${item.label}
+                                      - $if item.image:
+                                          - 'rtgl-view#previewImageButton${i} data-slot=${item.slot} w=f cur=pointer bw=xs bc=bo h-bc=ac br=md overflow=hidden style="box-sizing: border-box;"':
+                                              - $if item.image.previewFileId:
+                                                  - 'div.transformImageThumbnailTransparencyGrid style="display: block; width: 100%; aspect-ratio: 16 / 9; overflow: hidden;"':
+                                                      - rvn-file-image w=f h=f fileId=${item.image.previewFileId}: null
+                                                $else:
+                                                  - 'rtgl-view w=f av=c ah=c style="aspect-ratio: 16 / 9; overflow: hidden;"':
+                                                      - rtgl-text s=xs c=mu-fg: ${noPreviewLabel}
+                                              - rtgl-view w=f ph=sm pv=xs:
+                                                  - rtgl-text s=xs c=mu-fg ellipsis w=f: ${item.image.name}
+                                        $else:
+                                          - 'rtgl-view#previewImageButton${i} data-slot=${item.slot} w=f av=c ah=c bgc=mu bc=bo bw=xs br=md cur=pointer h-bc=ac style="aspect-ratio: 16 / 9; box-sizing: border-box;"':
+                                              - rtgl-text c=mu-fg s=xs: ${selectImageLabel}
+                      - 'rtgl-view h=25vh aria-hidden=true style="flex-shrink: 0;"': null
+  - rtgl-dropdown-menu#previewImageMenu :items=${previewImageMenu.items} ?open=${previewImageMenu.isOpen} x=${previewImageMenu.x} y=${previewImageMenu.y}: null
+  - rtgl-dialog#imageSelectorDialog ?open=${imageSelectorDialog.open} s=xl:
+      - $if imageSelectorDialog.open:
+          - rtgl-view slot=content d=v w=f g=md:
+              - 'rtgl-view d=h w=f h=70vh g=lg style="min-width: 0; min-height: 0;"':
+                  - $if showImageSelectorFileExplorer:
+                      - 'rtgl-view w=300 h=f style="min-width: 0; min-height: 0;"':
+                          - rvn-base-file-explorer#imageSelectorFileExplorer :items=${imageFolderItems} shrinkable: null
+                  - 'rtgl-view#imageSelectorKeyboardScope tabindex=-1 w=1fg h=f style="min-width: 0; min-height: 0; outline: none;"':
+                      - rvn-image-selector#imageSelector selectedImageId=${imageSelectorDialog.selectedImageId}: null
+              - rtgl-view d=h g=sm w=f ah=e:
+                  - rtgl-button#confirmImageSelection variant=pr: ${confirmButton}
+  - $when: fullImagePreviewVisible
+    rtgl-dialog#fullPreviewDialog open layout=fixed bare p=none:
+      - 'div#previewOverlay slot=content tabindex=0 style="position: fixed; inset: 0; z-index: 3000; cursor: pointer; outline: none;"':
+          - rtgl-view w=f h=f pos=fix edge=f bgc=bg: null
+          - $if fullImagePreviewFileId:
+              - rtgl-view pos=fix edge=f ah=c av=c z=3001:
+                  - rvn-file-image fileId=${fullImagePreviewFileId} w=80% h=80% bc=ac bw=xs br=md: null

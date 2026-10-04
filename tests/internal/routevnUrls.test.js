@@ -47,6 +47,9 @@ describe("routevnUrls", () => {
     expect(getRoutevnCreatorDocsUrl("/project/layout-editor")).toBe(
       "https://routevn.com/en/creator/docs/layouts/#layout-editor",
     );
+    expect(getRoutevnCreatorDocsUrl("/project/transform-editor")).toBe(
+      "https://routevn.com/en/creator/docs/transforms/",
+    );
   });
 
   it("maps settings routes to the docs settings section", () => {

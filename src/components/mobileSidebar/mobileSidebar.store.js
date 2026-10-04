@@ -202,6 +202,7 @@ const resourceParentMapping = {
   "character-sprites": "characters",
   "layout-editor": "layouts",
   releases: "versions",
+  "transform-editor": "transforms",
 };
 
 export const createInitialState = () => ({

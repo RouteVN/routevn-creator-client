@@ -1264,6 +1264,30 @@ off. On phones the keyboard toolbar has Undo, which keeps the keyboard open,
 and a More menu with Sections, Settings, and Redo; the menu closes the
 keyboard and follows the toolbar down.
 
+Transforms are edited on their own page, `/project/transform-editor` (the
+`t` payload holds the transform id), which opens from the transforms page like
+the audio effects editor; the transforms page's dialogs only add a transform
+and edit its name, description, and tags. The page has the layout editor's
+header (back, name, undo and redo, zoom), canvas workspace, and right panel
+with **Edit** and **Preview** tabs (on touch, under the canvas). Edit holds
+`rvn-layout-edit-panel mode=transform`, whose popovers preview on the canvas
+as in the layout editor, and draws the scene editor's custom transform editor
+outline on the canvas (`createBackgroundTransformEditorCanvasState` and the
+drag helpers in `src/internal/ui/sceneEditor/backgroundTransformEditor.js`):
+the border moves the target and an edge handle scales it evenly around its
+anchor. Arrow keys nudge the target on Edit, ten pixels with Shift. Preview
+holds the preview background and target images and **Save Preview**, and
+draws the same canvas without the outline: the background image, or a gray
+screen, and the target image, or a white square. Save Preview
+saves the preview images and a preview and thumbnail image of that canvas.
+
+As in the layout editor, edits save on their own 300ms after the last one,
+and leaving the page saves waiting edits at once (saves run one at a time
+through `enqueueSceneEditorPersistence`); preview images save only with Save
+Preview, so unsaved ones are left behind. Undo and redo work as in the audio
+effects editor: a step holds the transform's values before and after an edit,
+a drag is one step, and preview images are not part of the history.
+
 `rvn-mobile-sheet` is capped at 640px (the Projects page content width) and
 centered, so the bottom-tab sheets and every page's item detail sheet stay
 compact on tablets; phones are narrower than the cap and keep the full-width

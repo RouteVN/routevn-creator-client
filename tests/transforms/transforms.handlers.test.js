@@ -1,280 +1,294 @@
 import { describe, expect, it, vi } from "vitest";
 import { EN_I18N } from "../support/i18n.js";
 import {
-  handleMobileDetailEditClick,
-  handleTransformPreviewImageContextMenu,
-  handleTransformPreviewImageMenuItemClick,
-  handleTransformPreviewImageSelected,
+  handleAddFormAction,
+  handleDetailHeaderClick,
+  handleEditFormAction,
+  handleFileExplorerAction,
+  handleMobileDetailOpenClick,
+  handleTransformItemDoubleClick,
+  handleTransformItemEdit,
 } from "../../src/pages/transforms/transforms.handlers.js";
 
+const createRefreshDeps = (repositoryState, overrides = {}) => {
+  let selectedItemId;
+  return {
+    i18n: EN_I18N,
+    appService: {
+      getPayload: vi.fn(() => ({ p: "project-1" })),
+      navigate: vi.fn(),
+      showAlert: vi.fn(),
+      showToast: vi.fn(),
+    },
+    projectService: {
+      getRepositoryState: vi.fn(() => repositoryState),
+      ...overrides.projectService,
+    },
+    store: {
+      setItems: vi.fn(),
+      setSelectedFolderId: vi.fn(),
+      setSelectedItemId: vi.fn(({ itemId }) => {
+        selectedItemId = itemId;
+      }),
+      selectSelectedItemId: vi.fn(() => selectedItemId),
+      setTagsData: vi.fn(),
+      setDefaultDialogueAvatarTransformId: vi.fn(),
+      selectTransformItemById: vi.fn(
+        ({ itemId }) => repositoryState.transforms.items[itemId],
+      ),
+      ...overrides.store,
+    },
+    refs: { fileExplorer: { selectItem: vi.fn() }, ...overrides.refs },
+    render: vi.fn(),
+  };
+};
+
 describe("transforms.handlers", () => {
-  it("opens the selected transform from the mobile detail edit action", async () => {
-    const render = vi.fn();
-    const transform = {
+  it("opens transforms in the dedicated editor", async () => {
+    const deps = {
+      appService: {
+        getPayload: vi.fn(() => ({ p: "project-1" })),
+        navigate: vi.fn(),
+      },
+      store: { selectSelectedItemId: vi.fn(() => "transform-1") },
+    };
+
+    handleTransformItemDoubleClick(deps, {
+      _event: { detail: { itemId: "transform-1" } },
+    });
+    handleTransformItemEdit(deps, {
+      _event: { detail: { itemId: "transform-1" } },
+    });
+    handleMobileDetailOpenClick(deps);
+    await handleFileExplorerAction(deps, {
+      _event: {
+        detail: { itemId: "transform-1", item: { value: "edit-item" } },
+      },
+    });
+
+    expect(deps.appService.navigate).toHaveBeenCalledTimes(4);
+    for (const call of deps.appService.navigate.mock.calls) {
+      expect(call).toEqual([
+        "/project/transform-editor",
+        { p: "project-1", t: "transform-1" },
+      ]);
+    }
+  });
+
+  it("does not open the editor when a folder is double-clicked", () => {
+    const deps = { appService: { navigate: vi.fn() } };
+
+    handleTransformItemDoubleClick(deps, {
+      _event: { detail: { itemId: "folder-1", isFolder: true } },
+    });
+
+    expect(deps.appService.navigate).not.toHaveBeenCalled();
+  });
+
+  it("creates a transform from its name, description, and tags and keeps it selected", async () => {
+    const repositoryState = {
+      project: {},
+      transforms: { items: {}, tree: [] },
+    };
+    const deps = createRefreshDeps(repositoryState, {
+      projectService: {
+        createTransform: vi.fn(async ({ transformId, data }) => {
+          repositoryState.transforms.items[transformId] = {
+            id: transformId,
+            ...data,
+          };
+          repositoryState.transforms.tree.push({ id: transformId });
+          return { valid: true };
+        }),
+      },
+      store: {
+        selectTargetGroupId: vi.fn(() => "folder-1"),
+        closeAddDialog: vi.fn(),
+      },
+    });
+
+    await handleAddFormAction(deps, {
+      _event: {
+        detail: {
+          actionId: "submit",
+          values: {
+            name: " Transform One ",
+            description: "Description",
+            tagIds: ["tag-1"],
+          },
+        },
+      },
+    });
+
+    expect(deps.projectService.createTransform).toHaveBeenCalledWith({
+      transformId: expect.any(String),
+      data: {
+        type: "transform",
+        name: "Transform One",
+        description: "Description",
+        tagIds: ["tag-1"],
+        x: 0,
+        y: 0,
+        scaleX: 1,
+        scaleY: 1,
+        anchorX: 0,
+        anchorY: 0,
+        rotation: 0,
+      },
+      parentId: "folder-1",
+      position: "last",
+    });
+    const { transformId } =
+      deps.projectService.createTransform.mock.calls[0][0];
+    expect(deps.appService.navigate).not.toHaveBeenCalled();
+    expect(deps.store.closeAddDialog).toHaveBeenCalledOnce();
+    expect(deps.refs.fileExplorer.selectItem).toHaveBeenCalledWith({
+      itemId: transformId,
+    });
+  });
+
+  it("asks for a name before creating a transform", async () => {
+    const deps = createRefreshDeps(
+      { project: {}, transforms: { items: {}, tree: [] } },
+      { projectService: { createTransform: vi.fn() } },
+    );
+
+    await handleAddFormAction(deps, {
+      _event: {
+        detail: { actionId: "submit", values: { name: "  " } },
+      },
+    });
+
+    expect(deps.projectService.createTransform).not.toHaveBeenCalled();
+    expect(deps.appService.showAlert).toHaveBeenCalledWith({
+      message: "Transform name is required.",
+      title: "Warning",
+    });
+  });
+
+  it("edits the name, description, and tags from the detail header", async () => {
+    const item = {
       id: "transform-1",
       type: "transform",
-      name: "Center",
+      name: "Old Name",
+      description: "Old description",
+      tagIds: ["tag-1"],
+      x: 960,
+    };
+    const repositoryState = {
+      project: {},
+      transforms: { items: { "transform-1": item }, tree: [{ id: item.id }] },
+    };
+    const editForm = { reset: vi.fn(), setValues: vi.fn() };
+    const deps = createRefreshDeps(repositoryState, {
+      projectService: {
+        updateTransform: vi.fn(async ({ data }) => {
+          Object.assign(item, data);
+          return { valid: true };
+        }),
+      },
+      store: {
+        selectSelectedItemId: vi.fn(() => "transform-1"),
+        openEditDialog: vi.fn(),
+        selectEditItemId: vi.fn(() => "transform-1"),
+        closeEditDialog: vi.fn(),
+      },
+      refs: { editForm },
+    });
+
+    handleDetailHeaderClick(deps);
+
+    const editValues = {
+      name: "Old Name",
+      description: "Old description",
+      tagIds: ["tag-1"],
+    };
+    expect(deps.store.openEditDialog).toHaveBeenCalledWith({
+      itemId: "transform-1",
+      defaultValues: editValues,
+    });
+    expect(editForm.reset).toHaveBeenCalledOnce();
+    expect(editForm.setValues).toHaveBeenCalledWith({ values: editValues });
+
+    await handleEditFormAction(deps, {
+      _event: {
+        detail: {
+          actionId: "submit",
+          values: {
+            name: " New Name ",
+            description: "New description",
+            tagIds: ["tag-1", "tag-2"],
+          },
+        },
+      },
+    });
+
+    expect(deps.projectService.updateTransform).toHaveBeenCalledWith({
+      transformId: "transform-1",
+      data: {
+        name: "New Name",
+        description: "New description",
+        tagIds: ["tag-1", "tag-2"],
+      },
+    });
+    expect(deps.store.closeEditDialog).toHaveBeenCalledOnce();
+  });
+
+  it("duplicates a transform from the file explorer with its values and preview", async () => {
+    const item = {
+      id: "transform-1",
+      type: "transform",
+      name: "Transform One",
+      description: "",
+      tagIds: [],
       x: 960,
       y: 540,
-      scaleX: 1,
-      scaleY: 1,
+      scaleX: 2,
+      scaleY: 2,
       anchorX: 0.5,
-      anchorY: 0.5,
-      rotation: 0,
+      anchorY: 1,
+      rotation: 15,
+      thumbnailFileId: "thumb-1",
+      previewFileId: "preview-1",
+      preview: { background: { imageId: "image-1" } },
     };
-    const store = {
-      setSelectedItemId: vi.fn(),
-      openTransformFormDialog: vi.fn(),
-      selectProjectResolution: vi.fn(() => ({
-        width: 1920,
-        height: 1080,
-      })),
-      selectSelectedItemId: vi.fn(() => "transform-1"),
-      selectTransformItemById: vi.fn(() => transform),
+    const repositoryState = {
+      project: {},
+      transforms: { items: { "transform-1": item }, tree: [{ id: item.id }] },
     };
-    const event = {
-      preventDefault: vi.fn(),
-      stopPropagation: vi.fn(),
-    };
-
-    await handleMobileDetailEditClick(
-      {
-        refs: {},
-        render,
-        store,
-      },
-      {
-        _event: event,
-      },
-    );
-
-    expect(event.preventDefault).toHaveBeenCalled();
-    expect(event.stopPropagation).toHaveBeenCalled();
-    expect(store.setSelectedItemId).toHaveBeenCalledWith({
-      itemId: "transform-1",
-      suppressMobileDetailSheet: true,
-    });
-    expect(store.openTransformFormDialog).toHaveBeenCalledWith({
-      editMode: true,
-      itemId: "transform-1",
-      itemData: transform,
-      targetGroupId: undefined,
-    });
-    expect(render).toHaveBeenCalled();
-  });
-
-  it("opens the preview image context menu from the target slot", () => {
-    const preventDefault = vi.fn();
-    const stopPropagation = vi.fn();
-    const store = {
-      openPreviewImageMenu: vi.fn(),
-    };
-    const render = vi.fn();
-
-    handleTransformPreviewImageContextMenu(
-      {
-        i18n: EN_I18N,
-        render,
-        store,
-      },
-      {
-        _event: {
-          clientX: 64,
-          clientY: 96,
-          currentTarget: {
-            dataset: {
-              target: "preview-target",
-            },
-          },
-          preventDefault,
-          stopPropagation,
-        },
-      },
-    );
-
-    expect(preventDefault).toHaveBeenCalled();
-    expect(stopPropagation).toHaveBeenCalled();
-    expect(store.openPreviewImageMenu).toHaveBeenCalledWith({
-      target: "preview-target",
-      x: 64,
-      y: 96,
-      items: [
-        {
-          label: EN_I18N.resourcePages.removeMenuItem,
-          type: "item",
-          value: "remove",
-        },
-      ],
-    });
-    expect(render).toHaveBeenCalled();
-  });
-
-  it("applies preview image selections and rerenders the route-graphics preview", async () => {
-    const canvas = {};
-    const backgroundImage = {
-      id: "image-bg",
-      type: "image",
-      fileId: "file-bg",
-      fileType: "image/png",
-      width: 640,
-      height: 360,
-    };
-    const store = {
-      applyPreviewImageSelectorSelection: vi.fn(),
-      selectDialogValues: vi.fn(() => ({
-        x: "100",
-        y: "120",
-        scaleX: "1",
-        scaleY: "1",
-        rotation: "0",
-        anchor: {
-          anchorX: 0.5,
-          anchorY: 0.5,
-        },
-      })),
-      selectProjectResolution: vi.fn(() => ({
-        width: 1920,
-        height: 1080,
-      })),
-      selectDialogPreviewBackgroundImage: vi.fn(() => backgroundImage),
-      selectDialogPreviewTargetImage: vi.fn(() => undefined),
-    };
-    const graphicsService = {
-      attachCanvas: vi.fn(),
-      loadAssets: vi.fn(),
-      render: vi.fn(),
-    };
-    const projectService = {
-      getFileContent: vi.fn(async () => ({
-        url: "blob:file-bg",
-        type: "image/png",
-      })),
-    };
-    const render = vi.fn();
-
-    await handleTransformPreviewImageSelected(
-      {
-        graphicsService,
-        projectService,
-        refs: {
-          canvas,
-        },
-        render,
-        store,
-      },
-      {
-        _event: {
-          detail: {
-            imageId: "image-bg",
-          },
-        },
-      },
-    );
-
-    expect(store.applyPreviewImageSelectorSelection).toHaveBeenCalledWith({
-      imageId: "image-bg",
-    });
-    expect(render).toHaveBeenCalled();
-    expect(graphicsService.attachCanvas).toHaveBeenCalledWith(canvas);
-    expect(projectService.getFileContent).toHaveBeenCalledWith("file-bg");
-    expect(graphicsService.loadAssets).toHaveBeenCalledWith({
-      "file-bg": {
-        url: "blob:file-bg",
-        type: "image/png",
+    const deps = createRefreshDeps(repositoryState, {
+      projectService: {
+        createTransform: vi.fn(async () => ({ valid: true })),
       },
     });
-    expect(graphicsService.render).toHaveBeenNthCalledWith(1, {
-      elements: [],
-      animations: [],
-      audio: [],
-    });
-    expect(graphicsService.render).toHaveBeenNthCalledWith(
-      2,
-      expect.objectContaining({
-        elements: expect.arrayContaining([
-          expect.objectContaining({
-            id: "bg",
-            type: "sprite",
-            src: "file-bg",
-          }),
-        ]),
-      }),
-    );
-  });
 
-  it("removes a preview image selection and rerenders the route-graphics preview", async () => {
-    const canvas = {};
-    const store = {
-      clearPreviewImage: vi.fn(),
-      closePreviewImageMenu: vi.fn(),
-      selectPreviewImageMenuTarget: vi.fn(() => "preview-background"),
-      selectDialogValues: vi.fn(() => ({
-        x: "100",
-        y: "120",
-        scaleX: "1",
-        scaleY: "1",
-        rotation: "0",
-        anchor: {
-          anchorX: 0.5,
-          anchorY: 0.5,
-        },
-      })),
-      selectProjectResolution: vi.fn(() => ({
-        width: 1920,
-        height: 1080,
-      })),
-      selectDialogPreviewBackgroundImage: vi.fn(() => undefined),
-      selectDialogPreviewTargetImage: vi.fn(() => undefined),
-    };
-    const graphicsService = {
-      attachCanvas: vi.fn(),
-      loadAssets: vi.fn(),
-      render: vi.fn(),
-    };
-    const render = vi.fn();
-
-    await handleTransformPreviewImageMenuItemClick(
-      {
-        graphicsService,
-        refs: {
-          canvas,
-        },
-        render,
-        store,
+    await handleFileExplorerAction(deps, {
+      _event: {
+        detail: { itemId: "transform-1", item: { value: "duplicate-item" } },
       },
-      {
-        _event: {
-          detail: {
-            item: {
-              value: "remove",
-            },
-          },
-        },
-      },
-    );
+    });
 
-    expect(store.closePreviewImageMenu).toHaveBeenCalled();
-    expect(store.clearPreviewImage).toHaveBeenCalledWith({
-      target: "preview-background",
+    expect(deps.projectService.createTransform).toHaveBeenCalledWith({
+      transformId: expect.any(String),
+      data: {
+        type: "transform",
+        name: "Transform One",
+        description: "",
+        tagIds: [],
+        x: 960,
+        y: 540,
+        scaleX: 2,
+        scaleY: 2,
+        anchorX: 0.5,
+        anchorY: 1,
+        rotation: 15,
+        thumbnailFileId: "thumb-1",
+        previewFileId: "preview-1",
+        preview: { background: { imageId: "image-1" } },
+      },
+      parentId: null,
+      position: "after",
+      positionTargetId: "transform-1",
     });
-    expect(render).toHaveBeenCalled();
-    expect(graphicsService.attachCanvas).toHaveBeenCalledWith(canvas);
-    expect(graphicsService.loadAssets).not.toHaveBeenCalled();
-    expect(graphicsService.render).toHaveBeenNthCalledWith(1, {
-      elements: [],
-      animations: [],
-      audio: [],
-    });
-    expect(graphicsService.render).toHaveBeenNthCalledWith(
-      2,
-      expect.objectContaining({
-        elements: expect.arrayContaining([
-          expect.objectContaining({
-            id: "bg",
-            type: "rect",
-          }),
-        ]),
-      }),
-    );
   });
 });

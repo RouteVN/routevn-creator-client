@@ -81,6 +81,15 @@ const SIMPLE_RESOURCE_DIALOGS = [
     [["editForm", "handleEditFormAction"]],
   ],
   [
+    "pages/transforms/transforms.view.yaml",
+    "pages/transforms/transforms.store.js",
+    ["addDialog", "editDialog"],
+    [
+      ["addForm", "handleAddFormAction"],
+      ["editForm", "handleEditFormAction"],
+    ],
+  ],
+  [
     "pages/videos/videos.view.yaml",
     "pages/videos/videos.store.js",
     ["editDialog"],
@@ -92,7 +101,6 @@ const SPECIALIZED_RESOURCE_DIALOGS = [
   ["pages/characterSprites/characterSprites.view.yaml", ["spritesheetDialog"]],
   ["pages/particles/particles.view.yaml", ["particleDialog"]],
   ["pages/spritesheets/spritesheets.view.yaml", ["spritesheetDialog"]],
-  ["pages/transforms/transforms.view.yaml", ["transformDialog"]],
 ];
 
 const RESOURCE_FORMS_WITH_EXTERNAL_SUBMIT = [
@@ -115,10 +123,6 @@ const RESOURCE_FORMS_WITH_EXTERNAL_SUBMIT = [
       ["addColorForm", "handleAddColorFormSubmitKeyDown"],
       ["addFontForm", "handleAddFontFormSubmitKeyDown"],
     ],
-  ],
-  [
-    "pages/transforms/transforms.view.yaml",
-    [["transformForm", "handleTransformFormSubmitKeyDown"]],
   ],
 ];
 
@@ -210,17 +214,6 @@ describe("resource add/edit dialog layout", () => {
     );
     expect(variablesView).toContain("rtgl-button#variableSubmitButton");
     expect(variablesView).toContain("rtgl-button#computedSubmitButton");
-  });
-
-  it("uses one consistent padding layer for the transform form and preview", () => {
-    const view = readView("pages/transforms/transforms.view.yaml");
-
-    expect(view).toContain("rtgl-view d=h lg-d=v ah=c g=lg w=f:");
-    expect(view).toContain(
-      "rtgl-form#transformForm :defaultValues=${dialogDefaultValues} :form=${transformForm} w=f ph=md",
-    );
-    expect(view).toContain("rtgl-view w=6fg lg-w=f d=v g=md p=md:");
-    expect(view).not.toContain("rtgl-view d=h lg-d=v ah=c g=lg w=f ph=md:");
   });
 
   it.each(RESOURCE_FORMS_WITH_EXTERNAL_SUBMIT)(
