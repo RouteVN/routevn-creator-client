@@ -37,7 +37,7 @@ const isTextEditNode = (node) =>
   node.tagName === "TEXTAREA" ||
   (node.tagName === "INPUT" && !NON_TEXT_INPUT_TYPES.has(node.type));
 
-// Cmd/Ctrl+Z undoes; Shift+Cmd/Ctrl+Z and Ctrl+Y redo. A focused text field
+// Cmd/Ctrl+Z undoes and Shift+Cmd/Ctrl+Z redoes. A focused text field
 // keeps the keys for its own text undo, and an open dialog keeps them from
 // the page behind it. A page whose text editor uses the page's undo instead
 // names it in `textEditorTagName`; the editor's editable text then takes the
@@ -67,12 +67,8 @@ export const resolveEditHistoryShortcut = (
   ) {
     return undefined;
   }
-  const letter = getShortcutLetter(event);
-  if (letter === "z") {
-    return event.shiftKey ? "redo" : "undo";
+  if (getShortcutLetter(event) !== "z") {
+    return undefined;
   }
-  if (letter === "y" && event.ctrlKey && !event.shiftKey) {
-    return "redo";
-  }
-  return undefined;
+  return event.shiftKey ? "redo" : "undo";
 };

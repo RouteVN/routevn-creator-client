@@ -221,20 +221,24 @@ describe("edit history shortcuts", () => {
       ...init,
     });
 
-  it("undoes with Cmd/Ctrl+Z and redoes with Shift or Ctrl+Y", () => {
+  it("undoes with Cmd/Ctrl+Z and redoes with Shift+Cmd/Ctrl+Z only", () => {
     expect(press({ metaKey: true, key: "z", code: "KeyZ" })).toBe("undo");
     expect(press({ ctrlKey: true, key: "z", code: "KeyZ" })).toBe("undo");
     expect(
       press({ metaKey: true, shiftKey: true, key: "Z", code: "KeyZ" }),
     ).toBe("redo");
-    expect(press({ ctrlKey: true, key: "y", code: "KeyY" })).toBe("redo");
+    expect(
+      press({ ctrlKey: true, shiftKey: true, key: "Z", code: "KeyZ" }),
+    ).toBe("redo");
+    expect(press({ ctrlKey: true, key: "y", code: "KeyY" })).toBeUndefined();
     expect(press({ metaKey: true, key: "y", code: "KeyY" })).toBeUndefined();
     expect(press({ key: "z", code: "KeyZ" })).toBeUndefined();
   });
 
   it("follows the letter the keyboard layout types", () => {
-    // QWERTZ: Y is on the KeyZ code; AZERTY: W is on the KeyZ code.
-    expect(press({ ctrlKey: true, key: "y", code: "KeyZ" })).toBe("redo");
+    // QWERTZ: Z is on the KeyY code and Y on KeyZ; AZERTY: W is on KeyZ.
+    expect(press({ ctrlKey: true, key: "z", code: "KeyY" })).toBe("undo");
+    expect(press({ ctrlKey: true, key: "y", code: "KeyZ" })).toBeUndefined();
     expect(press({ ctrlKey: true, key: "w", code: "KeyZ" })).toBeUndefined();
     // A layout without Latin letters falls back to the physical key.
     expect(press({ ctrlKey: true, key: "я", code: "KeyZ" })).toBe("undo");

@@ -1206,7 +1206,7 @@ elements at once, then saves them. A step that only changes element data goes
 through the waiting-edit path, so undoing an edit not saved yet writes nothing;
 a step that creates, deletes or moves elements is saved through the page's save
 queue, and the store keeps it on top of repository data until it is saved.
-Cmd/Ctrl+Z undoes and Shift+Cmd/Ctrl+Z or Ctrl+Y redoes, by the letter the
+Cmd/Ctrl+Z undoes and Shift+Cmd/Ctrl+Z redoes, by the letter the
 keyboard layout types, except in a focused field, which keeps its own text
 undo, or in an open dialog. An explorer action first saves edits waiting to
 save, and undo and redo wait while it runs, so its step holds only its own
