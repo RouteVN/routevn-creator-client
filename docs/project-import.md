@@ -72,8 +72,9 @@ Every import stores the files directly inside `files/` under their file id. The 
 lives in `planFileRenames` (`src/internal/projectImportPlan.js`); native code only
 performs the renames it is given. For a project folder, JavaScript lists `files/` and
 sends the plan along: desktop renames inside the folder the user picked, so it changes
-that folder, while Android and iOS apply the renames to their own copy and never touch
-the user's source folder. For a zip, the plan is applied while extracting: each file is
+that folder (only after the folder has been checked to be a project: it must have
+`project.db` and `files/`, and its database must be readable), while Android and iOS
+apply the renames to their own copy and never touch the user's source folder. For a zip, the plan is applied while extracting: each file is
 written straight to its final name, so nothing is renamed afterwards.
 
 A `files` folder that is itself a link is refused on every platform, so a rename can
@@ -109,7 +110,8 @@ asked for, and nothing else.
 
 A zip is accepted when its root, or its single top-level folder, contains
 `project.db`. `__MACOSX/` and dot-entries are ignored. A missing `files/` is
-treated as empty. Only `project.db` and its sidecars (`-wal`, `-shm`, `-journal`),
+treated as empty: Android and iOS create it natively, and the desktop host creates it
+after extraction. Only `project.db` and its sidecars (`-wal`, `-shm`, `-journal`),
 `files/<name>` and `file-metadata/<name>` are extracted; everything else is skipped,
 including anything nested deeper. An archive that contains the incomplete-export
 marker, as a file or a directory, is rejected with `invalidArchive`.
@@ -140,9 +142,21 @@ Native extraction keeps the filesystem and the byte counts honest:
 
 The downloaded or picked zip itself is limited to 4 GiB.
 
-Entries that are not regular files are not special-cased: a zip library writes a
-symlink entry as an ordinary small file, and iOS and desktop reject a requested symlink
-entry. Android 14 and later refuse to open a zip that has an entry name with `..` or a
+Before a zip library opens an archive, desktop and iOS check its end-of-central-directory
+record and central directory themselves, and reject a malformed or hostile archive as
+`invalidArchive`: the end record must be at the end of the file (a zip comment is limited
+to 1,024 bytes), the declared entry count must not exceed the limit (50,000), the central
+directory must be at most 64 MiB and consist of exactly that many well-formed records,
+and no entry name may be longer than 4,096 bytes (on desktop an entry may also carry at
+most 16 extra fields). This keeps a tiny crafted file from making the zip library run for
+minutes or allocate gigabytes (desktop), or crash the app (iOS). iOS also rejects an
+encrypted entry, checks that every entry's offset and sizes fit the file, and requires the
+number of entries the library returns to equal the declared count, so an unreadable entry
+can no longer make a listing silently incomplete.
+
+Entries that are not regular files are only partly special-cased: iOS rejects a
+requested symlink entry (`unsafeArchiveEntry`), while desktop and Android write it as an
+ordinary small file holding the link's text, which is never followed. Android 14 and later refuse to open a zip that has an entry name with `..` or a
 leading `/`; the import reports that as `invalidArchive` instead of
 `unsafeArchiveEntry`. The platform zip libraries also decide how encrypted entries,
 unusual compression methods and duplicate raw entry names behave (the desktop library
@@ -188,9 +202,9 @@ and gives the same result when applied to its own output.
 - This relies on Drive's public download endpoint, which is not a documented API
   and can change.
 
-On Android, the calls that move a lot of data (`downloadImportFile`, `copyImportFile`
-and the storage step) opt out of the JavaScript bridge's default 30-minute response
-timeout, because a large archive on a slow connection can legitimately take longer. The
+On Android, the calls that move a lot of data (`downloadImportFile`, `copyImportFile`,
+`extractImportArchive` and the storage step for both a staged and a picked folder) opt
+out of the JavaScript bridge's default 30-minute response timeout, because a large archive on a slow connection can legitimately take longer. The
 native side bounds the download itself with the connect and stall timeouts.
 
 Downloads and extraction run natively, not through the WebView, because most
@@ -273,7 +287,10 @@ library like this:
 
 - **Listed project:** nothing is copied, nothing is renamed, nothing is deleted and the
   list entry is not touched. The incoming source (the folder, the unzipped archive or the
-  download) is ignored. The import ends with `projectExists`, and the user sees an alert
+  download) is ignored. (JavaScript still plans Rule A for the incoming copy before
+  native code reports that the project exists, so an incoming copy that also has a name
+  clash or an invalid file id ends with `fileNameConflict` or `invalidFileName` instead.)
+  The import ends with `projectExists`, and the user sees an alert
   titled "Project Already Added", not a success toast and not the failure alert. It says
   in one sentence that the project has already been added, so nothing was imported and the
   existing project was not changed. On iOS a second sentence says how to use the incoming
@@ -284,14 +301,18 @@ library like this:
   replace.
 - **Hidden project:** a project that was removed from the list but is still on disk is
   restored by importing it again. The restored entry describes the library's own copy
-  (its own name, description and icon), never the incoming one, and Rule A does not run.
+  (its own name, description and icon), never the incoming one, and no renames are applied
+  (the plan is still checked, as above).
   If its folder is still named after the id, as older builds made them, the folder is
   renamed after the project (sanitized, with ` (2)` when taken), so the result looks like
   every other import. A folder with any other name is left alone.
-- **Unfinished folder:** a folder with `project.db` but no `files/` is not a project the
-  app lists. It is treated as an unfinished earlier import, removed, and replaced by the
-  incoming copy in a new folder named after the project, so the result never keeps the
-  leftover's name (older builds named imported folders after the id).
+- **Unfinished folder:** a folder that is clearly an unfinished earlier import of this
+  same project is not a project the app lists. That means a folder whose identity file
+  names this id, or the id-named folder an older build made (it has `project.db` and no
+  `files/`). It is removed and replaced by the incoming copy in a new folder named after
+  the project, so the result never keeps the leftover's name. Any other folder or file
+  that merely uses the id as its name is never deleted: the import fails with
+  `importFailed` instead.
 
 `projectExists` is raised in JavaScript, by the iOS registration and by the duplicate check
 when a different project is added at a path that is already listed, and is mapped like the
@@ -301,9 +322,13 @@ entry appears.
 
 ## Errors
 
-Every import failure is an `Error` whose message starts with a stable code, then `: `,
-then a technical detail. The client maps the code to a localized message and appends the
-detail with `withErrorDetails` (`src/internal/projectImportErrors.js`).
+Every failure raised by the import code is an `Error` whose message starts with a stable
+code, then `: `, then a technical detail. The client maps the code to a localized message
+and appends the detail with `withErrorDetails` (`src/internal/projectImportErrors.js`).
+Failures that come from the platform have no code and show the generic alert with their
+text as the detail: Tauri's `invoke` rejects with plain text (not an `Error`), and the
+folder checks of a picked desktop folder, the project service and some storage-step
+errors raise uncoded messages.
 
 `invalidUrl`, `downloadFailed`, `archiveTooLarge`, `invalidArchive`,
 `unsafeArchiveEntry`, `invalidFileName`, `fileNameConflict`, `projectExists`,
@@ -314,8 +339,8 @@ Native code raises only `invalidUrl`, `downloadFailed`, `archiveTooLarge`,
 JavaScript: `invalidFileName`, `fileNameConflict` (Rule A), `unsupportedUrl` (for
 example a Drive folder link), `googleDriveFailed` (see Google Drive links above),
 `projectExists`, and the layout failures of the zip plan (`invalidArchive`,
-`unsafeArchiveEntry`, `archiveTooLarge`). A redirect loop is `downloadFailed` on iOS and
-`invalidUrl` on Android; both end in the same alert.
+`unsafeArchiveEntry`, `archiveTooLarge`). A redirect loop is `downloadFailed` on desktop and iOS and
+`invalidUrl` on Android, so the alert text differs.
 
 Android and iOS report any failure of the storage step as `importFailed`, so a
 `project.db` that cannot be read shows as an import failure with its detail.
@@ -324,9 +349,15 @@ Android and iOS report any failure of the storage step as `importFailed`, so a
 
 Import is app logic, so it lives in JavaScript. Native code only exposes basic
 operations that a WebView cannot do itself (stream a large download to disk, read and
-extract a zip, touch the app's private files) and never decides what a project is or
-how it is named. JavaScript decides the zip layout, the file names, the limits, the
-progress stages, the folder names and the error to show.
+extract a zip, touch the app's private files) and does not decide what a project is.
+JavaScript decides the zip layout, the file names, the limits, the progress stages, the
+desktop folder names and the error to show. The exception is each platform's existing
+storage step (`importProjectFolder`): on iOS it also names the library folder, decides
+whether the project is already in the library and removes an unfinished earlier import
+(see above), and iOS additionally exposes `renameLegacyProjectFolder` for a hidden
+project; on Android a picked folder that holds the incomplete-export marker is rejected
+there. Picking a zip goes through the platform's `openArchivePicker`, which is not part
+of the import contract.
 
 Every native error message is `<code>: <detail>` using only these codes:
 `invalidUrl`, `downloadFailed`, `archiveTooLarge`, `invalidArchive`,
