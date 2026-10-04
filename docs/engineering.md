@@ -1217,12 +1217,17 @@ page opened. Its autosave saves the whole animation, so a step holds the page's
 animation (tracks and keyframes per side, masks, and whether camera tracks are
 authored) before and after an edit, recorded where every saved edit queues the
 autosave (`queueEditorAutosave`). Edits that change the same values less than a
-second apart, such as typing a number or dragging a slider, are one step. Undo
-and redo put the snapshot back at once and queue the autosave, which skips what
-is already saved. Keyframes and masks are selected by index, so a selection the
-restore removes is cleared. Preview images, a mask still being added, and view
-state such as zoom and the playhead are not part of the history, and undo waits
-while a video export runs.
+second apart, such as typing a number or dragging a slider, are one step; an
+edit that adds or removes a keyframe, property, or mask is always its own step,
+and an edit that changes nothing autosave saves is not a step. Undo and redo put
+the snapshot back at once and queue the autosave, which skips what is already
+saved; a new animation counts as saved as it opened, so undoing its first edit
+creates nothing. Keyframes and masks are selected by index, so a selection is
+cleared when the restore removes it or moves the keyframes or masks around it.
+Preview images, a mask still being added, and view state such as zoom and the
+playhead are not part of the history, and undo and redo are off while a video
+export runs. The shortcuts step aside only for text fields, so they still work
+after a slider, checkbox, or select change.
 
 `rvn-mobile-sheet` is capped at 640px (the Projects page content width) and
 centered, so the bottom-tab sheets and every page's item detail sheet stay

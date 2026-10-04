@@ -193,7 +193,7 @@ describe("edit history change keys", () => {
     expect(getEditHistoryChangeKey(animation(1), animation(1))).toBe("");
   });
 
-  it("counts an added or removed item as a change to its list", () => {
+  it("gives edits that add or remove list items no key, so they never merge", () => {
     const twoKeyframes = {
       update: {
         x: {
@@ -205,9 +205,7 @@ describe("edit history change keys", () => {
       },
     };
 
-    expect(getEditHistoryChangeKey(animation(1), twoKeyframes)).toBe(
-      "/update/x/keyframes",
-    );
+    expect(getEditHistoryChangeKey(animation(1), twoKeyframes)).toBeUndefined();
     expect(
       getEditHistoryChangeKey(animation(1), animation(1, { startValue: 0 })),
     ).toBe("/update/x/keyframes/0/startValue");
@@ -242,6 +240,24 @@ describe("edit history shortcuts", () => {
     expect(press({ ctrlKey: true, key: "я", code: "KeyZ" })).toBe("undo");
   });
 
+  it("keeps working after a slider, checkbox, or select change", () => {
+    for (const node of [
+      { tagName: "INPUT", type: "range" },
+      { tagName: "INPUT", type: "checkbox" },
+      { tagName: "SELECT" },
+      { tagName: "RTGL-SELECT" },
+    ]) {
+      expect(
+        press({
+          metaKey: true,
+          key: "z",
+          code: "KeyZ",
+          composedPath: () => [node],
+        }),
+      ).toBe("undo");
+    }
+  });
+
   it("leaves the keys to fields and open dialogs", () => {
     expect(
       press({
@@ -259,5 +275,20 @@ describe("edit history shortcuts", () => {
         composedPath: () => [{ tagName: "BUTTON" }, { tagName: "DIALOG" }],
       }),
     ).toBeUndefined();
+    for (const node of [
+      { tagName: "INPUT", type: "text" },
+      { tagName: "INPUT", type: "number" },
+      { tagName: "TEXTAREA" },
+      { tagName: "DIV", isContentEditable: true },
+    ]) {
+      expect(
+        press({
+          metaKey: true,
+          key: "z",
+          code: "KeyZ",
+          composedPath: () => [node],
+        }),
+      ).toBeUndefined();
+    }
   });
 });

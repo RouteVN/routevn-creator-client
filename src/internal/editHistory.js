@@ -31,21 +31,22 @@ export const areEditHistoryValuesEqual = (a, b) => {
 
 // The paths of the values two snapshots differ in, for use as a merge key:
 // repeated edits to the same values, such as typing a number or dragging a
-// slider, merge, and an edit to anything else is a new step. An array whose
-// length changed counts as one changed value.
+// slider, merge, and an edit to anything else is a new step. An edit that
+// adds or removes list items, such as a keyframe, has no key and never
+// merges, so each add or delete is its own step.
 export const getEditHistoryChangeKey = (before, after) => {
   const paths = [];
+  let resizedList = false;
   const isObject = (value) => value !== null && typeof value === "object";
   const visit = (a, b, path) => {
     if (areEditHistoryValuesEqual(a, b)) {
       return;
     }
-    if (
-      isObject(a) &&
-      isObject(b) &&
-      Array.isArray(a) === Array.isArray(b) &&
-      (!Array.isArray(a) || a.length === b.length)
-    ) {
+    if (Array.isArray(a) && Array.isArray(b) && a.length !== b.length) {
+      resizedList = true;
+      return;
+    }
+    if (isObject(a) && isObject(b) && Array.isArray(a) === Array.isArray(b)) {
       for (const key of new Set([...Object.keys(a), ...Object.keys(b)])) {
         visit(a[key], b[key], `${path}/${key}`);
       }
@@ -54,7 +55,7 @@ export const getEditHistoryChangeKey = (before, after) => {
     paths.push(path);
   };
   visit(before, after, "");
-  return paths.join("|");
+  return resizedList ? undefined : paths.join("|");
 };
 
 export const createEditHistory = () => ({ undo: [], redo: [] });

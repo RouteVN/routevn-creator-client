@@ -3,16 +3,22 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import * as animationEditorStore from "../../src/pages/animationEditor/animationEditor.store.js";
 import {
   handleAddKeyframeFromTimeline,
+  handleAddPropertySideMenuItemClick,
   handleAfterMount,
   handleEditHistoryShortcutKeyDown,
   handleRedoButtonClick,
+  handleSelectedKeyframeRelativeChange,
   handleSelectedKeyframeValueChange,
   handleUndoButtonClick,
 } from "../../src/pages/animationEditor/animationEditor.handlers.js";
 import { EN_I18N } from "../support/i18n.js";
 
-// The page on its real store, opened on a saved animation.
-const createPage = async () => {
+// The page on its real store, opened on a saved animation, or on a new one
+// with `payload`.
+const createPage = async ({
+  payload = { an: "animation-1" },
+  keyframe = { relative: false },
+} = {}) => {
   let state = animationEditorStore.createInitialState();
   const store = new Proxy(
     {},
@@ -50,7 +56,7 @@ const createPage = async () => {
                     duration: 1000,
                     value: 100,
                     easing: "linear",
-                    relative: false,
+                    ...keyframe,
                   },
                 ],
               },
@@ -66,7 +72,8 @@ const createPage = async () => {
     refs: {},
     i18n: EN_I18N,
     appService: {
-      getPayload: () => ({ an: "animation-1" }),
+      getPayload: () => payload,
+      setPayload: vi.fn(),
       showAlert: vi.fn(),
       showToast: vi.fn(),
       navigate: vi.fn(),
@@ -75,11 +82,12 @@ const createPage = async () => {
       ensureRepository: async () => {},
       getRepositoryState: () => repositoryState,
       updateAnimation: vi.fn(async () => ({ valid: true })),
+      createAnimation: vi.fn(async () => ({ valid: true })),
     },
   };
   await handleAfterMount(deps);
 
-  const keyframes = () => state.tweenBySection.update.x.keyframes;
+  const keyframes = () => state.tweenBySection.update.x?.keyframes;
   const view = () =>
     animationEditorStore.selectViewData({ state, i18n: EN_I18N });
   const typeValue = (value) =>
@@ -167,6 +175,104 @@ describe("animation editor undo and redo", () => {
     expect(page.store.selectSelectedKeyframe()).toBeUndefined();
     await handleRedoButtonClick(page.deps);
     expect(page.keyframes()).toHaveLength(2);
+  });
+
+  it("keeps two quick keyframe adds on one track as two steps", async () => {
+    const page = await createPage();
+    for (const index of [1, 2]) {
+      handleAddKeyframeFromTimeline(page.deps, {
+        _event: { detail: { side: "update", property: "x", index } },
+      });
+      await vi.advanceTimersByTimeAsync(300);
+    }
+    expect(page.keyframes()).toHaveLength(3);
+
+    await handleUndoButtonClick(page.deps);
+    expect(page.keyframes()).toHaveLength(2);
+    await handleUndoButtonClick(page.deps);
+    expect(page.keyframes()).toHaveLength(1);
+  });
+
+  it("records no step for an edit that changes nothing autosave saves", async () => {
+    // Saving writes a missing relative as false, so setting it to false
+    // changes only the page's own data.
+    const page = await createPage({ keyframe: {} });
+    page.store.setSelectedKeyframe({ side: "update", property: "x", index: 0 });
+
+    handleSelectedKeyframeRelativeChange(page.deps, {
+      _event: { detail: { value: false } },
+    });
+
+    expect(page.keyframes()[0].relative).toBe(false);
+    expect(page.view().undoDisabled).toBe(true);
+  });
+
+  it("creates nothing when the first edit of a new animation is undone", async () => {
+    const page = await createPage({ payload: { at: "update" } });
+    await handleAddPropertySideMenuItemClick(page.deps, {
+      _event: { detail: { item: { side: "update", value: "x" } } },
+    });
+    expect(page.keyframes()).toBeDefined();
+
+    await handleUndoButtonClick(page.deps);
+    expect(page.keyframes()).toBeUndefined();
+    await vi.advanceTimersByTimeAsync(5000);
+
+    expect(page.deps.projectService.createAnimation).not.toHaveBeenCalled();
+  });
+
+  it("clears a keyframe selection the restore may point at a different keyframe", () => {
+    const keyframe = (value) => ({
+      duration: 500,
+      value,
+      easing: "linear",
+      relative: false,
+    });
+    const snapshotWith = (keyframes) => ({
+      tweenBySection: { update: { x: { initialValue: 0, keyframes } } },
+      transitionMask: undefined,
+      additionalTransitionMasks: [],
+      cameraTracksAuthored: false,
+    });
+    let state = produce(animationEditorStore.createInitialState(), (draft) => {
+      draft.tweenBySection.update.x = {
+        initialValue: 0,
+        keyframes: [keyframe(1), keyframe(2)],
+      };
+      draft.selectedKeyframe = { side: "update", property: "x", index: 1 };
+    });
+    const restore = (keyframes) =>
+      produce(state, (draft) => {
+        animationEditorStore.restoreAnimationHistorySnapshot(
+          { state: draft },
+          { snapshot: snapshotWith(keyframes) },
+        );
+      });
+
+    // Only the selected keyframe's value changes: it stays selected.
+    expect(restore([keyframe(1), keyframe(9)]).selectedKeyframe).toEqual({
+      side: "update",
+      property: "x",
+      index: 1,
+    });
+    // The keyframes swap places: index 1 is now a different keyframe.
+    expect(
+      restore([keyframe(2), keyframe(1)]).selectedKeyframe,
+    ).toBeUndefined();
+  });
+
+  it("turns undo and redo off while a video export runs", async () => {
+    const page = await createPage();
+    page.store.setSelectedKeyframe({ side: "update", property: "x", index: 0 });
+    page.typeValue(500);
+    expect(page.view().undoDisabled).toBe(false);
+
+    page.store.setAnimationVideoExportInProgress({ inProgress: true });
+
+    expect(page.view()).toMatchObject({
+      undoDisabled: true,
+      redoDisabled: true,
+    });
   });
 
   it("undoes and redoes with the keyboard, but not in a field or during a video export", async () => {

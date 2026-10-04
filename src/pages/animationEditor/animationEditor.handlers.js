@@ -735,14 +735,41 @@ const scheduleEditorAutosave = ({ deps } = {}) => {
   }
 };
 
+const getAnimationEditorPersistFingerprint = (deps) =>
+  createAnimationPersistFingerprint(
+    createAnimationPersistSnapshot({
+      copy: selectCopy(deps),
+      store: deps.store,
+    }),
+  );
+
+// Undo starts from the animation as the page has it now.
+const setAnimationEditorHistoryBaseline = (deps) => {
+  const { store } = deps;
+  store.setEditHistoryBaseline({
+    snapshot: store.selectAnimationHistorySnapshot(),
+    fingerprint: getAnimationEditorPersistFingerprint(deps),
+  });
+};
+
 // Records the animation as it is now against the last recorded version.
 // Repeated edits to the same values, such as typing a number, are one step.
+// An edit that changes nothing autosave saves is not a step.
 const recordAnimationEditorEdit = (deps) => {
   const { store } = deps;
   const before = store.selectEditHistoryBaseline();
-  const after = store.selectAnimationHistorySnapshot();
-  store.setEditHistoryBaseline({ snapshot: after });
+  // The baseline is set once the page has opened the animation.
   if (!before) {
+    return;
+  }
+  const beforeFingerprint = store.selectEditHistoryBaselineFingerprint();
+  const after = store.selectAnimationHistorySnapshot();
+  const afterFingerprint = getAnimationEditorPersistFingerprint(deps);
+  store.setEditHistoryBaseline({
+    snapshot: after,
+    fingerprint: afterFingerprint,
+  });
+  if (afterFingerprint === beforeFingerprint) {
     return;
   }
   store.recordEditHistoryStep({
@@ -774,7 +801,9 @@ const runAnimationEditorHistoryStep = async (deps, direction) => {
 
   store.moveEditHistoryStep({ direction });
   const snapshot = (direction === "undo" ? step.before : step.after).animation;
+  const playheadTimeMs = store.selectPreviewPlayheadTimeMs();
   store.restoreAnimationHistorySnapshot({ snapshot });
+  setAnimationEditorHistoryBaseline(deps);
   invalidatePreview({ store });
   render();
   scheduleEditorAutosave({ deps });
@@ -783,7 +812,7 @@ const runAnimationEditorHistoryStep = async (deps, direction) => {
       (properties) => properties?.camera,
     )
   ) {
-    await refreshCameraPreview(deps, 0);
+    await refreshCameraPreview(deps, playheadTimeMs ?? 0);
   }
 };
 
@@ -908,12 +937,13 @@ const syncEditorState = async ({ deps, repositoryState } = {}) => {
     store.setAnimationDescription({
       description: description ?? "",
     });
-    store.setAutosavePersistedFingerprint({ fingerprint: undefined });
+    // Nothing is saved for a new animation until it differs from how it
+    // opened, so undoing back to that creates nothing.
+    store.setAutosavePersistedFingerprint({
+      fingerprint: getAnimationEditorPersistFingerprint(deps),
+    });
   }
-  // Undo starts from the animation as the page opened it.
-  store.setEditHistoryBaseline({
-    snapshot: store.selectAnimationHistorySnapshot(),
-  });
+  setAnimationEditorHistoryBaseline(deps);
 
   render();
   await initializePreview({ deps });
