@@ -691,11 +691,16 @@ public class MainActivity extends Activity {
                     return;
                 }
 
-                bridgeExecutor.execute(() -> {
+                boolean accepted = ExecutorGuard.submit(bridgeExecutor, () -> {
                     dispatchAndroidBridgeMessage(messageData, response ->
                         postBridgeResponse(view, replyProxy, response)
                     );
                 });
+                if (!accepted) {
+                    // onDestroy already shut the executor down, so the page that
+                    // posted this message is gone and nobody can read a reply.
+                    Log.w(TAG, "Dropped an Android bridge message after the activity was destroyed.");
+                }
             }
         );
         return true;
@@ -983,7 +988,9 @@ public class MainActivity extends Activity {
     // would. This runs on the bridge thread, so it comes after every call the
     // dead page made and before any call from the new page.
     private void resetDeadPageState() {
-        bridgeExecutor.execute(() -> {
+        // After onDestroy the executor is shut down and onDestroy's own cleanup
+        // has already run this work, so a rejected task needs no retry.
+        ExecutorGuard.submit(bridgeExecutor, () -> {
             rollBackOpenTransactions();
             closeProjectFileWriteSessions();
             cleanupPendingSaveDocuments();
