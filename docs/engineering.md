@@ -1206,7 +1206,7 @@ elements at once, then saves them. A step that only changes element data goes
 through the waiting-edit path, so undoing an edit not saved yet writes nothing;
 a step that creates, deletes or moves elements is saved through the page's save
 queue, and the store keeps it on top of repository data until it is saved.
-Cmd/Ctrl+Z undoes and Shift+Cmd/Ctrl+Z or Ctrl+Y redoes, by the letter the
+Cmd/Ctrl+Z undoes and Shift+Cmd/Ctrl+Z redoes, by the letter the
 keyboard layout types, except in a focused field, which keeps its own text
 undo, or in an open dialog. An explorer action first saves edits waiting to
 save, and undo and redo wait while it runs, so its step holds only its own
@@ -1238,6 +1238,31 @@ the snapshot back at once, and the page saves it on leaving with its other
 edits; the page compares it with what was last saved, so undoing back to that
 saves nothing. Preview sounds, which Save Preview saves, and view state such as
 the tab and zoom are not part of the history.
+
+The scene editor has undo and redo for line edits made since the scene opened:
+text, new, split, merged, moved, and deleted lines, and line action edits.
+Section operations are not part of the history; a step whose section is gone
+is dropped. A step holds, for each line it touched, its section, index, and
+data, or none where it does not exist
+(`src/internal/ui/sceneEditorLexical/lineHistory.js`); a moved line touches
+only itself. Each section keeps its lines as of its last recorded edit, and an
+edit is recorded by comparing the page's lines with those: the editor's
+reported changes (an IME composition once it ends), new, swapped, and deleted
+lines, and the line action commands. Typing in one line less than a second
+apart is one step. Undo and redo put the lines into the section drafts at once
+and load them into the editor with `replaceLines`, since setting `lines` keeps
+a focused editor's own text; the caret goes where the text changed. The draft
+flush saves them, and restored lines are marked (`actionLineIds`) so it saves
+their whole actions, not only their dialogue. A line action command reads its
+line before anything is awaited, then saves pending drafts without waiting for
+the save interval, and does not run when that save fails. A draft that is still
+dirty afterwards, from typing during the save, takes the command's saved
+actions for its line, so the command shows at once and its step holds only its
+change. The shortcuts also work in the editor's own text, through
+`resolveEditHistoryShortcut`'s `textEditorTagName`; Lexical's own undo stays
+off. On phones the keyboard toolbar has Undo, which keeps the keyboard open,
+and a More menu with Sections, Settings, and Redo; the menu closes the
+keyboard and follows the toolbar down.
 
 `rvn-mobile-sheet` is capped at 640px (the Projects page content width) and
 centered, so the bottom-tab sheets and every page's item detail sheet stay

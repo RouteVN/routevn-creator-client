@@ -49,6 +49,8 @@ export function mountShortcutPage(owner, selectedLineId) {
     selectDraftSaveTimerId: () => undefined,
     selectPendingDraftSections: () => [],
     setDraftSavePendingSinceAt: () => {},
+    selectLineEditBaselines: () => ({}),
+    recordLineEdit: () => {},
   };
   const deps = {
     store,

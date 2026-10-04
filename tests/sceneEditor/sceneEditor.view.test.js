@@ -17,6 +17,54 @@ describe("sceneEditorLexical view", () => {
     expect(view).toContain("${sceneTextStatsLabel}");
   });
 
+  it("offers undo and redo in the text panel header, keeping the editor focused", () => {
+    const view = readFileSync(
+      new URL(
+        "../../src/pages/sceneEditorLexical/sceneEditorLexical.view.yaml",
+        import.meta.url,
+      ),
+      "utf8",
+    );
+    const template = view.slice(view.indexOf("template:"));
+
+    expect(template).toContain(
+      'rtgl-button#undoButton sq pre=undo v=ol ?disabled=${undoDisabled} aria-label="${undoLabel}" title="${undoLabel}"',
+    );
+    expect(template).toContain(
+      'rtgl-button#redoButton sq pre=redo v=ol ?disabled=${redoDisabled} aria-label="${redoLabel}" title="${redoLabel}"',
+    );
+    expect(template.indexOf("${scene.name}")).toBeLessThan(
+      template.indexOf("#undoButton"),
+    );
+    expect(template.indexOf("#redoButton")).toBeLessThan(
+      template.indexOf("rtgl-button#sectionsOverview"),
+    );
+    for (const [ref, handler] of [
+      ["undoButton", "handleUndoButtonClick"],
+      ["redoButton", "handleRedoButtonClick"],
+    ]) {
+      expect(view).toMatch(
+        new RegExp(
+          `${ref}:\\n\\s+eventListeners:\\n\\s+mousedown:\\n\\s+handler: handleEditHistoryButtonMouseDown\\n\\s+click:\\n\\s+handler: ${handler}`,
+        ),
+      );
+    }
+  });
+
+  it("gives the phone toolbar the undo and redo state", () => {
+    const view = readFileSync(
+      new URL(
+        "../../src/pages/sceneEditorLexical/sceneEditorLexical.view.yaml",
+        import.meta.url,
+      ),
+      "utf8",
+    );
+
+    expect(view).toContain(
+      "rvn-mobile-keyboard-toolbar#mobileKeyboardToolbar width=${mobileToolbarWidth} :undoDisabled=${undoDisabled} :redoDisabled=${redoDisabled}",
+    );
+  });
+
   it("renders a matching canvas download button after preview", () => {
     const view = readFileSync(
       new URL(

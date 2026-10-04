@@ -221,20 +221,24 @@ describe("edit history shortcuts", () => {
       ...init,
     });
 
-  it("undoes with Cmd/Ctrl+Z and redoes with Shift or Ctrl+Y", () => {
+  it("undoes with Cmd/Ctrl+Z and redoes with Shift+Cmd/Ctrl+Z only", () => {
     expect(press({ metaKey: true, key: "z", code: "KeyZ" })).toBe("undo");
     expect(press({ ctrlKey: true, key: "z", code: "KeyZ" })).toBe("undo");
     expect(
       press({ metaKey: true, shiftKey: true, key: "Z", code: "KeyZ" }),
     ).toBe("redo");
-    expect(press({ ctrlKey: true, key: "y", code: "KeyY" })).toBe("redo");
+    expect(
+      press({ ctrlKey: true, shiftKey: true, key: "Z", code: "KeyZ" }),
+    ).toBe("redo");
+    expect(press({ ctrlKey: true, key: "y", code: "KeyY" })).toBeUndefined();
     expect(press({ metaKey: true, key: "y", code: "KeyY" })).toBeUndefined();
     expect(press({ key: "z", code: "KeyZ" })).toBeUndefined();
   });
 
   it("follows the letter the keyboard layout types", () => {
-    // QWERTZ: Y is on the KeyZ code; AZERTY: W is on the KeyZ code.
-    expect(press({ ctrlKey: true, key: "y", code: "KeyZ" })).toBe("redo");
+    // QWERTZ: Z is on the KeyY code and Y on KeyZ; AZERTY: W is on KeyZ.
+    expect(press({ ctrlKey: true, key: "z", code: "KeyY" })).toBe("undo");
+    expect(press({ ctrlKey: true, key: "y", code: "KeyZ" })).toBeUndefined();
     expect(press({ ctrlKey: true, key: "w", code: "KeyZ" })).toBeUndefined();
     // A layout without Latin letters falls back to the physical key.
     expect(press({ ctrlKey: true, key: "я", code: "KeyZ" })).toBe("undo");
@@ -256,6 +260,36 @@ describe("edit history shortcuts", () => {
         }),
       ).toBe("undo");
     }
+  });
+
+  it("takes the keys in a page's own text editor, but not in its other fields or while composing", () => {
+    const editor = { tagName: "RVN-LEXICAL-SCENE-DOCUMENT-EDITOR" };
+    const editableText = { tagName: "DIV", isContentEditable: true };
+    const pressIn = (path, init) =>
+      resolveEditHistoryShortcut(
+        {
+          metaKey: true,
+          key: "z",
+          code: "KeyZ",
+          composedPath: () => path,
+          ...init,
+        },
+        { textEditorTagName: "rvn-lexical-scene-document-editor" },
+      );
+
+    expect(pressIn([editableText, editor, { tagName: "BODY" }])).toBe("undo");
+    // Another editable text outside the editor keeps its own undo.
+    expect(pressIn([editableText, { tagName: "BODY" }])).toBeUndefined();
+    expect(
+      pressIn([{ tagName: "INPUT", type: "text" }, editor]),
+    ).toBeUndefined();
+    expect(
+      pressIn([editableText, editor, { tagName: "DIALOG" }]),
+    ).toBeUndefined();
+    expect(
+      pressIn([editableText, editor], { isComposing: true }),
+    ).toBeUndefined();
+    expect(pressIn([editableText, editor], { keyCode: 229 })).toBeUndefined();
   });
 
   it("leaves the keys to fields and open dialogs", () => {

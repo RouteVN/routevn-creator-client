@@ -274,6 +274,20 @@ const isArrowRepeatNativeCalloutSuppressed = () => {
   );
 };
 
+// The More menu hangs from the top of its button, which moves with the
+// keyboard, so it is placed again whenever the toolbar moves.
+const placeMoreMenu = (deps) => {
+  const { refs, store } = deps;
+  const moreButton = Object.values(refs).find(
+    (element) => element?.dataset?.actionId === "more",
+  );
+  const rect = moreButton?.getBoundingClientRect();
+  if (!rect) {
+    return;
+  }
+  store.openMoreMenu({ x: rect.right, y: rect.top });
+};
+
 const stopArrowRepeat = (store) => {
   const repeatState = store.selectArrowRepeatState?.();
   if (!repeatState) {
@@ -393,6 +407,10 @@ export const handleBeforeMount = (deps) => {
     dispatchKeyboardStateChange(dispatchEvent, store.selectKeyboardState());
     const renderStartedAt = getSceneEditorTimingNow();
     render();
+    if (store.selectIsMoreMenuOpen()) {
+      placeMoreMenu(deps);
+      render();
+    }
     const renderDurationMs = getSceneEditorTimingDurationMs(renderStartedAt);
     emitSceneEditorTiming("mobile-keyboard.sync", {
       durationMs: getSceneEditorTimingDurationMs(startedAt),
@@ -514,6 +532,13 @@ export const handleToolbarItemPointerDown = ({ store, render }, payload) => {
   startArrowRepeat(store, direction, event.pointerId);
 };
 
+// A tap also sends a mouse press after the touch, which would move focus off
+// the text and close the keyboard. Undo keeps the keyboard open; the other
+// actions close it themselves.
+export const handleToolbarItemMouseDown = (_deps, payload) => {
+  payload._event.preventDefault();
+};
+
 const stopToolbarPointerAction = ({ store, render }, payload) => {
   const event = payload._event;
   event.preventDefault();
@@ -563,7 +588,8 @@ export const handleToolbarItemContextMenu = (deps, payload) => {
   clearToolbarPressedState(deps);
 };
 
-export const handleToolbarItemClick = ({ dispatchEvent }, payload) => {
+export const handleToolbarItemClick = (deps, payload) => {
+  const { dispatchEvent, render } = deps;
   const startedAt = getSceneEditorTimingNow();
   const actionId = payload._event.currentTarget.dataset.actionId;
   payload._event.preventDefault();
@@ -580,7 +606,20 @@ export const handleToolbarItemClick = ({ dispatchEvent }, payload) => {
     return;
   }
 
-  blurActiveEditableElement();
+  // The menu is a modal that takes focus, so the keyboard closes first and
+  // the menu then follows the toolbar down.
+  if (actionId === "more") {
+    blurActiveEditableElement();
+    placeMoreMenu(deps);
+    render();
+    return;
+  }
+
+  // Undo keeps the keyboard open, so typing can go on from the restored
+  // caret.
+  if (actionId !== "undo") {
+    blurActiveEditableElement();
+  }
   dispatchEvent(
     new CustomEvent("action-click", {
       detail: {
@@ -594,4 +633,27 @@ export const handleToolbarItemClick = ({ dispatchEvent }, payload) => {
     actionId,
     ignored: false,
   });
+};
+
+export const handleMoreMenuClose = ({ render, store }) => {
+  store.closeMoreMenu();
+  render();
+};
+
+export const handleMoreMenuItemClick = (deps, payload) => {
+  const { dispatchEvent, render, store } = deps;
+  const { item } = payload._event.detail;
+  store.closeMoreMenu();
+  render();
+  if (item.disabled) {
+    return;
+  }
+  dispatchEvent(
+    new CustomEvent("action-click", {
+      detail: {
+        actionId: item.value,
+      },
+      bubbles: true,
+    }),
+  );
 };

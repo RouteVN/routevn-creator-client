@@ -85,8 +85,10 @@ export const enqueueLatestSceneEditorPersistence = async ({
 
     const waiters = taskState.waiters.splice(0);
     if (lastError) {
+      // The waiters get the error; nothing awaits this runner, so throwing
+      // here would only add an unhandled rejection.
       waiters.forEach(({ reject }) => reject(lastError));
-      throw lastError;
+      return;
     }
 
     waiters.forEach(({ resolve }) => resolve());

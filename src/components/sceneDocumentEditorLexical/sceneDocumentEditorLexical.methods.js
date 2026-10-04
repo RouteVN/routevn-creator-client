@@ -77,6 +77,12 @@ export function hardRefresh() {
   getEditor(this)?.hardRefresh?.();
 }
 
+// Shows `lines` even while the editor is focused; see the primitive's
+// replaceLines.
+export function replaceLines({ lines, lineId, cursorPosition } = {}) {
+  getEditor(this)?.replaceLines?.(lines, { lineId, cursorPosition });
+}
+
 export function focusLine(payload = {}) {
   return focusLineWhenReady(this, payload, FOCUS_LINE_RETRY_FRAMES);
 }

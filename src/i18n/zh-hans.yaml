@@ -1995,6 +1995,7 @@ sceneEditorPage:
   loadingSceneLabel: "正在加载场景..."
   leftLabel: "左"
   missingProjectResolution: "项目缺少必要的分辨率设置。"
+  moreLabel: "更多"
   moveButton: "移动"
   moveSectionTitle: "移动段落"
   moveToSceneMenuItem: "移动到场景"
