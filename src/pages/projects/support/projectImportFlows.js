@@ -66,10 +66,11 @@ export const runProjectImport = async (deps, { run, status }) => {
 
 // What an "already added" alert says. Importing never replaces a project. On
 // iOS a project is recognized by the id inside project.db, so the user may be
-// holding a different version of the project they already have, and the only
-// way to use it is to remove the existing project first. Elsewhere it only
-// means a different project was found at a path that is already listed, and
-// there is nothing to replace.
+// holding a different version of the project they already have. Remove only
+// hides a project, and importing it again restores the library's own copy, so
+// the only way to use the incoming one is to delete the project's folder in
+// the Files app first. Elsewhere it only means a different project was found
+// at a path that is already listed, and there is nothing to replace.
 const createProjectExistsMessage = ({ copy, platform }) => {
   const parts = [copy.importProjectExistsExplanation];
   if (platform === "ios") {

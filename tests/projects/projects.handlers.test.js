@@ -1819,7 +1819,7 @@ describe("projects import of a project that already exists", () => {
   const EXPLANATION =
     "This project has already been added, so nothing was imported and the existing project was not changed.";
   const LIBRARY_HINT =
-    "To use this copy instead, remove the existing project first, then import it again.";
+    "To use this copy instead, delete the project's folder in the Files app, then import it again.";
 
   const expectExistsAlert = (deps, { withLibraryHint }) => {
     const progressDialog =
