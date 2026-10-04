@@ -176,7 +176,7 @@ const createPage = () => {
                   ...line,
                   actions: {
                     ...line.actions,
-                    dialogue: { content: [{ text }] },
+                    dialogue: { content: text ? [{ text }] : [] },
                   },
                 }
               : line,
@@ -255,6 +255,20 @@ describe("scene editor undo and redo", () => {
 
     handleRedoButtonClick(page.deps);
     expect(page.pageLines()[0].text).toBe("Hello bigger world");
+  });
+
+  it("undoes typing into an empty line, from its first letter, in one step", async () => {
+    const page = createPage();
+    await page.type("line-2", "");
+    vi.advanceTimersByTime(2000);
+    for (const text of ["H", "Hi", "Hi there"]) {
+      await page.type("line-2", text);
+      vi.advanceTimersByTime(100);
+    }
+
+    handleUndoButtonClick(page.deps);
+
+    expect(page.pageLines()[1].text).toBe("");
   });
 
   it("undoes a new line and selects the line before it", async () => {

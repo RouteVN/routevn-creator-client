@@ -17,10 +17,10 @@ import { createSceneEditorDraftPersistence } from "../../internal/ui/sceneEditor
 import { createEmptyContent } from "../../internal/ui/sceneEditorLexical/contentModel.js";
 import {
   diffSceneEditorSectionLines,
+  getSceneEditorLineEditMergeKey,
   getSceneEditorRestoreFocus,
   restoreSceneEditorSectionLines,
 } from "../../internal/ui/sceneEditorLexical/lineHistory.js";
-import { getEditHistoryChangeKey } from "../../internal/editHistory.js";
 import {
   resolveEditHistoryShortcut,
   selectEditHistoryCopy,
@@ -806,7 +806,7 @@ const recordSceneEditorLineEdits = (deps, sectionLines) => {
   store.recordLineEdit({
     before,
     after,
-    mergeKey: getEditHistoryChangeKey(before, after),
+    mergeKey: getSceneEditorLineEditMergeKey(before, after),
     time: Date.now(),
     baselines: sectionLines,
   });

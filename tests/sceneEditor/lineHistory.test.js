@@ -1,13 +1,13 @@
 import { describe, expect, it } from "vitest";
 import {
   createEditHistory,
-  getEditHistoryChangeKey,
   getEditHistoryStep,
   moveEditHistoryStep,
   recordEditHistoryStep,
 } from "../../src/internal/editHistory.js";
 import {
   diffSceneEditorSectionLines,
+  getSceneEditorLineEditMergeKey,
   getSceneEditorRestoreCaret,
   getSceneEditorRestoreFocus,
   restoreSceneEditorSectionLines,
@@ -35,9 +35,41 @@ describe("scene editor line history", () => {
 
     expect(Object.keys(step.before)).toEqual(["b"]);
     expect(step.before.b).toMatchObject({ sectionId: "section-1", index: 1 });
-    expect(getEditHistoryChangeKey(step.before, step.after)).toBe(
-      "/b/line/actions/dialogue/content/0/text",
+    expect(getSceneEditorLineEditMergeKey(step.before, step.after)).toBe(
+      "text:section-1:b",
     );
+  });
+
+  it("merges the first letter typed into an empty line with the rest", () => {
+    const empty = [{ id: "a", actions: { dialogue: { content: [] } } }];
+    const typed = (text) =>
+      diffSceneEditorSectionLines({
+        sectionId: "section-1",
+        before: empty,
+        after: [line("a", text)],
+      });
+    const first = typed("H");
+    expect(getSceneEditorLineEditMergeKey(first.before, first.after)).toBe(
+      "text:section-1:a",
+    );
+
+    // A new line or an action change does not merge.
+    const added = diffSceneEditorSectionLines({
+      sectionId: "section-1",
+      before: empty,
+      after: [...empty, line("b", "")],
+    });
+    expect(
+      getSceneEditorLineEditMergeKey(added.before, added.after),
+    ).toBeUndefined();
+    const actionChanged = diffSceneEditorSectionLines({
+      sectionId: "section-1",
+      before: [line("a", "One")],
+      after: [line("a", "One", { bgm: { resourceId: "m1" } })],
+    });
+    expect(
+      getSceneEditorLineEditMergeKey(actionChanged.before, actionChanged.after),
+    ).toBeUndefined();
   });
 
   it("touches only the moved line and the inserted line, not the lines they pass", () => {
@@ -126,7 +158,7 @@ describe("scene editor line history", () => {
         });
         recordEditHistoryStep(history, {
           ...step,
-          mergeKey: getEditHistoryChangeKey(step.before, step.after),
+          mergeKey: getSceneEditorLineEditMergeKey(step.before, step.after),
           time: edit * 400,
         });
         lines = next;

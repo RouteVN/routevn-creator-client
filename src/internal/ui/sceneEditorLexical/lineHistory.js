@@ -118,6 +118,32 @@ export const diffSceneEditorSectionLines = ({
   };
 };
 
+// Typing in one line merges into one step: an edit that changed only the text
+// of one line, in place, has that line as its merge key. Other edits, such as
+// new, moved, or deleted lines and action edits, never merge.
+export const getSceneEditorLineEditMergeKey = (before, after) => {
+  const lineIds = Object.keys(before);
+  if (lineIds.length !== 1) {
+    return undefined;
+  }
+  const [lineId] = lineIds;
+  const previous = before[lineId];
+  const next = after[lineId];
+  if (
+    !previous ||
+    !next ||
+    previous.sectionId !== next.sectionId ||
+    previous.index !== next.index ||
+    !areEditHistoryValuesEqual(
+      getActionsWithoutDialogueContent(previous.line),
+      getActionsWithoutDialogueContent(next.line),
+    )
+  ) {
+    return undefined;
+  }
+  return `text:${next.sectionId}:${lineId}`;
+};
+
 // Brings one section's lines back to a step's version of them: removes every
 // line the step covers, then inserts the step's lines in this section at their
 // indices, lowest first.
