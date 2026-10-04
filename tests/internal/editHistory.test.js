@@ -258,6 +258,36 @@ describe("edit history shortcuts", () => {
     }
   });
 
+  it("takes the keys in a page's own text editor, but not in its other fields or while composing", () => {
+    const editor = { tagName: "RVN-LEXICAL-SCENE-DOCUMENT-EDITOR" };
+    const editableText = { tagName: "DIV", isContentEditable: true };
+    const pressIn = (path, init) =>
+      resolveEditHistoryShortcut(
+        {
+          metaKey: true,
+          key: "z",
+          code: "KeyZ",
+          composedPath: () => path,
+          ...init,
+        },
+        { textEditorTagName: "rvn-lexical-scene-document-editor" },
+      );
+
+    expect(pressIn([editableText, editor, { tagName: "BODY" }])).toBe("undo");
+    // Another editable text outside the editor keeps its own undo.
+    expect(pressIn([editableText, { tagName: "BODY" }])).toBeUndefined();
+    expect(
+      pressIn([{ tagName: "INPUT", type: "text" }, editor]),
+    ).toBeUndefined();
+    expect(
+      pressIn([editableText, editor, { tagName: "DIALOG" }]),
+    ).toBeUndefined();
+    expect(
+      pressIn([editableText, editor], { isComposing: true }),
+    ).toBeUndefined();
+    expect(pressIn([editableText, editor], { keyCode: 229 })).toBeUndefined();
+  });
+
   it("leaves the keys to fields and open dialogs", () => {
     expect(
       press({

@@ -1,5 +1,13 @@
 import { formatLoadingProgress } from "../../internal/ui/assetLoadingProgress.js";
 import {
+  createEditHistory,
+  dropEditHistoryStep as dropHistoryStep,
+  getEditHistoryStep,
+  moveEditHistoryStep as moveHistoryStep,
+  recordEditHistoryStep,
+} from "../../internal/editHistory.js";
+import { selectEditHistoryCopy } from "../../internal/ui/editHistory.js";
+import {
   buildLayoutElements,
   isFragmentLayout,
 } from "../../internal/project/layout.js";
@@ -748,6 +756,12 @@ export const createInitialState = () => ({
   warnedAssetFileIds: [],
   lockingLineId: null, // Lock to prevent duplicate split/merge operations
   actionTargetLineId: undefined,
+  // Undo and redo for line edits made since the scene opened. A section's
+  // baseline is its lines as of its last recorded edit; until then they are
+  // the committed lines. Undo waits while a line action command runs.
+  editHistory: createEditHistory(),
+  editHistoryBaselines: {},
+  isLineCommandRunning: false,
   deadEndTooltip: {
     open: false,
     x: 0,
@@ -757,8 +771,82 @@ export const createInitialState = () => ({
 });
 
 export const setSceneId = ({ state }, { sceneId } = {}) => {
+  if (sceneId !== state.sceneId) {
+    state.editHistory = createEditHistory();
+    state.editHistoryBaselines = {};
+  }
   state.sceneId = sceneId;
 };
+
+// Each section's lines as of its last recorded edit: its baseline, or its
+// committed lines when no edit was recorded in it yet.
+export const selectLineEditBaselines = ({ state }, { sectionIds } = {}) => {
+  const baselines = {};
+  let committedSections;
+  for (const sectionId of sectionIds) {
+    if (state.editHistoryBaselines[sectionId]) {
+      baselines[sectionId] = state.editHistoryBaselines[sectionId];
+      continue;
+    }
+    committedSections ??= selectCommittedScene({ state })?.sections ?? [];
+    baselines[sectionId] =
+      committedSections.find((section) => section.id === sectionId)?.lines ??
+      [];
+  }
+  return baselines;
+};
+
+// Undo and redo wait while a line action command runs, the preview is open,
+// or text is being composed.
+export const selectIsEditHistoryBlocked = ({ state }) =>
+  state.isLineCommandRunning ||
+  state.previewVisible ||
+  getDraftSections(state).some((draftSection) => draftSection.isComposing);
+
+// Records an edit to the lines, when it touched any, and takes the sections'
+// lines after it as their baselines.
+export const recordLineEdit = (
+  { state },
+  { before, after, mergeKey, time, baselines } = {},
+) => {
+  if (Object.keys(before).length > 0) {
+    recordEditHistoryStep(state.editHistory, {
+      before,
+      after,
+      mergeKey,
+      time,
+    });
+  }
+  Object.assign(state.editHistoryBaselines, baselines);
+};
+
+export const setEditHistoryBaselines = ({ state }, { baselines } = {}) => {
+  Object.assign(state.editHistoryBaselines, baselines);
+};
+
+export const selectEditHistoryStep = ({ state }, { direction } = {}) =>
+  getEditHistoryStep(state.editHistory, direction);
+
+// Moves an undone or redone step to the other stack, and takes the restored
+// sections' lines as their baselines.
+export const moveEditHistoryStep = (
+  { state },
+  { direction, baselines } = {},
+) => {
+  moveHistoryStep(state.editHistory, direction);
+  Object.assign(state.editHistoryBaselines, baselines);
+};
+
+export const dropEditHistoryStep = ({ state }, { direction } = {}) => {
+  dropHistoryStep(state.editHistory, direction);
+};
+
+export const setLineCommandRunning = ({ state }, { running } = {}) => {
+  state.isLineCommandRunning = running === true;
+};
+
+export const selectIsLineCommandRunning = ({ state }) =>
+  state.isLineCommandRunning;
 
 export const setUiConfig = ({ state }, { uiConfig } = {}) => {
   state.isTouchMode =
@@ -1963,6 +2051,7 @@ const selectBackgroundTransformEditorViewData = ({ state }) => {
 export const selectViewData = ({ state, i18n }) => {
   const timingStartedAt = getSceneEditorTimingNow();
   const copy = selectSceneEditorCopy(i18n);
+  const editHistoryCopy = selectEditHistoryCopy(i18n);
   const sceneSelectStartedAt = getSceneEditorTimingNow();
   const scene = selectScene({ state });
   const sceneSelectDurationMs =
@@ -2069,6 +2158,10 @@ export const selectViewData = ({ state, i18n }) => {
       downloadCanvasButton: copy.downloadCanvasButton ?? "Download canvas",
       sectionsTitle: copy.sectionsLabel ?? "Sections",
       stateTitle: copy.stateTitle ?? "Presentation state",
+      undoDisabled: true,
+      redoDisabled: true,
+      undoLabel: editHistoryCopy.undoLabel,
+      redoLabel: editHistoryCopy.redoLabel,
     };
   }
 
@@ -2467,6 +2560,10 @@ export const selectViewData = ({ state, i18n }) => {
     downloadCanvasButton: copy.downloadCanvasButton ?? "Download canvas",
     sectionsTitle: copy.sectionsLabel ?? "Sections",
     stateTitle: copy.stateTitle ?? "Presentation state",
+    undoDisabled: state.editHistory.undo.length === 0,
+    redoDisabled: state.editHistory.redo.length === 0,
+    undoLabel: editHistoryCopy.undoLabel,
+    redoLabel: editHistoryCopy.redoLabel,
   };
 };
 

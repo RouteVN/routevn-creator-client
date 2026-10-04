@@ -331,6 +331,7 @@ export const createSceneEditorDraftPersistence = ({
               await deps.projectService.syncSectionLinesSnapshot({
                 sectionId: draftSection?.sectionId,
                 lines: snapshotLines,
+                actionLineIds: draftSection?.actionLineIds,
               });
               const syncSnapshotDurationMs = getSceneEditorTimingDurationMs(
                 syncSnapshotStartedAt,

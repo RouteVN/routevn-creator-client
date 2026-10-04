@@ -113,20 +113,28 @@ export const ensureSceneEditorDraftSection = ({
   });
 };
 
+// `actionLineIds` marks lines whose whole actions must be saved, not only
+// their dialogue, such as lines an undo restored.
 export const replaceSceneEditorDraftSectionLines = (
   draftSection,
-  { lines, source = "editor", dirty = true } = {},
+  { lines, source = "editor", dirty = true, actionLineIds = [] } = {},
 ) => {
   if (!draftSection) {
     return draftSection;
   }
 
-  return {
+  const nextDraftSection = {
     ...draftSection,
     lines: cloneSceneEditorLines(lines),
     dirty: dirty === true,
     lastSource: source,
   };
+  if (actionLineIds.length > 0) {
+    nextDraftSection.actionLineIds = [
+      ...new Set([...(draftSection.actionLineIds ?? []), ...actionLineIds]),
+    ];
+  }
+  return nextDraftSection;
 };
 
 export const setSceneEditorDraftSectionCompositionState = (
@@ -158,6 +166,7 @@ export const markSceneEditorDraftSectionClean = (
       ? revision
       : draftSection.baseRevision,
     lastSource: "repository",
+    actionLineIds: undefined,
   };
 };
 

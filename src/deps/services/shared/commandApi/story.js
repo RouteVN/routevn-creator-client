@@ -558,7 +558,14 @@ export const createStoryCommandApi = (shared) => {
       });
     },
 
-    async syncSectionLinesSnapshot({ sectionId, lines = [] } = {}) {
+    // Saves a section's lines: deletes, creates, and moves lines to match, and
+    // updates the dialogue of existing lines. For existing lines in
+    // `actionLineIds` it saves all of their actions instead.
+    async syncSectionLinesSnapshot({
+      sectionId,
+      lines = [],
+      actionLineIds = [],
+    } = {}) {
       const context = await shared.ensureCommandContext({
         sectionIds: [sectionId],
       });
@@ -584,6 +591,7 @@ export const createStoryCommandApi = (shared) => {
       const currentLineIds = getOrderedLineIds(currentSection);
       const currentLineIdsSet = new Set(currentLineIds);
       const currentLineItems = currentSection?.lines?.items || {};
+      const fullActionLineIds = new Set(actionLineIds);
       const commands = [];
 
       const deletedLineIds = currentLineIds.filter(
@@ -676,6 +684,28 @@ export const createStoryCommandApi = (shared) => {
 
         const desiredLine = desiredLineById.get(lineId);
         const currentLine = currentLineItems[lineId];
+        if (fullActionLineIds.has(lineId)) {
+          const desiredActions = desiredLine?.actions || {};
+          if (
+            JSON.stringify(currentLine?.actions || {}) ===
+            JSON.stringify(desiredActions)
+          ) {
+            continue;
+          }
+
+          commands.push({
+            scope: "story",
+            type: COMMAND_TYPES.LINE_UPDATE_ACTIONS,
+            payload: buildLineActionsPayload({
+              lineId,
+              data: desiredActions,
+              replace: true,
+            }),
+            partition,
+          });
+          continue;
+        }
+
         const desiredDialogue = desiredLine?.actions?.dialogue || {};
         const currentDialogue = currentLine?.actions?.dialogue || {};
 

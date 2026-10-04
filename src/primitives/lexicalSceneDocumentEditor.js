@@ -2163,6 +2163,41 @@ export class LexicalSceneDocumentEditorElement extends HTMLElement {
     });
   }
 
+  // Shows `lines` as given, also while the editor is focused, where setting
+  // `lines` keeps the editor's own text. Used for undo and redo, so it reports
+  // no change and drops pending focus restores from earlier edits. With
+  // `lineId`, selects that line, and when focused for typing, puts the caret
+  // at `cursorPosition` (the end when undefined).
+  replaceLines(lines, { lineId, cursorPosition } = {}) {
+    const nextLines = cloneSceneEditorLines(lines);
+    if (!this.isConnected || !this.refs.editor) {
+      this.state.lines = nextLines;
+      return;
+    }
+
+    this.cancelFocusRecovery();
+    this.hideSelectionPopover();
+    this.closeMentionMenu();
+    const isTyping =
+      this.isEditorFocused === true && this.state.mode === "text-editor";
+    this.loadLines(nextLines, {
+      emitChange: false,
+      restoreSelection: lineId
+        ? { lineId, start: 0, end: 0 }
+        : this.getCurrentSelectionSnapshot(),
+    });
+    if (!lineId) {
+      return;
+    }
+
+    this.state.selectedLineId = lineId;
+    if (isTyping) {
+      this.restoreLineSelection({ lineId, cursorPosition });
+      return;
+    }
+    this.scheduleRender();
+  }
+
   applyTextFormat(format) {
     if (format === "bold" || format === "italic" || format === "underline") {
       this.editor.update(

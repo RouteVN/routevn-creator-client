@@ -3,6 +3,7 @@ import {
   createSceneEditorDraftPersistence,
   getSceneEditorDraftSaveDelayMs,
 } from "../../src/internal/ui/sceneEditorLexical/draftPersistence.js";
+import { replaceSceneEditorDraftSectionLines } from "../../src/internal/ui/sceneEditorLexical/draftSection.js";
 
 const createLine = (id, text) => ({
   id,
@@ -396,6 +397,39 @@ describe("scene editor lexical draft persistence", () => {
     });
     expect(reconcileCurrentEditorSession).toHaveBeenCalledOnce();
     expect(render).toHaveBeenCalledOnce();
+  });
+
+  it("saves the whole actions of lines an undo marked, then clears the marks", async () => {
+    const draftSection = replaceSceneEditorDraftSectionLines(
+      replaceSceneEditorDraftSectionLines(createDirtyDraftSection(), {
+        lines: [createLine("line-1", "Hello")],
+        actionLineIds: ["line-1"],
+      }),
+      { lines: [createLine("line-1", "Hello!")] },
+    );
+    // A later edit keeps the marks.
+    expect(draftSection.actionLineIds).toEqual(["line-1"]);
+    const store = createStore({ draftSection });
+    const syncSectionLinesSnapshot = vi.fn(async () => {});
+    const controller = createSceneEditorDraftPersistence({
+      syncDraftSectionFromLiveEditor: (deps) => deps.store.selectDraftSection(),
+      nowMs: () => 1234,
+    });
+
+    await controller.flushSceneEditorDrafts({
+      store,
+      projectService: { syncSectionLinesSnapshot },
+      render: vi.fn(),
+      appService: { showAlert: vi.fn() },
+    });
+
+    expect(syncSectionLinesSnapshot).toHaveBeenCalledWith({
+      sectionId: "section-1",
+      lines: [createLine("line-1", "Hello!")],
+      actionLineIds: ["line-1"],
+    });
+    expect(store.state.draftSection).toMatchObject({ dirty: false });
+    expect(store.state.draftSection.actionLineIds).toBeUndefined();
   });
 
   it("reschedules an advanced draft through debounce instead of immediately flushing another row", async () => {

@@ -522,6 +522,94 @@ describe("story command api", () => {
     });
   });
 
+  it("saves all actions of the lines marked in a section line snapshot", async () => {
+    const lineActions = (background) => ({
+      background: { resourceId: background },
+      dialogue: { content: [{ text: "Same" }] },
+    });
+    const context = {
+      projectId: "project-1",
+      state: {
+        scenes: {
+          items: {
+            "scene-1": {
+              id: "scene-1",
+              type: "scene",
+              sections: {
+                items: {
+                  "section-1": {
+                    id: "section-1",
+                    lines: {
+                      items: {
+                        "line-1": {
+                          id: "line-1",
+                          actions: lineActions("bg-1"),
+                        },
+                        "line-2": {
+                          id: "line-2",
+                          actions: lineActions("bg-1"),
+                        },
+                      },
+                      tree: [{ id: "line-1" }, { id: "line-2" }],
+                    },
+                  },
+                },
+                tree: [{ id: "section-1" }],
+              },
+            },
+          },
+          tree: [{ id: "scene-1" }],
+        },
+      },
+    };
+    const shared = {
+      ensureCommandContext: vi.fn(async () => context),
+      submitCommandsWithContext: vi.fn(async () => ({ valid: true })),
+      scenePartitionFor: vi.fn(() => "s:scene-1"),
+      storyBasePartitionFor: vi.fn(() => "m"),
+    };
+    const api = createStoryCommandApi(shared);
+
+    // Line 1 is marked and its background changed; line 2 is not marked, so
+    // only its dialogue counts and it is unchanged.
+    await api.syncSectionLinesSnapshot({
+      sectionId: "section-1",
+      lines: [
+        { id: "line-1", actions: lineActions("bg-2") },
+        { id: "line-2", actions: lineActions("bg-2") },
+      ],
+      actionLineIds: ["line-1"],
+    });
+
+    expect(shared.submitCommandsWithContext).toHaveBeenCalledWith({
+      context,
+      commands: [
+        {
+          scope: "story",
+          type: COMMAND_TYPES.LINE_UPDATE_ACTIONS,
+          payload: {
+            lineId: "line-1",
+            data: lineActions("bg-2"),
+            replace: true,
+          },
+          partition: "s:scene-1",
+        },
+      ],
+    });
+
+    // A marked line whose actions are already saved writes nothing.
+    shared.submitCommandsWithContext.mockClear();
+    await api.syncSectionLinesSnapshot({
+      sectionId: "section-1",
+      lines: [
+        { id: "line-1", actions: lineActions("bg-1") },
+        { id: "line-2", actions: lineActions("bg-1") },
+      ],
+      actionLineIds: ["line-1"],
+    });
+    expect(shared.submitCommandsWithContext).not.toHaveBeenCalled();
+  });
+
   it("moves a section to another scene with its line snapshot", async () => {
     const context = {
       projectId: "project-1",

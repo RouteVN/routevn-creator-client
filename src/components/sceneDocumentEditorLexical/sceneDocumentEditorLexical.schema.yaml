@@ -53,6 +53,10 @@ methods:
       description: Reloads the current section lines into the document editor.
       params: []
       returns: void
+    replaceLines:
+      description: Shows the given lines even while the editor is focused, and selects a line, for undo and redo.
+      params: []
+      returns: void
     focusLine:
       description: Focuses a specific line block in the document editor.
       params: []

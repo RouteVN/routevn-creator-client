@@ -16,6 +16,16 @@ import {
 import { createSceneEditorDraftPersistence } from "../../internal/ui/sceneEditorLexical/draftPersistence.js";
 import { createEmptyContent } from "../../internal/ui/sceneEditorLexical/contentModel.js";
 import {
+  diffSceneEditorSectionLines,
+  getSceneEditorRestoreFocus,
+  restoreSceneEditorSectionLines,
+} from "../../internal/ui/sceneEditorLexical/lineHistory.js";
+import { getEditHistoryChangeKey } from "../../internal/editHistory.js";
+import {
+  resolveEditHistoryShortcut,
+  selectEditHistoryCopy,
+} from "../../internal/ui/editHistory.js";
+import {
   findCharacterIdByShortcut,
   syncSceneEditorProjectState as syncStoreProjectState,
 } from "../../internal/ui/sceneEditor/lineOperations.js";
@@ -543,6 +553,7 @@ const syncDraftSectionFromLines = (deps, liveLines, { sectionId } = {}) => {
     dirty: true,
   });
   store.setDraftSection({ draftSection: nextDraftSection });
+  recordSceneEditorLineEdit(deps, nextDraftSection);
   return nextDraftSection;
 };
 
@@ -760,6 +771,197 @@ const refreshSceneEditorStateFromProject = async (deps) => {
   await updateSceneEditorSectionChanges(deps);
   refreshSceneTextStatsNow(deps, { render: false });
   await cacheCurrentSceneTextStats(deps);
+};
+
+const SCENE_EDITOR_TEXT_EDITOR_TAG_NAME = "rvn-lexical-scene-document-editor";
+
+const selectPageSectionLines = (store) =>
+  Object.fromEntries(
+    (store.selectScene()?.sections ?? []).map((section) => [
+      section.id,
+      section.lines ?? [],
+    ]),
+  );
+
+// Records an edit to the lines as an undo step, given the lines of the
+// sections it may have changed, against their baselines. Typing in one line
+// less than a second apart is one step. A composition is recorded once it
+// ends, and an edit that changes nothing is not a step.
+const recordSceneEditorLineEdits = (deps, sectionLines) => {
+  const { store } = deps;
+  const baselines = store.selectLineEditBaselines({
+    sectionIds: Object.keys(sectionLines),
+  });
+  const before = {};
+  const after = {};
+  for (const [sectionId, lines] of Object.entries(sectionLines)) {
+    const step = diffSceneEditorSectionLines({
+      sectionId,
+      before: baselines[sectionId],
+      after: lines,
+    });
+    Object.assign(before, step.before);
+    Object.assign(after, step.after);
+  }
+  store.recordLineEdit({
+    before,
+    after,
+    mergeKey: getEditHistoryChangeKey(before, after),
+    time: Date.now(),
+    baselines: sectionLines,
+  });
+};
+
+const recordSceneEditorLineEdit = (deps, draftSection) => {
+  if (draftSection.isComposing) {
+    return;
+  }
+  recordSceneEditorLineEdits(deps, {
+    [draftSection.sectionId]: draftSection.lines,
+  });
+};
+
+// Runs a line action command as an undo step. Drafts are saved first, without
+// waiting for the save interval, so the command applies to the lines the page
+// shows and the step holds exactly its change.
+const runRecordedLineCommand = async (deps, command) => {
+  const { store } = deps;
+  store.setLineCommandRunning({ running: true });
+  try {
+    await flushSceneEditorDrafts(deps, {
+      force: true,
+      deferIfInFlight: false,
+      enforceMinInterval: false,
+    }).catch(() => {});
+    store.setEditHistoryBaselines({ baselines: selectPageSectionLines(store) });
+    return await command();
+  } finally {
+    recordSceneEditorLineEdits(deps, selectPageSectionLines(store));
+    store.setLineCommandRunning({ running: false });
+  }
+};
+
+// Undo and redo behave like an edit: the restored lines go into the drafts
+// and the editors at once, and the draft flush saves them with all of their
+// actions. A step whose sections are gone, such as a deleted section, is
+// dropped.
+const runSceneEditorHistoryStep = (deps, direction) => {
+  const { appService, i18n, refs, render, store, subject } = deps;
+  if (store.selectIsEditHistoryBlocked() || isSectionsOverviewOpen(store)) {
+    return;
+  }
+  const step = store.selectEditHistoryStep({ direction });
+  if (!step) {
+    return;
+  }
+
+  const target = direction === "undo" ? step.before : step.after;
+  const previous = direction === "undo" ? step.after : step.before;
+  const stepSectionIds = new Set(
+    [...Object.values(target), ...Object.values(previous)]
+      .filter(Boolean)
+      .map((entry) => entry.sectionId),
+  );
+  const sections = (store.selectScene()?.sections ?? []).filter((section) =>
+    stepSectionIds.has(section.id),
+  );
+  if (sections.length === 0) {
+    const copy = selectEditHistoryCopy(i18n);
+    store.dropEditHistoryStep({ direction });
+    render();
+    appService.showToast({
+      message:
+        direction === "undo"
+          ? copy.undoUnavailableMessage
+          : copy.redoUnavailableMessage,
+    });
+    return;
+  }
+
+  const restoredSections = sections.map((section) => {
+    const draftSection = reconcileDraftSectionForSection(deps, section.id);
+    const lines = restoreSceneEditorSectionLines({
+      sectionId: section.id,
+      lines: draftSection.lines,
+      target,
+    });
+    store.setDraftSection({
+      draftSection: replaceSceneEditorDraftSectionLines(draftSection, {
+        lines,
+        source: "structure",
+        dirty: true,
+        actionLineIds: Object.values(target)
+          .filter((entry) => entry?.sectionId === section.id)
+          .map((entry) => entry.line.id),
+      }),
+    });
+    return { id: section.id, lines };
+  });
+  store.moveEditHistoryStep({
+    direction,
+    baselines: Object.fromEntries(
+      restoredSections.map((section) => [section.id, section.lines]),
+    ),
+  });
+  const focus = getSceneEditorRestoreFocus({
+    sections: restoredSections,
+    target,
+    previous,
+  });
+  if (focus) {
+    selectEditorTarget(deps, {
+      sectionId: focus.sectionId,
+      lineId: focus.lineId,
+    });
+  }
+  render();
+
+  // Setting lines keeps a focused editor's own text, so the restored lines
+  // are loaded into the editors directly.
+  for (const section of restoredSections) {
+    const linesEditorRef = getLinesEditorRef(refs, { sectionId: section.id });
+    if (linesEditorRef?.dataset?.sectionId !== section.id) {
+      continue;
+    }
+    const isFocusSection = focus?.sectionId === section.id;
+    linesEditorRef.replaceLines({
+      lines: section.lines,
+      lineId: isFocusSection ? focus.lineId : undefined,
+      cursorPosition: isFocusSection ? focus.cursorPosition : undefined,
+    });
+  }
+  scheduleSceneTextStatsRefresh(deps);
+  subject.dispatch("sceneEditor.renderCanvas", {
+    skipRender: true,
+    syncPresentationState: true,
+    skipAnimations: true,
+  });
+  scheduleSceneEditorDraftFlush(deps, {
+    reason: "structure",
+  });
+};
+
+export const handleUndoButtonClick = (deps) =>
+  runSceneEditorHistoryStep(deps, "undo");
+
+export const handleRedoButtonClick = (deps) =>
+  runSceneEditorHistoryStep(deps, "redo");
+
+// Keeps the text editor focused, so undo can put the caret back.
+export const handleEditHistoryButtonMouseDown = (_deps, payload) => {
+  payload._event.preventDefault();
+};
+
+export const handleEditHistoryShortcutKeyDown = (deps, payload) => {
+  const event = payload._event;
+  const direction = resolveEditHistoryShortcut(event, {
+    textEditorTagName: SCENE_EDITOR_TEXT_EDITOR_TAG_NAME,
+  });
+  if (!direction) {
+    return;
+  }
+  event.preventDefault();
+  runSceneEditorHistoryStep(deps, direction);
 };
 
 const syncSceneEditorProjectPayload = async (deps, payload = {}) => {
@@ -1670,7 +1872,14 @@ export const handleActionTransformEditorDone = (deps, payload) => {
 };
 
 export const handleBeforeMount = (deps) => {
-  const { projectService, appService, store, uiConfig, subject } = deps;
+  const {
+    appService,
+    browserEventsClient,
+    projectService,
+    store,
+    subject,
+    uiConfig,
+  } = deps;
   store.advanceMountVersion();
   let routeSyncSequence = 0;
   setSceneEditorPageLoading(deps, true);
@@ -1692,6 +1901,14 @@ export const handleBeforeMount = (deps) => {
   );
 
   const cleanupRuntimeSubscriptions = mountSceneEditorSubscriptions(deps);
+  // A capture listener runs before the editor's own key handlers, which
+  // would otherwise swallow the keys.
+  const cleanupHistoryShortcuts = browserEventsClient.subscribeWindowEvent({
+    type: "keydown",
+    options: { capture: true },
+    listener: (event) =>
+      handleEditHistoryShortcutKeyDown(deps, { _event: event }),
+  });
   const cleanupBackgroundTransformEditorSubscriptions =
     mountBackgroundTransformEditorSubscriptions(deps);
   const projectSubscription = createProjectStateStream({
@@ -1732,6 +1949,7 @@ export const handleBeforeMount = (deps) => {
     projectSubscription.unsubscribe();
     routeSubscription.unsubscribe();
     cleanupRuntimeSubscriptions();
+    cleanupHistoryShortcuts();
     cleanupBackgroundTransformEditorSubscriptions();
     cancelSceneTextStatsRefresh(store);
     await flushSceneEditorDrafts(deps, { force: true });
@@ -1851,7 +2069,7 @@ const openSectionTabDropdown = (deps, event) => {
   render();
 };
 
-export const handleCommandLineSubmit = async (deps, payload) => {
+const submitSceneEditorCommandLine = async (deps, payload) => {
   const { store, render, projectService, subject, appService } = deps;
   const copy = selectCopy(deps);
   const lineId = resolveActionTargetLineId(store);
@@ -2105,6 +2323,11 @@ export const handleCommandLineSubmit = async (deps, payload) => {
   subject.dispatch("sceneEditor.renderCanvas", {});
 };
 
+export const handleCommandLineSubmit = (deps, payload) =>
+  runRecordedLineCommand(deps, () =>
+    submitSceneEditorCommandLine(deps, payload),
+  );
+
 export const handleEditorDataChanged = async (deps, payload) => {
   const { refs, render, subject, store } = deps;
   const handlerStartedAt = getSceneEditorTimingNow();
@@ -2157,6 +2380,7 @@ export const handleEditorDataChanged = async (deps, payload) => {
     dirty: true,
   });
   store.setDraftSection({ draftSection: nextDraftSection });
+  recordSceneEditorLineEdit(deps, nextDraftSection);
   const draftReplaceDurationMs = getSceneEditorTimingDurationMs(
     draftReplaceStartedAt,
   );
@@ -2266,6 +2490,7 @@ export const handleEditorCompositionStateChanged = (deps, payload) => {
     },
   );
   store.setDraftSection({ draftSection: nextDraftSection });
+  recordSceneEditorLineEdit(deps, nextDraftSection);
   emitSceneEditorTiming("page.editor-composition-state", {
     durationMs: getSceneEditorTimingDurationMs(timingStartedAt),
     sectionId,
@@ -2432,7 +2657,7 @@ export const handleDownloadCanvasButtonMouseDown = (_deps, payload) => {
   payload?._event?.preventDefault?.();
 };
 
-export const handleDialogueCharacterShortcut = async (deps, payload) => {
+const setDialogueCharacterFromShortcut = async (deps, payload) => {
   const { store, projectService, render, subject } = deps;
   if (isSectionsOverviewOpen(store)) {
     return;
@@ -2507,6 +2732,11 @@ export const handleDialogueCharacterShortcut = async (deps, payload) => {
   render();
   subject.dispatch("sceneEditor.renderCanvas", {});
 };
+
+export const handleDialogueCharacterShortcut = (deps, payload) =>
+  runRecordedLineCommand(deps, () =>
+    setDialogueCharacterFromShortcut(deps, payload),
+  );
 
 export const handleAddActionsButtonClick = (deps) => {
   const { refs, render, store } = deps;
@@ -2712,6 +2942,7 @@ export const handleNewLine = async (deps, payload) => {
     dirty: true,
   });
   store.setDraftSection({ draftSection: nextDraftSection });
+  recordSceneEditorLineEdit(deps, nextDraftSection);
   selectEditorTarget(deps, {
     sectionId: draftSection.sectionId,
     lineId: newLine.id,
@@ -2885,6 +3116,7 @@ export const handleSwapLine = async (deps, payload) => {
     dirty: true,
   });
   store.setDraftSection({ draftSection: nextDraftSection });
+  recordSceneEditorLineEdit(deps, nextDraftSection);
   selectEditorTarget(deps, {
     sectionId: draftSection.sectionId,
     lineId,
@@ -3039,6 +3271,66 @@ const moveSceneEditorSectionWithinScene = async (
   await selectSceneEditorSection(deps, sectionId);
 };
 
+// Deletes an action of the selected line from the line's action menu.
+const deleteSelectedLineActions = async (deps, actionsType) => {
+  const { projectService, store, subject } = deps;
+  const selectedLineId = store.selectSelectedLineId();
+  const selectedSectionId = store.selectSelectedSectionId?.();
+  const selectedLine = store.selectSelectedLine();
+
+  if (actionsType && selectedLineId && selectedSectionId) {
+    // Keep editable content while clearing the dialogue presentation.
+    if (actionsType === "dialogue") {
+      const currentDialogue = selectedLine?.actions?.dialogue;
+      if (currentDialogue) {
+        await runSceneEditorPersistence(
+          deps,
+          async () => {
+            await projectService.updateLineDialogueAction({
+              lineId: selectedLineId,
+              dialogue: { clear: true },
+              preserve: ["dialogue.content"],
+            });
+          },
+          {
+            label: "delete-dialogue-action",
+            meta: {
+              lineId: selectedLineId,
+            },
+          },
+        );
+      }
+    } else {
+      const currentActions = selectedLine?.actions || {};
+      const nextActions = structuredClone(currentActions);
+      delete nextActions[actionsType];
+
+      await runSceneEditorPersistence(
+        deps,
+        async () => {
+          await projectService.updateLineActions({
+            lineId: selectedLineId,
+            data: nextActions,
+            replace: true,
+          });
+        },
+        {
+          label: "delete-line-action",
+          meta: {
+            lineId: selectedLineId,
+            actionType: actionsType,
+          },
+        },
+      );
+    }
+
+    await refreshSceneEditorStateFromProject(deps);
+
+    // Trigger re-render to update the view
+    subject.dispatch("sceneEditor.renderCanvas", {});
+  }
+};
+
 export const handleDropdownMenuClickItem = async (deps, payload) => {
   const { store, render, projectService, subject, appService } = deps;
   const copy = selectCopy(deps);
@@ -3179,61 +3471,9 @@ export const handleDropdownMenuClickItem = async (deps, payload) => {
   } else if (action === "delete-line") {
     await deleteSceneEditorLine(deps, lineId);
   } else if (action === "delete-actions") {
-    const selectedLineId = store.selectSelectedLineId();
-    const selectedSectionId = store.selectSelectedSectionId?.();
-    const selectedLine = store.selectSelectedLine();
-
-    if (actionsType && selectedLineId && selectedSectionId) {
-      // Keep editable content while clearing the dialogue presentation.
-      if (actionsType === "dialogue") {
-        const currentDialogue = selectedLine?.actions?.dialogue;
-        if (currentDialogue) {
-          await runSceneEditorPersistence(
-            deps,
-            async () => {
-              await projectService.updateLineDialogueAction({
-                lineId: selectedLineId,
-                dialogue: { clear: true },
-                preserve: ["dialogue.content"],
-              });
-            },
-            {
-              label: "delete-dialogue-action",
-              meta: {
-                lineId: selectedLineId,
-              },
-            },
-          );
-        }
-      } else {
-        const currentActions = selectedLine?.actions || {};
-        const nextActions = structuredClone(currentActions);
-        delete nextActions[actionsType];
-
-        await runSceneEditorPersistence(
-          deps,
-          async () => {
-            await projectService.updateLineActions({
-              lineId: selectedLineId,
-              data: nextActions,
-              replace: true,
-            });
-          },
-          {
-            label: "delete-line-action",
-            meta: {
-              lineId: selectedLineId,
-              actionType: actionsType,
-            },
-          },
-        );
-      }
-
-      await refreshSceneEditorStateFromProject(deps);
-
-      // Trigger re-render to update the view
-      subject.dispatch("sceneEditor.renderCanvas", {});
-    }
+    await runRecordedLineCommand(deps, () =>
+      deleteSelectedLineActions(deps, actionsType),
+    );
   }
 
   render();
@@ -3690,6 +3930,7 @@ const deleteSceneEditorLine = async (deps, lineId) => {
   });
 
   store.setDraftSection({ draftSection: nextDraftSection });
+  recordSceneEditorLineEdit(deps, nextDraftSection);
   selectEditorTarget(deps, {
     sectionId,
     lineId: nextSelectedLineId,
@@ -3763,7 +4004,7 @@ export const handleLineContextMenuDismiss = (deps) => {
   render();
 };
 
-export const handleLineDeleteActionItem = async (deps, payload) => {
+const deleteLineActionItem = async (deps, payload) => {
   const { store, subject, render, projectService } = deps;
   const { actionType } = payload._event.detail;
   // Get current selected line
@@ -3806,6 +4047,9 @@ export const handleLineDeleteActionItem = async (deps, payload) => {
   subject.dispatch("sceneEditor.renderCanvas", {});
 };
 
+export const handleLineDeleteActionItem = (deps, payload) =>
+  runRecordedLineCommand(deps, () => deleteLineActionItem(deps, payload));
+
 export const handleHidePreviewScene = async (deps) => {
   await restoreSceneEditorFromPreview(deps);
 };
@@ -3829,7 +4073,7 @@ export const handleBackClick = (deps) => {
   leaveToScenes(appService);
 };
 
-export const handleSystemActionsActionDelete = async (deps, payload) => {
+const deleteSystemAction = async (deps, payload) => {
   const { store, render, projectService, subject } = deps;
   const { actionType } = payload._event.detail;
   // Get current selected line
@@ -3895,3 +4139,6 @@ export const handleSystemActionsActionDelete = async (deps, payload) => {
 
   subject.dispatch("sceneEditor.renderCanvas", {});
 };
+
+export const handleSystemActionsActionDelete = (deps, payload) =>
+  runRecordedLineCommand(deps, () => deleteSystemAction(deps, payload));

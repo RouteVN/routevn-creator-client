@@ -123,6 +123,18 @@ refs:
     eventListeners:
       click:
         handler: handleBackClick
+  undoButton:
+    eventListeners:
+      mousedown:
+        handler: handleEditHistoryButtonMouseDown
+      click:
+        handler: handleUndoButtonClick
+  redoButton:
+    eventListeners:
+      mousedown:
+        handler: handleEditHistoryButtonMouseDown
+      click:
+        handler: handleRedoButtonClick
   sceneSettingsButton:
     eventListeners:
       click:
@@ -203,6 +215,9 @@ template:
                       - rtgl-button#backButton sq pre=chevronLeft v=ol mr=sm: null
                       - rtgl-view w=1fg d=h av=c:
                           - rtgl-text w=1fg ellipsis=true: ${scene.name}
+                          - rtgl-view d=h av=c g=xs ml=sm:
+                              - 'rtgl-button#undoButton sq pre=undo v=ol ?disabled=${undoDisabled} aria-label="${undoLabel}" title="${undoLabel}"': null
+                              - 'rtgl-button#redoButton sq pre=redo v=ol ?disabled=${redoDisabled} aria-label="${redoLabel}" title="${redoLabel}"': null
                           - rtgl-button#sectionsOverview sq pre=hamburger v=ol ml=sm: null
                           - rtgl-button#sceneSettingsButton sq pre=settings v=ol: null
                   - $if sectionsGraphView:

@@ -39,13 +39,32 @@ const isTextEditNode = (node) =>
 
 // Cmd/Ctrl+Z undoes; Shift+Cmd/Ctrl+Z and Ctrl+Y redo. A focused text field
 // keeps the keys for its own text undo, and an open dialog keeps them from
-// the page behind it.
-export const resolveEditHistoryShortcut = (event) => {
+// the page behind it. A page whose text editor uses the page's undo instead
+// names it in `textEditorTagName`; the editor's editable text then takes the
+// keys too. Keys that confirm an IME composition are never a shortcut.
+export const resolveEditHistoryShortcut = (
+  event,
+  { textEditorTagName } = {},
+) => {
   if (!event || event.altKey || !(event.metaKey || event.ctrlKey)) {
     return undefined;
   }
+  if (event.isComposing || event.keyCode === 229) {
+    return undefined;
+  }
   const path = event.composedPath();
-  if (path.some((node) => isTextEditNode(node) || node.tagName === "DIALOG")) {
+  const editorIndex = textEditorTagName
+    ? path.findIndex((node) => node.tagName === textEditorTagName.toUpperCase())
+    : -1;
+  const isOwnEditorText = (node, index) =>
+    index < editorIndex && node.isContentEditable === true;
+  if (
+    path.some(
+      (node, index) =>
+        node.tagName === "DIALOG" ||
+        (isTextEditNode(node) && !isOwnEditorText(node, index)),
+    )
+  ) {
     return undefined;
   }
   const letter = getShortcutLetter(event);

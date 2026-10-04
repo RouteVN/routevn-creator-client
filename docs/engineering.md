@@ -1239,6 +1239,27 @@ edits; the page compares it with what was last saved, so undoing back to that
 saves nothing. Preview sounds, which Save Preview saves, and view state such as
 the tab and zoom are not part of the history.
 
+The scene editor has undo and redo for line edits made since the scene opened:
+text, new, split, merged, moved, and deleted lines, and line action edits.
+Section operations are not part of the history; a step whose section is gone
+is dropped. A step holds, for each line it touched, its section, index, and
+data, or none where it does not exist
+(`src/internal/ui/sceneEditorLexical/lineHistory.js`); a moved line touches
+only itself. Each section keeps its lines as of its last recorded edit, and an
+edit is recorded by comparing the page's lines with those: the editor's
+reported changes (an IME composition once it ends), new, swapped, and deleted
+lines, and the line action commands. Typing in one line less than a second
+apart is one step. Undo and redo put the lines into the section drafts at once
+and load them into the editor with `replaceLines`, since setting `lines` keeps
+a focused editor's own text; the caret goes where the text changed. The draft
+flush saves them, and restored lines are marked (`actionLineIds`) so it saves
+their whole actions, not only their dialogue. Before a line action command,
+the page saves pending drafts without waiting for the save interval, so the
+command never acts on lines the page has not saved and its step holds only its
+change. The shortcuts also work in the editor's own text, through
+`resolveEditHistoryShortcut`'s `textEditorTagName`; Lexical's own undo stays
+off. Touch mode has no undo buttons yet.
+
 `rvn-mobile-sheet` is capped at 640px (the Projects page content width) and
 centered, so the bottom-tab sheets and every page's item detail sheet stay
 compact on tablets; phones are narrower than the cap and keep the full-width
