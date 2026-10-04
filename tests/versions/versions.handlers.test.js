@@ -10,6 +10,8 @@ import {
   handleExportConfirmationConfirm,
   handleMacosExportFormAction,
   handleMobileDetailSheetClose,
+  handlePlatformDetailsCreated,
+  handlePlatformDetailsDialogClose,
   handleVersionFormAction,
 } from "../../src/pages/versions/versions.handlers.js";
 import { initialProjectData } from "../../src/deps/services/shared/projectRepository.js";
@@ -33,6 +35,7 @@ const createDeps = ({ repository, version, editingVersionId } = {}) => {
     waitForPaint: vi.fn(async () => {}),
   };
   let exportConfirmation;
+  let platformDetailsDialog;
 
   return {
     appService: {
@@ -45,6 +48,7 @@ const createDeps = ({ repository, version, editingVersionId } = {}) => {
       getAppVersion: vi.fn(() => "1.0.0"),
       getFileDisplayPath: vi.fn((path) => path),
       showAlert: vi.fn(),
+      showDialog: vi.fn(async () => true),
       showProgressDialog: vi.fn(() => progressDialog),
       closeAll: vi.fn(),
       discardPendingSaveDocument: vi.fn(async () => ({ deleted: true })),
@@ -63,6 +67,10 @@ const createDeps = ({ repository, version, editingVersionId } = {}) => {
         name: "Project One",
         iconFileId: "icon-1",
         publisher: "Studio One",
+      })),
+      getCurrentPlatformDetailsDefaults: vi.fn(async () => ({
+        applicationName: "Project One",
+        applicationIdentifier: "",
       })),
       getCurrentPlatformDetails: vi.fn(async (platform) => {
         const applicationInfo = {
@@ -140,6 +148,11 @@ const createDeps = ({ repository, version, editingVersionId } = {}) => {
       }),
       selectExportConfirmation: vi.fn(() => exportConfirmation),
       closeExportConfirmation: vi.fn(),
+      openPlatformDetailsDialog: vi.fn((dialog) => {
+        platformDetailsDialog = dialog;
+      }),
+      selectPlatformDetailsDialog: vi.fn(() => platformDetailsDialog),
+      closePlatformDetailsDialog: vi.fn(),
     },
     progressDialog,
     render: vi.fn(),
@@ -356,7 +369,7 @@ describe("versions.handleDownloadZipClick", () => {
     expect(deps.projectService.loadRepositoryState).not.toHaveBeenCalled();
   });
 
-  it("stops before the save dialog when Web platform details has not been added", async () => {
+  it("opens the platform details form instead of exporting when Web platform details has not been added", async () => {
     const repository = {
       loadState: vi.fn(async () => structuredClone(initialProjectData)),
       getState: vi.fn(() => structuredClone(initialProjectData)),
@@ -369,13 +382,106 @@ describe("versions.handleDownloadZipClick", () => {
     expect(deps.projectService.getCurrentPlatformDetails).toHaveBeenCalledWith(
       "web",
     );
+    expect(deps.appService.showDialog).toHaveBeenCalledWith({
+      title: EN_I18N.versionsPage.platformDetailsSetupTitle,
+      message: EN_I18N.versionsPage.platformDetailsSetupMessage,
+      confirmText: EN_I18N.versionsPage.platformDetailsSetupContinue,
+      cancelText: EN_I18N.versionsPage.cancelButton,
+    });
+    expect(
+      deps.projectService.getCurrentPlatformDetailsDefaults,
+    ).toHaveBeenCalledWith("web");
+    expect(deps.store.openPlatformDetailsDialog).toHaveBeenCalledWith({
+      exportType: "web",
+      platform: "web",
+      versionId: "version-1",
+      applicationInfo: {
+        applicationName: "Project One",
+        applicationIdentifier: "",
+      },
+    });
+    expect(deps.store.openExportConfirmation).not.toHaveBeenCalled();
+    expect(deps.appService.showAlert).not.toHaveBeenCalled();
     expect(
       deps.projectService.promptDistributionZipPath,
     ).not.toHaveBeenCalled();
+  });
+
+  it("does not open the platform details form when the setup prompt is cancelled", async () => {
+    const repository = {
+      loadState: vi.fn(async () => structuredClone(initialProjectData)),
+      getState: vi.fn(() => structuredClone(initialProjectData)),
+    };
+    const deps = createDeps({ repository });
+    deps.projectService.getCurrentPlatformDetails.mockResolvedValue(undefined);
+    deps.appService.showDialog.mockResolvedValue(false);
+
+    await handleDownloadZipClick(deps, createVersionClickPayload());
+
+    expect(deps.store.openPlatformDetailsDialog).not.toHaveBeenCalled();
+    expect(
+      deps.projectService.getCurrentPlatformDetailsDefaults,
+    ).not.toHaveBeenCalled();
+    expect(deps.store.openExportConfirmation).not.toHaveBeenCalled();
+  });
+
+  it("alerts when the platform details defaults cannot be loaded", async () => {
+    const repository = {
+      loadState: vi.fn(async () => structuredClone(initialProjectData)),
+      getState: vi.fn(() => structuredClone(initialProjectData)),
+    };
+    const deps = createDeps({ repository });
+    deps.projectService.getCurrentPlatformDetails.mockResolvedValue(undefined);
+    deps.projectService.getCurrentPlatformDetailsDefaults.mockRejectedValue(
+      new Error("failed"),
+    );
+
+    await handleDownloadWindowsExecutableClick(
+      deps,
+      createVersionClickPayload(),
+    );
+
+    expect(deps.store.openPlatformDetailsDialog).not.toHaveBeenCalled();
     expect(deps.appService.showAlert).toHaveBeenCalledWith({
-      message: EN_I18N.versionsPage.webPlatformDetailsRequired,
-      title: EN_I18N.versionsPage.warningTitle,
+      message: EN_I18N.versionsPage.platformDetailsLoadFailed,
+      title: EN_I18N.versionsPage.errorTitle,
     });
+  });
+
+  it("continues to the export confirmation once the platform details form is saved", async () => {
+    const repository = {
+      loadState: vi.fn(async () => structuredClone(initialProjectData)),
+      getState: vi.fn(() => structuredClone(initialProjectData)),
+    };
+    const deps = createDeps({ repository });
+    deps.projectService.getCurrentPlatformDetails.mockResolvedValueOnce(
+      undefined,
+    );
+    await handleDownloadWindowsInstallerClick(
+      deps,
+      createVersionClickPayload(),
+    );
+
+    await handlePlatformDetailsCreated(deps);
+
+    expect(deps.store.closePlatformDetailsDialog).toHaveBeenCalled();
+    expect(deps.store.openExportConfirmation).toHaveBeenCalledWith(
+      expect.objectContaining({
+        exportType: "windows-installer",
+        platform: "windows",
+        versionId: "version-1",
+      }),
+    );
+  });
+
+  it("closes the platform details form without exporting", () => {
+    const deps = createDeps({});
+
+    handlePlatformDetailsDialogClose(deps);
+
+    expect(deps.store.closePlatformDetailsDialog).toHaveBeenCalled();
+    expect(deps.store.openExportConfirmation).not.toHaveBeenCalled();
+    expect(deps.render).toHaveBeenCalled();
   });
 
   it("stops before the save dialog when Web application identifier is missing", async () => {

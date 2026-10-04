@@ -266,25 +266,6 @@ const formatWindowsExportErrorCopy = ({ template, error }) =>
     message: getWindowsExportErrorMessage(error),
   });
 
-const getMissingPlatformDetailsMessage = (platform, copy) => {
-  if (platform === "windows") {
-    return (
-      copy.windowsPlatformDetailsRequired ??
-      "Add Windows platform details before exporting. Open Platform Details, click +, and add Windows."
-    );
-  }
-  if (platform === "macos") {
-    return (
-      copy.macosPlatformDetailsRequired ??
-      "Add macOS platform details before exporting. Open Platform Details, click +, and add macOS."
-    );
-  }
-  return (
-    copy.webPlatformDetailsRequired ??
-    "Add Web platform details before exporting. Open Platform Details, click +, and add Web."
-  );
-};
-
 const getPlatformDetailsValidationMessage = (code, copy) => {
   if (code === "application-name-required") {
     return (
@@ -346,6 +327,7 @@ const getPlatformDetailsValidationMessage = (code, copy) => {
 const requirePlatformDetailsForExport = async ({
   appService,
   copy,
+  onMissing,
   platform,
   projectService,
 } = {}) => {
@@ -372,10 +354,7 @@ const requirePlatformDetailsForExport = async ({
   }
 
   if (!applicationInfo) {
-    appService.showAlert({
-      message: getMissingPlatformDetailsMessage(platform, copy),
-      title: copy.warningTitle ?? "Warning",
-    });
+    await onMissing();
     return undefined;
   }
 
@@ -742,15 +721,52 @@ export const handleDropdownMenuClose = (deps) => {
   render();
 };
 
-const prepareExportConfirmation = async (
+const openPlatformDetailsDialog = async (
   deps,
-  payload,
-  { exportType, platform },
+  { exportType, platform, versionId },
+) => {
+  const { appService, i18n, projectService, render, store } = deps;
+  const copy = selectVersionsPageCopy(i18n);
+  const confirmed = await appService.showDialog({
+    title: copy.platformDetailsSetupTitle,
+    message: copy.platformDetailsSetupMessage,
+    confirmText: copy.platformDetailsSetupContinue,
+    cancelText: copy.cancelButton,
+  });
+  if (!confirmed) {
+    return;
+  }
+
+  let applicationInfo;
+  try {
+    applicationInfo =
+      await projectService.getCurrentPlatformDetailsDefaults(platform);
+  } catch {
+    appService.showAlert({
+      message:
+        copy.platformDetailsLoadFailed ??
+        "Platform details could not be checked. Try again before exporting.",
+      title: copy.errorTitle ?? "Error",
+    });
+    return;
+  }
+
+  store.closeDropdownMenu();
+  store.openPlatformDetailsDialog({
+    exportType,
+    platform,
+    versionId,
+    applicationInfo,
+  });
+  render();
+};
+
+const startExportConfirmation = async (
+  deps,
+  { exportType, platform, versionId },
 ) => {
   const { store, refs, render, projectService, appService, i18n } = deps;
   const copy = selectVersionsPageCopy(i18n);
-  payload._event.stopPropagation();
-  const versionId = resolveVersionIdFromPayload(payload);
   const version = store.selectVersion(versionId);
   if (!version) {
     appService.showAlert({
@@ -763,6 +779,8 @@ const prepareExportConfirmation = async (
   const applicationInfo = await requirePlatformDetailsForExport({
     appService,
     copy,
+    onMissing: () =>
+      openPlatformDetailsDialog(deps, { exportType, platform, versionId }),
     platform,
     projectService,
   });
@@ -793,6 +811,31 @@ const prepareExportConfirmation = async (
       },
     });
   }
+};
+
+const prepareExportConfirmation = (deps, payload, { exportType, platform }) => {
+  payload._event.stopPropagation();
+  return startExportConfirmation(deps, {
+    exportType,
+    platform,
+    versionId: resolveVersionIdFromPayload(payload),
+  });
+};
+
+export const handlePlatformDetailsDialogClose = (deps) => {
+  const { store, render } = deps;
+  store.closePlatformDetailsDialog();
+  render();
+};
+
+export const handlePlatformDetailsCreated = (deps) => {
+  const { store, render } = deps;
+  const { exportType, platform, versionId } =
+    store.selectPlatformDetailsDialog();
+  store.closePlatformDetailsDialog();
+  render();
+
+  return startExportConfirmation(deps, { exportType, platform, versionId });
 };
 
 export const handleDownloadZipClick = (deps, payload) =>

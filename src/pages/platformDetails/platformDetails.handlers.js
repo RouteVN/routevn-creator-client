@@ -1,13 +1,10 @@
 import { validatePlatformDetails } from "../../internal/platformDetailsValidation.js";
+import {
+  createPlatformDetailsPatch,
+  getPlatformDetailsValidationMessage,
+  PLATFORM_APPLICATION_ICON_VALIDATIONS,
+} from "../../internal/ui/platformDetailsForm.js";
 import { selectPlatformDetailsPageCopy } from "./support/platformDetailsPageCopy.js";
-
-const ICON_VALIDATIONS = [
-  {
-    type: "image-min-size",
-    minWidth: 64,
-    minHeight: 64,
-  },
-];
 
 export const handleBeforeMount = (deps) => {
   const { appService, store, uiConfig } = deps;
@@ -116,60 +113,6 @@ export const handlePlatformEditDialogClose = (deps) => {
   render();
 };
 
-const createPlatformDetailsPatch = ({ platform, values, iconFileId }) => {
-  const patch = {
-    applicationName: values.applicationName.trim(),
-  };
-
-  if (platform !== "web") {
-    patch.iconFileId = iconFileId;
-  }
-
-  patch.applicationIdentifier = values.applicationIdentifier.trim();
-
-  // TODO: Restore optional Windows release metadata when these fields return
-  // to the Platform Details UI. Omitting them from the patch preserves any
-  // existing stored values while the fields are hidden.
-  // if (platform === "windows") {
-  //   patch.publisher = values.publisher.trim();
-  //   patch.description = values.description.trim();
-  //   patch.copyright = values.copyright.trim();
-  // }
-
-  return patch;
-};
-
-const getValidationMessage = (copy, code) => {
-  if (code === "application-name-required") {
-    return copy.applicationNameRequired;
-  }
-  if (code === "windows-icon-required") {
-    return copy.windowsIconRequired;
-  }
-  if (code === "macos-icon-required") {
-    return copy.macosIconRequired;
-  }
-  if (code === "web-identifier-required") {
-    return copy.webApplicationIdentifierRequired;
-  }
-  if (code === "web-identifier-invalid") {
-    return copy.webApplicationIdentifierInvalid;
-  }
-  if (code === "windows-identifier-required") {
-    return copy.windowsApplicationIdentifierRequired;
-  }
-  if (code === "windows-identifier-invalid") {
-    return copy.windowsApplicationIdentifierInvalid;
-  }
-  if (code === "macos-identifier-required") {
-    return copy.macosApplicationIdentifierRequired;
-  }
-  if (code === "macos-identifier-invalid") {
-    return copy.macosApplicationIdentifierInvalid;
-  }
-  return copy.failedSavePlatformMessage;
-};
-
 export const handlePlatformEditFormAction = async (deps, payload = {}) => {
   const { appService, i18n, projectService, render, store } = deps;
   const { actionId, values } = payload._event.detail;
@@ -197,7 +140,7 @@ export const handlePlatformEditFormAction = async (deps, payload = {}) => {
   });
   if (!validation.valid) {
     appService.showAlert({
-      message: getValidationMessage(copy, validation.code),
+      message: getPlatformDetailsValidationMessage(copy, validation.code),
       title: copy.warningTitle,
     });
     return;
@@ -256,7 +199,7 @@ export const handlePlatformEditDialogIconClick = async (deps) => {
     file = await appService.pickFiles({
       accept: "image/*",
       multiple: false,
-      validations: ICON_VALIDATIONS,
+      validations: PLATFORM_APPLICATION_ICON_VALIDATIONS,
     });
   } catch {
     appService.showAlert({

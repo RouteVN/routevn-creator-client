@@ -230,6 +230,13 @@ export const createInitialState = () => ({
     versionName: "",
     applicationInfo: undefined,
   },
+  platformDetailsDialog: {
+    isOpen: false,
+    exportType: undefined,
+    platform: undefined,
+    versionId: undefined,
+    applicationInfo: undefined,
+  },
 });
 
 export const openDropdownMenu = ({ state, i18n }, { x, y, versionId } = {}) => {
@@ -322,6 +329,33 @@ export const closeExportConfirmation = ({ state }, _payload = {}) => {
   state.exportConfirmation.versionId = undefined;
   state.exportConfirmation.versionName = "";
   state.exportConfirmation.applicationInfo = undefined;
+};
+
+export const openPlatformDetailsDialog = (
+  { state },
+  { exportType, platform, versionId, applicationInfo } = {},
+) => {
+  state.platformDetailsDialog.isOpen = true;
+  state.platformDetailsDialog.exportType = exportType;
+  state.platformDetailsDialog.platform = platform;
+  state.platformDetailsDialog.versionId = versionId;
+  state.platformDetailsDialog.applicationInfo = applicationInfo;
+};
+
+export const closePlatformDetailsDialog = ({ state }, _payload = {}) => {
+  state.platformDetailsDialog.isOpen = false;
+  state.platformDetailsDialog.exportType = undefined;
+  state.platformDetailsDialog.platform = undefined;
+  state.platformDetailsDialog.versionId = undefined;
+  state.platformDetailsDialog.applicationInfo = undefined;
+};
+
+export const selectPlatformDetailsDialog = ({ state }) => {
+  return {
+    exportType: state.platformDetailsDialog.exportType,
+    platform: state.platformDetailsDialog.platform,
+    versionId: state.platformDetailsDialog.versionId,
+  };
 };
 
 export const selectDropdownMenuTargetVersionId = ({ state }) => {
@@ -425,6 +459,10 @@ export const selectViewData = ({ state, i18n }) => {
     versionForm: createVersionForm({ isEditing, copy }),
     dropdownMenu: state.dropdownMenu,
     isExportConfirmationOpen: state.exportConfirmation.isOpen,
+    isPlatformDetailsDialogOpen: state.platformDetailsDialog.isOpen,
+    platformDetailsDialogApplicationInfo:
+      state.platformDetailsDialog.applicationInfo,
+    platformDetailsDialogPlatform: state.platformDetailsDialog.platform,
     exportConfirmationTitle: getExportConfirmationTitle(
       state.exportConfirmation.exportType,
       copy,
