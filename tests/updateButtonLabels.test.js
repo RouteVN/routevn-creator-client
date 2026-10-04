@@ -1,5 +1,11 @@
 import { describe, expect, it } from "vitest";
-import { EN_I18N, ES_I18N, JA_I18N, ZH_HANS_I18N } from "./support/i18n.js";
+import {
+  EN_I18N,
+  ES_I18N,
+  JA_I18N,
+  TH_I18N,
+  ZH_HANS_I18N,
+} from "./support/i18n.js";
 
 const APP_UPDATER_BUTTON_PATH = "appPage.updateNowButton";
 
@@ -24,6 +30,7 @@ describe("update button labels", () => {
     ["Japanese", JA_I18N, "更新"],
     ["Simplified Chinese", ZH_HANS_I18N, "更新"],
     ["Spanish", ES_I18N, "Actualizar"],
+    ["Thai", TH_I18N, "อัปเดต"],
   ])("uses a generic label in %s edit forms", (_locale, catalog, expected) => {
     const labels = collectUpdateButtonLabels(catalog);
 
