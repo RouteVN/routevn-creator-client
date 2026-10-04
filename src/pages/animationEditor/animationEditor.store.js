@@ -46,6 +46,13 @@ import {
 } from "./animationEditor.constants.js";
 import { selectAnimationEditorPageCopy } from "./support/animationEditorPageCopy.js";
 import {
+  createEditHistory,
+  getEditHistoryStep,
+  moveEditHistoryStep as moveHistoryStep,
+  recordEditHistoryStep as recordHistoryStep,
+} from "../../internal/editHistory.js";
+import { selectEditHistoryCopy } from "../../internal/ui/editHistory.js";
+import {
   cameraTimelineProperties,
   createCameraPose,
   expandCameraTrack,
@@ -1376,6 +1383,10 @@ export const createInitialState = () => ({
   animationCanvasCaptureInProgress: false,
   animationVideoShortcutStartedAt: undefined,
   animationVideoExportInProgress: false,
+  // Undo and redo for edits made since the page opened. The baseline is the
+  // animation as of the last recorded edit, the before of the next one.
+  editHistory: createEditHistory(),
+  editHistoryBaseline: undefined,
   autosaveVersion: 0,
   autosavePersistedVersion: 0,
   autosaveInFlight: false,
@@ -2211,6 +2222,76 @@ export const setPopover = ({ state }, { mode, x, y, payload } = {}) => {
   state.popover.x = x;
   state.popover.y = y;
   state.popover.payload = payload ?? {};
+};
+
+// The parts of the page's animation that autosave saves, for undo and redo.
+export const selectAnimationHistorySnapshot = ({ state }) =>
+  structuredClone({
+    tweenBySection: state.tweenBySection,
+    transitionMask: state.transitionMask,
+    additionalTransitionMasks: state.additionalTransitionMasks,
+    cameraTracksAuthored: state.cameraTracksAuthored,
+  });
+
+export const selectEditHistoryBaseline = ({ state }) =>
+  state.editHistoryBaseline;
+
+export const setEditHistoryBaseline = ({ state }, { snapshot } = {}) => {
+  state.editHistoryBaseline = snapshot;
+};
+
+export const recordEditHistoryStep = (
+  { state },
+  { before, after, mergeKey, time } = {},
+) => {
+  recordHistoryStep(state.editHistory, { before, after, mergeKey, time });
+};
+
+export const selectEditHistoryStep = ({ state }, { direction } = {}) =>
+  getEditHistoryStep(state.editHistory, direction);
+
+export const moveEditHistoryStep = ({ state }, { direction } = {}) => {
+  moveHistoryStep(state.editHistory, direction);
+};
+
+// Puts back an undone or redone version of the animation. Keyframes and
+// masks are selected by index, so a selection that no longer exists is
+// cleared, and an open popover closes.
+export const restoreAnimationHistorySnapshot = (
+  { state },
+  { snapshot } = {},
+) => {
+  state.tweenBySection = snapshot.tweenBySection;
+  state.transitionMask = snapshot.transitionMask;
+  state.additionalTransitionMasks = snapshot.additionalTransitionMasks;
+  state.cameraTracksAuthored = snapshot.cameraTracksAuthored;
+  state.editHistoryBaseline = snapshot;
+  closePopover({ state });
+
+  const { selectedKeyframe, selectedProperty } = state;
+  if (
+    selectedKeyframe &&
+    !getSectionProperties(state, selectedKeyframe.side)[
+      selectedKeyframe.property
+    ]?.keyframes?.[selectedKeyframe.index]
+  ) {
+    state.selectedKeyframe = undefined;
+  }
+  if (
+    selectedProperty &&
+    !getSectionProperties(state, selectedProperty.side)[
+      selectedProperty.property
+    ]
+  ) {
+    state.selectedProperty = undefined;
+  }
+  if (
+    state.selectedMask &&
+    !getTransitionMask(state, state.selectedMaskIndex)
+  ) {
+    state.selectedMask = false;
+    state.selectedMaskIndex = undefined;
+  }
 };
 
 export const closePopover = ({ state }, _payload = {}) => {
@@ -3922,6 +4003,7 @@ export const selectTimelinePlayheadVisible = ({ state }) => {
 
 export const selectViewData = ({ state, i18n }) => {
   const copy = selectAnimationEditorPageCopy(i18n);
+  const editHistoryCopy = selectEditHistoryCopy(i18n);
   const previewPlaying = selectPreviewPlaying({ state });
   const propertyFieldConfig = getLocalizedPropertyFieldConfig(state, copy);
   const defaultInitialValuesByProperty = getDefaultInitialValues(state);
@@ -4293,6 +4375,10 @@ export const selectViewData = ({ state, i18n }) => {
     previewPlayheadVisible: state.previewPlayheadVisible,
     previewLoopEnabled: state.previewLoopEnabled,
     previewLoopButtonVariant: state.previewLoopEnabled ? "pr" : "ol",
+    undoDisabled: state.editHistory.undo.length === 0,
+    redoDisabled: state.editHistory.redo.length === 0,
+    undoLabel: editHistoryCopy.undoLabel,
+    redoLabel: editHistoryCopy.redoLabel,
     showMobileEditorMenu: state.isTouchMode,
     showInlineTimelineZoom: !state.isTouchMode,
     mobileEditorMenuLabel: copy.actionsLabel,

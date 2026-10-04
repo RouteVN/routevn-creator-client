@@ -1212,6 +1212,18 @@ undo, or in an open dialog. An explorer action first saves edits waiting to
 save, and undo and redo wait while it runs, so its step holds only its own
 change. Save Preview and preview data are not part of the history.
 
+The animation editor has undo and redo the same way, for edits made since the
+page opened. Its autosave saves the whole animation, so a step holds the page's
+animation (tracks and keyframes per side, masks, and whether camera tracks are
+authored) before and after an edit, recorded where every saved edit queues the
+autosave (`queueEditorAutosave`). Edits that change the same values less than a
+second apart, such as typing a number or dragging a slider, are one step. Undo
+and redo put the snapshot back at once and queue the autosave, which skips what
+is already saved. Keyframes and masks are selected by index, so a selection the
+restore removes is cleared. Preview images, a mask still being added, and view
+state such as zoom and the playhead are not part of the history, and undo waits
+while a video export runs.
+
 `rvn-mobile-sheet` is capped at 640px (the Projects page content width) and
 centered, so the bottom-tab sheets and every page's item detail sheet stay
 compact on tablets; phones are narrower than the cap and keep the full-width

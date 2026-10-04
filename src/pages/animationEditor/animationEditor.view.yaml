@@ -41,6 +41,14 @@ refs:
     eventListeners:
       click:
         handler: handleBackClick
+  undoButton:
+    eventListeners:
+      click:
+        handler: handleUndoButtonClick
+  redoButton:
+    eventListeners:
+      click:
+        handler: handleRedoButtonClick
   playButton:
     eventListeners:
       click:
@@ -614,6 +622,9 @@ template:
               - rtgl-button#backButton sq pre=chevronLeft v=ol: null
               - rtgl-view w=1fg:
                   - rtgl-text: ${animationName}
+              - rtgl-view d=h av=c g=xs:
+                  - 'rtgl-button#undoButton sq pre=undo v=ol ?disabled=${undoDisabled} aria-label="${undoLabel}" title="${undoLabel}"': null
+                  - 'rtgl-button#redoButton sq pre=redo v=ol ?disabled=${redoDisabled} aria-label="${redoLabel}" title="${redoLabel}"': null
               - $if showMobileEditorMenu:
                   - 'rtgl-button#mobileEditorMenuButton sq v=ol pre=ellipsis aria-haspopup=menu aria-expanded="${popover.editorMenuIsOpen}" aria-label="${mobileEditorMenuLabel}" title="${mobileEditorMenuLabel}"': null
                 $else:

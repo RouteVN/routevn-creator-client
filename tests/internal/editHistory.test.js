@@ -3,6 +3,7 @@ import {
   areEditHistoryValuesEqual,
   createEditHistory,
   dropEditHistoryStep,
+  getEditHistoryChangeKey,
   getEditHistoryStep,
   moveEditHistoryStep,
   recordEditHistoryStep,
@@ -174,6 +175,42 @@ describe("edit history", () => {
     );
     expect(areEditHistoryValuesEqual([1], { 0: 1 })).toBe(false);
     expect(areEditHistoryValuesEqual({ x: NaN }, { x: NaN })).toBe(true);
+  });
+});
+
+describe("edit history change keys", () => {
+  const animation = (value, extra = {}) => ({
+    update: { x: { keyframes: [{ value, duration: 1000, ...extra }] } },
+  });
+
+  it("names the values an edit changed", () => {
+    expect(getEditHistoryChangeKey(animation(1), animation(2))).toBe(
+      "/update/x/keyframes/0/value",
+    );
+    expect(
+      getEditHistoryChangeKey(animation(1), animation(2, { duration: 500 })),
+    ).toBe("/update/x/keyframes/0/value|/update/x/keyframes/0/duration");
+    expect(getEditHistoryChangeKey(animation(1), animation(1))).toBe("");
+  });
+
+  it("counts an added or removed item as a change to its list", () => {
+    const twoKeyframes = {
+      update: {
+        x: {
+          keyframes: [
+            { value: 1, duration: 1000 },
+            { value: 2, duration: 1000 },
+          ],
+        },
+      },
+    };
+
+    expect(getEditHistoryChangeKey(animation(1), twoKeyframes)).toBe(
+      "/update/x/keyframes",
+    );
+    expect(
+      getEditHistoryChangeKey(animation(1), animation(1, { startValue: 0 })),
+    ).toBe("/update/x/keyframes/0/startValue");
   });
 });
 
