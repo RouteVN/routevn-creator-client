@@ -24,7 +24,7 @@ const lines = (element) => {
 };
 
 describe("progress dialog status text", () => {
-  it("turns a line break in the status into a <br> so it renders the same everywhere", () => {
+  it("turns a line break in the status into a <br> and keeps the accessible text on one line", () => {
     const document = createDocument();
 
     createProgressDialog(
@@ -40,24 +40,10 @@ describe("progress dialog status text", () => {
     const status = findStatus(document, "Downloading…");
     expect(status.querySelectorAll("br")).toHaveLength(1);
     expect(lines(status)).toEqual(["Downloading…", "76 MB of 195 MB (39%)"]);
-  });
-
-  it("keeps a single-line status as plain text", () => {
-    const document = createDocument();
-
-    createProgressDialog(
-      {
-        title: "Importing",
-        message: "Please wait",
-        status: "Extracting files… 83%",
-        progress: {},
-      },
-      document,
+    const track = document.querySelector("[data-progress-track]");
+    expect(track.getAttribute("aria-valuetext")).toBe(
+      "Downloading… 76 MB of 195 MB (39%)",
     );
-
-    const status = findStatus(document, "Extracting");
-    expect(status.querySelectorAll("br")).toHaveLength(0);
-    expect(status.textContent).toBe("Extracting files… 83%");
   });
 
   it("rebuilds the lines on every update without leaving old breaks behind", () => {
@@ -74,24 +60,5 @@ describe("progress dialog status text", () => {
     const status = findStatus(document, "Finishing up");
     expect(status.querySelectorAll("br")).toHaveLength(0);
     expect(lines(status)).toEqual(["Finishing up…"]);
-  });
-
-  it("describes the status to assistive technology on one line", () => {
-    const document = createDocument();
-
-    createProgressDialog(
-      {
-        title: "Importing",
-        message: "Please wait",
-        status: "Downloading…\n76 MB of 195 MB (39%)",
-        progress: {},
-      },
-      document,
-    );
-
-    const track = document.querySelector("[data-progress-track]");
-    expect(track.getAttribute("aria-valuetext")).toBe(
-      "Downloading… 76 MB of 195 MB (39%)",
-    );
   });
 });

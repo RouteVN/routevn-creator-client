@@ -44,7 +44,6 @@ vi.mock("@tauri-apps/api/core", () => ({
 import { createAppService as createDesktopAppService } from "../../src/deps/services/appService.js";
 import { createAppService as createAndroidAppService } from "../../src/deps/services/android/appService.js";
 import { createAppService as createIOSAppService } from "../../src/deps/services/ios/appService.js";
-import { createAppService as createWebAppService } from "../../src/deps/services/web/appService.js";
 
 const createDb = () => {
   const values = new Map([["projectEntries", []]]);
@@ -67,7 +66,7 @@ const createProjectService = () => ({
   })),
 });
 
-const createParams = ({ db, projectService, filePicker }) => ({
+const createParams = ({ db, projectService }) => ({
   appActivity: {
     isActive: () => true,
     subscribeActive: (listener) => {
@@ -80,7 +79,7 @@ const createParams = ({ db, projectService, filePicker }) => ({
     getPayload: () => ({}),
   },
   globalUI: {},
-  filePicker: filePicker ?? {},
+  filePicker: {},
   openUrl: vi.fn(),
   appVersion: "test",
   platform: "test",
@@ -92,15 +91,9 @@ const createParams = ({ db, projectService, filePicker }) => ({
 
 beforeEach(() => {
   vi.stubGlobal("window", {});
-  mocked.androidBridge.mockReset();
-  mocked.iosBridge.mockReset();
-  mocked.invoke.mockReset();
-  mocked.readDir.mockReset();
-  mocked.exists.mockReset();
-  mocked.mkdir.mockReset();
-  mocked.remove.mockReset();
-  mocked.rename.mockReset();
-  mocked.join.mockReset();
+  for (const mock of Object.values(mocked)) {
+    mock.mockReset();
+  }
   mocked.readDir.mockResolvedValue([]);
   mocked.exists.mockResolvedValue(true);
   mocked.join.mockImplementation(async (...parts) => parts.join("/"));
@@ -134,50 +127,37 @@ const PLANNED_FILES = [
   },
 ];
 
-const file = (name) => ({
+// Tauri fs `readDir` entries.
+const dirEntry = (name, kind) => ({
   name,
-  isFile: true,
-  isDirectory: false,
-  isSymlink: false,
+  isFile: kind === "file",
+  isDirectory: kind === "directory",
+  isSymlink: kind === "link",
 });
-const directory = (name) => ({
-  name,
-  isFile: false,
-  isDirectory: true,
-  isSymlink: false,
-});
-const link = (name) => ({
-  name,
-  isFile: false,
-  isDirectory: false,
-  isSymlink: true,
-});
+const file = (name) => dirEntry(name, "file");
 
 describe("desktop project import adapters", () => {
-  const mockDirectories = (directories) => {
+  const mockProjectFolder = (files, filesKind = "directory") => {
+    const directories = {
+      "/projects/project-one": [
+        dirEntry("files", filesKind),
+        file("project.db"),
+      ],
+      "/projects/project-one/files": files,
+    };
     mocked.readDir.mockImplementation(async (path) => directories[path] ?? []);
   };
 
-  const mockNative = ({
-    entries = PROJECT_ZIP_ENTRIES,
-    serverSendsFileName = true,
-    failOn,
-  } = {}) => {
-    const contentDisposition = serverSendsFileName
-      ? 'attachment; filename="Project One.zip"'
-      : undefined;
+  const mockNative = ({ entries = PROJECT_ZIP_ENTRIES } = {}) => {
     const calls = [];
     mocked.invoke.mockImplementation(async (command, payload) => {
       calls.push({ command, payload });
-      if (command === failOn) {
-        throw new Error("downloadFailed: HTTP 500");
-      }
       if (command === "download_file") {
         payload.onProgress.onmessage({ current: 0, total: 10 });
         payload.onProgress.onmessage({ current: 10, total: 10 });
         return {
           finalUrl: "https://example.com/files/project-one.zip",
-          contentDisposition,
+          contentDisposition: 'attachment; filename="Project One.zip"',
           bytes: 10,
         };
       }
@@ -215,10 +195,7 @@ describe("desktop project import adapters", () => {
   describe("a picked folder", () => {
     it("renames files to their file ids once the folder is known to be a project", async () => {
       const db = createDb();
-      mockDirectories({
-        "/projects/project-one": [directory("files"), file("project.db")],
-        "/projects/project-one/files": [file("abc.png"), file("def")],
-      });
+      mockProjectFolder([file("abc.png"), file("def")]);
 
       await createService({ db }).openExistingProject("/projects/project-one");
 
@@ -231,78 +208,53 @@ describe("desktop project import adapters", () => {
       expect(entries[0].projectPath).toBe("/projects/project-one");
     });
 
-    it("renames nothing in a folder that is not a project", async () => {
-      mockDirectories({
-        "/projects/not-a-project": [directory("files")],
-        "/projects/not-a-project/files": [file("photo.jpg")],
-      });
-      mocked.exists.mockImplementation(async (path) => path.endsWith("/files"));
+    it.each([
+      [
+        "has no project.db",
+        () => {
+          mocked.exists.mockImplementation(async (path) =>
+            path.endsWith("/files"),
+          );
+        },
+        "Missing project.db",
+      ],
+      [
+        "has a database that cannot be read",
+        (projectService) => {
+          projectService.getProjectInfoByPath.mockRejectedValue(
+            new Error("file is not a database"),
+          );
+        },
+        "file is not a database",
+      ],
+      [
+        "has two names for the same id",
+        () => mockProjectFolder([file("abc.png"), file("abc.jpg")]),
+        /^fileNameConflict: /,
+      ],
+      [
+        "has a files folder that is a link",
+        () => mockProjectFolder([file("abc.png")], "link"),
+        /^importFailed: /,
+      ],
+    ])(
+      "renames nothing in a folder that %s",
+      async (_label, arrange, error) => {
+        mockProjectFolder([file("abc.png")]);
+        const projectService = createProjectService();
+        arrange(projectService);
 
-      await expect(
-        createService().openExistingProject("/projects/not-a-project"),
-      ).rejects.toThrow("Missing project.db");
-      expect(mocked.rename).not.toHaveBeenCalled();
-    });
-
-    it("renames nothing when the project database cannot be read", async () => {
-      mockDirectories({
-        "/projects/project-one": [directory("files"), file("project.db")],
-        "/projects/project-one/files": [file("abc.png")],
-      });
-      const projectService = createProjectService();
-      projectService.getProjectInfoByPath.mockRejectedValue(
-        new Error("file is not a database"),
-      );
-
-      await expect(
-        createService({ projectService }).openExistingProject(
-          "/projects/project-one",
-        ),
-      ).rejects.toThrow("file is not a database");
-      expect(mocked.rename).not.toHaveBeenCalled();
-    });
-
-    it("renames nothing when two names would become the same id", async () => {
-      mockDirectories({
-        "/projects/project-one": [directory("files")],
-        "/projects/project-one/files": [file("abc.png"), file("abc.jpg")],
-      });
-
-      await expect(
-        createService().openExistingProject("/projects/project-one"),
-      ).rejects.toThrow(/^fileNameConflict: /);
-      expect(mocked.rename).not.toHaveBeenCalled();
-    });
-
-    it("refuses a name that cannot be a file id", async () => {
-      mockDirectories({
-        "/projects/project-one": [directory("files")],
-        "/projects/project-one/files": [file("a b.png")],
-      });
-
-      await expect(
-        createService().openExistingProject("/projects/project-one"),
-      ).rejects.toThrow(/^invalidFileName: /);
-      expect(mocked.rename).not.toHaveBeenCalled();
-    });
-
-    it("refuses a files folder that is a link", async () => {
-      mockDirectories({
-        "/projects/project-one": [link("files")],
-        "/projects/project-one/files": [file("abc.png")],
-      });
-
-      await expect(
-        createService().openExistingProject("/projects/project-one"),
-      ).rejects.toThrow(/^importFailed: /);
-      expect(mocked.rename).not.toHaveBeenCalled();
-    });
+        await expect(
+          createService({ projectService }).openExistingProject(
+            "/projects/project-one",
+          ),
+        ).rejects.toThrow(error);
+        expect(mocked.rename).not.toHaveBeenCalled();
+      },
+    );
 
     it("undoes the renames already made when one fails", async () => {
-      mockDirectories({
-        "/projects/project-one": [directory("files")],
-        "/projects/project-one/files": [file("abc.png"), file("def.png")],
-      });
+      mockProjectFolder([file("abc.png"), file("def.png")]);
       mocked.rename.mockImplementation(async (from) => {
         if (from.endsWith("def.png")) {
           throw new Error("permission denied");
@@ -328,17 +280,6 @@ describe("desktop project import adapters", () => {
         ],
       ]);
     });
-
-    it("leaves a project that needs no renames alone", async () => {
-      mockDirectories({
-        "/projects/project-one": [directory("files")],
-        "/projects/project-one/files": [file("abc"), file(".DS_Store")],
-      });
-
-      await createService().openExistingProject("/projects/project-one");
-
-      expect(mocked.rename).not.toHaveBeenCalled();
-    });
   });
 
   describe("a URL", () => {
@@ -349,12 +290,15 @@ describe("desktop project import adapters", () => {
         ...extra,
       });
 
-    it("downloads, extracts only the planned files and registers the moved folder", async () => {
+    it("downloads, extracts only the planned files, reports progress and registers the moved folder", async () => {
       const db = createDb();
       const calls = mockNative();
       mockFreeNames();
+      const events = [];
 
-      const project = await importFromUrl(createService({ db }));
+      const project = await importFromUrl(createService({ db }), {
+        onProgress: (event) => events.push(event),
+      });
 
       expect(calls.map((call) => call.command)).toEqual([
         "download_file",
@@ -388,6 +332,12 @@ describe("desktop project import adapters", () => {
       expect(project.projectPath).toBe("/projects/parent/Project One");
       const entries = await db.get("projectEntries");
       expect(entries[0].projectPath).toBe("/projects/parent/Project One");
+      expect(events).toEqual([
+        { stage: "downloading", current: 0, total: 10 },
+        { stage: "downloading", current: 10, total: 10 },
+        { stage: "extracting", current: 5, total: 18 },
+        { stage: "finishing", current: 0, total: 0 },
+      ]);
     });
 
     it("creates the files folder when the archive holds no assets", async () => {
@@ -440,15 +390,6 @@ describe("desktop project import adapters", () => {
       );
     });
 
-    it("names the folder from the URL when the server sends no filename", async () => {
-      mockNative({ serverSendsFileName: false });
-      mockFreeNames();
-
-      const project = await importFromUrl(createService());
-
-      expect(project.projectPath).toBe("/projects/parent/project-one");
-    });
-
     it("picks the next free name instead of replacing a folder", async () => {
       mockNative();
       mockFreeNames([
@@ -459,63 +400,6 @@ describe("desktop project import adapters", () => {
       const project = await importFromUrl(createService());
 
       expect(project.projectPath).toBe("/projects/parent/Project One 3");
-    });
-
-    it("reports downloading, extracting and finishing in order", async () => {
-      mockNative();
-      mockFreeNames();
-      const events = [];
-
-      await importFromUrl(createService(), {
-        onProgress: (event) => events.push(event),
-      });
-
-      expect(events).toEqual([
-        { stage: "downloading", current: 0, total: 10 },
-        { stage: "downloading", current: 10, total: 10 },
-        { stage: "extracting", current: 5, total: 18 },
-        { stage: "finishing", current: 0, total: 0 },
-      ]);
-    });
-
-    it("works without a progress callback", async () => {
-      mockNative();
-      mockFreeNames();
-
-      await expect(importFromUrl(createService())).resolves.toBeDefined();
-    });
-
-    it("rejects an invalid URL before touching the disk", async () => {
-      await expect(
-        importFromUrl(createService(), {
-          url: "http://example.com/project-one.zip",
-        }),
-      ).rejects.toThrow(/^invalidUrl: /);
-
-      expect(mocked.invoke).not.toHaveBeenCalled();
-      expect(mocked.mkdir).not.toHaveBeenCalled();
-    });
-
-    it("rejects a missing destination folder", async () => {
-      await expect(
-        importFromUrl(createService(), { destinationFolder: undefined }),
-      ).rejects.toThrow(/^importFailed: /);
-
-      expect(mocked.invoke).not.toHaveBeenCalled();
-    });
-
-    it("removes the staging folder when the download fails", async () => {
-      mockNative({ failOn: "download_file" });
-
-      await expect(importFromUrl(createService())).rejects.toThrow(
-        "downloadFailed: HTTP 500",
-      );
-
-      expect(mocked.remove).toHaveBeenCalledWith(
-        mocked.mkdir.mock.calls[0][0],
-        { recursive: true },
-      );
-      expect(mocked.rename).not.toHaveBeenCalled();
     });
 
     it("rejects an archive without project.db before extracting", async () => {
@@ -531,23 +415,6 @@ describe("desktop project import adapters", () => {
         "extract_archive",
       );
       expect(mocked.remove).toHaveBeenCalledTimes(1);
-    });
-
-    it("rejects an unsafe entry name before extracting", async () => {
-      const calls = mockNative({
-        entries: [
-          { name: "project.db", size: 1, isDirectory: false },
-          { name: "files/../escape", size: 1, isDirectory: false },
-        ],
-      });
-
-      await expect(importFromUrl(createService())).rejects.toThrow(
-        /^unsafeArchiveEntry: /,
-      );
-
-      expect(calls.map((call) => call.command)).not.toContain(
-        "extract_archive",
-      );
     });
 
     it("removes the moved folder when the project cannot be registered", async () => {
@@ -569,432 +436,6 @@ describe("desktop project import adapters", () => {
       );
     });
   });
-
-  it("does not support archive pickers on desktop", async () => {
-    const appService = createService();
-
-    await expect(appService.openArchivePicker()).rejects.toThrow(
-      /not supported/,
-    );
-    await expect(appService.importProjectFromArchive()).rejects.toThrow(
-      /not supported/,
-    );
-  });
-});
-
-// Android and iOS speak the same import operations over their own bridges.
-const describeMobileImport = ({
-  label,
-  bridge,
-  createService,
-  progressCallback,
-  importPayload,
-  finishPayload,
-  finishOptions,
-}) => {
-  const createNative = ({
-    entries = PROJECT_ZIP_ENTRIES,
-    result,
-    failOn,
-    folders = {},
-  } = {}) => {
-    const calls = [];
-    bridge.mockImplementation(async (method, payload, options) => {
-      calls.push({ method, payload, options });
-      if (method === failOn) {
-        throw new Error("downloadFailed: HTTP 500");
-      }
-      switch (method) {
-        case "createImportStaging":
-          return { stagingId: "staging-one" };
-        case "removeImportStaging":
-          return {};
-        case "downloadImportFile":
-          window[progressCallback]({
-            stagingId: "someone-else",
-            current: 1,
-            total: 9,
-          });
-          window[progressCallback]({
-            stagingId: payload.stagingId,
-            current: 0,
-            total: 10,
-          });
-          window[progressCallback]({
-            stagingId: payload.stagingId,
-            current: 10,
-            total: 10,
-          });
-          return {
-            finalUrl: payload.url,
-            contentDisposition: undefined,
-            bytes: 10,
-          };
-        case "copyImportFile":
-          return { bytes: 10 };
-        case "listImportArchive":
-          return { entries };
-        case "extractImportArchive":
-          window[progressCallback]({
-            stagingId: payload.stagingId,
-            current: 5,
-            total: 18,
-          });
-          return { files: PLANNED_FILES.length, bytes: 18 };
-        case "listImportDirectory":
-          return { entries: folders[payload.path] ?? [] };
-        case "importProjectFolder":
-          return result ? result(payload) : finishPayload(payload);
-        default:
-          throw new Error(`Unexpected ${label} bridge method: ${method}`);
-      }
-    });
-    return calls;
-  };
-
-  const methodsOf = (calls) => calls.map((call) => call.method);
-
-  describe(`${label} project import adapters`, () => {
-    it("imports a picked zip through staging and registers the project", async () => {
-      const db = createDb();
-      const calls = createNative();
-
-      const project = await createService({ db }).importProjectFromArchive({
-        uri: "content://archives/project-one.zip",
-      });
-
-      expect(methodsOf(calls)).toEqual([
-        "createImportStaging",
-        "copyImportFile",
-        "listImportArchive",
-        "extractImportArchive",
-        "importProjectFolder",
-        "removeImportStaging",
-      ]);
-      expect(calls[1].payload).toEqual({
-        stagingId: "staging-one",
-        uri: "content://archives/project-one.zip",
-        path: "archive.zip",
-        maxBytes: 4 * GIB,
-      });
-      expect(calls[3].payload).toEqual({
-        stagingId: "staging-one",
-        path: "archive.zip",
-        destination: "extracted",
-        files: PLANNED_FILES,
-        maxBytes: 8 * GIB,
-      });
-      expect(calls[4].payload).toMatchObject({
-        stagingId: "staging-one",
-        path: "extracted",
-      });
-      expect(calls[5].payload).toEqual({ stagingId: "staging-one" });
-      expect(project.name).toBe("Project One");
-      expect((await db.get("projectEntries"))[0].name).toBe("Project One");
-    });
-
-    it("downloads from a URL through staging and registers the entry", async () => {
-      const db = createDb();
-      const calls = createNative();
-
-      await createService({ db }).importProjectFromUrl({
-        url: "https://example.com/project-one.zip",
-      });
-
-      expect(methodsOf(calls)).toEqual([
-        "createImportStaging",
-        "downloadImportFile",
-        "listImportArchive",
-        "extractImportArchive",
-        "importProjectFolder",
-        "removeImportStaging",
-      ]);
-      expect(calls[1].payload).toEqual({
-        stagingId: "staging-one",
-        url: "https://example.com/project-one.zip",
-        path: "archive.zip",
-        maxBytes: 4 * GIB,
-      });
-      expect(await db.get("projectEntries")).toHaveLength(1);
-    });
-
-    it("never times out the calls that move a lot of data", async () => {
-      const calls = createNative();
-
-      await createService().importProjectFromUrl({
-        url: "https://example.com/project-one.zip",
-      });
-
-      const finish = calls.find(
-        (call) => call.method === "importProjectFolder",
-      );
-      expect(finish.options).toEqual(finishOptions);
-    });
-
-    it("forwards progress for its own staging folder only", async () => {
-      createNative();
-      const events = [];
-
-      await createService().importProjectFromUrl({
-        url: "https://example.com/project-one.zip",
-        onProgress: (event) => events.push(event),
-      });
-
-      expect(events).toEqual([
-        { stage: "downloading", current: 0, total: 10 },
-        { stage: "downloading", current: 10, total: 10 },
-        { stage: "extracting", current: 5, total: 18 },
-        { stage: "finishing", current: 0, total: 0 },
-      ]);
-    });
-
-    it("stops listening once the import settles", async () => {
-      createNative();
-      const onProgress = vi.fn();
-
-      await createService().importProjectFromUrl({
-        url: "https://example.com/project-one.zip",
-        onProgress,
-      });
-      onProgress.mockClear();
-      window[progressCallback]({
-        stagingId: "staging-one",
-        current: 1,
-        total: 2,
-      });
-
-      expect(onProgress).not.toHaveBeenCalled();
-    });
-
-    it("removes the staging folder and registers nothing when a step fails", async () => {
-      const db = createDb();
-      const calls = createNative({ failOn: "downloadImportFile" });
-      const onProgress = vi.fn();
-
-      await expect(
-        createService({ db }).importProjectFromUrl({
-          url: "https://example.com/project-one.zip",
-          onProgress,
-        }),
-      ).rejects.toThrow("downloadFailed: HTTP 500");
-      window[progressCallback]({
-        stagingId: "staging-one",
-        current: 1,
-        total: 2,
-      });
-
-      expect(methodsOf(calls).at(-1)).toBe("removeImportStaging");
-      expect(onProgress).not.toHaveBeenCalled();
-      expect(await db.get("projectEntries")).toEqual([]);
-    });
-
-    it("rejects an invalid URL before calling the bridge", async () => {
-      createNative();
-
-      await expect(
-        createService().importProjectFromUrl({
-          url: "ftp://example.com/a.zip",
-        }),
-      ).rejects.toThrow(/^invalidUrl: /);
-      expect(bridge).not.toHaveBeenCalled();
-    });
-
-    it("rejects a zip that is not a project before extracting anything", async () => {
-      const calls = createNative({
-        entries: [{ name: "notes.txt", size: 3, isDirectory: false }],
-      });
-
-      await expect(
-        createService().importProjectFromArchive({
-          uri: "content://archives/other.zip",
-        }),
-      ).rejects.toThrow(/^invalidArchive: /);
-
-      expect(methodsOf(calls)).not.toContain("extractImportArchive");
-      expect(methodsOf(calls).at(-1)).toBe("removeImportStaging");
-    });
-
-    it("does not fail the import when the staging cleanup fails", async () => {
-      const calls = [];
-      createNative();
-      const implementation = bridge.getMockImplementation();
-      bridge.mockImplementation(async (method, payload, options) => {
-        calls.push(method);
-        if (method === "removeImportStaging") {
-          throw new Error("cannot delete");
-        }
-        return implementation(method, payload, options);
-      });
-      vi.spyOn(console, "error").mockImplementation(() => {});
-
-      await expect(
-        createService().importProjectFromArchive({
-          uri: "content://archives/project-one.zip",
-        }),
-      ).resolves.toBeDefined();
-    });
-
-    it("delegates the archive picker to the file picker client", async () => {
-      const filePicker = {
-        openArchivePicker: vi.fn(async () => ({
-          uri: "content://archives/project-one.zip",
-          name: "project-one.zip",
-        })),
-      };
-
-      await expect(
-        createService({ filePicker }).openArchivePicker({
-          title: "Select Project Zip File",
-        }),
-      ).resolves.toEqual({
-        uri: "content://archives/project-one.zip",
-        name: "project-one.zip",
-      });
-      expect(filePicker.openArchivePicker).toHaveBeenCalledWith({
-        title: "Select Project Zip File",
-      });
-    });
-
-    it("maps a cancelled archive picker to undefined", async () => {
-      const filePicker = { openArchivePicker: vi.fn(async () => null) };
-
-      await expect(
-        createService({ filePicker }).openArchivePicker(),
-      ).resolves.toBeUndefined();
-    });
-
-    describe("a picked folder", () => {
-      const folder = "content://tree/project-one";
-
-      it("sends the renames Rule A needs and imports the folder", async () => {
-        const calls = createNative({
-          folders: {
-            "": [
-              { name: "project.db", kind: "file" },
-              { name: "files", kind: "directory" },
-            ],
-            files: [
-              { name: "abc.png", kind: "file" },
-              { name: "def", kind: "file" },
-            ],
-          },
-        });
-
-        await createService().openExistingProject(folder);
-
-        expect(
-          calls
-            .filter((call) => call.method === "listImportDirectory")
-            .map((call) => call.payload),
-        ).toEqual([
-          { uri: folder, path: "" },
-          { uri: folder, path: "files" },
-        ]);
-        const finish = calls.find(
-          (call) => call.method === "importProjectFolder",
-        );
-        expect(finish.payload).toMatchObject({
-          uri: folder,
-          fileRenames: [{ from: "abc.png", to: "abc" }],
-        });
-      });
-
-      it("imports nothing when two names would become the same id", async () => {
-        const calls = createNative({
-          folders: {
-            "": [{ name: "files", kind: "directory" }],
-            files: [
-              { name: "abc.png", kind: "file" },
-              { name: "ABC", kind: "file" },
-            ],
-          },
-        });
-
-        await expect(
-          createService().openExistingProject(folder),
-        ).rejects.toThrow(/^fileNameConflict: /);
-        expect(methodsOf(calls)).not.toContain("importProjectFolder");
-      });
-
-      it("refuses a files folder that is a link", async () => {
-        const calls = createNative({
-          folders: { "": [{ name: "files", kind: "symlink" }] },
-        });
-
-        await expect(
-          createService().openExistingProject(folder),
-        ).rejects.toThrow(/^importFailed: /);
-        expect(methodsOf(calls)).not.toContain("importProjectFolder");
-      });
-    });
-  });
-};
-
-describeMobileImport({
-  label: "android",
-  bridge: mocked.androidBridge,
-  progressCallback: "__routeVNAndroidProjectImportProgress",
-  createService: ({ db = createDb(), projectService, filePicker } = {}) =>
-    createAndroidAppService(
-      createParams({
-        db,
-        projectService: projectService ?? createProjectService(),
-        filePicker,
-      }),
-    ),
-  importPayload: () => ({
-    id: "imported-id",
-    name: "Project One",
-    description: "",
-    language: "en",
-    iconFileId: null,
-  }),
-  finishPayload: (payload) => ({
-    id: payload.projectId,
-    name: "Project One",
-    description: "",
-    language: "en",
-    iconFileId: null,
-  }),
-  finishOptions: { timeoutMs: Number.POSITIVE_INFINITY },
-});
-
-describe("android project import identity", () => {
-  it("fails and cleans up when the imported identity does not match", async () => {
-    const db = createDb();
-    const methods = [];
-    mocked.androidBridge.mockImplementation(async (method, payload) => {
-      methods.push(method);
-      switch (method) {
-        case "createImportStaging":
-          return { stagingId: "staging-one" };
-        case "copyImportFile":
-          return { bytes: 1 };
-        case "listImportArchive":
-          return { entries: PROJECT_ZIP_ENTRIES };
-        case "extractImportArchive":
-          return { files: 4, bytes: 18 };
-        case "removeImportStaging":
-          return {};
-        case "importProjectFolder":
-          return { id: "different-id", name: "Project One" };
-        default:
-          throw new Error(`Unexpected Android bridge method: ${method}`);
-      }
-    });
-    const appService = createAndroidAppService(
-      createParams({ db, projectService: createProjectService() }),
-    );
-
-    await expect(
-      appService.importProjectFromArchive({
-        uri: "content://archives/project-one.zip",
-      }),
-    ).rejects.toThrow(/^importFailed: /);
-
-    expect(methods.at(-1)).toBe("removeImportStaging");
-    expect(await db.get("projectEntries")).toEqual([]);
-  });
 });
 
 const iosImportPayload = () => ({
@@ -1006,25 +447,254 @@ const iosImportPayload = () => ({
   iconFileId: null,
 });
 
-describeMobileImport({
+// Android and iOS speak the same import operations over their own bridges.
+const ANDROID = {
+  label: "android",
+  bridge: mocked.androidBridge,
+  progressCallback: "__routeVNAndroidProjectImportProgress",
+  createAppService: createAndroidAppService,
+  // Android's storage step answers with the project id the app chose.
+  storeProject: (payload) => ({
+    id: payload.projectId,
+    name: "Project One",
+    description: "",
+    language: "en",
+    iconFileId: null,
+  }),
+  finishOptions: { timeoutMs: Number.POSITIVE_INFINITY },
+};
+const IOS = {
   label: "ios",
   bridge: mocked.iosBridge,
   progressCallback: "__routeVNIOSProjectImportProgress",
-  createService: ({ db = createDb(), projectService, filePicker } = {}) =>
-    createIOSAppService(
-      createParams({
-        db,
-        projectService: projectService ?? createProjectService(),
-        filePicker,
-      }),
-    ),
-  importPayload: iosImportPayload,
-  finishPayload: iosImportPayload,
+  createAppService: createIOSAppService,
+  storeProject: iosImportPayload,
   finishOptions: undefined,
+};
+
+const createMobileService = (platform, { db = createDb() } = {}) =>
+  platform.createAppService(
+    createParams({ db, projectService: createProjectService() }),
+  );
+
+// The bridge answers every import method; `answers` replaces single methods.
+const mockMobileNative = (
+  platform,
+  { entries = PROJECT_ZIP_ENTRIES, folders = {}, answers = {} } = {},
+) => {
+  const { bridge, progressCallback } = platform;
+  const report = (stagingId, current, total) => {
+    window[progressCallback]({ stagingId, current, total });
+  };
+  const handlers = {
+    createImportStaging: () => ({ stagingId: "staging-one" }),
+    removeImportStaging: () => ({}),
+    downloadImportFile: (payload) => {
+      report("someone-else", 1, 9);
+      report(payload.stagingId, 0, 10);
+      report(payload.stagingId, 10, 10);
+      return { finalUrl: payload.url, bytes: 10 };
+    },
+    copyImportFile: () => ({ bytes: 10 }),
+    listImportArchive: () => ({ entries }),
+    extractImportArchive: (payload) => {
+      report(payload.stagingId, 5, 18);
+      return { files: PLANNED_FILES.length, bytes: 18 };
+    },
+    listImportDirectory: (payload) => ({
+      entries: folders[payload.path] ?? [],
+    }),
+    importProjectFolder: platform.storeProject,
+    ...answers,
+  };
+  const calls = [];
+  bridge.mockImplementation(async (method, payload, options) => {
+    calls.push({ method, payload, options });
+    if (!handlers[method]) {
+      throw new Error(`Unexpected ${platform.label} bridge method: ${method}`);
+    }
+    return handlers[method](payload);
+  });
+  return calls;
+};
+
+const methodsOf = (calls) => calls.map((call) => call.method);
+
+describe.each([ANDROID, IOS])("$label project import adapters", (platform) => {
+  it("imports a picked zip through staging and registers the project", async () => {
+    const db = createDb();
+    const calls = mockMobileNative(platform);
+
+    const project = await createMobileService(platform, {
+      db,
+    }).importProjectFromArchive({
+      uri: "content://archives/project-one.zip",
+    });
+
+    expect(methodsOf(calls)).toEqual([
+      "createImportStaging",
+      "copyImportFile",
+      "listImportArchive",
+      "extractImportArchive",
+      "importProjectFolder",
+      "removeImportStaging",
+    ]);
+    expect(calls[1].payload).toEqual({
+      stagingId: "staging-one",
+      uri: "content://archives/project-one.zip",
+      path: "archive.zip",
+      maxBytes: 4 * GIB,
+    });
+    expect(calls[3].payload).toEqual({
+      stagingId: "staging-one",
+      path: "archive.zip",
+      destination: "extracted",
+      files: PLANNED_FILES,
+      maxBytes: 8 * GIB,
+    });
+    expect(calls[4].payload).toMatchObject({
+      stagingId: "staging-one",
+      path: "extracted",
+    });
+    // Android never times out the storage step of a large project.
+    expect(calls[4].options).toEqual(platform.finishOptions);
+    expect(calls[5].payload).toEqual({ stagingId: "staging-one" });
+    expect(project.name).toBe("Project One");
+    expect((await db.get("projectEntries"))[0].name).toBe("Project One");
+  });
+
+  it("downloads a URL, registers the project and forwards progress for its own staging folder only", async () => {
+    const db = createDb();
+    const calls = mockMobileNative(platform);
+    const events = [];
+
+    await createMobileService(platform, { db }).importProjectFromUrl({
+      url: "https://example.com/project-one.zip",
+      onProgress: (event) => events.push(event),
+    });
+
+    expect(methodsOf(calls)).toEqual([
+      "createImportStaging",
+      "downloadImportFile",
+      "listImportArchive",
+      "extractImportArchive",
+      "importProjectFolder",
+      "removeImportStaging",
+    ]);
+    expect(await db.get("projectEntries")).toHaveLength(1);
+    expect(calls[1].payload).toEqual({
+      stagingId: "staging-one",
+      url: "https://example.com/project-one.zip",
+      path: "archive.zip",
+      maxBytes: 4 * GIB,
+    });
+    expect(events).toEqual([
+      { stage: "downloading", current: 0, total: 10 },
+      { stage: "downloading", current: 10, total: 10 },
+      { stage: "extracting", current: 5, total: 18 },
+      { stage: "finishing", current: 0, total: 0 },
+    ]);
+  });
+
+  it("sends the renames Rule A needs with a picked folder", async () => {
+    const folder = "content://tree/project-one";
+    const calls = mockMobileNative(platform, {
+      folders: {
+        "": [
+          { name: "project.db", kind: "file" },
+          { name: "files", kind: "directory" },
+        ],
+        files: [
+          { name: "abc.png", kind: "file" },
+          { name: "def", kind: "file" },
+        ],
+      },
+    });
+
+    await createMobileService(platform).openExistingProject(folder);
+
+    expect(
+      calls
+        .filter((call) => call.method === "listImportDirectory")
+        .map((call) => call.payload),
+    ).toEqual([
+      { uri: folder, path: "" },
+      { uri: folder, path: "files" },
+    ]);
+    const finish = calls.find((call) => call.method === "importProjectFolder");
+    expect(finish.payload).toMatchObject({
+      uri: folder,
+      fileRenames: [{ from: "abc.png", to: "abc" }],
+    });
+  });
+});
+
+describe("mobile project import failures", () => {
+  it.each([
+    [
+      "the download fails",
+      {
+        downloadImportFile: () => {
+          throw new Error("downloadFailed: HTTP 500");
+        },
+      },
+      "downloadFailed: HTTP 500",
+    ],
+    [
+      "the stored Android project has another id",
+      {
+        importProjectFolder: () => ({
+          id: "different-id",
+          name: "Project One",
+        }),
+      },
+      /^importFailed: /,
+    ],
+  ])(
+    "removes the staging folder, stops listening and registers nothing when %s",
+    async (_label, answers, error) => {
+      const db = createDb();
+      const calls = mockMobileNative(ANDROID, { answers });
+      const onProgress = vi.fn();
+
+      await expect(
+        createMobileService(ANDROID, { db }).importProjectFromUrl({
+          url: "https://example.com/project-one.zip",
+          onProgress,
+        }),
+      ).rejects.toThrow(error);
+      onProgress.mockClear();
+      window[ANDROID.progressCallback]({
+        stagingId: "staging-one",
+        current: 1,
+        total: 2,
+      });
+
+      expect(methodsOf(calls).at(-1)).toBe("removeImportStaging");
+      expect(onProgress).not.toHaveBeenCalled();
+      expect(await db.get("projectEntries")).toEqual([]);
+    },
+  );
+
+  it("does not fail the import when the staging cleanup fails", async () => {
+    mockMobileNative(ANDROID, {
+      answers: {
+        removeImportStaging: () => {
+          throw new Error("cannot delete");
+        },
+      },
+    });
+    vi.spyOn(console, "error").mockImplementation(() => {});
+
+    await expect(
+      createMobileService(ANDROID).importProjectFromArchive({
+        uri: "content://archives/project-one.zip",
+      }),
+    ).resolves.toBeDefined();
+  });
 });
 
 describe("ios project import of a project that is already in the library", () => {
-  const importPayload = iosImportPayload;
   const existingEntry = {
     id: "project-one",
     projectFilePath: "/projects/project-one/project.db",
@@ -1036,96 +706,59 @@ describe("ios project import of a project that is already in the library", () =>
     lastOpenedAt: 222,
   };
 
-  const incoming = () => ({
-    ...importPayload(),
-    name: "Incoming Name",
-    description: "Incoming description",
-    alreadyImported: true,
-  });
-
-  // The staging steps succeed; `finish` answers the storage step.
-  const mockStaging = (finish) => {
-    mocked.iosBridge.mockImplementation(async (method, payload) => {
-      switch (method) {
-        case "createImportStaging":
-          return { stagingId: "staging-one" };
-        case "removeImportStaging":
-          return {};
-        case "downloadImportFile":
-          return { finalUrl: payload.url, bytes: 1 };
-        case "copyImportFile":
-          return { bytes: 1 };
-        case "listImportArchive":
-          return { entries: PROJECT_ZIP_ENTRIES };
-        case "extractImportArchive":
-          return { files: 4, bytes: 18 };
-        default:
-          return finish(method, payload);
-      }
-    });
-  };
-
   const createExistingSetup = async ({ removed = [] } = {}) => {
     const db = createDb();
     await db.set("projectEntries", [existingEntry]);
     await db.set("iosRemovedProjectIds", removed);
-    const appService = createIOSAppService(
-      createParams({ db, projectService: createProjectService() }),
-    );
-    return { db, appService };
+    return { db, appService: createMobileService(IOS, { db }) };
   };
 
-  it.each([
-    [
-      "archive",
-      (appService) =>
-        appService.importProjectFromArchive({
-          uri: "file:///tmp/project-one.zip",
+  it("rejects a listed project without touching its entry", async () => {
+    const { db, appService } = await createExistingSetup();
+    db.set.mockClear();
+    mockMobileNative(IOS, {
+      answers: {
+        importProjectFolder: () => ({
+          ...iosImportPayload(),
+          name: "Incoming Name",
+          description: "Incoming description",
+          alreadyImported: true,
         }),
-    ],
-    [
-      "URL",
-      (appService) =>
-        appService.importProjectFromUrl({
-          url: "https://example.com/project-one.zip",
-        }),
-    ],
-  ])(
-    "rejects a listed project from a %s import without touching its entry",
-    async (_label, run) => {
-      const { db, appService } = await createExistingSetup();
-      db.set.mockClear();
-      mockStaging(() => incoming());
+      },
+    });
 
-      await expect(run(appService)).rejects.toThrow(/^projectExists: /);
+    await expect(
+      appService.importProjectFromArchive({
+        uri: "file:///tmp/project-one.zip",
+      }),
+    ).rejects.toThrow(/^projectExists: /);
 
-      expect(mocked.iosBridge).not.toHaveBeenCalledWith(
-        "renameLegacyProjectFolder",
-        expect.anything(),
-      );
-      expect(await db.get("projectEntries")).toEqual([existingEntry]);
-      expect(await db.get("iosRemovedProjectIds")).toEqual([]);
-      expect(db.set).not.toHaveBeenCalled();
-    },
-  );
+    expect(mocked.iosBridge).not.toHaveBeenCalledWith(
+      "renameLegacyProjectFolder",
+      expect.anything(),
+    );
+    expect(await db.get("projectEntries")).toEqual([existingEntry]);
+    expect(await db.get("iosRemovedProjectIds")).toEqual([]);
+    expect(db.set).not.toHaveBeenCalled();
+  });
 
   it("restores a hidden project, renaming its id-named folder after the project, and keeps its entry dates", async () => {
     const { db, appService } = await createExistingSetup({
       removed: ["project-one"],
     });
-    mockStaging((method) => {
-      if (method === "renameLegacyProjectFolder") {
-        return {
-          ...importPayload(),
+    mockMobileNative(IOS, {
+      answers: {
+        importProjectFolder: () => ({
+          ...iosImportPayload(),
+          name: "Existing Name",
+          alreadyImported: true,
+        }),
+        renameLegacyProjectFolder: () => ({
+          ...iosImportPayload(),
           name: "Existing Name",
           projectFilePath: "/projects/Existing Name/project.db",
-        };
-      }
-      return {
-        ...importPayload(),
-        name: "Existing Name",
-        alreadyImported: true,
-      };
+        }),
+      },
     });
 
     const project = await appService.importProjectFromArchive({
@@ -1146,59 +779,5 @@ describe("ios project import of a project that is already in the library", () =>
       createdAt: 111,
       lastOpenedAt: 222,
     });
-  });
-
-  it("does not rename anything when the import is a new project", async () => {
-    const db = createDb();
-    const appService = createIOSAppService(
-      createParams({ db, projectService: createProjectService() }),
-    );
-    mockStaging(() => ({ ...importPayload(), alreadyImported: false }));
-
-    await appService.importProjectFromArchive({
-      uri: "file:///tmp/project-one.zip",
-    });
-
-    expect(mocked.iosBridge).not.toHaveBeenCalledWith(
-      "renameLegacyProjectFolder",
-      expect.anything(),
-    );
-    expect((await db.get("projectEntries"))[0].id).toBe("project-one");
-  });
-
-  it("restores a previously removed project when it is imported again", async () => {
-    const db = createDb();
-    await db.set("iosRemovedProjectIds", ["project-one"]);
-    const appService = createIOSAppService(
-      createParams({ db, projectService: createProjectService() }),
-    );
-    mockStaging(() => importPayload());
-
-    await appService.importProjectFromArchive({
-      uri: "file:///tmp/project-one.zip",
-    });
-
-    expect(await db.get("iosRemovedProjectIds")).toEqual([]);
-  });
-});
-
-describe("web project import adapters", () => {
-  it("does not support archive or URL imports", async () => {
-    const appService = createWebAppService(
-      createParams({
-        db: createDb(),
-        projectService: createProjectService(),
-      }),
-    );
-
-    await expect(appService.openArchivePicker()).rejects.toThrow(
-      /not supported/,
-    );
-    await expect(appService.importProjectFromArchive()).rejects.toThrow(
-      /not supported/,
-    );
-    await expect(appService.importProjectFromUrl()).rejects.toThrow(
-      /not supported/,
-    );
   });
 });

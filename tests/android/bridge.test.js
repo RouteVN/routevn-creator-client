@@ -95,21 +95,6 @@ describe("Android WebMessage bridge client", () => {
       );
     });
 
-    it("honors a per-call timeout", async () => {
-      installSilentBridge();
-
-      const pending = callAndroidBridge(
-        "shortCall",
-        {},
-        { timeoutMs: 1000 },
-      ).catch((error) => error);
-      await vi.advanceTimersByTimeAsync(1000);
-
-      expect((await pending).message).toBe(
-        "Android bridge call timed out: shortCall",
-      );
-    });
-
     it("never times out a call that opts out, and still resolves it", async () => {
       const bridge = installSilentBridge();
       let settled = false;

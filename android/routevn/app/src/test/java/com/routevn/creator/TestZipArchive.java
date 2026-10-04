@@ -3,49 +3,77 @@ package com.routevn.creator;
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.io.OutputStream;
+import java.nio.ByteBuffer;
+import java.nio.ByteOrder;
 import java.nio.charset.StandardCharsets;
-import java.util.ArrayList;
-import java.util.List;
 import java.util.zip.CRC32;
 import java.util.zip.Deflater;
+import java.util.zip.DeflaterOutputStream;
 
 /**
  * Minimal hand-rolled zip writer for tests. Unlike java.util.zip
  * ZipOutputStream it can record a wrong CRC32 or a wrong uncompressed size,
- * which the extraction tests need. Entries use the STORED method unless a
- * deflate variant is requested.
+ * which the extraction tests need. A name ending in "/" is a directory entry.
  */
 final class TestZipArchive {
-    private final ByteArrayOutputStream out = new ByteArrayOutputStream();
-    private final List<byte[]> centralRecords = new ArrayList<>();
+    private final ByteArrayOutputStream entries = new ByteArrayOutputStream();
+    private final ByteArrayOutputStream central = new ByteArrayOutputStream();
+    private int count;
 
-    TestZipArchive addStored(String name, byte[] data, int unixMode) throws IOException {
-        return addEntry(name, data, unixMode, false, data.length, crcOf(data));
+    TestZipArchive addStored(String name, byte[] data) throws IOException {
+        return add(name, data, false, data.length, crcOf(data));
     }
 
-    TestZipArchive addDeflated(String name, byte[] data, int unixMode) throws IOException {
-        return addEntry(name, data, unixMode, true, data.length, crcOf(data));
+    TestZipArchive addDeflated(String name, byte[] data) throws IOException {
+        return add(name, data, true, data.length, crcOf(data));
     }
 
-    /** Deflated entry whose headers declare a CRC that does not match the payload. */
-    TestZipArchive addDeflatedWithWrongCrc(String name, byte[] data, int unixMode)
+    /** Deflated entry whose headers record a CRC32 that does not match the data. */
+    TestZipArchive addDeflatedWithWrongCrc(String name, byte[] data) throws IOException {
+        return add(name, data, true, data.length, crcOf(data) ^ 0x5A5A5A5AL);
+    }
+
+    /** Deflated entry whose headers record a different uncompressed size. */
+    TestZipArchive addDeflatedWithDeclaredSize(String name, byte[] data, long size) throws IOException {
+        return add(name, data, true, size, crcOf(data));
+    }
+
+    byte[] toBytes() throws IOException {
+        ByteArrayOutputStream zip = new ByteArrayOutputStream();
+        entries.writeTo(zip);
+        central.writeTo(zip);
+        // End of central directory: disk numbers, entry counts, size, offset, comment length.
+        zip.write(le(22).putInt(0x06054b50).putInt(0).putShort((short) count).putShort((short) count)
+            .putInt(central.size()).putInt(entries.size()).array());
+        return zip.toByteArray();
+    }
+
+    private TestZipArchive add(String name, byte[] data, boolean deflate, long size, long crc)
         throws IOException {
-        return addEntry(name, data, unixMode, true, data.length, crcOf(data) ^ 0x5A5A5A5AL);
+        byte[] nameBytes = name.getBytes(StandardCharsets.UTF_8);
+        byte[] payload = deflate ? deflate(data) : data;
+        // Shared by both headers: version needed, flags, method, time and date,
+        // CRC32, compressed and uncompressed size, name and extra length.
+        byte[] fields = le(26).putShort((short) 20).putShort((short) 0)
+            .putShort((short) (deflate ? Deflater.DEFLATED : 0)).putInt(0).putInt((int) crc)
+            .putInt(payload.length).putInt((int) size).putShort((short) nameBytes.length).array();
+        int offset = entries.size();
+        entries.write(le(4).putInt(0x04034b50).array());
+        entries.write(fields);
+        entries.write(nameBytes);
+        entries.write(payload);
+        // Signature and version made by, the shared fields, then comment length,
+        // disk number, internal and external attributes and the local header offset.
+        central.write(le(6).putInt(0x02014b50).putShort((short) 20).array());
+        central.write(fields);
+        central.write(le(14).putInt(10, offset).array());
+        central.write(nameBytes);
+        count += 1;
+        return this;
     }
 
-    /** Deflated entry whose central directory declares a different uncompressed size. */
-    TestZipArchive addDeflatedWithDeclaredSize(
-        String name,
-        byte[] data,
-        int unixMode,
-        long declaredUncompressedSize
-    ) throws IOException {
-        return addEntry(name, data, unixMode, true, declaredUncompressedSize, crcOf(data));
-    }
-
-    TestZipArchive addDirectory(String name) throws IOException {
-        String dirName = name.endsWith("/") ? name : name + "/";
-        return addEntry(dirName, new byte[0], 040755, false, 0, crcOf(new byte[0]));
+    private static ByteBuffer le(int capacity) {
+        return ByteBuffer.allocate(capacity).order(ByteOrder.LITTLE_ENDIAN);
     }
 
     private static long crcOf(byte[] data) {
@@ -54,98 +82,12 @@ final class TestZipArchive {
         return crc.getValue();
     }
 
-    private TestZipArchive addEntry(
-        String name,
-        byte[] data,
-        int unixMode,
-        boolean deflate,
-        long declaredUncompressedSize,
-        long crcValue
-    ) throws IOException {
-        byte[] nameBytes = name.getBytes(StandardCharsets.UTF_8);
-        byte[] payload = deflate ? deflate(data) : data;
-
-        int localOffset = out.size();
-        le32(out, 0x04034b50);
-        le16(out, deflate ? 20 : 10);
-        le16(out, 0);
-        le16(out, deflate ? Deflater.DEFLATED : 0);
-        le16(out, 0);
-        le16(out, 0);
-        le32(out, (int) crcValue);
-        le32(out, payload.length);
-        le32(out, (int) declaredUncompressedSize);
-        le16(out, nameBytes.length);
-        le16(out, 0);
-        out.write(nameBytes);
-        out.write(payload);
-
-        int unixPlatform = unixMode == 0 ? 0 : 3;
-        ByteArrayOutputStream central = new ByteArrayOutputStream();
-        le32(central, 0x02014b50);
-        le16(central, (unixPlatform << 8) | 20);
-        le16(central, 20);
-        le16(central, 0);
-        le16(central, deflate ? Deflater.DEFLATED : 0);
-        le16(central, 0);
-        le16(central, 0);
-        le32(central, (int) crcValue);
-        le32(central, payload.length);
-        le32(central, (int) declaredUncompressedSize);
-        le16(central, nameBytes.length);
-        le16(central, 0);
-        le16(central, 0);
-        le16(central, 0);
-        le16(central, 0);
-        le32(central, unixMode << 16);
-        le32(central, localOffset);
-        central.write(nameBytes);
-        centralRecords.add(central.toByteArray());
-        return this;
-    }
-
-    byte[] toBytes() throws IOException {
-        int centralOffset = out.size();
-        int centralSize = 0;
-        for (byte[] record : centralRecords) {
-            out.write(record);
-            centralSize += record.length;
-        }
-        le32(out, 0x06054b50);
-        le16(out, 0);
-        le16(out, 0);
-        le16(out, centralRecords.size());
-        le16(out, centralRecords.size());
-        le32(out, centralSize);
-        le32(out, centralOffset);
-        le16(out, 0);
-        return out.toByteArray();
-    }
-
-    private static byte[] deflate(byte[] data) {
+    private static byte[] deflate(byte[] data) throws IOException {
         // nowrap = true: zip entries store raw deflate streams.
-        Deflater deflater = new Deflater(Deflater.DEFAULT_COMPRESSION, true);
-        deflater.setInput(data);
-        deflater.finish();
         ByteArrayOutputStream compressed = new ByteArrayOutputStream();
-        byte[] buffer = new byte[4096];
-        while (!deflater.finished()) {
-            int count = deflater.deflate(buffer);
-            compressed.write(buffer, 0, count);
+        try (OutputStream output = new DeflaterOutputStream(compressed, new Deflater(Deflater.DEFAULT_COMPRESSION, true))) {
+            output.write(data);
         }
-        deflater.end();
         return compressed.toByteArray();
-    }
-
-    private static void le16(OutputStream target, int value) throws IOException {
-        target.write(value & 0xFF);
-        target.write((value >> 8) & 0xFF);
-    }
-
-    private static void le32(OutputStream target, int value) throws IOException {
-        target.write(value & 0xFF);
-        target.write((value >> 8) & 0xFF);
-        target.write((value >> 16) & 0xFF);
-        target.write((value >> 24) & 0xFF);
     }
 }

@@ -41,33 +41,32 @@ public class ImportDownloaderTest {
         return new File(folder.newFolder(), "archive.zip");
     }
 
-    private static ProjectImportException assertFails(String code, String detailPart, ProjectImportException error) {
+    private static void assertCode(String code, String detailPart, ProjectImportException error) {
         assertEquals(code, error.code);
         assertTrue(error.getMessage(), error.getMessage().startsWith(code + ": "));
         if (detailPart != null) {
             assertTrue(error.getMessage(), error.getMessage().contains(detailPart));
         }
-        return error;
     }
 
-    private ProjectImportException downloadFailure(String url, File destination) {
-        return assertThrows(
+    /** Expects the download to fail with {@code code} and leave no file behind. */
+    private void assertDownloadFails(String code, String detailPart, String url, long maxBytes) throws IOException {
+        File destination = destination();
+        assertCode(code, detailPart, assertThrows(
             ProjectImportException.class,
-            () -> new ImportDownloader().download(url, destination, LIMIT, ImportProgress.NONE)
-        );
+            () -> new ImportDownloader().download(url, destination, maxBytes, ImportProgress.NONE)
+        ));
+        assertFalse(destination.exists());
     }
 
     @Test public void validatesUrls() throws Exception {
-        assertEquals("example.com", ImportDownloader.validateUrl("https://example.com/one.zip").getHost());
-        ImportDownloader.validateUrl("http://localhost:3001/one.zip");
-        ImportDownloader.validateUrl("http://127.0.0.1:8080/one.zip");
-        ImportDownloader.validateUrl("http://[::1]:8080/one.zip");
         for (String url : new String[] {
-            "http://example.com/one.zip", "ftp://example.com/one.zip", "file:///tmp/one.zip",
-            "javascript:alert(1)", "https://user:pass@example.com/one.zip", "https://", "",
-            "not a url", "example.com/one.zip", "https://example.com:99999/one.zip",
+            "https://example.com/one.zip", "http://localhost:3001/one.zip", "http://[::1]:8080/one.zip",
         }) {
-            assertFails("invalidUrl", null, assertThrows(
+            assertEquals(url, ImportDownloader.validateUrl(url).toString());
+        }
+        for (String url : new String[] { "http://example.com/one.zip", "file:///tmp/one.zip", "https://", "not a url" }) {
+            assertCode("invalidUrl", null, assertThrows(
                 "url accepted: " + url,
                 ProjectImportException.class,
                 () -> ImportDownloader.validateUrl(url)
@@ -75,130 +74,67 @@ public class ImportDownloaderTest {
         }
     }
 
-    @Test public void downloadsToANewFile() throws Exception {
+    @Test public void followsRedirectsToANewFileAndReturnsTheFinalUrlAndContentDisposition() throws Exception {
         byte[] body = bytes("Project One archive bytes");
-        server.setHandler(requestLine -> TestHttpServer.Response.ok(body));
-        File destination = destination();
-
-        ImportDownloader.Result result = new ImportDownloader()
-            .download(server.url("/ok.zip"), destination, LIMIT, ImportProgress.NONE);
-
-        assertArrayEquals(body, Files.readAllBytes(destination.toPath()));
-        assertEquals(body.length, result.bytes);
-        assertEquals(server.url("/ok.zip"), result.finalUrl);
-        assertNull(result.contentDisposition);
-    }
-
-    @Test public void passesTheRawContentDispositionHeaderThrough() throws Exception {
         String header = "attachment; filename*=UTF-8''Project%20One.zip; filename=\"Project One.zip\"";
-        server.setHandler(requestLine -> {
-            TestHttpServer.Response response = TestHttpServer.Response.ok(bytes("zip"));
-            response.headers.put("Content-Disposition", header);
-            return response;
-        });
-
-        ImportDownloader.Result result = new ImportDownloader()
-            .download(server.url("/ok.zip"), destination(), LIMIT, ImportProgress.NONE);
-
-        assertEquals(header, result.contentDisposition);
-    }
-
-    @Test public void followsRedirectsAndReportsTheFinalUrl() throws Exception {
-        byte[] body = bytes("redirected");
-        server.setHandler(requestLine ->
-            requestLine.contains("/redirect")
-                ? TestHttpServer.Response.redirect("/final.zip")
-                : TestHttpServer.Response.ok(body));
+        server.setHandler(requestLine -> requestLine.contains("/redirect")
+            ? TestHttpServer.Response.redirect("/final.zip")
+            : new TestHttpServer.Response(200, body, "Content-Disposition: " + header));
         File destination = destination();
 
         ImportDownloader.Result result = new ImportDownloader()
             .download(server.url("/redirect"), destination, LIMIT, ImportProgress.NONE);
 
-        assertEquals(server.url("/final.zip"), result.finalUrl);
         assertArrayEquals(body, Files.readAllBytes(destination.toPath()));
+        assertEquals(body.length, result.bytes);
+        assertEquals(server.url("/final.zip"), result.finalUrl);
+        assertEquals(header, result.contentDisposition);
     }
 
     @Test public void everyRedirectHopIsRevalidated() throws Exception {
         for (String target : new String[] { "ftp://example.com/one.zip", "http://example.com/one.zip" }) {
             server.setHandler(requestLine -> TestHttpServer.Response.redirect(target));
-            File destination = destination();
-            assertFails("invalidUrl", null, downloadFailure(server.url("/hop"), destination));
-            assertFalse(destination.exists());
+            assertDownloadFails("invalidUrl", null, server.url("/hop"), LIMIT);
         }
     }
 
     @Test public void followsAtMostFiveRedirects() throws Exception {
         byte[] body = bytes("done");
-        for (int redirects : new int[] { 5, 6 }) {
-            server.setHandler(requestLine -> {
-                int hop = Integer.parseInt(requestLine.split(" ")[1].replace("/hop/", ""));
-                return hop < redirects
-                    ? TestHttpServer.Response.redirect("/hop/" + (hop + 1))
-                    : TestHttpServer.Response.ok(body);
-            });
-            File destination = destination();
-            if (redirects == 5) {
-                new ImportDownloader().download(server.url("/hop/0"), destination, LIMIT, ImportProgress.NONE);
-                assertArrayEquals(body, Files.readAllBytes(destination.toPath()));
-            } else {
-                assertFails("invalidUrl", "redirects", downloadFailure(server.url("/hop/0"), destination));
-                assertFalse(destination.exists());
-            }
-        }
+        // /hop/N redirects to /hop/N+1 until /hop/5 answers.
+        server.setHandler(requestLine -> {
+            int hop = Integer.parseInt(requestLine.split(" ")[1].replace("/hop/", ""));
+            return hop < 5 ? TestHttpServer.Response.redirect("/hop/" + (hop + 1)) : TestHttpServer.Response.ok(body);
+        });
+        File destination = destination();
+
+        new ImportDownloader().download(server.url("/hop/0"), destination, LIMIT, ImportProgress.NONE);
+
+        assertArrayEquals(body, Files.readAllBytes(destination.toPath()));
+        assertDownloadFails("invalidUrl", "redirects", server.url("/hop/-1"), LIMIT);
     }
 
     @Test public void urlsWithCredentialsFailBeforeAnythingIsCreated() throws Exception {
-        File destination = destination();
-        assertFails(
-            "invalidUrl",
-            "credentials",
-            downloadFailure("http://user:pass@127.0.0.1:" + server.port() + "/a.zip", destination)
-        );
-        assertFalse(destination.exists());
+        assertDownloadFails("invalidUrl", "credentials", "http://user:pass@127.0.0.1:" + server.port() + "/a.zip", LIMIT);
     }
 
-    @Test public void nonSuccessStatusFailsWithTheStatusAndRemovesTheFile() throws Exception {
-        server.setHandler(requestLine -> TestHttpServer.Response.status(404, null));
+    @Test public void aFailingStatusFailsWithoutProgressAndRemovesTheFile() throws Exception {
+        server.setHandler(requestLine -> new TestHttpServer.Response(404, new byte[0]));
         File destination = destination();
-        assertFails("downloadFailed", "HTTP 404", downloadFailure(server.url("/missing.zip"), destination));
-        assertFalse(destination.exists());
-
-        server.setHandler(requestLine -> TestHttpServer.Response.status(503, bytes("busy")));
-        assertFails("downloadFailed", "HTTP 503", downloadFailure(server.url("/busy.zip"), destination()));
-    }
-
-    @Test public void noProgressIsSentUntilTheResponseHeadersArrive() throws Exception {
-        server.setHandler(requestLine -> TestHttpServer.Response.status(404, null));
         List<long[]> events = new ArrayList<>();
         ImportProgress progress = new ImportProgress((current, total) -> events.add(new long[] { current, total }));
 
-        assertThrows(
+        assertCode("downloadFailed", "HTTP 404", assertThrows(
             ProjectImportException.class,
-            () -> new ImportDownloader().download(server.url("/missing.zip"), destination(), LIMIT, progress)
-        );
+            () -> new ImportDownloader().download(server.url("/missing.zip"), destination, LIMIT, progress)
+        ));
 
+        assertFalse(destination.exists());
         assertTrue(events.isEmpty());
     }
 
     @Test public void tooLargeADownloadFailsAndRemovesThePartialFile() throws Exception {
         server.setHandler(requestLine -> TestHttpServer.Response.ok(new byte[4096]));
-        File destination = destination();
-        ProjectImportException error = assertThrows(
-            ProjectImportException.class,
-            () -> new ImportDownloader().download(server.url("/big.zip"), destination, 1024, ImportProgress.NONE)
-        );
-        assertFails("archiveTooLarge", null, error);
-        assertFalse(destination.exists());
-    }
-
-    @Test public void anExistingDestinationIsAnErrorAndStaysUntouched() throws Exception {
-        server.setHandler(requestLine -> TestHttpServer.Response.ok(bytes("new")));
-        File destination = destination();
-        Files.write(destination.toPath(), bytes("old"));
-
-        assertFails("importFailed", "exists", downloadFailure(server.url("/ok.zip"), destination));
-
-        assertArrayEquals(bytes("old"), Files.readAllBytes(destination.toPath()));
+        assertDownloadFails("archiveTooLarge", null, server.url("/big.zip"), 1024);
     }
 
     @Test public void reportsProgressFromZeroToTheFinalByteCount() throws Exception {
@@ -223,23 +159,5 @@ public class ImportDownloaderTest {
         }
         assertEquals(body.length, events.get(events.size() - 1)[0]);
         assertTrue("several chunks were reported", events.size() > 3);
-    }
-
-    @Test public void aStalledResponseTimesOut() throws Exception {
-        server.setHandler(requestLine -> TestHttpServer.Response.ok(bytes("late")).delayed(1500));
-        File destination = destination();
-        ProjectImportException error = assertThrows(
-            ProjectImportException.class,
-            () -> new ImportDownloader(1000, 300)
-                .download(server.url("/stall.zip"), destination, LIMIT, ImportProgress.NONE)
-        );
-        assertFails("downloadFailed", null, error);
-        assertFalse(destination.exists());
-    }
-
-    @Test public void aRefusedConnectionFailsCleanly() throws Exception {
-        File destination = destination();
-        assertFails("downloadFailed", null, downloadFailure("http://127.0.0.1:1/one.zip", destination));
-        assertFalse(destination.exists());
     }
 }

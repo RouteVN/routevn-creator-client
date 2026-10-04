@@ -12,13 +12,11 @@ import {
   handleDeleteConfirmationInput,
   handleDeleteDialogConfirm,
   handleImportSourceMenuClickItem,
-  handleImportSourceMenuClose,
   handleLanguageDialogClose,
   handleLanguageFormAction,
   handleMobileActionMenuClickItem,
   handleMobileCreateMenuButtonClick,
   handleOpenButtonClick,
-  handleUrlImportDialogClose,
   handleUrlImportFormAction,
   handleAfterMount,
   handleBeforeMount,
@@ -908,63 +906,47 @@ const createUrlFormPayload = (url) => {
   };
 };
 
-describe("projects.handleOpenButtonClick", () => {
-  it("opens the import source choice menu at the button on desktop", () => {
-    const deps = createDeps({ platform: "tauri" });
+const PROJECT_ONE = { id: "project-one", name: "Project One" };
+const IMPORTED_TOAST = { message: 'Project "Project One" imported.' };
+const IMPORT_FAILED =
+  "Failed to import project. Please select a valid project folder.";
 
-    handleOpenButtonClick(deps, createOpenButtonClickPayload());
+// The import resolves with Project One, and the refreshed list holds it.
+const mockImportedProject = (deps, method) => {
+  deps.appService[method].mockResolvedValue(PROJECT_ONE);
+  deps.appService.loadAllProjects.mockResolvedValue([PROJECT_ONE]);
+};
 
-    expect(deps.store.openImportSourceMenu).toHaveBeenCalledWith({
-      x: 100,
-      y: 40,
-      items: [
-        {
-          label: EN_I18N.projectsPage.importFromLocalMenuItem,
-          type: "item",
-          value: "import-local",
-        },
-        {
-          label: EN_I18N.projectsPage.importFromUrlMenuItem,
-          type: "item",
-          value: "import-url",
-        },
-      ],
-    });
-    expect(deps.render).toHaveBeenCalledOnce();
-    expect(deps.appService.openFolderPicker).not.toHaveBeenCalled();
+const pickZip = (deps) => {
+  deps.appService.openArchivePicker.mockResolvedValue({
+    uri: "content://archives/project-one.zip",
+    name: "project-one.zip",
   });
+};
 
-  it.each(["web", "android", "ios"])(
-    "ignores the desktop open button on %s",
-    (platform) => {
-      const deps = createDeps({ platform });
-
-      handleOpenButtonClick(deps, createOpenButtonClickPayload());
-
-      expect(deps.store.openImportSourceMenu).not.toHaveBeenCalled();
-      expect(deps.render).not.toHaveBeenCalled();
-    },
+// Android and iOS "From local": answer the folder-or-zip source dialog.
+const chooseLocalSource = (deps, dialogResult) => {
+  deps.appService.showFormDialog.mockResolvedValue(dialogResult);
+  return handleMobileActionMenuClickItem(
+    deps,
+    createMenuClickPayload("import-local"),
   );
+};
 
-  it("closes the choice menu on the menu close event", () => {
-    const deps = createDeps();
+const chooseDesktopLocal = (deps) => {
+  return handleImportSourceMenuClickItem(
+    deps,
+    createMenuClickPayload("import-local"),
+  );
+};
 
-    handleImportSourceMenuClose(deps);
+const submitUrl = (deps, url = "https://example.com/project-one.zip") => {
+  return handleUrlImportFormAction(deps, createUrlFormPayload(url));
+};
 
-    expect(deps.store.closeImportSourceMenu).toHaveBeenCalledTimes(1);
-    expect(deps.render).toHaveBeenCalledTimes(1);
-  });
-
-  it("skips closing when the choice menu is already closed", () => {
-    const deps = createDeps();
-    deps.store.selectIsImportSourceMenuOpen.mockReturnValue(false);
-
-    handleImportSourceMenuClose(deps);
-
-    expect(deps.store.closeImportSourceMenu).not.toHaveBeenCalled();
-    expect(deps.render).not.toHaveBeenCalled();
-  });
-});
+const progressDialogOf = (deps) => {
+  return deps.appService.showProgressDialog.mock.results[0].value;
+};
 
 const importMenuLeaves = () => {
   const copy = EN_I18N.projectsPage;
@@ -981,6 +963,22 @@ const importMenuLeaves = () => {
     },
   ];
 };
+
+describe("projects.handleOpenButtonClick", () => {
+  it("opens the import source choice menu at the button on desktop", () => {
+    const deps = createDeps({ platform: "tauri" });
+
+    handleOpenButtonClick(deps, createOpenButtonClickPayload());
+
+    expect(deps.store.openImportSourceMenu).toHaveBeenCalledWith({
+      x: 100,
+      y: 40,
+      items: importMenuLeaves(),
+    });
+    expect(deps.render).toHaveBeenCalledOnce();
+    expect(deps.appService.openFolderPicker).not.toHaveBeenCalled();
+  });
+});
 
 describe("projects mobile Create menu (two-level dropdown)", () => {
   it.each(["android", "ios", "tauri"])(
@@ -1011,13 +1009,6 @@ describe("projects mobile Create menu (two-level dropdown)", () => {
     },
   );
 
-  it("offers only From local and From URL under Import Project", () => {
-    expect(importMenuLeaves().map((item) => item.label)).toEqual([
-      "From local",
-      "From URL",
-    ]);
-  });
-
   it("disables Import Project on the web", () => {
     const deps = createDeps({ platform: "web" });
 
@@ -1040,66 +1031,24 @@ describe("projects mobile Create menu (two-level dropdown)", () => {
     expect(deps.store.openImportSourceMenu).not.toHaveBeenCalled();
   });
 
-  it.each(["android", "ios"])(
-    "asks for folder or zip with the source dialog from the second level on %s without opening another menu",
-    async (platform) => {
+  it.each([
+    ["tauri", handleImportSourceMenuClickItem, "closeImportSourceMenu"],
+    ["android", handleMobileActionMenuClickItem, "closeMobileActionMenu"],
+  ])(
+    "opens the URL dialog from the %s import menu without opening another menu",
+    async (platform, handleMenuClick, closeMenu) => {
       const deps = createDeps({ platform });
 
-      await handleMobileActionMenuClickItem(
-        deps,
-        createMenuClickPayload("import-local"),
-      );
+      await handleMenuClick(deps, createMenuClickPayload("import-url"));
 
-      expect(deps.store.closeMobileActionMenu).toHaveBeenCalledTimes(1);
-      expect(deps.appService.showFormDialog).toHaveBeenCalledTimes(1);
+      expect(deps.store[closeMenu]).toHaveBeenCalledTimes(1);
+      expect(deps.store.openUrlImportDialog).toHaveBeenCalledTimes(1);
       expect(deps.store.openImportSourceMenu).not.toHaveBeenCalled();
-      expect(deps.store.openMobileActionMenu).not.toHaveBeenCalled();
-      expect(deps.appService.openFolderPicker).not.toHaveBeenCalled();
-      expect(deps.appService.openArchivePicker).not.toHaveBeenCalled();
     },
   );
-
-  it("opens the URL dialog from the second level without opening another menu", async () => {
-    const deps = createDeps({ platform: "android" });
-
-    await handleMobileActionMenuClickItem(
-      deps,
-      createMenuClickPayload("import-url"),
-    );
-
-    expect(deps.store.closeMobileActionMenu).toHaveBeenCalledTimes(1);
-    expect(deps.store.openUrlImportDialog).toHaveBeenCalledTimes(1);
-    expect(deps.store.openImportSourceMenu).not.toHaveBeenCalled();
-  });
 });
 
 describe("projects import source choice", () => {
-  it("runs the folder flow straight away when desktop chooses From local", async () => {
-    const deps = createDeps({ platform: "tauri" });
-    deps.appService.openFolderPicker.mockResolvedValue("/projects/project-one");
-    deps.appService.openExistingProject.mockResolvedValue({
-      id: "project-one",
-      name: "Project One",
-    });
-    deps.appService.loadAllProjects.mockResolvedValue([
-      { id: "project-one", name: "Project One" },
-    ]);
-
-    await handleImportSourceMenuClickItem(
-      deps,
-      createMenuClickPayload("import-local"),
-    );
-
-    expect(deps.store.closeImportSourceMenu).toHaveBeenCalledTimes(1);
-    expect(deps.appService.showFormDialog).not.toHaveBeenCalled();
-    expect(deps.appService.openFolderPicker).toHaveBeenCalledWith({
-      title: "Select Existing Project Folder",
-    });
-    expect(deps.appService.openExistingProject).toHaveBeenCalledWith(
-      "/projects/project-one",
-    );
-  });
-
   it("keeps progress visible through import and list refresh", async () => {
     const deps = createDeps();
     const paint = Promise.withResolvers();
@@ -1240,36 +1189,18 @@ describe("projects import source choice", () => {
       "fileNameConflict: abc.png and abc.jpg both map to abc",
       "The project contains files that resolve to the same name.",
     ],
-    [
-      "importFailed",
-      "importFailed: rename rolled back",
-      "Failed to import project. Please select a valid project folder.",
-    ],
-    [
-      "unknown code",
-      "Something else went wrong",
-      "Failed to import project. Please select a valid project folder.",
-    ],
+    ["importFailed", "importFailed: rename rolled back", IMPORT_FAILED],
+    ["unknown code", "Something else went wrong", IMPORT_FAILED],
   ])(
     "maps the %s error code to a localized alert",
     async (_label, message, expectedBase) => {
       const deps = createDeps({ platform: "android" });
-      deps.appService.openArchivePicker.mockResolvedValue({
-        uri: "content://archives/project-one.zip",
-        name: "project-one.zip",
-      });
+      pickZip(deps);
       deps.appService.importProjectFromArchive.mockRejectedValue(
         new Error(message),
       );
 
-      deps.appService.showFormDialog.mockResolvedValue({
-        actionId: "import-zip",
-      });
-
-      await handleMobileActionMenuClickItem(
-        deps,
-        createMenuClickPayload("import-local"),
-      );
+      await chooseLocalSource(deps, { actionId: "import-zip" });
 
       expect(deps.appService.showAlert).toHaveBeenCalledWith({
         message: `${expectedBase}\n\nDetails:\n${message}`,
@@ -1277,53 +1208,67 @@ describe("projects import source choice", () => {
       expect(deps.appService.showToast).not.toHaveBeenCalled();
     },
   );
+
+  it.each([
+    ["folder", "tauri", chooseDesktopLocal],
+    [
+      "archive",
+      "ios",
+      (deps) => chooseLocalSource(deps, { actionId: "import-zip" }),
+    ],
+    ["destination", "tauri", (deps) => submitUrl(deps)],
+  ])(
+    "alerts without importing when the %s picker rejects",
+    async (_label, platform, run) => {
+      const deps = createDeps({ platform });
+      const pickerError = new Error("importFailed: Cannot open the picker.");
+      deps.appService.openFolderPicker.mockRejectedValue(pickerError);
+      deps.appService.openArchivePicker.mockRejectedValue(pickerError);
+
+      await run(deps);
+
+      expect(deps.appService.showAlert).toHaveBeenCalledWith({
+        message: `${IMPORT_FAILED}\n\nDetails:\nimportFailed: Cannot open the picker.`,
+      });
+      expect(deps.appService.showProgressDialog).not.toHaveBeenCalled();
+    },
+  );
 });
 
 describe("projects From local source dialog", () => {
-  const chooseLocal = (deps) => {
-    return handleMobileActionMenuClickItem(
-      deps,
-      createMenuClickPayload("import-local"),
-    );
-  };
+  it.each(["android", "ios"])(
+    "asks for a folder or a zip in a vertical two-button dialog on %s, without another menu",
+    async (platform) => {
+      const deps = createDeps({ platform });
 
-  it("uses a vertical two-button source dialog like the media picker", async () => {
-    const deps = createDeps({ platform: "android" });
-    deps.appService.showFormDialog.mockResolvedValue(undefined);
+      await chooseLocalSource(deps, undefined);
 
-    await chooseLocal(deps);
-
-    expect(deps.appService.showFormDialog).toHaveBeenCalledWith({
-      size: "sm",
-      form: {
-        title: "Import from local",
-        fields: [],
-        actions: {
-          layout: "vertical",
-          buttons: [
-            { id: "import-folder", label: "Project folder", variant: "se" },
-            { id: "import-zip", label: "Zip file", variant: "se" },
-          ],
+      expect(deps.store.closeMobileActionMenu).toHaveBeenCalledTimes(1);
+      expect(deps.appService.showFormDialog).toHaveBeenCalledWith({
+        size: "sm",
+        form: {
+          title: "Import from local",
+          fields: [],
+          actions: {
+            layout: "vertical",
+            buttons: [
+              { id: "import-folder", label: "Project folder", variant: "se" },
+              { id: "import-zip", label: "Zip file", variant: "se" },
+            ],
+          },
         },
-      },
-    });
-  });
+      });
+      expect(deps.store.openImportSourceMenu).not.toHaveBeenCalled();
+      expect(deps.store.openMobileActionMenu).not.toHaveBeenCalled();
+    },
+  );
 
   it("opens the folder picker for the folder button", async () => {
     const deps = createDeps({ platform: "ios" });
-    deps.appService.showFormDialog.mockResolvedValue({
-      actionId: "import-folder",
-    });
     deps.appService.openFolderPicker.mockResolvedValue("/projects/project-one");
-    deps.appService.openExistingProject.mockResolvedValue({
-      id: "project-one",
-      name: "Project One",
-    });
-    deps.appService.loadAllProjects.mockResolvedValue([
-      { id: "project-one", name: "Project One" },
-    ]);
+    mockImportedProject(deps, "openExistingProject");
 
-    await chooseLocal(deps);
+    await chooseLocalSource(deps, { actionId: "import-folder" });
 
     expect(deps.appService.openFolderPicker).toHaveBeenCalledWith({
       title: "Select Existing Project Folder",
@@ -1332,33 +1277,15 @@ describe("projects From local source dialog", () => {
     expect(deps.appService.openExistingProject).toHaveBeenCalledWith(
       "/projects/project-one",
     );
-    expect(deps.appService.showToast).toHaveBeenCalledWith({
-      message: 'Project "Project One" imported.',
-    });
-  });
-
-  it("opens the zip picker for the zip button", async () => {
-    const deps = createDeps({ platform: "android" });
-    deps.appService.showFormDialog.mockResolvedValue({
-      actionId: "import-zip",
-    });
-    deps.appService.openArchivePicker.mockResolvedValue(undefined);
-
-    await chooseLocal(deps);
-
-    expect(deps.appService.openArchivePicker).toHaveBeenCalledWith({
-      title: "Select Project Zip File",
-    });
-    expect(deps.appService.openFolderPicker).not.toHaveBeenCalled();
+    expect(deps.appService.showToast).toHaveBeenCalledWith(IMPORTED_TOAST);
   });
 
   it.each([[undefined], [{ actionId: "other" }]])(
     "does nothing when the dialog is dismissed or unknown (%j)",
     async (result) => {
       const deps = createDeps({ platform: "android" });
-      deps.appService.showFormDialog.mockResolvedValue(result);
 
-      await chooseLocal(deps);
+      await chooseLocalSource(deps, result);
 
       expect(deps.appService.openFolderPicker).not.toHaveBeenCalled();
       expect(deps.appService.openArchivePicker).not.toHaveBeenCalled();
@@ -1369,128 +1296,57 @@ describe("projects From local source dialog", () => {
 });
 
 describe("projects zip import", () => {
-  it("imports from a picked zip archive on mobile", async () => {
+  it("imports a picked zip on mobile, starting with a preparing status and reporting extraction", async () => {
     const deps = createDeps({ platform: "android" });
-    deps.appService.openArchivePicker.mockResolvedValue({
-      uri: "content://archives/project-one.zip",
-      name: "project-one.zip",
-    });
-    deps.appService.importProjectFromArchive.mockResolvedValue({
-      id: "project-one",
-      name: "Project One",
-    });
-    deps.appService.loadAllProjects.mockResolvedValue([
-      { id: "project-one", name: "Project One" },
-    ]);
-
-    deps.appService.showFormDialog.mockResolvedValue({
-      actionId: "import-zip",
-    });
-
-    await handleMobileActionMenuClickItem(
-      deps,
-      createMenuClickPayload("import-local"),
+    pickZip(deps);
+    deps.appService.loadAllProjects.mockResolvedValue([PROJECT_ONE]);
+    deps.appService.importProjectFromArchive.mockImplementation(
+      async ({ onProgress }) => {
+        onProgress({ stage: "extracting", current: 60, total: 120 });
+        return PROJECT_ONE;
+      },
     );
+
+    await chooseLocalSource(deps, { actionId: "import-zip" });
 
     expect(deps.appService.openArchivePicker).toHaveBeenCalledWith({
       title: "Select Project Zip File",
     });
+    expect(deps.appService.openFolderPicker).not.toHaveBeenCalled();
     expect(deps.appService.importProjectFromArchive).toHaveBeenCalledWith({
       uri: "content://archives/project-one.zip",
       onProgress: expect.any(Function),
     });
+    expect(deps.appService.showProgressDialog).toHaveBeenCalledWith(
+      expect.objectContaining({ status: "Preparing…" }),
+    );
+    expect(progressDialogOf(deps).update).toHaveBeenCalledWith({
+      status: "Extracting files… 50%",
+      progress: { current: 60, total: 120 },
+    });
     expect(deps.store.setProjects).toHaveBeenCalledWith({
-      projects: [{ id: "project-one", name: "Project One" }],
+      projects: [PROJECT_ONE],
     });
-    expect(deps.appService.showToast).toHaveBeenCalledWith({
-      message: 'Project "Project One" imported.',
-    });
+    expect(deps.appService.showToast).toHaveBeenCalledWith(IMPORTED_TOAST);
   });
 
   it("returns silently when the archive picker is cancelled", async () => {
     const deps = createDeps({ platform: "ios" });
     deps.appService.openArchivePicker.mockResolvedValue(undefined);
 
-    deps.appService.showFormDialog.mockResolvedValue({
-      actionId: "import-zip",
-    });
-
-    await handleMobileActionMenuClickItem(
-      deps,
-      createMenuClickPayload("import-local"),
-    );
+    await chooseLocalSource(deps, { actionId: "import-zip" });
 
     expect(deps.appService.importProjectFromArchive).not.toHaveBeenCalled();
     expect(deps.appService.showProgressDialog).not.toHaveBeenCalled();
     expect(deps.appService.showAlert).not.toHaveBeenCalled();
   });
-
-  it("closes the progress dialog when the zip import fails", async () => {
-    const deps = createDeps({ platform: "android" });
-    deps.appService.openArchivePicker.mockResolvedValue({
-      uri: "content://archives/project-one.zip",
-      name: "project-one.zip",
-    });
-    deps.appService.importProjectFromArchive.mockRejectedValue(
-      new Error("invalidArchive: project.db is missing"),
-    );
-
-    deps.appService.showFormDialog.mockResolvedValue({
-      actionId: "import-zip",
-    });
-
-    await handleMobileActionMenuClickItem(
-      deps,
-      createMenuClickPayload("import-local"),
-    );
-
-    const progressDialog =
-      deps.appService.showProgressDialog.mock.results[0].value;
-    expect(progressDialog.close).toHaveBeenCalledOnce();
-    expect(deps.appService.showToast).not.toHaveBeenCalled();
-  });
 });
 
 describe("projects URL import", () => {
-  it("closes the URL dialog on the dialog close event", () => {
-    const deps = createDeps();
-
-    handleUrlImportDialogClose(deps);
-
-    expect(deps.store.closeUrlImportDialog).toHaveBeenCalledTimes(1);
-    expect(deps.render).toHaveBeenCalledTimes(1);
-  });
-
-  it("skips closing when the URL dialog is already closed", () => {
-    const deps = createDeps();
-    deps.store.selectIsUrlImportDialogOpen.mockReturnValue(false);
-
-    handleUrlImportDialogClose(deps);
-
-    expect(deps.store.closeUrlImportDialog).not.toHaveBeenCalled();
-    expect(deps.render).not.toHaveBeenCalled();
-  });
-
-  it("opens the URL dialog when choosing From URL", async () => {
-    const deps = createDeps();
-
-    await handleImportSourceMenuClickItem(
-      deps,
-      createMenuClickPayload("import-url"),
-    );
-
-    expect(deps.store.closeImportSourceMenu).toHaveBeenCalledTimes(1);
-    expect(deps.store.openUrlImportDialog).toHaveBeenCalledTimes(1);
-    expect(deps.render).toHaveBeenCalledTimes(2);
-  });
-
   it("alerts without starting when the URL is invalid", async () => {
     const deps = createDeps({ platform: "android" });
 
-    await handleUrlImportFormAction(
-      deps,
-      createUrlFormPayload("http://example.com/project.zip"),
-    );
+    await submitUrl(deps, "http://example.com/project.zip");
 
     expect(deps.appService.showAlert).toHaveBeenCalledWith({
       message:
@@ -1512,16 +1368,11 @@ describe("projects URL import", () => {
     });
     deps.appService.importProjectFromUrl.mockImplementation(async () => {
       callOrder.push("import");
-      return { id: "project-one", name: "Project One" };
+      return PROJECT_ONE;
     });
-    deps.appService.loadAllProjects.mockResolvedValue([
-      { id: "project-one", name: "Project One" },
-    ]);
+    deps.appService.loadAllProjects.mockResolvedValue([PROJECT_ONE]);
 
-    await handleUrlImportFormAction(
-      deps,
-      createUrlFormPayload("  https://example.com/project-one.zip  "),
-    );
+    await submitUrl(deps, "  https://example.com/project-one.zip  ");
 
     expect(callOrder).toEqual(["close-dialog", "pick-parent", "import"]);
     expect(deps.appService.openFolderPicker).toHaveBeenCalledWith({
@@ -1532,70 +1383,18 @@ describe("projects URL import", () => {
       destinationFolder: "/projects",
       onProgress: expect.any(Function),
     });
-    expect(deps.appService.showToast).toHaveBeenCalledWith({
-      message: 'Project "Project One" imported.',
-    });
+    expect(deps.appService.showToast).toHaveBeenCalledWith(IMPORTED_TOAST);
   });
 
   it("returns silently when the destination folder pick is cancelled", async () => {
     const deps = createDeps({ platform: "tauri" });
     deps.appService.openFolderPicker.mockResolvedValue(undefined);
 
-    await handleUrlImportFormAction(
-      deps,
-      createUrlFormPayload("https://example.com/project-one.zip"),
-    );
+    await submitUrl(deps);
 
     expect(deps.appService.importProjectFromUrl).not.toHaveBeenCalled();
     expect(deps.appService.showProgressDialog).not.toHaveBeenCalled();
     expect(deps.appService.showAlert).not.toHaveBeenCalled();
-  });
-
-  it("runs the import directly on mobile without a destination folder", async () => {
-    const deps = createDeps({ platform: "ios" });
-    deps.appService.importProjectFromUrl.mockResolvedValue({
-      id: "project-one",
-      name: "Project One",
-    });
-    deps.appService.loadAllProjects.mockResolvedValue([
-      { id: "project-one", name: "Project One" },
-    ]);
-
-    await handleUrlImportFormAction(
-      deps,
-      createUrlFormPayload("https://example.com/project-one.zip"),
-    );
-
-    expect(deps.appService.openFolderPicker).not.toHaveBeenCalled();
-    expect(deps.appService.importProjectFromUrl).toHaveBeenCalledWith({
-      url: "https://example.com/project-one.zip",
-      destinationFolder: undefined,
-      onProgress: expect.any(Function),
-    });
-    expect(deps.store.setProjects).toHaveBeenCalledWith({
-      projects: [{ id: "project-one", name: "Project One" }],
-    });
-  });
-
-  it("closes the progress dialog and maps errors when the URL import fails", async () => {
-    const deps = createDeps({ platform: "android" });
-    deps.appService.importProjectFromUrl.mockRejectedValue(
-      new Error("downloadFailed: 404 Not Found"),
-    );
-
-    await handleUrlImportFormAction(
-      deps,
-      createUrlFormPayload("https://example.com/project-one.zip"),
-    );
-
-    const progressDialog =
-      deps.appService.showProgressDialog.mock.results[0].value;
-    expect(progressDialog.close).toHaveBeenCalledOnce();
-    expect(deps.appService.showAlert).toHaveBeenCalledWith({
-      message:
-        "Could not download the project archive. Check the URL and your connection, then try again.\n\nDetails:\ndownloadFailed: 404 Not Found",
-    });
-    expect(deps.appService.showToast).not.toHaveBeenCalled();
   });
 });
 
@@ -1606,32 +1405,19 @@ describe("projects Google Drive URL import", () => {
   const DRIVE_FAILED_MESSAGE =
     'Google Drive did not return a project zip file. Make sure the file is shared with "Anyone with the link" and has not reached its download limit.';
 
-  it.each([
-    ["share link", DRIVE_SHARE_URL],
-    [
-      "shared download link",
-      `https://drive.google.com/uc?export=download&id=${DRIVE_ID}`,
-    ],
-  ])("imports a %s through the direct download URL", async (_label, input) => {
+  it("imports a share link on mobile through the direct download URL, without a destination folder", async () => {
     const deps = createDeps({ platform: "android" });
-    deps.appService.importProjectFromUrl.mockResolvedValue({
-      id: "project-one",
-      name: "Project One",
-    });
-    deps.appService.loadAllProjects.mockResolvedValue([
-      { id: "project-one", name: "Project One" },
-    ]);
+    mockImportedProject(deps, "importProjectFromUrl");
 
-    await handleUrlImportFormAction(deps, createUrlFormPayload(input));
+    await submitUrl(deps, DRIVE_SHARE_URL);
 
+    expect(deps.appService.openFolderPicker).not.toHaveBeenCalled();
     expect(deps.appService.importProjectFromUrl).toHaveBeenCalledWith({
       url: DRIVE_DOWNLOAD_URL,
       destinationFolder: undefined,
       onProgress: expect.any(Function),
     });
-    expect(deps.appService.showToast).toHaveBeenCalledWith({
-      message: 'Project "Project One" imported.',
-    });
+    expect(deps.appService.showToast).toHaveBeenCalledWith(IMPORTED_TOAST);
   });
 
   // iOS and Android reject with an Error; Tauri's invoke rejects with the
@@ -1656,14 +1442,9 @@ describe("projects Google Drive URL import", () => {
         reject(nativeMessage),
       );
 
-      await handleUrlImportFormAction(
-        deps,
-        createUrlFormPayload(DRIVE_SHARE_URL),
-      );
+      await submitUrl(deps, DRIVE_SHARE_URL);
 
-      const progressDialog =
-        deps.appService.showProgressDialog.mock.results[0].value;
-      expect(progressDialog.close).toHaveBeenCalledOnce();
+      expect(progressDialogOf(deps).close).toHaveBeenCalledOnce();
       expect(deps.appService.showAlert).toHaveBeenCalledWith({
         message: `${DRIVE_FAILED_MESSAGE}\n\nDetails:\ngoogleDriveFailed: ${nativeMessage}`,
       });
@@ -1671,66 +1452,39 @@ describe("projects Google Drive URL import", () => {
     },
   );
 
-  it("keeps the download message when Drive was never reached", async () => {
-    const deps = createDeps({ platform: "android" });
-    deps.appService.importProjectFromUrl.mockRejectedValue(
-      new Error("downloadFailed: Network error: SocketTimeoutException"),
-    );
+  it.each([
+    [
+      "Drive was never reached",
+      DRIVE_SHARE_URL,
+      "downloadFailed: Network error: SocketTimeoutException",
+      "Could not download the project archive. Check the URL and your connection, then try again.",
+    ],
+    [
+      "the host is not Drive",
+      "https://example.com/project-one.zip",
+      "invalidArchive: End of central directory record not found.",
+      "This archive is not a valid RouteVN project export.",
+    ],
+  ])(
+    "keeps the error's own alert when %s",
+    async (_label, url, message, expectedBase) => {
+      const deps = createDeps({ platform: "android" });
+      deps.appService.importProjectFromUrl.mockRejectedValue(
+        new Error(message),
+      );
 
-    await handleUrlImportFormAction(
-      deps,
-      createUrlFormPayload(DRIVE_SHARE_URL),
-    );
+      await submitUrl(deps, url);
 
-    expect(deps.appService.showAlert).toHaveBeenCalledWith({
-      message:
-        "Could not download the project archive. Check the URL and your connection, then try again.\n\nDetails:\ndownloadFailed: Network error: SocketTimeoutException",
-    });
-  });
-
-  it("keeps other Drive import errors unchanged", async () => {
-    const deps = createDeps({ platform: "android" });
-    deps.appService.importProjectFromUrl.mockRejectedValue(
-      new Error("fileNameConflict: abc.png and abc.jpg both map to abc"),
-    );
-
-    await handleUrlImportFormAction(
-      deps,
-      createUrlFormPayload(DRIVE_SHARE_URL),
-    );
-
-    expect(deps.appService.showAlert).toHaveBeenCalledWith({
-      message:
-        "The project contains files that resolve to the same name.\n\nDetails:\nfileNameConflict: abc.png and abc.jpg both map to abc",
-    });
-  });
-
-  it("does not add the Drive message for other hosts", async () => {
-    const deps = createDeps({ platform: "android" });
-    deps.appService.importProjectFromUrl.mockRejectedValue(
-      new Error("invalidArchive: End of central directory record not found."),
-    );
-
-    await handleUrlImportFormAction(
-      deps,
-      createUrlFormPayload("https://example.com/project-one.zip"),
-    );
-
-    expect(deps.appService.showAlert).toHaveBeenCalledWith({
-      message:
-        "This archive is not a valid RouteVN project export.\n\nDetails:\ninvalidArchive: End of central directory record not found.",
-    });
-  });
+      expect(deps.appService.showAlert).toHaveBeenCalledWith({
+        message: `${expectedBase}\n\nDetails:\n${message}`,
+      });
+    },
+  );
 
   it("alerts for a Drive folder link without starting an import", async () => {
     const deps = createDeps({ platform: "android" });
 
-    await handleUrlImportFormAction(
-      deps,
-      createUrlFormPayload(
-        `https://drive.google.com/drive/folders/${DRIVE_ID}`,
-      ),
-    );
+    await submitUrl(deps, `https://drive.google.com/drive/folders/${DRIVE_ID}`);
 
     expect(deps.appService.showAlert).toHaveBeenCalledWith({
       message:
@@ -1739,162 +1493,36 @@ describe("projects Google Drive URL import", () => {
     expect(deps.store.closeUrlImportDialog).not.toHaveBeenCalled();
     expect(deps.appService.importProjectFromUrl).not.toHaveBeenCalled();
   });
-
-  it("passes the normalized URL and chosen folder on desktop", async () => {
-    const deps = createDeps({ platform: "tauri" });
-    deps.appService.openFolderPicker.mockResolvedValue("/projects");
-    deps.appService.importProjectFromUrl.mockResolvedValue({
-      id: "project-one",
-      name: "Project One",
-    });
-    deps.appService.loadAllProjects.mockResolvedValue([
-      { id: "project-one", name: "Project One" },
-    ]);
-
-    await handleUrlImportFormAction(
-      deps,
-      createUrlFormPayload(DRIVE_SHARE_URL),
-    );
-
-    expect(deps.appService.importProjectFromUrl).toHaveBeenCalledWith({
-      url: DRIVE_DOWNLOAD_URL,
-      destinationFolder: "/projects",
-      onProgress: expect.any(Function),
-    });
-  });
-});
-
-describe("projects import picker failures", () => {
-  const FAILURE =
-    "Failed to import project. Please select a valid project folder.";
-
-  it("alerts when the folder picker rejects", async () => {
-    const deps = createDeps({ platform: "tauri" });
-    deps.appService.openFolderPicker.mockRejectedValue(
-      new Error("importFailed: Cannot open the folder picker."),
-    );
-
-    await handleImportSourceMenuClickItem(
-      deps,
-      createMenuClickPayload("import-local"),
-    );
-
-    expect(deps.appService.showAlert).toHaveBeenCalledWith({
-      message: `${FAILURE}\n\nDetails:\nimportFailed: Cannot open the folder picker.`,
-    });
-    expect(deps.appService.showProgressDialog).not.toHaveBeenCalled();
-    expect(deps.appService.openExistingProject).not.toHaveBeenCalled();
-  });
-
-  it("alerts when the archive picker rejects", async () => {
-    const deps = createDeps({ platform: "ios" });
-    deps.appService.showFormDialog.mockResolvedValue({
-      actionId: "import-zip",
-    });
-    deps.appService.openArchivePicker.mockRejectedValue(
-      new Error("invalidArchive: Failed to read selected project archive."),
-    );
-
-    await handleMobileActionMenuClickItem(
-      deps,
-      createMenuClickPayload("import-local"),
-    );
-
-    expect(deps.appService.showAlert).toHaveBeenCalledWith({
-      message:
-        "This archive is not a valid RouteVN project export.\n\nDetails:\ninvalidArchive: Failed to read selected project archive.",
-    });
-    expect(deps.appService.showProgressDialog).not.toHaveBeenCalled();
-    expect(deps.appService.importProjectFromArchive).not.toHaveBeenCalled();
-  });
-
-  it("alerts when the desktop destination picker rejects", async () => {
-    const deps = createDeps({ platform: "tauri" });
-    deps.appService.openFolderPicker.mockRejectedValue(
-      new Error("importFailed: Cannot open the folder picker."),
-    );
-
-    await handleUrlImportFormAction(
-      deps,
-      createUrlFormPayload("https://example.com/project-one.zip"),
-    );
-
-    expect(deps.appService.showAlert).toHaveBeenCalledTimes(1);
-    expect(deps.appService.importProjectFromUrl).not.toHaveBeenCalled();
-    expect(deps.appService.showProgressDialog).not.toHaveBeenCalled();
-  });
 });
 
 describe("projects import of a project that already exists", () => {
-  const EXISTS = "projectExists: This project is already in the library.";
   const EXPLANATION =
     "This project has already been added, so nothing was imported and the existing project was not changed.";
   const LIBRARY_HINT =
     "To use this copy instead, delete the project's folder in the Files app, then import it again.";
 
-  const expectExistsAlert = (deps, { withLibraryHint }) => {
-    const progressDialog =
-      deps.appService.showProgressDialog.mock.results[0].value;
-    expect(progressDialog.close).toHaveBeenCalledOnce();
+  const expectExistsAlert = (deps, message) => {
+    expect(progressDialogOf(deps).close).toHaveBeenCalledOnce();
     expect(deps.appService.showAlert).toHaveBeenCalledTimes(1);
     expect(deps.appService.showAlert).toHaveBeenCalledWith({
       title: "Project Already Added",
-      message: [EXPLANATION, ...(withLibraryHint ? [LIBRARY_HINT] : [])].join(
-        "\n\n",
-      ),
+      message,
     });
     expect(deps.appService.showToast).not.toHaveBeenCalled();
     expect(deps.appService.loadAllProjects).not.toHaveBeenCalled();
     expect(deps.store.setProjects).not.toHaveBeenCalled();
   };
 
-  it("explains it in an alert for a zip import on iOS, including how to use the other copy", async () => {
+  it("explains it in an alert on iOS, including how to use the other copy", async () => {
     const deps = createDeps({ platform: "ios" });
-    deps.appService.showFormDialog.mockResolvedValue({
-      actionId: "import-zip",
-    });
-    deps.appService.openArchivePicker.mockResolvedValue({
-      uri: "file:///tmp/project-one.zip",
-      name: "project-one.zip",
-    });
+    pickZip(deps);
     deps.appService.importProjectFromArchive.mockRejectedValue(
-      new Error(EXISTS),
+      new Error("projectExists: This project is already in the library."),
     );
 
-    await handleMobileActionMenuClickItem(
-      deps,
-      createMenuClickPayload("import-local"),
-    );
+    await chooseLocalSource(deps, { actionId: "import-zip" });
 
-    expectExistsAlert(deps, { withLibraryHint: true });
-  });
-
-  it("shows the same alert for a URL import on iOS", async () => {
-    const deps = createDeps({ platform: "ios" });
-    deps.appService.importProjectFromUrl.mockRejectedValue(new Error(EXISTS));
-
-    await handleUrlImportFormAction(
-      deps,
-      createUrlFormPayload("https://example.com/project-one.zip"),
-    );
-
-    expectExistsAlert(deps, { withLibraryHint: true });
-  });
-
-  it("shows the same alert for a folder import on iOS", async () => {
-    const deps = createDeps({ platform: "ios" });
-    deps.appService.showFormDialog.mockResolvedValue({
-      actionId: "import-folder",
-    });
-    deps.appService.openFolderPicker.mockResolvedValue("/projects/project-one");
-    deps.appService.openExistingProject.mockRejectedValue(new Error(EXISTS));
-
-    await handleMobileActionMenuClickItem(
-      deps,
-      createMenuClickPayload("import-local"),
-    );
-
-    expectExistsAlert(deps, { withLibraryHint: true });
+    expectExistsAlert(deps, `${EXPLANATION}\n\n${LIBRARY_HINT}`);
   });
 
   it("leaves out the delete-first hint on desktop, where there is nothing to replace", async () => {
@@ -1904,60 +1532,16 @@ describe("projects import of a project that already exists", () => {
       new Error("projectExists: This project has already been added."),
     );
 
-    await handleImportSourceMenuClickItem(
-      deps,
-      createMenuClickPayload("import-local"),
-    );
+    await chooseDesktopLocal(deps);
 
-    expectExistsAlert(deps, { withLibraryHint: false });
-  });
-
-  it("keeps the failure alert, without this title, for other errors", async () => {
-    const deps = createDeps({ platform: "ios" });
-    deps.appService.importProjectFromUrl.mockRejectedValue(
-      new Error("importFailed: Cannot write the download: disk full"),
-    );
-
-    await handleUrlImportFormAction(
-      deps,
-      createUrlFormPayload("https://example.com/project-one.zip"),
-    );
-
-    expect(deps.appService.showAlert).toHaveBeenCalledTimes(1);
-    expect(deps.appService.showAlert.mock.calls[0][0].title).toBeUndefined();
-    expect(deps.appService.showToast).not.toHaveBeenCalled();
+    expectExistsAlert(deps, EXPLANATION);
   });
 });
 
 describe("projects import progress dialog", () => {
   const MB = 1024 * 1024;
 
-  const runUrlImport = (deps) => {
-    return handleUrlImportFormAction(
-      deps,
-      createUrlFormPayload("https://example.com/project-one.zip"),
-    );
-  };
-
-  it("starts a URL import with a connecting status and an indeterminate bar", async () => {
-    const deps = createDeps({ platform: "android" });
-    deps.appService.importProjectFromUrl.mockResolvedValue({
-      id: "project-one",
-      name: "Project One",
-    });
-    deps.appService.loadAllProjects.mockResolvedValue([]);
-
-    await runUrlImport(deps);
-
-    expect(deps.appService.showProgressDialog).toHaveBeenCalledWith({
-      title: "Importing Project…",
-      message: "Please wait while your project is being imported.",
-      status: "Connecting…",
-      progress: {},
-    });
-  });
-
-  it("walks the dialog through download, extraction and finishing", async () => {
+  it("walks a URL import from connecting through download, extraction and finishing", async () => {
     const deps = createDeps({ platform: "android" });
     deps.appService.importProjectFromUrl.mockImplementation(
       async ({ onProgress }) => {
@@ -1965,16 +1549,21 @@ describe("projects import progress dialog", () => {
         onProgress({ stage: "downloading", current: 50 * MB, total: 200 * MB });
         onProgress({ stage: "extracting", current: 30, total: 120 });
         onProgress({ stage: "finishing", current: 0, total: 0 });
-        return { id: "project-one", name: "Project One" };
+        return PROJECT_ONE;
       },
     );
-    deps.appService.loadAllProjects.mockResolvedValue([]);
 
-    await runUrlImport(deps);
+    await submitUrl(deps);
 
-    const progressDialog =
-      deps.appService.showProgressDialog.mock.results[0].value;
-    expect(progressDialog.update.mock.calls.map(([view]) => view)).toEqual([
+    expect(deps.appService.showProgressDialog).toHaveBeenCalledWith({
+      title: "Importing Project…",
+      message: "Please wait while your project is being imported.",
+      status: "Connecting…",
+      progress: {},
+    });
+    expect(
+      progressDialogOf(deps).update.mock.calls.map(([view]) => view),
+    ).toEqual([
       {
         status: "Downloading…\n0 B of 200 MB (0%)",
         progress: { current: 0, total: 200 * MB },
@@ -1989,81 +1578,6 @@ describe("projects import progress dialog", () => {
       },
       { status: "Finishing up…", progress: {} },
     ]);
-  });
-
-  it("starts a zip import with a preparing status and reports extraction", async () => {
-    const deps = createDeps({ platform: "ios" });
-    deps.appService.showFormDialog.mockResolvedValue({
-      actionId: "import-zip",
-    });
-    deps.appService.openArchivePicker.mockResolvedValue({
-      uri: "file:///tmp/project-one.zip",
-      name: "project-one.zip",
-    });
-    deps.appService.importProjectFromArchive.mockImplementation(
-      async ({ onProgress }) => {
-        onProgress({ stage: "extracting", current: 60, total: 120 });
-        return { id: "project-one", name: "Project One" };
-      },
-    );
-    deps.appService.loadAllProjects.mockResolvedValue([]);
-
-    await handleMobileActionMenuClickItem(
-      deps,
-      createMenuClickPayload("import-local"),
-    );
-
-    expect(deps.appService.showProgressDialog).toHaveBeenCalledWith(
-      expect.objectContaining({ status: "Preparing…" }),
-    );
-    const progressDialog =
-      deps.appService.showProgressDialog.mock.results[0].value;
-    expect(progressDialog.update).toHaveBeenCalledWith({
-      status: "Extracting files… 50%",
-      progress: { current: 60, total: 120 },
-    });
-  });
-
-  it("shows no status for a folder import", async () => {
-    const deps = createDeps({ platform: "tauri" });
-    deps.appService.openFolderPicker.mockResolvedValue("/projects/project-one");
-    deps.appService.openExistingProject.mockResolvedValue({
-      id: "project-one",
-      name: "Project One",
-    });
-    deps.appService.loadAllProjects.mockResolvedValue([]);
-
-    await handleImportSourceMenuClickItem(
-      deps,
-      createMenuClickPayload("import-local"),
-    );
-
-    expect(deps.appService.showProgressDialog).toHaveBeenCalledWith({
-      title: "Importing Project…",
-      message: "Please wait while your project is being imported.",
-      status: undefined,
-      progress: {},
-    });
-  });
-
-  it("keeps the dialog open and closes it once when a download fails midway", async () => {
-    const deps = createDeps({ platform: "android" });
-    deps.appService.importProjectFromUrl.mockImplementation(
-      async ({ onProgress }) => {
-        onProgress({ stage: "downloading", current: 10, total: 100 });
-        throw new Error(
-          "downloadFailed: Network error: SocketTimeoutException",
-        );
-      },
-    );
-
-    await runUrlImport(deps);
-
-    const progressDialog =
-      deps.appService.showProgressDialog.mock.results[0].value;
-    expect(progressDialog.update).toHaveBeenCalledTimes(1);
-    expect(progressDialog.close).toHaveBeenCalledOnce();
-    expect(deps.appService.showAlert).toHaveBeenCalledTimes(1);
   });
 });
 

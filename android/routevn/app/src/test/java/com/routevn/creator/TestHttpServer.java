@@ -1,53 +1,39 @@
 package com.routevn.creator;
 
-import java.io.ByteArrayOutputStream;
+import java.io.BufferedReader;
 import java.io.IOException;
-import java.io.InputStream;
+import java.io.InputStreamReader;
 import java.io.OutputStream;
 import java.net.InetAddress;
 import java.net.ServerSocket;
 import java.net.Socket;
 import java.nio.charset.StandardCharsets;
-import java.util.LinkedHashMap;
-import java.util.Map;
-import java.util.concurrent.atomic.AtomicReference;
 
 /**
  * Minimal JDK-only HTTP/1.1 server for download tests. Android unit tests
  * compile against the mockable android jar, which excludes
- * com.sun.net.httpserver, so this speaks just enough HTTP over a raw
- * ServerSocket: one request per connection, then the socket closes.
+ * com.sun.net.httpserver, so this answers one request per connection over a
+ * raw ServerSocket.
  */
 final class TestHttpServer implements AutoCloseable {
     static final class Response {
         final int status;
         final byte[] body;
-        final Map<String, String> headers = new LinkedHashMap<>();
-        long delayMs;
+        /** Extra header lines such as "Location: /next". */
+        final String[] headers;
 
-        static Response ok(byte[] body) {
-            return status(200, body);
+        Response(int status, byte[] body, String... headers) {
+            this.status = status;
+            this.body = body;
+            this.headers = headers;
         }
 
-        static Response status(int statusCode, byte[] body) {
-            Response response = new Response(statusCode, body);
-            return response;
+        static Response ok(byte[] body) {
+            return new Response(200, body);
         }
 
         static Response redirect(String location) {
-            Response response = new Response(302, new byte[0]);
-            response.headers.put("Location", location);
-            return response;
-        }
-
-        Response delayed(long millis) {
-            delayMs = millis;
-            return this;
-        }
-
-        private Response(int statusCode, byte[] responseBody) {
-            status = statusCode;
-            body = responseBody == null ? new byte[0] : responseBody;
+            return new Response(302, new byte[0], "Location: " + location);
         }
     }
 
@@ -56,8 +42,7 @@ final class TestHttpServer implements AutoCloseable {
     }
 
     private final ServerSocket serverSocket;
-    private final AtomicReference<Handler> handler = new AtomicReference<>();
-    private volatile boolean closed;
+    private volatile Handler handler = requestLine -> new Response(500, new byte[0]);
 
     TestHttpServer() throws IOException {
         serverSocket = new ServerSocket(0, 50, InetAddress.getByName("127.0.0.1"));
@@ -67,7 +52,7 @@ final class TestHttpServer implements AutoCloseable {
     }
 
     void setHandler(Handler requestHandler) {
-        handler.set(requestHandler);
+        handler = requestHandler;
     }
 
     int port() {
@@ -79,74 +64,36 @@ final class TestHttpServer implements AutoCloseable {
     }
 
     private void acceptLoop() {
-        while (!closed) {
+        while (!serverSocket.isClosed()) {
             try (Socket socket = serverSocket.accept()) {
-                handleConnection(socket);
-            } catch (IOException error) {
-                if (closed) {
-                    return;
+                socket.setSoTimeout(5000);
+                BufferedReader reader = new BufferedReader(
+                    new InputStreamReader(socket.getInputStream(), StandardCharsets.ISO_8859_1)
+                );
+                String requestLine = reader.readLine();
+                // Read the rest of the request head so closing the socket does not reset it.
+                String line = requestLine;
+                while (line != null && !line.isEmpty()) {
+                    line = reader.readLine();
                 }
+                Response response = handler.respond(requestLine);
+                StringBuilder head = new StringBuilder("HTTP/1.1 " + response.status + " X\r\n")
+                    .append("Content-Length: " + response.body.length + "\r\nConnection: close\r\n");
+                for (String header : response.headers) {
+                    head.append(header).append("\r\n");
+                }
+                OutputStream output = socket.getOutputStream();
+                output.write(head.append("\r\n").toString().getBytes(StandardCharsets.ISO_8859_1));
+                output.write(response.body);
+                output.flush();
+            } catch (IOException | RuntimeException error) {
+                // close() ends the loop; a failed connection only fails its own test.
             }
         }
-    }
-
-    private void handleConnection(Socket socket) throws IOException {
-        socket.setSoTimeout(5000);
-        String requestLine = readRequestLine(socket.getInputStream());
-        Handler requestHandler = handler.get();
-        Response response = requestHandler == null
-            ? Response.status(500, new byte[0])
-            : requestHandler.respond(requestLine);
-        if (response.delayMs > 0) {
-            try {
-                Thread.sleep(response.delayMs);
-            } catch (InterruptedException error) {
-                Thread.currentThread().interrupt();
-            }
-        }
-        writeResponse(socket.getOutputStream(), response);
-    }
-
-    private static String readRequestLine(InputStream input) throws IOException {
-        ByteArrayOutputStream head = new ByteArrayOutputStream();
-        byte[] buffer = new byte[1024];
-        while (head.size() < 64 * 1024) {
-            int read = input.read(buffer);
-            if (read < 0) {
-                break;
-            }
-            head.write(buffer, 0, read);
-            String text = new String(head.toByteArray(), StandardCharsets.ISO_8859_1);
-            if (text.contains("\r\n\r\n")) {
-                return text.substring(0, text.indexOf('\r'));
-            }
-        }
-        return new String(head.toByteArray(), StandardCharsets.ISO_8859_1);
-    }
-
-    private static void writeResponse(OutputStream output, Response response)
-        throws IOException {
-        ByteArrayOutputStream raw = new ByteArrayOutputStream();
-        raw.write(
-            ("HTTP/1.1 " + response.status + " X\r\nContent-Length: " +
-            response.body.length + "\r\nConnection: close\r\n")
-                .getBytes(StandardCharsets.ISO_8859_1)
-        );
-        for (Map.Entry<String, String> header : response.headers.entrySet()) {
-            raw.write(
-                (header.getKey() + ": " + header.getValue() + "\r\n")
-                    .getBytes(StandardCharsets.ISO_8859_1)
-            );
-        }
-        raw.write("\r\n".getBytes(StandardCharsets.ISO_8859_1));
-        raw.write(response.body);
-        output.write(raw.toByteArray());
-        output.flush();
     }
 
     @Override
     public void close() {
-        closed = true;
         try {
             serverSocket.close();
         } catch (IOException ignored) {

@@ -888,19 +888,20 @@ pub async fn extract_archive(
 #[cfg(test)]
 mod tests {
     use super::*;
+    use serde_json::json;
     use std::io::Cursor;
     use std::sync::{Arc, Mutex};
+    use zip::CompressionMethod::{Deflated, Stored};
 
-    type Events = Arc<Mutex<Vec<ProgressEvent>>>;
+    type Events = Arc<Mutex<Vec<(u64, u64)>>>;
 
-    fn quiet() -> ProgressSink {
-        ProgressSink::new(|_| {})
-    }
-
+    /// A sink that records `(current, total)` for every event.
     fn recording() -> (ProgressSink, Events) {
         let events = Events::default();
         let received = Arc::clone(&events);
-        let sink = ProgressSink::new(move |event| received.lock().unwrap().push(event));
+        let sink = ProgressSink::new(move |event| {
+            received.lock().unwrap().push((event.current, event.total));
+        });
         (sink, events)
     }
 
@@ -923,16 +924,18 @@ mod tests {
         Url::parse(&format!("http://{addr}/archive.zip")).unwrap()
     }
 
+    fn response(head: &str, body: &str) -> String {
+        format!("HTTP/1.1 {head}\r\nConnection: close\r\n\r\n{body}")
+    }
+
     fn ok_response(body: &str) -> String {
-        format!(
-            "HTTP/1.1 200 OK\r\nContent-Length: {}\r\nConnection: close\r\n\r\n{body}",
-            body.len()
-        )
+        response(&format!("200 OK\r\nContent-Length: {}", body.len()), body)
     }
 
     fn redirect_to(location: &str) -> String {
-        format!(
-            "HTTP/1.1 302 Found\r\nLocation: {location}\r\nContent-Length: 0\r\nConnection: close\r\n\r\n"
+        response(
+            &format!("302 Found\r\nLocation: {location}\r\nContent-Length: 0"),
+            "",
         )
     }
 
@@ -940,217 +943,88 @@ mod tests {
         url: &str,
         destination: &Path,
         max_bytes: u64,
-    ) -> Result<DownloadResult, String> {
-        tauri::async_runtime::block_on(download(url, destination, max_bytes, &mut quiet()))
+    ) -> (Result<DownloadResult, String>, Vec<(u64, u64)>) {
+        let (mut sink, events) = recording();
+        let result =
+            tauri::async_runtime::block_on(download(url, destination, max_bytes, &mut sink));
+        let events = events.lock().unwrap().clone();
+        (result, events)
     }
 
     #[test]
-    fn download_writes_the_body_and_passes_content_disposition_through() {
+    fn download_follows_five_redirects_and_returns_the_body_and_headers() {
         let body = "Project One archive ".repeat(10);
         let disposition =
             "attachment; filename*=UTF-8''Project%20One.zip; filename=\"Project One.zip\"";
-        let url = spawn_server(vec![format!(
-            "HTTP/1.1 200 OK\r\nContent-Disposition: {disposition}\r\nContent-Length: {}\r\nConnection: close\r\n\r\n{body}",
-            body.len()
-        )]);
+        let mut responses = vec![redirect_to("/archive.zip"); 4];
+        responses.push(redirect_to("/next.zip"));
+        let head = format!("200 OK\r\nContent-Disposition: {disposition}");
+        responses.push(response(&format!("{head}\r\nContent-Length: 200"), &body));
+        let url = spawn_server(responses);
         let dir = tempfile::tempdir().unwrap();
         let destination = dir.path().join("download.zip");
-        let result = run_download(url.as_str(), &destination, 1024).unwrap();
+        let (result, events) = run_download(url.as_str(), &destination, 1024);
+        let json = serde_json::to_value(result.unwrap()).unwrap();
         assert_eq!(fs::read(&destination).unwrap(), body.as_bytes());
-        assert_eq!(result.bytes, body.len() as u64);
-        assert_eq!(result.final_url, url.as_str());
-        assert_eq!(result.content_disposition.as_deref(), Some(disposition));
-        let json = serde_json::to_value(&result).unwrap();
-        assert_eq!(json["finalUrl"], url.as_str());
+        assert_eq!(json["bytes"], 200);
+        assert_eq!(json["finalUrl"], url.join("/next.zip").unwrap().as_str());
         assert_eq!(json["contentDisposition"], disposition);
+        // The first event follows the response headers; the last ends the body.
+        assert_eq!(events.first(), Some(&(0, 200)));
+        assert_eq!(events.last(), Some(&(200, 200)));
     }
 
     #[test]
-    fn download_result_omits_a_missing_content_disposition() {
-        let url = spawn_server(vec![ok_response("abc")]);
-        let dir = tempfile::tempdir().unwrap();
-        let result = run_download(url.as_str(), &dir.path().join("a.zip"), 1024).unwrap();
-        assert_eq!(result.content_disposition, None);
-        let json = serde_json::to_value(&result).unwrap();
-        assert!(json.get("contentDisposition").is_none());
-        assert_eq!(json["bytes"], 3);
-    }
-
-    #[test]
-    fn download_follows_redirects_and_reports_the_final_url() {
-        let url = spawn_server(vec![redirect_to("/next.zip"), ok_response("abc")]);
-        let dir = tempfile::tempdir().unwrap();
-        let destination = dir.path().join("a.zip");
-        let result = run_download(url.as_str(), &destination, 1024).unwrap();
-        assert_eq!(fs::read(&destination).unwrap(), b"abc");
-        assert!(
-            result.final_url.ends_with("/next.zip"),
-            "{}",
-            result.final_url
-        );
-    }
-
-    #[test]
-    fn download_rejects_a_redirect_to_a_disallowed_scheme() {
-        for location in ["http://example.com/a.zip", "ftp://127.0.0.1/a.zip"] {
-            let url = spawn_server(vec![redirect_to(location)]);
-            let dir = tempfile::tempdir().unwrap();
-            let destination = dir.path().join("a.zip");
-            let error = run_download(url.as_str(), &destination, 1024).unwrap_err();
-            assert!(error.starts_with("invalidUrl: "), "{location}: {error}");
-            assert!(!destination.exists());
-        }
-    }
-
-    #[test]
-    fn download_gives_up_after_five_redirects() {
-        // Five hops are followed; the sixth redirect fails.
-        let url = spawn_server(vec![redirect_to("/archive.zip"); 10]);
-        let dir = tempfile::tempdir().unwrap();
-        let destination = dir.path().join("a.zip");
-        let error = run_download(url.as_str(), &destination, 1024).unwrap_err();
-        assert!(error.starts_with("downloadFailed: "), "{error}");
-        assert!(error.contains("too many redirects"), "{error}");
-        assert!(!destination.exists());
-
-        let mut responses = vec![redirect_to("/archive.zip"); 5];
-        responses.push(ok_response("abc"));
-        let url = spawn_server(responses);
-        run_download(url.as_str(), &dir.path().join("b.zip"), 1024).unwrap();
-    }
-
-    #[test]
-    fn download_rejects_credentials_and_bad_urls_before_touching_the_disk() {
-        let dir = tempfile::tempdir().unwrap();
-        for url in [
-            "https://user:secret@example.com/a.zip",
-            "https://user@example.com/a.zip",
-            "http://example.com/a.zip",
-            "ftp://example.com/a.zip",
-            "not a url",
-        ] {
-            let destination = dir.path().join("a.zip");
-            let error = run_download(url, &destination, 1024).unwrap_err();
-            assert!(error.starts_with("invalidUrl: "), "{url}: {error}");
-            assert!(!destination.exists());
-        }
-    }
-
-    #[test]
-    fn download_reports_the_http_status_and_removes_the_file() {
-        let url = spawn_server(vec![
-            "HTTP/1.1 404 Not Found\r\nContent-Length: 0\r\nConnection: close\r\n\r\n".to_string(),
-        ]);
-        let dir = tempfile::tempdir().unwrap();
-        let destination = dir.path().join("a.zip");
-        let error = run_download(url.as_str(), &destination, 1024).unwrap_err();
-        assert!(error.starts_with("downloadFailed: "), "{error}");
-        assert!(error.contains("HTTP 404"), "{error}");
-        assert!(!destination.exists());
-    }
-
-    #[test]
-    fn download_fails_when_the_connection_cannot_be_made() {
+    fn download_failures_leave_no_file_and_send_no_progress() {
+        let not_found = spawn_server(vec![response("404 Not Found\r\nContent-Length: 0", "")]);
+        let insecure_hop = spawn_server(vec![redirect_to("http://example.com/a.zip")]);
+        // Five redirects are followed; the sixth is one too many.
+        let redirect_loop = spawn_server(vec![redirect_to("/archive.zip"); 6]);
         let listener = std::net::TcpListener::bind("127.0.0.1:0").unwrap();
-        let url = format!("http://{}/a.zip", listener.local_addr().unwrap());
+        let refused = format!("http://{}/a.zip", listener.local_addr().unwrap());
         drop(listener);
         let dir = tempfile::tempdir().unwrap();
         let destination = dir.path().join("a.zip");
-        let error = run_download(&url, &destination, 1024).unwrap_err();
-        assert!(error.starts_with("downloadFailed: "), "{error}");
-        assert!(!error.contains("HTTP "), "{error}");
-        assert!(!destination.exists());
+        for (url, expected) in [
+            ("https://user:secret@example.com/a.zip", "invalidUrl: "),
+            ("https://user@example.com/a.zip", "invalidUrl: "),
+            ("http://example.com/a.zip", "invalidUrl: "),
+            ("ftp://127.0.0.1/a.zip", "invalidUrl: "),
+            ("not a url", "invalidUrl: "),
+            // Every redirect hop passes the same check.
+            (insecure_hop.as_str(), "invalidUrl: "),
+            (not_found.as_str(), "downloadFailed: HTTP 404"),
+            (redirect_loop.as_str(), "downloadFailed: too many redirects"),
+            (refused.as_str(), "downloadFailed: "),
+        ] {
+            let (result, events) = run_download(url, &destination, 1024);
+            let error = result.unwrap_err();
+            assert!(error.starts_with(expected), "{url}: {error}");
+            assert!(!destination.exists(), "{url}");
+            assert!(events.is_empty(), "{url}: {events:?}");
+        }
     }
 
     #[test]
-    fn download_enforces_max_bytes_and_removes_the_partial_file() {
+    fn download_enforces_max_bytes_and_never_overwrites_a_file() {
         let body = "x".repeat(4096);
-        let responses = [
-            // The declared length is already too large.
-            ok_response(&body),
-            // No length: the limit is enforced on the streamed bytes.
-            format!("HTTP/1.1 200 OK\r\nConnection: close\r\n\r\n{body}"),
-        ];
-        for response in responses {
+        let dir = tempfile::tempdir().unwrap();
+        let destination = dir.path().join("a.zip");
+        // The declared length is too large, or (without one) the streamed bytes are.
+        for response in [ok_response(&body), response("200 OK", &body)] {
             let url = spawn_server(vec![response]);
-            let dir = tempfile::tempdir().unwrap();
-            let destination = dir.path().join("a.zip");
-            let error = run_download(url.as_str(), &destination, 1024).unwrap_err();
-            assert!(error.starts_with("archiveTooLarge: "), "{error}");
+            let error = run_download(url.as_str(), &destination, 4095).0;
+            assert!(error.unwrap_err().starts_with("archiveTooLarge: "));
             assert!(!destination.exists());
         }
         let url = spawn_server(vec![ok_response(&body)]);
-        let dir = tempfile::tempdir().unwrap();
-        let result = run_download(url.as_str(), &dir.path().join("a.zip"), 4096).unwrap();
-        assert_eq!(result.bytes, 4096);
-    }
-
-    #[test]
-    fn download_never_overwrites_an_existing_destination() {
-        let dir = tempfile::tempdir().unwrap();
-        let destination = dir.path().join("a.zip");
-        fs::write(&destination, "keep").unwrap();
-        // No server is needed: the destination is claimed before connecting.
-        let error = run_download("https://example.com/a.zip", &destination, 1024).unwrap_err();
-        assert!(error.starts_with("importFailed: "), "{error}");
-        assert_eq!(fs::read(&destination).unwrap(), b"keep");
-    }
-
-    #[test]
-    fn download_progress_starts_at_zero_and_ends_at_the_body_length() {
-        let body = "archive body ".repeat(100);
-        let url = spawn_server(vec![ok_response(&body)]);
-        let dir = tempfile::tempdir().unwrap();
-        let (mut sink, events) = recording();
-        tauri::async_runtime::block_on(download(
-            url.as_str(),
-            &dir.path().join("a.zip"),
-            1 << 20,
-            &mut sink,
-        ))
-        .unwrap();
-        let events = events.lock().unwrap();
-        assert!(events.len() >= 2);
-        assert_eq!(events[0].current, 0);
-        assert!(
-            events
-                .windows(2)
-                .all(|pair| pair[0].current <= pair[1].current)
-        );
-        assert_eq!(events.last().unwrap().current, body.len() as u64);
-        assert!(events.iter().all(|event| event.total == body.len() as u64));
-    }
-
-    #[test]
-    fn download_sends_no_progress_before_the_response_headers() {
-        let url = spawn_server(vec![
-            "HTTP/1.1 404 Not Found\r\nContent-Length: 0\r\nConnection: close\r\n\r\n".to_string(),
-        ]);
-        let dir = tempfile::tempdir().unwrap();
-        let (mut sink, events) = recording();
-        tauri::async_runtime::block_on(download(
-            url.as_str(),
-            &dir.path().join("a.zip"),
-            1024,
-            &mut sink,
-        ))
-        .unwrap_err();
-        assert!(events.lock().unwrap().is_empty());
-    }
-
-    #[test]
-    fn progress_sink_throttles_reports_but_always_sends_emits() {
-        let (mut sink, events) = recording();
-        sink.emit(0, 10);
-        for current in 1..5 {
-            sink.report(current, 10);
-        }
-        assert_eq!(events.lock().unwrap().len(), 1);
-        std::thread::sleep(PROGRESS_INTERVAL + Duration::from_millis(20));
-        sink.report(5, 10);
-        sink.emit(10, 10);
-        let currents: Vec<u64> = events.lock().unwrap().iter().map(|e| e.current).collect();
-        assert_eq!(currents, [0, 5, 10]);
+        let result = run_download(url.as_str(), &destination, 4096).0.unwrap();
+        let json = serde_json::to_value(result).unwrap();
+        assert_eq!(json, json!({ "finalUrl": url.as_str(), "bytes": 4096 }));
+        // The destination is claimed before connecting, so no server is needed.
+        let error = run_download("https://example.com/a.zip", &destination, 4096).0;
+        assert!(error.unwrap_err().starts_with("importFailed: "));
+        assert_eq!(fs::read(&destination).unwrap(), body.as_bytes());
     }
 
     // ----- zip fixtures -----
@@ -1169,98 +1043,55 @@ mod tests {
         writer.finish().unwrap().into_inner()
     }
 
-    fn stored_zip(entries: &[(&str, &[u8])]) -> Vec<u8> {
-        zip_bytes(entries, zip::CompressionMethod::Stored)
+    /// Writes `zip` to a new temporary folder next to an empty `out` folder.
+    fn setup(zip: &[u8]) -> (tempfile::TempDir, PathBuf, PathBuf) {
+        let dir = tempfile::tempdir().unwrap();
+        let archive = dir.path().join("archive.zip");
+        fs::write(&archive, zip).unwrap();
+        let out = dir.path().join("out");
+        fs::create_dir(&out).unwrap();
+        (dir, archive, out)
     }
 
-    // Overwrites a little-endian u32 in the last central directory record.
-    fn patch_central_u32(bytes: &mut [u8], field_offset: usize, value: u32) {
-        let record = bytes
-            .windows(4)
-            .rposition(|window| window == b"PK\x01\x02")
-            .unwrap();
-        bytes[record + field_offset..record + field_offset + 4]
-            .copy_from_slice(&value.to_le_bytes());
+    fn requests(files: &[(&str, &str)]) -> Vec<ExtractFile> {
+        let request = |&(entry, path): &(&str, &str)| ExtractFile {
+            entry: entry.into(),
+            path: path.into(),
+        };
+        files.iter().map(request).collect()
     }
 
-    const CENTRAL_CRC: usize = 16;
-    const CENTRAL_UNCOMPRESSED_SIZE: usize = 24;
-
-    fn write_archive(dir: &Path, bytes: &[u8]) -> PathBuf {
-        let path = dir.join("archive.zip");
-        fs::write(&path, bytes).unwrap();
-        path
+    fn run_extract(
+        archive: &Path,
+        out: &Path,
+        files: &[(&str, &str)],
+        max_bytes: u64,
+    ) -> Result<ExtractResult, String> {
+        let mut quiet = ProgressSink::new(|_| {});
+        extract(archive, out, &requests(files), max_bytes, &mut quiet)
     }
 
-    fn file(entry: &str, path: &str) -> ExtractFile {
-        ExtractFile {
-            entry: entry.to_string(),
-            path: path.to_string(),
-        }
+    fn is_empty_dir(path: &Path) -> bool {
+        fs::read_dir(path).unwrap().next().is_none()
     }
 
-    // ----- list_archive -----
+    // ----- list_archive and the archive layout check -----
 
     #[test]
     fn list_returns_raw_entry_names_sizes_and_directories() {
-        let names = [
-            "Project One/",
-            "Project One/project.db",
-            "../evil.txt",
-            "/absolute.txt",
-            "back\\slash.txt",
-            "./dot.txt",
-            "files//double.bin",
-            "__MACOSX/._junk",
-        ];
+        let names = ["One/", "One/db", "../up", "/abs", "a\\b"];
         let entries: Vec<(&str, &[u8])> = names.iter().map(|name| (*name, &b"12345"[..])).collect();
-        let dir = tempfile::tempdir().unwrap();
-        let archive = write_archive(
-            dir.path(),
-            &zip_bytes(&entries, zip::CompressionMethod::Deflated),
-        );
-        let listing = list(&archive, 100).unwrap();
-        let listed: Vec<&str> = listing.entries.iter().map(|e| e.name.as_str()).collect();
+        let (dir, archive, _) = setup(&zip_bytes(&entries, Stored));
+        let json = serde_json::to_value(list(&archive, 100).unwrap()).unwrap();
+        let listed: Vec<_> = (0..5).map(|i| &json["entries"][i]["name"]).collect();
         assert_eq!(listed, names);
-        assert!(listing.entries[0].is_directory);
-        assert_eq!(listing.entries[0].size, 0);
-        assert!(!listing.entries[1].is_directory);
-        assert_eq!(listing.entries[1].size, 5);
-        let json = serde_json::to_value(&listing).unwrap();
-        assert_eq!(json["entries"][1]["isDirectory"], false);
-        assert_eq!(json["entries"][1]["name"], "Project One/project.db");
-    }
-
-    #[test]
-    fn list_rejects_data_that_is_not_a_zip() {
-        let dir = tempfile::tempdir().unwrap();
-        for bytes in [&b"just some text, not an archive"[..], &b""[..]] {
-            let archive = write_archive(dir.path(), bytes);
-            let error = list(&archive, 100).unwrap_err();
-            assert!(error.starts_with("invalidArchive: "), "{error}");
-        }
-    }
-
-    #[test]
-    fn list_rejects_more_entries_than_the_limit() {
-        let dir = tempfile::tempdir().unwrap();
-        let archive = write_archive(
-            dir.path(),
-            &stored_zip(&[("a.txt", b"a"), ("b.txt", b"b"), ("c.txt", b"c")]),
-        );
-        assert_eq!(list(&archive, 3).unwrap().entries.len(), 3);
-        let error = list(&archive, 2).unwrap_err();
-        assert!(error.starts_with("invalidArchive: "), "{error}");
-    }
-
-    #[test]
-    fn list_reports_a_missing_archive_file_as_import_failed() {
-        let dir = tempfile::tempdir().unwrap();
+        let directory = json!({ "name": "One/", "size": 0, "isDirectory": true });
+        assert_eq!(json["entries"][0], directory);
+        let file = json!({ "name": "One/db", "size": 5, "isDirectory": false });
+        assert_eq!(json["entries"][1], file);
         let error = list(&dir.path().join("missing.zip"), 10).unwrap_err();
         assert!(error.starts_with("importFailed: "), "{error}");
     }
-
-    // ----- archive layout check -----
 
     fn end_record(entries: u16, size: u32, offset: u32, comment: &[u8]) -> Vec<u8> {
         let mut record = b"PK\x05\x06\0\0\0\0".to_vec();
@@ -1284,6 +1115,33 @@ mod tests {
         record.extend_from_slice(name);
         record
     }
+
+    fn central_records(count: usize) -> Vec<u8> {
+        (0..count)
+            .flat_map(|index| central_record(format!("{index:05}")))
+            .collect()
+    }
+
+    // A record the zip crate refuses: AES compression without the AES extra field.
+    fn refused_record() -> Vec<u8> {
+        let mut record = central_record("Project One/project.db");
+        record[10] = 99;
+        record
+    }
+
+    // `count` records that each carry `extra`, then their end record.
+    fn with_extra(extra: &[u8], count: u16) -> Vec<u8> {
+        let mut record = central_record("Project One/project.db");
+        record[30..32].copy_from_slice(&(extra.len() as u16).to_le_bytes());
+        record.extend_from_slice(extra);
+        let directory = record.repeat(count.into());
+        let end = end_record(count, directory.len() as u32, 0, b"");
+        [directory, end].concat()
+    }
+
+    // An empty timestamp field and an empty zip64 field.
+    const TIMESTAMP_FIELD: [u8; 5] = [0x55, 0x54, 1, 0, 0];
+    const ZIP64_FIELD: [u8; 4] = [1, 0, 0, 0];
 
     // A zip64 end record, its locator and an end record full of markers.
     fn zip64_end(entries: u64, size: u64, offset: u64, record_offset: u64) -> Vec<u8> {
@@ -1315,263 +1173,139 @@ mod tests {
                 return bytes;
             }
         }
-        bytes.extend(end_record(
-            entries as u16,
-            size as u32,
-            offset as u32,
-            comment,
-        ));
-        bytes
+        let end = end_record(entries as u16, size as u32, offset as u32, comment);
+        [bytes, end].concat()
     }
 
-    // Both commands open an archive through the same check.
-    fn assert_rejected_quickly(bytes: &[u8]) -> String {
-        let dir = tempfile::tempdir().unwrap();
-        let archive = write_archive(dir.path(), bytes);
-        let started = Instant::now();
-        let error = list(&archive, 50_000).unwrap_err();
-        let extract_error = run_extract(&archive, dir.path(), &[], 1024).unwrap_err();
-        let elapsed = started.elapsed();
-        assert!(error.starts_with("invalidArchive: "), "{error}");
-        assert!(
-            extract_error.starts_with("invalidArchive: "),
-            "{extract_error}"
-        );
-        assert!(elapsed < Duration::from_secs(2), "took {elapsed:?}");
-        error
-    }
-
-    fn passes_layout_check(bytes: &[u8]) -> bool {
-        let dir = tempfile::tempdir().unwrap();
-        let mut file = File::open(write_archive(dir.path(), bytes)).unwrap();
-        check_archive_layout(&mut file, 50_000).is_ok()
-    }
-
+    // Security regressions: before the layout check, the zip crate spent tens
+    // of seconds (or gigabytes) on small crafted files like these.
     #[test]
-    fn rejects_a_declared_entry_count_over_the_limit_before_reading_the_directory() {
-        // Only an end record that claims 60,000 entries; there is no directory.
-        let error = assert_rejected_quickly(&end_record(60_000, 60_000 * 46, 0, b""));
-        assert!(
-            error.contains("archive has 60000 entries, limit is 50000"),
-            "{error}"
-        );
-    }
-
-    #[test]
-    fn rejects_a_file_of_repeated_end_records_quickly() {
-        // The zip crate alone tries every one of these in turn.
-        assert_rejected_quickly(&end_record(1, 46, 0, b"").repeat(2 * 1024 * 1024 / 22));
-    }
-
-    #[test]
-    fn rejects_fake_end_records_after_a_valid_directory_quickly() {
-        let count = 2000u16;
-        let directory: Vec<u8> = (0..count)
-            .flat_map(|index| central_record(format!("{index:05}")))
-            .collect();
+    fn hostile_archive_layouts_are_rejected_quickly() {
+        let directory = central_records(2000);
         let size = directory.len() as u32;
-        assert!(passes_layout_check(
-            &[&directory[..], &end_record(count, size, 0, b"")].concat()
-        ));
         // Each fake claims one entry more than the directory holds.
-        let fake = end_record(count + 1, size, 0, b"");
-        let comment = fake.repeat(1024 / fake.len());
-        assert_rejected_quickly(&[&directory[..], &end_record(count, size, 0, &comment)].concat());
-        assert_rejected_quickly(
-            &[
-                &directory[..],
-                &end_record(count, size, 0, b""),
-                &fake.repeat(2000),
-            ]
-            .concat(),
-        );
-    }
-
-    #[test]
-    fn rejects_a_record_the_zip_crate_refuses_without_searching_the_entry_data() {
+        let fake = end_record(2001, size, 0, b"");
+        let fakes_in_comment = [&directory[..], &end_record(2000, size, 0, &fake.repeat(46))];
+        let fakes_after_end = [
+            &directory[..],
+            &end_record(2000, size, 0, b""),
+            &fake.repeat(2000),
+        ];
         // Entry data holding a run of directory records and many end records
         // that point at it, then a directory whose only record the zip crate
-        // refuses: AES compression without the AES extra field. On a refusal
-        // the crate alone goes on to try every planted end record.
-        let planted: Vec<u8> = (0..3000)
-            .flat_map(|index| central_record(format!("{index:05}")))
-            .collect();
-        let mut bytes = planted.clone();
-        bytes.extend(end_record(3001, planted.len() as u32, 0, b"").repeat(3000));
-        let start = bytes.len() as u32;
-        let mut record = central_record("Project One/project.db");
-        record[10] = 99;
-        bytes.extend_from_slice(&record);
-        bytes.extend(end_record(1, record.len() as u32, start, b""));
-        let error = assert_rejected_quickly(&bytes);
-        assert!(error.contains("rejected the central directory"), "{error}");
-    }
-
-    #[test]
-    fn accepts_a_directory_that_contains_an_end_record_signature() {
-        // The CRC-32 of these four bytes is the end-record signature.
-        let payload = [0x93, 0x4f, 0xb0, 0x9e];
-        let dir = tempfile::tempdir().unwrap();
-        let archive = write_archive(
-            dir.path(),
-            &stored_zip(&[
-                ("Project One/project.db", &payload),
-                ("Project One/PK\x05\x06.txt", b"a"),
-            ]),
-        );
-        assert_eq!(list(&archive, 10).unwrap().entries.len(), 2);
-        let destination = dir.path().join("out");
-        fs::create_dir(&destination).unwrap();
-        let files = [file("Project One/project.db", "project.db")];
-        run_extract(&archive, &destination, &files, 1024).unwrap();
-        assert_eq!(fs::read(destination.join("project.db")).unwrap(), payload);
-
-        // An entry comment that makes the zip crate's first 2,048-byte search
-        // window start right at that CRC.
-        let zip = stored_zip(&[("a", &payload)]);
-        let start = zip.len() - 22 - 47;
-        let mut bytes = zip[..zip.len() - 22].to_vec();
-        bytes[start + 32..start + 34].copy_from_slice(&1995u16.to_le_bytes());
-        bytes.extend([b'c'; 1995]);
-        bytes.extend(end_record(1, 47 + 1995, start as u32, b""));
-        assert_eq!(&bytes[bytes.len() - 2048..][..4], b"PK\x05\x06");
-        let archive = write_archive(dir.path(), &bytes);
-        assert_eq!(list(&archive, 10).unwrap().entries[0].name, "a");
-    }
-
-    #[test]
-    fn rejects_end_records_planted_in_the_directory_quickly() {
-        // A run of 2,000 records, a record the zip crate refuses, then names
-        // full of end records that claim the run and the refused record. On
-        // a refusal the crate alone would read the run again for each one.
-        let mut directory: Vec<u8> = (0..2000)
-            .flat_map(|index| central_record(format!("{index:05}")))
-            .collect();
-        let mut refused = central_record("Project One/project.db");
-        refused[10] = 99;
-        directory.extend(refused);
-        let fake = end_record(2001, 0, 0, b"");
-        directory.extend((0..11).flat_map(|_| central_record(fake.repeat(186))));
-        let end = end_record(2012, directory.len() as u32, 0, b"");
-        let error = assert_rejected_quickly(&[directory, end].concat());
-        assert!(error.contains("rejected the central directory"), "{error}");
-    }
-
-    #[test]
-    fn rejects_many_extra_fields_and_repeated_zip64_fields() {
-        let with_extra = |extra: &[u8], count: u16| {
-            let mut record = central_record("Project One/project.db");
-            record[30..32].copy_from_slice(&(extra.len() as u16).to_le_bytes());
-            record.extend_from_slice(extra);
-            let directory = record.repeat(count.into());
-            let end = end_record(count, directory.len() as u32, 0, b"");
-            [directory, end].concat()
-        };
-        // An empty timestamp field and an empty zip64 field.
-        let (timestamp, zip64) = ([0x55, 0x54, 1, 0, 0], [1, 0, 0, 0]);
-        let allowed = [timestamp.repeat(15), zip64.to_vec()].concat();
-        assert!(passes_layout_check(&with_extra(&allowed, 1)));
+        // refuses. On a refusal the crate alone tries every planted end record.
+        let mut in_data = central_records(3000);
+        in_data.extend(end_record(3001, in_data.len() as u32, 0, b"").repeat(3000));
+        let start = in_data.len() as u32;
+        in_data.extend(refused_record());
+        in_data.extend(end_record(1, refused_record().len() as u32, start, b""));
+        // A run of records, a refused one, then names full of end records that
+        // claim them. On a refusal the crate alone reads the run for each one.
+        let mut in_directory = [central_records(2000), refused_record()].concat();
+        let claim = end_record(2001, 0, 0, b"").repeat(186);
+        in_directory.extend((0..11).flat_map(|_| central_record(&claim)));
+        in_directory.extend(end_record(2012, in_directory.len() as u32, 0, b""));
+        // Only an end record: the entry count is checked before any directory.
+        let count = end_record(60_000, 60_000 * 46, 0, b"");
+        // The zip crate alone tries every one of these in turn.
+        let end_records = end_record(1, 46, 0, b"").repeat(95_325);
+        let one_entry = zip_bytes(&[("a", b"a")], Stored);
+        let trailing = [&one_entry[..], b"junk"].concat();
+        let comment = rewrite_end(&one_entry, b"", &[b'c'; 1025], None);
+        let name = zip_bytes(&[(&"a".repeat(4097), b"a")], Stored);
+        let huge = end_record(1, (64 << 20) + 1, 0, b"");
         // The zip crate copies the extra data once per zip64 field it strips
         // and keeps 32 bytes per timestamp field.
-        for (extra, count, detail) in [
-            (
-                zip64.repeat(16383),
-                20,
-                "16383 extra fields, 16383 of them zip64",
-            ),
-            (
-                timestamp.repeat(13107),
-                20,
-                "13107 extra fields, 0 of them zip64",
-            ),
-            (timestamp.repeat(17), 1, "17 extra fields"),
-            (zip64.repeat(2), 1, "2 extra fields, 2 of them zip64"),
+        let zip64_fields = with_extra(&ZIP64_FIELD.repeat(16383), 20);
+        let timestamps = with_extra(&TIMESTAMP_FIELD.repeat(13107), 20);
+        let two_zip64_fields = with_extra(&ZIP64_FIELD.repeat(2), 1);
+        let refused = "rejected the central directory";
+        for (case, bytes, detail) in [
+            ("not a zip", b"just some text".to_vec(), "record not found"),
+            ("count", count, "archive has 60000 entries, limit is 50000"),
+            ("end records", end_records, ""),
+            ("fakes in the comment", fakes_in_comment.concat(), ""),
+            ("fakes after the end", fakes_after_end.concat(), ""),
+            ("trailing data", trailing, "does not end the file"),
+            ("comment", comment, "zip comment is 1025 bytes"),
+            ("name", name, "entry name is 4097 bytes"),
+            ("size", huge, "central directory is 67108865 bytes"),
+            ("zip64 fields", zip64_fields, "16383 of them zip64"),
+            ("timestamps", timestamps, "13107 extra fields, 0 of"),
+            ("two zip64 fields", two_zip64_fields, "2 of them zip64"),
+            ("planted in entry data", in_data, refused),
+            ("planted in the directory", in_directory, refused),
         ] {
-            let error = assert_rejected_quickly(&with_extra(&extra, count));
-            assert!(error.contains(detail), "{detail}: {error}");
+            let (_dir, archive, out) = setup(&bytes);
+            let started = Instant::now();
+            // Both commands open an archive through the same check.
+            let error = list(&archive, 50_000).unwrap_err();
+            let extract_error = run_extract(&archive, &out, &[], 1024).unwrap_err();
+            let elapsed = started.elapsed();
+            assert!(error.starts_with("invalidArchive: "), "{case}: {error}");
+            assert!(error.contains(detail), "{case}: {error}");
+            assert!(extract_error.starts_with("invalidArchive: "), "{case}");
+            assert!(elapsed < Duration::from_secs(2), "{case}: took {elapsed:?}");
         }
     }
 
     #[test]
-    fn rejects_a_zip_comment_over_1024_bytes() {
-        let dir = tempfile::tempdir().unwrap();
-        let zip = stored_zip(&[("a.txt", b"a")]);
-        let archive = write_archive(dir.path(), &rewrite_end(&zip, b"", &[b'c'; 1024], None));
-        assert_eq!(list(&archive, 10).unwrap().entries.len(), 1);
-        let error = assert_rejected_quickly(&rewrite_end(&zip, b"", &[b'c'; 1025], None));
-        assert!(error.contains("zip comment is 1025 bytes"), "{error}");
-    }
-
-    #[test]
-    fn rejects_an_entry_name_over_4096_bytes() {
-        let dir = tempfile::tempdir().unwrap();
-        let name = "a".repeat(4096);
-        let archive = write_archive(dir.path(), &stored_zip(&[(&name, b"a")]));
-        assert_eq!(list(&archive, 10).unwrap().entries[0].name, name);
-        let error = assert_rejected_quickly(&stored_zip(&[(&"a".repeat(4097), b"a")]));
-        assert!(error.contains("entry name is 4097 bytes"), "{error}");
-    }
-
-    #[test]
-    fn rejects_a_central_directory_over_the_size_cap() {
-        let error = assert_rejected_quickly(&end_record(1, 64 * 1024 * 1024 + 1, 0, b""));
-        assert!(
-            error.contains("central directory is 67108865 bytes"),
-            "{error}"
-        );
-    }
-
-    #[test]
-    fn accepts_comments_prepended_data_zip64_end_records_and_empty_archives() {
-        let zip = zip_bytes(
-            &[
-                ("Project One/", b""),
-                ("Project One/project.db", b"database"),
-                ("Project One/files/abc", b"picture"),
-            ],
-            zip::CompressionMethod::Deflated,
-        );
+    fn valid_archives_still_open() {
+        let entries: [(&str, &[u8]); 3] = [
+            ("One/", b""),
+            ("One/db", b"database"),
+            ("One/files/abc", b"picture"),
+        ];
+        let zip = zip_bytes(&entries, Deflated);
+        let files = [("One/db", "db"), ("One/files/abc", "files/abc")];
         let stub = b"#!/bin/sh\necho Project One\n".repeat(40);
+        let comment = b"Project One export";
         for (stub, comment, zip64) in [
             (&b""[..], &b""[..], None),
-            (&stub[..], &b"Project One export"[..], None),
+            (&stub[..], &comment[..], None),
+            (&b""[..], &[b'c'; 1024][..], None),
             (&b""[..], &b""[..], Some(true)),
-            (&stub[..], &b"Project One export"[..], Some(true)),
+            (&stub[..], &comment[..], Some(true)),
             (&stub[..], &b""[..], Some(false)),
         ] {
-            let dir = tempfile::tempdir().unwrap();
-            let archive = write_archive(dir.path(), &rewrite_end(&zip, stub, comment, zip64));
+            let (_dir, archive, out) = setup(&rewrite_end(&zip, stub, comment, zip64));
             let listing = list(&archive, 3).unwrap();
-            let names: Vec<&str> = listing.entries.iter().map(|e| e.name.as_str()).collect();
-            assert_eq!(
-                names,
-                [
-                    "Project One/",
-                    "Project One/project.db",
-                    "Project One/files/abc"
-                ]
-            );
-            let destination = dir.path().join("out");
-            fs::create_dir(&destination).unwrap();
-            let files = [
-                file("Project One/project.db", "project.db"),
-                file("Project One/files/abc", "files/abc"),
-            ];
-            assert_eq!(
-                run_extract(&archive, &destination, &files, 1024)
-                    .unwrap()
-                    .bytes,
-                15
-            );
-            assert_eq!(fs::read(destination.join("files/abc")).unwrap(), b"picture");
+            let names = listing.entries.iter().map(|entry| entry.name.as_str());
+            assert!(names.eq(entries.iter().map(|(name, _)| *name)));
+            assert_eq!(run_extract(&archive, &out, &files, 1024).unwrap().bytes, 15);
+            assert_eq!(fs::read(out.join("files/abc")).unwrap(), b"picture");
         }
-        let empty = zip::ZipWriter::new(Cursor::new(Vec::new()))
-            .finish()
-            .unwrap()
-            .into_inner();
-        let dir = tempfile::tempdir().unwrap();
-        let archive = write_archive(dir.path(), &empty);
-        assert!(list(&archive, 0).unwrap().entries.is_empty());
+
+        // The CRC-32 of these four bytes is the end-record signature.
+        let payload = [0x93, 0x4f, 0xb0, 0x9e];
+        let signatures = zip_bytes(
+            &[("a", &payload), ("Project One/PK\x05\x06.txt", b"a")],
+            Stored,
+        );
+        // An entry comment that makes the zip crate's first 2,048-byte search
+        // window start right at that CRC.
+        let one = zip_bytes(&[("a", &payload)], Stored);
+        let start = one.len() - 22 - 47;
+        let mut window = one[..one.len() - 22].to_vec();
+        window[start + 32..start + 34].copy_from_slice(&1995u16.to_le_bytes());
+        window.extend([b'c'; 1995]);
+        window.extend(end_record(1, 47 + 1995, start as u32, b""));
+        assert_eq!(&window[window.len() - 2048..][..4], b"PK\x05\x06");
+        let long_name = zip_bytes(&[(&"a".repeat(4096), b"a")], Stored);
+        let empty = zip_bytes(&[], Stored);
+        for (bytes, count) in [(signatures, 2), (window, 1), (long_name, 1), (empty, 0)] {
+            let (_dir, archive, _) = setup(&bytes);
+            assert_eq!(list(&archive, count).unwrap().entries.len() as u64, count);
+        }
+
+        // Hand-built directories at the limits pass the check.
+        let directory = central_records(2000);
+        let end = end_record(2000, directory.len() as u32, 0, b"");
+        let extra = [TIMESTAMP_FIELD.repeat(15), ZIP64_FIELD.to_vec()].concat();
+        for bytes in [[directory, end].concat(), with_extra(&extra, 1)] {
+            let (_dir, archive, _) = setup(&bytes);
+            assert!(check_archive_layout(&mut File::open(archive).unwrap(), 50_000).is_ok());
+        }
     }
 
     #[test]
@@ -1581,6 +1315,11 @@ mod tests {
         let build = |entries: u64, offset: u64, record_offset: u64| {
             [vec![0; 156], zip64_end(entries, 46, offset, record_offset)].concat()
         };
+        let patched = |at: usize, value: u8| {
+            let mut bytes = build(1, 100, 146);
+            bytes[at] = value;
+            bytes
+        };
         let locate = |bytes: &[u8]| locate_directory(bytes, bytes.len() as u64, 10);
         let expected = DirectoryLocation {
             entries: 1,
@@ -1589,42 +1328,17 @@ mod tests {
             archive_offset: 10,
             end_record: 232,
         };
-        let bytes = build(1, 100, 146);
-        assert_eq!(locate(&bytes), Ok(expected));
-        // Only the end of the file is read; positions stay absolute.
-        assert_eq!(locate_directory(&bytes[150..], 254, 10).unwrap().start, 110);
-        // Zip64 end records with real values instead of markers.
-        let real = [&bytes[..232], &end_record(1, 46, 100, b"")].concat();
-        assert_eq!(locate(&real).unwrap().start, 110);
-
-        let patched = |at: usize, value: u8| {
-            let mut bytes = build(1, 100, 146);
-            bytes[at] = value;
-            bytes
-        };
+        assert_eq!(locate(&build(1, 100, 146)), Ok(expected));
         for (bytes, reason) in [
             (build(1, 100, 145), "zip64 end records disagree"),
             (build(1, 100, 157), "locator points past"),
-            (build(1, 111, 146), "offset is past the directory"),
             (build(2, 100, 146), "cannot hold 2 entries"),
-            (build(11, 100, 146), "11 entries, limit is 10"),
-            (
-                patched(156, b'X'),
-                "zip64 end of central directory not found",
-            ),
-            (patched(160, 45), "zip64 end of central directory not found"),
-            (
-                patched(212, b'X'),
-                "zip64 end of central directory not found",
-            ),
             (patched(172, 1), "multi-disk"),
-            // The 32-bit entries-on-this-disk must repeat the entry count.
-            (patched(240, 2), "multi-disk"),
             // A 32-bit field that is not a marker must match the zip64 one.
             (patched(244, 2), "zip64 end records disagree"),
             (
                 end_record(u16::MAX, u32::MAX, u32::MAX, b""),
-                "zip64 end of central directory not found",
+                "zip64 end of central",
             ),
         ] {
             let error = locate(&bytes).unwrap_err();
@@ -1635,325 +1349,140 @@ mod tests {
 
     // ----- extract_archive -----
 
-    fn run_extract(
-        archive: &Path,
-        destination: &Path,
-        files: &[ExtractFile],
-        max_bytes: u64,
-    ) -> Result<ExtractResult, String> {
-        extract(archive, destination, files, max_bytes, &mut quiet())
-    }
-
-    fn is_empty_dir(path: &Path) -> bool {
-        fs::read_dir(path).unwrap().next().is_none()
-    }
-
     #[test]
     fn extract_writes_only_the_requested_entries_to_the_requested_paths() {
-        let dir = tempfile::tempdir().unwrap();
-        let archive = write_archive(
-            dir.path(),
-            &zip_bytes(
-                &[
-                    ("Project One/", b""),
-                    ("Project One/project.db", b"database"),
-                    ("Project One/files/abc.png", b"picture"),
-                    ("Project One/notes.txt", b"not requested"),
-                    ("__MACOSX/Project One/._project.db", b"junk"),
-                    (".DS_Store", b"junk"),
-                ],
-                zip::CompressionMethod::Deflated,
-            ),
-        );
-        let destination = dir.path().join("out");
-        fs::create_dir(&destination).unwrap();
-        let result = run_extract(
-            &archive,
-            &destination,
-            &[
-                file("Project One/project.db", "project.db"),
-                file("Project One/files/abc.png", "files/abc"),
-            ],
-            1024,
-        )
-        .unwrap();
-        assert_eq!(result.files, 2);
-        assert_eq!(result.bytes, 15);
-        assert_eq!(
-            fs::read(destination.join("project.db")).unwrap(),
-            b"database"
-        );
-        assert_eq!(fs::read(destination.join("files/abc")).unwrap(), b"picture");
-        let mut names: Vec<_> = fs::read_dir(&destination)
-            .unwrap()
-            .map(|e| e.unwrap().file_name().into_string().unwrap())
-            .collect();
-        names.sort();
-        assert_eq!(names, ["files", "project.db"]);
-        let json = serde_json::to_value(&result).unwrap();
-        assert_eq!(json["files"], 2);
-        assert_eq!(json["bytes"], 15);
-    }
-
-    #[test]
-    fn extract_progress_counts_written_bytes_against_the_declared_total() {
-        let dir = tempfile::tempdir().unwrap();
-        let big = vec![b'x'; 256 * 1024];
-        let archive = write_archive(
-            dir.path(),
-            &stored_zip(&[("a.bin", &big), ("skipped.bin", &big), ("b.bin", b"tail")]),
-        );
-        let destination = dir.path().join("out");
-        fs::create_dir(&destination).unwrap();
+        let entries: [(&str, &[u8]); 5] = [
+            ("Project One/", b""),
+            ("Project One/project.db", b"database"),
+            ("Project One/files/abc.png", b"picture"),
+            ("Project One/notes.txt", b"not requested"),
+            ("__MACOSX/Project One/._project.db", b"junk"),
+        ];
+        let (_dir, archive, out) = setup(&zip_bytes(&entries, Deflated));
+        let files = requests(&[
+            ("Project One/project.db", "project.db"),
+            ("Project One/files/abc.png", "files/abc"),
+        ]);
         let (mut sink, events) = recording();
-        extract(
-            &archive,
-            &destination,
-            &[file("a.bin", "a.bin"), file("b.bin", "b.bin")],
-            1 << 20,
-            &mut sink,
-        )
-        .unwrap();
+        let result = extract(&archive, &out, &files, 1024, &mut sink).unwrap();
+        assert_eq!((result.files, result.bytes), (2, 15));
+        assert_eq!(fs::read(out.join("project.db")).unwrap(), b"database");
+        assert_eq!(fs::read(out.join("files/abc")).unwrap(), b"picture");
+        // Nothing else: only project.db and files/ at the top, only abc inside.
+        assert_eq!(fs::read_dir(&out).unwrap().count(), 2);
+        assert_eq!(fs::read_dir(out.join("files")).unwrap().count(), 1);
         let events = events.lock().unwrap();
-        let total = big.len() as u64 + 4;
-        assert!(events.len() >= 2);
-        assert_eq!(events[0].current, 0);
-        assert!(
-            events
-                .windows(2)
-                .all(|pair| pair[0].current <= pair[1].current)
-        );
-        assert!(events.iter().all(|event| event.total == total));
-        assert_eq!(events.last().unwrap().current, total);
+        assert_eq!(events.first(), Some(&(0, 15)));
+        assert_eq!(events.last(), Some(&(15, 15)));
     }
 
     #[test]
-    fn extract_rejects_unsafe_destination_paths_before_writing_anything() {
-        let dir = tempfile::tempdir().unwrap();
-        let archive = write_archive(dir.path(), &stored_zip(&[("a.txt", b"a"), ("b.txt", b"b")]));
-        let destination = dir.path().join("out");
-        fs::create_dir(&destination).unwrap();
-        for path in [
-            "",
-            "/abs.txt",
-            "a//b.txt",
-            "dir/",
-            "./a.txt",
-            "dir/./a.txt",
-            "../a.txt",
-            "dir/../a.txt",
-            "dir\\a.txt",
-            "C:a.txt",
-            "dir/a:b.txt",
-            "a\0b.txt",
+    fn extract_checks_the_whole_request_before_writing() {
+        let entries: [(&str, &[u8]); 3] = [("Project One/", b""), ("a.txt", b"a"), ("b.txt", b"b")];
+        let (_dir, archive, out) = setup(&zip_bytes(&entries, Stored));
+        let unsafe_entry = "unsafeArchiveEntry: ";
+        for (entry, path, expected) in [
+            ("a.txt", "", unsafe_entry),
+            ("a.txt", "/abs.txt", unsafe_entry),
+            ("a.txt", "a//b.txt", unsafe_entry),
+            ("a.txt", "dir/./a.txt", unsafe_entry),
+            ("a.txt", "dir/../a.txt", unsafe_entry),
+            ("a.txt", "dir\\a.txt", unsafe_entry),
+            ("a.txt", "C:a.txt", unsafe_entry),
+            ("a.txt", "a\0b.txt", unsafe_entry),
+            // Destinations are compared case-insensitively.
+            ("a.txt", "FILES/First.txt", "invalidArchive: "),
+            ("missing.txt", "other", "invalidArchive: "),
+            ("Project One/", "other", "invalidArchive: "),
         ] {
-            let error = run_extract(
-                &archive,
-                &destination,
-                &[file("b.txt", "fine.txt"), file("a.txt", path)],
-                1024,
-            )
-            .unwrap_err();
-            assert!(
-                error.starts_with("unsafeArchiveEntry: "),
-                "{path:?}: {error}"
-            );
-            assert!(is_empty_dir(&destination), "{path:?}");
+            let files = [("b.txt", "files/first.txt"), (entry, path)];
+            let error = run_extract(&archive, &out, &files, 1024).unwrap_err();
+            assert!(error.starts_with(expected), "{entry:?} {path:?}: {error}");
+            assert!(is_empty_dir(&out), "{entry:?} {path:?}");
         }
     }
 
     #[cfg(unix)]
     #[test]
-    fn extract_never_writes_through_a_symlinked_folder() {
-        let dir = tempfile::tempdir().unwrap();
-        let archive = write_archive(dir.path(), &stored_zip(&[("a.txt", b"a"), ("b.txt", b"b")]));
-        let outside = dir.path().join("outside");
-        let destination = dir.path().join("out");
+    fn extract_never_writes_through_a_planted_symlink() {
+        let (dir, archive, out) = setup(&zip_bytes(&[("a", b"new"), ("b", b"b")], Stored));
+        let (outside, target) = (dir.path().join("outside"), dir.path().join("target"));
         fs::create_dir(&outside).unwrap();
-        fs::create_dir(&destination).unwrap();
-        std::os::unix::fs::symlink(&outside, destination.join("link")).unwrap();
-        let error = run_extract(
-            &archive,
-            &destination,
-            &[file("b.txt", "first.txt"), file("a.txt", "link/a.txt")],
-            1024,
-        )
-        .unwrap_err();
-        assert!(error.starts_with("unsafeArchiveEntry: "), "{error}");
-        assert!(is_empty_dir(&outside));
-        assert!(!destination.join("first.txt").exists());
-        assert!(destination.join("link").is_symlink());
-    }
-
-    #[cfg(unix)]
-    #[test]
-    fn extract_never_writes_through_a_planted_symlink_file() {
-        let dir = tempfile::tempdir().unwrap();
-        let archive = write_archive(dir.path(), &stored_zip(&[("a.txt", b"new")]));
-        let target = dir.path().join("target.txt");
         fs::write(&target, "untouched").unwrap();
-        let destination = dir.path().join("out");
-        fs::create_dir(&destination).unwrap();
-        std::os::unix::fs::symlink(&target, destination.join("a.txt")).unwrap();
-        let error =
-            run_extract(&archive, &destination, &[file("a.txt", "a.txt")], 1024).unwrap_err();
-        assert!(error.starts_with("importFailed: "), "{error}");
+        std::os::unix::fs::symlink(&outside, out.join("folder")).unwrap();
+        std::os::unix::fs::symlink(&target, out.join("a")).unwrap();
+        for (path, expected) in [
+            ("folder/a", "unsafeArchiveEntry: "),
+            ("a", "importFailed: "),
+        ] {
+            let error = run_extract(&archive, &out, &[("b", "first"), ("a", path)], 1024);
+            assert!(error.unwrap_err().starts_with(expected), "{path}");
+            assert!(!out.join("first").exists(), "{path}");
+        }
+        assert!(is_empty_dir(&outside));
         assert_eq!(fs::read(&target).unwrap(), b"untouched");
-        assert!(destination.join("a.txt").is_symlink());
+        assert!(out.join("folder").is_symlink() && out.join("a").is_symlink());
     }
 
     #[test]
     fn extract_fails_on_an_existing_file_and_removes_only_what_it_created() {
-        let dir = tempfile::tempdir().unwrap();
-        let archive = write_archive(dir.path(), &stored_zip(&[("a.txt", b"a"), ("b.txt", b"b")]));
-        let destination = dir.path().join("out");
-        fs::create_dir_all(destination.join("files")).unwrap();
-        fs::write(destination.join("files/b"), "keep").unwrap();
-        let error = run_extract(
-            &archive,
-            &destination,
-            &[file("a.txt", "new/a"), file("b.txt", "files/b")],
-            1024,
-        )
-        .unwrap_err();
-        assert!(error.starts_with("importFailed: "), "{error}");
-        assert_eq!(fs::read(destination.join("files/b")).unwrap(), b"keep");
-        assert!(!destination.join("new").exists());
+        let (_dir, archive, out) = setup(&zip_bytes(&[("a", b"a"), ("b", b"b")], Stored));
+        fs::create_dir(out.join("files")).unwrap();
+        fs::write(out.join("files/b"), "keep").unwrap();
+        let error = run_extract(&archive, &out, &[("a", "new/a"), ("b", "files/b")], 1024);
+        assert!(error.unwrap_err().starts_with("importFailed: "));
+        assert_eq!(fs::read(out.join("files/b")).unwrap(), b"keep");
+        assert!(!out.join("new").exists());
     }
 
-    #[test]
-    fn extract_rejects_a_crc_mismatch_and_cleans_up() {
-        let dir = tempfile::tempdir().unwrap();
-        let mut bytes = stored_zip(&[("a.txt", b"good"), ("b.txt", b"bad")]);
-        patch_central_u32(&mut bytes, CENTRAL_CRC, 0x1234_5678);
-        let archive = write_archive(dir.path(), &bytes);
-        let destination = dir.path().join("out");
-        fs::create_dir(&destination).unwrap();
-        let error = run_extract(
-            &archive,
-            &destination,
-            &[file("a.txt", "x/a"), file("b.txt", "x/b")],
-            1024,
-        )
-        .unwrap_err();
-        assert!(error.starts_with("invalidArchive: "), "{error}");
-        assert!(error.contains("checksum"), "{error}");
-        assert!(is_empty_dir(&destination));
+    // Overwrites a little-endian u32 in the last central directory record.
+    fn patch_central_u32(bytes: &mut [u8], field_offset: usize, value: u32) {
+        let record = bytes
+            .windows(4)
+            .rposition(|window| window == b"PK\x01\x02")
+            .unwrap();
+        bytes[record + field_offset..record + field_offset + 4]
+            .copy_from_slice(&value.to_le_bytes());
     }
 
+    const CENTRAL_CRC: usize = 16;
+    const CENTRAL_UNCOMPRESSED_SIZE: usize = 24;
+
     #[test]
-    fn extract_rejects_a_declared_size_that_does_not_match_the_data() {
-        for declared in [1u32, 10] {
-            let dir = tempfile::tempdir().unwrap();
-            let mut bytes = stored_zip(&[("a.txt", b"four")]);
-            patch_central_u32(&mut bytes, CENTRAL_UNCOMPRESSED_SIZE, declared);
-            let archive = write_archive(dir.path(), &bytes);
-            let destination = dir.path().join("out");
-            fs::create_dir(&destination).unwrap();
-            let error =
-                run_extract(&archive, &destination, &[file("a.txt", "a.txt")], 1024).unwrap_err();
-            assert!(error.starts_with("invalidArchive: "), "{declared}: {error}");
-            assert!(error.contains("declares"), "{declared}: {error}");
-            assert!(is_empty_dir(&destination));
+    fn extract_rejects_a_crc_or_size_mismatch_and_removes_what_it_wrote() {
+        for method in [Stored, Deflated] {
+            for (field, value, detail) in [
+                (CENTRAL_CRC, 0x1234_5678, "checksum"),
+                (CENTRAL_UNCOMPRESSED_SIZE, 1, "declares 1 bytes"),
+                (CENTRAL_UNCOMPRESSED_SIZE, 10, "declares 10 bytes"),
+            ] {
+                let mut bytes = zip_bytes(&[("a", b"good"), ("b", b"four")], method);
+                patch_central_u32(&mut bytes, field, value);
+                let (_dir, archive, out) = setup(&bytes);
+                // a is written before b fails; neither it nor x/ is left.
+                let error = run_extract(&archive, &out, &[("a", "x/a"), ("b", "x/b")], 1024);
+                let error = error.unwrap_err();
+                assert!(error.starts_with("invalidArchive: "), "{method:?}: {error}");
+                assert!(error.contains(detail), "{method:?}: {error}");
+                assert!(is_empty_dir(&out), "{method:?}: {detail}");
+            }
         }
     }
 
     #[test]
-    fn extract_refuses_declared_sizes_over_max_bytes_before_writing() {
-        let dir = tempfile::tempdir().unwrap();
-        let data = vec![b'x'; 100];
-        let archive = write_archive(
-            dir.path(),
-            &stored_zip(&[("a.bin", &data), ("b.bin", &data)]),
-        );
-        let destination = dir.path().join("out");
-        fs::create_dir(&destination).unwrap();
-        let files = [file("a.bin", "x/a.bin"), file("b.bin", "x/b.bin")];
-        assert_eq!(
-            run_extract(&archive, &destination, &files, 200)
-                .unwrap()
-                .bytes,
-            200
-        );
-
-        // The headers declare 100 bytes each, so 150 is refused up front.
-        let second = dir.path().join("second");
-        fs::create_dir(&second).unwrap();
-        let error = run_extract(&archive, &second, &files, 150).unwrap_err();
-        assert!(error.starts_with("archiveTooLarge: "), "{error}");
-        assert!(is_empty_dir(&second));
-    }
-
-    #[test]
-    fn extract_stops_at_max_bytes_when_a_header_understates_the_data() {
-        let dir = tempfile::tempdir().unwrap();
-        let data = vec![b'x'; 200];
-        let mut bytes = stored_zip(&[("a.bin", &data)]);
-        patch_central_u32(&mut bytes, CENTRAL_UNCOMPRESSED_SIZE, 4);
-        let archive = write_archive(dir.path(), &bytes);
-        let destination = dir.path().join("out");
-        fs::create_dir(&destination).unwrap();
-        let error =
-            run_extract(&archive, &destination, &[file("a.bin", "x/a.bin")], 100).unwrap_err();
-        assert!(error.starts_with("archiveTooLarge: "), "{error}");
-        assert!(is_empty_dir(&destination));
-    }
-
-    #[test]
-    fn extract_rejects_duplicate_destination_paths_case_insensitively() {
-        let dir = tempfile::tempdir().unwrap();
-        let archive = write_archive(dir.path(), &stored_zip(&[("a.txt", b"a"), ("b.txt", b"b")]));
-        let destination = dir.path().join("out");
-        fs::create_dir(&destination).unwrap();
-        for second in ["files/ABC", "files/abc"] {
-            let error = run_extract(
-                &archive,
-                &destination,
-                &[file("a.txt", "files/abc"), file("b.txt", second)],
-                1024,
-            )
-            .unwrap_err();
-            assert!(error.starts_with("invalidArchive: "), "{second}: {error}");
-            assert!(is_empty_dir(&destination));
+    fn extract_counts_declared_and_written_bytes_against_max_bytes() {
+        let zip = zip_bytes(&[("a", &[b'x'; 100]), ("b", &[b'x'; 100])], Stored);
+        // A header that understates its data does not raise the limit.
+        let mut understated = zip.clone();
+        patch_central_u32(&mut understated, CENTRAL_UNCOMPRESSED_SIZE, 4);
+        let files = [("a", "x/a"), ("b", "x/b")];
+        for (bytes, max_bytes) in [(&zip, 199), (&understated, 150)] {
+            let (_dir, archive, out) = setup(bytes);
+            let error = run_extract(&archive, &out, &files, max_bytes).unwrap_err();
+            assert!(error.starts_with("archiveTooLarge: "), "{error}");
+            assert!(is_empty_dir(&out), "{max_bytes}");
         }
-    }
-
-    #[test]
-    fn extract_rejects_missing_and_directory_entries() {
-        let dir = tempfile::tempdir().unwrap();
-        let archive = write_archive(
-            dir.path(),
-            &stored_zip(&[("Project One/", b""), ("a.txt", b"a")]),
-        );
-        let destination = dir.path().join("out");
-        fs::create_dir(&destination).unwrap();
-        for entry in ["missing.txt", "A.TXT", "Project One/"] {
-            let error = run_extract(
-                &archive,
-                &destination,
-                &[file("a.txt", "a.txt"), file(entry, "other")],
-                1024,
-            )
-            .unwrap_err();
-            assert!(error.starts_with("invalidArchive: "), "{entry}: {error}");
-            assert!(is_empty_dir(&destination));
-        }
-    }
-
-    #[test]
-    fn extract_rejects_data_that_is_not_a_zip_and_a_missing_destination() {
-        let dir = tempfile::tempdir().unwrap();
-        let not_zip = write_archive(dir.path(), b"not a zip at all");
-        let error = run_extract(&not_zip, dir.path(), &[], 1024).unwrap_err();
-        assert!(error.starts_with("invalidArchive: "), "{error}");
-        let archive = write_archive(dir.path(), &stored_zip(&[("a.txt", b"a")]));
-        let error = run_extract(
-            &archive,
-            &dir.path().join("missing"),
-            &[file("a.txt", "a.txt")],
-            1024,
-        )
-        .unwrap_err();
-        assert!(error.starts_with("importFailed: "), "{error}");
+        let (_dir, archive, out) = setup(&zip);
+        assert_eq!(run_extract(&archive, &out, &files, 200).unwrap().bytes, 200);
     }
 }

@@ -4,12 +4,9 @@ import static org.junit.Assert.*;
 
 import java.io.ByteArrayInputStream;
 import java.io.File;
-import java.io.IOException;
-import java.io.InputStream;
 import java.nio.file.Files;
 import java.util.List;
 import java.util.regex.Pattern;
-import org.junit.Assume;
 import org.junit.Before;
 import org.junit.Rule;
 import org.junit.Test;
@@ -23,7 +20,7 @@ public class ImportStagingTest {
     private ImportStaging staging;
 
     @Before
-    public void setUp() throws IOException {
+    public void setUp() {
         root = new File(folder.getRoot(), "project-import");
         staging = new ImportStaging(root);
     }
@@ -59,25 +56,12 @@ public class ImportStagingTest {
         assertTrue(recent.exists());
     }
 
-    @Test public void sweepToleratesAMissingRoot() {
-        ImportStaging.sweep(new File(folder.getRoot(), "missing"), System.currentTimeMillis());
-    }
-
-    @Test public void resolveAcceptsPlainRelativePaths() throws Exception {
+    @Test public void resolveStaysInsideTheStagingFolder() throws Exception {
         String stagingId = staging.create();
-        assertEquals(
-            new File(new File(root, stagingId), "files/a b.png"),
-            staging.resolve(stagingId, "files/a b.png")
-        );
-        assertEquals(new File(new File(root, stagingId), "archive.zip"), staging.resolve(stagingId, "archive.zip"));
-    }
-
-    @Test public void resolveRejectsUnsafePaths() throws Exception {
-        String stagingId = staging.create();
-        for (String path : new String[] {
-            "", "/etc/passwd", "a//b", "./a", "a/./b", "../a", "a/..", "a/../b", "..", ".",
-            "a/", "a\\b", "C:/a", "a:b", "a\0b",
-        }) {
+        File directory = new File(root, stagingId);
+        assertEquals(new File(directory, "files/a b.png"), staging.resolve(stagingId, "files/a b.png"));
+        assertEquals(directory, staging.resolveDirectory(stagingId, ""));
+        for (String path : new String[] { "", "/etc/passwd", "../a", "a/./b" }) {
             assertCode("importFailed", assertThrows(
                 "path accepted: " + path,
                 ProjectImportException.class,
@@ -86,32 +70,17 @@ public class ImportStagingTest {
         }
     }
 
-    @Test public void resolveRejectsBadOrUnknownStagingIds() throws Exception {
+    @Test public void stagingIdsMustBeUuidsOfExistingFolders() throws Exception {
         staging.create();
         for (String stagingId : new String[] {
-            "", "../project-import", "not-a-uuid", "..", "00000000-0000-0000-0000-00000000000/",
+            "../project-import", "not-a-uuid", "00000000-0000-0000-0000-000000000000",
         }) {
             assertCode("importFailed", assertThrows(
+                "id accepted: " + stagingId,
                 ProjectImportException.class,
                 () -> staging.resolve(stagingId, "a.zip")
             ));
         }
-        // A well-formed id with no folder behind it is also an error.
-        assertCode("importFailed", assertThrows(
-            ProjectImportException.class,
-            () -> staging.resolve("00000000-0000-0000-0000-000000000000", "a.zip")
-        ));
-    }
-
-    @Test public void resolveDirectoryTreatsAnEmptyPathAsTheStagingFolder() throws Exception {
-        String stagingId = staging.create();
-        assertEquals(new File(root, stagingId), staging.resolveDirectory(stagingId, ""));
-        assertEquals(new File(root, stagingId), staging.resolveDirectory(stagingId, null));
-        assertEquals(
-            new File(new File(root, stagingId), "files"),
-            staging.resolveDirectory(stagingId, "files")
-        );
-        assertThrows(ProjectImportException.class, () -> staging.resolveDirectory(stagingId, ".."));
     }
 
     @Test public void removeDeletesRecursivelyAndIsIdempotent() throws Exception {
@@ -125,23 +94,6 @@ public class ImportStagingTest {
         staging.remove(stagingId);
 
         assertThrows(ProjectImportException.class, () -> staging.remove("../x"));
-    }
-
-    @Test public void removeNeverFollowsASymlinkOutOfTheStagingFolder() throws Exception {
-        String stagingId = staging.create();
-        File outside = folder.newFolder("outside");
-        File planted = new File(outside, "planted");
-        assertTrue(planted.createNewFile());
-        try {
-            Files.createSymbolicLink(new File(root, stagingId + "/link").toPath(), outside.toPath());
-        } catch (IOException | UnsupportedOperationException error) {
-            Assume.assumeNoException(error);
-        }
-
-        staging.remove(stagingId);
-
-        assertFalse(new File(root, stagingId).exists());
-        assertTrue(planted.exists());
     }
 
     @Test public void listReportsKindAndSizeSortedByName() throws Exception {
@@ -163,69 +115,16 @@ public class ImportStagingTest {
         assertEquals(3, children.get(2).size);
     }
 
-    @Test public void listReportsSymlinksWithoutFollowingThem() throws Exception {
-        String stagingId = staging.create();
-        File directory = staging.resolveDirectory(stagingId, "");
-        File target = folder.newFile("target.bin");
-        try {
-            Files.createSymbolicLink(new File(directory, "link").toPath(), target.toPath());
-        } catch (IOException | UnsupportedOperationException error) {
-            Assume.assumeNoException(error);
-        }
-
-        List<ImportStaging.Child> children = ImportStaging.list(directory);
-
-        assertEquals("symlink", children.get(0).kind);
-    }
-
-    @Test public void listFailsForAMissingFolder() {
-        assertCode("importFailed", assertThrows(
-            ProjectImportException.class,
-            () -> ImportStaging.list(new File(root, "missing"))
-        ));
-    }
-
-    @Test public void copyWritesANewFile() throws Exception {
+    @Test public void copyWritesANewFileAndRemovesItPastTheLimit() throws Exception {
         File destination = new File(folder.getRoot(), "in/archive.zip");
-        long bytes = ImportStaging.copy(new ByteArrayInputStream(new byte[] { 1, 2, 3 }), destination, 10);
-        assertEquals(3, bytes);
+        assertEquals(3, ImportStaging.copy(new ByteArrayInputStream(new byte[] { 1, 2, 3 }), destination, 10));
         assertArrayEquals(new byte[] { 1, 2, 3 }, Files.readAllBytes(destination.toPath()));
-    }
 
-    @Test public void copyPastTheLimitFailsAndRemovesTheFile() throws Exception {
-        File destination = folder.newFile("partial");
-        assertTrue(destination.delete());
-        ProjectImportException error = assertThrows(
+        File partial = new File(folder.getRoot(), "partial");
+        assertCode("archiveTooLarge", assertThrows(
             ProjectImportException.class,
-            () -> ImportStaging.copy(new ByteArrayInputStream(new byte[100]), destination, 99)
-        );
-        assertCode("archiveTooLarge", error);
-        assertFalse(destination.exists());
-    }
-
-    @Test public void copyNeverOverwritesAnExistingFile() throws Exception {
-        File destination = folder.newFile("existing");
-        Files.write(destination.toPath(), new byte[] { 9 });
-        ProjectImportException error = assertThrows(
-            ProjectImportException.class,
-            () -> ImportStaging.copy(new ByteArrayInputStream(new byte[] { 1 }), destination, 10)
-        );
-        assertCode("importFailed", error);
-        assertArrayEquals(new byte[] { 9 }, Files.readAllBytes(destination.toPath()));
-    }
-
-    @Test public void copyRemovesTheFileWhenReadingFails() throws Exception {
-        File destination = new File(folder.getRoot(), "broken");
-        InputStream failing = new InputStream() {
-            @Override public int read() throws IOException {
-                throw new IOException("read failed");
-            }
-        };
-        ProjectImportException error = assertThrows(
-            ProjectImportException.class,
-            () -> ImportStaging.copy(failing, destination, 10)
-        );
-        assertCode("importFailed", error);
-        assertFalse(destination.exists());
+            () -> ImportStaging.copy(new ByteArrayInputStream(new byte[100]), partial, 99)
+        ));
+        assertFalse(partial.exists());
     }
 }

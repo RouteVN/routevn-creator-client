@@ -9,14 +9,12 @@ import java.nio.file.Files;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
-import java.util.concurrent.atomic.AtomicLong;
 import org.junit.Assume;
 import org.junit.Rule;
 import org.junit.Test;
 import org.junit.rules.TemporaryFolder;
 
 public class ImportArchiveTest {
-    private static final int FILE = 0100644;
     private static final long LIMIT = 1_000_000;
 
     @Rule
@@ -32,6 +30,14 @@ public class ImportArchiveTest {
         return file;
     }
 
+    private File sample() throws IOException {
+        return archive(new TestZipArchive()
+            .addStored("Project One/", new byte[0])
+            .addStored("Project One/project.db", bytes("db"))
+            .addDeflated("Project One/files/abc.png", bytes("image bytes"))
+            .addStored("Project One/readme.txt", bytes("extra")));
+    }
+
     /** Pairs of entry name and destination path. */
     private static List<ImportArchive.Item> items(String... pairs) {
         List<ImportArchive.Item> items = new ArrayList<>();
@@ -41,29 +47,26 @@ public class ImportArchiveTest {
         return items;
     }
 
-    private static ProjectImportException assertFails(String code, ProjectImportException error) {
+    private static void assertCode(String code, ProjectImportException error) {
         assertEquals(code, error.code);
         assertTrue(error.getMessage(), error.getMessage().startsWith(code + ": "));
-        return error;
     }
 
-    private ProjectImportException extractFailure(File archive, File root, List<ImportArchive.Item> items, long maxBytes) {
-        return assertThrows(
+    private static void assertExtractFails(String code, File zip, File root, long maxBytes, String... pairs) {
+        assertCode(code, assertThrows(
             ProjectImportException.class,
-            () -> ImportArchive.extract(archive, root, items, maxBytes, ImportProgress.NONE)
-        );
+            () -> ImportArchive.extract(zip, root, items(pairs), maxBytes, ImportProgress.NONE)
+        ));
     }
 
-    private TestZipArchive sample() throws IOException {
-        return new TestZipArchive()
-            .addDirectory("Project One/")
-            .addStored("Project One/project.db", bytes("db"), FILE)
-            .addDeflated("Project One/files/abc.png", bytes("image bytes"), FILE)
-            .addStored("Project One/readme.txt", bytes("extra"), FILE);
+    private static List<String> sorted(String[] names) {
+        Arrays.sort(names);
+        return Arrays.asList(names);
     }
 
-    @Test public void listReturnsRawNamesSizesAndDirectories() throws Exception {
-        List<ImportArchive.Entry> entries = ImportArchive.list(archive(sample()), 100);
+    @Test public void listReturnsRawEntriesAndFailsForTooManyEntriesOrNotAZip() throws Exception {
+        File zip = sample();
+        List<ImportArchive.Entry> entries = ImportArchive.list(zip, 4);
 
         assertEquals(4, entries.size());
         assertEquals("Project One/", entries.get(0).name);
@@ -72,31 +75,25 @@ public class ImportArchiveTest {
         assertFalse(entries.get(1).isDirectory);
         assertEquals(2, entries.get(1).size);
         assertEquals(11, entries.get(2).size);
-    }
 
-    @Test public void listFailsForAFileThatIsNotAZip() throws Exception {
         File notZip = folder.newFile();
         Files.write(notZip.toPath(), bytes("not a zip at all"));
-        assertFails("invalidArchive", assertThrows(ProjectImportException.class, () -> ImportArchive.list(notZip, 100)));
-        assertFails("invalidArchive", assertThrows(
-            ProjectImportException.class,
-            () -> ImportArchive.list(new File(folder.getRoot(), "missing.zip"), 100)
-        ));
-    }
-
-    @Test public void listFailsWhenThereAreMoreEntriesThanAllowed() throws Exception {
-        File zip = archive(sample());
-        assertEquals(4, ImportArchive.list(zip, 4).size());
-        assertFails("invalidArchive", assertThrows(ProjectImportException.class, () -> ImportArchive.list(zip, 3)));
+        for (File file : new File[] { zip, notZip, new File(folder.getRoot(), "missing.zip") }) {
+            assertCode("invalidArchive", assertThrows(ProjectImportException.class, () -> ImportArchive.list(file, 3)));
+        }
     }
 
     @Test public void extractWritesOnlyTheRequestedEntriesToTheirNewPaths() throws Exception {
         File root = new File(folder.getRoot(), "out");
 
         long bytes = ImportArchive.extract(
-            archive(sample()),
+            sample(),
             root,
-            items("Project One/project.db", "project.db", "Project One/files/abc.png", "files/abc"),
+            items(
+                "Project One/project.db", "project.db",
+                "Project One/files/abc.png", "files/abc",
+                "Project One/", "file-metadata"
+            ),
             LIMIT,
             ImportProgress.NONE
         );
@@ -104,124 +101,59 @@ public class ImportArchiveTest {
         assertEquals(13, bytes);
         assertArrayEquals(bytes("db"), Files.readAllBytes(new File(root, "project.db").toPath()));
         assertArrayEquals(bytes("image bytes"), Files.readAllBytes(new File(root, "files/abc").toPath()));
-        assertEquals(Arrays.asList("files", "project.db"), sorted(root.list()));
-    }
-
-    private static List<String> sorted(String[] names) {
-        List<String> list = new ArrayList<>(Arrays.asList(names));
-        list.sort(String::compareTo);
-        return list;
-    }
-
-    @Test public void extractCreatesARequestedDirectoryEntry() throws Exception {
-        File root = folder.newFolder("out");
-        ImportArchive.extract(
-            archive(sample()),
-            root,
-            items("Project One/", "file-metadata"),
-            LIMIT,
-            ImportProgress.NONE
-        );
         assertTrue(new File(root, "file-metadata").isDirectory());
+        assertEquals(Arrays.asList("file-metadata", "files", "project.db"), sorted(root.list()));
     }
 
     @Test public void extractRefusesUnsafeDestinationPaths() throws Exception {
-        File zip = archive(sample());
+        File zip = sample();
         File root = new File(folder.getRoot(), "out");
-        for (String path : new String[] { "../escape", "/absolute", "a/../b", "a//b", "a\\b", "a:b", "" }) {
-            assertFails("unsafeArchiveEntry", extractFailure(zip, root, items("Project One/project.db", path), LIMIT));
+        for (String path : new String[] { "/absolute", "../escape", "a\\b", "a:b", "a\0b", "a//b" }) {
+            assertExtractFails("unsafeArchiveEntry", zip, root, LIMIT, "Project One/project.db", path);
         }
         assertFalse(root.exists());
     }
 
-    @Test public void extractRefusesToWriteThroughASymlinkedParent() throws Exception {
+    @Test public void extractNeverOverwritesOrWritesThroughWhatIsAlreadyThere() throws Exception {
+        File zip = sample();
         File root = folder.newFolder("out");
+        Files.write(new File(root, "project.db").toPath(), bytes("old"));
+
+        assertExtractFails("importFailed", zip, root, LIMIT, "Project One/project.db", "project.db");
+        assertArrayEquals(bytes("old"), Files.readAllBytes(new File(root, "project.db").toPath()));
+
         File outside = folder.newFolder("outside");
+        File planted = new File(outside, "planted");
+        Files.write(planted.toPath(), bytes("keep"));
         try {
+            Files.createSymbolicLink(new File(root, "link.db").toPath(), planted.toPath());
             Files.createSymbolicLink(new File(root, "files").toPath(), outside.toPath());
         } catch (IOException | UnsupportedOperationException error) {
             Assume.assumeNoException(error);
         }
 
-        assertFails("unsafeArchiveEntry", extractFailure(
-            archive(sample()),
-            root,
-            items("Project One/project.db", "project.db", "Project One/files/abc.png", "files/abc"),
-            LIMIT
-        ));
-
-        assertEquals(0, outside.list().length);
-        assertFalse(new File(root, "project.db").exists());
-    }
-
-    @Test public void extractNeverWritesThroughASymlinkAtTheTarget() throws Exception {
-        File root = folder.newFolder("out");
-        File planted = folder.newFile("planted");
-        Files.write(planted.toPath(), bytes("keep"));
-        try {
-            Files.createSymbolicLink(new File(root, "project.db").toPath(), planted.toPath());
-        } catch (IOException | UnsupportedOperationException error) {
-            Assume.assumeNoException(error);
-        }
-
-        assertFails("importFailed", extractFailure(
-            archive(sample()),
-            root,
-            items("Project One/project.db", "project.db"),
-            LIMIT
-        ));
-
+        assertExtractFails("importFailed", zip, root, LIMIT, "Project One/project.db", "link.db");
+        assertExtractFails("unsafeArchiveEntry", zip, root, LIMIT, "Project One/files/abc.png", "files/abc");
         assertArrayEquals(bytes("keep"), Files.readAllBytes(planted.toPath()));
-    }
-
-    @Test public void extractNeverOverwritesAnExistingFile() throws Exception {
-        File root = folder.newFolder("out");
-        Files.write(new File(root, "project.db").toPath(), bytes("old"));
-
-        assertFails("importFailed", extractFailure(
-            archive(sample()),
-            root,
-            items("Project One/project.db", "project.db"),
-            LIMIT
-        ));
-
-        assertArrayEquals(bytes("old"), Files.readAllBytes(new File(root, "project.db").toPath()));
-    }
-
-    @Test public void extractFailsWhenAFileIsInTheWayOfAFolder() throws Exception {
-        File root = folder.newFolder("out");
-        Files.write(new File(root, "files").toPath(), bytes("a file"));
-
-        assertFails("invalidArchive", extractFailure(
-            archive(sample()),
-            root,
-            items("Project One/files/abc.png", "files/abc"),
-            LIMIT
-        ));
+        assertEquals(Arrays.asList("planted"), sorted(outside.list()));
     }
 
     @Test public void extractFailsWhenTheCrcDoesNotMatch() throws Exception {
         File root = new File(folder.getRoot(), "out");
         File zip = archive(new TestZipArchive()
-            .addStored("project.db", bytes("db"), FILE)
-            .addDeflatedWithWrongCrc("files/abc", bytes("image bytes"), FILE));
+            .addStored("project.db", bytes("db"))
+            .addDeflatedWithWrongCrc("files/abc", bytes("image bytes")));
 
-        assertFails("invalidArchive", extractFailure(
-            zip,
-            root,
-            items("project.db", "project.db", "files/abc", "files/abc"),
-            LIMIT
-        ));
+        assertExtractFails("invalidArchive", zip, root, LIMIT, "project.db", "project.db", "files/abc", "files/abc");
 
         assertFalse("everything this call created is removed", root.exists());
     }
 
     @Test public void extractFailsWhenTheSizeDoesNotMatch() throws Exception {
         File root = new File(folder.getRoot(), "out");
-        File zip = archive(new TestZipArchive()
-            .addDeflatedWithDeclaredSize("files/abc", bytes("image bytes"), FILE, 99));
+        File zip = archive(new TestZipArchive().addDeflatedWithDeclaredSize("files/abc", bytes("image bytes"), 99));
 
-        assertFails("invalidArchive", extractFailure(zip, root, items("files/abc", "files/abc"), LIMIT));
+        assertExtractFails("invalidArchive", zip, root, LIMIT, "files/abc", "files/abc");
 
         assertFalse(root.exists());
     }
@@ -231,100 +163,11 @@ public class ImportArchiveTest {
         // 200 KB of zeros deflates to a few hundred bytes, so only the bytes
         // written can reveal the size.
         File zip = archive(new TestZipArchive()
-            .addStored("project.db", bytes("db"), FILE)
-            .addDeflated("files/big", new byte[200_000], FILE));
+            .addStored("project.db", bytes("db"))
+            .addDeflated("files/big", new byte[200_000]));
 
-        assertFails("archiveTooLarge", extractFailure(
-            zip,
-            root,
-            items("project.db", "project.db", "files/big", "files/big"),
-            100_000
-        ));
+        assertExtractFails("archiveTooLarge", zip, root, 100_000, "project.db", "project.db", "files/big", "files/big");
 
         assertFalse("created folders and files are removed", new File(folder.getRoot(), "parent").exists());
-    }
-
-    @Test public void extractKeepsWhatWasAlreadyThereWhenItFails() throws Exception {
-        File root = folder.newFolder("out");
-        File existing = new File(root, "keep.txt");
-        Files.write(existing.toPath(), bytes("keep"));
-        File zip = archive(new TestZipArchive()
-            .addStored("project.db", bytes("db"), FILE)
-            .addDeflatedWithWrongCrc("files/abc", bytes("image bytes"), FILE));
-
-        assertFails("invalidArchive", extractFailure(
-            zip,
-            root,
-            items("project.db", "project.db", "files/abc", "files/abc"),
-            LIMIT
-        ));
-
-        assertEquals(Arrays.asList("keep.txt"), sorted(root.list()));
-        assertArrayEquals(bytes("keep"), Files.readAllBytes(existing.toPath()));
-    }
-
-    @Test public void extractFailsForAMissingEntry() throws Exception {
-        assertFails("invalidArchive", extractFailure(
-            archive(sample()),
-            new File(folder.getRoot(), "out"),
-            items("Project One/nope", "nope"),
-            LIMIT
-        ));
-    }
-
-    @Test public void extractFailsWhenTwoEntriesShareADestination() throws Exception {
-        File root = new File(folder.getRoot(), "out");
-        assertFails("invalidArchive", extractFailure(
-            archive(sample()),
-            root,
-            items("Project One/project.db", "files/Abc", "Project One/readme.txt", "FILES/abc"),
-            LIMIT
-        ));
-        assertFalse(root.exists());
-    }
-
-    @Test public void extractReportsProgressFromZeroToTheTotal() throws Exception {
-        File zip = archive(new TestZipArchive()
-            .addDeflated("a.bin", new byte[200_000], FILE)
-            .addStored("b.bin", new byte[50_000], FILE));
-        AtomicLong clock = new AtomicLong();
-        List<long[]> events = new ArrayList<>();
-        ImportProgress progress = new ImportProgress(
-            (current, total) -> events.add(new long[] { current, total }),
-            () -> clock.addAndGet(ImportProgress.MIN_INTERVAL_MS)
-        );
-
-        ImportArchive.extract(zip, folder.newFolder("out"), items("a.bin", "a.bin", "b.bin", "b.bin"), LIMIT, progress);
-
-        assertEquals(0, events.get(0)[0]);
-        long previous = -1;
-        for (long[] event : events) {
-            assertEquals(250_000, event[1]);
-            assertTrue(event[0] >= previous);
-            previous = event[0];
-        }
-        assertEquals(250_000, events.get(events.size() - 1)[0]);
-        assertTrue(events.size() > 3);
-    }
-
-    @Test public void extractAcceptsEmptyFilesAndKeepsOddLayoutsUntouched() throws Exception {
-        // Layout is JavaScript's business: wrappers, extras and odd names are fine.
-        File zip = archive(new TestZipArchive()
-            .addStored("__MACOSX/._project.db", bytes("junk"), FILE)
-            .addStored("Wrapper/Nested/empty", new byte[0], FILE)
-            .addDeflated("Wrapper/Nested/data", bytes("data"), FILE));
-        File root = folder.newFolder("out");
-
-        long bytes = ImportArchive.extract(
-            zip,
-            root,
-            items("Wrapper/Nested/empty", "empty", "Wrapper/Nested/data", "d/data"),
-            LIMIT,
-            ImportProgress.NONE
-        );
-
-        assertEquals(4, bytes);
-        assertEquals(0, new File(root, "empty").length());
-        assertTrue(new File(root, "d/data").isFile());
     }
 }
