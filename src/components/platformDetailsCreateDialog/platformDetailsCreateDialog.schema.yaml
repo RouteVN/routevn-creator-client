@@ -1,0 +1,12 @@
+componentName: rvn-platform-details-create-dialog
+propsSchema:
+  type: object
+  properties:
+    platform:
+      type: string
+      description: Release platform being added (web, windows, or macos)
+    applicationInfo:
+      type: object
+      description: Default application info used to prefill the form
+events:
+  created: {}

@@ -1,0 +1,25 @@
+refs:
+  platformForm:
+    eventListeners:
+      form-action:
+        handler: handleFormAction
+  iconButton:
+    eventListeners:
+      click:
+        handler: handleIconClick
+  iconCropDialog:
+    eventListeners:
+      close:
+        handler: handleIconCropDialogClose
+      confirm:
+        handler: handleIconCropDialogConfirm
+template:
+  - rtgl-form#platformForm key=${formKey} :defaultValues=${defaultValues} :form=${form} sticky sbv=touch w=f h=f:
+      - $if showIcon:
+          - 'button#iconButton type=button slot=platform-application-icon-edit aria-label="${clickToUploadLabel}" title="${clickToUploadLabel}" style="width: 120px; height: 120px; padding: 0; border: 0; background: transparent; cursor: pointer; display: flex; align-items: center; justify-content: center;"':
+              - $if iconFileId:
+                  - rvn-file-image fileId=${iconFileId} w=120 h=120 bw=xs bc=bo br=md: null
+                $else:
+                  - rtgl-view w=120 h=120 ah=c av=c bw=xs bc=bo br=md:
+                      - rtgl-text c=mu-fg ta=c: ${clickToUploadLabel}
+  - rvn-square-image-crop-dialog#iconCropDialog :open=${isIconCropDialogOpen} :file=${iconCropFile} :outputSize=${iconOutputSize}: null

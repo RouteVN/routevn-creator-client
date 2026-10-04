@@ -53,6 +53,18 @@ describe("versions view export actions", () => {
     expect(versionsView).toContain("handler: handleExportConfirmationConfirm");
   });
 
+  it("hosts the platform details create form in a dialog", () => {
+    expect(versionsView).toContain("$if isPlatformDetailsDialogOpen:");
+    expect(versionsView).toContain(
+      "rtgl-dialog#platformDetailsDialog ?open=${isPlatformDetailsDialogOpen}",
+    );
+    expect(versionsView).toContain(
+      "rvn-platform-details-create-dialog#platformDetailsCreateDialog :platform=${platformDetailsDialogPlatform} :applicationInfo=${platformDetailsDialogApplicationInfo}",
+    );
+    expect(versionsView).toContain("handler: handlePlatformDetailsDialogClose");
+    expect(versionsView).toContain("handler: handlePlatformDetailsCreated");
+  });
+
   it("renders gated Windows export actions in desktop and mobile details", () => {
     expect(
       versionsView.match(/\$if canExportWindowsExecutable:/g),

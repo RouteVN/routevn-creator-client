@@ -1,6 +1,8 @@
+import {
+  createPlatformEditForm,
+  PLATFORM_APPLICATION_ICON_OUTPUT_SIZE,
+} from "../../internal/ui/platformDetailsForm.js";
 import { selectPlatformDetailsPageCopy } from "./support/platformDetailsPageCopy.js";
-
-const PLATFORM_APPLICATION_ICON_OUTPUT_SIZE = 256;
 
 const PLATFORM_IDS = ["web", "windows", "macos"];
 
@@ -49,26 +51,6 @@ const getPlatformTitle = (platform, copy) => {
     return copy.macosPlatformDetailsTitle;
   }
   return copy.webPlatformDetailsTitle;
-};
-
-const getPlatformEditTitle = (platform, copy) => {
-  if (platform === "windows") {
-    return copy.editWindowsPlatformDetailsTitle;
-  }
-  if (platform === "macos") {
-    return copy.editMacosPlatformDetailsTitle;
-  }
-  return copy.editWebPlatformDetailsTitle;
-};
-
-const getPlatformCreateTitle = (platform, copy) => {
-  if (platform === "windows") {
-    return copy.createWindowsPlatformDetailsTitle;
-  }
-  if (platform === "macos") {
-    return copy.createMacosPlatformDetailsTitle;
-  }
-  return copy.createWebPlatformDetailsTitle;
 };
 
 const getPlatformTabLabel = (platform, copy) => {
@@ -129,87 +111,6 @@ const buildPlatformDetailFields = (platform, _applicationInfo, copy) => {
   // }
 
   return fields;
-};
-
-const createPlatformEditForm = (platform, mode, copy) => {
-  const fields = [
-    {
-      name: "applicationName",
-      type: "input-text",
-      label: copy.applicationNameLabel,
-      description: copy[`${platform}ApplicationNameDescription`],
-      required: true,
-    },
-  ];
-
-  if (platform !== "web") {
-    fields.push({
-      type: "slot",
-      slot: "platform-application-icon-edit",
-      label: copy.iconLabel,
-      description: copy[`${platform}IconDescription`],
-    });
-  }
-
-  fields.push({
-    name: "applicationIdentifier",
-    type: "input-text",
-    label:
-      platform === "macos"
-        ? copy.macosApplicationIdentifierLabel
-        : copy.applicationIdentifierLabel,
-    description: copy[`${platform}ApplicationIdentifierDescription`],
-    required: true,
-  });
-
-  // TODO: Restore optional Windows release metadata in the edit form.
-  // if (platform === "windows") {
-  //   fields.push(
-  //     {
-  //       name: "publisher",
-  //       type: "input-text",
-  //       label: copy.windowsPublisherLabel,
-  //       description: copy[`${platform}PublisherDescription`],
-  //       required: false,
-  //     },
-  //     {
-  //       name: "description",
-  //       type: "input-textarea",
-  //       label: copy.descriptionLabel,
-  //       description: copy[`${platform}DescriptionDescription`],
-  //       required: false,
-  //     },
-  //     {
-  //       name: "copyright",
-  //       type: "input-text",
-  //       label: copy.copyrightLabel,
-  //       description: copy[`${platform}CopyrightDescription`],
-  //       required: false,
-  //     },
-  //   );
-  // }
-
-  return {
-    title:
-      mode === "create"
-        ? getPlatformCreateTitle(platform, copy)
-        : getPlatformEditTitle(platform, copy),
-    fields,
-    actions: {
-      layout: "",
-      buttons: [
-        {
-          id: "submit",
-          variant: "pr",
-          validate: true,
-          label:
-            mode === "create"
-              ? copy.createPlatformButtonLabel
-              : copy.saveChangesButton,
-        },
-      ],
-    },
-  };
 };
 
 export const createInitialState = () => ({
