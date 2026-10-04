@@ -3100,8 +3100,9 @@ const applyLayoutElementOperation = (elements, operation) => {
 
 // Brings the elements in `target` back to how it records them. Returns the
 // restored elements and the create, delete, move, and update operations that
-// save the change, in order. Returns valid: false when that would delete an
-// element the target does not cover.
+// save the change, in order. Returns valid: false when a restored element's
+// parent would not exist, or when a delete would remove an element the target
+// does not cover.
 export const restoreLayoutElementSnapshot = ({ elements, target }) => {
   const working = {
     items: { ...elements?.items },
@@ -3112,18 +3113,56 @@ export const restoreLayoutElementSnapshot = ({ elements, target }) => {
     operations.push(operation);
     applyLayoutElementOperation(working, operation);
   };
-  const locate = (id) => captureLayoutElementSnapshot(working, [id])[id];
+  const locate = (id) => findElementTreeLocation(working.tree, id);
   const elementIds = Object.keys(target);
-
-  // Remove what did not exist. A delete takes the descendants with it, so
-  // delete only the topmost elements, after moving out any element that
-  // stays, such as one moved into a container the edit created.
+  const stays = (id) => Boolean(target[id]);
+  const restoredIds = elementIds.filter(stays);
   const removed = new Set(
-    elementIds.filter((id) => target[id] === null && locate(id) !== null),
+    elementIds.filter((id) => target[id] === null && locate(id)),
   );
+
+  // Each restored element's parent must stay or be restored.
+  for (const id of restoredIds) {
+    const { parentId } = target[id];
+    if (
+      parentId !== null &&
+      !stays(parentId) &&
+      (!locate(parentId) || removed.has(parentId))
+    ) {
+      return { valid: false };
+    }
+  }
+  // A delete takes the descendants with it, so each must be covered: removed
+  // too, or restored elsewhere, which takes its own children along.
+  const coversDescendants = (node) =>
+    node.children.every(
+      (child) =>
+        stays(child.id) ||
+        (Object.hasOwn(target, child.id) && coversDescendants(child)),
+    );
+  for (const id of removed) {
+    if (!coversDescendants(locate(id).node)) {
+      return { valid: false };
+    }
+  }
+
+  // Where an element ends up: its target parent, or where it is now.
+  const getFinalParentId = (id) =>
+    stays(id) ? target[id].parentId : (locate(id)?.parentId ?? null);
+  const getFinalDepth = (parentId) => {
+    let depth = 0;
+    const visited = new Set();
+    for (let id = parentId; id !== null; id = getFinalParentId(id)) {
+      if (visited.has(id)) {
+        return undefined;
+      }
+      visited.add(id);
+      depth += 1;
+    }
+    return depth;
+  };
   const isInsideRemoved = (id) => {
-    let parentId = locate(id)?.parentId ?? null;
-    while (parentId !== null) {
+    for (let parentId = locate(id)?.parentId ?? null; parentId !== null; ) {
       if (removed.has(parentId)) {
         return true;
       }
@@ -3131,55 +3170,65 @@ export const restoreLayoutElementSnapshot = ({ elements, target }) => {
     }
     return false;
   };
-  for (const id of removed) {
-    const descendantIds = collectElementTreeIds(
-      findElementTreeLocation(working.tree, id).node,
-    );
-    if (
-      descendantIds.some((descendantId) => !Object.hasOwn(target, descendantId))
-    ) {
-      return { valid: false };
-    }
-  }
-  for (const id of elementIds) {
-    if (target[id] !== null && locate(id) !== null && isInsideRemoved(id)) {
-      const { parentId, index } = target[id];
-      run({ type: "move", elementId: id, parentId, index });
-    }
-  }
-  const topRemovedIds = [...removed].filter((id) => !isInsideRemoved(id));
-  if (topRemovedIds.length > 0) {
-    run({ type: "delete", elementIds: topRemovedIds });
+  const holdsRestored = (node) =>
+    node.children.some((child) => stays(child.id) || holdsRestored(child));
+
+  // Delete first what holds nothing that stays, so siblings close up.
+  const deletedFirst = [...removed].filter(
+    (id) => !isInsideRemoved(id) && !holdsRestored(locate(id).node),
+  );
+  if (deletedFirst.length > 0) {
+    run({ type: "delete", elementIds: deletedFirst });
   }
 
-  // Put back what existed: parents before children, and each parent's
-  // children in index order, so every index lands among siblings already in
-  // place.
-  const getDepth = (id) => {
-    let depth = 0;
-    let parentId = target[id].parentId;
-    while (parentId !== null && target[parentId]) {
-      depth += 1;
-      parentId = target[parentId].parentId;
+  // Then place each parent's children, parents nearest the root first, so a
+  // parent exists before its children and nothing moves into its own
+  // descendant. Within a list, elements the target does not cover keep their
+  // order and fill the indexes the target leaves free; each element is moved
+  // or created only if it is not already in place.
+  const parentIds = [...new Set(restoredIds.map((id) => target[id].parentId))];
+  const depths = new Map(parentIds.map((id) => [id, getFinalDepth(id)]));
+  if ([...depths.values()].includes(undefined)) {
+    return { valid: false };
+  }
+  parentIds.sort((a, b) => depths.get(a) - depths.get(b));
+  for (const parentId of parentIds) {
+    const children =
+      parentId === null ? working.tree : locate(parentId).node.children;
+    const kept = children
+      .map((node) => node.id)
+      .filter((id) => !Object.hasOwn(target, id));
+    const placed = restoredIds
+      .filter((id) => target[id].parentId === parentId)
+      .sort((a, b) => target[a].index - target[b].index);
+    const order = [];
+    while (kept.length > 0 || placed.length > 0) {
+      const takePlaced =
+        placed.length > 0 &&
+        (kept.length === 0 || target[placed[0]].index <= order.length);
+      order.push(takePlaced ? placed.shift() : kept.shift());
     }
-    return depth;
-  };
-  const restoredIds = elementIds
-    .filter((id) => target[id] !== null)
-    .sort(
-      (a, b) => getDepth(a) - getDepth(b) || target[a].index - target[b].index,
-    );
+    for (const [index, id] of order.entries()) {
+      const location = locate(id);
+      if (!location) {
+        run({
+          type: "create",
+          elementId: id,
+          parentId,
+          index,
+          data: target[id].data,
+        });
+      } else if (location.parentId !== parentId || location.index !== index) {
+        run({ type: "move", elementId: id, parentId, index });
+      }
+    }
+  }
+
+  // Restore each element's data.
   for (const id of restoredIds) {
-    const { parentId, index, data } = target[id];
-    const current = locate(id);
-    if (current === null) {
-      run({ type: "create", elementId: id, parentId, index, data });
-      continue;
-    }
-    if (current.parentId !== parentId || current.index !== index) {
-      run({ type: "move", elementId: id, parentId, index });
-    }
-    if (areEditHistoryValuesEqual(current.data, data)) {
+    const { data } = target[id];
+    const { id: _id, ...currentData } = working.items[id];
+    if (areEditHistoryValuesEqual(currentData, data)) {
       continue;
     }
     if (data.type !== "folder") {
@@ -3189,13 +3238,18 @@ export const restoreLayoutElementSnapshot = ({ elements, target }) => {
     // Folders accept only name and hidden, and a replace would drop their
     // type. A key cannot be removed, so a cleared hidden becomes false.
     const folderData = { name: data.name };
-    if (
-      Object.hasOwn(data, "hidden") ||
-      Object.hasOwn(current.data, "hidden")
-    ) {
+    if (Object.hasOwn(data, "hidden") || Object.hasOwn(currentData, "hidden")) {
       folderData.hidden = data.hidden === true;
     }
     run({ type: "update", elementId: id, data: folderData, replace: false });
+  }
+
+  // Last, delete what held elements that have now moved out.
+  const deletedLast = [...removed].filter(
+    (id) => locate(id) && !isInsideRemoved(id),
+  );
+  if (deletedLast.length > 0) {
+    run({ type: "delete", elementIds: deletedLast });
   }
 
   return { valid: true, elements: working, operations };

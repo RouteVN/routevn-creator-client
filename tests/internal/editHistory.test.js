@@ -2,10 +2,12 @@ import { describe, expect, it } from "vitest";
 import {
   areEditHistoryValuesEqual,
   createEditHistory,
+  dropEditHistoryStep,
   getEditHistoryStep,
   moveEditHistoryStep,
   recordEditHistoryStep,
 } from "../../src/internal/editHistory.js";
+import { resolveEditHistoryShortcut } from "../../src/internal/ui/editHistory.js";
 
 const at = (x) => ({ a: { x } });
 
@@ -151,6 +153,15 @@ describe("edit history", () => {
     expect(history.undo[0].before).toEqual(at(5));
   });
 
+  it("drops a step without moving it to the other stack", () => {
+    const history = createEditHistory();
+    recordEditHistoryStep(history, { before: at(0), after: at(1), time: 0 });
+
+    dropEditHistoryStep(history, "undo");
+
+    expect(history).toEqual({ undo: [], redo: [] });
+  });
+
   it("compares nested values regardless of key order", () => {
     expect(
       areEditHistoryValuesEqual(
@@ -162,5 +173,54 @@ describe("edit history", () => {
       false,
     );
     expect(areEditHistoryValuesEqual([1], { 0: 1 })).toBe(false);
+    expect(areEditHistoryValuesEqual({ x: NaN }, { x: NaN })).toBe(true);
+  });
+});
+
+describe("edit history shortcuts", () => {
+  const press = (init) =>
+    resolveEditHistoryShortcut({
+      composedPath: () => [],
+      metaKey: false,
+      ctrlKey: false,
+      ...init,
+    });
+
+  it("undoes with Cmd/Ctrl+Z and redoes with Shift or Ctrl+Y", () => {
+    expect(press({ metaKey: true, key: "z", code: "KeyZ" })).toBe("undo");
+    expect(press({ ctrlKey: true, key: "z", code: "KeyZ" })).toBe("undo");
+    expect(
+      press({ metaKey: true, shiftKey: true, key: "Z", code: "KeyZ" }),
+    ).toBe("redo");
+    expect(press({ ctrlKey: true, key: "y", code: "KeyY" })).toBe("redo");
+    expect(press({ metaKey: true, key: "y", code: "KeyY" })).toBeUndefined();
+    expect(press({ key: "z", code: "KeyZ" })).toBeUndefined();
+  });
+
+  it("follows the letter the keyboard layout types", () => {
+    // QWERTZ: Y is on the KeyZ code; AZERTY: W is on the KeyZ code.
+    expect(press({ ctrlKey: true, key: "y", code: "KeyZ" })).toBe("redo");
+    expect(press({ ctrlKey: true, key: "w", code: "KeyZ" })).toBeUndefined();
+    // A layout without Latin letters falls back to the physical key.
+    expect(press({ ctrlKey: true, key: "я", code: "KeyZ" })).toBe("undo");
+  });
+
+  it("leaves the keys to fields and open dialogs", () => {
+    expect(
+      press({
+        metaKey: true,
+        key: "z",
+        code: "KeyZ",
+        composedPath: () => [{ tagName: "INPUT" }],
+      }),
+    ).toBeUndefined();
+    expect(
+      press({
+        metaKey: true,
+        key: "z",
+        code: "KeyZ",
+        composedPath: () => [{ tagName: "BUTTON" }, { tagName: "DIALOG" }],
+      }),
+    ).toBeUndefined();
   });
 });

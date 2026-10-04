@@ -2616,3 +2616,5 @@ imageUploadValidation:
 editHistory:
   undoLabel: "Undo"
   redoLabel: "Redo"
+  undoUnavailableMessage: "This change can't be undone."
+  redoUnavailableMessage: "This change can't be redone."

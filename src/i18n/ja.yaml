@@ -2616,3 +2616,5 @@ imageUploadValidation:
 editHistory:
   undoLabel: "元に戻す"
   redoLabel: "やり直す"
+  undoUnavailableMessage: "この変更は元に戻せません。"
+  redoUnavailableMessage: "この変更はやり直せません。"

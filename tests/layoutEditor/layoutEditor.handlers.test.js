@@ -76,6 +76,10 @@ const createLayoutEditorDeps = ({
     updateSelectedItem: vi.fn(),
     selectLayoutElements: vi.fn(() => ({ items: {}, tree: [] })),
     recordEditHistoryStep: vi.fn(),
+    addSavingPersistPayload: vi.fn(),
+    removeSavingPersistPayload: vi.fn(),
+    setStructureEditRunning: vi.fn(),
+    selectIsStructureEditRunning: vi.fn(() => false),
   };
 
   const appService = {

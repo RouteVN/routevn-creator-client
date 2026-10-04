@@ -2616,3 +2616,5 @@ imageUploadValidation:
 editHistory:
   undoLabel: "撤销"
   redoLabel: "重做"
+  undoUnavailableMessage: "无法撤销此更改。"
+  redoUnavailableMessage: "无法重做此更改。"

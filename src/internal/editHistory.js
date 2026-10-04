@@ -7,7 +7,7 @@ export const EDIT_HISTORY_MERGE_WINDOW_MS = 1000;
 const MAX_EDIT_HISTORY_STEPS = 100;
 
 export const areEditHistoryValuesEqual = (a, b) => {
-  if (a === b) {
+  if (Object.is(a, b)) {
     return true;
   }
   if (
@@ -64,6 +64,11 @@ export const recordEditHistoryStep = (
 
 export const getEditHistoryStep = (history, direction) =>
   history[direction].at(-1);
+
+// Removes the latest undo or redo step, for a step that can no longer apply.
+export const dropEditHistoryStep = (history, direction) => {
+  history[direction].pop();
+};
 
 // Moves the latest undo or redo step to the other stack. The step now on top
 // of undo stays its own step, so a later edit does not merge into it.

@@ -9,6 +9,7 @@ import {
   handleBeforeMount,
   handleDataChanged,
   handleFileExplorerAction,
+  handleFileExplorerVisibilityToggle,
   handleLayoutEditorCanvasDragUpdate,
   handleRedoButtonClick,
   handleUndoButtonClick,
@@ -320,6 +321,133 @@ describe("layout editor undo and redo", () => {
     await vi.advanceTimersByTimeAsync(0);
     expect(page.saved("a")).toMatchObject({ name: "A" });
     expect(page.shown("a")).toMatchObject({ name: "A" });
+
+    await page.cleanup();
+  });
+
+  it("waits while an explorer action runs, so its step holds only its change", async () => {
+    const page = await createPage();
+    page.drag("a", { x: 300 });
+    await vi.advanceTimersByTimeAsync(1000);
+    let finishDelete;
+    page.projectService.deleteLayoutElement.mockImplementationOnce(
+      async (options) => {
+        await new Promise((resolve) => {
+          finishDelete = resolve;
+        });
+        return page.api.deleteLayoutElement(options);
+      },
+    );
+
+    const deleting = handleFileExplorerAction(page.deps, {
+      _event: { detail: { itemId: "b", item: { value: "delete-item" } } },
+    });
+    await vi.advanceTimersByTimeAsync(0);
+    page.press();
+    expect(page.shown("a").x).toBe(300);
+    finishDelete();
+    await deleting;
+
+    // Two steps: the drag, then the delete.
+    handleUndoButtonClick(page.deps);
+    expect(page.shown("b")).toMatchObject({ name: "B" });
+    expect(page.shown("a").x).toBe(300);
+    handleUndoButtonClick(page.deps);
+    expect(page.shown("a").x).toBe(0);
+
+    await page.cleanup();
+  });
+
+  it("saves waiting edits before an explorer action and records only the action", async () => {
+    const page = await createPage();
+    page.drag("a", { x: 300 });
+
+    await handleFileExplorerAction(page.deps, {
+      _event: {
+        detail: {
+          itemId: "b",
+          newName: "Bee",
+          item: { value: "rename-item-confirmed" },
+        },
+      },
+    });
+
+    expect(page.saved("a").x).toBe(300);
+    expect(page.saved("b").name).toBe("Bee");
+    handleUndoButtonClick(page.deps);
+    expect(page.shown("b").name).toBe("B");
+    expect(page.shown("a").x).toBe(300);
+
+    await page.cleanup();
+  });
+
+  it("says when a step can no longer apply, and drops it", async () => {
+    const page = await createPage();
+    page.store.recordEditHistoryStep({
+      before: {
+        c: { parentId: "missing", index: 0, data: rect("C") },
+      },
+      after: { c: null },
+      time: 0,
+    });
+
+    handleUndoButtonClick(page.deps);
+
+    expect(page.deps.appService.showToast).toHaveBeenCalledWith({
+      message: "This change can't be undone.",
+      status: "warning",
+    });
+    expect(page.view()).toMatchObject({
+      undoDisabled: true,
+      redoDisabled: true,
+    });
+
+    await page.cleanup();
+  });
+
+  it("leaves no step behind when a visibility change fails after a while", async () => {
+    const page = await createPage();
+    page.projectService.updateLayoutElement.mockImplementationOnce(async () => {
+      await new Promise((resolve) => setTimeout(resolve, 2000));
+      return { valid: false, error: { message: "rejected" } };
+    });
+
+    const toggling = handleFileExplorerVisibilityToggle(page.deps, {
+      _event: { detail: { itemId: "a", hidden: true } },
+    });
+    await vi.advanceTimersByTimeAsync(2500);
+    await toggling;
+
+    expect(page.shown("a").hidden).toBeUndefined();
+    expect(page.view().undoDisabled).toBe(true);
+
+    await page.cleanup();
+  });
+
+  it("keeps an edit saved early on screen until its save finishes", async () => {
+    const page = await createPage();
+    let finishSave;
+    page.projectService.updateLayoutElement.mockImplementationOnce(
+      async (options) => {
+        await new Promise((resolve) => {
+          finishSave = resolve;
+        });
+        return page.api.updateLayoutElement(options);
+      },
+    );
+
+    page.drag("a", { x: 300 });
+    // Editing another element sends a's edit to save at once.
+    page.drag("b", { x: 50 });
+    await vi.advanceTimersByTimeAsync(0);
+    await handleDataChanged(page.deps);
+    expect(page.saved("a").x).toBe(0);
+    expect(page.shown("a").x).toBe(300);
+
+    finishSave();
+    await vi.advanceTimersByTimeAsync(1000);
+    expect(page.saved("a").x).toBe(300);
+    expect(page.saved("b").x).toBe(50);
 
     await page.cleanup();
   });

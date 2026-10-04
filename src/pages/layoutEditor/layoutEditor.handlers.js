@@ -27,7 +27,11 @@ import {
   isFragmentLayout,
   restoreLayoutElementSnapshot,
 } from "../../internal/project/layout.js";
-import { resolveEditHistoryShortcut } from "../../internal/ui/editHistory.js";
+import {
+  resolveEditHistoryShortcut,
+  selectEditHistoryCopy,
+} from "../../internal/ui/editHistory.js";
+import { withErrorDetails } from "../../internal/errorDetails.js";
 import {
   getFirstSpritesheetAnimationSelectionValue,
   getSpritesheetResourceDefaultSize,
@@ -439,6 +443,7 @@ const queuePendingLayoutEditorPersist = (
       waitingPayload.resourceType !== resourceType ||
       waitingPayload.selectedItemId !== selectedItemId)
   ) {
+    store.addSavingPersistPayload({ payload: waitingPayload });
     void handleDebouncedUpdate(deps, waitingPayload);
   }
 
@@ -489,7 +494,10 @@ const flushQueuedLayoutEditorUpdates = async (deps) => {
 
 // Records an edit the page makes to its elements, from what it shows before
 // and after, so the edit can be undone before it is saved.
-const recordLayoutEditorEdit = (deps, { elementIds, apply }) => {
+const recordLayoutEditorEdit = (
+  deps,
+  { elementIds, apply, time = Date.now() },
+) => {
   const { store } = deps;
   const before = captureLayoutElementSnapshot(
     store.selectLayoutElements(),
@@ -504,16 +512,27 @@ const recordLayoutEditorEdit = (deps, { elementIds, apply }) => {
     ),
     // Quick edits to one element, such as a drag, are one step.
     mergeKey: elementIds.length === 1 ? `element:${elementIds[0]}` : undefined,
-    time: Date.now(),
+    time,
   });
 };
 
 // Explorer actions change the tree and then refresh from the repository, so
-// they are recorded as every element that changed.
+// they are recorded as every element that changed. Edits waiting to save are
+// saved first, so the action's writes come after them, and undo and redo wait
+// while it runs, so the step holds only the action's change.
 const recordLayoutEditorStructureEdit = async (deps, run) => {
   const { render, store } = deps;
+  const flushResult = await flushQueuedLayoutEditorUpdates(deps);
+  if (flushResult.ok === false) {
+    return;
+  }
   const before = store.selectLayoutElements();
-  await run();
+  store.setStructureEditRunning({ running: true });
+  try {
+    await run();
+  } finally {
+    store.setStructureEditRunning({ running: false });
+  }
   const after = store.selectLayoutElements();
   const elementIds = getChangedLayoutElementIds(before, after);
   store.recordEditHistoryStep({
@@ -581,16 +600,17 @@ const saveLayoutEditorHistoryRestore = async (
       layoutId,
       resourceType,
     });
-    showLayoutEditorError({
-      appService,
-      store,
-      error: result.error,
-      fallbackMessage:
-        copy.failedSaveLayoutChanges ?? "Failed to save layout changes.",
-      lockedMessage:
-        copy.databaseBusySaveLayoutChanges ??
-        "The project database is busy. RouteVN couldn't save the latest layout changes. Please wait a moment and try again.",
-      copy,
+    // It fails in the background, after the undo was shown.
+    appService.showAlertWhenIdle({
+      title: copy.errorTitle ?? "Error",
+      message: withErrorDetails(
+        isSqliteLockError(result.error)
+          ? (copy.databaseBusySaveLayoutChanges ??
+              "The project database is busy. RouteVN couldn't save the latest layout changes. Please wait a moment and try again.")
+          : (copy.failedSaveLayoutChanges ?? "Failed to save layout changes."),
+        result.error,
+        deps.i18n.appPage.errorDetailsLabel,
+      ),
     });
   }
   store.syncRepositoryState(
@@ -607,25 +627,49 @@ const saveLayoutEditorHistoryRestore = async (
 // Undo and redo behave like an edit: the page shows the result at once and
 // saves it in the background, after any edit waiting to save.
 const runLayoutEditorHistoryStep = (deps, direction) => {
-  const { refs, render, store, subject } = deps;
-  const step = store.selectEditHistoryStep({ direction });
-  if (!step) {
+  const { appService, i18n, refs, render, store, subject } = deps;
+  if (store.selectIsStructureEditRunning()) {
     return;
   }
+  const getTarget = (step) => (direction === "undo" ? step.before : step.after);
 
-  const restore = restoreLayoutElementSnapshot({
-    elements: store.selectLayoutElements(),
-    target: direction === "undo" ? step.before : step.after,
-  });
-  store.moveEditHistoryStep({ direction });
-  if (!restore.valid) {
+  // A step whose elements already match changes nothing, such as one whose
+  // save failed and was put back; pass over it to the next.
+  let step = store.selectEditHistoryStep({ direction });
+  let restore;
+  while (step) {
+    restore = restoreLayoutElementSnapshot({
+      elements: store.selectLayoutElements(),
+      target: getTarget(step),
+    });
+    if (!restore.valid || restore.operations.length > 0) {
+      break;
+    }
+    store.moveEditHistoryStep({ direction });
+    step = store.selectEditHistoryStep({ direction });
+  }
+  if (!step) {
     render();
     return;
   }
+  if (!restore.valid) {
+    const copy = selectEditHistoryCopy(i18n);
+    store.dropEditHistoryStep({ direction });
+    appService.showToast({
+      message:
+        direction === "undo"
+          ? copy.undoUnavailableMessage
+          : copy.redoUnavailableMessage,
+      status: "warning",
+    });
+    render();
+    return;
+  }
+  store.moveEditHistoryStep({ direction });
 
   // The canvas keeps the item it is moving until the page has its position;
   // drop it so the canvas shows the restored item.
-  refs.layoutEditorCanvas?.discardPendingUpdate?.();
+  refs.layoutEditorCanvas.discardPendingUpdate();
   if (restore.operations.every(({ type }) => type === "update")) {
     // Each restored element is a waiting edit, so an edit not saved yet is
     // replaced instead of saved and then undone.
@@ -645,12 +689,37 @@ const runLayoutEditorHistoryStep = (deps, direction) => {
       );
     }
   } else {
+    const target = getTarget(step);
     const restoreId = generateId();
     store.applyHistoryRestore({
       restoreId,
-      target: direction === "undo" ? step.before : step.after,
+      target,
       elements: restore.elements,
     });
+    // An edit still waiting to save for a restored element would otherwise
+    // land on top of the restore.
+    const waitingPayload = store.selectPendingPersistPayload();
+    if (
+      waitingPayload &&
+      Object.hasOwn(target, waitingPayload.selectedItemId)
+    ) {
+      const updatedItem = restore.elements.items[waitingPayload.selectedItemId];
+      if (updatedItem) {
+        subject.dispatch(
+          "layoutEditor.updateElement",
+          queuePendingLayoutEditorPersist(deps, {
+            layoutId: waitingPayload.layoutId,
+            resourceType: waitingPayload.resourceType,
+            selectedItemId: waitingPayload.selectedItemId,
+            updatedItem,
+          }),
+        );
+      } else {
+        store.clearPendingPersistPayload({
+          persistenceRequestId: waitingPayload.persistenceRequestId,
+        });
+      }
+    }
     void saveLayoutEditorHistoryRestore(deps, {
       restoreId,
       operations: restore.operations,
@@ -1001,9 +1070,13 @@ export const handleFileExplorerVisibilityToggle = async (deps, payload) => {
     ...currentItem,
     hidden,
   };
+  // A rollback records at the same time, so it merges into this step and
+  // cancels it however long the save took.
+  const toggleTime = Date.now();
   recordLayoutEditorEdit(deps, {
     elementIds: [itemId],
     apply: () => store.updateSelectedItem({ itemId, updatedItem }),
+    time: toggleTime,
   });
   render();
 
@@ -1018,6 +1091,7 @@ export const handleFileExplorerVisibilityToggle = async (deps, payload) => {
       elementIds: [itemId],
       apply: () =>
         store.updateSelectedItem({ itemId, updatedItem: currentItem }),
+      time: toggleTime,
     });
     render();
   };
@@ -2085,6 +2159,12 @@ async function handleDebouncedUpdate(deps, payload) {
       return {
         ok: false,
       };
+    } finally {
+      // Saved or not, the repository now decides what an edit sent early
+      // shows.
+      store.removeSavingPersistPayload({
+        persistenceRequestId: payload.persistenceRequestId,
+      });
     }
   });
 }

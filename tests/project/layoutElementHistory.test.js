@@ -230,6 +230,84 @@ describe("layout element history", () => {
     );
   });
 
+  it("restores a subtree moved into a container created in the same step", async () => {
+    const { api, layoutId, create, checkUndoRedo } = await createLayout();
+    await create("a", container("A"));
+    await create("a1", rect("A1"), { parentId: "a" });
+
+    await checkUndoRedo(async () => {
+      await create("b", container("B"));
+      await api.moveLayoutElement({
+        layoutId,
+        elementId: "a",
+        parentId: "b",
+        index: 0,
+      });
+    });
+  });
+
+  it("restores an element that leaves a deleted container for a new one", async () => {
+    const { api, layoutId, create, checkUndoRedo } = await createLayout();
+    await create("a", container("A"));
+    await create("c", rect("C"), { parentId: "a" });
+
+    await checkUndoRedo(async () => {
+      await create("b", container("B"));
+      await api.moveLayoutElement({
+        layoutId,
+        elementId: "c",
+        parentId: "b",
+        index: 0,
+      });
+      await api.deleteLayoutElement({ layoutId, elementIds: ["a"] });
+    });
+  });
+
+  it("never moves an element into its own descendant", async () => {
+    const { api, layoutId, create, checkUndoRedo } = await createLayout();
+    await create("x", container("X"));
+    await create("z", container("Z"), { parentId: "x" });
+    await create("y", container("Y"), { parentId: "z" });
+
+    await checkUndoRedo(async () => {
+      await api.moveLayoutElement({ layoutId, elementId: "z", index: 0 });
+      await api.moveLayoutElement({
+        layoutId,
+        elementId: "x",
+        parentId: "y",
+        index: 0,
+      });
+    });
+  });
+
+  it("restores several sibling moves around an element the step does not cover", async () => {
+    const { api, layoutId, create, checkUndoRedo } = await createLayout();
+    for (const id of ["a", "b", "c", "d"]) {
+      await create(id, rect(id));
+    }
+
+    // [a, b, c, d] becomes [c, b, d, a]; b keeps its index, so it is not in
+    // the step.
+    const step = await checkUndoRedo(async () => {
+      await api.moveLayoutElement({ layoutId, elementId: "c", index: 0 });
+      await api.moveLayoutElement({ layoutId, elementId: "a", index: 3 });
+      await api.moveLayoutElement({ layoutId, elementId: "d", index: 2 });
+    });
+    expect(Object.keys(step.before).sort()).toEqual(["a", "c", "d"]);
+  });
+
+  it("refuses to restore an element whose parent is gone", async () => {
+    const { create, elements } = await createLayout();
+    await create("a", rect("A"));
+
+    expect(
+      restoreLayoutElementSnapshot({
+        elements: elements(),
+        target: { c: { parentId: "missing", index: 0, data: rect("C") } },
+      }),
+    ).toEqual({ valid: false });
+  });
+
   it("refuses to delete an element the snapshot does not cover", async () => {
     const { create, elements } = await createLayout();
     await create("box", container("Box"));
