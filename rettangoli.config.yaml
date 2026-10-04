@@ -19,6 +19,7 @@ fe:
       - "en"
       - "ja"
       - "zh-hans"
+      - "es"
   #  watchPort: 3001
 
 # all visual testing configuration
