@@ -2613,3 +2613,6 @@ imageUploadValidation:
   file: "{name} ({width} × {height})"
   rejected: "Maximum size on this device: {limit} × {limit} px.\n{files}"
   runtimeSize: "{width} × {height}; maximum {limit} × {limit} px"
+editHistory:
+  undoLabel: "Undo"
+  redoLabel: "Redo"

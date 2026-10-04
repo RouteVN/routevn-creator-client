@@ -2613,3 +2613,6 @@ imageUploadValidation:
   file: "{name}（{width} × {height}）"
   rejected: "此设备的尺寸上限：{limit} × {limit} 像素。\n{files}"
   runtimeSize: "{width} × {height}；上限为 {limit} × {limit} 像素"
+editHistory:
+  undoLabel: "撤销"
+  redoLabel: "重做"

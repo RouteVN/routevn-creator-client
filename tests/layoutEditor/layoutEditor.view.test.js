@@ -208,6 +208,33 @@ describe("layoutEditor.view", () => {
     );
   });
 
+  it("offers undo and redo in the canvas header on every layout", () => {
+    const layoutEditorView = readFileSync(
+      new URL(
+        "../../src/pages/layoutEditor/layoutEditor.view.yaml",
+        import.meta.url,
+      ),
+      "utf8",
+    );
+    const header = layoutEditorView.slice(
+      layoutEditorView.indexOf("rtgl-button#backButton"),
+      layoutEditorView.indexOf("$if showCanvasZoomControls"),
+    );
+
+    expect(header).toContain(
+      'rtgl-button#undoButton sq pre=undo v=ol ?disabled=${undoDisabled} aria-label="${undoLabel}" title="${undoLabel}"',
+    );
+    expect(header).toContain(
+      'rtgl-button#redoButton sq pre=redo v=ol ?disabled=${redoDisabled} aria-label="${redoLabel}" title="${redoLabel}"',
+    );
+    expect(layoutEditorView).toMatch(
+      /undoButton:\n\s+eventListeners:\n\s+click:\n\s+handler: handleUndoButtonClick/,
+    );
+    expect(layoutEditorView).toMatch(
+      /redoButton:\n\s+eventListeners:\n\s+click:\n\s+handler: handleRedoButtonClick/,
+    );
+  });
+
   it("puts the edit panel and the preview in a right panel with Edit and Preview tabs", () => {
     const layoutEditorView = readFileSync(
       new URL(

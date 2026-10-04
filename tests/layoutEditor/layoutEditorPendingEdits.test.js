@@ -96,6 +96,7 @@ const createDeps = () => {
     },
     uiConfig: {},
     i18n: EN_I18N,
+    browserEventsClient: { subscribeWindowEvent: () => () => {} },
     refs: {},
     render: vi.fn(),
   };

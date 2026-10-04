@@ -1326,6 +1326,12 @@ const handleCanvasModifierChange = (deps, event) => {
   }
 };
 
+// The page replaced the item, as with undo, so the next render shows the
+// page's item instead of the one the canvas was moving.
+export const handleDiscardPendingUpdate = (deps) => {
+  deps.store.clearPendingUpdatedItem();
+};
+
 export const handleUseDefaultSelectionOccurrence = async (deps) => {
   deps.store.clearSelectedOccurrence();
   await renderLayoutEditorCanvas(deps, deps.props, {

@@ -20,6 +20,14 @@ import {
   toLayoutEditorExplorerItems,
 } from "./support/layoutEditorViewData.js";
 import { selectLayoutEditorPageCopy } from "./support/layoutEditorPageCopy.js";
+import { selectEditHistoryCopy } from "../../internal/ui/editHistory.js";
+import {
+  createEditHistory,
+  getEditHistoryStep,
+  moveEditHistoryStep as moveHistoryStep,
+  recordEditHistoryStep as recordHistoryStep,
+} from "../../internal/editHistory.js";
+import { restoreLayoutElementSnapshot } from "../../internal/project/layout.js";
 
 const normalizePreviewData = (previewData) => {
   return previewData && typeof previewData === "object"
@@ -202,6 +210,10 @@ export const createInitialState = () => {
     rightPanelMode: "preview",
     canvasZoom: 1,
     canvasPreviewItem: undefined,
+    // Undo and redo for edits made since the page opened.
+    editHistory: createEditHistory(),
+    // Undone or redone steps not saved yet, kept on top of repository data.
+    pendingHistoryRestores: [],
     projectResolution: DEFAULT_PROJECT_RESOLUTION,
     selectedElementMetrics: undefined,
     lastPersistErrorAt: 0,
@@ -376,6 +388,40 @@ export const setSelectedElementMetrics = ({ state }, { metrics } = {}) => {
   state.selectedElementMetrics = metrics;
 };
 
+export const recordEditHistoryStep = (
+  { state },
+  { before, after, mergeKey, time } = {},
+) => {
+  recordHistoryStep(state.editHistory, { before, after, mergeKey, time });
+};
+
+export const selectEditHistoryStep = ({ state }, { direction } = {}) =>
+  getEditHistoryStep(state.editHistory, direction);
+
+export const moveEditHistoryStep = ({ state }, { direction } = {}) => {
+  moveHistoryStep(state.editHistory, direction);
+};
+
+export const selectLayoutElements = ({ state }) => state.layoutData;
+
+// Shows an undone or redone step before it is saved. It stays on top of
+// repository data until clearPendingHistoryRestore.
+export const applyHistoryRestore = (
+  { state },
+  { restoreId, target, elements } = {},
+) => {
+  state.layoutData = elements;
+  if (restoreId) {
+    state.pendingHistoryRestores.push({ restoreId, target });
+  }
+};
+
+export const clearPendingHistoryRestore = ({ state }, { restoreId } = {}) => {
+  state.pendingHistoryRestores = state.pendingHistoryRestores.filter(
+    (restore) => restore.restoreId !== restoreId,
+  );
+};
+
 export const setLastPersistErrorAt = ({ state }, { timestamp } = {}) => {
   state.lastPersistErrorAt = Number.isFinite(timestamp) ? timestamp : 0;
 };
@@ -477,6 +523,15 @@ export const syncRepositoryState = ({ state }, payload = {}) => {
     resourceType,
   });
   state.layoutData = layoutData ?? { items: {}, tree: [] };
+  for (const { target } of state.pendingHistoryRestores) {
+    const restore = restoreLayoutElementSnapshot({
+      elements: state.layoutData,
+      target,
+    });
+    if (restore.valid) {
+      state.layoutData = restore.elements;
+    }
+  }
   const pending = state.pendingPersistPayload;
   if (
     pending &&
@@ -609,6 +664,7 @@ export const selectIsMobileFileExplorerOpen = ({ state }) =>
 
 export const selectViewData = ({ state, constants, i18n }) => {
   const copy = selectLayoutEditorPageCopy(i18n);
+  const editHistoryCopy = selectEditHistoryCopy(i18n);
   const selectedItem = selectItemDataById(
     { state },
     { itemId: state.selectedItemId },
@@ -761,6 +817,10 @@ export const selectViewData = ({ state, constants, i18n }) => {
     canvasZoomInLabel: copy.canvasZoomInLabel ?? "Zoom in",
     canvasZoomOutLabel: copy.canvasZoomOutLabel ?? "Zoom out",
     canvasZoomFitLabel: copy.canvasZoomFitLabel ?? "Fit to view",
+    undoDisabled: state.editHistory.undo.length === 0,
+    redoDisabled: state.editHistory.redo.length === 0,
+    undoLabel: editHistoryCopy.undoLabel,
+    redoLabel: editHistoryCopy.redoLabel,
     previewData: state.previewData,
     initialPreviewData: state.initialPreviewData,
     previewHydrationData,
