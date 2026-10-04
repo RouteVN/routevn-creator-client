@@ -143,6 +143,37 @@ final class ProjectStoragePaths {
         return discovered
     }
 
+    /**
+     Whether `directory`, the library location of `projectId`, is clearly an
+     unfinished import of that project, which an import may remove: a real
+     folder (not a symlink or a file) with no files entry that either carries
+     this project's identity, or is named after the id, as older builds named
+     them, and holds a project.db whose own id (databaseProjectId) is this
+     project's. An import copies project.db before files/, so a folder with
+     files/ is never one; anything else may be the user's own.
+     */
+    func isUnfinishedImport(projectId: String, directory: URL, databaseProjectId: (URL) -> String?) -> Bool {
+        lock.lock()
+        defer { lock.unlock() }
+        guard ImportFiles.fileType(directory) == mode_t(S_IFDIR),
+              ImportFiles.fileType(directory.appendingPathComponent("files")) == nil else {
+            return false
+        }
+        let identity: String?
+        do {
+            identity = try projectIdentity(in: directory)
+        } catch {
+            return false
+        }
+        if let identity {
+            return identity == projectId
+        }
+        let database = directory.appendingPathComponent("project.db")
+        return directory.lastPathComponent == projectId
+            && ImportFiles.fileType(database) == mode_t(S_IFREG)
+            && databaseProjectId(database) == projectId
+    }
+
     func recordIdentity(projectId: String, directory: URL) throws {
         lock.lock()
         defer { lock.unlock() }

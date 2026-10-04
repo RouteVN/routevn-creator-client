@@ -2220,9 +2220,17 @@ final class RouteVNViewController: UIViewController, WKNavigationDelegate, WKScr
                 // without files/) is not a project the app lists. It is removed
                 // first, so the new copy gets a folder named after the project
                 // instead of inheriting the leftover's name, which is the id for
-                // imports made by older builds.
-                if FileManager.default.fileExists(atPath: targetProjectRoot.path) {
-                    try FileManager.default.removeItemIfExists(at: targetProjectRoot)
+                // imports made by older builds. Anything else at the id's
+                // location (the user's own folder or file named like the id)
+                // is never removed: the import stops instead.
+                if ImportFiles.fileType(targetProjectRoot) != nil {
+                    let isLeftover = storage.isUnfinishedImport(projectId: projectId, directory: targetProjectRoot) { database in
+                        (try? readProjectInfo(databaseURL: database)).map { stringValue($0["id"]) }
+                    }
+                    guard isLeftover else {
+                        throw ProjectImportError("importFailed", "An item in the library already uses this project's id and was not changed.")
+                    }
+                    try FileManager.default.removeItem(at: targetProjectRoot)
                 }
                 // A new project gets a folder named after it, like a project
                 // created in the app: sanitized, with " (2)" when taken.
@@ -2930,6 +2938,10 @@ final class RouteVNNativeStorage {
 
     func recordProjectDirectory(projectId: String, directory: URL) throws {
         try projectStoragePaths.recordIdentity(projectId: projectId, directory: directory)
+    }
+
+    func isUnfinishedImport(projectId: String, directory: URL, databaseProjectId: (URL) -> String?) -> Bool {
+        projectStoragePaths.isUnfinishedImport(projectId: projectId, directory: directory, databaseProjectId: databaseProjectId)
     }
 
     func createProjectDirectory(projectId: String, projectName: String) throws -> URL {
