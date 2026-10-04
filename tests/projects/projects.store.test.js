@@ -206,7 +206,7 @@ describe("projects.store addProject", () => {
     });
   });
 
-  it("builds the language dialog form with en, ja, and zh-hans options", () => {
+  it("builds the language dialog form with every app locale option", () => {
     const state = createInitialState();
 
     openLanguageDialog({ state }, { locale: "ja" });
@@ -243,6 +243,10 @@ describe("projects.store addProject", () => {
             {
               value: "es",
               label: "Español (Beta)",
+            },
+            {
+              value: "th",
+              label: "ไทย (Beta)",
             },
           ],
         },

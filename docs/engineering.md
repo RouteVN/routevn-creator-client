@@ -81,6 +81,11 @@ For Spanish localization, follow the RouteVN website Spanish style guide:
 Use it as the terminology and tone reference for RouteVN `es` UI and docs copy,
 including its proposed Spanish app labels.
 
+For Thai localization, follow the RouteVN website Thai style guide:
+`https://github.com/RouteVN/routevn-website/blob/main/internal/thai-translation-style.md`.
+Use it as the terminology and tone reference for RouteVN `th` UI and docs copy,
+including its proposed Thai app labels.
+
 ## Code Style
 
 - Prefer direct values and `??` defaults over verbose string guards like
