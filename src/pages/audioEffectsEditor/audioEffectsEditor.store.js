@@ -4,20 +4,21 @@ import {
   normalizeAudioEffectDefinition,
 } from "../../internal/audioEffectDefinition.js";
 import {
+  areEditHistoryValuesEqual,
+  createEditHistory,
+  getEditHistoryChangeKey,
+  getEditHistoryStep,
+  moveEditHistoryStep,
+  recordEditHistoryStep,
+} from "../../internal/editHistory.js";
+import { selectEditHistoryCopy } from "../../internal/ui/editHistory.js";
+import {
   AUDIO_EFFECT_KEYFRAME_MENU_ITEMS,
   AUDIO_EFFECT_PROPERTY_CONFIG,
   AUDIO_EFFECT_PROPERTY_KEYS,
   SUPPORTED_AUDIO_EFFECT_EASINGS,
 } from "./audioEffectsEditor.constants.js";
 import { selectAudioEffectsEditorPageCopy } from "./support/audioEffectsEditorPageCopy.js";
-import {
-  areEditHistoryValuesEqual,
-  createEditHistory,
-  getEditHistoryStep,
-  moveEditHistoryStep as moveHistoryStep,
-  recordEditHistoryStep as recordHistoryStep,
-} from "../../internal/editHistory.js";
-import { selectEditHistoryCopy } from "../../internal/ui/editHistory.js";
 
 const TIMELINE_ZOOM_DEFAULT = 2;
 const TIMELINE_ZOOM_MIN = 0.25;
@@ -440,33 +441,45 @@ export const setSaving = ({ state }, { saving } = {}) => {
   state.saving = saving === true;
 };
 
+// The audio effect is unsaved while it differs from what is saved, or while a
+// save runs, since that save may not hold it; the save checks again when it
+// lands.
+const isAudioEffectUnsaved = (state, definition) =>
+  state.saving || !areEditHistoryValuesEqual(definition, state.savedDefinition);
+
 // Takes the audio effect that was saved, since edits made while the save ran
-// are still unsaved.
+// are still unsaved. It is copied because the store freezes what it keeps,
+// and the save handed this object to the project service.
 export const markSaved = ({ state }, { definition } = {}) => {
   state.savedDefinition = structuredClone(definition);
-  state.dirty = !areEditHistoryValuesEqual(state.definition, definition);
+  state.dirty = isAudioEffectUnsaved(state, state.definition);
 };
 
-export const selectEditHistoryBaseline = ({ state }) =>
-  state.editHistoryBaseline;
-
-export const setEditHistoryBaseline = ({ state }, { definition } = {}) => {
+// Records an edit, given the audio effect as it is now, against the last
+// recorded version. Repeated edits to the same values less than a second
+// apart, such as dragging a slider, are one step, and an edit that changes
+// nothing is not a step.
+export const recordAudioEffectEdit = ({ state }, { definition, time } = {}) => {
+  const before = state.editHistoryBaseline;
+  // The baseline is set once the page has opened the audio effect.
+  if (!before) {
+    return;
+  }
+  state.dirty = isAudioEffectUnsaved(state, definition);
+  if (areEditHistoryValuesEqual(before, definition)) {
+    return;
+  }
+  recordEditHistoryStep(state.editHistory, {
+    before: { definition: before },
+    after: { definition },
+    mergeKey: getEditHistoryChangeKey(before, definition),
+    time,
+  });
   state.editHistoryBaseline = definition;
-};
-
-export const recordEditHistoryStep = (
-  { state },
-  { before, after, mergeKey, time } = {},
-) => {
-  recordHistoryStep(state.editHistory, { before, after, mergeKey, time });
 };
 
 export const selectEditHistoryStep = ({ state }, { direction } = {}) =>
   getEditHistoryStep(state.editHistory, direction);
-
-export const moveEditHistoryStep = ({ state }, { direction } = {}) => {
-  moveHistoryStep(state.editHistory, direction);
-};
 
 export const setSoundsData = ({ state }, { soundsData } = {}) => {
   state.soundsData = soundsData ?? { items: {}, tree: [] };
@@ -741,15 +754,22 @@ export const closeAddPropertySideMenu = ({ state }) => {
   state.addPropertySideMenu.y = undefined;
 };
 
-// Puts back an undone or redone version of the audio effect, and closes the
-// keyframe and add menus. Keyframes are selected by index, so a selected
-// keyframe is cleared when it no longer exists, or when the restore changed
-// other keyframes in its track, since the index may then point at a
+// The keyframe after a keyframe holds the gap before it as its delay, so
+// moving a keyframe on the timeline changes that delay too.
+const withoutDelay = ({ delay: _delay, ...keyframe }) => keyframe;
+
+// Undoes or redoes the latest step: puts its version of the audio effect back
+// and closes the keyframe and add menus. Keyframes are selected by index, so a
+// selected keyframe is cleared when it no longer exists, or when the restore
+// changed other keyframes in its track, since the index may then point at a
 // different one.
-export const restoreAudioEffectHistorySnapshot = (
-  { state },
-  { definition } = {},
-) => {
+export const applyEditHistoryStep = ({ state }, { direction } = {}) => {
+  const step = getEditHistoryStep(state.editHistory, direction);
+  if (!step) {
+    return;
+  }
+  const { definition } = direction === "undo" ? step.before : step.after;
+  moveEditHistoryStep(state.editHistory, direction);
   const { selectedKeyframe, selectedProperty } = state;
   // A JSON copy, since state here is a store draft that structuredClone
   // cannot read; keyframes are plain JSON data.
@@ -761,7 +781,7 @@ export const restoreAudioEffectHistorySnapshot = (
 
   state.definition = definition;
   state.editHistoryBaseline = definition;
-  state.dirty = !areEditHistoryValuesEqual(definition, state.savedDefinition);
+  state.dirty = isAudioEffectUnsaved(state, definition);
   state.timelineDuration = Math.max(
     state.timelineDuration,
     resolveTimelineDuration(definition),
@@ -776,11 +796,18 @@ export const restoreAudioEffectHistorySnapshot = (
     if (
       !keyframes?.[index] ||
       previousKeyframes.length !== keyframes.length ||
-      previousKeyframes.some(
-        (keyframe, keyframeIndex) =>
-          keyframeIndex !== index &&
-          !areEditHistoryValuesEqual(keyframe, keyframes[keyframeIndex]),
-      )
+      previousKeyframes.some((keyframe, keyframeIndex) => {
+        if (keyframeIndex === index) {
+          return false;
+        }
+        const restored = keyframes[keyframeIndex];
+        return keyframeIndex === index + 1
+          ? !areEditHistoryValuesEqual(
+              withoutDelay(keyframe),
+              withoutDelay(restored),
+            )
+          : !areEditHistoryValuesEqual(keyframe, restored);
+      })
     ) {
       state.selectedKeyframe = undefined;
     }

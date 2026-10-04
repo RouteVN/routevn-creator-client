@@ -3,10 +3,6 @@ import {
   getAudioEffectsEditorBackPath,
   resolveAudioEffectsEditorPayload,
 } from "../../internal/audioEffectsEditorRoute.js";
-import {
-  areEditHistoryValuesEqual,
-  getEditHistoryChangeKey,
-} from "../../internal/editHistory.js";
 import { resolveEditHistoryShortcut } from "../../internal/ui/editHistory.js";
 import { runResourcePageMutation } from "../../internal/ui/resourcePages/resourcePageErrors.js";
 import { AUDIO_EFFECT_PROPERTY_CONFIG } from "./audioEffectsEditor.constants.js";
@@ -131,34 +127,14 @@ export const handleAfterMount = async (deps) => {
   handleTimelineViewportResize(deps);
 };
 
-// Records the audio effect as it is now against the last recorded version.
-// Repeated edits to the same values less than a second apart, such as
-// dragging a slider, are one step. An edit that changes nothing is not a step.
-const recordAudioEffectEdit = (deps) => {
-  const { store } = deps;
-  const before = store.selectEditHistoryBaseline();
-  // The baseline is set once the page has opened the audio effect.
-  if (!before) {
-    return;
-  }
-  const after = store.selectAudioEffectDefinition();
-  if (areEditHistoryValuesEqual(before, after)) {
-    return;
-  }
-  store.setEditHistoryBaseline({ definition: after });
-  store.recordEditHistoryStep({
-    before: { definition: before },
-    after: { definition: after },
-    mergeKey: getEditHistoryChangeKey(before, after),
-    time: Date.now(),
-  });
-};
-
 // Every edit to the audio effect ends here, so this is where it enters the
 // undo history.
 const commitAudioEffectEdit = (deps) => {
-  const { render } = deps;
-  recordAudioEffectEdit(deps);
+  const { render, store } = deps;
+  store.recordAudioEffectEdit({
+    definition: store.selectAudioEffectDefinition(),
+    time: Date.now(),
+  });
   render();
 };
 
@@ -167,15 +143,10 @@ const commitAudioEffectEdit = (deps) => {
 // back to the saved audio effect leaves nothing to save.
 const runAudioEffectHistoryStep = (deps, direction) => {
   const { render, store } = deps;
-  const step = store.selectEditHistoryStep({ direction });
-  if (!step) {
+  if (!store.selectEditHistoryStep({ direction })) {
     return;
   }
-
-  store.moveEditHistoryStep({ direction });
-  store.restoreAudioEffectHistorySnapshot({
-    definition: (direction === "undo" ? step.before : step.after).definition,
-  });
+  store.applyEditHistoryStep({ direction });
   render();
 };
 

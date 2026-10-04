@@ -8,6 +8,7 @@ import {
   handleBeforeMount,
   handleEditHistoryShortcutKeyDown,
   handleKeyframeDropdownItemClick,
+  handleKeyframeDurationChange,
   handleRedoButtonClick,
   handleRemovePropertyClick,
   handleSavePreviewClick,
@@ -195,6 +196,7 @@ describe("audio effects editor undo and redo", () => {
     });
 
     expect(page.view().undoDisabled).toBe(true);
+    expect(page.store.selectDirty()).toBe(false);
   });
 
   it("undoes an added keyframe and clears the selection on it", async () => {
@@ -274,48 +276,132 @@ describe("audio effects editor undo and redo", () => {
   });
 
   it("clears a keyframe selection the restore may point at a different keyframe", () => {
-    let state = produce(
-      audioEffectsEditorStore.createInitialState(),
-      (draft) => {
-        audioEffectsEditorStore.loadAudioEffect(
+    const definition = (keyframes) => ({
+      type: "update",
+      tween: { volume: { keyframes } },
+    });
+    // Opens on `restored`, edits it to `current` with keyframe `index`
+    // selected, and undoes that edit.
+    const undoSelection = ({ restored, current, index }) => {
+      let state = produce(
+        audioEffectsEditorStore.createInitialState(),
+        (draft) => {
+          audioEffectsEditorStore.loadAudioEffect(
+            { state: draft },
+            { item: { id: "effect-1", audioEffect: definition(restored) } },
+          );
+        },
+      );
+      state = produce(state, (draft) => {
+        draft.definition = definition(current);
+        audioEffectsEditorStore.recordAudioEffectEdit(
           { state: draft },
-          {
-            item: {
-              id: "effect-1",
-              audioEffect: {
-                type: "update",
-                tween: { volume: { keyframes: [keyframe(1), keyframe(2)] } },
-              },
-            },
-          },
+          { definition: definition(current), time: 0 },
         );
-        draft.selectedKeyframe = {
-          side: "update",
-          property: "volume",
-          index: 1,
-        };
-      },
-    );
-    const restore = (keyframes) =>
-      produce(state, (draft) => {
-        audioEffectsEditorStore.restoreAudioEffectHistorySnapshot(
-          { state: draft },
-          {
-            definition: { type: "update", tween: { volume: { keyframes } } },
-          },
-        );
+        draft.selectedKeyframe = { side: "update", property: "volume", index };
       });
+      return produce(state, (draft) => {
+        audioEffectsEditorStore.applyEditHistoryStep(
+          { state: draft },
+          { direction: "undo" },
+        );
+      }).selectedKeyframe;
+    };
 
     // Only the selected keyframe's value changes: it stays selected.
-    expect(restore([keyframe(1), keyframe(9)]).selectedKeyframe).toEqual({
-      side: "update",
-      property: "volume",
-      index: 1,
-    });
+    expect(
+      undoSelection({
+        restored: [keyframe(1), keyframe(9)],
+        current: [keyframe(1), keyframe(2)],
+        index: 1,
+      }),
+    ).toMatchObject({ index: 1 });
     // The keyframes swap places: index 1 is now a different keyframe.
     expect(
-      restore([keyframe(2), keyframe(1)]).selectedKeyframe,
+      undoSelection({
+        restored: [keyframe(2), keyframe(1)],
+        current: [keyframe(1), keyframe(2)],
+        index: 1,
+      }),
     ).toBeUndefined();
+    // The keyframe before it changes: index 0 is no longer the same one.
+    expect(
+      undoSelection({
+        restored: [keyframe(1), { ...keyframe(2), delay: 100 }],
+        current: [{ ...keyframe(1), delay: 100 }, keyframe(2)],
+        index: 1,
+      }),
+    ).toBeUndefined();
+  });
+
+  it("keeps the selection when a timeline move of the keyframe is undone", async () => {
+    const page = await createPage();
+    // Moving the keyframe also moves the gap before the next one.
+    handleKeyframeDurationChange(page.deps, {
+      _event: {
+        detail: {
+          side: "update",
+          property: "volume",
+          index: 0,
+          delay: 200,
+          duration: 800,
+          followingDelay: 100,
+        },
+      },
+    });
+    expect(page.keyframes()[1].delay).toBe(100);
+
+    handleUndoButtonClick(page.deps);
+
+    expect(page.keyframes()).toEqual(updateEffect.tween.volume.keyframes);
+    expect(page.store.selectSelectedKeyframe()).toMatchObject({ index: 0 });
+  });
+
+  it("saves nothing for a value changed and changed back", async () => {
+    const page = await createPage();
+    page.store.setSelectedKeyframe({
+      side: "update",
+      property: "volume",
+      index: 0,
+    });
+    page.typeValue(60);
+    page.typeValue(50);
+
+    expect(page.view().undoDisabled).toBe(true);
+    expect(page.store.selectDirty()).toBe(false);
+    await handleBackClick(page.deps);
+    expect(page.savedEffects()).toEqual([]);
+  });
+
+  it("still saves an undo back to the saved version made while a save runs", async () => {
+    const page = await createPage();
+    page.store.setSelectedKeyframe({
+      side: "update",
+      property: "volume",
+      index: 0,
+    });
+    page.typeValue(60);
+    let finishSave;
+    page.deps.projectService.updateAudioEffect.mockImplementationOnce(
+      () =>
+        new Promise((resolve) => {
+          finishSave = () => resolve({ valid: true });
+        }),
+    );
+    const savingPreview = handleSavePreviewClick(page.deps);
+
+    // The save of 60 is still running, so 50 is not saved yet.
+    handleUndoButtonClick(page.deps);
+    expect(page.store.selectDirty()).toBe(true);
+    await handleBackClick(page.deps);
+    finishSave();
+    await savingPreview;
+
+    expect(
+      page
+        .savedEffects()
+        .map((effect) => effect.tween.volume.keyframes[0].value),
+    ).toEqual([60, 50]);
   });
 
   it("saves an undo made after a save, and one made while the save ran", async () => {
