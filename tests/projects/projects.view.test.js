@@ -90,6 +90,20 @@ describe("projects view", () => {
     expect(projectsView).toContain("handler: handleLanguageDialogClose");
     expect(projectsView).toContain("handler: handleLanguageFormAction");
     expect(projectsView).toContain("rtgl-dialog#languageDialog");
+    // Language and Appearance use the item editor dialog layout, as on the
+    // images page.
+    expect(projectsView).toContain(
+      "rtgl-dialog#languageDialog ?open=${languageDialog.isOpen} s=md md-layout=fixed-top:",
+    );
+    expect(projectsView).toContain(
+      "rtgl-form#languageForm key=${languageDialog.formKey} :form=${languageForm} :defaultValues=${languageDialog.defaultValues} sticky sbv=touch bottom-spacer=96 w=f h=f: null",
+    );
+    expect(projectsView).toContain(
+      "rtgl-dialog#appearanceDialog ?open=${appearanceDialog.isOpen} s=md md-layout=fixed-top:",
+    );
+    expect(projectsView).toContain(
+      "rtgl-form#appearanceForm key=${appearanceDialog.formKey} :form=${appearanceForm} :defaultValues=${appearanceDialog.defaultValues} sticky sbv=touch bottom-spacer=96 w=f h=f: null",
+    );
     expect(projectsView).toContain("rtgl-form#languageForm");
     expect(footerTextIndex).toBeGreaterThan(footerContainerIndex);
     expect(projectsView).not.toContain("rtgl-view w=f ah=c pb=lg");

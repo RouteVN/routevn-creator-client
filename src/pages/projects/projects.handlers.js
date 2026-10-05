@@ -664,12 +664,6 @@ export const handleLanguageFormAction = async (deps, payload) => {
   const detail = payload?._event?.detail || {};
   const actionId = detail.actionId;
 
-  if (actionId === "cancel") {
-    store.closeLanguageDialog();
-    render();
-    return;
-  }
-
   if (actionId !== "save-language") {
     return;
   }
@@ -704,12 +698,6 @@ export const handleAppearanceFormAction = (deps, payload) => {
   const copy = selectProjectsPageCopy(i18n);
   const detail = payload?._event?.detail || {};
   const actionId = detail.actionId;
-
-  if (actionId === "cancel") {
-    store.closeAppearanceDialog();
-    render();
-    return;
-  }
 
   if (actionId !== "save-appearance") {
     return;

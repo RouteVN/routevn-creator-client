@@ -227,6 +227,7 @@ describe("projects.store addProject", () => {
           type: "select",
           label: "Language",
           required: true,
+          clearable: false,
           options: [
             {
               value: "en",
@@ -263,8 +264,16 @@ describe("projects.store addProject", () => {
     expect(state.appearanceDialog.defaultValues).toEqual({
       theme: "black",
     });
+    // One Save button, as in the item editor dialogs.
+    expect(viewData.languageForm.actions.buttons).toMatchObject([
+      { id: "save-language", variant: "pr" },
+    ]);
+    expect(viewData.appearanceForm.actions.buttons).toMatchObject([
+      { id: "save-appearance", variant: "pr" },
+    ]);
     expect(viewData.appearanceForm.fields[0]).toMatchObject({
       name: "theme",
+      clearable: false,
       options: [
         { value: "dark", label: "Dark" },
         { value: "black", label: "Black" },
