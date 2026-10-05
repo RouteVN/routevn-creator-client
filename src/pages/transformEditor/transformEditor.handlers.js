@@ -11,6 +11,10 @@ import {
 } from "../../internal/transformEditorRoute.js";
 import { showAssetLoadFailures } from "../../internal/ui/assetLoadFeedback.js";
 import { resolveEditHistoryShortcut } from "../../internal/ui/editHistory.js";
+import {
+  captureEditorPreviewImages,
+  storeEditorPreviewFiles,
+} from "../../internal/ui/editorPreviewCapture.js";
 import { createFileExplorerKeyboardScopeHandlers } from "../../internal/ui/fileExplorerKeyboardScope.js";
 import { formatI18nCopy } from "../../internal/ui/i18nCopy.js";
 import { mountMobileResourceWindowLayout } from "../../internal/ui/resourcePages/mobileResourcePage.js";
@@ -28,10 +32,6 @@ import {
   createTransformPreviewRenderState,
   roundTransformScale,
 } from "./support/transformEditorCanvas.js";
-import {
-  captureTransformPreviewImages,
-  storeTransformPreviewFiles,
-} from "./support/transformEditorPreviewCapture.js";
 import { selectTransformEditorPageCopy } from "./support/transformEditorPageCopy.js";
 
 const selectCopy = ({ i18n } = {}) => selectTransformEditorPageCopy(i18n);
@@ -526,7 +526,7 @@ const saveTransformPreview = async (deps) => {
 
   let previewImages;
   try {
-    previewImages = await captureTransformPreviewImages({
+    previewImages = await captureEditorPreviewImages({
       graphicsService,
       canvas: refs.canvas,
       renderState: createSavedPreviewRenderState(store),
@@ -539,7 +539,7 @@ const saveTransformPreview = async (deps) => {
 
   let previewFiles;
   try {
-    previewFiles = await storeTransformPreviewFiles({
+    previewFiles = await storeEditorPreviewFiles({
       projectService,
       ...previewImages,
     });

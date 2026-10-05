@@ -21,16 +21,16 @@ import {
   handleSavePreviewClick,
   handleUndoButtonClick,
 } from "../../src/pages/transformEditor/transformEditor.handlers.js";
-import { captureTransformPreviewImages } from "../../src/pages/transformEditor/support/transformEditorPreviewCapture.js";
+import { captureEditorPreviewImages } from "../../src/internal/ui/editorPreviewCapture.js";
 import { EN_I18N } from "../support/i18n.js";
 
 // The canvas capture needs a renderer; storing the captured images runs as
 // it is.
 vi.mock(
-  "../../src/pages/transformEditor/support/transformEditorPreviewCapture.js",
+  "../../src/internal/ui/editorPreviewCapture.js",
   async (importOriginal) => ({
     ...(await importOriginal()),
-    captureTransformPreviewImages: vi.fn(),
+    captureEditorPreviewImages: vi.fn(),
   }),
 );
 
@@ -262,8 +262,8 @@ const fileReads = (page, fileId) =>
   );
 
 beforeEach(() => {
-  captureTransformPreviewImages.mockReset();
-  captureTransformPreviewImages.mockResolvedValue(capturedImages);
+  captureEditorPreviewImages.mockReset();
+  captureEditorPreviewImages.mockResolvedValue(capturedImages);
 });
 
 describe("transform editor", () => {
@@ -450,7 +450,7 @@ describe("transform editor", () => {
         },
       },
     ]);
-    expect(captureTransformPreviewImages).not.toHaveBeenCalled();
+    expect(captureEditorPreviewImages).not.toHaveBeenCalled();
   });
 
   it("saves waiting edits at once when it leaves", async () => {
@@ -510,7 +510,7 @@ describe("transform editor", () => {
 
     await handleSavePreviewClick(page.deps);
 
-    const [{ renderState }] = captureTransformPreviewImages.mock.calls[0];
+    const [{ renderState }] = captureEditorPreviewImages.mock.calls[0];
     expect(page.findElement(renderState.elements, "selected-border")).toBe(
       undefined,
     );
@@ -554,7 +554,7 @@ describe("transform editor", () => {
 
   it("saves one preview when Save Preview is clicked twice", async () => {
     let finishCapture;
-    captureTransformPreviewImages.mockReturnValue(
+    captureEditorPreviewImages.mockReturnValue(
       new Promise((resolve) => {
         finishCapture = () => resolve(capturedImages);
       }),
@@ -568,14 +568,14 @@ describe("transform editor", () => {
     finishCapture();
     await Promise.all([firstClick, secondClick]);
 
-    expect(captureTransformPreviewImages).toHaveBeenCalledOnce();
+    expect(captureEditorPreviewImages).toHaveBeenCalledOnce();
     expect(page.deps.projectService.storeFile).toHaveBeenCalledTimes(2);
     expect(page.savedData()).toHaveLength(1);
     expect(page.view().savePreviewDisabled).toBe(false);
   });
 
   it("alerts and saves no preview when the canvas cannot be captured", async () => {
-    captureTransformPreviewImages.mockRejectedValue(
+    captureEditorPreviewImages.mockRejectedValue(
       new Error("The canvas returned no preview image."),
     );
     const page = await createPage();
@@ -679,7 +679,7 @@ describe("transform editor", () => {
       message:
         'Could not load the image "Image One", so the preview was not saved. Check its file, or pick another image.\n\nDetails:\nFile file-1 is missing.',
     });
-    expect(captureTransformPreviewImages).not.toHaveBeenCalled();
+    expect(captureEditorPreviewImages).not.toHaveBeenCalled();
     expect(page.savedData()).toEqual([]);
     expect(page.view().savePreviewDisabled).toBe(false);
   });

@@ -8,16 +8,22 @@ import {
 } from "../../internal/editHistory.js";
 import {
   DEFAULT_PROJECT_RESOLUTION,
-  formatCanvasMaxWidth,
-  formatHalfViewportCanvasMaxWidth,
   formatProjectResolutionAspectRatio,
   requireProjectResolution,
 } from "../../internal/projectResolution.js";
 import { toFlatItems } from "../../internal/project/tree.js";
 import { selectEditHistoryCopy } from "../../internal/ui/editHistory.js";
 import {
+  buildEditorCanvasLayout,
+  buildEditorCanvasZoomViewData,
+  resetEditorCanvasZoomState,
+  selectShowEditorRightPanelState,
+  setEditorCanvasZoomState,
+  zoomEditorCanvasInState,
+  zoomEditorCanvasOutState,
+} from "../../internal/ui/editorCanvasWorkspace.js";
+import {
   isTouchUiConfig,
-  selectIsTabletLandscapeState,
   setMobileResourcePageWindowMetricsState,
 } from "../../internal/ui/resourcePages/mobileResourcePage.js";
 import {
@@ -25,13 +31,6 @@ import {
   toTransformInspectorValues,
 } from "./support/transformEditorCanvas.js";
 import { selectTransformEditorPageCopy } from "./support/transformEditorPageCopy.js";
-
-// Canvas zoom is relative to the canvas fitted to the workspace (1 = fit),
-// as in the layout editor: the buttons step through these levels, and
-// gestures set any zoom in their range, which matches rvn-zoom-viewport.
-const CANVAS_ZOOM_LEVELS = Object.freeze([
-  0.1, 0.25, 0.5, 0.75, 1, 1.5, 2, 3, 4, 5, 6, 8, 10,
-]);
 
 // As in the layout editor, the right panel shows the transform's values
 // (Edit) or the preview settings and Save Preview (Preview).
@@ -317,26 +316,19 @@ export const finishSavingPreview = ({ state }) => {
 };
 
 export const zoomCanvasIn = ({ state }) => {
-  state.canvasZoom =
-    CANVAS_ZOOM_LEVELS.find((level) => level > state.canvasZoom) ??
-    state.canvasZoom;
+  zoomEditorCanvasInState(state);
 };
 
 export const zoomCanvasOut = ({ state }) => {
-  state.canvasZoom =
-    CANVAS_ZOOM_LEVELS.findLast((level) => level < state.canvasZoom) ??
-    state.canvasZoom;
+  zoomEditorCanvasOutState(state);
 };
 
 export const setCanvasZoom = ({ state }, { zoom } = {}) => {
-  state.canvasZoom = Math.min(
-    CANVAS_ZOOM_LEVELS.at(-1),
-    Math.max(CANVAS_ZOOM_LEVELS[0], zoom),
-  );
+  setEditorCanvasZoomState(state, { zoom });
 };
 
 export const resetCanvasZoom = ({ state }) => {
-  state.canvasZoom = 1;
+  resetEditorCanvasZoomState(state);
 };
 
 export const selectIsImageSelectorOpen = ({ state }) =>
@@ -424,40 +416,13 @@ const buildPreviewImageCard = (state, imageId) => {
   };
 };
 
-// Desktop and tablet landscape keep the Edit and Preview panel on the
-// right, as in the layout editor, and give the canvas the rest of the
-// workspace, where it zooms and pans. Other touch layouts show the canvas
-// fitted to half the workspace height with the panel under it.
-const selectShowRightPanel = ({ state }) =>
-  !state.isTouchMode || selectIsTabletLandscapeState({ state });
-
-const selectCanvasLayout = (state) => {
-  const resolution = state.projectResolution;
-  if (selectShowRightPanel({ state })) {
-    const canvasFitWidth = formatCanvasMaxWidth(resolution, {
-      heightUnit: "cqh",
-      heightPercent: 92,
-    });
-    return {
-      canvasBackgroundStyle:
-        "flex: 1 1 auto; min-height: 0; position: relative; overflow: hidden; background-position: var(--canvas-x, 0px) var(--canvas-y, 0px);",
-      canvasWrapperStyle: `position: absolute; left: 0; top: 0; width: calc(${canvasFitWidth} * var(--canvas-zoom, 1)); transform: translate(var(--canvas-x, 0px), var(--canvas-y, 0px));`,
-    };
-  }
-
-  return {
-    canvasBackgroundStyle: "",
-    canvasWrapperStyle: `position: relative; width: ${formatHalfViewportCanvasMaxWidth(resolution, { heightUnit: "cqh" })}; margin-left: auto; margin-right: auto;`,
-  };
-};
-
 export const selectViewData = ({ state, i18n }) => {
   const copy = selectTransformEditorPageCopy(i18n);
   const editHistoryCopy = selectEditHistoryCopy(i18n);
-  const { canvasBackgroundStyle, canvasWrapperStyle } =
-    selectCanvasLayout(state);
-  const showRightPanel = selectShowRightPanel({ state });
-  const canvasZoom = state.canvasZoom;
+  const { canvasBackgroundStyle, canvasWrapperStyle } = buildEditorCanvasLayout(
+    { state, resolution: state.projectResolution },
+  );
+  const showRightPanel = selectShowEditorRightPanelState({ state });
 
   return {
     resourceCategory: "assets",
@@ -471,12 +436,9 @@ export const selectViewData = ({ state, i18n }) => {
     undoLabel: editHistoryCopy.undoLabel,
     redoLabel: editHistoryCopy.redoLabel,
     showCanvasZoomControls: showRightPanel,
-    canvasZoom,
+    ...buildEditorCanvasZoomViewData(state.canvasZoom),
     canvasBackgroundStyle,
     canvasWrapperStyle,
-    canvasZoomLabel: `${Math.round(canvasZoom * 100)}%`,
-    canvasZoomInDisabled: canvasZoom >= CANVAS_ZOOM_LEVELS.at(-1),
-    canvasZoomOutDisabled: canvasZoom <= CANVAS_ZOOM_LEVELS[0],
     canvasZoomInLabel: copy.canvasZoomInLabel,
     canvasZoomOutLabel: copy.canvasZoomOutLabel,
     canvasZoomFitLabel: copy.canvasZoomFitLabel,
