@@ -24,13 +24,18 @@ describe("transform editor view", () => {
   });
 
   it("edits on a zoomable canvas with the scene editor's transform inspector", () => {
+    // One canvas for every layout, so turning a tablet keeps it in place.
+    expect(view.match(/div#canvas /g)).toHaveLength(1);
     expect(view).toContain(
-      "rvn-zoom-viewport#canvasBackground zoom=${canvasZoom} gestures",
+      "rvn-zoom-viewport#canvasBackground zoom=${canvasZoom} ?gestures=${showCanvasZoomControls}",
     );
+    // Tablet landscape keeps the right panel, as in the layout editor.
     expect(view).toContain(
-      'rvn-resizable-panel panel-type=detail-panel w=300 min-w=200 max-w=500 resize-side="left":',
+      'rvn-resizable-panel panel-type=detail-panel show-on-touch w=300 min-w=200 max-w=500 resize-side="left":',
     );
-    // The inspector shows in the right panel, or under the canvas on touch.
+    expect(view).toContain("$if showMobilePanels:");
+    // The inspector shows in the right panel, or under the canvas on phones
+    // and tablet portrait.
     expect(
       view.match(
         /rvn-layout-edit-panel#transformInspector mode=transform :projectResolution=\$\{projectResolution\} :selectedElementMetrics=\$\{selectedElementMetrics\} :values=\$\{inspectorValues\}: null/g,
@@ -45,7 +50,7 @@ describe("transform editor view", () => {
 
   it("switches between Edit and Preview like the layout editor", () => {
     // The tabs and Save Preview head the right panel, or the panel under the
-    // canvas on touch.
+    // canvas on phones and tablet portrait.
     expect(
       view.match(
         /rtgl-tabs#rightPanelModeTabs s=sm selected-tab=\$\{rightPanelMode\} :items=\$\{rightPanelModeTabs\}: null/g,

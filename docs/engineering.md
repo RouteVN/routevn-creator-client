@@ -1269,7 +1269,9 @@ Transforms are edited on their own page, `/project/transform-editor` (the
 the audio effects editor; the transforms page's dialogs only add a transform
 and edit its name, description, and tags. The page has the layout editor's
 header (back, name, undo and redo, zoom), canvas workspace, and right panel
-with **Edit** and **Preview** tabs (on touch, under the canvas). Edit holds
+with **Edit** and **Preview** tabs. As in the layout editor, the panel stays
+on the right in tablet landscape and moves under the canvas on phones and in
+tablet portrait, while the canvas stays in place. Edit holds
 `rvn-layout-edit-panel mode=transform`, whose popovers preview on the canvas
 as in the layout editor, and draws the scene editor's custom transform editor
 outline on the canvas (`createBackgroundTransformEditorCanvasState` and the

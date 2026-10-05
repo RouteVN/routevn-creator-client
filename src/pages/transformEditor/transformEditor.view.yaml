@@ -120,12 +120,12 @@ template:
                       - 'rtgl-button#canvasZoomOutButton sq pre=zoomOut v=ol ?disabled=${canvasZoomOutDisabled} aria-label="${canvasZoomOutLabel}" title="${canvasZoomOutLabel}"': null
                       - 'rtgl-button#canvasZoomResetButton v=gh style="min-width: 64px;" aria-label="${canvasZoomFitLabel}" title="${canvasZoomFitLabel}"': ${canvasZoomLabel}
                       - 'rtgl-button#canvasZoomInButton sq pre=zoomIn v=ol ?disabled=${canvasZoomInDisabled} aria-label="${canvasZoomInLabel}" title="${canvasZoomInLabel}"': null
-          - $if isTouchMode:
-              - 'rtgl-view w=f h=1fg d=v style="min-width: 0; min-height: 0;"':
-                  - 'rtgl-view w=f p=md bgc=bg ah=c style="flex: 0 0 auto; min-width: 0; background-image: radial-gradient(circle, var(--input) 1px, transparent 1px); background-size: 24px 24px;"':
-                      - 'div style="${canvasWrapperStyle}"':
-                          - 'rtgl-view w=f bwl=xs bwr=xs bc=bo style="aspect-ratio: ${canvasAspectRatio}; overflow: hidden;"':
-                              - 'div#canvas style="width: 100%; height: 100%; display: flex; background: #000;"': null
+          - 'rtgl-view d=v h=1fg w=f style="min-height: 0; container-type: size;"':
+              - 'rvn-zoom-viewport#canvasBackground zoom=${canvasZoom} ?gestures=${showCanvasZoomControls} style="display: flex; flex-direction: column; width: 100%; min-width: 0; background-color: var(--background); ${canvasBackgroundStyle} background-image: radial-gradient(circle, var(--input) 1px, transparent 1px); background-size: 24px 24px;"':
+                  - 'div style="${canvasWrapperStyle}"':
+                      - 'rtgl-view w=f bwl=xs bwr=xs bc=bo style="aspect-ratio: ${canvasAspectRatio}; overflow: hidden; user-select: none; -webkit-user-select: none; -webkit-touch-callout: none;"':
+                          - 'div#canvas style="width: 100%; height: 100%; display: flex; background: #000;"': null
+              - $if showMobilePanels:
                   - 'rtgl-view w=f h=1fg d=v bwt=xs style="min-height: 0;"':
                       - rtgl-view h=48 w=f d=h bgc=bg bwb=xs ph=md av=c:
                           - 'rtgl-view w=1fg style="min-width: 0;"':
@@ -156,14 +156,8 @@ template:
                                               - 'rtgl-view#previewImageButton${i} data-slot=${item.slot} w=f av=c ah=c bgc=mu bc=bo bw=xs br=md cur=pointer h-bc=ac style="aspect-ratio: 16 / 9; box-sizing: border-box;"':
                                                   - rtgl-text c=mu-fg s=xs: ${selectImageLabel}
                           - 'rtgl-view h=25vh aria-hidden=true style="flex-shrink: 0;"': null
-            $else:
-              - 'rtgl-view d=v h=1fg w=f style="min-height: 0; container-type: size;"':
-                  - 'rvn-zoom-viewport#canvasBackground zoom=${canvasZoom} gestures style="display: flex; flex-direction: column; flex: 1 1 auto; width: 100%; min-width: 0; min-height: 0; position: relative; overflow: hidden; background-color: var(--background); background-image: radial-gradient(circle, var(--input) 1px, transparent 1px); background-size: 24px 24px; background-position: var(--canvas-x, 0px) var(--canvas-y, 0px);"':
-                      - 'div style="${canvasWrapperStyle}"':
-                          - 'rtgl-view w=f bwl=xs bwr=xs bc=bo style="aspect-ratio: ${canvasAspectRatio}; overflow: hidden;"':
-                              - 'div#canvas style="width: 100%; height: 100%; display: flex; background: #000;"': null
       - $if showRightPanel:
-          - rvn-resizable-panel panel-type=detail-panel w=300 min-w=200 max-w=500 resize-side="left":
+          - rvn-resizable-panel panel-type=detail-panel show-on-touch w=300 min-w=200 max-w=500 resize-side="left":
               - 'rtgl-view slot=content d=v w=f h=f style="min-width: 0; min-height: 0;"':
                   - rtgl-view h=48 w=f d=h bgc=bg bwb=xs ph=md av=c:
                       - 'rtgl-view w=1fg style="min-width: 0;"':

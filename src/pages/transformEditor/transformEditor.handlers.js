@@ -10,6 +10,7 @@ import {
 } from "../../internal/transformEditorRoute.js";
 import { resolveEditHistoryShortcut } from "../../internal/ui/editHistory.js";
 import { createFileExplorerKeyboardScopeHandlers } from "../../internal/ui/fileExplorerKeyboardScope.js";
+import { mountMobileResourceWindowLayout } from "../../internal/ui/resourcePages/mobileResourcePage.js";
 import { runResourcePageMutation } from "../../internal/ui/resourcePages/resourcePageErrors.js";
 import { enqueueSceneEditorPersistence } from "../../internal/ui/sceneEditor/persistenceQueue.js";
 import {
@@ -275,10 +276,27 @@ const mountSubscriptions = (deps) => {
 };
 
 export const handleBeforeMount = (deps) => {
-  const { appService, browserEventsClient, graphicsService, store, uiConfig } =
-    deps;
+  const {
+    appService,
+    browserEventsClient,
+    graphicsService,
+    render,
+    store,
+    uiConfig,
+    windowMetricsClient,
+  } = deps;
   store.setUiConfig({ uiConfig });
   const cleanupSubscriptions = mountSubscriptions(deps);
+  // Turning a tablet moves the Edit and Preview panel between the right
+  // side and under the canvas.
+  const cleanupWindowLayout = mountMobileResourceWindowLayout({
+    windowMetricsClient,
+    store,
+    render: () => {
+      render();
+      void renderTransformCanvas(deps);
+    },
+  });
   const cleanupWindowResize = browserEventsClient.subscribeWindowEvent({
     type: "resize",
     listener: () => renderTransformCanvas(deps),
@@ -301,6 +319,7 @@ export const handleBeforeMount = (deps) => {
   return async () => {
     unregisterBeforeNavigation();
     cleanupSubscriptions();
+    cleanupWindowLayout?.();
     cleanupWindowResize();
     cleanupKeyboardShortcuts();
     const saved = await saveTransformValues(deps);

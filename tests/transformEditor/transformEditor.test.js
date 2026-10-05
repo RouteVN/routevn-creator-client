@@ -76,7 +76,7 @@ const imagesData = {
 
 // The page on its real store, opened on a saved transform. The canvas is
 // 960 CSS pixels wide, so a CSS pixel is two canvas units.
-const createPage = async ({ item = savedTransform } = {}) => {
+const createPage = async ({ item = savedTransform, uiConfig = {} } = {}) => {
   let state = transformEditorStore.createInitialState();
   const store = new Proxy(
     {},
@@ -96,6 +96,7 @@ const createPage = async ({ item = savedTransform } = {}) => {
   const subject = new Subject();
   subject.dispatch = (action, payload) => subject.next({ action, payload });
   const windowListeners = {};
+  const windowMetricsListeners = new Set();
   let beforeNavigation;
   const repositoryState = {
     project: { resolution: { width: 1920, height: 1080 } },
@@ -110,7 +111,13 @@ const createPage = async ({ item = savedTransform } = {}) => {
     subject,
     render: vi.fn(),
     i18n: EN_I18N,
-    uiConfig: {},
+    uiConfig,
+    windowMetricsClient: {
+      subscribe: (listener) => {
+        windowMetricsListeners.add(listener);
+        return () => windowMetricsListeners.delete(listener);
+      },
+    },
     refs: {
       canvas: { getBoundingClientRect: () => ({ width: 960 }) },
       canvasBackground: { centerContent: vi.fn() },
@@ -204,6 +211,10 @@ const createPage = async ({ item = savedTransform } = {}) => {
     drag,
     flush,
     beforeNavigation: () => beforeNavigation(),
+    resizeWindow: async (metrics) => {
+      windowMetricsListeners.forEach((listener) => listener(metrics));
+      await flush();
+    },
     savedData: () =>
       deps.projectService.updateTransform.mock.calls.map(([call]) => call),
   };
@@ -630,17 +641,50 @@ describe("transform editor", () => {
     expect(page.state().selectedElementMetrics.canvasUnitsPerCssPixel).toBe(1);
   });
 
-  it("shows the touch layout without side panels or the image folder list", async () => {
-    const page = await createPage();
-    page.store.setUiConfig({ uiConfig: { id: "touch" } });
+  it("shows the panel under the canvas on a phone", async () => {
+    const page = await createPage({ uiConfig: { id: "touch" } });
+    await page.resizeWindow({ width: 390, height: 844 });
 
     expect(page.view()).toMatchObject({
-      isTouchMode: true,
       showExplorerPanel: false,
       showRightPanel: false,
+      showMobilePanels: true,
       showCanvasZoomControls: false,
       showImageSelectorFileExplorer: false,
-      canvasZoom: 1,
+      canvasBackgroundStyle: "",
     });
+    expect(page.view().canvasWrapperStyle).toContain("position: relative;");
+  });
+
+  it("keeps the panel on the right in tablet landscape, as the layout editor does", async () => {
+    const page = await createPage({ uiConfig: { id: "touch" } });
+    await page.resizeWindow({ width: 1133, height: 744 });
+
+    expect(page.view()).toMatchObject({
+      showExplorerPanel: false,
+      showRightPanel: true,
+      showMobilePanels: false,
+      showCanvasZoomControls: true,
+      showImageSelectorFileExplorer: false,
+    });
+    expect(page.view().canvasWrapperStyle).toContain("position: absolute;");
+  });
+
+  it("moves the panel under the canvas when a tablet turns to portrait", async () => {
+    const page = await createPage({ uiConfig: { id: "touch" } });
+    await page.resizeWindow({ width: 1133, height: 744 });
+    const rendersBefore = page.deps.graphicsService.render.mock.calls.length;
+
+    await page.resizeWindow({ width: 744, height: 1133 });
+
+    expect(page.view()).toMatchObject({
+      showRightPanel: false,
+      showMobilePanels: true,
+    });
+    expect(page.deps.render).toHaveBeenCalled();
+    // The canvas redraws, so the outline handles fit the new canvas size.
+    expect(page.deps.graphicsService.render.mock.calls.length).toBeGreaterThan(
+      rendersBefore,
+    );
   });
 });

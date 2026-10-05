@@ -15,7 +15,11 @@ import {
 } from "../../internal/projectResolution.js";
 import { toFlatItems } from "../../internal/project/tree.js";
 import { selectEditHistoryCopy } from "../../internal/ui/editHistory.js";
-import { isTouchUiConfig } from "../../internal/ui/resourcePages/mobileResourcePage.js";
+import {
+  isTouchUiConfig,
+  selectIsTabletLandscapeState,
+  setMobileResourcePageWindowMetricsState,
+} from "../../internal/ui/resourcePages/mobileResourcePage.js";
 import {
   normalizeTransformValues,
   toTransformInspectorValues,
@@ -82,6 +86,7 @@ const getImageItemById = (imagesData, imageId) => {
 
 export const createInitialState = () => ({
   isTouchMode: false,
+  appWindowMetrics: { width: 0, height: 0 },
   transformId: undefined,
   transformName: "",
   transform: normalizeTransformValues(),
@@ -109,6 +114,10 @@ export const createInitialState = () => ({
 
 export const setUiConfig = ({ state }, { uiConfig } = {}) => {
   state.isTouchMode = isTouchUiConfig(uiConfig);
+};
+
+export const setAppWindowMetrics = ({ state }, { width, height } = {}) => {
+  setMobileResourcePageWindowMetricsState(state, { width, height });
 };
 
 export const loadTransform = (
@@ -372,46 +381,55 @@ const buildPreviewImageCard = (state, imageId) => {
   };
 };
 
+// Desktop and tablet landscape keep the Edit and Preview panel on the
+// right, as in the layout editor, and give the canvas the rest of the
+// workspace, where it zooms and pans. Other touch layouts show the canvas
+// fitted to half the workspace height with the panel under it.
+const selectShowRightPanel = ({ state }) =>
+  !state.isTouchMode || selectIsTabletLandscapeState({ state });
+
 const selectCanvasLayout = (state) => {
   const resolution = state.projectResolution;
-  // Desktop gives the canvas the whole workspace, where it zooms and pans;
-  // touch layouts show it fitted above the inspector.
-  if (!state.isTouchMode) {
+  if (selectShowRightPanel({ state })) {
     const canvasFitWidth = formatCanvasMaxWidth(resolution, {
       heightUnit: "cqh",
       heightPercent: 92,
     });
     return {
-      canvasZoom: state.canvasZoom,
+      canvasBackgroundStyle:
+        "flex: 1 1 auto; min-height: 0; position: relative; overflow: hidden; background-position: var(--canvas-x, 0px) var(--canvas-y, 0px);",
       canvasWrapperStyle: `position: absolute; left: 0; top: 0; width: calc(${canvasFitWidth} * var(--canvas-zoom, 1)); transform: translate(var(--canvas-x, 0px), var(--canvas-y, 0px));`,
     };
   }
 
   return {
-    canvasZoom: 1,
-    canvasWrapperStyle: `position: relative; width: ${formatHalfViewportCanvasMaxWidth(resolution)}; max-width: 100%; margin-left: auto; margin-right: auto;`,
+    canvasBackgroundStyle: "",
+    canvasWrapperStyle: `position: relative; width: ${formatHalfViewportCanvasMaxWidth(resolution, { heightUnit: "cqh" })}; margin-left: auto; margin-right: auto;`,
   };
 };
 
 export const selectViewData = ({ state, i18n }) => {
   const copy = selectTransformEditorPageCopy(i18n);
   const editHistoryCopy = selectEditHistoryCopy(i18n);
-  const { canvasZoom, canvasWrapperStyle } = selectCanvasLayout(state);
-  const showDesktopPanels = !state.isTouchMode;
+  const { canvasBackgroundStyle, canvasWrapperStyle } =
+    selectCanvasLayout(state);
+  const showRightPanel = selectShowRightPanel({ state });
+  const canvasZoom = state.canvasZoom;
 
   return {
     resourceCategory: "assets",
     selectedResourceId: "transform-editor",
-    showExplorerPanel: showDesktopPanels,
-    showRightPanel: showDesktopPanels,
-    isTouchMode: state.isTouchMode,
+    showExplorerPanel: !state.isTouchMode,
+    showRightPanel,
+    showMobilePanels: !showRightPanel,
     transformName: state.transformName,
     undoDisabled: state.editHistory.undo.length === 0,
     redoDisabled: state.editHistory.redo.length === 0,
     undoLabel: editHistoryCopy.undoLabel,
     redoLabel: editHistoryCopy.redoLabel,
-    showCanvasZoomControls: showDesktopPanels,
+    showCanvasZoomControls: showRightPanel,
     canvasZoom,
+    canvasBackgroundStyle,
     canvasWrapperStyle,
     canvasZoomLabel: `${Math.round(canvasZoom * 100)}%`,
     canvasZoomInDisabled: canvasZoom >= CANVAS_ZOOM_LEVELS.at(-1),
