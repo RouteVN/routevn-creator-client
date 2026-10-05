@@ -1442,6 +1442,7 @@ transformEditorPage:
   canvasZoomOutLabel: "缩小"
   editModeLabel: "编辑"
   failedCapturePreview: "无法捕获变换预览。"
+  failedLoadPreviewImage: "无法加载图像“{imageName}”，因此未保存预览。请检查其文件，或选择其他图像。"
   failedRenderPreview: "无法绘制变换预览。"
   failedSavePreview: "无法保存变换预览。"
   failedSaveTransform: "无法保存变换。"

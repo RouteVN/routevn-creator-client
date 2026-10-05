@@ -21,12 +21,17 @@ import {
   handleSavePreviewClick,
   handleUndoButtonClick,
 } from "../../src/pages/transformEditor/transformEditor.handlers.js";
-import { captureTransformPreviewFiles } from "../../src/pages/transformEditor/support/transformEditorPreviewCapture.js";
+import { captureTransformPreviewImages } from "../../src/pages/transformEditor/support/transformEditorPreviewCapture.js";
 import { EN_I18N } from "../support/i18n.js";
 
+// The canvas capture needs a renderer; storing the captured images runs as
+// it is.
 vi.mock(
   "../../src/pages/transformEditor/support/transformEditorPreviewCapture.js",
-  () => ({ captureTransformPreviewFiles: vi.fn() }),
+  async (importOriginal) => ({
+    ...(await importOriginal()),
+    captureTransformPreviewImages: vi.fn(),
+  }),
 );
 
 // Edits save on their own 300ms after the last one.
@@ -98,6 +103,7 @@ const createPage = async ({ item = savedTransform, uiConfig = {} } = {}) => {
   const windowListeners = {};
   const windowMetricsListeners = new Set();
   let beforeNavigation;
+  let storedFileCount = 0;
   const repositoryState = {
     project: { resolution: { width: 1920, height: 1080 } },
     images: imagesData,
@@ -156,6 +162,13 @@ const createPage = async ({ item = savedTransform, uiConfig = {} } = {}) => {
         type: "image/png",
       })),
       updateTransform: vi.fn(async () => ({ valid: true })),
+      storeFile: vi.fn(async () => {
+        storedFileCount += 1;
+        return {
+          fileId: `stored-${storedFileCount}`,
+          fileRecords: [{ id: `record-${storedFileCount}` }],
+        };
+      }),
     },
   };
   const cleanup = handleBeforeMount(deps);
@@ -220,13 +233,37 @@ const createPage = async ({ item = savedTransform, uiConfig = {} } = {}) => {
   };
 };
 
-beforeEach(() => {
-  captureTransformPreviewFiles.mockReset();
-  captureTransformPreviewFiles.mockResolvedValue({
-    previewFileId: "preview-2",
-    thumbnailFileId: "thumb-2",
-    fileRecords: [{ id: "record-1" }],
+const capturedImages = {
+  previewImage: "data:image/png;base64,cHJldmlldw==",
+  thumbnailImage: "data:image/png;base64,dGh1bWI=",
+};
+
+const pickPreviewImage = async (page, slot, imageId) => {
+  handlePreviewImageClick(page.deps, slotEvent(slot));
+  await handleImageSelectorImageSelected(page.deps, {
+    _event: { detail: { imageId } },
   });
+  await handleImageSelectorConfirmClick(page.deps);
+};
+
+// Image One's file cannot be read, as in an imported project that lacks it.
+const failImageOneFile = (page) => {
+  page.deps.projectService.getFileContent.mockImplementation(async (fileId) => {
+    if (fileId === "file-1") {
+      throw new Error("File file-1 is missing.");
+    }
+    return { url: `blob:${fileId}`, type: "image/png" };
+  });
+};
+
+const fileReads = (page, fileId) =>
+  page.deps.projectService.getFileContent.mock.calls.filter(
+    ([readFileId]) => readFileId === fileId,
+  );
+
+beforeEach(() => {
+  captureTransformPreviewImages.mockReset();
+  captureTransformPreviewImages.mockResolvedValue(capturedImages);
 });
 
 describe("transform editor", () => {
@@ -413,7 +450,7 @@ describe("transform editor", () => {
         },
       },
     ]);
-    expect(captureTransformPreviewFiles).not.toHaveBeenCalled();
+    expect(captureTransformPreviewImages).not.toHaveBeenCalled();
   });
 
   it("saves waiting edits at once when it leaves", async () => {
@@ -473,7 +510,7 @@ describe("transform editor", () => {
 
     await handleSavePreviewClick(page.deps);
 
-    const [{ renderState }] = captureTransformPreviewFiles.mock.calls[0];
+    const [{ renderState }] = captureTransformPreviewImages.mock.calls[0];
     expect(page.findElement(renderState.elements, "selected-border")).toBe(
       undefined,
     );
@@ -496,12 +533,19 @@ describe("transform editor", () => {
       {
         transformId: "transform-1",
         data: {
-          thumbnailFileId: "thumb-2",
-          previewFileId: "preview-2",
+          thumbnailFileId: "stored-2",
+          previewFileId: "stored-1",
           preview: { background: { imageId: "image-1" } },
         },
-        fileRecords: [{ id: "record-1" }],
+        fileRecords: [{ id: "record-1" }, { id: "record-2" }],
       },
+    ]);
+    const storedFiles = page.deps.projectService.storeFile.mock.calls.map(
+      ([{ file }]) => file,
+    );
+    expect(storedFiles.map((file) => [file.type, file.size])).toEqual([
+      ["image/png", "preview".length],
+      ["image/png", "thumb".length],
     ]);
     expect(page.deps.appService.showToast).toHaveBeenCalledWith({
       message: "Transform preview saved.",
@@ -509,20 +553,111 @@ describe("transform editor", () => {
   });
 
   it("alerts and saves no preview when the canvas cannot be captured", async () => {
-    captureTransformPreviewFiles.mockResolvedValue(undefined);
+    captureTransformPreviewImages.mockRejectedValue(
+      new Error("The canvas returned no preview image."),
+    );
     const page = await createPage();
+
+    await handleSavePreviewClick(page.deps);
+
+    expect(page.savedData()).toEqual([]);
+    expect(page.deps.projectService.storeFile).not.toHaveBeenCalled();
+    expect(page.deps.appService.showAlert).toHaveBeenCalledWith({
+      title: "Error",
+      message:
+        "Failed to capture the transform preview.\n\nDetails:\nThe canvas returned no preview image.",
+    });
+    // The canvas shows the outline again after the capture.
+    expect(
+      page.findElement(page.lastRender().elements, "selected-border"),
+    ).toBeTruthy();
+  });
+
+  it("alerts and saves no preview when its files cannot be stored", async () => {
+    const page = await createPage();
+    page.deps.projectService.storeFile.mockRejectedValue(
+      new Error("The disk is full."),
+    );
 
     await handleSavePreviewClick(page.deps);
 
     expect(page.savedData()).toEqual([]);
     expect(page.deps.appService.showAlert).toHaveBeenCalledWith({
       title: "Error",
-      message: "Failed to capture the transform preview.",
+      message:
+        "Failed to save the transform preview.\n\nDetails:\nThe disk is full.",
     });
-    // The canvas shows the outline again after the capture.
     expect(
       page.findElement(page.lastRender().elements, "selected-border"),
     ).toBeTruthy();
+  });
+
+  it("keeps drawing the canvas when a preview image fails to load, and warns once", async () => {
+    const page = await createPage();
+    failImageOneFile(page);
+
+    await pickPreviewImage(page, "background", "image-1");
+    await pickPreviewImage(page, "target", "image-2");
+
+    const elements = page.lastRender().elements;
+    // The background falls back to the gray screen; the target image and
+    // the outline still draw.
+    expect(page.findElement(elements, "transform-background")).toMatchObject({
+      type: "rect",
+    });
+    expect(page.findElement(elements, "transform-target")).toMatchObject({
+      type: "sprite",
+      src: "file-2",
+    });
+    expect(page.findElement(elements, "selected-border")).toBeTruthy();
+    expect(page.deps.appService.showAlert).toHaveBeenCalledOnce();
+    expect(page.deps.appService.showAlert).toHaveBeenCalledWith({
+      title: "Warning",
+      message: expect.stringContaining("Images: Image One"),
+    });
+
+    // Edits, inspector previews, and zoom redraw without reading the file
+    // again or warning again.
+    await page.press("ArrowRight");
+    await handleInspectorPreview(page.deps, {
+      _event: {
+        detail: {
+          formValues: page.view().inspectorValues,
+          name: "scaleX",
+          value: 2,
+        },
+      },
+    });
+    await handleCanvasZoomInClick(page.deps);
+
+    expect(page.transform().x).toBe(961);
+    expect(
+      page.findElement(page.lastRender().elements, "transform-target"),
+    ).toMatchObject({ x: 961, scaleX: 2, src: "file-2" });
+    expect(fileReads(page, "file-1")).toHaveLength(1);
+    expect(page.deps.appService.showAlert).toHaveBeenCalledOnce();
+    expect(page.deps.appService.showToast).not.toHaveBeenCalled();
+  });
+
+  it("alerts with the details and saves no preview when a preview image cannot load", async () => {
+    const page = await createPage();
+    failImageOneFile(page);
+    await pickPreviewImage(page, "background", "image-1");
+    await handleRightPanelModeChange(page.deps, {
+      _event: { detail: { id: "preview" } },
+    });
+
+    await handleSavePreviewClick(page.deps);
+
+    // Save Preview reads the file again before it gives up.
+    expect(fileReads(page, "file-1")).toHaveLength(2);
+    expect(page.deps.appService.showAlert).toHaveBeenLastCalledWith({
+      title: "Error",
+      message:
+        'Could not load the image "Image One", so the preview was not saved. Check its file, or pick another image.\n\nDetails:\nFile file-1 is missing.',
+    });
+    expect(captureTransformPreviewImages).not.toHaveBeenCalled();
+    expect(page.savedData()).toEqual([]);
   });
 
   it("draws the same canvas on both tabs, with the outline only on Edit", async () => {

@@ -1,4 +1,5 @@
 import { concatMap, debounceTime, filter, from, tap } from "rxjs";
+import { withErrorDetails } from "../../internal/errorDetails.js";
 import {
   applyTransformPositionIntent,
   createTransformKeyboardIntent,
@@ -8,8 +9,10 @@ import {
   getTransformEditorBackPath,
   resolveTransformEditorPayload,
 } from "../../internal/transformEditorRoute.js";
+import { showAssetLoadFailures } from "../../internal/ui/assetLoadFeedback.js";
 import { resolveEditHistoryShortcut } from "../../internal/ui/editHistory.js";
 import { createFileExplorerKeyboardScopeHandlers } from "../../internal/ui/fileExplorerKeyboardScope.js";
+import { formatI18nCopy } from "../../internal/ui/i18nCopy.js";
 import { mountMobileResourceWindowLayout } from "../../internal/ui/resourcePages/mobileResourcePage.js";
 import { runResourcePageMutation } from "../../internal/ui/resourcePages/resourcePageErrors.js";
 import { enqueueSceneEditorPersistence } from "../../internal/ui/sceneEditor/persistenceQueue.js";
@@ -25,7 +28,10 @@ import {
   createTransformPreviewRenderState,
   roundTransformScale,
 } from "./support/transformEditorCanvas.js";
-import { captureTransformPreviewFiles } from "./support/transformEditorPreviewCapture.js";
+import {
+  captureTransformPreviewImages,
+  storeTransformPreviewFiles,
+} from "./support/transformEditorPreviewCapture.js";
 import { selectTransformEditorPageCopy } from "./support/transformEditorPageCopy.js";
 
 const selectCopy = ({ i18n } = {}) => selectTransformEditorPageCopy(i18n);
@@ -58,29 +64,71 @@ const navigateBack = (appService) => {
   );
 };
 
-const loadPreviewImageAssets = async (deps) => {
+// Loads the preview images the canvas has not loaded, each on its own, and
+// returns the ones that failed. A failed image stays out of the canvas, and
+// renders do not read it again; `retryFailed` tries it again, as Save
+// Preview does.
+const loadPreviewImageAssets = async (deps, { retryFailed = false } = {}) => {
   const { graphicsService, projectService, store } = deps;
   const loadedFileIds = store.selectLoadedAssetFileIds();
-  const images = [
+  const failedFileIds = retryFailed ? [] : store.selectFailedAssetFileIds();
+  const images = new Map();
+  for (const image of [
     store.selectPreviewBackgroundImage(),
     store.selectPreviewTargetImage(),
-  ].filter((image) => image?.fileId && !loadedFileIds.includes(image.fileId));
-  if (images.length === 0) {
+  ]) {
+    if (
+      image?.fileId &&
+      !loadedFileIds.includes(image.fileId) &&
+      !failedFileIds.includes(image.fileId)
+    ) {
+      images.set(image.fileId, image);
+    }
+  }
+
+  const failures = [];
+  for (const [fileId, image] of images) {
+    try {
+      // As in the layout and scene editors, an image must match its saved
+      // size and hash.
+      const fileResult = await projectService.getFileContent(fileId, {
+        verifyImageIntegrity: true,
+      });
+      await graphicsService.loadAssets({
+        [fileId]: {
+          url: fileResult.url,
+          type: image.fileType ?? fileResult.type ?? "image/png",
+        },
+      });
+      store.markAssetLoaded({ fileId });
+    } catch (error) {
+      console.warn("[transformEditor] Failed to load a preview image", {
+        fileId,
+        error,
+      });
+      store.markAssetFailed({ fileId });
+      failures.push({ fileId, imageName: image.name, error });
+    }
+  }
+  return failures;
+};
+
+// Renders can overlap, so each failed file is warned about once while the
+// page is open, as in the layout editor.
+const warnPreviewImageFailures = (deps, failures) => {
+  const { store } = deps;
+  const warnedFileIds = store.selectWarnedAssetFileIds();
+  const newFailures = failures.filter(
+    ({ fileId }) => !warnedFileIds.includes(fileId),
+  );
+  if (newFailures.length === 0) {
     return;
   }
 
-  const assets = {};
-  for (const image of images) {
-    const fileResult = await projectService.getFileContent(image.fileId);
-    assets[image.fileId] = {
-      url: fileResult.url,
-      type: image.fileType ?? fileResult.type ?? "image/png",
-    };
-  }
-  await graphicsService.loadAssets(assets);
-  store.addLoadedAssetFileIds({
-    fileIds: images.map((image) => image.fileId),
+  store.markAssetWarningsShown({
+    fileIds: newFailures.map(({ fileId }) => fileId),
   });
+  showAssetLoadFailures(deps, newFailures);
 };
 
 // Canvas units per CSS pixel, so the outline's handles keep their on-screen
@@ -99,13 +147,15 @@ const createSavedPreviewRenderState = (store) =>
   createTransformPreviewRenderState({
     projectResolution: store.selectProjectResolution(),
     transform: store.selectTransform(),
-    backgroundImage: store.selectPreviewBackgroundImage(),
-    targetImage: store.selectPreviewTargetImage(),
+    backgroundImage: store.selectCanvasBackgroundImage(),
+    targetImage: store.selectCanvasTargetImage(),
   });
 
 // Edit draws the transform with its selection outline; Preview draws the
 // same canvas without it, which is what Save Preview saves. Every render
-// reads the store, so a later render shows the latest values.
+// reads the store, so a later render shows the latest values. A preview
+// image that cannot load is warned about once and left out, and the canvas
+// stays editable.
 const renderTransformCanvas = async (deps) => {
   const { appService, graphicsService, store } = deps;
   if (!store.selectTransformId()) {
@@ -113,7 +163,7 @@ const renderTransformCanvas = async (deps) => {
   }
 
   try {
-    await loadPreviewImageAssets(deps);
+    warnPreviewImageFailures(deps, await loadPreviewImageAssets(deps));
     if (store.selectRightPanelMode() === "preview") {
       graphicsService.render(createSavedPreviewRenderState(store));
       return;
@@ -124,8 +174,8 @@ const renderTransformCanvas = async (deps) => {
         graphicsService,
         projectResolution: store.selectProjectResolution(),
         transform: store.selectCanvasTransform(),
-        backgroundImage: store.selectPreviewBackgroundImage(),
-        targetImage: store.selectPreviewTargetImage(),
+        backgroundImage: store.selectCanvasBackgroundImage(),
+        targetImage: store.selectCanvasTargetImage(),
         canvasUnitsPerCssPixel: selectCanvasUnitsPerCssPixel(deps),
       });
     graphicsService.render(renderState);
@@ -441,6 +491,15 @@ export const handleRightPanelModeChange = async (deps, payload) => {
   await renderTransformCanvas(deps);
 };
 
+const showSavePreviewFailure = (deps, message, error) => {
+  const { appService, i18n } = deps;
+  console.error("[transformEditor] Failed to save the preview", error);
+  appService.showAlert({
+    title: selectCopy(deps).errorTitle,
+    message: withErrorDetails(message, error, i18n.appPage.errorDetailsLabel),
+  });
+};
+
 // Saves the preview images and a new preview and thumbnail image of the
 // transform, drawn as Preview shows it. The transform's values save first.
 export const handleSavePreviewClick = async (deps) => {
@@ -450,19 +509,43 @@ export const handleSavePreviewClick = async (deps) => {
     return;
   }
 
-  await loadPreviewImageAssets(deps);
-  const previewFiles = await captureTransformPreviewFiles({
-    graphicsService,
-    projectService,
-    canvas: refs.canvas,
-    renderState: createSavedPreviewRenderState(store),
-  });
-  if (!previewFiles) {
+  // A preview saves the images picked for it, so one that cannot load stops
+  // the save instead of saving the gray screen or white square in its place.
+  const [failure] = await loadPreviewImageAssets(deps, { retryFailed: true });
+  if (failure) {
     await renderTransformCanvas(deps);
-    appService.showAlert({
-      title: copy.errorTitle,
-      message: copy.failedCapturePreview,
+    showSavePreviewFailure(
+      deps,
+      formatI18nCopy(copy.failedLoadPreviewImage, {
+        imageName: failure.imageName,
+      }),
+      failure.error,
+    );
+    return;
+  }
+
+  let previewImages;
+  try {
+    previewImages = await captureTransformPreviewImages({
+      graphicsService,
+      canvas: refs.canvas,
+      renderState: createSavedPreviewRenderState(store),
     });
+  } catch (error) {
+    await renderTransformCanvas(deps);
+    showSavePreviewFailure(deps, copy.failedCapturePreview, error);
+    return;
+  }
+
+  let previewFiles;
+  try {
+    previewFiles = await storeTransformPreviewFiles({
+      projectService,
+      ...previewImages,
+    });
+  } catch (error) {
+    await renderTransformCanvas(deps);
+    showSavePreviewFailure(deps, copy.failedSavePreview, error);
     return;
   }
 

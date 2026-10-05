@@ -1287,6 +1287,15 @@ draws the same canvas without the outline: the background image, or a gray
 screen, and the target image, or a white square. Save Preview
 saves the preview images and a preview and thumbnail image of that canvas.
 
+Preview images follow the asset failure policy. Each loads on its own, with
+`verifyImageIntegrity`, so one that cannot be read, fails its integrity check,
+or does not decode is left out (the gray screen or white square shows in its
+place), warned about once with the shared asset warning, and not read again
+while the page is open; the rest of the canvas stays editable. Save Preview
+reads a failed image again and, if it still fails, saves nothing and alerts
+with the error's details, since saving the fallback would misrepresent the
+preview. Capture and file storage failures alert with their details too.
+
 As in the layout editor, edits save on their own 300ms after the last one,
 and leaving the page saves waiting edits at once (saves run one at a time
 through `enqueueSceneEditorPersistence`); preview images save only with Save
@@ -1518,6 +1527,7 @@ Current recovery boundaries:
 | Scene editor asset loading            | Isolate failed entries, show a warning, and keep editing and working assets available, including when a font fails.                                                                                                         |
 | Scene editor audio warm-up            | Keep painting after a decode retry fails. Preserve diagnostics without duplicating the warning already shown by preloading.                                                                                                 |
 | Layout editor canvas                  | Collect read/integrity/decode failures, warn once per failed file per mounted canvas, omit affected render elements, and keep unaffected elements editable. Retry on subsequent requests without changing the saved layout. |
+| Transform editor canvas               | Load each preview image separately, warn once per failed file per mounted page, and draw the fallback in its place while editing. Later renders skip it; Save Preview rereads it and saves nothing if it still fails.       |
 | Fullscreen startup                    | Check the combined initial scene and layout assets, collect all read/integrity/decode failures, and show one deduplicated warning stating playback is blocked. Any failure closes the preview before starting the engine.   |
 | Fullscreen later scene/layout loading | Retain the existing transition/prefetch handling: report scene failures, propagate font/layout failures.                                                                                                                    |
 

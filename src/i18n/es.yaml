@@ -1442,6 +1442,7 @@ transformEditorPage:
   canvasZoomOutLabel: "Alejar"
   editModeLabel: "Edición"
   failedCapturePreview: "No se pudo capturar la vista previa de la transformación."
+  failedLoadPreviewImage: "No se pudo cargar la imagen “{imageName}”, así que no se guardó la vista previa. Revisa su archivo o elige otra imagen."
   failedRenderPreview: "No se pudo dibujar la vista previa de la transformación."
   failedSavePreview: "No se pudo guardar la vista previa de la transformación."
   failedSaveTransform: "No se pudo guardar la transformación."

@@ -106,6 +106,9 @@ export const createInitialState = () => ({
   projectResolution: DEFAULT_PROJECT_RESOLUTION,
   imagesData: createEmptyImageCollection(),
   loadedAssetFileIds: [],
+  // Preview image files that failed to load; the canvas leaves them out.
+  failedAssetFileIds: [],
+  warnedAssetFileIds: [],
   canvasZoom: 1,
   imageSelectorDialog: createImageSelectorDialog(),
   previewImageMenu: createPreviewImageMenu(),
@@ -139,6 +142,8 @@ export const loadTransform = (
   );
   state.imagesData = imagesData ?? createEmptyImageCollection();
   state.loadedAssetFileIds = [];
+  state.failedAssetFileIds = [];
+  state.warnedAssetFileIds = [];
 };
 
 export const selectTransformId = ({ state }) => state.transformId;
@@ -257,11 +262,45 @@ export const selectPreviewBackgroundImage = ({ state }) =>
 export const selectPreviewTargetImage = ({ state }) =>
   getImageItemById(state.imagesData, state.previewImageIds.target);
 
+// The preview images the canvas draws. One whose file failed to load is left
+// out, so the canvas shows the gray screen or the white square instead.
+const selectAvailableImage = (state, imageId) => {
+  const image = getImageItemById(state.imagesData, imageId);
+  return image && !state.failedAssetFileIds.includes(image.fileId)
+    ? image
+    : undefined;
+};
+
+export const selectCanvasBackgroundImage = ({ state }) =>
+  selectAvailableImage(state, state.previewImageIds.background);
+
+export const selectCanvasTargetImage = ({ state }) =>
+  selectAvailableImage(state, state.previewImageIds.target);
+
 export const selectLoadedAssetFileIds = ({ state }) => state.loadedAssetFileIds;
 
-export const addLoadedAssetFileIds = ({ state }, { fileIds } = {}) => {
-  state.loadedAssetFileIds = [
-    ...new Set([...state.loadedAssetFileIds, ...(fileIds ?? [])]),
+export const selectFailedAssetFileIds = ({ state }) => state.failedAssetFileIds;
+
+export const markAssetLoaded = ({ state }, { fileId } = {}) => {
+  if (!state.loadedAssetFileIds.includes(fileId)) {
+    state.loadedAssetFileIds.push(fileId);
+  }
+  state.failedAssetFileIds = state.failedAssetFileIds.filter(
+    (failedFileId) => failedFileId !== fileId,
+  );
+};
+
+export const markAssetFailed = ({ state }, { fileId } = {}) => {
+  if (!state.failedAssetFileIds.includes(fileId)) {
+    state.failedAssetFileIds.push(fileId);
+  }
+};
+
+export const selectWarnedAssetFileIds = ({ state }) => state.warnedAssetFileIds;
+
+export const markAssetWarningsShown = ({ state }, { fileIds } = {}) => {
+  state.warnedAssetFileIds = [
+    ...new Set([...state.warnedAssetFileIds, ...fileIds]),
   ];
 };
 
