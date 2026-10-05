@@ -112,6 +112,33 @@ export const isBuiltinParticleTextureName = (value) => {
   return typeof value === "string" && BUILTIN_PARTICLE_TEXTURE_NAMES.has(value);
 };
 
+// The image a particle texture draws: the texture's image, or the first
+// image of a texture that picks between several. Built-in shapes have none.
+export const resolveParticleTextureImageItem = (texture, imageItems = {}) => {
+  if (typeof texture === "string") {
+    if (isBuiltinParticleTextureName(texture)) {
+      return;
+    }
+
+    const imageItem = imageItems?.[texture];
+    return imageItem?.type === "image" ? imageItem : undefined;
+  }
+
+  if (!texture || typeof texture !== "object" || Array.isArray(texture)) {
+    return;
+  }
+
+  const firstItem = Array.isArray(texture.items)
+    ? texture.items.find((item) => item?.src)
+    : undefined;
+
+  if (!firstItem?.src) {
+    return;
+  }
+
+  return resolveParticleTextureImageItem(firstItem.src, imageItems);
+};
+
 const resolveParticleTextureForRender = (texture, imageItems = {}) => {
   if (typeof texture === "string") {
     if (isBuiltinParticleTextureName(texture)) {

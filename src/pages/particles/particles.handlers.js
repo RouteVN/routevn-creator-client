@@ -1,87 +1,40 @@
 import { generateId } from "../../internal/id.js";
+import { createParticleEditorPayload } from "../../internal/particleEditorRoute.js";
 import { createCatalogPageHandlers } from "../../internal/ui/resourcePages/catalog/createCatalogPageHandlers.js";
-import { forwardFormSubmitOnEnter } from "../../internal/ui/resourcePages/formSubmitKeyDown.js";
 import { createResourceFileExplorerHandlers } from "../../internal/ui/fileExplorer.js";
-import {
-  appendTagIdToForm,
-  createResourcePageTagHandlers,
-} from "../../internal/ui/resourcePages/tags.js";
+import { appendTagIdToForm } from "../../internal/ui/resourcePages/tags.js";
 import { runResourcePageMutation } from "../../internal/ui/resourcePages/resourcePageErrors.js";
 import { extractFileIdsFromRenderState } from "../../internal/project/layout.js";
 import { createRenderableParticleData } from "../../internal/particles.js";
 import { createParticlePreviewState } from "../../internal/particlePreview.js";
-import { captureCanvasThumbnailImage } from "../../internal/runtime/graphicsEngineRuntime.js";
-import { createFileExplorerKeyboardScopeHandlers } from "../../internal/ui/fileExplorerKeyboardScope.js";
 import {
   getTagsCollection,
   resolveCollectionWithTags,
 } from "../../internal/resourceTags.js";
-import {
-  buildParticleFormValues,
-  buildParticlePayload,
-  resolveParticleBaseData,
-} from "./support/particleForm.js";
-import {
-  DEFAULT_PARTICLE_PRESET_ID,
-  PARTICLE_PRESET_OPTIONS,
-} from "./support/particlePresets.js";
+import { createParticlePreset } from "./support/particlePresets.js";
 import { PARTICLE_TAG_SCOPE_KEY } from "./particles.store.js";
 import { selectParticlesPageCopy } from "./support/particlesPageCopy.js";
 
-const CREATE_PARTICLE_SETUP_STEP = "setup";
-const PARTICLE_EDITOR_STEP = "editor";
-
 const selectCopy = (deps = {}) => selectParticlesPageCopy(deps.i18n);
 
-const dataUrlToBlob = async (value) => {
-  if (typeof value !== "string" || value.length === 0) {
-    throw new Error("Thumbnail image is missing");
+const navigateToEditor = ({ appService, particleId } = {}) => {
+  if (!particleId) {
+    return;
   }
 
-  const commaIndex = value.indexOf(",");
-  if (commaIndex < 0) {
-    throw new Error("Thumbnail image is not a valid data URL");
-  }
-
-  const header = value.slice(0, commaIndex);
-  const body = value.slice(commaIndex + 1);
-  const mimeMatch = header.match(/^data:([^;,]+)?(?:;base64)?$/);
-  if (!mimeMatch) {
-    throw new Error("Thumbnail image is not a valid data URL");
-  }
-
-  const mimeType = mimeMatch[1] || "application/octet-stream";
-  const isBase64 = header.includes(";base64");
-
-  if (!isBase64) {
-    return new Blob([decodeURIComponent(body)], { type: mimeType });
-  }
-
-  const binary = atob(body);
-  const bytes = new Uint8Array(binary.length);
-  for (let index = 0; index < binary.length; index += 1) {
-    bytes[index] = binary.charCodeAt(index);
-  }
-
-  return new Blob([bytes], { type: mimeType });
+  appService.navigate(
+    "/project/particle-editor",
+    createParticleEditorPayload({
+      payload: appService.getPayload() ?? {},
+      particleId,
+    }),
+  );
 };
 
-const syncDialogFormValues = ({ refs, values } = {}) => {
-  refs.particleForm?.reset?.();
-  refs.particleForm?.setValues?.({ values });
-};
-
-const getPreviewCanvasRef = (refs, target) => {
-  return target === "dialog" ? refs.dialogCanvas : refs.detailCanvas;
-};
-
-const {
-  focusKeyboardScope: focusImageSelectorKeyboardScope,
-  handleKeyboardScopeClick: handleImageSelectorKeyboardScopeClick,
-  handleKeyboardScopeKeyDown: handleImageSelectorKeyboardScopeKeyDown,
-} = createFileExplorerKeyboardScopeHandlers({
-  fileExplorerRefName: "imageSelectorFileExplorer",
-  keyboardScopeRefName: "imageSelectorKeyboardScope",
+const createMetadataValues = (values) => ({
+  name: values.name?.trim() ?? "",
+  description: values.description ?? "",
+  tagIds: Array.isArray(values.tagIds) ? values.tagIds : [],
 });
 
 const loadParticlePreviewAssets = async ({ deps, renderState } = {}) => {
@@ -112,292 +65,31 @@ const loadParticlePreviewAssets = async ({ deps, renderState } = {}) => {
   }
 };
 
-const resolveDialogBaseParticle = ({ deps, fallbackParticle } = {}) => {
-  const { store } = deps;
-  return resolveParticleBaseData({
-    particle: fallbackParticle,
-    presetId: store.selectDialogPresetId(),
-    projectResolution: store.selectProjectResolution(),
-    copy: selectCopy(deps),
-  });
-};
-
-const ensurePreviewRuntime = async ({
-  deps,
-  target,
-  width,
-  height,
-  forceInit = false,
-} = {}) => {
+// The detail panel plays the selected particle. It shows only on desktop;
+// touch layouts have no detail canvas.
+const renderDetailPreview = async (deps) => {
   const { graphicsService, refs, store } = deps;
-  const canvas = getPreviewCanvasRef(refs, target);
-
-  if (!graphicsService || !canvas) {
-    return false;
-  }
-
-  const runtime = store.selectPreviewRuntime();
-  const shouldInit =
-    forceInit ||
-    runtime.target !== target ||
-    runtime.width !== width ||
-    runtime.height !== height;
-
-  if (!shouldInit) {
-    return true;
-  }
-
-  await graphicsService.init({
-    canvas,
-    width,
-    height,
-  });
-  store.setPreviewRuntime({
-    target,
-    width,
-    height,
-  });
-  return true;
-};
-
-const renderParticlePreview = async ({
-  deps,
-  target,
-  particleData,
-  forceInit = false,
-} = {}) => {
-  const { graphicsService, store } = deps;
-  if (!graphicsService || !particleData) {
+  const particle = store.selectSelectedParticle();
+  if (!particle || !refs.detailCanvas) {
     return;
   }
 
   const renderableParticle = createRenderableParticleData(
-    particleData,
-    store.selectImagesData()?.items || {},
+    particle,
+    store.selectImagesData().items,
   );
-  const width = Math.max(1, Math.round(Number(renderableParticle.width) || 1));
-  const height = Math.max(
-    1,
-    Math.round(Number(renderableParticle.height) || 1),
-  );
-  const isReady = await ensurePreviewRuntime({
-    deps,
-    target,
-    width,
-    height,
-    forceInit,
+  await graphicsService.init({
+    canvas: refs.detailCanvas,
+    width: Math.max(1, Math.round(Number(renderableParticle.width) || 1)),
+    height: Math.max(1, Math.round(Number(renderableParticle.height) || 1)),
   });
-
-  if (!isReady) {
-    return;
-  }
-
-  const previewState = createParticlePreviewState(renderableParticle, {
-    backgroundImage:
-      target === "dialog" && store.selectDialogMode() === "form"
-        ? store.selectDialogPreviewBackgroundImage()
-        : undefined,
-  });
+  const previewState = createParticlePreviewState(renderableParticle);
   await loadParticlePreviewAssets({
     deps,
     renderState: previewState,
   });
   graphicsService.render(previewState);
 };
-
-const showParticleThumbnailError = ({
-  appService,
-  copy = {},
-  message,
-  error,
-} = {}) => {
-  if (error) {
-    console.error(`[particles] ${message}`, error);
-  } else {
-    console.error(`[particles] ${message}`);
-  }
-
-  appService.showAlert({
-    message,
-    title: copy.errorTitle ?? "Error",
-  });
-};
-
-const captureParticleThumbnail = async ({ deps, particleData } = {}) => {
-  const { appService, graphicsService, projectService, refs, store } = deps;
-  const copy = selectCopy(deps);
-
-  let renderableParticle;
-  try {
-    renderableParticle = createRenderableParticleData(
-      particleData,
-      store.selectImagesData()?.items || {},
-    );
-  } catch (error) {
-    showParticleThumbnailError({
-      appService,
-      copy,
-      error,
-      message:
-        copy.failedSaveThumbnailPrepare ??
-        "Failed to save particle thumbnail: particle data preparation failed.",
-    });
-    return;
-  }
-
-  const width = Math.max(1, Math.round(Number(renderableParticle.width) || 1));
-  const height = Math.max(
-    1,
-    Math.round(Number(renderableParticle.height) || 1),
-  );
-  let isReady;
-  try {
-    isReady = await ensurePreviewRuntime({
-      deps,
-      target: "dialog",
-      width,
-      height,
-    });
-  } catch (error) {
-    showParticleThumbnailError({
-      appService,
-      copy,
-      error,
-      message:
-        copy.failedSaveThumbnailRuntime ??
-        "Failed to save particle thumbnail: preview runtime setup failed.",
-    });
-    return;
-  }
-
-  if (!isReady) {
-    showParticleThumbnailError({
-      appService,
-      copy,
-      message:
-        copy.failedSaveThumbnailCanvas ??
-        "Failed to save particle thumbnail: preview canvas unavailable.",
-    });
-    return;
-  }
-
-  let previewState;
-  try {
-    previewState = createParticlePreviewState(renderableParticle);
-  } catch (error) {
-    showParticleThumbnailError({
-      appService,
-      copy,
-      error,
-      message:
-        copy.failedSaveThumbnailState ??
-        "Failed to save particle thumbnail: preview state creation failed.",
-    });
-    return;
-  }
-
-  try {
-    await loadParticlePreviewAssets({
-      deps,
-      renderState: previewState,
-    });
-  } catch (error) {
-    showParticleThumbnailError({
-      appService,
-      copy,
-      error,
-      message:
-        copy.failedSaveThumbnailTexture ??
-        "Failed to save particle thumbnail: texture asset load failed.",
-    });
-    return;
-  }
-
-  try {
-    graphicsService.render(previewState);
-  } catch (error) {
-    showParticleThumbnailError({
-      appService,
-      copy,
-      error,
-      message:
-        copy.failedSaveThumbnailRender ??
-        "Failed to save particle thumbnail: preview render failed.",
-    });
-    return;
-  }
-
-  const thumbnailImage = await captureCanvasThumbnailImage(
-    graphicsService,
-    refs.dialogCanvas,
-  );
-  if (!thumbnailImage) {
-    showParticleThumbnailError({
-      appService,
-      copy,
-      message:
-        copy.failedSaveThumbnailCapture ??
-        "Failed to save particle thumbnail: canvas capture returned no image.",
-    });
-    return;
-  }
-
-  let thumbnailBlob;
-  try {
-    thumbnailBlob = await dataUrlToBlob(thumbnailImage);
-  } catch (error) {
-    showParticleThumbnailError({
-      appService,
-      copy,
-      error,
-      message:
-        copy.failedSaveThumbnailConversion ??
-        "Failed to save particle thumbnail: image conversion failed.",
-    });
-    return;
-  }
-
-  let storedFile;
-  try {
-    storedFile = await projectService.storeFile({
-      file: thumbnailBlob,
-    });
-  } catch (error) {
-    showParticleThumbnailError({
-      appService,
-      copy,
-      error,
-      message:
-        copy.failedSaveThumbnailStorage ??
-        "Failed to save particle thumbnail: file storage failed.",
-    });
-    return;
-  }
-
-  return {
-    thumbnailFileId: storedFile.fileId,
-    fileRecords: storedFile.fileRecords,
-  };
-};
-
-async function renderDetailPreview(deps) {
-  const { store } = deps;
-  if (store.selectIsDialogOpen()) {
-    return;
-  }
-
-  const selectedParticle = store.selectSelectedParticle();
-  if (!selectedParticle) {
-    return;
-  }
-
-  await renderParticlePreview({
-    deps,
-    target: "detail",
-    particleData: selectedParticle,
-    forceInit: true,
-  });
-}
 
 const normalizeSelectedParticle = (deps) => {
   const { render, store } = deps;
@@ -419,199 +111,16 @@ const normalizeSelectedParticle = (deps) => {
   render();
 };
 
-const mergeDialogFormValues = (store, values = {}) => {
-  const currentValues = store.selectDialogFormValues() ?? {};
-  return {
-    ...currentValues,
-    ...values,
-  };
-};
-
-const buildDialogParticleData = ({ deps, values, fallbackParticle } = {}) => {
-  const { store } = deps;
-  return buildParticlePayload({
-    values,
-    baseParticle: resolveDialogBaseParticle({
-      deps,
-      fallbackParticle,
-    }),
-    projectResolution: store.selectProjectResolution(),
-  });
-};
-
-const isValidParticlePresetId = (presetId) => {
-  return PARTICLE_PRESET_OPTIONS.some((option) => option.value === presetId);
-};
-
-const getDialogFallbackParticle = (store) => {
-  return store.selectParticleItemById({
-    itemId: store.selectEditItemId(),
-  });
-};
-
-const renderCurrentDialogPreview = async (deps, { forceInit = false } = {}) => {
-  const { store } = deps;
-  const previewParticle = buildDialogParticleData({
-    deps,
-    values: store.selectDialogFormValues(),
-    fallbackParticle: getDialogFallbackParticle(store),
-  });
-
-  store.setDialogPreviewSize({
-    width: previewParticle.width,
-    height: previewParticle.height,
-  });
-
-  await renderParticlePreview({
-    deps,
-    target: "dialog",
-    particleData: previewParticle,
-    forceInit,
-  });
-};
-
-const getTextureImageId = (values = {}) => {
-  return `${values?.textureImageId ?? ""}`.trim();
-};
-
-const hasValidTextureImage = ({ store, textureImageId } = {}) => {
-  return Boolean(
-    textureImageId && store.selectImagesData()?.items?.[textureImageId]?.fileId,
-  );
-};
-
-const resolveCreateSetupDialogValues = ({ deps, values } = {}) => {
-  const { store } = deps;
-  const presetId = `${values?.presetId ?? ""}`.trim();
-
-  if (!presetId || presetId === store.selectDialogPresetId()) {
-    return values;
-  }
-
-  const presetValues = buildParticleFormValues({
-    presetId,
-    projectResolution: store.selectProjectResolution(),
-    copy: selectCopy(deps),
-  });
-
-  return {
-    ...presetValues,
-    textureImageId: values?.textureImageId ?? presetValues.textureImageId ?? "",
-  };
-};
-
-const openParticleDialog = async ({
-  deps,
-  editMode = false,
-  dialogStep,
-  previewOnly = false,
-  itemId,
-  itemData,
-  presetId,
-  targetGroupId,
-} = {}) => {
-  const { refs, render, store } = deps;
-
-  if (itemId) {
-    store.setSelectedItemId({ itemId, suppressMobileDetailSheet: true });
-    refs.fileExplorer?.selectItem?.({ itemId });
-  }
-
-  store.clearPreviewRuntime();
-
-  if (previewOnly) {
-    store.openParticlePreviewDialog({
-      itemId,
-      itemData,
-      copy: selectCopy(deps),
-    });
-  } else {
-    store.openParticleFormDialog({
-      editMode,
-      dialogStep,
-      itemId,
-      itemData,
-      presetId,
-      targetGroupId,
-      copy: selectCopy(deps),
-    });
-  }
-
-  render();
-
-  if (!previewOnly) {
-    syncDialogFormValues({
-      refs,
-      values: store.selectDialogFormValues(),
-    });
-  }
-
-  const previewParticle = previewOnly
-    ? itemData
-    : buildDialogParticleData({
-        deps,
-        values: store.selectDialogFormValues(),
-        fallbackParticle: itemData,
-      });
-
-  await renderParticlePreview({
-    deps,
-    target: "dialog",
-    particleData: previewParticle,
-    forceInit: true,
-  });
-};
-
-const restoreParticleFormDialog = async ({
-  deps,
-  editMode = false,
-  dialogStep = PARTICLE_EDITOR_STEP,
-  itemId,
-  itemData,
-  presetId,
-  targetGroupId,
-  values,
-} = {}) => {
-  await openParticleDialog({
-    deps,
-    editMode,
-    dialogStep,
-    itemId,
-    itemData,
-    presetId,
-    targetGroupId,
-  });
-
-  deps.store.setDialogFormValues({
-    values,
-  });
-  syncDialogFormValues({
-    refs: deps.refs,
-    values,
-  });
-
-  await renderParticlePreview({
-    deps,
-    target: "dialog",
-    particleData: buildDialogParticleData({
-      deps,
-      values,
-      fallbackParticle: itemData,
-    }),
-    forceInit: true,
-  });
-};
-
 const {
   handleBeforeMount: handleBeforeMountBase,
   handleAfterMount: handleAfterMountBase,
   refreshData: refreshDataBase,
   handleFileExplorerSelectionChanged: handleFileExplorerSelectionChangedBase,
-  handleFileExplorerAction,
+  handleFileExplorerAction: handleBaseFileExplorerAction,
   handleFileExplorerTargetChanged,
   handleFileExplorerKeyboardScopeClick,
   handleFileExplorerKeyboardScopeKeyDown,
-  handleResourceViewBackgroundClick: handleResourceViewBackgroundClickBase,
+  handleResourceViewBackgroundClick,
   handleItemClick: handleParticleItemClickBase,
   handleSearchInput,
   handleMobileFileExplorerOpen,
@@ -620,22 +129,22 @@ const {
   openFolderNameDialogWithValues,
   handleFolderNameDialogClose,
   handleFolderNameFormAction,
+  openCreateTagDialogForMode,
+  handleCreateTagDialogClose,
+  handleTagFilterChange,
+  handleTagFilterAddOptionClick,
+  handleDetailTagAddOptionClick,
+  handleDetailTagDraftValueChange,
+  handleDetailTagOpenChange,
+  handleDetailTagValueChange,
+  handleCreateTagFormAction,
 } = createCatalogPageHandlers({
   resourceType: "particles",
   copy: ({ i18n }) => selectParticlesPageCopy(i18n),
   onEditKey: ({ deps, selectedItemId }) => {
-    const itemData = deps.store.selectParticleItemById({
-      itemId: selectedItemId,
-    });
-    if (!itemData) {
-      return;
-    }
-
-    void openParticleDialog({
-      deps,
-      editMode: true,
-      itemId: selectedItemId,
-      itemData,
+    navigateToEditor({
+      appService: deps.appService,
+      particleId: selectedItemId,
     });
   },
   selectData: (repositoryState) => {
@@ -648,14 +157,15 @@ const {
     });
   },
   onProjectStateChanged: ({ deps, repositoryState }) => {
-    deps.store.setTagsData({
+    const { store } = deps;
+    store.setTagsData({
       tagsData: getTagsCollection(repositoryState, PARTICLE_TAG_SCOPE_KEY),
     });
-    deps.store.setProjectResolution({
-      projectResolution: repositoryState?.project?.resolution,
+    store.setProjectResolution({
+      projectResolution: repositoryState.project?.resolution,
     });
-    deps.store.setImagesData({
-      imagesData: repositoryState?.images,
+    store.setImagesData({
+      imagesData: repositoryState.images,
     });
   },
   createExplorerHandlers: ({ refresh }) =>
@@ -664,26 +174,40 @@ const {
       refresh: async (deps, options) => {
         await refresh(deps, options);
         normalizeSelectedParticle(deps);
-        deps.store.clearPreviewRuntime();
         await renderDetailPreview(deps);
       },
     }),
+  tagging: {
+    scopeKey: PARTICLE_TAG_SCOPE_KEY,
+    updateItemTagIds: ({ deps, itemId, tagIds }) =>
+      deps.projectService.updateParticle({
+        particleId: itemId,
+        data: {
+          tagIds,
+        },
+      }),
+    updateItemTagFallbackMessage: ({ deps }) =>
+      selectCopy(deps).failedUpdateTags,
+    // A tag created from the add or edit form goes into that form.
+    appendCreatedTagByMode: ({ deps, mode, tagId }) => {
+      const { refs } = deps;
+      if (mode === "add-form") {
+        appendTagIdToForm({ form: refs.addForm, tagId });
+      } else if (mode === "edit-form") {
+        appendTagIdToForm({ form: refs.editForm, tagId });
+      }
+    },
+  },
 });
 
 const refreshParticleData = async (deps, options = {}) => {
   await refreshDataBase(deps, options);
   normalizeSelectedParticle(deps);
-  deps.store.clearPreviewRuntime();
   await renderDetailPreview(deps);
 };
 
 export const handleBeforeMount = (deps) => {
-  const cleanupBase = handleBeforeMountBase(deps);
-
-  return () => {
-    cleanupBase?.();
-    deps.store.clearPreviewRuntime();
-  };
+  return handleBeforeMountBase(deps);
 };
 
 export const handleAfterMount = (deps) => {
@@ -692,65 +216,78 @@ export const handleAfterMount = (deps) => {
 
 export const handleDataChanged = refreshParticleData;
 export {
-  handleFileExplorerAction,
   handleFileExplorerTargetChanged,
   handleFileExplorerKeyboardScopeClick,
   handleFileExplorerKeyboardScopeKeyDown,
+  handleResourceViewBackgroundClick,
   handleSearchInput,
   handleMobileFileExplorerOpen,
   handleMobileFileExplorerClose,
   handleMobileDetailSheetClose,
   handleFolderNameDialogClose,
   handleFolderNameFormAction,
+  handleCreateTagDialogClose,
+  handleTagFilterChange,
+  handleTagFilterAddOptionClick,
+  handleDetailTagAddOptionClick,
+  handleDetailTagDraftValueChange,
+  handleDetailTagOpenChange,
+  handleDetailTagValueChange,
+  handleCreateTagFormAction,
 };
 
 export const handleFileExplorerSelectionChanged = async (deps, payload) => {
   handleFileExplorerSelectionChangedBase(deps, payload);
-  deps.store.clearPreviewRuntime();
   await renderDetailPreview(deps);
 };
 
-export const handleResourceViewBackgroundClick = async (deps) => {
-  handleResourceViewBackgroundClickBase(deps);
-  deps.store.clearPreviewRuntime();
-  await renderDetailPreview(deps);
+export const handleFileExplorerAction = async (deps, payload) => {
+  const { appService } = deps;
+  const { itemId, item } = payload._event.detail;
+  if (item?.value === "edit-item") {
+    navigateToEditor({ appService, particleId: itemId });
+    return;
+  }
+  if (item?.value === "duplicate-item") {
+    await handleItemDuplicate(deps, payload);
+    return;
+  }
+  await handleBaseFileExplorerAction(deps, payload);
 };
 
 export const handleParticleItemClick = async (deps, payload) => {
   handleParticleItemClickBase(deps, payload);
-  deps.store.clearPreviewRuntime();
   await renderDetailPreview(deps);
 };
 
-export const handleParticleItemDoubleClick = async (deps, payload) => {
+// Double-click and long press open the particle in the editor.
+export const handleParticleItemDoubleClick = (deps, payload) => {
+  const { appService } = deps;
   const { itemId, isFolder } = payload._event.detail;
-  if (isFolder || !itemId) {
+  if (isFolder) {
     return;
   }
-
-  const itemData = deps.store.selectParticleItemById({ itemId });
-  if (!itemData) {
-    return;
-  }
-
-  await openParticleDialog({
-    deps,
-    previewOnly: true,
-    itemId,
-    itemData,
-  });
+  navigateToEditor({ appService, particleId: itemId });
 };
 
-export const handleMobileDetailPreviewClick = async (deps, payload) => {
-  payload?._event?.preventDefault?.();
-  payload?._event?.stopPropagation?.();
+export const handleParticleItemEdit = (deps, payload) => {
+  const { appService } = deps;
+  const { itemId } = payload._event.detail;
+  navigateToEditor({ appService, particleId: itemId });
+};
 
+export const handleMobileDetailOpenClick = (deps) => {
+  const { appService, store } = deps;
+  navigateToEditor({ appService, particleId: store.selectSelectedItemId() });
+};
+
+export const handleMobileDetailDuplicateClick = async (deps) => {
   const itemId = deps.store.selectSelectedItemId();
   if (!itemId) {
     return;
   }
 
-  await handleParticleItemDoubleClick(deps, {
+  await handleItemDuplicate(deps, {
     _event: {
       detail: {
         itemId,
@@ -759,10 +296,7 @@ export const handleMobileDetailPreviewClick = async (deps, payload) => {
   });
 };
 
-export const handleMobileDetailDeleteClick = async (deps, payload) => {
-  payload?._event?.preventDefault?.();
-  payload?._event?.stopPropagation?.();
-
+export const handleMobileDetailDeleteClick = async (deps) => {
   const itemId = deps.store.selectSelectedItemId();
   if (!itemId) {
     return;
@@ -777,539 +311,156 @@ export const handleMobileDetailDeleteClick = async (deps, payload) => {
   });
 };
 
-export const handleDetailHeaderClick = async (deps) => {
+const openEditDialogWithValues = ({ deps, itemId }) => {
+  const { refs, render, store } = deps;
+  const { editForm, fileExplorer } = refs;
+  const item = store.selectParticleItemById({ itemId });
+  if (!item) {
+    return;
+  }
+
+  const editValues = createMetadataValues(item);
+  store.setSelectedItemId({ itemId, suppressMobileDetailSheet: true });
+  fileExplorer?.selectItem?.({ itemId });
+  store.openEditDialog({ itemId, defaultValues: editValues });
+  render();
+  editForm.reset();
+  editForm.setValues({ values: editValues });
+};
+
+// The detail header edits the particle's name, description and tags; its
+// effect is edited in the editor.
+export const handleDetailHeaderClick = (deps) => {
   const { store } = deps;
   const itemId = store.selectSelectedItemId();
-  if (!itemId) {
-    openFolderNameDialogWithValues({
-      deps,
-      folderId: store.selectSelectedFolderId(),
-    });
+  if (itemId) {
+    openEditDialogWithValues({ deps, itemId });
     return;
   }
 
-  const itemData = store.selectParticleItemById({ itemId });
-  if (!itemData) {
-    return;
-  }
-
-  await openParticleDialog({
+  openFolderNameDialogWithValues({
     deps,
-    editMode: true,
-    itemId,
-    itemData,
+    folderId: store.selectSelectedFolderId(),
   });
 };
 
-export const handleParticleFormAddOptionClick = (deps) => {
-  openCreateTagDialogForMode({
-    deps,
-    mode: "form",
-    itemId: deps.store.selectEditItemId(),
-  });
-};
-
-export const handleAddParticleClick = async (deps, payload) => {
-  const { groupId } = payload._event.detail;
-  await openParticleDialog({
-    deps,
-    presetId: DEFAULT_PARTICLE_PRESET_ID,
-    targetGroupId: groupId,
-  });
-};
-
-export const handleParticleDialogClose = async (deps) => {
+export const handleAddParticleClick = (deps, payload) => {
   const { render, store } = deps;
-  store.closeParticleDialog();
-  store.clearPreviewRuntime();
+  const { groupId } = payload._event.detail;
+  store.openAddDialog({ groupId });
   render();
-  await renderDetailPreview(deps);
 };
 
-export const handleParticleFormActionClick = async (deps, payload) => {
-  const { appService, projectService, refs, store, render } = deps;
+export const handleAddDialogClose = (deps) => {
+  const { render, store } = deps;
+  store.closeAddDialog();
+  render();
+};
+
+export const handleAddFormAddOptionClick = (deps) => {
+  openCreateTagDialogForMode({ deps, mode: "add-form" });
+};
+
+// Creates the particle from the preset, at the project's size, and opens it
+// in the editor, where its texture is picked.
+export const handleAddFormAction = async (deps, payload) => {
+  const { appService, projectService, render, store } = deps;
   const copy = selectCopy(deps);
-  const { actionId, valid, values: nextValues } = payload._event.detail;
-  const dialogStep = store.selectDialogStep();
-  const mergedValues = mergeDialogFormValues(store, nextValues);
-  const values =
-    dialogStep === CREATE_PARTICLE_SETUP_STEP && !store.selectEditMode()
-      ? resolveCreateSetupDialogValues({
-          deps,
-          values: mergedValues,
-        })
-      : mergedValues;
-  const presetId = `${values?.presetId ?? ""}`.trim();
-
-  if (dialogStep === CREATE_PARTICLE_SETUP_STEP && presetId) {
-    store.setDialogPresetId({
-      presetId,
-    });
-  }
-
-  store.setDialogFormValues({
-    values,
-  });
-
-  if (actionId === "cancel") {
-    await handleParticleDialogClose(deps);
-    return;
-  }
-
+  const { actionId, values } = payload._event.detail;
   if (actionId !== "submit") {
     return;
   }
 
-  if (valid === false) {
-    return;
-  }
-
-  if (dialogStep === CREATE_PARTICLE_SETUP_STEP && !store.selectEditMode()) {
-    if (!isValidParticlePresetId(presetId)) {
-      appService.showAlert({
-        message: copy.presetRequired ?? "Particle preset is required.",
-        title: copy.warningTitle ?? "Warning",
-      });
-      return;
-    }
-
-    const textureImageId = getTextureImageId(values);
-    if (!textureImageId) {
-      appService.showAlert({
-        message:
-          copy.textureImageRequired ?? "Particle texture image is required.",
-        title: copy.warningTitle ?? "Warning",
-      });
-      return;
-    }
-
-    if (
-      !hasValidTextureImage({
-        store,
-        textureImageId,
-      })
-    ) {
-      appService.showAlert({
-        message:
-          copy.selectValidTextureImage ??
-          "Select a valid particle texture image.",
-        title: copy.warningTitle ?? "Warning",
-      });
-      return;
-    }
-
-    store.setDialogStep({
-      step: PARTICLE_EDITOR_STEP,
-    });
-    render();
-    syncDialogFormValues({
-      refs,
-      values,
-    });
-
-    await renderParticlePreview({
-      deps,
-      target: "dialog",
-      particleData: buildDialogParticleData({
-        deps,
-        values,
-        fallbackParticle: getDialogFallbackParticle(store),
-      }),
-      forceInit: true,
-    });
-    return;
-  }
-
-  const particleData = buildDialogParticleData({
-    deps,
-    values,
-    fallbackParticle: getDialogFallbackParticle(store),
-  });
-
-  if (!particleData.name) {
+  const metadata = createMetadataValues(values);
+  if (!metadata.name) {
     appService.showAlert({
-      message: copy.particleNameRequired ?? "Particle name is required.",
-      title: copy.warningTitle ?? "Warning",
+      message: copy.particleNameRequired,
+      title: copy.warningTitle,
     });
     return;
   }
 
-  const textureImageId = getTextureImageId(values);
-  if (!textureImageId) {
-    appService.showAlert({
-      message:
-        copy.textureImageRequired ?? "Particle texture image is required.",
-      title: copy.warningTitle ?? "Warning",
-    });
-    return;
-  }
-
-  if (
-    !hasValidTextureImage({
-      store,
-      textureImageId,
-    })
-  ) {
-    appService.showAlert({
-      message:
-        copy.selectValidTextureImage ??
-        "Select a valid particle texture image.",
-      title: copy.warningTitle ?? "Warning",
-    });
-    return;
-  }
-
-  const editMode = store.selectEditMode();
-  const editItemId = store.selectEditItemId();
-  const targetGroupId = store.selectTargetGroupId();
-  const editItemData = store.selectParticleItemById({
-    itemId: editItemId,
+  const { width, height, seed, modules } = createParticlePreset({
+    presetId: values.presetId,
+    projectResolution: store.selectProjectResolution(),
   });
-  const dialogSnapshot = {
-    editMode,
-    dialogStep: PARTICLE_EDITOR_STEP,
-    itemId: editItemId,
-    itemData: editItemData,
-    presetId: store.selectDialogPresetId(),
-    targetGroupId,
-    values,
-  };
-  const thumbnailResult = await captureParticleThumbnail({
-    deps,
-    particleData,
-  });
-
-  if (!thumbnailResult) {
-    return;
-  }
-
-  particleData.thumbnailFileId = thumbnailResult.thumbnailFileId;
-
-  store.closeParticleDialog();
-  store.clearPreviewRuntime();
-  render();
-
-  if (editMode && editItemId) {
-    const updateAttempt = await runResourcePageMutation({
-      appService,
-      fallbackMessage:
-        copy.failedUpdateParticle ?? "Failed to update particle.",
-      title: copy.errorTitle ?? "Error",
-      action: () =>
-        projectService.updateParticle({
-          particleId: editItemId,
-          data: particleData,
-          fileRecords: thumbnailResult.fileRecords,
-        }),
-    });
-
-    if (!updateAttempt.ok) {
-      await restoreParticleFormDialog({
-        deps,
-        ...dialogSnapshot,
-      });
-      return;
-    }
-
-    await refreshParticleData(deps, { selectedItemId: editItemId });
-    return;
-  }
-
   const particleId = generateId();
   const createAttempt = await runResourcePageMutation({
     appService,
-    fallbackMessage: copy.failedCreateParticle ?? "Failed to create particle.",
-    title: copy.errorTitle ?? "Error",
+    fallbackMessage: copy.failedCreateParticle,
+    title: copy.errorTitle,
     action: () =>
       projectService.createParticle({
         particleId,
         data: {
           type: "particle",
-          ...particleData,
+          ...metadata,
+          width,
+          height,
+          seed,
+          modules,
         },
-        fileRecords: thumbnailResult.fileRecords,
-        parentId: targetGroupId,
+        parentId: store.selectTargetGroupId(),
         position: "last",
       }),
   });
-
   if (!createAttempt.ok) {
-    await restoreParticleFormDialog({
-      deps,
-      ...dialogSnapshot,
-    });
     return;
   }
 
-  await refreshParticleData(deps, { selectedItemId: particleId });
-};
-
-export const handleParticleSubmitClick = async (deps) => {
-  const { particleForm } = deps.refs;
-  const validation = particleForm.validate();
-  await handleParticleFormActionClick(deps, {
-    _event: {
-      detail: {
-        actionId: "submit",
-        valid: validation.valid,
-        values: particleForm.getValues(),
-      },
-    },
-  });
-};
-
-export const handleParticleFormSubmitKeyDown = (deps, payload) =>
-  forwardFormSubmitOnEnter({
-    deps,
-    payload,
-    submit: handleParticleSubmitClick,
-  });
-
-export const handleParticleFormChange = async (deps, payload) => {
-  const { render, store } = deps;
-  const dialogStep = store.selectDialogStep();
-  const mergedValues = mergeDialogFormValues(
-    store,
-    payload._event.detail.values,
-  );
-  const values =
-    dialogStep === CREATE_PARTICLE_SETUP_STEP && !store.selectEditMode()
-      ? resolveCreateSetupDialogValues({
-          deps,
-          values: mergedValues,
-        })
-      : mergedValues;
-  const presetId = `${values?.presetId ?? ""}`.trim();
-
-  if (dialogStep === CREATE_PARTICLE_SETUP_STEP && presetId) {
-    store.setDialogPresetId({
-      presetId,
-    });
-  }
-
-  store.setDialogFormValues({
-    values,
-  });
-
-  const previewParticle = buildDialogParticleData({
-    deps,
-    values,
-    fallbackParticle: getDialogFallbackParticle(store),
-  });
-
-  store.setDialogPreviewSize({
-    width: previewParticle.width,
-    height: previewParticle.height,
-  });
+  store.closeAddDialog();
   render();
+  navigateToEditor({ appService, particleId });
+};
 
-  await renderParticlePreview({
+export const handleEditFormAddOptionClick = (deps) => {
+  openCreateTagDialogForMode({
     deps,
-    target: "dialog",
-    particleData: previewParticle,
+    mode: "edit-form",
+    itemId: deps.store.selectEditItemId(),
   });
 };
 
-export const handleDialogPreviewBackgroundImageClick = (deps) => {
+export const handleEditDialogClose = (deps) => {
   const { render, store } = deps;
-  store.showPreviewImageSelectorDialog();
+  store.closeEditDialog();
   render();
 };
 
-export const handleDialogTextureImageClick = (deps) => {
-  const { render, store } = deps;
-  store.showTextureImageSelectorDialog();
-  render();
-};
-
-export const handleDialogTextureImageKeyDown = (deps, payload) => {
-  const { _event } = payload;
-  if (_event.key !== "Enter" && _event.key !== " ") {
-    return;
-  }
-
-  _event.preventDefault();
-  handleDialogTextureImageClick(deps);
-};
-
-export const handleDialogPreviewBackgroundImageContextMenu = async (
-  deps,
-  payload,
-) => {
-  const { appService, render, store } = deps;
+export const handleEditFormAction = async (deps, payload) => {
+  const { appService, projectService, store } = deps;
   const copy = selectCopy(deps);
-  const event = payload?._event;
-  event?.preventDefault?.();
-
-  if (!store.selectDialogPreviewBackgroundImage()) {
+  const { actionId, values } = payload._event.detail;
+  if (actionId !== "submit") {
     return;
   }
 
-  const result = await appService.showDropdownMenu({
-    items: [
-      { type: "item", label: copy.removeMenuItem ?? "Remove", key: "remove" },
-    ],
-    x: event.clientX,
-    y: event.clientY,
-    place: "bs",
-  });
-
-  if (!result || result.item?.key !== "remove") {
-    return;
-  }
-
-  store.clearDialogPreviewBackgroundImage();
-  render();
-  await renderCurrentDialogPreview(deps);
-};
-
-const applyDialogPreviewBackgroundImage = async (deps, imageId) => {
-  const { render, store } = deps;
-  store.setDialogPreviewBackgroundImage({
-    imageId,
-  });
-  store.hidePreviewImageSelectorDialog();
-  render();
-  await renderCurrentDialogPreview(deps);
-};
-
-const applyDialogTextureImage = async (deps, imageId) => {
-  const { refs, render, store } = deps;
-  store.setDialogTextureImage({
-    imageId,
-  });
-  store.hidePreviewImageSelectorDialog();
-  render();
-  refs.particleForm.setValues({
-    values: store.selectDialogFormValues(),
-  });
-  await renderCurrentDialogPreview(deps);
-};
-
-const applySelectedDialogImage = async (deps, imageId) => {
-  const { store } = deps;
-  const imageSelectorDialog = store.selectPreviewImageSelectorDialog();
-  if (imageSelectorDialog.target === "texture") {
-    await applyDialogTextureImage(deps, imageId);
-    return;
-  }
-
-  await applyDialogPreviewBackgroundImage(deps, imageId);
-};
-
-export const handlePreviewImageSelected = (deps, payload) => {
-  const { render, store } = deps;
-  store.setPreviewImageSelectorSelectedImageId({
-    imageId: payload._event.detail?.imageId,
-  });
-  render();
-};
-
-export const handlePreviewImageDoubleClick = async (deps, payload) => {
-  const imageId = payload?._event?.detail?.imageId;
-  if (!imageId) {
-    return;
-  }
-
-  await applySelectedDialogImage(deps, imageId);
-};
-
-export const handlePreviewImageFileExplorerClickItem = (deps, payload) => {
-  const itemId = payload?._event?.detail?.itemId;
-  if (!itemId) {
-    return;
-  }
-
-  deps.refs.imageSelector?.transformedHandlers?.handleScrollToItem?.({
-    itemId,
-  });
-  focusImageSelectorKeyboardScope(deps);
-};
-
-export {
-  handleImageSelectorKeyboardScopeClick,
-  handleImageSelectorKeyboardScopeKeyDown,
-};
-
-export const handleConfirmPreviewImageSelection = async (deps) => {
-  const { store } = deps;
-  const imageSelectorDialog = store.selectPreviewImageSelectorDialog();
-  await applySelectedDialogImage(deps, imageSelectorDialog.selectedImageId);
-};
-
-export const handleClosePreviewImageSelectorDialog = (deps) => {
-  const { render, store } = deps;
-  store.hidePreviewImageSelectorDialog();
-  render();
-};
-
-const {
-  openCreateTagDialogForMode,
-  handleCreateTagDialogClose,
-  handleTagFilterChange,
-  handleTagFilterAddOptionClick,
-  handleDetailTagAddOptionClick,
-  handleDetailTagDraftValueChange,
-  handleDetailTagOpenChange,
-  handleDetailTagValueChange,
-  handleCreateTagFormAction,
-} = createResourcePageTagHandlers({
-  resolveScopeKey: () => PARTICLE_TAG_SCOPE_KEY,
-  updateItemTagIds: ({ deps, itemId, tagIds }) =>
-    deps.projectService.updateParticle({
-      particleId: itemId,
-      data: {
-        tagIds,
-      },
-    }),
-  refreshAfterItemTagUpdate: ({ deps, itemId, itemStillSelected }) =>
-    refreshParticleData(deps, {
-      selectedItemId: itemStillSelected ? itemId : undefined,
-    }),
-  getSelectedItemTagIds: ({ deps }) =>
-    deps.store.selectSelectedParticle()?.tagIds ?? [],
-  appendCreatedTagByMode: ({ deps, mode, tagId }) => {
-    if (mode !== "form") {
-      return;
-    }
-
-    appendTagIdToForm({
-      form: deps.refs.particleForm,
-      tagId,
+  const metadata = createMetadataValues(values);
+  if (!metadata.name) {
+    appService.showAlert({
+      message: copy.particleNameRequired,
+      title: copy.warningTitle,
     });
-  },
-  updateItemTagFallbackMessage: ({ deps }) =>
-    selectCopy(deps).failedUpdateTags ?? "Failed to update particle tags.",
-  copy: ({ i18n }) => selectParticlesPageCopy(i18n),
-});
-
-export {
-  handleCreateTagDialogClose,
-  handleTagFilterChange,
-  handleTagFilterAddOptionClick,
-  handleDetailTagAddOptionClick,
-  handleDetailTagDraftValueChange,
-  handleDetailTagOpenChange,
-  handleDetailTagValueChange,
-  handleCreateTagFormAction,
-};
-
-export const handleParticleFormTabClick = (deps, payload) => {
-  const { render, store } = deps;
-  const tab = payload._event.detail.id;
-
-  if (
-    store.selectDialogStep() !== PARTICLE_EDITOR_STEP ||
-    !tab ||
-    tab === store.selectDialogFormTab()
-  ) {
     return;
   }
 
-  store.setDialogFormTab({
-    tab,
+  const editItemId = store.selectEditItemId();
+  const updateAttempt = await runResourcePageMutation({
+    appService,
+    fallbackMessage: copy.failedUpdateParticle,
+    title: copy.errorTitle,
+    action: () =>
+      projectService.updateParticle({
+        particleId: editItemId,
+        data: metadata,
+      }),
   });
-  render();
+  if (!updateAttempt.ok) {
+    return;
+  }
+
+  store.closeEditDialog();
+  await refreshParticleData(deps, { selectedItemId: editItemId });
 };
 
 export const handleItemDelete = async (deps, payload) => {
@@ -1322,8 +473,8 @@ export const handleItemDelete = async (deps, payload) => {
 
   const deleteAttempt = await runResourcePageMutation({
     appService,
-    fallbackMessage: copy.failedDeleteParticle ?? "Failed to delete particle.",
-    title: copy.errorTitle ?? "Error",
+    fallbackMessage: copy.failedDeleteParticle,
+    title: copy.errorTitle,
     action: () =>
       projectService.deleteParticles({
         particleIds: [itemId],
@@ -1335,4 +486,57 @@ export const handleItemDelete = async (deps, payload) => {
   }
 
   await refreshParticleData(deps);
+};
+
+// The copy has the particle's effect, name, description, tags and thumbnail,
+// and goes right after it, in its folder.
+export const handleItemDuplicate = async (deps, payload) => {
+  const { appService, projectService, store } = deps;
+  const copy = selectCopy(deps);
+  const { itemId } = payload._event.detail;
+  if (!itemId) {
+    return;
+  }
+
+  const itemData = store.selectParticleItemById({ itemId });
+  if (!itemData) {
+    return;
+  }
+
+  const duplicateParticleId = generateId();
+  const duplicateData = {
+    type: "particle",
+    ...createMetadataValues(itemData),
+    width: itemData.width,
+    height: itemData.height,
+    modules: structuredClone(itemData.modules),
+  };
+  if (Number.isFinite(itemData.seed)) {
+    duplicateData.seed = itemData.seed;
+  }
+  if (itemData.thumbnailFileId) {
+    duplicateData.thumbnailFileId = itemData.thumbnailFileId;
+  }
+
+  const createAttempt = await runResourcePageMutation({
+    appService,
+    fallbackMessage: copy.failedDuplicateParticle,
+    title: copy.errorTitle,
+    action: () =>
+      projectService.createParticle({
+        particleId: duplicateParticleId,
+        data: duplicateData,
+        parentId: store.selectItemParentId({ itemId }) ?? null,
+        position: "after",
+        positionTargetId: itemId,
+      }),
+  });
+
+  if (!createAttempt.ok) {
+    return;
+  }
+
+  await refreshParticleData(deps, {
+    selectedItemId: duplicateParticleId,
+  });
 };

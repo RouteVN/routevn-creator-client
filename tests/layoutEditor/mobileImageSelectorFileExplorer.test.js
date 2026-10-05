@@ -7,10 +7,10 @@ import {
   setUiConfig as setAnimationEditorUiConfig,
 } from "../../src/pages/animationEditor/animationEditor.store.js";
 import {
-  createInitialState as createParticlesState,
-  selectViewData as selectParticlesViewData,
-  setUiConfig as setParticlesUiConfig,
-} from "../../src/pages/particles/particles.store.js";
+  createInitialState as createParticleEditorState,
+  selectViewData as selectParticleEditorViewData,
+  setUiConfig as setParticleEditorUiConfig,
+} from "../../src/pages/particleEditor/particleEditor.store.js";
 import {
   createInitialState as createSliderDialogState,
   selectViewData as selectSliderDialogViewData,
@@ -77,10 +77,10 @@ const viewCases = [
     explorer: "rvn-base-file-explorer#imageSelectorFileExplorer",
   },
   {
-    name: "particles",
-    path: "../../src/pages/particles/particles.view.yaml",
-    start: "rtgl-dialog#previewImageSelectorDialog",
-    end: undefined,
+    name: "particle editor",
+    path: "../../src/pages/particleEditor/particleEditor.view.yaml",
+    start: "rtgl-dialog#imageSelectorDialog",
+    end: "$when: fullImagePreviewVisible",
     explorer: "rvn-base-file-explorer#imageSelectorFileExplorer",
   },
   {
@@ -132,11 +132,11 @@ const storeCases = [
       }),
   },
   {
-    name: "particles",
-    createState: createParticlesState,
-    setUiConfig: setParticlesUiConfig,
+    name: "particle editor",
+    createState: createParticleEditorState,
+    setUiConfig: setParticleEditorUiConfig,
     selectViewData: (state) =>
-      selectParticlesViewData({
+      selectParticleEditorViewData({
         state,
         i18n: EN_I18N,
       }),

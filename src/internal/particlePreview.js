@@ -23,7 +23,9 @@ export const formatParticleAspectRatio = (particle) => {
   return `${width} / ${height}`;
 };
 
-const hasRenderableTexture = (texture) => {
+// Whether a particle texture, as createRenderableParticleData resolves it,
+// draws anything. The canvas draws no particles without one.
+export const hasRenderableParticleTexture = (texture) => {
   if (typeof texture === "string") {
     return texture.length > 0;
   }
@@ -94,7 +96,7 @@ export const createParticlePreviewState = (
     }),
   ];
 
-  if (hasRenderableTexture(particle?.modules?.appearance?.texture)) {
+  if (hasRenderableParticleTexture(particle?.modules?.appearance?.texture)) {
     elements.push(element);
   }
 

@@ -26,6 +26,7 @@ const creatorDocsPathByRoutePattern = {
   "/project/animations": "/animations/",
   "/project/animation-editor": "/animations/#animation-editor-page",
   "/project/particles": "/particles/",
+  "/project/particle-editor": "/particles/",
   "/project/videos": "/videos/",
   "/project/colors": "/colors/",
   "/project/text-styles": "/text-styles/",

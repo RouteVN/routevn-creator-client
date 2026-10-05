@@ -1,15 +1,17 @@
 import { describe, expect, it } from "vitest";
 import {
+  applyParticleFormChange,
+  buildParticleEffectData,
   buildParticleFormValues,
-  buildParticlePayload,
   createParticleForm,
-} from "../../src/pages/particles/support/particleForm.js";
+} from "../../src/pages/particleEditor/support/particleEditorForm.js";
 import { createParticlePreset } from "../../src/pages/particles/support/particlePresets.js";
 import {
   createInitialState,
+  loadParticle,
   selectViewData,
-  setDialogFormValues,
-} from "../../src/pages/particles/particles.store.js";
+  setEffect,
+} from "../../src/pages/particleEditor/particleEditor.store.js";
 import { EN_I18N } from "../support/i18n.js";
 
 const createSnowFormValues = () =>
@@ -18,6 +20,53 @@ const createSnowFormValues = () =>
   });
 
 describe("particle form", () => {
+  it("edits the effect only: Basics has the size and seed", () => {
+    const fieldNames = (activeTab) =>
+      createParticleForm({ activeTab }).fields.map(
+        (field) => field.name ?? field.slot,
+      );
+
+    expect(fieldNames("basics")).toEqual(["width", "height", "seed"]);
+    expect(fieldNames("appearance")[0]).toBe("particle-texture-image");
+    expect(createParticleForm({ activeTab: "basics" }).actions.buttons).toEqual(
+      [],
+    );
+  });
+
+  it("saves the effect without the particle's name, description or tags", () => {
+    const snow = createParticlePreset({ presetId: "snow" });
+
+    expect(
+      Object.keys(
+        buildParticleEffectData({
+          baseParticle: snow,
+          values: buildParticleFormValues({ particle: snow }),
+        }),
+      ).sort(),
+    ).toEqual(["height", "modules", "seed", "width"]);
+  });
+
+  it("asks the form to show a value as the particle keeps it", () => {
+    const snow = createParticlePreset({ presetId: "snow" });
+
+    expect(
+      applyParticleFormChange(snow, { name: "emissionRate", value: 30 }),
+    ).toMatchObject({ refreshForm: false });
+    // Widths are whole pixels.
+    expect(
+      applyParticleFormChange(snow, { name: "width", value: 800.6 }),
+    ).toMatchObject({ effect: { width: 801 }, refreshForm: true });
+    // A Max below Min swaps them.
+    expect(
+      applyParticleFormChange(snow, { name: "lifetimeMax", value: 2 }),
+    ).toMatchObject({
+      effect: {
+        modules: { emission: { particleLifetime: { min: 2, max: 8.5 } } },
+      },
+      refreshForm: true,
+    });
+  });
+
   it("allows Rotate Toward Movement to be off", () => {
     const form = createParticleForm({ activeTab: "movement" });
     const faceVelocityField = form.fields.find(
@@ -38,7 +87,7 @@ describe("particle form", () => {
       faceVelocity: true,
     };
 
-    const particle = buildParticlePayload({
+    const particle = buildParticleEffectData({
       baseParticle,
       values,
     });
@@ -55,7 +104,7 @@ describe("particle form", () => {
     };
 
     const savedOpacity = (baseParticle, changes) =>
-      buildParticlePayload({
+      buildParticleEffectData({
         baseParticle,
         values: {
           ...buildParticleFormValues({ particle: baseParticle }),
@@ -298,11 +347,14 @@ describe("particle form", () => {
 
     it("remounts the form when Opacity switches mode, so revealed fades show their values", () => {
       const state = createInitialState();
+      const particle = createFixedOpacityParticle(0.72);
+      loadParticle({ state }, { item: { id: "particle-1", ...particle } });
       const formKeyFor = (opacityMode) => {
-        setDialogFormValues(
-          { state },
-          { values: { ...state.dialogFormValues, opacityMode } },
-        );
+        const { effect } = applyParticleFormChange(particle, {
+          name: "opacityMode",
+          value: opacityMode,
+        });
+        setEffect({ state }, { effect });
         return selectViewData({ state, i18n: EN_I18N }).particleFormKey;
       };
 
@@ -318,7 +370,7 @@ describe("particle form", () => {
 
   it("preserves appearance rotation when facing velocity is off", () => {
     const baseParticle = createParticlePreset({ presetId: "snow" });
-    const particle = buildParticlePayload({
+    const particle = buildParticleEffectData({
       baseParticle,
       values: createSnowFormValues(),
     });

@@ -75,6 +75,15 @@ const SIMPLE_RESOURCE_DIALOGS = [
     ],
   ],
   [
+    "pages/particles/particles.view.yaml",
+    "pages/particles/particles.store.js",
+    ["addDialog", "editDialog"],
+    [
+      ["addForm", "handleAddFormAction"],
+      ["editForm", "handleEditFormAction"],
+    ],
+  ],
+  [
     "pages/sounds/sounds.view.yaml",
     "pages/sounds/sounds.store.js",
     ["editDialog"],
@@ -99,7 +108,6 @@ const SIMPLE_RESOURCE_DIALOGS = [
 
 const SPECIALIZED_RESOURCE_DIALOGS = [
   ["pages/characterSprites/characterSprites.view.yaml", ["spritesheetDialog"]],
-  ["pages/particles/particles.view.yaml", ["particleDialog"]],
   ["pages/spritesheets/spritesheets.view.yaml", ["spritesheetDialog"]],
 ];
 
@@ -107,10 +115,6 @@ const RESOURCE_FORMS_WITH_EXTERNAL_SUBMIT = [
   [
     "pages/characterSprites/characterSprites.view.yaml",
     [["spritesheetDialogForm", "handleSpritesheetDialogFormSubmitKeyDown"]],
-  ],
-  [
-    "pages/particles/particles.view.yaml",
-    [["particleForm", "handleParticleFormSubmitKeyDown"]],
   ],
   [
     "pages/spritesheets/spritesheets.view.yaml",

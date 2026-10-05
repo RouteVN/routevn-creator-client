@@ -50,6 +50,9 @@ describe("routevnUrls", () => {
     expect(getRoutevnCreatorDocsUrl("/project/transform-editor")).toBe(
       "https://routevn.com/en/creator/docs/transforms/",
     );
+    expect(getRoutevnCreatorDocsUrl("/project/particle-editor")).toBe(
+      "https://routevn.com/en/creator/docs/particles/",
+    );
   });
 
   it("maps settings routes to the docs settings section", () => {
