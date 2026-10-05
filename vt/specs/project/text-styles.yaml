@@ -193,7 +193,7 @@ steps:
     state: attached
     timeoutMs: 5000
   - action: select
-    selector: "rvn-text-style-editor rtgl-input#previewTextInput input"
+    selector: "rvn-text-style-editor rtgl-textarea#previewTextInput textarea"
     steps:
       - action: clear
       - action: write
