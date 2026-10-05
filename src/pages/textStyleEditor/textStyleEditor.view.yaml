@@ -102,8 +102,8 @@ template:
                   - 'rtgl-button#undoButton sq pre=undo v=ol ?disabled=${undoDisabled} aria-label="${undoLabel}" title="${undoLabel}"': null
                   - 'rtgl-button#redoButton sq pre=redo v=ol ?disabled=${redoDisabled} aria-label="${redoLabel}" title="${redoLabel}"': null
           - 'rtgl-view d=v h=1fg w=f style="min-height: 0; container-type: size;"':
-              - 'div style="${previewAreaStyle} display: flex; flex-direction: column; width: 100%; padding: 16px; box-sizing: border-box; background-color: var(--background); background-image: radial-gradient(circle, var(--input) 1px, transparent 1px); background-size: 24px 24px;"':
-                  - 'rtgl-view w=f h=1fg bw=xs bc=bo br=md style="min-width: 0; min-height: 0; overflow: hidden;"':
+              - 'div style="${previewAreaStyle} display: flex; flex-direction: column; justify-content: center; width: 100%; padding: 16px; box-sizing: border-box; background-color: var(--background); background-image: radial-gradient(circle, var(--input) 1px, transparent 1px); background-size: 24px 24px;"':
+                  - 'rtgl-view#textStylePreviewFrame w=f bw=xs bc=bo br=md style="${previewFrameStyle} flex: 0 0 auto; min-width: 0; min-height: 0; overflow: hidden;"':
                       - rvn-font-preview#textStylePreview mode=live h=f :fontFamilies=${previewFontFamilies} previewText="${previewText}" :fileIds=${previewFontFileIds} :fontWeightDescriptors=${previewFontWeightDescriptors} fontSize=${previewFontSize} lineHeight=${previewLineHeight} color=${previewColor} strokeColor=${previewStrokeColor} strokeWidth=${previewStrokeWidth} fontWeight=${previewFontWeight} shadowColor=${previewShadowColor} shadowAlpha=${previewShadowAlpha} shadowBlur=${previewShadowBlur} shadowOffsetX=${previewShadowOffsetX} shadowOffsetY=${previewShadowOffsetY} width=f padding=24 av=c textAlign=center: null
               - $if showMobilePanels:
                   - 'rtgl-view w=f h=1fg d=v bwt=xs style="min-height: 0;"':

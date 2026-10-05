@@ -34,6 +34,11 @@ describe("text style editor view", () => {
       "font-load-error:\n        handler: handlePreviewFontLoadError",
     );
     expect(view).toContain('style="${previewAreaStyle} ');
+    // The preview box is half the preview area's height, centered in it.
+    expect(view).toContain("flex-direction: column; justify-content: center;");
+    expect(view).toContain(
+      'rtgl-view#textStylePreviewFrame w=f bw=xs bc=bo br=md style="${previewFrameStyle} flex: 0 0 auto; min-width: 0; min-height: 0; overflow: hidden;"',
+    );
   });
 
   it("keeps the Edit and Preview panel on the right, or under the preview", () => {

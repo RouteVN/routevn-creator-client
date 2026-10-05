@@ -925,6 +925,7 @@ describe("text style editor", () => {
       showRightPanel: false,
       showMobilePanels: true,
       previewAreaStyle: "flex: 0 0 auto; height: 40cqh;",
+      previewFrameStyle: "height: calc(20cqh - 16px);",
     });
   });
 
@@ -937,6 +938,7 @@ describe("text style editor", () => {
       showRightPanel: true,
       showMobilePanels: false,
       previewAreaStyle: "flex: 1 1 auto; min-height: 0;",
+      previewFrameStyle: "height: calc(50cqh - 16px);",
     });
 
     await page.resizeWindow({ width: 744, height: 1133 });

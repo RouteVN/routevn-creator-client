@@ -403,6 +403,12 @@ export const selectViewData = ({ state, i18n }) => {
     previewAreaStyle: showRightPanel
       ? "flex: 1 1 auto; min-height: 0;"
       : "flex: 0 0 auto; height: 40cqh;",
+    // The preview box is half the area's height inside its 16px padding,
+    // centered in it: the workspace's container units, since the area's
+    // flexed height does not resolve percentages.
+    previewFrameStyle: showRightPanel
+      ? "height: calc(50cqh - 16px);"
+      : "height: calc(20cqh - 16px);",
     // An empty preview text shows the name, as the text styles page does.
     previewText: state.previewText.trim()
       ? state.previewText
