@@ -1454,9 +1454,11 @@ textStyleEditorPage:
   editModeLabel: "编辑"
   failedSavePreview: "无法保存文本样式预览。"
   failedSaveTextStyle: "无法保存文本样式。"
+  outlineSectionLabel: "描边"
   previewTextDescription: "在文本样式页面中显示于此文本样式。为空时显示名称。"
   previewTitle: "预览"
   savePreviewButton: "保存预览"
+  shadowSectionLabel: "阴影"
   textStyleNotFound: "未找到文本样式。"
   textStylePreviewSaved: "文本样式预览已保存。"
 layoutEditorPage:

@@ -1454,9 +1454,11 @@ textStyleEditorPage:
   editModeLabel: "Edición"
   failedSavePreview: "No se pudo guardar la vista previa del estilo de texto."
   failedSaveTextStyle: "No se pudo guardar el estilo de texto."
+  outlineSectionLabel: "Contorno"
   previewTextDescription: "Se muestra para este estilo de texto en la página de estilos de texto. Si está vacío, se muestra el nombre."
   previewTitle: "Vista previa"
   savePreviewButton: "Guardar vista previa"
+  shadowSectionLabel: "Sombra"
   textStyleNotFound: "No se encontró el estilo de texto."
   textStylePreviewSaved: "Vista previa del estilo de texto guardada."
 layoutEditorPage:

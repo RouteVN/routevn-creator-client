@@ -299,15 +299,18 @@ export const createTextStyleForm = ({
       label: copy.colorLabel,
       required: true,
     },
+  ];
+
+  // Outline and shadow each get their own section, under a separator.
+  const outlineFields = [
     {
       type: "slot",
       slot: "text-style-outline-color",
       label: copy.outlineColorLabel,
     },
   ];
-
   if (showOutlineWidth) {
-    fields.push({
+    outlineFields.push({
       name: "strokeWidth",
       type: "slider-with-input",
       label: copy.outlineThicknessLabel,
@@ -317,15 +320,22 @@ export const createTextStyleForm = ({
       unit: "px",
     });
   }
-
   fields.push({
-    type: "slot",
-    slot: "text-style-shadow-color",
-    label: copy.shadowColorLabel,
+    type: "section",
+    id: "outline",
+    label: copy.outlineSectionLabel,
+    fields: outlineFields,
   });
 
+  const shadowFields = [
+    {
+      type: "slot",
+      slot: "text-style-shadow-color",
+      label: copy.shadowColorLabel,
+    },
+  ];
   if (showShadowFields) {
-    fields.push(
+    shadowFields.push(
       {
         name: "shadowAlpha",
         type: "slider-with-input",
@@ -363,6 +373,12 @@ export const createTextStyleForm = ({
       },
     );
   }
+  fields.push({
+    type: "section",
+    id: "shadow",
+    label: copy.shadowSectionLabel,
+    fields: shadowFields,
+  });
 
   return {
     fields,

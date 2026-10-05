@@ -1454,9 +1454,11 @@ textStyleEditorPage:
   editModeLabel: "Edit"
   failedSavePreview: "Failed to save the text style preview."
   failedSaveTextStyle: "Failed to save text style."
+  outlineSectionLabel: "Outline"
   previewTextDescription: "Shown for this text style on the text styles page. When it is empty, the name shows."
   previewTitle: "Preview"
   savePreviewButton: "Save Preview"
+  shadowSectionLabel: "Shadow"
   textStyleNotFound: "Text style not found."
   textStylePreviewSaved: "Text style preview saved."
 layoutEditorPage:

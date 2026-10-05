@@ -27,6 +27,14 @@ import { createTestFontBytes } from "../support/fontFixtures.js";
 import { EN_I18N } from "../support/i18n.js";
 
 // Edits save on their own 300ms after the last one.
+
+// The form's fields by name or slot, with each section and its fields.
+const formFieldNames = (fields) =>
+  fields.flatMap((field) =>
+    field.type === "section"
+      ? [`section:${field.id}`, ...formFieldNames(field.fields)]
+      : [field.name ?? field.slot],
+  );
 const AUTOSAVE_WAIT_MS = 400;
 const wait = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
 
@@ -300,21 +308,28 @@ describe("text style editor", () => {
       fontWeight: "400",
       strokeWidth: 3,
     });
-    // The outline thickness shows with the outline color; the shadow
-    // fields show only with a shadow color.
-    const fieldNames = page
-      .view()
-      .textStyleForm.fields.map((field) => field.name ?? field.slot);
+    // Outline and shadow have their own sections. The outline thickness
+    // shows with the outline color; the shadow fields show only with a
+    // shadow color.
+    const fieldNames = formFieldNames(page.view().textStyleForm.fields);
     expect(fieldNames).toEqual([
       "text-style-font",
       "fontSize",
       "lineHeight",
       "fontWeight",
       "text-style-color",
+      "section:outline",
       "text-style-outline-color",
       "strokeWidth",
+      "section:shadow",
       "text-style-shadow-color",
     ]);
+    expect(
+      page
+        .view()
+        .textStyleForm.fields.filter((field) => field.type === "section")
+        .map((field) => field.label),
+    ).toEqual(["Outline", "Shadow"]);
     // Name, description and tags are edited on the text styles page.
     expect(fieldNames).not.toContain("name");
     expect(fieldNames).not.toContain("tagIds");
@@ -507,9 +522,9 @@ describe("text style editor", () => {
       },
     });
     const formKey = page.view().textStyleFormKey;
-    expect(
-      page.view().textStyleForm.fields.map((field) => field.name),
-    ).not.toContain("strokeWidth");
+    expect(formFieldNames(page.view().textStyleForm.fields)).not.toContain(
+      "strokeWidth",
+    );
 
     page.pickColor("strokeColorId", "color-3");
 
@@ -520,9 +535,9 @@ describe("text style editor", () => {
     expect(page.view().previewStrokeColor).toBe("#ff0000");
     // The thickness field shows, so the form remounts.
     expect(page.view().textStyleFormKey).not.toBe(formKey);
-    expect(
-      page.view().textStyleForm.fields.map((field) => field.name),
-    ).toContain("strokeWidth");
+    expect(formFieldNames(page.view().textStyleForm.fields)).toContain(
+      "strokeWidth",
+    );
 
     page.pickColor("strokeColorId", undefined);
     expect(page.values()).toMatchObject({

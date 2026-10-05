@@ -1454,9 +1454,11 @@ textStyleEditorPage:
   editModeLabel: "編集"
   failedSavePreview: "テキストスタイルのプレビューを保存できませんでした。"
   failedSaveTextStyle: "テキストスタイルを保存できませんでした。"
+  outlineSectionLabel: "アウトライン"
   previewTextDescription: "テキストスタイルのページで、このテキストスタイルに表示されます。空のときは名前が表示されます。"
   previewTitle: "プレビュー"
   savePreviewButton: "プレビューを保存"
+  shadowSectionLabel: "影"
   textStyleNotFound: "テキストスタイルが見つかりません。"
   textStylePreviewSaved: "テキストスタイルのプレビューを保存しました。"
 layoutEditorPage:

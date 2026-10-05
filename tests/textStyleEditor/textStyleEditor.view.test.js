@@ -58,7 +58,8 @@ describe("text style editor view", () => {
         /rtgl-form#textStyleForm key=\$\{textStyleFormKey\} :defaultValues=\$\{formValues\} :form=\$\{textStyleForm\} w=f ph=md:/g,
       ),
     ).toBe(2);
-    expect(count(/rtgl-input#previewTextInput /g)).toBe(2);
+    // The preview text can span several lines.
+    expect(count(/rtgl-textarea#previewTextInput w=f rows=3 /g)).toBe(2);
     expect(count(/\$\{rightPanelEditStyle\}/g)).toBe(2);
     expect(count(/\$\{rightPanelPreviewStyle\}/g)).toBe(2);
   });

@@ -124,7 +124,7 @@ template:
                               - rtgl-view d=v w=f g=xs:
                                   - rtgl-text s=sm: ${previewTextLabel}
                                   - rtgl-text s=xs c=mu-fg: ${previewTextDescription}
-                              - rtgl-input#previewTextInput w=f value="${previewTextInputValue}" placeholder="${textStyleName}": null
+                              - rtgl-textarea#previewTextInput w=f rows=3 value="${previewTextInputValue}" placeholder="${textStyleName}": null
                           - 'rtgl-view h=25vh aria-hidden=true style="flex-shrink: 0;"': null
       - $if showRightPanel:
           - rvn-resizable-panel panel-type=detail-panel show-on-touch w=300 min-w=200 max-w=500 resize-side="left":
@@ -146,7 +146,7 @@ template:
                           - rtgl-view d=v w=f g=xs:
                               - rtgl-text s=sm: ${previewTextLabel}
                               - rtgl-text s=xs c=mu-fg: ${previewTextDescription}
-                          - rtgl-input#previewTextInput w=f value="${previewTextInputValue}" placeholder="${textStyleName}": null
+                          - rtgl-textarea#previewTextInput w=f rows=3 value="${previewTextInputValue}" placeholder="${textStyleName}": null
                       - 'rtgl-view h=25vh aria-hidden=true style="flex-shrink: 0;"': null
   - rtgl-dialog#addColorDialog ?open=${isAddColorDialogOpen} s=sm md-layout=fixed-top p=none:
       - $if isAddColorDialogOpen:

@@ -1454,9 +1454,11 @@ textStyleEditorPage:
   editModeLabel: "แก้ไข"
   failedSavePreview: "บันทึกตัวอย่างรูปแบบข้อความไม่สำเร็จ"
   failedSaveTextStyle: "บันทึกรูปแบบข้อความไม่สำเร็จ"
+  outlineSectionLabel: "เส้นขอบ"
   previewTextDescription: "แสดงสำหรับรูปแบบข้อความนี้ในหน้ารูปแบบข้อความ เมื่อเว้นว่างไว้ จะแสดงชื่อแทน"
   previewTitle: "ตัวอย่าง"
   savePreviewButton: "บันทึกตัวอย่าง"
+  shadowSectionLabel: "เงา"
   textStyleNotFound: "ไม่พบรูปแบบข้อความ"
   textStylePreviewSaved: "บันทึกตัวอย่างรูปแบบข้อความแล้ว"
 layoutEditorPage:
