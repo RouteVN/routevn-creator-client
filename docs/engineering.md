@@ -1182,11 +1182,13 @@ nothing to do. The middle mouse button pans anywhere. The wheel never pans: over
 step around the pointer, as on the scene map, and over the canvas it reaches the
 canvas unchanged. ctrl + wheel (a trackpad pinch) zooms anywhere. One finger
 on the canvas still edits; a first finger that already touched it gets a
-`pointercancel` when the second lands. A finger that lands while no other is
-down (a primary touch) clears the fingers the viewport still tracks, since one
-lifted without a `pointerup` reaching it, as when iOS takes over a long press;
-otherwise a one-finger drag would pinch around the lost finger. The viewport
-keeps `--canvas-zoom`,
+`pointercancel` when the second lands. As a defensive guard, a finger that
+lands while no other is down (a primary touch) clears the fingers the viewport
+still tracks, since one of them lifted without its `pointerup` reaching the
+viewport; otherwise a one-finger drag would pinch around the lost finger. If
+that cuts a pinch short, the viewport still reports its zoom. The likely cause
+is iOS taking over a long press, but iPad testing never logged a lost finger,
+so it is unconfirmed. The viewport keeps `--canvas-zoom`,
 `--canvas-x`, and `--canvas-y` in its shadow root, reports a gesture's final
 zoom with `zoom-change`, and keeps the canvas centered until a gesture moves it.
 The canvas draws at the project resolution, so high zoom looks soft.
