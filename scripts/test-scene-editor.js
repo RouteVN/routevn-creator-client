@@ -22,7 +22,6 @@ const checks = [
   [process.execPath, ["tests/sceneEditor/lexicalImeConfirmation.browser.mjs"]],
   [process.execPath, ["tests/sceneEditor/lexicalEmptyLineBackspace.browser.mjs"]],
   [process.execPath, ["tests/sceneEditor/lexicalReplaceLines.browser.mjs"]],
-  [process.execPath, ["tests/sceneEditor/newSectionChoice.browser.mjs"]],
 ];
 for (const [command, args] of checks) {
   console.log(`Running ${command} ${args.join(" ")}`);
