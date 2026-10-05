@@ -337,6 +337,13 @@ export class ZoomViewportElement extends HTMLElement {
   }
 
   handleTouchDown(event) {
+    // A primary touch lands with no other finger down, so a finger still
+    // tracked here lifted without a pointerup reaching the workspace, as when
+    // iOS takes over a long press. Left alone, it would turn this one-finger
+    // drag into a pinch around the point where it was lost.
+    if (event.isPrimary && this.touches.size > 0) {
+      this.resetGestures();
+    }
     this.touches.set(event.pointerId, {
       x: event.clientX,
       y: event.clientY,

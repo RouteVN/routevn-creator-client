@@ -235,6 +235,22 @@ describe("rvn-zoom-viewport", () => {
     expect([viewport.x, viewport.y]).toEqual([0, 0]);
   });
 
+  it("leaves a one-finger drag to the content after a finger lifts unseen", () => {
+    const { viewport, canvas } = createViewport();
+    const moves = vi.fn();
+    canvas.addEventListener("pointermove", moves);
+
+    // iOS takes over a long press, and its pointerup never reaches the
+    // workspace. The next finger lands alone, so it is primary.
+    pointer(canvas, "pointerdown", 1, 50, 100);
+    pointer(canvas, "pointerdown", 2, 150, 100, { isPrimary: true });
+    pointer(canvas, "pointermove", 2, 250, 140);
+    pointer(canvas, "pointerup", 2, 250, 140);
+
+    expect([viewport.zoom, viewport.x, viewport.y]).toEqual([1, 0, 0]);
+    expect(moves).toHaveBeenCalledOnce();
+  });
+
   it("pans without limits with one finger on the space around the content", () => {
     const { viewport } = createViewport();
 
