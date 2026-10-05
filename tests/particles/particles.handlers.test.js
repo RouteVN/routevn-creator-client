@@ -39,6 +39,7 @@ const createParticle = () => {
       appearance: { ...rain.modules.appearance, texture: "image-1" },
     },
     thumbnailFileId: "thumb-1",
+    preview: { background: { imageId: "image-1" } },
   };
 };
 
@@ -270,7 +271,7 @@ describe("particles handlers", () => {
     expect(page.view().isEditDialogOpen).toBe(false);
   });
 
-  it("duplicates a particle with its values, name, tags and thumbnail, in its folder", async () => {
+  it("duplicates a particle with its values, name, tags, thumbnail and preview background, in its folder", async () => {
     const page = await createPage();
     const { deps } = page;
     const source = page.repositoryState.particles.items["particle-1"];
@@ -293,8 +294,10 @@ describe("particles handlers", () => {
       seed: source.seed,
       modules: source.modules,
       thumbnailFileId: "thumb-1",
+      preview: { background: { imageId: "image-1" } },
     });
     expect(data.modules).not.toBe(source.modules);
+    expect(data.preview).not.toBe(source.preview);
     expect([parentId, position, positionTargetId]).toEqual([
       "folder-1",
       "after",

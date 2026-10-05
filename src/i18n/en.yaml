@@ -1438,7 +1438,7 @@ transformEditorPage:
   transformNotFound: "Transform not found."
   transformPreviewSaved: "Transform preview saved."
 particleEditorPage:
-  backgroundImageDescription: "Shows behind the particles while this page is open. It is not saved with the particle, but Save Preview includes it in the thumbnail."
+  backgroundImageDescription: "Shows behind the particles in this preview. Save Preview saves it with the particle and includes it in the thumbnail."
   canvasZoomFitLabel: "Fit to view"
   canvasZoomInLabel: "Zoom in"
   canvasZoomOutLabel: "Zoom out"

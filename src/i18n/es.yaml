@@ -1438,7 +1438,7 @@ transformEditorPage:
   transformNotFound: "No se encontró la transformación."
   transformPreviewSaved: "Vista previa de la transformación guardada."
 particleEditorPage:
-  backgroundImageDescription: "Se muestra detrás de las partículas mientras esta página está abierta. No se guarda con la partícula, pero Guardar vista previa la incluye en la miniatura."
+  backgroundImageDescription: "Se muestra detrás de las partículas en esta vista previa. Guardar vista previa la guarda con la partícula y la incluye en la miniatura."
   canvasZoomFitLabel: "Ajustar a la vista"
   canvasZoomInLabel: "Acercar"
   canvasZoomOutLabel: "Alejar"

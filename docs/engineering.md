@@ -1333,10 +1333,10 @@ Edit's Source tab is open, the canvas also draws the emitter source's outline
 (the rect, the circle's or line's bounding box, or a small square for a
 point, at least 16 CSS pixels and kept inside the canvas), and dragging its
 border moves the source, both ends of a line together, as one undo step. Until the particle has a texture the canvas
-shows a hint instead of the effect. Preview holds a background image for the
-page visit only (particles have no saved preview settings) and **Save
-Preview**, which saves the values and then a thumbnail of the canvas without
-the outline, with the background. Edits save on their own 300ms after the
+shows a hint instead of the effect. Preview holds a background image and
+**Save Preview**, which saves the values and then the background
+(`particle.preview.background`, from creator-model 1.16.0) and a thumbnail of
+the canvas without the outline, with the background. Edits save on their own 300ms after the
 last one and on leaving, as in the transform editor, and save only the effect
 (size, seed, and modules); thumbnails change only with Save Preview. Texture
 and background images follow the asset failure policy as in the transform

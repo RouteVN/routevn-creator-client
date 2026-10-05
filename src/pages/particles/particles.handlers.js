@@ -517,6 +517,9 @@ export const handleItemDuplicate = async (deps, payload) => {
   if (itemData.thumbnailFileId) {
     duplicateData.thumbnailFileId = itemData.thumbnailFileId;
   }
+  if (itemData.preview) {
+    duplicateData.preview = structuredClone(itemData.preview);
+  }
 
   const createAttempt = await runResourcePageMutation({
     appService,
