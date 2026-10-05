@@ -14,7 +14,7 @@
         "@rettangoli/fe": "1.5.0",
         "@rettangoli/ui": "1.23.0",
         "@rettangoli/vt": "1.1.0",
-        "@routevn/creator-model": "1.15.0",
+        "@routevn/creator-model": "1.16.0",
         "@sentry/browser": "10.44.0",
         "@tauri-apps/api": "2.11.0",
         "@tauri-apps/plugin-dialog": "2.4.2",
@@ -385,7 +385,7 @@
 
     "@rollup/rollup-win32-x64-msvc": ["@rollup/rollup-win32-x64-msvc@4.60.4", "", { "os": "win32", "cpu": "x64" }, "sha512-QVTUovf40zgTqlFVrKA1uXMVvU2QWEFWfAH8Wdc48IxLvrJMQVMBRjuQyUpzZCDkakImib9eVazbWlC6ksWtJw=="],
 
-    "@routevn/creator-model": ["@routevn/creator-model@1.15.0", "", {}, "sha512-/6oQB5unb4K5/s5NSh4kNLR0PgM3ZTj9AIP+tbV4ycFZfDqOlXCSvdGhZY2piwQUvTm1bKIT/p014E95rRC0cg=="],
+    "@routevn/creator-model": ["@routevn/creator-model@1.16.0", "", {}, "sha512-AHqb7RM+8FLUOc/VF1ipWOdd6QoQcG4nuF4M2zeeonzBk9FNzTTwh1us0UY+engLAYDiEPySTB1LVRFeewYAQg=="],
 
     "@sentry-internal/browser-utils": ["@sentry-internal/browser-utils@10.44.0", "", { "dependencies": { "@sentry/core": "10.44.0" } }, "sha512-z9xz3T/v+MnfHY6kdUCmOZI8CiAl3LlKYtGH2p3rAsrxhwX+BTnUp01VhMVnEZIDgUXNt3AhJac+4kcDIPu1Hg=="],
 
