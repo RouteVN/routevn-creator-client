@@ -551,7 +551,7 @@ describe("particle editor", () => {
     },
   );
 
-  it("keeps the preview background out of the saved particle and in the thumbnail", async () => {
+  it("saves the preview background with Save Preview, not with edits", async () => {
     const page = await createPage();
     await pickTexture(page, "image-1");
     await pickBackground(page, "image-2");
@@ -575,12 +575,48 @@ describe("particle editor", () => {
     expect(renderState.elements[0]).toMatchObject({ src: "file-2" });
     expect(page.savedData()[1]).toEqual({
       particleId: "particle-1",
-      data: { thumbnailFileId: "stored-1" },
+      data: {
+        thumbnailFileId: "stored-1",
+        preview: { background: { imageId: "image-2" } },
+      },
       fileRecords: [{ id: "record-1" }],
     });
     expect(page.deps.projectService.storeFile).toHaveBeenCalledOnce();
     expect(page.deps.appService.showToast).toHaveBeenCalledWith({
       message: "Particle preview saved.",
+    });
+  });
+
+  it("opens with the saved preview background, and Save Preview clears a removed one", async () => {
+    const page = await createPage({
+      item: {
+        ...createSavedParticle(),
+        preview: { background: { imageId: "image-2" } },
+      },
+    });
+    expect(page.view().backgroundImage.name).toBe("Image Two");
+    expect(
+      page.findElement(page.lastRender().elements, "particle-preview-bg"),
+    ).toMatchObject({ type: "sprite", src: "file-2" });
+
+    await showPreviewTab(page);
+    handleBackgroundImageContextMenu(page.deps, {
+      _event: {
+        clientX: 10,
+        clientY: 20,
+        preventDefault: vi.fn(),
+        stopPropagation: vi.fn(),
+      },
+    });
+    await handleBackgroundImageMenuItemClick(page.deps, {
+      _event: { detail: { item: { value: "remove" } } },
+    });
+    expect(page.view().backgroundImage).toBeUndefined();
+
+    await handleSavePreviewClick(page.deps);
+    expect(page.savedData().at(-1).data).toEqual({
+      thumbnailFileId: "stored-1",
+      preview: {},
     });
   });
 
@@ -628,7 +664,7 @@ describe("particle editor", () => {
       },
       {
         particleId: "particle-1",
-        data: { thumbnailFileId: "stored-1" },
+        data: { thumbnailFileId: "stored-1", preview: {} },
         fileRecords: [{ id: "record-1" }],
       },
     ]);

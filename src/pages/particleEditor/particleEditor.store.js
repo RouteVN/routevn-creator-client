@@ -106,8 +106,8 @@ export const createInitialState = () => ({
   effect: createEmptyEffect(),
   // The effect as last saved; edits save on their own, a moment after.
   savedEffect: undefined,
-  // The preview background is for this visit only. It is not saved with the
-  // particle, but Save Preview draws it into the thumbnail.
+  // The preview background saves with Save Preview, which also draws it into
+  // the thumbnail; edits to the effect do not save it.
   previewBackgroundImageId: undefined,
   rightPanelMode: "edit",
   formTab: PARTICLE_FORM_TAB_IDS[0],
@@ -147,6 +147,7 @@ export const loadParticle = ({ state }, { item, imagesData } = {}) => {
   state.particleName = item.name ?? "";
   state.effect = toParticleEffect(item);
   state.savedEffect = state.effect;
+  state.previewBackgroundImageId = item.preview?.background?.imageId;
   state.editHistory = createEditHistory();
   state.editHistoryBaseline = state.effect;
   state.dragStartPosition = undefined;
@@ -306,6 +307,12 @@ export const selectAvailableImageItems = ({ state }) =>
       ([, item]) => !state.failedAssetFileIds.includes(item.fileId),
     ),
   );
+
+// The preview settings Save Preview saves: the background, or none.
+export const selectPreviewSettings = ({ state }) =>
+  state.previewBackgroundImageId
+    ? { background: { imageId: state.previewBackgroundImageId } }
+    : {};
 
 export const selectCanvasBackgroundImage = ({ state }) => {
   const image = getImageItemById(

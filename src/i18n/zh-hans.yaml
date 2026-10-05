@@ -1438,7 +1438,7 @@ transformEditorPage:
   transformNotFound: "未找到变换。"
   transformPreviewSaved: "变换预览已保存。"
 particleEditorPage:
-  backgroundImageDescription: "仅在此页面打开期间显示在粒子后面。它不会随粒子保存，但“保存预览”会将其包含在缩略图中。"
+  backgroundImageDescription: "在此预览中显示在粒子后面。“保存预览”会将其随粒子保存，并包含在缩略图中。"
   canvasZoomFitLabel: "适应视图"
   canvasZoomInLabel: "放大"
   canvasZoomOutLabel: "缩小"

@@ -542,7 +542,10 @@ const saveParticlePreview = async (deps) => {
     action: () =>
       projectService.updateParticle({
         particleId: store.selectParticleId(),
-        data: { thumbnailFileId: previewFiles.thumbnailFileId },
+        data: {
+          thumbnailFileId: previewFiles.thumbnailFileId,
+          preview: store.selectPreviewSettings(),
+        },
         fileRecords: previewFiles.fileRecords,
       }),
   });
@@ -552,8 +555,8 @@ const saveParticlePreview = async (deps) => {
   }
 };
 
-// Saves a new thumbnail of the particle, drawn as Preview shows it, with the
-// preview background. The particle's values save first. The button is
+// Saves the preview background and a new thumbnail of the particle, drawn as
+// Preview shows it, with that background. The particle's values save first. The button is
 // disabled while it saves, so a double click saves once.
 export const handleSavePreviewClick = async (deps) => {
   const { render, store } = deps;

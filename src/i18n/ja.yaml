@@ -1438,7 +1438,7 @@ transformEditorPage:
   transformNotFound: "トランスフォームが見つかりません。"
   transformPreviewSaved: "トランスフォームのプレビューを保存しました。"
 particleEditorPage:
-  backgroundImageDescription: "このページを開いている間だけ、パーティクルの背後に表示されます。パーティクルには保存されませんが、「プレビューを保存」でサムネイルに含まれます。"
+  backgroundImageDescription: "このプレビューでパーティクルの背後に表示されます。「プレビューを保存」でパーティクルに保存され、サムネイルにも含まれます。"
   canvasZoomFitLabel: "画面に合わせる"
   canvasZoomInLabel: "拡大"
   canvasZoomOutLabel: "縮小"

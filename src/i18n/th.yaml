@@ -1438,7 +1438,7 @@ transformEditorPage:
   transformNotFound: "ไม่พบการแปลง"
   transformPreviewSaved: "บันทึกตัวอย่างการแปลงแล้ว"
 particleEditorPage:
-  backgroundImageDescription: "แสดงอยู่ด้านหลังอนุภาคเฉพาะขณะเปิดหน้านี้ ไม่ได้บันทึกไว้กับอนุภาค แต่ “บันทึกตัวอย่าง” จะรวมไว้ในภาพย่อ"
+  backgroundImageDescription: "แสดงอยู่ด้านหลังอนุภาคในตัวอย่างนี้ “บันทึกตัวอย่าง” จะบันทึกไว้กับอนุภาคและรวมไว้ในภาพย่อ"
   canvasZoomFitLabel: "พอดีกับหน้าจอ"
   canvasZoomInLabel: "ซูมเข้า"
   canvasZoomOutLabel: "ซูมออก"
