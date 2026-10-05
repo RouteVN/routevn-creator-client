@@ -50,7 +50,8 @@ describe("transform editor view", () => {
 
   it("switches between Edit and Preview like the layout editor", () => {
     // The tabs and Save Preview head the right panel, or the panel under the
-    // canvas on phones and tablet portrait.
+    // canvas on phones and tablet portrait. Save Preview is disabled while
+    // it saves.
     expect(
       view.match(
         /rtgl-tabs#rightPanelModeTabs s=sm selected-tab=\$\{rightPanelMode\} :items=\$\{rightPanelModeTabs\}: null/g,
@@ -58,7 +59,7 @@ describe("transform editor view", () => {
     ).toHaveLength(2);
     expect(
       view.match(
-        /rtgl-button#savePreviewButton sq pre=save v=se ml=sm aria-label="\$\{savePreviewButton\}" title="\$\{savePreviewButton\}"/g,
+        /rtgl-button#savePreviewButton sq pre=save v=se ml=sm \?disabled=\$\{savePreviewDisabled\} aria-label="\$\{savePreviewButton\}" title="\$\{savePreviewButton\}"/g,
       ),
     ).toHaveLength(2);
     expect(view.match(/\$\{rightPanelEditStyle\}/g)).toHaveLength(2);

@@ -131,7 +131,7 @@ template:
                           - 'rtgl-view w=1fg style="min-width: 0;"':
                               - rtgl-tabs#rightPanelModeTabs s=sm selected-tab=${rightPanelMode} :items=${rightPanelModeTabs}: null
                           - $if showSavePreviewButton:
-                              - 'rtgl-button#savePreviewButton sq pre=save v=se ml=sm aria-label="${savePreviewButton}" title="${savePreviewButton}"': null
+                              - 'rtgl-button#savePreviewButton sq pre=save v=se ml=sm ?disabled=${savePreviewDisabled} aria-label="${savePreviewButton}" title="${savePreviewButton}"': null
                       - 'rtgl-view w=f h=1fg sv pv=md style="min-height: 0; ${rightPanelEditStyle}"':
                           - rvn-layout-edit-panel#transformInspector mode=transform :projectResolution=${projectResolution} :selectedElementMetrics=${selectedElementMetrics} :values=${inspectorValues}: null
                           - 'rtgl-view h=25vh aria-hidden=true style="flex-shrink: 0;"': null
@@ -163,7 +163,7 @@ template:
                       - 'rtgl-view w=1fg style="min-width: 0;"':
                           - rtgl-tabs#rightPanelModeTabs s=sm selected-tab=${rightPanelMode} :items=${rightPanelModeTabs}: null
                       - $if showSavePreviewButton:
-                          - 'rtgl-button#savePreviewButton sq pre=save v=se ml=sm aria-label="${savePreviewButton}" title="${savePreviewButton}"': null
+                          - 'rtgl-button#savePreviewButton sq pre=save v=se ml=sm ?disabled=${savePreviewDisabled} aria-label="${savePreviewButton}" title="${savePreviewButton}"': null
                   - 'rtgl-view w=f h=1fg sv pv=md style="min-height: 0; ${rightPanelEditStyle}"':
                       - rvn-layout-edit-panel#transformInspector mode=transform :projectResolution=${projectResolution} :selectedElementMetrics=${selectedElementMetrics} :values=${inspectorValues}: null
                       - 'rtgl-view h=25vh aria-hidden=true style="flex-shrink: 0;"': null

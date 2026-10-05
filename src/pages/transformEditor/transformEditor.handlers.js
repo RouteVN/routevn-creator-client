@@ -500,9 +500,7 @@ const showSavePreviewFailure = (deps, message, error) => {
   });
 };
 
-// Saves the preview images and a new preview and thumbnail image of the
-// transform, drawn as Preview shows it. The transform's values save first.
-export const handleSavePreviewClick = async (deps) => {
+const saveTransformPreview = async (deps) => {
   const { appService, graphicsService, projectService, refs, store } = deps;
   const copy = selectCopy(deps);
   if (!(await saveTransformValues(deps))) {
@@ -566,6 +564,25 @@ export const handleSavePreviewClick = async (deps) => {
   await renderTransformCanvas(deps);
   if (updateAttempt.ok) {
     appService.showToast({ message: copy.transformPreviewSaved });
+  }
+};
+
+// Saves the preview images and a new preview and thumbnail image of the
+// transform, drawn as Preview shows it. The transform's values save first.
+// The button is disabled while it saves, so a double click saves once.
+export const handleSavePreviewClick = async (deps) => {
+  const { render, store } = deps;
+  if (store.selectIsSavingPreview()) {
+    return;
+  }
+
+  store.startSavingPreview();
+  render();
+  try {
+    await saveTransformPreview(deps);
+  } finally {
+    store.finishSavingPreview();
+    render();
   }
 };
 

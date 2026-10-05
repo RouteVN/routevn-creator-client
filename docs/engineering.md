@@ -1285,7 +1285,8 @@ anchor. Arrow keys nudge the target on Edit, ten pixels with Shift. Preview
 holds the preview background and target images and **Save Preview**, and
 draws the same canvas without the outline: the background image, or a gray
 screen, and the target image, or a white square. Save Preview
-saves the preview images and a preview and thumbnail image of that canvas.
+saves the preview images and a preview and thumbnail image of that canvas, and
+is disabled while it saves.
 
 Preview images follow the asset failure policy. Each loads on its own, with
 `verifyImageIntegrity`, so one that cannot be read, fails its integrity check,

@@ -552,6 +552,28 @@ describe("transform editor", () => {
     });
   });
 
+  it("saves one preview when Save Preview is clicked twice", async () => {
+    let finishCapture;
+    captureTransformPreviewImages.mockReturnValue(
+      new Promise((resolve) => {
+        finishCapture = () => resolve(capturedImages);
+      }),
+    );
+    const page = await createPage();
+
+    const firstClick = handleSavePreviewClick(page.deps);
+    const secondClick = handleSavePreviewClick(page.deps);
+    expect(page.view().savePreviewDisabled).toBe(true);
+    await page.flush();
+    finishCapture();
+    await Promise.all([firstClick, secondClick]);
+
+    expect(captureTransformPreviewImages).toHaveBeenCalledOnce();
+    expect(page.deps.projectService.storeFile).toHaveBeenCalledTimes(2);
+    expect(page.savedData()).toHaveLength(1);
+    expect(page.view().savePreviewDisabled).toBe(false);
+  });
+
   it("alerts and saves no preview when the canvas cannot be captured", async () => {
     captureTransformPreviewImages.mockRejectedValue(
       new Error("The canvas returned no preview image."),
@@ -590,6 +612,7 @@ describe("transform editor", () => {
     expect(
       page.findElement(page.lastRender().elements, "selected-border"),
     ).toBeTruthy();
+    expect(page.view().savePreviewDisabled).toBe(false);
   });
 
   it("keeps drawing the canvas when a preview image fails to load, and warns once", async () => {
@@ -658,6 +681,7 @@ describe("transform editor", () => {
     });
     expect(captureTransformPreviewImages).not.toHaveBeenCalled();
     expect(page.savedData()).toEqual([]);
+    expect(page.view().savePreviewDisabled).toBe(false);
   });
 
   it("draws the same canvas on both tabs, with the outline only on Edit", async () => {

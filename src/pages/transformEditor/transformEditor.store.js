@@ -109,6 +109,8 @@ export const createInitialState = () => ({
   // Preview image files that failed to load; the canvas leaves them out.
   failedAssetFileIds: [],
   warnedAssetFileIds: [],
+  // Save Preview runs once at a time.
+  isSavingPreview: false,
   canvasZoom: 1,
   imageSelectorDialog: createImageSelectorDialog(),
   previewImageMenu: createPreviewImageMenu(),
@@ -304,6 +306,16 @@ export const markAssetWarningsShown = ({ state }, { fileIds } = {}) => {
   ];
 };
 
+export const selectIsSavingPreview = ({ state }) => state.isSavingPreview;
+
+export const startSavingPreview = ({ state }) => {
+  state.isSavingPreview = true;
+};
+
+export const finishSavingPreview = ({ state }) => {
+  state.isSavingPreview = false;
+};
+
 export const zoomCanvasIn = ({ state }) => {
   state.canvasZoom =
     CANVAS_ZOOM_LEVELS.find((level) => level > state.canvasZoom) ??
@@ -482,6 +494,7 @@ export const selectViewData = ({ state, i18n }) => {
     rightPanelPreviewStyle:
       state.rightPanelMode === "preview" ? "" : "display: none;",
     showSavePreviewButton: state.rightPanelMode === "preview",
+    savePreviewDisabled: state.isSavingPreview,
     savePreviewButton: copy.savePreviewButton,
     previewImagesTitle: copy.previewImagesTitle,
     projectResolution: state.projectResolution,
