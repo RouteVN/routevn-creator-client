@@ -750,16 +750,12 @@ export const selectViewData = ({ state, i18n }) => {
         type: "select",
         label: copy.languageLabel,
         required: true,
+        clearable: false,
         options: APP_LOCALE_OPTIONS,
       },
     ],
     actions: {
       buttons: [
-        {
-          id: "cancel",
-          variant: "se",
-          label: copy.cancelButton,
-        },
         {
           id: "save-language",
           variant: "pr",
@@ -778,6 +774,7 @@ export const selectViewData = ({ state, i18n }) => {
         type: "select",
         label: copy.themeLabel,
         required: true,
+        clearable: false,
         options: [
           {
             value: "dark",
@@ -800,11 +797,6 @@ export const selectViewData = ({ state, i18n }) => {
     ],
     actions: {
       buttons: [
-        {
-          id: "cancel",
-          variant: "se",
-          label: copy.cancelButton,
-        },
         {
           id: "save-appearance",
           variant: "pr",

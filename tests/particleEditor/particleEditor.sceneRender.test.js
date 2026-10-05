@@ -1,8 +1,9 @@
 import { describe, expect, it } from "vitest";
 import {
+  buildParticleEffectData,
   buildParticleFormValues,
-  buildParticlePayload,
-} from "../../src/pages/particles/support/particleForm.js";
+} from "../../src/pages/particleEditor/support/particleEditorForm.js";
+import { createParticlePreset } from "../../src/pages/particles/support/particlePresets.js";
 import { buildLayoutRenderElements } from "../../src/internal/project/layout.js";
 import { createParticlePreviewState } from "../../src/internal/particlePreview.js";
 import {
@@ -56,15 +57,13 @@ const buildSceneParticleElement = (particle) => {
   return elements[0].children[0];
 };
 
+const snow = createParticlePreset({ presetId: "snow", projectResolution });
+
 const savedParticle = (seed) => {
-  const values = buildParticleFormValues({
-    particle: undefined,
-    presetId: "snow",
-    projectResolution,
-  });
+  const values = buildParticleFormValues({ particle: snow });
   values.textureImageId = "image-1";
   values.seed = seed;
-  return buildParticlePayload({ values, projectResolution });
+  return buildParticleEffectData({ values, baseParticle: snow });
 };
 
 describe("particle seed in scene render elements", () => {
@@ -94,7 +93,7 @@ describe("particle seed in scene render elements", () => {
     }
   });
 
-  it("applies the same rule to the particles page preview", () => {
+  it("applies the same rule to the particle previews", () => {
     const particle = savedParticle("1");
     const withSeed = (seed) =>
       createParticlePreviewState({ ...particle, seed }).elements.find(
@@ -122,14 +121,10 @@ describe("particle emission counts", () => {
 
   it("limits Max Active and Burst count when the form saves", () => {
     const save = (values) => {
-      const base = buildParticleFormValues({
-        particle: undefined,
-        presetId: "snow",
-        projectResolution,
-      });
-      return buildParticlePayload({
+      const base = buildParticleFormValues({ particle: snow });
+      return buildParticleEffectData({
         values: { ...base, textureImageId: "image-1", ...values },
-        projectResolution,
+        baseParticle: snow,
       }).modules.emission;
     };
 
@@ -162,7 +157,7 @@ describe("particle emission counts", () => {
     expect(element.modules.emission.maxActive).toBe(MAX_PARTICLE_COUNT);
   });
 
-  it("applies the same limit to the particles page preview", () => {
+  it("applies the same limit to the particle previews", () => {
     const stored = withCounts({ maxActive: 1000000000 });
     const element = createParticlePreviewState(stored).elements.find(
       (item) => item.type === "particles",
@@ -174,14 +169,10 @@ describe("particle emission counts", () => {
 
 describe("particle values route-graphics rejects", () => {
   const save = (values) => {
-    const base = buildParticleFormValues({
-      particle: undefined,
-      presetId: "snow",
-      projectResolution,
-    });
-    return buildParticlePayload({
+    const base = buildParticleFormValues({ particle: snow });
+    return buildParticleEffectData({
       values: { ...base, textureImageId: "image-1", ...values },
-      projectResolution,
+      baseParticle: snow,
     }).modules;
   };
 

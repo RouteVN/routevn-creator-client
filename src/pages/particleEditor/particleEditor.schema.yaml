@@ -1,0 +1,4 @@
+componentName: rvn-particle-editor
+propsSchema:
+  type: object
+  properties: {}

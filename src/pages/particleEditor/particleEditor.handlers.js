@@ -1,14 +1,10 @@
 import { concatMap, debounceTime, filter, from, tap } from "rxjs";
 import { withErrorDetails } from "../../internal/errorDetails.js";
 import {
-  applyTransformPositionIntent,
-  createTransformKeyboardIntent,
-} from "../../internal/transformKeyboard.js";
-import {
-  createTransformEditorPayload,
-  getTransformEditorBackPath,
-  resolveTransformEditorPayload,
-} from "../../internal/transformEditorRoute.js";
+  createParticleEditorPayload,
+  getParticleEditorBackPath,
+  resolveParticleEditorPayload,
+} from "../../internal/particleEditorRoute.js";
 import { showAssetLoadFailures } from "../../internal/ui/assetLoadFeedback.js";
 import { resolveEditHistoryShortcut } from "../../internal/ui/editHistory.js";
 import {
@@ -21,24 +17,23 @@ import { mountMobileResourceWindowLayout } from "../../internal/ui/resourcePages
 import { runResourcePageMutation } from "../../internal/ui/resourcePages/resourcePageErrors.js";
 import { enqueueSceneEditorPersistence } from "../../internal/ui/sceneEditor/persistenceQueue.js";
 import {
-  applyBackgroundTransformDragChange,
-  applyBackgroundTransformResizeChange,
-  getBackgroundTransformDragModeFromTargetId,
-  isBackgroundTransformResizeMode,
-} from "../../internal/ui/sceneEditor/backgroundTransformEditor.js";
+  PARTICLE_SOURCE_OUTLINE_ID,
+  createParticleEditorRenderState,
+  createParticlePreviewRenderState,
+  moveParticleSource,
+} from "./support/particleEditorCanvas.js";
 import {
-  createTransformEditorCanvasState,
-  createTransformFromInspectorValues,
-  createTransformPreviewRenderState,
-  roundTransformScale,
-} from "./support/transformEditorCanvas.js";
-import { selectTransformEditorPageCopy } from "./support/transformEditorPageCopy.js";
+  applyParticleFormChange,
+  replaceParticleSource,
+  replaceParticleTextureImage,
+} from "./support/particleEditorForm.js";
+import { selectParticleEditorPageCopy } from "./support/particleEditorPageCopy.js";
 
-const selectCopy = ({ i18n } = {}) => selectTransformEditorPageCopy(i18n);
+const selectCopy = ({ i18n } = {}) => selectParticleEditorPageCopy(i18n);
 
 // Edits save on their own once the values have been still this long.
 const AUTOSAVE_DEBOUNCE_MS = 300;
-const AUTOSAVE_ACTION = "transformEditor.autosave";
+const AUTOSAVE_ACTION = "particleEditor.autosave";
 
 const {
   focusKeyboardScope: focusImageSelectorKeyboardScope,
@@ -56,29 +51,44 @@ export {
 
 const navigateBack = (appService) => {
   appService.navigate(
-    getTransformEditorBackPath(),
-    createTransformEditorPayload({
+    getParticleEditorBackPath(),
+    createParticleEditorPayload({
       payload: appService.getPayload() ?? {},
     }),
     { historyMode: "replace" },
   );
 };
 
-// Loads the preview images the canvas has not loaded, each on its own, and
-// returns the ones that failed. A failed image stays out of the canvas, and
-// renders do not read it again; `retryFailed` tries it again, as Save
-// Preview does.
-const loadPreviewImageAssets = async (deps, { retryFailed = false } = {}) => {
+// The renderer draws at the particle's size, in whole pixels.
+const toCanvasSize = (effect) => ({
+  width: Math.max(1, Math.round(effect.width)),
+  height: Math.max(1, Math.round(effect.height)),
+});
+
+// Starts the canvas renderer at the particle's size, and again when the size
+// changes.
+const ensureGraphicsSize = async (deps) => {
+  const { graphicsService, refs, store } = deps;
+  const { width, height } = toCanvasSize(store.selectEffect());
+  const graphicsSize = store.selectGraphicsSize();
+  if (graphicsSize?.width === width && graphicsSize?.height === height) {
+    return;
+  }
+
+  store.setGraphicsSize({ width, height });
+  await graphicsService.init({ canvas: refs.canvas, width, height });
+};
+
+// Loads the images the canvas has not loaded, each on its own, and returns
+// the ones that failed. A failed image stays out of the canvas, and renders
+// do not read it again; `retryFailed` tries it again, as Save Preview does.
+const loadCanvasImages = async (deps, { retryFailed = false } = {}) => {
   const { graphicsService, projectService, store } = deps;
   const loadedFileIds = store.selectLoadedAssetFileIds();
   const failedFileIds = retryFailed ? [] : store.selectFailedAssetFileIds();
   const images = new Map();
-  for (const image of [
-    store.selectPreviewBackgroundImage(),
-    store.selectPreviewTargetImage(),
-  ]) {
+  for (const image of store.selectCanvasImages()) {
     if (
-      image?.fileId &&
       !loadedFileIds.includes(image.fileId) &&
       !failedFileIds.includes(image.fileId)
     ) {
@@ -102,7 +112,7 @@ const loadPreviewImageAssets = async (deps, { retryFailed = false } = {}) => {
       });
       store.markAssetLoaded({ fileId });
     } catch (error) {
-      console.warn("[transformEditor] Failed to load a preview image", {
+      console.warn("[particleEditor] Failed to load an image", {
         fileId,
         error,
       });
@@ -115,7 +125,7 @@ const loadPreviewImageAssets = async (deps, { retryFailed = false } = {}) => {
 
 // Renders can overlap, so each failed file is warned about once while the
 // page is open, as in the layout editor.
-const warnPreviewImageFailures = (deps, failures) => {
+const warnCanvasImageFailures = (deps, failures) => {
   const { store } = deps;
   const warnedFileIds = store.selectWarnedAssetFileIds();
   const newFailures = failures.filter(
@@ -131,65 +141,60 @@ const warnPreviewImageFailures = (deps, failures) => {
   showAssetLoadFailures(deps, newFailures);
 };
 
-// Canvas units per CSS pixel, so the outline's handles keep their on-screen
-// size at any zoom.
+// Canvas units per CSS pixel, so the outline keeps its on-screen size at any
+// zoom.
 const selectCanvasUnitsPerCssPixel = (deps) => {
   const { refs, store } = deps;
   const canvasWidth = refs.canvas.getBoundingClientRect().width;
-  return canvasWidth > 0
-    ? store.selectProjectResolution().width / canvasWidth
-    : 1;
+  return canvasWidth > 0 ? store.selectEffect().width / canvasWidth : 1;
 };
 
-// What Save Preview saves: the canvas as Edit shows it, without the
-// selection outline.
+// What Preview and Save Preview draw: the canvas without the source
+// outline, with the preview background.
 const createSavedPreviewRenderState = (store) =>
-  createTransformPreviewRenderState({
-    projectResolution: store.selectProjectResolution(),
-    transform: store.selectTransform(),
+  createParticlePreviewRenderState({
+    effect: store.selectCanvasEffect(),
+    imageItems: store.selectAvailableImageItems(),
     backgroundImage: store.selectCanvasBackgroundImage(),
-    targetImage: store.selectCanvasTargetImage(),
   });
 
-// Edit draws the transform with its selection outline; Preview draws the
-// same canvas without it, which is what Save Preview saves. Every render
-// reads the store, so a later render shows the latest values. A preview
-// image that cannot load is warned about once and left out, and the canvas
-// stays editable.
-const renderTransformCanvas = async (deps) => {
+// Edit's Source tab draws the particle with its source outline; the other
+// tabs and Preview draw the same canvas without it, which is what Save
+// Preview saves. Every render reads
+// the store, so a later render shows the latest values. An image that cannot
+// load is warned about once and left out, and the canvas stays editable.
+const renderParticleCanvas = async (deps) => {
   const { appService, graphicsService, store } = deps;
-  if (!store.selectTransformId()) {
+  if (!store.selectParticleId()) {
     return;
   }
 
   try {
-    warnPreviewImageFailures(deps, await loadPreviewImageAssets(deps));
-    if (store.selectRightPanelMode() === "preview") {
+    await ensureGraphicsSize(deps);
+    warnCanvasImageFailures(deps, await loadCanvasImages(deps));
+    if (!store.selectShowsSourceOutline()) {
       graphicsService.render(createSavedPreviewRenderState(store));
       return;
     }
 
-    const { renderState, selectedElementMetrics } =
-      createTransformEditorCanvasState({
-        graphicsService,
-        projectResolution: store.selectProjectResolution(),
-        transform: store.selectCanvasTransform(),
+    graphicsService.render(
+      createParticleEditorRenderState({
+        effect: store.selectCanvasEffect(),
+        imageItems: store.selectAvailableImageItems(),
         backgroundImage: store.selectCanvasBackgroundImage(),
-        targetImage: store.selectCanvasTargetImage(),
         canvasUnitsPerCssPixel: selectCanvasUnitsPerCssPixel(deps),
-      });
-    graphicsService.render(renderState);
-    store.setSelectedElementMetrics({ metrics: selectedElementMetrics });
+      }),
+    );
   } catch (error) {
-    console.error("[transformEditor] Failed to render the canvas", error);
+    console.error("[particleEditor] Failed to render the canvas", error);
     appService.showToast({ message: selectCopy(deps).failedRenderPreview });
   }
 };
 
-// Saves the transform's values when they differ from what is saved. Saves
-// run one at a time, so a save on leaving waits for a running autosave and
-// then saves what it missed.
-const saveTransformValues = (deps) => {
+// Saves the particle's effect when it differs from what is saved: its size,
+// seed and modules, never its name. Saves run one at a time, so a save on
+// leaving waits for a running autosave and then saves what it missed.
+const saveParticleValues = (deps) => {
   const { appService, projectService, store } = deps;
   return enqueueSceneEditorPersistence({
     owner: projectService,
@@ -198,98 +203,87 @@ const saveTransformValues = (deps) => {
         return true;
       }
 
-      const transform = store.selectTransform();
+      const effect = store.selectEffect();
       const updateAttempt = await runResourcePageMutation({
         appService,
-        fallbackMessage: selectCopy(deps).failedSaveTransform,
+        fallbackMessage: selectCopy(deps).failedSaveParticle,
         action: () =>
-          projectService.updateTransform({
-            transformId: store.selectTransformId(),
-            data: transform,
+          projectService.updateParticle({
+            particleId: store.selectParticleId(),
+            data: effect,
           }),
       });
       if (updateAttempt.ok) {
-        store.markValuesSaved({ transform });
+        store.markValuesSaved({ effect });
       }
       return updateAttempt.ok;
     },
   });
 };
 
-const queueTransformAutosave = ({ subject }) => {
+const queueParticleAutosave = ({ subject }) => {
   subject.dispatch(AUTOSAVE_ACTION, {});
 };
 
-// Every edit to the transform ends here, so this is where it enters the undo
+// Every edit to the particle ends here, so this is where it enters the undo
 // history.
-const commitTransformEdit = async (deps) => {
+const commitParticleEdit = async (deps, { merge = true } = {}) => {
   const { render, store } = deps;
-  store.recordTransformEdit({ time: Date.now() });
-  queueTransformAutosave(deps);
+  store.recordParticleEdit({ time: Date.now(), merge });
+  queueParticleAutosave(deps);
   render();
-  await renderTransformCanvas(deps);
+  await renderParticleCanvas(deps);
 };
 
 const handleBorderDragStart = (deps, payload = {}) => {
   const { store } = deps;
-  if (getBackgroundTransformDragModeFromTargetId(payload.targetId)) {
+  if (payload.targetId === PARTICLE_SOURCE_OUTLINE_ID) {
     store.clearDragStartPosition();
   }
 };
 
+// Dragging the outline moves the source by as much as the pointer moved.
 const handleBorderDragMove = (deps, payload = {}) => {
   const { store } = deps;
-  const dragMode = getBackgroundTransformDragModeFromTargetId(payload.targetId);
-  if (!dragMode || typeof payload.x !== "number") {
+  if (
+    payload.targetId !== PARTICLE_SOURCE_OUTLINE_ID ||
+    typeof payload.x !== "number" ||
+    !store.selectShowsSourceOutline()
+  ) {
     return;
   }
 
-  const transform = store.selectTransform();
+  const effect = store.selectEffect();
   const dragStartPosition = store.selectDragStartPosition();
   if (!dragStartPosition) {
-    const resizeEdge = isBackgroundTransformResizeMode(dragMode)
-      ? dragMode
-      : undefined;
-    const selectedElementMetrics = store.selectSelectedElementMetrics();
-    if (resizeEdge && !selectedElementMetrics) {
-      return;
-    }
     store.setDragStartPosition({
       dragStartPosition: {
         x: payload.x,
         y: payload.y,
-        resizeEdge,
-        selectedElementMetrics,
-        transformStartX: transform.x,
-        transformStartY: transform.y,
-        transformStartScaleX: transform.scaleX,
-        transformStartScaleY: transform.scaleY,
+        source: effect.modules.emission.source,
       },
     });
     return;
   }
 
-  const change = {
-    transform,
-    dragStartPosition,
-    x: payload.x,
-    y: payload.y,
-  };
-  const nextTransform = dragStartPosition.resizeEdge
-    ? roundTransformScale(applyBackgroundTransformResizeChange(change))
-    : applyBackgroundTransformDragChange(change);
-  store.setTransform({ transform: nextTransform });
-  void renderTransformCanvas(deps);
+  const source = moveParticleSource(dragStartPosition.source, {
+    dx: payload.x - dragStartPosition.x,
+    dy: payload.y - dragStartPosition.y,
+  });
+  store.setEffect({ effect: replaceParticleSource(effect, source) });
+  void renderParticleCanvas(deps);
 };
 
-// A drag is one edit, from where it started to where it ended.
+// A drag is one edit, from where it started to where it ended, and always
+// its own step. The form then shows the source's new position.
 const handleBorderDragEnd = async (deps) => {
   const { store } = deps;
   if (!store.selectDragStartPosition()) {
     return;
   }
   store.clearDragStartPosition();
-  await commitTransformEdit(deps);
+  store.refreshForm();
+  await commitParticleEdit(deps, { merge: false });
 };
 
 const mountSubscriptions = (deps) => {
@@ -299,7 +293,7 @@ const mountSubscriptions = (deps) => {
       .pipe(
         filter(({ action }) => action === AUTOSAVE_ACTION),
         debounceTime(AUTOSAVE_DEBOUNCE_MS),
-        concatMap(() => from(saveTransformValues(deps))),
+        concatMap(() => from(saveParticleValues(deps))),
       )
       .subscribe(),
     subject
@@ -344,24 +338,24 @@ export const handleBeforeMount = (deps) => {
     store,
     render: () => {
       render();
-      void renderTransformCanvas(deps);
+      void renderParticleCanvas(deps);
     },
   });
   const cleanupWindowResize = browserEventsClient.subscribeWindowEvent({
     type: "resize",
-    listener: () => renderTransformCanvas(deps),
+    listener: () => renderParticleCanvas(deps),
   });
   const cleanupKeyboardShortcuts = browserEventsClient.subscribeWindowEvent({
     type: "keydown",
     options: { capture: true },
     listener: (event) => handleWindowKeyDown(deps, { _event: event }),
   });
-  // Unsaved preview settings are left behind, as in the layout editor.
+  // The preview background is left behind; it is for this visit only.
   const unregisterBeforeNavigation = appService.registerBeforeNavigation(
     async () => {
-      const saved = await saveTransformValues(deps);
+      const saved = await saveParticleValues(deps);
       if (!saved) {
-        throw new Error("Failed to save transform before navigation.");
+        throw new Error("Failed to save particle before navigation.");
       }
     },
   );
@@ -375,111 +369,75 @@ export const handleBeforeMount = (deps) => {
     // The graphics service is shared, and the next page can start its
     // renderer while the save below runs, so this page's goes first.
     void graphicsService.destroy();
-    const saved = await saveTransformValues(deps);
+    const saved = await saveParticleValues(deps);
     if (!saved) {
-      throw new Error("Failed to save transform during cleanup.");
+      throw new Error("Failed to save particle during cleanup.");
     }
   };
 };
 
 export const handleAfterMount = async (deps) => {
-  const { appService, graphicsService, projectService, refs, render, store } =
-    deps;
+  const { appService, projectService, render, store } = deps;
   const copy = selectCopy(deps);
   await projectService.ensureRepository();
-  const { transformId } = resolveTransformEditorPayload(
+  const { particleId } = resolveParticleEditorPayload(
     appService.getPayload() ?? {},
   );
   const repositoryState = projectService.getRepositoryState();
-  const item = repositoryState.transforms?.items?.[transformId];
-  if (item?.type !== "transform") {
+  const item = repositoryState.particles?.items?.[particleId];
+  if (item?.type !== "particle") {
     appService.showAlert({
       title: copy.errorTitle,
-      message: copy.transformNotFound,
+      message: copy.particleNotFound,
     });
     navigateBack(appService);
     return;
   }
 
-  store.loadTransform({
+  store.loadParticle({
     item,
-    projectResolution: repositoryState.project?.resolution,
     imagesData: repositoryState.images,
   });
   render();
-
-  const projectResolution = store.selectProjectResolution();
-  await graphicsService.init({
-    canvas: refs.canvas,
-    width: projectResolution.width,
-    height: projectResolution.height,
-  });
-  await renderTransformCanvas(deps);
+  await renderParticleCanvas(deps);
 };
 
-// Undo and redo behave like an edit: the page shows the restored transform
-// at once and saves it a moment after. An undo back to the saved transform
+// Undo and redo behave like an edit: the page shows the restored particle at
+// once and saves it a moment after. An undo back to the saved particle
 // leaves nothing to save.
-const runTransformHistoryStep = async (deps, direction) => {
+const runParticleHistoryStep = async (deps, direction) => {
   const { render, store } = deps;
   if (!store.selectEditHistoryStep({ direction })) {
     return;
   }
   store.applyEditHistoryStep({ direction });
-  queueTransformAutosave(deps);
+  queueParticleAutosave(deps);
   render();
-  await renderTransformCanvas(deps);
+  await renderParticleCanvas(deps);
 };
 
 export const handleUndoButtonClick = (deps) =>
-  runTransformHistoryStep(deps, "undo");
+  runParticleHistoryStep(deps, "undo");
 
 export const handleRedoButtonClick = (deps) =>
-  runTransformHistoryStep(deps, "redo");
+  runParticleHistoryStep(deps, "redo");
 
-// Cmd/Ctrl+Z undoes and Shift+Cmd/Ctrl+Z redoes; the arrow keys move the
-// target, ten pixels at a time with Shift. Both step aside for text fields.
+// Cmd/Ctrl+Z undoes and Shift+Cmd/Ctrl+Z redoes, except in a text field or
+// a dialog.
 export const handleWindowKeyDown = async (deps, payload) => {
-  const { appService, store } = deps;
   const event = payload._event;
   const direction = resolveEditHistoryShortcut(event);
-  if (direction) {
-    event.preventDefault();
-    await runTransformHistoryStep(deps, direction);
-    return;
-  }
-
-  if (
-    event.defaultPrevented ||
-    event.isComposing ||
-    event.ctrlKey ||
-    event.metaKey ||
-    event.altKey ||
-    appService.isInputFocused() ||
-    store.selectIsImageSelectorOpen() ||
-    store.selectRightPanelMode() !== "edit"
-  ) {
-    return;
-  }
-
-  const intent = createTransformKeyboardIntent({
-    key: event.key,
-    shiftKey: event.shiftKey,
-  });
-  if (!intent) {
+  if (!direction) {
     return;
   }
 
   event.preventDefault();
-  store.setTransform({
-    transform: applyTransformPositionIntent(store.selectTransform(), intent),
-  });
-  await commitTransformEdit(deps);
+  await runParticleHistoryStep(deps, direction);
 };
 
 export const handleBackClick = async (deps) => {
   const { appService } = deps;
-  const saved = await saveTransformValues(deps);
+  const saved = await saveParticleValues(deps);
   if (saved) {
     navigateBack(appService);
   }
@@ -490,30 +448,58 @@ export const handleRightPanelModeChange = async (deps, payload) => {
   const { id } = payload._event.detail;
   store.setRightPanelMode({ mode: id });
   render();
-  await renderTransformCanvas(deps);
+  await renderParticleCanvas(deps);
+};
+
+// Switching tabs shows or hides the source outline.
+export const handleFormTabClick = async (deps, payload) => {
+  const { render, store } = deps;
+  const { id } = payload._event.detail;
+  store.setFormTab({ tab: id });
+  render();
+  await renderParticleCanvas(deps);
+};
+
+// The form holds only the fields that show, so only the field that changed
+// applies, onto the particle as it is: modules and curves the form does not
+// show stay as they are.
+export const handleParticleFormChange = async (deps, payload) => {
+  const { store } = deps;
+  const { name, value } = payload._event.detail;
+  const { effect, refreshForm } = applyParticleFormChange(
+    store.selectEffect(),
+    { name, value },
+  );
+  store.setEffect({ effect });
+  // A value the particle keeps differently from how it was typed, such as
+  // a width with decimals, shows as it is kept.
+  if (refreshForm) {
+    store.refreshForm();
+  }
+  await commitParticleEdit(deps);
 };
 
 const showSavePreviewFailure = (deps, message, error) => {
   const { appService, i18n } = deps;
-  console.error("[transformEditor] Failed to save the preview", error);
+  console.error("[particleEditor] Failed to save the preview", error);
   appService.showAlert({
     title: selectCopy(deps).errorTitle,
     message: withErrorDetails(message, error, i18n.appPage.errorDetailsLabel),
   });
 };
 
-const saveTransformPreview = async (deps) => {
+const saveParticlePreview = async (deps) => {
   const { appService, graphicsService, projectService, refs, store } = deps;
   const copy = selectCopy(deps);
-  if (!(await saveTransformValues(deps))) {
+  if (!(await saveParticleValues(deps))) {
     return;
   }
 
-  // A preview saves the images picked for it, so one that cannot load stops
-  // the save instead of saving the gray screen or white square in its place.
-  const [failure] = await loadPreviewImageAssets(deps, { retryFailed: true });
+  // The thumbnail shows the images picked for it, so one that cannot load
+  // stops the save instead of saving the particle without it.
+  const [failure] = await loadCanvasImages(deps, { retryFailed: true });
   if (failure) {
-    await renderTransformCanvas(deps);
+    await renderParticleCanvas(deps);
     showSavePreviewFailure(
       deps,
       formatI18nCopy(copy.failedLoadPreviewImage, {
@@ -530,9 +516,10 @@ const saveTransformPreview = async (deps) => {
       graphicsService,
       canvas: refs.canvas,
       renderState: createSavedPreviewRenderState(store),
+      thumbnailOnly: true,
     });
   } catch (error) {
-    await renderTransformCanvas(deps);
+    await renderParticleCanvas(deps);
     showSavePreviewFailure(deps, copy.failedCapturePreview, error);
     return;
   }
@@ -544,7 +531,7 @@ const saveTransformPreview = async (deps) => {
       ...previewImages,
     });
   } catch (error) {
-    await renderTransformCanvas(deps);
+    await renderParticleCanvas(deps);
     showSavePreviewFailure(deps, copy.failedSavePreview, error);
     return;
   }
@@ -553,25 +540,21 @@ const saveTransformPreview = async (deps) => {
     appService,
     fallbackMessage: copy.failedSavePreview,
     action: () =>
-      projectService.updateTransform({
-        transformId: store.selectTransformId(),
-        data: {
-          thumbnailFileId: previewFiles.thumbnailFileId,
-          previewFileId: previewFiles.previewFileId,
-          preview: store.selectPreviewData(),
-        },
+      projectService.updateParticle({
+        particleId: store.selectParticleId(),
+        data: { thumbnailFileId: previewFiles.thumbnailFileId },
         fileRecords: previewFiles.fileRecords,
       }),
   });
-  await renderTransformCanvas(deps);
+  await renderParticleCanvas(deps);
   if (updateAttempt.ok) {
-    appService.showToast({ message: copy.transformPreviewSaved });
+    appService.showToast({ message: copy.particlePreviewSaved });
   }
 };
 
-// Saves the preview images and a new preview and thumbnail image of the
-// transform, drawn as Preview shows it. The transform's values save first.
-// The button is disabled while it saves, so a double click saves once.
+// Saves a new thumbnail of the particle, drawn as Preview shows it, with the
+// preview background. The particle's values save first. The button is
+// disabled while it saves, so a double click saves once.
 export const handleSavePreviewClick = async (deps) => {
   const { render, store } = deps;
   if (store.selectIsSavingPreview()) {
@@ -581,7 +564,7 @@ export const handleSavePreviewClick = async (deps) => {
   store.startSavingPreview();
   render();
   try {
-    await saveTransformPreview(deps);
+    await saveParticlePreview(deps);
   } finally {
     store.finishSavingPreview();
     render();
@@ -593,14 +576,14 @@ export const handleCanvasZoomInClick = async (deps) => {
   const { render, store } = deps;
   store.zoomCanvasIn();
   render();
-  await renderTransformCanvas(deps);
+  await renderParticleCanvas(deps);
 };
 
 export const handleCanvasZoomOutClick = async (deps) => {
   const { render, store } = deps;
   store.zoomCanvasOut();
   render();
-  await renderTransformCanvas(deps);
+  await renderParticleCanvas(deps);
 };
 
 export const handleCanvasZoomResetClick = async (deps) => {
@@ -608,7 +591,7 @@ export const handleCanvasZoomResetClick = async (deps) => {
   store.resetCanvasZoom();
   render();
   refs.canvasBackground.centerContent();
-  await renderTransformCanvas(deps);
+  await renderParticleCanvas(deps);
 };
 
 export const handleCanvasZoomGesture = async (deps, payload) => {
@@ -616,58 +599,41 @@ export const handleCanvasZoomGesture = async (deps, payload) => {
   const { zoom } = payload._event.detail;
   store.setCanvasZoom({ zoom });
   render();
-  await renderTransformCanvas(deps);
+  await renderParticleCanvas(deps);
 };
 
-// The inspector's events name the field that changed. Only that field
-// applies, since the inspector's other values may be older than the canvas.
-const selectInspectorTransform = (store, { name, value }) =>
-  createTransformFromInspectorValues(store.selectTransform(), {
-    [name]: value,
-  });
-
-export const handleInspectorUpdate = async (deps, payload) => {
-  const { store } = deps;
-  store.clearInspectorPreviewTransform();
-  store.setTransform({
-    transform: selectInspectorTransform(store, payload._event.detail),
-  });
-  await commitTransformEdit(deps);
-};
-
-// Number fields preview on the canvas while their popover is open; closing
-// it without submitting puts the transform back.
-export const handleInspectorPreview = async (deps, payload) => {
-  const { store } = deps;
-  store.setInspectorPreviewTransform({
-    transform: selectInspectorTransform(store, payload._event.detail),
-  });
-  await renderTransformCanvas(deps);
-};
-
-export const handleInspectorPreviewCancel = async (deps) => {
-  const { store } = deps;
-  store.clearInspectorPreviewTransform();
-  await renderTransformCanvas(deps);
-};
-
-export const handlePreviewImageClick = (deps, payload) => {
+const openImageSelector = (deps, slot) => {
   const { render, store } = deps;
-  const { slot } = payload._event.currentTarget.dataset;
-  store.closePreviewImageMenu();
+  store.closeBackgroundImageMenu();
   store.openImageSelectorDialog({ slot });
   render();
 };
 
-export const handlePreviewImageContextMenu = (deps, payload) => {
+export const handleTextureImageClick = (deps) => {
+  openImageSelector(deps, "texture");
+};
+
+export const handleTextureImageKeyDown = (deps, payload) => {
+  const event = payload._event;
+  if (event.key !== "Enter" && event.key !== " ") {
+    return;
+  }
+
+  event.preventDefault();
+  openImageSelector(deps, "texture");
+};
+
+export const handleBackgroundImageClick = (deps) => {
+  openImageSelector(deps, "background");
+};
+
+export const handleBackgroundImageContextMenu = (deps, payload) => {
   const { render, store } = deps;
   const copy = selectCopy(deps);
   const event = payload._event;
-  const { slot } = event.currentTarget.dataset;
   event.preventDefault();
   event.stopPropagation();
-  store.openPreviewImageMenu({
-    slot,
+  store.openBackgroundImageMenu({
     x: event.clientX,
     y: event.clientY,
     items: [{ label: copy.removeMenuItem, type: "item", value: "remove" }],
@@ -675,22 +641,21 @@ export const handlePreviewImageContextMenu = (deps, payload) => {
   render();
 };
 
-export const handlePreviewImageMenuClose = (deps) => {
+export const handleBackgroundImageMenuClose = (deps) => {
   const { render, store } = deps;
-  store.closePreviewImageMenu();
+  store.closeBackgroundImageMenu();
   render();
 };
 
-export const handlePreviewImageMenuItemClick = async (deps, payload) => {
+export const handleBackgroundImageMenuItemClick = async (deps, payload) => {
   const { render, store } = deps;
   const { item } = payload._event.detail;
-  const slot = store.selectPreviewImageMenuSlot();
-  store.closePreviewImageMenu();
+  store.closeBackgroundImageMenu();
   if (item.value === "remove") {
-    store.clearPreviewImage({ slot });
+    store.clearPreviewBackgroundImage();
   }
   render();
-  await renderTransformCanvas(deps);
+  await renderParticleCanvas(deps);
 };
 
 export const handleImageSelectorImageSelected = async (deps, payload) => {
@@ -698,7 +663,7 @@ export const handleImageSelectorImageSelected = async (deps, payload) => {
   const { imageId } = payload._event.detail;
   store.applyImageSelectorSelection({ imageId });
   render();
-  await renderTransformCanvas(deps);
+  await renderParticleCanvas(deps);
 };
 
 export const handleImageSelectorImageDoubleClick = (deps, payload) => {
@@ -712,14 +677,33 @@ export const handleImageSelectorDialogClose = async (deps) => {
   const { render, store } = deps;
   store.cancelImageSelectorDialog();
   render();
-  await renderTransformCanvas(deps);
+  await renderParticleCanvas(deps);
 };
 
+// A picked texture is one edit; a picked background is only for the
+// preview.
 export const handleImageSelectorConfirmClick = async (deps) => {
   const { render, store } = deps;
-  store.commitImageSelectorSelection();
+  const { slot, selectedImageId, originalImageId } =
+    store.selectImageSelectorDialog();
+  store.closeImageSelectorDialog();
+  if (
+    slot === "texture" &&
+    selectedImageId &&
+    selectedImageId !== originalImageId
+  ) {
+    store.setEffect({
+      effect: replaceParticleTextureImage(
+        store.selectEffect(),
+        selectedImageId,
+      ),
+    });
+    await commitParticleEdit(deps);
+    return;
+  }
+
   render();
-  await renderTransformCanvas(deps);
+  await renderParticleCanvas(deps);
 };
 
 export const handleImageSelectorFileExplorerItemClick = (deps, payload) => {

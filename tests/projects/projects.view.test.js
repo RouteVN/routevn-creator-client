@@ -59,6 +59,29 @@ describe("projects view", () => {
     expect(projectsView).toContain("rtgl-view sm-w=f w=640 ph=md pv=lg ah=c");
     expect(projectsView).toContain("$if platform != 'web'");
     expect(projectsView).toContain("rtgl-view#appVersionButton");
+    // The gear sits on the right, and a spacer as wide sits on the left, so
+    // the name and version stay centered. The whole row opens the menu.
+    const versionButtonIndex = projectsView.indexOf(
+      "rtgl-view#appVersionButton.appVersionButton role=button aria-haspopup=menu d=h av=c ah=c g=sm",
+    );
+    const versionButtonRow = projectsView.slice(
+      versionButtonIndex,
+      projectsView.indexOf("$else:", versionButtonIndex),
+    );
+    expect(versionButtonIndex).toBeGreaterThan(-1);
+    expect(versionButtonRow).toContain(
+      `'rtgl-view w=16 h=16 aria-hidden=true style="flex-shrink: 0;"': null`,
+    );
+    expect(versionButtonRow).toContain(
+      "rtgl-svg svg=settings wh=16 c=mu-fg aria-hidden=true: null",
+    );
+    expect(versionButtonRow.indexOf("rtgl-view w=16 h=16")).toBeLessThan(
+      versionButtonRow.indexOf("RouteVN Creator ${appVersion}"),
+    );
+    expect(
+      versionButtonRow.indexOf("RouteVN Creator ${appVersion}"),
+    ).toBeLessThan(versionButtonRow.indexOf("svg=settings"));
+    expect(projectsView).toContain('".appVersionButton:active":');
     expect(projectsView).toContain(
       "rtgl-dropdown-menu#appVersionDropdownMenu ?open=${appVersionMenu.isOpen} x=${appVersionMenu.x} y=${appVersionMenu.y} place=t :items=${appVersionMenu.items}",
     );
@@ -67,6 +90,20 @@ describe("projects view", () => {
     expect(projectsView).toContain("handler: handleLanguageDialogClose");
     expect(projectsView).toContain("handler: handleLanguageFormAction");
     expect(projectsView).toContain("rtgl-dialog#languageDialog");
+    // Language and Appearance use the item editor dialog layout, as on the
+    // images page.
+    expect(projectsView).toContain(
+      "rtgl-dialog#languageDialog ?open=${languageDialog.isOpen} s=md md-layout=fixed-top:",
+    );
+    expect(projectsView).toContain(
+      "rtgl-form#languageForm key=${languageDialog.formKey} :form=${languageForm} :defaultValues=${languageDialog.defaultValues} sticky sbv=touch bottom-spacer=96 w=f h=f: null",
+    );
+    expect(projectsView).toContain(
+      "rtgl-dialog#appearanceDialog ?open=${appearanceDialog.isOpen} s=md md-layout=fixed-top:",
+    );
+    expect(projectsView).toContain(
+      "rtgl-form#appearanceForm key=${appearanceDialog.formKey} :form=${appearanceForm} :defaultValues=${appearanceDialog.defaultValues} sticky sbv=touch bottom-spacer=96 w=f h=f: null",
+    );
     expect(projectsView).toContain("rtgl-form#languageForm");
     expect(footerTextIndex).toBeGreaterThan(footerContainerIndex);
     expect(projectsView).not.toContain("rtgl-view w=f ah=c pb=lg");

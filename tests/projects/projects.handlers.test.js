@@ -68,6 +68,7 @@ const createDeps = ({
     getTheme: vi.fn(() => "dark"),
     setTheme: vi.fn((theme) => theme),
     navigate: vi.fn(),
+    openUrl: vi.fn(),
   };
 
   return {
@@ -622,6 +623,11 @@ describe("projects app version menu", () => {
           type: "item",
           value: "appearance",
         },
+        {
+          label: EN_I18N.projectsPage.contactMenuItem,
+          type: "item",
+          value: "contact",
+        },
       ],
     });
     expect(deps.render).toHaveBeenCalledTimes(1);
@@ -655,6 +661,11 @@ describe("projects app version menu", () => {
           label: EN_I18N.projectsPage.appearanceMenuItem,
           type: "item",
           value: "appearance",
+        },
+        {
+          label: EN_I18N.projectsPage.contactMenuItem,
+          type: "item",
+          value: "contact",
         },
       ],
     });
@@ -691,6 +702,11 @@ describe("projects app version menu", () => {
           type: "item",
           value: "appearance",
         },
+        {
+          label: EN_I18N.projectsPage.contactMenuItem,
+          type: "item",
+          value: "contact",
+        },
       ],
     });
     expect(deps.render).toHaveBeenCalledTimes(1);
@@ -723,6 +739,27 @@ describe("projects app version menu", () => {
     expect(deps.updaterService.checkForUpdates).toHaveBeenCalledWith(false, {
       copy: EN_I18N.appPage,
     });
+  });
+
+  it("opens the contact page from the app version dropdown", async () => {
+    const deps = createDeps();
+
+    await handleAppVersionMenuClickItem(deps, {
+      _event: {
+        detail: {
+          item: {
+            value: "contact",
+          },
+        },
+      },
+    });
+
+    expect(deps.store.closeAppVersionMenu).toHaveBeenCalledTimes(1);
+    expect(deps.appService.openUrl).toHaveBeenCalledWith(
+      "https://routevn.com/en/contact/",
+    );
+    expect(deps.render).toHaveBeenCalledTimes(1);
+    expect(deps.updaterService.checkForUpdates).not.toHaveBeenCalled();
   });
 
   it("opens the language dialog from the app version dropdown", async () => {

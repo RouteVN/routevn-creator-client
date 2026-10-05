@@ -16,6 +16,7 @@ import {
 import { createProjectRoutePayload } from "../../internal/localProjectRoute.js";
 import { parseProjectImportUrl } from "../../internal/projectImportUrl.js";
 import { getProjectImportErrorMessage } from "../../internal/projectImportErrors.js";
+import { ROUTEVN_CONTACT_URL } from "../../internal/routevnUrls.js";
 import { resolveUpdatesEnabled } from "../../internal/updates.js";
 import { readTestCrashKind } from "../../internal/testCrashes.js";
 import {
@@ -594,6 +595,11 @@ export const handleAppVersionClick = (deps, payload) => {
     type: "item",
     value: "appearance",
   });
+  items.push({
+    label: copy.contactMenuItem,
+    type: "item",
+    value: "contact",
+  });
 
   const menuPayload = {
     x: rect.left + rect.width / 2,
@@ -620,6 +626,12 @@ export const handleAppVersionMenuClickItem = async (deps, payload) => {
   const item = detail.item || detail;
 
   store.closeAppVersionMenu();
+
+  if (item.value === "contact") {
+    appService.openUrl(ROUTEVN_CONTACT_URL);
+    render();
+    return;
+  }
 
   if (item.value === "language") {
     store.openLanguageDialog({
@@ -664,12 +676,6 @@ export const handleLanguageFormAction = async (deps, payload) => {
   const detail = payload?._event?.detail || {};
   const actionId = detail.actionId;
 
-  if (actionId === "cancel") {
-    store.closeLanguageDialog();
-    render();
-    return;
-  }
-
   if (actionId !== "save-language") {
     return;
   }
@@ -704,12 +710,6 @@ export const handleAppearanceFormAction = (deps, payload) => {
   const copy = selectProjectsPageCopy(i18n);
   const detail = payload?._event?.detail || {};
   const actionId = detail.actionId;
-
-  if (actionId === "cancel") {
-    store.closeAppearanceDialog();
-    render();
-    return;
-  }
 
   if (actionId !== "save-appearance") {
     return;

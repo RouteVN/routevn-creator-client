@@ -164,6 +164,8 @@ styles:
     user-select: none
     -webkit-user-select: none
     -webkit-touch-callout: none
+  ".appVersionButton:active":
+    background-color: var(--accent)
 template:
   - 'rtgl-view w=f d=v style="height: var(--rvn-app-viewport-height, 100vh);"':
       - 'rtgl-view w=f h=f d=v style="min-height: 0;"':
@@ -255,8 +257,10 @@ template:
                       - 'rvn-android-backup-status style="display: block; width: 100%;"': null
               - 'rtgl-view sm-w=f w=640 ph=md pv=lg ah=c':
                   - $if platform != 'web':
-                      - rtgl-view#appVersionButton d=h av=c ah=c ph=md pv=sm br=sm h-bgc=mu cur=pointer:
+                      - rtgl-view#appVersionButton.appVersionButton role=button aria-haspopup=menu d=h av=c ah=c g=sm ph=md pv=sm br=sm h-bgc=mu cur=pointer:
+                          - 'rtgl-view w=16 h=16 aria-hidden=true style="flex-shrink: 0;"': null
                           - rtgl-text s=xs c=mu-fg: RouteVN Creator ${appVersion}
+                          - rtgl-svg svg=settings wh=16 c=mu-fg aria-hidden=true: null
                     $else:
                       - rtgl-view d=h av=c ah=c ph=md pv=sm:
                           - rtgl-text s=xs c=mu-fg: RouteVN Creator ${appVersion}
@@ -294,12 +298,12 @@ template:
           - rtgl-form#urlImportForm key=${urlImportDialog.formKey} :form=${urlImportForm} :defaultValues=${urlImportDialog.defaultValues} w=f: null
   - rtgl-dropdown-menu#appVersionDropdownMenu ?open=${appVersionMenu.isOpen} x=${appVersionMenu.x} y=${appVersionMenu.y} place=t :items=${appVersionMenu.items}: null
   - rtgl-dropdown-menu#profileDropdownMenu ?open=${profileMenu.isOpen} x=${profileMenu.x} y=${profileMenu.y} :items=${profileMenu.items}: null
-  - rtgl-dialog#languageDialog ?open=${languageDialog.isOpen} s=sm:
-      - rtgl-view slot=content w=f p=lg:
-          - rtgl-form#languageForm key=${languageDialog.formKey} :form=${languageForm} :defaultValues=${languageDialog.defaultValues} w=f: null
-  - rtgl-dialog#appearanceDialog ?open=${appearanceDialog.isOpen} s=sm:
-      - rtgl-view slot=content w=f p=lg:
-          - rtgl-form#appearanceForm key=${appearanceDialog.formKey} :form=${appearanceForm} :defaultValues=${appearanceDialog.defaultValues} w=f: null
+  - rtgl-dialog#languageDialog ?open=${languageDialog.isOpen} s=md md-layout=fixed-top:
+      - rtgl-view slot=content d=v w=f h=f overflow=hidden:
+          - rtgl-form#languageForm key=${languageDialog.formKey} :form=${languageForm} :defaultValues=${languageDialog.defaultValues} sticky sbv=touch bottom-spacer=96 w=f h=f: null
+  - rtgl-dialog#appearanceDialog ?open=${appearanceDialog.isOpen} s=md md-layout=fixed-top:
+      - rtgl-view slot=content d=v w=f h=f overflow=hidden:
+          - rtgl-form#appearanceForm key=${appearanceDialog.formKey} :form=${appearanceForm} :defaultValues=${appearanceDialog.defaultValues} sticky sbv=touch bottom-spacer=96 w=f h=f: null
   - rtgl-dialog#editProfileDialog ?open=${profileDialog.isOpen} s=f:
       - rtgl-view slot=content w=f h=f p=xl:
           - rtgl-view w=f h=f ah=c av=s:

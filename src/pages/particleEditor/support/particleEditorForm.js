@@ -1,9 +1,4 @@
 import {
-  DEFAULT_PARTICLE_PRESET_ID,
-  createParticlePresetOptions,
-  createParticlePreset,
-} from "./particlePresets.js";
-import {
   MAX_PARTICLE_COUNT,
   MAX_PARTICLE_RATE,
   isBuiltinParticleTextureName,
@@ -57,18 +52,6 @@ const createFaceVelocityOptions = (copy = {}) => [
   { id: "off", label: copy.offLabel ?? "Off", value: false },
   { id: "on", label: copy.onLabel ?? "On", value: true },
 ];
-
-const createParticleTagField = (copy = {}, tagOptions = []) => ({
-  name: "tagIds",
-  type: "tag-select",
-  label: copy.tagsLabel ?? "Tags",
-  placeholder: copy.selectTagsPlaceholder ?? "Select tags",
-  options: tagOptions,
-  addOption: {
-    label: copy.addTagOption ?? "Add tag",
-  },
-  required: false,
-});
 
 const toTextValue = (value) => {
   if (value === undefined || value === null) {
@@ -340,83 +323,24 @@ const areFieldsEqual = (values, baseValues, fieldNames) => {
   );
 };
 
-const formatDimensionLabel = (width, height) => {
-  return `${Math.round(width)} × ${Math.round(height)}`;
-};
+// Whether two sets of form values show the same, however their numbers are
+// written ("64" or 64).
+export const areParticleFormValuesEqual = (values, otherValues) =>
+  areFieldsEqual(
+    values,
+    otherValues,
+    Object.keys({ ...values, ...otherValues }),
+  );
 
-const capitalize = (value = "") => {
-  if (!value) {
-    return "";
-  }
-
-  return `${value.charAt(0).toUpperCase()}${value.slice(1)}`;
-};
-
-const getSourceKindLabel = (kind, copy = {}) => {
-  switch (kind) {
-    case "point":
-      return copy.sourceKindPoint ?? "Point";
-    case "circle":
-      return copy.sourceKindCircle ?? "Circle";
-    case "line":
-      return copy.sourceKindLine ?? "Line";
-    case "rect":
-    default:
-      return copy.sourceKindRectangle ?? "Rectangle";
-  }
-};
-
-const getEmissionModeLabel = (mode, copy = {}) => {
-  return mode === "burst"
-    ? (copy.emissionModeBurst ?? "Burst")
-    : (copy.emissionModeContinuous ?? "Continuous");
-};
-
-const summarizeTexture = (texture, imageItems = {}, copy = {}) => {
-  if (!texture) {
-    return copy.notSetValue ?? "Not set";
-  }
-
-  if (typeof texture === "string") {
-    return imageItems?.[texture]?.name ?? texture;
-  }
-
-  if (texture?.mode) {
-    return `${capitalize(texture.mode)} ${copy.selectorLabel ?? "selector"}`;
-  }
-
-  return copy.legacyShapeValue ?? "Legacy shape";
-};
-
-export const resolveParticleTextureImageItem = (texture, imageItems = {}) => {
-  if (typeof texture === "string") {
-    if (isBuiltinParticleTextureName(texture)) {
-      return;
-    }
-
-    const imageItem = imageItems?.[texture];
-    return imageItem?.type === "image" ? imageItem : undefined;
-  }
-
-  if (!texture || typeof texture !== "object" || Array.isArray(texture)) {
-    return;
-  }
-
-  const firstItem = Array.isArray(texture.items)
-    ? texture.items.find((item) => item?.src)
-    : undefined;
-
-  if (!firstItem?.src) {
-    return;
-  }
-
-  return resolveParticleTextureImageItem(firstItem.src, imageItems);
-};
-
-const summarizeSource = (source, copy = {}) => {
-  const kind = source?.kind ?? "rect";
-  return getSourceKindLabel(kind, copy);
-};
+// The fields that decide which other fields show (their `$when`). rtgl-form
+// fills in only the fields that show when it mounts, so it remounts when one
+// of these changes.
+export const PARTICLE_FORM_CONDITION_FIELDS = Object.freeze([
+  "emissionMode",
+  "durationMode",
+  "sourceKind",
+  "opacityMode",
+]);
 
 const withFieldTooltips = (fields = []) =>
   fields.map((field) => {
@@ -439,88 +363,29 @@ const withFieldTooltips = (fields = []) =>
     };
   });
 
-export const createParticleCreateSetupForm = ({ copy = {} } = {}) => ({
-  title: copy.createParticleTitle ?? "Create Particle",
-  description:
-    copy.createSetupDescription ??
-    "Choose a preset and texture image first. The preview updates here before you open the full editor.",
-  fields: withFieldTooltips([
-    {
-      name: "presetId",
-      type: "select",
-      label: copy.presetLabel ?? "Preset",
-      description:
-        copy.presetDescription ??
-        "Start from a ready-made particle effect profile.",
-      required: true,
-      clearable: false,
-      options: createParticlePresetOptions(copy),
-    },
-    {
-      type: "slot",
-      slot: "particle-texture-image",
-    },
-  ]),
-  actions: {
-    buttons: [
-      {
-        id: "submit",
-        variant: "pr",
-        label: copy.nextButton ?? "Next",
-        validate: true,
-      },
-    ],
-  },
-});
+// The Edit tab's sub-tabs. Each shows its own fields, and the form holds
+// only the fields of the tab that shows.
+export const PARTICLE_FORM_TAB_IDS = Object.freeze([
+  "basics",
+  "appearance",
+  "emission",
+  "source",
+  "movement",
+]);
 
-export const PARTICLE_FORM_TABS = [
-  { id: "basics", label: "Basics" },
-  { id: "appearance", label: "Appearance" },
-  { id: "emission", label: "Emission" },
-  { id: "source", label: "Source" },
-  { id: "movement", label: "Movement" },
+export const createParticleFormTabs = (copy) => [
+  { id: "basics", label: copy.basicsTab },
+  { id: "appearance", label: copy.appearanceTab },
+  { id: "emission", label: copy.emissionTab },
+  { id: "source", label: copy.sourceTab },
+  { id: "movement", label: copy.movementTab },
 ];
 
-export const createParticleFormTabs = (copy = {}) => [
-  { id: "basics", label: copy.basicsTab ?? "Basics" },
-  { id: "appearance", label: copy.appearanceTab ?? "Appearance" },
-  { id: "emission", label: copy.emissionTab ?? "Emission" },
-  { id: "source", label: copy.sourceTab ?? "Source" },
-  { id: "movement", label: copy.movementTab ?? "Movement" },
-];
-
-const PARTICLE_FORM_TAB_IDS = new Set(
-  PARTICLE_FORM_TABS.map((item) => item.id),
-);
-
-const createParticleFieldsByTab = ({ tagOptions = [], copy = {} } = {}) => {
+// The name, description and tags are edited on the particles page, so the
+// form holds the effect only.
+const createParticleFieldsByTab = ({ copy = {} } = {}) => {
   const fieldsByTab = {
     basics: [
-      {
-        type: "read-only-text",
-        content:
-          copy.basicsHelpText ??
-          "Pick a texture image and adjust the main emitter fields. Preset values were applied before opening this form.",
-      },
-      {
-        name: "name",
-        type: "input-text",
-        label: copy.nameLabel ?? "Name",
-        description:
-          copy.nameDescription ??
-          "Give this particle effect a name for the resource list.",
-        required: true,
-      },
-      {
-        name: "description",
-        type: "input-textarea",
-        label: copy.descriptionLabel ?? "Description",
-        description:
-          copy.descriptionDescription ??
-          "Optional notes about where or how this effect should be used.",
-        required: false,
-      },
-      createParticleTagField(copy, tagOptions),
       {
         name: "width",
         type: "input-number",
@@ -564,6 +429,7 @@ const createParticleFieldsByTab = ({ tagOptions = [], copy = {} } = {}) => {
           "Choose whether particles spawn continuously or in bursts.",
         options: createEmissionModeOptions(copy),
         required: true,
+        clearable: false,
       },
       {
         name: "emissionRate",
@@ -613,6 +479,7 @@ const createParticleFieldsByTab = ({ tagOptions = [], copy = {} } = {}) => {
           "Keep emitting forever or stop after a timed window.",
         options: createDurationModeOptions(copy),
         required: true,
+        clearable: false,
         $when: "emissionMode == 'continuous'",
       },
       {
@@ -660,6 +527,7 @@ const createParticleFieldsByTab = ({ tagOptions = [], copy = {} } = {}) => {
           "Choose the emitter shape particles spawn from.",
         options: createSourceKindOptions(copy),
         required: true,
+        clearable: false,
       },
       {
         name: "sourceX",
@@ -760,6 +628,7 @@ const createParticleFieldsByTab = ({ tagOptions = [], copy = {} } = {}) => {
           "Move particles in one direction or spread them radially.",
         options: createVelocityKindOptions(copy),
         required: true,
+        clearable: false,
       },
       {
         name: "speedMin",
@@ -931,95 +800,35 @@ const createParticleFieldsByTab = ({ tagOptions = [], copy = {} } = {}) => {
   );
 };
 
+// The form of one sub-tab. Edits apply as they are made, so it has no
+// buttons.
 export const createParticleForm = ({
-  editMode = false,
-  tagOptions = [],
   activeTab = "basics",
   copy = {},
 } = {}) => ({
-  title: editMode
-    ? (copy.editParticleTitle ?? "Edit Particle")
-    : (copy.addParticleTitle ?? "Add Particle"),
-  fields: [
-    {
-      type: "slot",
-      slot: "particle-form-tabs",
-    },
-    ...createParticleFieldsByTab({
-      tagOptions,
-      copy,
-    })[PARTICLE_FORM_TAB_IDS.has(activeTab) ? activeTab : "basics"],
-  ],
+  fields: createParticleFieldsByTab({ copy })[activeTab],
   actions: {
     layout: "",
-    buttons: [
-      {
-        id: "submit",
-        variant: "pr",
-        label: editMode
-          ? (copy.updateParticleButton ?? "Update")
-          : (copy.addParticleButton ?? "Add Particle"),
-        validate: true,
-      },
-    ],
+    buttons: [],
   },
 });
 
-export const resolveParticleBaseData = ({
-  particle,
-  presetId,
-  projectResolution,
-  copy,
-} = {}) => {
-  if (presetId) {
-    return createParticlePreset({
-      presetId,
-      projectResolution,
-      copy,
-    });
-  }
-
-  if (particle) {
-    return structuredClone(particle);
-  }
-
-  return createParticlePreset({
-    presetId: DEFAULT_PARTICLE_PRESET_ID,
-    projectResolution,
-    copy,
-  });
-};
-
-export const buildParticleFormValues = ({
-  particle,
-  presetId = "",
-  projectResolution,
-  copy,
-} = {}) => {
-  const resolvedParticle = resolveParticleBaseData({
-    particle,
-    presetId: presetId || undefined,
-    projectResolution,
-    copy,
-  });
-  const modules = resolvedParticle.modules ?? {};
+// The form's values for a particle's effect: its size, seed and modules.
+export const buildParticleFormValues = ({ particle }) => {
+  const modules = particle.modules ?? {};
   const emission = modules.emission ?? {};
   const movement = modules.movement ?? {};
   const appearance = modules.appearance ?? {};
   const lifetime = resolveRange(emission.particleLifetime, 1, 2);
   const scale = resolveScaleRange(appearance.scale);
   const textureFields = resolveTextureFields(appearance.texture);
-  const sourceValues = resolveSourceValues(resolvedParticle, emission.source);
+  const sourceValues = resolveSourceValues(particle, emission.source);
   const movementValues = resolveMovementValues(movement);
 
   return {
-    presetId,
-    name: resolvedParticle.name ?? "",
-    description: resolvedParticle.description ?? "",
-    tagIds: resolvedParticle.tagIds ?? [],
-    width: toTextValue(resolvedParticle.width ?? 1280),
-    height: toTextValue(resolvedParticle.height ?? 720),
-    seed: toTextValue(resolvedParticle.seed),
+    width: toTextValue(particle.width ?? 1280),
+    height: toTextValue(particle.height ?? 720),
+    seed: toTextValue(particle.seed),
     emissionMode: emission.mode ?? "continuous",
     emissionRate: toTextValue(emission.rate ?? 20),
     burstCount: toTextValue(emission.burstCount ?? 8),
@@ -1231,35 +1040,27 @@ const buildMovementDefinition = (values = {}) => {
   };
 };
 
-export const buildParticlePayload = ({
-  values,
-  baseParticle,
-  projectResolution,
-} = {}) => {
-  const resolvedBaseParticle = resolveParticleBaseData({
-    particle: baseParticle,
-    presetId: undefined,
-    projectResolution,
-  });
-  const baseValues = buildParticleFormValues({
-    particle: resolvedBaseParticle,
-    presetId: "",
-    projectResolution,
-  });
+// The effect a particle saves from the form's values: its size, seed and
+// modules. `baseParticle` is the effect the values were read from. Modules
+// and parts of modules the form does not show, such as bounds, rotation, or
+// a preset's scale and opacity curves, are kept as they are until the
+// author edits the fields that stand for them.
+export const buildParticleEffectData = ({ values, baseParticle }) => {
+  const baseValues = buildParticleFormValues({ particle: baseParticle });
 
   const width = Math.max(
     1,
-    Math.round(toPositiveNumber(values?.width, resolvedBaseParticle.width)),
+    Math.round(toPositiveNumber(values?.width, baseParticle.width)),
   );
   const height = Math.max(
     1,
-    Math.round(toPositiveNumber(values?.height, resolvedBaseParticle.height)),
+    Math.round(toPositiveNumber(values?.height, baseParticle.height)),
   );
-  const modules = structuredClone(resolvedBaseParticle.modules ?? {});
+  const modules = structuredClone(baseParticle.modules ?? {});
   const emissionMode = values?.emissionMode ?? "continuous";
   const emissionRate = Number(values?.emissionRate);
   const durationMode = values?.durationMode ?? "infinite";
-  const resolvedBaseDuration = resolvedBaseParticle.modules?.emission?.duration;
+  const resolvedBaseDuration = baseParticle.modules?.emission?.duration;
   const fallbackTimedDuration =
     typeof resolvedBaseDuration === "number" &&
     Number.isFinite(resolvedBaseDuration)
@@ -1299,11 +1100,14 @@ export const buildParticlePayload = ({
       MAX_PARTICLE_COUNT,
       Math.max(1, Math.round(toPositiveNumber(values?.maxActive, 60))),
     );
+    // An empty duration, as when Timed is first chosen, is not 0 seconds.
+    const durationSeconds =
+      values?.durationSeconds === "" ? undefined : values?.durationSeconds;
     modules.emission.duration =
       durationMode === "timed"
         ? Math.max(
             0,
-            toNonNegativeNumber(values?.durationSeconds, fallbackTimedDuration),
+            toNonNegativeNumber(durationSeconds, fallbackTimedDuration),
           )
         : "infinite";
     modules.emission.rate = Number.isFinite(emissionRate)
@@ -1323,10 +1127,10 @@ export const buildParticlePayload = ({
 
   if (
     areFieldsEqual(values, baseValues, ["textureImageId"]) &&
-    resolvedBaseParticle.modules?.appearance?.texture !== undefined
+    baseParticle.modules?.appearance?.texture !== undefined
   ) {
     modules.appearance.texture = structuredClone(
-      resolvedBaseParticle.modules.appearance.texture,
+      baseParticle.modules.appearance.texture,
     );
   } else {
     const textureDefinition = buildTextureDefinition(values);
@@ -1339,10 +1143,10 @@ export const buildParticlePayload = ({
 
   if (
     areFieldsEqual(values, baseValues, ["scaleMin", "scaleMax"]) &&
-    resolvedBaseParticle.modules?.appearance?.scale !== undefined
+    baseParticle.modules?.appearance?.scale !== undefined
   ) {
     modules.appearance.scale = structuredClone(
-      resolvedBaseParticle.modules.appearance.scale,
+      baseParticle.modules.appearance.scale,
     );
   } else {
     modules.appearance.scale = buildScaleDefinition(values);
@@ -1358,98 +1162,53 @@ export const buildParticlePayload = ({
     modules.appearance.alpha = buildOpacityDefinition({
       values: values ?? {},
       baseValues,
-      baseAlpha: resolvedBaseParticle.modules?.appearance?.alpha,
+      baseAlpha: baseParticle.modules?.appearance?.alpha,
     });
   }
 
   normalizeParticleModules(modules);
 
-  const payload = {
-    name: values?.name?.trim() ?? "",
-    description: values?.description ?? "",
+  // A blank seed saves as null, which removes it.
+  return {
     width,
     height,
     seed: values?.seed === "" ? null : (toOptionalNumber(values?.seed) ?? null),
     modules,
   };
-  const tagIds = Array.isArray(values?.tagIds)
-    ? values.tagIds.filter(Boolean)
-    : [];
-  if (tagIds.length > 0) {
-    payload.tagIds = tagIds;
-  }
-
-  return payload;
 };
 
-export const buildParticleDetailFields = (input) => {
-  const item = input?.item ?? input;
-  const imagesData = input?.imagesData;
-  const copy = input?.copy ?? {};
-  if (!item) {
-    return [];
-  }
-
-  const texture = item.modules?.appearance?.texture;
-  const textureImageItem = resolveParticleTextureImageItem(
-    texture,
-    imagesData?.items,
-  );
-  const textureImageField = textureImageItem?.fileId
-    ? {
-        type: "slot",
-        slot: "particle-texture-image",
-        label: copy.textureImageLabel ?? "Texture Image",
-      }
-    : {
-        type: "text",
-        label: copy.textureImageLabel ?? "Texture Image",
-        value: summarizeTexture(texture, imagesData?.items, copy),
-      };
-
-  return [
-    {
-      type: "slot",
-      slot: "particle-preview",
-      label: "",
-    },
-    {
-      type: "description",
-      value: item.description ?? "",
-    },
-    {
-      type: "slot",
-      slot: "particle-tags",
-      label: copy.tagsLabel ?? "Tags",
-    },
-    {
-      type: "text",
-      label: copy.canvasSizeLabel ?? "Canvas Size",
-      value: formatDimensionLabel(item.width ?? 0, item.height ?? 0),
-    },
-    {
-      type: "text",
-      label: copy.emissionLabel ?? "Emission",
-      value: getEmissionModeLabel(item.modules?.emission?.mode, copy),
-    },
-    {
-      type: "text",
-      label: copy.sourceLabel ?? "Source",
-      value: summarizeSource(item.modules?.emission?.source, copy),
-    },
-    textureImageField,
-    {
-      type: "text",
-      label: copy.seedLabel ?? "Seed",
-      value: toTextValue(item.seed),
-    },
-  ];
+// The effect after the form changed one field, onto `effect`. `refreshForm`
+// is set when the effect keeps the form's values differently from how they
+// were entered, such as a width with decimals, so the form shows them as
+// kept.
+export const applyParticleFormChange = (effect, { name, value }) => {
+  const values = {
+    ...buildParticleFormValues({ particle: effect }),
+    [name]: value,
+  };
+  const nextEffect = buildParticleEffectData({ values, baseParticle: effect });
+  return {
+    effect: nextEffect,
+    refreshForm: !areParticleFormValuesEqual(
+      values,
+      buildParticleFormValues({ particle: nextEffect }),
+    ),
+  };
 };
 
-export const buildParticleCatalogItem = (item) => ({
-  id: item.id,
-  name: item.name,
-  cardKind: "layout",
-  cardVariant: "thumbnail",
-  previewFileId: item.thumbnailFileId,
-});
+// The effect with its emitter source moved, as a drag on the canvas does.
+export const replaceParticleSource = (effect, source) => {
+  const nextEffect = structuredClone(effect);
+  nextEffect.modules.emission = { ...nextEffect.modules.emission, source };
+  return nextEffect;
+};
+
+// The effect with `imageId` as its texture, as the texture picker sets it.
+export const replaceParticleTextureImage = (effect, imageId) => {
+  const nextEffect = structuredClone(effect);
+  nextEffect.modules.appearance = {
+    ...nextEffect.modules.appearance,
+    texture: imageId,
+  };
+  return nextEffect;
+};

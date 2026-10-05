@@ -210,6 +210,7 @@ const resourceParentMapping = {
   "layout-editor": "layouts",
   releases: "versions",
   "transform-editor": "transforms",
+  "particle-editor": "particles",
 };
 
 export const createInitialState = () => ({

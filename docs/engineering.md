@@ -1314,6 +1314,34 @@ Preview, so unsaved ones are left behind. Undo and redo work as in the audio
 effects editor: a step holds the transform's values before and after an edit,
 a drag is one step, and preview images are not part of the history.
 
+Particles are edited on their own page too, `/project/particle-editor` (the
+`pt` payload holds the particle id), built like the transform editor from the
+shared editor helpers: `src/internal/ui/editorCanvasWorkspace.js` (zoom
+levels, the right panel rule, and the canvas layout for a given resolution)
+and `src/internal/ui/editorPreviewCapture.js` (capture and store the preview
+and thumbnail images, or the thumbnail only). The particles page's dialogs
+only add a particle (name, description, tags, and a preset; the editor opens
+next) and edit its name, description, and tags; double-click, long press, `e`,
+and **Open** open the editor, and **Duplicate** copies a particle into its
+folder. The canvas is the particle's own width and height, not the project
+resolution, and graphics restart when either changes. Edit keeps the
+particle form's five tabs (Basics has only the size and seed now). A form
+change applies only the field that changed, on top of the saved effect, so
+preset curves and bounds that the form does not show are kept; undo, redo,
+and values the form normalizes remount the form with the new values. While
+Edit's Source tab is open, the canvas also draws the emitter source's outline
+(the rect, the circle's or line's bounding box, or a small square for a
+point, at least 16 CSS pixels and kept inside the canvas), and dragging its
+border moves the source, both ends of a line together, as one undo step. Until the particle has a texture the canvas
+shows a hint instead of the effect. Preview holds a background image for the
+page visit only (particles have no saved preview settings) and **Save
+Preview**, which saves the values and then a thumbnail of the canvas without
+the outline, with the background. Edits save on their own 300ms after the
+last one and on leaving, as in the transform editor, and save only the effect
+(size, seed, and modules); thumbnails change only with Save Preview. Texture
+and background images follow the asset failure policy as in the transform
+editor.
+
 `rvn-mobile-sheet` is capped at 640px (the Projects page content width) and
 centered, so the bottom-tab sheets and every page's item detail sheet stay
 compact on tablets; phones are narrower than the cap and keep the full-width
@@ -1539,6 +1567,7 @@ Current recovery boundaries:
 | Scene editor audio warm-up            | Keep painting after a decode retry fails. Preserve diagnostics without duplicating the warning already shown by preloading.                                                                                                 |
 | Layout editor canvas                  | Collect read/integrity/decode failures, warn once per failed file per mounted canvas, omit affected render elements, and keep unaffected elements editable. Retry on subsequent requests without changing the saved layout. |
 | Transform editor canvas               | Load each preview image separately, warn once per failed file per mounted page, and draw the fallback in its place while editing. Later renders skip it; Save Preview rereads it and saves nothing if it still fails.       |
+| Particle editor canvas                | Load the texture and background images separately, warn once per failed file per mounted page, and leave the failed image out while editing. Later renders skip it; Save Preview rereads it and saves nothing if it fails.  |
 | Fullscreen startup                    | Check the combined initial scene and layout assets, collect all read/integrity/decode failures, and show one deduplicated warning stating playback is blocked. Any failure closes the preview before starting the engine.   |
 | Fullscreen later scene/layout loading | Retain the existing transition/prefetch handling: report scene failures, propagate font/layout failures.                                                                                                                    |
 

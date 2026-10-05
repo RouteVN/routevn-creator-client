@@ -1,25 +1,54 @@
 import { readFileSync } from "node:fs";
 import { describe, expect, it } from "vitest";
 
-describe("particles view", () => {
-  it("hides the form preview on mobile while retaining its thumbnail canvas", () => {
-    const view = readFileSync(
-      new URL("../../src/pages/particles/particles.view.yaml", import.meta.url),
-      "utf8",
-    );
-    const formDialogStart = view.indexOf("$if !isPreviewOnlyDialog:");
-    const particleDialogEnd = view.indexOf(
-      "rtgl-dialog#createTagDialog",
-      formDialogStart,
-    );
-    const formDialog = view.slice(formDialogStart, particleDialogEnd);
+const view = readFileSync(
+  new URL("../../src/pages/particles/particles.view.yaml", import.meta.url),
+  "utf8",
+);
 
-    expect(formDialog).toContain("$if !mobileLayout:");
-    expect(formDialog).toContain(
-      'rtgl-view w=6fg lg-w=f d=v av=c g=md style="min-width: 0; min-height: 0;"',
+describe("particles view", () => {
+  it("adds particles and edits their name, description and tags in dialogs", () => {
+    expect(view).toContain(
+      "rtgl-form#addForm key=${isAddDialogOpen} :defaultValues=${addFormDefaults} :form=${addForm}",
     );
-    expect(formDialog).toContain(
-      'div#dialogCanvas aria-hidden=true style="position: fixed; left: -10000px; top: -10000px; width: 1px; height: 1px; opacity: 0; pointer-events: none;"',
+    expect(view).toContain(
+      "rtgl-form#editForm key=${isEditDialogOpen} :defaultValues=${editDefaultValues} :form=${editForm}",
     );
+    // The effect is edited on the particle editor page.
+    expect(view).not.toContain("particleDialog");
+    expect(view).not.toContain("dialogCanvas");
+    expect(view).not.toContain("previewImageSelectorDialog");
+  });
+
+  it("plays the selected particle in the desktop detail panel", () => {
+    expect(view.match(/div#detailCanvas /g)).toHaveLength(1);
+    expect(view).toContain('rtgl-view slot="particle-preview"');
+  });
+
+  it("opens, duplicates and deletes from the phone detail sheet", () => {
+    const sheet = view.slice(
+      view.indexOf("rvn-mobile-sheet#mobileDetailSheet"),
+    );
+
+    expect(sheet).toContain(
+      "rtgl-button#mobileDetailOpenButton w=1fg v=se pre=chevronRight: ${openButton}",
+    );
+    expect(sheet).toContain(
+      "rtgl-button#mobileDetailDuplicateButton w=1fg v=se pre=duplicate: ${duplicateButton}",
+    );
+    expect(sheet).toContain(
+      "rtgl-button#mobileDetailDeleteButton w=1fg v=se pre=trash: ${deleteButton}",
+    );
+    expect(sheet).not.toContain("mobileDetailPreviewButton");
+  });
+
+  it("opens and duplicates from the center menu", () => {
+    for (const listener of [
+      "item-edit:\n        handler: handleParticleItemEdit",
+      "item-duplicate:\n        handler: handleItemDuplicate",
+      "item-dblclick:\n        handler: handleParticleItemDoubleClick",
+    ]) {
+      expect(view).toContain(listener);
+    }
   });
 });

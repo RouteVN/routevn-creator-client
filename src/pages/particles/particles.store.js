@@ -1,28 +1,25 @@
 import { createCatalogPageStore } from "../../internal/ui/resourcePages/catalog/createCatalogPageStore.js";
+import { createTagField } from "../../internal/ui/resourcePages/tags.js";
 import { applyFolderRequiredRootDragOptions } from "../../internal/fileExplorerDragOptions.js";
 import { toFlatItems } from "../../internal/project/tree.js";
+import { resolveParticleTextureImageItem } from "../../internal/particles.js";
+import { formatParticleAspectRatio } from "../../internal/particlePreview.js";
 import {
   DEFAULT_PROJECT_RESOLUTION,
   requireProjectResolution,
 } from "../../internal/projectResolution.js";
 import {
   buildTagFilterOptions,
-  createEmptyTagCollection,
   matchesTagAwareSearch,
-  matchesTagFilter,
 } from "../../internal/resourceTags.js";
 import {
-  PARTICLE_FORM_TABS,
   buildParticleCatalogItem,
   buildParticleDetailFields,
-  buildParticleFormValues,
-  createParticleCreateSetupForm,
-  createParticleForm,
-  createParticleFormTabs,
-  resolveParticleTextureImageItem,
-} from "./support/particleForm.js";
-import { DEFAULT_PARTICLE_PRESET_ID } from "./support/particlePresets.js";
-import { formatParticleAspectRatio } from "../../internal/particlePreview.js";
+} from "./support/particleDetails.js";
+import {
+  DEFAULT_PARTICLE_PRESET_ID,
+  createParticlePresetOptions,
+} from "./support/particlePresets.js";
 import { selectParticlesPageCopy } from "./support/particlesPageCopy.js";
 
 const EMPTY_TREE = {
@@ -32,120 +29,98 @@ const EMPTY_TREE = {
 
 export const PARTICLE_TAG_SCOPE_KEY = "particles";
 
-const DEFAULT_PARTICLE_FORM_TAB = PARTICLE_FORM_TABS[0]?.id ?? "basics";
-const CREATE_PARTICLE_SETUP_STEP = "setup";
-const PARTICLE_EDITOR_STEP = "editor";
-const CREATE_TAG_DEFAULT_VALUES = Object.freeze({
-  name: "",
-});
+const createMetadataFormFields = ({ copy, tagOptions }) => [
+  {
+    name: "name",
+    type: "input-text",
+    label: copy.nameLabel,
+    required: true,
+  },
+  {
+    name: "description",
+    type: "input-textarea",
+    label: copy.descriptionLabel,
+  },
+  createTagField({
+    label: copy.tagsLabel,
+    placeholder: copy.selectTagsPlaceholder,
+    addOptionLabel: copy.addTagOption,
+    options: tagOptions,
+  }),
+];
 
-const createInitialPreviewImageSelectorDialogState = () => ({
-  open: false,
-  target: undefined,
-  selectedImageId: undefined,
-});
-
-const PREVIEW_BACKGROUND_IMAGE_TARGET = "preview-background";
-const TEXTURE_IMAGE_TARGET = "texture";
-
-const getImageItems = (state) => state.imagesData?.items ?? {};
-
-const getImageItemById = (state, imageId) => {
-  return imageId ? getImageItems(state)?.[imageId] : undefined;
-};
-
-const buildDialogImageCard = (state, imageId) => {
-  const imageItem = getImageItemById(state, imageId);
-
-  if (!imageId || !imageItem?.fileId) {
-    return undefined;
-  }
-
-  return {
-    imageId,
-    previewFileId: imageItem.thumbnailFileId ?? imageItem.fileId,
-    previewAspectRatio: "16 / 9",
-    name: imageItem.name ?? imageId,
-    itemBorderColor: "bo",
-    itemHoverBorderColor: "ac",
-  };
-};
-
-const buildDialogPreviewBackgroundImage = (state) => {
-  return buildDialogImageCard(state, state.dialogPreviewBackgroundImageId);
-};
-
-const createTagForm = (copy = {}) => ({
-  title: copy.createTagTitle ?? "Create Tag",
-  fields: [
-    {
-      name: "name",
-      type: "input-text",
-      label: copy.tagNameLabel ?? "Tag Name",
-      required: true,
-    },
-  ],
+const createMetadataForm = ({ title, submitLabel, fields }) => ({
+  title,
   actions: {
-    layout: "",
     buttons: [
       {
         id: "submit",
         variant: "pr",
-        label: copy.createTagButton ?? "Create Tag",
+        validate: true,
+        label: submitLabel,
       },
     ],
   },
+  fields,
 });
 
-const createDialogForm = ({
-  editMode = false,
-  tagsData = createEmptyTagCollection(),
-  activeTab = DEFAULT_PARTICLE_FORM_TAB,
-  dialogStep = PARTICLE_EDITOR_STEP,
-  copy = {},
-} = {}) => {
-  const tagOptions = buildTagFilterOptions({
-    tagsCollection: tagsData,
+// A new particle starts from a preset; its texture is picked in the editor.
+const createAddForm = ({ copy, tagOptions }) =>
+  createMetadataForm({
+    title: copy.addParticleTitle,
+    submitLabel: copy.addParticleButton,
+    fields: [
+      ...createMetadataFormFields({ copy, tagOptions }),
+      {
+        name: "presetId",
+        type: "select",
+        label: copy.presetLabel,
+        tooltip: {
+          content: copy.presetDescription,
+        },
+        required: true,
+        clearable: false,
+        options: createParticlePresetOptions(copy),
+      },
+    ],
   });
 
-  if (!editMode && dialogStep === CREATE_PARTICLE_SETUP_STEP) {
-    return createParticleCreateSetupForm({
-      copy,
-    });
-  }
-
-  return createParticleForm({
-    editMode,
-    tagOptions,
-    activeTab,
-    copy,
-  });
-};
-
-const createDefaultDialogState = (projectResolution, copy = {}) => {
-  const particle = buildParticleFormValues({
-    presetId: DEFAULT_PARTICLE_PRESET_ID,
-    projectResolution,
-    copy,
+const createEditForm = ({ copy, tagOptions }) =>
+  createMetadataForm({
+    title: copy.editParticleTitle,
+    submitLabel: copy.updateParticleButton,
+    fields: createMetadataFormFields({ copy, tagOptions }),
   });
 
-  return {
-    dialogDefaultValues: particle,
-    dialogPresetId: DEFAULT_PARTICLE_PRESET_ID,
-    dialogPreviewAspectRatio: formatParticleAspectRatio({
-      width: particle.width,
-      height: particle.height,
-    }),
-  };
-};
+const createEmptyMetadataValues = () => ({
+  name: "",
+  description: "",
+  tagIds: [],
+});
 
-const matchesSearch = matchesTagAwareSearch;
+const createAddFormDefaults = () => ({
+  ...createEmptyMetadataValues(),
+  presetId: DEFAULT_PARTICLE_PRESET_ID,
+});
+
+const createParticleCenterItemContextMenuItems = (copy) => [
+  { label: copy.openButton, type: "item", value: "edit-item" },
+  { label: copy.duplicateMenuItem, type: "item", value: "duplicate-item" },
+  { label: copy.deleteMenuItem, type: "item", value: "delete-item" },
+];
+
+const createParticleExplorerItemContextMenuItems = (copy) => [
+  { label: copy.openButton, type: "item", value: "edit-item" },
+  { label: copy.renameMenuItem, type: "item", value: "rename-item" },
+  { label: copy.duplicateMenuItem, type: "item", value: "duplicate-item" },
+  { label: copy.deleteMenuItem, type: "item", value: "delete-item" },
+];
 
 const {
   createInitialState: createCatalogInitialState,
-  setItems: setBaseItems,
-  setSelectedItemId: setBaseSelectedItemId,
-  setSelectedFolderId: setBaseSelectedFolderId,
+  setItems,
+  setSelectedItemId,
+  setSelectedFolderId,
   setUiConfig,
   setAppWindowMetrics,
   selectIsTabletLandscape,
@@ -158,6 +133,17 @@ const {
   selectSelectedFolderId,
   selectFolderNameDialogItemId,
   setSearchQuery,
+  setTagsData,
+  setActiveTagIds,
+  setDetailTagIds,
+  commitDetailTagIds,
+  setDetailTagPopoverOpen,
+  openCreateTagDialog,
+  closeCreateTagDialog,
+  selectTagsData,
+  selectActiveTagIds,
+  selectDetailTagIds,
+  selectCreateTagContext,
   openFolderNameDialog,
   closeFolderNameDialog,
   selectViewData: selectCatalogViewData,
@@ -170,44 +156,23 @@ const {
   addText: "Add",
   emptyMessage: "No particle effects found",
   copy: selectParticlesPageCopy,
-  matchesSearch,
-  buildDetailFields: buildParticleDetailFields,
+  matchesSearch: matchesTagAwareSearch,
   buildCatalogItem: buildParticleCatalogItem,
   hiddenMobileDetailSlots: ["particle-preview"],
+  tagging: {
+    tagFilterPlaceholder: "",
+  },
   extendViewData: ({ state, selectedItem, baseViewData, copy }) => {
-    const activeTagIds = state.activeTagIds ?? [];
     const selectedTextureImageItem = resolveParticleTextureImageItem(
       selectedItem?.modules?.appearance?.texture,
-      state.imagesData?.items,
+      state.imagesData.items,
     );
-    const filteredCatalogGroups = (baseViewData.catalogGroups ?? [])
-      .map((group) => ({
-        ...group,
-        children: (group.children ?? []).filter((child) =>
-          matchesTagFilter({
-            item: state.data?.items?.[child.id],
-            activeTagIds,
-          }),
-        ),
-      }))
-      .filter(
-        (group) => group.children.length > 0 || activeTagIds.length === 0,
-      );
-    const particleForm = createDialogForm({
-      editMode: state.editMode,
-      tagsData: state.tagsData,
-      activeTab: state.dialogFormTab,
-      dialogStep: state.dialogStep,
-      copy,
+    const tagOptions = buildTagFilterOptions({
+      tagsCollection: state.tagsData,
     });
-    const particleSubmitButton = particleForm.actions?.buttons?.find(
-      (button) => button.id === "submit",
-    );
-    particleForm.actions.buttons = [];
 
     return {
       ...baseViewData,
-      catalogGroups: filteredCatalogGroups,
       detailFields: selectedItem
         ? buildParticleDetailFields({
             item: selectedItem,
@@ -215,486 +180,115 @@ const {
             copy,
           })
         : baseViewData.detailFields,
-      tagFilterOptions: buildTagFilterOptions({
-        tagsCollection: state.tagsData,
-      }),
-      selectedTagFilterValues: activeTagIds,
-      tagFilterPlaceholder: copy.tagFilterPlaceholder ?? "Filter tags",
-      selectedItemTagIds: selectedItem?.tagIds ?? [],
-      detailTagDraftValues: state.detailTagIds ?? [],
-      isDetailTagSelectOpen: !!state.isDetailTagSelectOpen,
-      detailTagAddOption: {
-        label: copy.addTagOption ?? "Add tag",
-      },
-      isDialogOpen: state.isDialogOpen,
-      isPreviewOnlyDialog: state.dialogMode === "preview",
-      showParticleFormTabs: state.dialogStep === PARTICLE_EDITOR_STEP,
-      particleFormTabs: createParticleFormTabs(copy),
-      selectedParticleFormTab: state.dialogFormTab,
-      // rtgl-form seeds only the fields visible when it mounts, so remount
-      // when Opacity switches mode to show the fade fields' values.
-      particleFormKey: `particle-form-${state.dialogStep}-${state.dialogFormTab}-${state.dialogFormValues.opacityMode}`,
-      particleForm,
-      particleSubmitButtonLabel: particleSubmitButton?.label ?? "Submit",
-      dialogFormValues: state.dialogFormValues,
-      dialogPreviewAspectRatio: state.dialogPreviewAspectRatio,
-      dialogPreviewBackgroundImage: buildDialogPreviewBackgroundImage(state),
-      dialogTextureImage: buildDialogImageCard(
-        state,
-        state.dialogFormValues.textureImageId,
-      ),
-      previewImageSelectorDialog: state.previewImageSelectorDialog,
-      showImageSelectorFileExplorer: !state.isTouchMode,
-      imageFolderItems: toFlatItems(state.imagesData).filter(
-        (item) => item.type === "folder",
-      ),
+      itemContextMenuItems: createParticleExplorerItemContextMenuItems(copy),
+      centerItemContextMenuItems:
+        createParticleCenterItemContextMenuItems(copy),
+      isAddDialogOpen: state.isAddDialogOpen,
+      addForm: createAddForm({ copy, tagOptions }),
+      addFormDefaults: createAddFormDefaults(),
+      isEditDialogOpen: state.isEditDialogOpen,
+      editForm: createEditForm({ copy, tagOptions }),
+      editDefaultValues: state.editDefaultValues,
       selectedPreviewAspectRatio: formatParticleAspectRatio(selectedItem),
       selectedTextureImageFileId:
         selectedTextureImageItem?.thumbnailFileId ??
         selectedTextureImageItem?.fileId,
       selectedTextureImageName: selectedTextureImageItem?.name ?? "",
-      isCreateTagDialogOpen: state.isCreateTagDialogOpen,
-      createTagDefaultValues: state.createTagDefaultValues,
-      createTagForm: createTagForm(copy),
       selectedItem,
-      addTagPlaceholder: copy.addTagPlaceholder ?? "Add tag",
-      backgroundImageLabel:
-        copy.backgroundImageLabel ?? "Preview background image",
-      selectButton: copy.selectButton ?? "Select",
-      deleteButton: copy.deleteButton ?? "Delete",
-      filesLabel: copy.filesLabel ?? "Files",
-      noSelectionLabel: copy.noSelectionLabel ?? "No selection",
-      previewButton: copy.previewMenuItem ?? "Preview",
-      removeMenuItem: copy.removeMenuItem ?? "Remove",
-      selectImageLabel: copy.selectImageOption ?? "Select image",
-      textureImageDescription:
-        state.dialogStep === CREATE_PARTICLE_SETUP_STEP
-          ? (copy.setupTextureImageDescription ??
-            "Choose the image used for each spawned particle.")
-          : (copy.textureImageDescription ??
-            "Choose the image used to draw each particle sprite."),
-      textureImageLabel: copy.textureImageLabel ?? "Texture Image",
     };
   },
 });
 
-export const createInitialState = () => {
-  const projectResolution = DEFAULT_PROJECT_RESOLUTION;
-  const defaultDialogState = createDefaultDialogState(projectResolution);
-
-  return {
-    ...createCatalogInitialState(),
-    tagsData: createEmptyTagCollection(),
-    activeTagIds: [],
-    detailTagIds: [],
-    detailTagIdsDirty: false,
-    isDetailTagSelectOpen: false,
-    isDialogOpen: false,
-    dialogMode: "form",
-    targetGroupId: undefined,
-    editMode: false,
-    editItemId: undefined,
-    projectResolution,
-    previewRuntimeTarget: undefined,
-    previewRuntimeWidth: undefined,
-    previewRuntimeHeight: undefined,
-    dialogPreviewBackgroundImageId: undefined,
-    previewImageSelectorDialog: createInitialPreviewImageSelectorDialogState(),
-    dialogStep: CREATE_PARTICLE_SETUP_STEP,
-    dialogFormTab: DEFAULT_PARTICLE_FORM_TAB,
-    imagesData: EMPTY_TREE,
-    particleForm: createDialogForm({
-      dialogStep: CREATE_PARTICLE_SETUP_STEP,
-    }),
-    isCreateTagDialogOpen: false,
-    createTagDefaultValues: {
-      ...CREATE_TAG_DEFAULT_VALUES,
-    },
-    createTagContext: {
-      mode: undefined,
-      itemId: undefined,
-      draftTagIds: [],
-    },
-    dialogFormValues: defaultDialogState.dialogDefaultValues,
-    dialogDefaultValues: defaultDialogState.dialogDefaultValues,
-    dialogPresetId: defaultDialogState.dialogPresetId,
-    dialogPreviewAspectRatio: defaultDialogState.dialogPreviewAspectRatio,
-  };
-};
-
-const syncDetailTagIds = (state, { preserveDirty = false } = {}) => {
-  if (preserveDirty && state.detailTagIdsDirty) {
-    return;
-  }
-
-  const item = state.selectedItemId
-    ? state.data?.items?.[state.selectedItemId]
-    : undefined;
-  state.detailTagIds = Array.isArray(item?.tagIds) ? [...item.tagIds] : [];
-  state.detailTagIdsDirty = false;
-};
-
-export const setItems = (context, payload = {}) => {
-  setBaseItems(context, payload);
-  syncDetailTagIds(context.state, { preserveDirty: true });
-};
-
-export const setSelectedItemId = (context, payload = {}) => {
-  setBaseSelectedItemId(context, payload);
-  context.state.isDetailTagSelectOpen = false;
-  syncDetailTagIds(context.state);
-};
-
-export const setSelectedFolderId = (context, payload = {}) => {
-  setBaseSelectedFolderId(context, payload);
-  context.state.isDetailTagSelectOpen = false;
-  syncDetailTagIds(context.state);
-};
-
-export const setTagsData = ({ state }, { tagsData } = {}) => {
-  state.tagsData = tagsData ?? createEmptyTagCollection();
-  const validTagIds = new Set(Object.keys(state.tagsData.items ?? {}));
-  state.activeTagIds = state.activeTagIds.filter((tagId) =>
-    validTagIds.has(tagId),
-  );
-  state.detailTagIds = state.detailTagIds.filter((tagId) =>
-    validTagIds.has(tagId),
-  );
-  state.particleForm = createDialogForm({
-    editMode: state.editMode,
-    tagsData: state.tagsData,
-    activeTab: state.dialogFormTab,
-    dialogStep: state.dialogStep,
-  });
-};
-
-export const setActiveTagIds = ({ state }, { tagIds } = {}) => {
-  const validTagIds = new Set(Object.keys(state.tagsData.items ?? {}));
-  state.activeTagIds = [
-    ...new Set((tagIds ?? []).filter((tagId) => validTagIds.has(tagId))),
-  ];
-};
-
-export const setDetailTagIds = ({ state }, { tagIds } = {}) => {
-  const validTagIds = new Set(Object.keys(state.tagsData.items ?? {}));
-  state.detailTagIds = [
-    ...new Set((tagIds ?? []).filter((tagId) => validTagIds.has(tagId))),
-  ];
-  state.detailTagIdsDirty = true;
-};
-
-export const commitDetailTagIds = ({ state }, { tagIds } = {}) => {
-  const validTagIds = new Set(Object.keys(state.tagsData.items ?? {}));
-  state.detailTagIds = [
-    ...new Set((tagIds ?? []).filter((tagId) => validTagIds.has(tagId))),
-  ];
-  state.detailTagIdsDirty = false;
-};
-
-export const setDetailTagPopoverOpen = ({ state }, { open, item } = {}) => {
-  state.isDetailTagSelectOpen = !!open;
-  if (!state.isDetailTagSelectOpen && state.detailTagIdsDirty) {
-    state.detailTagIds = Array.isArray(item?.tagIds) ? [...item.tagIds] : [];
-    state.detailTagIdsDirty = false;
-  }
-};
-
-export const openCreateTagDialog = (
-  { state },
-  { mode, itemId, draftTagIds } = {},
-) => {
-  state.isCreateTagDialogOpen = true;
-  state.createTagDefaultValues = {
-    ...CREATE_TAG_DEFAULT_VALUES,
-  };
-  state.createTagContext = {
-    mode: mode ?? "item",
-    itemId,
-    draftTagIds: Array.isArray(draftTagIds) ? [...draftTagIds] : [],
-  };
-};
-
-export const closeCreateTagDialog = ({ state }, _payload = {}) => {
-  state.isCreateTagDialogOpen = false;
-  state.createTagDefaultValues = {
-    ...CREATE_TAG_DEFAULT_VALUES,
-  };
-  state.createTagContext = {
-    mode: undefined,
-    itemId: undefined,
-    draftTagIds: [],
-  };
-};
+export const createInitialState = () => ({
+  ...createCatalogInitialState(),
+  isAddDialogOpen: false,
+  isEditDialogOpen: false,
+  targetGroupId: undefined,
+  editItemId: undefined,
+  editDefaultValues: createEmptyMetadataValues(),
+  projectResolution: DEFAULT_PROJECT_RESOLUTION,
+  imagesData: EMPTY_TREE,
+});
 
 export {
-  closeFolderNameDialog,
-  closeMobileFileExplorer,
-  openFolderNameDialog,
-  openMobileFileExplorer,
-  selectFolderById,
-  selectFolderNameDialogItemId,
-  selectSelectedItem,
-  selectSelectedFolderId,
-  selectSelectedItemId,
-  setSearchQuery,
+  setItems,
+  setSelectedItemId,
+  setSelectedFolderId,
   setUiConfig,
   setAppWindowMetrics,
   selectIsTabletLandscape,
+  openMobileFileExplorer,
+  closeMobileFileExplorer,
+  selectSelectedItem,
+  selectFolderById,
+  setTagsData,
+  setActiveTagIds,
+  setDetailTagIds,
+  commitDetailTagIds,
+  setDetailTagPopoverOpen,
+  openCreateTagDialog,
+  closeCreateTagDialog,
+  selectTagsData,
+  selectActiveTagIds,
+  selectDetailTagIds,
+  selectCreateTagContext,
+  openFolderNameDialog,
+  closeFolderNameDialog,
+  selectSelectedItemId,
+  selectSelectedFolderId,
+  selectFolderNameDialogItemId,
+  setSearchQuery,
 };
 
 export const selectParticleItemById = selectItemById;
 export const selectSelectedParticle = selectSelectedItem;
-export const selectTagsData = ({ state }) => state.tagsData;
-export const selectActiveTagIds = ({ state }) => state.activeTagIds ?? [];
-export const selectDetailTagIds = ({ state }) => state.detailTagIds ?? [];
-export const selectCreateTagContext = ({ state }) =>
-  state.createTagContext ?? {};
+
+// The folder an item is in, which its items do not record.
+export const selectItemParentId = ({ state }, { itemId } = {}) =>
+  toFlatItems(state.data).find((item) => item.id === itemId)?.parentId;
 
 export const setProjectResolution = ({ state }, { projectResolution } = {}) => {
   state.projectResolution = requireProjectResolution(
     projectResolution,
     "Project resolution",
   );
-
-  if (!state.isDialogOpen) {
-    const defaultDialogState = createDefaultDialogState(
-      state.projectResolution,
-    );
-    state.dialogFormValues = defaultDialogState.dialogDefaultValues;
-    state.dialogDefaultValues = defaultDialogState.dialogDefaultValues;
-    state.dialogPresetId = defaultDialogState.dialogPresetId;
-    state.dialogPreviewAspectRatio =
-      defaultDialogState.dialogPreviewAspectRatio;
-  }
 };
 
-const setDialogState = (state, options = {}) => {
-  const {
-    copy = {},
-    dialogMode = "form",
-    editMode = false,
-    dialogStep = editMode ? PARTICLE_EDITOR_STEP : CREATE_PARTICLE_SETUP_STEP,
-    itemId = undefined,
-    itemData = undefined,
-    targetGroupId = undefined,
-    presetId = editMode ? "" : DEFAULT_PARTICLE_PRESET_ID,
-  } = options;
-
-  const dialogDefaultValues = buildParticleFormValues({
-    particle: itemData,
-    presetId,
-    projectResolution: state.projectResolution,
-    copy,
-  });
-
-  state.isDialogOpen = true;
-  state.dialogMode = dialogMode;
-  state.editMode = editMode;
-  state.editItemId = itemId;
-  state.targetGroupId = targetGroupId === "_root" ? undefined : targetGroupId;
-  state.dialogStep = dialogStep;
-  state.dialogFormTab = DEFAULT_PARTICLE_FORM_TAB;
-  state.dialogFormValues = dialogDefaultValues;
-  state.dialogPresetId = presetId;
-  state.dialogDefaultValues = dialogDefaultValues;
-  state.dialogPreviewAspectRatio = formatParticleAspectRatio({
-    width: dialogDefaultValues.width,
-    height: dialogDefaultValues.height,
-  });
-  state.particleForm = createDialogForm({
-    editMode,
-    tagsData: state.tagsData,
-    activeTab: state.dialogFormTab,
-    dialogStep: state.dialogStep,
-    copy,
-  });
-};
-
-export const openParticleFormDialog = ({ state }, options = {}) => {
-  setDialogState(state, {
-    ...options,
-    dialogMode: "form",
-  });
-};
-
-export const openParticlePreviewDialog = ({ state }, options = {}) => {
-  setDialogState(state, {
-    ...options,
-    dialogMode: "preview",
-    editMode: false,
-    targetGroupId: undefined,
-    presetId: "",
-  });
-};
-
-export const closeParticleDialog = ({ state }, _payload = {}) => {
-  const defaultDialogState = createDefaultDialogState(state.projectResolution);
-
-  state.isDialogOpen = false;
-  state.dialogMode = "form";
-  state.targetGroupId = undefined;
-  state.editMode = false;
-  state.editItemId = undefined;
-  state.dialogStep = CREATE_PARTICLE_SETUP_STEP;
-  state.dialogFormTab = DEFAULT_PARTICLE_FORM_TAB;
-  state.dialogFormValues = defaultDialogState.dialogDefaultValues;
-  state.dialogPresetId = defaultDialogState.dialogPresetId;
-  state.dialogDefaultValues = defaultDialogState.dialogDefaultValues;
-  state.dialogPreviewAspectRatio = defaultDialogState.dialogPreviewAspectRatio;
-  state.previewImageSelectorDialog =
-    createInitialPreviewImageSelectorDialogState();
-  state.particleForm = createDialogForm({
-    tagsData: state.tagsData,
-    activeTab: state.dialogFormTab,
-    dialogStep: state.dialogStep,
-  });
-};
-
-export const setDialogDefaultValues = (
-  { state },
-  { values, presetId } = {},
-) => {
-  state.dialogFormValues = values ?? {};
-  state.dialogDefaultValues = values ?? {};
-  state.dialogPresetId = presetId ?? "";
-  state.dialogPreviewAspectRatio = formatParticleAspectRatio({
-    width: values?.width,
-    height: values?.height,
-  });
-};
-
-export const setDialogPresetId = ({ state }, { presetId } = {}) => {
-  state.dialogPresetId = presetId ?? "";
-};
-
-export const setDialogPreviewSize = ({ state }, { width, height } = {}) => {
-  state.dialogPreviewAspectRatio = formatParticleAspectRatio({
-    width,
-    height,
-  });
-};
+export const selectProjectResolution = ({ state }) => state.projectResolution;
 
 export const setImagesData = ({ state }, { imagesData } = {}) => {
   state.imagesData = imagesData ?? EMPTY_TREE;
-  const backgroundImage = getImageItemById(
-    state,
-    state.dialogPreviewBackgroundImageId,
-  );
-  if (!backgroundImage?.fileId) {
-    state.dialogPreviewBackgroundImageId = undefined;
-  }
-  state.particleForm = createDialogForm({
-    editMode: state.editMode,
-    tagsData: state.tagsData,
-    activeTab: state.dialogFormTab,
-    dialogStep: state.dialogStep,
-  });
 };
 
-export const setDialogFormValues = ({ state }, { values } = {}) => {
-  state.dialogFormValues = values ?? {};
+export const selectImagesData = ({ state }) => state.imagesData;
+
+export const openAddDialog = ({ state }, { groupId } = {}) => {
+  state.isAddDialogOpen = true;
+  state.targetGroupId = groupId === "_root" ? undefined : groupId;
 };
 
-export const setDialogFormTab = ({ state }, { tab } = {}) => {
-  state.dialogFormTab = tab ?? DEFAULT_PARTICLE_FORM_TAB;
-  state.particleForm = createDialogForm({
-    editMode: state.editMode,
-    tagsData: state.tagsData,
-    activeTab: state.dialogFormTab,
-    dialogStep: state.dialogStep,
-  });
+export const closeAddDialog = ({ state }) => {
+  state.isAddDialogOpen = false;
+  state.targetGroupId = undefined;
 };
 
-export const setDialogStep = ({ state }, { step } = {}) => {
-  state.dialogStep = step ?? CREATE_PARTICLE_SETUP_STEP;
-  state.particleForm = createDialogForm({
-    editMode: state.editMode,
-    tagsData: state.tagsData,
-    activeTab: state.dialogFormTab,
-    dialogStep: state.dialogStep,
-  });
+export const openEditDialog = ({ state }, { itemId, defaultValues } = {}) => {
+  state.isEditDialogOpen = true;
+  state.editItemId = itemId;
+  state.editDefaultValues.name = defaultValues.name;
+  state.editDefaultValues.description = defaultValues.description;
+  state.editDefaultValues.tagIds = defaultValues.tagIds;
 };
 
-export const setPreviewRuntime = (
-  { state },
-  { target, width, height } = {},
-) => {
-  state.previewRuntimeTarget = target;
-  state.previewRuntimeWidth = width;
-  state.previewRuntimeHeight = height;
-};
-
-export const clearPreviewRuntime = ({ state }, _payload = {}) => {
-  state.previewRuntimeTarget = undefined;
-  state.previewRuntimeWidth = undefined;
-  state.previewRuntimeHeight = undefined;
-};
-
-export const setDialogPreviewBackgroundImage = (
-  { state },
-  { imageId } = {},
-) => {
-  state.dialogPreviewBackgroundImageId = imageId ?? undefined;
-};
-
-export const clearDialogPreviewBackgroundImage = ({ state }, _payload = {}) => {
-  state.dialogPreviewBackgroundImageId = undefined;
-};
-
-export const showPreviewImageSelectorDialog = ({ state }, _payload = {}) => {
-  state.previewImageSelectorDialog.open = true;
-  state.previewImageSelectorDialog.target = PREVIEW_BACKGROUND_IMAGE_TARGET;
-  state.previewImageSelectorDialog.selectedImageId =
-    state.dialogPreviewBackgroundImageId;
-};
-
-export const showTextureImageSelectorDialog = ({ state }, _payload = {}) => {
-  const imageId = state.dialogFormValues.textureImageId;
-  state.previewImageSelectorDialog.open = true;
-  state.previewImageSelectorDialog.target = TEXTURE_IMAGE_TARGET;
-  state.previewImageSelectorDialog.selectedImageId = imageId
-    ? imageId
-    : undefined;
-};
-
-export const hidePreviewImageSelectorDialog = ({ state }, _payload = {}) => {
-  state.previewImageSelectorDialog =
-    createInitialPreviewImageSelectorDialogState();
-};
-
-export const setPreviewImageSelectorSelectedImageId = (
-  { state },
-  { imageId } = {},
-) => {
-  state.previewImageSelectorDialog.selectedImageId = imageId ?? undefined;
-};
-
-export const setDialogTextureImage = ({ state }, { imageId } = {}) => {
-  state.dialogFormValues.textureImageId = imageId ?? "";
+export const closeEditDialog = ({ state }) => {
+  state.isEditDialogOpen = false;
+  state.editItemId = undefined;
+  state.editDefaultValues = createEmptyMetadataValues();
 };
 
 export const selectTargetGroupId = ({ state }) => state.targetGroupId;
-export const selectEditMode = ({ state }) => state.editMode;
+
 export const selectEditItemId = ({ state }) => state.editItemId;
-export const selectProjectResolution = ({ state }) => state.projectResolution;
-export const selectDialogPresetId = ({ state }) => state.dialogPresetId;
-export const selectIsDialogOpen = ({ state }) => state.isDialogOpen;
-export const selectDialogMode = ({ state }) => state.dialogMode;
-export const selectDialogStep = ({ state }) => state.dialogStep;
-export const selectDialogFormTab = ({ state }) => state.dialogFormTab;
-export const selectDialogFormValues = ({ state }) => state.dialogFormValues;
-export const selectImagesData = ({ state }) => state.imagesData;
-export const selectDialogPreviewBackgroundImage = ({ state }) => {
-  return getImageItemById(state, state.dialogPreviewBackgroundImageId);
-};
-export const selectPreviewImageSelectorDialog = ({ state }) => {
-  return state.previewImageSelectorDialog;
-};
-export const selectPreviewRuntime = ({ state }) => ({
-  target: state.previewRuntimeTarget,
-  width: state.previewRuntimeWidth,
-  height: state.previewRuntimeHeight,
-});
 
 export const selectViewData = (context) => {
   const viewData = selectCatalogViewData(context);

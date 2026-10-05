@@ -403,8 +403,8 @@ on its own once it has started inside a gesture, so:
 
 - Every graphics page shares one media element, because graphicsService
   requests audio whenever it starts: the scene editor and fullscreen preview,
-  and also pages that never play sound, such as Transforms, Particles, and
-  Layouts. Destroying the graphics runtime pauses the element instead of
+  and also pages that never play sound, such as the transform and particle
+  editors, Particles, and Layouts. Destroying the graphics runtime pauses the element instead of
   replacing it; it is replaced only after a failure other than
   `NotAllowedError`. A refused start, of the element or of the audio context,
   waits, and the next tap or key press (`pointerdown`, `pointerup`,
@@ -412,8 +412,9 @@ on its own once it has started inside a gesture, so:
   tap shows the preview audio alert.
 - That tap starts silent media playback, which can pause another app's audio,
   as the immediate start did on iPadOS 26.4. Taps start nothing after the
-  graphics runtime is destroyed, but Transforms, Particles, Animations, the
-  animation editor, and the audio effects editor never destroy it. After a
+  graphics runtime is destroyed. The transform and particle editors destroy it
+  when they close, but Particles, Animations, the animation editor, and the
+  audio effects editor never destroy it. After a
   refusal there, a tap still starts it after leaving the page, until another
   graphics page starts or closes.
 - Opening a sound from the Sounds page or a BGM, sound effect, or voice action
