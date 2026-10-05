@@ -160,8 +160,6 @@ export const setRightPanelMode = ({ state }, { mode } = {}) => {
 
 export const selectProjectResolution = ({ state }) => state.projectResolution;
 
-export const selectIsTouchMode = ({ state }) => state.isTouchMode;
-
 export const selectHasUnsavedValues = ({ state }) =>
   Boolean(state.transformId) &&
   !areEditHistoryValuesEqual(state.transform, state.savedTransform);
@@ -183,8 +181,6 @@ export const selectPreviewData = ({ state }) => {
   }
   return preview;
 };
-
-export const selectPreviewImageIds = ({ state }) => state.previewImageIds;
 
 export const setTransform = ({ state }, { transform } = {}) => {
   state.transform = normalizeTransformValues(transform);
@@ -254,10 +250,6 @@ export const setSelectedElementMetrics = ({ state }, { metrics } = {}) => {
 
 export const selectSelectedElementMetrics = ({ state }) =>
   state.selectedElementMetrics;
-
-export const setImagesData = ({ state }, { imagesData } = {}) => {
-  state.imagesData = imagesData ?? createEmptyImageCollection();
-};
 
 export const selectPreviewBackgroundImage = ({ state }) =>
   getImageItemById(state.imagesData, state.previewImageIds.background);
