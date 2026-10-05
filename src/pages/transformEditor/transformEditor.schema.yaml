@@ -1,0 +1,4 @@
+componentName: rvn-transform-editor
+propsSchema:
+  type: object
+  properties: {}

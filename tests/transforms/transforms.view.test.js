@@ -1,16 +1,13 @@
 import { readFileSync } from "fs";
 import { describe, expect, it } from "vitest";
 
-describe("transforms view", () => {
-  it("uses icons for duplicate and delete actions in the mobile detail sheet", () => {
-    const transformsView = readFileSync(
-      new URL(
-        "../../src/pages/transforms/transforms.view.yaml",
-        import.meta.url,
-      ),
-      "utf8",
-    );
+const transformsView = readFileSync(
+  new URL("../../src/pages/transforms/transforms.view.yaml", import.meta.url),
+  "utf8",
+);
 
+describe("transforms view", () => {
+  it("opens, duplicates, and deletes from the mobile detail sheet", () => {
     const mobileDetailStart = transformsView.indexOf(
       "$if showMobileDetailSheet",
     );
@@ -24,77 +21,21 @@ describe("transforms view", () => {
     );
 
     expect(mobileDetailBranch).toContain(
+      "rtgl-button#mobileDetailOpenButton w=1fg v=se pre=chevronRight: ${openButton}",
+    );
+    expect(mobileDetailBranch).toContain(
       "rtgl-button#mobileDetailDuplicateButton w=1fg v=se pre=duplicate: ${duplicateButton}",
     );
     expect(mobileDetailBranch).toContain(
       "rtgl-button#mobileDetailDeleteButton w=1fg v=se pre=trash: ${deleteButton}",
     );
+    expect(mobileDetailBranch).not.toContain("mobileDetailEditButton");
+    expect(mobileDetailBranch).not.toContain("mobileDetailPreviewButton");
   });
 
-  it("hides the preview image selector file explorer behind touch-mode view data", () => {
-    const transformsView = readFileSync(
-      new URL(
-        "../../src/pages/transforms/transforms.view.yaml",
-        import.meta.url,
-      ),
-      "utf8",
-    );
-
-    const selectorDialogStart = transformsView.indexOf(
-      "rtgl-dialog#transformPreviewImageSelectorDialog",
-    );
-    const previewOverlayStart = transformsView.indexOf(
-      "$when: fullImagePreviewVisible",
-      selectorDialogStart,
-    );
-    const selectorDialogBranch = transformsView.slice(
-      selectorDialogStart,
-      previewOverlayStart,
-    );
-
-    expect(selectorDialogBranch).toContain(
-      "$if showTransformPreviewImageSelectorFileExplorer",
-    );
-    expect(selectorDialogBranch).toContain(
-      "rvn-base-file-explorer#transformPreviewImageSelectorFileExplorer",
-    );
-  });
-
-  it("does not show a cancel button in the preview image selector", () => {
-    const transformsView = readFileSync(
-      new URL(
-        "../../src/pages/transforms/transforms.view.yaml",
-        import.meta.url,
-      ),
-      "utf8",
-    );
-
-    expect(transformsView).not.toContain(
-      "rtgl-button#cancelTransformPreviewImageSelection",
-    );
-  });
-
-  it("uses fixed-width image cards for both transform preview images", () => {
-    const transformsView = readFileSync(
-      new URL(
-        "../../src/pages/transforms/transforms.view.yaml",
-        import.meta.url,
-      ),
-      "utf8",
-    );
-    const previewCards = transformsView.slice(
-      transformsView.indexOf("$for item, i in previewPanel.items"),
-      transformsView.indexOf("rtgl-dropdown-menu#transformPreviewImageMenu"),
-    );
-
-    expect(previewCards).toContain(
-      "transformPreviewImageButton${i} data-target=${item.target}",
-    );
-    expect(previewCards).toContain("br=md w=160 overflow=hidden");
-    expect(previewCards).toContain(
-      'div.transformImageThumbnailTransparencyGrid style="display: block; width: 100%; aspect-ratio: ${item.image.previewAspectRatio}; overflow: hidden;"',
-    );
-    expect(previewCards).toContain("rtgl-view w=f p=md");
-    expect(previewCards).not.toContain("rtgl-view p=md g=md br=md");
+  it("edits transform values in the editor page, not in a dialog", () => {
+    expect(transformsView).not.toContain("transformDialog");
+    expect(transformsView).not.toContain("transformForm");
+    expect(transformsView).not.toContain("div#canvas");
   });
 });

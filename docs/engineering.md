@@ -1190,7 +1190,13 @@ nothing to do. The middle mouse button pans anywhere. The wheel never pans: over
 step around the pointer, as on the scene map, and over the canvas it reaches the
 canvas unchanged. ctrl + wheel (a trackpad pinch) zooms anywhere. One finger
 on the canvas still edits; a first finger that already touched it gets a
-`pointercancel` when the second lands. The viewport keeps `--canvas-zoom`,
+`pointercancel` when the second lands. As a defensive guard, a finger that
+lands while no other is down (a primary touch) clears the fingers the viewport
+still tracks, since one of them lifted without its `pointerup` reaching the
+viewport; otherwise a one-finger drag would pinch around the lost finger. If
+that cuts a pinch short, the viewport still reports its zoom. The likely cause
+is iOS taking over a long press, but iPad testing never logged a lost finger,
+so it is unconfirmed. The viewport keeps `--canvas-zoom`,
 `--canvas-x`, and `--canvas-y` in its shadow root, reports a gesture's final
 zoom with `zoom-change`, and keeps the canvas centered until a gesture moves it.
 The canvas draws at the project resolution, so high zoom looks soft.
@@ -1271,6 +1277,42 @@ change. The shortcuts also work in the editor's own text, through
 off. On phones the keyboard toolbar has Undo, which keeps the keyboard open,
 and a More menu with Sections, Settings, and Redo; the menu closes the
 keyboard and follows the toolbar down.
+
+Transforms are edited on their own page, `/project/transform-editor` (the
+`t` payload holds the transform id), which opens from the transforms page like
+the audio effects editor; the transforms page's dialogs only add a transform
+and edit its name, description, and tags. The page has the layout editor's
+header (back, name, undo and redo, zoom), canvas workspace, and right panel
+with **Edit** and **Preview** tabs. As in the layout editor, the panel stays
+on the right in tablet landscape and moves under the canvas on phones and in
+tablet portrait, while the canvas stays in place. Edit holds
+`rvn-layout-edit-panel mode=transform`, whose popovers preview on the canvas
+as in the layout editor, and draws the scene editor's custom transform editor
+outline on the canvas (`createBackgroundTransformEditorCanvasState` and the
+drag helpers in `src/internal/ui/sceneEditor/backgroundTransformEditor.js`):
+the border moves the target and an edge handle scales it evenly around its
+anchor. Arrow keys nudge the target on Edit, ten pixels with Shift. Preview
+holds the preview background and target images and **Save Preview**, and
+draws the same canvas without the outline: the background image, or a gray
+screen, and the target image, or a white square. Save Preview
+saves the preview images and a preview and thumbnail image of that canvas, and
+is disabled while it saves.
+
+Preview images follow the asset failure policy. Each loads on its own, with
+`verifyImageIntegrity`, so one that cannot be read, fails its integrity check,
+or does not decode is left out (the gray screen or white square shows in its
+place), warned about once with the shared asset warning, and not read again
+while the page is open; the rest of the canvas stays editable. Save Preview
+reads a failed image again and, if it still fails, saves nothing and alerts
+with the error's details, since saving the fallback would misrepresent the
+preview. Capture and file storage failures alert with their details too.
+
+As in the layout editor, edits save on their own 300ms after the last one,
+and leaving the page saves waiting edits at once (saves run one at a time
+through `enqueueSceneEditorPersistence`); preview images save only with Save
+Preview, so unsaved ones are left behind. Undo and redo work as in the audio
+effects editor: a step holds the transform's values before and after an edit,
+a drag is one step, and preview images are not part of the history.
 
 `rvn-mobile-sheet` is capped at 640px (the Projects page content width) and
 centered, so the bottom-tab sheets and every page's item detail sheet stay
@@ -1496,6 +1538,7 @@ Current recovery boundaries:
 | Scene editor asset loading            | Isolate failed entries, show a warning, and keep editing and working assets available, including when a font fails.                                                                                                         |
 | Scene editor audio warm-up            | Keep painting after a decode retry fails. Preserve diagnostics without duplicating the warning already shown by preloading.                                                                                                 |
 | Layout editor canvas                  | Collect read/integrity/decode failures, warn once per failed file per mounted canvas, omit affected render elements, and keep unaffected elements editable. Retry on subsequent requests without changing the saved layout. |
+| Transform editor canvas               | Load each preview image separately, warn once per failed file per mounted page, and draw the fallback in its place while editing. Later renders skip it; Save Preview rereads it and saves nothing if it still fails.       |
 | Fullscreen startup                    | Check the combined initial scene and layout assets, collect all read/integrity/decode failures, and show one deduplicated warning stating playback is blocked. Any failure closes the preview before starting the engine.   |
 | Fullscreen later scene/layout loading | Retain the existing transition/prefetch handling: report scene failures, propagate font/layout failures.                                                                                                                    |
 

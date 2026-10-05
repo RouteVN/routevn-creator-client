@@ -1,6 +1,6 @@
 import { describe, expect, it, vi } from "vitest";
+import { applyBackgroundTransformResizeChange } from "../../src/internal/ui/sceneEditor/backgroundTransformEditor.js";
 import {
-  applyBackgroundTransformResizeChange,
   handleActionsDialogClose,
   handleActionTransformCustomize,
   handleAddActionsButtonClick,

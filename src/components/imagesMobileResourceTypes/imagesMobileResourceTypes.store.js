@@ -90,6 +90,7 @@ const resourceParentMapping = {
   "layout-editor": "layouts",
   "animation-editor": "animations",
   "audio-effects-editor": "audioEffects",
+  "transform-editor": "transforms",
 };
 
 const resourceCategoryNames = {

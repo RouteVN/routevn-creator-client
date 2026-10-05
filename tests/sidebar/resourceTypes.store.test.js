@@ -51,6 +51,24 @@ describe("resource type navigation", () => {
     ]);
   });
 
+  it("highlights transforms while the transform editor is open", () => {
+    const props = {
+      resourceCategory: "assets",
+      selectedResourceId: "transform-editor",
+    };
+
+    for (const viewData of [
+      selectDesktopResourceTypesViewData({ props }),
+      selectMobileResourceTypesViewData({ props }),
+    ]) {
+      expect(
+        viewData.items
+          .filter((item) => item.bgc === "mu")
+          .map((item) => item.id),
+      ).toEqual(["transforms"]);
+    }
+  });
+
   it("shows variables in system resource menus", () => {
     const props = {
       resourceCategory: "systemConfig",

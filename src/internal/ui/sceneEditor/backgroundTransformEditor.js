@@ -80,6 +80,9 @@ const OVERLAY_ANCHOR_BORDER = {
   alpha: 1,
 };
 
+const BACKGROUND_TRANSFORM_RESIZE_TARGET_PREFIX = "selected-border-resize-";
+const MIN_BACKGROUND_TRANSFORM_SCALE = 0.01;
+
 const OVERLAY_ANCHOR_SIZE = 8;
 const OVERLAY_RESIZE_HANDLE_SIZE = 12;
 const RESIZE_EDGES = ["left", "right", "top", "bottom"];
@@ -968,4 +971,151 @@ export const createBackgroundTransformEditorRenderState = (payload = {}) => {
 export const selectBackgroundTransformEditorElementMetrics = (payload = {}) => {
   return createBackgroundTransformEditorCanvasState(payload)
     .selectedElementMetrics;
+};
+
+// Canvas drags on the selection outline: the border moves the target, and
+// an edge handle scales it evenly around its anchor.
+export const getBackgroundTransformDragModeFromTargetId = (targetId) => {
+  if (targetId === "selected-border") {
+    return "move";
+  }
+
+  if (targetId?.startsWith(BACKGROUND_TRANSFORM_RESIZE_TARGET_PREFIX)) {
+    return targetId.slice(BACKGROUND_TRANSFORM_RESIZE_TARGET_PREFIX.length);
+  }
+
+  return undefined;
+};
+
+export const isBackgroundTransformResizeMode = (dragMode) => {
+  return (
+    dragMode === "left" ||
+    dragMode === "right" ||
+    dragMode === "top" ||
+    dragMode === "bottom"
+  );
+};
+
+const getPositiveNumber = (value, fallback) => {
+  const parsed = Number(value);
+  return Number.isFinite(parsed) && parsed > 0 ? parsed : fallback;
+};
+
+const getBackgroundTransformUniformScale = (transform = {}) => {
+  return Math.max(
+    Math.abs(getPositiveNumber(transform.scaleX, 1)),
+    Math.abs(getPositiveNumber(transform.scaleY, 1)),
+    MIN_BACKGROUND_TRANSFORM_SCALE,
+  );
+};
+
+const getPositiveScale = (value) => {
+  return getPositiveNumber(Math.abs(Number(value)), 1);
+};
+
+const getResizeScaleDenominator = (
+  resizeEdge,
+  metrics = {},
+  { scaleX = 1, scaleY = 1 } = {},
+) => {
+  const width = getPositiveNumber(metrics.width, 1) / getPositiveScale(scaleX);
+  const height =
+    getPositiveNumber(metrics.height, 1) / getPositiveScale(scaleY);
+  const anchorX = Number.isFinite(metrics.anchorX) ? metrics.anchorX : 0.5;
+  const anchorY = Number.isFinite(metrics.anchorY) ? metrics.anchorY : 0.5;
+  let distance = 1;
+
+  if (resizeEdge === "left") {
+    distance = width * anchorX;
+  } else if (resizeEdge === "right") {
+    distance = width * (1 - anchorX);
+  } else if (resizeEdge === "top") {
+    distance = height * anchorY;
+  } else if (resizeEdge === "bottom") {
+    distance = height * (1 - anchorY);
+  }
+
+  return distance > 0 ? distance : undefined;
+};
+
+const getResizePointerDelta = (resizeEdge, dragStartPosition, x, y) => {
+  if (resizeEdge === "left") {
+    return dragStartPosition.x - x;
+  }
+
+  if (resizeEdge === "right") {
+    return x - dragStartPosition.x;
+  }
+
+  if (resizeEdge === "top") {
+    return dragStartPosition.y - y;
+  }
+
+  if (resizeEdge === "bottom") {
+    return y - dragStartPosition.y;
+  }
+
+  return 0;
+};
+
+export const applyBackgroundTransformResizeChange = ({
+  transform,
+  dragStartPosition,
+  x,
+  y,
+} = {}) => {
+  const resizeEdge = dragStartPosition?.resizeEdge;
+  if (
+    !isBackgroundTransformResizeMode(resizeEdge) ||
+    typeof x !== "number" ||
+    typeof y !== "number"
+  ) {
+    return transform;
+  }
+
+  const startScale = getBackgroundTransformUniformScale({
+    scaleX: dragStartPosition.transformStartScaleX,
+    scaleY: dragStartPosition.transformStartScaleY,
+  });
+  const denominator = getResizeScaleDenominator(
+    resizeEdge,
+    dragStartPosition.selectedElementMetrics,
+    {
+      scaleX: dragStartPosition.transformStartScaleX,
+      scaleY: dragStartPosition.transformStartScaleY,
+    },
+  );
+  if (!denominator) {
+    return transform;
+  }
+
+  const scaleDelta =
+    getResizePointerDelta(resizeEdge, dragStartPosition, x, y) / denominator;
+  const nextScale = Math.max(
+    MIN_BACKGROUND_TRANSFORM_SCALE,
+    startScale + scaleDelta,
+  );
+
+  return normalizeBackgroundTransformEditorTransform({
+    ...transform,
+    scaleX: nextScale,
+    scaleY: nextScale,
+  });
+};
+
+export const applyBackgroundTransformDragChange = ({
+  transform,
+  dragStartPosition,
+  x,
+  y,
+} = {}) => {
+  if (!dragStartPosition || typeof x !== "number" || typeof y !== "number") {
+    return transform;
+  }
+
+  return normalizeBackgroundTransformEditorTransform({
+    ...transform,
+    x: Math.round(dragStartPosition.transformStartX + x - dragStartPosition.x),
+    y: Math.round(dragStartPosition.transformStartY + y - dragStartPosition.y),
+  });
 };

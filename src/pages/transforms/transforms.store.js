@@ -1,257 +1,49 @@
 import { createCatalogPageStore } from "../../internal/ui/resourcePages/catalog/createCatalogPageStore.js";
 import { createTagField } from "../../internal/ui/resourcePages/tags.js";
 import { applyFolderRequiredRootDragOptions } from "../../internal/fileExplorerDragOptions.js";
-import {
-  DEFAULT_PROJECT_RESOLUTION,
-  formatProjectResolutionAspectRatio,
-  requireProjectResolution,
-} from "../../internal/projectResolution.js";
 import { matchesTagAwareSearch } from "../../internal/resourceTags.js";
-import { toFlatItems } from "../../internal/project/tree.js";
 import { selectTransformsPageCopy } from "./support/transformsPageCopy.js";
 
 const TRANSFORM_TAG_SCOPE_KEY = "transforms";
-const TRANSFORM_PREVIEW_IMAGE_SLOT_CONFIGS = Object.freeze([
+
+const createMetadataFormFields = (copy) => [
   {
-    labelKey: "backgroundImageLabel",
-    target: "preview-background",
+    name: "name",
+    type: "input-text",
+    label: copy.nameLabel,
+    required: true,
   },
   {
-    labelKey: "targetImageLabel",
-    target: "preview-target",
+    name: "description",
+    type: "input-textarea",
+    label: copy.descriptionLabel,
   },
-]);
+  createTagField({
+    label: copy.tagsLabel,
+    placeholder: copy.selectTagsPlaceholder,
+    addOptionLabel: copy.addTagOption,
+  }),
+];
 
-const createEmptyImageCollection = () => ({
-  items: {},
-  tree: [],
-});
-
-const createTransformForm = ({
-  editMode = false,
-  projectResolution = DEFAULT_PROJECT_RESOLUTION,
-  copy,
-} = {}) => {
-  const resolvedProjectResolution = requireProjectResolution(
-    projectResolution,
-    copy.projectResolutionLabel,
-  );
-
-  return {
-    title: editMode ? copy.editTransformTitle : copy.addTransformTitle,
-    fields: [
+const createMetadataForm = ({ title, submitLabel, copy }) => ({
+  title,
+  actions: {
+    buttons: [
       {
-        name: "name",
-        type: "input-text",
-        label: copy.nameLabel,
-        required: true,
-      },
-      {
-        name: "description",
-        type: "input-textarea",
-        label: copy.descriptionLabel,
-        required: false,
-      },
-      createTagField({
-        label: copy.tagsLabel,
-        placeholder: copy.selectTagsPlaceholder,
-        addOptionLabel: copy.addTagOption,
-      }),
-      {
-        name: "x",
-        type: "slider-with-input",
-        min: 0,
-        max: resolvedProjectResolution.width,
-        step: 1,
-        label: copy.positionXLabel,
-        required: true,
-      },
-      {
-        name: "y",
-        type: "slider-with-input",
-        min: 0,
-        max: resolvedProjectResolution.height,
-        step: 1,
-        label: copy.positionYLabel,
-        required: true,
-      },
-      {
-        name: "scaleX",
-        type: "slider-with-input",
-        min: 0.1,
-        max: 3,
-        step: 0.1,
-        label: copy.scaleXLabel,
-        required: true,
-      },
-      {
-        name: "scaleY",
-        type: "slider-with-input",
-        min: 0.1,
-        max: 3,
-        step: 0.1,
-        label: copy.scaleYLabel,
-        required: true,
-      },
-      {
-        name: "anchor",
-        type: "select",
-        label: copy.anchorLabel,
-        placeholder: copy.chooseAnchorPlaceholder,
-        options: [
-          {
-            id: "tl",
-            label: copy.anchorTopLeft,
-            value: { anchorX: 0, anchorY: 0 },
-          },
-          {
-            id: "tc",
-            label: copy.anchorTopCenter,
-            value: { anchorX: 0.5, anchorY: 0 },
-          },
-          {
-            id: "tr",
-            label: copy.anchorTopRight,
-            value: { anchorX: 1, anchorY: 0 },
-          },
-          {
-            id: "cl",
-            label: copy.anchorCenterLeft,
-            value: { anchorX: 0, anchorY: 0.5 },
-          },
-          {
-            id: "cc",
-            label: copy.anchorCenterCenter,
-            value: { anchorX: 0.5, anchorY: 0.5 },
-          },
-          {
-            id: "cr",
-            label: copy.anchorCenterRight,
-            value: { anchorX: 1, anchorY: 0.5 },
-          },
-          {
-            id: "bl",
-            label: copy.anchorBottomLeft,
-            value: { anchorX: 0, anchorY: 1 },
-          },
-          {
-            id: "bc",
-            label: copy.anchorBottomCenter,
-            value: { anchorX: 0.5, anchorY: 1 },
-          },
-          {
-            id: "br",
-            label: copy.anchorBottomRight,
-            value: { anchorX: 1, anchorY: 1 },
-          },
-        ],
-        required: true,
+        id: "submit",
+        variant: "pr",
+        validate: true,
+        label: submitLabel,
       },
     ],
-  };
-};
-
-const createDialogDefaultValues = (item) => ({
-  name: item?.name ?? "",
-  description: item?.description ?? "",
-  tagIds: item?.tagIds ?? [],
-  x: String(item?.x ?? 0),
-  y: String(item?.y ?? 0),
-  scaleX: String(item?.scaleX ?? 1),
-  scaleY: String(item?.scaleY ?? 1),
-  anchor: {
-    anchorX: item?.anchorX ?? 0,
-    anchorY: item?.anchorY ?? 0,
   },
+  fields: createMetadataFormFields(copy),
 });
 
-const createPreviewImageSelectorDialog = () => ({
-  open: false,
-  target: undefined,
-  selectedImageId: undefined,
-  originalImageId: undefined,
-});
-
-const createPreviewImageMenu = () => ({
-  isOpen: false,
-  x: 0,
-  y: 0,
-  target: undefined,
-  items: [],
-});
-
-const resolvePreviewImageId = (preview, slotKey) => {
-  const imageId = preview?.[slotKey]?.imageId;
-  return typeof imageId === "string" && imageId.length > 0
-    ? imageId
-    : undefined;
-};
-
-const getPreviewSlotConfig = (target) => {
-  return TRANSFORM_PREVIEW_IMAGE_SLOT_CONFIGS.find(
-    (slot) => slot.target === target,
-  );
-};
-
-const getImageItemById = (imagesData, imageId) => {
-  if (!imageId) {
-    return undefined;
-  }
-
-  const item = imagesData?.items?.[imageId];
-  return item?.type === "image" ? item : undefined;
-};
-
-const buildPreviewImageCard = (state, imageId) => {
-  const item = getImageItemById(state.imagesData, imageId);
-  if (!item) {
-    return undefined;
-  }
-
-  return {
-    id: item.id,
-    name: item.name,
-    fileId: item.fileId,
-    thumbnailFileId: item.thumbnailFileId,
-    previewFileId: item.thumbnailFileId ?? item.fileId,
-    previewAspectRatio: "16 / 9",
-    itemBorderColor: "bo",
-    itemHoverBorderColor: "ac",
-  };
-};
-
-const selectPreviewImageIdFromState = (state, target) => {
-  if (target === "preview-background") {
-    return state.dialogPreviewBackgroundImageId;
-  }
-
-  if (target === "preview-target") {
-    return state.dialogPreviewTargetImageId;
-  }
-
-  return undefined;
-};
-
-const setPreviewImageIdInState = (state, target, imageId) => {
-  if (target === "preview-background") {
-    state.dialogPreviewBackgroundImageId = imageId;
-    return;
-  }
-
-  if (target === "preview-target") {
-    state.dialogPreviewTargetImageId = imageId;
-  }
-};
-
-const buildPreviewPanel = (state, copy) => ({
-  items: TRANSFORM_PREVIEW_IMAGE_SLOT_CONFIGS.map((slot) => ({
-    label: copy[slot.labelKey],
-    target: slot.target,
-    image: buildPreviewImageCard(
-      state,
-      selectPreviewImageIdFromState(state, slot.target),
-    ),
-  })),
+const createEmptyMetadataValues = () => ({
+  name: "",
+  description: "",
+  tagIds: [],
 });
 
 const buildDetailFields = (item, { copy } = {}) => {
@@ -304,6 +96,11 @@ const buildDetailFields = (item, { copy } = {}) => {
       label: copy.anchorYLabel,
       value: String(item.anchorY ?? 0),
     },
+    {
+      type: "text",
+      label: copy.rotationLabel,
+      value: String(item.rotation ?? 0),
+    },
   ];
 };
 
@@ -340,7 +137,14 @@ const buildCatalogItem = (item, { state, copy }) => ({
 const matchesSearch = matchesTagAwareSearch;
 
 const createTransformCenterItemContextMenuItems = (copy) => [
-  { label: copy.editMenuItem, type: "item", value: "edit-item" },
+  { label: copy.openButton, type: "item", value: "edit-item" },
+  { label: copy.duplicateMenuItem, type: "item", value: "duplicate-item" },
+  { label: copy.deleteMenuItem, type: "item", value: "delete-item" },
+];
+
+const createTransformExplorerItemContextMenuItems = (copy) => [
+  { label: copy.openButton, type: "item", value: "edit-item" },
+  { label: copy.renameMenuItem, type: "item", value: "rename-item" },
   { label: copy.duplicateMenuItem, type: "item", value: "duplicate-item" },
   { label: copy.deleteMenuItem, type: "item", value: "delete-item" },
 ];
@@ -408,45 +212,26 @@ const {
     return {
       ...baseViewData,
       detailFields,
+      itemContextMenuItems: createTransformExplorerItemContextMenuItems(copy),
       centerItemContextMenuItems:
         createTransformCenterItemContextMenuItems(copy),
-      isDialogOpen: state.isDialogOpen,
-      isPreviewOnlyDialog: state.dialogMode === "preview",
-      transformForm: createTransformForm({
-        editMode: state.editMode,
-        projectResolution: state.projectResolution,
+      isAddDialogOpen: state.isAddDialogOpen,
+      addForm: createMetadataForm({
+        title: copy.addTransformTitle,
+        submitLabel: copy.addTransformButton,
         copy,
       }),
-      transformSubmitButtonLabel: state.editMode
-        ? copy.updateTransformButton
-        : copy.addTransformButton,
-      dialogDefaultValues: state.dialogDefaultValues,
-      dialogPreviewItem: state.dialogItemData,
-      dialogPreviewThumbnailFileId: state.dialogItemData?.thumbnailFileId,
-      dialogPreviewFileId:
-        state.dialogItemData?.previewFileId ??
-        state.dialogItemData?.thumbnailFileId,
-      previewPanel: buildPreviewPanel(state, copy),
-      cancelButton: copy.cancelButton,
-      confirmButton: copy.confirmButton,
-      noPreviewLabel: copy.noPreviewLabel,
+      addFormDefaults: createEmptyMetadataValues(),
+      isEditDialogOpen: state.isEditDialogOpen,
+      editForm: createMetadataForm({
+        title: copy.editTransformTitle,
+        submitLabel: copy.updateTransformButton,
+        copy,
+      }),
+      editDefaultValues: state.editDefaultValues,
       noPreviewImageLabel: copy.noPreviewImageLabel,
-      previewLabel: copy.previewLabel,
-      editButton: copy.editMenuItem ?? "Edit",
-      selectImageLabel: copy.selectImageLabel,
-      updateToSetPreviewLabel: copy.updateToSetPreviewLabel,
-      imageSelectorDialog: {
-        ...state.imageSelectorDialog,
-        title:
-          state.imageSelectorDialog.target === "preview-background"
-            ? copy.selectBackgroundTitle
-            : copy.selectTargetImageTitle,
-      },
-      showTransformPreviewImageSelectorFileExplorer: !state.isTouchMode,
-      canvasAspectRatio: formatProjectResolutionAspectRatio(
-        state.projectResolution,
-      ),
-      projectResolution: state.projectResolution,
+      savePreviewInEditorLabel: copy.savePreviewInEditorLabel,
+      openButton: copy.openButton,
       selectedItem,
     };
   },
@@ -454,24 +239,12 @@ const {
 
 export const createInitialState = () => ({
   ...createCatalogInitialState(),
-  isDialogOpen: false,
-  dialogMode: "form",
+  isAddDialogOpen: false,
+  isEditDialogOpen: false,
   targetGroupId: undefined,
-  editMode: false,
   editItemId: undefined,
-  dialogItemData: undefined,
-  projectResolution: DEFAULT_PROJECT_RESOLUTION,
+  editDefaultValues: createEmptyMetadataValues(),
   defaultDialogueAvatarTransformId: undefined,
-  imagesData: createEmptyImageCollection(),
-  dialogDefaultValues: createDialogDefaultValues(),
-  dialogValues: createDialogDefaultValues(),
-  dialogPreviewBackgroundImageId: undefined,
-  dialogPreviewTargetImageId: undefined,
-  imageSelectorDialog: createPreviewImageSelectorDialog(),
-  previewImageMenu: createPreviewImageMenu(),
-  fullImagePreviewVisible: false,
-  fullImagePreviewImageId: undefined,
-  fullImagePreviewFileId: undefined,
 });
 
 export {
@@ -516,245 +289,33 @@ export const setDefaultDialogueAvatarTransformId = (
 export const selectDefaultDialogueAvatarTransformId = ({ state }) =>
   state.defaultDialogueAvatarTransformId;
 
-export const setImagesData = ({ state }, { imagesData } = {}) => {
-  state.imagesData = imagesData ?? createEmptyImageCollection();
-
-  if (
-    state.dialogPreviewBackgroundImageId &&
-    !getImageItemById(state.imagesData, state.dialogPreviewBackgroundImageId)
-  ) {
-    state.dialogPreviewBackgroundImageId = undefined;
-  }
-
-  if (
-    state.dialogPreviewTargetImageId &&
-    !getImageItemById(state.imagesData, state.dialogPreviewTargetImageId)
-  ) {
-    state.dialogPreviewTargetImageId = undefined;
-  }
+export const openAddDialog = ({ state }, { groupId } = {}) => {
+  state.isAddDialogOpen = true;
+  state.targetGroupId = groupId === "_root" ? undefined : groupId;
 };
 
-export const setProjectResolution = ({ state }, { projectResolution } = {}) => {
-  state.projectResolution = requireProjectResolution(
-    projectResolution,
-    "Project resolution",
-  );
-};
-
-const setDialogState = (state, options = {}) => {
-  const {
-    dialogMode = "form",
-    editMode = false,
-    itemId = undefined,
-    itemData = undefined,
-    targetGroupId = undefined,
-  } = options;
-
-  state.isDialogOpen = true;
-  state.dialogMode = dialogMode;
-  state.editMode = editMode;
-  state.editItemId = itemId;
-  state.dialogItemData = itemData;
-  state.targetGroupId = targetGroupId === "_root" ? undefined : targetGroupId;
-  state.dialogDefaultValues = createDialogDefaultValues(itemData);
-  state.dialogValues = createDialogDefaultValues(itemData);
-  state.dialogPreviewBackgroundImageId = resolvePreviewImageId(
-    itemData?.preview,
-    "background",
-  );
-  state.dialogPreviewTargetImageId = resolvePreviewImageId(
-    itemData?.preview,
-    "target",
-  );
-  state.imageSelectorDialog = createPreviewImageSelectorDialog();
-  state.previewImageMenu = createPreviewImageMenu();
-  state.fullImagePreviewVisible = false;
-  state.fullImagePreviewImageId = undefined;
-  state.fullImagePreviewFileId = undefined;
-};
-
-export const openTransformFormDialog = ({ state }, options = {}) => {
-  setDialogState(state, {
-    ...options,
-    dialogMode: "form",
-  });
-};
-
-export const openTransformPreviewDialog = ({ state }, options = {}) => {
-  setDialogState(state, {
-    ...options,
-    dialogMode: "preview",
-    editMode: false,
-    targetGroupId: undefined,
-  });
-};
-
-export const closeTransformFormDialog = ({ state }, _payload = {}) => {
-  state.isDialogOpen = false;
-  state.dialogMode = "form";
+export const closeAddDialog = ({ state }) => {
+  state.isAddDialogOpen = false;
   state.targetGroupId = undefined;
-  state.editMode = false;
+};
+
+export const openEditDialog = ({ state }, { itemId, defaultValues } = {}) => {
+  state.isEditDialogOpen = true;
+  state.editItemId = itemId;
+  state.editDefaultValues.name = defaultValues.name;
+  state.editDefaultValues.description = defaultValues.description;
+  state.editDefaultValues.tagIds = defaultValues.tagIds;
+};
+
+export const closeEditDialog = ({ state }) => {
+  state.isEditDialogOpen = false;
   state.editItemId = undefined;
-  state.dialogItemData = undefined;
-  state.dialogDefaultValues = createDialogDefaultValues();
-  state.dialogValues = createDialogDefaultValues();
-  state.dialogPreviewBackgroundImageId = undefined;
-  state.dialogPreviewTargetImageId = undefined;
-  state.imageSelectorDialog = createPreviewImageSelectorDialog();
-  state.previewImageMenu = createPreviewImageMenu();
-  state.fullImagePreviewVisible = false;
-  state.fullImagePreviewImageId = undefined;
-  state.fullImagePreviewFileId = undefined;
+  state.editDefaultValues = createEmptyMetadataValues();
 };
 
-export const selectTargetGroupId = ({ state }) => {
-  return state.targetGroupId;
-};
+export const selectTargetGroupId = ({ state }) => state.targetGroupId;
 
-export const selectEditMode = ({ state }) => {
-  return state.editMode;
-};
-
-export const selectEditItemId = ({ state }) => {
-  return state.editItemId;
-};
-
-export const selectProjectResolution = ({ state }) => {
-  return state.projectResolution;
-};
-
-export const setDialogValues = ({ state }, { values } = {}) => {
-  state.dialogValues = values ?? createDialogDefaultValues();
-};
-
-export const selectDialogValues = ({ state }) => {
-  return state.dialogValues;
-};
-
-export const selectDialogPreviewBackgroundImage = ({ state }) => {
-  return getImageItemById(
-    state.imagesData,
-    state.dialogPreviewBackgroundImageId,
-  );
-};
-
-export const selectDialogPreviewTargetImage = ({ state }) => {
-  return getImageItemById(state.imagesData, state.dialogPreviewTargetImageId);
-};
-
-export const selectDialogPreviewData = ({ state }) => {
-  const preview = {};
-
-  if (state.dialogPreviewBackgroundImageId) {
-    preview.background = {
-      imageId: state.dialogPreviewBackgroundImageId,
-    };
-  }
-
-  if (state.dialogPreviewTargetImageId) {
-    preview.target = {
-      imageId: state.dialogPreviewTargetImageId,
-    };
-  }
-
-  return Object.keys(preview).length > 0 ? preview : undefined;
-};
-
-export const selectPreviewImageMenuTarget = ({ state }) => {
-  return state.previewImageMenu.target;
-};
-
-export const openPreviewImageSelectorDialog = ({ state }, { target } = {}) => {
-  const slotConfig = getPreviewSlotConfig(target);
-  if (!slotConfig) {
-    return;
-  }
-
-  state.imageSelectorDialog.open = true;
-  state.imageSelectorDialog.target = target;
-  const imageId = selectPreviewImageIdFromState(state, target);
-  state.imageSelectorDialog.selectedImageId = imageId;
-  state.imageSelectorDialog.originalImageId = imageId;
-};
-
-export const openPreviewImageMenu = (
-  { state },
-  { target, x, y, items } = {},
-) => {
-  const slotConfig = getPreviewSlotConfig(target);
-  const imageId = selectPreviewImageIdFromState(state, target);
-  state.previewImageMenu = createPreviewImageMenu();
-
-  if (!slotConfig || !imageId) {
-    return;
-  }
-
-  state.previewImageMenu.isOpen = true;
-  state.previewImageMenu.x = x;
-  state.previewImageMenu.y = y;
-  state.previewImageMenu.target = target;
-  state.previewImageMenu.items = items ?? [];
-};
-
-export const closePreviewImageMenu = ({ state }, _payload = {}) => {
-  state.previewImageMenu = createPreviewImageMenu();
-};
-
-export const clearPreviewImage = ({ state }, { target } = {}) => {
-  const slotConfig = getPreviewSlotConfig(target);
-  if (!slotConfig) {
-    return;
-  }
-
-  setPreviewImageIdInState(state, target, undefined);
-};
-
-export const closePreviewImageSelectorDialog = ({ state }, _payload = {}) => {
-  setPreviewImageIdInState(
-    state,
-    state.imageSelectorDialog.target,
-    state.imageSelectorDialog.originalImageId,
-  );
-  state.imageSelectorDialog = createPreviewImageSelectorDialog();
-  state.fullImagePreviewVisible = false;
-  state.fullImagePreviewImageId = undefined;
-  state.fullImagePreviewFileId = undefined;
-};
-
-export const applyPreviewImageSelectorSelection = (
-  { state },
-  { imageId } = {},
-) => {
-  state.imageSelectorDialog.selectedImageId = imageId;
-  setPreviewImageIdInState(state, state.imageSelectorDialog.target, imageId);
-};
-
-export const commitPreviewImageSelectorSelection = (
-  { state },
-  _payload = {},
-) => {
-  const imageId = state.imageSelectorDialog.selectedImageId;
-  setPreviewImageIdInState(state, state.imageSelectorDialog.target, imageId);
-  state.imageSelectorDialog = createPreviewImageSelectorDialog();
-};
-
-export const showFullImagePreview = ({ state }, { imageId } = {}) => {
-  const imageItem = getImageItemById(state.imagesData, imageId);
-  state.fullImagePreviewVisible = true;
-  state.fullImagePreviewImageId = imageId;
-  state.fullImagePreviewFileId =
-    imageItem?.thumbnailFileId ?? imageItem?.fileId ?? undefined;
-};
-
-export const hideFullImagePreview = ({ state }, _payload = {}) => {
-  state.fullImagePreviewVisible = false;
-  state.fullImagePreviewImageId = undefined;
-  state.fullImagePreviewFileId = undefined;
-};
-
-export const selectImageSelectorFileExplorerItems = ({ state }) => {
-  return toFlatItems(state.imagesData).filter((item) => item.type === "folder");
-};
+export const selectEditItemId = ({ state }) => state.editItemId;
 
 export const selectViewData = (context) => {
   const viewData = selectCatalogViewData(context);
@@ -775,11 +336,6 @@ export const selectViewData = (context) => {
         };
       },
     ),
-    imageFolderItems: selectImageSelectorFileExplorerItems(context),
-    fullImagePreviewVisible: context.state.fullImagePreviewVisible,
-    fullImagePreviewImageId: context.state.fullImagePreviewImageId,
-    fullImagePreviewFileId: context.state.fullImagePreviewFileId,
-    previewImageMenu: context.state.previewImageMenu,
   };
 };
 

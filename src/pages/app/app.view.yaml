@@ -74,6 +74,8 @@ template:
                   - rvn-animation-editor: []
                 $elif currentRoutePattern == "/project/audio-effects-editor":
                   - rvn-audio-effects-editor: []
+                $elif currentRoutePattern == "/project/transform-editor":
+                  - rvn-transform-editor: []
                 $elif currentRoutePattern == "/project/about":
                   - rvn-about: []
                 $elif currentRoutePattern == "/project/config":

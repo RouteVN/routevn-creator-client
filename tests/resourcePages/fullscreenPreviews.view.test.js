@@ -10,7 +10,7 @@ import parse from "../../node_modules/@rettangoli/fe/node_modules/jempl/src/pars
 const previewOwners = [
   "pages/images",
   "pages/characterSprites",
-  "pages/transforms",
+  "pages/transformEditor",
   "pages/animationEditor",
   "components/commandLineBackground",
   "components/commandLineVisual",

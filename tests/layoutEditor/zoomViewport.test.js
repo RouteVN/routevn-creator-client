@@ -235,6 +235,47 @@ describe("rvn-zoom-viewport", () => {
     expect([viewport.x, viewport.y]).toEqual([0, 0]);
   });
 
+  it("leaves a one-finger drag to the content after a finger lifts unseen", () => {
+    const { viewport, canvas } = createViewport();
+    const moves = vi.fn();
+    canvas.addEventListener("pointermove", moves);
+
+    // The first finger's pointerup never reaches the workspace, as may
+    // happen when iOS takes over a long press. The next finger lands alone,
+    // so it is primary.
+    pointer(canvas, "pointerdown", 1, 50, 100);
+    pointer(canvas, "pointerdown", 2, 150, 100, { isPrimary: true });
+    pointer(canvas, "pointermove", 2, 250, 140);
+    pointer(canvas, "pointerup", 2, 250, 140);
+
+    expect([viewport.zoom, viewport.x, viewport.y]).toEqual([1, 0, 0]);
+    expect(moves).toHaveBeenCalledOnce();
+  });
+
+  it("reports the zoom of a pinch whose fingers lifted unseen", () => {
+    const { viewport, canvas } = createViewport();
+    const reported = [];
+    viewport.addEventListener("zoom-change", (event) =>
+      reported.push(event.detail.zoom),
+    );
+
+    pointer(canvas, "pointerdown", 1, 50, 100);
+    pointer(canvas, "pointerdown", 2, 150, 100);
+    pointer(canvas, "pointermove", 2, 250, 100);
+    // Neither pointerup reaches the workspace, so the next finger is the
+    // first one down.
+    pointer(canvas, "pointerdown", 3, 50, 100, { isPrimary: true });
+
+    expect(viewport.zoom).toBe(2);
+    expect(reported).toEqual([2]);
+
+    // A tap that clears a lost finger outside a pinch reports nothing.
+    pointer(canvas, "pointerup", 3, 50, 100);
+    pointer(canvas, "pointerdown", 4, 50, 100);
+    pointer(canvas, "pointerdown", 5, 50, 100, { isPrimary: true });
+    expect(reported).toEqual([2]);
+  });
+
   it("pans without limits with one finger on the space around the content", () => {
     const { viewport } = createViewport();
 
