@@ -684,6 +684,27 @@ describe("transform editor", () => {
     expect(page.view().savePreviewDisabled).toBe(false);
   });
 
+  it("releases the shared renderer before it saves on leaving", async () => {
+    const page = await createPage();
+    await page.press("ArrowLeft");
+    const order = [];
+    page.deps.graphicsService.destroy.mockImplementation(async () => {
+      order.push("destroy");
+    });
+    page.deps.projectService.updateTransform.mockImplementation(async () => {
+      order.push("save");
+      return { valid: true };
+    });
+
+    const cleaning = page.cleanup();
+    // Another page can start its renderer while the save runs.
+    expect(page.deps.graphicsService.destroy).toHaveBeenCalledOnce();
+    await cleaning;
+
+    expect(order).toEqual(["destroy", "save"]);
+    expect(page.savedData().map(({ data }) => data.x)).toEqual([959]);
+  });
+
   it("draws the same canvas on both tabs, with the outline only on Edit", async () => {
     const page = await createPage();
     const editElements = page.lastRender().elements;

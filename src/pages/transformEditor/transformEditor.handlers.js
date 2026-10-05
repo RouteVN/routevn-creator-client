@@ -372,8 +372,10 @@ export const handleBeforeMount = (deps) => {
     cleanupWindowLayout?.();
     cleanupWindowResize();
     cleanupKeyboardShortcuts();
-    const saved = await saveTransformValues(deps);
+    // The graphics service is shared, and the next page can start its
+    // renderer while the save below runs, so this page's goes first.
     void graphicsService.destroy();
+    const saved = await saveTransformValues(deps);
     if (!saved) {
       throw new Error("Failed to save transform during cleanup.");
     }
