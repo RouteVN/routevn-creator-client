@@ -1458,7 +1458,7 @@ textStyleEditorPage:
   failedSavePreview: "Failed to save the text style preview."
   failedSaveTextStyle: "Failed to save text style."
   outlineSectionLabel: "Outline"
-  previewAlignmentDescription: "Only changes how this preview shows the text. Nothing is saved."
+  previewAlignmentDescription: "Saved with Save Preview. It only changes editor previews; layouts use the text style's own alignment."
   previewAlignmentLabel: "Text Alignment"
   previewTextDescription: "Shown for this text style on the text styles page. When it is empty, the name shows."
   previewTitle: "Preview"

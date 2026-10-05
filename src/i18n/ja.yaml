@@ -1458,7 +1458,7 @@ textStyleEditorPage:
   failedSavePreview: "テキストスタイルのプレビューを保存できませんでした。"
   failedSaveTextStyle: "テキストスタイルを保存できませんでした。"
   outlineSectionLabel: "アウトライン"
-  previewAlignmentDescription: "このプレビューでのテキストの表示だけが変わります。保存はされません。"
+  previewAlignmentDescription: "「プレビューを保存」で保存されます。エディターのプレビューにだけ使われ、レイアウトではテキストスタイル自体の配置が使われます。"
   previewAlignmentLabel: "テキスト配置"
   previewTextDescription: "テキストスタイルのページで、このテキストスタイルに表示されます。空のときは名前が表示されます。"
   previewTitle: "プレビュー"

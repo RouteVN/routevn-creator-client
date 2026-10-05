@@ -1458,7 +1458,7 @@ textStyleEditorPage:
   failedSavePreview: "บันทึกตัวอย่างรูปแบบข้อความไม่สำเร็จ"
   failedSaveTextStyle: "บันทึกรูปแบบข้อความไม่สำเร็จ"
   outlineSectionLabel: "เส้นขอบ"
-  previewAlignmentDescription: "เปลี่ยนเฉพาะการแสดงข้อความในตัวอย่างนี้ ไม่มีการบันทึก"
+  previewAlignmentDescription: "บันทึกด้วย “บันทึกตัวอย่าง” มีผลเฉพาะตัวอย่างในตัวแก้ไข เลย์เอาต์จะใช้การจัดแนวของรูปแบบข้อความเอง"
   previewAlignmentLabel: "การจัดแนวข้อความ"
   previewTextDescription: "แสดงสำหรับรูปแบบข้อความนี้ในหน้ารูปแบบข้อความ เมื่อเว้นว่างไว้ จะแสดงชื่อแทน"
   previewTitle: "ตัวอย่าง"

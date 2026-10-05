@@ -102,12 +102,12 @@ export const createInitialState = () => ({
   // weight stays available with that font even when the font cannot draw
   // it, as it was before.
   openedFont: { fontId: undefined, fontWeight: undefined },
-  // The preview text saves only with Save Preview, and is not part of the
-  // undo history.
+  // The preview text and alignment save only with Save Preview, and are not
+  // part of the undo history.
   previewText: "",
-  // How the editor preview aligns its text; only for this visit.
   previewAlign: "center",
   savedPreviewText: "",
+  savedPreviewAlign: "center",
   rightPanelMode: "edit",
   // Remounts the form, for values that change outside it (undo, redo, a
   // weight the new font cannot draw) or that it shows differently from how
@@ -150,6 +150,8 @@ export const loadTextStyle = (
   };
   state.previewText = item.previewText ?? "";
   state.savedPreviewText = state.previewText;
+  state.previewAlign = item.previewAlign ?? "center";
+  state.savedPreviewAlign = state.previewAlign;
   state.editHistory = createEditHistory();
   state.editHistoryBaseline = state.values;
   state.colorsData = colorsData ?? createEmptyCollection();
@@ -258,15 +260,32 @@ export const setPreviewAlign = ({ state }, { align } = {}) => {
   }
 };
 
-export const selectHasUnsavedPreviewText = ({ state }) =>
-  state.previewText !== state.savedPreviewText;
+// The preview settings Save Preview has to write: only those that changed.
+export const selectUnsavedPreviewSettings = ({ state }) => {
+  const settings = {};
+  if (state.previewText !== state.savedPreviewText) {
+    settings.previewText = state.previewText;
+  }
+  if (state.previewAlign !== state.savedPreviewAlign) {
+    settings.previewAlign = state.previewAlign;
+  }
+  return settings;
+};
 
 export const setPreviewText = ({ state }, { previewText } = {}) => {
   state.previewText = previewText;
 };
 
-export const markPreviewTextSaved = ({ state }, { previewText } = {}) => {
-  state.savedPreviewText = previewText;
+export const markPreviewSettingsSaved = (
+  { state },
+  { previewText, previewAlign } = {},
+) => {
+  if (previewText !== undefined) {
+    state.savedPreviewText = previewText;
+  }
+  if (previewAlign !== undefined) {
+    state.savedPreviewAlign = previewAlign;
+  }
 };
 
 export const selectRightPanelMode = ({ state }) => state.rightPanelMode;

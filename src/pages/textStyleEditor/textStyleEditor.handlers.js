@@ -434,8 +434,8 @@ export const handlePreviewTextInput = (deps, payload) => {
   render();
 };
 
-// Aligns the editor preview's text. It is only how this page shows the
-// preview: nothing saves, and it is not an edit to undo.
+// Aligns the editor preview's text. Save Preview saves it as the text
+// style's previewAlign, which only editors use; it is not an edit to undo.
 export const handlePreviewAlignChange = (deps, payload) => {
   const { render, store } = deps;
   const { value } = payload._event.detail;
@@ -460,8 +460,8 @@ export const handleSavePreviewClick = async (deps) => {
       return;
     }
 
-    const previewText = store.selectPreviewText();
-    if (store.selectHasUnsavedPreviewText()) {
+    const previewSettings = store.selectUnsavedPreviewSettings();
+    if (Object.keys(previewSettings).length > 0) {
       const updateAttempt = await runResourcePageMutation({
         appService,
         fallbackMessage: copy.failedSavePreview,
@@ -469,13 +469,13 @@ export const handleSavePreviewClick = async (deps) => {
         action: () =>
           projectService.updateTextStyle({
             textStyleId: store.selectTextStyleId(),
-            data: { previewText },
+            data: previewSettings,
           }),
       });
       if (!updateAttempt.ok) {
         return;
       }
-      store.markPreviewTextSaved({ previewText });
+      store.markPreviewSettingsSaved(previewSettings);
     }
     appService.showToast({ message: copy.textStylePreviewSaved });
   } finally {

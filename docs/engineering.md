@@ -1366,9 +1366,11 @@ cannot draw the current weight moves the weight to the font's own in the same
 step; a weight the text style had with its font when the page opened stays
 available. Adding an outline color starts the outline at 2px. Preview holds
 the preview text, which the text styles page shows (the name when it is
-empty), and **Save Preview**, which saves the values and then the preview
-text; the preview text is not part of the history, and unsaved preview text is
-left behind on leaving. Edits save on their own 300ms after the last one and on
+empty), a Text Alignment control for the editor preview (saved as the text
+style's `previewAlign`, from creator-model 1.16.0; layouts keep using
+`align`), and **Save Preview**, which saves the values and then whichever of
+the preview text and alignment changed. Neither is part of the history, and
+unsaved ones are left behind on leaving. Edits save on their own 300ms after the last one and on
 leaving, through `enqueueSceneEditorPersistence`, as in the transform editor,
 and an undo back to the saved values saves nothing. Font files follow the
 asset failure policy: `rvn-font-preview` names the files it could not load in

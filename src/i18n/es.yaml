@@ -1458,7 +1458,7 @@ textStyleEditorPage:
   failedSavePreview: "No se pudo guardar la vista previa del estilo de texto."
   failedSaveTextStyle: "No se pudo guardar el estilo de texto."
   outlineSectionLabel: "Contorno"
-  previewAlignmentDescription: "Solo cambia cómo se muestra el texto en esta vista previa. No se guarda nada."
+  previewAlignmentDescription: "Se guarda con Guardar vista previa. Solo cambia las vistas previas del editor; los diseños usan la alineación propia del estilo de texto."
   previewAlignmentLabel: "Alineación del texto"
   previewTextDescription: "Se muestra para este estilo de texto en la página de estilos de texto. Si está vacío, se muestra el nombre."
   previewTitle: "Vista previa"

@@ -791,7 +791,7 @@ describe("text style editor", () => {
     expect(page.deps.projectService.createFont).not.toHaveBeenCalled();
   });
 
-  it("aligns the preview text left, center or right for this visit only", async () => {
+  it("aligns the preview text left, center or right, and Save Preview saves the alignment", async () => {
     const page = await createPage();
     expect(page.view().previewAlign).toBe("center");
     expect(page.view().previewAlignOptions).toEqual([
@@ -809,11 +809,27 @@ describe("text style editor", () => {
     });
     expect(page.view().previewAlign).toBe("right");
 
-    // It is only how the editor shows the preview: no edit, nothing saves.
+    // It is not an edit: nothing to undo, and nothing autosaves.
     expect(page.state().editHistory.undo).toHaveLength(0);
     await wait(AUTOSAVE_WAIT_MS);
     expect(page.savedData()).toEqual([]);
+
+    // Save Preview saves only the preview setting that changed.
+    await handleSavePreviewClick(page.deps);
+    expect(page.savedData()).toEqual([
+      { textStyleId: "text-style-1", data: { previewAlign: "right" } },
+    ]);
+    await handleSavePreviewClick(page.deps);
+    expect(page.savedData()).toHaveLength(1);
   });
+
+  it("opens with the saved preview alignment", async () => {
+    const page = await createPage({
+      item: { ...createSavedTextStyle(), previewAlign: "left" },
+    });
+    expect(page.view().previewAlign).toBe("left");
+  });
+
   it("previews the preview text without saving it, and Save Preview saves it after the values", async () => {
     const page = await createPage();
     await page.changeField("fontSize", 32);
