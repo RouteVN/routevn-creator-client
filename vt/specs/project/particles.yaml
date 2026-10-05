@@ -1,6 +1,6 @@
 ---
 title: Particles Workflow
-description: Covers the particles page create flow, particle editor, detail state, edit dialog, and empty search state.
+description: Covers the particles page add dialog, the particle editor's Edit and Preview tabs with a texture, the detail state, the edit dialog, and the empty search state.
 url: /projects
 skipInitialScreenshot: true
 viewport:
@@ -75,83 +75,105 @@ steps:
     steps:
       - action: click
   - action: waitFor
-    selector: "#particleDialog"
-    state: visible
+    selector: "#addDialog[open]"
+    state: attached
     timeoutMs: 10000
-  - action: wait
-    ms: 700
-  - action: screenshot
-  - action: waitFor
-    selector: "#dialogTextureImageButton"
-    state: visible
-    timeoutMs: 5000
   - action: select
-    selector: "#dialogTextureImageButton"
+    selector: rtgl-form#addForm rtgl-input#field0 input
     steps:
-      - action: click
-  - action: waitFor
-    selector: "#previewImageSelectorDialog[open]"
-    state: visible
-    timeoutMs: 5000
-  - action: waitFor
-    selector: "#previewImageSelectorDialog #imageItemRef0x0[data-item-id]"
-    state: visible
-    timeoutMs: 5000
-  - action: select
-    selector: "#previewImageSelectorDialog #imageItemRef0x0[data-item-id]"
-    steps:
-      - action: click
-  - action: select
-    selector: "#confirmPreviewImageSelection"
-    steps:
-      - action: click
-  - action: waitFor
-    selector: "#previewImageSelectorDialog"
-    state: hidden
-    timeoutMs: 5000
+      - action: clear
+      - action: write
+        value: VT Particle
   - action: wait
     ms: 300
   - action: screenshot
   - action: select
-    selector: "#particleDialog #particleSubmitButton"
+    selector: "rtgl-form#addForm rtgl-button[data-action-id=submit]"
     steps:
       - action: click
   - action: waitFor
-    selector: "#particleDialog rtgl-input#field2 input"
+    selector: rvn-particle-editor
+    state: attached
+    timeoutMs: 20000
+  - action: assert
+    type: url
+    value: /project/particle-editor
+  - action: waitFor
+    selector: "rvn-particle-editor rtgl-tabs#rightPanelModeTabs[selected-tab='edit']"
     state: attached
     timeoutMs: 5000
   - action: waitFor
-    selector: "#particleDialog #particleFormTabsScroll"
+    selector: "rvn-particle-editor #canvas canvas"
+    state: attached
+    timeoutMs: 20000
+  - action: wait
+    ms: 1200
+  - action: screenshot
+  - action: select
+    selector: "rvn-particle-editor rtgl-tabs#formTabs [data-id='appearance']"
+    steps:
+      - action: click
+  - action: waitFor
+    selector: "rvn-particle-editor rtgl-tabs#formTabs[selected-tab='appearance']"
+    state: attached
+    timeoutMs: 5000
+  - action: waitFor
+    selector: "rvn-particle-editor #textureImageButton"
     state: visible
     timeoutMs: 5000
   - action: select
-    selector: "#particleDialog rtgl-tabs#tabs [data-id='movement']"
+    selector: "rvn-particle-editor #textureImageButton"
     steps:
       - action: click
   - action: waitFor
-    selector: "#particleDialog rtgl-tabs#tabs[selected-tab='movement']"
+    selector: "rvn-particle-editor #imageSelectorDialog[open]"
     state: attached
     timeoutMs: 5000
-  - action: screenshot
+  - action: waitFor
+    selector: "rvn-particle-editor #imageSelectorDialog #imageItemRef0x0[data-item-id]"
+    state: visible
+    timeoutMs: 5000
   - action: select
-    selector: "#particleDialog rtgl-tabs#tabs [data-id='basics']"
+    selector: "rvn-particle-editor #imageSelectorDialog #imageItemRef0x0[data-item-id]"
+    steps:
+      - action: click
+  - action: select
+    selector: "rvn-particle-editor #confirmImageSelection"
     steps:
       - action: click
   - action: waitFor
-    selector: "#particleDialog rtgl-tabs#tabs[selected-tab='basics']"
-    state: attached
+    selector: "rvn-particle-editor #imageSelectorDialog"
+    state: hidden
     timeoutMs: 5000
   - action: wait
-    ms: 400
+    ms: 1200
   - action: screenshot
   - action: select
-    selector: "#particleDialog #particleSubmitButton"
+    selector: "rvn-particle-editor rtgl-tabs#rightPanelModeTabs [data-id='preview']"
     steps:
       - action: click
   - action: waitFor
-    selector: "#particleDialog"
-    state: hidden
-    timeoutMs: 60000
+    selector: "rvn-particle-editor rtgl-tabs#rightPanelModeTabs[selected-tab='preview']"
+    state: attached
+    timeoutMs: 5000
+  - action: waitFor
+    selector: "rvn-particle-editor #savePreviewButton"
+    state: visible
+    timeoutMs: 5000
+  - action: wait
+    ms: 500
+  - action: screenshot
+  - action: select
+    selector: "rvn-particle-editor #backButton"
+    steps:
+      - action: click
+  - action: waitFor
+    selector: rvn-particles
+    state: attached
+    timeoutMs: 10000
+  - action: assert
+    type: url
+    value: /project/particles
   - action: wait
     ms: 500
   - action: select
@@ -170,16 +192,16 @@ steps:
     steps:
       - action: click
   - action: waitFor
-    selector: "#particleDialog"
-    state: visible
-    timeoutMs: 10000
+    selector: "#editDialog[open]"
+    state: attached
+    timeoutMs: 5000
   - action: wait
-    ms: 700
+    ms: 300
   - action: screenshot
   - action: keypress
     key: Escape
   - action: waitFor
-    selector: "#particleDialog"
+    selector: "#editDialog"
     state: hidden
     timeoutMs: 10000
   - action: wait
