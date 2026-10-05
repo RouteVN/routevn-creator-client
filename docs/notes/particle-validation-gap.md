@@ -30,14 +30,14 @@ a check against real saved projects).
 
 ## What protects us instead
 
-- **Write:** `buildParticlePayload` runs `normalizeParticleModules`, so the form
-  writes valid values.
+- **Write:** the particle editor's `buildParticleEffectData` runs
+  `normalizeParticleModules`, so the form writes valid values.
 - **Render:** `createRenderableParticleData` and `createParticlePreviewState`
   run the same normalizer on a copy, so data saved earlier is repaired when it
   is rendered, without a migration. Every client path that hands particle
   modules to route-graphics goes through one of them: the scene layout builder,
-  the engine resources, the particles page preview and the asset-package
-  previews.
+  the engine resources, the particle editor canvas, the particles page detail
+  preview and the asset-package previews.
 
 ## What is not covered
 
