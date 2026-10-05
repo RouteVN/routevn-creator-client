@@ -630,7 +630,7 @@ template:
                 $else:
                   - 'rtgl-button#previewLoopButton sq v=${previewLoopButtonVariant} pre=loop aria-label="${loopPreviewLabel}" aria-pressed="${previewLoopEnabled}" title="${loopPreviewLabel}"': null
               - 'rtgl-button#playButton s=sm aria-label="${playButton}" aria-pressed="${previewPlaying}"': ${playButton}
-          - rtgl-view h=1fg sv w=f p=md g=lg:
+          - 'rtgl-view h=1fg sv w=f p=md g=lg style="container-type: size;"':
               - 'rtgl-view#animationEditorCanvasBackground d=v w=f g=md p=${previewCanvasPadding} bgc=bg style="box-sizing: border-box; min-width: 0; background-image: radial-gradient(circle, var(--input) 1px, transparent 1px); background-size: 24px 24px;"':
                   - 'rtgl-view pos=rel style="width: ${previewCanvasMaxWidth}; max-width: 100%; margin-left: auto; margin-right: auto; aspect-ratio: ${canvasAspectRatio};"':
                       - rtgl-view pos=abs cor=full:

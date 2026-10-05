@@ -204,6 +204,11 @@ describe("animationEditor view", () => {
       'rvn-resizable-panel#timelineDetailsPanel data-timeline-selection-surface=true panel-type=detail-panel w=270 min-w=200 max-w=500 resize-side="left"',
     );
     expect(view).toContain("rtgl-view#editorSurface");
+    // The canvas width is in the body's container units, so it is at most
+    // half the height the body gets.
+    expect(view).toContain(
+      `rtgl-view h=1fg sv w=f p=md g=lg style="container-type: size;"`,
+    );
     expect(view).toContain(
       "width: ${previewCanvasMaxWidth}; max-width: 100%; margin-left: auto; margin-right: auto; aspect-ratio: ${canvasAspectRatio};",
     );
