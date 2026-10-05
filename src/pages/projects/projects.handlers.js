@@ -16,6 +16,7 @@ import {
 import { createProjectRoutePayload } from "../../internal/localProjectRoute.js";
 import { parseProjectImportUrl } from "../../internal/projectImportUrl.js";
 import { getProjectImportErrorMessage } from "../../internal/projectImportErrors.js";
+import { ROUTEVN_CONTACT_URL } from "../../internal/routevnUrls.js";
 import { resolveUpdatesEnabled } from "../../internal/updates.js";
 import { readTestCrashKind } from "../../internal/testCrashes.js";
 import {
@@ -594,6 +595,11 @@ export const handleAppVersionClick = (deps, payload) => {
     type: "item",
     value: "appearance",
   });
+  items.push({
+    label: copy.contactMenuItem,
+    type: "item",
+    value: "contact",
+  });
 
   const menuPayload = {
     x: rect.left + rect.width / 2,
@@ -620,6 +626,12 @@ export const handleAppVersionMenuClickItem = async (deps, payload) => {
   const item = detail.item || detail;
 
   store.closeAppVersionMenu();
+
+  if (item.value === "contact") {
+    appService.openUrl(ROUTEVN_CONTACT_URL);
+    render();
+    return;
+  }
 
   if (item.value === "language") {
     store.openLanguageDialog({

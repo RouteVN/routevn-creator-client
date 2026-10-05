@@ -39,6 +39,7 @@ projectsPage:
   cloudTitle: "云端项目"
   browseButton: "浏览"
   clickToUpload: "点击上传"
+  contactMenuItem: "联系我们"
   createButton: "创建"
   createCloudButton: "创建云端项目"
   createCloudProjectTitle: "创建云端项目"

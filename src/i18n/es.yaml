@@ -39,6 +39,7 @@ projectsPage:
   cloudTitle: "Proyectos en la nube"
   browseButton: "Examinar"
   clickToUpload: "Haz clic para subir"
+  contactMenuItem: "Contacto"
   createButton: "Crear"
   createCloudButton: "Crear proyecto en la nube"
   createCloudProjectTitle: "Crear proyecto en la nube"

@@ -39,6 +39,7 @@ projectsPage:
   cloudTitle: "クラウドプロジェクト"
   browseButton: "参照"
   clickToUpload: "クリックしてアップロード"
+  contactMenuItem: "お問い合わせ"
   createButton: "作成"
   createCloudButton: "クラウドプロジェクトを作成"
   createCloudProjectTitle: "クラウドプロジェクトを作成"
