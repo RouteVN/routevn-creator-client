@@ -125,7 +125,7 @@ steps:
     ms: 800
   - action: screenshot
   - action: select
-    selector: "rvn-text-style-editor rtgl-form#textStyleForm rtgl-input-number#field1 input"
+    selector: "rvn-text-style-editor rtgl-form#textStyleForm rtgl-input-number[data-field-name=fontSize] input"
     steps:
       - action: clear
       - action: write
@@ -145,11 +145,11 @@ steps:
     steps:
       - action: click
   - action: waitFor
-    selector: "rvn-text-style-editor rtgl-form#textStyleForm rtgl-slider-input#field8 rtgl-input-number#input input"
+    selector: "rvn-text-style-editor rtgl-form#textStyleForm rtgl-slider-input[data-field-name=shadowBlur] rtgl-input-number#input input"
     state: attached
     timeoutMs: 5000
   - action: select
-    selector: "rvn-text-style-editor rtgl-form#textStyleForm rtgl-slider-input#field8 rtgl-input-number#input input"
+    selector: "rvn-text-style-editor rtgl-form#textStyleForm rtgl-slider-input[data-field-name=shadowBlur] rtgl-input-number#input input"
     steps:
       - action: clear
       - action: write
