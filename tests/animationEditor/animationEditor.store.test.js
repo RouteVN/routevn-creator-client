@@ -201,12 +201,12 @@ describe("animationEditor.store", () => {
     ).toBe(false);
   });
 
-  it("limits the preview canvas to half the viewport height", () => {
+  it("limits the preview canvas to half the editor body's height", () => {
     const state = createInitialState();
 
     expect(selectViewData({ state, i18n: EN_I18N })).toMatchObject({
       canvasAspectRatio: "1920 / 1080",
-      previewCanvasMaxWidth: "min(100%, 88.8889vh)",
+      previewCanvasMaxWidth: "min(100%, 88.8889cqh)",
     });
 
     setProjectResolution(
@@ -216,7 +216,7 @@ describe("animationEditor.store", () => {
 
     expect(selectViewData({ state, i18n: EN_I18N })).toMatchObject({
       canvasAspectRatio: "1080 / 1920",
-      previewCanvasMaxWidth: "min(100%, 28.125vh)",
+      previewCanvasMaxWidth: "min(100%, 28.125cqh)",
     });
   });
 

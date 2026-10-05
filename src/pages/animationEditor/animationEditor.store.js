@@ -4459,8 +4459,11 @@ export const selectViewData = ({ state, i18n }) => {
     canvasAspectRatio: formatProjectResolutionAspectRatio(
       state.projectResolution,
     ),
+    // Half the editor body's height (its container units), so the timeline
+    // and preview panels keep the other half on every screen size.
     previewCanvasMaxWidth: formatHalfViewportCanvasMaxWidth(
       state.projectResolution,
+      { heightUnit: "cqh" },
     ),
     updateProperties,
     previousProperties,
