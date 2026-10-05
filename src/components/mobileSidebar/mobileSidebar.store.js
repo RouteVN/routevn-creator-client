@@ -75,6 +75,7 @@ const userInterfaceItems = [
   },
   {
     id: "text-styles",
+    resourceTypeKey: "textStyles",
     label: "Text Styles",
     path: "/project/text-styles",
     icon: "typography",
@@ -153,21 +154,25 @@ const settingsItems = [
 const assetsSections = [
   {
     id: "assets",
+    titleKey: "assetsTitle",
     label: "Assets",
     items: assetItems,
   },
   {
     id: "animated-assets",
+    titleKey: "animatedAssetsTitle",
     label: "Animated Assets",
     items: animatedAssetItems,
   },
   {
     id: "user-interface",
+    titleKey: "userInterfaceTitle",
     label: "User Interface",
     items: userInterfaceItems,
   },
   {
     id: "system",
+    titleKey: "systemTitle",
     label: "System",
     items: systemItems,
   },
@@ -176,6 +181,7 @@ const assetsSections = [
 const releaseSections = [
   {
     id: "release",
+    titleKey: "releaseTitle",
     label: "Release",
     items: releaseItems,
   },
@@ -184,6 +190,7 @@ const releaseSections = [
 const settingsSections = [
   {
     id: "settings",
+    titleKey: "settingsTitle",
     label: "Settings",
     items: settingsItems,
   },
@@ -246,10 +253,12 @@ const buildSceneMapSections = (state) => {
   const sections = [
     {
       id: "scene-map",
+      titleKey: "sceneMapTitle",
       label: "Scene Map",
       items: [
         {
           id: "scene-map",
+          labelKey: "sceneMapTitle",
           label: "Scene Map",
           path: "/project/scenes",
           clearPayloadKeys: ["s", "sceneId", "sectionId"],
@@ -262,6 +271,7 @@ const buildSceneMapSections = (state) => {
   if (recentSceneItems.length > 0) {
     sections.push({
       id: "recently-visited",
+      titleKey: "recentlyVisitedTitle",
       label: "Recently Visited",
       items: recentSceneItems,
     });
@@ -327,8 +337,10 @@ export const selectViewData = ({ state, props = {}, i18n }) => {
   const sections = getSectionsByVariant(state)[variant] ?? assetsSections;
   const selectedResourceId = selectCurrentResourceId();
   const resourceTypesCopy = i18n?.resourceTypes ?? {};
+  const sidebarCopy = i18n?.sidebarPage ?? {};
   const viewSections = sections.map((section) => ({
     ...section,
+    label: sidebarCopy[section.titleKey] ?? section.label,
     items: section.items
       .filter(
         (item) =>
@@ -337,7 +349,10 @@ export const selectViewData = ({ state, props = {}, i18n }) => {
       )
       .map((item) => ({
         ...item,
-        label: resourceTypesCopy[item.id] ?? item.label,
+        label:
+          (item.labelKey
+            ? sidebarCopy[item.labelKey]
+            : resourceTypesCopy[item.resourceTypeKey ?? item.id]) ?? item.label,
         bgc: item.id === selectedResourceId ? "ac" : "bg",
       })),
   }));

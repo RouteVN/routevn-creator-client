@@ -6,6 +6,7 @@ import {
   setRecentSceneIds,
   setScenesData,
 } from "../../src/components/mobileSidebar/mobileSidebar.store.js";
+import { JA_I18N } from "../support/i18n.js";
 
 const createScenesData = () => ({
   tree: [{ id: "scene-1" }, { id: "scene-2" }, { id: "folder-1" }],
@@ -146,4 +147,33 @@ describe("mobileSidebar scene map sections", () => {
       }),
     );
   });
+
+  it.each(["assets", "release", "settings", "scene-map"])(
+    "localizes the %s section headings and navigation items",
+    (variant) => {
+      const state = createInitialState();
+      setScenesData({ state }, { scenesData: createScenesData() });
+      setRecentSceneIds({ state }, { sceneIds: ["scene-1"] });
+
+      const viewData = selectViewData({
+        state,
+        props: { variant },
+        i18n: JA_I18N,
+      });
+      const labels = viewData.sections.flatMap((section) => [
+        section.label,
+        ...section.items
+          .filter((item) => !item.id.startsWith("scene:"))
+          .map((item) => item.label),
+      ]);
+
+      expect(labels.length).toBeGreaterThan(0);
+      expect(
+        labels.filter(
+          // Japanese keeps the abbreviation UI for User Interface.
+          (label) => label !== "UI" && /^[\x20-\x7e]+$/.test(label),
+        ),
+      ).toEqual([]);
+    },
+  );
 });
