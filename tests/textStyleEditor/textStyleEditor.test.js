@@ -16,6 +16,7 @@ import {
   handleFontSelectAddOptionClick,
   handleFontSelectChange,
   handlePreviewFontLoadError,
+  handlePreviewAlignChange,
   handlePreviewTextInput,
   handleRedoButtonClick,
   handleRightPanelModeChange,
@@ -790,6 +791,29 @@ describe("text style editor", () => {
     expect(page.deps.projectService.createFont).not.toHaveBeenCalled();
   });
 
+  it("aligns the preview text left, center or right for this visit only", async () => {
+    const page = await createPage();
+    expect(page.view().previewAlign).toBe("center");
+    expect(page.view().previewAlignOptions).toEqual([
+      { value: "left", label: "Left" },
+      { value: "center", label: "Center" },
+      { value: "right", label: "Right" },
+    ]);
+
+    handlePreviewAlignChange(page.deps, {
+      _event: { detail: { value: "right" } },
+    });
+    expect(page.view().previewAlign).toBe("right");
+    handlePreviewAlignChange(page.deps, {
+      _event: { detail: { value: "justify" } },
+    });
+    expect(page.view().previewAlign).toBe("right");
+
+    // It is only how the editor shows the preview: no edit, nothing saves.
+    expect(page.state().editHistory.undo).toHaveLength(0);
+    await wait(AUTOSAVE_WAIT_MS);
+    expect(page.savedData()).toEqual([]);
+  });
   it("previews the preview text without saving it, and Save Preview saves it after the values", async () => {
     const page = await createPage();
     await page.changeField("fontSize", 32);

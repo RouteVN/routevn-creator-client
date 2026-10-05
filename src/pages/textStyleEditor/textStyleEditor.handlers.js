@@ -434,6 +434,15 @@ export const handlePreviewTextInput = (deps, payload) => {
   render();
 };
 
+// Aligns the editor preview's text. It is only how this page shows the
+// preview: nothing saves, and it is not an edit to undo.
+export const handlePreviewAlignChange = (deps, payload) => {
+  const { render, store } = deps;
+  const { value } = payload._event.detail;
+  store.setPreviewAlign({ align: value });
+  render();
+};
+
 // Saves the preview text, which the text styles page shows, after the
 // values. The button is disabled while it saves, so a double click saves
 // once.

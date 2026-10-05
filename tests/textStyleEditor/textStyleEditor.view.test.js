@@ -36,6 +36,10 @@ describe("text style editor view", () => {
     expect(view).toContain('style="${previewAreaStyle} ');
     // The preview box is half the preview area's height, centered in it.
     expect(view).toContain("flex-direction: column; justify-content: center;");
+    // The preview text cannot be selected, and a long press opens no menu.
+    expect(view).toContain(
+      "user-select: none; -webkit-user-select: none; -webkit-touch-callout: none;",
+    );
     expect(view).toContain(
       'rtgl-view#textStylePreviewFrame w=f bw=xs bc=bo br=md style="${previewFrameStyle} flex: 0 0 auto; min-width: 0; min-height: 0; overflow: hidden;"',
     );
@@ -63,6 +67,14 @@ describe("text style editor view", () => {
         /rtgl-form#textStyleForm key=\$\{textStyleFormKey\} :defaultValues=\$\{formValues\} :form=\$\{textStyleForm\} w=f ph=md:/g,
       ),
     ).toBe(2);
+    // The preview aligns its text as the Preview tab's control sets it.
+    expect(view).toContain("textAlign=${previewAlign}: null");
+    expect(
+      count(
+        /rtgl-segmented-control#previewAlignControl w=f no-clear :selectedValue=\$\{previewAlign\} :options=\$\{previewAlignOptions\}/g,
+      ),
+    ).toBe(2);
+    expect(view).toContain("handler: handlePreviewAlignChange");
     // The preview text can span several lines.
     expect(count(/rtgl-textarea#previewTextInput w=f rows=3 /g)).toBe(2);
     expect(count(/\$\{rightPanelEditStyle\}/g)).toBe(2);

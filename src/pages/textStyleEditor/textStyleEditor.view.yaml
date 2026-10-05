@@ -57,6 +57,10 @@ refs:
         handler: handlePreviewTextInput
       value-change:
         handler: handlePreviewTextInput
+  previewAlignControl:
+    eventListeners:
+      value-change:
+        handler: handlePreviewAlignChange
   addColorDialog:
     eventListeners:
       close:
@@ -102,9 +106,9 @@ template:
                   - 'rtgl-button#undoButton sq pre=undo v=ol ?disabled=${undoDisabled} aria-label="${undoLabel}" title="${undoLabel}"': null
                   - 'rtgl-button#redoButton sq pre=redo v=ol ?disabled=${redoDisabled} aria-label="${redoLabel}" title="${redoLabel}"': null
           - 'rtgl-view d=v h=1fg w=f style="min-height: 0; container-type: size;"':
-              - 'div style="${previewAreaStyle} display: flex; flex-direction: column; justify-content: center; width: 100%; padding: 16px; box-sizing: border-box; background-color: var(--background); background-image: radial-gradient(circle, var(--input) 1px, transparent 1px); background-size: 24px 24px;"':
+              - 'div style="${previewAreaStyle} display: flex; flex-direction: column; justify-content: center; width: 100%; padding: 16px; box-sizing: border-box; user-select: none; -webkit-user-select: none; -webkit-touch-callout: none; background-color: var(--background); background-image: radial-gradient(circle, var(--input) 1px, transparent 1px); background-size: 24px 24px;"':
                   - 'rtgl-view#textStylePreviewFrame w=f bw=xs bc=bo br=md style="${previewFrameStyle} flex: 0 0 auto; min-width: 0; min-height: 0; overflow: hidden;"':
-                      - rvn-font-preview#textStylePreview mode=live h=f :fontFamilies=${previewFontFamilies} previewText="${previewText}" :fileIds=${previewFontFileIds} :fontWeightDescriptors=${previewFontWeightDescriptors} fontSize=${previewFontSize} lineHeight=${previewLineHeight} color=${previewColor} strokeColor=${previewStrokeColor} strokeWidth=${previewStrokeWidth} fontWeight=${previewFontWeight} shadowColor=${previewShadowColor} shadowAlpha=${previewShadowAlpha} shadowBlur=${previewShadowBlur} shadowOffsetX=${previewShadowOffsetX} shadowOffsetY=${previewShadowOffsetY} width=f padding=24 av=c textAlign=center: null
+                      - rvn-font-preview#textStylePreview mode=live h=f :fontFamilies=${previewFontFamilies} previewText="${previewText}" :fileIds=${previewFontFileIds} :fontWeightDescriptors=${previewFontWeightDescriptors} fontSize=${previewFontSize} lineHeight=${previewLineHeight} color=${previewColor} strokeColor=${previewStrokeColor} strokeWidth=${previewStrokeWidth} fontWeight=${previewFontWeight} shadowColor=${previewShadowColor} shadowAlpha=${previewShadowAlpha} shadowBlur=${previewShadowBlur} shadowOffsetX=${previewShadowOffsetX} shadowOffsetY=${previewShadowOffsetY} width=f padding=24 av=c textAlign=${previewAlign}: null
               - $if showMobilePanels:
                   - 'rtgl-view w=f h=1fg d=v bwt=xs style="min-height: 0;"':
                       - rtgl-view h=48 w=f d=h bgc=bg bwb=xs ph=md av=c:
@@ -125,6 +129,11 @@ template:
                                   - rtgl-text s=sm: ${previewTextLabel}
                                   - rtgl-text s=xs c=mu-fg: ${previewTextDescription}
                               - rtgl-textarea#previewTextInput w=f rows=3 value="${previewTextInputValue}" placeholder="${textStyleName}": null
+                          - rtgl-view d=v w=f g=sm ph=md mt=lg:
+                              - rtgl-view d=v w=f g=xs:
+                                  - rtgl-text s=sm: ${previewAlignmentLabel}
+                                  - rtgl-text s=xs c=mu-fg: ${previewAlignmentDescription}
+                              - rtgl-segmented-control#previewAlignControl w=f no-clear :selectedValue=${previewAlign} :options=${previewAlignOptions}: null
                           - 'rtgl-view h=25vh aria-hidden=true style="flex-shrink: 0;"': null
       - $if showRightPanel:
           - rvn-resizable-panel panel-type=detail-panel show-on-touch w=300 min-w=200 max-w=500 resize-side="left":
@@ -147,6 +156,11 @@ template:
                               - rtgl-text s=sm: ${previewTextLabel}
                               - rtgl-text s=xs c=mu-fg: ${previewTextDescription}
                           - rtgl-textarea#previewTextInput w=f rows=3 value="${previewTextInputValue}" placeholder="${textStyleName}": null
+                      - rtgl-view d=v w=f g=sm ph=md mt=lg:
+                          - rtgl-view d=v w=f g=xs:
+                              - rtgl-text s=sm: ${previewAlignmentLabel}
+                              - rtgl-text s=xs c=mu-fg: ${previewAlignmentDescription}
+                          - rtgl-segmented-control#previewAlignControl w=f no-clear :selectedValue=${previewAlign} :options=${previewAlignOptions}: null
                       - 'rtgl-view h=25vh aria-hidden=true style="flex-shrink: 0;"': null
   - rtgl-dialog#addColorDialog ?open=${isAddColorDialogOpen} s=sm md-layout=fixed-top p=none:
       - $if isAddColorDialogOpen:

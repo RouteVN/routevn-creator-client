@@ -105,6 +105,8 @@ export const createInitialState = () => ({
   // The preview text saves only with Save Preview, and is not part of the
   // undo history.
   previewText: "",
+  // How the editor preview aligns its text; only for this visit.
+  previewAlign: "center",
   savedPreviewText: "",
   rightPanelMode: "edit",
   // Remounts the form, for values that change outside it (undo, redo, a
@@ -247,6 +249,14 @@ export const applyEditHistoryStep = ({ state }, { direction } = {}) => {
 };
 
 export const selectPreviewText = ({ state }) => state.previewText;
+
+const PREVIEW_ALIGN_VALUES = ["left", "center", "right"];
+
+export const setPreviewAlign = ({ state }, { align } = {}) => {
+  if (PREVIEW_ALIGN_VALUES.includes(align)) {
+    state.previewAlign = align;
+  }
+};
 
 export const selectHasUnsavedPreviewText = ({ state }) =>
   state.previewText !== state.savedPreviewText;
@@ -474,6 +484,14 @@ export const selectViewData = ({ state, i18n }) => {
     previewTextLabel: copy.previewTextLabel,
     previewTextDescription: copy.previewTextDescription,
     previewTextInputValue: state.previewText,
+    previewAlign: state.previewAlign,
+    previewAlignmentLabel: copy.previewAlignmentLabel,
+    previewAlignmentDescription: copy.previewAlignmentDescription,
+    previewAlignOptions: [
+      { value: "left", label: copy.alignLeftOption },
+      { value: "center", label: copy.alignCenterOption },
+      { value: "right", label: copy.alignRightOption },
+    ],
     isAddColorDialogOpen: state.addColorDialog.open,
     addColorForm: createAddColorForm({
       folderOptions: createFolderOptions(state.colorsData, copy),
