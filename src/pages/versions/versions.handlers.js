@@ -15,6 +15,7 @@ import {
   isValidMacosBuildNumber,
 } from "../../internal/nativeApplicationVersion.js";
 import { isVisualTestMode } from "../../internal/visualTestMode.js";
+import { mountMobileResourceWindowLayout } from "../../internal/ui/resourcePages/mobileResourcePage.js";
 import { validatePlatformDetails } from "../../internal/platformDetailsValidation.js";
 
 const getVersionDescription = (version) => {
@@ -550,6 +551,7 @@ export const handleBeforeMount = (deps) => {
   if (cachedVersions !== undefined) {
     store.setVersions({ versions: cachedVersions });
   }
+  return mountMobileResourceWindowLayout(deps);
 };
 
 export const handleAfterMount = async (deps) => {

@@ -2,6 +2,10 @@ import {
   createPlatformEditForm,
   PLATFORM_APPLICATION_ICON_OUTPUT_SIZE,
 } from "../../internal/ui/platformDetailsForm.js";
+import {
+  buildTabletLandscapeContentColumnStyle,
+  setMobileResourcePageWindowMetricsState,
+} from "../../internal/ui/resourcePages/mobileResourcePage.js";
 import { selectPlatformDetailsPageCopy } from "./support/platformDetailsPageCopy.js";
 
 const PLATFORM_IDS = ["web", "windows", "macos"];
@@ -118,6 +122,7 @@ export const createInitialState = () => ({
   platformApplicationInfo: {},
   selectedPlatform: undefined,
   isTouchMode: false,
+  appWindowMetrics: { width: 0, height: 0 },
   addPlatformMenu: {
     isOpen: false,
     x: 0,
@@ -180,6 +185,9 @@ export const selectViewData = ({ state, i18n }) => {
     ),
     clickToUploadLabel: copy.clickToUpload,
     contentLeftPadding: state.isTouchMode ? "0" : "sm",
+    // Tablet landscape centers the content in the Projects, About, and
+    // Config column width.
+    tabletLandscapeContentStyle: buildTabletLandscapeContentColumnStyle(state),
     detailFillHeight: false,
     emptyPlatformsMessage: copy.emptyPlatformsMessage,
     hasPlatformDetails: Boolean(selectedPlatformInfo),
@@ -257,6 +265,10 @@ export const setPlatformApplicationInfo = (
 export const setUiConfig = ({ state }, { uiConfig } = {}) => {
   state.isTouchMode =
     uiConfig?.id === "touch" || uiConfig?.inputMode === "touch";
+};
+
+export const setAppWindowMetrics = ({ state }, { width, height } = {}) => {
+  setMobileResourcePageWindowMetricsState(state, { width, height });
 };
 
 export const setPlatform = ({ state }, { platform } = {}) => {

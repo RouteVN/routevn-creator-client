@@ -2,8 +2,10 @@ import { formatDate } from "../../internal/dates.js";
 import { formatI18nCopy } from "../../internal/ui/i18nCopy.js";
 import {
   buildMobileResourcePageViewData,
+  buildTabletLandscapeContentColumnStyle,
   createMobileResourcePageState,
   setMobileResourcePageUiConfigState,
+  setMobileResourcePageWindowMetricsState,
 } from "../../internal/ui/resourcePages/mobileResourcePage.js";
 import { selectVersionsPageCopy } from "./support/versionsPageCopy.js";
 
@@ -260,6 +262,10 @@ export const setSelectedItemId = ({ state }, { itemId } = {}) => {
   state.selectedItemId = itemId;
 };
 
+export const setAppWindowMetrics = ({ state }, { width, height } = {}) => {
+  setMobileResourcePageWindowMetricsState(state, { width, height });
+};
+
 export const setUiConfig = ({ state }, { uiConfig } = {}) => {
   setMobileResourcePageUiConfigState(state, {
     uiConfig,
@@ -451,6 +457,11 @@ export const selectViewData = ({ state, i18n }) => {
     selectedItemId: state.selectedItemId,
     selectedItemName: selectedVersion?.name ?? "",
     detailFields,
+    // Tablet landscape centers the version list in the Projects, About,
+    // and Config column width; the header keeps the full width.
+    versionListStyle: buildTabletLandscapeContentColumnStyle(state, {
+      minGutter: "var(--spacing-md)",
+    }),
     ...buildMobileResourcePageViewData({
       state,
       detailFields,

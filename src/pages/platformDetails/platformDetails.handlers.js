@@ -4,12 +4,14 @@ import {
   getPlatformDetailsValidationMessage,
   PLATFORM_APPLICATION_ICON_VALIDATIONS,
 } from "../../internal/ui/platformDetailsForm.js";
+import { mountMobileResourceWindowLayout } from "../../internal/ui/resourcePages/mobileResourcePage.js";
 import { selectPlatformDetailsPageCopy } from "./support/platformDetailsPageCopy.js";
 
 export const handleBeforeMount = (deps) => {
   const { appService, store, uiConfig } = deps;
   store.setUiConfig({ uiConfig });
   store.setPlatform({ platform: appService.getPlatform() });
+  return mountMobileResourceWindowLayout(deps);
 };
 
 export const handleAfterMount = async (deps) => {

@@ -93,7 +93,7 @@ template:
                               - rtgl-view d=v ah=c g=md:
                                   - rtgl-text s=lg c=mu-fg: ${noVersionsMessage}
                         $else:
-                          - 'rtgl-view d=v g=md w=f ph=md pt=md pb=sm mb=lg style="min-width: 0;"':
+                          - 'rtgl-view d=v g=md w=f ph=md pt=md pb=sm mb=lg style="min-width: 0; ${versionListStyle}"':
                               - $for item, i in versions:
                                   - rtgl-view#versionItemRef${i} data-version-id="${item.id}" h=auto w=f bw=xs bc=${item.itemBorderColor} h-bc=${item.itemHoverBorderColor} br=md pt=md pb=sm ph=lg d=h av=c cur=pointer:
                                       - rtgl-view w=1fg d=v g=xs:
