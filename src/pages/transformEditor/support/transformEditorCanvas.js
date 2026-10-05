@@ -1,3 +1,7 @@
+import {
+  DEFAULT_TRANSFORM_VALUES,
+  TRANSFORM_VALUE_FIELDS,
+} from "../../../internal/transformValues.js";
 import { createBackgroundTransformEditorCanvasState } from "../../../internal/ui/sceneEditor/backgroundTransformEditor.js";
 
 // The canvas element the transform applies to, which the selection outline
@@ -6,26 +10,6 @@ export const TRANSFORM_EDITOR_TARGET_ID = "transform-target";
 
 const BACKGROUND_COLOR = "#4a4a4a";
 const FALLBACK_TARGET_SIZE = 200;
-
-export const TRANSFORM_VALUE_FIELDS = Object.freeze([
-  "x",
-  "y",
-  "scaleX",
-  "scaleY",
-  "anchorX",
-  "anchorY",
-  "rotation",
-]);
-
-const DEFAULT_TRANSFORM_VALUES = Object.freeze({
-  x: 0,
-  y: 0,
-  scaleX: 1,
-  scaleY: 1,
-  anchorX: 0,
-  anchorY: 0,
-  rotation: 0,
-});
 
 const toFiniteNumber = (value, fallback) => {
   const number = Number(value);

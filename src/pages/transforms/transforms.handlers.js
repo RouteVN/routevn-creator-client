@@ -1,5 +1,9 @@
 import { generateId } from "../../internal/id.js";
 import { createTransformEditorPayload } from "../../internal/transformEditorRoute.js";
+import {
+  DEFAULT_TRANSFORM_VALUES,
+  TRANSFORM_VALUE_FIELDS,
+} from "../../internal/transformValues.js";
 import { createCatalogPageHandlers } from "../../internal/ui/resourcePages/catalog/createCatalogPageHandlers.js";
 import { appendTagIdToForm } from "../../internal/ui/resourcePages/tags.js";
 import { runResourcePageMutation } from "../../internal/ui/resourcePages/resourcePageErrors.js";
@@ -11,19 +15,6 @@ import { TRANSFORM_TAG_SCOPE_KEY } from "./transforms.store.js";
 import { selectTransformsPageCopy } from "./support/transformsPageCopy.js";
 
 const selectCopy = (deps = {}) => selectTransformsPageCopy(deps.i18n);
-
-// A new transform places its target at the top-left corner, as is.
-const NEW_TRANSFORM_VALUES = Object.freeze({
-  x: 0,
-  y: 0,
-  scaleX: 1,
-  scaleY: 1,
-  anchorX: 0,
-  anchorY: 0,
-  rotation: 0,
-});
-
-const TRANSFORM_VALUE_FIELDS = Object.keys(NEW_TRANSFORM_VALUES);
 
 const navigateToEditor = ({ appService, transformId } = {}) => {
   if (!transformId) {
@@ -342,7 +333,7 @@ export const handleAddFormAction = async (deps, payload) => {
         data: {
           type: "transform",
           ...metadata,
-          ...NEW_TRANSFORM_VALUES,
+          ...DEFAULT_TRANSFORM_VALUES,
         },
         parentId: store.selectTargetGroupId(),
         position: "last",
@@ -451,7 +442,7 @@ export const handleItemDuplicate = async (deps, payload) => {
     ...createMetadataValues(itemData),
   };
   for (const field of TRANSFORM_VALUE_FIELDS) {
-    duplicateData[field] = itemData[field] ?? NEW_TRANSFORM_VALUES[field];
+    duplicateData[field] = itemData[field] ?? DEFAULT_TRANSFORM_VALUES[field];
   }
   if (itemData.thumbnailFileId) {
     duplicateData.thumbnailFileId = itemData.thumbnailFileId;
