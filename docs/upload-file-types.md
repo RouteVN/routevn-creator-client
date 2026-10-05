@@ -186,7 +186,7 @@ The returned files still pass the same page and upload-service validations.
 | Character avatar upload             | `image/*`                | `image-min-size` + square crop dialog | create dialog, edit dialog, avatar replace |
 | Project icon upload (create dialog) | `image/*`                | `image-min-size` + square crop dialog | projects page create dialog                |
 | Project icon upload (settings)      | `image/*`                | `square`                              | project settings dialog                    |
-| Text styles add-font dialog         | `.ttf`, `.otf`, `.woff2` | format + weight metadata              | matches the Fonts page                     |
+| Text style editor add-font dialog   | `.ttf`, `.otf`, `.woff2` | format + weight metadata              | matches the Fonts page                     |
 | Scene editor voice upload           | `.mp3`, `.wav`, `.ogg`   | invalid-format alert + bytes          | see audio validation; matches Sounds page  |
 
 ### Import Packages
@@ -235,9 +235,10 @@ downloaded or stored.
   `src/pages/sounds/sounds.store.js`
 - Fonts: `src/pages/fonts/fonts.handlers.js`,
   `src/pages/fonts/fonts.store.js`
-- Text styles font dialog: `src/pages/textStyles/textStyles.view.yaml`,
-  `src/pages/textStyles/textStyles.store.js`,
-  `src/pages/textStyles/textStyles.handlers.js`
+- Text style editor font dialog:
+  `src/pages/textStyleEditor/textStyleEditor.view.yaml`,
+  `src/pages/textStyleEditor/textStyleEditor.store.js`,
+  `src/pages/textStyleEditor/textStyleEditor.handlers.js`
 - Character avatars: `src/pages/characters/characters.handlers.js`,
   `src/components/squareImageCropDialog/`,
   `src/components/squareImageCropper/`

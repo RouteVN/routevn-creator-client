@@ -1342,6 +1342,39 @@ last one and on leaving, as in the transform editor, and save only the effect
 and background images follow the asset failure policy as in the transform
 editor.
 
+Text styles are edited on their own page as well, `/project/text-style-editor`
+(the `ts` payload holds the text style id), with the editors' header (back,
+name, undo and redo) and right panel with **Edit** and **Preview** tabs, which
+stays on the right in tablet landscape and moves under the preview on phones
+and in tablet portrait (`selectShowEditorRightPanelState`). The text styles
+page's dialogs only add a text style (name, description, and tags; it starts
+with the project's first font and color, 16px, and the font's own weight, and
+the editor opens next) and edit its name, description, and tags;
+double-click, long press, `e`, **Open**, and the detail preview open the
+editor, and **Duplicate** copies a text style after it. The workspace is one
+large live preview, the `rvn-font-preview` Route Graphics text preview that
+the cards and the detail panel use, with a renderer of its own. It draws the
+text at its font size in CSS pixels rather than as a scaled canvas, so the
+header has no zoom. Edit holds the text style form without the name,
+description, and tags. Its font and color selects are slots of the form, since
+rtgl-form's own selects do not offer an add option; **Add new font** and
+**Add new color** open dialogs that create the font or color and pick it in
+the select that opened them, as one undo step. A form change applies only the
+field that changed, so fields the form does not show (alignment, wrapping, and
+the fallback fonts while the primary font stays) are kept. Picking a font that
+cannot draw the current weight moves the weight to the font's own in the same
+step; a weight the text style had with its font when the page opened stays
+available. Adding an outline color starts the outline at 2px. Preview holds
+the preview text, which the text styles page shows (the name when it is
+empty), and **Save Preview**, which saves the values and then the preview
+text; the preview text is not part of the history, and unsaved preview text is
+left behind on leaving. Edits save on their own 300ms after the last one and on
+leaving, through `enqueueSceneEditorPersistence`, as in the transform editor,
+and an undo back to the saved values saves nothing. Font files follow the
+asset failure policy: `rvn-font-preview` names the files it could not load in
+`font-load-error`, and the editor warns once per file, draws the text without
+that file (in the style's next font, or the browser's), and stays editable.
+
 `rvn-mobile-sheet` is capped at 640px (the Projects page content width) and
 centered, so the bottom-tab sheets and every page's item detail sheet stay
 compact on tablets; phones are narrower than the cap and keep the full-width
@@ -1568,6 +1601,7 @@ Current recovery boundaries:
 | Layout editor canvas                  | Collect read/integrity/decode failures, warn once per failed file per mounted canvas, omit affected render elements, and keep unaffected elements editable. Retry on subsequent requests without changing the saved layout. |
 | Transform editor canvas               | Load each preview image separately, warn once per failed file per mounted page, and draw the fallback in its place while editing. Later renders skip it; Save Preview rereads it and saves nothing if it still fails.       |
 | Particle editor canvas                | Load the texture and background images separately, warn once per failed file per mounted page, and leave the failed image out while editing. Later renders skip it; Save Preview rereads it and saves nothing if it fails.  |
+| Text style editor preview             | Load each font file of the style separately, warn once per failed file per mounted page, and draw the text without that file, in the style's next font or the browser's. The saved fonts do not change.                     |
 | Fullscreen startup                    | Check the combined initial scene and layout assets, collect all read/integrity/decode failures, and show one deduplicated warning stating playback is blocked. Any failure closes the preview before starting the engine.   |
 | Fullscreen later scene/layout loading | Retain the existing transition/prefetch handling: report scene failures, propagate font/layout failures.                                                                                                                    |
 
