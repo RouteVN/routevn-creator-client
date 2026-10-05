@@ -4,7 +4,7 @@ import {
   selectViewData,
 } from "../../src/components/commandLineActions/commandLineActions.store.js";
 import { PRESENTATION_ACTION_MODE_ORDER } from "../../src/internal/presentationActionOrder.js";
-import { EN_I18N } from "../support/i18n.js";
+import { EN_I18N, JA_I18N } from "../support/i18n.js";
 
 const selectItems = ({ props }) => selectItemsBase({ props, i18n: EN_I18N });
 
@@ -139,6 +139,23 @@ describe("commandLineActions.store", () => {
       items.some((item) => item.type === "section" && item.label === "Menu"),
     ).toBe(true);
   });
+
+  it.each(["presentation", "system"])(
+    "localizes every %s section heading",
+    (actionsType) => {
+      const sectionLabels = selectItemsBase({
+        props: { actionsType },
+        i18n: JA_I18N,
+      })
+        .filter((item) => item.type === "section")
+        .map((item) => item.label);
+
+      expect(sectionLabels.length).toBeGreaterThan(0);
+      expect(
+        sectionLabels.filter((label) => /^[\x20-\x7e]+$/.test(label)),
+      ).toEqual([]);
+    },
+  );
 
   it("shows update variable in the logic section", () => {
     for (const actionsType of ["system", "presentation"]) {
