@@ -90,6 +90,15 @@ const SIMPLE_RESOURCE_DIALOGS = [
     [["editForm", "handleEditFormAction"]],
   ],
   [
+    "pages/textStyles/textStyles.view.yaml",
+    "pages/textStyles/textStyles.store.js",
+    ["addDialog", "editDialog"],
+    [
+      ["addForm", "handleAddFormAction"],
+      ["editForm", "handleEditFormAction"],
+    ],
+  ],
+  [
     "pages/transforms/transforms.view.yaml",
     "pages/transforms/transforms.store.js",
     ["addDialog", "editDialog"],
@@ -121,9 +130,8 @@ const RESOURCE_FORMS_WITH_EXTERNAL_SUBMIT = [
     [["dialogForm", "handleDialogFormSubmitKeyDown"]],
   ],
   [
-    "pages/textStyles/textStyles.view.yaml",
+    "pages/textStyleEditor/textStyleEditor.view.yaml",
     [
-      ["textStyleForm", "handleTextStyleFormSubmitKeyDown"],
       ["addColorForm", "handleAddColorFormSubmitKeyDown"],
       ["addFontForm", "handleAddFontFormSubmitKeyDown"],
     ],
@@ -192,23 +200,24 @@ describe("resource add/edit dialog layout", () => {
     },
   );
 
-  it("uses the same pattern for text-style and variable editors", () => {
-    const textStylesView = readView("pages/textStyles/textStyles.view.yaml");
+  it("uses the same pattern for the text style editor's and the variable editors' dialogs", () => {
+    const textStyleEditorView = readView(
+      "pages/textStyleEditor/textStyleEditor.view.yaml",
+    );
     const variablesView = readView(
       "components/groupVariablesView/groupVariablesView.view.yaml",
     );
 
-    for (const dialogId of [
-      "addTypographyDialog",
-      "addColorDialog",
-      "addFontDialog",
-    ]) {
-      expect(textStylesView).toContain(`rtgl-dialog#${dialogId} ?open=\${`);
+    for (const dialogId of ["addColorDialog", "addFontDialog"]) {
+      expect(textStyleEditorView).toContain(
+        `rtgl-dialog#${dialogId} ?open=\${`,
+      );
     }
-    expect(textStylesView.match(/md-layout=fixed-top p=none/g)).toHaveLength(3);
-    expect(textStylesView).toContain("rtgl-button#mobileTextStyleSubmitButton");
-    expect(textStylesView).toContain("rtgl-button#addColorSubmitButton");
-    expect(textStylesView).toContain("rtgl-button#addFontSubmitButton");
+    expect(
+      textStyleEditorView.match(/md-layout=fixed-top p=none/g),
+    ).toHaveLength(2);
+    expect(textStyleEditorView).toContain("rtgl-button#addColorSubmitButton");
+    expect(textStyleEditorView).toContain("rtgl-button#addFontSubmitButton");
 
     expect(variablesView).toContain(
       "rtgl-dialog#variableDialog s=md md-layout=fixed-top p=none",

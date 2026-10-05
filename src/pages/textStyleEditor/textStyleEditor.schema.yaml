@@ -1,0 +1,4 @@
+componentName: rvn-text-style-editor
+propsSchema:
+  type: object
+  properties: {}

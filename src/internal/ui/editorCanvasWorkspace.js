@@ -42,7 +42,9 @@ export const resetEditorCanvasZoomState = (state) => {
 // Desktop and tablet landscape keep the Edit and Preview panel on the
 // right, as in the layout editor, and give the canvas the rest of the
 // workspace, where it zooms and pans. Other touch layouts show the canvas
-// fitted to half the workspace height with the panel under it.
+// fitted to half the workspace height with the panel under it. The text
+// style editor, whose live preview is not a canvas, places its panel by the
+// same rule.
 export const selectShowEditorRightPanelState = ({ state }) =>
   !state.isTouchMode || selectIsTabletLandscapeState({ state });
 

@@ -3,16 +3,12 @@ import {
   getTextStyleCount,
   getTextStyleRemovalCount,
 } from "../../constants/textStyles.js";
-import { buildFontResourceDataFromUploadResult } from "../../deps/services/shared/resourceImports.js";
 import { recursivelyCheckResource } from "../../internal/project/projection.js";
+import { createTextStyleEditorPayload } from "../../internal/textStyleEditorRoute.js";
 import { createResourceFileExplorerHandlers } from "../../internal/ui/fileExplorer.js";
-import { forwardFormSubmitOnEnter } from "../../internal/ui/resourcePages/formSubmitKeyDown.js";
 import { createFileExplorerKeyboardScopeHandlers } from "../../internal/ui/fileExplorerKeyboardScope.js";
 import { handleResourceZoomShortcutKeyDown } from "../../internal/ui/resourcePages/zoomShortcuts.js";
-import {
-  runResourcePageMutation,
-  showResourcePageError,
-} from "../../internal/ui/resourcePages/resourcePageErrors.js";
+import { runResourcePageMutation } from "../../internal/ui/resourcePages/resourcePageErrors.js";
 import {
   appendTagIdToForm,
   createResourcePageTagHandlers,
@@ -36,25 +32,32 @@ import { TEXT_STYLE_TAG_SCOPE_KEY } from "./textStyles.store.js";
 import { selectTextStylesPageCopy } from "./support/textStylesPageCopy.js";
 import { clearResourcePageSelection } from "../../internal/ui/resourcePages/resourceViewBackground.js";
 import { getMediaPageData } from "../../internal/ui/resourcePages/media/mediaPageShared.js";
-import { normalizeFontFileType } from "../../internal/fileTypes.js";
-import {
-  extractFontWeightCapabilities,
-  inspectNewFontFile,
-  isFontWeightSupported,
-  isStrictFontMimeType,
-} from "../../internal/fontCapabilities.js";
-import { toFontIds, toPrimaryFontId } from "../../internal/fontIds.js";
 
 const selectCopy = (deps = {}) => selectTextStylesPageCopy(deps.i18n);
 
-const showInvalidFontFormatAlert = (appService, copy = {}) => {
-  appService.showAlert({
-    message:
-      copy.invalidFormatMessage ??
-      "Invalid file format. Please upload a TTF, OTF, or WOFF2 font file.",
-    title: copy.warningTitle ?? "Warning",
-  });
+// A new text style's size and spacing; the editor changes them.
+const NEW_TEXT_STYLE_FONT_SIZE = 16;
+const NEW_TEXT_STYLE_LINE_HEIGHT = 1.5;
+
+const navigateToEditor = ({ appService, textStyleId } = {}) => {
+  if (!textStyleId) {
+    return;
+  }
+
+  appService.navigate(
+    "/project/text-style-editor",
+    createTextStyleEditorPayload({
+      payload: appService.getPayload() ?? {},
+      textStyleId,
+    }),
+  );
 };
+
+const createMetadataValues = (values) => ({
+  name: values.name?.trim() ?? "",
+  description: values.description ?? "",
+  tagIds: Array.isArray(values.tagIds) ? values.tagIds : [],
+});
 
 // Helper function to sync repository state to store
 const syncRepositoryToStore = ({
@@ -83,118 +86,6 @@ const syncRepositoryToStore = ({
       resourceType: "fonts",
     }),
   });
-};
-
-const loadFontCapabilities = async (deps, { fontId } = {}) => {
-  const { projectService, store } = deps;
-  if (!fontId) {
-    return undefined;
-  }
-
-  const cachedCapabilities = store.selectFontCapabilities({ fontId });
-  if (cachedCapabilities) {
-    return cachedCapabilities.kind === "unrestricted"
-      ? undefined
-      : cachedCapabilities;
-  }
-
-  const font = store.selectFontById({ fontId });
-  if (!font?.fileId) {
-    return undefined;
-  }
-
-  if (
-    font.minWeight !== undefined &&
-    font.defaultWeight !== undefined &&
-    font.maxWeight !== undefined
-  ) {
-    const capabilities = {
-      kind: font.minWeight === font.maxWeight ? "static" : "variable",
-      minWeight: font.minWeight,
-      defaultWeight: font.defaultWeight,
-      maxWeight: font.maxWeight,
-    };
-    store.setFontCapabilities({ fontId, capabilities });
-    return capabilities;
-  }
-
-  const mimeType = normalizeFontFileType({
-    fileType: font.fileType,
-    fileName: font.name,
-  });
-  if (!isStrictFontMimeType(mimeType)) {
-    store.setFontCapabilities({
-      fontId,
-      capabilities: { kind: "unrestricted" },
-    });
-    return undefined;
-  }
-
-  let content;
-  try {
-    content = await projectService.getFileContent(font.fileId);
-    const response = await fetch(content.url);
-    if (!response.ok) {
-      throw new Error(`HTTP ${response.status}`);
-    }
-    const capabilities = extractFontWeightCapabilities(
-      await response.arrayBuffer(),
-    );
-    store.setFontCapabilities({ fontId, capabilities });
-    return capabilities;
-  } catch (error) {
-    console.warn(
-      `Could not inspect font capabilities for ${font.fileId}.`,
-      error,
-    );
-    store.setFontCapabilities({
-      fontId,
-      capabilities: { kind: "unrestricted" },
-    });
-    return undefined;
-  } finally {
-    content?.revoke?.();
-  }
-};
-
-const canPreserveExistingFontWeight = (store, { fontId, fontWeight } = {}) => {
-  const { editMode, editingItemId } = store.selectDialogState();
-  if (!editMode || !editingItemId) {
-    return false;
-  }
-
-  const editingItem = store.selectItemById(editingItemId);
-  return (
-    toPrimaryFontId(editingItem?.fontId) === fontId &&
-    String(editingItem.fontWeight) === String(fontWeight)
-  );
-};
-
-const validateSelectedFontWeight = async (
-  deps,
-  { fontId, fontWeight } = {},
-) => {
-  const { appService, store } = deps;
-  const capabilities = await loadFontCapabilities(deps, { fontId });
-  if (
-    !capabilities ||
-    isFontWeightSupported(capabilities, fontWeight) ||
-    canPreserveExistingFontWeight(store, { fontId, fontWeight })
-  ) {
-    return true;
-  }
-
-  const copy = selectCopy(deps);
-  appService.showAlert({
-    message:
-      capabilities.kind === "unavailable"
-        ? (copy.invalidFontMessage ??
-          "Could not read the font's supported weights. Please choose a valid TTF, OTF, or WOFF2 font.")
-        : (copy.unsupportedFontWeight ??
-          "The selected weight is not supported by this font."),
-    title: copy.warningTitle ?? "Warning",
-  });
-  return false;
 };
 
 export const handleBeforeMount = (deps) => {
@@ -239,12 +130,14 @@ const refreshTextStylesData = async (deps, { selectedItemId } = {}) => {
   }
 };
 
-const { handleFileExplorerAction, handleFileExplorerTargetChanged } =
-  createResourceFileExplorerHandlers({
-    resourceType: "textStyles",
-    refresh: refreshTextStylesData,
-    copy: selectCopy,
-  });
+const {
+  handleFileExplorerAction: handleBaseFileExplorerAction,
+  handleFileExplorerTargetChanged,
+} = createResourceFileExplorerHandlers({
+  resourceType: "textStyles",
+  refresh: refreshTextStylesData,
+  copy: selectCopy,
+});
 const {
   focusKeyboardScope: focusFileExplorerKeyboardScope,
   handleKeyboardScopeClick: handleFileExplorerKeyboardScopeClick,
@@ -256,7 +149,10 @@ const {
       return;
     }
 
-    openEditDialogWithValues({ deps, itemId: selectedItemId });
+    navigateToEditor({
+      appService: deps.appService,
+      textStyleId: selectedItemId,
+    });
   },
   resolveSelectedItemId: ({ deps, selectedExplorerItem }) =>
     selectedExplorerItem?.isFolder
@@ -287,15 +183,14 @@ const {
     refreshTextStylesData(deps, {
       selectedItemId: itemStillSelected ? itemId : undefined,
     }),
+  // A tag created from the add or edit form goes into that form.
   appendCreatedTagByMode: ({ deps, mode, tagId }) => {
-    if (mode !== "form") {
-      return;
+    const { refs } = deps;
+    if (mode === "add-form") {
+      appendTagIdToForm({ form: refs.addForm, tagId });
+    } else if (mode === "edit-form") {
+      appendTagIdToForm({ form: refs.editForm, tagId });
     }
-
-    appendTagIdToForm({
-      form: deps.refs.textStyleForm,
-      tagId,
-    });
   },
   createTagFallbackMessage: ({ deps }) =>
     selectCopy(deps).failedCreateTag ?? "Failed to create tag.",
@@ -305,7 +200,6 @@ const {
 });
 
 export {
-  handleFileExplorerAction,
   handleFileExplorerTargetChanged,
   handleFileExplorerKeyboardScopeClick,
   handleMobileResourceFileExplorerOpen as handleMobileFileExplorerOpen,
@@ -322,6 +216,18 @@ export {
 };
 
 export const handleDataChanged = refreshTextStylesData;
+
+// Open in the explorer's menu opens the text style in the editor.
+export const handleFileExplorerAction = async (deps, payload) => {
+  const { appService } = deps;
+  const { itemId, item } = payload._event.detail;
+  if (item?.value === "edit-item") {
+    navigateToEditor({ appService, textStyleId: itemId });
+    return;
+  }
+
+  await handleBaseFileExplorerAction(deps, payload);
+};
 
 export const handleFileExplorerKeyboardScopeKeyDown = (deps, payload) => {
   if (
@@ -381,29 +287,20 @@ export const handleResourceViewBackgroundClick = (deps) => {
 };
 
 const openEditDialogWithValues = ({ deps, itemId } = {}) => {
-  if (!itemId) {
-    return;
-  }
-
-  const { store, render, refs } = deps;
+  const { refs, render, store } = deps;
+  const { editForm, fileExplorer } = refs;
   const item = store.selectItemById(itemId);
   if (!item) {
     return;
   }
 
+  const editValues = createMetadataValues(item);
   store.setSelectedItemId({ itemId, suppressMobileDetailSheet: true });
-  refs.fileExplorer?.selectItem?.({ itemId });
-  store.setFormValuesFromItem({ item });
-  store.setEditMode({ itemId });
-  if (!store.selectIsDialogOpen()) {
-    store.toggleDialog();
-  }
+  fileExplorer?.selectItem?.({ itemId });
+  store.openEditDialog({ itemId, defaultValues: editValues });
   render();
-  void loadFontCapabilities(deps, {
-    fontId: toPrimaryFontId(item.fontId),
-  }).then(() => {
-    render();
-  });
+  editForm.reset();
+  editForm.setValues({ values: editValues });
 };
 
 const openFolderNameDialogWithValues = ({ deps, folderId } = {}) => {
@@ -433,243 +330,42 @@ const openFolderNameDialogWithValues = ({ deps, folderId } = {}) => {
   refs.folderNameForm?.setValues?.({ values });
 };
 
-const buildTextStyleData = ({
-  name,
-  description,
-  tagIds,
-  fontSize,
-  lineHeight,
-  fontColor,
-  fontId,
-  fontWeight,
-  previewText,
-  strokeColor,
-  strokeWidth,
-  shadowColor,
-  shadowAlpha,
-  shadowBlur,
-  shadowOffsetX,
-  shadowOffsetY,
-  includeEmptyTagIds = true,
-  clearOutlineColor = false,
-  clearShadow = false,
-} = {}) => {
-  const hasStrokeColor = Boolean(strokeColor);
-  const hasShadowColor = Boolean(shadowColor);
-  const normalizedTagIds = Array.isArray(tagIds) ? tagIds : [];
-  const textStyleData = {
-    name,
-    description: description ?? "",
-    fontSize: Number(fontSize ?? 16),
-    lineHeight: Number(lineHeight ?? 1.5),
-    colorId: fontColor,
-    fontId: toFontIds(fontId),
-    fontWeight: String(fontWeight ?? "400"),
-    previewText: previewText ?? "",
-    strokeWidth: hasStrokeColor ? Number(strokeWidth ?? 0) : 0,
-  };
-
-  if (normalizedTagIds.length > 0 || includeEmptyTagIds) {
-    textStyleData.tagIds = normalizedTagIds;
-  }
-
-  if (hasStrokeColor) {
-    textStyleData.strokeColorId = strokeColor;
-  } else if (clearOutlineColor) {
-    textStyleData.strokeColorId = undefined;
-  }
-
-  if (hasShadowColor) {
-    textStyleData.shadow = {
-      colorId: shadowColor,
-      alpha: Number(shadowAlpha ?? 1),
-      blur: Number(shadowBlur ?? 0),
-      offsetX: Number(shadowOffsetX ?? 2),
-      offsetY: Number(shadowOffsetY ?? 2),
-    };
-  } else if (clearShadow) {
-    textStyleData.clearShadow = true;
-  }
-
-  return textStyleData;
+// The detail preview opens the text style in the editor.
+export const handleDetailPreviewClick = (deps) => {
+  const { appService, store } = deps;
+  navigateToEditor({ appService, textStyleId: store.selectSelectedItemId() });
 };
 
-const handleTextStyleCreated = async (deps, payload) => {
-  const { appService, projectService } = deps;
-  const copy = selectCopy(deps);
-  const {
-    groupId,
-    name,
-    description,
-    tagIds,
-    fontSize,
-    lineHeight,
-    fontColor,
-    fontId,
-    fontWeight,
-    previewText,
-    strokeColor,
-    strokeWidth,
-    shadowColor,
-    shadowAlpha,
-    shadowBlur,
-    shadowOffsetX,
-    shadowOffsetY,
-  } = payload._event.detail;
-
-  const createAttempt = await runResourcePageMutation({
-    appService,
-    fallbackMessage:
-      copy.failedCreateTextStyle ?? "Failed to create text style.",
-    action: () =>
-      projectService.createTextStyle({
-        textStyleId: generateId(),
-        data: {
-          type: "textStyle",
-          ...buildTextStyleData({
-            name,
-            description,
-            tagIds,
-            fontSize,
-            lineHeight,
-            fontColor,
-            fontId,
-            fontWeight,
-            previewText,
-            strokeColor,
-            strokeWidth,
-            shadowColor,
-            shadowAlpha,
-            shadowBlur,
-            shadowOffsetX,
-            shadowOffsetY,
-            includeEmptyTagIds: false,
-          }),
-        },
-        parentId: groupId,
-        position: "last",
-      }),
-  });
-
-  if (!createAttempt.ok) {
-    return createAttempt.result ?? { valid: false };
-  }
-
-  await refreshTextStylesData(deps);
-  return createAttempt.result;
-};
-
-const handleTextStyleUpdated = async (deps, payload) => {
-  const { appService, projectService, store } = deps;
-  const copy = selectCopy(deps);
-  const {
-    itemId,
-    name,
-    description,
-    tagIds,
-    fontSize,
-    lineHeight,
-    fontColor,
-    fontId,
-    fontWeight,
-    previewText,
-    strokeColor,
-    strokeWidth,
-    shadowColor,
-    shadowAlpha,
-    shadowBlur,
-    shadowOffsetX,
-    shadowOffsetY,
-  } = payload._event.detail;
-  const currentFontIds = toFontIds(store.selectItemById({ itemId })?.fontId);
-  const updatedFontIds =
-    currentFontIds[0] === fontId ? currentFontIds : [fontId];
-
-  const updateAttempt = await runResourcePageMutation({
-    appService,
-    fallbackMessage:
-      copy.failedUpdateTextStyle ?? "Failed to update text style.",
-    action: () =>
-      projectService.updateTextStyle({
-        textStyleId: itemId,
-        data: buildTextStyleData({
-          name,
-          description,
-          tagIds,
-          fontSize,
-          lineHeight,
-          fontColor,
-          fontId: updatedFontIds,
-          fontWeight,
-          previewText,
-          strokeColor,
-          strokeWidth,
-          shadowColor,
-          shadowAlpha,
-          shadowBlur,
-          shadowOffsetX,
-          shadowOffsetY,
-          clearOutlineColor: true,
-          clearShadow: true,
-        }),
-      }),
-  });
-
-  if (!updateAttempt.ok) {
-    return updateAttempt.result ?? { valid: false };
-  }
-
-  await refreshTextStylesData(deps);
-  return updateAttempt.result;
-};
-
-export const handleFormExtraEvent = (deps) => {
-  const selectedItemId = deps.store.selectSelectedItemId();
-  openEditDialogWithValues({ deps, itemId: selectedItemId });
-};
-
-// Dialog handlers
 export const handleAddTextStyleClick = (deps, payload) => {
-  const { store, render } = deps;
+  const { render, store } = deps;
   const { groupId } = payload._event.detail;
-
-  store.setTargetGroupId({ groupId: groupId });
-  store.clearEditMode();
-  store.resetFormValues(); // Reset form values for a new text style
-  store.toggleDialog();
+  store.openAddDialog({ groupId });
   render();
 };
 
+// Double-click and long press open the text style in the editor.
 export const handleTextStyleItemDoubleClick = (deps, payload) => {
+  const { appService } = deps;
   const { itemId, isFolder } = payload._event.detail;
   if (isFolder) {
     return;
   }
 
-  openEditDialogWithValues({ deps, itemId });
+  navigateToEditor({ appService, textStyleId: itemId });
 };
 
 export const handleTextStyleItemEdit = (deps, payload) => {
+  const { appService } = deps;
   const { itemId } = payload._event.detail;
-  openEditDialogWithValues({ deps, itemId });
+  navigateToEditor({ appService, textStyleId: itemId });
 };
 
-export const handleMobileDetailEditClick = (deps, payload) => {
-  payload?._event?.preventDefault?.();
-  payload?._event?.stopPropagation?.();
-
-  const itemId = deps.store.selectSelectedItemId();
-  if (!itemId) {
-    return;
-  }
-
-  openEditDialogWithValues({ deps, itemId });
+export const handleMobileDetailOpenClick = (deps) => {
+  const { appService, store } = deps;
+  navigateToEditor({ appService, textStyleId: store.selectSelectedItemId() });
 };
 
-export const handleMobileDetailDuplicateClick = async (deps, payload) => {
-  payload?._event?.preventDefault?.();
-  payload?._event?.stopPropagation?.();
-
+export const handleMobileDetailDuplicateClick = async (deps) => {
   const itemId = deps.store.selectSelectedItemId();
   if (!itemId) {
     return;
@@ -684,10 +380,7 @@ export const handleMobileDetailDuplicateClick = async (deps, payload) => {
   });
 };
 
-export const handleMobileDetailDeleteClick = async (deps, payload) => {
-  payload?._event?.preventDefault?.();
-  payload?._event?.stopPropagation?.();
-
+export const handleMobileDetailDeleteClick = async (deps) => {
   const itemId = deps.store.selectSelectedItemId();
   if (!itemId) {
     return;
@@ -702,6 +395,8 @@ export const handleMobileDetailDeleteClick = async (deps, payload) => {
   });
 };
 
+// The detail header edits the text style's name, description and tags; how
+// it looks is edited in the editor.
 export const handleDetailHeaderClick = (deps) => {
   const { store } = deps;
   const selectedItemId = store.selectSelectedItemId();
@@ -761,517 +456,130 @@ export const handleFolderNameFormAction = async (deps, payload) => {
   render();
 };
 
-export const handleTextStyleFormAddOptionClick = (deps, payload) => {
-  if (payload?._event?.detail?.name !== "tagIds") {
+export const handleAddDialogClose = (deps) => {
+  const { render, store } = deps;
+  store.closeAddDialog();
+  render();
+};
+
+export const handleAddFormAddOptionClick = (deps) => {
+  openCreateTagDialogForMode({ deps, mode: "add-form" });
+};
+
+// Creates the text style with the project's first font and color, and
+// opens it in the editor, where they are changed.
+export const handleAddFormAction = async (deps, payload) => {
+  const { appService, projectService, render, store } = deps;
+  const copy = selectCopy(deps);
+  const { actionId, values } = payload._event.detail;
+  if (actionId !== "submit") {
     return;
   }
 
+  const metadata = createMetadataValues(values);
+  if (!metadata.name) {
+    appService.showAlert({
+      message: copy.textStyleNameRequired,
+      title: copy.warningTitle,
+    });
+    return;
+  }
+
+  const { fontId, colorId, fontWeight } = store.selectNewTextStyleResources();
+  if (!fontId || !colorId) {
+    appService.showAlert({
+      message: copy.fontAndColorRequired,
+      title: copy.warningTitle,
+    });
+    return;
+  }
+
+  const data = {
+    type: "textStyle",
+    name: metadata.name,
+    description: metadata.description,
+    fontId: [fontId],
+    colorId,
+    fontSize: NEW_TEXT_STYLE_FONT_SIZE,
+    lineHeight: NEW_TEXT_STYLE_LINE_HEIGHT,
+    fontWeight,
+  };
+  if (metadata.tagIds.length > 0) {
+    data.tagIds = metadata.tagIds;
+  }
+
+  const textStyleId = generateId();
+  const createAttempt = await runResourcePageMutation({
+    appService,
+    fallbackMessage: copy.failedCreateTextStyle,
+    title: copy.errorTitle,
+    action: () =>
+      projectService.createTextStyle({
+        textStyleId,
+        data,
+        parentId: store.selectTargetGroupId(),
+        position: "last",
+      }),
+  });
+  if (!createAttempt.ok) {
+    return;
+  }
+
+  store.closeAddDialog();
+  render();
+  navigateToEditor({ appService, textStyleId });
+};
+
+export const handleEditDialogClose = (deps) => {
+  const { render, store } = deps;
+  store.closeEditDialog();
+  render();
+};
+
+export const handleEditFormAddOptionClick = (deps) => {
   openCreateTagDialogForMode({
     deps,
-    mode: "form",
-    itemId: deps.store.selectDialogState().editingItemId,
+    mode: "edit-form",
+    itemId: deps.store.selectEditItemId(),
   });
 };
 
-export const handleDialogFormChange = async (deps, payload) => {
-  const { store, render, refs } = deps;
-  const { name, value, values } = payload._event.detail;
-
-  const formData = {
-    ...values,
-  };
-
-  if (name) {
-    formData[name] = value ?? "";
-  }
-
-  // Update form values for preview
-  store.updateFormValues({ formData });
-  render();
-
-  if (name !== "fontId" || !value) {
-    return;
-  }
-
-  const capabilities = await loadFontCapabilities(deps, { fontId: value });
-  const currentValues = store.selectCurrentFormValues();
-  if (currentValues.fontId !== value) {
-    return;
-  }
-
-  if (
-    !capabilities ||
-    isFontWeightSupported(capabilities, currentValues.fontWeight) ||
-    canPreserveExistingFontWeight(store, {
-      fontId: value,
-      fontWeight: currentValues.fontWeight,
-    })
-  ) {
-    render();
-    return;
-  }
-
-  if (capabilities.kind === "unavailable") {
-    render();
-    return;
-  }
-
-  const nextValues = {
-    ...currentValues,
-    fontWeight: String(capabilities.defaultWeight),
-  };
-  store.updateFormValues({ formData: nextValues });
-  render();
-  refs.textStyleForm.setValues({ values: nextValues });
-};
-
-export const handlePreviewTextInput = (deps, payload) => {
-  const { store, render } = deps;
-  const { value } = payload._event.detail;
-  store.updateFormValues({ formData: { previewText: value ?? "" } });
-  render();
-};
-
-export const handleCloseDialog = (deps) => {
-  const { store, render } = deps;
-
-  // Reset form values, clear edit mode, and close dialog
-  store.resetFormValues();
-  store.clearEditMode();
-  store.toggleDialog();
-  render();
-};
-
-export const handleFormActionClick = async (deps, payload) => {
-  const { store, render, appService } = deps;
+export const handleEditFormAction = async (deps, payload) => {
+  const { appService, projectService, store } = deps;
   const copy = selectCopy(deps);
-
-  // Check which button was clicked
-  const actionId = payload._event.detail.actionId;
-
-  // Handle add option for color selector
-  if (
-    actionId === "select-options-add" &&
-    (payload._event.detail.name === "fontColor" ||
-      payload._event.detail.name === "strokeColor" ||
-      payload._event.detail.name === "shadowColor")
-  ) {
-    // Open the add color dialog
-    store.openAddColorDialog();
-    render();
+  const { actionId, values } = payload._event.detail;
+  if (actionId !== "submit") {
     return;
   }
 
-  // Handle add option for font selector
-  if (
-    actionId === "select-options-add" &&
-    payload._event.detail.name === "fontId"
-  ) {
-    // Open the add font dialog
-    store.openAddFontDialog();
-    render();
-    return;
-  }
-
-  if (actionId === "submit") {
-    // Merge the left form values with the preview-column input.
-    const formData = {
-      ...payload._event.detail.values,
-      previewText: store.selectCurrentPreviewText(),
-    };
-
-    // Get the store state using selector
-    const { targetGroupId, editMode, editingItemId } =
-      store.selectDialogState();
-
-    // Validate required fields (dropdowns ensure valid color and font selections)
-    if (
-      !formData.name ||
-      !formData.fontSize ||
-      !formData.fontColor ||
-      !formData.fontId ||
-      !formData.fontWeight
-    ) {
-      appService.showAlert({
-        message:
-          copy.fillRequiredFields ?? "Please fill in all required fields",
-        title: copy.warningTitle ?? "Warning",
-      });
-      return;
-    }
-
-    if (
-      !(await validateSelectedFontWeight(deps, {
-        fontId: formData.fontId,
-        fontWeight: formData.fontWeight,
-      }))
-    ) {
-      return;
-    }
-
-    // Validate font size is a number
-    if (isNaN(formData.fontSize) || parseInt(formData.fontSize) <= 0) {
-      appService.showAlert({
-        message:
-          copy.fontSizeInvalid ??
-          "Please enter a valid font size (positive number)",
-        title: copy.warningTitle ?? "Warning",
-      });
-      return;
-    }
-
-    const strokeWidth = Number(formData.strokeWidth ?? 0);
-    if (
-      formData.strokeColor &&
-      (Number.isNaN(strokeWidth) || strokeWidth < 0)
-    ) {
-      appService.showAlert({
-        message:
-          copy.outlineThicknessInvalid ??
-          "Please enter a valid outline thickness (0 or greater)",
-        title: copy.warningTitle ?? "Warning",
-      });
-      return;
-    }
-
-    const shadowAlpha = Number(formData.shadowAlpha ?? 1);
-    const shadowBlur = Number(formData.shadowBlur ?? 0);
-    const shadowOffsetX = Number(formData.shadowOffsetX ?? 2);
-    const shadowOffsetY = Number(formData.shadowOffsetY ?? 2);
-    if (
-      formData.shadowColor &&
-      (!Number.isFinite(shadowAlpha) ||
-        shadowAlpha < 0 ||
-        shadowAlpha > 1 ||
-        !Number.isFinite(shadowBlur) ||
-        shadowBlur < 0 ||
-        !Number.isFinite(shadowOffsetX) ||
-        !Number.isFinite(shadowOffsetY))
-    ) {
-      appService.showAlert({
-        message:
-          copy.shadowInvalid ??
-          "Please enter valid shadow opacity, blur, and offset values",
-        title: copy.warningTitle ?? "Warning",
-      });
-      return;
-    }
-
-    let submitResult;
-
-    if (editMode && editingItemId) {
-      // Handle text style update
-      submitResult = await handleTextStyleUpdated(deps, {
-        _event: {
-          detail: {
-            itemId: editingItemId,
-            name: formData.name,
-            description: formData.description,
-            tagIds: formData.tagIds,
-            fontSize: formData.fontSize,
-            lineHeight: formData.lineHeight,
-            fontColor: formData.fontColor,
-            fontId: formData.fontId,
-            fontWeight: formData.fontWeight,
-            previewText: formData.previewText,
-            strokeColor: formData.strokeColor,
-            strokeWidth: formData.strokeWidth,
-            shadowColor: formData.shadowColor,
-            shadowAlpha: formData.shadowAlpha,
-            shadowBlur: formData.shadowBlur,
-            shadowOffsetX: formData.shadowOffsetX,
-            shadowOffsetY: formData.shadowOffsetY,
-          },
-        },
-      });
-    } else {
-      // Handle text style creation
-      submitResult = await handleTextStyleCreated(deps, {
-        _event: {
-          detail: {
-            groupId: targetGroupId,
-            name: formData.name,
-            description: formData.description,
-            tagIds: formData.tagIds,
-            fontSize: formData.fontSize,
-            lineHeight: formData.lineHeight,
-            fontColor: formData.fontColor,
-            fontId: formData.fontId,
-            fontWeight: formData.fontWeight,
-            previewText: formData.previewText,
-            strokeColor: formData.strokeColor,
-            strokeWidth: formData.strokeWidth,
-            shadowColor: formData.shadowColor,
-            shadowAlpha: formData.shadowAlpha,
-            shadowBlur: formData.shadowBlur,
-            shadowOffsetX: formData.shadowOffsetX,
-            shadowOffsetY: formData.shadowOffsetY,
-          },
-        },
-      });
-    }
-
-    if (submitResult?.valid === false) {
-      return;
-    }
-
-    // Reset form values, clear edit mode, and close dialog
-    store.resetFormValues();
-    store.clearEditMode();
-    store.toggleDialog();
-    render();
-  }
-};
-
-const submitDesktopTextStyleForm = async (deps) => {
-  const { refs } = deps;
-  const values = refs.textStyleForm.getValues();
-
-  await handleFormActionClick(deps, {
-    _event: {
-      detail: {
-        actionId: "submit",
-        values,
-      },
-    },
-  });
-};
-
-export const handleDesktopTextStyleSubmitClick = async (deps) => {
-  await submitDesktopTextStyleForm(deps);
-};
-
-export const handleTextStyleFormSubmitKeyDown = (deps, payload) =>
-  forwardFormSubmitOnEnter({
-    deps,
-    payload,
-    submit: handleDesktopTextStyleSubmitClick,
-  });
-
-export const handleDesktopTextStyleFormKeyDown =
-  handleTextStyleFormSubmitKeyDown;
-
-// Add color dialog handlers
-export const handleAddColorDialogClose = (deps) => {
-  const { store, render } = deps;
-  store.closeAddColorDialog();
-  render();
-};
-
-export const handleAddColorFormAction = async (deps, payload) => {
-  const { appService, store, render, projectService } = deps;
-  const copy = selectCopy(deps);
-
-  if (payload._event.detail.actionId === "submit") {
-    const formData = payload._event.detail.values;
-    const newColorId = generateId();
-
-    // Create the color in the repository
-    const createAttempt = await runResourcePageMutation({
-      appService,
-      fallbackMessage: copy.failedCreateColor ?? "Failed to create color.",
-      action: () =>
-        projectService.createColor({
-          colorId: newColorId,
-          data: {
-            type: "color",
-            name: formData.name,
-            description: formData.description ?? "",
-            hex: formData.hex,
-          },
-          parentId: formData.folderId || null,
-          position: "last",
-        }),
+  const metadata = createMetadataValues(values);
+  if (!metadata.name) {
+    appService.showAlert({
+      message: copy.textStyleNameRequired,
+      title: copy.warningTitle,
     });
-
-    if (!createAttempt.ok) {
-      return;
-    }
-
-    // Sync repository to store to ensure all data is updated
-    syncRepositoryToStore({ store, projectService });
-
-    // Don't update the form values - keep preview consistent with form state
-    // The user can manually select the new color from the dropdown
-
-    // Close the add color dialog
-    store.closeAddColorDialog();
-    render();
-  }
-};
-
-export const handleAddColorSubmitClick = async (deps) => {
-  const { addColorForm } = deps.refs;
-  await handleAddColorFormAction(deps, {
-    _event: {
-      detail: {
-        actionId: "submit",
-        values: addColorForm.getValues(),
-      },
-    },
-  });
-};
-
-export const handleAddColorFormSubmitKeyDown = (deps, payload) =>
-  forwardFormSubmitOnEnter({
-    deps,
-    payload,
-    submit: handleAddColorSubmitClick,
-  });
-
-// Add font dialog handlers
-export const handleAddFontDialogClose = (deps) => {
-  const { store, render } = deps;
-  store.closeAddFontDialog();
-  render();
-};
-
-export const handleFontFileSelected = async (deps, payload) => {
-  const { store, render, projectService, appService } = deps;
-  const copy = selectCopy(deps);
-  const { files } = payload._event.detail;
-
-  if (files && files.length > 0) {
-    const file = files[0];
-    let fontCapabilities;
-    try {
-      fontCapabilities = await inspectNewFontFile(file);
-    } catch (error) {
-      if (error?.code === "unsupported_font_format") {
-        showInvalidFontFormatAlert(appService, copy);
-        return;
-      }
-
-      appService.showAlert({
-        message:
-          copy.invalidFontMessage ??
-          "Could not read the font's supported weights. Please choose a valid TTF, OTF, or WOFF2 font.",
-        title: copy.warningTitle ?? "Warning",
-      });
-      return;
-    }
-
-    const fontName = file.name.replace(/\.(ttf|otf|woff2)$/i, "");
-
-    try {
-      // Upload the file immediately when selected
-      const uploadResults = await projectService.uploadFiles([file]);
-
-      if (uploadResults.length === 0) {
-        showResourcePageError({
-          appService,
-          errorOrResult:
-            copy.failedUploadFontFile ?? "Failed to upload font file.",
-          fallbackMessage:
-            copy.failedUploadFontFile ?? "Failed to upload font file.",
-        });
-        return;
-      }
-
-      const uploadResult = uploadResults[0];
-      uploadResult.fontCapabilities = fontCapabilities;
-      store.setSelectedFontFile({
-        file,
-        fileName: fontName,
-        uploadResult, // Store the upload result for later use
-      });
-      render();
-    } catch (error) {
-      showResourcePageError({
-        appService,
-        errorOrResult: error,
-        fallbackMessage:
-          copy.failedUploadFontFile ?? "Failed to upload font file.",
-      });
-    }
-  }
-};
-
-export const handleFontFileRejected = (deps, payload) => {
-  const files = payload._event.detail?.files ?? [];
-  if (files.length === 0) {
     return;
   }
 
-  showInvalidFontFormatAlert(deps.appService, selectCopy(deps));
-};
-
-export const handleAddFontFormAction = async (deps, payload) => {
-  const { store, render, projectService, appService } = deps;
-  const copy = selectCopy(deps);
-
-  if (payload._event.detail.actionId === "submit") {
-    const formData = payload._event.detail.values;
-    const fontData = store.selectSelectedFontData();
-
-    // Check if a font file was selected and uploaded
-    if (!fontData || !fontData.uploadResult) {
-      appService.showAlert({
-        message: copy.selectFontFile ?? "Please select a font file",
-        title: copy.warningTitle ?? "Warning",
-      });
-      return;
-    }
-
-    const fontName = fontData.fileName;
-    const newFontId = generateId();
-
-    // Create the font in the repository using the already uploaded file
-    const createAttempt = await runResourcePageMutation({
-      appService,
-      fallbackMessage: copy.failedCreateFont ?? "Failed to create font.",
-      action: () =>
-        projectService.createFont({
-          fontId: newFontId,
-          fileRecords: fontData.uploadResult.fileRecords,
-          data: buildFontResourceDataFromUploadResult({
-            uploadResult: fontData.uploadResult,
-            name: fontName,
-            description: formData.description ?? "",
-            fontFamily: fontName,
-          }),
-          parentId: formData.folderId || null,
-          position: "last",
-        }),
-    });
-
-    if (!createAttempt.ok) {
-      return;
-    }
-
-    store.setFontCapabilities({
-      fontId: newFontId,
-      capabilities: fontData.uploadResult.fontCapabilities,
-    });
-
-    // Sync repository to store to ensure all data is updated
-    syncRepositoryToStore({ store, projectService });
-
-    // Clear selected font data and close dialog
-    store.clearSelectedFontFile();
-    store.closeAddFontDialog();
-    render();
+  const editItemId = store.selectEditItemId();
+  const updateAttempt = await runResourcePageMutation({
+    appService,
+    fallbackMessage: copy.failedUpdateTextStyle,
+    title: copy.errorTitle,
+    action: () =>
+      projectService.updateTextStyle({
+        textStyleId: editItemId,
+        data: metadata,
+      }),
+  });
+  if (!updateAttempt.ok) {
+    return;
   }
+
+  store.closeEditDialog();
+  await refreshTextStylesData(deps, { selectedItemId: editItemId });
 };
 
-export const handleAddFontSubmitClick = async (deps) => {
-  const { addFontForm } = deps.refs;
-  await handleAddFontFormAction(deps, {
-    _event: {
-      detail: {
-        actionId: "submit",
-        values: addFontForm.getValues(),
-      },
-    },
-  });
-};
-
-export const handleAddFontFormSubmitKeyDown = (deps, payload) =>
-  forwardFormSubmitOnEnter({
-    deps,
-    payload,
-    submit: handleAddFontSubmitClick,
-  });
 export const handleSearchInput = (deps, payload) => {
   const { store, render } = deps;
   const searchQuery = payload._event.detail?.value ?? "";
@@ -1321,6 +629,8 @@ export const handleItemDelete = async (deps, payload) => {
   await refreshTextStylesData(deps);
 };
 
+// The copy has the text style's look, name, description, tags and preview
+// text, and goes right after it, in its folder.
 export const handleItemDuplicate = async (deps, payload) => {
   const { appService, projectService } = deps;
   const copy = selectCopy(deps);
