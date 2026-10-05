@@ -33,6 +33,37 @@ describe("particle form", () => {
     );
   });
 
+  it("keeps the mode and shape choices from being cleared", () => {
+    const fields = ["emission", "source", "movement"].flatMap(
+      (activeTab) => createParticleForm({ activeTab }).fields,
+    );
+    const field = (name) => fields.find((item) => item.name === name);
+
+    // Clearing one would silently swap the effect for a default and save it.
+    for (const name of [
+      "emissionMode",
+      "durationMode",
+      "sourceKind",
+      "velocityKind",
+    ]) {
+      expect(field(name)).toMatchObject({ clearable: false });
+    }
+  });
+
+  it("keeps a timed duration when Timed is chosen before its seconds", () => {
+    const snow = createParticlePreset({ presetId: "snow" });
+    const values = buildParticleFormValues({ particle: snow });
+    expect(values.durationSeconds).toBe("");
+
+    const particle = buildParticleEffectData({
+      baseParticle: snow,
+      values: { ...values, durationMode: "timed" },
+    });
+
+    // The empty seconds field is not 0 seconds, which would show nothing.
+    expect(particle.modules.emission.duration).toBe(1);
+  });
+
   it("saves the effect without the particle's name, description or tags", () => {
     const snow = createParticlePreset({ presetId: "snow" });
 

@@ -429,6 +429,7 @@ const createParticleFieldsByTab = ({ copy = {} } = {}) => {
           "Choose whether particles spawn continuously or in bursts.",
         options: createEmissionModeOptions(copy),
         required: true,
+        clearable: false,
       },
       {
         name: "emissionRate",
@@ -478,6 +479,7 @@ const createParticleFieldsByTab = ({ copy = {} } = {}) => {
           "Keep emitting forever or stop after a timed window.",
         options: createDurationModeOptions(copy),
         required: true,
+        clearable: false,
         $when: "emissionMode == 'continuous'",
       },
       {
@@ -525,6 +527,7 @@ const createParticleFieldsByTab = ({ copy = {} } = {}) => {
           "Choose the emitter shape particles spawn from.",
         options: createSourceKindOptions(copy),
         required: true,
+        clearable: false,
       },
       {
         name: "sourceX",
@@ -625,6 +628,7 @@ const createParticleFieldsByTab = ({ copy = {} } = {}) => {
           "Move particles in one direction or spread them radially.",
         options: createVelocityKindOptions(copy),
         required: true,
+        clearable: false,
       },
       {
         name: "speedMin",
@@ -1096,11 +1100,14 @@ export const buildParticleEffectData = ({ values, baseParticle }) => {
       MAX_PARTICLE_COUNT,
       Math.max(1, Math.round(toPositiveNumber(values?.maxActive, 60))),
     );
+    // An empty duration, as when Timed is first chosen, is not 0 seconds.
+    const durationSeconds =
+      values?.durationSeconds === "" ? undefined : values?.durationSeconds;
     modules.emission.duration =
       durationMode === "timed"
         ? Math.max(
             0,
-            toNonNegativeNumber(values?.durationSeconds, fallbackTimedDuration),
+            toNonNegativeNumber(durationSeconds, fallbackTimedDuration),
           )
         : "infinite";
     modules.emission.rate = Number.isFinite(emissionRate)
