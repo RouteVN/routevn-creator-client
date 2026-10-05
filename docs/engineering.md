@@ -57,6 +57,14 @@ Frontend locale catalogs live in `src/i18n/*.yaml`. Keep every locale aligned
 with the default English catalog because the Rettangoli i18n build validates
 that all locales contain the same keys.
 
+`bun run check:i18n` checks every locale in `rettangoli.config.yaml` against
+`en.yaml`. It fails on missing or extra keys, changed `{placeholders}`, and
+values of a different type. It runs as part of `bun run lint`, so the pre-push
+hook and CI run it too. The `i18n` workflow also runs it on every push to
+`main`, which catches catalogs broken by two pull requests merged one after the
+other. When you add or change an English string, add the same key to every
+locale in the same pull request.
+
 Rettangoli passes `i18n` into store selectors and handler deps. Do not pass
 page-level `copy` objects through component props only to localize a child
 component. Components that render or compute their own copy should read from
