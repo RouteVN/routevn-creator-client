@@ -1,6 +1,6 @@
 ---
 title: Transforms Workflow
-description: Covers the transforms page detail, preview dialog, edit dialog, and empty search state.
+description: Covers the transforms page detail, edit dialog, and empty search state, and the transform editor page with its Edit and Preview tabs.
 url: /projects
 skipInitialScreenshot: true
 viewport:
@@ -86,39 +86,20 @@ steps:
     ms: 300
   - action: screenshot
   - action: select
-    selector: "#groupview #itemRef0x0"
-    steps:
-      - action: dblclick
-  - action: waitFor
-    selector: "#transformDialog"
-    state: visible
-    timeoutMs: 10000
-  - action: wait
-    ms: 500
-  - action: screenshot
-  - action: keypress
-    key: Escape
-  - action: waitFor
-    selector: "#transformDialog"
-    state: hidden
-    timeoutMs: 10000
-  - action: wait
-    ms: 250
-  - action: select
     selector: "#detailHeader"
     steps:
       - action: click
   - action: waitFor
-    selector: "#transformDialog"
-    state: visible
-    timeoutMs: 10000
+    selector: "#editDialog[open]"
+    state: attached
+    timeoutMs: 5000
   - action: wait
-    ms: 500
+    ms: 300
   - action: screenshot
   - action: keypress
     key: Escape
   - action: waitFor
-    selector: "#transformDialog"
+    selector: "#editDialog"
     state: hidden
     timeoutMs: 10000
   - action: select
@@ -138,4 +119,78 @@ steps:
   - action: wait
     ms: 350
   - action: screenshot
+  - action: select
+    selector: "#tagFilterPopover rtgl-input#searchInput"
+    steps:
+      - action: clear
+  - action: wait
+    ms: 250
+  - action: select
+    selector: "#tagFilterApply"
+    steps:
+      - action: click
+  - action: waitFor
+    selector: "#tagFilterPopover"
+    state: hidden
+    timeoutMs: 5000
+  - action: select
+    selector: "#groupview #itemRef0x0"
+    steps:
+      - action: dblclick
+  - action: waitFor
+    selector: rvn-transform-editor
+    state: attached
+    timeoutMs: 20000
+  - action: assert
+    type: url
+    value: /project/transform-editor
+  - action: waitFor
+    selector: "rvn-transform-editor rtgl-tabs#rightPanelModeTabs[selected-tab='edit']"
+    state: attached
+    timeoutMs: 5000
+  - action: waitFor
+    selector: "rvn-transform-editor #canvas canvas"
+    state: attached
+    timeoutMs: 20000
+  - action: wait
+    ms: 1200
+  - action: screenshot
+  - action: select
+    selector: "rvn-transform-editor rtgl-tabs#rightPanelModeTabs [data-id='preview']"
+    steps:
+      - action: click
+  - action: waitFor
+    selector: "rvn-transform-editor rtgl-tabs#rightPanelModeTabs[selected-tab='preview']"
+    state: attached
+    timeoutMs: 5000
+  - action: waitFor
+    selector: "rvn-transform-editor #savePreviewButton"
+    state: visible
+    timeoutMs: 5000
+  - action: wait
+    ms: 500
+  - action: screenshot
+  - action: select
+    selector: "rvn-transform-editor rtgl-tabs#rightPanelModeTabs [data-id='edit']"
+    steps:
+      - action: click
+  - action: waitFor
+    selector: "rvn-transform-editor rtgl-tabs#rightPanelModeTabs[selected-tab='edit']"
+    state: attached
+    timeoutMs: 5000
+  - action: waitFor
+    selector: "rvn-transform-editor #savePreviewButton"
+    state: detached
+    timeoutMs: 5000
+  - action: select
+    selector: "rvn-transform-editor #backButton"
+    steps:
+      - action: click
+  - action: waitFor
+    selector: rvn-transforms
+    state: attached
+    timeoutMs: 10000
+  - action: assert
+    type: url
+    value: /project/transforms
 ---
