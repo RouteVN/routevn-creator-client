@@ -443,9 +443,9 @@ export const handlePreviewAlignChange = (deps, payload) => {
   render();
 };
 
-// Saves the preview text, which the text styles page shows, after the
-// values. The button is disabled while it saves, so a double click saves
-// once.
+// Saves the preview text, which the text styles page shows, and the preview
+// alignment, after the values. The button is disabled while it saves, so a
+// double click saves once.
 export const handleSavePreviewClick = async (deps) => {
   const { appService, projectService, render, store } = deps;
   const copy = selectCopy(deps);

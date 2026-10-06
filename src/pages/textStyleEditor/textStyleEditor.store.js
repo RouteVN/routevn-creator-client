@@ -250,8 +250,6 @@ export const applyEditHistoryStep = ({ state }, { direction } = {}) => {
   state.formRevision += 1;
 };
 
-export const selectPreviewText = ({ state }) => state.previewText;
-
 const PREVIEW_ALIGN_VALUES = ["left", "center", "right"];
 
 export const setPreviewAlign = ({ state }, { align } = {}) => {
