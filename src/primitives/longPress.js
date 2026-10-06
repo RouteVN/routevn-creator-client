@@ -182,6 +182,13 @@ export const installLongPress = (documentTarget = document) => {
   };
 
   const handleContextMenu = (event) => {
+    // Android sends the hold's native contextmenu at the system long-press
+    // timeout, which can be after this hold opened a menu. It then targets the
+    // menu's overlay instead of the card and would close the menu at once.
+    if (consumedPress && Date.now() <= consumedPress.until) {
+      suppress(event);
+      return;
+    }
     const target = findTarget(event);
     if (
       target &&

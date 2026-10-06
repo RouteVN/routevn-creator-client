@@ -169,6 +169,29 @@ describe("delegated long-press gestures", () => {
     expect(activate).toHaveBeenCalledOnce();
   });
 
+  it("suppresses a late native contextmenu that lands on the opened menu overlay", () => {
+    const overlay = document.createElement("dialog");
+    const closeMenu = vi.fn();
+    overlay.addEventListener("contextmenu", closeMenu);
+    document.body.append(overlay);
+    pointer("pointerdown");
+    vi.advanceTimersByTime(500);
+    expect(activate).toHaveBeenCalledOnce();
+    // A 1000 ms system long-press timeout delivers it while the finger is down.
+    vi.advanceTimersByTime(500);
+    expect(pointer("contextmenu", {}, overlay).defaultPrevented).toBe(true);
+    pointer("pointerup", {}, overlay);
+    expect(pointer("contextmenu", {}, overlay).defaultPrevented).toBe(true);
+    expect(closeMenu).not.toHaveBeenCalled();
+
+    pointer("pointerdown", { pointerType: "mouse", button: 2 }, overlay);
+    expect(
+      pointer("contextmenu", { pointerType: "mouse", button: 2 }, overlay)
+        .defaultPrevented,
+    ).toBe(false);
+    expect(closeMenu).toHaveBeenCalledOnce();
+  });
+
   it("preserves real mouse contextmenus even after touching a card", () => {
     pointer("pointerdown");
     pointer("pointerup");
