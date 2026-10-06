@@ -211,6 +211,7 @@ const resourceParentMapping = {
   releases: "versions",
   "transform-editor": "transforms",
   "particle-editor": "particles",
+  "text-style-editor": "text-styles",
 };
 
 export const createInitialState = () => ({

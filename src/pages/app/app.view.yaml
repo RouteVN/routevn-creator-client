@@ -78,6 +78,8 @@ template:
                   - rvn-transform-editor: []
                 $elif currentRoutePattern == "/project/particle-editor":
                   - rvn-particle-editor: []
+                $elif currentRoutePattern == "/project/text-style-editor":
+                  - rvn-text-style-editor: []
                 $elif currentRoutePattern == "/project/about":
                   - rvn-about: []
                 $elif currentRoutePattern == "/project/config":

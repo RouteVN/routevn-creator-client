@@ -43,10 +43,10 @@ refs:
     eventListeners:
       close:
         handler: handleMobileDetailSheetClose
-  mobileDetailEditButton:
+  mobileDetailOpenButton:
     eventListeners:
       click:
-        handler: handleMobileDetailEditClick
+        handler: handleMobileDetailOpenClick
         preventDefault: true
         stopPropagation: true
   mobileDetailDuplicateButton:
@@ -76,7 +76,7 @@ refs:
   detailTextStylePreview:
     eventListeners:
       click:
-        handler: handleFormExtraEvent
+        handler: handleDetailPreviewClick
   detailHeader:
     eventListeners:
       click:
@@ -89,62 +89,26 @@ refs:
     eventListeners:
       form-action:
         handler: handleFolderNameFormAction
-  addTypographyDialog:
+  addDialog:
     eventListeners:
       close:
-        handler: handleCloseDialog
-  textStyleForm:
+        handler: handleAddDialogClose
+  addForm:
     eventListeners:
-      form-change:
-        handler: handleDialogFormChange
       add-option-click:
-        handler: handleTextStyleFormAddOptionClick
-      keydown:
-        handler: handleTextStyleFormSubmitKeyDown
-  desktopTextStyleSubmitButton:
-    eventListeners:
-      click:
-        handler: handleDesktopTextStyleSubmitClick
-  mobileTextStyleSubmitButton:
-    eventListeners:
-      click:
-        handler: handleDesktopTextStyleSubmitClick
-  previewTextInput:
-    eventListeners:
-      value-input:
-        handler: handlePreviewTextInput
-      value-change:
-        handler: handlePreviewTextInput
-  addColorDialog:
+        handler: handleAddFormAddOptionClick
+      form-action:
+        handler: handleAddFormAction
+  editDialog:
     eventListeners:
       close:
-        handler: handleAddColorDialogClose
-  addColorForm:
+        handler: handleEditDialogClose
+  editForm:
     eventListeners:
-      keydown:
-        handler: handleAddColorFormSubmitKeyDown
-  addColorSubmitButton:
-    eventListeners:
-      click:
-        handler: handleAddColorSubmitClick
-  addFontDialog:
-    eventListeners:
-      close:
-        handler: handleAddFontDialogClose
-  fontDragDrop:
-    eventListeners:
-      file-selected:
-        handler: handleFontFileSelected
-      file-rejected:
-        handler: handleFontFileRejected
-  addFontForm:
-    eventListeners:
-      keydown:
-        handler: handleAddFontFormSubmitKeyDown
-  addFontSubmitButton:
-    eventListeners:
-      click:
-        handler: handleAddFontSubmitClick
+      add-option-click:
+        handler: handleEditFormAddOptionClick
+      form-action:
+        handler: handleEditFormAction
   detailTagSelect:
     eventListeners:
       value-change:
@@ -215,7 +179,7 @@ template:
                   - rtgl-text w=1fg ellipsis=true: ${selectedItemName}
                   - rtgl-svg svg=edit wh=16: null
               - rtgl-view d=h w=f g=sm p=md bwb=xs:
-                  - rtgl-button#mobileDetailEditButton w=1fg v=se pre=edit: ${editButton}
+                  - rtgl-button#mobileDetailOpenButton w=1fg v=se pre=chevronRight: ${openButton}
                   - rtgl-button#mobileDetailDuplicateButton w=1fg v=se pre=duplicate: ${duplicateButton}
                   - rtgl-button#mobileDetailDeleteButton w=1fg v=se pre=trash: ${deleteButton}
               - 'rtgl-view w=f h=1fg sv style="min-height: 0;"':
@@ -223,51 +187,11 @@ template:
                       - rtgl-tag-select#detailTagSelect slot="text-style-tags" w=f :options=${tagFilterOptions} :selectedValues=${selectedItemTagIds} :draftSelectedValues=${detailTagDraftValues} :open=${isDetailTagSelectOpen} :addOption=${detailTagAddOption} placeholder="${addTagPlaceholder}": null
   - rtgl-dialog#folderNameDialog ?open=${isFolderNameDialogOpen} s=sm:
       - rtgl-form#folderNameForm key=${folderNameDialogItemId} slot=content :defaultValues=${folderNameDialogDefaultValues} :form=${folderNameForm} w=f: null
-  - $if showDialogPreviewCanvas:
-      - $if isDialogOpen:
-          - rtgl-dialog#addTypographyDialog ?open=${isDialogOpen}:
-              - 'rtgl-view slot=content d=h g=md w=800 h=70vh style="min-width: 0; min-height: 0; overflow: hidden;"':
-                  - 'rtgl-view w=1fg h=f d=v style="min-width: 0; min-height: 0; overflow: hidden;"':
-                      - 'rtgl-view#textStyleFormScroll w=f h=1fg sv sbv=touch style="min-height: 0;"':
-                          - rtgl-form#textStyleForm key=${formKey} :defaultValues=${dialogDefaultValues} :form=${desktopDialogForm} w=f: null
-                      - 'rtgl-view w=f d=h ah=e bgc=bg ph=md pt=lg pb=md style="flex-shrink: 0;"':
-                          - rtgl-button#desktopTextStyleSubmitButton v=${dialogSubmitButton.variant}: ${dialogSubmitButton.label}
-                  - 'rtgl-view w=1fg h=f p=md d=v g=md style="min-width: 0; min-height: 0;"':
-                      - rtgl-text s=lg fw=b: ${previewLabel}
-                      - 'rtgl-view w=f style="aspect-ratio: 32 / 9; min-width: 0; overflow: hidden;"':
-                          - rvn-font-preview mode=live h=f :fontFamilies=${previewFontFamilies} previewText="${previewText}" :fileIds=${previewFontFileIds} :fontWeightDescriptors=${previewFontWeightDescriptors} fontSize=${previewFontSize} lineHeight=${previewLineHeight} color=${previewColor} strokeColor=${previewStrokeColor} strokeWidth=${previewStrokeWidth} fontWeight=${previewFontWeight} shadowColor=${previewShadowColor} shadowAlpha=${previewShadowAlpha} shadowBlur=${previewShadowBlur} shadowOffsetX=${previewShadowOffsetX} shadowOffsetY=${previewShadowOffsetY} width=f padding=8 showBorder=true: null
-                      - rtgl-view d=v g=sm w=f:
-                          - rtgl-text: ${previewTextLabel}
-                          - rtgl-input#previewTextInput key=${formKey} w=f value="${previewTextInputValue}": null
-    $else:
-      - $if isDialogOpen:
-          - rtgl-dialog#addTypographyDialog ?open=${isDialogOpen} s=md md-layout=fixed-top p=none:
-              - 'rtgl-view slot=content w=f h=f pv=md pos=rel style="min-width: 0; min-height: 0; overflow: hidden;"':
-                  - 'rtgl-view h=1fg sv sbv=touch w=f style="min-height: 0;"':
-                      - rtgl-form#textStyleForm key=${formKey} :defaultValues=${dialogDefaultValues} :form=${dialogForm} w=f ph=md: null
-                      - 'rtgl-view h=80 aria-hidden=true style="flex: 0 0 80px;"': null
-                  - 'rtgl-view d=h av=c ah=e w=f g=lg ph=md pt=md style="flex: 0 0 auto;"':
-                      - rtgl-button#mobileTextStyleSubmitButton v=${dialogSubmitButton.variant}: ${dialogSubmitButton.label}
-  - rtgl-dialog#addColorDialog ?open=${isAddColorDialogOpen} s=sm md-layout=fixed-top p=none:
-      - $if isAddColorDialogOpen:
-          - 'rtgl-view slot=content w=f h=f pv=md pos=rel style="min-width: 0; min-height: 0; overflow: hidden;"':
-              - 'rtgl-view h=1fg sv sbv=touch w=f style="min-height: 0;"':
-                  - rtgl-form#addColorForm :defaultValues=${addColorDefaultValues} :form=${addColorForm} w=f ph=md: null
-                  - 'rtgl-view h=80 aria-hidden=true style="flex: 0 0 80px;"': null
-              - 'rtgl-view d=h av=c ah=e w=f g=lg ph=md pt=md style="flex: 0 0 auto;"':
-                  - rtgl-button#addColorSubmitButton v=pr: ${addColorSubmitButtonLabel}
-  - rtgl-dialog#addFontDialog ?open=${isAddFontDialogOpen} md-layout=fixed-top p=none:
-      - $if isAddFontDialogOpen:
-          - 'rtgl-view slot=content w=f h=f pv=md pos=rel style="min-width: 0; min-height: 0; overflow: hidden;"':
-              - 'rtgl-view h=1fg sv sbv=touch w=f style="min-height: 0;"':
-                  - rtgl-form#addFontForm :defaultValues=${addFontDefaultValues} :form=${addFontForm} w=f ph=md:
-                      - rtgl-view slot=font-upload d=v g=sm:
-                          - rvn-drag-drop#fontDragDrop uploadText="${dragDropText}" :acceptedFileTypes=${fontFileTypes}: null
-                          - $if hasSelectedFont:
-                              - rtgl-view d=h g=sm av=c mt=sm:
-                                  - rtgl-text s=sm c=success: '${fontSelectedLabel} ${selectedFontFileName}'
-                  - 'rtgl-view h=80 aria-hidden=true style="flex: 0 0 80px;"': null
-              - 'rtgl-view d=h av=c ah=e w=f g=lg ph=md pt=md style="flex: 0 0 auto;"':
-                  - rtgl-button#addFontSubmitButton v=pr: ${addFontSubmitButtonLabel}
+  - rtgl-dialog#addDialog ?open=${isAddDialogOpen} s=md md-layout=fixed-top:
+      - rtgl-view slot=content d=v w=f h=f overflow=hidden:
+          - rtgl-form#addForm key=${isAddDialogOpen} :defaultValues=${addFormDefaults} :form=${addForm} sticky sbv=touch bottom-spacer=96 w=f h=f: null
+  - rtgl-dialog#editDialog ?open=${isEditDialogOpen} s=md md-layout=fixed-top:
+      - rtgl-view slot=content d=v w=f h=f overflow=hidden:
+          - rtgl-form#editForm key=${isEditDialogOpen} :defaultValues=${editDefaultValues} :form=${editForm} sticky sbv=touch bottom-spacer=96 w=f h=f: null
   - rtgl-dialog#createTagDialog ?open=${isCreateTagDialogOpen} s=sm:
       - rtgl-form#createTagForm key=${isCreateTagDialogOpen} slot=content :defaultValues=${createTagDefaultValues} :form=${createTagForm} w=f: null

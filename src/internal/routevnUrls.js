@@ -30,6 +30,7 @@ const creatorDocsPathByRoutePattern = {
   "/project/videos": "/videos/",
   "/project/colors": "/colors/",
   "/project/text-styles": "/text-styles/",
+  "/project/text-style-editor": "/text-styles/",
   "/project/controls": "/controls/",
   "/project/variables": "/variables/",
   "/project/scenes": "/scene-map/",

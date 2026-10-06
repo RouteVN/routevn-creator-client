@@ -53,6 +53,9 @@ describe("routevnUrls", () => {
     expect(getRoutevnCreatorDocsUrl("/project/particle-editor")).toBe(
       "https://routevn.com/en/creator/docs/particles/",
     );
+    expect(getRoutevnCreatorDocsUrl("/project/text-style-editor")).toBe(
+      "https://routevn.com/en/creator/docs/text-styles/",
+    );
   });
 
   it("maps settings routes to the docs settings section", () => {

@@ -1,725 +1,387 @@
+import { produce } from "immer";
 import { describe, expect, it, vi } from "vitest";
+import * as textStylesStore from "../../src/pages/textStyles/textStyles.store.js";
 import {
-  handleDesktopTextStyleFormKeyDown,
-  handleDesktopTextStyleSubmitClick,
-  handleDialogFormChange,
-  handleFontFileRejected,
-  handleFontFileSelected,
-  handleFormActionClick,
+  handleAddFormAction,
+  handleAddFormAddOptionClick,
+  handleAddTextStyleClick,
+  handleCreateTagFormAction,
+  handleDataChanged,
+  handleDetailHeaderClick,
+  handleDetailPreviewClick,
+  handleEditFormAction,
+  handleFileExplorerAction,
+  handleFileExplorerKeyboardScopeKeyDown,
   handleItemDuplicate,
-  handleMobileDetailEditClick,
+  handleMobileDetailDuplicateClick,
+  handleMobileDetailOpenClick,
+  handleTextStyleItemDoubleClick,
+  handleTextStyleItemEdit,
 } from "../../src/pages/textStyles/textStyles.handlers.js";
 import { EN_I18N } from "../support/i18n.js";
-import { createTestFontBytes } from "../support/fontFixtures.js";
 
-describe("textStyles.handlers", () => {
-  const createProjectState = () => ({
-    textStyles: {
-      items: {},
-      tree: [],
-    },
-    colors: {
-      items: {},
-      tree: [],
-    },
-    fonts: {
-      items: {},
-      tree: [],
-    },
-  });
+const createTextStyle = () => ({
+  id: "text-style-1",
+  type: "textStyle",
+  name: "Text Style One",
+  description: "Dialogue text.",
+  tagIds: ["tag-1"],
+  fontId: ["font-1"],
+  colorId: "color-1",
+  fontSize: 24,
+  lineHeight: 1.5,
+  fontWeight: "400",
+  previewText: "Preview One",
+});
 
-  const createFormDeps = ({
-    createTextStyle = vi.fn(async () => "text-style-new"),
-    updateTextStyle = vi.fn(async () => ({ valid: true })),
-    dialogState = {
-      targetGroupId: undefined,
-      editMode: false,
-      editingItemId: undefined,
+// The page on its real store, with a project of one text style.
+const createPage = async ({ fonts, colors } = {}) => {
+  let state = textStylesStore.createInitialState();
+  const store = new Proxy(
+    {},
+    {
+      get: (_target, name) => (payload) => {
+        if (name.startsWith("select")) {
+          return textStylesStore[name]({ state, i18n: EN_I18N }, payload);
+        }
+        let result;
+        state = produce(state, (draft) => {
+          result = textStylesStore[name]({ state: draft }, payload);
+        });
+        return result;
+      },
     },
-  } = {}) => ({
-    i18n: EN_I18N,
-    store: {
-      getState: () => ({
-        currentFormValues: {
-          previewText: "Preview",
+  );
+  const repositoryState = {
+    tags: {
+      textStyles: {
+        items: { "tag-1": { id: "tag-1", type: "tag", name: "Dialogue" } },
+        tree: [{ id: "tag-1" }],
+      },
+    },
+    colors: colors ?? {
+      items: {
+        "color-1": { id: "color-1", type: "color", name: "White", hex: "#fff" },
+      },
+      tree: [{ id: "color-1" }],
+    },
+    fonts: fonts ?? {
+      items: {
+        "font-1": {
+          id: "font-1",
+          type: "font",
+          name: "font-1.ttf",
+          fontFamily: "Font One",
+          fileId: "file-1",
         },
-      }),
-      selectDialogState: vi.fn(() => dialogState),
-      selectFontCapabilities: vi.fn(() => ({ kind: "unrestricted" })),
-      selectFontById: vi.fn(),
-      selectItemById: vi.fn(),
-      selectIsTouchMode: vi.fn(() => false),
-      selectCurrentPreviewText: vi.fn(() => "Preview"),
-      resetFormValues: vi.fn(),
-      clearEditMode: vi.fn(),
-      toggleDialog: vi.fn(),
-      setItems: vi.fn(),
-      setTagsData: vi.fn(),
-      setColorsData: vi.fn(),
-      setFontsData: vi.fn(),
-      setFontCapabilities: vi.fn(),
-      openAddColorDialog: vi.fn(),
-      openAddFontDialog: vi.fn(),
+        "font-2": {
+          id: "font-2",
+          type: "font",
+          name: "font-2.ttf",
+          fontFamily: "Font Two",
+          fileId: "file-2",
+          minWeight: 700,
+          defaultWeight: 700,
+          maxWeight: 700,
+        },
+      },
+      tree: [{ id: "font-1" }, { id: "font-2" }],
     },
-    projectService: {
-      createTextStyle,
-      updateTextStyle,
-      getState: createProjectState,
+    files: { items: {}, tree: [] },
+    textStyles: {
+      items: {
+        "folder-1": { id: "folder-1", type: "folder", name: "Folder One" },
+        "text-style-1": createTextStyle(),
+      },
+      tree: [{ id: "folder-1", children: [{ id: "text-style-1" }] }],
+    },
+  };
+  // The store keeps what it reads, frozen, so the project changes by
+  // replacing its collections.
+  const withItem = (collection, id, data) => ({
+    items: { ...collection.items, [id]: { id, ...data } },
+    tree: [...collection.tree, { id }],
+  });
+  const deps = {
+    store,
+    i18n: EN_I18N,
+    render: vi.fn(),
+    refs: {
+      fileExplorer: {
+        selectItem: vi.fn(),
+        getSelectedItem: vi.fn(() => ({
+          itemId: "text-style-1",
+          isFolder: false,
+        })),
+      },
+      addForm: { getValues: vi.fn(() => ({ tagIds: [] })), setValues: vi.fn() },
+      editForm: { reset: vi.fn(), setValues: vi.fn() },
     },
     appService: {
+      getPayload: vi.fn(() => ({ p: "project-1" })),
+      navigate: vi.fn(),
       showAlert: vi.fn(),
+      showToast: vi.fn(),
+      reportError: vi.fn(),
     },
-    refs: {
-      textStyleForm: {
-        getValues: vi.fn(() => createSubmitPayload()._event.detail.values),
-      },
+    projectService: {
+      getRepositoryState: vi.fn(() => repositoryState),
+      getState: vi.fn(() => repositoryState),
+      createTextStyle: vi.fn(async ({ textStyleId, data }) => {
+        repositoryState.textStyles = withItem(
+          repositoryState.textStyles,
+          textStyleId,
+          data,
+        );
+        return { valid: true };
+      }),
+      updateTextStyle: vi.fn(async ({ textStyleId, data }) => {
+        const { items, tree } = repositoryState.textStyles;
+        repositoryState.textStyles = {
+          items: {
+            ...items,
+            [textStyleId]: { ...items[textStyleId], ...data },
+          },
+          tree,
+        };
+        return { valid: true };
+      }),
+      duplicateTextStyle: vi.fn(async ({ textStyleId }) => {
+        repositoryState.textStyles = withItem(
+          repositoryState.textStyles,
+          "text-style-copy",
+          { ...repositoryState.textStyles.items[textStyleId] },
+        );
+        return "text-style-copy";
+      }),
+      createTag: vi.fn(async ({ scopeKey, tagId, data }) => {
+        repositoryState.tags = {
+          ...repositoryState.tags,
+          [scopeKey]: withItem(repositoryState.tags[scopeKey], tagId, data),
+        };
+        return { valid: true };
+      }),
     },
-    render: vi.fn(),
+  };
+  await handleDataChanged(deps);
+  return {
+    deps,
+    state: () => state,
+    view: () => textStylesStore.selectViewData({ state, i18n: EN_I18N }),
+    repositoryState,
+  };
+};
+
+const editorCall = (textStyleId) => [
+  "/project/text-style-editor",
+  { p: "project-1", ts: textStyleId },
+];
+
+const submitAdd = (deps, values) =>
+  handleAddFormAction(deps, {
+    _event: { detail: { actionId: "submit", values } },
   });
 
-  const createSubmitPayload = (values = {}) => ({
-    _event: {
-      detail: {
-        actionId: "submit",
-        values: {
-          name: "Dialogue",
-          description: "",
-          tagIds: [],
-          fontSize: 24,
-          lineHeight: 1.5,
-          fontColor: "color-1",
-          fontId: "font-1",
-          fontWeight: "400",
-          strokeColor: "",
-          strokeWidth: 0,
-          shadowColor: "",
-          shadowAlpha: 1,
-          shadowBlur: 0,
-          shadowOffsetX: 2,
-          shadowOffsetY: 2,
-          ...values,
-        },
-      },
-    },
-  });
+describe("textStyles handlers", () => {
+  it("opens text styles in the editor", async () => {
+    const page = await createPage();
+    const { deps } = page;
+    deps.store.setSelectedItemId({ itemId: "text-style-1" });
 
-  it("omits empty tag ids when creating a text style", async () => {
-    const createTextStyle = vi.fn(async () => "text-style-new");
-    const deps = createFormDeps({ createTextStyle });
-
-    await handleFormActionClick(deps, createSubmitPayload());
-
-    const createPayload = createTextStyle.mock.calls[0][0];
-    expect(Object.hasOwn(createPayload.data, "tagIds")).toBe(false);
-  });
-
-  it("keeps empty tag ids when updating a text style", async () => {
-    const updateTextStyle = vi.fn(async () => ({ valid: true }));
-    const deps = createFormDeps({
-      updateTextStyle,
-      dialogState: {
-        targetGroupId: undefined,
-        editMode: true,
-        editingItemId: "text-style-1",
-      },
+    handleTextStyleItemDoubleClick(deps, {
+      _event: { detail: { itemId: "text-style-1" } },
     });
-
-    await handleFormActionClick(deps, createSubmitPayload());
-
-    expect(updateTextStyle).toHaveBeenCalledWith(
-      expect.objectContaining({
-        textStyleId: "text-style-1",
-        data: expect.objectContaining({
-          tagIds: [],
-          clearShadow: true,
-        }),
-      }),
-    );
-  });
-
-  it("preserves fallback font ids when updating an unrelated field", async () => {
-    const updateTextStyle = vi.fn(async () => ({ valid: true }));
-    const deps = createFormDeps({
-      updateTextStyle,
-      dialogState: {
-        targetGroupId: undefined,
-        editMode: true,
-        editingItemId: "text-style-1",
-      },
+    handleTextStyleItemEdit(deps, {
+      _event: { detail: { itemId: "text-style-1" } },
     });
-    deps.store.selectItemById.mockReturnValue({
-      id: "text-style-1",
-      fontId: ["font-1", "font-fallback"],
-      fontWeight: "400",
-    });
-
-    await handleFormActionClick(
-      deps,
-      createSubmitPayload({ name: "Updated Dialogue" }),
-    );
-
-    expect(updateTextStyle).toHaveBeenCalledWith(
-      expect.objectContaining({
-        textStyleId: "text-style-1",
-        data: expect.objectContaining({
-          name: "Updated Dialogue",
-          fontId: ["font-1", "font-fallback"],
-        }),
-      }),
-    );
-  });
-
-  it("resets the fallback stack when the primary font changes", async () => {
-    const updateTextStyle = vi.fn(async () => ({ valid: true }));
-    const deps = createFormDeps({
-      updateTextStyle,
-      dialogState: {
-        targetGroupId: undefined,
-        editMode: true,
-        editingItemId: "text-style-1",
-      },
-    });
-    deps.store.selectItemById.mockReturnValue({
-      id: "text-style-1",
-      fontId: ["font-1", "font-fallback"],
-      fontWeight: "400",
-    });
-
-    await handleFormActionClick(
-      deps,
-      createSubmitPayload({ fontId: "font-2" }),
-    );
-
-    expect(updateTextStyle).toHaveBeenCalledWith(
-      expect.objectContaining({
-        data: expect.objectContaining({
-          fontId: ["font-2"],
-        }),
-      }),
-    );
-  });
-
-  it("persists shadow settings", async () => {
-    const createTextStyle = vi.fn(async () => "text-style-new");
-    const deps = createFormDeps({ createTextStyle });
-
-    await handleFormActionClick(
-      deps,
-      createSubmitPayload({
-        shadowColor: "color-shadow",
-        shadowAlpha: 0.75,
-        shadowBlur: 6,
-        shadowOffsetX: -2,
-        shadowOffsetY: 3,
-      }),
-    );
-
-    expect(createTextStyle.mock.calls[0][0].data).toMatchObject({
-      fontId: ["font-1"],
-      shadow: {
-        colorId: "color-shadow",
-        alpha: 0.75,
-        blur: 6,
-        offsetX: -2,
-        offsetY: 3,
-      },
-    });
-  });
-
-  it("rejects a new text style weight unsupported by a static font", async () => {
-    const createTextStyle = vi.fn(async () => "text-style-new");
-    const deps = createFormDeps({ createTextStyle });
-    deps.store.selectFontCapabilities.mockReturnValue({
-      kind: "static",
-      defaultWeight: 400,
-      minWeight: 400,
-      maxWeight: 400,
-    });
-
-    await handleFormActionClick(
-      deps,
-      createSubmitPayload({ fontWeight: "700" }),
-    );
-
-    expect(createTextStyle).not.toHaveBeenCalled();
-    expect(deps.appService.showAlert).toHaveBeenCalledWith(
-      expect.objectContaining({
-        message: expect.stringContaining("not supported"),
-      }),
-    );
-  });
-
-  it("preserves an existing unsupported weight while editing", async () => {
-    const updateTextStyle = vi.fn(async () => ({ valid: true }));
-    const deps = createFormDeps({
-      updateTextStyle,
-      dialogState: {
-        targetGroupId: undefined,
-        editMode: true,
-        editingItemId: "text-style-1",
-      },
-    });
-    deps.store.selectFontCapabilities.mockReturnValue({
-      kind: "static",
-      defaultWeight: 400,
-      minWeight: 400,
-      maxWeight: 400,
-    });
-    deps.store.selectItemById.mockReturnValue({
-      id: "text-style-1",
-      fontId: ["font-1"],
-      fontWeight: "700",
-    });
-
-    await handleFormActionClick(
-      deps,
-      createSubmitPayload({ fontWeight: "700" }),
-    );
-
-    expect(updateTextStyle).toHaveBeenCalledWith(
-      expect.objectContaining({
-        textStyleId: "text-style-1",
-        data: expect.objectContaining({
-          fontId: ["font-1"],
-          fontWeight: "700",
-        }),
-      }),
-    );
-  });
-
-  it("shows an alert and rejects WOFF1 files in the add-font dialog", async () => {
-    const file = new File(["legacy woff"], "legacy.woff", {
-      type: "font/woff",
-    });
-    const deps = {
-      i18n: EN_I18N,
-      store: {
-        setSelectedFontFile: vi.fn(),
-      },
-      projectService: {
-        uploadFiles: vi.fn(),
-      },
-      appService: {
-        showAlert: vi.fn(),
-      },
-      render: vi.fn(),
-    };
-
-    await handleFontFileSelected(deps, {
+    handleMobileDetailOpenClick(deps);
+    handleDetailPreviewClick(deps);
+    await handleFileExplorerAction(deps, {
       _event: {
-        detail: {
-          files: [file],
-        },
+        detail: { itemId: "text-style-1", item: { value: "edit-item" } },
       },
     });
-
-    expect(deps.projectService.uploadFiles).not.toHaveBeenCalled();
-    expect(deps.store.setSelectedFontFile).not.toHaveBeenCalled();
-    expect(deps.appService.showAlert).toHaveBeenCalledWith({
-      message:
-        "Invalid file format. Please upload a TTF, OTF, or WOFF2 font file.",
-      title: "Warning",
-    });
-  });
-
-  it("shows an alert when WOFF1 is rejected from the add-font drop zone", () => {
-    const deps = {
-      i18n: EN_I18N,
-      appService: {
-        showAlert: vi.fn(),
-      },
-    };
-
-    handleFontFileRejected(deps, {
-      _event: {
-        detail: {
-          files: [
-            new File(["legacy woff"], "legacy.woff", {
-              type: "font/woff",
-            }),
-          ],
-        },
-      },
-    });
-
-    expect(deps.appService.showAlert).toHaveBeenCalledWith({
-      message:
-        "Invalid file format. Please upload a TTF, OTF, or WOFF2 font file.",
-      title: "Warning",
-    });
-  });
-
-  it("loads a TTF's capabilities and selects its real static weight", async () => {
-    let currentFormValues = {
-      fontId: "font-600",
-      fontWeight: "400",
-    };
-    const revoke = vi.fn();
-    const deps = {
-      store: {
-        updateFormValues: vi.fn(({ formData }) => {
-          currentFormValues = { ...currentFormValues, ...formData };
-        }),
-        selectCurrentFormValues: vi.fn(() => currentFormValues),
-        selectFontCapabilities: vi.fn(),
-        selectFontById: vi.fn(() => ({
-          id: "font-600",
-          type: "font",
-          fileId: "file-600",
-          fileType: "font/ttf",
-        })),
-        setFontCapabilities: vi.fn(),
-        selectDialogState: vi.fn(() => ({ editMode: false })),
-      },
-      projectService: {
-        getFileContent: vi.fn(async () => ({
-          url: "blob:font-600",
-          revoke,
-        })),
-      },
-      refs: {
-        textStyleForm: {
-          setValues: vi.fn(),
-        },
-      },
-      render: vi.fn(),
-    };
-    const fontBytes = createTestFontBytes({ weight: 600 });
-    vi.stubGlobal(
-      "fetch",
-      vi.fn(async () => ({
-        ok: true,
-        arrayBuffer: async () => fontBytes.buffer,
-      })),
-    );
-
-    try {
-      await handleDialogFormChange(deps, {
-        _event: {
-          detail: {
-            name: "fontId",
-            value: "font-600",
-            values: currentFormValues,
-          },
-        },
-      });
-    } finally {
-      vi.unstubAllGlobals();
-    }
-
-    expect(deps.store.setFontCapabilities).toHaveBeenCalledWith({
-      fontId: "font-600",
-      capabilities: {
-        kind: "static",
-        defaultWeight: 600,
-        minWeight: 600,
-        maxWeight: 600,
-      },
-    });
-    expect(deps.refs.textStyleForm.setValues).toHaveBeenCalledWith({
-      values: {
-        fontId: "font-600",
-        fontWeight: "600",
-      },
-    });
-    expect(revoke).toHaveBeenCalledOnce();
-  });
-
-  it("keeps all weights available when stored font metadata is unusable", async () => {
-    const currentFormValues = {
-      fontId: "font-unknown",
-      fontWeight: "700",
-    };
-    const revoke = vi.fn();
-    const deps = {
-      store: {
-        updateFormValues: vi.fn(),
-        selectCurrentFormValues: vi.fn(() => currentFormValues),
-        selectFontCapabilities: vi.fn(),
-        selectFontById: vi.fn(() => ({
-          id: "font-unknown",
-          type: "font",
-          fileId: "file-unknown",
-          fileType: "font/ttf",
-        })),
-        setFontCapabilities: vi.fn(),
-        selectDialogState: vi.fn(() => ({ editMode: false })),
-      },
-      projectService: {
-        getFileContent: vi.fn(async () => ({
-          url: "blob:font-unknown",
-          revoke,
-        })),
-      },
-      refs: {
-        textStyleForm: {
-          setValues: vi.fn(),
-        },
-      },
-      render: vi.fn(),
-    };
-    const fontBytes = createTestFontBytes({ weight: 0 });
-    vi.stubGlobal(
-      "fetch",
-      vi.fn(async () => ({
-        ok: true,
-        arrayBuffer: async () => fontBytes.buffer,
-      })),
-    );
-
-    try {
-      await handleDialogFormChange(deps, {
-        _event: {
-          detail: {
-            name: "fontId",
-            value: "font-unknown",
-            values: currentFormValues,
-          },
-        },
-      });
-    } finally {
-      vi.unstubAllGlobals();
-    }
-
-    expect(deps.store.setFontCapabilities).toHaveBeenCalledWith({
-      fontId: "font-unknown",
-      capabilities: { kind: "unrestricted" },
-    });
-    expect(deps.refs.textStyleForm.setValues).not.toHaveBeenCalled();
-    expect(revoke).toHaveBeenCalledOnce();
-  });
-
-  it("uses stored font weight capabilities without reading the font file", async () => {
-    const currentFormValues = {
-      fontId: "font-600",
-      fontWeight: "400",
-    };
-    const deps = {
-      store: {
-        updateFormValues: vi.fn(),
-        selectCurrentFormValues: vi.fn(() => currentFormValues),
-        selectFontCapabilities: vi.fn(),
-        selectFontById: vi.fn(() => ({
-          id: "font-600",
-          type: "font",
-          fileId: "file-600",
-          fileType: "font/ttf",
-          minWeight: 600,
-          defaultWeight: 600,
-          maxWeight: 600,
-        })),
-        setFontCapabilities: vi.fn(),
-        selectDialogState: vi.fn(() => ({ editMode: false })),
-      },
-      projectService: {
-        getFileContent: vi.fn(),
-      },
-      refs: {
-        textStyleForm: {
-          setValues: vi.fn(),
-        },
-      },
-      render: vi.fn(),
-    };
-
-    await handleDialogFormChange(deps, {
-      _event: {
-        detail: {
-          name: "fontId",
-          value: "font-600",
-          values: currentFormValues,
-        },
-      },
-    });
-
-    expect(deps.store.setFontCapabilities).toHaveBeenCalledWith({
-      fontId: "font-600",
-      capabilities: {
-        kind: "static",
-        minWeight: 600,
-        defaultWeight: 600,
-        maxWeight: 600,
-      },
-    });
-    expect(deps.projectService.getFileContent).not.toHaveBeenCalled();
-  });
-
-  it("submits the desktop form through the fixed action button", async () => {
-    const createTextStyle = vi.fn(async () => "text-style-new");
-    const deps = createFormDeps({ createTextStyle });
-
-    await handleDesktopTextStyleSubmitClick(deps);
-
-    expect(deps.refs.textStyleForm.getValues).toHaveBeenCalledOnce();
-    expect(createTextStyle).toHaveBeenCalledOnce();
-  });
-
-  it("submits with Enter outside textareas in the desktop form", async () => {
-    const createTextStyle = vi.fn(async () => "text-style-new");
-    const deps = createFormDeps({ createTextStyle });
-    const preventDefault = vi.fn();
-
-    await handleDesktopTextStyleFormKeyDown(deps, {
-      _event: {
-        key: "Enter",
-        shiftKey: false,
-        preventDefault,
-        composedPath: () => [{ tagName: "RTGL-INPUT" }],
-      },
-    });
-
-    expect(preventDefault).toHaveBeenCalledOnce();
-    expect(createTextStyle).toHaveBeenCalledOnce();
-  });
-
-  it("keeps Enter available for multiline text in the desktop form", async () => {
-    const createTextStyle = vi.fn(async () => "text-style-new");
-    const deps = createFormDeps({ createTextStyle });
-    const preventDefault = vi.fn();
-
-    await handleDesktopTextStyleFormKeyDown(deps, {
-      _event: {
-        key: "Enter",
-        shiftKey: false,
-        preventDefault,
-        composedPath: () => [{ tagName: "TEXTAREA" }],
-      },
-    });
-
-    expect(preventDefault).not.toHaveBeenCalled();
-    expect(createTextStyle).not.toHaveBeenCalled();
-  });
-
-  it("duplicates a text style and selects the duplicate", async () => {
-    const duplicateTextStyle = vi.fn(async () => "text-style-copy");
-    let textStylesData = {
-      items: {},
-      tree: [],
-    };
-    const deps = {
-      i18n: EN_I18N,
-      store: {
-        getState: () => ({ textStylesData }),
-        setItems: vi.fn(({ textStylesData: nextTextStylesData } = {}) => {
-          textStylesData = nextTextStylesData;
-        }),
-        setTagsData: vi.fn(),
-        setColorsData: vi.fn(),
-        setFontsData: vi.fn(),
-        setSelectedFolderId: vi.fn(),
-        setSelectedItemId: vi.fn(),
-        selectItemById: vi.fn((itemId) => textStylesData.items[itemId]),
-      },
-      refs: {
-        fileExplorer: {
-          selectItem: vi.fn(),
-        },
-      },
-      projectService: {
-        duplicateTextStyle,
-        getState: () => ({
-          textStyles: {
-            items: {
-              "text-style-1": {
-                id: "text-style-1",
-                type: "textStyle",
-                name: "Dialogue",
-              },
-              "text-style-copy": {
-                id: "text-style-copy",
-                type: "textStyle",
-                name: "Dialogue",
-              },
-            },
-            tree: [{ id: "text-style-1" }, { id: "text-style-copy" }],
-          },
-          colors: {
-            items: {},
-            tree: [],
-          },
-          fonts: {
-            items: {},
-            tree: [],
-          },
-        }),
-      },
-      appService: {
-        showAlert: vi.fn(),
-      },
-      render: vi.fn(),
-    };
-
-    await handleItemDuplicate(deps, {
-      _event: {
-        detail: {
-          itemId: "text-style-1",
-        },
-      },
-    });
-
-    expect(duplicateTextStyle).toHaveBeenCalledWith({
-      textStyleId: "text-style-1",
-    });
-    expect(deps.store.setSelectedItemId).toHaveBeenCalledWith({
-      itemId: "text-style-copy",
-    });
-    expect(deps.refs.fileExplorer.selectItem).toHaveBeenCalledWith({
-      itemId: "text-style-copy",
-    });
-  });
-
-  it("opens the selected text style from the mobile detail edit action", () => {
-    const item = {
-      id: "text-style-1",
-      type: "textStyle",
-      name: "Dialogue",
-      colorId: "color-1",
-      fontId: "font-1",
-      fontSize: 24,
-      lineHeight: 1.5,
-      fontWeight: "400",
-    };
-    const event = {
+    const keyEvent = {
+      key: "e",
       preventDefault: vi.fn(),
       stopPropagation: vi.fn(),
+      composedPath: () => [],
     };
-    const deps = {
-      store: {
-        selectSelectedItemId: vi.fn(() => "text-style-1"),
-        selectItemById: vi.fn(() => item),
-        setSelectedItemId: vi.fn(),
-        setFormValuesFromItem: vi.fn(),
-        setEditMode: vi.fn(),
-        selectIsDialogOpen: vi.fn(() => false),
-        toggleDialog: vi.fn(),
-        selectFontCapabilities: vi.fn(() => ({ kind: "unrestricted" })),
+    handleFileExplorerKeyboardScopeKeyDown(deps, { _event: keyEvent });
+    handleTextStyleItemDoubleClick(deps, {
+      _event: { detail: { itemId: "folder-1", isFolder: true } },
+    });
+
+    expect(deps.appService.navigate.mock.calls).toEqual([
+      editorCall("text-style-1"),
+      editorCall("text-style-1"),
+      editorCall("text-style-1"),
+      editorCall("text-style-1"),
+      editorCall("text-style-1"),
+      editorCall("text-style-1"),
+    ]);
+    expect(keyEvent.preventDefault).toHaveBeenCalled();
+  });
+
+  it("adds a text style with the first font and color, and opens it", async () => {
+    const page = await createPage();
+    const { deps } = page;
+    handleAddTextStyleClick(deps, {
+      _event: { detail: { groupId: "folder-1" } },
+    });
+    expect(page.view().isAddDialogOpen).toBe(true);
+
+    await submitAdd(deps, {
+      name: " Text Style Two ",
+      description: "Narration.",
+      tagIds: ["tag-1"],
+    });
+
+    const [{ textStyleId, data, parentId, position }] =
+      deps.projectService.createTextStyle.mock.calls[0];
+    expect(data).toEqual({
+      type: "textStyle",
+      name: "Text Style Two",
+      description: "Narration.",
+      tagIds: ["tag-1"],
+      fontId: ["font-1"],
+      colorId: "color-1",
+      fontSize: 16,
+      lineHeight: 1.5,
+      fontWeight: "400",
+    });
+    expect(parentId).toBe("folder-1");
+    expect(position).toBe("last");
+    expect(page.view().isAddDialogOpen).toBe(false);
+    expect(deps.appService.navigate).toHaveBeenCalledWith(
+      ...editorCall(textStyleId),
+    );
+  });
+
+  it("starts a new text style at its font's own weight, without empty tags", async () => {
+    const page = await createPage({
+      fonts: {
+        items: {
+          "font-2": {
+            id: "font-2",
+            type: "font",
+            fontFamily: "Font Two",
+            fileId: "file-2",
+            minWeight: 700,
+            defaultWeight: 700,
+            maxWeight: 700,
+          },
+        },
+        tree: [{ id: "font-2" }],
       },
-      refs: {
-        fileExplorer: {
-          selectItem: vi.fn(),
+    });
+    handleAddTextStyleClick(page.deps, {
+      _event: { detail: { groupId: "_root" } },
+    });
+
+    await submitAdd(page.deps, { name: "Text Style Two", tagIds: [] });
+
+    const [{ data, parentId }] =
+      page.deps.projectService.createTextStyle.mock.calls[0];
+    expect(data).toMatchObject({ fontId: ["font-2"], fontWeight: "700" });
+    expect(data).not.toHaveProperty("tagIds");
+    expect(parentId).toBeUndefined();
+  });
+
+  it("asks for a name, and for a font and a color in the project", async () => {
+    const page = await createPage({ colors: { items: {}, tree: [] } });
+    const { deps } = page;
+
+    await submitAdd(deps, { name: " " });
+    expect(deps.appService.showAlert).toHaveBeenLastCalledWith({
+      message: "Text style name is required.",
+      title: "Warning",
+    });
+
+    await submitAdd(deps, { name: "Text Style Two" });
+    expect(deps.appService.showAlert).toHaveBeenLastCalledWith({
+      message:
+        "Add a font and a color to the project before adding a text style.",
+      title: "Warning",
+    });
+    expect(deps.projectService.createTextStyle).not.toHaveBeenCalled();
+    expect(deps.appService.navigate).not.toHaveBeenCalled();
+  });
+
+  it("puts a tag created from the add form into the form", async () => {
+    const page = await createPage();
+    const { deps } = page;
+
+    handleAddFormAddOptionClick(deps);
+    expect(page.view().isCreateTagDialogOpen).toBe(true);
+    await handleCreateTagFormAction(deps, {
+      _event: {
+        detail: { actionId: "submit", values: { name: "Narration" } },
+      },
+    });
+
+    const [{ tagId }] = deps.projectService.createTag.mock.calls[0];
+    expect(deps.refs.addForm.setValues).toHaveBeenCalledWith({
+      values: { tagIds: [tagId] },
+    });
+  });
+
+  it("edits the name, description and tags from the detail header", async () => {
+    const page = await createPage();
+    const { deps } = page;
+    deps.store.setSelectedItemId({ itemId: "text-style-1" });
+
+    handleDetailHeaderClick(deps);
+
+    const values = {
+      name: "Text Style One",
+      description: "Dialogue text.",
+      tagIds: ["tag-1"],
+    };
+    expect(page.view()).toMatchObject({
+      isEditDialogOpen: true,
+      editDefaultValues: values,
+    });
+    expect(deps.refs.editForm.reset).toHaveBeenCalledOnce();
+    expect(deps.refs.editForm.setValues).toHaveBeenCalledWith({ values });
+
+    await handleEditFormAction(deps, {
+      _event: {
+        detail: {
+          actionId: "submit",
+          values: { name: " Text Style Renamed ", description: "", tagIds: [] },
         },
       },
-      render: vi.fn(),
-    };
-
-    handleMobileDetailEditClick(deps, {
-      _event: event,
     });
 
-    expect(event.preventDefault).toHaveBeenCalled();
-    expect(event.stopPropagation).toHaveBeenCalled();
-    expect(deps.store.setSelectedItemId).toHaveBeenCalledWith({
-      itemId: "text-style-1",
-      suppressMobileDetailSheet: true,
+    expect(deps.projectService.updateTextStyle).toHaveBeenCalledWith({
+      textStyleId: "text-style-1",
+      data: { name: "Text Style Renamed", description: "", tagIds: [] },
     });
-    expect(deps.refs.fileExplorer.selectItem).toHaveBeenCalledWith({
-      itemId: "text-style-1",
+    expect(page.view()).toMatchObject({
+      isEditDialogOpen: false,
+      selectedItemId: "text-style-1",
+      selectedDetailName: "Text Style Renamed",
     });
-    expect(deps.store.setFormValuesFromItem).toHaveBeenCalledWith({ item });
-    expect(deps.store.setEditMode).toHaveBeenCalledWith({
-      itemId: "text-style-1",
+  });
+
+  it("duplicates a text style from the center menu and the phone detail sheet", async () => {
+    const page = await createPage();
+    const { deps } = page;
+
+    await handleItemDuplicate(deps, {
+      _event: { detail: { itemId: "text-style-1" } },
     });
-    expect(deps.store.toggleDialog).toHaveBeenCalled();
-    expect(deps.render).toHaveBeenCalled();
+    expect(deps.projectService.duplicateTextStyle).toHaveBeenCalledWith({
+      textStyleId: "text-style-1",
+    });
+    expect(page.view().selectedItemId).toBe("text-style-copy");
+    expect(deps.refs.fileExplorer.selectItem).toHaveBeenLastCalledWith({
+      itemId: "text-style-copy",
+    });
+
+    deps.store.setSelectedItemId({ itemId: "text-style-1" });
+    await handleMobileDetailDuplicateClick(deps);
+    expect(deps.projectService.duplicateTextStyle).toHaveBeenCalledTimes(2);
   });
 });

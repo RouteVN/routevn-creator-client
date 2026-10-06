@@ -92,6 +92,7 @@ const resourceParentMapping = {
   "audio-effects-editor": "audioEffects",
   "transform-editor": "transforms",
   "particle-editor": "particles",
+  "text-style-editor": "textStyles",
 };
 
 const resourceCategoryNames = {

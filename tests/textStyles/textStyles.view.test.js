@@ -1,110 +1,66 @@
-import { readFileSync } from "fs";
+import { readFileSync } from "node:fs";
 import { describe, expect, it } from "vitest";
 
+const view = readFileSync(
+  new URL("../../src/pages/textStyles/textStyles.view.yaml", import.meta.url),
+  "utf8",
+);
+
 describe("textStyles view", () => {
-  it("shows an edit action in the mobile detail sheet", () => {
-    const textStylesView = readFileSync(
-      new URL(
-        "../../src/pages/textStyles/textStyles.view.yaml",
-        import.meta.url,
-      ),
-      "utf8",
+  it("adds text styles and edits their name, description and tags in dialogs", () => {
+    expect(view).toContain(
+      "rtgl-form#addForm key=${isAddDialogOpen} :defaultValues=${addFormDefaults} :form=${addForm}",
     );
-
-    const mobileDetailStart = textStylesView.indexOf(
-      "$if showMobileDetailSheet",
+    expect(view).toContain(
+      "rtgl-form#editForm key=${isEditDialogOpen} :defaultValues=${editDefaultValues} :form=${editForm}",
     );
-    const folderDialogStart = textStylesView.indexOf(
-      "rtgl-dialog#folderNameDialog",
-      mobileDetailStart,
-    );
-    const mobileDetailBranch = textStylesView.slice(
-      mobileDetailStart,
-      folderDialogStart,
-    );
-
-    expect(mobileDetailBranch).toContain("mobileDetailEditButton");
-    expect(mobileDetailBranch).toContain("pre=edit: ${editButton}");
-    expect(mobileDetailBranch).toContain("rtgl-view d=h w=f g=sm p=md bwb=xs");
-    expect(mobileDetailBranch).toContain(
-      "rtgl-button#mobileDetailEditButton w=1fg v=se pre=edit",
-    );
-    expect(textStylesView).toContain("handler: handleMobileDetailEditClick");
-    expect(textStylesView).toContain("handler: handleTextStyleItemEdit");
+    // How a text style looks is edited on the text style editor page.
+    for (const removed of [
+      "addTypographyDialog",
+      "textStyleForm",
+      "previewTextInput",
+      "addColorDialog",
+      "addFontDialog",
+      "mode=live",
+    ]) {
+      expect(view).not.toContain(removed);
+    }
   });
 
-  it("hides the add/edit preview canvas in the mobile dialog branch", () => {
-    const textStylesView = readFileSync(
-      new URL(
-        "../../src/pages/textStyles/textStyles.view.yaml",
-        import.meta.url,
-      ),
-      "utf8",
+  it("previews the selected text style in the desktop detail panel and opens it from there", () => {
+    expect(view.match(/rvn-font-preview mode=thumbnail /g)).toHaveLength(1);
+    expect(view).toContain(
+      'rtgl-view#detailTextStylePreview slot="text-style-preview"',
     );
-
-    const desktopPreviewStart = textStylesView.indexOf(
-      "$if showDialogPreviewCanvas",
+    expect(view).toContain(
+      "detailTextStylePreview:\n    eventListeners:\n      click:\n        handler: handleDetailPreviewClick",
     );
-    const mobileBranchStart = textStylesView.indexOf(
-      "$else:",
-      desktopPreviewStart,
-    );
-    const dialogEnd = textStylesView.indexOf(
-      "rtgl-dialog#addColorDialog",
-      mobileBranchStart,
-    );
-    const desktopBranch = textStylesView.slice(
-      desktopPreviewStart,
-      mobileBranchStart,
-    );
-    const mobileBranch = textStylesView.slice(mobileBranchStart, dialogEnd);
-
-    expect(desktopBranch).toContain("rvn-font-preview");
-    expect(desktopBranch).toContain("aspect-ratio: 32 / 9");
-    expect(desktopBranch).toContain("previewTextInput");
-    expect(mobileBranch).toContain("$if isDialogOpen");
-    expect(mobileBranch).toContain("rtgl-form#textStyleForm");
-    expect(mobileBranch).toContain(
-      "rtgl-dialog#addTypographyDialog ?open=${isDialogOpen} s=md",
-    );
-    expect(mobileBranch).toContain("md-layout=fixed-top p=none");
-    expect(mobileBranch).toContain("rtgl-button#mobileTextStyleSubmitButton");
-    expect(mobileBranch).not.toContain("rvn-font-preview");
-    expect(mobileBranch).not.toContain("previewTextInput");
-    expect(mobileBranch).not.toContain("100vw");
-    expect(mobileBranch).not.toContain("calc(100vw");
   });
 
-  it("keeps the desktop submit action outside the scrollable form content", () => {
-    const textStylesView = readFileSync(
-      new URL(
-        "../../src/pages/textStyles/textStyles.view.yaml",
-        import.meta.url,
-      ),
-      "utf8",
+  it("opens, duplicates and deletes from the phone detail sheet", () => {
+    const sheet = view.slice(
+      view.indexOf("rvn-mobile-sheet#mobileDetailSheet"),
     );
 
-    const desktopPreviewStart = textStylesView.indexOf(
-      "$if showDialogPreviewCanvas",
+    expect(sheet).toContain(
+      "rtgl-button#mobileDetailOpenButton w=1fg v=se pre=chevronRight: ${openButton}",
     );
-    const mobileBranchStart = textStylesView.indexOf(
-      "$else:",
-      desktopPreviewStart,
+    expect(sheet).toContain(
+      "rtgl-button#mobileDetailDuplicateButton w=1fg v=se pre=duplicate: ${duplicateButton}",
     );
-    const desktopBranch = textStylesView.slice(
-      desktopPreviewStart,
-      mobileBranchStart,
+    expect(sheet).toContain(
+      "rtgl-button#mobileDetailDeleteButton w=1fg v=se pre=trash: ${deleteButton}",
     );
+    expect(sheet).not.toContain("mobileDetailEditButton");
+  });
 
-    expect(desktopBranch).toContain("w=800 h=70vh");
-    expect(desktopBranch).toContain("textStyleFormScroll w=f h=1fg sv");
-    expect(desktopBranch).toContain(":form=${desktopDialogForm}");
-    expect(desktopBranch).toContain("desktopTextStyleSubmitButton");
-    expect(
-      desktopBranch.indexOf("desktopTextStyleSubmitButton"),
-    ).toBeGreaterThan(desktopBranch.indexOf(":form=${desktopDialogForm}"));
-    expect(textStylesView).toContain(
-      "handler: handleDesktopTextStyleSubmitClick",
-    );
+  it("opens and duplicates from the center menu", () => {
+    for (const listener of [
+      "item-edit:\n        handler: handleTextStyleItemEdit",
+      "item-duplicate:\n        handler: handleItemDuplicate",
+      "item-dblclick:\n        handler: handleTextStyleItemDoubleClick",
+    ]) {
+      expect(view).toContain(listener);
+    }
   });
 });

@@ -1,6 +1,6 @@
 ---
 title: Text Styles Workflow
-description: Covers the text styles page detail, edit dialog, and empty search state.
+description: Covers the text styles page detail, the Add dialog, the text style editor, the metadata edit dialog, and the empty search state.
 url: /projects
 skipInitialScreenshot: true
 viewport:
@@ -86,72 +86,165 @@ steps:
     ms: 300
   - action: screenshot
   - action: select
-    selector: "#typographyView #itemRef0x0"
-    steps:
-      - action: dblclick
-  - action: waitFor
-    selector: "#addTypographyDialog"
-    state: visible
-    timeoutMs: 5000
-  - action: wait
-    ms: 400
-  - action: screenshot
-  - action: select
-    selector: "#textStyleFormScroll"
-    steps:
-      - action: hover
-      - action: scroll
-        deltaX: 0
-        deltaY: 900
-  - action: wait
-    ms: 250
-  - action: screenshot
-  - action: select
-    selector: "#textStyleForm rtgl-select#field10 [data-testid='select-button']"
+    selector: "#addBtnHeaderRef0"
     steps:
       - action: click
   - action: waitFor
-    selector: "#textStyleForm rtgl-select#field10 #option1"
-    state: visible
-    timeoutMs: 5000
-  - action: select
-    selector: "#textStyleForm rtgl-select#field10 #option1"
-    steps:
-      - action: click
-  - action: waitFor
-    selector: "#textStyleForm rtgl-slider-input#field11 rtgl-input-number#input input"
+    selector: "#addDialog[open]"
     state: attached
-    timeoutMs: 5000
+    timeoutMs: 10000
   - action: select
-    selector: "#textStyleForm rtgl-slider-input#field11 rtgl-input-number#input input"
+    selector: rtgl-form#addForm rtgl-input#field0 input
     steps:
       - action: clear
       - action: write
-        value: "1"
+        value: VT Text Style
+  - action: wait
+    ms: 300
+  - action: screenshot
+  - action: select
+    selector: "rtgl-form#addForm rtgl-button[data-action-id=submit]"
+    steps:
+      - action: click
   - action: waitFor
-    selector: "#textStyleForm rtgl-slider-input#field12 rtgl-input-number#input input"
+    selector: rvn-text-style-editor
+    state: attached
+    timeoutMs: 20000
+  - action: assert
+    type: url
+    value: /project/text-style-editor
+  - action: waitFor
+    selector: "rvn-text-style-editor rtgl-tabs#rightPanelModeTabs[selected-tab='edit']"
+    state: attached
+    timeoutMs: 5000
+  - action: waitFor
+    selector: "rvn-text-style-editor rvn-route-graphics-text-preview[data-preview-status='ready']"
+    state: attached
+    timeoutMs: 20000
+  - action: wait
+    ms: 800
+  - action: screenshot
+  - action: select
+    selector: "rvn-text-style-editor rtgl-form#textStyleForm rtgl-input-number[data-field-name=fontSize] input"
+    steps:
+      - action: clear
+      - action: write
+        value: "40"
+  - action: keypress
+    key: Tab
+  - action: select
+    selector: "rvn-text-style-editor rtgl-select#shadowColorSelect [data-testid='select-button']"
+    steps:
+      - action: click
+  - action: waitFor
+    selector: "rvn-text-style-editor rtgl-select#shadowColorSelect #option1"
+    state: visible
+    timeoutMs: 5000
+  - action: select
+    selector: "rvn-text-style-editor rtgl-select#shadowColorSelect #option1"
+    steps:
+      - action: click
+  - action: waitFor
+    selector: "rvn-text-style-editor rtgl-form#textStyleForm rtgl-slider-input[data-field-name=shadowBlur] rtgl-input-number#input input"
     state: attached
     timeoutMs: 5000
   - action: select
-    selector: "#textStyleForm rtgl-slider-input#field12 rtgl-input-number#input input"
+    selector: "rvn-text-style-editor rtgl-form#textStyleForm rtgl-slider-input[data-field-name=shadowBlur] rtgl-input-number#input input"
     steps:
       - action: clear
       - action: write
         value: "8"
+  - action: keypress
+    key: Tab
   - action: wait
-    ms: 250
+    ms: 800
   - action: screenshot
   - action: select
-    selector: "#textStyleForm rtgl-select#field8 [data-testid='select-clear-button'] svg"
+    selector: "rvn-text-style-editor rtgl-select#outlineColorSelect [data-testid='select-button']"
     steps:
       - action: click
+  - action: waitFor
+    selector: "rvn-text-style-editor rtgl-select#outlineColorSelect [data-testid='select-add-option']"
+    state: visible
+    timeoutMs: 5000
+  - action: select
+    selector: "rvn-text-style-editor rtgl-select#outlineColorSelect [data-testid='select-add-option']"
+    steps:
+      - action: click
+  - action: waitFor
+    selector: "rvn-text-style-editor #addColorDialog[open]"
+    state: attached
+    timeoutMs: 5000
   - action: wait
-    ms: 250
+    ms: 400
   - action: screenshot
   - action: keypress
     key: Escape
   - action: waitFor
-    selector: "#addTypographyDialog"
+    selector: "rvn-text-style-editor #addColorDialog"
+    state: hidden
+    timeoutMs: 10000
+  - action: select
+    selector: "rvn-text-style-editor rtgl-tabs#rightPanelModeTabs [data-id='preview']"
+    steps:
+      - action: click
+  - action: waitFor
+    selector: "rvn-text-style-editor rtgl-tabs#rightPanelModeTabs[selected-tab='preview']"
+    state: attached
+    timeoutMs: 5000
+  - action: select
+    selector: "rvn-text-style-editor rtgl-textarea#previewTextInput textarea"
+    steps:
+      - action: clear
+      - action: write
+        value: The quick brown fox jumps over the lazy dog.
+  - action: waitFor
+    selector: "rvn-text-style-editor #savePreviewButton"
+    state: visible
+    timeoutMs: 5000
+  - action: wait
+    ms: 800
+  - action: screenshot
+  - action: select
+    selector: "rvn-text-style-editor #backButton"
+    steps:
+      - action: click
+  - action: waitFor
+    selector: rvn-text-styles
+    state: attached
+    timeoutMs: 10000
+  - action: assert
+    type: url
+    value: /project/text-styles
+  - action: wait
+    ms: 500
+  - action: waitFor
+    selector: "#typographyView #itemRef0x0"
+    state: visible
+    timeoutMs: 20000
+  - action: select
+    selector: "#typographyView #itemRef0x0"
+    steps:
+      - action: click
+  - action: waitFor
+    selector: "#detailHeader"
+    state: visible
+    timeoutMs: 15000
+  - action: select
+    selector: "#detailHeader"
+    steps:
+      - action: click
+  - action: waitFor
+    selector: "#editDialog[open]"
+    state: attached
+    timeoutMs: 5000
+  - action: wait
+    ms: 300
+  - action: screenshot
+  - action: keypress
+    key: Escape
+  - action: waitFor
+    selector: "#editDialog"
     state: hidden
     timeoutMs: 10000
   - action: select

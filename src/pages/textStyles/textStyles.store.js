@@ -33,98 +33,15 @@ import {
   setMobileResourcePageUiConfigState,
   setMobileResourcePageWindowMetricsState,
 } from "../../internal/ui/resourcePages/mobileResourcePage.js";
-import { matchesTagAwareSearch } from "../../internal/resourceTags.js";
 import { selectTextStylesPageCopy } from "./support/textStylesPageCopy.js";
+import { getFontFaceWeightDescriptor } from "../../internal/fontCapabilities.js";
+import { toFontIds } from "../../internal/fontIds.js";
 import {
-  getFontFaceWeightDescriptor,
-  isFontWeightSupported,
-  NEW_FONT_FILE_TYPES,
-} from "../../internal/fontCapabilities.js";
-import { toFontIds, toPrimaryFontId } from "../../internal/fontIds.js";
+  buildTagFilterOptions,
+  matchesTagAwareSearch,
+} from "../../internal/resourceTags.js";
 
 export const TEXT_STYLE_TAG_SCOPE_KEY = "textStyles";
-
-const FONT_WEIGHT_DEFINITIONS = [
-  { value: "100", copyKey: "weight100Thin", label: "100 - Thin" },
-  {
-    value: "200",
-    copyKey: "weight200ExtraLight",
-    label: "200 - Extra Light",
-  },
-  { value: "300", copyKey: "weight300Light", label: "300 - Light" },
-  { value: "400", copyKey: "weight400Normal", label: "400 - Normal" },
-  { value: "500", copyKey: "weight500Medium", label: "500 - Medium" },
-  {
-    value: "600",
-    copyKey: "weight600SemiBold",
-    label: "600 - Semi Bold",
-  },
-  { value: "700", copyKey: "weight700Bold", label: "700 - Bold" },
-  {
-    value: "800",
-    copyKey: "weight800ExtraBold",
-    label: "800 - Extra Bold",
-  },
-  { value: "900", copyKey: "weight900Black", label: "900 - Black" },
-];
-
-const getFontCapabilityCacheSignature = (font) => {
-  if (!font) {
-    return "";
-  }
-
-  return JSON.stringify([
-    font.fileId,
-    font.fileType,
-    font.name,
-    font.minWeight,
-    font.defaultWeight,
-    font.maxWeight,
-  ]);
-};
-
-const buildFontWeightOptions = ({
-  capabilities,
-  grandfatheredWeight,
-  copy = {},
-} = {}) => {
-  const optionsByValue = new Map();
-  const addOption = (value) => {
-    const normalizedValue = String(value);
-    const definition = FONT_WEIGHT_DEFINITIONS.find(
-      (item) => item.value === normalizedValue,
-    );
-    optionsByValue.set(normalizedValue, {
-      label: definition
-        ? (copy[definition.copyKey] ?? definition.label)
-        : normalizedValue,
-      value: normalizedValue,
-    });
-  };
-
-  if (!capabilities || capabilities.kind === "unrestricted") {
-    FONT_WEIGHT_DEFINITIONS.forEach((definition) =>
-      addOption(definition.value),
-    );
-  } else {
-    FONT_WEIGHT_DEFINITIONS.forEach((definition) => {
-      if (isFontWeightSupported(capabilities, definition.value)) {
-        addOption(definition.value);
-      }
-    });
-    if (capabilities.defaultWeight !== undefined) {
-      addOption(capabilities.defaultWeight);
-    }
-  }
-
-  if (grandfatheredWeight !== undefined) {
-    addOption(grandfatheredWeight);
-  }
-
-  return Array.from(optionsByValue.values()).sort(
-    (left, right) => Number(left.value) - Number(right.value),
-  );
-};
 
 const createTagDialogForm = (copy = {}) =>
   createTagForm({
@@ -162,79 +79,45 @@ const createFolderNameForm = (copy = {}) => ({
   },
 });
 
-// Helper function to create add color form
-const createAddColorForm = (colorFolderOptions, copy = {}) => ({
-  title: copy.addNewColorTitle ?? "Add New Color",
-  description:
-    copy.addNewColorDescription ?? "Create a new color for text styles",
-  fields: [
-    {
-      name: "name",
-      type: "input-text",
-      label: copy.colorNameLabel ?? "Color Name",
-      description: copy.enterColorNameDescription ?? "Enter the color name",
-      required: true,
-    },
-    {
-      name: "description",
-      type: "input-textarea",
-      label: copy.descriptionLabel ?? "Description",
-      description:
-        copy.optionalColorDescription ?? "Optional description for this color",
-      required: false,
-    },
-    {
-      name: "hex",
-      type: "color-picker",
-      label: copy.hexValueLabel ?? "Hex Value",
-      description:
-        copy.chooseHexDescription ?? "Choose or enter a hex color value",
-      required: true,
-    },
-    {
-      name: "folderId",
-      type: "select",
-      label: copy.folderLabel ?? "Folder",
-      description:
-        copy.chooseColorFolderDescription ?? "Choose where to save the color",
-      options: colorFolderOptions,
-      required: true,
-    },
-  ],
+const createMetadataFormFields = ({ copy, tagOptions }) => [
+  {
+    name: "name",
+    type: "input-text",
+    label: copy.nameLabel,
+    required: true,
+  },
+  {
+    name: "description",
+    type: "input-textarea",
+    label: copy.descriptionLabel,
+  },
+  createTagField({
+    label: copy.tagsLabel,
+    placeholder: copy.selectTagsPlaceholder,
+    addOptionLabel: copy.addTagOption,
+    options: tagOptions,
+  }),
+];
+
+const createMetadataForm = ({ title, submitLabel, copy, tagOptions }) => ({
+  title,
+  actions: {
+    buttons: [
+      {
+        id: "submit",
+        variant: "pr",
+        validate: true,
+        label: submitLabel,
+      },
+    ],
+  },
+  fields: createMetadataFormFields({ copy, tagOptions }),
 });
 
-// Helper function to create add font form
-const createAddFontForm = (fontFolderOptions, copy = {}) => ({
-  title: copy.addNewFontTitle ?? "Add New Font",
-  description:
-    copy.addNewFontDescription ?? "Upload a new font for text styles",
-  fields: [
-    {
-      name: "description",
-      type: "input-textarea",
-      label: copy.descriptionLabel ?? "Description",
-      description:
-        copy.optionalFontDescription ?? "Optional description for this font",
-      required: false,
-    },
-    {
-      name: "folderId",
-      type: "select",
-      label: copy.folderLabel ?? "Folder",
-      description:
-        copy.chooseFontFolderDescription ?? "Choose where to save the font",
-      options: fontFolderOptions,
-      required: true,
-    },
-    {
-      slot: "font-upload",
-      type: "slot",
-      label: copy.fontFileLabel ?? "Font File",
-      description:
-        copy.fontFileDescription ?? "Click or drag and drop a font file here",
-      required: true,
-    },
-  ],
+const createEmptyMetadataValues = () => ({
+  name: "",
+  description: "",
+  tagIds: [],
 });
 
 const getPreviewTextValue = ({ previewText, name } = {}) => {
@@ -263,40 +146,19 @@ const createFolderContextMenuItems = (copy = {}) => [
   },
 ];
 
+// The explorer and center menus open a text style in the editor; its name,
+// description and tags are edited from the detail header.
 const createItemContextMenuItems = (copy = {}) => [
-  {
-    label: copy.renameMenuItem ?? "Rename",
-    type: "item",
-    value: "rename-item",
-  },
-  {
-    label: copy.duplicateMenuItem ?? "Duplicate",
-    type: "item",
-    value: "duplicate-item",
-  },
-  {
-    label: copy.deleteMenuItem ?? "Delete",
-    type: "item",
-    value: "delete-item",
-  },
+  { label: copy.openButton, type: "item", value: "edit-item" },
+  { label: copy.renameMenuItem, type: "item", value: "rename-item" },
+  { label: copy.duplicateMenuItem, type: "item", value: "duplicate-item" },
+  { label: copy.deleteMenuItem, type: "item", value: "delete-item" },
 ];
 
 const createCenterItemContextMenuItems = (copy = {}) => [
-  {
-    label: copy.editMenuItem ?? "Edit",
-    type: "item",
-    value: "edit-item",
-  },
-  {
-    label: copy.duplicateMenuItem ?? "Duplicate",
-    type: "item",
-    value: "duplicate-item",
-  },
-  {
-    label: copy.deleteMenuItem ?? "Delete",
-    type: "item",
-    value: "delete-item",
-  },
+  { label: copy.openButton, type: "item", value: "edit-item" },
+  { label: copy.duplicateMenuItem, type: "item", value: "duplicate-item" },
+  { label: copy.deleteMenuItem, type: "item", value: "delete-item" },
 ];
 
 const createEmptyContextMenuItems = (copy = {}) => [
@@ -311,7 +173,6 @@ export const createInitialState = () => ({
   textStylesData: { tree: [], items: {} },
   colorsData: { tree: [], items: {} },
   fontsData: { tree: [], items: {} },
-  fontCapabilitiesById: {},
   selectedItemId: undefined,
   selectedFolderId: undefined,
   searchQuery: "",
@@ -323,71 +184,13 @@ export const createInitialState = () => ({
   },
   ...createMobileResourcePageState(),
   ...createTagState(),
-
-  // Dialog state
-  isDialogOpen: false,
+  // A new text style is added with its name, description and tags; how it
+  // looks is edited in the text style editor, which opens next.
+  isAddDialogOpen: false,
   targetGroupId: undefined,
-  editMode: false,
-  editingItemId: undefined,
-
-  // Add color dialog state
-  isAddColorDialogOpen: false,
-  newColorData: {
-    name: "",
-    description: "",
-    hex: "#ff0000",
-    folderId: "_root",
-  },
-
-  // Add font dialog state
-  isAddFontDialogOpen: false,
-  selectedFontFile: undefined,
-  hasSelectedFont: false,
-  selectedFontFileName: "",
-  dragDropText: "Click or drag font file here",
-  newFontData: {
-    description: "",
-    folderId: "_root",
-  },
-
-  // Form values for preview
-  currentFormValues: {
-    name: "",
-    description: "",
-    tagIds: [],
-    fontColor: "",
-    strokeColor: "",
-    shadowColor: "",
-    fontId: "",
-    fontSize: 16,
-    lineHeight: 1.5,
-    fontWeight: "400",
-    strokeWidth: 0,
-    shadowAlpha: 1,
-    shadowBlur: 0,
-    shadowOffsetX: 2,
-    shadowOffsetY: 2,
-    previewText: "",
-  },
-
-  defaultValues: {
-    name: "",
-    description: "",
-    tagIds: [],
-    fontColor: "",
-    strokeColor: "",
-    shadowColor: "",
-    fontId: "",
-    fontSize: 16,
-    lineHeight: 1.5,
-    fontWeight: "400",
-    strokeWidth: 0,
-    shadowAlpha: 1,
-    shadowBlur: 0,
-    shadowOffsetX: 2,
-    shadowOffsetY: 2,
-    previewText: "",
-  },
+  isEditDialogOpen: false,
+  editItemId: undefined,
+  editDefaultValues: createEmptyMetadataValues(),
 
   folderContextMenuItems: [
     { label: "New Folder", type: "item", value: "new-item" },
@@ -395,12 +198,13 @@ export const createInitialState = () => ({
     { label: "Delete", type: "item", value: "delete-item" },
   ],
   itemContextMenuItems: [
+    { label: "Open", type: "item", value: "edit-item" },
     { label: "Rename", type: "item", value: "rename-item" },
     { label: "Duplicate", type: "item", value: "duplicate-item" },
     { label: "Delete", type: "item", value: "delete-item" },
   ],
   centerItemContextMenuItems: [
-    { label: "Edit", type: "item", value: "edit-item" },
+    { label: "Open", type: "item", value: "edit-item" },
     { label: "Duplicate", type: "item", value: "duplicate-item" },
     { label: "Delete", type: "item", value: "delete-item" },
   ],
@@ -431,25 +235,7 @@ export const setColorsData = ({ state }, { colorsData } = {}) => {
 };
 
 export const setFontsData = ({ state }, { fontsData } = {}) => {
-  for (const fontId of Object.keys(state.fontCapabilitiesById)) {
-    const currentFont = state.fontsData?.items?.[fontId];
-    const nextFont = fontsData?.items?.[fontId];
-    if (
-      getFontCapabilityCacheSignature(currentFont) !==
-      getFontCapabilityCacheSignature(nextFont)
-    ) {
-      delete state.fontCapabilitiesById[fontId];
-    }
-  }
-
   state.fontsData = fontsData;
-};
-
-export const setFontCapabilities = (
-  { state },
-  { fontId, capabilities } = {},
-) => {
-  state.fontCapabilitiesById[fontId] = capabilities;
 };
 
 export const setSelectedItemId = (
@@ -593,132 +379,50 @@ export const closeCreateTagDialog = ({ state }) => {
   });
 };
 
-// Dialog management
-export const toggleDialog = ({ state }, _payload = {}) => {
-  state.isDialogOpen = !state.isDialogOpen;
+export const openAddDialog = ({ state }, { groupId } = {}) => {
+  state.isAddDialogOpen = true;
+  state.targetGroupId = groupId === "_root" ? undefined : groupId;
 };
 
-export const setTargetGroupId = ({ state }, { groupId } = {}) => {
-  state.targetGroupId = groupId;
+export const closeAddDialog = ({ state }) => {
+  state.isAddDialogOpen = false;
+  state.targetGroupId = undefined;
 };
 
-export const setEditMode = ({ state }, { itemId } = {}) => {
-  state.editMode = true;
-  state.editingItemId = itemId;
+export const openEditDialog = ({ state }, { itemId, defaultValues } = {}) => {
+  state.isEditDialogOpen = true;
+  state.editItemId = itemId;
+  state.editDefaultValues.name = defaultValues.name;
+  state.editDefaultValues.description = defaultValues.description;
+  state.editDefaultValues.tagIds = defaultValues.tagIds;
 };
 
-export const clearEditMode = ({ state }, _payload = {}) => {
-  state.editMode = false;
-  state.editingItemId = undefined;
+export const closeEditDialog = ({ state }) => {
+  state.isEditDialogOpen = false;
+  state.editItemId = undefined;
+  state.editDefaultValues = createEmptyMetadataValues();
 };
 
-export const updateFormValues = ({ state }, { formData } = {}) => {
-  const newValues = { ...state.currentFormValues, ...formData };
-  if (newValues.previewText == null) {
-    newValues.previewText = "";
-  }
-  state.currentFormValues = newValues;
-};
+export const selectTargetGroupId = ({ state }) => state.targetGroupId;
 
-export const resetFormValues = ({ state }, _payload = {}) => {
-  state.currentFormValues = {
-    name: "",
-    description: "",
-    tagIds: [],
-    fontColor: "",
-    strokeColor: "",
-    shadowColor: "",
-    fontId: "",
-    fontSize: 16,
-    lineHeight: 1.5,
-    fontWeight: "400",
-    strokeWidth: 0,
-    shadowAlpha: 1,
-    shadowBlur: 0,
-    shadowOffsetX: 2,
-    shadowOffsetY: 2,
-    previewText: "",
+export const selectEditItemId = ({ state }) => state.editItemId;
+
+// The font and color a new text style starts with: the first of each in
+// the project. The editor changes them.
+export const selectNewTextStyleResources = ({ state }) => {
+  const font = toFlatItems(state.fontsData).find(
+    (item) => item.type === "font",
+  );
+  const color = toFlatItems(state.colorsData).find(
+    (item) => item.type === "color",
+  );
+  return {
+    fontId: font?.id,
+    colorId: color?.id,
+    fontWeight: Number.isFinite(font?.defaultWeight)
+      ? String(font.defaultWeight)
+      : "400",
   };
-};
-
-export const setFormValuesFromItem = ({ state }, { item } = {}) => {
-  if (!item) {
-    throw new Error("Item is required for setFormValuesFromItem");
-  }
-  state.currentFormValues = {
-    name: item.name ?? "",
-    description: item.description ?? "",
-    tagIds: item.tagIds ?? [],
-    fontColor: item.colorId ?? "",
-    strokeColor: item.strokeColorId ?? "",
-    shadowColor: item.shadow?.colorId ?? "",
-    fontId: toPrimaryFontId(item.fontId),
-    fontSize: item.fontSize,
-    lineHeight: item.lineHeight,
-    fontWeight: item.fontWeight,
-    strokeWidth: item.strokeWidth ?? 0,
-    shadowAlpha: item.shadow?.alpha ?? 1,
-    shadowBlur: item.shadow?.blur ?? 0,
-    shadowOffsetX: item.shadow?.offsetX ?? 2,
-    shadowOffsetY: item.shadow?.offsetY ?? 2,
-    previewText: item.previewText ?? "",
-  };
-};
-
-// Add color dialog management
-export const openAddColorDialog = ({ state }, _payload = {}) => {
-  state.isAddColorDialogOpen = true;
-};
-
-export const closeAddColorDialog = ({ state }, _payload = {}) => {
-  state.isAddColorDialogOpen = false;
-  state.newColorData = {
-    name: "",
-    description: "",
-    hex: "#ff0000",
-    folderId: "_root",
-  };
-};
-
-export const updateNewColorData = ({ state }, { data } = {}) => {
-  state.newColorData = { ...state.newColorData, ...data };
-};
-
-// Add font dialog management
-export const openAddFontDialog = ({ state }, _payload = {}) => {
-  state.isAddFontDialogOpen = true;
-};
-
-export const closeAddFontDialog = ({ state }, _payload = {}) => {
-  state.isAddFontDialogOpen = false;
-  state.selectedFontFile = undefined;
-  state.hasSelectedFont = false;
-  state.selectedFontFileName = "";
-  state.dragDropText = "Click or drag font file here";
-  state.newFontData = {
-    description: "",
-    folderId: "_root",
-  };
-};
-
-export const updateNewFontData = ({ state }, { data } = {}) => {
-  state.newFontData = { ...state.newFontData, ...data };
-};
-
-export const setSelectedFontFile = ({ state }, { data } = {}) => {
-  state.selectedFontFile = data.file;
-  state.hasSelectedFont = true;
-  state.selectedFontFileName = data.fileName;
-  state.selectedFontUploadResult = data.uploadResult;
-  state.dragDropText = "Replace font file";
-};
-
-export const clearSelectedFontFile = ({ state }, _payload = {}) => {
-  state.selectedFontFile = undefined;
-  state.hasSelectedFont = false;
-  state.selectedFontFileName = "";
-  state.selectedFontUploadResult = undefined;
-  state.dragDropText = "Drop font file here or click to browse";
 };
 
 export const selectSelectedItem = ({ state }) => {
@@ -731,13 +435,8 @@ export const selectSelectedItemId = ({ state }) => state.selectedItemId;
 
 export const selectSelectedFolderId = ({ state }) => state.selectedFolderId;
 
-export const selectIsDialogOpen = ({ state }) => state.isDialogOpen;
-
 export const selectFolderNameDialogItemId = ({ state }) =>
   state.folderNameDialogItemId;
-
-export const selectCurrentPreviewText = ({ state }) =>
-  state.currentFormValues.previewText ?? "";
 
 export const selectTagsData = selectTagsDataState;
 
@@ -756,36 +455,6 @@ export const selectFolderById = ({ state }, { folderId } = {}) => {
   const item = state.textStylesData?.items?.[folderId];
   return item?.type === "folder" ? item : undefined;
 };
-
-export const selectColorsData = ({ state }) => state.colorsData;
-
-export const selectFontsData = ({ state }) => state.fontsData;
-
-export const selectFontById = ({ state }, { fontId } = {}) => {
-  const font = state.fontsData?.items?.[fontId];
-  return font?.type === "font" ? font : undefined;
-};
-
-export const selectFontCapabilities = ({ state }, { fontId } = {}) =>
-  state.fontCapabilitiesById[fontId];
-
-export const selectCurrentFormValues = ({ state }) => state.currentFormValues;
-
-export const selectTypographyData = ({ state }) => state.textStylesData;
-
-export const selectDialogState = ({ state }) => ({
-  targetGroupId: state.targetGroupId,
-  editMode: state.editMode,
-  editingItemId: state.editingItemId,
-});
-
-export const selectSelectedFontFile = ({ state }) => state.selectedFontFile;
-
-export const selectSelectedFontData = ({ state }) => ({
-  file: state.selectedFontFile,
-  fileName: state.selectedFontFileName,
-  uploadResult: state.selectedFontUploadResult,
-});
 
 export const selectViewData = ({ state, i18n }) => {
   const copy = selectTextStylesPageCopy(i18n);
@@ -1039,293 +708,9 @@ export const selectViewData = ({ state, i18n }) => {
     ];
   }
 
-  // Generate color options for dialog form
-  const colorOptions = state.colorsData
-    ? toFlatItems(state.colorsData)
-        .filter((item) => item.type === "color")
-        .map((color) => ({
-          label: color.name,
-          value: color.id,
-        }))
-    : [];
-
-  // Generate font options for dialog form
-  const fontOptions = state.fontsData
-    ? toFlatItems(state.fontsData)
-        .filter((item) => item.type === "font")
-        .map((font) => ({
-          label: font.fontFamily,
-          value: font.id,
-        }))
-    : [];
-
-  // Generate folder options for add color dialog
-  const colorFolderOptions = [
-    { value: "_root", label: copy.rootFolderLabel ?? "Root Folder" },
-    ...toFlatItems(state.colorsData)
-      .filter((item) => item.type === "folder")
-      .map((folder) => ({
-        value: folder.id,
-        label: folder.name || folder.id,
-      })),
-  ];
-
-  // Generate folder options for add font dialog
-  const fontFolderOptions = [
-    { value: "_root", label: copy.rootFolderLabel ?? "Root Folder" },
-    ...toFlatItems(state.fontsData)
-      .filter((item) => item.type === "folder")
-      .map((folder) => ({
-        value: folder.id,
-        label: folder.name || folder.id,
-      })),
-  ];
-
-  // Get editing item data if in edit mode
-  const editingItem =
-    state.editMode && state.editingItemId
-      ? flatItems.find(
-          (item) =>
-            item.id === state.editingItemId && item.type === "textStyle",
-        )
-      : undefined;
-  const selectedFormFontId = state.currentFormValues.fontId;
-  const selectedFontCapabilities = selectedFormFontId
-    ? state.fontCapabilitiesById[selectedFormFontId]
-    : undefined;
-  const grandfatheredWeight =
-    editingItem && toPrimaryFontId(editingItem.fontId) === selectedFormFontId
-      ? editingItem.fontWeight
-      : undefined;
-  const fontWeightOptions = buildFontWeightOptions({
-    capabilities: selectedFontCapabilities,
-    grandfatheredWeight,
-    copy,
+  const tagOptions = buildTagFilterOptions({
+    tagsCollection: state.tagsData,
   });
-
-  const dialogFields = [
-    {
-      name: "name",
-      type: "input-text",
-      label: copy.nameLabel ?? "Name",
-      required: true,
-    },
-    {
-      name: "description",
-      type: "input-textarea",
-      label: copy.descriptionLabel ?? "Description",
-      required: false,
-    },
-    createTagField({
-      label: copy.tagsLabel,
-      placeholder: copy.selectTagsPlaceholder,
-      addOptionLabel: copy.addTagOption,
-    }),
-    {
-      name: "fontId",
-      type: "select",
-      label: copy.fontLabel ?? "Font",
-      placeholder: copy.chooseFontPlaceholder ?? "Choose a font",
-      options: fontOptions,
-      addOption: { label: copy.addNewFontOption ?? "Add new font" },
-      required: true,
-    },
-    {
-      name: "fontSize",
-      type: "input-number",
-      label: copy.fontSizeLabel ?? "Font Size",
-      min: 8,
-      step: 1,
-      unit: "px",
-      required: true,
-    },
-    {
-      name: "lineHeight",
-      type: "slider-with-input",
-      label: copy.lineHeightLabel ?? "Line Height",
-      min: 0.8,
-      max: 3.0,
-      step: 0.1,
-      required: true,
-    },
-    {
-      name: "fontWeight",
-      type: "select",
-      label: copy.fontWeightLabel ?? "Font Weight",
-      placeholder: copy.chooseFontWeightPlaceholder ?? "Choose font weight",
-      options: fontWeightOptions,
-      required: true,
-    },
-    {
-      name: "fontColor",
-      type: "select",
-      label: copy.colorLabel ?? "Color",
-      placeholder: copy.chooseColorPlaceholder ?? "Choose a color",
-      options: colorOptions,
-      addOption: { label: copy.addNewColorOption ?? "Add new color" },
-      required: true,
-    },
-    {
-      name: "strokeColor",
-      type: "select",
-      label: copy.outlineColorLabel ?? "Outline Color",
-      placeholder:
-        copy.chooseOutlineColorPlaceholder ?? "Choose an outline color",
-      options: colorOptions,
-      addOption: { label: copy.addNewColorOption ?? "Add new color" },
-      required: false,
-    },
-  ];
-
-  if (state.currentFormValues.strokeColor) {
-    dialogFields.push({
-      name: "strokeWidth",
-      type: "slider-with-input",
-      label: copy.outlineThicknessLabel ?? "Outline Thickness",
-      min: 0,
-      max: 12,
-      step: 0.5,
-      unit: "px",
-      required: false,
-    });
-  }
-
-  dialogFields.push({
-    name: "shadowColor",
-    type: "select",
-    label: copy.shadowColorLabel ?? "Shadow Color",
-    placeholder: copy.chooseShadowColorPlaceholder ?? "Choose a shadow color",
-    options: colorOptions,
-    addOption: { label: copy.addNewColorOption ?? "Add new color" },
-    required: false,
-  });
-
-  if (state.currentFormValues.shadowColor) {
-    dialogFields.push(
-      {
-        name: "shadowAlpha",
-        type: "slider-with-input",
-        label: copy.shadowOpacityLabel ?? "Shadow Opacity",
-        min: 0,
-        max: 1,
-        step: 0.05,
-        required: false,
-      },
-      {
-        name: "shadowBlur",
-        type: "slider-with-input",
-        label: copy.shadowBlurLabel ?? "Shadow Blur",
-        min: 0,
-        max: 32,
-        step: 1,
-        unit: "px",
-        required: false,
-      },
-      {
-        name: "shadowOffsetX",
-        type: "slider-with-input",
-        label: copy.shadowOffsetXLabel ?? "Shadow Offset X",
-        min: -32,
-        max: 32,
-        step: 1,
-        unit: "px",
-        required: false,
-      },
-      {
-        name: "shadowOffsetY",
-        type: "slider-with-input",
-        label: copy.shadowOffsetYLabel ?? "Shadow Offset Y",
-        min: -32,
-        max: 32,
-        step: 1,
-        unit: "px",
-        required: false,
-      },
-    );
-  }
-
-  // Generate dynamic dialog form with dropdown options
-  const dialogSubmitButton = {
-    id: "submit",
-    variant: "pr",
-    label: state.editMode
-      ? (copy.updateTextStyleButton ?? "Update")
-      : (copy.addTextStyleButton ?? "Add Text Style"),
-  };
-  const dialogForm = {
-    title: state.editMode
-      ? (copy.editTextStyleTitle ?? "Edit Text Style")
-      : (copy.addTextStyleTitle ?? "Add Text Style"),
-    fields: dialogFields,
-    actions: {
-      layout: "",
-      buttons: [],
-    },
-  };
-  const desktopDialogForm = {
-    title: dialogForm.title,
-    fields: dialogForm.fields,
-    actions: {
-      layout: "",
-      buttons: [],
-    },
-  };
-
-  // Set default values based on edit mode for dialog
-  const dialogDefaultValues =
-    state.editMode && editingItem
-      ? {
-          name: editingItem.name || "",
-          description: editingItem.description || "",
-          tagIds: editingItem.tagIds ?? [],
-          fontColor: editingItem.colorId || "",
-          strokeColor: editingItem.strokeColorId || "",
-          shadowColor: editingItem.shadow?.colorId ?? "",
-          fontId: toPrimaryFontId(editingItem.fontId),
-          fontSize: editingItem.fontSize,
-          lineHeight: editingItem.lineHeight,
-          fontWeight: editingItem.fontWeight,
-          strokeWidth: editingItem.strokeWidth ?? 0,
-          shadowAlpha: editingItem.shadow?.alpha ?? 1,
-          shadowBlur: editingItem.shadow?.blur ?? 0,
-          shadowOffsetX: editingItem.shadow?.offsetX ?? 2,
-          shadowOffsetY: editingItem.shadow?.offsetY ?? 2,
-          previewText: editingItem.previewText ?? "",
-        }
-      : state.defaultValues;
-
-  // Add color dialog form
-  const addColorForm = createAddColorForm(colorFolderOptions, copy);
-
-  // Add font dialog form
-  const addFontForm = createAddFontForm(fontFolderOptions, copy);
-
-  // Get preview values based on current form values
-  const getPreviewColor = () => {
-    const colorId = state.currentFormValues.fontColor;
-    if (!colorId) return undefined;
-    try {
-      return getColorHex(colorId);
-    } catch (error) {
-      console.error("Failed to get preview color:", error);
-      return undefined;
-    }
-  };
-
-  const getPreviewFontData = () => {
-    const fontId = state.currentFormValues.fontId;
-    if (!fontId) {
-      return { fontFamilies: [], fileIds: [], fontWeightDescriptors: [] };
-    }
-    try {
-      return getFontData(fontId);
-    } catch (error) {
-      console.error("Failed to get preview font data:", error);
-      return { fontFamilies: [], fileIds: [], fontWeightDescriptors: [] };
-    }
-  };
-
-  const previewFontData = getPreviewFontData();
 
   return {
     flatItems,
@@ -1370,33 +755,35 @@ export const selectViewData = ({ state, i18n }) => {
     title: copy.title ?? "Text Styles",
     addText: copy.addText ?? "Add",
     addTagPlaceholder: copy.addTagPlaceholder ?? "Add tag",
-    editButton: copy.editMenuItem ?? "Edit",
+    openButton: copy.openButton,
     deleteButton: copy.deleteButton ?? "Delete",
     duplicateButton: copy.duplicateButton ?? "Duplicate",
     filesLabel: copy.filesLabel ?? "Files",
     noSelectionLabel: copy.noSelectionLabel ?? "No selection",
-    previewLabel: copy.previewLabel ?? "Preview",
-    previewTextLabel: copy.previewTextLabel ?? "Preview Text",
-    fontSelectedLabel: copy.fontSelectedLabel ?? "Font selected:",
     folderContextMenuItems: createFolderContextMenuItems(copy),
     itemContextMenuItems: createItemContextMenuItems(copy),
     centerItemContextMenuItems: createCenterItemContextMenuItems(copy),
     emptyContextMenuItems: createEmptyContextMenuItems(copy),
-    colorsData: state.colorsData,
-    fontsData: state.fontsData,
     isFolderNameDialogOpen: state.isFolderNameDialogOpen,
     folderNameDialogItemId: state.folderNameDialogItemId,
     folderNameForm: createFolderNameForm(copy),
     folderNameDialogDefaultValues: state.folderNameDialogDefaultValues,
-
-    // Dialog-related data
-    isDialogOpen: state.isDialogOpen,
-    dialogForm: dialogForm,
-    desktopDialogForm,
-    dialogSubmitButton,
-    dialogDefaultValues,
-    showDialogPreviewCanvas: !state.isTouchMode,
-    formKey: `${state.selectedItemId}-${state.isDialogOpen || state.isAddFontDialogOpen}`,
+    isAddDialogOpen: state.isAddDialogOpen,
+    addForm: createMetadataForm({
+      title: copy.addTextStyleTitle,
+      submitLabel: copy.addTextStyleButton,
+      copy,
+      tagOptions,
+    }),
+    addFormDefaults: createEmptyMetadataValues(),
+    isEditDialogOpen: state.isEditDialogOpen,
+    editForm: createMetadataForm({
+      title: copy.editTextStyleTitle,
+      submitLabel: copy.updateTextStyleButton,
+      copy,
+      tagOptions,
+    }),
+    editDefaultValues: state.editDefaultValues,
     ...buildTagViewData({
       state,
       selectedItem,
@@ -1404,49 +791,6 @@ export const selectViewData = ({ state, i18n }) => {
       tagFilterPlaceholder: copy.tagFilterPlaceholder,
       detailTagAddOptionLabel: copy.addTagOption,
     }),
-
-    // Add color dialog data
-    isAddColorDialogOpen: state.isAddColorDialogOpen,
-    addColorForm: addColorForm,
-    addColorDefaultValues: state.newColorData,
-    addColorSubmitButtonLabel: copy.addColorButton ?? "Add Color",
-
-    // Add font dialog data
-    isAddFontDialogOpen: state.isAddFontDialogOpen,
-    addFontForm: addFontForm,
-    addFontDefaultValues: state.newFontData,
-    addFontSubmitButtonLabel: copy.addFontButton ?? "Add Font",
-    selectedFontFile: state.selectedFontFile,
-    hasSelectedFont: state.hasSelectedFont,
-    selectedFontFileName: state.selectedFontFileName,
-    dragDropText: state.hasSelectedFont
-      ? (copy.dragDropReplace ?? "Replace font file")
-      : (copy.dragDropClick ?? "Click or drag font file here"),
-    fontFileTypes: NEW_FONT_FILE_TYPES,
-
-    // Preview values for dialog
-    previewText: getPreviewTextValue(state.currentFormValues),
-    previewTextInputValue: state.currentFormValues.previewText ?? "",
-    previewFontSize: state.currentFormValues.fontSize,
-    previewLineHeight: state.currentFormValues.lineHeight,
-    previewFontWeight: state.currentFormValues.fontWeight,
-    previewColor: getPreviewColor(),
-    previewStrokeColor: state.currentFormValues.strokeColor
-      ? getColorHex(state.currentFormValues.strokeColor)
-      : undefined,
-    previewStrokeWidth: state.currentFormValues.strokeColor
-      ? (state.currentFormValues.strokeWidth ?? 0)
-      : 0,
-    previewShadowColor: state.currentFormValues.shadowColor
-      ? getColorHex(state.currentFormValues.shadowColor)
-      : undefined,
-    previewShadowAlpha: state.currentFormValues.shadowAlpha ?? 1,
-    previewShadowBlur: state.currentFormValues.shadowBlur ?? 0,
-    previewShadowOffsetX: state.currentFormValues.shadowOffsetX ?? 2,
-    previewShadowOffsetY: state.currentFormValues.shadowOffsetY ?? 2,
-    previewFontFamilies: previewFontData.fontFamilies,
-    previewFontFileIds: previewFontData.fileIds,
-    previewFontWeightDescriptors: previewFontData.fontWeightDescriptors,
     searchQuery: state.searchQuery,
     resourceType: "textStyles",
   };
