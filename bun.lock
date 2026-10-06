@@ -37,7 +37,7 @@
         "nanoid": "5.1.11",
         "ogg-opus-decoder": "1.7.5",
         "route-engine-js": "1.46.6",
-        "route-graphics": "1.46.0",
+        "route-graphics": "1.46.1",
         "rxjs": "7.8.2",
         "snabbdom": "3.6.3",
         "snabbdom-to-html": "7.1.0",
@@ -857,7 +857,7 @@
 
     "route-engine-js": ["route-engine-js@1.46.6", "", { "dependencies": { "immer": "^10.1.1", "jempl": "1.1.2", "js-yaml": "^4.1.0", "puty": "^0.1.1", "unicode-segmenter": "^0.17.0" } }, "sha512-DJHRpSnyfAA89YMbxhplQPjWN6vD83kPZMe8xsN78LWFX3/4oh5JjCqiP6EANpwbTFfRrQYMWqw7V/6vgyA3fg=="],
 
-    "route-graphics": ["route-graphics@1.46.0", "", { "dependencies": { "@wasm-audio-decoders/ogg-vorbis": "^0.1.20", "gsap": "3.15.0", "hotkeys-js": "^4.0.0-beta.7", "js-yaml": "^4.1.0", "ogg-opus-decoder": "^1.7.3", "pixi.js": "8.10.2", "playwright": "1.57.0" }, "bin": { "route-graphics": "bin/route-graphics.js" } }, "sha512-LgimpF4yjMacrJ5iOIJYHv+D5NellsOhrdTq7l1JW/5BPV+XvbEwyCZ9ngZOAOn1F5Jp+R/vv91td9bkOZxrHg=="],
+    "route-graphics": ["route-graphics@1.46.1", "", { "dependencies": { "@wasm-audio-decoders/ogg-vorbis": "^0.1.20", "gsap": "3.15.0", "hotkeys-js": "^4.0.0-beta.7", "js-yaml": "^4.1.0", "ogg-opus-decoder": "^1.7.3", "pixi.js": "8.10.2", "playwright": "1.57.0" }, "bin": { "route-graphics": "bin/route-graphics.js" } }, "sha512-/Wk4JZhNwrx7IVeeAwzWxXFlsO8W4xAzVmZ6U87pijPdEQ49x4eLrhhYI/0qVS85hpGbay+CdrK3lOOXBfgJ6A=="],
 
     "rrweb-cssom": ["rrweb-cssom@0.8.0", "", {}, "sha512-guoltQEx+9aMf2gDZ0s62EcV8lsXR+0w8915TC3ITdn2YueuNjdAYh/levpU9nFaoChh9RUS5ZdQMrKfVEN9tw=="],
 
