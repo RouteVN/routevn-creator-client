@@ -747,7 +747,17 @@ export const selectViewData = ({ state, constants, i18n }) => {
           layoutType,
         };
   let layoutState;
+  // The Preview tab draws the layout as it is saved. A popover's value shows
+  // on the canvas only, so the hidden preview does not redraw while it moves:
+  // its elements stay the same object.
+  let previewLayoutState;
   if (layout) {
+    previewLayoutState = {
+      id: layout.id,
+      layoutType: layout.layoutType,
+      layoutSchemaVersion: layout.layoutSchemaVersion,
+      elements: state.layoutData,
+    };
     layoutState = {
       id: layout.id,
       layoutType: layout.layoutType,
@@ -833,6 +843,7 @@ export const selectViewData = ({ state, constants, i18n }) => {
     contextMenuItems,
     emptyContextMenuItems,
     layoutState,
+    previewLayoutState,
     // The canvas is sized in container height units on every layout.
     canvasWorkspaceStyle: "container-type: size;",
     // With a right panel the canvas moves freely in the workspace:

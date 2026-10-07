@@ -1216,6 +1216,15 @@ values or the resolution change, since a rebuild remounts its form and would
 end a slider drag; other props, such as the element metrics that change on
 every preview, leave it alone.
 
+In the layout editor a popover redraws only the canvas as its value moves. The
+Preview tab gets the layout as it is saved (`previewLayoutState`), whose
+elements stay the same object, so the hidden preview does not sync again. The
+canvas reads the repository state without ensuring the repository, which the
+page has done and which validates the whole project. The page keeps the
+selected element's metrics when a render reports the same ones, so the edit
+panel's props stay as they were and the panel does not redraw for a move that
+changes none of them.
+
 X, Y, rotation, scale, and opacity popovers have a slider, a **Presets** menu,
 and four step buttons (`support/layoutEditPanelSliderPopovers.js` holds each
 field's range, presets, steps, and default). X and Y run from half the

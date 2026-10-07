@@ -1242,6 +1242,7 @@ describe("layoutEditor.handleLayoutEditorCanvasMetricsChange", () => {
       store: {
         selectSelectedItemId: vi.fn(() => "selected-item"),
         selectDetailPanelSelectedItemId: vi.fn(() => "stale-panel-item"),
+        selectSelectedElementMetrics: vi.fn(),
         setSelectedElementMetrics: vi.fn(),
       },
       refs: {
@@ -1291,6 +1292,7 @@ describe("layoutEditor.handleLayoutEditorCanvasMetricsChange", () => {
       store: {
         selectSelectedItemId: vi.fn(() => "selected-item"),
         selectDetailPanelSelectedItemId: vi.fn(() => "selected-item"),
+        selectSelectedElementMetrics: vi.fn(),
         setSelectedElementMetrics: vi.fn(),
       },
       refs: {
@@ -1316,6 +1318,45 @@ describe("layoutEditor.handleLayoutEditorCanvasMetricsChange", () => {
     expect(
       deps.refs.layoutEditPanel.setSelectedElementMetrics,
     ).toHaveBeenCalledWith({ metrics });
+  });
+
+  it("keeps the metrics it has when a render reports the same ones, so the edit panel's props stay as they were", () => {
+    const storedMetrics = {
+      id: "selected-item",
+      type: "container",
+      width: 76,
+      height: 54,
+    };
+    const deps = {
+      store: {
+        selectSelectedItemId: vi.fn(() => "selected-item"),
+        selectDetailPanelSelectedItemId: vi.fn(() => "selected-item"),
+        selectSelectedElementMetrics: vi.fn(() => storedMetrics),
+        setSelectedElementMetrics: vi.fn(),
+      },
+      refs: {
+        layoutEditPanel: {
+          getSelectedElementMetrics: vi.fn(() => storedMetrics),
+          setSelectedElementMetrics: vi.fn(),
+        },
+      },
+    };
+    const report = (metrics) =>
+      handleLayoutEditorCanvasMetricsChange(deps, {
+        _event: { detail: { itemId: "selected-item", metrics } },
+      });
+
+    // A slider moving X renders the same metrics in a new object.
+    report({ ...storedMetrics });
+    expect(deps.store.setSelectedElementMetrics).not.toHaveBeenCalled();
+    expect(
+      deps.refs.layoutEditPanel.setSelectedElementMetrics,
+    ).not.toHaveBeenCalled();
+
+    report({ ...storedMetrics, width: 80 });
+    expect(deps.store.setSelectedElementMetrics).toHaveBeenCalledWith({
+      metrics: { ...storedMetrics, width: 80 },
+    });
   });
 });
 
