@@ -14,7 +14,7 @@ import { selectI18nCopy } from "../../internal/ui/i18nCopy.js";
 import { isTouchUiConfig } from "../../internal/ui/resourcePages/mobileResourcePage.js";
 import { buildSelectableResourceTree } from "../../internal/ui/resourcePages/selectableResourceTree.js";
 import { selectResourceSelectorEmptyMessage } from "../../internal/ui/resourcePages/selectorEmptyState.js";
-import { createCommandLineResourceSelectorLayout } from "../../internal/ui/sceneEditor/commandLineResourceSelectorLayout.js";
+import { createCharacterSelectorLayout } from "../../internal/ui/sceneEditor/commandLineResourceSelectorLayout.js";
 
 const UNGROUPED_CHARACTERS_ID = "__ungrouped_characters__";
 const UNGROUPED_SPRITES_ID = "__ungrouped_sprites__";
@@ -180,8 +180,10 @@ export const selectViewData = ({ state, i18n }) => {
     "resourcePages",
     "characterSpriteSelector",
   ]);
-  const layout = createCommandLineResourceSelectorLayout({
+  // A dialog is wider than the scene editor's panel, so its cards are too.
+  const layout = createCharacterSelectorLayout({
     isTouchMode: state.isTouchMode,
+    minCardWidth: 240,
   });
   const searchQuery = state.searchQuery.toLowerCase().trim();
   const character = getCharacter(state, state.characterId);
@@ -214,8 +216,6 @@ export const selectViewData = ({ state, i18n }) => {
     gridStyle: layout.gridStyle,
     itemStyle: layout.itemStyle,
     cardStyle: layout.cardStyle,
-    previewStyle: state.isTouchMode
-      ? "width: 100%; height: auto; aspect-ratio: 5 / 3;"
-      : "width: 200px; height: 120px;",
+    previewStyle: layout.previewStyle,
   };
 };

@@ -43,9 +43,9 @@ template:
           - rtgl-input#searchInput s=sm placeholder=${searchPlaceholder} value=${searchQuery}: null
       - 'rtgl-view d=h w=f g=lg h=1fg style="min-width: 0; min-height: 0;"':
           - $if showFileExplorer:
-              - rtgl-view h=f w=1fg sv:
+              - 'rtgl-view h=f w=240 sv style="flex-shrink: 0;"':
                   - rvn-base-file-explorer#fileExplorer :items=${explorerItems}: null
-          - rtgl-view#galleryScroll h=f w=2fg sv g=lg:
+          - 'rtgl-view#galleryScroll h=f w=1fg sv g=lg style="min-width: 0;"':
               - $if emptyMessage:
                   - rtgl-view w=f h=1fg av=c ah=c p=md:
                       - rtgl-text s=sm c=mu-fg ta=c: ${emptyMessage}
@@ -58,7 +58,7 @@ template:
                           - 'rtgl-view d=h w=f wrap g=lg style="${gridStyle}"':
                               - $for item, j in group.children:
                                   - 'rtgl-view#item${i}x${j} data-item-id=${item.id} cur=pointer bw=xs bc=${item.itemBorderColor} h-bc=${item.itemHoverBorderColor} br=sm style="${itemStyle}"':
-                                      - 'rtgl-view p=md g=md br=md style="${cardStyle}"':
+                                      - 'rtgl-view p=sm g=sm br=md style="${cardStyle}"':
                                           - $if item.previewKind == 'spritesheet':
                                               - 'rtgl-view overflow=hidden br=sm style="${previewStyle}"':
                                                   - 'rvn-spritesheet-preview key=${item.previewKey} previewKey=${item.previewKey} fileId=${item.previewFileId} :atlas=${item.previewAtlas} :animation=${item.previewAnimation} w=f h=f br=sm checkerCellSize=6 showCheckerboard=true emptyLabel="${item.emptyPreviewLabel}"': null
@@ -68,4 +68,4 @@ template:
                                             $else:
                                               - 'rtgl-view av=c ah=c bgc=mu-fg style="${previewStyle}"':
                                                   - rtgl-text s=sm c=mu-fg: ${item.emptyPreviewLabel}
-                                          - rtgl-text s=xs c=mu-fg ellipsis w=f: ${item.name}
+                                          - rtgl-text s=sm c=mu-fg ellipsis w=f: ${item.name}

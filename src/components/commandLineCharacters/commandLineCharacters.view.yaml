@@ -241,14 +241,14 @@ template:
                               - 'rtgl-view d=h w=f wrap g=lg style="${resourceSelectorGridStyle}"':
                                   - $for item, j in group.children:
                                       - 'rtgl-view#characterItem${i}x${j} data-character-id=${item.id} cur=pointer bw=xs bc=${item.itemBorderColor} h-bc=${item.itemHoverBorderColor} br=sm style="${resourceSelectorItemStyle}"':
-                                          - 'rtgl-view p=md g=md br=md style="${resourceSelectorCardStyle}"':
+                                          - 'rtgl-view p=sm g=sm br=md style="${resourceSelectorCardStyle}"':
                                               - $if item.fileId:
                                                   - 'div.commandLineCharacterThumbnailTransparencyGrid style="display: block; overflow: hidden; border-radius: 4px; ${characterSelectorPreviewStyle}"':
                                                       - rvn-file-image fileId=${item.fileId} w=f h=f br=sm: null
                                                 $else:
                                                   - 'rtgl-view av=c ah=c bgc=mu-fg style="${characterSelectorPreviewStyle}"':
                                                       - rtgl-text s=sm c=mu-fg: ${noAvatarLabel}
-                                              - rtgl-text s=xs c=mu-fg ellipsis w=f: ${item.name}
+                                              - rtgl-text s=sm c=mu-fg ellipsis w=f: ${item.name}
       - $if mode == 'sprite-select':
           - rtgl-view w=f h=24 av=c ph=md mb=md:
               - rtgl-breadcrumb#breadcumb :items=${breadcrumb}: null
@@ -275,14 +275,14 @@ template:
                               - 'rtgl-view d=h w=f wrap g=lg style="${resourceSelectorGridStyle}"':
                                   - $for item, j in group.children:
                                       - 'rtgl-view#spriteItem${i}x${j} data-sprite-id=${item.id} cur=pointer bw=xs bc=${item.itemBorderColor} h-bc=${item.itemHoverBorderColor} br=sm style="${resourceSelectorItemStyle}"':
-                                          - 'rtgl-view p=md g=md br=md style="${resourceSelectorCardStyle}"':
+                                          - 'rtgl-view p=sm g=sm br=md style="${resourceSelectorCardStyle}"':
                                               - $if item.previewKind == 'spritesheet':
                                                   - 'rtgl-view overflow=hidden br=sm style="${characterSelectorPreviewStyle}"':
                                                       - 'rvn-spritesheet-preview key=${item.previewKey} previewKey=${item.previewKey} fileId=${item.previewFileId} :atlas=${item.previewAtlas} :animation=${item.previewAnimation} w=f h=f br=sm checkerCellSize=6 showCheckerboard=true emptyLabel="${noPreviewLabel}"': null
                                                 $else:
                                                   - 'div.commandLineCharacterThumbnailTransparencyGrid style="display: block; overflow: hidden; border-radius: 4px; ${characterSelectorPreviewStyle}"':
                                                       - rvn-file-image fileId=${item.previewFileId} w=f h=f br=sm: null
-                                              - rtgl-text s=xs c=mu-fg ellipsis w=f: ${item.name}
+                                              - rtgl-text s=sm c=mu-fg ellipsis w=f: ${item.name}
           - 'rtgl-view d=h av=c ah=e w=f g=lg ph=md pt=md style="flex: 0 0 auto;"':
               - rtgl-button#buttonSelect: ${selectButtonLabel}
   - $if fullImagePreviewVisible:

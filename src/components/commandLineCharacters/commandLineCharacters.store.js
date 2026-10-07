@@ -59,7 +59,7 @@ import {
   localizeCommandLineText,
   selectCommandLineCopy,
 } from "../../internal/ui/sceneEditor/commandLineCopy.js";
-import { createCommandLineResourceSelectorLayout } from "../../internal/ui/sceneEditor/commandLineResourceSelectorLayout.js";
+import { createCharacterSelectorLayout } from "../../internal/ui/sceneEditor/commandLineResourceSelectorLayout.js";
 import { buildSelectableResourceTree } from "../../internal/ui/resourcePages/selectableResourceTree.js";
 import { isTouchUiConfig } from "../../internal/ui/resourcePages/mobileResourcePage.js";
 
@@ -1441,7 +1441,7 @@ const createCharactersForm = (characters = []) => ({
 
 export const selectViewData = ({ state, i18n }) => {
   const copy = selectCommandLineCopy(i18n);
-  const resourceSelectorLayout = createCommandLineResourceSelectorLayout({
+  const resourceSelectorLayout = createCharacterSelectorLayout({
     isTouchMode: state.isTouchMode,
   });
   const searchQuery = (state.searchQuery ?? "").toLowerCase().trim();
@@ -1712,9 +1712,7 @@ export const selectViewData = ({ state, i18n }) => {
     resourceSelectorGridStyle: resourceSelectorLayout.gridStyle,
     resourceSelectorItemStyle: resourceSelectorLayout.itemStyle,
     resourceSelectorCardStyle: resourceSelectorLayout.cardStyle,
-    characterSelectorPreviewStyle: state.isTouchMode
-      ? "width: 100%; height: auto; aspect-ratio: 5 / 3;"
-      : "width: 200px; height: 120px;",
+    characterSelectorPreviewStyle: resourceSelectorLayout.previewStyle,
     selectedCharacters: processedSelectedCharacters,
     transformOptions,
     animationOptions,

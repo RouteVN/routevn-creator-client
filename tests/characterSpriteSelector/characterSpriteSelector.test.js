@@ -84,7 +84,11 @@ describe("rvn-character-sprite-selector", () => {
     expect(selector.view()).toMatchObject({
       step: "characters",
       showFileExplorer: true,
-      previewStyle: "width: 200px; height: 120px;",
+      // A dialog has room for wider cards than the scene editor's panel.
+      gridStyle: expect.stringContaining(
+        "repeat(auto-fill, minmax(240px, 1fr))",
+      ),
+      previewStyle: "width: 100%; aspect-ratio: 16 / 9;",
     });
     expect(selector.view().groups[0]).toMatchObject({
       fullLabel: "Ungrouped",
@@ -104,11 +108,13 @@ describe("rvn-character-sprite-selector", () => {
     selector.run("setSearchQuery", { value: " TWO " });
     expect(listedIds(selector.view())).toEqual(["character-2"]);
 
-    // Touch layouts drop the folder list and show two cards a row.
+    // Touch layouts drop the folder list, so the cards take its room.
     selector.run("setUiConfig", { uiConfig: { id: "touch" } });
     expect(selector.view()).toMatchObject({
       showFileExplorer: false,
-      gridStyle: expect.stringContaining("repeat(2,"),
+      gridStyle: expect.stringContaining(
+        "repeat(auto-fill, minmax(240px, 1fr))",
+      ),
     });
   });
 
