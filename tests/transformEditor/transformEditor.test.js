@@ -1076,6 +1076,27 @@ describe("transform editor", () => {
     expect(page.view().characterSpriteConfirmDisabled).toBe(false);
   });
 
+  it("applies the other scale a kept aspect ratio moves with the change, as one edit", async () => {
+    const page = await createPage();
+
+    await handleInspectorPreview(page.deps, {
+      _event: {
+        detail: { name: "scaleX", value: 1.5, linkedValues: { scaleY: 1.5 } },
+      },
+    });
+    expect(
+      page.findElement(page.lastRender().elements, "transform-target"),
+    ).toMatchObject({ scaleX: 1.5, scaleY: 1.5 });
+
+    await handleInspectorUpdate(page.deps, {
+      _event: {
+        detail: { name: "scaleX", value: 2, linkedValues: { scaleY: 2 } },
+      },
+    });
+    expect(page.transform()).toMatchObject({ scaleX: 2, scaleY: 2 });
+    expect(page.state().editHistory.undo).toHaveLength(1);
+  });
+
   it("redraws the outline for the zoomed canvas", async () => {
     const page = await createPage();
     page.deps.refs.canvas.getBoundingClientRect = () => ({ width: 1920 });

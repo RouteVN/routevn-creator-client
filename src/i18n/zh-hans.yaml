@@ -1766,6 +1766,7 @@ layoutEditPanel:
   yesOption: "是"
   decreaseByLabel: "减少 {step}"
   increaseByLabel: "增加 {step}"
+  keepAspectRatioLabel: "保持宽高比"
 controlsPage:
   actionDecrementSaveLoadPagination: "存档/读档上一页"
   actionIncrementSaveLoadPagination: "存档/读档下一页"

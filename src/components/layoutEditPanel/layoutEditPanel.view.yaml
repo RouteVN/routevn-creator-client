@@ -53,6 +53,10 @@ refs:
     eventListeners:
       hold-repeat:
         handler: handlePopoverStepPress
+  scaleAspectRatioToggle:
+    eventListeners:
+      value-change:
+        handler: handleScaleAspectRatioChange
   visibilityConditionDialog:
     eventListeners:
       close:
@@ -491,11 +495,14 @@ template:
           - $if popover.context.isSliderPopover:
               - rtgl-view slot=content w=360:
                   - rtgl-form#form autofocus key=${popover.key} :form=${popover.form} :defaultValues=${popover.defaultValues} :context=${popover.context} w=f:
-                      - rtgl-view slot="slider-presets" d=h av=c w=f g=xs:
-                          - rtgl-button#popoverPresetsButton v=ol s=sm suf=chevronDown: ${presetsButtonLabel}
-                          - rtgl-view w=1fg: null
-                          - $for stepButton, i in popover.context.stepButtons:
-                              - 'rtgl-button#popoverStep${i} sq v=ol s=sm pre=${stepButton.icon} data-delta=${stepButton.delta} data-hold-repeat=true aria-label="${stepButton.label}" title="${stepButton.label}"': null
+                      - rtgl-view slot="slider-presets" d=v w=f g=sm:
+                          - rtgl-view d=h av=c w=f g=xs:
+                              - rtgl-button#popoverPresetsButton v=ol s=sm suf=chevronDown: ${presetsButtonLabel}
+                              - rtgl-view w=1fg: null
+                              - $for stepButton, i in popover.context.stepButtons:
+                                  - 'rtgl-button#popoverStep${i} sq v=ol s=sm pre=${stepButton.icon} data-delta=${stepButton.delta} data-hold-repeat=true aria-label="${stepButton.label}" title="${stepButton.label}"': null
+                          - $if popover.context.showAspectRatioToggle:
+                              - rtgl-checkbox#scaleAspectRatioToggle ?checked=${scaleAspectRatioLocked}: ${keepAspectRatioLabel}
             $else:
               - rtgl-form#form autofocus key=${popover.key} slot=content :form=${popover.form} :defaultValues=${popover.defaultValues} :context=${popover.context}: null
   - rtgl-dialog#visibilityConditionDialog ?open=${visibilityConditionDialog.open} s=md:

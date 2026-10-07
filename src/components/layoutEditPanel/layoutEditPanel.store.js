@@ -1,6 +1,7 @@
 import {
   getSliderPopoverField,
   getSliderPopoverPresets,
+  hasAspectRatioToggle,
   getSliderPopoverRange,
   getSliderPopoverStepButtons,
   isSliderPopoverField,
@@ -550,6 +551,7 @@ const buildSliderPopoverContext = ({ name, projectResolution, copy } = {}) => {
     isSliderPopover: true,
     presetItems: getSliderPopoverPresets({ name, projectResolution, copy }),
     stepButtons: getSliderPopoverStepButtons({ name, copy }),
+    showAspectRatioToggle: hasAspectRatioToggle(name),
   };
 };
 
@@ -738,6 +740,8 @@ const resetSelectionUiState = (state) => {
 
 export const createInitialState = () => {
   const state = {
+    // Scale popovers keep the aspect ratio unless it is turned off.
+    scaleAspectRatioLocked: true,
     imagesData: { tree: [], items: {} },
     soundsData: { tree: [], items: {} },
     spritesheetsData: { tree: [], items: {} },
@@ -866,6 +870,13 @@ export const updatePopoverFormContext = (
   state.popover.name = nextName;
   state.popover.key = state.popover.key + 1;
 };
+
+export const setScaleAspectRatioLocked = ({ state }, { locked } = {}) => {
+  state.scaleAspectRatioLocked = locked;
+};
+
+export const selectScaleAspectRatioLocked = ({ state }) =>
+  state.scaleAspectRatioLocked;
 
 // The value the open popover's form shows while it is edited, without
 // rebuilding the form.
@@ -1854,6 +1865,8 @@ export const selectViewData = ({ state, props, constants, i18n }) => {
     visibilityConditionDialog: state.visibilityConditionDialog,
     dropdownMenu: state.dropdownMenu,
     presetsButtonLabel: copy.presetsLabel,
+    scaleAspectRatioLocked: state.scaleAspectRatioLocked,
+    keepAspectRatioLabel: copy.keepAspectRatioLabel,
     sectionTooltip: state.sectionTooltip,
     visibilityConditionDialogDefaults,
     visibilityConditionDialogForm: createVisibilityConditionForm({

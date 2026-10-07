@@ -1766,6 +1766,7 @@ layoutEditPanel:
   yesOption: "ใช่"
   decreaseByLabel: "ลดลง {step}"
   increaseByLabel: "เพิ่มขึ้น {step}"
+  keepAspectRatioLabel: "รักษาอัตราส่วน"
 controlsPage:
   actionDecrementSaveLoadPagination: "หน้าบันทึก/โหลดก่อนหน้า"
   actionIncrementSaveLoadPagination: "หน้าบันทึก/โหลดถัดไป"

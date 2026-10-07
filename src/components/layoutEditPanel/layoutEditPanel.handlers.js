@@ -35,7 +35,9 @@ import {
 } from "../../internal/spritesheets.js";
 import { selectLayoutEditPanelCopy } from "./support/layoutEditPanelCopy.js";
 import {
+  getLinkedScaleValues,
   getSliderPopoverField,
+  hasAspectRatioToggle,
   stepSliderPopoverValue,
 } from "./support/layoutEditPanelSliderPopovers.js";
 import { normalizeLayoutRotation } from "../../internal/project/layout.js";
@@ -169,21 +171,29 @@ const getAvailableActionInteractionItems = (itemType, copy = {}) => {
   ];
 };
 
+// `linkedValues` are other fields the change moves with it, such as the
+// other scale while the aspect ratio is kept; owners apply them too.
 const emitPanelUpdate = (
   { dispatchEvent, store },
-  { name, value, bubbles = false } = {},
+  { name, value, linkedValues, bubbles = false } = {},
 ) => {
-  dispatchEvent(
-    new CustomEvent("update", {
-      bubbles,
-      detail: {
-        formValues: store.selectValues(),
-        name,
-        value,
-      },
-    }),
-  );
+  const detail = {
+    formValues: store.selectValues(),
+    name,
+    value,
+  };
+  if (linkedValues) {
+    detail.linkedValues = linkedValues;
+  }
+  dispatchEvent(new CustomEvent("update", { bubbles, detail }));
 };
+
+// The other scale a popover's scale change moves while the aspect ratio is
+// kept.
+const selectPopoverLinkedValues = (store, { name, value } = {}) =>
+  hasAspectRatioToggle(name) && store.selectScaleAspectRatioLocked()
+    ? getLinkedScaleValues({ name, value, values: store.selectValues() })
+    : undefined;
 
 const getCurrentAspectRatioLock = (values = {}) => {
   const aspectRatioLock = Number(values?.aspectRatioLock);
@@ -480,20 +490,27 @@ const emitPanelPreview = (deps, { name, value } = {}) => {
     return;
   }
 
-  dispatchEvent(
-    new CustomEvent("preview", {
-      detail: {
-        formValues: store.selectValues(),
-        name,
-        value: normalizePanelValue(name, Number(value)),
-      },
-    }),
-  );
+  const detail = {
+    formValues: store.selectValues(),
+    name,
+    value: normalizePanelValue(name, Number(value)),
+  };
+  const linkedValues = selectPopoverLinkedValues(store, { name, value });
+  if (linkedValues) {
+    detail.linkedValues = linkedValues;
+  }
+  dispatchEvent(new CustomEvent("preview", { detail }));
 };
 
 const applyPanelValueUpdate = (
   deps,
-  { name, value, closePopover = false, closeImageSelector = false } = {},
+  {
+    name,
+    value,
+    linkedValues,
+    closePopover = false,
+    closeImageSelector = false,
+  } = {},
 ) => {
   const { store, render } = deps;
   let normalizedValue = normalizePanelValue(name, value);
@@ -621,6 +638,11 @@ const applyPanelValueUpdate = (
       name,
       value: normalizedValue,
     });
+    for (const [linkedName, linkedValue] of Object.entries(
+      linkedValues ?? {},
+    )) {
+      store.updateValueProperty({ name: linkedName, value: linkedValue });
+    }
   }
 
   if (closePopover) {
@@ -632,7 +654,7 @@ const applyPanelValueUpdate = (
   }
 
   render();
-  emitPanelUpdate(deps, { name, value: normalizedValue });
+  emitPanelUpdate(deps, { name, value: normalizedValue, linkedValues });
 };
 
 const openSoundForm = (deps, { name } = {}) => {
@@ -1516,11 +1538,23 @@ export const handleFormActions = (deps, payload) => {
   const { store } = deps;
   const { _event } = payload;
   const { name } = store.selectPopoverForm();
+  const { value } = _event.detail.values;
   applyPanelValueUpdate(deps, {
     name,
-    value: _event.detail.values.value,
+    value,
+    linkedValues: selectPopoverLinkedValues(store, { name, value }),
     closePopover: true,
   });
+};
+
+// Turning the aspect ratio on or off shows the popover's value on the
+// canvas again, with or without the other scale.
+export const handleScaleAspectRatioChange = (deps, payload) => {
+  const { render, store } = deps;
+  store.setScaleAspectRatioLocked({ locked: payload._event.detail.value });
+  render();
+  const { name, defaultValues } = store.selectPopoverForm();
+  emitPanelPreview(deps, { name, value: defaultValues.value });
 };
 
 export const handleVisibilityConditionFormAction = (deps, payload) => {

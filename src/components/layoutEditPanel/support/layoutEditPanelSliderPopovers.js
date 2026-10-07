@@ -184,3 +184,26 @@ export const stepSliderPopoverValue = ({ name, value, delta } = {}) => {
   }
   return stepped;
 };
+
+const isScaleField = (name) => name === "scaleX" || name === "scaleY";
+
+// Scale popovers offer to keep the aspect ratio.
+export const hasAspectRatioToggle = (name) => isScaleField(name);
+
+// While the aspect ratio is kept, a scale change moves the other scale in
+// proportion, from the values as they are saved; from 0, the two match.
+export const getLinkedScaleValues = ({ name, value, values = {} } = {}) => {
+  const next = Number(value);
+  if (!isScaleField(name) || !Number.isFinite(next)) {
+    return undefined;
+  }
+
+  const partner = name === "scaleX" ? "scaleY" : "scaleX";
+  const current = Number(values[name] ?? 1);
+  const partnerValue = Number(values[partner] ?? 1);
+  const linked =
+    Number.isFinite(current) && current !== 0 && Number.isFinite(partnerValue)
+      ? partnerValue * (next / current)
+      : next;
+  return { [partner]: Number(linked.toFixed(2)) };
+};

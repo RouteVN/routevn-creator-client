@@ -634,12 +634,15 @@ export const handleCanvasZoomGesture = async (deps, payload) => {
   await renderTransformCanvas(deps);
 };
 
-// The inspector's events name the field that changed. Only that field
-// applies, since the inspector's other values may be older than the canvas.
-const selectInspectorTransform = (store, { name, value }) =>
-  createTransformFromInspectorValues(store.selectTransform(), {
-    [name]: value,
-  });
+// The inspector's events name the field that changed. Only that field, and
+// the fields it moves with it (the other scale while the aspect ratio is
+// kept), apply, since the inspector's other values may be older than the
+// canvas.
+const selectInspectorTransform = (store, { name, value, linkedValues }) => {
+  const changes = { [name]: value };
+  Object.assign(changes, linkedValues);
+  return createTransformFromInspectorValues(store.selectTransform(), changes);
+};
 
 export const handleInspectorUpdate = async (deps, payload) => {
   const { store } = deps;

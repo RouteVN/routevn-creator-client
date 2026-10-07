@@ -1005,6 +1005,37 @@ describe("layoutEditor.handleLayoutEditPanelUpdateHandler", () => {
     expect(updateLayoutElement).not.toHaveBeenCalled();
   });
 
+  it("applies the other scale a kept aspect ratio moves with the change", async () => {
+    const deps = createLayoutEditorDeps({
+      updateLayoutElement: vi.fn(async () => ({ valid: true })),
+    });
+    const currentElement = {
+      id: "item-1",
+      type: "sprite",
+      name: "Sprite",
+      scaleX: 1,
+      scaleY: 1,
+    };
+    deps.store.selectSelectedItemId = vi.fn(() => "item-1");
+    deps.store.selectSelectedItemData = vi.fn(() => currentElement);
+    deps.store.selectImages = vi.fn(() => ({ items: {}, tree: [] }));
+
+    await handleLayoutEditPanelUpdateHandler(deps, {
+      _event: {
+        detail: {
+          name: "scaleX",
+          value: 1.5,
+          linkedValues: { scaleY: 1.5 },
+          formValues: { ...currentElement, scaleX: 1.5, scaleY: 1.5 },
+        },
+      },
+    });
+
+    expect(deps.store.updateSelectedItem).toHaveBeenCalledWith({
+      updatedItem: expect.objectContaining({ scaleX: 1.5, scaleY: 1.5 }),
+    });
+  });
+
   it("persists text reveal indicator visual updates immediately", async () => {
     const updateLayoutElement = vi.fn(async () => ({ valid: true }));
     const deps = createLayoutEditorDeps({

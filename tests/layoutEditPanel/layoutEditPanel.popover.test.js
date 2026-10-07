@@ -5,6 +5,7 @@ import {
   setValues,
 } from "../../src/components/layoutEditPanel/layoutEditPanel.store.js";
 import { selectLayoutEditPanelCopy } from "../../src/components/layoutEditPanel/support/layoutEditPanelCopy.js";
+import { getLinkedScaleValues } from "../../src/components/layoutEditPanel/support/layoutEditPanelSliderPopovers.js";
 import { EN_I18N } from "../support/i18n.js";
 
 const NUMBER_POPOVER_FORM = {
@@ -194,6 +195,37 @@ describe("layoutEditPanel popover forms", () => {
     expect(
       openSliderPopover("opacity", { opacity: 0.4 }).defaultValues.value,
     ).toBe(0.4);
+  });
+
+  it("moves the other scale in proportion while the aspect ratio is kept", () => {
+    expect(
+      getLinkedScaleValues({
+        name: "scaleX",
+        value: 1.5,
+        values: { scaleX: 1, scaleY: 1 },
+      }),
+    ).toEqual({ scaleY: 1.5 });
+    expect(
+      getLinkedScaleValues({
+        name: "scaleY",
+        value: 1,
+        values: { scaleX: 0.3, scaleY: 2 },
+      }),
+    ).toEqual({ scaleX: 0.15 });
+    // From 0, or unset, the two match.
+    expect(
+      getLinkedScaleValues({
+        name: "scaleX",
+        value: 0.8,
+        values: { scaleX: 0 },
+      }),
+    ).toEqual({ scaleY: 0.8 });
+    expect(getLinkedScaleValues({ name: "scaleX", value: 0.8 })).toEqual({
+      scaleY: 0.8,
+    });
+    expect(getLinkedScaleValues({ name: "rotation", value: 10 })).toBe(
+      undefined,
+    );
   });
 
   it("keeps other number popovers plain", () => {

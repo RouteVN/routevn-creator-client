@@ -2376,6 +2376,19 @@ const buildPanelUpdatedItem = (store, detail, currentItem) => {
     }
   }
 
+  // Other fields the change moves with it, such as the other scale while
+  // the aspect ratio is kept.
+  for (const [linkedName, linkedValue] of Object.entries(
+    detail.linkedValues ?? {},
+  )) {
+    updatedItem = applyLayoutItemFieldChange({
+      item: updatedItem,
+      name: linkedName,
+      value: linkedValue,
+      imagesData: store.selectImages(),
+    });
+  }
+
   if (
     (detail.name === "width" || detail.name === "height") &&
     Number.isFinite(detail.formValues?.aspectRatioLock) &&

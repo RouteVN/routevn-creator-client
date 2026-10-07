@@ -1766,6 +1766,7 @@ layoutEditPanel:
   yesOption: "Yes"
   decreaseByLabel: "Decrease by {step}"
   increaseByLabel: "Increase by {step}"
+  keepAspectRatioLabel: "Keep aspect ratio"
 controlsPage:
   actionDecrementSaveLoadPagination: "Previous Save/Load Page"
   actionIncrementSaveLoadPagination: "Next Save/Load Page"

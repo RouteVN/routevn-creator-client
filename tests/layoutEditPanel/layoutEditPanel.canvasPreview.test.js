@@ -1,12 +1,14 @@
 import { produce } from "immer";
 import { describe, expect, it, vi } from "vitest";
 import {
+  handleFormActions,
   handleOnUpdate,
   handlePopoverFormChange,
   handlePopoverFormInput,
   handlePopoverPresetsButtonClick,
   handlePopoverStepPress,
   handlePopverFormClose,
+  handleScaleAspectRatioChange,
 } from "../../src/components/layoutEditPanel/layoutEditPanel.handlers.js";
 import * as layoutEditPanelStore from "../../src/components/layoutEditPanel/layoutEditPanel.store.js";
 import { selectLayoutEditPanelCopy } from "../../src/components/layoutEditPanel/support/layoutEditPanelCopy.js";
@@ -33,6 +35,7 @@ const createDeps = (name = "x", value = 100) => {
         selectValues: () => ({ x: 100, y: 50 }),
         updatePopoverFormContext: vi.fn(),
         setPopoverFormValue: vi.fn(),
+        selectScaleAspectRatioLocked: () => false,
         closePopoverForm: vi.fn(),
       },
       props: { projectResolution: { width: 1920, height: 1080 } },
@@ -73,6 +76,65 @@ describe("layout edit panel canvas preview", () => {
     expect(deps.store.setPopoverFormValue).toHaveBeenCalledWith({
       value: 412.6,
     });
+  });
+
+  it("moves the other scale with a kept aspect ratio, in previews and on submit", () => {
+    let state = layoutEditPanelStore.createInitialState();
+    const store = new Proxy(
+      {},
+      {
+        get: (_target, name) => (payload) => {
+          if (name.startsWith("select")) {
+            return layoutEditPanelStore[name]({ state }, payload);
+          }
+          let result;
+          state = produce(state, (draft) => {
+            result = layoutEditPanelStore[name]({ state: draft }, payload);
+          });
+          return result;
+        },
+      },
+    );
+    const events = [];
+    const deps = {
+      store,
+      props: { projectResolution: { width: 1920, height: 1080 } },
+      i18n: EN_I18N,
+      render: vi.fn(),
+      dispatchEvent: (event) => events.push(event),
+    };
+    // Twice as tall as wide, so the ratio is not just "the same value".
+    store.setValues({ values: { id: "element-1", scaleX: 1, scaleY: 2 } });
+    store.openPopoverForm({
+      name: "scaleX",
+      form: { fields: [{ name: "value", type: "input-number" }] },
+      copy: selectLayoutEditPanelCopy(EN_I18N),
+    });
+    expect(state.popover.context.showAspectRatioToggle).toBe(true);
+
+    handlePopoverFormInput(deps, formEvent({ value: 1.5 }));
+    expect(events.at(-1).detail).toMatchObject({
+      name: "scaleX",
+      value: 1.5,
+      linkedValues: { scaleY: 3 },
+    });
+
+    // Turned off, the preview shows the other scale as it was.
+    handleScaleAspectRatioChange(deps, {
+      _event: { detail: { value: false } },
+    });
+    expect(events.at(-1).detail.linkedValues).toBeUndefined();
+    handleScaleAspectRatioChange(deps, { _event: { detail: { value: true } } });
+
+    handleFormActions(deps, formEvent({ value: 0.5 }));
+    const update = events.at(-1);
+    expect(update.type).toBe("update");
+    expect(update.detail).toMatchObject({
+      name: "scaleX",
+      value: 0.5,
+      linkedValues: { scaleY: 1 },
+    });
+    expect(state.values).toMatchObject({ scaleX: 0.5, scaleY: 1 });
   });
 
   it("keeps the slider's form while the canvas preview moves the element", () => {
