@@ -5,7 +5,7 @@ import {
   handlePopoverFormChange,
   handlePopoverFormInput,
   handlePopoverPresetsButtonClick,
-  handlePopoverStepClick,
+  handlePopoverStepPress,
   handlePopverFormClose,
 } from "../../src/components/layoutEditPanel/layoutEditPanel.handlers.js";
 import * as layoutEditPanelStore from "../../src/components/layoutEditPanel/layoutEditPanel.store.js";
@@ -42,6 +42,7 @@ const createDeps = (name = "x", value = 100) => {
       appService: {
         showDropdownMenu: vi.fn(async () => ({ item: { key: "960" } })),
       },
+      refs: { form: { setValues: vi.fn() } },
     },
   };
 };
@@ -180,20 +181,28 @@ describe("layout edit panel canvas preview", () => {
     const { deps, events } = createDeps();
 
     for (const delta of ["-10", "-1", "1", "10"]) {
-      handlePopoverStepClick(deps, buttonEvent({ delta }));
+      handlePopoverStepPress(deps, buttonEvent({ delta }));
     }
 
     // Each step starts from the popover's value, 100 here.
     expect(events.map((event) => event.detail.value)).toEqual([
       90, 99, 101, 110,
     ]);
+    // The form takes the value in place, so a held button is not replaced.
+    expect(deps.refs.form.setValues).toHaveBeenLastCalledWith({
+      values: { value: 110 },
+    });
+    expect(deps.store.setPopoverFormValue).toHaveBeenLastCalledWith({
+      value: 110,
+    });
+    expect(deps.store.updatePopoverFormContext).not.toHaveBeenCalled();
   });
 
   it("steps rotation by 1 and 15 degrees", () => {
     const { deps, events } = createDeps("rotation", 30);
 
     for (const delta of ["-15", "1"]) {
-      handlePopoverStepClick(deps, buttonEvent({ delta }));
+      handlePopoverStepPress(deps, buttonEvent({ delta }));
     }
 
     expect(events.map((event) => event.detail.value)).toEqual([15, 31]);
@@ -203,7 +212,7 @@ describe("layout edit panel canvas preview", () => {
     const { deps, events } = createDeps("opacity", 0.95);
 
     for (const delta of ["0.1", "0.01", "-0.01"]) {
-      handlePopoverStepClick(deps, buttonEvent({ delta }));
+      handlePopoverStepPress(deps, buttonEvent({ delta }));
     }
 
     // No floating-point noise such as 0.9400000000000001.

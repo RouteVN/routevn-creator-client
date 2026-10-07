@@ -122,8 +122,8 @@ export const getSliderPopoverPresets = ({
   return [];
 };
 
-// −−, −, + and ++ (minus signs, the width of the plus): the field's step,
-// and its larger step.
+// The step buttons: the field's larger step down and its step down (two
+// overlapping minus signs, and one), then its step up and its larger step up.
 export const getSliderPopoverStepButtons = ({ name, copy = {} } = {}) => {
   const field = SLIDER_POPOVER_FIELDS[name];
   if (!field) {
@@ -131,10 +131,10 @@ export const getSliderPopoverStepButtons = ({ name, copy = {} } = {}) => {
   }
 
   return [
-    { delta: -field.fastStep, text: "−−" },
-    { delta: -field.step, text: "−" },
-    { delta: field.step, text: "+" },
-    { delta: field.fastStep, text: "++" },
+    { delta: -field.fastStep, icon: "minusDouble" },
+    { delta: -field.step, icon: "minus" },
+    { delta: field.step, icon: "plus" },
+    { delta: field.fastStep, icon: "plusDouble" },
   ].map((button) => ({
     ...button,
     label: formatI18nCopy(

@@ -2293,16 +2293,21 @@ export const handlePopoverPresetsButtonClick = async (deps, payload) => {
 };
 
 // The step buttons move the value by the wheel's steps: the field's step,
-// or Shift's.
-export const handlePopoverStepClick = (deps, payload) => {
-  const { store } = deps;
+// or Shift's. Held, a button keeps stepping, so the form takes the value in
+// place: rebuilding it would replace the held button.
+export const handlePopoverStepPress = (deps, payload) => {
+  const { refs, store } = deps;
   const delta = Number(payload._event.currentTarget.dataset.delta);
   const { name, defaultValues } = store.selectPopoverForm();
   const value = Number(defaultValues.value);
   if (!Number.isFinite(value) || !Number.isFinite(delta)) {
     return;
   }
-  applyPopoverValue(deps, stepSliderPopoverValue({ name, value, delta }));
+
+  const nextValue = stepSliderPopoverValue({ name, value, delta });
+  store.setPopoverFormValue({ value: nextValue });
+  refs.form.setValues({ values: { value: nextValue } });
+  emitPanelPreview(deps, { name, value: nextValue });
 };
 
 // Shows a value picked in the popover in its form, and previews it.

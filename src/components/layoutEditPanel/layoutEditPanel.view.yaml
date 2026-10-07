@@ -51,8 +51,8 @@ refs:
         handler: handlePopoverPresetsButtonClick
   popoverStep*:
     eventListeners:
-      click:
-        handler: handlePopoverStepClick
+      hold-repeat:
+        handler: handlePopoverStepPress
   visibilityConditionDialog:
     eventListeners:
       close:
@@ -495,7 +495,7 @@ template:
                           - rtgl-button#popoverPresetsButton v=ol s=sm suf=chevronDown: ${presetsButtonLabel}
                           - rtgl-view w=1fg: null
                           - $for stepButton, i in popover.context.stepButtons:
-                              - 'rtgl-button#popoverStep${i} data-delta=${stepButton.delta} v=ol s=sm aria-label="${stepButton.label}" title="${stepButton.label}"': ${stepButton.text}
+                              - 'rtgl-button#popoverStep${i} sq v=ol s=sm pre=${stepButton.icon} data-delta=${stepButton.delta} data-hold-repeat=true aria-label="${stepButton.label}" title="${stepButton.label}"': null
             $else:
               - rtgl-form#form autofocus key=${popover.key} slot=content :form=${popover.form} :defaultValues=${popover.defaultValues} :context=${popover.context}: null
   - rtgl-dialog#visibilityConditionDialog ?open=${visibilityConditionDialog.open} s=md:

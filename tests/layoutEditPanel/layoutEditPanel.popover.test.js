@@ -89,12 +89,16 @@ describe("layoutEditPanel popover forms", () => {
       suffixText: "960 px",
     });
     expect(
-      xPopover.context.stepButtons.map(({ delta, text }) => [text, delta]),
+      xPopover.context.stepButtons.map(({ delta, icon, label }) => [
+        icon,
+        delta,
+        label,
+      ]),
     ).toEqual([
-      ["−−", -10],
-      ["−", -1],
-      ["+", 1],
-      ["++", 10],
+      ["minusDouble", -10, "Decrease by 10"],
+      ["minus", -1, "Decrease by 1"],
+      ["plus", 1, "Increase by 1"],
+      ["plusDouble", 10, "Increase by 10"],
     ]);
   });
 

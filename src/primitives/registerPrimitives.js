@@ -16,10 +16,12 @@ import {
 } from "./visibilityObserver.js";
 import { CameraViewportElement } from "./cameraViewport.js";
 import { ZoomViewportElement, ZOOM_VIEWPORT_TAG_NAME } from "./zoomViewport.js";
+import { installHoldRepeat } from "./holdRepeat.js";
 import { installLongPress } from "./longPress.js";
 
 export const registerPrimitives = () => {
   installLongPress();
+  installHoldRepeat();
   if (!customElements.get("rvn-camera-viewport")) {
     customElements.define("rvn-camera-viewport", CameraViewportElement);
   }
