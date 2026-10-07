@@ -34,6 +34,12 @@ import {
   toSpritesheetAnimationSelectionValue,
 } from "../../internal/spritesheets.js";
 import { selectLayoutEditPanelCopy } from "./support/layoutEditPanelCopy.js";
+import {
+  getLinkedScaleValues,
+  getSliderPopoverField,
+  hasAspectRatioToggle,
+  stepSliderPopoverValue,
+} from "./support/layoutEditPanelSliderPopovers.js";
 import { normalizeLayoutRotation } from "../../internal/project/layout.js";
 
 const ACTION_INTERACTION_TYPES = [
@@ -84,22 +90,16 @@ const CONDITIONAL_OVERRIDE_IMAGE_FIELDS = new Set([
   "clickImageId",
 ]);
 const WHEEL_INCREMENT_FIELD_CONFIG = {
-  x: { step: 1, fastStep: 10 },
-  y: { step: 1, fastStep: 10 },
+  x: getSliderPopoverField("x"),
+  y: getSliderPopoverField("y"),
   width: { step: 1, fastStep: 10 },
   height: { step: 1, fastStep: 10 },
   gapX: { step: 1, fastStep: 10 },
   gapY: { step: 1, fastStep: 10 },
-  rotation: { defaultValue: 0, step: 1, fastStep: 15 },
-  scaleX: { defaultValue: 1, step: 0.01, fastStep: 0.1 },
-  scaleY: { defaultValue: 1, step: 0.01, fastStep: 0.1 },
-  opacity: {
-    defaultValue: 1,
-    step: 0.01,
-    fastStep: 0.1,
-    min: 0,
-    max: 1,
-  },
+  rotation: getSliderPopoverField("rotation"),
+  scaleX: getSliderPopoverField("scaleX"),
+  scaleY: getSliderPopoverField("scaleY"),
+  opacity: getSliderPopoverField("opacity"),
 };
 const TEXT_REVEAL_INDICATOR_VISUAL_SOURCE_TARGET =
   "textRevealIndicatorVisualSource";
@@ -171,21 +171,29 @@ const getAvailableActionInteractionItems = (itemType, copy = {}) => {
   ];
 };
 
+// `linkedValues` are other fields the change moves with it, such as the
+// other scale while the aspect ratio is kept; owners apply them too.
 const emitPanelUpdate = (
   { dispatchEvent, store },
-  { name, value, bubbles = false } = {},
+  { name, value, linkedValues, bubbles = false } = {},
 ) => {
-  dispatchEvent(
-    new CustomEvent("update", {
-      bubbles,
-      detail: {
-        formValues: store.selectValues(),
-        name,
-        value,
-      },
-    }),
-  );
+  const detail = {
+    formValues: store.selectValues(),
+    name,
+    value,
+  };
+  if (linkedValues) {
+    detail.linkedValues = linkedValues;
+  }
+  dispatchEvent(new CustomEvent("update", { bubbles, detail }));
 };
+
+// The other scale a popover's scale change moves while the aspect ratio is
+// kept.
+const selectPopoverLinkedValues = (store, { name, value } = {}) =>
+  hasAspectRatioToggle(name) && store.selectScaleAspectRatioLocked()
+    ? getLinkedScaleValues({ name, value, values: store.selectValues() })
+    : undefined;
 
 const getCurrentAspectRatioLock = (values = {}) => {
   const aspectRatioLock = Number(values?.aspectRatioLock);
@@ -482,20 +490,27 @@ const emitPanelPreview = (deps, { name, value } = {}) => {
     return;
   }
 
-  dispatchEvent(
-    new CustomEvent("preview", {
-      detail: {
-        formValues: store.selectValues(),
-        name,
-        value: normalizePanelValue(name, Number(value)),
-      },
-    }),
-  );
+  const detail = {
+    formValues: store.selectValues(),
+    name,
+    value: normalizePanelValue(name, Number(value)),
+  };
+  const linkedValues = selectPopoverLinkedValues(store, { name, value });
+  if (linkedValues) {
+    detail.linkedValues = linkedValues;
+  }
+  dispatchEvent(new CustomEvent("preview", { detail }));
 };
 
 const applyPanelValueUpdate = (
   deps,
-  { name, value, closePopover = false, closeImageSelector = false } = {},
+  {
+    name,
+    value,
+    linkedValues,
+    closePopover = false,
+    closeImageSelector = false,
+  } = {},
 ) => {
   const { store, render } = deps;
   let normalizedValue = normalizePanelValue(name, value);
@@ -623,6 +638,11 @@ const applyPanelValueUpdate = (
       name,
       value: normalizedValue,
     });
+    for (const [linkedName, linkedValue] of Object.entries(
+      linkedValues ?? {},
+    )) {
+      store.updateValueProperty({ name: linkedName, value: linkedValue });
+    }
   }
 
   if (closePopover) {
@@ -634,7 +654,7 @@ const applyPanelValueUpdate = (
   }
 
   render();
-  emitPanelUpdate(deps, { name, value: normalizedValue });
+  emitPanelUpdate(deps, { name, value: normalizedValue, linkedValues });
 };
 
 const openSoundForm = (deps, { name } = {}) => {
@@ -797,8 +817,16 @@ export const handleOnUpdate = (deps, payload) => {
     metrics: newProps.selectedElementMetrics,
   });
 
+  // An open popover's form depends on the values and the resolution only.
+  // Rebuilding it remounts the form, which ends a slider drag, so other
+  // props must not: the element's metrics change on every move while a
+  // popover previews on the canvas.
   const popover = store.selectPopoverForm();
-  if (popover.open) {
+  if (
+    popover.open &&
+    (!valuesEquivalent ||
+      oldProps?.projectResolution !== newProps?.projectResolution)
+  ) {
     store.updatePopoverFormContext({
       values: popover.defaultValues,
       name: popover.name,
@@ -1510,11 +1538,23 @@ export const handleFormActions = (deps, payload) => {
   const { store } = deps;
   const { _event } = payload;
   const { name } = store.selectPopoverForm();
+  const { value } = _event.detail.values;
   applyPanelValueUpdate(deps, {
     name,
-    value: _event.detail.values.value,
+    value,
+    linkedValues: selectPopoverLinkedValues(store, { name, value }),
     closePopover: true,
   });
+};
+
+// Turning the aspect ratio on or off shows the popover's value on the
+// canvas again, with or without the other scale.
+export const handleScaleAspectRatioChange = (deps, payload) => {
+  const { render, store } = deps;
+  store.setScaleAspectRatioLocked({ locked: payload._event.detail.value });
+  render();
+  const { name, defaultValues } = store.selectPopoverForm();
+  emitPanelPreview(deps, { name, value: defaultValues.value });
 };
 
 export const handleVisibilityConditionFormAction = (deps, payload) => {
@@ -2233,7 +2273,11 @@ export const handleListBarItemClick = async (deps, payload) => {
 export const handlePopoverFormInput = (deps, payload) => {
   const { store } = deps;
   const { name } = store.selectPopoverForm();
-  emitPanelPreview(deps, { name, value: payload._event.detail.values.value });
+  const { value } = payload._event.detail.values;
+  // A rebuild while the slider moves starts from where it is, not from the
+  // value the popover opened with.
+  store.setPopoverFormValue({ value });
+  emitPanelPreview(deps, { name, value });
 };
 
 export const handlePopoverFormChange = async (deps, payload) => {
@@ -2251,14 +2295,61 @@ export const handlePopoverFormChange = async (deps, payload) => {
   emitPanelPreview(deps, { name, value: _event.detail.values.value });
 };
 
-export const handlePopoverPresetClick = (deps, payload) => {
+// Presets open a menu of the field's presets, each with its value beside it
+// where the label is not the value itself.
+export const handlePopoverPresetsButtonClick = async (deps, payload) => {
+  const { appService, store } = deps;
+  const { presetItems } = store.selectPopoverForm().context;
+  const rect = payload._event.currentTarget.getBoundingClientRect();
+
+  const result = await appService.showDropdownMenu({
+    items: presetItems.map((preset) => {
+      const item = {
+        type: "item",
+        label: preset.label,
+        key: String(preset.value),
+      };
+      if (preset.suffixText) {
+        item.suffixText = preset.suffixText;
+      }
+      return item;
+    }),
+    x: rect.left,
+    y: rect.bottom,
+    place: "bs",
+  });
+
+  const value = Number(result?.item?.key);
+  if (result?.item === undefined || !Number.isFinite(value)) {
+    return;
+  }
+  applyPopoverValue(deps, value);
+};
+
+// The step buttons move the value by the wheel's steps: the field's step,
+// or Shift's. Held, a button keeps stepping, so the form takes the value in
+// place: rebuilding it would replace the held button.
+export const handlePopoverStepPress = (deps, payload) => {
+  const { refs, store } = deps;
+  const delta = Number(payload._event.currentTarget.dataset.delta);
+  const { name, defaultValues } = store.selectPopoverForm();
+  const value = Number(defaultValues.value);
+  if (!Number.isFinite(value) || !Number.isFinite(delta)) {
+    return;
+  }
+
+  const nextValue = stepSliderPopoverValue({ name, value, delta });
+  store.setPopoverFormValue({ value: nextValue });
+  refs.form.setValues({ values: { value: nextValue } });
+  emitPanelPreview(deps, { name, value: nextValue });
+};
+
+// Shows a value picked in the popover in its form, and previews it.
+const applyPopoverValue = (deps, value) => {
   const { props, render, store } = deps;
-  const { _event } = payload;
   const popover = store.selectPopoverForm();
   const { name } = popover;
-  const value = Number(_event.currentTarget.dataset.value);
-
-  if (!name || !Number.isFinite(value)) {
+  if (!name) {
     return;
   }
 

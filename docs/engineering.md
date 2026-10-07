@@ -1129,7 +1129,11 @@ flags; a page opts in by exposing `setAppWindowMetrics` and
 `mountMobileResourceWindowLayout(deps)` from `handleBeforeMount`. Selecting an
 item in the pane syncs the grid but keeps the mobile detail sheet suppressed,
 matching the overlay explorer. Other resource pages are unchanged until they
-opt in.
+opt in. The pane is `rvn-tablet-explorer-panel`, with the explorer in its
+`content` slot: the button on the right of its title (**Files**, or
+**Elements** in the layout editor) hides it to a 48px strip holding only the
+button that shows it again. The explorer stays mounted while hidden, and the
+choice is shared by every page through `resourcePages.tabletExplorerCollapsed`.
 
 On tablet landscape the About, Config, Tutorials, and Project pages center
 their content in a 640px column (the Projects page column width). Their headers,
@@ -1165,7 +1169,8 @@ Preview**) sits on the right of the header while Preview is showing. Both
 bodies stay mounted and are
 shown or hidden by style so unsaved preview settings and scroll positions
 survive. Selecting an element (explorer, canvas, or stepping) switches to Edit
-and clearing the selection switches back to Preview. With the panels out of the
+and clearing the selection switches back to Preview; a click outside the canvas
+with nothing selected leaves the tab as it is. With the panels out of the
 center column, the canvas is vertically centered in a workspace-height box
 (`container-type: size`) and sized from the full height (`formatCanvasMaxWidth`);
 phone and portrait keep the stacked half-height layout.
@@ -1206,7 +1211,22 @@ values) preview on the canvas while you slide, type, or pick a preset: the panel
 emits `preview` from the form's live `form-input` events and `preview-cancel`
 when the popover closes. The page keeps the previewed item as an overlay on the
 canvas state only, so nothing is saved until **Submit**; closing the popover
-without submitting puts the element back.
+without submitting puts the element back. The popover is rebuilt only when the
+values or the resolution change, since a rebuild remounts its form and would
+end a slider drag; other props, such as the element metrics that change on
+every preview, leave it alone.
+
+X, Y, rotation, scale, and opacity popovers have a slider, a **Presets** menu,
+and four step buttons (`support/layoutEditPanelSliderPopovers.js` holds each
+field's range, presets, steps, and default). X and Y run from half the
+project's width or height before the edge to half past it, rotation a half turn
+each way, and scale from 0 to 2, each reaching further to a value already
+outside; opacity stays between 0 and 1. The step buttons move by the mouse
+wheel's step and Shift's larger one, and keep stepping while held
+(`src/primitives/holdRepeat.js`), taking the value into the form in place. Scale
+popovers also keep the aspect ratio by default: the other scale moves in
+proportion, sent as the events' `linkedValues`, which the layout and transform
+editors apply with the named change.
 
 The layout editor has undo and redo for element edits made since the page
 opened: canvas moves, resizes, rotations and nudges, edit panel fields, show and

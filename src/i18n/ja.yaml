@@ -1392,6 +1392,9 @@ charactersPage:
   title: "キャラクター"
   updateCharacterButton: "更新"
   updateGroupButton: "更新"
+tabletExplorerPanel:
+  hideLabel: "パネルを隠す"
+  showLabel: "パネルを表示"
 transformsPage:
   yesLabel: "はい"
   defaultDialogueAvatarLabel: "会話アバターのデフォルトトランスフォーム"
@@ -1704,6 +1707,7 @@ layoutEditPanel:
   positionSection: "位置"
   positionXLabel: "X位置"
   positionYLabel: "Y位置"
+  presetPixelsLabel: "{value} px"
   presetsLabel: "プリセット"
   qualityLabel: "品質"
   qualitySummaryLabel: "品質"
@@ -1760,6 +1764,9 @@ layoutEditPanel:
   volumeLabel: "音量"
   widthLabel: "幅"
   yesOption: "はい"
+  decreaseByLabel: "{step} 減らす"
+  increaseByLabel: "{step} 増やす"
+  keepAspectRatioLabel: "縦横比を維持"
 controlsPage:
   actionDecrementSaveLoadPagination: "前のセーブ/ロードページへ"
   actionIncrementSaveLoadPagination: "次のセーブ/ロードページへ"

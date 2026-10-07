@@ -1392,6 +1392,9 @@ charactersPage:
   title: "Characters"
   updateCharacterButton: "Update"
   updateGroupButton: "Update"
+tabletExplorerPanel:
+  hideLabel: "Hide panel"
+  showLabel: "Show panel"
 transformsPage:
   yesLabel: "Yes"
   defaultDialogueAvatarLabel: "Default Dialogue Avatar Transform"
@@ -1704,6 +1707,7 @@ layoutEditPanel:
   positionSection: "Position"
   positionXLabel: "Position X"
   positionYLabel: "Position Y"
+  presetPixelsLabel: "{value} px"
   presetsLabel: "Presets"
   qualityLabel: "Quality"
   qualitySummaryLabel: "quality"
@@ -1760,6 +1764,9 @@ layoutEditPanel:
   volumeLabel: "Volume"
   widthLabel: "Width"
   yesOption: "Yes"
+  decreaseByLabel: "Decrease by {step}"
+  increaseByLabel: "Increase by {step}"
+  keepAspectRatioLabel: "Keep aspect ratio"
 controlsPage:
   actionDecrementSaveLoadPagination: "Previous Save/Load Page"
   actionIncrementSaveLoadPagination: "Next Save/Load Page"

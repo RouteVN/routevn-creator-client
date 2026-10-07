@@ -1,3 +1,11 @@
+import {
+  getSliderPopoverField,
+  getSliderPopoverPresets,
+  getSliderPopoverRange,
+  getSliderPopoverStepButtons,
+  hasAspectRatioToggle,
+  isSliderPopoverField,
+} from "./support/layoutEditPanelSliderPopovers.js";
 import { parseAndRender } from "jempl";
 import { getFirstTextStyleId } from "../../constants/textStyles.js";
 import {
@@ -74,7 +82,6 @@ import {
 import { selectLayoutEditPanelCopy } from "./support/layoutEditPanelCopy.js";
 
 const HIDDEN_LAYOUT_ACTION_MODES = new Set(["conditional"]);
-const POSITION_POPOVER_NAMES = new Set(["x", "y"]);
 const DEFAULT_INTERACTION_SOUND_VOLUME = 100;
 const DEFAULT_REVEAL_SOUND_STOP_TIMING = "immediate";
 const TEXT_CONTENT_MENTION_VARIABLE_TYPES = new Set([
@@ -331,50 +338,8 @@ const createSoundForm = (copy = {}, { stopTimingName } = {}) => ({
     ],
   },
 });
-const POSITION_POPOVER_PRESETS = [
-  {
-    label: "0",
-    ratio: 0,
-  },
-  {
-    label: "1/5",
-    ratio: 1 / 5,
-  },
-  {
-    label: "1/4",
-    ratio: 1 / 4,
-  },
-  {
-    label: "1/3",
-    ratio: 1 / 3,
-  },
-  {
-    label: "1/2",
-    ratio: 1 / 2,
-  },
-  {
-    label: "2/3",
-    ratio: 2 / 3,
-  },
-  {
-    label: "3/5",
-    ratio: 3 / 5,
-  },
-  {
-    label: "3/4",
-    ratio: 3 / 4,
-  },
-  {
-    label: "4/5",
-    ratio: 4 / 5,
-  },
-  {
-    label: "1",
-    ratio: 1,
-  },
-];
 
-const POSITION_PRESETS_SLOT = "position-presets";
+const SLIDER_PRESETS_SLOT = "slider-presets";
 
 const toPanelViewKeyPart = (value, fallback) => {
   if (typeof value === "string" && value.length > 0) {
@@ -496,50 +461,6 @@ const annotatePanelSections = (sections = []) => {
   });
 };
 
-// X follows the project's width and Y its height.
-const getPositionPopoverResolutionDimension = ({
-  name,
-  projectResolution,
-} = {}) =>
-  Number(name === "y" ? projectResolution?.height : projectResolution?.width);
-
-const getPositionPopoverRange = ({
-  name,
-  values = {},
-  projectResolution,
-  currentValue,
-} = {}) => {
-  const resolutionDimension = getPositionPopoverResolutionDimension({
-    name,
-    projectResolution,
-  });
-  if (!Number.isFinite(resolutionDimension) || resolutionDimension <= 0) {
-    return undefined;
-  }
-
-  let min = -resolutionDimension;
-  let max = resolutionDimension * 2;
-
-  const numericValues = [values?.[name], currentValue]
-    .map((value) => Number(value))
-    .filter((value) => Number.isFinite(value));
-
-  for (const value of numericValues) {
-    if (value < min) {
-      min = Math.floor(value);
-    }
-    if (value > max) {
-      max = Math.ceil(value);
-    }
-  }
-
-  return {
-    min,
-    max,
-    resolutionDimension,
-  };
-};
-
 const clonePopoverForm = (form) => {
   if (!form || typeof form !== "object") {
     return form;
@@ -576,25 +497,24 @@ const buildPopoverForm = ({
   projectResolution,
   values,
   value,
-  copy,
 } = {}) => {
-  if (!POSITION_POPOVER_NAMES.has(name)) {
+  if (!isSliderPopoverField(name)) {
     return form;
   }
 
-  const positionRange = getPositionPopoverRange({
+  const sliderRange = getSliderPopoverRange({
     name,
     values,
     projectResolution,
     currentValue: value,
   });
-  if (!positionRange) {
+  if (!sliderRange) {
     return form;
   }
 
   const nextForm = clonePopoverForm(form);
   const normalizedFields = Array.isArray(nextForm?.fields)
-    ? nextForm.fields.filter((field) => field?.slot !== POSITION_PRESETS_SLOT)
+    ? nextForm.fields.filter((field) => field?.slot !== SLIDER_PRESETS_SLOT)
     : [];
   const firstField = normalizedFields[0];
   if (!firstField) {
@@ -606,14 +526,13 @@ const buildPopoverForm = ({
     {
       ...firstField,
       type: "slider-with-input",
-      min: positionRange.min,
-      max: positionRange.max,
-      step: 1,
+      min: sliderRange.min,
+      max: sliderRange.max,
+      step: sliderRange.step,
     },
     {
       type: "slot",
-      slot: POSITION_PRESETS_SLOT,
-      label: copy?.presetsLabel ?? "Presets",
+      slot: SLIDER_PRESETS_SLOT,
     },
     ...remainingFields,
   ];
@@ -621,31 +540,18 @@ const buildPopoverForm = ({
   return nextForm;
 };
 
-const buildPositionPopoverContext = ({
-  name,
-  projectResolution,
-  values,
-} = {}) => {
-  if (!POSITION_POPOVER_NAMES.has(name)) {
-    return {};
-  }
-
-  const positionRange = getPositionPopoverRange({
-    name,
-    values,
-    projectResolution,
-  });
-  if (!positionRange) {
+// X, Y, rotation and opacity popovers show a slider with a Presets menu and
+// step buttons.
+const buildSliderPopoverContext = ({ name, projectResolution, copy } = {}) => {
+  if (!isSliderPopoverField(name)) {
     return {};
   }
 
   return {
-    isPositionPopover: true,
-    positionPresetItems: POSITION_POPOVER_PRESETS.map((preset) => ({
-      label: preset.label,
-      ratio: preset.ratio,
-      value: Math.round(positionRange.resolutionDimension * preset.ratio),
-    })),
+    isSliderPopover: true,
+    presetItems: getSliderPopoverPresets({ name, projectResolution, copy }),
+    stepButtons: getSliderPopoverStepButtons({ name, copy }),
+    showAspectRatioToggle: hasAspectRatioToggle(name),
   };
 };
 
@@ -834,6 +740,8 @@ const resetSelectionUiState = (state) => {
 
 export const createInitialState = () => {
   const state = {
+    // Scale popovers keep the aspect ratio unless it is turned off.
+    scaleAspectRatioLocked: true,
     imagesData: { tree: [], items: {} },
     soundsData: { tree: [], items: {} },
     spritesheetsData: { tree: [], items: {} },
@@ -895,7 +803,9 @@ export const openPopoverForm = (
     return;
   }
 
-  const fieldValue = getValueAtPath(state.values, name);
+  const fieldValue =
+    getValueAtPath(state.values, name) ??
+    getSliderPopoverField(name)?.defaultValue;
   const value =
     name === "scaleX" || name === "scaleY"
       ? roundScaleForDisplay(fieldValue)
@@ -923,14 +833,13 @@ export const openPopoverForm = (
       projectResolution,
       values: state.values,
       value,
-      copy,
     }),
     context: {
       popoverFormValues,
-      ...buildPositionPopoverContext({
+      ...buildSliderPopoverContext({
         name,
         projectResolution,
-        values: state.values,
+        copy,
       }),
     },
   };
@@ -944,10 +853,10 @@ export const updatePopoverFormContext = (
 
   state.popover.context = {
     popoverFormValues: values,
-    ...buildPositionPopoverContext({
+    ...buildSliderPopoverContext({
       name: nextName,
       projectResolution,
-      values: state.values,
+      copy,
     }),
   };
   state.popover.defaultValues = values;
@@ -957,10 +866,26 @@ export const updatePopoverFormContext = (
     projectResolution,
     values: state.values,
     value: values.value,
-    copy,
   });
   state.popover.name = nextName;
   state.popover.key = state.popover.key + 1;
+};
+
+export const setScaleAspectRatioLocked = ({ state }, { locked } = {}) => {
+  state.scaleAspectRatioLocked = locked;
+};
+
+export const selectScaleAspectRatioLocked = ({ state }) =>
+  state.scaleAspectRatioLocked;
+
+// The value the open popover's form shows while it is edited, without
+// rebuilding the form.
+export const setPopoverFormValue = ({ state }, { value } = {}) => {
+  if (!state.popover.open) {
+    return;
+  }
+  state.popover.defaultValues.value = value;
+  state.popover.context.popoverFormValues.value = value;
 };
 
 export const closePopoverForm = ({ state }, _payload = {}) => {
@@ -1939,6 +1864,9 @@ export const selectViewData = ({ state, props, constants, i18n }) => {
     popover: state.popover,
     visibilityConditionDialog: state.visibilityConditionDialog,
     dropdownMenu: state.dropdownMenu,
+    presetsButtonLabel: copy.presetsLabel,
+    scaleAspectRatioLocked: state.scaleAspectRatioLocked,
+    keepAspectRatioLabel: copy.keepAspectRatioLabel,
     sectionTooltip: state.sectionTooltip,
     visibilityConditionDialogDefaults,
     visibilityConditionDialogForm: createVisibilityConditionForm({

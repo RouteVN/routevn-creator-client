@@ -1392,6 +1392,9 @@ charactersPage:
   title: "ตัวละคร"
   updateCharacterButton: "อัปเดต"
   updateGroupButton: "อัปเดต"
+tabletExplorerPanel:
+  hideLabel: "ซ่อนแผง"
+  showLabel: "แสดงแผง"
 transformsPage:
   yesLabel: "ใช่"
   defaultDialogueAvatarLabel: "การแปลงเริ่มต้นของอวาตาร์บทสนทนา"
@@ -1704,6 +1707,7 @@ layoutEditPanel:
   positionSection: "ตำแหน่ง"
   positionXLabel: "ตำแหน่ง X"
   positionYLabel: "ตำแหน่ง Y"
+  presetPixelsLabel: "{value} px"
   presetsLabel: "พรีเซ็ต"
   qualityLabel: "คุณภาพ"
   qualitySummaryLabel: "คุณภาพ"
@@ -1760,6 +1764,9 @@ layoutEditPanel:
   volumeLabel: "ระดับเสียง"
   widthLabel: "ความกว้าง"
   yesOption: "ใช่"
+  decreaseByLabel: "ลดลง {step}"
+  increaseByLabel: "เพิ่มขึ้น {step}"
+  keepAspectRatioLabel: "รักษาอัตราส่วน"
 controlsPage:
   actionDecrementSaveLoadPagination: "หน้าบันทึก/โหลดก่อนหน้า"
   actionIncrementSaveLoadPagination: "หน้าบันทึก/โหลดถัดไป"

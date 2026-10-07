@@ -45,10 +45,18 @@ refs:
     eventListeners:
       close:
         handler: handlePopverFormClose
-  popoverPreset*:
+  popoverPresetsButton:
     eventListeners:
       click:
-        handler: handlePopoverPresetClick
+        handler: handlePopoverPresetsButtonClick
+  popoverStep*:
+    eventListeners:
+      hold-repeat:
+        handler: handlePopoverStepPress
+  scaleAspectRatioToggle:
+    eventListeners:
+      value-change:
+        handler: handleScaleAspectRatioChange
   visibilityConditionDialog:
     eventListeners:
       close:
@@ -365,7 +373,7 @@ template:
                         $else:
                           - rtgl-view d=h w=f g=md av=c:
                               - $for field, k in item.fields:
-                                  - $if field.label:
+                                  - $if field.label && !field.hideLabel:
                                       - rtgl-text s=sm w=60: ${field.label}
                                   - rtgl-view#groupItem${i}x${j}x${k} data-name=${field.name} role=button tabindex=0 aria-label="${field.label}" w=1fg d=h pv=sm ph=md bgc=mu br=md av=c g=md cur=pointer bw=xs bc=bg h-bc=ac h=28:
                                       - rtgl-view d=h av=c g=md w=1fg:
@@ -484,12 +492,17 @@ template:
   - rvn-system-actions#systemActions :actions=${actionsData} actionType=system :hiddenModes=${hiddenSystemActionModes}: null
   - rtgl-popover#popoverForm ?open=${popover.open} place=b x=${popover.x} y=${popover.y}:
       - $if popover.open:
-          - $if popover.context.isPositionPopover:
+          - $if popover.context.isSliderPopover:
               - rtgl-view slot=content w=360:
                   - rtgl-form#form autofocus key=${popover.key} :form=${popover.form} :defaultValues=${popover.defaultValues} :context=${popover.context} w=f:
-                      - rtgl-view slot="position-presets" d=h wrap g=sm:
-                          - $for preset, i in popover.context.positionPresetItems:
-                              - rtgl-button#popoverPreset${i} data-value=${preset.value} v=ol s=sm: ${preset.label}
+                      - rtgl-view slot="slider-presets" d=v w=f g=sm:
+                          - rtgl-view d=h av=c w=f g=xs:
+                              - rtgl-button#popoverPresetsButton v=ol s=sm suf=chevronDown: ${presetsButtonLabel}
+                              - rtgl-view w=1fg: null
+                              - $for stepButton, i in popover.context.stepButtons:
+                                  - 'rtgl-button#popoverStep${i} sq v=ol s=sm pre=${stepButton.icon} data-delta=${stepButton.delta} data-hold-repeat=true aria-label="${stepButton.label}" title="${stepButton.label}"': null
+                          - $if popover.context.showAspectRatioToggle:
+                              - rtgl-checkbox#scaleAspectRatioToggle ?checked=${scaleAspectRatioLocked}: ${keepAspectRatioLabel}
             $else:
               - rtgl-form#form autofocus key=${popover.key} slot=content :form=${popover.form} :defaultValues=${popover.defaultValues} :context=${popover.context}: null
   - rtgl-dialog#visibilityConditionDialog ?open=${visibilityConditionDialog.open} s=md:

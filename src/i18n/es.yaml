@@ -1392,6 +1392,9 @@ charactersPage:
   title: "Personajes"
   updateCharacterButton: "Actualizar"
   updateGroupButton: "Actualizar"
+tabletExplorerPanel:
+  hideLabel: "Ocultar panel"
+  showLabel: "Mostrar panel"
 transformsPage:
   yesLabel: "Sí"
   defaultDialogueAvatarLabel: "Transformación predeterminada del avatar de diálogo"
@@ -1704,6 +1707,7 @@ layoutEditPanel:
   positionSection: "Posición"
   positionXLabel: "Posición X"
   positionYLabel: "Posición Y"
+  presetPixelsLabel: "{value} px"
   presetsLabel: "Valores predefinidos"
   qualityLabel: "Calidad"
   qualitySummaryLabel: "calidad"
@@ -1760,6 +1764,9 @@ layoutEditPanel:
   volumeLabel: "Volumen"
   widthLabel: "Ancho"
   yesOption: "Sí"
+  decreaseByLabel: "Disminuir en {step}"
+  increaseByLabel: "Aumentar en {step}"
+  keepAspectRatioLabel: "Mantener proporción"
 controlsPage:
   actionDecrementSaveLoadPagination: "Página anterior de guardado/carga"
   actionIncrementSaveLoadPagination: "Página siguiente de guardado/carga"

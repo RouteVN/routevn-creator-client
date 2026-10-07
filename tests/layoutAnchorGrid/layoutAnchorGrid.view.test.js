@@ -17,9 +17,10 @@ describe("layoutAnchorGrid view", () => {
 
     expect(() => yaml.load(view)).not.toThrow();
     expect(view).toContain('role=radiogroup aria-label="${label}"');
-    expect(view).toContain('grid-template-columns: "repeat(3, 28px)"');
-    expect(view).toContain("height: 28px");
-    expect(view).toContain("width: 28px");
+    expect(view).toContain('grid-template-columns: "repeat(3, 32px)"');
+    expect(view).toContain("gap: 2px");
+    expect(view).toContain("height: 32px");
+    expect(view).toContain("width: 32px");
     expect(view).toContain("button#anchorCell${i}.layoutAnchorGridCell");
     expect(view).toContain("role=radio");
     expect(view).toContain('aria-checked="${cell.isSelected}"');
