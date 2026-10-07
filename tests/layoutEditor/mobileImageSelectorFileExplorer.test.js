@@ -257,6 +257,8 @@ describe("mobile layout edit panel sound and spritesheet selectors", () => {
       end: "rtgl-dialog#spritesheetSelectorDialog",
       guard: "$if showSoundSelectorFileExplorer",
       explorer: "rvn-base-file-explorer#soundSelectorFileExplorer",
+      columnsProps:
+        ":columns=${soundSelectorColumns} :minColumnWidth=${soundSelectorMinColumnWidth}",
     },
     {
       name: "spritesheet",
@@ -264,21 +266,22 @@ describe("mobile layout edit panel sound and spritesheet selectors", () => {
       end: "$when: fullImagePreviewVisible",
       guard: "$if showSpritesheetSelectorFileExplorer",
       explorer: "rvn-base-file-explorer#spritesheetSelectorFileExplorer",
+      columnsProps: ":columns=${selectorColumns}",
     },
   ])(
     "guards the $name file explorer, passes columns, and confirms with Select",
-    ({ start, end, guard, explorer }) => {
+    ({ start, end, guard, explorer, columnsProps }) => {
       const branch = sliceBranch(view, start, end);
       const guardIndex = branch.indexOf(guard);
 
       expect(guardIndex).toBeGreaterThan(-1);
       expect(branch.indexOf(explorer)).toBeGreaterThan(guardIndex);
-      expect(branch).toContain(":columns=${selectorColumns}");
+      expect(branch).toContain(columnsProps);
       expect(branch).toContain("variant=pr: ${selectButton}");
     },
   );
 
-  it("uses two columns without file explorers in touch mode", () => {
+  it("uses two columns, or up to four for sounds, without file explorers in touch mode", () => {
     const state = createLayoutEditPanelState();
     const selectViewData = () =>
       selectLayoutEditPanelViewData({
@@ -292,6 +295,8 @@ describe("mobile layout edit panel sound and spritesheet selectors", () => {
       showSoundSelectorFileExplorer: true,
       showSpritesheetSelectorFileExplorer: true,
       selectorColumns: undefined,
+      soundSelectorColumns: undefined,
+      soundSelectorMinColumnWidth: undefined,
     });
 
     setLayoutEditPanelUiConfig(
@@ -307,6 +312,8 @@ describe("mobile layout edit panel sound and spritesheet selectors", () => {
       showSoundSelectorFileExplorer: false,
       showSpritesheetSelectorFileExplorer: false,
       selectorColumns: 2,
+      soundSelectorColumns: 4,
+      soundSelectorMinColumnWidth: 120,
     });
   });
 });

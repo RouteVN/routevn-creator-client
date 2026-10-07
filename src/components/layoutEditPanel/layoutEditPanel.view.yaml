@@ -429,26 +429,31 @@ template:
                               - $for barItem, k in item.items:
                                   - rtgl-view key=${barItem.viewKey} d=v w=f g=sm:
                                       - rtgl-text s=xs c=mu: ${barItem.label}
-                                      - rtgl-view#listBarItem${i}x${j}x${k} data-name=${barItem.name} d=h w=f g=md av=c ph=md h-bgc=mu bw=xs br=md cur=pointer:
-                                          - $if barItem.kind == 'spritesheet' && barItem.resourceId:
-                                              - rtgl-view w=56 h=32 overflow=hidden br=sm:
-                                                  - 'rvn-spritesheet-preview key=${barItem.spritesheetPreviewKey} previewKey=${barItem.spritesheetPreviewKey} fileId=${barItem.spritesheetFileId} :atlas=${barItem.spritesheetAtlas} :animation=${barItem.spritesheetAnimation} w=f h=f emptyLabel="${noPreviewLabel}"': null
-                                            $elif barItem.imageId:
-                                              - rvn-file-image imageId=${barItem.imageId} source="thumbnail" h=32: null
-                                            $elif barItem.soundId:
-                                              - 'rtgl-view d=h av=c g=sm h=32 w=1fg style="min-width: 0;"':
-                                                  - $if barItem.waveformDataFileId:
-                                                      - rtgl-view w=64 h=24 overflow=hidden br=sm:
-                                                          - rvn-waveform-visualizer waveformDataFileId=${barItem.waveformDataFileId} w=f h=f: null
-                                                    $else:
-                                                      - rtgl-view w=28 h=24 av=c ah=c bgc=mu br=sm:
-                                                          - rtgl-svg svg=play wh=14 c=mu-fg: null
-                                                  - rtgl-text s=xs c=mu-fg ellipsis w=1fg: ${barItem.soundName}
-                                                  - $if barItem.volumeLabel:
-                                                      - rtgl-text s=xs: ${barItem.volumeLabel}
-                                            $else:
-                                              - rtgl-view d=h av=c ah=c h=32 ph=sm bgc=mu br=sm:
-                                                  - rtgl-text s=xs c=mu: ${notSetLabel}
+                                      - $if barItem.imageId:
+                                          - 'rtgl-view#listBarItem${i}x${j}x${k} data-name=${barItem.name} cur=pointer bw=xs bc=bo h-bc=ac br=md overflow=hidden style="width: calc((100% - var(--spacing-md)) / 2); box-sizing: border-box;"':
+                                              - 'div.layoutEditorImageFieldTransparencyGrid style="display: block; width: 100%; aspect-ratio: 16 / 9; overflow: hidden;"':
+                                                  - rvn-file-image imageId=${barItem.imageId} source="thumbnail" w=f h=f: null
+                                              - rtgl-view w=f p=md:
+                                                  - rtgl-text s=xs c=mu-fg ellipsis w=f: ${barItem.imageName}
+                                        $else:
+                                          - rtgl-view#listBarItem${i}x${j}x${k} data-name=${barItem.name} d=h w=f g=md av=c ph=md h-bgc=mu bw=xs br=md cur=pointer:
+                                              - $if barItem.kind == 'spritesheet' && barItem.resourceId:
+                                                  - rtgl-view w=56 h=32 overflow=hidden br=sm:
+                                                      - 'rvn-spritesheet-preview key=${barItem.spritesheetPreviewKey} previewKey=${barItem.spritesheetPreviewKey} fileId=${barItem.spritesheetFileId} :atlas=${barItem.spritesheetAtlas} :animation=${barItem.spritesheetAnimation} w=f h=f emptyLabel="${noPreviewLabel}"': null
+                                                $elif barItem.soundId:
+                                                  - 'rtgl-view d=h av=c g=sm h=32 w=1fg style="min-width: 0;"':
+                                                      - $if barItem.waveformDataFileId:
+                                                          - rtgl-view w=64 h=24 overflow=hidden br=sm:
+                                                              - rvn-waveform-visualizer waveformDataFileId=${barItem.waveformDataFileId} w=f h=f: null
+                                                        $else:
+                                                          - rtgl-view w=28 h=24 av=c ah=c bgc=mu br=sm:
+                                                              - rtgl-svg svg=play wh=14 c=mu-fg: null
+                                                      - rtgl-text s=xs c=mu-fg ellipsis w=1fg: ${barItem.soundName}
+                                                      - $if barItem.volumeLabel:
+                                                          - rtgl-text s=xs: ${barItem.volumeLabel}
+                                                $else:
+                                                  - rtgl-view d=h av=c ah=c h=32 ph=sm bgc=mu br=sm:
+                                                      - rtgl-text s=xs c=mu: ${notSetLabel}
                         $else:
                           - $for barItem, k in item.items:
                               - rtgl-view#listBarItem${i}x${j}x${k} key=${barItem.viewKey} data-name=${barItem.name} d=h w=f g=md av=c ph=md h-bgc=mu bw=xs br=md cur=pointer:
@@ -509,8 +514,8 @@ template:
                       - rtgl-view#blurItem${i}x${j} data-name=${item.name} d=h pv=sm ph=md bgc=mu br=md av=c g=md cur=pointer bw=xs bc=bg h-bc=ac h=32 w=1fg:
                           - rtgl-text s=sm: ${item.value}
                     $elif item.type == 'text-content-summary':
-                      - rtgl-view#textContentItem${i}x${j} data-name=${item.name} w=1fg cur=pointer:
-                          - rtgl-view.layoutEditorTextContentSummaryField d=h av=c w=f wrap g=xs pv=xs ph=sm bgc=bg br=md bw=xs bc=bo h-bc=ac:
+                      - rtgl-view#textContentItem${i}x${j} data-name=${item.name} w=f cur=pointer:
+                          - rtgl-view.layoutEditorTextContentSummaryField d=h av=c w=f wrap g=xs pv=xs ph=md bgc=su br=md bw=xs bc=bo h-bc=ac:
                               - $for part, k in textContentSummaryParts:
                                   - $if part.type == 'reference':
                                       - 'span.layoutEditorTextContentReferenceChip.mention-chip key=${part.key} title="${part.resourceId}" data-rvn-mention="true" data-rvn-reference-resource-id="${part.resourceId}" data-rvn-mention-label="${part.label}"': ${part.label}
@@ -635,7 +640,7 @@ template:
                       - 'rtgl-view w=300 h=f style="min-width: 0; min-height: 0;"':
                           - rvn-base-file-explorer#soundSelectorFileExplorer :items=${soundFolderItems} shrinkable: null
                   - 'rtgl-view w=1fg h=f style="min-width: 0; min-height: 0;"':
-                      - rvn-sound-selector#soundSelector selectedSoundId=${tempSelectedSoundId} :columns=${selectorColumns}: null
+                      - rvn-sound-selector#soundSelector selectedSoundId=${tempSelectedSoundId} :columns=${soundSelectorColumns} :minColumnWidth=${soundSelectorMinColumnWidth}: null
               - rtgl-view d=h g=sm w=f ah=e:
                   - rtgl-button#confirmSoundSelection variant=pr: ${selectButton}
   - rtgl-dialog#spritesheetSelectorDialog ?open=${spritesheetSelectorDialog.open} s=lg:

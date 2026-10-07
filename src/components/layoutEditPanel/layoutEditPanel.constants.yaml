@@ -185,16 +185,17 @@ layoutSections:
             value: fixed
       - "$when": "showLayoutSizeSection && (showWidthField || showHeightField)"
         type: group
+        stacked: true
         fields:
           - "$when": "showWidthField"
             type: clickable-value
-            svg: w
+            label: Width
             name: width
             value: "${values.width}"
             popoverForm: *numberPopoverForm
           - "$when": "showHeightField"
             type: clickable-value
-            svg: h
+            label: Height
             name: height
             value: "${values.height}"
             popoverForm: *numberPopoverForm
@@ -369,7 +370,9 @@ layoutSections:
     "$if canAddSpriteImageVariant":
       labelAction: plus
     items:
+      # Labelled above 16:9 image cards that name their image.
       - type: list-bar
+        stacked: true
         items:
           - "$when": "values.imageId"
             name: imageId
@@ -633,15 +636,16 @@ controlSections:
             value: fixed
       - "$when": 'itemType != "fragment-ref"'
         type: group
+        stacked: true
         fields:
           - "$when": '!supportsWidthMode || widthMode == "fixed"'
             type: clickable-value
-            svg: w
+            label: Width
             name: width
             value: "${values.width}"
             popoverForm: *numberPopoverForm
           - type: clickable-value
-            svg: h
+            label: Height
             name: height
             value: "${values.height}"
             popoverForm: *numberPopoverForm
