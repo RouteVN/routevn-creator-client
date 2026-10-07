@@ -143,10 +143,36 @@ const FONT_SIZE_PRESETS = [
   12, 16, 20, 24, 28, 32, 36, 40, 48, 56, 64, 72, 96, 128,
 ];
 const LINE_HEIGHT_PRESETS = [1, 1.2, 1.4, 1.5, 1.6, 1.8, 2, 2.5, 3];
+const OUTLINE_THICKNESS_PRESETS = [0, 1, 2, 3, 4, 6, 8, 12];
+const SHADOW_OPACITY_PRESETS = [0, 0.25, 0.5, 0.75, 1];
+const SHADOW_BLUR_PRESETS = [0, 2, 4, 8, 12, 16, 24, 32];
+const SHADOW_OFFSET_PRESETS = [-16, -8, -4, -2, 0, 2, 4, 8, 16];
 
-// Font size and line height open slider popovers (see
+const toPixelPresets = (values) =>
+  values.map((value) => ({ label: `${value} px`, value }));
+
+// A share as a percentage, with its value beside it.
+const toPercentPresets = (values) =>
+  values.map((value) => ({
+    label: `${Math.round(value * 100)}%`,
+    value,
+    suffixText: `${value}`,
+  }));
+
+const SHADOW_OFFSET_FIELD = {
+  step: 1,
+  fastStep: 4,
+  min: -32,
+  max: 32,
+  unit: "px",
+  presets: toPixelPresets(SHADOW_OFFSET_PRESETS),
+};
+
+// The form's numbers open slider popovers (see
 // src/internal/ui/sliderPopover.js). Each slider's range bounds its value, as
-// the slider keeps a typed value within it.
+// the slider keeps a typed value within it; font size's reaches further to a
+// size already outside it. The ranges are the form's sliders' from before,
+// with font size from 8 px, the minimum its input had, to 128 px.
 export const TEXT_STYLE_SLIDER_FIELDS = Object.freeze({
   fontSize: {
     defaultValue: 16,
@@ -155,10 +181,7 @@ export const TEXT_STYLE_SLIDER_FIELDS = Object.freeze({
     min: 8,
     range: { min: 8, max: 128 },
     unit: "px",
-    presets: FONT_SIZE_PRESETS.map((value) => ({
-      label: `${value} px`,
-      value,
-    })),
+    presets: toPixelPresets(FONT_SIZE_PRESETS),
   },
   lineHeight: {
     defaultValue: 1.5,
@@ -168,7 +191,84 @@ export const TEXT_STYLE_SLIDER_FIELDS = Object.freeze({
     range: { min: 0.8, max: 3 },
     presets: LINE_HEIGHT_PRESETS.map((value) => ({ label: `${value}`, value })),
   },
+  strokeWidth: {
+    defaultValue: DEFAULT_OUTLINE_WIDTH,
+    step: 0.5,
+    fastStep: 2,
+    min: 0,
+    max: 12,
+    unit: "px",
+    presets: toPixelPresets(OUTLINE_THICKNESS_PRESETS),
+  },
+  shadowAlpha: {
+    defaultValue: DEFAULT_SHADOW.alpha,
+    step: 0.05,
+    fastStep: 0.25,
+    min: 0,
+    max: 1,
+    presets: toPercentPresets(SHADOW_OPACITY_PRESETS),
+  },
+  shadowBlur: {
+    defaultValue: DEFAULT_SHADOW.blur,
+    step: 1,
+    fastStep: 4,
+    min: 0,
+    max: 32,
+    unit: "px",
+    presets: toPixelPresets(SHADOW_BLUR_PRESETS),
+  },
+  shadowOffsetX: {
+    ...SHADOW_OFFSET_FIELD,
+    defaultValue: DEFAULT_SHADOW.offsetX,
+  },
+  shadowOffsetY: {
+    ...SHADOW_OFFSET_FIELD,
+    defaultValue: DEFAULT_SHADOW.offsetY,
+  },
 });
+
+// Each slider value field's slot in the form, and its label.
+const SLIDER_VALUE_FIELD_SLOTS = Object.freeze({
+  fontSize: { slot: "text-style-font-size", labelKey: "fontSizeLabel" },
+  lineHeight: { slot: "text-style-line-height", labelKey: "lineHeightLabel" },
+  strokeWidth: {
+    slot: "text-style-outline-thickness",
+    labelKey: "outlineThicknessLabel",
+  },
+  shadowAlpha: {
+    slot: "text-style-shadow-opacity",
+    labelKey: "shadowOpacityLabel",
+  },
+  shadowBlur: { slot: "text-style-shadow-blur", labelKey: "shadowBlurLabel" },
+  shadowOffsetX: {
+    slot: "text-style-shadow-offset-x",
+    labelKey: "shadowOffsetXLabel",
+  },
+  shadowOffsetY: {
+    slot: "text-style-shadow-offset-y",
+    labelKey: "shadowOffsetYLabel",
+  },
+});
+
+const createSliderSlotField = (name, copy, { required = false } = {}) => {
+  const { slot, labelKey } = SLIDER_VALUE_FIELD_SLOTS[name];
+  return { type: "slot", slot, label: copy[labelKey], required };
+};
+
+// The slider value fields the page puts in the form's slots, with the values
+// the form shows. A field whose section is hidden has no slot to show in.
+export const buildTextStyleSliderValueFields = ({ values, copy }) => {
+  const formValues = buildTextStyleFormValues(values);
+  return Object.entries(SLIDER_VALUE_FIELD_SLOTS).map(
+    ([name, { slot, labelKey }]) => ({
+      name,
+      slot,
+      label: copy[labelKey],
+      value: formValues[name],
+      field: TEXT_STYLE_SLIDER_FIELDS[name],
+    }),
+  );
+};
 
 const SHADOW_FIELD_KEYS = {
   shadowAlpha: "alpha",
@@ -297,18 +397,8 @@ export const createTextStyleForm = ({
       label: copy.fontLabel,
       required: true,
     },
-    {
-      type: "slot",
-      slot: "text-style-font-size",
-      label: copy.fontSizeLabel,
-      required: true,
-    },
-    {
-      type: "slot",
-      slot: "text-style-line-height",
-      label: copy.lineHeightLabel,
-      required: true,
-    },
+    createSliderSlotField("fontSize", copy, { required: true }),
+    createSliderSlotField("lineHeight", copy, { required: true }),
     {
       name: "fontWeight",
       type: "select",
@@ -335,15 +425,7 @@ export const createTextStyleForm = ({
     },
   ];
   if (showOutlineWidth) {
-    outlineFields.push({
-      name: "strokeWidth",
-      type: "slider-with-input",
-      label: copy.outlineThicknessLabel,
-      min: 0,
-      max: 12,
-      step: 0.5,
-      unit: "px",
-    });
+    outlineFields.push(createSliderSlotField("strokeWidth", copy));
   }
   fields.push({
     type: "section",
@@ -361,41 +443,10 @@ export const createTextStyleForm = ({
   ];
   if (showShadowFields) {
     shadowFields.push(
-      {
-        name: "shadowAlpha",
-        type: "slider-with-input",
-        label: copy.shadowOpacityLabel,
-        min: 0,
-        max: 1,
-        step: 0.05,
-      },
-      {
-        name: "shadowBlur",
-        type: "slider-with-input",
-        label: copy.shadowBlurLabel,
-        min: 0,
-        max: 32,
-        step: 1,
-        unit: "px",
-      },
-      {
-        name: "shadowOffsetX",
-        type: "slider-with-input",
-        label: copy.shadowOffsetXLabel,
-        min: -32,
-        max: 32,
-        step: 1,
-        unit: "px",
-      },
-      {
-        name: "shadowOffsetY",
-        type: "slider-with-input",
-        label: copy.shadowOffsetYLabel,
-        min: -32,
-        max: 32,
-        step: 1,
-        unit: "px",
-      },
+      createSliderSlotField("shadowAlpha", copy),
+      createSliderSlotField("shadowBlur", copy),
+      createSliderSlotField("shadowOffsetX", copy),
+      createSliderSlotField("shadowOffsetY", copy),
     );
   }
   fields.push({

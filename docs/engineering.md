@@ -1229,7 +1229,7 @@ proportion, sent as the events' `linkedValues`, which the layout and transform
 editors apply with the named change.
 
 `rvn-slider-value-field` is the same popover for one number elsewhere, such as
-the text style editor's font size and line height: a value that opens a
+the text style editor's numbers: a value that opens a
 slider, the **Presets** menu, and the four held step buttons. It sends
 `value-input` as the popover's value moves, `value-change` on **Submit**, and
 `value-cancel` when the popover closes without it. Its `field` prop gives the
@@ -1401,11 +1401,12 @@ field that changed, so fields the form does not show (alignment, wrapping, and
 the fallback fonts while the primary font stays) are kept. Picking a font that
 cannot draw the current weight moves the weight to the font's own in the same
 step; a weight the text style had with its font when the page opened stays
-available. Font size and line height are slider value fields in slots of the
-form: the preview draws a popover's value as it moves, as page state apart from
-the text style, and **Submit** changes the text style as one undo step. Font
-size runs from 8 px, the form's minimum before, to 128 px, and line height
-from 0.8 to 3, as its slider did (`TEXT_STYLE_SLIDER_FIELDS` in
+available. The form's numbers (font size, line height, outline thickness, and
+the shadow's opacity, blur, and offsets) are slider value fields in slots of
+the form: the preview draws a popover's value as it moves, as page state apart
+from the text style, and **Submit** changes the text style as one undo step.
+Each slider keeps the range the form's slider had, and font size runs from
+8 px, its input's minimum, to 128 px (`TEXT_STYLE_SLIDER_FIELDS` in
 `support/textStyleEditorForm.js`). Adding an
 outline color starts the outline at 2px. Preview holds
 the preview text, which the text styles page shows (the name when it is

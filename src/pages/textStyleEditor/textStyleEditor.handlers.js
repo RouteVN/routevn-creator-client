@@ -376,8 +376,8 @@ export const handleTextStyleFormChange = (deps, payload) => {
   commitTextStyleEdit(deps);
 };
 
-// Font size and line height show in the preview while their slider popover
-// moves, and change on Submit; closing the popover leaves them as they were.
+// The form's numbers show in the preview while their slider popover moves,
+// and change on Submit; closing the popover leaves them as they were.
 export const handleSliderValueInput = (deps, payload) => {
   const { render, store } = deps;
   const { name } = payload._event.currentTarget.dataset;

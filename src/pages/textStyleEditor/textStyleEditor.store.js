@@ -22,8 +22,8 @@ import {
   applyTextStyleFormChange,
   buildFontWeightOptions,
   buildTextStyleFormValues,
+  buildTextStyleSliderValueFields,
   createTextStyleForm,
-  TEXT_STYLE_SLIDER_FIELDS,
   toTextStyleValues,
 } from "./support/textStyleEditorForm.js";
 import { selectTextStyleEditorPageCopy } from "./support/textStyleEditorPageCopy.js";
@@ -111,8 +111,8 @@ export const createInitialState = () => ({
   savedPreviewText: "",
   savedPreviewAlign: "center",
   rightPanelMode: "edit",
-  // The font size or line height an open slider popover shows in the
-  // preview, as { name, value }, until it is submitted or closed.
+  // The number an open slider popover shows in the preview, as
+  // { name, value }, until it is submitted or closed.
   sliderPreview: undefined,
   // Remounts the form, for values that change outside it (undo, redo, a
   // weight the new font cannot draw) or that it shows differently from how
@@ -467,14 +467,14 @@ export const selectViewData = ({ state, i18n }) => {
     previewStrokeColor: values.strokeColorId
       ? getColorHex(state.colorsData, values.strokeColorId)
       : undefined,
-    previewStrokeWidth: values.strokeColorId ? values.strokeWidth : 0,
+    previewStrokeWidth: values.strokeColorId ? previewValues.strokeWidth : 0,
     previewShadowColor: values.shadow
       ? getColorHex(state.colorsData, values.shadow.colorId)
       : undefined,
-    previewShadowAlpha: values.shadow?.alpha ?? 1,
-    previewShadowBlur: values.shadow?.blur ?? 0,
-    previewShadowOffsetX: values.shadow?.offsetX ?? 2,
-    previewShadowOffsetY: values.shadow?.offsetY ?? 2,
+    previewShadowAlpha: previewValues.shadow?.alpha ?? 1,
+    previewShadowBlur: previewValues.shadow?.blur ?? 0,
+    previewShadowOffsetX: previewValues.shadow?.offsetX ?? 2,
+    previewShadowOffsetY: previewValues.shadow?.offsetY ?? 2,
     rightPanelMode: state.rightPanelMode,
     rightPanelModeTabs: [
       { id: "edit", label: copy.editModeLabel },
@@ -503,12 +503,7 @@ export const selectViewData = ({ state, i18n }) => {
     }),
     textStyleFormKey: buildFormKey(state),
     formValues: buildTextStyleFormValues(values),
-    fontSizeLabel: copy.fontSizeLabel,
-    fontSizeValue: values.fontSize,
-    fontSizeSliderField: TEXT_STYLE_SLIDER_FIELDS.fontSize,
-    lineHeightLabel: copy.lineHeightLabel,
-    lineHeightValue: values.lineHeight,
-    lineHeightSliderField: TEXT_STYLE_SLIDER_FIELDS.lineHeight,
+    sliderValueFields: buildTextStyleSliderValueFields({ values, copy }),
     fontOptions: buildFontOptions(state.fontsData),
     selectedFontId: primaryFontId,
     addFontOption: { label: copy.addNewFontOption },
