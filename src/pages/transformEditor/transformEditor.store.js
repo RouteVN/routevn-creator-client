@@ -264,7 +264,7 @@ export const selectPreviewTargetImage = ({ state }) =>
   getImageItemById(state.imagesData, state.previewImageIds.target);
 
 // The preview images the canvas draws. One whose file failed to load is left
-// out, so the canvas shows the gray screen or the white square instead.
+// out, so the canvas shows the gray screen or the light gray square instead.
 const selectAvailableImage = (state, imageId) => {
   const image = getImageItemById(state.imagesData, imageId);
   return image && !state.failedAssetFileIds.includes(image.fileId)

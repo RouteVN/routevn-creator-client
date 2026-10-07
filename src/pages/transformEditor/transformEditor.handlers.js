@@ -238,7 +238,7 @@ const handleBorderDragStart = (deps, payload = {}) => {
 };
 
 const handleBorderDragMove = (deps, payload = {}) => {
-  const { store } = deps;
+  const { refs, store } = deps;
   const dragMode = getBackgroundTransformDragModeFromTargetId(payload.targetId);
   if (!dragMode || typeof payload.x !== "number") {
     return;
@@ -279,6 +279,16 @@ const handleBorderDragMove = (deps, payload = {}) => {
     ? roundTransformScale(applyBackgroundTransformResizeChange(change))
     : applyBackgroundTransformDragChange(change);
   store.setTransform({ transform: nextTransform });
+  // The inspector shows the values while dragging, without rendering the
+  // page; the page renders when the drag ends.
+  refs.transformInspector.setTransientValues({
+    values: {
+      x: nextTransform.x,
+      y: nextTransform.y,
+      scaleX: nextTransform.scaleX,
+      scaleY: nextTransform.scaleY,
+    },
+  });
   void renderTransformCanvas(deps);
 };
 
@@ -510,7 +520,7 @@ const saveTransformPreview = async (deps) => {
   }
 
   // A preview saves the images picked for it, so one that cannot load stops
-  // the save instead of saving the gray screen or white square in its place.
+  // the save instead of saving the gray screen or light gray square in its place.
   const [failure] = await loadPreviewImageAssets(deps, { retryFailed: true });
   if (failure) {
     await renderTransformCanvas(deps);

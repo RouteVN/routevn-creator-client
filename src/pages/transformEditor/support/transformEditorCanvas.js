@@ -9,6 +9,9 @@ import { createBackgroundTransformEditorCanvasState } from "../../../internal/ui
 export const TRANSFORM_EDITOR_TARGET_ID = "transform-target";
 
 const BACKGROUND_COLOR = "#4a4a4a";
+// Lighter than the background and darker than the white selection outline,
+// so the outline stays visible on the default target.
+const TARGET_COLOR = "#a0a0a0";
 const FALLBACK_TARGET_SIZE = 200;
 
 const toFiniteNumber = (value, fallback) => {
@@ -67,7 +70,7 @@ export const createTransformFromInspectorValues = (
 };
 
 // The transform's preview: the background image, or a gray screen, and the
-// target image, or a white square, placed by the transform. Edit adds the
+// target image, or a light gray square, placed by the transform. Edit adds the
 // selection outline on top, and Preview and Save Preview show it as it is,
 // so the canvas looks the same on both tabs.
 export const createTransformPreviewRenderState = ({
@@ -123,7 +126,7 @@ export const createTransformPreviewRenderState = ({
         type: "rect",
         width: FALLBACK_TARGET_SIZE,
         height: FALLBACK_TARGET_SIZE,
-        fill: "white",
+        fill: TARGET_COLOR,
       };
 
   return {

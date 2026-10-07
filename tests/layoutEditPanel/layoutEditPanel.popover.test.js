@@ -45,7 +45,7 @@ const openPositionPopover = (name, values = { x: 120, y: 120 }) => {
 };
 
 describe("layoutEditPanel popover forms", () => {
-  it("uses the same special position popover for x and y", () => {
+  it("ranges x over the project's width and y over its height", () => {
     const sharedValues = {
       x: 5000,
       y: 120,
@@ -55,7 +55,7 @@ describe("layoutEditPanel popover forms", () => {
 
     expect(xPopover.context.isPositionPopover).toBe(true);
     expect(yPopover.context.isPositionPopover).toBe(true);
-    expect(xPopover.form.fields).toEqual(yPopover.form.fields);
+    // The slider also reaches the field's own value when it is outside.
     expect(xPopover.form.fields[0]).toMatchObject({
       type: "slider-with-input",
       min: -1920,
@@ -64,17 +64,16 @@ describe("layoutEditPanel popover forms", () => {
     });
     expect(yPopover.form.fields[0]).toMatchObject({
       type: "slider-with-input",
-      min: -1920,
-      max: 5000,
+      min: -1080,
+      max: 2160,
       step: 1,
     });
-    expect(xPopover.context.positionPresetItems).toEqual(
-      yPopover.context.positionPresetItems,
-    );
-    expect(
-      xPopover.context.positionPresetItems.some(
-        (item) => item.label === "1" && item.value === 1920,
-      ),
-    ).toBe(true);
+    const presetValue = (popover, label) =>
+      popover.context.positionPresetItems.find((item) => item.label === label)
+        ?.value;
+    expect(presetValue(xPopover, "1/2")).toBe(960);
+    expect(presetValue(xPopover, "1")).toBe(1920);
+    expect(presetValue(yPopover, "1/2")).toBe(540);
+    expect(presetValue(yPopover, "1")).toBe(1080);
   });
 });

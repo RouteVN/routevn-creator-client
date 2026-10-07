@@ -127,6 +127,7 @@ const createPage = async ({ item = savedTransform, uiConfig = {} } = {}) => {
     refs: {
       canvas: { getBoundingClientRect: () => ({ width: 960 }) },
       canvasBackground: { centerContent: vi.fn() },
+      transformInspector: { setTransientValues: vi.fn() },
     },
     graphicsService: {
       init: vi.fn(async () => {}),
@@ -334,6 +335,12 @@ describe("transform editor", () => {
     expect(
       page.findElement(page.lastRender().elements, "transform-target"),
     ).toMatchObject({ x: 1040, y: 580 });
+    // The inspector follows each move, not only the end of the drag.
+    const { setTransientValues } = page.deps.refs.transformInspector;
+    expect(setTransientValues.mock.calls).toEqual([
+      [{ values: { x: 1010, y: 560, scaleX: 1, scaleY: 1 } }],
+      [{ values: { x: 1040, y: 580, scaleX: 1, scaleY: 1 } }],
+    ]);
     expect(page.state().editHistory.undo).toHaveLength(1);
 
     await handleUndoButtonClick(page.deps);
@@ -352,6 +359,11 @@ describe("transform editor", () => {
     ]);
 
     expect(page.transform()).toMatchObject({ scaleX: 1.5, scaleY: 1.5 });
+    expect(
+      page.deps.refs.transformInspector.setTransientValues,
+    ).toHaveBeenLastCalledWith({
+      values: { x: 960, y: 540, scaleX: 1.5, scaleY: 1.5 },
+    });
     expect(page.state().editHistory.undo).toHaveLength(1);
   });
 
@@ -522,8 +534,8 @@ describe("transform editor", () => {
       renderState.elements,
       "transform-target",
     );
-    // The default target is a solid white square.
-    expect(savedTarget).toMatchObject({ x: 959, fill: "white" });
+    // The default target is a solid light gray square.
+    expect(savedTarget).toMatchObject({ x: 959, fill: "#a0a0a0" });
     expect(savedTarget.alpha).toBeUndefined();
     expect(page.savedData()).toEqual([
       {
