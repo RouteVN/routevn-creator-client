@@ -1,10 +1,14 @@
+import { produce } from "immer";
 import { describe, expect, it, vi } from "vitest";
 import {
+  handleOnUpdate,
   handlePopoverFormChange,
   handlePopoverFormInput,
-  handlePopoverPresetClick,
+  handlePopoverPresetsButtonClick,
+  handlePopoverStepClick,
   handlePopverFormClose,
 } from "../../src/components/layoutEditPanel/layoutEditPanel.handlers.js";
+import * as layoutEditPanelStore from "../../src/components/layoutEditPanel/layoutEditPanel.store.js";
 import { normalizeLayoutRotation } from "../../src/internal/project/layout.js";
 import { EN_I18N } from "../support/i18n.js";
 
@@ -14,18 +18,41 @@ const createDeps = (name = "x") => {
     events,
     deps: {
       store: {
-        selectPopoverForm: () => ({ name, defaultValues: { value: 100 } }),
+        selectPopoverForm: () => ({
+          name,
+          defaultValues: { value: 100 },
+          context: {
+            positionPresetItems: [
+              { label: "0", value: 0 },
+              { label: "1/2", value: 960 },
+              { label: "1", value: 1920 },
+            ],
+          },
+        }),
         selectValues: () => ({ x: 100, y: 50 }),
         updatePopoverFormContext: vi.fn(),
+        setPopoverFormValue: vi.fn(),
         closePopoverForm: vi.fn(),
       },
       props: { projectResolution: { width: 1920, height: 1080 } },
       i18n: EN_I18N,
       render: vi.fn(),
       dispatchEvent: (event) => events.push(event),
+      appService: {
+        showDropdownMenu: vi.fn(async () => ({ item: { key: "960" } })),
+      },
     },
   };
 };
+
+const buttonEvent = (dataset = {}) => ({
+  _event: {
+    currentTarget: {
+      dataset,
+      getBoundingClientRect: () => ({ left: 10, bottom: 40 }),
+    },
+  },
+});
 
 const formEvent = (values) => ({ _event: { detail: { values } } });
 
@@ -41,6 +68,70 @@ describe("layout edit panel canvas preview", () => {
     // Rebuilding the form remounts it and ends the slider drag.
     expect(deps.store.updatePopoverFormContext).not.toHaveBeenCalled();
     expect(deps.render).not.toHaveBeenCalled();
+    expect(deps.store.setPopoverFormValue).toHaveBeenCalledWith({
+      value: 412.6,
+    });
+  });
+
+  it("keeps the slider's form while the canvas preview moves the element", () => {
+    let state = layoutEditPanelStore.createInitialState();
+    const store = new Proxy(
+      {},
+      {
+        get: (_target, name) => (payload) => {
+          if (name.startsWith("select")) {
+            return layoutEditPanelStore[name]({ state }, payload);
+          }
+          let result;
+          state = produce(state, (draft) => {
+            result = layoutEditPanelStore[name]({ state: draft }, payload);
+          });
+          return result;
+        },
+      },
+    );
+    const projectResolution = { width: 1920, height: 1080 };
+    const values = { id: "element-1", type: "sprite", x: 100, y: 50 };
+    const deps = {
+      store,
+      props: { projectResolution, values },
+      i18n: EN_I18N,
+      render: vi.fn(),
+      dispatchEvent: vi.fn(),
+    };
+    store.setValues({ values });
+    store.openPopoverForm({
+      x: 0,
+      y: 0,
+      name: "x",
+      form: { fields: [{ name: "value", type: "input-number" }] },
+      projectResolution,
+    });
+    const openedKey = state.popover.key;
+    const oldProps = { projectResolution, values };
+
+    handlePopoverFormInput(deps, formEvent({ value: 640 }));
+    // The preview moves the element, so the canvas reports new metrics.
+    handleOnUpdate(deps, {
+      oldProps,
+      newProps: {
+        projectResolution,
+        values: { ...values },
+        selectedElementMetrics: { width: 200, height: 100 },
+      },
+    });
+
+    // Not rebuilt, so the slider keeps its drag.
+    expect(state.popover.key).toBe(openedKey);
+    expect(state.popover.defaultValues.value).toBe(640);
+
+    // A real change to the values rebuilds it from where the slider is.
+    handleOnUpdate(deps, {
+      oldProps,
+      newProps: { projectResolution, values: { ...values, y: 60 } },
+    });
+    expect(state.popover.key).toBe(openedKey + 1);
+    expect(state.popover.defaultValues.value).toBe(640);
   });
 
   it("previews only plain numbers", () => {
@@ -52,16 +143,48 @@ describe("layout edit panel canvas preview", () => {
     expect(events).toEqual([]);
   });
 
-  it("previews a committed value and a chosen preset", () => {
+  it("previews a committed value and a preset picked from the Presets menu", async () => {
     const { deps, events } = createDeps();
 
     handlePopoverFormChange(deps, formEvent({ value: 300 }));
-    handlePopoverPresetClick(deps, {
-      _event: { currentTarget: { dataset: { value: "960" } } },
-    });
+    await handlePopoverPresetsButtonClick(deps, buttonEvent());
 
+    // Each preset shows its value in pixels beside it.
+    expect(deps.appService.showDropdownMenu).toHaveBeenCalledWith({
+      items: [
+        { type: "item", label: "0", suffixText: "0 px", key: "0" },
+        { type: "item", label: "1/2", suffixText: "960 px", key: "960" },
+        { type: "item", label: "1", suffixText: "1920 px", key: "1920" },
+      ],
+      x: 10,
+      y: 40,
+      place: "bs",
+    });
     expect(events.map((event) => event.detail.value)).toEqual([300, 960]);
     expect(deps.store.updatePopoverFormContext).toHaveBeenCalledTimes(2);
+  });
+
+  it("changes nothing when the Presets menu closes without a pick", async () => {
+    const { deps, events } = createDeps();
+    deps.appService.showDropdownMenu.mockResolvedValue(undefined);
+
+    await handlePopoverPresetsButtonClick(deps, buttonEvent());
+
+    expect(events).toEqual([]);
+    expect(deps.store.updatePopoverFormContext).not.toHaveBeenCalled();
+  });
+
+  it("steps the value by one, or by ten as Shift and the wheel do", () => {
+    const { deps, events } = createDeps();
+
+    for (const delta of ["-10", "-1", "1", "10"]) {
+      handlePopoverStepClick(deps, buttonEvent({ delta }));
+    }
+
+    // Each step starts from the popover's value, 100 here.
+    expect(events.map((event) => event.detail.value)).toEqual([
+      90, 99, 101, 110,
+    ]);
   });
 
   it("normalizes a rotation preview like a saved value", () => {

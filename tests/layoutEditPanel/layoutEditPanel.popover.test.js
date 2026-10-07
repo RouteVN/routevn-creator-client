@@ -56,17 +56,23 @@ describe("layoutEditPanel popover forms", () => {
     expect(xPopover.context.isPositionPopover).toBe(true);
     expect(yPopover.context.isPositionPopover).toBe(true);
     // The slider also reaches the field's own value when it is outside.
+    // Half the width or height beyond each edge.
     expect(xPopover.form.fields[0]).toMatchObject({
       type: "slider-with-input",
-      min: -1920,
+      min: -960,
       max: 5000,
       step: 1,
     });
     expect(yPopover.form.fields[0]).toMatchObject({
       type: "slider-with-input",
-      min: -1080,
-      max: 2160,
+      min: -540,
+      max: 1620,
       step: 1,
+    });
+    // The presets slot holds the Presets button, so it has no heading.
+    expect(xPopover.form.fields[1]).toEqual({
+      type: "slot",
+      slot: "position-presets",
     });
     const presetValue = (popover, label) =>
       popover.context.positionPresetItems.find((item) => item.label === label)

@@ -1707,6 +1707,7 @@ layoutEditPanel:
   positionSection: "位置"
   positionXLabel: "X 位置"
   positionYLabel: "Y 位置"
+  presetPixelsLabel: "{value} px"
   presetsLabel: "预设"
   qualityLabel: "质量"
   qualitySummaryLabel: "质量"
@@ -1763,6 +1764,8 @@ layoutEditPanel:
   volumeLabel: "音量"
   widthLabel: "宽度"
   yesOption: "是"
+  decreaseByLabel: "减少 {step}"
+  increaseByLabel: "增加 {step}"
 controlsPage:
   actionDecrementSaveLoadPagination: "存档/读档上一页"
   actionIncrementSaveLoadPagination: "存档/读档下一页"

@@ -1707,6 +1707,7 @@ layoutEditPanel:
   positionSection: "Position"
   positionXLabel: "Position X"
   positionYLabel: "Position Y"
+  presetPixelsLabel: "{value} px"
   presetsLabel: "Presets"
   qualityLabel: "Quality"
   qualitySummaryLabel: "quality"
@@ -1763,6 +1764,8 @@ layoutEditPanel:
   volumeLabel: "Volume"
   widthLabel: "Width"
   yesOption: "Yes"
+  decreaseByLabel: "Decrease by {step}"
+  increaseByLabel: "Increase by {step}"
 controlsPage:
   actionDecrementSaveLoadPagination: "Previous Save/Load Page"
   actionIncrementSaveLoadPagination: "Next Save/Load Page"

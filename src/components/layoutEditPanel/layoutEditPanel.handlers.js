@@ -34,6 +34,11 @@ import {
   toSpritesheetAnimationSelectionValue,
 } from "../../internal/spritesheets.js";
 import { selectLayoutEditPanelCopy } from "./support/layoutEditPanelCopy.js";
+import { formatI18nCopy } from "../../internal/ui/i18nCopy.js";
+import {
+  POSITION_FAST_STEP,
+  POSITION_STEP,
+} from "./support/layoutEditPanelPositionSteps.js";
 import { normalizeLayoutRotation } from "../../internal/project/layout.js";
 
 const ACTION_INTERACTION_TYPES = [
@@ -84,8 +89,8 @@ const CONDITIONAL_OVERRIDE_IMAGE_FIELDS = new Set([
   "clickImageId",
 ]);
 const WHEEL_INCREMENT_FIELD_CONFIG = {
-  x: { step: 1, fastStep: 10 },
-  y: { step: 1, fastStep: 10 },
+  x: { step: POSITION_STEP, fastStep: POSITION_FAST_STEP },
+  y: { step: POSITION_STEP, fastStep: POSITION_FAST_STEP },
   width: { step: 1, fastStep: 10 },
   height: { step: 1, fastStep: 10 },
   gapX: { step: 1, fastStep: 10 },
@@ -797,8 +802,16 @@ export const handleOnUpdate = (deps, payload) => {
     metrics: newProps.selectedElementMetrics,
   });
 
+  // An open popover's form depends on the values and the resolution only.
+  // Rebuilding it remounts the form, which ends a slider drag, so other
+  // props must not: the element's metrics change on every move while a
+  // popover previews on the canvas.
   const popover = store.selectPopoverForm();
-  if (popover.open) {
+  if (
+    popover.open &&
+    (!valuesEquivalent ||
+      oldProps?.projectResolution !== newProps?.projectResolution)
+  ) {
     store.updatePopoverFormContext({
       values: popover.defaultValues,
       name: popover.name,
@@ -2233,7 +2246,11 @@ export const handleListBarItemClick = async (deps, payload) => {
 export const handlePopoverFormInput = (deps, payload) => {
   const { store } = deps;
   const { name } = store.selectPopoverForm();
-  emitPanelPreview(deps, { name, value: payload._event.detail.values.value });
+  const { value } = payload._event.detail.values;
+  // A rebuild while the slider moves starts from where it is, not from the
+  // value the popover opened with.
+  store.setPopoverFormValue({ value });
+  emitPanelPreview(deps, { name, value });
 };
 
 export const handlePopoverFormChange = async (deps, payload) => {
@@ -2251,14 +2268,52 @@ export const handlePopoverFormChange = async (deps, payload) => {
   emitPanelPreview(deps, { name, value: _event.detail.values.value });
 };
 
-export const handlePopoverPresetClick = (deps, payload) => {
+// Presets open a menu of shares of the project's width or height, each with
+// its value in pixels.
+export const handlePopoverPresetsButtonClick = async (deps, payload) => {
+  const { appService } = deps;
+  const copy = selectCopy(deps);
+  const { positionPresetItems } = deps.store.selectPopoverForm().context;
+  const rect = payload._event.currentTarget.getBoundingClientRect();
+
+  const result = await appService.showDropdownMenu({
+    items: positionPresetItems.map((preset) => ({
+      type: "item",
+      label: preset.label,
+      suffixText: formatI18nCopy(copy.presetPixelsLabel, {
+        value: preset.value,
+      }),
+      key: String(preset.value),
+    })),
+    x: rect.left,
+    y: rect.bottom,
+    place: "bs",
+  });
+
+  const value = Number(result?.item?.key);
+  if (result?.item === undefined || !Number.isFinite(value)) {
+    return;
+  }
+  applyPopoverValue(deps, value);
+};
+
+// The step buttons move the value by the wheel's steps: one, or Shift's.
+export const handlePopoverStepClick = (deps, payload) => {
+  const { store } = deps;
+  const delta = Number(payload._event.currentTarget.dataset.delta);
+  const value = Number(store.selectPopoverForm().defaultValues.value);
+  if (!Number.isFinite(value) || !Number.isFinite(delta)) {
+    return;
+  }
+  applyPopoverValue(deps, value + delta);
+};
+
+// Shows a value picked in the popover in its form, and previews it.
+const applyPopoverValue = (deps, value) => {
   const { props, render, store } = deps;
-  const { _event } = payload;
   const popover = store.selectPopoverForm();
   const { name } = popover;
-  const value = Number(_event.currentTarget.dataset.value);
-
-  if (!name || !Number.isFinite(value)) {
+  if (!name) {
     return;
   }
 

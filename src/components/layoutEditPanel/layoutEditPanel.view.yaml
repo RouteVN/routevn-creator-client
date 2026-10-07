@@ -45,10 +45,14 @@ refs:
     eventListeners:
       close:
         handler: handlePopverFormClose
-  popoverPreset*:
+  popoverPresetsButton:
     eventListeners:
       click:
-        handler: handlePopoverPresetClick
+        handler: handlePopoverPresetsButtonClick
+  popoverStep*:
+    eventListeners:
+      click:
+        handler: handlePopoverStepClick
   visibilityConditionDialog:
     eventListeners:
       close:
@@ -487,9 +491,11 @@ template:
           - $if popover.context.isPositionPopover:
               - rtgl-view slot=content w=360:
                   - rtgl-form#form autofocus key=${popover.key} :form=${popover.form} :defaultValues=${popover.defaultValues} :context=${popover.context} w=f:
-                      - rtgl-view slot="position-presets" d=h wrap g=sm:
-                          - $for preset, i in popover.context.positionPresetItems:
-                              - rtgl-button#popoverPreset${i} data-value=${preset.value} v=ol s=sm: ${preset.label}
+                      - rtgl-view slot="position-presets" d=h av=c w=f g=xs:
+                          - rtgl-button#popoverPresetsButton v=ol s=sm suf=chevronDown: ${presetsButtonLabel}
+                          - rtgl-view w=1fg: null
+                          - $for stepButton, i in positionStepButtons:
+                              - 'rtgl-button#popoverStep${i} data-delta=${stepButton.delta} v=ol s=sm aria-label="${stepButton.label}" title="${stepButton.label}"': ${stepButton.text}
             $else:
               - rtgl-form#form autofocus key=${popover.key} slot=content :form=${popover.form} :defaultValues=${popover.defaultValues} :context=${popover.context}: null
   - rtgl-dialog#visibilityConditionDialog ?open=${visibilityConditionDialog.open} s=md:

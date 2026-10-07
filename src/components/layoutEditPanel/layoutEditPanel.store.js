@@ -1,3 +1,7 @@
+import {
+  POSITION_FAST_STEP,
+  POSITION_STEP,
+} from "./support/layoutEditPanelPositionSteps.js";
 import { parseAndRender } from "jempl";
 import { getFirstTextStyleId } from "../../constants/textStyles.js";
 import {
@@ -517,8 +521,10 @@ const getPositionPopoverRange = ({
     return undefined;
   }
 
-  let min = -resolutionDimension;
-  let max = resolutionDimension * 2;
+  // Half the project's width or height beyond each edge, and further to
+  // reach a value already outside.
+  let min = Math.round(-resolutionDimension * 0.5);
+  let max = Math.round(resolutionDimension * 1.5);
 
   const numericValues = [values?.[name], currentValue]
     .map((value) => Number(value))
@@ -613,7 +619,6 @@ const buildPopoverForm = ({
     {
       type: "slot",
       slot: POSITION_PRESETS_SLOT,
-      label: copy?.presetsLabel ?? "Presets",
     },
     ...remainingFields,
   ];
@@ -961,6 +966,16 @@ export const updatePopoverFormContext = (
   });
   state.popover.name = nextName;
   state.popover.key = state.popover.key + 1;
+};
+
+// The value the open popover's form shows while it is edited, without
+// rebuilding the form.
+export const setPopoverFormValue = ({ state }, { value } = {}) => {
+  if (!state.popover.open) {
+    return;
+  }
+  state.popover.defaultValues.value = value;
+  state.popover.context.popoverFormValues.value = value;
 };
 
 export const closePopoverForm = ({ state }, _payload = {}) => {
@@ -1939,6 +1954,19 @@ export const selectViewData = ({ state, props, constants, i18n }) => {
     popover: state.popover,
     visibilityConditionDialog: state.visibilityConditionDialog,
     dropdownMenu: state.dropdownMenu,
+    presetsButtonLabel: copy.presetsLabel,
+    positionStepButtons: [
+      { delta: -POSITION_FAST_STEP, text: "--" },
+      { delta: -POSITION_STEP, text: "-" },
+      { delta: POSITION_STEP, text: "+" },
+      { delta: POSITION_FAST_STEP, text: "++" },
+    ].map((button) => ({
+      ...button,
+      label: formatI18nCopy(
+        button.delta < 0 ? copy.decreaseByLabel : copy.increaseByLabel,
+        { step: Math.abs(button.delta) },
+      ),
+    })),
     sectionTooltip: state.sectionTooltip,
     visibilityConditionDialogDefaults,
     visibilityConditionDialogForm: createVisibilityConditionForm({
