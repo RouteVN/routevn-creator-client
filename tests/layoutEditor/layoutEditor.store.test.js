@@ -772,31 +772,33 @@ describe("layoutEditor.store", () => {
     expect(viewData.detailPanelSelectedItemId).toBe("node-1");
   });
 
-  it("offers Edit and Preview tabs in the right panel that start on Preview", () => {
+  it("offers Edit and Preview tabs in the right panel that start on Edit with nothing selected", () => {
     const state = createInitialState();
     const select = () =>
       selectViewData({ state, constants: TEST_CONSTANTS, i18n: EN_I18N });
 
     expect(select().showRightPanel).toBe(true);
-    expect(select().rightPanelMode).toBe("preview");
+    expect(select().rightPanelMode).toBe("edit");
+    expect(select().selectedItemId).toBeUndefined();
+    expect(select().detailPanelSelectedItemId).toBeUndefined();
     expect(select().rightPanelModeTabs).toEqual([
       { id: "edit", label: "Edit" },
       { id: "preview", label: "Preview" },
     ]);
-    expect(select().showRightPanelSaveButton).toBe(true);
-    expect(select().rightPanelEditStyle).toBe("display: none;");
-    expect(select().rightPanelPreviewStyle).toBe("");
-
-    setRightPanelMode({ state }, { mode: "edit" });
-
-    expect(select().rightPanelMode).toBe("edit");
     expect(select().showRightPanelSaveButton).toBe(false);
     expect(select().rightPanelEditStyle).toBe("");
     expect(select().rightPanelPreviewStyle).toBe("display: none;");
 
+    setRightPanelMode({ state }, { mode: "preview" });
+
+    expect(select().rightPanelMode).toBe("preview");
+    expect(select().showRightPanelSaveButton).toBe(true);
+    expect(select().rightPanelEditStyle).toBe("display: none;");
+    expect(select().rightPanelPreviewStyle).toBe("");
+
     setRightPanelMode({ state }, { mode: "unknown" });
 
-    expect(select().rightPanelMode).toBe("edit");
+    expect(select().rightPanelMode).toBe("preview");
   });
 
   it("uses the whole workspace height for the canvas whenever there is a right panel", () => {
