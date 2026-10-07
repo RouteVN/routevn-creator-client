@@ -8,6 +8,7 @@ import {
   setValues,
 } from "../../src/components/layoutEditPanel/layoutEditPanel.store.js";
 import { EN_I18N, JA_I18N } from "../support/i18n.js";
+import { renderViewYaml } from "../support/renderView.js";
 
 const EMPTY_TREE = { items: {}, tree: [] };
 const CONSTANTS = yaml.load(
@@ -111,6 +112,37 @@ describe("layoutEditPanel transform mode", () => {
       "anchor",
       "rotation",
     ]);
+  });
+
+  it("labels X and Y above their fields, as Scale X and Scale Y are", () => {
+    const state = createInitialState();
+    setValues({ state }, { values: { x: 100, y: 120 } });
+    const viewData = selectViewData({
+      state,
+      props: {
+        mode: "transform",
+        projectResolution: { width: 1920, height: 1080 },
+        layoutsData: EMPTY_TREE,
+        charactersData: EMPTY_TREE,
+      },
+      constants: CONSTANTS,
+      i18n: EN_I18N,
+    });
+    const [positionGroup, scaleGroup] = viewData.config.sections[0].items;
+    expect(positionGroup.stacked).toBe(true);
+    expect(scaleGroup.stacked).toBe(true);
+    expect(positionGroup.fields.map((field) => field.svg)).toEqual([
+      undefined,
+      undefined,
+    ]);
+
+    const html = renderViewYaml(
+      "src/components/layoutEditPanel/layoutEditPanel.view.yaml",
+      viewData,
+    );
+    for (const label of ["Position X", "Position Y", "Scale X", "Scale Y"]) {
+      expect(html).toContain(`>${label}<`);
+    }
   });
 
   it("localizes position labels and center anchor options", () => {

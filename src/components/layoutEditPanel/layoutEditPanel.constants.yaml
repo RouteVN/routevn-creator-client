@@ -45,16 +45,16 @@ textPopoverForm: &textPopoverForm
 transformSections:
   - label: Transform
     items:
+      # Labelled above their fields, as Scale X and Scale Y are.
       - type: group
+        stacked: true
         fields:
           - type: clickable-value
-            svg: x
             label: Position X
             name: x
             value: "${values.x}"
             popoverForm: *numberPopoverForm
           - type: clickable-value
-            svg: y
             label: Position Y
             name: y
             value: "${values.y}"
@@ -131,11 +131,15 @@ layoutSections:
         fields:
           - type: clickable-value
             svg: x
+            label: Position X
+            hideLabel: true
             name: x
             value: "${values.x}"
             popoverForm: *numberPopoverForm
           - type: clickable-value
             svg: y
+            label: Position Y
+            hideLabel: true
             name: y
             value: "${values.y}"
             popoverForm: *numberPopoverForm
@@ -600,11 +604,15 @@ controlSections:
         fields:
           - type: clickable-value
             svg: x
+            label: Position X
+            hideLabel: true
             name: x
             value: "${values.x}"
             popoverForm: *numberPopoverForm
           - type: clickable-value
             svg: y
+            label: Position Y
+            hideLabel: true
             name: y
             value: "${values.y}"
             popoverForm: *numberPopoverForm
