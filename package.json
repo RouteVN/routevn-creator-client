@@ -23,7 +23,7 @@
     "@lexical/utils": "0.22.0",
     "@noble/hashes": "2.4.0",
     "@rettangoli/fe": "1.5.0",
-    "@rettangoli/ui": "1.23.0",
+    "@rettangoli/ui": "1.24.1",
     "@rettangoli/vt": "1.1.0",
     "@routevn/creator-model": "1.16.1",
     "@sentry/browser": "10.44.0",
