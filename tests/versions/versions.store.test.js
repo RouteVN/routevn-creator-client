@@ -5,6 +5,7 @@ import {
   openExportConfirmation,
   selectExportConfirmation,
   selectViewData,
+  setAppWindowMetrics,
   setSelectedItemId,
   setPlatform,
   setMacosExportAvailability,
@@ -52,6 +53,21 @@ describe("versions store form", () => {
 });
 
 describe("versions store mobile view data", () => {
+  it("centers the version list in the content column width in tablet landscape", () => {
+    const state = createInitialState();
+    setVersions({ state }, { versions: [version] });
+    setUiConfig({ state }, { uiConfig: { id: "touch" } });
+
+    setAppWindowMetrics({ state }, { width: 390, height: 844 });
+    expect(selectViewData({ state }).versionListStyle).toBe("");
+
+    // As on the Projects, About, and Config pages: a 640px column.
+    setAppWindowMetrics({ state }, { width: 1280, height: 800 });
+    expect(selectViewData({ state }).versionListStyle).toBe(
+      "padding-left: max(var(--spacing-md), calc((100% - 640px) / 2)); padding-right: max(var(--spacing-md), calc((100% - 640px) / 2));",
+    );
+  });
+
   it("shows the selected version in a mobile detail sheet in touch mode", () => {
     const state = createInitialState();
 

@@ -7,13 +7,36 @@ import {
   openPlatformEditDialog,
   selectCanAddPlatform,
   selectViewData,
+  setAppWindowMetrics,
   setPlatform,
   setPlatformApplicationInfo,
   setSelectedPlatform,
+  setUiConfig,
 } from "../../src/pages/platformDetails/platformDetails.store.js";
 import { EN_I18N } from "../support/i18n.js";
 
 describe("platformDetails.store", () => {
+  it("centers the content in the content column width in tablet landscape", () => {
+    const state = createInitialState();
+    expect(
+      selectViewData({ state, i18n: EN_I18N }).tabletLandscapeContentStyle,
+    ).toBe("");
+
+    // As on the Projects, About, and Config pages: a 640px column.
+    setUiConfig({ state }, { uiConfig: { id: "touch" } });
+    setAppWindowMetrics({ state }, { width: 1280, height: 800 });
+    expect(
+      selectViewData({ state, i18n: EN_I18N }).tabletLandscapeContentStyle,
+    ).toBe(
+      "padding-left: max(0px, calc((100% - 640px) / 2)); padding-right: max(0px, calc((100% - 640px) / 2));",
+    );
+
+    setAppWindowMetrics({ state }, { width: 800, height: 1280 });
+    expect(
+      selectViewData({ state, i18n: EN_I18N }).tabletLandscapeContentStyle,
+    ).toBe("");
+  });
+
   it("starts empty and offers every supported platform", () => {
     const state = createInitialState();
 

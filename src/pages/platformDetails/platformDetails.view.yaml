@@ -60,7 +60,7 @@ template:
                       - rtgl-text w=1fg: ${title}
                       - $if canAddPlatform:
                           - 'rtgl-button#addPlatformButton v=pr pre=plus title="${addPlatformButtonLabel}" aria-label="${addPlatformButtonLabel}"': ${addPlatformButtonLabel}
-              - 'rtgl-view w=f h=1fg pt=md sv style="min-width: 0; min-height: 0;"':
+              - 'rtgl-view w=f h=1fg pt=md sv style="min-width: 0; min-height: 0; ${tabletLandscapeContentStyle}"':
                   - $if hasPlatformDetails:
                       - rtgl-view w=f d=v g=md:
                           - rtgl-view w=f ph=md:
