@@ -1392,6 +1392,9 @@ charactersPage:
   title: "ตัวละคร"
   updateCharacterButton: "อัปเดต"
   updateGroupButton: "อัปเดต"
+tabletExplorerPanel:
+  hideLabel: "ซ่อนแผง"
+  showLabel: "แสดงแผง"
 transformsPage:
   yesLabel: "ใช่"
   defaultDialogueAvatarLabel: "การแปลงเริ่มต้นของอวาตาร์บทสนทนา"

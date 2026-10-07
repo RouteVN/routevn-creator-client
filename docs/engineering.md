@@ -1129,7 +1129,11 @@ flags; a page opts in by exposing `setAppWindowMetrics` and
 `mountMobileResourceWindowLayout(deps)` from `handleBeforeMount`. Selecting an
 item in the pane syncs the grid but keeps the mobile detail sheet suppressed,
 matching the overlay explorer. Other resource pages are unchanged until they
-opt in.
+opt in. The pane is `rvn-tablet-explorer-panel`, with the explorer in its
+`content` slot: the button on the right of its title (**Files**, or
+**Elements** in the layout editor) hides it to a 48px strip holding only the
+button that shows it again. The explorer stays mounted while hidden, and the
+choice is shared by every page through `resourcePages.tabletExplorerCollapsed`.
 
 On tablet landscape the About, Config, Tutorials, and Project pages center
 their content in a 640px column (the Projects page column width). Their headers,

@@ -101,6 +101,10 @@ Current keys:
     - `resizablePanel.detailPanelWidth`
       - purpose: persisted detail-panel width
       - scope: global
+    - `resourcePages.tabletExplorerCollapsed`
+      - purpose: whether the tablet landscape explorer pane (Files or
+        Elements) is hidden to its show button
+      - scope: global
 
 Naming rules:
 

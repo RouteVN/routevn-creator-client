@@ -1392,6 +1392,9 @@ charactersPage:
   title: "Characters"
   updateCharacterButton: "Update"
   updateGroupButton: "Update"
+tabletExplorerPanel:
+  hideLabel: "Hide panel"
+  showLabel: "Show panel"
 transformsPage:
   yesLabel: "Yes"
   defaultDialogueAvatarLabel: "Default Dialogue Avatar Transform"

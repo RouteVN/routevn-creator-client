@@ -1,0 +1,16 @@
+refs:
+  toggleButton:
+    eventListeners:
+      click:
+        handler: handleToggleClick
+template:
+  - 'rtgl-view w=${panelWidth} h=f d=v bwr=xs style="flex: 0 0 auto; min-width: 0; min-height: 0;"':
+      - $if collapsed:
+          - rtgl-view h=48 w=f d=h av=c ah=c bgc=bg bwb=xs:
+              - 'rtgl-button#toggleButton sq v=gh pre=panelLeft aria-label="${toggleLabel}" title="${toggleLabel}"': null
+        $else:
+          - rtgl-view h=48 w=f d=h av=c g=sm pl=md pr=sm bgc=bg bwb=xs:
+              - rtgl-text w=1fg s=${labelSize} ellipsis=true: ${label}
+              - 'rtgl-button#toggleButton sq v=gh pre=panelLeft aria-label="${toggleLabel}" title="${toggleLabel}"': null
+      - 'rtgl-view w=f h=1fg style="min-height: 0; ${contentStyle}"':
+          - slot name="content": null

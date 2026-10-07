@@ -1392,6 +1392,9 @@ charactersPage:
   title: "キャラクター"
   updateCharacterButton: "更新"
   updateGroupButton: "更新"
+tabletExplorerPanel:
+  hideLabel: "パネルを隠す"
+  showLabel: "パネルを表示"
 transformsPage:
   yesLabel: "はい"
   defaultDialogueAvatarLabel: "会話アバターのデフォルトトランスフォーム"

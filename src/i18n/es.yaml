@@ -1392,6 +1392,9 @@ charactersPage:
   title: "Personajes"
   updateCharacterButton: "Actualizar"
   updateGroupButton: "Actualizar"
+tabletExplorerPanel:
+  hideLabel: "Ocultar panel"
+  showLabel: "Mostrar panel"
 transformsPage:
   yesLabel: "Sí"
   defaultDialogueAvatarLabel: "Transformación predeterminada del avatar de diálogo"

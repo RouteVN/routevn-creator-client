@@ -1,0 +1,15 @@
+componentName: rvn-tablet-explorer-panel
+propsSchema:
+  type: object
+  properties:
+    label:
+      type: string
+      description: The panel's title, such as Files or Elements.
+    labelSize:
+      type: string
+      default: md
+      description: The title's text size.
+    w:
+      type: string
+      default: "300"
+      description: The panel's width while it shows.
