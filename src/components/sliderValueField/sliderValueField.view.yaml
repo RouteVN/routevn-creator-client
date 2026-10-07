@@ -26,7 +26,7 @@ refs:
       hold-repeat:
         handler: handleStepPress
 template:
-  - rtgl-view#valueButton role=button tabindex=0 aria-label="${label}" w=f d=h ph=md br=md av=c cur=pointer bw=xs bc=bo h-bc=ac h=32:
+  - rtgl-view#valueButton role=button tabindex=0 aria-label="${label}" w=f d=h ph=md br=md av=c cur=pointer bw=xs bc=bo h-bc=ac h=32 bgc=su:
       - rtgl-text s=sm: ${valueText}
   - rtgl-popover#popover ?open=${popover.open} place=b x=${popover.x} y=${popover.y}:
       - $if popover.open:

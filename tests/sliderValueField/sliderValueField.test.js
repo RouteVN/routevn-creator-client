@@ -83,6 +83,11 @@ describe("rvn-slider-value-field", () => {
 
     const html = renderViewYaml(TEMPLATE, createField().view());
     expect(html).toContain('aria-label="Font Size"');
+    // It looks like rtgl-select's button.
+    const valueButton = html.match(/<rtgl-view id="valueButton"[^>]*>/)[0];
+    for (const attribute of ['bgc="su"', 'bw="xs"', 'bc="bo"', 'h="32"']) {
+      expect(valueButton).toContain(attribute);
+    }
     expect(html).toContain(">24 px<");
   });
 
