@@ -2,11 +2,27 @@ import { formatI18nCopy } from "../../../internal/ui/i18nCopy.js";
 
 // The fields whose popover has a slider, a Presets menu, and step buttons.
 // The steps are the mouse wheel's, the larger ones Shift's. A field left
-// unset starts from its default, as the element draws it.
+// unset starts from its default, as the element draws it. `range` is where
+// the slider runs, reaching further to a value already outside; `min` and
+// `max` bound the value itself.
+const SCALE_FIELD = {
+  defaultValue: 1,
+  step: 0.01,
+  fastStep: 0.1,
+  range: { min: 0, max: 2 },
+};
+
 const SLIDER_POPOVER_FIELDS = {
   x: { step: 1, fastStep: 10 },
   y: { step: 1, fastStep: 10 },
-  rotation: { defaultValue: 0, step: 1, fastStep: 15 },
+  rotation: {
+    defaultValue: 0,
+    step: 1,
+    fastStep: 15,
+    range: { min: -180, max: 180 },
+  },
+  scaleX: SCALE_FIELD,
+  scaleY: SCALE_FIELD,
   opacity: { defaultValue: 1, step: 0.01, fastStep: 0.1, min: 0, max: 1 },
 };
 
@@ -28,6 +44,15 @@ const ROTATION_PRESETS = [-180, -135, -90, -45, 0, 45, 90, 135, 180];
 
 const OPACITY_PRESETS = [0, 0.25, 0.5, 0.75, 1];
 
+const SCALE_PRESETS = [0.25, 0.5, 0.75, 1, 1.25, 1.5, 2];
+
+// A share as a percentage, with its value beside it.
+const toPercentPreset = (value) => ({
+  label: `${Math.round(value * 100)}%`,
+  value,
+  suffixText: `${value}`,
+});
+
 const isPositionField = (name) => name === "x" || name === "y";
 
 const getStepDecimals = (step) => `${step}`.split(".")[1]?.length ?? 0;
@@ -40,9 +65,9 @@ export const isSliderPopoverField = (name) =>
 const getPositionDimension = ({ name, projectResolution }) =>
   Number(name === "y" ? projectResolution?.height : projectResolution?.width);
 
-// X and Y run half the project's width or height beyond each edge, and
-// rotation half a turn each way; both reach further to a value already
-// outside. Opacity stays between 0 and 1.
+// X and Y run half the project's width or height beyond each edge, rotation
+// half a turn each way, and scale from 0 to 2; all reach further to a value
+// already outside. Opacity stays between 0 and 1.
 export const getSliderPopoverRange = ({
   name,
   values = {},
@@ -58,8 +83,7 @@ export const getSliderPopoverRange = ({
     return { min: field.min, max: field.max, step: field.step };
   }
 
-  let min = -180;
-  let max = 180;
+  let { min, max } = field.range ?? {};
   if (isPositionField(name)) {
     const dimension = getPositionDimension({ name, projectResolution });
     if (!Number.isFinite(dimension) || dimension <= 0) {
@@ -86,7 +110,8 @@ export const getSliderPopoverRange = ({
 };
 
 // The Presets menu: shares of the width or height with their pixels,
-// rotations in degrees, and opacities as percentages with their values.
+// rotations in degrees, and scales and opacities as percentages with their
+// values.
 export const getSliderPopoverPresets = ({
   name,
   projectResolution,
@@ -102,7 +127,9 @@ export const getSliderPopoverPresets = ({
       return {
         label: preset.label,
         value,
-        suffixText: formatI18nCopy(copy.presetPixelsLabel, { value }),
+        suffixText: formatI18nCopy(copy.presetPixelsLabel ?? "{value} px", {
+          value,
+        }),
       };
     });
   }
@@ -111,12 +138,12 @@ export const getSliderPopoverPresets = ({
     return ROTATION_PRESETS.map((value) => ({ label: `${value}°`, value }));
   }
 
+  if (name === "scaleX" || name === "scaleY") {
+    return SCALE_PRESETS.map(toPercentPreset);
+  }
+
   if (name === "opacity") {
-    return OPACITY_PRESETS.map((value) => ({
-      label: `${Math.round(value * 100)}%`,
-      value,
-      suffixText: `${value}`,
-    }));
+    return OPACITY_PRESETS.map(toPercentPreset);
   }
 
   return [];
@@ -138,7 +165,9 @@ export const getSliderPopoverStepButtons = ({ name, copy = {} } = {}) => {
   ].map((button) => ({
     ...button,
     label: formatI18nCopy(
-      button.delta < 0 ? copy.decreaseByLabel : copy.increaseByLabel,
+      button.delta < 0
+        ? (copy.decreaseByLabel ?? "Decrease by {step}")
+        : (copy.increaseByLabel ?? "Increase by {step}"),
       { step: Math.abs(button.delta) },
     ),
   }));

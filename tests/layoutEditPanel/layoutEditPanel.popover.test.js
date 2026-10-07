@@ -151,6 +151,43 @@ describe("layoutEditPanel popover forms", () => {
     ]);
   });
 
+  it("runs scale from 0 to 2, with percentage presets and 0.01 and 0.1 steps", () => {
+    for (const name of ["scaleX", "scaleY"]) {
+      const popover = openSliderPopover(name, { [name]: 1.5 });
+
+      expect(popover.context.isSliderPopover).toBe(true);
+      expect(popover.form.fields[0]).toMatchObject({
+        type: "slider-with-input",
+        min: 0,
+        max: 2,
+        step: 0.01,
+      });
+      expect(popover.context.presetItems.map((item) => item.label)).toEqual([
+        "25%",
+        "50%",
+        "75%",
+        "100%",
+        "125%",
+        "150%",
+        "200%",
+      ]);
+      expect(popover.context.presetItems[3]).toEqual({
+        label: "100%",
+        value: 1,
+        suffixText: "1",
+      });
+      expect(popover.context.stepButtons.map((button) => button.delta)).toEqual(
+        [-0.1, -0.01, 0.01, 0.1],
+      );
+    }
+
+    // A scale past 2 widens the slider to reach it.
+    expect(
+      openSliderPopover("scaleX", { scaleX: 3.4 }).form.fields[0].max,
+    ).toBe(4);
+    expect(openSliderPopover("scaleX", {}).defaultValues.value).toBe(1);
+  });
+
   it("opens an unset rotation or opacity at its default, as the element draws it", () => {
     expect(openSliderPopover("opacity", {}).defaultValues.value).toBe(1);
     expect(openSliderPopover("rotation", {}).defaultValues.value).toBe(0);

@@ -95,8 +95,8 @@ const WHEEL_INCREMENT_FIELD_CONFIG = {
   gapX: { step: 1, fastStep: 10 },
   gapY: { step: 1, fastStep: 10 },
   rotation: getSliderPopoverField("rotation"),
-  scaleX: { defaultValue: 1, step: 0.01, fastStep: 0.1 },
-  scaleY: { defaultValue: 1, step: 0.01, fastStep: 0.1 },
+  scaleX: getSliderPopoverField("scaleX"),
+  scaleY: getSliderPopoverField("scaleY"),
   opacity: getSliderPopoverField("opacity"),
 };
 const TEXT_REVEAL_INDICATOR_VISUAL_SOURCE_TARGET =

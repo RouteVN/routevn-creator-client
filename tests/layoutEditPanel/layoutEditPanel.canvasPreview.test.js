@@ -208,6 +208,16 @@ describe("layout edit panel canvas preview", () => {
     expect(events.map((event) => event.detail.value)).toEqual([15, 31]);
   });
 
+  it("steps scale in hundredths, past 1 and 2 since scale has no bound", () => {
+    const { deps, events } = createDeps("scaleX", 1.95);
+
+    for (const delta of ["0.1", "-0.01"]) {
+      handlePopoverStepPress(deps, buttonEvent({ delta }));
+    }
+
+    expect(events.map((event) => event.detail.value)).toEqual([2.05, 1.94]);
+  });
+
   it("steps opacity in hundredths, kept between 0 and 1", () => {
     const { deps, events } = createDeps("opacity", 0.95);
 
