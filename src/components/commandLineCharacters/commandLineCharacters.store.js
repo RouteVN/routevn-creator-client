@@ -1,5 +1,5 @@
 import { selectResourceSelectorEmptyMessage } from "../../internal/ui/resourcePages/selectorEmptyState.js";
-import { toFlatGroups, toFlatItems } from "../../internal/project/tree.js";
+import { toFlatItems } from "../../internal/project/tree.js";
 import {
   canLoopAnimationById,
   createAnimationReference,
@@ -15,6 +15,13 @@ import {
   buildCharacterSpritePreviewLayers,
   isCharacterSpriteResourceItem,
 } from "../../internal/characterSpritePreview.js";
+import {
+  DEFAULT_SPRITE_GROUP_ID,
+  buildDefaultCharacterSprites,
+  buildSpriteSelectionGroups,
+  matchesSpriteGroupTags,
+  orderSpriteSelectionGroupsTopFirst,
+} from "../../internal/characterSpriteSelection.js";
 import {
   COMMAND_LINE_ITEM_FLIP_OPTIONS,
   COMMAND_LINE_ITEM_BLUR_KERNEL_SIZE_SELECT_OPTIONS,
@@ -52,7 +59,8 @@ import {
   localizeCommandLineText,
   selectCommandLineCopy,
 } from "../../internal/ui/sceneEditor/commandLineCopy.js";
-import { createCommandLineResourceSelectorLayout } from "../../internal/ui/sceneEditor/commandLineResourceSelectorLayout.js";
+import { createCharacterSelectorLayout } from "../../internal/ui/sceneEditor/commandLineResourceSelectorLayout.js";
+import { buildSelectableResourceTree } from "../../internal/ui/resourcePages/selectableResourceTree.js";
 import { isTouchUiConfig } from "../../internal/ui/resourcePages/mobileResourcePage.js";
 
 const createEmptyCollection = () => ({
@@ -63,8 +71,6 @@ const createEmptyCollection = () => ({
 const UNGROUPED_CHARACTER_GROUP_ID = "__ungrouped_characters__";
 const UNGROUPED_SPRITE_GROUP_ID = "__ungrouped_sprites__";
 const UNGROUPED_GROUP_LABEL = "Ungrouped";
-const DEFAULT_SPRITE_GROUP_ID = "base";
-const DEFAULT_SPRITE_GROUP_NAME = "Sprite";
 const TRANSFORM_MODE_OPTIONS = [
   { value: false, label: "Predefined" },
   { value: true, label: "Custom" },
@@ -104,98 +110,6 @@ const createAddCharacterTransformDropdownItems = (transforms = {}) =>
       type: "item",
       value: transform.id,
     }));
-
-const resolveSpriteGroupId = (spriteGroup = {}, index = 0) => {
-  if (typeof spriteGroup.id === "string" && spriteGroup.id.length > 0) {
-    return spriteGroup.id;
-  }
-
-  return `legacy-sprite-group-${index + 1}`;
-};
-
-const resolveSpriteGroupName = (spriteGroup = {}, index = 0) => {
-  if (typeof spriteGroup.name === "string" && spriteGroup.name.length > 0) {
-    return spriteGroup.name;
-  }
-
-  return `Group ${index + 1}`;
-};
-
-const buildSpriteSelectionGroups = (character = {}) => {
-  if (
-    !Array.isArray(character?.spriteGroups) ||
-    character.spriteGroups.length === 0
-  ) {
-    return [
-      {
-        id: DEFAULT_SPRITE_GROUP_ID,
-        name: DEFAULT_SPRITE_GROUP_NAME,
-        tags: [],
-      },
-    ];
-  }
-
-  return character.spriteGroups.map((spriteGroup, index) => ({
-    id: resolveSpriteGroupId(spriteGroup, index),
-    name: resolveSpriteGroupName(spriteGroup, index),
-    tags: Array.isArray(spriteGroup?.tags) ? spriteGroup.tags : [],
-  }));
-};
-
-const orderSpriteSelectionGroupsTopFirst = (spriteSelectionGroups = []) =>
-  spriteSelectionGroups.slice().reverse();
-
-const findFirstSpriteIdForGroup = ({
-  group,
-  spritesCollection,
-  allowUntaggedGroupFallback = false,
-} = {}) => {
-  const hasTags = Array.isArray(group?.tags) && group.tags.length > 0;
-  if (!hasTags && !allowUntaggedGroupFallback) {
-    return undefined;
-  }
-
-  return toFlatItems(spritesCollection ?? createEmptyCollection()).find(
-    (item) =>
-      isCharacterSpriteResourceItem(item) &&
-      matchesSpriteGroupTags({
-        item,
-        tagIds: group?.tags,
-      }),
-  )?.id;
-};
-
-const buildDefaultCharacterSprites = ({ characterData } = {}) => {
-  const spriteSelectionGroups = buildSpriteSelectionGroups(characterData);
-  const sprites = [];
-  let hasUntaggedGroupFallback = false;
-
-  for (const spriteSelectionGroup of spriteSelectionGroups) {
-    const hasTags =
-      Array.isArray(spriteSelectionGroup.tags) &&
-      spriteSelectionGroup.tags.length > 0;
-    const resourceId = findFirstSpriteIdForGroup({
-      group: spriteSelectionGroup,
-      spritesCollection: characterData?.sprites,
-      allowUntaggedGroupFallback: hasTags || !hasUntaggedGroupFallback,
-    });
-
-    if (!resourceId) {
-      continue;
-    }
-
-    sprites.push({
-      id: spriteSelectionGroup.id,
-      resourceId,
-    });
-
-    if (!hasTags) {
-      hasUntaggedGroupFallback = true;
-    }
-  }
-
-  return sprites;
-};
 
 const buildTempSelectedSpriteIdsByGroup = ({
   character,
@@ -277,15 +191,6 @@ const buildSpritePreviewItemViewData = (item = {}) => {
     previewAnimation: previewLayer?.animation,
     previewKey: previewLayer?.previewKey,
   };
-};
-
-const matchesSpriteGroupTags = ({ item, tagIds } = {}) => {
-  if (!Array.isArray(tagIds) || tagIds.length === 0) {
-    return true;
-  }
-
-  const itemTagIds = Array.isArray(item?.tagIds) ? item.tagIds : [];
-  return tagIds.some((tagId) => itemTagIds.includes(tagId));
 };
 
 const normalizeSelectedCharacter = (character = {}, animations = {}) => {
@@ -1536,111 +1441,13 @@ const createCharactersForm = (characters = []) => ({
 
 export const selectViewData = ({ state, i18n }) => {
   const copy = selectCommandLineCopy(i18n);
-  const resourceSelectorLayout = createCommandLineResourceSelectorLayout({
+  const resourceSelectorLayout = createCharacterSelectorLayout({
     isTouchMode: state.isTouchMode,
   });
   const searchQuery = (state.searchQuery ?? "").toLowerCase().trim();
-  const matchesSearch = (item) => {
-    if (!searchQuery) {
-      return true;
-    }
-
-    const name = (item.name ?? "").toLowerCase();
-    const description = (item.description ?? "").toLowerCase();
-    return name.includes(searchQuery) || description.includes(searchQuery);
-  };
-
-  const buildSelectableTreeData = ({
-    collection,
-    selectedItemId,
-    syntheticRootId,
-    itemFilter = () => true,
-    itemViewMapper = (item) => item,
-    hideEmptyGroups = false,
-  } = {}) => {
-    const ungroupedGroupLabel = localizeCommandLineText(
-      UNGROUPED_GROUP_LABEL,
-      copy,
-    );
-    const allItems = toFlatItems(collection);
-    const filterVisibleItem = (item) => itemFilter(item) && matchesSearch(item);
-    const rootChildren = allItems.filter(
-      (item) => item.type !== "folder" && item.parentId === null,
-    );
-    const visibleRootChildren = rootChildren
-      .filter(filterVisibleItem)
-      .map((child) => {
-        const isSelected = child.id === selectedItemId;
-        return {
-          ...itemViewMapper(child),
-          itemBorderColor: isSelected ? "pr" : "bo",
-          itemHoverBorderColor: isSelected ? "pr" : "ac",
-        };
-      });
-
-    const groups = toFlatGroups(collection)
-      .map((group) => {
-        const children = group.children
-          .filter(filterVisibleItem)
-          .map((child) => {
-            const isSelected = child.id === selectedItemId;
-            return {
-              ...itemViewMapper(child),
-              itemBorderColor: isSelected ? "pr" : "bo",
-              itemHoverBorderColor: isSelected ? "pr" : "ac",
-            };
-          });
-
-        return {
-          ...group,
-          children,
-          hasChildren: children.length > 0,
-          shouldDisplay:
-            children.length > 0 || (!hideEmptyGroups && !searchQuery),
-        };
-      })
-      .filter((group) => group.shouldDisplay);
-
-    const visibleGroupIds = new Set(groups.map((group) => group.id));
-    const explorerItems = allItems.filter(
-      (item) =>
-        item.type === "folder" &&
-        (!hideEmptyGroups || visibleGroupIds.has(item.id)),
-    );
-
-    if (
-      hideEmptyGroups ? visibleRootChildren.length > 0 : rootChildren.length > 0
-    ) {
-      explorerItems.unshift({
-        id: syntheticRootId,
-        type: "folder",
-        name: ungroupedGroupLabel,
-        fullLabel: ungroupedGroupLabel,
-        _level: 0,
-        parentId: null,
-        hasChildren: true,
-      });
-    }
-
-    if (visibleRootChildren.length > 0) {
-      groups.unshift({
-        id: syntheticRootId,
-        type: "folder",
-        name: ungroupedGroupLabel,
-        fullLabel: ungroupedGroupLabel,
-        _level: 0,
-        parentId: null,
-        hasChildren: true,
-        children: visibleRootChildren,
-        shouldDisplay: true,
-      });
-    }
-
-    return {
-      explorerItems,
-      groups,
-    };
-  };
+  const ungroupedLabel = localizeCommandLineText(UNGROUPED_GROUP_LABEL, copy);
+  const buildSelectableTreeData = (options) =>
+    buildSelectableResourceTree({ ...options, ungroupedLabel, searchQuery });
 
   const characterTreeData = buildSelectableTreeData({
     collection: state.items,
@@ -1905,9 +1712,7 @@ export const selectViewData = ({ state, i18n }) => {
     resourceSelectorGridStyle: resourceSelectorLayout.gridStyle,
     resourceSelectorItemStyle: resourceSelectorLayout.itemStyle,
     resourceSelectorCardStyle: resourceSelectorLayout.cardStyle,
-    characterSelectorPreviewStyle: state.isTouchMode
-      ? "width: 100%; height: auto; aspect-ratio: 5 / 3;"
-      : "width: 200px; height: 120px;",
+    characterSelectorPreviewStyle: resourceSelectorLayout.previewStyle,
     selectedCharacters: processedSelectedCharacters,
     transformOptions,
     animationOptions,

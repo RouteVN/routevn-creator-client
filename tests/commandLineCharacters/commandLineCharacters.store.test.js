@@ -927,33 +927,36 @@ describe("commandLineCharacters.store custom transforms", () => {
 });
 
 describe("commandLineCharacters.store mobile resource selectors", () => {
-  it("hides explorers and exposes a two-column card grid in touch mode", () => {
+  it("fills each row with 16:9 cards, without the folder list in touch mode", () => {
     const state = createInitialState();
     setUiConfig({ state }, { uiConfig: { inputMode: "touch" } });
 
     const viewData = selectViewData({ state, i18n: EN_I18N });
 
     expect(viewData.showResourceSelectorFileExplorer).toBe(false);
+    // Two a row in the iPad's panel, more where there is room.
     expect(viewData.resourceSelectorGridStyle).toContain(
-      "grid-template-columns: repeat(2, minmax(0, 1fr))",
+      "grid-template-columns: repeat(auto-fill, minmax(180px, 1fr))",
     );
     expect(viewData.resourceSelectorItemStyle).toContain("width: 100%");
     expect(viewData.resourceSelectorCardStyle).toContain("width: 100%");
-    expect(viewData.characterSelectorPreviewStyle).toContain(
-      "aspect-ratio: 5 / 3",
+    expect(viewData.characterSelectorPreviewStyle).toBe(
+      "width: 100%; aspect-ratio: 16 / 9;",
     );
   });
 
-  it("keeps the explorer and desktop card size outside touch mode", () => {
+  it("keeps the folder list outside touch mode", () => {
     const viewData = selectViewData({
       state: createInitialState(),
       i18n: EN_I18N,
     });
 
     expect(viewData.showResourceSelectorFileExplorer).toBe(true);
-    expect(viewData.resourceSelectorGridStyle).toBe("");
+    expect(viewData.resourceSelectorGridStyle).toContain(
+      "repeat(auto-fill, minmax(180px, 1fr))",
+    );
     expect(viewData.characterSelectorPreviewStyle).toBe(
-      "width: 200px; height: 120px;",
+      "width: 100%; aspect-ratio: 16 / 9;",
     );
   });
 });

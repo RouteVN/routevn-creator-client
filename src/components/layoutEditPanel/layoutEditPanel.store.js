@@ -496,27 +496,23 @@ const annotatePanelSections = (sections = []) => {
   });
 };
 
-const getPositionPopoverResolutionDimension = (projectResolution = {}) => {
-  const width = Number(projectResolution?.width);
-  const height = Number(projectResolution?.height);
-  const dimensions = [width, height].filter(
-    (value) => Number.isFinite(value) && value > 0,
-  );
-
-  if (dimensions.length === 0) {
-    return undefined;
-  }
-
-  return Math.max(...dimensions);
-};
+// X follows the project's width and Y its height.
+const getPositionPopoverResolutionDimension = ({
+  name,
+  projectResolution,
+} = {}) =>
+  Number(name === "y" ? projectResolution?.height : projectResolution?.width);
 
 const getPositionPopoverRange = ({
+  name,
   values = {},
   projectResolution,
   currentValue,
 } = {}) => {
-  const resolutionDimension =
-    getPositionPopoverResolutionDimension(projectResolution);
+  const resolutionDimension = getPositionPopoverResolutionDimension({
+    name,
+    projectResolution,
+  });
   if (!Number.isFinite(resolutionDimension) || resolutionDimension <= 0) {
     return undefined;
   }
@@ -524,7 +520,7 @@ const getPositionPopoverRange = ({
   let min = -resolutionDimension;
   let max = resolutionDimension * 2;
 
-  const numericValues = [values?.x, values?.y, currentValue]
+  const numericValues = [values?.[name], currentValue]
     .map((value) => Number(value))
     .filter((value) => Number.isFinite(value));
 
@@ -587,6 +583,7 @@ const buildPopoverForm = ({
   }
 
   const positionRange = getPositionPopoverRange({
+    name,
     values,
     projectResolution,
     currentValue: value,
@@ -634,6 +631,7 @@ const buildPositionPopoverContext = ({
   }
 
   const positionRange = getPositionPopoverRange({
+    name,
     values,
     projectResolution,
   });

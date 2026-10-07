@@ -11,6 +11,7 @@ import {
   formatProjectResolutionAspectRatio,
   requireProjectResolution,
 } from "../../internal/projectResolution.js";
+import { buildCharacterSpritePreviewLayers } from "../../internal/characterSpritePreview.js";
 import { toFlatItems } from "../../internal/project/tree.js";
 import { selectEditHistoryCopy } from "../../internal/ui/editHistory.js";
 import {
@@ -46,16 +47,38 @@ const createEmptyImageCollection = () => ({
   tree: [],
 });
 
-const createPreviewImageIds = (preview) => ({
-  background: preview?.background?.imageId,
-  target: preview?.target?.imageId,
+// What a preview slot shows, as saved: an image, or a character with one
+// sprite per sprite group. The background is always an image.
+const createPreviewVisual = (slot) => {
+  if (slot?.characterId) {
+    return {
+      characterId: slot.characterId,
+      sprites: structuredClone(slot.sprites),
+    };
+  }
+  if (slot?.imageId) {
+    return { imageId: slot.imageId };
+  }
+  return undefined;
+};
+
+const createPreviewSlots = (preview) => ({
+  background: createPreviewVisual(preview?.background),
+  target: createPreviewVisual(preview?.target),
 });
 
 const createImageSelectorDialog = () => ({
   open: false,
   slot: undefined,
   selectedImageId: undefined,
-  originalImageId: undefined,
+  originalVisual: undefined,
+});
+
+const createCharacterSpriteDialog = () => ({
+  open: false,
+  // The target when the dialog opened, which cancel puts back.
+  originalTarget: undefined,
+  selection: undefined,
 });
 
 const createPreviewImageMenu = () => ({
@@ -92,7 +115,7 @@ export const createInitialState = () => ({
   // The values as last saved; edits save on their own, a moment after.
   savedTransform: undefined,
   // Preview settings save only with Save Preview.
-  previewImageIds: createPreviewImageIds(),
+  previewSlots: createPreviewSlots(),
   rightPanelMode: "edit",
   // Undo and redo for edits made since the page opened.
   editHistory: createEditHistory(),
@@ -104,6 +127,7 @@ export const createInitialState = () => ({
   selectedElementMetrics: undefined,
   projectResolution: DEFAULT_PROJECT_RESOLUTION,
   imagesData: createEmptyImageCollection(),
+  charactersData: createEmptyImageCollection(),
   loadedAssetFileIds: [],
   // Preview image files that failed to load; the canvas leaves them out.
   failedAssetFileIds: [],
@@ -112,6 +136,7 @@ export const createInitialState = () => ({
   isSavingPreview: false,
   canvasZoom: 1,
   imageSelectorDialog: createImageSelectorDialog(),
+  characterSpriteDialog: createCharacterSpriteDialog(),
   previewImageMenu: createPreviewImageMenu(),
   fullImagePreview: createFullImagePreview(),
 });
@@ -126,13 +151,13 @@ export const setAppWindowMetrics = ({ state }, { width, height } = {}) => {
 
 export const loadTransform = (
   { state },
-  { item, projectResolution, imagesData } = {},
+  { item, projectResolution, imagesData, charactersData } = {},
 ) => {
   state.transformId = item.id;
   state.transformName = item.name ?? "";
   state.transform = normalizeTransformValues(item);
   state.savedTransform = state.transform;
-  state.previewImageIds = createPreviewImageIds(item.preview);
+  state.previewSlots = createPreviewSlots(item.preview);
   state.editHistory = createEditHistory();
   state.editHistoryBaseline = state.transform;
   state.inspectorPreviewTransform = undefined;
@@ -142,6 +167,7 @@ export const loadTransform = (
     "Project resolution",
   );
   state.imagesData = imagesData ?? createEmptyImageCollection();
+  state.charactersData = charactersData ?? createEmptyImageCollection();
   state.loadedAssetFileIds = [];
   state.failedAssetFileIds = [];
   state.warnedAssetFileIds = [];
@@ -176,13 +202,13 @@ export const markValuesSaved = ({ state }, { transform } = {}) => {
   state.savedTransform = transform;
 };
 
-// The saved form of the preview images.
+// The saved form of the preview settings.
 export const selectPreviewData = ({ state }) => {
   const preview = {};
   for (const { key } of PREVIEW_IMAGE_SLOTS) {
-    const imageId = state.previewImageIds[key];
-    if (imageId) {
-      preview[key] = { imageId };
+    const visual = createPreviewVisual(state.previewSlots[key]);
+    if (visual) {
+      preview[key] = visual;
     }
   }
   return preview;
@@ -258,13 +284,38 @@ export const selectSelectedElementMetrics = ({ state }) =>
   state.selectedElementMetrics;
 
 export const selectPreviewBackgroundImage = ({ state }) =>
-  getImageItemById(state.imagesData, state.previewImageIds.background);
+  getImageItemById(state.imagesData, state.previewSlots.background?.imageId);
 
 export const selectPreviewTargetImage = ({ state }) =>
-  getImageItemById(state.imagesData, state.previewImageIds.target);
+  getImageItemById(state.imagesData, state.previewSlots.target?.imageId);
+
+const getCharacterItemById = (charactersData, characterId) => {
+  const item = charactersData.items[characterId];
+  return item?.type === "character" ? item : undefined;
+};
+
+// The target character's sprites, in drawing order, the first at the bottom.
+// A sprite that no longer exists is left out.
+const getTargetCharacterSprites = (state) => {
+  const target = state.previewSlots.target;
+  const character = getCharacterItemById(
+    state.charactersData,
+    target?.characterId,
+  );
+  if (!character) {
+    return [];
+  }
+
+  return target.sprites
+    .map((sprite) => character.sprites?.items?.[sprite.resourceId])
+    .filter((sprite) => sprite?.type === "image" && sprite.fileId);
+};
+
+export const selectPreviewTargetCharacterSprites = ({ state }) =>
+  getTargetCharacterSprites(state);
 
 // The preview images the canvas draws. One whose file failed to load is left
-// out, so the canvas shows the gray screen or the white square instead.
+// out, so the canvas shows the gray screen or the light gray square instead.
 const selectAvailableImage = (state, imageId) => {
   const image = getImageItemById(state.imagesData, imageId);
   return image && !state.failedAssetFileIds.includes(image.fileId)
@@ -273,10 +324,16 @@ const selectAvailableImage = (state, imageId) => {
 };
 
 export const selectCanvasBackgroundImage = ({ state }) =>
-  selectAvailableImage(state, state.previewImageIds.background);
+  selectAvailableImage(state, state.previewSlots.background?.imageId);
 
 export const selectCanvasTargetImage = ({ state }) =>
-  selectAvailableImage(state, state.previewImageIds.target);
+  selectAvailableImage(state, state.previewSlots.target?.imageId);
+
+// A sprite that failed to load is left out, and the rest still draw.
+export const selectCanvasTargetCharacterSprites = ({ state }) =>
+  getTargetCharacterSprites(state).filter(
+    (sprite) => !state.failedAssetFileIds.includes(sprite.fileId),
+  );
 
 export const selectLoadedAssetFileIds = ({ state }) => state.loadedAssetFileIds;
 
@@ -331,45 +388,84 @@ export const resetCanvasZoom = ({ state }) => {
   resetEditorCanvasZoomState(state);
 };
 
-export const selectIsImageSelectorOpen = ({ state }) =>
-  state.imageSelectorDialog.open;
+// Picking a preview image or character sprite opens a dialog, which takes
+// the keys.
+export const selectIsPreviewPickerOpen = ({ state }) =>
+  state.imageSelectorDialog.open || state.characterSpriteDialog.open;
 
 export const openImageSelectorDialog = ({ state }, { slot } = {}) => {
   if (!isPreviewImageSlot(slot)) {
     return;
   }
 
-  const imageId = state.previewImageIds[slot];
   state.imageSelectorDialog.open = true;
   state.imageSelectorDialog.slot = slot;
-  state.imageSelectorDialog.selectedImageId = imageId;
-  state.imageSelectorDialog.originalImageId = imageId;
+  state.imageSelectorDialog.selectedImageId = state.previewSlots[slot]?.imageId;
+  state.imageSelectorDialog.originalVisual = state.previewSlots[slot];
 };
 
 // The canvas shows a picked image at once; cancel puts the original back.
 export const applyImageSelectorSelection = ({ state }, { imageId } = {}) => {
   state.imageSelectorDialog.selectedImageId = imageId;
-  state.previewImageIds[state.imageSelectorDialog.slot] = imageId;
+  state.previewSlots[state.imageSelectorDialog.slot] = createPreviewVisual({
+    imageId,
+  });
 };
 
+// OK without a picked image keeps what the slot showed.
 export const commitImageSelectorSelection = ({ state }) => {
-  const { slot, selectedImageId } = state.imageSelectorDialog;
-  state.previewImageIds[slot] = selectedImageId;
+  const { slot, selectedImageId, originalVisual } = state.imageSelectorDialog;
+  state.previewSlots[slot] = selectedImageId
+    ? createPreviewVisual({ imageId: selectedImageId })
+    : originalVisual;
   state.imageSelectorDialog = createImageSelectorDialog();
 };
 
 export const cancelImageSelectorDialog = ({ state }) => {
-  const { slot, originalImageId } = state.imageSelectorDialog;
+  const { slot, originalVisual } = state.imageSelectorDialog;
   if (slot) {
-    state.previewImageIds[slot] = originalImageId;
+    state.previewSlots[slot] = originalVisual;
   }
   state.imageSelectorDialog = createImageSelectorDialog();
   state.fullImagePreview = createFullImagePreview();
 };
 
+export const openCharacterSpriteDialog = ({ state }) => {
+  const target = state.previewSlots.target;
+  state.characterSpriteDialog.open = true;
+  state.characterSpriteDialog.originalTarget = target;
+  state.characterSpriteDialog.selection = target?.characterId
+    ? target
+    : undefined;
+};
+
+// The canvas shows the picked sprites at once; cancel puts the original
+// target back.
+export const applyCharacterSpriteSelection = (
+  { state },
+  { selection } = {},
+) => {
+  state.characterSpriteDialog.selection = selection;
+  if (selection) {
+    state.previewSlots.target = createPreviewVisual(selection);
+  }
+};
+
+export const commitCharacterSpriteSelection = ({ state }) => {
+  state.characterSpriteDialog = createCharacterSpriteDialog();
+};
+
+export const cancelCharacterSpriteDialog = ({ state }) => {
+  state.previewSlots.target = state.characterSpriteDialog.originalTarget;
+  state.characterSpriteDialog = createCharacterSpriteDialog();
+};
+
+export const selectHasPreviewVisual = ({ state }, { slot } = {}) =>
+  isPreviewImageSlot(slot) && Boolean(state.previewSlots[slot]);
+
 export const openPreviewImageMenu = ({ state }, { slot, x, y, items } = {}) => {
   state.previewImageMenu = createPreviewImageMenu();
-  if (!isPreviewImageSlot(slot) || !state.previewImageIds[slot]) {
+  if (!isPreviewImageSlot(slot)) {
     return;
   }
 
@@ -389,7 +485,7 @@ export const selectPreviewImageMenuSlot = ({ state }) =>
 
 export const clearPreviewImage = ({ state }, { slot } = {}) => {
   if (isPreviewImageSlot(slot)) {
-    state.previewImageIds[slot] = undefined;
+    state.previewSlots[slot] = undefined;
   }
 };
 
@@ -404,8 +500,23 @@ export const hideFullImagePreview = ({ state }) => {
   state.fullImagePreview = createFullImagePreview();
 };
 
-const buildPreviewImageCard = (state, imageId) => {
-  const item = getImageItemById(state.imagesData, imageId);
+// A slot's card shows its image, or its character's sprites stacked.
+const buildPreviewImageCard = (state, visual) => {
+  const character = getCharacterItemById(
+    state.charactersData,
+    visual?.characterId,
+  );
+  if (character) {
+    return {
+      name: character.name,
+      layers: buildCharacterSpritePreviewLayers({
+        spritesCollection: character.sprites,
+        spriteIds: visual.sprites.map((sprite) => sprite.resourceId),
+      }),
+    };
+  }
+
+  const item = getImageItemById(state.imagesData, visual?.imageId);
   if (!item) {
     return undefined;
   }
@@ -465,12 +576,18 @@ export const selectViewData = ({ state, i18n }) => {
     previewImageSlots: PREVIEW_IMAGE_SLOTS.map(({ key, labelKey }) => ({
       slot: key,
       label: copy[labelKey],
-      image: buildPreviewImageCard(state, state.previewImageIds[key]),
+      image: buildPreviewImageCard(state, state.previewSlots[key]),
     })),
     selectImageLabel: copy.selectImageLabel,
     noPreviewLabel: copy.noPreviewLabel,
     confirmButton: copy.confirmButton,
     imageSelectorDialog: state.imageSelectorDialog,
+    characterSpriteDialog: {
+      open: state.characterSpriteDialog.open,
+      characterId: state.characterSpriteDialog.originalTarget?.characterId,
+      sprites: state.characterSpriteDialog.originalTarget?.sprites ?? [],
+    },
+    characterSpriteConfirmDisabled: !state.characterSpriteDialog.selection,
     showImageSelectorFileExplorer: !state.isTouchMode,
     imageFolderItems: toFlatItems(state.imagesData).filter(
       (item) => item.type === "folder",

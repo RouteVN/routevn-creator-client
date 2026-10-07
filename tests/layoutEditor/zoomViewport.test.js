@@ -119,6 +119,9 @@ describe("rvn-zoom-viewport", () => {
     const hostRule = viewport.shadowRoot.querySelector("style").textContent;
     expect(hostRule).toContain("--canvas-zoom: 1;");
     expect(hostRule).toContain("touch-action: none;");
+    // A long press on the workspace does not select text.
+    expect(hostRule).toContain("-webkit-user-select: none;");
+    expect(hostRule).toContain("-webkit-touch-callout: none;");
     expect(viewport.shadowRoot.querySelector("slot")).not.toBeNull();
   });
 

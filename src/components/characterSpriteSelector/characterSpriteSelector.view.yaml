@@ -1,0 +1,71 @@
+refs:
+  backButton:
+    eventListeners:
+      click:
+        handler: handleBackClick
+  groupTabs:
+    eventListeners:
+      item-click:
+        handler: handleGroupTabClick
+  searchInput:
+    eventListeners:
+      value-input:
+        handler: handleSearchInput
+  fileExplorer:
+    eventListeners:
+      item-click:
+        handler: handleFileExplorerItemClick
+  galleryScroll: {}
+  item*:
+    eventListeners:
+      click:
+        handler: handleItemClick
+styles:
+  ".characterSpriteSelectorTransparencyGrid":
+    background-color: "#eef2f7"
+    background-image: 'linear-gradient(45deg, #94a3b8 25%, transparent 25%), linear-gradient(-45deg, #94a3b8 25%, transparent 25%), linear-gradient(45deg, transparent 75%, #94a3b8 75%), linear-gradient(-45deg, transparent 75%, #94a3b8 75%)'
+    background-position: "0 0, 0 6px, 6px -6px, -6px 0"
+    background-repeat: repeat
+    background-size: 12px 12px
+template:
+  - 'rtgl-view d=v w=f h=f g=md style="min-width: 0; min-height: 0;"':
+      - $if step == 'sprites':
+          - rtgl-view d=h av=c g=sm w=f:
+              - 'rtgl-button#backButton sq pre=chevronLeft v=ol aria-label="${charactersLabel}" title="${charactersLabel}"': null
+              - rtgl-text ellipsis: ${characterName}
+          - $if showGroupTabs:
+              - rtgl-tabs#groupTabs :items=${groupTabs} selected-tab=${selectedGroupId}: null
+        $else:
+          - rtgl-view d=h av=c h=32 w=f:
+              - rtgl-text: ${charactersLabel}
+      - rtgl-view d=h w=f av=c g=md:
+          - rtgl-view w=1fg: null
+          - rtgl-input#searchInput s=sm placeholder=${searchPlaceholder} value=${searchQuery}: null
+      - 'rtgl-view d=h w=f g=lg h=1fg style="min-width: 0; min-height: 0;"':
+          - $if showFileExplorer:
+              - 'rtgl-view h=f w=240 sv style="flex-shrink: 0;"':
+                  - rvn-base-file-explorer#fileExplorer :items=${explorerItems}: null
+          - 'rtgl-view#galleryScroll h=f w=1fg sv g=lg style="min-width: 0;"':
+              - $if emptyMessage:
+                  - rtgl-view w=f h=1fg av=c ah=c p=md:
+                      - rtgl-text s=sm c=mu-fg ta=c: ${emptyMessage}
+                $else:
+                  - $for group, i in groups:
+                      - rtgl-view data-group-id=${group.id} g=md:
+                          - rtgl-view d=h av=c g=md:
+                              - rtgl-svg svg=folder wh=16: null
+                              - rtgl-text: ${group.fullLabel}
+                          - 'rtgl-view d=h w=f wrap g=lg style="${gridStyle}"':
+                              - $for item, j in group.children:
+                                  - 'rtgl-view#item${i}x${j} data-item-id=${item.id} cur=pointer bw=xs bc=${item.itemBorderColor} h-bc=${item.itemHoverBorderColor} br=sm style="${itemStyle}"':
+                                      - 'rtgl-view p=sm g=sm br=md style="${cardStyle}"':
+                                          - $if item.previewKind == 'spritesheet':
+                                              - 'rtgl-view overflow=hidden br=sm style="${previewStyle}"':
+                                                  - 'rvn-spritesheet-preview key=${item.previewKey} previewKey=${item.previewKey} fileId=${item.previewFileId} :atlas=${item.previewAtlas} :animation=${item.previewAnimation} w=f h=f br=sm checkerCellSize=6 showCheckerboard=true emptyLabel="${item.emptyPreviewLabel}"': null
+                                            $elif item.previewKind == 'image':
+                                              - 'div.characterSpriteSelectorTransparencyGrid style="display: block; overflow: hidden; border-radius: 4px; ${previewStyle}"':
+                                                  - rvn-file-image fileId=${item.previewFileId} w=f h=f br=sm: null
+                                            $else:
+                                              - 'rtgl-view av=c ah=c bgc=mu-fg style="${previewStyle}"':
+                                                  - rtgl-text s=sm c=mu-fg: ${item.emptyPreviewLabel}
+                                          - rtgl-text s=sm c=mu-fg ellipsis w=f: ${item.name}

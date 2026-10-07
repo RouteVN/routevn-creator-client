@@ -1292,15 +1292,23 @@ outline on the canvas (`createBackgroundTransformEditorCanvasState` and the
 drag helpers in `src/internal/ui/sceneEditor/backgroundTransformEditor.js`):
 the border moves the target and an edge handle scales it evenly around its
 anchor. Arrow keys nudge the target on Edit, ten pixels with Shift. Preview
-holds the preview background and target images and **Save Preview**, and
-draws the same canvas without the outline: the background image, or a gray
-screen, and the target image, or a white square. Save Preview
-saves the preview images and a preview and thumbnail image of that canvas, and
-is disabled while it saves.
+holds the preview background and target and **Save Preview**, and draws the
+same canvas without the outline: the background image, or a gray screen, and
+the target, or a light gray square. The target card first asks for an
+**Image** or a **Character Sprite**. A character sprite is picked in
+`rvn-character-sprite-selector`, a character and then one sprite per sprite
+group (the sprite group helpers it shares with the scene editor are in
+`src/internal/characterSpriteSelection.js`), and saves as
+`preview.target: { characterId, sprites: [{ id, resourceId }] }`. The canvas
+draws it as scenes draw a character: a container placed by the transform with
+the sprites stacked from its top-left corner, the first at the bottom. Save
+Preview saves the preview settings and a preview and thumbnail image of that
+canvas, and is disabled while it saves.
 
-Preview images follow the asset failure policy. Each loads on its own, with
-`verifyImageIntegrity`, so one that cannot be read, fails its integrity check,
-or does not decode is left out (the gray screen or white square shows in its
+Preview images and character sprites follow the asset failure policy. Each
+loads on its own, with `verifyImageIntegrity`, so one that cannot be read,
+fails its integrity check, or does not decode is left out (the gray screen,
+the light gray square, or the character without that sprite shows in its
 place), warned about once with the shared asset warning, and not read again
 while the page is open; the rest of the canvas stays editable. Save Preview
 reads a failed image again and, if it still fails, saves nothing and alerts

@@ -167,8 +167,10 @@ export class ZoomViewportElement extends HTMLElement {
     return this.hasAttribute("gestures");
   }
 
+  // A canvas workspace has no text to select, so a long press on it selects
+  // nothing and shows no callout.
   syncHostStyle() {
-    this.hostStyle.textContent = `:host { --canvas-zoom: ${this.zoom}; --canvas-x: ${this.x}px; --canvas-y: ${this.y}px;${this.gesturesEnabled ? " position: relative; touch-action: none;" : ""} }`;
+    this.hostStyle.textContent = `:host { --canvas-zoom: ${this.zoom}; --canvas-x: ${this.x}px; --canvas-y: ${this.y}px; user-select: none; -webkit-user-select: none; -webkit-touch-callout: none;${this.gesturesEnabled ? " position: relative; touch-action: none;" : ""} }`;
   }
 
   // Shows the pan layer with the grab cursor while Space is held, and the
