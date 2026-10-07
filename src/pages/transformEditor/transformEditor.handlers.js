@@ -64,10 +64,10 @@ const navigateBack = (appService) => {
   );
 };
 
-// Loads the preview images the canvas has not loaded, each on its own, and
-// returns the ones that failed. A failed image stays out of the canvas, and
-// renders do not read it again; `retryFailed` tries it again, as Save
-// Preview does.
+// Loads the preview images and character sprites the canvas has not loaded,
+// each on its own, and returns the ones that failed. A failed image stays out
+// of the canvas, and renders do not read it again; `retryFailed` tries it
+// again, as Save Preview does.
 const loadPreviewImageAssets = async (deps, { retryFailed = false } = {}) => {
   const { graphicsService, projectService, store } = deps;
   const loadedFileIds = store.selectLoadedAssetFileIds();
@@ -76,6 +76,7 @@ const loadPreviewImageAssets = async (deps, { retryFailed = false } = {}) => {
   for (const image of [
     store.selectPreviewBackgroundImage(),
     store.selectPreviewTargetImage(),
+    ...store.selectPreviewTargetCharacterSprites(),
   ]) {
     if (
       image?.fileId &&
@@ -149,6 +150,7 @@ const createSavedPreviewRenderState = (store) =>
     transform: store.selectTransform(),
     backgroundImage: store.selectCanvasBackgroundImage(),
     targetImage: store.selectCanvasTargetImage(),
+    targetCharacterSprites: store.selectCanvasTargetCharacterSprites(),
   });
 
 // Edit draws the transform with its selection outline; Preview draws the
@@ -176,6 +178,7 @@ const renderTransformCanvas = async (deps) => {
         transform: store.selectCanvasTransform(),
         backgroundImage: store.selectCanvasBackgroundImage(),
         targetImage: store.selectCanvasTargetImage(),
+        targetCharacterSprites: store.selectCanvasTargetCharacterSprites(),
         canvasUnitsPerCssPixel: selectCanvasUnitsPerCssPixel(deps),
       });
     graphicsService.render(renderState);
@@ -415,6 +418,7 @@ export const handleAfterMount = async (deps) => {
     item,
     projectResolution: repositoryState.project?.resolution,
     imagesData: repositoryState.images,
+    charactersData: repositoryState.characters,
   });
   render();
 
@@ -466,7 +470,7 @@ export const handleWindowKeyDown = async (deps, payload) => {
     event.metaKey ||
     event.altKey ||
     appService.isInputFocused() ||
-    store.selectIsImageSelectorOpen() ||
+    store.selectIsPreviewPickerOpen() ||
     store.selectRightPanelMode() !== "edit"
   ) {
     return;
@@ -661,11 +665,31 @@ export const handleInspectorPreviewCancel = async (deps) => {
   await renderTransformCanvas(deps);
 };
 
+// The target can be an image or a character sprite, so its card first asks
+// which; the background is an image.
 export const handlePreviewImageClick = (deps, payload) => {
   const { render, store } = deps;
-  const { slot } = payload._event.currentTarget.dataset;
+  const copy = selectCopy(deps);
+  const event = payload._event;
+  const { slot } = event.currentTarget.dataset;
   store.closePreviewImageMenu();
-  store.openImageSelectorDialog({ slot });
+  if (slot === "target") {
+    store.openPreviewImageMenu({
+      slot,
+      x: event.clientX,
+      y: event.clientY,
+      items: [
+        { label: copy.imageOption, type: "item", value: "image" },
+        {
+          label: copy.characterSpriteOption,
+          type: "item",
+          value: "character-sprite",
+        },
+      ],
+    });
+  } else {
+    store.openImageSelectorDialog({ slot });
+  }
   render();
 };
 
@@ -676,6 +700,9 @@ export const handlePreviewImageContextMenu = (deps, payload) => {
   const { slot } = event.currentTarget.dataset;
   event.preventDefault();
   event.stopPropagation();
+  if (!store.selectHasPreviewVisual({ slot })) {
+    return;
+  }
   store.openPreviewImageMenu({
     slot,
     x: event.clientX,
@@ -698,6 +725,10 @@ export const handlePreviewImageMenuItemClick = async (deps, payload) => {
   store.closePreviewImageMenu();
   if (item.value === "remove") {
     store.clearPreviewImage({ slot });
+  } else if (item.value === "image") {
+    store.openImageSelectorDialog({ slot });
+  } else if (item.value === "character-sprite") {
+    store.openCharacterSpriteDialog();
   }
   render();
   await renderTransformCanvas(deps);
@@ -728,6 +759,28 @@ export const handleImageSelectorDialogClose = async (deps) => {
 export const handleImageSelectorConfirmClick = async (deps) => {
   const { render, store } = deps;
   store.commitImageSelectorSelection();
+  render();
+  await renderTransformCanvas(deps);
+};
+
+export const handleCharacterSpriteSelectionChange = async (deps, payload) => {
+  const { render, store } = deps;
+  const { selection } = payload._event.detail;
+  store.applyCharacterSpriteSelection({ selection });
+  render();
+  await renderTransformCanvas(deps);
+};
+
+export const handleCharacterSpriteDialogClose = async (deps) => {
+  const { render, store } = deps;
+  store.cancelCharacterSpriteDialog();
+  render();
+  await renderTransformCanvas(deps);
+};
+
+export const handleCharacterSpriteConfirmClick = async (deps) => {
+  const { render, store } = deps;
+  store.commitCharacterSpriteSelection();
   render();
   await renderTransformCanvas(deps);
 };

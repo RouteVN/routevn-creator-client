@@ -1,0 +1,15 @@
+componentName: rvn-character-sprite-selector
+propsSchema:
+  type: object
+  properties:
+    characterId:
+      type: string
+      description: The character picked when the selector opens.
+    sprites:
+      type: array
+      description: The sprites picked when the selector opens, one { id, resourceId } per sprite group.
+      items:
+        type: object
+events:
+  selection-change:
+    type: object

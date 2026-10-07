@@ -69,15 +69,65 @@ export const createTransformFromInspectorValues = (
   return normalizeTransformValues(values);
 };
 
+const createSpriteSize = (image) => ({
+  width: toPositiveNumber(image.width, FALLBACK_TARGET_SIZE),
+  height: toPositiveNumber(image.height, FALLBACK_TARGET_SIZE),
+});
+
+// What the transform places: a character's sprites, an image, or a light
+// gray square. A character draws as scenes draw it, a container placed by
+// the transform with its sprites stacked from its top-left corner, the first
+// at the bottom.
+const createTargetElement = ({
+  targetPlacement,
+  targetImage,
+  targetCharacterSprites,
+}) => {
+  if (targetCharacterSprites?.length > 0) {
+    return {
+      ...targetPlacement,
+      type: "container",
+      children: targetCharacterSprites.map((sprite, index) => ({
+        id: `${TRANSFORM_EDITOR_TARGET_ID}-sprite-${index}`,
+        type: "sprite",
+        src: sprite.fileId,
+        fileType: sprite.fileType ?? "image/png",
+        x: 0,
+        y: 0,
+        ...createSpriteSize(sprite),
+      })),
+    };
+  }
+
+  if (targetImage?.fileId) {
+    return {
+      ...targetPlacement,
+      type: "sprite",
+      src: targetImage.fileId,
+      fileType: targetImage.fileType ?? "image/png",
+      ...createSpriteSize(targetImage),
+    };
+  }
+
+  return {
+    ...targetPlacement,
+    type: "rect",
+    width: FALLBACK_TARGET_SIZE,
+    height: FALLBACK_TARGET_SIZE,
+    fill: TARGET_COLOR,
+  };
+};
+
 // The transform's preview: the background image, or a gray screen, and the
-// target image, or a light gray square, placed by the transform. Edit adds the
-// selection outline on top, and Preview and Save Preview show it as it is,
-// so the canvas looks the same on both tabs.
+// target placed by the transform. Edit adds the selection outline on top, and
+// Preview and Save Preview show it as it is, so the canvas looks the same on
+// both tabs.
 export const createTransformPreviewRenderState = ({
   projectResolution,
   transform,
   backgroundImage,
   targetImage,
+  targetCharacterSprites,
 }) => {
   const { width, height } = projectResolution;
   const backgroundElement = backgroundImage?.fileId
@@ -112,26 +162,16 @@ export const createTransformPreviewRenderState = ({
     anchorX: transform.anchorX,
     anchorY: transform.anchorY,
   };
-  const targetElement = targetImage?.fileId
-    ? {
-        ...targetPlacement,
-        type: "sprite",
-        src: targetImage.fileId,
-        fileType: targetImage.fileType ?? "image/png",
-        width: toPositiveNumber(targetImage.width, FALLBACK_TARGET_SIZE),
-        height: toPositiveNumber(targetImage.height, FALLBACK_TARGET_SIZE),
-      }
-    : {
-        ...targetPlacement,
-        type: "rect",
-        width: FALLBACK_TARGET_SIZE,
-        height: FALLBACK_TARGET_SIZE,
-        fill: TARGET_COLOR,
-      };
-
   return {
     id: "transform-editor",
-    elements: [backgroundElement, targetElement],
+    elements: [
+      backgroundElement,
+      createTargetElement({
+        targetPlacement,
+        targetImage,
+        targetCharacterSprites,
+      }),
+    ],
     animations: [],
   };
 };
@@ -144,6 +184,7 @@ export const createTransformEditorCanvasState = ({
   transform,
   backgroundImage,
   targetImage,
+  targetCharacterSprites,
   canvasUnitsPerCssPixel,
 }) =>
   createBackgroundTransformEditorCanvasState({
@@ -152,6 +193,7 @@ export const createTransformEditorCanvasState = ({
       transform,
       backgroundImage,
       targetImage,
+      targetCharacterSprites,
     }),
     graphicsService,
     editorState: {

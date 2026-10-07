@@ -80,6 +80,18 @@ refs:
     eventListeners:
       click:
         handler: handleImageSelectorConfirmClick
+  characterSpriteDialog:
+    eventListeners:
+      close:
+        handler: handleCharacterSpriteDialogClose
+  characterSpriteSelector:
+    eventListeners:
+      selection-change:
+        handler: handleCharacterSpriteSelectionChange
+  confirmCharacterSprite:
+    eventListeners:
+      click:
+        handler: handleCharacterSpriteConfirmClick
   fullPreviewDialog:
     eventListeners:
       close:
@@ -144,7 +156,10 @@ template:
                                           - rtgl-text s=xs c=mu: ${item.label}
                                           - $if item.image:
                                               - 'rtgl-view#previewImageButton${i} data-slot=${item.slot} w=f cur=pointer bw=xs bc=bo h-bc=ac br=md overflow=hidden style="box-sizing: border-box;"':
-                                                  - $if item.image.previewFileId:
+                                                  - $if item.image.layers:
+                                                      - 'div.transformImageThumbnailTransparencyGrid style="display: block; width: 100%; aspect-ratio: 16 / 9; overflow: hidden;"':
+                                                          - rvn-stacked-file-images :layers=${item.image.layers} w=f h=f spritesheetBr=none showSpritesheetCheckerboard=false: null
+                                                    $elif item.image.previewFileId:
                                                       - 'div.transformImageThumbnailTransparencyGrid style="display: block; width: 100%; aspect-ratio: 16 / 9; overflow: hidden;"':
                                                           - rvn-file-image w=f h=f fileId=${item.image.previewFileId}: null
                                                     $else:
@@ -176,7 +191,10 @@ template:
                                       - rtgl-text s=xs c=mu: ${item.label}
                                       - $if item.image:
                                           - 'rtgl-view#previewImageButton${i} data-slot=${item.slot} w=f cur=pointer bw=xs bc=bo h-bc=ac br=md overflow=hidden style="box-sizing: border-box;"':
-                                              - $if item.image.previewFileId:
+                                              - $if item.image.layers:
+                                                  - 'div.transformImageThumbnailTransparencyGrid style="display: block; width: 100%; aspect-ratio: 16 / 9; overflow: hidden;"':
+                                                      - rvn-stacked-file-images :layers=${item.image.layers} w=f h=f spritesheetBr=none showSpritesheetCheckerboard=false: null
+                                                $elif item.image.previewFileId:
                                                   - 'div.transformImageThumbnailTransparencyGrid style="display: block; width: 100%; aspect-ratio: 16 / 9; overflow: hidden;"':
                                                       - rvn-file-image w=f h=f fileId=${item.image.previewFileId}: null
                                                 $else:
@@ -200,6 +218,13 @@ template:
                       - rvn-image-selector#imageSelector selectedImageId=${imageSelectorDialog.selectedImageId}: null
               - rtgl-view d=h g=sm w=f ah=e:
                   - rtgl-button#confirmImageSelection variant=pr: ${confirmButton}
+  - rtgl-dialog#characterSpriteDialog ?open=${characterSpriteDialog.open} s=lg:
+      - $if characterSpriteDialog.open:
+          - rtgl-view slot=content d=v w=f g=md:
+              - 'rtgl-view w=f h=70vh style="min-width: 0; min-height: 0;"':
+                  - rvn-character-sprite-selector#characterSpriteSelector characterId=${characterSpriteDialog.characterId} :sprites=${characterSpriteDialog.sprites}: null
+              - rtgl-view d=h g=sm w=f ah=e:
+                  - rtgl-button#confirmCharacterSprite variant=pr ?disabled=${characterSpriteConfirmDisabled}: ${confirmButton}
   - $when: fullImagePreviewVisible
     rtgl-dialog#fullPreviewDialog open layout=fixed bare p=none:
       - 'div#previewOverlay slot=content tabindex=0 style="position: fixed; inset: 0; z-index: 3000; cursor: pointer; outline: none;"':

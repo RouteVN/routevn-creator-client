@@ -7,6 +7,9 @@ import {
   handleBackClick,
   handleBeforeMount,
   handleCanvasZoomInClick,
+  handleCharacterSpriteConfirmClick,
+  handleCharacterSpriteDialogClose,
+  handleCharacterSpriteSelectionChange,
   handleImageSelectorConfirmClick,
   handleImageSelectorDialogClose,
   handleImageSelectorImageSelected,
@@ -79,6 +82,66 @@ const imagesData = {
   },
 };
 
+// A character drawn with a body and a face, the face on top.
+const charactersData = {
+  tree: [{ id: "character-1" }],
+  items: {
+    "character-1": {
+      id: "character-1",
+      type: "character",
+      name: "Character One",
+      spriteGroups: [
+        { id: "body", name: "Body", tags: ["tag-body"] },
+        { id: "face", name: "Face", tags: ["tag-face"] },
+      ],
+      sprites: {
+        tree: [{ id: "sprite-body" }, { id: "sprite-smile" }],
+        items: {
+          "sprite-body": {
+            id: "sprite-body",
+            type: "image",
+            name: "Body",
+            fileId: "file-body",
+            width: 800,
+            height: 1200,
+            tagIds: ["tag-body"],
+          },
+          "sprite-smile": {
+            id: "sprite-smile",
+            type: "image",
+            name: "Smile",
+            fileId: "file-smile",
+            width: 800,
+            height: 1000,
+            tagIds: ["tag-face"],
+          },
+        },
+      },
+    },
+  },
+};
+
+const characterTarget = {
+  characterId: "character-1",
+  sprites: [
+    { id: "body", resourceId: "sprite-body" },
+    { id: "face", resourceId: "sprite-smile" },
+  ],
+};
+
+const sizeContainer = (element) => {
+  if (element.type !== "container") {
+    return element;
+  }
+  const children = element.children.map(sizeContainer);
+  return {
+    ...element,
+    children,
+    width: Math.max(...children.map((child) => child.x + child.width)),
+    height: Math.max(...children.map((child) => child.y + child.height)),
+  };
+};
+
 // The page on its real store, opened on a saved transform. The canvas is
 // 960 CSS pixels wide, so a CSS pixel is two canvas units.
 const createPage = async ({ item = savedTransform, uiConfig = {} } = {}) => {
@@ -107,6 +170,7 @@ const createPage = async ({ item = savedTransform, uiConfig = {} } = {}) => {
   const repositoryState = {
     project: { resolution: { width: 1920, height: 1080 } },
     images: imagesData,
+    characters: charactersData,
     transforms: {
       tree: [{ id: item.id }],
       items: { [item.id]: item },
@@ -132,9 +196,12 @@ const createPage = async ({ item = savedTransform, uiConfig = {} } = {}) => {
     graphicsService: {
       init: vi.fn(async () => {}),
       render: vi.fn(),
-      // Parsing keeps the elements as they are: the test elements already
-      // have their sizes.
-      parse: vi.fn(({ elements }) => ({ elements })),
+      // Parsing keeps the elements as they are, since the test elements
+      // already have their sizes, and sizes a container from its children,
+      // as route-graphics does.
+      parse: vi.fn(({ elements }) => ({
+        elements: elements.map(sizeContainer),
+      })),
       loadAssets: vi.fn(async () => {}),
       destroy: vi.fn(async () => {}),
     },
@@ -239,8 +306,20 @@ const capturedImages = {
   thumbnailImage: "data:image/png;base64,dGh1bWI=",
 };
 
+// The target card asks for an image or a character sprite first.
+const chooseTargetKind = async (page, value) => {
+  handlePreviewImageClick(page.deps, slotEvent("target"));
+  await handlePreviewImageMenuItemClick(page.deps, {
+    _event: { detail: { item: { value } } },
+  });
+};
+
 const pickPreviewImage = async (page, slot, imageId) => {
-  handlePreviewImageClick(page.deps, slotEvent(slot));
+  if (slot === "target") {
+    await chooseTargetKind(page, "image");
+  } else {
+    handlePreviewImageClick(page.deps, slotEvent(slot));
+  }
   await handleImageSelectorImageSelected(page.deps, {
     _event: { detail: { imageId } },
   });
@@ -784,7 +863,7 @@ describe("transform editor", () => {
     ).toMatchObject({ type: "sprite", src: "file-1" });
     await handleImageSelectorConfirmClick(page.deps);
 
-    handlePreviewImageClick(page.deps, slotEvent("target"));
+    await chooseTargetKind(page, "image");
     await handleImageSelectorImageSelected(page.deps, {
       _event: { detail: { imageId: "image-2" } },
     });
@@ -793,7 +872,7 @@ describe("transform editor", () => {
       page.view().previewImageSlots.map((slot) => slot.image?.name),
     ).toEqual(["Image One", undefined]);
 
-    handlePreviewImageClick(page.deps, slotEvent("target"));
+    await chooseTargetKind(page, "image");
     await handleImageSelectorImageSelected(page.deps, {
       _event: { detail: { imageId: "image-2" } },
     });
@@ -821,6 +900,180 @@ describe("transform editor", () => {
       target: { imageId: "image-2" },
     });
     expect(page.state().editHistory.undo).toHaveLength(0);
+  });
+
+  it("asks whether the target is an image or a character sprite", async () => {
+    const page = await createPage();
+
+    handlePreviewImageClick(page.deps, slotEvent("target"));
+    expect(page.view().previewImageMenu).toMatchObject({
+      isOpen: true,
+      slot: "target",
+    });
+    expect(
+      page
+        .view()
+        .previewImageMenu.items.map(({ label, value }) => [label, value]),
+    ).toEqual([
+      ["Image", "image"],
+      ["Character Sprite", "character-sprite"],
+    ]);
+
+    await handlePreviewImageMenuItemClick(page.deps, {
+      _event: { detail: { item: { value: "character-sprite" } } },
+    });
+    expect(page.view().characterSpriteDialog).toEqual({
+      open: true,
+      characterId: undefined,
+      sprites: [],
+    });
+    // Nothing is picked yet, so OK is disabled.
+    expect(page.view().characterSpriteConfirmDisabled).toBe(true);
+    await handleCharacterSpriteDialogClose(page.deps);
+
+    // The background is always an image.
+    handlePreviewImageClick(page.deps, slotEvent("background"));
+    expect(page.view().previewImageMenu.isOpen).toBe(false);
+    expect(page.view().imageSelectorDialog).toMatchObject({
+      open: true,
+      slot: "background",
+    });
+  });
+
+  it("previews a picked character's sprites at once and saves them with Save Preview", async () => {
+    const page = await createPage();
+    captureEditorPreviewImages.mockResolvedValue(capturedImages);
+
+    await chooseTargetKind(page, "character-sprite");
+    await handleCharacterSpriteSelectionChange(page.deps, {
+      _event: { detail: { selection: characterTarget } },
+    });
+
+    // As scenes draw a character: a container placed by the transform, its
+    // sprites stacked from its corner, the first at the bottom.
+    const target = page.findElement(
+      page.lastRender().elements,
+      "transform-target",
+    );
+    expect(target).toMatchObject({
+      type: "container",
+      x: 960,
+      y: 540,
+      anchorX: 0.5,
+      anchorY: 0.5,
+    });
+    expect(target.children).toEqual([
+      expect.objectContaining({
+        type: "sprite",
+        src: "file-body",
+        x: 0,
+        y: 0,
+        width: 800,
+        height: 1200,
+      }),
+      expect.objectContaining({
+        type: "sprite",
+        src: "file-smile",
+        width: 800,
+        height: 1000,
+      }),
+    ]);
+    for (const fileId of ["file-body", "file-smile"]) {
+      expect(page.deps.projectService.getFileContent).toHaveBeenCalledWith(
+        fileId,
+        { verifyImageIntegrity: true },
+      );
+    }
+
+    // The outline goes around the stacked sprites.
+    expect(page.state().selectedElementMetrics).toMatchObject({
+      width: 800,
+      height: 1200,
+    });
+
+    await handleCharacterSpriteConfirmClick(page.deps);
+    expect(page.view().characterSpriteDialog.open).toBe(false);
+    const [, targetCard] = page.view().previewImageSlots;
+    expect(targetCard.image).toMatchObject({ name: "Character One" });
+    expect(targetCard.image.layers.map((layer) => layer.itemId)).toEqual([
+      "sprite-body",
+      "sprite-smile",
+    ]);
+
+    await handleSavePreviewClick(page.deps);
+    expect(page.savedData()[0].data.preview).toEqual({
+      target: characterTarget,
+    });
+  });
+
+  it("puts the original target back when the character dialog is cancelled", async () => {
+    const page = await createPage({
+      item: { ...savedTransform, preview: { target: { imageId: "image-2" } } },
+    });
+
+    await chooseTargetKind(page, "character-sprite");
+    await handleCharacterSpriteSelectionChange(page.deps, {
+      _event: { detail: { selection: characterTarget } },
+    });
+    expect(
+      page.findElement(page.lastRender().elements, "transform-target").type,
+    ).toBe("container");
+
+    await handleCharacterSpriteDialogClose(page.deps);
+    expect(
+      page.findElement(page.lastRender().elements, "transform-target"),
+    ).toMatchObject({ type: "sprite", src: "file-2" });
+    expect(page.state().previewSlots.target).toEqual({ imageId: "image-2" });
+  });
+
+  it("leaves out a character sprite that cannot load, and warns once", async () => {
+    const page = await createPage();
+    page.deps.projectService.getFileContent.mockImplementation(
+      async (fileId) => {
+        if (fileId === "file-smile") {
+          throw new Error("File file-smile is missing.");
+        }
+        return { url: `blob:${fileId}`, type: "image/png" };
+      },
+    );
+
+    await chooseTargetKind(page, "character-sprite");
+    await handleCharacterSpriteSelectionChange(page.deps, {
+      _event: { detail: { selection: characterTarget } },
+    });
+    await handleCharacterSpriteConfirmClick(page.deps);
+
+    // The body still draws, and the outline with it.
+    const elements = page.lastRender().elements;
+    expect(
+      page
+        .findElement(elements, "transform-target")
+        .children.map((child) => child.src),
+    ).toEqual(["file-body"]);
+    expect(page.findElement(elements, "selected-border")).toBeTruthy();
+    expect(page.deps.appService.showAlert).toHaveBeenCalledOnce();
+    expect(page.deps.appService.showAlert).toHaveBeenCalledWith({
+      title: "Warning",
+      message: expect.stringContaining("Smile"),
+    });
+  });
+
+  it("opens with a saved character target", async () => {
+    const page = await createPage({
+      item: { ...savedTransform, preview: { target: characterTarget } },
+    });
+    expect(
+      page.findElement(page.lastRender().elements, "transform-target").children,
+    ).toHaveLength(2);
+
+    await chooseTargetKind(page, "character-sprite");
+    // The selector opens on the saved character and sprites.
+    expect(page.view().characterSpriteDialog).toEqual({
+      open: true,
+      characterId: "character-1",
+      sprites: characterTarget.sprites,
+    });
+    expect(page.view().characterSpriteConfirmDisabled).toBe(false);
   });
 
   it("redraws the outline for the zoomed canvas", async () => {
