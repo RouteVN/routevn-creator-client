@@ -126,20 +126,18 @@ transformSections:
 layoutSections:
   - label: Transform
     items:
+      # Labelled above their fields, as in the transform editor.
       - "$when": "!isInsideDirectedContainer"
         type: group
+        stacked: true
         fields:
           - type: clickable-value
-            svg: x
             label: Position X
-            hideLabel: true
             name: x
             value: "${values.x}"
             popoverForm: *numberPopoverForm
           - type: clickable-value
-            svg: y
             label: Position Y
-            hideLabel: true
             name: y
             value: "${values.y}"
             popoverForm: *numberPopoverForm
@@ -505,19 +503,23 @@ layoutSections:
     "$if canAddTextStyleVariant":
       labelAction: plus
     items:
+      # Labelled above their selects, as Opacity and Position X are.
       - type: select
+        stacked: true
         label: Default
         name: textStyleId
         value: "${values.textStyleId}"
         options: "${textStyleItems}"
       - "$when": "values.hoverTextStyleId"
         type: select
+        stacked: true
         label: Hover
         name: hoverTextStyleId
         value: "${values.hoverTextStyleId}"
         options: "${textStyleItemsWithNone}"
       - "$when": "values.clickTextStyleId"
         type: select
+        stacked: true
         label: Clicked
         name: clickTextStyleId
         value: "${values.clickTextStyleId}"
@@ -599,20 +601,18 @@ layoutSections:
 controlSections:
   - label: Transform
     items:
+      # Labelled above their fields, as in the transform editor.
       - "$when": "!isInsideDirectedContainer"
         type: group
+        stacked: true
         fields:
           - type: clickable-value
-            svg: x
             label: Position X
-            hideLabel: true
             name: x
             value: "${values.x}"
             popoverForm: *numberPopoverForm
           - type: clickable-value
-            svg: y
             label: Position Y
-            hideLabel: true
             name: y
             value: "${values.y}"
             popoverForm: *numberPopoverForm

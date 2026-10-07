@@ -422,6 +422,7 @@ export const selectViewData = ({ state, i18n }) => {
   const editHistoryCopy = selectEditHistoryCopy(i18n);
   const { values } = state;
   // The preview draws an open slider popover's value.
+  const formValues = buildTextStyleFormValues(values);
   const previewValues = state.sliderPreview
     ? applyTextStyleFormChange(values, state.sliderPreview).values
     : values;
@@ -502,8 +503,8 @@ export const selectViewData = ({ state, i18n }) => {
       showShadowFields: Boolean(values.shadow),
     }),
     textStyleFormKey: buildFormKey(state),
-    formValues: buildTextStyleFormValues(values),
-    sliderValueFields: buildTextStyleSliderValueFields({ values, copy }),
+    formValues,
+    sliderValueFields: buildTextStyleSliderValueFields({ formValues, copy }),
     fontOptions: buildFontOptions(state.fontsData),
     selectedFontId: primaryFontId,
     addFontOption: { label: copy.addNewFontOption },

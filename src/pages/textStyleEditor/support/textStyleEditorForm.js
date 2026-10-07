@@ -255,11 +255,10 @@ const createSliderSlotField = (name, copy, { required = false } = {}) => {
   return { type: "slot", slot, label: copy[labelKey], required };
 };
 
-// The slider value fields the page puts in the form's slots, with the values
-// the form shows. A field whose section is hidden has no slot to show in.
-export const buildTextStyleSliderValueFields = ({ values, copy }) => {
-  const formValues = buildTextStyleFormValues(values);
-  return Object.entries(SLIDER_VALUE_FIELD_SLOTS).map(
+// The slider value fields the page puts in the form's slots, with the form's
+// values. A field whose section is hidden has no slot to show in.
+export const buildTextStyleSliderValueFields = ({ formValues, copy }) =>
+  Object.entries(SLIDER_VALUE_FIELD_SLOTS).map(
     ([name, { slot, labelKey }]) => ({
       name,
       slot,
@@ -268,7 +267,6 @@ export const buildTextStyleSliderValueFields = ({ values, copy }) => {
       field: TEXT_STYLE_SLIDER_FIELDS[name],
     }),
   );
-};
 
 const SHADOW_FIELD_KEYS = {
   shadowAlpha: "alpha",
