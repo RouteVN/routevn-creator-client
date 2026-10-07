@@ -9,10 +9,11 @@ import {
   handlePopverFormClose,
 } from "../../src/components/layoutEditPanel/layoutEditPanel.handlers.js";
 import * as layoutEditPanelStore from "../../src/components/layoutEditPanel/layoutEditPanel.store.js";
+import { selectLayoutEditPanelCopy } from "../../src/components/layoutEditPanel/support/layoutEditPanelCopy.js";
 import { normalizeLayoutRotation } from "../../src/internal/project/layout.js";
 import { EN_I18N } from "../support/i18n.js";
 
-const createDeps = (name = "x") => {
+const createDeps = (name = "x", value = 100) => {
   const events = [];
   return {
     events,
@@ -20,12 +21,12 @@ const createDeps = (name = "x") => {
       store: {
         selectPopoverForm: () => ({
           name,
-          defaultValues: { value: 100 },
+          defaultValues: { value },
           context: {
-            positionPresetItems: [
-              { label: "0", value: 0 },
-              { label: "1/2", value: 960 },
-              { label: "1", value: 1920 },
+            presetItems: [
+              { label: "0", value: 0, suffixText: "0 px" },
+              { label: "1/2", value: 960, suffixText: "960 px" },
+              { label: "1", value: 1920, suffixText: "1920 px" },
             ],
           },
         }),
@@ -106,6 +107,7 @@ describe("layout edit panel canvas preview", () => {
       name: "x",
       form: { fields: [{ name: "value", type: "input-number" }] },
       projectResolution,
+      copy: selectLayoutEditPanelCopy(EN_I18N),
     });
     const openedKey = state.popover.key;
     const oldProps = { projectResolution, values };
@@ -185,6 +187,27 @@ describe("layout edit panel canvas preview", () => {
     expect(events.map((event) => event.detail.value)).toEqual([
       90, 99, 101, 110,
     ]);
+  });
+
+  it("steps rotation by 1 and 15 degrees", () => {
+    const { deps, events } = createDeps("rotation", 30);
+
+    for (const delta of ["-15", "1"]) {
+      handlePopoverStepClick(deps, buttonEvent({ delta }));
+    }
+
+    expect(events.map((event) => event.detail.value)).toEqual([15, 31]);
+  });
+
+  it("steps opacity in hundredths, kept between 0 and 1", () => {
+    const { deps, events } = createDeps("opacity", 0.95);
+
+    for (const delta of ["0.1", "0.01", "-0.01"]) {
+      handlePopoverStepClick(deps, buttonEvent({ delta }));
+    }
+
+    // No floating-point noise such as 0.9400000000000001.
+    expect(events.map((event) => event.detail.value)).toEqual([1, 0.96, 0.94]);
   });
 
   it("normalizes a rotation preview like a saved value", () => {

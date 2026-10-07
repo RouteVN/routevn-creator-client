@@ -34,11 +34,10 @@ import {
   toSpritesheetAnimationSelectionValue,
 } from "../../internal/spritesheets.js";
 import { selectLayoutEditPanelCopy } from "./support/layoutEditPanelCopy.js";
-import { formatI18nCopy } from "../../internal/ui/i18nCopy.js";
 import {
-  POSITION_FAST_STEP,
-  POSITION_STEP,
-} from "./support/layoutEditPanelPositionSteps.js";
+  getSliderPopoverField,
+  stepSliderPopoverValue,
+} from "./support/layoutEditPanelSliderPopovers.js";
 import { normalizeLayoutRotation } from "../../internal/project/layout.js";
 
 const ACTION_INTERACTION_TYPES = [
@@ -89,22 +88,16 @@ const CONDITIONAL_OVERRIDE_IMAGE_FIELDS = new Set([
   "clickImageId",
 ]);
 const WHEEL_INCREMENT_FIELD_CONFIG = {
-  x: { step: POSITION_STEP, fastStep: POSITION_FAST_STEP },
-  y: { step: POSITION_STEP, fastStep: POSITION_FAST_STEP },
+  x: getSliderPopoverField("x"),
+  y: getSliderPopoverField("y"),
   width: { step: 1, fastStep: 10 },
   height: { step: 1, fastStep: 10 },
   gapX: { step: 1, fastStep: 10 },
   gapY: { step: 1, fastStep: 10 },
-  rotation: { defaultValue: 0, step: 1, fastStep: 15 },
+  rotation: getSliderPopoverField("rotation"),
   scaleX: { defaultValue: 1, step: 0.01, fastStep: 0.1 },
   scaleY: { defaultValue: 1, step: 0.01, fastStep: 0.1 },
-  opacity: {
-    defaultValue: 1,
-    step: 0.01,
-    fastStep: 0.1,
-    min: 0,
-    max: 1,
-  },
+  opacity: getSliderPopoverField("opacity"),
 };
 const TEXT_REVEAL_INDICATOR_VISUAL_SOURCE_TARGET =
   "textRevealIndicatorVisualSource";
@@ -2268,23 +2261,25 @@ export const handlePopoverFormChange = async (deps, payload) => {
   emitPanelPreview(deps, { name, value: _event.detail.values.value });
 };
 
-// Presets open a menu of shares of the project's width or height, each with
-// its value in pixels.
+// Presets open a menu of the field's presets, each with its value beside it
+// where the label is not the value itself.
 export const handlePopoverPresetsButtonClick = async (deps, payload) => {
-  const { appService } = deps;
-  const copy = selectCopy(deps);
-  const { positionPresetItems } = deps.store.selectPopoverForm().context;
+  const { appService, store } = deps;
+  const { presetItems } = store.selectPopoverForm().context;
   const rect = payload._event.currentTarget.getBoundingClientRect();
 
   const result = await appService.showDropdownMenu({
-    items: positionPresetItems.map((preset) => ({
-      type: "item",
-      label: preset.label,
-      suffixText: formatI18nCopy(copy.presetPixelsLabel, {
-        value: preset.value,
-      }),
-      key: String(preset.value),
-    })),
+    items: presetItems.map((preset) => {
+      const item = {
+        type: "item",
+        label: preset.label,
+        key: String(preset.value),
+      };
+      if (preset.suffixText) {
+        item.suffixText = preset.suffixText;
+      }
+      return item;
+    }),
     x: rect.left,
     y: rect.bottom,
     place: "bs",
@@ -2297,15 +2292,17 @@ export const handlePopoverPresetsButtonClick = async (deps, payload) => {
   applyPopoverValue(deps, value);
 };
 
-// The step buttons move the value by the wheel's steps: one, or Shift's.
+// The step buttons move the value by the wheel's steps: the field's step,
+// or Shift's.
 export const handlePopoverStepClick = (deps, payload) => {
   const { store } = deps;
   const delta = Number(payload._event.currentTarget.dataset.delta);
-  const value = Number(store.selectPopoverForm().defaultValues.value);
+  const { name, defaultValues } = store.selectPopoverForm();
+  const value = Number(defaultValues.value);
   if (!Number.isFinite(value) || !Number.isFinite(delta)) {
     return;
   }
-  applyPopoverValue(deps, value + delta);
+  applyPopoverValue(deps, stepSliderPopoverValue({ name, value, delta }));
 };
 
 // Shows a value picked in the popover in its form, and previews it.
