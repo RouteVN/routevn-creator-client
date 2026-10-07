@@ -5,7 +5,7 @@ import { isCharacterSpriteResourceItem } from "./characterSpritePreview.js";
 // face, and drawn in the groups' order, the first at the bottom. A character
 // without sprite groups has one group.
 export const DEFAULT_SPRITE_GROUP_ID = "base";
-export const DEFAULT_SPRITE_GROUP_NAME = "Sprite";
+const DEFAULT_SPRITE_GROUP_NAME = "Sprite";
 
 const createEmptyCollection = () => ({
   items: {},

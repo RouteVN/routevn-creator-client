@@ -524,7 +524,8 @@ const saveTransformPreview = async (deps) => {
   }
 
   // A preview saves the images picked for it, so one that cannot load stops
-  // the save instead of saving the gray screen or light gray square in its place.
+  // the save instead of saving the gray screen or light gray square in its
+  // place.
   const [failure] = await loadPreviewImageAssets(deps, { retryFailed: true });
   if (failure) {
     await renderTransformCanvas(deps);
