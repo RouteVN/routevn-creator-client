@@ -269,6 +269,12 @@ describe("layoutEditor.view", () => {
     expect(rightPanel).toContain("${rightPanelPreviewStyle}");
     expect(editIndex).toBeGreaterThan(-1);
     expect(previewIndex).toBeGreaterThan(editIndex);
+    // The edit panel scrolls clear of the floating controls.
+    const editSpacerIndex = rightPanel.indexOf(
+      `'rtgl-view w=f h=240 aria-hidden=true style="flex: 0 0 240px;"': null`,
+    );
+    expect(editSpacerIndex).toBeGreaterThan(editIndex);
+    expect(editSpacerIndex).toBeLessThan(previewIndex);
     expect(rightPanel).toContain("$if showRightPanelSaveButton");
     // The save button is an icon, named for screen readers and on hover.
     expect(rightPanel).toContain(

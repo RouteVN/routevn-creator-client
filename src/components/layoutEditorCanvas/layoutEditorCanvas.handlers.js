@@ -103,10 +103,10 @@ const createLayoutDataWithUpdatedItem = (layoutData, updatedItem) => {
   };
 };
 
-const getRepositoryState = async (deps) => {
-  await deps.projectService.ensureRepository();
-  return deps.projectService.getRepositoryState();
-};
+// The page has ensured the repository before it gives the canvas a layout,
+// so each render reads its state without ensuring it again, which validates
+// the whole project.
+const getRepositoryState = (deps) => deps.projectService.getRepositoryState();
 
 const areCanvasItemsEquivalent = (left, right) => {
   if (!left || !right) {
@@ -954,7 +954,7 @@ const prefetchLayoutEditorAssets = async (
 
   try {
     await deps.graphicsService.waitUntilReady?.();
-    const repositoryState = await getRepositoryState(deps);
+    const repositoryState = getRepositoryState(deps);
     const layoutState = {
       id: props.layoutState?.id,
       layoutType: props.layoutState?.layoutType,
@@ -1000,7 +1000,7 @@ const renderLayoutEditorCanvas = async (
     if (finishStaleCanvasRender(deps, renderRequestId)) {
       return;
     }
-    const repositoryState = await getRepositoryState(deps);
+    const repositoryState = getRepositoryState(deps);
     if (finishStaleCanvasRender(deps, renderRequestId)) {
       return;
     }

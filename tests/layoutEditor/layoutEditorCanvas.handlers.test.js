@@ -1193,6 +1193,23 @@ describe("layoutEditorCanvas pointer selection", () => {
     });
   });
 
+  it("renders a changed layout from the repository state without ensuring the repository again", async () => {
+    const deps = createDeps();
+    deps.graphicsService.render.mockClear();
+    deps.projectService.ensureRepository.mockClear();
+    deps.projectService.getRepositoryState.mockClear();
+
+    // An edit panel popover's value changes the layout on every move.
+    await handleOnUpdate(deps, {
+      oldProps: deps.props,
+      newProps: { ...deps.props, previewData: { changed: true } },
+    });
+
+    expect(deps.projectService.ensureRepository).not.toHaveBeenCalled();
+    expect(deps.projectService.getRepositoryState).toHaveBeenCalledTimes(1);
+    expect(deps.graphicsService.render).toHaveBeenCalled();
+  });
+
   it("rebuilds editor chrome with the current canvas CSS scale", () => {
     const deps = createDeps({ selectedItemId: "parent" });
     const { elements, baseElements, parsedElements } =

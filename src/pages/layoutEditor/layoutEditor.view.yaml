@@ -138,7 +138,7 @@ template:
                               - rtgl-text w=1fg s=lg ellipsis=true: ${previewTitle}
                               - rtgl-button#saveButton ml=sm: ${savePreviewButton}
                       - $if isPreviewMounted:
-                          - rvn-layout-editor-preview#layoutEditorPreview :layoutState=${layoutState} :initialPreviewData=${previewHydrationData} :charactersData=${charactersData}: null
+                          - rvn-layout-editor-preview#layoutEditorPreview :layoutState=${previewLayoutState} :initialPreviewData=${previewHydrationData} :charactersData=${charactersData}: null
                         $else:
                           - rtgl-view wh=f av=c ah=c bgc=mu-fg:
                               - rtgl-text s=sm c=mu-fg: ${loadingPreviewLabel}
@@ -182,12 +182,13 @@ template:
                                           - rtgl-text s=xs c=mu-fg: ${itemRoleLabel}
                               - rtgl-view w=f h=1fg sv pv=md:
                                   - rvn-layout-edit-panel#layoutEditPanel layout-type=${layout.layoutType} resource-type=${layout.resourceType} item-type=${item.type} :projectResolution=${projectResolution} :selectedElementMetrics=${selectedElementMetrics} :isInsideSaveLoadSlot=${isInsideSaveLoadSlot} :isInsideDirectedContainer=${isInsideDirectedContainer} :values=${item} :imagesData=${imagesData} :soundsData=${soundsData} :spritesheetsData=${spritesheetsData} :particlesData=${particlesData} :charactersData=${charactersData} :textStylesData=${textStylesData} :variablesData=${variablesData} :layoutsData=${layoutsData}: null
+                                  - 'rtgl-view w=f h=240 aria-hidden=true style="flex: 0 0 240px;"': null
                         $else:
                           - rtgl-view wh=f av=c ah=c bgc=mu-fg:
                               - rtgl-text s=md c=mu-fg: ${noSelectionLabel}
                   - 'rtgl-view w=f h=1fg sv style="min-height: 0; ${rightPanelPreviewStyle}"':
                       - $if isPreviewMounted:
-                          - rvn-layout-editor-preview#layoutEditorPreview :layoutState=${layoutState} :initialPreviewData=${previewHydrationData} :charactersData=${charactersData}: null
+                          - rvn-layout-editor-preview#layoutEditorPreview :layoutState=${previewLayoutState} :initialPreviewData=${previewHydrationData} :charactersData=${charactersData}: null
                         $else:
                           - rtgl-view wh=f av=c ah=c bgc=mu-fg:
                               - rtgl-text s=sm c=mu-fg: ${loadingPreviewLabel}

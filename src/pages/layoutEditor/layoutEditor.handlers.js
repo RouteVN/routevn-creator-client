@@ -2279,9 +2279,19 @@ export const handleLayoutEditorCanvasMetricsChange = (deps, payload) => {
     return;
   }
 
-  store.setSelectedElementMetrics({
-    metrics,
-  });
+  // Each canvas render reports the metrics again. Keeping the same ones
+  // leaves the edit panel's props as they were, so a move that changes none
+  // of them, such as a slider moving X, does not redraw the panel.
+  if (
+    !areSelectedElementMetricsEqual(
+      store.selectSelectedElementMetrics(),
+      metrics,
+    )
+  ) {
+    store.setSelectedElementMetrics({
+      metrics,
+    });
+  }
 
   if (selectedItemId && detailPanelSelectedItemId !== selectedItemId) {
     return;

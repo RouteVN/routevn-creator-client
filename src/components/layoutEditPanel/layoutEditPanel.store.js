@@ -83,6 +83,10 @@ import { selectLayoutEditPanelCopy } from "./support/layoutEditPanelCopy.js";
 
 const HIDDEN_LAYOUT_ACTION_MODES = new Set(["conditional"]);
 const DEFAULT_INTERACTION_SOUND_VOLUME = 100;
+// Touch sound pickers show up to four sounds a row, which leaves two on a
+// phone.
+const TOUCH_SOUND_SELECTOR_COLUMNS = 4;
+const TOUCH_SOUND_SELECTOR_MIN_COLUMN_WIDTH = 120;
 const DEFAULT_REVEAL_SOUND_STOP_TIMING = "immediate";
 const TEXT_CONTENT_MENTION_VARIABLE_TYPES = new Set([
   "string",
@@ -1514,7 +1518,21 @@ const hydrateSoundListBarItem = (item = {}, soundsData = {}) => {
   };
 };
 
-const hydrateSoundListBarItems = (sections = [], soundsData = {}) => {
+const hydrateImageListBarItem = (item = {}, imagesData = {}) => {
+  if (!item.imageId) {
+    return item;
+  }
+
+  return {
+    ...item,
+    imageName: imagesData?.items?.[item.imageId]?.name ?? item.imageId,
+  };
+};
+
+const hydrateListBarItems = (
+  sections = [],
+  { soundsData, imagesData } = {},
+) => {
   return sections.map((section) => {
     const nextSection = {
       ...section,
@@ -1526,7 +1544,10 @@ const hydrateSoundListBarItems = (sections = [], soundsData = {}) => {
         return {
           ...item,
           items: item.items.map((barItem) =>
-            hydrateSoundListBarItem(barItem, soundsData),
+            hydrateImageListBarItem(
+              hydrateSoundListBarItem(barItem, soundsData),
+              imagesData,
+            ),
           ),
         };
       }),
@@ -1757,9 +1778,9 @@ export const selectViewData = ({ state, props, constants, i18n }) => {
       ...capabilities,
     },
   );
-  const sections = hydrateSoundListBarItems(
+  const sections = hydrateListBarItems(
     annotatePanelSections(localizePanelSections(renderedSections, copy)),
-    state.soundsData,
+    { soundsData: state.soundsData, imagesData: state.imagesData },
   );
   const visibilityConditionDialogDefaults =
     createVisibilityConditionDialogDefaults(
@@ -1960,6 +1981,12 @@ export const selectViewData = ({ state, props, constants, i18n }) => {
     tempSelectedSoundId: state.tempSelectedSoundId,
     soundFolderItems,
     showSoundSelectorFileExplorer: selectorLayout.showFileExplorer,
+    soundSelectorColumns: state.isTouchMode
+      ? TOUCH_SOUND_SELECTOR_COLUMNS
+      : undefined,
+    soundSelectorMinColumnWidth: state.isTouchMode
+      ? TOUCH_SOUND_SELECTOR_MIN_COLUMN_WIDTH
+      : undefined,
     soundFormDialog: state.soundFormDialog,
     soundForm: createSoundForm(copy, state.soundFormDialog),
     soundFormDefaults: {

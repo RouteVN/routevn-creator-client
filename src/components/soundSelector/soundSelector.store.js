@@ -42,7 +42,9 @@ export const selectViewData = ({ state, props = {}, i18n }) => {
   const selectedSoundId = state.selectedSoundId;
   const searchQuery = (props.searchQuery ?? "").toLowerCase().trim();
   const columns = parseSelectorColumnCount(props.columns);
-  const soundGridStyle = createSelectorGridStyle(columns);
+  const soundGridStyle = createSelectorGridStyle(columns, {
+    minColumnWidth: parseSelectorColumnCount(props.minColumnWidth),
+  });
   const soundPreviewStyle = columns
     ? "aspect-ratio: 16 / 9;"
     : "height: 120px;";
