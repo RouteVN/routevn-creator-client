@@ -21,6 +21,9 @@ import {
   handleRedoButtonClick,
   handleRightPanelModeChange,
   handleSavePreviewClick,
+  handleSliderValueCancel,
+  handleSliderValueChange,
+  handleSliderValueInput,
   handleTextStyleFormChange,
   handleUndoButtonClick,
 } from "../../src/pages/textStyleEditor/textStyleEditor.handlers.js";
@@ -236,6 +239,21 @@ const createPage = async ({
     });
   const pickFont = (value) =>
     handleFontSelectChange(deps, { _event: { detail: { value } } });
+  // The font size and line height slider popovers' events.
+  const slider = (name) => {
+    const currentTarget = { dataset: { name } };
+    return {
+      input: (value) =>
+        handleSliderValueInput(deps, {
+          _event: { currentTarget, detail: { value } },
+        }),
+      submit: (value) =>
+        handleSliderValueChange(deps, {
+          _event: { currentTarget, detail: { value } },
+        }),
+      cancel: () => handleSliderValueCancel(deps),
+    };
+  };
   return {
     deps,
     cleanup,
@@ -249,6 +267,7 @@ const createPage = async ({
     changeField,
     pickColor,
     pickFont,
+    slider,
     beforeNavigation: () => beforeNavigation(),
     resizeWindow: async (metrics) => {
       windowMetricsListeners.forEach((listener) => listener(metrics));
@@ -315,13 +334,13 @@ describe("text style editor", () => {
     const fieldNames = formFieldNames(page.view().textStyleForm.fields);
     expect(fieldNames).toEqual([
       "text-style-font",
-      "fontSize",
-      "lineHeight",
+      "text-style-font-size",
+      "text-style-line-height",
       "fontWeight",
       "text-style-color",
       "section:outline",
       "text-style-outline-color",
-      "strokeWidth",
+      "text-style-outline-thickness",
       "section:shadow",
       "text-style-shadow-color",
     ]);
@@ -399,6 +418,129 @@ describe("text style editor", () => {
     await page.changeField("shadowAlpha", 2);
     // No shadow, so its opacity has nothing to change.
     expect(page.values().shadow).toBeUndefined();
+  });
+
+  it("edits the form's numbers in slider popovers", async () => {
+    const page = await createPage();
+    const sliderValueField = (name) =>
+      page.view().sliderValueFields.find((field) => field.name === name);
+
+    expect(
+      page
+        .view()
+        .sliderValueFields.map(({ name, slot, label, value }) => [
+          name,
+          slot,
+          label,
+          value,
+        ]),
+    ).toEqual([
+      ["fontSize", "text-style-font-size", "Font Size", 24],
+      ["lineHeight", "text-style-line-height", "Line Height", 1.5],
+      ["strokeWidth", "text-style-outline-thickness", "Outline Thickness", 3],
+      ["shadowAlpha", "text-style-shadow-opacity", "Shadow Opacity", 1],
+      ["shadowBlur", "text-style-shadow-blur", "Shadow Blur", 0],
+      ["shadowOffsetX", "text-style-shadow-offset-x", "Shadow Offset X", 2],
+      ["shadowOffsetY", "text-style-shadow-offset-y", "Shadow Offset Y", 2],
+    ]);
+    // Each slider bounds its value as the form's slider did; font size runs
+    // from the input's minimum to 128 px.
+    expect(sliderValueField("fontSize").field).toMatchObject({
+      step: 1,
+      fastStep: 4,
+      min: 8,
+      range: { min: 8, max: 128 },
+      unit: "px",
+    });
+    expect(sliderValueField("lineHeight").field).toMatchObject({
+      step: 0.1,
+      fastStep: 0.5,
+      min: 0.8,
+      range: { min: 0.8, max: 3 },
+    });
+    expect(sliderValueField("strokeWidth").field).toMatchObject({
+      step: 0.5,
+      min: 0,
+      max: 12,
+    });
+    expect(sliderValueField("shadowAlpha").field).toMatchObject({
+      step: 0.05,
+      min: 0,
+      max: 1,
+    });
+    expect(sliderValueField("shadowBlur").field).toMatchObject({
+      min: 0,
+      max: 32,
+    });
+    expect(sliderValueField("shadowOffsetX").field).toMatchObject({
+      min: -32,
+      max: 32,
+    });
+
+    // The preview draws the popover's value; the text style keeps its own.
+    page.slider("fontSize").input(40);
+    expect(page.view().previewFontSize).toBe(40);
+    expect(sliderValueField("fontSize").value).toBe(24);
+    expect(page.values().fontSize).toBe(24);
+    expect(page.state().editHistory.undo).toHaveLength(0);
+
+    // Closing the popover puts the preview back.
+    page.slider("fontSize").cancel();
+    expect(page.view().previewFontSize).toBe(24);
+
+    // Submit changes the text style, as one undo step, and saves it.
+    page.slider("lineHeight").input(1.8);
+    expect(page.view().previewLineHeight).toBe(1.8);
+    page.slider("lineHeight").submit(2);
+    expect(page.values().lineHeight).toBe(2);
+    expect(page.view().previewLineHeight).toBe(2);
+    expect(sliderValueField("lineHeight").value).toBe(2);
+    expect(page.state().editHistory.undo).toHaveLength(1);
+
+    await wait(AUTOSAVE_WAIT_MS);
+    expect(page.savedData().at(-1).data).toMatchObject({
+      fontSize: 24,
+      lineHeight: 2,
+    });
+
+    handleUndoButtonClick(page.deps);
+    expect(sliderValueField("lineHeight").value).toBe(1.5);
+
+    // The outline thickness previews the same way.
+    page.slider("strokeWidth").input(6);
+    expect(page.view().previewStrokeWidth).toBe(6);
+    page.slider("strokeWidth").cancel();
+    expect(page.view().previewStrokeWidth).toBe(3);
+  });
+
+  it("previews and changes the shadow's numbers in slider popovers", async () => {
+    const page = await createPage();
+    page.pickColor("shadowColorId", "color-2");
+
+    page.slider("shadowAlpha").input(0.5);
+    page.slider("shadowAlpha").submit(0.5);
+    page.slider("shadowBlur").input(8);
+    expect(page.view()).toMatchObject({
+      previewShadowAlpha: 0.5,
+      previewShadowBlur: 8,
+    });
+    page.slider("shadowBlur").cancel();
+    page.slider("shadowOffsetX").submit(-4);
+    page.slider("shadowOffsetY").submit(6);
+
+    expect(page.values().shadow).toEqual({
+      colorId: "color-2",
+      alpha: 0.5,
+      blur: 0,
+      offsetX: -4,
+      offsetY: 6,
+    });
+    expect(page.view()).toMatchObject({
+      previewShadowAlpha: 0.5,
+      previewShadowBlur: 0,
+      previewShadowOffsetX: -4,
+      previewShadowOffsetY: 6,
+    });
   });
 
   it("makes one undo step of quick changes to one field, and puts the values back into the form", async () => {
@@ -524,7 +666,7 @@ describe("text style editor", () => {
     });
     const formKey = page.view().textStyleFormKey;
     expect(formFieldNames(page.view().textStyleForm.fields)).not.toContain(
-      "strokeWidth",
+      "text-style-outline-thickness",
     );
 
     page.pickColor("strokeColorId", "color-3");
@@ -537,7 +679,7 @@ describe("text style editor", () => {
     // The thickness field shows, so the form remounts.
     expect(page.view().textStyleFormKey).not.toBe(formKey);
     expect(formFieldNames(page.view().textStyleForm.fields)).toContain(
-      "strokeWidth",
+      "text-style-outline-thickness",
     );
 
     page.pickColor("strokeColorId", undefined);

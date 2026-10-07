@@ -376,6 +376,33 @@ export const handleTextStyleFormChange = (deps, payload) => {
   commitTextStyleEdit(deps);
 };
 
+// The form's numbers show in the preview while their slider popover moves,
+// and change on Submit; closing the popover leaves them as they were.
+export const handleSliderValueInput = (deps, payload) => {
+  const { render, store } = deps;
+  const { name } = payload._event.currentTarget.dataset;
+  store.setSliderPreview({ name, value: payload._event.detail.value });
+  render();
+};
+
+export const handleSliderValueChange = (deps, payload) => {
+  const { store } = deps;
+  const { name } = payload._event.currentTarget.dataset;
+  const { values } = applyTextStyleFormChange(store.selectValues(), {
+    name,
+    value: payload._event.detail.value,
+  });
+  store.clearSliderPreview();
+  store.setValues({ values });
+  commitTextStyleEdit(deps);
+};
+
+export const handleSliderValueCancel = (deps) => {
+  const { render, store } = deps;
+  store.clearSliderPreview();
+  render();
+};
+
 export const handleFontSelectChange = async (deps, payload) => {
   const { value } = payload._event.detail;
   if (!value) {

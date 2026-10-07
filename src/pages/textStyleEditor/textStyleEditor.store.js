@@ -19,8 +19,10 @@ import {
   setMobileResourcePageWindowMetricsState,
 } from "../../internal/ui/resourcePages/mobileResourcePage.js";
 import {
+  applyTextStyleFormChange,
   buildFontWeightOptions,
   buildTextStyleFormValues,
+  buildTextStyleSliderValueFields,
   createTextStyleForm,
   toTextStyleValues,
 } from "./support/textStyleEditorForm.js";
@@ -109,6 +111,9 @@ export const createInitialState = () => ({
   savedPreviewText: "",
   savedPreviewAlign: "center",
   rightPanelMode: "edit",
+  // The number an open slider popover shows in the preview, as
+  // { name, value }, until it is submitted or closed.
+  sliderPreview: undefined,
   // Remounts the form, for values that change outside it (undo, redo, a
   // weight the new font cannot draw) or that it shows differently from how
   // they were typed.
@@ -203,6 +208,14 @@ export const markValuesSaved = ({ state }, { values } = {}) => {
 
 export const setValues = ({ state }, { values } = {}) => {
   state.values = values;
+};
+
+export const setSliderPreview = ({ state }, { name, value } = {}) => {
+  state.sliderPreview = { name, value };
+};
+
+export const clearSliderPreview = ({ state }) => {
+  state.sliderPreview = undefined;
 };
 
 // Remounts the form with the text style's values as they are now.
@@ -408,6 +421,11 @@ export const selectViewData = ({ state, i18n }) => {
   const copy = selectTextStyleEditorPageCopy(i18n);
   const editHistoryCopy = selectEditHistoryCopy(i18n);
   const { values } = state;
+  // The preview draws an open slider popover's value.
+  const formValues = buildTextStyleFormValues(values);
+  const previewValues = state.sliderPreview
+    ? applyTextStyleFormChange(values, state.sliderPreview).values
+    : values;
   const showRightPanel = selectShowEditorRightPanelState({ state });
   const primaryFontId = toPrimaryFontId(values.fontId);
   const previewFontData = buildPreviewFontData(state);
@@ -443,21 +461,21 @@ export const selectViewData = ({ state, i18n }) => {
     previewFontFamilies: previewFontData.fontFamilies,
     previewFontFileIds: previewFontData.fileIds,
     previewFontWeightDescriptors: previewFontData.fontWeightDescriptors,
-    previewFontSize: values.fontSize,
-    previewLineHeight: values.lineHeight,
+    previewFontSize: previewValues.fontSize,
+    previewLineHeight: previewValues.lineHeight,
     previewFontWeight: values.fontWeight,
     previewColor: getColorHex(state.colorsData, values.colorId),
     previewStrokeColor: values.strokeColorId
       ? getColorHex(state.colorsData, values.strokeColorId)
       : undefined,
-    previewStrokeWidth: values.strokeColorId ? values.strokeWidth : 0,
+    previewStrokeWidth: values.strokeColorId ? previewValues.strokeWidth : 0,
     previewShadowColor: values.shadow
       ? getColorHex(state.colorsData, values.shadow.colorId)
       : undefined,
-    previewShadowAlpha: values.shadow?.alpha ?? 1,
-    previewShadowBlur: values.shadow?.blur ?? 0,
-    previewShadowOffsetX: values.shadow?.offsetX ?? 2,
-    previewShadowOffsetY: values.shadow?.offsetY ?? 2,
+    previewShadowAlpha: previewValues.shadow?.alpha ?? 1,
+    previewShadowBlur: previewValues.shadow?.blur ?? 0,
+    previewShadowOffsetX: previewValues.shadow?.offsetX ?? 2,
+    previewShadowOffsetY: previewValues.shadow?.offsetY ?? 2,
     rightPanelMode: state.rightPanelMode,
     rightPanelModeTabs: [
       { id: "edit", label: copy.editModeLabel },
@@ -485,7 +503,8 @@ export const selectViewData = ({ state, i18n }) => {
       showShadowFields: Boolean(values.shadow),
     }),
     textStyleFormKey: buildFormKey(state),
-    formValues: buildTextStyleFormValues(values),
+    formValues,
+    sliderValueFields: buildTextStyleSliderValueFields({ formValues, copy }),
     fontOptions: buildFontOptions(state.fontsData),
     selectedFontId: primaryFontId,
     addFontOption: { label: copy.addNewFontOption },

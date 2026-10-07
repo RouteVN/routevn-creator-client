@@ -1395,6 +1395,11 @@ charactersPage:
 tabletExplorerPanel:
   hideLabel: "ซ่อนแผง"
   showLabel: "แสดงแผง"
+sliderValueField:
+  decreaseByLabel: "ลดลง {step}"
+  increaseByLabel: "เพิ่มขึ้น {step}"
+  presetsLabel: "พรีเซ็ต"
+  submitLabel: "ส่ง"
 transformsPage:
   yesLabel: "ใช่"
   defaultDialogueAvatarLabel: "การแปลงเริ่มต้นของอวาตาร์บทสนทนา"

@@ -1395,6 +1395,11 @@ charactersPage:
 tabletExplorerPanel:
   hideLabel: "パネルを隠す"
   showLabel: "パネルを表示"
+sliderValueField:
+  decreaseByLabel: "{step} 減らす"
+  increaseByLabel: "{step} 増やす"
+  presetsLabel: "プリセット"
+  submitLabel: "送信"
 transformsPage:
   yesLabel: "はい"
   defaultDialogueAvatarLabel: "会話アバターのデフォルトトランスフォーム"

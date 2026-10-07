@@ -1,0 +1,24 @@
+componentName: rvn-slider-value-field
+propsSchema:
+  type: object
+  properties:
+    value:
+      type: number
+      description: The value the field shows; an unset value shows the field's default.
+    label:
+      type: string
+      description: The field's name, which screen readers announce.
+    field:
+      type: object
+      description: >-
+        The slider popover's field: step and fastStep, the slider's range, the
+        min and max that bound the value, defaultValue, the presets
+        ({ label, value, suffixText }), and the unit shown after the value. See
+        src/internal/ui/sliderPopover.js.
+events:
+  value-input:
+    type: object
+  value-change:
+    type: object
+  value-cancel:
+    type: object

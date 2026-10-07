@@ -40,6 +40,7 @@ import {
   hasAspectRatioToggle,
   stepSliderPopoverValue,
 } from "./support/layoutEditPanelSliderPopovers.js";
+import { toSliderPresetMenuItems } from "../../internal/ui/sliderPopover.js";
 import { normalizeLayoutRotation } from "../../internal/project/layout.js";
 
 const ACTION_INTERACTION_TYPES = [
@@ -2303,17 +2304,7 @@ export const handlePopoverPresetsButtonClick = async (deps, payload) => {
   const rect = payload._event.currentTarget.getBoundingClientRect();
 
   const result = await appService.showDropdownMenu({
-    items: presetItems.map((preset) => {
-      const item = {
-        type: "item",
-        label: preset.label,
-        key: String(preset.value),
-      };
-      if (preset.suffixText) {
-        item.suffixText = preset.suffixText;
-      }
-      return item;
-    }),
+    items: toSliderPresetMenuItems(presetItems),
     x: rect.left,
     y: rect.bottom,
     place: "bs",
