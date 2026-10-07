@@ -1291,6 +1291,7 @@ describe("layoutEditor.handleLayoutEditorCanvasMetricsChange", () => {
 describe("layoutEditor.handleFileExplorerItemClick", () => {
   it("clears node selection after clicking empty explorer space", async () => {
     const store = {
+      selectSelectedItemId: vi.fn(() => "node-1"),
       setSelectedItemId: vi.fn(),
       setDetailPanelSelectedItemId: vi.fn(),
       setRightPanelMode: vi.fn(),
@@ -1430,6 +1431,7 @@ describe("layoutEditor.handleLayoutEditorCanvasBackgroundClick", () => {
   it("clears node and explorer selection after clicking outside the canvas", () => {
     const background = {};
     const store = {
+      selectSelectedItemId: vi.fn(() => "node-1"),
       setSelectedItemId: vi.fn(),
       setDetailPanelSelectedItemId: vi.fn(),
       setRightPanelMode: vi.fn(),
@@ -1524,6 +1526,7 @@ describe("layoutEditor.handleLayoutEditorCanvasSelectionChange", () => {
 
   it("clears all canonical selection surfaces for an empty canvas hit", () => {
     const store = {
+      selectSelectedItemId: vi.fn(() => "node-1"),
       setSelectedItemId: vi.fn(),
       setDetailPanelSelectedItemId: vi.fn(),
       setRightPanelMode: vi.fn(),
@@ -1579,6 +1582,7 @@ describe("layoutEditor.handlePreviewButtonClick", () => {
 describe("layoutEditor.handleNodeButtonClick", () => {
   it("opens the Elements list and clears the selected node", () => {
     const store = {
+      selectSelectedItemId: vi.fn(() => "node-1"),
       selectIsMobileFileExplorerOpen: vi.fn(() => false),
       openMobileFileExplorer: vi.fn(),
       closeMobileFileExplorer: vi.fn(),
@@ -1604,6 +1608,7 @@ describe("layoutEditor.handleNodeButtonClick", () => {
   it("returns to the Elements list from the selected node's back button and unselects the node", () => {
     const calls = [];
     const store = {
+      selectSelectedItemId: vi.fn(() => "node-1"),
       selectIsMobileFileExplorerOpen: vi.fn(() => false),
       openMobileFileExplorer: vi.fn(() => calls.push("open")),
       closeMobileFileExplorer: vi.fn(),
@@ -1769,7 +1774,10 @@ describe("layoutEditor right panel mode", () => {
   });
 
   it("shows Edit when the canvas selects an element and Preview when it clears", () => {
-    const store = createModeStore({ selectIsTouchMode: vi.fn(() => true) });
+    const store = createModeStore({
+      selectIsTouchMode: vi.fn(() => true),
+      selectSelectedItemId: vi.fn(() => "node-1"),
+    });
     const refs = {
       fileExplorer: { selectItem: vi.fn(), clearSelection: vi.fn() },
     };
@@ -1790,7 +1798,9 @@ describe("layoutEditor right panel mode", () => {
   });
 
   it("shows Preview again after clearing the selection from the explorer or canvas background", async () => {
-    const store = createModeStore();
+    const store = createModeStore({
+      selectSelectedItemId: vi.fn(() => "node-1"),
+    });
     const refs = { fileExplorer: { clearSelection: vi.fn() } };
 
     await handleFileExplorerItemClick(
@@ -1808,6 +1818,28 @@ describe("layoutEditor right panel mode", () => {
       { _event: { target: background, currentTarget: background } },
     );
     expect(store.setRightPanelMode).toHaveBeenCalledWith({ mode: "preview" });
+  });
+
+  it("keeps the tab when nothing was selected", async () => {
+    const store = createModeStore();
+    const refs = { fileExplorer: { clearSelection: vi.fn() } };
+    const background = {};
+
+    handleLayoutEditorCanvasBackgroundClick(
+      { store, refs, render: vi.fn() },
+      { _event: { target: background, currentTarget: background } },
+    );
+    await handleFileExplorerItemClick(
+      { store, refs, render: vi.fn() },
+      { _event: { detail: {} } },
+    );
+    handleLayoutEditorCanvasSelectionChange(
+      { store, refs, render: vi.fn() },
+      { _event: { detail: { itemId: undefined } } },
+    );
+
+    expect(store.setRightPanelMode).not.toHaveBeenCalled();
+    expect(refs.fileExplorer.clearSelection).toHaveBeenCalledTimes(2);
   });
 
   it.each([

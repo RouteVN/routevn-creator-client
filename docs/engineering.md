@@ -1165,7 +1165,8 @@ Preview**) sits on the right of the header while Preview is showing. Both
 bodies stay mounted and are
 shown or hidden by style so unsaved preview settings and scroll positions
 survive. Selecting an element (explorer, canvas, or stepping) switches to Edit
-and clearing the selection switches back to Preview. With the panels out of the
+and clearing the selection switches back to Preview; a click outside the canvas
+with nothing selected leaves the tab as it is. With the panels out of the
 center column, the canvas is vertically centered in a workspace-height box
 (`container-type: size`) and sized from the full height (`formatCanvasMaxWidth`);
 phone and portrait keep the stacked half-height layout.

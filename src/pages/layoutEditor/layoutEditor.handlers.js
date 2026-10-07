@@ -543,6 +543,16 @@ const recordLayoutEditorStructureEdit = async (deps, run) => {
   render();
 };
 
+// Clearing a selection shows Preview, since Edit has nothing left to show.
+// With nothing selected, the tab stays as it is.
+const clearSelectedItem = (store) => {
+  if (store.selectSelectedItemId()) {
+    store.setRightPanelMode({ mode: "preview" });
+  }
+  store.setSelectedItemId({ itemId: undefined });
+  store.setDetailPanelSelectedItemId({ itemId: undefined });
+};
+
 // An undo or redo can remove the selected element, as when it undoes the
 // element's create.
 const clearMissingLayoutEditorSelection = (deps) => {
@@ -551,9 +561,7 @@ const clearMissingLayoutEditorSelection = (deps) => {
   if (!selectedItemId || store.selectItemDataById({ itemId: selectedItemId })) {
     return;
   }
-  store.setSelectedItemId({ itemId: undefined });
-  store.setDetailPanelSelectedItemId({ itemId: undefined });
-  store.setRightPanelMode({ mode: "preview" });
+  clearSelectedItem(store);
   refs.fileExplorer?.clearSelection?.();
 };
 
@@ -968,9 +976,7 @@ export const handleFileExplorerItemClick = async (deps, payload) => {
   const detail = payload._event.detail || {};
   const itemId = detail.id || detail.itemId || detail.item?.id;
   if (!itemId) {
-    store.setSelectedItemId({ itemId: undefined });
-    store.setDetailPanelSelectedItemId({ itemId: undefined });
-    store.setRightPanelMode({ mode: "preview" });
+    clearSelectedItem(store);
     render();
     return;
   }
@@ -1008,9 +1014,7 @@ export const handleLayoutEditorCanvasSelectionChange = (deps, payload) => {
   const { itemId } = payload._event.detail;
 
   if (!itemId) {
-    store.setSelectedItemId({ itemId: undefined });
-    store.setDetailPanelSelectedItemId({ itemId: undefined });
-    store.setRightPanelMode({ mode: "preview" });
+    clearSelectedItem(store);
     refs.fileExplorer?.clearSelection?.();
     render();
     return;
@@ -1038,9 +1042,7 @@ export const handleLayoutEditorCanvasBackgroundClick = (deps, payload) => {
     return;
   }
 
-  store.setSelectedItemId({ itemId: undefined });
-  store.setDetailPanelSelectedItemId({ itemId: undefined });
-  store.setRightPanelMode({ mode: "preview" });
+  clearSelectedItem(store);
   refs.fileExplorer?.clearSelection?.();
   render();
 };
@@ -1153,9 +1155,7 @@ export const handleFileExplorerVisibilityToggle = async (deps, payload) => {
 const openMobileNodeExplorer = (deps) => {
   const { render, store } = deps;
 
-  store.setSelectedItemId({ itemId: undefined });
-  store.setDetailPanelSelectedItemId({ itemId: undefined });
-  store.setRightPanelMode({ mode: "preview" });
+  clearSelectedItem(store);
   store.openMobileFileExplorer();
   render();
 };
