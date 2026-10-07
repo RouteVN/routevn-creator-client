@@ -208,8 +208,7 @@ export const createInitialState = () => {
     isTouchMode: false,
     appWindowMetrics: { width: 0, height: 0 },
     isMobileFileExplorerOpen: false,
-    // The page opens on Edit with nothing selected.
-    rightPanelMode: "edit",
+    rightPanelMode: "preview",
     canvasZoom: 1,
     canvasPreviewItem: undefined,
     // Undo and redo for edits made since the page opened.
