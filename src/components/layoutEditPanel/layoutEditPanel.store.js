@@ -1741,6 +1741,8 @@ export const selectViewData = ({ state, props, constants, i18n }) => {
       canAddTextStyleVariant:
         !values.hoverTextStyleId || !values.clickTextStyleId,
       canAddSoundVariant: !values.hoverSoundId || !values.clickSoundId,
+      hoverSoundVolumeLabel: `${normalizeInteractionSoundVolume(values.hover?.soundVolume)}%`,
+      clickSoundVolumeLabel: `${normalizeInteractionSoundVolume(values.click?.soundVolume)}%`,
       conditionalOverrideItems,
       visibilityConditionSummary: getVisibilityConditionSummary(
         currentVisibilityCondition,

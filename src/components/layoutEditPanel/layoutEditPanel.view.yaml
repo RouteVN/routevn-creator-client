@@ -383,10 +383,15 @@ template:
                                       - $if field.metaValue:
                                           - rtgl-text s=xs c=mu-fg: ${field.metaValue}
                     $elif item.type == 'select':
-                      - rtgl-view d=h av=c w=f:
-                          - rtgl-text s=xs w=65: ${item.label}
-                          - 'rtgl-view style="width: calc(100% - 65px);"':
+                      - $if item.stacked:
+                          - rtgl-view d=v w=f g=sm:
+                              - rtgl-text s=xs c=mu: ${item.label}
                               - rtgl-select#selectItem${i}x${j} data-name=${item.name} w=f no-clear :selectedValue=${item.value} :options=${item.options}: null
+                        $else:
+                          - rtgl-view d=h av=c w=f:
+                              - rtgl-text s=xs w=65: ${item.label}
+                              - 'rtgl-view style="width: calc(100% - 65px);"':
+                                  - rtgl-select#selectItem${i}x${j} data-name=${item.name} w=f no-clear :selectedValue=${item.value} :options=${item.options}: null
                     $elif item.type == 'anchor-grid':
                       - $if item.stacked:
                           - rtgl-view d=v w=f g=sm:
@@ -419,27 +424,53 @@ template:
                               - rtgl-svg svg=${listItem.svg} wh=16: null
                               - rtgl-text s=xs: ${listItem.label}
                     $elif item.type == 'list-bar':
-                      - $for barItem, k in item.items:
-                          - rtgl-view#listBarItem${i}x${j}x${k} key=${barItem.viewKey} data-name=${barItem.name} d=h w=f g=md av=c ph=md h-bgc=mu bw=xs br=md cur=pointer:
-                              - rtgl-text s=xs: ${barItem.label}
-                              - rtgl-view w=1fg: null
-                              - $if barItem.kind == 'spritesheet' && barItem.resourceId:
-                                  - rtgl-view w=56 h=32 overflow=hidden br=sm:
-                                      - 'rvn-spritesheet-preview key=${barItem.spritesheetPreviewKey} previewKey=${barItem.spritesheetPreviewKey} fileId=${barItem.spritesheetFileId} :atlas=${barItem.spritesheetAtlas} :animation=${barItem.spritesheetAnimation} w=f h=f emptyLabel="${noPreviewLabel}"': null
-                                $elif barItem.imageId:
-                                  - rvn-file-image imageId=${barItem.imageId} source="thumbnail" h=32: null
-                                $elif barItem.soundId:
-                                  - 'rtgl-view d=h av=c g=sm h=32 style="min-width: 0; max-width: 180px;"':
-                                      - $if barItem.waveformDataFileId:
-                                          - rtgl-view w=64 h=24 overflow=hidden br=sm:
-                                              - rvn-waveform-visualizer waveformDataFileId=${barItem.waveformDataFileId} w=f h=f: null
-                                        $else:
-                                          - rtgl-view w=28 h=24 av=c ah=c bgc=mu br=sm:
-                                              - rtgl-svg svg=play wh=14 c=mu-fg: null
-                                      - rtgl-text s=xs c=mu-fg ellipsis w=100: ${barItem.soundName}
-                                $else:
-                                  - rtgl-view d=h av=c ah=c h=32 ph=sm bgc=mu br=sm:
-                                      - rtgl-text s=xs c=mu: ${notSetLabel}
+                      - $if item.stacked:
+                          - rtgl-view d=v w=f g=md:
+                              - $for barItem, k in item.items:
+                                  - rtgl-view key=${barItem.viewKey} d=v w=f g=sm:
+                                      - rtgl-text s=xs c=mu: ${barItem.label}
+                                      - rtgl-view#listBarItem${i}x${j}x${k} data-name=${barItem.name} d=h w=f g=md av=c ph=md h-bgc=mu bw=xs br=md cur=pointer:
+                                          - $if barItem.kind == 'spritesheet' && barItem.resourceId:
+                                              - rtgl-view w=56 h=32 overflow=hidden br=sm:
+                                                  - 'rvn-spritesheet-preview key=${barItem.spritesheetPreviewKey} previewKey=${barItem.spritesheetPreviewKey} fileId=${barItem.spritesheetFileId} :atlas=${barItem.spritesheetAtlas} :animation=${barItem.spritesheetAnimation} w=f h=f emptyLabel="${noPreviewLabel}"': null
+                                            $elif barItem.imageId:
+                                              - rvn-file-image imageId=${barItem.imageId} source="thumbnail" h=32: null
+                                            $elif barItem.soundId:
+                                              - 'rtgl-view d=h av=c g=sm h=32 w=1fg style="min-width: 0;"':
+                                                  - $if barItem.waveformDataFileId:
+                                                      - rtgl-view w=64 h=24 overflow=hidden br=sm:
+                                                          - rvn-waveform-visualizer waveformDataFileId=${barItem.waveformDataFileId} w=f h=f: null
+                                                    $else:
+                                                      - rtgl-view w=28 h=24 av=c ah=c bgc=mu br=sm:
+                                                          - rtgl-svg svg=play wh=14 c=mu-fg: null
+                                                  - rtgl-text s=xs c=mu-fg ellipsis w=1fg: ${barItem.soundName}
+                                                  - $if barItem.volumeLabel:
+                                                      - rtgl-text s=xs: ${barItem.volumeLabel}
+                                            $else:
+                                              - rtgl-view d=h av=c ah=c h=32 ph=sm bgc=mu br=sm:
+                                                  - rtgl-text s=xs c=mu: ${notSetLabel}
+                        $else:
+                          - $for barItem, k in item.items:
+                              - rtgl-view#listBarItem${i}x${j}x${k} key=${barItem.viewKey} data-name=${barItem.name} d=h w=f g=md av=c ph=md h-bgc=mu bw=xs br=md cur=pointer:
+                                  - rtgl-text s=xs: ${barItem.label}
+                                  - rtgl-view w=1fg: null
+                                  - $if barItem.kind == 'spritesheet' && barItem.resourceId:
+                                      - rtgl-view w=56 h=32 overflow=hidden br=sm:
+                                          - 'rvn-spritesheet-preview key=${barItem.spritesheetPreviewKey} previewKey=${barItem.spritesheetPreviewKey} fileId=${barItem.spritesheetFileId} :atlas=${barItem.spritesheetAtlas} :animation=${barItem.spritesheetAnimation} w=f h=f emptyLabel="${noPreviewLabel}"': null
+                                    $elif barItem.imageId:
+                                      - rvn-file-image imageId=${barItem.imageId} source="thumbnail" h=32: null
+                                    $elif barItem.soundId:
+                                      - 'rtgl-view d=h av=c g=sm h=32 style="min-width: 0; max-width: 180px;"':
+                                          - $if barItem.waveformDataFileId:
+                                              - rtgl-view w=64 h=24 overflow=hidden br=sm:
+                                                  - rvn-waveform-visualizer waveformDataFileId=${barItem.waveformDataFileId} w=f h=f: null
+                                            $else:
+                                              - rtgl-view w=28 h=24 av=c ah=c bgc=mu br=sm:
+                                                  - rtgl-svg svg=play wh=14 c=mu-fg: null
+                                          - rtgl-text s=xs c=mu-fg ellipsis w=100: ${barItem.soundName}
+                                    $else:
+                                      - rtgl-view d=h av=c ah=c h=32 ph=sm bgc=mu br=sm:
+                                          - rtgl-text s=xs c=mu: ${notSetLabel}
                     $elif item.type == 'spritesheet-preview':
                       - 'rvn-spritesheet-preview key=${item.previewKey} previewKey=${item.previewKey} fileId=${item.fileId} :atlas=${item.atlas} :animation=${item.animation} h=180 emptyLabel="${selectSpritesheetAnimationLabel}"': null
                     $elif item.type == 'popover-input':
