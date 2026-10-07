@@ -1229,8 +1229,8 @@ proportion, sent as the events' `linkedValues`, which the layout and transform
 editors apply with the named change.
 
 `rvn-slider-value-field` is the same popover for one number elsewhere, such as
-the text style editor's numbers: a value that opens a
-slider, the **Presets** menu, and the four held step buttons. It sends
+the text style editor's numbers: a value that opens the slider, the **Presets**
+menu, and the four step buttons, which keep stepping while held. It sends
 `value-input` as the popover's value moves, `value-change` on **Submit**, and
 `value-cancel` when the popover closes without it. Its `field` prop gives the
 steps, range, bounds, default, presets, and unit, and the shared
@@ -1407,8 +1407,8 @@ the form: the preview draws a popover's value as it moves, as page state apart
 from the text style, and **Submit** changes the text style as one undo step.
 Each slider keeps the range the form's slider had, and font size runs from
 8 px, its input's minimum, to 128 px (`TEXT_STYLE_SLIDER_FIELDS` in
-`support/textStyleEditorForm.js`). Adding an
-outline color starts the outline at 2px. Preview holds
+`support/textStyleEditorForm.js`). Adding an outline color starts the outline
+at 2px. Preview holds
 the preview text, which the text styles page shows (the name when it is
 empty), a Text Alignment control for the editor preview (saved as the text
 style's `previewAlign`, from creator-model 1.16.0; layouts keep using
