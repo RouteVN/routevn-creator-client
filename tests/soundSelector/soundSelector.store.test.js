@@ -92,4 +92,17 @@ describe("soundSelector.store", () => {
       "width: 100%;",
     );
   });
+
+  it("caps the columns per row with a minimum column width", () => {
+    const state = createInitialState();
+
+    const upToFourColumns = selectViewData({
+      state,
+      props: { columns: 4, minColumnWidth: 120 },
+    });
+    expect(upToFourColumns.soundGridStyle).toBe(
+      "display: grid; grid-template-columns: repeat(auto-fill, minmax(max(120px, calc((100% - 3 * var(--spacing-md)) / 4)), 1fr));",
+    );
+    expect(upToFourColumns.soundPreviewStyle).toBe("aspect-ratio: 16 / 9;");
+  });
 });
