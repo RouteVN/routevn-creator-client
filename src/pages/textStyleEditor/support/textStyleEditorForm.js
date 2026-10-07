@@ -139,6 +139,37 @@ export const buildTextStyleFormValues = (values) => ({
 
 const TEXT_FORM_FIELDS = ["fontSize", "lineHeight", "fontWeight"];
 
+const FONT_SIZE_PRESETS = [
+  12, 16, 20, 24, 28, 32, 36, 40, 48, 56, 64, 72, 96, 128,
+];
+const LINE_HEIGHT_PRESETS = [1, 1.2, 1.4, 1.5, 1.6, 1.8, 2, 2.5, 3];
+
+// Font size and line height open slider popovers (see
+// src/internal/ui/sliderPopover.js). Each slider's range bounds its value, as
+// the slider keeps a typed value within it.
+export const TEXT_STYLE_SLIDER_FIELDS = Object.freeze({
+  fontSize: {
+    defaultValue: 16,
+    step: 1,
+    fastStep: 4,
+    min: 8,
+    range: { min: 8, max: 128 },
+    unit: "px",
+    presets: FONT_SIZE_PRESETS.map((value) => ({
+      label: `${value} px`,
+      value,
+    })),
+  },
+  lineHeight: {
+    defaultValue: 1.5,
+    step: 0.1,
+    fastStep: 0.5,
+    min: 0.8,
+    range: { min: 0.8, max: 3 },
+    presets: LINE_HEIGHT_PRESETS.map((value) => ({ label: `${value}`, value })),
+  },
+});
+
 const SHADOW_FIELD_KEYS = {
   shadowAlpha: "alpha",
   shadowBlur: "blur",
@@ -267,21 +298,15 @@ export const createTextStyleForm = ({
       required: true,
     },
     {
-      name: "fontSize",
-      type: "input-number",
+      type: "slot",
+      slot: "text-style-font-size",
       label: copy.fontSizeLabel,
-      min: 8,
-      step: 1,
-      unit: "px",
       required: true,
     },
     {
-      name: "lineHeight",
-      type: "slider-with-input",
+      type: "slot",
+      slot: "text-style-line-height",
       label: copy.lineHeightLabel,
-      min: 0.8,
-      max: 3.0,
-      step: 0.1,
       required: true,
     },
     {

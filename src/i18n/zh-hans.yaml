@@ -1395,6 +1395,11 @@ charactersPage:
 tabletExplorerPanel:
   hideLabel: "隐藏面板"
   showLabel: "显示面板"
+sliderValueField:
+  decreaseByLabel: "减少 {step}"
+  increaseByLabel: "增加 {step}"
+  presetsLabel: "预设"
+  submitLabel: "提交"
 transformsPage:
   yesLabel: "是"
   defaultDialogueAvatarLabel: "对话头像默认变换"

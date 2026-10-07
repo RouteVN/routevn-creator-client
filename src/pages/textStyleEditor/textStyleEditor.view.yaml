@@ -27,6 +27,14 @@ refs:
     eventListeners:
       form-change:
         handler: handleTextStyleFormChange
+  sliderValueField*:
+    eventListeners:
+      value-input:
+        handler: handleSliderValueInput
+      value-change:
+        handler: handleSliderValueChange
+      value-cancel:
+        handler: handleSliderValueCancel
   fontSelect:
     eventListeners:
       value-change:
@@ -119,6 +127,8 @@ template:
                       - 'rtgl-view w=f h=1fg sv pv=md style="min-height: 0; ${rightPanelEditStyle}"':
                           - rtgl-form#textStyleForm key=${textStyleFormKey} :defaultValues=${formValues} :form=${textStyleForm} w=f ph=md:
                               - rtgl-select#fontSelect slot=text-style-font w=f no-clear :options=${fontOptions} :selectedValue=${selectedFontId} :addOption=${addFontOption} placeholder=${chooseFontPlaceholder}: null
+                              - 'rvn-slider-value-field#sliderValueFieldFontSize slot=text-style-font-size data-name=fontSize w=f label="${fontSizeLabel}" :value=${fontSizeValue} :field=${fontSizeSliderField}': null
+                              - 'rvn-slider-value-field#sliderValueFieldLineHeight slot=text-style-line-height data-name=lineHeight w=f label="${lineHeightLabel}" :value=${lineHeightValue} :field=${lineHeightSliderField}': null
                               - rtgl-select#colorSelect slot=text-style-color data-color-field=colorId w=f no-clear :options=${colorOptions} :selectedValue=${selectedColorId} :addOption=${addColorOption} placeholder=${chooseColorPlaceholder}: null
                               - rtgl-select#outlineColorSelect slot=text-style-outline-color data-color-field=strokeColorId w=f :options=${colorOptions} :selectedValue=${selectedOutlineColorId} :addOption=${addColorOption} placeholder=${chooseOutlineColorPlaceholder}: null
                               - rtgl-select#shadowColorSelect slot=text-style-shadow-color data-color-field=shadowColorId w=f :options=${colorOptions} :selectedValue=${selectedShadowColorId} :addOption=${addColorOption} placeholder=${chooseShadowColorPlaceholder}: null
@@ -146,6 +156,8 @@ template:
                   - 'rtgl-view w=f h=1fg sv pv=md style="min-height: 0; ${rightPanelEditStyle}"':
                       - rtgl-form#textStyleForm key=${textStyleFormKey} :defaultValues=${formValues} :form=${textStyleForm} w=f ph=md:
                           - rtgl-select#fontSelect slot=text-style-font w=f no-clear :options=${fontOptions} :selectedValue=${selectedFontId} :addOption=${addFontOption} placeholder=${chooseFontPlaceholder}: null
+                          - 'rvn-slider-value-field#sliderValueFieldFontSize slot=text-style-font-size data-name=fontSize w=f label="${fontSizeLabel}" :value=${fontSizeValue} :field=${fontSizeSliderField}': null
+                          - 'rvn-slider-value-field#sliderValueFieldLineHeight slot=text-style-line-height data-name=lineHeight w=f label="${lineHeightLabel}" :value=${lineHeightValue} :field=${lineHeightSliderField}': null
                           - rtgl-select#colorSelect slot=text-style-color data-color-field=colorId w=f no-clear :options=${colorOptions} :selectedValue=${selectedColorId} :addOption=${addColorOption} placeholder=${chooseColorPlaceholder}: null
                           - rtgl-select#outlineColorSelect slot=text-style-outline-color data-color-field=strokeColorId w=f :options=${colorOptions} :selectedValue=${selectedOutlineColorId} :addOption=${addColorOption} placeholder=${chooseOutlineColorPlaceholder}: null
                           - rtgl-select#shadowColorSelect slot=text-style-shadow-color data-color-field=shadowColorId w=f :options=${colorOptions} :selectedValue=${selectedShadowColorId} :addOption=${addColorOption} placeholder=${chooseShadowColorPlaceholder}: null

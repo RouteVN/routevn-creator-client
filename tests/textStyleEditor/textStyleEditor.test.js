@@ -21,6 +21,9 @@ import {
   handleRedoButtonClick,
   handleRightPanelModeChange,
   handleSavePreviewClick,
+  handleSliderValueCancel,
+  handleSliderValueChange,
+  handleSliderValueInput,
   handleTextStyleFormChange,
   handleUndoButtonClick,
 } from "../../src/pages/textStyleEditor/textStyleEditor.handlers.js";
@@ -236,6 +239,21 @@ const createPage = async ({
     });
   const pickFont = (value) =>
     handleFontSelectChange(deps, { _event: { detail: { value } } });
+  // The font size and line height slider popovers' events.
+  const slider = (name) => {
+    const currentTarget = { dataset: { name } };
+    return {
+      input: (value) =>
+        handleSliderValueInput(deps, {
+          _event: { currentTarget, detail: { value } },
+        }),
+      submit: (value) =>
+        handleSliderValueChange(deps, {
+          _event: { currentTarget, detail: { value } },
+        }),
+      cancel: () => handleSliderValueCancel(deps),
+    };
+  };
   return {
     deps,
     cleanup,
@@ -249,6 +267,7 @@ const createPage = async ({
     changeField,
     pickColor,
     pickFont,
+    slider,
     beforeNavigation: () => beforeNavigation(),
     resizeWindow: async (metrics) => {
       windowMetricsListeners.forEach((listener) => listener(metrics));
@@ -315,8 +334,8 @@ describe("text style editor", () => {
     const fieldNames = formFieldNames(page.view().textStyleForm.fields);
     expect(fieldNames).toEqual([
       "text-style-font",
-      "fontSize",
-      "lineHeight",
+      "text-style-font-size",
+      "text-style-line-height",
       "fontWeight",
       "text-style-color",
       "section:outline",
@@ -399,6 +418,58 @@ describe("text style editor", () => {
     await page.changeField("shadowAlpha", 2);
     // No shadow, so its opacity has nothing to change.
     expect(page.values().shadow).toBeUndefined();
+  });
+
+  it("edits font size and line height in slider popovers", async () => {
+    const page = await createPage();
+
+    expect(page.view()).toMatchObject({
+      fontSizeLabel: "Font Size",
+      fontSizeValue: 24,
+      fontSizeSliderField: {
+        step: 1,
+        fastStep: 4,
+        min: 8,
+        range: { min: 8, max: 128 },
+        unit: "px",
+      },
+      lineHeightLabel: "Line Height",
+      lineHeightValue: 1.5,
+      lineHeightSliderField: { step: 0.1, fastStep: 0.5 },
+    });
+
+    // The preview draws the popover's value; the text style keeps its own.
+    page.slider("fontSize").input(40);
+    expect(page.view()).toMatchObject({
+      previewFontSize: 40,
+      fontSizeValue: 24,
+    });
+    expect(page.values().fontSize).toBe(24);
+    expect(page.state().editHistory.undo).toHaveLength(0);
+
+    // Closing the popover puts the preview back.
+    page.slider("fontSize").cancel();
+    expect(page.view().previewFontSize).toBe(24);
+
+    // Submit changes the text style, as one undo step, and saves it.
+    page.slider("lineHeight").input(1.8);
+    expect(page.view().previewLineHeight).toBe(1.8);
+    page.slider("lineHeight").submit(2);
+    expect(page.values().lineHeight).toBe(2);
+    expect(page.view()).toMatchObject({
+      previewLineHeight: 2,
+      lineHeightValue: 2,
+    });
+    expect(page.state().editHistory.undo).toHaveLength(1);
+
+    await wait(AUTOSAVE_WAIT_MS);
+    expect(page.savedData().at(-1).data).toMatchObject({
+      fontSize: 24,
+      lineHeight: 2,
+    });
+
+    handleUndoButtonClick(page.deps);
+    expect(page.view().lineHeightValue).toBe(1.5);
   });
 
   it("makes one undo step of quick changes to one field, and puts the values back into the form", async () => {

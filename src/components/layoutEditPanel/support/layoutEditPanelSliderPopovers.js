@@ -1,4 +1,9 @@
 import { formatI18nCopy } from "../../../internal/ui/i18nCopy.js";
+import {
+  getSliderRange,
+  getSliderStepButtons,
+  stepSliderValue,
+} from "../../../internal/ui/sliderPopover.js";
 
 // The fields whose popover has a slider, a Presets menu, and step buttons.
 // The steps are the mouse wheel's, the larger ones Shift's. A field left
@@ -55,8 +60,6 @@ const toPercentPreset = (value) => ({
 
 const isPositionField = (name) => name === "x" || name === "y";
 
-const getStepDecimals = (step) => `${step}`.split(".")[1]?.length ?? 0;
-
 export const getSliderPopoverField = (name) => SLIDER_POPOVER_FIELDS[name];
 
 export const isSliderPopoverField = (name) =>
@@ -79,34 +82,23 @@ export const getSliderPopoverRange = ({
     return undefined;
   }
 
-  if (Number.isFinite(field.min) && Number.isFinite(field.max)) {
-    return { min: field.min, max: field.max, step: field.step };
-  }
-
-  let { min, max } = field.range ?? {};
+  let { range } = field;
   if (isPositionField(name)) {
     const dimension = getPositionDimension({ name, projectResolution });
     if (!Number.isFinite(dimension) || dimension <= 0) {
       return undefined;
     }
-    min = Math.round(-dimension * 0.5);
-    max = Math.round(dimension * 1.5);
+    range = {
+      min: Math.round(-dimension * 0.5),
+      max: Math.round(dimension * 1.5),
+    };
   }
 
-  for (const value of [values?.[name], currentValue]) {
-    const number = Number(value);
-    if (!Number.isFinite(number)) {
-      continue;
-    }
-    if (number < min) {
-      min = Math.floor(number);
-    }
-    if (number > max) {
-      max = Math.ceil(number);
-    }
-  }
-
-  return { min, max, step: field.step };
+  return getSliderRange({
+    field,
+    range,
+    values: [values?.[name], currentValue],
+  });
 };
 
 // The Presets menu: shares of the width or height with their pixels,
@@ -149,41 +141,16 @@ export const getSliderPopoverPresets = ({
   return [];
 };
 
-// The step buttons: the field's larger step down and its step down (two
-// overlapping minus signs, and one), then its step up and its larger step up.
+// The step buttons move by the field's steps.
 export const getSliderPopoverStepButtons = ({ name, copy = {} } = {}) => {
   const field = SLIDER_POPOVER_FIELDS[name];
-  if (!field) {
-    return [];
-  }
-
-  return [
-    { delta: -field.fastStep, icon: "minusDouble" },
-    { delta: -field.step, icon: "minus" },
-    { delta: field.step, icon: "plus" },
-    { delta: field.fastStep, icon: "plusDouble" },
-  ].map((button) => ({
-    ...button,
-    label: formatI18nCopy(
-      button.delta < 0
-        ? (copy.decreaseByLabel ?? "Decrease by {step}")
-        : (copy.increaseByLabel ?? "Increase by {step}"),
-      { step: Math.abs(button.delta) },
-    ),
-  }));
+  return field ? getSliderStepButtons({ field, copy }) : [];
 };
 
-// A value moved by a step, rounded to the step and kept in the field's
-// range when it has one.
-export const stepSliderPopoverValue = ({ name, value, delta } = {}) => {
-  const field = SLIDER_POPOVER_FIELDS[name];
-  const decimals = getStepDecimals(field.step);
-  const stepped = Number((Number(value) + Number(delta)).toFixed(decimals));
-  if (Number.isFinite(field.min) && Number.isFinite(field.max)) {
-    return Math.min(field.max, Math.max(field.min, stepped));
-  }
-  return stepped;
-};
+// A value moved by a step, rounded to the step and kept within the field's
+// bounds.
+export const stepSliderPopoverValue = ({ name, value, delta } = {}) =>
+  stepSliderValue({ field: SLIDER_POPOVER_FIELDS[name], value, delta });
 
 const isScaleField = (name) => name === "scaleX" || name === "scaleY";
 

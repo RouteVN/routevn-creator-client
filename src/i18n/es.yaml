@@ -1395,6 +1395,11 @@ charactersPage:
 tabletExplorerPanel:
   hideLabel: "Ocultar panel"
   showLabel: "Mostrar panel"
+sliderValueField:
+  decreaseByLabel: "Disminuir en {step}"
+  increaseByLabel: "Aumentar en {step}"
+  presetsLabel: "Valores predefinidos"
+  submitLabel: "Enviar"
 transformsPage:
   yesLabel: "Sí"
   defaultDialogueAvatarLabel: "Transformación predeterminada del avatar de diálogo"
