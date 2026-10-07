@@ -1,9 +1,9 @@
 import {
   getSliderPopoverField,
   getSliderPopoverPresets,
-  hasAspectRatioToggle,
   getSliderPopoverRange,
   getSliderPopoverStepButtons,
+  hasAspectRatioToggle,
   isSliderPopoverField,
 } from "./support/layoutEditPanelSliderPopovers.js";
 import { parseAndRender } from "jempl";

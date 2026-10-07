@@ -1211,7 +1211,22 @@ values) preview on the canvas while you slide, type, or pick a preset: the panel
 emits `preview` from the form's live `form-input` events and `preview-cancel`
 when the popover closes. The page keeps the previewed item as an overlay on the
 canvas state only, so nothing is saved until **Submit**; closing the popover
-without submitting puts the element back.
+without submitting puts the element back. The popover is rebuilt only when the
+values or the resolution change, since a rebuild remounts its form and would
+end a slider drag; other props, such as the element metrics that change on
+every preview, leave it alone.
+
+X, Y, rotation, scale, and opacity popovers have a slider, a **Presets** menu,
+and four step buttons (`support/layoutEditPanelSliderPopovers.js` holds each
+field's range, presets, steps, and default). X and Y run from half the
+project's width or height before the edge to half past it, rotation a half turn
+each way, and scale from 0 to 2, each reaching further to a value already
+outside; opacity stays between 0 and 1. The step buttons move by the mouse
+wheel's step and Shift's larger one, and keep stepping while held
+(`src/primitives/holdRepeat.js`), taking the value into the form in place. Scale
+popovers also keep the aspect ratio by default: the other scale moves in
+proportion, sent as the events' `linkedValues`, which the layout and transform
+editors apply with the named change.
 
 The layout editor has undo and redo for element edits made since the page
 opened: canvas moves, resizes, rotations and nudges, edit panel fields, show and
