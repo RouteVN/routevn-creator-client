@@ -301,8 +301,10 @@ const createTextRevealIndicatorFormValuesForSpritesheet = (
   return nextValues;
 };
 
+// The size the picked visual fills in can be past the sliders' range, which
+// bounds a typed value, so the range reaches it in a render first.
 const setTextRevealIndicatorDialogImage = (deps, { imageId } = {}) => {
-  const { refs, store } = deps;
+  const { refs, render, store } = deps;
   const nextValues = createTextRevealIndicatorFormValuesForImage(
     { store },
     {
@@ -314,6 +316,7 @@ const setTextRevealIndicatorDialogImage = (deps, { imageId } = {}) => {
   store.setTextRevealIndicatorDialogImage({
     imageId,
   });
+  render();
   refs.textRevealIndicatorForm?.setValues?.({
     values: nextValues,
   });
@@ -323,7 +326,7 @@ const setTextRevealIndicatorDialogSpritesheet = (
   deps,
   { resourceId, animationName } = {},
 ) => {
-  const { refs, store } = deps;
+  const { refs, render, store } = deps;
   const nextValues = createTextRevealIndicatorFormValuesForSpritesheet(
     { store },
     {
@@ -337,6 +340,7 @@ const setTextRevealIndicatorDialogSpritesheet = (
     resourceId,
     animationName,
   });
+  render();
   refs.textRevealIndicatorForm?.setValues?.({
     values: nextValues,
   });

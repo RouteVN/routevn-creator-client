@@ -1,7 +1,10 @@
 import { readFileSync } from "node:fs";
 import yaml from "js-yaml";
 import { describe, expect, it, vi } from "vitest";
-import { getTextRevealIndicatorVisualName } from "../../src/components/layoutEditPanel/support/layoutEditPanelTextRevealIndicator.js";
+import {
+  getTextRevealIndicatorSliderRanges,
+  getTextRevealIndicatorVisualName,
+} from "../../src/components/layoutEditPanel/support/layoutEditPanelTextRevealIndicator.js";
 import {
   closeTextRevealIndicatorDialog,
   closeImageSelectorDialog,
@@ -947,5 +950,58 @@ describe("layoutEditPanel indicator visual name", () => {
       }),
     ).toBe("Sparks / idle");
     expect(getTextRevealIndicatorVisualName({ dialog: {} })).toBe("");
+  });
+});
+
+describe("layoutEditPanel indicator sliders", () => {
+  it("run to 256 for size and 128 each way for offsets", () => {
+    expect(getTextRevealIndicatorSliderRanges()).toEqual({
+      size: { min: 1, max: 256, step: 1 },
+      offset: { min: -128, max: 128, step: 1 },
+    });
+  });
+
+  it("reach to a picked image's size, so picking it keeps its size", () => {
+    const ranges = getTextRevealIndicatorSliderRanges({
+      values: { width: 12, height: 12, offsetX: 16, offsetY: 0 },
+      dialog: { kind: "image", imageId: "image-wide" },
+      imagesData: {
+        items: { "image-wide": { width: 1920, height: 300 } },
+      },
+    });
+
+    expect(ranges.size.max).toBe(1920);
+    expect(ranges.offset).toEqual({ min: -128, max: 128, step: 1 });
+  });
+
+  it("reach to a spritesheet animation's frame size", () => {
+    const ranges = getTextRevealIndicatorSliderRanges({
+      dialog: {
+        kind: "spritesheet",
+        resourceId: "sheet-1",
+        animationName: "idle",
+      },
+      spritesheetsData: {
+        items: {
+          "sheet-1": {
+            animations: { idle: { frames: ["frame-1"] } },
+            jsonData: {
+              frames: { "frame-1": { frame: { w: 400, h: 320 } } },
+            },
+          },
+        },
+      },
+    });
+
+    expect(ranges.size.max).toBe(400);
+  });
+
+  it("reach to a saved size or offset past them", () => {
+    const ranges = getTextRevealIndicatorSliderRanges({
+      values: { width: 300, height: 12, offsetX: -200.4, offsetY: 0 },
+    });
+
+    expect(ranges.size.max).toBe(300);
+    expect(ranges.offset).toEqual({ min: -201, max: 201, step: 1 });
   });
 });

@@ -3,17 +3,9 @@ import { resolveSpritesheetFrameName } from "../../../internal/spritesheets.js";
 const DEFAULT_TEXT_REVEAL_INDICATOR_SIZE = 12;
 const DEFAULT_TEXT_REVEAL_INDICATOR_OFFSET_X = 16;
 const DEFAULT_TEXT_REVEAL_INDICATOR_OFFSET_Y = 0;
-// The dialog's sliders, which also bound a typed value.
-const TEXT_REVEAL_INDICATOR_SIZE_RANGE = Object.freeze({
-  min: 1,
-  max: 256,
-  step: 1,
-});
-const TEXT_REVEAL_INDICATOR_OFFSET_RANGE = Object.freeze({
-  min: -128,
-  max: 128,
-  step: 1,
-});
+// Where the dialog's sliders run before they reach further.
+const TEXT_REVEAL_INDICATOR_SIZE_SLIDER_MAX = 256;
+const TEXT_REVEAL_INDICATOR_OFFSET_SLIDER_MAX = 128;
 
 export const TEXT_REVEAL_INDICATOR_STATE_ITEMS = [
   { type: "item", label: "Revealing", key: "revealing" },
@@ -178,8 +170,50 @@ export const createTextRevealIndicatorDialogDefaults = ({
   );
 };
 
+const reachSliderMax = (base, numbers) =>
+  Math.max(
+    base,
+    ...numbers
+      .map((number) => Math.ceil(Math.abs(Number(number))))
+      .filter(Number.isFinite),
+  );
+
+// The dialog's sliders also bound a typed value, so they reach to the
+// indicator's size and offsets, and to the size of the picked image or
+// animation, which picking it fills in.
+export const getTextRevealIndicatorSliderRanges = ({
+  values = {},
+  dialog = {},
+  imagesData,
+  spritesheetsData,
+} = {}) => {
+  const visualSize =
+    dialog.kind === "spritesheet" && dialog.resourceId
+      ? getSpritesheetAnimationDimensions(
+          spritesheetsData?.items?.[dialog.resourceId],
+          dialog.animationName,
+        )
+      : getImageDimensions(imagesData?.items?.[dialog.imageId]);
+  const sizeMax = reachSliderMax(TEXT_REVEAL_INDICATOR_SIZE_SLIDER_MAX, [
+    values.width,
+    values.height,
+    visualSize.width,
+    visualSize.height,
+  ]);
+  const offsetMax = reachSliderMax(TEXT_REVEAL_INDICATOR_OFFSET_SLIDER_MAX, [
+    values.offsetX,
+    values.offsetY,
+  ]);
+
+  return {
+    size: { min: 1, max: sizeMax, step: 1 },
+    offset: { min: -offsetMax, max: offsetMax, step: 1 },
+  };
+};
+
 export const createTextRevealIndicatorForm = ({
   stateName,
+  sliderRanges = getTextRevealIndicatorSliderRanges(),
   copy = {},
 } = {}) => {
   const stateLabel = getTextRevealIndicatorStateLabel(stateName, copy);
@@ -201,27 +235,27 @@ export const createTextRevealIndicatorForm = ({
         name: "width",
         type: "slider-with-input",
         label: copy.widthLabel ?? "Width",
-        ...TEXT_REVEAL_INDICATOR_SIZE_RANGE,
+        ...sliderRanges.size,
         required: true,
       },
       {
         name: "height",
         type: "slider-with-input",
         label: copy.heightLabel ?? "Height",
-        ...TEXT_REVEAL_INDICATOR_SIZE_RANGE,
+        ...sliderRanges.size,
         required: true,
       },
       {
         name: "offsetX",
         type: "slider-with-input",
         label: copy.offsetXLabel ?? "Offset X",
-        ...TEXT_REVEAL_INDICATOR_OFFSET_RANGE,
+        ...sliderRanges.offset,
       },
       {
         name: "offsetY",
         type: "slider-with-input",
         label: copy.offsetYLabel ?? "Offset Y",
-        ...TEXT_REVEAL_INDICATOR_OFFSET_RANGE,
+        ...sliderRanges.offset,
       },
     ],
     actions: {

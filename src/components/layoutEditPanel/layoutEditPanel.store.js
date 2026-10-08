@@ -76,6 +76,7 @@ import {
 import {
   createTextRevealIndicatorDialogDefaults,
   createTextRevealIndicatorForm,
+  getTextRevealIndicatorSliderRanges,
   getTextRevealIndicatorVisualName,
   isTextRevealIndicatorStateName,
 } from "./support/layoutEditPanelTextRevealIndicator.js";
@@ -1853,6 +1854,12 @@ export const selectViewData = ({ state, props, constants, i18n }) => {
     });
   const textRevealIndicatorDialogForm = createTextRevealIndicatorForm({
     stateName: state.textRevealIndicatorDialog.stateName,
+    sliderRanges: getTextRevealIndicatorSliderRanges({
+      values: textRevealIndicatorDialogDefaults,
+      dialog: state.textRevealIndicatorDialog,
+      imagesData: state.imagesData,
+      spritesheetsData: state.spritesheetsData,
+    }),
     copy,
   });
   const textRevealIndicatorDialogSpritesheetSelectionValue =
