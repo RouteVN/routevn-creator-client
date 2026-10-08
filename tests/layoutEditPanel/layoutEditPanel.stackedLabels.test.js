@@ -107,6 +107,20 @@ describe("layoutEditPanel stacked labels", () => {
     ]);
   });
 
+  it("labels the typewriter's Effect select above it", () => {
+    const revealingSection = selectSections("text-revealing", {
+      revealEffect: "typewriter",
+    }).find((section) => section.id === "textRevealing");
+
+    expect(
+      revealingSection.items.find((item) => item.name === "revealEffect"),
+    ).toMatchObject({
+      type: "select",
+      stacked: true,
+      label: "Effect",
+    });
+  });
+
   it("labels the Hover and Click sound boxes above them and shows their volume", () => {
     const soundsSection = selectTextSections({
       hoverSoundId: "sound-hover",

@@ -485,7 +485,9 @@ layoutSections:
     "$if canAddTextRevealSound":
       labelAction: plus
     items:
+      # Labelled above its select, as the text style selects are.
       - type: select
+        stacked: true
         label: Effect
         name: revealEffect
         value: "${values.revealEffect}"
