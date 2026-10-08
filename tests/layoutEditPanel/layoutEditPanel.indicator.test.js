@@ -2,6 +2,10 @@ import { readFileSync } from "node:fs";
 import yaml from "js-yaml";
 import { describe, expect, it, vi } from "vitest";
 import {
+  getTextRevealIndicatorSliderRanges,
+  getTextRevealIndicatorVisualName,
+} from "../../src/components/layoutEditPanel/support/layoutEditPanelTextRevealIndicator.js";
+import {
   closeTextRevealIndicatorDialog,
   closeImageSelectorDialog,
   closeSpritesheetSelectorDialog,
@@ -39,6 +43,7 @@ import {
   handleSpritesheetSelectorSubmit,
   handleTextRevealIndicatorFormAction,
   handleTextRevealIndicatorImageFieldClick,
+  handleTextRevealIndicatorImageFieldKeyDown,
 } from "../../src/components/layoutEditPanel/layoutEditPanel.handlers.js";
 import { toInspectorValues } from "../../src/components/layoutEditPanel/support/layoutEditPanelViewData.js";
 import { EN_I18N } from "../support/i18n.js";
@@ -385,27 +390,24 @@ describe("layoutEditPanel text reveal indicators", () => {
       offsetY: -5,
     });
     expect(viewData.textRevealIndicatorDialog.imageId).toBe("image-revealing");
+    // The dialog's image card names its image.
+    expect(viewData.textRevealIndicatorDialogVisualName).toBe("Revealing");
     expect(viewData.textRevealIndicatorDialogForm.title).toBe(
       "Revealing Indicator",
     );
     expect(viewData.textRevealIndicatorDialogForm.fields[0]).toMatchObject({
       type: "slot",
       slot: "text-reveal-indicator-image",
-      label: "Visual",
+      label: "Image",
     });
+    // Each number has a slider with its input.
     expect(
       viewData.textRevealIndicatorDialogForm.fields.slice(1),
     ).toMatchObject([
-      {
-        type: "row",
-        stackAt: "none",
-        fields: [{ name: "width" }, { name: "height" }],
-      },
-      {
-        type: "row",
-        stackAt: "none",
-        fields: [{ name: "offsetX" }, { name: "offsetY" }],
-      },
+      { name: "width", type: "slider-with-input", min: 1, max: 256 },
+      { name: "height", type: "slider-with-input", min: 1, max: 256 },
+      { name: "offsetX", type: "slider-with-input", min: -128, max: 128 },
+      { name: "offsetY", type: "slider-with-input", min: -128, max: 128 },
     ]);
   });
 
@@ -536,6 +538,33 @@ describe("layoutEditPanel text reveal indicators", () => {
         },
       ],
     });
+  });
+
+  it("opens the visual source dropdown from the image field with Enter or Space", () => {
+    for (const key of ["Enter", " "]) {
+      const state = createInitialState();
+      const deps = createDeps(state);
+      openTextRevealIndicatorDialog({ state }, { stateName: "revealing" });
+      const payload = createIndicatorImageFieldClickPayload();
+      payload._event.key = key;
+      payload._event.preventDefault = vi.fn();
+
+      handleTextRevealIndicatorImageFieldKeyDown(deps, payload);
+
+      expect(payload._event.preventDefault).toHaveBeenCalledOnce();
+      expect(state.dropdownMenu).toMatchObject({
+        isOpen: true,
+        targetName: "textRevealIndicatorVisualSource",
+      });
+    }
+
+    const state = createInitialState();
+    const deps = createDeps(state);
+    openTextRevealIndicatorDialog({ state }, { stateName: "revealing" });
+    const payload = createIndicatorImageFieldClickPayload();
+    payload._event.key = "Tab";
+    handleTextRevealIndicatorImageFieldKeyDown(deps, payload);
+    expect(state.dropdownMenu.isOpen).toBe(false);
   });
 
   it("autofills dimensions from the selected indicator image", () => {
@@ -922,5 +951,85 @@ describe("layoutEditPanel text reveal indicators", () => {
       imageId: "Visual is required.",
     });
     expect(deps.dispatchEvent).not.toHaveBeenCalled();
+  });
+});
+
+describe("layoutEditPanel indicator visual name", () => {
+  it("names an image, or a spritesheet and its animation", () => {
+    const imagesData = { items: { "image-1": { name: "Arrow" } } };
+    const spritesheetsData = { items: { "sheet-1": { name: "Sparks" } } };
+
+    expect(
+      getTextRevealIndicatorVisualName({
+        dialog: { kind: "image", imageId: "image-1" },
+        imagesData,
+        spritesheetsData,
+      }),
+    ).toBe("Arrow");
+    expect(
+      getTextRevealIndicatorVisualName({
+        dialog: {
+          kind: "spritesheet",
+          resourceId: "sheet-1",
+          animationName: "idle",
+        },
+        imagesData,
+        spritesheetsData,
+      }),
+    ).toBe("Sparks / idle");
+    expect(getTextRevealIndicatorVisualName({ dialog: {} })).toBe("");
+  });
+});
+
+describe("layoutEditPanel indicator sliders", () => {
+  it("run to 256 for size and 128 each way for offsets", () => {
+    expect(getTextRevealIndicatorSliderRanges()).toEqual({
+      size: { min: 1, max: 256, step: 1 },
+      offset: { min: -128, max: 128, step: 1 },
+    });
+  });
+
+  it("reach to a picked image's size, so picking it keeps its size", () => {
+    const ranges = getTextRevealIndicatorSliderRanges({
+      values: { width: 12, height: 12, offsetX: 16, offsetY: 0 },
+      dialog: { kind: "image", imageId: "image-wide" },
+      imagesData: {
+        items: { "image-wide": { width: 1920, height: 300 } },
+      },
+    });
+
+    expect(ranges.size.max).toBe(1920);
+    expect(ranges.offset).toEqual({ min: -128, max: 128, step: 1 });
+  });
+
+  it("reach to a spritesheet animation's frame size", () => {
+    const ranges = getTextRevealIndicatorSliderRanges({
+      dialog: {
+        kind: "spritesheet",
+        resourceId: "sheet-1",
+        animationName: "idle",
+      },
+      spritesheetsData: {
+        items: {
+          "sheet-1": {
+            animations: { idle: { frames: ["frame-1"] } },
+            jsonData: {
+              frames: { "frame-1": { frame: { w: 400, h: 320 } } },
+            },
+          },
+        },
+      },
+    });
+
+    expect(ranges.size.max).toBe(400);
+  });
+
+  it("reach to a saved size or offset past them", () => {
+    const ranges = getTextRevealIndicatorSliderRanges({
+      values: { width: 300, height: 12, offsetX: -200.4, offsetY: 0 },
+    });
+
+    expect(ranges.size.max).toBe(300);
+    expect(ranges.offset).toEqual({ min: -201, max: 201, step: 1 });
   });
 });

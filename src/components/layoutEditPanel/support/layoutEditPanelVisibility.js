@@ -84,16 +84,9 @@ export const getScalarConditionTargetItems = (
   return Object.fromEntries([...projectVariables, ...specialTargets]);
 };
 
-export const toVisibilityConditionTargetOptions = (
-  variablesData = {},
-  options = {},
-) => {
-  return Object.entries(getScalarConditionTargetItems(variablesData, options))
-    .filter(([target]) => isVisibleVisibilityTarget(target))
-    .map(([target, item]) => toConditionTargetOption(target, item))
-    .sort((left, right) => left.label.localeCompare(right.label));
-};
-
+// The targets a visibility condition or a conditional override can test:
+// System first, then the variables of each folder in tree order, then the
+// variables outside folders.
 export const toSectionedVisibilityConditionTargetOptions = (
   variablesData = {},
   options = {},
@@ -203,36 +196,78 @@ const getVisibilityConditionTargetName = (
   return target;
 };
 
-export const getVisibilityConditionSummary = (
+// The value as the dialog shows it: True or False, a character's name, or
+// the text or number itself.
+const getVisibilityConditionValueLabel = (
+  visibilityCondition,
+  options,
+  copy,
+) => {
+  const { target, value } = visibilityCondition;
+  if (target === DIALOGUE_CHARACTER_ID_CONDITION_TARGET) {
+    return (
+      getCharacterOptionLabel(options.charactersData, value, {
+        noneLabel: copy.noCharacterOption ?? "No Character",
+      }) ?? String(value ?? "")
+    );
+  }
+  if (typeof value === "boolean") {
+    return createVisibilityBooleanOptions(copy).find(
+      (option) => option.value === value,
+    ).label;
+  }
+  return String(value);
+};
+
+// A condition's summary in parts: what it tests, the operation as the
+// dialog names it, and the value. The panel shows each as a chip of its own
+// kind, so they read apart from each other.
+export const getVisibilityConditionSummaryParts = (
   visibilityCondition,
   variablesData = {},
   options = {},
   copy = {},
 ) => {
   if (!visibilityCondition?.target || visibilityCondition?.op !== "eq") {
-    return copy.alwaysVisibleSummary ?? "Always visible";
+    return [
+      {
+        kind: "text",
+        text: copy.alwaysVisibleSummary ?? "Always visible",
+      },
+    ];
   }
 
-  const targetName = getVisibilityConditionTargetName(
-    visibilityCondition.target,
-    variablesData,
-    options,
-  );
-  const value =
-    visibilityCondition.target === DIALOGUE_CHARACTER_ID_CONDITION_TARGET
-      ? (getCharacterOptionLabel(
-          options.charactersData,
-          visibilityCondition.value,
-          {
-            noneLabel: copy.noCharacterOption ?? "No Character",
-          },
-        ) ?? `"${visibilityCondition.value ?? ""}"`)
-      : typeof visibilityCondition.value === "string"
-        ? `"${visibilityCondition.value}"`
-        : String(visibilityCondition.value);
-
-  return `${targetName} == ${value}`;
+  return [
+    {
+      kind: "target",
+      text: getVisibilityConditionTargetName(
+        visibilityCondition.target,
+        variablesData,
+        options,
+      ),
+    },
+    {
+      kind: "operator",
+      text: createVisibilityConditionOpOptions(copy).find(
+        (option) => option.value === visibilityCondition.op,
+      ).label,
+    },
+    {
+      kind: "value",
+      text: getVisibilityConditionValueLabel(
+        visibilityCondition,
+        options,
+        copy,
+      ),
+    },
+  ];
 };
+
+// The summary as one line, such as for a screen reader.
+export const getVisibilityConditionSummary = (...summaryArgs) =>
+  getVisibilityConditionSummaryParts(...summaryArgs)
+    .map(({ text }) => text)
+    .join(" ");
 
 export const createVisibilityConditionDialogDefaults = (
   visibilityCondition,
@@ -273,6 +308,10 @@ export const createVisibilityConditionForm = ({
         type: "select",
         label: copy.targetLabel ?? "Target",
         required: false,
+        searchable: true,
+        searchPlaceholder:
+          copy.conditionTargetSearchPlaceholder ?? "Search targets...",
+        emptySearchLabel: copy.noConditionTargetsFound ?? "No targets found",
         options: targetOptions,
       },
       {

@@ -48,7 +48,9 @@ export const selectViewData = ({ state, props = {}, i18n = {} }) => {
   } else if (props.resourceTarget === "characterSprites") {
     imageSelectorLabel = i18n.characterSpritesPage.title;
   }
-  const imageGridStyle = createSelectorGridStyle(columns);
+  const imageGridStyle = createSelectorGridStyle(columns, {
+    minColumnWidth: parseSelectorColumnCount(props.minColumnWidth),
+  });
 
   const resourceGroups = toFlatGroups(images);
   const rootItems = toFlatItems(images).filter(

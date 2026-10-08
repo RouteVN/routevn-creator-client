@@ -1226,11 +1226,29 @@ panel's props stay as they were and the panel does not redraw for a move that
 changes none of them.
 
 The edit panel labels Position X and Y, Width and Height, the text style
-selects, the sound boxes, and the images above their fields. An image shows as
-a 16:9 card as wide as one of the panel's two columns, with its name below. On
-touch, its sound picker shows up to four sounds a row, each at least 120px wide
-(`createSelectorGridStyle`'s `minColumnWidth`), so a phone fits two. The panel
-ends with the 240px scroll spacer.
+selects, the sound boxes, the typewriter's Effect, the indicator's images, and
+the images above their fields. An image shows as a 16:9 card as wide as one of
+the panel's two columns, with its name below: `rvn-image-card`, the image or a
+slotted preview on a transparency grid with its name, which the indicator dialog
+uses too. On touch, its image and sound pickers show up to four a row, each at
+least 120px wide (`createSelectorGridStyle`'s `minColumnWidth`): four on a
+tablet, two on a phone. The panel ends with the 240px scroll spacer. A select
+shows its clear button when its item is `clearable`; clearing the Hover or
+Clicked text style removes it.
+
+A visibility condition or conditional override sums up in parts
+(`getVisibilityConditionSummaryParts`): its target, the operation by the
+dialog's own label, and its value, as True or False for a Boolean. The panel
+shows them as chips of their own look from the theme's tokens: the target
+muted, the operation an outline, and the value the accent. Both dialogs list
+their targets by section, System first, then each variable folder. A
+conditional override's card shows its condition and attributes under small
+labels; clicking it opens the condition dialog, and its right-click menu deletes
+it. The dialog lists the attributes below the condition and edits them as a
+draft (`draftSet`), which its Save saves with the condition, so a new override
+can have its attributes before it is saved. The indicator dialog's width,
+height, and offsets are sliders whose range reaches the picked image's size
+and the saved values, since a slider also bounds a typed value.
 
 X, Y, rotation, scale, and opacity popovers have a slider, a **Presets** menu,
 and four step buttons (`support/layoutEditPanelSliderPopovers.js` holds each

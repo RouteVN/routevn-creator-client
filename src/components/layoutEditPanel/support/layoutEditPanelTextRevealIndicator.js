@@ -3,6 +3,9 @@ import { resolveSpritesheetFrameName } from "../../../internal/spritesheets.js";
 const DEFAULT_TEXT_REVEAL_INDICATOR_SIZE = 12;
 const DEFAULT_TEXT_REVEAL_INDICATOR_OFFSET_X = 16;
 const DEFAULT_TEXT_REVEAL_INDICATOR_OFFSET_Y = 0;
+// Where the dialog's sliders run before they reach further.
+const TEXT_REVEAL_INDICATOR_SIZE_SLIDER_MAX = 256;
+const TEXT_REVEAL_INDICATOR_OFFSET_SLIDER_MAX = 128;
 
 export const TEXT_REVEAL_INDICATOR_STATE_ITEMS = [
   { type: "item", label: "Revealing", key: "revealing" },
@@ -167,8 +170,50 @@ export const createTextRevealIndicatorDialogDefaults = ({
   );
 };
 
+const reachSliderMax = (base, numbers) =>
+  Math.max(
+    base,
+    ...numbers
+      .map((number) => Math.ceil(Math.abs(Number(number))))
+      .filter(Number.isFinite),
+  );
+
+// The dialog's sliders also bound a typed value, so they reach to the
+// indicator's size and offsets, and to the size of the picked image or
+// animation, which picking it fills in.
+export const getTextRevealIndicatorSliderRanges = ({
+  values = {},
+  dialog = {},
+  imagesData,
+  spritesheetsData,
+} = {}) => {
+  const visualSize =
+    dialog.kind === "spritesheet" && dialog.resourceId
+      ? getSpritesheetAnimationDimensions(
+          spritesheetsData?.items?.[dialog.resourceId],
+          dialog.animationName,
+        )
+      : getImageDimensions(imagesData?.items?.[dialog.imageId]);
+  const sizeMax = reachSliderMax(TEXT_REVEAL_INDICATOR_SIZE_SLIDER_MAX, [
+    values.width,
+    values.height,
+    visualSize.width,
+    visualSize.height,
+  ]);
+  const offsetMax = reachSliderMax(TEXT_REVEAL_INDICATOR_OFFSET_SLIDER_MAX, [
+    values.offsetX,
+    values.offsetY,
+  ]);
+
+  return {
+    size: { min: 1, max: sizeMax, step: 1 },
+    offset: { min: -offsetMax, max: offsetMax, step: 1 },
+  };
+};
+
 export const createTextRevealIndicatorForm = ({
   stateName,
+  sliderRanges = getTextRevealIndicatorSliderRanges(),
   copy = {},
 } = {}) => {
   const stateLabel = getTextRevealIndicatorStateLabel(stateName, copy);
@@ -184,47 +229,33 @@ export const createTextRevealIndicatorForm = ({
       {
         type: "slot",
         slot: "text-reveal-indicator-image",
-        label: copy.visualLabel ?? "Visual",
+        label: copy.imageLabel ?? "Image",
       },
       {
-        type: "row",
-        stackAt: "none",
-        fields: [
-          {
-            name: "width",
-            type: "input-number",
-            label: copy.widthLabel ?? "Width",
-            min: 1,
-            step: 1,
-            required: true,
-          },
-          {
-            name: "height",
-            type: "input-number",
-            label: copy.heightLabel ?? "Height",
-            min: 1,
-            step: 1,
-            required: true,
-          },
-        ],
+        name: "width",
+        type: "slider-with-input",
+        label: copy.widthLabel ?? "Width",
+        ...sliderRanges.size,
+        required: true,
       },
       {
-        type: "row",
-        stackAt: "none",
-        fields: [
-          {
-            name: "offsetX",
-            type: "input-number",
-            label: copy.offsetXLabel ?? "Offset X",
-            step: 1,
-          },
-          {
-            name: "offsetY",
-            type: "input-number",
-            label: copy.offsetYLabel ?? "Offset Y",
-            step: 1,
-          },
-        ],
+        name: "height",
+        type: "slider-with-input",
+        label: copy.heightLabel ?? "Height",
+        ...sliderRanges.size,
+        required: true,
+      },
+      {
+        name: "offsetX",
+        type: "slider-with-input",
+        label: copy.offsetXLabel ?? "Offset X",
+        ...sliderRanges.offset,
+      },
+      {
+        name: "offsetY",
+        type: "slider-with-input",
+        label: copy.offsetYLabel ?? "Offset Y",
+        ...sliderRanges.offset,
       },
     ],
     actions: {
@@ -244,6 +275,24 @@ export const createTextRevealIndicatorForm = ({
       ],
     },
   };
+};
+
+// The name under the dialog's image: the image's, or the spritesheet's and
+// its animation's.
+export const getTextRevealIndicatorVisualName = ({
+  dialog = {},
+  imagesData,
+  spritesheetsData,
+} = {}) => {
+  if (dialog.kind === "spritesheet" && dialog.resourceId) {
+    const name =
+      spritesheetsData?.items?.[dialog.resourceId]?.name ?? dialog.resourceId;
+    return dialog.animationName ? `${name} / ${dialog.animationName}` : name;
+  }
+  if (dialog.imageId) {
+    return imagesData?.items?.[dialog.imageId]?.name ?? dialog.imageId;
+  }
+  return "";
 };
 
 export const createTextRevealIndicatorVisualFromDialogValues = (

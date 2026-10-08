@@ -123,6 +123,8 @@ refs:
     eventListeners:
       click:
         handler: handleTextRevealIndicatorImageFieldClick
+      keydown:
+        handler: handleTextRevealIndicatorImageFieldKeyDown
   textContentForm:
     eventListeners:
       form-action:
@@ -147,30 +149,22 @@ refs:
         handler: handleConditionalOverrideAttributeImageClick
       keydown:
         handler: handleConditionalOverrideAttributeImageKeyDown
-  conditionalOverrideCondition*:
+  conditionalOverrideItem*:
     eventListeners:
       click:
         handler: handleConditionalOverrideConditionClick
-  conditionalOverrideItem*:
-    eventListeners:
       contextmenu:
         handler: handleConditionalOverrideContextMenu
-  conditionalOverrideDelete*:
-    eventListeners:
-      click:
-        handler: handleConditionalOverrideDeleteClick
-  conditionalOverrideAddAttribute*:
-    eventListeners:
-      click:
-        handler: handleConditionalOverrideAddAttributeClick
-  conditionalOverrideAttribute*:
+  conditionalOverrideDraftAttribute*:
     eventListeners:
       click:
         handler: handleConditionalOverrideAttributeClick
-  conditionalOverrideAttributeDelete*:
+      contextmenu:
+        handler: handleConditionalOverrideDraftAttributeContextMenu
+  conditionalOverrideDraftAddAttribute:
     eventListeners:
       click:
-        handler: handleConditionalOverrideAttributeDeleteClick
+        handler: handleConditionalOverrideAddAttributeClick
   sectionAction*:
     eventListeners:
       click:
@@ -315,6 +309,34 @@ styles:
     cursor: pointer
     user-select: none
     "-webkit-user-select": none
+  ".layoutEditorConditionChip":
+    display: inline-flex
+    align-items: center
+    max-width: 100%
+    min-height: 22px
+    padding: "0 8px"
+    box-sizing: border-box
+    border: "1px solid var(--border)"
+    border-radius: "var(--border-radius-md)"
+    font-size: 0.88em
+    font-weight: 500
+    line-height: 1.35
+    white-space: nowrap
+    overflow: hidden
+    text-overflow: ellipsis
+  # What the condition tests.
+  ".layoutEditorConditionTarget":
+    background: "var(--muted)"
+    color: "var(--foreground)"
+  # The operation, an outline that reads as the link between the two.
+  ".layoutEditorConditionOperator":
+    background: transparent
+    color: "var(--muted-foreground)"
+  # The value, the brightest of the three.
+  ".layoutEditorConditionValue":
+    border-color: transparent
+    background: "var(--accent)"
+    color: "var(--accent-foreground)"
   ".layoutEditPanelSectionTooltipTrigger":
     align-items: center
     appearance: none
@@ -386,12 +408,12 @@ template:
                       - $if item.stacked:
                           - rtgl-view d=v w=f g=sm:
                               - rtgl-text s=xs c=mu: ${item.label}
-                              - rtgl-select#selectItem${i}x${j} data-name=${item.name} w=f no-clear :selectedValue=${item.value} :options=${item.options}: null
+                              - rtgl-select#selectItem${i}x${j} data-name=${item.name} w=f ?no-clear=${item.noClear} :selectedValue=${item.value} :options=${item.options}: null
                         $else:
                           - rtgl-view d=h av=c w=f:
                               - rtgl-text s=xs w=65: ${item.label}
                               - 'rtgl-view style="width: calc(100% - 65px);"':
-                                  - rtgl-select#selectItem${i}x${j} data-name=${item.name} w=f no-clear :selectedValue=${item.value} :options=${item.options}: null
+                                  - rtgl-select#selectItem${i}x${j} data-name=${item.name} w=f ?no-clear=${item.noClear} :selectedValue=${item.value} :options=${item.options}: null
                     $elif item.type == 'anchor-grid':
                       - $if item.stacked:
                           - rtgl-view d=v w=f g=sm:
@@ -430,11 +452,8 @@ template:
                                   - rtgl-view key=${barItem.viewKey} d=v w=f g=sm:
                                       - rtgl-text s=xs c=mu: ${barItem.label}
                                       - $if barItem.imageId:
-                                          - 'rtgl-view#listBarItem${i}x${j}x${k} data-name=${barItem.name} cur=pointer bw=xs bc=bo h-bc=ac br=md overflow=hidden style="width: calc((100% - var(--spacing-md)) / 2); box-sizing: border-box;"':
-                                              - 'div.layoutEditorImageFieldTransparencyGrid style="display: block; width: 100%; aspect-ratio: 16 / 9; overflow: hidden;"':
-                                                  - rvn-file-image imageId=${barItem.imageId} source="thumbnail" w=f h=f: null
-                                              - rtgl-view w=f p=md:
-                                                  - rtgl-text s=xs c=mu-fg ellipsis w=f: ${barItem.imageName}
+                                          - 'rtgl-view#listBarItem${i}x${j}x${k} data-name=${barItem.name} style="width: calc((100% - var(--spacing-md)) / 2);"':
+                                              - 'rvn-image-card imageId=${barItem.imageId} name="${barItem.imageName}"': null
                                         $else:
                                           - rtgl-view#listBarItem${i}x${j}x${k} data-name=${barItem.name} d=h w=f g=md av=c ph=md h-bgc=mu bw=xs br=md cur=pointer:
                                               - $if barItem.kind == 'spritesheet' && barItem.resourceId:
@@ -482,26 +501,43 @@ template:
                       - rtgl-view#groupItem${i}x${j} data-name=${item.name} role=button tabindex=0 aria-label="${item.label}" d=h pv=sm ph=md bgc=mu br=md av=c g=md cur=pointer bw=xs bc=bg h-bc=ac h=32 w=1fg:
                           - rtgl-text s=sm: ${item.value}
                     $elif item.type == 'condition-summary':
-                      - rtgl-view#conditionItem${i}x${j} data-name=${item.name} d=h pv=sm ph=md bgc=mu br=md av=c g=md cur=pointer bw=xs bc=bg h-bc=ac h=32 w=1fg:
-                          - rtgl-text s=sm: ${item.value}
+                      # The target, the operation, and the value, each a chip of its own kind.
+                      - 'rtgl-view#conditionItem${i}x${j} data-name=${item.name} title="${item.value}" d=h av=c w=f wrap g=sm pv=xs ph=md bgc=su br=md bw=xs bc=bo h-bc=ac cur=pointer style="min-height: 32px; box-sizing: border-box;"':
+                          - $for part, k in item.parts:
+                              - $if part.kind == 'target':
+                                  - span.layoutEditorConditionChip.layoutEditorConditionTarget key=${part.kind}: ${part.text}
+                                $elif part.kind == 'operator':
+                                  - span.layoutEditorConditionChip.layoutEditorConditionOperator key=${part.kind}: ${part.text}
+                                $elif part.kind == 'value':
+                                  - span.layoutEditorConditionChip.layoutEditorConditionValue key=${part.kind}: ${part.text}
+                                $else:
+                                  - rtgl-text key=${part.kind} s=sm c=mu-fg: ${part.text}
                     $elif item.type == 'conditional-override-list':
                       - $if item.items.length > 0:
-                          - $for conditionalItem, k in item.items:
-                              - rtgl-view#conditionalOverrideItem${i}x${j}x${k} key=${conditionalItem.viewKey} data-index=${conditionalItem.index} w=f g=sm p=md bgc=bg br=md bw=xs bc=bo h-bc=ac cur=context-menu:
-                                  - rtgl-view d=h g=sm av=c w=f:
-                                      - rtgl-view#conditionalOverrideCondition${i}x${j}x${k} data-index=${conditionalItem.index} w=1fg p=sm bgc=bg br=md bw=xs bc=bg h-bc=ac cur=pointer:
-                                          - rtgl-text s=sm: ${conditionalItem.summary}
-                                      - rtgl-button#conditionalOverrideDelete${i}x${j}x${k} data-index=${conditionalItem.index} variant=se s=sm: ${deleteButton}
-                                  - $if conditionalItem.attributeItems.length > 0:
-                                      - $for attributeItem, m in conditionalItem.attributeItems:
-                                          - rtgl-view key=${attributeItem.viewKey} d=h g=sm av=c w=f:
-                                              - rtgl-view#conditionalOverrideAttribute${i}x${j}x${k}x${m} data-index=${conditionalItem.index} data-field-name=${attributeItem.fieldName} w=1fg p=sm bgc=bg br=md bw=xs bc=bg h-bc=ac cur=pointer:
-                                                  - rtgl-text s=xs: ${attributeItem.summary}
-                                              - rtgl-button#conditionalOverrideAttributeDelete${i}x${j}x${k}x${m} data-index=${conditionalItem.index} data-field-name=${attributeItem.fieldName} variant=se s=sm: ${removeButton}
-                                    $else:
-                                      - rtgl-text s=xs c=mu-fg: ${noAttributesYet}
-                                  - rtgl-view d=h w=f:
-                                      - rtgl-button#conditionalOverrideAddAttribute${i}x${j}x${k} data-index=${conditionalItem.index} pre=plus s=sm v=gh w=f: ${addAttributeButton}
+                          # A gap between the conditions.
+                          - rtgl-view d=v w=f g=md:
+                              - $for conditionalItem, k in item.items:
+                                  - rtgl-view#conditionalOverrideItem${i}x${j}x${k} key=${conditionalItem.viewKey} data-index=${conditionalItem.index} w=f g=md p=md bgc=bg br=md bw=xs bc=bo h-bc=ac cur=pointer:
+                                      # The condition and its attributes, each under a small label.
+                                      - rtgl-view d=v w=f g=xs:
+                                          - rtgl-text s=xs c=mu-fg: ${conditionLabel}
+                                          - 'rtgl-view title="${conditionalItem.summary}" d=h av=c wrap g=sm w=f':
+                                              - $for part, n in conditionalItem.summaryParts:
+                                                  - $if part.kind == 'target':
+                                                      - span.layoutEditorConditionChip.layoutEditorConditionTarget key=${part.kind}: ${part.text}
+                                                    $elif part.kind == 'operator':
+                                                      - span.layoutEditorConditionChip.layoutEditorConditionOperator key=${part.kind}: ${part.text}
+                                                    $elif part.kind == 'value':
+                                                      - span.layoutEditorConditionChip.layoutEditorConditionValue key=${part.kind}: ${part.text}
+                                                    $else:
+                                                      - rtgl-text key=${part.kind} s=sm c=mu-fg: ${part.text}
+                                      - rtgl-view d=v w=f g=xs:
+                                          - rtgl-text s=xs c=mu-fg: ${attributesLabel}
+                                          - $if conditionalItem.attributeItems.length > 0:
+                                              - $for attributeItem, m in conditionalItem.attributeItems:
+                                                  - rtgl-text key=${attributeItem.viewKey} s=xs: ${attributeItem.summary}
+                                            $else:
+                                              - rtgl-text s=xs c=mu-fg: ${noAttributesYet}
                     $elif item.type == 'pagination-summary':
                       - rtgl-view#paginationItem${i}x${j} data-name=${item.name} d=h pv=sm ph=md bgc=mu br=md av=c g=md cur=pointer bw=xs bc=bg h-bc=ac h=32 w=1fg:
                           - rtgl-text s=sm: ${item.value}
@@ -564,15 +600,13 @@ template:
           - rtgl-view slot=content g=md:
               - rtgl-form#textRevealIndicatorForm key=${textRevealIndicatorDialog.key} :form=${textRevealIndicatorDialogForm} :defaultValues=${textRevealIndicatorDialogDefaults}:
                   - rtgl-view slot=text-reveal-indicator-image g=xs:
-                      - rtgl-view#textRevealIndicatorImageField w=220 h=160 bw=xs bc=bo br=md cur=pointer av=c ah=c overflow=hidden:
+                      - 'rtgl-view#textRevealIndicatorImageField role=button tabindex=0 aria-haspopup=menu aria-label="${imageLabel}" w=160 style="max-width: 100%;"':
                           - $if textRevealIndicatorDialog.kind == 'spritesheet' && textRevealIndicatorDialog.resourceId:
-                              - 'div.layoutEditorImageFieldTransparencyGrid style="display: block; width: 100%; height: 100%; overflow: hidden;"':
-                                  - 'rvn-spritesheet-preview key=${textRevealIndicatorDialogPreviewKey} previewKey=${textRevealIndicatorDialogPreviewKey} fileId=${textRevealIndicatorDialogSpritesheetFileId} :atlas=${textRevealIndicatorDialogSpritesheetAtlas} :animation=${textRevealIndicatorDialogSpritesheetAnimation} w=f h=f emptyLabel="${noPreviewLabel}"': null
-                            $elif textRevealIndicatorDialog.imageId:
-                              - 'div.layoutEditorImageFieldTransparencyGrid style="display: block; width: 100%; height: 100%; overflow: hidden;"':
-                                  - rvn-file-image imageId=${textRevealIndicatorDialog.imageId} source="thumbnail" w=f h=f: null
+                              - 'rvn-image-card :hasPreview=${true} name="${textRevealIndicatorDialogVisualName}"':
+                                  - 'div slot="preview" style="display: block; width: 100%; height: 100%;"':
+                                      - 'rvn-spritesheet-preview key=${textRevealIndicatorDialogPreviewKey} previewKey=${textRevealIndicatorDialogPreviewKey} fileId=${textRevealIndicatorDialogSpritesheetFileId} :atlas=${textRevealIndicatorDialogSpritesheetAtlas} :animation=${textRevealIndicatorDialogSpritesheetAnimation} w=f h=f emptyLabel="${noPreviewLabel}"': null
                             $else:
-                              - rtgl-text c=mu-fg ta=c: ${selectVisualLabel}
+                              - 'rvn-image-card imageId=${textRevealIndicatorDialog.imageId} name="${textRevealIndicatorDialogVisualName}" emptyLabel="${selectImageLabel}"': null
                       - $if textRevealIndicatorDialog.validationErrors.imageId:
                           - rtgl-text s=sm c=de: ${textRevealIndicatorDialog.validationErrors.imageId}
   - rtgl-dialog#textContentDialog ?open=${textContentDialog.open} s=sm:
@@ -583,7 +617,16 @@ template:
   - rtgl-dialog#conditionalOverrideConditionDialog ?open=${conditionalOverrideConditionDialog.open} s=md:
       - $if conditionalOverrideConditionDialog.open:
           - rtgl-view slot=content g=md:
-              - rtgl-form#conditionalOverrideConditionForm key=${conditionalOverrideConditionDialog.key} :form=${conditionalOverrideConditionForm} :defaultValues=${conditionalOverrideConditionDefaults} :context=${conditionalOverrideConditionDialogContext} w=f: null
+              - rtgl-form#conditionalOverrideConditionForm key=${conditionalOverrideConditionDialog.key} :form=${conditionalOverrideConditionForm} :defaultValues=${conditionalOverrideConditionDefaults} :context=${conditionalOverrideConditionDialogContext} w=f:
+                  # The override's attributes: click one to edit it, right-click to remove it.
+                  - rtgl-view slot=conditional-override-attributes d=v w=f g=sm:
+                      - $if conditionalOverrideDraftAttributeItems.length > 0:
+                          - $for attributeItem, i in conditionalOverrideDraftAttributeItems:
+                              - rtgl-view#conditionalOverrideDraftAttribute${i} key=${attributeItem.fieldName} data-field-name=${attributeItem.fieldName} w=f p=sm bgc=su br=md bw=xs bc=bo h-bc=ac cur=pointer:
+                                  - rtgl-text s=sm: ${attributeItem.summary}
+                        $else:
+                          - rtgl-text s=sm c=mu-fg: ${noAttributesYet}
+                      - rtgl-button#conditionalOverrideDraftAddAttribute pre=plus s=sm v=ol w=f: ${addAttributeButton}
   - rtgl-dialog#conditionalOverrideAttributeDialog ?open=${conditionalOverrideAttributeDialog.open} s=md:
       - $if conditionalOverrideAttributeDialog.open:
           - rtgl-view slot=content g=md:
@@ -609,10 +652,10 @@ template:
                       - 'rtgl-view w=300 h=f style="min-width: 0; min-height: 0;"':
                           - rvn-base-file-explorer#imageSelectorFileExplorer :items=${imageFolderItems} shrinkable: null
                   - 'rtgl-view w=1fg h=f style="min-width: 0; min-height: 0;"':
-                      - rvn-image-selector#imageSelector selectedImageId=${tempSelectedImageId} :columns=${selectorColumns}: null
+                      - rvn-image-selector#imageSelector selectedImageId=${tempSelectedImageId} :columns=${imageSelectorColumns} :minColumnWidth=${imageSelectorMinColumnWidth}: null
               - rtgl-view d=h g=sm w=f ah=e:
                   - rtgl-button#confirmImageSelection variant=pr: ${selectButton}
-  - rtgl-dialog#soundFormDialog ?open=${soundFormDialog.open} s=sm:
+  - rtgl-dialog#soundFormDialog ?open=${soundFormDialog.open} s=md:
       - $if soundFormDialog.open:
           - rtgl-view slot=content g=md w=f:
               - rtgl-form#soundForm key=${soundFormDialog.key} :form=${soundForm} :defaultValues=${soundFormDefaults} w=f:

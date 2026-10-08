@@ -301,8 +301,10 @@ const createTextRevealIndicatorFormValuesForSpritesheet = (
   return nextValues;
 };
 
+// The size the picked visual fills in can be past the sliders' range, which
+// bounds a typed value, so the range reaches it in a render first.
 const setTextRevealIndicatorDialogImage = (deps, { imageId } = {}) => {
-  const { refs, store } = deps;
+  const { refs, render, store } = deps;
   const nextValues = createTextRevealIndicatorFormValuesForImage(
     { store },
     {
@@ -314,6 +316,7 @@ const setTextRevealIndicatorDialogImage = (deps, { imageId } = {}) => {
   store.setTextRevealIndicatorDialogImage({
     imageId,
   });
+  render();
   refs.textRevealIndicatorForm?.setValues?.({
     values: nextValues,
   });
@@ -323,7 +326,7 @@ const setTextRevealIndicatorDialogSpritesheet = (
   deps,
   { resourceId, animationName } = {},
 ) => {
-  const { refs, store } = deps;
+  const { refs, render, store } = deps;
   const nextValues = createTextRevealIndicatorFormValuesForSpritesheet(
     { store },
     {
@@ -337,6 +340,7 @@ const setTextRevealIndicatorDialogSpritesheet = (
     resourceId,
     animationName,
   });
+  render();
   refs.textRevealIndicatorForm?.setValues?.({
     values: nextValues,
   });
@@ -1087,45 +1091,58 @@ export const handleCloseContextMenu = (deps) => {
   render();
 };
 
+// The type and value kind of a condition form's target, which pick the value
+// field it shows.
+const selectConditionTargetKinds = (store, target) => {
+  if (!target) {
+    return { selectedVariableType: undefined, selectedValueKind: undefined };
+  }
+
+  const selectedVariableType =
+    store.selectVisibilityConditionTargetTypeByTarget()?.[target] ?? "string";
+  const selectedValueKind =
+    store.selectVisibilityConditionTargetValueKindByTarget()?.[target] ??
+    selectedVariableType;
+  return { selectedVariableType, selectedValueKind };
+};
+
+// A picked target starts at Equals, and a Boolean target at True, whichever
+// target came before. Undefined when the form already has them.
+const getConditionTargetDefaults = (values, selectedVariableType) => {
+  if (!values.target) {
+    return undefined;
+  }
+
+  const nextValues = { ...values };
+  let hasDefaults = false;
+  if (values.op === undefined) {
+    nextValues.op = "eq";
+    hasDefaults = true;
+  }
+  if (selectedVariableType === "boolean" && values.booleanValue === undefined) {
+    nextValues.booleanValue = true;
+    hasDefaults = true;
+  }
+  return hasDefaults ? nextValues : undefined;
+};
+
+// The form fills a field only once it shows, so a target's defaults go in
+// after the render that shows its value field.
 export const handleVisibilityConditionFormChange = (deps, payload) => {
   const { refs, render, store } = deps;
   const values = payload._event.detail?.values ?? {};
-  const targetTypeByTarget =
-    store.selectVisibilityConditionTargetTypeByTarget();
-  const targetValueKindByTarget =
-    store.selectVisibilityConditionTargetValueKindByTarget();
-  const selectedVariableType = values.target
-    ? (targetTypeByTarget?.[values.target] ?? "string")
-    : undefined;
-  const selectedValueKind = values.target
-    ? (targetValueKindByTarget?.[values.target] ??
-      selectedVariableType ??
-      "string")
-    : undefined;
+  const kinds = selectConditionTargetKinds(store, values.target);
 
-  if (values.target && values.op === undefined) {
-    const nextValues = {
-      ...values,
-      op: "eq",
-    };
-
-    if (
-      selectedVariableType === "boolean" &&
-      values.booleanValue === undefined
-    ) {
-      nextValues.booleanValue = true;
-    }
-
-    refs.visibilityConditionForm.setValues({
-      values: nextValues,
-    });
-  }
-
-  store.setVisibilityConditionDialogSelectedVariableType({
-    selectedVariableType,
-    selectedValueKind,
-  });
+  store.setVisibilityConditionDialogSelectedVariableType(kinds);
   render();
+
+  const defaults = getConditionTargetDefaults(
+    values,
+    kinds.selectedVariableType,
+  );
+  if (defaults) {
+    refs.visibilityConditionForm.setValues({ values: defaults });
+  }
 };
 
 export const handleContextMenuClickItem = (deps, payload) => {
@@ -1181,43 +1198,17 @@ export const handleContextMenuClickItem = (deps, payload) => {
 export const handleConditionalOverrideConditionFormChange = (deps, payload) => {
   const { refs, render, store } = deps;
   const values = payload._event.detail?.values ?? {};
-  const targetTypeByTarget =
-    store.selectVisibilityConditionTargetTypeByTarget();
-  const targetValueKindByTarget =
-    store.selectVisibilityConditionTargetValueKindByTarget();
-  const selectedVariableType = values.target
-    ? (targetTypeByTarget?.[values.target] ?? "string")
-    : undefined;
-  const selectedValueKind = values.target
-    ? (targetValueKindByTarget?.[values.target] ??
-      selectedVariableType ??
-      "string")
-    : undefined;
+  const kinds = selectConditionTargetKinds(store, values.target);
 
-  const shouldDefaultOperation = values.target && values.op === undefined;
-  const shouldDefaultBooleanValue =
-    values.target &&
-    selectedVariableType === "boolean" &&
-    values.booleanValue === undefined;
-
-  store.setConditionalOverrideConditionDialogSelectedVariableType({
-    selectedVariableType,
-    selectedValueKind,
-  });
+  store.setConditionalOverrideConditionDialogSelectedVariableType(kinds);
   render();
 
-  if (shouldDefaultOperation || shouldDefaultBooleanValue) {
-    const nextValues = { ...values };
-    if (shouldDefaultOperation) {
-      nextValues.op = "eq";
-    }
-    if (shouldDefaultBooleanValue) {
-      nextValues.booleanValue = true;
-    }
-
-    refs.conditionalOverrideConditionForm.setValues({
-      values: nextValues,
-    });
+  const defaults = getConditionTargetDefaults(
+    values,
+    kinds.selectedVariableType,
+  );
+  if (defaults) {
+    refs.conditionalOverrideConditionForm.setValues({ values: defaults });
   }
 };
 
@@ -1744,6 +1735,17 @@ export const handleTextRevealIndicatorImageFieldClick = (deps, payload) => {
   render();
 };
 
+// The image field is a button: Enter or Space opens its menu too.
+export const handleTextRevealIndicatorImageFieldKeyDown = (deps, payload) => {
+  const { _event } = payload;
+  if (_event.key !== "Enter" && _event.key !== " ") {
+    return;
+  }
+
+  _event.preventDefault();
+  handleTextRevealIndicatorImageFieldClick(deps, payload);
+};
+
 export const handleTextRevealIndicatorFormAction = (deps, payload) => {
   const { store, render } = deps;
   const detail = payload._event.detail || {};
@@ -1878,6 +1880,7 @@ export const handleConditionalOverrideConditionClick = (deps, payload) => {
 
   store.openConditionalOverrideConditionDialog({
     editingIndex: Number.isInteger(index) && index >= 0 ? index : undefined,
+    draftSet: rule?.set,
     selectedVariableType: rule?.when?.target
       ? (targetTypeByTarget?.[rule.when.target] ?? "string")
       : undefined,
@@ -1923,37 +1926,11 @@ export const handleConditionalOverrideContextMenu = async (deps, payload) => {
   await confirmConditionalOverrideDelete(deps, ruleLocator);
 };
 
-export const handleConditionalOverrideDeleteClick = async (deps, payload) => {
-  const { store } = deps;
-  const event = payload._event;
-  event.preventDefault();
-  event.stopPropagation();
-
-  const index = Number.parseInt(event.currentTarget.dataset.index, 10);
-  const rules = getConditionalOverrideRules(store);
-  if (!Number.isInteger(index) || index < 0 || index >= rules.length) {
-    return;
-  }
-
-  const ruleLocator = createConditionalOverrideRuleLocator({ rules, index });
-  await confirmConditionalOverrideDelete(deps, ruleLocator);
-};
-
-export const handleConditionalOverrideAddAttributeClick = (deps, payload) => {
+// The condition dialog's Add Attribute edits a new attribute of its draft.
+export const handleConditionalOverrideAddAttributeClick = (deps) => {
   const { appService, props, render, store } = deps;
-  const index = Number.parseInt(
-    payload._event.currentTarget?.dataset?.index,
-    10,
-  );
-  const rules = getConditionalOverrideRules(store);
-  const rule = Number.isInteger(index) && index >= 0 ? rules[index] : undefined;
-
-  if (!rule) {
-    return;
-  }
-
   const availableAttributeOptions = getConditionalOverrideAttributeOptions({
-    rule,
+    rule: { set: store.selectConditionalOverrideDraftSet() },
     capabilities:
       getLayoutEditorElementDefinition(props.itemType)?.capabilities ?? {},
   });
@@ -1969,40 +1946,62 @@ export const handleConditionalOverrideAddAttributeClick = (deps, payload) => {
   }
 
   store.openConditionalOverrideAttributeDialog({
-    editingIndex: index,
     fieldName: undefined,
     selectedAnchor: { x: 0, y: 0 },
   });
   render();
 };
 
+// An attribute in the condition dialog opens to edit it in the draft.
 export const handleConditionalOverrideAttributeClick = (deps, payload) => {
   const { render, store } = deps;
-  const index = Number.parseInt(
-    payload._event.currentTarget?.dataset?.index,
-    10,
-  );
-  const fieldName = payload._event.currentTarget?.dataset?.fieldName;
-  const rules = getConditionalOverrideRules(store);
-  const selectedImageId =
-    Number.isInteger(index) && CONDITIONAL_OVERRIDE_IMAGE_FIELDS.has(fieldName)
-      ? rules[index]?.set?.[fieldName]
-      : undefined;
-  const selectedRule = Number.isInteger(index) ? rules[index] : undefined;
+  const { fieldName } = payload._event.currentTarget.dataset;
+  const draftSet = store.selectConditionalOverrideDraftSet();
+  const selectedImageId = CONDITIONAL_OVERRIDE_IMAGE_FIELDS.has(fieldName)
+    ? draftSet[fieldName]
+    : undefined;
   const selectedAnchor = {
-    x: Number.isFinite(selectedRule?.set?.anchorX)
-      ? selectedRule.set.anchorX
-      : 0,
-    y: Number.isFinite(selectedRule?.set?.anchorY)
-      ? selectedRule.set.anchorY
-      : 0,
+    x: Number.isFinite(draftSet.anchorX) ? draftSet.anchorX : 0,
+    y: Number.isFinite(draftSet.anchorY) ? draftSet.anchorY : 0,
   };
 
   store.openConditionalOverrideAttributeDialog({
-    editingIndex: Number.isInteger(index) && index >= 0 ? index : undefined,
     fieldName,
     selectedImageId,
     selectedAnchor,
+  });
+  render();
+};
+
+// An attribute in the condition dialog is removed from the draft from its
+// right-click menu.
+export const handleConditionalOverrideDraftAttributeContextMenu = async (
+  deps,
+  payload,
+) => {
+  const { appService, render, store } = deps;
+  const copy = selectCopy(deps);
+  const event = payload._event;
+  event.preventDefault();
+  const { fieldName } = event.currentTarget.dataset;
+
+  const result = await appService.showDropdownMenu({
+    items: [
+      { type: "item", label: copy.removeButton ?? "Remove", key: "remove" },
+    ],
+    x: event.clientX,
+    y: event.clientY,
+    place: "bs",
+  });
+  if (result?.item?.key !== "remove") {
+    return;
+  }
+
+  store.setConditionalOverrideConditionDialogDraftSet({
+    draftSet: deleteConditionalOverrideSetField(
+      store.selectConditionalOverrideDraftSet(),
+      fieldName,
+    ),
   });
   render();
 };
@@ -2037,41 +2036,6 @@ export const handleConditionalOverrideAttributeImageKeyDown = (
   payload._event.preventDefault();
   payload._event.stopPropagation();
   handleConditionalOverrideAttributeImageClick(deps);
-};
-
-export const handleConditionalOverrideAttributeDeleteClick = (
-  deps,
-  payload,
-) => {
-  const { render, store } = deps;
-  const index = Number.parseInt(
-    payload._event.currentTarget?.dataset?.index,
-    10,
-  );
-  const fieldName = payload._event.currentTarget?.dataset?.fieldName;
-  const rules = getConditionalOverrideRules(store);
-
-  if (
-    !Number.isInteger(index) ||
-    index < 0 ||
-    index >= rules.length ||
-    !fieldName
-  ) {
-    return;
-  }
-
-  const nextRules = [...rules];
-  const nextRule = {
-    ...nextRules[index],
-    set: deleteConditionalOverrideSetField(nextRules[index]?.set, fieldName),
-  };
-  nextRules[index] = nextRule;
-
-  applyPanelValueUpdate(deps, {
-    name: "conditionalOverrides",
-    value: nextRules,
-  });
-  render();
 };
 
 export const handleConditionalOverrideConditionFormAction = (deps, payload) => {
@@ -2116,7 +2080,7 @@ export const handleConditionalOverrideConditionFormAction = (deps, payload) => {
       op: values.op ?? "eq",
       value: conditionValue,
     },
-    set: {},
+    set: store.selectConditionalOverrideDraftSet(),
   };
   const rules = getConditionalOverrideRules(store);
   const editingIndex =
@@ -2131,6 +2095,7 @@ export const handleConditionalOverrideConditionFormAction = (deps, payload) => {
     nextRules[editingIndex] = {
       ...nextRules[editingIndex],
       when: nextRule.when,
+      set: nextRule.set,
     };
   } else {
     nextRules.push(nextRule);
@@ -2178,34 +2143,19 @@ export const handleConditionalOverrideAttributeFormAction = (deps, payload) => {
     return;
   }
 
-  const rules = getConditionalOverrideRules(store);
-  const editingIndex = dialog.editingIndex;
-  if (
-    !Number.isInteger(editingIndex) ||
-    editingIndex < 0 ||
-    editingIndex >= rules.length
-  ) {
-    return;
-  }
-
-  const nextRules = [...rules];
   const attributeValues = { ...values };
   attributeValues.selectedImageId = dialog.selectedImageId;
   if (values.fieldName === "anchor") {
     attributeValues.anchor = dialog.selectedAnchor;
   }
 
-  nextRules[editingIndex] = {
-    ...nextRules[editingIndex],
-    set: buildConditionalOverrideSetUpdate(
-      nextRules[editingIndex]?.set,
+  // The attribute goes into the condition dialog's draft, which its Save
+  // saves.
+  store.setConditionalOverrideConditionDialogDraftSet({
+    draftSet: buildConditionalOverrideSetUpdate(
+      store.selectConditionalOverrideDraftSet(),
       attributeValues,
     ),
-  };
-
-  applyPanelValueUpdate(deps, {
-    name: "conditionalOverrides",
-    value: nextRules,
   });
   store.closeConditionalOverrideAttributeDialog();
   render();

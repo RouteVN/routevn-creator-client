@@ -17,3 +17,8 @@ propsSchema:
     columns:
       type: integer
       minimum: 1
+    # With columns, makes columns the most per row: narrower grids show
+    # fewer columns, each at least this many pixels wide.
+    minColumnWidth:
+      type: integer
+      minimum: 1

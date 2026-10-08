@@ -105,6 +105,63 @@ describe("layoutEditPanel stacked labels", () => {
         name: "clickTextStyleId",
       },
     ]);
+    // Hover and Clicked clear with the select's clear button instead of a
+    // None option; the default text style stays.
+    expect(textStylesSection.items.map(({ noClear }) => noClear)).toEqual([
+      true,
+      false,
+      false,
+    ]);
+    for (const item of textStylesSection.items) {
+      expect(item.options.some(({ value }) => value === "")).toBe(false);
+    }
+  });
+
+  it("shows a select's clear button only when its item is clearable", () => {
+    const selectBlock = sliceViewBlock(
+      "$elif item.type == 'select':",
+      "$elif item.type == 'anchor-grid':",
+    );
+    const selects = selectBlock
+      .split("\n")
+      .filter((line) => line.includes("rtgl-select#selectItem"));
+
+    expect(selects).toHaveLength(2);
+    for (const select of selects) {
+      expect(select).toContain("?no-clear=${item.noClear}");
+    }
+  });
+
+  it("labels the typewriter's Effect select above it", () => {
+    const revealingSection = selectSections("text-revealing", {
+      revealEffect: "typewriter",
+    }).find((section) => section.id === "textRevealing");
+
+    expect(
+      revealingSection.items.find((item) => item.name === "revealEffect"),
+    ).toMatchObject({
+      type: "select",
+      stacked: true,
+      label: "Effect",
+    });
+  });
+
+  it("labels the indicator's Revealing and Complete above their boxes", () => {
+    const indicatorSection = selectSections("text-revealing", {
+      indicator: {
+        revealing: { imageId: "image-revealing" },
+        complete: { imageId: "image-complete" },
+      },
+    }).find((section) => section.id === "textRevealIndicator");
+    const [indicatorBar] = indicatorSection.items;
+
+    expect(indicatorBar).toMatchObject({ type: "list-bar", stacked: true });
+    expect(
+      indicatorBar.items.map(({ label, imageId }) => ({ label, imageId })),
+    ).toEqual([
+      { label: "Revealing", imageId: "image-revealing" },
+      { label: "Complete", imageId: "image-complete" },
+    ]);
   });
 
   it("labels the Hover and Click sound boxes above them and shows their volume", () => {
@@ -212,12 +269,9 @@ describe("layoutEditPanel stacked labels", () => {
     expect(imageCard).toContain("rtgl-view#listBarItem${i}x${j}x${k}");
     // As wide as one of the panel's two columns, such as Position X.
     expect(imageCard).toContain("width: calc((100% - var(--spacing-md)) / 2);");
-    expect(imageCard).toContain("aspect-ratio: 16 / 9;");
+    // rvn-image-card draws the 16:9 image with its name below.
     expect(imageCard).toContain(
-      'rvn-file-image imageId=${barItem.imageId} source="thumbnail" w=f h=f',
-    );
-    expect(imageCard.indexOf("rvn-file-image")).toBeLessThan(
-      imageCard.indexOf("${barItem.imageName}"),
+      'rvn-image-card imageId=${barItem.imageId} name="${barItem.imageName}"',
     );
   });
 

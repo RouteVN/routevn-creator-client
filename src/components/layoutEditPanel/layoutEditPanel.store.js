@@ -50,10 +50,10 @@ import {
   getConditionalOverrideSummary,
   getSaveLoadPaginationSummary,
   getVisibilityConditionSummary,
+  getVisibilityConditionSummaryParts,
   normalizeConditionalOverrideRules,
   toConditionalOverrideAttributeItems,
   toSectionedVisibilityConditionTargetOptions,
-  toVisibilityConditionTargetOptions,
 } from "./support/layoutEditPanelFeatures.js";
 import {
   createSpriteBlurDialogDefaults,
@@ -77,16 +77,18 @@ import {
 import {
   createTextRevealIndicatorDialogDefaults,
   createTextRevealIndicatorForm,
+  getTextRevealIndicatorSliderRanges,
+  getTextRevealIndicatorVisualName,
   isTextRevealIndicatorStateName,
 } from "./support/layoutEditPanelTextRevealIndicator.js";
 import { selectLayoutEditPanelCopy } from "./support/layoutEditPanelCopy.js";
 
 const HIDDEN_LAYOUT_ACTION_MODES = new Set(["conditional"]);
 const DEFAULT_INTERACTION_SOUND_VOLUME = 100;
-// Touch sound pickers show up to four sounds a row, which leaves two on a
-// phone.
-const TOUCH_SOUND_SELECTOR_COLUMNS = 4;
-const TOUCH_SOUND_SELECTOR_MIN_COLUMN_WIDTH = 120;
+// Touch image and sound pickers show up to four a row, each at least 120px
+// wide: four on a tablet, two on a phone.
+const TOUCH_MEDIA_SELECTOR_COLUMNS = 4;
+const TOUCH_MEDIA_SELECTOR_MIN_COLUMN_WIDTH = 120;
 const DEFAULT_REVEAL_SOUND_STOP_TIMING = "immediate";
 const TEXT_CONTENT_MENTION_VARIABLE_TYPES = new Set([
   "string",
@@ -431,6 +433,11 @@ const annotatePanelItems = (items = [], { sectionKey } = {}) => {
       nextItem.previewKey = item?.key ?? nextItem.viewKey;
     }
 
+    // A select shows its clear button only when its item is clearable.
+    if (item?.type === "select") {
+      nextItem.noClear = item.clearable !== true;
+    }
+
     return nextItem;
   });
 };
@@ -727,11 +734,14 @@ const resetSelectionUiState = (state) => {
     editingIndex: undefined,
     selectedVariableType: undefined,
     selectedValueKind: undefined,
+    // The override's attributes as the dialog edits them, saved with its
+    // condition.
+    draftSet: undefined,
   };
+  // An attribute of the condition dialog's draft.
   state.conditionalOverrideAttributeDialog = {
     open: false,
     key: 0,
-    editingIndex: undefined,
     fieldName: undefined,
     selectedImageId: undefined,
     selectedAnchor: undefined,
@@ -1043,14 +1053,25 @@ export const closeTextContentDialog = ({ state }, _payload = {}) => {
 
 export const openConditionalOverrideConditionDialog = (
   { state },
-  { editingIndex, selectedVariableType } = {},
+  { editingIndex, selectedVariableType, draftSet } = {},
 ) => {
   state.conditionalOverrideConditionDialog.open = true;
   state.conditionalOverrideConditionDialog.key += 1;
   state.conditionalOverrideConditionDialog.editingIndex = editingIndex;
   state.conditionalOverrideConditionDialog.selectedVariableType =
     selectedVariableType;
+  state.conditionalOverrideConditionDialog.draftSet = draftSet ?? {};
 };
+
+export const setConditionalOverrideConditionDialogDraftSet = (
+  { state },
+  { draftSet } = {},
+) => {
+  state.conditionalOverrideConditionDialog.draftSet = draftSet;
+};
+
+export const selectConditionalOverrideDraftSet = ({ state }) =>
+  state.conditionalOverrideConditionDialog.draftSet ?? {};
 
 export const closeConditionalOverrideConditionDialog = (
   { state },
@@ -1059,6 +1080,7 @@ export const closeConditionalOverrideConditionDialog = (
   state.conditionalOverrideConditionDialog.open = false;
   state.conditionalOverrideConditionDialog.editingIndex = undefined;
   state.conditionalOverrideConditionDialog.selectedValueKind = undefined;
+  state.conditionalOverrideConditionDialog.draftSet = undefined;
 };
 
 export const closeVisibilityConditionDialog = ({ state }, _payload = {}) => {
@@ -1088,11 +1110,10 @@ export const setConditionalOverrideConditionDialogSelectedVariableType = (
 
 export const openConditionalOverrideAttributeDialog = (
   { state },
-  { editingIndex, fieldName, selectedImageId, selectedAnchor } = {},
+  { fieldName, selectedImageId, selectedAnchor } = {},
 ) => {
   state.conditionalOverrideAttributeDialog.open = true;
   state.conditionalOverrideAttributeDialog.key += 1;
-  state.conditionalOverrideAttributeDialog.editingIndex = editingIndex;
   state.conditionalOverrideAttributeDialog.fieldName = fieldName;
   state.conditionalOverrideAttributeDialog.selectedImageId = selectedImageId;
   state.conditionalOverrideAttributeDialog.selectedAnchor = selectedAnchor;
@@ -1104,7 +1125,6 @@ export const closeConditionalOverrideAttributeDialog = (
   _payload = {},
 ) => {
   state.conditionalOverrideAttributeDialog.open = false;
-  state.conditionalOverrideAttributeDialog.editingIndex = undefined;
   state.conditionalOverrideAttributeDialog.fieldName = undefined;
   state.conditionalOverrideAttributeDialog.selectedImageId = undefined;
   state.conditionalOverrideAttributeDialog.selectedAnchor = undefined;
@@ -1578,10 +1598,6 @@ export const selectViewData = ({ state, props, constants, i18n }) => {
     (item) => item.type === "folder",
   );
   const firstTextStyleId = getFirstTextStyleId(state.textStylesData);
-  const textStyleItemsWithNone = [
-    { label: copy.noneOption ?? "None", value: "" },
-    ...textStyleItems,
-  ];
   const soundItemsWithNone = [
     { label: copy.noneOption ?? "None", value: "" },
     ...soundItems,
@@ -1606,15 +1622,11 @@ export const selectViewData = ({ state, props, constants, i18n }) => {
     systemSectionLabel: copy.systemSection ?? "System",
     variablesSectionLabel: copy.variablesSection ?? "Variables",
   };
-  const visibilityConditionTargetOptions = toVisibilityConditionTargetOptions(
+  // Visibility and conditional overrides list the same targets, by section.
+  const conditionTargetOptions = toSectionedVisibilityConditionTargetOptions(
     state.variablesData,
     visibilityConditionOptions,
   );
-  const conditionalOverrideConditionTargetOptions =
-    toSectionedVisibilityConditionTargetOptions(
-      state.variablesData,
-      visibilityConditionOptions,
-    );
   const visibilityConditionTargetTypeByTarget =
     toVisibilityConditionTargetTypeByTarget(
       state.variablesData,
@@ -1663,6 +1675,12 @@ export const selectViewData = ({ state, props, constants, i18n }) => {
         state.variablesData,
         visibilityConditionOptions,
         getVisibilityConditionSummary,
+        copy,
+      ),
+      summaryParts: getVisibilityConditionSummaryParts(
+        rule?.when,
+        state.variablesData,
+        visibilityConditionOptions,
         copy,
       ),
       attributeItems: toConditionalOverrideAttributeItems(
@@ -1716,7 +1734,6 @@ export const selectViewData = ({ state, props, constants, i18n }) => {
       resourceType: props.resourceType,
       isInsideDirectedContainer: props.isInsideDirectedContainer === true,
       textStyleItems,
-      textStyleItemsWithNone,
       soundItems,
       soundItemsWithNone,
       spritesheetSelectionItems,
@@ -1771,6 +1788,12 @@ export const selectViewData = ({ state, props, constants, i18n }) => {
         visibilityConditionOptions,
         copy,
       ),
+      visibilityConditionSummaryParts: getVisibilityConditionSummaryParts(
+        currentVisibilityCondition,
+        state.variablesData,
+        visibilityConditionOptions,
+        copy,
+      ),
       hasVisibilityCondition: !!currentVisibilityCondition?.target,
       canAddSpriteImageVariant:
         !values.imageId || !values.hoverImageId || !values.clickImageId,
@@ -1801,23 +1824,20 @@ export const selectViewData = ({ state, props, constants, i18n }) => {
       visibilityConditionTargetTypeByTarget,
       visibilityConditionTargetValueKindByTarget,
     );
-  const editingConditionalOverrideAttributeRule =
-    Number.isInteger(state.conditionalOverrideAttributeDialog.editingIndex) &&
-    state.conditionalOverrideAttributeDialog.editingIndex >= 0
-      ? conditionalOverrideRules[
-          state.conditionalOverrideAttributeDialog.editingIndex
-        ]
-      : undefined;
+  // The attribute dialog edits the condition dialog's draft attributes.
+  const conditionalOverrideDraftRule = {
+    set: state.conditionalOverrideConditionDialog.draftSet ?? {},
+  };
   const conditionalOverrideAttributeOptions =
     getConditionalOverrideAttributeOptions({
-      rule: editingConditionalOverrideAttributeRule,
+      rule: conditionalOverrideDraftRule,
       includeFieldName: state.conditionalOverrideAttributeDialog.fieldName,
       capabilities,
       copy,
     });
   const conditionalOverrideAttributeDefaults =
     createConditionalOverrideAttributeDefaults(
-      editingConditionalOverrideAttributeRule,
+      conditionalOverrideDraftRule,
       state.conditionalOverrideAttributeDialog.fieldName,
       conditionalOverrideAttributeOptions,
     );
@@ -1857,6 +1877,12 @@ export const selectViewData = ({ state, props, constants, i18n }) => {
     });
   const textRevealIndicatorDialogForm = createTextRevealIndicatorForm({
     stateName: state.textRevealIndicatorDialog.stateName,
+    sliderRanges: getTextRevealIndicatorSliderRanges({
+      values: textRevealIndicatorDialogDefaults,
+      dialog: state.textRevealIndicatorDialog,
+      imagesData: state.imagesData,
+      spritesheetsData: state.spritesheetsData,
+    }),
     copy,
   });
   const textRevealIndicatorDialogSpritesheetSelectionValue =
@@ -1893,7 +1919,7 @@ export const selectViewData = ({ state, props, constants, i18n }) => {
     sectionTooltip: state.sectionTooltip,
     visibilityConditionDialogDefaults,
     visibilityConditionDialogForm: createVisibilityConditionForm({
-      targetOptions: visibilityConditionTargetOptions,
+      targetOptions: conditionTargetOptions,
       copy,
     }),
     visibilityConditionDialogContext: {
@@ -1930,6 +1956,11 @@ export const selectViewData = ({ state, props, constants, i18n }) => {
     textRevealIndicatorDialogSpritesheetAnimation:
       textRevealIndicatorDialogSpritesheetPreview.animation,
     textRevealIndicatorDialogPreviewKey,
+    textRevealIndicatorDialogVisualName: getTextRevealIndicatorVisualName({
+      dialog: state.textRevealIndicatorDialog,
+      imagesData: state.imagesData,
+      spritesheetsData: state.spritesheetsData,
+    }),
     textContentDialog: state.textContentDialog,
     textContentDialogDefaults: {},
     textContentDialogContent: values.content,
@@ -1941,12 +1972,18 @@ export const selectViewData = ({ state, props, constants, i18n }) => {
     conditionalOverrideItems,
     conditionalOverrideConditionDefaults,
     conditionalOverrideConditionForm: createConditionalOverrideConditionForm({
-      targetOptions: conditionalOverrideConditionTargetOptions,
+      targetOptions: conditionTargetOptions,
       submitLabel: editingConditionalOverrideRule
         ? (copy.saveButton ?? "Save")
         : (copy.createButton ?? "Create"),
       copy,
     }),
+    conditionalOverrideDraftAttributeItems: toConditionalOverrideAttributeItems(
+      conditionalOverrideDraftRule,
+      state.textStylesData,
+      state.imagesData,
+      copy,
+    ),
     conditionalOverrideConditionDialogContext: {
       selectedVariableType: selectedConditionalOverrideVariableType,
       selectedValueKind: selectedConditionalOverrideValueKind,
@@ -1981,11 +2018,17 @@ export const selectViewData = ({ state, props, constants, i18n }) => {
     tempSelectedSoundId: state.tempSelectedSoundId,
     soundFolderItems,
     showSoundSelectorFileExplorer: selectorLayout.showFileExplorer,
+    imageSelectorColumns: state.isTouchMode
+      ? TOUCH_MEDIA_SELECTOR_COLUMNS
+      : undefined,
+    imageSelectorMinColumnWidth: state.isTouchMode
+      ? TOUCH_MEDIA_SELECTOR_MIN_COLUMN_WIDTH
+      : undefined,
     soundSelectorColumns: state.isTouchMode
-      ? TOUCH_SOUND_SELECTOR_COLUMNS
+      ? TOUCH_MEDIA_SELECTOR_COLUMNS
       : undefined,
     soundSelectorMinColumnWidth: state.isTouchMode
-      ? TOUCH_SOUND_SELECTOR_MIN_COLUMN_WIDTH
+      ? TOUCH_MEDIA_SELECTOR_MIN_COLUMN_WIDTH
       : undefined,
     soundFormDialog: state.soundFormDialog,
     soundForm: createSoundForm(copy, state.soundFormDialog),
@@ -2002,9 +2045,10 @@ export const selectViewData = ({ state, props, constants, i18n }) => {
     fullImagePreviewImageId: state.fullImagePreviewImageId,
     addAttributeButton: copy.addAttributeButton ?? "Add Attribute",
     cancelButton: copy.cancelButton ?? "Cancel",
-    deleteButton: copy.deleteButton ?? "Delete",
     imageLabel: copy.imageLabel ?? "Image",
     noAttributesYet: copy.noAttributesYet ?? "No attributes yet",
+    conditionLabel: copy.conditionTitle ?? "Condition",
+    attributesLabel: copy.attributesLabel ?? "Attributes",
     noPreviewLabel: copy.noPreviewLabel ?? "No preview",
     notSetLabel: copy.notSetLabel ?? "Not set",
     removeButton: copy.removeButton ?? "Remove",
@@ -2013,6 +2057,5 @@ export const selectViewData = ({ state, props, constants, i18n }) => {
       copy.selectSpritesheetAnimationLabel ?? "Select a spritesheet animation",
     selectImageLabel: copy.selectImageLabel ?? "Select image",
     selectSoundLabel: copy.selectSoundLabel ?? "Select sound",
-    selectVisualLabel: copy.selectVisualLabel ?? "Select visual",
   };
 };

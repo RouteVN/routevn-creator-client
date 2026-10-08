@@ -485,7 +485,9 @@ layoutSections:
     "$if canAddTextRevealSound":
       labelAction: plus
     items:
+      # Labelled above its select, as the text style selects are.
       - type: select
+        stacked: true
         label: Effect
         name: revealEffect
         value: "${values.revealEffect}"
@@ -498,7 +500,9 @@ layoutSections:
     "$if canAddTextRevealIndicator":
       labelAction: plus
     items:
+      # Revealing and Complete are labelled above their boxes.
       - type: list-bar
+        stacked: true
         items: "${values.textRevealIndicatorItems}"
   - "$when": "supportsTextStyles"
     id: textStyles
@@ -519,14 +523,17 @@ layoutSections:
         label: Hover
         name: hoverTextStyleId
         value: "${values.hoverTextStyleId}"
-        options: "${textStyleItemsWithNone}"
+        options: "${textStyleItems}"
+        # Clearing a hover or click text style removes it.
+        clearable: true
       - "$when": "values.clickTextStyleId"
         type: select
         stacked: true
         label: Clicked
         name: clickTextStyleId
         value: "${values.clickTextStyleId}"
-        options: "${textStyleItemsWithNone}"
+        options: "${textStyleItems}"
+        clearable: true
   - "$when": "supportsSoundSelection"
     id: sounds
     label: Sound
@@ -576,6 +583,7 @@ layoutSections:
         type: condition-summary
         name: visibilityCondition
         value: "${visibilityConditionSummary}"
+        parts: "${visibilityConditionSummaryParts}"
   - "$when": 'itemType == "fragment-ref"'
     label: Fragment
     items:
@@ -677,6 +685,7 @@ controlSections:
         type: condition-summary
         name: visibilityCondition
         value: "${visibilityConditionSummary}"
+        parts: "${visibilityConditionSummaryParts}"
   - "$when": "supportsActions"
     id: actions
     label: Actions

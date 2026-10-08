@@ -1,0 +1,21 @@
+componentName: rvn-image-card
+propsSchema:
+  type: object
+  properties:
+    imageId:
+      type: string
+      description: The image shown, by its image resource id, as its thumbnail.
+    fileId:
+      type: string
+      description: The image shown, by its file id, when there is no imageId.
+    name:
+      type: string
+      description: The name below the image, such as the image's name.
+    hasPreview:
+      type: boolean
+      description: >-
+        Shows the slotted preview, such as a spritesheet animation, in the frame
+        when there is no image.
+    emptyLabel:
+      type: string
+      description: Shown in the frame when there is no image or preview.

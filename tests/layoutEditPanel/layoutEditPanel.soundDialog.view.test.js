@@ -11,8 +11,9 @@ describe("layoutEditPanel sound dialogs view", () => {
       "utf8",
     );
 
+    // Its size is checked with the panel's other dialogs.
     const soundFormStart = view.indexOf(
-      "rtgl-dialog#soundFormDialog ?open=${soundFormDialog.open} s=sm",
+      "rtgl-dialog#soundFormDialog ?open=${soundFormDialog.open} ",
     );
     const soundSelectorStart = view.indexOf(
       "rtgl-dialog#soundSelectorDialog",

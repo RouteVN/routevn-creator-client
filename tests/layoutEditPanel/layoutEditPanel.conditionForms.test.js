@@ -1,5 +1,8 @@
 import { describe, expect, it, vi } from "vitest";
-import { handleConditionalOverrideConditionFormChange } from "../../src/components/layoutEditPanel/layoutEditPanel.handlers.js";
+import {
+  handleConditionalOverrideConditionFormChange,
+  handleVisibilityConditionFormChange,
+} from "../../src/components/layoutEditPanel/layoutEditPanel.handlers.js";
 import {
   createConditionalOverrideAttributeForm,
   createConditionalOverrideAttributeImagePreview,
@@ -34,129 +37,6 @@ describe("layoutEditPanel condition forms", () => {
         id: "submit",
         variant: "pr",
         label: "Save",
-      },
-    ]);
-  });
-
-  it("selects Equals by default after choosing a condition target", () => {
-    const setValues = vi.fn();
-
-    handleConditionalOverrideConditionFormChange(
-      {
-        refs: {
-          conditionalOverrideConditionForm: { setValues },
-        },
-        render: vi.fn(),
-        store: {
-          selectVisibilityConditionTargetTypeByTarget: () => ({
-            "variables['score']": "number",
-          }),
-          selectVisibilityConditionTargetValueKindByTarget: () => ({
-            "variables['score']": "number",
-          }),
-          setConditionalOverrideConditionDialogSelectedVariableType: vi.fn(),
-        },
-      },
-      {
-        _event: {
-          detail: {
-            values: {
-              target: "variables['score']",
-            },
-          },
-        },
-      },
-    );
-
-    expect(setValues).toHaveBeenCalledWith({
-      values: {
-        target: "variables['score']",
-        op: "eq",
-      },
-    });
-  });
-
-  it("selects True by default after choosing a Boolean target", () => {
-    const setValues = vi.fn();
-
-    handleConditionalOverrideConditionFormChange(
-      {
-        refs: {
-          conditionalOverrideConditionForm: { setValues },
-        },
-        render: vi.fn(),
-        store: {
-          selectVisibilityConditionTargetTypeByTarget: () => ({
-            "variables['enabled']": "boolean",
-          }),
-          selectVisibilityConditionTargetValueKindByTarget: () => ({
-            "variables['enabled']": "boolean",
-          }),
-          setConditionalOverrideConditionDialogSelectedVariableType: vi.fn(),
-        },
-      },
-      {
-        _event: {
-          detail: {
-            values: {
-              target: "variables['enabled']",
-            },
-          },
-        },
-      },
-    );
-
-    expect(setValues).toHaveBeenCalledWith({
-      values: {
-        target: "variables['enabled']",
-        op: "eq",
-        booleanValue: true,
-      },
-    });
-  });
-
-  it("selects True after Equals is already populated", () => {
-    const calls = [];
-
-    handleConditionalOverrideConditionFormChange(
-      {
-        refs: {
-          conditionalOverrideConditionForm: {
-            setValues: ({ values }) => calls.push({ type: "set", values }),
-          },
-        },
-        render: () => calls.push({ type: "render" }),
-        store: {
-          selectVisibilityConditionTargetTypeByTarget: () => ({
-            "variables['enabled']": "boolean",
-          }),
-          selectVisibilityConditionTargetValueKindByTarget: () => ({
-            "variables['enabled']": "boolean",
-          }),
-          setConditionalOverrideConditionDialogSelectedVariableType: vi.fn(),
-        },
-      },
-      {
-        _event: {
-          detail: {
-            values: {
-              target: "variables['enabled']",
-              op: "eq",
-            },
-          },
-        },
-      },
-    );
-
-    expect(calls).toEqual([
-      { type: "render" },
-      {
-        type: "set",
-        values: {
-          target: "variables['enabled']",
-          op: "eq",
-          booleanValue: true,
-        },
       },
     ]);
   });
@@ -279,3 +159,115 @@ describe("layoutEditPanel condition forms", () => {
     });
   });
 });
+
+describe.each([
+  {
+    dialog: "visibility",
+    handler: handleVisibilityConditionFormChange,
+    formRef: "visibilityConditionForm",
+    setter: "setVisibilityConditionDialogSelectedVariableType",
+  },
+  {
+    dialog: "conditional override",
+    handler: handleConditionalOverrideConditionFormChange,
+    formRef: "conditionalOverrideConditionForm",
+    setter: "setConditionalOverrideConditionDialogSelectedVariableType",
+  },
+])(
+  "layoutEditPanel $dialog condition target defaults",
+  ({ handler, formRef, setter }) => {
+    const TYPES = {
+      "variables['enabled']": "boolean",
+      "variables['score']": "number",
+    };
+    const changeForm = (values) => {
+      const calls = [];
+      handler(
+        {
+          refs: {
+            [formRef]: {
+              setValues: ({ values: nextValues }) =>
+                calls.push({ type: "set", values: nextValues }),
+            },
+          },
+          render: () => calls.push({ type: "render" }),
+          store: {
+            selectVisibilityConditionTargetTypeByTarget: () => TYPES,
+            selectVisibilityConditionTargetValueKindByTarget: () => TYPES,
+            [setter]: (kinds) => calls.push({ type: "kinds", kinds }),
+          },
+        },
+        { _event: { detail: { values } } },
+      );
+      return calls;
+    };
+
+    it("selects Equals after choosing a target", () => {
+      expect(changeForm({ target: "variables['score']" })).toEqual([
+        {
+          type: "kinds",
+          kinds: {
+            selectedVariableType: "number",
+            selectedValueKind: "number",
+          },
+        },
+        { type: "render" },
+        { type: "set", values: { target: "variables['score']", op: "eq" } },
+      ]);
+    });
+
+    it("selects True for a Boolean target after the render that shows its value", () => {
+      expect(changeForm({ target: "variables['enabled']" })).toEqual([
+        {
+          type: "kinds",
+          kinds: {
+            selectedVariableType: "boolean",
+            selectedValueKind: "boolean",
+          },
+        },
+        { type: "render" },
+        {
+          type: "set",
+          values: {
+            target: "variables['enabled']",
+            op: "eq",
+            booleanValue: true,
+          },
+        },
+      ]);
+    });
+
+    it("selects True when Equals is already set, as after another target", () => {
+      expect(
+        changeForm({ target: "variables['enabled']", op: "eq" }).at(-1),
+      ).toEqual({
+        type: "set",
+        values: {
+          target: "variables['enabled']",
+          op: "eq",
+          booleanValue: true,
+        },
+      });
+    });
+
+    it("keeps a value already chosen, and sets nothing without a target", () => {
+      const chosen = changeForm({
+        target: "variables['enabled']",
+        op: "eq",
+        booleanValue: false,
+      });
+      expect(chosen.some(({ type }) => type === "set")).toBe(false);
+
+      expect(changeForm({})).toEqual([
+        {
+          type: "kinds",
+          kinds: {
+            selectedVariableType: undefined,
+            selectedValueKind: undefined,
+          },
+        },
+        { type: "render" },
+      ]);
+    });
+  },
+);

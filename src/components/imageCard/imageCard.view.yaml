@@ -1,0 +1,28 @@
+styles:
+  ".imageCardTransparencyGrid":
+    display: block
+    width: 100%
+    aspect-ratio: 16 / 9
+    overflow: hidden
+    background-color: "#eef2f7"
+    background-image: 'linear-gradient(45deg, #94a3b8 25%, transparent 25%), linear-gradient(-45deg, #94a3b8 25%, transparent 25%), linear-gradient(45deg, transparent 75%, #94a3b8 75%), linear-gradient(-45deg, transparent 75%, #94a3b8 75%)'
+    background-position: "0 0, 0 6px, 6px -6px, -6px 0"
+    background-repeat: repeat
+    background-size: 12px 12px
+template:
+  - 'rtgl-view w=f cur=pointer bw=xs bc=bo h-bc=ac br=md overflow=hidden style="box-sizing: border-box;"':
+      - $if showImage:
+          - div.imageCardTransparencyGrid:
+              - $if imageId:
+                  - rvn-file-image imageId=${imageId} source="thumbnail" w=f h=f: null
+                $else:
+                  - rvn-file-image fileId=${fileId} w=f h=f: null
+        $elif showPreview:
+          - div.imageCardTransparencyGrid:
+              - slot name="preview": null
+        $else:
+          - 'rtgl-view w=f av=c ah=c bgc=mu style="aspect-ratio: 16 / 9;"':
+              - rtgl-text s=sm c=mu-fg ta=c: ${emptyLabel}
+      - $if name:
+          - rtgl-view w=f p=md:
+              - rtgl-text s=xs c=mu-fg ellipsis w=f: ${name}
