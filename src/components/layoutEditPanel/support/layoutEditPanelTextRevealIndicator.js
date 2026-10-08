@@ -3,6 +3,17 @@ import { resolveSpritesheetFrameName } from "../../../internal/spritesheets.js";
 const DEFAULT_TEXT_REVEAL_INDICATOR_SIZE = 12;
 const DEFAULT_TEXT_REVEAL_INDICATOR_OFFSET_X = 16;
 const DEFAULT_TEXT_REVEAL_INDICATOR_OFFSET_Y = 0;
+// The dialog's sliders, which also bound a typed value.
+const TEXT_REVEAL_INDICATOR_SIZE_RANGE = Object.freeze({
+  min: 1,
+  max: 256,
+  step: 1,
+});
+const TEXT_REVEAL_INDICATOR_OFFSET_RANGE = Object.freeze({
+  min: -128,
+  max: 128,
+  step: 1,
+});
 
 export const TEXT_REVEAL_INDICATOR_STATE_ITEMS = [
   { type: "item", label: "Revealing", key: "revealing" },
@@ -184,47 +195,33 @@ export const createTextRevealIndicatorForm = ({
       {
         type: "slot",
         slot: "text-reveal-indicator-image",
-        label: copy.visualLabel ?? "Visual",
+        label: copy.imageLabel ?? "Image",
       },
       {
-        type: "row",
-        stackAt: "none",
-        fields: [
-          {
-            name: "width",
-            type: "input-number",
-            label: copy.widthLabel ?? "Width",
-            min: 1,
-            step: 1,
-            required: true,
-          },
-          {
-            name: "height",
-            type: "input-number",
-            label: copy.heightLabel ?? "Height",
-            min: 1,
-            step: 1,
-            required: true,
-          },
-        ],
+        name: "width",
+        type: "slider-with-input",
+        label: copy.widthLabel ?? "Width",
+        ...TEXT_REVEAL_INDICATOR_SIZE_RANGE,
+        required: true,
       },
       {
-        type: "row",
-        stackAt: "none",
-        fields: [
-          {
-            name: "offsetX",
-            type: "input-number",
-            label: copy.offsetXLabel ?? "Offset X",
-            step: 1,
-          },
-          {
-            name: "offsetY",
-            type: "input-number",
-            label: copy.offsetYLabel ?? "Offset Y",
-            step: 1,
-          },
-        ],
+        name: "height",
+        type: "slider-with-input",
+        label: copy.heightLabel ?? "Height",
+        ...TEXT_REVEAL_INDICATOR_SIZE_RANGE,
+        required: true,
+      },
+      {
+        name: "offsetX",
+        type: "slider-with-input",
+        label: copy.offsetXLabel ?? "Offset X",
+        ...TEXT_REVEAL_INDICATOR_OFFSET_RANGE,
+      },
+      {
+        name: "offsetY",
+        type: "slider-with-input",
+        label: copy.offsetYLabel ?? "Offset Y",
+        ...TEXT_REVEAL_INDICATOR_OFFSET_RANGE,
       },
     ],
     actions: {
@@ -244,6 +241,24 @@ export const createTextRevealIndicatorForm = ({
       ],
     },
   };
+};
+
+// The name under the dialog's image: the image's, or the spritesheet's and
+// its animation's.
+export const getTextRevealIndicatorVisualName = ({
+  dialog = {},
+  imagesData,
+  spritesheetsData,
+} = {}) => {
+  if (dialog.kind === "spritesheet" && dialog.resourceId) {
+    const name =
+      spritesheetsData?.items?.[dialog.resourceId]?.name ?? dialog.resourceId;
+    return dialog.animationName ? `${name} / ${dialog.animationName}` : name;
+  }
+  if (dialog.imageId) {
+    return imagesData?.items?.[dialog.imageId]?.name ?? dialog.imageId;
+  }
+  return "";
 };
 
 export const createTextRevealIndicatorVisualFromDialogValues = (

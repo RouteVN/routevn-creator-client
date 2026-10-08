@@ -76,6 +76,7 @@ import {
 import {
   createTextRevealIndicatorDialogDefaults,
   createTextRevealIndicatorForm,
+  getTextRevealIndicatorVisualName,
   isTextRevealIndicatorStateName,
 } from "./support/layoutEditPanelTextRevealIndicator.js";
 import { selectLayoutEditPanelCopy } from "./support/layoutEditPanelCopy.js";
@@ -1925,6 +1926,11 @@ export const selectViewData = ({ state, props, constants, i18n }) => {
     textRevealIndicatorDialogSpritesheetAnimation:
       textRevealIndicatorDialogSpritesheetPreview.animation,
     textRevealIndicatorDialogPreviewKey,
+    textRevealIndicatorDialogVisualName: getTextRevealIndicatorVisualName({
+      dialog: state.textRevealIndicatorDialog,
+      imagesData: state.imagesData,
+      spritesheetsData: state.spritesheetsData,
+    }),
     textContentDialog: state.textContentDialog,
     textContentDialogDefaults: {},
     textContentDialogContent: values.content,
@@ -2014,6 +2020,5 @@ export const selectViewData = ({ state, props, constants, i18n }) => {
       copy.selectSpritesheetAnimationLabel ?? "Select a spritesheet animation",
     selectImageLabel: copy.selectImageLabel ?? "Select image",
     selectSoundLabel: copy.selectSoundLabel ?? "Select sound",
-    selectVisualLabel: copy.selectVisualLabel ?? "Select visual",
   };
 };

@@ -430,11 +430,8 @@ template:
                                   - rtgl-view key=${barItem.viewKey} d=v w=f g=sm:
                                       - rtgl-text s=xs c=mu: ${barItem.label}
                                       - $if barItem.imageId:
-                                          - 'rtgl-view#listBarItem${i}x${j}x${k} data-name=${barItem.name} cur=pointer bw=xs bc=bo h-bc=ac br=md overflow=hidden style="width: calc((100% - var(--spacing-md)) / 2); box-sizing: border-box;"':
-                                              - 'div.layoutEditorImageFieldTransparencyGrid style="display: block; width: 100%; aspect-ratio: 16 / 9; overflow: hidden;"':
-                                                  - rvn-file-image imageId=${barItem.imageId} source="thumbnail" w=f h=f: null
-                                              - rtgl-view w=f p=md:
-                                                  - rtgl-text s=xs c=mu-fg ellipsis w=f: ${barItem.imageName}
+                                          - 'rtgl-view#listBarItem${i}x${j}x${k} data-name=${barItem.name} style="width: calc((100% - var(--spacing-md)) / 2);"':
+                                              - 'rvn-image-card imageId=${barItem.imageId} name="${barItem.imageName}"': null
                                         $else:
                                           - rtgl-view#listBarItem${i}x${j}x${k} data-name=${barItem.name} d=h w=f g=md av=c ph=md h-bgc=mu bw=xs br=md cur=pointer:
                                               - $if barItem.kind == 'spritesheet' && barItem.resourceId:
@@ -564,15 +561,13 @@ template:
           - rtgl-view slot=content g=md:
               - rtgl-form#textRevealIndicatorForm key=${textRevealIndicatorDialog.key} :form=${textRevealIndicatorDialogForm} :defaultValues=${textRevealIndicatorDialogDefaults}:
                   - rtgl-view slot=text-reveal-indicator-image g=xs:
-                      - rtgl-view#textRevealIndicatorImageField w=220 h=160 bw=xs bc=bo br=md cur=pointer av=c ah=c overflow=hidden:
+                      - 'rtgl-view#textRevealIndicatorImageField role=button tabindex=0 aria-haspopup=menu aria-label="${imageLabel}" w=160 style="max-width: 100%;"':
                           - $if textRevealIndicatorDialog.kind == 'spritesheet' && textRevealIndicatorDialog.resourceId:
-                              - 'div.layoutEditorImageFieldTransparencyGrid style="display: block; width: 100%; height: 100%; overflow: hidden;"':
-                                  - 'rvn-spritesheet-preview key=${textRevealIndicatorDialogPreviewKey} previewKey=${textRevealIndicatorDialogPreviewKey} fileId=${textRevealIndicatorDialogSpritesheetFileId} :atlas=${textRevealIndicatorDialogSpritesheetAtlas} :animation=${textRevealIndicatorDialogSpritesheetAnimation} w=f h=f emptyLabel="${noPreviewLabel}"': null
-                            $elif textRevealIndicatorDialog.imageId:
-                              - 'div.layoutEditorImageFieldTransparencyGrid style="display: block; width: 100%; height: 100%; overflow: hidden;"':
-                                  - rvn-file-image imageId=${textRevealIndicatorDialog.imageId} source="thumbnail" w=f h=f: null
+                              - 'rvn-image-card :hasPreview=${true} name="${textRevealIndicatorDialogVisualName}"':
+                                  - 'div slot="preview" style="display: block; width: 100%; height: 100%;"':
+                                      - 'rvn-spritesheet-preview key=${textRevealIndicatorDialogPreviewKey} previewKey=${textRevealIndicatorDialogPreviewKey} fileId=${textRevealIndicatorDialogSpritesheetFileId} :atlas=${textRevealIndicatorDialogSpritesheetAtlas} :animation=${textRevealIndicatorDialogSpritesheetAnimation} w=f h=f emptyLabel="${noPreviewLabel}"': null
                             $else:
-                              - rtgl-text c=mu-fg ta=c: ${selectVisualLabel}
+                              - 'rvn-image-card imageId=${textRevealIndicatorDialog.imageId} name="${textRevealIndicatorDialogVisualName}" emptyLabel="${selectImageLabel}"': null
                       - $if textRevealIndicatorDialog.validationErrors.imageId:
                           - rtgl-text s=sm c=de: ${textRevealIndicatorDialog.validationErrors.imageId}
   - rtgl-dialog#textContentDialog ?open=${textContentDialog.open} s=sm:

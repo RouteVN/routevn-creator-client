@@ -1,6 +1,7 @@
 import { readFileSync } from "node:fs";
 import yaml from "js-yaml";
 import { describe, expect, it, vi } from "vitest";
+import { getTextRevealIndicatorVisualName } from "../../src/components/layoutEditPanel/support/layoutEditPanelTextRevealIndicator.js";
 import {
   closeTextRevealIndicatorDialog,
   closeImageSelectorDialog,
@@ -385,27 +386,24 @@ describe("layoutEditPanel text reveal indicators", () => {
       offsetY: -5,
     });
     expect(viewData.textRevealIndicatorDialog.imageId).toBe("image-revealing");
+    // The dialog's image card names its image.
+    expect(viewData.textRevealIndicatorDialogVisualName).toBe("Revealing");
     expect(viewData.textRevealIndicatorDialogForm.title).toBe(
       "Revealing Indicator",
     );
     expect(viewData.textRevealIndicatorDialogForm.fields[0]).toMatchObject({
       type: "slot",
       slot: "text-reveal-indicator-image",
-      label: "Visual",
+      label: "Image",
     });
+    // Each number has a slider with its input.
     expect(
       viewData.textRevealIndicatorDialogForm.fields.slice(1),
     ).toMatchObject([
-      {
-        type: "row",
-        stackAt: "none",
-        fields: [{ name: "width" }, { name: "height" }],
-      },
-      {
-        type: "row",
-        stackAt: "none",
-        fields: [{ name: "offsetX" }, { name: "offsetY" }],
-      },
+      { name: "width", type: "slider-with-input", min: 1, max: 256 },
+      { name: "height", type: "slider-with-input", min: 1, max: 256 },
+      { name: "offsetX", type: "slider-with-input", min: -128, max: 128 },
+      { name: "offsetY", type: "slider-with-input", min: -128, max: 128 },
     ]);
   });
 
@@ -922,5 +920,32 @@ describe("layoutEditPanel text reveal indicators", () => {
       imageId: "Visual is required.",
     });
     expect(deps.dispatchEvent).not.toHaveBeenCalled();
+  });
+});
+
+describe("layoutEditPanel indicator visual name", () => {
+  it("names an image, or a spritesheet and its animation", () => {
+    const imagesData = { items: { "image-1": { name: "Arrow" } } };
+    const spritesheetsData = { items: { "sheet-1": { name: "Sparks" } } };
+
+    expect(
+      getTextRevealIndicatorVisualName({
+        dialog: { kind: "image", imageId: "image-1" },
+        imagesData,
+        spritesheetsData,
+      }),
+    ).toBe("Arrow");
+    expect(
+      getTextRevealIndicatorVisualName({
+        dialog: {
+          kind: "spritesheet",
+          resourceId: "sheet-1",
+          animationName: "idle",
+        },
+        imagesData,
+        spritesheetsData,
+      }),
+    ).toBe("Sparks / idle");
+    expect(getTextRevealIndicatorVisualName({ dialog: {} })).toBe("");
   });
 });

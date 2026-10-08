@@ -244,12 +244,9 @@ describe("layoutEditPanel stacked labels", () => {
     expect(imageCard).toContain("rtgl-view#listBarItem${i}x${j}x${k}");
     // As wide as one of the panel's two columns, such as Position X.
     expect(imageCard).toContain("width: calc((100% - var(--spacing-md)) / 2);");
-    expect(imageCard).toContain("aspect-ratio: 16 / 9;");
+    // rvn-image-card draws the 16:9 image with its name below.
     expect(imageCard).toContain(
-      'rvn-file-image imageId=${barItem.imageId} source="thumbnail" w=f h=f',
-    );
-    expect(imageCard.indexOf("rvn-file-image")).toBeLessThan(
-      imageCard.indexOf("${barItem.imageName}"),
+      'rvn-image-card imageId=${barItem.imageId} name="${barItem.imageName}"',
     );
   });
 
