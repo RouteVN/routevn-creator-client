@@ -7,7 +7,6 @@ import {
   handleConditionalOverrideAttributeImageClick,
   handleConditionalOverrideAttributeImageKeyDown,
   handleConditionalOverrideContextMenu,
-  handleConditionalOverrideDeleteClick,
   handleImageSelectorSubmit,
 } from "../../src/components/layoutEditPanel/layoutEditPanel.handlers.js";
 import {
@@ -149,7 +148,7 @@ describe("layoutEditPanel conditional overrides", () => {
     expect(render).toHaveBeenCalledOnce();
   });
 
-  it("uses a border-only card hover and a full-width add attribute button", () => {
+  it("uses a border-only card hover, a full-width add attribute button, and no delete button", () => {
     const view = readFileSync(
       new URL(
         "../../src/components/layoutEditPanel/layoutEditPanel.view.yaml",
@@ -169,10 +168,10 @@ describe("layoutEditPanel conditional overrides", () => {
       "bgc=bg br=md bw=xs bc=bo h-bc=ac cur=context-menu",
     );
     expect(conditionalBlock).not.toContain("h-bgc=");
-    expect(conditionalBlock).toContain(
-      "conditionalOverrideDelete${i}x${j}x${k} data-index=${conditionalItem.index} variant=se s=sm: ${deleteButton}",
-    );
-    expect(view).toContain("handler: handleConditionalOverrideDeleteClick");
+    // A condition is deleted from its right-click menu.
+    expect(conditionalBlock).not.toContain("conditionalOverrideDelete");
+    expect(view).not.toContain("handleConditionalOverrideDeleteClick");
+    expect(view).toContain("handler: handleConditionalOverrideContextMenu");
     expect(conditionalBlock).toContain(
       "conditionalOverrideAddAttribute${i}x${j}x${k} data-index=${conditionalItem.index} pre=plus s=sm v=gh w=f",
     );
@@ -244,20 +243,6 @@ describe("layoutEditPanel conditional overrides", () => {
     await handleConditionalOverrideContextMenu(deps, createPayload(0));
 
     expect(deps.values.conditionalOverrides).toEqual([remainingRule]);
-    expect(deps.dispatchEvent).toHaveBeenCalledOnce();
-  });
-
-  it("deletes a condition through its explicit button", async () => {
-    const deps = createDeps({ confirmed: true });
-    const payload = createPayload(1);
-    payload._event.stopPropagation = vi.fn();
-
-    await handleConditionalOverrideDeleteClick(deps, payload);
-
-    expect(payload._event.preventDefault).toHaveBeenCalledOnce();
-    expect(payload._event.stopPropagation).toHaveBeenCalledOnce();
-    expect(deps.appService.showDropdownMenu).not.toHaveBeenCalled();
-    expect(deps.values.conditionalOverrides).toEqual([RULES[0]]);
     expect(deps.dispatchEvent).toHaveBeenCalledOnce();
   });
 

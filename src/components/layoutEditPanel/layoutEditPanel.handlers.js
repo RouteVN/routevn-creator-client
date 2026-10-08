@@ -1914,22 +1914,6 @@ export const handleConditionalOverrideContextMenu = async (deps, payload) => {
   await confirmConditionalOverrideDelete(deps, ruleLocator);
 };
 
-export const handleConditionalOverrideDeleteClick = async (deps, payload) => {
-  const { store } = deps;
-  const event = payload._event;
-  event.preventDefault();
-  event.stopPropagation();
-
-  const index = Number.parseInt(event.currentTarget.dataset.index, 10);
-  const rules = getConditionalOverrideRules(store);
-  if (!Number.isInteger(index) || index < 0 || index >= rules.length) {
-    return;
-  }
-
-  const ruleLocator = createConditionalOverrideRuleLocator({ rules, index });
-  await confirmConditionalOverrideDelete(deps, ruleLocator);
-};
-
 export const handleConditionalOverrideAddAttributeClick = (deps, payload) => {
   const { appService, props, render, store } = deps;
   const index = Number.parseInt(

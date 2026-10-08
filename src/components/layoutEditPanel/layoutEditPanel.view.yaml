@@ -155,10 +155,6 @@ refs:
     eventListeners:
       contextmenu:
         handler: handleConditionalOverrideContextMenu
-  conditionalOverrideDelete*:
-    eventListeners:
-      click:
-        handler: handleConditionalOverrideDeleteClick
   conditionalOverrideAddAttribute*:
     eventListeners:
       click:
@@ -533,7 +529,6 @@ template:
                                                   - span.layoutEditorConditionChip.layoutEditorConditionValue key=${part.kind}: ${part.text}
                                                 $else:
                                                   - rtgl-text key=${part.kind} s=sm c=mu-fg: ${part.text}
-                                      - rtgl-button#conditionalOverrideDelete${i}x${j}x${k} data-index=${conditionalItem.index} variant=se s=sm: ${deleteButton}
                                   - $if conditionalItem.attributeItems.length > 0:
                                       - $for attributeItem, m in conditionalItem.attributeItems:
                                           - rtgl-view key=${attributeItem.viewKey} d=h g=sm av=c w=f:
