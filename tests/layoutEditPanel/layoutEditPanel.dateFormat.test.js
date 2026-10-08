@@ -57,6 +57,7 @@ describe("layoutEditPanel save/load date format", () => {
         label: "Format",
         name: "dateFormat",
         value: "YYYY-MM-DD",
+        noClear: true,
         options: [
           {
             label: "YYYY-MM-DD",

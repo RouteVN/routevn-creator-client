@@ -386,12 +386,12 @@ template:
                       - $if item.stacked:
                           - rtgl-view d=v w=f g=sm:
                               - rtgl-text s=xs c=mu: ${item.label}
-                              - rtgl-select#selectItem${i}x${j} data-name=${item.name} w=f ?no-clear=${!item.clearable} :selectedValue=${item.value} :options=${item.options}: null
+                              - rtgl-select#selectItem${i}x${j} data-name=${item.name} w=f ?no-clear=${item.noClear} :selectedValue=${item.value} :options=${item.options}: null
                         $else:
                           - rtgl-view d=h av=c w=f:
                               - rtgl-text s=xs w=65: ${item.label}
                               - 'rtgl-view style="width: calc(100% - 65px);"':
-                                  - rtgl-select#selectItem${i}x${j} data-name=${item.name} w=f ?no-clear=${!item.clearable} :selectedValue=${item.value} :options=${item.options}: null
+                                  - rtgl-select#selectItem${i}x${j} data-name=${item.name} w=f ?no-clear=${item.noClear} :selectedValue=${item.value} :options=${item.options}: null
                     $elif item.type == 'anchor-grid':
                       - $if item.stacked:
                           - rtgl-view d=v w=f g=sm:

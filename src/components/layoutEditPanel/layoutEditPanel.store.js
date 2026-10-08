@@ -432,6 +432,11 @@ const annotatePanelItems = (items = [], { sectionKey } = {}) => {
       nextItem.previewKey = item?.key ?? nextItem.viewKey;
     }
 
+    // A select shows its clear button only when its item is clearable.
+    if (item?.type === "select") {
+      nextItem.noClear = item.clearable !== true;
+    }
+
     return nextItem;
   });
 };

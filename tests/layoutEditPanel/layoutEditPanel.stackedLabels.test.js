@@ -107,10 +107,10 @@ describe("layoutEditPanel stacked labels", () => {
     ]);
     // Hover and Clicked clear with the select's clear button instead of a
     // None option; the default text style stays.
-    expect(textStylesSection.items.map(({ clearable }) => clearable)).toEqual([
-      undefined,
+    expect(textStylesSection.items.map(({ noClear }) => noClear)).toEqual([
       true,
-      true,
+      false,
+      false,
     ]);
     for (const item of textStylesSection.items) {
       expect(item.options.some(({ value }) => value === "")).toBe(false);
@@ -128,7 +128,7 @@ describe("layoutEditPanel stacked labels", () => {
 
     expect(selects).toHaveLength(2);
     for (const select of selects) {
-      expect(select).toContain("?no-clear=${!item.clearable}");
+      expect(select).toContain("?no-clear=${item.noClear}");
     }
   });
 
