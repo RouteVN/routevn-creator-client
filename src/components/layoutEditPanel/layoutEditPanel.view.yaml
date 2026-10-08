@@ -381,6 +381,9 @@ template:
                           - rtgl-view d=v w=f g=sm:
                               - rtgl-text s=xs c=mu: ${item.label}
                               - rtgl-select#selectItem${i}x${j} data-name=${item.name} w=f ?no-clear=${item.noClear} :selectedValue=${item.value} :options=${item.options}: null
+                        # A select with no label of its own, such as Fragment's, fills the row.
+                        $elif !item.label:
+                          - rtgl-select#selectItem${i}x${j} data-name=${item.name} w=f ?no-clear=${item.noClear} :selectedValue=${item.value} :options=${item.options}: null
                         $else:
                           - rtgl-view d=h av=c w=f:
                               - rtgl-text s=xs w=65: ${item.label}

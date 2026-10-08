@@ -588,7 +588,6 @@ layoutSections:
     label: Fragment
     items:
       - type: select
-        label: Fragment
         name: fragmentLayoutId
         value: "${values.fragmentLayoutId}"
         options: "${fragmentLayoutOptions}"

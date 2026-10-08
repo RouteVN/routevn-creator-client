@@ -126,7 +126,8 @@ describe("layoutEditPanel stacked labels", () => {
       .split("\n")
       .filter((line) => line.includes("rtgl-select#selectItem"));
 
-    expect(selects).toHaveLength(2);
+    // Stacked, without a label, and with one beside it.
+    expect(selects).toHaveLength(3);
     for (const select of selects) {
       expect(select).toContain("?no-clear=${item.noClear}");
     }
