@@ -612,7 +612,7 @@ template:
                       - rvn-image-selector#imageSelector selectedImageId=${tempSelectedImageId} :columns=${selectorColumns}: null
               - rtgl-view d=h g=sm w=f ah=e:
                   - rtgl-button#confirmImageSelection variant=pr: ${selectButton}
-  - rtgl-dialog#soundFormDialog ?open=${soundFormDialog.open} s=sm:
+  - rtgl-dialog#soundFormDialog ?open=${soundFormDialog.open} s=md:
       - $if soundFormDialog.open:
           - rtgl-view slot=content g=md w=f:
               - rtgl-form#soundForm key=${soundFormDialog.key} :form=${soundForm} :defaultValues=${soundFormDefaults} w=f:
