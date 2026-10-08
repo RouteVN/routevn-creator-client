@@ -168,6 +168,10 @@ describe("layoutEditPanel conditional overrides", () => {
       "bgc=bg br=md bw=xs bc=bo h-bc=ac cur=context-menu",
     );
     expect(conditionalBlock).not.toContain("h-bgc=");
+    // The conditions stand apart.
+    expect(conditionalBlock).toContain(
+      "- rtgl-view d=v w=f g=md:\n                              - $for conditionalItem, k in item.items:",
+    );
     // A condition is deleted from its right-click menu.
     expect(conditionalBlock).not.toContain("conditionalOverrideDelete");
     expect(view).not.toContain("handleConditionalOverrideDeleteClick");
