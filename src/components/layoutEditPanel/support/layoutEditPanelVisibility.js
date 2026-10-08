@@ -220,8 +220,8 @@ const getVisibilityConditionValueLabel = (
 };
 
 // A condition's summary in parts: what it tests, the operation as the
-// dialog names it, and the value. The panel shows the target and the value
-// as chips around the operation, so they read apart from it.
+// dialog names it, and the value. The panel shows each as a chip of its own
+// kind, so they read apart from each other.
 export const getVisibilityConditionSummaryParts = (
   visibilityCondition,
   variablesData = {},
@@ -233,7 +233,6 @@ export const getVisibilityConditionSummaryParts = (
       {
         kind: "text",
         text: copy.alwaysVisibleSummary ?? "Always visible",
-        chip: false,
       },
     ];
   }
@@ -246,14 +245,12 @@ export const getVisibilityConditionSummaryParts = (
         variablesData,
         options,
       ),
-      chip: true,
     },
     {
       kind: "operator",
       text: createVisibilityConditionOpOptions(copy).find(
         (option) => option.value === visibilityCondition.op,
       ).label,
-      chip: false,
     },
     {
       kind: "value",
@@ -262,7 +259,6 @@ export const getVisibilityConditionSummaryParts = (
         options,
         copy,
       ),
-      chip: true,
     },
   ];
 };

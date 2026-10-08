@@ -228,7 +228,7 @@ describe("layoutEditPanel visibility summary", () => {
     ).toBe("Always visible");
   });
 
-  it("gives the target and the value as chips around the operation", () => {
+  it("gives the target, the operation, and the value as parts", () => {
     expect(
       getVisibilityConditionSummaryParts(
         { target: toVariableConditionTarget("hasKey"), op: "eq", value: true },
@@ -237,16 +237,16 @@ describe("layoutEditPanel visibility summary", () => {
         copy,
       ),
     ).toEqual([
-      { kind: "target", text: "Has Key", chip: true },
-      { kind: "operator", text: "Equals", chip: false },
-      { kind: "value", text: "True", chip: true },
+      { kind: "target", text: "Has Key" },
+      { kind: "operator", text: "Equals" },
+      { kind: "value", text: "True" },
     ]);
     expect(
       getVisibilityConditionSummaryParts(undefined, variablesData, {}, copy),
-    ).toEqual([{ kind: "text", text: "Always visible", chip: false }]);
+    ).toEqual([{ kind: "text", text: "Always visible" }]);
   });
 
-  it("fills the panel's width, with the target and value as chips", () => {
+  it("fills the panel's width, with a chip of its own kind for each part", () => {
     const view = readFileSync(
       new URL(
         "../../src/components/layoutEditPanel/layoutEditPanel.view.yaml",
@@ -264,9 +264,15 @@ describe("layoutEditPanel visibility summary", () => {
 
     expect(conditionLine).toContain(" w=f ");
     expect(conditionBlock).toContain("$for part, k in item.parts:");
-    expect(conditionBlock).toContain(
-      "span.layoutEditorConditionChip key=${part.kind}: ${part.text}",
-    );
+    for (const kindClass of [
+      "layoutEditorConditionTarget",
+      "layoutEditorConditionOperator",
+      "layoutEditorConditionValue",
+    ]) {
+      expect(conditionBlock).toContain(
+        `span.layoutEditorConditionChip.${kindClass} key=\${part.kind}: \${part.text}`,
+      );
+    }
     expect(conditionBlock).toContain(
       "rtgl-text key=${part.kind} s=sm c=mu-fg: ${part.text}",
     );
