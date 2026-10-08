@@ -583,6 +583,7 @@ layoutSections:
         type: condition-summary
         name: visibilityCondition
         value: "${visibilityConditionSummary}"
+        parts: "${visibilityConditionSummaryParts}"
   - "$when": 'itemType == "fragment-ref"'
     label: Fragment
     items:
@@ -684,6 +685,7 @@ controlSections:
         type: condition-summary
         name: visibilityCondition
         value: "${visibilityConditionSummary}"
+        parts: "${visibilityConditionSummaryParts}"
   - "$when": "supportsActions"
     id: actions
     label: Actions

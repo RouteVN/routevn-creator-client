@@ -50,6 +50,7 @@ import {
   getConditionalOverrideSummary,
   getSaveLoadPaginationSummary,
   getVisibilityConditionSummary,
+  getVisibilityConditionSummaryParts,
   normalizeConditionalOverrideRules,
   toConditionalOverrideAttributeItems,
   toSectionedVisibilityConditionTargetOptions,
@@ -1663,6 +1664,12 @@ export const selectViewData = ({ state, props, constants, i18n }) => {
         getVisibilityConditionSummary,
         copy,
       ),
+      summaryParts: getVisibilityConditionSummaryParts(
+        rule?.when,
+        state.variablesData,
+        visibilityConditionOptions,
+        copy,
+      ),
       attributeItems: toConditionalOverrideAttributeItems(
         rule,
         state.textStylesData,
@@ -1763,6 +1770,12 @@ export const selectViewData = ({ state, props, constants, i18n }) => {
       clickSoundVolumeLabel: `${normalizeInteractionSoundVolume(values.click?.soundVolume)}%`,
       conditionalOverrideItems,
       visibilityConditionSummary: getVisibilityConditionSummary(
+        currentVisibilityCondition,
+        state.variablesData,
+        visibilityConditionOptions,
+        copy,
+      ),
+      visibilityConditionSummaryParts: getVisibilityConditionSummaryParts(
         currentVisibilityCondition,
         state.variablesData,
         visibilityConditionOptions,

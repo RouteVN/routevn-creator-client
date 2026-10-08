@@ -7,7 +7,13 @@ import {
   setValues,
   setVariablesData,
 } from "../../src/components/layoutEditPanel/layoutEditPanel.store.js";
-import { toSectionedVisibilityConditionTargetOptions } from "../../src/components/layoutEditPanel/support/layoutEditPanelVisibility.js";
+import { selectLayoutEditPanelCopy } from "../../src/components/layoutEditPanel/support/layoutEditPanelCopy.js";
+import {
+  getVisibilityConditionSummary,
+  getVisibilityConditionSummaryParts,
+  toSectionedVisibilityConditionTargetOptions,
+} from "../../src/components/layoutEditPanel/support/layoutEditPanelVisibility.js";
+import { toVariableConditionTarget } from "../../src/internal/layoutConditions.js";
 import { EN_I18N } from "../support/i18n.js";
 
 describe("layoutEditPanel visibility target options", () => {
@@ -167,5 +173,102 @@ describe("layoutEditPanel visibility condition dialog", () => {
     });
     // Clearing the target removes the visibility condition.
     expect(visibilityTarget.required).toBe(false);
+  });
+});
+
+describe("layoutEditPanel visibility summary", () => {
+  const variablesData = {
+    items: {
+      playerName: {
+        id: "playerName",
+        type: "variable",
+        name: "Player Name",
+        variableType: "string",
+      },
+      score: {
+        id: "score",
+        type: "variable",
+        name: "Score",
+        variableType: "number",
+      },
+      hasKey: {
+        id: "hasKey",
+        type: "variable",
+        name: "Has Key",
+        variableType: "boolean",
+      },
+    },
+    tree: [{ id: "playerName" }, { id: "score" }, { id: "hasKey" }],
+  };
+  const copy = selectLayoutEditPanelCopy(EN_I18N);
+  const summarize = (target, value) =>
+    getVisibilityConditionSummary(
+      { target, op: "eq", value },
+      variablesData,
+      {},
+      copy,
+    );
+
+  it("reads as its target, the operation as the dialog names it, and its value", () => {
+    expect(summarize(toVariableConditionTarget("score"), 10)).toBe(
+      "Score Equals 10",
+    );
+    expect(summarize(toVariableConditionTarget("playerName"), "Alex")).toBe(
+      "Player Name Equals Alex",
+    );
+    // True and False as the dialog's Value control names them.
+    expect(summarize(toVariableConditionTarget("hasKey"), true)).toBe(
+      "Has Key Equals True",
+    );
+    expect(summarize(toVariableConditionTarget("hasKey"), false)).toBe(
+      "Has Key Equals False",
+    );
+    expect(
+      getVisibilityConditionSummary(undefined, variablesData, {}, copy),
+    ).toBe("Always visible");
+  });
+
+  it("gives the target and the value as chips around the operation", () => {
+    expect(
+      getVisibilityConditionSummaryParts(
+        { target: toVariableConditionTarget("hasKey"), op: "eq", value: true },
+        variablesData,
+        {},
+        copy,
+      ),
+    ).toEqual([
+      { kind: "target", text: "Has Key", chip: true },
+      { kind: "operator", text: "Equals", chip: false },
+      { kind: "value", text: "True", chip: true },
+    ]);
+    expect(
+      getVisibilityConditionSummaryParts(undefined, variablesData, {}, copy),
+    ).toEqual([{ kind: "text", text: "Always visible", chip: false }]);
+  });
+
+  it("fills the panel's width, with the target and value as chips", () => {
+    const view = readFileSync(
+      new URL(
+        "../../src/components/layoutEditPanel/layoutEditPanel.view.yaml",
+        import.meta.url,
+      ),
+      "utf8",
+    );
+    const conditionBlock = view.slice(
+      view.indexOf("$elif item.type == 'condition-summary':"),
+      view.indexOf("$elif item.type == 'conditional-override-list':"),
+    );
+    const conditionLine = conditionBlock
+      .split("\n")
+      .find((line) => line.includes("rtgl-view#conditionItem"));
+
+    expect(conditionLine).toContain(" w=f ");
+    expect(conditionBlock).toContain("$for part, k in item.parts:");
+    expect(conditionBlock).toContain(
+      "span.layoutEditorConditionChip key=${part.kind}: ${part.text}",
+    );
+    expect(conditionBlock).toContain(
+      "rtgl-text key=${part.kind} s=sm c=mu-fg: ${part.text}",
+    );
   });
 });

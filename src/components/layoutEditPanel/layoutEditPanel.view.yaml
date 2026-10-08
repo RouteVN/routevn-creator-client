@@ -315,6 +315,23 @@ styles:
     cursor: pointer
     user-select: none
     "-webkit-user-select": none
+  ".layoutEditorConditionChip":
+    display: inline-flex
+    align-items: center
+    max-width: 100%
+    min-height: 22px
+    padding: "0 8px"
+    box-sizing: border-box
+    border: "1px solid var(--border)"
+    border-radius: "var(--tag-border-radius, 9999px)"
+    background: "var(--muted)"
+    color: "var(--foreground)"
+    font-size: 0.88em
+    font-weight: 500
+    line-height: 1.35
+    white-space: nowrap
+    overflow: hidden
+    text-overflow: ellipsis
   ".layoutEditPanelSectionTooltipTrigger":
     align-items: center
     appearance: none
@@ -479,15 +496,24 @@ template:
                       - rtgl-view#groupItem${i}x${j} data-name=${item.name} role=button tabindex=0 aria-label="${item.label}" d=h pv=sm ph=md bgc=mu br=md av=c g=md cur=pointer bw=xs bc=bg h-bc=ac h=32 w=1fg:
                           - rtgl-text s=sm: ${item.value}
                     $elif item.type == 'condition-summary':
-                      - rtgl-view#conditionItem${i}x${j} data-name=${item.name} d=h pv=sm ph=md bgc=mu br=md av=c g=md cur=pointer bw=xs bc=bg h-bc=ac h=32 w=1fg:
-                          - rtgl-text s=sm: ${item.value}
+                      # The target and the value as chips around the operation.
+                      - 'rtgl-view#conditionItem${i}x${j} data-name=${item.name} title="${item.value}" d=h av=c w=f wrap g=xs pv=xs ph=md bgc=su br=md bw=xs bc=bo h-bc=ac cur=pointer style="min-height: 32px; box-sizing: border-box;"':
+                          - $for part, k in item.parts:
+                              - $if part.chip:
+                                  - span.layoutEditorConditionChip key=${part.kind}: ${part.text}
+                                $else:
+                                  - rtgl-text key=${part.kind} s=sm c=mu-fg: ${part.text}
                     $elif item.type == 'conditional-override-list':
                       - $if item.items.length > 0:
                           - $for conditionalItem, k in item.items:
                               - rtgl-view#conditionalOverrideItem${i}x${j}x${k} key=${conditionalItem.viewKey} data-index=${conditionalItem.index} w=f g=sm p=md bgc=bg br=md bw=xs bc=bo h-bc=ac cur=context-menu:
                                   - rtgl-view d=h g=sm av=c w=f:
-                                      - rtgl-view#conditionalOverrideCondition${i}x${j}x${k} data-index=${conditionalItem.index} w=1fg p=sm bgc=bg br=md bw=xs bc=bg h-bc=ac cur=pointer:
-                                          - rtgl-text s=sm: ${conditionalItem.summary}
+                                      - 'rtgl-view#conditionalOverrideCondition${i}x${j}x${k} data-index=${conditionalItem.index} title="${conditionalItem.summary}" d=h av=c wrap g=xs w=1fg p=sm bgc=bg br=md bw=xs bc=bg h-bc=ac cur=pointer':
+                                          - $for part, n in conditionalItem.summaryParts:
+                                              - $if part.chip:
+                                                  - span.layoutEditorConditionChip key=${part.kind}: ${part.text}
+                                                $else:
+                                                  - rtgl-text key=${part.kind} s=sm c=mu-fg: ${part.text}
                                       - rtgl-button#conditionalOverrideDelete${i}x${j}x${k} data-index=${conditionalItem.index} variant=se s=sm: ${deleteButton}
                                   - $if conditionalItem.attributeItems.length > 0:
                                       - $for attributeItem, m in conditionalItem.attributeItems:

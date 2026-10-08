@@ -196,36 +196,82 @@ const getVisibilityConditionTargetName = (
   return target;
 };
 
-export const getVisibilityConditionSummary = (
+// The value as the dialog shows it: True or False, a character's name, or
+// the text or number itself.
+const getVisibilityConditionValueLabel = (
+  visibilityCondition,
+  options,
+  copy,
+) => {
+  const { target, value } = visibilityCondition;
+  if (target === DIALOGUE_CHARACTER_ID_CONDITION_TARGET) {
+    return (
+      getCharacterOptionLabel(options.charactersData, value, {
+        noneLabel: copy.noCharacterOption ?? "No Character",
+      }) ?? String(value ?? "")
+    );
+  }
+  if (typeof value === "boolean") {
+    return createVisibilityBooleanOptions(copy).find(
+      (option) => option.value === value,
+    ).label;
+  }
+  return String(value);
+};
+
+// A condition's summary in parts: what it tests, the operation as the
+// dialog names it, and the value. The panel shows the target and the value
+// as chips around the operation, so they read apart from it.
+export const getVisibilityConditionSummaryParts = (
   visibilityCondition,
   variablesData = {},
   options = {},
   copy = {},
 ) => {
   if (!visibilityCondition?.target || visibilityCondition?.op !== "eq") {
-    return copy.alwaysVisibleSummary ?? "Always visible";
+    return [
+      {
+        kind: "text",
+        text: copy.alwaysVisibleSummary ?? "Always visible",
+        chip: false,
+      },
+    ];
   }
 
-  const targetName = getVisibilityConditionTargetName(
-    visibilityCondition.target,
-    variablesData,
-    options,
-  );
-  const value =
-    visibilityCondition.target === DIALOGUE_CHARACTER_ID_CONDITION_TARGET
-      ? (getCharacterOptionLabel(
-          options.charactersData,
-          visibilityCondition.value,
-          {
-            noneLabel: copy.noCharacterOption ?? "No Character",
-          },
-        ) ?? `"${visibilityCondition.value ?? ""}"`)
-      : typeof visibilityCondition.value === "string"
-        ? `"${visibilityCondition.value}"`
-        : String(visibilityCondition.value);
-
-  return `${targetName} == ${value}`;
+  return [
+    {
+      kind: "target",
+      text: getVisibilityConditionTargetName(
+        visibilityCondition.target,
+        variablesData,
+        options,
+      ),
+      chip: true,
+    },
+    {
+      kind: "operator",
+      text: createVisibilityConditionOpOptions(copy).find(
+        (option) => option.value === visibilityCondition.op,
+      ).label,
+      chip: false,
+    },
+    {
+      kind: "value",
+      text: getVisibilityConditionValueLabel(
+        visibilityCondition,
+        options,
+        copy,
+      ),
+      chip: true,
+    },
+  ];
 };
+
+// The summary as one line, such as for a screen reader.
+export const getVisibilityConditionSummary = (...summaryArgs) =>
+  getVisibilityConditionSummaryParts(...summaryArgs)
+    .map(({ text }) => text)
+    .join(" ");
 
 export const createVisibilityConditionDialogDefaults = (
   visibilityCondition,
