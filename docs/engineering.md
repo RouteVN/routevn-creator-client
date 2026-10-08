@@ -1590,6 +1590,13 @@ Scene editor draft persistence uses latest-wins coalescing for draft flushes:
 if a running flush already has a pending replacement, the newer pending flush
 replaces it. This coalesces scheduled draft tasks, not generated commands.
 
+The sync client rejects any single event over 64 KiB (UTF-8 bytes of the whole
+message). Story commands that carry many lines are therefore split by
+`chunkByJsonBytes` into consecutive commands of at most 32 KiB of JSON: line
+creates and deletes in `syncSectionLinesSnapshot`, and the line commands of
+section duplicates and cross-scene section moves. They are still submitted in
+one batch. A single line larger than that cannot be split and fails to save.
+
 If a running flush saves a stale snapshot and notices that the draft advanced
 during the write, the newer draft is kept dirty and rescheduled through the
 normal debounce/throttle path instead of being submitted immediately. This
