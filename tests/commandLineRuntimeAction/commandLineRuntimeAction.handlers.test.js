@@ -64,7 +64,11 @@ describe("commandLineRuntimeAction.handlers", () => {
       "settings",
       { valueChoice: "custom", presetValue: "options" },
     ],
-    ["setMenuEntryPoint", "pause-menu", {}],
+    [
+      "setMenuEntryPoint",
+      "pause-menu",
+      { valueChoice: "custom", presetValue: "story" },
+    ],
   ])(
     "hydrates the existing %s value into the mounted form",
     (mode, value, extra) => {
@@ -153,6 +157,8 @@ describe("commandLineRuntimeAction.handlers", () => {
       values: {
         valueSource: "fixed",
         value: "pause-menu",
+        valueChoice: "custom",
+        presetValue: "story",
       },
     });
   });

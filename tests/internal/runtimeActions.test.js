@@ -19,7 +19,7 @@ describe("runtimeActions", () => {
     },
   );
 
-  it("uses the existing setMenuEntryPoint value as the form default", () => {
+  it("uses an existing value as the form default, as Custom when it is not predefined", () => {
     expect(
       createRuntimeActionDefaultValues("setMenuEntryPoint", {
         value: "pause-menu",
@@ -27,7 +27,33 @@ describe("runtimeActions", () => {
     ).toEqual({
       valueSource: "fixed",
       value: "pause-menu",
+      valueChoice: "custom",
+      presetValue: "story",
     });
+  });
+
+  it("offers the default template's menu entry points as predefined values", () => {
+    const presetField = createRuntimeActionForm(
+      "setMenuEntryPoint",
+    ).fields.find((field) => field.name === "presetValue");
+    expect(presetField.options).toEqual([
+      { label: "Story", value: "story" },
+      { label: "Title Screen", value: "title" },
+    ]);
+    expect(
+      createRuntimeActionDefaultValues("setMenuEntryPoint", { value: "title" }),
+    ).toMatchObject({ valueChoice: "predefined", presetValue: "title" });
+    expect(
+      createRuntimeActionSubmitDetail("setMenuEntryPoint", {
+        valueSource: "fixed",
+        valueChoice: "predefined",
+        presetValue: "title",
+      }),
+    ).toEqual({ setMenuEntryPoint: { value: "title" } });
+    expect(
+      createRuntimeActionPreview("setMenuEntryPoint", { value: "title" })
+        .summary,
+    ).toBe("Set Menu Entry Point: Title Screen");
   });
 
   it("offers the default template's menu pages as predefined values, or a custom one", () => {

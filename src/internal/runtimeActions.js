@@ -27,6 +27,13 @@ const MENU_PAGE_PRESET_VALUES = Object.freeze([
   { label: "Load", value: "load" },
 ]);
 
+// Where the default project template's menus are entered from: the story or
+// the title screen.
+const MENU_ENTRY_POINT_PRESET_VALUES = Object.freeze([
+  { label: "Story", value: "story" },
+  { label: "Title Screen", value: "title" },
+]);
+
 const createValueActionDefinition = ({
   mode,
   label,
@@ -163,6 +170,7 @@ export const RUNTIME_ACTION_DEFINITIONS = Object.freeze({
     icon: "settings",
     runtimeId: "menuEntryPoint",
     inputType: "text",
+    presetValues: MENU_ENTRY_POINT_PRESET_VALUES,
   }),
 });
 
