@@ -323,7 +323,7 @@ styles:
     padding: "0 8px"
     box-sizing: border-box
     border: "1px solid var(--border)"
-    border-radius: "var(--tag-border-radius, 9999px)"
+    border-radius: "var(--border-radius-md)"
     background: "var(--muted)"
     color: "var(--foreground)"
     font-size: 0.88em
@@ -497,7 +497,7 @@ template:
                           - rtgl-text s=sm: ${item.value}
                     $elif item.type == 'condition-summary':
                       # The target and the value as chips around the operation.
-                      - 'rtgl-view#conditionItem${i}x${j} data-name=${item.name} title="${item.value}" d=h av=c w=f wrap g=xs pv=xs ph=md bgc=su br=md bw=xs bc=bo h-bc=ac cur=pointer style="min-height: 32px; box-sizing: border-box;"':
+                      - 'rtgl-view#conditionItem${i}x${j} data-name=${item.name} title="${item.value}" d=h av=c w=f wrap g=sm pv=xs ph=md bgc=su br=md bw=xs bc=bo h-bc=ac cur=pointer style="min-height: 32px; box-sizing: border-box;"':
                           - $for part, k in item.parts:
                               - $if part.chip:
                                   - span.layoutEditorConditionChip key=${part.kind}: ${part.text}
@@ -508,7 +508,7 @@ template:
                           - $for conditionalItem, k in item.items:
                               - rtgl-view#conditionalOverrideItem${i}x${j}x${k} key=${conditionalItem.viewKey} data-index=${conditionalItem.index} w=f g=sm p=md bgc=bg br=md bw=xs bc=bo h-bc=ac cur=context-menu:
                                   - rtgl-view d=h g=sm av=c w=f:
-                                      - 'rtgl-view#conditionalOverrideCondition${i}x${j}x${k} data-index=${conditionalItem.index} title="${conditionalItem.summary}" d=h av=c wrap g=xs w=1fg p=sm bgc=bg br=md bw=xs bc=bg h-bc=ac cur=pointer':
+                                      - 'rtgl-view#conditionalOverrideCondition${i}x${j}x${k} data-index=${conditionalItem.index} title="${conditionalItem.summary}" d=h av=c wrap g=sm w=1fg p=sm bgc=bg br=md bw=xs bc=bg h-bc=ac cur=pointer':
                                           - $for part, n in conditionalItem.summaryParts:
                                               - $if part.chip:
                                                   - span.layoutEditorConditionChip key=${part.kind}: ${part.text}
