@@ -387,6 +387,13 @@ export const createConditionalOverrideConditionForm = ({
         clearable: false,
         options: "${characterValueOptions}",
       },
+      // The attributes the condition sets, which the dialog's Save saves
+      // with it.
+      {
+        type: "slot",
+        slot: "conditional-override-attributes",
+        label: copy.attributesLabel ?? "Attributes",
+      },
     ],
     actions: {
       layout: "",

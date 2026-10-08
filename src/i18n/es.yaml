@@ -1625,6 +1625,7 @@ layoutEditPanel:
   anchorTopRight: "Superior derecha"
   appearanceSection: "Apariencia"
   attributeLabel: "Atributo"
+  attributesLabel: "Atributos"
   autoOption: "Automático"
   blurTitle: "Desenfoque"
   blurXLabel: "Desenfoque X"

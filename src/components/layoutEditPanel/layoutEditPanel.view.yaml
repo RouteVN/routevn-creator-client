@@ -147,26 +147,22 @@ refs:
         handler: handleConditionalOverrideAttributeImageClick
       keydown:
         handler: handleConditionalOverrideAttributeImageKeyDown
-  conditionalOverrideCondition*:
+  conditionalOverrideItem*:
     eventListeners:
       click:
         handler: handleConditionalOverrideConditionClick
-  conditionalOverrideItem*:
-    eventListeners:
       contextmenu:
         handler: handleConditionalOverrideContextMenu
-  conditionalOverrideAddAttribute*:
-    eventListeners:
-      click:
-        handler: handleConditionalOverrideAddAttributeClick
-  conditionalOverrideAttribute*:
+  conditionalOverrideDraftAttribute*:
     eventListeners:
       click:
         handler: handleConditionalOverrideAttributeClick
-  conditionalOverrideAttributeDelete*:
+      contextmenu:
+        handler: handleConditionalOverrideDraftAttributeContextMenu
+  conditionalOverrideDraftAddAttribute:
     eventListeners:
       click:
-        handler: handleConditionalOverrideAttributeDeleteClick
+        handler: handleConditionalOverrideAddAttributeClick
   sectionAction*:
     eventListeners:
       click:
@@ -519,28 +515,22 @@ template:
                           # A gap between the conditions.
                           - rtgl-view d=v w=f g=md:
                               - $for conditionalItem, k in item.items:
-                                  - rtgl-view#conditionalOverrideItem${i}x${j}x${k} key=${conditionalItem.viewKey} data-index=${conditionalItem.index} w=f g=sm p=md bgc=bg br=md bw=xs bc=bo h-bc=ac cur=context-menu:
-                                      - rtgl-view d=h g=sm av=c w=f:
-                                          - 'rtgl-view#conditionalOverrideCondition${i}x${j}x${k} data-index=${conditionalItem.index} title="${conditionalItem.summary}" d=h av=c wrap g=sm w=1fg p=sm bgc=bg br=md bw=xs bc=bg h-bc=ac cur=pointer':
-                                              - $for part, n in conditionalItem.summaryParts:
-                                                  - $if part.kind == 'target':
-                                                      - span.layoutEditorConditionChip.layoutEditorConditionTarget key=${part.kind}: ${part.text}
-                                                    $elif part.kind == 'operator':
-                                                      - span.layoutEditorConditionChip.layoutEditorConditionOperator key=${part.kind}: ${part.text}
-                                                    $elif part.kind == 'value':
-                                                      - span.layoutEditorConditionChip.layoutEditorConditionValue key=${part.kind}: ${part.text}
-                                                    $else:
-                                                      - rtgl-text key=${part.kind} s=sm c=mu-fg: ${part.text}
+                                  - rtgl-view#conditionalOverrideItem${i}x${j}x${k} key=${conditionalItem.viewKey} data-index=${conditionalItem.index} w=f g=sm p=md bgc=bg br=md bw=xs bc=bo h-bc=ac cur=pointer:
+                                      - 'rtgl-view title="${conditionalItem.summary}" d=h av=c wrap g=sm w=f':
+                                          - $for part, n in conditionalItem.summaryParts:
+                                              - $if part.kind == 'target':
+                                                  - span.layoutEditorConditionChip.layoutEditorConditionTarget key=${part.kind}: ${part.text}
+                                                $elif part.kind == 'operator':
+                                                  - span.layoutEditorConditionChip.layoutEditorConditionOperator key=${part.kind}: ${part.text}
+                                                $elif part.kind == 'value':
+                                                  - span.layoutEditorConditionChip.layoutEditorConditionValue key=${part.kind}: ${part.text}
+                                                $else:
+                                                  - rtgl-text key=${part.kind} s=sm c=mu-fg: ${part.text}
                                       - $if conditionalItem.attributeItems.length > 0:
                                           - $for attributeItem, m in conditionalItem.attributeItems:
-                                              - rtgl-view key=${attributeItem.viewKey} d=h g=sm av=c w=f:
-                                                  - rtgl-view#conditionalOverrideAttribute${i}x${j}x${k}x${m} data-index=${conditionalItem.index} data-field-name=${attributeItem.fieldName} w=1fg p=sm bgc=bg br=md bw=xs bc=bg h-bc=ac cur=pointer:
-                                                      - rtgl-text s=xs: ${attributeItem.summary}
-                                                  - rtgl-button#conditionalOverrideAttributeDelete${i}x${j}x${k}x${m} data-index=${conditionalItem.index} data-field-name=${attributeItem.fieldName} variant=se s=sm: ${removeButton}
+                                              - rtgl-text key=${attributeItem.viewKey} s=xs: ${attributeItem.summary}
                                         $else:
                                           - rtgl-text s=xs c=mu-fg: ${noAttributesYet}
-                                      - rtgl-view d=h w=f:
-                                          - rtgl-button#conditionalOverrideAddAttribute${i}x${j}x${k} data-index=${conditionalItem.index} pre=plus s=sm v=gh w=f: ${addAttributeButton}
                     $elif item.type == 'pagination-summary':
                       - rtgl-view#paginationItem${i}x${j} data-name=${item.name} d=h pv=sm ph=md bgc=mu br=md av=c g=md cur=pointer bw=xs bc=bg h-bc=ac h=32 w=1fg:
                           - rtgl-text s=sm: ${item.value}
@@ -620,7 +610,16 @@ template:
   - rtgl-dialog#conditionalOverrideConditionDialog ?open=${conditionalOverrideConditionDialog.open} s=md:
       - $if conditionalOverrideConditionDialog.open:
           - rtgl-view slot=content g=md:
-              - rtgl-form#conditionalOverrideConditionForm key=${conditionalOverrideConditionDialog.key} :form=${conditionalOverrideConditionForm} :defaultValues=${conditionalOverrideConditionDefaults} :context=${conditionalOverrideConditionDialogContext} w=f: null
+              - rtgl-form#conditionalOverrideConditionForm key=${conditionalOverrideConditionDialog.key} :form=${conditionalOverrideConditionForm} :defaultValues=${conditionalOverrideConditionDefaults} :context=${conditionalOverrideConditionDialogContext} w=f:
+                  # The override's attributes: click one to edit it, right-click to remove it.
+                  - rtgl-view slot=conditional-override-attributes d=v w=f g=sm:
+                      - $if conditionalOverrideDraftAttributeItems.length > 0:
+                          - $for attributeItem, i in conditionalOverrideDraftAttributeItems:
+                              - rtgl-view#conditionalOverrideDraftAttribute${i} key=${attributeItem.fieldName} data-field-name=${attributeItem.fieldName} w=f p=sm bgc=su br=md bw=xs bc=bo h-bc=ac cur=pointer:
+                                  - rtgl-text s=sm: ${attributeItem.summary}
+                        $else:
+                          - rtgl-text s=sm c=mu-fg: ${noAttributesYet}
+                      - rtgl-button#conditionalOverrideDraftAddAttribute pre=plus s=sm v=ol w=f: ${addAttributeButton}
   - rtgl-dialog#conditionalOverrideAttributeDialog ?open=${conditionalOverrideAttributeDialog.open} s=md:
       - $if conditionalOverrideAttributeDialog.open:
           - rtgl-view slot=content g=md:

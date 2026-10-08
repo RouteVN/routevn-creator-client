@@ -1625,6 +1625,7 @@ layoutEditPanel:
   anchorTopRight: "右上"
   appearanceSection: "外观"
   attributeLabel: "属性"
+  attributesLabel: "属性"
   autoOption: "自动"
   blurTitle: "模糊"
   blurXLabel: "模糊 X"

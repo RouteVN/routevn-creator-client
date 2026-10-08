@@ -1625,6 +1625,7 @@ layoutEditPanel:
   anchorTopRight: "Top Right"
   appearanceSection: "Appearance"
   attributeLabel: "Attribute"
+  attributesLabel: "Attributes"
   autoOption: "Auto"
   blurTitle: "Blur"
   blurXLabel: "Blur X"

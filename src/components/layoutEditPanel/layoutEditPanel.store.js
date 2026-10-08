@@ -734,11 +734,14 @@ const resetSelectionUiState = (state) => {
     editingIndex: undefined,
     selectedVariableType: undefined,
     selectedValueKind: undefined,
+    // The override's attributes as the dialog edits them, saved with its
+    // condition.
+    draftSet: undefined,
   };
+  // An attribute of the condition dialog's draft.
   state.conditionalOverrideAttributeDialog = {
     open: false,
     key: 0,
-    editingIndex: undefined,
     fieldName: undefined,
     selectedImageId: undefined,
     selectedAnchor: undefined,
@@ -1050,14 +1053,25 @@ export const closeTextContentDialog = ({ state }, _payload = {}) => {
 
 export const openConditionalOverrideConditionDialog = (
   { state },
-  { editingIndex, selectedVariableType } = {},
+  { editingIndex, selectedVariableType, draftSet } = {},
 ) => {
   state.conditionalOverrideConditionDialog.open = true;
   state.conditionalOverrideConditionDialog.key += 1;
   state.conditionalOverrideConditionDialog.editingIndex = editingIndex;
   state.conditionalOverrideConditionDialog.selectedVariableType =
     selectedVariableType;
+  state.conditionalOverrideConditionDialog.draftSet = draftSet ?? {};
 };
+
+export const setConditionalOverrideConditionDialogDraftSet = (
+  { state },
+  { draftSet } = {},
+) => {
+  state.conditionalOverrideConditionDialog.draftSet = draftSet;
+};
+
+export const selectConditionalOverrideDraftSet = ({ state }) =>
+  state.conditionalOverrideConditionDialog.draftSet ?? {};
 
 export const closeConditionalOverrideConditionDialog = (
   { state },
@@ -1066,6 +1080,7 @@ export const closeConditionalOverrideConditionDialog = (
   state.conditionalOverrideConditionDialog.open = false;
   state.conditionalOverrideConditionDialog.editingIndex = undefined;
   state.conditionalOverrideConditionDialog.selectedValueKind = undefined;
+  state.conditionalOverrideConditionDialog.draftSet = undefined;
 };
 
 export const closeVisibilityConditionDialog = ({ state }, _payload = {}) => {
@@ -1095,11 +1110,10 @@ export const setConditionalOverrideConditionDialogSelectedVariableType = (
 
 export const openConditionalOverrideAttributeDialog = (
   { state },
-  { editingIndex, fieldName, selectedImageId, selectedAnchor } = {},
+  { fieldName, selectedImageId, selectedAnchor } = {},
 ) => {
   state.conditionalOverrideAttributeDialog.open = true;
   state.conditionalOverrideAttributeDialog.key += 1;
-  state.conditionalOverrideAttributeDialog.editingIndex = editingIndex;
   state.conditionalOverrideAttributeDialog.fieldName = fieldName;
   state.conditionalOverrideAttributeDialog.selectedImageId = selectedImageId;
   state.conditionalOverrideAttributeDialog.selectedAnchor = selectedAnchor;
@@ -1111,7 +1125,6 @@ export const closeConditionalOverrideAttributeDialog = (
   _payload = {},
 ) => {
   state.conditionalOverrideAttributeDialog.open = false;
-  state.conditionalOverrideAttributeDialog.editingIndex = undefined;
   state.conditionalOverrideAttributeDialog.fieldName = undefined;
   state.conditionalOverrideAttributeDialog.selectedImageId = undefined;
   state.conditionalOverrideAttributeDialog.selectedAnchor = undefined;
@@ -1811,13 +1824,10 @@ export const selectViewData = ({ state, props, constants, i18n }) => {
       visibilityConditionTargetTypeByTarget,
       visibilityConditionTargetValueKindByTarget,
     );
-  const editingConditionalOverrideAttributeRule =
-    Number.isInteger(state.conditionalOverrideAttributeDialog.editingIndex) &&
-    state.conditionalOverrideAttributeDialog.editingIndex >= 0
-      ? conditionalOverrideRules[
-          state.conditionalOverrideAttributeDialog.editingIndex
-        ]
-      : undefined;
+  // The attribute dialog edits the condition dialog's draft attributes.
+  const editingConditionalOverrideAttributeRule = {
+    set: state.conditionalOverrideConditionDialog.draftSet ?? {},
+  };
   const conditionalOverrideAttributeOptions =
     getConditionalOverrideAttributeOptions({
       rule: editingConditionalOverrideAttributeRule,
@@ -1968,6 +1978,12 @@ export const selectViewData = ({ state, props, constants, i18n }) => {
         : (copy.createButton ?? "Create"),
       copy,
     }),
+    conditionalOverrideDraftAttributeItems: toConditionalOverrideAttributeItems(
+      editingConditionalOverrideAttributeRule,
+      state.textStylesData,
+      state.imagesData,
+      copy,
+    ),
     conditionalOverrideConditionDialogContext: {
       selectedVariableType: selectedConditionalOverrideVariableType,
       selectedValueKind: selectedConditionalOverrideValueKind,

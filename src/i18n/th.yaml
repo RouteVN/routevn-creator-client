@@ -1625,6 +1625,7 @@ layoutEditPanel:
   anchorTopRight: "บนขวา"
   appearanceSection: "รูปลักษณ์"
   attributeLabel: "แอตทริบิวต์"
+  attributesLabel: "แอตทริบิวต์"
   autoOption: "อัตโนมัติ"
   blurTitle: "การเบลอ"
   blurXLabel: "เบลอ X"

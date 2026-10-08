@@ -1625,6 +1625,7 @@ layoutEditPanel:
   anchorTopRight: "右上"
   appearanceSection: "外観"
   attributeLabel: "属性"
+  attributesLabel: "属性"
   autoOption: "自動"
   blurTitle: "ぼかし"
   blurXLabel: "ぼかしX"

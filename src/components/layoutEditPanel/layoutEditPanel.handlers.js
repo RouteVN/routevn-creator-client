@@ -1869,6 +1869,7 @@ export const handleConditionalOverrideConditionClick = (deps, payload) => {
 
   store.openConditionalOverrideConditionDialog({
     editingIndex: Number.isInteger(index) && index >= 0 ? index : undefined,
+    draftSet: rule?.set,
     selectedVariableType: rule?.when?.target
       ? (targetTypeByTarget?.[rule.when.target] ?? "string")
       : undefined,
@@ -1914,21 +1915,11 @@ export const handleConditionalOverrideContextMenu = async (deps, payload) => {
   await confirmConditionalOverrideDelete(deps, ruleLocator);
 };
 
-export const handleConditionalOverrideAddAttributeClick = (deps, payload) => {
+// The condition dialog's Add Attribute edits a new attribute of its draft.
+export const handleConditionalOverrideAddAttributeClick = (deps) => {
   const { appService, props, render, store } = deps;
-  const index = Number.parseInt(
-    payload._event.currentTarget?.dataset?.index,
-    10,
-  );
-  const rules = getConditionalOverrideRules(store);
-  const rule = Number.isInteger(index) && index >= 0 ? rules[index] : undefined;
-
-  if (!rule) {
-    return;
-  }
-
   const availableAttributeOptions = getConditionalOverrideAttributeOptions({
-    rule,
+    rule: { set: store.selectConditionalOverrideDraftSet() },
     capabilities:
       getLayoutEditorElementDefinition(props.itemType)?.capabilities ?? {},
   });
@@ -1944,40 +1935,62 @@ export const handleConditionalOverrideAddAttributeClick = (deps, payload) => {
   }
 
   store.openConditionalOverrideAttributeDialog({
-    editingIndex: index,
     fieldName: undefined,
     selectedAnchor: { x: 0, y: 0 },
   });
   render();
 };
 
+// An attribute in the condition dialog opens to edit it in the draft.
 export const handleConditionalOverrideAttributeClick = (deps, payload) => {
   const { render, store } = deps;
-  const index = Number.parseInt(
-    payload._event.currentTarget?.dataset?.index,
-    10,
-  );
-  const fieldName = payload._event.currentTarget?.dataset?.fieldName;
-  const rules = getConditionalOverrideRules(store);
-  const selectedImageId =
-    Number.isInteger(index) && CONDITIONAL_OVERRIDE_IMAGE_FIELDS.has(fieldName)
-      ? rules[index]?.set?.[fieldName]
-      : undefined;
-  const selectedRule = Number.isInteger(index) ? rules[index] : undefined;
+  const { fieldName } = payload._event.currentTarget.dataset;
+  const draftSet = store.selectConditionalOverrideDraftSet();
+  const selectedImageId = CONDITIONAL_OVERRIDE_IMAGE_FIELDS.has(fieldName)
+    ? draftSet[fieldName]
+    : undefined;
   const selectedAnchor = {
-    x: Number.isFinite(selectedRule?.set?.anchorX)
-      ? selectedRule.set.anchorX
-      : 0,
-    y: Number.isFinite(selectedRule?.set?.anchorY)
-      ? selectedRule.set.anchorY
-      : 0,
+    x: Number.isFinite(draftSet.anchorX) ? draftSet.anchorX : 0,
+    y: Number.isFinite(draftSet.anchorY) ? draftSet.anchorY : 0,
   };
 
   store.openConditionalOverrideAttributeDialog({
-    editingIndex: Number.isInteger(index) && index >= 0 ? index : undefined,
     fieldName,
     selectedImageId,
     selectedAnchor,
+  });
+  render();
+};
+
+// An attribute in the condition dialog is removed from the draft from its
+// right-click menu.
+export const handleConditionalOverrideDraftAttributeContextMenu = async (
+  deps,
+  payload,
+) => {
+  const { appService, render, store } = deps;
+  const copy = selectCopy(deps);
+  const event = payload._event;
+  event.preventDefault();
+  const { fieldName } = event.currentTarget.dataset;
+
+  const result = await appService.showDropdownMenu({
+    items: [
+      { type: "item", label: copy.removeButton ?? "Remove", key: "remove" },
+    ],
+    x: event.clientX,
+    y: event.clientY,
+    place: "bs",
+  });
+  if (result?.item?.key !== "remove") {
+    return;
+  }
+
+  store.setConditionalOverrideConditionDialogDraftSet({
+    draftSet: deleteConditionalOverrideSetField(
+      store.selectConditionalOverrideDraftSet(),
+      fieldName,
+    ),
   });
   render();
 };
@@ -2012,41 +2025,6 @@ export const handleConditionalOverrideAttributeImageKeyDown = (
   payload._event.preventDefault();
   payload._event.stopPropagation();
   handleConditionalOverrideAttributeImageClick(deps);
-};
-
-export const handleConditionalOverrideAttributeDeleteClick = (
-  deps,
-  payload,
-) => {
-  const { render, store } = deps;
-  const index = Number.parseInt(
-    payload._event.currentTarget?.dataset?.index,
-    10,
-  );
-  const fieldName = payload._event.currentTarget?.dataset?.fieldName;
-  const rules = getConditionalOverrideRules(store);
-
-  if (
-    !Number.isInteger(index) ||
-    index < 0 ||
-    index >= rules.length ||
-    !fieldName
-  ) {
-    return;
-  }
-
-  const nextRules = [...rules];
-  const nextRule = {
-    ...nextRules[index],
-    set: deleteConditionalOverrideSetField(nextRules[index]?.set, fieldName),
-  };
-  nextRules[index] = nextRule;
-
-  applyPanelValueUpdate(deps, {
-    name: "conditionalOverrides",
-    value: nextRules,
-  });
-  render();
 };
 
 export const handleConditionalOverrideConditionFormAction = (deps, payload) => {
@@ -2091,7 +2069,7 @@ export const handleConditionalOverrideConditionFormAction = (deps, payload) => {
       op: values.op ?? "eq",
       value: conditionValue,
     },
-    set: {},
+    set: store.selectConditionalOverrideDraftSet(),
   };
   const rules = getConditionalOverrideRules(store);
   const editingIndex =
@@ -2106,6 +2084,7 @@ export const handleConditionalOverrideConditionFormAction = (deps, payload) => {
     nextRules[editingIndex] = {
       ...nextRules[editingIndex],
       when: nextRule.when,
+      set: nextRule.set,
     };
   } else {
     nextRules.push(nextRule);
@@ -2153,34 +2132,19 @@ export const handleConditionalOverrideAttributeFormAction = (deps, payload) => {
     return;
   }
 
-  const rules = getConditionalOverrideRules(store);
-  const editingIndex = dialog.editingIndex;
-  if (
-    !Number.isInteger(editingIndex) ||
-    editingIndex < 0 ||
-    editingIndex >= rules.length
-  ) {
-    return;
-  }
-
-  const nextRules = [...rules];
   const attributeValues = { ...values };
   attributeValues.selectedImageId = dialog.selectedImageId;
   if (values.fieldName === "anchor") {
     attributeValues.anchor = dialog.selectedAnchor;
   }
 
-  nextRules[editingIndex] = {
-    ...nextRules[editingIndex],
-    set: buildConditionalOverrideSetUpdate(
-      nextRules[editingIndex]?.set,
+  // The attribute goes into the condition dialog's draft, which its Save
+  // saves.
+  store.setConditionalOverrideConditionDialogDraftSet({
+    draftSet: buildConditionalOverrideSetUpdate(
+      store.selectConditionalOverrideDraftSet(),
       attributeValues,
     ),
-  };
-
-  applyPanelValueUpdate(deps, {
-    name: "conditionalOverrides",
-    value: nextRules,
   });
   store.closeConditionalOverrideAttributeDialog();
   render();
