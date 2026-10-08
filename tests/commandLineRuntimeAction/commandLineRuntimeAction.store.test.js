@@ -6,6 +6,7 @@ import {
   setFormValues,
   setMode,
 } from "../../src/components/commandLineRuntimeAction/commandLineRuntimeAction.store.js";
+import { EN_I18N } from "../support/i18n.js";
 
 describe("commandLineRuntimeAction.store", () => {
   it("builds dialogue text speed view data used by the extracted scene-editor action editor", () => {
@@ -21,7 +22,7 @@ describe("commandLineRuntimeAction.store", () => {
       },
     );
 
-    const viewData = selectViewData({ state });
+    const viewData = selectViewData({ state, i18n: EN_I18N });
 
     expect(viewData.breadcrumb).toEqual([
       {
@@ -67,11 +68,11 @@ describe("commandLineRuntimeAction.store", () => {
       },
     );
 
-    const eventViewData = selectViewData({ state });
+    const eventViewData = selectViewData({ state, i18n: EN_I18N });
 
     expect(eventViewData.defaultValues).toEqual({
       valueSource: "event",
-      value: 500,
+      value: 50,
     });
     expect(eventViewData.context).toEqual({
       values: eventViewData.defaultValues,
@@ -88,12 +89,41 @@ describe("commandLineRuntimeAction.store", () => {
       },
     );
 
-    const fixedViewData = selectViewData({ state });
+    const fixedViewData = selectViewData({ state, i18n: EN_I18N });
 
     expect(fixedViewData.defaultValues).toEqual({
       valueSource: "fixed",
       value: 42,
     });
     expect(fixedViewData.formKey).toBe("setMusicVolume-fixed");
+  });
+
+  it("remounts the menu page form for Predefined or Custom, with each one's value", () => {
+    const state = createInitialState();
+    setMode({ state }, { mode: "setMenuPage" });
+    setAction({ state }, { action: { value: "settings" } });
+
+    const customViewData = selectViewData({ state, i18n: EN_I18N });
+    expect(customViewData.formKey).toBe("setMenuPage-fixed-custom");
+    expect(customViewData.defaultValues).toMatchObject({
+      valueChoice: "custom",
+      value: "settings",
+    });
+
+    // Switching to Predefined drops the hidden custom text from the form's
+    // values; the predefined value comes from the defaults.
+    setFormValues(
+      { state },
+      { values: { valueSource: "fixed", valueChoice: "predefined" } },
+    );
+    const predefinedViewData = selectViewData({ state, i18n: EN_I18N });
+    expect(predefinedViewData.formKey).toBe("setMenuPage-fixed-predefined");
+    expect(predefinedViewData.defaultValues).toMatchObject({
+      valueChoice: "predefined",
+      presetValue: "options",
+    });
+    expect(predefinedViewData.context.values).toBe(
+      predefinedViewData.defaultValues,
+    );
   });
 });

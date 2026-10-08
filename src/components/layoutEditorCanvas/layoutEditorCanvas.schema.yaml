@@ -19,6 +19,8 @@ propsSchema:
       type: boolean
     disableInteraction:
       type: boolean
+    disableSelection:
+      type: boolean
 methods:
   type: object
   properties:

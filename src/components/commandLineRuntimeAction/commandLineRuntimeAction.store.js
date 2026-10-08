@@ -34,6 +34,14 @@ export const selectSubmitData = ({ state }) => ({
   formValues: state.formValues,
 });
 
+// The form's values over the action's defaults. The form leaves out a field
+// it hides, so a field that shows again, such as the predefined value after
+// Custom, still has a value.
+export const selectResolvedFormValues = ({ state }) => ({
+  ...createRuntimeActionDefaultValues(state.mode, state.action),
+  ...state.formValues,
+});
+
 export const selectViewData = ({ state, i18n }) => {
   const copy = selectCommandLineCopy(i18n);
   const definition = getRuntimeActionDefinition(state.mode);
@@ -48,10 +56,7 @@ export const selectViewData = ({ state, i18n }) => {
     },
   ];
 
-  const defaultValues =
-    Object.keys(state.formValues || {}).length > 0
-      ? state.formValues
-      : createRuntimeActionDefaultValues(state.mode, state.action);
+  const defaultValues = selectResolvedFormValues({ state });
   const valueSource = defaultValues.valueSource ?? "fixed";
   const form = createRuntimeActionForm(state.mode);
   const submitButton = form?.actions?.buttons?.find(
@@ -69,7 +74,11 @@ export const selectViewData = ({ state, i18n }) => {
     context: {
       values: defaultValues,
     },
-    formKey: `${state.mode}-${valueSource}`,
+    // The fields that show depend on these, and the form fills a field only
+    // when it mounts.
+    formKey: [state.mode, valueSource, defaultValues.valueChoice]
+      .filter(Boolean)
+      .join("-"),
     submitLabel: localizeCommandLineText(submitButton?.label ?? "Submit", copy),
   };
 };

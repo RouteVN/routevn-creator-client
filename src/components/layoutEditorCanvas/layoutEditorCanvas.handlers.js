@@ -500,6 +500,7 @@ const updateCanvasHover = (deps) => {
   const pointerGesture = deps.store.selectPointerGesture();
   const { isDragging } = deps.store.selectDragging();
   if (
+    deps.props.disableSelection === true ||
     !position ||
     position.pointerType === "touch" ||
     pointerGesture?.moved === true ||
@@ -1188,6 +1189,15 @@ export const handleCanvasPointerDown = (deps, payload) => {
   }
 
   deps.store.clearPendingClickGesture();
+  // With selection off, a press neither selects an element nor moves one,
+  // and an earlier click cannot make it a double-click.
+  if (deps.props.disableSelection === true) {
+    deps.store.clearPointerGesture();
+    deps.store.clearDoubleClickSequence();
+    clearCanvasHover(deps);
+    return;
+  }
+
   if (deps.store.selectDragging().isDragging) {
     deps.store.clearPointerGesture();
     clearCanvasHover(deps);
@@ -1714,6 +1724,10 @@ export const handleOnUpdate = async (deps, changes) => {
 
   if (!deps.store.selectIsGraphicsReady()) {
     return;
+  }
+
+  if (newProps.disableSelection === true) {
+    clearCanvasHover(deps);
   }
 
   if (

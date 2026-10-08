@@ -1296,3 +1296,54 @@ describe("layoutEditorCanvas pointer selection", () => {
     expect(disconnect).toHaveBeenCalledTimes(1);
   });
 });
+
+describe("layoutEditorCanvas with selection off", () => {
+  const selectionEvents = (deps) =>
+    deps.dispatchEvent.mock.calls
+      .map(([event]) => event)
+      .filter(({ type }) => type === "selection-change");
+
+  it("neither selects nor moves an element on a press", () => {
+    const { deps, start, move, end } = createDragHarness();
+    deps.props.disableSelection = true;
+
+    start();
+    move(20);
+    end();
+    handleCanvasClick(deps, { _event: { detail: 1 } });
+
+    expect(selectionEvents(deps)).toHaveLength(0);
+    expect(deps.store.selectDragging().isDragging).toBe(false);
+    expect(deps.store.selectPendingUpdatedItem()).toBeUndefined();
+  });
+
+  it("does not let an earlier click make a double-click select", () => {
+    const deps = createDeps({ selectedItemId: "parent" });
+    runClick(deps);
+    expect(selectionEvents(deps)).toHaveLength(1);
+
+    deps.props.disableSelection = true;
+    deps.dispatchEvent.mockClear();
+    runClick(deps, { clickCount: 2 });
+    handleCanvasDoubleClick(deps);
+
+    expect(selectionEvents(deps)).toHaveLength(0);
+  });
+
+  it("clears the hover highlight when selection turns off", async () => {
+    const deps = createDeps();
+    deps.store.setHoveredSelection({
+      selection: {
+        itemId: "child",
+        occurrenceId: "child",
+        bounds: bounds(20, 20, 40, 40),
+      },
+    });
+    const oldProps = { ...deps.props };
+    deps.props = { ...deps.props, disableSelection: true };
+
+    await handleOnUpdate(deps, { oldProps, newProps: deps.props });
+
+    expect(deps.store.selectHoveredSelection()).toBeUndefined();
+  });
+});

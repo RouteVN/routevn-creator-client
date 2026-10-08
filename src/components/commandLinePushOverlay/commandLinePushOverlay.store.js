@@ -1,4 +1,4 @@
-import { toFlatItems } from "../../internal/project/tree.js";
+import { toFlatGroups, toFlatItems } from "../../internal/project/tree.js";
 import {
   localizeCommandLineBreadcrumb,
   localizeCommandLineForm,
@@ -50,18 +50,30 @@ export const selectFormValues = ({ state }) => state.formValues;
 
 export const selectViewData = ({ state, i18n }) => {
   const copy = selectCommandLineCopy(i18n);
-  const layouts = toFlatItems(state.layouts);
-  const allLayouts = layouts.filter((item) => item.type === "layout");
 
   const breadcrumb = [
     { id: "actions", label: "Actions", click: true },
     { label: "Push Overlay" },
   ];
 
-  const layoutOptions = allLayouts.map((layout) => ({
+  // The layouts outside folders first, then a section for each folder that
+  // has layouts, in the order of the layouts tree.
+  const toLayoutOption = (layout) => ({
     value: layout.id,
     label: layout.name,
-  }));
+  });
+  const layoutOptions = toFlatItems(state.layouts)
+    .filter((item) => item.type === "layout" && !item.parentId)
+    .map(toLayoutOption);
+  for (const group of toFlatGroups(state.layouts)) {
+    const children = group.children.filter((item) => item.type === "layout");
+    if (children.length > 0) {
+      layoutOptions.push(
+        { type: "section", label: group.fullLabel },
+        ...children.map(toLayoutOption),
+      );
+    }
+  }
 
   const context = { layoutOptions };
 

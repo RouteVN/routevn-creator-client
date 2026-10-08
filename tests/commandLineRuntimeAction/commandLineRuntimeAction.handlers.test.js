@@ -1,6 +1,7 @@
 import { describe, expect, it, vi } from "vitest";
 import {
   createInitialState,
+  selectResolvedFormValues,
   selectSubmitData,
   setAction,
   setFormValues,
@@ -19,6 +20,7 @@ const createStore = (state) => ({
   setAction: (payload) => setAction({ state }, payload),
   setFormValues: (payload) => setFormValues({ state }, payload),
   selectSubmitData: () => selectSubmitData({ state }),
+  selectResolvedFormValues: () => selectResolvedFormValues({ state }),
 });
 
 describe("commandLineRuntimeAction.handlers", () => {
@@ -57,35 +59,73 @@ describe("commandLineRuntimeAction.handlers", () => {
   });
 
   it.each([
-    ["setMenuPage", "settings"],
-    ["setMenuEntryPoint", "pause-menu"],
-  ])("hydrates the existing %s value into the mounted form", (mode, value) => {
+    [
+      "setMenuPage",
+      "settings",
+      { valueChoice: "custom", presetValue: "options" },
+    ],
+    [
+      "setMenuEntryPoint",
+      "pause-menu",
+      { valueChoice: "custom", presetValue: "story" },
+    ],
+  ])(
+    "hydrates the existing %s value into the mounted form",
+    (mode, value, extra) => {
+      const state = createInitialState();
+      const store = createStore(state);
+      const form = {
+        reset: vi.fn(),
+        setValues: vi.fn(),
+      };
+
+      handleBeforeMount({
+        props: {
+          mode,
+          action: { value },
+        },
+        store,
+      });
+      handleAfterMount({
+        refs: { form },
+        store,
+      });
+
+      expect(form.reset).toHaveBeenCalledOnce();
+      expect(form.setValues).toHaveBeenCalledWith({
+        values: {
+          valueSource: "fixed",
+          value,
+          ...extra,
+        },
+      });
+    },
+  );
+
+  it("saves the predefined menu page from Submit after switching back from Custom", () => {
     const state = createInitialState();
     const store = createStore(state);
-    const form = {
-      reset: vi.fn(),
-      setValues: vi.fn(),
-    };
-
+    const events = [];
     handleBeforeMount({
-      props: {
-        mode,
-        action: { value },
-      },
+      props: { mode: "setMenuPage", action: { value: "settings" } },
       store,
     });
-    handleAfterMount({
-      refs: { form },
-      store,
-    });
+    // The form reports only the fields that show: switching to Predefined
+    // drops the custom text and has no predefined value yet.
+    setFormValues(
+      { state },
+      { values: { valueSource: "fixed", valueChoice: "predefined" } },
+    );
 
-    expect(form.reset).toHaveBeenCalledOnce();
-    expect(form.setValues).toHaveBeenCalledWith({
-      values: {
-        valueSource: "fixed",
-        value,
+    handleSubmitClick(
+      {
+        store,
+        dispatchEvent: (event) => events.push([event.type, event.detail]),
       },
-    });
+      { _event: { detail: {} } },
+    );
+
+    expect(events).toEqual([["submit", { setMenuPage: { value: "options" } }]]);
   });
 
   it("rehydrates the form when an existing runtime action is opened in place", () => {
@@ -117,6 +157,8 @@ describe("commandLineRuntimeAction.handlers", () => {
       values: {
         valueSource: "fixed",
         value: "pause-menu",
+        valueChoice: "custom",
+        presetValue: "story",
       },
     });
   });
@@ -171,6 +213,7 @@ describe("commandLineRuntimeAction.handlers", () => {
       {
         store: {
           selectSubmitData: () => selectSubmitData({ state }),
+          selectResolvedFormValues: () => selectResolvedFormValues({ state }),
         },
         dispatchEvent,
       },
@@ -211,6 +254,7 @@ describe("commandLineRuntimeAction.handlers", () => {
       {
         store: {
           selectSubmitData: () => selectSubmitData({ state }),
+          selectResolvedFormValues: () => selectResolvedFormValues({ state }),
         },
         dispatchEvent,
       },

@@ -46,6 +46,14 @@ const arePreviewDataEqual = (left, right) => {
 const selectShowRightPanel = ({ state }) =>
   !state.isTouchMode || selectIsTabletLandscapeState({ state });
 
+// In a Preview picked from its tab, pressing the canvas leaves the selection
+// alone. The Elements list still selects, and goes back to Edit. The Preview
+// shown when the selection clears keeps the canvas selecting.
+export const selectIsCanvasSelectionDisabled = ({ state }) =>
+  state.rightPanelMode === "preview" &&
+  state.isPreviewPickedFromTab &&
+  selectShowRightPanel({ state });
+
 const selectLayoutEditorCanvasMaxWidth = ({ state }) => {
   const resolution = state.projectResolution ?? DEFAULT_PROJECT_RESOLUTION;
 
@@ -210,6 +218,7 @@ export const createInitialState = () => {
     isMobileFileExplorerOpen: false,
     // The page opens on Edit with nothing selected.
     rightPanelMode: "edit",
+    isPreviewPickedFromTab: false,
     canvasZoom: 1,
     canvasPreviewItem: undefined,
     // Undo and redo for edits made since the page opened.
@@ -350,6 +359,17 @@ export const setUiConfig = ({ state }, { uiConfig } = {}) => {
 export const setRightPanelMode = ({ state }, { mode } = {}) => {
   if (RIGHT_PANEL_MODES.has(mode)) {
     state.rightPanelMode = mode;
+  }
+  if (mode === "edit") {
+    state.isPreviewPickedFromTab = false;
+  }
+};
+
+// The Edit or Preview tab the user picked.
+export const pickRightPanelTab = ({ state }, { mode } = {}) => {
+  if (RIGHT_PANEL_MODES.has(mode)) {
+    state.rightPanelMode = mode;
+    state.isPreviewPickedFromTab = mode === "preview";
   }
 };
 
@@ -808,6 +828,7 @@ export const selectViewData = ({ state, constants, i18n }) => {
   // inline list under the canvas is only for narrower touch layouts.
   const showTabletLandscapeExplorer = selectIsTabletLandscapeState({ state });
   const showRightPanel = selectShowRightPanel({ state });
+  const isCanvasSelectionDisabled = selectIsCanvasSelectionDisabled({ state });
   const showMobilePanels = !showRightPanel;
   const showMobileNodeExplorer =
     showMobilePanels && state.isMobileFileExplorerOpen;
@@ -885,6 +906,9 @@ export const selectViewData = ({ state, constants, i18n }) => {
     selectedItemIsInsideSaveLoadSlot,
     selectedItemIsInsideDirectedContainer,
     selectedItemIsEffectivelyHidden,
+    canvasDisableSelection: isCanvasSelectionDisabled,
+    canvasDisableInteraction:
+      selectedItemIsEffectivelyHidden || isCanvasSelectionDisabled,
     isInsideSaveLoadSlot: detailPanelIsInsideSaveLoadSlot,
     isInsideDirectedContainer: detailPanelIsInsideDirectedContainer,
     isTouchMode: state.isTouchMode,

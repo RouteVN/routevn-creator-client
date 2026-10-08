@@ -1503,6 +1503,7 @@ describe("layoutEditor.handleLayoutEditorCanvasBackgroundClick", () => {
   it("clears node and explorer selection after clicking outside the canvas", () => {
     const background = {};
     const store = {
+      selectIsCanvasSelectionDisabled: vi.fn(() => false),
       selectSelectedItemId: vi.fn(() => "node-1"),
       setSelectedItemId: vi.fn(),
       setDetailPanelSelectedItemId: vi.fn(),
@@ -1808,11 +1809,13 @@ describe("layoutEditor.handleBeforeMount", () => {
 
 describe("layoutEditor right panel mode", () => {
   const createModeStore = (overrides = {}) => ({
+    selectIsCanvasSelectionDisabled: vi.fn(() => false),
     setSelectedItemId: vi.fn(),
     selectSelectedItemId: vi.fn(() => undefined),
     selectIsTouchMode: vi.fn(() => false),
     setDetailPanelSelectedItemId: vi.fn(),
     setRightPanelMode: vi.fn(),
+    pickRightPanelTab: vi.fn(),
     closeMobileFileExplorer: vi.fn(),
     ...overrides,
   });
@@ -1826,7 +1829,7 @@ describe("layoutEditor right panel mode", () => {
       { _event: { detail: { id: "edit" } } },
     );
 
-    expect(store.setRightPanelMode).toHaveBeenCalledWith({ mode: "edit" });
+    expect(store.pickRightPanelTab).toHaveBeenCalledWith({ mode: "edit" });
     expect(render).toHaveBeenCalledTimes(1);
   });
 
