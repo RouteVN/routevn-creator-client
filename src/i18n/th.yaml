@@ -2044,6 +2044,7 @@ sceneEditorPage:
   failedRenderCanvas: "ไม่สามารถอัปเดตแคนวาสได้"
   failedSaveBeforePreview: "บันทึกการเปลี่ยนแปลงของฉากก่อนดูตัวอย่างไม่สำเร็จ"
   failedSaveSceneChanges: "บันทึกการเปลี่ยนแปลงของฉากไม่สำเร็จ"
+  failedSaveSectionChangesDiscarded: "ไม่สามารถบันทึกการเปลี่ยนแปลงล่าสุดในส่วน “{sectionName}” ของฉาก “{sceneName}” ได้ จึงยกเลิกการเปลี่ยนแปลงนั้นแล้ว กรุณาป้อนใหม่อีกครั้ง"
   failedSaveDialogueAction: "บันทึกแอ็กชันบทสนทนาไม่สำเร็จ"
   failedSaveLineActions: "บันทึกแอ็กชันของบรรทัดไม่สำเร็จ"
   failedSaveSectionTransition: "บันทึกแอ็กชัน \"ไปยังส่วน\" ไม่สำเร็จ"

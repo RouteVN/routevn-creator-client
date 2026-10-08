@@ -1,9 +1,10 @@
-import { describe, expect, it, vi } from "vitest";
+import { beforeEach, describe, expect, it, vi } from "vitest";
 import {
   createSceneEditorDraftPersistence,
   getSceneEditorDraftSaveDelayMs,
 } from "../../src/internal/ui/sceneEditorLexical/draftPersistence.js";
 import { replaceSceneEditorDraftSectionLines } from "../../src/internal/ui/sceneEditorLexical/draftSection.js";
+import { EN_I18N } from "../support/i18n.js";
 
 const createLine = (id, text) => ({
   id,
@@ -738,5 +739,348 @@ describe("scene editor lexical draft persistence", () => {
       baseRevision: 3,
     });
     expect(reconcileCurrentEditorSession).toHaveBeenCalledOnce();
+  });
+});
+
+describe("scene editor lexical draft persistence: failed saves", () => {
+  beforeEach(() => {
+    // A failed save is logged for developers; keep it out of the test output.
+    vi.spyOn(console, "error").mockImplementation(() => {});
+  });
+
+  const createSectionDraft = (sectionId, text) => ({
+    ...createDirtyDraftSection([
+      { ...createLine(`${sectionId}-line`, text), sectionId },
+    ]),
+    sectionId,
+  });
+
+  const createMultiSectionStore = (draftSections) => {
+    const state = {
+      draftSections: Object.fromEntries(
+        draftSections.map((draftSection) => [
+          `scene-1:${draftSection.sectionId}`,
+          draftSection,
+        ]),
+      ),
+      revision: 3,
+      lastDraftFlushStartedAt: 0,
+      draftSavePendingSinceAt: 0,
+      draftSaveTimerId: undefined,
+      draftFlushInFlight: false,
+      draftRevertGeneration: 0,
+      selectedSectionId: draftSections[0].sectionId,
+    };
+    return {
+      state,
+      selectPendingDraftSections: () =>
+        Object.values(state.draftSections).filter(
+          (draftSection) => draftSection.dirty,
+        ),
+      selectDraftSection: () =>
+        state.draftSections[`scene-1:${state.selectedSectionId}`],
+      selectDraftSectionBySectionId: ({ sectionId }) =>
+        state.draftSections[`scene-1:${sectionId}`],
+      setDraftSection: ({ draftSection }) => {
+        state.draftSections[`scene-1:${draftSection.sectionId}`] = draftSection;
+      },
+      selectSelectedSectionId: () => state.selectedSectionId,
+      selectRepositoryRevision: () => state.revision,
+      selectLastDraftFlushStartedAt: () => state.lastDraftFlushStartedAt,
+      setLastDraftFlushStartedAt: ({ timestamp }) => {
+        state.lastDraftFlushStartedAt = timestamp;
+      },
+      selectDraftSavePendingSinceAt: () => state.draftSavePendingSinceAt,
+      setDraftSavePendingSinceAt: ({ timestamp }) => {
+        state.draftSavePendingSinceAt = timestamp;
+      },
+      selectDraftFlushInFlight: () => state.draftFlushInFlight,
+      setDraftFlushInFlight: ({ value }) => {
+        state.draftFlushInFlight = value === true;
+      },
+      selectDraftSaveTimerId: () => state.draftSaveTimerId,
+      setDraftSaveTimerId: ({ timerId }) => {
+        state.draftSaveTimerId = timerId;
+      },
+      clearDraftSaveTimer: () => {
+        state.draftSaveTimerId = undefined;
+      },
+      selectDraftRevertGeneration: () => state.draftRevertGeneration,
+      markDraftSectionReverted: () => {
+        state.draftRevertGeneration += 1;
+      },
+    };
+  };
+
+  // The revert stand-in does what the page does: the section's draft goes
+  // back to its stored lines and is clean.
+  const storedLines = (sectionId) => [
+    { ...createLine(`${sectionId}-line`, "stored"), sectionId },
+  ];
+
+  const setup = ({ draftSections, syncSectionLinesSnapshot }) => {
+    const store = createMultiSectionStore(draftSections);
+    const revertFailedDraftSection = vi.fn((deps, { draftSection }) => {
+      deps.store.setDraftSection({
+        draftSection: {
+          ...draftSection,
+          dirty: false,
+          lines: storedLines(draftSection.sectionId),
+        },
+      });
+    });
+    const onDidFlush = vi.fn();
+    const controller = createSceneEditorDraftPersistence({
+      syncDraftSectionFromLines: (deps, liveLines, { sectionId }) => {
+        const draftSection = deps.store.selectDraftSectionBySectionId({
+          sectionId,
+        });
+        const nextDraftSection = replaceSceneEditorDraftSectionLines(
+          draftSection,
+          { lines: liveLines, dirty: true },
+        );
+        deps.store.setDraftSection({ draftSection: nextDraftSection });
+        return nextDraftSection;
+      },
+      syncDraftSectionFromLiveEditor: () => undefined,
+      syncStoreProjectState: () => {},
+      reconcileCurrentEditorSession: vi.fn(),
+      revertFailedDraftSection,
+      describeDraftSection: (_deps, { sectionId }) => ({
+        sceneName: "Scene One",
+        sectionName: `Name of ${sectionId}`,
+      }),
+      onDidFlush,
+    });
+    const deps = {
+      store,
+      i18n: EN_I18N,
+      projectService: { syncSectionLinesSnapshot },
+      render: vi.fn(),
+      appService: {
+        showAlert: vi.fn(),
+        showAlertWhenIdle: vi.fn(),
+        reportError: vi.fn(),
+      },
+    };
+    return { store, controller, deps, revertFailedDraftSection, onDidFlush };
+  };
+
+  const refused = (code = "precondition_validation_failed") => ({
+    valid: false,
+    error: { code, message: "payload.lines.lineId must not already exist" },
+  });
+
+  it("drops a refused save at once, tells the user which section, and completes the flush", async () => {
+    const syncSectionLinesSnapshot = vi.fn(async () => refused());
+    const { store, controller, deps, revertFailedDraftSection, onDidFlush } =
+      setup({
+        draftSections: [createSectionDraft("section-1", "Hello")],
+        syncSectionLinesSnapshot,
+      });
+
+    await expect(
+      controller.flushSceneEditorDrafts(deps, { force: true }),
+    ).resolves.toBeUndefined();
+
+    expect(syncSectionLinesSnapshot).toHaveBeenCalledTimes(1);
+    expect(revertFailedDraftSection).toHaveBeenCalledTimes(1);
+    expect(
+      revertFailedDraftSection.mock.calls[0][1].draftSection,
+    ).toMatchObject({ sectionId: "section-1" });
+    expect(store.selectPendingDraftSections()).toEqual([]);
+    expect(store.state.draftRevertGeneration).toBe(1);
+    expect(deps.appService.showAlertWhenIdle).toHaveBeenCalledTimes(1);
+    const alert = deps.appService.showAlertWhenIdle.mock.calls[0][0];
+    expect(alert.title).toBe("Error");
+    expect(alert.message).toBe(
+      "Your latest changes to section “Name of section-1” in scene “Scene One” could not be saved and were removed. Please enter them again.\n\nDetails:\npayload.lines.lineId must not already exist",
+    );
+    expect(deps.appService.reportError).toHaveBeenCalledWith(
+      expect.objectContaining({ code: "precondition_validation_failed" }),
+      {
+        operation: "sceneEditor.saveDraft",
+        code: "precondition_validation_failed",
+      },
+    );
+    expect(deps.appService.showAlert).not.toHaveBeenCalled();
+    expect(onDidFlush).toHaveBeenCalledTimes(1);
+  });
+
+  it("does not save a failed save again", async () => {
+    // The commands of a failed save may be partly stored already.
+    const syncSectionLinesSnapshot = vi
+      .fn()
+      .mockResolvedValueOnce(refused("submit_failed"))
+      .mockResolvedValue({ valid: true });
+    const { controller, deps, revertFailedDraftSection } = setup({
+      draftSections: [createSectionDraft("section-1", "Hello")],
+      syncSectionLinesSnapshot,
+    });
+
+    await controller.flushSceneEditorDrafts(deps, { force: true });
+
+    expect(syncSectionLinesSnapshot).toHaveBeenCalledTimes(1);
+    expect(revertFailedDraftSection).toHaveBeenCalledTimes(1);
+  });
+
+  it("treats a thrown error like a refused save", async () => {
+    const syncSectionLinesSnapshot = vi.fn(async () => {
+      throw new Error("section not found");
+    });
+    const { controller, deps, revertFailedDraftSection } = setup({
+      draftSections: [createSectionDraft("section-1", "Hello")],
+      syncSectionLinesSnapshot,
+    });
+
+    await expect(
+      controller.flushSceneEditorDrafts(deps, { force: true }),
+    ).resolves.toBeUndefined();
+
+    expect(revertFailedDraftSection).toHaveBeenCalledTimes(1);
+    expect(
+      deps.appService.showAlertWhenIdle.mock.calls[0][0].message,
+    ).toContain("section not found");
+  });
+
+  it("only drops the section that failed and still saves the others", async () => {
+    const syncSectionLinesSnapshot = vi.fn(async ({ sectionId }) =>
+      sectionId === "section-1" ? refused() : { valid: true },
+    );
+    const { store, controller, deps, revertFailedDraftSection } = setup({
+      draftSections: [
+        createSectionDraft("section-1", "Fails"),
+        createSectionDraft("section-2", "Saves"),
+      ],
+      syncSectionLinesSnapshot,
+    });
+
+    await controller.flushSceneEditorDrafts(deps, { force: true });
+
+    expect(
+      syncSectionLinesSnapshot.mock.calls.map(([args]) => args.sectionId),
+    ).toEqual(["section-1", "section-2"]);
+    expect(revertFailedDraftSection).toHaveBeenCalledTimes(1);
+    expect(
+      revertFailedDraftSection.mock.calls[0][1].draftSection.sectionId,
+    ).toBe("section-1");
+    expect(store.state.draftSections["scene-1:section-2"]).toMatchObject({
+      dirty: false,
+      lines: [expect.objectContaining({ id: "section-2-line" })],
+    });
+    expect(store.selectPendingDraftSections()).toEqual([]);
+    expect(deps.appService.showAlertWhenIdle).toHaveBeenCalledTimes(1);
+  });
+
+  it("names each section that failed", async () => {
+    const syncSectionLinesSnapshot = vi.fn(async () => refused());
+    const { controller, deps, revertFailedDraftSection } = setup({
+      draftSections: [
+        createSectionDraft("section-1", "One"),
+        createSectionDraft("section-2", "Two"),
+      ],
+      syncSectionLinesSnapshot,
+    });
+
+    await controller.flushSceneEditorDrafts(deps, { force: true });
+
+    expect(revertFailedDraftSection).toHaveBeenCalledTimes(2);
+    expect(
+      deps.appService.showAlertWhenIdle.mock.calls.map(
+        ([alert]) => alert.message.match(/“Name of (section-\d)”/)[1],
+      ),
+    ).toEqual(["section-1", "section-2"]);
+  });
+
+  it("tells the user at once, without waiting for another section's save", async () => {
+    const syncSectionLinesSnapshot = vi.fn(({ sectionId }) =>
+      sectionId === "section-1"
+        ? Promise.resolve(refused())
+        : new Promise(() => {}),
+    );
+    const { controller, deps, revertFailedDraftSection } = setup({
+      draftSections: [
+        createSectionDraft("section-1", "Fails"),
+        createSectionDraft("section-2", "Hangs"),
+      ],
+      syncSectionLinesSnapshot,
+    });
+
+    void controller.flushSceneEditorDrafts(deps, { force: true });
+
+    await vi.waitFor(() =>
+      expect(deps.appService.showAlertWhenIdle).toHaveBeenCalledTimes(1),
+    );
+    expect(revertFailedDraftSection).toHaveBeenCalledTimes(1);
+    expect(syncSectionLinesSnapshot).toHaveBeenCalledTimes(2);
+  });
+
+  it("does not save lines it was handed before the draft was dropped", async () => {
+    let failFirstSave;
+    const syncSectionLinesSnapshot = vi
+      .fn()
+      .mockImplementationOnce(
+        () =>
+          new Promise((resolve) => {
+            failFirstSave = () => resolve(refused());
+          }),
+      )
+      .mockResolvedValue({ valid: true });
+    const { controller, deps } = setup({
+      draftSections: [createSectionDraft("section-1", "Typed")],
+      syncSectionLinesSnapshot,
+    });
+
+    // An autosave is writing when preview asks to save the editor's lines,
+    // which still hold the text that is about to be dropped.
+    const autosave = controller.flushSceneEditorDrafts(deps, { force: true });
+    await vi.waitFor(() =>
+      expect(syncSectionLinesSnapshot).toHaveBeenCalledTimes(1),
+    );
+    const typedLines = [
+      { ...createLine("section-1-line", "Typed"), sectionId: "section-1" },
+    ];
+    const preview = controller.flushSceneEditorDrafts(deps, {
+      sectionId: "section-1",
+      liveLines: typedLines,
+      force: true,
+    });
+    failFirstSave();
+    await autosave;
+    await preview;
+
+    expect(syncSectionLinesSnapshot).toHaveBeenCalledTimes(1);
+    expect(deps.appService.showAlertWhenIdle).toHaveBeenCalledTimes(1);
+  });
+
+  it("keeps the old behaviour when dropping the draft itself fails", async () => {
+    const syncSectionLinesSnapshot = vi.fn(async () => refused());
+    const { controller, deps, revertFailedDraftSection } = setup({
+      draftSections: [createSectionDraft("section-1", "Hello")],
+      syncSectionLinesSnapshot,
+    });
+    revertFailedDraftSection.mockImplementation(() => {
+      throw new Error("could not reload the editor");
+    });
+
+    await expect(
+      controller.flushSceneEditorDrafts(deps, { force: true }),
+    ).rejects.toThrow("could not reload the editor");
+    expect(deps.appService.showAlert).toHaveBeenCalledTimes(1);
+  });
+
+  it("does not drop or tell anything after a clean save", async () => {
+    const syncSectionLinesSnapshot = vi.fn(async () => ({ valid: true }));
+    const { controller, deps, revertFailedDraftSection } = setup({
+      draftSections: [createSectionDraft("section-1", "Hello")],
+      syncSectionLinesSnapshot,
+    });
+
+    await controller.flushSceneEditorDrafts(deps, { force: true });
+
+    expect(syncSectionLinesSnapshot).toHaveBeenCalledTimes(1);
+    expect(revertFailedDraftSection).not.toHaveBeenCalled();
+    expect(deps.appService.showAlertWhenIdle).not.toHaveBeenCalled();
+    expect(deps.appService.reportError).not.toHaveBeenCalled();
   });
 });

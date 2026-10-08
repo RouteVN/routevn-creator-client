@@ -1602,6 +1602,17 @@ during the write, the newer draft is kept dirty and rescheduled through the
 normal debounce/throttle path instead of being submitted immediately. This
 avoids inserting every intermediate text version into `local_drafts`.
 
+A section save that fails, refused with `{ valid: false }` or thrown, fails
+fast. It is not submitted again, because its commands may be partly stored
+already. Only that section's unsaved changes are dropped: its draft and the
+editor showing it go back to the stored lines, undo history is reset, and the
+user is told at once, by an alert naming the section and scene, that the
+changes were removed. Other sections still save and the flush completes, so
+navigation, backup and cleanup carry on and the user does not keep building on
+lines that were never stored. Flushes read live lines only from the section's
+own editor, never another section's, and a flush queued before a drop does not
+save the lines it was handed then.
+
 Editor blur uses the normal text debounce path; navigation, preview, and
 explicit persistence workflows remain responsible for immediate flushes when
 leaving the editing context. Scheduled autosaves defer while a previous draft

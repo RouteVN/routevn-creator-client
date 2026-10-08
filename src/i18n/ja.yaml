@@ -2044,6 +2044,7 @@ sceneEditorPage:
   failedRenderCanvas: "キャンバスを更新できませんでした。"
   failedSaveBeforePreview: "プレビュー前にシーン変更を保存できませんでした。"
   failedSaveSceneChanges: "シーン変更を保存できませんでした。"
+  failedSaveSectionChangesDiscarded: "シーン「{sceneName}」のセクション「{sectionName}」の最新の変更を保存できなかったため、取り消しました。もう一度入力してください。"
   failedSaveDialogueAction: "会話アクションを保存できませんでした。"
   failedSaveLineActions: "行アクションを保存できませんでした。"
   failedSaveSectionTransition: "セクション遷移を保存できませんでした。"

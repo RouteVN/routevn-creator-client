@@ -127,6 +127,8 @@ const createPage = ({ secondLine = dialogueLine("line-2", "Second") } = {}) => {
       setPayload: vi.fn(),
       showToast: vi.fn(),
       showAlert: vi.fn(),
+      showAlertWhenIdle: vi.fn(),
+      reportError: vi.fn(),
     },
     projectService: {
       getRepositoryState: () => repositoryState,
@@ -444,7 +446,8 @@ describe("scene editor undo and redo", () => {
     expect(page.pageLines()[0].text).toBe("Hello there!");
   });
 
-  it("does not run a line action edit when saving the drafts before it fails", async () => {
+  it("drops a draft that fails to save before a line action edit, then runs the edit on the stored lines", async () => {
+    vi.spyOn(console, "error").mockImplementation(() => {});
     const page = createPage();
     await page.type("line-1", "Hello there");
     page.deps.projectService.syncSectionLinesSnapshot.mockRejectedValueOnce(
@@ -455,8 +458,21 @@ describe("scene editor undo and redo", () => {
       _event: { detail: { actionType: "background" } },
     });
 
-    expect(page.deps.appService.showAlert).toHaveBeenCalledOnce();
-    expect(page.deps.projectService.updateLineActions).not.toHaveBeenCalled();
+    // Saved once, not again. The typed text is gone from the page and the
+    // editor, and the user is told where; nothing is left unsaved for the
+    // edit to be ordered against.
+    expect(
+      page.deps.projectService.syncSectionLinesSnapshot,
+    ).toHaveBeenCalledOnce();
+    expect(page.pageLines()[0].text).toBe("Hello world");
+    expect(page.editors[0].replaceLines).toHaveBeenCalledOnce();
+    expect(page.deps.appService.showAlertWhenIdle).toHaveBeenCalledOnce();
+    const { message } = page.deps.appService.showAlertWhenIdle.mock.calls[0][0];
+    expect(message).toContain("“Section One”");
+    expect(message).toContain("“Scene One”");
+    expect(message).toContain("Storage is full");
+    expect(page.deps.appService.showAlert).not.toHaveBeenCalled();
+    expect(page.deps.projectService.updateLineActions).toHaveBeenCalledOnce();
   });
 
   it("waits while the actions dialog is open", async () => {

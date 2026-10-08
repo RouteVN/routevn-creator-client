@@ -723,6 +723,9 @@ export const createInitialState = () => ({
   lastDraftFlushStartedAt: 0,
   draftSavePendingSinceAt: 0,
   draftFlushInFlight: false,
+  // Counts drafts dropped because they could not be saved, so a flush queued
+  // before a drop does not save the lines it was handed then.
+  draftRevertGeneration: 0,
   previewVisible: false,
   previewSceneId: undefined,
   previewSectionId: undefined,
@@ -820,6 +823,13 @@ export const recordLineEdit = (
     });
   }
   Object.assign(state.editHistoryBaselines, baselines);
+};
+
+// Forgets every recorded edit, so undo cannot bring back lines that were
+// dropped because they could not be saved.
+export const resetEditHistory = ({ state }) => {
+  state.editHistory = createEditHistory();
+  state.editHistoryBaselines = {};
 };
 
 export const setEditHistoryBaselines = ({ state }, { baselines } = {}) => {
@@ -978,6 +988,28 @@ export const clearDraftSection = ({ state }, _payload = {}) => {
     delete state.draftSections[draftSectionKey];
   }
   state.draftSection = undefined;
+};
+
+// Drops one section's draft, whichever section is selected.
+export const removeDraftSection = ({ state }, { sceneId, sectionId } = {}) => {
+  const draftSectionKey = getDraftSectionKey(sceneId, sectionId);
+  if (draftSectionKey && state.draftSections) {
+    delete state.draftSections[draftSectionKey];
+  }
+  if (
+    state.draftSection?.sceneId === sceneId &&
+    state.draftSection?.sectionId === sectionId
+  ) {
+    state.draftSection = undefined;
+  }
+};
+
+export const markDraftSectionReverted = ({ state }) => {
+  state.draftRevertGeneration += 1;
+};
+
+export const selectDraftRevertGeneration = ({ state }) => {
+  return state.draftRevertGeneration;
 };
 
 export const setDraftSaveTimerId = ({ state }, { timerId } = {}) => {

@@ -97,6 +97,12 @@ custom menu closed, and preserved the selected offsets 1–4. Browser tests also
 cover native right-click and replacement typing. An actual finger long-press
 was not automated. No Android device was connected for verification.
 
+## Failed save regression
+
+| Bug | Reproduction and former result | Cause/fix | Regression |
+| --- | --- | --- | --- |
+| SAVE-B001 | Have the project storage refuse a section save, then keep typing or leave the editor. Android, iOS and desktop return a failed local write the same way; a 400-line paste in a collaboration project is one natural case. The draft was marked saved and the typed lines vanished on the next reload, with no message, and later edits built on lines that were never stored. | Saving reports a refusal as `{ valid: false }`, which the draft saver ignored. A failed save now drops only that section's unsaved changes: the draft and the section's own editor go back to the stored lines, undo history is reset, and an alert names the section and scene at once. It is not saved again, because a failed save may be partly stored. Automatic saves read only the section's own editor, and a flush queued before the drop does not save the lines it was handed. | `lexicalDraftPersistence.test.js` covers the policy, both races (an alert waiting on another section's save, a queued preview saving the dropped text) and no repeated save. `sceneEditorFailedSaveRevert.test.js` runs the page handlers on the real store: revert, names, recovery, a deleted section, a scene switch with the previous scene's editors still mounted, and preview during a failing save. `sceneEditorUndoRedo.test.js` covers a line action after a failed save. |
+
 ## Preview navigation regression
 
 | Bug | Reproduction and former result | Cause/fix | Regression |

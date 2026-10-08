@@ -2044,6 +2044,7 @@ sceneEditorPage:
   failedRenderCanvas: "Could not update the canvas."
   failedSaveBeforePreview: "Failed to save scene changes before preview"
   failedSaveSceneChanges: "Failed to save scene changes"
+  failedSaveSectionChangesDiscarded: "Your latest changes to section “{sectionName}” in scene “{sceneName}” could not be saved and were removed. Please enter them again."
   failedSaveDialogueAction: "Failed to save dialogue action"
   failedSaveLineActions: "Failed to save line actions"
   failedSaveSectionTransition: "Failed to save section transition"

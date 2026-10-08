@@ -9,6 +9,7 @@ import {
   areSceneEditorLinesEqual,
   cloneSceneEditorLine,
   cloneSceneEditorLines,
+  createSceneEditorDraftSection,
   ensureSceneEditorDraftSection,
   hasPendingSceneEditorDraftChanges,
   replaceSceneEditorDraftSectionLines,
@@ -272,6 +273,19 @@ const getLinesEditorRef = (refs, { sectionId, lineId } = {}) => {
   }
 
   return refs?.linesEditor || refElements[0];
+};
+
+// The editor showing this section, and no other. getLinesEditorRef falls back
+// to another editor, which would mix up sections while the editors on screen
+// still belong to the previous scene.
+const findSectionEditorRef = (refs, sectionId) => {
+  if (!sectionId) {
+    return undefined;
+  }
+
+  return getRefElements(refs)
+    .filter(isLinesEditorRef)
+    .find((element) => element?.dataset?.sectionId === sectionId);
 };
 
 const forEachLinesEditorRef = (refs, callback) => {
@@ -564,11 +578,16 @@ const syncDraftSectionFromLines = (deps, liveLines, { sectionId } = {}) => {
   return nextDraftSection;
 };
 
+// Saves read the section's own editor only: lines from another section's
+// editor would be saved over this section's lines.
 const syncDraftSectionFromLiveEditor = (deps, { sectionId } = {}) => {
-  const { refs } = deps;
-  const linesEditorRef = getLinesEditorRef(refs, { sectionId });
+  const { refs, store } = deps;
+  const targetSectionId = sectionId || store.selectSelectedSectionId?.();
+  const linesEditorRef = findSectionEditorRef(refs, targetSectionId);
   const liveLines = getLiveLinesFromElement(linesEditorRef);
-  return syncDraftSectionFromLines(deps, liveLines, { sectionId });
+  return syncDraftSectionFromLines(deps, liveLines, {
+    sectionId: targetSectionId,
+  });
 };
 
 const focusLinesEditorLine = (refs, payload = {}) => {
@@ -755,6 +774,68 @@ const reconcileCurrentEditorSession = (deps) => {
   );
 };
 
+// The scene and section names of a draft, for telling the user which section
+// lost its changes. Read before the draft is dropped, from the stored project.
+const describeDraftSection = (deps, { sceneId, sectionId }) => {
+  const copy = selectSceneEditorCopy(deps.i18n);
+  const scene =
+    deps.projectService.getRepositoryState()?.scenes?.items?.[sceneId];
+  const sectionIds = (scene?.sections?.tree ?? []).map((node) => node.id);
+  const sectionIndex = sectionIds.indexOf(sectionId);
+  const sectionFallback = copy.sectionFallback ?? "Section {index}";
+  return {
+    sceneName: scene?.name || (copy.sceneLabel ?? "Scene"),
+    sectionName:
+      scene?.sections?.items?.[sectionId]?.name ||
+      (sectionIndex >= 0
+        ? sectionFallback.replaceAll("{index}", String(sectionIndex + 1))
+        : sectionFallback.replaceAll("{index}", "").trim()),
+  };
+};
+
+// Puts a section whose draft could not be saved back to its stored lines, in
+// the store and in the editor showing it.
+const revertFailedDraftSection = (deps, { draftSection }) => {
+  const { projectService, refs, store, subject } = deps;
+  const { sceneId, sectionId } = draftSection;
+
+  syncStoreProjectState(store, projectService);
+
+  const isCurrentScene = store.selectSceneId() === sceneId;
+  const committedSection = isCurrentScene
+    ? store
+        .selectCommittedScene()
+        ?.sections?.find((section) => section.id === sectionId)
+    : undefined;
+  if (committedSection) {
+    store.setDraftSection({
+      draftSection: createSceneEditorDraftSection({
+        sceneId,
+        sectionId,
+        section: committedSection,
+        revision: store.selectRepositoryRevision(),
+      }),
+    });
+  } else {
+    store.removeDraftSection({ sceneId, sectionId });
+  }
+  if (!isCurrentScene) {
+    return;
+  }
+
+  store.resetEditHistory();
+  findSectionEditorRef(refs, sectionId)?.replaceLines({
+    lines: committedSection?.lines ?? [],
+  });
+  reconcileSceneEditorSelection(store);
+  scheduleSceneTextStatsRefresh(deps);
+  subject.dispatch("sceneEditor.renderCanvas", {
+    skipRender: true,
+    syncPresentationState: true,
+    skipAnimations: true,
+  });
+};
+
 const {
   cancelSceneEditorDraftFlush,
   flushSceneEditorDrafts,
@@ -765,6 +846,8 @@ const {
   syncDraftSectionFromLiveEditor,
   syncStoreProjectState,
   reconcileCurrentEditorSession,
+  revertFailedDraftSection,
+  describeDraftSection,
   onDidFlush: async (deps) => {
     refreshSceneTextStatsNow(deps, { render: false });
     await cacheCurrentSceneTextStats(deps);
@@ -3771,7 +3854,18 @@ export const handlePreviewClick = (deps, payload) => {
       store.setSkipNextEditorBlurDraftFlush({ value: true });
       blurLinesEditorFocus(deps.refs);
       appService?.blurActiveElement?.();
-      store.showPreviewSceneId({ sceneId, sectionId, lineId });
+      // A save that failed may have dropped the line preview was asked from;
+      // start that section from its first line then.
+      const sectionLines =
+        store.selectScene()?.sections?.find((item) => item.id === sectionId)
+          ?.lines ?? [];
+      store.showPreviewSceneId({
+        sceneId,
+        sectionId,
+        lineId: sectionLines.some((item) => item.id === lineId)
+          ? lineId
+          : sectionLines[0]?.id,
+      });
       store.setSkipNextEditorBlurDraftFlush({ value: false });
       render();
     } catch (error) {

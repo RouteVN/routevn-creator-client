@@ -2044,6 +2044,7 @@ sceneEditorPage:
   failedRenderCanvas: "No se pudo actualizar el lienzo."
   failedSaveBeforePreview: "No se pudieron guardar los cambios de la escena antes de la vista previa"
   failedSaveSceneChanges: "No se pudieron guardar los cambios de la escena"
+  failedSaveSectionChangesDiscarded: "No se pudieron guardar tus últimos cambios en la sección “{sectionName}” de la escena “{sceneName}”, así que se descartaron. Vuelve a escribirlos."
   failedSaveDialogueAction: "No se pudo guardar la acción de diálogo"
   failedSaveLineActions: "No se pudieron guardar las acciones de la línea"
   failedSaveSectionTransition: "No se pudo guardar el cambio de sección"

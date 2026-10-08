@@ -300,6 +300,9 @@ describe("sceneEditorLexical.handlers preview", () => {
       setDraftSavePendingSinceAt: vi.fn(),
       setSkipNextEditorBlurDraftFlush: vi.fn(),
       showPreviewSceneId: vi.fn(() => calls.push("show-preview")),
+      selectScene: vi.fn(() => ({
+        sections: [{ id: "section-1", lines: [line] }],
+      })),
       setRepositoryState: vi.fn(),
       setDomainState: vi.fn(),
       setRepositoryRevision: vi.fn(),
