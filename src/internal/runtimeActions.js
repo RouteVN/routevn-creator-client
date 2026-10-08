@@ -19,12 +19,17 @@ const VALUE_CHOICE_OPTIONS = Object.freeze([
   { label: "Custom", value: "custom" },
 ]);
 
-// The menu pages the default project template's layouts show, by the value
-// that sets them.
+// The menu pages a project's layouts commonly show, by the value that sets
+// them: the default project template's Options, Save, and Load, and the
+// pages visual novels often add.
 const MENU_PAGE_PRESET_VALUES = Object.freeze([
   { label: "Options", value: "options" },
   { label: "Save", value: "save" },
   { label: "Load", value: "load" },
+  { label: "History", value: "history" },
+  { label: "Gallery", value: "gallery" },
+  { label: "Music Room", value: "music-room" },
+  { label: "Scene Replay", value: "scene-replay" },
 ]);
 
 // Where the default project template's menus are entered from: the story or

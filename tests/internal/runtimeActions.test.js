@@ -80,6 +80,10 @@ describe("runtimeActions", () => {
         { label: "Options", value: "options" },
         { label: "Save", value: "save" },
         { label: "Load", value: "load" },
+        { label: "History", value: "history" },
+        { label: "Gallery", value: "gallery" },
+        { label: "Music Room", value: "music-room" },
+        { label: "Scene Replay", value: "scene-replay" },
       ],
     });
     expect(fields[3].$when).toBe(
@@ -90,6 +94,7 @@ describe("runtimeActions", () => {
   it.each([
     [{}, "predefined", "options"],
     [{ value: "save" }, "predefined", "save"],
+    [{ value: "music-room" }, "predefined", "music-room"],
     [{ value: "settings" }, "custom", "options"],
   ])("opens setMenuPage %o as %s", (action, valueChoice, presetValue) => {
     expect(
@@ -118,6 +123,10 @@ describe("runtimeActions", () => {
     expect(
       createRuntimeActionPreview("setMenuPage", { value: "options" }).summary,
     ).toBe("Set Current Menu Page: Options");
+    expect(
+      createRuntimeActionPreview("setMenuPage", { value: "scene-replay" })
+        .summary,
+    ).toBe("Set Current Menu Page: Scene Replay");
     expect(
       createRuntimeActionPreview("setMenuPage", { value: "settings" }).summary,
     ).toBe("Set Current Menu Page: settings");
