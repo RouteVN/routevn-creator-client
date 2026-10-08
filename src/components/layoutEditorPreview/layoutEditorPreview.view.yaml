@@ -106,42 +106,26 @@ styles:
     "-webkit-user-select": none
     --focus-ring-outline: none
     --focus-ring-box-shadow: none
-  ".layoutEditorImageFieldTransparencyGrid":
-    background-color: "#eef2f7"
-    background-image: 'linear-gradient(45deg, #94a3b8 25%, transparent 25%), linear-gradient(-45deg, #94a3b8 25%, transparent 25%), linear-gradient(45deg, transparent 75%, #94a3b8 75%), linear-gradient(-45deg, transparent 75%, #94a3b8 75%)'
-    background-position: "0 0, 0 6px, 6px -6px, -6px 0"
-    background-repeat: repeat
-    background-size: 12px 12px
 template:
   - 'div style="width: 100%; max-width: 600px;"':
       - $if previewBackgroundOnlyForm:
           - rtgl-form key=${previewBackgroundOnlyFormKey} w=f :form=${previewBackgroundOnlyForm}:
               - rtgl-view slot=${previewBackgroundSlot} g=xs:
-                  - 'rtgl-view#previewBackgroundField w=220 bw=xs bc=bo br=md cur=pointer av=c ah=c overflow=hidden style="aspect-ratio: 16 / 9;"':
-                      - $if previewBackgroundImageId:
-                          - 'div.layoutEditorImageFieldTransparencyGrid style="display: block; width: 100%; height: 100%; overflow: hidden;"':
-                              - rvn-file-image imageId=${previewBackgroundImageId} source="thumbnail" w=f h=f: null
-                        $else:
-                          - rtgl-text c=mu-fg ta=c: Select image
+                  - rtgl-view#previewBackgroundField w=220 cur=pointer:
+                      - 'rvn-image-card imageId=${previewBackgroundImageId} name="${previewBackgroundImageName}" emptyLabel="${i18n.layoutEditorPage.previewBackgroundPlaceholder}"': null
       - $if showDialogueForm:
           - rtgl-form#dialogueForm key=${dialogueFormKey} w=f g=0 :form=${dialogueForm} :defaultValues=${dialogueDefaultValues} :context=${dialogueContext}:
               - rtgl-view slot=dialogueCharacterAvatar w=f g=xs:
-                  - 'rtgl-view#characterAvatarField role=button tabindex=0 aria-haspopup=dialog aria-label="${i18n.layoutEditorPage.previewCharacterAvatarPlaceholder}" w=f bw=xs bc=bo br=md cur=pointer av=c ah=c overflow=hidden style="aspect-ratio: 16 / 9;"':
-                      - $if characterAvatarPreview:
-                          - 'div.layoutEditorImageFieldTransparencyGrid style="display: block; width: 100%; height: 100%; overflow: hidden;"':
-                              - $if characterAvatarPreview.kind == 'spritesheet':
+                  - 'rtgl-view#characterAvatarField role=button tabindex=0 aria-haspopup=dialog aria-label="${i18n.layoutEditorPage.previewCharacterAvatarPlaceholder}" w=f cur=pointer':
+                      - $if characterAvatarPreview.kind == 'spritesheet':
+                          - 'rvn-image-card :hasPreview=${true} name="${characterAvatarName}"':
+                              - 'div slot="preview" style="display: block; width: 100%; height: 100%;"':
                                   - rvn-spritesheet-preview fileId=${characterAvatarPreview.fileId} :atlas=${characterAvatarPreview.atlas} :animation=${characterAvatarPreview.animation} previewKey=${characterAvatarPreview.previewKey} w=f h=f: null
-                                $else:
-                                  - rvn-file-image fileId=${characterAvatarThumbnailFileId} w=f h=f: null
                         $else:
-                          - rtgl-text c=mu-fg ta=c: ${i18n.layoutEditorPage.previewCharacterAvatarPlaceholder}
+                          - 'rvn-image-card fileId=${characterAvatarThumbnailFileId} name="${characterAvatarName}" emptyLabel="${i18n.layoutEditorPage.previewCharacterAvatarPlaceholder}"': null
               - rtgl-view slot=${previewBackgroundSlot} g=xs:
-                  - 'rtgl-view#previewBackgroundField w=220 bw=xs bc=bo br=md cur=pointer av=c ah=c overflow=hidden style="aspect-ratio: 16 / 9;"':
-                      - $if previewBackgroundImageId:
-                          - 'div.layoutEditorImageFieldTransparencyGrid style="display: block; width: 100%; height: 100%; overflow: hidden;"':
-                              - rvn-file-image imageId=${previewBackgroundImageId} source="thumbnail" w=f h=f: null
-                        $else:
-                          - rtgl-text c=mu-fg ta=c: Select image
+                  - rtgl-view#previewBackgroundField w=220 cur=pointer:
+                      - 'rvn-image-card imageId=${previewBackgroundImageId} name="${previewBackgroundImageName}" emptyLabel="${i18n.layoutEditorPage.previewBackgroundPlaceholder}"': null
                   - $if layoutType == 'dialogue-adv':
                       - rtgl-view g=sm mt=md:
                           - rtgl-text: ${i18n.layoutEditorPage.previewRevealingSpeedLabel}
@@ -151,57 +135,33 @@ template:
       - $if showNvlForm:
           - rtgl-form#nvlForm key=${nvlFormKey} w=f :form=${nvlForm} :defaultValues=${nvlDefaultValues} :context=${nvlContext}:
               - rtgl-view slot=${previewBackgroundSlot} g=xs:
-                  - 'rtgl-view#previewBackgroundField w=220 bw=xs bc=bo br=md cur=pointer av=c ah=c overflow=hidden style="aspect-ratio: 16 / 9;"':
-                      - $if previewBackgroundImageId:
-                          - 'div.layoutEditorImageFieldTransparencyGrid style="display: block; width: 100%; height: 100%; overflow: hidden;"':
-                              - rvn-file-image imageId=${previewBackgroundImageId} source="thumbnail" w=f h=f: null
-                        $else:
-                          - rtgl-text c=mu-fg ta=c: Select image
+                  - rtgl-view#previewBackgroundField w=220 cur=pointer:
+                      - 'rvn-image-card imageId=${previewBackgroundImageId} name="${previewBackgroundImageName}" emptyLabel="${i18n.layoutEditorPage.previewBackgroundPlaceholder}"': null
       - $if showChoiceForm:
           - rtgl-form#choiceForm key=${choiceFormKey} w=f g=0 :form=${choiceForm} :defaultValues=${choiceDefaultValues} :context=${choicesContext}:
               - rtgl-view slot=${previewBackgroundSlot} g=xs:
-                  - 'rtgl-view#previewBackgroundField w=220 bw=xs bc=bo br=md cur=pointer av=c ah=c overflow=hidden style="aspect-ratio: 16 / 9;"':
-                      - $if previewBackgroundImageId:
-                          - 'div.layoutEditorImageFieldTransparencyGrid style="display: block; width: 100%; height: 100%; overflow: hidden;"':
-                              - rvn-file-image imageId=${previewBackgroundImageId} source="thumbnail" w=f h=f: null
-                        $else:
-                          - rtgl-text c=mu-fg ta=c: Select image
+                  - rtgl-view#previewBackgroundField w=220 cur=pointer:
+                      - 'rvn-image-card imageId=${previewBackgroundImageId} name="${previewBackgroundImageName}" emptyLabel="${i18n.layoutEditorPage.previewBackgroundPlaceholder}"': null
       - $if showHistoryForm:
           - rtgl-form#historyForm key=${historyFormKey} w=f :form=${historyForm} :defaultValues=${historyDefaultValues} :context=${historyContext}:
               - rtgl-view slot=${previewBackgroundSlot} g=xs:
-                  - 'rtgl-view#previewBackgroundField w=220 bw=xs bc=bo br=md cur=pointer av=c ah=c overflow=hidden style="aspect-ratio: 16 / 9;"':
-                      - $if previewBackgroundImageId:
-                          - 'div.layoutEditorImageFieldTransparencyGrid style="display: block; width: 100%; height: 100%; overflow: hidden;"':
-                              - rvn-file-image imageId=${previewBackgroundImageId} source="thumbnail" w=f h=f: null
-                        $else:
-                          - rtgl-text c=mu-fg ta=c: Select image
+                  - rtgl-view#previewBackgroundField w=220 cur=pointer:
+                      - 'rvn-image-card imageId=${previewBackgroundImageId} name="${previewBackgroundImageName}" emptyLabel="${i18n.layoutEditorPage.previewBackgroundPlaceholder}"': null
       - $if showInputFieldsForm:
           - rtgl-form#inputFieldsForm key=${inputFieldsFormKey} w=f :form=${inputFieldsForm} :defaultValues=${inputFieldsDefaultValues}:
               - rtgl-view slot=${previewBackgroundSlot} g=xs:
-                  - 'rtgl-view#previewBackgroundField w=220 bw=xs bc=bo br=md cur=pointer av=c ah=c overflow=hidden style="aspect-ratio: 16 / 9;"':
-                      - $if previewBackgroundImageId:
-                          - 'div.layoutEditorImageFieldTransparencyGrid style="display: block; width: 100%; height: 100%; overflow: hidden;"':
-                              - rvn-file-image imageId=${previewBackgroundImageId} source="thumbnail" w=f h=f: null
-                        $else:
-                          - rtgl-text c=mu-fg ta=c: Select image
+                  - rtgl-view#previewBackgroundField w=220 cur=pointer:
+                      - 'rvn-image-card imageId=${previewBackgroundImageId} name="${previewBackgroundImageName}" emptyLabel="${i18n.layoutEditorPage.previewBackgroundPlaceholder}"': null
       - $if showPreviewVariablesForm:
           - rtgl-form#previewVariablesForm key=${previewVariablesFormKey} w=f :form=${previewVariablesForm} :defaultValues=${previewVariablesDefaultValues}:
               - rtgl-view slot=${previewBackgroundSlot} g=xs:
-                  - 'rtgl-view#previewBackgroundField w=220 bw=xs bc=bo br=md cur=pointer av=c ah=c overflow=hidden style="aspect-ratio: 16 / 9;"':
-                      - $if previewBackgroundImageId:
-                          - 'div.layoutEditorImageFieldTransparencyGrid style="display: block; width: 100%; height: 100%; overflow: hidden;"':
-                              - rvn-file-image imageId=${previewBackgroundImageId} source="thumbnail" w=f h=f: null
-                        $else:
-                          - rtgl-text c=mu-fg ta=c: Select image
+                  - rtgl-view#previewBackgroundField w=220 cur=pointer:
+                      - 'rvn-image-card imageId=${previewBackgroundImageId} name="${previewBackgroundImageName}" emptyLabel="${i18n.layoutEditorPage.previewBackgroundPlaceholder}"': null
       - $if showSaveLoadForm:
           - rtgl-form#saveLoadForm key=${saveLoadFormKey} w=f :form=${saveLoadForm} :defaultValues=${saveLoadDefaultValues} :context=${saveLoadContext}:
               - rtgl-view slot=${previewBackgroundSlot} g=xs:
-                  - 'rtgl-view#previewBackgroundField w=220 bw=xs bc=bo br=md cur=pointer av=c ah=c overflow=hidden style="aspect-ratio: 16 / 9;"':
-                      - $if previewBackgroundImageId:
-                          - 'div.layoutEditorImageFieldTransparencyGrid style="display: block; width: 100%; height: 100%; overflow: hidden;"':
-                              - rvn-file-image imageId=${previewBackgroundImageId} source="thumbnail" w=f h=f: null
-                        $else:
-                          - rtgl-text c=mu-fg ta=c: Select image
+                  - rtgl-view#previewBackgroundField w=220 cur=pointer:
+                      - 'rvn-image-card imageId=${previewBackgroundImageId} name="${previewBackgroundImageName}" emptyLabel="${i18n.layoutEditorPage.previewBackgroundPlaceholder}"': null
   - rtgl-dropdown-menu#dropdownMenu :items=${dropdownMenu.items} x=${dropdownMenu.x} y=${dropdownMenu.y} ?open=${dropdownMenu.isOpen}: null
   - rtgl-dialog#imageSelectorDialog ?open=${imageSelectorDialog.open} s=lg:
       - rtgl-view slot=content d=v w=f g=md:

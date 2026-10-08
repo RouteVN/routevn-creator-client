@@ -1566,6 +1566,7 @@ layoutEditorPage:
   previewPlayButton: "Play"
   previewCharacterAvatarLabel: "Character Avatar"
   previewCharacterAvatarPlaceholder: "Select sprite"
+  previewBackgroundPlaceholder: "Select image"
   previewAvatarTransformLabel: "Transform"
   previewAvatarTransformPlaceholder: "Select transform"
   previewRevealingSpeedLabel: "Revealing Speed"

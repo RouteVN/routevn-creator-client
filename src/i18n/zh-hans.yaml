@@ -1566,6 +1566,7 @@ layoutEditorPage:
   previewPlayButton: "播放"
   previewCharacterAvatarLabel: "角色头像"
   previewCharacterAvatarPlaceholder: "选择立绘"
+  previewBackgroundPlaceholder: "选择图像"
   previewAvatarTransformLabel: "变换"
   previewAvatarTransformPlaceholder: "选择变换"
   previewRevealingSpeedLabel: "显示速度"

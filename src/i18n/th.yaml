@@ -1566,6 +1566,7 @@ layoutEditorPage:
   previewPlayButton: "เล่น"
   previewCharacterAvatarLabel: "อวาตาร์ตัวละคร"
   previewCharacterAvatarPlaceholder: "เลือกสไปรต์"
+  previewBackgroundPlaceholder: "เลือกรูปภาพ"
   previewAvatarTransformLabel: "การแปลง"
   previewAvatarTransformPlaceholder: "เลือกการแปลง"
   previewRevealingSpeedLabel: "ความเร็วในการแสดงข้อความ"
