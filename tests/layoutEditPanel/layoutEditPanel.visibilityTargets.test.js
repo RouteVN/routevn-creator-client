@@ -246,7 +246,7 @@ describe("layoutEditPanel visibility summary", () => {
     ).toEqual([{ kind: "text", text: "Always visible" }]);
   });
 
-  it("fills the panel's width, with a chip of its own kind for each part", () => {
+  it("fills the panel's width, with the operation in the primary color", () => {
     const view = readFileSync(
       new URL(
         "../../src/components/layoutEditPanel/layoutEditPanel.view.yaml",
@@ -264,17 +264,15 @@ describe("layoutEditPanel visibility summary", () => {
 
     expect(conditionLine).toContain(" w=f ");
     expect(conditionBlock).toContain("$for part, k in item.parts:");
-    for (const kindClass of [
-      "layoutEditorConditionTarget",
-      "layoutEditorConditionOperator",
-      "layoutEditorConditionValue",
-    ]) {
-      expect(conditionBlock).toContain(
-        `span.layoutEditorConditionChip.${kindClass} key=\${part.kind}: \${part.text}`,
-      );
-    }
+    expect(conditionBlock).toContain(
+      "rtgl-text key=${part.kind} s=sm c=pr: ${part.text}",
+    );
     expect(conditionBlock).toContain(
       "rtgl-text key=${part.kind} s=sm c=mu-fg: ${part.text}",
     );
+    expect(conditionBlock).toContain(
+      "rtgl-text key=${part.kind} s=sm: ${part.text}",
+    );
+    expect(view).not.toContain("layoutEditorConditionChip");
   });
 });
