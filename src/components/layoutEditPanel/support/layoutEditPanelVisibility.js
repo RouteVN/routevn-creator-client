@@ -84,16 +84,9 @@ export const getScalarConditionTargetItems = (
   return Object.fromEntries([...projectVariables, ...specialTargets]);
 };
 
-export const toVisibilityConditionTargetOptions = (
-  variablesData = {},
-  options = {},
-) => {
-  return Object.entries(getScalarConditionTargetItems(variablesData, options))
-    .filter(([target]) => isVisibleVisibilityTarget(target))
-    .map(([target, item]) => toConditionTargetOption(target, item))
-    .sort((left, right) => left.label.localeCompare(right.label));
-};
-
+// The targets a visibility condition or a conditional override can test:
+// System first, then the variables of each folder in tree order, then the
+// variables outside folders.
 export const toSectionedVisibilityConditionTargetOptions = (
   variablesData = {},
   options = {},
@@ -273,6 +266,10 @@ export const createVisibilityConditionForm = ({
         type: "select",
         label: copy.targetLabel ?? "Target",
         required: false,
+        searchable: true,
+        searchPlaceholder:
+          copy.conditionTargetSearchPlaceholder ?? "Search targets...",
+        emptySearchLabel: copy.noConditionTargetsFound ?? "No targets found",
         options: targetOptions,
       },
       {

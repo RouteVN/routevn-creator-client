@@ -1,8 +1,14 @@
+import { readFileSync } from "node:fs";
+import yaml from "js-yaml";
 import { describe, expect, it } from "vitest";
 import {
-  toSectionedVisibilityConditionTargetOptions,
-  toVisibilityConditionTargetOptions,
-} from "../../src/components/layoutEditPanel/support/layoutEditPanelVisibility.js";
+  createInitialState,
+  selectViewData,
+  setValues,
+  setVariablesData,
+} from "../../src/components/layoutEditPanel/layoutEditPanel.store.js";
+import { toSectionedVisibilityConditionTargetOptions } from "../../src/components/layoutEditPanel/support/layoutEditPanelVisibility.js";
+import { EN_I18N } from "../support/i18n.js";
 
 describe("layoutEditPanel visibility target options", () => {
   it("groups system targets first and variables by folder order", () => {
@@ -53,7 +59,9 @@ describe("layoutEditPanel visibility target options", () => {
   });
 
   it("uses suffixText for target types and hides deferred runtime targets", () => {
-    const options = toVisibilityConditionTargetOptions();
+    const options = toSectionedVisibilityConditionTargetOptions().filter(
+      (item) => item.type !== "section",
+    );
 
     const menuPageOption = options.find(
       (item) => item.value === "runtime.menuPage",
@@ -82,7 +90,7 @@ describe("layoutEditPanel visibility target options", () => {
   });
 
   it("includes the current dialogue character target as a character selector", () => {
-    const options = toVisibilityConditionTargetOptions();
+    const options = toSectionedVisibilityConditionTargetOptions();
 
     expect(
       options.find((item) => item.value === "dialogue.characterId"),
@@ -91,5 +99,73 @@ describe("layoutEditPanel visibility target options", () => {
       value: "dialogue.characterId",
       suffixText: "character",
     });
+  });
+});
+
+describe("layoutEditPanel visibility condition dialog", () => {
+  const CONSTANTS = yaml.load(
+    readFileSync(
+      new URL(
+        "../../src/components/layoutEditPanel/layoutEditPanel.constants.yaml",
+        import.meta.url,
+      ),
+      "utf8",
+    ),
+  );
+
+  it("lists its targets by section, as the conditional override targets are, with search", () => {
+    const state = createInitialState();
+    setValues({ state }, { values: { id: "text-1", type: "text" } });
+    setVariablesData(
+      { state },
+      {
+        variablesData: {
+          items: {
+            flags: { id: "flags", type: "folder", name: "Flags" },
+            hasKey: {
+              id: "hasKey",
+              type: "variable",
+              name: "Has Key",
+              variableType: "boolean",
+            },
+            score: {
+              id: "score",
+              type: "variable",
+              name: "Score",
+              variableType: "number",
+            },
+          },
+          tree: [
+            { id: "flags", children: [{ id: "hasKey" }] },
+            { id: "score" },
+          ],
+        },
+      },
+    );
+
+    const viewData = selectViewData({
+      state,
+      props: {},
+      constants: CONSTANTS,
+      i18n: EN_I18N,
+    });
+    const visibilityTarget = viewData.visibilityConditionDialogForm.fields[0];
+    const overrideTarget = viewData.conditionalOverrideConditionForm.fields[0];
+
+    expect(visibilityTarget.options).toEqual(overrideTarget.options);
+    expect(
+      visibilityTarget.options
+        .filter((item) => item.type === "section")
+        .map((item) => item.label),
+    ).toEqual(["System", "Flags", "Variables"]);
+    expect(visibilityTarget).toMatchObject({
+      name: "target",
+      type: "select",
+      searchable: true,
+      searchPlaceholder: "Search targets...",
+      emptySearchLabel: "No targets found",
+    });
+    // Clearing the target removes the visibility condition.
+    expect(visibilityTarget.required).toBe(false);
   });
 });

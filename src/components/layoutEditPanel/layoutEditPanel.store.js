@@ -53,7 +53,6 @@ import {
   normalizeConditionalOverrideRules,
   toConditionalOverrideAttributeItems,
   toSectionedVisibilityConditionTargetOptions,
-  toVisibilityConditionTargetOptions,
 } from "./support/layoutEditPanelFeatures.js";
 import {
   createSpriteBlurDialogDefaults,
@@ -1606,15 +1605,11 @@ export const selectViewData = ({ state, props, constants, i18n }) => {
     systemSectionLabel: copy.systemSection ?? "System",
     variablesSectionLabel: copy.variablesSection ?? "Variables",
   };
-  const visibilityConditionTargetOptions = toVisibilityConditionTargetOptions(
+  // Visibility and conditional overrides list the same targets, by section.
+  const conditionTargetOptions = toSectionedVisibilityConditionTargetOptions(
     state.variablesData,
     visibilityConditionOptions,
   );
-  const conditionalOverrideConditionTargetOptions =
-    toSectionedVisibilityConditionTargetOptions(
-      state.variablesData,
-      visibilityConditionOptions,
-    );
   const visibilityConditionTargetTypeByTarget =
     toVisibilityConditionTargetTypeByTarget(
       state.variablesData,
@@ -1893,7 +1888,7 @@ export const selectViewData = ({ state, props, constants, i18n }) => {
     sectionTooltip: state.sectionTooltip,
     visibilityConditionDialogDefaults,
     visibilityConditionDialogForm: createVisibilityConditionForm({
-      targetOptions: visibilityConditionTargetOptions,
+      targetOptions: conditionTargetOptions,
       copy,
     }),
     visibilityConditionDialogContext: {
@@ -1941,7 +1936,7 @@ export const selectViewData = ({ state, props, constants, i18n }) => {
     conditionalOverrideItems,
     conditionalOverrideConditionDefaults,
     conditionalOverrideConditionForm: createConditionalOverrideConditionForm({
-      targetOptions: conditionalOverrideConditionTargetOptions,
+      targetOptions: conditionTargetOptions,
       submitLabel: editingConditionalOverrideRule
         ? (copy.saveButton ?? "Save")
         : (copy.createButton ?? "Create"),
