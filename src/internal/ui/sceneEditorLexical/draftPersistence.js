@@ -634,9 +634,18 @@ export const createSceneEditorDraftPersistence = ({
     });
   };
 
+  // Resolves once every save already queued for the project has run, such as
+  // a line action still being written.
+  const waitForSceneEditorPersistence = (deps) =>
+    enqueueSceneEditorPersistence({
+      owner: deps.projectService,
+      task: async () => {},
+    });
+
   return {
     cancelSceneEditorDraftFlush,
     flushSceneEditorDrafts,
+    waitForSceneEditorPersistence,
     getDraftSaveDelayMs: (store, options = {}) =>
       getSceneEditorDraftSaveDelayMs(store, {
         nowMs,

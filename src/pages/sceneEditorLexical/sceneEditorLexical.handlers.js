@@ -841,6 +841,7 @@ const {
   flushSceneEditorDrafts,
   runSceneEditorPersistence,
   scheduleSceneEditorDraftFlush,
+  waitForSceneEditorPersistence,
 } = createSceneEditorDraftPersistence({
   syncDraftSectionFromLines,
   syncDraftSectionFromLiveEditor,
@@ -1160,14 +1161,39 @@ const getSceneEditorRoutePayload = (eventPayload = {}) => {
   return eventPayload.payload || {};
 };
 
+// The page is saved, not left: for a backup, the app going to the background,
+// or quitting.
+const SAVE_ONLY_NAVIGATION_REASONS = new Set(["backup", "background", "quit"]);
+
+// Before the app is suspended or quits there may be no later autosave, and
+// the process may end: save the drafts, wait for every save already queued,
+// such as a line action still being written, and save again what was typed
+// meanwhile (a flush keeps such lines for the next autosave), a few times at
+// most.
+const MAX_SUSPEND_SAVE_PASSES = 3;
+
+const saveSceneEditorBeforeSuspend = async (deps) => {
+  for (let pass = 0; pass < MAX_SUSPEND_SAVE_PASSES; pass += 1) {
+    await flushSceneEditorDrafts(deps, { force: true });
+    await waitForSceneEditorPersistence(deps);
+    if (deps.store.selectPendingDraftSections().length === 0) {
+      return;
+    }
+  }
+};
+
 export const prepareSceneEditorNavigation = async (
   deps,
   { path, payload, reason } = {},
 ) => {
-  if (reason === "backup") {
+  if (SAVE_ONLY_NAVIGATION_REASONS.has(reason)) {
     // A real draft flush updates its stats cache through onDidFlush. Rewriting
     // that cache without edits would itself make the next backup dirty.
-    await flushSceneEditorDrafts(deps, { force: true });
+    if (reason === "backup") {
+      await flushSceneEditorDrafts(deps, { force: true });
+      return;
+    }
+    await saveSceneEditorBeforeSuspend(deps);
     return;
   }
   const currentProjectId =

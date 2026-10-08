@@ -114,7 +114,7 @@ const graphicsService = await createGraphicsService({
 // Create dialogue queue service for debounced writes
 const dialogueQueueService = createPendingQueueService({ debounceMs: 2000 });
 
-setupCloseListener({ globalUI });
+setupCloseListener({ appService, globalUI });
 
 const componentDependencies = {
   browserEventsClient,

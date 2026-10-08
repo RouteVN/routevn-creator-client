@@ -567,6 +567,8 @@ Handler-facing facade for:
 
 - navigation
 - awaited pre-navigation preparation
+- saving the open page before the app goes to the background or quits
+  (`saveBeforeSuspend`)
 - dialogs and toasts
 - dropdowns
 - user config
@@ -1630,6 +1632,20 @@ repository-state reconciliation cannot accidentally clear the active throttle
 window. The same minimum-interval check runs inside the queued draft-flush task
 before `syncSectionLinesSnapshot()` is called, so a task already accepted by the
 latest-task queue still reschedules instead of writing too soon.
+
+The app saves the open page when it leaves the user's hands.
+`appService.saveBeforeSuspend` runs the before-navigation hooks with the
+`background` reason when the Android or iOS app goes inactive (the activity
+signal in `src/deps/clients/mobileLifecycle.js`), and with `quit` after the
+desktop quit confirmation, waiting at most five seconds before closing. A
+failure is reported, not thrown. The scene editor treats both reasons like a
+backup check: it saves unsaved lines and rewrites nothing when there are none.
+Because the app may not get another autosave, it also waits for saves already
+queued, such as a line action still being written, and writes lines typed
+meanwhile at once, up to three passes. Other editors save their open values
+once through their before-navigation hooks. This is best effort: the iOS shell
+does not request background time for the save, and the macOS Quit menu item
+and Command-Q end the app without a close request.
 
 ### Scene Asset Loading
 

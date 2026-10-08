@@ -175,3 +175,9 @@ native browser check when changing rich-text formatting or context menus.
   on the packaged desktop app and physical mobile keyboards, including IME.
 
 Historical investigation: [newline input notes](notes/lexical-newline-input.md).
+
+## Background and quit save regression
+
+| Bug | Reproduction and former result | Cause/fix | Regression |
+| --- | --- | --- | --- |
+| BG-B001 | Type a line, then switch to another app within about two seconds, and let the system end RouteVN in the background; or confirm Quit on desktop right after typing. The line was gone on reopening. | Typed text is saved two to ten seconds after typing, and nothing saved it when the app left the foreground. `appService.saveBeforeSuspend` now saves the open page when the Android or iOS app goes inactive and after the desktop quit confirmation, before the window closes (at most five seconds). It also waits for saves already queued, such as a line action still being written, and saves lines typed while it writes. A second close request during the save is held back. | `tests/app/mobileLifecycle.test.js` drives the real activity runtime; `tests/updates/mobileUpdateSetup.test.js` checks the Android and iOS setups wire it; `tests/app/saveBeforeSuspend.test.js` covers the app service; `tests/tauri/windowClose.test.js` covers confirm, cancel, a hung or failing save, a second close request and the window's own close; `tests/sceneEditor/sceneEditorSaveBeforeSuspend.test.js` saves through the real store and handlers, from the activity signal on, including lines typed during the save and a line action still being written. |
