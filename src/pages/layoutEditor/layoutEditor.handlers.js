@@ -1038,7 +1038,10 @@ export const handleLayoutEditorCanvasBackgroundClick = (deps, payload) => {
   const { store, refs, render } = deps;
   const event = payload._event;
 
-  if (event.target !== event.currentTarget) {
+  if (
+    event.target !== event.currentTarget ||
+    store.selectIsCanvasSelectionDisabled()
+  ) {
     return;
   }
 
@@ -1227,7 +1230,7 @@ export const handleRightPanelModeChange = (deps, payload) => {
   const { render, store } = deps;
   const { id } = payload._event.detail;
 
-  store.setRightPanelMode({ mode: id });
+  store.pickRightPanelTab({ mode: id });
   render();
 };
 
