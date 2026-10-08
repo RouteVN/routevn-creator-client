@@ -523,14 +523,17 @@ layoutSections:
         label: Hover
         name: hoverTextStyleId
         value: "${values.hoverTextStyleId}"
-        options: "${textStyleItemsWithNone}"
+        options: "${textStyleItems}"
+        # Clearing a hover or click text style removes it.
+        clearable: true
       - "$when": "values.clickTextStyleId"
         type: select
         stacked: true
         label: Clicked
         name: clickTextStyleId
         value: "${values.clickTextStyleId}"
-        options: "${textStyleItemsWithNone}"
+        options: "${textStyleItems}"
+        clearable: true
   - "$when": "supportsSoundSelection"
     id: sounds
     label: Sound

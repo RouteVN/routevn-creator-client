@@ -105,6 +105,31 @@ describe("layoutEditPanel stacked labels", () => {
         name: "clickTextStyleId",
       },
     ]);
+    // Hover and Clicked clear with the select's clear button instead of a
+    // None option; the default text style stays.
+    expect(textStylesSection.items.map(({ clearable }) => clearable)).toEqual([
+      undefined,
+      true,
+      true,
+    ]);
+    for (const item of textStylesSection.items) {
+      expect(item.options.some(({ value }) => value === "")).toBe(false);
+    }
+  });
+
+  it("shows a select's clear button only when its item is clearable", () => {
+    const selectBlock = sliceViewBlock(
+      "$elif item.type == 'select':",
+      "$elif item.type == 'anchor-grid':",
+    );
+    const selects = selectBlock
+      .split("\n")
+      .filter((line) => line.includes("rtgl-select#selectItem"));
+
+    expect(selects).toHaveLength(2);
+    for (const select of selects) {
+      expect(select).toContain("?no-clear=${!item.clearable}");
+    }
   });
 
   it("labels the typewriter's Effect select above it", () => {

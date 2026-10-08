@@ -1579,10 +1579,6 @@ export const selectViewData = ({ state, props, constants, i18n }) => {
     (item) => item.type === "folder",
   );
   const firstTextStyleId = getFirstTextStyleId(state.textStylesData);
-  const textStyleItemsWithNone = [
-    { label: copy.noneOption ?? "None", value: "" },
-    ...textStyleItems,
-  ];
   const soundItemsWithNone = [
     { label: copy.noneOption ?? "None", value: "" },
     ...soundItems,
@@ -1713,7 +1709,6 @@ export const selectViewData = ({ state, props, constants, i18n }) => {
       resourceType: props.resourceType,
       isInsideDirectedContainer: props.isInsideDirectedContainer === true,
       textStyleItems,
-      textStyleItemsWithNone,
       soundItems,
       soundItemsWithNone,
       spritesheetSelectionItems,
