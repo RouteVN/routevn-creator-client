@@ -2047,6 +2047,8 @@ export const selectViewData = ({ state, props, constants, i18n }) => {
     cancelButton: copy.cancelButton ?? "Cancel",
     imageLabel: copy.imageLabel ?? "Image",
     noAttributesYet: copy.noAttributesYet ?? "No attributes yet",
+    conditionLabel: copy.conditionTitle ?? "Condition",
+    attributesLabel: copy.attributesLabel ?? "Attributes",
     noPreviewLabel: copy.noPreviewLabel ?? "No preview",
     notSetLabel: copy.notSetLabel ?? "Not set",
     removeButton: copy.removeButton ?? "Remove",

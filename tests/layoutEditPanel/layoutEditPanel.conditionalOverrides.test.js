@@ -172,6 +172,13 @@ describe("layoutEditPanel conditional overrides", () => {
       "bgc=bg br=md bw=xs bc=bo h-bc=ac cur=pointer",
     );
     expect(conditionalBlock).not.toContain("h-bgc=");
+    // Small labels name the condition and its attributes.
+    expect(conditionalBlock.indexOf("${conditionLabel}")).toBeLessThan(
+      conditionalBlock.indexOf("conditionalItem.summaryParts"),
+    );
+    expect(conditionalBlock.indexOf("${attributesLabel}")).toBeLessThan(
+      conditionalBlock.indexOf("conditionalItem.attributeItems:"),
+    );
     // The conditions stand apart.
     expect(conditionalBlock).toContain(
       "- rtgl-view d=v w=f g=md:\n                              - $for conditionalItem, k in item.items:",
@@ -573,6 +580,10 @@ describe("layoutEditPanel conditional overrides", () => {
         ({ fieldName }) => fieldName,
       ),
     ).toEqual(["opacity", "visible"]);
+    expect(viewData).toMatchObject({
+      conditionLabel: "Condition",
+      attributesLabel: "Attributes",
+    });
     expect(viewData.conditionalOverrideConditionForm.fields.at(-1)).toEqual({
       type: "slot",
       slot: "conditional-override-attributes",

@@ -515,22 +515,27 @@ template:
                           # A gap between the conditions.
                           - rtgl-view d=v w=f g=md:
                               - $for conditionalItem, k in item.items:
-                                  - rtgl-view#conditionalOverrideItem${i}x${j}x${k} key=${conditionalItem.viewKey} data-index=${conditionalItem.index} w=f g=sm p=md bgc=bg br=md bw=xs bc=bo h-bc=ac cur=pointer:
-                                      - 'rtgl-view title="${conditionalItem.summary}" d=h av=c wrap g=sm w=f':
-                                          - $for part, n in conditionalItem.summaryParts:
-                                              - $if part.kind == 'target':
-                                                  - span.layoutEditorConditionChip.layoutEditorConditionTarget key=${part.kind}: ${part.text}
-                                                $elif part.kind == 'operator':
-                                                  - span.layoutEditorConditionChip.layoutEditorConditionOperator key=${part.kind}: ${part.text}
-                                                $elif part.kind == 'value':
-                                                  - span.layoutEditorConditionChip.layoutEditorConditionValue key=${part.kind}: ${part.text}
-                                                $else:
-                                                  - rtgl-text key=${part.kind} s=sm c=mu-fg: ${part.text}
-                                      - $if conditionalItem.attributeItems.length > 0:
-                                          - $for attributeItem, m in conditionalItem.attributeItems:
-                                              - rtgl-text key=${attributeItem.viewKey} s=xs: ${attributeItem.summary}
-                                        $else:
-                                          - rtgl-text s=xs c=mu-fg: ${noAttributesYet}
+                                  - rtgl-view#conditionalOverrideItem${i}x${j}x${k} key=${conditionalItem.viewKey} data-index=${conditionalItem.index} w=f g=md p=md bgc=bg br=md bw=xs bc=bo h-bc=ac cur=pointer:
+                                      # The condition and its attributes, each under a small label.
+                                      - rtgl-view d=v w=f g=xs:
+                                          - rtgl-text s=xs c=mu-fg: ${conditionLabel}
+                                          - 'rtgl-view title="${conditionalItem.summary}" d=h av=c wrap g=sm w=f':
+                                              - $for part, n in conditionalItem.summaryParts:
+                                                  - $if part.kind == 'target':
+                                                      - span.layoutEditorConditionChip.layoutEditorConditionTarget key=${part.kind}: ${part.text}
+                                                    $elif part.kind == 'operator':
+                                                      - span.layoutEditorConditionChip.layoutEditorConditionOperator key=${part.kind}: ${part.text}
+                                                    $elif part.kind == 'value':
+                                                      - span.layoutEditorConditionChip.layoutEditorConditionValue key=${part.kind}: ${part.text}
+                                                    $else:
+                                                      - rtgl-text key=${part.kind} s=sm c=mu-fg: ${part.text}
+                                      - rtgl-view d=v w=f g=xs:
+                                          - rtgl-text s=xs c=mu-fg: ${attributesLabel}
+                                          - $if conditionalItem.attributeItems.length > 0:
+                                              - $for attributeItem, m in conditionalItem.attributeItems:
+                                                  - rtgl-text key=${attributeItem.viewKey} s=xs: ${attributeItem.summary}
+                                            $else:
+                                              - rtgl-text s=xs c=mu-fg: ${noAttributesYet}
                     $elif item.type == 'pagination-summary':
                       - rtgl-view#paginationItem${i}x${j} data-name=${item.name} d=h pv=sm ph=md bgc=mu br=md av=c g=md cur=pointer bw=xs bc=bg h-bc=ac h=32 w=1fg:
                           - rtgl-text s=sm: ${item.value}
