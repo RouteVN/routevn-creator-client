@@ -199,4 +199,21 @@ describe("imageSelector.store", () => {
       "width: 100%",
     );
   });
+
+  it("caps the columns per row with a minimum column width", () => {
+    const state = createInitialState();
+    setImages({ state }, { images: createImages() });
+
+    const viewData = selectViewData({
+      state,
+      props: { columns: 4, minColumnWidth: 120 },
+    });
+
+    expect(viewData.imageGridStyle).toBe(
+      "display: grid; grid-template-columns: repeat(auto-fill, minmax(max(120px, calc((100% - 3 * var(--spacing-md)) / 4)), 1fr));",
+    );
+    expect(viewData.groups[0].children[0].imageCardStyle).toContain(
+      "width: 100%",
+    );
+  });
 });

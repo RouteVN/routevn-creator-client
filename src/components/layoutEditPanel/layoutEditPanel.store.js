@@ -82,10 +82,10 @@ import { selectLayoutEditPanelCopy } from "./support/layoutEditPanelCopy.js";
 
 const HIDDEN_LAYOUT_ACTION_MODES = new Set(["conditional"]);
 const DEFAULT_INTERACTION_SOUND_VOLUME = 100;
-// Touch sound pickers show up to four sounds a row, which leaves two on a
-// phone.
-const TOUCH_SOUND_SELECTOR_COLUMNS = 4;
-const TOUCH_SOUND_SELECTOR_MIN_COLUMN_WIDTH = 120;
+// Touch image and sound pickers show up to four a row, each at least 120px
+// wide: four on a tablet, two on a phone.
+const TOUCH_MEDIA_SELECTOR_COLUMNS = 4;
+const TOUCH_MEDIA_SELECTOR_MIN_COLUMN_WIDTH = 120;
 const DEFAULT_REVEAL_SOUND_STOP_TIMING = "immediate";
 const TEXT_CONTENT_MENTION_VARIABLE_TYPES = new Set([
   "string",
@@ -1976,11 +1976,17 @@ export const selectViewData = ({ state, props, constants, i18n }) => {
     tempSelectedSoundId: state.tempSelectedSoundId,
     soundFolderItems,
     showSoundSelectorFileExplorer: selectorLayout.showFileExplorer,
+    imageSelectorColumns: state.isTouchMode
+      ? TOUCH_MEDIA_SELECTOR_COLUMNS
+      : undefined,
+    imageSelectorMinColumnWidth: state.isTouchMode
+      ? TOUCH_MEDIA_SELECTOR_MIN_COLUMN_WIDTH
+      : undefined,
     soundSelectorColumns: state.isTouchMode
-      ? TOUCH_SOUND_SELECTOR_COLUMNS
+      ? TOUCH_MEDIA_SELECTOR_COLUMNS
       : undefined,
     soundSelectorMinColumnWidth: state.isTouchMode
-      ? TOUCH_SOUND_SELECTOR_MIN_COLUMN_WIDTH
+      ? TOUCH_MEDIA_SELECTOR_MIN_COLUMN_WIDTH
       : undefined,
     soundFormDialog: state.soundFormDialog,
     soundForm: createSoundForm(copy, state.soundFormDialog),

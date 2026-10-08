@@ -1228,9 +1228,9 @@ changes none of them.
 The edit panel labels Position X and Y, Width and Height, the text style
 selects, the sound boxes, and the images above their fields. An image shows as
 a 16:9 card as wide as one of the panel's two columns, with its name below. On
-touch, its sound picker shows up to four sounds a row, each at least 120px wide
-(`createSelectorGridStyle`'s `minColumnWidth`), so a phone fits two. The panel
-ends with the 240px scroll spacer.
+touch, its image and sound pickers show up to four a row, each at least 120px
+wide (`createSelectorGridStyle`'s `minColumnWidth`): four on a tablet, two on a
+phone. The panel ends with the 240px scroll spacer.
 
 X, Y, rotation, scale, and opacity popovers have a slider, a **Presets** menu,
 and four step buttons (`support/layoutEditPanelSliderPopovers.js` holds each

@@ -609,7 +609,7 @@ template:
                       - 'rtgl-view w=300 h=f style="min-width: 0; min-height: 0;"':
                           - rvn-base-file-explorer#imageSelectorFileExplorer :items=${imageFolderItems} shrinkable: null
                   - 'rtgl-view w=1fg h=f style="min-width: 0; min-height: 0;"':
-                      - rvn-image-selector#imageSelector selectedImageId=${tempSelectedImageId} :columns=${selectorColumns}: null
+                      - rvn-image-selector#imageSelector selectedImageId=${tempSelectedImageId} :columns=${imageSelectorColumns} :minColumnWidth=${imageSelectorMinColumnWidth}: null
               - rtgl-view d=h g=sm w=f ah=e:
                   - rtgl-button#confirmImageSelection variant=pr: ${selectButton}
   - rtgl-dialog#soundFormDialog ?open=${soundFormDialog.open} s=md:

@@ -245,12 +245,21 @@ describe("mobile image selector file explorers", () => {
   );
 });
 
-describe("mobile layout edit panel sound and spritesheet selectors", () => {
+describe("mobile layout edit panel image, sound, and spritesheet selectors", () => {
   const view = readView(
     "../../src/components/layoutEditPanel/layoutEditPanel.view.yaml",
   );
 
   it.each([
+    {
+      name: "image",
+      start: "rtgl-dialog#imageSelectorDialog",
+      end: "rtgl-dialog#soundFormDialog",
+      guard: "$if showImageSelectorFileExplorer",
+      explorer: "rvn-base-file-explorer#imageSelectorFileExplorer",
+      columnsProps:
+        ":columns=${imageSelectorColumns} :minColumnWidth=${imageSelectorMinColumnWidth}",
+    },
     {
       name: "sound",
       start: "rtgl-dialog#soundSelectorDialog",
@@ -281,7 +290,7 @@ describe("mobile layout edit panel sound and spritesheet selectors", () => {
     },
   );
 
-  it("uses two columns, or up to four for sounds, without file explorers in touch mode", () => {
+  it("uses two columns, or up to four for images and sounds, without file explorers in touch mode", () => {
     const state = createLayoutEditPanelState();
     const selectViewData = () =>
       selectLayoutEditPanelViewData({
@@ -295,6 +304,8 @@ describe("mobile layout edit panel sound and spritesheet selectors", () => {
       showSoundSelectorFileExplorer: true,
       showSpritesheetSelectorFileExplorer: true,
       selectorColumns: undefined,
+      imageSelectorColumns: undefined,
+      imageSelectorMinColumnWidth: undefined,
       soundSelectorColumns: undefined,
       soundSelectorMinColumnWidth: undefined,
     });
@@ -312,6 +323,8 @@ describe("mobile layout edit panel sound and spritesheet selectors", () => {
       showSoundSelectorFileExplorer: false,
       showSpritesheetSelectorFileExplorer: false,
       selectorColumns: 2,
+      imageSelectorColumns: 4,
+      imageSelectorMinColumnWidth: 120,
       soundSelectorColumns: 4,
       soundSelectorMinColumnWidth: 120,
     });
