@@ -110,8 +110,9 @@ template:
   - 'div style="width: 100%; max-width: 600px;"':
       - $if previewBackgroundOnlyForm:
           - rtgl-form key=${previewBackgroundOnlyFormKey} w=f :form=${previewBackgroundOnlyForm}:
-              - rtgl-view slot=${previewBackgroundSlot} g=xs:
-                  - rtgl-view#previewBackgroundField w=220 cur=pointer:
+              - rtgl-view slot=${previewBackgroundSlot} w=f g=xs:
+                  # As wide as one column of a two-column form row.
+                  - 'rtgl-view#previewBackgroundField cur=pointer style="width: calc((100% - var(--spacing-lg)) / 2);"':
                       - 'rvn-image-card imageId=${previewBackgroundImageId} name="${previewBackgroundImageName}" emptyLabel="${i18n.layoutEditorPage.previewBackgroundPlaceholder}"': null
       - $if showDialogueForm:
           - rtgl-form#dialogueForm key=${dialogueFormKey} w=f g=0 :form=${dialogueForm} :defaultValues=${dialogueDefaultValues} :context=${dialogueContext}:
@@ -123,8 +124,9 @@ template:
                                   - rvn-spritesheet-preview fileId=${characterAvatarPreview.fileId} :atlas=${characterAvatarPreview.atlas} :animation=${characterAvatarPreview.animation} previewKey=${characterAvatarPreview.previewKey} w=f h=f: null
                         $else:
                           - 'rvn-image-card fileId=${characterAvatarThumbnailFileId} name="${characterAvatarName}" emptyLabel="${i18n.layoutEditorPage.previewCharacterAvatarPlaceholder}"': null
-              - rtgl-view slot=${previewBackgroundSlot} g=xs:
-                  - rtgl-view#previewBackgroundField w=220 cur=pointer:
+              - rtgl-view slot=${previewBackgroundSlot} w=f g=xs:
+                  # As wide as one column of a two-column form row.
+                  - 'rtgl-view#previewBackgroundField cur=pointer style="width: calc((100% - var(--spacing-lg)) / 2);"':
                       - 'rvn-image-card imageId=${previewBackgroundImageId} name="${previewBackgroundImageName}" emptyLabel="${i18n.layoutEditorPage.previewBackgroundPlaceholder}"': null
                   - $if layoutType == 'dialogue-adv':
                       - rtgl-view g=sm mt=md:
@@ -134,33 +136,39 @@ template:
                               - rtgl-button#playPreviewButton v=ol: ${i18n.layoutEditorPage.previewPlayButton}
       - $if showNvlForm:
           - rtgl-form#nvlForm key=${nvlFormKey} w=f :form=${nvlForm} :defaultValues=${nvlDefaultValues} :context=${nvlContext}:
-              - rtgl-view slot=${previewBackgroundSlot} g=xs:
-                  - rtgl-view#previewBackgroundField w=220 cur=pointer:
+              - rtgl-view slot=${previewBackgroundSlot} w=f g=xs:
+                  # As wide as one column of a two-column form row.
+                  - 'rtgl-view#previewBackgroundField cur=pointer style="width: calc((100% - var(--spacing-lg)) / 2);"':
                       - 'rvn-image-card imageId=${previewBackgroundImageId} name="${previewBackgroundImageName}" emptyLabel="${i18n.layoutEditorPage.previewBackgroundPlaceholder}"': null
       - $if showChoiceForm:
           - rtgl-form#choiceForm key=${choiceFormKey} w=f g=0 :form=${choiceForm} :defaultValues=${choiceDefaultValues} :context=${choicesContext}:
-              - rtgl-view slot=${previewBackgroundSlot} g=xs:
-                  - rtgl-view#previewBackgroundField w=220 cur=pointer:
+              - rtgl-view slot=${previewBackgroundSlot} w=f g=xs:
+                  # As wide as one column of a two-column form row.
+                  - 'rtgl-view#previewBackgroundField cur=pointer style="width: calc((100% - var(--spacing-lg)) / 2);"':
                       - 'rvn-image-card imageId=${previewBackgroundImageId} name="${previewBackgroundImageName}" emptyLabel="${i18n.layoutEditorPage.previewBackgroundPlaceholder}"': null
       - $if showHistoryForm:
           - rtgl-form#historyForm key=${historyFormKey} w=f :form=${historyForm} :defaultValues=${historyDefaultValues} :context=${historyContext}:
-              - rtgl-view slot=${previewBackgroundSlot} g=xs:
-                  - rtgl-view#previewBackgroundField w=220 cur=pointer:
+              - rtgl-view slot=${previewBackgroundSlot} w=f g=xs:
+                  # As wide as one column of a two-column form row.
+                  - 'rtgl-view#previewBackgroundField cur=pointer style="width: calc((100% - var(--spacing-lg)) / 2);"':
                       - 'rvn-image-card imageId=${previewBackgroundImageId} name="${previewBackgroundImageName}" emptyLabel="${i18n.layoutEditorPage.previewBackgroundPlaceholder}"': null
       - $if showInputFieldsForm:
           - rtgl-form#inputFieldsForm key=${inputFieldsFormKey} w=f :form=${inputFieldsForm} :defaultValues=${inputFieldsDefaultValues}:
-              - rtgl-view slot=${previewBackgroundSlot} g=xs:
-                  - rtgl-view#previewBackgroundField w=220 cur=pointer:
+              - rtgl-view slot=${previewBackgroundSlot} w=f g=xs:
+                  # As wide as one column of a two-column form row.
+                  - 'rtgl-view#previewBackgroundField cur=pointer style="width: calc((100% - var(--spacing-lg)) / 2);"':
                       - 'rvn-image-card imageId=${previewBackgroundImageId} name="${previewBackgroundImageName}" emptyLabel="${i18n.layoutEditorPage.previewBackgroundPlaceholder}"': null
       - $if showPreviewVariablesForm:
           - rtgl-form#previewVariablesForm key=${previewVariablesFormKey} w=f :form=${previewVariablesForm} :defaultValues=${previewVariablesDefaultValues}:
-              - rtgl-view slot=${previewBackgroundSlot} g=xs:
-                  - rtgl-view#previewBackgroundField w=220 cur=pointer:
+              - rtgl-view slot=${previewBackgroundSlot} w=f g=xs:
+                  # As wide as one column of a two-column form row.
+                  - 'rtgl-view#previewBackgroundField cur=pointer style="width: calc((100% - var(--spacing-lg)) / 2);"':
                       - 'rvn-image-card imageId=${previewBackgroundImageId} name="${previewBackgroundImageName}" emptyLabel="${i18n.layoutEditorPage.previewBackgroundPlaceholder}"': null
       - $if showSaveLoadForm:
           - rtgl-form#saveLoadForm key=${saveLoadFormKey} w=f :form=${saveLoadForm} :defaultValues=${saveLoadDefaultValues} :context=${saveLoadContext}:
-              - rtgl-view slot=${previewBackgroundSlot} g=xs:
-                  - rtgl-view#previewBackgroundField w=220 cur=pointer:
+              - rtgl-view slot=${previewBackgroundSlot} w=f g=xs:
+                  # As wide as one column of a two-column form row.
+                  - 'rtgl-view#previewBackgroundField cur=pointer style="width: calc((100% - var(--spacing-lg)) / 2);"':
                       - 'rvn-image-card imageId=${previewBackgroundImageId} name="${previewBackgroundImageName}" emptyLabel="${i18n.layoutEditorPage.previewBackgroundPlaceholder}"': null
   - rtgl-dropdown-menu#dropdownMenu :items=${dropdownMenu.items} x=${dropdownMenu.x} y=${dropdownMenu.y} ?open=${dropdownMenu.isOpen}: null
   - rtgl-dialog#imageSelectorDialog ?open=${imageSelectorDialog.open} s=lg:

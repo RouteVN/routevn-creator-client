@@ -96,7 +96,7 @@ describe("layoutEditorPreview image cards", () => {
     const backgroundCard =
       '- \'rvn-image-card imageId=${previewBackgroundImageId} name="${previewBackgroundImageName}" emptyLabel="${i18n.layoutEditorPage.previewBackgroundPlaceholder}"\': null';
     const backgroundFields = view.split(
-      "- rtgl-view#previewBackgroundField w=220 cur=pointer:\n",
+      "- 'rtgl-view#previewBackgroundField cur=pointer style=\"width: calc((100% - var(--spacing-lg)) / 2);\"':\n",
     );
     expect(backgroundFields).toHaveLength(9);
     for (const field of backgroundFields.slice(1)) {
@@ -117,5 +117,8 @@ describe("layoutEditorPreview image cards", () => {
       'rvn-image-card fileId=${characterAvatarThumbnailFileId} name="${characterAvatarName}" emptyLabel="${i18n.layoutEditorPage.previewCharacterAvatarPlaceholder}"',
     );
     expect(view).not.toContain("Select image");
+    expect(
+      view.split("rtgl-view slot=${previewBackgroundSlot} w=f g=xs:"),
+    ).toHaveLength(9);
   });
 });
