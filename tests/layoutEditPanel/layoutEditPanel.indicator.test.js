@@ -43,6 +43,7 @@ import {
   handleSpritesheetSelectorSubmit,
   handleTextRevealIndicatorFormAction,
   handleTextRevealIndicatorImageFieldClick,
+  handleTextRevealIndicatorImageFieldKeyDown,
 } from "../../src/components/layoutEditPanel/layoutEditPanel.handlers.js";
 import { toInspectorValues } from "../../src/components/layoutEditPanel/support/layoutEditPanelViewData.js";
 import { EN_I18N } from "../support/i18n.js";
@@ -537,6 +538,33 @@ describe("layoutEditPanel text reveal indicators", () => {
         },
       ],
     });
+  });
+
+  it("opens the visual source dropdown from the image field with Enter or Space", () => {
+    for (const key of ["Enter", " "]) {
+      const state = createInitialState();
+      const deps = createDeps(state);
+      openTextRevealIndicatorDialog({ state }, { stateName: "revealing" });
+      const payload = createIndicatorImageFieldClickPayload();
+      payload._event.key = key;
+      payload._event.preventDefault = vi.fn();
+
+      handleTextRevealIndicatorImageFieldKeyDown(deps, payload);
+
+      expect(payload._event.preventDefault).toHaveBeenCalledOnce();
+      expect(state.dropdownMenu).toMatchObject({
+        isOpen: true,
+        targetName: "textRevealIndicatorVisualSource",
+      });
+    }
+
+    const state = createInitialState();
+    const deps = createDeps(state);
+    openTextRevealIndicatorDialog({ state }, { stateName: "revealing" });
+    const payload = createIndicatorImageFieldClickPayload();
+    payload._event.key = "Tab";
+    handleTextRevealIndicatorImageFieldKeyDown(deps, payload);
+    expect(state.dropdownMenu.isOpen).toBe(false);
   });
 
   it("autofills dimensions from the selected indicator image", () => {

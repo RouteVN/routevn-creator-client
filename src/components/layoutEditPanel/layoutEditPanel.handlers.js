@@ -1735,6 +1735,17 @@ export const handleTextRevealIndicatorImageFieldClick = (deps, payload) => {
   render();
 };
 
+// The image field is a button: Enter or Space opens its menu too.
+export const handleTextRevealIndicatorImageFieldKeyDown = (deps, payload) => {
+  const { _event } = payload;
+  if (_event.key !== "Enter" && _event.key !== " ") {
+    return;
+  }
+
+  _event.preventDefault();
+  handleTextRevealIndicatorImageFieldClick(deps, payload);
+};
+
 export const handleTextRevealIndicatorFormAction = (deps, payload) => {
   const { store, render } = deps;
   const detail = payload._event.detail || {};

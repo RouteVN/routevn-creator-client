@@ -123,6 +123,8 @@ refs:
     eventListeners:
       click:
         handler: handleTextRevealIndicatorImageFieldClick
+      keydown:
+        handler: handleTextRevealIndicatorImageFieldKeyDown
   textContentForm:
     eventListeners:
       form-action:
@@ -499,7 +501,7 @@ template:
                       - rtgl-view#groupItem${i}x${j} data-name=${item.name} role=button tabindex=0 aria-label="${item.label}" d=h pv=sm ph=md bgc=mu br=md av=c g=md cur=pointer bw=xs bc=bg h-bc=ac h=32 w=1fg:
                           - rtgl-text s=sm: ${item.value}
                     $elif item.type == 'condition-summary':
-                      # The target and the value as chips around the operation.
+                      # The target, the operation, and the value, each a chip of its own kind.
                       - 'rtgl-view#conditionItem${i}x${j} data-name=${item.name} title="${item.value}" d=h av=c w=f wrap g=sm pv=xs ph=md bgc=su br=md bw=xs bc=bo h-bc=ac cur=pointer style="min-height: 32px; box-sizing: border-box;"':
                           - $for part, k in item.parts:
                               - $if part.kind == 'target':

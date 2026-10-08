@@ -1825,19 +1825,19 @@ export const selectViewData = ({ state, props, constants, i18n }) => {
       visibilityConditionTargetValueKindByTarget,
     );
   // The attribute dialog edits the condition dialog's draft attributes.
-  const editingConditionalOverrideAttributeRule = {
+  const conditionalOverrideDraftRule = {
     set: state.conditionalOverrideConditionDialog.draftSet ?? {},
   };
   const conditionalOverrideAttributeOptions =
     getConditionalOverrideAttributeOptions({
-      rule: editingConditionalOverrideAttributeRule,
+      rule: conditionalOverrideDraftRule,
       includeFieldName: state.conditionalOverrideAttributeDialog.fieldName,
       capabilities,
       copy,
     });
   const conditionalOverrideAttributeDefaults =
     createConditionalOverrideAttributeDefaults(
-      editingConditionalOverrideAttributeRule,
+      conditionalOverrideDraftRule,
       state.conditionalOverrideAttributeDialog.fieldName,
       conditionalOverrideAttributeOptions,
     );
@@ -1979,7 +1979,7 @@ export const selectViewData = ({ state, props, constants, i18n }) => {
       copy,
     }),
     conditionalOverrideDraftAttributeItems: toConditionalOverrideAttributeItems(
-      editingConditionalOverrideAttributeRule,
+      conditionalOverrideDraftRule,
       state.textStylesData,
       state.imagesData,
       copy,
