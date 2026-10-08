@@ -1087,45 +1087,58 @@ export const handleCloseContextMenu = (deps) => {
   render();
 };
 
+// The type and value kind of a condition form's target, which pick the value
+// field it shows.
+const selectConditionTargetKinds = (store, target) => {
+  if (!target) {
+    return { selectedVariableType: undefined, selectedValueKind: undefined };
+  }
+
+  const selectedVariableType =
+    store.selectVisibilityConditionTargetTypeByTarget()?.[target] ?? "string";
+  const selectedValueKind =
+    store.selectVisibilityConditionTargetValueKindByTarget()?.[target] ??
+    selectedVariableType;
+  return { selectedVariableType, selectedValueKind };
+};
+
+// A picked target starts at Equals, and a Boolean target at True, whichever
+// target came before. Undefined when the form already has them.
+const getConditionTargetDefaults = (values, selectedVariableType) => {
+  if (!values.target) {
+    return undefined;
+  }
+
+  const nextValues = { ...values };
+  let hasDefaults = false;
+  if (values.op === undefined) {
+    nextValues.op = "eq";
+    hasDefaults = true;
+  }
+  if (selectedVariableType === "boolean" && values.booleanValue === undefined) {
+    nextValues.booleanValue = true;
+    hasDefaults = true;
+  }
+  return hasDefaults ? nextValues : undefined;
+};
+
+// The form fills a field only once it shows, so a target's defaults go in
+// after the render that shows its value field.
 export const handleVisibilityConditionFormChange = (deps, payload) => {
   const { refs, render, store } = deps;
   const values = payload._event.detail?.values ?? {};
-  const targetTypeByTarget =
-    store.selectVisibilityConditionTargetTypeByTarget();
-  const targetValueKindByTarget =
-    store.selectVisibilityConditionTargetValueKindByTarget();
-  const selectedVariableType = values.target
-    ? (targetTypeByTarget?.[values.target] ?? "string")
-    : undefined;
-  const selectedValueKind = values.target
-    ? (targetValueKindByTarget?.[values.target] ??
-      selectedVariableType ??
-      "string")
-    : undefined;
+  const kinds = selectConditionTargetKinds(store, values.target);
 
-  if (values.target && values.op === undefined) {
-    const nextValues = {
-      ...values,
-      op: "eq",
-    };
-
-    if (
-      selectedVariableType === "boolean" &&
-      values.booleanValue === undefined
-    ) {
-      nextValues.booleanValue = true;
-    }
-
-    refs.visibilityConditionForm.setValues({
-      values: nextValues,
-    });
-  }
-
-  store.setVisibilityConditionDialogSelectedVariableType({
-    selectedVariableType,
-    selectedValueKind,
-  });
+  store.setVisibilityConditionDialogSelectedVariableType(kinds);
   render();
+
+  const defaults = getConditionTargetDefaults(
+    values,
+    kinds.selectedVariableType,
+  );
+  if (defaults) {
+    refs.visibilityConditionForm.setValues({ values: defaults });
+  }
 };
 
 export const handleContextMenuClickItem = (deps, payload) => {
@@ -1181,43 +1194,17 @@ export const handleContextMenuClickItem = (deps, payload) => {
 export const handleConditionalOverrideConditionFormChange = (deps, payload) => {
   const { refs, render, store } = deps;
   const values = payload._event.detail?.values ?? {};
-  const targetTypeByTarget =
-    store.selectVisibilityConditionTargetTypeByTarget();
-  const targetValueKindByTarget =
-    store.selectVisibilityConditionTargetValueKindByTarget();
-  const selectedVariableType = values.target
-    ? (targetTypeByTarget?.[values.target] ?? "string")
-    : undefined;
-  const selectedValueKind = values.target
-    ? (targetValueKindByTarget?.[values.target] ??
-      selectedVariableType ??
-      "string")
-    : undefined;
+  const kinds = selectConditionTargetKinds(store, values.target);
 
-  const shouldDefaultOperation = values.target && values.op === undefined;
-  const shouldDefaultBooleanValue =
-    values.target &&
-    selectedVariableType === "boolean" &&
-    values.booleanValue === undefined;
-
-  store.setConditionalOverrideConditionDialogSelectedVariableType({
-    selectedVariableType,
-    selectedValueKind,
-  });
+  store.setConditionalOverrideConditionDialogSelectedVariableType(kinds);
   render();
 
-  if (shouldDefaultOperation || shouldDefaultBooleanValue) {
-    const nextValues = { ...values };
-    if (shouldDefaultOperation) {
-      nextValues.op = "eq";
-    }
-    if (shouldDefaultBooleanValue) {
-      nextValues.booleanValue = true;
-    }
-
-    refs.conditionalOverrideConditionForm.setValues({
-      values: nextValues,
-    });
+  const defaults = getConditionTargetDefaults(
+    values,
+    kinds.selectedVariableType,
+  );
+  if (defaults) {
+    refs.conditionalOverrideConditionForm.setValues({ values: defaults });
   }
 };
 
