@@ -12,6 +12,21 @@ const VALUE_SOURCE_OPTIONS = Object.freeze([
 
 const EVENT_VALUE_BINDING = "_event.value";
 
+// A Specific Value can be one of the action's predefined values, or any
+// value typed in as Custom.
+const VALUE_CHOICE_OPTIONS = Object.freeze([
+  { label: "Predefined", value: "predefined" },
+  { label: "Custom", value: "custom" },
+]);
+
+// The menu pages the default project template's layouts show, by the value
+// that sets them.
+const MENU_PAGE_PRESET_VALUES = Object.freeze([
+  { label: "Options", value: "options" },
+  { label: "Save", value: "save" },
+  { label: "Load", value: "load" },
+]);
+
 const createValueActionDefinition = ({
   mode,
   label,
@@ -21,6 +36,7 @@ const createValueActionDefinition = ({
   min,
   step,
   description,
+  presetValues,
 } = {}) => {
   const field = getRuntimeFieldItem(runtimeId);
 
@@ -35,6 +51,7 @@ const createValueActionDefinition = ({
     valueLabel: "Value",
     min,
     step,
+    presetValues,
   };
 };
 
@@ -138,6 +155,7 @@ export const RUNTIME_ACTION_DEFINITIONS = Object.freeze({
     icon: "settings",
     runtimeId: "menuPage",
     inputType: "text",
+    presetValues: MENU_PAGE_PRESET_VALUES,
   }),
   setMenuEntryPoint: createValueActionDefinition({
     mode: "setMenuEntryPoint",
@@ -188,9 +206,17 @@ export const getRuntimeActionModes = () => {
   return Object.keys(RUNTIME_ACTION_DEFINITIONS);
 };
 
+const findPresetValue = (definition, value) =>
+  definition.presetValues?.find((preset) => preset.value === value);
+
 const formatPreviewValue = (definition, value) => {
   if (value === EVENT_VALUE_BINDING) {
     return "Current Value";
+  }
+
+  const preset = findPresetValue(definition, value);
+  if (preset) {
+    return preset.label;
   }
 
   if (definition.inputType === "boolean") {
@@ -234,6 +260,39 @@ const createFixedValueField = (definition) => {
   };
 };
 
+// With predefined values, a Specific Value is either one of them, from a
+// select, or Custom, typed in as any other value is.
+const createFixedValueFields = (definition) => {
+  if (!definition.presetValues) {
+    return [createFixedValueField(definition)];
+  }
+
+  return [
+    {
+      $when: `values.valueSource == 'fixed'`,
+      name: "valueChoice",
+      type: "segmented-control",
+      label: definition.valueLabel,
+      clearable: false,
+      options: VALUE_CHOICE_OPTIONS,
+    },
+    {
+      $when: `values.valueSource == 'fixed' && values.valueChoice == 'predefined'`,
+      name: "presetValue",
+      type: "select",
+      clearable: false,
+      options: definition.presetValues,
+      description: definition.description,
+    },
+    {
+      $when: `values.valueSource == 'fixed' && values.valueChoice == 'custom'`,
+      name: "value",
+      type: "input-text",
+      description: definition.description,
+    },
+  ];
+};
+
 export const createRuntimeActionForm = (mode) => {
   const definition = getRuntimeActionDefinition(mode);
   if (!definition) {
@@ -269,7 +328,7 @@ export const createRuntimeActionForm = (mode) => {
         description:
           "Specific Value lets you enter a value. Current Value uses the value from the triggering control.",
       },
-      createFixedValueField(definition),
+      ...createFixedValueFields(definition),
     ],
     actions: {
       layout: "",
@@ -295,14 +354,23 @@ export const createRuntimeActionDefaultValues = (mode, action = {}) => {
   }
 
   const valueSource = getRuntimeActionValueSource(action.value);
+  const value =
+    valueSource === "fixed"
+      ? (action.value ?? definition.defaultValue)
+      : definition.defaultValue;
+  const defaultValues = { valueSource, value };
 
-  return {
-    valueSource,
-    value:
-      valueSource === "fixed"
-        ? (action.value ?? definition.defaultValue)
-        : definition.defaultValue,
-  };
+  // A value that is not one of the predefined ones is Custom; a new action
+  // starts at the first predefined value.
+  if (definition.presetValues) {
+    const preset = findPresetValue(definition, value);
+    const isCustom = !preset && value !== undefined && value !== "";
+    defaultValues.valueChoice = isCustom ? "custom" : "predefined";
+    defaultValues.presetValue =
+      preset?.value ?? definition.presetValues[0].value;
+  }
+
+  return defaultValues;
 };
 
 export const createRuntimeActionSubmitDetail = (mode, values = {}) => {
@@ -318,10 +386,16 @@ export const createRuntimeActionSubmitDetail = (mode, values = {}) => {
   }
 
   const valueSource = values.valueSource === "event" ? "event" : "fixed";
+  let value = values.value;
+  if (valueSource === "event") {
+    value = EVENT_VALUE_BINDING;
+  } else if (definition.presetValues && values.valueChoice !== "custom") {
+    value = values.presetValue;
+  }
 
   return {
     [mode]: {
-      value: valueSource === "event" ? EVENT_VALUE_BINDING : values.value,
+      value,
     },
   };
 };

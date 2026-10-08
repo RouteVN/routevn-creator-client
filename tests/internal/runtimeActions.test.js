@@ -19,18 +19,82 @@ describe("runtimeActions", () => {
     },
   );
 
-  it.each([
-    ["setMenuPage", "settings"],
-    ["setMenuEntryPoint", "pause-menu"],
-  ])("uses the existing %s value as the form default", (mode, value) => {
+  it("uses the existing setMenuEntryPoint value as the form default", () => {
     expect(
-      createRuntimeActionDefaultValues(mode, {
-        value,
+      createRuntimeActionDefaultValues("setMenuEntryPoint", {
+        value: "pause-menu",
       }),
     ).toEqual({
       valueSource: "fixed",
-      value,
+      value: "pause-menu",
     });
+  });
+
+  it("offers the default template's menu pages as predefined values, or a custom one", () => {
+    const fields = createRuntimeActionForm("setMenuPage").fields;
+    expect(fields.map(({ name, type }) => [name, type])).toEqual([
+      ["valueSource", "segmented-control"],
+      ["valueChoice", "segmented-control"],
+      ["presetValue", "select"],
+      ["value", "input-text"],
+    ]);
+    expect(fields[1]).toMatchObject({
+      $when: "values.valueSource == 'fixed'",
+      label: "Value",
+      options: [
+        { label: "Predefined", value: "predefined" },
+        { label: "Custom", value: "custom" },
+      ],
+    });
+    expect(fields[2]).toMatchObject({
+      $when:
+        "values.valueSource == 'fixed' && values.valueChoice == 'predefined'",
+      clearable: false,
+      options: [
+        { label: "Options", value: "options" },
+        { label: "Save", value: "save" },
+        { label: "Load", value: "load" },
+      ],
+    });
+    expect(fields[3].$when).toBe(
+      "values.valueSource == 'fixed' && values.valueChoice == 'custom'",
+    );
+  });
+
+  it.each([
+    [{}, "predefined", "options"],
+    [{ value: "save" }, "predefined", "save"],
+    [{ value: "settings" }, "custom", "options"],
+  ])("opens setMenuPage %o as %s", (action, valueChoice, presetValue) => {
+    expect(
+      createRuntimeActionDefaultValues("setMenuPage", action),
+    ).toMatchObject({ valueSource: "fixed", valueChoice, presetValue });
+  });
+
+  it("saves the predefined or the custom menu page, as the choice says", () => {
+    const submit = (values) =>
+      createRuntimeActionSubmitDetail("setMenuPage", {
+        valueSource: "fixed",
+        presetValue: "load",
+        value: "settings",
+        ...values,
+      });
+
+    expect(submit({ valueChoice: "predefined" })).toEqual({
+      setMenuPage: { value: "load" },
+    });
+    expect(submit({ valueChoice: "custom" })).toEqual({
+      setMenuPage: { value: "settings" },
+    });
+    expect(submit({ valueSource: "event" })).toEqual({
+      setMenuPage: { value: "_event.value" },
+    });
+    expect(
+      createRuntimeActionPreview("setMenuPage", { value: "options" }).summary,
+    ).toBe("Set Current Menu Page: Options");
+    expect(
+      createRuntimeActionPreview("setMenuPage", { value: "settings" }).summary,
+    ).toBe("Set Current Menu Page: settings");
   });
 
   it("shows a value source segmented control for runtime value actions", () => {

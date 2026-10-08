@@ -2262,6 +2262,7 @@ commandLinePage:
   "Layout": "เลย์เอาต์"
   "Layouts": "เลย์เอาต์"
   "Line Start": "เริ่มบรรทัด"
+  "Load": "โหลด"
   "Load Slot": "โหลดจากช่อง"
   "Load slot {slot}": "โหลดจากช่อง {slot}"
   "Logic": "ตรรกะ"

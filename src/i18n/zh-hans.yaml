@@ -2262,6 +2262,7 @@ commandLinePage:
   "Layout": "布局"
   "Layouts": "布局"
   "Line Start": "行开始时"
+  "Load": "读取"
   "Load Slot": "从存档位读档"
   "Load slot {slot}": "从存档位 {slot} 读档"
   "Logic": "逻辑"
