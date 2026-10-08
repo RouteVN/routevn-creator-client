@@ -121,6 +121,24 @@ describe("layoutEditPanel stacked labels", () => {
     });
   });
 
+  it("labels the indicator's Revealing and Complete above their boxes", () => {
+    const indicatorSection = selectSections("text-revealing", {
+      indicator: {
+        revealing: { imageId: "image-revealing" },
+        complete: { imageId: "image-complete" },
+      },
+    }).find((section) => section.id === "textRevealIndicator");
+    const [indicatorBar] = indicatorSection.items;
+
+    expect(indicatorBar).toMatchObject({ type: "list-bar", stacked: true });
+    expect(
+      indicatorBar.items.map(({ label, imageId }) => ({ label, imageId })),
+    ).toEqual([
+      { label: "Revealing", imageId: "image-revealing" },
+      { label: "Complete", imageId: "image-complete" },
+    ]);
+  });
+
   it("labels the Hover and Click sound boxes above them and shows their volume", () => {
     const soundsSection = selectTextSections({
       hoverSoundId: "sound-hover",

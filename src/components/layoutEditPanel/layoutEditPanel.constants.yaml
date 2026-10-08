@@ -500,7 +500,9 @@ layoutSections:
     "$if canAddTextRevealIndicator":
       labelAction: plus
     items:
+      # Revealing and Complete are labelled above their boxes.
       - type: list-bar
+        stacked: true
         items: "${values.textRevealIndicatorItems}"
   - "$when": "supportsTextStyles"
     id: textStyles
