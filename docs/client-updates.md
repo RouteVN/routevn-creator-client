@@ -49,7 +49,7 @@ table live in `src-tauri/src/update_device_info.rs`.
 
 | Field               | Source                                                                                                                              |
 | ------------------- | ----------------------------------------------------------------------------------------------------------------------------------- |
-| `device.formFactor` | Native shell: iOS `desktop` on Mac (`isiOSAppOnMac` wins over the pad idiom), else `pad`/`phone`; Android `desktop` on ChromeOS, else the sw600dp display boundary; desktop builds always `desktop`. |
+| `device.formFactor` | Native shell: iOS `desktop` on Mac (`isiOSAppOnMac` wins over the pad idiom), else `tablet` for the pad idiom and `phone` otherwise; Android `desktop` on ChromeOS, else the sw600dp display boundary; desktop builds always `desktop`. |
 | `device.language`   | First preferred device language, read natively (`Locale.preferredLanguages`, system `Configuration` locales, `sys-locale`), normalized to lowercase with no region; only Chinese keeps a script (`zh-hans`/`zh-hant`). Unreadable values send `unknown`, which the API accepts only here. |
 | `device.webViewVersion` | Android Chromium major from `WebView.getCurrentWebViewPackage()` (user-agent `Chrome/<major>` before API 26); Windows WebView2 major and Linux WebKitGTK `major.minor` from `tauri::webview_version()`. iOS and macOS omit it. |
 | `uiLanguage`        | The app's active locale at check time (`APP_LOCALE_OPTIONS` in `src/internal/ui/appLocale.js`), reread on every check.                |
