@@ -25,7 +25,8 @@ The ID is reused across checks, launches, and app upgrades while local app data
 is retained. It identifies an app installation, independently of accounts and
 hardware identifiers. Clearing its local data generates a new ID. Restoring a
 backup containing the database also restores the ID.
-IDs are 24 Base58 characters; the update API rejects any other length.
+IDs are 24 Base58 characters; the update API ignores any other value and still
+answers the check.
 
 Model and OS version are nonblank strings of at most 256 characters, without
 ASCII control characters. These fields do not change the response shape.
@@ -38,10 +39,13 @@ Every check also reports how and where it ran: `uiLanguage`,
 `uiLanguage`, `uiLanguageSource`, `trigger`, `device.formFactor`,
 `device.language`, `device.webViewVersion` on desktop).
 
-The API rejects the whole check when an optional field is present but invalid
-("a present but invalid optional value fails the check; absent stays absent"),
-so each value is validated immediately before it is sent and omitted when it
-fails or cannot be read; reading a value never fails the check. Shared
+The API ignores a device or usage value it cannot accept, and any parameter
+name it does not know, and still answers the check. Only the request selectors
+(`appId`, `currentVersion`, `target`, `arch`, `distribution`, `channel`,
+Android `currentBuild`, Google Play `availableBuild`, desktop `bundleType`)
+can still fail it. The client sends only values the API accepts: each value is
+validated immediately before it is sent and omitted when it fails or cannot be
+read; reading a value never fails the check. Shared
 JavaScript validates the mobile RPC path, and Rust revalidates everything as
 it appends the desktop query parameters. `src/internal/updateUsage.js` holds
 the shared rules and one language normalizer; the same algorithm and test
