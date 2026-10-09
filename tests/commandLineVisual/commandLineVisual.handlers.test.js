@@ -5,7 +5,6 @@ import {
   handleAnimationChange,
   handleBlurFieldChange,
   handleBlurFieldInput,
-  handleBlurToggleChange,
   handleButtonSelectClick,
   handleCustomTransformButtonClick,
   handleCustomTransformButtonKeyDown,
@@ -32,7 +31,9 @@ import {
   moveVisual,
   openAddVisualPopover,
   removeVisual,
+  removeVisualBlurOption,
   removeVisualFlipOption,
+  removeVisualOpacityOption,
   removeVisualShaderAdjustmentOption,
   selectDefaultTransformId,
   selectDefaultVisualLayer,
@@ -43,7 +44,9 @@ import {
   selectPendingVisualTransformId,
   selectSelectedVisuals,
   selectSelectedVisualIndex,
+  selectVisualBlurOptionEnabled,
   selectVisualFlipOptionEnabled,
+  selectVisualOpacityOptionEnabled,
   selectVisualShaderAdjustmentOptionEnabled,
   selectTab,
   selectTempSelectedResourceId,
@@ -59,11 +62,12 @@ import {
   setTempSelectedResourceId,
   setTransforms,
   showDropdownMenu,
+  showVisualBlurOption,
   showVisualFlipOption,
+  showVisualOpacityOption,
   showVisualShaderAdjustmentOption,
   updateVisualResource,
   updateVisualAnimation,
-  updateVisualBlurEnabled,
   updateVisualBlurField,
   updateVisualLayer,
   updateVisualOpacity,
@@ -89,8 +93,12 @@ const createStoreApi = (state) => ({
   moveVisual: (payload) => moveVisual({ state }, payload),
   openAddVisualPopover: (payload) => openAddVisualPopover({ state }, payload),
   removeVisual: (payload) => removeVisual({ state }, payload),
+  removeVisualBlurOption: (payload) =>
+    removeVisualBlurOption({ state }, payload),
   removeVisualFlipOption: (payload) =>
     removeVisualFlipOption({ state }, payload),
+  removeVisualOpacityOption: (payload) =>
+    removeVisualOpacityOption({ state }, payload),
   removeVisualShaderAdjustmentOption: (payload) =>
     removeVisualShaderAdjustmentOption({ state }, payload),
   selectDefaultTransformId: () => selectDefaultTransformId({ state }),
@@ -103,8 +111,12 @@ const createStoreApi = (state) => ({
     selectPendingVisualTransformId({ state }),
   selectSelectedVisualIndex: () => selectSelectedVisualIndex({ state }),
   selectSelectedVisuals: () => selectSelectedVisuals({ state }),
+  selectVisualBlurOptionEnabled: (payload) =>
+    selectVisualBlurOptionEnabled({ state }, payload),
   selectVisualFlipOptionEnabled: (payload) =>
     selectVisualFlipOptionEnabled({ state }, payload),
+  selectVisualOpacityOptionEnabled: (payload) =>
+    selectVisualOpacityOptionEnabled({ state }, payload),
   selectVisualShaderAdjustmentOptionEnabled: (payload) =>
     selectVisualShaderAdjustmentOptionEnabled({ state }, payload),
   selectTab: () => selectTab({ state }),
@@ -123,12 +135,13 @@ const createStoreApi = (state) => ({
   setTempSelectedResourceId: (payload) =>
     setTempSelectedResourceId({ state }, payload),
   showDropdownMenu: (payload) => showDropdownMenu({ state }, payload),
+  showVisualBlurOption: (payload) => showVisualBlurOption({ state }, payload),
   showVisualFlipOption: (payload) => showVisualFlipOption({ state }, payload),
+  showVisualOpacityOption: (payload) =>
+    showVisualOpacityOption({ state }, payload),
   showVisualShaderAdjustmentOption: (payload) =>
     showVisualShaderAdjustmentOption({ state }, payload),
   updateVisualAnimation: (payload) => updateVisualAnimation({ state }, payload),
-  updateVisualBlurEnabled: (payload) =>
-    updateVisualBlurEnabled({ state }, payload),
   updateVisualBlurField: (payload) => updateVisualBlurField({ state }, payload),
   updateVisualLayer: (payload) => updateVisualLayer({ state }, payload),
   updateVisualOpacity: (payload) => updateVisualOpacity({ state }, payload),
@@ -562,11 +575,14 @@ describe("commandLineVisual.handlers animation controls", () => {
     });
   });
 
-  it("updates visual opacity and blur in temporary presentation state", () => {
+  it("updates visual opacity and blur in temporary presentation state", async () => {
     const state = createInitialState();
     const render = vi.fn();
     const dispatchEvent = vi.fn();
     const store = createStoreApi(state);
+    const showDropdownMenu = vi.fn().mockResolvedValue({
+      item: { key: "blur" },
+    });
 
     setExistingVisuals(
       { state },
@@ -621,25 +637,36 @@ describe("commandLineVisual.handlers animation controls", () => {
       },
     });
 
-    handleBlurToggleChange(
+    await handleFormSectionAction(
       {
-        store,
-        render,
+        appService: { showDropdownMenu },
         dispatchEvent,
+        i18n: TEST_I18N,
+        render,
+        store,
       },
       {
         _event: {
-          currentTarget: {
-            dataset: {
-              index: "0",
-            },
-          },
           detail: {
-            value: true,
+            actionId: "add",
+            position: { x: 20, y: 30 },
+            sectionId: "visual-0",
           },
         },
       },
     );
+
+    expect(showDropdownMenu.mock.calls[0][0].items).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({ key: "blur" }),
+        expect.objectContaining({ key: "flip-x" }),
+      ]),
+    );
+    expect(showDropdownMenu.mock.calls[0][0].items).not.toContainEqual(
+      expect.objectContaining({ key: "opacity" }),
+    );
+    expect(selectVisualBlurOptionEnabled({ state }, { index: 0 })).toBe(true);
+
     handleBlurFieldInput(
       {
         store,
@@ -714,7 +741,7 @@ describe("commandLineVisual.handlers animation controls", () => {
     expect(render).toHaveBeenCalledTimes(4);
   });
 
-  it("emits null when visual blur is disabled", () => {
+  it("emits null when visual blur is disabled", async () => {
     const state = createInitialState();
     const render = vi.fn();
     const dispatchEvent = vi.fn();
@@ -742,27 +769,24 @@ describe("commandLineVisual.handlers animation controls", () => {
       },
     );
 
-    handleBlurToggleChange(
+    await handleFormSectionAction(
       {
-        store,
-        render,
         dispatchEvent,
+        render,
+        store,
       },
       {
         _event: {
-          currentTarget: {
-            dataset: {
-              index: "0",
-            },
-          },
           detail: {
-            value: false,
+            actionId: "remove",
+            sectionId: "visual-0-blur",
           },
         },
       },
     );
 
     expect(selectSelectedVisuals({ state })[0].blur).toBeNull();
+    expect(selectVisualBlurOptionEnabled({ state }, { index: 0 })).toBe(false);
     expect(dispatchEvent.mock.calls[0][0].detail).toEqual({
       presentationState: {
         visual: {
@@ -780,6 +804,158 @@ describe("commandLineVisual.handlers animation controls", () => {
       },
     });
     expect(render).toHaveBeenCalledTimes(1);
+  });
+
+  it("shows and removes the visual opacity option from the section action", async () => {
+    const state = createInitialState();
+    const render = vi.fn();
+    const dispatchEvent = vi.fn();
+    const store = createStoreApi(state);
+    const showDropdownMenu = vi.fn().mockResolvedValue({
+      item: { key: "opacity" },
+    });
+
+    setExistingVisuals(
+      { state },
+      {
+        visuals: [
+          {
+            id: "visual-1",
+            resourceId: "visual-image",
+            resourceType: "image",
+            transformId: "visual-center",
+            layer: 50,
+          },
+        ],
+      },
+    );
+
+    const deps = {
+      appService: { showDropdownMenu },
+      dispatchEvent,
+      i18n: TEST_I18N,
+      render,
+      store,
+    };
+
+    expect(selectVisualOpacityOptionEnabled({ state }, { index: 0 })).toBe(
+      false,
+    );
+
+    await handleFormSectionAction(deps, {
+      _event: {
+        detail: {
+          actionId: "add",
+          position: { x: 20, y: 30 },
+          sectionId: "visual-0",
+        },
+      },
+    });
+
+    expect(selectSelectedVisuals({ state })[0].opacity).toBe(1);
+    expect(selectVisualOpacityOptionEnabled({ state }, { index: 0 })).toBe(
+      true,
+    );
+    expect(dispatchEvent.mock.calls[0][0].detail).toMatchObject({
+      presentationState: {
+        visual: {
+          items: [{ opacity: 1 }],
+        },
+      },
+    });
+
+    await handleFormSectionAction(deps, {
+      _event: {
+        detail: {
+          actionId: "remove",
+          sectionId: "visual-0-opacity",
+        },
+      },
+    });
+
+    expect(selectSelectedVisuals({ state })[0].opacity).toBeUndefined();
+    expect(selectVisualOpacityOptionEnabled({ state }, { index: 0 })).toBe(
+      false,
+    );
+    expect(
+      dispatchEvent.mock.calls[1][0].detail.presentationState.visual.items[0]
+        .opacity,
+    ).toBeUndefined();
+    expect(render).toHaveBeenCalledTimes(2);
+  });
+
+  it("shows and removes the visual blur option from the section action", async () => {
+    const state = createInitialState();
+    const render = vi.fn();
+    const dispatchEvent = vi.fn();
+    const store = createStoreApi(state);
+    const showDropdownMenu = vi.fn().mockResolvedValue({
+      item: { key: "blur" },
+    });
+
+    setExistingVisuals(
+      { state },
+      {
+        visuals: [
+          {
+            id: "visual-1",
+            resourceId: "visual-image",
+            resourceType: "image",
+            transformId: "visual-center",
+            layer: 50,
+          },
+        ],
+      },
+    );
+
+    const deps = {
+      appService: { showDropdownMenu },
+      dispatchEvent,
+      i18n: TEST_I18N,
+      render,
+      store,
+    };
+
+    expect(selectVisualBlurOptionEnabled({ state }, { index: 0 })).toBe(false);
+
+    await handleFormSectionAction(deps, {
+      _event: {
+        detail: {
+          actionId: "add",
+          position: { x: 20, y: 30 },
+          sectionId: "visual-0",
+        },
+      },
+    });
+
+    expect(selectSelectedVisuals({ state })[0].blur).toEqual({
+      x: 6,
+      y: 9,
+      quality: 3,
+      kernelSize: 9,
+      repeatEdgePixels: true,
+    });
+    expect(selectVisualBlurOptionEnabled({ state }, { index: 0 })).toBe(true);
+    expect(dispatchEvent.mock.calls[0][0].detail).toMatchObject({
+      presentationState: {
+        visual: {
+          items: [{ blur: { x: 6, y: 9 } }],
+        },
+      },
+    });
+
+    await handleFormSectionAction(deps, {
+      _event: {
+        detail: {
+          actionId: "remove",
+          sectionId: "visual-0-blur",
+        },
+      },
+    });
+
+    expect(selectSelectedVisuals({ state })[0].blur).toBeNull();
+    expect(selectVisualBlurOptionEnabled({ state }, { index: 0 })).toBe(false);
+    expect(render).toHaveBeenCalledTimes(2);
   });
 
   it("moves visuals from the context menu and emits reordered preview data", () => {

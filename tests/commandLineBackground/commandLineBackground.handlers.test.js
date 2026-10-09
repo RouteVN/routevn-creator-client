@@ -1037,6 +1037,23 @@ describe("commandLineBackground.handlers", () => {
         },
         {
           type: "item",
+          label: "Blur",
+          key: "blur",
+        },
+        { type: "separator" },
+        {
+          type: "item",
+          label: "Flip X",
+          key: "flip-x",
+        },
+        {
+          type: "item",
+          label: "Flip Y",
+          key: "flip-y",
+        },
+        { type: "separator" },
+        {
+          type: "item",
           label: "Brightness",
           key: "brightness",
         },
@@ -1069,21 +1086,6 @@ describe("commandLineBackground.handlers", () => {
           type: "item",
           label: "Invert",
           key: "invert",
-        },
-        {
-          type: "item",
-          label: "Blur",
-          key: "blur",
-        },
-        {
-          type: "item",
-          label: "Flip X",
-          key: "flip-x",
-        },
-        {
-          type: "item",
-          label: "Flip Y",
-          key: "flip-y",
         },
       ],
       x: 120,
@@ -1340,6 +1342,23 @@ describe("commandLineBackground.handlers", () => {
         },
         {
           type: "item",
+          label: "Blur",
+          key: "blur",
+        },
+        { type: "separator" },
+        {
+          type: "item",
+          label: "Flip X",
+          key: "flip-x",
+        },
+        {
+          type: "item",
+          label: "Flip Y",
+          key: "flip-y",
+        },
+        { type: "separator" },
+        {
+          type: "item",
           label: "Brightness",
           key: "brightness",
         },
@@ -1372,21 +1391,6 @@ describe("commandLineBackground.handlers", () => {
           type: "item",
           label: "Invert",
           key: "invert",
-        },
-        {
-          type: "item",
-          label: "Blur",
-          key: "blur",
-        },
-        {
-          type: "item",
-          label: "Flip X",
-          key: "flip-x",
-        },
-        {
-          type: "item",
-          label: "Flip Y",
-          key: "flip-y",
         },
       ],
       x: 120,

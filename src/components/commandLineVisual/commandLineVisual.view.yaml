@@ -125,10 +125,6 @@ refs:
     eventListeners:
       value-input:
         handler: handleOpacityInput
-  blurToggle*:
-    eventListeners:
-      value-change:
-        handler: handleBlurToggleChange
   blurX*:
     eventListeners:
       value-input:
@@ -229,8 +225,8 @@ template:
                                       - rtgl-segmented-control#animationPlaybackLoop${visual.controlId} data-index=${visual.visualIndex} w=f no-clear ?disabled=${visual.animationLoopDisabled} :selectedValue=${visual.animationPlaybackLoop} :options=${defaultValues.animationPlaybackLoopOptions}: null
                                       - $if !visual.animationCanLoop:
                                           - rtgl-text s=xs c=mu-fg: ${animationPlaybackLoopDisabledDescription}
-                          - 'rtgl-slider-input#opacity${visual.controlId} slot=${visual.opacityFormSlot} data-index=${visual.visualIndex} key=${visual.id} min=0 max=1 step=0.01 w=f value=${visual.opacity}': null
-                          - 'rtgl-segmented-control#blurToggle${visual.controlId} slot=${visual.blurToggleFormSlot} data-index=${visual.visualIndex} w=f no-clear :selectedValue=${visual.blurEnabled} :options=${defaultValues.blurToggleOptions}': null
+                          - $if visual.opacityEnabled:
+                              - 'rtgl-slider-input#opacity${visual.controlId} slot=${visual.opacityFormSlot} data-index=${visual.visualIndex} key=${visual.id} min=0 max=1 step=0.01 w=f value=${visual.opacity}': null
                           - $if visual.blurEnabled:
                               - 'rtgl-slider-input#blurX${visual.controlId} slot=${visual.blurXFormSlot} data-index=${visual.visualIndex} data-blur-field=x min=0 max=${visual.blurSliderMax.x} step=0.5 w=f value=${visual.blur.x}': null
                               - 'rtgl-slider-input#blurY${visual.controlId} slot=${visual.blurYFormSlot} data-index=${visual.visualIndex} data-blur-field=y min=0 max=${visual.blurSliderMax.y} step=0.5 w=f value=${visual.blur.y}': null

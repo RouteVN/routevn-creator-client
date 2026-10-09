@@ -1,9 +1,73 @@
+import { getCommandLineShaderAdjustment } from "./commandLineShaderAdjustments.js";
+
 export const DEFAULT_COMMAND_LINE_ITEM_OPACITY = 1;
 
 export const COMMAND_LINE_ITEM_FLIP_OPTIONS = [
   { id: "flip-x", fieldName: "flipX", label: "Flip X" },
   { id: "flip-y", fieldName: "flipY", label: "Flip Y" },
 ];
+
+export const COMMAND_LINE_OPTION_GROUPS = [
+  ["background-color", "opacity", "blur"],
+  ["flip-x", "flip-y"],
+  [
+    "brightness",
+    "contrast",
+    "saturation",
+    "hue",
+    "grayscale",
+    "sepia",
+    "invert",
+  ],
+];
+
+const COMMAND_LINE_OPTION_LABELS = {
+  "background-color": "Background Color",
+  opacity: "Opacity",
+  blur: "Blur",
+};
+
+export const getCommandLineOptionLabel = (optionId) => {
+  const flipOption = getCommandLineItemFlipOption(optionId);
+  if (flipOption) {
+    return flipOption.label;
+  }
+
+  const adjustment = getCommandLineShaderAdjustment(optionId);
+  if (adjustment) {
+    return adjustment.label;
+  }
+
+  return COMMAND_LINE_OPTION_LABELS[optionId];
+};
+
+export const createCommandLineOptionMenuItems = ({ optionIds, getLabel }) => {
+  const availableIds = new Set(optionIds);
+  const items = [];
+
+  for (const group of COMMAND_LINE_OPTION_GROUPS) {
+    const groupOptionIds = group.filter((optionId) =>
+      availableIds.has(optionId),
+    );
+    if (groupOptionIds.length === 0) {
+      continue;
+    }
+
+    if (items.length > 0) {
+      items.push({ type: "separator" });
+    }
+
+    for (const optionId of groupOptionIds) {
+      items.push({
+        type: "item",
+        label: getLabel(optionId),
+        key: optionId,
+      });
+    }
+  }
+
+  return items;
+};
 
 export const getCommandLineItemFlipOption = (optionId) => {
   return COMMAND_LINE_ITEM_FLIP_OPTIONS.find(
@@ -32,11 +96,6 @@ export const COMMAND_LINE_ITEM_BLUR_FIELD_NAMES = [
 ];
 
 export const COMMAND_LINE_ITEM_BLUR_KERNEL_SIZE_OPTIONS = [5, 7, 9, 11, 13, 15];
-
-export const COMMAND_LINE_ITEM_BLUR_TOGGLE_OPTIONS = [
-  { value: false, label: "No Blur" },
-  { value: true, label: "Blur" },
-];
 
 export const COMMAND_LINE_ITEM_BLUR_REPEAT_EDGE_OPTIONS = [
   { value: false, label: "No" },

@@ -69,11 +69,9 @@ describe("commandLineVisual sections", () => {
 
     const viewData = selectViewData({ state, i18n: EN_I18N });
     const [section] = viewData.form.fields;
-    const rows = section.fields.map((field) =>
-      field.type === "row"
-        ? field.fields.map((nestedField) => nestedField.slot)
-        : field.slot,
-    );
+    const rows = section.fields
+      .filter((field) => field.type === "row")
+      .map((field) => field.fields.map((nestedField) => nestedField.slot));
 
     expect(section).toMatchObject({
       type: "section",
@@ -86,10 +84,73 @@ describe("commandLineVisual sections", () => {
       ["visual-0-animation", "visual-0-animation-spacer"],
       ["visual-0-playback-speed", "visual-0-playback-continuity"],
       ["visual-0-playback-loop", "visual-0-playback-loop-spacer"],
-      ["visual-0-opacity", "visual-0-blur-toggle"],
-      ["visual-0-blur-x", "visual-0-blur-y"],
-      ["visual-0-blur-quality", "visual-0-blur-kernel-size"],
-      "visual-0-blur-repeat-edge-pixels",
+    ]);
+    expect(section.fields.filter((field) => field.type === "section")).toEqual([
+      {
+        type: "section",
+        id: "visual-0-opacity",
+        label: "Opacity",
+        separator: false,
+        action: {
+          id: "remove",
+          icon: "x",
+          label: "Remove",
+        },
+        fields: [
+          {
+            type: "slot",
+            slot: "visual-0-opacity",
+          },
+        ],
+      },
+      {
+        type: "section",
+        id: "visual-0-blur",
+        label: "Blur",
+        separator: false,
+        action: {
+          id: "remove",
+          icon: "x",
+          label: "Remove",
+        },
+        fields: [
+          {
+            type: "row",
+            fields: [
+              {
+                type: "slot",
+                slot: "visual-0-blur-x",
+                label: "Blur X",
+              },
+              {
+                type: "slot",
+                slot: "visual-0-blur-y",
+                label: "Blur Y",
+              },
+            ],
+          },
+          {
+            type: "row",
+            fields: [
+              {
+                type: "slot",
+                slot: "visual-0-blur-quality",
+                label: "Quality",
+              },
+              {
+                type: "slot",
+                slot: "visual-0-blur-kernel-size",
+                label: "Kernel Size",
+              },
+            ],
+          },
+          {
+            type: "slot",
+            slot: "visual-0-blur-repeat-edge-pixels",
+            label: "Repeat Edge Pixels",
+          },
+        ],
+      },
     ]);
     expect(viewData.defaultValues.visuals[0]).toMatchObject({
       controlId: "0x0",
@@ -97,7 +158,7 @@ describe("commandLineVisual sections", () => {
       layerFormSlot: "visual-0-layer",
     });
     expect(viewData.formKey).toBe(
-      "0:visual-item-one:Visual One:50:preset-transform:fade:update:blur",
+      "0:visual-item-one:Visual One:50:preset-transform:fade:update:opacity-option:blur",
     );
   });
 
@@ -120,7 +181,8 @@ describe("commandLineVisual sections", () => {
     expect(view).toContain("slot=${visual.playbackSpeedFormSlot}");
     expect(view).toContain("slot=${visual.playbackContinuityFormSlot}");
     expect(view).toContain("slot=${visual.opacityFormSlot}");
-    expect(view).toContain("slot=${visual.blurToggleFormSlot}");
+    expect(view).toContain("$if visual.opacityEnabled:");
+    expect(view).not.toContain("blurToggle");
     expect(view).toContain("slot=${visual.blurXFormSlot}");
     expect(view).toContain("slot=${visual.blurYFormSlot}");
     expect(view).toContain("slot=${visual.blurQualityFormSlot}");
