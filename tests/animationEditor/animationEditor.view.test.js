@@ -444,11 +444,11 @@ describe("animationEditor view", () => {
     expect(view.indexOf("rtgl-button#addPropertiesButton")).toBeLessThan(
       tweenPanelStart,
     );
-    expect(view.indexOf("rtgl-button#savePreviewButton")).toBeGreaterThan(
-      toolbarStart,
-    );
-    expect(view.indexOf("rtgl-button#savePreviewButton")).toBeLessThan(
-      previewPanelStart,
+    // Preview images save on their own, so there is no Save Preview; the
+    // touch preview dialog closes with Done.
+    expect(view).not.toContain("savePreview");
+    expect(view).toContain(
+      "rtgl-button#previewDialogDoneButton s=sm: ${doneButton}",
     );
     expect(view).toContain(
       "min=${timelineZoomMin} max=${timelineZoomMax} step=${timelineZoomStep} value=${timelineZoom}",
