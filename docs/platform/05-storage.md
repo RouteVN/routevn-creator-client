@@ -158,3 +158,28 @@ For the agreed persisted key catalog across global app DB, project-specific DB
 - Local read state is reconstructed from committed history plus ordered draft
   overlay.
 - Read models/materialized views can be rebuilt at any time.
+
+### Drafts That No Longer Apply
+
+The full history of an opened project loads on demand, often after a reused
+main checkpoint has already opened it. A draft that no longer applies during
+that replay is left out of the loaded history and kept in `local_drafts`.
+Errors without a command index are traced to their draft by a binary search,
+so valid drafts around it still apply.
+
+When a load leaves drafts out, the repository deletes every scene projection
+checkpoint (they count events by position, which a left-out draft shifts),
+clears the overviews and text stats of the affected scenes (of every scene
+when a draft was made in the main partition), and reloads the open scene. If a
+left-out draft was made in the main or a main-scene partition, it also rebuilds
+the main state from the loaded history and saves it as the main checkpoint; the
+main state never applies scene-partition events. An event that storage already
+held when it is added, such as a command's own draft, is not applied twice.
+Then the app shows one alert naming the affected scenes and sections, at most
+once per draft (`projectHistory.notifiedSkippedDrafts.<projectId>` in
+`userConfig`).
+
+Drafts are not reported when the history has no `project.create`: they then
+replay onto an empty project, as in desktop history backed by a main
+checkpoint, so a failure does not mean their changes are missing. A draft that
+repeats a committed event is not reported either.

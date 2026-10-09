@@ -69,7 +69,10 @@ import {
   scrollSceneEditorSectionTabIntoView,
   selectSceneEditorSection,
 } from "../../internal/ui/sceneEditor/sectionOperations.js";
-import { selectSceneEditorCopy } from "../../internal/ui/sceneEditor/sceneEditorCopy.js";
+import {
+  describeDraftSection,
+  selectSceneEditorCopy,
+} from "../../internal/ui/sceneEditor/sceneEditorCopy.js";
 import { withErrorDetails } from "../../internal/errorDetails.js";
 import {
   createSceneCanvasFileName,
@@ -772,25 +775,6 @@ const reconcileCurrentEditorSession = (deps) => {
     deps,
     deps.store.selectSelectedSectionId?.(),
   );
-};
-
-// The scene and section names of a draft, for telling the user which section
-// lost its changes. Read before the draft is dropped, from the stored project.
-const describeDraftSection = (deps, { sceneId, sectionId }) => {
-  const copy = selectSceneEditorCopy(deps.i18n);
-  const scene =
-    deps.projectService.getRepositoryState()?.scenes?.items?.[sceneId];
-  const sectionIds = (scene?.sections?.tree ?? []).map((node) => node.id);
-  const sectionIndex = sectionIds.indexOf(sectionId);
-  const sectionFallback = copy.sectionFallback ?? "Section {index}";
-  return {
-    sceneName: scene?.name || (copy.sceneLabel ?? "Scene"),
-    sectionName:
-      scene?.sections?.items?.[sectionId]?.name ||
-      (sectionIndex >= 0
-        ? sectionFallback.replaceAll("{index}", String(sectionIndex + 1))
-        : sectionFallback.replaceAll("{index}", "").trim()),
-  };
 };
 
 // Puts a section whose draft could not be saved back to its stored lines, in

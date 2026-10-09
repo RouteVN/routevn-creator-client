@@ -34,6 +34,25 @@ export const selectSceneEditorCopy = (i18n = {}) => {
   ]);
 };
 
+// The scene and section names of a draft, for telling the user which section
+// lost its changes. They are read from the project as it is stored.
+export const describeDraftSection = (deps, { sceneId, sectionId }) => {
+  const copy = selectSceneEditorCopy(deps.i18n);
+  const scene =
+    deps.projectService.getRepositoryState()?.scenes?.items?.[sceneId];
+  const sectionIds = (scene?.sections?.tree ?? []).map((node) => node.id);
+  const sectionIndex = sectionIds.indexOf(sectionId);
+  const sectionFallback = copy.sectionFallback ?? "Section {index}";
+  return {
+    sceneName: scene?.name || (copy.sceneLabel ?? "Scene"),
+    sectionName:
+      scene?.sections?.items?.[sectionId]?.name ||
+      (sectionIndex >= 0
+        ? sectionFallback.replaceAll("{index}", String(sectionIndex + 1))
+        : sectionFallback.replaceAll("{index}", "").trim()),
+  };
+};
+
 export const localizeSceneEditorForm = (form = {}, copy = {}) => {
   const localizeValue = (value) => {
     if (!value) {

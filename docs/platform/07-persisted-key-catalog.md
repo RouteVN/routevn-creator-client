@@ -89,6 +89,11 @@ Current keys:
     - `sceneEditor.showLineNumbers`
       - purpose: scene-editor line-number toggle
       - scope: global
+    - `projectHistory.notifiedSkippedDrafts.<projectId>`
+      - purpose: ids of the local drafts that one project's loaded history
+        left out and that the user has already been told about; it holds only
+        drafts that are still left out, and is removed when none are
+      - scope: per project
     - `auth.session`
       - purpose: authenticated session tokens
       - scope: global

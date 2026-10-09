@@ -24,6 +24,8 @@ import {
   createSceneProjectionState,
   getLatestSceneProjectionRevision,
   iterateCommittedEventBatches,
+  isMainPartition,
+  isMainScenePartition,
   isNonEmptyString,
   resolveSceneIdForPartition,
   toCommittedProjectEvent,
@@ -533,6 +535,15 @@ export const createProjectRepositoryRuntime = async ({
     : [];
   let hasLoadedEvents = historyLoaded;
   let historyLoadPromise;
+  // The drafts the history load left out, set when loadEvents() resolves.
+  let historySkippedDrafts;
+  // The same drafts, reported once state built before the history loaded has
+  // been rebuilt without them.
+  let reportedSkippedDrafts;
+  let skippedDraftRebuild;
+  const skippedDraftListeners = new Set();
+  // The revision of each event the main state was rebuilt from, by event id.
+  let rebuiltEventRevisions = new Map();
   const listeners = new Set();
   let activeSceneId = null;
   let activeSceneState = null;
@@ -638,13 +649,21 @@ export const createProjectRepositoryRuntime = async ({
       return historyLoadPromise;
     }
 
-    historyLoadPromise = Promise.resolve(loadEvents())
+    const skippedDrafts = [];
+    historyLoadPromise = Promise.resolve(
+      loadEvents({
+        onSkippedDraft: (skippedDraft) => {
+          skippedDrafts.push(structuredClone(skippedDraft));
+        },
+      }),
+    )
       .then((loadedEvents) => {
         events = Array.isArray(loadedEvents)
           ? loadedEvents.map((event) => structuredClone(event))
           : [];
         eventRevisions = createEventRevisions(events);
         hasLoadedEvents = true;
+        historySkippedDrafts = skippedDrafts;
         currentRevision = Math.max(
           currentRevision,
           eventRevisions.at(-1) ?? events.length,
@@ -1047,7 +1066,7 @@ export const createProjectRepositoryRuntime = async ({
     if (hasLoadedEvents || hasDraftHistory) {
       const replayEvents = hasLoadedEvents
         ? events
-        : await ensureEventHistoryLoaded();
+        : await ensureEventHistoryReady();
       return replayEventsToRepositoryState({
         events: replayEvents,
         untilEventIndex: resolveEventCountAtRevision(untilEventIndex),
@@ -1139,21 +1158,9 @@ export const createProjectRepositoryRuntime = async ({
     return state;
   };
 
-  const loadSceneProjection = async (sceneId) => {
-    if (!hasLoadedEvents && !hasDraftHistory) {
-      return loadSceneProjectionState({
-        store,
-        mainState: currentMainState,
-        listCommittedAfter: listCommittedAfterFromRepository,
-        createInitialState,
-        reduceEventToState,
-        reduceEventsToState,
-        sceneId,
-      });
-    }
-
-    const eventsForProjection = await ensureEventHistoryLoaded();
-    return loadSceneProjectionState({
+  // Without `eventsForProjection`, the projection pages through the history.
+  const loadSceneProjectionFromEvents = (sceneId, eventsForProjection) =>
+    loadSceneProjectionState({
       store,
       mainState: currentMainState,
       events: eventsForProjection,
@@ -1163,6 +1170,16 @@ export const createProjectRepositoryRuntime = async ({
       reduceEventsToState,
       sceneId,
     });
+
+  const loadSceneProjection = async (sceneId) => {
+    if (!hasLoadedEvents && !hasDraftHistory) {
+      return loadSceneProjectionFromEvents(sceneId);
+    }
+
+    return loadSceneProjectionFromEvents(
+      sceneId,
+      await ensureEventHistoryReady(),
+    );
   };
 
   const sceneBundleRuntime = createSceneBundleRuntime({
@@ -1254,6 +1271,160 @@ export const createProjectRepositoryRuntime = async ({
     clearActiveSceneProjection();
     await deleteSceneProjectionCheckpoint({ store, sceneId: removedSceneId });
     await sceneBundleRuntime.clearSceneOverview(removedSceneId);
+  };
+
+  // Scene projection checkpoints count revisions by position in the loaded
+  // history, and a left-out draft moves every later event, so every scene's
+  // projection is rebuilt when it is next loaded. Overviews and text stats
+  // count stable revisions: only the scenes of the left-out drafts are
+  // cleared, or every scene when a draft was made in the main partition,
+  // which can change any scene.
+  const clearSceneCachesForSkippedDrafts = async (skippedDrafts) => {
+    const draftSceneIds = new Set(
+      skippedDrafts.map(({ sceneId }) => sceneId).filter(isNonEmptyString),
+    );
+    const sceneIds = new Set(draftSceneIds);
+    for (const [sceneId, scene] of Object.entries(
+      currentMainState?.scenes?.items ?? {},
+    )) {
+      if (scene?.type !== "folder") {
+        sceneIds.add(sceneId);
+      }
+    }
+    await Promise.all(
+      [...sceneIds].map((sceneId) =>
+        deleteSceneProjectionCheckpoint({ store, sceneId }),
+      ),
+    );
+
+    if (skippedDrafts.some(({ partition }) => isMainPartition(partition))) {
+      await sceneBundleRuntime.clearAllSceneOverviews();
+    } else {
+      for (const sceneId of draftSceneIds) {
+        await sceneBundleRuntime.clearSceneOverview(sceneId);
+      }
+    }
+
+    await pruneRemovedActiveScene();
+    if (activeSceneId) {
+      activeSceneState = await loadSceneProjectionFromEvents(
+        activeSceneId,
+        events,
+      );
+    }
+  };
+
+  const notifySkippedDraftListeners = () => {
+    skippedDraftListeners.forEach((listener) => {
+      listener(structuredClone(reportedSkippedDrafts));
+    });
+  };
+
+  // The main view saves its checkpoint at the last event it applied, which
+  // leaves out the positions of left-out drafts at the end of the history.
+  // Saving the current main state over it keeps the revision that counts them.
+  const persistMainCheckpoint = async () => {
+    await materializedViewRuntime.flushMaterializedView({
+      viewName: MAIN_VIEW_NAME,
+      partition: MAIN_PARTITION,
+    });
+    await saveCurrentMainCheckpoint();
+  };
+
+  // The main state only applies events of the main and main-scene partitions,
+  // so a reused main checkpoint cannot include a left-out draft from a scene
+  // partition.
+  const rebuildMainStateFromLoadedHistory = async () => {
+    await materializedViewRuntime.invalidateMaterializedView({
+      viewName: MAIN_VIEW_NAME,
+      partition: MAIN_PARTITION,
+    });
+    await refreshMainState();
+    await persistMainCheckpoint();
+    rebuiltEventRevisions = new Map(
+      events.map((event, index) => [event.id, eventRevisions[index]]),
+    );
+  };
+
+  // State built before the history loaded can still include drafts the load
+  // left out: a reused main checkpoint, scene projection checkpoints and scene
+  // overviews. Rebuild it from the loaded history, then report the drafts.
+  // Callers wait for this, so it must not use ensureEventHistoryReady().
+  const rebuildWithoutSkippedDrafts = async () => {
+    const skippedDrafts = historySkippedDrafts;
+    if (
+      skippedDrafts.some(
+        ({ partition }) =>
+          isMainPartition(partition) || isMainScenePartition(partition),
+      )
+    ) {
+      await rebuildMainStateFromLoadedHistory();
+    }
+    if (skippedDrafts.length > 0) {
+      await clearSceneCachesForSkippedDrafts(skippedDrafts);
+    }
+
+    // Set before listeners run, so a listener that throws cannot start the
+    // rebuild again.
+    reportedSkippedDrafts = skippedDrafts;
+    if (skippedDrafts.length > 0) {
+      notifyStateListeners();
+    }
+    notifySkippedDraftListeners();
+  };
+
+  // Resolves at once while the history has not been loaded through
+  // loadEvents(), so it never starts a history load, and once the rebuild
+  // has finished.
+  const reconcileSkippedDrafts = () => {
+    if (
+      historySkippedDrafts === undefined ||
+      reportedSkippedDrafts !== undefined
+    ) {
+      return Promise.resolve();
+    }
+
+    skippedDraftRebuild ??= rebuildWithoutSkippedDrafts().finally(() => {
+      skippedDraftRebuild = undefined;
+    });
+    return skippedDraftRebuild;
+  };
+
+  // Loads the history outside the main view's lock and waits until state
+  // built before it no longer includes left-out drafts.
+  const ensureEventHistoryReady = async () => {
+    const loadedEvents = await ensureEventHistoryLoaded();
+    await reconcileSkippedDrafts();
+    return loadedEvents;
+  };
+
+  const isEventHistoryPending = () =>
+    !hasLoadedEvents ||
+    (historySkippedDrafts !== undefined && reportedSkippedDrafts === undefined);
+
+  // Records an added event and applies it to the main state. Storage holds an
+  // event before it is added here, so the history load can already have put
+  // it in a rebuilt main state; it then keeps the revision it was loaded at.
+  const commitAddedEvent = async (event) => {
+    const rebuiltRevision = rebuiltEventRevisions.get(event.id);
+    if (rebuiltRevision !== undefined) {
+      return toCommittedProjectEvent({
+        event,
+        committedId: rebuiltRevision,
+        projectId,
+      });
+    }
+
+    events.push(structuredClone(event));
+    const committedId = advanceCurrentRevision();
+    eventRevisions.push(committedId);
+    const committedEvent = toCommittedProjectEvent({
+      event,
+      committedId,
+      projectId,
+    });
+    await materializedViewRuntime.onCommittedEvent(committedEvent);
+    return committedEvent;
   };
 
   const updateActiveSceneProjection = async (committedEvents = []) => {
@@ -1422,6 +1593,10 @@ export const createProjectRepositoryRuntime = async ({
     });
   };
 
+  // Building the main state may have loaded the history from inside the main
+  // view's lock, where it cannot be rebuilt.
+  await reconcileSkippedDrafts();
+
   return {
     getState(untilEventIndex) {
       if (untilEventIndex === undefined || untilEventIndex === null) {
@@ -1461,7 +1636,7 @@ export const createProjectRepositoryRuntime = async ({
     },
 
     async loadEvents() {
-      return (await ensureEventHistoryLoaded()).map((event) =>
+      return (await ensureEventHistoryReady()).map((event) =>
         structuredClone(event),
       );
     },
@@ -1485,6 +1660,20 @@ export const createProjectRepositoryRuntime = async ({
 
       return () => {
         listeners.delete(listener);
+      };
+    },
+
+    // Calls `listener` with the drafts the loaded history left out, after
+    // state built before it has been rebuilt without them. The history loads
+    // on demand, so this can come at any time after the repository opens.
+    subscribeSkippedDrafts(listener, { emitCurrent = true } = {}) {
+      skippedDraftListeners.add(listener);
+      if (emitCurrent && reportedSkippedDrafts !== undefined) {
+        listener(structuredClone(reportedSkippedDrafts));
+      }
+
+      return () => {
+        skippedDraftListeners.delete(listener);
       };
     },
 
@@ -1513,45 +1702,41 @@ export const createProjectRepositoryRuntime = async ({
     },
 
     async getContextState(payload = {}) {
+      await reconcileSkippedDrafts();
       return structuredClone(await getContextState(payload));
     },
 
     async getSceneOverview(sceneId) {
+      await reconcileSkippedDrafts();
       return sceneBundleRuntime.ensureSceneBundle(sceneId);
     },
 
     async loadSceneOverviews({ sceneIds = [] } = {}) {
+      await reconcileSkippedDrafts();
       return sceneBundleRuntime.loadSceneOverviews({ sceneIds });
     },
 
     async cacheSceneTextStats(payload = {}) {
+      await reconcileSkippedDrafts();
       return sceneBundleRuntime.cacheSceneTextStats(payload);
     },
 
     async loadSceneTextStats(payload = {}) {
+      await reconcileSkippedDrafts();
       return sceneBundleRuntime.loadSceneTextStats(payload);
     },
 
     async ensureSceneTextStats(payload = {}) {
+      await reconcileSkippedDrafts();
       return sceneBundleRuntime.ensureSceneTextStats(payload);
     },
 
     async addEvent(event) {
-      if (!hasLoadedEvents) {
-        await ensureEventHistoryLoaded();
+      if (isEventHistoryPending()) {
+        await ensureEventHistoryReady();
       }
 
-      events.push(structuredClone(event));
-      const committedId = advanceCurrentRevision();
-      eventRevisions.push(committedId);
-
-      const committedEvent = toCommittedProjectEvent({
-        event,
-        committedId,
-        projectId,
-      });
-
-      await materializedViewRuntime.onCommittedEvent(committedEvent);
+      const committedEvent = await commitAddedEvent(event);
       await refreshMainState();
       const adoptedActiveScene = await autoAdoptSceneProjection([
         committedEvent,
@@ -1572,22 +1757,13 @@ export const createProjectRepositoryRuntime = async ({
         return;
       }
 
-      if (!hasLoadedEvents) {
-        await ensureEventHistoryLoaded();
+      if (isEventHistoryPending()) {
+        await ensureEventHistoryReady();
       }
 
       const committedEvents = [];
       for (const event of nextEvents) {
-        events.push(structuredClone(event));
-        const committedId = advanceCurrentRevision();
-        eventRevisions.push(committedId);
-        const committedEvent = toCommittedProjectEvent({
-          event,
-          committedId,
-          projectId,
-        });
-        committedEvents.push(committedEvent);
-        await materializedViewRuntime.onCommittedEvent(committedEvent);
+        committedEvents.push(await commitAddedEvent(event));
       }
 
       await refreshMainState();
@@ -1602,14 +1778,12 @@ export const createProjectRepositoryRuntime = async ({
     },
 
     async flushMainCheckpoint() {
-      await materializedViewRuntime.flushMaterializedView({
-        viewName: MAIN_VIEW_NAME,
-        partition: MAIN_PARTITION,
-      });
-      await saveCurrentMainCheckpoint();
+      await reconcileSkippedDrafts();
+      await persistMainCheckpoint();
     },
 
     async flushMaterializedViews() {
+      await reconcileSkippedDrafts();
       await materializedViewRuntime.flushMaterializedViews();
       await saveCurrentMainCheckpoint();
       await sceneBundleRuntime.flushSceneOverviews();

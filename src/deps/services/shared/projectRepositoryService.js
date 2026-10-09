@@ -1159,11 +1159,12 @@ export const createProjectRepositoryService = ({
               historyLoaded: Array.isArray(events),
               initialRevision,
               historyStats: currentHistoryStats,
-              loadEvents: async () =>
+              loadEvents: async ({ onSkippedDraft } = {}) =>
                 loadRepositoryEventsFromClientStore({
                   store,
                   projectId: reference.repositoryProjectId,
                   onProgress: onEventLoadProgress,
+                  onSkippedDraft,
                 }),
               onHydrationProgress,
             });
@@ -1342,10 +1343,7 @@ export const createProjectRepositoryService = ({
     return repository;
   };
 
-  const subscribeProjectState = (
-    listener,
-    { projectId, emitCurrent = true } = {},
-  ) => {
+  const getEnsuredRepositoryForSubscription = (projectId) => {
     const targetProjectId = projectId || getCurrentProjectId();
     if (!targetProjectId) {
       throw new Error("No project selected (missing ?p= in URL)");
@@ -1372,7 +1370,27 @@ export const createProjectRepositoryService = ({
       );
     }
 
-    return repository.subscribe(listener, { emitCurrent });
+    return repository;
+  };
+
+  const subscribeProjectState = (
+    listener,
+    { projectId, emitCurrent = true } = {},
+  ) => {
+    return getEnsuredRepositoryForSubscription(projectId).subscribe(listener, {
+      emitCurrent,
+    });
+  };
+
+  // The project's history loads on demand, after the project opens. Each time
+  // a load leaves out local drafts, `listener` receives them.
+  const subscribeSkippedDrafts = (
+    listener,
+    { projectId, emitCurrent = true } = {},
+  ) => {
+    return getEnsuredRepositoryForSubscription(
+      projectId,
+    ).subscribeSkippedDrafts(listener, { emitCurrent });
   };
 
   const getCachedRepository = () => {
@@ -1490,6 +1508,9 @@ export const createProjectRepositoryService = ({
     },
     subscribeProjectState(listener, options) {
       return subscribeProjectState(listener, options);
+    },
+    subscribeSkippedDrafts(listener, options) {
+      return subscribeSkippedDrafts(listener, options);
     },
     async getRepositoryByPath(projectPath) {
       return getRepositoryByPath(projectPath);
