@@ -11,6 +11,32 @@ Before making changes, read these repo docs:
 
 `AGENTS.md` is the source of truth for coding conventions and agent workflow rules.
 
+## Public Repository
+
+This repository is public. Commits, branch names, pull request titles and
+descriptions, review comments, issues, code comments, and docs are visible to
+anyone, and GitHub keeps the history of edited descriptions and comments.
+
+- Describe only the change in this repository: what it does, why, and how it
+  was tested.
+- Do not name, link, or quote private RouteVN repositories or their pull
+  requests and issues. Public dependencies such as Route Engine and Route
+  Graphics may be mentioned. When a change depends on work elsewhere, say what
+  the client needs in neutral terms, such as "requires an update API that
+  accepts these fields".
+- Do not mention internal infrastructure or operations: server versions, what
+  is deployed in production, hosts, internal logs and dashboards, analytics or
+  observability tools and their queries, credentials, or internal plans and
+  roadmaps.
+- Do not mention internal process or tooling, such as which AI agent or
+  reviewer worked on the change, or other agent sessions.
+- Docs may describe how the client talks to RouteVN services and how to test
+  against a locally running API, but not the API's repository, setup commands,
+  or internal storage.
+- Before creating or editing a pull request, comment, or commit, reread the
+  text for these. A mistake stays visible in the edit history until that
+  revision is deleted.
+
 ## Commands
 
 Build the web app:

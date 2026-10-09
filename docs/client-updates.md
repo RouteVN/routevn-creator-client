@@ -166,8 +166,7 @@ not be retrieved. Steam and web retain their existing behavior.
 ## Development and tests
 
 Run the RouteVN API locally at `http://127.0.0.1:8787` to test development
-update checks against its release catalog. API setup and catalog configuration
-live in the `routevn-api-2` repository.
+update checks against its release catalog.
 
 Run `bun run test:updates` for client updater regression tests in `tests/updates`.
 
