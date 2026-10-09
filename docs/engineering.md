@@ -1312,8 +1312,9 @@ recorded where every edit handler ends (`commitAudioEffectEdit`). Edits merge
 into steps and select keyframes as in the animation editor. Undo and redo put
 the snapshot back at once, and the page saves it on leaving with its other
 edits; the page compares it with what was last saved, so undoing back to that
-saves nothing. Preview sounds, which Save Preview saves, and view state such as
-the tab and zoom are not part of the history.
+saves nothing. Picked preview sounds save with the audio effect on leaving,
+in the same `audioEffect.update`, when they differ from what is saved; they and
+view state such as the tab and zoom are not part of the history.
 
 The scene editor has undo and redo for line edits made since the scene opened:
 text, new, split, merged, moved, and deleted lines, and line action edits.

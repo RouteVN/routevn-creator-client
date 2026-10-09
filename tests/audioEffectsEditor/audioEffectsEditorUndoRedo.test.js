@@ -5,13 +5,15 @@ import {
   handleAddKeyframeFromTimeline,
   handleAfterMount,
   handleBackClick,
+  handleConfirmSoundSelection,
+  handlePreviewSoundClick,
+  handlePreviewSoundSelected,
   handleBeforeMount,
   handleEditHistoryShortcutKeyDown,
   handleKeyframeDropdownItemClick,
   handleKeyframeDurationChange,
   handleRedoButtonClick,
   handleRemovePropertyClick,
-  handleSavePreviewClick,
   handleSelectedKeyframeEasingChange,
   handleSelectedKeyframeValueChange,
   handleUndoButtonClick,
@@ -388,14 +390,14 @@ describe("audio effects editor undo and redo", () => {
           finishSave = () => resolve({ valid: true });
         }),
     );
-    const savingPreview = handleSavePreviewClick(page.deps);
+    const firstSave = handleBackClick(page.deps);
 
     // The save of 60 is still running, so 50 is not saved yet.
     handleUndoButtonClick(page.deps);
     expect(page.store.selectDirty()).toBe(true);
     await handleBackClick(page.deps);
     finishSave();
-    await savingPreview;
+    await firstSave;
 
     expect(
       page
@@ -412,7 +414,7 @@ describe("audio effects editor undo and redo", () => {
       index: 0,
     });
     page.typeValue(60);
-    await handleSavePreviewClick(page.deps);
+    await handleBackClick(page.deps);
     expect(page.store.selectDirty()).toBe(false);
 
     handleUndoButtonClick(page.deps);
@@ -485,5 +487,34 @@ describe("audio effects editor undo and redo", () => {
       _event: shortcut({ shiftKey: true }),
     });
     expect(page.keyframes()[0].value).toBe(60);
+  });
+  it("saves a picked preview sound when it leaves, outside the undo history", async () => {
+    const page = await createPage();
+    page.store.setSoundsData({
+      soundsData: {
+        tree: [{ id: "sound-1" }],
+        items: { "sound-1": { id: "sound-1", type: "sound", name: "Sound" } },
+      },
+    });
+
+    await handlePreviewSoundClick(page.deps, {
+      _event: { currentTarget: { dataset: { target: "target" } } },
+    });
+    handlePreviewSoundSelected(page.deps, {
+      _event: { detail: { soundId: "sound-1" } },
+    });
+    handleConfirmSoundSelection(page.deps);
+    expect(page.view().undoDisabled).toBe(true);
+
+    await handleBackClick(page.deps);
+    expect(
+      page.deps.projectService.updateAudioEffect.mock.calls.map(
+        ([{ data }]) => data,
+      ),
+    ).toEqual([{ preview: { target: { soundId: "sound-1" } } }]);
+
+    // Saved, so leaving again writes nothing.
+    await handleBackClick(page.deps);
+    expect(page.deps.projectService.updateAudioEffect).toHaveBeenCalledOnce();
   });
 });
