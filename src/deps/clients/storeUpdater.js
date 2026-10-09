@@ -48,11 +48,11 @@ export const createStoreUpdater = ({
       }),
     );
 
-  const performCheck = async (silent, copy) => {
+  const performCheck = async (silent, copy, trigger) => {
     updateInfo = undefined;
     try {
       if (!metadataClient) throw new Error("Update metadata is unavailable.");
-      updateInfo = await metadataClient.check();
+      updateInfo = await metadataClient.check({ trigger });
       closeCheckProgress();
     } catch {
       closeCheckProgress();
@@ -97,9 +97,12 @@ export const createStoreUpdater = ({
       return operation;
     }
     const copy = options.copy ?? getCopy();
+    // A user-started check is manual even when it joins an automatic one;
+    // automatic checks carry their own launch/periodic trigger.
+    const trigger = !silent ? "manual" : options.trigger;
     checkingResponse = true;
     if (!silent) checkProgress = createUpdateCheckProgress(copy);
-    operation = performCheck(silent, copy).finally(() => {
+    operation = performCheck(silent, copy, trigger).finally(() => {
       closeCheckProgress();
       operation = undefined;
       manualCheckRequested = false;

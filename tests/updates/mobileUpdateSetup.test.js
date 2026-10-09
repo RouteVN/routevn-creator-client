@@ -32,6 +32,9 @@ const nativeAndroidInfo = (distribution = "google-play") => ({
   build: "9",
   model: "Example device",
   osVersion: "18.0",
+  formFactor: "phone",
+  language: "ja-JP",
+  webViewVersion: "128",
 });
 const stubUpdateFetch = (result) => {
   const fetchMock = vi.fn(
@@ -404,10 +407,13 @@ describe("mobile update API setup", () => {
       arch: "aarch64",
       model: "Example device",
       osVersion: "18.0",
+      formFactor: "phone",
+      language: "ja-JP",
     };
     if (platform === "android") {
       info.distribution = distribution;
       info.build = "9";
+      info.webViewVersion = "128";
     }
     return info;
   };
@@ -448,8 +454,12 @@ describe("mobile update API setup", () => {
           target: "android",
           distribution,
           currentBuild: "9",
+          trigger: "manual",
           device: {
             id: expect.stringMatching(/^[1-9A-HJ-NP-Za-km-z]{24}$/),
+            formFactor: "phone",
+            language: "ja",
+            webViewVersion: "128",
           },
         },
       });
@@ -524,8 +534,11 @@ describe("mobile update API setup", () => {
         appId: "routevn-creator",
         target: "ios",
         distribution: "app-store",
+        trigger: "manual",
         device: {
           id: expect.stringMatching(/^[1-9A-HJ-NP-Za-km-z]{24}$/),
+          formFactor: "phone",
+          language: "ja",
         },
       },
     });

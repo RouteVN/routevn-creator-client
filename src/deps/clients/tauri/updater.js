@@ -5,6 +5,11 @@ import { createProgressDialog } from "../progressDialog.js";
 import { createAutomaticUpdateChecks } from "../automaticUpdateChecks.js";
 import { getDeviceId, isDeviceMetadataText } from "../deviceIdentity.js";
 import { createUpdateCheckProgress } from "../updateCheckProgress.js";
+import {
+  isValidUiLanguage,
+  isValidUiLanguageSource,
+  isValidUpdateTrigger,
+} from "../../../internal/updateUsage.js";
 
 const formatUpdaterCopy = (template, values = {}) => {
   return String(template || "").replace(/\{([A-Za-z0-9_]+)\}/g, (match, key) =>
@@ -65,7 +70,7 @@ const createUpdateProgressDialog = (copy = {}) => {
   };
 };
 
-const createUpdater = ({ globalUI, keyValueStore }) => {
+const createUpdater = ({ globalUI, keyValueStore, getLocaleUsage }) => {
   let updateAvailable = false;
   let updateInfo;
   let downloadProgress = 0;
@@ -110,6 +115,20 @@ const createUpdater = ({ globalUI, keyValueStore }) => {
           deviceModel,
           osVersion,
         };
+        // The native command validates these again before the network; they
+        // are omitted here too when they cannot be read or fail validation.
+        let localeUsage;
+        try {
+          localeUsage = await getLocaleUsage?.();
+        } catch {
+          localeUsage = undefined;
+        }
+        if (isValidUiLanguage(localeUsage?.uiLanguage))
+          checkOptions.uiLanguage = localeUsage.uiLanguage;
+        if (isValidUiLanguageSource(localeUsage?.uiLanguageSource))
+          checkOptions.uiLanguageSource = localeUsage.uiLanguageSource;
+        const trigger = !silent ? "manual" : options.trigger;
+        if (isValidUpdateTrigger(trigger)) checkOptions.trigger = trigger;
         const metadata = await invoke("check_client_update", checkOptions);
         const update = metadata ? new Update(metadata) : undefined;
         closeCheckProgress();

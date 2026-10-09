@@ -64,12 +64,14 @@ const createUpdaterClient = ({
   globalUI = createGlobalUI(),
   update = createUpdate(),
   keyValueStore = createKeyValueStore(),
+  getLocaleUsage,
 } = {}) => {
   checkMock.mockResolvedValue(update);
 
   const updater = createUpdater({
     globalUI,
     keyValueStore,
+    getLocaleUsage,
   });
 
   return {
@@ -233,10 +235,10 @@ describe("tauri updater", () => {
       date: "2026-07-03",
       body: "Fix packaging.",
     });
-    expect(invokeMock).toHaveBeenCalledWith(
-      "check_client_update",
-      expectedDevice,
-    );
+    expect(invokeMock).toHaveBeenCalledWith("check_client_update", {
+      ...expectedDevice,
+      trigger: "manual",
+    });
     expect(globalUI.showConfirm).toHaveBeenCalledWith({
       message: "Update 1.7.3 is available.\nFix packaging.",
       title: "Update Available",
@@ -377,10 +379,10 @@ describe("tauri updater", () => {
     const result = await updater.checkForUpdates(false);
 
     expect(result).toBeUndefined();
-    expect(invokeMock).toHaveBeenCalledWith(
-      "check_client_update",
-      expectedDevice,
-    );
+    expect(invokeMock).toHaveBeenCalledWith("check_client_update", {
+      ...expectedDevice,
+      trigger: "manual",
+    });
     expect(globalUI.showConfirm).not.toHaveBeenCalled();
     expect(globalUI.showAlert).toHaveBeenCalledWith({
       message: "You are already on the latest version",
@@ -475,6 +477,53 @@ describe("tauri updater", () => {
     const { updater } = createUpdaterClient();
 
     await updater.checkForUpdates(true);
+
+    expect(invokeMock).toHaveBeenCalledWith(
+      "check_client_update",
+      expectedDevice,
+    );
+  });
+
+  it("sends the active locale and automatic trigger per check", async () => {
+    const getLocaleUsage = vi
+      .fn()
+      .mockReturnValueOnce({ uiLanguage: "ja", uiLanguageSource: "selected" })
+      .mockReturnValueOnce({
+        uiLanguage: "zh-hans",
+        uiLanguageSource: "default",
+      });
+    const { updater } = createUpdaterClient({ getLocaleUsage, update: null });
+
+    await updater.checkForUpdates(true, { trigger: "launch" });
+    await updater.checkForUpdates(true, { trigger: "periodic" });
+
+    const checks = invokeMock.mock.calls
+      .filter(([command]) => command === "check_client_update")
+      .map(([, options]) => options);
+    expect(checks[0]).toEqual({
+      ...expectedDevice,
+      uiLanguage: "ja",
+      uiLanguageSource: "selected",
+      trigger: "launch",
+    });
+    expect(checks[1]).toEqual({
+      ...expectedDevice,
+      uiLanguage: "zh-hans",
+      uiLanguageSource: "default",
+      trigger: "periodic",
+    });
+    expect(getLocaleUsage).toHaveBeenCalledTimes(2);
+  });
+
+  it("omits invalid or unreadable usage fields and still checks", async () => {
+    const { updater } = createUpdaterClient({
+      update: null,
+      getLocaleUsage: () => {
+        throw new Error("Locale service unavailable");
+      },
+    });
+
+    await updater.checkForUpdates(true, { trigger: "background" });
 
     expect(invokeMock).toHaveBeenCalledWith(
       "check_client_update",

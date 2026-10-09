@@ -25,6 +25,22 @@ export const resolveAppLocale = ({ appService, localeService } = {}) => {
   return availableLocales.includes(locale) ? locale : DEFAULT_APP_LOCALE;
 };
 
+// Update checks report the active locale and whether it came from a stored
+// user choice. Both are read at check time because the locale can change
+// while the app runs.
+export const readAppLocaleUsage = ({ appService, localeService } = {}) => {
+  const availableLocales = getAvailableAppLocales(localeService);
+  const storedLocale = appService?.getUserConfig?.(APP_LOCALE_CONFIG_KEY);
+  const currentLocale = localeService?.current?.();
+
+  return {
+    uiLanguage: currentLocale,
+    uiLanguageSource: availableLocales.includes(storedLocale)
+      ? "selected"
+      : "default",
+  };
+};
+
 export const activateAppLocale = async ({
   appService,
   localeService,

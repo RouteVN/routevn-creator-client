@@ -107,6 +107,7 @@ const updater = createIOSUpdater({
     ? createClientUpdates({
         context: updateContext,
         keyValueStore: appDb,
+        getLocaleUsage: () => appService.getAppLocaleUsage(),
         request: updateRequest,
       })
     : undefined,

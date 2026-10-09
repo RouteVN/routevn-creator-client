@@ -75,7 +75,9 @@ describe("Android API-owned updates", () => {
 
       await updater.checkForUpdates(false);
 
-      expect(metadataClient.check).toHaveBeenCalledExactlyOnceWith();
+      expect(metadataClient.check).toHaveBeenCalledExactlyOnceWith({
+        trigger: "manual",
+      });
       if (confirmed)
         expect(openUrl).toHaveBeenCalledExactlyOnceWith(downloadUrl);
       else expect(openUrl).not.toHaveBeenCalled();
@@ -89,7 +91,9 @@ describe("Android API-owned updates", () => {
 
       await updater.checkForUpdates(false);
 
-      expect(metadataClient.check).toHaveBeenCalledExactlyOnceWith();
+      expect(metadataClient.check).toHaveBeenCalledExactlyOnceWith({
+        trigger: "manual",
+      });
       expect(rawUI.showConfirm).toHaveBeenCalledWith(
         expect.objectContaining({
           message: copy.updateAvailableMessage
@@ -184,7 +188,10 @@ describe("Android API-owned updates", () => {
     expect(
       document.querySelector("#routevn-update-check-dialog"),
     ).not.toBeNull();
-    expect(metadataClient.check).toHaveBeenCalledExactlyOnceWith();
+    // The automatic check that started the shared request keeps its trigger.
+    expect(metadataClient.check).toHaveBeenCalledExactlyOnceWith({
+      trigger: undefined,
+    });
     resolveCheck({ status: "noUpdate", reason: "upToDate" });
     await manual;
     expect(rawUI.showAlert).toHaveBeenCalledOnce();

@@ -147,7 +147,7 @@ public class MainActivity extends Activity {
     private static final String EXPORT_INCOMPLETE_MARKER_CONTENT =
         "This RouteVN project export is incomplete. Do not import or edit it.";
     // Android's phone/tablet boundary, matching the sw600dp resource qualifier.
-    private static final int TABLET_MIN_SMALLEST_WIDTH_DP = 600;
+    static final int TABLET_MIN_SMALLEST_WIDTH_DP = 600;
 
     private static final class ProjectFileWriteSession {
         private final String writeId;
@@ -594,17 +594,26 @@ public class MainActivity extends Activity {
         }
     }
 
-    @SuppressWarnings("deprecation") // getMaximumWindowMetrics() starts at API 30.
     private int smallestDisplayWidthDp() {
+        return smallestDisplayWidthDp(this);
+    }
+
+    // The display's smallest width in dp from maximum window metrics on
+    // API 30+, so split-screen does not count, and from the real display
+    // size before that. Shared with the update-check form factor.
+    @SuppressWarnings("deprecation") // getMaximumWindowMetrics() starts at API 30.
+    static int smallestDisplayWidthDp(android.content.Context context) {
         android.graphics.Rect bounds;
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
-            bounds = getWindowManager().getMaximumWindowMetrics().getBounds();
+            bounds = context.getSystemService(android.view.WindowManager.class)
+                .getMaximumWindowMetrics().getBounds();
         } else {
             android.graphics.Point size = new android.graphics.Point();
-            getWindowManager().getDefaultDisplay().getRealSize(size);
+            context.getSystemService(android.view.WindowManager.class)
+                .getDefaultDisplay().getRealSize(size);
             bounds = new android.graphics.Rect(0, 0, size.x, size.y);
         }
-        float density = getResources().getDisplayMetrics().density;
+        float density = context.getResources().getDisplayMetrics().density;
         return Math.round(Math.min(bounds.width(), bounds.height()) / density);
     }
 
@@ -1290,7 +1299,7 @@ public class MainActivity extends Activity {
         AndroidBridge bridge = new AndroidBridge();
         switch (method) {
             case "getAppUpdateDeviceInfo":
-                return bridgeSuccess(AppDeviceInfo.read());
+                return bridgeSuccess(AppDeviceInfo.read(this));
             case "getBackupStatus":
                 return bridgeSuccess(projectBackup.status());
             case "configureBackup":
