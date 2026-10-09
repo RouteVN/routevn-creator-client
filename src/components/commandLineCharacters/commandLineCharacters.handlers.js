@@ -5,7 +5,9 @@ import {
 } from "../../internal/ui/sceneEditor/commandLineCopy.js";
 import {
   COMMAND_LINE_ITEM_FLIP_OPTIONS,
+  createCommandLineOptionMenuItems,
   getCommandLineItemFlipOption,
+  getCommandLineOptionLabel,
 } from "../../internal/commandLineItemEffects.js";
 import {
   COMMAND_LINE_SHADER_ADJUSTMENTS,
@@ -692,53 +694,38 @@ export const handleFormSectionAction = async (deps, payload) => {
   }
 
   const copy = selectCommandLineCopy(i18n);
-  const items = [];
+  const optionIds = [];
   if (!store.selectCharacterOpacityOptionEnabled({ index: characterIndex })) {
-    items.push({
-      type: "item",
-      label: localizeCommandLineText("Opacity", copy),
-      key: "opacity",
-    });
+    optionIds.push("opacity");
   }
   if (!store.selectCharacterBlurOptionEnabled({ index: characterIndex })) {
-    items.push({
-      type: "item",
-      label: localizeCommandLineText("Blur", copy),
-      key: "blur",
-    });
+    optionIds.push("blur");
   }
   for (const characterFlipOption of COMMAND_LINE_ITEM_FLIP_OPTIONS) {
     if (
-      store.selectCharacterFlipOptionEnabled({
+      !store.selectCharacterFlipOptionEnabled({
         index: characterIndex,
         optionId: characterFlipOption.id,
       })
     ) {
-      continue;
+      optionIds.push(characterFlipOption.id);
     }
-
-    items.push({
-      type: "item",
-      label: localizeCommandLineText(characterFlipOption.label, copy),
-      key: characterFlipOption.id,
-    });
   }
   for (const adjustment of COMMAND_LINE_SHADER_ADJUSTMENTS) {
     if (
-      store.selectCharacterShaderAdjustmentOptionEnabled({
+      !store.selectCharacterShaderAdjustmentOptionEnabled({
         index: characterIndex,
         adjustmentId: adjustment.id,
       })
     ) {
-      continue;
+      optionIds.push(adjustment.id);
     }
-
-    items.push({
-      type: "item",
-      label: localizeCommandLineText(adjustment.label, copy),
-      key: adjustment.id,
-    });
   }
+  const items = createCommandLineOptionMenuItems({
+    optionIds,
+    getLabel: (optionId) =>
+      localizeCommandLineText(getCommandLineOptionLabel(optionId), copy),
+  });
   if (items.length === 0) {
     return;
   }

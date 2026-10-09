@@ -11,6 +11,10 @@ import {
   COMMAND_LINE_SHADER_ADJUSTMENTS,
   getCommandLineShaderAdjustment,
 } from "../../internal/commandLineShaderAdjustments.js";
+import {
+  createCommandLineOptionMenuItems,
+  getCommandLineOptionLabel,
+} from "../../internal/commandLineItemEffects.js";
 
 const createEmptyCollection = () => ({
   items: {},
@@ -589,57 +593,36 @@ export const handleOptionsSectionAction = async (deps, payload) => {
   }
 
   const copy = selectCommandLineCopy(i18n);
-  const items = [];
+  const optionIds = [];
   if (!store.selectBackgroundColorOptionEnabled()) {
-    items.push({
-      type: "item",
-      label: localizeCommandLineText("Background Color", copy),
-      key: "background-color",
-    });
+    optionIds.push("background-color");
   }
   if (!store.selectOpacityOptionEnabled()) {
-    items.push({
-      type: "item",
-      label: localizeCommandLineText("Opacity", copy),
-      key: "opacity",
-    });
+    optionIds.push("opacity");
+  }
+  if (!store.selectSelectedBlur()) {
+    optionIds.push("blur");
+  }
+  if (!store.selectFlipXOptionEnabled()) {
+    optionIds.push("flip-x");
+  }
+  if (!store.selectFlipYOptionEnabled()) {
+    optionIds.push("flip-y");
   }
   for (const adjustment of COMMAND_LINE_SHADER_ADJUSTMENTS) {
     if (
-      store.selectBackgroundShaderAdjustmentOptionEnabled({
+      !store.selectBackgroundShaderAdjustmentOptionEnabled({
         adjustmentId: adjustment.id,
       })
     ) {
-      continue;
+      optionIds.push(adjustment.id);
     }
-
-    items.push({
-      type: "item",
-      label: localizeCommandLineText(adjustment.label, copy),
-      key: adjustment.id,
-    });
   }
-  if (!store.selectSelectedBlur()) {
-    items.push({
-      type: "item",
-      label: localizeCommandLineText("Blur", copy),
-      key: "blur",
-    });
-  }
-  if (!store.selectFlipXOptionEnabled()) {
-    items.push({
-      type: "item",
-      label: localizeCommandLineText("Flip X", copy),
-      key: "flip-x",
-    });
-  }
-  if (!store.selectFlipYOptionEnabled()) {
-    items.push({
-      type: "item",
-      label: localizeCommandLineText("Flip Y", copy),
-      key: "flip-y",
-    });
-  }
+  const items = createCommandLineOptionMenuItems({
+    optionIds,
+    getLabel: (optionId) =>
+      localizeCommandLineText(getCommandLineOptionLabel(optionId), copy),
+  });
   if (items.length === 0) {
     return;
   }

@@ -4,7 +4,9 @@ import {
 } from "../../internal/ui/sceneEditor/commandLineCopy.js";
 import {
   COMMAND_LINE_ITEM_FLIP_OPTIONS,
+  createCommandLineOptionMenuItems,
   getCommandLineItemFlipOption,
+  getCommandLineOptionLabel,
 } from "../../internal/commandLineItemEffects.js";
 import {
   COMMAND_LINE_SHADER_ADJUSTMENTS,
@@ -49,6 +51,8 @@ const parseVisualSectionId = (sectionId) => {
   const optionId = match[2];
   if (
     optionId &&
+    optionId !== "opacity" &&
+    optionId !== "blur" &&
     !getCommandLineItemFlipOption(optionId) &&
     !getCommandLineShaderAdjustment(optionId)
   ) {
@@ -484,22 +488,6 @@ export const handleOpacityInput = (deps, payload) => {
   dispatchTemporaryPresentationStateChange(deps);
 };
 
-export const handleBlurToggleChange = (deps, payload) => {
-  const { store, render } = deps;
-  const index = getIndexFromEvent(payload._event);
-
-  if (index === undefined) {
-    return;
-  }
-
-  store.updateVisualBlurEnabled({
-    index,
-    enabled: getEventValue(payload._event),
-  });
-  render();
-  dispatchTemporaryPresentationStateChange(deps);
-};
-
 export const handleBlurFieldInput = (deps, payload) => {
   const { store, render } = deps;
   const index = getIndexFromEvent(payload._event);
@@ -549,6 +537,18 @@ export const handleFormSectionAction = async (deps, payload) => {
   const { optionId, visualIndex } = section;
   const flipOption = getCommandLineItemFlipOption(optionId);
   const adjustment = getCommandLineShaderAdjustment(optionId);
+  if (actionId === "remove" && optionId === "opacity") {
+    store.removeVisualOpacityOption({ index: visualIndex });
+    render();
+    dispatchTemporaryPresentationStateChange(deps);
+    return;
+  }
+  if (actionId === "remove" && optionId === "blur") {
+    store.removeVisualBlurOption({ index: visualIndex });
+    render();
+    dispatchTemporaryPresentationStateChange(deps);
+    return;
+  }
   if (actionId === "remove" && flipOption) {
     store.removeVisualFlipOption({
       index: visualIndex,
@@ -572,39 +572,38 @@ export const handleFormSectionAction = async (deps, payload) => {
   }
 
   const copy = selectCommandLineCopy(i18n);
-  const items = [];
+  const optionIds = [];
+  if (!store.selectVisualOpacityOptionEnabled({ index: visualIndex })) {
+    optionIds.push("opacity");
+  }
+  if (!store.selectVisualBlurOptionEnabled({ index: visualIndex })) {
+    optionIds.push("blur");
+  }
   for (const option of COMMAND_LINE_ITEM_FLIP_OPTIONS) {
     if (
-      store.selectVisualFlipOptionEnabled({
+      !store.selectVisualFlipOptionEnabled({
         index: visualIndex,
         optionId: option.id,
       })
     ) {
-      continue;
+      optionIds.push(option.id);
     }
-
-    items.push({
-      type: "item",
-      label: localizeCommandLineText(option.label, copy),
-      key: option.id,
-    });
   }
   for (const shaderAdjustment of COMMAND_LINE_SHADER_ADJUSTMENTS) {
     if (
-      store.selectVisualShaderAdjustmentOptionEnabled({
+      !store.selectVisualShaderAdjustmentOptionEnabled({
         index: visualIndex,
         adjustmentId: shaderAdjustment.id,
       })
     ) {
-      continue;
+      optionIds.push(shaderAdjustment.id);
     }
-
-    items.push({
-      type: "item",
-      label: localizeCommandLineText(shaderAdjustment.label, copy),
-      key: shaderAdjustment.id,
-    });
   }
+  const items = createCommandLineOptionMenuItems({
+    optionIds,
+    getLabel: (optionId) =>
+      localizeCommandLineText(getCommandLineOptionLabel(optionId), copy),
+  });
   if (items.length === 0) {
     return;
   }
@@ -615,6 +614,18 @@ export const handleFormSectionAction = async (deps, payload) => {
     y: position.y,
     place: "be",
   });
+  if (result?.item?.key === "opacity") {
+    store.showVisualOpacityOption({ index: visualIndex });
+    render();
+    dispatchTemporaryPresentationStateChange(deps);
+    return;
+  }
+  if (result?.item?.key === "blur") {
+    store.showVisualBlurOption({ index: visualIndex });
+    render();
+    dispatchTemporaryPresentationStateChange(deps);
+    return;
+  }
   const selectedFlipOption = getCommandLineItemFlipOption(result?.item?.key);
   if (selectedFlipOption) {
     store.showVisualFlipOption({

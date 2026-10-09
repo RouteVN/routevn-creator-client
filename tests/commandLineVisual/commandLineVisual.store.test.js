@@ -8,12 +8,15 @@ import {
   hideAddVisualPopover,
   moveVisual,
   openAddVisualPopover,
+  removeVisualBlurOption,
   removeVisualFlipOption,
+  removeVisualOpacityOption,
   removeVisualShaderAdjustmentOption,
   selectDefaultVisualLayer,
   selectPendingVisualLayer,
   selectPendingVisualTransformId,
   selectSelectedVisuals,
+  selectVisualBlurOptionEnabled,
   selectVisualFlipOptionEnabled,
   selectViewData as selectViewDataBase,
   setAnimations,
@@ -28,10 +31,11 @@ import {
   setTransforms,
   setUiConfig,
   setVideos,
+  showVisualBlurOption,
   showVisualFlipOption,
+  showVisualOpacityOption,
   showDropdownMenu,
   updateVisualAnimation,
-  updateVisualBlurEnabled,
   updateVisualBlurField,
   updateVisualCustomTransform,
   updateVisualCustomTransformEnabled,
@@ -409,6 +413,7 @@ describe("commandLineVisual.store animation controls", () => {
 
     let viewData = selectViewData({ state });
     expect(viewData.defaultValues.visuals[0]).toMatchObject({
+      opacityEnabled: true,
       opacity: 0.75,
       blurEnabled: true,
       blur: {
@@ -419,10 +424,6 @@ describe("commandLineVisual.store animation controls", () => {
         repeatEdgePixels: false,
       },
     });
-    expect(viewData.defaultValues.blurToggleOptions).toEqual([
-      { value: false, label: "No Blur" },
-      { value: true, label: "Blur" },
-    ]);
     expect(viewData.defaultValues.blurKernelSizeOptions).toEqual([
       { value: 5, label: "5" },
       { value: 7, label: "7" },
@@ -435,10 +436,11 @@ describe("commandLineVisual.store animation controls", () => {
     updateVisualOpacity({ state }, { index: 0, opacity: "1.2" });
     expect(selectSelectedVisuals({ state })[0].opacity).toBe(1);
 
-    updateVisualBlurEnabled({ state }, { index: 0, enabled: false });
+    removeVisualBlurOption({ state }, { index: 0 });
     expect(selectSelectedVisuals({ state })[0].blur).toBeNull();
+    expect(selectVisualBlurOptionEnabled({ state }, { index: 0 })).toBe(false);
 
-    updateVisualBlurEnabled({ state }, { index: 0, enabled: true });
+    showVisualBlurOption({ state }, { index: 0 });
     updateVisualBlurField(
       { state },
       {
@@ -458,6 +460,7 @@ describe("commandLineVisual.store animation controls", () => {
 
     viewData = selectViewData({ state });
     expect(viewData.defaultValues.visuals[0]).toMatchObject({
+      opacityEnabled: true,
       opacity: 1,
       blurEnabled: true,
       blur: selectedVisual.blur,
@@ -522,6 +525,48 @@ describe("commandLineVisual.store animation controls", () => {
         { index: 0, optionId: "flip-x" },
       ),
     ).toBe(false);
+  });
+
+  it("hides the visual add action only when every offered option is enabled", () => {
+    const state = createInitialState();
+    setRepositoryCollections(state);
+    setExistingVisuals(
+      { state },
+      {
+        visuals: [
+          {
+            id: "visual-1",
+            resourceId: "visual-image",
+            resourceType: "image",
+          },
+        ],
+      },
+    );
+
+    showVisualOpacityOption({ state }, { index: 0 });
+    showVisualBlurOption({ state }, { index: 0 });
+    showVisualFlipOption({ state }, { index: 0, optionId: "flip-x" });
+    showVisualFlipOption({ state }, { index: 0, optionId: "flip-y" });
+    for (const adjustment of COMMAND_LINE_SHADER_ADJUSTMENTS) {
+      updateVisualShaderAdjustment(
+        { state },
+        {
+          index: 0,
+          adjustmentId: adjustment.id,
+          value: adjustment.defaultValue,
+        },
+      );
+    }
+
+    const viewData = selectViewData({ state });
+    expect(viewData.form.fields[0].action).toBeUndefined();
+    expect(viewData.defaultValues.visuals[0].opacityEnabled).toBe(true);
+    expect(viewData.defaultValues.visuals[0].blurEnabled).toBe(true);
+
+    removeVisualOpacityOption({ state }, { index: 0 });
+    expect(selectViewData({ state }).form.fields[0].action).toMatchObject({
+      id: "add",
+    });
   });
 
   it("manages canonically ordered shader adjustments for each visual", () => {
