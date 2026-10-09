@@ -1,7 +1,7 @@
 import { parseAndRender } from "jempl";
 import { formatDate, resolveLayoutReferences } from "route-engine-js";
 import { getFontFaceWeightDescriptor } from "./fontCapabilities.js";
-import { PARTICLE_PREVIEW_SETTLE_MS } from "./particlePreview.js";
+import { getParticleSettleMs } from "./particlePreview.js";
 import {
   buildLayoutElements,
   extractFileIdsFromRenderState,
@@ -448,13 +448,13 @@ const showFullText = (elements) =>
     return nextElement;
   });
 
-const hasElementOfType = (elements, type) =>
-  elements.some(
-    (element) =>
-      element.type === type ||
-      (Array.isArray(element.children) &&
-        hasElementOfType(element.children, type)),
-  );
+const collectElementsOfType = (elements, type) =>
+  elements.flatMap((element) => [
+    ...(element.type === type ? [element] : []),
+    ...(Array.isArray(element.children)
+      ? collectElementsOfType(element.children, type)
+      : []),
+  ]);
 
 // Bump when a layout's preview starts drawing the same saved layout
 // differently, so saved thumbnails are drawn again.
@@ -513,9 +513,15 @@ export const createLayoutThumbnailSource = ({ item, repositoryState }) => {
     assets,
   };
   // Particles move on the renderer's own clock, so they run for a while
-  // before the thumbnail is taken.
-  if (hasElementOfType(renderedElements, "particles")) {
-    source.settleMs = PARTICLE_PREVIEW_SETTLE_MS;
+  // before the thumbnail is taken, as long as the effect that shows its
+  // particles soonest needs.
+  const particleElements = collectElementsOfType(renderedElements, "particles");
+  if (particleElements.length > 0) {
+    source.settleMs = Math.min(
+      ...particleElements.map((element) =>
+        getParticleSettleMs(element.modules),
+      ),
+    );
   }
   return source;
 };

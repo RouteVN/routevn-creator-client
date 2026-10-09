@@ -1033,7 +1033,6 @@ audioEffectsEditorPage:
   relativeValueType: "Relativo"
   removePropertyButton: "Eliminar propiedad"
   removeStartValueButtonLabel: "Eliminar valor de inicio"
-  saveButton: "Guardar"
   savingButton: "Guardando…"
   selectPreviewSoundToPlay: "Selecciona un sonido en el panel Vista previa para activar la reproducción."
   selectSoundLabel: "Seleccionar sonido"

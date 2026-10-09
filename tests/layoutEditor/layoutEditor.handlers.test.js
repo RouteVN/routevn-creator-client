@@ -861,11 +861,13 @@ describe("layoutEditor preview autosave", () => {
     );
   });
 
-  it("asks for no thumbnail when leaving for a backup", async () => {
+  it("asks for no thumbnail for a backup, the background, or quitting", async () => {
     const { deps, leave } = mountEditor();
 
     changePreview(deps, { backgroundImageId: "image-two" });
     await leave({ reason: "backup" });
+    await leave({ reason: "background" });
+    await leave({ reason: "quit" });
 
     expect(deps.projectService.updateLayoutItem).toHaveBeenCalledTimes(1);
     expect(deps.projectService.requestLayoutThumbnails).not.toHaveBeenCalled();

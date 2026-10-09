@@ -1033,7 +1033,6 @@ audioEffectsEditorPage:
   relativeValueType: "相対"
   removePropertyButton: "プロパティを削除"
   removeStartValueButtonLabel: "開始値を削除"
-  saveButton: "保存"
   savingButton: "保存中…"
   selectPreviewSoundToPlay: "「プレビュー」でサウンドを選択すると再生できます。"
   selectSoundLabel: "サウンドを選択"

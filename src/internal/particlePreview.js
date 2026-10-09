@@ -110,9 +110,31 @@ export const createParticlePreviewState = (
   };
 };
 
-// Particles move on the renderer's own clock, so a still picture of them is
-// taken after they have run this long.
-export const PARTICLE_PREVIEW_SETTLE_MS = 1500;
+// Particles move on the renderer's own clock, so a still picture of a running
+// effect is taken after it has run this long.
+const PARTICLE_PREVIEW_SETTLE_MS = 1500;
+
+// How long an effect runs before a still picture of it is taken. A burst
+// emits once, and a timed effect stops emitting, so their picture is taken
+// while the particles are still there, halfway through the shortest life.
+export const getParticleSettleMs = (modules) => {
+  const emission = modules?.emission ?? {};
+  const lifetime = emission.particleLifetime;
+  const shortestLife = Number(
+    typeof lifetime === "number" ? lifetime : lifetime?.min,
+  );
+  const halfLifeMs =
+    (Number.isFinite(shortestLife) && shortestLife >= 0 ? shortestLife : 1) *
+    500;
+  if (emission.mode === "burst") {
+    return Math.min(PARTICLE_PREVIEW_SETTLE_MS, halfLifeMs);
+  }
+  const duration = Number(emission.duration);
+  if (Number.isFinite(duration) && duration >= 0) {
+    return Math.min(PARTICLE_PREVIEW_SETTLE_MS, duration * 1000 + halfLifeMs);
+  }
+  return PARTICLE_PREVIEW_SETTLE_MS;
+};
 
 // Bump when a particle's preview starts drawing the same saved particle
 // differently, so saved thumbnails are drawn again.
@@ -155,5 +177,6 @@ export const createParticleThumbnailSource = ({ item, repositoryState }) => {
     height: Math.max(1, Math.round(toPositiveNumber(effect.height) ?? 1)),
     renderState,
     assets,
+    settleMs: getParticleSettleMs(effect.modules),
   };
 };

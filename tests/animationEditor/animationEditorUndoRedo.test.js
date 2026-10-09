@@ -5,7 +5,10 @@ import {
   handleAddKeyframeFromTimeline,
   handleAddPropertySideMenuItemClick,
   handleAfterMount,
+  handleConfirmMaskImageSelection,
   handleEditHistoryShortcutKeyDown,
+  handleMaskImageSelected,
+  handlePreviewImageClick,
   handleRedoButtonClick,
   handleSelectedKeyframeRelativeChange,
   handleSelectedKeyframeValueChange,
@@ -219,6 +222,61 @@ describe("animation editor undo and redo", () => {
     await vi.advanceTimersByTimeAsync(5000);
 
     expect(page.deps.projectService.createAnimation).not.toHaveBeenCalled();
+  });
+
+  // Picks a background preview image through its picker and OKs it.
+  const pickBackground = async (page, imageId) => {
+    handlePreviewImageClick(page.deps, {
+      _event: {
+        currentTarget: { dataset: { target: "preview-background" } },
+      },
+    });
+    handleMaskImageSelected(page.deps, { _event: { detail: { imageId } } });
+    await handleConfirmMaskImageSelection(page.deps);
+  };
+
+  it("saves a picked preview image of a saved animation on its own, once, outside the undo history", async () => {
+    const page = await createPage();
+
+    await pickBackground(page, "image-1");
+    await vi.advanceTimersByTimeAsync(5000);
+
+    const { updateAnimation } = page.deps.projectService;
+    expect(updateAnimation).toHaveBeenCalledOnce();
+    expect(updateAnimation.mock.calls[0][0]).toMatchObject({
+      animationId: "animation-1",
+      data: { preview: { background: { imageId: "image-1" } } },
+    });
+    expect(page.view().undoDisabled).toBe(true);
+
+    // Saved, so an edit after it saves the animation without the images.
+    page.store.setSelectedKeyframe({ side: "update", property: "x", index: 0 });
+    page.typeValue(200);
+    await vi.advanceTimersByTimeAsync(5000);
+    expect(updateAnimation).toHaveBeenCalledTimes(2);
+    expect(updateAnimation.mock.calls[1][0].data).not.toHaveProperty("preview");
+  });
+
+  it("creates a new animation on its first edit, not on a picked preview image, and takes the image along", async () => {
+    const page = await createPage({ payload: { at: "update" } });
+    const { createAnimation, updateAnimation } = page.deps.projectService;
+
+    await pickBackground(page, "image-1");
+    await vi.advanceTimersByTimeAsync(5000);
+    expect(createAnimation).not.toHaveBeenCalled();
+
+    await handleAddPropertySideMenuItemClick(page.deps, {
+      _event: { detail: { item: { side: "update", value: "x" } } },
+    });
+    await vi.advanceTimersByTimeAsync(5000);
+
+    expect(createAnimation).toHaveBeenCalledOnce();
+    expect(createAnimation.mock.calls[0][0].data).toMatchObject({
+      preview: { background: { imageId: "image-1" } },
+    });
+    // What it was created with is not saved again.
+    await vi.advanceTimersByTimeAsync(5000);
+    expect(updateAnimation).not.toHaveBeenCalled();
   });
 
   it("clears a keyframe selection the restore may point at a different keyframe", () => {

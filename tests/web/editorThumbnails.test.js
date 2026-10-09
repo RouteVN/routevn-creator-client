@@ -244,6 +244,45 @@ describe("editor thumbnails", () => {
     expect(mapped.elements[1].modules.appearance.texture).toBe("key:file-2");
   });
 
+  it("draws built-in particle textures and other text as they are, and renames only the files it loaded", async () => {
+    stubBrowser();
+    const graphics = createGraphics();
+    createGraphicsService.mockResolvedValue(graphics);
+
+    await draw({
+      renderState: {
+        elements: [
+          {
+            id: "snow",
+            type: "particles",
+            modules: { appearance: { texture: "snowflake" } },
+          },
+          {
+            id: "mixed",
+            type: "particles",
+            modules: {
+              appearance: {
+                texture: { items: [{ src: "file-1" }, { src: "circle" }] },
+              },
+            },
+          },
+          { id: "title", type: "text", text: "Title One" },
+        ],
+        animations: [],
+      },
+      assets: { "file-1": imageAssets["file-1"] },
+    });
+
+    const [loadedKey] = keysOf(graphics);
+    const { elements } = graphics.render.mock.calls.at(-1)[0];
+    expect(elements[0].modules.appearance.texture).toBe("snowflake");
+    expect(elements[1].modules.appearance.texture.items).toEqual([
+      { src: loadedKey },
+      { src: "circle" },
+    ]);
+    expect(elements[2].text).toBe("Title One");
+  });
+
   it("renames the fonts it loaded in a text style's font family, and keeps the system's", () => {
     const text = {
       elements: [

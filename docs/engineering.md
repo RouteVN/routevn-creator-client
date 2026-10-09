@@ -1309,12 +1309,14 @@ project resolution. The render state holds the text styles, colors, font file
 ids, images, fragments, and particles the layout draws, so changing one
 redraws the thumbnails of the layouts that use it the next time they are
 requested. Text that types itself out is drawn in full, sounds are not loaded,
-and a layout with particles lets them run 1.5s first. Fonts load under the
+and a layout with particles lets them run first, as long as the effect that
+shows its particles soonest needs (`getParticleSettleMs`). Fonts load under the
 thumbnail renderer's own keys, as images do, and text styles' font families
 are renamed to match: route-graphics names a font face by its key and deletes
 it from `document.fonts` when its renderer is freed, so the keys stay valid
 font family names. Leaving the layout editor requests the layout's thumbnail
-(not for a backup, and not for controls, which show none); the layouts page
+(not for controls, which show none, and not when the page stays open, as
+below); the layouts page
 requests every layout's when it opens and a new layout's after Add.
 
 The animation editor has undo and redo the same way, for edits made since the
@@ -1331,7 +1333,9 @@ creates nothing. Keyframes and masks are selected by index, so a selection is
 cleared when the restore removes it or moves the keyframes or masks around it.
 A picked preview image saves through the same autosave (`scheduleEditorAutosave`,
 without recording a step), and a save sends the preview images only when they
-differ from what is saved; the touch preview dialog closes with Done.
+differ from what is saved. A new animation is created by its first edit, which
+takes its preview images along, so a picked image alone creates nothing. The
+touch preview dialog closes with Done.
 Preview images, a mask still being added, and view state such as zoom and the
 playhead are not part of the history, and undo and redo are off while a video
 export runs. The shortcuts step aside only for text fields, so they still work
@@ -1453,7 +1457,7 @@ Leaving the transform editor saves waiting changes and then requests its
 thumbnail without waiting for it. A `prepareNavigation` with a `reason` only
 saves, since the page stays open: a backup (`"backup"`), the app going to the
 background (`"background"`), or quitting (`"quit"`); a navigation passes no
-reason. The transforms page
+reason. Each editor with thumbnails does the same. The transforms page
 requests every thumbnail when it opens and a new transform's after Add, which
 also repairs thumbnails left out of date when the app closed or crashed before
 an editor was left; until one is drawn, the detail panel says there is no
@@ -1497,7 +1501,9 @@ the editor requests the particle's, the particles page requests every
 particle's when it opens, and Duplicate copies the hash. A thumbnail draws the
 canvas without the outline, with the background, at the particle's own size;
 particles move on the renderer's own clock, so the renderer lets them run
-1.5s before it captures. Texture and background images follow the asset
+before it captures (`getParticleSettleMs`): 1.5s for an effect that runs on,
+and for a burst, or an effect that stops emitting, only until halfway through
+the shortest particle life after it last emits, so its particles still show. Texture and background images follow the asset
 failure policy as in the transform editor.
 
 Text styles are edited on their own page as well, `/project/text-style-editor`

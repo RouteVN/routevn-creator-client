@@ -441,8 +441,13 @@ export const selectKeyframeDialogIsFinal = ({ state }) => {
   return !add && index === keyframes.length - 1;
 };
 
+// Once a save ends, what is unsaved is known again, even after a save that
+// held only preview sounds.
 export const setSaving = ({ state }, { saving } = {}) => {
   state.saving = saving === true;
+  if (!state.saving) {
+    state.dirty = isAudioEffectUnsaved(state, state.definition);
+  }
 };
 
 // The audio effect is unsaved while it differs from what is saved, or while a

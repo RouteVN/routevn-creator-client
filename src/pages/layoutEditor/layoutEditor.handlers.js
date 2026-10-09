@@ -804,12 +804,14 @@ export const handleBeforeMount = (deps) => {
       if (!flushResult.ok) {
         throw new Error("Failed to save layout changes before navigation.");
       }
-      // A layout's thumbnail follows in the background. Controls show none.
+      // A layout's thumbnail follows in the background, once the page is
+      // left: a backup, the app going to the background, or quitting only
+      // saves. Controls show none.
       const layoutId = store.selectLayoutId();
       if (
         layoutId &&
         store.selectLayoutResourceType() === "layouts" &&
-        reason !== "backup"
+        !reason
       ) {
         void projectService.requestLayoutThumbnails({
           layoutIds: [layoutId],

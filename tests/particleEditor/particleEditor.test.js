@@ -595,7 +595,7 @@ describe("particle editor", () => {
     expect(page.savedData()).toEqual([]);
   });
 
-  it("leaves without waiting for the thumbnail, and only saves for a backup", async () => {
+  it("leaves without waiting for the thumbnail, and only saves for a backup, the background, or quitting", async () => {
     const page = await createPage();
     const { requestParticleThumbnails } = page.deps.projectService;
     requestParticleThumbnails.mockReturnValue(new Promise(() => {}));
@@ -603,6 +603,8 @@ describe("particle editor", () => {
 
     await page.beforeNavigation({ reason: "backup" });
     expect(page.savedData()).toHaveLength(1);
+    await page.beforeNavigation({ reason: "background" });
+    await page.beforeNavigation({ reason: "quit" });
     expect(requestParticleThumbnails).not.toHaveBeenCalled();
 
     await page.beforeNavigation({ path: "/project/particles" });

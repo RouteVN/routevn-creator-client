@@ -1033,7 +1033,6 @@ audioEffectsEditorPage:
   relativeValueType: "相对"
   removePropertyButton: "移除属性"
   removeStartValueButtonLabel: "移除起始值"
-  saveButton: "保存"
   savingButton: "正在保存…"
   selectPreviewSoundToPlay: "在“预览”中选择预览声音后即可播放。"
   selectSoundLabel: "选择声音"

@@ -370,7 +370,9 @@ export const handleBeforeMount = (deps) => {
         throw new Error("Failed to save particle before navigation.");
       }
       const particleId = store.selectParticleId();
-      if (particleId && reason !== "backup") {
+      // Only leaving the page draws its thumbnail. A backup, the app going to
+      // the background, or quitting only saves.
+      if (particleId && !reason) {
         void projectService.requestParticleThumbnails({
           particleIds: [particleId],
         });

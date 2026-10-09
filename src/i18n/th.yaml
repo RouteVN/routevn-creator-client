@@ -1033,7 +1033,6 @@ audioEffectsEditorPage:
   relativeValueType: "ค่าสัมพัทธ์"
   removePropertyButton: "ลบคุณสมบัติ"
   removeStartValueButtonLabel: "ลบค่าตอนเริ่ม"
-  saveButton: "บันทึก"
   savingButton: "กำลังบันทึก…"
   selectPreviewSoundToPlay: "เลือกเสียงตัวอย่างในแผงตัวอย่างเพื่อให้เล่นได้"
   selectSoundLabel: "เลือกเสียง"

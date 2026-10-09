@@ -5,7 +5,6 @@ import {
 } from "../../../internal/layoutPreview.js";
 import {
   createParticleThumbnailSource,
-  PARTICLE_PREVIEW_SETTLE_MS,
   PARTICLE_THUMBNAIL_VERSION,
 } from "../../../internal/particlePreview.js";
 import {
@@ -64,7 +63,6 @@ export const createEditorThumbnailService = ({
       collection: "particles",
       version: PARTICLE_THUMBNAIL_VERSION,
       createSource: createParticleThumbnailSource,
-      settleMs: PARTICLE_PREVIEW_SETTLE_MS,
       save: ({ id, data, fileRecords }) =>
         updateParticle({ particleId: id, data, fileRecords }),
     },
@@ -160,10 +158,7 @@ export const createEditorThumbnailService = ({
     }
 
     rendererInUse = true;
-    const thumbnailImage = await drawThumbnail({
-      settleMs: kinds[kind].settleMs,
-      ...stale.source,
-    });
+    const thumbnailImage = await drawThumbnail(stale.source);
     if (!isOpen(projectId)) {
       return;
     }

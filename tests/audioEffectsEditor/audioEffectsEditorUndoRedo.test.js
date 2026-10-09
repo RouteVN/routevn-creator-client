@@ -517,4 +517,46 @@ describe("audio effects editor undo and redo", () => {
     await handleBackClick(page.deps);
     expect(page.deps.projectService.updateAudioEffect).toHaveBeenCalledOnce();
   });
+
+  it("saves nothing more for an edit undone while a save of only preview sounds ran", async () => {
+    const page = await createPage();
+    page.store.setSoundsData({
+      soundsData: {
+        tree: [{ id: "sound-1" }],
+        items: { "sound-1": { id: "sound-1", type: "sound", name: "Sound" } },
+      },
+    });
+    await handlePreviewSoundClick(page.deps, {
+      _event: { currentTarget: { dataset: { target: "target" } } },
+    });
+    handlePreviewSoundSelected(page.deps, {
+      _event: { detail: { soundId: "sound-1" } },
+    });
+    handleConfirmSoundSelection(page.deps);
+    let finishSave;
+    page.deps.projectService.updateAudioEffect.mockImplementationOnce(
+      () =>
+        new Promise((resolve) => {
+          finishSave = () => resolve({ valid: true });
+        }),
+    );
+    const saving = handleBackClick(page.deps);
+
+    // An edit and its undo while the preview sound saves.
+    page.store.setSelectedKeyframe({
+      side: "update",
+      property: "volume",
+      index: 0,
+    });
+    page.typeValue(60);
+    handleUndoButtonClick(page.deps);
+    expect(page.store.selectDirty()).toBe(true);
+    finishSave();
+    await saving;
+
+    expect(page.store.selectDirty()).toBe(false);
+    await handleBackClick(page.deps);
+    expect(page.deps.projectService.updateAudioEffect).toHaveBeenCalledOnce();
+    expect(page.savedEffects()).toEqual([]);
+  });
 });

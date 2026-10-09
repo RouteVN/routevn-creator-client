@@ -605,11 +605,12 @@ const createAnimationEditFingerprint = (snapshot) => {
 };
 
 // What autosave compares with what is saved: the animation and its preview
-// images.
+// images. A new animation is created by its first edit, which takes its
+// preview images along, so a picked image alone creates nothing.
 const createAnimationPersistFingerprint = (snapshot) => {
   return JSON.stringify({
     edit: createAnimationEditFingerprint(snapshot),
-    preview: snapshot.preview,
+    preview: snapshot.editMode ? snapshot.preview : undefined,
   });
 };
 
@@ -721,9 +722,13 @@ const flushQueuedAutosave = async ({ deps, force = false } = {}) => {
         return mutationAttempt;
       }
 
+      // A new animation is saved now, so its preview images count from here.
       store.markAutosavePersisted({
         version,
-        fingerprint,
+        fingerprint: createAnimationPersistFingerprint({
+          ...snapshot,
+          editMode: true,
+        }),
       });
     } while (
       force &&
