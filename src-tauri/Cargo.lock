@@ -4253,6 +4253,7 @@ name = "routevn-creator"
 version = "1.18.0"
 dependencies = [
  "cc",
+ "dirs",
  "discord-rich-presence",
  "dotenvy",
  "futures-util",
@@ -4266,6 +4267,7 @@ dependencies = [
  "sentry-types",
  "serde",
  "serde_json",
+ "sqlx",
  "tauri",
  "tauri-build",
  "tauri-plugin-dialog",
@@ -4281,7 +4283,6 @@ dependencies = [
  "tokio",
  "url",
  "urlencoding",
- "uuid 1.18.1",
  "windows",
  "zip 4.6.1",
 ]

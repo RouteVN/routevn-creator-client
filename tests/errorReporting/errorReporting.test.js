@@ -168,13 +168,13 @@ describe("explicit error reporting through the SDK", () => {
     vi.unstubAllEnvs();
   });
 
-  it("sends the shell's crash ID as the only user field", () => {
-    const crashId = "0f6b1c3e-2a4d-4c8b-9e7f-1a2b3c4d5e6f";
+  it("sends the shell's device ID as the only user field", () => {
+    const deviceId = "7mQkR2vXa9Lp8nRmS3wYb2Mq";
     const reporter = createErrorReporter({
       dsn: TEST_DSN,
       runtime: "tauri",
       captureGlobal: true,
-      crashId,
+      deviceId,
     });
     const event = reporter.scrubErrorEvent({
       event_id: "event-one",
@@ -197,25 +197,25 @@ describe("explicit error reporting through the SDK", () => {
       },
     });
 
-    expect(event.user).toEqual({ id: crashId });
+    expect(event.user).toEqual({ id: deviceId });
     const encoded = JSON.stringify(event);
-    expect(encoded).toContain(crashId);
+    expect(encoded).toContain(deviceId);
     expect(encoded).not.toContain("user@example.com");
     expect(encoded).not.toContain("someone-else");
     expect(encoded).not.toContain("secret-segment");
   });
 
-  it("sends no user without a shell crash ID", () => {
-    for (const crashId of [
+  it("sends no user without a shell device ID", () => {
+    for (const deviceId of [
       undefined,
       null,
-      "not-a-uuid",
-      "0F6B1C3E-2A4D-4C8B-9E7F-1A2B3C4D5E6F",
+      "not-a-device-id",
+      "0OQkR2vXa9Lp8nRmS3wYb2Mq",
     ]) {
       const reporter = createErrorReporter({
         runtime: "web",
         captureGlobal: false,
-        crashId,
+        deviceId,
       });
       const event = reporter.scrubErrorEvent({
         event_id: "event-one",
@@ -230,13 +230,13 @@ describe("explicit error reporting through the SDK", () => {
     }
   });
 
-  it("carries the crash ID on events sent through the SDK pipeline", async () => {
-    const crashId = "11111111-2222-4333-8444-555555555555";
+  it("carries the device ID on events sent through the SDK pipeline", async () => {
+    const deviceId = "23456789ABCD23456789ABCD";
     const reporter = createErrorReporter({
       dsn: TEST_DSN,
       runtime: "tauri",
       captureGlobal: false,
-      crashId,
+      deviceId,
     });
     const events = collectSentEvents();
 
@@ -246,17 +246,17 @@ describe("explicit error reporting through the SDK", () => {
     await reporter.flush();
 
     expect(events).toHaveLength(1);
-    expect(events[0].user).toEqual({ id: crashId });
+    expect(events[0].user).toEqual({ id: deviceId });
   });
 
-  it("uses the crash ID injected into the exported desktop reporter", async () => {
-    const crashId = "11111111-2222-4333-8444-555555555555";
+  it("uses the device ID injected into the exported desktop reporter", async () => {
+    const deviceId = "23456789ABCD23456789ABCD";
     globalThis.__ROUTEVN_ERROR_REPORTING__ = Object.freeze({
       dsn: TEST_DSN,
       release: "app-one@1.0.0",
       environment: "development",
       dist: "test-build",
-      crashId,
+      deviceId,
     });
     vi.resetModules();
     const { errorReporter } = await import(
@@ -268,10 +268,10 @@ describe("explicit error reporting through the SDK", () => {
     await errorReporter.flush();
 
     expect(events).toHaveLength(1);
-    expect(events[0].user).toEqual({ id: crashId });
+    expect(events[0].user).toEqual({ id: deviceId });
   });
 
-  it("omits the user when the injected desktop configuration has no crash ID", async () => {
+  it("omits the user when the injected desktop configuration has no device ID", async () => {
     globalThis.__ROUTEVN_ERROR_REPORTING__ = Object.freeze({
       dsn: TEST_DSN,
       release: "app-one@1.0.0",
@@ -388,7 +388,7 @@ describe("explicit error reporting through the SDK", () => {
   });
 
   it("keeps source map debug IDs only for files in the sent stack", async () => {
-    const mainDebugId = "0F6B1C3E-2A4D-4C8B-9E7F-1A2B3C4D5E6F";
+    const mainDebugId = "0f6b1c3e-2a4d-4c8b-9e7f-1a2b3c4d5e6f";
     // Registered the way the injected build snippet does: stack -> debug ID.
     globalThis._sentryDebugIds = {
       "Error\n    at https://app.test/public/main.js?v=1:1:10": mainDebugId,

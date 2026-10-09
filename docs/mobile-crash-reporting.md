@@ -21,37 +21,24 @@ breadcrumbs, screenshots, view hierarchies, swizzling, network tracking,
 performance tracing, client reports and replay are disabled. The aggregate
 `sentry-android` artifact is not used because it also ships replay.
 
-## Crash ID
+## Device ID
 
-Every crash or error report carries `user.id`: a random UUID v4 generated once
-per install and persisted by the native shell before Sentry initializes, so
-startup crashes carry it too. The backend keeps only `user.id` from each
-event, which allows counting distinct crashing installs per version
+Reports include `user.id` only when the device ID exists at native startup.
+The backend keeps only `user.id` from each event, which allows counting distinct crashing installs per version
 (crash-free users) even though sessions are disabled.
 
-- Android: `crashId` in the `routevn_crash_reporting` SharedPreferences.
-- iOS: `RouteVNCrashId` in UserDefaults.
-- Desktop: a `crash-id` file in the app data directory. Instances that start
-  together create or repair it one at a time under an OS lock on the empty
-  `crash-id.lock` beside it.
+- Android: `deviceId` in `kv` in `context.getDatabasePath("app.db")`.
+- iOS: the same row in `Application Support/RouteVN Creator/databases/app.db`.
+- Desktop: the same row in Tauri’s app config directory (`app.db`).
 
 The ID is random and resets when app storage is cleared or the app is
 reinstalled on Android and iOS; restoring an iOS backup can bring the old ID
-back. On macOS, Windows, and Linux, the desktop file lives in the app data
-directory and survives deleting the app unless that directory is removed.
-The ID is separate from the update-check device ID (`device.id`), is never
-sent with update checks or anywhere else, and the two cannot be derived from
-each other. It links to no account and no other data. A stored value that is
-not a valid ID, including one of another type, a desktop file that is not a
-small regular file, or bytes that are not UTF-8, is replaced with a fresh ID.
-If the shell cannot read or write its storage, a random ID is generated in
-memory for that run instead; the ID never blocks or crashes startup. On iOS,
-UserDefaults saves
-asynchronously, so a crash within seconds of the very first launch may produce
-one additional ID on the next launch.
+back. The desktop database survives app deletion unless its app config directory is removed.
+The ID is the JavaScript-created update-check device ID (`device.id`).
+It links to no account. Missing or invalid values omit `user`. Read errors
+also omit `user`; the read creates no database and does not stop reporting.
 
-On desktop, the JS reporter receives the same ID with the configuration the
-Tauri core injects before any page script runs, and sends it as `user.id`.
+The desktop JS reporter sends any available startup ID as `user.id`.
 WebView JavaScript errors are not reported on Android and iOS
 (`appService.reportError` is a no-op there). Plain web builds send no
 `user.id`.
@@ -83,7 +70,7 @@ reported because it is a real failure, at level `error` because the app kept
 running. The crash reporter sets `fatal` on crashes that close the app, so in
 obs the level, or the exception type, separates recovered renderer crashes from
 crashes. The event passes through the same `beforeSend` scrubbing as a crash,
-so it carries only the exception type, stack, release, device, OS and crash ID.
+so it carries only the exception type, stack, release, device, OS and any available device ID.
 
 Recovery on Android (`MainActivity.onRenderProcessGone`, which always returns
 `true`):
@@ -123,8 +110,8 @@ launch. Delivery is best effort: storage failures, cache eviction and rejected
 requests can discard reports. Reports are not guaranteed to remain until the
 collector accepts them. A user who never reopens the app may produce no report.
 There is no crash-free-rate (session) metric because sessions are disabled;
-distinct crashing installs per version are counted from the [crash
-ID](#crash-id) instead.
+distinct crashing installs per version are counted from the [device
+ID](#device-id) instead.
 
 ## Resource and startup safeguards
 
@@ -194,7 +181,7 @@ own `dist`.
 - debug images that the frames point into, with file paths reduced to basenames
   but debug IDs, load addresses and sizes kept
 - app release and dist, device model and architecture, OS name and version
-- the install [crash ID](#crash-id) as `user.id` (the only user field kept;
+- any available [device ID](#device-id) as `user.id` (the only user field kept;
   email, username, IP address, segment and any other user data are dropped)
 
 It drops message and exception text (replaced with `App crash`), every other
@@ -235,7 +222,7 @@ durable storage before cleaning it.
 Before shipping, declare:
 
 - App Store privacy labels: Diagnostics → Crash Data, and Identifiers →
-  Device ID (the [crash ID](#crash-id); not linked to the user's identity, not
+  Device ID (the [device ID](#device-id); not linked to the user's identity, not
   used for tracking), purposes App Functionality and Analytics.
 - Google Play Data safety form: App info and performance → Crash logs, and
   Device or other IDs, purpose Analytics, not shared, not used for tracking.

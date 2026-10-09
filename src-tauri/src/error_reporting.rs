@@ -1,11 +1,8 @@
 use std::borrow::Cow;
-use std::io::{Read, Write};
-#[cfg(unix)]
-use std::os::unix::fs::PermissionsExt;
 use std::path::{Path, PathBuf};
 use std::sync::OnceLock;
 use std::sync::atomic::{AtomicUsize, Ordering};
-use std::time::{Duration, Instant};
+use std::time::Duration;
 
 use sentry::integrations::backtrace::ProcessStacktraceIntegration;
 use sentry::integrations::debug_images::DebugImagesIntegration;
@@ -13,145 +10,65 @@ use sentry::integrations::panic::PanicIntegration;
 use sentry::protocol::{
     DebugImage, DebugMeta, Event, Frame, Mechanism, Stacktrace, SymbolicDebugImage, User,
 };
-use uuid::Uuid;
+use sqlx::{
+    Connection,
+    sqlite::{SqliteConnectOptions, SqliteConnection},
+};
 
 const RELEASE: &str = concat!("routevn-creator@", env!("CARGO_PKG_VERSION"));
 // Matches the webview limit; the panic hook also blocks while each event is sent.
 const MAX_EVENTS_PER_SESSION: usize = 10;
 static SENT_EVENTS: AtomicUsize = AtomicUsize::new(0);
 
-const CRASH_ID_FILENAME: &str = "crash-id";
-const CRASH_ID_LOCK_FILENAME: &str = "crash-id.lock";
-// A stored ID is 36 bytes, perhaps with a newline; a larger file is not one.
-const MAX_CRASH_ID_FILE_BYTES: u64 = 64;
-// Another instance holds the lock only for one small read and write.
-const CRASH_ID_LOCK_WAIT: Duration = Duration::from_secs(2);
-// Set before sentry::init so every native event and the webview config carry it.
-static CRASH_ID: OnceLock<String> = OnceLock::new();
+// Set before sentry::init so native reports and the webview share one read.
+static DEVICE_ID: OnceLock<Option<String>> = OnceLock::new();
 
-// Random per-install crash ID: a lowercase UUID v4. Separate from the
-// update-check device ID; sent only as the Sentry `user.id`.
-fn is_crash_id(value: &str) -> bool {
-    let bytes = value.as_bytes();
-    bytes.len() == 36
-        && bytes[14] == b'4'
-        && matches!(bytes[19], b'8'..=b'b')
-        && bytes.iter().enumerate().all(|(index, &byte)| {
-            if matches!(index, 8 | 13 | 18 | 23) {
-                byte == b'-'
-            } else {
-                byte.is_ascii_digit() || (b'a'..=b'f').contains(&byte)
-            }
+fn is_device_id(value: &str) -> bool {
+    value.len() == 24
+        && value.bytes().all(|byte| {
+            matches!(byte,
+            b'1'..=b'9' | b'A'..=b'H' | b'J'..=b'N' | b'P'..=b'Z'
+            | b'a'..=b'k' | b'm'..=b'z')
         })
 }
 
-// Resolve the app data directory before the Tauri builder runs, using the same
-// base directories Tauri uses for AppData.
-fn app_data_dir() -> Option<PathBuf> {
-    #[cfg(target_os = "macos")]
-    let base = std::env::var_os("HOME")
-        .map(|home| PathBuf::from(home).join("Library/Application Support"));
-    #[cfg(target_os = "windows")]
-    let base = std::env::var_os("APPDATA").map(PathBuf::from);
-    #[cfg(target_os = "linux")]
-    let base = linux_data_home(
-        std::env::var_os("XDG_DATA_HOME").as_deref(),
-        std::env::var_os("HOME").as_deref(),
-    );
-    base.map(|base| base.join("com.routevn.creator"))
+// The SQL plugin resolves sqlite:app.db against Tauri's app_config_dir().
+fn app_database_path() -> Option<PathBuf> {
+    dirs::config_dir().map(|base| base.join("com.routevn.creator/app.db"))
 }
 
-#[cfg(any(target_os = "linux", test))]
-fn linux_data_home(
-    xdg_data_home: Option<&std::ffi::OsStr>,
-    home: Option<&std::ffi::OsStr>,
-) -> Option<PathBuf> {
-    xdg_data_home
-        .map(PathBuf::from)
-        .filter(|path| path.is_absolute())
-        .or_else(|| home.map(|home| PathBuf::from(home).join(".local/share")))
-}
-
-// The stored ID, when the path is a small regular file holding a valid one.
-// Type and size are checked before opening, so a FIFO, a device or a huge
-// file at the path is never read, and the read itself is bounded.
-fn read_crash_id(file: &Path) -> Option<String> {
-    let metadata = std::fs::metadata(file).ok()?;
-    if !metadata.is_file() || metadata.len() > MAX_CRASH_ID_FILE_BYTES {
+fn read_device_id(file: &Path) -> Option<String> {
+    if !file.is_file() {
         return None;
     }
-    let mut bytes = Vec::new();
-    std::fs::File::open(file)
-        .ok()?
-        .take(MAX_CRASH_ID_FILE_BYTES)
-        .read_to_end(&mut bytes)
+    let options = SqliteConnectOptions::new()
+        .filename(file)
+        .read_only(true)
+        .create_if_missing(false)
+        // Not immutable: the app database runs in WAL mode, and the device ID
+        // can still be only in the write-ahead log.
+        .busy_timeout(Duration::from_millis(50));
+    let runtime = tokio::runtime::Builder::new_current_thread()
+        .enable_all()
+        .build()
         .ok()?;
-    let id = std::str::from_utf8(&bytes).ok()?.trim();
-    is_crash_id(id).then(|| id.to_owned())
-}
-
-// An exclusive lock, so instances that start together create or repair the
-// ID one at a time. The OS releases it when the file closes, including when a
-// process dies. Waits briefly, never indefinitely.
-fn lock_crash_id(data_dir: &Path) -> Option<std::fs::File> {
-    let path = data_dir.join(CRASH_ID_LOCK_FILENAME);
-    // Opening a FIFO or other special file left at the path could block.
-    if std::fs::symlink_metadata(&path).is_ok_and(|metadata| !metadata.is_file()) {
-        return None;
-    }
-    let lock = std::fs::OpenOptions::new()
-        .create(true)
-        .write(true)
-        .truncate(false)
-        .open(&path)
-        .ok()?;
-    let deadline = Instant::now() + CRASH_ID_LOCK_WAIT;
-    loop {
-        match lock.try_lock() {
-            Ok(()) => return Some(lock),
-            Err(std::fs::TryLockError::WouldBlock) if Instant::now() < deadline => {
-                std::thread::sleep(Duration::from_millis(10));
-            }
-            Err(_) => return None,
-        }
-    }
-}
-
-// Reuse the persisted ID, or create one and persist it. A missing or invalid
-// file gets a fresh ID; any failure, including an unavailable lock, keeps an
-// in-memory ID for this run, and a later launch repairs the file.
-// Diagnostics must never crash or block startup because of the ID.
-fn crash_id_from_directory(data_dir: &Path) -> String {
-    let file = data_dir.join(CRASH_ID_FILENAME);
-    if let Some(id) = read_crash_id(&file) {
-        return id;
-    }
-    let id = Uuid::new_v4().to_string();
-    let persist = || -> std::io::Result<String> {
-        std::fs::create_dir_all(data_dir)?;
-        let _lock = lock_crash_id(data_dir).ok_or(std::io::ErrorKind::WouldBlock)?;
-        // Another instance may have created or repaired the ID meanwhile.
-        if let Some(stored) = read_crash_id(&file) {
-            return Ok(stored);
-        }
-        let mut temp = tempfile::NamedTempFile::new_in(data_dir)?;
-        #[cfg(unix)]
-        temp.as_file()
-            .set_permissions(std::fs::Permissions::from_mode(0o600))?;
-        temp.write_all(id.as_bytes())?;
-        // One rename replaces whatever is at the path, never exposing a
-        // partly written file; a FIFO or symlink there is replaced, not opened.
-        temp.persist(&file)?;
-        Ok(id.clone())
-    };
-    persist().unwrap_or(id)
-}
-
-fn load_or_create_crash_id() -> String {
-    app_data_dir()
-        .as_deref()
-        .map(crash_id_from_directory)
-        .unwrap_or_else(|| Uuid::new_v4().to_string())
+    let id = runtime.block_on(async {
+        tokio::time::timeout(Duration::from_millis(250), async {
+            let mut connection = SqliteConnection::connect_with(&options).await.ok()?;
+            let json: String =
+                sqlx::query_scalar("SELECT value FROM kv WHERE key = 'deviceId' LIMIT 1")
+                    .fetch_optional(&mut connection)
+                    .await
+                    .ok()??;
+            let id: String = serde_json::from_str(&json).ok()?;
+            is_device_id(&id).then_some(id)
+        })
+        .await
+        .ok()
+        .flatten()
+    });
+    runtime.shutdown_timeout(Duration::from_millis(50));
+    id
 }
 
 fn safe_identifier(value: &str) -> Option<String> {
@@ -233,7 +150,7 @@ fn scrub_stacktrace(stacktrace: &mut Stacktrace) {
     }
 }
 
-fn scrub_event(event: Event<'static>, crash_id: Option<&str>) -> Event<'static> {
+fn scrub_event(event: Event<'static>, device_id: Option<&str>) -> Event<'static> {
     let mut safe = Event {
         event_id: event.event_id,
         level: event.level,
@@ -245,9 +162,9 @@ fn scrub_event(event: Event<'static>, crash_id: Option<&str>) -> Event<'static> 
         message: Some("Rust panic".to_owned()),
         exception: event.exception,
         stacktrace: event.stacktrace,
-        // Only the install crash ID may survive as user.id; any other user
+        // Only the valid device ID may survive as user.id; any other user
         // data on the incoming event is dropped.
-        user: crash_id.filter(|id| is_crash_id(id)).map(|id| User {
+        user: device_id.filter(|id| is_device_id(id)).map(|id| User {
             id: Some(id.to_owned()),
             ..User::default()
         }),
@@ -286,17 +203,19 @@ fn scrub_event(event: Event<'static>, crash_id: Option<&str>) -> Event<'static> 
 
 fn send_event(event: Event<'static>) -> Option<Event<'static>> {
     (SENT_EVENTS.fetch_add(1, Ordering::Relaxed) < MAX_EVENTS_PER_SESSION)
-        .then(|| scrub_event(event, CRASH_ID.get().map(String::as_str)))
+        .then(|| scrub_event(event, DEVICE_ID.get().and_then(Option::as_deref)))
 }
 
 pub fn webview_init_script() -> String {
-    let config = serde_json::json!({
+    let mut config = serde_json::json!({
         "dsn": env!("ROUTEVN_SENTRY_DSN"),
         "release": RELEASE,
         "environment": env!("ROUTEVN_SENTRY_ENVIRONMENT"),
         "dist": env!("ROUTEVN_SENTRY_DIST"),
-        "crashId": CRASH_ID.get(),
     });
+    if let Some(Some(device_id)) = DEVICE_ID.get() {
+        config["deviceId"] = serde_json::json!(device_id);
+    }
     // Tauri appends this to its IPC bootstrap without a separator.
     format!(
         ";\nObject.defineProperty(window, '__ROUTEVN_ERROR_REPORTING__', {{ value: Object.freeze({config}) }});\n"
@@ -304,9 +223,8 @@ pub fn webview_init_script() -> String {
 }
 
 pub fn init() -> sentry::ClientInitGuard {
-    // Create and load the per-install crash ID before Sentry can send
-    // anything; failures fall back to an in-memory ID for this run.
-    let _ = CRASH_ID.set(load_or_create_crash_id());
+    // Read once before Sentry starts; an unavailable ID leaves user unset.
+    let _ = DEVICE_ID.set(app_database_path().as_deref().and_then(read_device_id));
     // The transport uses rustls without a bundled provider; the updater installs
     // the same ring provider when it has not been set yet.
     let _ = rustls::crypto::ring::default_provider().install_default();
@@ -497,8 +415,8 @@ mod tests {
     }
 
     #[test]
-    fn keeps_only_the_install_crash_id_as_user_id() {
-        const CRASH_ID: &str = "0f6b1c3e-2a4d-4c8b-9e7f-1a2b3c4d5e6f";
+    fn keeps_only_the_device_id_as_user_id() {
+        const DEVICE_ID: &str = "7mQkR2vXa9Lp8nRmS3wYb2Mq";
         let event = Event {
             user: Some(User {
                 id: Some("someone-else".to_owned()),
@@ -515,9 +433,9 @@ mod tests {
             ..Event::default()
         };
 
-        let safe = scrub_event(event, Some(CRASH_ID));
+        let safe = scrub_event(event, Some(DEVICE_ID));
         let user = safe.user.as_ref().unwrap();
-        assert_eq!(user.id.as_deref(), Some(CRASH_ID));
+        assert_eq!(user.id.as_deref(), Some(DEVICE_ID));
         assert_eq!(user.email, None);
         assert_eq!(user.username, None);
         assert_eq!(user.ip_address, None);
@@ -529,11 +447,11 @@ mod tests {
     }
 
     #[test]
-    fn drops_the_user_without_a_valid_crash_id() {
-        for crash_id in [
+    fn drops_the_user_without_a_valid_device_id() {
+        for device_id in [
             None,
-            Some("not-a-uuid"),
-            Some("0F6B1C3E-2A4D-4C8B-9E7F-1A2B3C4D5E6F"),
+            Some("not-a-device-id"),
+            Some("0OQkR2vXa9Lp8nRmS3wYb2Mq"),
         ] {
             let event = Event {
                 user: Some(User {
@@ -542,189 +460,120 @@ mod tests {
                 }),
                 ..Event::default()
             };
-            let safe = scrub_event(event, crash_id);
-            assert!(safe.user.is_none(), "{crash_id:?}");
+            let safe = scrub_event(event, device_id);
+            assert!(safe.user.is_none(), "{device_id:?}");
         }
     }
 
-    #[test]
-    fn creates_and_reuses_the_persisted_crash_id() {
-        let data_dir = tempfile::tempdir().unwrap();
-        let first = crash_id_from_directory(data_dir.path());
-        assert!(is_crash_id(&first));
-        assert_eq!(
-            std::fs::read_to_string(data_dir.path().join(CRASH_ID_FILENAME)).unwrap(),
-            first
-        );
-        let second = crash_id_from_directory(data_dir.path());
-        assert_eq!(first, second);
-    }
-
-    #[cfg(unix)]
-    #[test]
-    fn creates_crash_id_with_owner_only_permissions() {
-        let data_dir = tempfile::tempdir().unwrap();
-        crash_id_from_directory(data_dir.path());
-        let mode = std::fs::metadata(data_dir.path().join(CRASH_ID_FILENAME))
-            .unwrap()
-            .permissions()
-            .mode();
-        assert_eq!(mode & 0o777, 0o600);
-    }
-
-    #[test]
-    fn ignores_empty_and_relative_xdg_data_home() {
-        use std::ffi::OsStr;
-
-        let home = Some(OsStr::new("/home/tester"));
-        let fallback = Some(PathBuf::from("/home/tester/.local/share"));
-        assert_eq!(linux_data_home(Some(OsStr::new("")), home), fallback);
-        assert_eq!(
-            linux_data_home(Some(OsStr::new("relative/path")), home),
-            fallback
-        );
-        assert_eq!(
-            linux_data_home(Some(OsStr::new("/custom/data")), home),
-            Some(PathBuf::from("/custom/data"))
-        );
-    }
-
-    #[test]
-    fn regenerates_a_corrupt_crash_id_file() {
-        let data_dir = tempfile::tempdir().unwrap();
-        let file = data_dir.path().join(CRASH_ID_FILENAME);
-        for corrupt in [
-            "not-a-uuid",
-            "",
-            "0f6b1c3e-2a4d-4c8b-9e7f-1a2b3c4d5e6f\nextra",
-        ] {
-            std::fs::write(&file, corrupt).unwrap();
-            let regenerated = crash_id_from_directory(data_dir.path());
-            assert!(is_crash_id(&regenerated), "{corrupt:?}");
-            assert_ne!(regenerated, corrupt.trim());
-            assert_eq!(
-                std::fs::read_to_string(&file).unwrap(),
-                regenerated,
-                "the fresh ID must be persisted"
-            );
-        }
-        // A valid stored ID survives, including with surrounding whitespace.
-        std::fs::write(&file, "0f6b1c3e-2a4d-4c8b-9e7f-1a2b3c4d5e6f\n").unwrap();
-        let original = std::fs::read_to_string(&file).unwrap();
-        assert_eq!(
-            crash_id_from_directory(data_dir.path()),
-            "0f6b1c3e-2a4d-4c8b-9e7f-1a2b3c4d5e6f"
-        );
-        assert_eq!(std::fs::read_to_string(&file).unwrap(), original);
-    }
-
-    #[test]
-    fn repairs_non_utf8_and_oversized_crash_id_files() {
-        let data_dir = tempfile::tempdir().unwrap();
-        let file = data_dir.path().join(CRASH_ID_FILENAME);
-        let oversized = format!("0f6b1c3e-2a4d-4c8b-9e7f-1a2b3c4d5e6f{}", " ".repeat(100));
-        for corrupt in [vec![0xff, 0xfe, 0x00, 0x80], oversized.into_bytes()] {
-            std::fs::write(&file, &corrupt).unwrap();
-            let repaired = crash_id_from_directory(data_dir.path());
-            assert!(is_crash_id(&repaired));
-            assert_eq!(std::fs::read_to_string(&file).unwrap(), repaired);
-            assert_eq!(crash_id_from_directory(data_dir.path()), repaired);
-        }
-    }
-
-    #[cfg(unix)]
-    #[test]
-    fn replaces_a_fifo_without_opening_it() {
-        let data_dir = tempfile::tempdir().unwrap();
-        let file = data_dir.path().join(CRASH_ID_FILENAME);
-        assert!(
-            std::process::Command::new("mkfifo")
-                .arg(&file)
-                .status()
-                .unwrap()
-                .success()
-        );
-        // Opening the FIFO for reading would block until a writer appears.
-        let (sender, receiver) = std::sync::mpsc::channel();
-        let dir = data_dir.path().to_owned();
-        std::thread::spawn(move || sender.send(crash_id_from_directory(&dir)));
-        let id = receiver
-            .recv_timeout(Duration::from_secs(10))
-            .expect("reading the crash ID must not block on a FIFO");
-        assert!(is_crash_id(&id));
-        assert!(std::fs::symlink_metadata(&file).unwrap().is_file());
-        assert_eq!(std::fs::read_to_string(&file).unwrap(), id);
-    }
-
-    #[test]
-    fn concurrent_instances_agree_on_one_id() {
-        for corrupt in [None, Some("not-a-uuid")] {
-            let data_dir = tempfile::tempdir().unwrap();
-            if let Some(corrupt) = corrupt {
-                std::fs::write(data_dir.path().join(CRASH_ID_FILENAME), corrupt).unwrap();
+    fn create_database(file: &Path, value: Option<&str>, table: bool) {
+        let runtime = tokio::runtime::Builder::new_current_thread()
+            .enable_all()
+            .build()
+            .unwrap();
+        runtime.block_on(async {
+            let options = SqliteConnectOptions::new()
+                .filename(file)
+                .create_if_missing(true);
+            let mut connection = SqliteConnection::connect_with(&options).await.unwrap();
+            if table {
+                sqlx::query("CREATE TABLE kv (key TEXT PRIMARY KEY, value TEXT)")
+                    .execute(&mut connection)
+                    .await
+                    .unwrap();
+                if let Some(value) = value {
+                    sqlx::query("INSERT INTO kv (key, value) VALUES ('deviceId', ?)")
+                        .bind(value)
+                        .execute(&mut connection)
+                        .await
+                        .unwrap();
+                }
             }
-            let barrier = std::sync::Arc::new(std::sync::Barrier::new(8));
-            let ids: Vec<String> = (0..8)
-                .map(|_| {
-                    let dir = data_dir.path().to_owned();
-                    let barrier = barrier.clone();
-                    std::thread::spawn(move || {
-                        barrier.wait();
-                        crash_id_from_directory(&dir)
-                    })
-                })
-                .collect::<Vec<_>>()
-                .into_iter()
-                .map(|thread| thread.join().unwrap())
-                .collect();
-            assert!(is_crash_id(&ids[0]), "{corrupt:?}");
-            assert!(ids.iter().all(|id| id == &ids[0]), "{corrupt:?}: {ids:?}");
-            assert_eq!(
-                std::fs::read_to_string(data_dir.path().join(CRASH_ID_FILENAME)).unwrap(),
-                ids[0]
-            );
+        });
+    }
+
+    #[test]
+    fn reads_only_valid_json_string_device_id() {
+        let directory = tempfile::tempdir().unwrap();
+        let file = directory.path().join("app.db");
+        let valid = "7mQkR2vXa9Lp8nRmS3wYb2Mq";
+        assert_eq!(read_device_id(&file), None);
+        assert!(!file.exists());
+        create_database(&file, None, false);
+        assert_eq!(read_device_id(&file), None); // missing table
+        std::fs::remove_file(&file).unwrap();
+        create_database(&file, None, true);
+        assert_eq!(read_device_id(&file), None); // missing row
+        for value in [
+            "not json",
+            valid,
+            "42",
+            "null",
+            "\"short\"",
+            "\"0OQkR2vXa9Lp8nRmS3wYb2Mq\"",
+        ] {
+            sqlx_test_update(&file, value);
+            assert_eq!(read_device_id(&file), None, "{value}");
         }
+        sqlx_test_update(&file, &serde_json::to_string(valid).unwrap());
+        assert_eq!(read_device_id(&file).as_deref(), Some(valid));
+    }
+
+    fn sqlx_test_update(file: &Path, value: &str) {
+        let runtime = tokio::runtime::Builder::new_current_thread()
+            .enable_all()
+            .build()
+            .unwrap();
+        runtime.block_on(async {
+            let options = SqliteConnectOptions::new().filename(file);
+            let mut connection = SqliteConnection::connect_with(&options).await.unwrap();
+            sqlx::query("INSERT OR REPLACE INTO kv (key, value) VALUES ('deviceId', ?)")
+                .bind(value)
+                .execute(&mut connection)
+                .await
+                .unwrap();
+        });
     }
 
     #[test]
-    fn falls_back_when_the_lock_path_is_not_a_file() {
-        let data_dir = tempfile::tempdir().unwrap();
-        std::fs::create_dir(data_dir.path().join(CRASH_ID_LOCK_FILENAME)).unwrap();
-        let id = crash_id_from_directory(data_dir.path());
-        assert!(is_crash_id(&id));
-        assert!(!data_dir.path().join(CRASH_ID_FILENAME).exists());
+    fn reads_a_device_id_still_in_the_write_ahead_log() {
+        let directory = tempfile::tempdir().unwrap();
+        let file = directory.path().join("app.db");
+        let id = "7mQkR2vXa9Lp8nRmS3wYb2Mq";
+        create_database(&file, None, true);
+        let runtime = tokio::runtime::Builder::new_current_thread()
+            .enable_all()
+            .build()
+            .unwrap();
+        // Like the app, a WAL writer stays open, so the row is only in the log.
+        let writer = runtime.block_on(async {
+            let options = SqliteConnectOptions::new().filename(&file);
+            let mut connection = SqliteConnection::connect_with(&options).await.unwrap();
+            for sql in ["PRAGMA journal_mode=WAL", "PRAGMA wal_autocheckpoint=0"] {
+                sqlx::query(sql).execute(&mut connection).await.unwrap();
+            }
+            sqlx::query("INSERT INTO kv (key, value) VALUES ('deviceId', ?)")
+                .bind(serde_json::to_string(id).unwrap())
+                .execute(&mut connection)
+                .await
+                .unwrap();
+            connection
+        });
+        assert!(directory.path().join("app.db-wal").exists());
+        assert_eq!(read_device_id(&file).as_deref(), Some(id));
+        runtime.block_on(writer.close()).unwrap();
     }
 
+    #[cfg(target_os = "linux")]
     #[test]
-    fn falls_back_to_an_in_memory_id_when_storage_is_unwritable() {
-        let data_dir = tempfile::tempdir().unwrap();
-        // A directory in the file's place makes both read and write fail.
-        std::fs::create_dir(data_dir.path().join(CRASH_ID_FILENAME)).unwrap();
-        let id = crash_id_from_directory(data_dir.path());
-        assert!(is_crash_id(&id));
-        assert_ne!(id, crash_id_from_directory(data_dir.path()));
-    }
-
-    #[cfg(unix)]
-    #[test]
-    fn falls_back_when_the_data_directory_is_read_only() {
-        let data_dir = tempfile::tempdir().unwrap();
-        std::fs::set_permissions(data_dir.path(), std::fs::Permissions::from_mode(0o500)).unwrap();
-        let first = crash_id_from_directory(data_dir.path());
-        let second = crash_id_from_directory(data_dir.path());
-        std::fs::set_permissions(data_dir.path(), std::fs::Permissions::from_mode(0o700)).unwrap();
-        assert!(is_crash_id(&first));
-        assert_ne!(first, second);
-        assert!(!data_dir.path().join(CRASH_ID_FILENAME).exists());
-    }
-
-    #[test]
-    fn creates_missing_app_data_directories() {
-        let data_dir = tempfile::tempdir().unwrap();
-        let nested = data_dir.path().join("missing/inner");
-        let id = crash_id_from_directory(&nested);
-        assert!(is_crash_id(&id));
-        assert!(nested.join(CRASH_ID_FILENAME).is_file());
+    fn database_path_uses_config_directory() {
+        assert_eq!(
+            app_database_path(),
+            dirs::config_dir().map(|base| base.join("com.routevn.creator/app.db"))
+        );
+        assert_ne!(
+            app_database_path(),
+            dirs::data_dir().map(|base| base.join("com.routevn.creator/app.db"))
+        );
     }
 
     #[test]

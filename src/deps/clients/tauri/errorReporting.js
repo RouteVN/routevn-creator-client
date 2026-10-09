@@ -1,8 +1,8 @@
 import { createErrorReporter } from "../errorReporting.js";
 
-// Tauri injects the compiled configuration, including the per-install crash
+// Tauri injects the compiled configuration, including the device
 // ID, before any webview scripts run.
-const { dsn, release, environment, dist, crashId } =
+const { dsn, release, environment, dist, deviceId } =
   globalThis.__ROUTEVN_ERROR_REPORTING__ ?? {};
 
 export const errorReporter = createErrorReporter({
@@ -10,7 +10,7 @@ export const errorReporter = createErrorReporter({
   release,
   environment,
   dist,
-  crashId,
+  deviceId,
   runtime: "tauri",
   captureGlobal: true,
 });

@@ -135,7 +135,7 @@ replay, feedback, logs/metrics forwarding, screenshots, view hierarchy,
 attachments, browser sessions, and browser client reports are disabled by
 options or excluded features. The Rust SDK has no client-report switch; it may
 attach a loss report to a later error envelope, which the collector discards.
-Both SDKs set only the crash ID as `user.id`.
+Both SDKs omit `user` unless a valid stored device ID is available as `user.id`.
 
 `beforeSend` on each side retains the error category, capture mechanism type and
 handled flag, and bounded stack location (Rust frames also keep their

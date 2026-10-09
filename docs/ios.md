@@ -612,8 +612,8 @@ swiftc -module-cache-path /tmp/routevn-folder-swift-cache ios/routevn/routevn/Pr
 /tmp/routevn-storage-native-tests
 swiftc -module-cache-path /tmp/routevn-export-swift-cache ios/routevn/routevn/SaveFileDestinations.swift tests/ios/saveFileDestinationsNative.swift -o /tmp/routevn-save-destinations-tests
 /tmp/routevn-save-destinations-tests
-swiftc -module-cache-path /tmp/routevn-crash-id-swift-cache ios/routevn/routevn/NativeCrashIdStore.swift tests/ios/nativeCrashIdStoreNative.swift -o /tmp/routevn-crash-id-tests
-/tmp/routevn-crash-id-tests
+swiftc -module-cache-path /tmp/routevn-device-id-swift-cache ios/routevn/routevn/NativeDeviceIdReader.swift tests/ios/nativeDeviceIdReaderNative.swift -lsqlite3 -o /tmp/routevn-device-id-tests
+/tmp/routevn-device-id-tests
 ```
 
 Use a physical device for these final checks:

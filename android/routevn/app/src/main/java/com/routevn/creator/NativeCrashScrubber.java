@@ -18,7 +18,7 @@ import java.util.List;
 /**
  * Keeps a crash report to the crash type, stack locations, the debug images
  * those frames point into, app version, device model, OS version and the
- * install crash ID as user.id. Message text, other user data, paths,
+ * device ID as user.id. Message text, other user data, paths,
  * variables and other context are dropped.
  */
 final class NativeCrashScrubber {
@@ -26,9 +26,9 @@ final class NativeCrashScrubber {
 
     private NativeCrashScrubber() {}
 
-    static SentryEvent scrub(SentryEvent event, String crashId) {
+    static SentryEvent scrub(SentryEvent event, String deviceId) {
         event.setMessage(null);
-        event.setUser(keptUser(crashId));
+        event.setUser(keptUser(deviceId));
         event.setRequest(null);
         event.setBreadcrumbs(null);
         event.setServerName(null);
@@ -61,12 +61,12 @@ final class NativeCrashScrubber {
         return event;
     }
 
-    // Keep only the install crash ID as user.id; any other user data on the
+    // Keep only the device ID as user.id; any other user data on the
     // incoming event is dropped.
-    private static User keptUser(String crashId) {
-        if (!NativeCrashIdStore.isCrashId(crashId)) return null;
+    private static User keptUser(String deviceId) {
+        if (!NativeDeviceIdReader.isDeviceId(deviceId)) return null;
         User user = new User();
-        user.setId(crashId);
+        user.setId(deviceId);
         return user;
     }
 

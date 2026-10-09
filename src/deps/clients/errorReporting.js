@@ -1,3 +1,4 @@
+import { isDeviceId } from "./deviceIdentity.js";
 import {
   captureEvent,
   captureException,
@@ -108,15 +109,6 @@ const scrubStacktrace = (stacktrace) => {
 const DEBUG_ID_PATTERN =
   /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
-// Random per-install crash ID from the app shell: a lowercase UUID v4,
-// separate from the update-check device ID. The shell's reporter passes it in;
-// it is the only user field ever sent.
-const CRASH_ID_PATTERN =
-  /^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/;
-
-export const isCrashId = (value) =>
-  typeof value === "string" && CRASH_ID_PATTERN.test(value);
-
 // Keep the source map debug IDs of files in the sent stack, with the same
 // basename as their frames, so frames can be matched to the build's private
 // source maps. Other images are dropped.
@@ -193,7 +185,7 @@ export const createErrorReporter = ({
   dist,
   runtime,
   captureGlobal,
-  crashId,
+  deviceId,
 }) => {
   const sentEvents = { explicit: 0, global: 0 };
 
@@ -219,7 +211,7 @@ export const createErrorReporter = ({
       message: exceptions?.[0]?.value ?? fallbackMessage,
       exception: exceptions ? { values: exceptions } : undefined,
       debug_meta: scrubDebugMeta(event.debug_meta, exceptions),
-      user: isCrashId(crashId) ? { id: crashId } : undefined,
+      user: isDeviceId(deviceId) ? { id: deviceId } : undefined,
     };
   };
 
