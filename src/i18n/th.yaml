@@ -2019,7 +2019,7 @@ scenesPage:
 sceneEditorPage:
   errorDetailsLabel: "รายละเอียด:"
   failedOpenScene: "ไม่สามารถเปิดฉากได้"
-  failedOpenSceneComputedVariable: "ไม่สามารถคำนวณค่าของตัวแปรที่คำนวณ “{name}” ได้ สูตรอาจหารด้วยศูนย์หรือให้ค่าผิดประเภท ตรวจสอบสูตรและตัวแปรที่สูตรใช้ในหน้า “ตัวแปร”"
+  computedVariableFailed: "ไม่สามารถคำนวณค่าของตัวแปรที่คำนวณ “{name}” ได้ สูตรอาจหารด้วยศูนย์หรือให้ค่าผิดประเภท ตรวจสอบสูตรและตัวแปรที่สูตรใช้ในหน้า “ตัวแปร”"
   actionsLabel: "แอ็กชัน"
   addSectionMenuItem: "เพิ่มส่วน"
   addSectionAboveMenuItem: "เพิ่มส่วนด้านบน"

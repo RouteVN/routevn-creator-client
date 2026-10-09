@@ -57,6 +57,7 @@ import {
 } from "../../../deps/services/shared/debugLog.js";
 import { selectSceneEditorCopy } from "./sceneEditorCopy.js";
 import { withErrorDetails } from "../../errorDetails.js";
+import { getComputedVariableErrorName } from "../../computedVariableError.js";
 import {
   emitSceneEditorTiming,
   shouldMeasureSceneEditorTiming,
@@ -2386,16 +2387,30 @@ const reportCanvasRenderFailure = (deps, error) => {
   });
 };
 
+// A computed variable that cannot be calculated is named, as the full-screen
+// preview names it.
+const getCanvasRenderFailureMessage = (deps, error) => {
+  const { i18n, projectService } = deps;
+  const copy = selectSceneEditorCopy(i18n);
+  const variableName = getComputedVariableErrorName(error, () =>
+    projectService.getRepositoryState(),
+  );
+  if (variableName) {
+    return copy.computedVariableFailed.replaceAll("{name}", () => variableName);
+  }
+  return withErrorDetails(
+    copy.failedRenderCanvas ?? "Could not update the canvas.",
+    error,
+    copy.errorDetailsLabel ?? "Details:",
+  );
+};
+
 const alertCanvasRenderFailure = (deps, error) => {
   const { appService, i18n } = deps;
   const copy = selectSceneEditorCopy(i18n);
   appService.showAlertWhenIdle({
     title: copy.errorTitle ?? "Error",
-    message: withErrorDetails(
-      copy.failedRenderCanvas ?? "Could not update the canvas.",
-      error,
-      copy.errorDetailsLabel ?? "Details:",
-    ),
+    message: getCanvasRenderFailureMessage(deps, error),
   });
 };
 

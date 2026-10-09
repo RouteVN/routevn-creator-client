@@ -2019,7 +2019,7 @@ scenesPage:
 sceneEditorPage:
   errorDetailsLabel: "Details:"
   failedOpenScene: "Could not open the scene."
-  failedOpenSceneComputedVariable: "Could not calculate computed variable “{name}”. Its formula may have divided by zero or produced the wrong type of value. Check the formula and the variables it uses in Variables."
+  computedVariableFailed: "Could not calculate computed variable “{name}”. Its formula may have divided by zero or produced the wrong type of value. Check the formula and the variables it uses in Variables."
   actionsLabel: "Actions"
   addSectionMenuItem: "Add section"
   addSectionAboveMenuItem: "Add section above"

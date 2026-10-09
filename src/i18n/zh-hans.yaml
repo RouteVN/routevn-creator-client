@@ -2019,7 +2019,7 @@ scenesPage:
 sceneEditorPage:
   errorDetailsLabel: "详细信息："
   failedOpenScene: "无法打开场景。"
-  failedOpenSceneComputedVariable: "无法算出计算变量“{name}”的值。其公式可能除以了零，或得出了类型不符的值。请在“变量”中检查该公式及其使用的变量。"
+  computedVariableFailed: "无法算出计算变量“{name}”的值。其公式可能除以了零，或得出了类型不符的值。请在“变量”中检查该公式及其使用的变量。"
   actionsLabel: "动作"
   addSectionMenuItem: "添加段落"
   addSectionAboveMenuItem: "在上方添加段落"

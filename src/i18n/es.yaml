@@ -2019,7 +2019,7 @@ scenesPage:
 sceneEditorPage:
   errorDetailsLabel: "Detalles:"
   failedOpenScene: "No se pudo abrir la escena."
-  failedOpenSceneComputedVariable: "No se pudo obtener el valor de la variable calculada “{name}”. Es posible que su fórmula haya dividido entre cero o haya producido un tipo de valor incorrecto. Revisa en Variables la fórmula y las variables que usa."
+  computedVariableFailed: "No se pudo obtener el valor de la variable calculada “{name}”. Es posible que su fórmula haya dividido entre cero o haya producido un tipo de valor incorrecto. Revisa en Variables la fórmula y las variables que usa."
   actionsLabel: "Acciones"
   addSectionMenuItem: "Añadir sección"
   addSectionAboveMenuItem: "Añadir sección arriba"

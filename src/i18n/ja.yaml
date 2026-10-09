@@ -2019,7 +2019,7 @@ scenesPage:
 sceneEditorPage:
   errorDetailsLabel: "詳細："
   failedOpenScene: "シーンを開けませんでした。"
-  failedOpenSceneComputedVariable: "計算変数「{name}」の値を計算できませんでした。計算式でゼロ除算が起きたか、型の異なる値が返された可能性があります。「変数」で計算式と、計算式が使う変数を確認してください。"
+  computedVariableFailed: "計算変数「{name}」の値を計算できませんでした。計算式でゼロ除算が起きたか、型の異なる値が返された可能性があります。「変数」で計算式と、計算式が使う変数を確認してください。"
   actionsLabel: "アクション"
   addSectionMenuItem: "セクションを追加"
   addSectionAboveMenuItem: "上にセクションを追加"
