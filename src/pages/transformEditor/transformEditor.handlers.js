@@ -379,7 +379,9 @@ export const handleBeforeMount = (deps) => {
         throw new Error("Failed to save transform before navigation.");
       }
       const transformId = store.selectTransformId();
-      if (transformId && reason !== "backup") {
+      // Only leaving the page draws its thumbnail. A backup, the app going to
+      // the background, or quitting only saves.
+      if (transformId && !reason) {
         void projectService.requestTransformThumbnails({
           transformIds: [transformId],
         });

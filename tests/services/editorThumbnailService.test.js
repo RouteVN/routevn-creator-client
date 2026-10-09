@@ -86,6 +86,7 @@ const createService = ({ repositoryState = createRepositoryState() } = {}) => {
       return { valid: true };
     }),
     renderThumbnail: vi.fn(async () => thumbnailImage),
+    releaseRenderer: vi.fn(async () => {}),
     waitUntilIdle: vi.fn(async () => {}),
   };
   return {
@@ -345,5 +346,38 @@ describe("editor thumbnail service", () => {
     expect(
       deps.updateTransform.mock.calls.map(([call]) => call.transformId),
     ).toEqual(["transform-1", "transform-2"]);
+  });
+
+  it("frees its renderer once the queue is empty, and only after it drew", async () => {
+    const { deps, service } = createService();
+
+    await service.requestTransformThumbnails();
+
+    expect(deps.renderThumbnail).toHaveBeenCalledTimes(2);
+    expect(deps.releaseRenderer).toHaveBeenCalledOnce();
+    expect(deps.releaseRenderer.mock.invocationCallOrder[0]).toBeGreaterThan(
+      deps.renderThumbnail.mock.invocationCallOrder[1],
+    );
+
+    // Nothing out of date, so nothing drawn and nothing to free.
+    await service.requestTransformThumbnails();
+    expect(deps.renderThumbnail).toHaveBeenCalledTimes(2);
+    expect(deps.releaseRenderer).toHaveBeenCalledOnce();
+  });
+
+  it("frees its renderer after a drawing failed too", async () => {
+    const { deps, service } = createService();
+    deps.renderThumbnail.mockRejectedValue(new Error("render failed"));
+    const warn = vi.spyOn(console, "warn").mockImplementation(() => {});
+
+    try {
+      await service.requestTransformThumbnails({
+        transformIds: ["transform-1"],
+      });
+    } finally {
+      warn.mockRestore();
+    }
+
+    expect(deps.releaseRenderer).toHaveBeenCalledOnce();
   });
 });

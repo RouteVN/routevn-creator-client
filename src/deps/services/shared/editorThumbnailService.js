@@ -10,6 +10,11 @@ const renderDefaultThumbnail = async (options) => {
   return client.renderThumbnailImage(options);
 };
 
+const releaseDefaultRenderer = async () => {
+  const client = await import("../../clients/web/editorThumbnails.js");
+  await client.releaseThumbnailRenderer();
+};
+
 // Thumbnails draw between the user's own work.
 const waitForIdle = () =>
   new Promise((resolve) => {
@@ -31,10 +36,12 @@ export const createEditorThumbnailService = ({
   storeFileForProject,
   updateTransform,
   renderThumbnail = renderDefaultThumbnail,
+  releaseRenderer = releaseDefaultRenderer,
   waitUntilIdle = waitForIdle,
 }) => {
   const pendingJobs = new Map();
   let running;
+  let rendererInUse = false;
 
   // A job's work counts only while its project is the one open.
   const isOpen = (projectId) => getEnsuredProjectId() === projectId;
@@ -105,6 +112,7 @@ export const createEditorThumbnailService = ({
       return;
     }
 
+    rendererInUse = true;
     const thumbnailImage = await drawThumbnail(stale.source);
     if (!isOpen(projectId)) {
       return;
@@ -134,8 +142,9 @@ export const createEditorThumbnailService = ({
     }
   };
 
-  // Jobs run one at a time. A failure only logs, since no one is waiting on a
-  // thumbnail; the next request tries again.
+  // Jobs run one at a time, on one renderer, which is freed once there are
+  // none left. A failure only logs, since no one is waiting on a thumbnail;
+  // the next request tries again.
   const runPendingJobs = async () => {
     while (pendingJobs.size > 0) {
       const [key, job] = pendingJobs.entries().next().value;
@@ -145,6 +154,16 @@ export const createEditorThumbnailService = ({
       } catch (error) {
         console.warn("[editorThumbnails] Failed to update a thumbnail", {
           transformId: job.transformId,
+          error,
+        });
+      }
+    }
+    if (rendererInUse) {
+      rendererInUse = false;
+      try {
+        await releaseRenderer();
+      } catch (error) {
+        console.warn("[editorThumbnails] Failed to free the renderer", {
           error,
         });
       }

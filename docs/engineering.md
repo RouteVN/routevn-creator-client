@@ -1398,23 +1398,32 @@ and sizes, so replacing an image's file changes the hash, while a name or tag
 change does not. Checking a hash is cheap and does not wait; only when it
 differs from the transform's `thumbnailSourceHash` (creator-model 1.16.2) does
 the job wait for the app to be idle, read the transform again, and draw: it
-loads the preview images with `verifyImageIntegrity`, renders on a renderer of
-its own off screen (`src/deps/clients/web/editorThumbnails.js`), freed after
-each job, scales the frame's pixels straight into the thumbnail (route-graphics
-`extractCanvas`, from 1.47.0) without encoding a full-size PNG, and saves the
-JPEG thumbnail with its hash in one `transform.update`. That renderer loads
-its images under keys of its own: textures are cached by key for every
-renderer, and a graphics service unloads the keys it loaded when it is freed,
-so sharing the page renderer's file id keys would take images away from an
-open editor, or let the editor's teardown take them from the thumbnail. Bump
+loads the preview images with `verifyImageIntegrity`, renders off screen
+(`src/deps/clients/web/editorThumbnails.js`), scales the frame's pixels
+straight into the thumbnail (route-graphics `extractCanvas`, from 1.47.0)
+without encoding a full-size PNG, and saves the JPEG thumbnail with its hash
+in one `transform.update`. Jobs share one off-screen renderer, freed once the
+queue is empty (`releaseThumbnailRenderer`), and made again for another size,
+after six drawings, which bounds what its loaded files hold, and after a
+failed drawing. A renderer per job would not do: WebKit counts every WebGL
+context a page made against its limit of 16 until it is garbage collected,
+even once freed, and past the limit loses the oldest, which is an open
+editor's canvas when thumbnails are drawn while it is open. Each drawing
+clears the last first. The renderer loads its images under keys of its own:
+textures are cached by key for every renderer, and a graphics service unloads
+the keys it loaded when it is freed, so sharing the page renderer's file id
+keys would take images away from an open editor, or let the editor's
+teardown take them from the thumbnail. Bump
 `TRANSFORM_THUMBNAIL_VERSION` when the preview starts drawing the same saved
 transform differently, so saved thumbnails are drawn again. Thumbnails no
 longer come with a full-size `previewFileId`; one saved earlier stays, and
 asset package import shows the thumbnail before it.
 
 Leaving the transform editor saves waiting changes and then requests its
-thumbnail without waiting for it; a backup's
-`prepareNavigation({ reason: "backup" })` only saves. The transforms page
+thumbnail without waiting for it. A `prepareNavigation` with a `reason` only
+saves, since the page stays open: a backup (`"backup"`), the app going to the
+background (`"background"`), or quitting (`"quit"`); a navigation passes no
+reason. The transforms page
 requests every thumbnail when it opens and a new transform's after Add, which
 also repairs thumbnails left out of date when the app closed or crashed before
 an editor was left; until one is drawn, the detail panel says there is no
