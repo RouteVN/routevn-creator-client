@@ -1,9 +1,9 @@
 import { concatMap, debounceTime, filter, from, tap } from "rxjs";
-import { withErrorDetails } from "../../internal/errorDetails.js";
 import {
   applyTransformPositionIntent,
   createTransformKeyboardIntent,
 } from "../../internal/transformKeyboard.js";
+import { createTransformPreviewRenderState } from "../../internal/transformPreview.js";
 import {
   createTransformEditorPayload,
   getTransformEditorBackPath,
@@ -11,12 +11,7 @@ import {
 } from "../../internal/transformEditorRoute.js";
 import { showAssetLoadFailures } from "../../internal/ui/assetLoadFeedback.js";
 import { resolveEditHistoryShortcut } from "../../internal/ui/editHistory.js";
-import {
-  captureEditorPreviewImages,
-  storeEditorPreviewFiles,
-} from "../../internal/ui/editorPreviewCapture.js";
 import { createFileExplorerKeyboardScopeHandlers } from "../../internal/ui/fileExplorerKeyboardScope.js";
-import { formatI18nCopy } from "../../internal/ui/i18nCopy.js";
 import { mountMobileResourceWindowLayout } from "../../internal/ui/resourcePages/mobileResourcePage.js";
 import { runResourcePageMutation } from "../../internal/ui/resourcePages/resourcePageErrors.js";
 import { enqueueSceneEditorPersistence } from "../../internal/ui/sceneEditor/persistenceQueue.js";
@@ -29,7 +24,6 @@ import {
 import {
   createTransformEditorCanvasState,
   createTransformFromInspectorValues,
-  createTransformPreviewRenderState,
   roundTransformScale,
 } from "./support/transformEditorCanvas.js";
 import { selectTransformEditorPageCopy } from "./support/transformEditorPageCopy.js";
@@ -66,12 +60,11 @@ const navigateBack = (appService) => {
 
 // Loads the preview images and character sprites the canvas has not loaded,
 // each on its own, and returns the ones that failed. A failed image stays out
-// of the canvas, and renders do not read it again; `retryFailed` tries it
-// again, as Save Preview does.
-const loadPreviewImageAssets = async (deps, { retryFailed = false } = {}) => {
+// of the canvas, and is not read again while the page is open.
+const loadPreviewImageAssets = async (deps) => {
   const { graphicsService, projectService, store } = deps;
   const loadedFileIds = store.selectLoadedAssetFileIds();
-  const failedFileIds = retryFailed ? [] : store.selectFailedAssetFileIds();
+  const failedFileIds = store.selectFailedAssetFileIds();
   const images = new Map();
   for (const image of [
     store.selectPreviewBackgroundImage(),
@@ -142,9 +135,8 @@ const selectCanvasUnitsPerCssPixel = (deps) => {
     : 1;
 };
 
-// What Save Preview saves: the canvas as Edit shows it, without the
-// selection outline.
-const createSavedPreviewRenderState = (store) =>
+// The canvas as Edit shows it, without the selection outline.
+const createPreviewRenderState = (store) =>
   createTransformPreviewRenderState({
     projectResolution: store.selectProjectResolution(),
     transform: store.selectTransform(),
@@ -154,7 +146,7 @@ const createSavedPreviewRenderState = (store) =>
   });
 
 // Edit draws the transform with its selection outline; Preview draws the
-// same canvas without it, which is what Save Preview saves. Every render
+// same canvas without it, which is what the thumbnail shows. Every render
 // reads the store, so a later render shows the latest values. A preview
 // image that cannot load is warned about once and left out, and the canvas
 // stays editable.
@@ -167,7 +159,7 @@ const renderTransformCanvas = async (deps) => {
   try {
     warnPreviewImageFailures(deps, await loadPreviewImageAssets(deps));
     if (store.selectRightPanelMode() === "preview") {
-      graphicsService.render(createSavedPreviewRenderState(store));
+      graphicsService.render(createPreviewRenderState(store));
       return;
     }
 
@@ -189,30 +181,37 @@ const renderTransformCanvas = async (deps) => {
   }
 };
 
-// Saves the transform's values when they differ from what is saved. Saves
-// run one at a time, so a save on leaving waits for a running autosave and
-// then saves what it missed.
-const saveTransformValues = (deps) => {
+// Saves the transform's values and preview images, whichever differ from
+// what is saved. Saves run one at a time, so a save on leaving waits for a
+// running autosave and then saves what it missed.
+const saveTransformChanges = (deps) => {
   const { appService, projectService, store } = deps;
   return enqueueSceneEditorPersistence({
     owner: projectService,
     task: async () => {
-      if (!store.selectHasUnsavedValues()) {
+      const changes = store.selectUnsavedChanges();
+      if (!changes.transform && !changes.preview) {
         return true;
       }
 
-      const transform = store.selectTransform();
+      const data = {};
+      if (changes.transform) {
+        Object.assign(data, changes.transform);
+      }
+      if (changes.preview) {
+        data.preview = changes.preview;
+      }
       const updateAttempt = await runResourcePageMutation({
         appService,
         fallbackMessage: selectCopy(deps).failedSaveTransform,
         action: () =>
           projectService.updateTransform({
             transformId: store.selectTransformId(),
-            data: transform,
+            data,
           }),
       });
       if (updateAttempt.ok) {
-        store.markValuesSaved({ transform });
+        store.markChangesSaved(changes);
       }
       return updateAttempt.ok;
     },
@@ -312,7 +311,7 @@ const mountSubscriptions = (deps) => {
       .pipe(
         filter(({ action }) => action === AUTOSAVE_ACTION),
         debounceTime(AUTOSAVE_DEBOUNCE_MS),
-        concatMap(() => from(saveTransformValues(deps))),
+        concatMap(() => from(saveTransformChanges(deps))),
       )
       .subscribe(),
     subject
@@ -343,6 +342,7 @@ export const handleBeforeMount = (deps) => {
     appService,
     browserEventsClient,
     graphicsService,
+    projectService,
     render,
     store,
     uiConfig,
@@ -369,12 +369,20 @@ export const handleBeforeMount = (deps) => {
     options: { capture: true },
     listener: (event) => handleWindowKeyDown(deps, { _event: event }),
   });
-  // Unsaved preview settings are left behind, as in the layout editor.
+  // Leaving saves waiting edits, then has the thumbnail brought up to date
+  // in the background, so leaving waits only for the save. A backup keeps
+  // the page open, so it only saves.
   const unregisterBeforeNavigation = appService.registerBeforeNavigation(
-    async () => {
-      const saved = await saveTransformValues(deps);
+    async ({ reason } = {}) => {
+      const saved = await saveTransformChanges(deps);
       if (!saved) {
         throw new Error("Failed to save transform before navigation.");
+      }
+      const transformId = store.selectTransformId();
+      if (transformId && reason !== "backup") {
+        void projectService.requestTransformThumbnails({
+          transformIds: [transformId],
+        });
       }
     },
   );
@@ -388,7 +396,7 @@ export const handleBeforeMount = (deps) => {
     // The graphics service is shared, and the next page can start its
     // renderer while the save below runs, so this page's goes first.
     void graphicsService.destroy();
-    const saved = await saveTransformValues(deps);
+    const saved = await saveTransformChanges(deps);
     if (!saved) {
       throw new Error("Failed to save transform during cleanup.");
     }
@@ -493,7 +501,7 @@ export const handleWindowKeyDown = async (deps, payload) => {
 
 export const handleBackClick = async (deps) => {
   const { appService } = deps;
-  const saved = await saveTransformValues(deps);
+  const saved = await saveTransformChanges(deps);
   if (saved) {
     navigateBack(appService);
   }
@@ -505,102 +513,6 @@ export const handleRightPanelModeChange = async (deps, payload) => {
   store.setRightPanelMode({ mode: id });
   render();
   await renderTransformCanvas(deps);
-};
-
-const showSavePreviewFailure = (deps, message, error) => {
-  const { appService, i18n } = deps;
-  console.error("[transformEditor] Failed to save the preview", error);
-  appService.showAlert({
-    title: selectCopy(deps).errorTitle,
-    message: withErrorDetails(message, error, i18n.appPage.errorDetailsLabel),
-  });
-};
-
-const saveTransformPreview = async (deps) => {
-  const { appService, graphicsService, projectService, refs, store } = deps;
-  const copy = selectCopy(deps);
-  if (!(await saveTransformValues(deps))) {
-    return;
-  }
-
-  // A preview saves the images picked for it, so one that cannot load stops
-  // the save instead of saving the gray screen or light gray square in its
-  // place.
-  const [failure] = await loadPreviewImageAssets(deps, { retryFailed: true });
-  if (failure) {
-    await renderTransformCanvas(deps);
-    showSavePreviewFailure(
-      deps,
-      formatI18nCopy(copy.failedLoadPreviewImage, {
-        imageName: failure.imageName,
-      }),
-      failure.error,
-    );
-    return;
-  }
-
-  let previewImages;
-  try {
-    previewImages = await captureEditorPreviewImages({
-      graphicsService,
-      canvas: refs.canvas,
-      renderState: createSavedPreviewRenderState(store),
-    });
-  } catch (error) {
-    await renderTransformCanvas(deps);
-    showSavePreviewFailure(deps, copy.failedCapturePreview, error);
-    return;
-  }
-
-  let previewFiles;
-  try {
-    previewFiles = await storeEditorPreviewFiles({
-      projectService,
-      ...previewImages,
-    });
-  } catch (error) {
-    await renderTransformCanvas(deps);
-    showSavePreviewFailure(deps, copy.failedSavePreview, error);
-    return;
-  }
-
-  const updateAttempt = await runResourcePageMutation({
-    appService,
-    fallbackMessage: copy.failedSavePreview,
-    action: () =>
-      projectService.updateTransform({
-        transformId: store.selectTransformId(),
-        data: {
-          thumbnailFileId: previewFiles.thumbnailFileId,
-          previewFileId: previewFiles.previewFileId,
-          preview: store.selectPreviewData(),
-        },
-        fileRecords: previewFiles.fileRecords,
-      }),
-  });
-  await renderTransformCanvas(deps);
-  if (updateAttempt.ok) {
-    appService.showToast({ message: copy.transformPreviewSaved });
-  }
-};
-
-// Saves the preview images and a new preview and thumbnail image of the
-// transform, drawn as Preview shows it. The transform's values save first.
-// The button is disabled while it saves, so a double click saves once.
-export const handleSavePreviewClick = async (deps) => {
-  const { render, store } = deps;
-  if (store.selectIsSavingPreview()) {
-    return;
-  }
-
-  store.startSavingPreview();
-  render();
-  try {
-    await saveTransformPreview(deps);
-  } finally {
-    store.finishSavingPreview();
-    render();
-  }
 };
 
 // rvn-zoom-viewport keeps the point in view in place when the zoom changes.
@@ -669,6 +581,15 @@ export const handleInspectorPreviewCancel = async (deps) => {
   await renderTransformCanvas(deps);
 };
 
+// A picked or removed preview image saves on its own, as an edit does, but
+// is not part of the undo history.
+const commitPreviewChange = async (deps) => {
+  const { render } = deps;
+  queueTransformAutosave(deps);
+  render();
+  await renderTransformCanvas(deps);
+};
+
 // The target can be an image or a character sprite, so its card first asks
 // which; the background is an image.
 export const handlePreviewImageClick = (deps, payload) => {
@@ -729,7 +650,10 @@ export const handlePreviewImageMenuItemClick = async (deps, payload) => {
   store.closePreviewImageMenu();
   if (item.value === "remove") {
     store.clearPreviewImage({ slot });
-  } else if (item.value === "image") {
+    await commitPreviewChange(deps);
+    return;
+  }
+  if (item.value === "image") {
     store.openImageSelectorDialog({ slot });
   } else if (item.value === "character-sprite") {
     store.openCharacterSpriteDialog();
@@ -761,10 +685,9 @@ export const handleImageSelectorDialogClose = async (deps) => {
 };
 
 export const handleImageSelectorConfirmClick = async (deps) => {
-  const { render, store } = deps;
+  const { store } = deps;
   store.commitImageSelectorSelection();
-  render();
-  await renderTransformCanvas(deps);
+  await commitPreviewChange(deps);
 };
 
 export const handleCharacterSpriteSelectionChange = async (deps, payload) => {
@@ -783,10 +706,9 @@ export const handleCharacterSpriteDialogClose = async (deps) => {
 };
 
 export const handleCharacterSpriteConfirmClick = async (deps) => {
-  const { render, store } = deps;
+  const { store } = deps;
   store.commitCharacterSpriteSelection();
-  render();
-  await renderTransformCanvas(deps);
+  await commitPreviewChange(deps);
 };
 
 export const handleImageSelectorFileExplorerItemClick = (deps, payload) => {

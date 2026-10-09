@@ -13,6 +13,11 @@ import {
 } from "../../internal/projectResolution.js";
 import { buildCharacterSpritePreviewLayers } from "../../internal/characterSpritePreview.js";
 import { toFlatItems } from "../../internal/project/tree.js";
+import {
+  getTransformPreviewImage,
+  getTransformTargetCharacterSprites,
+} from "../../internal/transformPreview.js";
+import { normalizeTransformValues } from "../../internal/transformValues.js";
 import { selectEditHistoryCopy } from "../../internal/ui/editHistory.js";
 import {
   buildEditorCanvasLayout,
@@ -27,14 +32,11 @@ import {
   isTouchUiConfig,
   setMobileResourcePageWindowMetricsState,
 } from "../../internal/ui/resourcePages/mobileResourcePage.js";
-import {
-  normalizeTransformValues,
-  toTransformInspectorValues,
-} from "./support/transformEditorCanvas.js";
+import { toTransformInspectorValues } from "./support/transformEditorCanvas.js";
 import { selectTransformEditorPageCopy } from "./support/transformEditorPageCopy.js";
 
 // As in the layout editor, the right panel shows the transform's values
-// (Edit) or the preview settings and Save Preview (Preview).
+// (Edit) or the preview settings (Preview).
 const RIGHT_PANEL_MODES = new Set(["edit", "preview"]);
 
 const PREVIEW_IMAGE_SLOTS = Object.freeze([
@@ -67,6 +69,32 @@ const createPreviewSlots = (preview) => ({
   target: createPreviewVisual(preview?.target),
 });
 
+// The saved form of the preview settings.
+const createPreviewData = (previewSlots) => {
+  const preview = {};
+  for (const { key } of PREVIEW_IMAGE_SLOTS) {
+    const visual = createPreviewVisual(previewSlots[key]);
+    if (visual) {
+      preview[key] = visual;
+    }
+  }
+  return preview;
+};
+
+// The preview slots as picked. A picker shows its pick on the canvas at
+// once, but its slot keeps what it showed before until OK.
+const getCommittedPreviewSlots = (state) => {
+  const slots = { ...state.previewSlots };
+  if (state.imageSelectorDialog.open) {
+    slots[state.imageSelectorDialog.slot] =
+      state.imageSelectorDialog.originalVisual;
+  }
+  if (state.characterSpriteDialog.open) {
+    slots.target = state.characterSpriteDialog.originalTarget;
+  }
+  return slots;
+};
+
 const createImageSelectorDialog = () => ({
   open: false,
   slot: undefined,
@@ -97,25 +125,17 @@ const createFullImagePreview = () => ({
 const isPreviewImageSlot = (slot) =>
   PREVIEW_IMAGE_SLOTS.some((previewSlot) => previewSlot.key === slot);
 
-const getImageItemById = (imagesData, imageId) => {
-  if (!imageId) {
-    return undefined;
-  }
-
-  const item = imagesData.items[imageId];
-  return item?.type === "image" ? item : undefined;
-};
-
 export const createInitialState = () => ({
   isTouchMode: false,
   appWindowMetrics: { width: 0, height: 0 },
   transformId: undefined,
   transformName: "",
   transform: normalizeTransformValues(),
-  // The values as last saved; edits save on their own, a moment after.
+  // The values and preview settings as last saved; edits to either save on
+  // their own, a moment after.
   savedTransform: undefined,
-  // Preview settings save only with Save Preview.
   previewSlots: createPreviewSlots(),
+  savedPreview: undefined,
   rightPanelMode: "edit",
   // Undo and redo for edits made since the page opened.
   editHistory: createEditHistory(),
@@ -132,8 +152,6 @@ export const createInitialState = () => ({
   // Preview image files that failed to load; the canvas leaves them out.
   failedAssetFileIds: [],
   warnedAssetFileIds: [],
-  // Save Preview runs once at a time.
-  isSavingPreview: false,
   canvasZoom: 1,
   imageSelectorDialog: createImageSelectorDialog(),
   characterSpriteDialog: createCharacterSpriteDialog(),
@@ -158,6 +176,7 @@ export const loadTransform = (
   state.transform = normalizeTransformValues(item);
   state.savedTransform = state.transform;
   state.previewSlots = createPreviewSlots(item.preview);
+  state.savedPreview = createPreviewData(state.previewSlots);
   state.editHistory = createEditHistory();
   state.editHistoryBaseline = state.transform;
   state.inspectorPreviewTransform = undefined;
@@ -192,26 +211,33 @@ export const setRightPanelMode = ({ state }, { mode } = {}) => {
 
 export const selectProjectResolution = ({ state }) => state.projectResolution;
 
-export const selectHasUnsavedValues = ({ state }) =>
-  Boolean(state.transformId) &&
-  !areEditHistoryValuesEqual(state.transform, state.savedTransform);
+// The transform's values and its preview settings, each when it differs from
+// what is saved.
+export const selectUnsavedChanges = ({ state }) => {
+  const changes = {};
+  if (!state.transformId) {
+    return changes;
+  }
 
-// Takes the values that were saved, since edits made while the save ran are
-// still unsaved.
-export const markValuesSaved = ({ state }, { transform } = {}) => {
-  state.savedTransform = transform;
+  if (!areEditHistoryValuesEqual(state.transform, state.savedTransform)) {
+    changes.transform = state.transform;
+  }
+  const preview = createPreviewData(getCommittedPreviewSlots(state));
+  if (!areEditHistoryValuesEqual(preview, state.savedPreview)) {
+    changes.preview = preview;
+  }
+  return changes;
 };
 
-// The saved form of the preview settings.
-export const selectPreviewData = ({ state }) => {
-  const preview = {};
-  for (const { key } of PREVIEW_IMAGE_SLOTS) {
-    const visual = createPreviewVisual(state.previewSlots[key]);
-    if (visual) {
-      preview[key] = visual;
-    }
+// Takes what was saved, since edits made while the save ran are still
+// unsaved.
+export const markChangesSaved = ({ state }, { transform, preview } = {}) => {
+  if (transform) {
+    state.savedTransform = transform;
   }
-  return preview;
+  if (preview) {
+    state.savedPreview = preview;
+  }
 };
 
 export const setTransform = ({ state }, { transform } = {}) => {
@@ -284,40 +310,32 @@ export const selectSelectedElementMetrics = ({ state }) =>
   state.selectedElementMetrics;
 
 export const selectPreviewBackgroundImage = ({ state }) =>
-  getImageItemById(state.imagesData, state.previewSlots.background?.imageId);
+  getTransformPreviewImage(
+    state.imagesData,
+    state.previewSlots.background?.imageId,
+  );
 
 export const selectPreviewTargetImage = ({ state }) =>
-  getImageItemById(state.imagesData, state.previewSlots.target?.imageId);
+  getTransformPreviewImage(
+    state.imagesData,
+    state.previewSlots.target?.imageId,
+  );
 
 const getCharacterItemById = (charactersData, characterId) => {
   const item = charactersData.items[characterId];
   return item?.type === "character" ? item : undefined;
 };
 
-// The target character's sprites, in drawing order, the first at the bottom.
-// A sprite that no longer exists is left out.
-const getTargetCharacterSprites = (state) => {
-  const target = state.previewSlots.target;
-  const character = getCharacterItemById(
-    state.charactersData,
-    target?.characterId,
-  );
-  if (!character) {
-    return [];
-  }
-
-  return target.sprites
-    .map((sprite) => character.sprites?.items?.[sprite.resourceId])
-    .filter((sprite) => sprite?.type === "image" && sprite.fileId);
-};
-
 export const selectPreviewTargetCharacterSprites = ({ state }) =>
-  getTargetCharacterSprites(state);
+  getTransformTargetCharacterSprites(
+    state.charactersData,
+    state.previewSlots.target,
+  );
 
 // The preview images the canvas draws. One whose file failed to load is left
 // out, so the canvas shows the gray screen or the light gray square instead.
 const selectAvailableImage = (state, imageId) => {
-  const image = getImageItemById(state.imagesData, imageId);
+  const image = getTransformPreviewImage(state.imagesData, imageId);
   return image && !state.failedAssetFileIds.includes(image.fileId)
     ? image
     : undefined;
@@ -331,9 +349,10 @@ export const selectCanvasTargetImage = ({ state }) =>
 
 // A sprite that failed to load is left out, and the rest still draw.
 export const selectCanvasTargetCharacterSprites = ({ state }) =>
-  getTargetCharacterSprites(state).filter(
-    (sprite) => !state.failedAssetFileIds.includes(sprite.fileId),
-  );
+  getTransformTargetCharacterSprites(
+    state.charactersData,
+    state.previewSlots.target,
+  ).filter((sprite) => !state.failedAssetFileIds.includes(sprite.fileId));
 
 export const selectLoadedAssetFileIds = ({ state }) => state.loadedAssetFileIds;
 
@@ -360,16 +379,6 @@ export const markAssetWarningsShown = ({ state }, { fileIds } = {}) => {
   state.warnedAssetFileIds = [
     ...new Set([...state.warnedAssetFileIds, ...fileIds]),
   ];
-};
-
-export const selectIsSavingPreview = ({ state }) => state.isSavingPreview;
-
-export const startSavingPreview = ({ state }) => {
-  state.isSavingPreview = true;
-};
-
-export const finishSavingPreview = ({ state }) => {
-  state.isSavingPreview = false;
 };
 
 export const zoomCanvasIn = ({ state }) => {
@@ -490,7 +499,7 @@ export const clearPreviewImage = ({ state }, { slot } = {}) => {
 };
 
 export const showFullImagePreview = ({ state }, { imageId } = {}) => {
-  const imageItem = getImageItemById(state.imagesData, imageId);
+  const imageItem = getTransformPreviewImage(state.imagesData, imageId);
   state.fullImagePreview.visible = true;
   state.fullImagePreview.fileId =
     imageItem?.thumbnailFileId ?? imageItem?.fileId;
@@ -516,7 +525,7 @@ const buildPreviewImageCard = (state, visual) => {
     };
   }
 
-  const item = getImageItemById(state.imagesData, visual?.imageId);
+  const item = getTransformPreviewImage(state.imagesData, visual?.imageId);
   if (!item) {
     return undefined;
   }
@@ -566,9 +575,6 @@ export const selectViewData = ({ state, i18n }) => {
       state.rightPanelMode === "edit" ? "" : "display: none;",
     rightPanelPreviewStyle:
       state.rightPanelMode === "preview" ? "" : "display: none;",
-    showSavePreviewButton: state.rightPanelMode === "preview",
-    savePreviewDisabled: state.isSavingPreview,
-    savePreviewButton: copy.savePreviewButton,
     previewImagesTitle: copy.previewImagesTitle,
     projectResolution: state.projectResolution,
     selectedElementMetrics: state.selectedElementMetrics,

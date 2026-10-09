@@ -1,6 +1,6 @@
 import { produce } from "immer";
 import { Subject } from "rxjs";
-import { beforeEach, describe, expect, it, vi } from "vitest";
+import { describe, expect, it, vi } from "vitest";
 import * as transformEditorStore from "../../src/pages/transformEditor/transformEditor.store.js";
 import {
   handleAfterMount,
@@ -21,21 +21,9 @@ import {
   handlePreviewImageMenuItemClick,
   handleRedoButtonClick,
   handleRightPanelModeChange,
-  handleSavePreviewClick,
   handleUndoButtonClick,
 } from "../../src/pages/transformEditor/transformEditor.handlers.js";
-import { captureEditorPreviewImages } from "../../src/internal/ui/editorPreviewCapture.js";
 import { EN_I18N } from "../support/i18n.js";
-
-// The canvas capture needs a renderer; storing the captured images runs as
-// it is.
-vi.mock(
-  "../../src/internal/ui/editorPreviewCapture.js",
-  async (importOriginal) => ({
-    ...(await importOriginal()),
-    captureEditorPreviewImages: vi.fn(),
-  }),
-);
 
 // Edits save on their own 300ms after the last one.
 const AUTOSAVE_WAIT_MS = 400;
@@ -45,10 +33,7 @@ const slotEvent = (slot) => ({
   _event: { currentTarget: { dataset: { slot } } },
 });
 
-const savedTransform = {
-  id: "transform-1",
-  type: "transform",
-  name: "Transform One",
+const transformValues = {
   x: 960,
   y: 540,
   scaleX: 1,
@@ -56,6 +41,13 @@ const savedTransform = {
   anchorX: 0.5,
   anchorY: 0.5,
   rotation: 0,
+};
+
+const savedTransform = {
+  id: "transform-1",
+  type: "transform",
+  name: "Transform One",
+  ...transformValues,
   thumbnailFileId: "thumb-1",
   previewFileId: "preview-1",
 };
@@ -166,7 +158,6 @@ const createPage = async ({ item = savedTransform, uiConfig = {} } = {}) => {
   const windowListeners = {};
   const windowMetricsListeners = new Set();
   let beforeNavigation;
-  let storedFileCount = 0;
   const repositoryState = {
     project: { resolution: { width: 1920, height: 1080 } },
     images: imagesData,
@@ -230,13 +221,7 @@ const createPage = async ({ item = savedTransform, uiConfig = {} } = {}) => {
         type: "image/png",
       })),
       updateTransform: vi.fn(async () => ({ valid: true })),
-      storeFile: vi.fn(async () => {
-        storedFileCount += 1;
-        return {
-          fileId: `stored-${storedFileCount}`,
-          fileRecords: [{ id: `record-${storedFileCount}` }],
-        };
-      }),
+      requestTransformThumbnails: vi.fn(async () => {}),
     },
   };
   const cleanup = handleBeforeMount(deps);
@@ -291,7 +276,7 @@ const createPage = async ({ item = savedTransform, uiConfig = {} } = {}) => {
     press,
     drag,
     flush,
-    beforeNavigation: () => beforeNavigation(),
+    beforeNavigation: (payload) => beforeNavigation(payload),
     resizeWindow: async (metrics) => {
       windowMetricsListeners.forEach((listener) => listener(metrics));
       await flush();
@@ -299,11 +284,6 @@ const createPage = async ({ item = savedTransform, uiConfig = {} } = {}) => {
     savedData: () =>
       deps.projectService.updateTransform.mock.calls.map(([call]) => call),
   };
-};
-
-const capturedImages = {
-  previewImage: "data:image/png;base64,cHJldmlldw==",
-  thumbnailImage: "data:image/png;base64,dGh1bWI=",
 };
 
 // The target card asks for an image or a character sprite first.
@@ -340,11 +320,6 @@ const fileReads = (page, fileId) =>
   page.deps.projectService.getFileContent.mock.calls.filter(
     ([readFileId]) => readFileId === fileId,
   );
-
-beforeEach(() => {
-  captureEditorPreviewImages.mockReset();
-  captureEditorPreviewImages.mockResolvedValue(capturedImages);
-});
 
 describe("transform editor", () => {
   it("opens the transform with the selection outline on the canvas", async () => {
@@ -399,6 +374,13 @@ describe("transform editor", () => {
       { p: "project-1" },
       { historyMode: "replace" },
     );
+
+    // Going back has no transform to save or draw.
+    await page.beforeNavigation();
+    expect(page.savedData()).toEqual([]);
+    expect(
+      page.deps.projectService.requestTransformThumbnails,
+    ).not.toHaveBeenCalled();
   });
 
   it("moves the target by dragging its outline, as one undo step", async () => {
@@ -541,10 +523,12 @@ describe("transform editor", () => {
         },
       },
     ]);
-    expect(captureEditorPreviewImages).not.toHaveBeenCalled();
+    expect(
+      page.deps.projectService.requestTransformThumbnails,
+    ).not.toHaveBeenCalled();
   });
 
-  it("saves waiting edits at once when it leaves", async () => {
+  it("saves waiting edits at once when it leaves, then asks for its thumbnail", async () => {
     const page = await createPage();
     await page.press("ArrowLeft");
 
@@ -557,9 +541,14 @@ describe("transform editor", () => {
       { historyMode: "replace" },
     );
 
+    // Navigating runs the leave check, which has nothing left to save, and
+    // has the thumbnail brought up to date in the background.
     await page.beforeNavigation();
     await wait(AUTOSAVE_WAIT_MS);
     expect(page.savedData()).toHaveLength(1);
+    expect(
+      page.deps.projectService.requestTransformThumbnails,
+    ).toHaveBeenCalledWith({ transformIds: ["transform-1"] });
   });
 
   it("saves nothing when an edit is undone before it saves", async () => {
@@ -573,137 +562,121 @@ describe("transform editor", () => {
     expect(page.savedData()).toEqual([]);
   });
 
-  it("leaves unsaved preview images behind, as the layout editor does", async () => {
+  it("saves picked preview images on their own, outside the undo history", async () => {
     const page = await createPage();
-    handlePreviewImageClick(page.deps, slotEvent("background"));
-    await handleImageSelectorImageSelected(page.deps, {
-      _event: { detail: { imageId: "image-1" } },
-    });
-    await handleImageSelectorConfirmClick(page.deps);
 
-    await handleBackClick(page.deps);
-
+    await pickPreviewImage(page, "background", "image-1");
     expect(page.savedData()).toEqual([]);
-    expect(page.deps.appService.navigate).toHaveBeenCalled();
-  });
+    await wait(AUTOSAVE_WAIT_MS);
 
-  it("saves the preview images and a new preview with Save Preview", async () => {
-    const page = await createPage();
-    await page.press("ArrowLeft");
-    handlePreviewImageClick(page.deps, slotEvent("background"));
-    await handleImageSelectorImageSelected(page.deps, {
-      _event: { detail: { imageId: "image-1" } },
-    });
-    await handleImageSelectorConfirmClick(page.deps);
-    await handleRightPanelModeChange(page.deps, {
-      _event: { detail: { id: "preview" } },
-    });
-
-    await handleSavePreviewClick(page.deps);
-
-    const [{ renderState }] = captureEditorPreviewImages.mock.calls[0];
-    expect(page.findElement(renderState.elements, "selected-border")).toBe(
-      undefined,
-    );
-    expect(renderState.elements.map((element) => element.id)).toEqual([
-      "transform-background",
-      "transform-target",
-    ]);
-    const savedTarget = page.findElement(
-      renderState.elements,
-      "transform-target",
-    );
-    // The default target is a solid light gray square.
-    expect(savedTarget).toMatchObject({ x: 959, fill: "#a0a0a0" });
-    expect(savedTarget.alpha).toBeUndefined();
     expect(page.savedData()).toEqual([
       {
         transformId: "transform-1",
-        data: expect.objectContaining({ x: 959 }),
+        data: { preview: { background: { imageId: "image-1" } } },
       },
+    ]);
+    expect(page.state().editHistory.undo).toHaveLength(0);
+    // Saving the preview images leaves the thumbnail for later.
+    expect(
+      page.deps.projectService.requestTransformThumbnails,
+    ).not.toHaveBeenCalled();
+  });
+
+  it("saves a removed preview image", async () => {
+    const page = await createPage({
+      item: { ...savedTransform, preview: { target: { imageId: "image-2" } } },
+    });
+
+    handlePreviewImageContextMenu(page.deps, {
+      _event: {
+        ...slotEvent("target")._event,
+        clientX: 10,
+        clientY: 20,
+        preventDefault: vi.fn(),
+        stopPropagation: vi.fn(),
+      },
+    });
+    await handlePreviewImageMenuItemClick(page.deps, {
+      _event: { detail: { item: { value: "remove" } } },
+    });
+    await wait(AUTOSAVE_WAIT_MS);
+
+    expect(page.savedData()).toEqual([
+      { transformId: "transform-1", data: { preview: {} } },
+    ]);
+  });
+
+  it("saves values and preview images together, and a pick only once it is OK'd", async () => {
+    const page = await createPage();
+    await page.press("ArrowLeft");
+    // The canvas shows a pick at once, but it is not saved until OK.
+    handlePreviewImageClick(page.deps, slotEvent("background"));
+    await handleImageSelectorImageSelected(page.deps, {
+      _event: { detail: { imageId: "image-1" } },
+    });
+    await wait(AUTOSAVE_WAIT_MS);
+
+    expect(page.savedData().map(({ data }) => data)).toEqual([
+      { ...transformValues, x: 959 },
+    ]);
+
+    await handleImageSelectorConfirmClick(page.deps);
+    await page.press("ArrowLeft");
+    await handleBackClick(page.deps);
+
+    expect(page.savedData().map(({ data }) => data)).toEqual([
+      { ...transformValues, x: 959 },
+      {
+        ...transformValues,
+        x: 958,
+        preview: { background: { imageId: "image-1" } },
+      },
+    ]);
+  });
+
+  it("leaves thumbnails to the background: opening asks for nothing", async () => {
+    const page = await createPage();
+
+    expect(
+      page.deps.projectService.requestTransformThumbnails,
+    ).not.toHaveBeenCalled();
+    expect(page.savedData()).toEqual([]);
+  });
+
+  it("leaves without waiting for the thumbnail, after saving picked images", async () => {
+    const page = await createPage();
+    const { requestTransformThumbnails, updateTransform } =
+      page.deps.projectService;
+    // The thumbnail is still being drawn when the page has left.
+    requestTransformThumbnails.mockReturnValue(new Promise(() => {}));
+    await pickPreviewImage(page, "background", "image-1");
+
+    await page.beforeNavigation({ path: "/project/transforms" });
+
+    expect(page.savedData()).toEqual([
       {
         transformId: "transform-1",
-        data: {
-          thumbnailFileId: "stored-2",
-          previewFileId: "stored-1",
-          preview: { background: { imageId: "image-1" } },
-        },
-        fileRecords: [{ id: "record-1" }, { id: "record-2" }],
+        data: { preview: { background: { imageId: "image-1" } } },
       },
     ]);
-    const storedFiles = page.deps.projectService.storeFile.mock.calls.map(
-      ([{ file }]) => file,
-    );
-    expect(storedFiles.map((file) => [file.type, file.size])).toEqual([
-      ["image/png", "preview".length],
-      ["image/png", "thumb".length],
-    ]);
-    expect(page.deps.appService.showToast).toHaveBeenCalledWith({
-      message: "Transform preview saved.",
+    expect(requestTransformThumbnails).toHaveBeenCalledWith({
+      transformIds: ["transform-1"],
     });
+    expect(updateTransform.mock.invocationCallOrder[0]).toBeLessThan(
+      requestTransformThumbnails.mock.invocationCallOrder[0],
+    );
   });
 
-  it("saves one preview when Save Preview is clicked twice", async () => {
-    let finishCapture;
-    captureEditorPreviewImages.mockReturnValue(
-      new Promise((resolve) => {
-        finishCapture = () => resolve(capturedImages);
-      }),
-    );
+  it("only saves for a backup, since the page stays open", async () => {
     const page = await createPage();
+    await page.press("ArrowLeft");
 
-    const firstClick = handleSavePreviewClick(page.deps);
-    const secondClick = handleSavePreviewClick(page.deps);
-    expect(page.view().savePreviewDisabled).toBe(true);
-    await page.flush();
-    finishCapture();
-    await Promise.all([firstClick, secondClick]);
+    await page.beforeNavigation({ reason: "backup" });
 
-    expect(captureEditorPreviewImages).toHaveBeenCalledOnce();
-    expect(page.deps.projectService.storeFile).toHaveBeenCalledTimes(2);
-    expect(page.savedData()).toHaveLength(1);
-    expect(page.view().savePreviewDisabled).toBe(false);
-  });
-
-  it("alerts and saves no preview when the canvas cannot be captured", async () => {
-    captureEditorPreviewImages.mockRejectedValue(
-      new Error("The canvas returned no preview image."),
-    );
-    const page = await createPage();
-
-    await handleSavePreviewClick(page.deps);
-
-    expect(page.savedData()).toEqual([]);
-    expect(page.deps.projectService.storeFile).not.toHaveBeenCalled();
-    expect(page.deps.appService.showAlert).toHaveBeenCalledWith({
-      title: "Error",
-      message:
-        "Failed to capture the transform preview.\n\nDetails:\nThe canvas returned no preview image.",
-    });
-    // The canvas shows the outline again after the capture.
+    expect(page.savedData().map(({ data }) => data.x)).toEqual([959]);
     expect(
-      page.findElement(page.lastRender().elements, "selected-border"),
-    ).toBeTruthy();
-  });
-
-  it("alerts and saves no preview when its files cannot be stored", async () => {
-    const page = await createPage();
-    page.deps.projectService.storeFile.mockRejectedValue(
-      new Error("The disk is full."),
-    );
-
-    await handleSavePreviewClick(page.deps);
-
-    expect(page.savedData()).toEqual([]);
-    expect(page.deps.appService.showAlert).toHaveBeenCalledWith({
-      title: "Error",
-      message:
-        "Failed to save the transform preview.\n\nDetails:\nThe disk is full.",
-    });
-    expect(
-      page.findElement(page.lastRender().elements, "selected-border"),
-    ).toBeTruthy();
-    expect(page.view().savePreviewDisabled).toBe(false);
+      page.deps.projectService.requestTransformThumbnails,
+    ).not.toHaveBeenCalled();
   });
 
   it("keeps drawing the canvas when a preview image fails to load, and warns once", async () => {
@@ -753,28 +726,6 @@ describe("transform editor", () => {
     expect(page.deps.appService.showToast).not.toHaveBeenCalled();
   });
 
-  it("alerts with the details and saves no preview when a preview image cannot load", async () => {
-    const page = await createPage();
-    failImageOneFile(page);
-    await pickPreviewImage(page, "background", "image-1");
-    await handleRightPanelModeChange(page.deps, {
-      _event: { detail: { id: "preview" } },
-    });
-
-    await handleSavePreviewClick(page.deps);
-
-    // Save Preview reads the file again before it gives up.
-    expect(fileReads(page, "file-1")).toHaveLength(2);
-    expect(page.deps.appService.showAlert).toHaveBeenLastCalledWith({
-      title: "Error",
-      message:
-        'Could not load the image "Image One", so the preview was not saved. Check its file, or pick another image.\n\nDetails:\nFile file-1 is missing.',
-    });
-    expect(captureEditorPreviewImages).not.toHaveBeenCalled();
-    expect(page.savedData()).toEqual([]);
-    expect(page.view().savePreviewDisabled).toBe(false);
-  });
-
   it("releases the shared renderer before it saves on leaving", async () => {
     const page = await createPage();
     await page.press("ArrowLeft");
@@ -808,7 +759,6 @@ describe("transform editor", () => {
       rightPanelMode: "edit",
       rightPanelEditStyle: "",
       rightPanelPreviewStyle: "display: none;",
-      showSavePreviewButton: false,
     });
 
     await handleRightPanelModeChange(page.deps, {
@@ -819,9 +769,8 @@ describe("transform editor", () => {
       rightPanelMode: "preview",
       rightPanelEditStyle: "display: none;",
       rightPanelPreviewStyle: "",
-      showSavePreviewButton: true,
     });
-    // Preview is Edit without the outline, which is what Save Preview saves.
+    // Preview is Edit without the outline, which is what the thumbnail shows.
     expect(page.lastRender().elements).toEqual([editElements[0], editTarget]);
     // The target is not selected for nudges on the Preview tab.
     const event = await page.press("ArrowRight");
@@ -849,9 +798,12 @@ describe("transform editor", () => {
     await expect(page.beforeNavigation()).rejects.toThrow(
       "Failed to save transform before navigation.",
     );
+    expect(
+      page.deps.projectService.requestTransformThumbnails,
+    ).not.toHaveBeenCalled();
   });
 
-  it("previews picked images at once and saves them with Save Preview", async () => {
+  it("previews picked images at once and saves them on their own", async () => {
     const page = await createPage();
 
     handlePreviewImageClick(page.deps, slotEvent("background"));
@@ -895,10 +847,10 @@ describe("transform editor", () => {
       _event: { detail: { item: { value: "remove" } } },
     });
 
-    await handleSavePreviewClick(page.deps);
-    expect(page.savedData()[0].data.preview).toEqual({
-      target: { imageId: "image-2" },
-    });
+    await wait(AUTOSAVE_WAIT_MS);
+    expect(page.savedData().map(({ data }) => data)).toEqual([
+      { preview: { target: { imageId: "image-2" } } },
+    ]);
     expect(page.state().editHistory.undo).toHaveLength(0);
   });
 
@@ -940,9 +892,8 @@ describe("transform editor", () => {
     });
   });
 
-  it("previews a picked character's sprites at once and saves them with Save Preview", async () => {
+  it("previews a picked character's sprites at once and saves them on their own", async () => {
     const page = await createPage();
-    captureEditorPreviewImages.mockResolvedValue(capturedImages);
 
     await chooseTargetKind(page, "character-sprite");
     await handleCharacterSpriteSelectionChange(page.deps, {
@@ -1000,10 +951,10 @@ describe("transform editor", () => {
       "sprite-smile",
     ]);
 
-    await handleSavePreviewClick(page.deps);
-    expect(page.savedData()[0].data.preview).toEqual({
-      target: characterTarget,
-    });
+    await wait(AUTOSAVE_WAIT_MS);
+    expect(page.savedData().map(({ data }) => data)).toEqual([
+      { preview: { target: characterTarget } },
+    ]);
   });
 
   it("puts the original target back when the character dialog is cancelled", async () => {
