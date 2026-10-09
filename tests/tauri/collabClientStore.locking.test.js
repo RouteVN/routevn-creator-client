@@ -567,7 +567,7 @@ describe("tauri collab client store locking", () => {
     warnSpy.mockRestore();
   });
 
-  it("uses sequential single draft inserts instead of insertDrafts batching", async () => {
+  it("writes a batch of drafts with the store's transactional batch insert", async () => {
     const fakeDb = {
       execute: vi.fn(async (_sql, args = []) => ({
         rowsAffected: Array.isArray(args) ? args.length || 1 : 1,
@@ -582,7 +582,7 @@ describe("tauri collab client store locking", () => {
       "../../src/deps/services/tauri/collabClientStore.js"
     );
     const store = await createPersistedTauriProjectStore({
-      projectPath: "/projects/sequential-insert-drafts",
+      projectPath: "/projects/batch-insert-drafts",
       projectId: "project-4",
     });
 
@@ -607,16 +607,11 @@ describe("tauri collab client store locking", () => {
       },
     ]);
 
-    expect(
-      fakeDb.execute.mock.calls.filter(([sql]) =>
-        String(sql).includes("INSERT DRAFT"),
-      ).length,
-    ).toBe(2);
-    expect(
-      fakeDb.execute.mock.calls.some(([sql]) =>
-        String(sql).includes("BEGIN IMMEDIATE"),
-      ),
-    ).toBe(false);
+    const executedSql = fakeDb.execute.mock.calls.map(([sql]) => String(sql));
+    expect(executedSql.filter((sql) => sql === "INSERT DRAFTS")).toHaveLength(
+      1,
+    );
+    expect(executedSql).not.toContain("INSERT DRAFT");
 
     await store.close();
   });

@@ -238,9 +238,11 @@ export const createPersistedAndroidProjectStore = async ({
           const normalizedItems = Array.isArray(items)
             ? items.filter(Boolean)
             : [];
-          for (const item of normalizedItems) {
-            await store.insertDraft(item);
+          if (normalizedItems.length === 0) {
+            return;
           }
+          // One transaction, so a failed save stores none of its drafts.
+          await store.insertDrafts(normalizedItems);
         });
       },
 
