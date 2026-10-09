@@ -11,6 +11,7 @@ import {
   handleVariableOperandContextMenu,
 } from "../../src/components/computedOperationBlock/computedOperationBlock.handlers.js";
 import { selectViewData } from "../../src/components/computedOperationBlock/computedOperationBlock.store.js";
+import { EN_I18N } from "../support/i18n.js";
 
 const view = readFileSync(
   new URL(
@@ -35,6 +36,20 @@ describe("computedOperationBlock", () => {
     expect(view).toContain("rtgl-view#variableOperand${i}");
     expect(view).toContain("$if operand.source == 'operation':");
     expect(view).toContain("pre=x");
+  });
+
+  it("notes under Divide that dividing by 0 gives 0", () => {
+    const select = (type) =>
+      selectViewData({
+        props: { operation: { type, operands: [] } },
+        i18n: EN_I18N,
+      }).operationNote;
+
+    expect(select("divide")).toBe("Dividing by 0 gives 0.");
+    expect(select("multiply")).toBe("");
+    expect(view).toContain(
+      "- $if operationNote:\n          - rtgl-text s=sm c=mu-fg: ${operationNote}",
+    );
   });
 
   it("owns its localized operation copy", () => {

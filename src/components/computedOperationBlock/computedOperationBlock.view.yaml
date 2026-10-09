@@ -30,6 +30,8 @@ styles:
 template:
   - rtgl-view#operationBlock d=v w=f g=sm bw=xs bc=bo br=md p=md bgc=bg cur=pointer:
       - rtgl-text s=md: ${operationLabel}
+      - $if operationNote:
+          - rtgl-text s=sm c=mu-fg: ${operationNote}
       - $if operands.length > 0:
           - $for operand, i in operands:
               - rtgl-view.computed-operation-operand d=h w=f av=e g=sm:

@@ -784,7 +784,7 @@ const getPreviewStoppedMessage = ({ i18n, projectService }, error) => {
   if (variableName) {
     return (
       i18n?.vnPreview?.computedVariableFailed ??
-      "Could not calculate computed variable “{name}”. Its formula may have divided by zero or produced the wrong type of value. Check the formula and the variables it uses in Variables."
+      "Could not calculate computed variable “{name}”. Its formula may have produced the wrong type of value. Check the formula and the variables it uses in Variables."
     ).replaceAll("{name}", () => variableName);
   }
   return withErrorDetails(

@@ -37,6 +37,11 @@ export const selectViewData = ({ i18n, props }) => {
       operation.operands?.length ?? 0,
     ),
     operationLabel: getComputedOperationLabel(operation.type, copy),
+    // Route Engine gives 0 for a division by zero.
+    operationNote:
+      operation.type === "divide"
+        ? (copy.computedDivideByZeroNote ?? "Dividing by 0 gives 0.")
+        : "",
     operationNeedsOperandsMessage,
     addOperandLabel:
       copy.computedAddOperandLabel ?? "Add variable, value, or operation",

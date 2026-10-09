@@ -28,7 +28,7 @@ describe("getSceneStartupErrorMessage", () => {
         i18n: EN_I18N,
       }),
     ).toBe(
-      "Could not calculate computed variable “Ratio”. Its formula may have divided by zero or produced the wrong type of value. Check the formula and the variables it uses in Variables.",
+      "Could not calculate computed variable “Ratio”. Its formula may have produced the wrong type of value. Check the formula and the variables it uses in Variables.",
     );
   });
 

@@ -459,40 +459,41 @@ describe("vnPreview.handlers", () => {
     );
 
     describe("computed variables", () => {
-      const reciprocal = {
+      const product = {
         type: "variable",
-        name: "Reciprocal",
+        name: "Product",
         variableType: "number",
-        computed: { expr: { div: [1, { var: "variables.denominator" }] } },
+        computed: { expr: { mul: [1e308, { var: "variables.factor" }] } },
       };
       const computedAlert = {
         title: "Preview stopped",
         message:
-          "Could not calculate computed variable “Reciprocal”. Its formula may have divided by zero or produced the wrong type of value. Check the formula and the variables it uses in Variables.",
+          "Could not calculate computed variable “Product”. Its formula may have produced the wrong type of value. Check the formula and the variables it uses in Variables.",
       };
 
-      // The engine's own error for 1 / 0.
-      const createDivideByZeroError = () => {
+      // The engine's own error for a number too large to represent. Division
+      // by zero gives 0, so it no longer fails.
+      const createNonFiniteError = () => {
         try {
           resolveComputedVariables({
             variableConfigs: {
-              denominator: { type: "number", scope: "context", default: 0 },
-              reciprocal: {
+              factor: { type: "number", scope: "context", default: 10 },
+              product: {
                 type: "number",
                 scope: "context",
-                computed: reciprocal.computed,
+                computed: product.computed,
               },
             },
-            variables: { denominator: 0 },
+            variables: { factor: 10 },
           });
         } catch (error) {
           return error;
         }
       };
 
-      const withReciprocal = (deps) => {
+      const withProduct = (deps) => {
         deps.projectService.getRepositoryState = vi.fn(() => ({
-          variables: { items: { reciprocal } },
+          variables: { items: { product } },
         }));
         return deps;
       };
@@ -501,11 +502,11 @@ describe("vnPreview.handlers", () => {
         const { handleAfterMount } = await import(
           "../../src/components/vnPreview/vnPreview.handlers.js"
         );
-        const deps = withReciprocal(createPlaybackDeps());
+        const deps = withProduct(createPlaybackDeps());
         await handleAfterMount(deps);
         const { onPlaybackError } = deps.graphicsService.init.mock.calls[0][0];
 
-        onPlaybackError(createDivideByZeroError());
+        onPlaybackError(createNonFiniteError());
 
         expect(deps.appService.showAlert).toHaveBeenCalledWith(computedAlert);
         expect(deps.dispatchEvent).toHaveBeenCalledOnce();
@@ -516,10 +517,10 @@ describe("vnPreview.handlers", () => {
         const { handleAfterMount } = await import(
           "../../src/components/vnPreview/vnPreview.handlers.js"
         );
-        const deps = withReciprocal(
+        const deps = withProduct(
           createPlaybackDeps({
             initRouteEngine: vi.fn(() => {
-              throw createDivideByZeroError();
+              throw createNonFiniteError();
             }),
           }),
         );
