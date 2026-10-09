@@ -68,8 +68,9 @@ Host: api1.routevn.com
 Desktop includes Tauri's installation `bundleType`, device metadata, and the
 usage fields in the query. The updater endpoint is assembled at check time so
 the persisted device ID and the per-check usage fields can be included. Device
-values are URL-encoded once. Artifact downloads do not include device
-metadata.
+and usage values are percent-encoded once, with spaces as `%20`: the API keeps
+a `+` literally, so form encoding would store `macOS 27.0` as `macOS+27.0`.
+Artifact downloads do not include device metadata.
 Development Tauri builds use the localhost API by default. Production builds
 use `api1.routevn.com`.
 Restart the Tauri shell after changing updater configuration or native commands;

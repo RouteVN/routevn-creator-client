@@ -77,31 +77,52 @@ fn endpoint_with_device(
     let device_language = Some(platform_device_language())
         .filter(|value| value == "unknown" || valid_ui_language(value))
         .unwrap_or_else(|| "unknown".to_owned());
+    let mut pairs = vec![
+        ("device.id", device_id),
+        ("device.model", device_model),
+        ("device.osVersion", os_version),
+        ("device.formFactor", "desktop"),
+        ("device.language", device_language.as_str()),
+    ];
+    if let Some(webview_version) = webview_version
+        .as_deref()
+        .filter(|value| valid_webview_version(value))
     {
-        let mut pairs = endpoint.query_pairs_mut();
-        pairs
-            .append_pair("device.id", device_id)
-            .append_pair("device.model", device_model)
-            .append_pair("device.osVersion", os_version)
-            .append_pair("device.formFactor", "desktop")
-            .append_pair("device.language", &device_language);
-        if let Some(webview_version) = webview_version
-            .as_deref()
-            .filter(|value| valid_webview_version(value))
-        {
-            pairs.append_pair("device.webViewVersion", webview_version);
-        }
-        if let Some(ui_language) = usage.ui_language.as_deref() {
-            pairs.append_pair("uiLanguage", ui_language);
-        }
-        if let Some(ui_language_source) = usage.ui_language_source.as_deref() {
-            pairs.append_pair("uiLanguageSource", ui_language_source);
-        }
-        if let Some(trigger) = usage.trigger.as_deref() {
-            pairs.append_pair("trigger", trigger);
-        }
+        pairs.push(("device.webViewVersion", webview_version));
     }
+    if let Some(ui_language) = usage.ui_language.as_deref() {
+        pairs.push(("uiLanguage", ui_language));
+    }
+    if let Some(ui_language_source) = usage.ui_language_source.as_deref() {
+        pairs.push(("uiLanguageSource", ui_language_source));
+    }
+    if let Some(trigger) = usage.trigger.as_deref() {
+        pairs.push(("trigger", trigger));
+    }
+    append_query_pairs(&mut endpoint, &pairs);
     endpoint
+}
+
+// The API percent-decodes the query once and keeps `+` literally, so a form
+// encoder's `+` for a space would arrive as a `+`. Spaces go out as `%20`.
+fn append_query_pairs(endpoint: &mut Url, pairs: &[(&str, &str)]) {
+    // The form encoder writes a literal `+` as `%2B`, so each `+` it outputs
+    // stands for a space.
+    let encode = |value: &str| {
+        url::form_urlencoded::byte_serialize(value.as_bytes())
+            .collect::<String>()
+            .replace('+', "%20")
+    };
+    let mut query = endpoint.query().unwrap_or_default().to_owned();
+    for (key, value) in pairs {
+        if !query.is_empty() {
+            query.push('&');
+        }
+        query.push_str(&encode(key));
+        query.push('=');
+        query.push_str(&encode(value));
+    }
+    endpoint.set_query(Some(&query));
 }
 
 #[tauri::command]
@@ -176,9 +197,11 @@ pub async fn check_client_update(
 mod tests {
     use super::*;
 
+    // Decodes the query as the API does: percent-decoded once, with `+` kept
+    // literally rather than read as a space.
     fn query_pairs(endpoint: &Url) -> Vec<(String, String)> {
-        endpoint
-            .query_pairs()
+        let query = endpoint.query().unwrap_or_default().replace('+', "%2B");
+        url::form_urlencoded::parse(query.as_bytes())
             .map(|(key, value)| (key.to_string(), value.to_string()))
             .collect()
     }
@@ -234,6 +257,26 @@ mod tests {
         assert_eq!(pair_value(&query, "uiLanguage"), Some("ja"));
         assert_eq!(pair_value(&query, "uiLanguageSource"), Some("selected"));
         assert_eq!(pair_value(&query, "trigger"), Some("manual"));
+    }
+
+    #[test]
+    fn encodes_spaces_as_percent_20_and_plus_as_percent_2b() {
+        let endpoint =
+            Url::parse("https://api1.routevn.com/system/updates/v1/routevn-creator/tauri").unwrap();
+        let endpoint = endpoint_with_device(
+            endpoint,
+            "123456789ABC123456789ABC",
+            "Model+ Pro",
+            "macOS 27.0",
+            &usage_fields(None, None, None),
+        );
+        let raw = endpoint.query().unwrap();
+        assert!(raw.contains("device.model=Model%2B%20Pro"), "{raw}");
+        assert!(raw.contains("device.osVersion=macOS%2027.0"), "{raw}");
+        assert!(!raw.contains('+'), "{raw}");
+        let query = query_pairs(&endpoint);
+        assert_eq!(pair_value(&query, "device.model"), Some("Model+ Pro"));
+        assert_eq!(pair_value(&query, "device.osVersion"), Some("macOS 27.0"));
     }
 
     #[test]
