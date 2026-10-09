@@ -1441,8 +1441,7 @@ Particles are edited on their own page too, `/project/particle-editor` (the
 `pt` payload holds the particle id), built like the transform editor from the
 shared editor helpers: `src/internal/ui/editorCanvasWorkspace.js` (zoom
 levels, the right panel rule, and the canvas layout for a given resolution)
-and `src/internal/ui/editorPreviewCapture.js` (capture and store the preview
-and thumbnail images, or the thumbnail only). The particles page's dialogs
+and the editor thumbnail service. The particles page's dialogs
 only add a particle (name, description, tags, and a preset; the editor opens
 next) and edit its name, description, and tags; double-click, long press, `e`,
 and **Open** open the editor, and **Duplicate** copies a particle into its
@@ -1456,14 +1455,21 @@ Edit's Source tab is open, the canvas also draws the emitter source's outline
 (the rect, the circle's or line's bounding box, or a small square for a
 point, at least 16 CSS pixels and kept inside the canvas), and dragging its
 border moves the source, both ends of a line together, as one undo step. Until the particle has a texture the canvas
-shows a hint instead of the effect. Preview holds a background image and
-**Save Preview**, which saves the values and then the background
-(`particle.preview.background`, from creator-model 1.16.0) and a thumbnail of
-the canvas without the outline, with the background. Edits save on their own 300ms after the
-last one and on leaving, as in the transform editor, and save only the effect
-(size, seed, and modules); thumbnails change only with Save Preview. Texture
-and background images follow the asset failure policy as in the transform
-editor.
+shows a hint instead of the effect. Preview holds a background image
+(`particle.preview.background`, from creator-model 1.16.0). Edits, and a
+picked or removed background, save on their own 300ms after the last change
+and on leaving, as in the transform editor: the effect (size, seed, and
+modules) and the background, whichever changed, in one `particle.update`; a
+pick saves once its picker is OK'd, and the background is not part of the
+history. Thumbnails are drawn in the background as transforms' are
+(`projectService.requestParticleThumbnails`, `createParticleThumbnailSource`
+in `src/internal/particlePreview.js`, `PARTICLE_THUMBNAIL_VERSION`): leaving
+the editor requests the particle's, the particles page requests every
+particle's when it opens, and Duplicate copies the hash. A thumbnail draws the
+canvas without the outline, with the background, at the particle's own size;
+particles move on the renderer's own clock, so the renderer lets them run
+1.5s before it captures. Texture and background images follow the asset
+failure policy as in the transform editor.
 
 Text styles are edited on their own page as well, `/project/text-style-editor`
 (the `ts` payload holds the text style id), with the editors' header (back,
@@ -1768,7 +1774,7 @@ Current recovery boundaries:
 | Scene editor audio warm-up            | Keep painting after a decode retry fails. Preserve diagnostics without duplicating the warning already shown by preloading.                                                                                                 |
 | Layout editor canvas                  | Collect read/integrity/decode failures, warn once per failed file per mounted canvas, omit affected render elements, and keep unaffected elements editable. Retry on subsequent requests without changing the saved layout. |
 | Transform editor canvas               | Load each preview image separately, warn once per failed file per mounted page, and draw the fallback in its place while editing. Later renders skip it, and the thumbnail is not redrawn while it fails.                   |
-| Particle editor canvas                | Load the texture and background images separately, warn once per failed file per mounted page, and leave the failed image out while editing. Later renders skip it; Save Preview rereads it and saves nothing if it fails.  |
+| Particle editor canvas                | Load the texture and background images separately, warn once per failed file per mounted page, and leave the failed image out while editing. Later renders skip it, and the thumbnail is not redrawn while it fails.        |
 | Text style editor preview             | Load each font file of the style separately, warn once per failed file per mounted page, and draw the text without that file, in the style's next font or the browser's. The saved fonts do not change.                     |
 | Fullscreen startup                    | Check the combined initial scene and layout assets, collect all read/integrity/decode failures, and show one deduplicated warning stating playback is blocked. Any failure closes the preview before starting the engine.   |
 | Fullscreen later scene/layout loading | Retain the existing transition/prefetch handling: report scene failures, propagate font/layout failures.                                                                                                                    |

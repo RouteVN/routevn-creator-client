@@ -180,4 +180,72 @@ describe("editor thumbnails", () => {
     await expect(draw()).resolves.toBe(thumbnailImage);
     expect(next.init).toHaveBeenCalledOnce();
   });
+
+  it("renames particle textures it loaded, at any depth, and keeps built-in ones", () => {
+    const particles = {
+      elements: [
+        {
+          id: "particle-preview",
+          type: "particles",
+          modules: {
+            appearance: {
+              texture: {
+                items: [{ src: "file-1" }, { src: "circle" }],
+              },
+            },
+          },
+        },
+        {
+          id: "other",
+          type: "particles",
+          modules: { appearance: { texture: "file-2" } },
+        },
+      ],
+      animations: [],
+    };
+    const known = new Map([
+      ["file-1", "key:file-1"],
+      ["file-2", "key:file-2"],
+    ]);
+
+    const mapped = mapRenderStateSources(
+      particles,
+      (fileId) => known.get(fileId) ?? fileId,
+    );
+
+    expect(mapped.elements[0].modules.appearance.texture.items).toEqual([
+      { src: "key:file-1" },
+      { src: "circle" },
+    ]);
+    expect(mapped.elements[1].modules.appearance.texture).toBe("key:file-2");
+  });
+
+  it("lets an effect run for its settle time before it captures", async () => {
+    vi.useFakeTimers();
+    try {
+      vi.stubGlobal("document", {
+        createElement: () => ({ remove: vi.fn() }),
+      });
+      vi.stubGlobal("requestAnimationFrame", (callback) => callback());
+      const graphics = createGraphics();
+      createGraphicsService.mockResolvedValueOnce(graphics);
+
+      const drawing = renderThumbnailImage({
+        width: 640,
+        height: 360,
+        renderState,
+        imageAssets: {},
+        settleMs: 1500,
+      });
+      await vi.advanceTimersByTimeAsync(1400);
+      expect(captureGraphicsThumbnailImage).not.toHaveBeenCalled();
+      await vi.advanceTimersByTimeAsync(100);
+      await drawing;
+
+      expect(captureGraphicsThumbnailImage).toHaveBeenCalledOnce();
+      expect(graphics.loadAssets).not.toHaveBeenCalled();
+    } finally {
+      vi.useRealTimers();
+    }
+  });
 });

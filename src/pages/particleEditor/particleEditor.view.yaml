@@ -32,10 +32,6 @@ refs:
     eventListeners:
       item-click:
         handler: handleRightPanelModeChange
-  savePreviewButton:
-    eventListeners:
-      click:
-        handler: handleSavePreviewClick
   formTabs:
     eventListeners:
       item-click:
@@ -138,8 +134,6 @@ template:
                       - rtgl-view h=48 w=f d=h bgc=bg bwb=xs ph=md av=c:
                           - 'rtgl-view w=1fg style="min-width: 0;"':
                               - rtgl-tabs#rightPanelModeTabs s=sm selected-tab=${rightPanelMode} :items=${rightPanelModeTabs}: null
-                          - $if showSavePreviewButton:
-                              - 'rtgl-button#savePreviewButton sq pre=save v=se ml=sm ?disabled=${savePreviewDisabled} aria-label="${savePreviewButton}" title="${savePreviewButton}"': null
                       - 'rtgl-view w=f h=1fg d=v style="min-height: 0; ${rightPanelEditStyle}"':
                           - 'rtgl-view w=f sh ph=md pt=sm bwb=xs style="min-width: 0; flex-shrink: 0; overscroll-behavior-x: contain;"':
                               - 'div style="width: max-content; min-width: 100%;"':
@@ -181,8 +175,6 @@ template:
                   - rtgl-view h=48 w=f d=h bgc=bg bwb=xs ph=md av=c:
                       - 'rtgl-view w=1fg style="min-width: 0;"':
                           - rtgl-tabs#rightPanelModeTabs s=sm selected-tab=${rightPanelMode} :items=${rightPanelModeTabs}: null
-                      - $if showSavePreviewButton:
-                          - 'rtgl-button#savePreviewButton sq pre=save v=se ml=sm ?disabled=${savePreviewDisabled} aria-label="${savePreviewButton}" title="${savePreviewButton}"': null
                   - 'rtgl-view w=f h=1fg d=v style="min-height: 0; ${rightPanelEditStyle}"':
                       - 'rtgl-view w=f sh ph=md pt=sm bwb=xs style="min-width: 0; flex-shrink: 0; overscroll-behavior-x: contain;"':
                           - 'div style="width: max-content; min-width: 100%;"':

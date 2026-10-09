@@ -184,7 +184,8 @@ export const createTransformThumbnailSource = ({ item, repositoryState }) => {
   }
 
   return {
-    projectResolution,
+    width: projectResolution.width,
+    height: projectResolution.height,
     renderState: createTransformPreviewRenderState({
       projectResolution,
       transform: normalizeTransformValues(item),

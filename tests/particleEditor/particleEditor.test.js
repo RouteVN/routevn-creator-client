@@ -1,6 +1,6 @@
 import { produce } from "immer";
 import { Subject } from "rxjs";
-import { beforeEach, describe, expect, it, vi } from "vitest";
+import { describe, expect, it, vi } from "vitest";
 import * as particleEditorStore from "../../src/pages/particleEditor/particleEditor.store.js";
 import {
   handleAfterMount,
@@ -17,24 +17,13 @@ import {
   handleParticleFormChange,
   handleRedoButtonClick,
   handleRightPanelModeChange,
-  handleSavePreviewClick,
   handleTextureImageClick,
   handleTextureImageKeyDown,
   handleUndoButtonClick,
 } from "../../src/pages/particleEditor/particleEditor.handlers.js";
 import { createParticlePreset } from "../../src/pages/particles/support/particlePresets.js";
-import { captureEditorPreviewImages } from "../../src/internal/ui/editorPreviewCapture.js";
+import { createParticleThumbnailSource } from "../../src/internal/particlePreview.js";
 import { EN_I18N } from "../support/i18n.js";
-
-// The canvas capture needs a renderer; storing the captured image runs as it
-// is.
-vi.mock(
-  "../../src/internal/ui/editorPreviewCapture.js",
-  async (importOriginal) => ({
-    ...(await importOriginal()),
-    captureEditorPreviewImages: vi.fn(),
-  }),
-);
 
 // Edits save on their own 300ms after the last one.
 const AUTOSAVE_WAIT_MS = 400;
@@ -113,7 +102,6 @@ const createPage = async ({
   const windowListeners = {};
   const windowMetricsListeners = new Set();
   let beforeNavigation;
-  let storedFileCount = 0;
   const repositoryState = {
     project: { resolution: { width: 1920, height: 1080 } },
     images: imagesData,
@@ -168,13 +156,7 @@ const createPage = async ({
         type: "image/png",
       })),
       updateParticle: vi.fn(async () => ({ valid: true })),
-      storeFile: vi.fn(async () => {
-        storedFileCount += 1;
-        return {
-          fileId: `stored-${storedFileCount}`,
-          fileRecords: [{ id: `record-${storedFileCount}` }],
-        };
-      }),
+      requestParticleThumbnails: vi.fn(async () => {}),
     },
   };
   const cleanup = handleBeforeMount(deps);
@@ -232,7 +214,7 @@ const createPage = async ({
     flush,
     changeField,
     pickImage,
-    beforeNavigation: () => beforeNavigation(),
+    beforeNavigation: (payload) => beforeNavigation(payload),
     resizeWindow: async (metrics) => {
       windowMetricsListeners.forEach((listener) => listener(metrics));
       await flush();
@@ -240,10 +222,6 @@ const createPage = async ({
     savedData: () =>
       deps.projectService.updateParticle.mock.calls.map(([call]) => call),
   };
-};
-
-const capturedImages = {
-  thumbnailImage: "data:image/png;base64,dGh1bWI=",
 };
 
 const pickTexture = async (page, imageId) => {
@@ -278,11 +256,6 @@ const fileReads = (page, fileId) =>
   page.deps.projectService.getFileContent.mock.calls.filter(
     ([readFileId]) => readFileId === fileId,
   );
-
-beforeEach(() => {
-  captureEditorPreviewImages.mockReset();
-  captureEditorPreviewImages.mockResolvedValue(capturedImages);
-});
 
 describe("particle editor", () => {
   it("opens the particle on a canvas of its own size, with the source outline on the Source tab", async () => {
@@ -435,7 +408,10 @@ describe("particle editor", () => {
     ]);
     expect(data).toMatchObject({ width: 640, height: 360, seed: 20260408 });
     expect(data.modules.emission.rate).toBe(31);
-    expect(captureEditorPreviewImages).not.toHaveBeenCalled();
+    // Saving leaves the thumbnail for later.
+    expect(
+      page.deps.projectService.requestParticleThumbnails,
+    ).not.toHaveBeenCalled();
   });
 
   it("saves waiting edits at once when it leaves", async () => {
@@ -453,9 +429,14 @@ describe("particle editor", () => {
       { historyMode: "replace" },
     );
 
+    // Navigating runs the leave check, which has nothing left to save, and
+    // has the thumbnail brought up to date in the background.
     await page.beforeNavigation();
     await wait(AUTOSAVE_WAIT_MS);
     expect(page.savedData()).toHaveLength(1);
+    expect(
+      page.deps.projectService.requestParticleThumbnails,
+    ).toHaveBeenCalledWith({ particleIds: ["particle-1"] });
   });
 
   it("saves nothing when an edit is undone before it saves", async () => {
@@ -483,6 +464,9 @@ describe("particle editor", () => {
     await expect(page.beforeNavigation()).rejects.toThrow(
       "Failed to save particle before navigation.",
     );
+    expect(
+      page.deps.projectService.requestParticleThumbnails,
+    ).not.toHaveBeenCalled();
   });
 
   it("starts the canvas again at a new size when the width changes", async () => {
@@ -551,43 +535,25 @@ describe("particle editor", () => {
     },
   );
 
-  it("saves the preview background with Save Preview, not with edits", async () => {
+  it("saves a picked preview background on its own, outside the undo history", async () => {
     const page = await createPage();
     await pickTexture(page, "image-1");
+    await wait(AUTOSAVE_WAIT_MS);
     await pickBackground(page, "image-2");
     expect(
       page.findElement(page.lastRender().elements, "particle-preview-bg"),
     ).toMatchObject({ type: "sprite", src: "file-2" });
     await wait(AUTOSAVE_WAIT_MS);
-    expect(page.savedData()).toHaveLength(1);
-    expect(JSON.stringify(page.savedData())).not.toContain("image-2");
-    await showPreviewTab(page);
 
-    await handleSavePreviewClick(page.deps);
-
-    const [{ renderState, thumbnailOnly }] =
-      captureEditorPreviewImages.mock.calls[0];
-    expect(thumbnailOnly).toBe(true);
-    expect(renderState.elements.map((element) => element.id)).toEqual([
-      "particle-preview-bg",
-      "particle-preview",
+    expect(page.savedData().map(({ data }) => data)).toEqual([
+      expect.objectContaining({ width: 640 }),
+      { preview: { background: { imageId: "image-2" } } },
     ]);
-    expect(renderState.elements[0]).toMatchObject({ src: "file-2" });
-    expect(page.savedData()[1]).toEqual({
-      particleId: "particle-1",
-      data: {
-        thumbnailFileId: "stored-1",
-        preview: { background: { imageId: "image-2" } },
-      },
-      fileRecords: [{ id: "record-1" }],
-    });
-    expect(page.deps.projectService.storeFile).toHaveBeenCalledOnce();
-    expect(page.deps.appService.showToast).toHaveBeenCalledWith({
-      message: "Particle preview saved.",
-    });
+    // Only the texture is an edit to undo.
+    expect(page.state().editHistory.undo).toHaveLength(1);
   });
 
-  it("opens with the saved preview background, and Save Preview clears a removed one", async () => {
+  it("opens with the saved preview background, and saves its removal on its own", async () => {
     const page = await createPage({
       item: {
         ...createSavedParticle(),
@@ -612,12 +578,57 @@ describe("particle editor", () => {
       _event: { detail: { item: { value: "remove" } } },
     });
     expect(page.view().backgroundImage).toBeUndefined();
+    await wait(AUTOSAVE_WAIT_MS);
 
-    await handleSavePreviewClick(page.deps);
-    expect(page.savedData().at(-1).data).toEqual({
-      thumbnailFileId: "stored-1",
-      preview: {},
+    expect(page.savedData()).toEqual([
+      { particleId: "particle-1", data: { preview: {} } },
+    ]);
+  });
+
+  it("leaves a background still in its picker unsaved when it leaves", async () => {
+    const page = await createPage();
+    await page.pickImage(handleBackgroundImageClick, "image-2");
+
+    await page.beforeNavigation({ path: "/project/particles" });
+    await page.cleanup();
+
+    expect(page.savedData()).toEqual([]);
+  });
+
+  it("leaves without waiting for the thumbnail, and only saves for a backup", async () => {
+    const page = await createPage();
+    const { requestParticleThumbnails } = page.deps.projectService;
+    requestParticleThumbnails.mockReturnValue(new Promise(() => {}));
+    await page.changeField("emissionRate", 30);
+
+    await page.beforeNavigation({ reason: "backup" });
+    expect(page.savedData()).toHaveLength(1);
+    expect(requestParticleThumbnails).not.toHaveBeenCalled();
+
+    await page.beforeNavigation({ path: "/project/particles" });
+    expect(requestParticleThumbnails).toHaveBeenCalledWith({
+      particleIds: ["particle-1"],
     });
+  });
+
+  it("draws on its Preview tab exactly what the background thumbnail hashes", async () => {
+    const item = {
+      ...createSavedParticle(),
+      preview: { background: { imageId: "image-2" } },
+    };
+    item.modules = {
+      ...item.modules,
+      appearance: { ...item.modules.appearance, texture: "image-1" },
+    };
+    const page = await createPage({ item });
+    await showPreviewTab(page);
+
+    expect(page.lastRender()).toEqual(
+      createParticleThumbnailSource({
+        item,
+        repositoryState: { images: imagesData },
+      }).renderState,
+    );
   });
 
   it("removes the preview background from its menu, and cancel restores it", async () => {
@@ -649,86 +660,10 @@ describe("particle editor", () => {
       page.findElement(page.lastRender().elements, "particle-preview-bg"),
     ).toMatchObject({ type: "rect", fill: "#000000" });
     expect(page.state().editHistory.undo).toHaveLength(0);
-  });
-
-  it("saves the values before the thumbnail with Save Preview", async () => {
-    const page = await createPage();
-    await page.changeField("emissionRate", 30);
-
-    await handleSavePreviewClick(page.deps);
-
-    expect(page.savedData()).toEqual([
-      {
-        particleId: "particle-1",
-        data: expect.objectContaining({ width: 640 }),
-      },
-      {
-        particleId: "particle-1",
-        data: { thumbnailFileId: "stored-1", preview: {} },
-        fileRecords: [{ id: "record-1" }],
-      },
-    ]);
-  });
-
-  it("saves one thumbnail when Save Preview is clicked twice", async () => {
-    let finishCapture;
-    captureEditorPreviewImages.mockReturnValue(
-      new Promise((resolve) => {
-        finishCapture = () => resolve(capturedImages);
-      }),
-    );
-    const page = await createPage();
-
-    const firstClick = handleSavePreviewClick(page.deps);
-    const secondClick = handleSavePreviewClick(page.deps);
-    expect(page.view().savePreviewDisabled).toBe(true);
-    await page.flush();
-    finishCapture();
-    await Promise.all([firstClick, secondClick]);
-
-    expect(captureEditorPreviewImages).toHaveBeenCalledOnce();
-    expect(page.deps.projectService.storeFile).toHaveBeenCalledOnce();
-    expect(page.savedData()).toHaveLength(1);
-    expect(page.view().savePreviewDisabled).toBe(false);
-  });
-
-  it("alerts with the details when the canvas cannot be captured", async () => {
-    captureEditorPreviewImages.mockRejectedValue(
-      new Error("The canvas returned no preview image."),
-    );
-    const page = await createPage();
-    await showFormTab(page, "source");
-
-    await handleSavePreviewClick(page.deps);
-
+    // The pick and the removal came within one autosave and end where the
+    // particle started, without a background, so nothing saves.
+    await wait(AUTOSAVE_WAIT_MS);
     expect(page.savedData()).toEqual([]);
-    expect(page.deps.projectService.storeFile).not.toHaveBeenCalled();
-    expect(page.deps.appService.showAlert).toHaveBeenCalledWith({
-      title: "Error",
-      message:
-        "Failed to capture the particle preview.\n\nDetails:\nThe canvas returned no preview image.",
-    });
-    // The canvas shows the outline again after the capture.
-    expect(
-      page.findElement(page.lastRender().elements, "selected-border"),
-    ).toBeTruthy();
-  });
-
-  it("alerts with the details when the thumbnail cannot be stored", async () => {
-    const page = await createPage();
-    page.deps.projectService.storeFile.mockRejectedValue(
-      new Error("The disk is full."),
-    );
-
-    await handleSavePreviewClick(page.deps);
-
-    expect(page.savedData()).toEqual([]);
-    expect(page.deps.appService.showAlert).toHaveBeenCalledWith({
-      title: "Error",
-      message:
-        "Failed to save the particle preview.\n\nDetails:\nThe disk is full.",
-    });
-    expect(page.view().savePreviewDisabled).toBe(false);
   });
 
   it("keeps the canvas editable when the texture fails to load, and warns once", async () => {
@@ -766,28 +701,6 @@ describe("particle editor", () => {
     expect(page.deps.appService.showToast).not.toHaveBeenCalled();
   });
 
-  it("alerts with the details and saves no thumbnail when the texture cannot load", async () => {
-    const page = await createPage();
-    failImageOneFile(page);
-    await pickTexture(page, "image-1");
-    await showPreviewTab(page);
-
-    await handleSavePreviewClick(page.deps);
-
-    // Save Preview reads the file again before it gives up.
-    expect(fileReads(page, "file-1")).toHaveLength(2);
-    expect(page.deps.appService.showAlert).toHaveBeenLastCalledWith({
-      title: "Error",
-      message:
-        'Could not load the image "Image One", so the preview was not saved. Check its file, or pick another image.\n\nDetails:\nFile file-1 is missing.',
-    });
-    expect(captureEditorPreviewImages).not.toHaveBeenCalled();
-    expect(page.savedData().map(({ data }) => data.thumbnailFileId)).toEqual([
-      undefined,
-    ]);
-    expect(page.view().savePreviewDisabled).toBe(false);
-  });
-
   it("draws the outline on Edit's Source tab only", async () => {
     const page = await createPage();
     await pickTexture(page, "image-1");
@@ -812,7 +725,6 @@ describe("particle editor", () => {
     expect(page.view()).toMatchObject({
       rightPanelEditStyle: "",
       rightPanelPreviewStyle: "display: none;",
-      showSavePreviewButton: false,
     });
 
     await showPreviewTab(page);
@@ -820,7 +732,6 @@ describe("particle editor", () => {
     expect(page.view()).toMatchObject({
       rightPanelEditStyle: "display: none;",
       rightPanelPreviewStyle: "",
-      showSavePreviewButton: true,
     });
     expect(page.lastRender().elements).toEqual(editElements.slice(0, 2));
   });

@@ -210,8 +210,12 @@ export const handleBeforeMount = (deps) => {
   return handleBeforeMountBase(deps);
 };
 
+// Thumbnails that went out of date, such as when the app closed before an
+// editor was left, are drawn in the background.
 export const handleAfterMount = (deps) => {
+  const { projectService } = deps;
   handleAfterMountBase(deps);
+  void projectService.requestParticleThumbnails();
 };
 
 export const handleDataChanged = refreshParticleData;
@@ -516,6 +520,10 @@ export const handleItemDuplicate = async (deps, payload) => {
   }
   if (itemData.thumbnailFileId) {
     duplicateData.thumbnailFileId = itemData.thumbnailFileId;
+  }
+  // The copy draws as the original does, so its thumbnail stays current.
+  if (itemData.thumbnailSourceHash) {
+    duplicateData.thumbnailSourceHash = itemData.thumbnailSourceHash;
   }
   if (itemData.preview) {
     duplicateData.preview = structuredClone(itemData.preview);

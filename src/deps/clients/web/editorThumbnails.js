@@ -8,20 +8,29 @@ const waitForPaint = () =>
     });
   });
 
-// The render state with each element's `src`, and its children's, read
-// through `toKey`.
+const ASSET_REFERENCE_FIELDS = new Set(["src", "texture"]);
+
+// The render state with every asset it draws read through `toKey`: a sprite's
+// `src`, a particle texture, or a texture item's `src`, at any depth, such as
+// in a container's children or a particle's modules.
 export const mapRenderStateSources = (renderState, toKey) => {
-  const mapElement = (element) => {
-    const mapped = { ...element };
-    if (typeof element.src === "string") {
-      mapped.src = toKey(element.src);
+  const mapValue = (value) => {
+    if (Array.isArray(value)) {
+      return value.map(mapValue);
     }
-    if (Array.isArray(element.children)) {
-      mapped.children = element.children.map(mapElement);
+    if (!value || typeof value !== "object") {
+      return value;
+    }
+    const mapped = {};
+    for (const [field, fieldValue] of Object.entries(value)) {
+      mapped[field] =
+        ASSET_REFERENCE_FIELDS.has(field) && typeof fieldValue === "string"
+          ? toKey(fieldValue)
+          : mapValue(fieldValue);
     }
     return mapped;
   };
-  return { ...renderState, elements: renderState.elements.map(mapElement) };
+  return mapValue(renderState);
 };
 
 // Every WebGL context a page creates counts against the browser's limit
@@ -89,6 +98,7 @@ export const renderThumbnailImage = async ({
   height,
   renderState,
   imageAssets,
+  settleMs = 0,
 }) => {
   try {
     const current = await takeRenderer({ width, height });
@@ -102,9 +112,12 @@ export const renderThumbnailImage = async ({
         assetsToLoad[key] = asset;
       }
     }
+    // Only the files loaded here are renamed; built-in particle textures, such
+    // as "circle", keep their names.
     const toKey = (fileId) => keys.get(fileId) ?? fileId;
 
-    // The last drawing goes first, so nothing of it carries over.
+    // The last drawing goes first, so nothing of it carries over, such as
+    // particles already running.
     await graphicsService.render({ elements: [], animations: [] });
     if (Object.keys(assetsToLoad).length > 0) {
       await graphicsService.loadAssets(assetsToLoad);
@@ -112,6 +125,11 @@ export const renderThumbnailImage = async ({
     }
     await graphicsService.render(mapRenderStateSources(renderState, toKey));
     await waitForPaint();
+    // Effects that move on the renderer's own clock, such as particles, run
+    // for a while first, so the thumbnail shows them going.
+    if (settleMs > 0) {
+      await new Promise((resolve) => setTimeout(resolve, settleMs));
+    }
     const thumbnailImage = await captureGraphicsThumbnailImage(graphicsService);
     if (!thumbnailImage) {
       throw new Error("The canvas returned no thumbnail image.");

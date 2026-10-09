@@ -157,7 +157,7 @@ steps:
     state: attached
     timeoutMs: 5000
   - action: waitFor
-    selector: "rvn-particle-editor #savePreviewButton"
+    selector: "rvn-particle-editor #backgroundImageButton"
     state: visible
     timeoutMs: 5000
   - action: wait

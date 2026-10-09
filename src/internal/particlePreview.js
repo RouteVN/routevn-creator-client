@@ -1,4 +1,8 @@
-import { normalizeParticleModules } from "./particles.js";
+import {
+  collectParticleTextureImageIds,
+  createRenderableParticleData,
+  normalizeParticleModules,
+} from "./particles.js";
 
 const PREVIEW_BACKGROUND = "#000000";
 const FALLBACK_ASPECT_RATIO = "16 / 9";
@@ -103,5 +107,50 @@ export const createParticlePreviewState = (
   return {
     elements,
     animations: [],
+  };
+};
+
+// Bump when a particle's preview starts drawing the same saved particle
+// differently, so saved thumbnails are drawn again.
+export const PARTICLE_THUMBNAIL_VERSION = 1;
+
+// What a saved particle's thumbnail shows: the particle on its saved preview
+// background, as the editor's Preview draws it, at the particle's own size,
+// and the image files that draws.
+export const createParticleThumbnailSource = ({ item, repositoryState }) => {
+  const imageItems = repositoryState.images?.items ?? {};
+  const effect = {
+    width: item.width,
+    height: item.height,
+    seed: item.seed,
+    modules: item.modules,
+  };
+  const background = imageItems[item.preview?.background?.imageId];
+  const backgroundImage = background?.type === "image" ? background : undefined;
+  const renderState = createParticlePreviewState(
+    createRenderableParticleData(effect, imageItems),
+    { backgroundImage },
+  );
+  const images = [];
+  for (const image of [
+    ...collectParticleTextureImageIds(effect, imageItems).map(
+      (imageId) => imageItems[imageId],
+    ),
+    backgroundImage,
+  ]) {
+    if (image?.fileId) {
+      images.push({
+        fileId: image.fileId,
+        name: image.name,
+        fileType: image.fileType,
+      });
+    }
+  }
+
+  return {
+    width: Math.max(1, Math.round(toPositiveNumber(effect.width) ?? 1)),
+    height: Math.max(1, Math.round(toPositiveNumber(effect.height) ?? 1)),
+    renderState,
+    images,
   };
 };

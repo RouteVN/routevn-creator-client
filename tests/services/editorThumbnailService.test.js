@@ -2,6 +2,10 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 import { createEditorThumbnailService } from "../../src/deps/services/shared/editorThumbnailService.js";
 import { createThumbnailSourceHash } from "../../src/deps/services/shared/thumbnailSourceHash.js";
 import {
+  createParticleThumbnailSource,
+  PARTICLE_THUMBNAIL_VERSION,
+} from "../../src/internal/particlePreview.js";
+import {
   createTransformThumbnailSource,
   TRANSFORM_THUMBNAIL_VERSION,
 } from "../../src/internal/transformPreview.js";
@@ -33,6 +37,24 @@ const createRepositoryState = () => ({
     },
   },
   characters: { tree: [], items: {} },
+  particles: {
+    tree: [{ id: "particle-1" }],
+    items: {
+      "particle-1": {
+        id: "particle-1",
+        type: "particle",
+        name: "Particle One",
+        width: 640.4,
+        height: 360,
+        seed: 7,
+        modules: {
+          emission: {},
+          appearance: { texture: "image-1" },
+        },
+        preview: { background: { imageId: "image-1" } },
+      },
+    },
+  },
   transforms: {
     tree: [{ id: "folder-1" }, { id: "transform-1" }, { id: "transform-2" }],
     items: {
@@ -83,6 +105,10 @@ const createService = ({ repositoryState = createRepositoryState() } = {}) => {
     // The update lands in the repository, as a command would.
     updateTransform: vi.fn(async ({ transformId, data }) => {
       Object.assign(repositoryState.transforms.items[transformId], data);
+      return { valid: true };
+    }),
+    updateParticle: vi.fn(async ({ particleId, data }) => {
+      Object.assign(repositoryState.particles.items[particleId], data);
       return { valid: true };
     }),
     renderThumbnail: vi.fn(async () => thumbnailImage),
@@ -218,7 +244,7 @@ describe("editor thumbnail service", () => {
     });
     expect(warn).toHaveBeenCalledWith(
       "[editorThumbnails] Failed to update a thumbnail",
-      { transformId: "transform-1", error: expect.any(Error) },
+      { kind: "transform", id: "transform-1", error: expect.any(Error) },
     );
   });
 
@@ -246,7 +272,7 @@ describe("editor thumbnail service", () => {
 
     expect(warn).toHaveBeenCalledWith(
       "[editorThumbnails] The thumbnail update was rejected",
-      { transformId: "transform-2", result: { valid: false } },
+      { kind: "transform", id: "transform-2", result: { valid: false } },
     );
   });
 
@@ -346,6 +372,43 @@ describe("editor thumbnail service", () => {
     expect(
       deps.updateTransform.mock.calls.map(([call]) => call.transformId),
     ).toEqual(["transform-1", "transform-2"]);
+  });
+
+  it("draws a particle at its own size once it has run a while, and saves it as a particle", async () => {
+    const { deps, repositoryState, service } = createService();
+    const item = repositoryState.particles.items["particle-1"];
+    const source = createParticleThumbnailSource({ item, repositoryState });
+
+    await service.requestParticleThumbnails();
+
+    const [options] = deps.renderThumbnail.mock.calls[0];
+    expect(options).toEqual({
+      width: 640,
+      height: 360,
+      renderState: source.renderState,
+      imageAssets: { "file-1": { url: "blob:file-1", type: "image/webp" } },
+      settleMs: 1500,
+    });
+    // The particle draws its texture's file, on its background.
+    const particleElement = options.renderState.elements.find(
+      (element) => element.type === "particles",
+    );
+    expect(particleElement).toMatchObject({ seed: 7, width: 640 });
+    expect(deps.updateParticle).toHaveBeenCalledWith({
+      particleId: "particle-1",
+      data: {
+        thumbnailFileId: "stored-1",
+        thumbnailSourceHash: await createThumbnailSourceHash({
+          version: PARTICLE_THUMBNAIL_VERSION,
+          renderState: source.renderState,
+        }),
+      },
+      fileRecords: [{ id: "record-1" }],
+    });
+    expect(deps.updateTransform).not.toHaveBeenCalled();
+
+    await service.requestParticleThumbnails({ particleIds: ["particle-1"] });
+    expect(deps.renderThumbnail).toHaveBeenCalledOnce();
   });
 
   it("frees its renderer once the queue is empty, and only after it drew", async () => {
