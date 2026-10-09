@@ -20,7 +20,6 @@ import {
   handlePreviewTextInput,
   handleRedoButtonClick,
   handleRightPanelModeChange,
-  handleSavePreviewClick,
   handleSliderValueCancel,
   handleSliderValueChange,
   handleSliderValueInput,
@@ -933,7 +932,7 @@ describe("text style editor", () => {
     expect(page.deps.projectService.createFont).not.toHaveBeenCalled();
   });
 
-  it("aligns the preview text left, center or right, and Save Preview saves the alignment", async () => {
+  it("aligns the preview text left, center or right, and saves the alignment on its own", async () => {
     const page = await createPage();
     expect(page.view().previewAlign).toBe("center");
     expect(page.view().previewAlignOptions).toEqual([
@@ -951,18 +950,13 @@ describe("text style editor", () => {
     });
     expect(page.view().previewAlign).toBe("right");
 
-    // It is not an edit: nothing to undo, and nothing autosaves.
+    // It is not an edit to undo, but it saves a moment after, alone.
     expect(page.state().editHistory.undo).toHaveLength(0);
-    await wait(AUTOSAVE_WAIT_MS);
     expect(page.savedData()).toEqual([]);
-
-    // Save Preview saves only the preview setting that changed.
-    await handleSavePreviewClick(page.deps);
+    await wait(AUTOSAVE_WAIT_MS);
     expect(page.savedData()).toEqual([
       { textStyleId: "text-style-1", data: { previewAlign: "right" } },
     ]);
-    await handleSavePreviewClick(page.deps);
-    expect(page.savedData()).toHaveLength(1);
   });
 
   it("opens with the saved preview alignment", async () => {
@@ -972,7 +966,7 @@ describe("text style editor", () => {
     expect(page.view().previewAlign).toBe("left");
   });
 
-  it("previews the preview text without saving it, and Save Preview saves it after the values", async () => {
+  it("saves the preview text with waiting edits, as one save, once typing stops", async () => {
     const page = await createPage();
     await page.changeField("fontSize", 32);
     handleRightPanelModeChange(page.deps, {
@@ -981,71 +975,42 @@ describe("text style editor", () => {
     expect(page.view()).toMatchObject({
       rightPanelEditStyle: "display: none;",
       rightPanelPreviewStyle: "",
-      showSavePreviewButton: true,
     });
 
-    handlePreviewTextInput(page.deps, {
-      _event: { detail: { value: "A longer preview line" } },
-    });
+    for (const value of ["A", "A longer", "A longer preview line"]) {
+      handlePreviewTextInput(page.deps, { _event: { detail: { value } } });
+    }
     expect(page.view().previewText).toBe("A longer preview line");
     expect(page.state().editHistory.undo).toHaveLength(1);
-
-    await handleSavePreviewClick(page.deps);
+    await wait(AUTOSAVE_WAIT_MS);
 
     expect(page.savedData()).toEqual([
       {
         textStyleId: "text-style-1",
-        data: expect.objectContaining({ fontSize: 32 }),
-      },
-      {
-        textStyleId: "text-style-1",
-        data: { previewText: "A longer preview line" },
+        data: expect.objectContaining({
+          fontSize: 32,
+          previewText: "A longer preview line",
+        }),
       },
     ]);
-    expect(page.deps.appService.showToast).toHaveBeenCalledWith({
-      message: "Text style preview saved.",
-    });
-
-    // Saved already, so a second Save Preview writes nothing.
-    await handleSavePreviewClick(page.deps);
-    expect(page.savedData()).toHaveLength(2);
-    expect(page.deps.appService.showToast).toHaveBeenCalledTimes(2);
+    // Saved already, so leaving writes nothing more.
+    await handleBackClick(page.deps);
+    expect(page.savedData()).toHaveLength(1);
   });
 
-  it("shows the name for an empty preview text, and leaves unsaved preview text behind", async () => {
+  it("saves waiting preview text at once when it leaves, and shows the name while it is empty", async () => {
     const page = await createPage();
 
     handlePreviewTextInput(page.deps, { _event: { detail: { value: " " } } });
     expect(page.view().previewText).toBe("Text Style One");
 
     await handleBackClick(page.deps);
-    expect(page.savedData()).toEqual([]);
+    expect(page.savedData()).toEqual([
+      { textStyleId: "text-style-1", data: { previewText: " " } },
+    ]);
   });
 
-  it("saves the preview text once when Save Preview is clicked twice", async () => {
-    let finishSave;
-    const page = await createPage();
-    page.deps.projectService.updateTextStyle.mockReturnValue(
-      new Promise((resolve) => {
-        finishSave = () => resolve({ valid: true });
-      }),
-    );
-    handlePreviewTextInput(page.deps, {
-      _event: { detail: { value: "Preview Two" } },
-    });
-
-    const firstClick = handleSavePreviewClick(page.deps);
-    const secondClick = handleSavePreviewClick(page.deps);
-    expect(page.view().savePreviewDisabled).toBe(true);
-    await page.flush();
-    finishSave();
-    await Promise.all([firstClick, secondClick]);
-
-    expect(page.savedData()).toHaveLength(1);
-    expect(page.view().savePreviewDisabled).toBe(false);
-  });
-
-  it("alerts when the preview text cannot be saved", async () => {
+  it("alerts and keeps the page open when the preview text cannot be saved", async () => {
     const page = await createPage();
     page.deps.projectService.updateTextStyle.mockResolvedValue({
       valid: false,
@@ -1054,14 +1019,13 @@ describe("text style editor", () => {
       _event: { detail: { value: "Preview Two" } },
     });
 
-    await handleSavePreviewClick(page.deps);
+    await handleBackClick(page.deps);
 
     expect(page.deps.appService.showAlert).toHaveBeenCalledWith({
-      message: "Failed to save the text style preview.",
+      message: "Failed to save text style.",
       title: "Error",
     });
-    expect(page.deps.appService.showToast).not.toHaveBeenCalled();
-    expect(page.view().savePreviewDisabled).toBe(false);
+    expect(page.deps.appService.navigate).not.toHaveBeenCalled();
   });
 
   it("draws without a font file that fails to load, warns about it once, and keeps editing", async () => {

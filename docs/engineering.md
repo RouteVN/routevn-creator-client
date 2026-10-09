@@ -1494,11 +1494,11 @@ at 2px. Preview holds
 the preview text, which the text styles page shows (the name when it is
 empty), a Text Alignment control for the editor preview (saved as the text
 style's `previewAlign`, from creator-model 1.16.0; layouts keep using
-`align`), and **Save Preview**, which saves the values and then whichever of
-the preview text and alignment changed. Neither is part of the history, and
-unsaved ones are left behind on leaving. Edits save on their own 300ms after
-the last one and on leaving, through `enqueueSceneEditorPersistence`, as in
-the transform editor, and an undo back to the saved values saves nothing. Font files follow the
+`align`). Edits, and the preview text and alignment, save on their own 300ms
+after the last change and on leaving, together in one `textStyle.update`,
+through `enqueueSceneEditorPersistence`, as in the transform editor; an undo
+back to the saved values saves nothing. The preview text and alignment are
+not part of the history. Font files follow the
 asset failure policy: `rvn-font-preview` names the files it could not load in
 `font-load-error`, and the editor warns once per file, draws the text without
 that file (in the style's next font, or the browser's), and stays editable.
