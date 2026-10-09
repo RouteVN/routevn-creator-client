@@ -50,6 +50,9 @@ final class NativeCrashReporting {
     }
 
     private static void initialize(Context context) {
+        // Generate and load the per-install crash ID before the SDK starts, so
+        // every event, including crashes during startup, carries it.
+        String crashId = NativeCrashIdStore.loadOrCreate(context);
         SentryAndroid.init(context, options -> {
             options.setDsn(BuildConfig.SENTRY_DSN);
             options.setRelease("routevn-creator@" + BuildConfig.VERSION_NAME);
@@ -102,7 +105,7 @@ final class NativeCrashReporting {
             options.setEnableAutoActivityLifecycleTracing(false);
             options.setEnableFramesTracking(false);
 
-            options.setBeforeSend((event, hint) -> NativeCrashScrubber.scrub(event));
+            options.setBeforeSend((event, hint) -> NativeCrashScrubber.scrub(event, crashId));
         });
     }
 }

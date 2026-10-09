@@ -21,6 +21,9 @@ import java.util.Map;
 import org.junit.Test;
 
 public class NativeCrashScrubberTest {
+    private static final String CRASH_ID =
+        "0f6b1c3e-2a4d-4c8b-9e7f-1a2b3c4d5e6f";
+
     @Test
     public void keepsOnlyCrashTypeStackDeviceAndOsFacts() {
         SentryEvent event = new SentryEvent();
@@ -61,7 +64,7 @@ public class NativeCrashScrubberTest {
         exception.setMechanism(mechanism);
         event.setExceptions(Collections.singletonList(exception));
 
-        NativeCrashScrubber.scrub(event);
+        NativeCrashScrubber.scrub(event, null);
 
         assertNull(event.getMessage());
         assertNull(event.getUser());
@@ -110,7 +113,7 @@ public class NativeCrashScrubberTest {
         event.setExceptions(Collections.singletonList(exception));
         event.setDebugMeta(debugMeta);
 
-        NativeCrashScrubber.scrub(event);
+        NativeCrashScrubber.scrub(event, CRASH_ID);
 
         assertEquals(1, event.getDebugMeta().getImages().size());
         DebugImage kept = event.getDebugMeta().getImages().get(0);
@@ -121,6 +124,55 @@ public class NativeCrashScrubberTest {
         assertEquals("libroutevn.so", keptFrame.getPackage());
         assertEquals("0x7000001234", keptFrame.getInstructionAddr());
         assertEquals(signal, event.getExceptions().get(0).getMechanism().getMeta().get("signal"));
+    }
+
+    @Test
+    public void keepsOnlyTheInstallCrashIdAsUserId() {
+        SentryEvent event = new SentryEvent();
+        User user = new User();
+        user.setId("someone-else");
+        user.setEmail("user@example.com");
+        user.setUsername("user");
+        user.setIpAddress("203.0.113.7");
+        user.setName("Real Name");
+        user.setData(Collections.singletonMap("path", "/Users/user@example.com"));
+        user.setUnknown(Collections.singletonMap("segment", "secret-segment"));
+        event.setUser(user);
+
+        NativeCrashScrubber.scrub(event, CRASH_ID);
+
+        User kept = event.getUser();
+        assertEquals(CRASH_ID, kept.getId());
+        assertNull(kept.getEmail());
+        assertNull(kept.getUsername());
+        assertNull(kept.getIpAddress());
+        assertNull(kept.getName());
+        assertNull(kept.getData());
+        assertNull(kept.getUnknown());
+    }
+
+    @Test
+    public void addsTheCrashIdToEventsWithoutUserAndDropsItWhenUnavailable() {
+        SentryEvent withoutUser = new SentryEvent();
+        NativeCrashScrubber.scrub(withoutUser, CRASH_ID);
+        assertEquals(CRASH_ID, withoutUser.getUser().getId());
+        assertNull(withoutUser.getUser().getEmail());
+
+        SentryEvent withoutUserOrCrashId = new SentryEvent();
+        NativeCrashScrubber.scrub(withoutUserOrCrashId, null);
+        assertNull(withoutUserOrCrashId.getUser());
+
+        // Without our crash ID the user stays dropped, whatever it contained.
+        SentryEvent withUser = new SentryEvent();
+        withUser.setUser(new User());
+        withUser.getUser().setEmail("user@example.com");
+        NativeCrashScrubber.scrub(withUser, null);
+        assertNull(withUser.getUser());
+
+        SentryEvent withCorruptId = new SentryEvent();
+        withCorruptId.setUser(new User());
+        NativeCrashScrubber.scrub(withCorruptId, "not-a-uuid");
+        assertNull(withCorruptId.getUser());
     }
 
     private static DebugImage image(String address, long size, String path) {

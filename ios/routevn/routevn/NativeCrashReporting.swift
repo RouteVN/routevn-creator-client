@@ -5,12 +5,15 @@ import Sentry
 /// NSExceptions and Swift runtime traps. Reports are saved at crash time and
 /// sent on the next launch. See docs/mobile-crash-reporting.md.
 enum NativeCrashReporting {
-    static func start(bundle: Bundle = .main) {
+    static func start(bundle: Bundle = .main, defaults: UserDefaults = .standard) {
         guard let dsn = bundle.object(forInfoDictionaryKey: "RouteVNSentryDSN") as? String,
               !dsn.isEmpty else { return }
         let version = bundle.object(forInfoDictionaryKey: "CFBundleShortVersionString") as? String
         let build = bundle.object(forInfoDictionaryKey: "CFBundleVersion") as? String
         let environment = bundle.object(forInfoDictionaryKey: "RouteVNSentryEnvironment") as? String
+        // Generate and load the per-install crash ID before the SDK starts, so
+        // every event, including crashes during startup, carries it.
+        let crashId = NativeCrashIdStore.loadOrCreate(defaults: defaults)
 
         SentrySDK.start { options in
             options.dsn = dsn
@@ -47,21 +50,22 @@ enum NativeCrashReporting {
             options.attachScreenshot = false
             options.attachViewHierarchy = false
 
-            options.beforeSend = { event in NativeCrashScrubber.scrub(event) }
+            options.beforeSend = { event in NativeCrashScrubber.scrub(event, crashId: crashId) }
         }
     }
 }
 
 /// Keeps a crash report to the crash type, stack locations, the debug images
-/// those frames point into, app version, device model and OS version. Message
-/// text, user data, paths, variables and other context are dropped.
+/// those frames point into, app version, device model, OS version and the
+/// install crash ID as user.id. Message text, other user data, paths,
+/// variables and other context are dropped.
 enum NativeCrashScrubber {
     static let message = "App crash"
 
-    static func scrub(_ event: Event) -> Event {
+    static func scrub(_ event: Event, crashId: String?) -> Event {
         event.message = nil
         event.error = nil
-        event.user = nil
+        event.user = keptUser(crashId)
         event.request = nil
         event.breadcrumbs = nil
         event.serverName = nil
@@ -99,6 +103,15 @@ enum NativeCrashScrubber {
             image.codeFile = basename(image.codeFile)
         }
         return event
+    }
+
+    // Keep only the install crash ID as user.id; any other user data on the
+    // incoming event is dropped.
+    private static func keptUser(_ crashId: String?) -> User? {
+        guard let crashId, NativeCrashIdStore.isCrashId(crashId) else { return nil }
+        let user = User()
+        user.userId = crashId
+        return user
     }
 
     private static func scrubContext(

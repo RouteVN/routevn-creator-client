@@ -56,6 +56,8 @@ futures-util = { version = "0.3", default-features = false, features = ["std"] }
 # build does not switch the updater to native TLS or link OpenSSL.
 rustls = { version = "0.23", default-features = false, features = ["ring"] }
 sentry = { version = "=0.49.3", default-features = false, features = ["panic", "backtrace", "debug-images", "reqwest", "rustls-no-provider"] }
+# Per-install crash ID for error reporting (docs/mobile-crash-reporting.md).
+uuid = { version = "1.18.1", features = ["v4"] }
 
 [target.'cfg(target_os = "windows")'.dependencies]
 windows = { version = "=0.61.3", features = [

@@ -32,7 +32,6 @@ vi.hoisted(() => {
     dist: "test-build",
   });
 });
-
 describe("desktop error reporting", () => {
   it("initializes the official SDK with the native build configuration", () => {
     expect(getClient().getOptions()).toMatchObject({
@@ -167,6 +166,129 @@ describe("explicit error reporting through the SDK", () => {
   afterEach(() => {
     vi.restoreAllMocks();
     vi.unstubAllEnvs();
+  });
+
+  it("sends the shell's crash ID as the only user field", () => {
+    const crashId = "0f6b1c3e-2a4d-4c8b-9e7f-1a2b3c4d5e6f";
+    const reporter = createErrorReporter({
+      dsn: TEST_DSN,
+      runtime: "tauri",
+      captureGlobal: true,
+      crashId,
+    });
+    const event = reporter.scrubErrorEvent({
+      event_id: "event-one",
+      user: {
+        id: "someone-else",
+        email: "user@example.com",
+        username: "user",
+        ip_address: "203.0.113.7",
+        segment: "secret-segment",
+        data: { path: "/Users/user@example.com" },
+      },
+      exception: {
+        values: [
+          {
+            type: "TypeError",
+            value: "failed for user@example.com",
+            mechanism: { type: "routevn.capture", handled: true },
+          },
+        ],
+      },
+    });
+
+    expect(event.user).toEqual({ id: crashId });
+    const encoded = JSON.stringify(event);
+    expect(encoded).toContain(crashId);
+    expect(encoded).not.toContain("user@example.com");
+    expect(encoded).not.toContain("someone-else");
+    expect(encoded).not.toContain("secret-segment");
+  });
+
+  it("sends no user without a shell crash ID", () => {
+    for (const crashId of [
+      undefined,
+      null,
+      "not-a-uuid",
+      "0F6B1C3E-2A4D-4C8B-9E7F-1A2B3C4D5E6F",
+    ]) {
+      const reporter = createErrorReporter({
+        runtime: "web",
+        captureGlobal: false,
+        crashId,
+      });
+      const event = reporter.scrubErrorEvent({
+        event_id: "event-one",
+        user: { email: "user@example.com", username: "user" },
+        exception: {
+          values: [{ type: "TypeError", mechanism: { handled: true } }],
+        },
+      });
+
+      expect(event.user).toBeUndefined();
+      expect(JSON.stringify(event)).not.toContain("user@example.com");
+    }
+  });
+
+  it("carries the crash ID on events sent through the SDK pipeline", async () => {
+    const crashId = "11111111-2222-4333-8444-555555555555";
+    const reporter = createErrorReporter({
+      dsn: TEST_DSN,
+      runtime: "tauri",
+      captureGlobal: false,
+      crashId,
+    });
+    const events = collectSentEvents();
+
+    reporter.capture(new Error("save failed"), {
+      operation: "resourcePage.mutation",
+    });
+    await reporter.flush();
+
+    expect(events).toHaveLength(1);
+    expect(events[0].user).toEqual({ id: crashId });
+  });
+
+  it("uses the crash ID injected into the exported desktop reporter", async () => {
+    const crashId = "11111111-2222-4333-8444-555555555555";
+    globalThis.__ROUTEVN_ERROR_REPORTING__ = Object.freeze({
+      dsn: TEST_DSN,
+      release: "app-one@1.0.0",
+      environment: "development",
+      dist: "test-build",
+      crashId,
+    });
+    vi.resetModules();
+    const { errorReporter } = await import(
+      "../../src/deps/clients/tauri/errorReporting.js"
+    );
+    const events = collectSentEvents();
+
+    errorReporter.capture(new Error("save failed"));
+    await errorReporter.flush();
+
+    expect(events).toHaveLength(1);
+    expect(events[0].user).toEqual({ id: crashId });
+  });
+
+  it("omits the user when the injected desktop configuration has no crash ID", async () => {
+    globalThis.__ROUTEVN_ERROR_REPORTING__ = Object.freeze({
+      dsn: TEST_DSN,
+      release: "app-one@1.0.0",
+      environment: "development",
+      dist: "test-build",
+    });
+    vi.resetModules();
+    const { errorReporter } = await import(
+      "../../src/deps/clients/tauri/errorReporting.js"
+    );
+    const events = collectSentEvents();
+
+    errorReporter.capture(new Error("save failed"));
+    await errorReporter.flush();
+
+    expect(events).toHaveLength(1);
+    expect(events[0].user).toBeUndefined();
   });
 
   it("caps explicit reports separately from uncaught errors", async () => {

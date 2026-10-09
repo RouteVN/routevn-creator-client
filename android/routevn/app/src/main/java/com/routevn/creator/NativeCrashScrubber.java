@@ -11,22 +11,24 @@ import io.sentry.protocol.SentryException;
 import io.sentry.protocol.SentryStackFrame;
 import io.sentry.protocol.SentryStackTrace;
 import io.sentry.protocol.SentryThread;
+import io.sentry.protocol.User;
 import java.util.ArrayList;
 import java.util.List;
 
 /**
  * Keeps a crash report to the crash type, stack locations, the debug images
- * those frames point into, app version, device model and OS version. Message
- * text, user data, paths, variables and other context are dropped.
+ * those frames point into, app version, device model, OS version and the
+ * install crash ID as user.id. Message text, other user data, paths,
+ * variables and other context are dropped.
  */
 final class NativeCrashScrubber {
     static final String MESSAGE = "App crash";
 
     private NativeCrashScrubber() {}
 
-    static SentryEvent scrub(SentryEvent event) {
+    static SentryEvent scrub(SentryEvent event, String crashId) {
         event.setMessage(null);
-        event.setUser(null);
+        event.setUser(keptUser(crashId));
         event.setRequest(null);
         event.setBreadcrumbs(null);
         event.setServerName(null);
@@ -57,6 +59,15 @@ final class NativeCrashScrubber {
         }
         scrubDebugMeta(event.getDebugMeta(), addresses);
         return event;
+    }
+
+    // Keep only the install crash ID as user.id; any other user data on the
+    // incoming event is dropped.
+    private static User keptUser(String crashId) {
+        if (!NativeCrashIdStore.isCrashId(crashId)) return null;
+        User user = new User();
+        user.setId(crashId);
+        return user;
     }
 
     // Contexts is a map owned by the event, so rebuild it in place.
