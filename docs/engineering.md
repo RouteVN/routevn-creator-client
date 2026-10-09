@@ -1617,7 +1617,11 @@ save the lines it was handed then.
 
 Editor blur uses the normal text debounce path; navigation, preview, and
 explicit persistence workflows remain responsible for immediate flushes when
-leaving the editing context. Scheduled autosaves defer while a previous draft
+leaving the editing context. The editor reports line changes only while it has
+focus, so before the render that follows a blur, the page takes the blurred
+section editor's lines into its draft. Otherwise a change that reached the
+editor after the blur, such as a keyboard finishing a word, would be replaced
+by the draft's older lines and never saved. Scheduled autosaves defer while a previous draft
 flush is still writing, then reschedule through the normal debounce/throttle
 path instead of queueing another storage submit behind the in-flight write.
 

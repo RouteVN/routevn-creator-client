@@ -2528,9 +2528,10 @@ export const handleEditorCompositionStateChanged = (deps, payload) => {
   });
 };
 
-export const handleEditorBlur = async (deps) => {
+export const handleEditorBlur = async (deps, payload) => {
   const { store } = deps;
   const blurStartedAt = getSceneEditorTimingNow();
+  const sectionId = getSectionIdFromPayload(payload);
   const skipDraftFlush = store.selectSkipNextEditorBlurDraftFlush?.() === true;
   if (skipDraftFlush) {
     store.setSkipNextEditorBlurDraftFlush({ value: false });
@@ -2538,11 +2539,28 @@ export const handleEditorBlur = async (deps) => {
 
   setTimeout(() => {
     const timeoutStartedAt = getSceneEditorTimingNow();
+    // The editor reports changes only while it has focus, so a change that
+    // reaches it after the blur, such as a keyboard finishing a word, is not
+    // in the draft yet. Take its lines first, or the render would load the
+    // draft's older lines over that change. Only for a section of the scene
+    // on screen: during a scene switch the blur can come from an editor of
+    // the previous scene.
+    const editorRef = findSectionEditorRef(deps.refs, sectionId);
+    const isSceneSection =
+      editorRef &&
+      store
+        .selectScene()
+        ?.sections?.some((section) => section.id === sectionId);
+    const liveLines = isSceneSection && getLiveLinesFromElement(editorRef);
+    const draftSection =
+      liveLines && syncDraftSectionFromLines(deps, liveLines, { sectionId });
     const renderStartedAt = getSceneEditorTimingNow();
     deps.render();
     const renderDurationMs = getSceneEditorTimingDurationMs(renderStartedAt);
 
-    if (skipDraftFlush) {
+    // Preview saves before it blurs the editor, so its blur saves only a
+    // change that reached the editor after that save.
+    if (skipDraftFlush && !draftSection?.dirty) {
       emitSceneEditorTiming("page.editor-blur", {
         durationMs: getSceneEditorTimingDurationMs(timeoutStartedAt),
         queuedDelayMs: getSceneEditorTimingDurationMs(blurStartedAt),
