@@ -25,6 +25,7 @@ import {
 import { getLocalProjectPathFromPayload } from "../../internal/localProjectRoute.js";
 import { getRoutevnCreatorDocsUrl } from "../../internal/routevnUrls.js";
 import { resolveUpdatesEnabled } from "../../internal/updates.js";
+import { readAppLocaleUsage } from "../../internal/ui/appLocale.js";
 import { recordRecentSceneVisit } from "../../internal/ui/recentScenes.js";
 import { isAssetPackageEnabled } from "../../internal/ui/releasePreferences.js";
 import {
@@ -595,6 +596,9 @@ export const handleBeforeMount = (deps) => {
   const initialPath = currentPath === "/" ? "/projects" : currentPath;
 
   appService.setAppCopyProvider?.(() => selectAppCopy(deps.i18n));
+  appService.setAppLocaleUsageProvider?.(() =>
+    readAppLocaleUsage({ appService, localeService: deps.locale }),
+  );
   store.setPlatform({ platform: appService.getPlatform() });
   store.setUiConfig({ uiConfig });
   const cleanupBackup = appService.startBackupChecks?.(() => ({

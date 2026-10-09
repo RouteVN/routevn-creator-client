@@ -12,24 +12,40 @@ const ios = {
   arch: "aarch64",
   distribution: "app-store",
   channel: "stable",
-  device: { model: "iPhone17,1", osVersion: "18.0" },
+  device: {
+    model: "iPhone17,1",
+    osVersion: "18.0",
+    formFactor: "phone",
+    language: "ja",
+  },
 };
 const android = {
   ...ios,
   target: "android",
   distribution: "google-play",
   currentBuild: "9",
+  device: {
+    ...ios.device,
+    formFactor: "tablet",
+    language: "en",
+    webViewVersion: "128",
+  },
 };
 const iosInfo = {
   version: "1.15.1",
   arch: "aarch64",
   model: "iPhone17,1",
   osVersion: "18.0",
+  formFactor: "phone",
+  language: "ja-JP",
 };
 const androidInfo = {
   ...iosInfo,
+  formFactor: "tablet",
+  language: "en-US",
   distribution: "google-play",
   build: "9",
+  webViewVersion: "128",
 };
 const release = () => ({
   version: "1.16.0",
@@ -62,6 +78,64 @@ describe("mobile update metadata protocol", () => {
     expect(await readClientUpdateContext(bridge, "ios")).toBeUndefined();
     bridge.mockResolvedValue({ ...iosInfo, version: "invalid" });
     expect(await readClientUpdateContext(bridge, "ios")).toBeUndefined();
+    // An older shell without the usage-field keys is accepted too; the
+    // usage fields are simply omitted.
+    const oldShape = {
+      version: "1.15.1",
+      arch: "aarch64",
+      model: "iPhone17,1",
+      osVersion: "18.0",
+    };
+    bridge.mockResolvedValue(oldShape);
+    expect(await readClientUpdateContext(bridge, "ios")).toEqual({
+      ...ios,
+      device: { model: "iPhone17,1", osVersion: "18.0" },
+    });
+    bridge.mockResolvedValue({
+      ...oldShape,
+      distribution: "google-play",
+      build: "9",
+    });
+    expect(await readClientUpdateContext(bridge, "android")).toEqual({
+      ...android,
+      device: { model: "iPhone17,1", osVersion: "18.0" },
+    });
+  });
+
+  it("keeps valid usage fields when one native usage field is invalid", async () => {
+    const context = await readClientUpdateContext(
+      async () => ({
+        ...androidInfo,
+        formFactor: "watch",
+      }),
+      "android",
+    );
+    expect(context?.device).toEqual({
+      model: androidInfo.model,
+      osVersion: androidInfo.osVersion,
+      language: "en",
+      webViewVersion: "128",
+    });
+    const unreadableLanguage = await readClientUpdateContext(
+      async () => ({ ...androidInfo, language: 18 }),
+      "android",
+    );
+    expect(unreadableLanguage?.device).toEqual({
+      model: androidInfo.model,
+      osVersion: androidInfo.osVersion,
+      formFactor: "tablet",
+      language: "unknown",
+      webViewVersion: "128",
+    });
+  });
+
+  it("rejects unknown keys in native contexts", async () => {
+    expect(
+      await readClientUpdateContext(
+        async () => ({ ...iosInfo, unexpected: "field" }),
+        "ios",
+      ),
+    ).toBeUndefined();
   });
 
   it.each([
@@ -81,9 +155,40 @@ describe("mobile update metadata protocol", () => {
       expect(context?.device).toEqual({
         model: field === "model" ? "unknown" : iosInfo.model,
         osVersion: field === "osVersion" ? "unknown" : iosInfo.osVersion,
+        formFactor: iosInfo.formFactor,
+        language: "ja",
       });
     },
   );
+
+  it.each([
+    ["ja-JP", "ja"],
+    ["zh-Hans-CN", "zh-hans"],
+    [null, "unknown"],
+    [18, "unknown"],
+  ])("normalizes native language %p to %p", async (language, expected) => {
+    const context = await readClientUpdateContext(
+      async () => ({ ...iosInfo, language }),
+      "ios",
+    );
+    expect(context?.device.language).toBe(expected);
+  });
+
+  it("omits invalid native usage values instead of failing the check", async () => {
+    const context = await readClientUpdateContext(
+      async () => ({
+        ...androidInfo,
+        formFactor: "watch",
+        webViewVersion: "128.0.6613.84",
+      }),
+      "android",
+    );
+    expect(context?.device).toEqual({
+      model: androidInfo.model,
+      osVersion: androidInfo.osVersion,
+      language: "en",
+    });
+  });
 
   it("rejects app fields in native device facts", async () => {
     expect(
@@ -137,6 +242,83 @@ describe("mobile update metadata protocol", () => {
       params: {
         ...ios,
         device: { ...ios.device, id: deviceId },
+      },
+    });
+  });
+
+  it("reports the check trigger and reads the active locale per check", async () => {
+    const request = vi
+      .fn()
+      .mockResolvedValue(response({ status: "noUpdate", reason: "upToDate" }));
+    const getLocaleUsage = vi
+      .fn()
+      .mockReturnValueOnce({ uiLanguage: "ja", uiLanguageSource: "selected" })
+      .mockReturnValueOnce({
+        uiLanguage: "zh-hans",
+        uiLanguageSource: "default",
+      });
+    const client = createClientUpdates({
+      context: ios,
+      request,
+      keyValueStore,
+      getLocaleUsage,
+    });
+    const params = (call) => JSON.parse(request.mock.calls[call][0]).params;
+    await client.check({ trigger: "launch" });
+    expect(params(0)).toEqual({
+      ...ios,
+      trigger: "launch",
+      uiLanguage: "ja",
+      uiLanguageSource: "selected",
+      device: { ...ios.device, id: deviceId },
+    });
+    await client.check({ trigger: "periodic" });
+    expect(getLocaleUsage).toHaveBeenCalledTimes(2);
+    expect(params(1)).toEqual({
+      ...ios,
+      trigger: "periodic",
+      uiLanguage: "zh-hans",
+      uiLanguageSource: "default",
+      device: { ...ios.device, id: deviceId },
+    });
+  });
+
+  it("omits invalid or unreadable usage fields and still checks", async () => {
+    const request = vi
+      .fn()
+      .mockResolvedValue(response({ status: "noUpdate", reason: "upToDate" }));
+    const brokenContext = {
+      ...ios,
+      device: {
+        model: "iPhone17,1",
+        osVersion: "18.0",
+        formFactor: "watch",
+        language: "EN",
+        webViewVersion: "128.0.6613.84",
+      },
+    };
+    const client = createClientUpdates({
+      context: brokenContext,
+      request,
+      keyValueStore,
+      getLocaleUsage: () => {
+        throw new Error("Locale service unavailable");
+      },
+    });
+    await expect(
+      client.check({ trigger: "background" }),
+    ).resolves.toMatchObject({ status: "noUpdate" });
+    expect(JSON.parse(request.mock.calls[0][0]).params).toEqual({
+      appId: "routevn-creator",
+      currentVersion: "1.15.1",
+      target: "ios",
+      arch: "aarch64",
+      distribution: "app-store",
+      channel: "stable",
+      device: {
+        id: deviceId,
+        model: "iPhone17,1",
+        osVersion: "18.0",
       },
     });
   });

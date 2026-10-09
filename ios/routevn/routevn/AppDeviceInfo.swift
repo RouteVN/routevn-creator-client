@@ -1,9 +1,16 @@
+#if canImport(UIKit)
+import UIKit
+#endif
 import Foundation
 import Darwin
 
 /// Exposes installed app and device facts to JavaScript.
 enum AppDeviceInfo {
-    static func read(bundle: Bundle = .main) throws -> [String: Any] {
+    static func read(
+        bundle: Bundle = .main,
+        formFactor: String,
+        deviceLanguage: String?
+    ) throws -> [String: Any] {
         guard let version = bundle.object(forInfoDictionaryKey: "CFBundleShortVersionString") as? String,
               !version.isEmpty else {
             throw failure("Installed application version is missing.")
@@ -22,7 +29,30 @@ enum AppDeviceInfo {
             "arch": architecture,
             "model": hardwareModel(),
             "osVersion": osVersion,
+            "formFactor": formFactor,
+            "language": deviceLanguage ?? NSNull(),
         ]
+    }
+
+    // The raw first preferred language; shared JavaScript normalizes it
+    // (the bundle only localizes English, so navigator.language is wrong).
+    static func currentDeviceLanguage() -> String? {
+        Locale.preferredLanguages.first
+    }
+
+    #if canImport(UIKit)
+    static func currentFormFactor() -> String {
+        formFactor(
+            idiom: UIDevice.current.userInterfaceIdiom == .pad ? "pad" : "phone",
+            isiOSAppOnMac: ProcessInfo.processInfo.isiOSAppOnMac)
+    }
+    #endif
+
+    /// `desktop` for an iOS app running on a Mac (which reports the pad idiom),
+    /// `tablet` on iPad, otherwise `phone`. Pure so native checks can test it.
+    static func formFactor(idiom: String, isiOSAppOnMac: Bool) -> String {
+        if isiOSAppOnMac { return "desktop" }
+        return idiom == "pad" ? "tablet" : "phone"
     }
 
     private static func hardwareModel() -> String {

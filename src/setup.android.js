@@ -88,6 +88,7 @@ const updater = createAndroidUpdater({
     ? createClientUpdates({
         context: updateContext,
         keyValueStore: appDb,
+        getLocaleUsage: () => appService.getAppLocaleUsage(),
         request: createMobileUpdateRequest({
           debug: isAndroidDebugBuild,
           override: readAndroidEnv("ROUTEVN_UPDATE_API_URL", undefined),

@@ -2,7 +2,16 @@ import {
   compareUpdateVersions,
   isUpdateVersion,
 } from "../../internal/updateVersion.js";
-import { getDeviceId, isDeviceMetadataText } from "./deviceIdentity.js";
+import { isDeviceMetadataText, getDeviceId } from "./deviceIdentity.js";
+import {
+  isValidDeviceLanguage,
+  isValidFormFactor,
+  isValidUiLanguage,
+  isValidUiLanguageSource,
+  isValidUpdateTrigger,
+  isValidWebViewVersion,
+  normalizeDeviceLanguage,
+} from "../../internal/updateUsage.js";
 import {
   ROUTEVN_CREATOR_PLAY_STORE_URL,
   ROUTEVN_DOWNLOAD_DOMAIN,
@@ -83,7 +92,7 @@ const validateContext = (context) => {
   ];
   if (context?.target === "android") fields.push("currentBuild");
   exactFields(context, fields);
-  exactFields(context.device, ["model", "osVersion"]);
+  validateContextDevice(context.device);
   if (
     !isDeviceMetadataText(context.device.model) ||
     !isDeviceMetadataText(context.device.osVersion) ||
@@ -105,15 +114,60 @@ const validateContext = (context) => {
   return context;
 };
 
-// Older installed shells do not expose the metadata bridge yet.
+// Optional usage fields may be absent, and any value that is present is
+// revalidated and omitted at send time; the shape check only rejects
+// unexpected device keys.
+const validateContextDevice = (device) => {
+  const optionalFields = ["formFactor", "language", "webViewVersion"];
+  if (
+    !device ||
+    typeof device !== "object" ||
+    Array.isArray(device) ||
+    !["model", "osVersion"].every((field) => Object.hasOwn(device, field)) ||
+    Object.keys(device).some(
+      (field) => !["model", "osVersion", ...optionalFields].includes(field),
+    )
+  )
+    invalid();
+};
+
+// Older installed shells do not expose the metadata bridge yet, and shells
+// that predate the usage fields report the installation facts without them.
 export const readClientUpdateContext = async (bridge, target) => {
   try {
     const info = await bridge("getAppUpdateDeviceInfo", {});
-    const fields =
+    const requiredFields =
       target === "android"
         ? ["version", "arch", "distribution", "build", "model", "osVersion"]
         : ["version", "arch", "model", "osVersion"];
-    exactFields(info, fields);
+    const allowedFields = [
+      ...requiredFields,
+      "formFactor",
+      "language",
+      ...(target === "android" ? ["webViewVersion"] : []),
+    ];
+    if (
+      !info ||
+      typeof info !== "object" ||
+      Array.isArray(info) ||
+      !requiredFields.every((field) => Object.hasOwn(info, field)) ||
+      Object.keys(info).some((field) => !allowedFields.includes(field))
+    )
+      invalid();
+    const device = {
+      model: isDeviceMetadataText(info.model) ? info.model : "unknown",
+      osVersion: isDeviceMetadataText(info.osVersion)
+        ? info.osVersion
+        : "unknown",
+    };
+    // Each usage field is optional: it is kept only when valid, so a wrong
+    // value never invalidates the context. An absent language is an older
+    // shell; a present-but-unreadable one reports "unknown".
+    if (info.language !== undefined)
+      device.language = normalizeDeviceLanguage(info.language);
+    if (isValidFormFactor(info.formFactor)) device.formFactor = info.formFactor;
+    if (target === "android" && isValidWebViewVersion(info.webViewVersion))
+      device.webViewVersion = info.webViewVersion;
     const context = {
       appId: "routevn-creator",
       currentVersion: info.version,
@@ -121,12 +175,7 @@ export const readClientUpdateContext = async (bridge, target) => {
       arch: info.arch,
       distribution: target === "android" ? info.distribution : "app-store",
       channel: "stable",
-      device: {
-        model: isDeviceMetadataText(info.model) ? info.model : "unknown",
-        osVersion: isDeviceMetadataText(info.osVersion)
-          ? info.osVersion
-          : "unknown",
-      },
+      device,
     };
     if (target === "android") context.currentBuild = info.build;
     return validateContext(context);
@@ -204,16 +253,41 @@ const validateResult = (result, context) => {
   return result;
 };
 
+// The API rejects the whole check when an optional usage field is present
+// but invalid, so every field is validated here, immediately before the
+// request, and omitted when it fails or cannot be read.
+const applyUsageParams = async (params, context, options, getLocaleUsage) => {
+  const { device } = context;
+  if (isValidFormFactor(device.formFactor))
+    params.device.formFactor = device.formFactor;
+  if (isValidDeviceLanguage(device.language))
+    params.device.language = device.language;
+  if (isValidWebViewVersion(device.webViewVersion))
+    params.device.webViewVersion = device.webViewVersion;
+  let localeUsage;
+  try {
+    localeUsage = await getLocaleUsage?.();
+  } catch {
+    localeUsage = undefined;
+  }
+  if (isValidUiLanguage(localeUsage?.uiLanguage))
+    params.uiLanguage = localeUsage.uiLanguage;
+  if (isValidUiLanguageSource(localeUsage?.uiLanguageSource))
+    params.uiLanguageSource = localeUsage.uiLanguageSource;
+  if (isValidUpdateTrigger(options?.trigger)) params.trigger = options.trigger;
+};
+
 export const createClientUpdates = ({
   context,
   request,
   keyValueStore,
+  getLocaleUsage,
   now = Date.now,
 }) => {
   validateContext(context);
   let retryAt = 0;
   return {
-    async check() {
+    async check(options = {}) {
       if (now() < retryAt)
         throw new Error("Client update check is temporarily deferred.");
       const params = {
@@ -231,6 +305,7 @@ export const createClientUpdates = ({
       };
       if (context.target === "android")
         params.currentBuild = context.currentBuild;
+      await applyUsageParams(params, context, options, getLocaleUsage);
       const response = await request(
         JSON.stringify({
           jsonrpc: "2.0",

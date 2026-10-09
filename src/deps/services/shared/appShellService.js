@@ -91,11 +91,22 @@ export const createAppShellService = ({
     ...updater,
   };
   let appCopyProvider = () => ({});
+  let appLocaleUsageProvider = () => ({});
   const beforeNavigationHandlers = new Set();
 
   const getAppCopy = () => {
     try {
       return appCopyProvider?.() ?? {};
+    } catch {
+      return {};
+    }
+  };
+
+  // The active app locale and whether it was user-selected, read through a
+  // provider because the locale service exists only after page mount.
+  const getAppLocaleUsage = () => {
+    try {
+      return appLocaleUsageProvider?.() ?? {};
     } catch {
       return {};
     }
@@ -118,6 +129,13 @@ export const createAppShellService = ({
     },
 
     getAppCopy,
+
+    setAppLocaleUsageProvider(provider) {
+      appLocaleUsageProvider =
+        typeof provider === "function" ? provider : () => provider ?? {};
+    },
+
+    getAppLocaleUsage,
 
     registerBeforeNavigation(handler) {
       beforeNavigationHandlers.add(handler);

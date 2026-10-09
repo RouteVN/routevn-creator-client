@@ -31,12 +31,18 @@ describe("shared automatic update strategy", () => {
     let copy = { title: "English" };
     start({ getCopy: () => copy });
     await vi.advanceTimersByTimeAsync(0);
-    expect(checkForUpdates).toHaveBeenCalledWith(true, { copy });
+    expect(checkForUpdates).toHaveBeenCalledWith(true, {
+      copy,
+      trigger: "launch",
+    });
     await vi.advanceTimersByTimeAsync(2 * 60 * 60 * 1000);
     expect(checkForUpdates).toHaveBeenCalledTimes(1);
     copy = { title: "Japanese" };
     await vi.advanceTimersByTimeAsync(10 * 60 * 1000);
-    expect(checkForUpdates).toHaveBeenLastCalledWith(true, { copy });
+    expect(checkForUpdates).toHaveBeenLastCalledWith(true, {
+      copy,
+      trigger: "periodic",
+    });
     expect(checkForUpdates).toHaveBeenCalledTimes(2);
     expect(keyValueStore.set).toHaveBeenCalledWith("lastCheckTime", Date.now());
   });

@@ -9,7 +9,7 @@ export const createAutomaticUpdateChecks = ({
   return (options = {}) => {
     if (intervalId !== undefined) return;
     const getCopy = options.getCopy ?? (() => options.copy ?? {});
-    const performCheck = async ({ force = false } = {}) => {
+    const performCheck = async ({ force = false, trigger } = {}) => {
       if (checking || !shouldCheck()) return;
       checking = true;
       try {
@@ -21,7 +21,7 @@ export const createAutomaticUpdateChecks = ({
           currentTime - lastCheckTime > 2 * 60 * 60 * 1000
         ) {
           try {
-            await checkForUpdates(true, { copy: getCopy() });
+            await checkForUpdates(true, { copy: getCopy(), trigger });
           } finally {
             await keyValueStore.set("lastCheckTime", currentTime);
           }
@@ -33,7 +33,12 @@ export const createAutomaticUpdateChecks = ({
       }
     };
 
-    void performCheck({ force: true });
-    intervalId = setInterval(performCheck, 10 * 60 * 1000);
+    // The forced first check reports the app launch; the ten-minute timer
+    // that finds the two-hour threshold elapsed reports a periodic check.
+    void performCheck({ force: true, trigger: "launch" });
+    intervalId = setInterval(
+      () => void performCheck({ trigger: "periodic" }),
+      10 * 60 * 1000,
+    );
   };
 };
