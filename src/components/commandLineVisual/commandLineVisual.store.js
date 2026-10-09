@@ -18,11 +18,9 @@ import {
   COMMAND_LINE_ITEM_FLIP_OPTIONS,
   COMMAND_LINE_ITEM_BLUR_KERNEL_SIZE_SELECT_OPTIONS,
   COMMAND_LINE_ITEM_BLUR_REPEAT_EDGE_OPTIONS,
-  COMMAND_LINE_ITEM_BLUR_TOGGLE_OPTIONS,
   DEFAULT_COMMAND_LINE_ITEM_BLUR,
   DEFAULT_COMMAND_LINE_ITEM_OPACITY,
   normalizeCommandLineItemBlur,
-  normalizeCommandLineItemBlurEnabled,
   normalizeCommandLineItemBlurWithField,
   normalizeCommandLineItemEffects,
   normalizeCommandLineItemOpacity,
@@ -222,7 +220,6 @@ const createVisualFormSlots = (visualIndex) => {
     playbackLoopFormSlot: `${prefix}-playback-loop`,
     playbackLoopSpacerFormSlot: `${prefix}-playback-loop-spacer`,
     opacityFormSlot: `${prefix}-opacity`,
-    blurToggleFormSlot: `${prefix}-blur-toggle`,
     blurXFormSlot: `${prefix}-blur-x`,
     blurYFormSlot: `${prefix}-blur-y`,
     blurQualityFormSlot: `${prefix}-blur-quality`,
@@ -325,60 +322,75 @@ const createVisualsForm = (visuals = []) => ({
       });
     }
 
-    fields.push({
-      type: "row",
-      fields: [
-        {
-          type: "slot",
-          slot: visual.opacityFormSlot,
-          label: "Opacity",
+    if (visual.opacityEnabled) {
+      fields.push({
+        type: "section",
+        id: `${visual.formSectionId}-opacity`,
+        label: "Opacity",
+        separator: false,
+        action: {
+          id: "remove",
+          icon: "x",
+          label: "Remove",
         },
-        {
-          type: "slot",
-          slot: visual.blurToggleFormSlot,
-          label: "Blur",
-        },
-      ],
-    });
+        fields: [
+          {
+            type: "slot",
+            slot: visual.opacityFormSlot,
+          },
+        ],
+      });
+    }
 
     if (visual.blurEnabled) {
-      fields.push(
-        {
-          type: "row",
-          fields: [
-            {
-              type: "slot",
-              slot: visual.blurXFormSlot,
-              label: "Blur X",
-            },
-            {
-              type: "slot",
-              slot: visual.blurYFormSlot,
-              label: "Blur Y",
-            },
-          ],
+      fields.push({
+        type: "section",
+        id: `${visual.formSectionId}-blur`,
+        label: "Blur",
+        separator: false,
+        action: {
+          id: "remove",
+          icon: "x",
+          label: "Remove",
         },
-        {
-          type: "row",
-          fields: [
-            {
-              type: "slot",
-              slot: visual.blurQualityFormSlot,
-              label: "Quality",
-            },
-            {
-              type: "slot",
-              slot: visual.blurKernelSizeFormSlot,
-              label: "Kernel Size",
-            },
-          ],
-        },
-        {
-          type: "slot",
-          slot: visual.blurRepeatEdgePixelsFormSlot,
-          label: "Repeat Edge Pixels",
-        },
-      );
+        fields: [
+          {
+            type: "row",
+            fields: [
+              {
+                type: "slot",
+                slot: visual.blurXFormSlot,
+                label: "Blur X",
+              },
+              {
+                type: "slot",
+                slot: visual.blurYFormSlot,
+                label: "Blur Y",
+              },
+            ],
+          },
+          {
+            type: "row",
+            fields: [
+              {
+                type: "slot",
+                slot: visual.blurQualityFormSlot,
+                label: "Quality",
+              },
+              {
+                type: "slot",
+                slot: visual.blurKernelSizeFormSlot,
+                label: "Kernel Size",
+              },
+            ],
+          },
+          {
+            type: "slot",
+            slot: visual.blurRepeatEdgePixelsFormSlot,
+            label: "Repeat Edge Pixels",
+          },
+        ],
+      });
     }
 
     for (const flipOption of visual.flipOptions) {
@@ -428,6 +440,8 @@ const createVisualsForm = (visuals = []) => ({
       type: "section",
       id: visual.formSectionId,
       action:
+        visual.opacityEnabled &&
+        visual.blurEnabled &&
         visual.flipOptions.every((option) => option.enabled) &&
         visual.shaderAdjustments.every((adjustment) => adjustment.enabled)
           ? undefined
@@ -1120,20 +1134,52 @@ export const updateVisualOpacity = ({ state }, { index, opacity } = {}) => {
   visual.opacity = normalizedOpacity;
 };
 
-export const updateVisualBlurEnabled = ({ state }, { index, enabled } = {}) => {
+export const showVisualOpacityOption = ({ state }, { index } = {}) => {
   const visual = state.selectedVisuals[index];
   if (!visual) {
     return;
   }
 
-  if (!normalizeCommandLineItemBlurEnabled(enabled)) {
-    visual.blur = null;
+  visual.opacity =
+    normalizeCommandLineItemOpacity(visual.opacity) ??
+    DEFAULT_COMMAND_LINE_ITEM_OPACITY;
+};
+
+export const removeVisualOpacityOption = ({ state }, { index } = {}) => {
+  const visual = state.selectedVisuals[index];
+  if (!visual) {
+    return;
+  }
+
+  delete visual.opacity;
+};
+
+export const selectVisualOpacityOptionEnabled = ({ state }, { index } = {}) => {
+  return state.selectedVisuals[index]?.opacity !== undefined;
+};
+
+export const showVisualBlurOption = ({ state }, { index } = {}) => {
+  const visual = state.selectedVisuals[index];
+  if (!visual) {
     return;
   }
 
   visual.blur = normalizeCommandLineItemBlur(
     visual.blur ?? DEFAULT_COMMAND_LINE_ITEM_BLUR,
   );
+};
+
+export const removeVisualBlurOption = ({ state }, { index } = {}) => {
+  const visual = state.selectedVisuals[index];
+  if (!visual) {
+    return;
+  }
+
+  visual.blur = null;
+};
+
+export const selectVisualBlurOptionEnabled = ({ state }, { index } = {}) => {
+  return Boolean(state.selectedVisuals[index]?.blur);
 };
 
 export const updateVisualBlurField = (
@@ -1715,6 +1761,7 @@ export const selectViewData = ({ state, i18n }) => {
       animationCanLoop,
       animationLoopDisabled: !animationCanLoop,
       layer: normalizeVisualLayer(visual.layer),
+      opacityEnabled: visual.opacity !== undefined,
       opacity: visual.opacity ?? DEFAULT_COMMAND_LINE_ITEM_OPACITY,
       blurEnabled: Boolean(visual.blur),
       blur,
@@ -1779,10 +1826,6 @@ export const selectViewData = ({ state, i18n }) => {
     layerOptions: localizeCommandLineOptions(VISUAL_LAYER_OPTIONS, copy),
     transformModeOptions: localizeCommandLineOptions(
       TRANSFORM_MODE_OPTIONS,
-      copy,
-    ),
-    blurToggleOptions: localizeCommandLineOptions(
-      COMMAND_LINE_ITEM_BLUR_TOGGLE_OPTIONS,
       copy,
     ),
     blurKernelSizeOptions: localizeCommandLineOptions(
@@ -1851,6 +1894,7 @@ export const selectViewData = ({ state, i18n }) => {
             visual.customTransform ? "custom-transform" : "preset-transform",
             visual.animationId ?? "no-animation",
             visual.animationMode,
+            visual.opacityEnabled ? "opacity-option" : "no-opacity-option",
             visual.blurEnabled ? "blur" : "no-blur",
             ...visual.flipOptions
               .filter((option) => option.enabled)

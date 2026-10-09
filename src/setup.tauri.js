@@ -60,6 +60,7 @@ const updater = updatesEnabled
   ? createUpdater({
       globalUI,
       keyValueStore: appDb,
+      getLocaleUsage: () => appService.getAppLocaleUsage(),
     })
   : undefined;
 

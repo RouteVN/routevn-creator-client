@@ -11,8 +11,11 @@ struct AppDeviceInfoNativeTests {
             .write(to: directory.appendingPathComponent("Info.plist"))
         let bundle = Bundle(url: directory)!
 
-        let device = try AppDeviceInfo.read(bundle: bundle)
-        precondition(Set(device.keys) == Set(["version", "arch", "model", "osVersion"]))
+        let device = try AppDeviceInfo.read(
+            bundle: bundle,
+            formFactor: "phone",
+            deviceLanguage: "ja-JP")
+        precondition(Set(device.keys) == Set(["version", "arch", "model", "osVersion", "formFactor", "language"]))
         precondition(device["version"] as? String == "1.15.1")
         precondition(["aarch64", "x86_64", "unknown"].contains(device["arch"] as? String ?? ""))
         let deviceModel = device["model"] as! String
@@ -20,6 +23,19 @@ struct AppDeviceInfoNativeTests {
         let systemVersion = ProcessInfo.processInfo.operatingSystemVersion
         precondition(device["osVersion"] as? String ==
             "\(systemVersion.majorVersion).\(systemVersion.minorVersion).\(systemVersion.patchVersion)")
+        precondition(device["formFactor"] as? String == "phone")
+        precondition(device["language"] as? String == "ja-JP")
+        let missingLanguage = try AppDeviceInfo.read(
+            bundle: bundle, formFactor: "tablet", deviceLanguage: nil)
+        precondition(missingLanguage["language"] is NSNull)
+        precondition(AppDeviceInfo.currentDeviceLanguage() == Locale.preferredLanguages.first)
+
+        // A Mac running the iOS app reports the pad idiom, so the Mac check
+        // wins; otherwise the pad idiom is a tablet and the rest are phones.
+        precondition(AppDeviceInfo.formFactor(idiom: "pad", isiOSAppOnMac: true) == "desktop")
+        precondition(AppDeviceInfo.formFactor(idiom: "pad", isiOSAppOnMac: false) == "tablet")
+        precondition(AppDeviceInfo.formFactor(idiom: "phone", isiOSAppOnMac: false) == "phone")
+        precondition(AppDeviceInfo.formFactor(idiom: "phone", isiOSAppOnMac: true) == "desktop")
 
         precondition(AppDeviceInfo.deviceMetadata("iPhone17,1") == "iPhone17,1")
         precondition(AppDeviceInfo.deviceMetadata(String(repeating: "a", count: 256)).count == 256)

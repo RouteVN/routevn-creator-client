@@ -1206,57 +1206,6 @@ export const selectViewData = ({ state, i18n }) => {
       ],
     });
   }
-  if (state.flipXOptionEnabled) {
-    optionFields.push({
-      type: "section",
-      id: "flip-x",
-      label: "Flip X",
-      action: {
-        id: "remove",
-        icon: "x",
-        label: "Remove",
-      },
-      fields: [],
-    });
-  }
-  if (state.flipYOptionEnabled) {
-    optionFields.push({
-      type: "section",
-      id: "flip-y",
-      label: "Flip Y",
-      action: {
-        id: "remove",
-        icon: "x",
-        label: "Remove",
-      },
-      fields: [],
-    });
-  }
-  for (const adjustment of COMMAND_LINE_SHADER_ADJUSTMENTS) {
-    if (!state.backgroundShaderAdjustments[adjustment.id].enabled) {
-      continue;
-    }
-
-    optionFields.push({
-      type: "section",
-      id: adjustment.id,
-      label: adjustment.label,
-      action: {
-        id: "remove",
-        icon: "x",
-        label: "Remove",
-      },
-      fields: [
-        {
-          name: adjustment.id,
-          type: "slider-with-input",
-          min: adjustment.min,
-          max: adjustment.max,
-          step: adjustment.step,
-        },
-      ],
-    });
-  }
   if (state.selectedBlurEnabled) {
     optionFields.push({
       type: "section",
@@ -1329,6 +1278,57 @@ export const selectViewData = ({ state, i18n }) => {
       ],
     });
   }
+  if (state.flipXOptionEnabled) {
+    optionFields.push({
+      type: "section",
+      id: "flip-x",
+      label: "Flip X",
+      action: {
+        id: "remove",
+        icon: "x",
+        label: "Remove",
+      },
+      fields: [],
+    });
+  }
+  if (state.flipYOptionEnabled) {
+    optionFields.push({
+      type: "section",
+      id: "flip-y",
+      label: "Flip Y",
+      action: {
+        id: "remove",
+        icon: "x",
+        label: "Remove",
+      },
+      fields: [],
+    });
+  }
+  for (const adjustment of COMMAND_LINE_SHADER_ADJUSTMENTS) {
+    if (!state.backgroundShaderAdjustments[adjustment.id].enabled) {
+      continue;
+    }
+
+    optionFields.push({
+      type: "section",
+      id: adjustment.id,
+      label: adjustment.label,
+      action: {
+        id: "remove",
+        icon: "x",
+        label: "Remove",
+      },
+      fields: [
+        {
+          name: adjustment.id,
+          type: "slider-with-input",
+          min: adjustment.min,
+          max: adjustment.max,
+          step: adjustment.step,
+        },
+      ],
+    });
+  }
   const optionsSection = {
     type: "section",
     id: "options",
@@ -1338,12 +1338,12 @@ export const selectViewData = ({ state, i18n }) => {
   const allOptionsVisible =
     state.backgroundColorOptionEnabled &&
     state.opacityOptionEnabled &&
+    state.selectedBlurEnabled &&
     state.flipXOptionEnabled &&
     state.flipYOptionEnabled &&
     COMMAND_LINE_SHADER_ADJUSTMENTS.every(
       (adjustment) => state.backgroundShaderAdjustments[adjustment.id].enabled,
-    ) &&
-    state.selectedBlurEnabled;
+    );
   if (!allOptionsVisible) {
     optionsSection.action = {
       id: "add",

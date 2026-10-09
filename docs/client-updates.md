@@ -6,6 +6,8 @@ channel, and device metadata. Checks work before account sign-in.
 `google-play` and `direct` flavours.
 Manual checks show an indeterminate progress dialog after 200 ms and close it
 before showing the result. Automatic checks do not show the dialog.
+A manual check started while an automatic check is in flight joins it and is
+reported with that check's trigger, so only one request is sent.
 Automatic checks stay silent unless an update is available. Manual check failures,
 including unsupported clients and no compatible release, show the same error:
 “Could not retrieve update information.” A successful up-to-date result still
@@ -28,17 +30,47 @@ IDs are 24 Base58 characters; the update API rejects any other length.
 Model and OS version are nonblank strings of at most 256 characters, without
 ASCII control characters. These fields do not change the response shape.
 
+## Usage fields
+
+Every check also reports how and where it ran: `uiLanguage`,
+`uiLanguageSource`, and `trigger` beside the request fields, and
+`formFactor`, `language`, and `webViewVersion` inside `device` (query names
+`uiLanguage`, `uiLanguageSource`, `trigger`, `device.formFactor`,
+`device.language`, `device.webViewVersion` on desktop).
+
+The API rejects the whole check when an optional field is present but invalid
+("a present but invalid optional value fails the check; absent stays absent"),
+so each value is validated immediately before it is sent and omitted when it
+fails or cannot be read; reading a value never fails the check. Shared
+JavaScript validates the mobile RPC path, and Rust revalidates everything as
+it appends the desktop query parameters. `src/internal/updateUsage.js` holds
+the shared rules and one language normalizer; the same algorithm and test
+table live in `src-tauri/src/update_device_info.rs`.
+
+| Field               | Source                                                                                                                              |
+| ------------------- | ----------------------------------------------------------------------------------------------------------------------------------- |
+| `device.formFactor` | Native shell: iOS `desktop` on Mac (`isiOSAppOnMac` wins over the pad idiom), else `tablet` for the pad idiom and `phone` otherwise; Android `desktop` on ChromeOS, else the sw600dp display boundary; desktop builds always `desktop`. |
+| `device.language`   | First preferred device language, read natively (`Locale.preferredLanguages`, system `Configuration` locales, `sys-locale`), normalized to lowercase with no region; only Chinese keeps a script (`zh-hans`/`zh-hant`). Unreadable values send `unknown`, which the API accepts only here. |
+| `device.webViewVersion` | Android Chromium major from `WebView.getCurrentWebViewPackage()` (user-agent `Chrome/<major>` before API 26); Windows WebView2 major and Linux WebKitGTK `major.minor` from `tauri::webview_version()`. iOS and macOS omit it. |
+| `uiLanguage`        | The app's active locale at check time (`APP_LOCALE_OPTIONS` in `src/internal/ui/appLocale.js`), reread on every check.                |
+| `uiLanguageSource`  | `selected` when the stored `app.locale` config is still an offered locale; `default` otherwise. Never inferred from the current locale alone. |
+| `trigger`           | `launch` for the forced first automatic check, `periodic` for the ten-minute timer past the two-hour threshold, `manual` for the user's own check. |
+
+The API derives country/region itself; clients never send it.
+
 ## Desktop
 
 ```http
-GET /system/updates/v1/routevn-creator/tauri?currentVersion=1.15.1&target=windows&arch=x86_64&distribution=direct&channel=stable&bundleType=nsis&device.id=123456789ABC123456789ABC&device.model=Example%20device&device.osVersion=10.0.26100
+GET /system/updates/v1/routevn-creator/tauri?currentVersion=1.15.1&target=windows&arch=x86_64&distribution=direct&channel=stable&bundleType=nsis&device.id=123456789ABC123456789ABC&device.model=Example%20device&device.osVersion=10.0.26100&device.formFactor=desktop&device.language=en&device.webViewVersion=128&uiLanguage=en&uiLanguageSource=default&trigger=launch
 Host: api1.routevn.com
 ```
 
-Desktop includes Tauri's installation `bundleType` and device metadata in the
-query. The updater endpoint is assembled at check time so the persisted device
-ID can be included. Device values are URL-encoded once. Artifact downloads do
-not include device metadata.
+Desktop includes Tauri's installation `bundleType`, device metadata, and the
+usage fields in the query. The updater endpoint is assembled at check time so
+the persisted device ID and the per-check usage fields can be included. Device
+and usage values are percent-encoded once, with spaces as `%20`: the API keeps
+a `+` literally, so form encoding would store `macOS 27.0` as `macOS+27.0`.
+Artifact downloads do not include device metadata.
 Development Tauri builds use the localhost API by default. Production builds
 use `api1.routevn.com`.
 Restart the Tauri shell after changing updater configuration or native commands;
@@ -81,10 +113,16 @@ X-RouteVN-RPC: 1
     "distribution": "google-play",
     "channel": "stable",
     "currentBuild": "9",
+    "uiLanguage": "ja",
+    "uiLanguageSource": "default",
+    "trigger": "launch",
     "device": {
       "id": "123456789ABC123456789ABC",
       "model": "Pixel 9",
-      "osVersion": "16"
+      "osVersion": "16",
+      "formFactor": "phone",
+      "language": "ja",
+      "webViewVersion": "128"
     }
   }
 }

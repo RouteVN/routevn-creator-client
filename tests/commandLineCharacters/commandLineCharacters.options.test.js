@@ -3,8 +3,6 @@ import {
   handleFormSectionAction,
   handleRemoveCharacterOpacityClick,
 } from "../../src/components/commandLineCharacters/commandLineCharacters.handlers.js";
-import { COMMAND_LINE_ITEM_FLIP_OPTIONS } from "../../src/internal/commandLineItemEffects.js";
-import { COMMAND_LINE_SHADER_ADJUSTMENTS } from "../../src/internal/commandLineShaderAdjustments.js";
 import { EN_I18N } from "../support/i18n.js";
 
 describe("commandLineCharacters character options", () => {
@@ -47,16 +45,17 @@ describe("commandLineCharacters character options", () => {
       items: [
         { type: "item", label: "Opacity", key: "opacity" },
         { type: "item", label: "Blur", key: "blur" },
-        ...COMMAND_LINE_ITEM_FLIP_OPTIONS.map((option) => ({
-          type: "item",
-          label: option.label,
-          key: option.id,
-        })),
-        ...COMMAND_LINE_SHADER_ADJUSTMENTS.map((adjustment) => ({
-          type: "item",
-          label: adjustment.label,
-          key: adjustment.id,
-        })),
+        { type: "separator" },
+        { type: "item", label: "Flip X", key: "flip-x" },
+        { type: "item", label: "Flip Y", key: "flip-y" },
+        { type: "separator" },
+        { type: "item", label: "Brightness", key: "brightness" },
+        { type: "item", label: "Contrast", key: "contrast" },
+        { type: "item", label: "Saturation", key: "saturation" },
+        { type: "item", label: "Hue", key: "hue" },
+        { type: "item", label: "Grayscale", key: "grayscale" },
+        { type: "item", label: "Sepia", key: "sepia" },
+        { type: "item", label: "Invert", key: "invert" },
       ],
       x: 120,
       y: 240,

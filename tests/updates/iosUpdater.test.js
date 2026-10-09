@@ -102,12 +102,15 @@ describe("iOS update prompts", () => {
   );
 
   it("shows latest only for a successful manual upToDate check", async () => {
-    const { updater, rawUI } = setup({
+    const { updater, rawUI, metadataClient } = setup({
       result: { status: "noUpdate", reason: "upToDate" },
     });
     await updater.checkForUpdates(true);
     expect(rawUI.showAlert).not.toHaveBeenCalled();
     await updater.checkForUpdates(false);
+    expect(metadataClient.check).toHaveBeenLastCalledWith({
+      trigger: "manual",
+    });
     expect(rawUI.showAlert).toHaveBeenCalledWith(
       expect.objectContaining({ message: copy.latestVersionMessage }),
     );
@@ -165,10 +168,18 @@ describe("iOS update prompts", () => {
 
   it("automatically checks on startup and leaves old shells quiet", async () => {
     vi.useFakeTimers();
+    vi.setSystemTime(new Date("2026-09-05T12:00:00Z"));
     const normal = setup();
     normal.updater.startAutomaticChecks();
     await vi.advanceTimersByTimeAsync(0);
     expect(normal.metadataClient.check).toHaveBeenCalledOnce();
+    expect(normal.metadataClient.check).toHaveBeenCalledWith({
+      trigger: "launch",
+    });
+    await vi.advanceTimersByTimeAsync(2 * 60 * 60 * 1000 + 10 * 60 * 1000);
+    expect(normal.metadataClient.check).toHaveBeenLastCalledWith({
+      trigger: "periodic",
+    });
     const old = setup({ olderShell: true });
     old.updater.startAutomaticChecks();
     await vi.advanceTimersByTimeAsync(0);

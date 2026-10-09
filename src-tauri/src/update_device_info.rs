@@ -149,6 +149,143 @@ fn platform_device_info() -> (Option<String>, Option<String>) {
     (None, None)
 }
 
+// ---------------------------------------------------------------------------
+// Update-check usage fields (device.language, device.webViewVersion).
+//
+// The API rejects the whole update check when an optional field is present
+// but invalid, so every value is validated here and omitted otherwise. The
+// language rules mirror src/internal/updateUsage.js exactly.
+// ---------------------------------------------------------------------------
+
+fn is_ascii_lowercase(part: &str) -> bool {
+    !part.is_empty() && part.bytes().all(|byte| byte.is_ascii_lowercase())
+}
+
+pub fn valid_ui_language(value: &str) -> bool {
+    let mut parts = value.split('-');
+    let language = parts.next().unwrap_or_default();
+    let script = parts.next();
+    if !is_ascii_lowercase(language) || !(2..=3).contains(&language.len()) {
+        return false;
+    }
+    match script {
+        None => parts.next().is_none(),
+        Some(script) => is_ascii_lowercase(script) && script.len() == 4 && parts.next().is_none(),
+    }
+}
+
+fn chinese_script_for_region(region: &str) -> Option<&'static str> {
+    match region {
+        "cn" | "sg" => Some("hans"),
+        "tw" | "hk" | "mo" => Some("hant"),
+        _ => None,
+    }
+}
+
+// A single letter or digit starts an extension or private-use block; no
+// region or script subtag appears after it.
+fn is_singleton_subtag(part: &str) -> bool {
+    part.len() == 1
+        && part
+            .chars()
+            .all(|character| character.is_ascii_alphanumeric())
+}
+
+/// Lowercase language with no region or extensions; only Chinese keeps a
+/// script. Anything unreadable becomes "unknown", which the API accepts only
+/// for device.language.
+pub fn normalize_device_language(raw: Option<&str>) -> String {
+    let Some(raw) = raw.map(str::trim).filter(|value| !value.is_empty()) else {
+        return "unknown".to_string();
+    };
+    let lowercase = raw.to_lowercase();
+    let parts: Vec<&str> = lowercase
+        .split(['-', '_'])
+        .filter(|part| !part.is_empty())
+        .collect();
+    let Some(&language) = parts.first() else {
+        return "unknown".to_string();
+    };
+    if !is_ascii_lowercase(language) || !(2..=3).contains(&language.len()) {
+        return "unknown".to_string();
+    }
+    if language != "zh" {
+        return language.to_string();
+    }
+    let second = parts.get(1).copied().unwrap_or_default();
+    if second == "hans" || second == "hant" {
+        return format!("zh-{second}");
+    }
+    let extension_start = parts.iter().skip(1).copied().position(is_singleton_subtag);
+    let known_parts = match extension_start {
+        Some(index) => &parts[..index + 1],
+        None => &parts[..],
+    };
+    if !is_ascii_lowercase(second) || second.len() != 4 {
+        if let Some(script) = chinese_script_for_region(second) {
+            return format!("zh-{script}");
+        }
+        let region = known_parts
+            .iter()
+            .skip(1)
+            .find(|part| is_ascii_lowercase(part) && part.len() == 2);
+        if let Some(script) = region.and_then(|region| chinese_script_for_region(region)) {
+            return format!("zh-{script}");
+        }
+    }
+    "zh-hans".to_string()
+}
+
+pub fn valid_webview_version(value: &str) -> bool {
+    let mut parts = value.split('.');
+    let part = parts.next().unwrap_or_default();
+    let all_numeric = |part: &str| {
+        (1..=4).contains(&part.len()) && part.bytes().all(|byte| byte.is_ascii_digit())
+    };
+    all_numeric(part)
+        && parts
+            .next()
+            .is_none_or(|minor| all_numeric(minor) && parts.next().is_none())
+}
+
+/// The engine version the update API groups on: the Chromium major on
+/// Windows ("128.0.2739.79" -> "128") and WebKitGTK major.minor on Linux
+/// ("2.46.7" -> "2.46"). macOS and iOS omit the field entirely.
+// Only the OS-specific readers and tests call this on Windows/Linux; other
+// targets compile it for the table-driven tests alone.
+#[cfg_attr(not(any(target_os = "windows", target_os = "linux")), allow(dead_code))]
+pub fn webview_version_query_value(version: &str, parts_to_keep: usize) -> Option<String> {
+    let parts: Vec<&str> = version.split('.').collect();
+    if parts.len() < parts_to_keep {
+        return None;
+    }
+    let value = parts[..parts_to_keep].join(".");
+    valid_webview_version(&value).then_some(value)
+}
+
+#[cfg(target_os = "windows")]
+pub fn platform_webview_version() -> Option<String> {
+    tauri::webview_version()
+        .ok()
+        .and_then(|version| webview_version_query_value(&version, 1))
+}
+
+#[cfg(target_os = "linux")]
+pub fn platform_webview_version() -> Option<String> {
+    tauri::webview_version()
+        .ok()
+        .and_then(|version| webview_version_query_value(&version, 2))
+}
+
+#[cfg(not(any(target_os = "windows", target_os = "linux")))]
+pub fn platform_webview_version() -> Option<String> {
+    None
+}
+
+pub fn platform_device_language() -> String {
+    normalize_device_language(sys_locale::get_locale().as_deref())
+}
+
 #[tauri::command]
 pub async fn get_update_device_info() -> Result<UpdateDeviceInfo, String> {
     tauri::async_runtime::spawn_blocking(|| {
@@ -189,6 +326,92 @@ mod tests {
             assert!(!value.is_empty());
             assert!(value.encode_utf16().count() <= MAX_METADATA_CHARS);
             assert!(!value.chars().any(char::is_control));
+        }
+    }
+
+    // The same table as tests/updates/updateUsage.test.js; keep both aligned.
+    #[test]
+    fn normalizes_device_language_like_the_js_client() {
+        let cases: &[(&str, &str)] = &[
+            ("ja-JP", "ja"),
+            ("en-GB", "en"),
+            ("en_US", "en"),
+            ("pt-BR", "pt"),
+            ("ja-JP-u-ca-japanese", "ja"),
+            ("th", "th"),
+            ("fil", "fil"),
+            ("zh-Hans-CN", "zh-hans"),
+            ("zh-Hant-TW", "zh-hant"),
+            ("zh-Hant", "zh-hant"),
+            ("zh-CN", "zh-hans"),
+            ("zh-SG", "zh-hans"),
+            ("zh-TW", "zh-hant"),
+            ("zh-HK", "zh-hant"),
+            ("zh-MO", "zh-hant"),
+            ("zh", "zh-hans"),
+            ("zh-x-tw", "zh-hans"),
+            ("zh-u-nu-hanidec", "zh-hans"),
+            ("zh-TW-x-foo", "zh-hant"),
+            ("ja-x-tw", "ja"),
+            ("zh-u-ca-japanese", "zh-hans"),
+            ("zh-419", "zh-hans"),
+            ("sr-Latn-RS", "sr"),
+            ("en-Latn-US", "en"),
+            ("en", "en"),
+            ("", "unknown"),
+            ("123", "unknown"),
+            ("C", "unknown"),
+            ("POSIX", "unknown"),
+        ];
+        for (raw, expected) in cases {
+            assert_eq!(&normalize_device_language(Some(raw)), expected, "{raw:?}");
+        }
+        assert_eq!(normalize_device_language(None), "unknown");
+        assert_eq!(normalize_device_language(Some(" ja-JP ")), "ja");
+        assert!(valid_ui_language("ja"));
+        assert!(valid_ui_language("zh-hans"));
+        assert!(!valid_ui_language("unknown"));
+        assert!(!valid_ui_language("en-US"));
+        assert!(!valid_ui_language("EN"));
+    }
+
+    #[test]
+    fn webview_versions_use_the_grouping_the_api_expects() {
+        assert_eq!(
+            webview_version_query_value("128.0.2739.79", 1),
+            Some("128".to_string())
+        );
+        assert_eq!(
+            webview_version_query_value("2.46.7", 2),
+            Some("2.46".to_string())
+        );
+        assert_eq!(webview_version_query_value("", 1), None);
+        assert_eq!(webview_version_query_value("x.y", 1), None);
+        assert_eq!(
+            webview_version_query_value("128", 1),
+            Some("128".to_string())
+        );
+        assert_eq!(
+            webview_version_query_value("128", 2),
+            None,
+            "fewer parts than requested is omitted"
+        );
+        assert!(valid_webview_version("128"));
+        assert!(valid_webview_version("2.46"));
+        assert!(!valid_webview_version("128.0.6613.84"));
+        assert!(!valid_webview_version(""));
+        assert!(!valid_webview_version("128."));
+        assert!(!valid_webview_version(".128"));
+        assert!(!valid_webview_version("01234"));
+    }
+
+    #[test]
+    fn platform_usage_fields_fit_the_wire_contract() {
+        // Runs on the test host OS; both accepted shapes must hold.
+        let language = platform_device_language();
+        assert!(language == "unknown" || valid_ui_language(&language));
+        if let Some(webview) = platform_webview_version() {
+            assert!(valid_webview_version(&webview));
         }
     }
 }
