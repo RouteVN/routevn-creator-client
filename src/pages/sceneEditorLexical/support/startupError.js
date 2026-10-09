@@ -11,8 +11,5 @@ export const getSceneStartupErrorMessage = ({
     projectService.getRepositoryState(),
   );
   if (!variableName) return copy.failedOpenScene;
-  return copy.failedOpenSceneComputedVariable.replaceAll(
-    "{name}",
-    () => variableName,
-  );
+  return copy.computedVariableFailed.replaceAll("{name}", () => variableName);
 };

@@ -309,34 +309,6 @@ styles:
     cursor: pointer
     user-select: none
     "-webkit-user-select": none
-  ".layoutEditorConditionChip":
-    display: inline-flex
-    align-items: center
-    max-width: 100%
-    min-height: 22px
-    padding: "0 8px"
-    box-sizing: border-box
-    border: "1px solid var(--border)"
-    border-radius: "var(--border-radius-md)"
-    font-size: 0.88em
-    font-weight: 500
-    line-height: 1.35
-    white-space: nowrap
-    overflow: hidden
-    text-overflow: ellipsis
-  # What the condition tests.
-  ".layoutEditorConditionTarget":
-    background: "var(--muted)"
-    color: "var(--foreground)"
-  # The operation, an outline that reads as the link between the two.
-  ".layoutEditorConditionOperator":
-    background: transparent
-    color: "var(--muted-foreground)"
-  # The value, the brightest of the three.
-  ".layoutEditorConditionValue":
-    border-color: transparent
-    background: "var(--accent)"
-    color: "var(--accent-foreground)"
   ".layoutEditPanelSectionTooltipTrigger":
     align-items: center
     appearance: none
@@ -409,6 +381,9 @@ template:
                           - rtgl-view d=v w=f g=sm:
                               - rtgl-text s=xs c=mu: ${item.label}
                               - rtgl-select#selectItem${i}x${j} data-name=${item.name} w=f ?no-clear=${item.noClear} :selectedValue=${item.value} :options=${item.options}: null
+                        # A select with no label of its own, such as Fragment's, fills the row.
+                        $elif !item.label:
+                          - rtgl-select#selectItem${i}x${j} data-name=${item.name} w=f ?no-clear=${item.noClear} :selectedValue=${item.value} :options=${item.options}: null
                         $else:
                           - rtgl-view d=h av=c w=f:
                               - rtgl-text s=xs w=65: ${item.label}
@@ -503,17 +478,16 @@ template:
                       - rtgl-view#groupItem${i}x${j} data-name=${item.name} role=button tabindex=0 aria-label="${item.label}" d=h pv=sm ph=md bgc=mu br=md av=c g=md cur=pointer bw=xs bc=bg h-bc=ac h=32 w=1fg:
                           - rtgl-text s=sm: ${item.value}
                     $elif item.type == 'condition-summary':
-                      # The target, the operation, and the value, each a chip of its own kind.
+                      # The target and the value as text, with the operation between them in
+                      # the primary color, as Update Variable shows its operations.
                       - 'rtgl-view#conditionItem${i}x${j} data-name=${item.name} title="${item.value}" d=h av=c w=f wrap g=sm pv=xs ph=md bgc=su br=md bw=xs bc=bo h-bc=ac cur=pointer style="min-height: 32px; box-sizing: border-box;"':
                           - $for part, k in item.parts:
-                              - $if part.kind == 'target':
-                                  - span.layoutEditorConditionChip.layoutEditorConditionTarget key=${part.kind}: ${part.text}
-                                $elif part.kind == 'operator':
-                                  - span.layoutEditorConditionChip.layoutEditorConditionOperator key=${part.kind}: ${part.text}
-                                $elif part.kind == 'value':
-                                  - span.layoutEditorConditionChip.layoutEditorConditionValue key=${part.kind}: ${part.text}
-                                $else:
+                              - $if part.kind == 'operator':
+                                  - rtgl-text key=${part.kind} s=sm c=pr: ${part.text}
+                                $elif part.kind == 'text':
                                   - rtgl-text key=${part.kind} s=sm c=mu-fg: ${part.text}
+                                $else:
+                                  - rtgl-text key=${part.kind} s=sm: ${part.text}
                     $elif item.type == 'conditional-override-list':
                       - $if item.items.length > 0:
                           # A gap between the conditions.
@@ -525,14 +499,12 @@ template:
                                           - rtgl-text s=xs c=mu-fg: ${conditionLabel}
                                           - 'rtgl-view title="${conditionalItem.summary}" d=h av=c wrap g=sm w=f':
                                               - $for part, n in conditionalItem.summaryParts:
-                                                  - $if part.kind == 'target':
-                                                      - span.layoutEditorConditionChip.layoutEditorConditionTarget key=${part.kind}: ${part.text}
-                                                    $elif part.kind == 'operator':
-                                                      - span.layoutEditorConditionChip.layoutEditorConditionOperator key=${part.kind}: ${part.text}
-                                                    $elif part.kind == 'value':
-                                                      - span.layoutEditorConditionChip.layoutEditorConditionValue key=${part.kind}: ${part.text}
-                                                    $else:
+                                                  - $if part.kind == 'operator':
+                                                      - rtgl-text key=${part.kind} s=sm c=pr: ${part.text}
+                                                    $elif part.kind == 'text':
                                                       - rtgl-text key=${part.kind} s=sm c=mu-fg: ${part.text}
+                                                    $else:
+                                                      - rtgl-text key=${part.kind} s=sm: ${part.text}
                                       - rtgl-view d=v w=f g=xs:
                                           - rtgl-text s=xs c=mu-fg: ${attributesLabel}
                                           - $if conditionalItem.attributeItems.length > 0:

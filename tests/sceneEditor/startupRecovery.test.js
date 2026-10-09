@@ -15,25 +15,25 @@ vi.mock(
 it.each([
   {
     reason: "a non-finite computed number",
-    computed: { expr: { div: [1, { var: "variables.denominator" }] } },
+    computed: { expr: { mul: [1e308, { var: "variables.factor" }] } },
     message:
-      "Could not calculate computed variable “Reciprocal”. Its formula may have divided by zero or produced the wrong type of value. Check the formula and the variables it uses in Variables.",
+      "Could not calculate computed variable “Product”. Its formula may have produced the wrong type of value. Check the formula and the variables it uses in Variables.",
   },
   {
     reason: "a computed result with the wrong type",
     computed: { value: "text" },
     message:
-      "Could not calculate computed variable “Reciprocal”. Its formula may have divided by zero or produced the wrong type of value. Check the formula and the variables it uses in Variables.",
+      "Could not calculate computed variable “Product”. Its formula may have produced the wrong type of value. Check the formula and the variables it uses in Variables.",
   },
   {
     reason: "an unknown variable reference",
     computed: { expr: { div: [1, { var: "variables.missing" }] } },
     message:
-      "Could not calculate computed variable “Reciprocal”. Its formula may have divided by zero or produced the wrong type of value. Check the formula and the variables it uses in Variables.",
+      "Could not calculate computed variable “Product”. Its formula may have produced the wrong type of value. Check the formula and the variables it uses in Variables.",
   },
   {
     reason: "a computed variable that is no longer in the repository",
-    computed: { expr: { div: [1, { var: "variables.denominator" }] } },
+    computed: { expr: { mul: [1e308, { var: "variables.factor" }] } },
     repositoryId: "another-variable",
     message: "Could not open the scene.",
   },
@@ -51,17 +51,17 @@ it.each([
   async ({
     computed,
     message,
-    repositoryId = "reciprocal",
+    repositoryId = "product",
     repositoryUnavailable = false,
   }) => {
     vi.mocked(initializeSceneEditorPage).mockImplementationOnce(() => {
       if (computed) {
         resolveComputedVariables({
           variableConfigs: {
-            denominator: { type: "number", scope: "context", default: 0 },
-            reciprocal: { type: "number", scope: "context", computed },
+            factor: { type: "number", scope: "context", default: 10 },
+            product: { type: "number", scope: "context", computed },
           },
-          variables: { denominator: 0 },
+          variables: { factor: 10 },
         });
       }
       throw new Error("Startup failed");
@@ -81,7 +81,7 @@ it.each([
               items: {
                 [repositoryId]: {
                   type: "variable",
-                  name: "Reciprocal",
+                  name: "Product",
                   variableType: "number",
                   computed,
                 },

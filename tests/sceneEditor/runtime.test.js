@@ -620,6 +620,68 @@ describe("renderSceneEditorState", () => {
     }
   });
 
+  it("names a computed variable that a canvas render could not calculate", async () => {
+    const subject = new Subject();
+    const failure = new Error(
+      'Computed variable "variable-1" expected type number, got number',
+    );
+    const appService = {
+      reportError: vi.fn(),
+      showAlertWhenIdle: vi.fn(),
+    };
+    const consoleError = vi
+      .spyOn(console, "error")
+      .mockImplementation(() => {});
+    const unmount = mountSceneEditorSubscriptions({
+      subject,
+      appService,
+      projectService: {
+        getRepositoryState: () => ({
+          variables: {
+            items: {
+              "variable-1": {
+                id: "variable-1",
+                type: "variable",
+                name: "Ratio",
+                computed: { expr: { div: [1, 0] } },
+              },
+            },
+          },
+        }),
+      },
+      i18n: {
+        resourcePages: { errorTitle: "Error title" },
+        scenesPage: {},
+        sceneEditorPage: {
+          computedVariableFailed: "Could not calculate “{name}”.",
+          failedRenderCanvas: "Canvas message",
+        },
+      },
+      store: {
+        selectIsScenePageLoading: () => {
+          throw failure;
+        },
+      },
+    });
+
+    try {
+      subject.next({
+        action: "sceneEditor.renderCanvas",
+        payload: { flush: true },
+      });
+
+      await vi.waitFor(() => {
+        expect(appService.showAlertWhenIdle).toHaveBeenCalledWith({
+          title: "Error title",
+          message: "Could not calculate “Ratio”.",
+        });
+      });
+    } finally {
+      unmount();
+      consoleError.mockRestore();
+    }
+  });
+
   it("skips inline canvas renders while full-screen preview is visible", async () => {
     const render = vi.fn();
     const store = {

@@ -220,8 +220,8 @@ const getVisibilityConditionValueLabel = (
 };
 
 // A condition's summary in parts: what it tests, the operation as the
-// dialog names it, and the value. The panel shows each as a chip of its own
-// kind, so they read apart from each other.
+// dialog names it, and the value. The panel shows the operation in the
+// primary color, so it reads apart from the target and the value.
 export const getVisibilityConditionSummaryParts = (
   visibilityCondition,
   variablesData = {},

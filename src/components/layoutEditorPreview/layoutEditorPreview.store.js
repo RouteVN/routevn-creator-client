@@ -793,6 +793,10 @@ export const selectViewData = ({ state, constants, props = {}, i18n }) => {
     layoutType,
     previewBackgroundSlot: PREVIEW_BACKGROUND_SLOT,
     previewBackgroundImageId: state.previewBackgroundImageId,
+    // The names below the Background and Character Avatar cards.
+    previewBackgroundImageName:
+      state.repositoryState.images?.items?.[state.previewBackgroundImageId]
+        ?.name ?? "",
     previewBackgroundOnlyForm:
       previewBackgroundFormTarget === "backgroundOnly"
         ? createPreviewBackgroundOnlyForm()
@@ -828,6 +832,7 @@ export const selectViewData = ({ state, constants, props = {}, i18n }) => {
     dialogueDefaultValues: state.dialogueDefaultValues,
     characterAvatarPreview: buildCharacterSpritePreviewLayer(avatar),
     characterAvatarThumbnailFileId: avatar?.thumbnailFileId ?? avatar?.fileId,
+    characterAvatarName: avatar?.name ?? "",
     dialogueContext: {
       characterAvatarLabel: copy.previewCharacterAvatarLabel,
       avatarTransformLabel: copy.previewAvatarTransformLabel,
