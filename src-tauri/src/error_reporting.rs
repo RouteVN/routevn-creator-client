@@ -1,11 +1,11 @@
 use std::borrow::Cow;
-use std::io::Write;
+use std::io::{Read, Write};
 #[cfg(unix)]
 use std::os::unix::fs::PermissionsExt;
 use std::path::{Path, PathBuf};
 use std::sync::OnceLock;
 use std::sync::atomic::{AtomicUsize, Ordering};
-use std::time::Duration;
+use std::time::{Duration, Instant};
 
 use sentry::integrations::backtrace::ProcessStacktraceIntegration;
 use sentry::integrations::debug_images::DebugImagesIntegration;
@@ -21,6 +21,11 @@ const MAX_EVENTS_PER_SESSION: usize = 10;
 static SENT_EVENTS: AtomicUsize = AtomicUsize::new(0);
 
 const CRASH_ID_FILENAME: &str = "crash-id";
+const CRASH_ID_LOCK_FILENAME: &str = "crash-id.lock";
+// A stored ID is 36 bytes, perhaps with a newline; a larger file is not one.
+const MAX_CRASH_ID_FILE_BYTES: u64 = 64;
+// Another instance holds the lock only for one small read and write.
+const CRASH_ID_LOCK_WAIT: Duration = Duration::from_secs(2);
 // Set before sentry::init so every native event and the webview config carry it.
 static CRASH_ID: OnceLock<String> = OnceLock::new();
 
@@ -67,44 +72,77 @@ fn linux_data_home(
         .or_else(|| home.map(|home| PathBuf::from(home).join(".local/share")))
 }
 
-// Reuse the persisted ID, or create one and persist it. A missing or corrupt
-// file gets a fresh ID; write failures keep an in-memory ID for this run.
+// The stored ID, when the path is a small regular file holding a valid one.
+// Type and size are checked before opening, so a FIFO, a device or a huge
+// file at the path is never read, and the read itself is bounded.
+fn read_crash_id(file: &Path) -> Option<String> {
+    let metadata = std::fs::metadata(file).ok()?;
+    if !metadata.is_file() || metadata.len() > MAX_CRASH_ID_FILE_BYTES {
+        return None;
+    }
+    let mut bytes = Vec::new();
+    std::fs::File::open(file)
+        .ok()?
+        .take(MAX_CRASH_ID_FILE_BYTES)
+        .read_to_end(&mut bytes)
+        .ok()?;
+    let id = std::str::from_utf8(&bytes).ok()?.trim();
+    is_crash_id(id).then(|| id.to_owned())
+}
+
+// An exclusive lock, so instances that start together create or repair the
+// ID one at a time. The OS releases it when the file closes, including when a
+// process dies. Waits briefly, never indefinitely.
+fn lock_crash_id(data_dir: &Path) -> Option<std::fs::File> {
+    let path = data_dir.join(CRASH_ID_LOCK_FILENAME);
+    // Opening a FIFO or other special file left at the path could block.
+    if std::fs::symlink_metadata(&path).is_ok_and(|metadata| !metadata.is_file()) {
+        return None;
+    }
+    let lock = std::fs::OpenOptions::new()
+        .create(true)
+        .write(true)
+        .truncate(false)
+        .open(&path)
+        .ok()?;
+    let deadline = Instant::now() + CRASH_ID_LOCK_WAIT;
+    loop {
+        match lock.try_lock() {
+            Ok(()) => return Some(lock),
+            Err(std::fs::TryLockError::WouldBlock) if Instant::now() < deadline => {
+                std::thread::sleep(Duration::from_millis(10));
+            }
+            Err(_) => return None,
+        }
+    }
+}
+
+// Reuse the persisted ID, or create one and persist it. A missing or invalid
+// file gets a fresh ID; any failure, including an unavailable lock, keeps an
+// in-memory ID for this run, and a later launch repairs the file.
 // Diagnostics must never crash or block startup because of the ID.
 fn crash_id_from_directory(data_dir: &Path) -> String {
     let file = data_dir.join(CRASH_ID_FILENAME);
-    let stored = std::fs::read_to_string(&file);
-    if let Ok(contents) = &stored
-        && is_crash_id(contents.trim())
-    {
-        return contents.trim().to_owned();
+    if let Some(id) = read_crash_id(&file) {
+        return id;
     }
     let id = Uuid::new_v4().to_string();
     let persist = || -> std::io::Result<String> {
         std::fs::create_dir_all(data_dir)?;
+        let _lock = lock_crash_id(data_dir).ok_or(std::io::ErrorKind::WouldBlock)?;
+        // Another instance may have created or repaired the ID meanwhile.
+        if let Some(stored) = read_crash_id(&file) {
+            return Ok(stored);
+        }
         let mut temp = tempfile::NamedTempFile::new_in(data_dir)?;
         #[cfg(unix)]
         temp.as_file()
             .set_permissions(std::fs::Permissions::from_mode(0o600))?;
         temp.write_all(id.as_bytes())?;
-        if stored.is_ok() {
-            // An invalid existing file is replaced in one rename, never exposed
-            // partially written to another process.
-            temp.persist(&file)?;
-            return Ok(id.clone());
-        }
-        match temp.persist_noclobber(&file) {
-            Ok(_) => Ok(id.clone()),
-            Err(error) if error.error.kind() == std::io::ErrorKind::AlreadyExists => {
-                let winner = std::fs::read_to_string(&file)?;
-                if is_crash_id(winner.trim()) {
-                    Ok(winner.trim().to_owned())
-                } else {
-                    error.file.persist(&file)?;
-                    Ok(id.clone())
-                }
-            }
-            Err(error) => Err(error.error),
-        }
+        // One rename replaces whatever is at the path, never exposing a
+        // partly written file; a FIFO or symlink there is replaced, not opened.
+        temp.persist(&file)?;
+        Ok(id.clone())
     };
     persist().unwrap_or(id)
 }
@@ -578,6 +616,83 @@ mod tests {
             "0f6b1c3e-2a4d-4c8b-9e7f-1a2b3c4d5e6f"
         );
         assert_eq!(std::fs::read_to_string(&file).unwrap(), original);
+    }
+
+    #[test]
+    fn repairs_non_utf8_and_oversized_crash_id_files() {
+        let data_dir = tempfile::tempdir().unwrap();
+        let file = data_dir.path().join(CRASH_ID_FILENAME);
+        let oversized = format!("0f6b1c3e-2a4d-4c8b-9e7f-1a2b3c4d5e6f{}", " ".repeat(100));
+        for corrupt in [vec![0xff, 0xfe, 0x00, 0x80], oversized.into_bytes()] {
+            std::fs::write(&file, &corrupt).unwrap();
+            let repaired = crash_id_from_directory(data_dir.path());
+            assert!(is_crash_id(&repaired));
+            assert_eq!(std::fs::read_to_string(&file).unwrap(), repaired);
+            assert_eq!(crash_id_from_directory(data_dir.path()), repaired);
+        }
+    }
+
+    #[cfg(unix)]
+    #[test]
+    fn replaces_a_fifo_without_opening_it() {
+        let data_dir = tempfile::tempdir().unwrap();
+        let file = data_dir.path().join(CRASH_ID_FILENAME);
+        assert!(
+            std::process::Command::new("mkfifo")
+                .arg(&file)
+                .status()
+                .unwrap()
+                .success()
+        );
+        // Opening the FIFO for reading would block until a writer appears.
+        let (sender, receiver) = std::sync::mpsc::channel();
+        let dir = data_dir.path().to_owned();
+        std::thread::spawn(move || sender.send(crash_id_from_directory(&dir)));
+        let id = receiver
+            .recv_timeout(Duration::from_secs(10))
+            .expect("reading the crash ID must not block on a FIFO");
+        assert!(is_crash_id(&id));
+        assert!(std::fs::symlink_metadata(&file).unwrap().is_file());
+        assert_eq!(std::fs::read_to_string(&file).unwrap(), id);
+    }
+
+    #[test]
+    fn concurrent_instances_agree_on_one_id() {
+        for corrupt in [None, Some("not-a-uuid")] {
+            let data_dir = tempfile::tempdir().unwrap();
+            if let Some(corrupt) = corrupt {
+                std::fs::write(data_dir.path().join(CRASH_ID_FILENAME), corrupt).unwrap();
+            }
+            let barrier = std::sync::Arc::new(std::sync::Barrier::new(8));
+            let ids: Vec<String> = (0..8)
+                .map(|_| {
+                    let dir = data_dir.path().to_owned();
+                    let barrier = barrier.clone();
+                    std::thread::spawn(move || {
+                        barrier.wait();
+                        crash_id_from_directory(&dir)
+                    })
+                })
+                .collect::<Vec<_>>()
+                .into_iter()
+                .map(|thread| thread.join().unwrap())
+                .collect();
+            assert!(is_crash_id(&ids[0]), "{corrupt:?}");
+            assert!(ids.iter().all(|id| id == &ids[0]), "{corrupt:?}: {ids:?}");
+            assert_eq!(
+                std::fs::read_to_string(data_dir.path().join(CRASH_ID_FILENAME)).unwrap(),
+                ids[0]
+            );
+        }
+    }
+
+    #[test]
+    fn falls_back_when_the_lock_path_is_not_a_file() {
+        let data_dir = tempfile::tempdir().unwrap();
+        std::fs::create_dir(data_dir.path().join(CRASH_ID_LOCK_FILENAME)).unwrap();
+        let id = crash_id_from_directory(data_dir.path());
+        assert!(is_crash_id(&id));
+        assert!(!data_dir.path().join(CRASH_ID_FILENAME).exists());
     }
 
     #[test]

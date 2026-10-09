@@ -31,7 +31,9 @@ event, which allows counting distinct crashing installs per version
 
 - Android: `crashId` in the `routevn_crash_reporting` SharedPreferences.
 - iOS: `RouteVNCrashId` in UserDefaults.
-- Desktop: a `crash-id` file in the app data directory.
+- Desktop: a `crash-id` file in the app data directory. Instances that start
+  together create or repair it one at a time under an OS lock on the empty
+  `crash-id.lock` beside it.
 
 The ID is random and resets when app storage is cleared or the app is
 reinstalled on Android and iOS; restoring an iOS backup can bring the old ID
@@ -39,9 +41,12 @@ back. On macOS, Windows, and Linux, the desktop file lives in the app data
 directory and survives deleting the app unless that directory is removed.
 The ID is separate from the update-check device ID (`device.id`), is never
 sent with update checks or anywhere else, and the two cannot be derived from
-each other. It links to no account and no other data. If the shell cannot read
-or write its storage, a random ID is generated in memory for that run instead;
-the ID never blocks or crashes startup. On iOS, UserDefaults saves
+each other. It links to no account and no other data. A stored value that is
+not a valid ID, including one of another type, a desktop file that is not a
+small regular file, or bytes that are not UTF-8, is replaced with a fresh ID.
+If the shell cannot read or write its storage, a random ID is generated in
+memory for that run instead; the ID never blocks or crashes startup. On iOS,
+UserDefaults saves
 asynchronously, so a crash within seconds of the very first launch may produce
 one additional ID on the next launch.
 

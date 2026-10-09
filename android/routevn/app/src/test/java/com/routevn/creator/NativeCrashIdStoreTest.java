@@ -64,6 +64,15 @@ public class NativeCrashIdStoreTest {
     }
 
     @Test
+    public void replacesAValueOfAnotherTypeUnderTheKey() {
+        preferences.edit().putInt(NativeCrashIdStore.PREFS_KEY, 7).commit();
+        String replaced = NativeCrashIdStore.loadOrCreate(preferences);
+        assertTrue(NativeCrashIdStore.isCrashId(replaced));
+        assertEquals(replaced, preferences.getString(NativeCrashIdStore.PREFS_KEY, null));
+        assertEquals(replaced, NativeCrashIdStore.loadOrCreate(preferences));
+    }
+
+    @Test
     public void recognizesOnlyLowercaseUuid4Values() {
         assertTrue(NativeCrashIdStore.isCrashId("0f6b1c3e-2a4d-4c8b-9e7f-1a2b3c4d5e6f"));
         assertTrue(NativeCrashIdStore.isCrashId("11111111-2222-4333-8444-555555555555"));

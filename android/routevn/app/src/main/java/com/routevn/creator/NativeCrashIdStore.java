@@ -41,6 +41,9 @@ final class NativeCrashIdStore {
         String stored;
         try {
             stored = preferences.getString(PREFS_KEY, null);
+        } catch (ClassCastException wrongType) {
+            // A value of another type under the key is replaced below.
+            stored = null;
         } catch (RuntimeException ignored) {
             return inMemoryId();
         }
