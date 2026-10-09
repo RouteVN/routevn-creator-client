@@ -44,7 +44,8 @@ const createLayoutEditorDeps = ({
   const state = {
     pendingPersistPayload,
     previewData,
-    persistedPreviewData: previewData,
+    previewEditVersion: 0,
+    previewSavedVersion: 0,
   };
 
   const store = {
@@ -70,14 +71,17 @@ const createLayoutEditorDeps = ({
     setPreviewData: vi.fn(({ previewData: nextPreviewData } = {}) => {
       state.previewData = nextPreviewData;
     }),
+    markPreviewDataEdited: vi.fn(() => {
+      state.previewEditVersion += 1;
+    }),
+    selectPreviewEditVersion: vi.fn(() => state.previewEditVersion),
     selectUnsavedPreviewData: vi.fn(() =>
-      JSON.stringify(state.previewData) ===
-      JSON.stringify(state.persistedPreviewData)
-        ? undefined
-        : state.previewData,
+      state.previewEditVersion > state.previewSavedVersion
+        ? state.previewData
+        : undefined,
     ),
-    markPreviewDataSaved: vi.fn(({ previewData: savedPreviewData } = {}) => {
-      state.persistedPreviewData = savedPreviewData;
+    markPreviewDataSaved: vi.fn(({ version } = {}) => {
+      state.previewSavedVersion = Math.max(state.previewSavedVersion, version);
     }),
     selectSelectedItemId: vi.fn(() => undefined),
     selectItemDataById: vi.fn(({ itemId } = {}) => ({
@@ -794,9 +798,9 @@ describe("layoutEditor preview autosave", () => {
       leave: (navigation) => beforeNavigation(navigation),
     };
   };
-  const changePreview = (deps, previewData) =>
+  const changePreview = (deps, previewData, { edited = true } = {}) =>
     handleLayoutEditorPreviewDataChange(deps, {
-      _event: { detail: { previewData } },
+      _event: { detail: { previewData, edited } },
     });
 
   it("saves the preview data on its own a moment after it changes, outside the undo history", async () => {
@@ -831,14 +835,53 @@ describe("layoutEditor preview autosave", () => {
     }
   });
 
-  it("saves nothing for preview data that is as saved", async () => {
+  it("saves nothing for preview data the Preview derives on its own, as when it opens", async () => {
     const { deps, leave } = mountEditor();
 
-    changePreview(deps, { backgroundImageId: "image-preview" });
+    changePreview(
+      deps,
+      {
+        backgroundImageId: "image-preview",
+        dialogue: { content: [{ text: "This is a sample dialogue content." }] },
+      },
+      { edited: false },
+    );
     await leave({});
 
+    expect(deps.store.selectPreviewData()).toMatchObject({
+      dialogue: { content: [{ text: "This is a sample dialogue content." }] },
+    });
     expect(deps.subject.dispatch).not.toHaveBeenCalled();
     expect(deps.projectService.updateLayoutItem).not.toHaveBeenCalled();
+  });
+
+  it("saves an edit undone while the save of the edit ran", async () => {
+    const { deps, leave } = mountEditor();
+    let finishSave;
+    deps.projectService.updateLayoutItem.mockImplementationOnce(
+      () =>
+        new Promise((resolve) => {
+          finishSave = () => resolve({ valid: true });
+        }),
+    );
+
+    changePreview(deps, { backgroundImageId: "image-two" });
+    const saving = leave({});
+    await vi.waitFor(() =>
+      expect(deps.projectService.updateLayoutItem).toHaveBeenCalledOnce(),
+    );
+    // Back to how it opened, while image-two saves.
+    changePreview(deps, { backgroundImageId: "image-preview" });
+    finishSave();
+    await saving;
+    await leave({});
+
+    expect(
+      deps.projectService.updateLayoutItem.mock.calls.map(
+        ([{ data }]) => data.preview.backgroundImageId,
+      ),
+    ).toEqual(["image-two", "image-preview"]);
+    expect(deps.store.selectUnsavedPreviewData()).toBeUndefined();
   });
 
   it("saves a changed preview at once on leaving, then asks for the layout's thumbnail", async () => {

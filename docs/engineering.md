@@ -1288,16 +1288,22 @@ undo, or in an open dialog. An explorer action first saves edits waiting to
 save, and undo and redo wait while it runs, so its step holds only its own
 change. Preview data is not part of the history.
 
-The layout editor's preview data saves on its own 500ms after it changes, as
-the layout's or control's `preview` (`saveLayoutEditorPreview`, through the
-page's save queue, after element edits), and leaving saves it at once. The
-preview component hands the page derived data, so a layout opened after its
-elements, variables, or characters changed elsewhere saves its preview once
-when it opens; that keeps what the editor shows and what a thumbnail draws the
-same. Comparisons sort keys (`stableStringify`), since saved data can come
-back in another order. The preview component does not hydrate data it already
-shows: hydrating remounts its forms, and would take the focus from a field
-being typed in when the page's save comes back.
+The layout editor's preview data saves on its own 500ms after the user edits
+it, as the layout's or control's `preview` (`saveLayoutEditorPreview`, through
+the page's save queue, after element edits), and leaving saves it at once. The
+Preview's values, and the preview data a layout draws with them, are in
+`src/internal/layoutEditorPreview/` (`createSavedLayoutPreviewData` in
+`layoutEditorPreviewValues.js`): the Preview hydrates from the saved data and
+derives the rest, such as sample dialogue, and a layout's thumbnail derives it
+from the saved data the same way. So the Preview tells the page which data the
+user edited (`edited` on `preview-data-change`), and only that is saved; what
+it derives when it opens or the layout changes is not, so opening a layout
+writes nothing. The page counts edits and the last one saved
+(`previewEditVersion`), so an edit made while a save runs, even one back to
+how it opened, is saved after it. Comparisons sort keys (`stableStringify`),
+since saved data can come back in another order. The preview component does
+not hydrate data it already shows: hydrating remounts its forms, and would
+take the focus from a field being typed in when the page's save comes back.
 
 Layout thumbnails are drawn in the background as transforms' are
 (`projectService.requestLayoutThumbnails`, `createLayoutThumbnailSource` and

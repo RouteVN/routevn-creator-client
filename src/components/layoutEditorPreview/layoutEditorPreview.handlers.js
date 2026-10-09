@@ -30,13 +30,17 @@ const syncRepositoryState = async (deps) => {
   });
 };
 
-const emitPreviewDataChange = (deps) => {
+// `edited` says the user changed the preview, so the page saves it. Data the
+// Preview derives on its own, when it opens or the layout changes, is drawn
+// the same from what is saved, so it is not saved.
+const emitPreviewDataChange = (deps, { edited = false } = {}) => {
   deps.dispatchEvent(
     new CustomEvent("preview-data-change", {
       bubbles: true,
       composed: true,
       detail: {
         previewData: deps.store.selectPreviewData(),
+        edited,
       },
     }),
   );
@@ -54,6 +58,11 @@ const emitPlay = (deps) => {
 const renderAndEmitPreviewDataChange = (deps) => {
   deps.render();
   emitPreviewDataChange(deps);
+};
+
+const renderAndEmitPreviewEdit = (deps) => {
+  deps.render();
+  emitPreviewDataChange(deps, { edited: true });
 };
 
 const didLayoutIdentityChange = (oldProps = {}, newProps = {}) => {
@@ -157,7 +166,7 @@ export const handleDialogueFormChange = (deps, payload) => {
       });
     }
 
-    renderAndEmitPreviewDataChange(deps);
+    renderAndEmitPreviewEdit(deps);
     return;
   }
 
@@ -179,54 +188,54 @@ export const handleDialogueFormChange = (deps, payload) => {
       });
     }
 
-    renderAndEmitPreviewDataChange(deps);
+    renderAndEmitPreviewEdit(deps);
     return;
   }
 
   deps.store.setDialogueDefaultValue({ name, fieldValue });
-  renderAndEmitPreviewDataChange(deps);
+  renderAndEmitPreviewEdit(deps);
 };
 
 export const handleNvlFormChange = (deps, payload) => {
   const { name, value: fieldValue } = payload._event.detail;
 
   deps.store.setNvlDefaultValue({ name, fieldValue });
-  renderAndEmitPreviewDataChange(deps);
+  renderAndEmitPreviewEdit(deps);
 };
 
 export const handleChoiceFormChange = (deps, payload) => {
   const { name, value: fieldValue } = payload._event.detail;
 
   deps.store.setChoiceDefaultValue({ name, fieldValue });
-  renderAndEmitPreviewDataChange(deps);
+  renderAndEmitPreviewEdit(deps);
 };
 
 export const handleHistoryFormChange = (deps, payload) => {
   const { name, value: fieldValue } = payload._event.detail;
 
   deps.store.setHistoryDefaultValue({ name, fieldValue });
-  renderAndEmitPreviewDataChange(deps);
+  renderAndEmitPreviewEdit(deps);
 };
 
 export const handleSaveLoadFormChange = (deps, payload) => {
   const { name, value: fieldValue } = payload._event.detail;
 
   deps.store.setSaveLoadDefaultValue({ name, fieldValue });
-  renderAndEmitPreviewDataChange(deps);
+  renderAndEmitPreviewEdit(deps);
 };
 
 export const handlePreviewVariablesFormChange = (deps, payload) => {
   const { name, value: fieldValue } = payload._event.detail;
 
   deps.store.setPreviewVariableValue({ name, fieldValue });
-  renderAndEmitPreviewDataChange(deps);
+  renderAndEmitPreviewEdit(deps);
 };
 
 export const handleInputFieldsFormChange = (deps, payload) => {
   const { name, value: fieldValue } = payload._event.detail;
 
   deps.store.setPreviewInputFieldValue({ name, fieldValue });
-  renderAndEmitPreviewDataChange(deps);
+  renderAndEmitPreviewEdit(deps);
 };
 
 export const handlePreviewRevealingSpeedInput = (deps, payload) => {
@@ -238,7 +247,7 @@ export const handlePreviewRevealingSpeedInput = (deps, payload) => {
   deps.store.setPreviewRevealingSpeed({
     value: toPositivePreviewRevealingSpeed(rawValue),
   });
-  renderAndEmitPreviewDataChange(deps);
+  renderAndEmitPreviewEdit(deps);
 };
 
 export const handlePreviewBackgroundFieldClick = async (deps) => {
@@ -291,7 +300,7 @@ export const handleClearCharacterAvatar = (deps) => {
     name: "dialogue-character-sprite-id",
     fieldValue: undefined,
   });
-  renderAndEmitPreviewDataChange(deps);
+  renderAndEmitPreviewEdit(deps);
 };
 
 export const handlePreviewBackgroundFieldContextMenu = (deps, payload) => {
@@ -334,7 +343,7 @@ export const handleImageSelectorSubmit = (deps) => {
     store.selectDialogueDefaultValues()[transformField];
   store.applyImageSelectorSelection();
   store.hideDropdownMenu();
-  renderAndEmitPreviewDataChange(deps);
+  renderAndEmitPreviewEdit(deps);
   const transformId = store.selectDialogueDefaultValues()[transformField];
   if (transformId !== previousTransformId) {
     refs.dialogueForm.setValues({ values: { [transformField]: transformId } });
@@ -367,7 +376,7 @@ export const handleClearPreviewBackground = (deps) => {
     imageId: undefined,
   });
   deps.store.hideDropdownMenu();
-  renderAndEmitPreviewDataChange(deps);
+  renderAndEmitPreviewEdit(deps);
 };
 
 export const handleDropdownMenuClickItem = (deps, payload) => {

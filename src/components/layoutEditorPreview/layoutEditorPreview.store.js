@@ -1,7 +1,11 @@
+import { getLayoutPreviewSections } from "../../internal/layoutEditorPreview/layoutEditorPreviewData.js";
 import {
-  createLayoutEditorPreviewData,
-  getLayoutPreviewSections,
-} from "./support/layoutEditorPreviewData.js";
+  createDefaultPreviewValues,
+  createLayoutPreviewData,
+  createPreviewChoicesData,
+  createPreviewSaveLoadViewData,
+  createSavedPreviewValues,
+} from "../../internal/layoutEditorPreview/layoutEditorPreviewValues.js";
 import {
   createChoiceFormDefaultValues,
   createHistoryFormDefaultValues,
@@ -11,8 +15,7 @@ import {
   createSaveLoadPreviewViewData,
   findSaveLoadPreviewSettings,
   getSaveLoadPreviewWindow,
-} from "./support/layoutEditorPreviewSupport.js";
-import { createPersistedPreviewState } from "./support/layoutEditorPreviewPersistence.js";
+} from "../../internal/layoutEditorPreview/layoutEditorPreviewSupport.js";
 import { toFlatGroups, toFlatItems } from "../../internal/project/tree.js";
 import { toCharacterSelectOptions } from "../../internal/characterOptions.js";
 import { buildCharacterSpritePreviewLayer } from "../../internal/characterSpritePreview.js";
@@ -39,59 +42,8 @@ const PREVIEW_BACKGROUND_MENU_ITEMS = [
 const DIALOGUE_CUSTOM_CHARACTER_NAME_FIELD = "dialogue-custom-character-name";
 const DIALOGUE_CHARACTER_NAME_FIELD = "dialogue-character-name";
 
-const createDialogueDefaultValues = () => ({
-  "dialogue-character-id": undefined,
-  [DIALOGUE_CUSTOM_CHARACTER_NAME_FIELD]: false,
-  "dialogue-character-name": "Character",
-  "dialogue-character-sprite-id": undefined,
-  "dialogue-character-sprite-transform-id": undefined,
-  "dialogue-content": "This is a sample dialogue content.",
-  "dialogue-auto-mode": false,
-  "dialogue-skip-mode": false,
-  "dialogue-is-line-completed": false,
-});
-
-const createNvlDefaultValues = () => ({
-  linesNum: 3,
-  characterNames: ["Character", "", "Narrator"],
-  lines: [
-    "This is the first sample NVL line.",
-    "This is the second sample NVL line.",
-    "This is the third sample NVL line.",
-  ],
-});
-
-const createChoiceDefaultValues = () => ({
-  choicesNum: 2,
-  choices: ["Choice 1", "Choice 2"],
-});
-
-const createHistoryDefaultValues = () => ({
-  linesNum: 3,
-  characterNames: ["Aki", "Mina", ""],
-  texts: [
-    "The first history line.",
-    "The second history line.",
-    "The third history line.",
-  ],
-});
-
-const createSaveLoadDefaultValues = () => ({
-  slotsNum: 3,
-  saveImageIds: [undefined, undefined, undefined],
-  saveDates: ["2026-03-10 18:00", "", ""],
-});
-
 const resetPreviewStateValues = (state) => {
-  state.dialogueDefaultValues = createDialogueDefaultValues();
-  state.nvlDefaultValues = createNvlDefaultValues();
-  state.previewRevealingSpeed = 50;
-  state.choiceDefaultValues = createChoiceDefaultValues();
-  state.historyDefaultValues = createHistoryDefaultValues();
-  state.saveLoadDefaultValues = createSaveLoadDefaultValues();
-  state.previewVariableValues = {};
-  state.previewInputFieldValues = {};
-  state.previewBackgroundImageId = undefined;
+  Object.assign(state, createDefaultPreviewValues());
   state.imageSelectorDialog = {
     open: false,
     resourceTarget: "images",
@@ -245,15 +197,7 @@ export const createInitialState = () => ({
   repositoryState: {},
   speakerAvatarUrls: {},
   previewHydrationVersion: 0,
-  dialogueDefaultValues: createDialogueDefaultValues(),
-  nvlDefaultValues: createNvlDefaultValues(),
-  previewRevealingSpeed: 50,
-  choiceDefaultValues: createChoiceDefaultValues(),
-  historyDefaultValues: createHistoryDefaultValues(),
-  saveLoadDefaultValues: createSaveLoadDefaultValues(),
-  previewVariableValues: {},
-  previewInputFieldValues: {},
-  previewBackgroundImageId: undefined,
+  ...createDefaultPreviewValues(),
   imageSelectorDialog: {
     open: false,
     resourceTarget: "images",
@@ -294,38 +238,7 @@ export const resetPreviewState = ({ state }, _payload = {}) => {
 
 export const hydratePreviewState = ({ state }, { previewData } = {}) => {
   resetPreviewStateValues(state);
-  const persistedPreviewState = createPersistedPreviewState(previewData);
-
-  if (persistedPreviewState.dialogueDefaultValues !== undefined) {
-    state.dialogueDefaultValues = persistedPreviewState.dialogueDefaultValues;
-  }
-
-  if (persistedPreviewState.nvlDefaultValues !== undefined) {
-    state.nvlDefaultValues = persistedPreviewState.nvlDefaultValues;
-  }
-
-  if (persistedPreviewState.previewRevealingSpeed !== undefined) {
-    state.previewRevealingSpeed = persistedPreviewState.previewRevealingSpeed;
-  }
-
-  if (persistedPreviewState.choiceDefaultValues !== undefined) {
-    state.choiceDefaultValues = persistedPreviewState.choiceDefaultValues;
-  }
-
-  if (persistedPreviewState.historyDefaultValues !== undefined) {
-    state.historyDefaultValues = persistedPreviewState.historyDefaultValues;
-  }
-
-  if (persistedPreviewState.saveLoadDefaultValues !== undefined) {
-    state.saveLoadDefaultValues = persistedPreviewState.saveLoadDefaultValues;
-  }
-
-  state.previewVariableValues =
-    persistedPreviewState.previewVariableValues ?? {};
-  state.previewInputFieldValues =
-    persistedPreviewState.previewInputFieldValues ?? {};
-  state.previewBackgroundImageId =
-    persistedPreviewState.previewBackgroundImageId;
+  Object.assign(state, createSavedPreviewValues(previewData));
   state.previewHydrationVersion += 1;
 };
 
@@ -623,79 +536,28 @@ export const selectRepositoryState = ({ state }) => {
   return state.repositoryState;
 };
 
-export const selectChoicesData = ({ state }) => {
-  const choices = [];
+export const selectChoicesData = ({ state }) => createPreviewChoicesData(state);
 
-  for (
-    let index = 0;
-    index < state.choiceDefaultValues.choicesNum;
-    index += 1
-  ) {
-    choices.push({
-      content: state.choiceDefaultValues.choices[index],
-    });
-  }
-
-  return {
-    items: choices,
-  };
-};
-
-export const selectSaveLoadData = ({ state }) => {
-  const layoutState = getLayoutState(state);
-  const saveLoadPreviewViewData = createSaveLoadPreviewViewData({
-    currentLayoutId: layoutState.id,
-    currentLayoutData: layoutState.elements,
-    currentLayoutType: layoutState.layoutType,
-    layoutsData: state.repositoryState.layouts,
-    saveLoadDefaultValues: state.saveLoadDefaultValues,
-    previewVariableValues: state.previewVariableValues,
-    variablesData: state.repositoryState.variables,
-    images: state.repositoryState.images,
+const selectSaveLoadPreviewViewData = (state) =>
+  createPreviewSaveLoadViewData({
+    layoutState: getLayoutState(state),
+    repositoryState: state.repositoryState,
+    values: state,
   });
 
-  return {
-    slots: saveLoadPreviewViewData.visibleSaveLoadSlots,
-  };
-};
+export const selectSaveLoadData = ({ state }) => ({
+  slots: selectSaveLoadPreviewViewData(state).visibleSaveLoadSlots,
+});
 
-export const selectHasSaveLoadPreview = ({ state }) => {
-  const layoutState = getLayoutState(state);
+export const selectHasSaveLoadPreview = ({ state }) =>
+  selectSaveLoadPreviewViewData(state).hasSaveLoadPreview;
 
-  return createSaveLoadPreviewViewData({
-    currentLayoutId: layoutState.id,
-    currentLayoutData: layoutState.elements,
-    currentLayoutType: layoutState.layoutType,
-    layoutsData: state.repositoryState.layouts,
-    saveLoadDefaultValues: state.saveLoadDefaultValues,
-    previewVariableValues: state.previewVariableValues,
-    variablesData: state.repositoryState.variables,
-    images: state.repositoryState.images,
-  }).hasSaveLoadPreview;
-};
-
-export const selectPreviewData = ({ state }) => {
-  const layoutState = getLayoutState(state);
-  const layoutType = layoutState.layoutType;
-
-  return createLayoutEditorPreviewData({
-    layoutType,
-    currentLayoutId: layoutState.id,
-    currentLayoutData: layoutState.elements,
-    layoutsData: state.repositoryState.layouts,
-    variablesData: state.repositoryState.variables,
-    previewVariableValues: state.previewVariableValues,
-    previewInputFieldValues: state.previewInputFieldValues,
-    dialogueDefaultValues: state.dialogueDefaultValues,
-    nvlDefaultValues: state.nvlDefaultValues,
-    historyDefaultValues: state.historyDefaultValues,
-    previewRevealingSpeed: state.previewRevealingSpeed,
-    choicesData: selectChoicesData({ state }),
-    saveLoadData: selectSaveLoadData({ state }),
-    hasSaveLoadPreview: selectHasSaveLoadPreview({ state }),
-    backgroundImageId: state.previewBackgroundImageId,
+export const selectPreviewData = ({ state }) =>
+  createLayoutPreviewData({
+    layoutState: getLayoutState(state),
+    repositoryState: state.repositoryState,
+    values: state,
   });
-};
 
 export const selectViewData = ({ state, constants, props = {}, i18n }) => {
   const copy = i18n.layoutEditorPage;

@@ -15,6 +15,7 @@ import {
   selectIsTabletLandscape,
   setPreviewData,
   selectUnsavedPreviewData,
+  markPreviewDataEdited,
   markPreviewDataSaved,
   setUiConfig,
   setPendingPersistPayload,
@@ -918,35 +919,46 @@ describe("layoutEditor.store", () => {
 });
 
 describe("layoutEditor.store preview autosave", () => {
-  const syncLayout = (state, persistedPreviewData) =>
+  const syncLayout = (state, persistedPreviewData, layoutId = "layout-1") =>
     syncRepositoryState(
       { state },
       {
         projectResolution: { width: 1920, height: 1080 },
-        layoutId: "layout-1",
-        layout: { id: "layout-1", layoutType: "general" },
+        layoutId,
+        layout: { id: layoutId, layoutType: "general" },
         layoutData: { items: {}, tree: [] },
         persistedPreviewData,
       },
     );
 
-  it("has unsaved preview data only once it differs from what is saved", () => {
+  it("has unsaved preview data only once the user edits it", () => {
     const state = createInitialState();
     syncLayout(state, { backgroundImageId: "image-one" });
 
+    // What the Preview derives on its own is not unsaved.
+    setPreviewData(
+      { state },
+      {
+        previewData: {
+          backgroundImageId: "image-one",
+          dialogue: { content: [{ text: "Sample" }] },
+        },
+      },
+    );
     expect(selectUnsavedPreviewData({ state })).toBeUndefined();
 
     setPreviewData(
       { state },
       { previewData: { backgroundImageId: "image-two" } },
     );
+    markPreviewDataEdited({ state });
     expect(selectUnsavedPreviewData({ state })).toEqual({
       backgroundImageId: "image-two",
     });
 
     markPreviewDataSaved(
       { state },
-      { previewData: { backgroundImageId: "image-two" } },
+      { previewData: { backgroundImageId: "image-two" }, version: 1 },
     );
     expect(selectUnsavedPreviewData({ state })).toBeUndefined();
   });
@@ -959,7 +971,8 @@ describe("layoutEditor.store preview autosave", () => {
       runtime: { autoMode: true, skipMode: false },
     };
     setPreviewData({ state }, { previewData });
-    markPreviewDataSaved({ state }, { previewData });
+    markPreviewDataEdited({ state });
+    markPreviewDataSaved({ state }, { previewData, version: 1 });
 
     syncLayout(state, {
       runtime: { skipMode: false, autoMode: true },
@@ -970,20 +983,22 @@ describe("layoutEditor.store preview autosave", () => {
     expect(state.previewData).toEqual(previewData);
   });
 
-  it("keeps a newer unsaved preview when an older save comes back", () => {
+  it("keeps an edit made while an older save ran unsaved", () => {
     const state = createInitialState();
     syncLayout(state, {});
     setPreviewData(
       { state },
       { previewData: { backgroundImageId: "image-two" } },
     );
-    markPreviewDataSaved(
-      { state },
-      { previewData: { backgroundImageId: "image-two" } },
-    );
+    markPreviewDataEdited({ state });
     setPreviewData(
       { state },
       { previewData: { backgroundImageId: "image-three" } },
+    );
+    markPreviewDataEdited({ state });
+    markPreviewDataSaved(
+      { state },
+      { previewData: { backgroundImageId: "image-two" }, version: 1 },
     );
 
     syncLayout(state, { backgroundImageId: "image-two" });
@@ -991,5 +1006,19 @@ describe("layoutEditor.store preview autosave", () => {
     expect(selectUnsavedPreviewData({ state })).toEqual({
       backgroundImageId: "image-three",
     });
+  });
+
+  it("starts another layout with no edits", () => {
+    const state = createInitialState();
+    syncLayout(state, {});
+    setPreviewData(
+      { state },
+      { previewData: { backgroundImageId: "image-two" } },
+    );
+    markPreviewDataEdited({ state });
+
+    syncLayout(state, {}, "layout-2");
+
+    expect(selectUnsavedPreviewData({ state })).toBeUndefined();
   });
 });

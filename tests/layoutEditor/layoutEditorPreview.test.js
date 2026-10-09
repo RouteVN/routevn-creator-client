@@ -8,11 +8,12 @@ import {
   createLayoutEditorSelectionOverlay,
   formatLayoutEditorPreviewDate,
 } from "../../src/components/layoutEditorCanvas/support/layoutEditorCanvasRender.js";
-import { createLayoutEditorPreviewData } from "../../src/components/layoutEditorPreview/support/layoutEditorPreviewData.js";
+import { createLayoutEditorPreviewData } from "../../src/internal/layoutEditorPreview/layoutEditorPreviewData.js";
 import {
   createLayoutThumbnailSource,
   toLayoutPreviewType,
 } from "../../src/internal/layoutPreview.js";
+import * as previewComponentStore from "../../src/components/layoutEditorPreview/layoutEditorPreview.store.js";
 import { getRuntimeFieldItems } from "../../src/internal/runtimeFields.js";
 import {
   AUTO_MODE_CONDITION_TARGET,
@@ -1384,26 +1385,43 @@ describe("layout thumbnails", () => {
     },
   };
 
+  // What the editor's canvas draws for a saved layout when it opens: its
+  // Preview hydrated from the saved preview data, without selection chrome.
+  const drawnByEditor = ({ item, repositoryState, layoutType }) => {
+    const layoutState = {
+      id: item.id,
+      layoutType,
+      elements: item.elements,
+    };
+    const state = previewComponentStore.createInitialState();
+    previewComponentStore.setLayoutState({ state }, { layoutState });
+    previewComponentStore.setRepositoryState({ state }, { repositoryState });
+    previewComponentStore.hydratePreviewState(
+      { state },
+      { previewData: item.preview },
+    );
+    return createLayoutEditorAssetReferences({
+      layoutState,
+      repositoryState,
+      previewData: previewComponentStore.selectPreviewData({ state }),
+      resolution: { width: 1280, height: 720 },
+    }).renderedElements;
+  };
+
   it("draws a saved layout with its saved preview as the editor's canvas does, without its selection chrome", () => {
     const repositoryState = createRepositoryState();
     const item = createLayout(titleItems);
 
     const source = createLayoutThumbnailSource({ item, repositoryState });
 
-    const { renderedElements } = createLayoutEditorAssetReferences({
-      layoutState: {
-        id: item.id,
-        layoutType: "general",
-        elements: item.elements,
-      },
-      repositoryState,
-      previewData: item.preview,
-      resolution: { width: 1280, height: 720 },
-    });
     expect(source.width).toBe(1280);
     expect(source.height).toBe(720);
     expect(source.renderState).toEqual({
-      elements: renderedElements,
+      elements: drawnByEditor({
+        item,
+        repositoryState,
+        layoutType: "general",
+      }),
       animations: [],
     });
     expect(source.renderState.elements[0]).toMatchObject({
@@ -1411,6 +1429,47 @@ describe("layout thumbnails", () => {
       src: "file-image-1",
     });
     expect(source.settleMs).toBeUndefined();
+  });
+
+  it("fills in what the editor's Preview shows for preview data never saved, such as sample dialogue", () => {
+    const repositoryState = createRepositoryState();
+    const item = {
+      ...createLayout({
+        name: {
+          id: "name",
+          type: "text-ref-character-name",
+          textStyleId: "style-1",
+        },
+        line: {
+          id: "line",
+          type: "text-revealing-ref-dialogue-content",
+          textStyleId: "style-1",
+        },
+      }),
+      layoutType: "dialogue-adv",
+      preview: undefined,
+    };
+
+    const source = createLayoutThumbnailSource({ item, repositoryState });
+
+    const editorElements = drawnByEditor({
+      item,
+      repositoryState,
+      layoutType: "dialogue-adv",
+    });
+    // A thumbnail draws text that types itself out in full.
+    const withoutRevealEffect = (elements) =>
+      JSON.parse(
+        JSON.stringify(elements, (key, value) =>
+          key === "revealEffect" ? undefined : value,
+        ),
+      );
+    expect(withoutRevealEffect(source.renderState.elements)).toEqual(
+      withoutRevealEffect(editorElements),
+    );
+    expect(JSON.stringify(source.renderState.elements)).toContain(
+      "This is a sample dialogue content.",
+    );
   });
 
   it("loads the files it draws, a font typed by its file name with its weight, and no sounds", () => {

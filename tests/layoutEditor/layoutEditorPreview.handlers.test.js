@@ -217,6 +217,30 @@ describe("layoutEditorPreview.handleOnUpdate", () => {
     expect(deps.store.selectPreviewData()).toEqual(shown);
   });
 
+  it("tells the page which preview data the user edited, so only that is saved", async () => {
+    const deps = createUpdateDeps();
+    const editedFlags = () =>
+      deps.dispatchEvent.mock.calls
+        .map(([event]) => event)
+        .filter((event) => event.type === "preview-data-change")
+        .map((event) => event.detail.edited);
+
+    // Saved data handed back to it is derived again, not edited.
+    await handleOnUpdate(deps, {
+      oldProps: { layoutState, initialPreviewData: {} },
+      newProps: {
+        layoutState,
+        initialPreviewData: { backgroundImageId: "image-two" },
+      },
+    });
+    handleDialogueFormChange(
+      deps,
+      createPayload("dialogue-content", "Hello one"),
+    );
+
+    expect(editedFlags()).toEqual([false, true]);
+  });
+
   it("hydrates preview data that differs from what it shows", async () => {
     const deps = createUpdateDeps();
     const previewData = {

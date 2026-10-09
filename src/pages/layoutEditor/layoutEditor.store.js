@@ -215,6 +215,9 @@ export const createInitialState = () => {
     previewData: {},
     persistedPreviewData: {},
     initialPreviewData: {},
+    // Counts the user's preview edits, and the last one saved.
+    previewEditVersion: 0,
+    previewSavedVersion: 0,
     isPreviewMounted: false,
     isTouchMode: false,
     appWindowMetrics: { width: 0, height: 0 },
@@ -347,15 +350,28 @@ export const setPreviewData = ({ state }, { previewData } = {}) => {
   state.previewData = normalizePreviewData(previewData);
 };
 
-// The preview data saves on its own, a moment after it changes. A layout's
-// thumbnail is drawn with what is saved.
-export const selectUnsavedPreviewData = ({ state }) =>
-  arePreviewDataEqual(state.previewData, state.persistedPreviewData)
-    ? undefined
-    : state.previewData;
+// The preview data saves on its own, a moment after the user edits it. What
+// the Preview derives on its own is not saved: a layout's thumbnail derives it
+// from what is saved the same way.
+export const markPreviewDataEdited = ({ state }) => {
+  state.previewEditVersion += 1;
+};
 
-export const markPreviewDataSaved = ({ state }, { previewData } = {}) => {
+export const selectPreviewEditVersion = ({ state }) => state.previewEditVersion;
+
+export const selectUnsavedPreviewData = ({ state }) =>
+  state.previewEditVersion > state.previewSavedVersion
+    ? state.previewData
+    : undefined;
+
+// Takes the edit that was saved, since edits made while the save ran are
+// still unsaved.
+export const markPreviewDataSaved = (
+  { state },
+  { previewData, version } = {},
+) => {
   state.persistedPreviewData = normalizePreviewData(previewData);
+  state.previewSavedVersion = Math.max(state.previewSavedVersion, version);
 };
 
 export const setPreviewMounted = ({ state }, { isMounted } = {}) => {
@@ -573,6 +589,14 @@ export const syncRepositoryState = ({ state }, payload = {}) => {
   const shouldRefreshInitialPreviewData =
     shouldApplyPersistedPreview ||
     arePreviewDataEqual(state.previewData, nextPersistedPreviewData);
+  // Another layout starts with no edits.
+  if (
+    currentLayoutId !== layoutId ||
+    currentResourceType !== (resourceType ?? "layouts")
+  ) {
+    state.previewEditVersion = 0;
+    state.previewSavedVersion = 0;
+  }
 
   state.projectResolution = requireProjectResolution(
     projectResolution,

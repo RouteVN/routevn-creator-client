@@ -135,12 +135,13 @@ const runLayoutEditorPersistence = (deps, task) => {
 
 const PREVIEW_AUTOSAVE_ACTION = "layoutEditor.savePreview";
 
-// Saves the preview data when it differs from what is saved. It saves on its
-// own, outside the undo history, in order with element edits.
+// Saves the preview data when the user edited it since the last save. It
+// saves on its own, outside the undo history, in order with element edits.
 const saveLayoutEditorPreview = (deps) => {
   const { appService, projectService, store } = deps;
   return runLayoutEditorPersistence(deps, async () => {
     const layoutId = store.selectLayoutId();
+    const version = store.selectPreviewEditVersion();
     const previewData = store.selectUnsavedPreviewData();
     if (!layoutId || !previewData) {
       return { ok: true };
@@ -167,7 +168,7 @@ const saveLayoutEditorPreview = (deps) => {
         }),
     });
     if (updateAttempt.ok) {
-      store.markPreviewDataSaved({ previewData });
+      store.markPreviewDataSaved({ previewData, version });
     }
     return { ok: updateAttempt.ok };
   });
@@ -2263,11 +2264,11 @@ export const handleLayoutEditorCanvasMetricsChange = (deps, payload) => {
 
 export const handleLayoutEditorPreviewDataChange = (deps, payload) => {
   const { store, render, subject } = deps;
-  store.setPreviewData({
-    previewData: payload._event.detail?.previewData,
-  });
+  const { previewData, edited } = payload._event.detail;
+  store.setPreviewData({ previewData });
   render();
-  if (store.selectUnsavedPreviewData()) {
+  if (edited) {
+    store.markPreviewDataEdited();
     subject.dispatch(PREVIEW_AUTOSAVE_ACTION, {});
   }
 };

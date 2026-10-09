@@ -1,6 +1,7 @@
 import { parseAndRender } from "jempl";
 import { formatDate, resolveLayoutReferences } from "route-engine-js";
 import { getFontFaceWeightDescriptor } from "./fontCapabilities.js";
+import { createSavedLayoutPreviewData } from "./layoutEditorPreview/layoutEditorPreviewValues.js";
 import { getParticleSettleMs } from "./particlePreview.js";
 import {
   buildLayoutElements,
@@ -461,24 +462,31 @@ const collectElementsOfType = (elements, type) =>
 export const LAYOUT_THUMBNAIL_VERSION = 1;
 
 // What a saved layout's thumbnail shows: the layout with its saved preview
-// data, as the layout editor's canvas draws it without its selection chrome,
-// at the project's resolution, and the files that draws. Sounds are left out,
-// since a still picture plays none.
+// data, as the layout editor shows it when it opens, without its selection
+// chrome, at the project's resolution, and the files that draws. Sounds are
+// left out, since a still picture plays none.
 export const createLayoutThumbnailSource = ({ item, repositoryState }) => {
   const resolution = requireProjectResolution(
     repositoryState.project?.resolution,
     "Project resolution",
   );
+  const layoutState = {
+    id: item.id,
+    layoutType: toLayoutPreviewType(item.layoutType),
+    layoutSchemaVersion: item.layoutSchemaVersion,
+    elements: item.elements,
+  };
   const { elements, backgroundElement, characterSprite } =
     createLayoutPreviewElements({
-      layoutState: {
-        id: item.id,
-        layoutType: toLayoutPreviewType(item.layoutType),
-        layoutSchemaVersion: item.layoutSchemaVersion,
-        elements: item.elements,
-      },
+      layoutState,
       repositoryState,
-      previewData: item.preview,
+      // The saved preview data, with what the editor's Preview fills in for
+      // what is not saved, such as sample dialogue.
+      previewData: createSavedLayoutPreviewData({
+        layoutState,
+        repositoryState,
+        previewData: item.preview,
+      }),
       resolution,
     });
   const renderedElements = showFullText(
