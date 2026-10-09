@@ -4,8 +4,8 @@ Android and iOS native crashes are covered in
 [mobile crash reporting](mobile-crash-reporting.md).
 
 The Tauri desktop app sends uncaught webview errors, unhandled promise
-rejections, and Rust panics to the Sentry-compatible collector in
-`routevn-api-2`. Browser and Rust use separate official SDKs and their normal
+rejections, and Rust panics to the RouteVN API's Sentry-compatible collector.
+Browser and Rust use separate official SDKs and their normal
 transports. Neither layer forwards failures through the other. Handled errors
 stay in their existing UI flows.
 
@@ -35,7 +35,7 @@ Tauri injects the compiled DSN into the webview before application scripts run,
 along with the release, build ID, and environment label. The injected object is
 read-only. Both official SDKs receive the same configuration.
 
-Use the development DSN printed by `python3 scripts/dev.py` in `routevn-api-2`.
+Use the development DSN that the locally running RouteVN API prints at startup.
 Development builds reject DSNs outside HTTP on `127.0.0.1`, the only local host
 the webview CSP allows, so loading production settings by mistake cannot send
 development errors there. Every build parses the DSN with the Sentry DSN parser
@@ -156,14 +156,9 @@ forwarding path; the SDK handles collector rate limits and transport errors.
 
 ## Local verification
 
-Start `python3 scripts/dev.py` in `routevn-api-2`, then launch the Tauri desktop
-app with its development build. The API prints the local DSN and stores accepted
-events in `.local/system.sqlite`. To inspect only report IDs and event types:
-
-```bash
-sqlite3 .local/system.sqlite \
-  "SELECT id, json_extract(data, '$.event.exception.values[0].type') FROM errorEvents ORDER BY created DESC LIMIT 10;"
-```
+Run the RouteVN API locally, then launch the Tauri desktop app with its
+development build. The API prints the local DSN and keeps the events it
+accepts, so each failure below can be checked there.
 
 Use one deliberate uncaught webview error and one Rust panic in a disposable
 development build when qualifying a release. Each should create one row from

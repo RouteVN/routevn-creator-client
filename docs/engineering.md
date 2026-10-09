@@ -73,16 +73,13 @@ component. Components that render or compute their own copy should read from
 copy-like props only when the caller is intentionally customizing generic
 reusable component text.
 
-For Japanese localization, follow the RouteVN website Japanese style guide:
-`https://github.com/RouteVN/routevn-website/blob/main/internal/japanese-translation-style.md`.
-Use it as the terminology and tone reference for RouteVN Japanese UI and docs
-copy.
+For Japanese localization, follow the RouteVN Japanese translation style
+guide. Use it as the terminology and tone reference for RouteVN Japanese UI
+and docs copy.
 
-For Simplified Chinese localization, follow the RouteVN website Simplified
-Chinese style guide:
-`https://github.com/RouteVN/routevn-website/blob/main/internal/simplified-chinese-translation-style.md`.
-Use it as the terminology and tone reference for RouteVN `zh-hans` UI and docs
-copy.
+For Simplified Chinese localization, follow the RouteVN Simplified Chinese
+translation style guide. Use it as the terminology and tone reference for
+RouteVN `zh-hans` UI and docs copy.
 
 ## Code Style
 

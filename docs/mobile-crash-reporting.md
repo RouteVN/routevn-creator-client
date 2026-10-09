@@ -1,7 +1,7 @@
 # Mobile crash reporting
 
 The Android and iOS apps send native crashes to the same Sentry-compatible
-collector in `routevn-api-2` as the desktop app (see
+collector as the desktop app (see
 [desktop error reporting](desktop-error-reporting.md)). Each platform uses the
 official Sentry SDK with a thin wrapper, following the collector's
 `specs/services/error-sdk-compatibility-v1.md`.
@@ -234,7 +234,7 @@ supported: a real crash in a release-configured build, delivery after relaunch,
 and a check that the stored row contains only the fields listed above. Use the
 [test crash names](#test-crashes) to crash a release build.
 
-- Android: run `python3 scripts/dev.py` in `routevn-api-2`, then
+- Android: run the RouteVN API locally, then
   `adb reverse tcp:3000 tcp:3000` and install a debug build with
   `-ProutevnSentryDsn=<local dsn>`. Induce a JVM crash with
   `adb shell am crash com.routevn.creator` and a native crash with
@@ -256,7 +256,7 @@ not replace a Release crash-delivery test.
 Android crash delivery verified on 2026-09-29 on a Redmi K30 5G (Android 12)
 with the background initializer: a Debug build using the development DSN
 `http://11111111111111111111111111111111@127.0.0.1:3000/system/sentry/1`, sending
-through `adb reverse` to a local envelope sink rather than `routevn-api-2`.
+through `adb reverse` to a local envelope sink rather than the API.
 A JVM crash (`am crash`, surfacing as the WebView renderer-loss exception) was
 delivered to `/system/sentry/api/1/envelope/` while the process exited; a
 `kill -SEGV` native crash was delivered after relaunch. Both events contained
