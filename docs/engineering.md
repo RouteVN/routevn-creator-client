@@ -1387,21 +1387,26 @@ Transform thumbnails are drawn in the background, never while navigation or
 an editor waits. `projectService.requestTransformThumbnails({ transformIds })`
 queues them (all transforms when none are named) in the editor thumbnail
 service (`src/deps/services/shared/editorThumbnailService.js`), which runs one
-job at a time when the app is idle. Each job builds the transform's preview
-from saved data alone (`createTransformThumbnailSource` in
-`src/internal/transformPreview.js`, the same render state the editor's Preview
-tab draws) and hashes it: the SHA-256 of `TRANSFORM_THUMBNAIL_VERSION` and that
-render state (`createThumbnailSourceHash` in `src/internal/thumbnailSourceHash.js`,
-over `stableStringify` from `src/internal/stableStringify.js`). The render state
-holds the transform's values, the project resolution, and the preview images'
-file ids and sizes, so replacing an image's file changes the hash, while a name
-or tag change does not. Only when the hash differs from the transform's
-`thumbnailSourceHash` (creator-model 1.16.2) does the job draw: it loads the
-preview images with `verifyImageIntegrity`, renders on a renderer of its own
-off screen (`src/deps/clients/web/editorThumbnails.js`), freed after each job,
-scales the frame's pixels straight into the thumbnail (route-graphics
+job at a time. Each job builds the transform's preview from saved data alone
+(`createTransformThumbnailSource` in `src/internal/transformPreview.js`, the
+same render state the editor's Preview tab draws) and hashes it: the SHA-256 of
+`TRANSFORM_THUMBNAIL_VERSION` and that render state (`createThumbnailSourceHash`
+in `src/deps/services/shared/thumbnailSourceHash.js`, over `stableStringify`
+from `src/internal/stableStringify.js`). The render state holds the
+transform's values, the project resolution, and the preview images' file ids
+and sizes, so replacing an image's file changes the hash, while a name or tag
+change does not. Checking a hash is cheap and does not wait; only when it
+differs from the transform's `thumbnailSourceHash` (creator-model 1.16.2) does
+the job wait for the app to be idle, read the transform again, and draw: it
+loads the preview images with `verifyImageIntegrity`, renders on a renderer of
+its own off screen (`src/deps/clients/web/editorThumbnails.js`), freed after
+each job, scales the frame's pixels straight into the thumbnail (route-graphics
 `extractCanvas`, from 1.47.0) without encoding a full-size PNG, and saves the
-JPEG thumbnail with its hash in one `transform.update`. Bump
+JPEG thumbnail with its hash in one `transform.update`. That renderer loads
+its images under keys of its own: textures are cached by key for every
+renderer, and a graphics service unloads the keys it loaded when it is freed,
+so sharing the page renderer's file id keys would take images away from an
+open editor, or let the editor's teardown take them from the thumbnail. Bump
 `TRANSFORM_THUMBNAIL_VERSION` when the preview starts drawing the same saved
 transform differently, so saved thumbnails are drawn again. Thumbnails no
 longer come with a full-size `previewFileId`; one saved earlier stays, and
@@ -1412,7 +1417,10 @@ thumbnail without waiting for it; a backup's
 `prepareNavigation({ reason: "backup" })` only saves. The transforms page
 requests every thumbnail when it opens and a new transform's after Add, which
 also repairs thumbnails left out of date when the app closed or crashed before
-an editor was left. A job drops its work when another project has opened. A
+an editor was left; until one is drawn, the detail panel says there is no
+preview image. A job only works for the project that is open
+(`getEnsuredProjectId`): it checks before waiting, drawing, storing, and
+saving, and stores its file into its own project (`storeFileForProject`). A
 preview image that cannot load leaves the old thumbnail in place, since the
 fallback would misrepresent the preview; that, and capture, storage, or update
 failures, are logged as warnings without an alert, since the user did not

@@ -164,7 +164,7 @@ steps:
     state: attached
     timeoutMs: 5000
   - action: waitFor
-    selector: "rvn-transform-editor #savePreviewButton"
+    selector: "rvn-transform-editor #previewImageButton0"
     state: visible
     timeoutMs: 5000
   - action: wait
@@ -179,8 +179,8 @@ steps:
     state: attached
     timeoutMs: 5000
   - action: waitFor
-    selector: "rvn-transform-editor #savePreviewButton"
-    state: detached
+    selector: "rvn-transform-editor #previewImageButton0"
+    state: hidden
     timeoutMs: 5000
   - action: select
     selector: "rvn-transform-editor #backButton"

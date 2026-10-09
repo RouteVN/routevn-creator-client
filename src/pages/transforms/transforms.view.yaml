@@ -161,9 +161,7 @@ template:
                                                   - rvn-file-image fileId=${selectedItem.thumbnailFileId} w=f h=f: null
                                                 $else:
                                                   - rtgl-view w=f h=f av=c ah=c bgc=bg:
-                                                      - rtgl-view d=v av=c ah=c g=xs ph=sm:
-                                                          - rtgl-text s=xs c=mu-fg: ${noPreviewImageLabel}
-                                                          - rtgl-text s=xs c=mu-fg: ${savePreviewInEditorLabel}
+                                                      - rtgl-text s=xs c=mu-fg: ${noPreviewImageLabel}
                                       - $if selectedItemId:
                                           - rtgl-tag-select#detailTagSelect slot="transform-tags" w=f :options=${tagFilterOptions} :selectedValues=${selectedItemTagIds} :draftSelectedValues=${detailTagDraftValues} :open=${isDetailTagSelectOpen} :addOption=${detailTagAddOption} :placeholder=${addTagPlaceholder}: null
                             $else:

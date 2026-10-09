@@ -1,6 +1,6 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { createEditorThumbnailService } from "../../src/deps/services/shared/editorThumbnailService.js";
-import { createThumbnailSourceHash } from "../../src/internal/thumbnailSourceHash.js";
+import { createThumbnailSourceHash } from "../../src/deps/services/shared/thumbnailSourceHash.js";
 import {
   createTransformThumbnailSource,
   TRANSFORM_THUMBNAIL_VERSION,
@@ -65,18 +65,19 @@ const createService = ({ repositoryState = createRepositoryState() } = {}) => {
   let storedFileCount = 0;
   const fileContents = [];
   const deps = {
-    getCurrentProjectId: () => projectId,
+    getEnsuredProjectId: () => projectId,
     getRepositoryState: () => repositoryState,
     getFileContent: vi.fn(async (fileId) => {
       const content = { url: `blob:${fileId}`, type: "", revoke: vi.fn() };
       fileContents.push(content);
       return content;
     }),
-    storeFile: vi.fn(async () => {
+    // As storeFileForProject returns: the file and its one record.
+    storeFileForProject: vi.fn(async () => {
       storedFileCount += 1;
       return {
         fileId: `stored-${storedFileCount}`,
-        fileRecords: [{ id: `record-${storedFileCount}` }],
+        fileRecord: { id: `record-${storedFileCount}` },
       };
     }),
     // The update lands in the repository, as a command would.
@@ -142,7 +143,8 @@ describe("editor thumbnail service", () => {
       ["transform-background", "sprite", "file-1"],
       ["transform-target", "sprite", "file-1"],
     ]);
-    const [{ file }] = deps.storeFile.mock.calls[0];
+    const [{ projectId, file }] = deps.storeFileForProject.mock.calls[0];
+    expect(projectId).toBe("project-1");
     expect([file.type, file.size]).toEqual(["image/jpeg", "thumb".length]);
     expect(deps.updateTransform.mock.calls).toEqual([
       [
@@ -209,7 +211,7 @@ describe("editor thumbnail service", () => {
     await service.requestTransformThumbnails({ transformIds: ["transform-1"] });
 
     expect(deps.renderThumbnail).not.toHaveBeenCalled();
-    expect(deps.storeFile).not.toHaveBeenCalled();
+    expect(deps.storeFileForProject).not.toHaveBeenCalled();
     expect(repositoryState.transforms.items["transform-1"]).toMatchObject({
       thumbnailFileId: "thumb-old",
     });
@@ -245,6 +247,62 @@ describe("editor thumbnail service", () => {
       "[editorThumbnails] The thumbnail update was rejected",
       { transformId: "transform-2", result: { valid: false } },
     );
+  });
+
+  it("checks hashes without waiting, and waits for the app to be idle only to draw", async () => {
+    const { deps, repositoryState, service } = createService();
+    repositoryState.transforms.items["transform-1"].thumbnailSourceHash =
+      await hashOf(repositoryState, "transform-1");
+
+    await service.requestTransformThumbnails();
+
+    expect(deps.waitUntilIdle).toHaveBeenCalledOnce();
+    expect(deps.renderThumbnail).toHaveBeenCalledOnce();
+  });
+
+  it("draws the transform as it is once the app is idle", async () => {
+    const { deps, repositoryState, service } = createService();
+    deps.waitUntilIdle.mockImplementationOnce(async () => {
+      repositoryState.transforms.items["transform-2"].x = 100;
+    });
+
+    await service.requestTransformThumbnails({ transformIds: ["transform-2"] });
+
+    const [{ renderState }] = deps.renderThumbnail.mock.calls[0];
+    expect(renderState.elements[1]).toMatchObject({ x: 100 });
+    expect(
+      repositoryState.transforms.items["transform-2"].thumbnailSourceHash,
+    ).toBe(await hashOf(repositoryState, "transform-2"));
+  });
+
+  it("stores and saves nothing once the project closes while it draws or stores", async () => {
+    const { deps, service, switchProject } = createService();
+    deps.renderThumbnail.mockImplementationOnce(async () => {
+      switchProject(undefined);
+      return thumbnailImage;
+    });
+
+    await service.requestTransformThumbnails({ transformIds: ["transform-2"] });
+    expect(deps.storeFileForProject).not.toHaveBeenCalled();
+
+    switchProject("project-1");
+    deps.storeFileForProject.mockImplementationOnce(async () => {
+      switchProject("project-2");
+      return { fileId: "stored-1", fileRecord: { id: "record-1" } };
+    });
+    await service.requestTransformThumbnails({ transformIds: ["transform-2"] });
+    expect(deps.storeFileForProject).toHaveBeenCalledOnce();
+    expect(deps.updateTransform).not.toHaveBeenCalled();
+  });
+
+  it("asks for nothing while no project is open", async () => {
+    const { deps, service, switchProject } = createService();
+    switchProject(undefined);
+
+    await service.requestTransformThumbnails();
+
+    expect(deps.renderThumbnail).not.toHaveBeenCalled();
+    expect(deps.waitUntilIdle).not.toHaveBeenCalled();
   });
 
   it("drops what was asked for in a project that is no longer open", async () => {

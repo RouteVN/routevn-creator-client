@@ -1,9 +1,9 @@
 import { dataUrlToBlob } from "../../../internal/dataUrl.js";
-import { createThumbnailSourceHash } from "../../../internal/thumbnailSourceHash.js";
 import {
   createTransformThumbnailSource,
   TRANSFORM_THUMBNAIL_VERSION,
 } from "../../../internal/transformPreview.js";
+import { createThumbnailSourceHash } from "./thumbnailSourceHash.js";
 
 const renderDefaultThumbnail = async (options) => {
   const client = await import("../../clients/web/editorThumbnails.js");
@@ -25,16 +25,37 @@ const waitForIdle = () =>
 // thumbnail is drawn only when its `thumbnailSourceHash` no longer matches
 // what it would show, so asking again is cheap.
 export const createEditorThumbnailService = ({
-  getCurrentProjectId,
+  getEnsuredProjectId,
   getRepositoryState,
   getFileContent,
-  storeFile,
+  storeFileForProject,
   updateTransform,
   renderThumbnail = renderDefaultThumbnail,
   waitUntilIdle = waitForIdle,
 }) => {
   const pendingJobs = new Map();
   let running;
+
+  // A job's work counts only while its project is the one open.
+  const isOpen = (projectId) => getEnsuredProjectId() === projectId;
+
+  // The transform's thumbnail source and its hash, when it is out of date.
+  const findStaleTransformThumbnail = async (transformId) => {
+    const repositoryState = getRepositoryState();
+    const item = repositoryState.transforms?.items?.[transformId];
+    if (item?.type !== "transform") {
+      return undefined;
+    }
+
+    const source = createTransformThumbnailSource({ item, repositoryState });
+    const thumbnailSourceHash = await createThumbnailSourceHash({
+      version: TRANSFORM_THUMBNAIL_VERSION,
+      renderState: source.renderState,
+    });
+    return item.thumbnailSourceHash === thumbnailSourceHash
+      ? undefined
+      : { source, thumbnailSourceHash };
+  };
 
   // A preview image that cannot be read leaves the old thumbnail in place,
   // since drawing the fallback would misrepresent the preview.
@@ -66,41 +87,44 @@ export const createEditorThumbnailService = ({
     }
   };
 
+  // Checking a hash is cheap, so only drawing waits for the app to be idle,
+  // and the transform is read again after the wait.
   const syncTransformThumbnail = async ({ projectId, transformId }) => {
-    if (getCurrentProjectId() !== projectId) {
+    if (
+      !isOpen(projectId) ||
+      !(await findStaleTransformThumbnail(transformId))
+    ) {
       return;
     }
-    const repositoryState = getRepositoryState();
-    const item = repositoryState.transforms?.items?.[transformId];
-    if (item?.type !== "transform") {
+    await waitUntilIdle();
+    if (!isOpen(projectId)) {
       return;
     }
-
-    const source = createTransformThumbnailSource({ item, repositoryState });
-    const thumbnailSourceHash = await createThumbnailSourceHash({
-      version: TRANSFORM_THUMBNAIL_VERSION,
-      renderState: source.renderState,
-    });
-    if (item.thumbnailSourceHash === thumbnailSourceHash) {
+    const stale = await findStaleTransformThumbnail(transformId);
+    if (!stale) {
       return;
     }
 
-    const thumbnailImage = await drawThumbnail(source);
-    if (getCurrentProjectId() !== projectId) {
+    const thumbnailImage = await drawThumbnail(stale.source);
+    if (!isOpen(projectId)) {
       return;
     }
-    const thumbnailFile = await storeFile({
+    const thumbnailFile = await storeFileForProject({
+      projectId,
       file: dataUrlToBlob(thumbnailImage),
     });
+    if (!isOpen(projectId)) {
+      return;
+    }
     // The hash describes what was drawn, so it stays right even if the
     // transform changed meanwhile; the next request draws that change.
     const result = await updateTransform({
       transformId,
       data: {
         thumbnailFileId: thumbnailFile.fileId,
-        thumbnailSourceHash,
+        thumbnailSourceHash: stale.thumbnailSourceHash,
       },
-      fileRecords: thumbnailFile.fileRecords,
+      fileRecords: [thumbnailFile.fileRecord],
     });
     if (result?.valid === false) {
       console.warn("[editorThumbnails] The thumbnail update was rejected", {
@@ -110,11 +134,10 @@ export const createEditorThumbnailService = ({
     }
   };
 
-  // Jobs run one at a time, each once the app is idle. A failure only logs,
-  // since no one is waiting on a thumbnail; the next request tries again.
+  // Jobs run one at a time. A failure only logs, since no one is waiting on a
+  // thumbnail; the next request tries again.
   const runPendingJobs = async () => {
     while (pendingJobs.size > 0) {
-      await waitUntilIdle();
       const [key, job] = pendingJobs.entries().next().value;
       pendingJobs.delete(key);
       try {
@@ -140,11 +163,14 @@ export const createEditorThumbnailService = ({
 
   return {
     // Brings the named transforms' thumbnails up to date, or every
-    // transform's in the current project when none are named. Callers do not
+    // transform's in the open project when none are named. Callers do not
     // wait for it; the promise settles when the queue is empty and never
     // rejects.
     requestTransformThumbnails({ transformIds } = {}) {
-      const projectId = getCurrentProjectId();
+      const projectId = getEnsuredProjectId();
+      if (!projectId) {
+        return Promise.resolve();
+      }
       const ids =
         transformIds ??
         Object.values(getRepositoryState().transforms?.items ?? {})

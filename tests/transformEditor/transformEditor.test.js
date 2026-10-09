@@ -23,6 +23,7 @@ import {
   handleRightPanelModeChange,
   handleUndoButtonClick,
 } from "../../src/pages/transformEditor/transformEditor.handlers.js";
+import { createTransformThumbnailSource } from "../../src/internal/transformPreview.js";
 import { EN_I18N } from "../support/i18n.js";
 
 // Edits save on their own 300ms after the last one.
@@ -665,6 +666,43 @@ describe("transform editor", () => {
     expect(updateTransform.mock.invocationCallOrder[0]).toBeLessThan(
       requestTransformThumbnails.mock.invocationCallOrder[0],
     );
+  });
+
+  it("draws on its Preview tab exactly what the background thumbnail hashes", async () => {
+    const repositoryState = {
+      project: { resolution: { width: 1920, height: 1080 } },
+      images: imagesData,
+      characters: charactersData,
+    };
+    for (const preview of [
+      { background: { imageId: "image-1" }, target: { imageId: "image-2" } },
+      { background: { imageId: "image-2" }, target: characterTarget },
+      // A deleted image draws the gray screen in both.
+      { background: { imageId: "image-deleted" } },
+    ]) {
+      const item = { ...savedTransform, x: 700, scaleX: 1.5, preview };
+      const page = await createPage({ item });
+      await handleRightPanelModeChange(page.deps, {
+        _event: { detail: { id: "preview" } },
+      });
+
+      expect(page.lastRender()).toEqual(
+        createTransformThumbnailSource({ item, repositoryState }).renderState,
+      );
+    }
+  });
+
+  it("leaves a pick still in its picker unsaved when it leaves", async () => {
+    const page = await createPage();
+    handlePreviewImageClick(page.deps, slotEvent("background"));
+    await handleImageSelectorImageSelected(page.deps, {
+      _event: { detail: { imageId: "image-1" } },
+    });
+
+    await page.beforeNavigation({ path: "/project/transforms" });
+    await page.cleanup();
+
+    expect(page.savedData()).toEqual([]);
   });
 
   it("only saves for a backup, since the page stays open", async () => {

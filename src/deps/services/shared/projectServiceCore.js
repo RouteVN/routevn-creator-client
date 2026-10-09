@@ -131,10 +131,10 @@ export const createProjectServiceCore = ({
   };
 
   const editorThumbnailService = createEditorThumbnailService({
-    getCurrentProjectId,
+    getEnsuredProjectId: repositoryService.getEnsuredProjectId,
     getRepositoryState,
     getFileContent: assetService.getFileContent,
-    storeFile: assetService.storeFile,
+    storeFileForProject: assetService.storeFileForProject,
     updateTransform: collabService.commandApi.updateTransform,
   });
 

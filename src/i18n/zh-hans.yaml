@@ -1430,7 +1430,6 @@ transformsPage:
   targetImageLabel: "目标图像"
   title: "变换"
   updateTransformButton: "更新"
-  savePreviewInEditorLabel: "在编辑器中保存预览"
 transformEditorPage:
   canvasZoomFitLabel: "适应视图"
   canvasZoomInLabel: "放大"

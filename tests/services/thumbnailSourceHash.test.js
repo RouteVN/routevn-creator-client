@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { createThumbnailSourceHash } from "../../src/internal/thumbnailSourceHash.js";
+import { createThumbnailSourceHash } from "../../src/deps/services/shared/thumbnailSourceHash.js";
 
 describe("thumbnail source hash", () => {
   it("hashes what a thumbnail is drawn from, whatever the key order", async () => {

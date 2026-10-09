@@ -1,5 +1,5 @@
-import { computeSha256 } from "../deps/clients/sha256.js";
-import { stableStringify } from "./stableStringify.js";
+import { computeSha256 } from "../../clients/sha256.js";
+import { stableStringify } from "../../../internal/stableStringify.js";
 
 // The hash of what a thumbnail is drawn from, saved with it as
 // `thumbnailSourceHash`, so the app can tell whether the saved thumbnail still

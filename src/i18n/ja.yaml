@@ -1430,7 +1430,6 @@ transformsPage:
   targetImageLabel: "対象画像"
   title: "トランスフォーム"
   updateTransformButton: "更新"
-  savePreviewInEditorLabel: "エディターでプレビューを保存してください"
 transformEditorPage:
   canvasZoomFitLabel: "画面に合わせる"
   canvasZoomInLabel: "拡大"

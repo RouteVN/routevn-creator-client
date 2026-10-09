@@ -1430,7 +1430,6 @@ transformsPage:
   targetImageLabel: "ภาพเป้าหมาย"
   title: "การแปลง"
   updateTransformButton: "อัปเดต"
-  savePreviewInEditorLabel: "บันทึกตัวอย่างในตัวแก้ไข"
 transformEditorPage:
   canvasZoomFitLabel: "พอดีกับหน้าจอ"
   canvasZoomInLabel: "ซูมเข้า"

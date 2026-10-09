@@ -1430,7 +1430,6 @@ transformsPage:
   targetImageLabel: "Imagen objetivo"
   title: "Transformaciones"
   updateTransformButton: "Actualizar"
-  savePreviewInEditorLabel: "Guarda una vista previa en el editor"
 transformEditorPage:
   canvasZoomFitLabel: "Ajustar a la vista"
   canvasZoomInLabel: "Acercar"
