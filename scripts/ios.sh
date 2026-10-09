@@ -111,6 +111,14 @@ find_simulator_udid() {
   echo "$udid"
 }
 
+# The Simulator window is optional: simctl boots, installs, and launches
+# without it, and some Xcode installs do not include Simulator.app.
+open_simulator_window() {
+  if ! open -a Simulator 2>/dev/null; then
+    echo "Simulator.app not found; the simulator runs without a window." >&2
+  fi
+}
+
 app_path() {
   local sdk="iphoneos"
   if [ "$TARGET" = simulator ]; then sdk="iphonesimulator"; fi
@@ -162,7 +170,7 @@ install_app() {
   local udid
   udid=$(find_simulator_udid)
   xcrun simctl boot "$udid" 2>/dev/null || true
-  open -a Simulator
+  open_simulator_window
   xcrun simctl install "$udid" "$built_app"
 }
 
@@ -217,7 +225,7 @@ launch_app() {
   local udid
   udid=$(find_simulator_udid)
   xcrun simctl boot "$udid" 2>/dev/null || true
-  open -a Simulator
+  open_simulator_window
   local launch_env=()
   if [ -n "$IOS_DEV_SERVER_URL" ]; then
     launch_env+=(SIMCTL_CHILD_ROUTEVN_IOS_DEV_SERVER_URL="$IOS_DEV_SERVER_URL")

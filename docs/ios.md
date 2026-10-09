@@ -276,6 +276,10 @@ Build, install, and launch on the default Simulator:
 bun run ios:run -- --simulator "iPhone 17"
 ```
 
+These commands open the Simulator window when Xcode includes Simulator.app.
+Without it they still install and launch, and the simulator runs without a
+window; take a screenshot with `xcrun simctl io <udid> screenshot <file>.png`.
+
 To use the running watch server from a Simulator without rebuilding:
 
 ```bash
