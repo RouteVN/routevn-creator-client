@@ -110,13 +110,17 @@ export const createParticlePreviewState = (
   };
 };
 
+// Particles move on the renderer's own clock, so a still picture of them is
+// taken after they have run this long.
+export const PARTICLE_PREVIEW_SETTLE_MS = 1500;
+
 // Bump when a particle's preview starts drawing the same saved particle
 // differently, so saved thumbnails are drawn again.
 export const PARTICLE_THUMBNAIL_VERSION = 1;
 
 // What a saved particle's thumbnail shows: the particle on its saved preview
 // background, as the editor's Preview draws it, at the particle's own size,
-// and the image files that draws.
+// and the files that draws.
 export const createParticleThumbnailSource = ({ item, repositoryState }) => {
   const imageItems = repositoryState.images?.items ?? {};
   const effect = {
@@ -131,7 +135,7 @@ export const createParticleThumbnailSource = ({ item, repositoryState }) => {
     createRenderableParticleData(effect, imageItems),
     { backgroundImage },
   );
-  const images = [];
+  const assets = [];
   for (const image of [
     ...collectParticleTextureImageIds(effect, imageItems).map(
       (imageId) => imageItems[imageId],
@@ -139,9 +143,8 @@ export const createParticleThumbnailSource = ({ item, repositoryState }) => {
     backgroundImage,
   ]) {
     if (image?.fileId) {
-      images.push({
+      assets.push({
         fileId: image.fileId,
-        name: image.name,
         fileType: image.fileType,
       });
     }
@@ -151,6 +154,6 @@ export const createParticleThumbnailSource = ({ item, repositoryState }) => {
     width: Math.max(1, Math.round(toPositiveNumber(effect.width) ?? 1)),
     height: Math.max(1, Math.round(toPositiveNumber(effect.height) ?? 1)),
     renderState,
-    images,
+    assets,
   };
 };

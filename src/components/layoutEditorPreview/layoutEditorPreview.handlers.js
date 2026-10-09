@@ -1,4 +1,5 @@
 import { subscribeCharacterAvatarOptions } from "../../internal/ui/characterAvatarOptions.js";
+import { stableStringify } from "../../internal/stableStringify.js";
 
 const toPositivePreviewRevealingSpeed = (rawValue) => {
   const value = Number(rawValue);
@@ -75,6 +76,13 @@ const didInitialPreviewDataChange = (oldProps = {}, newProps = {}) => {
   );
 };
 
+// The page hands back what this shows once it is saved. Hydrating remounts
+// the forms, which would take the focus from a field being typed in, so data
+// this already shows is not hydrated again.
+const showsPreviewData = (deps, previewData) =>
+  stableStringify(deps.store.selectPreviewData()) ===
+  stableStringify(previewData ?? {});
+
 export const handleBeforeMount = (deps) => {
   const { store, props, uiConfig, render } = deps;
   store.setUiConfig({ uiConfig });
@@ -114,7 +122,11 @@ export const handleOnUpdate = async (deps, payload) => {
     layoutState: newProps.layoutState,
   });
 
-  if (layoutIdentityChanged || initialPreviewDataChanged) {
+  if (
+    layoutIdentityChanged ||
+    (initialPreviewDataChanged &&
+      !showsPreviewData(deps, newProps.initialPreviewData))
+  ) {
     deps.store.hydratePreviewState({
       previewData: newProps.initialPreviewData,
     });

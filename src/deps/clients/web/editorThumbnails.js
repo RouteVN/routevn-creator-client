@@ -8,13 +8,28 @@ const waitForPaint = () =>
     });
   });
 
-const ASSET_REFERENCE_FIELDS = new Set(["src", "texture"]);
+// A text style's font family, which can list several, comma separated.
+const mapFontFamily = (fontFamily, toKey) => {
+  if (Array.isArray(fontFamily)) {
+    return fontFamily.map((family) =>
+      typeof family === "string" ? toKey(family.trim()) : family,
+    );
+  }
+  return fontFamily
+    .split(",")
+    .map((family) => toKey(family.trim()))
+    .join(",");
+};
 
-// The render state with every asset it draws read through `toKey`: a sprite's
-// `src`, a particle texture, or a texture item's `src`, at any depth, such as
-// in a container's children or a particle's modules.
+// The render state with every file it draws read through `toKey`, at any
+// depth and in any field: a sprite's `src`, a slider's `thumbSrc`, a hover
+// image, a particle texture, or a text style's font family. An element's own
+// `id` is left alone. `toKey` returns other strings as they are.
 export const mapRenderStateSources = (renderState, toKey) => {
   const mapValue = (value) => {
+    if (typeof value === "string") {
+      return toKey(value);
+    }
     if (Array.isArray(value)) {
       return value.map(mapValue);
     }
@@ -23,10 +38,16 @@ export const mapRenderStateSources = (renderState, toKey) => {
     }
     const mapped = {};
     for (const [field, fieldValue] of Object.entries(value)) {
-      mapped[field] =
-        ASSET_REFERENCE_FIELDS.has(field) && typeof fieldValue === "string"
-          ? toKey(fieldValue)
-          : mapValue(fieldValue);
+      if (field === "id") {
+        mapped[field] = fieldValue;
+      } else if (
+        field === "fontFamily" &&
+        (typeof fieldValue === "string" || Array.isArray(fieldValue))
+      ) {
+        mapped[field] = mapFontFamily(fieldValue, toKey);
+      } else {
+        mapped[field] = mapValue(fieldValue);
+      }
     }
     return mapped;
   };
@@ -86,18 +107,19 @@ const takeRenderer = async ({ width, height }) => {
 
 // Draws `renderState` off screen, on the shared renderer, and returns its
 // thumbnail as a JPEG data URL, at most 400 by 225, scaled straight from the
-// frame's pixels. `imageAssets` maps each file id the state draws to
-// `{ url, type }`.
+// frame's pixels. `assets` maps each file id the state draws to
+// `{ url, type }`, and a font's to its `fontWeightDescriptor` too.
 //
-// Its images load under the renderer's own keys. Textures are cached by key
-// for every renderer, and freeing a renderer unloads the keys it loaded, so a
-// key shared with the page's renderer would take the page's image away, or
-// the page leaving would take this one's.
+// Its files load under the renderer's own keys. Assets are cached by key for
+// every renderer, and freeing a renderer unloads the keys it loaded, so a key
+// shared with the page's renderer would take the page's image or font away,
+// or the page leaving would take this one's. A font is named by its key, so
+// keys stay valid font family names.
 export const renderThumbnailImage = async ({
   width,
   height,
   renderState,
-  imageAssets,
+  assets,
   settleMs = 0,
 }) => {
   try {
@@ -105,15 +127,15 @@ export const renderThumbnailImage = async ({
     const { graphicsService, loadedKeys } = current;
     const keys = new Map();
     const assetsToLoad = {};
-    for (const [fileId, asset] of Object.entries(imageAssets)) {
+    for (const [fileId, asset] of Object.entries(assets)) {
       const key = `editor-thumbnail-${current.id}-${fileId}`;
       keys.set(fileId, key);
       if (!loadedKeys.has(key)) {
         assetsToLoad[key] = asset;
       }
     }
-    // Only the files loaded here are renamed; built-in particle textures, such
-    // as "circle", keep their names.
+    // Only the files loaded here are renamed. Built-in particle textures,
+    // such as "circle", and fonts the system has keep their names.
     const toKey = (fileId) => keys.get(fileId) ?? fileId;
 
     // The last drawing goes first, so nothing of it carries over, such as

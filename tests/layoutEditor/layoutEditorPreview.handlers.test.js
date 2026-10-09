@@ -2,7 +2,9 @@ import { describe, expect, it, vi } from "vitest";
 import {
   handleDialogueFormChange,
   handleInputFieldsFormChange,
+  handleOnUpdate,
 } from "../../src/components/layoutEditorPreview/layoutEditorPreview.handlers.js";
+import * as previewStore from "../../src/components/layoutEditorPreview/layoutEditorPreview.store.js";
 import {
   createInitialState,
   setLayoutState,
@@ -167,5 +169,69 @@ describe("layoutEditorPreview.handlers", () => {
     });
     expect(deps.render).toHaveBeenCalled();
     expect(deps.dispatchEvent).toHaveBeenCalledWith(expect.any(CustomEvent));
+  });
+});
+
+describe("layoutEditorPreview.handleOnUpdate", () => {
+  const layoutState = {
+    id: "layout-dialogue",
+    layoutType: "dialogue-adv",
+    elements: EMPTY_COLLECTION,
+  };
+  const reverseKeys = (value) => {
+    if (!value || typeof value !== "object" || Array.isArray(value)) {
+      return value;
+    }
+    return Object.fromEntries(
+      Object.entries(value)
+        .reverse()
+        .map(([key, entry]) => [key, reverseKeys(entry)]),
+    );
+  };
+  const createUpdateDeps = () => {
+    const { state, deps } = createDeps();
+    deps.store.setLayoutState = (payload) =>
+      previewStore.setLayoutState({ state }, payload);
+    deps.store.selectPreviewData = () =>
+      previewStore.selectPreviewData({ state });
+    deps.store.hydratePreviewState = vi.fn((payload) =>
+      previewStore.hydratePreviewState({ state }, payload),
+    );
+    deps.store.hydratePreviewState({
+      previewData: { backgroundImageId: "image-one" },
+    });
+    deps.store.hydratePreviewState.mockClear();
+    return deps;
+  };
+
+  it("does not hydrate again what it already shows, which would remount its forms", async () => {
+    const deps = createUpdateDeps();
+    const shown = deps.store.selectPreviewData();
+
+    await handleOnUpdate(deps, {
+      oldProps: { layoutState, initialPreviewData: {} },
+      newProps: { layoutState, initialPreviewData: reverseKeys(shown) },
+    });
+
+    expect(deps.store.hydratePreviewState).not.toHaveBeenCalled();
+    expect(deps.store.selectPreviewData()).toEqual(shown);
+  });
+
+  it("hydrates preview data that differs from what it shows", async () => {
+    const deps = createUpdateDeps();
+    const previewData = {
+      ...deps.store.selectPreviewData(),
+      backgroundImageId: "image-two",
+    };
+
+    await handleOnUpdate(deps, {
+      oldProps: { layoutState, initialPreviewData: {} },
+      newProps: { layoutState, initialPreviewData: previewData },
+    });
+
+    expect(deps.store.hydratePreviewState).toHaveBeenCalledWith({
+      previewData,
+    });
+    expect(deps.store.selectPreviewData().backgroundImageId).toBe("image-two");
   });
 });

@@ -137,6 +137,7 @@ export const createProjectServiceCore = ({
     storeFileForProject: assetService.storeFileForProject,
     updateTransform: collabService.commandApi.updateTransform,
     updateParticle: collabService.commandApi.updateParticle,
+    updateLayout: collabService.commandApi.updateLayoutItem,
   });
 
   const resourcePackageImportService = createResourcePackageImportService({
@@ -761,6 +762,7 @@ export const createProjectServiceCore = ({
     requestTransformThumbnails:
       editorThumbnailService.requestTransformThumbnails,
     requestParticleThumbnails: editorThumbnailService.requestParticleThumbnails,
+    requestLayoutThumbnails: editorThumbnailService.requestLayoutThumbnails,
     downloadMetadata: assetService.downloadMetadata,
     loadFontFile: assetService.loadFontFile,
     detectFileType: assetService.detectFileType,

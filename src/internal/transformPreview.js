@@ -150,7 +150,7 @@ export const createTransformPreviewRenderState = ({
 };
 
 // What a saved transform's thumbnail shows: its preview as saved, at the
-// project's resolution, and the image files that draws.
+// project's resolution, and the files that draws.
 export const createTransformThumbnailSource = ({ item, repositoryState }) => {
   const projectResolution = requireProjectResolution(
     repositoryState.project?.resolution,
@@ -168,16 +168,15 @@ export const createTransformThumbnailSource = ({ item, repositoryState }) => {
     repositoryState.characters,
     item.preview?.target,
   );
-  const images = [];
+  const assets = [];
   for (const image of [
     backgroundImage,
     targetImage,
     ...targetCharacterSprites,
   ]) {
     if (image?.fileId) {
-      images.push({
+      assets.push({
         fileId: image.fileId,
-        name: image.name,
         fileType: image.fileType,
       });
     }
@@ -193,6 +192,6 @@ export const createTransformThumbnailSource = ({ item, repositoryState }) => {
       targetImage,
       targetCharacterSprites,
     }),
-    images,
+    assets,
   };
 };

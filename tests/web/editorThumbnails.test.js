@@ -62,7 +62,7 @@ const draw = (options = {}) =>
     width: 1920,
     height: 1080,
     renderState,
-    imageAssets,
+    assets: imageAssets,
     ...options,
   });
 const keysOf = (graphics) =>
@@ -76,9 +76,26 @@ afterEach(async () => {
 });
 
 describe("editor thumbnails", () => {
-  it("reads every element's and child's source through the key mapping", () => {
+  it("reads every file it draws through the key mapping, in any field, and leaves ids alone", () => {
+    const withSlider = {
+      ...renderState,
+      elements: [
+        ...renderState.elements,
+        {
+          id: "file-3",
+          type: "slider",
+          thumbSrc: "file-1",
+          barSrc: "file-2",
+          hover: { src: "file-3" },
+        },
+      ],
+    };
+    const known = new Set(["file-1", "file-2", "file-3"]);
+
     expect(
-      mapRenderStateSources(renderState, (fileId) => `key:${fileId}`),
+      mapRenderStateSources(withSlider, (fileId) =>
+        known.has(fileId) ? `key:${fileId}` : fileId,
+      ),
     ).toEqual({
       ...renderState,
       elements: [
@@ -92,13 +109,20 @@ describe("editor thumbnails", () => {
           ],
         },
         { id: "square", type: "rect", fill: "#a0a0a0" },
+        {
+          id: "file-3",
+          type: "slider",
+          thumbSrc: "key:file-1",
+          barSrc: "key:file-2",
+          hover: { src: "key:file-3" },
+        },
       ],
     });
     // The hashed render state is left as it was.
     expect(renderState.elements[0].src).toBe("file-1");
   });
 
-  it("loads images under its renderer's own keys, never the file ids a page uses, once per renderer", async () => {
+  it("loads files under its renderer's own keys, never the file ids a page uses, once per renderer", async () => {
     stubBrowser();
     const graphics = createGraphics();
     createGraphicsService.mockResolvedValue(graphics);
@@ -106,7 +130,7 @@ describe("editor thumbnails", () => {
     await expect(draw()).resolves.toBe(thumbnailImage);
     await expect(draw()).resolves.toBe(thumbnailImage);
 
-    // Drawings of one size share a renderer, and its images load once.
+    // Drawings of one size share a renderer, and its files load once.
     expect(createGraphicsService).toHaveBeenCalledOnce();
     expect(graphics.init).toHaveBeenCalledOnce();
     expect(graphics.init).toHaveBeenCalledWith(
@@ -220,13 +244,73 @@ describe("editor thumbnails", () => {
     expect(mapped.elements[1].modules.appearance.texture).toBe("key:file-2");
   });
 
+  it("renames the fonts it loaded in a text style's font family, and keeps the system's", () => {
+    const text = {
+      elements: [
+        {
+          id: "title",
+          type: "text",
+          textStyle: { fontFamily: "file-font-1, sans-serif", fontSize: 32 },
+        },
+        {
+          id: "line",
+          type: "text-revealing",
+          textStyle: { fontFamily: ["file-font-1", "serif"] },
+        },
+      ],
+      animations: [],
+    };
+
+    const mapped = mapRenderStateSources(text, (fileId) =>
+      fileId === "file-font-1" ? "key-file-font-1" : fileId,
+    );
+
+    expect(mapped.elements[0].textStyle).toEqual({
+      fontFamily: "key-file-font-1,sans-serif",
+      fontSize: 32,
+    });
+    expect(mapped.elements[1].textStyle.fontFamily).toEqual([
+      "key-file-font-1",
+      "serif",
+    ]);
+  });
+
+  it("loads fonts under keys that are valid font family names", async () => {
+    stubBrowser();
+    const graphics = createGraphics();
+    createGraphicsService.mockResolvedValueOnce(graphics);
+    const font = {
+      url: "blob:font",
+      type: "font/woff2",
+      fontWeightDescriptor: "600",
+    };
+
+    await renderThumbnailImage({
+      width: 640,
+      height: 360,
+      renderState: {
+        elements: [
+          { id: "title", type: "text", textStyle: { fontFamily: "9font" } },
+        ],
+        animations: [],
+      },
+      assets: { "9font": font },
+    });
+
+    const [[loaded]] = graphics.loadAssets.mock.calls;
+    const [key] = Object.keys(loaded);
+    // A CSS identifier: it starts with a letter and has no colon.
+    expect(key).toMatch(/^[a-z][a-z0-9_-]*$/i);
+    expect(loaded[key]).toEqual(font);
+    expect(
+      graphics.render.mock.calls.at(-1)[0].elements[0].textStyle.fontFamily,
+    ).toBe(key);
+  });
+
   it("lets an effect run for its settle time before it captures", async () => {
     vi.useFakeTimers();
     try {
-      vi.stubGlobal("document", {
-        createElement: () => ({ remove: vi.fn() }),
-      });
-      vi.stubGlobal("requestAnimationFrame", (callback) => callback());
+      stubBrowser();
       const graphics = createGraphics();
       createGraphicsService.mockResolvedValueOnce(graphics);
 
@@ -234,7 +318,7 @@ describe("editor thumbnails", () => {
         width: 640,
         height: 360,
         renderState,
-        imageAssets: {},
+        assets: {},
         settleMs: 1500,
       });
       await vi.advanceTimersByTimeAsync(1400);

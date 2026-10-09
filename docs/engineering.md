@@ -1286,7 +1286,36 @@ Cmd/Ctrl+Z undoes and Shift+Cmd/Ctrl+Z redoes, by the letter the
 keyboard layout types, except in a focused field, which keeps its own text
 undo, or in an open dialog. An explorer action first saves edits waiting to
 save, and undo and redo wait while it runs, so its step holds only its own
-change. Save Preview and preview data are not part of the history.
+change. Preview data is not part of the history.
+
+The layout editor's preview data saves on its own 500ms after it changes, as
+the layout's or control's `preview` (`saveLayoutEditorPreview`, through the
+page's save queue, after element edits), and leaving saves it at once. The
+preview component hands the page derived data, so a layout opened after its
+elements, variables, or characters changed elsewhere saves its preview once
+when it opens; that keeps what the editor shows and what a thumbnail draws the
+same. Comparisons sort keys (`stableStringify`), since saved data can come
+back in another order. The preview component does not hydrate data it already
+shows: hydrating remounts its forms, and would take the focus from a field
+being typed in when the page's save comes back.
+
+Layout thumbnails are drawn in the background as transforms' are
+(`projectService.requestLayoutThumbnails`, `createLayoutThumbnailSource` and
+`LAYOUT_THUMBNAIL_VERSION` in `src/internal/layoutPreview.js`). That module
+holds what a layout draws with its preview data (`createLayoutPreviewElements`):
+the editor's canvas draws it with its selection chrome on top, and a thumbnail
+draws it without, from the saved layout and its saved `preview`, at the
+project resolution. The render state holds the text styles, colors, font file
+ids, images, fragments, and particles the layout draws, so changing one
+redraws the thumbnails of the layouts that use it the next time they are
+requested. Text that types itself out is drawn in full, sounds are not loaded,
+and a layout with particles lets them run 1.5s first. Fonts load under the
+thumbnail renderer's own keys, as images do, and text styles' font families
+are renamed to match: route-graphics names a font face by its key and deletes
+it from `document.fonts` when its renderer is freed, so the keys stay valid
+font family names. Leaving the layout editor requests the layout's thumbnail
+(not for a backup, and not for controls, which show none); the layouts page
+requests every layout's when it opens and a new layout's after Add.
 
 The animation editor has undo and redo the same way, for edits made since the
 page opened. Its autosave saves the whole animation, so a step holds the page's
@@ -1410,8 +1439,8 @@ failed drawing. A renderer per job would not do: WebKit counts every WebGL
 context a page made against its limit of 16 until it is garbage collected,
 even once freed, and past the limit loses the oldest, which is an open
 editor's canvas when thumbnails are drawn while it is open. Each drawing
-clears the last first. The renderer loads its images under keys of its own:
-textures are cached by key for every renderer, and a graphics service unloads
+clears the last first. The renderer loads its files under keys of its own:
+assets are cached by key for every renderer, and a graphics service unloads
 the keys it loaded when it is freed, so sharing the page renderer's file id
 keys would take images away from an open editor, or let the editor's
 teardown take them from the thumbnail. Bump

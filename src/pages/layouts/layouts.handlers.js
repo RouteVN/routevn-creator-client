@@ -89,7 +89,7 @@ const openEditDialogWithValues = ({ deps, itemId } = {}) => {
 
 const {
   handleBeforeMount,
-  handleAfterMount,
+  handleAfterMount: handleAfterMountBase,
   refreshData: handleDataChanged,
   handleFileExplorerSelectionChanged: handleCatalogFileExplorerSelectionChanged,
   handleFileExplorerAction,
@@ -171,9 +171,16 @@ const {
   },
 });
 
+// Layout thumbnails out of date, such as after a text style they use
+// changed, are drawn again in the background.
+export const handleAfterMount = (deps) => {
+  const { projectService } = deps;
+  handleAfterMountBase(deps);
+  void projectService.requestLayoutThumbnails();
+};
+
 export {
   handleBeforeMount,
-  handleAfterMount,
   handleDataChanged,
   handleFileExplorerAction,
   handleFileExplorerTargetChanged,
@@ -1116,12 +1123,13 @@ export const handleLayoutFormActionClick = async (deps, payload) => {
   const isFragment = normalizeBooleanField(values?.isFragment);
   const description = values?.description ?? "";
 
+  const layoutId = generateId();
   const createAttempt = await runResourcePageMutation({
     appService,
     fallbackMessage: copy.failedCreateLayout ?? "Failed to create layout.",
     action: () =>
       projectService.createLayoutItem({
-        layoutId: generateId(),
+        layoutId,
         name,
         layoutType,
         data: {
@@ -1142,6 +1150,7 @@ export const handleLayoutFormActionClick = async (deps, payload) => {
 
   store.closeAddDialog();
   await handleDataChanged(deps);
+  void projectService.requestLayoutThumbnails({ layoutIds: [layoutId] });
 };
 
 export const handleEditFormActionClick = async (deps, payload) => {

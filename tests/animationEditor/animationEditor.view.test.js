@@ -433,7 +433,6 @@ describe("animationEditor view", () => {
     );
     const toolbarStart = view.indexOf("rtgl-view#animationEditorToolbar");
     const tweenPanelStart = view.indexOf("rtgl-view#animationTweenPanel");
-    const previewPanelStart = view.indexOf("rtgl-view#animationPreviewPanel");
     expect(toolbarStart).toBeGreaterThan(-1);
     expect(view.indexOf("rtgl-view#animationEditorTabs")).toBeGreaterThan(
       toolbarStart,

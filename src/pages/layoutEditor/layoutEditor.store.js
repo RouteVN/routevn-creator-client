@@ -1,5 +1,7 @@
 import { parseAndRender } from "jempl";
 import { toFlatItems } from "../../internal/project/tree.js";
+import { stableStringify } from "../../internal/stableStringify.js";
+import { toLayoutPreviewType } from "../../internal/layoutPreview.js";
 import {
   DEFAULT_PROJECT_RESOLUTION,
   formatCanvasMaxWidth,
@@ -36,8 +38,9 @@ const normalizePreviewData = (previewData) => {
     : {};
 };
 
+// Saved data can come back with its keys in another order.
 const arePreviewDataEqual = (left, right) => {
-  return JSON.stringify(left ?? {}) === JSON.stringify(right ?? {});
+  return stableStringify(left ?? {}) === stableStringify(right ?? {});
 };
 
 // Desktop and tablet landscape keep the edit panel and preview in a right
@@ -269,11 +272,7 @@ const getLayoutEditorLayoutType = (layoutType, resourceType) => {
     return layoutType;
   }
 
-  if (layoutType === "save" || layoutType === "load") {
-    return "save-load";
-  }
-
-  return layoutType ?? "general";
+  return toLayoutPreviewType(layoutType);
 };
 
 const assignLayoutState = (state, { id, layout, resourceType } = {}) => {
@@ -346,6 +345,17 @@ export const requestDetailPanelSelectionSync = (
 
 export const setPreviewData = ({ state }, { previewData } = {}) => {
   state.previewData = normalizePreviewData(previewData);
+};
+
+// The preview data saves on its own, a moment after it changes. A layout's
+// thumbnail is drawn with what is saved.
+export const selectUnsavedPreviewData = ({ state }) =>
+  arePreviewDataEqual(state.previewData, state.persistedPreviewData)
+    ? undefined
+    : state.previewData;
+
+export const markPreviewDataSaved = ({ state }, { previewData } = {}) => {
+  state.persistedPreviewData = normalizePreviewData(previewData);
 };
 
 export const setPreviewMounted = ({ state }, { isMounted } = {}) => {
@@ -855,7 +865,6 @@ export const selectViewData = ({ state, constants, i18n }) => {
     nodeExplorerTitle:
       copy.nodeExplorerTitle ?? copy.nodeButtonLabel ?? "Elements",
     previewTitle: copy.previewTitle ?? "Preview",
-    savePreviewButton: copy.savePreviewButton,
     flatItems,
     selectedItemId: state.selectedItemId,
     detailPanelSelectedItemId: state.detailPanelSelectedItemId,
@@ -923,7 +932,6 @@ export const selectViewData = ({ state, constants, i18n }) => {
       state.rightPanelMode === "edit" ? "" : "display: none;",
     rightPanelPreviewStyle:
       state.rightPanelMode === "preview" ? "" : "display: none;",
-    showRightPanelSaveButton: state.rightPanelMode === "preview",
     showPreviewHeader: !showMobileSelectedNodeDetail,
     showTabletLandscapeExplorer,
     tabletLandscapeExplorerWidth: TABLET_LANDSCAPE_EXPLORER_WIDTH,

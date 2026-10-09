@@ -2,6 +2,10 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 import { createEditorThumbnailService } from "../../src/deps/services/shared/editorThumbnailService.js";
 import { createThumbnailSourceHash } from "../../src/deps/services/shared/thumbnailSourceHash.js";
 import {
+  createLayoutThumbnailSource,
+  LAYOUT_THUMBNAIL_VERSION,
+} from "../../src/internal/layoutPreview.js";
+import {
   createParticleThumbnailSource,
   PARTICLE_THUMBNAIL_VERSION,
 } from "../../src/internal/particlePreview.js";
@@ -37,6 +41,57 @@ const createRepositoryState = () => ({
     },
   },
   characters: { tree: [], items: {} },
+  fonts: {
+    tree: [{ id: "font-1" }],
+    items: {
+      "font-1": {
+        id: "font-1",
+        type: "font",
+        name: "Display.woff2",
+        fileId: "file-font-1",
+        minWeight: 600,
+        defaultWeight: 600,
+        maxWeight: 600,
+      },
+    },
+  },
+  colors: { tree: [], items: { "color-1": { type: "color", hex: "#ffffff" } } },
+  textStyles: {
+    tree: [],
+    items: {
+      "style-1": {
+        id: "style-1",
+        type: "textStyle",
+        fontId: "font-1",
+        colorId: "color-1",
+        fontSize: 32,
+      },
+    },
+  },
+  layouts: {
+    tree: [{ id: "folder-2" }, { id: "layout-1" }],
+    items: {
+      "folder-2": { id: "folder-2", type: "folder", name: "Folder Two" },
+      "layout-1": {
+        id: "layout-1",
+        type: "layout",
+        name: "Layout One",
+        layoutType: "general",
+        elements: {
+          tree: [{ id: "title" }],
+          items: {
+            title: {
+              id: "title",
+              type: "text",
+              text: "Title One",
+              textStyleId: "style-1",
+            },
+          },
+        },
+        preview: { backgroundImageId: "image-1" },
+      },
+    },
+  },
   particles: {
     tree: [{ id: "particle-1" }],
     items: {
@@ -111,6 +166,10 @@ const createService = ({ repositoryState = createRepositoryState() } = {}) => {
       Object.assign(repositoryState.particles.items[particleId], data);
       return { valid: true };
     }),
+    updateLayout: vi.fn(async ({ layoutId, data }) => {
+      Object.assign(repositoryState.layouts.items[layoutId], data);
+      return { valid: true };
+    }),
     renderThumbnail: vi.fn(async () => thumbnailImage),
     releaseRenderer: vi.fn(async () => {}),
     waitUntilIdle: vi.fn(async () => {}),
@@ -158,7 +217,7 @@ describe("editor thumbnail service", () => {
         item: repositoryState.transforms.items["transform-1"],
         repositoryState,
       }).renderState,
-      imageAssets: { "file-1": { url: "blob:file-1", type: "image/webp" } },
+      assets: { "file-1": { url: "blob:file-1", type: "image/webp" } },
     });
     expect(
       renderOptions.renderState.elements.map(({ id, type, src }) => [
@@ -227,7 +286,7 @@ describe("editor thumbnail service", () => {
     ).toEqual(["transform-2"]);
     // A transform without preview images draws the gray screen and square.
     expect(deps.getFileContent).not.toHaveBeenCalled();
-    expect(deps.renderThumbnail.mock.calls[0][0].imageAssets).toEqual({});
+    expect(deps.renderThumbnail.mock.calls[0][0].assets).toEqual({});
   });
 
   it("keeps the old thumbnail while a preview image cannot be read", async () => {
@@ -386,7 +445,7 @@ describe("editor thumbnail service", () => {
       width: 640,
       height: 360,
       renderState: source.renderState,
-      imageAssets: { "file-1": { url: "blob:file-1", type: "image/webp" } },
+      assets: { "file-1": { url: "blob:file-1", type: "image/webp" } },
       settleMs: 1500,
     });
     // The particle draws its texture's file, on its background.
@@ -409,6 +468,49 @@ describe("editor thumbnail service", () => {
 
     await service.requestParticleThumbnails({ particleIds: ["particle-1"] });
     expect(deps.renderThumbnail).toHaveBeenCalledOnce();
+  });
+
+  it("draws a layout with its saved preview and its fonts, and saves it as a layout", async () => {
+    const { deps, repositoryState, service } = createService();
+    const item = repositoryState.layouts.items["layout-1"];
+    const source = createLayoutThumbnailSource({ item, repositoryState });
+
+    await service.requestLayoutThumbnails();
+
+    expect(deps.renderThumbnail).toHaveBeenCalledOnce();
+    expect(deps.renderThumbnail).toHaveBeenCalledWith({
+      width: 1920,
+      height: 1080,
+      renderState: source.renderState,
+      assets: {
+        "file-1": { url: "blob:file-1", type: "image/webp" },
+        "file-font-1": {
+          url: "blob:file-font-1",
+          type: "font/woff2",
+          fontWeightDescriptor: "600",
+        },
+      },
+      settleMs: undefined,
+    });
+    expect(deps.updateLayout).toHaveBeenCalledWith({
+      layoutId: "layout-1",
+      data: {
+        thumbnailFileId: "stored-1",
+        thumbnailSourceHash: await createThumbnailSourceHash({
+          version: LAYOUT_THUMBNAIL_VERSION,
+          renderState: source.renderState,
+        }),
+      },
+      fileRecords: [{ id: "record-1" }],
+    });
+
+    // Drawn as it is, it is not drawn again, until a text style it uses
+    // changes.
+    await service.requestLayoutThumbnails({ layoutIds: ["layout-1"] });
+    expect(deps.renderThumbnail).toHaveBeenCalledOnce();
+    repositoryState.textStyles.items["style-1"].fontSize = 48;
+    await service.requestLayoutThumbnails({ layoutIds: ["layout-1"] });
+    expect(deps.renderThumbnail).toHaveBeenCalledTimes(2);
   });
 
   it("frees its renderer once the queue is empty, and only after it drew", async () => {

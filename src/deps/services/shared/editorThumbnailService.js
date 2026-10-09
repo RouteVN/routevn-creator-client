@@ -1,6 +1,11 @@
 import { dataUrlToBlob } from "../../../internal/dataUrl.js";
 import {
+  createLayoutThumbnailSource,
+  LAYOUT_THUMBNAIL_VERSION,
+} from "../../../internal/layoutPreview.js";
+import {
   createParticleThumbnailSource,
+  PARTICLE_PREVIEW_SETTLE_MS,
   PARTICLE_THUMBNAIL_VERSION,
 } from "../../../internal/particlePreview.js";
 import {
@@ -8,10 +13,6 @@ import {
   TRANSFORM_THUMBNAIL_VERSION,
 } from "../../../internal/transformPreview.js";
 import { createThumbnailSourceHash } from "./thumbnailSourceHash.js";
-
-// Particles move on the renderer's own clock, so their thumbnail shows them
-// after they have run this long.
-const PARTICLE_THUMBNAIL_SETTLE_MS = 1500;
 
 const renderDefaultThumbnail = async (options) => {
   const client = await import("../../clients/web/editorThumbnails.js");
@@ -44,6 +45,7 @@ export const createEditorThumbnailService = ({
   storeFileForProject,
   updateTransform,
   updateParticle,
+  updateLayout,
   renderThumbnail = renderDefaultThumbnail,
   releaseRenderer = releaseDefaultRenderer,
   waitUntilIdle = waitForIdle,
@@ -62,9 +64,16 @@ export const createEditorThumbnailService = ({
       collection: "particles",
       version: PARTICLE_THUMBNAIL_VERSION,
       createSource: createParticleThumbnailSource,
-      settleMs: PARTICLE_THUMBNAIL_SETTLE_MS,
+      settleMs: PARTICLE_PREVIEW_SETTLE_MS,
       save: ({ id, data, fileRecords }) =>
         updateParticle({ particleId: id, data, fileRecords }),
+    },
+    layout: {
+      collection: "layouts",
+      version: LAYOUT_THUMBNAIL_VERSION,
+      createSource: createLayoutThumbnailSource,
+      save: ({ id, data, fileRecords }) =>
+        updateLayout({ layoutId: id, data, fileRecords }),
     },
   };
   const pendingJobs = new Map();
@@ -93,33 +102,40 @@ export const createEditorThumbnailService = ({
       : { source, thumbnailSourceHash };
   };
 
-  // A preview image that cannot be read leaves the old thumbnail in place,
-  // since drawing the fallback would misrepresent the preview.
-  const drawThumbnail = async (
-    { width, height, renderState, images },
-    { settleMs },
-  ) => {
+  // A file that cannot be read leaves the old thumbnail in place, since
+  // drawing without it would misrepresent the preview.
+  const drawThumbnail = async ({
+    width,
+    height,
+    renderState,
+    assets,
+    settleMs,
+  }) => {
     const contents = [];
     try {
-      const imageAssets = {};
-      for (const image of images) {
-        if (imageAssets[image.fileId]) {
+      const assetsByFileId = {};
+      for (const asset of assets) {
+        if (assetsByFileId[asset.fileId]) {
           continue;
         }
-        const content = await getFileContent(image.fileId, {
+        const content = await getFileContent(asset.fileId, {
           verifyImageIntegrity: true,
         });
         contents.push(content);
-        imageAssets[image.fileId] = {
+        const loadedAsset = {
           url: content.url,
-          type: image.fileType ?? content.type ?? "image/png",
+          type: asset.fileType ?? content.type ?? "image/png",
         };
+        if (asset.fontWeightDescriptor !== undefined) {
+          loadedAsset.fontWeightDescriptor = asset.fontWeightDescriptor;
+        }
+        assetsByFileId[asset.fileId] = loadedAsset;
       }
       return await renderThumbnail({
         width,
         height,
         renderState,
-        imageAssets,
+        assets: assetsByFileId,
         settleMs,
       });
     } finally {
@@ -144,7 +160,10 @@ export const createEditorThumbnailService = ({
     }
 
     rendererInUse = true;
-    const thumbnailImage = await drawThumbnail(stale.source, kinds[kind]);
+    const thumbnailImage = await drawThumbnail({
+      settleMs: kinds[kind].settleMs,
+      ...stale.source,
+    });
     if (!isOpen(projectId)) {
       return;
     }
@@ -239,6 +258,9 @@ export const createEditorThumbnailService = ({
     },
     requestParticleThumbnails({ particleIds } = {}) {
       return requestThumbnails("particle", particleIds);
+    },
+    requestLayoutThumbnails({ layoutIds } = {}) {
+      return requestThumbnails("layout", layoutIds);
     },
   };
 };
