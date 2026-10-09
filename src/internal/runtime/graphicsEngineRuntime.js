@@ -311,6 +311,17 @@ const createDataUrlThumbnailImage = async (value) => {
   }
 };
 
+// The current frame's thumbnail, scaled straight from its pixels, without
+// encoding and decoding a full-size PNG first.
+export const captureGraphicsThumbnailImage = async (graphicsService) => {
+  const frame = await graphicsService.extractCanvas();
+  return renderThumbnailDataUrl({
+    source: frame,
+    sourceWidth: frame.width,
+    sourceHeight: frame.height,
+  });
+};
+
 export const captureCanvasThumbnailImage = async (
   graphicsService,
   canvasRoot,

@@ -204,8 +204,13 @@ export const handleBeforeMount = (deps) => {
   return handleBeforeMountBase(deps);
 };
 
+// Thumbnails that went out of date, such as when the app closed before an
+// editor was left, or that a new transform lacks, are drawn in the
+// background.
 export const handleAfterMount = (deps) => {
+  const { projectService } = deps;
   handleAfterMountBase(deps);
+  void projectService.requestTransformThumbnails();
 };
 
 export const handleTransformItemDoubleClick = (deps, payload) => {
@@ -345,6 +350,9 @@ export const handleAddFormAction = async (deps, payload) => {
 
   store.closeAddDialog();
   await handleDataChanged(deps, { selectedItemId: transformId });
+  void projectService.requestTransformThumbnails({
+    transformIds: [transformId],
+  });
 };
 
 export const handleEditFormAddOptionClick = (deps) => {
@@ -446,6 +454,10 @@ export const handleItemDuplicate = async (deps, payload) => {
   }
   if (itemData.thumbnailFileId) {
     duplicateData.thumbnailFileId = itemData.thumbnailFileId;
+  }
+  // The copy draws as the original does, so its thumbnail stays current.
+  if (itemData.thumbnailSourceHash) {
+    duplicateData.thumbnailSourceHash = itemData.thumbnailSourceHash;
   }
   if (itemData.previewFileId) {
     duplicateData.previewFileId = itemData.previewFileId;

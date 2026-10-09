@@ -1,5 +1,6 @@
 import { createProjectAssetService } from "./projectAssetService.js";
 import { createAssetPackageExportService } from "./assetPackageExportService.js";
+import { createEditorThumbnailService } from "./editorThumbnailService.js";
 import { createProjectCollabCore } from "./projectCollabCore.js";
 import { createProjectExportService } from "./projectExportService.js";
 import { createProjectRepositoryService } from "./projectRepositoryService.js";
@@ -128,6 +129,14 @@ export const createProjectServiceCore = ({
     const repository = repositoryService.getCachedRepository();
     return repository.getRevision();
   };
+
+  const editorThumbnailService = createEditorThumbnailService({
+    getEnsuredProjectId: repositoryService.getEnsuredProjectId,
+    getRepositoryState,
+    getFileContent: assetService.getFileContent,
+    storeFileForProject: assetService.storeFileForProject,
+    updateTransform: collabService.commandApi.updateTransform,
+  });
 
   const resourcePackageImportService = createResourcePackageImportService({
     idGenerator,
@@ -748,6 +757,8 @@ export const createProjectServiceCore = ({
     checkFileIntegrity: assetService.checkFileIntegrity,
     createAssetPackageBundle:
       assetPackageExportService.createAssetPackageBundle,
+    requestTransformThumbnails:
+      editorThumbnailService.requestTransformThumbnails,
     downloadMetadata: assetService.downloadMetadata,
     loadFontFile: assetService.loadFontFile,
     detectFileType: assetService.detectFileType,

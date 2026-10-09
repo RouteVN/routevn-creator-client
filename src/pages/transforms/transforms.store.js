@@ -230,7 +230,6 @@ const {
       }),
       editDefaultValues: state.editDefaultValues,
       noPreviewImageLabel: copy.noPreviewImageLabel,
-      savePreviewInEditorLabel: copy.savePreviewInEditorLabel,
       openButton: copy.openButton,
       selectedItem,
     };

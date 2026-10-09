@@ -2,6 +2,7 @@ import { describe, expect, it, vi } from "vitest";
 import { EN_I18N } from "../support/i18n.js";
 import {
   handleAddFormAction,
+  handleAfterMount,
   handleDetailHeaderClick,
   handleEditFormAction,
   handleFileExplorerAction,
@@ -22,6 +23,7 @@ const createRefreshDeps = (repositoryState, overrides = {}) => {
     },
     projectService: {
       getRepositoryState: vi.fn(() => repositoryState),
+      requestTransformThumbnails: vi.fn(async () => {}),
       ...overrides.projectService,
     },
     store: {
@@ -145,6 +147,29 @@ describe("transforms.handlers", () => {
     expect(deps.refs.fileExplorer.selectItem).toHaveBeenCalledWith({
       itemId: transformId,
     });
+    // Its thumbnail is drawn in the background.
+    expect(deps.projectService.requestTransformThumbnails).toHaveBeenCalledWith(
+      { transformIds: [transformId] },
+    );
+  });
+
+  it("has out-of-date thumbnails drawn in the background when it opens", () => {
+    // Opening also focuses the explorer on the next frame.
+    vi.stubGlobal("requestAnimationFrame", vi.fn());
+    const deps = createRefreshDeps({
+      project: {},
+      transforms: { items: {}, tree: [] },
+    });
+
+    try {
+      handleAfterMount(deps);
+    } finally {
+      vi.unstubAllGlobals();
+    }
+
+    expect(
+      deps.projectService.requestTransformThumbnails,
+    ).toHaveBeenCalledWith();
   });
 
   it("asks for a name before creating a transform", async () => {
@@ -234,7 +259,7 @@ describe("transforms.handlers", () => {
     expect(deps.store.closeEditDialog).toHaveBeenCalledOnce();
   });
 
-  it("duplicates a transform from the file explorer with its values and preview", async () => {
+  it("duplicates a transform from the file explorer with its values, preview, and thumbnail", async () => {
     const item = {
       id: "transform-1",
       type: "transform",
@@ -249,6 +274,7 @@ describe("transforms.handlers", () => {
       anchorY: 1,
       rotation: 15,
       thumbnailFileId: "thumb-1",
+      thumbnailSourceHash: "hash-1",
       previewFileId: "preview-1",
       preview: { background: { imageId: "image-1" } },
     };
@@ -283,6 +309,7 @@ describe("transforms.handlers", () => {
         anchorY: 1,
         rotation: 15,
         thumbnailFileId: "thumb-1",
+        thumbnailSourceHash: "hash-1",
         previewFileId: "preview-1",
         preview: { background: { imageId: "image-1" } },
       },

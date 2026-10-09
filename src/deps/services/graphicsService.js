@@ -2579,6 +2579,9 @@ export const createGraphicsService = async ({
 
       return await routeGraphics.extractBase64(label);
     },
+    // The frame's pixels as a canvas, for callers that scale them, without
+    // encoding a full-size PNG.
+    extractCanvas: async (label) => await routeGraphics.extractCanvas(label),
     startCanvasVideoRecording: (options = {}) => {
       return startCanvasVideoRecording({
         ...options,

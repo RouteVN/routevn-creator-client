@@ -1354,8 +1354,8 @@ outline on the canvas (`createBackgroundTransformEditorCanvasState` and the
 drag helpers in `src/internal/ui/sceneEditor/backgroundTransformEditor.js`):
 the border moves the target and an edge handle scales it evenly around its
 anchor. Arrow keys nudge the target on Edit, ten pixels with Shift. Preview
-holds the preview background and target and **Save Preview**, and draws the
-same canvas without the outline: the background image, or a gray screen, and
+holds the preview background and target, and draws the same canvas without
+the outline: the background image, or a gray screen, and
 the target, or a light gray square. The target card first asks for an
 **Image** or a **Character Sprite**. A character sprite is picked in
 `rvn-character-sprite-selector`, a character and then one sprite per sprite
@@ -1363,26 +1363,75 @@ group (the sprite group helpers it shares with the scene editor are in
 `src/internal/characterSpriteSelection.js`), and saves as
 `preview.target: { characterId, sprites: [{ id, resourceId }] }`. The canvas
 draws it as scenes draw a character: a container placed by the transform with
-the sprites stacked from its top-left corner, the first at the bottom. Save
-Preview saves the preview settings and a preview and thumbnail image of that
-canvas, and is disabled while it saves.
+the sprites stacked from its top-left corner, the first at the bottom.
 
 Preview images and character sprites follow the asset failure policy. Each
 loads on its own, with `verifyImageIntegrity`, so one that cannot be read,
 fails its integrity check, or does not decode is left out (the gray screen,
 the light gray square, or the character without that sprite shows in its
 place), warned about once with the shared asset warning, and not read again
-while the page is open; the rest of the canvas stays editable. Save Preview
-reads a failed image again and, if it still fails, saves nothing and alerts
-with the error's details, since saving the fallback would misrepresent the
-preview. Capture and file storage failures alert with their details too.
+while the page is open; the rest of the canvas stays editable.
 
-As in the layout editor, edits save on their own 300ms after the last one,
-and leaving the page saves waiting edits at once (saves run one at a time
-through `enqueueSceneEditorPersistence`); preview images save only with Save
-Preview, so unsaved ones are left behind. Undo and redo work as in the audio
-effects editor: a step holds the transform's values before and after an edit,
-a drag is one step, and preview images are not part of the history.
+Edits and picked preview images save on their own 300ms after the last
+change, and leaving the page saves waiting changes at once (saves run one at
+a time through `enqueueSceneEditorPersistence`). A pick saves once its
+picker's OK is clicked; until then the canvas shows it, but the saved preview
+keeps what the slot showed before. Undo and redo work as in the audio effects
+editor: a step holds the transform's values before and after an edit, a drag
+is one step, and preview images are not part of the history.
+
+Transform thumbnails are drawn in the background, never while navigation or
+an editor waits. `projectService.requestTransformThumbnails({ transformIds })`
+queues them (all transforms when none are named) in the editor thumbnail
+service (`src/deps/services/shared/editorThumbnailService.js`), which runs one
+job at a time. Each job builds the transform's preview from saved data alone
+(`createTransformThumbnailSource` in `src/internal/transformPreview.js`, the
+same render state the editor's Preview tab draws) and hashes it: the SHA-256 of
+`TRANSFORM_THUMBNAIL_VERSION` and that render state (`createThumbnailSourceHash`
+in `src/deps/services/shared/thumbnailSourceHash.js`, over `stableStringify`
+from `src/internal/stableStringify.js`). The render state holds the
+transform's values, the project resolution, and the preview images' file ids
+and sizes, so replacing an image's file changes the hash, while a name or tag
+change does not. Checking a hash is cheap and does not wait; only when it
+differs from the transform's `thumbnailSourceHash` (creator-model 1.16.2) does
+the job wait for the app to be idle, read the transform again, and draw: it
+loads the preview images with `verifyImageIntegrity`, renders off screen
+(`src/deps/clients/web/editorThumbnails.js`), scales the frame's pixels
+straight into the thumbnail (route-graphics `extractCanvas`, from 1.47.0)
+without encoding a full-size PNG, and saves the JPEG thumbnail with its hash
+in one `transform.update`. Jobs share one off-screen renderer, freed once the
+queue is empty (`releaseThumbnailRenderer`), and made again for another size,
+after six drawings, which bounds what its loaded files hold, and after a
+failed drawing. A renderer per job would not do: WebKit counts every WebGL
+context a page made against its limit of 16 until it is garbage collected,
+even once freed, and past the limit loses the oldest, which is an open
+editor's canvas when thumbnails are drawn while it is open. Each drawing
+clears the last first. The renderer loads its images under keys of its own:
+textures are cached by key for every renderer, and a graphics service unloads
+the keys it loaded when it is freed, so sharing the page renderer's file id
+keys would take images away from an open editor, or let the editor's
+teardown take them from the thumbnail. Bump
+`TRANSFORM_THUMBNAIL_VERSION` when the preview starts drawing the same saved
+transform differently, so saved thumbnails are drawn again. Thumbnails no
+longer come with a full-size `previewFileId`; one saved earlier stays, and
+asset package import shows the thumbnail before it.
+
+Leaving the transform editor saves waiting changes and then requests its
+thumbnail without waiting for it. A `prepareNavigation` with a `reason` only
+saves, since the page stays open: a backup (`"backup"`), the app going to the
+background (`"background"`), or quitting (`"quit"`); a navigation passes no
+reason. The transforms page
+requests every thumbnail when it opens and a new transform's after Add, which
+also repairs thumbnails left out of date when the app closed or crashed before
+an editor was left; until one is drawn, the detail panel says there is no
+preview image. A job only works for the project that is open
+(`getEnsuredProjectId`): it checks before waiting, drawing, storing, and
+saving, and stores its file into its own project (`storeFileForProject`). A
+preview image that cannot load leaves the old thumbnail in place, since the
+fallback would misrepresent the preview; that, and capture, storage, or update
+failures, are logged as warnings without an alert, since the user did not
+start them, and the next request tries again. Duplicating a transform copies
+the hash with its thumbnail, since the copy draws the same.
 
 Particles are edited on their own page too, `/project/particle-editor` (the
 `pt` payload holds the particle id), built like the transform editor from the
@@ -1714,7 +1763,7 @@ Current recovery boundaries:
 | Scene editor asset loading            | Isolate failed entries, show a warning, and keep editing and working assets available, including when a font fails.                                                                                                         |
 | Scene editor audio warm-up            | Keep painting after a decode retry fails. Preserve diagnostics without duplicating the warning already shown by preloading.                                                                                                 |
 | Layout editor canvas                  | Collect read/integrity/decode failures, warn once per failed file per mounted canvas, omit affected render elements, and keep unaffected elements editable. Retry on subsequent requests without changing the saved layout. |
-| Transform editor canvas               | Load each preview image separately, warn once per failed file per mounted page, and draw the fallback in its place while editing. Later renders skip it; Save Preview rereads it and saves nothing if it still fails.       |
+| Transform editor canvas               | Load each preview image separately, warn once per failed file per mounted page, and draw the fallback in its place while editing. Later renders skip it, and the thumbnail is not redrawn while it fails.                   |
 | Particle editor canvas                | Load the texture and background images separately, warn once per failed file per mounted page, and leave the failed image out while editing. Later renders skip it; Save Preview rereads it and saves nothing if it fails.  |
 | Text style editor preview             | Load each font file of the style separately, warn once per failed file per mounted page, and draw the text without that file, in the style's next font or the browser's. The saved fonts do not change.                     |
 | Fullscreen startup                    | Check the combined initial scene and layout assets, collect all read/integrity/decode failures, and show one deduplicated warning stating playback is blocked. Any failure closes the preview before starting the engine.   |
