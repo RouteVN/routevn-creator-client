@@ -1,3 +1,4 @@
+import { isDeviceId } from "./deviceIdentity.js";
 import {
   captureEvent,
   captureException,
@@ -184,6 +185,7 @@ export const createErrorReporter = ({
   dist,
   runtime,
   captureGlobal,
+  deviceId,
 }) => {
   const sentEvents = { explicit: 0, global: 0 };
 
@@ -209,6 +211,7 @@ export const createErrorReporter = ({
       message: exceptions?.[0]?.value ?? fallbackMessage,
       exception: exceptions ? { values: exceptions } : undefined,
       debug_meta: scrubDebugMeta(event.debug_meta, exceptions),
+      user: isDeviceId(deviceId) ? { id: deviceId } : undefined,
     };
   };
 

@@ -11,22 +11,24 @@ import io.sentry.protocol.SentryException;
 import io.sentry.protocol.SentryStackFrame;
 import io.sentry.protocol.SentryStackTrace;
 import io.sentry.protocol.SentryThread;
+import io.sentry.protocol.User;
 import java.util.ArrayList;
 import java.util.List;
 
 /**
  * Keeps a crash report to the crash type, stack locations, the debug images
- * those frames point into, app version, device model and OS version. Message
- * text, user data, paths, variables and other context are dropped.
+ * those frames point into, app version, device model, OS version and the
+ * device ID as user.id. Message text, other user data, paths,
+ * variables and other context are dropped.
  */
 final class NativeCrashScrubber {
     static final String MESSAGE = "App crash";
 
     private NativeCrashScrubber() {}
 
-    static SentryEvent scrub(SentryEvent event) {
+    static SentryEvent scrub(SentryEvent event, String deviceId) {
         event.setMessage(null);
-        event.setUser(null);
+        event.setUser(keptUser(deviceId));
         event.setRequest(null);
         event.setBreadcrumbs(null);
         event.setServerName(null);
@@ -57,6 +59,15 @@ final class NativeCrashScrubber {
         }
         scrubDebugMeta(event.getDebugMeta(), addresses);
         return event;
+    }
+
+    // Keep only the device ID as user.id; any other user data on the
+    // incoming event is dropped.
+    private static User keptUser(String deviceId) {
+        if (!NativeDeviceIdReader.isDeviceId(deviceId)) return null;
+        User user = new User();
+        user.setId(deviceId);
+        return user;
     }
 
     // Contexts is a map owned by the event, so rebuild it in place.

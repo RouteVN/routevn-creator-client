@@ -32,7 +32,6 @@ vi.hoisted(() => {
     dist: "test-build",
   });
 });
-
 describe("desktop error reporting", () => {
   it("initializes the official SDK with the native build configuration", () => {
     expect(getClient().getOptions()).toMatchObject({
@@ -169,6 +168,129 @@ describe("explicit error reporting through the SDK", () => {
     vi.unstubAllEnvs();
   });
 
+  it("sends the shell's device ID as the only user field", () => {
+    const deviceId = "7mQkR2vXa9Lp8nRmS3wYb2Mq";
+    const reporter = createErrorReporter({
+      dsn: TEST_DSN,
+      runtime: "tauri",
+      captureGlobal: true,
+      deviceId,
+    });
+    const event = reporter.scrubErrorEvent({
+      event_id: "event-one",
+      user: {
+        id: "someone-else",
+        email: "user@example.com",
+        username: "user",
+        ip_address: "203.0.113.7",
+        segment: "secret-segment",
+        data: { path: "/Users/user@example.com" },
+      },
+      exception: {
+        values: [
+          {
+            type: "TypeError",
+            value: "failed for user@example.com",
+            mechanism: { type: "routevn.capture", handled: true },
+          },
+        ],
+      },
+    });
+
+    expect(event.user).toEqual({ id: deviceId });
+    const encoded = JSON.stringify(event);
+    expect(encoded).toContain(deviceId);
+    expect(encoded).not.toContain("user@example.com");
+    expect(encoded).not.toContain("someone-else");
+    expect(encoded).not.toContain("secret-segment");
+  });
+
+  it("sends no user without a shell device ID", () => {
+    for (const deviceId of [
+      undefined,
+      null,
+      "not-a-device-id",
+      "0OQkR2vXa9Lp8nRmS3wYb2Mq",
+    ]) {
+      const reporter = createErrorReporter({
+        runtime: "web",
+        captureGlobal: false,
+        deviceId,
+      });
+      const event = reporter.scrubErrorEvent({
+        event_id: "event-one",
+        user: { email: "user@example.com", username: "user" },
+        exception: {
+          values: [{ type: "TypeError", mechanism: { handled: true } }],
+        },
+      });
+
+      expect(event.user).toBeUndefined();
+      expect(JSON.stringify(event)).not.toContain("user@example.com");
+    }
+  });
+
+  it("carries the device ID on events sent through the SDK pipeline", async () => {
+    const deviceId = "23456789ABCD23456789ABCD";
+    const reporter = createErrorReporter({
+      dsn: TEST_DSN,
+      runtime: "tauri",
+      captureGlobal: false,
+      deviceId,
+    });
+    const events = collectSentEvents();
+
+    reporter.capture(new Error("save failed"), {
+      operation: "resourcePage.mutation",
+    });
+    await reporter.flush();
+
+    expect(events).toHaveLength(1);
+    expect(events[0].user).toEqual({ id: deviceId });
+  });
+
+  it("uses the device ID injected into the exported desktop reporter", async () => {
+    const deviceId = "23456789ABCD23456789ABCD";
+    globalThis.__ROUTEVN_ERROR_REPORTING__ = Object.freeze({
+      dsn: TEST_DSN,
+      release: "app-one@1.0.0",
+      environment: "development",
+      dist: "test-build",
+      deviceId,
+    });
+    vi.resetModules();
+    const { errorReporter } = await import(
+      "../../src/deps/clients/tauri/errorReporting.js"
+    );
+    const events = collectSentEvents();
+
+    errorReporter.capture(new Error("save failed"));
+    await errorReporter.flush();
+
+    expect(events).toHaveLength(1);
+    expect(events[0].user).toEqual({ id: deviceId });
+  });
+
+  it("omits the user when the injected desktop configuration has no device ID", async () => {
+    globalThis.__ROUTEVN_ERROR_REPORTING__ = Object.freeze({
+      dsn: TEST_DSN,
+      release: "app-one@1.0.0",
+      environment: "development",
+      dist: "test-build",
+    });
+    vi.resetModules();
+    const { errorReporter } = await import(
+      "../../src/deps/clients/tauri/errorReporting.js"
+    );
+    const events = collectSentEvents();
+
+    errorReporter.capture(new Error("save failed"));
+    await errorReporter.flush();
+
+    expect(events).toHaveLength(1);
+    expect(events[0].user).toBeUndefined();
+  });
+
   it("caps explicit reports separately from uncaught errors", async () => {
     const reporter = createErrorReporter({
       dsn: TEST_DSN,
@@ -266,7 +388,7 @@ describe("explicit error reporting through the SDK", () => {
   });
 
   it("keeps source map debug IDs only for files in the sent stack", async () => {
-    const mainDebugId = "0F6B1C3E-2A4D-4C8B-9E7F-1A2B3C4D5E6F";
+    const mainDebugId = "0f6b1c3e-2a4d-4c8b-9e7f-1a2b3c4d5e6f";
     // Registered the way the injected build snippet does: stack -> debug ID.
     globalThis._sentryDebugIds = {
       "Error\n    at https://app.test/public/main.js?v=1:1:10": mainDebugId,

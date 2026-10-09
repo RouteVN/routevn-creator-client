@@ -50,6 +50,8 @@ final class NativeCrashReporting {
     }
 
     private static void initialize(Context context) {
+        // Read the existing device ID before the SDK starts; it may be absent.
+        String deviceId = NativeDeviceIdReader.read(context);
         SentryAndroid.init(context, options -> {
             options.setDsn(BuildConfig.SENTRY_DSN);
             options.setRelease("routevn-creator@" + BuildConfig.VERSION_NAME);
@@ -102,7 +104,7 @@ final class NativeCrashReporting {
             options.setEnableAutoActivityLifecycleTracing(false);
             options.setEnableFramesTracking(false);
 
-            options.setBeforeSend((event, hint) -> NativeCrashScrubber.scrub(event));
+            options.setBeforeSend((event, hint) -> NativeCrashScrubber.scrub(event, deviceId));
         });
     }
 }

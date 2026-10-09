@@ -21,8 +21,27 @@ breadcrumbs, screenshots, view hierarchies, swizzling, network tracking,
 performance tracing, client reports and replay are disabled. The aggregate
 `sentry-android` artifact is not used because it also ships replay.
 
-WebView JavaScript errors are separate: `appService.reportError` is a no-op on
-Android and iOS.
+## Device ID
+
+Reports include `user.id` only when the device ID exists at native startup.
+The backend keeps only `user.id` from each event, which allows counting distinct crashing installs per version
+(crash-free users) even though sessions are disabled.
+
+- Android: `deviceId` in `kv` in `context.getDatabasePath("app.db")`.
+- iOS: the same row in `Application Support/RouteVN Creator/databases/app.db`.
+- Desktop: the same row in Tauri’s app config directory (`app.db`).
+
+The ID is random and resets when app storage is cleared or the app is
+reinstalled on Android and iOS; restoring an iOS backup can bring the old ID
+back. The desktop database survives app deletion unless its app config directory is removed.
+The ID is the JavaScript-created update-check device ID (`device.id`).
+It links to no account. Missing or invalid values omit `user`. Read errors
+also omit `user`; the read creates no database and does not stop reporting.
+
+The desktop JS reporter sends any available startup ID as `user.id`.
+WebView JavaScript errors are not reported on Android and iOS
+(`appService.reportError` is a no-op there). Plain web builds send no
+`user.id`.
 
 ### WebView renderer loss
 
@@ -51,7 +70,7 @@ reported because it is a real failure, at level `error` because the app kept
 running. The crash reporter sets `fatal` on crashes that close the app, so in
 obs the level, or the exception type, separates recovered renderer crashes from
 crashes. The event passes through the same `beforeSend` scrubbing as a crash,
-so it carries only the exception type, stack, release, device and OS.
+so it carries only the exception type, stack, release, device, OS and any available device ID.
 
 Recovery on Android (`MainActivity.onRenderProcessGone`, which always returns
 `true`):
@@ -90,7 +109,9 @@ Native crash reports are saved locally and delivery is attempted on a later
 launch. Delivery is best effort: storage failures, cache eviction and rejected
 requests can discard reports. Reports are not guaranteed to remain until the
 collector accepts them. A user who never reopens the app may produce no report.
-There is no crash-free-rate metric because sessions are disabled.
+There is no crash-free-rate (session) metric because sessions are disabled;
+distinct crashing installs per version are counted from the [device
+ID](#device-id) instead.
 
 ## Resource and startup safeguards
 
@@ -160,12 +181,14 @@ own `dist`.
 - debug images that the frames point into, with file paths reduced to basenames
   but debug IDs, load addresses and sizes kept
 - app release and dist, device model and architecture, OS name and version
+- any available [device ID](#device-id) as `user.id` (the only user field kept;
+  email, username, IP address, segment and any other user data are dropped)
 
-It drops message and exception text (replaced with `App crash`), user,
-request, tags, extras, breadcrumbs, server name, modules, device name and other
-device state, frame variables and source context, and absolute paths. Filtering
-debug images reduces report size but does not guarantee the collector's 256 KiB
-event limit; larger reports are rejected, not truncated.
+It drops message and exception text (replaced with `App crash`), every other
+user field, request, tags, extras, breadcrumbs, server name, modules, device
+name and other device state, frame variables and source context, and absolute
+paths. Filtering debug images reduces report size but does not guarantee the
+collector's 256 KiB event limit; larger reports are rejected, not truncated.
 
 The collector's server-side redaction only removes fixed structural fields, so
 the client scrubbing is required.
@@ -196,9 +219,13 @@ durable storage before cleaning it.
 
 ## Store disclosures
 
-Before shipping, declare crash data in the App Store privacy labels
-(Diagnostics → Crash Data) and in the Google Play Data safety form (App info
-and performance → Crash logs). No identifiers are collected.
+Before shipping, declare:
+
+- App Store privacy labels: Diagnostics → Crash Data, and Identifiers →
+  Device ID (the [device ID](#device-id); not linked to the user's identity, not
+  used for tracking), purposes App Functionality and Analytics.
+- Google Play Data safety form: App info and performance → Crash logs, and
+  Device or other IDs, purpose Analytics, not shared, not used for tracking.
 
 ## Test crashes
 
