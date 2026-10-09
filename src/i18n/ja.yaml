@@ -1967,6 +1967,7 @@ scenesPage:
   createSceneTitle: "シーンを作成"
   deadEndTooltipContent: "このセクションから別のセクションへの遷移がありません。"
   editSceneTitle: "シーンを編集"
+  errorDetailsLabel: "詳細："
   failedCreateFolder: "フォルダーを作成できませんでした。"
   failedCreateScene: "シーンを作成できませんでした。"
   failedUpdateFolder: "フォルダーを更新できませんでした。"

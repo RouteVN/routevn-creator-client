@@ -12,6 +12,9 @@ vi.mock(
   }),
 );
 
+const OPEN_SCENE_FAILED_MESSAGE =
+  "Could not open the scene.\n\nDetails:\nStartup failed";
+
 it.each([
   {
     reason: "a non-finite computed number",
@@ -35,16 +38,17 @@ it.each([
     reason: "a computed variable that is no longer in the repository",
     computed: { expr: { mul: [1e308, { var: "variables.factor" }] } },
     repositoryId: "another-variable",
-    message: "Could not open the scene.",
+    message:
+      'Could not open the scene.\n\nDetails:\nComputed variable "product" expected type number, got number',
   },
   {
     reason: "an unrelated startup error",
-    message: "Could not open the scene.",
+    message: OPEN_SCENE_FAILED_MESSAGE,
   },
   {
     reason: "a failure before the project loaded",
     repositoryUnavailable: true,
-    message: "Could not open the scene.",
+    message: OPEN_SCENE_FAILED_MESSAGE,
   },
 ])(
   "recovers from $reason and shows the relevant error",

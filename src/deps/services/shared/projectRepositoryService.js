@@ -470,6 +470,13 @@ export const createProjectRepositoryService = ({
     }
 
     const currentHistoryStats = await store.getRepositoryHistoryStats();
+    const currentHistoryLength =
+      Number(currentHistoryStats?.committedCount || 0) +
+      Number(currentHistoryStats?.draftCount || 0);
+    const checkpointRevision = Math.max(
+      0,
+      Math.floor(Number(checkpoint.lastCommittedId) || 0),
+    );
     const checkpointHistoryStats = checkpoint?.meta?.historyStats;
     const hasCheckpointHistoryStats =
       checkpointHistoryStats &&
@@ -497,14 +504,6 @@ export const createProjectRepositoryService = ({
         return undefined;
       }
     } else {
-      const currentHistoryLength =
-        Number(currentHistoryStats?.committedCount || 0) +
-        Number(currentHistoryStats?.draftCount || 0);
-      const checkpointRevision = Math.max(
-        0,
-        Math.floor(Number(checkpoint.lastCommittedId) || 0),
-      );
-
       if (checkpointRevision !== currentHistoryLength) {
         console.warn(
           "Discarding project repository checkpoint without matching history length",
@@ -535,13 +534,35 @@ export const createProjectRepositoryService = ({
         updatedAt: checkpoint.updatedAt || Date.now(),
       });
     }
+
+    // Older versions could save a revision past the history length when an
+    // edit loaded history on demand, and every later session kept counting
+    // from it. The checkpoint still matches its history, so keep its state
+    // and correct its revision to the history length that events are
+    // numbered by.
+    if (checkpointRevision > currentHistoryLength) {
+      console.warn(
+        "Correcting project repository checkpoint revision past its history",
+        {
+          cacheKey,
+          checkpointRevision,
+          currentHistoryLength,
+        },
+      );
+      await store.saveMaterializedViewCheckpoint({
+        viewName: MAIN_VIEW_NAME,
+        partition: MAIN_PARTITION,
+        viewVersion: checkpoint.viewVersion,
+        lastCommittedId: currentHistoryLength,
+        value: checkpoint.value,
+        updatedAt: checkpoint.updatedAt || Date.now(),
+      });
+    }
+
     return {
       checkpoint,
       currentHistoryStats,
-      initialRevision: Math.max(
-        0,
-        Math.floor(Number(checkpoint.lastCommittedId) || 0),
-      ),
+      initialRevision: Math.min(checkpointRevision, currentHistoryLength),
     };
   };
 

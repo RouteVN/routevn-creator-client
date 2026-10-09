@@ -1967,6 +1967,7 @@ scenesPage:
   createSceneTitle: "创建场景"
   deadEndTooltipContent: "该段落没有跳转到其他段落。"
   editSceneTitle: "编辑场景"
+  errorDetailsLabel: "详细信息："
   failedCreateFolder: "无法创建文件夹。"
   failedCreateScene: "无法创建场景。"
   failedUpdateFolder: "无法更新文件夹。"

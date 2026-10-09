@@ -8,6 +8,7 @@ import { createFileExplorerKeyboardScopeHandlers } from "../../internal/ui/fileE
 import { recordRecentSceneVisit } from "../../internal/ui/recentScenes.js";
 import { toFlatItems } from "../../internal/project/tree.js";
 import { formatI18nCopy } from "../../internal/ui/i18nCopy.js";
+import { withErrorDetails } from "../../internal/errorDetails.js";
 import {
   SCENE_BOX_HEIGHT,
   SCENE_BOX_VIEWPORT_PADDING,
@@ -997,7 +998,7 @@ export const handleWhiteboardItemPositionUpdating = async (deps, payload) => {
 };
 
 export const handleWhiteboardItemPositionChanged = async (deps, payload) => {
-  const { store, render, projectService } = deps;
+  const { store, render, projectService, appService } = deps;
   const { itemId, x, y } = payload._event.detail;
   const nextX = Number(x);
   const nextY = Number(y);
@@ -1019,12 +1020,37 @@ export const handleWhiteboardItemPositionChanged = async (deps, payload) => {
     return;
   }
 
-  await projectService.updateSceneItem({
-    sceneId: itemId,
-    data: {
-      position: { x: nextX, y: nextY },
-    },
-  });
+  let updateResult;
+  let updateError;
+  try {
+    updateResult = await projectService.updateSceneItem({
+      sceneId: itemId,
+      data: {
+        position: { x: nextX, y: nextY },
+      },
+    });
+  } catch (error) {
+    updateError = error;
+  }
+
+  if (updateError || updateResult?.valid === false) {
+    const copy = selectCopy(deps);
+    console.error("[scenes] Failed to move scene", updateError ?? updateResult);
+    // Put the scene back where it is saved.
+    if (Number.isFinite(currentX) && Number.isFinite(currentY)) {
+      store.updateItemPosition({ itemId, x: currentX, y: currentY });
+      render();
+    }
+    appService.showAlert({
+      message: withErrorDetails(
+        copy.failedUpdateScene ?? "Failed to update scene.",
+        updateError ?? updateResult.error,
+        copy.errorDetailsLabel ?? "Details:",
+      ),
+      title: copy.errorTitle ?? "Error",
+    });
+    return;
+  }
 
   // Keep local UI and the last persisted scene snapshot aligned.
   store.updatePersistedScenePosition({ itemId, x: nextX, y: nextY });

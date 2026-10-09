@@ -1967,6 +1967,7 @@ scenesPage:
   createSceneTitle: "สร้างฉาก"
   deadEndTooltipContent: "ส่วนนี้ไม่มีทางไปต่อยังส่วนอื่น"
   editSceneTitle: "แก้ไขฉาก"
+  errorDetailsLabel: "รายละเอียด:"
   failedCreateFolder: "สร้างโฟลเดอร์ไม่สำเร็จ"
   failedCreateScene: "สร้างฉากไม่สำเร็จ"
   failedUpdateFolder: "อัปเดตโฟลเดอร์ไม่สำเร็จ"

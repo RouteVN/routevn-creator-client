@@ -1967,6 +1967,7 @@ scenesPage:
   createSceneTitle: "Crear escena"
   deadEndTooltipContent: "Esta sección no lleva a ninguna otra sección."
   editSceneTitle: "Editar escena"
+  errorDetailsLabel: "Detalles:"
   failedCreateFolder: "No se pudo crear la carpeta."
   failedCreateScene: "No se pudo crear la escena."
   failedUpdateFolder: "No se pudo actualizar la carpeta."

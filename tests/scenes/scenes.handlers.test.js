@@ -11,6 +11,7 @@ import {
   handleWhiteboardClick,
   handleWhiteboardItemDelete,
   handleWhiteboardItemDoubleClick,
+  handleWhiteboardItemPositionChanged,
   handleWhiteboardItemSelected,
   handleWhiteboardPanChanged,
   handleWhiteboardZoomChanged,
@@ -701,5 +702,51 @@ describe("scenes.handlers config keys", () => {
       "sceneEditor.recentSceneIdsByProject",
       expect.anything(),
     );
+  });
+
+  it("puts a scene back and shows the details when moving it fails", async () => {
+    const deps = createDeps();
+    deps.store.selectScenesData = vi.fn(() => ({
+      items: {
+        "scene-1": {
+          id: "scene-1",
+          position: {
+            x: 10,
+            y: 20,
+          },
+        },
+      },
+    }));
+    deps.store.updateItemPosition = vi.fn();
+    deps.store.updatePersistedScenePosition = vi.fn();
+    deps.projectService.updateSceneItem = vi.fn(async () => {
+      throw new Error("Scene could not be loaded");
+    });
+    const errorSpy = vi.spyOn(console, "error").mockImplementation(() => {});
+
+    try {
+      await handleWhiteboardItemPositionChanged(deps, {
+        _event: {
+          detail: {
+            itemId: "scene-1",
+            x: 100,
+            y: 200,
+          },
+        },
+      });
+    } finally {
+      errorSpy.mockRestore();
+    }
+
+    expect(deps.store.updateItemPosition).toHaveBeenCalledWith({
+      itemId: "scene-1",
+      x: 10,
+      y: 20,
+    });
+    expect(deps.store.updatePersistedScenePosition).not.toHaveBeenCalled();
+    expect(deps.appService.showAlert).toHaveBeenCalledWith({
+      message: "Failed to update scene.\n\nDetails:\nScene could not be loaded",
+      title: "Error",
+    });
   });
 });

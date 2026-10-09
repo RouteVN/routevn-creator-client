@@ -395,6 +395,97 @@ describe("projectRepositoryService main checkpoint reuse", () => {
     expect(repository.getState()).toEqual(initialProjectData);
   });
 
+  it("corrects a checkpoint revision past its history and still skips full event loading", async () => {
+    const historyStats = {
+      committedCount: 0,
+      latestCommittedId: 0,
+      draftCount: 3,
+      latestDraftClock: 3,
+    };
+    const saveMaterializedViewCheckpoint = vi.fn(async () => {});
+    const store = {
+      listCommittedAfter: vi.fn(async () => []),
+      listDraftsOrdered: vi.fn(async () => []),
+      getCursor: vi.fn(async () => 0),
+      getRepositoryHistoryStats: async () => structuredClone(historyStats),
+      isRepositoryHistoryStatsEqual: (left, right) =>
+        JSON.stringify(left) === JSON.stringify(right),
+      loadMaterializedViewCheckpoint: async () => ({
+        viewName: "project_repository_main_state",
+        viewVersion: "1",
+        partition: "m",
+        lastCommittedId: 5,
+        value: structuredClone(initialProjectData),
+        meta: {
+          historyStats: structuredClone(historyStats),
+        },
+        updatedAt: 1,
+      }),
+      saveMaterializedViewCheckpoint,
+      deleteMaterializedViewCheckpoint: vi.fn(async () => {}),
+      app: {
+        get: async (key) => {
+          if (key === "creatorVersion") {
+            return 1;
+          }
+
+          if (key === "projectInfo") {
+            return {
+              id: "project-1",
+              namespace: "namespace-1",
+              name: "Project 1",
+              description: "",
+              iconFileId: null,
+            };
+          }
+
+          return undefined;
+        },
+        set: vi.fn(async () => {}),
+      },
+    };
+    const storageAdapter = {
+      readCreatorVersionByReference: vi.fn(async () => 1),
+      resolveProjectReferenceByProjectId: vi.fn(async ({ projectId }) => ({
+        projectPath: `/tmp/${projectId}`,
+        cacheKey: `/tmp/${projectId}`,
+        repositoryProjectId: projectId,
+      })),
+      createStore: vi.fn(async () => store),
+    };
+    const service = createProjectRepositoryService({
+      router: {
+        getPayload: () => ({
+          p: "project-1",
+        }),
+      },
+      db: {},
+      creatorVersion: 1,
+      storageAdapter,
+      collabAdapter: noopCollabAdapter,
+    });
+    const warnSpy = vi.spyOn(console, "warn").mockImplementation(() => {});
+
+    try {
+      const repository = await service.ensureRepository();
+
+      expect(store.listDraftsOrdered).not.toHaveBeenCalled();
+      expect(store.deleteMaterializedViewCheckpoint).not.toHaveBeenCalled();
+      expect(saveMaterializedViewCheckpoint).toHaveBeenNthCalledWith(1, {
+        viewName: "project_repository_main_state",
+        partition: "m",
+        viewVersion: "1",
+        lastCommittedId: 3,
+        value: initialProjectData,
+        updatedAt: 1,
+      });
+      expect(repository.getRevision()).toBe(3);
+      expect(repository.getState()).toEqual(initialProjectData);
+    } finally {
+      warnSpy.mockRestore();
+    }
+  });
+
   it("flushes a fresh main checkpoint after replaying events for a stale checkpoint", async () => {
     const repositoryEvents = [
       {

@@ -967,3 +967,304 @@ describe("scene projection compatibility", () => {
     ).toEqual([{ text: "Hello" }]);
   });
 });
+
+describe("scene projection replay after section deletes", () => {
+  const otherSectionId = "section-3";
+  const otherLineId = "line-2";
+
+  // One scene with Section 1 holding one line.
+  const createSceneWithOneLine = () => {
+    const state = createRepositoryState();
+    const sections = state.scenes.items[sceneId].sections;
+    delete sections.items[targetSectionId];
+    sections.tree = [{ id: sectionId }];
+    sections.items[sectionId].lines = {
+      items: {
+        [lineId]: {
+          id: lineId,
+          actions: {},
+        },
+      },
+      tree: [{ id: lineId }],
+    };
+    return state;
+  };
+
+  const createSectionEvent = ({
+    id,
+    newSectionId,
+    name,
+    position,
+    positionTargetId,
+  }) => {
+    const payload = {
+      sceneId,
+      sectionId: newSectionId,
+      parentId: null,
+      data: {
+        name,
+      },
+      position,
+    };
+    if (positionTargetId) {
+      payload.positionTargetId = positionTargetId;
+    }
+
+    return createCommandEvent({
+      id,
+      partition: mainScenePartitionFor(sceneId),
+      type: COMMAND_TYPES.SECTION_CREATE,
+      payload,
+      clientTs: 1,
+    });
+  };
+
+  const createLineEvent = ({ id, toSectionId, newLineId }) =>
+    createCommandEvent({
+      id,
+      partition: scenePartitionFor(sceneId),
+      type: COMMAND_TYPES.LINE_CREATE,
+      payload: {
+        sectionId: toSectionId,
+        lines: [
+          {
+            lineId: newLineId,
+            data: {
+              actions: {},
+            },
+          },
+        ],
+        position: "last",
+      },
+      clientTs: 1,
+    });
+
+  const deleteSectionsEvent = ({ id, sectionIds }) =>
+    createCommandEvent({
+      id,
+      partition: mainScenePartitionFor(sceneId),
+      type: COMMAND_TYPES.SECTION_DELETE,
+      payload: {
+        sectionIds,
+      },
+      clientTs: 1,
+    });
+
+  const moveLineEvent = ({ id, toSectionId }) =>
+    createCommandEvent({
+      id,
+      partition: scenePartitionFor(sceneId),
+      type: COMMAND_TYPES.LINE_MOVE,
+      payload: {
+        lineId,
+        toSectionId,
+        position: "last",
+      },
+      clientTs: 1,
+    });
+
+  const replayAll = (repositoryState, events) =>
+    events.reduce(
+      (state, event) => reduceEventToState({ repositoryState: state, event }),
+      structuredClone(repositoryState),
+    );
+
+  const getSectionLineIds = (projection, id) =>
+    projection.scenes.items[sceneId].sections.items[id]?.lines.tree.map(
+      (line) => line.id,
+    );
+
+  it("replays a section duplicated next to a section that was deleted later", async () => {
+    const initialState = createSceneWithOneLine();
+    const events = [
+      createProjectCreateRepositoryEvent({
+        projectId,
+        state: initialState,
+      }),
+      createSectionEvent({
+        id: "duplicate-1",
+        newSectionId: targetSectionId,
+        name: "Section 1 copy",
+        position: "after",
+        positionTargetId: sectionId,
+      }),
+      createLineEvent({
+        id: "duplicate-1-line",
+        toSectionId: targetSectionId,
+        newLineId: otherLineId,
+      }),
+      createSectionEvent({
+        id: "duplicate-2",
+        newSectionId: otherSectionId,
+        name: "Section 1 copy",
+        position: "after",
+        positionTargetId: sectionId,
+      }),
+      deleteSectionsEvent({
+        id: "delete-original",
+        sectionIds: [sectionId],
+      }),
+      deleteSectionsEvent({
+        id: "delete-second-copy",
+        sectionIds: [otherSectionId],
+      }),
+    ];
+    const finalState = replayAll(initialProjectData, events);
+
+    const projection = await loadSceneProjectionState({
+      store: createCheckpointStore(),
+      mainState: createMainProjectionState(finalState),
+      events,
+      createInitialState: () => structuredClone(initialProjectData),
+      reduceEventToState,
+      reduceEventsToState,
+      sceneId,
+    });
+
+    const sections = projection.scenes.items[sceneId].sections;
+    expect(Object.keys(sections.items)).toEqual([targetSectionId]);
+    expect(sections.tree).toEqual(
+      finalState.scenes.items[sceneId].sections.tree,
+    );
+    expect(getSectionLineIds(projection, targetSectionId)).toEqual([
+      otherLineId,
+    ]);
+  });
+
+  it("keeps a line moved out of a section that was deleted later", async () => {
+    const initialState = createSceneWithOneLine();
+    const events = [
+      createProjectCreateRepositoryEvent({
+        projectId,
+        state: initialState,
+      }),
+      createSectionEvent({
+        id: "create-section-2",
+        newSectionId: targetSectionId,
+        name: "Section 2",
+        position: "last",
+      }),
+      moveLineEvent({
+        id: "move-line",
+        toSectionId: targetSectionId,
+      }),
+      deleteSectionsEvent({
+        id: "delete-section-1",
+        sectionIds: [sectionId],
+      }),
+    ];
+    const finalState = replayAll(initialProjectData, events);
+
+    const projection = await loadSceneProjectionState({
+      store: createCheckpointStore(),
+      mainState: createMainProjectionState(finalState),
+      events,
+      createInitialState: () => structuredClone(initialProjectData),
+      reduceEventToState,
+      reduceEventsToState,
+      sceneId,
+    });
+
+    expect(getSectionLineIds(projection, targetSectionId)).toEqual([lineId]);
+  });
+
+  it("replays from a stale checkpoint after a section moved above a section that was deleted later", async () => {
+    const checkpointState = createSceneWithOneLine();
+    const events = [
+      createSectionEvent({
+        id: "create-section-2",
+        newSectionId: targetSectionId,
+        name: "Section 2",
+        position: "last",
+      }),
+      createLineEvent({
+        id: "create-section-2-line",
+        toSectionId: targetSectionId,
+        newLineId: otherLineId,
+      }),
+      createCommandEvent({
+        id: "move-section-2-up",
+        partition: mainScenePartitionFor(sceneId),
+        type: COMMAND_TYPES.SECTION_MOVE,
+        payload: {
+          sectionId: targetSectionId,
+          parentId: null,
+          position: "before",
+          positionTargetId: sectionId,
+        },
+        clientTs: 1,
+      }),
+      deleteSectionsEvent({
+        id: "delete-section-1",
+        sectionIds: [sectionId],
+      }),
+    ];
+    const finalState = replayAll(checkpointState, events);
+
+    const projection = await loadSceneProjectionState({
+      store: {
+        async loadMaterializedViewCheckpoint() {
+          return {
+            viewVersion: SCENE_VIEW_VERSION,
+            lastCommittedId: 0,
+            value: createSceneProjectionState(
+              checkpointState,
+              scenePartitionFor(sceneId),
+            ),
+          };
+        },
+        async saveMaterializedViewCheckpoint() {},
+        async deleteMaterializedViewCheckpoint() {},
+      },
+      mainState: createMainProjectionState(finalState),
+      events,
+      createInitialState: () => structuredClone(initialProjectData),
+      reduceEventToState,
+      reduceEventsToState,
+      sceneId,
+    });
+
+    const sections = projection.scenes.items[sceneId].sections;
+    expect(Object.keys(sections.items)).toEqual([targetSectionId]);
+    expect(getSectionLineIds(projection, targetSectionId)).toEqual([
+      otherLineId,
+    ]);
+  });
+
+  it("keeps a moved line when the active scene's old section is already deleted", () => {
+    const initialState = createSceneWithOneLine();
+    const lineMove = moveLineEvent({
+      id: "move-line",
+      toSectionId: targetSectionId,
+    });
+    const finalState = replayAll(initialState, [
+      createSectionEvent({
+        id: "create-section-2",
+        newSectionId: targetSectionId,
+        name: "Section 2",
+        position: "last",
+      }),
+      lineMove,
+      deleteSectionsEvent({
+        id: "delete-section-1",
+        sectionIds: [sectionId],
+      }),
+    ]);
+
+    const projection = applySceneEventsToLoadedProjection({
+      mainState: createMainProjectionState(finalState),
+      sceneState: createSceneProjectionState(
+        initialState,
+        scenePartitionFor(sceneId),
+      ),
+      sceneId,
+      sourceEvents: [lineMove],
+      reduceEventsToState,
+    });
+
+    expect(
+      projection.scenes.items[sceneId].sections.items[sectionId],
+    ).toBeUndefined();
+    expect(getSectionLineIds(projection, targetSectionId)).toEqual([lineId]);
+  });
+});

@@ -21,7 +21,6 @@ import {
   MAIN_VIEW_VERSION,
   cloneState,
   createMainProjectionState,
-  createSceneProjectionState,
   getLatestSceneProjectionRevision,
   iterateCommittedEventBatches,
   isMainPartition,
@@ -1398,6 +1397,32 @@ export const createProjectRepositoryRuntime = async ({
     return loadedEvents;
   };
 
+  // Drafts are saved before they reach addEvent and addEvents, and the
+  // client store saves remote events before they are applied, so a history
+  // load started by an add already holds the events being added. Drop those
+  // loaded copies before the events are appended, so each event is listed
+  // and counted once, then wait as ensureEventHistoryReady() does.
+  const prepareEventHistoryForAdd = async (sourceEvents) => {
+    if (!hasLoadedEvents) {
+      const revisionBeforeLoad = currentRevision;
+      await ensureEventHistoryLoaded();
+      const sourceEventIds = new Set(
+        sourceEvents.map((event) => event?.id).filter(isNonEmptyString),
+      );
+      for (let index = events.length - 1; index >= 0; index -= 1) {
+        if (sourceEventIds.has(events[index]?.id)) {
+          events.splice(index, 1);
+          eventRevisions.splice(index, 1);
+        }
+      }
+      currentRevision = Math.max(
+        revisionBeforeLoad,
+        eventRevisions.at(-1) ?? 0,
+      );
+    }
+    await reconcileSkippedDrafts();
+  };
+
   const isEventHistoryPending = () =>
     !hasLoadedEvents ||
     (historySkippedDrafts !== undefined && reportedSkippedDrafts === undefined);
@@ -1456,30 +1481,21 @@ export const createProjectRepositoryRuntime = async ({
 
     // Main-scene section lifecycle is already reflected in currentMainState
     // after refreshMainState(), so rebuild the active snapshot from that base
-    // and replay only scene line events on top.
-    activeSceneState = createSceneProjectionState(
-      composeRepositoryState({
-        mainState: currentMainState,
-        activeSceneId,
-        activeSceneState,
-      }),
-      scenePartitionFor(activeSceneId),
-    );
-
+    // and replay only scene line events on top. Pass the previous snapshot,
+    // which still has sections these events delete, so lines moved out of
+    // them before the delete are kept.
     const lineScopedEvents = scopedEvents.filter((committedEvent) => {
       const type = committedEvent?.type;
       return typeof type === "string" && type.startsWith("line.");
     });
 
-    if (lineScopedEvents.length > 0) {
-      activeSceneState = applySceneEventsToLoadedProjection({
-        mainState: currentMainState,
-        sceneState: activeSceneState,
-        sceneId: activeSceneId,
-        sourceEvents: lineScopedEvents,
-        reduceEventsToState,
-      });
-    }
+    activeSceneState = applySceneEventsToLoadedProjection({
+      mainState: currentMainState,
+      sceneState: activeSceneState,
+      sceneId: activeSceneId,
+      sourceEvents: lineScopedEvents,
+      reduceEventsToState,
+    });
 
     await saveSceneProjectionCheckpoint({
       store,
@@ -1733,7 +1749,7 @@ export const createProjectRepositoryRuntime = async ({
 
     async addEvent(event) {
       if (isEventHistoryPending()) {
-        await ensureEventHistoryReady();
+        await prepareEventHistoryForAdd([event]);
       }
 
       const committedEvent = await commitAddedEvent(event);
@@ -1758,7 +1774,7 @@ export const createProjectRepositoryRuntime = async ({
       }
 
       if (isEventHistoryPending()) {
-        await ensureEventHistoryReady();
+        await prepareEventHistoryForAdd(nextEvents);
       }
 
       const committedEvents = [];
