@@ -135,11 +135,14 @@ export const reconcileSceneEditorSelection = (store) => {
   };
 };
 
+// Choices and forms block advancing, so a copied one strands the new section.
+const LINE_SCOPED_INTERACTION_KEYS = new Set(["choice", "form"]);
+
 const createInheritedPresentationActions = (presentationState = {}) => {
   const actions = {};
 
   for (const [key, value] of Object.entries(presentationState || {})) {
-    if (value === undefined) {
+    if (value === undefined || LINE_SCOPED_INTERACTION_KEYS.has(key)) {
       continue;
     }
 

@@ -73,6 +73,127 @@ describe("scene editor section operations", () => {
     expect(overviewRow.scrollIntoView).not.toHaveBeenCalled();
   });
 
+  const dialogueLayout = { id: "dialogue-layout", layoutType: "dialogue-adv" };
+  const control = { resourceId: "control-1", resourceType: "control" };
+  const choice = {
+    resourceId: "choice-layout",
+    items: [
+      {
+        content: "Go on",
+        events: {
+          click: {
+            actions: {
+              sectionTransition: {
+                sceneId: "scene-1",
+                sectionId: "section-2",
+              },
+            },
+          },
+        },
+      },
+    ],
+  };
+  const defaultFirstLineActions = {
+    dialogue: {
+      ui: { resourceId: "dialogue-layout" },
+      mode: "adv",
+      content: [{ text: "" }],
+    },
+    control,
+  };
+
+  const createFirstLineActions = async ({
+    presentationState,
+    inheritPresentationFromSelectedLine,
+  }) => {
+    vi.useFakeTimers();
+
+    try {
+      const projectService = {
+        getState: vi.fn(() => ({
+          layouts: { items: { "dialogue-layout": dialogueLayout } },
+          controls: {
+            items: { "control-1": { id: "control-1", type: "control" } },
+          },
+        })),
+        createSectionItem: vi.fn(async () => {}),
+        createLineItem: vi.fn(async () => {}),
+      };
+
+      await createSceneEditorSectionWithName(
+        {
+          store: {
+            selectSceneId: vi.fn(() => "scene-1"),
+            selectEffectivePresentationState: vi.fn(() => presentationState),
+          },
+          projectService,
+          render: vi.fn(),
+        },
+        "Section Two",
+        vi.fn(),
+        { inheritPresentationFromSelectedLine },
+      );
+
+      return projectService.createLineItem.mock.calls[0][0].data.actions;
+    } finally {
+      vi.useRealTimers();
+    }
+  };
+
+  it("does not copy the selected line's choice or form into a new section", async () => {
+    const actions = await createFirstLineActions({
+      presentationState: {
+        dialogue: {
+          ui: { resourceId: "dialogue-layout" },
+          mode: "adv",
+          content: [{ text: "Pick one" }],
+        },
+        control,
+        choice,
+        form: { resourceId: "form-layout" },
+      },
+      inheritPresentationFromSelectedLine: true,
+    });
+
+    expect(actions).toEqual(defaultFirstLineActions);
+  });
+
+  it("inherits the selected line's state when it has no choice", async () => {
+    const background = { resourceId: "background-1" };
+    const actions = await createFirstLineActions({
+      presentationState: {
+        background,
+        dialogue: {
+          ui: { resourceId: "dialogue-layout" },
+          mode: "adv",
+          content: [{ text: "Hello" }],
+        },
+        control,
+      },
+      inheritPresentationFromSelectedLine: true,
+    });
+
+    expect(actions).toEqual({ ...defaultFirstLineActions, background });
+  });
+
+  it("falls back to the default first line when only a choice was inheritable", async () => {
+    const actions = await createFirstLineActions({
+      presentationState: { choice },
+      inheritPresentationFromSelectedLine: true,
+    });
+
+    expect(actions).toEqual(defaultFirstLineActions);
+  });
+
+  it("uses the default first line when not inheriting from a choice line", async () => {
+    const actions = await createFirstLineActions({
+      presentationState: { control, choice },
+      inheritPresentationFromSelectedLine: false,
+    });
+
+    expect(actions).toEqual(defaultFirstLineActions);
+  });
+
   it("does not select or scroll to a newly created section", async () => {
     vi.useFakeTimers();
 
