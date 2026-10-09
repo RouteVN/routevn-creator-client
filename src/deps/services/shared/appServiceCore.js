@@ -123,6 +123,19 @@ export const createAppServiceCore = ({
       errorTracker.capture(error, context);
     },
 
+    // Saves what the open page still holds in memory, at the moments the app
+    // leaves the user's hands: sent to the background, where the system may end
+    // it, or about to quit. Nothing can wait on a failure there, so it is
+    // reported, not thrown.
+    async saveBeforeSuspend(reason) {
+      try {
+        await appShellService.prepareNavigation({ reason });
+      } catch (error) {
+        console.error("[app] Failed to save before suspending", error);
+        errorTracker.capture(error, { operation: "app.saveBeforeSuspend" });
+      }
+    },
+
     getTheme,
     applyTheme,
 

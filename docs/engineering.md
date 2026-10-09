@@ -567,6 +567,8 @@ Handler-facing facade for:
 
 - navigation
 - awaited pre-navigation preparation
+- saving the open page before the app goes to the background or quits
+  (`saveBeforeSuspend`)
 - dialogs and toasts
 - dropdowns
 - user config
@@ -1590,14 +1592,36 @@ Scene editor draft persistence uses latest-wins coalescing for draft flushes:
 if a running flush already has a pending replacement, the newer pending flush
 replaces it. This coalesces scheduled draft tasks, not generated commands.
 
+The sync client rejects any single event over 64 KiB (UTF-8 bytes of the whole
+message). Story commands that carry many lines are therefore split by
+`chunkByJsonBytes` into consecutive commands of at most 32 KiB of JSON: line
+creates and deletes in `syncSectionLinesSnapshot`, and the line commands of
+section duplicates and cross-scene section moves. They are still submitted in
+one batch. A single line larger than that cannot be split and fails to save.
+
 If a running flush saves a stale snapshot and notices that the draft advanced
 during the write, the newer draft is kept dirty and rescheduled through the
 normal debounce/throttle path instead of being submitted immediately. This
 avoids inserting every intermediate text version into `local_drafts`.
 
+A section save that fails, refused with `{ valid: false }` or thrown, fails
+fast. It is not submitted again, because its commands may be partly stored
+already. Only that section's unsaved changes are dropped: its draft and the
+editor showing it go back to the stored lines, undo history is reset, and the
+user is told at once, by an alert naming the section and scene, that the
+changes were removed. Other sections still save and the flush completes, so
+navigation, backup and cleanup carry on and the user does not keep building on
+lines that were never stored. Flushes read live lines only from the section's
+own editor, never another section's, and a flush queued before a drop does not
+save the lines it was handed then.
+
 Editor blur uses the normal text debounce path; navigation, preview, and
 explicit persistence workflows remain responsible for immediate flushes when
-leaving the editing context. Scheduled autosaves defer while a previous draft
+leaving the editing context. The editor reports line changes only while it has
+focus, so before the render that follows a blur, the page takes the blurred
+section editor's lines into its draft. Otherwise a change that reached the
+editor after the blur, such as a keyboard finishing a word, would be replaced
+by the draft's older lines and never saved. Scheduled autosaves defer while a previous draft
 flush is still writing, then reschedule through the normal debounce/throttle
 path instead of queueing another storage submit behind the in-flight write.
 
@@ -1612,6 +1636,20 @@ repository-state reconciliation cannot accidentally clear the active throttle
 window. The same minimum-interval check runs inside the queued draft-flush task
 before `syncSectionLinesSnapshot()` is called, so a task already accepted by the
 latest-task queue still reschedules instead of writing too soon.
+
+The app saves the open page when it leaves the user's hands.
+`appService.saveBeforeSuspend` runs the before-navigation hooks with the
+`background` reason when the Android or iOS app goes inactive (the activity
+signal in `src/deps/clients/mobileLifecycle.js`), and with `quit` after the
+desktop quit confirmation, waiting at most five seconds before closing. A
+failure is reported, not thrown. The scene editor treats both reasons like a
+backup check: it saves unsaved lines and rewrites nothing when there are none.
+Because the app may not get another autosave, it also waits for saves already
+queued, such as a line action still being written, and writes lines typed
+meanwhile at once, up to three passes. Other editors save their open values
+once through their before-navigation hooks. This is best effort: the iOS shell
+does not request background time for the save, and the macOS Quit menu item
+and Command-Q end the app without a close request.
 
 ### Scene Asset Loading
 

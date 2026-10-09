@@ -52,6 +52,8 @@ const mocked = vi.hoisted(() => ({
     showAlert: vi.fn(),
     showToast: vi.fn(),
   },
+  // The activity signal the setups subscribe to, as the audio runtime gives it.
+  audioRuntime: { subscribeActivity: vi.fn() },
   projectService: {
     getRepositoryState: vi.fn(),
     updateLayoutElement: vi.fn(),
@@ -68,10 +70,16 @@ vi.mock("../../src/deps/services/graphicsService.js", () => ({
   createGraphicsService: async () => ({}),
 }));
 vi.mock("../../src/deps/clients/android/audioRuntime.js", () => ({
-  createAndroidAudioRuntime: () => ({ graphicsRuntime: {} }),
+  createAndroidAudioRuntime: () => ({
+    graphicsRuntime: {},
+    subscribeActivity: mocked.audioRuntime.subscribeActivity,
+  }),
 }));
 vi.mock("../../src/deps/clients/mobileAudioRuntime.js", () => ({
-  createMobileAudioRuntime: () => ({ graphicsRuntime: {} }),
+  createMobileAudioRuntime: () => ({
+    graphicsRuntime: {},
+    subscribeActivity: mocked.audioRuntime.subscribeActivity,
+  }),
 }));
 vi.mock("../../src/deps/clients/ios/graphicsAudioOutput.js", () => ({
   createIOSGraphicsAudioOutput: () => ({ graphicsRuntime: {} }),
@@ -572,5 +580,34 @@ describe("mobile update API setup", () => {
     progress.close();
     await checking;
     expect(mocked.globalUI.showConfirm).toHaveBeenCalledOnce();
+  });
+});
+
+describe("mobile setup saves the open page as the app goes inactive", () => {
+  it.each([
+    ["Android", "../../src/setup.android.js"],
+    ["iOS", "../../src/setup.ios.js"],
+  ])("on %s", async (_platform, setupPath) => {
+    const {
+      deps: { pages },
+    } = await import(/* @vite-ignore */ setupPath);
+    const saveBeforeSuspend = vi
+      .spyOn(pages.appService, "saveBeforeSuspend")
+      .mockResolvedValue(undefined);
+    const listeners = mocked.audioRuntime.subscribeActivity.mock.calls.map(
+      ([listener]) => listener,
+    );
+    expect(listeners.length).toBeGreaterThan(0);
+
+    for (const listener of listeners) {
+      await listener(true);
+    }
+    expect(saveBeforeSuspend).not.toHaveBeenCalled();
+
+    for (const listener of listeners) {
+      await listener(false);
+    }
+    expect(saveBeforeSuspend).toHaveBeenCalledTimes(1);
+    expect(saveBeforeSuspend).toHaveBeenCalledWith("background");
   });
 });

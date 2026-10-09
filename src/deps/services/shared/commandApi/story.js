@@ -5,6 +5,48 @@ import {
 } from "../projectRepository.js";
 import { COMMAND_TYPES } from "../../../../internal/project/commands.js";
 
+// The sync client rejects a single event whose serialized message is over
+// 64 KiB, counted in UTF-8 bytes. Commands that carry many lines are split to
+// half of that, so a long paste or a large section is saved as several events
+// instead of failing as a whole.
+const MAX_LINE_COMMAND_PAYLOAD_BYTES = 32 * 1024;
+
+const textEncoder = new TextEncoder();
+
+const getJsonByteLength = (value) =>
+  textEncoder.encode(JSON.stringify(value)).length;
+
+// Splits `items` into consecutive runs that each stay within `maxBytes` of
+// JSON. An item that is larger on its own cannot be split, so it gets a run of
+// its own.
+export const chunkByJsonBytes = (
+  items,
+  maxBytes = MAX_LINE_COMMAND_PAYLOAD_BYTES,
+) => {
+  const chunks = [];
+  let chunk = [];
+  let chunkBytes = 0;
+
+  for (const item of items) {
+    // One more byte for the comma that separates items in an array.
+    const itemBytes = getJsonByteLength(item) + 1;
+    if (chunk.length > 0 && chunkBytes + itemBytes > maxBytes) {
+      chunks.push(chunk);
+      chunk = [];
+      chunkBytes = 0;
+    }
+
+    chunk.push(item);
+    chunkBytes += itemBytes;
+  }
+
+  if (chunk.length > 0) {
+    chunks.push(chunk);
+  }
+
+  return chunks;
+};
+
 export const createStoryCommandApi = (shared) => {
   const appendMissingIds = (orderedIds, allIds) => {
     const seen = new Set();
@@ -597,12 +639,12 @@ export const createStoryCommandApi = (shared) => {
       const deletedLineIds = currentLineIds.filter(
         (lineId) => !desiredLineIdsSet.has(lineId),
       );
-      if (deletedLineIds.length > 0) {
+      for (const lineIds of chunkByJsonBytes(deletedLineIds)) {
         commands.push({
           scope: "story",
           type: COMMAND_TYPES.LINE_DELETE,
           payload: {
-            lineIds: deletedLineIds,
+            lineIds,
           },
           partition,
         });
@@ -638,16 +680,20 @@ export const createStoryCommandApi = (shared) => {
           }
 
           if (newLines.length > 0) {
-            commands.push({
-              scope: "story",
-              type: COMMAND_TYPES.LINE_CREATE,
-              payload: {
-                sectionId,
-                lines: newLines,
-                index,
-              },
-              partition,
-            });
+            let chunkIndex = index;
+            for (const lines of chunkByJsonBytes(newLines)) {
+              commands.push({
+                scope: "story",
+                type: COMMAND_TYPES.LINE_CREATE,
+                payload: {
+                  sectionId,
+                  lines,
+                  index: chunkIndex,
+                },
+                partition,
+              });
+              chunkIndex += lines.length;
+            }
             workingOrder.splice(
               index,
               0,
@@ -1188,14 +1234,14 @@ export const createStoryCommandApi = (shared) => {
         },
       ];
 
-      if (duplicateLines.length > 0) {
+      for (const lines of chunkByJsonBytes(duplicateLines)) {
         commands.push({
           scope: "story",
           partition: getSceneOnlyPartition(context, [sectionLocation.sceneId]),
           type: COMMAND_TYPES.LINE_CREATE,
           payload: buildLineCreatePayload({
             sectionId: duplicateSectionId,
-            normalizedLines: duplicateLines,
+            normalizedLines: lines,
             position: "last",
           }),
         });
@@ -1312,37 +1358,37 @@ export const createStoryCommandApi = (shared) => {
       }
 
       if (isCrossSceneMove && movedLineIds.length > 0) {
-        const commands = [
-          {
-            scope: "story",
-            partition: getSceneOnlyPartition(context, [sourceSceneId]),
-            type: COMMAND_TYPES.LINE_DELETE,
-            payload: {
-              lineIds: movedLineIds,
-            },
+        const commands = chunkByJsonBytes(movedLineIds).map((lineIds) => ({
+          scope: "story",
+          partition: getSceneOnlyPartition(context, [sourceSceneId]),
+          type: COMMAND_TYPES.LINE_DELETE,
+          payload: {
+            lineIds,
           },
-          {
-            scope: "story",
-            partition: getMainScenePartition(context, [
-              sourceSceneId,
-              targetSceneId,
-            ]),
-            type: COMMAND_TYPES.SECTION_MOVE,
-            payload,
-          },
-        ];
+        }));
+        commands.push({
+          scope: "story",
+          partition: getMainScenePartition(context, [
+            sourceSceneId,
+            targetSceneId,
+          ]),
+          type: COMMAND_TYPES.SECTION_MOVE,
+          payload,
+        });
 
         for (const sectionLineSet of movedSectionLineSets) {
-          commands.push({
-            scope: "story",
-            partition: getSceneOnlyPartition(context, [targetSceneId]),
-            type: COMMAND_TYPES.LINE_CREATE,
-            payload: buildLineCreatePayload({
-              sectionId: sectionLineSet.sectionId,
-              normalizedLines: sectionLineSet.lines,
-              position: "last",
-            }),
-          });
+          for (const lines of chunkByJsonBytes(sectionLineSet.lines)) {
+            commands.push({
+              scope: "story",
+              partition: getSceneOnlyPartition(context, [targetSceneId]),
+              type: COMMAND_TYPES.LINE_CREATE,
+              payload: buildLineCreatePayload({
+                sectionId: sectionLineSet.sectionId,
+                normalizedLines: lines,
+                position: "last",
+              }),
+            });
+          }
         }
 
         return shared.submitCommandsWithContext({

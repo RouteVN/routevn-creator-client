@@ -28,6 +28,7 @@ import {
   readClientUpdateContext,
 } from "./deps/clients/clientUpdates.js";
 import { createMobileUpdateRequest } from "./deps/clients/mobileUpdateRequest.js";
+import { saveWhenAppGoesInactive } from "./deps/clients/mobileLifecycle.js";
 
 registerPrimitives();
 
@@ -191,6 +192,7 @@ const appService = createAppService({
   uiConfig,
   triggerTestCrash: (kind) => callAndroidBridge("triggerTestCrash", { kind }),
 });
+saveWhenAppGoesInactive({ runtime: androidAudioRuntime, appService });
 await appService.initUserConfig();
 // Startup lands directly on Projects without waiting for native backup status;
 // the footer backup card is the entry point for backup setup.

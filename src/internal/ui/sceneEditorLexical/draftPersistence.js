@@ -10,6 +10,7 @@ import {
   enqueueSceneEditorPersistence,
 } from "../sceneEditor/persistenceQueue.js";
 import { selectSceneEditorCopy } from "../sceneEditor/sceneEditorCopy.js";
+import { withErrorDetails } from "../../errorDetails.js";
 import {
   emitSceneEditorTiming,
   getSceneEditorTimingDurationMs,
@@ -154,11 +155,71 @@ const selectSceneEditorDraftSectionByTarget = (store, draftSection) => {
   );
 };
 
+// Saving reports a refusal as a `{ valid: false, error }` result and an
+// unexpected failure as a thrown error; both come out as an Error.
+const toSaveError = (failure) => {
+  if (failure instanceof Error) {
+    return failure;
+  }
+
+  const error = new Error(failure?.message ?? "Failed to save scene changes");
+  error.code = failure?.code;
+  return error;
+};
+
+// Saves a draft section's lines once and resolves to the Error when that
+// failed, or undefined when it succeeded. A failed save is not repeated: a
+// failure can come after part of the commands were stored, and saving them
+// again would store them twice.
+const saveDraftSectionLines = async (deps, { draftSection, snapshotLines }) => {
+  try {
+    const result = await deps.projectService.syncSectionLinesSnapshot({
+      sectionId: draftSection?.sectionId,
+      lines: snapshotLines,
+      actionLineIds: draftSection?.actionLineIds,
+    });
+    return result?.valid === false ? toSaveError(result.error) : undefined;
+  } catch (error) {
+    return toSaveError(error);
+  }
+};
+
+const notifyDraftSaveFailure = (deps, { error, sceneName, sectionName }) => {
+  const { appService, i18n } = deps;
+  const copy = selectSceneEditorCopy(i18n);
+  const message = (
+    copy.failedSaveSectionChangesDiscarded ??
+    "Your latest changes to section “{sectionName}” in scene “{sceneName}” could not be saved and were removed. Please enter them again."
+  )
+    .replaceAll("{sectionName}", sectionName)
+    .replaceAll("{sceneName}", sceneName);
+
+  console.error("[sceneEditor] Failed to save scene changes", error);
+  appService.reportError(error, {
+    operation: "sceneEditor.saveDraft",
+    code: error.code,
+  });
+  appService.showAlertWhenIdle({
+    title: copy.errorTitle ?? "Error",
+    message: withErrorDetails(
+      message,
+      error,
+      copy.errorDetailsLabel ?? "Details:",
+    ),
+  });
+};
+
 export const createSceneEditorDraftPersistence = ({
   syncDraftSectionFromLines = (deps) => deps.store.selectDraftSection(),
   syncDraftSectionFromLiveEditor = (deps) => deps.store.selectDraftSection(),
   syncStoreProjectState = () => {},
   reconcileCurrentEditorSession = () => {},
+  // Called for a draft section that could not be saved. It must put the
+  // section, and the editor showing it, back to the stored lines, so the user
+  // does not keep building on lines that were never stored.
+  revertFailedDraftSection = async () => {},
+  // The names to tell the user which section lost its changes.
+  describeDraftSection = () => ({ sceneName: "", sectionName: "" }),
   onDidFlush = async () => {},
   nowMs = defaultNowMs,
   timing = DEFAULT_SCENE_EDITOR_DRAFT_SAVE_TIMING,
@@ -186,6 +247,7 @@ export const createSceneEditorDraftPersistence = ({
     const { store } = deps;
     const timingFlushStartedAt = getSceneEditorTimingNow();
     const targetSectionId = sectionId || store.selectSelectedSectionId?.();
+    const revertGeneration = store.selectDraftRevertGeneration?.();
     clearScheduledDraftFlush(store);
     const initialSyncStartedAt = getSceneEditorTimingNow();
     syncDraftInput(deps, { liveLines, sectionId: targetSectionId });
@@ -256,7 +318,15 @@ export const createSceneEditorDraftPersistence = ({
           const taskStartedAt = getSceneEditorTimingNow();
           const taskSections = [];
           const taskSyncStartedAt = getSceneEditorTimingNow();
-          syncDraftInput(deps, { liveLines, sectionId: targetSectionId });
+          // Lines handed over before a draft was dropped may hold the dropped
+          // text; read the editor again instead.
+          syncDraftInput(deps, {
+            liveLines:
+              store.selectDraftRevertGeneration?.() === revertGeneration
+                ? liveLines
+                : undefined,
+            sectionId: targetSectionId,
+          });
           const taskSyncDurationMs =
             getSceneEditorTimingDurationMs(taskSyncStartedAt);
           const taskDraftSections =
@@ -328,14 +398,41 @@ export const createSceneEditorDraftPersistence = ({
               }
 
               const syncSnapshotStartedAt = getSceneEditorTimingNow();
-              await deps.projectService.syncSectionLinesSnapshot({
-                sectionId: draftSection?.sectionId,
-                lines: snapshotLines,
-                actionLineIds: draftSection?.actionLineIds,
+              const saveError = await saveDraftSectionLines(deps, {
+                draftSection,
+                snapshotLines,
               });
               const syncSnapshotDurationMs = getSceneEditorTimingDurationMs(
                 syncSnapshotStartedAt,
               );
+              if (saveError) {
+                // Fail fast: drop only this section's unsaved changes and say
+                // so at once. Other sections still save, and the user carries
+                // on from the lines that are stored.
+                const { sceneName, sectionName } = describeDraftSection(
+                  deps,
+                  draftSection,
+                );
+                await revertFailedDraftSection(deps, {
+                  draftSection,
+                  error: saveError,
+                });
+                store.markDraftSectionReverted?.();
+                notifyDraftSaveFailure(deps, {
+                  error: saveError,
+                  sceneName,
+                  sectionName,
+                });
+                taskSections.push({
+                  sectionId: draftSection?.sectionId,
+                  lineCount: snapshotLines.length,
+                  cloneDurationMs,
+                  syncSnapshotDurationMs,
+                  failed: true,
+                  errorCode: saveError.code,
+                });
+                continue;
+              }
               const storeSyncStartedAt = getSceneEditorTimingNow();
               syncStoreProjectState(store, deps.projectService);
               const storeSyncDurationMs =
@@ -537,9 +634,18 @@ export const createSceneEditorDraftPersistence = ({
     });
   };
 
+  // Resolves once every save already queued for the project has run, such as
+  // a line action still being written.
+  const waitForSceneEditorPersistence = (deps) =>
+    enqueueSceneEditorPersistence({
+      owner: deps.projectService,
+      task: async () => {},
+    });
+
   return {
     cancelSceneEditorDraftFlush,
     flushSceneEditorDrafts,
+    waitForSceneEditorPersistence,
     getDraftSaveDelayMs: (store, options = {}) =>
       getSceneEditorDraftSaveDelayMs(store, {
         nowMs,

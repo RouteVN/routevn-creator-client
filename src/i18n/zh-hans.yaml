@@ -2044,6 +2044,7 @@ sceneEditorPage:
   failedRenderCanvas: "无法更新画布。"
   failedSaveBeforePreview: "预览前无法保存场景更改。"
   failedSaveSceneChanges: "无法保存场景更改。"
+  failedSaveSectionChangesDiscarded: "无法保存场景“{sceneName}”中段落“{sectionName}”的最新更改，这些更改已被撤销。请重新输入。"
   failedSaveDialogueAction: "无法保存对话动作。"
   failedSaveLineActions: "无法保存该行的动作。"
   failedSaveSectionTransition: "无法保存段落跳转。"

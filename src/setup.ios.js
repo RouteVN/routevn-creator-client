@@ -33,6 +33,7 @@ import {
 } from "./deps/clients/clientUpdates.js";
 import { createMobileUpdateRequest } from "./deps/clients/mobileUpdateRequest.js";
 import { createIOSUpdater } from "./deps/clients/ios/updater.js";
+import { saveWhenAppGoesInactive } from "./deps/clients/mobileLifecycle.js";
 
 registerPrimitives();
 
@@ -206,6 +207,7 @@ const appService = createAppService({
   uiConfig,
   triggerTestCrash: (kind) => callIOSBridge("triggerTestCrash", { kind }),
 });
+saveWhenAppGoesInactive({ runtime: iosAudioRuntime, appService });
 await appService.initUserConfig();
 await appService.initializeProjectFolderSetup();
 if (!appService.getProjectFolderSetup().configured) {
