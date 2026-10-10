@@ -515,6 +515,7 @@ export const handleItemDuplicate = async (deps, payload) => {
     height: itemData.height,
     modules: structuredClone(itemData.modules),
   };
+  duplicateData.name = store.selectDuplicateItemName({ itemId });
   if (Number.isFinite(itemData.seed)) {
     duplicateData.seed = itemData.seed;
   }

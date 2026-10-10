@@ -123,7 +123,7 @@ describe("audio effect command API", () => {
     });
   });
 
-  it("duplicates beside the source and strips persisted wrapper fields", async () => {
+  it("duplicates beside the source with a numbered name and strips persisted wrapper fields", async () => {
     const { context, shared } = createShared();
     const api = createCatalogResourceCommandApi(shared);
 
@@ -146,7 +146,7 @@ describe("audio effect command API", () => {
       type: COMMAND_TYPES.AUDIOEFFECT_CREATE,
       payload: {
         audioEffectId: "generated-effect",
-        data: crossfade,
+        data: { ...crossfade, name: "Crossfade 2" },
         parentId: "folder",
         index: 2,
       },

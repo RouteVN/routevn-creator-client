@@ -290,7 +290,7 @@ describe("particles handlers", () => {
     expect(page.view().isEditDialogOpen).toBe(false);
   });
 
-  it("duplicates a particle with its values, name, tags, thumbnail and its hash, and preview background, in its folder", async () => {
+  it("duplicates a particle with its values, a numbered name, tags, thumbnail and its hash, and preview background, in its folder", async () => {
     const page = await createPage();
     const { deps } = page;
     const source = page.repositoryState.particles.items["particle-1"];
@@ -305,7 +305,7 @@ describe("particles handlers", () => {
       deps.projectService.createParticle.mock.calls[0];
     expect(data).toEqual({
       type: "particle",
-      name: "Particle One",
+      name: "Particle One 2",
       description: "Rainfall.",
       tagIds: ["tag-1"],
       width: source.width,

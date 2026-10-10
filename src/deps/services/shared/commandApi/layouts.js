@@ -5,7 +5,10 @@ import {
   cloneLayoutElementsWithFreshIds,
   normalizeLayoutSchemaVersion,
 } from "../../../../internal/project/layout.js";
-import { toFlatItems } from "../../../../internal/project/tree.js";
+import {
+  createDuplicateItemName,
+  toFlatItems,
+} from "../../../../internal/project/tree.js";
 
 const getLayoutsResourcePartition = ({ shared, context }) => {
   return shared.resourceTypePartitionFor(context.projectId, "layouts");
@@ -180,9 +183,9 @@ export const createLayoutCommandApi = (shared) => ({
     const sourceLayoutClone = structuredClone(sourceLayout);
     delete sourceLayoutClone.id;
     delete sourceLayoutClone.parentId;
+    delete sourceLayoutClone.name;
 
     const {
-      name,
       layoutType = "general",
       elements = createTreeCollection(),
       ...data
@@ -191,7 +194,7 @@ export const createLayoutCommandApi = (shared) => ({
     return submitCreateLayoutItem({
       shared,
       context,
-      name,
+      name: createDuplicateItemName(context.state.layouts, layoutId),
       layoutType,
       elements: cloneLayoutElementsWithFreshIds(elements, shared.createId),
       parentId: resolveLayoutParentId(context.state?.layouts, layoutId),

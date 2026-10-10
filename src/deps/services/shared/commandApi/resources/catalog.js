@@ -1,5 +1,8 @@
 import { COMMAND_TYPES } from "../../../../../internal/project/commands.js";
-import { toFlatItems } from "../../../../../internal/project/tree.js";
+import {
+  createDuplicateItemName,
+  toFlatItems,
+} from "../../../../../internal/project/tree.js";
 import {
   submitCreateResourceCommand,
   submitDeleteResourceCommand,
@@ -97,6 +100,10 @@ export const createCatalogResourceCommandApi = (shared) => ({
     const nextData = structuredClone(sourceAnimation);
     delete nextData.id;
     delete nextData.parentId;
+    nextData.name = createDuplicateItemName(
+      context.state.animations,
+      animationId,
+    );
 
     return submitCreateResourceCommand({
       shared,
@@ -184,6 +191,10 @@ export const createCatalogResourceCommandApi = (shared) => ({
     const nextData = structuredClone(sourceAudioEffect);
     delete nextData.id;
     delete nextData.parentId;
+    nextData.name = createDuplicateItemName(
+      context.state.audioEffects,
+      audioEffectId,
+    );
 
     return submitCreateResourceCommand({
       shared,
@@ -499,6 +510,10 @@ export const createCatalogResourceCommandApi = (shared) => ({
     const nextData = structuredClone(sourceTextStyle);
     delete nextData.id;
     delete nextData.parentId;
+    nextData.name = createDuplicateItemName(
+      context.state.textStyles,
+      textStyleId,
+    );
 
     return submitCreateResourceCommand({
       shared,
