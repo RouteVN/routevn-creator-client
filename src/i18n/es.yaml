@@ -2010,6 +2010,7 @@ sceneEditorPage:
   downLabel: "Abajo"
   dontInheritOption: "No heredar"
   editSectionTitle: "Editar sección"
+  cannotDeleteReferencedSection: "No se puede eliminar esta sección porque otra sección enlaza con ella. Primero quita esos enlaces."
   failedDeleteSection: "No se pudo eliminar la sección"
   failedDuplicateSection: "No se pudo duplicar la sección"
   failedDownloadCanvas: "No se pudo descargar el lienzo."

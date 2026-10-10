@@ -2010,6 +2010,7 @@ sceneEditorPage:
   downLabel: "ลง"
   dontInheritOption: "ไม่สืบทอด"
   editSectionTitle: "แก้ไขส่วน"
+  cannotDeleteReferencedSection: "ไม่สามารถลบส่วนนี้ได้เนื่องจากมีส่วนอื่นลิงก์มาที่ส่วนนี้ ลบลิงก์เหล่านั้นก่อน"
   failedDeleteSection: "ลบส่วนไม่สำเร็จ"
   failedDuplicateSection: "ทำสำเนาส่วนไม่สำเร็จ"
   failedDownloadCanvas: "ดาวน์โหลดแคนวาสไม่สำเร็จ"

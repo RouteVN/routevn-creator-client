@@ -1,5 +1,6 @@
-import { describe, expect, it, vi } from "vitest";
+import { afterEach, describe, expect, it, vi } from "vitest";
 import { applyBackgroundTransformResizeChange } from "../../src/internal/ui/sceneEditor/backgroundTransformEditor.js";
+import { selectSceneEditorCopy } from "../../src/internal/ui/sceneEditor/sceneEditorCopy.js";
 import {
   handleActionsDialogClose,
   handleActionTransformCustomize,
@@ -27,7 +28,13 @@ import {
   scrollEntrySelectionIntoView,
   syncSceneEditorRoutePayload,
 } from "../../src/pages/sceneEditorLexical/sceneEditorLexical.handlers.js";
-import { EN_I18N } from "../support/i18n.js";
+import {
+  EN_I18N,
+  ES_I18N,
+  JA_I18N,
+  TH_I18N,
+  ZH_HANS_I18N,
+} from "../support/i18n.js";
 
 // The page's undo history calls, for tests about other behavior. Line
 // action commands read their line from the scene, by its id.
@@ -3026,74 +3033,6 @@ describe("sceneEditorLexical.handlers actions dialog", () => {
     }
   });
 
-  it("closes the section dropdown before showing a delete validation alert", async () => {
-    const store = {
-      selectDropdownMenu: vi.fn(() => ({
-        sectionId: "section-1",
-      })),
-      hideDropdownMenu: vi.fn(),
-      selectSceneId: vi.fn(() => "scene-1"),
-      selectSelectedSectionId: vi.fn(() => "section-1"),
-      selectDraftSaveTimerId: vi.fn(() => undefined),
-      selectDraftSectionBySectionId: vi.fn(() => ({
-        sceneId: "scene-1",
-        sectionId: "section-1",
-        dirty: false,
-        lines: [],
-      })),
-      selectPendingDraftSections: vi.fn(() => []),
-      setDraftSavePendingSinceAt: vi.fn(),
-    };
-    const render = vi.fn();
-    const showAlert = vi.fn();
-    const deps = {
-      i18n: EN_I18N,
-      store,
-      render,
-      refs: {},
-      projectService: {
-        deleteSectionItem: vi.fn(async () => ({
-          valid: false,
-          error: {
-            message:
-              "This section can't be deleted because another section references it.",
-          },
-        })),
-      },
-      subject: {
-        dispatch: vi.fn(),
-      },
-      appService: {
-        showAlert,
-      },
-    };
-
-    await expect(
-      handleDropdownMenuClickItem(deps, {
-        _event: {
-          detail: {
-            item: {
-              value: "delete-section",
-            },
-          },
-        },
-      }),
-    ).rejects.toThrow(
-      "This section can't be deleted because another section references it.",
-    );
-
-    expect(store.hideDropdownMenu).toHaveBeenCalledOnce();
-    expect(render).toHaveBeenCalled();
-    expect(showAlert).toHaveBeenCalledWith({
-      message:
-        "This section can't be deleted because another section references it.",
-      title: "Error",
-    });
-    expect(render.mock.invocationCallOrder[0]).toBeLessThan(
-      showAlert.mock.invocationCallOrder[0],
-    );
-  });
-
   it("opens section create dialog with below placement from the section menu", async () => {
     const store = {
       selectDropdownMenu: vi.fn(() => ({
@@ -3219,5 +3158,383 @@ describe("sceneEditorLexical.handlers actions dialog", () => {
       defaultName: "Section 3",
     });
     expect(deps.render).toHaveBeenCalledOnce();
+  });
+});
+
+describe("sceneEditorLexical.handlers refused section commands", () => {
+  afterEach(() => {
+    vi.restoreAllMocks();
+  });
+
+  // The command layer words this refusal in English, for logs.
+  const sectionReferencedResult = () => ({
+    valid: false,
+    error: {
+      message:
+        "This section can't be deleted because another section references it.",
+      code: "section_referenced",
+      details: {
+        sceneId: "scene-2",
+        sceneName: "Scene 2",
+        sectionId: "section-2",
+        sectionName: "Branch",
+        lineId: "line-1",
+        referencedSectionId: "section-1",
+      },
+    },
+  });
+
+  const menuItemPayload = (value) => ({
+    _event: { detail: { item: { value } } },
+  });
+
+  const createSectionMenuDeps = ({
+    i18n = EN_I18N,
+    sectionId = "section-1",
+    projectService,
+  }) => ({
+    i18n,
+    store: {
+      selectDropdownMenu: vi.fn(() => ({ sectionId })),
+      hideDropdownMenu: vi.fn(),
+      selectSceneId: vi.fn(() => "scene-1"),
+      selectSelectedSectionId: vi.fn(() => sectionId),
+      selectScene: vi.fn(() => ({
+        sections: [{ id: "section-1" }, { id: "section-2" }],
+      })),
+      setSelectedSectionId: vi.fn(),
+      selectDraftSaveTimerId: vi.fn(() => undefined),
+      selectDraftSectionBySectionId: vi.fn(() => ({
+        sceneId: "scene-1",
+        sectionId,
+        dirty: false,
+        lines: [],
+      })),
+      selectPendingDraftSections: vi.fn(() => []),
+      setDraftSavePendingSinceAt: vi.fn(),
+    },
+    render: vi.fn(),
+    refs: {},
+    projectService: { getRepositoryState: vi.fn(), ...projectService },
+    subject: { dispatch: vi.fn() },
+    appService: { showAlert: vi.fn() },
+  });
+
+  // After a command succeeds the page reloads the saved project, reselects a
+  // section and redraws the canvas. None of that applies to a refused one.
+  const expectNothingFollowedTheFailedSave = ({
+    store,
+    projectService,
+    subject,
+  }) => {
+    expect(projectService.getRepositoryState).not.toHaveBeenCalled();
+    expect(store.setSelectedSectionId).not.toHaveBeenCalled();
+    expect(subject.dispatch).not.toHaveBeenCalled();
+  };
+
+  const deleteReferencedSection = async (i18n) => {
+    const deps = createSectionMenuDeps({
+      i18n,
+      projectService: {
+        deleteSectionItem: vi.fn(async () => sectionReferencedResult()),
+      },
+    });
+
+    await expect(
+      handleDropdownMenuClickItem(deps, menuItemPayload("delete-section")),
+    ).resolves.toBeUndefined();
+
+    expect(
+      deps.projectService.deleteSectionItem,
+    ).toHaveBeenCalledExactlyOnceWith({
+      sceneId: "scene-1",
+      sectionIds: ["section-1"],
+    });
+    expect(deps.store.hideDropdownMenu).toHaveBeenCalledOnce();
+    expect(deps.render.mock.invocationCallOrder[0]).toBeLessThan(
+      deps.appService.showAlert.mock.invocationCallOrder[0],
+    );
+    expectNothingFollowedTheFailedSave(deps);
+    return deps;
+  };
+
+  it("tells the user a referenced section can't be deleted, and ends the action without throwing", async () => {
+    const { appService } = await deleteReferencedSection(EN_I18N);
+
+    expect(appService.showAlert).toHaveBeenCalledExactlyOnceWith({
+      message:
+        "This section can't be deleted because another section links to it. Remove those links first.",
+      title: "Error",
+    });
+  });
+
+  it.each([
+    ["Spanish", ES_I18N],
+    ["Japanese", JA_I18N],
+    ["Thai", TH_I18N],
+    ["Simplified Chinese", ZH_HANS_I18N],
+  ])(
+    "tells the user in %s that a referenced section can't be deleted",
+    async (_language, i18n) => {
+      const { appService } = await deleteReferencedSection(i18n);
+      const copy = selectSceneEditorCopy(i18n);
+
+      expect(appService.showAlert).toHaveBeenCalledExactlyOnceWith({
+        message: copy.cannotDeleteReferencedSection,
+        title: copy.errorTitle,
+      });
+      expect(copy.cannotDeleteReferencedSection).not.toBe(
+        EN_I18N.sceneEditorPage.cannotDeleteReferencedSection,
+      );
+    },
+  );
+
+  it("leads with the localized fallback and adds the technical details for any other refusal", async () => {
+    const consoleError = vi
+      .spyOn(console, "error")
+      .mockImplementation(() => {});
+    const deps = createSectionMenuDeps({
+      i18n: JA_I18N,
+      projectService: {
+        deleteSectionItem: vi.fn(async () => ({
+          valid: false,
+          error: {
+            message: "Section store is read-only.",
+            code: "store_read_only",
+          },
+        })),
+      },
+    });
+    const copy = selectSceneEditorCopy(JA_I18N);
+
+    await expect(
+      handleDropdownMenuClickItem(deps, menuItemPayload("delete-section")),
+    ).resolves.toBeUndefined();
+
+    expect(deps.appService.showAlert).toHaveBeenCalledExactlyOnceWith({
+      message: `${copy.failedDeleteSection}\n\n${copy.errorDetailsLabel}\nSection store is read-only.`,
+      title: copy.errorTitle,
+    });
+    expect(consoleError).toHaveBeenCalledOnce();
+    expectNothingFollowedTheFailedSave(deps);
+  });
+
+  it("shows only the localized fallback when a refusal says nothing more", async () => {
+    vi.spyOn(console, "error").mockImplementation(() => {});
+    const deps = createSectionMenuDeps({
+      projectService: {
+        deleteSectionItem: vi.fn(async () => ({ valid: false })),
+      },
+    });
+
+    await expect(
+      handleDropdownMenuClickItem(deps, menuItemPayload("delete-section")),
+    ).resolves.toBeUndefined();
+
+    expect(deps.appService.showAlert).toHaveBeenCalledExactlyOnceWith({
+      message: "Failed to delete section",
+      title: "Error",
+    });
+    expectNothingFollowedTheFailedSave(deps);
+  });
+
+  it("still throws when saving fails unexpectedly", async () => {
+    const storageError = new Error("storage unavailable");
+    const deps = createSectionMenuDeps({
+      projectService: {
+        deleteSectionItem: vi.fn(async () => {
+          throw storageError;
+        }),
+      },
+    });
+
+    await expect(
+      handleDropdownMenuClickItem(deps, menuItemPayload("delete-section")),
+    ).rejects.toBe(storageError);
+
+    expectNothingFollowedTheFailedSave(deps);
+  });
+
+  it("ends a refused section duplicate without throwing, with the menu drawn closed", async () => {
+    vi.spyOn(console, "error").mockImplementation(() => {});
+    const deps = createSectionMenuDeps({
+      projectService: {
+        duplicateSectionItem: vi.fn(async () => ({
+          valid: false,
+          error: { message: "Section not found." },
+        })),
+      },
+    });
+
+    await expect(
+      handleDropdownMenuClickItem(deps, menuItemPayload("duplicate-section")),
+    ).resolves.toBeUndefined();
+
+    expect(deps.appService.showAlert).toHaveBeenCalledExactlyOnceWith({
+      message: "Failed to duplicate section\n\nDetails:\nSection not found.",
+      title: "Error",
+    });
+    expect(deps.store.hideDropdownMenu).toHaveBeenCalledOnce();
+    expect(deps.render).toHaveBeenCalled();
+    expectNothingFollowedTheFailedSave(deps);
+  });
+
+  it("ends a refused section move within the scene without throwing", async () => {
+    vi.spyOn(console, "error").mockImplementation(() => {});
+    const deps = createSectionMenuDeps({
+      sectionId: "section-2",
+      projectService: {
+        moveSectionItem: vi.fn(async () => ({
+          valid: false,
+          error: { message: "Target section not found." },
+        })),
+      },
+    });
+
+    await expect(
+      handleDropdownMenuClickItem(deps, menuItemPayload("move-section-up")),
+    ).resolves.toBeUndefined();
+
+    expect(deps.projectService.moveSectionItem).toHaveBeenCalledExactlyOnceWith(
+      {
+        sectionId: "section-2",
+        position: "before",
+        positionTargetId: "section-1",
+      },
+    );
+    expect(deps.appService.showAlert).toHaveBeenCalledExactlyOnceWith({
+      message: "Failed to move section\n\nDetails:\nTarget section not found.",
+      title: "Error",
+    });
+    expect(deps.render).toHaveBeenCalledOnce();
+    expectNothingFollowedTheFailedSave(deps);
+  });
+
+  it("ends a refused section move to another scene without throwing, with the dialog drawn closed", async () => {
+    vi.spyOn(console, "error").mockImplementation(() => {});
+    const store = {
+      selectSectionMoveSceneDialog: vi.fn(() => ({ sectionId: "section-1" })),
+      selectSceneId: vi.fn(() => "scene-1"),
+      selectCommittedScene: vi.fn(() => ({
+        id: "scene-1",
+        sections: [{ id: "section-1" }, { id: "section-2" }],
+      })),
+      hideSectionMoveSceneDialog: vi.fn(),
+      setSelectedSectionId: vi.fn(),
+    };
+    const deps = {
+      i18n: EN_I18N,
+      store,
+      render: vi.fn(),
+      subject: { dispatch: vi.fn() },
+      projectService: {
+        getRepositoryState: vi.fn(),
+        moveSectionItem: vi.fn(async () => ({
+          valid: false,
+          error: { message: "Scene not found." },
+        })),
+      },
+      appService: { showAlert: vi.fn() },
+    };
+
+    await expect(
+      handleSectionMoveSceneFormActionClick(deps, {
+        _event: {
+          detail: { actionId: "submit", values: { sceneId: "scene-2" } },
+        },
+      }),
+    ).resolves.toBeUndefined();
+
+    expect(deps.appService.showAlert).toHaveBeenCalledExactlyOnceWith({
+      message: "Failed to move section\n\nDetails:\nScene not found.",
+      title: "Error",
+    });
+    expect(store.hideSectionMoveSceneDialog).toHaveBeenCalledOnce();
+    expect(deps.render).toHaveBeenCalledOnce();
+    expectNothingFollowedTheFailedSave(deps);
+  });
+
+  describe("from the command line", () => {
+    const createCommandLineDeps = ({ updateLineActions }) => ({
+      i18n: EN_I18N,
+      store: {
+        ...editHistoryStore(),
+        selectActionTargetLineId: vi.fn(() => "line-2"),
+        selectSelectedLineId: vi.fn(() => "line-1"),
+        selectDraftSection: vi.fn(() => undefined),
+        setSelectedLineId: vi.fn(),
+        clearActionTargetLineId: vi.fn(),
+        clearTemporaryPresentationState: vi.fn(),
+        setSelectedSectionId: vi.fn(),
+      },
+      render: vi.fn(),
+      subject: { dispatch: vi.fn() },
+      projectService: { getRepositoryState: vi.fn(), updateLineActions },
+      appService: { showAlert: vi.fn() },
+    });
+
+    it("ends a refused section transition without throwing", async () => {
+      vi.spyOn(console, "error").mockImplementation(() => {});
+      const deps = createCommandLineDeps({
+        updateLineActions: vi.fn(async () => ({
+          valid: false,
+          error: { message: "Section not found." },
+        })),
+      });
+
+      await expect(
+        handleCommandLineSubmit(deps, {
+          _event: {
+            detail: {
+              sectionTransition: { sceneId: "scene-1", sectionId: "section-9" },
+            },
+          },
+        }),
+      ).resolves.toBeUndefined();
+
+      expect(deps.appService.showAlert).toHaveBeenCalledExactlyOnceWith({
+        message:
+          "Failed to save section transition\n\nDetails:\nSection not found.",
+        title: "Error",
+      });
+      expect(deps.store.clearActionTargetLineId).not.toHaveBeenCalled();
+      expect(deps.render).not.toHaveBeenCalled();
+      expectNothingFollowedTheFailedSave(deps);
+    });
+
+    it("ends the temporary preview of a refused line action without throwing", async () => {
+      vi.spyOn(console, "error").mockImplementation(() => {});
+      const deps = createCommandLineDeps({
+        updateLineActions: vi.fn(async () => ({
+          valid: false,
+          error: { message: "Resource not found." },
+        })),
+      });
+
+      await expect(
+        handleCommandLineSubmit(deps, {
+          _event: {
+            detail: { background: { resourceId: "bg-school" } },
+          },
+        }),
+      ).resolves.toBeUndefined();
+
+      expect(deps.appService.showAlert).toHaveBeenCalledExactlyOnceWith({
+        message: "Failed to save line actions\n\nDetails:\nResource not found.",
+        title: "Error",
+      });
+      expect(deps.store.clearTemporaryPresentationState).toHaveBeenCalledOnce();
+      expect(deps.subject.dispatch).toHaveBeenCalledExactlyOnceWith(
+        "sceneEditor.renderCanvas",
+        {
+          preserveAnimationPlayback: true,
+          skipRender: true,
+          skipAnimations: true,
+        },
+      );
+      expect(deps.store.clearActionTargetLineId).not.toHaveBeenCalled();
+      expect(deps.render).not.toHaveBeenCalled();
+      expect(deps.projectService.getRepositoryState).not.toHaveBeenCalled();
+    });
   });
 });

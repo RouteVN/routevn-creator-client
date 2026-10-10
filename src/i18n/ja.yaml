@@ -2010,6 +2010,7 @@ sceneEditorPage:
   downLabel: "下"
   dontInheritOption: "継承しない"
   editSectionTitle: "セクションを編集"
+  cannotDeleteReferencedSection: "このセクションは別のセクションの遷移先に指定されているため、削除できません。先にその遷移を削除してください。"
   failedDeleteSection: "セクションを削除できませんでした。"
   failedDuplicateSection: "セクションを複製できませんでした。"
   failedDownloadCanvas: "キャンバスをダウンロードできませんでした。"
