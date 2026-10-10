@@ -533,8 +533,8 @@ export const handleToolbarItemPointerDown = ({ store, render }, payload) => {
 };
 
 // A tap also sends a mouse press after the touch, which would move focus off
-// the text and close the keyboard. Undo keeps the keyboard open; the other
-// actions close it themselves.
+// the text and close the keyboard. Undo and redo keep the keyboard open; the
+// other actions close it themselves.
 export const handleToolbarItemMouseDown = (_deps, payload) => {
   payload._event.preventDefault();
 };
@@ -615,9 +615,9 @@ export const handleToolbarItemClick = (deps, payload) => {
     return;
   }
 
-  // Undo keeps the keyboard open, so typing can go on from the restored
-  // caret.
-  if (actionId !== "undo") {
+  // Undo and redo keep the keyboard open, so typing can go on from the
+  // restored caret.
+  if (actionId !== "undo" && actionId !== "redo") {
     blurActiveEditableElement();
   }
   dispatchEvent(

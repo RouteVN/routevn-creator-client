@@ -1379,9 +1379,9 @@ dirty afterwards, from typing during the save, takes the command's saved
 actions for its line, so the command shows at once and its step holds only its
 change. The shortcuts also work in the editor's own text, through
 `resolveEditHistoryShortcut`'s `textEditorTagName`; Lexical's own undo stays
-off. On phones the keyboard toolbar has Undo, which keeps the keyboard open,
-and a More menu with Sections, Settings, and Redo; the menu closes the
-keyboard and follows the toolbar down.
+off. On phones the keyboard toolbar has Undo and Redo, which keep the
+keyboard open, and a More menu with Preview, Sections, and Settings; the menu
+closes the keyboard and follows the toolbar down.
 
 Transforms are edited on their own page, `/project/transform-editor` (the
 `t` payload holds the transform id), which opens from the transforms page like

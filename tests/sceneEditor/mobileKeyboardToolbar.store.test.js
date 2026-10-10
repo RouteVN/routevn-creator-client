@@ -50,9 +50,9 @@ describe("mobileKeyboardToolbar.store", () => {
     setPressedActionId({ state }, { actionId: "arrow-left" });
 
     const pressedItems = selectViewData({ state, i18n: EN_I18N }).toolbarItems;
-    expect(
-      pressedItems.find((item) => item.id === "arrow-left")?.bgColor,
-    ).toBe("ac");
+    expect(pressedItems.find((item) => item.id === "arrow-left")?.bgColor).toBe(
+      "ac",
+    );
     expect(pressedItems.find((item) => item.id === "actions")?.bgColor).toBe(
       "mu",
     );
@@ -66,7 +66,7 @@ describe("mobileKeyboardToolbar.store", () => {
     ).toBe(true);
   });
 
-  it("shows undo and keeps sections, settings, and redo in the More menu", () => {
+  it("shows undo and redo, and keeps preview, sections, and settings in the More menu", () => {
     const state = createInitialState();
     const view = (props) => selectViewData({ state, props, i18n: EN_I18N });
 
@@ -76,28 +76,36 @@ describe("mobileKeyboardToolbar.store", () => {
       "arrow-down",
       "arrow-right",
       "actions",
-      "preview",
       "undo",
+      "redo",
       "more",
     ]);
     expect(view({}).moreMenuItems).toEqual([
+      expect.objectContaining({
+        label: "Preview",
+        icon: "play",
+        value: "preview",
+      }),
       expect.objectContaining({
         label: "Sections",
         value: "sections-overview",
       }),
       expect.objectContaining({ label: "Settings", value: "scene-settings" }),
-      expect.objectContaining({
-        label: "Redo",
-        value: "redo",
-        disabled: false,
-      }),
     ]);
 
+    const enabled = view({});
+    for (const id of ["undo", "redo"]) {
+      expect(enabled.toolbarItems.find((item) => item.id === id)).toMatchObject(
+        { disabled: false, opacity: "1" },
+      );
+    }
     const disabled = view({ undoDisabled: true, redoDisabled: true });
     expect(
       disabled.toolbarItems.find((item) => item.id === "undo"),
     ).toMatchObject({ title: "Undo", disabled: true, opacity: "0.4" });
-    expect(disabled.moreMenuItems[2].disabled).toBe(true);
+    expect(
+      disabled.toolbarItems.find((item) => item.id === "redo"),
+    ).toMatchObject({ title: "Redo", disabled: true, opacity: "0.4" });
   });
 
   it("opens the More menu at its button and closes it", () => {

@@ -38,20 +38,20 @@ const toolbarItems = [
     title: "Actions",
   },
   {
-    id: "preview",
-    icon: "play",
-    iconStyle: "",
-    width: "40",
-    title: "Preview",
-  },
-  {
     id: "undo",
     icon: "undo",
     iconStyle: "",
     width: "40",
     title: "Undo",
   },
-  // Sections, settings, and redo, which do not fit on a phone.
+  {
+    id: "redo",
+    icon: "redo",
+    iconStyle: "",
+    width: "40",
+    title: "Redo",
+  },
+  // Preview, sections, and settings, which do not fit on a phone.
   {
     id: "more",
     icon: "ellipsisLarge",
@@ -189,7 +189,7 @@ export const selectArrowRepeatState = ({ state }) => {
 
 const createToolbarViewItems = (
   items,
-  { copy, editHistoryCopy, pressedActionId, undoDisabled },
+  { copy, editHistoryCopy, pressedActionId, undoDisabled, redoDisabled },
 ) => {
   const labels = {
     "arrow-left": copy.leftLabel ?? "Left",
@@ -197,13 +197,17 @@ const createToolbarViewItems = (
     "arrow-down": copy.downLabel ?? "Down",
     "arrow-right": copy.rightLabel ?? "Right",
     actions: copy.actionsLabel ?? "Actions",
-    preview: copy.previewButton ?? "Preview",
     undo: editHistoryCopy.undoLabel,
+    redo: editHistoryCopy.redoLabel,
     more: copy.moreLabel ?? "More",
+  };
+  const disabledById = {
+    undo: undoDisabled === true,
+    redo: redoDisabled === true,
   };
 
   return items.map((item) => {
-    const disabled = item.id === "undo" && undoDisabled === true;
+    const disabled = disabledById[item.id] ?? false;
     return {
       ...item,
       bgColor: item.id === pressedActionId ? "ac" : "mu",
@@ -237,10 +241,17 @@ export const selectViewData = ({ state, props = {}, i18n }) => {
       editHistoryCopy,
       pressedActionId: state.pressedActionId,
       undoDisabled: props.undoDisabled,
+      redoDisabled: props.redoDisabled,
     }),
     moreMenu: state.moreMenu,
     moreMenuLabel: copy.moreLabel ?? "More",
     moreMenuItems: [
+      {
+        type: "item",
+        label: copy.previewButton ?? "Preview",
+        icon: "play",
+        value: "preview",
+      },
       {
         type: "item",
         label: copy.sectionsLabel ?? "Sections",
@@ -252,13 +263,6 @@ export const selectViewData = ({ state, props = {}, i18n }) => {
         label: copy.settingsTitle ?? "Settings",
         icon: "settings",
         value: "scene-settings",
-      },
-      {
-        type: "item",
-        label: editHistoryCopy.redoLabel,
-        icon: "redo",
-        value: "redo",
-        disabled: props.redoDisabled === true,
       },
     ],
   };
