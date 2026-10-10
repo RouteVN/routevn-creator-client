@@ -162,23 +162,25 @@ const toPercentPresets = (values) =>
 const SHADOW_OFFSET_FIELD = {
   step: 1,
   fastStep: 4,
-  min: -32,
-  max: 32,
+  min: -500,
+  max: 500,
+  range: { min: -32, max: 32 },
   unit: "px",
   presets: toPixelPresets(SHADOW_OFFSET_PRESETS),
 };
 
 // The form's numbers open slider popovers (see
-// src/internal/ui/sliderPopover.js). Each slider's range bounds its value, as
-// the slider keeps a typed value within it; font size's reaches further to a
-// size already outside it. The ranges are the form's sliders' from before,
-// with font size from 8 px, the minimum its input had, to 128 px.
+// src/internal/ui/sliderPopover.js). Each slider runs over its range, the
+// form's sliders' from before, with font size from 8 px, the minimum its
+// input had, to 128 px. A typed value can go past it, within `min` and
+// `max`.
 export const TEXT_STYLE_SLIDER_FIELDS = Object.freeze({
   fontSize: {
     defaultValue: 16,
     step: 1,
     fastStep: 4,
     min: 8,
+    max: 400,
     range: { min: 8, max: 128 },
     unit: "px",
     presets: toPixelPresets(FONT_SIZE_PRESETS),
@@ -188,6 +190,7 @@ export const TEXT_STYLE_SLIDER_FIELDS = Object.freeze({
     step: 0.1,
     fastStep: 0.5,
     min: 0.8,
+    max: 10,
     range: { min: 0.8, max: 3 },
     presets: LINE_HEIGHT_PRESETS.map((value) => ({ label: `${value}`, value })),
   },
@@ -196,7 +199,8 @@ export const TEXT_STYLE_SLIDER_FIELDS = Object.freeze({
     step: 0.5,
     fastStep: 2,
     min: 0,
-    max: 12,
+    max: 100,
+    range: { min: 0, max: 12 },
     unit: "px",
     presets: toPixelPresets(OUTLINE_THICKNESS_PRESETS),
   },
@@ -204,6 +208,7 @@ export const TEXT_STYLE_SLIDER_FIELDS = Object.freeze({
     defaultValue: DEFAULT_SHADOW.alpha,
     step: 0.05,
     fastStep: 0.25,
+    stepsAsPercent: true,
     min: 0,
     max: 1,
     presets: toPercentPresets(SHADOW_OPACITY_PRESETS),
@@ -213,7 +218,8 @@ export const TEXT_STYLE_SLIDER_FIELDS = Object.freeze({
     step: 1,
     fastStep: 4,
     min: 0,
-    max: 32,
+    max: 200,
+    range: { min: 0, max: 32 },
     unit: "px",
     presets: toPixelPresets(SHADOW_BLUR_PRESETS),
   },

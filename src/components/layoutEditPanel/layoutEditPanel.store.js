@@ -502,23 +502,12 @@ const clonePopoverForm = (form) => {
   return nextForm;
 };
 
-const buildPopoverForm = ({
-  form,
-  name,
-  projectResolution,
-  values,
-  value,
-} = {}) => {
+const buildPopoverForm = ({ form, name, projectResolution } = {}) => {
   if (!isSliderPopoverField(name)) {
     return form;
   }
 
-  const sliderRange = getSliderPopoverRange({
-    name,
-    values,
-    projectResolution,
-    currentValue: value,
-  });
+  const sliderRange = getSliderPopoverRange({ name, projectResolution });
   if (!sliderRange) {
     return form;
   }
@@ -539,6 +528,8 @@ const buildPopoverForm = ({
       type: "slider-with-input",
       min: sliderRange.min,
       max: sliderRange.max,
+      sliderMin: sliderRange.sliderMin,
+      sliderMax: sliderRange.sliderMax,
       step: sliderRange.step,
     },
     {
@@ -547,6 +538,8 @@ const buildPopoverForm = ({
     },
     ...remainingFields,
   ];
+  // Submit sits in the presets row.
+  delete nextForm.actions;
 
   return nextForm;
 };
@@ -845,8 +838,6 @@ export const openPopoverForm = (
       form,
       name,
       projectResolution,
-      values: state.values,
-      value,
     }),
     context: {
       popoverFormValues,
@@ -1914,6 +1905,7 @@ export const selectViewData = ({ state, props, constants, i18n }) => {
     visibilityConditionDialog: state.visibilityConditionDialog,
     dropdownMenu: state.dropdownMenu,
     presetsButtonLabel: copy.presetsLabel,
+    sliderSubmitLabel: copy.submitButton,
     scaleAspectRatioLocked: state.scaleAspectRatioLocked,
     keepAspectRatioLabel: copy.keepAspectRatioLabel,
     sectionTooltip: state.sectionTooltip,

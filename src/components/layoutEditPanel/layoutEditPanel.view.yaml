@@ -53,6 +53,10 @@ refs:
     eventListeners:
       hold-repeat:
         handler: handlePopoverStepPress
+  popoverSubmitButton:
+    eventListeners:
+      click:
+        handler: handlePopoverSubmitClick
   scaleAspectRatioToggle:
     eventListeners:
       value-change:
@@ -69,6 +73,8 @@ refs:
         handler: handlePopoverFormInput
       form-change:
         handler: handlePopoverFormChange
+      keydown:
+        handler: handlePopoverFormKeyDown
   visibilityConditionForm:
     eventListeners:
       form-action:
@@ -543,10 +549,12 @@ template:
                   - rtgl-form#form autofocus key=${popover.key} :form=${popover.form} :defaultValues=${popover.defaultValues} :context=${popover.context} w=f:
                       - rtgl-view slot="slider-presets" d=v w=f g=sm:
                           - rtgl-view d=h av=c w=f g=xs:
-                              - rtgl-button#popoverPresetsButton v=ol s=sm suf=chevronDown: ${presetsButtonLabel}
+                              - 'rtgl-button#popoverPresetsButton sq v=ol s=sm pre=chevronDown aria-label="${presetsButtonLabel}" title="${presetsButtonLabel}"': null
                               - rtgl-view w=1fg: null
                               - $for stepButton, i in popover.context.stepButtons:
-                                  - 'rtgl-button#popoverStep${i} sq v=ol s=sm pre=${stepButton.icon} data-delta=${stepButton.delta} data-hold-repeat=true aria-label="${stepButton.label}" title="${stepButton.label}"': null
+                                  - 'rtgl-button#popoverStep${i} v=ol s=sm w=44 data-delta=${stepButton.delta} data-hold-repeat=true aria-label="${stepButton.label}" title="${stepButton.label}"': ${stepButton.text}
+                              - rtgl-view w=1fg: null
+                              - rtgl-button#popoverSubmitButton v=pr s=sm: ${sliderSubmitLabel}
                           - $if popover.context.showAspectRatioToggle:
                               - rtgl-checkbox#scaleAspectRatioToggle ?checked=${scaleAspectRatioLocked}: ${keepAspectRatioLabel}
             $else:

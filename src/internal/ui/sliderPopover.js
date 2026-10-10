@@ -1,64 +1,90 @@
 import { formatI18nCopy } from "./i18nCopy.js";
 
-// A slider popover edits one number with a slider, a Presets menu, and four
-// step buttons. Its field gives `step` and the larger `fastStep`; `range`,
-// where the slider runs; `min` and `max`, either or both, which bound the
-// value itself; and `defaultValue`, which an unset value starts from.
+// A slider popover edits one number with a slider, and a row with a Presets
+// menu, four step buttons, and Submit. Its field gives `step` and the larger
+// `fastStep`; `min` and `max`, which bound the value itself; `range`, where
+// the slider runs, when smaller than `min` to `max`; `defaultValue`, which an
+// unset value starts from; and `stepsAsPercent`, set where the steps read as
+// percentages, as the field's presets do.
 
 const getStepDecimals = (step) => `${step}`.split(".")[1]?.length ?? 0;
 
-// The slider runs `min` to `max` when the field has both, and over its range
-// otherwise, reaching further to a value already outside it.
-export const getSliderRange = ({ field, range = field.range, values = [] }) => {
-  if (Number.isFinite(field.min) && Number.isFinite(field.max)) {
-    return { min: field.min, max: field.max, step: field.step };
-  }
+// The slider runs over the range, or `min` to `max` without one. A value can
+// be typed past the slider's ends, within `min` and `max`; the slider then
+// rests at the nearer end.
+export const getSliderRange = ({
+  field,
+  range = field.range,
+  min = field.min,
+  max = field.max,
+}) => ({
+  min,
+  max,
+  sliderMin: range?.min ?? min,
+  sliderMax: range?.max ?? max,
+  step: field.step,
+});
 
-  let { min, max } = range;
-  for (const value of values) {
-    const number = Number(value);
-    if (!Number.isFinite(number)) {
-      continue;
-    }
-    if (number < min) {
-      min = Math.floor(number);
-    }
-    if (number > max) {
-      max = Math.ceil(number);
-    }
-  }
-
-  return { min, max, step: field.step };
+// A step's size as its button shows it: 0.25 is 25% where the steps read as
+// percentages.
+const formatStepAmount = ({ field, delta }) => {
+  const amount = Math.abs(delta);
+  return field.stepsAsPercent ? `${Math.round(amount * 100)}%` : `${amount}`;
 };
 
-// The step buttons: the larger step down and the step down (two overlapping
-// minus signs, and one), then the step up and the larger step up.
+// The step buttons show what they add: the larger step down, the step down,
+// the step up, and the larger step up, as −4 −1 +1 +4.
 export const getSliderStepButtons = ({ field, copy = {} }) =>
-  [
-    { delta: -field.fastStep, icon: "minusDouble" },
-    { delta: -field.step, icon: "minus" },
-    { delta: field.step, icon: "plus" },
-    { delta: field.fastStep, icon: "plusDouble" },
-  ].map((button) => ({
-    ...button,
-    label: formatI18nCopy(
-      button.delta < 0
-        ? (copy.decreaseByLabel ?? "Decrease by {step}")
-        : (copy.increaseByLabel ?? "Increase by {step}"),
-      { step: Math.abs(button.delta) },
-    ),
-  }));
+  [-field.fastStep, -field.step, field.step, field.fastStep].map((delta) => {
+    const amount = formatStepAmount({ field, delta });
+    return {
+      delta,
+      text: `${delta < 0 ? "−" : "+"}${amount}`,
+      label: formatI18nCopy(
+        delta < 0
+          ? (copy.decreaseByLabel ?? "Decrease by {step}")
+          : (copy.increaseByLabel ?? "Increase by {step}"),
+        { step: amount },
+      ),
+    };
+  });
+
+// Enter submits a slider popover. Its form submits on Enter only through
+// its own actions, which a slider popover leaves out for the Submit button in
+// its row, so Enter counts unless the form took it or it pressed a button.
+export const isSliderPopoverSubmitKey = (event) =>
+  event.key === "Enter" &&
+  !event.shiftKey &&
+  !event.altKey &&
+  !event.ctrlKey &&
+  !event.metaKey &&
+  !event.isComposing &&
+  !event.defaultPrevented &&
+  !event
+    .composedPath()
+    .some(
+      (target) =>
+        target?.tagName === "BUTTON" ||
+        target?.tagName === "RTGL-BUTTON" ||
+        target?.getAttribute?.("role") === "button",
+    );
 
 // A value moved by a step, rounded to the step and kept within the field's
-// bounds.
-export const stepSliderValue = ({ field, value, delta }) => {
+// bounds, or the bounds given.
+export const stepSliderValue = ({
+  field,
+  value,
+  delta,
+  min = field.min,
+  max = field.max,
+}) => {
   const decimals = getStepDecimals(field.step);
   let stepped = Number((Number(value) + Number(delta)).toFixed(decimals));
-  if (Number.isFinite(field.min)) {
-    stepped = Math.max(field.min, stepped);
+  if (Number.isFinite(min)) {
+    stepped = Math.max(min, stepped);
   }
-  if (Number.isFinite(field.max)) {
-    stepped = Math.min(field.max, stepped);
+  if (Number.isFinite(max)) {
+    stepped = Math.min(max, stepped);
   }
   return stepped;
 };

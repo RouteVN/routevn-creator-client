@@ -442,12 +442,14 @@ describe("text style editor", () => {
       ["shadowOffsetX", "text-style-shadow-offset-x", "Shadow Offset X", 2],
       ["shadowOffsetY", "text-style-shadow-offset-y", "Shadow Offset Y", 2],
     ]);
-    // Each slider bounds its value as the form's slider did; font size runs
-    // from the input's minimum to 128 px.
+    // Each slider runs over the form's slider's range, font size from the
+    // input's minimum to 128 px; a typed value reaches further, within
+    // `min` and `max`.
     expect(sliderValueField("fontSize").field).toMatchObject({
       step: 1,
       fastStep: 4,
       min: 8,
+      max: 400,
       range: { min: 8, max: 128 },
       unit: "px",
     });
@@ -455,25 +457,31 @@ describe("text style editor", () => {
       step: 0.1,
       fastStep: 0.5,
       min: 0.8,
+      max: 10,
       range: { min: 0.8, max: 3 },
     });
     expect(sliderValueField("strokeWidth").field).toMatchObject({
       step: 0.5,
       min: 0,
-      max: 12,
+      max: 100,
+      range: { min: 0, max: 12 },
     });
+    // Opacity stays between 0 and 1, all of it on the slider.
     expect(sliderValueField("shadowAlpha").field).toMatchObject({
       step: 0.05,
       min: 0,
       max: 1,
     });
+    expect(sliderValueField("shadowAlpha").field.range).toBeUndefined();
     expect(sliderValueField("shadowBlur").field).toMatchObject({
       min: 0,
-      max: 32,
+      max: 200,
+      range: { min: 0, max: 32 },
     });
     expect(sliderValueField("shadowOffsetX").field).toMatchObject({
-      min: -32,
-      max: 32,
+      min: -500,
+      max: 500,
+      range: { min: -32, max: 32 },
     });
 
     // The preview draws the popover's value; the text style keeps its own.

@@ -2,12 +2,13 @@ import { produce } from "immer";
 import { describe, expect, it, vi } from "vitest";
 import * as fieldStore from "../../src/components/sliderValueField/sliderValueField.store.js";
 import {
-  handleFormAction,
   handleFormChange,
   handleFormInput,
+  handleFormKeyDown,
   handlePopoverClose,
   handlePresetsButtonClick,
   handleStepPress,
+  handleSubmitClick,
   handleValueClick,
 } from "../../src/components/sliderValueField/sliderValueField.handlers.js";
 import { EN_I18N } from "../support/i18n.js";
@@ -20,6 +21,7 @@ const FIELD = {
   step: 1,
   fastStep: 4,
   min: 8,
+  max: 400,
   range: { min: 8, max: 128 },
   unit: "px",
   presets: [
@@ -55,7 +57,13 @@ const createField = ({ menuResult, ...propOverrides } = {}) => {
     props,
     render: vi.fn(),
     dispatchEvent: (event) => events.push([event.type, event.detail]),
-    refs: { form: { setValues: vi.fn() } },
+    // The form holds the popover's value, as its own form does.
+    refs: {
+      form: {
+        setValues: vi.fn(),
+        getValues: () => ({ value: state.popover.value }),
+      },
+    },
     appService: { showDropdownMenu: vi.fn(async () => menuResult) },
   };
   const rect = { left: 100, width: 200, bottom: 40 };
@@ -73,6 +81,16 @@ const createField = ({ menuResult, ...propOverrides } = {}) => {
       handlePresetsButtonClick(deps, { _event: { currentTarget: target } }),
     input: (value) =>
       handleFormInput(deps, { _event: { detail: { values: { value } } } }),
+    pressKey: ({ path = [{ tagName: "INPUT" }], ...event } = {}) => {
+      const _event = {
+        key: "Enter",
+        composedPath: () => path,
+        preventDefault: vi.fn(),
+        ...event,
+      };
+      handleFormKeyDown(deps, { _event });
+      return _event;
+    },
   };
 };
 
@@ -91,36 +109,93 @@ describe("rvn-slider-value-field", () => {
     expect(html).toContain(">24 px<");
   });
 
-  it("opens a slider under the field, from its value, with Presets and four step buttons", () => {
+  it("opens a slider under the field, from its value, with Presets, four step buttons, and Submit in one row", () => {
     const field = createField();
     field.open();
 
     const view = field.view();
     expect(view.popover).toMatchObject({ open: true, x: 200, y: 40 });
     expect(view.popoverDefaultValues).toEqual({ value: 24 });
+    // The slider runs over the field's range; a typed value reaches its
+    // bounds.
     expect(view.popoverForm.fields[0]).toEqual({
       name: "value",
       type: "slider-with-input",
       min: 8,
-      max: 128,
+      max: 400,
+      sliderMin: 8,
+      sliderMax: 128,
       step: 1,
     });
-    expect(view.stepButtons.map(({ delta, label }) => [delta, label])).toEqual([
-      [-4, "Decrease by 4"],
-      [-1, "Decrease by 1"],
-      [1, "Increase by 1"],
-      [4, "Increase by 4"],
+    expect(
+      view.stepButtons.map(({ delta, text, label }) => [delta, text, label]),
+    ).toEqual([
+      [-4, "−4", "Decrease by 4"],
+      [-1, "−1", "Decrease by 1"],
+      [1, "+1", "Increase by 1"],
+      [4, "+4", "Increase by 4"],
     ]);
+    // Submit sits in the presets row, so the form has no actions row.
+    expect(view.popoverForm.actions).toBeUndefined();
 
     const html = renderViewYaml(TEMPLATE, view);
-    expect(html).toContain(">Presets<");
+    const row = html.slice(html.indexOf('slot="slider-presets"'));
+    // Presets is a square chevron button, named by its label.
+    const presetsButton = row.match(/<rtgl-button id="presetsButton"[^>]*>/)[0];
+    for (const attribute of [
+      'pre="chevronDown"',
+      " sq",
+      'aria-label="Presets"',
+    ]) {
+      expect(presetsButton).toContain(attribute);
+    }
+    const rowOrder = [
+      'id="presetsButton"',
+      ">−4<",
+      ">−1<",
+      ">+1<",
+      ">+4<",
+      ">Submit<",
+    ].map((text) => row.indexOf(text));
+    expect(rowOrder.every((index) => index > -1)).toBe(true);
+    expect(rowOrder).toEqual([...rowOrder].sort((a, b) => a - b));
     expect(html.match(/data-hold-repeat="true"/g)).toHaveLength(4);
   });
 
-  it("reaches the slider to a value already outside its range", () => {
-    expect(createField({ value: 240 }).view().popoverForm.fields[0].max).toBe(
-      240,
-    );
+  it("shows the steps as percentages where the field asks", () => {
+    const field = createField({
+      value: 0.5,
+      field: {
+        defaultValue: 0.5,
+        step: 0.05,
+        fastStep: 0.25,
+        stepsAsPercent: true,
+        min: 0,
+        max: 1,
+        presets: [],
+      },
+    });
+
+    expect(
+      field.view().stepButtons.map(({ text, label }) => [text, label]),
+    ).toEqual([
+      ["−25%", "Decrease by 25%"],
+      ["−5%", "Decrease by 5%"],
+      ["+5%", "Increase by 5%"],
+      ["+25%", "Increase by 25%"],
+    ]);
+  });
+
+  it("keeps the slider's range for a value past it, and steps it within the field's bounds", () => {
+    const field = createField({ value: 398 });
+    field.open();
+
+    expect(field.view().popoverForm.fields[0]).toMatchObject({
+      max: 400,
+      sliderMax: 128,
+    });
+    field.step(4);
+    expect(field.events.at(-1)).toEqual(["value-input", { value: 400 }]);
   });
 
   it("shows each change as it happens, without changing its value", () => {
@@ -175,9 +250,7 @@ describe("rvn-slider-value-field", () => {
     handleFormChange(field.deps, {
       _event: { detail: { values: { value: 30 } } },
     });
-    handleFormAction(field.deps, {
-      _event: { detail: { actionId: "submit", values: { value: 30 } } },
-    });
+    handleSubmitClick(field.deps);
     // The popover reports closing after Submit too.
     handlePopoverClose(field.deps);
     expect(field.events).toEqual([
@@ -189,5 +262,24 @@ describe("rvn-slider-value-field", () => {
     field.open();
     handlePopoverClose(field.deps);
     expect(field.events.at(-1)).toEqual(["value-cancel", null]);
+  });
+
+  it("changes on Enter, unless a button or the form takes the key", () => {
+    const field = createField();
+    field.open();
+    field.input(30);
+
+    field.pressKey({
+      path: [{ tagName: "BUTTON" }, { tagName: "RTGL-BUTTON" }],
+    });
+    field.pressKey({ defaultPrevented: true });
+    field.pressKey({ isComposing: true });
+    field.pressKey({ key: "Tab" });
+    expect(field.view().popover.open).toBe(true);
+
+    const enter = field.pressKey();
+    expect(enter.preventDefault).toHaveBeenCalledOnce();
+    expect(field.events.at(-1)).toEqual(["value-change", { value: 30 }]);
+    expect(field.view().popover.open).toBe(false);
   });
 });

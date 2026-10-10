@@ -15,8 +15,8 @@ refs:
         handler: handleFormInput
       form-change:
         handler: handleFormChange
-      form-action:
-        handler: handleFormAction
+      keydown:
+        handler: handleFormKeyDown
   presetsButton:
     eventListeners:
       click:
@@ -25,6 +25,10 @@ refs:
     eventListeners:
       hold-repeat:
         handler: handleStepPress
+  submitButton:
+    eventListeners:
+      click:
+        handler: handleSubmitClick
 template:
   - rtgl-view#valueButton role=button tabindex=0 aria-label="${label}" w=f d=h ph=md br=md av=c cur=pointer bw=xs bc=bo h-bc=ac h=32 bgc=su:
       - rtgl-text s=sm: ${valueText}
@@ -33,7 +37,9 @@ template:
           - rtgl-view slot=content w=360:
               - rtgl-form#form autofocus key=${popover.key} :form=${popoverForm} :defaultValues=${popoverDefaultValues} w=f:
                   - rtgl-view slot="slider-presets" d=h av=c w=f g=xs:
-                      - rtgl-button#presetsButton v=ol s=sm suf=chevronDown: ${presetsLabel}
+                      - 'rtgl-button#presetsButton sq v=ol s=sm pre=chevronDown aria-label="${presetsLabel}" title="${presetsLabel}"': null
                       - rtgl-view w=1fg: null
                       - $for stepButton, i in stepButtons:
-                          - 'rtgl-button#stepButton${i} sq v=ol s=sm pre=${stepButton.icon} data-delta=${stepButton.delta} data-hold-repeat=true aria-label="${stepButton.label}" title="${stepButton.label}"': null
+                          - 'rtgl-button#stepButton${i} v=ol s=sm w=44 data-delta=${stepButton.delta} data-hold-repeat=true aria-label="${stepButton.label}" title="${stepButton.label}"': ${stepButton.text}
+                      - rtgl-view w=1fg: null
+                      - rtgl-button#submitButton v=pr s=sm: ${submitLabel}
