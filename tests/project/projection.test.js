@@ -44,6 +44,9 @@ const createExportRepositoryState = (overrides = {}) => ({
   ...overrides,
 });
 
+// Route Engine renders a layout's child elements with occurrence ids,
+// `@layout/<slot id>--<element id>`, where the slot is the engine container
+// that shows the layout, such as `dialogue-container`.
 const findRenderElementById = (nodes, elementId) => {
   if (!Array.isArray(nodes)) {
     return undefined;
@@ -437,10 +440,13 @@ describe("constructProjectData", () => {
     });
 
     const renderState = selectRouteEngineRenderState(projectData);
-    const input = findRenderElementById(renderState.elements, "name-input");
+    const input = findRenderElementById(
+      renderState.elements,
+      "@layout/form-container--name-input",
+    );
     const renderedSubmitButton = findRenderElementById(
       renderState.elements,
-      "submit-button",
+      "@layout/form-container--submit-button",
     );
 
     expect(input).toMatchObject({
@@ -679,14 +685,14 @@ describe("constructProjectData", () => {
     const renderState = selectRouteEngineRenderState(projectData);
     const dialogueText = findRenderElementById(
       renderState.elements,
-      "dialogue-text",
+      "@layout/dialogue-container--dialogue-text",
     );
 
     expect(dialogueText.content).toEqual([
       { text: "Hello " },
       { text: "Alice" },
       { text: ". Score: " },
-      { text: 7 },
+      { text: "7" },
     ]);
   });
 
@@ -886,7 +892,7 @@ describe("constructProjectData", () => {
     const renderState = selectRouteEngineRenderState(projectData);
     const speakerName = findRenderElementById(
       renderState.elements,
-      "dialogue-name",
+      "@layout/dialogue-container--dialogue-name",
     );
 
     expect(speakerName.content).toBe("Ada");

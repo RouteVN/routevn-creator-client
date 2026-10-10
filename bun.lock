@@ -36,8 +36,8 @@
         "lexical": "0.22.0",
         "nanoid": "5.1.11",
         "ogg-opus-decoder": "1.7.5",
-        "route-engine-js": "1.47.0",
-        "route-graphics": "1.47.0",
+        "route-engine-js": "1.48.0",
+        "route-graphics": "1.48.0",
         "rxjs": "7.8.2",
         "snabbdom": "3.6.3",
         "snabbdom-to-html": "7.1.0",
@@ -855,9 +855,9 @@
 
     "rollup": ["rollup@4.60.4", "", { "dependencies": { "@types/estree": "1.0.8" }, "optionalDependencies": { "@rollup/rollup-android-arm-eabi": "4.60.4", "@rollup/rollup-android-arm64": "4.60.4", "@rollup/rollup-darwin-arm64": "4.60.4", "@rollup/rollup-darwin-x64": "4.60.4", "@rollup/rollup-freebsd-arm64": "4.60.4", "@rollup/rollup-freebsd-x64": "4.60.4", "@rollup/rollup-linux-arm-gnueabihf": "4.60.4", "@rollup/rollup-linux-arm-musleabihf": "4.60.4", "@rollup/rollup-linux-arm64-gnu": "4.60.4", "@rollup/rollup-linux-arm64-musl": "4.60.4", "@rollup/rollup-linux-loong64-gnu": "4.60.4", "@rollup/rollup-linux-loong64-musl": "4.60.4", "@rollup/rollup-linux-ppc64-gnu": "4.60.4", "@rollup/rollup-linux-ppc64-musl": "4.60.4", "@rollup/rollup-linux-riscv64-gnu": "4.60.4", "@rollup/rollup-linux-riscv64-musl": "4.60.4", "@rollup/rollup-linux-s390x-gnu": "4.60.4", "@rollup/rollup-linux-x64-gnu": "4.60.4", "@rollup/rollup-linux-x64-musl": "4.60.4", "@rollup/rollup-openbsd-x64": "4.60.4", "@rollup/rollup-openharmony-arm64": "4.60.4", "@rollup/rollup-win32-arm64-msvc": "4.60.4", "@rollup/rollup-win32-ia32-msvc": "4.60.4", "@rollup/rollup-win32-x64-gnu": "4.60.4", "@rollup/rollup-win32-x64-msvc": "4.60.4", "fsevents": "~2.3.2" }, "bin": { "rollup": "dist/bin/rollup" } }, "sha512-WHeFSbZYsPu3+bLoNRUuAO+wavNlocOPf3wSHTP7hcFKVnJeWsYlCDbr3mTS14FCizf9ccIxXA8sGL8zKeQN3g=="],
 
-    "route-engine-js": ["route-engine-js@1.47.0", "", { "dependencies": { "immer": "^10.1.1", "jempl": "1.1.2", "js-yaml": "^4.1.0", "puty": "^0.1.1", "unicode-segmenter": "^0.17.0" } }, "sha512-ehsZa+j8Cf4tbh79Dyjj5gwkHJ7FjJ7u2z8INNh/tLBWSlJfp3/YSMmM08z8tQlR4UbKRl0kszZq3ampriR7/Q=="],
+    "route-engine-js": ["route-engine-js@1.48.0", "", { "dependencies": { "immer": "^10.1.1", "jempl": "1.1.2", "js-yaml": "^4.1.0", "puty": "^0.1.1", "unicode-segmenter": "^0.17.0" } }, "sha512-xWO9b0Cx6sDo0I0kXbUuNcOtr6XGeTFn4IYzsHfUNVClreqt1IFFvpxy/3xusqzd7gkbTm0LpX/uep3gK6BoYQ=="],
 
-    "route-graphics": ["route-graphics@1.47.0", "", { "dependencies": { "@wasm-audio-decoders/ogg-vorbis": "^0.1.20", "gsap": "3.15.0", "hotkeys-js": "^4.0.0-beta.7", "js-yaml": "^4.1.0", "ogg-opus-decoder": "^1.7.3", "pixi.js": "8.10.2", "playwright": "1.57.0" }, "bin": { "route-graphics": "bin/route-graphics.js" } }, "sha512-aJyCR6FnL9GPTfN6+XKuFOuEESJtb1Jebm75vUTw4y4Dkgv8UViwojZKcziRpyZWWGaD9CkUwnDLtJJHzv8kWw=="],
+    "route-graphics": ["route-graphics@1.48.0", "", { "dependencies": { "@wasm-audio-decoders/ogg-vorbis": "^0.1.20", "gsap": "3.15.0", "hotkeys-js": "^4.0.0-beta.7", "js-yaml": "^4.1.0", "ogg-opus-decoder": "^1.7.3", "pixi.js": "8.10.2", "playwright": "1.57.0" }, "bin": { "route-graphics": "bin/route-graphics.js" } }, "sha512-NlOtYIcoV2xZuHMH8Vi4FOubp5PLs3TGSdcFZqLwHQ/yp6iR4gjaQORp31FOzfKs4Yl8BL7J3ulpOPhzSp3vIA=="],
 
     "rrweb-cssom": ["rrweb-cssom@0.8.0", "", {}, "sha512-guoltQEx+9aMf2gDZ0s62EcV8lsXR+0w8915TC3ITdn2YueuNjdAYh/levpU9nFaoChh9RUS5ZdQMrKfVEN9tw=="],
 
