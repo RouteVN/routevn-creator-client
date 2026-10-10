@@ -17,6 +17,7 @@ import {
   SCENE_OVERVIEW_VIEW_NAME,
   SCENE_VIEW_NAME,
   SCENE_VIEW_VERSION,
+  SKIPPED_DRAFTS_VIEW_NAME,
   createMainProjectionState,
   createSceneProjectionState,
 } from "../../src/deps/services/shared/projectRepositoryViews/shared.js";
@@ -237,6 +238,52 @@ const draftHistoryStats = {
   latestDraftClock: 6,
 };
 
+// A store whose checkpoints were saved while the left-out drafts applied.
+const createStoreWithStaleCheckpoints = () => {
+  const staleState = createStateWithLeftOutDrafts();
+  return createClientStore({
+    drafts: [...createProjectEvents(), ...createLeftOutDrafts()],
+    checkpoints: [
+      createMainCheckpoint({ state: staleState, lastCommittedId: 6 }),
+      createSceneCheckpoint({ state: staleState, lastCommittedId: 5 }),
+      createSceneOverviewCheckpoint(),
+    ],
+  });
+};
+
+// Opens the project on `store`, as each session does.
+const openSession = (store, { draftCount = 6 } = {}) =>
+  createRepository({
+    store,
+    historyStats: {
+      committedCount: 0,
+      latestCommittedId: 0,
+      draftCount,
+      latestDraftClock: draftCount,
+    },
+    initialRevision: draftCount,
+  });
+
+const sceneCheckpointKey = {
+  viewName: SCENE_VIEW_NAME,
+  partition: scenePartitionFor(sceneId),
+};
+
+const getSkippedDraftsRecord = (store) =>
+  store.checkpointsByKey.get(
+    toCheckpointKey({
+      viewName: SKIPPED_DRAFTS_VIEW_NAME,
+      partition: MAIN_PARTITION,
+    }),
+  )?.value;
+
+const getContextLineIds = async (repository) =>
+  Object.keys(
+    (await repository.getContextState({ sceneIds: [sceneId] })).scenes.items[
+      sceneId
+    ].sections.items[sectionId].lines.items,
+  );
+
 describe("projectRepositoryRuntime left-out drafts", () => {
   it("rebuilds a reused main checkpoint without the left-out drafts and reports them", async () => {
     vi.spyOn(console, "warn").mockImplementation(() => {});
@@ -285,7 +332,7 @@ describe("projectRepositoryRuntime left-out drafts", () => {
       onStateChange.mock.calls[0][0].repositoryState.scenes.items[sceneId].name,
     ).toBe("Scene One");
     expect(onSkippedDrafts).toHaveBeenCalledOnce();
-    expect(onSkippedDrafts).toHaveBeenCalledWith([
+    expect(onSkippedDrafts.mock.calls[0][0]).toEqual([
       {
         draftId: "line-create-left-out",
         type: "line.create",
@@ -554,7 +601,7 @@ describe("projectRepositoryRuntime left-out drafts", () => {
 
     await repository.loadEvents();
 
-    expect(onSkippedDrafts).toHaveBeenCalledWith([]);
+    expect(onSkippedDrafts).toHaveBeenCalledWith([], undefined);
     expect(store.deleteMaterializedViewCheckpoint).not.toHaveBeenCalled();
   });
 
@@ -581,5 +628,200 @@ describe("projectRepositoryRuntime left-out drafts", () => {
     expect(
       onSkippedDrafts.mock.calls[0][0].map(({ draftId }) => draftId),
     ).toEqual(["line-create-left-out", "scene-rename-left-out"]);
+  });
+
+  it("keeps reading and saving when stale checkpoints cannot be deleted", async () => {
+    vi.spyOn(console, "warn").mockImplementation(() => {});
+    const store = createStoreWithStaleCheckpoints();
+    const deleteError = new Error("disk I/O error");
+    store.deleteMaterializedViewCheckpoint.mockRejectedValue(deleteError);
+    const { repository } = await openSession(store);
+    const onSkippedDrafts = vi.fn();
+    repository.subscribeSkippedDrafts(onSkippedDrafts);
+
+    await expect(repository.loadEvents()).resolves.toHaveLength(4);
+
+    // The main state and the scene are rebuilt from the loaded history, not
+    // from the checkpoints that could not be deleted.
+    expect(repository.getState().scenes.items[sceneId].name).toBe("Scene One");
+    expect(await getContextLineIds(repository)).toEqual(["line-1"]);
+    expect(await getContextLineIds(repository)).toEqual(["line-1"]);
+    await repository.addEvents([
+      createLine({ id: "line-create-new", lineId: "line-3", clientTs: 7 }),
+    ]);
+    expect(getLineIds(repository)).toEqual(["line-1", "line-3"]);
+    await repository.flushMaterializedViews();
+    expect((await repository.getSceneOverview(sceneId)).name).toBe("Scene One");
+
+    // The rebuild ran once, and its error reaches one listener call.
+    expect(
+      store.deleteMaterializedViewCheckpoint.mock.calls.filter(
+        ([{ viewName }]) => viewName === MAIN_VIEW_NAME,
+      ),
+    ).toHaveLength(1);
+    expect(onSkippedDrafts).toHaveBeenCalledOnce();
+    expect(onSkippedDrafts.mock.calls[0][0]).toHaveLength(2);
+    expect(onSkippedDrafts.mock.calls[0][1]).toBe(deleteError);
+    const onLaterSkippedDrafts = vi.fn();
+    repository.subscribeSkippedDrafts(onLaterSkippedDrafts);
+    expect(onLaterSkippedDrafts.mock.calls[0][0]).toHaveLength(2);
+    expect(onLaterSkippedDrafts.mock.calls[0][1]).toBeUndefined();
+    // The record stays unfinished, so the next open rebuilds again.
+    expect(getSkippedDraftsRecord(store).rebuilt).toBe(false);
+  });
+
+  it("finishes the rebuild in memory when the main checkpoint cannot be saved", async () => {
+    vi.spyOn(console, "warn").mockImplementation(() => {});
+    const store = createStoreWithStaleCheckpoints();
+    const saveCheckpoint = store.saveMaterializedViewCheckpoint;
+    const saveError = new Error("disk I/O error");
+    store.saveMaterializedViewCheckpoint = vi.fn(async (checkpoint) => {
+      if (checkpoint.viewName === MAIN_VIEW_NAME) {
+        throw saveError;
+      }
+      return saveCheckpoint(checkpoint);
+    });
+    const { repository } = await openSession(store);
+    const onSkippedDrafts = vi.fn();
+    repository.subscribeSkippedDrafts(onSkippedDrafts);
+
+    await expect(repository.loadEvents()).resolves.toHaveLength(4);
+    await repository.setActiveSceneId(sceneId);
+
+    expect(repository.getState().scenes.items[sceneId].name).toBe("Scene One");
+    expect(getLineIds(repository)).toEqual(["line-1"]);
+    expect(onSkippedDrafts.mock.calls[0][1]).toBe(saveError);
+    expect(getSkippedDraftsRecord(store)).toEqual({
+      drafts: [
+        {
+          draftId: "line-create-left-out",
+          partition: scenePartitionFor(sceneId),
+          sceneId,
+        },
+        {
+          draftId: "scene-rename-left-out",
+          partition: mainScenePartitionFor(sceneId),
+          sceneId,
+        },
+      ],
+      rebuilt: false,
+    });
+  });
+
+  it("rebuilds again on the next open when the last rebuild did not finish", async () => {
+    vi.spyOn(console, "warn").mockImplementation(() => {});
+    const store = createStoreWithStaleCheckpoints();
+    const deleteCheckpoint = store.deleteMaterializedViewCheckpoint;
+    store.deleteMaterializedViewCheckpoint = vi.fn(async () => {
+      throw new Error("disk I/O error");
+    });
+    await (await openSession(store)).repository.loadEvents();
+    store.deleteMaterializedViewCheckpoint = deleteCheckpoint;
+
+    const { repository } = await openSession(store);
+    await repository.loadEvents();
+
+    expect(store.deleteMaterializedViewCheckpoint).toHaveBeenCalledWith(
+      sceneCheckpointKey,
+    );
+    expect(getSkippedDraftsRecord(store).rebuilt).toBe(true);
+  });
+
+  it("does not rebuild again in a later session that leaves out the same drafts", async () => {
+    vi.spyOn(console, "warn").mockImplementation(() => {});
+    const store = createStoreWithStaleCheckpoints();
+    const firstSession = await openSession(store);
+    await firstSession.repository.setActiveSceneId(sceneId);
+    await firstSession.repository.flushMaterializedViews();
+    expect(store.deleteMaterializedViewCheckpoint).toHaveBeenCalledWith(
+      sceneCheckpointKey,
+    );
+    expect(getSkippedDraftsRecord(store).rebuilt).toBe(true);
+    store.deleteMaterializedViewCheckpoint.mockClear();
+    store.saveMaterializedViewCheckpoint.mockClear();
+
+    const { repository, loadEvents } = await openSession(store);
+    const onSkippedDrafts = vi.fn();
+    repository.subscribeSkippedDrafts(onSkippedDrafts);
+    await repository.setActiveSceneId(sceneId);
+
+    expect(loadEvents).toHaveBeenCalledOnce();
+    expect(store.deleteMaterializedViewCheckpoint).not.toHaveBeenCalled();
+    // The scene opens from the checkpoint the first session saved.
+    expect(store.saveMaterializedViewCheckpoint).not.toHaveBeenCalledWith(
+      expect.objectContaining(sceneCheckpointKey),
+    );
+    expect(repository.getState().scenes.items[sceneId].name).toBe("Scene One");
+    expect(getLineIds(repository)).toEqual(["line-1"]);
+    expect(onSkippedDrafts).toHaveBeenCalledOnce();
+    expect(
+      onSkippedDrafts.mock.calls[0][0].map(({ draftId }) => draftId),
+    ).toEqual(["line-create-left-out", "scene-rename-left-out"]);
+  });
+
+  it("rebuilds in a later session that leaves out another draft", async () => {
+    vi.spyOn(console, "warn").mockImplementation(() => {});
+    const drafts = [...createProjectEvents(), ...createLeftOutDrafts()];
+    const store = createClientStore({ drafts });
+    const firstSession = await openSession(store);
+    await firstSession.repository.setActiveSceneId(sceneId);
+    await firstSession.repository.flushMaterializedViews();
+    drafts.push(
+      createLine({
+        id: "line-create-left-out-2",
+        lineId: "line-4",
+        clientTs: 7,
+        isRejected: true,
+      }),
+    );
+    store.deleteMaterializedViewCheckpoint.mockClear();
+
+    const { repository } = await openSession(store, { draftCount: 7 });
+    await repository.loadEvents();
+
+    expect(store.deleteMaterializedViewCheckpoint).toHaveBeenCalledWith(
+      sceneCheckpointKey,
+    );
+    expect(
+      getSkippedDraftsRecord(store).drafts.map(({ draftId }) => draftId),
+    ).toEqual([
+      "line-create-left-out",
+      "scene-rename-left-out",
+      "line-create-left-out-2",
+    ]);
+  });
+
+  it("puts back drafts that apply again in a later session", async () => {
+    vi.spyOn(console, "warn").mockImplementation(() => {});
+    const drafts = [...createProjectEvents(), ...createLeftOutDrafts()];
+    const store = createClientStore({ drafts });
+    await (await openSession(store)).repository.loadEvents();
+    // The same drafts, as a later version of the app would accept them.
+    drafts.splice(
+      4,
+      2,
+      ...createLeftOutDrafts().map((draft) => {
+        delete draft.payload.unsupportedField;
+        return draft;
+      }),
+    );
+    store.deleteMaterializedViewCheckpoint.mockClear();
+
+    const { repository } = await openSession(store);
+    // The reused main checkpoint was rebuilt without the drafts.
+    expect(repository.getState().scenes.items[sceneId].name).toBe("Scene One");
+    const onSkippedDrafts = vi.fn();
+    repository.subscribeSkippedDrafts(onSkippedDrafts);
+    await repository.loadEvents();
+
+    expect(repository.getState().scenes.items[sceneId].name).toBe(
+      "Scene Renamed",
+    );
+    expect(store.deleteMaterializedViewCheckpoint).toHaveBeenCalledWith(
+      sceneCheckpointKey,
+    );
+    expect(await getContextLineIds(repository)).toEqual(["line-1", "line-2"]);
+    expect(onSkippedDrafts).toHaveBeenCalledWith([], undefined);
+    expect(getSkippedDraftsRecord(store)).toBeUndefined();
   });
 });

@@ -190,7 +190,7 @@ describe("projectRepositoryService left-out drafts", () => {
     ]);
     expect(repository.getState().scenes.items[sceneId].name).toBe("Scene One");
     expect(onSkippedDrafts).toHaveBeenCalledOnce();
-    expect(onSkippedDrafts).toHaveBeenCalledWith([
+    expect(onSkippedDrafts.mock.calls[0][0]).toEqual([
       {
         draftId: "scene-rename-left-out",
         type: "scene.update",
@@ -232,7 +232,7 @@ describe("projectRepositoryService left-out drafts", () => {
     const events = await repository.loadEvents();
 
     expect(events).toEqual([]);
-    expect(onSkippedDrafts).toHaveBeenCalledWith([]);
+    expect(onSkippedDrafts).toHaveBeenCalledWith([], undefined);
     expect(store.deleteMaterializedViewCheckpoint).not.toHaveBeenCalled();
     expect(repository.getState().scenes.items[sceneId].name).toBe(
       "Scene Renamed",

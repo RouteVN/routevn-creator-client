@@ -13,10 +13,13 @@ export const SCENE_OVERVIEW_VIEW_NAME =
   "project_repository_scene_overview_state";
 export const SCENE_TEXT_STATS_VIEW_NAME =
   "project_repository_scene_text_stats_state";
+// Not a view: the left-out drafts that the cached views were rebuilt without.
+export const SKIPPED_DRAFTS_VIEW_NAME = "project_repository_skipped_drafts";
 export const MAIN_VIEW_VERSION = "1";
 export const SCENE_VIEW_VERSION = "2";
 export const SCENE_OVERVIEW_VIEW_VERSION = "1";
 export const SCENE_TEXT_STATS_VIEW_VERSION = "3";
+export const SKIPPED_DRAFTS_VIEW_VERSION = "1";
 export const COMMITTED_HISTORY_BATCH_LIMIT = 256;
 export const VIEW_CHECKPOINT = {
   mode: "debounce",

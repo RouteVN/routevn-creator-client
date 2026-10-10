@@ -90,12 +90,19 @@ const createSkippedDraftsError = (skippedDrafts) => {
 
 // Shows one alert for the drafts the user has not been told about yet. The
 // stored ids are then those of the drafts that are still left out, so the
-// list never grows past the drafts in storage.
+// list never grows past the drafts in storage. A storage error that kept
+// cached state from being fully rebuilt without them is only reported: the
+// open project no longer uses that state.
 export const notifySkippedDrafts = async (
   deps,
-  { projectId, skippedDrafts },
+  { projectId, skippedDrafts, rebuildError },
 ) => {
   const { appService, i18n } = deps;
+  if (rebuildError) {
+    appService.reportError(rebuildError, {
+      operation: "projectHistory.rebuildWithoutSkippedDrafts",
+    });
+  }
   const configKey = getNotifiedSkippedDraftsConfigKey(projectId);
   const notifiedDraftIds = new Set(appService.getUserConfig(configKey) ?? []);
   const skippedDraftIds = skippedDrafts.map(({ draftId }) => draftId);

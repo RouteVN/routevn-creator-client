@@ -68,5 +68,14 @@ describe("projectServiceCore subscribeSkippedDrafts", () => {
       projectId: "project-1",
       skippedDrafts,
     });
+
+    const rebuildError = new Error("disk I/O error");
+    repositoryListener(skippedDrafts, rebuildError);
+
+    expect(listener).toHaveBeenLastCalledWith({
+      projectId: "project-1",
+      skippedDrafts,
+      rebuildError,
+    });
   });
 });

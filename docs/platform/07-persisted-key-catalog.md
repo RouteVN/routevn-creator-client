@@ -259,6 +259,17 @@ Current storage key shape:
 
 These rows are projection caches/checkpoints, not user-facing config.
 
+One row is not a projection:
+
+- `project_repository_skipped_drafts`, partition `m`
+  - purpose: the local drafts that the project's history load left out and
+    that the cached views were rebuilt without, so that a later load leaving
+    out the same drafts does not rebuild them again
+  - value: `{ drafts, rebuilt }`, each draft as
+    `{ draftId, partition, sceneId }`; `rebuilt` is false while a rebuild
+    over `drafts` has not finished
+  - removed when no draft is left out; see `05-storage.md`
+
 ## Exported Windows Player Runtime SQLite Keys
 
 The native Windows player stores Route Engine runtime persistence in:
