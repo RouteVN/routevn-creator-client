@@ -18,6 +18,20 @@ describe("mobileSheet view", () => {
     expect(view).not.toContain("rgba(15, 23, 42");
   });
 
+  it("lets the system Back close the sheet through its overlay", () => {
+    const view = readFileSync(
+      new URL(
+        "../../src/components/mobileSheet/mobileSheet.view.yaml",
+        import.meta.url,
+      ),
+      "utf8",
+    );
+
+    expect(view).toContain(
+      "rtgl-view#overlay pos=fix edge=f bgc=bg data-native-back=true",
+    );
+  });
+
   it("caps the sheet width and centers it on wide windows", () => {
     const view = readFileSync(
       new URL(

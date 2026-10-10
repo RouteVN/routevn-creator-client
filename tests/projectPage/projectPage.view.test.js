@@ -27,6 +27,17 @@ describe("project page view", () => {
     );
   });
 
+  it("keeps the system Back from leaving the project while it exports", () => {
+    const projectView = readFileSync(
+      new URL("../../src/pages/project/project.view.yaml", import.meta.url),
+      "utf8",
+    );
+
+    expect(projectView).toContain(
+      "rtgl-view pos=fix edge=f z=2050 d=v ah=c av=c g=sm data-native-back=true",
+    );
+  });
+
   it("keeps basic information and analytics in separate scrollable sections", () => {
     const projectView = readFileSync(
       new URL("../../src/pages/project/project.view.yaml", import.meta.url),

@@ -264,6 +264,7 @@ appPage:
   failedInstallUpdateMessage: "无法安装更新：{message}"
   failedLoadAppSettings: "无法加载应用设置。将使用默认值。"
   failedOpenLink: "无法打开链接。"
+  failedGoBack: "无法返回。请重试。"
   failedSaveAppSettings: "无法保存应用设置。"
   failedUpdateStatusBar: "无法更新状态栏。请重启应用。"
   failedRevealEditorCaret: "无法滚动到光标位置。请重启应用。"

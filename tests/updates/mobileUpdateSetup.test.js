@@ -624,3 +624,23 @@ describe("mobile setup saves the open page as the app goes inactive", () => {
     expect(saveBeforeSuspend).toHaveBeenCalledWith("background");
   });
 });
+
+describe("mobile setup system Back", () => {
+  it.each([
+    ["Android", "../../src/setup.android.js", true],
+    ["iOS", "../../src/setup.ios.js", false],
+  ])(
+    "from a project with nothing behind it on %s",
+    async (_platform, setupPath, opensProjects) => {
+      const {
+        deps: { pages },
+      } = await import(/* @vite-ignore */ setupPath);
+      const backToProjects = vi.spyOn(pages.appService, "backToProjects");
+      // Projects opens a project in place of its own route entry.
+      pages.appService.replace("/project", { p: "project-1" });
+
+      expect(window.routeVNNativeBack()).toBe(opensProjects);
+      expect(backToProjects).toHaveBeenCalledTimes(opensProjects ? 1 : 0);
+    },
+  );
+});

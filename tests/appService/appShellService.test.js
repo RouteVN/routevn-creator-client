@@ -176,6 +176,22 @@ describe("appShellService", () => {
     });
   });
 
+  it("opens Projects in place of the project, remembering to keep its entry", () => {
+    const deps = createDeps();
+    const service = createAppShellService(deps);
+
+    service.backToProjects();
+
+    expect(deps.subject.dispatch).toHaveBeenCalledOnce();
+    expect(deps.subject.dispatch).toHaveBeenCalledWith("redirect", {
+      path: "/projects",
+      payload: undefined,
+      timing: undefined,
+      historyMode: "replace",
+      historyState: { preserveProjectsEntryOnProjectOpen: true },
+    });
+  });
+
   it("leaves web history route updates to popstate", async () => {
     const deps = createDeps();
     deps.router.back.mockReturnValue(undefined);

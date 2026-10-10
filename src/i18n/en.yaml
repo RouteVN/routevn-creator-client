@@ -264,6 +264,7 @@ appPage:
   failedInstallUpdateMessage: "Failed to install update: {message}"
   failedLoadAppSettings: "Failed to load app settings. Using defaults."
   failedOpenLink: "Failed to open link."
+  failedGoBack: "Could not go back. Please try again."
   failedSaveAppSettings: "Failed to save app settings."
   failedUpdateStatusBar: "Could not update the status bar. Please restart the app."
   failedRevealEditorCaret: "Could not scroll to the cursor. Please restart the app."
