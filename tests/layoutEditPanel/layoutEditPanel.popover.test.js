@@ -64,9 +64,10 @@ describe("layoutEditPanel popover forms", () => {
     expect(yPopover.context.isSliderPopover).toBe(true);
     // The slider runs half the width or height beyond each edge, also for a
     // value outside it; a typed value reaches 4 times the width or height
-    // either way.
+    // either way. The number input is small, as the buttons below it are.
     expect(xPopover.form.fields[0]).toMatchObject({
       type: "slider-with-input",
+      s: "sm",
       min: -7680,
       max: 7680,
       sliderMin: -960,

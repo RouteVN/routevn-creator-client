@@ -49,6 +49,8 @@ export const selectViewData = ({ state, props, i18n }) => {
         {
           name: "value",
           type: "slider-with-input",
+          // Small, as the buttons in the row below are.
+          s: "sm",
           min: range.min,
           max: range.max,
           sliderMin: range.sliderMin,

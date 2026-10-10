@@ -117,10 +117,11 @@ describe("rvn-slider-value-field", () => {
     expect(view.popover).toMatchObject({ open: true, x: 200, y: 40 });
     expect(view.popoverDefaultValues).toEqual({ value: 24 });
     // The slider runs over the field's range; a typed value reaches its
-    // bounds.
+    // bounds. The number input is small, as the buttons below it are.
     expect(view.popoverForm.fields[0]).toEqual({
       name: "value",
       type: "slider-with-input",
+      s: "sm",
       min: 8,
       max: 400,
       sliderMin: 8,

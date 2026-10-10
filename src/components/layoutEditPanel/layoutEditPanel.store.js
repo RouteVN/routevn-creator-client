@@ -526,6 +526,8 @@ const buildPopoverForm = ({ form, name, projectResolution } = {}) => {
     {
       ...firstField,
       type: "slider-with-input",
+      // Small, as the buttons in the row below are.
+      s: "sm",
       min: sliderRange.min,
       max: sliderRange.max,
       sliderMin: sliderRange.sliderMin,
