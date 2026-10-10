@@ -1,5 +1,6 @@
 import {
   EMPTY,
+  Subject,
   filter,
   fromEvent,
   map,
@@ -32,6 +33,7 @@ import {
   HELP_BUTTON_VISIBLE_CONFIG_KEY,
   isHelpButtonVisible,
 } from "../../internal/ui/helpPreferences.js";
+import { createSkippedDraftsNoticeStream } from "./support/skippedDraftsNotice.js";
 
 const GLOBAL_NAV_TIMEOUT_MS = 1500;
 const ROUTE_HISTORY_MODES = new Set(["push", "replace", "none"]);
@@ -257,7 +259,12 @@ const renderWithNavigationTiming = ({ render, timing, event }) => {
   markNavigationPaintTiming(timing, `${event}.paint`);
 };
 
-export const createRouteTransitionRunner = (deps) => {
+// `onOpenProjectChange` receives the id of the project a route opened, or
+// undefined when the open project is released.
+export const createRouteTransitionRunner = (
+  deps,
+  { onOpenProjectChange = () => {} } = {},
+) => {
   let transitionToken = 0;
 
   return async ({
@@ -393,6 +400,7 @@ export const createRouteTransitionRunner = (deps) => {
       markNavigationTiming(routeTiming, "repository.release.end", {
         ensuredProjectId,
       });
+      onOpenProjectChange(undefined);
     }
 
     if (!needsRepository) {
@@ -496,6 +504,7 @@ export const createRouteTransitionRunner = (deps) => {
       finishNavigationTiming(routeTiming, "route.transition.complete", {
         needsRepository,
       });
+      onOpenProjectChange(currentProjectId);
     } catch (error) {
       if (currentTransitionToken !== transitionToken) {
         return;
@@ -816,7 +825,10 @@ export const handleSceneEditorKeyboardStateChange = (deps, payload = {}) => {
 
 const subscriptions = (deps) => {
   const { appService, subject, store, render } = deps;
-  const runRouteTransition = createRouteTransitionRunner(deps);
+  const openProjectId$ = new Subject();
+  const runRouteTransition = createRouteTransitionRunner(deps, {
+    onOpenProjectChange: (projectId) => openProjectId$.next(projectId),
+  });
   let navigationRequestSequence = 0;
   const projectKeyDown$ = fromEvent(window, "keydown", { capture: true }).pipe(
     filter(() => isProjectRoute(appService.getPath())),
@@ -861,6 +873,7 @@ const subscriptions = (deps) => {
   };
 
   return [
+    createSkippedDraftsNoticeStream({ deps, projectId$: openProjectId$ }),
     subject.pipe(
       filter(
         ({ action, payload }) =>

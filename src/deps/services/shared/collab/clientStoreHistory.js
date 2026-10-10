@@ -1,9 +1,16 @@
 import {
   applyRepositoryEventsToRepositoryState,
+  findLineLocation,
+  findSectionLocation,
   initialProjectData,
 } from "../projectRepository.js";
+import {
+  isNonEmptyString,
+  resolveSceneIdForPartition,
+} from "../projectRepositoryViews/shared.js";
 
 export const DRAFT_HISTORY_MODE_SNAPSHOT_ARCHIVE = "snapshot_archive";
+const PROJECT_CREATE_TYPE = "project.create";
 
 const normalizeHistoryStatValue = (value) => {
   const numericValue = Number(value);
@@ -174,6 +181,128 @@ const applyRepositoryEventsToState = ({
   return applyResult.repositoryState;
 };
 
+const tryApplyRepositoryEventsToState = ({
+  repositoryState,
+  events,
+  projectId,
+}) => {
+  try {
+    return {
+      repositoryState: applyRepositoryEventsToState({
+        repositoryState,
+        events,
+        projectId,
+      }),
+    };
+  } catch (error) {
+    return { error };
+  }
+};
+
+// Finds the draft that makes `draftEvents` fail on `repositoryState`, given
+// the error from applying them all. Returns how many drafts before it apply,
+// the state they produce, and the error the failed draft causes.
+//
+// A reported command index points at the failed draft once the drafts before
+// it are known to apply. Errors without an index, such as a malformed draft or
+// a check of the final state, are located by a binary search for the shortest
+// failing prefix: its last draft is the failed one. Treating the first
+// remaining draft as the failed one instead would leave out valid drafts until
+// the invalid one came first.
+const findFailedDraft = ({
+  repositoryState,
+  draftEvents,
+  projectId,
+  error,
+}) => {
+  // The first `acceptedCount` drafts apply, and the first `failedCount` fail.
+  let acceptedCount = 0;
+  let acceptedState = repositoryState;
+  let failedCount = draftEvents.length;
+  let failedError = error;
+  let nextProbeCount;
+
+  const reportedIndex = Number(error?.details?.commandIndex);
+  if (
+    Number.isInteger(reportedIndex) &&
+    reportedIndex >= 0 &&
+    reportedIndex < draftEvents.length
+  ) {
+    failedCount = reportedIndex + 1;
+    nextProbeCount = reportedIndex;
+  }
+
+  while (failedCount - acceptedCount > 1) {
+    const probeCount =
+      nextProbeCount ?? Math.floor((acceptedCount + failedCount) / 2);
+    nextProbeCount = undefined;
+    const result = tryApplyRepositoryEventsToState({
+      repositoryState,
+      events: draftEvents.slice(0, probeCount),
+      projectId,
+    });
+
+    if (result.error) {
+      failedCount = probeCount;
+      failedError = result.error;
+    } else {
+      acceptedCount = probeCount;
+      acceptedState = result.repositoryState;
+    }
+  }
+
+  return {
+    acceptedCount,
+    acceptedState,
+    error: failedError,
+  };
+};
+
+const toLocationId = (value) => (isNonEmptyString(value) ? value : undefined);
+
+// The section that `events` last put a line in, for a line that an earlier
+// change deleted.
+const findLastSectionOfLine = (events, lineId) => {
+  for (let index = events.length - 1; index >= 0; index -= 1) {
+    const { type, payload } = events[index];
+    if (type === "line.move" && payload.lineId === lineId) {
+      return toLocationId(payload.toSectionId);
+    }
+    if (
+      type === "line.create" &&
+      payload.lines?.some((line) => line?.lineId === lineId)
+    ) {
+      return toLocationId(payload.sectionId);
+    }
+  }
+  return undefined;
+};
+
+// Where a left-out draft belongs, read from the state and the events the
+// draft was replayed onto. Line commands that name no section are found by
+// their line. A section that is not in the project is not named.
+const resolveDraftLocation = ({ repositoryState, events, draft }) => {
+  const { payload } = draft;
+  const lineId = toLocationId(payload.lineId ?? payload.lineIds?.[0]);
+  const sectionId =
+    toLocationId(payload.sectionId ?? payload.toSectionId) ??
+    (lineId
+      ? (findLineLocation(repositoryState, lineId)?.sectionId ??
+        findLastSectionOfLine(events, lineId))
+      : undefined);
+  const sectionLocation = sectionId
+    ? findSectionLocation(repositoryState, sectionId)
+    : undefined;
+  const sceneId =
+    sectionLocation?.sceneId ??
+    resolveSceneIdForPartition(repositoryState, draft.partition);
+
+  return {
+    sceneId: sceneId ?? undefined,
+    sectionId: sectionLocation ? sectionId : undefined,
+  };
+};
+
 const logInvalidLocalDraftDuringProjectLoad = ({
   projectId,
   failedDraft,
@@ -282,10 +411,15 @@ export const loadClientStoreCursor = async (store) => {
   return Number(await store.getCursor()) || 0;
 };
 
+// Replays committed events, then local drafts. A draft that no longer applies
+// is left out of the returned events but kept in the store. `onSkippedDraft`
+// is called once for each left-out draft whose changes are missing from the
+// project, with `{ draftId, type, partition, sceneId, sectionId, error }`.
 export const loadRepositoryEventsFromClientStore = async ({
   store,
   projectId,
   onProgress,
+  onSkippedDraft = () => {},
   draftHistoryMode,
 }) => {
   const committed = await loadCommittedEventsFromClientStore(store);
@@ -356,6 +490,87 @@ export const loadRepositoryEventsFromClientStore = async ({
     return nextEvent;
   });
 
+  // A draft replayed before any project.create replays onto an empty project
+  // rather than the one it was made in, as in desktop history backed by a main
+  // checkpoint, so it may fail there and still be part of the project. A draft
+  // that repeats a committed event is already in the committed history.
+  // Neither is reported as missing.
+  const isProjectCreate = (event) => event?.type === PROJECT_CREATE_TYPE;
+  const committedEventIds = new Set(committed.map((event) => event?.id));
+  const isMissingFromProject = (failedDraft) =>
+    events.some(isProjectCreate) && !committedEventIds.has(failedDraft.id);
+
+  // Appends the drafts that apply to `events` and leaves out the ones that do
+  // not, one at a time.
+  const replayDraftEvents = async ({ startState, draftsToReplay }) => {
+    let repositoryState = startState;
+    let remainingDraftEvents = draftsToReplay;
+
+    while (remainingDraftEvents.length > 0) {
+      const result = tryApplyRepositoryEventsToState({
+        repositoryState,
+        events: remainingDraftEvents,
+        projectId,
+      });
+      if (!result.error) {
+        events.push(...remainingDraftEvents);
+        processedEventCount += remainingDraftEvents.length;
+        reportProgress({ force: true });
+        await yieldForUiPaint();
+        return;
+      }
+
+      const { acceptedCount, acceptedState, error } = findFailedDraft({
+        repositoryState,
+        draftEvents: remainingDraftEvents,
+        projectId,
+        error: result.error,
+      });
+
+      if (acceptedCount > 0) {
+        events.push(...remainingDraftEvents.slice(0, acceptedCount));
+        processedEventCount += acceptedCount;
+        reportProgress({ force: true });
+        await yieldForUiPaint();
+      }
+      repositoryState = acceptedState;
+
+      const failedDraft = remainingDraftEvents[acceptedCount];
+      assertDraftCanBeIgnoredDuringLoad({
+        projectId,
+        failedDraft,
+        error,
+      });
+      processedEventCount += 1;
+      reportProgress({ force: true });
+      await yieldForUiPaint();
+      logInvalidLocalDraftDuringProjectLoad({
+        projectId,
+        failedDraft,
+        error,
+      });
+      if (isMissingFromProject(failedDraft)) {
+        const { sceneId, sectionId } = resolveDraftLocation({
+          repositoryState,
+          events,
+          draft: failedDraft,
+        });
+        onSkippedDraft({
+          draftId: failedDraft.id,
+          type: failedDraft.type,
+          partition: failedDraft.partition,
+          sceneId,
+          sectionId,
+          error: {
+            code: error?.code ?? "validation_failed",
+            message: error?.message ?? "Invalid local draft",
+          },
+        });
+      }
+      remainingDraftEvents = remainingDraftEvents.slice(acceptedCount + 1);
+    }
+  };
+
   if (draftHistoryMode === DRAFT_HISTORY_MODE_SNAPSHOT_ARCHIVE) {
     const bootstrapEvent = draftEvents[0];
     events.push(bootstrapEvent);
@@ -373,67 +588,12 @@ export const loadRepositoryEventsFromClientStore = async ({
       });
     }
 
-    let repositoryState = structuredClone(
-      bootstrapEvent?.payload?.state ?? initialProjectData,
-    );
-    let remainingDraftEvents = draftEvents.slice(1);
-
-    while (remainingDraftEvents.length > 0) {
-      try {
-        repositoryState = applyRepositoryEventsToState({
-          repositoryState,
-          events: remainingDraftEvents,
-          projectId,
-        });
-        events.push(...remainingDraftEvents);
-        processedEventCount += remainingDraftEvents.length;
-        reportProgress({ force: true });
-        await yieldForUiPaint();
-        break;
-      } catch (error) {
-        const failedDraftIndex = Number(error?.details?.commandIndex);
-        const resolvedFailedDraftIndex =
-          Number.isInteger(failedDraftIndex) &&
-          failedDraftIndex >= 0 &&
-          failedDraftIndex < remainingDraftEvents.length
-            ? failedDraftIndex
-            : 0;
-        const acceptedPrefix = remainingDraftEvents.slice(
-          0,
-          resolvedFailedDraftIndex,
-        );
-
-        if (acceptedPrefix.length > 0) {
-          repositoryState = applyRepositoryEventsToState({
-            repositoryState,
-            events: acceptedPrefix,
-            projectId,
-          });
-          events.push(...acceptedPrefix);
-          processedEventCount += acceptedPrefix.length;
-          reportProgress({ force: true });
-          await yieldForUiPaint();
-        }
-
-        const failedDraft = remainingDraftEvents[resolvedFailedDraftIndex];
-        assertDraftCanBeIgnoredDuringLoad({
-          projectId,
-          failedDraft,
-          error,
-        });
-        processedEventCount += 1;
-        reportProgress({ force: true });
-        await yieldForUiPaint();
-        logInvalidLocalDraftDuringProjectLoad({
-          projectId,
-          failedDraft,
-          error,
-        });
-        remainingDraftEvents = remainingDraftEvents.slice(
-          resolvedFailedDraftIndex + 1,
-        );
-      }
-    }
+    await replayDraftEvents({
+      startState: structuredClone(
+        bootstrapEvent?.payload?.state ?? initialProjectData,
+      ),
+      draftsToReplay: draftEvents.slice(1),
+    });
 
     reportProgress({ force: true });
     return finalizeLoadedRepositoryEvents({
@@ -451,68 +611,14 @@ export const loadRepositoryEventsFromClientStore = async ({
     total: totalEventCount,
   });
 
-  let repositoryState = applyRepositoryEventsToState({
-    repositoryState: initialProjectData,
-    events,
-    projectId,
+  await replayDraftEvents({
+    startState: applyRepositoryEventsToState({
+      repositoryState: initialProjectData,
+      events,
+      projectId,
+    }),
+    draftsToReplay: draftEvents,
   });
-  let remainingDraftEvents = draftEvents;
-  while (remainingDraftEvents.length > 0) {
-    try {
-      repositoryState = applyRepositoryEventsToState({
-        repositoryState,
-        events: remainingDraftEvents,
-        projectId,
-      });
-      events.push(...remainingDraftEvents);
-      processedEventCount += remainingDraftEvents.length;
-      reportProgress({ force: true });
-      await yieldForUiPaint();
-      break;
-    } catch (error) {
-      const failedDraftIndex = Number(error?.details?.commandIndex);
-      const resolvedFailedDraftIndex =
-        Number.isInteger(failedDraftIndex) &&
-        failedDraftIndex >= 0 &&
-        failedDraftIndex < remainingDraftEvents.length
-          ? failedDraftIndex
-          : 0;
-      const acceptedPrefix = remainingDraftEvents.slice(
-        0,
-        resolvedFailedDraftIndex,
-      );
-
-      if (acceptedPrefix.length > 0) {
-        repositoryState = applyRepositoryEventsToState({
-          repositoryState,
-          events: acceptedPrefix,
-          projectId,
-        });
-        events.push(...acceptedPrefix);
-        processedEventCount += acceptedPrefix.length;
-        reportProgress({ force: true });
-        await yieldForUiPaint();
-      }
-
-      const failedDraft = remainingDraftEvents[resolvedFailedDraftIndex];
-      assertDraftCanBeIgnoredDuringLoad({
-        projectId,
-        failedDraft,
-        error,
-      });
-      processedEventCount += 1;
-      reportProgress({ force: true });
-      await yieldForUiPaint();
-      logInvalidLocalDraftDuringProjectLoad({
-        projectId,
-        failedDraft,
-        error,
-      });
-      remainingDraftEvents = remainingDraftEvents.slice(
-        resolvedFailedDraftIndex + 1,
-      );
-    }
-  }
 
   reportProgress({ force: true });
   return finalizeLoadedRepositoryEvents({

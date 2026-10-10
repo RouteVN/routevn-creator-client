@@ -423,8 +423,9 @@ export const createSceneBundleRuntime = ({
 
     const sceneState = await getSceneStateForOverview(sceneId);
 
+    // Loading the scene can load the history and rebuild the main state.
     const repositoryState = composeRepositoryState({
-      mainState: currentMainState,
+      mainState: getCurrentMainState(),
       activeSceneId: sceneId,
       activeSceneState: sceneState,
     });

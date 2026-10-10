@@ -565,14 +565,18 @@ describe("app route transitions", () => {
       setRepositoryLoadingPhase: vi.fn(),
       setRepositoryLoadingProgress: vi.fn(),
     };
+    const onOpenProjectChange = vi.fn();
 
-    await createRouteTransitionRunner({
-      appService,
-      projectService,
-      store,
-      render: vi.fn(),
-      i18n: {},
-    })({
+    await createRouteTransitionRunner(
+      {
+        appService,
+        projectService,
+        store,
+        render: vi.fn(),
+        i18n: {},
+      },
+      { onOpenProjectChange },
+    )({
       path: "/project",
       payload: {
         p: "shared-project-id",
@@ -584,6 +588,11 @@ describe("app route transitions", () => {
     expect(projectService.releaseProjectRuntime).toHaveBeenCalledWith(
       "shared-project-id",
     );
+    // The released repository's project closes before the other path opens.
+    expect(onOpenProjectChange.mock.calls).toEqual([
+      [undefined],
+      ["shared-project-id"],
+    ]);
     expect(appService.refreshCurrentProjectEntry).toHaveBeenCalledOnce();
     expect(projectService.ensureRepository).toHaveBeenCalledOnce();
     expect(store.setRepositoryLoading).toHaveBeenNthCalledWith(1, {
@@ -592,6 +601,66 @@ describe("app route transitions", () => {
     expect(store.setRepositoryLoading).toHaveBeenLastCalledWith({
       isLoading: false,
     });
+  });
+
+  it("reports the open project once its repository is ready and clears it when released", async () => {
+    let routeProjectId = "project-1";
+    let ensuredProjectId;
+    const appService = {
+      prepareNavigation: vi.fn(async () => {}),
+      getCurrentProjectId: vi.fn(() => routeProjectId),
+      refreshCurrentProjectEntry: vi.fn(async () => {}),
+      getPlatform: vi.fn(() => "web"),
+    };
+    const projectService = {
+      ensureRepository: vi.fn(async () => {
+        ensuredProjectId = routeProjectId;
+      }),
+      getEnsuredProjectId: vi.fn(() => ensuredProjectId),
+      releaseProjectRuntime: vi.fn(async () => {
+        ensuredProjectId = undefined;
+      }),
+    };
+    const onOpenProjectChange = vi.fn();
+    const runRouteTransition = createRouteTransitionRunner(
+      {
+        appService,
+        projectService,
+        store: {
+          setCurrentRoute: vi.fn(),
+          closeMobileSheet: vi.fn(),
+          setRepositoryLoading: vi.fn(),
+          setRepositoryLoadingPhase: vi.fn(),
+          setRepositoryLoadingProgress: vi.fn(),
+        },
+        render: vi.fn(),
+        i18n: {},
+      },
+      { onOpenProjectChange },
+    );
+
+    await runRouteTransition({
+      path: "/project",
+      payload: { p: "project-1" },
+      navigationPrepared: true,
+    });
+
+    expect(onOpenProjectChange.mock.calls).toEqual([["project-1"]]);
+
+    routeProjectId = "";
+    await runRouteTransition({
+      path: "/projects",
+      payload: {},
+      navigationPrepared: true,
+    });
+
+    expect(projectService.releaseProjectRuntime).toHaveBeenCalledWith(
+      "project-1",
+    );
+    expect(onOpenProjectChange.mock.calls).toEqual([
+      ["project-1"],
+      [undefined],
+    ]);
   });
 
   it("prepares browser back navigation without rewriting the popped entry", async () => {
@@ -741,6 +810,7 @@ describe("app route transitions", () => {
       projectService: {
         ensureRepository: vi.fn(async () => {}),
         getEnsuredProjectId: vi.fn(() => "project-1"),
+        subscribeSkippedDrafts: vi.fn(() => () => {}),
       },
       render: vi.fn(),
       store,

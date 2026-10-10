@@ -684,6 +684,19 @@ export const createProjectServiceCore = ({
         options,
       );
     },
+    // Like subscribeProjectState, for the local drafts left out when the
+    // project's history loads: `listener` receives `{ projectId,
+    // skippedDrafts }`, where each draft is `{ draftId, type, partition,
+    // sceneId, sectionId, error }`.
+    subscribeSkippedDrafts(listener, options) {
+      const projectId = options?.projectId ?? getCurrentProjectId();
+      return repositoryService.subscribeSkippedDrafts((skippedDrafts) => {
+        listener({
+          projectId,
+          skippedDrafts,
+        });
+      }, options);
+    },
     getRepositoryByPath: repositoryService.getRepositoryByPath,
     ...collabService.commandApi,
     getState: getDomainState,
