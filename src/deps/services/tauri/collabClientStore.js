@@ -806,12 +806,10 @@ export const createPersistedTauriProjectStore = async ({
             return undefined;
           }
 
-          // plugin-sql does not guarantee a pinned connection across JS-issued
-          // BEGIN/COMMIT batches. Sequential single inserts avoid the long
-          // busy-timeout stalls we were seeing in insertDrafts().
-          for (const item of normalizedItems) {
-            await store.insertDraft(item);
-          }
+          // One transaction, so a failed save stores none of its drafts. The
+          // SQL plugin keeps one connection per database, so the BEGIN, the
+          // inserts and the COMMIT all run on it.
+          await store.insertDrafts(normalizedItems);
           return undefined;
         });
       },
