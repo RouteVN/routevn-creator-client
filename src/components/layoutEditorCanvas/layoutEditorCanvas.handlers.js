@@ -10,7 +10,6 @@ import {
   canResizeLayoutEditorItemHeight,
   canResizeLayoutEditorItemWidth,
 } from "../../internal/layoutEditorElementRegistry.js";
-import { captureCanvasThumbnailImage } from "../../internal/runtime/graphicsEngineRuntime.js";
 import { createTransformKeyboardIntent } from "../../internal/transformKeyboard.js";
 import {
   createLayoutEditorAssetReferences,
@@ -1098,10 +1097,6 @@ const initCanvasGraphics = async (deps, props = deps.props) => {
     height,
   });
   deps.store.setGraphicsReady({ value: true });
-};
-
-export const handleCaptureThumbnailImage = async (deps) => {
-  return captureCanvasThumbnailImage(deps.graphicsService, deps.refs.canvas);
 };
 
 export const handleCanvasResize = (deps) => {

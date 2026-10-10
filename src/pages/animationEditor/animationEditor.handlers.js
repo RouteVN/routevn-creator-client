@@ -14,7 +14,10 @@ import {
 import { resolveResourceFileType } from "../../internal/resourceFileMetadata.js";
 import { createFileExplorerKeyboardScopeHandlers } from "../../internal/ui/fileExplorerKeyboardScope.js";
 import { runResourcePageMutation } from "../../internal/ui/resourcePages/resourcePageErrors.js";
-import { getEditHistoryChangeKey } from "../../internal/editHistory.js";
+import {
+  areEditHistoryValuesEqual,
+  getEditHistoryChangeKey,
+} from "../../internal/editHistory.js";
 import { resolveEditHistoryShortcut } from "../../internal/ui/editHistory.js";
 import {
   addKeyframeDefaultValues,
@@ -506,14 +509,31 @@ const createAnimationPersistSnapshot = ({ copy, store } = {}) => {
     description: store.selectAnimationDescription(),
     animationData,
     cameraTracks: store.selectCameraTracks(),
+    preview: store.selectPreviewData(),
   };
 };
 
+// Saves the snapshot. The preview images go with it only when they differ
+// from what is saved, so an animation is not rewritten with the same ones.
 const persistEditorSnapshot = async ({ deps, snapshot } = {}) => {
   const { appService, projectService, render, store } = deps;
   const copy = selectCopy(deps);
   let savedAnimationId = snapshot.editItemId;
   let mutationAttempt;
+  const data = {
+    name: snapshot.name,
+    description: snapshot.description,
+    animation: snapshot.animationData,
+    cameraTracks: snapshot.cameraTracks,
+  };
+  if (
+    !areEditHistoryValuesEqual(
+      snapshot.preview,
+      store.selectAutosavePersistedPreview(),
+    )
+  ) {
+    data.preview = snapshot.preview;
+  }
 
   if (snapshot.editMode && savedAnimationId) {
     mutationAttempt = await runResourcePageMutation({
@@ -523,16 +543,12 @@ const persistEditorSnapshot = async ({ deps, snapshot } = {}) => {
       action: () =>
         projectService.updateAnimation({
           animationId: savedAnimationId,
-          data: {
-            name: snapshot.name,
-            description: snapshot.description,
-            animation: snapshot.animationData,
-            cameraTracks: snapshot.cameraTracks,
-          },
+          data,
         }),
     });
   } else {
     savedAnimationId = generateId();
+    data.type = "animation";
     mutationAttempt = await runResourcePageMutation({
       appService,
       fallbackMessage:
@@ -540,13 +556,7 @@ const persistEditorSnapshot = async ({ deps, snapshot } = {}) => {
       action: () =>
         projectService.createAnimation({
           animationId: savedAnimationId,
-          data: {
-            type: "animation",
-            name: snapshot.name,
-            description: snapshot.description,
-            animation: snapshot.animationData,
-            cameraTracks: snapshot.cameraTracks,
-          },
+          data,
           parentId: snapshot.targetGroupId,
           position: "last",
         }),
@@ -556,6 +566,7 @@ const persistEditorSnapshot = async ({ deps, snapshot } = {}) => {
   if (!mutationAttempt.ok) {
     return mutationAttempt;
   }
+  store.setAutosavePersistedPreview({ preview: snapshot.preview });
 
   if (!snapshot.editMode) {
     store.markAnimationPersisted({
@@ -582,12 +593,24 @@ const persistEditorSnapshot = async ({ deps, snapshot } = {}) => {
   };
 };
 
-const createAnimationPersistFingerprint = (snapshot) => {
+// What undo compares: the animation as autosave saves it, without the
+// preview images, which are not part of the history.
+const createAnimationEditFingerprint = (snapshot) => {
   return JSON.stringify({
     name: snapshot.name,
     description: snapshot.description,
     animation: snapshot.animationData,
     cameraTracks: snapshot.cameraTracks,
+  });
+};
+
+// What autosave compares with what is saved: the animation and its preview
+// images. A new animation is created by its first edit, which takes its
+// preview images along, so a picked image alone creates nothing.
+const createAnimationPersistFingerprint = (snapshot) => {
+  return JSON.stringify({
+    edit: createAnimationEditFingerprint(snapshot),
+    preview: snapshot.editMode ? snapshot.preview : undefined,
   });
 };
 
@@ -699,9 +722,13 @@ const flushQueuedAutosave = async ({ deps, force = false } = {}) => {
         return mutationAttempt;
       }
 
+      // A new animation is saved now, so its preview images count from here.
       store.markAutosavePersisted({
         version,
-        fingerprint,
+        fingerprint: createAnimationPersistFingerprint({
+          ...snapshot,
+          editMode: true,
+        }),
       });
     } while (
       force &&
@@ -735,8 +762,8 @@ const scheduleEditorAutosave = ({ deps } = {}) => {
   }
 };
 
-const getAnimationEditorPersistFingerprint = (deps) =>
-  createAnimationPersistFingerprint(
+const getAnimationEditorEditFingerprint = (deps) =>
+  createAnimationEditFingerprint(
     createAnimationPersistSnapshot({
       copy: selectCopy(deps),
       store: deps.store,
@@ -748,7 +775,7 @@ const setAnimationEditorHistoryBaseline = (deps) => {
   const { store } = deps;
   store.setEditHistoryBaseline({
     snapshot: store.selectAnimationHistorySnapshot(),
-    fingerprint: getAnimationEditorPersistFingerprint(deps),
+    fingerprint: getAnimationEditorEditFingerprint(deps),
   });
 };
 
@@ -764,7 +791,7 @@ const recordAnimationEditorEdit = (deps) => {
   }
   const beforeFingerprint = store.selectEditHistoryBaselineFingerprint();
   const after = store.selectAnimationHistorySnapshot();
-  const afterFingerprint = getAnimationEditorPersistFingerprint(deps);
+  const afterFingerprint = getAnimationEditorEditFingerprint(deps);
   store.setEditHistoryBaseline({
     snapshot: after,
     fingerprint: afterFingerprint,
@@ -924,6 +951,7 @@ const syncEditorState = async ({ deps, repositoryState } = {}) => {
     store.setAutosavePersistedFingerprint({
       fingerprint: createAnimationPersistFingerprint(snapshot),
     });
+    store.setAutosavePersistedPreview({ preview: snapshot.preview });
   } else {
     store.setSelectedItemId({ itemId: undefined });
     store.openDialog({
@@ -940,7 +968,9 @@ const syncEditorState = async ({ deps, repositoryState } = {}) => {
     // Nothing is saved for a new animation until it differs from how it
     // opened, so undoing back to that creates nothing.
     store.setAutosavePersistedFingerprint({
-      fingerprint: getAnimationEditorPersistFingerprint(deps),
+      fingerprint: createAnimationPersistFingerprint(
+        createAnimationPersistSnapshot({ copy, store }),
+      ),
     });
   }
   setAnimationEditorHistoryBaseline(deps);
@@ -1217,65 +1247,6 @@ export const handleBackClick = async (deps) => {
     }),
     { historyMode: "replace" },
   );
-};
-
-export const handleSavePreviewClick = async (deps) => {
-  const { appService, projectService, render, store } = deps;
-  const copy = selectCopy(deps);
-  const autosaveAttempt = await flushQueuedAutosave({
-    deps,
-    force: true,
-  });
-
-  if (!autosaveAttempt.ok) {
-    return;
-  }
-
-  const animationId = store.selectEditItemId();
-  if (!animationId) {
-    appService.showAlert({
-      message: copy.animationMissing ?? "Animation is missing.",
-      title: copy.errorTitle ?? "Error",
-    });
-    return;
-  }
-
-  try {
-    const previewData = store.selectPreviewData();
-    const updateAttempt = await runResourcePageMutation({
-      appService,
-      fallbackMessage:
-        copy.failedSaveAnimationPreview ?? "Failed to save animation preview.",
-      action: () =>
-        projectService.updateAnimation({
-          animationId,
-          data: {
-            preview: previewData,
-          },
-        }),
-    });
-
-    if (!updateAttempt.ok) {
-      return;
-    }
-
-    store.setItems({
-      data: projectService.getRepositoryState()?.animations,
-    });
-    if (store.selectIsTouchMode()) {
-      store.closePreviewDialog({});
-    }
-    render();
-    appService.showToast({
-      message: copy.animationPreviewSaved ?? "Animation preview saved.",
-    });
-  } catch {
-    appService.showAlert({
-      message:
-        copy.failedSaveAnimationPreview ?? "Failed to save animation preview.",
-      title: copy.errorTitle ?? "Error",
-    });
-  }
 };
 
 export const handleClosePopover = (deps) => {
@@ -3059,6 +3030,8 @@ export const handleConfirmMaskImageSelection = async (deps) => {
 
   store.hideImageSelectorDialog({});
   if (isPreviewImageSelection) {
+    // A picked preview image saves on its own, but is not an edit to undo.
+    scheduleEditorAutosave({ deps });
     invalidatePreview({
       store,
     });

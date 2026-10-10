@@ -1,6 +1,8 @@
 import { describe, expect, it, vi } from "vitest";
+import { EN_I18N } from "../support/i18n.js";
 import {
   createLayoutTemplate,
+  handleAfterMount,
   handleItemDuplicate,
   handleLayoutFormActionClick,
   handleLayoutItemClick,
@@ -76,19 +78,19 @@ describe("createLayoutTemplate", () => {
     });
   });
 
-  it("creates layouts with empty elements and metadata", async () => {
+  it("creates layouts with empty elements and metadata, and has their thumbnails drawn", async () => {
     const createLayoutItem = vi.fn(async () => "layout-1");
     const deps = {
+      i18n: EN_I18N,
       store: {
-        getState: () => ({
-          targetGroupId: "group-1",
-        }),
+        selectTargetGroupId: () => "group-1",
         closeAddDialog: vi.fn(),
         setItems: vi.fn(),
         setTagsData: vi.fn(),
       },
       projectService: {
         createLayoutItem,
+        requestLayoutThumbnails: vi.fn(async () => {}),
         getRepositoryState: () => ({
           project: {
             resolution: projectResolution,
@@ -137,6 +139,11 @@ describe("createLayoutTemplate", () => {
       }),
     );
     expect(deps.store.closeAddDialog).toHaveBeenCalled();
+    // Its thumbnail is drawn in the background.
+    const { layoutId } = createLayoutItem.mock.calls[0][0];
+    expect(deps.projectService.requestLayoutThumbnails).toHaveBeenCalledWith({
+      layoutIds: [layoutId],
+    });
   });
 
   it("selects a layout without logging", () => {
@@ -227,6 +234,7 @@ describe("createLayoutTemplate", () => {
   it("duplicates a layout and selects the duplicate", async () => {
     const duplicateLayoutItem = vi.fn(async () => "layout-copy");
     const deps = {
+      i18n: EN_I18N,
       store: {
         setItems: vi.fn(),
         setTagsData: vi.fn(),
@@ -280,5 +288,37 @@ describe("createLayoutTemplate", () => {
     expect(deps.refs.fileExplorer.selectItem).toHaveBeenCalledWith({
       itemId: "layout-copy",
     });
+  });
+
+  it("has out-of-date thumbnails drawn in the background when it opens", () => {
+    // Opening also focuses the explorer on the next frame.
+    vi.stubGlobal("requestAnimationFrame", vi.fn());
+    const deps = {
+      i18n: EN_I18N,
+      appService: { getPayload: vi.fn(() => ({ p: "project-1" })) },
+      projectService: {
+        getRepositoryState: () => ({
+          project: { resolution: projectResolution },
+          layouts: { items: {}, tree: [] },
+        }),
+        requestLayoutThumbnails: vi.fn(async () => {}),
+      },
+      store: {
+        setItems: vi.fn(),
+        setTagsData: vi.fn(),
+        setSelectedItemId: vi.fn(),
+        selectSelectedItemId: vi.fn(() => undefined),
+      },
+      refs: { fileExplorer: { selectItem: vi.fn() } },
+      render: vi.fn(),
+    };
+
+    try {
+      handleAfterMount(deps);
+    } finally {
+      vi.unstubAllGlobals();
+    }
+
+    expect(deps.projectService.requestLayoutThumbnails).toHaveBeenCalledWith();
   });
 });

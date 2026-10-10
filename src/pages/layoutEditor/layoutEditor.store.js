@@ -1,5 +1,7 @@
 import { parseAndRender } from "jempl";
 import { toFlatItems } from "../../internal/project/tree.js";
+import { stableStringify } from "../../internal/stableStringify.js";
+import { toLayoutPreviewType } from "../../internal/layoutPreview.js";
 import {
   DEFAULT_PROJECT_RESOLUTION,
   formatCanvasMaxWidth,
@@ -36,8 +38,9 @@ const normalizePreviewData = (previewData) => {
     : {};
 };
 
+// Saved data can come back with its keys in another order.
 const arePreviewDataEqual = (left, right) => {
-  return JSON.stringify(left ?? {}) === JSON.stringify(right ?? {});
+  return stableStringify(left ?? {}) === stableStringify(right ?? {});
 };
 
 // Desktop and tablet landscape keep the edit panel and preview in a right
@@ -212,6 +215,9 @@ export const createInitialState = () => {
     previewData: {},
     persistedPreviewData: {},
     initialPreviewData: {},
+    // Counts the user's preview edits, and the last one saved.
+    previewEditVersion: 0,
+    previewSavedVersion: 0,
     isPreviewMounted: false,
     isTouchMode: false,
     appWindowMetrics: { width: 0, height: 0 },
@@ -269,11 +275,7 @@ const getLayoutEditorLayoutType = (layoutType, resourceType) => {
     return layoutType;
   }
 
-  if (layoutType === "save" || layoutType === "load") {
-    return "save-load";
-  }
-
-  return layoutType ?? "general";
+  return toLayoutPreviewType(layoutType);
 };
 
 const assignLayoutState = (state, { id, layout, resourceType } = {}) => {
@@ -346,6 +348,30 @@ export const requestDetailPanelSelectionSync = (
 
 export const setPreviewData = ({ state }, { previewData } = {}) => {
   state.previewData = normalizePreviewData(previewData);
+};
+
+// The preview data saves on its own, a moment after the user edits it. What
+// the Preview derives on its own is not saved: a layout's thumbnail derives it
+// from what is saved the same way.
+export const markPreviewDataEdited = ({ state }) => {
+  state.previewEditVersion += 1;
+};
+
+export const selectPreviewEditVersion = ({ state }) => state.previewEditVersion;
+
+export const selectUnsavedPreviewData = ({ state }) =>
+  state.previewEditVersion > state.previewSavedVersion
+    ? state.previewData
+    : undefined;
+
+// Takes the edit that was saved, since edits made while the save ran are
+// still unsaved.
+export const markPreviewDataSaved = (
+  { state },
+  { previewData, version } = {},
+) => {
+  state.persistedPreviewData = normalizePreviewData(previewData);
+  state.previewSavedVersion = Math.max(state.previewSavedVersion, version);
 };
 
 export const setPreviewMounted = ({ state }, { isMounted } = {}) => {
@@ -563,6 +589,14 @@ export const syncRepositoryState = ({ state }, payload = {}) => {
   const shouldRefreshInitialPreviewData =
     shouldApplyPersistedPreview ||
     arePreviewDataEqual(state.previewData, nextPersistedPreviewData);
+  // Another layout starts with no edits.
+  if (
+    currentLayoutId !== layoutId ||
+    currentResourceType !== (resourceType ?? "layouts")
+  ) {
+    state.previewEditVersion = 0;
+    state.previewSavedVersion = 0;
+  }
 
   state.projectResolution = requireProjectResolution(
     projectResolution,
@@ -855,7 +889,6 @@ export const selectViewData = ({ state, constants, i18n }) => {
     nodeExplorerTitle:
       copy.nodeExplorerTitle ?? copy.nodeButtonLabel ?? "Elements",
     previewTitle: copy.previewTitle ?? "Preview",
-    savePreviewButton: copy.savePreviewButton,
     flatItems,
     selectedItemId: state.selectedItemId,
     detailPanelSelectedItemId: state.detailPanelSelectedItemId,
@@ -923,7 +956,6 @@ export const selectViewData = ({ state, constants, i18n }) => {
       state.rightPanelMode === "edit" ? "" : "display: none;",
     rightPanelPreviewStyle:
       state.rightPanelMode === "preview" ? "" : "display: none;",
-    showRightPanelSaveButton: state.rightPanelMode === "preview",
     showPreviewHeader: !showMobileSelectedNodeDetail,
     showTabletLandscapeExplorer,
     tabletLandscapeExplorerWidth: TABLET_LANDSCAPE_EXPLORER_WIDTH,

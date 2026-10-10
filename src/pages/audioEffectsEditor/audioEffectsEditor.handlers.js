@@ -27,6 +27,8 @@ const navigateBack = (appService) => {
   );
 };
 
+// Saves the audio effect and its preview sounds, whichever differ from what
+// is saved, in one update.
 const persistAudioEffect = async (deps, { notify = false } = {}) => {
   const { appService, projectService, render, store } = deps;
   const copy = selectCopy(deps);
@@ -35,11 +37,20 @@ const persistAudioEffect = async (deps, { notify = false } = {}) => {
     return true;
   }
 
-  if (!store.selectDirty()) {
+  const dirty = store.selectDirty();
+  const preview = store.selectUnsavedPreviewData();
+  if (!dirty && !preview) {
     return true;
   }
 
   const audioEffect = store.selectAudioEffectDefinition();
+  const data = {};
+  if (dirty) {
+    data.audioEffect = audioEffect;
+  }
+  if (preview) {
+    data.preview = preview;
+  }
   store.setSaving({ saving: true });
   render();
   const updateAttempt = await runResourcePageMutation({
@@ -49,14 +60,17 @@ const persistAudioEffect = async (deps, { notify = false } = {}) => {
     action: () =>
       projectService.updateAudioEffect({
         audioEffectId,
-        data: {
-          audioEffect,
-        },
+        data,
       }),
   });
   store.setSaving({ saving: false });
   if (updateAttempt.ok) {
-    store.markSaved({ definition: audioEffect });
+    if (dirty) {
+      store.markSaved({ definition: audioEffect });
+    }
+    if (preview) {
+      store.markPreviewSaved({ preview });
+    }
     if (notify) {
       appService.showToast({
         message: copy.audioEffectSaved ?? "Audio effect saved.",
@@ -319,44 +333,6 @@ export const handleTogglePreviewLoop = (deps) => {
   const { render, store } = deps;
   store.togglePreviewLoop({});
   render();
-};
-
-export const handleSavePreviewClick = async (deps) => {
-  const { appService, projectService, render, store } = deps;
-  const copy = selectCopy(deps);
-  const saved = await persistAudioEffect(deps);
-  if (!saved) {
-    return;
-  }
-
-  const audioEffectId = store.selectAudioEffectId();
-  if (!audioEffectId) {
-    return;
-  }
-
-  store.setSaving({ saving: true });
-  render();
-  const updateAttempt = await runResourcePageMutation({
-    appService,
-    fallbackMessage:
-      copy.failedSaveAudioEffectPreview ??
-      "Failed to save audio effect preview.",
-    action: () =>
-      projectService.updateAudioEffect({
-        audioEffectId,
-        data: {
-          preview: store.selectAudioEffectPreviewData(),
-        },
-      }),
-  });
-  store.setSaving({ saving: false });
-  render();
-
-  if (updateAttempt.ok) {
-    appService.showToast({
-      message: copy.audioEffectPreviewSaved ?? "Audio effect preview saved.",
-    });
-  }
 };
 
 export const handlePreviewSoundClick = async (deps, payload) => {

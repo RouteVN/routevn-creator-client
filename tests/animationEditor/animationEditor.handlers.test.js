@@ -39,7 +39,6 @@ import {
   handlePreviewImageClick,
   handleReplayAnimation,
   handleRulerTimeScrub,
-  handleSavePreviewClick,
   handleSelectedKeyframeDelayChange,
   handleSelectedKeyframeDurationChange,
   handleSelectedKeyframeEasingChange,
@@ -148,6 +147,7 @@ describe("animationEditor.handlers", () => {
       selectCameraTracks: vi.fn(),
       selectAnimationJsonCopyShortcutStartedAt: vi.fn(() => shortcutStartedAt),
       selectAnimationName: vi.fn(() => "Fade Fast"),
+      selectPreviewData: vi.fn(() => ({ background: {}, target: {} })),
       selectDialogType: vi.fn(() => "update"),
       selectEditItemData: vi.fn(() => ({
         id: "animation-1",
@@ -3010,6 +3010,8 @@ describe("animationEditor.handlers", () => {
         mode: "none",
       })),
       queueAutosave: vi.fn(),
+      ...createIdleAutosaveMocks(),
+      setAutosavePendingSinceAt: vi.fn(),
       selectEditHistoryBaseline: vi.fn(),
       selectAnimationHistorySnapshot: vi.fn(),
       setEditHistoryBaseline: vi.fn(),
@@ -3044,7 +3046,9 @@ describe("animationEditor.handlers", () => {
     expect(store.hideImageSelectorDialog).toHaveBeenCalledWith({});
     expect(store.bumpPreviewRenderVersion).toHaveBeenCalledWith({});
     expect(render).toHaveBeenCalled();
-    expect(store.queueAutosave).not.toHaveBeenCalled();
+    // It saves on its own, but is not an edit to undo.
+    expect(store.queueAutosave).toHaveBeenCalledOnce();
+    expect(store.recordEditHistoryStep).not.toHaveBeenCalled();
     expect(graphicsService.setAnimationPlaybackMode).toHaveBeenCalledWith(
       "manual",
     );
@@ -3598,86 +3602,93 @@ describe("animationEditor.handlers", () => {
     }
   });
 
-  it("saves preview data without capturing a thumbnail", async () => {
-    const previewData = {
-      background: {
-        imageId: "image-bg",
-      },
-      outgoing: {
-        imageId: "image-out",
-        transformId: "transform-out",
-      },
-      incoming: {
-        imageId: "image-in",
-      },
-    };
+  it("saves picked preview images with the animation on leaving, only when they changed", async () => {
+    let preview = { background: {}, target: {} };
+    let persistedPreview = preview;
+    let version = 1;
+    let persistedVersion = 1;
+    let persistedFingerprint;
     const store = {
-      ...createIdleAutosaveMocks(),
+      selectAutosaveInFlight: vi.fn(() => false),
+      selectAutosaveTimerId: vi.fn(() => undefined),
+      selectAutosaveVersion: vi.fn(() => version),
+      selectAutosavePersistedVersion: vi.fn(() => persistedVersion),
+      selectAutosavePersistedFingerprint: vi.fn(() => persistedFingerprint),
+      selectAutosavePersistedPreview: vi.fn(() => persistedPreview),
+      setAutosavePersistedPreview: vi.fn(({ preview: saved }) => {
+        persistedPreview = saved;
+      }),
+      markAutosavePersisted: vi.fn(({ version: saved, fingerprint }) => {
+        persistedVersion = saved;
+        persistedFingerprint = fingerprint;
+      }),
+      setAutosaveInFlight: vi.fn(),
+      setAutosavePendingSinceAt: vi.fn(),
+      setLastAutosaveFlushStartedAt: vi.fn(),
+      selectDialogType: vi.fn(() => "update"),
+      selectProperties: vi.fn(() => ({})),
+      selectEditMode: vi.fn(() => true),
       selectEditItemId: vi.fn(() => "animation-1"),
-      selectPreviewPlayheadVisible: vi.fn(() => false),
-      selectPreviewPlaybackFrameId: vi.fn(() => undefined),
-      stopPreviewPlayback: vi.fn(),
-      selectPreviewPlaybackMode: vi.fn(() => "auto"),
-      selectPreviewPreparedVersion: vi.fn(() => undefined),
-      selectPreviewRenderVersion: vi.fn(() => 1),
-      setPreviewPlaybackMode: vi.fn(),
-      markPreviewPrepared: vi.fn(),
-      selectAnimationResetState: vi.fn(() => ({
-        elements: [],
-        animations: [],
-      })),
-      selectAnimationRenderStateWithAnimations: vi.fn(() => ({
-        elements: [],
-        animations: [],
-      })),
-      selectPreviewData: vi.fn(() => previewData),
-      selectIsTouchMode: vi.fn(() => false),
+      selectTargetGroupId: vi.fn(() => undefined),
+      selectAnimationName: vi.fn(() => "Fade"),
+      selectAnimationDescription: vi.fn(() => ""),
+      selectCameraTracks: vi.fn(() => undefined),
+      selectPreviewData: vi.fn(() => preview),
       setItems: vi.fn(),
+      setSelectedItemId: vi.fn(),
+      setUiConfig: vi.fn(),
     };
     const projectService = {
-      storeFile: vi.fn(),
       updateAnimation: vi.fn(async () => ({ valid: true })),
       getRepositoryState: vi.fn(() => ({
-        animations: {
-          items: {},
-          tree: [],
-        },
+        animations: { items: {}, tree: [] },
       })),
     };
-    const appService = {
-      showAlert: vi.fn(),
-      showToast: vi.fn(),
-    };
-    const graphicsService = {
-      extractBase64: vi.fn(async () => "data:image/jpeg;base64,SGVsbG8="),
-      render: vi.fn(),
-      setAnimationPlaybackMode: vi.fn(),
-      setAnimationTime: vi.fn(),
-    };
-    const render = vi.fn();
-
-    await handleSavePreviewClick({
-      appService,
+    let beforeNavigation;
+    handleBeforeMount({
+      appService: {
+        registerBeforeNavigation: vi.fn((handler) => {
+          beforeNavigation = handler;
+          return vi.fn();
+        }),
+      },
+      browserEventsClient: { subscribeWindowEvent: vi.fn(() => vi.fn()) },
       i18n: EN_I18N,
       projectService,
-      render,
+      render: vi.fn(),
       store,
+      subject: new Subject(),
+      uiConfig: {},
     });
 
-    expect(projectService.storeFile).not.toHaveBeenCalled();
-    expect(graphicsService.render).not.toHaveBeenCalled();
-    expect(graphicsService.extractBase64).not.toHaveBeenCalled();
-    expect(graphicsService.setAnimationPlaybackMode).not.toHaveBeenCalled();
-    expect(graphicsService.setAnimationTime).not.toHaveBeenCalled();
-    expect(projectService.updateAnimation).toHaveBeenCalledWith({
-      animationId: "animation-1",
-      data: {
-        preview: previewData,
-      },
+    // A picked background, waiting to save.
+    preview = { background: { imageId: "image-bg" }, target: {} };
+    version = 2;
+    await beforeNavigation();
+    expect(projectService.updateAnimation.mock.calls).toEqual([
+      [
+        {
+          animationId: "animation-1",
+          data: {
+            name: "Fade",
+            description: "",
+            animation: { type: "update", tween: {} },
+            cameraTracks: undefined,
+            preview: { background: { imageId: "image-bg" }, target: {} },
+          },
+        },
+      ],
+    ]);
+
+    // An edit with the same preview images saves without them.
+    store.selectAnimationName.mockReturnValue("Fade Out");
+    version = 3;
+    await beforeNavigation();
+    expect(projectService.updateAnimation.mock.lastCall[0].data).toEqual({
+      name: "Fade Out",
+      description: "",
+      animation: { type: "update", tween: {} },
+      cameraTracks: undefined,
     });
-    expect(appService.showToast).toHaveBeenCalledWith({
-      message: "Animation preview saved.",
-    });
-    expect(render).toHaveBeenCalled();
   });
 });

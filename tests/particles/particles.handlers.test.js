@@ -2,6 +2,7 @@ import { produce } from "immer";
 import { describe, expect, it, vi } from "vitest";
 import * as particlesStore from "../../src/pages/particles/particles.store.js";
 import {
+  handleAfterMount,
   handleAddFormAction,
   handleAddFormAddOptionClick,
   handleAddParticleClick,
@@ -39,6 +40,7 @@ const createParticle = () => {
       appearance: { ...rain.modules.appearance, texture: "image-1" },
     },
     thumbnailFileId: "thumb-1",
+    thumbnailSourceHash: "hash-1",
     preview: { background: { imageId: "image-1" } },
   };
 };
@@ -101,6 +103,7 @@ const createPage = async () => {
     },
     projectService: {
       getRepositoryState: vi.fn(() => repositoryState),
+      requestParticleThumbnails: vi.fn(async () => {}),
       createParticle: vi.fn(async ({ particleId, data }) => {
         repositoryState.particles = withItem(
           repositoryState.particles,
@@ -141,6 +144,22 @@ const editorCall = (particleId) => [
 ];
 
 describe("particles handlers", () => {
+  it("has out-of-date thumbnails drawn in the background when it opens", async () => {
+    // Opening also focuses the explorer on the next frame.
+    vi.stubGlobal("requestAnimationFrame", vi.fn());
+    const { deps } = await createPage();
+
+    try {
+      handleAfterMount(deps);
+    } finally {
+      vi.unstubAllGlobals();
+    }
+
+    expect(
+      deps.projectService.requestParticleThumbnails,
+    ).toHaveBeenCalledWith();
+  });
+
   it("opens particles in the editor", async () => {
     const page = await createPage();
     const { deps } = page;
@@ -271,7 +290,7 @@ describe("particles handlers", () => {
     expect(page.view().isEditDialogOpen).toBe(false);
   });
 
-  it("duplicates a particle with its values, name, tags, thumbnail and preview background, in its folder", async () => {
+  it("duplicates a particle with its values, name, tags, thumbnail and its hash, and preview background, in its folder", async () => {
     const page = await createPage();
     const { deps } = page;
     const source = page.repositoryState.particles.items["particle-1"];
@@ -294,6 +313,7 @@ describe("particles handlers", () => {
       seed: source.seed,
       modules: source.modules,
       thumbnailFileId: "thumb-1",
+      thumbnailSourceHash: "hash-1",
       preview: { background: { imageId: "image-1" } },
     });
     expect(data.modules).not.toBe(source.modules);

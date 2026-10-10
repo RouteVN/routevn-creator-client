@@ -5,7 +5,10 @@ import {
 } from "../../src/pages/particleEditor/support/particleEditorForm.js";
 import { createParticlePreset } from "../../src/pages/particles/support/particlePresets.js";
 import { buildLayoutRenderElements } from "../../src/internal/project/layout.js";
-import { createParticlePreviewState } from "../../src/internal/particlePreview.js";
+import {
+  createParticlePreviewState,
+  getParticleSettleMs,
+} from "../../src/internal/particlePreview.js";
 import {
   MAX_PARTICLE_COUNT,
   MAX_PARTICLE_RATE,
@@ -243,5 +246,53 @@ describe("particle values route-graphics rejects", () => {
     const modules = savedParticle("1").modules;
     const before = structuredClone(modules);
     expect(normalizeParticleModules(structuredClone(modules))).toEqual(before);
+  });
+});
+
+describe("particle thumbnail settle time", () => {
+  it("lets a running effect fill out for 1.5s", () => {
+    expect(getParticleSettleMs({ emission: { mode: "continuous" } })).toBe(
+      1500,
+    );
+    expect(
+      getParticleSettleMs({ emission: { duration: "infinite", rate: 20 } }),
+    ).toBe(1500);
+    expect(getParticleSettleMs(undefined)).toBe(1500);
+  });
+
+  it("takes a burst halfway through its shortest life, so its particles still show", () => {
+    expect(
+      getParticleSettleMs({
+        emission: { mode: "burst", particleLifetime: { min: 0.3, max: 0.8 } },
+      }),
+    ).toBe(150);
+    expect(
+      getParticleSettleMs({
+        emission: { mode: "burst", particleLifetime: 6 },
+      }),
+    ).toBe(1500);
+  });
+
+  it("takes a timed effect before its last particles are gone", () => {
+    expect(
+      getParticleSettleMs({
+        emission: { duration: 0.2, particleLifetime: { min: 1, max: 2 } },
+      }),
+    ).toBe(700);
+    expect(
+      getParticleSettleMs({
+        emission: { duration: 5, particleLifetime: { min: 1, max: 2 } },
+      }),
+    ).toBe(1500);
+  });
+
+  it("lets every preset, which all run on, fill out for 1.5s", () => {
+    for (const presetId of ["snow", "rain", "sparkle"]) {
+      const particle = createParticlePreset({
+        presetId,
+        projectResolution: { width: 1920, height: 1080 },
+      });
+      expect(getParticleSettleMs(particle.modules)).toBe(1500);
+    }
   });
 });

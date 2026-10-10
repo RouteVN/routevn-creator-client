@@ -46,6 +46,7 @@ import {
 import { createLayoutElementsFileExplorerHandlers } from "../../internal/ui/fileExplorer.js";
 import { createLayoutEditorRepositoryStoreData } from "./support/layoutEditorRepositoryState.js";
 import { formatI18nCopy } from "../../internal/ui/i18nCopy.js";
+import { runResourcePageMutation } from "../../internal/ui/resourcePages/resourcePageErrors.js";
 import { selectLayoutEditorPageCopy } from "./support/layoutEditorPageCopy.js";
 
 const mountSubscriptions = (deps) => {
@@ -132,6 +133,47 @@ const runLayoutEditorPersistence = (deps, task) => {
   });
 };
 
+const PREVIEW_AUTOSAVE_ACTION = "layoutEditor.savePreview";
+
+// Saves the preview data when the user edited it since the last save. It
+// saves on its own, outside the undo history, in order with element edits.
+const saveLayoutEditorPreview = (deps) => {
+  const { appService, projectService, store } = deps;
+  return runLayoutEditorPersistence(deps, async () => {
+    const layoutId = store.selectLayoutId();
+    const version = store.selectPreviewEditVersion();
+    const previewData = store.selectUnsavedPreviewData();
+    if (!layoutId || !previewData) {
+      return { ok: true };
+    }
+
+    const copy = selectCopy(deps);
+    const { ownerPayloadKey, ownerLabel, updateItem } =
+      getLayoutEditorOwnerConfig(
+        store.selectLayoutResourceType(),
+        projectService,
+        copy,
+      );
+    const updateAttempt = await runResourcePageMutation({
+      appService,
+      fallbackMessage: formatI18nCopy(
+        copy.failedSaveOwnerPreview ?? "Failed to save {ownerLabel} preview.",
+        { ownerLabel: ownerLabel.toLowerCase() },
+      ),
+      title: copy.errorTitle ?? "Error",
+      action: () =>
+        updateItem({
+          [ownerPayloadKey]: layoutId,
+          data: { preview: previewData },
+        }),
+    });
+    if (updateAttempt.ok) {
+      store.markPreviewDataSaved({ previewData, version });
+    }
+    return { ok: updateAttempt.ok };
+  });
+};
+
 const getLayoutEditorOwnerConfig = (
   resourceType,
   projectService,
@@ -162,39 +204,6 @@ const getLayoutEditorOwnerConfig = (
       ? projectService.moveControlElement.bind(projectService)
       : projectService.moveLayoutElement.bind(projectService),
   };
-};
-
-const dataUrlToBlob = async (value) => {
-  if (typeof value !== "string" || value.length === 0) {
-    throw new Error("Thumbnail image is missing");
-  }
-
-  const commaIndex = value.indexOf(",");
-  if (commaIndex < 0) {
-    throw new Error("Thumbnail image is not a valid data URL");
-  }
-
-  const header = value.slice(0, commaIndex);
-  const body = value.slice(commaIndex + 1);
-  const mimeMatch = header.match(/^data:([^;,]+)?(?:;base64)?$/);
-  if (!mimeMatch) {
-    throw new Error("Thumbnail image is not a valid data URL");
-  }
-
-  const mimeType = mimeMatch[1] || "application/octet-stream";
-  const isBase64 = header.includes(";base64");
-
-  if (!isBase64) {
-    return new Blob([decodeURIComponent(body)], { type: mimeType });
-  }
-
-  const binary = atob(body);
-  const bytes = new Uint8Array(binary.length);
-  for (let index = 0; index < binary.length; index += 1) {
-    bytes[index] = binary.charCodeAt(index);
-  }
-
-  return new Blob([bytes], { type: mimeType });
 };
 
 const resolveMenuItem = (detail = {}) => detail.item || detail;
@@ -463,16 +472,14 @@ const queuePendingLayoutEditorPersist = (
   return pendingPayload;
 };
 
+// Saves every edit waiting to save, and then the preview data.
 const flushQueuedLayoutEditorUpdates = async (deps) => {
   const { projectService, store } = deps;
-  let flushResult = {
-    ok: true,
-  };
 
   while (true) {
     const pendingPayload = store.selectPendingPersistPayload();
     if (pendingPayload) {
-      flushResult = await handleDebouncedUpdate(deps, pendingPayload);
+      const flushResult = await handleDebouncedUpdate(deps, pendingPayload);
       if (flushResult.ok === false) {
         return flushResult;
       }
@@ -487,9 +494,11 @@ const flushQueuedLayoutEditorUpdates = async (deps) => {
     }
 
     if (!store.selectPendingPersistPayload()) {
-      return idleResult ?? flushResult;
+      break;
     }
   }
+
+  return saveLayoutEditorPreview(deps);
 };
 
 // Records an edit the page makes to its elements, from what it shows before
@@ -761,7 +770,8 @@ const syncExplorerSelectionAfterLayoutChange = (deps) => {
 };
 
 export const handleBeforeMount = (deps) => {
-  const { appService, browserEventsClient, store, uiConfig } = deps;
+  const { appService, browserEventsClient, projectService, store, uiConfig } =
+    deps;
   store.setUiConfig({ uiConfig });
   // Touch layouts start on the node explorer instead of the Preview section.
   if (store.selectIsTouchMode()) {
@@ -790,10 +800,23 @@ export const handleBeforeMount = (deps) => {
     },
   });
   const unregisterBeforeNavigation = appService.registerBeforeNavigation(
-    async () => {
+    async ({ reason } = {}) => {
       const flushResult = await flushQueuedLayoutEditorUpdates(deps);
       if (!flushResult.ok) {
         throw new Error("Failed to save layout changes before navigation.");
+      }
+      // A layout's thumbnail follows in the background, once the page is
+      // left: a backup, the app going to the background, or quitting only
+      // saves. Controls show none.
+      const layoutId = store.selectLayoutId();
+      if (
+        layoutId &&
+        store.selectLayoutResourceType() === "layouts" &&
+        !reason
+      ) {
+        void projectService.requestLayoutThumbnails({
+          layoutIds: [layoutId],
+        });
       }
     },
   );
@@ -847,83 +870,6 @@ export const handleBackClick = async (deps) => {
       historyMode: "replace",
     },
   );
-};
-
-export const handleSaveButtonClick = async (deps) => {
-  const { appService, projectService, refs, store } = deps;
-  const copy = selectCopy(deps);
-  const layoutId = store.selectLayoutId();
-  const resourceType = store.selectLayoutResourceType();
-  const previewData = store.selectPreviewData();
-  const { ownerPayloadKey, ownerLabel, ownerMissingMessage, updateItem } =
-    getLayoutEditorOwnerConfig(resourceType, projectService, copy);
-
-  if (!layoutId) {
-    appService.showAlert({
-      message: ownerMissingMessage,
-      title: copy.errorTitle ?? "Error",
-    });
-    return;
-  }
-
-  try {
-    const thumbnailImage =
-      await refs.layoutEditorCanvas.captureThumbnailImage();
-    if (!thumbnailImage) {
-      appService.showAlert({
-        message: formatI18nCopy(
-          copy.failedCaptureOwnerThumbnail ??
-            "Failed to capture {ownerLabel} thumbnail.",
-          { ownerLabel: ownerLabel.toLowerCase() },
-        ),
-        title: copy.errorTitle ?? "Error",
-      });
-      return;
-    }
-
-    const thumbnailBlob = await dataUrlToBlob(thumbnailImage);
-    const storedFile = await projectService.storeFile({
-      file: thumbnailBlob,
-    });
-    const updateResult = await updateItem({
-      [ownerPayloadKey]: layoutId,
-      data: {
-        thumbnailFileId: storedFile.fileId,
-        preview: previewData,
-      },
-      fileRecords: storedFile.fileRecords,
-    });
-
-    if (updateResult?.valid === false) {
-      appService.showAlert({
-        message: formatI18nCopy(
-          copy.failedSaveOwnerPreview ?? "Failed to save {ownerLabel} preview.",
-          { ownerLabel: ownerLabel.toLowerCase() },
-        ),
-        title: copy.errorTitle ?? "Error",
-      });
-      return;
-    }
-
-    await refreshLayoutEditorData(deps, {
-      selectedItemId: store.selectSelectedItemId(),
-      syncDetailPanel: !store.selectIsTouchMode?.(),
-    });
-    appService.showToast({
-      message: formatI18nCopy(
-        copy.ownerPreviewSaved ?? "{ownerLabel} preview saved.",
-        { ownerLabel },
-      ),
-    });
-  } catch {
-    appService.showAlert({
-      message: formatI18nCopy(
-        copy.failedSaveOwnerPreview ?? "Failed to save {ownerLabel} preview.",
-        { ownerLabel: ownerLabel.toLowerCase() },
-      ),
-      title: copy.errorTitle ?? "Error",
-    });
-  }
 };
 
 // Simple render handler for events that only need to trigger a re-render
@@ -2195,6 +2141,11 @@ const subscriptions = (deps) => {
       debounceTime(DEBOUNCE_DELAYS.UPDATE),
       concatMap(({ payload }) => from(handleDebouncedUpdate(deps, payload))),
     ),
+    subject.pipe(
+      filter(({ action }) => action === PREVIEW_AUTOSAVE_ACTION),
+      debounceTime(DEBOUNCE_DELAYS.UPDATE),
+      concatMap(() => from(saveLayoutEditorPreview(deps))),
+    ),
   ];
 };
 
@@ -2312,11 +2263,14 @@ export const handleLayoutEditorCanvasMetricsChange = (deps, payload) => {
 };
 
 export const handleLayoutEditorPreviewDataChange = (deps, payload) => {
-  const { store, render } = deps;
-  store.setPreviewData({
-    previewData: payload._event.detail?.previewData,
-  });
+  const { store, render, subject } = deps;
+  const { previewData, edited } = payload._event.detail;
+  store.setPreviewData({ previewData });
   render();
+  if (edited) {
+    store.markPreviewDataEdited();
+    subject.dispatch(PREVIEW_AUTOSAVE_ACTION, {});
+  }
 };
 
 export const handleLayoutEditorPreviewPlay = (deps) => {

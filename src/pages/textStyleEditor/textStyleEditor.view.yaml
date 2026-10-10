@@ -19,10 +19,6 @@ refs:
     eventListeners:
       item-click:
         handler: handleRightPanelModeChange
-  savePreviewButton:
-    eventListeners:
-      click:
-        handler: handleSavePreviewClick
   textStyleForm:
     eventListeners:
       form-change:
@@ -122,8 +118,6 @@ template:
                       - rtgl-view h=48 w=f d=h bgc=bg bwb=xs ph=md av=c:
                           - 'rtgl-view w=1fg style="min-width: 0;"':
                               - rtgl-tabs#rightPanelModeTabs s=sm selected-tab=${rightPanelMode} :items=${rightPanelModeTabs}: null
-                          - $if showSavePreviewButton:
-                              - 'rtgl-button#savePreviewButton sq pre=save v=se ml=sm ?disabled=${savePreviewDisabled} aria-label="${savePreviewButton}" title="${savePreviewButton}"': null
                       - 'rtgl-view w=f h=1fg sv pv=md style="min-height: 0; ${rightPanelEditStyle}"':
                           - rtgl-form#textStyleForm key=${textStyleFormKey} :defaultValues=${formValues} :form=${textStyleForm} w=f ph=md:
                               - rtgl-select#fontSelect slot=text-style-font w=f no-clear :options=${fontOptions} :selectedValue=${selectedFontId} :addOption=${addFontOption} placeholder=${chooseFontPlaceholder}: null
@@ -151,8 +145,6 @@ template:
                   - rtgl-view h=48 w=f d=h bgc=bg bwb=xs ph=md av=c:
                       - 'rtgl-view w=1fg style="min-width: 0;"':
                           - rtgl-tabs#rightPanelModeTabs s=sm selected-tab=${rightPanelMode} :items=${rightPanelModeTabs}: null
-                      - $if showSavePreviewButton:
-                          - 'rtgl-button#savePreviewButton sq pre=save v=se ml=sm ?disabled=${savePreviewDisabled} aria-label="${savePreviewButton}" title="${savePreviewButton}"': null
                   - 'rtgl-view w=f h=1fg sv pv=md style="min-height: 0; ${rightPanelEditStyle}"':
                       - rtgl-form#textStyleForm key=${textStyleFormKey} :defaultValues=${formValues} :form=${textStyleForm} w=f ph=md:
                           - rtgl-select#fontSelect slot=text-style-font w=f no-clear :options=${fontOptions} :selectedValue=${selectedFontId} :addOption=${addFontOption} placeholder=${chooseFontPlaceholder}: null

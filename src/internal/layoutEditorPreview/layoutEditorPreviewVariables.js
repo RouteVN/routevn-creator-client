@@ -3,11 +3,11 @@ import {
   parseVariableConditionTarget,
   splitLayoutConditionFromWhen,
   toVariableConditionTarget,
-} from "../../../internal/layoutConditions.js";
-import { getLayoutTextReferenceResourceId } from "../../../internal/layoutTextContent.js";
-import { toRuntimeConditionTarget } from "../../../internal/runtimeFields.js";
-import { collectComputedVariableReferenceIds } from "../../../internal/project/projection.js";
-import { toExecutableComputed } from "../../../internal/computedExamples.js";
+} from "../layoutConditions.js";
+import { getLayoutTextReferenceResourceId } from "../layoutTextContent.js";
+import { toRuntimeConditionTarget } from "../runtimeFields.js";
+import { collectComputedVariableReferenceIds } from "../project/projection.js";
+import { toExecutableComputed } from "../computedExamples.js";
 import { resolveComputedVariables } from "route-engine-js";
 import { visitLayoutItemsWithFragments } from "./layoutEditorPreviewFragments.js";
 

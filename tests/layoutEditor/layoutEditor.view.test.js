@@ -275,11 +275,8 @@ describe("layoutEditor.view", () => {
     );
     expect(editSpacerIndex).toBeGreaterThan(editIndex);
     expect(editSpacerIndex).toBeLessThan(previewIndex);
-    expect(rightPanel).toContain("$if showRightPanelSaveButton");
-    // The save button is an icon, named for screen readers and on hover.
-    expect(rightPanel).toContain(
-      'rtgl-button#saveButton sq pre=save v=se ml=sm aria-label="${savePreviewButton}" title="${savePreviewButton}"',
-    );
+    // The preview saves on its own, so neither layout has a Save button.
+    expect(layoutEditorView).not.toContain("saveButton");
     expect(layoutEditorView).toMatch(
       /rightPanelModeTabs:\n\s+eventListeners:\n\s+item-click:\n\s+handler: handleRightPanelModeChange/,
     );
