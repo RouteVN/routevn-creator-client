@@ -25,8 +25,8 @@ import {
   handleNodeMoveNextClick,
   handleNodeMovePreviousClick,
   handlePreviewButtonClick,
+  handleLayoutEditorPreviewDataChange,
   handleRightPanelModeChange,
-  handleSaveButtonClick,
 } from "../../src/pages/layoutEditor/layoutEditor.handlers.js";
 import { enqueueLayoutEditorPersistence } from "../../src/pages/layoutEditor/support/layoutEditorPersistenceQueue.js";
 
@@ -43,6 +43,9 @@ const createLayoutEditorDeps = ({
 } = {}) => {
   const state = {
     pendingPersistPayload,
+    previewData,
+    previewEditVersion: 0,
+    previewSavedVersion: 0,
   };
 
   const store = {
@@ -64,7 +67,22 @@ const createLayoutEditorDeps = ({
     syncRepositoryState: vi.fn(),
     selectLayoutId: vi.fn(() => "layout-1"),
     selectLayoutResourceType: vi.fn(() => resourceType),
-    selectPreviewData: vi.fn(() => previewData),
+    selectPreviewData: vi.fn(() => state.previewData),
+    setPreviewData: vi.fn(({ previewData: nextPreviewData } = {}) => {
+      state.previewData = nextPreviewData;
+    }),
+    markPreviewDataEdited: vi.fn(() => {
+      state.previewEditVersion += 1;
+    }),
+    selectPreviewEditVersion: vi.fn(() => state.previewEditVersion),
+    selectUnsavedPreviewData: vi.fn(() =>
+      state.previewEditVersion > state.previewSavedVersion
+        ? state.previewData
+        : undefined,
+    ),
+    markPreviewDataSaved: vi.fn(({ version } = {}) => {
+      state.previewSavedVersion = Math.max(state.previewSavedVersion, version);
+    }),
     selectSelectedItemId: vi.fn(() => undefined),
     selectItemDataById: vi.fn(({ itemId } = {}) => ({
       id: itemId,
@@ -134,10 +152,7 @@ const createLayoutEditorDeps = ({
     createControlElement: vi.fn(async () => ({ valid: true })),
     deleteControlElement: vi.fn(async () => ({ valid: true })),
     moveControlElement: vi.fn(async () => ({ valid: true })),
-    storeFile: vi.fn(async () => ({
-      fileId: "file-layout-thumb",
-      fileRecords: [{ id: "file-layout-thumb" }],
-    })),
+    requestLayoutThumbnails: vi.fn(async () => {}),
   };
 
   return {
@@ -146,9 +161,6 @@ const createLayoutEditorDeps = ({
     store,
     render: vi.fn(),
     refs: {
-      layoutEditorCanvas: {
-        captureThumbnailImage: vi.fn(async () => "data:text/plain;base64,QQ=="),
-      },
       layoutEditPanel: {
         setTransientValues: vi.fn(),
       },
@@ -760,63 +772,182 @@ describe("layoutEditor.handleBackClick", () => {
   });
 });
 
-describe("layoutEditor.handleSaveButtonClick", () => {
-  it("persists the current preview data with the saved thumbnail", async () => {
-    const updateLayoutItem = vi.fn(async () => ({ valid: true }));
-    const previewData = {
-      backgroundImageId: "image-preview",
-      runtime: {
-        autoMode: true,
-      },
+describe("layoutEditor preview autosave", () => {
+  // A mounted editor, with the page's subject, and its hook for leaving.
+  const mountEditor = (options) => {
+    const deps = createLayoutEditorDeps(options);
+    const subject = new Subject();
+    subject.dispatch = vi.fn((action, payload) =>
+      subject.next({ action, payload }),
+    );
+    deps.subject = subject;
+    let beforeNavigation;
+    deps.appService.registerBeforeNavigation = vi.fn((callback) => {
+      beforeNavigation = callback;
+      return vi.fn();
+    });
+    deps.browserEventsClient = {
+      subscribeWindowEvent: vi.fn(() => vi.fn()),
     };
-    const deps = createLayoutEditorDeps({
-      updateLayoutItem,
-      previewData,
+    deps.store.setUiConfig = vi.fn();
+    deps.store.selectIsTouchMode = vi.fn(() => false);
+    const cleanup = handleBeforeMount(deps);
+    return {
+      deps,
+      cleanup,
+      leave: (navigation) => beforeNavigation(navigation),
+    };
+  };
+  const changePreview = (deps, previewData, { edited = true } = {}) =>
+    handleLayoutEditorPreviewDataChange(deps, {
+      _event: { detail: { previewData, edited } },
     });
 
-    await handleSaveButtonClick(deps);
+  it("saves the preview data on its own a moment after it changes, outside the undo history", async () => {
+    vi.useFakeTimers();
+    try {
+      const { deps, cleanup } = mountEditor();
+      const { updateLayoutItem } = deps.projectService;
+
+      changePreview(deps, { backgroundImageId: "image-two" });
+      const previewData = {
+        backgroundImageId: "image-two",
+        runtime: { autoMode: true },
+      };
+      changePreview(deps, previewData);
+      expect(updateLayoutItem).not.toHaveBeenCalled();
+
+      await vi.advanceTimersByTimeAsync(500);
+
+      expect(updateLayoutItem).toHaveBeenCalledTimes(1);
+      expect(updateLayoutItem).toHaveBeenCalledWith({
+        layoutId: "layout-1",
+        data: { preview: previewData },
+      });
+      expect(deps.store.recordEditHistoryStep).not.toHaveBeenCalled();
+
+      // What is saved is not saved again on leaving.
+      await handleBackClick(deps);
+      await cleanup();
+      expect(updateLayoutItem).toHaveBeenCalledTimes(1);
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+
+  it("saves nothing for preview data the Preview derives on its own, as when it opens", async () => {
+    const { deps, leave } = mountEditor();
+
+    changePreview(
+      deps,
+      {
+        backgroundImageId: "image-preview",
+        dialogue: { content: [{ text: "This is a sample dialogue content." }] },
+      },
+      { edited: false },
+    );
+    await leave({});
+
+    expect(deps.store.selectPreviewData()).toMatchObject({
+      dialogue: { content: [{ text: "This is a sample dialogue content." }] },
+    });
+    expect(deps.subject.dispatch).not.toHaveBeenCalled();
+    expect(deps.projectService.updateLayoutItem).not.toHaveBeenCalled();
+  });
+
+  it("saves an edit undone while the save of the edit ran", async () => {
+    const { deps, leave } = mountEditor();
+    let finishSave;
+    deps.projectService.updateLayoutItem.mockImplementationOnce(
+      () =>
+        new Promise((resolve) => {
+          finishSave = () => resolve({ valid: true });
+        }),
+    );
+
+    changePreview(deps, { backgroundImageId: "image-two" });
+    const saving = leave({});
+    await vi.waitFor(() =>
+      expect(deps.projectService.updateLayoutItem).toHaveBeenCalledOnce(),
+    );
+    // Back to how it opened, while image-two saves.
+    changePreview(deps, { backgroundImageId: "image-preview" });
+    finishSave();
+    await saving;
+    await leave({});
+
+    expect(
+      deps.projectService.updateLayoutItem.mock.calls.map(
+        ([{ data }]) => data.preview.backgroundImageId,
+      ),
+    ).toEqual(["image-two", "image-preview"]);
+    expect(deps.store.selectUnsavedPreviewData()).toBeUndefined();
+  });
+
+  it("saves a changed preview at once on leaving, then asks for the layout's thumbnail", async () => {
+    const { deps, leave } = mountEditor();
+    const { requestLayoutThumbnails, updateLayoutItem } = deps.projectService;
+    const previewData = { backgroundImageId: "image-two" };
+
+    changePreview(deps, previewData);
+    await leave({});
 
     expect(updateLayoutItem).toHaveBeenCalledWith({
       layoutId: "layout-1",
-      data: {
-        thumbnailFileId: "file-layout-thumb",
-        preview: previewData,
-      },
-      fileRecords: [{ id: "file-layout-thumb" }],
+      data: { preview: previewData },
     });
-    expect(deps.appService.showToast).toHaveBeenCalledWith({
-      message: "Layout preview saved.",
+    expect(requestLayoutThumbnails).toHaveBeenCalledWith({
+      layoutIds: ["layout-1"],
     });
+    expect(updateLayoutItem.mock.invocationCallOrder[0]).toBeLessThan(
+      requestLayoutThumbnails.mock.invocationCallOrder[0],
+    );
   });
 
-  it("keeps mobile preview saves from resyncing an unmounted file explorer", async () => {
-    const originalRequestAnimationFrame = globalThis.requestAnimationFrame;
-    globalThis.requestAnimationFrame = (callback) => {
-      callback();
-      return 1;
-    };
+  it("asks for no thumbnail for a backup, the background, or quitting", async () => {
+    const { deps, leave } = mountEditor();
 
-    try {
-      const deps = createLayoutEditorDeps();
-      deps.store.selectIsTouchMode = vi.fn(() => true);
-      deps.store.selectSelectedItemId = vi.fn(() => "node-1");
-      deps.store.setSelectedItemId = vi.fn();
-      deps.store.setDetailPanelSelectedItemId = vi.fn();
-      deps.store.setRightPanelMode = vi.fn();
+    changePreview(deps, { backgroundImageId: "image-two" });
+    await leave({ reason: "backup" });
+    await leave({ reason: "background" });
+    await leave({ reason: "quit" });
 
-      await handleSaveButtonClick(deps);
+    expect(deps.projectService.updateLayoutItem).toHaveBeenCalledTimes(1);
+    expect(deps.projectService.requestLayoutThumbnails).not.toHaveBeenCalled();
+  });
 
-      expect(deps.store.setSelectedItemId).toHaveBeenCalledWith({
-        itemId: "node-1",
-      });
-      expect(deps.store.setDetailPanelSelectedItemId).not.toHaveBeenCalled();
-      expect(deps.appService.showAlert).not.toHaveBeenCalled();
-      expect(deps.appService.showToast).toHaveBeenCalledWith({
-        message: "Layout preview saved.",
-      });
-    } finally {
-      globalThis.requestAnimationFrame = originalRequestAnimationFrame;
-    }
+  it("saves a control's preview through the control command, and asks for no thumbnail", async () => {
+    const { deps, leave } = mountEditor({ resourceType: "controls" });
+    const previewData = { backgroundImageId: "image-two" };
+
+    changePreview(deps, previewData);
+    await leave({});
+
+    expect(deps.projectService.updateControlItem).toHaveBeenCalledWith({
+      controlId: "layout-1",
+      data: { preview: previewData },
+    });
+    expect(deps.projectService.updateLayoutItem).not.toHaveBeenCalled();
+    expect(deps.projectService.requestLayoutThumbnails).not.toHaveBeenCalled();
+  });
+
+  it("keeps a preview that failed to save unsaved, says so, and stays on the page", async () => {
+    const { deps, leave } = mountEditor({
+      updateLayoutItem: vi.fn(async () => ({ valid: false })),
+    });
+
+    changePreview(deps, { backgroundImageId: "image-two" });
+    await expect(leave({})).rejects.toThrow();
+
+    expect(deps.appService.showAlert).toHaveBeenCalledWith({
+      message: "Failed to save layout preview.",
+      title: "Error",
+    });
+    expect(deps.store.markPreviewDataSaved).not.toHaveBeenCalled();
+    expect(deps.store.selectUnsavedPreviewData()).toEqual({
+      backgroundImageId: "image-two",
+    });
+    expect(deps.projectService.requestLayoutThumbnails).not.toHaveBeenCalled();
   });
 });
 

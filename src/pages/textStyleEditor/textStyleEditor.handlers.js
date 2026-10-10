@@ -130,21 +130,28 @@ const loadFontCapabilities = async (deps, { fontId } = {}) => {
   }
 };
 
-// Saves the text style's values when they differ from what is saved: how
-// the text looks, never its name or preview text. Saves run one at a time,
-// so a save on leaving waits for a running autosave and then saves what it
+// Saves how the text looks and the preview text and alignment, whichever
+// differ from what is saved, never the name. Saves run one at a time, so a
+// save on leaving waits for a running autosave and then saves what it
 // missed.
-const saveTextStyleValues = (deps) => {
+const saveTextStyleChanges = (deps) => {
   const { appService, projectService, store } = deps;
   return enqueueSceneEditorPersistence({
     owner: projectService,
     task: async () => {
-      if (!store.selectHasUnsavedValues()) {
+      const hasUnsavedValues = store.selectHasUnsavedValues();
+      const previewSettings = store.selectUnsavedPreviewSettings();
+      if (!hasUnsavedValues && Object.keys(previewSettings).length === 0) {
         return true;
       }
 
       const copy = selectCopy(deps);
       const values = store.selectValues();
+      const data = {};
+      if (hasUnsavedValues) {
+        Object.assign(data, toTextStyleUpdateData(values));
+      }
+      Object.assign(data, previewSettings);
       const updateAttempt = await runResourcePageMutation({
         appService,
         fallbackMessage: copy.failedSaveTextStyle,
@@ -152,11 +159,14 @@ const saveTextStyleValues = (deps) => {
         action: () =>
           projectService.updateTextStyle({
             textStyleId: store.selectTextStyleId(),
-            data: toTextStyleUpdateData(values),
+            data,
           }),
       });
       if (updateAttempt.ok) {
-        store.markValuesSaved({ values });
+        if (hasUnsavedValues) {
+          store.markValuesSaved({ values });
+        }
+        store.markPreviewSettingsSaved(previewSettings);
       }
       return updateAttempt.ok;
     },
@@ -227,7 +237,7 @@ const mountSubscriptions = (deps) => {
       .pipe(
         filter(({ action }) => action === AUTOSAVE_ACTION),
         debounceTime(AUTOSAVE_DEBOUNCE_MS),
-        concatMap(() => from(saveTextStyleValues(deps))),
+        concatMap(() => from(saveTextStyleChanges(deps))),
       )
       .subscribe(),
   ];
@@ -258,11 +268,9 @@ export const handleBeforeMount = (deps) => {
     options: { capture: true },
     listener: (event) => handleWindowKeyDown(deps, { _event: event }),
   });
-  // Unsaved preview text is left behind, as unsaved preview settings are
-  // in the other editors.
   const unregisterBeforeNavigation = appService.registerBeforeNavigation(
     async () => {
-      const saved = await saveTextStyleValues(deps);
+      const saved = await saveTextStyleChanges(deps);
       if (!saved) {
         throw new Error("Failed to save text style before navigation.");
       }
@@ -276,7 +284,7 @@ export const handleBeforeMount = (deps) => {
     cleanupKeyboardShortcuts();
     // The preview draws with a renderer of its own, which it releases when
     // the page leaves, so no shared renderer waits on the save below.
-    const saved = await saveTextStyleValues(deps);
+    const saved = await saveTextStyleChanges(deps);
     if (!saved) {
       throw new Error("Failed to save text style during cleanup.");
     }
@@ -345,7 +353,7 @@ export const handleWindowKeyDown = (deps, payload) => {
 
 export const handleBackClick = async (deps) => {
   const { appService } = deps;
-  const saved = await saveTextStyleValues(deps);
+  const saved = await saveTextStyleChanges(deps);
   if (saved) {
     navigateBack(appService);
   }
@@ -454,61 +462,24 @@ export const handlePreviewFontLoadError = (deps, payload) => {
   render();
 };
 
+// The preview text, which the text styles page shows, saves on its own as
+// the values do, but is not an edit to undo.
 export const handlePreviewTextInput = (deps, payload) => {
   const { render, store } = deps;
   const { value } = payload._event.detail;
   store.setPreviewText({ previewText: value ?? "" });
+  queueTextStyleAutosave(deps);
   render();
 };
 
-// Aligns the editor preview's text. Save Preview saves it as the text
-// style's previewAlign, which only editors use; it is not an edit to undo.
+// Aligns the editor preview's text, saved as the text style's previewAlign,
+// which only editors use; it saves on its own and is not an edit to undo.
 export const handlePreviewAlignChange = (deps, payload) => {
   const { render, store } = deps;
   const { value } = payload._event.detail;
   store.setPreviewAlign({ align: value });
+  queueTextStyleAutosave(deps);
   render();
-};
-
-// Saves the preview text, which the text styles page shows, and the preview
-// alignment, after the values. The button is disabled while it saves, so a
-// double click saves once.
-export const handleSavePreviewClick = async (deps) => {
-  const { appService, projectService, render, store } = deps;
-  const copy = selectCopy(deps);
-  if (store.selectIsSavingPreview()) {
-    return;
-  }
-
-  store.startSavingPreview();
-  render();
-  try {
-    if (!(await saveTextStyleValues(deps))) {
-      return;
-    }
-
-    const previewSettings = store.selectUnsavedPreviewSettings();
-    if (Object.keys(previewSettings).length > 0) {
-      const updateAttempt = await runResourcePageMutation({
-        appService,
-        fallbackMessage: copy.failedSavePreview,
-        title: copy.errorTitle,
-        action: () =>
-          projectService.updateTextStyle({
-            textStyleId: store.selectTextStyleId(),
-            data: previewSettings,
-          }),
-      });
-      if (!updateAttempt.ok) {
-        return;
-      }
-      store.markPreviewSettingsSaved(previewSettings);
-    }
-    appService.showToast({ message: copy.textStylePreviewSaved });
-  } finally {
-    store.finishSavingPreview();
-    render();
-  }
 };
 
 export const handleAddColorDialogClose = (deps) => {

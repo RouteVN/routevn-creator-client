@@ -18,7 +18,6 @@ import {
   handleConfirmSoundSelection,
   handlePreviewSoundSelected,
   handlePropertyNameClick,
-  handleSavePreviewClick,
   handleSelectedKeyframeAddClick,
   handleSelectedKeyframeAddMenuClose,
   handleSelectedKeyframeAddMenuItemClick,
@@ -215,10 +214,17 @@ describe("audioEffectsEditor.handlers", () => {
     expect(store.confirmPreviewSoundSelection).toHaveBeenCalledOnce();
   });
 
-  it("saves outgoing and incoming preview sounds", async () => {
-    const deps = {
+  it("saves picked preview sounds with the audio effect, in one update, on leaving", async () => {
+    const preview = {
+      outgoing: { soundId: "sound-a" },
+      incoming: { soundId: "sound-b" },
+    };
+    const definition = { type: "transition" };
+    const createDeps = ({ dirty, unsavedPreview }) => ({
       i18n: EN_I18N,
       appService: {
+        getPayload: vi.fn(() => ({ p: "project-1" })),
+        navigate: vi.fn(),
         showToast: vi.fn(),
       },
       projectService: {
@@ -226,30 +232,44 @@ describe("audioEffectsEditor.handlers", () => {
       },
       store: {
         selectAudioEffectId: vi.fn(() => "crossfade"),
-        selectDirty: vi.fn(() => false),
-        selectAudioEffectPreviewData: vi.fn(() => ({
-          outgoing: { soundId: "sound-a" },
-          incoming: { soundId: "sound-b" },
-        })),
+        selectDirty: vi.fn(() => dirty),
+        selectUnsavedPreviewData: vi.fn(() => unsavedPreview),
+        selectAudioEffectDefinition: vi.fn(() => definition),
         setSaving: vi.fn(),
+        markSaved: vi.fn(),
+        markPreviewSaved: vi.fn(),
       },
       render: vi.fn(),
-    };
+    });
 
-    await handleSavePreviewClick(deps);
-
-    expect(deps.projectService.updateAudioEffect).toHaveBeenCalledWith({
+    const previewOnly = createDeps({ dirty: false, unsavedPreview: preview });
+    await handleBackClick(previewOnly);
+    expect(previewOnly.projectService.updateAudioEffect).toHaveBeenCalledWith({
       audioEffectId: "crossfade",
-      data: {
-        preview: {
-          outgoing: { soundId: "sound-a" },
-          incoming: { soundId: "sound-b" },
+      data: { preview },
+    });
+    expect(previewOnly.store.markPreviewSaved).toHaveBeenCalledWith({
+      preview,
+    });
+    expect(previewOnly.store.markSaved).not.toHaveBeenCalled();
+    expect(previewOnly.appService.navigate).toHaveBeenCalledOnce();
+
+    const both = createDeps({ dirty: true, unsavedPreview: preview });
+    await handleBackClick(both);
+    expect(both.projectService.updateAudioEffect.mock.calls).toEqual([
+      [
+        {
+          audioEffectId: "crossfade",
+          data: { audioEffect: definition, preview },
         },
-      },
-    });
-    expect(deps.appService.showToast).toHaveBeenCalledWith({
-      message: "Audio effect preview saved.",
-    });
+      ],
+    ]);
+    expect(both.store.markSaved).toHaveBeenCalledWith({ definition });
+
+    const nothing = createDeps({ dirty: false, unsavedPreview: undefined });
+    await handleBackClick(nothing);
+    expect(nothing.projectService.updateAudioEffect).not.toHaveBeenCalled();
+    expect(nothing.appService.navigate).toHaveBeenCalledOnce();
   });
 
   it("adds and selects a default audio keyframe without opening a dialog", () => {
@@ -662,6 +682,7 @@ describe("audioEffectsEditor.handlers", () => {
       store: {
         selectAudioEffectId: vi.fn(() => "crossfade"),
         selectDirty: vi.fn(() => true),
+        selectUnsavedPreviewData: vi.fn(() => undefined),
         setSaving: vi.fn(),
         selectAudioEffectDefinition: vi.fn(() => definition),
         markSaved: vi.fn(),

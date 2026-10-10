@@ -36,7 +36,7 @@ import {
 } from "./support/textStyleEditorResourceForms.js";
 
 // As in the other editors, the right panel shows the text style's values
-// (Edit) or the preview text and Save Preview (Preview).
+// (Edit) or the preview text and its alignment (Preview).
 const RIGHT_PANEL_MODES = new Set(["edit", "preview"]);
 
 const createEmptyCollection = () => ({
@@ -104,8 +104,8 @@ export const createInitialState = () => ({
   // weight stays available with that font even when the font cannot draw
   // it, as it was before.
   openedFont: { fontId: undefined, fontWeight: undefined },
-  // The preview text and alignment save only with Save Preview, and are not
-  // part of the undo history.
+  // The preview text and alignment, and as last saved. They save on their
+  // own as the values do, but are not part of the undo history.
   previewText: "",
   previewAlign: "center",
   savedPreviewText: "",
@@ -127,8 +127,6 @@ export const createInitialState = () => ({
   // Font files that failed to load; the preview draws without them.
   failedFontFileIds: [],
   warnedFontFileIds: [],
-  // Save Preview runs once at a time.
-  isSavingPreview: false,
   addColorDialog: createAddColorDialog(),
   addFontDialog: createAddFontDialog(),
 });
@@ -271,7 +269,7 @@ export const setPreviewAlign = ({ state }, { align } = {}) => {
   }
 };
 
-// The preview settings Save Preview has to write: only those that changed.
+// The preview settings that differ from what is saved.
 export const selectUnsavedPreviewSettings = ({ state }) => {
   const settings = {};
   if (state.previewText !== state.savedPreviewText) {
@@ -334,16 +332,6 @@ export const markFontWarningsShown = ({ state }, { fileIds } = {}) => {
   state.warnedFontFileIds = [
     ...new Set([...state.warnedFontFileIds, ...fileIds]),
   ];
-};
-
-export const selectIsSavingPreview = ({ state }) => state.isSavingPreview;
-
-export const startSavingPreview = ({ state }) => {
-  state.isSavingPreview = true;
-};
-
-export const finishSavingPreview = ({ state }) => {
-  state.isSavingPreview = false;
 };
 
 export const selectAddColorDialogField = ({ state }) =>
@@ -486,9 +474,6 @@ export const selectViewData = ({ state, i18n }) => {
       state.rightPanelMode === "edit" ? "" : "display: none;",
     rightPanelPreviewStyle:
       state.rightPanelMode === "preview" ? "" : "display: none;",
-    showSavePreviewButton: state.rightPanelMode === "preview",
-    savePreviewDisabled: state.isSavingPreview,
-    savePreviewButton: copy.savePreviewButton,
     textStyleForm: createTextStyleForm({
       copy,
       fontWeightOptions: buildFontWeightOptions({

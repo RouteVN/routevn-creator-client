@@ -8,7 +8,12 @@ import {
   createLayoutEditorSelectionOverlay,
   formatLayoutEditorPreviewDate,
 } from "../../src/components/layoutEditorCanvas/support/layoutEditorCanvasRender.js";
-import { createLayoutEditorPreviewData } from "../../src/components/layoutEditorPreview/support/layoutEditorPreviewData.js";
+import { createLayoutEditorPreviewData } from "../../src/internal/layoutEditorPreview/layoutEditorPreviewData.js";
+import {
+  createLayoutThumbnailSource,
+  toLayoutPreviewType,
+} from "../../src/internal/layoutPreview.js";
+import * as previewComponentStore from "../../src/components/layoutEditorPreview/layoutEditorPreview.store.js";
 import { getRuntimeFieldItems } from "../../src/internal/runtimeFields.js";
 import {
   AUTO_MODE_CONDITION_TARGET,
@@ -1280,5 +1285,249 @@ describe("layoutEditorPreview", () => {
       "selected-border-anchor",
       "selected-border-rotate",
     ]);
+  });
+});
+
+describe("layout thumbnails", () => {
+  const createRepositoryState = () => ({
+    project: { resolution: { width: 1280, height: 720 } },
+    images: {
+      items: {
+        "image-1": {
+          id: "image-1",
+          type: "image",
+          fileId: "file-image-1",
+          fileType: "image/webp",
+          width: 1280,
+          height: 720,
+        },
+        "image-2": {
+          id: "image-2",
+          type: "image",
+          fileId: "file-image-2",
+          width: 64,
+          height: 64,
+        },
+      },
+    },
+    fonts: {
+      items: {
+        "font-1": {
+          id: "font-1",
+          type: "font",
+          name: "Display.woff2",
+          fileId: "file-font-1",
+          minWeight: 600,
+          defaultWeight: 600,
+          maxWeight: 600,
+        },
+      },
+    },
+    colors: { items: { "color-1": { type: "color", hex: "#ffffff" } } },
+    textStyles: {
+      items: {
+        "style-1": {
+          type: "textStyle",
+          fontId: "font-1",
+          colorId: "color-1",
+          fontSize: 32,
+          fontWeight: "600",
+        },
+      },
+    },
+    sounds: {
+      items: {
+        "sound-1": {
+          type: "sound",
+          fileId: "file-sound-1",
+          fileType: "audio/mpeg",
+        },
+      },
+    },
+    particles: {
+      items: {
+        "particle-1": {
+          type: "particle",
+          width: 1280,
+          height: 720,
+          seed: 7,
+          modules: { emission: {}, appearance: { texture: "image-2" } },
+        },
+      },
+    },
+    layouts: { items: {} },
+  });
+  const createLayout = (items) => ({
+    id: "layout-1",
+    type: "layout",
+    layoutType: "general",
+    elements: { items, tree: Object.keys(items).map((id) => ({ id })) },
+    preview: { backgroundImageId: "image-1" },
+  });
+  const titleItems = {
+    art: {
+      id: "art",
+      type: "sprite",
+      imageId: "image-2",
+      x: 0,
+      y: 0,
+      width: 64,
+      height: 64,
+    },
+    title: {
+      id: "title",
+      type: "text",
+      text: "Title One",
+      textStyleId: "style-1",
+      x: 10,
+      y: 20,
+      clickSoundId: "sound-1",
+    },
+  };
+
+  // What the editor's canvas draws for a saved layout when it opens: its
+  // Preview hydrated from the saved preview data, without selection chrome.
+  const drawnByEditor = ({ item, repositoryState, layoutType }) => {
+    const layoutState = {
+      id: item.id,
+      layoutType,
+      elements: item.elements,
+    };
+    const state = previewComponentStore.createInitialState();
+    previewComponentStore.setLayoutState({ state }, { layoutState });
+    previewComponentStore.setRepositoryState({ state }, { repositoryState });
+    previewComponentStore.hydratePreviewState(
+      { state },
+      { previewData: item.preview },
+    );
+    return createLayoutEditorAssetReferences({
+      layoutState,
+      repositoryState,
+      previewData: previewComponentStore.selectPreviewData({ state }),
+      resolution: { width: 1280, height: 720 },
+    }).renderedElements;
+  };
+
+  it("draws a saved layout with its saved preview as the editor's canvas does, without its selection chrome", () => {
+    const repositoryState = createRepositoryState();
+    const item = createLayout(titleItems);
+
+    const source = createLayoutThumbnailSource({ item, repositoryState });
+
+    expect(source.width).toBe(1280);
+    expect(source.height).toBe(720);
+    expect(source.renderState).toEqual({
+      elements: drawnByEditor({
+        item,
+        repositoryState,
+        layoutType: "general",
+      }),
+      animations: [],
+    });
+    expect(source.renderState.elements[0]).toMatchObject({
+      id: "layout-editor-preview-background",
+      src: "file-image-1",
+    });
+    expect(source.settleMs).toBeUndefined();
+  });
+
+  it("fills in what the editor's Preview shows for preview data never saved, such as sample dialogue", () => {
+    const repositoryState = createRepositoryState();
+    const item = {
+      ...createLayout({
+        name: {
+          id: "name",
+          type: "text-ref-character-name",
+          textStyleId: "style-1",
+        },
+        line: {
+          id: "line",
+          type: "text-revealing-ref-dialogue-content",
+          textStyleId: "style-1",
+        },
+      }),
+      layoutType: "dialogue-adv",
+      preview: undefined,
+    };
+
+    const source = createLayoutThumbnailSource({ item, repositoryState });
+
+    const editorElements = drawnByEditor({
+      item,
+      repositoryState,
+      layoutType: "dialogue-adv",
+    });
+    // A thumbnail draws text that types itself out in full.
+    const withoutRevealEffect = (elements) =>
+      JSON.parse(
+        JSON.stringify(elements, (key, value) =>
+          key === "revealEffect" ? undefined : value,
+        ),
+      );
+    expect(withoutRevealEffect(source.renderState.elements)).toEqual(
+      withoutRevealEffect(editorElements),
+    );
+    expect(JSON.stringify(source.renderState.elements)).toContain(
+      "This is a sample dialogue content.",
+    );
+  });
+
+  it("loads the files it draws, a font typed by its file name with its weight, and no sounds", () => {
+    const source = createLayoutThumbnailSource({
+      item: createLayout(titleItems),
+      repositoryState: createRepositoryState(),
+    });
+
+    expect(source.assets).toEqual([
+      { fileId: "file-image-1", fileType: "image/webp" },
+      { fileId: "file-image-2", fileType: "image/png" },
+      {
+        fileId: "file-font-1",
+        fileType: "font/woff2",
+        fontWeightDescriptor: "600",
+      },
+    ]);
+  });
+
+  it("draws text that types itself out in full", () => {
+    const source = createLayoutThumbnailSource({
+      item: createLayout({
+        line: {
+          id: "line",
+          type: "text-revealing",
+          content: [{ text: "Hello" }],
+          textStyleId: "style-1",
+          revealEffect: "typewriter",
+        },
+      }),
+      repositoryState: createRepositoryState(),
+    });
+
+    expect(
+      source.renderState.elements.find((element) => element.id === "line"),
+    ).toMatchObject({ type: "text-revealing", revealEffect: "none" });
+  });
+
+  it("lets a layout's particles run before its thumbnail is taken", () => {
+    const source = createLayoutThumbnailSource({
+      item: createLayout({
+        snow: { id: "snow", type: "particle", particleId: "particle-1" },
+      }),
+      repositoryState: createRepositoryState(),
+    });
+
+    expect(
+      source.renderState.elements.some(
+        (element) => element.type === "particles",
+      ),
+    ).toBe(true);
+    expect(source.settleMs).toBe(1500);
+  });
+
+  it("draws save and load screens as one type, as the editor does", () => {
+    expect(toLayoutPreviewType("save")).toBe("save-load");
+    expect(toLayoutPreviewType("load")).toBe("save-load");
+    expect(toLayoutPreviewType(undefined)).toBe("general");
+    expect(toLayoutPreviewType("dialogue-adv")).toBe("dialogue-adv");
   });
 });

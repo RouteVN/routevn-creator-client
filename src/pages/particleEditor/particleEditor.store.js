@@ -42,7 +42,7 @@ import {
 import { selectParticleEditorPageCopy } from "./support/particleEditorPageCopy.js";
 
 // As in the layout editor, the right panel shows the particle's values
-// (Edit) or the preview settings and Save Preview (Preview).
+// (Edit) or the preview settings (Preview).
 const RIGHT_PANEL_MODES = new Set(["edit", "preview"]);
 
 // The image picker sets the texture, or the preview background.
@@ -106,9 +106,11 @@ export const createInitialState = () => ({
   effect: createEmptyEffect(),
   // The effect as last saved; edits save on their own, a moment after.
   savedEffect: undefined,
-  // The preview background saves with Save Preview, which also draws it into
-  // the thumbnail; edits to the effect do not save it.
+  // The preview background, and as last saved. A picked one saves on its
+  // own, as edits do, but is not part of the undo history; the thumbnail
+  // draws it.
   previewBackgroundImageId: undefined,
+  savedPreviewBackgroundImageId: undefined,
   rightPanelMode: "edit",
   formTab: PARTICLE_FORM_TAB_IDS[0],
   // Remounts the form, for values that change outside it (undo, redo, a
@@ -126,8 +128,6 @@ export const createInitialState = () => ({
   // Image files that failed to load; the canvas leaves them out.
   failedAssetFileIds: [],
   warnedAssetFileIds: [],
-  // Save Preview runs once at a time.
-  isSavingPreview: false,
   canvasZoom: 1,
   imageSelectorDialog: createImageSelectorDialog(),
   backgroundImageMenu: createBackgroundImageMenu(),
@@ -148,6 +148,7 @@ export const loadParticle = ({ state }, { item, imagesData } = {}) => {
   state.effect = toParticleEffect(item);
   state.savedEffect = state.effect;
   state.previewBackgroundImageId = item.preview?.background?.imageId;
+  state.savedPreviewBackgroundImageId = state.previewBackgroundImageId;
   state.editHistory = createEditHistory();
   state.editHistoryBaseline = state.effect;
   state.dragStartPosition = undefined;
@@ -308,11 +309,30 @@ export const selectAvailableImageItems = ({ state }) =>
     ),
   );
 
-// The preview settings Save Preview saves: the background, or none.
-export const selectPreviewSettings = ({ state }) =>
-  state.previewBackgroundImageId
-    ? { background: { imageId: state.previewBackgroundImageId } }
-    : {};
+// The preview background as picked. A picker shows its pick on the canvas
+// at once, but the background keeps what it was until OK.
+const selectPickedBackgroundImageId = (state) => {
+  const { open, slot, originalImageId } = state.imageSelectorDialog;
+  return open && slot === "background"
+    ? originalImageId
+    : state.previewBackgroundImageId;
+};
+
+const createPreviewSettings = (backgroundImageId) =>
+  backgroundImageId ? { background: { imageId: backgroundImageId } } : {};
+
+// The preview settings, when they differ from what is saved: the
+// background, or none.
+export const selectUnsavedPreviewSettings = ({ state }) => {
+  const backgroundImageId = selectPickedBackgroundImageId(state);
+  return backgroundImageId === state.savedPreviewBackgroundImageId
+    ? undefined
+    : createPreviewSettings(backgroundImageId);
+};
+
+export const markPreviewSettingsSaved = ({ state }, { preview } = {}) => {
+  state.savedPreviewBackgroundImageId = preview.background?.imageId;
+};
 
 export const selectCanvasBackgroundImage = ({ state }) => {
   const image = getImageItemById(
@@ -349,16 +369,6 @@ export const markAssetWarningsShown = ({ state }, { fileIds } = {}) => {
   state.warnedAssetFileIds = [
     ...new Set([...state.warnedAssetFileIds, ...fileIds]),
   ];
-};
-
-export const selectIsSavingPreview = ({ state }) => state.isSavingPreview;
-
-export const startSavingPreview = ({ state }) => {
-  state.isSavingPreview = true;
-};
-
-export const finishSavingPreview = ({ state }) => {
-  state.isSavingPreview = false;
 };
 
 export const zoomCanvasIn = ({ state }) => {
@@ -532,9 +542,6 @@ export const selectViewData = ({ state, i18n }) => {
       state.rightPanelMode === "edit" ? "" : "display: none;",
     rightPanelPreviewStyle:
       state.rightPanelMode === "preview" ? "" : "display: none;",
-    showSavePreviewButton: state.rightPanelMode === "preview",
-    savePreviewDisabled: state.isSavingPreview,
-    savePreviewButton: copy.savePreviewButton,
     formTab: state.formTab,
     formTabs: createParticleFormTabs(copy),
     particleForm: createParticleForm({ activeTab: state.formTab, copy }),

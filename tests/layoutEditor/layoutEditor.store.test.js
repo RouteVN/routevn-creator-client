@@ -14,6 +14,9 @@ import {
   setAppWindowMetrics,
   selectIsTabletLandscape,
   setPreviewData,
+  selectUnsavedPreviewData,
+  markPreviewDataEdited,
+  markPreviewDataSaved,
   setUiConfig,
   setPendingPersistPayload,
   clearPendingPersistPayload,
@@ -626,7 +629,7 @@ describe("layoutEditor.store", () => {
     expect(viewData.item.name).toBe("Node 1");
   });
 
-  it("shows preview saving in the preview header on touch layouts", () => {
+  it("shows the preview header on touch layouts, with no Save button, since the preview saves on its own", () => {
     const state = createInitialState();
 
     setUiConfig({ state }, { uiConfig: { inputMode: "touch" } });
@@ -643,7 +646,7 @@ describe("layoutEditor.store", () => {
     expect(viewData.previewPanelVisibilityStyle).toBe("");
     expect(viewData.previewHydrationData).toEqual(viewData.previewData);
     expect(viewData.previewTitle).toBe("Preview");
-    expect(viewData.savePreviewButton).toBe("Save Preview");
+    expect(viewData).not.toHaveProperty("savePreviewButton");
   });
   it("shows the node explorer in place of the preview and node detail on touch layouts", () => {
     const state = createInitialState();
@@ -785,14 +788,12 @@ describe("layoutEditor.store", () => {
       { id: "edit", label: "Edit" },
       { id: "preview", label: "Preview" },
     ]);
-    expect(select().showRightPanelSaveButton).toBe(false);
     expect(select().rightPanelEditStyle).toBe("");
     expect(select().rightPanelPreviewStyle).toBe("display: none;");
 
     setRightPanelMode({ state }, { mode: "preview" });
 
     expect(select().rightPanelMode).toBe("preview");
-    expect(select().showRightPanelSaveButton).toBe(true);
     expect(select().rightPanelEditStyle).toBe("display: none;");
     expect(select().rightPanelPreviewStyle).toBe("");
 
@@ -914,5 +915,110 @@ describe("layoutEditor.store", () => {
 
     expect(viewData.showMobileNodeExplorer).toBe(false);
     expect(viewData.previewPanelVisibilityStyle).toBe("");
+  });
+});
+
+describe("layoutEditor.store preview autosave", () => {
+  const syncLayout = (state, persistedPreviewData, layoutId = "layout-1") =>
+    syncRepositoryState(
+      { state },
+      {
+        projectResolution: { width: 1920, height: 1080 },
+        layoutId,
+        layout: { id: layoutId, layoutType: "general" },
+        layoutData: { items: {}, tree: [] },
+        persistedPreviewData,
+      },
+    );
+
+  it("has unsaved preview data only once the user edits it", () => {
+    const state = createInitialState();
+    syncLayout(state, { backgroundImageId: "image-one" });
+
+    // What the Preview derives on its own is not unsaved.
+    setPreviewData(
+      { state },
+      {
+        previewData: {
+          backgroundImageId: "image-one",
+          dialogue: { content: [{ text: "Sample" }] },
+        },
+      },
+    );
+    expect(selectUnsavedPreviewData({ state })).toBeUndefined();
+
+    setPreviewData(
+      { state },
+      { previewData: { backgroundImageId: "image-two" } },
+    );
+    markPreviewDataEdited({ state });
+    expect(selectUnsavedPreviewData({ state })).toEqual({
+      backgroundImageId: "image-two",
+    });
+
+    markPreviewDataSaved(
+      { state },
+      { previewData: { backgroundImageId: "image-two" }, version: 1 },
+    );
+    expect(selectUnsavedPreviewData({ state })).toBeUndefined();
+  });
+
+  it("keeps what the preview shows when its save comes back, keys in any order", () => {
+    const state = createInitialState();
+    syncLayout(state, {});
+    const previewData = {
+      backgroundImageId: "image-two",
+      runtime: { autoMode: true, skipMode: false },
+    };
+    setPreviewData({ state }, { previewData });
+    markPreviewDataEdited({ state });
+    markPreviewDataSaved({ state }, { previewData, version: 1 });
+
+    syncLayout(state, {
+      runtime: { skipMode: false, autoMode: true },
+      backgroundImageId: "image-two",
+    });
+
+    expect(selectUnsavedPreviewData({ state })).toBeUndefined();
+    expect(state.previewData).toEqual(previewData);
+  });
+
+  it("keeps an edit made while an older save ran unsaved", () => {
+    const state = createInitialState();
+    syncLayout(state, {});
+    setPreviewData(
+      { state },
+      { previewData: { backgroundImageId: "image-two" } },
+    );
+    markPreviewDataEdited({ state });
+    setPreviewData(
+      { state },
+      { previewData: { backgroundImageId: "image-three" } },
+    );
+    markPreviewDataEdited({ state });
+    markPreviewDataSaved(
+      { state },
+      { previewData: { backgroundImageId: "image-two" }, version: 1 },
+    );
+
+    syncLayout(state, { backgroundImageId: "image-two" });
+
+    expect(selectUnsavedPreviewData({ state })).toEqual({
+      backgroundImageId: "image-three",
+    });
+  });
+
+  it("starts another layout with no edits", () => {
+    const state = createInitialState();
+    syncLayout(state, {});
+    setPreviewData(
+      { state },
+      { previewData: { backgroundImageId: "image-two" } },
+    );
+    markPreviewDataEdited({ state });
+
+    syncLayout(state, {}, "layout-2");
+
+    expect(selectUnsavedPreviewData({ state })).toBeUndefined();
   });
 });

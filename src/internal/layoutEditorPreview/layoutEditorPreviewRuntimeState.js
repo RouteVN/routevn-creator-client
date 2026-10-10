@@ -2,11 +2,11 @@ import {
   AUTO_MODE_CONDITION_TARGET,
   LINE_COMPLETED_CONDITION_TARGET,
   SKIP_MODE_CONDITION_TARGET,
-} from "../../../internal/layoutConditions.js";
+} from "../layoutConditions.js";
 import {
   getRuntimeFieldItems,
   toRuntimeConditionTarget,
-} from "../../../internal/runtimeFields.js";
+} from "../runtimeFields.js";
 
 const toPreviewRuntimeValue = (field = {}, value) => {
   if (field.type === "number") {

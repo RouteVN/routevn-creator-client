@@ -82,8 +82,8 @@ export const buildFontWeightOptions = ({
 
 // What this page edits and saves: how the text looks. Its name, description
 // and tags are edited on the text styles page, its preview text saves with
-// Save Preview, and fields the form does not show, such as its alignment,
-// are left as they are. Every key is always present, so two versions
+// the preview settings, and fields the form does not show, such as its
+// alignment, are left as they are. Every key is always present, so two versions
 // compare equal when they look the same.
 export const toTextStyleValues = (item) => ({
   fontId: toFontIds(item.fontId),

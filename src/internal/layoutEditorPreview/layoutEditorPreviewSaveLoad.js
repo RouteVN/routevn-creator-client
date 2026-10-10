@@ -2,7 +2,7 @@ import { parseAndRender } from "jempl";
 import {
   getRuntimeFieldItem,
   toRuntimeConditionTarget,
-} from "../../../internal/runtimeFields.js";
+} from "../runtimeFields.js";
 import { visitLayoutItemsWithFragments } from "./layoutEditorPreviewFragments.js";
 
 export const usesSaveLoadPreviewInLayout = (layoutParams = {}) => {

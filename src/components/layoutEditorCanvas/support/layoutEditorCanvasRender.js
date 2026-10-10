@@ -1,12 +1,11 @@
-import { parseAndRender } from "jempl";
-import { formatDate, resolveLayoutReferences } from "route-engine-js";
-import {
-  buildLayoutElements,
-  extractFileIdsFromRenderState,
-} from "../../../internal/project/layout.js";
+import { extractFileIdsFromRenderState } from "../../../internal/project/layout.js";
 import { getLayoutEditorItemResizeEdges } from "../../../internal/layoutEditorElementRegistry.js";
-import { getFontFaceWeightDescriptor } from "../../../internal/fontCapabilities.js";
-import { toHierarchyStructure } from "../../../internal/project/tree.js";
+import {
+  createFontAssetMetadataByFileId,
+  createLayoutPreviewElements,
+  createLayoutPreviewRenderState,
+  formatLayoutPreviewDate,
+} from "../../../internal/layoutPreview.js";
 import {
   createTransformSelectionAnchor,
   createTransformSelectionHitArea,
@@ -57,10 +56,7 @@ const getOverlayStrokeUnits = (canvasUnitsPerCssPixel) =>
   Math.max(canvasUnitsPerCssPixel, MIN_OVERLAY_STROKE_UNITS);
 const OVERLAY_RESIZE_HANDLE_SIZE = 12;
 const OVERLAY_ROTATION_HANDLE_SIZE = 16;
-export const formatLayoutEditorPreviewDate = formatDate;
-const jemplFunctions = {
-  formatDate: formatLayoutEditorPreviewDate,
-};
+export const formatLayoutEditorPreviewDate = formatLayoutPreviewDate;
 
 const isBlobUrl = (url) => typeof url === "string" && url.startsWith("blob:");
 
@@ -70,18 +66,6 @@ const toElementList = (elements) => {
   }
 
   return elements ? [elements] : [];
-};
-
-const toPlainObject = (value) => {
-  if (!value || typeof value !== "object" || Array.isArray(value)) {
-    return {};
-  }
-
-  return value;
-};
-
-const toArray = (value) => {
-  return Array.isArray(value) ? value : [];
 };
 
 const dedupeFileReferences = (fileReferences = []) => {
@@ -99,288 +83,6 @@ const dedupeFileReferences = (fileReferences = []) => {
   }
 
   return nextFileReferences;
-};
-
-const resolveFontAssetType = (fileName = "") => {
-  if (fileName.endsWith(".woff2")) {
-    return "font/woff2";
-  }
-
-  if (fileName.endsWith(".woff")) {
-    return "font/woff";
-  }
-
-  if (fileName.endsWith(".ttf")) {
-    return "font/ttf";
-  }
-
-  if (fileName.endsWith(".otf")) {
-    return "font/otf";
-  }
-
-  return "font/ttf";
-};
-
-const createFontAssetMetadataByFileId = (fontsItems = {}) => {
-  const fontAssetMetadataByFileId = {};
-
-  for (const fontItem of Object.values(fontsItems)) {
-    const fileId = fontItem?.fileId;
-    if (!fileId) {
-      continue;
-    }
-
-    fontAssetMetadataByFileId[fileId] = {
-      type: resolveFontAssetType(fontItem.name || ""),
-      fontWeightDescriptor: getFontFaceWeightDescriptor(fontItem),
-    };
-  }
-
-  return fontAssetMetadataByFileId;
-};
-
-const normalizeHistoryDialogueItem = (item) => {
-  const nextItem = toPlainObject(item);
-  const nextContent = toArray(nextItem.content);
-  const firstContentItem = toPlainObject(nextContent[0]);
-
-  return {
-    ...nextItem,
-    characterName: nextItem.characterName ?? "",
-    text: nextItem.text ?? firstContentItem.text ?? "",
-  };
-};
-
-const normalizeLayoutEditorPreviewData = (previewData = {}) => {
-  const nextPreviewData = toPlainObject(previewData);
-  const nextRuntime = toPlainObject(nextPreviewData.runtime);
-  const nextDialogue = toPlainObject(nextPreviewData.dialogue);
-  const nextDialogueCharacter = toPlainObject(nextDialogue.character);
-  const nextChoice = toPlainObject(nextPreviewData.choice);
-  const nextConfirmDialog = toPlainObject(nextPreviewData.confirmDialog);
-  const nextForm = toPlainObject(nextPreviewData.form);
-  const dialogueContent = toArray(nextDialogue.content);
-  const historyDialogue = toArray(nextPreviewData.historyDialogue);
-
-  return {
-    ...nextPreviewData,
-    backgroundImageId:
-      typeof nextPreviewData.backgroundImageId === "string" &&
-      nextPreviewData.backgroundImageId.length > 0
-        ? nextPreviewData.backgroundImageId
-        : undefined,
-    variables: toPlainObject(nextPreviewData.variables),
-    form: {
-      ...nextForm,
-      values: toPlainObject(nextForm.values),
-    },
-    runtime: {
-      ...nextRuntime,
-      dialogueTextSpeed: nextRuntime.dialogueTextSpeed ?? 50,
-      autoMode: nextRuntime.autoMode ?? false,
-      skipMode: nextRuntime.skipMode ?? false,
-      dialogueUIHidden: nextRuntime.dialogueUIHidden ?? false,
-      isLineCompleted: nextRuntime.isLineCompleted ?? false,
-      saveLoadPagination: nextRuntime.saveLoadPagination ?? 1,
-      menuPage: nextRuntime.menuPage ?? "",
-      menuEntryPoint: nextRuntime.menuEntryPoint ?? "",
-      autoForwardDelay: nextRuntime.autoForwardDelay ?? 1000,
-      skipUnseenText: nextRuntime.skipUnseenText ?? false,
-      skipTransitionsAndAnimations:
-        nextRuntime.skipTransitionsAndAnimations ?? false,
-      soundVolume: nextRuntime.soundVolume ?? 50,
-      musicVolume: nextRuntime.musicVolume ?? 50,
-      muteAll: nextRuntime.muteAll ?? false,
-    },
-    dialogue: {
-      ...nextDialogue,
-      characterId:
-        typeof nextDialogue.characterId === "string"
-          ? nextDialogue.characterId
-          : "",
-      character: {
-        ...nextDialogueCharacter,
-        name: nextDialogueCharacter.name ?? "",
-      },
-      content:
-        dialogueContent.length > 0
-          ? dialogueContent
-          : [
-              {
-                text: "",
-              },
-            ],
-      lines: toArray(nextDialogue.lines),
-    },
-    choice: {
-      ...nextChoice,
-      items: toArray(nextChoice.items),
-    },
-    confirmDialog: {
-      ...nextConfirmDialog,
-      confirmActions: toPlainObject(nextConfirmDialog.confirmActions),
-      cancelActions: toPlainObject(nextConfirmDialog.cancelActions),
-    },
-    historyDialogue:
-      historyDialogue.length > 0
-        ? historyDialogue.map(normalizeHistoryDialogueItem)
-        : [
-            {
-              characterName: "Alice",
-              text: "First history line",
-            },
-            {
-              characterName: "Bob",
-              text: "Second history line",
-            },
-          ],
-    saveSlots: toArray(nextPreviewData.saveSlots),
-  };
-};
-
-const applyInputPreviewValues = (elements, formValues = {}) => {
-  return toElementList(elements).map((element) => {
-    const nextElement = {
-      ...element,
-    };
-
-    if (
-      nextElement.type === "input" &&
-      typeof nextElement.field === "string" &&
-      Object.hasOwn(formValues, nextElement.field)
-    ) {
-      nextElement.value = formValues[nextElement.field];
-    }
-
-    if (Array.isArray(nextElement.children)) {
-      nextElement.children = applyInputPreviewValues(
-        nextElement.children,
-        formValues,
-      );
-    }
-
-    return nextElement;
-  });
-};
-
-const toPositiveNumber = (value, fallback) => {
-  const parsed = Number(value);
-  return Number.isFinite(parsed) && parsed > 0 ? parsed : fallback;
-};
-
-const createLayoutEditorPreviewBackgroundElement = ({
-  previewData,
-  repositoryState,
-  resolution,
-} = {}) => {
-  const backgroundImageId = previewData?.backgroundImageId;
-  if (!backgroundImageId) {
-    return undefined;
-  }
-
-  const imageItem = repositoryState?.images?.items?.[backgroundImageId];
-  if (imageItem?.type && imageItem.type !== "image") {
-    return undefined;
-  }
-
-  const fileId = imageItem?.fileId;
-  if (typeof fileId !== "string" || fileId.length === 0) {
-    return undefined;
-  }
-
-  const resolutionWidth = toPositiveNumber(resolution?.width, undefined);
-  const resolutionHeight = toPositiveNumber(resolution?.height, undefined);
-  if (resolutionWidth === undefined || resolutionHeight === undefined) {
-    return undefined;
-  }
-
-  return {
-    id: "layout-editor-preview-background",
-    type: "sprite",
-    src: fileId,
-    fileType: imageItem?.fileType ?? "image/png",
-    x: Math.round(resolutionWidth / 2),
-    y: Math.round(resolutionHeight / 2),
-    width: toPositiveNumber(imageItem?.width, resolutionWidth),
-    height: toPositiveNumber(imageItem?.height, resolutionHeight),
-    anchorX: 0.5,
-    anchorY: 0.5,
-  };
-};
-
-const createLayoutEditorPreviewCharacterSprite = ({
-  previewData,
-  repositoryState,
-} = {}) => {
-  const sprite = previewData.dialogue?.character?.sprite;
-  if (!sprite?.items?.length) {
-    return undefined;
-  }
-
-  const transform = repositoryState?.transforms?.items?.[sprite.transformId];
-  const characters = Object.values(repositoryState?.characters?.items ?? {});
-  const images = {};
-  const spritesheets = {};
-  const children = [];
-  for (const item of sprite.items) {
-    const resource = characters
-      .map((character) => character.sprites?.items?.[item.resourceId])
-      .find(Boolean);
-    if (!resource?.fileId) {
-      continue;
-    }
-
-    const child = {
-      id: `layout-editor-preview-character-sprite-${item.id}`,
-      x: 0,
-      y: 0,
-    };
-    if (resource.type === "image") {
-      images[item.resourceId] = resource;
-      child.type = "sprite";
-      child.imageId = item.resourceId;
-      child.width = resource.width;
-      child.height = resource.height;
-    } else if (resource.type === "spritesheet") {
-      spritesheets[item.resourceId] = resource;
-      child.type = "spritesheet-animation";
-      child.resourceId = item.resourceId;
-      child.width = resource.width;
-      child.height = resource.height;
-    } else {
-      continue;
-    }
-    children.push(child);
-  }
-  if (children.length === 0) {
-    return undefined;
-  }
-
-  const { elements, resources } = buildLayoutElements(
-    [
-      {
-        id: "layout-editor-preview-character-sprite",
-        type: "container",
-        x: transform?.x ?? 0,
-        y: transform?.y ?? 0,
-        anchorX: transform?.anchorX ?? 0,
-        anchorY: transform?.anchorY ?? 0,
-        scaleX: transform?.scaleX ?? 1,
-        scaleY: transform?.scaleY ?? 1,
-        rotation: transform?.rotation ?? 0,
-        children,
-      },
-    ],
-    images,
-    { items: {} },
-    { items: {} },
-    { items: {} },
-    {
-      spritesheetsData: { items: spritesheets },
-      filesData: repositoryState?.files,
-    },
-  );
-  return resolveLayoutReferences(elements, { resources })[0];
 };
 
 const collectMatchingPaths = (
@@ -786,20 +488,6 @@ const toSelectedElementMetrics = (path) => {
   };
 };
 
-const resolveLayoutPreviewElements = ({ elements, previewData } = {}) => {
-  const normalizedPreviewData = normalizeLayoutEditorPreviewData(previewData);
-  const renderedElements = toElementList(
-    parseAndRender(toElementList(elements), normalizedPreviewData, {
-      functions: jemplFunctions,
-    }),
-  );
-
-  return applyInputPreviewValues(
-    renderedElements,
-    normalizedPreviewData.form.values,
-  );
-};
-
 export const createLayoutEditorSelectionOverlay = ({
   parsedElements,
   selectedItemId,
@@ -1047,53 +735,14 @@ export const omitUnavailableLayoutElements = (elements, failedFileIds) => {
 export const createLayoutEditorRenderState = ({
   layoutState,
   repositoryState,
-} = {}) => {
-  const imageItems = repositoryState?.images?.items || {};
-  const spritesheetsData = repositoryState?.spritesheets || {
-    items: {},
-    tree: [],
-  };
-  const soundsData = repositoryState?.sounds || {
-    items: {},
-    tree: [],
-  };
-  const particlesData = repositoryState?.particles || {
-    items: {},
-    tree: [],
-  };
-  const textStyleItems = repositoryState?.textStyles?.items || {};
-  const colorsItems = repositoryState?.colors?.items || {};
-  const fontsItems = repositoryState?.fonts?.items || {};
-  const layoutHierarchyStructure = toHierarchyStructure(
-    layoutState?.elements ?? { items: {}, tree: [] },
-  );
-  const { elements, resources } = buildLayoutElements(
-    layoutHierarchyStructure,
-    imageItems,
-    { items: textStyleItems },
-    { items: colorsItems },
-    { items: fontsItems },
-    {
+} = {}) =>
+  createLayoutPreviewRenderState({
+    layoutState,
+    repositoryState,
+    mapElement: createLayoutEditorSelectionElementMapper({
       layoutId: layoutState?.id,
-      layoutType: layoutState?.layoutType,
-      layoutSchemaVersion: layoutState?.layoutSchemaVersion,
-      filesData: repositoryState?.files,
-      soundsData,
-      particlesData,
-      spritesheetsData,
-      layoutsData: repositoryState?.layouts?.items || {},
-      mapElement: createLayoutEditorSelectionElementMapper({
-        layoutId: layoutState?.id,
-      }),
-    },
-  );
-
-  return {
-    renderStateElements: elements,
-    resources,
-    fontsItems,
-  };
-};
+    }),
+  });
 
 const createLayoutEditorResolvedElements = ({
   layoutState,
@@ -1101,36 +750,24 @@ const createLayoutEditorResolvedElements = ({
   previewData,
   resolution,
 } = {}) => {
-  const { renderStateElements, resources } = createLayoutEditorRenderState({
-    layoutState,
-    repositoryState,
-  });
-  const normalizedPreviewData = normalizeLayoutEditorPreviewData(previewData);
-  const finalElements = resolveLayoutPreviewElements({
-    elements: renderStateElements,
-    previewData: normalizedPreviewData,
-  });
-  const resolvedFinalElements = resolveLayoutReferences(finalElements, {
-    resources,
-  });
-  const selectionOccurrences = extractLayoutEditorSelectionOccurrences(
-    resolvedFinalElements,
-  );
-  const previewBackgroundElement = createLayoutEditorPreviewBackgroundElement({
-    previewData: normalizedPreviewData,
-    repositoryState,
-    resolution,
-  });
+  const { elements, backgroundElement, characterSprite } =
+    createLayoutPreviewElements({
+      layoutState,
+      repositoryState,
+      previewData,
+      resolution,
+      mapElement: createLayoutEditorSelectionElementMapper({
+        layoutId: layoutState?.id,
+      }),
+    });
+  const selectionOccurrences =
+    extractLayoutEditorSelectionOccurrences(elements);
   const renderedElements = [...selectionOccurrences.elements];
-  if (previewBackgroundElement) {
-    renderedElements.unshift(previewBackgroundElement);
+  if (backgroundElement) {
+    renderedElements.unshift(backgroundElement);
   }
-  const previewCharacterSprite = createLayoutEditorPreviewCharacterSprite({
-    previewData: normalizedPreviewData,
-    repositoryState,
-  });
-  if (previewCharacterSprite) {
-    renderedElements.push(previewCharacterSprite);
+  if (characterSprite) {
+    renderedElements.push(characterSprite);
   }
   return {
     renderedElements,
