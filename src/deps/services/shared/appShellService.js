@@ -122,6 +122,27 @@ export const createAppShellService = ({
     }
   };
 
+  const navigate = (path, payload, options = {}) => {
+    const timing =
+      options.timing ??
+      createNavigationTiming({
+        platform,
+        source: "appService.navigate",
+        path,
+        payload,
+      });
+    const historyMode = options.historyMode;
+    const historyState = options.historyState;
+    markNavigationTiming(timing, "appService.navigate.dispatch");
+    subject.dispatch("redirect", {
+      path,
+      payload,
+      timing,
+      historyMode,
+      historyState,
+    });
+  };
+
   return {
     setAppCopyProvider(provider) {
       appCopyProvider =
@@ -146,24 +167,15 @@ export const createAppShellService = ({
 
     prepareNavigation,
 
-    navigate(path, payload, options = {}) {
-      const timing =
-        options.timing ??
-        createNavigationTiming({
-          platform,
-          source: "appService.navigate",
-          path,
-          payload,
-        });
-      const historyMode = options.historyMode;
-      const historyState = options.historyState;
-      markNavigationTiming(timing, "appService.navigate.dispatch");
-      subject.dispatch("redirect", {
-        path,
-        payload,
-        timing,
-        historyMode,
-        historyState,
+    navigate,
+
+    // Leaves the open project for the Projects list in place of its route
+    // entry. Projects then keeps its own entry below the next project it
+    // opens, so going back from that project returns to the list.
+    backToProjects() {
+      navigate("/projects", undefined, {
+        historyMode: "replace",
+        historyState: { preserveProjectsEntryOnProjectOpen: true },
       });
     },
 

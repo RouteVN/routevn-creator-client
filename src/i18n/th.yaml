@@ -264,6 +264,7 @@ appPage:
   failedInstallUpdateMessage: "ติดตั้งอัปเดตไม่สำเร็จ: {message}"
   failedLoadAppSettings: "โหลดการตั้งค่าแอปไม่สำเร็จ จึงใช้ค่าเริ่มต้นแทน"
   failedOpenLink: "เปิดลิงก์ไม่สำเร็จ"
+  failedGoBack: "ย้อนกลับไม่สำเร็จ โปรดลองอีกครั้ง"
   failedSaveAppSettings: "บันทึกการตั้งค่าแอปไม่สำเร็จ"
   failedUpdateStatusBar: "ไม่สามารถอัปเดตแถบสถานะได้ โปรดเริ่มแอปใหม่"
   failedRevealEditorCaret: "ไม่สามารถเลื่อนไปยังเคอร์เซอร์ได้ โปรดเริ่มแอปใหม่"

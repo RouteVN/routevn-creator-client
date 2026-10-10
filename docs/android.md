@@ -440,15 +440,30 @@ user's only backup. Real-device backup validation is still required before relea
 
 ## Android Back
 
-Native back calls `window.routeVNNativeBack()`.
+Native back calls `window.routeVNNativeBack()`, created by
+`src/deps/clients/nativeBack.js`. Each press closes one open overlay, as Escape
+does on desktop, before it navigates. The web app handles back in this order:
 
-The web app handles back in this order:
+1. Close the topmost modal dialog, popover, or menu. These open in the
+   browser's top layer, whose order is not document order, so
+   `src/primitives/nativeBackOverlays.js` records the order modal dialogs open
+   in. Back fires the dialog's `cancel` event, which Rettangoli turns into the
+   `close` event its owner already handles.
+2. Dispatch `app.nativeBack` so mounted overlays outside the top layer can
+   consume the event. An open `rvn-vn-preview` closes the preview this way.
+3. Tap the last visible control marked `data-native-back="true"`. Sheets and
+   full-page panels mark the control that closes them: the `rvn-mobile-sheet`
+   overlay and the resource pages' file explorer close button. The project
+   export overlay is marked so Back does nothing while a project exports.
+4. If nothing is open, the Android router goes back.
+5. In a project with nothing behind it in the router stack, Back opens the
+   Projects list through `appService.backToProjects()`, as the project page's
+   Back to Projects does.
+6. Otherwise the web app returns false, and the Activity moves to the
+   background.
 
-1. Dispatch `app.nativeBack` so mounted overlays can consume the event.
-2. If a `rvn-vn-preview` is open, it closes the preview and prevents route
-   navigation.
-3. If nothing handles the event, the Android router goes back.
-4. If the web app cannot handle back, the Activity finishes.
+A dialog that ignores its `close` event, such as a progress dialog, keeps Back
+from navigating while it is open.
 
 ## Debugging
 

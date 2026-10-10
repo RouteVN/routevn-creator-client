@@ -21,6 +21,7 @@ import Subject from "./deps/subject.js";
 import { createGraphicsService } from "./deps/services/graphicsService.js";
 import { deriveProjectFormatVersionFromAppVersion } from "./internal/projectCompatibility.js";
 import { registerPrimitives } from "./primitives/registerPrimitives.js";
+import { installNativeBackOverlays } from "./primitives/nativeBackOverlays.js";
 import { setAndroidDebugBuild } from "./internal/navigationTiming.js";
 import tauriConfig from "../src-tauri/tauri.conf.json";
 import {
@@ -29,8 +30,11 @@ import {
 } from "./deps/clients/clientUpdates.js";
 import { createMobileUpdateRequest } from "./deps/clients/mobileUpdateRequest.js";
 import { saveWhenAppGoesInactive } from "./deps/clients/mobileLifecycle.js";
+import { createNativeBackHandler } from "./deps/clients/nativeBack.js";
 
 registerPrimitives();
+// Before any dialog opens, so Back knows which one is on top.
+const nativeBackOverlays = installNativeBackOverlays();
 
 const androidAudioRuntime = createAndroidAudioRuntime();
 configureAudioRuntime(androidAudioRuntime.graphicsRuntime);
@@ -100,7 +104,6 @@ const updater = createAndroidUpdater({
 });
 
 const subject = new Subject();
-let nativeBackInFlight = false;
 
 const notifyAndroidBackState = () => {
   void callAndroidBridge("updateBackState", {
@@ -111,49 +114,6 @@ const notifyAndroidBackState = () => {
 };
 
 router.setOnStackChange(notifyAndroidBackState);
-window.routeVNNativeBack = () => {
-  const backRequest = {
-    handled: false,
-    handle() {
-      this.handled = true;
-    },
-  };
-
-  subject.dispatch("app.nativeBack", backRequest);
-  if (backRequest.handled) {
-    notifyAndroidBackState();
-    return true;
-  }
-
-  if (!appService.canGoBack()) {
-    notifyAndroidBackState();
-    return false;
-  }
-
-  if (nativeBackInFlight) {
-    return true;
-  }
-
-  nativeBackInFlight = true;
-  void appService
-    .back()
-    .catch((error) => {
-      console.error("Failed to prepare Android back navigation:", error);
-      const copy = appService.getAppCopy();
-      appService.showToast({
-        title: copy.errorTitle ?? "Error",
-        message:
-          copy.navigationFailed ?? "Could not go back. Please try again.",
-        status: "error",
-      });
-    })
-    .finally(() => {
-      nativeBackInFlight = false;
-      notifyAndroidBackState();
-    });
-
-  return true;
-};
 
 const projectService = createProjectService({
   router,
@@ -192,6 +152,14 @@ const appService = createAppService({
   windowMetricsClient,
   uiConfig,
   triggerTestCrash: (kind) => callAndroidBridge("triggerTestCrash", { kind }),
+});
+window.routeVNNativeBack = createNativeBackHandler({
+  subject,
+  appService,
+  overlays: nativeBackOverlays,
+  notifyBackState: notifyAndroidBackState,
+  openProjectsFromProject: true,
+  platformName: "Android",
 });
 saveWhenAppGoesInactive({ runtime: androidAudioRuntime, appService });
 await appService.initUserConfig();

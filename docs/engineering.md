@@ -1572,6 +1572,14 @@ an inline `max-width`: `w=f` sets `max-width: unset` in the element's own
 stylesheet and overrides the inline value, so size such rows with an inline
 `width: 100%` instead.
 
+Android's system Back closes the topmost open overlay before it navigates (see
+[Android Back](android.md#android-back)). Rettangoli dialogs, popovers, and
+menus need nothing more. A sheet or full-page panel that is not a dialog marks
+the control that closes it with `data-native-back="true"`, as the
+`rvn-mobile-sheet` overlay and the file explorer close button do. Back taps the
+last visible marked control in document order, through shadow roots, so a panel
+must come later in the document than any marked panel it covers.
+
 On touch devices, long-pressing a resource card runs only its primary action
 (preview, play, edit, or open). Do not emit a preliminary `item-click` selection
 event: it opens the selected-item action sheet before the primary action runs.

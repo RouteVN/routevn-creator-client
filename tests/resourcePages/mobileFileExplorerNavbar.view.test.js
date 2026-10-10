@@ -96,6 +96,20 @@ describe("mobile file explorer navbar", () => {
   );
 
   it.each(mobileFileExplorerPages)(
+    "lets the system Back close the mobile explorer for %s",
+    (_name, relativePath) => {
+      const view = readFileSync(
+        new URL(`../../src/pages/${relativePath}`, import.meta.url),
+        "utf8",
+      );
+
+      expect(view).toContain(
+        "rtgl-button#mobileFileExplorerClose sq pre=x v=ol data-native-back=true",
+      );
+    },
+  );
+
+  it.each(mobileFileExplorerPages)(
     "exposes the empty-space menu in the mobile explorer for %s",
     (name, relativePath, explorerCondition) => {
       const view = readFileSync(

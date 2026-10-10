@@ -25,6 +25,7 @@ import { deriveProjectFormatVersionFromAppVersion } from "./internal/projectComp
 import { DEFAULT_PROJECT_RESOLUTION } from "./internal/projectResolution.js";
 import { withErrorDetails } from "./internal/errorDetails.js";
 import { registerPrimitives } from "./primitives/registerPrimitives.js";
+import { installNativeBackOverlays } from "./primitives/nativeBackOverlays.js";
 import tauriConfig from "../src-tauri/tauri.conf.json";
 import { createGlobalUIClient } from "./deps/clients/globalUI.js";
 import {
@@ -34,8 +35,11 @@ import {
 import { createMobileUpdateRequest } from "./deps/clients/mobileUpdateRequest.js";
 import { createIOSUpdater } from "./deps/clients/ios/updater.js";
 import { saveWhenAppGoesInactive } from "./deps/clients/mobileLifecycle.js";
+import { createNativeBackHandler } from "./deps/clients/nativeBack.js";
 
 registerPrimitives();
+// Before any dialog opens, so Back knows which one is on top.
+const nativeBackOverlays = installNativeBackOverlays();
 
 const iosAudioRuntime = createMobileAudioRuntime();
 const iosGraphicsAudioOutput = createIOSGraphicsAudioOutput({
@@ -120,7 +124,6 @@ const updater = createIOSUpdater({
 });
 
 const subject = new Subject();
-let nativeBackInFlight = false;
 
 const notifyIOSBackState = () => {
   callIOSBridge("updateBackState", {
@@ -131,49 +134,6 @@ const notifyIOSBackState = () => {
 };
 
 router.setOnStackChange(notifyIOSBackState);
-window.routeVNNativeBack = () => {
-  const backRequest = {
-    handled: false,
-    handle() {
-      this.handled = true;
-    },
-  };
-
-  subject.dispatch("app.nativeBack", backRequest);
-  if (backRequest.handled) {
-    notifyIOSBackState();
-    return true;
-  }
-
-  if (!appService.canGoBack()) {
-    notifyIOSBackState();
-    return false;
-  }
-
-  if (nativeBackInFlight) {
-    return true;
-  }
-
-  nativeBackInFlight = true;
-  void appService
-    .back()
-    .catch((error) => {
-      console.error("Failed to prepare iOS back navigation:", error);
-      const copy = appService.getAppCopy();
-      appService.showToast({
-        title: copy.errorTitle ?? "Error",
-        message:
-          copy.navigationFailed ?? "Could not go back. Please try again.",
-        status: "error",
-      });
-    })
-    .finally(() => {
-      nativeBackInFlight = false;
-      notifyIOSBackState();
-    });
-
-  return true;
-};
 
 const projectService = createProjectService({
   router,
@@ -207,6 +167,13 @@ const appService = createAppService({
   windowMetricsClient,
   uiConfig,
   triggerTestCrash: (kind) => callIOSBridge("triggerTestCrash", { kind }),
+});
+window.routeVNNativeBack = createNativeBackHandler({
+  subject,
+  appService,
+  overlays: nativeBackOverlays,
+  notifyBackState: notifyIOSBackState,
+  platformName: "iOS",
 });
 saveWhenAppGoesInactive({ runtime: iosAudioRuntime, appService });
 await appService.initUserConfig();

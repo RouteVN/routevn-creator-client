@@ -16,6 +16,7 @@ const createDeps = () => ({
   appService: {
     getPayload: vi.fn(() => ({ p: "project-1" })),
     navigate: vi.fn(),
+    backToProjects: vi.fn(),
   },
 });
 
@@ -589,22 +590,7 @@ describe("project page handlers", () => {
 
     expect(enterEvent.preventDefault).toHaveBeenCalledTimes(1);
     expect(spaceEvent.preventDefault).toHaveBeenCalledTimes(1);
-    const expectedOptions = {
-      historyMode: "replace",
-      historyState: { preserveProjectsEntryOnProjectOpen: true },
-    };
-    expect(deps.appService.navigate).toHaveBeenNthCalledWith(
-      1,
-      "/projects",
-      undefined,
-      expectedOptions,
-    );
-    expect(deps.appService.navigate).toHaveBeenNthCalledWith(
-      2,
-      "/projects",
-      undefined,
-      expectedOptions,
-    );
+    expect(deps.appService.backToProjects).toHaveBeenCalledTimes(2);
   });
 
   it("ignores unrelated Back to Projects key presses", () => {
@@ -616,7 +602,7 @@ describe("project page handlers", () => {
     });
 
     expect(event.preventDefault).not.toHaveBeenCalled();
-    expect(deps.appService.navigate).not.toHaveBeenCalled();
+    expect(deps.appService.backToProjects).not.toHaveBeenCalled();
   });
 
   it("opens resource analytics in their resource pages", () => {
