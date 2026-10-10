@@ -723,7 +723,11 @@ export const handleHelpFloatingButtonClick = (deps) => {
   const { appService, store } = deps;
   const currentRoutePattern = store.selectCurrentRoutePattern();
 
-  appService.openUrl(getRoutevnCreatorDocsUrl(currentRoutePattern));
+  appService.openUrl(
+    getRoutevnCreatorDocsUrl(currentRoutePattern, {
+      isTouchMode: store.selectIsTouchMode(),
+    }),
+  );
 };
 
 export const handleMobileTabClick = (deps, payload = {}) => {

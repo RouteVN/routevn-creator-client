@@ -213,6 +213,8 @@ export const setUiConfig = ({ state }, { uiConfig } = {}) => {
     uiConfig?.id === "touch" || uiConfig?.inputMode === "touch";
 };
 
+export const selectIsTouchMode = ({ state }) => state.isTouchMode;
+
 export const setPlatform = ({ state }, { platform } = {}) => {
   state.platform = platform ?? "web";
 };

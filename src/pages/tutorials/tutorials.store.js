@@ -2,6 +2,10 @@ import {
   buildTabletLandscapeContentColumnStyle,
   setMobileResourcePageWindowMetricsState,
 } from "../../internal/ui/resourcePages/mobileResourcePage.js";
+import {
+  ROUTEVN_CREATOR_MOBILE_VIDEO_TUTORIALS_URL,
+  ROUTEVN_CREATOR_VIDEO_TUTORIALS_URL,
+} from "../../internal/routevnUrls.js";
 import { selectTutorialsPageCopy } from "./support/tutorialsPageCopy.js";
 
 export const createInitialState = () => ({
@@ -19,6 +23,12 @@ export const setUiConfig = ({ state }, { uiConfig } = {}) => {
 export const setAppWindowMetrics = ({ state }, { width, height } = {}) => {
   setMobileResourcePageWindowMetricsState(state, { width, height });
 };
+
+// Phones and tablets get the tutorials recorded on them.
+export const selectVideoTutorialsUrl = ({ state }) =>
+  state.isTouchMode
+    ? ROUTEVN_CREATOR_MOBILE_VIDEO_TUTORIALS_URL
+    : ROUTEVN_CREATOR_VIDEO_TUTORIALS_URL;
 
 export const selectViewData = ({ state, i18n }) => {
   const copy = selectTutorialsPageCopy(i18n);

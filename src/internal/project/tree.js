@@ -188,6 +188,32 @@ export const toFlatItems = (data) => {
 };
 
 /**
+ * Names a copy of an item with its original's name and a number after it.
+ * The number counts on from one the name already ends with, or from 2, and
+ * skips numbers other items of that type use: "Fade" copies to "Fade 2", or
+ * to "Fade 3" when "Fade 2" exists, and "Level 10" copies to "Level 11".
+ *
+ * @param {HierarchyDataInput} data - Hierarchy data object containing items and order
+ * @param {string} itemId - Id of the item being copied
+ * @returns {string} Name for the copy
+ */
+export const createDuplicateItemName = (data, itemId) => {
+  const sourceItem = data.items[itemId];
+  const numberedName = sourceItem.name.match(/^(.*\S)\s+(\d+)$/);
+  const baseName = numberedName?.[1] ?? sourceItem.name;
+  const names = new Set(
+    Object.values(data.items)
+      .filter((item) => item.type === sourceItem.type)
+      .map((item) => item.name),
+  );
+  let number = numberedName ? Number(numberedName[2]) + 1 : 2;
+  while (names.has(`${baseName} ${number}`)) {
+    number += 1;
+  }
+  return `${baseName} ${number}`;
+};
+
+/**
  * Groups order items by their parent folders.
  * Creates flat groups where folders contain their non-folder children.
  *

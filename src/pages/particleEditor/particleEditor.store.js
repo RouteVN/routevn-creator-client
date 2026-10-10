@@ -33,10 +33,8 @@ import {
 } from "../../internal/ui/resourcePages/mobileResourcePage.js";
 import {
   PARTICLE_FORM_CONDITION_FIELDS,
-  PARTICLE_FORM_TAB_IDS,
   buildParticleFormValues,
   createParticleForm,
-  createParticleFormTabs,
   replaceParticleTextureImage,
 } from "./support/particleEditorForm.js";
 import { selectParticleEditorPageCopy } from "./support/particleEditorPageCopy.js";
@@ -112,7 +110,6 @@ export const createInitialState = () => ({
   previewBackgroundImageId: undefined,
   savedPreviewBackgroundImageId: undefined,
   rightPanelMode: "edit",
-  formTab: PARTICLE_FORM_TAB_IDS[0],
   // Remounts the form, for values that change outside it (undo, redo, a
   // drag on the canvas) or that it shows differently from how they were
   // typed.
@@ -231,18 +228,10 @@ export const setRightPanelMode = ({ state }, { mode } = {}) => {
   }
 };
 
-export const selectFormTab = ({ state }) => state.formTab;
-
-// The emitter source's outline, which moves the source, shows only while the
-// Source tab of Edit is open.
+// The emitter source's outline, which moves the source, shows while Edit is
+// open, as the layout editor shows its selection's.
 export const selectShowsSourceOutline = ({ state }) =>
-  state.rightPanelMode === "edit" && state.formTab === "source";
-
-export const setFormTab = ({ state }, { tab } = {}) => {
-  if (PARTICLE_FORM_TAB_IDS.includes(tab)) {
-    state.formTab = tab;
-  }
-};
+  state.rightPanelMode === "edit";
 
 export const setDragStartPosition = ({ state }, { dragStartPosition } = {}) => {
   state.dragStartPosition = dragStartPosition;
@@ -481,12 +470,11 @@ const buildImageCard = (image) => {
 };
 
 // rtgl-form fills in only the fields that show when it mounts, so the key
-// remounts it for another sub-tab, for a change to a field that decides
-// which fields show, and when the form needs the particle's values again.
+// remounts it for a change to a field that decides which fields show, and
+// when the form needs the particle's values again.
 const buildFormKey = (state, formValues) =>
   [
     "particle-form",
-    state.formTab,
     state.formRevision,
     ...PARTICLE_FORM_CONDITION_FIELDS.map((name) => formValues[name]),
   ].join("-");
@@ -542,9 +530,7 @@ export const selectViewData = ({ state, i18n }) => {
       state.rightPanelMode === "edit" ? "" : "display: none;",
     rightPanelPreviewStyle:
       state.rightPanelMode === "preview" ? "" : "display: none;",
-    formTab: state.formTab,
-    formTabs: createParticleFormTabs(copy),
-    particleForm: createParticleForm({ activeTab: state.formTab, copy }),
+    particleForm: createParticleForm({ copy }),
     particleFormKey: buildFormKey(state, formValues),
     formValues,
     textureImageLabel: copy.textureImageLabel,

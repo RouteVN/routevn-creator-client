@@ -13,7 +13,8 @@ propsSchema:
       description: >-
         The slider popover's field: step and fastStep, the slider's range, the
         min and max that bound the value, defaultValue, the presets
-        ({ label, value, suffixText }), and the unit shown after the value. See
+        ({ label, value, suffixText }), the unit shown after the value, and
+        stepsAsPercent to show the steps as percentages. See
         src/internal/ui/sliderPopover.js.
 events:
   value-input:

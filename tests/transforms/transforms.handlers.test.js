@@ -10,6 +10,10 @@ import {
   handleTransformItemDoubleClick,
   handleTransformItemEdit,
 } from "../../src/pages/transforms/transforms.handlers.js";
+import {
+  selectDuplicateItemName,
+  selectItemParentId,
+} from "../../src/pages/transforms/transforms.store.js";
 
 const createRefreshDeps = (repositoryState, overrides = {}) => {
   let selectedItemId;
@@ -37,6 +41,18 @@ const createRefreshDeps = (repositoryState, overrides = {}) => {
       setDefaultDialogueAvatarTransformId: vi.fn(),
       selectTransformItemById: vi.fn(
         ({ itemId }) => repositoryState.transforms.items[itemId],
+      ),
+      selectItemParentId: vi.fn((payload) =>
+        selectItemParentId(
+          { state: { data: repositoryState.transforms } },
+          payload,
+        ),
+      ),
+      selectDuplicateItemName: vi.fn((payload) =>
+        selectDuplicateItemName(
+          { state: { data: repositoryState.transforms } },
+          payload,
+        ),
       ),
       ...overrides.store,
     },
@@ -259,7 +275,7 @@ describe("transforms.handlers", () => {
     expect(deps.store.closeEditDialog).toHaveBeenCalledOnce();
   });
 
-  it("duplicates a transform from the file explorer with its values, preview, and thumbnail", async () => {
+  it("duplicates a transform into its folder with a numbered name, its values, preview, and thumbnail", async () => {
     const item = {
       id: "transform-1",
       type: "transform",
@@ -280,7 +296,13 @@ describe("transforms.handlers", () => {
     };
     const repositoryState = {
       project: {},
-      transforms: { items: { "transform-1": item }, tree: [{ id: item.id }] },
+      transforms: {
+        items: {
+          "folder-1": { id: "folder-1", type: "folder", name: "Folder One" },
+          "transform-1": item,
+        },
+        tree: [{ id: "folder-1", children: [{ id: item.id }] }],
+      },
     };
     const deps = createRefreshDeps(repositoryState, {
       projectService: {
@@ -298,7 +320,7 @@ describe("transforms.handlers", () => {
       transformId: expect.any(String),
       data: {
         type: "transform",
-        name: "Transform One",
+        name: "Transform One 2",
         description: "",
         tagIds: [],
         x: 960,
@@ -313,7 +335,7 @@ describe("transforms.handlers", () => {
         previewFileId: "preview-1",
         preview: { background: { imageId: "image-1" } },
       },
-      parentId: null,
+      parentId: "folder-1",
       position: "after",
       positionTargetId: "transform-1",
     });

@@ -3,9 +3,10 @@ import {
   getSliderStepButtons,
 } from "../../internal/ui/sliderPopover.js";
 
-// A number that opens a popover with a slider, a Presets menu, and step
-// buttons. The popover's value shows on the page as it moves and changes the
-// number on Submit; closing the popover leaves the number as it was.
+// A number that opens a popover with a slider, and a row with a Presets
+// menu, step buttons, and Submit. The popover's value shows on the page as it
+// moves and changes the number on Submit or Enter; closing the popover leaves
+// the number as it was.
 const SLIDER_PRESETS_SLOT = "slider-presets";
 
 export const createInitialState = () => ({
@@ -37,10 +38,7 @@ export const selectViewData = ({ state, props, i18n }) => {
   const copy = i18n.sliderValueField;
   const { field } = props;
   const value = props.value ?? field.defaultValue;
-  const range = getSliderRange({
-    field,
-    values: [value, state.popover.value],
-  });
+  const range = getSliderRange({ field });
 
   return {
     label: props.label ?? "",
@@ -51,18 +49,20 @@ export const selectViewData = ({ state, props, i18n }) => {
         {
           name: "value",
           type: "slider-with-input",
+          // Small, as the buttons in the row below are.
+          s: "sm",
           min: range.min,
           max: range.max,
+          sliderMin: range.sliderMin,
+          sliderMax: range.sliderMax,
           step: range.step,
         },
         { type: "slot", slot: SLIDER_PRESETS_SLOT },
       ],
-      actions: {
-        buttons: [{ id: "submit", variant: "pr", label: copy.submitLabel }],
-      },
     },
     popoverDefaultValues: { value: state.popover.value },
     presetsLabel: copy.presetsLabel,
+    submitLabel: copy.submitLabel,
     stepButtons: getSliderStepButtons({ field, copy }),
   };
 };

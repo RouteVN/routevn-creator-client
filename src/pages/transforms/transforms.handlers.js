@@ -449,6 +449,7 @@ export const handleItemDuplicate = async (deps, payload) => {
     type: "transform",
     ...createMetadataValues(itemData),
   };
+  duplicateData.name = store.selectDuplicateItemName({ itemId });
   for (const field of TRANSFORM_VALUE_FIELDS) {
     duplicateData[field] = itemData[field] ?? DEFAULT_TRANSFORM_VALUES[field];
   }
@@ -473,7 +474,7 @@ export const handleItemDuplicate = async (deps, payload) => {
       projectService.createTransform({
         transformId: duplicateTransformId,
         data: duplicateData,
-        parentId: itemData.parentId ?? null,
+        parentId: store.selectItemParentId({ itemId }) ?? null,
         position: "after",
         positionTargetId: itemId,
       }),

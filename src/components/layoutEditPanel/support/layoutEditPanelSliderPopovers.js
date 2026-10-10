@@ -8,16 +8,20 @@ import {
 // The fields whose popover has a slider, a Presets menu, and step buttons.
 // The steps are the mouse wheel's, the larger ones Shift's. A field left
 // unset starts from its default, as the element draws it. `range` is where
-// the slider runs, reaching further to a value already outside; `min` and
-// `max` bound the value itself.
+// the slider runs; `min` and `max` bound the value itself, which can be
+// typed past the slider's ends. Position and size take theirs from the
+// project. Scale and opacity steps read as percentages, as their presets do.
 const SCALE_FIELD = {
   defaultValue: 1,
   step: 0.01,
   fastStep: 0.1,
+  stepsAsPercent: true,
+  min: 0,
+  max: 10,
   range: { min: 0, max: 2 },
 };
 
-const SIZE_FIELD = { step: 1, fastStep: 10, min: 0 };
+const SIZE_FIELD = { step: 1, fastStep: 10 };
 
 const SLIDER_POPOVER_FIELDS = {
   x: { step: 1, fastStep: 10 },
@@ -28,11 +32,20 @@ const SLIDER_POPOVER_FIELDS = {
     defaultValue: 0,
     step: 1,
     fastStep: 15,
+    min: -360,
+    max: 360,
     range: { min: -180, max: 180 },
   },
   scaleX: SCALE_FIELD,
   scaleY: SCALE_FIELD,
-  opacity: { defaultValue: 1, step: 0.01, fastStep: 0.1, min: 0, max: 1 },
+  opacity: {
+    defaultValue: 1,
+    step: 0.01,
+    fastStep: 0.1,
+    stepsAsPercent: true,
+    min: 0,
+    max: 1,
+  },
 };
 
 // Shares of the project's width or height. Sizes leave out 0.
@@ -79,39 +92,46 @@ const getProjectDimension = ({ name, projectResolution }) =>
       : projectResolution?.width,
   );
 
-// X and Y run half the project's width or height beyond each edge, width and
-// height from 0 to the project's, rotation half a turn each way, and scale
-// from 0 to 2; all reach further to a value already outside. Opacity stays
-// between 0 and 1, and sizes stay at 0 or more.
-export const getSliderPopoverRange = ({
-  name,
-  values = {},
-  projectResolution,
-  currentValue,
-} = {}) => {
+// The project's width or height bounds a position or size this many times
+// over.
+const PROJECT_BOUND_MULTIPLE = 4;
+
+// The X and Y sliders run half the project's width or height beyond each
+// edge, width and height from 0 to the project's, rotation half a turn each
+// way, and scale from 0 to 2. Typed, X and Y reach 4 times the project's
+// width or height either way, width and height 4 times it, rotation a turn
+// each way, and scale 10; opacity stays between 0 and 1.
+export const getSliderPopoverRange = ({ name, projectResolution } = {}) => {
   const field = SLIDER_POPOVER_FIELDS[name];
   if (!field) {
     return undefined;
   }
 
-  let { range } = field;
-  if (isPositionField(name) || isSizeField(name)) {
-    const dimension = getProjectDimension({ name, projectResolution });
-    if (!Number.isFinite(dimension) || dimension <= 0) {
-      return undefined;
-    }
-    range = isSizeField(name)
-      ? { min: 0, max: dimension }
-      : {
-          min: Math.round(-dimension * 0.5),
-          max: Math.round(dimension * 1.5),
-        };
+  if (!isPositionField(name) && !isSizeField(name)) {
+    return getSliderRange({ field });
   }
 
+  const dimension = getProjectDimension({ name, projectResolution });
+  if (!Number.isFinite(dimension) || dimension <= 0) {
+    return undefined;
+  }
+  const bound = Math.round(dimension * PROJECT_BOUND_MULTIPLE);
+  if (isSizeField(name)) {
+    return getSliderRange({
+      field,
+      range: { min: 0, max: dimension },
+      min: 0,
+      max: bound,
+    });
+  }
   return getSliderRange({
     field,
-    range,
-    values: [values?.[name], currentValue],
+    range: {
+      min: Math.round(-dimension * 0.5),
+      max: Math.round(dimension * 1.5),
+    },
+    min: -bound,
+    max: bound,
   });
 };
 
@@ -166,8 +186,21 @@ export const getSliderPopoverStepButtons = ({ name, copy = {} } = {}) => {
 
 // A value moved by a step, rounded to the step and kept within the field's
 // bounds.
-export const stepSliderPopoverValue = ({ name, value, delta } = {}) =>
-  stepSliderValue({ field: SLIDER_POPOVER_FIELDS[name], value, delta });
+export const stepSliderPopoverValue = ({
+  name,
+  value,
+  delta,
+  projectResolution,
+} = {}) => {
+  const range = getSliderPopoverRange({ name, projectResolution });
+  return stepSliderValue({
+    field: SLIDER_POPOVER_FIELDS[name],
+    value,
+    delta,
+    min: range?.min,
+    max: range?.max,
+  });
+};
 
 const isScaleField = (name) => name === "scaleX" || name === "scaleY";
 

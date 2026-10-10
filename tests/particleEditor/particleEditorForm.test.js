@@ -19,24 +19,21 @@ const createSnowFormValues = () =>
     particle: createParticlePreset({ presetId: "snow" }),
   });
 
+const sectionFields = (id) =>
+  createParticleForm().fields.find((section) => section.id === id).fields;
+
 describe("particle form", () => {
   it("edits the effect only: Basics has the size and seed", () => {
-    const fieldNames = (activeTab) =>
-      createParticleForm({ activeTab }).fields.map(
-        (field) => field.name ?? field.slot,
-      );
+    const fieldNames = (id) =>
+      sectionFields(id).map((field) => field.name ?? field.slot);
 
     expect(fieldNames("basics")).toEqual(["width", "height", "seed"]);
     expect(fieldNames("appearance")[0]).toBe("particle-texture-image");
-    expect(createParticleForm({ activeTab: "basics" }).actions.buttons).toEqual(
-      [],
-    );
+    expect(createParticleForm().actions.buttons).toEqual([]);
   });
 
   it("keeps the mode and shape choices from being cleared", () => {
-    const fields = ["emission", "source", "movement"].flatMap(
-      (activeTab) => createParticleForm({ activeTab }).fields,
-    );
+    const fields = ["emission", "source", "movement"].flatMap(sectionFields);
     const field = (name) => fields.find((item) => item.name === name);
 
     // Clearing one would silently swap the effect for a default and save it.
@@ -99,8 +96,7 @@ describe("particle form", () => {
   });
 
   it("allows Rotate Toward Movement to be off", () => {
-    const form = createParticleForm({ activeTab: "movement" });
-    const faceVelocityField = form.fields.find(
+    const faceVelocityField = sectionFields("movement").find(
       (field) => field.name === "faceVelocity",
     );
 
@@ -144,8 +140,8 @@ describe("particle form", () => {
       }).modules.appearance.alpha;
 
     it("shows Fixed or Curve, with fade fields only for Curve", () => {
-      const form = createParticleForm({ activeTab: "appearance" });
-      const field = (name) => form.fields.find((item) => item.name === name);
+      const field = (name) =>
+        sectionFields("appearance").find((item) => item.name === name);
 
       expect(field("opacityMode")).toMatchObject({
         type: "segmented-control",

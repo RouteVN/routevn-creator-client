@@ -5,8 +5,10 @@ import {
   handleOnUpdate,
   handlePopoverFormChange,
   handlePopoverFormInput,
+  handlePopoverFormKeyDown,
   handlePopoverPresetsButtonClick,
   handlePopoverStepPress,
+  handlePopoverSubmitClick,
   handlePopverFormClose,
   handleScaleAspectRatioChange,
 } from "../../src/components/layoutEditPanel/layoutEditPanel.handlers.js";
@@ -60,6 +62,19 @@ const buttonEvent = (dataset = {}) => ({
 });
 
 const formEvent = (values) => ({ _event: { detail: { values } } });
+
+const keyEvent = ({
+  key = "Enter",
+  path = [{ tagName: "INPUT" }],
+  ...rest
+} = {}) => ({
+  _event: {
+    key,
+    composedPath: () => path,
+    preventDefault: vi.fn(),
+    ...rest,
+  },
+});
 
 describe("layout edit panel canvas preview", () => {
   it("previews a value while the slider moves, without rebuilding the form", () => {
@@ -126,7 +141,9 @@ describe("layout edit panel canvas preview", () => {
     expect(events.at(-1).detail.linkedValues).toBeUndefined();
     handleScaleAspectRatioChange(deps, { _event: { detail: { value: true } } });
 
-    handleFormActions(deps, formEvent({ value: 0.5 }));
+    // Submit sits in the presets row and reads the form's value.
+    deps.refs = { form: { getValues: () => ({ value: 0.5 }) } };
+    handlePopoverSubmitClick(deps);
     const update = events.at(-1);
     expect(update.type).toBe("update");
     expect(update.detail).toMatchObject({
@@ -191,7 +208,11 @@ describe("layout edit panel canvas preview", () => {
     });
     expect(state.values).toMatchObject({ width: 400, height: 200 });
 
-    handleFormActions(deps, formEvent({ value: 800 }));
+    // Enter in the number box submits, as the form has no actions to.
+    deps.refs = { form: { getValues: () => ({ value: 800 }) } };
+    const enter = keyEvent();
+    handlePopoverFormKeyDown(deps, enter);
+    expect(enter._event.preventDefault).toHaveBeenCalledOnce();
     const update = events.at(-1);
     expect(update.type).toBe("update");
     expect(update.detail).toMatchObject({
@@ -387,6 +408,28 @@ describe("layout edit panel canvas preview", () => {
 
     expect(events[0].detail.value).toBe(normalizeLayoutRotation(12.34567));
     expect(events[0].detail.value).not.toBe(12.34567);
+  });
+
+  it("leaves Enter to a button it presses, to the form, and to other popovers", () => {
+    const { deps, events } = createDeps();
+    deps.refs.form.getValues = () => ({ value: 300 });
+    const sliderPopover = deps.store.selectPopoverForm();
+    sliderPopover.context.isSliderPopover = true;
+    deps.store.selectPopoverForm = () => sliderPopover;
+
+    handlePopoverFormKeyDown(
+      deps,
+      keyEvent({ path: [{ tagName: "BUTTON" }, { tagName: "RTGL-BUTTON" }] }),
+    );
+    handlePopoverFormKeyDown(deps, keyEvent({ defaultPrevented: true }));
+    handlePopoverFormKeyDown(deps, keyEvent({ shiftKey: true }));
+    handlePopoverFormKeyDown(deps, keyEvent({ key: "a" }));
+    expect(events).toEqual([]);
+
+    // Other popovers submit on Enter through their form's own action.
+    sliderPopover.context.isSliderPopover = undefined;
+    handlePopoverFormKeyDown(deps, keyEvent());
+    expect(events).toEqual([]);
   });
 
   it("cancels the preview when the popover closes without submitting", () => {

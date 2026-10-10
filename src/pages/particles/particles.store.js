@@ -1,7 +1,10 @@
 import { createCatalogPageStore } from "../../internal/ui/resourcePages/catalog/createCatalogPageStore.js";
 import { createTagField } from "../../internal/ui/resourcePages/tags.js";
 import { applyFolderRequiredRootDragOptions } from "../../internal/fileExplorerDragOptions.js";
-import { toFlatItems } from "../../internal/project/tree.js";
+import {
+  createDuplicateItemName,
+  toFlatItems,
+} from "../../internal/project/tree.js";
 import { resolveParticleTextureImageItem } from "../../internal/particles.js";
 import { formatParticleAspectRatio } from "../../internal/particlePreview.js";
 import {
@@ -246,6 +249,9 @@ export const selectSelectedParticle = selectSelectedItem;
 // The folder an item is in, which its items do not record.
 export const selectItemParentId = ({ state }, { itemId } = {}) =>
   toFlatItems(state.data).find((item) => item.id === itemId)?.parentId;
+
+export const selectDuplicateItemName = ({ state }, { itemId } = {}) =>
+  createDuplicateItemName(state.data, itemId);
 
 export const setProjectResolution = ({ state }, { projectResolution } = {}) => {
   state.projectResolution = requireProjectResolution(

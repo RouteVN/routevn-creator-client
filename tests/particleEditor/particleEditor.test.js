@@ -10,7 +10,6 @@ import {
   handleBackgroundImageMenuItemClick,
   handleBeforeMount,
   handleCanvasZoomInClick,
-  handleFormTabClick,
   handleImageSelectorConfirmClick,
   handleImageSelectorDialogClose,
   handleImageSelectorImageSelected,
@@ -239,9 +238,6 @@ const showPreviewTab = (page) =>
     _event: { detail: { id: "preview" } },
   });
 
-const showFormTab = (page, id) =>
-  handleFormTabClick(page.deps, { _event: { detail: { id } } });
-
 // Image One's file cannot be read, as in an imported project that lacks it.
 const failImageOneFile = (page) => {
   page.deps.projectService.getFileContent.mockImplementation(async (fileId) => {
@@ -258,7 +254,7 @@ const fileReads = (page, fileId) =>
   );
 
 describe("particle editor", () => {
-  it("opens the particle on a canvas of its own size, with the source outline on the Source tab", async () => {
+  it("opens the particle on a canvas of its own size, with the source outline", async () => {
     const page = await createPage();
 
     expect(page.deps.graphicsService.init).toHaveBeenCalledWith({
@@ -266,10 +262,6 @@ describe("particle editor", () => {
       width: 640,
       height: 360,
     });
-    // Basics is open, so the source outline does not draw.
-    expect(page.lastRender().elements.map((element) => element.id)).toEqual([
-      "particle-preview-bg",
-    ]);
     expect(page.view()).toMatchObject({
       particleName: "Particle One",
       undoDisabled: true,
@@ -278,20 +270,12 @@ describe("particle editor", () => {
       // No texture yet, so the particles do not draw.
       showTextureHint: true,
       textureHint: "Choose a texture image in Appearance to see the particles.",
-      formTab: "basics",
     });
     expect(page.view().formValues).toMatchObject({
       width: "640",
       height: "360",
       seed: "20260408",
     });
-    expect(page.view().particleForm.fields.map((field) => field.name)).toEqual([
-      "width",
-      "height",
-      "seed",
-    ]);
-
-    await showFormTab(page, "source");
     const elements = page.lastRender().elements;
     expect(elements.map((element) => element.id)).toEqual([
       "particle-preview-bg",
@@ -674,7 +658,6 @@ describe("particle editor", () => {
 
     await pickTexture(page, "image-1");
     await pickBackground(page, "image-2");
-    await showFormTab(page, "source");
 
     const elements = page.lastRender().elements;
     // The particles leave out the texture they cannot draw; the background
@@ -703,27 +686,15 @@ describe("particle editor", () => {
     expect(page.deps.appService.showToast).not.toHaveBeenCalled();
   });
 
-  it("draws the outline on Edit's Source tab only", async () => {
+  it("draws the outline while Edit shows, and not in Preview", async () => {
     const page = await createPage();
     await pickTexture(page, "image-1");
-    const basicsElements = page.lastRender().elements;
-    expect(basicsElements.map((element) => element.id)).toEqual([
-      "particle-preview-bg",
-      "particle-preview",
-    ]);
-
-    await showFormTab(page, "source");
     const editElements = page.lastRender().elements;
     expect(editElements.map((element) => element.id)).toEqual([
       "particle-preview-bg",
       "particle-preview",
       "selected-border",
     ]);
-
-    await showFormTab(page, "movement");
-    expect(page.lastRender().elements).toEqual(basicsElements);
-
-    await showFormTab(page, "source");
     expect(page.view()).toMatchObject({
       rightPanelEditStyle: "",
       rightPanelPreviewStyle: "display: none;",
@@ -738,8 +709,9 @@ describe("particle editor", () => {
     expect(page.lastRender().elements).toEqual(editElements.slice(0, 2));
   });
 
-  it("moves the source only while the Source tab shows its outline", async () => {
+  it("moves the source only while Edit shows its outline", async () => {
     const page = await createPage();
+    await showPreviewTab(page);
 
     await page.drag([
       [150, 60],
@@ -755,7 +727,6 @@ describe("particle editor", () => {
 
   it("moves the source by dragging its outline, as one undo step per drag", async () => {
     const page = await createPage();
-    await showFormTab(page, "source");
 
     await page.drag([
       [150, 60],
@@ -801,7 +772,6 @@ describe("particle editor", () => {
       data: { x1: 100, y1: 200, x2: 300, y2: 200 },
     };
     const page = await createPage({ item });
-    await showFormTab(page, "source");
     // A straight line still gets an outline the minimum size thick.
     expect(
       page.findElement(page.lastRender().elements, "selected-border"),
@@ -829,20 +799,31 @@ describe("particle editor", () => {
     const page = await createPage({
       item: { ...createSavedParticle(), modules: snow.modules },
     });
-    await showFormTab(page, "source");
 
     expect(
       page.findElement(page.lastRender().elements, "selected-border"),
     ).toMatchObject({ x: 4, y: 4, width: 632, height: 24 });
   });
 
-  it("switches sub-tabs and shows each tab's fields", async () => {
+  it("shows every field at once, in sections", async () => {
     const page = await createPage();
+    const sections = page.view().particleForm.fields;
 
-    await showFormTab(page, "source");
-
-    expect(page.view().formTab).toBe("source");
-    expect(page.view().particleForm.fields.map((field) => field.name)).toEqual(
+    expect(
+      sections.map((section) => [section.type, section.id, section.label]),
+    ).toEqual([
+      ["section", "basics", "Basics"],
+      ["section", "appearance", "Appearance"],
+      ["section", "emission", "Emission"],
+      ["section", "source", "Source"],
+      ["section", "movement", "Movement"],
+    ]);
+    expect(sections[0].fields.map((field) => field.name)).toEqual([
+      "width",
+      "height",
+      "seed",
+    ]);
+    expect(sections[3].fields.map((field) => field.name)).toEqual(
       expect.arrayContaining(["sourceKind", "sourceX", "sourceY"]),
     );
   });

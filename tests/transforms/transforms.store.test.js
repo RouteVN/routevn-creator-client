@@ -5,6 +5,8 @@ import {
   createInitialState,
   openAddDialog,
   openEditDialog,
+  selectDuplicateItemName,
+  selectItemParentId,
   selectTargetGroupId,
   selectViewData,
   setItems,
@@ -30,6 +32,38 @@ const transformsData = {
 };
 
 describe("transforms.store", () => {
+  it("names a copy with a number and finds the folder it goes in", () => {
+    const state = {
+      data: {
+        tree: [
+          { id: "folder-1", children: [{ id: "transform-1" }] },
+          { id: "transform-2" },
+        ],
+        items: {
+          "folder-1": { id: "folder-1", type: "folder", name: "Folder One" },
+          "transform-1": {
+            id: "transform-1",
+            type: "transform",
+            name: "Transform One",
+          },
+          "transform-2": {
+            id: "transform-2",
+            type: "transform",
+            name: "Transform Two",
+          },
+        },
+      },
+    };
+
+    expect(selectDuplicateItemName({ state }, { itemId: "transform-1" })).toBe(
+      "Transform One 2",
+    );
+    expect(selectItemParentId({ state }, { itemId: "transform-1" })).toBe(
+      "folder-1",
+    );
+    expect(selectItemParentId({ state }, { itemId: "transform-2" })).toBeNull();
+  });
+
   it("opens transforms from the menus and the mobile detail sheet", () => {
     const viewData = selectViewData({
       state: createInitialState(),

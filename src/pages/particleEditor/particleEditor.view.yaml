@@ -32,10 +32,6 @@ refs:
     eventListeners:
       item-click:
         handler: handleRightPanelModeChange
-  formTabs:
-    eventListeners:
-      item-click:
-        handler: handleFormTabClick
   particleForm:
     eventListeners:
       form-change:
@@ -135,9 +131,6 @@ template:
                           - 'rtgl-view w=1fg style="min-width: 0;"':
                               - rtgl-tabs#rightPanelModeTabs s=sm selected-tab=${rightPanelMode} :items=${rightPanelModeTabs}: null
                       - 'rtgl-view w=f h=1fg d=v style="min-height: 0; ${rightPanelEditStyle}"':
-                          - 'rtgl-view w=f sh ph=md pt=sm bwb=xs style="min-width: 0; flex-shrink: 0; overscroll-behavior-x: contain;"':
-                              - 'div style="width: max-content; min-width: 100%;"':
-                                  - rtgl-tabs#formTabs s=sm selected-tab=${formTab} :items=${formTabs}: null
                           - 'rtgl-view w=f h=1fg sv pv=md style="min-height: 0;"':
                               - rtgl-form#particleForm key=${particleFormKey} :defaultValues=${formValues} :form=${particleForm} w=f ph=md:
                                   - rtgl-view slot=particle-texture-image d=v w=f g=sm:
@@ -176,9 +169,6 @@ template:
                       - 'rtgl-view w=1fg style="min-width: 0;"':
                           - rtgl-tabs#rightPanelModeTabs s=sm selected-tab=${rightPanelMode} :items=${rightPanelModeTabs}: null
                   - 'rtgl-view w=f h=1fg d=v style="min-height: 0; ${rightPanelEditStyle}"':
-                      - 'rtgl-view w=f sh ph=md pt=sm bwb=xs style="min-width: 0; flex-shrink: 0; overscroll-behavior-x: contain;"':
-                          - 'div style="width: max-content; min-width: 100%;"':
-                              - rtgl-tabs#formTabs s=sm selected-tab=${formTab} :items=${formTabs}: null
                       - 'rtgl-view w=f h=1fg sv pv=md style="min-height: 0;"':
                           - rtgl-form#particleForm key=${particleFormKey} :defaultValues=${formValues} :form=${particleForm} w=f ph=md:
                               - rtgl-view slot=particle-texture-image d=v w=f g=sm:

@@ -1,4 +1,5 @@
 import {
+  isSliderPopoverSubmitKey,
   stepSliderValue,
   toSliderPresetMenuItems,
 } from "../../internal/ui/sliderPopover.js";
@@ -80,12 +81,27 @@ export const handleStepPress = (deps, payload) => {
   showPopoverValue(deps, stepSliderValue({ field: props.field, value, delta }));
 };
 
-export const handleFormAction = (deps, payload) => {
-  const { dispatchEvent, render, store } = deps;
-  const { value } = payload._event.detail.values;
+// Submit and Enter change the number to the form's value.
+const submitPopoverValue = (deps) => {
+  const { dispatchEvent, refs, render, store } = deps;
+  const { value } = refs.form.getValues();
   store.closePopover();
   render();
   dispatchEvent(new CustomEvent("value-change", { detail: { value } }));
+};
+
+export const handleSubmitClick = (deps) => {
+  submitPopoverValue(deps);
+};
+
+export const handleFormKeyDown = (deps, payload) => {
+  const { _event } = payload;
+  if (!isSliderPopoverSubmitKey(_event)) {
+    return;
+  }
+
+  _event.preventDefault();
+  submitPopoverValue(deps);
 };
 
 // The popover also reports closing after Submit, which already closed it.

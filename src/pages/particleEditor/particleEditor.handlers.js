@@ -152,9 +152,8 @@ const createSavedPreviewRenderState = (store) =>
     backgroundImage: store.selectCanvasBackgroundImage(),
   });
 
-// Edit's Source tab draws the particle with its source outline; the other
-// tabs and Preview draw the same canvas without it, which is what the
-// thumbnail shows. Every render reads
+// Edit draws the particle with its source outline; Preview draws the same
+// canvas without it, which is what the thumbnail shows. Every render reads
 // the store, so a later render shows the latest values. An image that cannot
 // load is warned about once and left out, and the canvas stays editable.
 const renderParticleCanvas = async (deps) => {
@@ -467,15 +466,6 @@ export const handleRightPanelModeChange = async (deps, payload) => {
   const { render, store } = deps;
   const { id } = payload._event.detail;
   store.setRightPanelMode({ mode: id });
-  render();
-  await renderParticleCanvas(deps);
-};
-
-// Switching tabs shows or hides the source outline.
-export const handleFormTabClick = async (deps, payload) => {
-  const { render, store } = deps;
-  const { id } = payload._event.detail;
-  store.setFormTab({ tab: id });
   render();
   await renderParticleCanvas(deps);
 };

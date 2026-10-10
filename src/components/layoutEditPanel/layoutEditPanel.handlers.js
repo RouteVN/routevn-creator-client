@@ -40,7 +40,10 @@ import {
   hasAspectRatioToggle,
   stepSliderPopoverValue,
 } from "./support/layoutEditPanelSliderPopovers.js";
-import { toSliderPresetMenuItems } from "../../internal/ui/sliderPopover.js";
+import {
+  isSliderPopoverSubmitKey,
+  toSliderPresetMenuItems,
+} from "../../internal/ui/sliderPopover.js";
 import { normalizeLayoutRotation } from "../../internal/project/layout.js";
 
 const ACTION_INTERACTION_TYPES = [
@@ -1550,17 +1553,40 @@ export const handleSectionTooltipMouseLeave = (deps) => {
   render();
 };
 
-export const handleFormActions = (deps, payload) => {
+// Submit saves the popover's value: the form's own action, or in a slider
+// popover the button in its presets row and Enter.
+const submitPopoverValue = (deps, value) => {
   const { store } = deps;
-  const { _event } = payload;
   const { name } = store.selectPopoverForm();
-  const { value } = _event.detail.values;
   applyPanelValueUpdate(deps, {
     name,
     value,
     linkedValues: selectPopoverLinkedValues(store, { name, value }),
     closePopover: true,
   });
+};
+
+export const handleFormActions = (deps, payload) => {
+  submitPopoverValue(deps, payload._event.detail.values.value);
+};
+
+export const handlePopoverSubmitClick = (deps) => {
+  const { refs } = deps;
+  submitPopoverValue(deps, refs.form.getValues().value);
+};
+
+export const handlePopoverFormKeyDown = (deps, payload) => {
+  const { refs, store } = deps;
+  const { _event } = payload;
+  if (
+    !store.selectPopoverForm().context.isSliderPopover ||
+    !isSliderPopoverSubmitKey(_event)
+  ) {
+    return;
+  }
+
+  _event.preventDefault();
+  submitPopoverValue(deps, refs.form.getValues().value);
 };
 
 // Turning the aspect ratio on or off shows the popover's value on the
@@ -2295,7 +2321,7 @@ export const handlePopoverPresetsButtonClick = async (deps, payload) => {
 // or Shift's. Held, a button keeps stepping, so the form takes the value in
 // place: rebuilding it would replace the held button.
 export const handlePopoverStepPress = (deps, payload) => {
-  const { refs, store } = deps;
+  const { props, refs, store } = deps;
   const delta = Number(payload._event.currentTarget.dataset.delta);
   const { name, defaultValues } = store.selectPopoverForm();
   const value = Number(defaultValues.value);
@@ -2303,7 +2329,12 @@ export const handlePopoverStepPress = (deps, payload) => {
     return;
   }
 
-  const nextValue = stepSliderPopoverValue({ name, value, delta });
+  const nextValue = stepSliderPopoverValue({
+    name,
+    value,
+    delta,
+    projectResolution: props.projectResolution,
+  });
   store.setPopoverFormValue({ value: nextValue });
   refs.form.setValues({ values: { value: nextValue } });
   emitPanelPreview(deps, { name, value: nextValue });

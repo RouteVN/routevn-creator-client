@@ -5,7 +5,10 @@ import {
   setValues,
 } from "../../src/components/layoutEditPanel/layoutEditPanel.store.js";
 import { selectLayoutEditPanelCopy } from "../../src/components/layoutEditPanel/support/layoutEditPanelCopy.js";
-import { getLinkedScaleValues } from "../../src/components/layoutEditPanel/support/layoutEditPanelSliderPopovers.js";
+import {
+  getLinkedScaleValues,
+  stepSliderPopoverValue,
+} from "../../src/components/layoutEditPanel/support/layoutEditPanelSliderPopovers.js";
 import { EN_I18N } from "../support/i18n.js";
 
 const NUMBER_POPOVER_FORM = {
@@ -59,20 +62,44 @@ describe("layoutEditPanel popover forms", () => {
 
     expect(xPopover.context.isSliderPopover).toBe(true);
     expect(yPopover.context.isSliderPopover).toBe(true);
-    // Half the width or height beyond each edge, and further to reach the
-    // field's own value when it is outside.
+    // The slider runs half the width or height beyond each edge, also for a
+    // value outside it; a typed value reaches 4 times the width or height
+    // either way. The number input is small, as the buttons below it are.
     expect(xPopover.form.fields[0]).toMatchObject({
       type: "slider-with-input",
-      min: -960,
-      max: 5000,
+      s: "sm",
+      min: -7680,
+      max: 7680,
+      sliderMin: -960,
+      sliderMax: 2880,
       step: 1,
     });
     expect(yPopover.form.fields[0]).toMatchObject({
       type: "slider-with-input",
-      min: -540,
-      max: 1620,
+      min: -4320,
+      max: 4320,
+      sliderMin: -540,
+      sliderMax: 1620,
       step: 1,
     });
+    // A step stops there too.
+    const projectResolution = { width: 1920, height: 1080 };
+    expect(
+      stepSliderPopoverValue({
+        name: "x",
+        value: 7675,
+        delta: 10,
+        projectResolution,
+      }),
+    ).toBe(7680);
+    expect(
+      stepSliderPopoverValue({
+        name: "y",
+        value: -4320,
+        delta: -1,
+        projectResolution,
+      }),
+    ).toBe(-4320);
     // The presets slot holds the Presets button, so it has no heading.
     expect(xPopover.form.fields[1]).toEqual({
       type: "slot",
@@ -89,29 +116,34 @@ describe("layoutEditPanel popover forms", () => {
       value: 960,
       suffixText: "960 px",
     });
+    // Each step button shows what it adds.
     expect(
-      xPopover.context.stepButtons.map(({ delta, icon, label }) => [
-        icon,
+      xPopover.context.stepButtons.map(({ delta, text, label }) => [
+        text,
         delta,
         label,
       ]),
     ).toEqual([
-      ["minusDouble", -10, "Decrease by 10"],
-      ["minus", -1, "Decrease by 1"],
-      ["plus", 1, "Increase by 1"],
-      ["plusDouble", 10, "Increase by 10"],
+      ["−10", -10, "Decrease by 10"],
+      ["−1", -1, "Decrease by 1"],
+      ["+1", 1, "Increase by 1"],
+      ["+10", 10, "Increase by 10"],
     ]);
+    // Submit sits in the presets row, so the form has no actions row.
+    expect(xPopover.form.actions).toBeUndefined();
   });
 
   it("gives rotation a half turn each way, degree presets, and 1 and 15 degree steps", () => {
     const popover = openSliderPopover("rotation", { rotation: 270 });
 
     expect(popover.context.isSliderPopover).toBe(true);
-    // It reaches a rotation already past half a turn.
+    // A typed rotation reaches a turn each way, past the slider's half turn.
     expect(popover.form.fields[0]).toMatchObject({
       type: "slider-with-input",
-      min: -180,
-      max: 270,
+      min: -360,
+      max: 360,
+      sliderMin: -180,
+      sliderMax: 180,
       step: 1,
     });
     expect(popover.context.presetItems.map((item) => item.label)).toEqual([
@@ -150,6 +182,15 @@ describe("layoutEditPanel popover forms", () => {
     expect(popover.context.stepButtons.map((button) => button.delta)).toEqual([
       -0.1, -0.01, 0.01, 0.1,
     ]);
+    // The steps read as percentages, like the presets.
+    expect(
+      popover.context.stepButtons.map(({ text, label }) => [text, label]),
+    ).toEqual([
+      ["−10%", "Decrease by 10%"],
+      ["−1%", "Decrease by 1%"],
+      ["+1%", "Increase by 1%"],
+      ["+10%", "Increase by 10%"],
+    ]);
   });
 
   it("runs scale from 0 to 2, with percentage presets and 0.01 and 0.1 steps", () => {
@@ -160,7 +201,9 @@ describe("layoutEditPanel popover forms", () => {
       expect(popover.form.fields[0]).toMatchObject({
         type: "slider-with-input",
         min: 0,
-        max: 2,
+        max: 10,
+        sliderMin: 0,
+        sliderMax: 2,
         step: 0.01,
       });
       expect(popover.context.presetItems.map((item) => item.label)).toEqual([
@@ -180,12 +223,18 @@ describe("layoutEditPanel popover forms", () => {
       expect(popover.context.stepButtons.map((button) => button.delta)).toEqual(
         [-0.1, -0.01, 0.01, 0.1],
       );
+      expect(popover.context.stepButtons.map((button) => button.text)).toEqual([
+        "−10%",
+        "−1%",
+        "+1%",
+        "+10%",
+      ]);
     }
 
-    // A scale past 2 widens the slider to reach it.
+    // A scale past 2 keeps the slider's range; typed, it reaches 10.
     expect(
-      openSliderPopover("scaleX", { scaleX: 3.4 }).form.fields[0].max,
-    ).toBe(4);
+      openSliderPopover("scaleX", { scaleX: 3.4 }).form.fields[0],
+    ).toMatchObject({ max: 10, sliderMax: 2 });
     expect(openSliderPopover("scaleX", {}).defaultValues.value).toBe(1);
   });
 
@@ -236,17 +285,22 @@ describe("layoutEditPanel popover forms", () => {
     expect(widthPopover.context.isSliderPopover).toBe(true);
     expect(heightPopover.context.isSliderPopover).toBe(true);
     expect(widthPopover.context.showAspectRatioToggle).toBe(false);
-    // It reaches a size already larger than the project.
+    // The slider stops at the project's size, also for a larger size; a
+    // typed size reaches 4 times it.
     expect(widthPopover.form.fields[0]).toMatchObject({
       type: "slider-with-input",
       min: 0,
-      max: 2500,
+      max: 7680,
+      sliderMin: 0,
+      sliderMax: 1920,
       step: 1,
     });
     expect(heightPopover.form.fields[0]).toMatchObject({
       type: "slider-with-input",
       min: 0,
-      max: 1080,
+      max: 4320,
+      sliderMin: 0,
+      sliderMax: 1080,
       step: 1,
     });
     // Shares of the project's width or height, leaving out 0.
@@ -281,5 +335,8 @@ describe("layoutEditPanel popover forms", () => {
 
     expect(popover.context.isSliderPopover).toBeUndefined();
     expect(popover.form.fields[0].type).toBe("input-number");
+    expect(popover.form.actions.buttons.map((button) => button.id)).toEqual([
+      "submit",
+    ]);
   });
 });

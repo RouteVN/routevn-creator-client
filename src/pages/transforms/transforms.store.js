@@ -2,6 +2,10 @@ import { createCatalogPageStore } from "../../internal/ui/resourcePages/catalog/
 import { createTagField } from "../../internal/ui/resourcePages/tags.js";
 import { applyFolderRequiredRootDragOptions } from "../../internal/fileExplorerDragOptions.js";
 import { matchesTagAwareSearch } from "../../internal/resourceTags.js";
+import {
+  createDuplicateItemName,
+  toFlatItems,
+} from "../../internal/project/tree.js";
 import { selectTransformsPageCopy } from "./support/transformsPageCopy.js";
 
 const TRANSFORM_TAG_SCOPE_KEY = "transforms";
@@ -277,6 +281,13 @@ export {
 };
 
 export const selectTransformItemById = selectItemById;
+
+// The folder an item is in, which its items do not record.
+export const selectItemParentId = ({ state }, { itemId } = {}) =>
+  toFlatItems(state.data).find((item) => item.id === itemId)?.parentId;
+
+export const selectDuplicateItemName = ({ state }, { itemId } = {}) =>
+  createDuplicateItemName(state.data, itemId);
 
 export const setDefaultDialogueAvatarTransformId = (
   { state },

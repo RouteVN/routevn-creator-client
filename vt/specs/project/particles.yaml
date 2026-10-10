@@ -109,14 +109,6 @@ steps:
   - action: wait
     ms: 1200
   - action: screenshot
-  - action: select
-    selector: "rvn-particle-editor rtgl-tabs#formTabs [data-id='appearance']"
-    steps:
-      - action: click
-  - action: waitFor
-    selector: "rvn-particle-editor rtgl-tabs#formTabs[selected-tab='appearance']"
-    state: attached
-    timeoutMs: 5000
   - action: waitFor
     selector: "rvn-particle-editor #textureImageButton"
     state: visible
