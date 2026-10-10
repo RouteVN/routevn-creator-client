@@ -919,8 +919,6 @@ animationEditorPage:
   keyframeValueTooltip: "ค่าสุดท้ายของคุณสมบัติเมื่อแอนิเมชันจบ"
   kindLabel: "ชนิด"
   linearEasingLabel: "เชิงเส้น"
-  loopMenuItem: "วนซ้ำ"
-  dontLoopMenuItem: "ไม่วนซ้ำ"
   loopPreviewLabel: "เล่นตัวอย่างวนซ้ำ"
   maskRemoveConfirmMessage: "ต้องการลบมาสก์ทรานสิชันนี้หรือไม่ การดำเนินการนี้ไม่สามารถเลิกทำได้"
   maskRemoveConfirmTitle: "ลบมาสก์"

@@ -228,8 +228,56 @@ describe("layoutEditPanel popover forms", () => {
     );
   });
 
+  it("runs width and height from 0 to the project's, with presets in pixels and 1 and 10 steps", () => {
+    const sharedValues = { width: 2500, height: 300 };
+    const widthPopover = openSliderPopover("width", sharedValues);
+    const heightPopover = openSliderPopover("height", sharedValues);
+
+    expect(widthPopover.context.isSliderPopover).toBe(true);
+    expect(heightPopover.context.isSliderPopover).toBe(true);
+    expect(widthPopover.context.showAspectRatioToggle).toBe(false);
+    // It reaches a size already larger than the project.
+    expect(widthPopover.form.fields[0]).toMatchObject({
+      type: "slider-with-input",
+      min: 0,
+      max: 2500,
+      step: 1,
+    });
+    expect(heightPopover.form.fields[0]).toMatchObject({
+      type: "slider-with-input",
+      min: 0,
+      max: 1080,
+      step: 1,
+    });
+    // Shares of the project's width or height, leaving out 0.
+    expect(widthPopover.context.presetItems[0]).toEqual({
+      label: "1/5",
+      value: 384,
+      suffixText: "384 px",
+    });
+    expect(
+      heightPopover.context.presetItems.map(({ label, value }) => [
+        label,
+        value,
+      ]),
+    ).toEqual([
+      ["1/5", 216],
+      ["1/4", 270],
+      ["1/3", 360],
+      ["1/2", 540],
+      ["2/3", 720],
+      ["3/5", 648],
+      ["3/4", 810],
+      ["4/5", 864],
+      ["1", 1080],
+    ]);
+    expect(
+      widthPopover.context.stepButtons.map((button) => button.delta),
+    ).toEqual([-10, -1, 1, 10]);
+  });
+
   it("keeps other number popovers plain", () => {
-    const popover = openSliderPopover("width", { width: 300 });
+    const popover = openSliderPopover("gapX", { gapX: 12 });
 
     expect(popover.context.isSliderPopover).toBeUndefined();
     expect(popover.form.fields[0].type).toBe("input-number");

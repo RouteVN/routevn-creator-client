@@ -93,8 +93,8 @@ const CONDITIONAL_OVERRIDE_IMAGE_FIELDS = new Set([
 const WHEEL_INCREMENT_FIELD_CONFIG = {
   x: getSliderPopoverField("x"),
   y: getSliderPopoverField("y"),
-  width: { step: 1, fastStep: 10 },
-  height: { step: 1, fastStep: 10 },
+  width: getSliderPopoverField("width"),
+  height: getSliderPopoverField("height"),
   gapX: { step: 1, fastStep: 10 },
   gapY: { step: 1, fastStep: 10 },
   rotation: getSliderPopoverField("rotation"),
@@ -189,13 +189,6 @@ const emitPanelUpdate = (
   dispatchEvent(new CustomEvent("update", { bubbles, detail }));
 };
 
-// The other scale a popover's scale change moves while the aspect ratio is
-// kept.
-const selectPopoverLinkedValues = (store, { name, value } = {}) =>
-  hasAspectRatioToggle(name) && store.selectScaleAspectRatioLocked()
-    ? getLinkedScaleValues({ name, value, values: store.selectValues() })
-    : undefined;
-
 const getCurrentAspectRatioLock = (values = {}) => {
   const aspectRatioLock = Number(values?.aspectRatioLock);
   if (Number.isFinite(aspectRatioLock) && aspectRatioLock > 0) {
@@ -205,15 +198,16 @@ const getCurrentAspectRatioLock = (values = {}) => {
   return undefined;
 };
 
-const syncFixedAspectRatioValue = (store, { name, value } = {}) => {
+// While the aspect ratio is fixed, a width or height change moves the other
+// size with it.
+const getAspectLockedSizeValues = ({ name, value, values = {} } = {}) => {
   if (!SIZE_FIELDS.has(name)) {
-    return;
+    return undefined;
   }
 
-  const values = store.selectValues();
   const aspectRatioLock = getCurrentAspectRatioLock(values);
-  if (!Number.isFinite(aspectRatioLock) || aspectRatioLock <= 0) {
-    return;
+  if (!aspectRatioLock) {
+    return undefined;
   }
 
   const currentWidth = Number(values.width);
@@ -228,21 +222,40 @@ const syncFixedAspectRatioValue = (store, { name, value } = {}) => {
     !Number.isFinite(nextValue) ||
     nextValue <= 0
   ) {
-    return;
+    return undefined;
   }
 
-  if (name === "width") {
-    store.updateValueProperty({
-      name: "height",
-      value: Math.round(nextValue / aspectRatioLock),
-    });
-    return;
+  return name === "width"
+    ? { height: Math.round(nextValue / aspectRatioLock) }
+    : { width: Math.round(nextValue * aspectRatioLock) };
+};
+
+// The other values a popover's change moves: the other scale while the
+// scale's aspect ratio is kept, or the other size while the aspect ratio is
+// fixed.
+const selectPopoverLinkedValues = (store, { name, value } = {}) => {
+  if (hasAspectRatioToggle(name)) {
+    return store.selectScaleAspectRatioLocked()
+      ? getLinkedScaleValues({ name, value, values: store.selectValues() })
+      : undefined;
   }
 
-  store.updateValueProperty({
-    name: "width",
-    value: Math.round(nextValue * aspectRatioLock),
+  return getAspectLockedSizeValues({
+    name,
+    value,
+    values: store.selectValues(),
   });
+};
+
+const syncFixedAspectRatioValue = (store, { name, value } = {}) => {
+  const linkedValues = getAspectLockedSizeValues({
+    name,
+    value,
+    values: store.selectValues(),
+  });
+  for (const [linkedName, linkedValue] of Object.entries(linkedValues ?? {})) {
+    store.updateValueProperty({ name: linkedName, value: linkedValue });
+  }
 };
 
 const getCurrentTextRevealIndicatorFormValues = (refs) => {
@@ -495,14 +508,25 @@ const emitPanelPreview = (deps, { name, value } = {}) => {
     return;
   }
 
+  const previewValue = normalizePanelValue(name, Number(value));
   const detail = {
     formValues: store.selectValues(),
     name,
-    value: normalizePanelValue(name, Number(value)),
+    value: previewValue,
   };
-  const linkedValues = selectPopoverLinkedValues(store, { name, value });
+  const linkedValues = selectPopoverLinkedValues(store, {
+    name,
+    value: previewValue,
+  });
   if (linkedValues) {
     detail.linkedValues = linkedValues;
+    // Owners read both sizes from the form values while the aspect ratio is
+    // fixed, so they carry the previewed ones.
+    detail.formValues = {
+      ...detail.formValues,
+      [name]: previewValue,
+      ...linkedValues,
+    };
   }
   dispatchEvent(new CustomEvent("preview", { detail }));
 };

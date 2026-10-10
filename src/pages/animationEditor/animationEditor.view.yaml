@@ -57,16 +57,10 @@ refs:
     eventListeners:
       click:
         handler: handleTogglePreviewLoop
-  mobileEditorMenuButton:
+  timelineZoomButton:
     eventListeners:
       click:
-        handler: handleMobileEditorMenuClick
-  mobileEditorMenu:
-    eventListeners:
-      close:
-        handler: handleClosePopover
-      item-click:
-        handler: handleMobileEditorMenuItemClick
+        handler: handleTimelineZoomButtonClick
   timelineZoomPopover:
     eventListeners:
       close:
@@ -621,11 +615,8 @@ template:
               - rtgl-view d=h av=c g=xs:
                   - 'rtgl-button#undoButton sq pre=undo v=ol ?disabled=${undoDisabled} aria-label="${undoLabel}" title="${undoLabel}"': null
                   - 'rtgl-button#redoButton sq pre=redo v=ol ?disabled=${redoDisabled} aria-label="${redoLabel}" title="${redoLabel}"': null
-              - $if showMobileEditorMenu:
-                  - 'rtgl-button#mobileEditorMenuButton sq v=ol pre=ellipsis aria-haspopup=menu aria-expanded="${popover.editorMenuIsOpen}" aria-label="${mobileEditorMenuLabel}" title="${mobileEditorMenuLabel}"': null
-                $else:
-                  - 'rtgl-button#previewLoopButton sq v=${previewLoopButtonVariant} pre=loop aria-label="${loopPreviewLabel}" aria-pressed="${previewLoopEnabled}" title="${loopPreviewLabel}"': null
-              - 'rtgl-button#playButton s=sm aria-label="${playButton}" aria-pressed="${previewPlaying}"': ${playButton}
+              - 'rtgl-button#previewLoopButton sq v=${previewLoopButtonVariant} pre=loop aria-label="${loopPreviewLabel}" aria-pressed="${previewLoopEnabled}" title="${loopPreviewLabel}"': null
+              - 'rtgl-button#playButton sq v=se pre=${playButtonIcon} aria-label="${playButton}" aria-pressed="${previewPlaying}" title="${playButton}"': null
           - 'rtgl-view h=1fg sv w=f p=md g=lg style="container-type: size;"':
               - 'rtgl-view#animationEditorCanvasBackground d=v w=f g=md p=${previewCanvasPadding} bgc=bg style="box-sizing: border-box; min-width: 0; background-image: radial-gradient(circle, var(--input) 1px, transparent 1px); background-size: 24px 24px;"':
                   - 'rtgl-view pos=rel style="width: ${previewCanvasMaxWidth}; max-width: 100%; margin-left: auto; margin-right: auto; aspect-ratio: ${canvasAspectRatio};"':
@@ -639,11 +630,7 @@ template:
                                   - rtgl-text s=sm c=${item.textColor}: ${item.label}
                       - $if selectedEditorTab == 'tween':
                           - rtgl-view w=1fg: null
-                          - $if showInlineTimelineZoom:
-                              - rtgl-view d=h av=c g=sm mr=md:
-                                  - 'rtgl-button#timelineZoomOut sq v=ol s=sm aria-label="${timelineZoomOutLabel}" title="${timelineZoomOutLabel}"': '-'
-                                  - 'rtgl-slider#timelineZoomSlider w=120 min=${timelineZoomMin} max=${timelineZoomMax} step=${timelineZoomStep} value=${timelineZoom} aria-label="${timelineZoomLabel}" title="${timelineZoomLabel}"': null
-                                  - 'rtgl-button#timelineZoomIn sq v=ol s=sm aria-label="${timelineZoomInLabel}" title="${timelineZoomInLabel}"': +
+                          - 'rtgl-button#timelineZoomButton sq v=ol pre=zoomIn mr=md aria-haspopup=dialog aria-expanded="${popover.timelineZoomIsOpen}" aria-label="${timelineZoomLabel}" title="${timelineZoomLabel}"': null
                           - $if dialogType == 'update' && updateAddPropertyButtonVisible:
                               - rtgl-button#addPropertiesButton data-side=update pre=plus s=sm: ${addButton}
                           - $if dialogType == 'transition' && transitionAddPropertyButtonVisible:
@@ -972,15 +959,13 @@ template:
                                       - rtgl-text c=mu-fg s=sm: ${selectImageLabel}
               - rtgl-view d=h g=sm w=f ah=e pt=sm:
                   - rtgl-button#previewDialogDoneButton s=sm: ${doneButton}
-  - $if showMobileEditorMenu:
-      - rtgl-dropdown-menu#mobileEditorMenu :items=${mobileEditorMenuItems} ?open=${popover.editorMenuIsOpen} x=${popover.x} y=${popover.y} place=be: null
-      - rtgl-popover#timelineZoomPopover ?open=${popover.timelineZoomIsOpen} x=${popover.x} y=${popover.y} place=be content-w=260 content-g=sm content-ph=md content-pv=md:
-          - rtgl-view#timelineZoomContent d=v w=f g=sm:
-              - rtgl-text s=md: ${timelineZoomLabel}
-              - rtgl-view#timelineZoomControls d=h av=c g=sm:
-                  - 'rtgl-button#timelineZoomOut sq v=ol s=sm aria-label="${timelineZoomOutLabel}" title="${timelineZoomOutLabel}"': '-'
-                  - 'rtgl-slider#timelineZoomSlider w=1fg min=${timelineZoomMin} max=${timelineZoomMax} step=${timelineZoomStep} value=${timelineZoom} aria-label="${timelineZoomLabel}" title="${timelineZoomLabel}"': null
-                  - 'rtgl-button#timelineZoomIn sq v=ol s=sm aria-label="${timelineZoomInLabel}" title="${timelineZoomInLabel}"': +
+  - rtgl-popover#timelineZoomPopover ?open=${popover.timelineZoomIsOpen} x=${popover.x} y=${popover.y} place=be content-w=260 content-g=sm content-ph=md content-pv=md:
+      - rtgl-view#timelineZoomContent d=v w=f g=sm:
+          - rtgl-text s=md: ${timelineZoomLabel}
+          - rtgl-view#timelineZoomControls d=h av=c g=sm:
+              - 'rtgl-button#timelineZoomOut sq v=ol s=sm aria-label="${timelineZoomOutLabel}" title="${timelineZoomOutLabel}"': '-'
+              - 'rtgl-slider#timelineZoomSlider w=1fg min=${timelineZoomMin} max=${timelineZoomMax} step=${timelineZoomStep} value=${timelineZoom} aria-label="${timelineZoomLabel}" title="${timelineZoomLabel}"': null
+              - 'rtgl-button#timelineZoomIn sq v=ol s=sm aria-label="${timelineZoomInLabel}" title="${timelineZoomInLabel}"': +
   - rtgl-dropdown-menu#keyframeDropdownMenu :items=${keyframeDropdownItems} ?open=${popover.dropdownMenuIsOpen} x=${popover.x} y=${popover.y}: null
   - rtgl-dropdown-menu#addPropertySideMenu :items=${addPropertySideMenuItems} ?open=${popover.addPropertySideMenuIsOpen} x=${popover.x} y=${popover.y}: null
   - rtgl-dropdown-menu#selectedKeyframeAddMenu :items=${selectedKeyframeAddMenuItems} ?open=${popover.selectedKeyframeAddMenuIsOpen} x=${popover.x} y=${popover.y}: null

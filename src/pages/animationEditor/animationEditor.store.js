@@ -1359,6 +1359,7 @@ export const createInitialState = () => ({
   selectedMaskIndex: undefined,
   timelinePan: undefined,
   timelinePanClickSuppressed: false,
+  timelinePanDragged: false,
   timelinePanHovered: false,
   timelinePanMode: false,
   timelineZoom: TIMELINE_ZOOM_DEFAULT,
@@ -1525,6 +1526,7 @@ export const setTimelinePanHovered = ({ state }, { hovered } = {}) => {
 
 export const setTimelinePanMode = ({ state }, { enabled } = {}) => {
   state.timelinePanMode = enabled ?? false;
+  state.timelinePanDragged = false;
 };
 
 export const startTimelinePan = (
@@ -1532,6 +1534,7 @@ export const startTimelinePan = (
   { pointerId, startX, startScrollLeft } = {},
 ) => {
   state.timelinePanClickSuppressed = true;
+  state.timelinePanDragged = true;
   state.timelinePan = {
     pointerId,
     startX,
@@ -1545,6 +1548,10 @@ export const stopTimelinePan = ({ state }, _payload = {}) => {
 
 export const selectTimelinePan = ({ state }) => {
   return state.timelinePan;
+};
+
+export const selectTimelinePanDragged = ({ state }) => {
+  return state.timelinePanDragged;
 };
 
 export const selectTimelinePanHovered = ({ state }) => {
@@ -4432,19 +4439,6 @@ export const selectViewData = ({ state, i18n }) => {
       state.animationVideoExportInProgress,
     undoLabel: editHistoryCopy.undoLabel,
     redoLabel: editHistoryCopy.redoLabel,
-    showMobileEditorMenu: state.isTouchMode,
-    showInlineTimelineZoom: !state.isTouchMode,
-    mobileEditorMenuLabel: copy.actionsLabel,
-    mobileEditorMenuItems: [
-      {
-        type: "item",
-        value: "loop",
-        label: state.previewLoopEnabled
-          ? copy.dontLoopMenuItem
-          : copy.loopMenuItem,
-      },
-      { type: "item", value: "zoom", label: copy.zoomLabel },
-    ],
     timelinePlayheadVisible,
     timelinePlayheadStyle,
     timelineUsedAreaStyle,
@@ -4550,7 +4544,6 @@ export const selectViewData = ({ state, i18n }) => {
     addPropertySideMenuItems: transitionAddPropertySideOptions,
     popover: {
       ...state.popover,
-      editorMenuIsOpen: state.popover.mode === "editorMenu",
       timelineZoomIsOpen: state.popover.mode === "timelineZoom",
       popoverIsOpen:
         state.popover.mode === "editInitialValue" ||
@@ -4677,6 +4670,7 @@ export const selectViewData = ({ state, i18n }) => {
     playButton: previewPlaying
       ? (copy.pauseButton ?? "Pause")
       : (copy.playButton ?? "Play"),
+    playButtonIcon: previewPlaying ? "pause" : "play",
     previewPlaying,
     previewTitle: copy.previewTitle ?? "Preview",
     progressDurationLabel:

@@ -225,6 +225,7 @@ describe("animationEditor.store", () => {
 
     expect(selectViewData({ state, i18n: EN_I18N })).toMatchObject({
       playButton: "Play",
+      playButtonIcon: "play",
       previewPlaying: false,
     });
 
@@ -234,12 +235,14 @@ describe("animationEditor.store", () => {
     );
     expect(selectViewData({ state, i18n: EN_I18N })).toMatchObject({
       playButton: "Pause",
+      playButtonIcon: "pause",
       previewPlaying: true,
     });
 
     stopPreviewPlayback({ state }, { preservePlayhead: true });
     expect(selectViewData({ state, i18n: EN_I18N })).toMatchObject({
       playButton: "Play",
+      playButtonIcon: "play",
       previewPlaying: false,
     });
     expect(state.previewPlayheadTimeMs).toBe(400);

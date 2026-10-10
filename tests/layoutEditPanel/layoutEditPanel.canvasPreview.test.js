@@ -137,6 +137,85 @@ describe("layout edit panel canvas preview", () => {
     expect(state.values).toMatchObject({ scaleX: 0.5, scaleY: 1 });
   });
 
+  it("moves the other size with a fixed aspect ratio, in previews and on submit", () => {
+    let state = layoutEditPanelStore.createInitialState();
+    const store = new Proxy(
+      {},
+      {
+        get: (_target, name) => (payload) => {
+          if (name.startsWith("select")) {
+            return layoutEditPanelStore[name]({ state }, payload);
+          }
+          let result;
+          state = produce(state, (draft) => {
+            result = layoutEditPanelStore[name]({ state: draft }, payload);
+          });
+          return result;
+        },
+      },
+    );
+    const events = [];
+    const projectResolution = { width: 1920, height: 1080 };
+    const deps = {
+      store,
+      props: { projectResolution },
+      i18n: EN_I18N,
+      render: vi.fn(),
+      dispatchEvent: (event) => events.push(event),
+    };
+    store.setValues({
+      values: {
+        id: "element-1",
+        type: "sprite",
+        width: 400,
+        height: 200,
+        aspectRatioLock: 2,
+      },
+    });
+    store.openPopoverForm({
+      name: "width",
+      form: { fields: [{ name: "value", type: "input-number" }] },
+      projectResolution,
+      copy: selectLayoutEditPanelCopy(EN_I18N),
+    });
+    expect(state.popover.context.isSliderPopover).toBe(true);
+
+    handlePopoverFormInput(deps, formEvent({ value: 600 }));
+    // The owner reads both sizes from the form values, so they carry the
+    // previewed ones, while the saved values stay as they were.
+    expect(events.at(-1).detail).toMatchObject({
+      name: "width",
+      value: 600,
+      linkedValues: { height: 300 },
+      formValues: { width: 600, height: 300, aspectRatioLock: 2 },
+    });
+    expect(state.values).toMatchObject({ width: 400, height: 200 });
+
+    handleFormActions(deps, formEvent({ value: 800 }));
+    const update = events.at(-1);
+    expect(update.type).toBe("update");
+    expect(update.detail).toMatchObject({
+      name: "width",
+      value: 800,
+      linkedValues: { height: 400 },
+      formValues: { width: 800, height: 400 },
+    });
+    expect(state.values).toMatchObject({ width: 800, height: 400 });
+  });
+
+  it("previews a size alone without a fixed aspect ratio", () => {
+    const { deps, events } = createDeps("height", 200);
+    deps.store.selectValues = () => ({ width: 400, height: 200 });
+
+    handlePopoverFormInput(deps, formEvent({ value: 250 }));
+
+    expect(events[0].detail).toEqual({
+      formValues: { width: 400, height: 200 },
+      name: "height",
+      value: 250,
+    });
+  });
+
   it("keeps the slider's form while the canvas preview moves the element", () => {
     let state = layoutEditPanelStore.createInitialState();
     const store = new Proxy(
@@ -289,6 +368,16 @@ describe("layout edit panel canvas preview", () => {
 
     // No floating-point noise such as 0.9400000000000001.
     expect(events.map((event) => event.detail.value)).toEqual([1, 0.96, 0.94]);
+  });
+
+  it("steps a size by 1 and 10, never below 0", () => {
+    const { deps, events } = createDeps("width", 5);
+
+    for (const delta of ["-10", "1", "10"]) {
+      handlePopoverStepPress(deps, buttonEvent({ delta }));
+    }
+
+    expect(events.map((event) => event.detail.value)).toEqual([0, 6, 15]);
   });
 
   it("normalizes a rotation preview like a saved value", () => {

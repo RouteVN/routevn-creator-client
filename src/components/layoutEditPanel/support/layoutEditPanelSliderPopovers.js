@@ -17,9 +17,13 @@ const SCALE_FIELD = {
   range: { min: 0, max: 2 },
 };
 
+const SIZE_FIELD = { step: 1, fastStep: 10, min: 0 };
+
 const SLIDER_POPOVER_FIELDS = {
   x: { step: 1, fastStep: 10 },
   y: { step: 1, fastStep: 10 },
+  width: SIZE_FIELD,
+  height: SIZE_FIELD,
   rotation: {
     defaultValue: 0,
     step: 1,
@@ -31,7 +35,7 @@ const SLIDER_POPOVER_FIELDS = {
   opacity: { defaultValue: 1, step: 0.01, fastStep: 0.1, min: 0, max: 1 },
 };
 
-// Shares of the project's width or height.
+// Shares of the project's width or height. Sizes leave out 0.
 const POSITION_PRESETS = [
   { label: "0", ratio: 0 },
   { label: "1/5", ratio: 1 / 5 },
@@ -60,17 +64,25 @@ const toPercentPreset = (value) => ({
 
 const isPositionField = (name) => name === "x" || name === "y";
 
+const isSizeField = (name) => name === "width" || name === "height";
+
 export const getSliderPopoverField = (name) => SLIDER_POPOVER_FIELDS[name];
 
 export const isSliderPopoverField = (name) =>
   Object.hasOwn(SLIDER_POPOVER_FIELDS, name);
 
-const getPositionDimension = ({ name, projectResolution }) =>
-  Number(name === "y" ? projectResolution?.height : projectResolution?.width);
+// X and width go with the project's width, Y and height with its height.
+const getProjectDimension = ({ name, projectResolution }) =>
+  Number(
+    name === "y" || name === "height"
+      ? projectResolution?.height
+      : projectResolution?.width,
+  );
 
-// X and Y run half the project's width or height beyond each edge, rotation
-// half a turn each way, and scale from 0 to 2; all reach further to a value
-// already outside. Opacity stays between 0 and 1.
+// X and Y run half the project's width or height beyond each edge, width and
+// height from 0 to the project's, rotation half a turn each way, and scale
+// from 0 to 2; all reach further to a value already outside. Opacity stays
+// between 0 and 1, and sizes stay at 0 or more.
 export const getSliderPopoverRange = ({
   name,
   values = {},
@@ -83,15 +95,17 @@ export const getSliderPopoverRange = ({
   }
 
   let { range } = field;
-  if (isPositionField(name)) {
-    const dimension = getPositionDimension({ name, projectResolution });
+  if (isPositionField(name) || isSizeField(name)) {
+    const dimension = getProjectDimension({ name, projectResolution });
     if (!Number.isFinite(dimension) || dimension <= 0) {
       return undefined;
     }
-    range = {
-      min: Math.round(-dimension * 0.5),
-      max: Math.round(dimension * 1.5),
-    };
+    range = isSizeField(name)
+      ? { min: 0, max: dimension }
+      : {
+          min: Math.round(-dimension * 0.5),
+          max: Math.round(dimension * 1.5),
+        };
   }
 
   return getSliderRange({
@@ -109,12 +123,15 @@ export const getSliderPopoverPresets = ({
   projectResolution,
   copy = {},
 } = {}) => {
-  if (isPositionField(name)) {
-    const dimension = getPositionDimension({ name, projectResolution });
+  if (isPositionField(name) || isSizeField(name)) {
+    const dimension = getProjectDimension({ name, projectResolution });
     if (!Number.isFinite(dimension) || dimension <= 0) {
       return [];
     }
-    return POSITION_PRESETS.map((preset) => {
+    const presets = isSizeField(name)
+      ? POSITION_PRESETS.filter((preset) => preset.ratio > 0)
+      : POSITION_PRESETS;
+    return presets.map((preset) => {
       const value = Math.round(dimension * preset.ratio);
       return {
         label: preset.label,

@@ -94,8 +94,11 @@ describe("animationEditor view", () => {
     expect(view).not.toContain(
       'rtgl-button#backButton sq pre="chevronLeft" v="gh"',
     );
-    expect(view).toContain("rtgl-button#playButton");
+    expect(view).toContain(
+      "rtgl-button#playButton sq v=se pre=${playButtonIcon}",
+    );
     expect(view).toContain('aria-pressed="${previewPlaying}"');
+    expect(view).toContain('title="${playButton}"\': null');
     expect(view).toContain(
       "rtgl-button#previewLoopButton sq v=${previewLoopButtonVariant} pre=loop",
     );
@@ -126,7 +129,7 @@ describe("animationEditor view", () => {
       template.indexOf("#undoButton"),
     );
     expect(template.indexOf("#redoButton")).toBeLessThan(
-      template.indexOf("$if showMobileEditorMenu"),
+      template.indexOf("#previewLoopButton"),
     );
     expect(view).toMatch(
       /undoButton:\n\s+eventListeners:\n\s+click:\n\s+handler: handleUndoButtonClick/,
@@ -428,7 +431,7 @@ describe("animationEditor view", () => {
       "utf8",
     );
 
-    expect(view.indexOf("rtgl-slider#timelineZoomSlider")).toBeLessThan(
+    expect(view.indexOf("rtgl-button#timelineZoomButton")).toBeLessThan(
       view.indexOf("rtgl-button#addPropertiesButton"),
     );
     const toolbarStart = view.indexOf("rtgl-view#animationEditorToolbar");
@@ -437,7 +440,7 @@ describe("animationEditor view", () => {
     expect(view.indexOf("rtgl-view#animationEditorTabs")).toBeGreaterThan(
       toolbarStart,
     );
-    expect(view.indexOf("rtgl-slider#timelineZoomSlider")).toBeGreaterThan(
+    expect(view.indexOf("rtgl-button#timelineZoomButton")).toBeGreaterThan(
       toolbarStart,
     );
     expect(view.indexOf("rtgl-button#addPropertiesButton")).toBeLessThan(
