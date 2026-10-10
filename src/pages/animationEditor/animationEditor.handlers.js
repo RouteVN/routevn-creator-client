@@ -13,6 +13,7 @@ import {
 } from "../../internal/animationMasks.js";
 import { resolveResourceFileType } from "../../internal/resourceFileMetadata.js";
 import { createFileExplorerKeyboardScopeHandlers } from "../../internal/ui/fileExplorerKeyboardScope.js";
+import { mountMobileResourceWindowLayout } from "../../internal/ui/resourcePages/mobileResourcePage.js";
 import { runResourcePageMutation } from "../../internal/ui/resourcePages/resourcePageErrors.js";
 import {
   areEditHistoryValuesEqual,
@@ -1230,9 +1231,15 @@ export const handlePreviewPlaybackShortcutKeyDown = (deps, payload) => {
 };
 
 export const handleBeforeMount = (deps) => {
-  const { appService, store, uiConfig } = deps;
+  const { appService, render, store, uiConfig, windowMetricsClient } = deps;
   store.setUiConfig({ uiConfig });
   const cleanupTimelinePanSubscriptions = mountTimelinePanSubscriptions(deps);
+  // Phones and tablets place the tabs and the navbar's buttons differently.
+  const cleanupWindowLayout = mountMobileResourceWindowLayout({
+    windowMetricsClient,
+    store,
+    render,
+  });
   const unregisterBeforeNavigation = appService.registerBeforeNavigation(
     async () => {
       const autosaveAttempt = await flushQueuedAutosave({
@@ -1248,6 +1255,7 @@ export const handleBeforeMount = (deps) => {
   return async () => {
     unregisterBeforeNavigation();
     cleanupTimelinePanSubscriptions();
+    cleanupWindowLayout?.();
     clearScheduledAnimationEditorAutosave(store);
     store.setPreviewPlaybackRequestId({ requestId: undefined });
     stopPreviewPlaybackIndicator({ store });
@@ -1401,59 +1409,17 @@ export const handleTimelineZoomIn = (deps) => {
   render();
 };
 
-const EDITOR_TAB_IDS = ["tween", "preview"];
-
-const activateEditorTab = (deps, tab) => {
-  const { render, store } = deps;
-  if (tab === store.selectSelectedEditorTab()) {
-    return;
-  }
-
-  store.setSelectedEditorTab({ tab });
-  render();
-};
-
+// rtgl-tabs moves focus with the arrow keys, and picks a tab on a click,
+// Enter, or Space.
 export const handleEditorTabClick = (deps, payload) => {
-  activateEditorTab(deps, payload._event.currentTarget.dataset.tabId);
-};
-
-export const handleEditorTabKeyDown = (deps, payload) => {
-  const { refs } = deps;
-  const event = payload._event;
-  const currentTab = event.currentTarget.dataset.tabId;
-  const currentIndex = EDITOR_TAB_IDS.indexOf(currentTab);
-  if (currentIndex < 0) {
+  const { render, store } = deps;
+  const { id } = payload._event.detail;
+  if (id === store.selectSelectedEditorTab()) {
     return;
   }
 
-  if (event.key === "Enter" || event.key === " ") {
-    event.preventDefault();
-    event.stopPropagation();
-    activateEditorTab(deps, currentTab);
-    return;
-  }
-
-  let targetIndex;
-  if (event.key === "ArrowLeft") {
-    targetIndex =
-      (currentIndex - 1 + EDITOR_TAB_IDS.length) % EDITOR_TAB_IDS.length;
-  } else if (event.key === "ArrowRight") {
-    targetIndex = (currentIndex + 1) % EDITOR_TAB_IDS.length;
-  } else if (event.key === "Home") {
-    targetIndex = 0;
-  } else if (event.key === "End") {
-    targetIndex = EDITOR_TAB_IDS.length - 1;
-  } else {
-    return;
-  }
-
-  event.preventDefault();
-  event.stopPropagation();
-  const targetTab = EDITOR_TAB_IDS[targetIndex];
-  refs.animationEditorTabs
-    .querySelector(`[data-tab-id="${targetTab}"]`)
-    ?.focus();
-  activateEditorTab(deps, targetTab);
+  store.setSelectedEditorTab({ tab: id });
+  render();
 };
 
 export const handleTimelineZoomOut = (deps) => {

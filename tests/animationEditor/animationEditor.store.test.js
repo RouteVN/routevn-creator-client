@@ -8,12 +8,12 @@ import {
 import {
   addKeyframe,
   addProperty,
+  clearSelectedKeyframe,
+  clearTimelineSelection,
+  clearTimelineUsedDurationPreview,
+  closePropertyRemoveConfirmDialog,
   commitPendingTransitionMask,
   createInitialState,
-  clearSelectedKeyframe,
-  clearTimelineUsedDurationPreview,
-  clearTimelineSelection,
-  closePropertyRemoveConfirmDialog,
   deleteKeyframe,
   deleteProperty,
   disableTransitionMask,
@@ -24,16 +24,16 @@ import {
   nudgeTimelineZoom,
   openDialog,
   openPropertyRemoveConfirmDialog,
-  selectAnimationRenderStateWithAnimations,
-  selectAnimationResetState,
-  selectAnimationJsonCopyShortcutStartedAt,
   selectAnimationCanvasCaptureInProgress,
   selectAnimationCanvasCaptureShortcutStartedAt,
+  selectAnimationJsonCopyShortcutStartedAt,
+  selectAnimationRenderStateWithAnimations,
+  selectAnimationResetState,
   selectAnimationVideoExportInProgress,
   selectAnimationVideoShortcutStartedAt,
-  selectPreviewDurationMs,
-  selectPreviewData,
   selectDefaultSelectedKeyframeStartValue,
+  selectPreviewData,
+  selectPreviewDurationMs,
   selectSelectedEditorTab,
   selectSelectedKeyframeFormValues,
   selectTimelinePan,
@@ -42,15 +42,16 @@ import {
   selectTimelinePlayheadVisible,
   selectTransitionMasks,
   selectViewData,
-  setImages,
-  setAnimationJsonCopyShortcutStartedAt,
   setAnimationCanvasCaptureInProgress,
   setAnimationCanvasCaptureShortcutStartedAt,
+  setAnimationJsonCopyShortcutStartedAt,
   setAnimationVideoExportInProgress,
   setAnimationVideoShortcutStartedAt,
+  setAppWindowMetrics,
+  setImages,
   setPopover,
-  setPreviewPlayhead,
   setPreviewImage,
+  setPreviewPlayhead,
   setProjectResolution,
   setSelectedEditorTab,
   setSelectedKeyframe,
@@ -65,10 +66,6 @@ import {
   setSelectedProperty,
   setSelectedPropertyAutoDuration,
   setSelectedPropertyAutoEasing,
-  startPreviewPlayback,
-  startTimelinePan,
-  stopPreviewPlayback,
-  stopTimelinePan,
   setTimelinePanMode,
   setTimelineScrollMetrics,
   setTimelineUsedDurationPreview,
@@ -77,6 +74,10 @@ import {
   setTransitionMaskImage,
   setUiConfig,
   startPendingTransitionMask,
+  startPreviewPlayback,
+  startTimelinePan,
+  stopPreviewPlayback,
+  stopTimelinePan,
   togglePreviewLoop,
   updateKeyframe,
   updatePopoverFormValues,
@@ -722,6 +723,56 @@ describe("animationEditor.store", () => {
     const viewData = selectViewData({ state, i18n: EN_I18N });
     expect(viewData.showEditAutoDialog).toBe(true);
     expect(viewData.popover.popoverIsOpen).toBe(false);
+  });
+
+  it("moves the tabs to the navbar on phones, with Loop, Play, and on Timeline undo and redo under the canvas", () => {
+    const state = createInitialState();
+    const placement = () => {
+      const viewData = selectViewData({ state, i18n: EN_I18N });
+      return {
+        showNavbarControls: viewData.showNavbarControls,
+        showNavbarEditorTabs: viewData.showNavbarEditorTabs,
+        showToolbarEditorTabs: viewData.showToolbarEditorTabs,
+        showToolbarPlayback: viewData.showToolbarPlayback,
+        showToolbarEditHistory: viewData.showToolbarEditHistory,
+        showLeadingTimelineZoom: viewData.showLeadingTimelineZoom,
+        showTrailingTimelineZoom: viewData.showTrailingTimelineZoom,
+      };
+    };
+    const tabletLayout = {
+      showNavbarControls: true,
+      showNavbarEditorTabs: false,
+      showToolbarEditorTabs: true,
+      showToolbarPlayback: false,
+      showToolbarEditHistory: false,
+      showLeadingTimelineZoom: false,
+      showTrailingTimelineZoom: true,
+    };
+
+    setAppWindowMetrics({ state }, { width: 390, height: 844 });
+    // Desktop keeps its layout in a phone-sized window.
+    expect(placement()).toEqual(tabletLayout);
+
+    setUiConfig({ state }, { uiConfig: { id: "touch", inputMode: "touch" } });
+    expect(placement()).toEqual({
+      showNavbarControls: false,
+      showNavbarEditorTabs: true,
+      showToolbarEditorTabs: false,
+      showToolbarPlayback: true,
+      showToolbarEditHistory: true,
+      showLeadingTimelineZoom: true,
+      showTrailingTimelineZoom: false,
+    });
+
+    setSelectedEditorTab({ state }, { tab: "preview" });
+    expect(placement()).toMatchObject({
+      showToolbarPlayback: true,
+      showToolbarEditHistory: false,
+    });
+
+    setSelectedEditorTab({ state }, { tab: "tween" });
+    setAppWindowMetrics({ state }, { width: 744, height: 1133 });
+    expect(placement()).toEqual(tabletLayout);
   });
 
   it("keeps a single keyframe selected through timeline mutations", () => {

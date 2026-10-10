@@ -1,6 +1,7 @@
 import {
   getSliderRange,
   getSliderStepButtons,
+  isSliderValueUnset,
 } from "../../internal/ui/sliderPopover.js";
 
 // A number that opens a popover with a slider, and a row with a Presets
@@ -37,12 +38,17 @@ export const selectPopoverValue = ({ state }) => state.popover.value;
 export const selectViewData = ({ state, props, i18n }) => {
   const copy = i18n.sliderValueField;
   const { field } = props;
-  const value = props.value ?? field.defaultValue;
+  const unset = isSliderValueUnset(props.value);
+  const value = unset ? field.defaultValue : props.value;
   const range = getSliderRange({ field });
+  let valueText = field.unit ? `${value} ${field.unit}` : `${value}`;
+  if (unset && field.emptyText) {
+    valueText = field.emptyText;
+  }
 
   return {
     label: props.label ?? "",
-    valueText: field.unit ? `${value} ${field.unit}` : `${value}`,
+    valueText,
     popover: state.popover,
     popoverForm: {
       fields: [

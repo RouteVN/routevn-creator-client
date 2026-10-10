@@ -4,6 +4,7 @@ import {
   resolveAudioEffectsEditorPayload,
 } from "../../internal/audioEffectsEditorRoute.js";
 import { resolveEditHistoryShortcut } from "../../internal/ui/editHistory.js";
+import { mountMobileResourceWindowLayout } from "../../internal/ui/resourcePages/mobileResourcePage.js";
 import { runResourcePageMutation } from "../../internal/ui/resourcePages/resourcePageErrors.js";
 import { AUDIO_EFFECT_PROPERTY_CONFIG } from "./audioEffectsEditor.constants.js";
 import {
@@ -82,8 +83,21 @@ const persistAudioEffect = async (deps, { notify = false } = {}) => {
 };
 
 export const handleBeforeMount = (deps) => {
-  const { appService, browserEventsClient, store, uiConfig } = deps;
+  const {
+    appService,
+    browserEventsClient,
+    render,
+    store,
+    uiConfig,
+    windowMetricsClient,
+  } = deps;
   store.setUiConfig({ uiConfig });
+  // Phones and tablets place the tabs and the navbar's buttons differently.
+  const cleanupWindowLayout = mountMobileResourceWindowLayout({
+    windowMetricsClient,
+    store,
+    render,
+  });
   const cleanupWindowResize = browserEventsClient.subscribeWindowEvent({
     type: "resize",
     listener: () => handleTimelineViewportResize(deps),
@@ -105,6 +119,7 @@ export const handleBeforeMount = (deps) => {
 
   return async () => {
     unregisterBeforeNavigation();
+    cleanupWindowLayout?.();
     cleanupWindowResize();
     cleanupHistoryShortcuts();
     await stopAudioEffectPreview(deps);
@@ -188,8 +203,6 @@ export const handleBackClick = async (deps) => {
   }
 };
 
-const EDITOR_TAB_IDS = ["timeline", "preview"];
-
 const activateEditorTab = async (deps, tab) => {
   const { render, store } = deps;
   if (tab === store.selectSelectedEditorTab()) {
@@ -205,50 +218,29 @@ const activateEditorTab = async (deps, tab) => {
   }
 };
 
+// rtgl-tabs moves focus with the arrow keys, and picks a tab on a click,
+// Enter, or Space.
 export const handleEditorTabClick = async (deps, payload) => {
-  await activateEditorTab(deps, payload._event.currentTarget.dataset.tabId);
-};
-
-export const handleEditorTabKeyDown = async (deps, payload) => {
-  const { refs } = deps;
-  const event = payload._event;
-  const currentTab = event.currentTarget.dataset.tabId;
-  const currentIndex = EDITOR_TAB_IDS.indexOf(currentTab);
-  if (currentIndex < 0) {
-    return;
-  }
-
-  if (event.key === "Enter" || event.key === " ") {
-    event.preventDefault();
-    event.stopPropagation();
-    await activateEditorTab(deps, currentTab);
-    return;
-  }
-
-  let targetIndex;
-  if (event.key === "ArrowLeft") {
-    targetIndex =
-      (currentIndex - 1 + EDITOR_TAB_IDS.length) % EDITOR_TAB_IDS.length;
-  } else if (event.key === "ArrowRight") {
-    targetIndex = (currentIndex + 1) % EDITOR_TAB_IDS.length;
-  } else if (event.key === "Home") {
-    targetIndex = 0;
-  } else if (event.key === "End") {
-    targetIndex = EDITOR_TAB_IDS.length - 1;
-  } else {
-    return;
-  }
-
-  event.preventDefault();
-  event.stopPropagation();
-  const targetTab = EDITOR_TAB_IDS[targetIndex];
-  refs.editorTabs.querySelector(`[data-tab-id="${targetTab}"]`)?.focus();
-  await activateEditorTab(deps, targetTab);
+  await activateEditorTab(deps, payload._event.detail.id);
 };
 
 export const handleTimelineZoomChange = (deps, payload) => {
   const { render, store } = deps;
   store.setTimelineZoom({ zoom: resolveValueChange(payload) });
+  render();
+};
+
+export const handleTimelineZoomButtonClick = (deps, payload) => {
+  const { refs, render, store } = deps;
+  payload._event.stopPropagation();
+  const rect = refs.timelineZoomButton.getBoundingClientRect();
+  store.openTimelineZoomPopover({ x: rect.right, y: rect.bottom });
+  render();
+};
+
+export const handleTimelineZoomPopoverClose = (deps) => {
+  const { render, store } = deps;
+  store.closeTimelineZoomPopover();
   render();
 };
 

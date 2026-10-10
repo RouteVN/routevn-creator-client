@@ -370,34 +370,32 @@ const createParticleFieldsBySection = ({ copy = {} } = {}) => {
     basics: [
       {
         name: "width",
-        type: "input-number",
+        type: "slot",
+        slot: "particle-slider-width",
         label: copy.widthLabel ?? "Width",
         description:
           copy.widthDescription ??
           "Set the particle preview and effect canvas width in pixels.",
-        min: 1,
-        step: 1,
         required: true,
       },
       {
         name: "height",
-        type: "input-number",
+        type: "slot",
+        slot: "particle-slider-height",
         label: copy.heightLabel ?? "Height",
         description:
           copy.heightDescription ??
           "Set the particle preview and effect canvas height in pixels.",
-        min: 1,
-        step: 1,
         required: true,
       },
       {
         name: "seed",
-        type: "input-number",
+        type: "slot",
+        slot: "particle-slider-seed",
         label: copy.seedLabel ?? "Seed",
         description:
           copy.seedDescription ??
           "Use a fixed random seed to make the effect replay consistently.",
-        step: 1,
         required: false,
       },
     ],
@@ -415,40 +413,34 @@ const createParticleFieldsBySection = ({ copy = {} } = {}) => {
       },
       {
         name: "emissionRate",
-        type: "input-number",
+        type: "slot",
+        slot: "particle-slider-emissionRate",
         label: copy.emissionRateLabel ?? "Rate / second",
         description:
           copy.emissionRateDescription ??
           "How many particles spawn each second in continuous mode.",
-        min: 0,
-        max: MAX_PARTICLE_RATE,
-        step: 1,
         required: false,
         $when: "emissionMode == 'continuous'",
       },
       {
         name: "burstCount",
-        type: "input-number",
+        type: "slot",
+        slot: "particle-slider-burstCount",
         label: copy.burstCountLabel ?? "Burst Count",
         description:
           copy.burstCountDescription ??
           "How many particles spawn each time a burst is emitted.",
-        min: 1,
-        max: MAX_PARTICLE_COUNT,
-        step: 1,
         required: true,
         $when: "emissionMode == 'burst'",
       },
       {
         name: "maxActive",
-        type: "input-number",
+        type: "slot",
+        slot: "particle-slider-maxActive",
         label: copy.maxActiveLabel ?? "Max Active",
         description:
           copy.maxActiveDescription ??
           "Limit how many particles can exist at the same time.",
-        min: 1,
-        max: MAX_PARTICLE_COUNT,
-        step: 1,
         required: false,
         $when: "emissionMode == 'continuous'",
       },
@@ -466,36 +458,33 @@ const createParticleFieldsBySection = ({ copy = {} } = {}) => {
       },
       {
         name: "durationSeconds",
-        type: "input-number",
+        type: "slot",
+        slot: "particle-slider-durationSeconds",
         label: copy.durationSecondsLabel ?? "Duration Seconds",
         description:
           copy.durationSecondsDescription ??
           "How long emission lasts when using timed duration.",
-        min: 0,
-        step: 0.1,
         required: false,
         $when: "emissionMode == 'continuous' && durationMode == 'timed'",
       },
       {
         name: "lifetimeMin",
-        type: "input-number",
+        type: "slot",
+        slot: "particle-slider-lifetimeMin",
         label: copy.lifetimeMinLabel ?? "Lifetime Min",
         description:
           copy.lifetimeMinDescription ??
           "Shortest lifetime a spawned particle can have, in seconds.",
-        min: 0,
-        step: 0.1,
         required: true,
       },
       {
         name: "lifetimeMax",
-        type: "input-number",
+        type: "slot",
+        slot: "particle-slider-lifetimeMax",
         label: copy.lifetimeMaxLabel ?? "Lifetime Max",
         description:
           copy.lifetimeMaxDescription ??
           "Longest lifetime a spawned particle can have, in seconds.",
-        min: 0,
-        step: 0.1,
         required: true,
       },
     ],
@@ -513,89 +502,85 @@ const createParticleFieldsBySection = ({ copy = {} } = {}) => {
       },
       {
         name: "sourceX",
-        type: "input-number",
+        type: "slot",
+        slot: "particle-slider-sourceX",
         label: copy.sourceXLabel ?? "Source X",
         description:
           copy.sourceXDescription ??
           "Horizontal start position of the emitter shape.",
-        step: 1,
         required: false,
       },
       {
         name: "sourceY",
-        type: "input-number",
+        type: "slot",
+        slot: "particle-slider-sourceY",
         label: copy.sourceYLabel ?? "Source Y",
         description:
           copy.sourceYDescription ??
           "Vertical start position of the emitter shape.",
-        step: 1,
         required: false,
       },
       {
         name: "sourceWidth",
-        type: "input-number",
+        type: "slot",
+        slot: "particle-slider-sourceWidth",
         label: copy.sourceWidthLabel ?? "Source Width",
         description:
           copy.sourceWidthDescription ?? "Width of the rectangle emitter area.",
-        min: 0,
-        step: 1,
         required: false,
         $when: "sourceKind == 'rect'",
       },
       {
         name: "sourceHeight",
-        type: "input-number",
+        type: "slot",
+        slot: "particle-slider-sourceHeight",
         label: copy.sourceHeightLabel ?? "Source Height",
         description:
           copy.sourceHeightDescription ??
           "Height of the rectangle emitter area.",
-        min: 0,
-        step: 1,
         required: false,
         $when: "sourceKind == 'rect'",
       },
       {
         name: "sourceRadius",
-        type: "input-number",
+        type: "slot",
+        slot: "particle-slider-sourceRadius",
         label: copy.sourceRadiusLabel ?? "Source Radius",
         description:
           copy.sourceRadiusDescription ??
           "Outer radius of the circle emitter area.",
-        min: 0,
-        step: 1,
         required: false,
         $when: "sourceKind == 'circle'",
       },
       {
         name: "sourceInnerRadius",
-        type: "input-number",
+        type: "slot",
+        slot: "particle-slider-sourceInnerRadius",
         label: copy.sourceInnerRadiusLabel ?? "Inner Radius",
         description:
           copy.sourceInnerRadiusDescription ??
           "Optional inner gap for ring-shaped circle emitters.",
-        min: 0,
-        step: 1,
         required: false,
         $when: "sourceKind == 'circle'",
       },
       {
         name: "sourceX2",
-        type: "input-number",
+        type: "slot",
+        slot: "particle-slider-sourceX2",
         label: copy.lineX2Label ?? "Line X2",
         description:
           copy.lineX2Description ??
           "Horizontal end position for line emitters.",
-        step: 1,
         required: false,
         $when: "sourceKind == 'line'",
       },
       {
         name: "sourceY2",
-        type: "input-number",
+        type: "slot",
+        slot: "particle-slider-sourceY2",
         label: copy.lineY2Label ?? "Line Y2",
         description:
           copy.lineY2Description ?? "Vertical end position for line emitters.",
-        step: 1,
         required: false,
         $when: "sourceKind == 'line'",
       },
@@ -614,73 +599,70 @@ const createParticleFieldsBySection = ({ copy = {} } = {}) => {
       },
       {
         name: "speedMin",
-        type: "input-number",
+        type: "slot",
+        slot: "particle-slider-speedMin",
         label: copy.speedMinLabel ?? "Speed Min",
         description:
           copy.speedMinDescription ?? "Minimum launch speed for new particles.",
-        min: 0,
-        step: 1,
         required: false,
       },
       {
         name: "speedMax",
-        type: "input-number",
+        type: "slot",
+        slot: "particle-slider-speedMax",
         label: copy.speedMaxLabel ?? "Speed Max",
         description:
           copy.speedMaxDescription ?? "Maximum launch speed for new particles.",
-        min: 0,
-        step: 1,
         required: false,
       },
       {
         name: "directionMin",
-        type: "input-number",
+        type: "slot",
+        slot: "particle-slider-directionMin",
         label: copy.directionMinLabel ?? "Direction / Angle Min",
         description:
           copy.directionMinDescription ??
           "Starting minimum direction or angle for particle movement.",
-        step: 1,
         required: false,
       },
       {
         name: "directionMax",
-        type: "input-number",
+        type: "slot",
+        slot: "particle-slider-directionMax",
         label: copy.directionMaxLabel ?? "Direction / Angle Max",
         description:
           copy.directionMaxDescription ??
           "Starting maximum direction or angle for particle movement.",
-        step: 1,
         required: false,
       },
       {
         name: "accelerationX",
-        type: "input-number",
+        type: "slot",
+        slot: "particle-slider-accelerationX",
         label: copy.accelerationXLabel ?? "Acceleration X",
         description:
           copy.accelerationXDescription ??
           "Horizontal acceleration applied over each particle's lifetime.",
-        step: 1,
         required: false,
       },
       {
         name: "accelerationY",
-        type: "input-number",
+        type: "slot",
+        slot: "particle-slider-accelerationY",
         label: copy.accelerationYLabel ?? "Acceleration Y",
         description:
           copy.accelerationYDescription ??
           "Vertical acceleration applied over each particle's lifetime.",
-        step: 1,
         required: false,
       },
       {
         name: "maxSpeed",
-        type: "input-number",
+        type: "slot",
+        slot: "particle-slider-maxSpeed",
         label: copy.maxSpeedLabel ?? "Max Speed",
         description:
           copy.maxSpeedDescription ??
           "Clamp particle speed so acceleration does not exceed this limit.",
-        min: 0,
-        step: 1,
         required: false,
       },
       {
@@ -702,24 +684,22 @@ const createParticleFieldsBySection = ({ copy = {} } = {}) => {
       },
       {
         name: "scaleMin",
-        type: "input-number",
+        type: "slot",
+        slot: "particle-slider-scaleMin",
         label: copy.scaleMinLabel ?? "Scale Min",
         description:
           copy.scaleMinDescription ??
           "Minimum particle scale at spawn or across the preset range.",
-        min: 0,
-        step: 0.05,
         required: false,
       },
       {
         name: "scaleMax",
-        type: "input-number",
+        type: "slot",
+        slot: "particle-slider-scaleMax",
         label: copy.scaleMaxLabel ?? "Scale Max",
         description:
           copy.scaleMaxDescription ??
           "Maximum particle scale at spawn or across the preset range.",
-        min: 0,
-        step: 0.05,
         required: false,
       },
       {
@@ -735,39 +715,33 @@ const createParticleFieldsBySection = ({ copy = {} } = {}) => {
       },
       {
         name: "opacity",
-        type: "input-number",
+        type: "slot",
+        slot: "particle-slider-opacity",
         label: copy.opacityValueLabel ?? "Opacity Value",
         description:
           copy.opacityValueDescription ??
           "From 0 (invisible) to 1 (fully visible). With Curve, this is the highest opacity reached.",
-        min: 0,
-        max: 1,
-        step: 0.05,
         required: false,
       },
       {
         name: "opacityFadeIn",
-        type: "input-number",
+        type: "slot",
+        slot: "particle-slider-opacityFadeIn",
         label: copy.opacityFadeInLabel ?? "Fade In %",
         description:
           copy.opacityFadeInDescription ??
           "Share of each particle's lifetime spent fading in from invisible.",
-        min: 0,
-        max: 100,
-        step: 1,
         required: false,
         $when: "opacityMode == 'curve'",
       },
       {
         name: "opacityFadeOut",
-        type: "input-number",
+        type: "slot",
+        slot: "particle-slider-opacityFadeOut",
         label: copy.opacityFadeOutLabel ?? "Fade Out %",
         description:
           copy.opacityFadeOutDescription ??
           "Share of each particle's lifetime spent fading out at the end.",
-        min: 0,
-        max: 100,
-        step: 1,
         required: false,
         $when: "opacityMode == 'curve'",
       },
@@ -780,6 +754,280 @@ const createParticleFieldsBySection = ({ copy = {} } = {}) => {
       withFieldTooltips(fields),
     ]),
   );
+};
+
+// The slots of the fields edited with a slider popover.
+const PARTICLE_SLIDER_SLOT_PREFIX = "particle-slider-";
+
+const toPixelPresets = (values) =>
+  values.map((value) => ({ label: `${value} px`, value }));
+
+const toSecondPresets = (values) =>
+  values.map((value) => ({ label: `${value} s`, value }));
+
+const toDegreePresets = (values) =>
+  values.map((value) => ({ label: `${value}°`, value }));
+
+const toNumberPresets = (values) =>
+  values.map((value) => ({ label: `${value}`, value }));
+
+// Opacity reads as a percentage, with its value beside it.
+const toOpacityPresets = (values) =>
+  values.map((value) => ({
+    label: `${Math.round(value * 100)}%`,
+    value,
+    suffixText: `${value}`,
+  }));
+
+const CANVAS_SHARES = [
+  { label: "0", ratio: 0 },
+  { label: "1/4", ratio: 1 / 4 },
+  { label: "1/2", ratio: 1 / 2 },
+  { label: "3/4", ratio: 3 / 4 },
+  { label: "1", ratio: 1 },
+];
+
+// Shares of a canvas length, with their pixels beside them.
+const toCanvasSharePresets = (length, { leaveOutZero = false } = {}) =>
+  CANVAS_SHARES.filter((share) => !leaveOutZero || share.ratio > 0).map(
+    (share) => {
+      const value = Math.round(length * share.ratio);
+      return { label: share.label, value, suffixText: `${value} px` };
+    },
+  );
+
+// A typed position or size of the source reaches this many times the
+// particle's canvas.
+const CANVAS_BOUND_MULTIPLE = 4;
+
+// The fields the form edits with a slider popover (see
+// src/internal/ui/sliderPopover.js): the steps are `step` and the larger
+// `fastStep`, `range` is where the slider runs, and `min` and `max` bound a
+// typed value. The source's position and size go with the particle's own
+// canvas, `width` by `height`.
+const createParticleSliderFields = ({ copy = {}, width, height }) => {
+  const bound = (length) => Math.round(length * CANVAS_BOUND_MULTIPLE);
+  const radius = Math.round(Math.min(width, height) / 2);
+  const position = (length) => ({
+    step: 1,
+    fastStep: 10,
+    min: -bound(length),
+    max: bound(length),
+    range: { min: 0, max: length },
+    unit: "px",
+    presets: toCanvasSharePresets(length),
+  });
+  const size = (length) => ({
+    step: 1,
+    fastStep: 10,
+    min: 0,
+    max: bound(length),
+    range: { min: 0, max: length },
+    unit: "px",
+    presets: toCanvasSharePresets(length, { leaveOutZero: true }),
+  });
+  const radiusField = ({ leaveOutZero }) => ({
+    step: 1,
+    fastStep: 10,
+    min: 0,
+    max: bound(Math.max(width, height)),
+    range: { min: 0, max: radius },
+    unit: "px",
+    presets: toCanvasSharePresets(radius, { leaveOutZero }),
+  });
+  const scale = {
+    defaultValue: 1,
+    step: 0.05,
+    fastStep: 0.25,
+    min: 0,
+    max: 10,
+    range: { min: 0, max: 2 },
+    presets: toNumberPresets([0.1, 0.25, 0.5, 1, 1.5, 2]),
+  };
+  const fade = {
+    defaultValue: DEFAULT_OPACITY_FADE_PERCENT,
+    step: 1,
+    fastStep: 10,
+    min: 0,
+    max: 100,
+    presets: [0, 10, 20, 30, 50].map((value) => ({
+      label: `${value}%`,
+      value,
+    })),
+  };
+  const lifetime = {
+    step: 0.1,
+    fastStep: 0.5,
+    min: 0,
+    max: 600,
+    range: { min: 0, max: 10 },
+    unit: "s",
+    presets: toSecondPresets([0.25, 0.5, 1, 2, 3, 5, 10]),
+  };
+  const speed = {
+    defaultValue: 0,
+    step: 1,
+    fastStep: 10,
+    min: 0,
+    max: 10000,
+    range: { min: 0, max: 1000 },
+    presets: toNumberPresets([0, 50, 100, 200, 400, 800]),
+  };
+  const direction = {
+    defaultValue: 0,
+    step: 1,
+    fastStep: 15,
+    min: -720,
+    max: 720,
+    range: { min: -180, max: 180 },
+    presets: toDegreePresets([-180, -135, -90, -45, 0, 45, 90, 135, 180]),
+  };
+  const acceleration = {
+    defaultValue: 0,
+    step: 1,
+    fastStep: 10,
+    min: -10000,
+    max: 10000,
+    range: { min: -1000, max: 1000 },
+    presets: toNumberPresets([-500, -200, -100, 0, 100, 200, 500]),
+  };
+
+  return {
+    width: {
+      defaultValue: 1280,
+      step: 1,
+      fastStep: 10,
+      min: 1,
+      max: 7680,
+      range: { min: 1, max: 1920 },
+      unit: "px",
+      presets: toPixelPresets([256, 512, 640, 960, 1280, 1920]),
+    },
+    height: {
+      defaultValue: 720,
+      step: 1,
+      fastStep: 10,
+      min: 1,
+      max: 4320,
+      range: { min: 1, max: 1080 },
+      unit: "px",
+      presets: toPixelPresets([256, 360, 480, 540, 720, 1080]),
+    },
+    // An unset seed plays differently each time; the Random preset unsets
+    // it again.
+    seed: {
+      defaultValue: 1,
+      step: 1,
+      fastStep: 10,
+      min: 0,
+      // Seeds are 32-bit integers, often large, such as a date.
+      max: 2147483647,
+      range: { min: 0, max: 1000 },
+      emptyText: copy.seedRandomLabel ?? "Random",
+      presets: [
+        { label: copy.seedRandomLabel ?? "Random", value: "" },
+        ...toNumberPresets([1, 10, 100, 1000]),
+      ],
+    },
+    scaleMin: scale,
+    scaleMax: scale,
+    opacity: {
+      defaultValue: 1,
+      step: 0.05,
+      fastStep: 0.25,
+      stepsAsPercent: true,
+      min: 0,
+      max: 1,
+      presets: toOpacityPresets([0, 0.25, 0.5, 0.75, 1]),
+    },
+    opacityFadeIn: fade,
+    opacityFadeOut: fade,
+    emissionRate: {
+      defaultValue: 20,
+      step: 1,
+      fastStep: 10,
+      min: 0,
+      max: MAX_PARTICLE_RATE,
+      range: { min: 0, max: 200 },
+      presets: toNumberPresets([1, 5, 10, 20, 50, 100, 200]),
+    },
+    burstCount: {
+      defaultValue: 8,
+      step: 1,
+      fastStep: 10,
+      min: 1,
+      max: MAX_PARTICLE_COUNT,
+      range: { min: 1, max: 200 },
+      presets: toNumberPresets([1, 5, 10, 20, 50, 100, 200]),
+    },
+    maxActive: {
+      defaultValue: 60,
+      step: 1,
+      fastStep: 10,
+      min: 1,
+      max: MAX_PARTICLE_COUNT,
+      range: { min: 1, max: 1000 },
+      presets: toNumberPresets([10, 30, 60, 100, 200, 500, 1000]),
+    },
+    durationSeconds: {
+      ...lifetime,
+      defaultValue: 1,
+      fastStep: 1,
+      presets: toSecondPresets([0.5, 1, 2, 3, 5, 10]),
+    },
+    lifetimeMin: { ...lifetime, defaultValue: 1 },
+    lifetimeMax: { ...lifetime, defaultValue: 2 },
+    sourceX: { ...position(width), defaultValue: Math.round(width / 2) },
+    sourceY: { ...position(height), defaultValue: Math.round(height / 2) },
+    sourceWidth: { ...size(width), defaultValue: width },
+    sourceHeight: { ...size(height), defaultValue: height },
+    sourceRadius: { ...radiusField({ leaveOutZero: true }), defaultValue: 0 },
+    sourceInnerRadius: {
+      ...radiusField({ leaveOutZero: false }),
+      defaultValue: 0,
+    },
+    sourceX2: { ...position(width), defaultValue: width },
+    sourceY2: { ...position(height), defaultValue: Math.round(height / 2) },
+    speedMin: speed,
+    speedMax: speed,
+    directionMin: direction,
+    directionMax: direction,
+    accelerationX: acceleration,
+    accelerationY: acceleration,
+    maxSpeed: {
+      defaultValue: 0,
+      step: 1,
+      fastStep: 10,
+      min: 0,
+      max: 20000,
+      range: { min: 0, max: 2000 },
+      presets: toNumberPresets([0, 100, 200, 500, 1000, 2000]),
+    },
+  };
+};
+
+// The slider value fields the page puts in the form's slots, with the
+// form's values. A field the form hides, such as Burst Count while emission
+// is continuous, has no slot to show in.
+export const buildParticleSliderValueFields = ({ formValues, copy = {} }) => {
+  const width = Number(formValues.width);
+  const height = Number(formValues.height);
+  const sliderFields = createParticleSliderFields({
+    copy,
+    width: width > 0 ? width : 1280,
+    height: height > 0 ? height : 720,
+  });
+
+  return Object.values(createParticleFieldsBySection({ copy }))
+    .flat()
+    .filter((field) => field.slot?.startsWith(PARTICLE_SLIDER_SLOT_PREFIX))
+    .map((field) => ({
+      name: field.name,
+      slot: field.slot,
+      label: field.label,
+      value: formValues[field.name],
+      field: sliderFields[field.name],
+    }));
 };
 
 // Edit shows every field at once, in sections, as the layout editor's panel

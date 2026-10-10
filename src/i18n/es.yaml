@@ -1230,6 +1230,7 @@ particlesPage:
   scaleMinLabel: "Escala mínima"
   seedDescription: "Usa una semilla aleatoria fija para que el efecto se reproduzca siempre igual."
   seedLabel: "Semilla"
+  seedRandomLabel: "Aleatoria"
   selectButton: "Seleccionar"
   selectImageOption: "Seleccionar imagen"
   selectorLabel: "selector"

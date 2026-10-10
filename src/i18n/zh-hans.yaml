@@ -1230,6 +1230,7 @@ particlesPage:
   scaleMinLabel: "缩放最小值"
   seedDescription: "使用固定随机种子，让效果每次都能一致重放。"
   seedLabel: "种子"
+  seedRandomLabel: "随机"
   selectButton: "选择"
   selectImageOption: "选择图像"
   selectorLabel: "选择器"

@@ -51,13 +51,13 @@ describe("text style editor view", () => {
     );
     expect(view).toContain("$if showMobilePanels:");
     // The tabs, the form with its selects, and the preview text show in
-    // either place. The preview settings save on their own, so there is no
-    // Save Preview.
+    // either place; phones show the tabs in the navbar. The preview settings
+    // save on their own, so there is no Save Preview.
     expect(
       count(
         /rtgl-tabs#rightPanelModeTabs s=sm selected-tab=\$\{rightPanelMode\} :items=\$\{rightPanelModeTabs\}: null/g,
       ),
-    ).toBe(2);
+    ).toBe(3);
     expect(view).not.toContain("savePreview");
     expect(
       count(

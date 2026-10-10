@@ -22,8 +22,8 @@ import { selectEditHistoryCopy } from "../../internal/ui/editHistory.js";
 import {
   buildEditorCanvasLayout,
   buildEditorCanvasZoomViewData,
+  buildEditorPanelPlacementViewData,
   resetEditorCanvasZoomState,
-  selectShowEditorRightPanelState,
   setEditorCanvasZoomState,
   zoomEditorCanvasInState,
   zoomEditorCanvasOutState,
@@ -542,14 +542,14 @@ export const selectViewData = ({ state, i18n }) => {
   const { canvasBackgroundStyle, canvasWrapperStyle } = buildEditorCanvasLayout(
     { state, resolution: state.projectResolution },
   );
-  const showRightPanel = selectShowEditorRightPanelState({ state });
+  const panelPlacement = buildEditorPanelPlacementViewData({ state });
+  const { showRightPanel } = panelPlacement;
 
   return {
     resourceCategory: "assets",
     selectedResourceId: "transform-editor",
     showExplorerPanel: !state.isTouchMode,
-    showRightPanel,
-    showMobilePanels: !showRightPanel,
+    ...panelPlacement,
     transformName: state.transformName,
     undoDisabled: state.editHistory.undo.length === 0,
     redoDisabled: state.editHistory.redo.length === 0,

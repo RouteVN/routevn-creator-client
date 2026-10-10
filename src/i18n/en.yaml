@@ -1230,6 +1230,7 @@ particlesPage:
   scaleMinLabel: "Scale Min"
   seedDescription: "Use a fixed random seed to make the effect replay consistently."
   seedLabel: "Seed"
+  seedRandomLabel: "Random"
   selectButton: "Select"
   selectImageOption: "Select image"
   selectorLabel: "selector"

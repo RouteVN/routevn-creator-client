@@ -5,7 +5,11 @@ import {
   requireProjectResolution,
 } from "../../internal/projectResolution.js";
 import { toFlatItems } from "../../internal/project/tree.js";
-import { isTouchUiConfig } from "../../internal/ui/resourcePages/mobileResourcePage.js";
+import { buildTimelineEditorControlsPlacement } from "../../internal/ui/timelineEditorControls.js";
+import {
+  isTouchUiConfig,
+  setMobileResourcePageWindowMetricsState,
+} from "../../internal/ui/resourcePages/mobileResourcePage.js";
 import {
   compileTransitionMaskForRuntime,
   createDefaultTransitionMask,
@@ -1413,6 +1417,8 @@ export const createInitialState = () => ({
   previewPlaybackRequestId: undefined,
   previewImages: createInitialPreviewImages(),
   isTouchMode: false,
+  // The app window's size, which tells a phone from a tablet.
+  appWindowMetrics: { width: 0, height: 0 },
   isPreviewDialogOpen: false,
   maskRemoveConfirmDialogOpen: false,
   propertyRemoveConfirmDialogOpen: false,
@@ -1463,6 +1469,10 @@ export const setUiConfig = ({ state }, { uiConfig } = {}) => {
 
 export const selectIsTouchMode = ({ state }) => {
   return state.isTouchMode;
+};
+
+export const setAppWindowMetrics = ({ state }, { width, height } = {}) => {
+  setMobileResourcePageWindowMetricsState(state, { width, height });
 };
 
 export const setTimelineZoom = ({ state }, { zoom } = {}) => {
@@ -4586,30 +4596,17 @@ export const selectViewData = ({ state, i18n }) => {
     maskRemoveConfirmDialogOpen: state.maskRemoveConfirmDialogOpen,
     propertyRemoveConfirmDialogOpen: state.propertyRemoveConfirmDialogOpen,
     showRightPanel: !state.isTouchMode,
+    ...buildTimelineEditorControlsPlacement({
+      state,
+      isTimelineTab: state.selectedEditorTab === DEFAULT_EDITOR_TAB,
+    }),
     selectedEditorTab: state.selectedEditorTab,
     editorTabs: [
-      {
-        id: DEFAULT_EDITOR_TAB,
-        label: copy.timelineLabel ?? "Timeline",
-        panelId: "animationTweenPanel",
-      },
-      {
-        id: "preview",
-        label: copy.previewTitle ?? "Preview",
-        panelId: "animationPreviewPanel",
-      },
-    ].map((item, index) => {
-      const selected = item.id === state.selectedEditorTab;
-      return {
-        ...item,
-        index,
-        selected,
-        tabIndex: selected ? 0 : -1,
-        backgroundColor: selected ? "ac" : "",
-        borderColor: selected ? "" : "tr",
-        textColor: selected ? "fg" : "mu-fg",
-      };
-    }),
+      { id: DEFAULT_EDITOR_TAB, label: copy.timelineLabel ?? "Timeline" },
+      { id: "preview", label: copy.previewTitle ?? "Preview" },
+    ],
+    timelineTabLabel: copy.timelineLabel ?? "Timeline",
+    previewTabLabel: copy.previewTitle ?? "Preview",
     editorPanelsLabel: copy.editorPanelsLabel ?? "Animation editor panels",
     showAddPropertyPopover,
     showAddKeyframePopover,

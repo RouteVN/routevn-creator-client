@@ -3,8 +3,10 @@ propsSchema:
   type: object
   properties:
     value:
-      type: number
-      description: The value the field shows; an unset value shows the field's default.
+      type: [number, string]
+      description: >-
+        The value the field shows. An unset value, undefined or empty, shows
+        the field's emptyText, or its default.
     label:
       type: string
       description: The field's name, which screen readers announce.
@@ -12,8 +14,9 @@ propsSchema:
       type: object
       description: >-
         The slider popover's field: step and fastStep, the slider's range, the
-        min and max that bound the value, defaultValue, the presets
-        ({ label, value, suffixText }), the unit shown after the value, and
+        min and max that bound the value, defaultValue, emptyText for an
+        unset value, the presets ({ label, value, suffixText }; an empty value
+        unsets the number), the unit shown after the value, and
         stepsAsPercent to show the steps as percentages. See
         src/internal/ui/sliderPopover.js.
 events:

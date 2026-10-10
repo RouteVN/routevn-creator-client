@@ -4,10 +4,15 @@ import { formatI18nCopy } from "./i18nCopy.js";
 // menu, four step buttons, and Submit. Its field gives `step` and the larger
 // `fastStep`; `min` and `max`, which bound the value itself; `range`, where
 // the slider runs, when smaller than `min` to `max`; `defaultValue`, which an
-// unset value starts from; and `stepsAsPercent`, set where the steps read as
-// percentages, as the field's presets do.
+// unset value starts from; `emptyText`, which an unset value shows instead;
+// and `stepsAsPercent`, set where the steps read as percentages, as the
+// field's presets do. A preset with an empty value unsets the value.
 
 const getStepDecimals = (step) => `${step}`.split(".")[1]?.length ?? 0;
+
+// Forms keep an unset number as an empty value.
+export const isSliderValueUnset = (value) =>
+  value === undefined || value === "";
 
 // The slider runs over the range, or `min` to `max` without one. A value can
 // be typed past the slider's ends, within `min` and `max`; the slider then

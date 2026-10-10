@@ -21,8 +21,8 @@ import { selectEditHistoryCopy } from "../../internal/ui/editHistory.js";
 import {
   buildEditorCanvasLayout,
   buildEditorCanvasZoomViewData,
+  buildEditorPanelPlacementViewData,
   resetEditorCanvasZoomState,
-  selectShowEditorRightPanelState,
   setEditorCanvasZoomState,
   zoomEditorCanvasInState,
   zoomEditorCanvasOutState,
@@ -33,7 +33,9 @@ import {
 } from "../../internal/ui/resourcePages/mobileResourcePage.js";
 import {
   PARTICLE_FORM_CONDITION_FIELDS,
+  applyParticleFormChange,
   buildParticleFormValues,
+  buildParticleSliderValueFields,
   createParticleForm,
   replaceParticleTextureImage,
 } from "./support/particleEditorForm.js";
@@ -118,6 +120,8 @@ export const createInitialState = () => ({
   editHistory: createEditHistory(),
   editHistoryBaseline: undefined,
   dragStartPosition: undefined,
+  // The value a slider popover shows on the canvas before it is submitted.
+  sliderPreview: undefined,
   // The canvas renderer's size, which is the particle's size.
   graphicsSize: undefined,
   imagesData: createEmptyImageCollection(),
@@ -253,7 +257,7 @@ export const setGraphicsSize = ({ state }, { width, height } = {}) => {
 };
 
 // The particle the canvas shows: the effect, with the texture being picked
-// while the image picker is open.
+// while the image picker is open, or the value a slider popover shows.
 const selectCanvasEffectState = (state) => {
   const { open, slot, selectedImageId, originalImageId } =
     state.imageSelectorDialog;
@@ -265,10 +269,21 @@ const selectCanvasEffectState = (state) => {
   ) {
     return replaceParticleTextureImage(state.effect, selectedImageId);
   }
+  if (state.sliderPreview) {
+    return applyParticleFormChange(state.effect, state.sliderPreview).effect;
+  }
   return state.effect;
 };
 
 export const selectCanvasEffect = ({ state }) => selectCanvasEffectState(state);
+
+export const setSliderPreview = ({ state }, { name, value } = {}) => {
+  state.sliderPreview = { name, value: String(value) };
+};
+
+export const clearSliderPreview = ({ state }) => {
+  state.sliderPreview = undefined;
+};
 
 // The images the canvas draws: the texture images, and the preview
 // background.
@@ -489,7 +504,8 @@ export const selectViewData = ({ state, i18n }) => {
   const { canvasBackgroundStyle, canvasWrapperStyle } = buildEditorCanvasLayout(
     { state, resolution: canvasResolution },
   );
-  const showRightPanel = selectShowEditorRightPanelState({ state });
+  const panelPlacement = buildEditorPanelPlacementViewData({ state });
+  const { showRightPanel } = panelPlacement;
   const formValues = buildParticleFormValues({ particle: state.effect });
   const canvasParticle = createRenderableParticleData(
     selectCanvasEffectState(state),
@@ -500,8 +516,7 @@ export const selectViewData = ({ state, i18n }) => {
     resourceCategory: "animatedAssets",
     selectedResourceId: "particle-editor",
     showExplorerPanel: !state.isTouchMode,
-    showRightPanel,
-    showMobilePanels: !showRightPanel,
+    ...panelPlacement,
     particleName: state.particleName,
     undoDisabled: state.editHistory.undo.length === 0,
     redoDisabled: state.editHistory.redo.length === 0,
@@ -533,6 +548,7 @@ export const selectViewData = ({ state, i18n }) => {
     particleForm: createParticleForm({ copy }),
     particleFormKey: buildFormKey(state, formValues),
     formValues,
+    sliderValueFields: buildParticleSliderValueFields({ formValues, copy }),
     textureImageLabel: copy.textureImageLabel,
     textureImageDescription: copy.textureImageDescription,
     textureImage: buildImageCard(selectTextureImageState(state)),

@@ -49,14 +49,14 @@ describe("transform editor view", () => {
   });
 
   it("switches between Edit and Preview like the layout editor", () => {
-    // The tabs head the right panel, or the panel under the canvas on phones
-    // and tablet portrait. Preview images save on their own, so there is no
-    // Save Preview.
+    // The tabs head the right panel, or the panel under the canvas in tablet
+    // portrait, or sit in the navbar on phones. Preview images save on their
+    // own, so there is no Save Preview.
     expect(
       view.match(
         /rtgl-tabs#rightPanelModeTabs s=sm selected-tab=\$\{rightPanelMode\} :items=\$\{rightPanelModeTabs\}: null/g,
       ),
-    ).toHaveLength(2);
+    ).toHaveLength(3);
     expect(view).not.toContain("savePreview");
     expect(view.match(/\$\{rightPanelEditStyle\}/g)).toHaveLength(2);
     expect(view.match(/\$\{rightPanelPreviewStyle\}/g)).toHaveLength(2);

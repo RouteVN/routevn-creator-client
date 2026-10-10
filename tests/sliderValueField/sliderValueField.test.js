@@ -283,4 +283,31 @@ describe("rvn-slider-value-field", () => {
     expect(field.events.at(-1)).toEqual(["value-change", { value: 30 }]);
     expect(field.view().popover.open).toBe(false);
   });
+  it("shows an unset value as its emptyText, opens at the default, and unsets it from an empty preset", async () => {
+    const field = createField({
+      value: "",
+      menuResult: { item: { key: "" } },
+      field: {
+        ...FIELD,
+        defaultValue: 1,
+        emptyText: "Random",
+        presets: [
+          { label: "Random", value: "" },
+          { label: "10", value: 10 },
+        ],
+      },
+    });
+
+    expect(field.view().valueText).toBe("Random");
+    field.open();
+    expect(field.view().popover.value).toBe(1);
+
+    await field.pickPreset();
+    expect(field.events).toEqual([["value-change", { value: "" }]]);
+    expect(field.view().popover.open).toBe(false);
+  });
+
+  it("shows an unset value as its default without an emptyText", () => {
+    expect(createField({ value: "" }).view().valueText).toBe("16 px");
+  });
 });

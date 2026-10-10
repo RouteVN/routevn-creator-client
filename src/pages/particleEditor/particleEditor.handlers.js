@@ -489,6 +489,44 @@ export const handleParticleFormChange = async (deps, payload) => {
   await commitParticleEdit(deps);
 };
 
+// A size change restarts the canvas, so width and height show on Submit;
+// the other numbers show on the canvas while their slider popover moves.
+const SLIDER_FIELDS_WITHOUT_PREVIEW = new Set(["width", "height"]);
+
+export const handleSliderValueInput = async (deps, payload) => {
+  const { store } = deps;
+  const { name } = payload._event.currentTarget.dataset;
+  if (SLIDER_FIELDS_WITHOUT_PREVIEW.has(name)) {
+    return;
+  }
+
+  store.setSliderPreview({ name, value: payload._event.detail.value });
+  await renderParticleCanvas(deps);
+};
+
+// Submit changes the number, as typing it in the form did; closing the
+// popover leaves it as it was.
+export const handleSliderValueChange = async (deps, payload) => {
+  const { store } = deps;
+  const { name } = payload._event.currentTarget.dataset;
+  const { effect, refreshForm } = applyParticleFormChange(
+    store.selectEffect(),
+    { name, value: String(payload._event.detail.value) },
+  );
+  store.clearSliderPreview();
+  store.setEffect({ effect });
+  if (refreshForm) {
+    store.refreshForm();
+  }
+  await commitParticleEdit(deps);
+};
+
+export const handleSliderValueCancel = async (deps) => {
+  const { store } = deps;
+  store.clearSliderPreview();
+  await renderParticleCanvas(deps);
+};
+
 // rvn-zoom-viewport keeps the point in view in place when the zoom changes.
 export const handleCanvasZoomInClick = async (deps) => {
   const { render, store } = deps;
