@@ -26,10 +26,10 @@ refs:
     eventListeners:
       click:
         handler: handleBackClick
-  nodeButton:
+  mobilePanelModeTabs:
     eventListeners:
-      click:
-        handler: handleNodeButtonClick
+      item-click:
+        handler: handleMobilePanelModeChange
   nodeDetailBackButton:
     eventListeners:
       click:
@@ -42,15 +42,19 @@ refs:
     eventListeners:
       click:
         handler: handleNodeMoveNextClick
-  previewButton:
-    eventListeners:
-      click:
-        handler: handlePreviewButtonClick
   undoButton:
     eventListeners:
       click:
         handler: handleUndoButtonClick
   redoButton:
+    eventListeners:
+      click:
+        handler: handleRedoButtonClick
+  panelUndoButton*:
+    eventListeners:
+      click:
+        handler: handleUndoButtonClick
+  panelRedoButton*:
     eventListeners:
       click:
         handler: handleRedoButtonClick
@@ -111,18 +115,18 @@ template:
               - rtgl-button#backButton sq pre=chevronLeft v=ol mr=sm: null
               - 'rtgl-view w=1fg style="min-width: 0;"':
                   - rtgl-text w=f ellipsis=true: ${layout.name}
-              - rtgl-view d=h av=c g=xs ml=sm:
-                  - 'rtgl-button#undoButton sq pre=undo v=ol ?disabled=${undoDisabled} aria-label="${undoLabel}" title="${undoLabel}"': null
-                  - 'rtgl-button#redoButton sq pre=redo v=ol ?disabled=${redoDisabled} aria-label="${redoLabel}" title="${redoLabel}"': null
+              - $if showNavbarEditHistory:
+                  - rtgl-view d=h av=c g=xs ml=sm:
+                      - 'rtgl-button#undoButton sq pre=undo v=ol ?disabled=${undoDisabled} aria-label="${undoLabel}" title="${undoLabel}"': null
+                      - 'rtgl-button#redoButton sq pre=redo v=ol ?disabled=${redoDisabled} aria-label="${redoLabel}" title="${redoLabel}"': null
               - $if showCanvasZoomControls:
                   - rtgl-view d=h av=c g=xs ml=sm:
                       - 'rtgl-button#canvasZoomOutButton sq pre=zoomOut v=ol ?disabled=${canvasZoomOutDisabled} aria-label="${canvasZoomOutLabel}" title="${canvasZoomOutLabel}"': null
                       - 'rtgl-button#canvasZoomResetButton v=gh style="min-width: 64px;" aria-label="${canvasZoomFitLabel}" title="${canvasZoomFitLabel}"': ${canvasZoomLabel}
                       - 'rtgl-button#canvasZoomInButton sq pre=zoomIn v=ol ?disabled=${canvasZoomInDisabled} aria-label="${canvasZoomInLabel}" title="${canvasZoomInLabel}"': null
-              - $if showMobileNodeButton:
-                  - rtgl-button#nodeButton ml=sm v=${nodeButtonVariant}: ${nodeButtonLabel}
-              - $if showMobilePreviewButton:
-                  - rtgl-button#previewButton ml=sm v=se: ${previewTitle}
+              - $if showMobilePanels:
+                  - rtgl-view ml=sm:
+                      - rtgl-tabs#mobilePanelModeTabs s=sm selected-tab=${mobilePanelMode} :items=${mobilePanelModeTabs}: null
           - 'rtgl-view d=v h=1fg w=f style="min-height: 0; ${canvasWorkspaceStyle}"':
               - 'rvn-zoom-viewport#layoutEditorCanvasBackground zoom=${canvasZoom} ?gestures=${showCanvasZoomControls} style="display: flex; flex-direction: column; width: 100%; min-width: 0; background-color: var(--background); ${canvasBackgroundStyle} background-image: radial-gradient(circle, var(--input) 1px, transparent 1px); background-size: 24px 24px;"':
                   - 'div style="${canvasWrapperStyle}"':
@@ -146,6 +150,10 @@ template:
                                   - 'rtgl-view style="transform: rotate(180deg);"':
                                       - rtgl-svg svg=chevronDown wh=18: null
                               - 'rtgl-button#nodeMoveNextButton sq pre=chevronDown v=ol ml=sm aria-label="${nodeMoveNextLabel}" title="${nodeMoveNextLabel}"': null
+                              - $if showPanelEditHistory:
+                                  - rtgl-view d=h av=c g=xs ml=sm:
+                                      - 'rtgl-button#panelUndoButtonElements sq pre=undo v=ol ?disabled=${undoDisabled} aria-label="${undoLabel}" title="${undoLabel}"': null
+                                      - 'rtgl-button#panelRedoButtonElements sq pre=redo v=ol ?disabled=${redoDisabled} aria-label="${redoLabel}" title="${redoLabel}"': null
                           - 'rtgl-view w=f h=1fg style="min-height: 0;"':
                               - rvn-base-file-explorer#fileExplorer :items=${flatItems} shrinkable dropdown-menu allowDrag show-item-menu-actions bottom-empty-space-height=32vh :contextMenuItems=${contextMenuItems} :emptyContextMenuItems=${emptyContextMenuItems}: null
                   - $if showMobileSelectedNodeDetail:
@@ -156,6 +164,10 @@ template:
                                   - rtgl-text w=1fg ellipsis=true: ${item.name}
                                   - $if itemRoleLabel:
                                       - rtgl-text s=xs c=mu-fg: ${itemRoleLabel}
+                              - $if showPanelEditHistory:
+                                  - rtgl-view d=h av=c g=xs ml=sm:
+                                      - 'rtgl-button#panelUndoButtonDetail sq pre=undo v=ol ?disabled=${undoDisabled} aria-label="${undoLabel}" title="${undoLabel}"': null
+                                      - 'rtgl-button#panelRedoButtonDetail sq pre=redo v=ol ?disabled=${redoDisabled} aria-label="${redoLabel}" title="${redoLabel}"': null
                           - 'rtgl-view w=f h=1fg sv pv=md style="min-height: 0;"':
                               - rvn-layout-edit-panel#layoutEditPanel layout-type=${layout.layoutType} resource-type=${layout.resourceType} item-type=${item.type} :projectResolution=${projectResolution} :selectedElementMetrics=${selectedElementMetrics} :isInsideSaveLoadSlot=${isInsideSaveLoadSlot} :isInsideDirectedContainer=${isInsideDirectedContainer} :values=${item} :imagesData=${imagesData} :soundsData=${soundsData} :spritesheetsData=${spritesheetsData} :particlesData=${particlesData} :charactersData=${charactersData} :textStylesData=${textStylesData} :variablesData=${variablesData} :layoutsData=${layoutsData}: null
                               - 'rtgl-view w=f h=32vh style="flex-shrink: 0;"': null

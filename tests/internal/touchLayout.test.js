@@ -1,5 +1,8 @@
 import { describe, expect, it } from "vitest";
-import { isTouchLandscape } from "../../src/internal/touchLayout.js";
+import {
+  isTouchLandscape,
+  isTouchPhone,
+} from "../../src/internal/touchLayout.js";
 
 describe("touch landscape layout", () => {
   it.each([
@@ -24,5 +27,28 @@ describe("touch landscape layout", () => {
     expect(
       isTouchLandscape({ isTouchMode: false, width: 1440, height: 900 }),
     ).toBe(false);
+  });
+});
+
+describe("touch phone layout", () => {
+  it.each([
+    ["phone portrait", 390, 844, true],
+    ["large phone portrait", 430, 932, true],
+    // Phones are locked to portrait; a window this wide takes the touch
+    // landscape layout.
+    ["landscape window at phone height", 844, 390, false],
+    ["small tablet portrait", 744, 1133, false],
+    ["tablet portrait", 820, 1180, false],
+    ["tablet landscape", 1180, 820, false],
+    ["small Android tablet landscape", 962, 530, false],
+    ["window metrics not loaded yet", 0, 0, false],
+  ])("%s (%i × %i) is %s", (_name, width, height, expected) => {
+    expect(isTouchPhone({ isTouchMode: true, width, height })).toBe(expected);
+  });
+
+  it("is never a phone in the pointer UI", () => {
+    expect(isTouchPhone({ isTouchMode: false, width: 390, height: 844 })).toBe(
+      false,
+    );
   });
 });

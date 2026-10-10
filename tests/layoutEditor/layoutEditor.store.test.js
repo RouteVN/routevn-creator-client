@@ -616,15 +616,20 @@ describe("layoutEditor.store", () => {
     expect(viewData.showExplorerPanel).toBe(false);
     expect(viewData.showRightPanel).toBe(false);
     expect(viewData.showPreviewHeader).toBe(false);
-    expect(viewData.showMobileNodeButton).toBe(true);
-    expect(viewData.showMobilePreviewButton).toBe(true);
+    expect(viewData.showMobilePanels).toBe(true);
+    // Edit and Preview tabs switch the panel under the canvas, on Edit while
+    // it shows the element.
+    expect(viewData.mobilePanelMode).toBe("edit");
+    expect(viewData.mobilePanelModeTabs).toEqual([
+      { id: "edit", label: "Edit" },
+      { id: "preview", label: "Preview" },
+    ]);
     expect(viewData.showMobileSelectedNodeDetail).toBe(true);
     expect(viewData.previewPanelVisibilityStyle).toBe("display: none;");
     expect(viewData.previewHydrationData).toEqual({
       backgroundImageId: "unsaved-preview-image",
     });
     expect(viewData.initialPreviewData).toEqual({});
-    expect(viewData.nodeButtonLabel).toBe("Elements");
     expect(viewData.previewTitle).toBe("Preview");
     expect(viewData.item.name).toBe("Node 1");
   });
@@ -641,7 +646,7 @@ describe("layoutEditor.store", () => {
     });
 
     expect(viewData.showPreviewHeader).toBe(true);
-    expect(viewData.showMobilePreviewButton).toBe(false);
+    expect(viewData.mobilePanelMode).toBe("preview");
     expect(viewData.showMobileSelectedNodeDetail).toBe(false);
     expect(viewData.previewPanelVisibilityStyle).toBe("");
     expect(viewData.previewHydrationData).toEqual(viewData.previewData);
@@ -680,16 +685,16 @@ describe("layoutEditor.store", () => {
 
     expect(select().showMobileNodeExplorer).toBe(false);
     expect(select().showMobileSelectedNodeDetail).toBe(true);
-    expect(select().nodeButtonVariant).toBe("se");
+    expect(select().mobilePanelMode).toBe("edit");
 
     openMobileFileExplorer({ state });
     const viewData = select();
 
     expect(viewData.showMobileNodeExplorer).toBe(true);
     expect(viewData.showMobileSelectedNodeDetail).toBe(false);
-    expect(viewData.showMobilePreviewButton).toBe(true);
     expect(viewData.previewPanelVisibilityStyle).toBe("display: none;");
-    expect(viewData.nodeButtonVariant).toBe("pr");
+    // The Elements list is part of Edit too.
+    expect(viewData.mobilePanelMode).toBe("edit");
     expect(viewData.nodeExplorerTitle).toBe("Elements");
     expect(viewData.nodeMovePreviousLabel).toBe("Previous element");
     expect(viewData.nodeMoveNextLabel).toBe("Next element");
@@ -708,7 +713,7 @@ describe("layoutEditor.store", () => {
     });
 
     expect(viewData.showMobileNodeExplorer).toBe(true);
-    expect(viewData.showMobilePreviewButton).toBe(false);
+    expect(viewData.mobilePanelMode).toBe("edit");
     expect(viewData.previewPanelVisibilityStyle).toBe("display: none;");
     expect(viewData.isPreviewMounted).toBe(false);
   });
@@ -728,7 +733,7 @@ describe("layoutEditor.store", () => {
     expect(landscape.showTabletLandscapeExplorer).toBe(true);
     expect(landscape.tabletLandscapeExplorerWidth).toBe(300);
     expect(landscape.showMobileNodeExplorer).toBe(false);
-    expect(landscape.showMobileNodeButton).toBe(false);
+    expect(landscape.showMobilePanels).toBe(false);
     expect(landscape.previewPanelVisibilityStyle).toBe("");
 
     setAppWindowMetrics({ state }, { width: 880, height: 1408 });
@@ -737,8 +742,47 @@ describe("layoutEditor.store", () => {
     expect(selectIsTabletLandscape({ state })).toBe(false);
     expect(portrait.showTabletLandscapeExplorer).toBe(false);
     expect(portrait.showMobileNodeExplorer).toBe(true);
-    expect(portrait.showMobileNodeButton).toBe(true);
+    expect(portrait.showMobilePanels).toBe(true);
   });
+
+  it.each([
+    ["a phone", { inputMode: "touch" }, { width: 412, height: 915 }, true],
+    [
+      "a tablet in portrait",
+      { inputMode: "touch" },
+      { width: 820, height: 1180 },
+      false,
+    ],
+    [
+      "a tablet in landscape",
+      { inputMode: "touch" },
+      { width: 1180, height: 820 },
+      false,
+    ],
+    [
+      "a phone not measured yet",
+      { inputMode: "touch" },
+      { width: 0, height: 0 },
+      false,
+    ],
+    ["desktop", { inputMode: "pointer" }, { width: 1440, height: 900 }, false],
+  ])(
+    "keeps undo and redo under the canvas on %s: %s",
+    (_name, uiConfig, metrics, inPanel) => {
+      const state = createInitialState();
+      setUiConfig({ state }, { uiConfig });
+      setAppWindowMetrics({ state }, metrics);
+
+      const viewData = selectViewData({
+        state,
+        constants: TEST_CONSTANTS,
+        i18n: EN_I18N,
+      });
+
+      expect(viewData.showPanelEditHistory).toBe(inPanel);
+      expect(viewData.showNavbarEditHistory).toBe(!inPanel);
+    },
+  );
 
   it("keeps the edit panel and preview in the right panel on tablet landscape", () => {
     const state = createInitialState();
@@ -770,8 +814,6 @@ describe("layoutEditor.store", () => {
     expect(viewData.showMobilePanels).toBe(false);
     expect(viewData.showMobileSelectedNodeDetail).toBe(false);
     expect(viewData.showMobileNodeExplorer).toBe(false);
-    expect(viewData.showMobilePreviewButton).toBe(false);
-    expect(viewData.showMobileNodeButton).toBe(false);
     expect(viewData.detailPanelSelectedItemId).toBe("node-1");
   });
 

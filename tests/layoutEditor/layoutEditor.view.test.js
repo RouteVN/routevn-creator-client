@@ -85,9 +85,71 @@ describe("layoutEditor.view", () => {
     expect(explorerBranch).toContain("${nodeExplorerTitle}");
     expect(explorerBranch).toContain("rvn-base-file-explorer#fileExplorer");
     expect(explorerBranch).toContain("show-item-menu-actions");
-    expect(layoutEditorView).toContain("v=${nodeButtonVariant}");
+    // Edit and Preview tabs in the header switch the panel under the canvas.
+    expect(layoutEditorView).toContain(
+      "rtgl-tabs#mobilePanelModeTabs s=sm selected-tab=${mobilePanelMode} :items=${mobilePanelModeTabs}",
+    );
+    expect(layoutEditorView).toMatch(
+      /mobilePanelModeTabs:\n\s+eventListeners:\n\s+item-click:\n\s+handler: handleMobilePanelModeChange/,
+    );
+    expect(layoutEditorView).not.toContain("rtgl-button#nodeButton");
+    expect(layoutEditorView).not.toContain("rtgl-button#previewButton");
     expect(layoutEditorView).not.toContain("mobileFileExplorerClose");
     expect(layoutEditorView).not.toContain("pos=fix");
+  });
+
+  it("moves undo and redo from the navbar to the Elements and element headers under the canvas on phones", () => {
+    const layoutEditorView = readFileSync(
+      new URL(
+        "../../src/pages/layoutEditor/layoutEditor.view.yaml",
+        import.meta.url,
+      ),
+      "utf8",
+    );
+    const lines = layoutEditorView.split("\n");
+    const indentOf = (line) => line.search(/\S/);
+    // The $if block that holds a line.
+    const conditionOf = (text) => {
+      const index = lines.findIndex((line) => line.includes(text));
+      const ifLine = lines
+        .slice(0, index)
+        .reverse()
+        .find(
+          (line) =>
+            line.trim().startsWith("- $if") &&
+            indentOf(line) < indentOf(lines[index]) - 2,
+        );
+      return ifLine.trim();
+    };
+
+    expect(conditionOf("rtgl-button#undoButton")).toBe(
+      "- $if showNavbarEditHistory:",
+    );
+    for (const section of ["Elements", "Detail"]) {
+      for (const step of ["Undo", "Redo"]) {
+        expect(conditionOf(`rtgl-button#panel${step}Button${section}`)).toBe(
+          "- $if showPanelEditHistory:",
+        );
+      }
+    }
+    // Preview has neither.
+    const previewHeader = layoutEditorView.slice(
+      layoutEditorView.indexOf("$if showPreviewHeader"),
+      layoutEditorView.indexOf("$if isPreviewMounted"),
+    );
+    expect(previewHeader).toContain("${previewTitle}");
+    expect(previewHeader).not.toContain("pre=undo");
+    expect(previewHeader).not.toContain("pre=redo");
+    // In the Elements header they follow the up and down buttons.
+    expect(layoutEditorView.indexOf("panelUndoButtonElements")).toBeGreaterThan(
+      layoutEditorView.indexOf("rtgl-button#nodeMoveNextButton"),
+    );
+    expect(layoutEditorView).toMatch(
+      /panelUndoButton\*:\n\s+eventListeners:\n\s+click:\n\s+handler: handleUndoButtonClick/,
+    );
+    expect(layoutEditorView).toMatch(
+      /panelRedoButton\*:\n\s+eventListeners:\n\s+click:\n\s+handler: handleRedoButtonClick/,
+    );
   });
 
   it("puts the navbar's back button before the selected node name and opens the explorer", () => {
