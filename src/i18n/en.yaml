@@ -2011,6 +2011,7 @@ sceneEditorPage:
   downLabel: "Down"
   dontInheritOption: "Don't Inherit"
   editSectionTitle: "Edit Section"
+  cannotDeleteReferencedSection: "This section can't be deleted because another section links to it. Remove those links first."
   failedDeleteSection: "Failed to delete section"
   failedDuplicateSection: "Failed to duplicate section"
   failedDownloadCanvas: "Failed to download canvas."

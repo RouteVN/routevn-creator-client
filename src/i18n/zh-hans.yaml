@@ -2011,6 +2011,7 @@ sceneEditorPage:
   downLabel: "下"
   dontInheritOption: "不继承"
   editSectionTitle: "编辑段落"
+  cannotDeleteReferencedSection: "该段落是其他段落的跳转目标，无法删除。请先移除这些跳转。"
   failedDeleteSection: "无法删除段落。"
   failedDuplicateSection: "无法复制段落。"
   failedDownloadCanvas: "无法下载画布。"

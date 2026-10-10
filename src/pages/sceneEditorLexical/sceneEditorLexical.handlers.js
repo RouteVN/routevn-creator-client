@@ -740,24 +740,51 @@ const dispatchLineNavigationRender = (
   });
 };
 
+// The command layer words its refusals in English, for logs. A refusal the
+// user can resolve is explained here in their language instead.
+const getSceneEditorCommandRefusalMessage = (copy, code) => {
+  if (code === "section_referenced") {
+    return (
+      copy.cannotDeleteReferencedSection ??
+      "This section can't be deleted because another section links to it. Remove those links first."
+    );
+  }
+
+  return undefined;
+};
+
+// Thrown by `assertSceneEditorCommandResult` once the user has been told why a
+// command was refused. It stops the save that ran the command, and
+// `persistSceneEditorCommand` then ends the action without reporting an error.
+class SceneEditorCommandRefusedError extends Error {}
+
 const assertSceneEditorCommandResult = (
   result,
-  {
-    appService,
-    errorTitle = "Error",
-    fallbackMessage = "Failed to save scene changes",
-  } = {},
+  { appService, copy, fallbackMessage } = {},
 ) => {
   if (result?.valid !== false) {
     return result;
   }
 
-  const message = result?.error?.message || fallbackMessage;
-  appService?.showAlert({ message: message, title: errorTitle });
+  const { code, message, details } = result.error ?? {};
+  const error = new SceneEditorCommandRefusedError(message ?? fallbackMessage);
+  error.code = code ?? "validation_failed";
+  error.details = details;
 
-  const error = new Error(message);
-  error.code = result?.error?.code || "validation_failed";
-  error.details = result?.error?.details;
+  const refusalMessage = getSceneEditorCommandRefusalMessage(copy, code);
+  if (refusalMessage === undefined) {
+    console.error("[sceneEditor] Command refused", result);
+  }
+  appService.showAlert({
+    message:
+      refusalMessage ??
+      withErrorDetails(
+        fallbackMessage,
+        message === undefined ? undefined : error,
+        copy.errorDetailsLabel ?? "Details:",
+      ),
+    title: copy.errorTitle ?? "Error",
+  });
   throw error;
 };
 
@@ -838,6 +865,22 @@ const {
     await cacheCurrentSceneTextStats(deps);
   },
 });
+
+// Runs the save for an action, and resolves to whether the command went
+// through. When the command layer refused it, the user was already told why,
+// so this resolves to false and the action ends there. Any other failure is
+// thrown.
+const persistSceneEditorCommand = async (deps, task, options) => {
+  try {
+    await runSceneEditorPersistence(deps, task, options);
+    return true;
+  } catch (error) {
+    if (error instanceof SceneEditorCommandRefusedError) {
+      return false;
+    }
+    throw error;
+  }
+};
 
 const refreshSceneEditorStateFromProject = async (deps) => {
   const { store, projectService } = deps;
@@ -2111,7 +2154,7 @@ const submitSceneEditorCommandLine = async (deps, payload, { lineId }) => {
       return;
     }
 
-    await runSceneEditorPersistence(
+    const didSave = await persistSceneEditorCommand(
       deps,
       async () => {
         assertSceneEditorCommandResult(
@@ -2122,7 +2165,7 @@ const submitSceneEditorCommandLine = async (deps, payload, { lineId }) => {
           }),
           {
             appService,
-            errorTitle: copy.errorTitle ?? "Error",
+            copy,
             fallbackMessage:
               copy.failedSaveSectionTransition ??
               "Failed to save section transition",
@@ -2136,6 +2179,9 @@ const submitSceneEditorCommandLine = async (deps, payload, { lineId }) => {
         },
       },
     );
+    if (!didSave) {
+      return;
+    }
 
     await refreshSceneEditorStateFromProject(deps);
     finalizeActionTargetLine(store, lineId);
@@ -2275,8 +2321,9 @@ const submitSceneEditorCommandLine = async (deps, payload, { lineId }) => {
       ? ["dialogue.content"]
       : undefined;
 
+  let didSave = false;
   try {
-    await runSceneEditorPersistence(
+    didSave = await persistSceneEditorCommand(
       deps,
       async () => {
         if (dialogue) {
@@ -2288,7 +2335,7 @@ const submitSceneEditorCommandLine = async (deps, payload, { lineId }) => {
             }),
             {
               appService,
-              errorTitle: copy.errorTitle ?? "Error",
+              copy,
               fallbackMessage:
                 copy.failedSaveDialogueAction ??
                 "Failed to save dialogue action",
@@ -2305,7 +2352,7 @@ const submitSceneEditorCommandLine = async (deps, payload, { lineId }) => {
             }),
             {
               appService,
-              errorTitle: copy.errorTitle ?? "Error",
+              copy,
               fallbackMessage:
                 copy.failedSaveLineActions ?? "Failed to save line actions",
             },
@@ -2321,9 +2368,14 @@ const submitSceneEditorCommandLine = async (deps, payload, { lineId }) => {
         },
       },
     );
-  } catch (error) {
-    clearTemporaryPresentationPreview(deps);
-    throw error;
+  } finally {
+    // A save that did not go through, refused or failed, ends the preview.
+    if (!didSave) {
+      clearTemporaryPresentationPreview(deps);
+    }
+  }
+  if (!didSave) {
+    return;
   }
 
   store.clearTemporaryPresentationState?.();
@@ -3283,7 +3335,7 @@ const moveSceneEditorSectionWithinScene = async (
   }
 
   await flushSceneEditorDrafts(deps, { force: true });
-  await runSceneEditorPersistence(
+  const didMove = await persistSceneEditorCommand(
     deps,
     async () => {
       assertSceneEditorCommandResult(
@@ -3294,7 +3346,7 @@ const moveSceneEditorSectionWithinScene = async (
         }),
         {
           appService,
-          errorTitle: copy.errorTitle ?? "Error",
+          copy,
           fallbackMessage: copy.failedMoveSection ?? "Failed to move section",
         },
       );
@@ -3307,6 +3359,9 @@ const moveSceneEditorSectionWithinScene = async (
       },
     },
   );
+  if (!didMove) {
+    return;
+  }
 
   await refreshSceneEditorStateFromProject(deps);
   await selectSceneEditorSection(deps, sectionId);
@@ -3433,7 +3488,7 @@ export const handleDropdownMenuClickItem = async (deps, payload) => {
   if (action === "delete-section") {
     render();
     await flushSceneEditorDrafts(deps, { force: true });
-    await runSceneEditorPersistence(
+    const didDelete = await persistSceneEditorCommand(
       deps,
       async () => {
         assertSceneEditorCommandResult(
@@ -3443,7 +3498,7 @@ export const handleDropdownMenuClickItem = async (deps, payload) => {
           }),
           {
             appService,
-            errorTitle: copy.errorTitle ?? "Error",
+            copy,
             fallbackMessage:
               copy.failedDeleteSection ?? "Failed to delete section",
           },
@@ -3457,6 +3512,10 @@ export const handleDropdownMenuClickItem = async (deps, payload) => {
         },
       },
     );
+    if (!didDelete) {
+      render();
+      return;
+    }
 
     // Update store with new repository state
     syncStoreProjectState(store, projectService);
@@ -3473,7 +3532,7 @@ export const handleDropdownMenuClickItem = async (deps, payload) => {
   } else if (action === "duplicate-section") {
     await flushSceneEditorDrafts(deps, { force: true });
     let duplicateSectionId;
-    await runSceneEditorPersistence(
+    const didDuplicate = await persistSceneEditorCommand(
       deps,
       async () => {
         duplicateSectionId = assertSceneEditorCommandResult(
@@ -3482,7 +3541,7 @@ export const handleDropdownMenuClickItem = async (deps, payload) => {
           }),
           {
             appService,
-            errorTitle: copy.errorTitle ?? "Error",
+            copy,
             fallbackMessage:
               copy.failedDuplicateSection ?? "Failed to duplicate section",
           },
@@ -3496,6 +3555,10 @@ export const handleDropdownMenuClickItem = async (deps, payload) => {
         },
       },
     );
+    if (!didDuplicate) {
+      render();
+      return;
+    }
 
     await refreshSceneEditorStateFromProject(deps);
 
@@ -3643,7 +3706,7 @@ export const handleSectionMoveSceneFormActionClick = async (deps, payload) => {
 
   store.hideSectionMoveSceneDialog();
 
-  await runSceneEditorPersistence(
+  const didMove = await persistSceneEditorCommand(
     deps,
     async () => {
       assertSceneEditorCommandResult(
@@ -3654,7 +3717,7 @@ export const handleSectionMoveSceneFormActionClick = async (deps, payload) => {
         }),
         {
           appService,
-          errorTitle: copy.errorTitle ?? "Error",
+          copy,
           fallbackMessage: copy.failedMoveSection ?? "Failed to move section",
         },
       );
@@ -3668,6 +3731,10 @@ export const handleSectionMoveSceneFormActionClick = async (deps, payload) => {
       },
     },
   );
+  if (!didMove) {
+    render();
+    return;
+  }
 
   await refreshSceneEditorStateFromProject(deps);
   subject.dispatch("sceneEditor.renderCanvas", {});
