@@ -1193,6 +1193,34 @@ describe("baseFileExplorer handlers", () => {
     expect(deps.store.selectIsDragging()).toBe(false);
   });
 
+  it("selects a pointer tap on its touchend, which cancels the click that follows", () => {
+    vi.useFakeTimers();
+    const { deps } = createDragDeps();
+    const point = { currentTarget: deps.refs.itemRef0, x: 10, y: 16 };
+
+    handleItemPointerDown(deps, { _event: createPointerEvent(point) });
+    handleWindowPointerUp(deps, {
+      _event: { ...createPointerEvent(point), type: "pointerup" },
+    });
+
+    // Selecting here would let the click after the tap land on whatever the
+    // selection opens under the finger.
+    expect(deps.dispatchEvent).not.toHaveBeenCalled();
+
+    const touchEnd = createTouchEvent({ ...point, ended: true });
+    handleWindowTouchEnd(deps, { _event: touchEnd });
+    vi.advanceTimersByTime(400);
+
+    expect(touchEnd.preventDefault).toHaveBeenCalled();
+    expect(deps.store.selectSelectedItemId()).toBe("item-1");
+    expect(deps.dispatchEvent).toHaveBeenCalledTimes(1);
+    expect(deps.dispatchEvent.mock.calls[0][0].detail).toMatchObject({
+      itemId: "item-1",
+    });
+    expect(deps.store.selectIsDragging()).toBe(false);
+    expect(deps.store.selectTouchDragPointerId()).toBeUndefined();
+  });
+
   it("suppresses touch context menu while preserving desktop context menu", () => {
     vi.useFakeTimers();
     const { deps } = createDragDeps();

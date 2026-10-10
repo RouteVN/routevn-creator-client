@@ -1351,6 +1351,14 @@ const handleMobilePointEnd = (deps, payload, { point } = {}) => {
 
   if (!store.selectTouchDragActive()) {
     clearTouchDragTimer(store);
+    // A finger's pointerup comes before its touchend, and only a cancelled
+    // touchend stops the click the browser sends after a tap. A tap selects
+    // on the touchend instead, so that click cannot land on what the
+    // selection opens under the finger, such as an input. Without touch
+    // events the click on the row selects.
+    if (payload?._event?.type === "pointerup" && store.selectPendingDrag()) {
+      return;
+    }
     payload?._event?.preventDefault?.();
     payload?._event?.stopPropagation?.();
     if (selectPendingTouchItem(deps)) {
