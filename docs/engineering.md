@@ -1485,12 +1485,13 @@ only add a particle (name, description, tags, and a preset; the editor opens
 next) and edit its name, description, and tags; double-click, long press, `e`,
 and **Open** open the editor, and **Duplicate** copies a particle into its
 folder. The canvas is the particle's own width and height, not the project
-resolution, and graphics restart when either changes. Edit keeps the
-particle form's five tabs (Basics has only the size and seed now). A form
+resolution, and graphics restart when either changes. Edit shows the
+particle form's fields at once, in five sections as the layout editor's panel
+does (Basics has only the size and seed now). A form
 change applies only the field that changed, on top of the saved effect, so
 preset curves and bounds that the form does not show are kept; undo, redo,
 and values the form normalizes remount the form with the new values. While
-Edit's Source tab is open, the canvas also draws the emitter source's outline
+Edit is open, the canvas also draws the emitter source's outline
 (the rect, the circle's or line's bounding box, or a small square for a
 point, at least 16 CSS pixels and kept inside the canvas), and dragging its
 border moves the source, both ends of a line together, as one undo step. Until the particle has a texture the canvas

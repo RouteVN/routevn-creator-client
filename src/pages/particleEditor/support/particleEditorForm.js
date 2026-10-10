@@ -363,28 +363,10 @@ const withFieldTooltips = (fields = []) =>
     };
   });
 
-// The Edit tab's sub-tabs. Each shows its own fields, and the form holds
-// only the fields of the tab that shows.
-export const PARTICLE_FORM_TAB_IDS = Object.freeze([
-  "basics",
-  "appearance",
-  "emission",
-  "source",
-  "movement",
-]);
-
-export const createParticleFormTabs = (copy) => [
-  { id: "basics", label: copy.basicsTab },
-  { id: "appearance", label: copy.appearanceTab },
-  { id: "emission", label: copy.emissionTab },
-  { id: "source", label: copy.sourceTab },
-  { id: "movement", label: copy.movementTab },
-];
-
 // The name, description and tags are edited on the particles page, so the
 // form holds the effect only.
-const createParticleFieldsByTab = ({ copy = {} } = {}) => {
-  const fieldsByTab = {
+const createParticleFieldsBySection = ({ copy = {} } = {}) => {
+  const fieldsBySection = {
     basics: [
       {
         name: "width",
@@ -793,25 +775,38 @@ const createParticleFieldsByTab = ({ copy = {} } = {}) => {
   };
 
   return Object.fromEntries(
-    Object.entries(fieldsByTab).map(([tab, fields]) => [
-      tab,
+    Object.entries(fieldsBySection).map(([section, fields]) => [
+      section,
       withFieldTooltips(fields),
     ]),
   );
 };
 
-// The form of one sub-tab. Edits apply as they are made, so it has no
-// buttons.
-export const createParticleForm = ({
-  activeTab = "basics",
-  copy = {},
-} = {}) => ({
-  fields: createParticleFieldsByTab({ copy })[activeTab],
-  actions: {
-    layout: "",
-    buttons: [],
-  },
-});
+// Edit shows every field at once, in sections, as the layout editor's panel
+// does. Edits apply as they are made, so the form has no buttons.
+export const createParticleForm = ({ copy = {} } = {}) => {
+  const fieldsBySection = createParticleFieldsBySection({ copy });
+  const createSection = (id, label) => ({
+    type: "section",
+    id,
+    label,
+    fields: fieldsBySection[id],
+  });
+
+  return {
+    fields: [
+      createSection("basics", copy.basicsSection ?? "Basics"),
+      createSection("appearance", copy.appearanceSection ?? "Appearance"),
+      createSection("emission", copy.emissionSection ?? "Emission"),
+      createSection("source", copy.sourceSection ?? "Source"),
+      createSection("movement", copy.movementSection ?? "Movement"),
+    ],
+    actions: {
+      layout: "",
+      buttons: [],
+    },
+  };
+};
 
 // The form's values for a particle's effect: its size, seed and modules.
 export const buildParticleFormValues = ({ particle }) => {
