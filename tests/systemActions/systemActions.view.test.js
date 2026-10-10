@@ -82,6 +82,30 @@ describe("systemActions view", () => {
     );
   });
 
+  it("shows the background icon for every kind of background", () => {
+    const systemActionsView = readFileSync(
+      new URL(
+        "../../src/components/systemActions/systemActions.view.yaml",
+        import.meta.url,
+      ),
+      "utf8",
+    );
+    const backgroundStart = systemActionsView.indexOf(
+      "rtgl-view#actionItemBackground",
+    );
+    const backgroundMarkup = systemActionsView.slice(
+      backgroundStart,
+      systemActionsView.indexOf("$if preview.screen:", backgroundStart),
+    );
+
+    expect(backgroundStart).toBeGreaterThan(-1);
+    expect(backgroundMarkup.match(/rtgl-svg svg=\S+/g)).toEqual([
+      "rtgl-svg svg=image",
+    ]);
+    expect(backgroundMarkup).toContain("preview.background.type == 'layout'");
+    expect(backgroundMarkup).toContain("preview.background.type == 'video'");
+  });
+
   it("preserves scene editor selection before action dialog controls open", () => {
     const systemActionsView = readFileSync(
       new URL(
