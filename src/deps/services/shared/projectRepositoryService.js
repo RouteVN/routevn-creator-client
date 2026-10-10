@@ -427,6 +427,14 @@ export const createProjectRepositoryService = ({
     await releaseRepositoryByReference(reference);
   };
 
+  // Releases everything cached for the project folder at `projectPath`, even
+  // one that was only read and never registered, so the folder can be removed.
+  const releaseRepositoryByPath = async (projectPath) => {
+    await releaseRepositoryByReference(
+      await resolveProjectReferenceByPath(projectPath),
+    );
+  };
+
   const withRecoveredStore = async (reference, run) => {
     let hasRetriedClosedPool = false;
 
@@ -1523,6 +1531,9 @@ export const createProjectRepositoryService = ({
     },
     async releaseRepositoryByProjectId(projectId) {
       return releaseRepositoryByProjectId(projectId);
+    },
+    async releaseRepositoryByPath(projectPath) {
+      return releaseRepositoryByPath(projectPath);
     },
     async ensureRepository(options) {
       return ensureRepository(options);

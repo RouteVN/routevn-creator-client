@@ -153,7 +153,9 @@ is visible while the import runs (the fs plugin scope does not match leading-dot
 is killed mid-import. The desktop destination folder is named from `Content-Disposition`, else the last URL
 segment, else `RouteVN Project` (`deriveImportFolderName`; unsafe characters become `-`, at most 180 bytes,
 Windows reserved names prefixed with `_`); a taken name gets ` 2`, ` 3`, so an existing folder is never
-overwritten, and the moved folder is removed again if registering fails.
+overwritten. If registering fails, the project's database connection is closed and any list entry the import
+added is removed before the moved folder is removed again, so a later import into the same folder name opens
+its own database.
 
 ## Importing a project that already exists
 

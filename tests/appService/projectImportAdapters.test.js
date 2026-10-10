@@ -64,6 +64,7 @@ const createProjectService = () => ({
     language: "en",
     iconFileId: null,
   })),
+  releaseRepositoryByPath: vi.fn(async () => {}),
 });
 
 const createParams = ({ db, projectService }) => ({
@@ -417,23 +418,102 @@ describe("desktop project import adapters", () => {
       expect(mocked.remove).toHaveBeenCalledTimes(1);
     });
 
-    it("removes the moved folder when the project cannot be registered", async () => {
+    const expectReleasedBeforeRemoval = (projectService) => {
+      expect(projectService.releaseRepositoryByPath).toHaveBeenCalledWith(
+        "/projects/parent/Project One",
+      );
+      const folderRemoval = mocked.remove.mock.calls.findIndex(
+        ([path]) => path === "/projects/parent/Project One",
+      );
+      expect(mocked.remove.mock.calls[folderRemoval]).toEqual([
+        "/projects/parent/Project One",
+        { recursive: true },
+      ]);
+      expect(
+        projectService.releaseRepositoryByPath.mock.invocationCallOrder[0],
+      ).toBeLessThan(mocked.remove.mock.invocationCallOrder[folderRemoval]);
+    };
+
+    it("releases the project's storage, then removes the moved folder when the project cannot be registered", async () => {
+      const db = createDb();
       mockNative();
       mockFreeNames();
-      const projectService = {
-        getProjectInfoByPath: vi.fn(async () => {
-          throw new Error("file is not a database");
-        }),
-      };
+      const projectService = createProjectService();
+      projectService.getProjectInfoByPath.mockRejectedValue(
+        new Error("file is not a database"),
+      );
 
       await expect(
-        importFromUrl(createService({ projectService })),
+        importFromUrl(createService({ db, projectService })),
       ).rejects.toThrow("file is not a database");
+
+      expectReleasedBeforeRemoval(projectService);
+      expect(await db.get("projectEntries")).toEqual([]);
+    });
+
+    it("removes the entry it added when saving the project list fails after the entry was stored", async () => {
+      const db = createDb();
+      const setEntries = db.set.getMockImplementation();
+      db.set.mockImplementationOnce(async (key, value) => {
+        await setEntries(key, value);
+        throw new Error("disk I/O error");
+      });
+      mockNative();
+      mockFreeNames();
+      const projectService = createProjectService();
+
+      await expect(
+        importFromUrl(createService({ db, projectService })),
+      ).rejects.toThrow("disk I/O error");
+
+      expectReleasedBeforeRemoval(projectService);
+      expect(await db.get("projectEntries")).toEqual([]);
+    });
+
+    it("still removes the moved folder and its entry when releasing the project's storage fails", async () => {
+      vi.spyOn(console, "error").mockImplementation(() => {});
+      const db = createDb();
+      const setEntries = db.set.getMockImplementation();
+      db.set.mockImplementationOnce(async (key, value) => {
+        await setEntries(key, value);
+        throw new Error("disk I/O error");
+      });
+      mockNative();
+      mockFreeNames();
+      const projectService = createProjectService();
+      projectService.releaseRepositoryByPath.mockRejectedValue(
+        new Error("database is locked"),
+      );
+
+      await expect(
+        importFromUrl(createService({ db, projectService })),
+      ).rejects.toThrow("disk I/O error");
 
       expect(mocked.remove).toHaveBeenCalledWith(
         "/projects/parent/Project One",
         { recursive: true },
       );
+      expect(await db.get("projectEntries")).toEqual([]);
+    });
+
+    it("leaves an entry that already had the new folder's path as it was", async () => {
+      const staleEntry = {
+        id: "project-two",
+        projectPath: "/projects/parent/Project One",
+        name: "Project Two",
+      };
+      const db = createDb();
+      await db.set("projectEntries", [staleEntry]);
+      mockNative();
+      mockFreeNames();
+      const projectService = createProjectService();
+
+      await expect(
+        importFromUrl(createService({ db, projectService })),
+      ).rejects.toThrow(/^projectExists: /);
+
+      expectReleasedBeforeRemoval(projectService);
+      expect(await db.get("projectEntries")).toEqual([staleEntry]);
     });
   });
 });
