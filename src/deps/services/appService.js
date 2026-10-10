@@ -276,6 +276,33 @@ export const createAppService = (params) => {
     platformAdapter,
   });
 
+  // Undoes a URL import whose folder could not be registered. The project's
+  // database connection and cached stores are released before the folder is
+  // deleted, so a later import into a folder of the same name opens its own
+  // database. The entry is removed only if this import added it: an entry that
+  // already had this path pointed at a missing folder and is left as it was.
+  // Each step is attempted even if an earlier one failed, so the folder is
+  // still removed when releasing or unlisting it did not work.
+  const discardImportedFolder = async ({ projectPath, registeredPaths }) => {
+    try {
+      await params.projectService.releaseRepositoryByPath(projectPath);
+    } catch (releaseError) {
+      console.error("Failed to release the imported project:", releaseError);
+    }
+    if (!registeredPaths.has(projectPath)) {
+      try {
+        await appService.removeProjectEntryByPath(projectPath);
+      } catch (entryError) {
+        console.error("Failed to unlist the imported project:", entryError);
+      }
+    }
+    try {
+      await projectImportHost.removeFolder(projectPath);
+    } catch (removeError) {
+      console.error("Failed to remove the imported folder:", removeError);
+    }
+  };
+
   return {
     ...appService,
 
@@ -314,6 +341,11 @@ export const createAppService = (params) => {
         parent: destinationFolder,
         onProgress,
         finish: async ({ staging, path, meta }) => {
+          const registeredPaths = new Set(
+            (await appService.getProjectEntries()).map(
+              (entry) => entry.projectPath,
+            ),
+          );
           const projectPath = await projectImportHost.moveToAvailableFolder({
             staging,
             path,
@@ -323,14 +355,7 @@ export const createAppService = (params) => {
           try {
             return await appService.openExistingProject(projectPath);
           } catch (error) {
-            try {
-              await projectImportHost.removeFolder(projectPath);
-            } catch (removeError) {
-              console.error(
-                "Failed to remove the imported folder:",
-                removeError,
-              );
-            }
+            await discardImportedFolder({ projectPath, registeredPaths });
             throw error;
           }
         },

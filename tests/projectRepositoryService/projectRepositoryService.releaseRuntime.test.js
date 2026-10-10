@@ -276,4 +276,72 @@ describe("projectRepositoryService release runtime", () => {
     ).not.toHaveBeenCalled();
     expect(storageAdapter.resolveProjectReferenceByPath).not.toHaveBeenCalled();
   });
+
+  describe("releasing a project folder by path", () => {
+    const PROJECT_PATH = "/projects/project-one";
+
+    const createPathService = () => {
+      const store = {
+        app: {
+          get: vi.fn(async (key) => (key === "creatorVersion" ? 1 : undefined)),
+        },
+        close: vi.fn(async () => {}),
+      };
+      const storageAdapter = {
+        resolveProjectReferenceByPath: vi.fn(async ({ projectPath }) => ({
+          projectPath,
+          cacheKey: projectPath,
+          repositoryProjectId: projectPath,
+        })),
+        readCreatorVersionByReference: vi.fn(async () => 1),
+        readProjectInfoByReference: vi.fn(async () => ({
+          id: "project-1",
+          namespace: "namespace-1",
+          nativeApplicationIdentifier: "vn.routevn.player.project-1",
+          name: "Project One",
+        })),
+        createStore: vi.fn(async () => store),
+        evictStoreByReference: vi.fn(async () => {}),
+      };
+      const service = createProjectRepositoryService({
+        router: {
+          getPayload: () => ({}),
+        },
+        db: {},
+        creatorVersion: 1,
+        storageAdapter,
+        collabAdapter: noopCollabAdapter,
+      });
+
+      return { service, store, storageAdapter };
+    };
+
+    it("evicts the storage of a folder that was only read", async () => {
+      const { service, store, storageAdapter } = createPathService();
+
+      await service.getProjectInfoByPath(PROJECT_PATH);
+      await service.releaseRepositoryByPath(PROJECT_PATH);
+
+      expect(storageAdapter.createStore).not.toHaveBeenCalled();
+      expect(store.close).not.toHaveBeenCalled();
+      expect(storageAdapter.evictStoreByReference).toHaveBeenCalledWith({
+        reference: expect.objectContaining({
+          projectPath: PROJECT_PATH,
+          cacheKey: PROJECT_PATH,
+        }),
+      });
+    });
+
+    it("forgets the store and reference of a project id bound to the folder", async () => {
+      const { service, store, storageAdapter } = createPathService();
+
+      await service.ensureProjectCompatibleByPath(PROJECT_PATH, "project-1");
+      expect(service.getStoreByProjectSync("project-1")).toBe(store);
+
+      await service.releaseRepositoryByPath(PROJECT_PATH);
+
+      expect(service.getStoreByProjectSync("project-1")).toBeUndefined();
+      expect(storageAdapter.evictStoreByReference).toHaveBeenCalledTimes(1);
+    });
+  });
 });

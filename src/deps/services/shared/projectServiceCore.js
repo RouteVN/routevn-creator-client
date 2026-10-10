@@ -698,6 +698,7 @@ export const createProjectServiceCore = ({
       }, options);
     },
     getRepositoryByPath: repositoryService.getRepositoryByPath,
+    releaseRepositoryByPath: repositoryService.releaseRepositoryByPath,
     ...collabService.commandApi,
     getState: getDomainState,
     getDomainState,

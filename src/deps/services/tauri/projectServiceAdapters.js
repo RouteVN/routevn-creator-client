@@ -52,7 +52,10 @@ import {
   withSqliteLockRetry,
 } from "../../../internal/sqliteLocking.js";
 import { assertSafeProjectFileId } from "../../../internal/projectFileIds.js";
-import { getManagedSqliteConnection } from "../../clients/tauri/sqliteConnectionManager.js";
+import {
+  closeManagedSqliteConnection,
+  getManagedSqliteConnection,
+} from "../../clients/tauri/sqliteConnectionManager.js";
 import { isMacosHost } from "../../clients/tauri/platform.js";
 import { normalizeExportFileEntries } from "../shared/projectExportService.js";
 import { requireNativeApplicationIdentifier } from "../../../internal/nativeApplicationIdentifier.js";
@@ -500,6 +503,23 @@ export const createTauriProjectServiceAdapters = ({
         [key, JSON.stringify(value)],
       ),
     );
+  };
+
+  // App-state reads and writes open the project database without a store, and
+  // that connection stays cached for the path until it is closed here.
+  const closeProjectDatabaseConnection = async (reference) => {
+    const projectPath = reference?.projectPath;
+    if (!projectPath) {
+      return;
+    }
+
+    const dbFilePath = await join(projectPath, PROJECT_DB_NAME);
+    try {
+      await closeManagedSqliteConnection({ dbPath: `sqlite:${dbFilePath}` });
+    } catch {
+      // The connection is dropped from the cache before it closes, so the
+      // next read of this path opens the file again even if closing failed.
+    }
   };
 
   const getReferenceFilesPath = async (reference) => {
@@ -1056,6 +1076,7 @@ export const createTauriProjectServiceAdapters = ({
       await evictPersistedTauriProjectStoreCache({
         projectPath: reference?.projectPath,
       });
+      await closeProjectDatabaseConnection(reference);
     },
 
     initializeProject: async ({

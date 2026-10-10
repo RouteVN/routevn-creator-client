@@ -131,3 +131,9 @@ export const getManagedSqliteConnection = ({
   connectionsByPath.set(dbPath, connection);
   return connection;
 };
+
+// Closes the cached connection to `dbPath`, if there is one. The next
+// `getManagedSqliteConnection` for that path opens the file again.
+export const closeManagedSqliteConnection = async ({ dbPath }) => {
+  await connectionsByPath.get(dbPath)?.close();
+};
