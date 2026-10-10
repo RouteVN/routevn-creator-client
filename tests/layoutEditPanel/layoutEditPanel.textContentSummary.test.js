@@ -31,4 +31,14 @@ describe("layoutEditPanel text content summary", () => {
       expect(fieldLine).toContain(attribute);
     }
   });
+
+  it("gives action items rtgl-select's background", () => {
+    const actionItemLine = layoutEditPanelView
+      .slice(layoutEditPanelView.indexOf("$elif item.type == 'list-item':"))
+      .split("\n")
+      .find((line) => line.includes("rtgl-view#listItem"));
+
+    expect(actionItemLine).toContain("rtgl-view#listItem${i}x${j}x${k}");
+    expect(actionItemLine).toContain(" bgc=su ");
+  });
 });

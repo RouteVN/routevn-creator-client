@@ -104,6 +104,28 @@ const isTextEntryEvent = (event) => {
   return ["INPUT", "SELECT", "TEXTAREA"].includes(target?.tagName);
 };
 
+// A focused button keeps Space to press itself.
+const isFocusedControlEvent = (event) => {
+  const target = event.composedPath?.()[0] ?? event.target;
+  return Boolean(target?.closest?.('button, [role="button"]'));
+};
+
+// Space plays or stops the preview, as the Play button does. A text field,
+// a focused button, or an open dialog keeps the key.
+const isPreviewPlaybackShortcutEvent = (event) => {
+  return (
+    isSpaceKey(event) &&
+    !event.isComposing &&
+    !event.altKey &&
+    !event.ctrlKey &&
+    !event.metaKey &&
+    !event.shiftKey &&
+    !isTextEntryEvent(event) &&
+    !isFocusedControlEvent(event) &&
+    !event.composedPath().some((node) => node.tagName === "DIALOG")
+  );
+};
+
 const stopPreviewPlaybackIndicator = ({
   preservePlayhead = false,
   store,
@@ -999,6 +1021,9 @@ const mountTimelinePanSubscriptions = (deps) => {
         handleCaptureAnimationCanvasShortcutKeyDown(deps, {
           _event: event,
         });
+        handlePreviewPlaybackShortcutKeyDown(deps, {
+          _event: event,
+        });
         handleTimelinePanKeyDown(deps, {
           _event: event,
         });
@@ -1183,6 +1208,25 @@ export const handleCaptureAnimationCanvasShortcutKeyDown = async (
   store.setAnimationCanvasCaptureShortcutStartedAt({ timestamp: undefined });
   event.preventDefault();
   await handleCaptureAnimationCanvas(deps);
+};
+
+export const handlePreviewPlaybackShortcutKeyDown = (deps, payload) => {
+  const { store } = deps;
+  const event = payload._event;
+  // Over the timeline, holding Space pans it, so there the key up plays.
+  if (
+    !isPreviewPlaybackShortcutEvent(event) ||
+    store.selectTimelinePanHovered()
+  ) {
+    return;
+  }
+
+  event.preventDefault();
+  if (event.repeat) {
+    return;
+  }
+
+  void handleReplayAnimation(deps);
 };
 
 export const handleBeforeMount = (deps) => {
@@ -1485,11 +1529,10 @@ export const handleTimelinePanPointerLeave = (deps) => {
 export const handleTimelinePanKeyDown = (deps, payload) => {
   const { render, store } = deps;
   const event = payload._event;
-  const target = event.composedPath?.()[0] ?? event.target;
   if (
     !isSpaceKey(event) ||
     isTextEntryEvent(event) ||
-    target?.closest?.('button, [role="button"]') ||
+    isFocusedControlEvent(event) ||
     !store.selectTimelinePanHovered() ||
     store.selectTimelinePanMode()
   ) {
@@ -1521,9 +1564,15 @@ export const handleTimelinePanKeyUp = (deps, payload) => {
   }
 
   event.preventDefault();
+  const dragged = store.selectTimelinePanDragged();
   stopTimelinePanGesture(deps);
   store.setTimelinePanMode({ enabled: false });
   render();
+  // Space let go over the timeline without dragging it plays or stops the
+  // preview, as it does elsewhere on the page.
+  if (!dragged && isPreviewPlaybackShortcutEvent(event)) {
+    void handleReplayAnimation(deps);
+  }
 };
 
 export const handleTimelinePanWindowBlur = (deps) => {
@@ -3321,28 +3370,12 @@ export const handleTogglePreviewLoop = (deps) => {
   render();
 };
 
-export const handleMobileEditorMenuClick = (deps, payload) => {
+export const handleTimelineZoomButtonClick = (deps, payload) => {
   const { refs, store, render } = deps;
   payload._event.stopPropagation();
-  const rect = refs.mobileEditorMenuButton.getBoundingClientRect();
+  const rect = refs.timelineZoomButton.getBoundingClientRect();
   store.closePopover();
-  store.setPopover({ mode: "editorMenu", x: rect.right, y: rect.bottom });
-  render();
-};
-
-export const handleMobileEditorMenuItemClick = (deps, payload) => {
-  const { store, render } = deps;
-  const { item } = payload._event.detail;
-  const { x, y } = store.selectPopover();
-  store.closePopover();
-
-  if (item.value === "loop") {
-    store.togglePreviewLoop({});
-  } else if (item.value === "zoom") {
-    store.setSelectedEditorTab({ tab: "tween" });
-    store.setPopover({ mode: "timelineZoom", x, y });
-  }
-
+  store.setPopover({ mode: "timelineZoom", x: rect.right, y: rect.bottom });
   render();
 };
 

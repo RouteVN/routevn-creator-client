@@ -919,8 +919,6 @@ animationEditorPage:
   keyframeValueTooltip: "Valor final de la propiedad al terminar la animación"
   kindLabel: "Tipo"
   linearEasingLabel: "Lineal"
-  loopMenuItem: "Activar bucle"
-  dontLoopMenuItem: "Desactivar bucle"
   loopPreviewLabel: "Vista previa en bucle"
   maskRemoveConfirmMessage: "¿Eliminar esta máscara de transición? Esta acción no se puede deshacer."
   maskRemoveConfirmTitle: "Eliminar máscara"

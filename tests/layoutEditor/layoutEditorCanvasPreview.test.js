@@ -76,6 +76,36 @@ describe("layout editor canvas preview", () => {
     expect(canvasItem()).toMatchObject({ x: 100, y: 300 });
   });
 
+  it("resizes both sides on the canvas while the aspect ratio is fixed", () => {
+    const { deps, canvasItem, getState } = createHarness();
+    deps.store.updateSelectedItem({
+      updatedItem: {
+        ...getState().layoutData.items["item-1"],
+        width: 400,
+        height: 200,
+        aspectRatioLock: 2,
+      },
+    });
+
+    // The edit panel sends the previewed sizes in its form values.
+    handleLayoutEditPanelPreview(deps, {
+      _event: {
+        detail: {
+          name: "width",
+          value: 600,
+          linkedValues: { height: 300 },
+          formValues: { width: 600, height: 300, aspectRatioLock: 2 },
+        },
+      },
+    });
+
+    expect(canvasItem()).toMatchObject({ width: 600, height: 300 });
+    expect(getState().layoutData.items["item-1"]).toMatchObject({
+      width: 400,
+      height: 200,
+    });
+  });
+
   it("puts the item back when the preview is cancelled", () => {
     const { deps, canvasItem } = createHarness();
     handleLayoutEditPanelPreview(deps, previewEvent("x", 420));

@@ -551,8 +551,8 @@ const buildPopoverForm = ({
   return nextForm;
 };
 
-// X, Y, rotation and opacity popovers show a slider with a Presets menu and
-// step buttons.
+// X, Y, width, height, rotation, scale, and opacity popovers show a slider
+// with a Presets menu and step buttons.
 const buildSliderPopoverContext = ({ name, projectResolution, copy } = {}) => {
   if (!isSliderPopoverField(name)) {
     return {};

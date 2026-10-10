@@ -37,6 +37,7 @@ import {
   handlePropertyRemoveConfirmDialogClose,
   handlePropertyNameClick,
   handlePreviewImageClick,
+  handlePreviewPlaybackShortcutKeyDown,
   handleReplayAnimation,
   handleRulerTimeScrub,
   handleSelectedKeyframeDelayChange,
@@ -670,11 +671,14 @@ describe("animationEditor.handlers", () => {
   it("pans the timeline horizontally while Space is held", () => {
     let timelinePan;
     let timelinePanClickSuppressed = false;
+    let timelinePanDragged = false;
     let timelinePanHovered = false;
     let timelinePanMode = false;
     const store = {
+      selectPreviewPlaying: vi.fn(() => true),
       selectTimelinePan: vi.fn(() => timelinePan),
       selectTimelinePanClickSuppressed: vi.fn(() => timelinePanClickSuppressed),
+      selectTimelinePanDragged: vi.fn(() => timelinePanDragged),
       selectTimelinePanHovered: vi.fn(() => timelinePanHovered),
       selectTimelinePanMode: vi.fn(() => timelinePanMode),
       setTimelinePanHovered: vi.fn(({ hovered }) => {
@@ -682,9 +686,11 @@ describe("animationEditor.handlers", () => {
       }),
       setTimelinePanMode: vi.fn(({ enabled }) => {
         timelinePanMode = enabled;
+        timelinePanDragged = false;
       }),
       startTimelinePan: vi.fn((nextTimelinePan) => {
         timelinePanClickSuppressed = true;
+        timelinePanDragged = true;
         timelinePan = nextTimelinePan;
       }),
       clearTimelinePanClickSuppression: vi.fn(() => {
@@ -756,7 +762,11 @@ describe("animationEditor.handlers", () => {
       _event: { preventDefault, stopPropagation },
     });
     handleTimelinePanKeyUp(deps, {
-      _event: { code: "Space", preventDefault },
+      _event: {
+        code: "Space",
+        composedPath: () => [{ tagName: "DIV" }],
+        preventDefault,
+      },
     });
 
     expect(releasePointerCapture).toHaveBeenCalledWith(7);
@@ -766,6 +776,7 @@ describe("animationEditor.handlers", () => {
       enabled: false,
     });
     expect(render).toHaveBeenCalledTimes(4);
+    expect(store.selectPreviewPlaying).not.toHaveBeenCalled();
   });
 
   it.each([
@@ -798,6 +809,102 @@ describe("animationEditor.handlers", () => {
     expect(preventDefault).not.toHaveBeenCalled();
     expect(store.setTimelinePanMode).not.toHaveBeenCalled();
     expect(render).not.toHaveBeenCalled();
+  });
+
+  // Playing, so a Space press takes the Play button's synchronous stop path.
+  const createPlayingPreviewStore = (store = {}) => ({
+    selectPreviewPlaybackFrameId: vi.fn(() => undefined),
+    selectPreviewPlaying: vi.fn(() => true),
+    selectTimelinePanHovered: vi.fn(() => false),
+    setPreviewPlaybackRequestId: vi.fn(),
+    stopPreviewPlayback: vi.fn(),
+    ...store,
+  });
+  const createSpaceKeyEvent = (event = {}) => ({
+    code: "Space",
+    composedPath: () => [{ tagName: "BODY" }],
+    preventDefault: vi.fn(),
+    ...event,
+  });
+
+  it("plays or stops the preview once per Space press", () => {
+    const store = createPlayingPreviewStore();
+    const render = vi.fn();
+    const deps = { graphicsService: {}, render, store };
+    const press = createSpaceKeyEvent();
+    const repeat = createSpaceKeyEvent({ repeat: true });
+
+    handlePreviewPlaybackShortcutKeyDown(deps, { _event: press });
+    handlePreviewPlaybackShortcutKeyDown(deps, { _event: repeat });
+
+    expect(press.preventDefault).toHaveBeenCalledOnce();
+    expect(repeat.preventDefault).toHaveBeenCalledOnce();
+    expect(store.stopPreviewPlayback).toHaveBeenCalledOnce();
+    expect(store.stopPreviewPlayback).toHaveBeenCalledWith({
+      preservePlayhead: true,
+    });
+    expect(render).toHaveBeenCalledOnce();
+  });
+
+  it.each([
+    ["a text field", { composedPath: () => [{ tagName: "TEXTAREA" }] }],
+    [
+      "a focused button",
+      { composedPath: () => [JSDOM.fragment("<button></button>").firstChild] },
+    ],
+    [
+      'a focused role="button"',
+      {
+        composedPath: () => [
+          JSDOM.fragment('<div role="button" tabindex="0"></div>').firstChild,
+        ],
+      },
+    ],
+    [
+      "an open dialog",
+      { composedPath: () => [{ tagName: "DIV" }, { tagName: "DIALOG" }] },
+    ],
+    ["a modifier key", { metaKey: true }],
+    ["an IME composition", { isComposing: true }],
+  ])("leaves Space alone in %s", (_label, event) => {
+    const store = createPlayingPreviewStore();
+    const spaceEvent = createSpaceKeyEvent(event);
+
+    handlePreviewPlaybackShortcutKeyDown(
+      { graphicsService: {}, render: vi.fn(), store },
+      { _event: spaceEvent },
+    );
+
+    expect(spaceEvent.preventDefault).not.toHaveBeenCalled();
+    expect(store.selectPreviewPlaying).not.toHaveBeenCalled();
+  });
+
+  it("plays or stops the preview when Space is tapped over the timeline", () => {
+    let timelinePanMode = false;
+    const store = createPlayingPreviewStore({
+      selectTimelinePan: vi.fn(() => undefined),
+      selectTimelinePanDragged: vi.fn(() => false),
+      selectTimelinePanHovered: vi.fn(() => true),
+      selectTimelinePanMode: vi.fn(() => timelinePanMode),
+      setTimelinePanMode: vi.fn(({ enabled }) => {
+        timelinePanMode = enabled;
+      }),
+    });
+    const deps = { graphicsService: {}, refs: {}, render: vi.fn(), store };
+    const keyDown = createSpaceKeyEvent();
+
+    handlePreviewPlaybackShortcutKeyDown(deps, { _event: keyDown });
+    handleTimelinePanKeyDown(deps, { _event: keyDown });
+
+    expect(timelinePanMode).toBe(true);
+    expect(store.selectPreviewPlaying).not.toHaveBeenCalled();
+
+    handleTimelinePanKeyUp(deps, { _event: createSpaceKeyEvent() });
+
+    expect(timelinePanMode).toBe(false);
+    expect(store.stopPreviewPlayback).toHaveBeenCalledWith({
+      preservePlayhead: true,
+    });
   });
 
   it("toggles preview looping", () => {
