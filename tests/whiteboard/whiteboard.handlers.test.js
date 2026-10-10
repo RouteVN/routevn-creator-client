@@ -728,6 +728,9 @@ describe("whiteboard minimap drag handlers", () => {
       handleContainerTouchStart(deps, {
         _event: touchStartEvent,
       });
+      // Chromium sends no long-press contextmenu for a cancelled touchstart,
+      // so the menu can open while the finger is still down.
+      expect(touchStartEvent.preventDefault).toHaveBeenCalledOnce();
 
       vi.advanceTimersByTime(500);
 

@@ -219,7 +219,7 @@ export const stopPanning = ({ state }, _payload = {}) => {
 
 export const startTouchPan = (
   { state },
-  { touchX, touchY, longPressTimeoutId } = {},
+  { touchX, touchY, startClientX, startClientY, longPressTimeoutId } = {},
 ) => {
   const startX = Number(touchX);
   const startY = Number(touchY);
@@ -232,6 +232,8 @@ export const startTouchPan = (
     type: "pan",
     startX,
     startY,
+    startClientX,
+    startClientY,
     startPanX: state.panX,
     startPanY: state.panY,
     longPressTimeoutId,

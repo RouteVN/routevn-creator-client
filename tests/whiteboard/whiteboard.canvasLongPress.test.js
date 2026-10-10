@@ -51,22 +51,57 @@ describe("whiteboard empty-canvas long press", () => {
   beforeEach(() => vi.useFakeTimers());
   afterEach(() => vi.useRealTimers());
 
-  it("emits the canvas action after 500 ms without a native contextmenu", () => {
+  it("emits the canvas action when a hold of 500 ms is released", () => {
     const deps = createDeps();
     handlers.handleContainerTouchStart(deps, touchEvent());
-    vi.advanceTimersByTime(499);
+    vi.advanceTimersByTime(500);
     expect(canvasEvents(deps)).toHaveLength(0);
-    vi.advanceTimersByTime(1);
-    expect(canvasEvents(deps).map((event) => event.detail)).toEqual([
-      { formX: 140, formY: 200, whiteboardX: 100, whiteboardY: 100 },
-    ]);
 
     const release = touchEvent([]);
     handlers.handleContainerTouchEnd(deps, release);
     expect(release._event.preventDefault).toHaveBeenCalledOnce();
+    expect(canvasEvents(deps).map((event) => event.detail)).toEqual([
+      { formX: 140, formY: 200, whiteboardX: 100, whiteboardY: 100 },
+    ]);
     expect(deps.store.selectTouchGesture()).toBeUndefined();
     expect(vi.getTimerCount()).toBe(0);
   });
+
+  // Chromium on Android sends a hold's own contextmenu after the system
+  // touch-and-hold delay plus its 100 ms show-press delay, to whatever is
+  // under the finger. Rettangoli's dialog closes on a backdrop contextmenu.
+  it.each([500, 1000, 1500])(
+    "keeps the form open past Android's contextmenu with a %i ms touch-and-hold delay",
+    (touchAndHoldDelayMs) => {
+      const deps = createDeps();
+      let isFormOpen = false;
+      deps.dispatchEvent.mockImplementation((event) => {
+        if (event.type === "canvas-context-menu") {
+          isFormOpen = true;
+        }
+      });
+      const nativeContextMenu = {
+        _event: { clientX: 140, clientY: 200, preventDefault: vi.fn() },
+      };
+      const sendAndroidContextMenu = () => {
+        if (isFormOpen) {
+          isFormOpen = false;
+          return;
+        }
+        handlers.handleContainerContextMenu(deps, nativeContextMenu);
+      };
+
+      handlers.handleContainerTouchStart(deps, touchEvent());
+      vi.advanceTimersByTime(touchAndHoldDelayMs + 100);
+      sendAndroidContextMenu();
+      vi.advanceTimersByTime(400);
+      handlers.handleContainerTouchEnd(deps, touchEvent([]));
+
+      expect(nativeContextMenu._event.preventDefault).toHaveBeenCalledOnce();
+      expect(isFormOpen).toBe(true);
+      expect(canvasEvents(deps)).toHaveLength(1);
+    },
+  );
 
   it("tolerates finger jitter without moving the canvas or cancelling the hold", () => {
     const deps = createDeps();
@@ -76,7 +111,6 @@ describe("whiteboard empty-canvas long press", () => {
       touchEvent([{ clientX: 143, clientY: 204 }]),
     );
     vi.advanceTimersByTime(500);
-    expect(canvasEvents(deps)).toHaveLength(1);
     expect(deps.store.selectPan()).toEqual({ x: -80, y: -40 });
 
     handlers.handleContainerTouchMove(
@@ -84,6 +118,10 @@ describe("whiteboard empty-canvas long press", () => {
       touchEvent([{ clientX: 180, clientY: 240 }]),
     );
     expect(deps.store.selectPan()).toEqual({ x: -80, y: -40 });
+    handlers.handleContainerTouchEnd(deps, touchEvent([]));
+    expect(canvasEvents(deps).map((event) => event.detail)).toEqual([
+      { formX: 140, formY: 200, whiteboardX: 100, whiteboardY: 100 },
+    ]);
   });
 
   it("cancels the hold when the finger pans, even if it returns to its start", () => {
@@ -96,6 +134,7 @@ describe("whiteboard empty-canvas long press", () => {
     expect(deps.store.selectPan()).toEqual({ x: -60, y: -10 });
     handlers.handleContainerTouchMove(deps, touchEvent());
     vi.advanceTimersByTime(600);
+    handlers.handleContainerTouchEnd(deps, touchEvent([]));
     expect(canvasEvents(deps)).toHaveLength(0);
     expect(vi.getTimerCount()).toBe(0);
   });
@@ -113,6 +152,15 @@ describe("whiteboard empty-canvas long press", () => {
     },
   );
 
+  it("does not emit the canvas action when a recognized hold is cancelled", () => {
+    const deps = createDeps();
+    handlers.handleContainerTouchStart(deps, touchEvent());
+    vi.advanceTimersByTime(500);
+    handlers.handleContainerTouchCancel(deps, touchEvent([]));
+    expect(canvasEvents(deps)).toHaveLength(0);
+    expect(deps.store.selectTouchGesture()).toBeUndefined();
+  });
+
   it("cancels for pinch and does not rearm when one finger remains", () => {
     const deps = createDeps();
     handlers.handleContainerTouchStart(deps, touchEvent());
@@ -126,6 +174,7 @@ describe("whiteboard empty-canvas long press", () => {
     expect(deps.store.selectTouchGesture().type).toBe("pinch");
     handlers.handleContainerTouchEnd(deps, touchEvent());
     vi.advanceTimersByTime(600);
+    handlers.handleContainerTouchEnd(deps, touchEvent([]));
     expect(canvasEvents(deps)).toHaveLength(0);
     expect(vi.getTimerCount()).toBe(0);
   });
@@ -137,13 +186,14 @@ describe("whiteboard empty-canvas long press", () => {
     };
     handlers.handleContainerTouchStart(deps, touchEvent());
     handlers.handleContainerContextMenu(deps, contextMenu);
-    expect(canvasEvents(deps)).toHaveLength(0);
     vi.advanceTimersByTime(500);
     handlers.handleContainerContextMenu(deps, contextMenu);
-    expect(canvasEvents(deps)).toHaveLength(1);
+    expect(canvasEvents(deps)).toHaveLength(0);
     handlers.handleContainerTouchEnd(deps, touchEvent([]));
+    expect(canvasEvents(deps)).toHaveLength(1);
     handlers.handleContainerContextMenu(deps, contextMenu);
     expect(canvasEvents(deps)).toHaveLength(2);
+    expect(contextMenu._event.preventDefault).toHaveBeenCalledTimes(3);
   });
 
   it("cleans up a pending hold when the component unmounts", () => {

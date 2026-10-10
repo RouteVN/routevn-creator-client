@@ -984,6 +984,8 @@ export const handleContainerTouchStart = (deps, payload) => {
   const itemId = getItemIdFromElement(itemElement);
   if (itemId && !store.selectIsPanMode()) {
     const touchClientPoint = getTouchClientPoint(event);
+    // Cancelling the touchstart also stops Chromium from sending its own
+    // long-press contextmenu, which could close the item menu.
     preventTouchDefault(event);
     event.stopPropagation();
     startTouchItemPress(deps, {
@@ -998,7 +1000,6 @@ export const handleContainerTouchStart = (deps, payload) => {
   store.clearLastTouchTap();
   let longPressTimeoutId;
   if (!itemId && !store.selectIsPanMode()) {
-    const clientPoint = getTouchClientPoint(event);
     longPressTimeoutId = globalThis.setTimeout(() => {
       const gesture = store.selectTouchGesture();
       if (
@@ -1009,13 +1010,16 @@ export const handleContainerTouchStart = (deps, payload) => {
         return;
       }
 
+      // handleContainerTouchEnd opens the canvas action on release.
       store.markTouchCanvasLongPressed();
-      dispatchCanvasContextMenu(deps, clientPoint);
     }, TOUCH_LONG_PRESS_MS);
   }
+  const clientPoint = getTouchClientPoint(event);
   store.startTouchPan({
     touchX: point.x,
     touchY: point.y,
+    startClientX: clientPoint.clientX,
+    startClientY: clientPoint.clientY,
     longPressTimeoutId,
   });
 };
@@ -1187,6 +1191,18 @@ export const handleContainerTouchEnd = (deps, payload) => {
   }
 
   stopTouchGesture(deps);
+
+  // A held canvas opens its action on release, not while the finger is down.
+  // Android sends its own contextmenu for the hold after the system
+  // touch-and-hold delay. While the finger is down that reaches this canvas,
+  // which cancels it, but a form already open under the finger would receive
+  // it on its backdrop and close.
+  if (gesture?.longPressFired) {
+    dispatchCanvasContextMenu(deps, {
+      clientX: gesture.startClientX,
+      clientY: gesture.startClientY,
+    });
+  }
 };
 
 export const handleContainerTouchCancel = (deps, payload) => {
