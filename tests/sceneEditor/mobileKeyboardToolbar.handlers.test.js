@@ -121,7 +121,7 @@ describe("mobileKeyboardToolbar.handlers", () => {
 
     try {
       const currentTarget = document.createElement("div");
-      currentTarget.dataset.actionId = "preview";
+      currentTarget.dataset.actionId = "redo";
       currentTarget.setPointerCapture = vi.fn();
       currentTarget.releasePointerCapture = vi.fn();
       const store = createStore();
@@ -141,7 +141,7 @@ describe("mobileKeyboardToolbar.handlers", () => {
       );
 
       expect(currentTarget.setPointerCapture).toHaveBeenCalledWith(14);
-      expect(store.selectPressedActionId()).toBe("preview");
+      expect(store.selectPressedActionId()).toBe("redo");
 
       handleToolbarItemPointerUp(
         { store, render },
@@ -227,15 +227,32 @@ describe("mobileKeyboardToolbar undo and More menu", () => {
     expect(event.preventDefault).toHaveBeenCalledOnce();
   });
 
-  it("undoes without closing the keyboard", () => {
-    const { restoreDomGlobals, field, deps, click } = setUp("undo");
+  it.each(["undo", "redo"])(
+    "sends %s without closing the keyboard",
+    (actionId) => {
+      const { restoreDomGlobals, field, deps, click } = setUp(actionId);
+      try {
+        click();
+
+        expect(deps.dispatchEvent.mock.calls[0][0].detail).toEqual({
+          actionId,
+        });
+        expect(document.activeElement).toBe(field);
+      } finally {
+        restoreDomGlobals();
+      }
+    },
+  );
+
+  it("closes the keyboard for the other actions", () => {
+    const { restoreDomGlobals, field, deps, click } = setUp("actions");
     try {
       click();
 
       expect(deps.dispatchEvent.mock.calls[0][0].detail).toEqual({
-        actionId: "undo",
+        actionId: "actions",
       });
-      expect(document.activeElement).toBe(field);
+      expect(document.activeElement).not.toBe(field);
     } finally {
       restoreDomGlobals();
     }
@@ -266,13 +283,14 @@ describe("mobileKeyboardToolbar undo and More menu", () => {
     const choose = (item) =>
       handleMoreMenuItemClick(deps, { _event: { detail: { item } } });
 
-    choose({ value: "redo", disabled: true });
+    choose({ value: "scene-settings", disabled: true });
     expect(deps.dispatchEvent).not.toHaveBeenCalled();
 
+    choose({ value: "preview" });
     choose({ value: "scene-settings" });
-    expect(deps.store.closeMoreMenu).toHaveBeenCalledTimes(2);
-    expect(deps.dispatchEvent.mock.calls[0][0].detail).toEqual({
-      actionId: "scene-settings",
-    });
+    expect(deps.store.closeMoreMenu).toHaveBeenCalledTimes(3);
+    expect(
+      deps.dispatchEvent.mock.calls.map(([event]) => event.detail),
+    ).toEqual([{ actionId: "preview" }, { actionId: "scene-settings" }]);
   });
 });
