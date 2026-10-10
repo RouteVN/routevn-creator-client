@@ -1,4 +1,8 @@
-import { isTouchUiConfig } from "../../internal/ui/resourcePages/mobileResourcePage.js";
+import {
+  isTouchUiConfig,
+  setMobileResourcePageWindowMetricsState,
+} from "../../internal/ui/resourcePages/mobileResourcePage.js";
+import { buildTimelineEditorControlsPlacement } from "../../internal/ui/timelineEditorControls.js";
 import {
   getAudioEffectDefinitionDuration,
   normalizeAudioEffectDefinition,
@@ -282,6 +286,8 @@ export const createInitialState = () => ({
   previewPlayheadVisible: false,
   previewRuntimeReady: false,
   isTouchMode: false,
+  // The app window's size, which tells a phone from a tablet.
+  appWindowMetrics: { width: 0, height: 0 },
   dirty: false,
   saving: false,
   // The audio effect as last saved, so an undo back to it saves nothing.
@@ -318,6 +324,11 @@ export const createInitialState = () => ({
     x: undefined,
     y: undefined,
   },
+  timelineZoomPopover: {
+    open: false,
+    x: undefined,
+    y: undefined,
+  },
   keyframeDialog: {
     open: false,
     side: undefined,
@@ -332,6 +343,10 @@ export const createInitialState = () => ({
 
 export const setUiConfig = ({ state }, { uiConfig } = {}) => {
   state.isTouchMode = isTouchUiConfig(uiConfig);
+};
+
+export const setAppWindowMetrics = ({ state }, { width, height } = {}) => {
+  setMobileResourcePageWindowMetricsState(state, { width, height });
 };
 
 export const loadAudioEffect = ({ state }, { item } = {}) => {
@@ -364,6 +379,7 @@ export const loadAudioEffect = ({ state }, { item } = {}) => {
   state.addPropertySideMenu.open = false;
   state.addPropertySideMenu.x = undefined;
   state.addPropertySideMenu.y = undefined;
+  state.timelineZoomPopover.open = false;
   closeKeyframeMenu({ state });
   state.dirty = false;
   state.savedDefinition = state.definition;
@@ -776,6 +792,18 @@ export const closeAddPropertySideMenu = ({ state }) => {
   state.addPropertySideMenu.open = false;
   state.addPropertySideMenu.x = undefined;
   state.addPropertySideMenu.y = undefined;
+};
+
+// The timeline zoom slider opens in a popover under its button, as in the
+// animation editor.
+export const openTimelineZoomPopover = ({ state }, { x, y } = {}) => {
+  state.timelineZoomPopover.open = true;
+  state.timelineZoomPopover.x = x;
+  state.timelineZoomPopover.y = y;
+};
+
+export const closeTimelineZoomPopover = ({ state }) => {
+  state.timelineZoomPopover.open = false;
 };
 
 // The keyframe after a keyframe holds the gap before it as its delay, so
@@ -1729,28 +1757,16 @@ export const selectViewData = ({ state, i18n }) => {
     isTransition,
     isUpdate: !isTransition,
     selectedEditorTab: state.selectedEditorTab,
-    editorTabs: [
-      {
-        id: "timeline",
-        label: copy.timelineLabel ?? "Timeline",
-        panelId: "audioEffectTimelinePanel",
-      },
-      {
-        id: "preview",
-        label: copy.previewTitle ?? "Preview",
-        panelId: "audioEffectPreviewPanel",
-      },
-    ].map((item) => {
-      const selected = item.id === state.selectedEditorTab;
-      return {
-        ...item,
-        selected,
-        tabIndex: selected ? 0 : -1,
-        backgroundColor: selected ? "ac" : "",
-        borderColor: selected ? "" : "tr",
-        textColor: selected ? "fg" : "mu-fg",
-      };
+    ...buildTimelineEditorControlsPlacement({
+      state,
+      isTimelineTab: state.selectedEditorTab === "timeline",
     }),
+    editorTabs: [
+      { id: "timeline", label: copy.timelineLabel ?? "Timeline" },
+      { id: "preview", label: copy.previewTitle ?? "Preview" },
+    ],
+    timelineTabLabel: copy.timelineLabel ?? "Timeline",
+    previewTabLabel: copy.previewTitle ?? "Preview",
     editorPanelsLabel: copy.editorPanelsLabel ?? "Audio effect editor panels",
     properties,
     updateTimelineProperties,
@@ -1807,6 +1823,7 @@ export const selectViewData = ({ state, i18n }) => {
     canAddProperty: availableProperties.length > 0,
     canAddTransitionProperty: addPropertySideMenuItems.length > 0,
     addPropertySideMenu: state.addPropertySideMenu,
+    timelineZoomPopover: state.timelineZoomPopover,
     addPropertySideMenuItems,
     addPropertyButton: copy.addPropertyButton ?? "Add Property",
     addKeyframeButton: copy.addKeyframeButton ?? "Add Keyframe",
@@ -1822,6 +1839,7 @@ export const selectViewData = ({ state, i18n }) => {
     playButton: state.previewPlaying
       ? (copy.stopPreviewButton ?? "Stop Preview")
       : (copy.playButton ?? "Play"),
+    playButtonIcon: state.previewPlaying ? "pause" : "play",
     playButtonDisabled: !previewReady || state.previewLoading,
     playButtonDisabledReason,
     playButtonTooltip: {

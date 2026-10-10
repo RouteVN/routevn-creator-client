@@ -1,19 +1,21 @@
 import { describe, expect, it } from "vitest";
 import {
-  addKeyframe,
   addAudioEffectProperty,
+  addKeyframe,
   applyKeyframe,
   closePreviewSoundSelector,
+  closeTimelineZoomPopover,
   confirmPreviewSoundSelection,
   createInitialState,
   hidePlayButtonTooltip,
   loadAudioEffect,
   markSaved,
+  openKeyframeDialog,
   openKeyframeMenu,
   openPreviewSoundSelector,
-  openKeyframeDialog,
-  removeKeyframe,
+  openTimelineZoomPopover,
   removeAudioEffectProperty,
+  removeKeyframe,
   selectAudioEffectDefinition,
   selectAudioEffectDuration,
   selectAudioEffectPreview,
@@ -21,6 +23,10 @@ import {
   selectDefaultSelectedKeyframeStartValue,
   selectKeyframeDialogIsFinal,
   selectViewData,
+  setAppWindowMetrics,
+  setPreviewPlayhead,
+  setPreviewSoundSelectorSelectedSoundId,
+  setSelectedEditorTab,
   setSelectedKeyframe,
   setSelectedKeyframeDelay,
   setSelectedKeyframeDuration,
@@ -31,12 +37,10 @@ import {
   setSelectedProperty,
   setSelectedPropertyInitialValue,
   setSelectedPropertyValueSource,
-  setPreviewSoundSelectorSelectedSoundId,
-  setPreviewPlayhead,
-  setSelectedEditorTab,
   setSoundsData,
   setTimelineViewportWidth,
   setTimelineZoom,
+  setUiConfig,
   showPlayButtonTooltip,
   startPreviewPlayback,
   togglePreviewLoop,
@@ -169,10 +173,13 @@ describe("audioEffectsEditor.store", () => {
     expect(selectViewData({ state, i18n: EN_I18N })).toMatchObject({
       selectedEditorTab: "timeline",
       editorTabs: [
-        { id: "timeline", label: "Timeline", selected: true },
-        { id: "preview", label: "Preview", selected: false },
+        { id: "timeline", label: "Timeline" },
+        { id: "preview", label: "Preview" },
       ],
+      timelineTabLabel: "Timeline",
+      previewTabLabel: "Preview",
       playButton: "Play",
+      playButtonIcon: "play",
       playButtonDisabled: true,
       playButtonDisabledReason:
         "Select different outgoing and incoming sounds in Preview to enable playback.",
@@ -1304,5 +1311,62 @@ describe("audioEffectsEditor.store", () => {
         { label: "Add keyframe to left", value: "add-left" },
       ],
     });
+  });
+  it("moves the tabs to the navbar on phones, with Loop, Play, and on Timeline undo and redo under the canvas", () => {
+    const state = createInitialState();
+    const placement = () => {
+      const viewData = selectViewData({ state, i18n: EN_I18N });
+      return {
+        showNavbarControls: viewData.showNavbarControls,
+        showNavbarEditorTabs: viewData.showNavbarEditorTabs,
+        showToolbarEditorTabs: viewData.showToolbarEditorTabs,
+        showToolbarPlayback: viewData.showToolbarPlayback,
+        showToolbarEditHistory: viewData.showToolbarEditHistory,
+        showLeadingTimelineZoom: viewData.showLeadingTimelineZoom,
+        showTrailingTimelineZoom: viewData.showTrailingTimelineZoom,
+      };
+    };
+    const tabletLayout = {
+      showNavbarControls: true,
+      showNavbarEditorTabs: false,
+      showToolbarEditorTabs: true,
+      showToolbarPlayback: false,
+      showToolbarEditHistory: false,
+      showLeadingTimelineZoom: false,
+      showTrailingTimelineZoom: true,
+    };
+
+    setAppWindowMetrics({ state }, { width: 390, height: 844 });
+    expect(placement()).toEqual(tabletLayout);
+
+    setUiConfig({ state }, { uiConfig: { id: "touch", inputMode: "touch" } });
+    expect(placement()).toEqual({
+      showNavbarControls: false,
+      showNavbarEditorTabs: true,
+      showToolbarEditorTabs: false,
+      showToolbarPlayback: true,
+      showToolbarEditHistory: true,
+      showLeadingTimelineZoom: true,
+      showTrailingTimelineZoom: false,
+    });
+    setSelectedEditorTab({ state }, { tab: "preview" });
+    expect(placement().showToolbarEditHistory).toBe(false);
+
+    setSelectedEditorTab({ state }, { tab: "timeline" });
+    setAppWindowMetrics({ state }, { width: 744, height: 1133 });
+    expect(placement()).toEqual(tabletLayout);
+  });
+
+  it("opens and closes the timeline zoom popover", () => {
+    const state = createInitialState();
+
+    openTimelineZoomPopover({ state }, { x: 180, y: 300 });
+    expect(
+      selectViewData({ state, i18n: EN_I18N }).timelineZoomPopover,
+    ).toEqual({ open: true, x: 180, y: 300 });
+    closeTimelineZoomPopover({ state });
+    expect(
+      selectViewData({ state, i18n: EN_I18N }).timelineZoomPopover.open,
+    ).toBe(false);
   });
 });

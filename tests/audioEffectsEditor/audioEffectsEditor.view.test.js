@@ -15,9 +15,12 @@ describe("audioEffectsEditor view", () => {
     expect(view).toContain("rvn-keyframe-timeline#nextTimeline");
     expect(view).toContain("${outgoingTimelineLabel}");
     expect(view).toContain("${incomingTimelineLabel}");
+    // Add reads as in the animation editor, at its size, and names what it
+    // adds.
     expect(view).toContain(
-      "rtgl-button#addPropertyButton pre=plus s=sm aria-haspopup=menu",
+      'rtgl-button#addPropertyButton pre=plus aria-haspopup=menu aria-expanded="${addPropertySideMenu.open}" aria-label="${addPropertyButton}" title="${addPropertyButton}"\': ${addButton}',
     );
+    expect(view).not.toContain("${addPropertyButton}': ${addPropertyButton}");
     expect(view).toContain("rtgl-dropdown-menu#addPropertySideMenu");
     expect(view).not.toContain("#addPreviousPropertyButton");
     expect(view).not.toContain("#addNextPropertyButton");
@@ -45,8 +48,14 @@ describe("audioEffectsEditor view", () => {
     );
     expect(view).toContain("$if selectedPropertyEditor.hasInitialValue");
     expect(view).toContain("rtgl-text s=sm c=mu-fg ta=c: ${noSelectionLabel}");
-    expect(view).toContain("rtgl-view#editorTabs role=tablist");
-    expect(view).toContain("$for item, i in editorTabs");
+    expect(view).toContain(
+      'rtgl-tabs#editorTabs aria-label="${editorPanelsLabel}" selected-tab=${selectedEditorTab} :items=${editorTabs}',
+    );
+    expect(view).not.toContain("$for item, i in editorTabs");
+    expect(view).not.toContain("handleEditorTabKeyDown");
+    expect(view).toContain(
+      'rtgl-view#audioEffectPreviewPanel role=tabpanel aria-label="${previewTabLabel}"',
+    );
     expect(view).toContain("$if selectedEditorTab == 'timeline'");
     expect(view).toContain("rtgl-view#audioEffectPreviewPanel");
     expect(view).toContain("${item.label}");
@@ -65,7 +74,10 @@ describe("audioEffectsEditor view", () => {
     ).toHaveLength(2);
     expect(view).toContain('".audioEffectPreviewSoundButton:focus"');
     expect(view).toContain('".audioEffectPreviewSoundButton:focus-visible"');
-    expect(view).toContain("rtgl-button#playButton");
+    expect(view).toContain(
+      'rtgl-button#playButton sq v=se pre=${playButtonIcon} aria-label="${playButton}"',
+    );
+    expect(view).not.toContain("rtgl-button#playButton s=sm");
     expect(view).toContain("handler: handlePlayClick");
     expect(view).toContain("rtgl-view#playButtonTooltipTrigger role=group");
     expect(view).toContain("handler: handlePlayButtonTooltipShow");
@@ -82,7 +94,15 @@ describe("audioEffectsEditor view", () => {
     );
     // Preview sounds save with the audio effect, so there is no Save Preview.
     expect(view).not.toContain("savePreview");
-    expect(view).toContain("rtgl-slider#timelineZoomSlider");
+    // Zoom opens its slider in a popover, as in the animation editor.
+    expect(view).toContain(
+      'rtgl-button#timelineZoomButton sq v=ol pre=zoomIn mr=md aria-haspopup=dialog aria-expanded="${timelineZoomPopover.open}"',
+    );
+    expect(view).toContain("handler: handleTimelineZoomButtonClick");
+    expect(view).toContain("handler: handleTimelineZoomPopoverClose");
+    expect(
+      view.indexOf("rtgl-slider#timelineZoomSlider w=1fg"),
+    ).toBeGreaterThan(view.indexOf("rtgl-popover#timelineZoomPopover"));
     expect(view).toContain("handler: handleTimelineZoomIn");
     expect(view).toContain("handler: handleTimelineZoomOut");
     expect(view).toContain("rtgl-dropdown-menu#keyframeDropdownMenu");
@@ -148,5 +168,69 @@ describe("audioEffectsEditor view", () => {
     expect(view).toMatch(
       /redoButton:\n\s+eventListeners:\n\s+click:\n\s+handler: handleRedoButtonClick/,
     );
+  });
+  it("moves the tabs to the navbar on phones, and the navbar's buttons to the toolbar, as the animation editor does", () => {
+    const view = readFileSync(
+      new URL(
+        "../../src/pages/audioEffectsEditor/audioEffectsEditor.view.yaml",
+        import.meta.url,
+      ),
+      "utf8",
+    );
+    const navbar = view.slice(
+      view.indexOf("rtgl-button#backButton"),
+      view.indexOf("div#audioPreviewCanvas"),
+    );
+    const toolbar = view.slice(
+      view.indexOf("rtgl-view#audioEffectsEditorToolbar"),
+      view.indexOf("rtgl-view#audioEffectTimelinePanel"),
+    );
+    const after = (text, marker, item) =>
+      text.indexOf(item, text.indexOf(marker)) > text.indexOf(marker);
+
+    for (const button of [
+      "rtgl-button#undoButton",
+      "rtgl-button#redoButton",
+      "rtgl-button#previewLoopButton",
+      "rtgl-button#playButton",
+    ]) {
+      expect(after(navbar, "$if showNavbarControls:", button)).toBe(true);
+    }
+    expect(
+      after(navbar, "$if showNavbarEditorTabs:", "rtgl-tabs#editorTabs s=sm"),
+    ).toBe(true);
+    expect(
+      after(
+        toolbar,
+        "$if showToolbarEditorTabs:",
+        "rtgl-tabs#editorTabs aria-label",
+      ),
+    ).toBe(true);
+    // On phones: zoom, Loop and Play on the left, evenly spaced in one
+    // group; then undo and redo, and Add last. Tablets and desktop keep zoom
+    // just before Add.
+    const order = [
+      "$if showToolbarPlayback:",
+      "rtgl-view d=h av=c g=xs:",
+      "$if showLeadingTimelineZoom:",
+      "rtgl-button#timelineZoomButton sq v=ol pre=zoomIn aria-haspopup",
+      "rtgl-button#previewLoopButton",
+      "rtgl-button#playButton",
+      "rtgl-view w=1fg: null",
+      "$if showToolbarEditHistory:",
+      "rtgl-button#undoButton",
+      "rtgl-button#redoButton",
+      "$if showTrailingTimelineZoom:",
+      "rtgl-button#addPropertyButton",
+    ].map((item) => toolbar.indexOf(item));
+    expect(order.every((index) => index > -1)).toBe(true);
+    expect([...order].sort((a, b) => a - b)).toEqual(order);
+    expect(
+      after(
+        toolbar,
+        "$if showTrailingTimelineZoom:",
+        "rtgl-button#timelineZoomButton",
+      ),
+    ).toBe(true);
   });
 });

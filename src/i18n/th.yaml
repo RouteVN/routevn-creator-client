@@ -1231,6 +1231,7 @@ particlesPage:
   scaleMinLabel: "สเกลต่ำสุด"
   seedDescription: "ใช้ค่าซีดสุ่มแบบคงที่เพื่อให้เอฟเฟกต์เล่นออกมาเหมือนเดิมทุกครั้ง"
   seedLabel: "ค่าซีด"
+  seedRandomLabel: "สุ่ม"
   selectButton: "เลือก"
   selectImageOption: "เลือกรูปภาพ"
   selectorLabel: "ตัวคัดเลือก"

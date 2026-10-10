@@ -1344,6 +1344,15 @@ the snapshot back at once and queue the autosave, which skips what is already
 saved; a new animation counts as saved as it opened, so undoing its first edit
 creates nothing. Keyframes and masks are selected by index, so a selection is
 cleared when the restore removes it or moves the keyframes or masks around it.
+On phones the **Timeline** and **Preview** tabs sit in the header after the
+name, as the other editors' **Edit** and **Preview** tabs do, and the header's
+buttons move to the toolbar under the canvas: the zoom button, Loop and Play
+on the left, and undo and redo before **Add** on the right; zoom, undo and
+redo show on Timeline only. Tablets and desktop keep the buttons in the header and the tabs in the
+toolbar. The audio effects editor has the same header, toolbar, and buttons
+(`buildTimelineEditorControlsPlacement` in
+`src/internal/ui/timelineEditorControls.js`): icon Loop and Play, a zoom
+button whose popover holds the timeline zoom slider, and **Add**.
 A picked preview image saves through the same autosave (`scheduleEditorAutosave`,
 without recording a step), and a save sends the preview images only when they
 differ from what is saved. A new animation is created by its first edit, which
@@ -1397,7 +1406,15 @@ and edit its name, description, and tags. The page has the layout editor's
 header (back, name, undo and redo, zoom), canvas workspace, and right panel
 with **Edit** and **Preview** tabs. As in the layout editor, the panel stays
 on the right in tablet landscape and moves under the canvas on phones and in
-tablet portrait, while the canvas stays in place. Edit holds
+tablet portrait, while the canvas stays in place. On phones, again as in the
+layout editor, the **Edit** and **Preview** tabs sit in the header after the
+name, and undo and redo in the header under the canvas, in Edit only; that
+header is hidden in Preview but stays in the page, since the virtual DOM keys
+elements without an id by their place, and removing it would rebuild the
+panels after it (the form would lose its scroll and local state). Tablets
+keep the tabs over the panel and undo
+and redo in the header (`buildEditorPanelPlacementViewData`, which the
+particle and text style editors share). Edit holds
 `rvn-layout-edit-panel mode=transform`, whose popovers preview on the canvas
 as in the layout editor, and draws the scene editor's custom transform editor
 outline on the canvas (`createBackgroundTransformEditorCanvasState` and the
@@ -1492,9 +1509,20 @@ only add a particle (name, description, tags, and a preset; the editor opens
 next) and edit its name, description, and tags; double-click, long press, `e`,
 and **Open** open the editor, and **Duplicate** copies a particle into its
 folder. The canvas is the particle's own width and height, not the project
-resolution, and graphics restart when either changes. Edit shows the
-particle form's fields at once, in five sections as the layout editor's panel
-does (Basics has only the size and seed now). A form
+resolution, and graphics restart when either changes. The tabs and undo and
+redo are placed as in the transform editor. Edit shows the particle form's
+fields at once, in five sections as the layout editor's panel
+does (Basics has only the size and seed now). Every number is an
+`rvn-slider-value-field` in a named slot field, as in the text style editor:
+its slider popover previews the value on the canvas about once a frame
+(except the size, which restarts the canvas), changes it on Submit, and leaves
+it on close; the preview also goes when turning a tablet moves the panel,
+which closes the popover. Submit and Enter keep the value within the field's
+bounds, and an emptied number keeps the last value. The source's positions
+and sizes run over the particle's own canvas, and its width, height, radius,
+and the rate start at 1, as they save only above 0. An unset seed shows as
+Random, with a Random preset to unset it again, and any saved seed stays as
+it is. A form
 change applies only the field that changed, on top of the saved effect, so
 preset curves and bounds that the form does not show are kept; undo, redo,
 and values the form normalizes remount the form with the new values. While
@@ -1524,7 +1552,8 @@ Text styles are edited on their own page as well, `/project/text-style-editor`
 (the `ts` payload holds the text style id), with the editors' header (back,
 name, undo and redo) and right panel with **Edit** and **Preview** tabs, which
 stays on the right in tablet landscape and moves under the preview on phones
-and in tablet portrait (`selectShowEditorRightPanelState`). The text styles
+and in tablet portrait (`selectShowEditorRightPanelState`); on phones the tabs
+and undo and redo are placed as in the transform editor. The text styles
 page's dialogs only add a text style (name, description, and tags; it starts
 with the project's first font and color, 16px, and the font's own weight, and
 the editor opens next) and edit its name, description, and tags;

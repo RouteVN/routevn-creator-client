@@ -43,12 +43,13 @@ describe("particle editor view", () => {
       'rvn-resizable-panel panel-type=detail-panel show-on-touch w=300 min-w=200 max-w=500 resize-side="left":',
     );
     expect(view).toContain("$if showMobilePanels:");
-    // The tabs, the form and the preview background show in either place.
+    // The tabs, the form and the preview background show in either place;
+    // phones show the tabs in the navbar.
     expect(
       count(
         /rtgl-tabs#rightPanelModeTabs s=sm selected-tab=\$\{rightPanelMode\} :items=\$\{rightPanelModeTabs\}: null/g,
       ),
-    ).toBe(2);
+    ).toBe(3);
     // The preview background saves on its own, so there is no Save Preview.
     expect(view).not.toContain("savePreview");
     // The form shows its fields in sections, without sub-tabs.

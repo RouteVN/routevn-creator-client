@@ -13,7 +13,10 @@ import {
 import { toPrimaryFontId } from "../../internal/fontIds.js";
 import { toFlatItems } from "../../internal/project/tree.js";
 import { selectEditHistoryCopy } from "../../internal/ui/editHistory.js";
-import { selectShowEditorRightPanelState } from "../../internal/ui/editorCanvasWorkspace.js";
+import {
+  buildEditorPanelPlacementViewData,
+  selectShowEditorRightPanelState,
+} from "../../internal/ui/editorCanvasWorkspace.js";
 import {
   isTouchUiConfig,
   setMobileResourcePageWindowMetricsState,
@@ -135,8 +138,15 @@ export const setUiConfig = ({ state }, { uiConfig } = {}) => {
   state.isTouchMode = isTouchUiConfig(uiConfig);
 };
 
+// Moving the panel between the right side and under the canvas rebuilds its
+// slider fields, which closes an open popover without a cancel, so the value
+// it showed goes too.
 export const setAppWindowMetrics = ({ state }, { width, height } = {}) => {
+  const showedRightPanel = selectShowEditorRightPanelState({ state });
   setMobileResourcePageWindowMetricsState(state, { width, height });
+  if (selectShowEditorRightPanelState({ state }) !== showedRightPanel) {
+    state.sliderPreview = undefined;
+  }
 };
 
 export const loadTextStyle = (
@@ -414,7 +424,8 @@ export const selectViewData = ({ state, i18n }) => {
   const previewValues = state.sliderPreview
     ? applyTextStyleFormChange(values, state.sliderPreview).values
     : values;
-  const showRightPanel = selectShowEditorRightPanelState({ state });
+  const panelPlacement = buildEditorPanelPlacementViewData({ state });
+  const { showRightPanel } = panelPlacement;
   const primaryFontId = toPrimaryFontId(values.fontId);
   const previewFontData = buildPreviewFontData(state);
   const colorOptions = buildColorOptions(state.colorsData);
@@ -424,8 +435,7 @@ export const selectViewData = ({ state, i18n }) => {
     resourceCategory: "userInterface",
     selectedResourceId: "text-style-editor",
     showExplorerPanel: !state.isTouchMode,
-    showRightPanel,
-    showMobilePanels: !showRightPanel,
+    ...panelPlacement,
     textStyleName: state.textStyleName,
     undoDisabled: state.editHistory.undo.length === 0,
     redoDisabled: state.editHistory.redo.length === 0,

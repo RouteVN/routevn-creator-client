@@ -1,4 +1,4 @@
-import { concatMap, debounceTime, filter, from, tap } from "rxjs";
+import { auditTime, concatMap, debounceTime, filter, from, tap } from "rxjs";
 import {
   createParticleEditorPayload,
   getParticleEditorBackPath,
@@ -28,6 +28,10 @@ const selectCopy = ({ i18n } = {}) => selectParticleEditorPageCopy(i18n);
 // Edits save on their own once the values have been still this long.
 const AUTOSAVE_DEBOUNCE_MS = 300;
 const AUTOSAVE_ACTION = "particleEditor.autosave";
+const SLIDER_PREVIEW_ACTION = "particleEditor.sliderPreview";
+// A slider moving fast shows on the canvas about once a frame, with its
+// latest value.
+const SLIDER_PREVIEW_INTERVAL_MS = 16;
 
 const {
   focusKeyboardScope: focusImageSelectorKeyboardScope,
@@ -295,13 +299,22 @@ const handleBorderDragEnd = async (deps) => {
 };
 
 const mountSubscriptions = (deps) => {
-  const { subject } = deps;
+  const { store, subject } = deps;
   const subscriptions = [
     subject
       .pipe(
         filter(({ action }) => action === AUTOSAVE_ACTION),
         debounceTime(AUTOSAVE_DEBOUNCE_MS),
         concatMap(() => from(saveParticleChanges(deps))),
+      )
+      .subscribe(),
+    subject
+      .pipe(
+        filter(({ action }) => action === SLIDER_PREVIEW_ACTION),
+        auditTime(SLIDER_PREVIEW_INTERVAL_MS),
+        // Submit and close draw the canvas themselves.
+        filter(() => store.selectHasSliderPreview()),
+        tap(() => renderParticleCanvas(deps)),
       )
       .subscribe(),
     subject
@@ -487,6 +500,44 @@ export const handleParticleFormChange = async (deps, payload) => {
     store.refreshForm();
   }
   await commitParticleEdit(deps);
+};
+
+// A size change restarts the canvas, so width and height show on Submit;
+// the other numbers show on the canvas while their slider popover moves.
+const SLIDER_FIELDS_WITHOUT_PREVIEW = new Set(["width", "height"]);
+
+export const handleSliderValueInput = (deps, payload) => {
+  const { store, subject } = deps;
+  const { name } = payload._event.currentTarget.dataset;
+  if (SLIDER_FIELDS_WITHOUT_PREVIEW.has(name)) {
+    return;
+  }
+
+  store.setSliderPreview({ name, value: payload._event.detail.value });
+  subject.dispatch(SLIDER_PREVIEW_ACTION, {});
+};
+
+// Submit changes the number, as typing it in the form did; closing the
+// popover leaves it as it was.
+export const handleSliderValueChange = async (deps, payload) => {
+  const { store } = deps;
+  const { name } = payload._event.currentTarget.dataset;
+  const { effect, refreshForm } = applyParticleFormChange(
+    store.selectEffect(),
+    { name, value: String(payload._event.detail.value) },
+  );
+  store.clearSliderPreview();
+  store.setEffect({ effect });
+  if (refreshForm) {
+    store.refreshForm();
+  }
+  await commitParticleEdit(deps);
+};
+
+export const handleSliderValueCancel = async (deps) => {
+  const { store } = deps;
+  store.clearSliderPreview();
+  await renderParticleCanvas(deps);
 };
 
 // rvn-zoom-viewport keeps the point in view in place when the zoom changes.

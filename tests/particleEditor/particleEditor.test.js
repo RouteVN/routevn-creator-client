@@ -16,6 +16,9 @@ import {
   handleParticleFormChange,
   handleRedoButtonClick,
   handleRightPanelModeChange,
+  handleSliderValueCancel,
+  handleSliderValueChange,
+  handleSliderValueInput,
   handleTextureImageClick,
   handleTextureImageKeyDown,
   handleUndoButtonClick,
@@ -862,6 +865,30 @@ describe("particle editor", () => {
     expect(page.view().canvasWrapperStyle).toContain("position: relative;");
   });
 
+  it("puts Edit and Preview in the navbar on a phone, and undo and redo under the canvas in Edit only", async () => {
+    const page = await createPage({ uiConfig: { id: "touch" } });
+    await page.resizeWindow({ width: 390, height: 844 });
+
+    expect(page.view()).toMatchObject({
+      showNavbarEditHistory: false,
+      showNavbarPanelModeTabs: true,
+      mobilePanelHeaderStyle: "",
+      showPanelModeTabs: false,
+      showPanelEditHistory: true,
+    });
+
+    handleRightPanelModeChange(page.deps, {
+      _event: { detail: { id: "preview" } },
+    });
+
+    // The header under the canvas would be empty in Preview.
+    expect(page.view()).toMatchObject({
+      showNavbarPanelModeTabs: true,
+      mobilePanelHeaderStyle: "display: none;",
+      showPanelEditHistory: false,
+    });
+  });
+
   it("keeps the panel on the right in tablet landscape, and moves it under the canvas in portrait", async () => {
     const page = await createPage({ uiConfig: { id: "touch" } });
     await page.resizeWindow({ width: 1133, height: 744 });
@@ -875,13 +902,98 @@ describe("particle editor", () => {
 
     await page.resizeWindow({ width: 744, height: 1133 });
 
+    // Tablets keep the tabs over the panel, and undo and redo in the navbar.
     expect(page.view()).toMatchObject({
       showRightPanel: false,
       showMobilePanels: true,
+      showNavbarEditHistory: true,
+      showNavbarPanelModeTabs: false,
+      mobilePanelHeaderStyle: "",
+      showPanelModeTabs: true,
+      showPanelEditHistory: false,
     });
     // The canvas redraws, so the outline fits the new canvas size.
     expect(page.deps.graphicsService.render.mock.calls.length).toBeGreaterThan(
       rendersBefore,
     );
+  });
+
+  it("drops a slider's preview when turning a tablet moves the panel, which closes the popover", async () => {
+    const page = await createPage({ uiConfig: { id: "touch" } });
+    await page.resizeWindow({ width: 1133, height: 744 });
+    const savedRate = page.effect().modules.emission.rate;
+    handleSliderValueInput(page.deps, {
+      _event: {
+        currentTarget: { dataset: { name: "emissionRate" } },
+        detail: { value: 150 },
+      },
+    });
+    expect(page.store.selectCanvasEffect().modules.emission.rate).toBe(150);
+
+    // A resize that keeps the panel in place keeps the preview.
+    await page.resizeWindow({ width: 1180, height: 820 });
+    expect(page.store.selectCanvasEffect().modules.emission.rate).toBe(150);
+
+    await page.resizeWindow({ width: 744, height: 1133 });
+    expect(page.store.selectCanvasEffect().modules.emission.rate).toBe(
+      savedRate,
+    );
+    page.cleanup?.();
+  });
+
+  it("previews a slider popover's number on the canvas, changes it on Submit, and keeps it on close", async () => {
+    const page = await createPage();
+    const slider = (handler, name, value) =>
+      handler(page.deps, {
+        _event: {
+          currentTarget: { dataset: { name } },
+          detail: { value },
+        },
+      });
+    const canvasRate = () =>
+      page.store.selectCanvasEffect().modules.emission.rate;
+    const savedRate = page.effect().modules.emission.rate;
+
+    // Every number is a slider field in the form's slot.
+    const rateField = page
+      .view()
+      .sliderValueFields.find((field) => field.name === "emissionRate");
+    expect(rateField).toMatchObject({
+      slot: "particle-slider-emissionRate",
+      value: `${savedRate}`,
+    });
+
+    const renders = () => page.deps.graphicsService.render.mock.calls.length;
+    const rendersBefore = renders();
+    slider(handleSliderValueInput, "emissionRate", 60);
+    slider(handleSliderValueInput, "emissionRate", 90);
+    slider(handleSliderValueInput, "emissionRate", 120);
+    expect(canvasRate()).toBe(120);
+    expect(page.effect().modules.emission.rate).toBe(savedRate);
+    // A fast slider shows on the canvas about once a frame, with its latest
+    // value.
+    expect(renders()).toBe(rendersBefore);
+    await wait(40);
+    expect(renders()).toBe(rendersBefore + 1);
+
+    // Closing the popover leaves the number as it was.
+    await slider(handleSliderValueCancel, "emissionRate");
+    expect(canvasRate()).toBe(savedRate);
+
+    await slider(handleSliderValueInput, "emissionRate", 80);
+    await slider(handleSliderValueChange, "emissionRate", 80);
+    expect(page.effect().modules.emission.rate).toBe(80);
+    expect(canvasRate()).toBe(80);
+    expect(page.state().editHistory.undo).toHaveLength(1);
+
+    // A size change restarts the canvas, so it shows on Submit only.
+    const rendersBeforeWidth =
+      page.deps.graphicsService.render.mock.calls.length;
+    slider(handleSliderValueInput, "width", 640);
+    await wait(40);
+    expect(page.deps.graphicsService.render.mock.calls.length).toBe(
+      rendersBeforeWidth,
+    );
+    page.cleanup?.();
   });
 });

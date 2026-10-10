@@ -2,11 +2,12 @@ import {
   formatCanvasMaxWidth,
   formatHalfViewportCanvasMaxWidth,
 } from "../projectResolution.js";
+import { isTouchPhone } from "../touchLayout.js";
 import { selectIsTabletLandscapeState } from "./resourcePages/mobileResourcePage.js";
 
 // The canvas workspace of the editor pages built like the layout editor
-// (the transform and particle editors): zoom, the right panel, and the
-// canvas layout. Their stores keep `canvasZoom`, `isTouchMode` and
+// (the transform and particle editors): zoom, the right panel and its tabs,
+// and the canvas layout. Their stores keep `canvasZoom`, `isTouchMode` and
 // `appWindowMetrics`.
 
 // Canvas zoom is relative to the canvas fitted to the workspace (1 = fit),
@@ -47,6 +48,38 @@ export const resetEditorCanvasZoomState = (state) => {
 // same rule.
 export const selectShowEditorRightPanelState = ({ state }) =>
   !state.isTouchMode || selectIsTabletLandscapeState({ state });
+
+// Where the Edit and Preview tabs and undo and redo go. Phones put the tabs
+// in the navbar after the name, and undo and redo in the header under the
+// canvas, in Edit only, as the layout editor does; that header is hidden in
+// Preview, where it would be empty. It stays in the page, so the panels after
+// it keep their place and are not rebuilt on a switch. Tablets and desktop
+// keep the tabs over the panel and undo and redo in the navbar. The stores
+// keep `rightPanelMode`.
+export const buildEditorPanelPlacementViewData = ({ state }) => {
+  const showRightPanel = selectShowEditorRightPanelState({ state });
+  const showMobilePanels = !showRightPanel;
+  const showPhonePanels =
+    showMobilePanels &&
+    isTouchPhone({
+      isTouchMode: state.isTouchMode,
+      width: state.appWindowMetrics.width,
+      height: state.appWindowMetrics.height,
+    });
+  const showPanelEditHistory =
+    showPhonePanels && state.rightPanelMode === "edit";
+
+  return {
+    showRightPanel,
+    showMobilePanels,
+    showNavbarEditHistory: !showPhonePanels,
+    showNavbarPanelModeTabs: showPhonePanels,
+    mobilePanelHeaderStyle:
+      !showPhonePanels || showPanelEditHistory ? "" : "display: none;",
+    showPanelModeTabs: !showPhonePanels,
+    showPanelEditHistory,
+  };
+};
 
 // The styles of the workspace and of the canvas wrapper for a canvas of
 // `resolution`.

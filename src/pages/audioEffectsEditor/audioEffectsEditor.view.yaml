@@ -29,13 +29,18 @@ refs:
     eventListeners:
       click:
         handler: handleTogglePreviewLoop
-  editorTabs: {}
-  editorTab*:
+  editorTabs:
+    eventListeners:
+      item-click:
+        handler: handleEditorTabClick
+  timelineZoomButton:
     eventListeners:
       click:
-        handler: handleEditorTabClick
-      keydown:
-        handler: handleEditorTabKeyDown
+        handler: handleTimelineZoomButtonClick
+  timelineZoomPopover:
+    eventListeners:
+      close:
+        handler: handleTimelineZoomPopoverClose
   timelineZoomSlider:
     eventListeners:
       value-change:
@@ -227,38 +232,50 @@ template:
               - 'rtgl-view d=h av=c g=sm w=1fg style="min-width: 0;"':
                   - rtgl-text ellipsis=true: ${audioEffectName}
                   - rtgl-text s=xs c=mu-fg: ${effectTypeLabel}
-              - rtgl-view d=h av=c g=xs:
-                  - 'rtgl-button#undoButton sq pre=undo v=ol ?disabled=${undoDisabled} aria-label="${undoLabel}" title="${undoLabel}"': null
-                  - 'rtgl-button#redoButton sq pre=redo v=ol ?disabled=${redoDisabled} aria-label="${redoLabel}" title="${redoLabel}"': null
-              - 'rtgl-button#previewLoopButton sq v=${previewLoopButtonVariant} pre=loop aria-label="${loopPreviewLabel}" aria-pressed="${previewLoopEnabled}" title="${loopPreviewLabel}"': null
-              - $if playButtonDisabledReason:
-                  - 'rtgl-view#playButtonTooltipTrigger role=group tabindex=0 aria-label="${playButton}: ${playButtonDisabledReason}" d=h av=c':
-                      - 'rtgl-button#playButton s=sm aria-label="${playButton}" aria-pressed="${previewPlaying}" ?disabled=${playButtonDisabled}': ${playButton}
-                $else:
-                  - 'rtgl-button#playButton s=sm aria-label="${playButton}" aria-pressed="${previewPlaying}" ?disabled=${playButtonDisabled}': ${playButton}
+              - $if showNavbarControls:
+                  - rtgl-view d=h av=c g=xs:
+                      - 'rtgl-button#undoButton sq pre=undo v=ol ?disabled=${undoDisabled} aria-label="${undoLabel}" title="${undoLabel}"': null
+                      - 'rtgl-button#redoButton sq pre=redo v=ol ?disabled=${redoDisabled} aria-label="${redoLabel}" title="${redoLabel}"': null
+                  - 'rtgl-button#previewLoopButton sq v=${previewLoopButtonVariant} pre=loop aria-label="${loopPreviewLabel}" aria-pressed="${previewLoopEnabled}" title="${loopPreviewLabel}"': null
+                  - $if playButtonDisabledReason:
+                      - 'rtgl-view#playButtonTooltipTrigger role=group tabindex=0 aria-label="${playButton}: ${playButtonDisabledReason}" d=h av=c':
+                          - 'rtgl-button#playButton sq v=se pre=${playButtonIcon} aria-label="${playButton}" aria-pressed="${previewPlaying}" title="${playButton}" ?disabled=${playButtonDisabled}': null
+                    $else:
+                      - 'rtgl-button#playButton sq v=se pre=${playButtonIcon} aria-label="${playButton}" aria-pressed="${previewPlaying}" title="${playButton}" ?disabled=${playButtonDisabled}': null
+              - $if showNavbarEditorTabs:
+                  - 'rtgl-tabs#editorTabs s=sm aria-label="${editorPanelsLabel}" selected-tab=${selectedEditorTab} :items=${editorTabs}': null
           - 'rtgl-view d=v h=1fg sv w=f p=md g=lg style="min-height: 0;"':
               - 'div#audioPreviewCanvas style="display: none; width: 1px; height: 1px;"': null
               - 'rtgl-view d=v w=f h=1fg g=md style="min-height: 0;"':
                   - rtgl-view#audioEffectsEditorToolbar d=h w=f av=c:
-                      - 'rtgl-view#editorTabs role=tablist aria-label="${editorPanelsLabel}" d=h g=sm bgc=mu p=sm br=lg w=fit-content':
-                          - $for item, i in editorTabs:
-                              - 'rtgl-view#editorTab${i} role=tab tabindex=${item.tabIndex} aria-selected="${item.selected}" aria-controls=${item.panelId} data-tab-id=${item.id} cur=pointer bgc=${item.backgroundColor} bw=xs bc=${item.borderColor} pv=md ph=lg br=lg':
-                                  - rtgl-text s=sm c=${item.textColor}: ${item.label}
+                      - $if showToolbarEditorTabs:
+                          - 'rtgl-tabs#editorTabs aria-label="${editorPanelsLabel}" selected-tab=${selectedEditorTab} :items=${editorTabs}': null
+                      - $if showToolbarPlayback:
+                          - rtgl-view d=h av=c g=xs:
+                              - $if showLeadingTimelineZoom:
+                                  - 'rtgl-button#timelineZoomButton sq v=ol pre=zoomIn aria-haspopup=dialog aria-expanded="${timelineZoomPopover.open}" aria-label="${timelineZoomLabel}" title="${timelineZoomLabel}"': null
+                              - 'rtgl-button#previewLoopButton sq v=${previewLoopButtonVariant} pre=loop aria-label="${loopPreviewLabel}" aria-pressed="${previewLoopEnabled}" title="${loopPreviewLabel}"': null
+                              - $if playButtonDisabledReason:
+                                  - 'rtgl-view#playButtonTooltipTrigger role=group tabindex=0 aria-label="${playButton}: ${playButtonDisabledReason}" d=h av=c':
+                                      - 'rtgl-button#playButton sq v=se pre=${playButtonIcon} aria-label="${playButton}" aria-pressed="${previewPlaying}" title="${playButton}" ?disabled=${playButtonDisabled}': null
+                                $else:
+                                  - 'rtgl-button#playButton sq v=se pre=${playButtonIcon} aria-label="${playButton}" aria-pressed="${previewPlaying}" title="${playButton}" ?disabled=${playButtonDisabled}': null
                       - rtgl-view w=1fg: null
-                      - $if selectedEditorTab == 'timeline':
-                          - rtgl-view d=h av=c g=sm mr=md:
-                              - 'rtgl-button#timelineZoomOut sq v=ol s=sm aria-label="${timelineZoomOutLabel}" title="${timelineZoomOutLabel}"': '-'
-                              - 'rtgl-slider#timelineZoomSlider w=120 min=${timelineZoomMin} max=${timelineZoomMax} step=${timelineZoomStep} value=${timelineZoom} aria-label="${timelineZoomLabel}" title="${timelineZoomLabel}"': null
-                              - 'rtgl-button#timelineZoomIn sq v=ol s=sm aria-label="${timelineZoomInLabel}" title="${timelineZoomInLabel}"': +
+                      - $if showToolbarEditHistory:
+                          - rtgl-view d=h av=c g=xs mr=md:
+                              - 'rtgl-button#undoButton sq pre=undo v=ol ?disabled=${undoDisabled} aria-label="${undoLabel}" title="${undoLabel}"': null
+                              - 'rtgl-button#redoButton sq pre=redo v=ol ?disabled=${redoDisabled} aria-label="${redoLabel}" title="${redoLabel}"': null
+                      - $if showTrailingTimelineZoom:
+                          - 'rtgl-button#timelineZoomButton sq v=ol pre=zoomIn mr=md aria-haspopup=dialog aria-expanded="${timelineZoomPopover.open}" aria-label="${timelineZoomLabel}" title="${timelineZoomLabel}"': null
                       - $if selectedEditorTab == 'timeline' && isUpdate:
                           - $if canAddProperty:
-                              - 'rtgl-button#addPropertyButton data-side=update pre=plus s=sm': ${addPropertyButton}
+                              - 'rtgl-button#addPropertyButton data-side=update pre=plus aria-label="${addPropertyButton}" title="${addPropertyButton}"': ${addButton}
                       - $if selectedEditorTab == 'timeline' && isTransition:
                           - $if canAddTransitionProperty:
-                              - 'rtgl-button#addPropertyButton pre=plus s=sm aria-haspopup=menu aria-expanded="${addPropertySideMenu.open}"': ${addPropertyButton}
+                              - 'rtgl-button#addPropertyButton pre=plus aria-haspopup=menu aria-expanded="${addPropertySideMenu.open}" aria-label="${addPropertyButton}" title="${addPropertyButton}"': ${addButton}
                   - $if selectedEditorTab == 'timeline':
                       - $if isTransition:
-                          - 'rtgl-view#audioEffectTimelinePanel role=tabpanel aria-labelledby=editorTab0 d=v w=f h=1fg g=md style="min-height: 0;"':
+                          - 'rtgl-view#audioEffectTimelinePanel role=tabpanel aria-label="${timelineTabLabel}" d=v w=f h=1fg g=md style="min-height: 0;"':
                               - 'rtgl-view#timelineScrollContainer w=f h=1fg sh sv style="min-width: 0; min-height: 0;"':
                                   - 'rtgl-view d=v g=md pos=rel style="${timelineCanvasStyle} min-height: 100%;"':
                                       - 'rtgl-view data-timeline-property-column-fill=true pos=abs style="inset: 0; pointer-events: none; z-index: 5;"':
@@ -284,7 +301,7 @@ template:
                                       - $if timelinePlayheadVisible:
                                           - 'rtgl-view pos=abs bgc=fg op="0.5" style="${timelinePlayheadStyle}"': null
                         $else:
-                          - 'rtgl-view#audioEffectTimelinePanel role=tabpanel aria-labelledby=editorTab0 d=v w=f h=1fg g=md style="min-height: 0;"':
+                          - 'rtgl-view#audioEffectTimelinePanel role=tabpanel aria-label="${timelineTabLabel}" d=v w=f h=1fg g=md style="min-height: 0;"':
                               - 'rtgl-view#timelineScrollContainer w=f h=1fg sh sv style="min-width: 0; min-height: 0;"':
                                   - 'rtgl-view d=v pos=rel style="${timelineCanvasStyle} min-height: 100%;"':
                                       - $if properties.length == 0:
@@ -299,7 +316,7 @@ template:
                                       - $if timelinePlayheadVisible:
                                           - 'rtgl-view pos=abs bgc=fg op="0.5" style="${timelinePlayheadStyle}"': null
                     $else:
-                      - 'rtgl-view#audioEffectPreviewPanel role=tabpanel aria-labelledby=editorTab1 w=f h=1fg d=v style="min-height: 0;"':
+                      - 'rtgl-view#audioEffectPreviewPanel role=tabpanel aria-label="${previewTabLabel}" w=f h=1fg d=v style="min-height: 0;"':
                           - 'rtgl-view w=f h=1fg sv style="min-height: 0;"':
                               - rtgl-view d=v w=f g=md pb=xl:
                                   - $for item, i in previewSoundItems:
@@ -376,5 +393,12 @@ template:
                   - 'rtgl-button#confirmSoundSelection variant=pr ?disabled=${soundSelectionConfirmDisabled}': ${confirmSoundSelectionButton}
   - rtgl-dropdown-menu#keyframeDropdownMenu :items=${keyframeMenuItems} ?open=${keyframeMenu.open} x=${keyframeMenu.x} y=${keyframeMenu.y}: null
   - rtgl-dropdown-menu#addPropertySideMenu :items=${addPropertySideMenuItems} ?open=${addPropertySideMenu.open} x=${addPropertySideMenu.x} y=${addPropertySideMenu.y}: null
+  - rtgl-popover#timelineZoomPopover ?open=${timelineZoomPopover.open} x=${timelineZoomPopover.x} y=${timelineZoomPopover.y} place=be content-w=260 content-g=sm content-ph=md content-pv=md:
+      - rtgl-view#timelineZoomContent d=v w=f g=sm:
+          - rtgl-text s=md: ${timelineZoomLabel}
+          - rtgl-view#timelineZoomControls d=h av=c g=sm:
+              - 'rtgl-button#timelineZoomOut sq v=ol s=sm aria-label="${timelineZoomOutLabel}" title="${timelineZoomOutLabel}"': '-'
+              - 'rtgl-slider#timelineZoomSlider w=1fg min=${timelineZoomMin} max=${timelineZoomMax} step=${timelineZoomStep} value=${timelineZoom} aria-label="${timelineZoomLabel}" title="${timelineZoomLabel}"': null
+              - 'rtgl-button#timelineZoomIn sq v=ol s=sm aria-label="${timelineZoomInLabel}" title="${timelineZoomInLabel}"': +
   - rtgl-dropdown-menu#selectedKeyframeAddMenu :items=${selectedKeyframeAddMenuItems} ?open=${selectedKeyframeAddMenu.open} x=${selectedKeyframeAddMenu.x} y=${selectedKeyframeAddMenu.y}: null
   - rtgl-tooltip ?open=${playButtonTooltip.open} x=${playButtonTooltip.x} y=${playButtonTooltip.y} place="b" content="${playButtonDisabledReason}": null

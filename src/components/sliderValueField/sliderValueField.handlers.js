@@ -1,17 +1,22 @@
 import {
+  clampSliderValue,
   isSliderPopoverSubmitKey,
+  isSliderValueUnset,
   stepSliderValue,
   toSliderPresetMenuItems,
 } from "../../internal/ui/sliderPopover.js";
 
-// The popover opens under the field, from the value it shows.
+// The popover opens under the field, from its value, or its default when it
+// has none.
 export const handleValueClick = (deps, payload) => {
   const { props, render, store } = deps;
   const rect = payload._event.currentTarget.getBoundingClientRect();
   store.openPopover({
     x: rect.left + rect.width / 2,
     y: rect.bottom,
-    value: props.value ?? props.field.defaultValue,
+    value: isSliderValueUnset(props.value)
+      ? props.field.defaultValue
+      : props.value,
   });
   render();
 };
@@ -26,9 +31,13 @@ export const handleValueKeyDown = (deps, payload) => {
   handleValueClick(deps, payload);
 };
 
-// Every change in the popover shows on the page as it happens.
+// Every change in the popover shows on the page as it happens. An emptied
+// number shows nothing new, so the last value stays.
 const previewPopoverValue = (deps, value) => {
   const { dispatchEvent, store } = deps;
+  if (isSliderValueUnset(value)) {
+    return;
+  }
   store.setPopoverValue({ value });
   dispatchEvent(new CustomEvent("value-input", { detail: { value } }));
 };
@@ -62,11 +71,26 @@ export const handlePresetsButtonClick = async (deps, payload) => {
     place: "bs",
   });
 
-  const value = Number(result?.item?.key);
-  if (result?.item === undefined || !Number.isFinite(value)) {
+  if (result?.item === undefined) {
+    return;
+  }
+  // A preset with an empty value unsets the number at once.
+  if (result.item.key === "") {
+    unsetPopoverValue(deps);
+    return;
+  }
+  const value = Number(result.item.key);
+  if (!Number.isFinite(value)) {
     return;
   }
   showPopoverValue(deps, value);
+};
+
+const unsetPopoverValue = (deps) => {
+  const { dispatchEvent, render, store } = deps;
+  store.closePopover();
+  render();
+  dispatchEvent(new CustomEvent("value-change", { detail: { value: "" } }));
 };
 
 // Held, a step button keeps stepping.
@@ -81,10 +105,18 @@ export const handleStepPress = (deps, payload) => {
   showPopoverValue(deps, stepSliderValue({ field: props.field, value, delta }));
 };
 
-// Submit and Enter change the number to the form's value.
+// Submit and Enter change the number to the form's value, kept within the
+// field's bounds: Enter submits before the number input clamps what was
+// typed. An emptied number submits the last value instead.
 const submitPopoverValue = (deps) => {
-  const { dispatchEvent, refs, render, store } = deps;
-  const { value } = refs.form.getValues();
+  const { dispatchEvent, props, refs, render, store } = deps;
+  const typedValue = refs.form.getValues().value;
+  const value = clampSliderValue({
+    field: props.field,
+    value: isSliderValueUnset(typedValue)
+      ? store.selectPopoverValue()
+      : typedValue,
+  });
   store.closePopover();
   render();
   dispatchEvent(new CustomEvent("value-change", { detail: { value } }));

@@ -3,6 +3,7 @@ import {
   applyParticleFormChange,
   buildParticleEffectData,
   buildParticleFormValues,
+  buildParticleSliderValueFields,
   createParticleForm,
 } from "../../src/pages/particleEditor/support/particleEditorForm.js";
 import { createParticlePreset } from "../../src/pages/particles/support/particlePresets.js";
@@ -23,6 +24,127 @@ const sectionFields = (id) =>
   createParticleForm().fields.find((section) => section.id === id).fields;
 
 describe("particle form", () => {
+  describe("slider popovers", () => {
+    const allFields = () =>
+      createParticleForm().fields.flatMap((section) => section.fields);
+    const sliderFields = (
+      particle = { width: 800, height: 600, modules: {} },
+    ) =>
+      buildParticleSliderValueFields({
+        formValues: buildParticleFormValues({ particle }),
+      });
+    const sliderField = (name, particle) =>
+      sliderFields(particle).find((item) => item.name === name);
+
+    it("edits every number with a slider popover in a named slot, keeping its label, tooltip, and condition", () => {
+      const numberFields = allFields().filter((field) =>
+        field.slot?.startsWith("particle-slider-"),
+      );
+
+      expect(allFields().some((field) => field.type === "input-number")).toBe(
+        false,
+      );
+      expect(numberFields).toHaveLength(29);
+      for (const field of numberFields) {
+        expect(field).toMatchObject({
+          type: "slot",
+          slot: `particle-slider-${field.name}`,
+        });
+        expect(field.label).toBeTruthy();
+        expect(field.tooltip.content).toBeTruthy();
+      }
+      const burstCount = numberFields.find(
+        (field) => field.name === "burstCount",
+      );
+      expect(burstCount.$when).toBe("emissionMode == 'burst'");
+
+      // Each slot gets a slider field with the form's value.
+      expect(
+        sliderFields()
+          .map((field) => field.name)
+          .sort(),
+      ).toEqual(numberFields.map((field) => field.name).sort());
+      for (const field of sliderFields()) {
+        expect(field.field).toMatchObject({
+          step: expect.any(Number),
+          fastStep: expect.any(Number),
+          min: expect.any(Number),
+          max: expect.any(Number),
+        });
+        expect(field.field.presets.length).toBeGreaterThan(0);
+      }
+      expect(sliderField("emissionRate")).toMatchObject({
+        slot: "particle-slider-emissionRate",
+        label: "Rate / second",
+        value: "20",
+      });
+    });
+
+    it("runs the source's sliders over the particle's canvas, and lets typed values reach 4 times it", () => {
+      expect(sliderField("sourceX").field).toMatchObject({
+        min: -3200,
+        max: 3200,
+        range: { min: 0, max: 800 },
+      });
+      expect(sliderField("sourceY").field).toMatchObject({
+        min: -2400,
+        max: 2400,
+        range: { min: 0, max: 600 },
+      });
+      // A width, height or radius saves only above 0, so it starts at 1.
+      expect(sliderField("sourceWidth").field).toMatchObject({
+        min: 1,
+        max: 3200,
+        range: { min: 1, max: 800 },
+      });
+      // A radius runs to half the shorter side.
+      expect(sliderField("sourceRadius").field.range).toEqual({
+        min: 1,
+        max: 300,
+      });
+      expect(sliderField("sourceInnerRadius").field.range).toEqual({
+        min: 0,
+        max: 300,
+      });
+      expect(sliderField("emissionRate").field).toMatchObject({
+        min: 1,
+        range: { min: 1, max: 200 },
+      });
+      expect(sliderField("sourceX").field.presets[2]).toEqual({
+        label: "1/2",
+        value: 400,
+        suffixText: "400 px",
+      });
+    });
+
+    it("keeps opacity between 0 and 1 with percentage steps", () => {
+      expect(sliderField("opacity").field).toMatchObject({
+        min: 0,
+        max: 1,
+        stepsAsPercent: true,
+      });
+    });
+
+    it("shows an unset seed as Random, and offers Random to unset it", () => {
+      const seed = sliderField("seed");
+
+      expect(seed.value).toBe("");
+      expect(seed.field.emptyText).toBe("Random");
+      expect(seed.field.presets[0]).toEqual({ label: "Random", value: "" });
+      // Any saved seed stays as it is when its popover opens.
+      expect(seed.field).toMatchObject({
+        min: Number.MIN_SAFE_INTEGER,
+        max: Number.MAX_SAFE_INTEGER,
+      });
+      // Unsetting removes the seed, as clearing the number did.
+      const particle = { width: 800, height: 600, seed: 42, modules: {} };
+      expect(
+        applyParticleFormChange(particle, { name: "seed", value: "" }).effect
+          .seed,
+      ).toBeNull();
+    });
+  });
+
   it("edits the effect only: Basics has the size and seed", () => {
     const fieldNames = (id) =>
       sectionFields(id).map((field) => field.name ?? field.slot);
@@ -153,7 +275,10 @@ describe("particle form", () => {
       });
       // Clicking the selected mode again must not clear it.
       expect(field("opacityMode").clearable).toBe(false);
-      expect(field("opacity")).toMatchObject({ min: 0, max: 1 });
+      expect(field("opacity")).toMatchObject({
+        type: "slot",
+        slot: "particle-slider-opacity",
+      });
       expect(field("opacity")).not.toHaveProperty("$when");
       expect(field("opacityFadeIn").$when).toBe("opacityMode == 'curve'");
       expect(field("opacityFadeOut").$when).toBe("opacityMode == 'curve'");

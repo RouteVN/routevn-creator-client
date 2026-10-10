@@ -65,13 +65,10 @@ refs:
     eventListeners:
       close:
         handler: handleClosePopover
-  animationEditorTabs: {}
-  animationEditorTab*:
+  animationEditorTabs:
     eventListeners:
-      click:
+      item-click:
         handler: handleEditorTabClick
-      keydown:
-        handler: handleEditorTabKeyDown
   mobileMaskButton:
     eventListeners:
       click:
@@ -583,9 +580,6 @@ styles:
     "-webkit-user-select": none
     --focus-ring-outline: none
     --focus-ring-box-shadow: none
-  ".animationEditorTab:focus-visible":
-    outline: "2px solid var(--ring)"
-    outline-offset: 2px
   '[id^="unsupportedMaskTimelineRow"]:focus-visible':
     outline: "2px solid var(--ring)"
     outline-offset: 2px
@@ -610,13 +604,16 @@ template:
       - 'rtgl-view w=2fg h=f style="min-width: 0; min-height: 0;"':
           - rtgl-view h=48 bwb=xs bc=bo d=h av=c w=f ph=md g=md:
               - rtgl-button#backButton sq pre=chevronLeft v=ol: null
-              - rtgl-view w=1fg:
-                  - rtgl-text: ${animationName}
-              - rtgl-view d=h av=c g=xs:
-                  - 'rtgl-button#undoButton sq pre=undo v=ol ?disabled=${undoDisabled} aria-label="${undoLabel}" title="${undoLabel}"': null
-                  - 'rtgl-button#redoButton sq pre=redo v=ol ?disabled=${redoDisabled} aria-label="${redoLabel}" title="${redoLabel}"': null
-              - 'rtgl-button#previewLoopButton sq v=${previewLoopButtonVariant} pre=loop aria-label="${loopPreviewLabel}" aria-pressed="${previewLoopEnabled}" title="${loopPreviewLabel}"': null
-              - 'rtgl-button#playButton sq v=se pre=${playButtonIcon} aria-label="${playButton}" aria-pressed="${previewPlaying}" title="${playButton}"': null
+              - 'rtgl-view w=1fg style="min-width: 0;"':
+                  - rtgl-text w=f ellipsis=true: ${animationName}
+              - $if showNavbarControls:
+                  - rtgl-view d=h av=c g=xs:
+                      - 'rtgl-button#undoButton sq pre=undo v=ol ?disabled=${undoDisabled} aria-label="${undoLabel}" title="${undoLabel}"': null
+                      - 'rtgl-button#redoButton sq pre=redo v=ol ?disabled=${redoDisabled} aria-label="${redoLabel}" title="${redoLabel}"': null
+                  - 'rtgl-button#previewLoopButton sq v=${previewLoopButtonVariant} pre=loop aria-label="${loopPreviewLabel}" aria-pressed="${previewLoopEnabled}" title="${loopPreviewLabel}"': null
+                  - 'rtgl-button#playButton sq v=se pre=${playButtonIcon} aria-label="${playButton}" aria-pressed="${previewPlaying}" title="${playButton}"': null
+              - $if showNavbarEditorTabs:
+                  - 'rtgl-tabs#animationEditorTabs s=sm aria-label="${editorPanelsLabel}" selected-tab=${selectedEditorTab} :items=${editorTabs}': null
           - 'rtgl-view h=1fg sv w=f p=md g=lg style="container-type: size;"':
               - 'rtgl-view#animationEditorCanvasBackground d=v w=f g=md p=${previewCanvasPadding} bgc=bg style="box-sizing: border-box; min-width: 0; background-image: radial-gradient(circle, var(--input) 1px, transparent 1px); background-size: 24px 24px;"':
                   - 'rtgl-view pos=rel style="width: ${previewCanvasMaxWidth}; max-width: 100%; margin-left: auto; margin-right: auto; aspect-ratio: ${canvasAspectRatio};"':
@@ -624,21 +621,28 @@ template:
                           - 'div#canvas style="width: 100%; height: 100%; display: flex;"': null
               - 'rtgl-view d=v w=f h=1fg g=md style="min-height: 0;"':
                   - rtgl-view#animationEditorToolbar d=h w=f av=c:
-                      - 'rtgl-view#animationEditorTabs role=tablist aria-label="${editorPanelsLabel}" d=h g=sm bgc=mu p=sm br=lg w=fit-content':
-                          - $for item, i in editorTabs:
-                              - 'rtgl-view#animationEditorTab${i}.animationEditorTab role=tab tabindex=${item.tabIndex} aria-selected="${item.selected}" aria-controls=${item.panelId} data-tab-id=${item.id} cur=pointer bgc=${item.backgroundColor} bw=xs bc=${item.borderColor} pv=md ph=lg br=lg':
-                                  - rtgl-text s=sm c=${item.textColor}: ${item.label}
-                      - $if selectedEditorTab == 'tween':
-                          - rtgl-view w=1fg: null
+                      - $if showToolbarEditorTabs:
+                          - 'rtgl-tabs#animationEditorTabs aria-label="${editorPanelsLabel}" selected-tab=${selectedEditorTab} :items=${editorTabs}': null
+                      - $if showToolbarPlayback:
+                          - rtgl-view d=h av=c g=xs:
+                              - $if showLeadingTimelineZoom:
+                                  - 'rtgl-button#timelineZoomButton sq v=ol pre=zoomIn aria-haspopup=dialog aria-expanded="${popover.timelineZoomIsOpen}" aria-label="${timelineZoomLabel}" title="${timelineZoomLabel}"': null
+                              - 'rtgl-button#previewLoopButton sq v=${previewLoopButtonVariant} pre=loop aria-label="${loopPreviewLabel}" aria-pressed="${previewLoopEnabled}" title="${loopPreviewLabel}"': null
+                              - 'rtgl-button#playButton sq v=se pre=${playButtonIcon} aria-label="${playButton}" aria-pressed="${previewPlaying}" title="${playButton}"': null
+                      - rtgl-view w=1fg: null
+                      - $if showToolbarEditHistory:
+                          - rtgl-view d=h av=c g=xs mr=md:
+                              - 'rtgl-button#undoButton sq pre=undo v=ol ?disabled=${undoDisabled} aria-label="${undoLabel}" title="${undoLabel}"': null
+                              - 'rtgl-button#redoButton sq pre=redo v=ol ?disabled=${redoDisabled} aria-label="${redoLabel}" title="${redoLabel}"': null
+                      - $if showTrailingTimelineZoom:
                           - 'rtgl-button#timelineZoomButton sq v=ol pre=zoomIn mr=md aria-haspopup=dialog aria-expanded="${popover.timelineZoomIsOpen}" aria-label="${timelineZoomLabel}" title="${timelineZoomLabel}"': null
+                      - $if selectedEditorTab == 'tween':
                           - $if dialogType == 'update' && updateAddPropertyButtonVisible:
-                              - rtgl-button#addPropertiesButton data-side=update pre=plus s=sm: ${addButton}
+                              - rtgl-button#addPropertiesButton data-side=update pre=plus: ${addButton}
                           - $if dialogType == 'transition' && transitionAddPropertyButtonVisible:
-                              - rtgl-button#addPropertiesButton pre=plus s=sm: ${addButton}
-                        $else:
-                          - rtgl-view w=1fg: null
+                              - rtgl-button#addPropertiesButton pre=plus: ${addButton}
                   - $if selectedEditorTab == 'tween':
-                      - 'rtgl-view#animationTweenPanel role=tabpanel aria-labelledby=animationEditorTab0 d=v w=f h=1fg g=md style="min-height: 0;"':
+                      - 'rtgl-view#animationTweenPanel role=tabpanel aria-label="${timelineTabLabel}" d=v w=f h=1fg g=md style="min-height: 0;"':
                           - $if dialogType == 'update':
                               - 'rtgl-view#timelineScrollContainer w=f h=1fg sh sv cur=${timelinePanCursor} style="min-width: 0; min-height: 0;"':
                                   - 'rtgl-view d=v pos=rel style="${timelineCanvasStyle} min-height: 100%;"':
@@ -706,7 +710,7 @@ template:
                                       - $if timelinePlayheadVisible:
                                           - 'rtgl-view pos=abs bgc=fg op="0.5" style="${timelinePlayheadStyle}"': null
                     $else:
-                      - 'rtgl-view#animationPreviewPanel role=tabpanel aria-labelledby=animationEditorTab1 w=f h=1fg d=v style="min-height: 0;"':
+                      - 'rtgl-view#animationPreviewPanel role=tabpanel aria-label="${previewTabLabel}" w=f h=1fg d=v style="min-height: 0;"':
                           - 'rtgl-view w=f h=1fg sv style="min-height: 0;"':
                               - rtgl-view d=v w=f g=md pb=xl:
                                   - $for item, i in previewPanel.items:

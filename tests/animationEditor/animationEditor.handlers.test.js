@@ -20,7 +20,6 @@ import {
   handleEditorPopoverPositioned,
   handleEditorSurfaceClick,
   handleEditorTabClick,
-  handleEditorTabKeyDown,
   handleEmptyTimelineAddPropertiesKeyDown,
   handleExportAnimationVideo,
   handleExportAnimationVideoShortcutKeyDown,
@@ -534,7 +533,7 @@ describe("animationEditor.handlers", () => {
 
     handleEditorTabClick(
       { store, render },
-      { _event: { currentTarget: { dataset: { tabId: "preview" } } } },
+      { _event: { detail: { id: "preview" } } },
     );
 
     expect(store.setSelectedEditorTab).toHaveBeenCalledWith({ tab: "preview" });
@@ -543,41 +542,10 @@ describe("animationEditor.handlers", () => {
     store.selectSelectedEditorTab.mockReturnValue("preview");
     handleEditorTabClick(
       { store, render },
-      { _event: { currentTarget: { dataset: { tabId: "preview" } } } },
+      { _event: { detail: { id: "preview" } } },
     );
 
     expect(store.setSelectedEditorTab).toHaveBeenCalledOnce();
-    expect(render).toHaveBeenCalledOnce();
-  });
-
-  it("switches and focuses animation editor tabs from the keyboard", () => {
-    const focus = vi.fn();
-    const querySelector = vi.fn(() => ({ focus }));
-    const store = {
-      selectSelectedEditorTab: vi.fn(() => "tween"),
-      setSelectedEditorTab: vi.fn(),
-    };
-    const render = vi.fn();
-    const preventDefault = vi.fn();
-    const stopPropagation = vi.fn();
-
-    handleEditorTabKeyDown(
-      { refs: { animationEditorTabs: { querySelector } }, store, render },
-      {
-        _event: {
-          currentTarget: { dataset: { tabId: "tween" } },
-          key: "ArrowRight",
-          preventDefault,
-          stopPropagation,
-        },
-      },
-    );
-
-    expect(preventDefault).toHaveBeenCalledOnce();
-    expect(stopPropagation).toHaveBeenCalledOnce();
-    expect(querySelector).toHaveBeenCalledWith('[data-tab-id="preview"]');
-    expect(focus).toHaveBeenCalledOnce();
-    expect(store.setSelectedEditorTab).toHaveBeenCalledWith({ tab: "preview" });
     expect(render).toHaveBeenCalledOnce();
   });
 

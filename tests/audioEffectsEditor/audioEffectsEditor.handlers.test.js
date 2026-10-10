@@ -27,9 +27,11 @@ import {
   handleSelectedKeyframeStartValueChange,
   handleSelectedPropertyInitialValueChange,
   handleSelectedPropertyValueSourceChange,
+  handleTimelineZoomButtonClick,
   handleTimelineZoomChange,
   handleTimelineZoomIn,
   handleTimelineZoomOut,
+  handleTimelineZoomPopoverClose,
   handleTogglePreviewLoop,
 } from "../../src/pages/audioEffectsEditor/audioEffectsEditor.handlers.js";
 import { EN_I18N } from "../support/i18n.js";
@@ -155,6 +157,34 @@ describe("audioEffectsEditor.handlers", () => {
     expect(render).toHaveBeenCalledTimes(3);
   });
 
+  it("opens the timeline zoom slider in a popover under its button", () => {
+    const store = {
+      openTimelineZoomPopover: vi.fn(),
+      closeTimelineZoomPopover: vi.fn(),
+    };
+    const render = vi.fn();
+    const stopPropagation = vi.fn();
+    const refs = {
+      timelineZoomButton: {
+        getBoundingClientRect: () => ({ right: 180, bottom: 300 }),
+      },
+    };
+
+    handleTimelineZoomButtonClick(
+      { refs, store, render },
+      { _event: { stopPropagation } },
+    );
+    expect(stopPropagation).toHaveBeenCalledOnce();
+    expect(store.openTimelineZoomPopover).toHaveBeenCalledWith({
+      x: 180,
+      y: 300,
+    });
+
+    handleTimelineZoomPopoverClose({ store, render });
+    expect(store.closeTimelineZoomPopover).toHaveBeenCalledOnce();
+    expect(render).toHaveBeenCalledTimes(2);
+  });
+
   it("switches between Timeline and Preview tabs", async () => {
     let selectedEditorTab = "timeline";
     const store = {
@@ -169,9 +199,7 @@ describe("audioEffectsEditor.handlers", () => {
     await handleEditorTabClick(
       { store, render },
       {
-        _event: {
-          currentTarget: { dataset: { tabId: "preview" } },
-        },
+        _event: { detail: { id: "preview" } },
       },
     );
 

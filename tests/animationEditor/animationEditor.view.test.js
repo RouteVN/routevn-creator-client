@@ -269,16 +269,20 @@ describe("animationEditor view", () => {
       "content-w=220 content-g=sm content-ph=md content-pv=md content-bgc=su",
     );
     expect(view).toContain("rtgl-button#selectedMaskNumberConfirm");
+    // Standard-size rtgl-tabs, as the other editors use for their panels.
     expect(view).toContain(
-      'rtgl-view#animationEditorTabs role=tablist aria-label="${editorPanelsLabel}"',
+      'rtgl-tabs#animationEditorTabs aria-label="${editorPanelsLabel}" selected-tab=${selectedEditorTab} :items=${editorTabs}',
+    );
+    expect(view).toMatch(
+      /animationEditorTabs:\n\s+eventListeners:\n\s+item-click:\n\s+handler: handleEditorTabClick/,
+    );
+    expect(view).not.toContain("handleEditorTabKeyDown");
+    expect(view).toContain(
+      'rtgl-view#animationTweenPanel role=tabpanel aria-label="${timelineTabLabel}"',
     );
     expect(view).toContain(
-      'animationEditorTabs role=tablist aria-label="${editorPanelsLabel}" d=h g=sm bgc=mu p=sm br=lg w=fit-content',
+      'rtgl-view#animationPreviewPanel role=tabpanel aria-label="${previewTabLabel}"',
     );
-    expect(view).toContain(
-      "rtgl-view#animationEditorTab${i}.animationEditorTab role=tab",
-    );
-    expect(view).toContain("handler: handleEditorTabKeyDown");
     expect(view).toContain("$if selectedEditorTab == 'tween'");
     expect(view).not.toContain("$elif selectedEditorTab == 'mask'");
     expect(view).toContain("rtgl-view#animationTweenPanel");
@@ -422,6 +426,78 @@ describe("animationEditor view", () => {
     expect(view).not.toContain("property-name-right-click");
   });
 
+  it("moves the tabs to the navbar on phones, and the navbar's buttons to the toolbar", () => {
+    const view = readFileSync(
+      new URL(
+        "../../src/pages/animationEditor/animationEditor.view.yaml",
+        import.meta.url,
+      ),
+      "utf8",
+    );
+    const navbar = view.slice(
+      view.indexOf("rtgl-button#backButton"),
+      view.indexOf("rtgl-view#animationEditorCanvasBackground"),
+    );
+    const toolbar = view.slice(
+      view.indexOf("rtgl-view#animationEditorToolbar"),
+      view.indexOf("rtgl-view#animationTweenPanel"),
+    );
+    const after = (text, marker, item) =>
+      text.indexOf(item, text.indexOf(marker)) > text.indexOf(marker);
+
+    // A long name shortens instead of pushing the tabs off a phone.
+    expect(navbar).toContain("rtgl-text w=f ellipsis=true: ${animationName}");
+    for (const button of [
+      "rtgl-button#undoButton",
+      "rtgl-button#redoButton",
+      "rtgl-button#previewLoopButton",
+      "rtgl-button#playButton",
+    ]) {
+      expect(after(navbar, "$if showNavbarControls:", button)).toBe(true);
+    }
+    expect(
+      after(
+        navbar,
+        "$if showNavbarEditorTabs:",
+        "rtgl-tabs#animationEditorTabs s=sm",
+      ),
+    ).toBe(true);
+
+    expect(
+      after(
+        toolbar,
+        "$if showToolbarEditorTabs:",
+        "rtgl-tabs#animationEditorTabs aria-label",
+      ),
+    ).toBe(true);
+    // On phones: zoom, Loop and Play on the left, evenly spaced in one
+    // group; then undo and redo, and Add last. Tablets and desktop keep zoom
+    // just before Add.
+    const order = [
+      "$if showToolbarPlayback:",
+      "rtgl-view d=h av=c g=xs:",
+      "$if showLeadingTimelineZoom:",
+      "rtgl-button#timelineZoomButton sq v=ol pre=zoomIn aria-haspopup",
+      "rtgl-button#previewLoopButton",
+      "rtgl-button#playButton",
+      "rtgl-view w=1fg: null",
+      "$if showToolbarEditHistory:",
+      "rtgl-button#undoButton",
+      "rtgl-button#redoButton",
+      "$if showTrailingTimelineZoom:",
+      "rtgl-button#addPropertiesButton",
+    ].map((item) => toolbar.indexOf(item));
+    expect(order.every((index) => index > -1)).toBe(true);
+    expect([...order].sort((a, b) => a - b)).toEqual(order);
+    expect(
+      after(
+        toolbar,
+        "$if showTrailingTimelineZoom:",
+        "rtgl-button#timelineZoomButton",
+      ),
+    ).toBe(true);
+  });
+
   it("places tab actions in the toolbar and lets the timeline scroll on both axes", () => {
     const view = readFileSync(
       new URL(
@@ -437,9 +513,9 @@ describe("animationEditor view", () => {
     const toolbarStart = view.indexOf("rtgl-view#animationEditorToolbar");
     const tweenPanelStart = view.indexOf("rtgl-view#animationTweenPanel");
     expect(toolbarStart).toBeGreaterThan(-1);
-    expect(view.indexOf("rtgl-view#animationEditorTabs")).toBeGreaterThan(
-      toolbarStart,
-    );
+    expect(
+      view.indexOf("rtgl-tabs#animationEditorTabs aria-label", toolbarStart),
+    ).toBeGreaterThan(toolbarStart);
     expect(view.indexOf("rtgl-button#timelineZoomButton")).toBeGreaterThan(
       toolbarStart,
     );
