@@ -23,6 +23,7 @@ import {
   buildEditorCanvasZoomViewData,
   buildEditorPanelPlacementViewData,
   resetEditorCanvasZoomState,
+  selectShowEditorRightPanelState,
   setEditorCanvasZoomState,
   zoomEditorCanvasInState,
   zoomEditorCanvasOutState,
@@ -139,8 +140,15 @@ export const setUiConfig = ({ state }, { uiConfig } = {}) => {
   state.isTouchMode = isTouchUiConfig(uiConfig);
 };
 
+// Moving the panel between the right side and under the canvas rebuilds its
+// slider fields, which closes an open popover without a cancel, so the value
+// it showed goes too.
 export const setAppWindowMetrics = ({ state }, { width, height } = {}) => {
+  const showedRightPanel = selectShowEditorRightPanelState({ state });
   setMobileResourcePageWindowMetricsState(state, { width, height });
+  if (selectShowEditorRightPanelState({ state }) !== showedRightPanel) {
+    state.sliderPreview = undefined;
+  }
 };
 
 export const loadParticle = ({ state }, { item, imagesData } = {}) => {
@@ -284,6 +292,9 @@ export const setSliderPreview = ({ state }, { name, value } = {}) => {
 export const clearSliderPreview = ({ state }) => {
   state.sliderPreview = undefined;
 };
+
+export const selectHasSliderPreview = ({ state }) =>
+  state.sliderPreview !== undefined;
 
 // The images the canvas draws: the texture images, and the preview
 // background.

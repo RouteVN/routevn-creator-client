@@ -817,23 +817,25 @@ const createParticleSliderFields = ({ copy = {}, width, height }) => {
     unit: "px",
     presets: toCanvasSharePresets(length),
   });
+  // A source's width, height and radius save only above 0, so they start at
+  // 1; an inner radius can be 0.
   const size = (length) => ({
     step: 1,
     fastStep: 10,
-    min: 0,
+    min: 1,
     max: bound(length),
-    range: { min: 0, max: length },
+    range: { min: 1, max: length },
     unit: "px",
     presets: toCanvasSharePresets(length, { leaveOutZero: true }),
   });
-  const radiusField = ({ leaveOutZero }) => ({
+  const radiusField = ({ min }) => ({
     step: 1,
     fastStep: 10,
-    min: 0,
+    min,
     max: bound(Math.max(width, height)),
-    range: { min: 0, max: radius },
+    range: { min, max: radius },
     unit: "px",
-    presets: toCanvasSharePresets(radius, { leaveOutZero }),
+    presets: toCanvasSharePresets(radius, { leaveOutZero: min > 0 }),
   });
   const scale = {
     defaultValue: 1,
@@ -919,9 +921,9 @@ const createParticleSliderFields = ({ copy = {}, width, height }) => {
       defaultValue: 1,
       step: 1,
       fastStep: 10,
-      min: 0,
-      // Seeds are 32-bit integers, often large, such as a date.
-      max: 2147483647,
+      // Any saved seed stays as it is; the slider runs over small seeds.
+      min: Number.MIN_SAFE_INTEGER,
+      max: Number.MAX_SAFE_INTEGER,
       range: { min: 0, max: 1000 },
       emptyText: copy.seedRandomLabel ?? "Random",
       presets: [
@@ -942,13 +944,14 @@ const createParticleSliderFields = ({ copy = {}, width, height }) => {
     },
     opacityFadeIn: fade,
     opacityFadeOut: fade,
+    // The rate saves as at least 1 a second.
     emissionRate: {
       defaultValue: 20,
       step: 1,
       fastStep: 10,
-      min: 0,
+      min: 1,
       max: MAX_PARTICLE_RATE,
-      range: { min: 0, max: 200 },
+      range: { min: 1, max: 200 },
       presets: toNumberPresets([1, 5, 10, 20, 50, 100, 200]),
     },
     burstCount: {
@@ -981,11 +984,8 @@ const createParticleSliderFields = ({ copy = {}, width, height }) => {
     sourceY: { ...position(height), defaultValue: Math.round(height / 2) },
     sourceWidth: { ...size(width), defaultValue: width },
     sourceHeight: { ...size(height), defaultValue: height },
-    sourceRadius: { ...radiusField({ leaveOutZero: true }), defaultValue: 0 },
-    sourceInnerRadius: {
-      ...radiusField({ leaveOutZero: false }),
-      defaultValue: 0,
-    },
+    sourceRadius: { ...radiusField({ min: 1 }), defaultValue: 24 },
+    sourceInnerRadius: { ...radiusField({ min: 0 }), defaultValue: 0 },
     sourceX2: { ...position(width), defaultValue: width },
     sourceY2: { ...position(height), defaultValue: Math.round(height / 2) },
     speedMin: speed,

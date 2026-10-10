@@ -872,7 +872,7 @@ describe("particle editor", () => {
     expect(page.view()).toMatchObject({
       showNavbarEditHistory: false,
       showNavbarPanelModeTabs: true,
-      showMobilePanelHeader: true,
+      mobilePanelHeaderStyle: "",
       showPanelModeTabs: false,
       showPanelEditHistory: true,
     });
@@ -884,7 +884,7 @@ describe("particle editor", () => {
     // The header under the canvas would be empty in Preview.
     expect(page.view()).toMatchObject({
       showNavbarPanelModeTabs: true,
-      showMobilePanelHeader: false,
+      mobilePanelHeaderStyle: "display: none;",
       showPanelEditHistory: false,
     });
   });
@@ -908,7 +908,7 @@ describe("particle editor", () => {
       showMobilePanels: true,
       showNavbarEditHistory: true,
       showNavbarPanelModeTabs: false,
-      showMobilePanelHeader: true,
+      mobilePanelHeaderStyle: "",
       showPanelModeTabs: true,
       showPanelEditHistory: false,
     });
@@ -916,6 +916,29 @@ describe("particle editor", () => {
     expect(page.deps.graphicsService.render.mock.calls.length).toBeGreaterThan(
       rendersBefore,
     );
+  });
+
+  it("drops a slider's preview when turning a tablet moves the panel, which closes the popover", async () => {
+    const page = await createPage({ uiConfig: { id: "touch" } });
+    await page.resizeWindow({ width: 1133, height: 744 });
+    const savedRate = page.effect().modules.emission.rate;
+    handleSliderValueInput(page.deps, {
+      _event: {
+        currentTarget: { dataset: { name: "emissionRate" } },
+        detail: { value: 150 },
+      },
+    });
+    expect(page.store.selectCanvasEffect().modules.emission.rate).toBe(150);
+
+    // A resize that keeps the panel in place keeps the preview.
+    await page.resizeWindow({ width: 1180, height: 820 });
+    expect(page.store.selectCanvasEffect().modules.emission.rate).toBe(150);
+
+    await page.resizeWindow({ width: 744, height: 1133 });
+    expect(page.store.selectCanvasEffect().modules.emission.rate).toBe(
+      savedRate,
+    );
+    page.cleanup?.();
   });
 
   it("previews a slider popover's number on the canvas, changes it on Submit, and keeps it on close", async () => {
@@ -940,13 +963,18 @@ describe("particle editor", () => {
       value: `${savedRate}`,
     });
 
-    const rendersBefore = page.deps.graphicsService.render.mock.calls.length;
-    await slider(handleSliderValueInput, "emissionRate", 120);
+    const renders = () => page.deps.graphicsService.render.mock.calls.length;
+    const rendersBefore = renders();
+    slider(handleSliderValueInput, "emissionRate", 60);
+    slider(handleSliderValueInput, "emissionRate", 90);
+    slider(handleSliderValueInput, "emissionRate", 120);
     expect(canvasRate()).toBe(120);
     expect(page.effect().modules.emission.rate).toBe(savedRate);
-    expect(page.deps.graphicsService.render.mock.calls.length).toBe(
-      rendersBefore + 1,
-    );
+    // A fast slider shows on the canvas about once a frame, with its latest
+    // value.
+    expect(renders()).toBe(rendersBefore);
+    await wait(40);
+    expect(renders()).toBe(rendersBefore + 1);
 
     // Closing the popover leaves the number as it was.
     await slider(handleSliderValueCancel, "emissionRate");
@@ -961,7 +989,8 @@ describe("particle editor", () => {
     // A size change restarts the canvas, so it shows on Submit only.
     const rendersBeforeWidth =
       page.deps.graphicsService.render.mock.calls.length;
-    await slider(handleSliderValueInput, "width", 640);
+    slider(handleSliderValueInput, "width", 640);
+    await wait(40);
     expect(page.deps.graphicsService.render.mock.calls.length).toBe(
       rendersBeforeWidth,
     );

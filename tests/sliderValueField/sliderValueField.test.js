@@ -52,6 +52,9 @@ const createField = ({ menuResult, ...propOverrides } = {}) => {
     },
   );
   const events = [];
+  // What is typed in the number input, when it differs from the popover's
+  // value: an emptied input gives null, and Enter submits before it clamps.
+  let typedValue;
   const deps = {
     store,
     props,
@@ -61,7 +64,9 @@ const createField = ({ menuResult, ...propOverrides } = {}) => {
     refs: {
       form: {
         setValues: vi.fn(),
-        getValues: () => ({ value: state.popover.value }),
+        getValues: () => ({
+          value: typedValue === undefined ? state.popover.value : typedValue,
+        }),
       },
     },
     appService: { showDropdownMenu: vi.fn(async () => menuResult) },
@@ -81,6 +86,10 @@ const createField = ({ menuResult, ...propOverrides } = {}) => {
       handlePresetsButtonClick(deps, { _event: { currentTarget: target } }),
     input: (value) =>
       handleFormInput(deps, { _event: { detail: { values: { value } } } }),
+    type: (value) => {
+      typedValue = value;
+      handleFormInput(deps, { _event: { detail: { values: { value } } } });
+    },
     pressKey: ({ path = [{ tagName: "INPUT" }], ...event } = {}) => {
       const _event = {
         key: "Enter",
@@ -283,6 +292,36 @@ describe("rvn-slider-value-field", () => {
     expect(field.events.at(-1)).toEqual(["value-change", { value: 30 }]);
     expect(field.view().popover.open).toBe(false);
   });
+
+  it("keeps the last value while the number is emptied, and submits it on Enter", () => {
+    const field = createField();
+    field.open();
+    field.input(30);
+
+    field.type(null);
+    expect(field.events).toEqual([["value-input", { value: 30 }]]);
+    // A step goes on from the last value, not from zero.
+    field.step(1);
+    expect(field.events.at(-1)).toEqual(["value-input", { value: 31 }]);
+
+    field.type(null);
+    field.pressKey();
+    expect(field.events.at(-1)).toEqual(["value-change", { value: 31 }]);
+  });
+
+  it("keeps a typed value within the field's bounds when Enter submits it", () => {
+    const field = createField();
+    field.open();
+    field.type(9999);
+    field.pressKey();
+    expect(field.events.at(-1)).toEqual(["value-change", { value: 400 }]);
+
+    field.open();
+    field.type(2);
+    field.pressKey();
+    expect(field.events.at(-1)).toEqual(["value-change", { value: 8 }]);
+  });
+
   it("shows an unset value as its emptyText, opens at the default, and unsets it from an empty preset", async () => {
     const field = createField({
       value: "",

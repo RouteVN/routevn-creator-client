@@ -13,7 +13,10 @@ import {
 import { toPrimaryFontId } from "../../internal/fontIds.js";
 import { toFlatItems } from "../../internal/project/tree.js";
 import { selectEditHistoryCopy } from "../../internal/ui/editHistory.js";
-import { buildEditorPanelPlacementViewData } from "../../internal/ui/editorCanvasWorkspace.js";
+import {
+  buildEditorPanelPlacementViewData,
+  selectShowEditorRightPanelState,
+} from "../../internal/ui/editorCanvasWorkspace.js";
 import {
   isTouchUiConfig,
   setMobileResourcePageWindowMetricsState,
@@ -135,8 +138,15 @@ export const setUiConfig = ({ state }, { uiConfig } = {}) => {
   state.isTouchMode = isTouchUiConfig(uiConfig);
 };
 
+// Moving the panel between the right side and under the canvas rebuilds its
+// slider fields, which closes an open popover without a cancel, so the value
+// it showed goes too.
 export const setAppWindowMetrics = ({ state }, { width, height } = {}) => {
+  const showedRightPanel = selectShowEditorRightPanelState({ state });
   setMobileResourcePageWindowMetricsState(state, { width, height });
+  if (selectShowEditorRightPanelState({ state }) !== showedRightPanel) {
+    state.sliderPreview = undefined;
+  }
 };
 
 export const loadTextStyle = (

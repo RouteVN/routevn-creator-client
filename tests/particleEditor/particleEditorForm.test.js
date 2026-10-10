@@ -91,15 +91,24 @@ describe("particle form", () => {
         max: 2400,
         range: { min: 0, max: 600 },
       });
+      // A width, height or radius saves only above 0, so it starts at 1.
       expect(sliderField("sourceWidth").field).toMatchObject({
-        min: 0,
+        min: 1,
         max: 3200,
-        range: { min: 0, max: 800 },
+        range: { min: 1, max: 800 },
       });
       // A radius runs to half the shorter side.
       expect(sliderField("sourceRadius").field.range).toEqual({
+        min: 1,
+        max: 300,
+      });
+      expect(sliderField("sourceInnerRadius").field.range).toEqual({
         min: 0,
         max: 300,
+      });
+      expect(sliderField("emissionRate").field).toMatchObject({
+        min: 1,
+        range: { min: 1, max: 200 },
       });
       expect(sliderField("sourceX").field.presets[2]).toEqual({
         label: "1/2",
@@ -122,6 +131,11 @@ describe("particle form", () => {
       expect(seed.value).toBe("");
       expect(seed.field.emptyText).toBe("Random");
       expect(seed.field.presets[0]).toEqual({ label: "Random", value: "" });
+      // Any saved seed stays as it is when its popover opens.
+      expect(seed.field).toMatchObject({
+        min: Number.MIN_SAFE_INTEGER,
+        max: Number.MAX_SAFE_INTEGER,
+      });
       // Unsetting removes the seed, as clearing the number did.
       const particle = { width: 800, height: 600, seed: 42, modules: {} };
       expect(

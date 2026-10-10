@@ -1409,7 +1409,10 @@ on the right in tablet landscape and moves under the canvas on phones and in
 tablet portrait, while the canvas stays in place. On phones, again as in the
 layout editor, the **Edit** and **Preview** tabs sit in the header after the
 name, and undo and redo in the header under the canvas, in Edit only; that
-header is left out in Preview. Tablets keep the tabs over the panel and undo
+header is hidden in Preview but stays in the page, since the virtual DOM keys
+elements without an id by their place, and removing it would rebuild the
+panels after it (the form would lose its scroll and local state). Tablets
+keep the tabs over the panel and undo
 and redo in the header (`buildEditorPanelPlacementViewData`, which the
 particle and text style editors share). Edit holds
 `rvn-layout-edit-panel mode=transform`, whose popovers preview on the canvas
@@ -1511,10 +1514,15 @@ redo are placed as in the transform editor. Edit shows the particle form's
 fields at once, in five sections as the layout editor's panel
 does (Basics has only the size and seed now). Every number is an
 `rvn-slider-value-field` in a named slot field, as in the text style editor:
-its slider popover previews the value on the canvas (except the size, which
-restarts the canvas), changes it on Submit, and leaves it on close. The
-source's positions and sizes run over the particle's own canvas, and an unset
-seed shows as Random, with a Random preset to unset it again. A form
+its slider popover previews the value on the canvas about once a frame
+(except the size, which restarts the canvas), changes it on Submit, and leaves
+it on close; the preview also goes when turning a tablet moves the panel,
+which closes the popover. Submit and Enter keep the value within the field's
+bounds, and an emptied number keeps the last value. The source's positions
+and sizes run over the particle's own canvas, and its width, height, radius,
+and the rate start at 1, as they save only above 0. An unset seed shows as
+Random, with a Random preset to unset it again, and any saved seed stays as
+it is. A form
 change applies only the field that changed, on top of the saved effect, so
 preset curves and bounds that the form does not show are kept; undo, redo,
 and values the form normalizes remount the form with the new values. While

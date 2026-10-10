@@ -1,4 +1,5 @@
 import {
+  clampSliderValue,
   isSliderPopoverSubmitKey,
   isSliderValueUnset,
   stepSliderValue,
@@ -30,9 +31,13 @@ export const handleValueKeyDown = (deps, payload) => {
   handleValueClick(deps, payload);
 };
 
-// Every change in the popover shows on the page as it happens.
+// Every change in the popover shows on the page as it happens. An emptied
+// number shows nothing new, so the last value stays.
 const previewPopoverValue = (deps, value) => {
   const { dispatchEvent, store } = deps;
+  if (isSliderValueUnset(value)) {
+    return;
+  }
   store.setPopoverValue({ value });
   dispatchEvent(new CustomEvent("value-input", { detail: { value } }));
 };
@@ -100,10 +105,18 @@ export const handleStepPress = (deps, payload) => {
   showPopoverValue(deps, stepSliderValue({ field: props.field, value, delta }));
 };
 
-// Submit and Enter change the number to the form's value.
+// Submit and Enter change the number to the form's value, kept within the
+// field's bounds: Enter submits before the number input clamps what was
+// typed. An emptied number submits the last value instead.
 const submitPopoverValue = (deps) => {
-  const { dispatchEvent, refs, render, store } = deps;
-  const { value } = refs.form.getValues();
+  const { dispatchEvent, props, refs, render, store } = deps;
+  const typedValue = refs.form.getValues().value;
+  const value = clampSliderValue({
+    field: props.field,
+    value: isSliderValueUnset(typedValue)
+      ? store.selectPopoverValue()
+      : typedValue,
+  });
   store.closePopover();
   render();
   dispatchEvent(new CustomEvent("value-change", { detail: { value } }));

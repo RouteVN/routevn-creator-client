@@ -96,21 +96,21 @@ describe("editor canvas workspace", () => {
       showMobilePanels: true,
       showNavbarEditHistory: false,
       showNavbarPanelModeTabs: true,
-      showMobilePanelHeader: true,
+      mobilePanelHeaderStyle: "",
       showPanelModeTabs: false,
       showPanelEditHistory: true,
     });
     // The header under the canvas would be empty in Preview.
     expect(placement({ ...phone, rightPanelMode: "preview" })).toMatchObject({
       showNavbarPanelModeTabs: true,
-      showMobilePanelHeader: false,
+      mobilePanelHeaderStyle: "display: none;",
       showPanelEditHistory: false,
     });
 
     const tabletLayout = {
       showNavbarEditHistory: true,
       showNavbarPanelModeTabs: false,
-      showMobilePanelHeader: true,
+      mobilePanelHeaderStyle: "",
       showPanelModeTabs: true,
       showPanelEditHistory: false,
     };
@@ -152,11 +152,16 @@ describe("editor canvas workspace", () => {
         view.indexOf("$if showMobilePanels:"),
         view.indexOf("$if showRightPanel:"),
       );
+      // The header stays in the page, hidden in Preview, so the panels after
+      // it are not rebuilt on a switch.
+      expect(panel).not.toContain("$if showMobilePanelHeader:");
       const header = panel.slice(
-        panel.indexOf("$if showMobilePanelHeader:"),
+        panel.indexOf(
+          'rtgl-view h=48 w=f d=h bgc=bg bwb=xs ph=md av=c style="${mobilePanelHeaderStyle}"',
+        ),
         panel.indexOf("${rightPanelEditStyle}"),
       );
-      expect(header.indexOf("$if showPanelModeTabs:")).toBeGreaterThan(-1);
+      expect(header.indexOf("$if showPanelModeTabs:")).toBeGreaterThan(0);
       expect(header.indexOf(tabs)).toBeGreaterThan(
         header.indexOf("$if showPanelModeTabs:"),
       );

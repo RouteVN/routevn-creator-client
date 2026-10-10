@@ -51,9 +51,11 @@ export const selectShowEditorRightPanelState = ({ state }) =>
 
 // Where the Edit and Preview tabs and undo and redo go. Phones put the tabs
 // in the navbar after the name, and undo and redo in the header under the
-// canvas, in Edit only, as the layout editor does; that header is left out
-// in Preview, where it would be empty. Tablets and desktop keep the tabs over
-// the panel and undo and redo in the navbar. The stores keep `rightPanelMode`.
+// canvas, in Edit only, as the layout editor does; that header is hidden in
+// Preview, where it would be empty. It stays in the page, so the panels after
+// it keep their place and are not rebuilt on a switch. Tablets and desktop
+// keep the tabs over the panel and undo and redo in the navbar. The stores
+// keep `rightPanelMode`.
 export const buildEditorPanelPlacementViewData = ({ state }) => {
   const showRightPanel = selectShowEditorRightPanelState({ state });
   const showMobilePanels = !showRightPanel;
@@ -72,7 +74,8 @@ export const buildEditorPanelPlacementViewData = ({ state }) => {
     showMobilePanels,
     showNavbarEditHistory: !showPhonePanels,
     showNavbarPanelModeTabs: showPhonePanels,
-    showMobilePanelHeader: !showPhonePanels || showPanelEditHistory,
+    mobilePanelHeaderStyle:
+      !showPhonePanels || showPanelEditHistory ? "" : "display: none;",
     showPanelModeTabs: !showPhonePanels,
     showPanelEditHistory,
   };

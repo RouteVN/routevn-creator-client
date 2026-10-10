@@ -139,15 +139,14 @@ template:
                               - 'div style="position: absolute; inset: 0; display: flex; align-items: center; justify-content: center; padding: 16px; box-sizing: border-box; color: rgba(255, 255, 255, 0.8); font-size: 14px; line-height: 1.4; text-align: center; pointer-events: none;"': ${textureHint}
               - $if showMobilePanels:
                   - 'rtgl-view w=f h=1fg d=v bwt=xs style="min-height: 0;"':
-                      - $if showMobilePanelHeader:
-                          - rtgl-view h=48 w=f d=h bgc=bg bwb=xs ph=md av=c:
-                              - 'rtgl-view w=1fg style="min-width: 0;"':
-                                  - $if showPanelModeTabs:
-                                      - rtgl-tabs#rightPanelModeTabs s=sm selected-tab=${rightPanelMode} :items=${rightPanelModeTabs}: null
-                              - $if showPanelEditHistory:
-                                  - rtgl-view d=h av=c g=xs ml=sm:
-                                      - 'rtgl-button#undoButton sq pre=undo v=ol ?disabled=${undoDisabled} aria-label="${undoLabel}" title="${undoLabel}"': null
-                                      - 'rtgl-button#redoButton sq pre=redo v=ol ?disabled=${redoDisabled} aria-label="${redoLabel}" title="${redoLabel}"': null
+                      - 'rtgl-view h=48 w=f d=h bgc=bg bwb=xs ph=md av=c style="${mobilePanelHeaderStyle}"':
+                          - 'rtgl-view w=1fg style="min-width: 0;"':
+                              - $if showPanelModeTabs:
+                                  - rtgl-tabs#rightPanelModeTabs s=sm selected-tab=${rightPanelMode} :items=${rightPanelModeTabs}: null
+                          - $if showPanelEditHistory:
+                              - rtgl-view d=h av=c g=xs ml=sm:
+                                  - 'rtgl-button#undoButton sq pre=undo v=ol ?disabled=${undoDisabled} aria-label="${undoLabel}" title="${undoLabel}"': null
+                                  - 'rtgl-button#redoButton sq pre=redo v=ol ?disabled=${redoDisabled} aria-label="${redoLabel}" title="${redoLabel}"': null
                       - 'rtgl-view w=f h=1fg d=v style="min-height: 0; ${rightPanelEditStyle}"':
                           - 'rtgl-view w=f h=1fg sv pv=md style="min-height: 0;"':
                               - rtgl-form#particleForm key=${particleFormKey} :defaultValues=${formValues} :form=${particleForm} w=f ph=md:

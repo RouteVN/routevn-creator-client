@@ -10,9 +10,27 @@ import { formatI18nCopy } from "./i18nCopy.js";
 
 const getStepDecimals = (step) => `${step}`.split(".")[1]?.length ?? 0;
 
-// Forms keep an unset number as an empty value.
+// Forms keep an unset number as an empty value; a number input that is
+// emptied while typing gives null.
 export const isSliderValueUnset = (value) =>
-  value === undefined || value === "";
+  value === undefined || value === null || value === "";
+
+// A value kept within the field's bounds, or the bounds given.
+export const clampSliderValue = ({
+  field,
+  value,
+  min = field.min,
+  max = field.max,
+}) => {
+  let clamped = Number(value);
+  if (Number.isFinite(min)) {
+    clamped = Math.max(min, clamped);
+  }
+  if (Number.isFinite(max)) {
+    clamped = Math.min(max, clamped);
+  }
+  return clamped;
+};
 
 // The slider runs over the range, or `min` to `max` without one. A value can
 // be typed past the slider's ends, within `min` and `max`; the slider then
@@ -84,14 +102,12 @@ export const stepSliderValue = ({
   max = field.max,
 }) => {
   const decimals = getStepDecimals(field.step);
-  let stepped = Number((Number(value) + Number(delta)).toFixed(decimals));
-  if (Number.isFinite(min)) {
-    stepped = Math.max(min, stepped);
-  }
-  if (Number.isFinite(max)) {
-    stepped = Math.min(max, stepped);
-  }
-  return stepped;
+  return clampSliderValue({
+    field,
+    value: Number((Number(value) + Number(delta)).toFixed(decimals)),
+    min,
+    max,
+  });
 };
 
 // The Presets menu's items, each keyed by its value, with the value on the
