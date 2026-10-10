@@ -5,6 +5,7 @@ import Subject from "../../src/deps/subject.js";
 import {
   createRouteTransitionRunner,
   handleBeforeMount,
+  handleHelpFloatingButtonClick,
   handleMobileTabLostPointerCapture,
   handleMobileTabPointerCancel,
   handleMobileTabPointerDown,
@@ -16,8 +17,36 @@ import {
 import {
   createInitialState as createAppState,
   selectCurrentRoutePattern,
+  selectIsTouchMode,
   setCurrentRoute,
+  setUiConfig,
 } from "../../src/pages/app/app.store.js";
+
+describe("app help button", () => {
+  const openedDocsUrl = (uiConfig) => {
+    const state = createAppState();
+    setUiConfig({ state }, { uiConfig });
+    setCurrentRoute({ state }, { route: "/project/tutorials" });
+    const deps = {
+      appService: { openUrl: vi.fn() },
+      store: {
+        selectCurrentRoutePattern: () => selectCurrentRoutePattern({ state }),
+        selectIsTouchMode: () => selectIsTouchMode({ state }),
+      },
+    };
+    handleHelpFloatingButtonClick(deps);
+    return deps.appService.openUrl.mock.calls[0][0];
+  };
+
+  it("opens the mobile video tutorials from Tutorials in touch mode", () => {
+    expect(openedDocsUrl({ id: "normal", inputMode: "pointer" })).toBe(
+      "https://routevn.com/en/creator/docs/video-tutorials/",
+    );
+    expect(openedDocsUrl({ id: "touch", inputMode: "touch" })).toBe(
+      "https://routevn.com/en/creator/docs/video-tutorials-mobile/",
+    );
+  });
+});
 
 describe("app mobile tab press feedback", () => {
   const createDeps = () => {

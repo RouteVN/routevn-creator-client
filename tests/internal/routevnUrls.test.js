@@ -76,6 +76,19 @@ describe("routevnUrls", () => {
     );
   });
 
+  it("opens the mobile video tutorials from Tutorials in touch mode", () => {
+    expect(getRoutevnCreatorDocsUrl("/project/tutorials")).toBe(
+      "https://routevn.com/en/creator/docs/video-tutorials/",
+    );
+    expect(
+      getRoutevnCreatorDocsUrl("/project/tutorials", { isTouchMode: true }),
+    ).toBe("https://routevn.com/en/creator/docs/video-tutorials-mobile/");
+    // Pages without mobile docs keep their docs in touch mode.
+    expect(
+      getRoutevnCreatorDocsUrl("/project/images", { isTouchMode: true }),
+    ).toBe("https://routevn.com/en/creator/docs/images/");
+  });
+
   it("falls back to the introduction page when no dedicated docs route exists", () => {
     expect(getRoutevnCreatorDocsUrl("/project/unknown")).toBe(
       ROUTEVN_CREATOR_DOCS_URL,

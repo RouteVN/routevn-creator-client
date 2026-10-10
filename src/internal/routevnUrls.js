@@ -12,6 +12,7 @@ export const ROUTEVN_ASSET_STORE_URL =
 export const ROUTEVN_CREATOR_DOCS_URL = `${ROUTEVN_CREATOR_DOCS_BASE_URL}/introduction/`;
 export const ROUTEVN_CREATOR_DOCS_PAGE_INDEX_URL = `${ROUTEVN_CREATOR_DOCS_BASE_URL}/page-index/`;
 export const ROUTEVN_CREATOR_VIDEO_TUTORIALS_URL = `${ROUTEVN_CREATOR_DOCS_BASE_URL}/video-tutorials/`;
+export const ROUTEVN_CREATOR_MOBILE_VIDEO_TUTORIALS_URL = `${ROUTEVN_CREATOR_DOCS_BASE_URL}/video-tutorials-mobile/`;
 
 const creatorDocsPathByRoutePattern = {
   "/project": "/projects/",
@@ -48,6 +49,11 @@ const creatorDocsPathByRoutePattern = {
   "/project/language": "/page-index/#settings",
   "/project/asset-package": "/page-index/#release",
   "/project/user": "/page-index/#settings",
+};
+
+// Pages with their own docs for phones and tablets, used in touch mode.
+const creatorTouchDocsPathByRoutePattern = {
+  "/project/tutorials": "/video-tutorials-mobile/",
 };
 
 const creatorDocsPathBySystemActionMode = {
@@ -112,9 +118,16 @@ const normalizeMode = (mode) => {
   return mode;
 };
 
-export const getRoutevnCreatorDocsUrl = (routePattern) => {
+export const getRoutevnCreatorDocsUrl = (
+  routePattern,
+  { isTouchMode = false } = {},
+) => {
   const normalizedRoutePattern = normalizeRoutePattern(routePattern);
-  const docsPath = creatorDocsPathByRoutePattern[normalizedRoutePattern];
+  const touchDocsPath = isTouchMode
+    ? creatorTouchDocsPathByRoutePattern[normalizedRoutePattern]
+    : undefined;
+  const docsPath =
+    touchDocsPath ?? creatorDocsPathByRoutePattern[normalizedRoutePattern];
 
   if (!docsPath) {
     return ROUTEVN_CREATOR_DOCS_URL;
