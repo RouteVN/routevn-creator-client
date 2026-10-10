@@ -388,6 +388,23 @@ encrypted with an AES-GCM key generated in Android Keystore; only ciphertext is
 stored in the excluded `auth-secrets` preferences file. The session is merged
 back into the in-memory config only when the app reads its named global state.
 
+## Minimum WebView Version
+
+The app also requires WebView (Chromium) 111 or newer, set by
+`MIN_WEBVIEW_MAJOR_VERSION` in `MainActivity`. The theme colours in
+`static/public/theme.css` use `oklch()`, and the Rettangoli UI uses
+`color-mix()`; both arrive in Chromium 111. On an older WebView the page loads,
+but every themed background is transparent and the text falls back to black,
+so the app shows a black screen.
+
+A WebView below the minimum, or without the message-listener feature, gets the
+native "needs a newer Android System WebView" screen instead of the app. If the
+version cannot be read, only the feature check applies.
+
+Raise the minimum when the web app starts using a newer CSS or JavaScript
+feature. Android 7 cannot update past Chromium 119 and Android 8 and 9 stop at
+Chromium 138, so a minimum above 119 also means raising `minSdk`.
+
 ## Backup And Device Transfer
 
 `android:allowBackup` is enabled as the master switch, but RouteVN does not use
