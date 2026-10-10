@@ -26,10 +26,6 @@ refs:
     eventListeners:
       click:
         handler: handleBackClick
-  saveButton:
-    eventListeners:
-      click:
-        handler: handleSaveButtonClick
   nodeButton:
     eventListeners:
       click:
@@ -136,7 +132,6 @@ template:
                       - $if showPreviewHeader:
                           - 'rtgl-view h=48 w=f d=h bgc=bg bwt=xs bwb=xs ph=md av=c style="position: sticky; top: 0px; z-index: 1000;"':
                               - rtgl-text w=1fg s=lg ellipsis=true: ${previewTitle}
-                              - rtgl-button#saveButton ml=sm: ${savePreviewButton}
                       - $if isPreviewMounted:
                           - rvn-layout-editor-preview#layoutEditorPreview :layoutState=${previewLayoutState} :initialPreviewData=${previewHydrationData} :charactersData=${charactersData}: null
                         $else:
@@ -170,8 +165,6 @@ template:
                   - rtgl-view h=48 w=f d=h bgc=bg bwb=xs ph=md av=c:
                       - 'rtgl-view w=1fg style="min-width: 0;"':
                           - rtgl-tabs#rightPanelModeTabs s=sm selected-tab=${rightPanelMode} :items=${rightPanelModeTabs}: null
-                      - $if showRightPanelSaveButton:
-                          - 'rtgl-button#saveButton sq pre=save v=se ml=sm aria-label="${savePreviewButton}" title="${savePreviewButton}"': null
                   - 'rtgl-view d=v w=f h=1fg style="min-height: 0; ${rightPanelEditStyle}"':
                       - $if detailPanelSelectedItemId:
                           - rtgl-view d=v w=f h=f:

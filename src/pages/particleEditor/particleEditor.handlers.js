@@ -1,5 +1,4 @@
 import { concatMap, debounceTime, filter, from, tap } from "rxjs";
-import { withErrorDetails } from "../../internal/errorDetails.js";
 import {
   createParticleEditorPayload,
   getParticleEditorBackPath,
@@ -7,12 +6,7 @@ import {
 } from "../../internal/particleEditorRoute.js";
 import { showAssetLoadFailures } from "../../internal/ui/assetLoadFeedback.js";
 import { resolveEditHistoryShortcut } from "../../internal/ui/editHistory.js";
-import {
-  captureEditorPreviewImages,
-  storeEditorPreviewFiles,
-} from "../../internal/ui/editorPreviewCapture.js";
 import { createFileExplorerKeyboardScopeHandlers } from "../../internal/ui/fileExplorerKeyboardScope.js";
-import { formatI18nCopy } from "../../internal/ui/i18nCopy.js";
 import { mountMobileResourceWindowLayout } from "../../internal/ui/resourcePages/mobileResourcePage.js";
 import { runResourcePageMutation } from "../../internal/ui/resourcePages/resourcePageErrors.js";
 import { enqueueSceneEditorPersistence } from "../../internal/ui/sceneEditor/persistenceQueue.js";
@@ -81,11 +75,11 @@ const ensureGraphicsSize = async (deps) => {
 
 // Loads the images the canvas has not loaded, each on its own, and returns
 // the ones that failed. A failed image stays out of the canvas, and renders
-// do not read it again; `retryFailed` tries it again, as Save Preview does.
-const loadCanvasImages = async (deps, { retryFailed = false } = {}) => {
+// do not read it again while the page is open.
+const loadCanvasImages = async (deps) => {
   const { graphicsService, projectService, store } = deps;
   const loadedFileIds = store.selectLoadedAssetFileIds();
-  const failedFileIds = retryFailed ? [] : store.selectFailedAssetFileIds();
+  const failedFileIds = store.selectFailedAssetFileIds();
   const images = new Map();
   for (const image of store.selectCanvasImages()) {
     if (
@@ -149,7 +143,7 @@ const selectCanvasUnitsPerCssPixel = (deps) => {
   return canvasWidth > 0 ? store.selectEffect().width / canvasWidth : 1;
 };
 
-// What Preview and Save Preview draw: the canvas without the source
+// What Preview draws, as the thumbnail does: the canvas without the source
 // outline, with the preview background.
 const createSavedPreviewRenderState = (store) =>
   createParticlePreviewRenderState({
@@ -159,8 +153,8 @@ const createSavedPreviewRenderState = (store) =>
   });
 
 // Edit's Source tab draws the particle with its source outline; the other
-// tabs and Preview draw the same canvas without it, which is what Save
-// Preview saves. Every render reads
+// tabs and Preview draw the same canvas without it, which is what the
+// thumbnail shows. Every render reads
 // the store, so a later render shows the latest values. An image that cannot
 // load is warned about once and left out, and the canvas stays editable.
 const renderParticleCanvas = async (deps) => {
@@ -191,30 +185,45 @@ const renderParticleCanvas = async (deps) => {
   }
 };
 
-// Saves the particle's effect when it differs from what is saved: its size,
-// seed and modules, never its name. Saves run one at a time, so a save on
-// leaving waits for a running autosave and then saves what it missed.
-const saveParticleValues = (deps) => {
+// Saves the particle's effect (its size, seed and modules, never its name)
+// and its preview background, whichever differ from what is saved. Saves run
+// one at a time, so a save on leaving waits for a running autosave and then
+// saves what it missed.
+const saveParticleChanges = (deps) => {
   const { appService, projectService, store } = deps;
   return enqueueSceneEditorPersistence({
     owner: projectService,
     task: async () => {
-      if (!store.selectHasUnsavedValues()) {
+      const hasUnsavedValues = store.selectHasUnsavedValues();
+      const preview = store.selectUnsavedPreviewSettings();
+      if (!hasUnsavedValues && !preview) {
         return true;
       }
 
       const effect = store.selectEffect();
+      const data = {};
+      if (hasUnsavedValues) {
+        Object.assign(data, effect);
+      }
+      if (preview) {
+        data.preview = preview;
+      }
       const updateAttempt = await runResourcePageMutation({
         appService,
         fallbackMessage: selectCopy(deps).failedSaveParticle,
         action: () =>
           projectService.updateParticle({
             particleId: store.selectParticleId(),
-            data: effect,
+            data,
           }),
       });
       if (updateAttempt.ok) {
-        store.markValuesSaved({ effect });
+        if (hasUnsavedValues) {
+          store.markValuesSaved({ effect });
+        }
+        if (preview) {
+          store.markPreviewSettingsSaved({ preview });
+        }
       }
       return updateAttempt.ok;
     },
@@ -293,7 +302,7 @@ const mountSubscriptions = (deps) => {
       .pipe(
         filter(({ action }) => action === AUTOSAVE_ACTION),
         debounceTime(AUTOSAVE_DEBOUNCE_MS),
-        concatMap(() => from(saveParticleValues(deps))),
+        concatMap(() => from(saveParticleChanges(deps))),
       )
       .subscribe(),
     subject
@@ -324,6 +333,7 @@ export const handleBeforeMount = (deps) => {
     appService,
     browserEventsClient,
     graphicsService,
+    projectService,
     render,
     store,
     uiConfig,
@@ -350,12 +360,22 @@ export const handleBeforeMount = (deps) => {
     options: { capture: true },
     listener: (event) => handleWindowKeyDown(deps, { _event: event }),
   });
-  // The preview background is left behind; it is for this visit only.
+  // Leaving saves waiting changes, then has the thumbnail brought up to date
+  // in the background, so leaving waits only for the save. A backup keeps
+  // the page open, so it only saves.
   const unregisterBeforeNavigation = appService.registerBeforeNavigation(
-    async () => {
-      const saved = await saveParticleValues(deps);
+    async ({ reason } = {}) => {
+      const saved = await saveParticleChanges(deps);
       if (!saved) {
         throw new Error("Failed to save particle before navigation.");
+      }
+      const particleId = store.selectParticleId();
+      // Only leaving the page draws its thumbnail. A backup, the app going to
+      // the background, or quitting only saves.
+      if (particleId && !reason) {
+        void projectService.requestParticleThumbnails({
+          particleIds: [particleId],
+        });
       }
     },
   );
@@ -369,7 +389,7 @@ export const handleBeforeMount = (deps) => {
     // The graphics service is shared, and the next page can start its
     // renderer while the save below runs, so this page's goes first.
     void graphicsService.destroy();
-    const saved = await saveParticleValues(deps);
+    const saved = await saveParticleChanges(deps);
     if (!saved) {
       throw new Error("Failed to save particle during cleanup.");
     }
@@ -437,7 +457,7 @@ export const handleWindowKeyDown = async (deps, payload) => {
 
 export const handleBackClick = async (deps) => {
   const { appService } = deps;
-  const saved = await saveParticleValues(deps);
+  const saved = await saveParticleChanges(deps);
   if (saved) {
     navigateBack(appService);
   }
@@ -477,101 +497,6 @@ export const handleParticleFormChange = async (deps, payload) => {
     store.refreshForm();
   }
   await commitParticleEdit(deps);
-};
-
-const showSavePreviewFailure = (deps, message, error) => {
-  const { appService, i18n } = deps;
-  console.error("[particleEditor] Failed to save the preview", error);
-  appService.showAlert({
-    title: selectCopy(deps).errorTitle,
-    message: withErrorDetails(message, error, i18n.appPage.errorDetailsLabel),
-  });
-};
-
-const saveParticlePreview = async (deps) => {
-  const { appService, graphicsService, projectService, refs, store } = deps;
-  const copy = selectCopy(deps);
-  if (!(await saveParticleValues(deps))) {
-    return;
-  }
-
-  // The thumbnail shows the images picked for it, so one that cannot load
-  // stops the save instead of saving the particle without it.
-  const [failure] = await loadCanvasImages(deps, { retryFailed: true });
-  if (failure) {
-    await renderParticleCanvas(deps);
-    showSavePreviewFailure(
-      deps,
-      formatI18nCopy(copy.failedLoadPreviewImage, {
-        imageName: failure.imageName,
-      }),
-      failure.error,
-    );
-    return;
-  }
-
-  let previewImages;
-  try {
-    previewImages = await captureEditorPreviewImages({
-      graphicsService,
-      canvas: refs.canvas,
-      renderState: createSavedPreviewRenderState(store),
-      thumbnailOnly: true,
-    });
-  } catch (error) {
-    await renderParticleCanvas(deps);
-    showSavePreviewFailure(deps, copy.failedCapturePreview, error);
-    return;
-  }
-
-  let previewFiles;
-  try {
-    previewFiles = await storeEditorPreviewFiles({
-      projectService,
-      ...previewImages,
-    });
-  } catch (error) {
-    await renderParticleCanvas(deps);
-    showSavePreviewFailure(deps, copy.failedSavePreview, error);
-    return;
-  }
-
-  const updateAttempt = await runResourcePageMutation({
-    appService,
-    fallbackMessage: copy.failedSavePreview,
-    action: () =>
-      projectService.updateParticle({
-        particleId: store.selectParticleId(),
-        data: {
-          thumbnailFileId: previewFiles.thumbnailFileId,
-          preview: store.selectPreviewSettings(),
-        },
-        fileRecords: previewFiles.fileRecords,
-      }),
-  });
-  await renderParticleCanvas(deps);
-  if (updateAttempt.ok) {
-    appService.showToast({ message: copy.particlePreviewSaved });
-  }
-};
-
-// Saves the preview background and a new thumbnail of the particle, drawn as
-// Preview shows it, with that background. The particle's values save first. The button is
-// disabled while it saves, so a double click saves once.
-export const handleSavePreviewClick = async (deps) => {
-  const { render, store } = deps;
-  if (store.selectIsSavingPreview()) {
-    return;
-  }
-
-  store.startSavingPreview();
-  render();
-  try {
-    await saveParticlePreview(deps);
-  } finally {
-    store.finishSavingPreview();
-    render();
-  }
 };
 
 // rvn-zoom-viewport keeps the point in view in place when the zoom changes.
@@ -650,12 +575,23 @@ export const handleBackgroundImageMenuClose = (deps) => {
   render();
 };
 
+// A picked or removed preview background saves on its own, as an edit does,
+// but is not part of the undo history.
+const commitPreviewChange = async (deps) => {
+  const { render } = deps;
+  queueParticleAutosave(deps);
+  render();
+  await renderParticleCanvas(deps);
+};
+
 export const handleBackgroundImageMenuItemClick = async (deps, payload) => {
   const { render, store } = deps;
   const { item } = payload._event.detail;
   store.closeBackgroundImageMenu();
   if (item.value === "remove") {
     store.clearPreviewBackgroundImage();
+    await commitPreviewChange(deps);
+    return;
   }
   render();
   await renderParticleCanvas(deps);
@@ -684,7 +620,7 @@ export const handleImageSelectorDialogClose = async (deps) => {
 };
 
 // A picked texture is one edit; a picked background is only for the
-// preview.
+// preview, and saves on its own.
 export const handleImageSelectorConfirmClick = async (deps) => {
   const { render, store } = deps;
   const { slot, selectedImageId, originalImageId } =
@@ -702,6 +638,10 @@ export const handleImageSelectorConfirmClick = async (deps) => {
       ),
     });
     await commitParticleEdit(deps);
+    return;
+  }
+  if (slot === "background") {
+    await commitPreviewChange(deps);
     return;
   }
 

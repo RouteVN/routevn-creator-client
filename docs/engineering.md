@@ -1286,7 +1286,44 @@ Cmd/Ctrl+Z undoes and Shift+Cmd/Ctrl+Z redoes, by the letter the
 keyboard layout types, except in a focused field, which keeps its own text
 undo, or in an open dialog. An explorer action first saves edits waiting to
 save, and undo and redo wait while it runs, so its step holds only its own
-change. Save Preview and preview data are not part of the history.
+change. Preview data is not part of the history.
+
+The layout editor's preview data saves on its own 500ms after the user edits
+it, as the layout's or control's `preview` (`saveLayoutEditorPreview`, through
+the page's save queue, after element edits), and leaving saves it at once. The
+Preview's values, and the preview data a layout draws with them, are in
+`src/internal/layoutEditorPreview/` (`createSavedLayoutPreviewData` in
+`layoutEditorPreviewValues.js`): the Preview hydrates from the saved data and
+derives the rest, such as sample dialogue, and a layout's thumbnail derives it
+from the saved data the same way. So the Preview tells the page which data the
+user edited (`edited` on `preview-data-change`), and only that is saved; what
+it derives when it opens or the layout changes is not, so opening a layout
+writes nothing. The page counts edits and the last one saved
+(`previewEditVersion`), so an edit made while a save runs, even one back to
+how it opened, is saved after it. Comparisons sort keys (`stableStringify`),
+since saved data can come back in another order. The preview component does
+not hydrate data it already shows: hydrating remounts its forms, and would
+take the focus from a field being typed in when the page's save comes back.
+
+Layout thumbnails are drawn in the background as transforms' are
+(`projectService.requestLayoutThumbnails`, `createLayoutThumbnailSource` and
+`LAYOUT_THUMBNAIL_VERSION` in `src/internal/layoutPreview.js`). That module
+holds what a layout draws with its preview data (`createLayoutPreviewElements`):
+the editor's canvas draws it with its selection chrome on top, and a thumbnail
+draws it without, from the saved layout and its saved `preview`, at the
+project resolution. The render state holds the text styles, colors, font file
+ids, images, fragments, and particles the layout draws, so changing one
+redraws the thumbnails of the layouts that use it the next time they are
+requested. Text that types itself out is drawn in full, sounds are not loaded,
+and a layout with particles lets them run first, as long as the effect that
+shows its particles soonest needs (`getParticleSettleMs`). Fonts load under the
+thumbnail renderer's own keys, as images do, and text styles' font families
+are renamed to match: route-graphics names a font face by its key and deletes
+it from `document.fonts` when its renderer is freed, so the keys stay valid
+font family names. Leaving the layout editor requests the layout's thumbnail
+(not for controls, which show none, and not when the page stays open, as
+below); the layouts page
+requests every layout's when it opens and a new layout's after Add.
 
 The animation editor has undo and redo the same way, for edits made since the
 page opened. Its autosave saves the whole animation, so a step holds the page's
@@ -1300,6 +1337,11 @@ the snapshot back at once and queue the autosave, which skips what is already
 saved; a new animation counts as saved as it opened, so undoing its first edit
 creates nothing. Keyframes and masks are selected by index, so a selection is
 cleared when the restore removes it or moves the keyframes or masks around it.
+A picked preview image saves through the same autosave (`scheduleEditorAutosave`,
+without recording a step), and a save sends the preview images only when they
+differ from what is saved. A new animation is created by its first edit, which
+takes its preview images along, so a picked image alone creates nothing. The
+touch preview dialog closes with Done.
 Preview images, a mask still being added, and view state such as zoom and the
 playhead are not part of the history, and undo and redo are off while a video
 export runs. The shortcuts step aside only for text fields, so they still work
@@ -1312,8 +1354,9 @@ recorded where every edit handler ends (`commitAudioEffectEdit`). Edits merge
 into steps and select keyframes as in the animation editor. Undo and redo put
 the snapshot back at once, and the page saves it on leaving with its other
 edits; the page compares it with what was last saved, so undoing back to that
-saves nothing. Preview sounds, which Save Preview saves, and view state such as
-the tab and zoom are not part of the history.
+saves nothing. Picked preview sounds save with the audio effect on leaving,
+in the same `audioEffect.update`, when they differ from what is saved; they and
+view state such as the tab and zoom are not part of the history.
 
 The scene editor has undo and redo for line edits made since the scene opened:
 text, new, split, merged, moved, and deleted lines, and line action edits.
@@ -1406,8 +1449,8 @@ failed drawing. A renderer per job would not do: WebKit counts every WebGL
 context a page made against its limit of 16 until it is garbage collected,
 even once freed, and past the limit loses the oldest, which is an open
 editor's canvas when thumbnails are drawn while it is open. Each drawing
-clears the last first. The renderer loads its images under keys of its own:
-textures are cached by key for every renderer, and a graphics service unloads
+clears the last first. The renderer loads its files under keys of its own:
+assets are cached by key for every renderer, and a graphics service unloads
 the keys it loaded when it is freed, so sharing the page renderer's file id
 keys would take images away from an open editor, or let the editor's
 teardown take them from the thumbnail. Bump
@@ -1420,7 +1463,7 @@ Leaving the transform editor saves waiting changes and then requests its
 thumbnail without waiting for it. A `prepareNavigation` with a `reason` only
 saves, since the page stays open: a backup (`"backup"`), the app going to the
 background (`"background"`), or quitting (`"quit"`); a navigation passes no
-reason. The transforms page
+reason. Each editor with thumbnails does the same. The transforms page
 requests every thumbnail when it opens and a new transform's after Add, which
 also repairs thumbnails left out of date when the app closed or crashed before
 an editor was left; until one is drawn, the detail panel says there is no
@@ -1437,8 +1480,7 @@ Particles are edited on their own page too, `/project/particle-editor` (the
 `pt` payload holds the particle id), built like the transform editor from the
 shared editor helpers: `src/internal/ui/editorCanvasWorkspace.js` (zoom
 levels, the right panel rule, and the canvas layout for a given resolution)
-and `src/internal/ui/editorPreviewCapture.js` (capture and store the preview
-and thumbnail images, or the thumbnail only). The particles page's dialogs
+and the editor thumbnail service. The particles page's dialogs
 only add a particle (name, description, tags, and a preset; the editor opens
 next) and edit its name, description, and tags; double-click, long press, `e`,
 and **Open** open the editor, and **Duplicate** copies a particle into its
@@ -1452,14 +1494,23 @@ Edit's Source tab is open, the canvas also draws the emitter source's outline
 (the rect, the circle's or line's bounding box, or a small square for a
 point, at least 16 CSS pixels and kept inside the canvas), and dragging its
 border moves the source, both ends of a line together, as one undo step. Until the particle has a texture the canvas
-shows a hint instead of the effect. Preview holds a background image and
-**Save Preview**, which saves the values and then the background
-(`particle.preview.background`, from creator-model 1.16.0) and a thumbnail of
-the canvas without the outline, with the background. Edits save on their own 300ms after the
-last one and on leaving, as in the transform editor, and save only the effect
-(size, seed, and modules); thumbnails change only with Save Preview. Texture
-and background images follow the asset failure policy as in the transform
-editor.
+shows a hint instead of the effect. Preview holds a background image
+(`particle.preview.background`, from creator-model 1.16.0). Edits, and a
+picked or removed background, save on their own 300ms after the last change
+and on leaving, as in the transform editor: the effect (size, seed, and
+modules) and the background, whichever changed, in one `particle.update`; a
+pick saves once its picker is OK'd, and the background is not part of the
+history. Thumbnails are drawn in the background as transforms' are
+(`projectService.requestParticleThumbnails`, `createParticleThumbnailSource`
+in `src/internal/particlePreview.js`, `PARTICLE_THUMBNAIL_VERSION`): leaving
+the editor requests the particle's, the particles page requests every
+particle's when it opens, and Duplicate copies the hash. A thumbnail draws the
+canvas without the outline, with the background, at the particle's own size;
+particles move on the renderer's own clock, so the renderer lets them run
+before it captures (`getParticleSettleMs`): 1.5s for an effect that runs on,
+and for a burst, or an effect that stops emitting, only until halfway through
+the shortest particle life after it last emits, so its particles still show. Texture and background images follow the asset
+failure policy as in the transform editor.
 
 Text styles are edited on their own page as well, `/project/text-style-editor`
 (the `ts` payload holds the text style id), with the editors' header (back,
@@ -1494,11 +1545,11 @@ at 2px. Preview holds
 the preview text, which the text styles page shows (the name when it is
 empty), a Text Alignment control for the editor preview (saved as the text
 style's `previewAlign`, from creator-model 1.16.0; layouts keep using
-`align`), and **Save Preview**, which saves the values and then whichever of
-the preview text and alignment changed. Neither is part of the history, and
-unsaved ones are left behind on leaving. Edits save on their own 300ms after
-the last one and on leaving, through `enqueueSceneEditorPersistence`, as in
-the transform editor, and an undo back to the saved values saves nothing. Font files follow the
+`align`). Edits, and the preview text and alignment, save on their own 300ms
+after the last change and on leaving, together in one `textStyle.update`,
+through `enqueueSceneEditorPersistence`, as in the transform editor; an undo
+back to the saved values saves nothing. The preview text and alignment are
+not part of the history. Font files follow the
 asset failure policy: `rvn-font-preview` names the files it could not load in
 `font-load-error`, and the editor warns once per file, draws the text without
 that file (in the style's next font, or the browser's), and stays editable.
@@ -1764,7 +1815,7 @@ Current recovery boundaries:
 | Scene editor audio warm-up            | Keep painting after a decode retry fails. Preserve diagnostics without duplicating the warning already shown by preloading.                                                                                                 |
 | Layout editor canvas                  | Collect read/integrity/decode failures, warn once per failed file per mounted canvas, omit affected render elements, and keep unaffected elements editable. Retry on subsequent requests without changing the saved layout. |
 | Transform editor canvas               | Load each preview image separately, warn once per failed file per mounted page, and draw the fallback in its place while editing. Later renders skip it, and the thumbnail is not redrawn while it fails.                   |
-| Particle editor canvas                | Load the texture and background images separately, warn once per failed file per mounted page, and leave the failed image out while editing. Later renders skip it; Save Preview rereads it and saves nothing if it fails.  |
+| Particle editor canvas                | Load the texture and background images separately, warn once per failed file per mounted page, and leave the failed image out while editing. Later renders skip it, and the thumbnail is not redrawn while it fails.        |
 | Text style editor preview             | Load each font file of the style separately, warn once per failed file per mounted page, and draw the text without that file, in the style's next font or the browser's. The saved fonts do not change.                     |
 | Fullscreen startup                    | Check the combined initial scene and layout assets, collect all read/integrity/decode failures, and show one deduplicated warning stating playback is blocked. Any failure closes the preview before starting the engine.   |
 | Fullscreen later scene/layout loading | Retain the existing transition/prefetch handling: report scene failures, propagate font/layout failures.                                                                                                                    |

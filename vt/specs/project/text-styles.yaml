@@ -199,7 +199,7 @@ steps:
       - action: write
         value: The quick brown fox jumps over the lazy dog.
   - action: waitFor
-    selector: "rvn-text-style-editor #savePreviewButton"
+    selector: "rvn-text-style-editor #previewAlignControl"
     state: visible
     timeoutMs: 5000
   - action: wait

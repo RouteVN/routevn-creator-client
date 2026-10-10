@@ -80,8 +80,8 @@ describe("audioEffectsEditor view", () => {
     expect(view.indexOf("#previewLoopButton")).toBeLessThan(
       view.indexOf("#playButton"),
     );
-    expect(view).toContain("rtgl-button#savePreviewButton");
-    expect(view).toContain("handler: handleSavePreviewClick");
+    // Preview sounds save with the audio effect, so there is no Save Preview.
+    expect(view).not.toContain("savePreview");
     expect(view).toContain("rtgl-slider#timelineZoomSlider");
     expect(view).toContain("handler: handleTimelineZoomIn");
     expect(view).toContain("handler: handleTimelineZoomOut");

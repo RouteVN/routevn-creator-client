@@ -29,10 +29,6 @@ refs:
     eventListeners:
       click:
         handler: handleTogglePreviewLoop
-  savePreviewButton:
-    eventListeners:
-      click:
-        handler: handleSavePreviewClick
   editorTabs: {}
   editorTab*:
     eventListeners:
@@ -260,8 +256,6 @@ template:
                       - $if selectedEditorTab == 'timeline' && isTransition:
                           - $if canAddTransitionProperty:
                               - 'rtgl-button#addPropertyButton pre=plus s=sm aria-haspopup=menu aria-expanded="${addPropertySideMenu.open}"': ${addPropertyButton}
-                      - $if selectedEditorTab == 'preview':
-                          - 'rtgl-button#savePreviewButton s=sm ?disabled=${saving}': ${saveButton}
                   - $if selectedEditorTab == 'timeline':
                       - $if isTransition:
                           - 'rtgl-view#audioEffectTimelinePanel role=tabpanel aria-labelledby=editorTab0 d=v w=f h=1fg g=md style="min-height: 0;"':

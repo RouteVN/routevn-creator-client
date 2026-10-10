@@ -3,8 +3,8 @@ import {
   collectLayoutPreviewTargets,
   createSaveLoadPreviewSlots,
   getLayoutPreviewVariableItems,
-} from "../../src/components/layoutEditorPreview/support/layoutEditorPreviewSupport.js";
-import { createLayoutEditorPreviewData } from "../../src/components/layoutEditorPreview/support/layoutEditorPreviewData.js";
+} from "../../src/internal/layoutEditorPreview/layoutEditorPreviewSupport.js";
+import { createLayoutEditorPreviewData } from "../../src/internal/layoutEditorPreview/layoutEditorPreviewData.js";
 import {
   setHistoryDefaultValue,
   setSaveLoadDefaultValue,

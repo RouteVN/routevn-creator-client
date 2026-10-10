@@ -1,5 +1,13 @@
 import { dataUrlToBlob } from "../../../internal/dataUrl.js";
 import {
+  createLayoutThumbnailSource,
+  LAYOUT_THUMBNAIL_VERSION,
+} from "../../../internal/layoutPreview.js";
+import {
+  createParticleThumbnailSource,
+  PARTICLE_THUMBNAIL_VERSION,
+} from "../../../internal/particlePreview.js";
+import {
   createTransformThumbnailSource,
   TRANSFORM_THUMBNAIL_VERSION,
 } from "../../../internal/transformPreview.js";
@@ -35,10 +43,37 @@ export const createEditorThumbnailService = ({
   getFileContent,
   storeFileForProject,
   updateTransform,
+  updateParticle,
+  updateLayout,
   renderThumbnail = renderDefaultThumbnail,
   releaseRenderer = releaseDefaultRenderer,
   waitUntilIdle = waitForIdle,
 }) => {
+  // Each kind of item with a thumbnail: where it is kept, how its thumbnail
+  // is drawn from saved data, and how it is saved.
+  const kinds = {
+    transform: {
+      collection: "transforms",
+      version: TRANSFORM_THUMBNAIL_VERSION,
+      createSource: createTransformThumbnailSource,
+      save: ({ id, data, fileRecords }) =>
+        updateTransform({ transformId: id, data, fileRecords }),
+    },
+    particle: {
+      collection: "particles",
+      version: PARTICLE_THUMBNAIL_VERSION,
+      createSource: createParticleThumbnailSource,
+      save: ({ id, data, fileRecords }) =>
+        updateParticle({ particleId: id, data, fileRecords }),
+    },
+    layout: {
+      collection: "layouts",
+      version: LAYOUT_THUMBNAIL_VERSION,
+      createSource: createLayoutThumbnailSource,
+      save: ({ id, data, fileRecords }) =>
+        updateLayout({ layoutId: id, data, fileRecords }),
+    },
+  };
   const pendingJobs = new Map();
   let running;
   let rendererInUse = false;
@@ -46,17 +81,18 @@ export const createEditorThumbnailService = ({
   // A job's work counts only while its project is the one open.
   const isOpen = (projectId) => getEnsuredProjectId() === projectId;
 
-  // The transform's thumbnail source and its hash, when it is out of date.
-  const findStaleTransformThumbnail = async (transformId) => {
+  // The item's thumbnail source and its hash, when it is out of date.
+  const findStaleThumbnail = async ({ kind, id }) => {
+    const { collection, version, createSource } = kinds[kind];
     const repositoryState = getRepositoryState();
-    const item = repositoryState.transforms?.items?.[transformId];
-    if (item?.type !== "transform") {
+    const item = repositoryState[collection]?.items?.[id];
+    if (item?.type !== kind) {
       return undefined;
     }
 
-    const source = createTransformThumbnailSource({ item, repositoryState });
+    const source = createSource({ item, repositoryState });
     const thumbnailSourceHash = await createThumbnailSourceHash({
-      version: TRANSFORM_THUMBNAIL_VERSION,
+      version,
       renderState: source.renderState,
     });
     return item.thumbnailSourceHash === thumbnailSourceHash
@@ -64,30 +100,41 @@ export const createEditorThumbnailService = ({
       : { source, thumbnailSourceHash };
   };
 
-  // A preview image that cannot be read leaves the old thumbnail in place,
-  // since drawing the fallback would misrepresent the preview.
-  const drawThumbnail = async ({ projectResolution, renderState, images }) => {
+  // A file that cannot be read leaves the old thumbnail in place, since
+  // drawing without it would misrepresent the preview.
+  const drawThumbnail = async ({
+    width,
+    height,
+    renderState,
+    assets,
+    settleMs,
+  }) => {
     const contents = [];
     try {
-      const imageAssets = {};
-      for (const image of images) {
-        if (imageAssets[image.fileId]) {
+      const assetsByFileId = {};
+      for (const asset of assets) {
+        if (assetsByFileId[asset.fileId]) {
           continue;
         }
-        const content = await getFileContent(image.fileId, {
+        const content = await getFileContent(asset.fileId, {
           verifyImageIntegrity: true,
         });
         contents.push(content);
-        imageAssets[image.fileId] = {
+        const loadedAsset = {
           url: content.url,
-          type: image.fileType ?? content.type ?? "image/png",
+          type: asset.fileType ?? content.type ?? "image/png",
         };
+        if (asset.fontWeightDescriptor !== undefined) {
+          loadedAsset.fontWeightDescriptor = asset.fontWeightDescriptor;
+        }
+        assetsByFileId[asset.fileId] = loadedAsset;
       }
       return await renderThumbnail({
-        width: projectResolution.width,
-        height: projectResolution.height,
+        width,
+        height,
         renderState,
-        imageAssets,
+        assets: assetsByFileId,
+        settleMs,
       });
     } finally {
       contents.forEach((content) => content.revoke?.());
@@ -95,19 +142,17 @@ export const createEditorThumbnailService = ({
   };
 
   // Checking a hash is cheap, so only drawing waits for the app to be idle,
-  // and the transform is read again after the wait.
-  const syncTransformThumbnail = async ({ projectId, transformId }) => {
-    if (
-      !isOpen(projectId) ||
-      !(await findStaleTransformThumbnail(transformId))
-    ) {
+  // and the item is read again after the wait.
+  const syncThumbnail = async (job) => {
+    const { projectId, kind, id } = job;
+    if (!isOpen(projectId) || !(await findStaleThumbnail(job))) {
       return;
     }
     await waitUntilIdle();
     if (!isOpen(projectId)) {
       return;
     }
-    const stale = await findStaleTransformThumbnail(transformId);
+    const stale = await findStaleThumbnail(job);
     if (!stale) {
       return;
     }
@@ -124,10 +169,10 @@ export const createEditorThumbnailService = ({
     if (!isOpen(projectId)) {
       return;
     }
-    // The hash describes what was drawn, so it stays right even if the
-    // transform changed meanwhile; the next request draws that change.
-    const result = await updateTransform({
-      transformId,
+    // The hash describes what was drawn, so it stays right even if the item
+    // changed meanwhile; the next request draws that change.
+    const result = await kinds[kind].save({
+      id,
       data: {
         thumbnailFileId: thumbnailFile.fileId,
         thumbnailSourceHash: stale.thumbnailSourceHash,
@@ -136,7 +181,8 @@ export const createEditorThumbnailService = ({
     });
     if (result?.valid === false) {
       console.warn("[editorThumbnails] The thumbnail update was rejected", {
-        transformId,
+        kind,
+        id,
         result,
       });
     }
@@ -150,10 +196,11 @@ export const createEditorThumbnailService = ({
       const [key, job] = pendingJobs.entries().next().value;
       pendingJobs.delete(key);
       try {
-        await syncTransformThumbnail(job);
+        await syncThumbnail(job);
       } catch (error) {
         console.warn("[editorThumbnails] Failed to update a thumbnail", {
-          transformId: job.transformId,
+          kind: job.kind,
+          id: job.id,
           error,
         });
       }
@@ -180,28 +227,35 @@ export const createEditorThumbnailService = ({
     return running;
   };
 
+  // Queues the named items of a kind, or all of them in the open project when
+  // none are named.
+  const requestThumbnails = (kind, ids) => {
+    const projectId = getEnsuredProjectId();
+    if (!projectId) {
+      return Promise.resolve();
+    }
+    const itemIds =
+      ids ??
+      Object.values(getRepositoryState()[kinds[kind].collection]?.items ?? {})
+        .filter((item) => item.type === kind)
+        .map((item) => item.id);
+    for (const id of itemIds) {
+      pendingJobs.set(`${projectId}:${kind}:${id}`, { projectId, kind, id });
+    }
+    return startRunning();
+  };
+
   return {
-    // Brings the named transforms' thumbnails up to date, or every
-    // transform's in the open project when none are named. Callers do not
-    // wait for it; the promise settles when the queue is empty and never
-    // rejects.
+    // Bring thumbnails up to date. Callers do not wait for them; the promise
+    // settles when the queue is empty and never rejects.
     requestTransformThumbnails({ transformIds } = {}) {
-      const projectId = getEnsuredProjectId();
-      if (!projectId) {
-        return Promise.resolve();
-      }
-      const ids =
-        transformIds ??
-        Object.values(getRepositoryState().transforms?.items ?? {})
-          .filter((item) => item.type === "transform")
-          .map((item) => item.id);
-      for (const transformId of ids) {
-        pendingJobs.set(`${projectId}:${transformId}`, {
-          projectId,
-          transformId,
-        });
-      }
-      return startRunning();
+      return requestThumbnails("transform", transformIds);
+    },
+    requestParticleThumbnails({ particleIds } = {}) {
+      return requestThumbnails("particle", particleIds);
+    },
+    requestLayoutThumbnails({ layoutIds } = {}) {
+      return requestThumbnails("layout", layoutIds);
     },
   };
 };

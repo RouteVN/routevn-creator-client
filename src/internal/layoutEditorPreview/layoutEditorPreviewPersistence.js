@@ -3,8 +3,8 @@ import {
   LINE_COMPLETED_CONDITION_TARGET,
   SKIP_MODE_CONDITION_TARGET,
   toVariableConditionTarget,
-} from "../../../internal/layoutConditions.js";
-import { toRuntimeConditionTarget } from "../../../internal/runtimeFields.js";
+} from "../layoutConditions.js";
+import { toRuntimeConditionTarget } from "../runtimeFields.js";
 
 const DIALOGUE_RUNTIME_CONDITION_TARGETS = new Set([
   AUTO_MODE_CONDITION_TARGET,

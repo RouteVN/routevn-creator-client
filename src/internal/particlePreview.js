@@ -1,4 +1,8 @@
-import { normalizeParticleModules } from "./particles.js";
+import {
+  collectParticleTextureImageIds,
+  createRenderableParticleData,
+  normalizeParticleModules,
+} from "./particles.js";
 
 const PREVIEW_BACKGROUND = "#000000";
 const FALLBACK_ASPECT_RATIO = "16 / 9";
@@ -103,5 +107,76 @@ export const createParticlePreviewState = (
   return {
     elements,
     animations: [],
+  };
+};
+
+// Particles move on the renderer's own clock, so a still picture of a running
+// effect is taken after it has run this long.
+const PARTICLE_PREVIEW_SETTLE_MS = 1500;
+
+// How long an effect runs before a still picture of it is taken. A burst
+// emits once, and a timed effect stops emitting, so their picture is taken
+// while the particles are still there, halfway through the shortest life.
+export const getParticleSettleMs = (modules) => {
+  const emission = modules?.emission ?? {};
+  const lifetime = emission.particleLifetime;
+  const shortestLife = Number(
+    typeof lifetime === "number" ? lifetime : lifetime?.min,
+  );
+  const halfLifeMs =
+    (Number.isFinite(shortestLife) && shortestLife >= 0 ? shortestLife : 1) *
+    500;
+  if (emission.mode === "burst") {
+    return Math.min(PARTICLE_PREVIEW_SETTLE_MS, halfLifeMs);
+  }
+  const duration = Number(emission.duration);
+  if (Number.isFinite(duration) && duration >= 0) {
+    return Math.min(PARTICLE_PREVIEW_SETTLE_MS, duration * 1000 + halfLifeMs);
+  }
+  return PARTICLE_PREVIEW_SETTLE_MS;
+};
+
+// Bump when a particle's preview starts drawing the same saved particle
+// differently, so saved thumbnails are drawn again.
+export const PARTICLE_THUMBNAIL_VERSION = 1;
+
+// What a saved particle's thumbnail shows: the particle on its saved preview
+// background, as the editor's Preview draws it, at the particle's own size,
+// and the files that draws.
+export const createParticleThumbnailSource = ({ item, repositoryState }) => {
+  const imageItems = repositoryState.images?.items ?? {};
+  const effect = {
+    width: item.width,
+    height: item.height,
+    seed: item.seed,
+    modules: item.modules,
+  };
+  const background = imageItems[item.preview?.background?.imageId];
+  const backgroundImage = background?.type === "image" ? background : undefined;
+  const renderState = createParticlePreviewState(
+    createRenderableParticleData(effect, imageItems),
+    { backgroundImage },
+  );
+  const assets = [];
+  for (const image of [
+    ...collectParticleTextureImageIds(effect, imageItems).map(
+      (imageId) => imageItems[imageId],
+    ),
+    backgroundImage,
+  ]) {
+    if (image?.fileId) {
+      assets.push({
+        fileId: image.fileId,
+        fileType: image.fileType,
+      });
+    }
+  }
+
+  return {
+    width: Math.max(1, Math.round(toPositiveNumber(effect.width) ?? 1)),
+    height: Math.max(1, Math.round(toPositiveNumber(effect.height) ?? 1)),
+    renderState,
+    assets,
+    settleMs: getParticleSettleMs(effect.modules),
   };
 };

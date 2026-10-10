@@ -286,6 +286,9 @@ export const createInitialState = () => ({
   saving: false,
   // The audio effect as last saved, so an undo back to it saves nothing.
   savedDefinition: undefined,
+  // The preview sounds as last saved; picked ones save with the audio effect
+  // on leaving.
+  savedPreview: undefined,
   // Undo and redo for edits made since the page opened. The baseline is the
   // audio effect as of the last recorded edit, the before of the next one.
   editHistory: createEditHistory(),
@@ -364,6 +367,7 @@ export const loadAudioEffect = ({ state }, { item } = {}) => {
   closeKeyframeMenu({ state });
   state.dirty = false;
   state.savedDefinition = state.definition;
+  state.savedPreview = createPreviewData(state);
   state.editHistory = createEditHistory();
   state.editHistoryBaseline = state.definition;
 };
@@ -437,8 +441,13 @@ export const selectKeyframeDialogIsFinal = ({ state }) => {
   return !add && index === keyframes.length - 1;
 };
 
+// Once a save ends, what is unsaved is known again, even after a save that
+// held only preview sounds.
 export const setSaving = ({ state }, { saving } = {}) => {
   state.saving = saving === true;
+  if (!state.saving) {
+    state.dirty = isAudioEffectUnsaved(state, state.definition);
+  }
 };
 
 // The audio effect is unsaved while it differs from what is saved, or while a
@@ -599,7 +608,7 @@ const createPreviewSoundSlot = (soundId) => {
   return { soundId };
 };
 
-export const selectAudioEffectPreviewData = ({ state }) =>
+const createPreviewData = (state) =>
   state.definition.type === "transition"
     ? {
         outgoing: createPreviewSoundSlot(state.previewSoundIds.outgoing),
@@ -608,6 +617,21 @@ export const selectAudioEffectPreviewData = ({ state }) =>
     : {
         target: createPreviewSoundSlot(state.previewSoundIds.target),
       };
+
+export const selectAudioEffectPreviewData = ({ state }) =>
+  createPreviewData(state);
+
+// The preview sounds, when they differ from what is saved.
+export const selectUnsavedPreviewData = ({ state }) => {
+  const preview = createPreviewData(state);
+  return areEditHistoryValuesEqual(preview, state.savedPreview)
+    ? undefined
+    : preview;
+};
+
+export const markPreviewSaved = ({ state }, { preview } = {}) => {
+  state.savedPreview = preview;
+};
 
 const getMutablePropertyTracks = (state, side = "update") => {
   if (side === "update") {
@@ -1789,8 +1813,6 @@ export const selectViewData = ({ state, i18n }) => {
     removePropertyButton: copy.removePropertyButton ?? "Remove Property",
     editButton: copy.editMenuItem ?? "Edit",
     deleteButton: copy.deleteMenuItem ?? "Delete",
-    saving: state.saving,
-    saveButton: copy.saveButton ?? "Save",
     previewSoundItems,
     previewSoundSelectorOpen: state.previewSoundSelector.open,
     selectedPreviewSoundId,

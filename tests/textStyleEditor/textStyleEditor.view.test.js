@@ -50,18 +50,15 @@ describe("text style editor view", () => {
       'rvn-resizable-panel panel-type=detail-panel show-on-touch w=300 min-w=200 max-w=500 resize-side="left":',
     );
     expect(view).toContain("$if showMobilePanels:");
-    // The tabs, Save Preview, the form with its selects, and the preview
-    // text show in either place.
+    // The tabs, the form with its selects, and the preview text show in
+    // either place. The preview settings save on their own, so there is no
+    // Save Preview.
     expect(
       count(
         /rtgl-tabs#rightPanelModeTabs s=sm selected-tab=\$\{rightPanelMode\} :items=\$\{rightPanelModeTabs\}: null/g,
       ),
     ).toBe(2);
-    expect(
-      count(
-        /rtgl-button#savePreviewButton sq pre=save v=se ml=sm \?disabled=\$\{savePreviewDisabled\} aria-label="\$\{savePreviewButton\}" title="\$\{savePreviewButton\}"/g,
-      ),
-    ).toBe(2);
+    expect(view).not.toContain("savePreview");
     expect(
       count(
         /rtgl-form#textStyleForm key=\$\{textStyleFormKey\} :defaultValues=\$\{formValues\} :form=\$\{textStyleForm\} w=f ph=md:/g,

@@ -1397,6 +1397,9 @@ export const createInitialState = () => ({
   autosavePendingSinceAt: undefined,
   lastAutosaveFlushStartedAt: undefined,
   autosavePersistedFingerprint: undefined,
+  // The preview images as last saved, so a save sends them only when they
+  // changed.
+  autosavePersistedPreview: undefined,
   previewPlaybackMode: "auto",
   previewLoopEnabled: false,
   previewRenderVersion: 0,
@@ -3430,6 +3433,14 @@ export const selectAutosavePersistedFingerprint = ({ state }) => {
   return state.autosavePersistedFingerprint;
 };
 
+export const setAutosavePersistedPreview = ({ state }, { preview } = {}) => {
+  state.autosavePersistedPreview = preview;
+};
+
+export const selectAutosavePersistedPreview = ({ state }) => {
+  return state.autosavePersistedPreview;
+};
+
 export const markAnimationPersisted = ({ state }, { animationId } = {}) => {
   state.editMode = true;
   state.editItemId = animationId;
@@ -4672,7 +4683,6 @@ export const selectViewData = ({ state, i18n }) => {
       copy.progressDurationLabel ?? "Progress Duration (ms)",
     progressEasingLabel: copy.progressEasingLabel ?? "Progress Easing",
     removeButton: copy.removeMenuItem ?? "Remove",
-    saveButton: copy.saveButton ?? "Save",
     selectImageLabel: copy.selectImageLabel ?? "Select image",
     softnessLabel: copy.softnessLabel ?? "Softness",
     timelineZoomLabel: copy.timelineZoomLabel ?? "Timeline zoom",
