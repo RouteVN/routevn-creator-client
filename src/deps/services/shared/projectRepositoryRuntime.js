@@ -19,6 +19,8 @@ import {
   MAIN_PARTITION,
   MAIN_VIEW_NAME,
   MAIN_VIEW_VERSION,
+  SKIPPED_DRAFTS_VIEW_NAME,
+  SKIPPED_DRAFTS_VIEW_VERSION,
   cloneState,
   createMainProjectionState,
   getLatestSceneProjectionRevision,
@@ -540,6 +542,11 @@ export const createProjectRepositoryRuntime = async ({
   // been rebuilt without them.
   let reportedSkippedDrafts;
   let skippedDraftRebuild;
+  // The storage errors that did not stop that rebuild, while it runs.
+  let rebuildErrors;
+  // The first of them, passed to one listener of left-out drafts, so that it
+  // is reported once.
+  let unreportedRebuildError;
   const skippedDraftListeners = new Set();
   // The revision of each event the main state was rebuilt from, by event id.
   let rebuiltEventRevisions = new Map();
@@ -731,9 +738,71 @@ export const createProjectRepositoryRuntime = async ({
     emitHydrationProgress(activeHydrationProgress);
   };
 
+  const toCheckpointKey = ({ viewName, partition }) =>
+    JSON.stringify([viewName, partition]);
+  // Checkpoints that failed to be saved or deleted, so they can be out of
+  // date, for example still include drafts the history load left out. They
+  // read as missing for the rest of the session, until it is written again.
+  const untrustedCheckpointKeys = new Set();
+
+  // A failed delete does not fail the caller: this session no longer reads
+  // the checkpoint, and a later one checks it is current before using it, or
+  // deletes it again when the rebuild without left-out drafts did not finish.
+  // While that rebuild runs, a failed save does not fail it either.
+  const writeCheckpoint = async (key, write, { isDelete = false } = {}) => {
+    const checkpointKey = toCheckpointKey(key);
+    try {
+      await write();
+      untrustedCheckpointKeys.delete(checkpointKey);
+    } catch (error) {
+      untrustedCheckpointKeys.add(checkpointKey);
+      if (rebuildErrors) {
+        rebuildErrors.push(error);
+      } else if (isDelete) {
+        console.warn("Failed to delete a project repository checkpoint:", {
+          viewName: key.viewName,
+          partition: key.partition,
+          error,
+        });
+      } else {
+        throw error;
+      }
+    }
+  };
+
+  // The store's checkpoint methods, for every view of this runtime.
+  const checkpointStore = {
+    loadMaterializedViewCheckpoint: async (key) =>
+      untrustedCheckpointKeys.has(toCheckpointKey(key))
+        ? undefined
+        : store.loadMaterializedViewCheckpoint(key),
+    loadMaterializedViewCheckpoints: async ({ viewName, partitions }) => {
+      const trustedPartitions = partitions.filter(
+        (partition) =>
+          !untrustedCheckpointKeys.has(
+            toCheckpointKey({ viewName, partition }),
+          ),
+      );
+      return trustedPartitions.length > 0
+        ? store.loadMaterializedViewCheckpoints({
+            viewName,
+            partitions: trustedPartitions,
+          })
+        : [];
+    },
+    saveMaterializedViewCheckpoint: (checkpoint) =>
+      writeCheckpoint(checkpoint, () =>
+        store.saveMaterializedViewCheckpoint(checkpoint),
+      ),
+    deleteMaterializedViewCheckpoint: (key) =>
+      writeCheckpoint(key, () => store.deleteMaterializedViewCheckpoint(key), {
+        isDelete: true,
+      }),
+  };
+
   const saveCurrentMainCheckpoint = async () => {
     const value = createMainProjectionState(currentMainState);
-    await store.saveMaterializedViewCheckpoint({
+    await checkpointStore.saveMaterializedViewCheckpoint({
       viewName: MAIN_VIEW_NAME,
       partition: MAIN_PARTITION,
       viewVersion: MAIN_VIEW_VERSION,
@@ -804,14 +873,14 @@ export const createProjectRepositoryRuntime = async ({
       return batch;
     },
     loadCheckpoint: async ({ viewName, partition }) =>
-      store.loadMaterializedViewCheckpoint({
+      checkpointStore.loadMaterializedViewCheckpoint({
         viewName,
         partition,
       }),
     saveCheckpoint: async (checkpoint) =>
-      store.saveMaterializedViewCheckpoint(checkpoint),
+      checkpointStore.saveMaterializedViewCheckpoint(checkpoint),
     deleteCheckpoint: async ({ viewName, partition }) =>
-      store.deleteMaterializedViewCheckpoint({
+      checkpointStore.deleteMaterializedViewCheckpoint({
         viewName,
         partition,
       }),
@@ -1160,7 +1229,7 @@ export const createProjectRepositoryRuntime = async ({
   // Without `eventsForProjection`, the projection pages through the history.
   const loadSceneProjectionFromEvents = (sceneId, eventsForProjection) =>
     loadSceneProjectionState({
-      store,
+      store: checkpointStore,
       mainState: currentMainState,
       events: eventsForProjection,
       listCommittedAfter: listCommittedAfterFromRepository,
@@ -1182,7 +1251,7 @@ export const createProjectRepositoryRuntime = async ({
   };
 
   const sceneBundleRuntime = createSceneBundleRuntime({
-    store,
+    store: checkpointStore,
     listCommittedAfter: listSceneOverviewEventsAfterFromRepository,
     getCurrentMainState: () => currentMainState,
     getCurrentRevision: () => currentRevision,
@@ -1268,19 +1337,22 @@ export const createProjectRepositoryRuntime = async ({
 
     const removedSceneId = activeSceneId;
     clearActiveSceneProjection();
-    await deleteSceneProjectionCheckpoint({ store, sceneId: removedSceneId });
+    await deleteSceneProjectionCheckpoint({
+      store: checkpointStore,
+      sceneId: removedSceneId,
+    });
     await sceneBundleRuntime.clearSceneOverview(removedSceneId);
   };
 
   // Scene projection checkpoints count revisions by position in the loaded
-  // history, and a left-out draft moves every later event, so every scene's
-  // projection is rebuilt when it is next loaded. Overviews and text stats
-  // count stable revisions: only the scenes of the left-out drafts are
+  // history, and a draft left out or applied again moves every later event,
+  // so every scene's projection is rebuilt when it is next loaded. Overviews
+  // and text stats count stable revisions: only the scenes of the drafts are
   // cleared, or every scene when a draft was made in the main partition,
   // which can change any scene.
-  const clearSceneCachesForSkippedDrafts = async (skippedDrafts) => {
+  const clearSceneCachesForDrafts = async (drafts) => {
     const draftSceneIds = new Set(
-      skippedDrafts.map(({ sceneId }) => sceneId).filter(isNonEmptyString),
+      drafts.map(({ sceneId }) => sceneId).filter(isNonEmptyString),
     );
     const sceneIds = new Set(draftSceneIds);
     for (const [sceneId, scene] of Object.entries(
@@ -1292,11 +1364,11 @@ export const createProjectRepositoryRuntime = async ({
     }
     await Promise.all(
       [...sceneIds].map((sceneId) =>
-        deleteSceneProjectionCheckpoint({ store, sceneId }),
+        deleteSceneProjectionCheckpoint({ store: checkpointStore, sceneId }),
       ),
     );
 
-    if (skippedDrafts.some(({ partition }) => isMainPartition(partition))) {
+    if (drafts.some(({ partition }) => isMainPartition(partition))) {
       await sceneBundleRuntime.clearAllSceneOverviews();
     } else {
       for (const sceneId of draftSceneIds) {
@@ -1313,9 +1385,15 @@ export const createProjectRepositoryRuntime = async ({
     }
   };
 
+  const callSkippedDraftListener = (listener) => {
+    const rebuildError = unreportedRebuildError;
+    unreportedRebuildError = undefined;
+    listener(structuredClone(reportedSkippedDrafts), rebuildError);
+  };
+
   const notifySkippedDraftListeners = () => {
     skippedDraftListeners.forEach((listener) => {
-      listener(structuredClone(reportedSkippedDrafts));
+      callSkippedDraftListener(listener);
     });
   };
 
@@ -1346,27 +1424,152 @@ export const createProjectRepositoryRuntime = async ({
   };
 
   // State built before the history loaded can still include drafts the load
-  // left out: a reused main checkpoint, scene projection checkpoints and scene
-  // overviews. Rebuild it from the loaded history, then report the drafts.
-  // Callers wait for this, so it must not use ensureEventHistoryReady().
-  const rebuildWithoutSkippedDrafts = async () => {
-    const skippedDrafts = historySkippedDrafts;
+  // left out, or lack drafts that applied again: a reused main checkpoint,
+  // scene projection checkpoints and scene overviews.
+  const rebuildCachedState = async (drafts) => {
     if (
-      skippedDrafts.some(
+      drafts.some(
         ({ partition }) =>
           isMainPartition(partition) || isMainScenePartition(partition),
       )
     ) {
       await rebuildMainStateFromLoadedHistory();
     }
-    if (skippedDrafts.length > 0) {
-      await clearSceneCachesForSkippedDrafts(skippedDrafts);
+    if (drafts.length > 0) {
+      await clearSceneCachesForDrafts(drafts);
+    }
+  };
+
+  // Stored beside the checkpoints: the left-out drafts that cached state was
+  // rebuilt without, as `{ drafts, rebuilt }`, each draft as `{ draftId,
+  // partition, sceneId }`. `rebuilt` is false while a rebuild over `drafts`
+  // has not finished. No record means that no draft was left out.
+  const skippedDraftsRecordKey = {
+    viewName: SKIPPED_DRAFTS_VIEW_NAME,
+    partition: MAIN_PARTITION,
+  };
+
+  const loadSkippedDraftsRecord = async () => {
+    try {
+      const record = await store.loadMaterializedViewCheckpoint(
+        skippedDraftsRecordKey,
+      );
+      if (!record) {
+        return { drafts: [], rebuilt: true };
+      }
+      if (
+        record.viewVersion === SKIPPED_DRAFTS_VIEW_VERSION &&
+        Array.isArray(record.value?.drafts)
+      ) {
+        return record.value;
+      }
+    } catch (error) {
+      rebuildErrors.push(error);
+    }
+
+    // The drafts cached state was built without are unknown, so it is
+    // rebuilt without the drafts left out now.
+    return { drafts: [], rebuilt: false };
+  };
+
+  const saveSkippedDraftsRecord = async ({ drafts, rebuilt }) => {
+    if (rebuilt && drafts.length === 0) {
+      await checkpointStore.deleteMaterializedViewCheckpoint(
+        skippedDraftsRecordKey,
+      );
+      return;
+    }
+
+    await checkpointStore.saveMaterializedViewCheckpoint({
+      viewName: SKIPPED_DRAFTS_VIEW_NAME,
+      partition: MAIN_PARTITION,
+      viewVersion: SKIPPED_DRAFTS_VIEW_VERSION,
+      lastCommittedId: currentRevision,
+      value: {
+        drafts: drafts.map(({ draftId, partition, sceneId }) => ({
+          draftId,
+          partition,
+          sceneId,
+        })),
+        rebuilt,
+      },
+      updatedAt: Date.now(),
+    });
+  };
+
+  const haveSameDraftIds = (left, right) => {
+    const leftIds = new Set(left.map(({ draftId }) => draftId));
+    const rightIds = new Set(right.map(({ draftId }) => draftId));
+    return (
+      leftIds.size === rightIds.size &&
+      [...leftIds].every((draftId) => rightIds.has(draftId))
+    );
+  };
+
+  // Each draft once, as it is first listed.
+  const mergeDrafts = (...draftLists) => {
+    const draftsById = new Map();
+    for (const draft of draftLists.flat()) {
+      if (!draftsById.has(draft.draftId)) {
+        draftsById.set(draft.draftId, draft);
+      }
+    }
+    return [...draftsById.values()];
+  };
+
+  // Rebuilds cached state from the loaded history, then reports the drafts.
+  // When the record shows that cached state was already rebuilt without the
+  // same drafts, as when they are left out again in a later session, nothing
+  // is rebuilt. Otherwise the rebuild also covers the drafts of the record,
+  // since some of them may apply again.
+  //
+  // The main state and the open scene are rebuilt in memory. A checkpoint
+  // write that fails does not stop the rebuild: this session no longer reads
+  // that checkpoint, the record stays unfinished so that the next open
+  // rebuilds again, and the first error is passed to a listener of left-out
+  // drafts.
+  //
+  // Callers wait for this, so it must not use ensureEventHistoryReady().
+  const rebuildWithoutSkippedDrafts = async () => {
+    const skippedDrafts = historySkippedDrafts;
+    let rebuiltDrafts = [];
+    rebuildErrors = [];
+    try {
+      const record = await loadSkippedDraftsRecord();
+      if (!record.rebuilt || !haveSameDraftIds(record.drafts, skippedDrafts)) {
+        rebuiltDrafts = mergeDrafts(skippedDrafts, record.drafts);
+      }
+      if (rebuiltDrafts.length > 0) {
+        // Marked unfinished before any cache changes, so that a rebuild that
+        // stops halfway, even by a crash, is done again on the next open.
+        await saveSkippedDraftsRecord({
+          drafts: rebuiltDrafts,
+          rebuilt: false,
+        });
+        await rebuildCachedState(rebuiltDrafts);
+        // An unfinished record is saved again in case the first save failed.
+        await saveSkippedDraftsRecord(
+          rebuildErrors.length === 0
+            ? { drafts: skippedDrafts, rebuilt: true }
+            : { drafts: rebuiltDrafts, rebuilt: false },
+        );
+      }
+      unreportedRebuildError = rebuildErrors[0];
+    } finally {
+      rebuildErrors = undefined;
+    }
+
+    if (unreportedRebuildError) {
+      console.warn(
+        "Failed to rebuild cached project state without left-out drafts:",
+        unreportedRebuildError,
+      );
     }
 
     // Set before listeners run, so a listener that throws cannot start the
     // rebuild again.
     reportedSkippedDrafts = skippedDrafts;
-    if (skippedDrafts.length > 0) {
+    if (rebuiltDrafts.length > 0) {
       notifyStateListeners();
     }
     notifySkippedDraftListeners();
@@ -1498,7 +1701,7 @@ export const createProjectRepositoryRuntime = async ({
     });
 
     await saveSceneProjectionCheckpoint({
-      store,
+      store: checkpointStore,
       sceneId: activeSceneId,
       value: activeSceneState,
       lastCommittedId: getLatestSceneProjectionRevision({
@@ -1682,10 +1885,12 @@ export const createProjectRepositoryRuntime = async ({
     // Calls `listener` with the drafts the loaded history left out, after
     // state built before it has been rebuilt without them. The history loads
     // on demand, so this can come at any time after the repository opens.
+    // The first call after a storage error kept cached state from being fully
+    // rebuilt also receives that error, which no other call receives.
     subscribeSkippedDrafts(listener, { emitCurrent = true } = {}) {
       skippedDraftListeners.add(listener);
       if (emitCurrent && reportedSkippedDrafts !== undefined) {
-        listener(structuredClone(reportedSkippedDrafts));
+        callSkippedDraftListener(listener);
       }
 
       return () => {

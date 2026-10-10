@@ -179,6 +179,24 @@ Then the app shows one alert naming the affected scenes and sections, at most
 once per draft (`projectHistory.notifiedSkippedDrafts.<projectId>` in
 `userConfig`).
 
+The drafts stay in storage, so later loads leave them out again. The
+repository records the drafts that cached state was rebuilt without in the
+`project_repository_skipped_drafts` row beside the checkpoints. A load that
+leaves out the same drafts rebuilds nothing; the app is still told about them.
+A load that leaves out other drafts rebuilds over both lists, so a recorded
+draft that applies again is put back too. The record is saved as unfinished
+before the rebuild changes any cache, and as finished only after every
+checkpoint write of the rebuild succeeded; with no draft left out, it is
+removed.
+
+A storage error does not stop the rebuild: the main state and the open scene
+are rebuilt in memory, a checkpoint that fails to be deleted or saved is not
+read again in that session (the repository rebuilds it from the loaded
+history), and the unfinished record makes the next open rebuild again. The
+first error is reported once as a handled error, with the left-out drafts.
+Outside the rebuild too, a checkpoint that fails to be deleted is not read
+again in that session, and the operation that deleted it does not fail.
+
 Drafts are not reported when the history has no `project.create`: they then
 replay onto an empty project, as in desktop history backed by a main
 checkpoint, so a failure does not mean their changes are missing. A draft that

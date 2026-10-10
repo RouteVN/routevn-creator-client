@@ -209,6 +209,26 @@ describe("skippedDraftsNotice", () => {
     );
   });
 
+  it("reports an error that kept cached state from being rebuilt", async () => {
+    const deps = createDeps({
+      userConfig: { [configKey]: ["draft-1"] },
+    });
+    const rebuildError = new Error("disk I/O error");
+
+    await notifySkippedDrafts(deps, {
+      projectId,
+      skippedDrafts: [createSkippedDraft({ draftId: "draft-1" })],
+      rebuildError,
+    });
+
+    expect(deps.appService.reportError).toHaveBeenCalledOnce();
+    expect(deps.appService.reportError).toHaveBeenCalledWith(rebuildError, {
+      operation: "projectHistory.rebuildWithoutSkippedDrafts",
+    });
+    // The project no longer uses the stale state, so there is no alert.
+    expect(deps.appService.showAlertWhenIdle).not.toHaveBeenCalled();
+  });
+
   it.each(locales)("uses the %s wording", async (locale) => {
     const deps = createDeps({ locale });
     const copy = deps.i18n.sceneEditorPage;
