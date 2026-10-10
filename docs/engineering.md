@@ -1146,20 +1146,27 @@ are unchanged.
 On touch layouts (phone and tablet) the layout editor shows its element list
 inline below the canvas instead of in a full-page overlay. The panel under the
 canvas takes turns showing the Preview section, the **Elements** list, and the
-selected element's edit panel, and the page opens on the Elements list. The
-header **Elements** button toggles the list and is highlighted while it is
-open. Going to the list, from that button or from the back button in an
-element's edit panel header (styled like the navbar's), unselects the element on
-the canvas. Square up and down arrow buttons on the right of the list title step
+selected element's edit panel, and the page opens on the Elements list.
+**Edit** and **Preview** tabs in the header switch the panel: Edit is selected
+while it shows the list or an element's edit panel. Choosing Edit goes back to
+the element selected on the canvas, or opens the list when none is; choosing
+Preview shows the Preview section and keeps the canvas selection. Going to the
+list, from Edit with nothing selected or from the back button in an element's
+edit panel header (styled like the navbar's), unselects the element on the
+canvas. A press on empty canvas while Edit shows an element unselects it and
+also goes to the list, staying in Edit; in Preview it stays in Preview. Square up and down arrow buttons on the right of the list title step
 the highlighted element through the visible rows (the explorer's
 `navigateSelection`, which marks its `item-click` with `source: "navigation"`),
 so the list stays open while the canvas selection follows. Picking an element
-closes the list and shows its edit panel; **Preview** returns to the Preview
-section. The Preview section stays mounted but
-hidden behind the other two, so unsaved preview settings survive. On tablet
-landscape the Elements list is instead a persistent 300px pane on the left
-(without the step buttons), the header **Elements** button is hidden, and
-selecting there goes straight to the element's edit panel.
+closes the list and shows its edit panel. The Preview section stays mounted but
+hidden behind the other two, so unsaved preview settings survive. On phones
+(`isTouchPhone`: touch windows under 600 logical pixels on their short side,
+outside touch landscape), undo and redo move from the navbar to the right of
+the Elements list header, after the up and down buttons, and of an element's
+edit panel header; Preview shows neither. Tablets keep them in the navbar. On tablet landscape the Elements list is
+instead a persistent 300px pane on the left (without the step buttons), the
+header tabs are hidden, and selecting there goes straight to the element's
+edit panel.
 
 On desktop and tablet landscape the edit panel and the Preview both live in a
 right panel (`rvn-resizable-panel` with `show-on-touch`), with **Edit** and

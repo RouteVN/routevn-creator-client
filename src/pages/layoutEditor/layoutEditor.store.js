@@ -1,6 +1,7 @@
 import { parseAndRender } from "jempl";
 import { toFlatItems } from "../../internal/project/tree.js";
 import { stableStringify } from "../../internal/stableStringify.js";
+import { isTouchPhone } from "../../internal/touchLayout.js";
 import { toLayoutPreviewType } from "../../internal/layoutPreview.js";
 import {
   DEFAULT_PROJECT_RESOLUTION,
@@ -48,6 +49,9 @@ const arePreviewDataEqual = (left, right) => {
 // stack the panels under the canvas and give it half the height.
 const selectShowRightPanel = ({ state }) =>
   !state.isTouchMode || selectIsTabletLandscapeState({ state });
+
+export const selectShowsMobilePanels = ({ state }) =>
+  !selectShowRightPanel({ state });
 
 // In a Preview picked from its tab, pressing the canvas leaves the selection
 // alone. The Elements list still selects, and goes back to Edit. The Preview
@@ -874,6 +878,16 @@ export const selectViewData = ({ state, constants, i18n }) => {
     showMobileSelectedNodeDetail || showMobileNodeExplorer
       ? "display: none;"
       : "";
+  // Phones keep undo and redo in the header of the Elements list or the
+  // element under the canvas, and not in Preview; tablets and desktop keep
+  // them in the navbar.
+  const showPanelEditHistory =
+    showMobilePanels &&
+    isTouchPhone({
+      isTouchMode: state.isTouchMode,
+      width: state.appWindowMetrics.width,
+      height: state.appWindowMetrics.height,
+    });
   const previewHydrationData = state.isTouchMode
     ? state.previewData
     : state.initialPreviewData;
@@ -885,7 +899,6 @@ export const selectViewData = ({ state, constants, i18n }) => {
     itemRoleLabel: selectItemRoleLabel(item?.type, copy),
     loadingPreviewLabel: copy.loadingPreviewLabel,
     noSelectionLabel: copy.noSelectionLabel,
-    nodeButtonLabel: copy.nodeButtonLabel ?? "Elements",
     nodeExplorerTitle:
       copy.nodeExplorerTitle ?? copy.nodeButtonLabel ?? "Elements",
     previewTitle: copy.previewTitle ?? "Preview",
@@ -960,11 +973,20 @@ export const selectViewData = ({ state, constants, i18n }) => {
     showTabletLandscapeExplorer,
     tabletLandscapeExplorerWidth: TABLET_LANDSCAPE_EXPLORER_WIDTH,
     showMobilePanels,
-    showMobileNodeButton: showMobilePanels,
-    nodeButtonVariant: showMobileNodeExplorer ? "pr" : "se",
+    showNavbarEditHistory: !showPanelEditHistory,
+    showPanelEditHistory,
+    // The panel under the canvas is in Edit while it shows the Elements list
+    // or an element, and in Preview otherwise.
+    mobilePanelMode:
+      showMobileNodeExplorer || showMobileSelectedNodeDetail
+        ? "edit"
+        : "preview",
+    mobilePanelModeTabs: [
+      { id: "edit", label: copy.editModeLabel ?? "Edit" },
+      { id: "preview", label: copy.previewTitle ?? "Preview" },
+    ],
     nodeMovePreviousLabel: copy.previousElementLabel ?? "Previous element",
     nodeMoveNextLabel: copy.nextElementLabel ?? "Next element",
-    showMobilePreviewButton: showMobilePanels && Boolean(item),
     showMobileNodeExplorer,
     showMobileSelectedNodeDetail,
     previewPanelVisibilityStyle,

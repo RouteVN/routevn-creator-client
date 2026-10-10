@@ -562,6 +562,22 @@ const clearSelectedItem = (store) => {
   store.setDetailPanelSelectedItemId({ itemId: undefined });
 };
 
+// A press on empty canvas clears the selection. Under the canvas on phones,
+// where Edit was showing the element, the panel stays in Edit and goes to
+// the Elements list rather than to Preview.
+const clearCanvasSelection = (deps) => {
+  const { refs, store } = deps;
+  const wasEditingElement =
+    store.selectShowsMobilePanels() &&
+    Boolean(store.selectDetailPanelSelectedItemId());
+
+  clearSelectedItem(store);
+  refs.fileExplorer?.clearSelection?.();
+  if (wasEditingElement) {
+    store.openMobileFileExplorer();
+  }
+};
+
 // An undo or redo can remove the selected element, as when it undoes the
 // element's create.
 const clearMissingLayoutEditorSelection = (deps) => {
@@ -960,8 +976,7 @@ export const handleLayoutEditorCanvasSelectionChange = (deps, payload) => {
   const { itemId } = payload._event.detail;
 
   if (!itemId) {
-    clearSelectedItem(store);
-    refs.fileExplorer?.clearSelection?.();
+    clearCanvasSelection(deps);
     render();
     return;
   }
@@ -991,8 +1006,7 @@ export const handleLayoutEditorCanvasBackgroundClick = (deps, payload) => {
     return;
   }
 
-  clearSelectedItem(store);
-  refs.fileExplorer?.clearSelection?.();
+  clearCanvasSelection(deps);
   render();
 };
 
@@ -1109,16 +1123,30 @@ const openMobileNodeExplorer = (deps) => {
   render();
 };
 
-export const handleNodeButtonClick = (deps) => {
+// On phones, Edit goes back to the element selected on the canvas, or opens
+// the Elements list when none is; Preview shows the preview under the canvas
+// and keeps the selection.
+export const handleMobilePanelModeChange = (deps, payload) => {
   const { render, store } = deps;
+  const { id } = payload._event.detail;
 
-  if (store.selectIsMobileFileExplorerOpen()) {
+  if (id === "preview") {
     store.closeMobileFileExplorer();
+    store.setDetailPanelSelectedItemId({ itemId: undefined });
     render();
     return;
   }
 
-  openMobileNodeExplorer(deps);
+  const selectedItemId = store.selectSelectedItemId();
+  if (!selectedItemId) {
+    openMobileNodeExplorer(deps);
+    return;
+  }
+
+  store.closeMobileFileExplorer();
+  store.setDetailPanelSelectedItemId({ itemId: selectedItemId });
+  store.setRightPanelMode({ mode: "edit" });
+  render();
 };
 
 export const handleNodeDetailBackClick = openMobileNodeExplorer;
@@ -1135,14 +1163,6 @@ export const handleNodeMovePreviousClick = (deps) => {
 
 export const handleNodeMoveNextClick = (deps) => {
   stepMobileNodeSelection(deps, "next");
-};
-
-export const handlePreviewButtonClick = (deps) => {
-  const { render, store } = deps;
-
-  store.closeMobileFileExplorer();
-  store.setDetailPanelSelectedItemId({ itemId: undefined });
-  render();
 };
 
 // rvn-zoom-viewport keeps the point in view in place when the zoom changes.
