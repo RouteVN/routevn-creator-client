@@ -1199,6 +1199,110 @@ describe("projectRepositoryRuntime replay diagnostics", () => {
     });
   });
 
+  it("does not list a saved draft twice when appending loads history", async () => {
+    const savedMainCheckpoints = [];
+    const reduceEventToState = ({ repositoryState, event }) => ({
+      appliedIds: [...(repositoryState?.appliedIds || []), event.id],
+    });
+    // The draft is saved before it is appended, so the history loaded on
+    // demand already holds it.
+    const loadEvents = vi.fn(async () => [
+      { id: "event-1", type: "resource.update", partition: "m", payload: {} },
+      { id: "event-2", type: "resource.update", partition: "m", payload: {} },
+      { id: "event-3", type: "resource.update", partition: "m", payload: {} },
+    ]);
+    const repository = await createProjectRepositoryRuntime({
+      projectId: "project-1",
+      store: {
+        loadMaterializedViewCheckpoint: async () => ({
+          viewName: MAIN_VIEW_NAME,
+          viewVersion: "1",
+          partition: "m",
+          lastCommittedId: 1,
+          value: {
+            appliedIds: ["event-1"],
+          },
+        }),
+        saveMaterializedViewCheckpoint: async (checkpoint) => {
+          savedMainCheckpoints.push(structuredClone(checkpoint));
+        },
+        deleteMaterializedViewCheckpoint: async () => {},
+      },
+      initialRevision: 1,
+      loadEvents,
+      createInitialState: () => ({
+        appliedIds: [],
+      }),
+      reduceEventToState,
+      reduceEventsToState: createBatchedReducer(reduceEventToState),
+    });
+
+    await repository.addEvents([
+      { id: "event-2", type: "resource.update", partition: "m", payload: {} },
+      { id: "event-3", type: "resource.update", partition: "m", payload: {} },
+    ]);
+
+    expect(repository.getRevision()).toBe(3);
+    expect((await repository.loadEvents()).map((event) => event.id)).toEqual([
+      "event-1",
+      "event-2",
+      "event-3",
+    ]);
+    expect(repository.getState()).toEqual({
+      appliedIds: ["event-1", "event-2", "event-3"],
+    });
+
+    await repository.flushMainCheckpoint();
+
+    expect(savedMainCheckpoints.at(-1)).toMatchObject({
+      lastCommittedId: 3,
+    });
+  });
+
+  it("applies a saved draft once when the checkpoint revision is past loaded history", async () => {
+    const reduceEventToState = ({ repositoryState, event }) => ({
+      appliedIds: [...(repositoryState?.appliedIds || []), event.id],
+    });
+    const repository = await createProjectRepositoryRuntime({
+      projectId: "project-1",
+      store: {
+        loadMaterializedViewCheckpoint: async () => ({
+          viewName: MAIN_VIEW_NAME,
+          viewVersion: "1",
+          partition: "m",
+          lastCommittedId: 5,
+          value: {
+            appliedIds: ["event-1"],
+          },
+        }),
+        saveMaterializedViewCheckpoint: async () => {},
+        deleteMaterializedViewCheckpoint: async () => {},
+      },
+      initialRevision: 5,
+      loadEvents: async () => [
+        { id: "event-1", type: "resource.update", partition: "m", payload: {} },
+        { id: "event-2", type: "resource.update", partition: "m", payload: {} },
+      ],
+      createInitialState: () => ({
+        appliedIds: [],
+      }),
+      reduceEventToState,
+      reduceEventsToState: createBatchedReducer(reduceEventToState),
+    });
+
+    await repository.addEvent({
+      id: "event-2",
+      type: "resource.update",
+      partition: "m",
+      payload: {},
+    });
+
+    expect(repository.getState()).toEqual({
+      appliedIds: ["event-1", "event-2"],
+    });
+    await expect(repository.loadEvents()).resolves.toHaveLength(2);
+  });
+
   it("keeps batch event revisions ahead of a checkpoint cursor after filtered history", async () => {
     const loadEvents = vi.fn(async () => [
       {
@@ -2209,5 +2313,121 @@ describe("projectRepositoryRuntime replay diagnostics", () => {
       id: nextSectionId,
       name: "Section 2",
     });
+  });
+
+  it("keeps a line moved out of a section that the same batch deletes in the open scene", async () => {
+    const projectId = "project-1";
+    const sceneId = "scene-1";
+    const initialState = structuredClone(initialProjectData);
+    initialState.story.initialSceneId = sceneId;
+    initialState.scenes = {
+      items: {
+        [sceneId]: {
+          id: sceneId,
+          type: "scene",
+          name: "Scene 1",
+          sections: {
+            items: {
+              "section-1": {
+                id: "section-1",
+                name: "Section 1",
+                lines: {
+                  items: {
+                    "line-1": {
+                      id: "line-1",
+                      actions: {},
+                    },
+                  },
+                  tree: [{ id: "line-1" }],
+                },
+              },
+            },
+            tree: [{ id: "section-1" }],
+          },
+        },
+      },
+      tree: [{ id: sceneId }],
+    };
+    const checkpoints = new Map();
+    const repository = await createProjectRepository({
+      projectId,
+      store: {
+        loadMaterializedViewCheckpoint: async ({ viewName, partition }) =>
+          checkpoints.get(`${viewName}:${partition}`),
+        saveMaterializedViewCheckpoint: async (checkpoint) => {
+          checkpoints.set(
+            `${checkpoint.viewName}:${checkpoint.partition}`,
+            structuredClone(checkpoint),
+          );
+        },
+        deleteMaterializedViewCheckpoint: async ({ viewName, partition }) => {
+          checkpoints.delete(`${viewName}:${partition}`);
+        },
+      },
+      events: [
+        createProjectCreateRepositoryEvent({
+          projectId,
+          state: initialState,
+        }),
+      ],
+    });
+    const createEvent = ({ id, partition, type, payload }) =>
+      createRepositoryCommandEvent({
+        command: {
+          id,
+          projectId,
+          partition,
+          type,
+          payload,
+          actor: {
+            userId: "user-1",
+            clientId: "client-2",
+          },
+          clientTs: 1,
+          schemaVersion: 1,
+        },
+      });
+
+    await repository.setActiveSceneId(sceneId);
+    await repository.addEvents([
+      createEvent({
+        id: "create-section-2",
+        partition: mainScenePartitionFor(sceneId),
+        type: COMMAND_TYPES.SECTION_CREATE,
+        payload: {
+          sceneId,
+          sectionId: "section-2",
+          parentId: null,
+          position: "last",
+          data: {
+            name: "Section 2",
+          },
+        },
+      }),
+      createEvent({
+        id: "move-line",
+        partition: scenePartitionFor(sceneId),
+        type: COMMAND_TYPES.LINE_MOVE,
+        payload: {
+          lineId: "line-1",
+          toSectionId: "section-2",
+          position: "last",
+        },
+      }),
+      createEvent({
+        id: "delete-section-1",
+        partition: mainScenePartitionFor(sceneId),
+        type: COMMAND_TYPES.SECTION_DELETE,
+        payload: {
+          sectionIds: ["section-1"],
+        },
+      }),
+    ]);
+
+    const sections = repository.getState().scenes.items[sceneId].sections;
+    expect(Object.keys(sections.items)).toEqual(["section-2"]);
+    expect(
+      sections.items["section-2"].lines.tree.map((line) => line.id),
+    ).toEqual(["line-1"]);
   });
 });

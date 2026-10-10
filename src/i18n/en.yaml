@@ -1967,6 +1967,7 @@ scenesPage:
   createSceneTitle: "Create Scene"
   deadEndTooltipContent: "This section has no transition to another section."
   editSceneTitle: "Edit Scene"
+  errorDetailsLabel: "Details:"
   failedCreateFolder: "Failed to create folder."
   failedCreateScene: "Failed to create scene."
   failedUpdateFolder: "Failed to update folder."

@@ -412,6 +412,75 @@ export const composeRepositoryState = ({
   return composed;
 };
 
+// Main state owns each scene's section order, nesting, and names. A scene
+// replay only needs a section to exist while its lines are replayed, so a
+// replayed create appends the section, and moves and renames are skipped.
+// Otherwise a create placed next to a section that was deleted later fails.
+const toSceneLineReplayEvent = (event) => {
+  if (event.type === "section.move" || event.type === "section.update") {
+    return undefined;
+  }
+
+  if (event.type !== "section.create") {
+    return event;
+  }
+
+  const { sectionId, sceneId, data } = event.payload;
+  return {
+    ...event,
+    payload: {
+      sectionId,
+      sceneId,
+      data,
+      position: "last",
+    },
+  };
+};
+
+// Start a replay from main's sections plus the sections the starting
+// projection still has but main has since deleted. Replayed line events can
+// then move lines out of those sections before the replayed delete removes
+// them, instead of being skipped and losing the lines.
+const composeSceneReplayState = ({ mainState, sceneId, sceneState }) => {
+  const composed = composeRepositoryState({
+    mainState,
+    activeSceneId: sceneId,
+    activeSceneState: sceneState,
+  });
+  const sections = composed?.scenes?.items?.[sceneId]?.sections;
+  if (!sections) {
+    return composed;
+  }
+
+  const startSections = sceneState?.scenes?.items?.[sceneId]?.sections?.items;
+  for (const [sectionId, section] of Object.entries(startSections ?? {})) {
+    if (findSectionLocationInState(composed, sectionId)) {
+      continue;
+    }
+
+    sections.items[sectionId] = structuredClone(section);
+    sections.tree.push({ id: sectionId, children: [] });
+  }
+
+  return composed;
+};
+
+// Drop the sections main no longer has and take main's section order.
+const keepMainSceneSections = ({ state, mainState, sceneId }) => {
+  const sections = state?.scenes?.items?.[sceneId]?.sections;
+  const mainSections = mainState?.scenes?.items?.[sceneId]?.sections;
+  if (!sections || !mainSections) {
+    return;
+  }
+
+  for (const sectionId of Object.keys(sections.items)) {
+    if (!mainSections.items?.[sectionId]) {
+      delete sections.items[sectionId];
+    }
+  }
+  sections.tree = structuredClone(mainSections.tree ?? []);
+};
+
 export const composeRepositoryStateWithScenes = ({
   mainState,
   sceneStatesBySceneId,
@@ -677,10 +746,10 @@ export const loadSceneProjectionState = async ({
     );
   }
 
-  let workingState = composeRepositoryState({
+  let workingState = composeSceneReplayState({
     mainState,
-    activeSceneId: sceneId,
-    activeSceneState: bootstrapProjection || null,
+    sceneId,
+    sceneState: bootstrapProjection,
   });
   const initialWorkingState = workingState;
   const replayEvents = committedEvents || [];
@@ -702,8 +771,13 @@ export const loadSceneProjectionState = async ({
         continue;
       }
 
+      const replayEvent = toSceneLineReplayEvent(event);
+      if (!replayEvent) {
+        continue;
+      }
+
       relevantEventEntries.push({
-        event,
+        event: replayEvent,
         index: Math.max(0, getCommittedEventRevision(event) - 1),
       });
     }
@@ -783,6 +857,7 @@ export const loadSceneProjectionState = async ({
     }
   }
 
+  keepMainSceneSections({ state: workingState, mainState, sceneId });
   const nextProjection = createSceneProjectionState(
     workingState,
     scenePartition,
@@ -814,18 +889,20 @@ export const applySceneEventsToLoadedProjection = ({
   }
 
   const scenePartition = getScenePartition(sceneId);
-  let workingState = composeRepositoryState({
+  let workingState = composeSceneReplayState({
     mainState,
-    activeSceneId: sceneId,
-    activeSceneState: sceneState,
+    sceneId,
+    sceneState,
   });
 
   const committedEvents = Array.isArray(sourceEvents) ? sourceEvents : [];
-  const relevantEvents = committedEvents.filter((event) =>
-    isRelevantSceneProjectionEvent({ event, sceneId }),
-  );
+  const relevantEvents = committedEvents
+    .filter((event) => isRelevantSceneProjectionEvent({ event, sceneId }))
+    .map(toSceneLineReplayEvent)
+    .filter(Boolean);
 
   if (relevantEvents.length === 0) {
+    keepMainSceneSections({ state: workingState, mainState, sceneId });
     return createSceneProjectionState(workingState, scenePartition);
   }
 
@@ -868,7 +945,7 @@ export const applySceneEventsToLoadedProjection = ({
 
         const failedSequentialIndex = Math.max(
           0,
-          committedEvents.indexOf(relevantEvent),
+          committedEvents.findIndex((event) => event.id === relevantEvent.id),
         );
         logSceneProjectionReplayFailure({
           sceneId,
@@ -887,6 +964,7 @@ export const applySceneEventsToLoadedProjection = ({
     workingState = recoveredState;
   }
 
+  keepMainSceneSections({ state: workingState, mainState, sceneId });
   return createSceneProjectionState(workingState, scenePartition);
 };
 

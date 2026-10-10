@@ -32,13 +32,15 @@ describe("getSceneStartupErrorMessage", () => {
     );
   });
 
-  it("falls back to the generic message for other errors", () => {
+  it("falls back to the generic message with details for other errors", () => {
     expect(
       getSceneStartupErrorMessage({
         error: new Error("Something else"),
         projectService,
         i18n: EN_I18N,
       }),
-    ).toBe(EN_I18N.sceneEditorPage.failedOpenScene);
+    ).toBe(
+      `${EN_I18N.sceneEditorPage.failedOpenScene}\n\n${EN_I18N.sceneEditorPage.errorDetailsLabel}\nSomething else`,
+    );
   });
 });
