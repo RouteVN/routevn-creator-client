@@ -148,6 +148,9 @@ public class MainActivity extends Activity {
         "This RouteVN project export is incomplete. Do not import or edit it.";
     // Android's phone/tablet boundary, matching the sw600dp resource qualifier.
     static final int TABLET_MIN_SMALLEST_WIDTH_DP = 600;
+    // The first Chromium that reads the theme's oklch() colours. Older WebViews
+    // load the app as black text on the black WebView background.
+    static final int MIN_WEBVIEW_MAJOR_VERSION = 111;
 
     private static final class ProjectFileWriteSession {
         private final String writeId;
@@ -468,7 +471,8 @@ public class MainActivity extends Activity {
         webView.setBackgroundColor(Color.BLACK);
         configureWebSettings(webView.getSettings());
         configureCookies();
-        if (!configureSecureAndroidBridge()) {
+        if (isWebViewTooOld(AppDeviceInfo.webViewVersion(this))
+            || !configureSecureAndroidBridge()) {
             showUnsupportedWebViewError();
             return;
         }
@@ -713,6 +717,12 @@ public class MainActivity extends Activity {
             }
         );
         return true;
+    }
+
+    /** An unreadable version is allowed; the bridge feature check still applies. */
+    static boolean isWebViewTooOld(String webViewMajorVersion) {
+        return webViewMajorVersion != null
+            && Integer.parseInt(webViewMajorVersion) < MIN_WEBVIEW_MAJOR_VERSION;
     }
 
     private void showUnsupportedWebViewError() {
