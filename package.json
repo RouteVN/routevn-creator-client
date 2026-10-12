@@ -79,6 +79,7 @@
     "ios:packaged": "./scripts/ios.sh packaged",
     "ios:devices": "./scripts/ios.sh devices",
     "test": "node scripts/test.js",
+    "test:unit": "vitest run --dir tests",
     "test:smoke": "node scripts/test-smoke.js",
     "test:scene-editor": "node scripts/test-scene-editor.js",
     "test:window-controls": "node scripts/test-window-controls.js",
