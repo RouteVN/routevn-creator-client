@@ -16,19 +16,23 @@ release are in [project-import-followups.md](project-import-followups.md).
 
 ## Sources
 
-| Platform | From local                | From URL                  | Where the imported project lives                                        |
-| -------- | ------------------------- | ------------------------- | ----------------------------------------------------------------------- |
-| Desktop  | Project folder (in place) | Zip, into a chosen folder | A picked folder stays where it is; a URL import creates a new subfolder |
-| Android  | Project folder or zip     | Zip                       | App-private `files/projects/<random id>`; every import gets a new id    |
-| iOS      | Project folder or zip     | Zip                       | A folder in the library named after the project (see below)             |
-| Web      | Not supported             | Not supported             |                                                                         |
+| Platform | From local                                             | From URL                  | Where the imported project lives                                                     |
+| -------- | ------------------------------------------------------ | ------------------------- | ------------------------------------------------------------------------------------ |
+| Desktop  | Project folder (in place), or zip into a chosen folder | Zip, into a chosen folder | A picked folder stays where it is; a zip or URL import fills the chosen empty folder |
+| Android  | Project folder or zip                                  | Zip                       | App-private `files/projects/<random id>`; every import gets a new id                 |
+| iOS      | Project folder or zip                                  | Zip                       | A folder in the library named after the project (see below)                          |
+| Web      | Not supported                                          | Not supported             |                                                                                      |
 
-The choices live in one dropdown with two levels: **Create** opens **Create Project** and **Import Project**,
-and Import Project opens **From local** and **From URL**. On desktop the **Open** button opens the same two
-choices. On desktop **From local** opens the folder picker straight away (there is no local zip choice) and
-**From URL** asks for a parent folder after the URL is entered. On Android and iOS no single system picker
-can select a folder or a file, so **From local** first shows an app-owned `showFormDialog` with **Project
-folder** and **Zip file** buttons.
+The choices live in one dropdown with two levels: **Create** opens **Create Project** and **Import Project**.
+On Android and iOS, Import Project opens **From local** and **From URL**. On desktop it opens **From local
+folder**, **From local zip file** and **From URL**, and the **Import** button opens the same three choices.
+**From local folder** opens the folder picker straight away. **From local zip file** and **From URL** open a
+dialog that asks for the zip file or the URL, and for the destination folder the project is saved in. As for
+**Create Project**, the destination must be an empty folder: the project's files go directly into it, and
+**Import** keeps the dialog open with a field error when the folder is missing or not empty. The zip file and
+the folder are each picked with a **Browse** button inside the dialog. On
+Android and iOS no single system picker can select a folder or a file, so **From local** first shows an
+app-owned `showFormDialog` with **Project folder** and **Zip file** buttons.
 
 Android and iOS copy the project and keep no reference to the source.
 
@@ -144,18 +148,18 @@ Android and iOS also sweep staging folders older than 24 hours when a new one is
 
 | Platform | Staging folder (`archive.zip` and `extracted/`)                | Then                                                   |
 | -------- | -------------------------------------------------------------- | ------------------------------------------------------ |
-| Desktop  | `routevn-import-<random>` folder inside the chosen destination | `extracted/` is moved into place beside it             |
+| Desktop  | `routevn-import-<random>` folder inside the chosen destination | The contents of `extracted/` are moved up beside it    |
 | Android  | `cacheDir/project-import/<tempFolderId>/`                      | The payload is moved into `files/projects/<projectId>` |
 | iOS      | `tmp/project-import/<tempFolderId>/`                           | The payload is copied into the project library folder  |
 
 The archive stays outside `extracted/`, so it can never end up inside a project. On desktop the staging folder
 is visible while the import runs (the fs plugin scope does not match leading-dot names) and stays if the app
-is killed mid-import. The desktop destination folder is named from `Content-Disposition`, else the last URL
-segment, else `RouteVN Project` (`deriveImportFolderName`; unsafe characters become `-`, at most 180 bytes,
-Windows reserved names prefixed with `_`); a taken name gets ` 2`, ` 3`, so an existing folder is never
-overwritten. If registering fails, the project's database connection is closed and any list entry the import
-added is removed before the moved folder is removed again, so a later import into the same folder name opens
-its own database.
+is killed mid-import. The desktop destination is checked again before anything is moved: if it holds anything
+besides the staging folder, nothing is moved and the import fails, so existing files are never overwritten or
+merged into. If a move fails, the entries already moved go back into staging. If registering fails, the
+project's database connection is closed and any list entry the import added is removed before the moved
+entries are removed again, leaving the folder empty, so a later import into the same folder opens its own
+database.
 
 ## Importing a project that already exists
 
@@ -201,8 +205,8 @@ Import is app logic, so it lives in JavaScript. Native code only exposes operati
 (stream a download to disk, read and extract a zip, touch the app's private files) and does not decide what a
 project is. JavaScript owns URL parsing and Drive links (`projectImportUrl.js`), the zip layout, entry-name
 checks, limits and Rule A (`projectImportPlan.js`), the sequence, progress stages and cleanup
-(`projectImportService.js`, driven through a small per-platform `projectImportHost.js`), desktop folder naming
-and which error to show. The exception is each platform's storage step (`importProjectFolder`): on iOS it also
+(`projectImportService.js`, driven through a small per-platform `projectImportHost.js`) and which error to
+show. The exception is each platform's storage step (`importProjectFolder`): on iOS it also
 names the library folder, decides "already in the library" and removes an unfinished import, and iOS exposes
 `renameLegacyProjectFolder` for a hidden project; on Android a picked folder with the incomplete-export marker
 is rejected there. Picking a zip goes through the platform's `openArchivePicker`, outside this contract.
@@ -220,7 +224,9 @@ errors are `invalidUrl`, `downloadFailed` (network, a non-2xx status, redirect p
 `writeFailed`. It sends no request headers or cookies; a caller that needs them adds an optional argument.
 
 **Desktop (Tauri commands).** Paths are absolute. JavaScript creates, renames and removes folders with the Tauri
-fs plugin (`fs:allow-rename` is in `src-tauri/capabilities/default.json`); native code provides three commands:
+fs plugin, and copies a picked zip into staging after checking its size against the 4 GiB limit
+(`fs:allow-rename`, `fs:allow-copy-file` and `fs:allow-stat` are in `src-tauri/capabilities/default.json`); native
+code provides three commands:
 
 | Command           | Arguments                                                                                                  | Result                                       |
 | ----------------- | ---------------------------------------------------------------------------------------------------------- | -------------------------------------------- |
@@ -251,8 +257,7 @@ files directly inside the copy's `files/` (never overwriting) and does not decid
 
 - UI flow: `src/pages/projects/` (`support/projectImportFlows.js`), status text in
   `src/internal/projectImportProgress.js`
-- Rules: `src/internal/projectImportUrl.js`, `projectImportPlan.js`, `projectImportFolderName.js`,
-  `projectImportErrors.js`
+- Rules: `src/internal/projectImportUrl.js`, `projectImportPlan.js`, `projectImportErrors.js`
 - Sequence and cleanup: `src/deps/services/shared/projectImportService.js`; platform hosts
   `src/deps/clients/tauri/projectImportHost.js`, `mobileProjectImportHost.js` and the Android/iOS wrappers;
   progress listeners `src/deps/clients/transferProgress.js`

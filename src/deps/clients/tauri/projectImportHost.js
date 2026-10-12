@@ -1,6 +1,13 @@
 import { Channel, invoke } from "@tauri-apps/api/core";
 import { join } from "@tauri-apps/api/path";
-import { exists, mkdir, readDir, remove, rename } from "@tauri-apps/plugin-fs";
+import {
+  copyFile,
+  mkdir,
+  readDir,
+  remove,
+  rename,
+  stat,
+} from "@tauri-apps/plugin-fs";
 import { generateId } from "../../../internal/id.js";
 
 const createProgressChannel = (onProgress) => {
@@ -24,15 +31,16 @@ const toEntry = (entry) => {
 };
 
 // Desktop uses three native commands (download, list a zip, extract a zip) and
-// the Tauri fs plugin for everything else. Staging is a temporary folder inside
+// the Tauri fs plugin for everything else, including copying a picked zip. Staging is a temporary folder inside
 // the chosen destination, so the extracted project can be moved into place
 // without leaving the volume. Its name has no leading dot because the fs
 // plugin's scope does not match hidden names.
 export const createTauriProjectImportHost = () => ({
   createStaging: async ({ parent }) => {
-    const dir = await join(parent, `routevn-import-${generateId()}`);
+    const name = `routevn-import-${generateId()}`;
+    const dir = await join(parent, name);
     await mkdir(dir);
-    return { dir };
+    return { dir, name };
   },
 
   removeStaging: async ({ dir }) => {
@@ -48,8 +56,16 @@ export const createTauriProjectImportHost = () => ({
     });
   },
 
-  copyFile: async () => {
-    throw new Error("importFailed: Importing a local zip is not supported.");
+  // Copies a picked zip into staging. The picker adds the file to the fs
+  // scope; the size is checked first, as the download is.
+  copyFile: async ({ dir }, { uri, path, maxBytes }) => {
+    const { size } = await stat(uri);
+    if (size > maxBytes) {
+      throw new Error(
+        `tooLarge: The archive is ${size} bytes, over the ${maxBytes} byte limit.`,
+      );
+    }
+    await copyFile(uri, await join(dir, path));
   },
 
   listArchive: async ({ dir }, { path, maxEntries }) => {
@@ -79,25 +95,50 @@ export const createTauriProjectImportHost = () => ({
     await mkdir(await join(destinationPath, "files"), { recursive: true });
   },
 
-  // Moves the extracted project folder out of staging into `parent`, under
-  // `name` or the first of `name 2`, `name 3`, ... that is free, and returns
-  // its path. An existing folder is never replaced or merged into.
-  moveToAvailableFolder: async ({ staging, path, parent, name }) => {
+  // Moves everything in the extracted project folder out of staging into
+  // `folder`, the destination staging was created in, which must hold nothing
+  // else. Nothing is ever replaced or merged into. If a move fails, the
+  // entries already moved are moved back before the error is thrown.
+  moveIntoEmptyFolder: async ({ staging, path, folder }) => {
+    const others = (await readDir(folder)).filter(
+      (entry) => entry.name !== staging.name,
+    );
+    if (others.length > 0) {
+      throw new Error("importFailed: The destination folder is not empty.");
+    }
+
     const source = await join(staging.dir, path);
-    for (let attempt = 1; ; attempt += 1) {
-      const candidate = await join(
-        parent,
-        attempt === 1 ? name : `${name} ${attempt}`,
-      );
-      if (!(await exists(candidate))) {
-        await rename(source, candidate);
-        return candidate;
+    const moved = [];
+    try {
+      for (const { name } of await readDir(source)) {
+        await rename(await join(source, name), await join(folder, name));
+        moved.push(name);
       }
+    } catch (error) {
+      for (const name of moved.reverse()) {
+        try {
+          await rename(await join(folder, name), await join(source, name));
+        } catch (rollbackError) {
+          console.error(
+            "Failed to move an imported entry back:",
+            rollbackError,
+          );
+        }
+      }
+      throw new Error(
+        `importFailed: Failed to move the project into the destination folder. ${error}`,
+      );
     }
   },
 
-  removeFolder: async (folderPath) => {
-    await remove(folderPath, { recursive: true });
+  // Removes everything in `folder` except the staging folder, leaving it as
+  // empty as it was before the import moved the project in.
+  emptyFolder: async ({ folder, staging }) => {
+    for (const { name } of await readDir(folder)) {
+      if (name !== staging.name) {
+        await remove(await join(folder, name), { recursive: true });
+      }
+    }
   },
 
   // The `{ name, kind }` entries of a folder inside a project folder.

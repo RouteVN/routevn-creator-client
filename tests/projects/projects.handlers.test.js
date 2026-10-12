@@ -17,7 +17,11 @@ import {
   handleMobileActionMenuClickItem,
   handleMobileCreateMenuButtonClick,
   handleOpenButtonClick,
+  handleUrlImportBrowseButtonClick,
   handleUrlImportFormAction,
+  handleZipImportArchiveBrowseButtonClick,
+  handleZipImportDestinationBrowseButtonClick,
+  handleZipImportFormAction,
   handleAfterMount,
   handleBeforeMount,
   handleCloudProjectLongPress,
@@ -47,6 +51,7 @@ const createDeps = ({
     openExistingProject: vi.fn(),
     importProjectFromArchive: vi.fn(),
     importProjectFromUrl: vi.fn(),
+    isFolderEmpty: vi.fn(async () => true),
     loadAllProjects: vi.fn(async () => []),
     getCachedProjects: vi.fn(() => undefined),
     createNewProject: vi.fn(async () => ({
@@ -114,6 +119,17 @@ const createDeps = ({
       openUrlImportDialog: vi.fn(),
       closeUrlImportDialog: vi.fn(),
       selectIsUrlImportDialogOpen: vi.fn(() => true),
+      selectUrlImportDestinationFolder: vi.fn(() => undefined),
+      setUrlImportDestinationFolder: vi.fn(),
+      setUrlImportDestinationError: vi.fn(),
+      openZipImportDialog: vi.fn(),
+      closeZipImportDialog: vi.fn(),
+      selectIsZipImportDialogOpen: vi.fn(() => true),
+      selectZipImportArchive: vi.fn(() => undefined),
+      selectZipImportDestinationFolder: vi.fn(() => undefined),
+      setZipImportArchive: vi.fn(),
+      setZipImportDestinationFolder: vi.fn(),
+      setZipImportErrors: vi.fn(),
       openLanguageDialog: vi.fn(),
       closeLanguageDialog: vi.fn(),
       selectIsLanguageDialogOpen: vi.fn(() => true),
@@ -970,10 +986,10 @@ const chooseLocalSource = (deps, dialogResult) => {
   );
 };
 
-const chooseDesktopLocal = (deps) => {
+const chooseDesktopFolder = (deps) => {
   return handleImportSourceMenuClickItem(
     deps,
-    createMenuClickPayload("import-local"),
+    createMenuClickPayload("import-folder"),
   );
 };
 
@@ -985,8 +1001,27 @@ const progressDialogOf = (deps) => {
   return deps.appService.showProgressDialog.mock.results[0].value;
 };
 
-const importMenuLeaves = () => {
+const importMenuLeaves = (platform) => {
   const copy = EN_I18N.projectsPage;
+  if (platform === "tauri") {
+    return [
+      {
+        label: "From local folder",
+        type: "item",
+        value: "import-folder",
+      },
+      {
+        label: "From local zip file",
+        type: "item",
+        value: "import-zip",
+      },
+      {
+        label: copy.importFromUrlMenuItem,
+        type: "item",
+        value: "import-url",
+      },
+    ];
+  }
   return [
     {
       label: copy.importFromLocalMenuItem,
@@ -1010,7 +1045,7 @@ describe("projects.handleOpenButtonClick", () => {
     expect(deps.store.openImportSourceMenu).toHaveBeenCalledWith({
       x: 100,
       y: 40,
-      items: importMenuLeaves(),
+      items: importMenuLeaves("tauri"),
     });
     expect(deps.render).toHaveBeenCalledOnce();
     expect(deps.appService.openFolderPicker).not.toHaveBeenCalled();
@@ -1038,7 +1073,7 @@ describe("projects mobile Create menu (two-level dropdown)", () => {
             label: EN_I18N.projectsPage.importProjectMenuItem,
             type: "item",
             disabled: false,
-            items: importMenuLeaves(),
+            items: importMenuLeaves(platform),
           },
         ],
       });
@@ -1102,7 +1137,7 @@ describe("projects import source choice", () => {
 
     const task = handleImportSourceMenuClickItem(
       deps,
-      createMenuClickPayload("import-local"),
+      createMenuClickPayload("import-folder"),
     );
     await vi.waitFor(() => {
       expect(progressDialog.waitForPaint).toHaveBeenCalledOnce();
@@ -1146,7 +1181,7 @@ describe("projects import source choice", () => {
 
     await handleImportSourceMenuClickItem(
       deps,
-      createMenuClickPayload("import-local"),
+      createMenuClickPayload("import-folder"),
     );
 
     expect(deps.appService.showProgressDialog).not.toHaveBeenCalled();
@@ -1172,7 +1207,7 @@ describe("projects import source choice", () => {
 
       await handleImportSourceMenuClickItem(
         deps,
-        createMenuClickPayload("import-local"),
+        createMenuClickPayload("import-folder"),
       );
 
       const progressDialog =
@@ -1253,13 +1288,13 @@ describe("projects import source choice", () => {
   );
 
   it.each([
-    ["folder", "tauri", chooseDesktopLocal],
+    ["folder", "tauri", chooseDesktopFolder],
     [
       "archive",
       "ios",
       (deps) => chooseLocalSource(deps, { actionId: "import-zip" }),
     ],
-    ["destination", "tauri", (deps) => submitUrl(deps)],
+    ["destination", "tauri", handleUrlImportBrowseButtonClick],
   ])(
     "alerts without importing when the %s picker rejects",
     async (_label, platform, run) => {
@@ -1399,15 +1434,14 @@ describe("projects URL import", () => {
     expect(deps.appService.importProjectFromUrl).not.toHaveBeenCalled();
   });
 
-  it("asks for a destination parent folder on desktop before running", async () => {
+  it("imports into the destination folder chosen in the dialog on desktop, without another picker", async () => {
     const deps = createDeps({ platform: "tauri" });
     const callOrder = [];
+    deps.store.selectUrlImportDestinationFolder.mockReturnValue(
+      "/projects/Project One",
+    );
     deps.store.closeUrlImportDialog.mockImplementation(() => {
       callOrder.push("close-dialog");
-    });
-    deps.appService.openFolderPicker.mockImplementation(async () => {
-      callOrder.push("pick-parent");
-      return "/projects";
     });
     deps.appService.importProjectFromUrl.mockImplementation(async () => {
       callOrder.push("import");
@@ -1417,27 +1451,273 @@ describe("projects URL import", () => {
 
     await submitUrl(deps, "  https://example.com/project-one.zip  ");
 
-    expect(callOrder).toEqual(["close-dialog", "pick-parent", "import"]);
-    expect(deps.appService.openFolderPicker).toHaveBeenCalledWith({
-      title: "Select Import Destination",
-    });
+    expect(callOrder).toEqual(["close-dialog", "import"]);
+    expect(deps.appService.openFolderPicker).not.toHaveBeenCalled();
     expect(deps.appService.importProjectFromUrl).toHaveBeenCalledWith({
       url: "https://example.com/project-one.zip",
-      destinationFolder: "/projects",
+      destinationFolder: "/projects/Project One",
       onProgress: expect.any(Function),
     });
     expect(deps.appService.showToast).toHaveBeenCalledWith(IMPORTED_TOAST);
   });
 
-  it("returns silently when the destination folder pick is cancelled", async () => {
+  it("keeps the dialog open with a field error when no destination folder is chosen on desktop", async () => {
     const deps = createDeps({ platform: "tauri" });
-    deps.appService.openFolderPicker.mockResolvedValue(undefined);
 
     await submitUrl(deps);
 
+    expect(deps.store.setUrlImportDestinationError).toHaveBeenCalledWith({
+      message: "Destination Folder is required.",
+    });
+    expect(deps.render).toHaveBeenCalled();
+    expect(deps.store.closeUrlImportDialog).not.toHaveBeenCalled();
+    expect(deps.appService.openFolderPicker).not.toHaveBeenCalled();
     expect(deps.appService.importProjectFromUrl).not.toHaveBeenCalled();
-    expect(deps.appService.showProgressDialog).not.toHaveBeenCalled();
     expect(deps.appService.showAlert).not.toHaveBeenCalled();
+  });
+
+  it("keeps the dialog open with a field error when the destination folder is not empty on desktop", async () => {
+    const deps = createDeps({ platform: "tauri" });
+    deps.store.selectUrlImportDestinationFolder.mockReturnValue(
+      "/projects/Project One",
+    );
+    deps.appService.isFolderEmpty.mockResolvedValue(false);
+
+    await submitUrl(deps);
+
+    expect(deps.appService.isFolderEmpty).toHaveBeenCalledWith(
+      "/projects/Project One",
+    );
+    expect(deps.store.setUrlImportDestinationError).toHaveBeenCalledWith({
+      message: "The selected folder must be empty.",
+    });
+    expect(deps.store.closeUrlImportDialog).not.toHaveBeenCalled();
+    expect(deps.appService.importProjectFromUrl).not.toHaveBeenCalled();
+  });
+
+  it("does not ask mobile for a destination folder", async () => {
+    const deps = createDeps({ platform: "android" });
+    mockImportedProject(deps, "importProjectFromUrl");
+
+    await submitUrl(deps);
+
+    expect(deps.store.setUrlImportDestinationError).not.toHaveBeenCalled();
+    expect(deps.appService.isFolderEmpty).not.toHaveBeenCalled();
+    expect(deps.appService.importProjectFromUrl).toHaveBeenCalledWith({
+      url: "https://example.com/project-one.zip",
+      destinationFolder: undefined,
+      onProgress: expect.any(Function),
+    });
+  });
+});
+
+describe("projects URL import destination folder", () => {
+  it("opens the import destination picker and keeps the chosen folder", async () => {
+    const deps = createDeps({ platform: "tauri" });
+    deps.appService.openFolderPicker.mockResolvedValue("/projects/Project One");
+
+    await handleUrlImportBrowseButtonClick(deps);
+
+    expect(deps.appService.openFolderPicker).toHaveBeenCalledWith({
+      title: "Select Import Destination",
+    });
+    expect(deps.store.setUrlImportDestinationFolder).toHaveBeenCalledWith({
+      folder: "/projects/Project One",
+    });
+    expect(deps.render).toHaveBeenCalled();
+  });
+
+  it("keeps the previous folder when the picker is cancelled", async () => {
+    const deps = createDeps({ platform: "tauri" });
+    deps.appService.openFolderPicker.mockResolvedValue(undefined);
+
+    await handleUrlImportBrowseButtonClick(deps);
+
+    expect(deps.store.setUrlImportDestinationFolder).not.toHaveBeenCalled();
+    expect(deps.appService.showAlert).not.toHaveBeenCalled();
+  });
+});
+
+describe("projects desktop zip import", () => {
+  const ZIP_ARCHIVE = {
+    uri: "/Users/me/Downloads/Project One.zip",
+    name: "Project One.zip",
+  };
+  const submitZip = (deps) =>
+    handleZipImportFormAction(deps, {
+      _event: { detail: { actionId: "import-zip", values: {} } },
+    });
+
+  it("opens the zip dialog from the desktop import menu without opening a picker", async () => {
+    const deps = createDeps({ platform: "tauri" });
+
+    await handleImportSourceMenuClickItem(
+      deps,
+      createMenuClickPayload("import-zip"),
+    );
+
+    expect(deps.store.closeImportSourceMenu).toHaveBeenCalledTimes(1);
+    expect(deps.store.openZipImportDialog).toHaveBeenCalledTimes(1);
+    expect(deps.appService.openArchivePicker).not.toHaveBeenCalled();
+    expect(deps.appService.openFolderPicker).not.toHaveBeenCalled();
+  });
+
+  it("keeps the zip file picked with Browse", async () => {
+    const deps = createDeps({ platform: "tauri" });
+    deps.appService.openArchivePicker.mockResolvedValue(ZIP_ARCHIVE);
+
+    await handleZipImportArchiveBrowseButtonClick(deps);
+
+    expect(deps.appService.openArchivePicker).toHaveBeenCalledWith({
+      title: "Select Project Zip File",
+    });
+    expect(deps.store.setZipImportArchive).toHaveBeenCalledWith({
+      archive: ZIP_ARCHIVE,
+    });
+    expect(deps.render).toHaveBeenCalled();
+  });
+
+  it("keeps the destination folder picked with Browse", async () => {
+    const deps = createDeps({ platform: "tauri" });
+    deps.appService.openFolderPicker.mockResolvedValue("/projects/Project One");
+
+    await handleZipImportDestinationBrowseButtonClick(deps);
+
+    expect(deps.appService.openFolderPicker).toHaveBeenCalledWith({
+      title: "Select Import Destination",
+    });
+    expect(deps.store.setZipImportDestinationFolder).toHaveBeenCalledWith({
+      folder: "/projects/Project One",
+    });
+  });
+
+  it("keeps the previous choices when a picker is cancelled", async () => {
+    const deps = createDeps({ platform: "tauri" });
+    deps.appService.openArchivePicker.mockResolvedValue(undefined);
+    deps.appService.openFolderPicker.mockResolvedValue(undefined);
+
+    await handleZipImportArchiveBrowseButtonClick(deps);
+    await handleZipImportDestinationBrowseButtonClick(deps);
+
+    expect(deps.store.setZipImportArchive).not.toHaveBeenCalled();
+    expect(deps.store.setZipImportDestinationFolder).not.toHaveBeenCalled();
+    expect(deps.appService.showAlert).not.toHaveBeenCalled();
+  });
+
+  it.each([
+    [
+      "nothing is chosen",
+      undefined,
+      undefined,
+      {
+        archiveError: "Project Zip File is required.",
+        destinationError: "Destination Folder is required.",
+      },
+    ],
+    [
+      "only the zip file is chosen",
+      ZIP_ARCHIVE,
+      undefined,
+      {
+        archiveError: undefined,
+        destinationError: "Destination Folder is required.",
+      },
+    ],
+    [
+      "only the destination folder is chosen",
+      undefined,
+      "/projects/Project One",
+      {
+        archiveError: "Project Zip File is required.",
+        destinationError: undefined,
+      },
+    ],
+  ])(
+    "keeps the dialog open with field errors when %s",
+    async (_label, archive, destinationFolder, errors) => {
+      const deps = createDeps({ platform: "tauri" });
+      deps.store.selectZipImportArchive.mockReturnValue(archive);
+      deps.store.selectZipImportDestinationFolder.mockReturnValue(
+        destinationFolder,
+      );
+
+      await submitZip(deps);
+
+      expect(deps.store.setZipImportErrors).toHaveBeenCalledWith(errors);
+      expect(deps.store.closeZipImportDialog).not.toHaveBeenCalled();
+      expect(deps.appService.importProjectFromArchive).not.toHaveBeenCalled();
+    },
+  );
+
+  it("keeps the dialog open with a field error when the destination folder is not empty", async () => {
+    const deps = createDeps({ platform: "tauri" });
+    deps.store.selectZipImportArchive.mockReturnValue(ZIP_ARCHIVE);
+    deps.store.selectZipImportDestinationFolder.mockReturnValue(
+      "/projects/Project One",
+    );
+    deps.appService.isFolderEmpty.mockResolvedValue(false);
+
+    await submitZip(deps);
+
+    expect(deps.appService.isFolderEmpty).toHaveBeenCalledWith(
+      "/projects/Project One",
+    );
+    expect(deps.store.setZipImportErrors).toHaveBeenCalledWith({
+      archiveError: undefined,
+      destinationError: "The selected folder must be empty.",
+    });
+    expect(deps.store.closeZipImportDialog).not.toHaveBeenCalled();
+    expect(deps.appService.importProjectFromArchive).not.toHaveBeenCalled();
+  });
+
+  it("leaves a destination folder that cannot be read to the import, which reports it", async () => {
+    const deps = createDeps({ platform: "tauri" });
+    deps.store.selectZipImportArchive.mockReturnValue(ZIP_ARCHIVE);
+    deps.store.selectZipImportDestinationFolder.mockReturnValue(
+      "/projects/Project One",
+    );
+    deps.appService.isFolderEmpty.mockRejectedValue(
+      new Error("No such file or directory"),
+    );
+    deps.appService.importProjectFromArchive.mockRejectedValue(
+      new Error("No such file or directory"),
+    );
+
+    await submitZip(deps);
+
+    expect(deps.store.setZipImportErrors).not.toHaveBeenCalled();
+    expect(deps.store.closeZipImportDialog).toHaveBeenCalledTimes(1);
+    expect(deps.appService.showAlert).toHaveBeenCalledTimes(1);
+  });
+
+  it("imports the chosen zip into the destination folder", async () => {
+    const deps = createDeps({ platform: "tauri" });
+    const callOrder = [];
+    deps.store.selectZipImportArchive.mockReturnValue(ZIP_ARCHIVE);
+    deps.store.selectZipImportDestinationFolder.mockReturnValue(
+      "/projects/Project One",
+    );
+    deps.store.closeZipImportDialog.mockImplementation(() => {
+      callOrder.push("close-dialog");
+    });
+    deps.appService.importProjectFromArchive.mockImplementation(async () => {
+      callOrder.push("import");
+      return PROJECT_ONE;
+    });
+    deps.appService.loadAllProjects.mockResolvedValue([PROJECT_ONE]);
+
+    await submitZip(deps);
+
+    expect(callOrder).toEqual(["close-dialog", "import"]);
+    expect(deps.appService.showProgressDialog).toHaveBeenCalledWith(
+      expect.objectContaining({ status: "Preparing…" }),
+    );
+    expect(deps.appService.importProjectFromArchive).toHaveBeenCalledWith({
+      uri: "/Users/me/Downloads/Project One.zip",
+      destinationFolder: "/projects/Project One",
+      onProgress: expect.any(Function),
+    });
+    expect(deps.appService.showToast).toHaveBeenCalledWith(IMPORTED_TOAST);
   });
 });
 
@@ -1575,7 +1855,7 @@ describe("projects import of a project that already exists", () => {
       new Error("projectExists: This project has already been added."),
     );
 
-    await chooseDesktopLocal(deps);
+    await chooseDesktopFolder(deps);
 
     expectExistsAlert(deps, EXPLANATION);
   });

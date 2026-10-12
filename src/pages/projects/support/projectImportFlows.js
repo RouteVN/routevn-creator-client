@@ -134,41 +134,91 @@ export const importProjectFromFolder = async (deps) => {
   });
 };
 
-// Mobile zip import: pick a local zip archive, then import it into app
-// storage. A cancelled picker returns silently.
-export const importProjectFromZip = async (deps) => {
+// Picks a local zip archive: `{ uri, name }`, or undefined when cancelled or
+// failed.
+export const pickProjectArchive = (deps) => {
   const { appService, i18n } = deps;
   const copy = selectProjectsPageCopy(i18n);
 
-  const archive = await pickOrAlert(deps, () =>
+  return pickOrAlert(deps, () =>
     appService.openArchivePicker({
       title: copy.selectProjectArchiveTitle,
     }),
   );
-  if (!archive?.uri) {
-    return;
+};
+
+// Picks the folder a desktop zip or URL import is saved in, or undefined when
+// cancelled or failed.
+export const pickImportDestinationFolder = (deps) => {
+  const { appService, i18n } = deps;
+  const copy = selectProjectsPageCopy(i18n);
+
+  return pickOrAlert(deps, () =>
+    appService.openFolderPicker({
+      title: copy.selectImportDestinationTitle,
+    }),
+  );
+};
+
+// The dialog error for a desktop zip or URL import's destination folder, or
+// undefined when it can be used. As for a new project, the folder must be
+// empty: the project is saved directly in it. A folder that cannot be read is
+// left to the import, which fails with the error's details.
+export const getImportDestinationError = async (deps, folder) => {
+  const { appService, i18n } = deps;
+  const copy = selectProjectsPageCopy(i18n);
+
+  if (!folder) {
+    return copy.importDestinationRequiredMessage;
   }
+  try {
+    if (!(await appService.isFolderEmpty(folder))) {
+      return copy.importDestinationNotEmptyMessage;
+    }
+  } catch {
+    return undefined;
+  }
+  return undefined;
+};
+
+// Zip import: desktop imports into the empty folder chosen in the zip dialog;
+// mobile passes no destination and imports into app storage.
+export const importProjectArchive = async (
+  deps,
+  { archive, destinationFolder },
+) => {
+  const { appService, i18n } = deps;
+  const copy = selectProjectsPageCopy(i18n);
 
   await runProjectImport(deps, {
     status: copy.importPreparingStatus,
     run: ({ onProgress }) =>
-      appService.importProjectFromArchive({ uri: archive.uri, onProgress }),
+      appService.importProjectFromArchive({
+        uri: archive.uri,
+        destinationFolder,
+        onProgress,
+      }),
   });
 };
 
-// "From local": desktop opens the folder picker. Android and iOS have no
-// single system picker for a folder or a zip file, so they first ask which one
-// with the same vertical-button source dialog the media pickers use. Dismissing
-// the dialog returns silently.
+// Mobile zip import: pick a local zip archive, then import it into app
+// storage. A cancelled picker returns silently.
+export const importProjectFromZip = async (deps) => {
+  const archive = await pickProjectArchive(deps);
+  if (!archive?.uri) {
+    return;
+  }
+
+  await importProjectArchive(deps, { archive });
+};
+
+// "From local" on Android and iOS: there is no single system picker for a
+// folder or a zip file, so it first asks which one with the same
+// vertical-button source dialog the media pickers use. Dismissing the dialog
+// returns silently. Desktop lists folder and zip import as separate menu items.
 export const importProjectFromLocal = async (deps) => {
   const { appService, i18n } = deps;
   const copy = selectProjectsPageCopy(i18n);
-  const platform = appService.getPlatform();
-
-  if (platform !== "android" && platform !== "ios") {
-    await importProjectFromFolder(deps);
-    return;
-  }
 
   const result = await appService.showFormDialog({
     size: "sm",
@@ -203,23 +253,14 @@ export const importProjectFromLocal = async (deps) => {
   }
 };
 
-// URL import: desktop asks for a destination parent folder first (a cancelled
-// pick returns silently); mobile imports straight into app storage.
-export const importProjectFromUrl = async (deps, { url }) => {
+// URL import: desktop imports into the empty folder chosen in the URL dialog;
+// mobile passes no destination and imports straight into app storage.
+export const importProjectFromUrl = async (
+  deps,
+  { url, destinationFolder },
+) => {
   const { appService, i18n } = deps;
   const copy = selectProjectsPageCopy(i18n);
-
-  let destinationFolder;
-  if (appService.getPlatform() === "tauri") {
-    destinationFolder = await pickOrAlert(deps, () =>
-      appService.openFolderPicker({
-        title: copy.selectImportDestinationTitle,
-      }),
-    );
-    if (!destinationFolder) {
-      return;
-    }
-  }
 
   await runProjectImport(deps, {
     status: copy.importConnectingStatus,

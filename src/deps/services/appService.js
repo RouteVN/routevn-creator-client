@@ -7,7 +7,6 @@ import { assertSafeProjectFileId } from "../../internal/projectFileIds.js";
 import { copyTextToClipboard } from "../../internal/copyText.js";
 import { createNativeApplicationIdentifier } from "../../internal/nativeApplicationIdentifier.js";
 import { normalizeProjectLanguage } from "../../internal/projectLanguage.js";
-import { deriveImportFolderName } from "../../internal/projectImportFolderName.js";
 import { setDiscordPresenceDetails as setDiscordPresenceDetailsClient } from "../clients/tauri/discordPresence.js";
 import { createTauriProjectImportHost } from "../clients/tauri/projectImportHost.js";
 import { createProjectImportService } from "./shared/projectImportService.js";
@@ -20,6 +19,9 @@ const deriveProjectNameFromPath = (projectPath) => {
   const segments = normalizedPath.split(/[\\/]/).filter(Boolean);
   return segments[segments.length - 1] || "Untitled Project";
 };
+
+const isFolderEmpty = async (folderPath) =>
+  (await readDir(folderPath)).length === 0;
 
 const runningStaticWebServersById = new Map();
 
@@ -276,14 +278,49 @@ export const createAppService = (params) => {
     platformAdapter,
   });
 
-  // Undoes a URL import whose folder could not be registered. The project's
+  // Zip and URL imports save the project directly in the chosen folder, so,
+  // as for a new project, it must be set and empty. The dialogs check this
+  // first; this guards the import itself.
+  const assertImportDestination = async (destinationFolder) => {
+    if (!destinationFolder) {
+      throw new Error("importFailed: Destination folder is required.");
+    }
+    if (!(await isFolderEmpty(destinationFolder))) {
+      throw new Error("importFailed: The destination folder is not empty.");
+    }
+  };
+
+  // The last step of a zip or URL import: move the extracted project out of
+  // staging into the destination folder itself, then register it there.
+  const registerImportedFolder = async ({ staging, path, projectPath }) => {
+    const registeredPaths = new Set(
+      (await appService.getProjectEntries()).map((entry) => entry.projectPath),
+    );
+    await projectImportHost.moveIntoEmptyFolder({
+      staging,
+      path,
+      folder: projectPath,
+    });
+    try {
+      return await appService.openExistingProject(projectPath);
+    } catch (error) {
+      await discardImportedFolder({ projectPath, staging, registeredPaths });
+      throw error;
+    }
+  };
+
+  // Undoes a zip or URL import whose folder could not be registered. The project's
   // database connection and cached stores are released before the folder is
-  // deleted, so a later import into a folder of the same name opens its own
-  // database. The entry is removed only if this import added it: an entry that
-  // already had this path pointed at a missing folder and is left as it was.
-  // Each step is attempted even if an earlier one failed, so the folder is
-  // still removed when releasing or unlisting it did not work.
-  const discardImportedFolder = async ({ projectPath, registeredPaths }) => {
+  // emptied, so a later import into the same folder opens its own database.
+  // The entry is removed only if this import added it: an entry that already
+  // had this path pointed at a folder that no longer held its project and is
+  // left as it was. Each step is attempted even if an earlier one failed, so
+  // the folder is still emptied when releasing or unlisting it did not work.
+  const discardImportedFolder = async ({
+    projectPath,
+    staging,
+    registeredPaths,
+  }) => {
     try {
       await params.projectService.releaseRepositoryByPath(projectPath);
     } catch (releaseError) {
@@ -297,9 +334,12 @@ export const createAppService = (params) => {
       }
     }
     try {
-      await projectImportHost.removeFolder(projectPath);
+      await projectImportHost.emptyFolder({ folder: projectPath, staging });
     } catch (removeError) {
-      console.error("Failed to remove the imported folder:", removeError);
+      console.error(
+        "Failed to empty the import destination folder:",
+        removeError,
+      );
     }
   };
 
@@ -319,46 +359,63 @@ export const createAppService = (params) => {
       return setDiscordPresenceDetailsClient(options);
     },
 
-    async openArchivePicker() {
-      throw new Error("Archive import is not supported on the desktop app.");
-    },
-
-    async importProjectFromArchive() {
-      throw new Error("Archive import is not supported on the desktop app.");
-    },
-
-    // URL import on desktop: the archive is downloaded into a temporary staging
-    // folder inside the chosen destination, extracted, and the project folder
-    // is moved into a new subfolder named after the download. The folder is
-    // registered in place, and removed again if registering fails.
-    async importProjectFromUrl({ url, destinationFolder, onProgress } = {}) {
-      if (!destinationFolder) {
-        throw new Error("importFailed: Destination folder is required.");
+    // A zip file on this computer. Resolves to `{ uri, name }`, where `uri` is
+    // the file's path, or undefined when the picker is cancelled.
+    async openArchivePicker({ title } = {}) {
+      const path = await appService.openFilePicker({
+        title,
+        filters: [{ name: "Zip", extensions: ["zip"] }],
+      });
+      if (!path) {
+        return undefined;
       }
+      return { uri: path, name: path.split(/[\\/]/).at(-1) };
+    },
+
+    // Whether a folder picked as a zip or URL import destination is empty.
+    isFolderEmpty,
+
+    // Zip and URL import on desktop: the destination is an empty folder, as
+    // for a new project. The archive is copied or downloaded into a temporary
+    // staging folder inside it and extracted, and the project's files are
+    // moved out of staging into the folder itself. The folder is registered in
+    // place, and emptied again if registering fails.
+    async importProjectFromArchive({
+      uri,
+      destinationFolder,
+      onProgress,
+    } = {}) {
+      if (!uri) {
+        throw new Error("importFailed: Archive path is required.");
+      }
+      await assertImportDestination(destinationFolder);
+
+      return projectImport.importFromArchive({
+        uri,
+        parent: destinationFolder,
+        onProgress,
+        finish: ({ staging, path }) =>
+          registerImportedFolder({
+            staging,
+            path,
+            projectPath: destinationFolder,
+          }),
+      });
+    },
+
+    async importProjectFromUrl({ url, destinationFolder, onProgress } = {}) {
+      await assertImportDestination(destinationFolder);
 
       return projectImport.importFromUrl({
         url,
         parent: destinationFolder,
         onProgress,
-        finish: async ({ staging, path, meta }) => {
-          const registeredPaths = new Set(
-            (await appService.getProjectEntries()).map(
-              (entry) => entry.projectPath,
-            ),
-          );
-          const projectPath = await projectImportHost.moveToAvailableFolder({
+        finish: ({ staging, path }) =>
+          registerImportedFolder({
             staging,
             path,
-            parent: destinationFolder,
-            name: deriveImportFolderName(meta),
-          });
-          try {
-            return await appService.openExistingProject(projectPath);
-          } catch (error) {
-            await discardImportedFolder({ projectPath, registeredPaths });
-            throw error;
-          }
-        },
+            projectPath: destinationFolder,
+          }),
       });
     },
 
