@@ -1748,6 +1748,18 @@ The Lexical document editor must not own:
 - split/merge/create/delete persistence workflows
 - scene-specific badge/preview shaping
 
+Software keyboards keep their own model of the text: the range they are
+composing and positions they have already seen. The primitive keeps the
+browser's composition intact. A delete that arrives while a keyboard composes
+is left to the browser when it stays inside the caret's text node: Lexical
+would end its composition and rewrite the node, which drops the browser's
+composition without a compositionend, and the keyboard's next update inserted
+its word again. The editor leaves composition mode when the browser shows that
+the composition is gone. In touch mode, a tapped or restored caret sits before
+the invisible placeholder of an empty line, so removing the placeholder when
+typing starts does not move text the keyboard has seen. See TXT-017 and TXT-018
+in the [scene text editor specifications](scene-text-editor-spec.md).
+
 Scene editor draft persistence uses latest-wins coalescing for draft flushes:
 if a running flush already has a pending replacement, the newer pending flush
 replaces it. This coalesces scheduled draft tasks, not generated commands.
