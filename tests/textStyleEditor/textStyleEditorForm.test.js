@@ -123,7 +123,7 @@ describe("text style editor form", () => {
       fontSize: 24,
       lineHeight: 1.5,
       fontWeight: "400",
-      strokeColorId: undefined,
+      strokeColorId: null,
       strokeWidth: 0,
       clearShadow: true,
     });

@@ -290,7 +290,6 @@ describe("animation editor undo and redo", () => {
       tweenBySection: { update: { x: { initialValue: 0, keyframes } } },
       transitionMask: undefined,
       additionalTransitionMasks: [],
-      cameraTracksAuthored: false,
     });
     let state = produce(animationEditorStore.createInitialState(), (draft) => {
       draft.tweenBySection.update.x = {

@@ -365,4 +365,27 @@ describe("layoutEditorMutations", () => {
       }),
     ).toBe(item);
   });
+
+  it("does not keyboard-move items without a position", () => {
+    const item = {
+      id: "folder-1",
+      type: "folder",
+      name: "Group",
+    };
+
+    expect(
+      applyCanvasItemKeyboardChange({
+        item,
+        key: "ArrowLeft",
+        unit: 1,
+      }),
+    ).toBe(item);
+    expect(
+      applyCanvasItemKeyboardChange({
+        item,
+        key: "ArrowDown",
+        unit: 10,
+      }),
+    ).toBe(item);
+  });
 });

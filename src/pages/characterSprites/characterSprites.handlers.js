@@ -1711,18 +1711,13 @@ export const handleEditFormAction = async (deps, payload) => {
     return;
   }
 
-  const data = {
-    name,
-    description: values?.description ?? "",
-    tagIds: Array.isArray(values?.tagIds) ? values.tagIds : [],
-  };
-
-  if (editUploadResult) {
-    Object.assign(
-      data,
-      buildImageResourcePatchFromUploadResult(editUploadResult),
-    );
-  }
+  // The name typed in the dialog wins over the replaced file's name.
+  const data = editUploadResult
+    ? buildImageResourcePatchFromUploadResult(editUploadResult)
+    : {};
+  data.name = name;
+  data.description = values?.description ?? "";
+  data.tagIds = Array.isArray(values?.tagIds) ? values.tagIds : [];
 
   const updateAttempt = await runResourcePageMutation({
     appService,
@@ -1962,6 +1957,10 @@ export const handleSpritesheetDialogFormAction = async (deps, payload) => {
     });
     return;
   }
+
+  // An empty size field removes the default frame size.
+  spritesheetData.width ??= null;
+  spritesheetData.height ??= null;
 
   const updateAttempt = await runResourcePageMutation({
     appService,

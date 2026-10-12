@@ -32,12 +32,16 @@ const flushRepositoryMainCheckpointBestEffort = async ({
 };
 
 // Desktop, Android and iOS store changes as JSON, which drops undefined fields
-// and turns NaN and Infinity into null. In an update that merges its data, such
-// a field means something else, or nothing, when the project's history loads
-// again. These updates are reported so that the editor that made them can be
-// fixed; they are still saved as before. Each command type and set of fields
-// is reported once, and only a couple per session, to leave the reporter's
-// budget to other errors.
+// and turns NaN and Infinity into null. A command's payload is turned into its
+// JSON form when the command is created, so the change checked and applied in
+// the open project is the one that loads again on every platform.
+const toStoredPayload = (payload) =>
+  payload === undefined ? undefined : JSON.parse(JSON.stringify(payload));
+
+// An update that merges such a field meant something its JSON form does not,
+// such as clearing the field. It is reported so that the editor that made it
+// can be fixed. Each command type and set of fields is reported once, and only
+// a couple per session, to leave the reporter's budget to other errors.
 const MAX_NON_JSON_PAYLOAD_REPORTS = 2;
 
 // Adds the names of the fields of `value` that JSON drops or changes.
@@ -153,6 +157,42 @@ export const createCommandApiShared = ({
     };
   };
 
+  const reportedNonJsonPayloads = new Set();
+
+  // Runs before the payload is turned into its JSON form, while the editor
+  // that made it is still on the stack. Reporting never stops the change.
+  const reportNonJsonPayload = ({ type, payload }) => {
+    if (
+      !errorTracker ||
+      reportedNonJsonPayloads.size >= MAX_NON_JSON_PAYLOAD_REPORTS ||
+      // A create or a full replace means the same without such fields.
+      type.endsWith(".create") ||
+      payload?.replace === true
+    ) {
+      return;
+    }
+
+    try {
+      const fields = new Set();
+      collectNonJsonFields(payload, "payload", fields);
+      if (fields.size === 0) {
+        return;
+      }
+      const message = `${type}: non-JSON value in ${[...fields].sort().join(", ")}`;
+      if (reportedNonJsonPayloads.has(message)) {
+        return;
+      }
+      const error = new Error(message);
+      error.name = "NonJsonCommandPayloadError";
+      errorTracker.capture(error, {
+        operation: "projectCommand.nonJsonPayload",
+      });
+      reportedNonJsonPayloads.add(message);
+    } catch (failure) {
+      console.warn("Failed to report a non-JSON command payload", failure);
+    }
+  };
+
   const createCommandWithContext = ({
     context,
     commandId,
@@ -171,12 +211,14 @@ export const createCommandApiShared = ({
             partitions,
           );
 
+    reportNonJsonPayload({ type, payload });
+
     return createCommandEnvelope({
       id: commandId ?? createId(),
       projectId: context.projectId,
       partition: resolvedPartition,
       type,
-      payload,
+      payload: toStoredPayload(payload),
       actor: context.actor,
       clientTs: getCommandTimestamp(),
     });
@@ -216,45 +258,6 @@ export const createCommandApiShared = ({
       commands: normalizedCommands,
       projectId: context.projectId,
     });
-  };
-
-  const reportedNonJsonPayloads = new Set();
-
-  // Called after the commands were saved.
-  const reportNonJsonPayloads = (commands) => {
-    if (!errorTracker) {
-      return;
-    }
-
-    for (const { type, payload } of commands) {
-      if (reportedNonJsonPayloads.size >= MAX_NON_JSON_PAYLOAD_REPORTS) {
-        return;
-      }
-      // A create or a full replace loads back the same without such fields.
-      if (type.endsWith(".create") || payload?.replace === true) {
-        continue;
-      }
-
-      try {
-        const fields = new Set();
-        collectNonJsonFields(payload, "payload", fields);
-        if (fields.size === 0) {
-          continue;
-        }
-        const message = `${type}: non-JSON value in ${[...fields].sort().join(", ")}`;
-        if (reportedNonJsonPayloads.has(message)) {
-          continue;
-        }
-        const error = new Error(message);
-        error.name = "NonJsonCommandPayloadError";
-        errorTracker.capture(error, {
-          operation: "projectCommand.nonJsonPayload",
-        });
-        reportedNonJsonPayloads.add(message);
-      } catch (failure) {
-        console.warn("Failed to report a non-JSON command payload", failure);
-      }
-    }
   };
 
   const advanceContextStateWithCommands = ({ context, commands = [] }) => {
@@ -323,7 +326,6 @@ export const createCommandApiShared = ({
     if (submitResult?.valid === false) {
       return submitResult;
     }
-    reportNonJsonPayloads([command]);
 
     const applyResult = await applyCommandToRepository({
       repository: context.repository,
@@ -387,7 +389,6 @@ export const createCommandApiShared = ({
         return submitResult;
       }
       submitted = true;
-      reportNonJsonPayloads(normalizedCommands);
 
       const applyResult = await applyCommandsToRepository({
         repository: context.repository,

@@ -113,7 +113,8 @@ export const toTextStyleUpdateData = (values) => {
     fontSize: values.fontSize,
     lineHeight: values.lineHeight,
     fontWeight: values.fontWeight,
-    strokeColorId: values.strokeColorId,
+    // null removes the outline color; undefined would not be stored.
+    strokeColorId: values.strokeColorId ?? null,
     strokeWidth: values.strokeWidth,
   };
   if (values.shadow) {

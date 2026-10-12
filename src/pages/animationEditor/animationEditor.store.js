@@ -2253,7 +2253,6 @@ export const selectAnimationHistorySnapshot = ({ state }) =>
     tweenBySection: state.tweenBySection,
     transitionMask: state.transitionMask,
     additionalTransitionMasks: state.additionalTransitionMasks,
-    cameraTracksAuthored: state.cameraTracksAuthored,
   });
 
 export const selectEditHistoryBaseline = ({ state }) =>
@@ -2311,7 +2310,8 @@ export const restoreAnimationHistorySnapshot = (
   state.tweenBySection = snapshot.tweenBySection;
   state.transitionMask = snapshot.transitionMask;
   state.additionalTransitionMasks = snapshot.additionalTransitionMasks;
-  state.cameraTracksAuthored = snapshot.cameraTracksAuthored;
+  // Undo keeps camera tracks authored, so undoing the only camera saves an
+  // empty track list rather than none, which would keep the saved tracks.
   state.editHistoryBaseline = snapshot;
   state.cameraEditor = undefined;
   closePopover({ state });

@@ -362,6 +362,7 @@ const validateCharacterSpritesheetData = ({
   path,
   requireFileId,
   requireAtlas,
+  allowNullSize = false,
 }) => {
   for (const key of [
     "sheetWidth",
@@ -370,6 +371,14 @@ const validateCharacterSpritesheetData = ({
     "width",
     "height",
   ]) {
+    // An update removes the default frame size with null.
+    if (
+      allowNullSize &&
+      (key === "width" || key === "height") &&
+      data[key] === null
+    ) {
+      continue;
+    }
     const result = validateFiniteNumberField({
       value: data[key],
       path: `${path}.${key}`,
@@ -553,6 +562,7 @@ const validateCharacterSpriteUpdateData = ({ data, currentItem }) => {
       path: "payload.data",
       requireFileId: false,
       requireAtlas: false,
+      allowNullSize: true,
     });
   }
 
@@ -664,6 +674,7 @@ const validateCharacterSpritesheetUpdatePayloadShape = ({ payload }) => {
     path: "payload.data",
     requireFileId: false,
     requireAtlas: false,
+    allowNullSize: true,
   });
 };
 
@@ -1980,10 +1991,16 @@ const reduceCharacterSpriteCommand = ({ repositoryState, command }) => {
       characterId: payload.characterId,
     });
     const currentItem = collection.items[payload.spriteId];
-    collection.items[payload.spriteId] = applyTagIdsUpdate({
+    const nextItem = applyTagIdsUpdate({
       currentItem,
       data: payload.data,
     });
+    for (const key of ["width", "height"]) {
+      if (payload.data[key] === null) {
+        delete nextItem[key];
+      }
+    }
+    collection.items[payload.spriteId] = nextItem;
 
     return {
       valid: true,

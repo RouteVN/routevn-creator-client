@@ -77,7 +77,13 @@ const setup = async ({ errorTracker = { capture: vi.fn() } } = {}) => {
   const updateElement = (data) =>
     api.updateLayoutElement({ layoutId, elementId, data, replace: false });
 
-  return { reportError: errorTracker?.capture, session, shared, updateElement };
+  return {
+    reportError: errorTracker?.capture,
+    repository,
+    session,
+    shared,
+    updateElement,
+  };
 };
 
 describe("commandApi non-JSON payload report", () => {
@@ -85,11 +91,10 @@ describe("commandApi non-JSON payload report", () => {
     vi.restoreAllMocks();
   });
 
-  it("reports a field that JSON would drop, after the change is saved", async () => {
+  it("reports a field that JSON would drop", async () => {
     const { reportError, session, updateElement } = await setup();
 
-    // Stored as JSON, this is `{ name: "Heading" }`, so `hidden` comes back
-    // when the project loads again.
+    // Its JSON form is `{ name: "Heading" }`, which leaves `hidden` as it was.
     const result = await updateElement({ name: "Heading", hidden: undefined });
 
     expect(result).toMatchObject({ valid: true });
@@ -171,16 +176,18 @@ describe("commandApi non-JSON payload report", () => {
     expect(session.submitCommand).toHaveBeenCalledOnce();
   });
 
-  it("does not report a change that was not saved", async () => {
+  it("reports a change whose JSON form is rejected", async () => {
     const { reportError, session, updateElement } = await setup();
-    session.submitCommand.mockResolvedValueOnce({
-      valid: false,
-      error: { code: "rejected", message: "Rejected" },
-    });
 
-    await updateElement({ name: "Heading", hidden: undefined });
+    // Its JSON form is `{}`, which updates nothing.
+    const result = await updateElement({ hidden: undefined });
 
-    expect(reportError).not.toHaveBeenCalled();
+    expect(result).toMatchObject({ valid: false });
+    expect(session.submitCommand).not.toHaveBeenCalled();
+    expect(reportError).toHaveBeenCalledOnce();
+    expect(reportError.mock.calls[0][0].message).toBe(
+      "layout.element.update: non-JSON value in hidden",
+    );
   });
 
   it("reports commands saved together", async () => {
@@ -225,6 +232,37 @@ describe("commandApi non-JSON payload report", () => {
       "Failed to report a non-JSON command payload",
       expect.objectContaining({ message: "reporter unavailable" }),
     );
+  });
+});
+
+describe("commandApi JSON form of payloads", () => {
+  const getElement = (repository) =>
+    repository.getState().layouts.items[layoutId].elements.items[elementId];
+
+  it("saves and applies the payload's JSON form", async () => {
+    const { repository, session, updateElement } = await setup();
+
+    const result = await updateElement({ name: "Heading", hidden: undefined });
+
+    expect(result).toMatchObject({ valid: true });
+    const [command] = session.submitCommand.mock.calls[0];
+    expect(command.payload.data).toEqual({ name: "Heading" });
+    expect(Object.hasOwn(command.payload.data, "hidden")).toBe(false);
+    // As after a reload: the field is not cleared.
+    expect(getElement(repository)).toMatchObject({
+      name: "Heading",
+      hidden: true,
+    });
+  });
+
+  it("checks NaN as the null it is stored as", async () => {
+    const { repository, session, updateElement } = await setup();
+
+    const result = await updateElement({ x: Number.NaN });
+
+    expect(result).toMatchObject({ valid: false });
+    expect(session.submitCommand).not.toHaveBeenCalled();
+    expect(getElement(repository).x).toBe(0);
   });
 });
 

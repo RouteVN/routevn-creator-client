@@ -883,6 +883,32 @@ describe("Camera animation authoring", () => {
     editor.addProperty({ state: reopened }, { side: "update", property: "x" });
     expect(reopened.tweenBySection.update.x).toBeDefined();
   });
+  it("saves an empty track list after undoing the only Camera", () => {
+    const state = editor.createInitialState();
+    editor.openDialog({ state }, { dialogType: "update" });
+    const beforeCamera = editor.selectAnimationHistorySnapshot({ state });
+    editor.addProperty({ state }, { side: "update", property: "camera" });
+    expect(editor.selectCameraTracks({ state })).toEqual(["update"]);
+
+    editor.restoreAnimationHistorySnapshot(
+      { state },
+      { snapshot: beforeCamera },
+    );
+
+    // An empty list replaces the saved ["update"]; no list would keep it
+    // and fail validation against the animation without a Camera.
+    expect(state.tweenBySection.update.camera).toBeUndefined();
+    expect(editor.selectCameraTracks({ state })).toEqual([]);
+    expect(
+      validatePayload({
+        type: "animation.update",
+        payload: {
+          animationId: "camera-one",
+          data: { cameraTracks: editor.selectCameraTracks({ state }) },
+        },
+      }),
+    ).toEqual({ valid: true });
+  });
   it("renders Camera keyframes and initial poses without scalar value inputs", () => {
     const state = createState();
     const render = () =>

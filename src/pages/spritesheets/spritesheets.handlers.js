@@ -977,6 +977,10 @@ export const handleDialogFormAction = async (deps, payload) => {
     return;
   }
 
+  // An empty size field removes the default frame size.
+  spritesheetData.width ??= null;
+  spritesheetData.height ??= null;
+
   const updateAttempt = await runResourcePageMutation({
     appService,
     fallbackMessage:
