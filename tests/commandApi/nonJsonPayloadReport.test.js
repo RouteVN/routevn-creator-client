@@ -1,6 +1,9 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { createLayoutCommandApi } from "../../src/deps/services/shared/commandApi/layouts.js";
-import { createCommandApiShared } from "../../src/deps/services/shared/commandApi/shared.js";
+import {
+  collectNonJsonFields,
+  createCommandApiShared,
+} from "../../src/deps/services/shared/commandApi/shared.js";
 import { createProjectRepository } from "../../src/deps/services/shared/projectRepository.js";
 import { COMMAND_TYPES } from "../../src/internal/project/commands.js";
 
@@ -69,12 +72,12 @@ const setup = async ({ errorTracker = { capture: vi.fn() } } = {}) => {
     },
   });
   session.submitCommand.mockClear();
-  errorTracker.capture.mockClear();
+  errorTracker?.capture.mockClear();
 
   const updateElement = (data) =>
     api.updateLayoutElement({ layoutId, elementId, data, replace: false });
 
-  return { reportError: errorTracker.capture, session, shared, updateElement };
+  return { reportError: errorTracker?.capture, session, shared, updateElement };
 };
 
 describe("commandApi non-JSON payload report", () => {
@@ -132,6 +135,42 @@ describe("commandApi non-JSON payload report", () => {
     ]);
   });
 
+  it("reports the same fields once whatever their order", async () => {
+    const { reportError, updateElement } = await setup();
+
+    await updateElement({ name: "Heading", hidden: undefined, x: undefined });
+    await updateElement({ x: undefined, name: "Subtitle", hidden: undefined });
+
+    expect(reportError).toHaveBeenCalledOnce();
+    expect(reportError.mock.calls[0][0].message).toBe(
+      "layout.element.update: non-JSON value in hidden, x",
+    );
+  });
+
+  it("does not report a create, which loads back the same", async () => {
+    const { reportError, session, shared } = await setup();
+    const api = createLayoutCommandApi(shared);
+
+    await api.createLayoutItem({
+      layoutId: "layout-2",
+      name: "Layout Two",
+      layoutType: "general",
+      data: { description: undefined },
+    });
+
+    expect(session.submitCommand).toHaveBeenCalledOnce();
+    expect(reportError).not.toHaveBeenCalled();
+  });
+
+  it("checks nothing without an error tracker", async () => {
+    const { session, updateElement } = await setup({ errorTracker: null });
+
+    const result = await updateElement({ name: "Heading", hidden: undefined });
+
+    expect(result).toMatchObject({ valid: true });
+    expect(session.submitCommand).toHaveBeenCalledOnce();
+  });
+
   it("does not report a change that was not saved", async () => {
     const { reportError, session, updateElement } = await setup();
     session.submitCommand.mockResolvedValueOnce({
@@ -186,5 +225,39 @@ describe("commandApi non-JSON payload report", () => {
       "Failed to report a non-JSON command payload",
       expect.objectContaining({ message: "reporter unavailable" }),
     );
+  });
+});
+
+describe("collectNonJsonFields", () => {
+  const collect = (value) => {
+    const fields = new Set();
+    collectNonJsonFields(value, "payload", fields);
+    return [...fields].sort();
+  };
+
+  it("names the fields whose values JSON drops or changes", () => {
+    expect(
+      collect({
+        kept: { text: "a", count: 1, flag: false, empty: null },
+        missing: undefined,
+        ratio: Number.NaN,
+        limit: Infinity,
+        when: new Date(0),
+        list: [1, undefined],
+      }),
+    ).toEqual(["limit", "list", "missing", "ratio", "when"]);
+  });
+
+  it("names nothing in a JSON-safe value that uses one object twice", () => {
+    const shared = { value: "same" };
+
+    expect(collect({ first: shared, second: [shared] })).toEqual([]);
+  });
+
+  it("names a field that leads back into its own value", () => {
+    const cyclic = { name: "loop" };
+    cyclic.self = cyclic;
+
+    expect(collect({ data: cyclic })).toEqual(["self"]);
   });
 });
