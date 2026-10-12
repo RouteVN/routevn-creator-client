@@ -1,6 +1,7 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import * as storeModule from "../../src/pages/sceneEditorLexical/sceneEditorLexical.store.js";
 import {
+  handleMobileKeyboardToolbarActionClick,
   handlePreviewClick,
   prepareSceneEditorNavigation,
 } from "../../src/pages/sceneEditorLexical/sceneEditorLexical.handlers.js";
@@ -366,6 +367,91 @@ describe("scene editor: a draft that cannot be saved", () => {
 
     expect(store.selectViewData().previewSectionId).toBe("section-1");
     expect(store.selectViewData().previewLineId).toBe("b");
+  });
+
+  // A click on the Preview button or the phone toolbar comes from outside
+  // every section editor. In the page's shadow root, the first section's
+  // editor comes first.
+  const clickOutsideEditors = (detail) => ({
+    _event: {
+      detail,
+      currentTarget: {
+        getRootNode: () => ({ querySelector: () => editors.first }),
+      },
+      preventDefault: vi.fn(),
+      stopPropagation: vi.fn(),
+    },
+  });
+
+  it.each([
+    [
+      "the Preview button",
+      () => handlePreviewClick(deps, clickOutsideEditors()),
+    ],
+    [
+      "the phone toolbar",
+      () =>
+        handleMobileKeyboardToolbarActionClick(
+          deps,
+          clickOutsideEditors({ actionId: "preview" }),
+        ),
+    ],
+  ])(
+    "saves the section preview was asked from with its own lines, from %s",
+    async (_source, openPreview) => {
+      // Like the project, refuses lines that are saved in another section.
+      syncSectionLinesSnapshot.mockImplementation(
+        async ({ sectionId, lines }) =>
+          lines.some(({ id }) =>
+            Object.entries(savedLines).some(
+              ([otherSectionId, otherLines]) =>
+                otherSectionId !== sectionId &&
+                otherLines.some((otherLine) => otherLine.id === id),
+            ),
+          )
+            ? refused
+            : { valid: true },
+      );
+      store.setSelectedSectionId({ selectedSectionId: "section-2" });
+      store.setSelectedLineId({ selectedLineId: "c" });
+      const typedInSecond = [line("c", "typed in the second section")];
+      editors.second.replaceLines({ lines: typedInSecond });
+
+      openPreview();
+      await vi.waitFor(() =>
+        expect(store.selectViewData().previewVisible).toBe(true),
+      );
+
+      expect(
+        Object.fromEntries(
+          syncSectionLinesSnapshot.mock.calls.map(([{ sectionId, lines }]) => [
+            sectionId,
+            lines,
+          ]),
+        ),
+      ).toEqual({ "section-1": typedLines, "section-2": typedInSecond });
+      expect(deps.appService.showAlertWhenIdle).not.toHaveBeenCalled();
+      expect(editors.second.getLines()).toEqual(typedInSecond);
+    },
+  );
+
+  it("does not save another section's editor into the section preview was asked from", async () => {
+    syncSectionLinesSnapshot.mockResolvedValue({ valid: true });
+    store.setSelectedSectionId({ selectedSectionId: "section-2" });
+    store.setSelectedLineId({ selectedLineId: "c" });
+    deps.refs = { sectionEditor0: editors.first };
+
+    handlePreviewClick(deps, {});
+    await vi.waitFor(() =>
+      expect(store.selectViewData().previewVisible).toBe(true),
+    );
+
+    expect(
+      syncSectionLinesSnapshot.mock.calls.map(([{ sectionId }]) => sectionId),
+    ).toEqual(["section-1"]);
+    expect(
+      store.selectDraftSectionBySectionId({ sectionId: "section-2" }),
+    ).toMatchObject({ dirty: false, lines: savedLines["section-2"] });
   });
 
   it("leaves a successful save alone", async () => {

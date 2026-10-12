@@ -723,9 +723,6 @@ export const createInitialState = () => ({
   lastDraftFlushStartedAt: 0,
   draftSavePendingSinceAt: 0,
   draftFlushInFlight: false,
-  // Counts drafts dropped because they could not be saved, so a flush queued
-  // before a drop does not save the lines it was handed then.
-  draftRevertGeneration: 0,
   previewVisible: false,
   previewSceneId: undefined,
   previewSectionId: undefined,
@@ -1002,14 +999,6 @@ export const removeDraftSection = ({ state }, { sceneId, sectionId } = {}) => {
   ) {
     state.draftSection = undefined;
   }
-};
-
-export const markDraftSectionReverted = ({ state }) => {
-  state.draftRevertGeneration += 1;
-};
-
-export const selectDraftRevertGeneration = ({ state }) => {
-  return state.draftRevertGeneration;
 };
 
 export const setDraftSaveTimerId = ({ state }, { timerId } = {}) => {
