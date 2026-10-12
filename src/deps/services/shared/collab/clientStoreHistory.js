@@ -209,7 +209,10 @@ const tryApplyRepositoryEventsToState = ({
 // failing prefix: its last draft is the failed one. Treating the first
 // remaining draft as the failed one instead would leave out valid drafts until
 // the invalid one came first.
-const findFailedDraft = ({
+//
+// Each probe replays the drafts again, so it first yields to the UI. Without
+// that, the failed attempt and the probes after it block as one long task.
+const findFailedDraft = async ({
   repositoryState,
   draftEvents,
   projectId,
@@ -236,6 +239,7 @@ const findFailedDraft = ({
     const probeCount =
       nextProbeCount ?? Math.floor((acceptedCount + failedCount) / 2);
     nextProbeCount = undefined;
+    await yieldForUiPaint();
     const result = tryApplyRepositoryEventsToState({
       repositoryState,
       events: draftEvents.slice(0, probeCount),
@@ -518,7 +522,7 @@ export const loadRepositoryEventsFromClientStore = async ({
         return;
       }
 
-      const { acceptedCount, acceptedState, error } = findFailedDraft({
+      const { acceptedCount, acceptedState, error } = await findFailedDraft({
         repositoryState,
         draftEvents: remainingDraftEvents,
         projectId,
