@@ -147,6 +147,53 @@ describe("skippedDraftsReport", () => {
     });
   });
 
+  it("reports a rebuild error and new drafts together", () => {
+    const deps = createDeps();
+    const rebuildError = new Error("disk I/O error");
+
+    reportSkippedDrafts(deps, {
+      projectId,
+      skippedDrafts: [createSkippedDraft({ draftId: "draft-1" })],
+      rebuildError,
+    });
+
+    expect(deps.appService.reportError).toHaveBeenCalledTimes(2);
+    expect(deps.appService.reportError).toHaveBeenNthCalledWith(
+      1,
+      rebuildError,
+      { operation: "projectHistory.rebuildWithoutSkippedDrafts" },
+    );
+    expect(deps.appService.reportError).toHaveBeenNthCalledWith(
+      2,
+      expect.objectContaining({ name: "SkippedLocalDraftsError" }),
+      {
+        operation: "projectHistory.loadDrafts",
+        code: "payload_validation_failed",
+      },
+    );
+    expect(deps.config.get(configKey)).toEqual(["draft-1"]);
+  });
+
+  it("lists each failure once with its count", () => {
+    const deps = createDeps();
+
+    reportSkippedDrafts(deps, {
+      projectId,
+      skippedDrafts: [
+        createSkippedDraft({ draftId: "draft-1" }),
+        createSkippedDraft({ draftId: "draft-2", type: "scene.update" }),
+        createSkippedDraft({ draftId: "draft-3" }),
+      ],
+    });
+
+    expect(deps.appService.reportError.mock.calls[0][0].message).toBe(
+      [
+        "line.update_actions: payload.unsupportedField is not allowed (×2)",
+        "scene.update: payload.unsupportedField is not allowed",
+      ].join("; "),
+    );
+  });
+
   it("follows the open project and reports each left-out draft", () => {
     const deps = createDeps();
     const listeners = [];

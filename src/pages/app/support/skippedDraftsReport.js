@@ -11,11 +11,19 @@ import { EMPTY, Observable, catchError, switchMap, tap } from "rxjs";
 export const getReportedSkippedDraftsConfigKey = (projectId) =>
   `projectHistory.notifiedSkippedDrafts.${projectId}`;
 
-// The left-out drafts as one error for the report.
+// The left-out drafts as one error for the report. Each failure is listed once
+// with its count, since the reporter keeps only the start of the message.
 const createSkippedDraftsError = (skippedDrafts) => {
+  const failureCounts = new Map();
+  for (const { type, error: draftError } of skippedDrafts) {
+    const failure = `${type}: ${draftError.message}`;
+    failureCounts.set(failure, (failureCounts.get(failure) ?? 0) + 1);
+  }
   const error = new Error(
-    skippedDrafts
-      .map(({ type, error: draftError }) => `${type}: ${draftError.message}`)
+    [...failureCounts]
+      .map(([failure, count]) =>
+        count > 1 ? `${failure} (×${count})` : failure,
+      )
       .join("; "),
   );
   error.name = "SkippedLocalDraftsError";

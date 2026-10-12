@@ -175,11 +175,14 @@ left-out draft was made in the main or a main-scene partition, it also rebuilds
 the main state from the loaded history and saves it as the main checkpoint; the
 main state never applies scene-partition events. An event that storage already
 held when it is added, such as a command's own draft, is not applied twice.
-Then the app reports the left-out drafts as one handled error, at most once
-per draft (`projectHistory.notifiedSkippedDrafts.<projectId>` in
-`userConfig`). It does not show them to the user: a draft can be left out long
-after it was made, when the user no longer remembers the change. A change that
-fails to save while the user makes it is shown by the editor that saves it.
+Then the app reports the left-out drafts it has not reported yet as one
+handled error, and keeps the ids of the reported drafts that are still left out
+(`projectHistory.notifiedSkippedDrafts.<projectId>` in `userConfig`). A draft is
+reported again if the app ends before that list is written, or if it applies
+again and is later left out again. The app does not show left-out drafts to the
+user: a draft can be left out long after it was made, when the user no longer
+remembers the change. A change that fails validation when the user makes it is
+shown by the editor that saves it.
 
 The drafts stay in storage, so later loads leave them out again. The
 repository records the drafts that cached state was rebuilt without in the

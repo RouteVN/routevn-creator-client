@@ -254,7 +254,7 @@ describe("clientStoreHistory", () => {
     ).toEqual([
       { draftId: "invalid-line-update", sceneId },
       { draftId: "malformed-rename", sceneId },
-      // The draft's scene does not exist, so it cannot be named.
+      // The draft's scene does not exist, so it has no scene.
       { draftId: "missing-scene-create", sceneId: undefined },
     ]);
   });
@@ -285,7 +285,7 @@ describe("clientStoreHistory", () => {
     expect(onSkippedDraft).not.toHaveBeenCalled();
   });
 
-  it("reports a left-out line command at its line's scene and section", async () => {
+  it("reports a left-out line command at its line's scene", async () => {
     const { skippedDrafts } = await loadHistory({
       drafts: [
         createBootstrapDraft(),
@@ -325,9 +325,10 @@ describe("clientStoreHistory", () => {
     ]);
   });
 
-  it("reports an edit of a deleted line at the section that last held it", async () => {
+  it("reports an edit of a deleted line at the scene of the section that last held it", async () => {
     // A save stored its line delete but not the rest, and the next save
-    // edited the deleted line.
+    // edited the deleted line. The edit is in the main partition, so only the
+    // line's last section can give its scene.
     const { eventIds, skippedDrafts } = await loadHistory({
       drafts: [
         createBootstrapDraft(),
@@ -341,7 +342,7 @@ describe("clientStoreHistory", () => {
         }),
         createDraft({
           id: "deleted-line-update",
-          partition: scenePartitionFor(sceneId),
+          partition: "m",
           type: "line.update_actions",
           payload: { lineId, data: {} },
           clientTs: 6,
@@ -358,7 +359,7 @@ describe("clientStoreHistory", () => {
     ]);
   });
 
-  it("reports an edit in a deleted section at its scene only", async () => {
+  it("reports an edit in a deleted section at the scene of its partition", async () => {
     const { skippedDrafts } = await loadHistory({
       drafts: [
         createBootstrapDraft(),
