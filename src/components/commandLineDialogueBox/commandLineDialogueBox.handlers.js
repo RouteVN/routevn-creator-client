@@ -749,6 +749,7 @@ export const handleAfterMount = (deps) => {
 };
 
 export const handleOnUpdate = (deps, changes) => {
+  const { render } = deps;
   const { oldProps, newProps } = changes;
   const selectedLineChanged =
     oldProps?.selectedLineId !== newProps?.selectedLineId;
@@ -763,6 +764,9 @@ export const handleOnUpdate = (deps, changes) => {
     deps,
     selectedLineChanged ? newProps?.dialogue : newProps?.authoredDialogue,
   );
+  // The view was rendered before this update, and the form keeps values only
+  // for the fields it shows, so it shows the new dialogue's fields first.
+  render();
   syncDialogueFormValues(deps);
 };
 
@@ -800,7 +804,7 @@ export const handleFormChange = (deps, payload) => {
   });
 
   // The form hid the other sections while the layout was cleared and no
-  // longer holds their values, so it is filled again from the dialogue.
+  // longer holds their values, so it is filled again from the kept settings.
   if (currentState.layoutCleared) {
     store.setSelectedMode({ mode: selectedMode });
     store.setSelectedResource({ resourceId: selectedResourceId });

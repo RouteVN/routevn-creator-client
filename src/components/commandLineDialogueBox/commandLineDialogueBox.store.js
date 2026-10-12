@@ -1299,6 +1299,9 @@ export const selectViewData = ({ state, props, i18n }) => {
         ...field,
         options: layoutOptions,
         value: selectedResourceId,
+        // Clearing a chosen layout removes the dialogue. Without one, as in a
+        // project with no dialogue layouts, there is nothing to clear.
+        clearable: !!selectedResourceId,
         label: "Layout",
       };
     }

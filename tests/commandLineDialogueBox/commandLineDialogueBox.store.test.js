@@ -80,7 +80,7 @@ describe("commandLineDialogueBox.store", () => {
       (field) => field.name === "resourceId",
     );
     expect(layoutField.value).toBe("layout-adv");
-    expect(layoutField.clearable).not.toBe(false);
+    expect(layoutField.clearable).toBe(true);
     expect(layoutField.required).toBeUndefined();
     expect(isSectionShown(viewData, "speaker")).toBe(true);
     expect(isSectionShown(viewData, "options")).toBe(true);
@@ -99,7 +99,7 @@ describe("commandLineDialogueBox.store", () => {
     expect(clearedViewData.submitDisabled).toBe(false);
   });
 
-  it("keeps submitting off and the sections shown when there are no dialogue layouts", () => {
+  it("keeps submitting off, the sections shown, and nothing to clear when there are no dialogue layouts", () => {
     const viewData = selectTestViewData({
       state: createInitialState(),
       props: { layouts: [], characters: [] },
@@ -108,6 +108,9 @@ describe("commandLineDialogueBox.store", () => {
     expect(viewData.submitDisabled).toBe(true);
     expect(isSectionShown(viewData, "speaker")).toBe(true);
     expect(isSectionShown(viewData, "options")).toBe(true);
+    expect(
+      findFormField(viewData, (field) => field.name === "resourceId").clearable,
+    ).toBe(false);
   });
 
   it("groups speaker options by folder and shows avatars without changing the selected speaker", () => {

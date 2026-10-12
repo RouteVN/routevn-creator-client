@@ -253,6 +253,7 @@ describe("commandLineDialogueBox.handlers", () => {
       {
         props: { layouts, characters, animations },
         refs,
+        render: vi.fn(),
         store: createStore(state),
       },
       {
@@ -284,6 +285,7 @@ describe("commandLineDialogueBox.handlers", () => {
       {
         props: { layouts, characters, animations },
         refs,
+        render: vi.fn(),
         store: createStore(state),
       },
       {
@@ -313,6 +315,7 @@ describe("commandLineDialogueBox.handlers", () => {
       {
         props: { layouts, characters, animations },
         refs,
+        render: vi.fn(),
         store: createStore(state),
       },
       {
@@ -1856,14 +1859,17 @@ describe("commandLineDialogueBox.handlers", () => {
     });
   });
 
-  it("drops a cleared layout when another line is selected", () => {
+  it("drops a cleared layout when another line is selected, and shows that line's fields before filling them", () => {
     const state = createInitialState();
+    const refs = createFormRefs();
+    const render = vi.fn();
     clearLayout({ state });
 
     handleOnUpdate(
       {
         props: { layouts, characters, animations },
-        refs: createFormRefs(),
+        refs,
+        render,
         store: createStore(state),
       },
       {
@@ -1877,6 +1883,39 @@ describe("commandLineDialogueBox.handlers", () => {
 
     expect(state.layoutCleared).toBe(false);
     expect(state.selectedResourceId).toBe("layout-adv");
+    // The form keeps values only for the fields it shows.
+    expect(render.mock.invocationCallOrder[0]).toBeLessThan(
+      refs.dialogueForm.reset.mock.invocationCallOrder[0],
+    );
+  });
+
+  it("keeps previewing the dialogue as cleared when a late input arrives after the layout is cleared", () => {
+    const state = createInitialState();
+    const dispatchEvent = vi.fn();
+    setSelectedResource({ state }, { resourceId: "layout-adv" });
+    clearLayout({ state });
+
+    handleFormInput(
+      {
+        props: {
+          layouts,
+          characters,
+          dialogue: { content: [{ text: "Line text" }] },
+        },
+        render: vi.fn(),
+        dispatchEvent,
+        store: createStore(state),
+      },
+      {
+        _event: { detail: { name: "characterName", value: "Late name" } },
+      },
+    );
+
+    expect(dispatchEvent.mock.calls[0][0].detail).toEqual({
+      presentationState: {
+        dialogue: { clear: true, content: [{ text: "Line text" }] },
+      },
+    });
   });
 
   it("submits dialogue.textSpeed when customized", () => {
