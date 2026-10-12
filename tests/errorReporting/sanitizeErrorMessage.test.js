@@ -47,6 +47,41 @@ describe("sanitizeErrorMessage", () => {
     ).toBe("ENOENT open '…'");
   });
 
+  it("does not leak Android paths with spaces", () => {
+    expect(
+      sanitizeErrorMessage(
+        "unable to open database file: /storage/emulated/0/Documents/Jane Doe Story/project.db",
+      ),
+    ).toBe("unable to open database file: <path>");
+    expect(
+      sanitizeErrorMessage(
+        "/sdcard/RouteVN/Jane Doe Story/scene.json: open failed",
+      ),
+    ).toBe("<path>");
+    expect(
+      sanitizeErrorMessage(
+        "copy failed: /data/user/0/com.example.app/files/Jane Doe/a.png",
+      ),
+    ).toBe("copy failed: <path>");
+  });
+
+  it("hides names in typographic quotes", () => {
+    expect(
+      sanitizeErrorMessage(
+        "The file “project.db” couldn’t be saved in the folder “Jane Doe Story”.",
+      ),
+    ).toBe('The file "…" couldn’t be saved in the folder "…".');
+    expect(
+      sanitizeErrorMessage("Le dossier « Jane Doe » est introuvable."),
+    ).toBe('Le dossier "…" est introuvable.');
+    expect(sanitizeErrorMessage("Der Ordner „Jane Doe“ fehlt.")).toBe(
+      'Der Ordner "…" fehlt.',
+    );
+    expect(sanitizeErrorMessage("フォルダ「山田の物語」が見つかりません")).toBe(
+      'フォルダ"…"が見つかりません',
+    );
+  });
+
   it("hides quoted text that is not an identifier", () => {
     expect(sanitizeErrorMessage('{"name":"Jane Doe"}')).toBe('{"…":"…"}');
     expect(sanitizeErrorMessage("no such scene 'Chapter One'")).toBe(

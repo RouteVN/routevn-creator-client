@@ -179,7 +179,7 @@ cargo test --manifest-path src-tauri/Cargo.toml --lib \
   --ignored --exact
 ```
 
-## Explicit reporting (web and desktop)
+## Explicit reporting
 
 `appService.reportError(error, { operation, code })` sends an error the app
 already handled. It never shows UI. Handled errors are still shown through
@@ -195,7 +195,9 @@ already handled. It never shows UI. Handled errors are still shown through
 - Web pages set no Content-Security-Policy, so nothing needs allowing. The
   collector must accept browser cross-origin requests from the web origin.
 - Web and desktop share the same environment. Events carry a `runtime` tag
-  (`web` or `tauri`) to tell them apart.
+  (`web`, `tauri`, `android` or `ios`) to tell them apart. Android and iOS
+  report through the same reporter; see
+  [mobile crash reporting](mobile-crash-reporting.md#javascript-errors).
 - Web builds use the same `release` and choose `dist` like desktop release
   builds: `ROUTEVN_BUILD_ID` when set, otherwise the 12-character Git revision.
   Without Git metadata, and on dev servers, it is `local`.
@@ -221,9 +223,9 @@ already handled. It never shows UI. Handled errors are still shown through
   projects are not reported either. Stored changes that a project's history
   leaves out when it loads are reported once per change
   (`projectHistory.loadDrafts`; see Drafts That No Longer Apply in
-  `docs/platform/05-storage.md`). On desktop, a saved update that merges data
-  holding a value JSON drops or changes, such as an `undefined` field, is
-  reported with its command type and field names
+  `docs/platform/05-storage.md`). On desktop, Android and iOS, a saved update
+  that merges data holding a value JSON drops or changes, such as an
+  `undefined` field, is reported with its command type and field names
   (`projectCommand.nonJsonPayload`), once per command type and set of fields
   and at most twice per session. Creates and full replaces load back the same
   and are not reported. Web keeps such values in IndexedDB, so it does not

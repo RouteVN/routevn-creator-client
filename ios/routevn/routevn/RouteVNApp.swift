@@ -136,6 +136,17 @@ final class RouteVNViewController: UIViewController, WKNavigationDelegate, WKScr
         configuration.defaultWebpagePreferences = preferences
 
         let contentController = WKUserContentController()
+        // Gives the page's JavaScript error reporter its configuration before
+        // any page script runs. Builds that do not report add nothing.
+        if let errorReportingScript = NativeCrashReporting.webViewConfigScript() {
+            contentController.addUserScript(
+                WKUserScript(
+                    source: errorReportingScript,
+                    injectionTime: .atDocumentStart,
+                    forMainFrameOnly: true
+                )
+            )
+        }
         #if DEBUG
         if devServerURL != nil {
             contentController.addUserScript(WKUserScript(

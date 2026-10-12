@@ -58,7 +58,7 @@ export const sanitizeErrorMessage = (message) => {
     // A rooted path can contain spaces, such as a project folder name, and
     // nothing says where an unquoted one ends, so it runs to the next quote.
     .replace(
-      /(?:[A-Za-z]:\\|\/(?:Users|home|Volumes|private|var|tmp|mnt|opt|root)\/)[^'"`\n]*/g,
+      /(?:[A-Za-z]:\\|\/(?:Users|home|Volumes|private|var|tmp|mnt|opt|root|storage|sdcard|data)\/)[^'"`\n]*/g,
       (path) => (/\s/.test(path) ? "<path>" : (safeFilename(path) ?? "<path>")),
     )
     .replace(
@@ -69,7 +69,8 @@ export const sanitizeErrorMessage = (message) => {
       /(^|[\s('"`])(\/(?:[^/\s'"`]+\/)+[^/\s'"`]*)/g,
       (_, before, path) => `${before}${safeFilename(path) ?? "<path>"}`,
     )
-    .replace(/"[^"]*"|`[^`]*`/g, '"…"')
+    // iOS system errors put file and folder names in typographic quotes.
+    .replace(/"[^"]*"|`[^`]*`|“[^”]*”|„[^“”]*[“”]|«[^»]*»|「[^」]*」/g, '"…"')
     .replace(/'([^']*)'/g, (quoted, inner) =>
       IDENTIFIER_IN_QUOTES.test(inner) ? quoted : "'…'",
     )

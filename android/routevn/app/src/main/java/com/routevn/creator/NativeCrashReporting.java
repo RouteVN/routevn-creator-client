@@ -5,6 +5,8 @@ import android.util.Log;
 import io.sentry.Sentry;
 import io.sentry.android.core.SentryAndroid;
 import java.util.concurrent.ThreadFactory;
+import org.json.JSONException;
+import org.json.JSONObject;
 
 /** Best-effort diagnostics must not delay or prevent the app from opening. */
 final class NativeCrashReporting {
@@ -44,6 +46,52 @@ final class NativeCrashReporting {
         }
     }
 
+    /**
+     * A script that gives the page's JavaScript error reporter the same
+     * configuration as native crash reporting, set before any page script
+     * runs, as the desktop app does. Null when this build does not report.
+     */
+    static String webViewConfigScript(Context context) {
+        if (BuildConfig.SENTRY_DSN.isEmpty()) return null;
+        return webViewConfigScript(
+            BuildConfig.SENTRY_DSN,
+            release(),
+            BuildConfig.SENTRY_ENVIRONMENT,
+            dist(),
+            NativeDeviceIdReader.read(context)
+        );
+    }
+
+    static String webViewConfigScript(
+        String dsn,
+        String release,
+        String environment,
+        String dist,
+        String deviceId
+    ) {
+        JSONObject config = new JSONObject();
+        try {
+            config.put("dsn", dsn);
+            config.put("release", release);
+            config.put("environment", environment);
+            config.put("dist", dist);
+            if (deviceId != null) config.put("deviceId", deviceId);
+        } catch (JSONException error) {
+            return null;
+        }
+        return "Object.defineProperty(window, '__ROUTEVN_ERROR_REPORTING__', "
+            + "{ value: Object.freeze(" + config + ") });";
+    }
+
+    private static String release() {
+        return "routevn-creator@" + BuildConfig.VERSION_NAME;
+    }
+
+    // Each distribution runs R8 separately, so its symbols need their own dist.
+    private static String dist() {
+        return BuildConfig.VERSION_CODE + "-" + BuildConfig.UPDATE_DISTRIBUTION;
+    }
+
     // The class alone identifies the failure; messages may contain the DSN.
     private static String describe(Throwable error) {
         return error.getClass().getName();
@@ -54,9 +102,8 @@ final class NativeCrashReporting {
         String deviceId = NativeDeviceIdReader.read(context);
         SentryAndroid.init(context, options -> {
             options.setDsn(BuildConfig.SENTRY_DSN);
-            options.setRelease("routevn-creator@" + BuildConfig.VERSION_NAME);
-            // Each distribution runs R8 separately, so its symbols need their own dist.
-            options.setDist(BuildConfig.VERSION_CODE + "-" + BuildConfig.UPDATE_DISTRIBUTION);
+            options.setRelease(release());
+            options.setDist(dist());
             // Tags JVM crashes with the R8 mapping kept for this build.
             if (!BuildConfig.PROGUARD_UUID.isEmpty()) {
                 options.setProguardUuid(BuildConfig.PROGUARD_UUID);

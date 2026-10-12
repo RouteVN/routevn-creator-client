@@ -3,8 +3,7 @@
 The Android and iOS apps send native crashes to the same Sentry-compatible
 collector as the desktop app (see
 [desktop error reporting](desktop-error-reporting.md)). Each platform uses the
-official Sentry SDK with a thin wrapper, following the collector's
-`specs/services/error-sdk-compatibility-v1.md`.
+official Sentry SDK with a thin wrapper.
 
 ## What is reported
 
@@ -16,10 +15,16 @@ official Sentry SDK with a thin wrapper, following the collector's
 Android also reports WebView renderer crashes that the app recovers from, at
 level `error` (see [WebView renderer loss](#webview-renderer-loss)).
 
-Crash reporting only. Sessions, ANRs/app hangs, watchdog terminations,
-breadcrumbs, screenshots, view hierarchies, swizzling, network tracking,
-performance tracing, client reports and replay are disabled. The aggregate
-`sentry-android` artifact is not used because it also ships replay.
+The app's page, the JavaScript running in the WebView, reports its own errors
+with the same JavaScript reporter as the desktop app
+(`src/deps/clients/errorReporting.js`): uncaught errors, unhandled promise
+rejections, and handled errors passed to `appService.reportError`. See
+[JavaScript errors](#javascript-errors).
+
+Native reporting is crash reporting only. Sessions, ANRs/app hangs, watchdog
+terminations, breadcrumbs, screenshots, view hierarchies, swizzling, network
+tracking, performance tracing, client reports and replay are disabled. The
+aggregate `sentry-android` artifact is not used because it also ships replay.
 
 ## Device ID
 
@@ -38,10 +43,39 @@ The ID is the JavaScript-created update-check device ID (`device.id`).
 It links to no account. Missing or invalid values omit `user`. Read errors
 also omit `user`; the read creates no database and does not stop reporting.
 
-The desktop JS reporter sends any available startup ID as `user.id`.
-WebView JavaScript errors are not reported on Android and iOS
-(`appService.reportError` is a no-op there). Plain web builds send no
-`user.id`.
+The desktop, Android and iOS JS reporters send any available startup ID as
+`user.id`. Plain web builds send no `user.id`.
+
+### JavaScript errors
+
+Like the desktop app, each mobile app gives the page's reporter its
+configuration before any page script runs: the same DSN, release, environment
+and dist as its native crash reporting, and the device ID read at that moment.
+The script defines a frozen `window.__ROUTEVN_ERROR_REPORTING__`.
+
+- Android adds it with `WebViewCompat.addDocumentStartJavaScript` for the
+  app's page origins (`NativeCrashReporting.webViewConfigScript`, called from
+  `MainActivity`). A WebView without document-start scripts reports nothing
+  from the page.
+- iOS adds it as a `WKUserScript` at document start
+  (`NativeCrashReporting.webViewConfigScript` in `NativeCrashReporting.swift`).
+- `src/deps/clients/android/errorReporting.js` and
+  `src/deps/clients/ios/errorReporting.js` read it and tag events with the
+  `runtime` `android` or `ios`. Builds without a DSN set nothing, so the page
+  sends nothing.
+
+The page's events go through the JavaScript `beforeSend` scrubbing described in
+[desktop error reporting](desktop-error-reporting.md#collection-and-privacy),
+with the same per-session limits. They are sent from the page's origin,
+`https://appassets.androidplatform.net` on Android and the `routevn` scheme on
+iOS, so the collector must accept cross-origin requests from them.
+
+The Android page's Content-Security-Policy (`static/android/index.html`) allows
+`https:` connections and only two local addresses: the dev server
+(`ws://127.0.0.1:3001`) and the local RouteVN API on port 8787. A local
+`http://127.0.0.1` collector on another port therefore receives native crashes
+but not the page's errors, unless its address is added to `connect-src` for
+that test build.
 
 ### WebView renderer loss
 
@@ -221,11 +255,13 @@ durable storage before cleaning it.
 
 Before shipping, declare:
 
-- App Store privacy labels: Diagnostics → Crash Data, and Identifiers →
+- App Store privacy labels: Diagnostics → Crash Data and Other Diagnostic
+  Data (the page's [JavaScript errors](#javascript-errors)), and Identifiers →
   Device ID (the [device ID](#device-id); not linked to the user's identity, not
   used for tracking), purposes App Functionality and Analytics.
-- Google Play Data safety form: App info and performance → Crash logs, and
-  Device or other IDs, purpose Analytics, not shared, not used for tracking.
+- Google Play Data safety form: App info and performance → Crash logs and
+  Diagnostics, and Device or other IDs, purpose Analytics, not shared, not used
+  for tracking.
 
 ## Test crashes
 
@@ -291,3 +327,11 @@ only release, dist, environment, level, platform, SDK, fingerprint, the scrubbed
 exception (`App crash`), frames, device architecture/manufacturer/model, OS
 name/version and, for the native crash, basename-only debug images. This does
 not replace the Release-build qualification against the collector.
+
+Page JavaScript reporting verified on 2026-10-12 with Debug builds and a
+temporary probe (a handled `appService.reportError` call and an uncaught error)
+against a local envelope sink: on an iPad mini 6 through the Mac's LAN address,
+and on a Redmi K30 5G through `adb reverse` with the sink's address temporarily
+added to the page's `connect-src`. Both events arrived from the page's origin
+(`routevn://app`, `https://appassets.androidplatform.net`) with the `runtime`
+tag, dist and device ID, and with stacks reduced to `main.js` frames.

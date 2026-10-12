@@ -1,3 +1,4 @@
+import { errorReporter } from "./deps/clients/ios/errorReporting.js";
 import { createGlobalUI } from "@rettangoli/ui";
 import { configureAudioRuntime } from "route-graphics";
 
@@ -140,6 +141,7 @@ const projectService = createProjectService({
   filePicker,
   db: appDb,
   creatorVersion,
+  errorTracker: errorReporter,
 });
 
 const openUrl = async (url) => {
@@ -151,6 +153,7 @@ const openUrl = async (url) => {
 };
 
 const appService = createAppService({
+  errorTracker: errorReporter,
   db: appDb,
   router,
   globalUI,
@@ -297,6 +300,10 @@ const graphicsService = await createGraphicsService({
   subject,
   audioOutput: iosGraphicsAudioOutput,
   onAudioOutputError: alertPreviewAudioFailure,
+  onRenderError: (error) => {
+    console.error(error);
+    errorReporter.capture(error, { operation: "graphics.render" });
+  },
 });
 const dialogueQueueService = createPendingQueueService({ debounceMs: 2000 });
 

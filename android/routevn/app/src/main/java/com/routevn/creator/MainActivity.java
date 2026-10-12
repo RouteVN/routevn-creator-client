@@ -477,6 +477,7 @@ public class MainActivity extends Activity {
             return;
         }
 
+        addErrorReportingConfig();
         webView.setWebViewClient(new RouteVNWebViewClient());
         webView.setWebChromeClient(new RouteVNWebChromeClient());
         // A replacement WebView starts a new page with nothing reported to it.
@@ -674,16 +675,10 @@ public class MainActivity extends Activity {
             return false;
         }
 
-        Set<String> allowedOriginRules = new HashSet<>();
-        allowedOriginRules.add(APP_ORIGIN);
-        if (shouldUseDebugDevServer()) {
-            allowedOriginRules.add(DEV_SERVER_ORIGIN);
-        }
-
         WebViewCompat.addWebMessageListener(
             webView,
             ANDROID_BRIDGE_NAME,
-            allowedOriginRules,
+            pageOriginRules(),
             (view, message, sourceOrigin, isMainFrame, replyProxy) -> {
                 if (!isMainFrame || !isAllowedBridgeOrigin(sourceOrigin)) {
                     Log.w(TAG, "Rejected Android bridge message from " + sourceOrigin);
@@ -787,6 +782,28 @@ public class MainActivity extends Activity {
 
         Log.i(TAG, "Loading packaged Android app URL: " + APP_URL);
         return APP_URL;
+    }
+
+    // The origins the app's own page is loaded from.
+    private Set<String> pageOriginRules() {
+        Set<String> allowedOriginRules = new HashSet<>();
+        allowedOriginRules.add(APP_ORIGIN);
+        if (shouldUseDebugDevServer()) {
+            allowedOriginRules.add(DEV_SERVER_ORIGIN);
+        }
+        return allowedOriginRules;
+    }
+
+    // Gives the page's JavaScript error reporter its configuration before any
+    // page script runs. Without it, as in builds that do not report, the page
+    // reports nothing.
+    private void addErrorReportingConfig() {
+        String script = NativeCrashReporting.webViewConfigScript(this);
+        if (script == null
+            || !WebViewFeature.isFeatureSupported(WebViewFeature.DOCUMENT_START_SCRIPT)) {
+            return;
+        }
+        WebViewCompat.addDocumentStartJavaScript(webView, script, pageOriginRules());
     }
 
     private boolean shouldUseDebugDevServer() {

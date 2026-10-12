@@ -6,6 +6,7 @@ import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicReference;
+import org.json.JSONObject;
 import org.junit.Test;
 import org.junit.runner.RunWith;
 import org.robolectric.RobolectricTestRunner;
@@ -111,5 +112,43 @@ public class NativeCrashReportingTest {
         assertFalse(worker.get().isAlive());
         assertNull(uncaught.get());
         assertEquals(1, attempts.get());
+    }
+
+    @Test
+    public void webViewConfigScriptDefinesAFrozenConfig() throws Exception {
+        String script = NativeCrashReporting.webViewConfigScript(
+            "https://key@errors.example.com/1",
+            "routevn-creator@1.0.0",
+            "production",
+            "100-direct",
+            "11111111111111111111abcd"
+        );
+
+        String prefix =
+            "Object.defineProperty(window, '__ROUTEVN_ERROR_REPORTING__', { value: Object.freeze(";
+        String suffix = ") });";
+        assertTrue(script.startsWith(prefix));
+        assertTrue(script.endsWith(suffix));
+        JSONObject config = new JSONObject(
+            script.substring(prefix.length(), script.length() - suffix.length())
+        );
+        assertEquals("https://key@errors.example.com/1", config.getString("dsn"));
+        assertEquals("routevn-creator@1.0.0", config.getString("release"));
+        assertEquals("production", config.getString("environment"));
+        assertEquals("100-direct", config.getString("dist"));
+        assertEquals("11111111111111111111abcd", config.getString("deviceId"));
+    }
+
+    @Test
+    public void webViewConfigScriptLeavesOutAMissingDeviceId() throws Exception {
+        String script = NativeCrashReporting.webViewConfigScript(
+            "https://key@errors.example.com/1",
+            "routevn-creator@1.0.0",
+            "production",
+            "100-direct",
+            null
+        );
+
+        assertFalse(script.contains("deviceId"));
     }
 }
