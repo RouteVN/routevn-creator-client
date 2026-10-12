@@ -815,7 +815,6 @@ const {
   scheduleSceneEditorDraftFlush,
   waitForSceneEditorPersistence,
 } = createSceneEditorDraftPersistence({
-  syncDraftSectionFromLines,
   syncDraftSectionFromLiveEditor,
   syncStoreProjectState,
   reconcileCurrentEditorSession,
@@ -2689,10 +2688,6 @@ export const handleSelectedLineChanged = (deps, payload) => {
   });
 };
 
-export const handleFormatButtonMouseDown = (deps, payload) => {
-  payload?._event?.preventDefault?.();
-};
-
 export const handlePreviewButtonMouseDown = (deps, payload) => {
   payload?._event?.preventDefault?.();
   deps.store.setSkipNextEditorBlurDraftFlush({ value: true });
@@ -3893,9 +3888,6 @@ export const handlePreviewClick = (deps) => {
       const sectionId = store.selectSelectedSectionId?.();
       const lineId = store.selectSelectedLineId();
 
-      // The save reads the selected section from its own editor. The Preview
-      // button and the phone toolbar are outside every editor, so the click
-      // cannot tell which editor that is.
       await flushSceneEditorDrafts(deps, {
         sectionId,
         showErrorAlert: false,
@@ -3938,22 +3930,6 @@ export const handlePreviewClick = (deps) => {
   };
 
   void openPreview();
-};
-
-export const handleFormatButtonClick = (deps, payload) => {
-  const format = payload?._event?.currentTarget?.dataset?.format;
-  if (!format) {
-    return;
-  }
-
-  cancelSceneEditorDraftFlush(deps);
-  const sectionId =
-    getSectionIdFromPayload(payload) || deps.store.selectSelectedSectionId?.();
-  const linesEditorRef = getLinesEditorRef(deps.refs, { sectionId });
-  linesEditorRef?.applyTextFormat?.({ format });
-  queueMicrotask(() => {
-    syncDraftSectionFromLiveEditor(deps, { sectionId });
-  });
 };
 
 export const handlePreviewShortcut = (deps) => {
