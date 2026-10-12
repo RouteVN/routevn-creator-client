@@ -104,9 +104,9 @@ export const toTextStyleValues = (item) => ({
     : undefined,
 });
 
-// The update that saves `values`: an outline or shadow that was removed is
-// cleared from the saved text style.
-export const toTextStyleUpdateData = (values) => {
+// The update that saves `values` over `savedValues`: an outline or shadow
+// that was removed is cleared from the saved text style.
+export const toTextStyleUpdateData = (values, savedValues) => {
   const data = {
     fontId: values.fontId,
     colorId: values.colorId,
@@ -116,6 +116,13 @@ export const toTextStyleUpdateData = (values) => {
     strokeColorId: values.strokeColorId,
     strokeWidth: values.strokeWidth,
   };
+  // null removes a saved outline color; undefined would not be stored.
+  if (
+    values.strokeColorId === undefined &&
+    savedValues?.strokeColorId !== undefined
+  ) {
+    data.strokeColorId = null;
+  }
   if (values.shadow) {
     data.shadow = values.shadow;
   } else {

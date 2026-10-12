@@ -925,31 +925,41 @@ export const applyCanvasItemKeyboardChange = ({
     return item;
   }
 
+  const fieldName =
+    intent.type === "resize"
+      ? intent.axis === "x"
+        ? "width"
+        : "height"
+      : intent.axis;
+  // Folders have no position or size to nudge.
+  if (!Number.isFinite(item[fieldName])) {
+    return item;
+  }
+
   if (intent.type === "move") {
     return {
       ...item,
-      [intent.axis]: Math.round(item[intent.axis] + intent.delta),
+      [fieldName]: Math.round(item[fieldName] + intent.delta),
     };
   }
 
   // A size stops at its least, as resizing with the pointer does, and moves
   // the other with it while the aspect ratio is fixed.
-  const name = intent.axis === "x" ? "width" : "height";
   const aspectRatioLock = getAspectRatioLock(item);
   const nextValue = clampResizeDimension(
-    item[name] + intent.delta,
-    getMinLayoutEditorItemSize({ name, aspectRatioLock }),
+    item[fieldName] + intent.delta,
+    getMinLayoutEditorItemSize({ name: fieldName, aspectRatioLock }),
   );
-  if (nextValue === item[name]) {
+  if (nextValue === item[fieldName]) {
     return item;
   }
 
   const nextItem = {
     ...item,
-    [name]: nextValue,
+    [fieldName]: nextValue,
   };
   if (aspectRatioLock) {
-    if (name === "width") {
+    if (fieldName === "width") {
       nextItem.height = clampResizeDimension(nextValue / aspectRatioLock);
     } else {
       nextItem.width = clampResizeDimension(nextValue * aspectRatioLock);

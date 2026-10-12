@@ -145,9 +145,17 @@ describe("projects view", () => {
     expect(projectsView).toContain(
       "rtgl-view slot=content d=v w=f h=f overflow=hidden",
     );
-    expect(projectCreateDialogView).toContain(
-      "rtgl-form#createProjectForm key=${formKey} :defaultValues=${defaultValues} :form=${form} :context=${context} sticky w=f h=f",
-    );
+    // Check the sticky layout attributes on the form's line, so other
+    // attributes can be added to the form without breaking this test.
+    const createProjectFormLine = projectCreateDialogView
+      .split("\n")
+      .find((line) =>
+        line.includes(
+          "rtgl-form#createProjectForm key=${formKey} :defaultValues=${defaultValues} :form=${form} :context=${context} ",
+        ),
+      );
+    expect(createProjectFormLine).toContain(" sticky ");
+    expect(createProjectFormLine).toContain("w=f h=f");
     expect(projectsView).toContain("handler: handleCreateDialogSubmit");
     expect(projectsView).not.toContain("createProjectSubmitButton");
     expect(projectsView).not.toContain("h=80 aria-hidden=true");

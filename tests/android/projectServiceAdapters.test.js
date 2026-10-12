@@ -77,6 +77,8 @@ describe("android project service adapters", () => {
     vi.restoreAllMocks();
   });
 
+  // Encoding 1.2 MB in three chunks takes about a second on a fast machine and
+  // several seconds on a shared CI runner, so it gets more than the default 5 s.
   it("stores large project files through bounded ordered bridge chunks", async () => {
     const sourceBytes = Uint8Array.from(
       { length: 1_200_000 },
@@ -137,7 +139,7 @@ describe("android project service adapters", () => {
       "writeProjectFile",
       expect.anything(),
     );
-  });
+  }, 30000);
 
   it("aborts the native project file session when a chunk write fails", async () => {
     const sourceBytes = new Uint8Array(600_000);

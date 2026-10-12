@@ -449,45 +449,6 @@ const createDocumentDraftLine = ({ lineId, sectionId } = {}) => {
   };
 };
 
-const getLiveLinesEditorElementFromPayload = (payload) => {
-  const findEditorElement = (node) => {
-    if (!node) {
-      return undefined;
-    }
-
-    if (node.matches?.("rvn-lexical-scene-document-editor")) {
-      return node;
-    }
-
-    const wrapper = node.matches?.("rvn-scene-document-editor-lexical")
-      ? node
-      : node.querySelector?.("rvn-scene-document-editor-lexical");
-    const primitive = wrapper?.shadowRoot?.querySelector?.(
-      "rvn-lexical-scene-document-editor",
-    );
-
-    return primitive || wrapper;
-  };
-
-  let current = payload?._event?.currentTarget;
-  while (current) {
-    const directMatch = findEditorElement(current);
-    if (directMatch) {
-      return directMatch;
-    }
-
-    const root = current.getRootNode?.();
-    const rootMatch = findEditorElement(root);
-    if (rootMatch) {
-      return rootMatch;
-    }
-
-    current = root?.host;
-  }
-
-  return undefined;
-};
-
 const getNestedPrimitiveEditor = (element) => {
   if (!element || typeof element.querySelector !== "function") {
     return undefined;
@@ -854,7 +815,6 @@ const {
   scheduleSceneEditorDraftFlush,
   waitForSceneEditorPersistence,
 } = createSceneEditorDraftPersistence({
-  syncDraftSectionFromLines,
   syncDraftSectionFromLiveEditor,
   syncStoreProjectState,
   reconcileCurrentEditorSession,
@@ -2728,10 +2688,6 @@ export const handleSelectedLineChanged = (deps, payload) => {
   });
 };
 
-export const handleFormatButtonMouseDown = (deps, payload) => {
-  payload?._event?.preventDefault?.();
-};
-
 export const handlePreviewButtonMouseDown = (deps, payload) => {
   payload?._event?.preventDefault?.();
   deps.store.setSkipNextEditorBlurDraftFlush({ value: true });
@@ -2854,7 +2810,7 @@ export const handleMobileKeyboardToolbarActionClick = (deps, payload) => {
   }
 
   if (actionId === "preview") {
-    handlePreviewClick(deps, payload);
+    handlePreviewClick(deps);
     return;
   }
 
@@ -3921,7 +3877,7 @@ export const handleDownloadCanvasClick = async (deps) => {
   }
 };
 
-export const handlePreviewClick = (deps, payload) => {
+export const handlePreviewClick = (deps) => {
   const openPreview = async () => {
     const { store, render, appService, projectService } = deps;
     const copy = selectCopy(deps);
@@ -3931,16 +3887,9 @@ export const handlePreviewClick = (deps, payload) => {
       const sceneId = store.selectSceneId();
       const sectionId = store.selectSelectedSectionId?.();
       const lineId = store.selectSelectedLineId();
-      const liveLinesEditorElement =
-        getLiveLinesEditorElementFromPayload(payload) ||
-        getLinesEditorRef(deps.refs, { sectionId });
-      const liveLines = cloneSceneEditorLines(
-        getLiveLinesFromElement(liveLinesEditorElement),
-      );
 
       await flushSceneEditorDrafts(deps, {
         sectionId,
-        liveLines,
         showErrorAlert: false,
         force: true,
       });
@@ -3983,30 +3932,8 @@ export const handlePreviewClick = (deps, payload) => {
   void openPreview();
 };
 
-export const handleFormatButtonClick = (deps, payload) => {
-  const format = payload?._event?.currentTarget?.dataset?.format;
-  if (!format) {
-    return;
-  }
-
-  cancelSceneEditorDraftFlush(deps);
-  const sectionId =
-    getSectionIdFromPayload(payload) || deps.store.selectSelectedSectionId?.();
-  const linesEditorRef = getLinesEditorRef(deps.refs, { sectionId });
-  linesEditorRef?.applyTextFormat?.({ format });
-  const liveLinesEditorElement =
-    getLiveLinesEditorElementFromPayload(payload) || linesEditorRef;
-  queueMicrotask(() => {
-    syncDraftSectionFromLines(
-      deps,
-      getLiveLinesFromElement(liveLinesEditorElement),
-      { sectionId },
-    );
-  });
-};
-
-export const handlePreviewShortcut = (deps, payload) => {
-  handlePreviewClick(deps, payload);
+export const handlePreviewShortcut = (deps) => {
+  handlePreviewClick(deps);
 };
 
 const deleteSceneEditorLine = async (deps, lineId) => {

@@ -149,7 +149,10 @@ const saveTextStyleChanges = (deps) => {
       const values = store.selectValues();
       const data = {};
       if (hasUnsavedValues) {
-        Object.assign(data, toTextStyleUpdateData(values));
+        Object.assign(
+          data,
+          toTextStyleUpdateData(values, store.selectSavedValues()),
+        );
       }
       Object.assign(data, previewSettings);
       const updateAttempt = await runResourcePageMutation({

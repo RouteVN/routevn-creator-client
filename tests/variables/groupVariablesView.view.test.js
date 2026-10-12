@@ -87,8 +87,16 @@ describe("groupVariablesView view", () => {
   });
 
   it("scrolls long computed forms through a constrained wrapper", () => {
-    expect(view).toContain(
-      'rtgl-view#computedFormScrollContainer w=1fg h=f sv ph=md style="grid-column: 1; grid-row: 1; min-width: 0; min-height: 0;"',
+    // Check the scrolling and sizing attributes on the wrapper's line, so
+    // other attributes can be added to it without breaking this test.
+    const computedScrollContainerLine = view
+      .split("\n")
+      .find((line) => line.includes("rtgl-view#computedFormScrollContainer "));
+    expect(computedScrollContainerLine).toContain("w=1fg h=f");
+    expect(computedScrollContainerLine).toContain(" sv ");
+    expect(computedScrollContainerLine).toContain(" ph=md ");
+    expect(computedScrollContainerLine).toContain(
+      'style="grid-column: 1; grid-row: 1; min-width: 0; min-height: 0;"',
     );
     expect(view).toContain('rtgl-view slot="operation" d=v w=f g=sm pb=lg');
     expect(view).toContain(
@@ -103,7 +111,12 @@ describe("groupVariablesView view", () => {
   });
 
   it("keeps variable and computed submit actions visible below scrolling content", () => {
-    expect(view).toContain('rtgl-view w=f h=1fg sv style="min-height: 0;"');
+    // The variable form's scrolling wrapper has no id, so find its line by
+    // its sizing and scrolling attributes, and check the rest on that line.
+    const variableScrollWrapperLine = view
+      .split("\n")
+      .find((line) => line.includes("rtgl-view w=f h=1fg sv "));
+    expect(variableScrollWrapperLine).toContain('style="min-height: 0;"');
     expect(view).toContain(
       "rtgl-dialog#variableDialog s=md md-layout=fixed-top p=none",
     );

@@ -20,12 +20,25 @@ describe("characters view", () => {
     expect(
       charactersView.match(/slot=content d=v w=f h=f overflow=hidden:/g),
     ).toHaveLength(2);
-    expect(charactersView).toContain(
-      "rtgl-form#characterForm key=${isDialogOpen} :defaultValues=${dialogDefaultValues} :form=${dialogForm} sticky bottom-spacer=96 w=f h=f:",
+    // Check the sticky layout attributes on each form's line, so other
+    // attributes can be added to the form without breaking this test.
+    const lines = charactersView.split("\n");
+    const characterFormLine = lines.find((line) =>
+      line.includes(
+        "rtgl-form#characterForm key=${isDialogOpen} :defaultValues=${dialogDefaultValues} :form=${dialogForm} ",
+      ),
     );
-    expect(charactersView).toContain(
-      "rtgl-form#editForm key=${isEditDialogOpen} :defaultValues=${editDefaultValues} :form=${editForm} sticky bottom-spacer=96 w=f h=f:",
+    const editFormLine = lines.find((line) =>
+      line.includes(
+        "rtgl-form#editForm key=${isEditDialogOpen} :defaultValues=${editDefaultValues} :form=${editForm} ",
+      ),
     );
+    expect(characterFormLine).toContain(" sticky ");
+    expect(characterFormLine).toContain("bottom-spacer=96");
+    expect(characterFormLine).toContain("w=f h=f");
+    expect(editFormLine).toContain(" sticky ");
+    expect(editFormLine).toContain("bottom-spacer=96");
+    expect(editFormLine).toContain("w=f h=f");
     expect(charactersView).toContain(
       "form-action:\n        handler: handleDialogFormActionClick",
     );

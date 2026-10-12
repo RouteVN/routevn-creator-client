@@ -17,9 +17,17 @@ describe("resource-import-dialog.view", () => {
     expect(viewSource).toContain(
       "rtgl-view slot=content d=v w=f h=f g=md overflow=hidden",
     );
-    expect(viewSource).toContain(
-      "rtgl-form#workflowForm key=${formKey} :defaultValues=${defaultValues} :form=${form} :context=${formContext} sticky w=f h=f",
-    );
+    // Check the sticky layout attributes on the form's line, so other
+    // attributes can be added to the form without breaking this test.
+    const workflowFormLine = viewSource
+      .split("\n")
+      .find((line) =>
+        line.includes(
+          "rtgl-form#workflowForm key=${formKey} :defaultValues=${defaultValues} :form=${form} :context=${formContext} ",
+        ),
+      );
+    expect(workflowFormLine).toContain(" sticky ");
+    expect(workflowFormLine).toContain("w=f h=f");
   });
 
   it("links the source description to the asset store", () => {

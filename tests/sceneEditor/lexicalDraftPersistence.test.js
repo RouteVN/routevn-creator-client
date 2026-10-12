@@ -768,7 +768,6 @@ describe("scene editor lexical draft persistence: failed saves", () => {
       draftSavePendingSinceAt: 0,
       draftSaveTimerId: undefined,
       draftFlushInFlight: false,
-      draftRevertGeneration: 0,
       selectedSectionId: draftSections[0].sectionId,
     };
     return {
@@ -805,10 +804,6 @@ describe("scene editor lexical draft persistence: failed saves", () => {
       clearDraftSaveTimer: () => {
         state.draftSaveTimerId = undefined;
       },
-      selectDraftRevertGeneration: () => state.draftRevertGeneration,
-      markDraftSectionReverted: () => {
-        state.draftRevertGeneration += 1;
-      },
     };
   };
 
@@ -831,17 +826,6 @@ describe("scene editor lexical draft persistence: failed saves", () => {
     });
     const onDidFlush = vi.fn();
     const controller = createSceneEditorDraftPersistence({
-      syncDraftSectionFromLines: (deps, liveLines, { sectionId }) => {
-        const draftSection = deps.store.selectDraftSectionBySectionId({
-          sectionId,
-        });
-        const nextDraftSection = replaceSceneEditorDraftSectionLines(
-          draftSection,
-          { lines: liveLines, dirty: true },
-        );
-        deps.store.setDraftSection({ draftSection: nextDraftSection });
-        return nextDraftSection;
-      },
       syncDraftSectionFromLiveEditor: () => undefined,
       syncStoreProjectState: () => {},
       reconcileCurrentEditorSession: vi.fn(),
@@ -889,7 +873,6 @@ describe("scene editor lexical draft persistence: failed saves", () => {
       revertFailedDraftSection.mock.calls[0][1].draftSection,
     ).toMatchObject({ sectionId: "section-1" });
     expect(store.selectPendingDraftSections()).toEqual([]);
-    expect(store.state.draftRevertGeneration).toBe(1);
     expect(deps.appService.showAlertWhenIdle).toHaveBeenCalledTimes(1);
     const alert = deps.appService.showAlertWhenIdle.mock.calls[0][0];
     expect(alert.title).toBe("Error");
@@ -1013,44 +996,6 @@ describe("scene editor lexical draft persistence: failed saves", () => {
     );
     expect(revertFailedDraftSection).toHaveBeenCalledTimes(1);
     expect(syncSectionLinesSnapshot).toHaveBeenCalledTimes(2);
-  });
-
-  it("does not save lines it was handed before the draft was dropped", async () => {
-    let failFirstSave;
-    const syncSectionLinesSnapshot = vi
-      .fn()
-      .mockImplementationOnce(
-        () =>
-          new Promise((resolve) => {
-            failFirstSave = () => resolve(refused());
-          }),
-      )
-      .mockResolvedValue({ valid: true });
-    const { controller, deps } = setup({
-      draftSections: [createSectionDraft("section-1", "Typed")],
-      syncSectionLinesSnapshot,
-    });
-
-    // An autosave is writing when preview asks to save the editor's lines,
-    // which still hold the text that is about to be dropped.
-    const autosave = controller.flushSceneEditorDrafts(deps, { force: true });
-    await vi.waitFor(() =>
-      expect(syncSectionLinesSnapshot).toHaveBeenCalledTimes(1),
-    );
-    const typedLines = [
-      { ...createLine("section-1-line", "Typed"), sectionId: "section-1" },
-    ];
-    const preview = controller.flushSceneEditorDrafts(deps, {
-      sectionId: "section-1",
-      liveLines: typedLines,
-      force: true,
-    });
-    failFirstSave();
-    await autosave;
-    await preview;
-
-    expect(syncSectionLinesSnapshot).toHaveBeenCalledTimes(1);
-    expect(deps.appService.showAlertWhenIdle).toHaveBeenCalledTimes(1);
   });
 
   it("keeps the old behaviour when dropping the draft itself fails", async () => {

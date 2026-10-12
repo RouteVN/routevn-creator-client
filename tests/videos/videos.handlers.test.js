@@ -1,11 +1,19 @@
-import { describe, expect, it, vi } from "vitest";
+import { afterEach, describe, expect, it, vi } from "vitest";
 import {
   handleDataChanged,
+  handleEditFormAction,
   handleFileExplorerKeyboardScopeKeyDown,
   handleOutsideVideoClick,
 } from "../../src/pages/videos/videos.handlers.js";
+import { EN_I18N } from "../support/i18n.js";
+
+const originalRequestAnimationFrame = globalThis.requestAnimationFrame;
 
 describe("videos handlers", () => {
+  afterEach(() => {
+    globalThis.requestAnimationFrame = originalRequestAnimationFrame;
+  });
+
   it("pauses playback before closing the preview", () => {
     const calls = [];
     handleOutsideVideoClick({
@@ -199,5 +207,80 @@ describe("videos handlers", () => {
     });
     expect(preventDefault).toHaveBeenCalledOnce();
     expect(stopPropagation).toHaveBeenCalledOnce();
+  });
+
+  it("keeps the typed name when the edit dialog replaces the video file", async () => {
+    globalThis.requestAnimationFrame = (callback) => {
+      callback();
+      return 1;
+    };
+    const updateVideo = vi.fn(async () => ({}));
+    const deps = {
+      i18n: EN_I18N,
+      appService: {
+        showAlert: vi.fn(),
+      },
+      projectService: {
+        updateVideo,
+        getRepositoryState: () => ({
+          videos: {
+            items: {},
+            tree: [],
+          },
+          files: {
+            items: {},
+            tree: [],
+          },
+        }),
+      },
+      store: {
+        selectEditItemId: vi.fn(() => "video-1"),
+        selectEditUploadResult: vi.fn(() => ({
+          fileId: "video-file-2",
+          thumbnailFileId: "thumbnail-2",
+          displayName: "replacement",
+          duration: 12,
+          dimensions: {
+            width: 1920,
+            height: 1080,
+          },
+          fileRecords: [],
+        })),
+        closeEditDialog: vi.fn(),
+        setTagsData: vi.fn(),
+        setItems: vi.fn(),
+      },
+      refs: {},
+      render: vi.fn(),
+    };
+
+    await handleEditFormAction(deps, {
+      _event: {
+        detail: {
+          actionId: "submit",
+          values: {
+            name: "Opening",
+            description: "Opening movie",
+            tagIds: ["tag-1"],
+          },
+        },
+      },
+    });
+
+    expect(deps.appService.showAlert).not.toHaveBeenCalled();
+    expect(updateVideo).toHaveBeenCalledWith({
+      videoId: "video-1",
+      fileRecords: [],
+      data: {
+        fileId: "video-file-2",
+        thumbnailFileId: "thumbnail-2",
+        name: "Opening",
+        duration: 12,
+        width: 1920,
+        height: 1080,
+        description: "Opening movie",
+        tagIds: ["tag-1"],
+      },
+    });
   });
 });

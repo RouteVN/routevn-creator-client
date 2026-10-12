@@ -176,8 +176,31 @@ describe("variables.handlers", () => {
         scope: "context",
         default: 0,
         value: 0,
+        tagIds: [],
       },
     });
+  });
+
+  it("removes every tag when the edit dialog has none", async () => {
+    const deps = createDeps();
+
+    await handleVariableUpdated(deps, {
+      _event: {
+        detail: {
+          itemId: "variable1",
+          name: "Score",
+          description: "",
+          tagIds: [],
+          scope: "context",
+          variableType: "number",
+          default: 3,
+        },
+      },
+    });
+
+    expect(
+      deps.projectService.updateVariable.mock.calls[0][0].data.tagIds,
+    ).toEqual([]);
   });
 
   it("creates a computed variable without stored values", async () => {

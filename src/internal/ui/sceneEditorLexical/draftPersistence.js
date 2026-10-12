@@ -210,7 +210,8 @@ const notifyDraftSaveFailure = (deps, { error, sceneName, sectionName }) => {
 };
 
 export const createSceneEditorDraftPersistence = ({
-  syncDraftSectionFromLines = (deps) => deps.store.selectDraftSection(),
+  // Brings a section's draft up to date from the editor showing that section,
+  // never from another section's editor.
   syncDraftSectionFromLiveEditor = (deps) => deps.store.selectDraftSection(),
   syncStoreProjectState = () => {},
   reconcileCurrentEditorSession = () => {},
@@ -224,18 +225,9 @@ export const createSceneEditorDraftPersistence = ({
   nowMs = defaultNowMs,
   timing = DEFAULT_SCENE_EDITOR_DRAFT_SAVE_TIMING,
 } = {}) => {
-  const syncDraftInput = (deps, { liveLines, sectionId } = {}) => {
-    if (Array.isArray(liveLines) && liveLines.length > 0) {
-      return syncDraftSectionFromLines(deps, liveLines, { sectionId });
-    }
-
-    return syncDraftSectionFromLiveEditor(deps, { sectionId });
-  };
-
   const flushSceneEditorDrafts = async (
     deps,
     {
-      liveLines,
       sectionId,
       showErrorAlert = true,
       rescheduleReason = "text",
@@ -247,10 +239,9 @@ export const createSceneEditorDraftPersistence = ({
     const { store } = deps;
     const timingFlushStartedAt = getSceneEditorTimingNow();
     const targetSectionId = sectionId || store.selectSelectedSectionId?.();
-    const revertGeneration = store.selectDraftRevertGeneration?.();
     clearScheduledDraftFlush(store);
     const initialSyncStartedAt = getSceneEditorTimingNow();
-    syncDraftInput(deps, { liveLines, sectionId: targetSectionId });
+    syncDraftSectionFromLiveEditor(deps, { sectionId: targetSectionId });
     const initialSyncDurationMs =
       getSceneEditorTimingDurationMs(initialSyncStartedAt);
 
@@ -318,15 +309,9 @@ export const createSceneEditorDraftPersistence = ({
           const taskStartedAt = getSceneEditorTimingNow();
           const taskSections = [];
           const taskSyncStartedAt = getSceneEditorTimingNow();
-          // Lines handed over before a draft was dropped may hold the dropped
-          // text; read the editor again instead.
-          syncDraftInput(deps, {
-            liveLines:
-              store.selectDraftRevertGeneration?.() === revertGeneration
-                ? liveLines
-                : undefined,
-            sectionId: targetSectionId,
-          });
+          // The editor may have changed while this save waited, or been put
+          // back to the stored lines by a failed save, so read it again.
+          syncDraftSectionFromLiveEditor(deps, { sectionId: targetSectionId });
           const taskSyncDurationMs =
             getSceneEditorTimingDurationMs(taskSyncStartedAt);
           const taskDraftSections =
@@ -417,7 +402,6 @@ export const createSceneEditorDraftPersistence = ({
                   draftSection,
                   error: saveError,
                 });
-                store.markDraftSectionReverted?.();
                 notifyDraftSaveFailure(deps, {
                   error: saveError,
                   sceneName,

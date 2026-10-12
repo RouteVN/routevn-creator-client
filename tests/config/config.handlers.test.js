@@ -8,7 +8,21 @@ import {
   handleHelpButtonChange,
   handleThemeCardClick,
 } from "../../src/pages/config/config.handlers.js";
+import * as storeModule from "../../src/pages/config/config.store.js";
 import { EN_I18N } from "../support/i18n.js";
+
+// The real store on fresh state, with every selector and action spied on.
+const createStore = () => {
+  const state = storeModule.createInitialState();
+  return Object.fromEntries(
+    Object.entries(storeModule)
+      .filter(([, value]) => typeof value === "function")
+      .map(([name, fn]) => [
+        name,
+        vi.fn((payload) => fn({ state, i18n: EN_I18N }, payload)),
+      ]),
+  );
+};
 
 const createDeps = () => {
   let currentLocale = "en";
@@ -36,16 +50,7 @@ const createDeps = () => {
   return {
     appService,
     locale,
-    store: {
-      selectCurrentTheme: vi.fn(() => "dark"),
-      setCurrentTheme: vi.fn(),
-      selectCurrentLocale: vi.fn(() => currentLocale),
-      setCurrentLocale: vi.fn(),
-      setUiConfig: vi.fn(),
-      setProjectFolder: vi.fn(),
-      setAssetPackageEnabled: vi.fn(),
-      setHelpButtonVisible: vi.fn(),
-    },
+    store: createStore(),
     uiConfig: { id: "normal", inputMode: "pointer" },
     i18n: EN_I18N,
     render: vi.fn(),

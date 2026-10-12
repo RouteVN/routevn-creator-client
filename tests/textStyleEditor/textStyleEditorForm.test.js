@@ -115,18 +115,29 @@ describe("text style editor form", () => {
   });
 
   it("clears a removed outline and shadow when it saves", () => {
+    const savedValues = toTextStyleValues(
+      createItem({ strokeColorId: "color-2", strokeWidth: 2 }),
+    );
     const values = toTextStyleValues(createItem());
 
-    expect(toTextStyleUpdateData(values)).toEqual({
+    expect(toTextStyleUpdateData(values, savedValues)).toEqual({
       fontId: ["font-1"],
       colorId: "color-1",
       fontSize: 24,
       lineHeight: 1.5,
       fontWeight: "400",
-      strokeColorId: undefined,
+      strokeColorId: null,
       strokeWidth: 0,
       clearShadow: true,
     });
+  });
+
+  it("sends no null outline color when none was saved", () => {
+    const values = toTextStyleValues(createItem());
+
+    const data = toTextStyleUpdateData(values, values);
+
+    expect(data.strokeColorId).toBeUndefined();
   });
 
   it("keeps values the fields cannot keep, and normalizes the ones they can", () => {

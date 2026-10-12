@@ -631,7 +631,6 @@ export const handleVariableUpdated = async (deps, payload) => {
     data.default = storedDefault;
     data.value = storedDefault;
   }
-  const normalizedTagIds = normalizeOptionalTagIds(tagIds);
 
   if (computed === undefined && nextVariableType === "string") {
     data.isEnum = isEnum === true;
@@ -639,9 +638,8 @@ export const handleVariableUpdated = async (deps, payload) => {
       isEnum === true ? normalizeVariableEnumValues(enumValues) : [];
   }
 
-  if (normalizedTagIds !== undefined) {
-    data.tagIds = normalizedTagIds;
-  }
+  // An empty list removes every tag.
+  data.tagIds = Array.isArray(tagIds) ? tagIds : [];
 
   if (computed !== undefined) {
     try {

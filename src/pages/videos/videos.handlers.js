@@ -574,10 +574,10 @@ export const handleEditFormAction = async (deps, payload) => {
         videoId: editItemId,
         fileRecords: editUploadResult?.fileRecords,
         data: {
+          ...videoPatch,
           name,
           description: values?.description ?? "",
           tagIds: Array.isArray(values?.tagIds) ? values.tagIds : [],
-          ...videoPatch,
         },
       }),
   });
