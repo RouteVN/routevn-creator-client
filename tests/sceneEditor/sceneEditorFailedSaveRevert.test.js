@@ -368,6 +368,57 @@ describe("scene editor: a draft that cannot be saved", () => {
     expect(store.selectViewData().previewLineId).toBe("b");
   });
 
+  it("saves the section preview was asked from with that section's own lines", async () => {
+    syncSectionLinesSnapshot.mockResolvedValue({ valid: true });
+    store.setSelectedSectionId({ selectedSectionId: "section-2" });
+    store.setSelectedLineId({ selectedLineId: "c" });
+    const typedInSecond = [line("c", "typed in the second section")];
+    editors.second.replaceLines({ lines: typedInSecond });
+
+    // The Preview button is outside every editor, in the page's shadow root,
+    // where the first section's editor comes first.
+    handlePreviewClick(deps, {
+      _event: {
+        currentTarget: {
+          getRootNode: () => ({ querySelector: () => editors.first }),
+        },
+      },
+    });
+    await vi.waitFor(() =>
+      expect(store.selectViewData().previewVisible).toBe(true),
+    );
+
+    expect(
+      syncSectionLinesSnapshot.mock.calls.map(([{ sectionId, lines }]) => [
+        sectionId,
+        lines,
+      ]),
+    ).toEqual([
+      ["section-1", typedLines],
+      ["section-2", typedInSecond],
+    ]);
+    expect(deps.appService.showAlertWhenIdle).not.toHaveBeenCalled();
+  });
+
+  it("does not save another section's editor into the section preview was asked from", async () => {
+    syncSectionLinesSnapshot.mockResolvedValue({ valid: true });
+    store.setSelectedSectionId({ selectedSectionId: "section-2" });
+    store.setSelectedLineId({ selectedLineId: "c" });
+    deps.refs = { sectionEditor0: editors.first };
+
+    handlePreviewClick(deps, {});
+    await vi.waitFor(() =>
+      expect(store.selectViewData().previewVisible).toBe(true),
+    );
+
+    expect(
+      syncSectionLinesSnapshot.mock.calls.map(([{ sectionId }]) => sectionId),
+    ).toEqual(["section-1"]);
+    expect(
+      store.selectDraftSectionBySectionId({ sectionId: "section-2" }),
+    ).toMatchObject({ dirty: false, lines: savedLines["section-2"] });
+  });
+
   it("leaves a successful save alone", async () => {
     syncSectionLinesSnapshot.mockResolvedValue({ valid: true });
 
