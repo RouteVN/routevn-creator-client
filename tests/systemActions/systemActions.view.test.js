@@ -1,5 +1,7 @@
 import { readFileSync } from "node:fs";
 import { describe, expect, it } from "vitest";
+import yaml from "js-yaml";
+import * as systemActionsHandlers from "../../src/components/systemActions/systemActions.handlers.js";
 
 describe("systemActions view", () => {
   it("propagates hidden modes into conditional action editors", () => {
@@ -194,6 +196,49 @@ describe("systemActions view", () => {
     );
     expect(sceneEditorLexicalView).toContain(
       'dialog-panel-width="${systemActionsDialogPanelWidth}"',
+    );
+  });
+
+  it("relays the transform editor's change, preview, canvas resize and drag cancel events", () => {
+    const systemActionsView = yaml.load(
+      readFileSync(
+        new URL(
+          "../../src/components/systemActions/systemActions.view.yaml",
+          import.meta.url,
+        ),
+        "utf8",
+      ),
+    );
+    const { eventListeners } = systemActionsView.refs.actionTransformEditor;
+
+    expect(eventListeners).toMatchObject({
+      "transform-change": { handler: "handleTransformEditorChange" },
+      "transform-preview": { handler: "handleTransformEditorPreview" },
+      "transform-preview-cancel": {
+        handler: "handleTransformEditorPreviewCancel",
+      },
+      "canvas-resize": { handler: "handleTransformEditorCanvasResize" },
+      "canvas-drag-cancel": { handler: "handleTransformEditorDragCancel" },
+    });
+    for (const { handler } of Object.values(eventListeners)) {
+      expect(systemActionsHandlers[handler]).toBeTypeOf("function");
+    }
+  });
+
+  // The selected actions above the dialog come and go as a tablet rotates.
+  // Elements without an id are keyed by their place, so without one the
+  // dialog content, and the transform editor's canvas in it, would remount.
+  it("keys the dialog content by id so a rotation keeps it mounted", () => {
+    const systemActionsView = readFileSync(
+      new URL(
+        "../../src/components/systemActions/systemActions.view.yaml",
+        import.meta.url,
+      ),
+      "utf8",
+    );
+
+    expect(systemActionsView).toContain(
+      "rtgl-view#actionsDialogContent slot=content",
     );
   });
 

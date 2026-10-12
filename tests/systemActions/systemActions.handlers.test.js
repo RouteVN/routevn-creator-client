@@ -20,9 +20,14 @@ import {
   handleOnUpdate,
   handleCommandLineSubmit,
   handleTemporaryPresentationStateChange,
+  handleTransformEditorCanvasResize,
   handleTransformEditorChange,
   handleTransformEditorDone,
+  handleTransformEditorDragCancel,
+  handleTransformEditorPreview,
+  handleTransformEditorPreviewCancel,
   handleSetBackgroundCustomTransform,
+  handleSetBackgroundTransformEditorTransientTransform,
   handleSetActionCustomTransform,
   open,
 } from "../../src/components/systemActions/systemActions.handlers.js";
@@ -415,6 +420,102 @@ describe("systemActions.handlers", () => {
       },
     });
   });
+
+  it("relays a dedicated transform editor preview to the scene editor page", () => {
+    const dispatchedEvents = [];
+    const stopPropagation = vi.fn();
+    const detail = {
+      transform: {
+        x: 100,
+        y: 200,
+        scaleX: 1.5,
+      },
+    };
+
+    handleTransformEditorPreview(
+      {
+        dispatchEvent: (event) => dispatchedEvents.push(event),
+      },
+      {
+        _event: {
+          stopPropagation,
+          detail,
+        },
+      },
+    );
+
+    // The editor's own event stops here, and the page hears the relayed one.
+    expect(stopPropagation).toHaveBeenCalledTimes(1);
+    expect(dispatchedEvents).toHaveLength(1);
+    expect(dispatchedEvents[0].type).toBe(
+      "background-transform-editor-preview",
+    );
+    expect(dispatchedEvents[0].bubbles).toBe(true);
+    expect(dispatchedEvents[0].composed).toBe(true);
+    expect(dispatchedEvents[0].detail).toEqual(detail);
+  });
+
+  it("relays a dedicated transform editor preview cancel to the scene editor page", () => {
+    const dispatchedEvents = [];
+    const stopPropagation = vi.fn();
+
+    handleTransformEditorPreviewCancel(
+      {
+        dispatchEvent: (event) => dispatchedEvents.push(event),
+      },
+      {
+        _event: {
+          stopPropagation,
+        },
+      },
+    );
+
+    expect(stopPropagation).toHaveBeenCalledTimes(1);
+    expect(dispatchedEvents).toHaveLength(1);
+    expect(dispatchedEvents[0].type).toBe(
+      "background-transform-editor-preview-cancel",
+    );
+    expect(dispatchedEvents[0].bubbles).toBe(true);
+    expect(dispatchedEvents[0].composed).toBe(true);
+    expect(dispatchedEvents[0].detail).toEqual({});
+  });
+
+  it.each([
+    [
+      "canvas resize",
+      handleTransformEditorCanvasResize,
+      "background-transform-editor-canvas-resize",
+    ],
+    [
+      "drag cancel",
+      handleTransformEditorDragCancel,
+      "background-transform-editor-drag-cancel",
+    ],
+  ])(
+    "relays a dedicated transform editor %s to the scene editor page",
+    (_name, handler, type) => {
+      const dispatchedEvents = [];
+      const stopPropagation = vi.fn();
+
+      handler(
+        {
+          dispatchEvent: (event) => dispatchedEvents.push(event),
+        },
+        {
+          _event: {
+            stopPropagation,
+          },
+        },
+      );
+
+      expect(stopPropagation).toHaveBeenCalledTimes(1);
+      expect(dispatchedEvents).toHaveLength(1);
+      expect(dispatchedEvents[0].type).toBe(type);
+      expect(dispatchedEvents[0].bubbles).toBe(true);
+      expect(dispatchedEvents[0].composed).toBe(true);
+      expect(dispatchedEvents[0].detail).toEqual({});
+    },
+  );
 
   it("updates the system-actions draft when applying a background custom transform", () => {
     const state = createInitialState();
@@ -956,6 +1057,34 @@ describe("systemActions.handlers", () => {
       }),
     ).toBe(canvasRoot);
     expect(getCanvasRoot).toHaveBeenCalledTimes(1);
+  });
+
+  it("shows a transform the canvas drags in the mounted transform editor's inspector", () => {
+    const setTransientTransform = vi.fn();
+    const transform = { x: 320, y: 180, scaleX: 1.5, scaleY: 1.5 };
+
+    handleSetBackgroundTransformEditorTransientTransform(
+      {
+        refs: {
+          actionTransformEditor: {
+            setTransientTransform,
+          },
+        },
+      },
+      { transform },
+    );
+
+    expect(setTransientTransform).toHaveBeenCalledTimes(1);
+    expect(setTransientTransform).toHaveBeenCalledWith({ transform });
+  });
+
+  it("leaves a dragged transform alone when the transform editor is not mounted", () => {
+    expect(() =>
+      handleSetBackgroundTransformEditorTransientTransform(
+        { refs: {} },
+        { transform: { x: 320, y: 180 } },
+      ),
+    ).not.toThrow();
   });
 
   it("refreshes repository resources when system action props update", () => {

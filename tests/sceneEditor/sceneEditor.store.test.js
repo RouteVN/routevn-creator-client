@@ -1,10 +1,17 @@
 import { describe, expect, it } from "vitest";
 import {
+  cancelBackgroundTransformEditorDrag,
   createInitialState,
+  clearBackgroundTransformEditorPreviewTransform,
   clearTemporaryPresentationState,
+  closeBackgroundTransformEditor,
   openBackgroundTransformEditor,
   refreshSceneTextStats,
+  resetBackgroundTransformEditorDrag,
+  selectBackgroundTransformEditor,
+  selectCanvasBackgroundTransformEditor,
   selectEffectivePresentationState,
+  selectHasBackgroundTransformEditorPreviewTransform,
   selectPreviousPresentationState,
   selectViewData,
   selectSectionTransitionsDAG,
@@ -16,7 +23,10 @@ import {
   setPresentationState,
   setMobileKeyboardState,
   setUiConfig,
+  setBackgroundTransformEditorDragStartPosition,
+  setBackgroundTransformEditorPreviewTransform,
   setBackgroundTransformEditorSelectedElementMetrics,
+  setBackgroundTransformEditorTransform,
   setProjectLanguage,
   setSelectedLineId,
   setSelectedSectionId,
@@ -182,6 +192,320 @@ describe("sceneEditorLexical.store", () => {
       anchorY: 1,
       originX: 200,
       originY: 600,
+    });
+  });
+
+  describe("transform editor inspector preview", () => {
+    const openEditor = (state) =>
+      openBackgroundTransformEditor(
+        { state },
+        {
+          targetType: "background",
+          background: { resourceId: "image-one" },
+          transform: { x: 100, y: 120 },
+        },
+      );
+
+    it("draws a previewed transform on the canvas and keeps the committed one", () => {
+      const state = createInitialState();
+      openEditor(state);
+      const committed = state.backgroundTransformEditor.transform;
+
+      expect(state.backgroundTransformEditor.previewTransform).toBeUndefined();
+      expect(
+        selectHasBackgroundTransformEditorPreviewTransform({ state }),
+      ).toBe(false);
+      // Without a preview the canvas draws the editor as it is.
+      expect(selectCanvasBackgroundTransformEditor({ state })).toBe(
+        state.backgroundTransformEditor,
+      );
+
+      setBackgroundTransformEditorPreviewTransform(
+        { state },
+        { transform: { x: 300, y: 220, scaleX: 2 } },
+      );
+
+      expect(
+        selectHasBackgroundTransformEditorPreviewTransform({ state }),
+      ).toBe(true);
+      expect(selectCanvasBackgroundTransformEditor({ state })).toMatchObject({
+        isOpen: true,
+        targetType: "background",
+        background: { resourceId: "image-one" },
+        transform: {
+          x: 300,
+          y: 220,
+          scaleX: 2,
+          scaleY: 1,
+          anchorX: 0.5,
+          anchorY: 0.5,
+        },
+      });
+      // Everything but the canvas reads the committed transform.
+      expect(committed).toMatchObject({ x: 100, y: 120 });
+      expect(state.backgroundTransformEditor.transform).toEqual(committed);
+      expect(selectBackgroundTransformEditor({ state }).transform).toEqual(
+        committed,
+      );
+    });
+
+    it("replaces a previewed transform when the transform changes", () => {
+      const state = createInitialState();
+      openEditor(state);
+      setBackgroundTransformEditorPreviewTransform(
+        { state },
+        { transform: { x: 300 } },
+      );
+
+      setBackgroundTransformEditorTransform(
+        { state },
+        { transform: { x: 400, y: 50 } },
+      );
+
+      expect(
+        selectHasBackgroundTransformEditorPreviewTransform({ state }),
+      ).toBe(false);
+      expect(state.backgroundTransformEditor.previewTransform).toBeUndefined();
+      expect(state.backgroundTransformEditor.transform).toMatchObject({
+        x: 400,
+        y: 50,
+      });
+      expect(selectCanvasBackgroundTransformEditor({ state })).toBe(
+        state.backgroundTransformEditor,
+      );
+    });
+
+    it("puts the committed transform back on the canvas when the preview is cleared", () => {
+      const state = createInitialState();
+      openEditor(state);
+      setBackgroundTransformEditorPreviewTransform(
+        { state },
+        { transform: { x: 300 } },
+      );
+
+      clearBackgroundTransformEditorPreviewTransform({ state });
+
+      expect(
+        selectHasBackgroundTransformEditorPreviewTransform({ state }),
+      ).toBe(false);
+      expect(state.backgroundTransformEditor.previewTransform).toBeUndefined();
+      expect(state.backgroundTransformEditor.transform).toMatchObject({
+        x: 100,
+        y: 120,
+      });
+      expect(selectCanvasBackgroundTransformEditor({ state })).toBe(
+        state.backgroundTransformEditor,
+      );
+    });
+
+    it("drops a previewed transform when the editor opens again", () => {
+      const state = createInitialState();
+      openEditor(state);
+      setBackgroundTransformEditorPreviewTransform(
+        { state },
+        { transform: { x: 300 } },
+      );
+
+      openBackgroundTransformEditor(
+        { state },
+        { targetType: "visual", transform: { x: 10 } },
+      );
+
+      expect(
+        selectHasBackgroundTransformEditorPreviewTransform({ state }),
+      ).toBe(false);
+      expect(selectCanvasBackgroundTransformEditor({ state })).toMatchObject({
+        targetType: "visual",
+        transform: { x: 10 },
+      });
+    });
+
+    it("drops a previewed transform when the editor closes", () => {
+      const state = createInitialState();
+      openEditor(state);
+      setBackgroundTransformEditorPreviewTransform(
+        { state },
+        { transform: { x: 300 } },
+      );
+
+      closeBackgroundTransformEditor({ state });
+
+      expect(state.backgroundTransformEditor.isOpen).toBe(false);
+      expect(
+        selectHasBackgroundTransformEditorPreviewTransform({ state }),
+      ).toBe(false);
+      expect(state.backgroundTransformEditor.previewTransform).toBeUndefined();
+    });
+
+    it("keeps a previewed transform when rendered target metrics arrive", () => {
+      const state = createInitialState();
+      openBackgroundTransformEditor(
+        { state },
+        {
+          targetType: "character",
+          transform: { anchorX: 0.5, anchorY: 1 },
+        },
+      );
+      setBackgroundTransformEditorPreviewTransform(
+        { state },
+        { transform: { x: 300, anchorX: 0.5, anchorY: 1 } },
+      );
+      const metrics = { width: 400, height: 600 };
+
+      setBackgroundTransformEditorSelectedElementMetrics(
+        { state },
+        { metrics },
+      );
+
+      expect(state.backgroundTransformEditor.selectedElementMetrics).toEqual(
+        metrics,
+      );
+      expect(
+        selectHasBackgroundTransformEditorPreviewTransform({ state }),
+      ).toBe(true);
+      expect(
+        selectCanvasBackgroundTransformEditor({ state }).transform,
+      ).toMatchObject({
+        x: 300,
+      });
+      // The committed transform still takes its origin from the metrics.
+      expect(state.backgroundTransformEditor.transform).toMatchObject({
+        originX: 200,
+        originY: 600,
+      });
+    });
+  });
+
+  describe("transform editor canvas drag", () => {
+    const openEditor = (state) =>
+      openBackgroundTransformEditor(
+        { state },
+        {
+          targetType: "background",
+          background: { resourceId: "image-one" },
+          transform: {
+            x: 100,
+            y: 120,
+            rotation: 15,
+            anchorX: 0.25,
+            anchorY: 0.75,
+          },
+        },
+      );
+
+    // A drag that began with the target at 100, 120 and has moved and scaled
+    // it since.
+    const dragTarget = (state) => {
+      setBackgroundTransformEditorDragStartPosition(
+        { state },
+        {
+          dragStartPosition: {
+            x: 500,
+            y: 400,
+            transformStartX: 100,
+            transformStartY: 120,
+            transformStartScaleX: 1,
+            transformStartScaleY: 1,
+          },
+        },
+      );
+      setBackgroundTransformEditorTransform(
+        { state },
+        {
+          transform: {
+            ...state.backgroundTransformEditor.transform,
+            x: 460,
+            y: 300,
+            scaleX: 2,
+            scaleY: 2,
+          },
+        },
+      );
+    };
+
+    it("starts with no cancelled drag", () => {
+      const state = createInitialState();
+
+      expect(state.backgroundTransformEditor.isDragCancelled).toBe(false);
+    });
+
+    it("puts the target back where the drag found it when its pointer is cancelled", () => {
+      const state = createInitialState();
+      openEditor(state);
+      dragTarget(state);
+
+      cancelBackgroundTransformEditorDrag({ state });
+
+      expect(state.backgroundTransformEditor.transform).toMatchObject({
+        x: 100,
+        y: 120,
+        scaleX: 1,
+        scaleY: 1,
+      });
+      // Only what a drag moves goes back.
+      expect(state.backgroundTransformEditor.transform).toMatchObject({
+        rotation: 15,
+        anchorX: 0.25,
+        anchorY: 0.75,
+      });
+      // The moves the pointer still sends move nothing, until it lifts.
+      expect(state.backgroundTransformEditor.dragStartPosition).toBeUndefined();
+      expect(state.backgroundTransformEditor.isDragCancelled).toBe(true);
+    });
+
+    it("drops a cancelled pointer's drag even when it had not moved the target yet", () => {
+      const state = createInitialState();
+      openEditor(state);
+      const transform = { ...state.backgroundTransformEditor.transform };
+
+      cancelBackgroundTransformEditorDrag({ state });
+
+      expect(state.backgroundTransformEditor.transform).toEqual(transform);
+      expect(state.backgroundTransformEditor.isDragCancelled).toBe(true);
+    });
+
+    it("ends a drag where it stopped, so the next one starts from there", () => {
+      const state = createInitialState();
+      openEditor(state);
+      dragTarget(state);
+
+      resetBackgroundTransformEditorDrag({ state });
+
+      expect(state.backgroundTransformEditor.dragStartPosition).toBeUndefined();
+      expect(state.backgroundTransformEditor.transform).toMatchObject({
+        x: 460,
+        y: 300,
+        scaleX: 2,
+        scaleY: 2,
+      });
+    });
+
+    it("lets the next drag move the target once the cancelled pointer's drag is over", () => {
+      const state = createInitialState();
+      openEditor(state);
+      dragTarget(state);
+      cancelBackgroundTransformEditorDrag({ state });
+      expect(state.backgroundTransformEditor.isDragCancelled).toBe(true);
+
+      resetBackgroundTransformEditorDrag({ state });
+
+      expect(state.backgroundTransformEditor.isDragCancelled).toBe(false);
+      expect(state.backgroundTransformEditor.dragStartPosition).toBeUndefined();
+    });
+
+    it.each([
+      ["opens again", (state) => openEditor(state)],
+      ["closes", (state) => closeBackgroundTransformEditor({ state })],
+    ])("forgets a cancelled drag when the editor %s", (_name, act) => {
+      const state = createInitialState();
+      openEditor(state);
+      dragTarget(state);
+      cancelBackgroundTransformEditorDrag({ state });
+
+      act(state);
+
+      expect(state.backgroundTransformEditor.isDragCancelled).toBe(false);
+      expect(state.backgroundTransformEditor.dragStartPosition).toBeUndefined();
     });
   });
 

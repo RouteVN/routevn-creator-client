@@ -21,6 +21,14 @@ propsSchema:
 events:
   transform-change:
     type: object
+  transform-preview:
+    type: object
+  transform-preview-cancel:
+    type: object
+  canvas-resize:
+    type: object
+  canvas-drag-cancel:
+    type: object
   done:
     type: object
   cancel:
@@ -32,3 +40,7 @@ methods:
       description: Returns the mounted canvas used by the action transform preview.
       params: []
       returns: object
+    setTransientTransform:
+      description: Shows a transform the canvas is dragging in the inspector, without a render.
+      params: []
+      returns: void

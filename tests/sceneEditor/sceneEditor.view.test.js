@@ -1,5 +1,7 @@
 import { readFileSync } from "node:fs";
 import { describe, expect, it } from "vitest";
+import yaml from "js-yaml";
+import * as sceneEditorHandlers from "../../src/pages/sceneEditorLexical/sceneEditorLexical.handlers.js";
 
 describe("sceneEditorLexical view", () => {
   it("renders the project-language text count in the editor toolbar", () => {
@@ -133,6 +135,40 @@ describe("sceneEditorLexical view", () => {
     expect(view).toContain(
       'dialog-panel-bottom="${mobileSystemActionsDialogBottom}"',
     );
+  });
+
+  it("listens for the transform editor's change, preview, canvas resize and drag cancel events from the system actions", () => {
+    const view = yaml.load(
+      readFileSync(
+        new URL(
+          "../../src/pages/sceneEditorLexical/sceneEditorLexical.view.yaml",
+          import.meta.url,
+        ),
+        "utf8",
+      ),
+    );
+    const { eventListeners } = view.refs.systemActions;
+
+    expect(eventListeners).toMatchObject({
+      "background-transform-editor-change": {
+        handler: "handleBackgroundTransformEditorChange",
+      },
+      "background-transform-editor-preview": {
+        handler: "handleBackgroundTransformEditorPreview",
+      },
+      "background-transform-editor-preview-cancel": {
+        handler: "handleBackgroundTransformEditorPreviewCancel",
+      },
+      "background-transform-editor-canvas-resize": {
+        handler: "handleBackgroundTransformEditorCanvasResize",
+      },
+      "background-transform-editor-drag-cancel": {
+        handler: "handleBackgroundTransformEditorDragCancel",
+      },
+    });
+    for (const { handler } of Object.values(eventListeners)) {
+      expect(sceneEditorHandlers[handler]).toBeTypeOf("function");
+    }
   });
 
   it("opens the section menu from empty space in the sections scroller", () => {

@@ -203,6 +203,55 @@ export const handleTransformEditorChange = (deps, payload) => {
   );
 };
 
+export const handleTransformEditorPreview = (deps, payload) => {
+  const { dispatchEvent } = deps;
+  const { _event: event } = payload;
+  event.stopPropagation();
+  dispatchEvent(
+    new CustomEvent("background-transform-editor-preview", {
+      detail: event.detail,
+      bubbles: true,
+      composed: true,
+    }),
+  );
+};
+
+export const handleTransformEditorPreviewCancel = (deps, payload) => {
+  const { dispatchEvent } = deps;
+  payload._event.stopPropagation();
+  dispatchEvent(
+    new CustomEvent("background-transform-editor-preview-cancel", {
+      detail: {},
+      bubbles: true,
+      composed: true,
+    }),
+  );
+};
+
+export const handleTransformEditorCanvasResize = (deps, payload) => {
+  const { dispatchEvent } = deps;
+  payload._event.stopPropagation();
+  dispatchEvent(
+    new CustomEvent("background-transform-editor-canvas-resize", {
+      detail: {},
+      bubbles: true,
+      composed: true,
+    }),
+  );
+};
+
+export const handleTransformEditorDragCancel = (deps, payload) => {
+  const { dispatchEvent } = deps;
+  payload._event.stopPropagation();
+  dispatchEvent(
+    new CustomEvent("background-transform-editor-drag-cancel", {
+      detail: {},
+      bubbles: true,
+      composed: true,
+    }),
+  );
+};
+
 export const handleTransformEditorCancel = (deps, payload) => {
   const { dispatchEvent, store } = deps;
   payload._event.stopPropagation();
@@ -270,6 +319,13 @@ export const handleActionsDialogCloseRequest = (deps, payload) => {
 
 export const handleGetBackgroundTransformPreviewCanvasRoot = ({ refs }) => {
   return refs?.actionTransformEditor?.getCanvasRoot?.();
+};
+
+export const handleSetBackgroundTransformEditorTransientTransform = (
+  { refs },
+  { transform } = {},
+) => {
+  refs.actionTransformEditor?.setTransientTransform({ transform });
 };
 
 export const handleSetBackgroundCustomTransform = (

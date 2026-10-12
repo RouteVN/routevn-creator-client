@@ -12,8 +12,15 @@ import {
 } from "../../src/internal/ui/sceneEditor/runtime.js";
 
 import {
+  clearBackgroundTransformEditorPreviewTransform,
+  createInitialState,
+  openBackgroundTransformEditor,
+  selectBackgroundTransformEditor,
+  selectCanvasBackgroundTransformEditor,
+  selectIsBackgroundTransformEditorOpen,
   selectWarnedAssetFileIds,
   markAssetWarningsShown,
+  setBackgroundTransformEditorPreviewTransform,
 } from "../../src/pages/sceneEditorLexical/sceneEditorLexical.store.js";
 
 const createWarningStore = () => {
@@ -1541,6 +1548,246 @@ describe("renderSceneEditorState", () => {
     expect(graphicsService.attachCanvas).not.toHaveBeenCalledWith(
       transformEditorCanvasRoot,
     );
+  });
+
+  describe("with the background transform editor open", () => {
+    const BACKGROUND_SPRITE_ID = "bg-cg-background-sprite";
+    const OUTLINE_ANCHOR_ID = "selected-border-anchor";
+    // A transform chosen in an inspector popover, with another anchor and
+    // scale than the editor's own.
+    const PREVIEW_TRANSFORM = {
+      x: 700,
+      y: 120,
+      anchorX: 0,
+      anchorY: 0,
+      scaleX: 2,
+      scaleY: 2,
+    };
+
+    const findRenderedElement = (elements = [], id) => {
+      for (const element of elements) {
+        if (element.id === id) {
+          return element;
+        }
+        const child = findRenderedElement(element.children, id);
+        if (child) {
+          return child;
+        }
+      }
+    };
+
+    const createEditorOpenDeps = () => {
+      const projectData = createProjectData();
+      projectData.resources.images["bg-school"] = {
+        id: "bg-school",
+        fileId: "bg-school.png",
+        width: 3840,
+        height: 2160,
+      };
+      projectData.story.scenes["scene-1"].sections[
+        "section-1"
+      ].lines[1].actions.background = {
+        resourceId: "bg-school",
+        x: 100,
+        y: 120,
+        anchorX: 0.5,
+        anchorY: 0.5,
+        scaleX: 1,
+        scaleY: 1,
+        rotation: 0,
+        originX: 0,
+        originY: 0,
+      };
+      const graphicsService = createGraphicsService();
+      graphicsService.attachCanvas = vi.fn(async () => {});
+      graphicsService.loadAssets = vi.fn(async () => {});
+      graphicsService.parse = ({ elements }) => ({ elements });
+      graphicsService.render = vi.fn();
+      const state = createInitialState();
+      openBackgroundTransformEditor(
+        { state },
+        {
+          targetType: "background",
+          background: { resourceId: "bg-school" },
+          transform: { x: 100, y: 120 },
+        },
+      );
+      const store = {
+        selectIsScenePageLoading: () => false,
+        selectPreviewScene: () => ({ previewVisible: false }),
+        selectSceneId: () => "scene-1",
+        selectSelectedSectionId: () => "section-1",
+        selectSelectedLineId: () => "line-2",
+        selectProjectData: () => projectData,
+        selectTemporaryPresentationState: () => ({}),
+        selectIsBackgroundTransformEditorOpen: () =>
+          selectIsBackgroundTransformEditorOpen({ state }),
+        selectBackgroundTransformEditor: () =>
+          selectBackgroundTransformEditor({ state }),
+        // The store hands out immutable snapshots, so a read keeps its value
+        // when the state changes after it.
+        selectCanvasBackgroundTransformEditor: vi.fn(() =>
+          structuredClone(selectCanvasBackgroundTransformEditor({ state })),
+        ),
+        setBackgroundTransformEditorSelectedElementMetrics: vi.fn(),
+        selectIsMuted: () => false,
+        setPresentationState: vi.fn(),
+      };
+
+      return {
+        state,
+        graphicsService,
+        deps: {
+          store,
+          graphicsService,
+          projectService: {
+            getFileContent: vi.fn(async (fileId) => ({ url: fileId })),
+          },
+          refs: {
+            systemActions: {
+              transformedHandlers: {
+                handleGetBackgroundTransformPreviewCanvasRoot: () => ({
+                  isConnected: true,
+                }),
+              },
+            },
+          },
+        },
+      };
+    };
+
+    it("draws the committed transform and keeps the rendered target metrics", async () => {
+      const { deps, graphicsService } = createEditorOpenDeps();
+
+      await renderSceneEditorState(deps, { skipAnimations: true });
+
+      const [renderState] = graphicsService.render.mock.calls.at(-1);
+      expect(
+        findRenderedElement(renderState.elements, BACKGROUND_SPRITE_ID),
+      ).toMatchObject({
+        x: 100,
+        y: 120,
+        anchorX: 0.5,
+        anchorY: 0.5,
+        scaleX: 1,
+        scaleY: 1,
+        originX: 1920,
+        originY: 1080,
+      });
+      expect(
+        deps.store.setBackgroundTransformEditorSelectedElementMetrics,
+      ).toHaveBeenCalledTimes(1);
+      expect(
+        deps.store.setBackgroundTransformEditorSelectedElementMetrics,
+      ).toHaveBeenCalledWith({
+        metrics: expect.objectContaining({ width: 3840, height: 2160 }),
+      });
+    });
+
+    it("draws a previewed transform without keeping its rendered target metrics", async () => {
+      const { deps, graphicsService, state } = createEditorOpenDeps();
+      setBackgroundTransformEditorPreviewTransform(
+        { state },
+        { transform: PREVIEW_TRANSFORM },
+      );
+
+      await renderSceneEditorState(deps, { skipAnimations: true });
+
+      const [renderState] = graphicsService.render.mock.calls.at(-1);
+      // The previewed anchor sets the drawn origin, as the committed one does.
+      expect(
+        findRenderedElement(renderState.elements, BACKGROUND_SPRITE_ID),
+      ).toMatchObject({
+        x: 700,
+        y: 120,
+        anchorX: 0,
+        anchorY: 0,
+        scaleX: 2,
+        scaleY: 2,
+        originX: 0,
+        originY: 0,
+      });
+      // The kept metrics set the committed transform's origin, which a preview
+      // with another scale must not change.
+      expect(
+        deps.store.setBackgroundTransformEditorSelectedElementMetrics,
+      ).not.toHaveBeenCalled();
+      expect(state.backgroundTransformEditor.transform).toMatchObject({
+        x: 100,
+        y: 120,
+        anchorX: 0.5,
+        anchorY: 0.5,
+        scaleX: 1,
+        scaleY: 1,
+      });
+    });
+
+    // The editor is read once, before the render waits for anything, so the
+    // scene (built from it) and the outline (drawn around the scene, with its
+    // anchor marker at the transform's anchor) cannot disagree. The marker is
+    // at the anchor of the 3840 x 2160 target, less half of its 8 unit size.
+    it("draws the scene and the outline from one read of the editor when a preview starts during the render", async () => {
+      const { deps, graphicsService, state } = createEditorOpenDeps();
+      // The preview starts while the render waits for the canvas, after the
+      // scene was built.
+      graphicsService.attachCanvas.mockImplementationOnce(async () => {
+        setBackgroundTransformEditorPreviewTransform(
+          { state },
+          { transform: PREVIEW_TRANSFORM },
+        );
+      });
+
+      await renderSceneEditorState(deps, { skipAnimations: true });
+
+      expect(state.backgroundTransformEditor.previewTransform).toBeDefined();
+      expect(
+        deps.store.selectCanvasBackgroundTransformEditor,
+      ).toHaveBeenCalledTimes(1);
+      const [renderState] = graphicsService.render.mock.calls.at(-1);
+      expect(
+        findRenderedElement(renderState.elements, BACKGROUND_SPRITE_ID),
+      ).toMatchObject({ x: 100, anchorX: 0.5, anchorY: 0.5, scaleX: 1 });
+      expect(
+        findRenderedElement(renderState.elements, OUTLINE_ANCHOR_ID),
+      ).toMatchObject({ x: 1916, y: 1076 });
+      // What it read had no preview, so the committed transform keeps its
+      // metrics.
+      expect(
+        deps.store.setBackgroundTransformEditorSelectedElementMetrics,
+      ).toHaveBeenCalledTimes(1);
+    });
+
+    it("draws the scene and the outline from one read of the editor when a preview ends during the render", async () => {
+      const { deps, graphicsService, state } = createEditorOpenDeps();
+      setBackgroundTransformEditorPreviewTransform(
+        { state },
+        { transform: PREVIEW_TRANSFORM },
+      );
+      // The preview ends while the render waits for the canvas, after the
+      // scene was built.
+      graphicsService.attachCanvas.mockImplementationOnce(async () => {
+        clearBackgroundTransformEditorPreviewTransform({ state });
+      });
+
+      await renderSceneEditorState(deps, { skipAnimations: true });
+
+      expect(state.backgroundTransformEditor.previewTransform).toBeUndefined();
+      expect(
+        deps.store.selectCanvasBackgroundTransformEditor,
+      ).toHaveBeenCalledTimes(1);
+      const [renderState] = graphicsService.render.mock.calls.at(-1);
+      expect(
+        findRenderedElement(renderState.elements, BACKGROUND_SPRITE_ID),
+      ).toMatchObject({ x: 700, anchorX: 0, anchorY: 0, scaleX: 2 });
+      expect(
+        findRenderedElement(renderState.elements, OUTLINE_ANCHOR_ID),
+      ).toMatchObject({ x: -4, y: -4 });
+      // What it read was a preview, so the committed transform keeps its
+      // metrics as they were.
+      expect(
+        deps.store.setBackgroundTransformEditorSelectedElementMetrics,
+      ).not.toHaveBeenCalled();
+    });
   });
 
   it("immediately retries a failed scene video and caches it after recovery", async () => {

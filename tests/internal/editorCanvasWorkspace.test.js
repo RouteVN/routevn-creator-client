@@ -2,6 +2,7 @@ import { readFileSync } from "node:fs";
 import { describe, expect, it } from "vitest";
 import {
   buildEditorCanvasLayout,
+  buildEditorCanvasLayoutForPanel,
   buildEditorCanvasZoomViewData,
   buildEditorPanelPlacementViewData,
   resetEditorCanvasZoomState,
@@ -86,6 +87,64 @@ describe("editor canvas workspace", () => {
         "position: relative; width: min(100%, 50cqh); margin-left: auto; margin-right: auto;",
     });
   });
+
+  it("lays the canvas out by the zoom viewport with the panel on the right, and fitted with the panel under it", () => {
+    const resolution = { width: 800, height: 800 };
+
+    expect(
+      buildEditorCanvasLayoutForPanel({ showRightPanel: true, resolution }),
+    ).toEqual({
+      canvasBackgroundStyle:
+        "flex: 1 1 auto; min-height: 0; position: relative; overflow: hidden; background-position: var(--canvas-x, 0px) var(--canvas-y, 0px);",
+      canvasWrapperStyle:
+        "position: absolute; left: 0; top: 0; width: calc(min(100%, 92cqh) * var(--canvas-zoom, 1)); transform: translate(var(--canvas-x, 0px), var(--canvas-y, 0px));",
+    });
+    expect(
+      buildEditorCanvasLayoutForPanel({ showRightPanel: false, resolution }),
+    ).toEqual({
+      canvasBackgroundStyle: "",
+      canvasWrapperStyle:
+        "position: relative; width: min(100%, 50cqh); margin-left: auto; margin-right: auto;",
+    });
+  });
+
+  it("sizes the canvas from the shape of its resolution with the panel on either side", () => {
+    const resolution = { width: 1920, height: 1080 };
+
+    // The widest the canvas gets is the height it fits to times the ratio of
+    // its width to its height: 92% of the height with the panel on the right,
+    // half of it with the panel under the canvas.
+    expect(
+      buildEditorCanvasLayoutForPanel({ showRightPanel: true, resolution })
+        .canvasWrapperStyle,
+    ).toContain("width: calc(min(100%, 163.5556cqh) * var(--canvas-zoom, 1));");
+    expect(
+      buildEditorCanvasLayoutForPanel({ showRightPanel: false, resolution })
+        .canvasWrapperStyle,
+    ).toContain("width: min(100%, 88.8889cqh);");
+  });
+
+  it("lays the canvas out for the panel position of a tablet in landscape and in portrait", () => {
+    const resolution = { width: 800, height: 800 };
+
+    expect(
+      buildEditorCanvasLayout({
+        state: createState({ isTouchMode: true, width: 1133, height: 744 }),
+        resolution,
+      }),
+    ).toEqual(
+      buildEditorCanvasLayoutForPanel({ showRightPanel: true, resolution }),
+    );
+    expect(
+      buildEditorCanvasLayout({
+        state: createState({ isTouchMode: true, width: 744, height: 1133 }),
+        resolution,
+      }),
+    ).toEqual(
+      buildEditorCanvasLayoutForPanel({ showRightPanel: false, resolution }),
+    );
+  });
+
   it("puts the Edit and Preview tabs in the navbar on phones, and undo and redo under the canvas in Edit only", () => {
     const placement = (options) =>
       buildEditorPanelPlacementViewData({ state: createState(options) });

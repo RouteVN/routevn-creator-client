@@ -837,6 +837,9 @@ audioEffectsPage:
 actionTransformEditor:
   backgroundTarget: "ฉากหลัง"
   cancelButton: "ยกเลิก"
+  canvasZoomFitLabel: "พอดีกับหน้าจอ"
+  canvasZoomInLabel: "ซูมเข้า"
+  canvasZoomOutLabel: "ซูมออก"
   characterTarget: "ตัวละคร"
   doneButton: "เสร็จสิ้น"
   targetTitle: "เป้าหมาย"

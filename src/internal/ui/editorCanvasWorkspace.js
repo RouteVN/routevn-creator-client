@@ -8,7 +8,8 @@ import { selectIsTabletLandscapeState } from "./resourcePages/mobileResourcePage
 // The canvas workspace of the editor pages built like the layout editor
 // (the transform and particle editors): zoom, the right panel and its tabs,
 // and the canvas layout. Their stores keep `canvasZoom`, `isTouchMode` and
-// `appWindowMetrics`.
+// `appWindowMetrics`. The scene editor's transform editor shares the zoom and
+// the canvas layout.
 
 // Canvas zoom is relative to the canvas fitted to the workspace (1 = fit),
 // as in the layout editor: the buttons step through these levels, and
@@ -82,9 +83,14 @@ export const buildEditorPanelPlacementViewData = ({ state }) => {
 };
 
 // The styles of the workspace and of the canvas wrapper for a canvas of
-// `resolution`.
-export const buildEditorCanvasLayout = ({ state, resolution }) => {
-  if (selectShowEditorRightPanelState({ state })) {
+// `resolution`, with the panel on the right or under the canvas. The scene
+// editor's transform editor, which keeps no window metrics, passes where its
+// panel is.
+export const buildEditorCanvasLayoutForPanel = ({
+  showRightPanel,
+  resolution,
+}) => {
+  if (showRightPanel) {
     const canvasFitWidth = formatCanvasMaxWidth(resolution, {
       heightUnit: "cqh",
       heightPercent: 92,
@@ -101,6 +107,14 @@ export const buildEditorCanvasLayout = ({ state, resolution }) => {
     canvasWrapperStyle: `position: relative; width: ${formatHalfViewportCanvasMaxWidth(resolution, { heightUnit: "cqh" })}; margin-left: auto; margin-right: auto;`,
   };
 };
+
+// The styles of the workspace and of the canvas wrapper for a canvas of
+// `resolution`.
+export const buildEditorCanvasLayout = ({ state, resolution }) =>
+  buildEditorCanvasLayoutForPanel({
+    showRightPanel: selectShowEditorRightPanelState({ state }),
+    resolution,
+  });
 
 // The header's zoom controls.
 export const buildEditorCanvasZoomViewData = (canvasZoom) => ({
