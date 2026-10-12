@@ -179,7 +179,7 @@ cargo test --manifest-path src-tauri/Cargo.toml --lib \
   --ignored --exact
 ```
 
-## Explicit reporting (web and desktop)
+## Explicit reporting
 
 `appService.reportError(error, { operation, code })` sends an error the app
 already handled. It never shows UI. Handled errors are still shown through
@@ -195,7 +195,9 @@ already handled. It never shows UI. Handled errors are still shown through
 - Web pages set no Content-Security-Policy, so nothing needs allowing. The
   collector must accept browser cross-origin requests from the web origin.
 - Web and desktop share the same environment. Events carry a `runtime` tag
-  (`web` or `tauri`) to tell them apart.
+  (`web`, `tauri`, `android` or `ios`) to tell them apart. Android and iOS
+  report through the same reporter; see
+  [mobile crash reporting](mobile-crash-reporting.md#javascript-errors).
 - Web builds use the same `release` and choose `dist` like desktop release
   builds: `ROUTEVN_BUILD_ID` when set, otherwise the 12-character Git revision.
   Without Git metadata, and on dev servers, it is `local`.

@@ -5,20 +5,53 @@ import Sentry
 /// NSExceptions and Swift runtime traps. Reports are saved at crash time and
 /// sent on the next launch. See docs/mobile-crash-reporting.md.
 enum NativeCrashReporting {
-    static func start(bundle: Bundle = .main) {
+    private struct Configuration {
+        let dsn: String
+        let release: String
+        let dist: String?
+        let environment: String
+    }
+
+    private static func configuration(bundle: Bundle) -> Configuration? {
         guard let dsn = bundle.object(forInfoDictionaryKey: "RouteVNSentryDSN") as? String,
-              !dsn.isEmpty else { return }
+              !dsn.isEmpty else { return nil }
         let version = bundle.object(forInfoDictionaryKey: "CFBundleShortVersionString") as? String
-        let build = bundle.object(forInfoDictionaryKey: "CFBundleVersion") as? String
         let environment = bundle.object(forInfoDictionaryKey: "RouteVNSentryEnvironment") as? String
+        return Configuration(
+            dsn: dsn,
+            release: "routevn-creator@\(version ?? "unknown")",
+            dist: bundle.object(forInfoDictionaryKey: "CFBundleVersion") as? String,
+            environment: environment ?? "production"
+        )
+    }
+
+    /// A script that gives the page's JavaScript error reporter the same
+    /// configuration as native crash reporting, set before any page script
+    /// runs, as the desktop app does. Nil when this build does not report.
+    static func webViewConfigScript(bundle: Bundle = .main) -> String? {
+        guard let config = configuration(bundle: bundle) else { return nil }
+        var values = [
+            "dsn": config.dsn,
+            "release": config.release,
+            "environment": config.environment,
+        ]
+        if let dist = config.dist { values["dist"] = dist }
+        if let deviceId = NativeDeviceIdReader.read() { values["deviceId"] = deviceId }
+        guard let data = try? JSONSerialization.data(withJSONObject: values, options: [.sortedKeys]),
+              let json = String(data: data, encoding: .utf8) else { return nil }
+        return "Object.defineProperty(window, '__ROUTEVN_ERROR_REPORTING__', { value: Object.freeze(\(json)) });"
+    }
+
+    static func start(bundle: Bundle = .main) {
+        guard let config = configuration(bundle: bundle) else { return }
         // Read the existing device ID before the SDK starts; it may be absent.
         let deviceId = NativeDeviceIdReader.read()
 
         SentrySDK.start { options in
-            options.dsn = dsn
-            options.releaseName = "routevn-creator@\(version ?? "unknown")"
-            options.dist = build
-            options.environment = environment ?? "production"
+            options.dsn = config.dsn
+            options.releaseName = config.release
+            options.dist = config.dist
+            options.environment = config.environment
             options.sendDefaultPii = false
             options.sendClientReports = false
             options.maxBreadcrumbs = 0

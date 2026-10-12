@@ -1,3 +1,4 @@
+import { errorReporter } from "./deps/clients/android/errorReporting.js";
 import { createGlobalUI } from "@rettangoli/ui";
 import { configureAudioRuntime } from "route-graphics";
 
@@ -152,6 +153,7 @@ const appService = createAppService({
   windowMetricsClient,
   uiConfig,
   triggerTestCrash: (kind) => callAndroidBridge("triggerTestCrash", { kind }),
+  errorTracker: errorReporter,
 });
 window.routeVNNativeBack = createNativeBackHandler({
   subject,
@@ -174,7 +176,13 @@ const apiService = createApiService({
   ),
 });
 
-const graphicsService = await createGraphicsService({ subject });
+const graphicsService = await createGraphicsService({
+  subject,
+  onRenderError: (error) => {
+    console.error(error);
+    errorReporter.capture(error, { operation: "graphics.render" });
+  },
+});
 const dialogueQueueService = createPendingQueueService({ debounceMs: 2000 });
 
 const componentDependencies = {
