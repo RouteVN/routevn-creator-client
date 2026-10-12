@@ -31,9 +31,61 @@ const flushRepositoryMainCheckpointBestEffort = async ({
   }
 };
 
+// Desktop, Android and iOS store changes as JSON, which drops undefined fields
+// and turns NaN and Infinity into null. In an update that merges its data, such
+// a field means something else, or nothing, when the project's history loads
+// again. These updates are reported so that the editor that made them can be
+// fixed; they are still saved as before. Each command type and set of fields
+// is reported once, and only a couple per session, to leave the reporter's
+// budget to other errors.
+const MAX_NON_JSON_PAYLOAD_REPORTS = 2;
+
+// Adds the names of the fields of `value` that JSON drops or changes.
+// Array items count as their array's field.
+export const collectNonJsonFields = (
+  value,
+  field,
+  fields,
+  seen = new WeakSet(),
+) => {
+  if (
+    value === null ||
+    typeof value === "string" ||
+    typeof value === "boolean"
+  ) {
+    return;
+  }
+  if (typeof value === "number") {
+    if (!Number.isFinite(value)) {
+      fields.add(field);
+    }
+    return;
+  }
+  const isArray = Array.isArray(value);
+  const prototype = typeof value === "object" && Object.getPrototypeOf(value);
+  if (!isArray && prototype !== Object.prototype && prototype !== null) {
+    fields.add(field);
+    return;
+  }
+  if (seen.has(value)) {
+    fields.add(field);
+    return;
+  }
+  seen.add(value);
+  if (isArray) {
+    value.forEach((item) => collectNonJsonFields(item, field, fields, seen));
+  } else {
+    for (const [key, item] of Object.entries(value)) {
+      collectNonJsonFields(item, key, fields, seen);
+    }
+  }
+  seen.delete(value);
+};
+
 export const createCommandApiShared = ({
   idGenerator,
   now = () => 0,
+  errorTracker,
   getCurrentProjectId,
   getCurrentRepository,
   getCachedRepository,
@@ -166,6 +218,45 @@ export const createCommandApiShared = ({
     });
   };
 
+  const reportedNonJsonPayloads = new Set();
+
+  // Called after the commands were saved.
+  const reportNonJsonPayloads = (commands) => {
+    if (!errorTracker) {
+      return;
+    }
+
+    for (const { type, payload } of commands) {
+      if (reportedNonJsonPayloads.size >= MAX_NON_JSON_PAYLOAD_REPORTS) {
+        return;
+      }
+      // A create or a full replace loads back the same without such fields.
+      if (type.endsWith(".create") || payload?.replace === true) {
+        continue;
+      }
+
+      try {
+        const fields = new Set();
+        collectNonJsonFields(payload, "payload", fields);
+        if (fields.size === 0) {
+          continue;
+        }
+        const message = `${type}: non-JSON value in ${[...fields].sort().join(", ")}`;
+        if (reportedNonJsonPayloads.has(message)) {
+          continue;
+        }
+        const error = new Error(message);
+        error.name = "NonJsonCommandPayloadError";
+        errorTracker.capture(error, {
+          operation: "projectCommand.nonJsonPayload",
+        });
+        reportedNonJsonPayloads.add(message);
+      } catch (failure) {
+        console.warn("Failed to report a non-JSON command payload", failure);
+      }
+    }
+  };
+
   const advanceContextStateWithCommands = ({ context, commands = [] }) => {
     const normalizedCommands = Array.isArray(commands)
       ? commands.filter(Boolean)
@@ -232,6 +323,7 @@ export const createCommandApiShared = ({
     if (submitResult?.valid === false) {
       return submitResult;
     }
+    reportNonJsonPayloads([command]);
 
     const applyResult = await applyCommandToRepository({
       repository: context.repository,
@@ -295,6 +387,7 @@ export const createCommandApiShared = ({
         return submitResult;
       }
       submitted = true;
+      reportNonJsonPayloads(normalizedCommands);
 
       const applyResult = await applyCommandsToRepository({
         repository: context.repository,
