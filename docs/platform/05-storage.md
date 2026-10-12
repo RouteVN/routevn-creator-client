@@ -175,19 +175,21 @@ left-out draft was made in the main or a main-scene partition, it also rebuilds
 the main state from the loaded history and saves it as the main checkpoint; the
 main state never applies scene-partition events. An event that storage already
 held when it is added, such as a command's own draft, is not applied twice.
-Then the app shows one alert naming the affected scenes and sections, at most
-once per draft (`projectHistory.notifiedSkippedDrafts.<projectId>` in
-`userConfig`).
+Then the app reports the left-out drafts as one handled error, at most once
+per draft (`projectHistory.notifiedSkippedDrafts.<projectId>` in
+`userConfig`). It does not show them to the user: a draft can be left out long
+after it was made, when the user no longer remembers the change. A change that
+fails to save while the user makes it is shown by the editor that saves it.
 
 The drafts stay in storage, so later loads leave them out again. The
 repository records the drafts that cached state was rebuilt without in the
 `project_repository_skipped_drafts` row beside the checkpoints. A load that
-leaves out the same drafts rebuilds nothing; the app is still told about them.
-A load that leaves out other drafts rebuilds over both lists, so a recorded
-draft that applies again is put back too. The record is saved as unfinished
-before the rebuild changes any cache, and as finished only after every
-checkpoint write of the rebuild succeeded; with no draft left out, it is
-removed.
+leaves out the same drafts rebuilds nothing; the app still receives them and
+skips those it already reported. A load that leaves out other drafts rebuilds
+over both lists, so a recorded draft that applies again is put back too. The
+record is saved as unfinished before the rebuild changes any cache, and as
+finished only after every checkpoint write of the rebuild succeeded; with no
+draft left out, it is removed.
 
 A storage error does not stop the rebuild: the main state and the open scene
 are rebuilt in memory, a checkpoint that fails to be deleted or saved is not

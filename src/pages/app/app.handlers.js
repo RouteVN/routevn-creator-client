@@ -33,7 +33,7 @@ import {
   HELP_BUTTON_VISIBLE_CONFIG_KEY,
   isHelpButtonVisible,
 } from "../../internal/ui/helpPreferences.js";
-import { createSkippedDraftsNoticeStream } from "./support/skippedDraftsNotice.js";
+import { createSkippedDraftsReportStream } from "./support/skippedDraftsReport.js";
 
 const GLOBAL_NAV_TIMEOUT_MS = 1500;
 const ROUTE_HISTORY_MODES = new Set(["push", "replace", "none"]);
@@ -877,7 +877,7 @@ const subscriptions = (deps) => {
   };
 
   return [
-    createSkippedDraftsNoticeStream({ deps, projectId$: openProjectId$ }),
+    createSkippedDraftsReportStream({ deps, projectId$: openProjectId$ }),
     subject.pipe(
       filter(
         ({ action, payload }) =>
