@@ -35,23 +35,42 @@ const flushRepositoryMainCheckpointBestEffort = async ({
 // and turns NaN and Infinity into null. A command's payload is turned into its
 // JSON form when the command is created, so the change checked and applied in
 // the open project is the one that loads again on every platform.
-// A payload JSON cannot hold, such as one with a cycle, is left as it is for
-// validation to reject.
+const UNSTORABLE_PAYLOAD_ERROR = "unstorable_payload";
+
 const toStoredPayload = (payload) => {
   if (payload === undefined) {
     return undefined;
   }
   try {
     return JSON.parse(JSON.stringify(payload));
-  } catch {
-    return payload;
+  } catch (cause) {
+    // Such as a payload with a cycle or a BigInt.
+    const error = new Error("payload must be storable as JSON", { cause });
+    error.code = UNSTORABLE_PAYLOAD_ERROR;
+    throw error;
   }
 };
 
-// An update that merges such a field meant something its JSON form does not,
-// such as clearing the field. It is reported so that the editor that made it
-// can be fixed. Each command type and set of fields is reported once, and only
-// a couple per session, to leave the reporter's budget to other errors.
+// A change whose payload cannot be stored is rejected before it is checked or
+// saved, like a change that fails validation.
+const toUnstorablePayloadResult = (error) => {
+  if (error?.code !== UNSTORABLE_PAYLOAD_ERROR) {
+    throw error;
+  }
+  return {
+    valid: false,
+    error: {
+      code: "validation_failed",
+      message: error.message,
+    },
+  };
+};
+
+// A payload holding a value its JSON form drops or changes meant something
+// the stored change does not, such as clearing a field. It is reported so that
+// the editor that made it can be fixed. Each command type and set of fields is
+// reported once, and only a couple per session, to leave the reporter's
+// budget to other errors.
 const MAX_NON_JSON_PAYLOAD_REPORTS = 2;
 
 // Adds the names of the fields of `value` that JSON drops or changes.
@@ -320,15 +339,20 @@ export const createCommandApiShared = ({
     partitions = [],
     basePartition,
   }) => {
-    const command = createCommandWithContext({
-      context,
-      scope,
-      type,
-      payload,
-      partition,
-      partitions,
-      basePartition,
-    });
+    let command;
+    try {
+      command = createCommandWithContext({
+        context,
+        scope,
+        type,
+        payload,
+        partition,
+        partitions,
+        basePartition,
+      });
+    } catch (error) {
+      return toUnstorablePayloadResult(error);
+    }
 
     const validationResult = validateCommandsAgainstContext({
       context,
@@ -368,18 +392,23 @@ export const createCommandApiShared = ({
   };
 
   const submitCommandsWithContext = async ({ context, commands = [] } = {}) => {
-    const normalizedCommands = (commands || []).map((entry) =>
-      createCommandWithContext({
-        context,
-        commandId: entry.commandId,
-        scope: entry.scope,
-        type: entry.type,
-        payload: entry.payload,
-        partition: entry.partition,
-        partitions: entry.partitions,
-        basePartition: entry.basePartition,
-      }),
-    );
+    let normalizedCommands;
+    try {
+      normalizedCommands = (commands || []).map((entry) =>
+        createCommandWithContext({
+          context,
+          commandId: entry.commandId,
+          scope: entry.scope,
+          type: entry.type,
+          payload: entry.payload,
+          partition: entry.partition,
+          partitions: entry.partitions,
+          basePartition: entry.basePartition,
+        }),
+      );
+    } catch (error) {
+      return toUnstorablePayloadResult(error);
+    }
     if (normalizedCommands.length === 0) {
       return {
         valid: true,

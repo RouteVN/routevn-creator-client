@@ -184,15 +184,45 @@ describe("commandApi non-JSON payload report", () => {
     );
   });
 
-  it("rejects a payload JSON cannot hold instead of throwing", async () => {
-    const { session, updateElement } = await setup({ errorTracker: null });
-    const cyclic = { name: "Heading" };
-    cyclic.self = cyclic;
+  it("rejects a payload JSON cannot hold before submitting it", async () => {
+    const { session, shared } = await setup({ errorTracker: null });
+    const context = await shared.ensureCommandContext();
+    const cyclic = { meta: {} };
+    cyclic.meta.root = cyclic;
+    const invalid = {
+      valid: false,
+      error: {
+        code: "validation_failed",
+        message: "payload must be storable as JSON",
+      },
+    };
 
-    const result = await updateElement(cyclic);
+    // Free-form data, such as a spritesheet's atlas, is not checked field by
+    // field, so only the JSON step can catch these.
+    const single = await shared.submitCommandWithContext({
+      context,
+      scope: "resources",
+      type: COMMAND_TYPES.SPRITESHEET_UPDATE,
+      payload: { spritesheetId: "sheet-1", data: { jsonData: cyclic } },
+    });
+    const batch = await shared.submitCommandsWithContext({
+      context,
+      commands: [
+        {
+          scope: "resources",
+          type: COMMAND_TYPES.SPRITESHEET_UPDATE,
+          payload: {
+            spritesheetId: "sheet-1",
+            data: { jsonData: { frames: 1n } },
+          },
+        },
+      ],
+    });
 
-    expect(result).toMatchObject({ valid: false });
+    expect(single).toEqual(invalid);
+    expect(batch).toEqual(invalid);
     expect(session.submitCommand).not.toHaveBeenCalled();
+    expect(session.submitCommands).not.toHaveBeenCalled();
   });
 
   it("checks nothing without an error tracker", async () => {
