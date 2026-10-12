@@ -9,12 +9,30 @@ import {
   scenePartitionFor,
 } from "../../src/deps/services/shared/collab/partitions.js";
 
+// Records how many events each replay applies while a test sets `log`.
+const replayRecorder = vi.hoisted(() => ({ log: undefined }));
+
+vi.mock(
+  "../../src/deps/services/shared/projectRepository.js",
+  async (importOriginal) => {
+    const actual = await importOriginal();
+    return {
+      ...actual,
+      applyRepositoryEventsToRepositoryState: (args) => {
+        replayRecorder.log?.push(args.events.length);
+        return actual.applyRepositoryEventsToRepositoryState(args);
+      },
+    };
+  },
+);
+
 const projectId = "project-1";
 const sceneId = "scene-1";
 const sectionId = "section-1";
 const lineId = "line-1";
 
 afterEach(() => {
+  replayRecorder.log = undefined;
   vi.restoreAllMocks();
 });
 
@@ -208,6 +226,34 @@ describe("clientStoreHistory", () => {
     expect(skippedDrafts.map(({ draftId }) => draftId)).toEqual([
       "invalid-line-update",
     ]);
+  });
+
+  it("yields to the UI between a failed replay and the replay that finds the failed draft", async () => {
+    replayRecorder.log = [];
+    const originalSetTimeout = globalThis.setTimeout;
+    vi.spyOn(globalThis, "setTimeout").mockImplementation(
+      (callback, delay, ...args) => {
+        if (delay === 0) {
+          replayRecorder.log.push("yield");
+        }
+        return originalSetTimeout(callback, delay, ...args);
+      },
+    );
+
+    const { eventIds } = await loadHistory({
+      drafts: [
+        createBootstrapDraft(),
+        ...createSceneDrafts(),
+        createSceneRename({ id: "rename-1", name: "Scene Two", clientTs: 5 }),
+        createInvalidLineUpdate({ id: "invalid-line-update", clientTs: 6 }),
+        createSceneRename({ id: "rename-2", name: "Scene Three", clientTs: 7 }),
+      ],
+    });
+
+    expect(eventIds).not.toContain("invalid-line-update");
+    // The empty start state, all 7 drafts failing at the sixth, then the 5
+    // drafts before it.
+    expect(replayRecorder.log.slice(0, 4)).toEqual([0, 7, "yield", 5]);
   });
 
   it("leaves out each of several invalid drafts and keeps the rest", async () => {

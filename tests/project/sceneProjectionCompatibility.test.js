@@ -871,6 +871,91 @@ describe("scene projection compatibility", () => {
     }
   });
 
+  it("yields to the browser during replay when batch sizes do not add up to the yield interval", async () => {
+    const initialState = createRepositoryState();
+    const lineCount = 600;
+    const committedEvents = [
+      createProjectCreateRepositoryEvent({
+        projectId,
+        state: initialState,
+      }),
+      ...Array.from({ length: lineCount }, (_, index) =>
+        createCommandEvent({
+          id: `line-create-${index + 1}`,
+          partition: scenePartitionFor(sceneId),
+          type: COMMAND_TYPES.LINE_CREATE,
+          payload: {
+            sectionId,
+            lines: [
+              {
+                lineId: `line-${index + 1}`,
+                data: {
+                  actions: {},
+                },
+              },
+            ],
+            index,
+          },
+          clientTs: index + 1,
+        }),
+      ),
+    ].map((event, index) => ({
+      ...structuredClone(event),
+      committedId: index + 1,
+    }));
+    // Pages of 100 events: the replayed event count never lands on a
+    // multiple of the yield interval of 128.
+    const listCommittedAfter = async ({ sinceCommittedId = 0 } = {}) =>
+      committedEvents
+        .slice(sinceCommittedId, sinceCommittedId + 100)
+        .map((event) => structuredClone(event));
+    const replayLog = [];
+    const reduceEventsToStateSpy = (args) => {
+      replayLog.push(args.events.length);
+      return reduceEventsToState(args);
+    };
+    const originalSetTimeout = globalThis.setTimeout;
+    const setTimeoutSpy = vi
+      .spyOn(globalThis, "setTimeout")
+      .mockImplementation((callback, delay, ...args) => {
+        if (delay === 0) {
+          replayLog.push("yield");
+        }
+        return originalSetTimeout(callback, delay, ...args);
+      });
+
+    try {
+      const projection = await loadSceneProjectionState({
+        store: createCheckpointStore(),
+        mainState: createMainProjectionState(initialState),
+        listCommittedAfter,
+        createInitialState: () => structuredClone(initialProjectData),
+        reduceEventToState,
+        reduceEventsToState: reduceEventsToStateSpy,
+        sceneId,
+      });
+
+      expect(
+        projection.scenes.items[sceneId].sections.items[sectionId].lines.tree,
+      ).toHaveLength(lineCount);
+      // The first page holds project.create, which seeds the replay.
+      expect(replayLog).toEqual([
+        99,
+        100,
+        "yield",
+        100,
+        100,
+        "yield",
+        100,
+        100,
+        "yield",
+        1,
+      ]);
+    } finally {
+      setTimeoutSpy.mockRestore();
+    }
+  });
+
   it("skips obsolete section and line lifecycle events while preserving newer scene lines", async () => {
     const initialState = createRepositoryState();
     const deletedSectionId = "section-deleted";
