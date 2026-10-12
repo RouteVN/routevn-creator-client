@@ -121,6 +121,50 @@ const createImageReplayReducer = () => {
   };
 };
 
+const createFileCreateEvent = ({ id, fileId }) => ({
+  id,
+  type: "file.create",
+  partition: "m",
+  payload: {
+    fileId,
+    data: {
+      mimeType: "image/png",
+      size: 123,
+      sha256: `hash-${fileId}`,
+    },
+  },
+});
+
+const createInvalidLineCreateEvent = ({ id }) => ({
+  id,
+  type: "line.create",
+  partition: "m",
+  payload: {
+    sectionId: "missing-section",
+  },
+});
+
+// Replays file creates and fails every line create.
+const createFileReplayReducerWithInvalidLines = () => {
+  const reduceFileEventToState = createFileReplayReducer();
+  return ({ repositoryState, event }) => {
+    if (event?.type === "line.create") {
+      const error = new Error(
+        "payload.sectionId must reference an existing section",
+      );
+      error.code = "validation_failed";
+      throw error;
+    }
+
+    return reduceFileEventToState({ repositoryState, event });
+  };
+};
+
+const toEventIds = (spy) => spy.mock.calls.map(([{ event }]) => event.id);
+
+const toBatchEventIds = (spy) =>
+  spy.mock.calls.map(([{ events }]) => events.map((event) => event.id));
+
 const createSceneRepositoryState = ({
   sceneId = "scene-1",
   sectionId = "section-1",
@@ -646,6 +690,110 @@ describe("projectRepositoryRuntime replay diagnostics", () => {
     expect(state.images.tree).toEqual([{ id: "image-1" }]);
   });
 
+  it("replays only a duplicate file.create on its own during batched historical replay", () => {
+    const reduceFileEventToState = createFileReplayReducer();
+    const reduceEventToState = vi.fn(reduceFileEventToState);
+    const reduceEventsToState = vi.fn(
+      createBatchedReducerWithCommandIndex(reduceFileEventToState),
+    );
+    const events = [
+      createFileCreateEvent({ id: "event-1", fileId: "file-1" }),
+      createFileCreateEvent({ id: "event-2", fileId: "file-2" }),
+      createFileCreateEvent({ id: "event-3", fileId: "file-1" }),
+      createFileCreateEvent({ id: "event-4", fileId: "file-3" }),
+      createFileCreateEvent({ id: "event-5", fileId: "file-4" }),
+    ];
+
+    const state = replayEventsToRepositoryState({
+      events,
+      untilEventIndex: events.length,
+      createInitialState: () => structuredClone(initialProjectData),
+      reduceEventToState,
+      reduceEventsToState,
+    });
+
+    expect(state.files.tree).toEqual([
+      { id: "file-1" },
+      { id: "file-2" },
+      { id: "file-3" },
+      { id: "file-4" },
+    ]);
+    expect(toEventIds(reduceEventToState)).toEqual(["event-3"]);
+    expect(toBatchEventIds(reduceEventsToState)).toEqual([
+      ["event-1", "event-2", "event-3", "event-4", "event-5"],
+      ["event-1", "event-2"],
+      ["event-4", "event-5"],
+    ]);
+  });
+
+  it("reports a failure after a skipped duplicate file.create by its history index", () => {
+    const reduceFileEventToState = createFileReplayReducerWithInvalidLines();
+    const reduceEventToState = vi.fn(reduceFileEventToState);
+    const events = [
+      createFileCreateEvent({ id: "event-1", fileId: "file-1" }),
+      createFileCreateEvent({ id: "event-2", fileId: "file-1" }),
+      createFileCreateEvent({ id: "event-3", fileId: "file-2" }),
+      createInvalidLineCreateEvent({ id: "event-4" }),
+      createFileCreateEvent({ id: "event-5", fileId: "file-3" }),
+    ];
+
+    let error;
+    try {
+      replayEventsToRepositoryState({
+        events,
+        untilEventIndex: events.length,
+        createInitialState: () => structuredClone(initialProjectData),
+        reduceEventToState,
+        reduceEventsToState: createBatchedReducerWithCommandIndex(
+          reduceFileEventToState,
+        ),
+      });
+    } catch (caughtError) {
+      error = caughtError;
+    }
+
+    expect(error?.name).toBe("ProjectRepositoryReplayError");
+    expect(error?.message).toBe(
+      "payload.sectionId must reference an existing section",
+    );
+    expect(error?.details?.replay).toMatchObject({
+      targetEventCount: 5,
+      failedEventArrayIndex: 3,
+      failedEventOffset: 4,
+      failedEvent: {
+        arrayIndex: 3,
+        id: "event-4",
+        type: "line.create",
+      },
+    });
+    expect(toEventIds(reduceEventToState)).toEqual(["event-2", "event-4"]);
+  });
+
+  it("replays one event at a time when batched replay omits the index of a duplicate file.create", () => {
+    const reduceFileEventToState = createFileReplayReducer();
+    const reduceEventToState = vi.fn(reduceFileEventToState);
+    const events = [
+      createFileCreateEvent({ id: "event-1", fileId: "file-1" }),
+      createFileCreateEvent({ id: "event-2", fileId: "file-1" }),
+      createFileCreateEvent({ id: "event-3", fileId: "file-2" }),
+    ];
+
+    const state = replayEventsToRepositoryState({
+      events,
+      untilEventIndex: events.length,
+      createInitialState: () => structuredClone(initialProjectData),
+      reduceEventToState,
+      reduceEventsToState: createBatchedReducer(reduceFileEventToState),
+    });
+
+    expect(state.files.tree).toEqual([{ id: "file-1" }, { id: "file-2" }]);
+    expect(toEventIds(reduceEventToState)).toEqual([
+      "event-1",
+      "event-2",
+      "event-3",
+    ]);
+  });
+
   it("reports initial main hydration progress while replaying checkpoint gaps", async () => {
     const events = Array.from({ length: 300 }, (_, index) => ({
       id: `event-${index + 1}`,
@@ -997,6 +1145,96 @@ describe("projectRepositoryRuntime replay diagnostics", () => {
 
     expect(loadEvents).not.toHaveBeenCalled();
     expect(listCommittedAfter).toHaveBeenCalled();
+  });
+
+  it("replays only a duplicate file.create on its own in a later committed batch", async () => {
+    // The first batch of committed history holds only events that do not
+    // change files.
+    const fillerEvents = Array.from({ length: 256 }, (_, index) => ({
+      id: `filler-${index + 1}`,
+      type: "story.update",
+      partition: "m",
+      payload: {},
+    }));
+    const committedEvents = [
+      ...fillerEvents,
+      createFileCreateEvent({ id: "event-1", fileId: "file-1" }),
+      createFileCreateEvent({ id: "event-2", fileId: "file-1" }),
+      createFileCreateEvent({ id: "event-3", fileId: "file-2" }),
+      createInvalidLineCreateEvent({ id: "event-4" }),
+    ].map((event, index) => ({
+      ...event,
+      committedId: index + 1,
+    }));
+    const listCommittedAfter = vi.fn(
+      async ({ sinceCommittedId = 0, limit } = {}) => {
+        const startIndex = Math.max(0, Number(sinceCommittedId) || 0);
+        return committedEvents
+          .slice(startIndex, startIndex + limit)
+          .map((event) => structuredClone(event));
+      },
+    );
+    const loadEvents = vi.fn(async () => committedEvents);
+    const reduceFileEventToState = createFileReplayReducerWithInvalidLines();
+    const reduceEventToState = vi.fn(reduceFileEventToState);
+    const historyStats = {
+      committedCount: committedEvents.length,
+      latestCommittedId: committedEvents.length,
+      draftCount: 0,
+      latestDraftClock: 0,
+    };
+
+    const repository = await createProjectRepositoryRuntime({
+      projectId: "project-1",
+      store: {
+        listCommittedAfter,
+        loadMaterializedViewCheckpoint: async () => ({
+          viewName: "project_repository_main_state",
+          viewVersion: "1",
+          partition: "m",
+          lastCommittedId: committedEvents.length,
+          value: createMainProjectionState(structuredClone(initialProjectData)),
+          meta: {
+            historyStats,
+          },
+        }),
+        saveMaterializedViewCheckpoint: async () => {},
+        deleteMaterializedViewCheckpoint: async () => {},
+      },
+      initialRevision: committedEvents.length,
+      historyStats,
+      loadEvents,
+      createInitialState: () => structuredClone(initialProjectData),
+      reduceEventToState,
+      reduceEventsToState: createBatchedReducerWithCommandIndex(
+        reduceFileEventToState,
+      ),
+    });
+    reduceEventToState.mockClear();
+
+    const state = await repository.loadState(committedEvents.length - 1);
+    expect(state.files.tree).toEqual([{ id: "file-1" }, { id: "file-2" }]);
+    expect(toEventIds(reduceEventToState)).toEqual(["event-2"]);
+
+    reduceEventToState.mockClear();
+    let error;
+    try {
+      await repository.loadState(committedEvents.length);
+    } catch (caughtError) {
+      error = caughtError;
+    }
+
+    expect(error?.name).toBe("ProjectRepositoryReplayError");
+    expect(error?.details?.replay).toMatchObject({
+      targetEventCount: committedEvents.length,
+      failedEventArrayIndex: committedEvents.length - 1,
+      failedEvent: {
+        arrayIndex: committedEvents.length - 1,
+        id: "event-4",
+      },
+    });
+    expect(toEventIds(reduceEventToState)).toEqual(["event-2", "event-4"]);
+    expect(loadEvents).not.toHaveBeenCalled();
   });
 
   it("loads full history before appending new events on a checkpoint-backed repository", async () => {
