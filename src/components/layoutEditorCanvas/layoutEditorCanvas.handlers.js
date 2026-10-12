@@ -916,6 +916,10 @@ export const applyCanvasItemKeyboardChange = ({
         ? "width"
         : "height"
       : intent.axis;
+  // Folders have no position or size to nudge.
+  if (!Number.isFinite(item[fieldName])) {
+    return item;
+  }
   const change = {
     [fieldName]: Math.round(item[fieldName] + intent.delta),
   };

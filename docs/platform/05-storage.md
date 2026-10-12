@@ -167,12 +167,18 @@ that replay is left out of the loaded history and kept in `local_drafts`.
 Errors without a command index are traced to their draft by a binary search,
 so valid drafts around it still apply.
 
-Desktop, Android and iOS store drafts as JSON, which drops `undefined` fields;
-web keeps them in IndexedDB as they are. A draft whose payload JSON would
-change can therefore load differently, or fail, after it is stored. On these
-platforms, the command API reports such a payload when the change is saved
-(`projectCommand.nonJsonPayload`, see `docs/desktop-error-reporting.md`) so
-that its source can be fixed.
+Desktop, Android and iOS store drafts as JSON, which drops `undefined` fields
+and turns `NaN` and `Infinity` into `null`. So that a change loads back as it
+was made, the command API turns every payload into its JSON form when it
+creates the command, on every platform, before the change is checked and
+applied. An editor therefore cannot clear a field by setting it to
+`undefined`: the field is left as it was, and an update left with no fields is
+rejected right away. Optional fields are cleared with `null` where the data
+model accepts it, such as a text style's `strokeColorId` or a spritesheet's
+`width` and `height`. On desktop, Android and iOS, an update that held such a
+value is reported (`projectCommand.nonJsonPayload`, see
+`docs/desktop-error-reporting.md`) so that the editor that made it can be
+fixed.
 
 When a load leaves drafts out, the repository deletes every scene projection
 checkpoint (they count events by position, which a left-out draft shifts),

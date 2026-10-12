@@ -204,6 +204,8 @@ export const selectKeepsOpenedFontWeight = (
   state.openedFont.fontId === fontId &&
   state.openedFont.fontWeight === String(fontWeight);
 
+export const selectSavedValues = ({ state }) => state.savedValues;
+
 export const selectHasUnsavedValues = ({ state }) =>
   Boolean(state.textStyleId) &&
   !areEditHistoryValuesEqual(state.values, state.savedValues);

@@ -208,8 +208,9 @@ const updateControlKeyboard = async ({
     nextKeyboard[key] = interaction;
   }
 
+  // An empty map removes the last binding; undefined would not be stored.
   const data = {};
-  data[field] = Object.keys(nextKeyboard).length > 0 ? nextKeyboard : undefined;
+  data[field] = nextKeyboard;
 
   const updateAttempt = await runResourcePageMutation({
     appService,

@@ -977,6 +977,13 @@ export const handleDialogFormAction = async (deps, payload) => {
     return;
   }
 
+  // An empty size field removes a default frame size the item has.
+  for (const key of ["width", "height"]) {
+    if (spritesheetData[key] === undefined && existingItem[key] !== undefined) {
+      spritesheetData[key] = null;
+    }
+  }
+
   const updateAttempt = await runResourcePageMutation({
     appService,
     fallbackMessage:

@@ -3,7 +3,9 @@ import { EN_I18N } from "../support/i18n.js";
 import * as characterSpritesStore from "../../src/pages/characterSprites/characterSprites.store.js";
 import {
   handleEditDialogImageClick,
+  handleEditFormAction,
   handleFileExplorerKeyboardScopeKeyDown,
+  handleSpritesheetDialogFormAction,
   handleUploadClick,
   handlePreviewCanvasModeClick,
   handlePreviewFitModeClick,
@@ -571,4 +573,113 @@ it("leaves a character sprite replacement untouched when oversized", async () =>
   expect(deps.projectService.uploadFiles).not.toHaveBeenCalled();
   expect(deps.store.setEditUpload).not.toHaveBeenCalled();
   expect(deps.appService.showAlert).toHaveBeenCalledOnce();
+});
+
+describe("characterSprites edit dialogs", () => {
+  it.each([
+    [
+      "removes a saved spritesheet frame size",
+      { width: 128, height: 128 },
+      null,
+    ],
+    ["sends no null size for a spritesheet without one", {}, undefined],
+  ])("%s when the size fields are empty", async (_, savedSize, expected) => {
+    const deps = createUploadDeps();
+    deps.projectService.updateCharacterSpriteItem = vi.fn(async () => ({}));
+    Object.assign(deps.store, {
+      selectSpritesheetDialogMode: vi.fn(() => "edit"),
+      selectSpritesheetDialogItemId: vi.fn(() => "spritesheet-1"),
+      selectSpritesheetDialogParentId: vi.fn(() => undefined),
+      selectSpritesheetDialogImportData: vi.fn(() => undefined),
+      selectSpritesheetDialogDraftAnimations: vi.fn(() => ({})),
+      selectSpritesheetDialogSourceFiles: vi.fn(() => undefined),
+      selectSpritesheetDialogPreviewUrl: vi.fn(() => undefined),
+      selectSpriteItemById: vi.fn(() => ({
+        id: "spritesheet-1",
+        type: "spritesheet",
+        name: "Walk Cycle",
+        fileId: "sheet-file",
+        ...savedSize,
+        sheetWidth: 512,
+        sheetHeight: 128,
+        frameCount: 4,
+        jsonData: {},
+        animations: {},
+      })),
+      closeSpritesheetDialog: vi.fn(),
+    });
+
+    await handleSpritesheetDialogFormAction(deps, {
+      _event: {
+        detail: {
+          actionId: "submit",
+          values: {
+            name: "Walk Cycle",
+            description: "",
+            tagIds: [],
+            width: "",
+            height: "",
+          },
+        },
+      },
+    });
+
+    expect(deps.appService.showAlert).not.toHaveBeenCalled();
+    expect(deps.projectService.updateCharacterSpriteItem).toHaveBeenCalledTimes(
+      1,
+    );
+    const [{ spriteId, data }] =
+      deps.projectService.updateCharacterSpriteItem.mock.calls[0];
+    expect(spriteId).toBe("spritesheet-1");
+    expect(data.width).toBe(expected);
+    expect(data.height).toBe(expected);
+    expect(data.fileId).toBe("sheet-file");
+  });
+
+  it("keeps the typed image sprite name when the file is replaced", async () => {
+    const deps = createUploadDeps();
+    deps.projectService.updateCharacterSpriteItem = vi.fn(async () => ({}));
+    Object.assign(deps.store, {
+      selectEditItemId: vi.fn(() => "sprite-1"),
+      selectEditUploadResult: vi.fn(() => ({
+        fileId: "file-2",
+        thumbnailFileId: "thumbnail-2",
+        displayName: "replacement",
+        dimensions: {
+          width: 640,
+          height: 480,
+        },
+        fileRecords: [],
+      })),
+      closeEditDialog: vi.fn(),
+    });
+
+    await handleEditFormAction(deps, {
+      _event: {
+        detail: {
+          actionId: "submit",
+          values: {
+            name: "Hero Smile",
+            description: "Smiling pose",
+            tagIds: ["tag-1"],
+          },
+        },
+      },
+    });
+
+    expect(deps.projectService.updateCharacterSpriteItem).toHaveBeenCalledWith({
+      characterId: "character-1",
+      spriteId: "sprite-1",
+      fileRecords: [],
+      data: {
+        fileId: "file-2",
+        thumbnailFileId: "thumbnail-2",
+        name: "Hero Smile",
+        width: 640,
+        height: 480,
+        description: "Smiling pose",
+        tagIds: ["tag-1"],
+      },
+    });
+  });
 });
