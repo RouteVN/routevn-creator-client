@@ -71,10 +71,11 @@ with the same per-session limits. They are sent from the page's origin,
 iOS, so the collector must accept cross-origin requests from them.
 
 The Android page's Content-Security-Policy (`static/android/index.html`) allows
-only `https:` connections, apart from the dev server. A local
-`http://127.0.0.1` collector therefore receives native crashes but not the
-page's errors, unless its address is added to `connect-src` for that test
-build.
+`https:` connections and only two local addresses: the dev server
+(`ws://127.0.0.1:3001`) and the local RouteVN API on port 8787. A local
+`http://127.0.0.1` collector on another port therefore receives native crashes
+but not the page's errors, unless its address is added to `connect-src` for
+that test build.
 
 ### WebView renderer loss
 
