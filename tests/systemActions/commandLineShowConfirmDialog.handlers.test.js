@@ -7,7 +7,7 @@ import {
   handleConfirmActionsDelete,
 } from "../../src/components/commandLineShowConfirmDialog/commandLineShowConfirmDialog.handlers.js";
 
-// The real store, with its state bound, as the component's handlers see it.
+// The real store module's selectors and actions, bound to a plain state.
 const bindStore = (state) =>
   Object.fromEntries(
     Object.entries(storeModule)

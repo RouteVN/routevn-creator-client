@@ -88,7 +88,6 @@ Notes:
 
 - `bun run test:unit` runs every Vitest test under `tests/`. CI runs it on
   pull requests, so it must stay green.
-
 - `bun run test:puty` runs the YAML-based Puty storage suite in `tests/puty/`.
 - Use neutral fixture names such as `Project One` in tests. Do not use real
   project or product names.
