@@ -513,7 +513,11 @@ const normalizePanelValue = (name, value) => {
 // does only once the value is committed, and Enter submits before that.
 const clampPopoverValue = (deps, { name, value } = {}) => {
   const { props, store } = deps;
-  if (!isSliderPopoverField(name) || !Number.isFinite(Number(value))) {
+  if (
+    !isSliderPopoverField(name) ||
+    isSliderValueUnset(value) ||
+    !Number.isFinite(Number(value))
+  ) {
     return value;
   }
 
@@ -2334,15 +2338,18 @@ export const handlePopoverFormChange = async (deps, payload) => {
   const { props, store, render } = deps;
   const { _event } = payload;
   const { name } = store.selectPopoverForm();
+  // A committed value shows within the field's bounds, as it will be saved.
+  const values = { ..._event.detail.values };
+  values.value = clampPopoverValue(deps, { name, value: values.value });
 
   store.updatePopoverFormContext({
-    values: _event.detail.values,
+    values,
     name,
     projectResolution: props.projectResolution,
     copy: selectCopy(deps),
   });
   render();
-  emitPanelPreview(deps, { name, value: _event.detail.values.value });
+  emitPanelPreview(deps, { name, value: values.value });
 };
 
 // Presets open a menu of the field's presets, each with its value beside it

@@ -537,7 +537,7 @@ const buildPopoverForm = ({
       type: "slider-with-input",
       // Small, as the buttons in the row below are.
       s: "sm",
-      min: sliderRange.min,
+      min: sliderRange.inputMin ?? sliderRange.min,
       max: sliderRange.max,
       sliderMin: sliderRange.sliderMin,
       sliderMax: sliderRange.sliderMax,

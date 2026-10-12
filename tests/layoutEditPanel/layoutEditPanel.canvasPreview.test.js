@@ -501,6 +501,14 @@ describe("layout edit panel canvas preview", () => {
       linkedValues: { height: 1 },
     });
 
+    // The number input stops only at 1, so a value it commits below the
+    // ratio's least size shows and previews at that least size.
+    setWideSprite(400);
+    openWidthPopover();
+    handlePopoverFormChange(deps, formEvent({ value: 2 }));
+    expect(state.popover.defaultValues.value).toBe(4);
+    expect(events.at(-1).detail).toMatchObject({ name: "width", value: 4 });
+
     // An emptied number previews nothing new and submits the last value.
     setWideSprite(400);
     openWidthPopover();

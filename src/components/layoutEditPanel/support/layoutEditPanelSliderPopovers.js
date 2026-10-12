@@ -131,12 +131,19 @@ export const getSliderPopoverRange = ({
   const bound = Math.round(dimension * PROJECT_BOUND_MULTIPLE);
   if (isSizeField(name)) {
     const min = getMinLayoutEditorItemSize({ name, aspectRatioLock });
-    return getSliderRange({
+    const sizeRange = getSliderRange({
       field,
       range: { min, max: dimension },
       min,
       max: bound,
     });
+    // The number input stops only at 1. The form writes a typed draft back
+    // into it when the panel redraws, as the canvas preview makes it do, and
+    // the input would raise a draft below its least, such as the 1 of 150,
+    // while it is still typed. The ratio's least size applies when the value
+    // previews, commits, and saves.
+    sizeRange.inputMin = field.min;
+    return sizeRange;
   }
   return getSliderRange({
     field,
