@@ -576,7 +576,14 @@ it("leaves a character sprite replacement untouched when oversized", async () =>
 });
 
 describe("characterSprites edit dialogs", () => {
-  it("removes the spritesheet default frame size when the size fields are empty", async () => {
+  it.each([
+    [
+      "removes a saved spritesheet frame size",
+      { width: 128, height: 128 },
+      null,
+    ],
+    ["sends no null size for a spritesheet without one", {}, undefined],
+  ])("%s when the size fields are empty", async (_, savedSize, expected) => {
     const deps = createUploadDeps();
     deps.projectService.updateCharacterSpriteItem = vi.fn(async () => ({}));
     Object.assign(deps.store, {
@@ -592,8 +599,7 @@ describe("characterSprites edit dialogs", () => {
         type: "spritesheet",
         name: "Walk Cycle",
         fileId: "sheet-file",
-        width: 128,
-        height: 128,
+        ...savedSize,
         sheetWidth: 512,
         sheetHeight: 128,
         frameCount: 4,
@@ -625,8 +631,8 @@ describe("characterSprites edit dialogs", () => {
     const [{ spriteId, data }] =
       deps.projectService.updateCharacterSpriteItem.mock.calls[0];
     expect(spriteId).toBe("spritesheet-1");
-    expect(data.width).toBeNull();
-    expect(data.height).toBeNull();
+    expect(data.width).toBe(expected);
+    expect(data.height).toBe(expected);
     expect(data.fileId).toBe("sheet-file");
   });
 

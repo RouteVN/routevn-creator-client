@@ -167,6 +167,34 @@ describe("commandApi non-JSON payload report", () => {
     expect(reportError).not.toHaveBeenCalled();
   });
 
+  it("reports a create holding a value JSON changes", async () => {
+    const { reportError, shared } = await setup();
+    const api = createLayoutCommandApi(shared);
+
+    await api.createLayoutItem({
+      layoutId: "layout-2",
+      name: "Layout Two",
+      layoutType: "general",
+      data: { description: undefined, layoutSchemaVersion: Number.NaN },
+    });
+
+    expect(reportError).toHaveBeenCalledOnce();
+    expect(reportError.mock.calls[0][0].message).toBe(
+      "layout.create: non-JSON value in layoutSchemaVersion",
+    );
+  });
+
+  it("rejects a payload JSON cannot hold instead of throwing", async () => {
+    const { session, updateElement } = await setup({ errorTracker: null });
+    const cyclic = { name: "Heading" };
+    cyclic.self = cyclic;
+
+    const result = await updateElement(cyclic);
+
+    expect(result).toMatchObject({ valid: false });
+    expect(session.submitCommand).not.toHaveBeenCalled();
+  });
+
   it("checks nothing without an error tracker", async () => {
     const { session, updateElement } = await setup({ errorTracker: null });
 
@@ -290,6 +318,18 @@ describe("collectNonJsonFields", () => {
     const shared = { value: "same" };
 
     expect(collect({ first: shared, second: [shared] })).toEqual([]);
+  });
+
+  it("skips object fields set to undefined when asked, but not array items", () => {
+    const fields = new Set();
+    collectNonJsonFields(
+      { gone: undefined, ratio: Number.NaN, list: [undefined] },
+      "payload",
+      fields,
+      { ignoreUndefinedFields: true },
+    );
+
+    expect([...fields].sort()).toEqual(["list", "ratio"]);
   });
 
   it("names a field that leads back into its own value", () => {

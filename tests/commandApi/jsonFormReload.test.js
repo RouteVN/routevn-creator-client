@@ -1,6 +1,7 @@
 import { describe, expect, it, vi } from "vitest";
 import { createControlCommandApi } from "../../src/deps/services/shared/commandApi/controls.js";
 import { createLayoutCommandApi } from "../../src/deps/services/shared/commandApi/layouts.js";
+import { createResourceCommandApi } from "../../src/deps/services/shared/commandApi/resources/index.js";
 import { createCommandApiShared } from "../../src/deps/services/shared/commandApi/shared.js";
 import {
   createProjectRepository,
@@ -62,6 +63,13 @@ const setup = async () => {
 
   return { repository, reload, shared };
 };
+
+const fileRecord = (id, mimeType) => ({
+  id,
+  mimeType,
+  size: 1,
+  sha256: "a".repeat(64),
+});
 
 describe("a saved change loads back as it was made", () => {
   it("keeps a field set to undefined as it was, in the open project and after a load", async () => {
@@ -131,6 +139,83 @@ describe("a saved change loads back as it was made", () => {
     expect(control.keyboard ?? {}).toEqual({});
     expect((await reload()).getState().controls.items["control-1"]).toEqual(
       control,
+    );
+  });
+  it("keeps a cleared outline color and frame size cleared after a load", async () => {
+    const { repository, reload, shared } = await setup();
+    const resources = createResourceCommandApi(shared);
+    const steps = [
+      () =>
+        resources.createColor({
+          colorId: "color-1",
+          data: { type: "color", name: "White", hex: "#ffffff" },
+        }),
+      () =>
+        resources.createFont({
+          fontId: "font-1",
+          fileRecords: [fileRecord("font-file", "font/woff2")],
+          data: {
+            type: "font",
+            name: "Font One",
+            fileId: "font-file",
+            fontFamily: "Font One",
+          },
+        }),
+      () =>
+        resources.createTextStyle({
+          textStyleId: "style-1",
+          data: {
+            type: "textStyle",
+            name: "Style One",
+            fontId: "font-1",
+            colorId: "color-1",
+            fontSize: 24,
+            lineHeight: 1.4,
+            fontWeight: "400",
+            strokeColorId: "color-1",
+            strokeWidth: 2,
+          },
+        }),
+      () =>
+        resources.createSpritesheet({
+          spritesheetId: "sheet-1",
+          fileRecords: [fileRecord("sheet-file", "image/png")],
+          data: {
+            type: "spritesheet",
+            name: "Sheet One",
+            fileId: "sheet-file",
+            width: 64,
+            height: 64,
+            jsonData: { meta: { image: "sheet.png" } },
+            animations: { idle: { frames: [0] } },
+          },
+        }),
+      () =>
+        resources.updateTextStyle({
+          textStyleId: "style-1",
+          data: { strokeColorId: null, strokeWidth: 0 },
+        }),
+      () =>
+        resources.updateSpritesheet({
+          spritesheetId: "sheet-1",
+          data: { width: null, height: null },
+        }),
+    ];
+    for (const step of steps) {
+      const result = await step();
+      expect(result?.error?.message).toBeUndefined();
+    }
+
+    const { textStyles, spritesheets } = repository.getState();
+    expect(textStyles.items["style-1"]).not.toHaveProperty("strokeColorId");
+    expect(spritesheets.items["sheet-1"]).not.toHaveProperty("width");
+    expect(spritesheets.items["sheet-1"]).not.toHaveProperty("height");
+    const reloaded = (await reload()).getState();
+    expect(reloaded.textStyles.items["style-1"]).toEqual(
+      textStyles.items["style-1"],
+    );
+    expect(reloaded.spritesheets.items["sheet-1"]).toEqual(
+      spritesheets.items["sheet-1"],
     );
   });
 });

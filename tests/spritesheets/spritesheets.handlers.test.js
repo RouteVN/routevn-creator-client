@@ -116,6 +116,29 @@ describe("spritesheets dialog form action", () => {
     expect(data.fileId).toBe("sheet-file");
   });
 
+  it("sends no null size when the edited spritesheet has no frame size", async () => {
+    const unsizedSpritesheet = structuredClone(existingSpritesheet);
+    delete unsizedSpritesheet.width;
+    delete unsizedSpritesheet.height;
+    const deps = createDialogDeps({
+      dialogMode: "edit",
+      dialogItemId: "spritesheet-1",
+      existingItem: unsizedSpritesheet,
+    });
+
+    await submitDialog(deps, {
+      name: "Walk Cycle",
+      description: "",
+      tagIds: [],
+      width: "",
+      height: "",
+    });
+
+    const [{ data }] = deps.projectService.updateSpritesheet.mock.calls[0];
+    expect(data.width).toBeUndefined();
+    expect(data.height).toBeUndefined();
+  });
+
   it("does not send null sizes when creating with empty size fields", async () => {
     const deps = createDialogDeps({
       dialogMode: "create",

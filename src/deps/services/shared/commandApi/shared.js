@@ -35,8 +35,18 @@ const flushRepositoryMainCheckpointBestEffort = async ({
 // and turns NaN and Infinity into null. A command's payload is turned into its
 // JSON form when the command is created, so the change checked and applied in
 // the open project is the one that loads again on every platform.
-const toStoredPayload = (payload) =>
-  payload === undefined ? undefined : JSON.parse(JSON.stringify(payload));
+// A payload JSON cannot hold, such as one with a cycle, is left as it is for
+// validation to reject.
+const toStoredPayload = (payload) => {
+  if (payload === undefined) {
+    return undefined;
+  }
+  try {
+    return JSON.parse(JSON.stringify(payload));
+  } catch {
+    return payload;
+  }
+};
 
 // An update that merges such a field meant something its JSON form does not,
 // such as clearing the field. It is reported so that the editor that made it
@@ -45,12 +55,13 @@ const toStoredPayload = (payload) =>
 const MAX_NON_JSON_PAYLOAD_REPORTS = 2;
 
 // Adds the names of the fields of `value` that JSON drops or changes.
-// Array items count as their array's field.
+// Array items count as their array's field. With `ignoreUndefinedFields`,
+// object fields set to undefined are skipped.
 export const collectNonJsonFields = (
   value,
   field,
   fields,
-  seen = new WeakSet(),
+  { ignoreUndefinedFields = false, seen = new WeakSet() } = {},
 ) => {
   if (
     value === null ||
@@ -76,11 +87,15 @@ export const collectNonJsonFields = (
     return;
   }
   seen.add(value);
+  const options = { ignoreUndefinedFields, seen };
   if (isArray) {
-    value.forEach((item) => collectNonJsonFields(item, field, fields, seen));
+    value.forEach((item) => collectNonJsonFields(item, field, fields, options));
   } else {
     for (const [key, item] of Object.entries(value)) {
-      collectNonJsonFields(item, key, fields, seen);
+      if (ignoreUndefinedFields && item === undefined) {
+        continue;
+      }
+      collectNonJsonFields(item, key, fields, options);
     }
   }
   seen.delete(value);
@@ -159,22 +174,23 @@ export const createCommandApiShared = ({
 
   const reportedNonJsonPayloads = new Set();
 
-  // Runs before the payload is turned into its JSON form, while the editor
-  // that made it is still on the stack. Reporting never stops the change.
+  // Runs before the payload is turned into its JSON form, and before the
+  // change is checked or saved. Reporting never stops the change.
   const reportNonJsonPayload = ({ type, payload }) => {
     if (
       !errorTracker ||
-      reportedNonJsonPayloads.size >= MAX_NON_JSON_PAYLOAD_REPORTS ||
-      // A create or a full replace means the same without such fields.
-      type.endsWith(".create") ||
-      payload?.replace === true
+      reportedNonJsonPayloads.size >= MAX_NON_JSON_PAYLOAD_REPORTS
     ) {
       return;
     }
 
     try {
       const fields = new Set();
-      collectNonJsonFields(payload, "payload", fields);
+      collectNonJsonFields(payload, "payload", fields, {
+        // A create or a full replace means the same without such fields.
+        ignoreUndefinedFields:
+          type.endsWith(".create") || payload?.replace === true,
+      });
       if (fields.size === 0) {
         return;
       }
