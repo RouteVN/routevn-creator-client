@@ -100,6 +100,7 @@ const projectService = await createWebProjectServiceWithCollab({
   db: appDb,
   collabConfig,
   creatorVersion,
+  reportError: errorReporter.capture,
 });
 
 // Create app service (web version)

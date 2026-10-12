@@ -31,9 +31,25 @@ const flushRepositoryMainCheckpointBestEffort = async ({
   }
 };
 
+// Whether storing `value` as JSON changes it: JSON drops undefined fields and
+// turns NaN and Infinity into null.
+const hasValueChangedByJson = (value) => {
+  if (value === undefined) {
+    return true;
+  }
+  if (typeof value === "number") {
+    return !Number.isFinite(value);
+  }
+  if (value && typeof value === "object") {
+    return Object.values(value).some(hasValueChangedByJson);
+  }
+  return false;
+};
+
 export const createCommandApiShared = ({
   idGenerator,
   now = () => 0,
+  reportError = () => {},
   getCurrentProjectId,
   getCurrentRepository,
   getCachedRepository,
@@ -166,6 +182,44 @@ export const createCommandApiShared = ({
     });
   };
 
+  // Changes are stored as JSON and validated again when the project's history
+  // loads, where a change that no longer passes is left out of the project.
+  // A change that passes now but whose stored form would not is reported when
+  // it is made, so that its source can be fixed. It is still saved as before,
+  // and a failure of this check never stops the save.
+  const reportCommandsInvalidOnceStored = ({ context, commands }) => {
+    try {
+      const changedCommands = commands.filter((command) =>
+        hasValueChangedByJson(command.payload),
+      );
+      if (changedCommands.length === 0) {
+        return;
+      }
+
+      const storedResult = validateCommandsAgainstContext({
+        context,
+        commands: JSON.parse(JSON.stringify(commands)),
+      });
+      if (storedResult?.valid !== false) {
+        return;
+      }
+
+      const error = new Error(
+        `${changedCommands.map(({ type }) => type).join(", ")}: ${
+          storedResult.error?.message ?? "Invalid stored command"
+        }`,
+      );
+      error.name = "CommandInvalidOnceStoredError";
+      error.code = storedResult.error?.code;
+      reportError(error, {
+        operation: "projectCommand.validateStoredForm",
+        code: error.code,
+      });
+    } catch (error) {
+      console.warn("Failed to check the stored form of a command", error);
+    }
+  };
+
   const advanceContextStateWithCommands = ({ context, commands = [] }) => {
     const normalizedCommands = Array.isArray(commands)
       ? commands.filter(Boolean)
@@ -227,6 +281,7 @@ export const createCommandApiShared = ({
     if (validationResult?.valid === false) {
       return validationResult;
     }
+    reportCommandsInvalidOnceStored({ context, commands: [command] });
 
     const submitResult = await context.session.submitCommand(command);
     if (submitResult?.valid === false) {
@@ -285,6 +340,7 @@ export const createCommandApiShared = ({
     if (validationResult?.valid === false) {
       return validationResult;
     }
+    reportCommandsInvalidOnceStored({ context, commands: normalizedCommands });
 
     const localApplyCommands = structuredClone(normalizedCommands);
     let submitted = false;

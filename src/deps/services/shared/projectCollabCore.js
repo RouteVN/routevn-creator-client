@@ -22,6 +22,7 @@ export const createProjectCollabCore = ({
   onEnsureLocalSession,
   onSessionCleared,
   onSessionTransportUpdated,
+  reportError,
 }) => {
   const collabSessionsByProject = new Map();
   const collabSessionModeByProject = new Map();
@@ -275,6 +276,7 @@ export const createProjectCollabCore = ({
     storyScenePartitionFor,
     scenePartitionFor: directScenePartitionFor,
     resourceTypePartitionFor,
+    reportError,
   });
 
   const deleteItemIfUnused = async ({

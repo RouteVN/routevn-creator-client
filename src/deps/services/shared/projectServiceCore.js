@@ -56,6 +56,7 @@ export const createProjectServiceCore = ({
   fileAdapter,
   collabAdapter,
   shouldApplyProjectContentPatchesOnEnsure = () => true,
+  reportError,
 }) => {
   const repositoryService = createProjectRepositoryService({
     router,
@@ -81,6 +82,7 @@ export const createProjectServiceCore = ({
     idGenerator,
     now,
     collabLog,
+    reportError,
     getCurrentRepository: repositoryService.getCurrentRepository,
     getCachedRepository: repositoryService.getCachedRepository,
     getRepositoryByProject: repositoryService.getRepositoryByProject,
