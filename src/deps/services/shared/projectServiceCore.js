@@ -687,8 +687,8 @@ export const createProjectServiceCore = ({
     // Like subscribeProjectState, for the local drafts left out when the
     // project's history loads: `listener` receives `{ projectId,
     // skippedDrafts, rebuildError }`, where each draft is `{ draftId, type,
-    // partition, sceneId, sectionId, error }`. `rebuildError` is set once, when
-    // a storage error kept cached state from being fully rebuilt without them.
+    // partition, sceneId, error }`. `rebuildError` is set once, when a storage
+    // error kept cached state from being fully rebuilt without them.
     subscribeSkippedDrafts(listener, options) {
       const projectId = options?.projectId ?? getCurrentProjectId();
       return repositoryService.subscribeSkippedDrafts(

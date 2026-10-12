@@ -278,10 +278,11 @@ const findLastSectionOfLine = (events, lineId) => {
   return undefined;
 };
 
-// Where a left-out draft belongs, read from the state and the events the
-// draft was replayed onto. Line commands that name no section are found by
-// their line. A section that is not in the project is not named.
-const resolveDraftLocation = ({ repositoryState, events, draft }) => {
+// The scene a left-out draft belongs to, read from the state and the events
+// the draft was replayed onto. Line commands that name no section are found by
+// their line. A draft whose section is not in the project falls back to the
+// scene of its partition.
+const resolveDraftSceneId = ({ repositoryState, events, draft }) => {
   const { payload } = draft;
   const lineId = toLocationId(payload.lineId ?? payload.lineIds?.[0]);
   const sectionId =
@@ -293,14 +294,11 @@ const resolveDraftLocation = ({ repositoryState, events, draft }) => {
   const sectionLocation = sectionId
     ? findSectionLocation(repositoryState, sectionId)
     : undefined;
-  const sceneId =
+  return (
     sectionLocation?.sceneId ??
-    resolveSceneIdForPartition(repositoryState, draft.partition);
-
-  return {
-    sceneId: sceneId ?? undefined,
-    sectionId: sectionLocation ? sectionId : undefined,
-  };
+    resolveSceneIdForPartition(repositoryState, draft.partition) ??
+    undefined
+  );
 };
 
 const logInvalidLocalDraftDuringProjectLoad = ({
@@ -414,7 +412,7 @@ export const loadClientStoreCursor = async (store) => {
 // Replays committed events, then local drafts. A draft that no longer applies
 // is left out of the returned events but kept in the store. `onSkippedDraft`
 // is called once for each left-out draft whose changes are missing from the
-// project, with `{ draftId, type, partition, sceneId, sectionId, error }`.
+// project, with `{ draftId, type, partition, sceneId, error }`.
 export const loadRepositoryEventsFromClientStore = async ({
   store,
   projectId,
@@ -550,17 +548,15 @@ export const loadRepositoryEventsFromClientStore = async ({
         error,
       });
       if (isMissingFromProject(failedDraft)) {
-        const { sceneId, sectionId } = resolveDraftLocation({
-          repositoryState,
-          events,
-          draft: failedDraft,
-        });
         onSkippedDraft({
           draftId: failedDraft.id,
           type: failedDraft.type,
           partition: failedDraft.partition,
-          sceneId,
-          sectionId,
+          sceneId: resolveDraftSceneId({
+            repositoryState,
+            events,
+            draft: failedDraft,
+          }),
           error: {
             code: error?.code ?? "validation_failed",
             message: error?.message ?? "Invalid local draft",

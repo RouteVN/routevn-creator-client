@@ -48,7 +48,6 @@ describe("projectServiceCore subscribeSkippedDrafts", () => {
         draftId: "draft-1",
         type: "scene.update",
         sceneId: "scene-1",
-        sectionId: undefined,
         error: { code: "validation_failed", message: "Invalid local draft" },
       },
     ];
