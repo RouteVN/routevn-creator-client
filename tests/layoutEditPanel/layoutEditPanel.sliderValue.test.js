@@ -6,6 +6,7 @@ import {
 } from "../../src/components/layoutEditPanel/layoutEditPanel.store.js";
 import { handleOptionSelected } from "../../src/components/layoutEditPanel/layoutEditPanel.handlers.js";
 import { toInspectorValues } from "../../src/components/layoutEditPanel/support/layoutEditPanelViewData.js";
+import { getRuntimeFieldItem } from "../../src/internal/runtimeFields.js";
 
 const createDeps = ({ values = {} } = {}) => {
   const state = createInitialState();
@@ -42,12 +43,14 @@ describe("layoutEditPanel slider values", () => {
   });
 
   it("updates slider initialValue when a runtime value is selected", () => {
+    // The slider's range is widened to take in the runtime value's default.
+    const musicVolumeDefault = getRuntimeFieldItem("musicVolume").default;
     const deps = createDeps({
       values: {
         type: "slider",
         initialValue: 0,
         min: 0,
-        max: 100,
+        max: musicVolumeDefault - 10,
       },
     });
 
@@ -66,14 +69,14 @@ describe("layoutEditPanel slider values", () => {
 
     expect(deps.state.values.sliderRuntimeValueId).toBe("musicVolume");
     expect(deps.state.values.min).toBe(0);
-    expect(deps.state.values.max).toBe(500);
+    expect(deps.state.values.max).toBe(musicVolumeDefault);
     expect(deps.state.values.initialValue).toBe("${runtime.musicVolume}");
     expect(
       deps.dispatchEvent.mock.calls.map(([event]) => event.detail),
     ).toEqual([
       expect.objectContaining({
         name: "max",
-        value: 500,
+        value: musicVolumeDefault,
       }),
       expect.objectContaining({
         name: "initialValue",

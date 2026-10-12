@@ -14,9 +14,18 @@ describe("images view", () => {
     expect(imagesView).toContain(
       "rtgl-view slot=content d=v w=f h=f overflow=hidden:",
     );
-    expect(imagesView).toContain(
-      "rtgl-form#editForm key=${isEditDialogOpen} :defaultValues=${editDefaultValues} :form=${editForm} sticky bottom-spacer=96 w=f h=f:",
-    );
+    // Check the sticky layout attributes on the form's line, so other
+    // attributes can be added to the form without breaking this test.
+    const editFormLine = imagesView
+      .split("\n")
+      .find((line) =>
+        line.includes(
+          "rtgl-form#editForm key=${isEditDialogOpen} :defaultValues=${editDefaultValues} :form=${editForm} ",
+        ),
+      );
+    expect(editFormLine).toContain(" sticky ");
+    expect(editFormLine).toContain("bottom-spacer=96");
+    expect(editFormLine).toContain("w=f h=f");
     expect(imagesView).toContain(
       "form-action:\n        handler: handleEditFormAction",
     );

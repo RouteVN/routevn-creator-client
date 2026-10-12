@@ -141,12 +141,13 @@ describe("resource type navigation", () => {
     expect(desktopViewData.items.map((item) => item.id)).toEqual([
       "about",
       "config",
+      "tutorials",
     ]);
     expect(
       mobileSidebarViewData.sections.flatMap((section) =>
         section.items.map((item) => item.id),
       ),
-    ).toEqual(["project", "about", "config"]);
+    ).toEqual(["project", "about", "config", "tutorials"]);
     expect(
       mobileSidebarViewData.sections
         .flatMap((section) => section.items)

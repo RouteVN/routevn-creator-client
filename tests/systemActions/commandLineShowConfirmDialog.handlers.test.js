@@ -1,9 +1,5 @@
 import { describe, expect, it, vi } from "vitest";
-import {
-  createInitialState,
-  setCancelActions,
-  setConfirmActions,
-} from "../../src/components/commandLineShowConfirmDialog/commandLineShowConfirmDialog.store.js";
+import * as storeModule from "../../src/components/commandLineShowConfirmDialog/commandLineShowConfirmDialog.store.js";
 import {
   handleCancelActionsChange,
   handleCancelActionsDelete,
@@ -11,16 +7,20 @@ import {
   handleConfirmActionsDelete,
 } from "../../src/components/commandLineShowConfirmDialog/commandLineShowConfirmDialog.handlers.js";
 
+// The real store, with its state bound, as the component's handlers see it.
+const bindStore = (state) =>
+  Object.fromEntries(
+    Object.entries(storeModule)
+      .filter(([, value]) => typeof value === "function")
+      .map(([name, fn]) => [name, (payload) => fn({ state }, payload)]),
+  );
+
 const createDeps = () => {
-  const state = createInitialState();
+  const state = storeModule.createInitialState();
 
   return {
     state,
-    store: {
-      getState: () => state,
-      setConfirmActions: (payload) => setConfirmActions({ state }, payload),
-      setCancelActions: (payload) => setCancelActions({ state }, payload),
-    },
+    store: bindStore(state),
     render: vi.fn(),
   };
 };
@@ -29,14 +29,11 @@ describe("commandLineShowConfirmDialog.handlers", () => {
   it("merges confirm actions instead of replacing the existing set", () => {
     const deps = createDeps();
 
-    setConfirmActions(
-      { state: deps.state },
-      {
-        actions: {
-          toggleAutoMode: {},
-        },
+    deps.store.setConfirmActions({
+      actions: {
+        toggleAutoMode: {},
       },
-    );
+    });
 
     handleConfirmActionsChange(deps, {
       _event: {
@@ -55,14 +52,11 @@ describe("commandLineShowConfirmDialog.handlers", () => {
   it("merges cancel actions instead of replacing the existing set", () => {
     const deps = createDeps();
 
-    setCancelActions(
-      { state: deps.state },
-      {
-        actions: {
-          popOverlay: {},
-        },
+    deps.store.setCancelActions({
+      actions: {
+        popOverlay: {},
       },
-    );
+    });
 
     handleCancelActionsChange(deps, {
       _event: {
@@ -81,15 +75,12 @@ describe("commandLineShowConfirmDialog.handlers", () => {
   it("deletes a nested confirm action by action type", () => {
     const deps = createDeps();
 
-    setConfirmActions(
-      { state: deps.state },
-      {
-        actions: {
-          toggleAutoMode: {},
-          toggleSkipMode: {},
-        },
+    deps.store.setConfirmActions({
+      actions: {
+        toggleAutoMode: {},
+        toggleSkipMode: {},
       },
-    );
+    });
 
     handleConfirmActionsDelete(deps, {
       _event: {
@@ -107,15 +98,12 @@ describe("commandLineShowConfirmDialog.handlers", () => {
   it("deletes a nested cancel action by action type", () => {
     const deps = createDeps();
 
-    setCancelActions(
-      { state: deps.state },
-      {
-        actions: {
-          popOverlay: {},
-          hideConfirmDialog: {},
-        },
+    deps.store.setCancelActions({
+      actions: {
+        popOverlay: {},
+        hideConfirmDialog: {},
       },
-    );
+    });
 
     handleCancelActionsDelete(deps, {
       _event: {
