@@ -176,7 +176,7 @@ export const getImportDestinationError = async (deps, folder) => {
       return copy.importDestinationNotEmptyMessage;
     }
   } catch {
-    return undefined;
+    // Left to the import, which reports the error with its details.
   }
   return undefined;
 };

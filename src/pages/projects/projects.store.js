@@ -797,8 +797,8 @@ export const selectViewData = ({ state, i18n }) => {
       ],
     },
   ];
-  // Desktop saves a zip or URL import in a new folder inside a parent folder
-  // chosen in the import dialog. Mobile imports into app storage, so it has no
+  // Desktop saves a zip or URL import directly in an empty folder chosen in
+  // the import dialog. Mobile imports into app storage, so it has no
   // destination.
   const createImportDestinationField = (slot) => ({
     name: "destinationFolder",
