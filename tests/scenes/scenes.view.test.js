@@ -67,12 +67,27 @@ describe("scenes view", () => {
     expect(
       scenesView.match(/slot=content d=v w=f h=f overflow=hidden:/g),
     ).toHaveLength(2);
-    expect(scenesView).toContain(
-      "rtgl-form#sceneForm key=${sceneFormKey} :defaultValues=${sceneFormData} :form=${sceneFormFields} sticky bottom-spacer=96 w=f h=f:",
+    // Check the sticky layout attributes on each form's line, so other
+    // attributes can be added to the form without breaking this test. The
+    // desktop scene popover has its own, non-sticky `rtgl-form#sceneForm`, so
+    // the lookup includes the dialog form's bindings.
+    const lines = scenesView.split("\n");
+    const sceneFormLine = lines.find((line) =>
+      line.includes(
+        "rtgl-form#sceneForm key=${sceneFormKey} :defaultValues=${sceneFormData} :form=${sceneFormFields} ",
+      ),
     );
-    expect(scenesView).toContain(
-      "rtgl-form#editForm key=${isEditDialogOpen} :defaultValues=${editDefaultValues} :form=${editForm} sticky bottom-spacer=96 w=f h=f:",
+    const editFormLine = lines.find((line) =>
+      line.includes(
+        "rtgl-form#editForm key=${isEditDialogOpen} :defaultValues=${editDefaultValues} :form=${editForm} ",
+      ),
     );
+    expect(sceneFormLine).toContain(" sticky ");
+    expect(sceneFormLine).toContain("bottom-spacer=96");
+    expect(sceneFormLine).toContain("w=f h=f");
+    expect(editFormLine).toContain(" sticky ");
+    expect(editFormLine).toContain("bottom-spacer=96");
+    expect(editFormLine).toContain("w=f h=f");
   });
 
   it("uses the same mobile file explorer navbar sizing as images", () => {

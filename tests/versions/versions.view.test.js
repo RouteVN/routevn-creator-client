@@ -23,9 +23,18 @@ describe("versions view export actions", () => {
     expect(versionsView).toContain(
       "rtgl-view slot=content d=v w=f h=f overflow=hidden:",
     );
-    expect(versionsView).toContain(
-      "rtgl-form#versionForm key=${isVersionDialogOpen} :form=${versionForm} sticky bottom-spacer=96 w=f h=f:",
-    );
+    // Check the sticky layout attributes on the form's line, so other
+    // attributes can be added to the form without breaking this test.
+    const versionFormLine = versionsView
+      .split("\n")
+      .find((line) =>
+        line.includes(
+          "rtgl-form#versionForm key=${isVersionDialogOpen} :form=${versionForm} ",
+        ),
+      );
+    expect(versionFormLine).toContain(" sticky ");
+    expect(versionFormLine).toContain("bottom-spacer=96");
+    expect(versionFormLine).toContain("w=f h=f");
   });
 
   it("shows loading before the settled empty-version state", () => {

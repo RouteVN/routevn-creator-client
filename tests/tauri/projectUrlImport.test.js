@@ -64,7 +64,9 @@ vi.mock("@tauri-apps/api/core", () => ({
 import { createAppService } from "../../src/deps/services/appService.js";
 import { createProjectService } from "../../src/deps/services/projectService.js";
 
-const PROJECT_PATH = "/projects/parent/Project One";
+// The import destination: an empty folder the user picked, which becomes the
+// project folder.
+const PROJECT_PATH = "/projects/Project One";
 const PROJECT_DB_PATH = `sqlite:${PROJECT_PATH}/project.db`;
 
 const createAppDb = () => {
@@ -198,12 +200,18 @@ beforeEach(() => {
 const importFromUrl = (appService) =>
   appService.importProjectFromUrl({
     url: "https://example.com/files/project-one.zip",
-    destinationFolder: "/projects/parent",
+    destinationFolder: PROJECT_PATH,
   });
 
+const listFolderContents = (folder) =>
+  [...disk.folders, ...disk.databases.keys()].filter(
+    (path) => path !== folder && isInside(path, folder),
+  );
+
 describe("desktop URL import of a project that cannot be registered", () => {
-  it("closes the project database before removing the folder, so the next import into that folder opens its own file", async () => {
+  it("closes the project database before emptying the folder, so the next import into that folder opens its own file", async () => {
     const { db, appService } = createServices();
+    disk.folders.add(PROJECT_PATH);
     archiveAppState = {
       creatorVersion: 1,
       projectInfo: { id: "project-one", name: "Project One" },
@@ -216,14 +224,16 @@ describe("desktop URL import of a project that cannot be registered", () => {
     const [firstDatabase] = loadedDatabases;
     expect(firstDatabase.dbPath).toBe(PROJECT_DB_PATH);
     expect(firstDatabase.close).toHaveBeenCalledTimes(1);
-    const folderRemoval = mocked.remove.mock.calls.findIndex(
-      ([path]) => path === PROJECT_PATH,
+    const databaseRemoval = mocked.remove.mock.calls.findIndex(
+      ([path]) => path === `${PROJECT_PATH}/project.db`,
     );
-    expect(folderRemoval).not.toBe(-1);
+    expect(databaseRemoval).not.toBe(-1);
     expect(firstDatabase.close.mock.invocationCallOrder[0]).toBeLessThan(
-      mocked.remove.mock.invocationCallOrder[folderRemoval],
+      mocked.remove.mock.invocationCallOrder[databaseRemoval],
     );
-    expect(disk.folders.has(PROJECT_PATH)).toBe(false);
+    // The folder the user picked is kept, and left empty.
+    expect(disk.folders.has(PROJECT_PATH)).toBe(true);
+    expect(listFolderContents(PROJECT_PATH)).toEqual([]);
     expect(await db.get("projectEntries")).toEqual([]);
 
     archiveAppState = {

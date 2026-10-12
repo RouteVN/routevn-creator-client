@@ -12,6 +12,7 @@ import {
   startEditingField,
   updateEditFieldConfig,
 } from "../../src/components/commandLineInput/commandLineInput.store.js";
+import { EN_I18N } from "../support/i18n.js";
 
 const inputLayout = {
   id: "profile-form-layout",
@@ -89,6 +90,7 @@ describe("commandLineInput.store", () => {
       props: {
         layouts,
       },
+      i18n: EN_I18N,
     });
 
     expect(viewData.selectedResourceId).toBe("");
@@ -144,6 +146,7 @@ describe("commandLineInput.store", () => {
       props: {
         layouts,
       },
+      i18n: EN_I18N,
     });
 
     expect(viewData.fieldRows.map((field) => field.field)).toEqual([
@@ -250,6 +253,7 @@ describe("commandLineInput.store", () => {
       props: {
         layouts,
       },
+      i18n: EN_I18N,
     });
 
     expect(viewData.defaultValues).toMatchObject({
@@ -335,6 +339,7 @@ describe("commandLineInput.store", () => {
       props: {
         layouts,
       },
+      i18n: EN_I18N,
     });
 
     expect(selectCanSaveEditField({ state })).toBe(false);
@@ -350,6 +355,7 @@ describe("commandLineInput.store", () => {
       props: {
         layouts,
       },
+      i18n: EN_I18N,
     });
 
     expect(selectCanSaveEditField({ state })).toBe(true);

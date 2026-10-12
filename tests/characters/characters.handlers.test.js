@@ -12,6 +12,21 @@ import {
   handleSpriteGroupDropdownMenuItemClick,
   handleSpriteGroupFormAction,
 } from "../../src/pages/characters/characters.handlers.js";
+import * as storeModule from "../../src/pages/characters/characters.store.js";
+
+// The real page store on its initial state plus `state`, with every selector
+// and action spied on.
+const createStore = (state = {}) => {
+  const storeState = { ...storeModule.createInitialState(), ...state };
+  return Object.fromEntries(
+    Object.entries(storeModule)
+      .filter(([, value]) => typeof value === "function")
+      .map(([name, fn]) => [
+        name,
+        vi.fn((payload) => fn({ state: storeState, i18n: EN_I18N }, payload)),
+      ]),
+  );
+};
 
 const createDeps = () => {
   return {
@@ -371,19 +386,13 @@ describe("characters name variable", () => {
       appService: {
         showAlert: vi.fn(),
       },
-      store: {
-        getState: vi.fn(() => ({
-          editItemId: "character-hero",
-          editAvatarFileId: undefined,
-          editAvatarUploadResult: undefined,
-          editSpriteGroups: [],
-          spriteTagsByCharacterId: {},
-        })),
-        setTagsData: vi.fn(),
-        setSpriteTagsByCharacterId: vi.fn(),
-        setItems: vi.fn(),
-        closeEditDialog: vi.fn(),
-      },
+      store: createStore({
+        editItemId: "character-hero",
+        editAvatarFileId: undefined,
+        editAvatarUploadResult: undefined,
+        editSpriteGroups: [],
+        spriteTagsByCharacterId: {},
+      }),
       projectService: {
         updateCharacter: vi.fn(() => Promise.resolve({ valid: true })),
         getRepositoryState: vi.fn(() => ({
@@ -432,46 +441,40 @@ describe("characters name variable", () => {
       appService: {
         showAlert: vi.fn(),
       },
-      store: {
-        getState: vi.fn(() => ({
-          editItemId: "character-hero",
-          editAvatarFileId: undefined,
-          editAvatarUploadResult: undefined,
-          editSpriteGroups: [
-            {
-              id: "group-face",
-              name: "Face",
-              tags: ["sprite-tag-face"],
-            },
-            {
-              id: "group-body",
-              name: "Body",
-              tags: ["sprite-tag-body"],
-            },
-          ],
-          spriteTagsByCharacterId: {
-            "character-hero": {
-              items: {
-                "sprite-tag-face": {
-                  id: "sprite-tag-face",
-                  type: "tag",
-                  name: "Face",
-                },
-                "sprite-tag-body": {
-                  id: "sprite-tag-body",
-                  type: "tag",
-                  name: "Body",
-                },
-              },
-              tree: [{ id: "sprite-tag-face" }, { id: "sprite-tag-body" }],
-            },
+      store: createStore({
+        editItemId: "character-hero",
+        editAvatarFileId: undefined,
+        editAvatarUploadResult: undefined,
+        editSpriteGroups: [
+          {
+            id: "group-face",
+            name: "Face",
+            tags: ["sprite-tag-face"],
           },
-        })),
-        setTagsData: vi.fn(),
-        setSpriteTagsByCharacterId: vi.fn(),
-        setItems: vi.fn(),
-        closeEditDialog: vi.fn(),
-      },
+          {
+            id: "group-body",
+            name: "Body",
+            tags: ["sprite-tag-body"],
+          },
+        ],
+        spriteTagsByCharacterId: {
+          "character-hero": {
+            items: {
+              "sprite-tag-face": {
+                id: "sprite-tag-face",
+                type: "tag",
+                name: "Face",
+              },
+              "sprite-tag-body": {
+                id: "sprite-tag-body",
+                type: "tag",
+                name: "Body",
+              },
+            },
+            tree: [{ id: "sprite-tag-face" }, { id: "sprite-tag-body" }],
+          },
+        },
+      }),
       projectService: {
         updateCharacter: vi.fn(() => Promise.resolve({ valid: true })),
         getRepositoryState: vi.fn(() => ({
@@ -525,19 +528,13 @@ describe("characters name variable", () => {
       appService: {
         showAlert: vi.fn(),
       },
-      store: {
-        getState: vi.fn(() => ({
-          editItemId: "character-hero",
-          editAvatarFileId: undefined,
-          editAvatarUploadResult: undefined,
-          editSpriteGroups: [],
-          spriteTagsByCharacterId: {},
-        })),
-        setTagsData: vi.fn(),
-        setSpriteTagsByCharacterId: vi.fn(),
-        setItems: vi.fn(),
-        closeEditDialog: vi.fn(),
-      },
+      store: createStore({
+        editItemId: "character-hero",
+        editAvatarFileId: undefined,
+        editAvatarUploadResult: undefined,
+        editSpriteGroups: [],
+        spriteTagsByCharacterId: {},
+      }),
       projectService: {
         updateCharacter: vi.fn(() => Promise.resolve({ valid: true })),
         getRepositoryState: vi.fn(() => ({
@@ -582,17 +579,15 @@ describe("characters sprite group tag scope", () => {
       appService: {
         showAlert: vi.fn(),
       },
-      store: {
-        getState: vi.fn(() => ({
-          dialogSpriteGroups: [
-            {
-              id: "group-face",
-              name: "Face",
-              tags: ["tag-smile"],
-            },
-          ],
-        })),
-      },
+      store: createStore({
+        dialogSpriteGroups: [
+          {
+            id: "group-face",
+            name: "Face",
+            tags: ["tag-smile"],
+          },
+        ],
+      }),
     };
 
     await handleDialogFormActionClick(deps, {
@@ -621,42 +616,40 @@ describe("characters sprite group tag scope", () => {
       appService: {
         showAlert: vi.fn(),
       },
-      store: {
-        getState: vi.fn(() => ({
-          editItemId: "character-hero",
-          editAvatarFileId: undefined,
-          editAvatarUploadResult: undefined,
-          editSpriteGroups: [
-            {
-              id: "group-face",
-              name: "Face",
-              tags: ["character-tag-hero"],
+      store: createStore({
+        editItemId: "character-hero",
+        editAvatarFileId: undefined,
+        editAvatarUploadResult: undefined,
+        editSpriteGroups: [
+          {
+            id: "group-face",
+            name: "Face",
+            tags: ["character-tag-hero"],
+          },
+        ],
+        tagsData: {
+          items: {
+            "character-tag-hero": {
+              id: "character-tag-hero",
+              type: "tag",
+              name: "Hero",
             },
-          ],
-          tagsData: {
+          },
+          tree: [{ id: "character-tag-hero" }],
+        },
+        spriteTagsByCharacterId: {
+          "character-hero": {
             items: {
-              "character-tag-hero": {
-                id: "character-tag-hero",
+              "sprite-tag-smile": {
+                id: "sprite-tag-smile",
                 type: "tag",
-                name: "Hero",
+                name: "Smile",
               },
             },
-            tree: [{ id: "character-tag-hero" }],
+            tree: [{ id: "sprite-tag-smile" }],
           },
-          spriteTagsByCharacterId: {
-            "character-hero": {
-              items: {
-                "sprite-tag-smile": {
-                  id: "sprite-tag-smile",
-                  type: "tag",
-                  name: "Smile",
-                },
-              },
-              tree: [{ id: "sprite-tag-smile" }],
-            },
-          },
-        })),
-      },
+        },
+      }),
       projectService: {
         updateCharacter: vi.fn(),
       },
@@ -752,26 +745,22 @@ describe("characters sprite group dialog", () => {
       appService: {
         showAlert: vi.fn(),
       },
-      store: {
-        getState: vi.fn(() => ({
-          spriteGroupDialogTarget: "edit",
-          editItemId: "character-hero",
-          spriteTagsByCharacterId: {
-            "character-hero": {
-              items: {
-                "sprite-tag-smile": {
-                  id: "sprite-tag-smile",
-                  type: "tag",
-                  name: "Smile",
-                },
+      store: createStore({
+        spriteGroupDialogTarget: "edit",
+        editItemId: "character-hero",
+        spriteTagsByCharacterId: {
+          "character-hero": {
+            items: {
+              "sprite-tag-smile": {
+                id: "sprite-tag-smile",
+                type: "tag",
+                name: "Smile",
               },
-              tree: [{ id: "sprite-tag-smile" }],
             },
+            tree: [{ id: "sprite-tag-smile" }],
           },
-        })),
-        addSpriteGroup: vi.fn(),
-        closeSpriteGroupDialog: vi.fn(),
-      },
+        },
+      }),
       render: vi.fn(),
     };
 
@@ -803,35 +792,30 @@ describe("characters sprite group dialog", () => {
       appService: {
         showAlert: vi.fn(),
       },
-      store: {
-        getState: vi.fn(() => ({
-          spriteGroupDialogTarget: "edit",
-          spriteGroupDialogIndex: 0,
-          editItemId: "character-hero",
-          editSpriteGroups: [
-            {
-              id: "group-face",
-              name: "Face",
-              tags: ["sprite-tag-smile"],
-            },
-          ],
-          spriteTagsByCharacterId: {
-            "character-hero": {
-              items: {
-                "sprite-tag-neutral": {
-                  id: "sprite-tag-neutral",
-                  type: "tag",
-                  name: "Neutral",
-                },
-              },
-              tree: [{ id: "sprite-tag-neutral" }],
-            },
+      store: createStore({
+        spriteGroupDialogTarget: "edit",
+        spriteGroupDialogIndex: 0,
+        editItemId: "character-hero",
+        editSpriteGroups: [
+          {
+            id: "group-face",
+            name: "Face",
+            tags: ["sprite-tag-smile"],
           },
-        })),
-        addSpriteGroup: vi.fn(),
-        updateSpriteGroup: vi.fn(),
-        closeSpriteGroupDialog: vi.fn(),
-      },
+        ],
+        spriteTagsByCharacterId: {
+          "character-hero": {
+            items: {
+              "sprite-tag-neutral": {
+                id: "sprite-tag-neutral",
+                type: "tag",
+                name: "Neutral",
+              },
+            },
+            tree: [{ id: "sprite-tag-neutral" }],
+          },
+        },
+      }),
       render: vi.fn(),
     };
 
@@ -865,26 +849,22 @@ describe("characters sprite group dialog", () => {
       appService: {
         showAlert: vi.fn(),
       },
-      store: {
-        getState: vi.fn(() => ({
-          spriteGroupDialogTarget: "edit",
-          editItemId: "character-hero",
-          spriteTagsByCharacterId: {
-            "character-hero": {
-              items: {
-                "sprite-tag-smile": {
-                  id: "sprite-tag-smile",
-                  type: "tag",
-                  name: "Smile",
-                },
+      store: createStore({
+        spriteGroupDialogTarget: "edit",
+        editItemId: "character-hero",
+        spriteTagsByCharacterId: {
+          "character-hero": {
+            items: {
+              "sprite-tag-smile": {
+                id: "sprite-tag-smile",
+                type: "tag",
+                name: "Smile",
               },
-              tree: [{ id: "sprite-tag-smile" }],
             },
+            tree: [{ id: "sprite-tag-smile" }],
           },
-        })),
-        addSpriteGroup: vi.fn(),
-        closeSpriteGroupDialog: vi.fn(),
-      },
+        },
+      }),
       render: vi.fn(),
     };
 
@@ -964,24 +944,20 @@ describe("characters sprite group removal guard", () => {
           },
         })),
       },
-      store: {
-        getState: vi.fn(() => ({
-          editItemId: "character-hero",
-          editSpriteGroups: [
-            {
-              id: "group-face",
-              name: "Face",
-              tags: ["sprite-tag-smile"],
-            },
-          ],
-          spriteGroupDropdownMenu: {
-            target: "edit",
-            index: 0,
+      store: createStore({
+        editItemId: "character-hero",
+        editSpriteGroups: [
+          {
+            id: "group-face",
+            name: "Face",
+            tags: ["sprite-tag-smile"],
           },
-        })),
-        hideSpriteGroupDropdownMenu: vi.fn(),
-        removeSpriteGroup: vi.fn(),
-      },
+        ],
+        spriteGroupDropdownMenu: {
+          target: "edit",
+          index: 0,
+        },
+      }),
       render: vi.fn(),
     };
 
@@ -1013,16 +989,12 @@ describe("characters sprite group removal guard", () => {
       projectService: {
         getRepositoryState: vi.fn(),
       },
-      store: {
-        getState: vi.fn(() => ({
-          spriteGroupDropdownMenu: {
-            target: "edit",
-            index: 1,
-          },
-        })),
-        hideSpriteGroupDropdownMenu: vi.fn(),
-        moveSpriteGroup: vi.fn(),
-      },
+      store: createStore({
+        spriteGroupDropdownMenu: {
+          target: "edit",
+          index: 1,
+        },
+      }),
       render: vi.fn(),
     };
 
@@ -1057,24 +1029,20 @@ describe("characters sprite group removal guard", () => {
           },
         })),
       },
-      store: {
-        getState: vi.fn(() => ({
-          editItemId: "character-hero",
-          editSpriteGroups: [
-            {
-              id: "group-face",
-              name: "Face",
-              tags: ["sprite-tag-smile"],
-            },
-          ],
-          spriteGroupDropdownMenu: {
-            target: "edit",
-            index: 0,
+      store: createStore({
+        editItemId: "character-hero",
+        editSpriteGroups: [
+          {
+            id: "group-face",
+            name: "Face",
+            tags: ["sprite-tag-smile"],
           },
-        })),
-        hideSpriteGroupDropdownMenu: vi.fn(),
-        removeSpriteGroup: vi.fn(),
-      },
+        ],
+        spriteGroupDropdownMenu: {
+          target: "edit",
+          index: 0,
+        },
+      }),
       render: vi.fn(),
     };
 
