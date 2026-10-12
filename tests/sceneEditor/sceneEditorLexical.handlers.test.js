@@ -7,8 +7,12 @@ import {
   handleAddActionsButtonClick,
   handleBackgroundTransformCustomize,
   handleBackgroundTransformEditorCancel,
+  handleBackgroundTransformEditorCanvasResize,
   handleBackgroundTransformEditorChange,
   handleBackgroundTransformEditorCloseClick,
+  handleBackgroundTransformEditorDragCancel,
+  handleBackgroundTransformEditorPreview,
+  handleBackgroundTransformEditorPreviewCancel,
   handleCommandLineSubmit,
   handleDownloadCanvasClick,
   handleDropdownMenuClickItem,
@@ -28,6 +32,7 @@ import {
   scrollEntrySelectionIntoView,
   syncSceneEditorRoutePayload,
 } from "../../src/pages/sceneEditorLexical/sceneEditorLexical.handlers.js";
+import * as storeModule from "../../src/pages/sceneEditorLexical/sceneEditorLexical.store.js";
 import {
   EN_I18N,
   ES_I18N,
@@ -35,6 +40,17 @@ import {
   TH_I18N,
   ZH_HANS_I18N,
 } from "../support/i18n.js";
+
+// The real store module's selectors and actions, bound to a plain state.
+const bindStore = (state) =>
+  Object.fromEntries(
+    Object.entries(storeModule)
+      .filter(([, value]) => typeof value === "function")
+      .map(([name, fn]) => [
+        name,
+        (payload) => fn({ state, i18n: EN_I18N }, payload),
+      ]),
+  );
 
 // The page's undo history calls, for tests about other behavior. Line
 // action commands read their line from the scene, by its id.
@@ -1204,6 +1220,322 @@ describe("sceneEditorLexical.handlers actions dialog", () => {
     });
     expect(deps.render).not.toHaveBeenCalled();
     expect(deps.subject.dispatch).not.toHaveBeenCalled();
+  });
+
+  it("shows an inspector preview on the canvas without rendering the page", () => {
+    const calls = [];
+    const stopPropagation = vi.fn();
+    const transform = {
+      x: 320,
+      y: 180,
+      anchorX: 0.5,
+      anchorY: 1,
+      scaleX: 2,
+      scaleY: 2,
+      rotation: 0,
+      originX: 200,
+      originY: 600,
+    };
+    const deps = {
+      store: {
+        setBackgroundTransformEditorPreviewTransform: vi.fn(() =>
+          calls.push("setPreviewTransform"),
+        ),
+        setBackgroundTransformEditorTransform: vi.fn(),
+      },
+      render: vi.fn(),
+      subject: {
+        dispatch: vi.fn(() => calls.push("renderCanvas")),
+      },
+    };
+
+    handleBackgroundTransformEditorPreview(deps, {
+      _event: {
+        stopPropagation,
+        detail: { transform },
+      },
+    });
+
+    expect(stopPropagation).toHaveBeenCalledTimes(1);
+    expect(
+      deps.store.setBackgroundTransformEditorPreviewTransform,
+    ).toHaveBeenCalledWith({ transform });
+    // The preview is not a change, so the committed transform stays.
+    expect(
+      deps.store.setBackgroundTransformEditorTransform,
+    ).not.toHaveBeenCalled();
+    // New inspector values would rebuild the open popover and end its drag.
+    expect(deps.render).not.toHaveBeenCalled();
+    expect(deps.subject.dispatch).toHaveBeenCalledTimes(1);
+    expect(deps.subject.dispatch).toHaveBeenCalledWith(
+      "sceneEditor.renderCanvas",
+      {
+        skipRender: true,
+        skipAnimations: true,
+        skipAudio: true,
+        debounceMs: 0,
+      },
+    );
+    // The canvas draws the preview, so it is stored before the render asks.
+    expect(calls).toEqual(["setPreviewTransform", "renderCanvas"]);
+  });
+
+  it("puts the transform back on the canvas when an inspector preview is cancelled", () => {
+    const calls = [];
+    const stopPropagation = vi.fn();
+    const deps = {
+      store: {
+        selectHasBackgroundTransformEditorPreviewTransform: vi.fn(() => true),
+        clearBackgroundTransformEditorPreviewTransform: vi.fn(() =>
+          calls.push("clearPreviewTransform"),
+        ),
+      },
+      render: vi.fn(),
+      subject: {
+        dispatch: vi.fn(() => calls.push("renderCanvas")),
+      },
+    };
+
+    handleBackgroundTransformEditorPreviewCancel(deps, {
+      _event: { stopPropagation },
+    });
+
+    expect(stopPropagation).toHaveBeenCalledTimes(1);
+    expect(
+      deps.store.clearBackgroundTransformEditorPreviewTransform,
+    ).toHaveBeenCalledTimes(1);
+    expect(deps.render).not.toHaveBeenCalled();
+    expect(deps.subject.dispatch).toHaveBeenCalledTimes(1);
+    expect(deps.subject.dispatch).toHaveBeenCalledWith(
+      "sceneEditor.renderCanvas",
+      {
+        skipRender: true,
+        skipAnimations: true,
+        skipAudio: true,
+        debounceMs: 0,
+      },
+    );
+    expect(calls).toEqual(["clearPreviewTransform", "renderCanvas"]);
+  });
+
+  it("leaves the canvas alone when an inspector preview is cancelled after a change replaced it", () => {
+    const stopPropagation = vi.fn();
+    const deps = {
+      store: {
+        selectHasBackgroundTransformEditorPreviewTransform: vi.fn(() => false),
+        clearBackgroundTransformEditorPreviewTransform: vi.fn(),
+      },
+      render: vi.fn(),
+      subject: {
+        dispatch: vi.fn(),
+      },
+    };
+
+    handleBackgroundTransformEditorPreviewCancel(deps, {
+      _event: { stopPropagation },
+    });
+
+    // The event still stops here, but nothing is left to put back.
+    expect(stopPropagation).toHaveBeenCalledTimes(1);
+    expect(
+      deps.store.clearBackgroundTransformEditorPreviewTransform,
+    ).not.toHaveBeenCalled();
+    expect(deps.render).not.toHaveBeenCalled();
+    expect(deps.subject.dispatch).not.toHaveBeenCalled();
+  });
+
+  it("draws an inspector preview until a change or a cancel replaces it", () => {
+    const state = storeModule.createInitialState();
+    const store = bindStore(state);
+    store.openBackgroundTransformEditor({
+      targetType: "background",
+      background: { resourceId: "image-one" },
+      transform: { x: 100, y: 120 },
+    });
+    // What the canvas render reads each time it is asked to draw.
+    const drawnTransforms = [];
+    const deps = {
+      store,
+      render: vi.fn(),
+      subject: {
+        dispatch: vi.fn(() => {
+          drawnTransforms.push(
+            store.selectCanvasBackgroundTransformEditor().transform,
+          );
+        }),
+      },
+    };
+    const event = (detail) => ({
+      stopPropagation: vi.fn(),
+      detail,
+    });
+
+    handleBackgroundTransformEditorPreview(deps, {
+      _event: event({ transform: { x: 300, y: 120, scaleX: 2 } }),
+    });
+    handleBackgroundTransformEditorPreview(deps, {
+      _event: event({ transform: { x: 320, y: 120, scaleX: 3 } }),
+    });
+
+    expect(drawnTransforms).toMatchObject([
+      { x: 300, scaleX: 2 },
+      { x: 320, scaleX: 3 },
+    ]);
+    expect(store.selectBackgroundTransformEditor().transform).toMatchObject({
+      x: 100,
+      y: 120,
+      scaleX: 1,
+    });
+
+    handleBackgroundTransformEditorPreviewCancel(deps, {
+      _event: event(),
+    });
+
+    expect(drawnTransforms).toHaveLength(3);
+    expect(drawnTransforms[2]).toMatchObject({ x: 100, y: 120, scaleX: 1 });
+    expect(store.selectHasBackgroundTransformEditorPreviewTransform()).toBe(
+      false,
+    );
+
+    // A submitted value replaces the preview, so a late cancel has nothing
+    // to put back.
+    handleBackgroundTransformEditorPreview(deps, {
+      _event: event({ transform: { x: 500, y: 120, scaleX: 4 } }),
+    });
+    handleBackgroundTransformEditorChange(deps, {
+      _event: event({ transform: { x: 500, y: 120, scaleX: 4 } }),
+    });
+    const drawCountAfterChange = drawnTransforms.length;
+    handleBackgroundTransformEditorPreviewCancel(deps, {
+      _event: event(),
+    });
+
+    expect(drawnTransforms.at(-1)).toMatchObject({ x: 500, scaleX: 4 });
+    expect(store.selectBackgroundTransformEditor().transform).toMatchObject({
+      x: 500,
+      scaleX: 4,
+    });
+    expect(store.selectHasBackgroundTransformEditorPreviewTransform()).toBe(
+      false,
+    );
+    expect(drawnTransforms).toHaveLength(drawCountAfterChange);
+  });
+
+  it("draws the transform editor's canvas again when it changes size, without rendering the page", () => {
+    const stopPropagation = vi.fn();
+    const deps = {
+      render: vi.fn(),
+      subject: {
+        dispatch: vi.fn(),
+      },
+    };
+
+    handleBackgroundTransformEditorCanvasResize(deps, {
+      _event: { stopPropagation },
+    });
+
+    expect(stopPropagation).toHaveBeenCalledTimes(1);
+    // Only the canvas changed size, so the outline is drawn again for it.
+    expect(deps.render).not.toHaveBeenCalled();
+    expect(deps.subject.dispatch).toHaveBeenCalledTimes(1);
+    expect(deps.subject.dispatch).toHaveBeenCalledWith(
+      "sceneEditor.renderCanvas",
+      {
+        skipRender: true,
+        skipAnimations: true,
+        skipAudio: true,
+        debounceMs: 0,
+      },
+    );
+  });
+
+  it("drops the canvas drag, renders the page, then draws the canvas when the canvas cancels a pointer", () => {
+    const calls = [];
+    const stopPropagation = vi.fn();
+    const deps = {
+      store: {
+        cancelBackgroundTransformEditorDrag: vi.fn(() =>
+          calls.push("cancelDrag"),
+        ),
+      },
+      render: vi.fn(() => calls.push("render")),
+      subject: {
+        dispatch: vi.fn(() => calls.push("renderCanvas")),
+      },
+    };
+
+    handleBackgroundTransformEditorDragCancel(deps, {
+      _event: { stopPropagation },
+    });
+
+    expect(stopPropagation).toHaveBeenCalledTimes(1);
+    expect(
+      deps.store.cancelBackgroundTransformEditorDrag,
+    ).toHaveBeenCalledTimes(1);
+    expect(deps.subject.dispatch).toHaveBeenCalledWith(
+      "sceneEditor.renderCanvas",
+      {
+        skipRender: true,
+        skipAnimations: true,
+        skipAudio: true,
+        debounceMs: 0,
+      },
+    );
+    expect(calls).toEqual(["cancelDrag", "render", "renderCanvas"]);
+  });
+
+  it("shows the target back where the drag found it, in the page and on the canvas, after the canvas cancels a pointer", () => {
+    const state = storeModule.createInitialState();
+    const store = bindStore(state);
+    store.openBackgroundTransformEditor({
+      targetType: "background",
+      background: { resourceId: "image-one" },
+      transform: { x: 100, y: 120 },
+    });
+    // A drag that began with the target at 100, 120 and has moved it since.
+    store.setBackgroundTransformEditorDragStartPosition({
+      dragStartPosition: {
+        x: 500,
+        y: 400,
+        transformStartX: 100,
+        transformStartY: 120,
+        transformStartScaleX: 1,
+        transformStartScaleY: 1,
+      },
+    });
+    store.setBackgroundTransformEditorTransform({
+      transform: { x: 460, y: 300 },
+    });
+    // What the page and the canvas read each time they draw.
+    const drawn = [];
+    const deps = {
+      store,
+      render: vi.fn(() => {
+        const { x, y } = store.selectBackgroundTransformEditor().transform;
+        drawn.push({ page: { x, y } });
+      }),
+      subject: {
+        dispatch: vi.fn(() => {
+          const { x, y } =
+            store.selectCanvasBackgroundTransformEditor().transform;
+          drawn.push({ canvas: { x, y } });
+        }),
+      },
+    };
+
+    handleBackgroundTransformEditorDragCancel(deps, {
+      _event: { stopPropagation: vi.fn() },
+    });
+
+    expect(drawn).toEqual([
+      { page: { x: 100, y: 120 } },
+      { canvas: { x: 100, y: 120 } },
+    ]);
+    // The rest of the pointer's drag is ignored until it lifts.
+    expect(store.selectBackgroundTransformEditor()).toMatchObject({
+      dragStartPosition: undefined,
+      isDragCancelled: true,
+    });
   });
 
   it("closes only the background transform editor when Done is clicked", () => {

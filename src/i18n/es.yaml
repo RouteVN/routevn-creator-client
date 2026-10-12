@@ -837,6 +837,9 @@ audioEffectsPage:
 actionTransformEditor:
   backgroundTarget: "Fondo"
   cancelButton: "Cancelar"
+  canvasZoomFitLabel: "Ajustar a la vista"
+  canvasZoomInLabel: "Acercar"
+  canvasZoomOutLabel: "Alejar"
   characterTarget: "Personaje"
   doneButton: "Hecho"
   targetTitle: "Objetivo"

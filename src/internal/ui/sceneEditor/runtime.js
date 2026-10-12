@@ -1399,6 +1399,10 @@ export const renderSceneEditorState = async (deps, payload = {}) => {
     shouldPreviewSelectedLineAudioEffect && !skipAudio;
   const backgroundTransformEditorOpen =
     store.selectIsBackgroundTransformEditorOpen?.() === true;
+  // Read once, so the scene and the outline draw the same transform even when
+  // a preview starts or ends during the render.
+  const backgroundTransformEditor =
+    store.selectCanvasBackgroundTransformEditor?.();
   graphicsService.setEngineAudioMuted?.(isMuted);
   graphicsService.setRuntimeInteractionsEnabled?.(
     !backgroundTransformEditorOpen,
@@ -1473,7 +1477,7 @@ export const renderSceneEditorState = async (deps, payload = {}) => {
   renderProjectData = createProjectDataWithBackgroundTransformEditor(
     renderProjectData,
     selection,
-    store.selectBackgroundTransformEditor?.(),
+    backgroundTransformEditor,
   );
 
   if (renderProjectData !== projectData) {
@@ -1566,8 +1570,10 @@ export const renderSceneEditorState = async (deps, payload = {}) => {
     await attachGraphicsCanvasToMountedRoot(deps, 2);
     const canvasPaintStartedAt = shouldMeasure ? getDebugNow() : 0;
     if (backgroundTransformEditorOpen) {
-      const backgroundTransformEditor =
-        store.selectBackgroundTransformEditor?.();
+      // The kept metrics set the transform's origin, so a previewed
+      // transform's, which can have another scale, are not kept.
+      const keepsMetrics =
+        backgroundTransformEditor?.previewTransform === undefined;
       const canvasWidth =
         getBackgroundTransformEditorCanvasRoot(refs)?.getBoundingClientRect?.()
           .width;
@@ -1585,21 +1591,25 @@ export const renderSceneEditorState = async (deps, payload = {}) => {
         ACTION_TRANSFORM_TARGET_TYPES.BACKGROUND
       ) {
         graphicsService.render(backgroundTransformCanvasState.renderState);
-        const renderedBounds = selectBackgroundTransformEditorRenderedBounds({
-          graphicsService,
-          editorState: backgroundTransformEditor,
-          projectResolution: renderProjectData.screen,
-        });
-        store.setBackgroundTransformEditorSelectedElementMetrics?.({
-          metrics: {
-            ...backgroundTransformCanvasState.selectedElementMetrics,
-            renderedBounds,
-          },
-        });
+        if (keepsMetrics) {
+          const renderedBounds = selectBackgroundTransformEditorRenderedBounds({
+            graphicsService,
+            editorState: backgroundTransformEditor,
+            projectResolution: renderProjectData.screen,
+          });
+          store.setBackgroundTransformEditorSelectedElementMetrics?.({
+            metrics: {
+              ...backgroundTransformCanvasState.selectedElementMetrics,
+              renderedBounds,
+            },
+          });
+        }
       } else {
-        store.setBackgroundTransformEditorSelectedElementMetrics?.({
-          metrics: backgroundTransformCanvasState.selectedElementMetrics,
-        });
+        if (keepsMetrics) {
+          store.setBackgroundTransformEditorSelectedElementMetrics?.({
+            metrics: backgroundTransformCanvasState.selectedElementMetrics,
+          });
+        }
         graphicsService.render(backgroundTransformCanvasState.renderState);
       }
     } else {

@@ -1706,6 +1706,24 @@ so rotating from a tall portrait window does not create a false keyboard inset.
 preservation across rotation and split-window changes; the scroll browser
 fixture covers portrait and landscape keyboard geometry in Chromium and WebKit.
 
+The custom transform editor of a background, visual, or character action
+(`src/components/actionTransformEditor/`) follows the layout editor. Desktop
+and touch landscape keep its inspector in a right panel and give the canvas a
+zoomable workspace (`rvn-zoom-viewport`, with the zoom levels and canvas
+layout of `src/internal/ui/editorCanvasWorkspace.js`); other touch layouts
+stack the inspector under the fitted canvas. The canvas keeps its place in the
+virtual DOM in both, and the actions dialog content has an id, so a tablet
+rotating does not remount the canvas. The page draws the canvas, so the editor
+asks it to draw again when the canvas changes size, which keeps the outline's
+handles at their on-screen size. A number popover previews its value on the
+canvas as `backgroundTransformEditor.previewTransform` without rendering the
+page, since new inspector values would rebuild the popover and end its drag; a
+change or a cancel replaces it, and so does the panel moving on rotation, which
+closes the popover without a cancel. A render of a preview keeps no element
+metrics, because the kept metrics set the transform's origin. A canvas drag
+shows its values in the inspector as it goes, and a cancelled pointer, such as
+the first finger of a pinch, drops its drag and puts the target back.
+
 Current scene-editing pattern:
 
 - `src/primitives/lexicalSceneDocumentEditor.js`

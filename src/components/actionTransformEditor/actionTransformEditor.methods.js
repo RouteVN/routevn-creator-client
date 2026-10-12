@@ -8,3 +8,7 @@ export function getCanvasRoot() {
     canvasHost?.querySelector?.("#canvas")
   );
 }
+
+export function setTransientTransform(payload = {}) {
+  return this.transformedHandlers.setTransientTransform(payload);
+}

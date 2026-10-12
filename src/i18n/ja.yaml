@@ -837,6 +837,9 @@ audioEffectsPage:
 actionTransformEditor:
   backgroundTarget: "背景"
   cancelButton: "キャンセル"
+  canvasZoomFitLabel: "画面に合わせる"
+  canvasZoomInLabel: "拡大"
+  canvasZoomOutLabel: "縮小"
   characterTarget: "キャラクター"
   doneButton: "完了"
   targetTitle: "対象"

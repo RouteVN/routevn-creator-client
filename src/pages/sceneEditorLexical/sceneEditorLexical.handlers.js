@@ -1548,11 +1548,11 @@ const handleBackgroundTransformBorderDragStart = (deps, payload = {}) => {
     return;
   }
 
-  deps.store.clearBackgroundTransformEditorDragStartPosition?.();
+  deps.store.resetBackgroundTransformEditorDrag();
 };
 
 const handleBackgroundTransformBorderDragMove = (deps, payload = {}) => {
-  const { store, subject } = deps;
+  const { refs, store, subject } = deps;
   if (!store.selectIsBackgroundTransformEditorOpen?.()) {
     return;
   }
@@ -1567,6 +1567,10 @@ const handleBackgroundTransformBorderDragMove = (deps, payload = {}) => {
   }
 
   const editor = store.selectBackgroundTransformEditor?.();
+  if (editor.isDragCancelled) {
+    return;
+  }
+
   const transform = normalizeBackgroundTransformEditorTransform(
     editor?.transform,
   );
@@ -1612,6 +1616,11 @@ const handleBackgroundTransformBorderDragMove = (deps, payload = {}) => {
   store.setBackgroundTransformEditorTransform?.({
     transform: updatedTransform,
   });
+  // The inspector shows the values while dragging, without rendering the
+  // page; the page renders when the drag ends.
+  refs.systemActions.transformedHandlers.handleSetBackgroundTransformEditorTransientTransform(
+    { transform: updatedTransform },
+  );
   requestBackgroundTransformEditorCanvasRender(subject, {
     debounceMs: 0,
   });
@@ -1622,7 +1631,7 @@ const handleBackgroundTransformBorderDragEnd = (deps) => {
     return;
   }
 
-  deps.store.clearBackgroundTransformEditorDragStartPosition?.();
+  deps.store.resetBackgroundTransformEditorDrag();
   deps.render();
   requestBackgroundTransformEditorCanvasRender(deps.subject, {
     debounceMs: 0,
@@ -1707,6 +1716,49 @@ export const handleBackgroundTransformEditorChange = (deps, payload) => {
     debounceMs: 0,
     skipRender: false,
   });
+};
+
+// A value chosen in an inspector popover shows on the canvas while the slider
+// moves. The page is not rendered: new inspector values would rebuild the
+// open popover and end the drag.
+export const handleBackgroundTransformEditorPreview = (deps, payload) => {
+  const { store, subject } = deps;
+  const { _event: event } = payload;
+  event.stopPropagation();
+  store.setBackgroundTransformEditorPreviewTransform({
+    transform: event.detail.transform,
+  });
+  requestBackgroundTransformEditorCanvasRender(subject, { debounceMs: 0 });
+};
+
+// Closing the popover without submitting puts the transform back.
+export const handleBackgroundTransformEditorPreviewCancel = (deps, payload) => {
+  const { store, subject } = deps;
+  payload._event.stopPropagation();
+  if (!store.selectHasBackgroundTransformEditorPreviewTransform()) {
+    return;
+  }
+
+  store.clearBackgroundTransformEditorPreviewTransform();
+  requestBackgroundTransformEditorCanvasRender(subject, { debounceMs: 0 });
+};
+
+// The canvas changed size, as when it zooms, so the outline is drawn again at
+// the new size and its handles keep their on-screen size.
+export const handleBackgroundTransformEditorCanvasResize = (deps, payload) => {
+  const { subject } = deps;
+  payload._event.stopPropagation();
+  requestBackgroundTransformEditorCanvasRender(subject, { debounceMs: 0 });
+};
+
+// The canvas cancelled a pointer, as the zoom viewport does to the first
+// finger of a pinch, so its drag is dropped.
+export const handleBackgroundTransformEditorDragCancel = (deps, payload) => {
+  const { render, store, subject } = deps;
+  payload._event.stopPropagation();
+  store.cancelBackgroundTransformEditorDrag();
+  render();
+  requestBackgroundTransformEditorCanvasRender(subject, { debounceMs: 0 });
 };
 
 const closeActionTransformEditor = (deps, payload) => {

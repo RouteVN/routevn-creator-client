@@ -733,7 +733,9 @@ export const createInitialState = () => ({
   backgroundTransformEditor: {
     isOpen: false,
     transform: normalizeBackgroundTransformEditorTransform(),
+    previewTransform: undefined,
     dragStartPosition: undefined,
+    isDragCancelled: false,
     selectedElementMetrics: undefined,
     background: {},
     targetType: "background",
@@ -1120,13 +1122,17 @@ export const openBackgroundTransformEditor = (
   state.backgroundTransformEditor.targetName = targetName;
   state.backgroundTransformEditor.transform =
     normalizeBackgroundTransformEditorTransform(transform);
+  state.backgroundTransformEditor.previewTransform = undefined;
   state.backgroundTransformEditor.dragStartPosition = undefined;
+  state.backgroundTransformEditor.isDragCancelled = false;
   state.backgroundTransformEditor.selectedElementMetrics = undefined;
 };
 
 export const closeBackgroundTransformEditor = ({ state }, _payload = {}) => {
   state.backgroundTransformEditor.isOpen = false;
+  state.backgroundTransformEditor.previewTransform = undefined;
   state.backgroundTransformEditor.dragStartPosition = undefined;
+  state.backgroundTransformEditor.isDragCancelled = false;
   state.backgroundTransformEditor.selectedElementMetrics = undefined;
 };
 
@@ -1142,13 +1148,32 @@ export const setBackgroundTransformEditorSelectedElementMetrics = (
     });
 };
 
+// A change replaces the transform previewed from an inspector popover.
 export const setBackgroundTransformEditorTransform = (
   { state },
   { transform } = {},
 ) => {
   state.backgroundTransformEditor.transform =
     normalizeBackgroundTransformEditorTransform(transform);
+  state.backgroundTransformEditor.previewTransform = undefined;
 };
+
+// A transform chosen in an inspector popover and not submitted yet. Only the
+// canvas shows it; a change or a cancel replaces it.
+export const setBackgroundTransformEditorPreviewTransform = (
+  { state },
+  { transform } = {},
+) => {
+  state.backgroundTransformEditor.previewTransform =
+    normalizeBackgroundTransformEditorTransform(transform);
+};
+
+export const clearBackgroundTransformEditorPreviewTransform = ({ state }) => {
+  state.backgroundTransformEditor.previewTransform = undefined;
+};
+
+export const selectHasBackgroundTransformEditorPreviewTransform = ({ state }) =>
+  state.backgroundTransformEditor.previewTransform !== undefined;
 
 export const setBackgroundTransformEditorDragStartPosition = (
   { state },
@@ -1162,6 +1187,29 @@ export const clearBackgroundTransformEditorDragStartPosition = (
   _payload = {},
 ) => {
   state.backgroundTransformEditor.dragStartPosition = undefined;
+};
+
+// A canvas drag starts or ends, so the next one starts where it finds the
+// target.
+export const resetBackgroundTransformEditorDrag = ({ state }) => {
+  state.backgroundTransformEditor.dragStartPosition = undefined;
+  state.backgroundTransformEditor.isDragCancelled = false;
+};
+
+// A cancelled pointer, such as the first finger of a pinch, drops its drag:
+// the target goes back to where the drag found it, and the moves the pointer
+// sends until it lifts move nothing.
+export const cancelBackgroundTransformEditorDrag = ({ state }) => {
+  const editor = state.backgroundTransformEditor;
+  const start = editor.dragStartPosition;
+  if (start) {
+    editor.transform.x = start.transformStartX;
+    editor.transform.y = start.transformStartY;
+    editor.transform.scaleX = start.transformStartScaleX;
+    editor.transform.scaleY = start.transformStartScaleY;
+  }
+  editor.dragStartPosition = undefined;
+  editor.isDragCancelled = true;
 };
 
 export const suppressNextActionsDialogClose = ({ state }, _payload = {}) => {
@@ -1183,6 +1231,20 @@ export const selectSuppressNextActionsDialogClose = ({ state }) => {
 
 export const selectBackgroundTransformEditor = ({ state }) => {
   return state.backgroundTransformEditor;
+};
+
+// The editor as the canvas draws it: with the previewed transform while an
+// inspector popover previews one.
+export const selectCanvasBackgroundTransformEditor = ({ state }) => {
+  const editor = state.backgroundTransformEditor;
+  if (editor.previewTransform === undefined) {
+    return editor;
+  }
+
+  return {
+    ...editor,
+    transform: editor.previewTransform,
+  };
 };
 
 export const selectIsBackgroundTransformEditorOpen = ({ state }) => {

@@ -111,6 +111,14 @@ refs:
         handler: handleBackgroundTransformEditorDone
       background-transform-editor-change:
         handler: handleBackgroundTransformEditorChange
+      background-transform-editor-preview:
+        handler: handleBackgroundTransformEditorPreview
+      background-transform-editor-preview-cancel:
+        handler: handleBackgroundTransformEditorPreviewCancel
+      background-transform-editor-canvas-resize:
+        handler: handleBackgroundTransformEditorCanvasResize
+      background-transform-editor-drag-cancel:
+        handler: handleBackgroundTransformEditorDragCancel
       background-transform-editor-cancel:
         handler: handleBackgroundTransformEditorCancel
       action-transform-customize:
