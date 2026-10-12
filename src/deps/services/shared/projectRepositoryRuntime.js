@@ -28,6 +28,7 @@ import {
   isMainPartition,
   isMainScenePartition,
   isNonEmptyString,
+  replayFailedEventBatch,
   resolveSceneIdForPartition,
   toCommittedProjectEvent,
 } from "./projectRepositoryViews/shared.js";
@@ -339,7 +340,7 @@ const canSkipDuplicateResourceCreateDuringReplay = ({
   );
 };
 
-const canAttemptSequentialReplayRecovery = ({ events, error } = {}) => {
+const canAttemptDuplicateCreateReplayRecovery = ({ events, error } = {}) => {
   const replayEvents = Array.isArray(events) ? events : [];
   const failedIndex = getReplayFailedCommandIndex(error);
   if (Number.isInteger(failedIndex) && failedIndex < replayEvents.length) {
@@ -370,57 +371,68 @@ const canAttemptSequentialReplayRecovery = ({ events, error } = {}) => {
   );
 };
 
-const replayEventsSequentially = ({
+// Replays `events`, skipping file and resource creates that are already in
+// the state. Given the `error` from replaying them together, it resumes after
+// the event the error reports instead of replaying each event on its own.
+const replayEventsSkippingDuplicateCreates = ({
   repositoryState,
   events,
+  error,
   reduceEventToState,
+  reduceEventsToState,
 } = {}) => {
-  let state = repositoryState;
+  let failedEventArrayIndex;
 
-  for (let index = 0; index < events.length; index += 1) {
-    const event = events[index];
+  try {
+    const replayedState = replayFailedEventBatch({
+      repositoryState,
+      events,
+      error,
+      reduceEventsToState,
+      replayEvent: ({ repositoryState: state, event, index }) => {
+        try {
+          return reduceEventToState({
+            repositoryState: state,
+            event,
+          });
+        } catch (eventError) {
+          if (
+            canSkipDuplicateFileCreateDuringReplay({
+              repositoryState: state,
+              event,
+              error: eventError,
+            })
+          ) {
+            return state;
+          }
 
-    try {
-      const nextState = reduceEventToState({
-        repositoryState: state,
-        event,
-      });
-      if (nextState !== undefined) {
-        state = nextState;
-      }
-    } catch (error) {
-      if (
-        canSkipDuplicateFileCreateDuringReplay({
-          repositoryState: state,
-          event,
-          error,
-        })
-      ) {
-        continue;
-      }
+          if (
+            canSkipDuplicateResourceCreateDuringReplay({
+              repositoryState: state,
+              event,
+              error: eventError,
+            })
+          ) {
+            return state;
+          }
 
-      if (
-        canSkipDuplicateResourceCreateDuringReplay({
-          repositoryState: state,
-          event,
-          error,
-        })
-      ) {
-        continue;
-      }
+          failedEventArrayIndex = index;
+          throw eventError;
+        }
+      },
+    });
 
-      return {
-        valid: false,
-        error,
-        failedEventArrayIndex: index,
-      };
-    }
+    return {
+      valid: true,
+      repositoryState: replayedState,
+    };
+  } catch (replayError) {
+    return {
+      valid: false,
+      error: replayError,
+      failedEventArrayIndex,
+    };
   }
-
-  return {
-    valid: true,
-    repositoryState: state,
-  };
 };
 
 export const replayEventsToRepositoryState = ({
@@ -445,27 +457,29 @@ export const replayEventsToRepositoryState = ({
       const replayEvents = events.slice(0, targetIndex);
       if (
         typeof reduceEventToState === "function" &&
-        canAttemptSequentialReplayRecovery({
+        canAttemptDuplicateCreateReplayRecovery({
           events: replayEvents,
           error,
         })
       ) {
-        const sequentialReplay = replayEventsSequentially({
+        const recoveredReplay = replayEventsSkippingDuplicateCreates({
           repositoryState: createInitialState(),
           events: replayEvents,
+          error,
           reduceEventToState,
+          reduceEventsToState,
         });
 
-        if (sequentialReplay.valid) {
-          return sequentialReplay.repositoryState;
+        if (recoveredReplay.valid) {
+          return recoveredReplay.repositoryState;
         }
 
         throw createReplayError({
-          error: sequentialReplay.error,
+          error: recoveredReplay.error,
           events: replayEvents,
           targetEventCount: targetIndex,
-          failedEventArrayIndex: sequentialReplay.failedEventArrayIndex,
-          fallbackFailedBatchIndex: sequentialReplay.failedEventArrayIndex,
+          failedEventArrayIndex: recoveredReplay.failedEventArrayIndex,
+          fallbackFailedBatchIndex: recoveredReplay.failedEventArrayIndex,
         });
       }
 
@@ -486,7 +500,7 @@ export const replayEventsToRepositoryState = ({
 
   let state = createInitialState();
   for (let index = 0; index < targetIndex; index += 1) {
-    const replayResult = replayEventsSequentially({
+    const replayResult = replayEventsSkippingDuplicateCreates({
       repositoryState: state,
       events: [events[index]],
       reduceEventToState,
@@ -1177,31 +1191,33 @@ export const createProjectRepositoryRuntime = async ({
       } catch (error) {
         if (
           typeof reduceEventToState === "function" &&
-          canAttemptSequentialReplayRecovery({
+          canAttemptDuplicateCreateReplayRecovery({
             events: replayBatch,
             error,
           })
         ) {
-          const sequentialReplay = replayEventsSequentially({
+          const recoveredReplay = replayEventsSkippingDuplicateCreates({
             repositoryState: state,
             events: replayBatch,
+            error,
             reduceEventToState,
+            reduceEventsToState,
           });
 
-          if (sequentialReplay.valid) {
-            state = sequentialReplay.repositoryState;
+          if (recoveredReplay.valid) {
+            state = recoveredReplay.repositoryState;
             replayedEventCount += replayBatch.length;
             continue;
           }
 
           throw createReplayError({
-            error: sequentialReplay.error,
+            error: recoveredReplay.error,
             events: replayBatch,
             targetEventCount: targetIndex,
             failedEventArrayIndex:
-              batchStartIndex + sequentialReplay.failedEventArrayIndex,
+              batchStartIndex + recoveredReplay.failedEventArrayIndex,
             baseIndex: batchStartIndex,
-            fallbackFailedBatchIndex: sequentialReplay.failedEventArrayIndex,
+            fallbackFailedBatchIndex: recoveredReplay.failedEventArrayIndex,
           });
         }
 
