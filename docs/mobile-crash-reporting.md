@@ -63,13 +63,19 @@ The script defines a frozen `window.__ROUTEVN_ERROR_REPORTING__`.
 - `src/deps/clients/android/errorReporting.js` and
   `src/deps/clients/ios/errorReporting.js` read it and tag events with the
   `runtime` `android` or `ios`. Builds without a DSN set nothing, so the page
-  sends nothing, as in Debug builds without a local collector.
+  sends nothing.
 
 The page's events go through the JavaScript `beforeSend` scrubbing described in
 [desktop error reporting](desktop-error-reporting.md#collection-and-privacy),
 with the same per-session limits. They are sent from the page's origin,
 `https://appassets.androidplatform.net` on Android and the `routevn` scheme on
 iOS, so the collector must accept cross-origin requests from them.
+
+The Android page's Content-Security-Policy (`static/android/index.html`) allows
+only `https:` connections, apart from the dev server. A local
+`http://127.0.0.1` collector therefore receives native crashes but not the
+page's errors, unless its address is added to `connect-src` for that test
+build.
 
 ### WebView renderer loss
 
@@ -321,3 +327,11 @@ only release, dist, environment, level, platform, SDK, fingerprint, the scrubbed
 exception (`App crash`), frames, device architecture/manufacturer/model, OS
 name/version and, for the native crash, basename-only debug images. This does
 not replace the Release-build qualification against the collector.
+
+Page JavaScript reporting verified on 2026-10-12 with Debug builds and a
+temporary probe (a handled `appService.reportError` call and an uncaught error)
+against a local envelope sink: on an iPad mini 6 through the Mac's LAN address,
+and on a Redmi K30 5G through `adb reverse` with the sink's address temporarily
+added to the page's `connect-src`. Both events arrived from the page's origin
+(`routevn://app`, `https://appassets.androidplatform.net`) with the `runtime`
+tag, dist and device ID, and with stacks reduced to `main.js` frames.

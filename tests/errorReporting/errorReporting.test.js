@@ -271,6 +271,36 @@ describe("explicit error reporting through the SDK", () => {
     expect(events[0].user).toEqual({ id: deviceId });
   });
 
+  it.each([
+    [
+      "android",
+      () => import("../../src/deps/clients/android/errorReporting.js"),
+    ],
+    ["ios", () => import("../../src/deps/clients/ios/errorReporting.js")],
+  ])(
+    "tags %s page reports with their runtime and injected device ID",
+    async (runtime, importReporter) => {
+      const deviceId = "23456789ABCD23456789ABCD";
+      globalThis.__ROUTEVN_ERROR_REPORTING__ = Object.freeze({
+        dsn: TEST_DSN,
+        release: "app-one@1.0.0",
+        environment: "development",
+        dist: "test-build",
+        deviceId,
+      });
+      vi.resetModules();
+      const { errorReporter } = await importReporter();
+      const events = collectSentEvents();
+
+      errorReporter.capture(new Error("save failed"));
+      await errorReporter.flush();
+
+      expect(events).toHaveLength(1);
+      expect(events[0].tags.runtime).toBe(runtime);
+      expect(events[0].user).toEqual({ id: deviceId });
+    },
+  );
+
   it("omits the user when the injected desktop configuration has no device ID", async () => {
     globalThis.__ROUTEVN_ERROR_REPORTING__ = Object.freeze({
       dsn: TEST_DSN,
