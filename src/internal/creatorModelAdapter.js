@@ -2157,70 +2157,129 @@ export const applyCommandToRepositoryStateWithCreatorModel = ({
   });
 };
 
+// Gives a failed result the index of the failed command in the whole batch.
+const withBatchCommandIndex = (result, commandIndex) => {
+  if (result.valid !== false || !Number.isInteger(commandIndex)) {
+    return result;
+  }
+
+  const details = isPlainObject(result.error?.details)
+    ? { ...result.error.details }
+    : {};
+  details.commandIndex = commandIndex;
+
+  return {
+    ...result,
+    error: {
+      ...result.error,
+      details,
+    },
+  };
+};
+
+// Replays `commands[start..end)` in one creator model pass. A command that
+// fails is reported by its index in `commands`.
+const replayCommandRun = ({ repositoryState, commands, start, end }) => {
+  const runCommands = commands.slice(start, end);
+  const replayResult = toCreatorModelResult(
+    replayCreatorModelCommands({
+      state: toCreatorModelState(repositoryState),
+      commands: commandsToCreatorModelCommands({
+        commands: runCommands,
+      }),
+    }),
+  );
+  if (!replayResult.valid) {
+    const runCommandIndex = replayResult.error?.details?.commandIndex;
+    return withBatchCommandIndex(
+      replayResult,
+      Number.isInteger(runCommandIndex) ? start + runCommandIndex : undefined,
+    );
+  }
+
+  const extendedState = mergeClientModelExtensions({
+    sourceState: repositoryState,
+    targetState: replayResult.state,
+    commands: runCommands,
+  });
+  if (extendedState.valid === false) {
+    return extendedState;
+  }
+
+  return {
+    valid: true,
+    nextCreatorModelState: replayResult.state,
+    repositoryState: extendedState.repositoryState,
+  };
+};
+
 export const applyCommandsToRepositoryStateWithCreatorModel = ({
   repositoryState,
   commands,
 } = {}) => {
   return captureCreatorModelResult(() => {
     const normalizedCommands = Array.isArray(commands) ? commands : [];
-    const requiresSequentialProjection = normalizedCommands.some((command) =>
-      requiresClientModelCharacterSpriteProjection({
-        command,
-        repositoryState,
-      }),
-    );
-
-    if (requiresSequentialProjection) {
-      const creatorModelCommands = commandsToCreatorModelCommands({
-        commands: normalizedCommands,
-      });
-      let nextState = repositoryState;
-      for (const command of normalizedCommands) {
-        const applyResult = applyCommandToRepositoryStateWithCreatorModel({
-          repositoryState: nextState,
-          command,
-        });
-        if (applyResult.valid === false) {
-          return applyResult;
-        }
-        nextState = applyResult.repositoryState;
-      }
-
-      return {
-        valid: true,
-        creatorModelCommands,
-        nextCreatorModelState: toCreatorModelState(nextState),
-        repositoryState: nextState,
-      };
-    }
-
-    const creatorModelState = toCreatorModelState(repositoryState);
     const creatorModelCommands = commandsToCreatorModelCommands({
       commands: normalizedCommands,
     });
-    const replayResult = toCreatorModelResult(
-      replayCreatorModelCommands({
-        state: creatorModelState,
-        commands: creatorModelCommands,
-      }),
-    );
-    if (!replayResult.valid) {
-      return replayResult;
+
+    // Only the character sprite commands that the client model projects are
+    // applied one at a time. Each of those validates the whole state, so the
+    // commands between them are replayed together. The replayed commands do
+    // not change which characters have spritesheets, so the state before them
+    // still tells which later commands need the client model.
+    let nextState = repositoryState;
+    let runStart = 0;
+    for (let index = 0; index < normalizedCommands.length; index += 1) {
+      const command = normalizedCommands[index];
+      if (
+        !requiresClientModelCharacterSpriteProjection({
+          command,
+          repositoryState: nextState,
+        })
+      ) {
+        continue;
+      }
+
+      if (index > runStart) {
+        const runResult = replayCommandRun({
+          repositoryState: nextState,
+          commands: normalizedCommands,
+          start: runStart,
+          end: index,
+        });
+        if (runResult.valid === false) {
+          return runResult;
+        }
+        nextState = runResult.repositoryState;
+      }
+
+      const applyResult = applyCommandToRepositoryStateWithCreatorModel({
+        repositoryState: nextState,
+        command,
+      });
+      if (applyResult.valid === false) {
+        return withBatchCommandIndex(applyResult, index);
+      }
+      nextState = applyResult.repositoryState;
+      runStart = index + 1;
     }
-    const extendedState = mergeClientModelExtensions({
-      sourceState: repositoryState,
-      targetState: replayResult.state,
+
+    const runResult = replayCommandRun({
+      repositoryState: nextState,
       commands: normalizedCommands,
+      start: runStart,
+      end: normalizedCommands.length,
     });
-    if (extendedState.valid === false) {
-      return extendedState;
+    if (runResult.valid === false) {
+      return runResult;
     }
 
     return {
       valid: true,
       creatorModelCommands,
-      nextCreatorModelState: replayResult.state,
-      repositoryState: extendedState.repositoryState,
+      nextCreatorModelState: runResult.nextCreatorModelState,
+      repositoryState: runResult.repositoryState,
     };
   });
 };

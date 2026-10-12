@@ -759,6 +759,61 @@ export const loadSceneProjectionState = async ({
     (projectCreateEvent ? [structuredClone(projectCreateEvent)] : []);
   let relevantReplayCount = 0;
 
+  const replayEntriesOneAtATime = (entries) => {
+    for (const relevantEntry of entries) {
+      try {
+        const nextState = reduceEventToState({
+          repositoryState: workingState,
+          event: relevantEntry.event,
+        });
+        if (nextState !== undefined) {
+          workingState = nextState;
+        }
+      } catch (sequentialError) {
+        if (
+          shouldSkipObsoleteSceneReplayEvent({
+            event: relevantEntry.event,
+            repositoryState: workingState,
+            error: sequentialError,
+          })
+        ) {
+          console.warn("[sceneProjection] skipped obsolete replay event", {
+            sceneId,
+            eventId: relevantEntry.event?.id,
+            partition: relevantEntry.event?.partition,
+            error: sequentialError?.message || "unknown",
+          });
+          continue;
+        }
+
+        logSceneProjectionReplayFailure({
+          sceneId,
+          event: relevantEntry.event,
+          index: relevantEntry.index,
+          events:
+            streamedDebugReplayEvents === debugReplayEvents
+              ? replayEvents
+              : streamedDebugReplayEvents,
+          mainState,
+          bootstrapProjection,
+          initialWorkingState,
+          repositoryState: workingState,
+          error: sequentialError,
+        });
+        throw sequentialError;
+      }
+    }
+  };
+  const replayEntriesTogether = (entries) => {
+    const nextState = reduceEventsToState({
+      repositoryState: workingState,
+      events: entries.map(({ event }) => event),
+    });
+    if (nextState !== undefined) {
+      workingState = nextState;
+    }
+  };
+
   for await (const committedBatch of iterateCommittedEventBatches({
     events: committedEvents,
     listCommittedAfter,
@@ -792,63 +847,40 @@ export const loadSceneProjectionState = async ({
       );
     }
 
-    try {
-      const nextState = reduceEventsToState({
-        repositoryState: workingState,
-        events: relevantEventEntries.map(({ event }) => event),
-      });
-      if (nextState !== undefined) {
-        workingState = nextState;
+    // Each event replayed on its own validates the whole state, so a batch
+    // that fails is replayed together up to the event it reports, and only
+    // that event is replayed on its own. A failure without an event index
+    // replays the rest of the batch one event at a time.
+    let pendingEntries = relevantEventEntries;
+    while (pendingEntries.length > 0) {
+      let failedIndex;
+      try {
+        replayEntriesTogether(pendingEntries);
+        break;
+      } catch (error) {
+        failedIndex = error?.details?.commandIndex;
       }
-    } catch (error) {
-      let recovered = false;
-      for (const relevantEntry of relevantEventEntries) {
-        try {
-          const nextState = reduceEventToState({
-            repositoryState: workingState,
-            event: relevantEntry.event,
-          });
-          if (nextState !== undefined) {
-            workingState = nextState;
-          }
-        } catch (sequentialError) {
-          if (
-            shouldSkipObsoleteSceneReplayEvent({
-              event: relevantEntry.event,
-              repositoryState: workingState,
-              error: sequentialError,
-            })
-          ) {
-            console.warn("[sceneProjection] skipped obsolete replay event", {
-              sceneId,
-              eventId: relevantEntry.event?.id,
-              partition: relevantEntry.event?.partition,
-              error: sequentialError?.message || "unknown",
-            });
-            continue;
-          }
 
-          logSceneProjectionReplayFailure({
-            sceneId,
-            event: relevantEntry.event,
-            index: relevantEntry.index,
-            events:
-              streamedDebugReplayEvents === debugReplayEvents
-                ? replayEvents
-                : streamedDebugReplayEvents,
-            mainState,
-            bootstrapProjection,
-            initialWorkingState,
-            repositoryState: workingState,
-            error: sequentialError,
-          });
-          throw sequentialError;
+      if (
+        !Number.isInteger(failedIndex) ||
+        failedIndex < 0 ||
+        failedIndex >= pendingEntries.length
+      ) {
+        replayEntriesOneAtATime(pendingEntries);
+        break;
+      }
+
+      try {
+        if (failedIndex > 0) {
+          replayEntriesTogether(pendingEntries.slice(0, failedIndex));
         }
+      } catch {
+        replayEntriesOneAtATime(pendingEntries);
+        break;
       }
-      recovered = true;
-      if (!recovered) {
-        throw error;
-      }
+
+      replayEntriesOneAtATime([pendingEntries[failedIndex]]);
+      pendingEntries = pendingEntries.slice(failedIndex + 1);
     }
 
     relevantReplayCount += relevantEventEntries.length;
