@@ -167,6 +167,13 @@ that replay is left out of the loaded history and kept in `local_drafts`.
 Errors without a command index are traced to their draft by a binary search,
 so valid drafts around it still apply.
 
+Desktop, Android and iOS store drafts as JSON, which drops `undefined` fields;
+web keeps them in IndexedDB as they are. A draft whose payload JSON would
+change can therefore load differently, or fail, after it is stored. The command
+API reports such a payload when the change is saved
+(`projectCommand.nonJsonPayload`, see `docs/desktop-error-reporting.md`) so
+that its source can be fixed.
+
 When a load leaves drafts out, the repository deletes every scene projection
 checkpoint (they count events by position, which a left-out draft shifts),
 clears the overviews and text stats of the affected scenes (of every scene

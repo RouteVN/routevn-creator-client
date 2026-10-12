@@ -69,63 +69,74 @@ const setup = async ({ reportError = vi.fn() } = {}) => {
     },
   });
   session.submitCommand.mockClear();
+  reportError.mockClear();
 
-  return { api, repository, reportError, session, shared };
+  const updateElement = (data) =>
+    api.updateLayoutElement({ layoutId, elementId, data, replace: false });
+
+  return { reportError, session, shared, updateElement };
 };
 
-const getElement = (repository) =>
-  repository.getState().layouts.items[layoutId].elements.items[elementId];
-
-describe("commandApi stored form check", () => {
+describe("commandApi non-JSON payload report", () => {
   afterEach(() => {
     vi.restoreAllMocks();
   });
 
-  it("reports a change whose stored form would not load, and still saves it", async () => {
-    const { api, repository, reportError, session } = await setup();
+  it("reports a field that JSON would drop, after the change is saved", async () => {
+    const { reportError, session, updateElement } = await setup();
 
-    const result = await api.updateLayoutElement({
-      layoutId,
-      elementId,
-      data: { hidden: undefined },
-      replace: false,
-    });
+    // Stored as JSON, this is `{ name: "Heading" }`, so `hidden` comes back
+    // when the project loads again.
+    const result = await updateElement({ name: "Heading", hidden: undefined });
 
     expect(result).toMatchObject({ valid: true });
     expect(session.submitCommand).toHaveBeenCalledOnce();
-    expect(getElement(repository).hidden).toBeUndefined();
     expect(reportError).toHaveBeenCalledOnce();
     const [error, context] = reportError.mock.calls[0];
-    expect(error.name).toBe("CommandInvalidOnceStoredError");
+    expect(error.name).toBe("NonJsonCommandPayloadError");
     expect(error.message).toBe(
-      "layout.element.update: payload.data must include at least one updatable field",
+      "layout.element.update: payload.data.hidden must contain only JSON values",
     );
-    expect(context).toEqual({
-      operation: "projectCommand.validateStoredForm",
-      code: error.code,
-    });
+    expect(context).toEqual({ operation: "projectCommand.nonJsonPayload" });
   });
 
-  it("does not report a change whose stored form still loads", async () => {
-    const { api, reportError } = await setup();
+  it("does not report a payload that JSON keeps as it is", async () => {
+    const { reportError, updateElement } = await setup();
 
-    await api.updateLayoutElement({
-      layoutId,
-      elementId,
-      data: { name: "Heading", hidden: undefined },
-      replace: false,
-    });
-    await api.updateLayoutElement({
-      layoutId,
-      elementId,
-      data: { name: "Subtitle" },
-      replace: false,
-    });
+    await updateElement({ name: "Heading" });
 
     expect(reportError).not.toHaveBeenCalled();
   });
 
-  it("checks commands saved together", async () => {
+  it("reports each command type and field once, and at most three per session", async () => {
+    const { reportError, updateElement } = await setup();
+
+    await updateElement({ name: "Heading", hidden: undefined });
+    await updateElement({ name: "Subtitle", hidden: undefined });
+    await updateElement({ name: "Caption", x: undefined });
+    await updateElement({ name: "Label", y: undefined });
+    await updateElement({ name: "Footer", width: undefined });
+
+    expect(reportError.mock.calls.map(([error]) => error.message)).toEqual([
+      "layout.element.update: payload.data.hidden must contain only JSON values",
+      "layout.element.update: payload.data.x must contain only JSON values",
+      "layout.element.update: payload.data.y must contain only JSON values",
+    ]);
+  });
+
+  it("does not report a change that was not saved", async () => {
+    const { reportError, session, updateElement } = await setup();
+    session.submitCommand.mockResolvedValueOnce({
+      valid: false,
+      error: { code: "rejected", message: "Rejected" },
+    });
+
+    await updateElement({ name: "Heading", hidden: undefined });
+
+    expect(reportError).not.toHaveBeenCalled();
+  });
+
+  it("reports commands saved together", async () => {
     const { reportError, session, shared } = await setup();
     const context = await shared.ensureCommandContext();
 
@@ -138,7 +149,7 @@ describe("commandApi stored form check", () => {
           payload: {
             layoutId,
             elementId,
-            data: { hidden: undefined },
+            data: { name: "Heading", hidden: undefined },
             replace: false,
           },
         },
@@ -148,29 +159,20 @@ describe("commandApi stored form check", () => {
     expect(result).toMatchObject({ valid: true });
     expect(session.submitCommands).toHaveBeenCalledOnce();
     expect(reportError).toHaveBeenCalledOnce();
-    expect(reportError.mock.calls[0][0].name).toBe(
-      "CommandInvalidOnceStoredError",
-    );
   });
 
-  it("saves the change when the check itself fails", async () => {
+  it("saves the change when reporting fails", async () => {
     vi.spyOn(console, "warn").mockImplementation(() => {});
     const reportError = vi.fn(() => {
       throw new Error("reporter unavailable");
     });
-    const { api, session } = await setup({ reportError });
+    const { updateElement } = await setup({ reportError });
 
-    const result = await api.updateLayoutElement({
-      layoutId,
-      elementId,
-      data: { hidden: undefined },
-      replace: false,
-    });
+    const result = await updateElement({ name: "Heading", hidden: undefined });
 
     expect(result).toMatchObject({ valid: true });
-    expect(session.submitCommand).toHaveBeenCalledOnce();
     expect(console.warn).toHaveBeenCalledWith(
-      "Failed to check the stored form of a command",
+      "Failed to report a non-JSON command payload",
       expect.objectContaining({ message: "reporter unavailable" }),
     );
   });

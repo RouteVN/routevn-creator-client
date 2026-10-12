@@ -12,6 +12,7 @@ import {
 } from "../projectRepository.js";
 import { collapsePartitionsToSingle } from "../collab/partitions.js";
 import { generateId } from "../../../../internal/id.js";
+import { assertJsonValue } from "../../../../internal/playerRuntimePersistence.js";
 
 const flushRepositoryMainCheckpoint = async (repository) => {
   await repository.flushMainCheckpoint();
@@ -31,25 +32,19 @@ const flushRepositoryMainCheckpointBestEffort = async ({
   }
 };
 
-// Whether storing `value` as JSON changes it: JSON drops undefined fields and
-// turns NaN and Infinity into null.
-const hasValueChangedByJson = (value) => {
-  if (value === undefined) {
-    return true;
-  }
-  if (typeof value === "number") {
-    return !Number.isFinite(value);
-  }
-  if (value && typeof value === "object") {
-    return Object.values(value).some(hasValueChangedByJson);
-  }
-  return false;
-};
+// Changes are stored as JSON on desktop, Android and iOS, and sent as JSON when
+// synced. JSON drops undefined fields and changes other non-JSON values, so
+// such a change can mean something else, or fail, when the project's history
+// loads again. These are reported so that the editor that made them can be
+// fixed; the change itself is saved as before. Each command type and field is
+// reported once per session, and only a few per session, so that they do not
+// use up the reports available for other errors.
+const MAX_NON_JSON_PAYLOAD_REPORTS = 3;
 
 export const createCommandApiShared = ({
   idGenerator,
   now = () => 0,
-  reportError = () => {},
+  reportError,
   getCurrentProjectId,
   getCurrentRepository,
   getCachedRepository,
@@ -182,41 +177,41 @@ export const createCommandApiShared = ({
     });
   };
 
-  // Changes are stored as JSON and validated again when the project's history
-  // loads, where a change that no longer passes is left out of the project.
-  // A change that passes now but whose stored form would not is reported when
-  // it is made, so that its source can be fixed. It is still saved as before,
-  // and a failure of this check never stops the save.
-  const reportCommandsInvalidOnceStored = ({ context, commands }) => {
-    try {
-      const changedCommands = commands.filter((command) =>
-        hasValueChangedByJson(command.payload),
-      );
-      if (changedCommands.length === 0) {
+  const reportedNonJsonPayloads = new Set();
+
+  // Called after the commands were saved.
+  const reportNonJsonPayloads = (commands) => {
+    if (!reportError) {
+      return;
+    }
+
+    for (const { type, payload } of commands) {
+      if (reportedNonJsonPayloads.size >= MAX_NON_JSON_PAYLOAD_REPORTS) {
         return;
       }
 
-      const storedResult = validateCommandsAgainstContext({
-        context,
-        commands: JSON.parse(JSON.stringify(commands)),
-      });
-      if (storedResult?.valid !== false) {
-        return;
+      let message;
+      try {
+        assertJsonValue(payload, "payload");
+        continue;
+      } catch (error) {
+        message = `${type}: ${error.message}`;
       }
+      if (reportedNonJsonPayloads.has(message)) {
+        continue;
+      }
+      reportedNonJsonPayloads.add(message);
 
-      const error = new Error(
-        `${changedCommands.map(({ type }) => type).join(", ")}: ${
-          storedResult.error?.message ?? "Invalid stored command"
-        }`,
-      );
-      error.name = "CommandInvalidOnceStoredError";
-      error.code = storedResult.error?.code;
-      reportError(error, {
-        operation: "projectCommand.validateStoredForm",
-        code: error.code,
-      });
-    } catch (error) {
-      console.warn("Failed to check the stored form of a command", error);
+      const error = new Error(message);
+      error.name = "NonJsonCommandPayloadError";
+      try {
+        reportError(error, { operation: "projectCommand.nonJsonPayload" });
+      } catch (reportFailure) {
+        console.warn(
+          "Failed to report a non-JSON command payload",
+          reportFailure,
+        );
+      }
     }
   };
 
@@ -281,12 +276,12 @@ export const createCommandApiShared = ({
     if (validationResult?.valid === false) {
       return validationResult;
     }
-    reportCommandsInvalidOnceStored({ context, commands: [command] });
 
     const submitResult = await context.session.submitCommand(command);
     if (submitResult?.valid === false) {
       return submitResult;
     }
+    reportNonJsonPayloads([command]);
 
     const applyResult = await applyCommandToRepository({
       repository: context.repository,
@@ -340,7 +335,6 @@ export const createCommandApiShared = ({
     if (validationResult?.valid === false) {
       return validationResult;
     }
-    reportCommandsInvalidOnceStored({ context, commands: normalizedCommands });
 
     const localApplyCommands = structuredClone(normalizedCommands);
     let submitted = false;
@@ -351,6 +345,7 @@ export const createCommandApiShared = ({
         return submitResult;
       }
       submitted = true;
+      reportNonJsonPayloads(normalizedCommands);
 
       const applyResult = await applyCommandsToRepository({
         repository: context.repository,
