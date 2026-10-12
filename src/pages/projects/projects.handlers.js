@@ -26,8 +26,13 @@ import {
 } from "../../internal/ui/appLocale.js";
 import { selectProjectsPageCopy } from "./support/projectsPageCopy.js";
 import {
+  getImportDestinationError,
+  importProjectArchive,
+  importProjectFromFolder,
   importProjectFromLocal,
   importProjectFromUrl,
+  pickImportDestinationFolder,
+  pickProjectArchive,
 } from "./support/projectImportFlows.js";
 
 const mapCloudProject = (project, copy) => {
@@ -414,9 +419,30 @@ export const handleCloudCreateFormAction = async (deps, payload) => {
 };
 
 // Leaf import actions shared by the desktop Open button menu and the second
-// level of the mobile Create menu. "From local" covers folders and, on mobile,
-// zip files; every platform can import from a URL.
-const createImportMenuItems = (copy) => {
+// level of the mobile Create menu. Desktop lists a local folder, a local zip
+// file and a URL. On Android and iOS, "From local" asks for a folder or a zip
+// file; every platform can import from a URL.
+const createImportMenuItems = (copy, platform) => {
+  if (platform === "tauri") {
+    return [
+      {
+        label: copy.importFromLocalFolderMenuItem,
+        type: "item",
+        value: "import-folder",
+      },
+      {
+        label: copy.importFromLocalZipMenuItem,
+        type: "item",
+        value: "import-zip",
+      },
+      {
+        label: copy.importFromUrlMenuItem,
+        type: "item",
+        value: "import-url",
+      },
+    ];
+  }
+
   return [
     {
       label: copy.importFromLocalMenuItem,
@@ -440,6 +466,17 @@ const runImportMenuAction = async (deps, value) => {
     return;
   }
 
+  if (value === "import-zip") {
+    store.openZipImportDialog();
+    render();
+    return;
+  }
+
+  if (value === "import-folder") {
+    await importProjectFromFolder(deps);
+    return;
+  }
+
   if (value === "import-local") {
     await importProjectFromLocal(deps);
   }
@@ -456,7 +493,7 @@ export const handleOpenButtonClick = (deps, payload) => {
   store.openImportSourceMenu({
     x: rect.left,
     y: rect.bottom,
-    items: createImportMenuItems(copy),
+    items: createImportMenuItems(copy, appService.getPlatform()),
   });
   render();
 };
@@ -510,10 +547,100 @@ export const handleUrlImportFormAction = async (deps, payload) => {
     return;
   }
 
+  const destinationFolder = store.selectUrlImportDestinationFolder();
+  if (appService.getPlatform() === "tauri") {
+    const destinationError = await getImportDestinationError(
+      deps,
+      destinationFolder,
+    );
+    if (destinationError) {
+      store.setUrlImportDestinationError({ message: destinationError });
+      render();
+      return;
+    }
+  }
+
   store.closeUrlImportDialog();
   render();
 
-  await importProjectFromUrl(deps, { url });
+  await importProjectFromUrl(deps, { url, destinationFolder });
+};
+
+// Desktop URL import: the empty destination folder is picked inside the URL
+// dialog. A cancelled pick keeps the previous choice.
+export const handleUrlImportBrowseButtonClick = async (deps) => {
+  const { store, render } = deps;
+
+  const folder = await pickImportDestinationFolder(deps);
+  if (!folder) {
+    return;
+  }
+
+  store.setUrlImportDestinationFolder({ folder });
+  render();
+};
+
+export const handleZipImportDialogClose = (deps) => {
+  const { store, render } = deps;
+  if (!store.selectIsZipImportDialogOpen()) {
+    return;
+  }
+  store.closeZipImportDialog();
+  render();
+};
+
+// Desktop zip import: the zip file and the empty destination folder are both
+// picked inside the zip dialog. A cancelled pick keeps the previous choice.
+export const handleZipImportArchiveBrowseButtonClick = async (deps) => {
+  const { store, render } = deps;
+
+  const archive = await pickProjectArchive(deps);
+  if (!archive?.uri) {
+    return;
+  }
+
+  store.setZipImportArchive({ archive });
+  render();
+};
+
+export const handleZipImportDestinationBrowseButtonClick = async (deps) => {
+  const { store, render } = deps;
+
+  const folder = await pickImportDestinationFolder(deps);
+  if (!folder) {
+    return;
+  }
+
+  store.setZipImportDestinationFolder({ folder });
+  render();
+};
+
+export const handleZipImportFormAction = async (deps, payload) => {
+  const { store, render, i18n } = deps;
+  const copy = selectProjectsPageCopy(i18n);
+  const { actionId } = payload._event.detail;
+
+  if (actionId !== "import-zip") {
+    return;
+  }
+
+  const archive = store.selectZipImportArchive();
+  const destinationFolder = store.selectZipImportDestinationFolder();
+  const archiveError = archive ? undefined : copy.importZipRequiredMessage;
+  const destinationError = await getImportDestinationError(
+    deps,
+    destinationFolder,
+  );
+  if (archiveError || destinationError) {
+    store.setZipImportErrors({ archiveError, destinationError });
+    render();
+    return;
+  }
+
+  store.closeZipImportDialog();
+  render();
+
+  await importProjectArchive(deps, { archive, destinationFolder });
 };
 
 export const handleMobileCreateMenuButtonClick = (deps, payload) => {
@@ -536,7 +663,7 @@ export const handleMobileCreateMenuButtonClick = (deps, payload) => {
         label: copy.importProjectMenuItem,
         type: "item",
         disabled: !canImportProjects,
-        items: createImportMenuItems(copy),
+        items: createImportMenuItems(copy, platform),
       },
     ],
   };

@@ -23,6 +23,26 @@ refs:
     eventListeners:
       form-action:
         handler: handleUrlImportFormAction
+  urlImportBrowseButton:
+    eventListeners:
+      click:
+        handler: handleUrlImportBrowseButtonClick
+  zipImportDialog:
+    eventListeners:
+      close:
+        handler: handleZipImportDialogClose
+  zipImportForm:
+    eventListeners:
+      form-action:
+        handler: handleZipImportFormAction
+  zipImportArchiveBrowseButton:
+    eventListeners:
+      click:
+        handler: handleZipImportArchiveBrowseButtonClick
+  zipImportDestinationBrowseButton:
+    eventListeners:
+      click:
+        handler: handleZipImportDestinationBrowseButtonClick
   mobileCreateMenuButton:
     eventListeners:
       click:
@@ -293,9 +313,31 @@ template:
   - rtgl-dropdown-menu#dropdownMenu ?open=${dropdownMenu.isOpen} x=${dropdownMenu.x} y=${dropdownMenu.y} :items=${dropdownMenu.items}: null
   - rtgl-dropdown-menu#mobileActionMenu ?open=${mobileActionMenu.isOpen} x=${mobileActionMenu.x} y=${mobileActionMenu.y} place=be :items=${mobileActionMenu.items}: null
   - rtgl-dropdown-menu#importSourceMenu ?open=${importSourceMenu.isOpen} x=${importSourceMenu.x} y=${importSourceMenu.y} place=be :items=${importSourceMenu.items}: null
-  - rtgl-dialog#urlImportDialog ?open=${urlImportDialog.isOpen} s=sm:
-      - rtgl-view slot=content w=f p=lg:
-          - rtgl-form#urlImportForm key=${urlImportDialog.formKey} :form=${urlImportForm} :defaultValues=${urlImportDialog.defaultValues} w=f: null
+  - rtgl-dialog#urlImportDialog ?open=${urlImportDialog.isOpen} s=md md-layout=fixed-top:
+      - rtgl-view slot=content d=v w=f h=f overflow=hidden:
+          - rtgl-form#urlImportForm key=${urlImportDialog.formKey} :form=${urlImportForm} :defaultValues=${urlImportDialog.defaultValues} sticky sbv=touch w=f h=f:
+              - $if platform == 'tauri':
+                  - rtgl-view slot=url-import-destination w=f g=xs:
+                      - rtgl-view d=h w=f g=sm av=c:
+                          - rtgl-input w=f :value=${urlImportDestinationDisplay} disabled=true placeholder=${noFolderSelectedLabel}: null
+                          - rtgl-button#urlImportBrowseButton variant=se: ${browseButtonLabel}
+                      - $if urlImportDialog.destinationError:
+                          - rtgl-text s=sm c=de: ${urlImportDialog.destinationError}
+  - rtgl-dialog#zipImportDialog ?open=${zipImportDialog.isOpen} s=md md-layout=fixed-top:
+      - rtgl-view slot=content d=v w=f h=f overflow=hidden:
+          - rtgl-form#zipImportForm key=${zipImportDialog.formKey} :form=${zipImportForm} sticky sbv=touch w=f h=f:
+              - rtgl-view slot=zip-import-archive w=f g=xs:
+                  - rtgl-view d=h w=f g=sm av=c:
+                      - rtgl-input w=f :value=${zipImportArchiveDisplay} disabled=true placeholder=${noFileSelectedLabel}: null
+                      - rtgl-button#zipImportArchiveBrowseButton variant=se: ${browseButtonLabel}
+                  - $if zipImportDialog.archiveError:
+                      - rtgl-text s=sm c=de: ${zipImportDialog.archiveError}
+              - rtgl-view slot=zip-import-destination w=f g=xs:
+                  - rtgl-view d=h w=f g=sm av=c:
+                      - rtgl-input w=f :value=${zipImportDestinationDisplay} disabled=true placeholder=${noFolderSelectedLabel}: null
+                      - rtgl-button#zipImportDestinationBrowseButton variant=se: ${browseButtonLabel}
+                  - $if zipImportDialog.destinationError:
+                      - rtgl-text s=sm c=de: ${zipImportDialog.destinationError}
   - rtgl-dropdown-menu#appVersionDropdownMenu ?open=${appVersionMenu.isOpen} x=${appVersionMenu.x} y=${appVersionMenu.y} place=t :items=${appVersionMenu.items}: null
   - rtgl-dropdown-menu#profileDropdownMenu ?open=${profileMenu.isOpen} x=${profileMenu.x} y=${profileMenu.y} :items=${profileMenu.items}: null
   - rtgl-dialog#languageDialog ?open=${languageDialog.isOpen} s=md md-layout=fixed-top:

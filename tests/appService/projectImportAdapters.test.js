@@ -9,6 +9,8 @@ const mocked = vi.hoisted(() => ({
   mkdir: vi.fn(),
   remove: vi.fn(),
   rename: vi.fn(),
+  stat: vi.fn(),
+  copyFile: vi.fn(),
   join: vi.fn(),
 }));
 
@@ -27,6 +29,8 @@ vi.mock("@tauri-apps/plugin-fs", () => ({
   mkdir: mocked.mkdir,
   remove: mocked.remove,
   rename: mocked.rename,
+  stat: mocked.stat,
+  copyFile: mocked.copyFile,
 }));
 
 vi.mock("@tauri-apps/api/path", () => ({
@@ -128,6 +132,19 @@ const PLANNED_FILES = [
   },
 ];
 
+// A desktop zip or URL import's destination: an empty folder the user picked.
+const DESTINATION = "/projects/Project One";
+
+// The destination folder after a desktop import of a typical project zip.
+const IMPORTED_PROJECT = [
+  `${DESTINATION}/file-metadata`,
+  `${DESTINATION}/file-metadata/abc.mime`,
+  `${DESTINATION}/files`,
+  `${DESTINATION}/files/abc`,
+  `${DESTINATION}/files/def`,
+  `${DESTINATION}/project.db`,
+];
+
 // Tauri fs `readDir` entries.
 const dirEntry = (name, kind) => ({
   name,
@@ -149,11 +166,17 @@ describe("desktop project import adapters", () => {
     mocked.readDir.mockImplementation(async (path) => directories[path] ?? []);
   };
 
-  const mockNative = ({ entries = PROJECT_ZIP_ENTRIES } = {}) => {
+  // Native commands. Extraction writes the planned files into `fileSystem`.
+  const mockNative = ({
+    entries = PROJECT_ZIP_ENTRIES,
+    fileSystem,
+    onDownload,
+  } = {}) => {
     const calls = [];
     mocked.invoke.mockImplementation(async (command, payload) => {
       calls.push({ command, payload });
       if (command === "download_file") {
+        onDownload?.();
         payload.onProgress.onmessage({ current: 0, total: 10 });
         payload.onProgress.onmessage({ current: 10, total: 10 });
         return {
@@ -166,6 +189,9 @@ describe("desktop project import adapters", () => {
         return { entries };
       }
       if (command === "extract_archive") {
+        for (const { path } of payload.files) {
+          fileSystem?.add(`${payload.destination}/${path}`, "file");
+        }
         payload.onProgress.onmessage({ current: 5, total: 18 });
         return { files: PLANNED_FILES.length, bytes: 18 };
       }
@@ -174,15 +200,60 @@ describe("desktop project import adapters", () => {
     return calls;
   };
 
-  // Free except for the folders in `taken`; validating a project folder
-  // finds its project.db and files.
-  const mockFreeNames = (taken = []) => {
-    mocked.exists.mockImplementation(
-      async (path) =>
-        taken.includes(path) ||
-        path.endsWith("/project.db") ||
-        path.endsWith("/files"),
+  // An in-memory file system behind the fs plugin, holding the destination
+  // folder and the `contents` it starts with (names mapped to their kind).
+  // `list(folder)` returns every path below a folder, sorted.
+  const mockFileSystem = (contents = {}) => {
+    const paths = new Map([[DESTINATION, "directory"]]);
+    const isWithin = (path, folder) =>
+      path === folder || path.startsWith(`${folder}/`);
+    const add = (path, kind) => {
+      const segments = path.split("/");
+      for (let index = 2; index < segments.length; index += 1) {
+        paths.set(segments.slice(0, index).join("/"), "directory");
+      }
+      paths.set(path, kind);
+    };
+    for (const [name, kind] of Object.entries(contents)) {
+      add(`${DESTINATION}/${name}`, kind);
+    }
+
+    mocked.mkdir.mockImplementation(async (path) => {
+      add(path, "directory");
+    });
+    mocked.rename.mockImplementation(async (from, to) => {
+      const moving = [...paths].filter(([path]) => isWithin(path, from));
+      for (const [path, kind] of moving) {
+        paths.delete(path);
+        paths.set(`${to}${path.slice(from.length)}`, kind);
+      }
+    });
+    mocked.remove.mockImplementation(async (target) => {
+      for (const path of paths.keys()) {
+        if (isWithin(path, target)) {
+          paths.delete(path);
+        }
+      }
+    });
+    mocked.exists.mockImplementation(async (path) => paths.has(path));
+    mocked.readDir.mockImplementation(async (folder) =>
+      [...paths]
+        .filter(
+          ([path]) =>
+            path.startsWith(`${folder}/`) &&
+            !path.slice(folder.length + 1).includes("/"),
+        )
+        .map(([path, kind]) => dirEntry(path.slice(folder.length + 1), kind)),
     );
+
+    return {
+      add,
+      has: (path) => paths.has(path),
+      list: (folder) =>
+        [...paths.keys()]
+          .filter((path) => path.startsWith(`${folder}/`))
+          .sort(),
+    };
   };
 
   const createService = ({ db = createDb(), projectService } = {}) =>
@@ -283,18 +354,137 @@ describe("desktop project import adapters", () => {
     });
   });
 
+  describe("a picked zip file", () => {
+    const ZIP_PATH = "/Users/me/Downloads/Project One.zip";
+    const importFromZip = (appService, extra = {}) =>
+      appService.importProjectFromArchive({
+        uri: ZIP_PATH,
+        destinationFolder: DESTINATION,
+        ...extra,
+      });
+
+    it("opens a zip-only picker and returns the file's path and name", async () => {
+      const openFilePicker = vi.fn(async () => ZIP_PATH);
+      const appService = createDesktopAppService({
+        ...createParams({
+          db: createDb(),
+          projectService: createProjectService(),
+        }),
+        filePicker: { openFilePicker },
+      });
+
+      const archive = await appService.openArchivePicker({
+        title: "Select Project Zip File",
+      });
+
+      expect(openFilePicker).toHaveBeenCalledWith({
+        title: "Select Project Zip File",
+        filters: [{ name: "Zip", extensions: ["zip"] }],
+      });
+      expect(archive).toEqual({ uri: ZIP_PATH, name: "Project One.zip" });
+    });
+
+    it("resolves to undefined when the picker is cancelled", async () => {
+      const appService = createDesktopAppService({
+        ...createParams({
+          db: createDb(),
+          projectService: createProjectService(),
+        }),
+        filePicker: { openFilePicker: vi.fn(async () => null) },
+      });
+
+      expect(await appService.openArchivePicker()).toBeUndefined();
+    });
+
+    it("copies the zip into staging, extracts it and moves the project into the destination folder", async () => {
+      const db = createDb();
+      const fileSystem = mockFileSystem();
+      const calls = mockNative({ fileSystem });
+      mocked.stat.mockResolvedValue({ size: 10 });
+      const events = [];
+
+      const project = await importFromZip(createService({ db }), {
+        onProgress: (event) => events.push(event),
+      });
+
+      const stagingDir = mocked.mkdir.mock.calls[0][0];
+      expect(stagingDir).toMatch(/^\/projects\/Project One\/routevn-import-/);
+      expect(mocked.copyFile).toHaveBeenCalledWith(
+        ZIP_PATH,
+        `${stagingDir}/archive.zip`,
+      );
+      expect(calls.map((call) => call.command)).toEqual([
+        "list_archive",
+        "extract_archive",
+      ]);
+      expect(calls[1].payload).toMatchObject({
+        archive: `${stagingDir}/archive.zip`,
+        destination: `${stagingDir}/extracted`,
+        files: PLANNED_FILES,
+      });
+      expect(mocked.remove).toHaveBeenCalledWith(stagingDir, {
+        recursive: true,
+      });
+      expect(fileSystem.list(DESTINATION)).toEqual(IMPORTED_PROJECT);
+      expect(project.projectPath).toBe(DESTINATION);
+      const entries = await db.get("projectEntries");
+      expect(entries[0].projectPath).toBe(DESTINATION);
+      expect(events).toEqual([
+        { stage: "extracting", current: 5, total: 18 },
+        { stage: "finishing", current: 0, total: 0 },
+      ]);
+    });
+
+    it("rejects a zip over the archive size limit without copying it", async () => {
+      mockFileSystem();
+      const calls = mockNative();
+      mocked.stat.mockResolvedValue({ size: 4 * GIB + 1 });
+
+      await expect(importFromZip(createService())).rejects.toThrow(
+        /^tooLarge: /,
+      );
+
+      expect(mocked.copyFile).not.toHaveBeenCalled();
+      expect(calls).toEqual([]);
+      expect(mocked.remove).toHaveBeenCalledTimes(1);
+    });
+
+    it("requires a destination folder", async () => {
+      await expect(
+        importFromZip(createService(), { destinationFolder: undefined }),
+      ).rejects.toThrow(/^importFailed: /);
+
+      expect(mocked.mkdir).not.toHaveBeenCalled();
+    });
+
+    it("refuses a destination folder that is not empty before copying anything", async () => {
+      const fileSystem = mockFileSystem({ "notes.txt": "file" });
+      mocked.stat.mockResolvedValue({ size: 10 });
+
+      await expect(importFromZip(createService())).rejects.toThrow(
+        /^importFailed: /,
+      );
+
+      expect(mocked.mkdir).not.toHaveBeenCalled();
+      expect(mocked.copyFile).not.toHaveBeenCalled();
+      expect(fileSystem.list(DESTINATION)).toEqual([
+        `${DESTINATION}/notes.txt`,
+      ]);
+    });
+  });
+
   describe("a URL", () => {
     const importFromUrl = (appService, extra = {}) =>
       appService.importProjectFromUrl({
         url: "https://example.com/files/project-one.zip",
-        destinationFolder: "/projects/parent",
+        destinationFolder: DESTINATION,
         ...extra,
       });
 
-    it("downloads, extracts only the planned files, reports progress and registers the moved folder", async () => {
+    it("downloads, extracts only the planned files, reports progress and registers the destination folder", async () => {
       const db = createDb();
-      const calls = mockNative();
-      mockFreeNames();
+      const fileSystem = mockFileSystem();
+      const calls = mockNative({ fileSystem });
       const events = [];
 
       const project = await importFromUrl(createService({ db }), {
@@ -307,7 +497,7 @@ describe("desktop project import adapters", () => {
         "extract_archive",
       ]);
       const stagingDir = mocked.mkdir.mock.calls[0][0];
-      expect(stagingDir).toMatch(/^\/projects\/parent\/routevn-import-/);
+      expect(stagingDir).toMatch(/^\/projects\/Project One\/routevn-import-/);
       expect(calls[0].payload).toMatchObject({
         url: "https://example.com/files/project-one.zip",
         destination: `${stagingDir}/archive.zip`,
@@ -323,16 +513,13 @@ describe("desktop project import adapters", () => {
         files: PLANNED_FILES,
         maxBytes: 8 * GIB,
       });
-      expect(mocked.rename).toHaveBeenCalledWith(
-        `${stagingDir}/extracted`,
-        "/projects/parent/Project One",
-      );
       expect(mocked.remove).toHaveBeenCalledWith(stagingDir, {
         recursive: true,
       });
-      expect(project.projectPath).toBe("/projects/parent/Project One");
+      expect(fileSystem.list(DESTINATION)).toEqual(IMPORTED_PROJECT);
+      expect(project.projectPath).toBe(DESTINATION);
       const entries = await db.get("projectEntries");
-      expect(entries[0].projectPath).toBe("/projects/parent/Project One");
+      expect(entries[0].projectPath).toBe(DESTINATION);
       expect(events).toEqual([
         { stage: "downloading", current: 0, total: 10 },
         { stage: "downloading", current: 10, total: 10 },
@@ -342,45 +529,26 @@ describe("desktop project import adapters", () => {
     });
 
     it("creates the files folder when the archive holds no assets", async () => {
-      const db = createDb();
+      const fileSystem = mockFileSystem();
       mockNative({
+        fileSystem,
         entries: [
           { name: "Project One/project.db", size: 100, isDirectory: false },
         ],
       });
-      // A folder exists only once it was created, and moves with its parent.
-      const folders = new Set();
-      mocked.mkdir.mockImplementation(async (path) => {
-        folders.add(path);
-      });
-      mocked.rename.mockImplementation(async (from, to) => {
-        for (const path of [...folders]) {
-          if (path === from || path.startsWith(`${from}/`)) {
-            folders.delete(path);
-            folders.add(`${to}${path.slice(from.length)}`);
-          }
-        }
-      });
-      mocked.exists.mockImplementation(
-        async (path) => path.endsWith("/project.db") || folders.has(path),
-      );
 
-      const project = await importFromUrl(createService({ db }));
+      const project = await importFromUrl(createService());
 
-      expect(project.projectPath).toBe("/projects/parent/Project One");
-      expect(mocked.mkdir).toHaveBeenCalledWith(
-        expect.stringMatching(/\/extracted\/files$/),
-        { recursive: true },
-      );
-      expect(mocked.remove).not.toHaveBeenCalledWith(
-        "/projects/parent/Project One",
-        expect.anything(),
-      );
+      expect(project.projectPath).toBe(DESTINATION);
+      expect(fileSystem.list(DESTINATION)).toEqual([
+        `${DESTINATION}/files`,
+        `${DESTINATION}/project.db`,
+      ]);
     });
 
     it("rewrites a Google Drive link before downloading", async () => {
-      const calls = mockNative();
-      mockFreeNames();
+      const fileSystem = mockFileSystem();
+      const calls = mockNative({ fileSystem });
 
       await importFromUrl(createService(), {
         url: "https://drive.google.com/file/d/1HYPkPo6yHL_D_zeHVz0vTMHN9d58AgOc/view?usp=drive_link",
@@ -391,19 +559,65 @@ describe("desktop project import adapters", () => {
       );
     });
 
-    it("picks the next free name instead of replacing a folder", async () => {
-      mockNative();
-      mockFreeNames([
-        "/projects/parent/Project One",
-        "/projects/parent/Project One 2",
+    it("refuses a destination folder that is not empty before downloading", async () => {
+      const fileSystem = mockFileSystem({ "notes.txt": "file" });
+      const calls = mockNative({ fileSystem });
+
+      await expect(importFromUrl(createService())).rejects.toThrow(
+        /^importFailed: /,
+      );
+
+      expect(calls).toEqual([]);
+      expect(mocked.mkdir).not.toHaveBeenCalled();
+      expect(fileSystem.list(DESTINATION)).toEqual([
+        `${DESTINATION}/notes.txt`,
       ]);
+    });
 
-      const project = await importFromUrl(createService());
+    it("moves nothing into a destination folder that gained a file during the import", async () => {
+      const db = createDb();
+      const fileSystem = mockFileSystem();
+      mockNative({
+        fileSystem,
+        onDownload: () => fileSystem.add(`${DESTINATION}/notes.txt`, "file"),
+      });
 
-      expect(project.projectPath).toBe("/projects/parent/Project One 3");
+      await expect(importFromUrl(createService({ db }))).rejects.toThrow(
+        /^importFailed: /,
+      );
+
+      expect(fileSystem.list(DESTINATION)).toEqual([
+        `${DESTINATION}/notes.txt`,
+      ]);
+      expect(await db.get("projectEntries")).toEqual([]);
+    });
+
+    it("moves the entries back when one cannot be moved", async () => {
+      const fileSystem = mockFileSystem();
+      mockNative({ fileSystem });
+      const move = mocked.rename.getMockImplementation();
+      // project.db and files/ are moved first; file-metadata/ fails.
+      mocked.rename.mockImplementation(async (from, to) => {
+        if (to === `${DESTINATION}/file-metadata`) {
+          throw new Error("permission denied");
+        }
+        await move(from, to);
+      });
+
+      await expect(importFromUrl(createService())).rejects.toThrow(
+        /^importFailed: /,
+      );
+
+      expect(mocked.rename).toHaveBeenCalledWith(
+        `${DESTINATION}/project.db`,
+        expect.stringMatching(/\/extracted\/project\.db$/),
+      );
+      expect(fileSystem.list(DESTINATION)).toEqual([]);
+      expect(fileSystem.has(DESTINATION)).toBe(true);
     });
 
     it("rejects an archive without project.db before extracting", async () => {
+      mockFileSystem();
       const calls = mockNative({
         entries: [{ name: "readme.txt", size: 3, isDirectory: false }],
       });
@@ -418,26 +632,27 @@ describe("desktop project import adapters", () => {
       expect(mocked.remove).toHaveBeenCalledTimes(1);
     });
 
-    const expectReleasedBeforeRemoval = (projectService) => {
+    // The project's storage is released before the moved entries are removed,
+    // and the destination folder itself is kept, empty.
+    const expectReleasedBeforeEmptying = (projectService, fileSystem) => {
       expect(projectService.releaseRepositoryByPath).toHaveBeenCalledWith(
-        "/projects/parent/Project One",
+        DESTINATION,
       );
-      const folderRemoval = mocked.remove.mock.calls.findIndex(
-        ([path]) => path === "/projects/parent/Project One",
+      const firstRemoval = mocked.remove.mock.calls.findIndex(
+        ([path]) => path === `${DESTINATION}/project.db`,
       );
-      expect(mocked.remove.mock.calls[folderRemoval]).toEqual([
-        "/projects/parent/Project One",
-        { recursive: true },
-      ]);
+      expect(firstRemoval).not.toBe(-1);
       expect(
         projectService.releaseRepositoryByPath.mock.invocationCallOrder[0],
-      ).toBeLessThan(mocked.remove.mock.invocationCallOrder[folderRemoval]);
+      ).toBeLessThan(mocked.remove.mock.invocationCallOrder[firstRemoval]);
+      expect(fileSystem.list(DESTINATION)).toEqual([]);
+      expect(fileSystem.has(DESTINATION)).toBe(true);
     };
 
-    it("releases the project's storage, then removes the moved folder when the project cannot be registered", async () => {
+    it("releases the project's storage, then empties the destination folder when the project cannot be registered", async () => {
       const db = createDb();
-      mockNative();
-      mockFreeNames();
+      const fileSystem = mockFileSystem();
+      mockNative({ fileSystem });
       const projectService = createProjectService();
       projectService.getProjectInfoByPath.mockRejectedValue(
         new Error("file is not a database"),
@@ -447,7 +662,7 @@ describe("desktop project import adapters", () => {
         importFromUrl(createService({ db, projectService })),
       ).rejects.toThrow("file is not a database");
 
-      expectReleasedBeforeRemoval(projectService);
+      expectReleasedBeforeEmptying(projectService, fileSystem);
       expect(await db.get("projectEntries")).toEqual([]);
     });
 
@@ -458,19 +673,19 @@ describe("desktop project import adapters", () => {
         await setEntries(key, value);
         throw new Error("disk I/O error");
       });
-      mockNative();
-      mockFreeNames();
+      const fileSystem = mockFileSystem();
+      mockNative({ fileSystem });
       const projectService = createProjectService();
 
       await expect(
         importFromUrl(createService({ db, projectService })),
       ).rejects.toThrow("disk I/O error");
 
-      expectReleasedBeforeRemoval(projectService);
+      expectReleasedBeforeEmptying(projectService, fileSystem);
       expect(await db.get("projectEntries")).toEqual([]);
     });
 
-    it("still removes the moved folder and its entry when releasing the project's storage fails", async () => {
+    it("still empties the destination folder and removes its entry when releasing the project's storage fails", async () => {
       vi.spyOn(console, "error").mockImplementation(() => {});
       const db = createDb();
       const setEntries = db.set.getMockImplementation();
@@ -478,8 +693,8 @@ describe("desktop project import adapters", () => {
         await setEntries(key, value);
         throw new Error("disk I/O error");
       });
-      mockNative();
-      mockFreeNames();
+      const fileSystem = mockFileSystem();
+      mockNative({ fileSystem });
       const projectService = createProjectService();
       projectService.releaseRepositoryByPath.mockRejectedValue(
         new Error("database is locked"),
@@ -489,30 +704,27 @@ describe("desktop project import adapters", () => {
         importFromUrl(createService({ db, projectService })),
       ).rejects.toThrow("disk I/O error");
 
-      expect(mocked.remove).toHaveBeenCalledWith(
-        "/projects/parent/Project One",
-        { recursive: true },
-      );
+      expect(fileSystem.list(DESTINATION)).toEqual([]);
       expect(await db.get("projectEntries")).toEqual([]);
     });
 
-    it("leaves an entry that already had the new folder's path as it was", async () => {
+    it("leaves an entry that already had the destination folder's path as it was", async () => {
       const staleEntry = {
         id: "project-two",
-        projectPath: "/projects/parent/Project One",
+        projectPath: DESTINATION,
         name: "Project Two",
       };
       const db = createDb();
       await db.set("projectEntries", [staleEntry]);
-      mockNative();
-      mockFreeNames();
+      const fileSystem = mockFileSystem();
+      mockNative({ fileSystem });
       const projectService = createProjectService();
 
       await expect(
         importFromUrl(createService({ db, projectService })),
       ).rejects.toThrow(/^projectExists: /);
 
-      expectReleasedBeforeRemoval(projectService);
+      expectReleasedBeforeEmptying(projectService, fileSystem);
       expect(await db.get("projectEntries")).toEqual([staleEntry]);
     });
   });

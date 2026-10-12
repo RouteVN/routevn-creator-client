@@ -78,6 +78,17 @@ export const createInitialState = () => ({
     defaultValues: {
       url: "",
     },
+    destinationFolder: undefined,
+    destinationError: undefined,
+  },
+
+  zipImportDialog: {
+    isOpen: false,
+    formKey: 0,
+    archive: undefined,
+    archiveError: undefined,
+    destinationFolder: undefined,
+    destinationError: undefined,
   },
 
   appVersionMenu: {
@@ -326,6 +337,8 @@ export const openUrlImportDialog = ({ state }, _payload = {}) => {
   state.urlImportDialog.defaultValues = {
     url: "",
   };
+  state.urlImportDialog.destinationFolder = undefined;
+  state.urlImportDialog.destinationError = undefined;
 };
 
 export const closeUrlImportDialog = ({ state }, _payload = {}) => {
@@ -334,6 +347,62 @@ export const closeUrlImportDialog = ({ state }, _payload = {}) => {
 
 export const selectIsUrlImportDialogOpen = ({ state }) => {
   return Boolean(state.urlImportDialog?.isOpen);
+};
+
+export const setUrlImportDestinationFolder = ({ state }, { folder } = {}) => {
+  state.urlImportDialog.destinationFolder = folder;
+  state.urlImportDialog.destinationError = undefined;
+};
+
+export const setUrlImportDestinationError = ({ state }, { message } = {}) => {
+  state.urlImportDialog.destinationError = message;
+};
+
+export const selectUrlImportDestinationFolder = ({ state }) => {
+  return state.urlImportDialog.destinationFolder;
+};
+
+export const openZipImportDialog = ({ state }, _payload = {}) => {
+  state.zipImportDialog.isOpen = true;
+  state.zipImportDialog.formKey += 1;
+  state.zipImportDialog.archive = undefined;
+  state.zipImportDialog.archiveError = undefined;
+  state.zipImportDialog.destinationFolder = undefined;
+  state.zipImportDialog.destinationError = undefined;
+};
+
+export const closeZipImportDialog = ({ state }, _payload = {}) => {
+  state.zipImportDialog.isOpen = false;
+};
+
+export const selectIsZipImportDialogOpen = ({ state }) => {
+  return state.zipImportDialog.isOpen;
+};
+
+export const setZipImportArchive = ({ state }, { archive } = {}) => {
+  state.zipImportDialog.archive = archive;
+  state.zipImportDialog.archiveError = undefined;
+};
+
+export const setZipImportDestinationFolder = ({ state }, { folder } = {}) => {
+  state.zipImportDialog.destinationFolder = folder;
+  state.zipImportDialog.destinationError = undefined;
+};
+
+export const setZipImportErrors = (
+  { state },
+  { archiveError, destinationError } = {},
+) => {
+  state.zipImportDialog.archiveError = archiveError;
+  state.zipImportDialog.destinationError = destinationError;
+};
+
+export const selectZipImportArchive = ({ state }) => {
+  return state.zipImportDialog.archive;
+};
+
+export const selectZipImportDestinationFolder = ({ state }) => {
+  return state.zipImportDialog.destinationFolder;
 };
 
 export const openAppVersionMenu = ({ state }, { x, y, items } = {}) => {
@@ -713,29 +782,72 @@ export const selectViewData = ({ state, i18n }) => {
       ],
     },
   };
+  const urlImportFields = [
+    {
+      name: "url",
+      type: "input-text",
+      label: copy.importUrlLabel,
+      description: copy.importUrlDescription,
+      required: true,
+      validations: [
+        {
+          rule: /^.+$/,
+          message: copy.importUrlRequiredMessage,
+        },
+      ],
+    },
+  ];
+  // Desktop saves a zip or URL import directly in an empty folder chosen in
+  // the import dialog. Mobile imports into app storage, so it has no
+  // destination.
+  const createImportDestinationField = (slot) => ({
+    name: "destinationFolder",
+    type: "slot",
+    slot,
+    label: copy.importDestinationLabel,
+    description: copy.importDestinationDescription,
+    required: true,
+  });
+  if (state.platform === "tauri") {
+    urlImportFields.push(
+      createImportDestinationField("url-import-destination"),
+    );
+  }
   const urlImportForm = {
     title: copy.importFromUrlTitle,
-    fields: [
-      {
-        name: "url",
-        type: "input-text",
-        label: copy.importUrlLabel,
-        description: copy.importUrlDescription,
-        required: true,
-        validations: [
-          {
-            rule: /^.+$/,
-            message: copy.importUrlRequiredMessage,
-          },
-        ],
-      },
-    ],
+    fields: urlImportFields,
     actions: {
       buttons: [
         {
           id: "import-url",
           variant: "pr",
           label: copy.importUrlSubmitButton,
+          type: "submit",
+          validate: true,
+        },
+      ],
+    },
+  };
+  // Desktop only: Android and iOS pick a zip straight from "From local".
+  const zipImportForm = {
+    title: copy.importFromZipTitle,
+    fields: [
+      {
+        name: "archive",
+        type: "slot",
+        slot: "zip-import-archive",
+        label: copy.importZipLabel,
+        description: copy.importZipDescription,
+        required: true,
+      },
+      createImportDestinationField("zip-import-destination"),
+    ],
+    actions: {
+      buttons: [
+        {
+          id: "import-zip",
+          variant: "pr",
+          label: copy.importButton,
           type: "submit",
           validate: true,
         },
@@ -893,6 +1005,16 @@ export const selectViewData = ({ state, i18n }) => {
     cloudCreateForm,
     addMemberForm,
     urlImportForm,
+    urlImportDestinationDisplay:
+      state.urlImportDialog.destinationFolder ?? copy.noFolderSelected,
+    zipImportForm,
+    zipImportArchiveDisplay:
+      state.zipImportDialog.archive?.uri ?? copy.noFileSelected,
+    zipImportDestinationDisplay:
+      state.zipImportDialog.destinationFolder ?? copy.noFolderSelected,
+    noFolderSelectedLabel: copy.noFolderSelected,
+    noFileSelectedLabel: copy.noFileSelected,
+    browseButtonLabel: copy.browseButton,
     languageForm,
     appearanceForm,
     profileDialogForm,

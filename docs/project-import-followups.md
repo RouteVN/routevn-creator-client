@@ -148,9 +148,6 @@ Line numbers are not given because they drift; each item names the file and func
 - **The final progress call is not guarded:** a throwing listener aborts the import at the
   `finishing` event (`projectImportService.js`). On desktop, Tauri channel messages are not
   ordered against the command response, so a late "extracting" event can overwrite "Finishing".
-- **`Content-Disposition` names are cut short or left encoded in some cases:** a quoted `;`,
-  an apostrophe in `filename*`, an ISO-8859-1 `filename*`, and a percent-encoded plain
-  `filename=` (`projectImportFolderName.js`). The folder name stays safe.
 - **Account-scoped Drive links are not rewritten:** `drive.google.com/u/0/uc?id=…` and
   `/u/1/open?id=…` skip the `confirm=t` rewrite, so a large file hits the virus-scan page and
   shows the "check sharing" message (`projectImportUrl.js`).

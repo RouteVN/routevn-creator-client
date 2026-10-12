@@ -50,8 +50,8 @@ template:
                   - rtgl-view#iconPlaceholder w=120 h=120 av=c ah=c bgc=bg bc=bo bw=xs br=md cur=pointer:
                       - rtgl-text c=mu-fg s=sm: ${clickToUploadLabel}
       - $if platform == 'tauri':
-          - rtgl-view slot=project-path-selector g=xs:
-              - rtgl-view d=h g=sm av=c:
+          - rtgl-view slot=project-path-selector w=f g=xs:
+              - rtgl-view d=h w=f g=sm av=c:
                   - rtgl-input#pathInput w=f :value=${projectPathDisplay} disabled=true placeholder=${noFolderSelectedLabel}: null
                   - rtgl-button#browseButton variant=se: ${browseButtonLabel}
               - $if validationErrors.projectPath:

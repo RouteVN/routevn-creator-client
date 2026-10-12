@@ -5,17 +5,27 @@ import {
   addProject,
   closeAppVersionMenu,
   closeDeleteDialog,
+  closeUrlImportDialog,
+  closeZipImportDialog,
   createInitialState,
   openDeleteDialog,
   openAppearanceDialog,
   openLanguageDialog,
   openAppVersionMenu,
+  openUrlImportDialog,
+  openZipImportDialog,
   removeProject,
   selectDeleteDialogConfirmationText,
+  selectUrlImportDestinationFolder,
   selectViewData,
   setDeleteDialogConfirmationText,
   setPlatform,
   setProjects,
+  setUrlImportDestinationError,
+  setUrlImportDestinationFolder,
+  setZipImportArchive,
+  setZipImportDestinationFolder,
+  setZipImportErrors,
 } from "../../src/pages/projects/projects.store.js";
 
 const EN_I18N_URL = new URL("../../src/i18n/en.yaml", import.meta.url);
@@ -341,6 +351,140 @@ describe("projects store loading state", () => {
       isProjectsLoading: false,
       localEmptyMessage: "No local projects yet",
       localEmptySubMessage: "Create or open a local project to get started",
+    });
+  });
+});
+
+describe("projects store URL import dialog", () => {
+  it("asks desktop for a destination folder below the URL", () => {
+    const state = createInitialState();
+    setPlatform({ state }, { platform: "tauri" });
+
+    const viewData = selectViewData({ state, i18n: EN_I18N });
+
+    expect(viewData.urlImportForm.fields.map((field) => field.name)).toEqual([
+      "url",
+      "destinationFolder",
+    ]);
+    expect(viewData.urlImportForm.fields[1]).toEqual({
+      name: "destinationFolder",
+      type: "slot",
+      slot: "url-import-destination",
+      label: "Destination Folder",
+      description: "Select an empty folder for the project",
+      required: true,
+    });
+    expect(viewData.urlImportDestinationDisplay).toBe("No folder selected");
+  });
+
+  it("asks mobile for the URL only", () => {
+    const state = createInitialState();
+    setPlatform({ state }, { platform: "android" });
+
+    const viewData = selectViewData({ state, i18n: EN_I18N });
+
+    expect(viewData.urlImportForm.fields.map((field) => field.name)).toEqual([
+      "url",
+    ]);
+  });
+
+  it("shows the chosen folder, clears its error, and starts over when reopened", () => {
+    const state = createInitialState();
+    setPlatform({ state }, { platform: "tauri" });
+
+    openUrlImportDialog({ state });
+    setUrlImportDestinationError(
+      { state },
+      { message: "Destination Folder is required." },
+    );
+    setUrlImportDestinationFolder({ state }, { folder: "/projects" });
+
+    expect(state.urlImportDialog.destinationError).toBeUndefined();
+    expect(selectUrlImportDestinationFolder({ state })).toBe("/projects");
+    expect(
+      selectViewData({ state, i18n: EN_I18N }).urlImportDestinationDisplay,
+    ).toBe("/projects");
+
+    closeUrlImportDialog({ state });
+    openUrlImportDialog({ state });
+
+    expect(selectUrlImportDestinationFolder({ state })).toBeUndefined();
+    expect(state.urlImportDialog.destinationError).toBeUndefined();
+  });
+});
+
+describe("projects store zip import dialog", () => {
+  it("asks for a zip file, then a destination folder", () => {
+    const state = createInitialState();
+    setPlatform({ state }, { platform: "tauri" });
+
+    const viewData = selectViewData({ state, i18n: EN_I18N });
+
+    expect(viewData.zipImportForm).toMatchObject({
+      title: "Import from Local Zip File",
+      fields: [
+        {
+          name: "archive",
+          type: "slot",
+          slot: "zip-import-archive",
+          label: "Project Zip File",
+          description: "Select a project zip archive on this computer.",
+          required: true,
+        },
+        {
+          name: "destinationFolder",
+          type: "slot",
+          slot: "zip-import-destination",
+          label: "Destination Folder",
+          required: true,
+        },
+      ],
+      actions: {
+        buttons: [{ id: "import-zip", label: "Import", type: "submit" }],
+      },
+    });
+    expect(viewData.zipImportArchiveDisplay).toBe("No file selected");
+    expect(viewData.zipImportDestinationDisplay).toBe("No folder selected");
+  });
+
+  it("shows the chosen zip and folder, clears their errors, and starts over when reopened", () => {
+    const state = createInitialState();
+    setPlatform({ state }, { platform: "tauri" });
+
+    openZipImportDialog({ state });
+    setZipImportErrors(
+      { state },
+      {
+        archiveError: "Project Zip File is required.",
+        destinationError: "Destination Folder is required.",
+      },
+    );
+    setZipImportArchive(
+      { state },
+      {
+        archive: {
+          uri: "/Users/me/Downloads/Project One.zip",
+          name: "Project One.zip",
+        },
+      },
+    );
+    setZipImportDestinationFolder({ state }, { folder: "/projects" });
+
+    expect(state.zipImportDialog.archiveError).toBeUndefined();
+    expect(state.zipImportDialog.destinationError).toBeUndefined();
+    expect(selectViewData({ state, i18n: EN_I18N })).toMatchObject({
+      zipImportArchiveDisplay: "/Users/me/Downloads/Project One.zip",
+      zipImportDestinationDisplay: "/projects",
+    });
+
+    closeZipImportDialog({ state });
+    openZipImportDialog({ state });
+
+    expect(state.zipImportDialog).toMatchObject({
+      isOpen: true,
+      formKey: 2,
+      archive: undefined,
+      destinationFolder: undefined,
     });
   });
 });
