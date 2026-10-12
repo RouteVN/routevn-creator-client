@@ -57,14 +57,28 @@ describe("app view", () => {
     expect(appView).toContain("rvn-mobile-sheet#mobileSheet");
     expect(appView).toContain("position: relative; z-index: 1150;");
     expect(appView).toContain(
-      "rtgl-view#mobileTabItem${i} data-tab-id=${item.id} w=1fg h=f d=v ah=c av=c g=xs bgc=${item.backgroundColor}",
+      "rtgl-view#mobileTabItem${i} data-tab-id=${item.id} w=1fg h=f d=v ah=c av=c g=xs ph=xs bgc=${item.backgroundColor}",
     );
     expect(appView).toContain(
       "rtgl-svg wh=22 svg=${item.icon} c=${item.color}",
     );
-    expect(appView).toContain("rtgl-text s=xs c=${item.color}");
+    expect(appView).toContain(
+      "rtgl-text s=xs ta=c w=f ellipsis c=${item.color}",
+    );
     expect(appView).toContain("-webkit-tap-highlight-color: transparent;");
     expect(appView).toContain("handler: handleMobileTabPointerCancel");
     expect(appView).toContain("handler: handleMobileTabLostPointerCapture");
+  });
+
+  it("keeps mobile tab labels on one line in equal-width tabs", () => {
+    const appView = readFileSync(
+      new URL("../../src/pages/app/app.view.yaml", import.meta.url),
+      "utf8",
+    );
+
+    expect(appView).toContain(
+      'style="min-width: 0; touch-action: manipulation;',
+    );
+    expect(appView).toContain("rtgl-text s=xs ta=c w=f ellipsis");
   });
 });
