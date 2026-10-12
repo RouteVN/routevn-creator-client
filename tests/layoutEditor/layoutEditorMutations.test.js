@@ -366,6 +366,74 @@ describe("layoutEditorMutations", () => {
     ).toBe(item);
   });
 
+  it("stops resizing a fixed aspect ratio where the shorter side is 1", () => {
+    const item = {
+      id: "sprite-1",
+      type: "sprite",
+      x: 100,
+      y: 50,
+      width: 40,
+      height: 10,
+      aspectRatioLock: 4,
+    };
+    const dragStartPosition = {
+      x: 100,
+      y: 50,
+      itemStartX: 100,
+      itemStartY: 50,
+      itemStartWidth: 40,
+      itemStartHeight: 10,
+    };
+
+    // At 4:1 the width stops at 4, and the left edge stays where it stopped.
+    expect(
+      applyCanvasItemResizeChange({
+        item,
+        dragStartPosition,
+        resizeEdge: "left",
+        x: 300,
+        y: 50,
+      }),
+    ).toMatchObject({ x: 136, width: 4, height: 1 });
+    expect(
+      applyCanvasItemResizeChange({
+        item,
+        dragStartPosition,
+        resizeEdge: "bottom",
+        x: 100,
+        y: -200,
+      }),
+    ).toMatchObject({ width: 4, height: 1 });
+  });
+
+  it("keyboard-resizes to 1 or more, keeping a fixed aspect ratio", () => {
+    const resize = (item, key, unit) =>
+      applyCanvasItemKeyboardChange({ item, key, unit, resize: true });
+    const rect = { id: "rect-1", type: "rect", width: 5, height: 40 };
+    const sprite = {
+      id: "sprite-1",
+      type: "sprite",
+      width: 8,
+      height: 2,
+      aspectRatioLock: 4,
+    };
+
+    expect(resize(rect, "ArrowLeft", 10)).toMatchObject({
+      width: 1,
+      height: 40,
+    });
+    expect(resize(sprite, "ArrowRight", 1)).toMatchObject({
+      width: 9,
+      height: 2,
+    });
+    expect(resize(sprite, "ArrowLeft", 10)).toMatchObject({
+      width: 4,
+      height: 1,
+    });
+    const smallest = { ...sprite, width: 4, height: 1 };
+    expect(resize(smallest, "ArrowUp", 1)).toBe(smallest);
+  });
+
   it("does not keyboard-move items without a position", () => {
     const item = {
       id: "folder-1",

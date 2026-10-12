@@ -188,6 +188,7 @@ describe("layoutEditPanel rotation", () => {
           updateValueProperty({ state }, payload),
         closePopoverForm: vi.fn(),
       },
+      props: {},
       dispatchEvent,
       render: vi.fn(),
     };

@@ -7,6 +7,7 @@ import {
 import { selectLayoutEditPanelCopy } from "../../src/components/layoutEditPanel/support/layoutEditPanelCopy.js";
 import {
   getLinkedScaleValues,
+  getSliderPopoverRange,
   stepSliderPopoverValue,
 } from "../../src/components/layoutEditPanel/support/layoutEditPanelSliderPopovers.js";
 import { EN_I18N } from "../support/i18n.js";
@@ -277,7 +278,7 @@ describe("layoutEditPanel popover forms", () => {
     );
   });
 
-  it("runs width and height from 0 to the project's, with presets in pixels and 1 and 10 steps", () => {
+  it("runs width and height from 1 to the project's, with presets in pixels and 1 and 10 steps", () => {
     const sharedValues = { width: 2500, height: 300 };
     const widthPopover = openSliderPopover("width", sharedValues);
     const heightPopover = openSliderPopover("height", sharedValues);
@@ -289,17 +290,17 @@ describe("layoutEditPanel popover forms", () => {
     // typed size reaches 4 times it.
     expect(widthPopover.form.fields[0]).toMatchObject({
       type: "slider-with-input",
-      min: 0,
+      min: 1,
       max: 7680,
-      sliderMin: 0,
+      sliderMin: 1,
       sliderMax: 1920,
       step: 1,
     });
     expect(heightPopover.form.fields[0]).toMatchObject({
       type: "slider-with-input",
-      min: 0,
+      min: 1,
       max: 4320,
-      sliderMin: 0,
+      sliderMin: 1,
       sliderMax: 1080,
       step: 1,
     });
@@ -328,6 +329,40 @@ describe("layoutEditPanel popover forms", () => {
     expect(
       widthPopover.context.stepButtons.map((button) => button.delta),
     ).toEqual([-10, -1, 1, 10]);
+  });
+
+  it("stops a fixed aspect ratio's sizes where the shorter side is 1", () => {
+    const getSliderMin = (name, values) =>
+      openSliderPopover(name, values).form.fields[0].sliderMin;
+
+    // At 4:1 the width's slider starts at 4, where the height is 1; at 1:4
+    // the other way round.
+    const wide = { width: 400, height: 100, aspectRatioLock: 4 };
+    const tall = { width: 100, height: 400, aspectRatioLock: 0.25 };
+    expect(getSliderMin("width", wide)).toBe(4);
+    expect(getSliderMin("height", wide)).toBe(1);
+    expect(getSliderMin("width", tall)).toBe(1);
+    expect(getSliderMin("height", tall)).toBe(4);
+    // The number input stops only at 1, so a draft such as the 1 of 150 is
+    // not raised to 4 while it is typed.
+    expect(openSliderPopover("width", wide).form.fields[0].min).toBe(1);
+    expect(
+      getSliderPopoverRange({
+        name: "width",
+        projectResolution: { width: 1920, height: 1080 },
+        aspectRatioLock: 4,
+      }).min,
+    ).toBe(4);
+
+    expect(
+      stepSliderPopoverValue({
+        name: "width",
+        value: 10,
+        delta: -10,
+        projectResolution: { width: 1920, height: 1080 },
+        aspectRatioLock: 4,
+      }),
+    ).toBe(4);
   });
 
   it("keeps other number popovers plain", () => {

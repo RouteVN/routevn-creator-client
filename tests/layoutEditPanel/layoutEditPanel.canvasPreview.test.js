@@ -2,6 +2,7 @@ import { produce } from "immer";
 import { describe, expect, it, vi } from "vitest";
 import {
   handleFormActions,
+  handleGroupItemWheel,
   handleOnUpdate,
   handlePopoverFormChange,
   handlePopoverFormInput,
@@ -391,14 +392,137 @@ describe("layout edit panel canvas preview", () => {
     expect(events.map((event) => event.detail.value)).toEqual([1, 0.96, 0.94]);
   });
 
-  it("steps a size by 1 and 10, never below 0", () => {
+  it("steps a size by 1 and 10, never below 1", () => {
     const { deps, events } = createDeps("width", 5);
 
     for (const delta of ["-10", "1", "10"]) {
       handlePopoverStepPress(deps, buttonEvent({ delta }));
     }
 
-    expect(events.map((event) => event.detail.value)).toEqual([0, 6, 15]);
+    expect(events.map((event) => event.detail.value)).toEqual([1, 6, 15]);
+  });
+
+  it("keeps a size at its least from the wheel, typing, and a fixed aspect ratio", () => {
+    let state = layoutEditPanelStore.createInitialState();
+    const store = new Proxy(
+      {},
+      {
+        get: (_target, name) => (payload) => {
+          if (name.startsWith("select")) {
+            return layoutEditPanelStore[name]({ state }, payload);
+          }
+          let result;
+          state = produce(state, (draft) => {
+            result = layoutEditPanelStore[name]({ state: draft }, payload);
+          });
+          return result;
+        },
+      },
+    );
+    const events = [];
+    const projectResolution = { width: 1920, height: 1080 };
+    const deps = {
+      store,
+      props: { projectResolution },
+      i18n: EN_I18N,
+      render: vi.fn(),
+      dispatchEvent: (event) => events.push(event),
+    };
+    store.setValues({
+      values: {
+        id: "element-1",
+        type: "sprite",
+        width: 5,
+        height: 400,
+      },
+    });
+    const wheel = (name, { deltaY, shiftKey = false }) =>
+      handleGroupItemWheel(deps, {
+        _event: {
+          currentTarget: { dataset: { name } },
+          deltaY,
+          shiftKey,
+          preventDefault: vi.fn(),
+        },
+      });
+
+    // Shift and the wheel step by 10, down to 1 and no further.
+    wheel("width", { deltaY: 100, shiftKey: true });
+    wheel("width", { deltaY: 100 });
+    wheel("height", { deltaY: -100 });
+    expect(events.map(({ detail: { name, value } }) => [name, value])).toEqual([
+      ["width", 1],
+      ["width", 1],
+      ["height", 401],
+    ]);
+
+    // At a fixed 4:1, the width stops at 4, where the height is 1.
+    const setWideSprite = (width) =>
+      store.setValues({
+        values: {
+          id: "element-1",
+          type: "sprite",
+          width,
+          height: width / 4,
+          aspectRatioLock: 4,
+        },
+      });
+    const openWidthPopover = () =>
+      store.openPopoverForm({
+        name: "width",
+        form: { fields: [{ name: "value", type: "input-number" }] },
+        projectResolution,
+        copy: selectLayoutEditPanelCopy(EN_I18N),
+      });
+    setWideSprite(12);
+    wheel("width", { deltaY: 100, shiftKey: true });
+    expect(events.at(-1).detail).toMatchObject({
+      name: "width",
+      value: 4,
+      formValues: { width: 4, height: 1 },
+    });
+
+    // A typed 0 previews and saves that least size, though Enter submits
+    // before the number input keeps the value within its bounds.
+    setWideSprite(400);
+    openWidthPopover();
+    handlePopoverFormInput(deps, formEvent({ value: 0 }));
+    expect(events.at(-1).detail).toMatchObject({
+      name: "width",
+      value: 4,
+      linkedValues: { height: 1 },
+    });
+    deps.refs = { form: { getValues: () => ({ value: 0 }) } };
+    handlePopoverFormKeyDown(deps, keyEvent());
+    expect(events.at(-1).type).toBe("update");
+    expect(events.at(-1).detail).toMatchObject({
+      name: "width",
+      value: 4,
+      linkedValues: { height: 1 },
+    });
+
+    // The number input stops only at 1, so a value it commits below the
+    // ratio's least size shows and previews at that least size.
+    setWideSprite(400);
+    openWidthPopover();
+    handlePopoverFormChange(deps, formEvent({ value: 2 }));
+    expect(state.popover.defaultValues.value).toBe(4);
+    expect(events.at(-1).detail).toMatchObject({ name: "width", value: 4 });
+
+    // An emptied number previews nothing new and submits the last value.
+    setWideSprite(400);
+    openWidthPopover();
+    handlePopoverFormInput(deps, formEvent({ value: 200 }));
+    const eventCount = events.length;
+    handlePopoverFormInput(deps, formEvent({ value: null }));
+    expect(events).toHaveLength(eventCount);
+    deps.refs = { form: { getValues: () => ({ value: null }) } };
+    handlePopoverFormKeyDown(deps, keyEvent());
+    expect(events.at(-1).detail).toMatchObject({
+      name: "width",
+      value: 200,
+      linkedValues: { height: 50 },
+    });
   });
 
   it("normalizes a rotation preview like a saved value", () => {

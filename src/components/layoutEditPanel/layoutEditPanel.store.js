@@ -502,12 +502,21 @@ const clonePopoverForm = (form) => {
   return nextForm;
 };
 
-const buildPopoverForm = ({ form, name, projectResolution } = {}) => {
+const buildPopoverForm = ({
+  form,
+  name,
+  projectResolution,
+  aspectRatioLock,
+} = {}) => {
   if (!isSliderPopoverField(name)) {
     return form;
   }
 
-  const sliderRange = getSliderPopoverRange({ name, projectResolution });
+  const sliderRange = getSliderPopoverRange({
+    name,
+    projectResolution,
+    aspectRatioLock,
+  });
   if (!sliderRange) {
     return form;
   }
@@ -528,7 +537,7 @@ const buildPopoverForm = ({ form, name, projectResolution } = {}) => {
       type: "slider-with-input",
       // Small, as the buttons in the row below are.
       s: "sm",
-      min: sliderRange.min,
+      min: sliderRange.inputMin ?? sliderRange.min,
       max: sliderRange.max,
       sliderMin: sliderRange.sliderMin,
       sliderMax: sliderRange.sliderMax,
@@ -840,6 +849,7 @@ export const openPopoverForm = (
       form,
       name,
       projectResolution,
+      aspectRatioLock: state.values.aspectRatioLock,
     }),
     context: {
       popoverFormValues,
@@ -871,8 +881,7 @@ export const updatePopoverFormContext = (
     form: state.popover.form,
     name: nextName,
     projectResolution,
-    values: state.values,
-    value: values.value,
+    aspectRatioLock: state.values.aspectRatioLock,
   });
   state.popover.name = nextName;
   state.popover.key = state.popover.key + 1;
