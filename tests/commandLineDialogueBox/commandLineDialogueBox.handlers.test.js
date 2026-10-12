@@ -20,6 +20,7 @@ import {
 } from "../../src/components/commandLineDialogueBox/commandLineDialogueBox.handlers.js";
 import {
   clearCharacterSprite,
+  clearLayout,
   clearTempSelectedSpriteIds,
   createInitialState,
   setAppendDialogue,
@@ -145,6 +146,7 @@ const createStore = (state) => ({
   selectSpriteSelectionState: () => selectSpriteSelectionState({ state }),
   setSelectedMode: (payload) => setSelectedMode({ state }, payload),
   setSelectedResource: (payload) => setSelectedResource({ state }, payload),
+  clearLayout: (payload) => clearLayout({ state }, payload),
   setSelectedCharacterId: (payload) =>
     setSelectedCharacterId({ state }, payload),
   setCustomCharacterName: (payload) =>
@@ -1726,6 +1728,155 @@ describe("commandLineDialogueBox.handlers", () => {
         persistCharacter: false,
       },
     });
+  });
+
+  it("previews the dialogue removed when its layout is cleared, keeping the rest until submit", () => {
+    const state = createInitialState();
+    const dispatchEvent = vi.fn();
+    setSelectedResource({ state }, { resourceId: "layout-adv" });
+    setSelectedCharacterId({ state }, { characterId: "character-1" });
+
+    handleFormChange(
+      {
+        props: {
+          layouts,
+          characters,
+          dialogue: { content: [{ text: "Line text" }] },
+        },
+        refs: createFormRefs(),
+        render: vi.fn(),
+        dispatchEvent,
+        store: createStore(state),
+      },
+      {
+        _event: {
+          detail: {
+            name: "resourceId",
+            value: undefined,
+            values: { characterId: "character-1", persistCharacter: false },
+          },
+        },
+      },
+    );
+
+    expect(state.layoutCleared).toBe(true);
+    expect(state.selectedResourceId).toBe("");
+    expect(state.selectedCharacterId).toBe("character-1");
+    expect(dispatchEvent).toHaveBeenCalledTimes(1);
+    expect(dispatchEvent.mock.calls[0][0].detail).toEqual({
+      presentationState: {
+        dialogue: { clear: true, content: [{ text: "Line text" }] },
+      },
+    });
+  });
+
+  it("submits the dialogue as cleared once its layout is cleared, as deleting it does", () => {
+    const state = createInitialState();
+    const dispatchEvent = vi.fn();
+    const showToast = vi.fn();
+    setSelectedResource({ state }, { resourceId: "layout-adv" });
+    setSelectedCharacterId({ state }, { characterId: "character-1" });
+    // A sprite without a transform would otherwise block the submit.
+    setSpriteCharacterId({ state }, { characterId: "character-1" });
+    setSelectedSpriteIds(
+      { state },
+      { spriteIdsByGroupId: { body: "sprite-body" } },
+    );
+    clearLayout({ state });
+
+    handleSubmitClick({
+      props: {
+        layouts,
+        characters,
+        transforms,
+        dialogue: { content: [{ text: "Line text" }] },
+      },
+      store: createStore(state),
+      appService: { showToast },
+      i18n: EN_I18N,
+      dispatchEvent,
+    });
+
+    expect(showToast).not.toHaveBeenCalled();
+    expect(dispatchEvent).toHaveBeenCalledTimes(1);
+    expect(dispatchEvent.mock.calls[0][0].type).toBe("submit");
+    expect(dispatchEvent.mock.calls[0][0].detail).toEqual({
+      dialogue: { clear: true },
+    });
+  });
+
+  it("brings the dialogue back when a layout is chosen again after clearing it", () => {
+    const state = createInitialState();
+    const dispatchEvent = vi.fn();
+    const refs = createFormRefs();
+    setSelectedResource({ state }, { resourceId: "layout-adv" });
+    setSelectedCharacterId({ state }, { characterId: "character-1" });
+    setPersistCharacter({ state }, { persistCharacter: true });
+    clearLayout({ state });
+
+    handleFormChange(
+      {
+        props: { layouts, characters },
+        refs,
+        render: vi.fn(),
+        dispatchEvent,
+        store: createStore(state),
+      },
+      {
+        _event: {
+          detail: {
+            name: "resourceId",
+            value: "layout-nvl",
+            // The form no longer holds the values of the sections it hid.
+            values: { resourceId: "layout-nvl" },
+          },
+        },
+      },
+    );
+
+    expect(state.layoutCleared).toBe(false);
+    expect(state.selectedResourceId).toBe("layout-nvl");
+    expect(state.selectedMode).toBe("nvl");
+    expect(state.selectedCharacterId).toBe("character-1");
+    expect(state.persistCharacter).toBe(true);
+    expect(
+      refs.dialogueForm.setValues.mock.calls.at(-1)[0].values,
+    ).toMatchObject({
+      resourceId: "layout-nvl",
+      characterId: "character-1",
+      persistCharacter: true,
+    });
+    expect(
+      dispatchEvent.mock.calls[0][0].detail.presentationState.dialogue,
+    ).toMatchObject({
+      mode: "nvl",
+      ui: { resourceId: "layout-nvl" },
+      characterId: "character-1",
+      persistCharacter: true,
+    });
+  });
+
+  it("drops a cleared layout when another line is selected", () => {
+    const state = createInitialState();
+    clearLayout({ state });
+
+    handleOnUpdate(
+      {
+        props: { layouts, characters, animations },
+        refs: createFormRefs(),
+        store: createStore(state),
+      },
+      {
+        oldProps: { selectedLineId: "line-one" },
+        newProps: {
+          selectedLineId: "line-two",
+          dialogue: { ui: { resourceId: "layout-adv" } },
+        },
+      },
+    );
+
+    expect(state.layoutCleared).toBe(false);
+    expect(state.selectedResourceId).toBe("layout-adv");
   });
 
   it("submits dialogue.textSpeed when customized", () => {

@@ -341,6 +341,8 @@ export const createInitialState = () => ({
   mode: "current",
   layouts: [],
   selectedResourceId: "",
+  // The user cleared the layout: submitting removes the dialogue.
+  layoutCleared: false,
   characters: [],
   speakerAvatarUrls: {},
   selectedCharacterId: "",
@@ -398,8 +400,6 @@ export const createInitialState = () => ({
             type: "select",
             label: "Layout",
             description: "",
-            required: true,
-            clearable: false,
             placeholder: "Choose a layout...",
             options: [],
           },
@@ -410,6 +410,7 @@ export const createInitialState = () => ({
         ],
       },
       {
+        $when: "!layoutCleared",
         id: "speaker",
         label: "Speaker",
         description: "",
@@ -575,6 +576,7 @@ export const createInitialState = () => ({
         ],
       },
       {
+        $when: "!layoutCleared",
         id: "options",
         label: "Options",
         description: "",
@@ -637,6 +639,13 @@ export const setLayouts = ({ state }, { layouts } = {}) => {
 export const setSelectedResource = ({ state }, { resourceId } = {}) => {
   state.selectedResourceId = resourceId;
   state.defaultValues.resourceId = resourceId;
+  state.layoutCleared = false;
+};
+
+export const clearLayout = ({ state }) => {
+  state.selectedResourceId = "";
+  state.defaultValues.resourceId = "";
+  state.layoutCleared = true;
 };
 
 export const setSelectedCharacterId = ({ state }, { characterId } = {}) => {
@@ -962,6 +971,7 @@ export const selectDialogueBuildState = ({ state }) => ({
   mode: state.mode,
   selectedMode: state.selectedMode,
   selectedResourceId: state.selectedResourceId,
+  layoutCleared: state.layoutCleared,
   selectedCharacterId: state.selectedCharacterId,
   customCharacterName: state.customCharacterName,
   characterName: state.characterName,
@@ -1008,6 +1018,7 @@ export const selectDialogueFormState = ({ state }) => ({
 
 export const selectDialogueFormChangeState = ({ state }) => ({
   selectedMode: state.selectedMode,
+  layoutCleared: state.layoutCleared,
   customizeTextSpeed: state.customizeTextSpeed,
   selectedCharacterId: state.selectedCharacterId,
   customCharacterName: state.customCharacterName,
@@ -1080,10 +1091,12 @@ export const selectViewData = ({ state, props, i18n }) => {
   const layoutOptions = getLayoutOptions({
     layouts,
   });
-  const selectedResourceId = resolveSelectedResourceId({
-    layoutOptions,
-    resourceId: state.selectedResourceId,
-  });
+  const selectedResourceId = state.layoutCleared
+    ? ""
+    : resolveSelectedResourceId({
+        layoutOptions,
+        resourceId: state.selectedResourceId,
+      });
   const selectedMode = resolveSelectedMode({
     layouts,
     resourceId: selectedResourceId,
@@ -1418,6 +1431,7 @@ export const selectViewData = ({ state, props, i18n }) => {
   };
   const context = {
     dialogueMode: selectedMode,
+    layoutCleared: state.layoutCleared,
     values: defaultValues,
   };
 
@@ -1456,7 +1470,7 @@ export const selectViewData = ({ state, props, i18n }) => {
     clearPage: state.clearPage,
     customizeTextSpeed: state.customizeTextSpeed,
     textSpeed: normalizeTextSpeed(state.textSpeed),
-    submitDisabled: !selectedResourceId,
+    submitDisabled: !selectedResourceId && !state.layoutCleared,
     breadcrumb: localizeCommandLineBreadcrumb(breadcrumb, copy),
     form: {
       ...state.form,
