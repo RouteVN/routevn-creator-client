@@ -22,10 +22,10 @@ with the same JavaScript reporter as the desktop app
 rejections, and handled errors passed to `appService.reportError`. See
 [JavaScript errors](#javascript-errors).
 
-Native reporting is crash reporting only. Sessions, ANRs/app hangs, watchdog terminations,
-breadcrumbs, screenshots, view hierarchies, swizzling, network tracking,
-performance tracing, client reports and replay are disabled. The aggregate
-`sentry-android` artifact is not used because it also ships replay.
+Native reporting is crash reporting only. Sessions, ANRs/app hangs, watchdog
+terminations, breadcrumbs, screenshots, view hierarchies, swizzling, network
+tracking, performance tracing, client reports and replay are disabled. The
+aggregate `sentry-android` artifact is not used because it also ships replay.
 
 ## Device ID
 

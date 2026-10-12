@@ -786,12 +786,12 @@ public class MainActivity extends Activity {
 
     // The origins the app's own page is loaded from.
     private Set<String> pageOriginRules() {
-        Set<String> rules = new HashSet<>();
-        rules.add(APP_ORIGIN);
+        Set<String> allowedOriginRules = new HashSet<>();
+        allowedOriginRules.add(APP_ORIGIN);
         if (shouldUseDebugDevServer()) {
-            rules.add(DEV_SERVER_ORIGIN);
+            allowedOriginRules.add(DEV_SERVER_ORIGIN);
         }
-        return rules;
+        return allowedOriginRules;
     }
 
     // Gives the page's JavaScript error reporter its configuration before any

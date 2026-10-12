@@ -223,9 +223,9 @@ already handled. It never shows UI. Handled errors are still shown through
   projects are not reported either. Stored changes that a project's history
   leaves out when it loads are reported once per change
   (`projectHistory.loadDrafts`; see Drafts That No Longer Apply in
-  `docs/platform/05-storage.md`). On desktop, a saved update that merges data
-  holding a value JSON drops or changes, such as an `undefined` field, is
-  reported with its command type and field names
+  `docs/platform/05-storage.md`). On desktop, Android and iOS, a saved update
+  that merges data holding a value JSON drops or changes, such as an
+  `undefined` field, is reported with its command type and field names
   (`projectCommand.nonJsonPayload`), once per command type and set of fields
   and at most twice per session. Creates and full replaces load back the same
   and are not reported. Web keeps such values in IndexedDB, so it does not

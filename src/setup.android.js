@@ -121,6 +121,7 @@ const projectService = createProjectService({
   filePicker,
   db: appDb,
   creatorVersion,
+  errorTracker: errorReporter,
 });
 
 const openUrl = async (url) => {
