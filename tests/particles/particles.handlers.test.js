@@ -14,6 +14,7 @@ import {
   handleItemDuplicate,
   handleMobileDetailDuplicateClick,
   handleMobileDetailOpenClick,
+  handleParticleItemClick,
   handleParticleItemDoubleClick,
   handleParticleItemEdit,
   handleResourceViewBackgroundClick,
@@ -360,5 +361,62 @@ describe("particles handlers", () => {
 
     expect(page.view().selectedItemId).toBeUndefined();
     expect(deps.refs.fileExplorer.clearSelection).toHaveBeenCalledOnce();
+  });
+
+  it("plays the selected particle in the detail panel, but not once the page has gone", async () => {
+    const page = await createPage();
+    const { deps, repositoryState } = page;
+    repositoryState.images = {
+      items: {
+        "image-1": {
+          id: "image-1",
+          type: "image",
+          name: "Image One",
+          fileId: "file-1",
+          fileType: "image/png",
+        },
+      },
+      tree: [{ id: "image-1" }],
+    };
+    await handleDataChanged(deps);
+    const canvas = { isConnected: true };
+    deps.refs.detailCanvas = canvas;
+    deps.projectService.getFileContent = vi.fn(async () => ({
+      url: "blob:file-1",
+      type: "image/png",
+    }));
+    deps.graphicsService = {
+      init: vi.fn(async () => {}),
+      loadAssets: vi.fn(async () => {}),
+      render: vi.fn(),
+    };
+    const select = () =>
+      handleParticleItemClick(deps, {
+        _event: { detail: { itemId: "particle-1" } },
+      });
+
+    await select();
+
+    expect(deps.graphicsService.loadAssets).toHaveBeenCalledWith({
+      "file-1": { url: "blob:file-1", type: "image/png" },
+    });
+    const [[renderState]] = deps.graphicsService.render.mock.calls;
+    expect(renderState.elements.map(({ type }) => type)).toEqual([
+      "rect",
+      "particles",
+    ]);
+
+    // A double click opens the editor while the texture loads. The editor
+    // has the shared renderer by then, so the panel does not draw there.
+    deps.store.setSelectedItemId({ itemId: undefined });
+    deps.graphicsService.render.mockClear();
+    deps.graphicsService.loadAssets.mockImplementation(async () => {
+      canvas.isConnected = false;
+    });
+
+    await select();
+
+    expect(deps.graphicsService.loadAssets).toHaveBeenCalledTimes(2);
+    expect(deps.graphicsService.render).not.toHaveBeenCalled();
   });
 });

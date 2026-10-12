@@ -88,6 +88,13 @@ const renderDetailPreview = async (deps) => {
     deps,
     renderState: previewState,
   });
+  // The renderer is shared. Once this page has gone, as when a double click
+  // opens the particle in the editor, the renderer is the editor's, and this
+  // particle drawn there before the editor loads its texture never starts:
+  // the editor then draws the same particle, which is left as it is.
+  if (!refs.detailCanvas.isConnected) {
+    return;
+  }
   graphicsService.render(previewState);
 };
 
