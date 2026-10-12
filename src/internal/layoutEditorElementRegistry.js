@@ -991,6 +991,25 @@ export const canResizeLayoutEditorItemHeight = (item = {}) => {
   );
 };
 
+// An element 0 wide or high draws nothing and cannot be picked on the
+// canvas, so a size the user sets is at least 1.
+export const MIN_LAYOUT_EDITOR_ITEM_SIZE = 1;
+
+// The least width or height the user can set. While the aspect ratio is
+// fixed, the pair stops shrinking when the shorter side reaches 1, so the
+// longer side's least size follows the ratio: 4 for a width at 4:1.
+export const getMinLayoutEditorItemSize = ({ name, aspectRatioLock } = {}) => {
+  if (!Number.isFinite(aspectRatioLock) || aspectRatioLock <= 0) {
+    return MIN_LAYOUT_EDITOR_ITEM_SIZE;
+  }
+
+  const ratio = name === "width" ? aspectRatioLock : 1 / aspectRatioLock;
+  return Math.max(
+    MIN_LAYOUT_EDITOR_ITEM_SIZE,
+    Math.round(ratio * MIN_LAYOUT_EDITOR_ITEM_SIZE),
+  );
+};
+
 export const getLayoutEditorItemResizeEdges = (item = {}) => {
   const edges = [];
 

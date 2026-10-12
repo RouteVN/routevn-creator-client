@@ -1,5 +1,10 @@
+import {
+  getMinLayoutEditorItemSize,
+  MIN_LAYOUT_EDITOR_ITEM_SIZE,
+} from "../../../internal/layoutEditorElementRegistry.js";
 import { formatI18nCopy } from "../../../internal/ui/i18nCopy.js";
 import {
+  clampSliderValue,
   getSliderRange,
   getSliderStepButtons,
   stepSliderValue,
@@ -23,8 +28,9 @@ const SCALE_FIELD = {
 
 // A width or height is at least 1, as resizing on the canvas keeps it: an
 // element 0 wide or high draws nothing and cannot be picked on the canvas.
-// Text and row and column containers size to their content with Auto.
-const SIZE_FIELD = { step: 1, fastStep: 10, min: 1 };
+// While the aspect ratio is fixed, the longer side's least size follows the
+// ratio. Text and row and column containers size to their content with Auto.
+const SIZE_FIELD = { step: 1, fastStep: 10, min: MIN_LAYOUT_EDITOR_ITEM_SIZE };
 
 const SLIDER_POPOVER_FIELDS = {
   x: { step: 1, fastStep: 10 },
@@ -100,11 +106,15 @@ const getProjectDimension = ({ name, projectResolution }) =>
 const PROJECT_BOUND_MULTIPLE = 4;
 
 // The X and Y sliders run half the project's width or height beyond each
-// edge, width and height from 1 to the project's, rotation half a turn each
-// way, and scale from 0 to 2. Typed, X and Y reach 4 times the project's
-// width or height either way, width and height 4 times it, rotation a turn
-// each way, and scale 10; opacity stays between 0 and 1.
-export const getSliderPopoverRange = ({ name, projectResolution } = {}) => {
+// edge, width and height from their least size to the project's, rotation
+// half a turn each way, and scale from 0 to 2. Typed, X and Y reach 4 times
+// the project's width or height either way, width and height 4 times it,
+// rotation a turn each way, and scale 10; opacity stays between 0 and 1.
+export const getSliderPopoverRange = ({
+  name,
+  projectResolution,
+  aspectRatioLock,
+} = {}) => {
   const field = SLIDER_POPOVER_FIELDS[name];
   if (!field) {
     return undefined;
@@ -120,9 +130,11 @@ export const getSliderPopoverRange = ({ name, projectResolution } = {}) => {
   }
   const bound = Math.round(dimension * PROJECT_BOUND_MULTIPLE);
   if (isSizeField(name)) {
+    const min = getMinLayoutEditorItemSize({ name, aspectRatioLock });
     return getSliderRange({
       field,
-      range: { min: field.min, max: dimension },
+      range: { min, max: dimension },
+      min,
       max: bound,
     });
   }
@@ -193,12 +205,37 @@ export const stepSliderPopoverValue = ({
   value,
   delta,
   projectResolution,
+  aspectRatioLock,
 } = {}) => {
-  const range = getSliderPopoverRange({ name, projectResolution });
+  const range = getSliderPopoverRange({
+    name,
+    projectResolution,
+    aspectRatioLock,
+  });
   return stepSliderValue({
     field: SLIDER_POPOVER_FIELDS[name],
     value,
     delta,
+    min: range?.min,
+    max: range?.max,
+  });
+};
+
+// A value kept within the field's bounds.
+export const clampSliderPopoverValue = ({
+  name,
+  value,
+  projectResolution,
+  aspectRatioLock,
+} = {}) => {
+  const range = getSliderPopoverRange({
+    name,
+    projectResolution,
+    aspectRatioLock,
+  });
+  return clampSliderValue({
+    field: SLIDER_POPOVER_FIELDS[name],
+    value,
     min: range?.min,
     max: range?.max,
   });

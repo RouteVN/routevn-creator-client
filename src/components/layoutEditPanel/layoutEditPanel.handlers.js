@@ -35,13 +35,16 @@ import {
 } from "../../internal/spritesheets.js";
 import { selectLayoutEditPanelCopy } from "./support/layoutEditPanelCopy.js";
 import {
+  clampSliderPopoverValue,
   getLinkedScaleValues,
   getSliderPopoverField,
   hasAspectRatioToggle,
+  isSliderPopoverField,
   stepSliderPopoverValue,
 } from "./support/layoutEditPanelSliderPopovers.js";
 import {
   isSliderPopoverSubmitKey,
+  isSliderValueUnset,
   toSliderPresetMenuItems,
 } from "../../internal/ui/sliderPopover.js";
 import { normalizeLayoutRotation } from "../../internal/project/layout.js";
@@ -505,16 +508,37 @@ const normalizePanelValue = (name, value) => {
   return normalizedValue;
 };
 
+// A slider popover's value kept within its field's bounds. A typed value
+// reaches the form before the number input keeps it within them, which it
+// does only once the value is committed, and Enter submits before that.
+const clampPopoverValue = (deps, { name, value } = {}) => {
+  const { props, store } = deps;
+  if (!isSliderPopoverField(name) || !Number.isFinite(Number(value))) {
+    return value;
+  }
+
+  return clampSliderPopoverValue({
+    name,
+    value,
+    projectResolution: props.projectResolution,
+    aspectRatioLock: store.selectValues().aspectRatioLock,
+  });
+};
+
 // Show a popover value on the canvas while it is chosen. The owner keeps it
 // out of the saved layout until an update arrives, and drops it on
-// preview-cancel. Only plain numbers preview; a variable is applied on save.
+// preview-cancel. Only plain numbers preview, as Submit would save them; a
+// variable is applied on save, and an emptied number shows nothing new.
 const emitPanelPreview = (deps, { name, value } = {}) => {
   const { dispatchEvent, store } = deps;
-  if (!name || value === "" || !Number.isFinite(Number(value))) {
+  if (!name || isSliderValueUnset(value) || !Number.isFinite(Number(value))) {
     return;
   }
 
-  const previewValue = normalizePanelValue(name, Number(value));
+  const previewValue = normalizePanelValue(
+    name,
+    clampPopoverValue(deps, { name, value: Number(value) }),
+  );
   const detail = {
     formValues: store.selectValues(),
     name,
@@ -922,9 +946,8 @@ export const handleGroupItemWheel = (deps, payload) => {
     return;
   }
 
-  const currentValue = Number(
-    store.selectValues()?.[name] ?? fieldConfig.defaultValue,
-  );
+  const values = store.selectValues();
+  const currentValue = Number(values?.[name] ?? fieldConfig.defaultValue);
   if (!Number.isFinite(currentValue)) {
     return;
   }
@@ -936,13 +959,14 @@ export const handleGroupItemWheel = (deps, payload) => {
       ? fieldConfig.fastStep
       : fieldConfig.step;
   const delta = _event.deltaY < 0 ? step : -step;
-  // A size stays within its popover's bounds, from 1.
+  // A size stays within its popover's bounds, from its least size.
   const nextValue = SIZE_FIELDS.has(name)
     ? stepSliderPopoverValue({
         name,
         value: currentValue,
         delta,
         projectResolution: props.projectResolution,
+        aspectRatioLock: values?.aspectRatioLock,
       })
     : currentValue + delta;
 
@@ -1565,10 +1589,20 @@ export const handleSectionTooltipMouseLeave = (deps) => {
 };
 
 // Submit saves the popover's value: the form's own action, or in a slider
-// popover the button in its presets row and Enter.
-const submitPopoverValue = (deps, value) => {
+// popover the button in its presets row and Enter. A slider popover saves
+// its value within the field's bounds, or its last value when the number was
+// emptied.
+const submitPopoverValue = (deps, typedValue) => {
   const { store } = deps;
-  const { name } = store.selectPopoverForm();
+  const { name, defaultValues } = store.selectPopoverForm();
+  const value = isSliderPopoverField(name)
+    ? clampPopoverValue(deps, {
+        name,
+        value: isSliderValueUnset(typedValue)
+          ? defaultValues.value
+          : typedValue,
+      })
+    : typedValue;
   applyPanelValueUpdate(deps, {
     name,
     value,
@@ -2286,6 +2320,10 @@ export const handlePopoverFormInput = (deps, payload) => {
   const { store } = deps;
   const { name } = store.selectPopoverForm();
   const { value } = payload._event.detail.values;
+  // An emptied number keeps the last value, which Submit then saves.
+  if (isSliderPopoverField(name) && isSliderValueUnset(value)) {
+    return;
+  }
   // A rebuild while the slider moves starts from where it is, not from the
   // value the popover opened with.
   store.setPopoverFormValue({ value });
@@ -2345,6 +2383,7 @@ export const handlePopoverStepPress = (deps, payload) => {
     value,
     delta,
     projectResolution: props.projectResolution,
+    aspectRatioLock: store.selectValues().aspectRatioLock,
   });
   store.setPopoverFormValue({ value: nextValue });
   refs.form.setValues({ values: { value: nextValue } });

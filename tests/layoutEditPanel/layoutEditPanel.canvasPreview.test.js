@@ -402,7 +402,7 @@ describe("layout edit panel canvas preview", () => {
     expect(events.map((event) => event.detail.value)).toEqual([1, 6, 15]);
   });
 
-  it("keeps a size at 1 or more from the wheel and a fixed aspect ratio", () => {
+  it("keeps a size at its least from the wheel, typing, and a fixed aspect ratio", () => {
     let state = layoutEditPanelStore.createInitialState();
     const store = new Proxy(
       {},
@@ -456,27 +456,64 @@ describe("layout edit panel canvas preview", () => {
       ["height", 401],
     ]);
 
-    // With a wide ratio, a width of 1 rounds the height to 0, kept at 1.
-    store.setValues({
-      values: {
-        id: "element-1",
-        type: "sprite",
-        width: 400,
-        height: 100,
-        aspectRatioLock: 4,
-      },
-    });
-    store.openPopoverForm({
-      name: "width",
-      form: { fields: [{ name: "value", type: "input-number" }] },
-      projectResolution,
-      copy: selectLayoutEditPanelCopy(EN_I18N),
-    });
-    handleFormActions(deps, formEvent({ value: 1 }));
+    // At a fixed 4:1, the width stops at 4, where the height is 1.
+    const setWideSprite = (width) =>
+      store.setValues({
+        values: {
+          id: "element-1",
+          type: "sprite",
+          width,
+          height: width / 4,
+          aspectRatioLock: 4,
+        },
+      });
+    const openWidthPopover = () =>
+      store.openPopoverForm({
+        name: "width",
+        form: { fields: [{ name: "value", type: "input-number" }] },
+        projectResolution,
+        copy: selectLayoutEditPanelCopy(EN_I18N),
+      });
+    setWideSprite(12);
+    wheel("width", { deltaY: 100, shiftKey: true });
     expect(events.at(-1).detail).toMatchObject({
       name: "width",
-      value: 1,
+      value: 4,
+      formValues: { width: 4, height: 1 },
+    });
+
+    // A typed 0 previews and saves that least size, though Enter submits
+    // before the number input keeps the value within its bounds.
+    setWideSprite(400);
+    openWidthPopover();
+    handlePopoverFormInput(deps, formEvent({ value: 0 }));
+    expect(events.at(-1).detail).toMatchObject({
+      name: "width",
+      value: 4,
       linkedValues: { height: 1 },
+    });
+    deps.refs = { form: { getValues: () => ({ value: 0 }) } };
+    handlePopoverFormKeyDown(deps, keyEvent());
+    expect(events.at(-1).type).toBe("update");
+    expect(events.at(-1).detail).toMatchObject({
+      name: "width",
+      value: 4,
+      linkedValues: { height: 1 },
+    });
+
+    // An emptied number previews nothing new and submits the last value.
+    setWideSprite(400);
+    openWidthPopover();
+    handlePopoverFormInput(deps, formEvent({ value: 200 }));
+    const eventCount = events.length;
+    handlePopoverFormInput(deps, formEvent({ value: null }));
+    expect(events).toHaveLength(eventCount);
+    deps.refs = { form: { getValues: () => ({ value: null }) } };
+    handlePopoverFormKeyDown(deps, keyEvent());
+    expect(events.at(-1).detail).toMatchObject({
+      name: "width",
+      value: 200,
+      linkedValues: { height: 50 },
     });
   });
 

@@ -330,6 +330,32 @@ describe("layoutEditPanel popover forms", () => {
     ).toEqual([-10, -1, 1, 10]);
   });
 
+  it("stops a fixed aspect ratio's sizes where the shorter side is 1", () => {
+    const getBounds = (name, values) => {
+      const { min, sliderMin } = openSliderPopover(name, values).form.fields[0];
+      return [min, sliderMin];
+    };
+
+    // At 4:1 the width stops at 4, where the height is 1; at 1:4 the other
+    // way round.
+    const wide = { width: 400, height: 100, aspectRatioLock: 4 };
+    const tall = { width: 100, height: 400, aspectRatioLock: 0.25 };
+    expect(getBounds("width", wide)).toEqual([4, 4]);
+    expect(getBounds("height", wide)).toEqual([1, 1]);
+    expect(getBounds("width", tall)).toEqual([1, 1]);
+    expect(getBounds("height", tall)).toEqual([4, 4]);
+
+    expect(
+      stepSliderPopoverValue({
+        name: "width",
+        value: 10,
+        delta: -10,
+        projectResolution: { width: 1920, height: 1080 },
+        aspectRatioLock: 4,
+      }),
+    ).toBe(4);
+  });
+
   it("keeps other number popovers plain", () => {
     const popover = openSliderPopover("gapX", { gapX: 12 });
 

@@ -9,6 +9,8 @@ import { normalizeLayoutRotation } from "../../internal/project/layout.js";
 import {
   canResizeLayoutEditorItemHeight,
   canResizeLayoutEditorItemWidth,
+  getMinLayoutEditorItemSize,
+  MIN_LAYOUT_EDITOR_ITEM_SIZE,
 } from "../../internal/layoutEditorElementRegistry.js";
 import { createTransformKeyboardIntent } from "../../internal/transformKeyboard.js";
 import {
@@ -37,7 +39,6 @@ const KEYBOARD_UNITS = {
   NORMAL: 1,
   FAST: 10,
 };
-const MIN_RESIZE_DIMENSION = 1;
 const RESIZE_TARGET_PREFIX = "selected-border-resize-";
 const POINTER_DRAG_THRESHOLD = 4;
 
@@ -185,12 +186,12 @@ const canResizeCanvasItemForEdge = (item = {}, resizeEdge) => {
   return false;
 };
 
-const clampResizeDimension = (value) => {
+const clampResizeDimension = (value, min = MIN_LAYOUT_EDITOR_ITEM_SIZE) => {
   if (!Number.isFinite(value)) {
-    return MIN_RESIZE_DIMENSION;
+    return min;
   }
 
-  return Math.max(MIN_RESIZE_DIMENSION, Math.round(value));
+  return Math.max(min, Math.round(value));
 };
 
 export const applyCanvasItemResizeChange = ({
@@ -218,6 +219,16 @@ export const applyCanvasItemResizeChange = ({
     ...item,
   };
   const aspectRatioLock = getAspectRatioLock(item);
+  // While the aspect ratio is fixed, the pair stops shrinking when the
+  // shorter side reaches its least size.
+  const minWidth = getMinLayoutEditorItemSize({
+    name: "width",
+    aspectRatioLock,
+  });
+  const minHeight = getMinLayoutEditorItemSize({
+    name: "height",
+    aspectRatioLock,
+  });
 
   if (!canResizeCanvasItemForEdge(item, resizeEdge)) {
     return item;
@@ -226,6 +237,7 @@ export const applyCanvasItemResizeChange = ({
   if (resizeEdge === "left") {
     nextItem.width = clampResizeDimension(
       dragStartPosition.itemStartWidth - deltaX,
+      minWidth,
     );
     nextItem.x =
       dragStartPosition.itemStartX +
@@ -236,6 +248,7 @@ export const applyCanvasItemResizeChange = ({
   } else if (resizeEdge === "right") {
     nextItem.width = clampResizeDimension(
       dragStartPosition.itemStartWidth + deltaX,
+      minWidth,
     );
     if (aspectRatioLock) {
       nextItem.height = clampResizeDimension(nextItem.width / aspectRatioLock);
@@ -243,6 +256,7 @@ export const applyCanvasItemResizeChange = ({
   } else if (resizeEdge === "top") {
     nextItem.height = clampResizeDimension(
       dragStartPosition.itemStartHeight - deltaY,
+      minHeight,
     );
     nextItem.y =
       dragStartPosition.itemStartY +
@@ -253,6 +267,7 @@ export const applyCanvasItemResizeChange = ({
   } else if (resizeEdge === "bottom") {
     nextItem.height = clampResizeDimension(
       dragStartPosition.itemStartHeight + deltaY,
+      minHeight,
     );
     if (aspectRatioLock) {
       nextItem.width = clampResizeDimension(nextItem.height * aspectRatioLock);
@@ -910,20 +925,37 @@ export const applyCanvasItemKeyboardChange = ({
     return item;
   }
 
-  const fieldName =
-    intent.type === "resize"
-      ? intent.axis === "x"
-        ? "width"
-        : "height"
-      : intent.axis;
-  const change = {
-    [fieldName]: Math.round(item[fieldName] + intent.delta),
-  };
+  if (intent.type === "move") {
+    return {
+      ...item,
+      [intent.axis]: Math.round(item[intent.axis] + intent.delta),
+    };
+  }
 
-  return {
+  // A size stops at its least, as resizing with the pointer does, and moves
+  // the other with it while the aspect ratio is fixed.
+  const name = intent.axis === "x" ? "width" : "height";
+  const aspectRatioLock = getAspectRatioLock(item);
+  const nextValue = clampResizeDimension(
+    item[name] + intent.delta,
+    getMinLayoutEditorItemSize({ name, aspectRatioLock }),
+  );
+  if (nextValue === item[name]) {
+    return item;
+  }
+
+  const nextItem = {
     ...item,
-    ...change,
+    [name]: nextValue,
   };
+  if (aspectRatioLock) {
+    if (name === "width") {
+      nextItem.height = clampResizeDimension(nextValue / aspectRatioLock);
+    } else {
+      nextItem.width = clampResizeDimension(nextValue * aspectRatioLock);
+    }
+  }
+  return nextItem;
 };
 
 const dispatchCanvasItemEvent = (deps, eventName, updatedItem) => {
