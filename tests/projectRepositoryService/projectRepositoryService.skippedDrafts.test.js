@@ -196,7 +196,6 @@ describe("projectRepositoryService left-out drafts", () => {
         type: "scene.update",
         partition: mainScenePartitionFor(sceneId),
         sceneId,
-        sectionId: undefined,
         error: {
           code: "payload_validation_failed",
           message: "payload.unsupportedField is not allowed",

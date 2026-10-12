@@ -1,5 +1,5 @@
 import { Subject } from "rxjs";
-import { describe, expect, it, vi } from "vitest";
+import { afterEach, describe, expect, it, vi } from "vitest";
 import {
   createSkippedDraftsReportStream,
   getReportedSkippedDraftsConfigKey,
@@ -13,13 +13,11 @@ const createSkippedDraft = ({
   draftId,
   type = "line.update_actions",
   sceneId,
-  sectionId,
 }) => ({
   draftId,
   type,
   partition: "m",
   sceneId,
-  sectionId,
   error: {
     code: "payload_validation_failed",
     message: "payload.unsupportedField is not allowed",
@@ -49,6 +47,10 @@ const createDeps = ({ userConfig = {} } = {}) => {
 };
 
 describe("skippedDraftsReport", () => {
+  afterEach(() => {
+    vi.restoreAllMocks();
+  });
+
   it("reports the left-out drafts as one error without an alert", () => {
     const deps = createDeps();
 
@@ -56,11 +58,7 @@ describe("skippedDraftsReport", () => {
       projectId,
       skippedDrafts: [
         createSkippedDraft({ draftId: "draft-1", type: "image.update" }),
-        createSkippedDraft({
-          draftId: "draft-2",
-          sceneId: "scene-1",
-          sectionId: "section-2",
-        }),
+        createSkippedDraft({ draftId: "draft-2", sceneId: "scene-1" }),
         createSkippedDraft({ draftId: "draft-3", type: "scene.update" }),
       ],
     });
@@ -222,7 +220,7 @@ describe("skippedDraftsReport", () => {
     expect(deps.appService.reportError).toHaveBeenNthCalledWith(
       1,
       expect.objectContaining({ message: "user config unavailable" }),
-      { operation: "projectHistory.reportSkippedDrafts" },
+      { operation: "projectHistory.notifySkippedDrafts" },
     );
     expect(deps.appService.reportError).toHaveBeenNthCalledWith(
       2,
@@ -256,7 +254,7 @@ describe("skippedDraftsReport", () => {
 
     expect(deps.appService.reportError).toHaveBeenCalledWith(
       expect.objectContaining({ message: "Repository not initialized" }),
-      { operation: "projectHistory.reportSkippedDrafts" },
+      { operation: "projectHistory.notifySkippedDrafts" },
     );
     expect(deps.projectService.subscribeSkippedDrafts).toHaveBeenCalledTimes(2);
 

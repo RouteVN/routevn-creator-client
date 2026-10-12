@@ -64,12 +64,13 @@ export const reportSkippedDrafts = (
   }
 };
 
+// Keeps the operation name it had when left-out drafts were also shown to the
+// user, so these reports stay grouped with earlier ones.
 const reportStreamFailure = (deps, error) => {
   console.error("[projectHistory] Failed to report left-out changes", error);
   deps.appService.reportError(error, {
-    operation: "projectHistory.reportSkippedDrafts",
+    operation: "projectHistory.notifySkippedDrafts",
   });
-  return EMPTY;
 };
 
 // `projectId$` emits the id of the open project after each route that needs
@@ -88,7 +89,12 @@ export const createSkippedDraftsReportStream = ({ deps, projectId$ }) => {
               (payload) => subscriber.next(payload),
               { projectId },
             ),
-          ).pipe(catchError((error) => reportStreamFailure(deps, error)))
+          ).pipe(
+            catchError((error) => {
+              reportStreamFailure(deps, error);
+              return EMPTY;
+            }),
+          )
         : EMPTY,
     ),
     tap((payload) => {

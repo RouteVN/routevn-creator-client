@@ -178,7 +178,6 @@ describe("clientStoreHistory", () => {
         type: "scene.update",
         partition: mainScenePartitionFor(sceneId),
         sceneId,
-        sectionId: undefined,
         error: {
           code: "validation_failed",
           message: "repository event schemaVersion must be a positive integer",
@@ -308,7 +307,6 @@ describe("clientStoreHistory", () => {
         type: "line.update_actions",
         partition: scenePartitionFor(sceneId),
         sceneId,
-        sectionId,
         error: {
           code: "payload_validation_failed",
           message: "payload.unsupportedField is not allowed",
@@ -319,7 +317,6 @@ describe("clientStoreHistory", () => {
         type: "line.delete",
         partition: "m",
         sceneId,
-        sectionId,
         error: {
           code: "payload_validation_failed",
           message: "payload.unsupportedField is not allowed",
@@ -357,7 +354,6 @@ describe("clientStoreHistory", () => {
       expect.objectContaining({
         draftId: "deleted-line-update",
         sceneId,
-        sectionId,
       }),
     ]);
   });
@@ -387,7 +383,6 @@ describe("clientStoreHistory", () => {
       expect.objectContaining({
         draftId: "deleted-section-line-update",
         sceneId,
-        sectionId: undefined,
       }),
     ]);
   });
