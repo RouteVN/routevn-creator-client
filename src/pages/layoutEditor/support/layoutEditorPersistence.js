@@ -111,6 +111,11 @@ const normalizeLayoutElementInteractions = (item = {}) => {
   return nextItem;
 };
 
+// Changes are stored as JSON, which drops fields set to undefined. Items are
+// compared and sent in that form, so a field cleared to undefined is sent as
+// removed, with a replace, and never as an update that stores no fields.
+const toStoredForm = (item) => JSON.parse(JSON.stringify(item));
+
 export const shouldPersistLayoutEditorFieldImmediately = ({
   name,
   itemType,
@@ -144,8 +149,12 @@ export const createLayoutEditorElementPersistPayload = ({
     };
   }
 
-  const previousItem = normalizeLayoutElementInteractions(currentItem);
-  const normalizedUpdatedItem = normalizeLayoutElementInteractions(updatedItem);
+  const previousItem = toStoredForm(
+    normalizeLayoutElementInteractions(currentItem),
+  );
+  const normalizedUpdatedItem = toStoredForm(
+    normalizeLayoutElementInteractions(updatedItem),
+  );
   const diff = createObjectPatch(previousItem, normalizedUpdatedItem);
 
   if (!diff.hasChanges && !diff.requiresReplace) {

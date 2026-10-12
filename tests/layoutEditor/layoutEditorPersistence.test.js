@@ -1,3 +1,4 @@
+import { validatePayload } from "@routevn/creator-model";
 import { describe, expect, it, vi } from "vitest";
 import {
   createLayoutEditorElementPersistPayload,
@@ -108,6 +109,67 @@ describe("layoutEditorPersistence", () => {
       type: "sprite",
       imageId: "default",
     });
+  });
+
+  it("sends a field cleared to undefined as removed, so the stored change still loads", () => {
+    const currentItem = {
+      id: "sprite-1",
+      type: "sprite",
+      name: "Sprite",
+      x: 0,
+      y: 0,
+      imageId: "default",
+      hoverImageId: "hover",
+    };
+
+    const result = createLayoutEditorElementPersistPayload({
+      currentItem,
+      updatedItem: { ...currentItem, hoverImageId: undefined },
+    });
+
+    expect(result).toEqual({
+      hasChanges: true,
+      replace: true,
+      data: {
+        type: "sprite",
+        name: "Sprite",
+        x: 0,
+        y: 0,
+        imageId: "default",
+      },
+    });
+    expect(Object.hasOwn(result.data, "hoverImageId")).toBe(false);
+
+    // Changes are stored as JSON and validated again when the history loads.
+    const storedPayload = JSON.parse(
+      JSON.stringify({
+        layoutId: "layout-1",
+        elementId: "sprite-1",
+        data: result.data,
+        replace: result.replace,
+      }),
+    );
+    expect(
+      validatePayload({
+        type: "layout.element.update",
+        payload: storedPayload,
+      }),
+    ).toEqual({ valid: true });
+  });
+
+  it("ignores a field set to undefined that was never set", () => {
+    const currentItem = {
+      id: "sprite-1",
+      type: "sprite",
+      imageId: "default",
+    };
+
+    const result = createLayoutEditorElementPersistPayload({
+      currentItem,
+      updatedItem: { ...currentItem, hoverImageId: undefined },
+    });
+
+    expect(result.hasChanges).toBe(false);
   });
 
   it("persists rich text content in repository command payloads", () => {
