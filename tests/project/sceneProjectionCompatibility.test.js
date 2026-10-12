@@ -770,6 +770,107 @@ describe("scene projection compatibility", () => {
     }
   });
 
+  it("replays the events around an obsolete event together", async () => {
+    const initialState = createRepositoryState();
+    delete initialState.scenes.items[sceneId].sections.items[targetSectionId];
+    initialState.scenes.items[sceneId].sections.tree = [{ id: sectionId }];
+
+    const createLineEvent = ({ id, createdLineId, index, clientTs }) =>
+      createCommandEvent({
+        id,
+        partition: scenePartitionFor(sceneId),
+        type: COMMAND_TYPES.LINE_CREATE,
+        payload: {
+          sectionId,
+          lines: [
+            {
+              lineId: createdLineId,
+              data: {
+                actions: {},
+              },
+            },
+          ],
+          index,
+        },
+        clientTs,
+      });
+    const events = [
+      createProjectCreateRepositoryEvent({
+        projectId,
+        state: initialState,
+      }),
+      createLineEvent({
+        id: "line-create-1",
+        createdLineId: "line-1",
+        index: 0,
+        clientTs: 1,
+      }),
+      createCommandEvent({
+        id: "section-delete-missing",
+        partition: mainScenePartitionFor(sceneId),
+        type: COMMAND_TYPES.SECTION_DELETE,
+        payload: {
+          sectionIds: [targetSectionId],
+        },
+        clientTs: 2,
+      }),
+      createLineEvent({
+        id: "line-create-2",
+        createdLineId: "line-2",
+        index: 1,
+        clientTs: 3,
+      }),
+    ];
+    // Like the repository reducer, report which event failed.
+    const reduceEventsToStateWithIndex = ({ repositoryState, events }) => {
+      const applyResult = applyRepositoryEventsToRepositoryState({
+        repositoryState,
+        events,
+        projectId,
+      });
+
+      if (!applyResult.valid) {
+        const error = new Error(applyResult.error?.message);
+        error.details = applyResult.error?.details;
+        throw error;
+      }
+
+      return applyResult.repositoryState;
+    };
+    const reduceEventToStateSpy = vi.fn(reduceEventToState);
+
+    const warnSpy = vi.spyOn(console, "warn").mockImplementation(() => {});
+    try {
+      const projection = await loadSceneProjectionState({
+        store: createCheckpointStore(),
+        mainState: createMainProjectionState(initialState),
+        events,
+        createInitialState: () => structuredClone(initialProjectData),
+        reduceEventToState: reduceEventToStateSpy,
+        reduceEventsToState: reduceEventsToStateWithIndex,
+        sceneId,
+      });
+
+      expect(
+        projection.scenes.items[sceneId].sections.items[
+          sectionId
+        ].lines.tree.map((line) => line.id),
+      ).toEqual(["line-1", "line-2"]);
+      // The project.create seed, then only the obsolete event on its own.
+      expect(
+        reduceEventToStateSpy.mock.calls.map(([{ event }]) => event.id),
+      ).toEqual([events[0].id, "section-delete-missing"]);
+      expect(warnSpy).toHaveBeenCalledWith(
+        "[sceneProjection] skipped obsolete replay event",
+        expect.objectContaining({
+          eventId: "section-delete-missing",
+        }),
+      );
+    } finally {
+      warnSpy.mockRestore();
+    }
+  });
+
   it("skips obsolete section and line lifecycle events while preserving newer scene lines", async () => {
     const initialState = createRepositoryState();
     const deletedSectionId = "section-deleted";
