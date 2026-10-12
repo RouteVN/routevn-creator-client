@@ -3,8 +3,7 @@
 The Android and iOS apps send native crashes to the same Sentry-compatible
 collector as the desktop app (see
 [desktop error reporting](desktop-error-reporting.md)). Each platform uses the
-official Sentry SDK with a thin wrapper, following the collector's
-`specs/services/error-sdk-compatibility-v1.md`.
+official Sentry SDK with a thin wrapper.
 
 ## What is reported
 
