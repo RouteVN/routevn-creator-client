@@ -588,4 +588,92 @@ describe("character sprite spritesheet creator-model extension", () => {
     expect(result.valid).toBe(false);
     expect(result.error.details.commandIndex).toBe(3);
   });
+
+  it("does not give spritesheets back to a deleted character re-created with the same id", () => {
+    const characterDeleteCommand = createCommand({
+      id: "character-delete",
+      type: COMMAND_TYPES.CHARACTER_DELETE,
+      payload: {
+        characterIds: ["hero"],
+      },
+    });
+    const characterRecreateCommand = {
+      ...createCharacterCommand(),
+      id: "character-recreate",
+    };
+
+    const sameBatchResult = applyCommandsToRepositoryState({
+      repositoryState: structuredClone(initialProjectData),
+      projectId: "project-1",
+      commands: [
+        ...createBaseCommands(),
+        createSpritesheetCommand(),
+        characterDeleteCommand,
+        characterRecreateCommand,
+      ],
+    });
+    expect(sameBatchResult.valid).toBe(true);
+    expect(
+      sameBatchResult.repositoryState.characters.items.hero.sprites,
+    ).toEqual({
+      items: {},
+      tree: [],
+    });
+
+    const setupResult = applyCommandsToRepositoryState({
+      repositoryState: structuredClone(initialProjectData),
+      projectId: "project-1",
+      commands: [...createBaseCommands(), createSpritesheetCommand()],
+    });
+    const laterBatchResult = applyCommandsToRepositoryState({
+      repositoryState: setupResult.repositoryState,
+      projectId: "project-1",
+      commands: [characterDeleteCommand, characterRecreateCommand],
+    });
+    expect(laterBatchResult.valid).toBe(true);
+    expect(
+      laterBatchResult.repositoryState.characters.items.hero.sprites,
+    ).toEqual({
+      items: {},
+      tree: [],
+    });
+  });
+
+  it("applies a batch of only spritesheet commands like each command on its own", () => {
+    const setupResult = applyCommandsToRepositoryState({
+      repositoryState: structuredClone(initialProjectData),
+      projectId: "project-1",
+      commands: [...createBaseCommands(), createSpritesheetCommand()],
+    });
+    // A stale reference that the creator model rejects in a full state check,
+    // which applying a spritesheet command on its own does not run.
+    const repositoryState = structuredClone(setupResult.repositoryState);
+    repositoryState.story.initialSceneId = "missing-scene";
+    const sheetUpdateCommand = createCommand({
+      id: "sheet-update",
+      type: COMMAND_TYPES.CHARACTER_SPRITE_UPDATE,
+      payload: {
+        characterId: "hero",
+        spriteId: "sheet-1",
+        data: {
+          name: "Hero Sheet Renamed",
+        },
+      },
+    });
+
+    const singleResult = applyCommandToRepositoryState({
+      repositoryState,
+      command: sheetUpdateCommand,
+      projectId: "project-1",
+    });
+    const batchResult = applyCommandsToRepositoryState({
+      repositoryState,
+      commands: [sheetUpdateCommand],
+      projectId: "project-1",
+    });
+
+    expect(singleResult.valid).toBe(true);
+    expect(batchResult.valid).toBe(true);
+    expect(batchResult.repositoryState).toEqual(singleResult.repositoryState);
+  });
 });

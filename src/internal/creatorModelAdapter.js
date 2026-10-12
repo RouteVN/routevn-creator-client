@@ -2089,6 +2089,32 @@ const reduceCharacterSpriteCommand = ({ repositoryState, command }) => {
   );
 };
 
+// Applies a character sprite command that only the client model projects.
+const applyClientModelCharacterSpriteCommand = ({
+  repositoryState,
+  command,
+}) => {
+  const extensionResult = reduceCharacterSpriteCommand({
+    repositoryState,
+    command,
+  });
+  if (extensionResult.valid === false) {
+    return extensionResult;
+  }
+
+  const validationResult = validateClientModelStateExtensions(
+    extensionResult.repositoryState,
+  );
+  if (validationResult.valid === false) {
+    return validationResult;
+  }
+
+  return {
+    valid: true,
+    repositoryState: extensionResult.repositoryState,
+  };
+};
+
 export const applyCommandToRepositoryStateWithCreatorModel = ({
   repositoryState,
   command,
@@ -2104,28 +2130,21 @@ export const applyCommandToRepositoryStateWithCreatorModel = ({
         repositoryState,
       })
     ) {
-      const extensionResult = reduceCharacterSpriteCommand({
+      const clientModelResult = applyClientModelCharacterSpriteCommand({
         repositoryState,
         command,
       });
-      if (extensionResult.valid === false) {
-        return extensionResult;
-      }
-
-      const validationResult = validateClientModelStateExtensions(
-        extensionResult.repositoryState,
-      );
-      if (validationResult.valid === false) {
-        return validationResult;
+      if (clientModelResult.valid === false) {
+        return clientModelResult;
       }
 
       return {
         valid: true,
         creatorModelCommand,
         nextCreatorModelState: toCreatorModelState(
-          extensionResult.repositoryState,
+          clientModelResult.repositoryState,
         ),
-        repositoryState: extensionResult.repositoryState,
+        repositoryState: clientModelResult.repositoryState,
       };
     }
 
@@ -2163,30 +2182,51 @@ const withBatchCommandIndex = (result, commandIndex) => {
     return result;
   }
 
-  const details = isPlainObject(result.error?.details)
-    ? { ...result.error.details }
-    : {};
+  const details = { ...result.error?.details };
   details.commandIndex = commandIndex;
+  const error = { ...result.error };
+  error.details = details;
 
   return {
-    ...result,
-    error: {
-      ...result.error,
-      details,
-    },
+    valid: false,
+    error,
   };
 };
 
+const hasAnyCharacterSpritesheetExtensions = (state) =>
+  Object.keys(state?.characters?.items ?? {}).some((characterId) =>
+    hasCharacterSpritesheetExtensions({
+      state,
+      characterId,
+    }),
+  );
+
+// Commands a batch applies on their own instead of replaying them with the
+// commands around them. Deleting a character drops its spritesheets; replayed
+// together, a character re-created with the same id would get them back from
+// the state before the replay.
+const isAppliedOnItsOwnInBatch = ({ command, repositoryState }) =>
+  requiresClientModelCharacterSpriteProjection({
+    command,
+    repositoryState,
+  }) ||
+  (command?.type === "character.delete" &&
+    hasAnyCharacterSpritesheetExtensions(repositoryState));
+
 // Replays `commands[start..end)` in one creator model pass. A command that
 // fails is reported by its index in `commands`.
-const replayCommandRun = ({ repositoryState, commands, start, end }) => {
+const replayCommandRun = ({
+  repositoryState,
+  commands,
+  creatorModelCommands,
+  start,
+  end,
+}) => {
   const runCommands = commands.slice(start, end);
   const replayResult = toCreatorModelResult(
     replayCreatorModelCommands({
       state: toCreatorModelState(repositoryState),
-      commands: commandsToCreatorModelCommands({
-        commands: runCommands,
-      }),
+      commands: creatorModelCommands.slice(start, end),
     }),
   );
   if (!replayResult.valid) {
@@ -2223,17 +2263,18 @@ export const applyCommandsToRepositoryStateWithCreatorModel = ({
       commands: normalizedCommands,
     });
 
-    // Only the character sprite commands that the client model projects are
-    // applied one at a time. Each of those validates the whole state, so the
-    // commands between them are replayed together. The replayed commands do
-    // not change which characters have spritesheets, so the state before them
-    // still tells which later commands need the client model.
+    // Applying a command on its own validates the whole state, so only the
+    // commands that need it are applied that way, and the commands between
+    // them are replayed together. Replayed commands can remove a character's
+    // spritesheets but never add one, so the state before them can only
+    // overstate which commands need it. Each one is checked again when it is
+    // applied.
     let nextState = repositoryState;
     let runStart = 0;
     for (let index = 0; index < normalizedCommands.length; index += 1) {
       const command = normalizedCommands[index];
       if (
-        !requiresClientModelCharacterSpriteProjection({
+        !isAppliedOnItsOwnInBatch({
           command,
           repositoryState: nextState,
         })
@@ -2245,6 +2286,7 @@ export const applyCommandsToRepositoryStateWithCreatorModel = ({
         const runResult = replayCommandRun({
           repositoryState: nextState,
           commands: normalizedCommands,
+          creatorModelCommands,
           start: runStart,
           end: index,
         });
@@ -2254,10 +2296,18 @@ export const applyCommandsToRepositoryStateWithCreatorModel = ({
         nextState = runResult.repositoryState;
       }
 
-      const applyResult = applyCommandToRepositoryStateWithCreatorModel({
-        repositoryState: nextState,
+      const applyResult = requiresClientModelCharacterSpriteProjection({
         command,
-      });
+        repositoryState: nextState,
+      })
+        ? applyClientModelCharacterSpriteCommand({
+            repositoryState: nextState,
+            command,
+          })
+        : applyCommandToRepositoryStateWithCreatorModel({
+            repositoryState: nextState,
+            command,
+          });
       if (applyResult.valid === false) {
         return withBatchCommandIndex(applyResult, index);
       }
@@ -2265,9 +2315,19 @@ export const applyCommandsToRepositoryStateWithCreatorModel = ({
       runStart = index + 1;
     }
 
+    if (runStart > 0 && runStart === normalizedCommands.length) {
+      return {
+        valid: true,
+        creatorModelCommands,
+        nextCreatorModelState: toCreatorModelState(nextState),
+        repositoryState: nextState,
+      };
+    }
+
     const runResult = replayCommandRun({
       repositoryState: nextState,
       commands: normalizedCommands,
+      creatorModelCommands,
       start: runStart,
       end: normalizedCommands.length,
     });
