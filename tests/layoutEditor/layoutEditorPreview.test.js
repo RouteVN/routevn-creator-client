@@ -335,6 +335,45 @@ describe("layoutEditorPreview", () => {
     expect(anchor).toMatchObject({ width: 2, height: 2 });
   });
 
+  it("leaves out the inner border of an element no larger than the stroke", () => {
+    // Route Graphics draws only rects larger than 0. A 2 by 1 element at
+    // 3 canvas units per CSS pixel has no room for the inner border.
+    const rectSizes = (elements) =>
+      elements
+        .flatMap((element) => [element, ...(element.children ?? [])])
+        .filter(({ type }) => type === "rect")
+        .map(({ id, width, height }) => [id, width > 0 && height > 0]);
+
+    const [selection] = createLayoutEditorSelectionOverlay({
+      selectedItemId: "selected",
+      occurrencesById: { selected: { ownerItemId: "selected" } },
+      occurrenceIdsByOwner: { selected: ["selected"] },
+      selectedItem: { type: "sprite" },
+      parsedElements: [{ id: "selected", type: "rect", width: 2, height: 1 }],
+      canvasUnitsPerCssPixel: 3,
+    });
+    const selectionIds = selection.children.map(({ id }) => id);
+    expect(selectionIds).toContain("selected-border-outer");
+    expect(selectionIds).not.toContain("selected-border-inner");
+    expect(selectionIds).toContain("selected-border-rotate");
+    expect(
+      rectSizes(selection.children).filter(([, positive]) => !positive),
+    ).toEqual([]);
+
+    const hover = createLayoutEditorHoverOverlay({
+      bounds: {
+        corners: [
+          { x: 10, y: 20 },
+          { x: 12, y: 20 },
+          { x: 12, y: 21 },
+          { x: 10, y: 21 },
+        ],
+      },
+      canvasUnitsPerCssPixel: 3,
+    });
+    expect(hover.map(({ id }) => id)).toEqual(["hover-border-outer"]);
+  });
+
   it("formats the authored English and CJK date presets", () => {
     const timestamp = new Date(2026, 11, 31, 12).getTime();
 

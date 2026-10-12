@@ -193,13 +193,22 @@ const buildOverlayInnerRect = ({
   }
 
   const strokeUnits = getOverlayStrokeUnits(canvasUnitsPerCssPixel);
+  const width = element.width - strokeUnits;
+  const height = element.height - strokeUnits;
+  // Route Graphics draws only rects larger than 0, and an element no wider
+  // or higher than the stroke leaves no room inside for the inner border.
+  // The outer border still marks it.
+  if (width <= 0 || height <= 0) {
+    return undefined;
+  }
+
   return {
     id: `${overlayId}-inner`,
     type: "rect",
     x: strokeUnits / 2,
     y: strokeUnits / 2,
-    width: Math.max(0, element.width - strokeUnits),
-    height: Math.max(0, element.height - strokeUnits),
+    width,
+    height,
     fill: OVERLAY_FILL,
     border: {
       ...OVERLAY_INNER_BORDER,
@@ -404,32 +413,30 @@ const buildOverlayTree = ({
   });
   let overlayTree;
 
-  if (
-    !overlayRect ||
-    !overlayOuterRect ||
-    !overlayInnerRect ||
-    !anchorMarker ||
-    !rotationHandle
-  ) {
+  if (!overlayRect || !overlayOuterRect || !anchorMarker || !rotationHandle) {
     return undefined;
   }
+
+  const children = [overlayOuterRect];
+  if (overlayInnerRect) {
+    children.push(overlayInnerRect);
+  }
+  children.push(
+    overlayRect,
+    ...buildOverlayResizeHandles({
+      element: selectedElement,
+      overlayId,
+      selectedItem,
+      canvasUnitsPerCssPixel,
+    }),
+    anchorMarker,
+    rotationHandle,
+  );
 
   overlayTree = buildOverlayElementContainer({
     element: selectedElement,
     overlayId: `${overlayId}-group`,
-    children: [
-      overlayOuterRect,
-      overlayInnerRect,
-      overlayRect,
-      ...buildOverlayResizeHandles({
-        element: selectedElement,
-        overlayId,
-        selectedItem,
-        canvasUnitsPerCssPixel,
-      }),
-      anchorMarker,
-      rotationHandle,
-    ],
+    children,
   });
 
   for (let index = path.length - 2; index >= 0; index -= 1) {
@@ -592,8 +599,10 @@ export const createLayoutEditorHoverOverlay = ({
   });
   const outerPosition = toOffsetPoint(-halfStroke);
   const innerPosition = toOffsetPoint(halfStroke);
+  const innerWidth = width - strokeUnits;
+  const innerHeight = height - strokeUnits;
 
-  return [
+  const borders = [
     {
       id: "hover-border-outer",
       type: "rect",
@@ -609,13 +618,17 @@ export const createLayoutEditorHoverOverlay = ({
         alpha: 1,
       },
     },
-    {
+  ];
+  // As in the selection overlay, an element no wider or higher than the
+  // stroke has no room inside for the inner border.
+  if (innerWidth > 0 && innerHeight > 0) {
+    borders.push({
       id: "hover-border-inner",
       type: "rect",
       x: innerPosition.x,
       y: innerPosition.y,
-      width: Math.max(0, width - strokeUnits),
-      height: Math.max(0, height - strokeUnits),
+      width: innerWidth,
+      height: innerHeight,
       rotation,
       fill: OVERLAY_FILL,
       border: {
@@ -623,8 +636,9 @@ export const createLayoutEditorHoverOverlay = ({
         width: strokeUnits,
         alpha: 1,
       },
-    },
-  ];
+    });
+  }
+  return borders;
 };
 
 export const loadLayoutEditorAssets = async ({
