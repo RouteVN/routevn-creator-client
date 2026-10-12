@@ -37,6 +37,12 @@ const areValuesEqual = (left, right) => {
   return false;
 };
 
+// Changes are stored as JSON, which drops fields set to undefined, so such a
+// field counts as missing. A field cleared to undefined is then sent as
+// removed, with a replace, and never as an update that stores no fields.
+const hasFieldValue = (object, key) =>
+  Object.hasOwn(object, key) && object[key] !== undefined;
+
 const createObjectPatch = (previousValue, nextValue) => {
   const previousObject = isPlainObject(previousValue) ? previousValue : {};
   const nextObject = isPlainObject(nextValue) ? nextValue : {};
@@ -46,14 +52,18 @@ const createObjectPatch = (previousValue, nextValue) => {
   let hasNestedChanges = false;
 
   for (const key of Object.keys(previousObject)) {
-    if (!Object.hasOwn(nextObject, key)) {
+    if (hasFieldValue(previousObject, key) && !hasFieldValue(nextObject, key)) {
       requiresReplace = true;
       break;
     }
   }
 
   for (const [key, value] of Object.entries(nextObject)) {
-    if (!Object.hasOwn(previousObject, key)) {
+    if (value === undefined) {
+      continue;
+    }
+
+    if (!hasFieldValue(previousObject, key)) {
       patch[key] = structuredClone(value);
       hasChanges = true;
       continue;
@@ -158,7 +168,11 @@ export const createLayoutEditorElementPersistPayload = ({
 
   const shouldReplace =
     replace === true || diff.requiresReplace || diff.hasNestedChanges;
-  const { id: _ignoredItemId, ...nextReplaceData } = normalizedUpdatedItem;
+  const nextReplaceData = Object.fromEntries(
+    Object.entries(normalizedUpdatedItem).filter(
+      ([key, value]) => key !== "id" && value !== undefined,
+    ),
+  );
   const data = shouldReplace ? nextReplaceData : diff.patch;
 
   return {
