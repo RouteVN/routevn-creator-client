@@ -221,7 +221,9 @@ already handled. It never shows UI. Handled errors are still shown through
   projects are not reported either. Stored changes that a project's history
   leaves out when it loads are reported once per change
   (`projectHistory.loadDrafts`; see Drafts That No Longer Apply in
-  `docs/platform/05-storage.md`). A saved change whose payload holds a value
-  that JSON drops or changes, such as an `undefined` field, is reported with
-  its command type and field path (`projectCommand.nonJsonPayload`), once per
-  command type and field and at most three times per session.
+  `docs/platform/05-storage.md`). On desktop, a saved change whose payload
+  holds a value that JSON drops or changes, such as an `undefined` field, is
+  reported with its command type and field names
+  (`projectCommand.nonJsonPayload`), once per command type and set of fields
+  and at most twice per session. Web keeps such values in IndexedDB, so it does
+  not report them.

@@ -10,7 +10,7 @@ export const createProjectService = ({
   filePicker,
   creatorVersion,
   projectMediaOrigin,
-  reportError,
+  errorTracker,
 }) => {
   const collabLog = (level, message, meta = {}) => {
     if (!ENABLE_VERBOSE_COLLAB_LOGS && level !== "warn" && level !== "error") {
@@ -44,6 +44,6 @@ export const createProjectService = ({
     storageAdapter,
     fileAdapter,
     collabAdapter,
-    reportError,
+    errorTracker,
   });
 };

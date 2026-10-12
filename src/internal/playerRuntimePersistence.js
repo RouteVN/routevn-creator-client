@@ -123,7 +123,7 @@ const isOptionalSaveContextBgmPath = (path) => {
   );
 };
 
-export const assertJsonValue = (
+const assertJsonValue = (
   value,
   label,
   ancestors = new WeakSet(),

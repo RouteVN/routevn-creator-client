@@ -7,7 +7,7 @@ import { COMMAND_TYPES } from "../../src/internal/project/commands.js";
 const layoutId = "layout-1";
 const elementId = "text-1";
 
-const setup = async ({ reportError = vi.fn() } = {}) => {
+const setup = async ({ errorTracker = { capture: vi.fn() } } = {}) => {
   const repository = await createProjectRepository({
     projectId: "project-1",
     store: {
@@ -32,7 +32,7 @@ const setup = async ({ reportError = vi.fn() } = {}) => {
       return () => `cmd-${++index}`;
     })(),
     now: () => 1,
-    reportError,
+    errorTracker,
     getCurrentProjectId: () => "project-1",
     getCurrentRepository: async () => repository,
     getCachedRepository: () => repository,
@@ -69,12 +69,12 @@ const setup = async ({ reportError = vi.fn() } = {}) => {
     },
   });
   session.submitCommand.mockClear();
-  reportError.mockClear();
+  errorTracker.capture.mockClear();
 
   const updateElement = (data) =>
     api.updateLayoutElement({ layoutId, elementId, data, replace: false });
 
-  return { reportError, session, shared, updateElement };
+  return { reportError: errorTracker.capture, session, shared, updateElement };
 };
 
 describe("commandApi non-JSON payload report", () => {
@@ -95,7 +95,7 @@ describe("commandApi non-JSON payload report", () => {
     const [error, context] = reportError.mock.calls[0];
     expect(error.name).toBe("NonJsonCommandPayloadError");
     expect(error.message).toBe(
-      "layout.element.update: payload.data.hidden must contain only JSON values",
+      "layout.element.update: non-JSON value in hidden",
     );
     expect(context).toEqual({ operation: "projectCommand.nonJsonPayload" });
   });
@@ -108,19 +108,27 @@ describe("commandApi non-JSON payload report", () => {
     expect(reportError).not.toHaveBeenCalled();
   });
 
-  it("reports each command type and field once, and at most three per session", async () => {
+  it("lists every non-JSON field of a payload", async () => {
+    const { reportError, updateElement } = await setup();
+
+    await updateElement({ name: "Heading", hidden: undefined, x: undefined });
+
+    expect(reportError.mock.calls[0][0].message).toBe(
+      "layout.element.update: non-JSON value in hidden, x",
+    );
+  });
+
+  it("reports each command type and set of fields once, and at most two per session", async () => {
     const { reportError, updateElement } = await setup();
 
     await updateElement({ name: "Heading", hidden: undefined });
     await updateElement({ name: "Subtitle", hidden: undefined });
     await updateElement({ name: "Caption", x: undefined });
     await updateElement({ name: "Label", y: undefined });
-    await updateElement({ name: "Footer", width: undefined });
 
     expect(reportError.mock.calls.map(([error]) => error.message)).toEqual([
-      "layout.element.update: payload.data.hidden must contain only JSON values",
-      "layout.element.update: payload.data.x must contain only JSON values",
-      "layout.element.update: payload.data.y must contain only JSON values",
+      "layout.element.update: non-JSON value in hidden",
+      "layout.element.update: non-JSON value in x",
     ]);
   });
 
@@ -163,10 +171,13 @@ describe("commandApi non-JSON payload report", () => {
 
   it("saves the change when reporting fails", async () => {
     vi.spyOn(console, "warn").mockImplementation(() => {});
-    const reportError = vi.fn(() => {
-      throw new Error("reporter unavailable");
+    const { updateElement } = await setup({
+      errorTracker: {
+        capture: vi.fn(() => {
+          throw new Error("reporter unavailable");
+        }),
+      },
     });
-    const { updateElement } = await setup({ reportError });
 
     const result = await updateElement({ name: "Heading", hidden: undefined });
 

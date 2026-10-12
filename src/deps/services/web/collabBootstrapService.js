@@ -14,7 +14,6 @@ export const createWebProjectServiceWithCollab = async ({
   db,
   collabConfig = {},
   creatorVersion,
-  reportError,
 }) => {
   const collabDebugEnabled = resolveCollabDebugEnabled({
     enabled: collabConfig.debugEnabled,
@@ -36,7 +35,6 @@ export const createWebProjectServiceWithCollab = async ({
     creatorVersion,
     shouldApplyProjectContentPatchesOnEnsure: ({ projectId }) =>
       isLocalProjectId({ db, projectId }),
-    reportError,
   });
 
   const collabConnectionRuntime = createCollabConnectionRuntime({

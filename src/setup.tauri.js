@@ -79,7 +79,7 @@ const projectService = createProjectService({
   filePicker,
   creatorVersion,
   projectMediaOrigin,
-  reportError: errorReporter.capture,
+  errorTracker: errorReporter,
 });
 
 // Create app service
