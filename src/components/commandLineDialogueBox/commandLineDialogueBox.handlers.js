@@ -418,6 +418,18 @@ const hasDialogueCharacter = ({
   return !!selectedCharacterId || toBoolean(customCharacterName);
 };
 
+const addLineContent = (dialogue, { props, includeContent }) => {
+  if (
+    includeContent &&
+    !Object.hasOwn(dialogue, "content") &&
+    props?.dialogue?.content !== undefined
+  ) {
+    dialogue.content = structuredClone(props.dialogue.content);
+  }
+
+  return dialogue;
+};
+
 const buildDialogueFromState = (
   deps,
   { includeTemporarySpriteSelection = false, includeContent = false } = {},
@@ -426,6 +438,7 @@ const buildDialogueFromState = (
   const {
     selectedMode,
     selectedResourceId,
+    layoutCleared,
     selectedCharacterId,
     customCharacterName,
     characterName,
@@ -446,6 +459,11 @@ const buildDialogueFromState = (
     customizeTextSpeed,
     textSpeed,
   } = store.selectDialogueBuildState();
+  // Without a layout there is no dialogue: it is cleared, as deleting the
+  // action does.
+  if (layoutCleared) {
+    return addLineContent({ clear: true }, { props, includeContent });
+  }
   const selectedSpriteIds = resolveEffectiveSelectedSpriteIds({
     state: store.selectDialogueBuildState(),
     props,
@@ -532,15 +550,8 @@ const buildDialogueFromState = (
   if (toBoolean(customizeTextSpeed)) {
     dialogue.textSpeed = normalizeTextSpeed(textSpeed);
   }
-  if (
-    includeContent &&
-    !Object.hasOwn(dialogue, "content") &&
-    props?.dialogue?.content !== undefined
-  ) {
-    dialogue.content = structuredClone(props.dialogue.content);
-  }
 
-  return dialogue;
+  return addLineContent(dialogue, { props, includeContent });
 };
 
 const dispatchTemporaryPresentationStateChange = (deps) => {
@@ -738,6 +749,7 @@ export const handleAfterMount = (deps) => {
 };
 
 export const handleOnUpdate = (deps, changes) => {
+  const { render } = deps;
   const { oldProps, newProps } = changes;
   const selectedLineChanged =
     oldProps?.selectedLineId !== newProps?.selectedLineId;
@@ -752,14 +764,26 @@ export const handleOnUpdate = (deps, changes) => {
     deps,
     selectedLineChanged ? newProps?.dialogue : newProps?.authoredDialogue,
   );
+  // The view was rendered before this update, and the form keeps values only
+  // for the fields it shows, so it shows the new dialogue's fields first.
+  render();
   syncDialogueFormValues(deps);
 };
 
 export const handleFormChange = (deps, payload) => {
   const { store, render, props } = deps;
-  const { values: formValues } = payload._event.detail;
+  const { name, value, values: formValues } = payload._event.detail;
 
   if (!formValues) {
+    return;
+  }
+
+  // Clearing the layout removes the dialogue when submitted. The rest of the
+  // dialogue is kept until then, in case a layout is chosen again.
+  if (name === "resourceId" && !value) {
+    store.clearLayout();
+    render();
+    dispatchTemporaryPresentationStateChange(deps);
     return;
   }
 
@@ -778,6 +802,18 @@ export const handleFormChange = (deps, payload) => {
       },
     },
   });
+
+  // The form hid the other sections while the layout was cleared and no
+  // longer holds their values, so it is filled again from the kept settings.
+  if (currentState.layoutCleared) {
+    store.setSelectedMode({ mode: selectedMode });
+    store.setSelectedResource({ resourceId: selectedResourceId });
+    render();
+    syncDialogueFormValues(deps);
+    dispatchTemporaryPresentationStateChange(deps);
+    return;
+  }
+
   const modeChanged = selectedMode !== currentState.selectedMode;
   const customCharacterName = toBoolean(formValues.customCharacterName);
   const selectedCharacterId = formValues.characterId ?? "";
@@ -1225,9 +1261,10 @@ export const handleButtonSelectClick = (deps) => {
 
 export const handleSubmitClick = (deps) => {
   const { dispatchEvent, store, props, appService, i18n } = deps;
-  const { selectedSpriteIds, spriteTransformId } =
+  const { layoutCleared, selectedSpriteIds, spriteTransformId } =
     store.selectDialogueBuildState();
   if (
+    !layoutCleared &&
     Object.values(selectedSpriteIds).some(Boolean) &&
     !resolveSelectedTransformId({
       transforms: props.transforms,

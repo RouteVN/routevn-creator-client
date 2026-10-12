@@ -1,10 +1,12 @@
 import { describe, expect, it } from "vitest";
 import { parseAndRender } from "jempl";
 import {
+  clearLayout,
   createInitialState,
   setAppendDialogue,
   setCharacterName,
   setCustomCharacterName,
+  setSelectedResource,
   selectViewData,
   setPersistCharacter,
   setPersistSprite,
@@ -51,7 +53,66 @@ const isFieldVisible = ({ field, values }) => {
   );
 };
 
+const isSectionShown = (viewData, sectionId) => {
+  const section = viewData.form.fields.find((field) => field.id === sectionId);
+  const rendered = parseAndRender(
+    { fields: [{ [`$if ${section.$when}`]: { id: section.id } }] },
+    viewData.context,
+  );
+
+  return rendered.fields.some((field) => field.id === sectionId);
+};
+
 describe("commandLineDialogueBox.store", () => {
+  it("leaves the layout empty once it is cleared, hides the other sections, and still allows submitting", () => {
+    const props = {
+      layouts: [
+        { id: "layout-adv", name: "ADV Layout", layoutType: "dialogue-adv" },
+      ],
+      characters: [],
+    };
+    const state = createInitialState();
+    setSelectedResource({ state }, { resourceId: "layout-adv" });
+
+    const viewData = selectTestViewData({ state, props });
+    const layoutField = findFormField(
+      viewData,
+      (field) => field.name === "resourceId",
+    );
+    expect(layoutField.value).toBe("layout-adv");
+    expect(layoutField.clearable).toBe(true);
+    expect(layoutField.required).toBeUndefined();
+    expect(isSectionShown(viewData, "speaker")).toBe(true);
+    expect(isSectionShown(viewData, "options")).toBe(true);
+    expect(viewData.submitDisabled).toBe(false);
+
+    clearLayout({ state });
+    const clearedViewData = selectTestViewData({ state, props });
+
+    expect(
+      findFormField(clearedViewData, (field) => field.name === "resourceId")
+        .value,
+    ).toBe("");
+    expect(clearedViewData.defaultValues.resourceId).toBe("");
+    expect(isSectionShown(clearedViewData, "speaker")).toBe(false);
+    expect(isSectionShown(clearedViewData, "options")).toBe(false);
+    expect(clearedViewData.submitDisabled).toBe(false);
+  });
+
+  it("keeps submitting off, the sections shown, and nothing to clear when there are no dialogue layouts", () => {
+    const viewData = selectTestViewData({
+      state: createInitialState(),
+      props: { layouts: [], characters: [] },
+    });
+
+    expect(viewData.submitDisabled).toBe(true);
+    expect(isSectionShown(viewData, "speaker")).toBe(true);
+    expect(isSectionShown(viewData, "options")).toBe(true);
+    expect(
+      findFormField(viewData, (field) => field.name === "resourceId").clearable,
+    ).toBe(false);
+  });
+
   it("groups speaker options by folder and shows avatars without changing the selected speaker", () => {
     const state = createInitialState();
     state.selectedCharacterId = "nested-character";
