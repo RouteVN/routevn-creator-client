@@ -2,6 +2,7 @@ import { produce } from "immer";
 import { describe, expect, it, vi } from "vitest";
 import {
   handleFormActions,
+  handleGroupItemWheel,
   handleOnUpdate,
   handlePopoverFormChange,
   handlePopoverFormInput,
@@ -391,14 +392,92 @@ describe("layout edit panel canvas preview", () => {
     expect(events.map((event) => event.detail.value)).toEqual([1, 0.96, 0.94]);
   });
 
-  it("steps a size by 1 and 10, never below 0", () => {
+  it("steps a size by 1 and 10, never below 1", () => {
     const { deps, events } = createDeps("width", 5);
 
     for (const delta of ["-10", "1", "10"]) {
       handlePopoverStepPress(deps, buttonEvent({ delta }));
     }
 
-    expect(events.map((event) => event.detail.value)).toEqual([0, 6, 15]);
+    expect(events.map((event) => event.detail.value)).toEqual([1, 6, 15]);
+  });
+
+  it("keeps a size at 1 or more from the wheel and a fixed aspect ratio", () => {
+    let state = layoutEditPanelStore.createInitialState();
+    const store = new Proxy(
+      {},
+      {
+        get: (_target, name) => (payload) => {
+          if (name.startsWith("select")) {
+            return layoutEditPanelStore[name]({ state }, payload);
+          }
+          let result;
+          state = produce(state, (draft) => {
+            result = layoutEditPanelStore[name]({ state: draft }, payload);
+          });
+          return result;
+        },
+      },
+    );
+    const events = [];
+    const projectResolution = { width: 1920, height: 1080 };
+    const deps = {
+      store,
+      props: { projectResolution },
+      i18n: EN_I18N,
+      render: vi.fn(),
+      dispatchEvent: (event) => events.push(event),
+    };
+    store.setValues({
+      values: {
+        id: "element-1",
+        type: "sprite",
+        width: 5,
+        height: 400,
+      },
+    });
+    const wheel = (name, { deltaY, shiftKey = false }) =>
+      handleGroupItemWheel(deps, {
+        _event: {
+          currentTarget: { dataset: { name } },
+          deltaY,
+          shiftKey,
+          preventDefault: vi.fn(),
+        },
+      });
+
+    // Shift and the wheel step by 10, down to 1 and no further.
+    wheel("width", { deltaY: 100, shiftKey: true });
+    wheel("width", { deltaY: 100 });
+    wheel("height", { deltaY: -100 });
+    expect(events.map(({ detail: { name, value } }) => [name, value])).toEqual([
+      ["width", 1],
+      ["width", 1],
+      ["height", 401],
+    ]);
+
+    // With a wide ratio, a width of 1 rounds the height to 0, kept at 1.
+    store.setValues({
+      values: {
+        id: "element-1",
+        type: "sprite",
+        width: 400,
+        height: 100,
+        aspectRatioLock: 4,
+      },
+    });
+    store.openPopoverForm({
+      name: "width",
+      form: { fields: [{ name: "value", type: "input-number" }] },
+      projectResolution,
+      copy: selectLayoutEditPanelCopy(EN_I18N),
+    });
+    handleFormActions(deps, formEvent({ value: 1 }));
+    expect(events.at(-1).detail).toMatchObject({
+      name: "width",
+      value: 1,
+      linkedValues: { height: 1 },
+    });
   });
 
   it("normalizes a rotation preview like a saved value", () => {

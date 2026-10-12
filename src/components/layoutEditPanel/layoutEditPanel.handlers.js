@@ -228,9 +228,12 @@ const getAspectLockedSizeValues = ({ name, value, values = {} } = {}) => {
     return undefined;
   }
 
+  // A small size with a wide or tall ratio rounds the other below its
+  // minimum, which it keeps.
+  const { min } = getSliderPopoverField(name);
   return name === "width"
-    ? { height: Math.round(nextValue / aspectRatioLock) }
-    : { width: Math.round(nextValue * aspectRatioLock) };
+    ? { height: Math.max(min, Math.round(nextValue / aspectRatioLock)) }
+    : { width: Math.max(min, Math.round(nextValue * aspectRatioLock)) };
 };
 
 // The other values a popover's change moves: the other scale while the
@@ -906,7 +909,7 @@ export const handleGroupItemKeyDown = (deps, payload) => {
 };
 
 export const handleGroupItemWheel = (deps, payload) => {
-  const { store } = deps;
+  const { props, store } = deps;
   const { _event } = payload;
   const name = _event.currentTarget.dataset.name;
   const fieldConfig = WHEEL_INCREMENT_FIELD_CONFIG[name];
@@ -933,7 +936,15 @@ export const handleGroupItemWheel = (deps, payload) => {
       ? fieldConfig.fastStep
       : fieldConfig.step;
   const delta = _event.deltaY < 0 ? step : -step;
-  const nextValue = currentValue + delta;
+  // A size stays within its popover's bounds, from 1.
+  const nextValue = SIZE_FIELDS.has(name)
+    ? stepSliderPopoverValue({
+        name,
+        value: currentValue,
+        delta,
+        projectResolution: props.projectResolution,
+      })
+    : currentValue + delta;
 
   applyPanelValueUpdate(deps, {
     name,

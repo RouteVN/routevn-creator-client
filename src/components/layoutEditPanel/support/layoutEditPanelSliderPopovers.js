@@ -21,7 +21,10 @@ const SCALE_FIELD = {
   range: { min: 0, max: 2 },
 };
 
-const SIZE_FIELD = { step: 1, fastStep: 10 };
+// A width or height is at least 1, as resizing on the canvas keeps it: an
+// element 0 wide or high draws nothing and cannot be picked on the canvas.
+// Text and row and column containers size to their content with Auto.
+const SIZE_FIELD = { step: 1, fastStep: 10, min: 1 };
 
 const SLIDER_POPOVER_FIELDS = {
   x: { step: 1, fastStep: 10 },
@@ -97,7 +100,7 @@ const getProjectDimension = ({ name, projectResolution }) =>
 const PROJECT_BOUND_MULTIPLE = 4;
 
 // The X and Y sliders run half the project's width or height beyond each
-// edge, width and height from 0 to the project's, rotation half a turn each
+// edge, width and height from 1 to the project's, rotation half a turn each
 // way, and scale from 0 to 2. Typed, X and Y reach 4 times the project's
 // width or height either way, width and height 4 times it, rotation a turn
 // each way, and scale 10; opacity stays between 0 and 1.
@@ -119,8 +122,7 @@ export const getSliderPopoverRange = ({ name, projectResolution } = {}) => {
   if (isSizeField(name)) {
     return getSliderRange({
       field,
-      range: { min: 0, max: dimension },
-      min: 0,
+      range: { min: field.min, max: dimension },
       max: bound,
     });
   }

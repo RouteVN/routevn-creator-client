@@ -277,7 +277,7 @@ describe("layoutEditPanel popover forms", () => {
     );
   });
 
-  it("runs width and height from 0 to the project's, with presets in pixels and 1 and 10 steps", () => {
+  it("runs width and height from 1 to the project's, with presets in pixels and 1 and 10 steps", () => {
     const sharedValues = { width: 2500, height: 300 };
     const widthPopover = openSliderPopover("width", sharedValues);
     const heightPopover = openSliderPopover("height", sharedValues);
@@ -289,17 +289,17 @@ describe("layoutEditPanel popover forms", () => {
     // typed size reaches 4 times it.
     expect(widthPopover.form.fields[0]).toMatchObject({
       type: "slider-with-input",
-      min: 0,
+      min: 1,
       max: 7680,
-      sliderMin: 0,
+      sliderMin: 1,
       sliderMax: 1920,
       step: 1,
     });
     expect(heightPopover.form.fields[0]).toMatchObject({
       type: "slider-with-input",
-      min: 0,
+      min: 1,
       max: 4320,
-      sliderMin: 0,
+      sliderMin: 1,
       sliderMax: 1080,
       step: 1,
     });
