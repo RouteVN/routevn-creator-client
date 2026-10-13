@@ -22,6 +22,10 @@ The template reads the exported game's application identifier from the stamped
 per-game identifier before launching; `vn.routevn.shell` is reserved and cannot
 be used for an exported game.
 
+Exports made with this template can be Authenticode-signed after export; see
+the packager README. The template itself is not signed, because stamping
+changes it.
+
 Build it with:
 
 ```bash

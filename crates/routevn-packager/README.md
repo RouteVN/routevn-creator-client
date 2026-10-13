@@ -107,6 +107,25 @@ player template and is rejected case-insensitively. Titles may contain spaces;
 the player reads the identifier, not the title, so a title like
 `Project One` never has to be a valid identifier.
 
+### Code Signing
+
+A stamped executable can be signed with Authenticode after export, for
+example with `signtool sign /fd SHA256 ...`. Sign the finished file last:
+stamping again, or changing the file in any other way, invalidates the
+signature and the payload.
+
+The payload sits after the executable, so signing appends the certificate table
+behind the payload footer. The player skips that table when it looks for the
+footer, and the key mask ignores the PE checksum and the certificate-table
+entry in the headers, which signing rewrites.
+
+Only executables stamped with a template that includes this support can be
+signed. Executables exported before that cannot, and need to be exported again.
+Unsigned executables are unchanged and remain readable by older players.
+
+A signature cannot cover an executable of 4 GiB or more, because the
+certificate table offset in the PE headers is 32 bits wide.
+
 ## Config File
 
 Config files can be `.json` or `.toml`.
