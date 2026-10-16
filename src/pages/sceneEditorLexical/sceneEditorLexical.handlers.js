@@ -74,6 +74,7 @@ import {
   selectSceneEditorCopy,
 } from "../../internal/ui/sceneEditor/sceneEditorCopy.js";
 import { withErrorDetails } from "../../internal/errorDetails.js";
+import { isGraphicsUnavailableError } from "../../internal/graphicsErrors.js";
 import {
   createSceneCanvasFileName,
   dataUrlToBlob,
@@ -2053,10 +2054,13 @@ export const handleAfterMount = async (deps) => {
     if (!isMissingProjectResolutionError(error)) {
       console.error("[sceneEditor] Failed to open scene", error);
       setSceneEditorPageLoading(deps, false);
-      appService.showAlert({
-        message: getSceneStartupErrorMessage({ error, projectService, i18n }),
-        title: copy.errorTitle ?? "Error",
-      });
+      // A device without WebGL has already been told by the graphics service.
+      if (!isGraphicsUnavailableError(error)) {
+        appService.showAlert({
+          message: getSceneStartupErrorMessage({ error, projectService, i18n }),
+          title: copy.errorTitle ?? "Error",
+        });
+      }
       leaveToScenes(appService);
       return;
     }

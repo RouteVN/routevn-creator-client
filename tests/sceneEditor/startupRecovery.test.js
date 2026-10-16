@@ -130,6 +130,45 @@ it.each([
   },
 );
 
+it("leaves the editor without a second alert when the device has no WebGL", async () => {
+  // The graphics service has already told the user, so a generic alert
+  // would only repeat it.
+  vi.mocked(initializeSceneEditorPage).mockRejectedValueOnce(
+    new Error(
+      "This browser does not support WebGL. Try using the canvas renderer",
+    ),
+  );
+  const payload = { p: "project-one", s: "scene-one" };
+  const deps = {
+    projectService: { getRepositoryState: () => ({}) },
+    store: {
+      selectMountVersion: () => 1,
+      setScenePageLoading: vi.fn(),
+      selectIsScenePageLoading: () => false,
+      selectIsSceneAssetLoading: () => false,
+    },
+    appService: {
+      showAlert: vi.fn(),
+      getPayload: () => payload,
+      navigate: vi.fn(),
+    },
+    i18n: EN_I18N,
+    render: vi.fn(),
+  };
+  const log = vi.spyOn(console, "error").mockImplementation(() => {});
+  try {
+    await handleAfterMount(deps);
+    expect(deps.appService.showAlert).not.toHaveBeenCalled();
+    expect(deps.appService.navigate).toHaveBeenCalledWith(
+      "/project/scenes",
+      payload,
+      { historyMode: "replace" },
+    );
+  } finally {
+    log.mockRestore();
+  }
+});
+
 it("ignores a startup error from an editor that has been unmounted", async () => {
   let rejectStartup;
   vi.mocked(initializeSceneEditorPage).mockImplementationOnce(

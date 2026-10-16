@@ -280,6 +280,7 @@ appPage:
   failedUpdateStatusBar: "No se pudo actualizar la barra de estado. Reinicia la aplicación."
   failedRevealEditorCaret: "No se pudo desplazar la vista hasta el cursor. Reinicia la aplicación."
   failedSaveProjectIcon: "El proyecto se creó, pero no se pudo guardar su icono."
+  graphicsUnavailableMessage: "Este dispositivo no puede mostrar la vista previa ni los editores de lienzo porque no pudo iniciar los gráficos WebGL. Reinicia la aplicación o el dispositivo. Actualizar el WebView del sistema, el navegador o el controlador gráfico también puede ayudar."
   incompatibleProjectTitle: "Proyecto incompatible"
   latestVersionMessage: "Ya tienes la versión más reciente"
   laterButton: "Más tarde"

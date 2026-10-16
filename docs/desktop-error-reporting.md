@@ -215,6 +215,15 @@ already handled. It never shows UI. Handled errors are still shown through
   be opened because its folder was moved, deleted, or is inaccessible (code
   `project_database_missing`, or SQLite code 14 in plugin-sql's message), and
   full browser storage (`QuotaExceededError`).
+- A device or web view that cannot create a WebGL context is not reported
+  either. Route Graphics offers WebGL and WebGPU only, so there is no renderer
+  to fall back to. `isGraphicsUnavailableError` in
+  `src/internal/graphicsErrors.js` matches Pixi's "does not support WebGL"
+  failure. `graphicsService.init` still rejects with it and calls its
+  `onGraphicsUnavailable` option, which every platform setup points at
+  `createGraphicsUnavailableNotifier`: one localized alert at a time, with the
+  technical details after it. The preview and the scene editor skip their own
+  generic alert for this error, and the reporter drops events for it.
 - Current call sites: project-open route failures, `runResourcePageMutation`
   thrown errors, engine render failures (`operation` `graphics.render`), and
   scene editor canvas renders that throw with no caller waiting for them
