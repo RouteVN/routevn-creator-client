@@ -266,6 +266,23 @@ export const createRouteTransitionRunner = (
   { onOpenProjectChange = () => {} } = {},
 ) => {
   let transitionToken = 0;
+  // The release of the project a route left, while it is still closing. The
+  // project keeps reporting itself as ensured until the release finishes, so
+  // a route that opens a project in the meantime must not reuse it: the
+  // release would close it under the page that route mounts.
+  let projectRelease;
+
+  const releaseProject = (projectId) => {
+    const release = deps.projectService
+      .releaseProjectRuntime(projectId)
+      .finally(() => {
+        if (projectRelease === release) {
+          projectRelease = undefined;
+        }
+      });
+    projectRelease = release;
+    return release;
+  };
 
   return async ({
     path,
@@ -360,8 +377,13 @@ export const createRouteTransitionRunner = (
     const needsRepository =
       !isIOSConfig && routeNeedsRepository(canonicalPath, currentProjectId);
     const currentProjectPath = getLocalProjectPathFromPayload(nextPayload);
-    const ensuredProjectId = projectService.getEnsuredProjectId();
-    const ensuredProjectPath = projectService.getEnsuredProjectPath?.() ?? "";
+    const closingProject = projectRelease;
+    const ensuredProjectId = closingProject
+      ? undefined
+      : projectService.getEnsuredProjectId();
+    const ensuredProjectPath = closingProject
+      ? ""
+      : (projectService.getEnsuredProjectPath?.() ?? "");
     const isAlreadyEnsured =
       currentProjectId === ensuredProjectId &&
       (!currentProjectPath || currentProjectPath === ensuredProjectPath);
@@ -396,7 +418,7 @@ export const createRouteTransitionRunner = (
       markNavigationTiming(routeTiming, "repository.release.start", {
         ensuredProjectId,
       });
-      await projectService.releaseProjectRuntime(ensuredProjectId);
+      await releaseProject(ensuredProjectId);
       markNavigationTiming(routeTiming, "repository.release.end", {
         ensuredProjectId,
       });
@@ -423,6 +445,13 @@ export const createRouteTransitionRunner = (
     }
 
     try {
+      if (closingProject) {
+        // The route that started the release handles its failure; this one
+        // only needs the project closed before it opens one.
+        markNavigationTiming(routeTiming, "repository.release-wait.start");
+        await closingProject.catch(() => {});
+        markNavigationTiming(routeTiming, "repository.release-wait.end");
+      }
       markNavigationTiming(routeTiming, "project-entry.refresh.start");
       await appService.refreshCurrentProjectEntry();
       markNavigationTiming(routeTiming, "project-entry.refresh.end");

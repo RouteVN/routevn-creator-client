@@ -692,6 +692,101 @@ describe("app route transitions", () => {
     ]);
   });
 
+  it("opens a project again only after its previous release finishes", async () => {
+    // Like the project service, the project counts as ensured until its
+    // release has flushed and closed it.
+    let routeProjectId = "project-1";
+    let ensuredProjectId;
+    let finishRelease;
+    const appService = {
+      prepareNavigation: vi.fn(async () => {}),
+      getCurrentProjectId: vi.fn(() => routeProjectId),
+      refreshCurrentProjectEntry: vi.fn(async () => {}),
+      getPlatform: vi.fn(() => "android"),
+    };
+    const projectService = {
+      ensureRepository: vi.fn(async () => {
+        ensuredProjectId = routeProjectId;
+      }),
+      getEnsuredProjectId: vi.fn(() => ensuredProjectId),
+      releaseProjectRuntime: vi.fn(
+        () =>
+          new Promise((resolve) => {
+            finishRelease = () => {
+              ensuredProjectId = undefined;
+              resolve();
+            };
+          }),
+      ),
+    };
+    const store = {
+      setCurrentRoute: vi.fn(),
+      closeMobileSheet: vi.fn(),
+      setRepositoryLoading: vi.fn(),
+      setRepositoryLoadingPhase: vi.fn(),
+      setRepositoryLoadingProgress: vi.fn(),
+    };
+    const onOpenProjectChange = vi.fn();
+    const runRouteTransition = createRouteTransitionRunner(
+      {
+        appService,
+        projectService,
+        store,
+        render: vi.fn(),
+        i18n: {},
+      },
+      { onOpenProjectChange },
+    );
+
+    await runRouteTransition({
+      path: "/project",
+      payload: { p: "project-1" },
+      navigationPrepared: true,
+    });
+
+    routeProjectId = "";
+    const leaveProject = runRouteTransition({
+      path: "/projects",
+      payload: {},
+      navigationPrepared: true,
+    });
+    await vi.waitFor(() =>
+      expect(projectService.releaseProjectRuntime).toHaveBeenCalledWith(
+        "project-1",
+      ),
+    );
+
+    routeProjectId = "project-1";
+    const reopenProject = runRouteTransition({
+      path: "/project",
+      payload: { p: "project-1" },
+      navigationPrepared: true,
+    });
+    await Promise.resolve();
+
+    // The closing project is not shown as ready, nor ensured again, while
+    // its release can still close it.
+    expect(store.setRepositoryLoading).toHaveBeenLastCalledWith({
+      isLoading: true,
+    });
+    expect(projectService.ensureRepository).toHaveBeenCalledOnce();
+    expect(projectService.releaseProjectRuntime).toHaveBeenCalledOnce();
+
+    finishRelease();
+    await Promise.all([leaveProject, reopenProject]);
+
+    expect(projectService.ensureRepository).toHaveBeenCalledTimes(2);
+    expect(ensuredProjectId).toBe("project-1");
+    expect(store.setRepositoryLoading).toHaveBeenLastCalledWith({
+      isLoading: false,
+    });
+    expect(onOpenProjectChange.mock.calls).toEqual([
+      ["project-1"],
+      [undefined],
+      ["project-1"],
+    ]);
+  });
+
   it("prepares browser back navigation without rewriting the popped entry", async () => {
     const currentPath = "/projects";
     const currentPayload = {};
