@@ -120,6 +120,12 @@ An in-memory per-project promise prevents duplicate execution by concurrent
 repository-ensure calls in one application instance. The persisted marker is
 the cross-restart completion record.
 
+Once the patches complete for an opened repository, normally during the
+route's repository ensure that opens the project, later repository-ensure
+calls for that repository skip them without reading the markers, so the
+calls pages make do not touch the project store. Reopening the project
+evaluates the patches again.
+
 The font metadata patch uses the same marker ordering and concurrency guard.
 When a retry follows a partially completed run, fonts that now have all three
 fields are skipped before their files are read.

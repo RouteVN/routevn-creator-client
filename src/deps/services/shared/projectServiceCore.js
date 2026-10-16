@@ -121,6 +121,10 @@ export const createProjectServiceCore = ({
     repositoryService.getEnsuredProjectId() || router.getPayload()?.p;
 
   const contentPatchesByProject = new Map();
+  // The repository each project last completed its content patches for. The
+  // route opens a project once and its pages ensure it many times; only the
+  // first ensure of an opened repository reads the patch markers.
+  const patchedRepositoryByProject = new Map();
 
   const getRepositoryState = () => {
     const repository = repositoryService.getCachedRepository();
@@ -427,6 +431,13 @@ export const createProjectServiceCore = ({
 
   const ensureContentPatches = async (repository) => {
     const projectId = getCurrentProjectId();
+    if (
+      patchedRepositoryByProject.has(projectId) &&
+      patchedRepositoryByProject.get(projectId) === repository
+    ) {
+      return;
+    }
+
     const existingPatches = contentPatchesByProject.get(projectId);
     if (existingPatches) {
       return existingPatches;
@@ -437,6 +448,7 @@ export const createProjectServiceCore = ({
 
     try {
       await patches;
+      patchedRepositoryByProject.set(projectId, repository);
     } finally {
       if (contentPatchesByProject.get(projectId) === patches) {
         contentPatchesByProject.delete(projectId);
