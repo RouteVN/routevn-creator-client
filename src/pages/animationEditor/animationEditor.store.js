@@ -3338,6 +3338,12 @@ export const setPreviewImage = ({ state }, { target, imageId } = {}) => {
   if (!state.previewImages[slotConfig.field]) {
     state.previewImages[slotConfig.field] = {};
   }
+  // A slot without an image has no imageId field. The preview is saved as
+  // JSON, which has no undefined.
+  if (imageId === undefined) {
+    delete state.previewImages[slotConfig.field].imageId;
+    return;
+  }
   state.previewImages[slotConfig.field].imageId = imageId;
 };
 

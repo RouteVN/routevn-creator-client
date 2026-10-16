@@ -2128,6 +2128,21 @@ describe("animationEditor.store", () => {
     });
   });
 
+  it("leaves a preview slot without an image as an empty object, not a field set to undefined", () => {
+    const state = createInitialState();
+    openDialog({ state }, { dialogType: "transition" });
+
+    setPreviewImage({ state }, { target: "preview-outgoing" });
+    expect(selectPreviewData({ state }).outgoing).toStrictEqual({});
+
+    setPreviewImage(
+      { state },
+      { target: "preview-outgoing", imageId: "outgoing" },
+    );
+    setPreviewImage({ state }, { target: "preview-outgoing" });
+    expect(selectPreviewData({ state }).outgoing).toStrictEqual({});
+  });
+
   it("uses the target image in update render states", () => {
     const state = createInitialState();
     openDialog({ state }, { dialogType: "update" });
