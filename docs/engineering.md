@@ -421,7 +421,9 @@ Page handlers should not repeat route-level repository boot logic.
 Pages that must persist local work before leaving should register that work with
 `appService.registerBeforeNavigation(...)` during mount and unregister it during
 cleanup. Do not rely on asynchronous page cleanup for data required by the
-destination page.
+destination page. Work that can outlive its page, such as a resource upload
+batch, registers for its own duration instead, so leaving the project waits
+for it while moving between pages of the same project does not.
 
 ### Project-Backed Page Rendering
 

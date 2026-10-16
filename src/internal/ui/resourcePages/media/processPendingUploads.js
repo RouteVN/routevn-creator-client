@@ -1,5 +1,6 @@
 import { processWithConcurrency } from "../../../processWithConcurrency.js";
 import { generatePrefixedId } from "../../../id.js";
+import { getLocalProjectPathFromPayload } from "../../../localProjectRoute.js";
 
 const CREATE_ABORT_ERROR = "pending-upload-create-abort";
 
@@ -31,7 +32,48 @@ const createPendingUploads = ({
   }));
 };
 
-export const processPendingUploads = async ({
+// Whether a navigation to `destination` leaves the project at `routePayload`.
+// A save before the app suspends or backs up has no destination: it does not
+// leave the project, and waiting there would hold up the editors' saves.
+const leavesProject = (destination, routePayload) => {
+  if (destination?.path === undefined) {
+    return false;
+  }
+
+  const { payload } = destination;
+  return (
+    (payload?.p ?? "") !== (routePayload.p ?? "") ||
+    getLocalProjectPathFromPayload(payload) !==
+      getLocalProjectPathFromPayload(routePayload)
+  );
+};
+
+// Stores the files in the project open when the uploads start. Leaving that
+// project waits until they finish: its files and items can only be saved
+// while it is open. The batch registers itself rather than its page, because
+// moving to another page of the same project does not stop it.
+export const processPendingUploads = async (options) => {
+  const { appService } = options.deps;
+  const routePayload = appService.getPayload();
+  const batch = runPendingUploads(options);
+  const unregisterBeforeNavigation = appService.registerBeforeNavigation(
+    (destination) => {
+      if (!leavesProject(destination, routePayload)) {
+        return undefined;
+      }
+      // Navigation only waits for the batch; its caller handles a failure.
+      return batch.catch(() => {});
+    },
+  );
+
+  try {
+    return await batch;
+  } finally {
+    unregisterBeforeNavigation();
+  }
+};
+
+const runPendingUploads = async ({
   deps,
   files,
   parentId,

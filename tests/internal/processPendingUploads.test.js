@@ -1,7 +1,13 @@
 import { describe, expect, it, vi } from "vitest";
 import { processPendingUploads } from "../../src/internal/ui/resourcePages/media/processPendingUploads.js";
+import { createAppShellService } from "../../src/deps/services/shared/appShellService.js";
+
+const createAppService = (
+  router = { getPayload: () => ({ p: "project-1" }) },
+) => createAppShellService({ router, subject: { dispatch: vi.fn() } });
 
 const createDeps = () => ({
+  appService: createAppService(),
   projectService: {
     uploadFiles: vi.fn(async ([file]) => [
       {
@@ -83,5 +89,62 @@ describe("processPendingUploads", () => {
     expect(seenPendingUploadIds).toEqual(
       expect.arrayContaining([expect.any(String)]),
     );
+  });
+
+  it("leaves the project only after the uploads stored in it finish", async () => {
+    let routePayload = { p: "project-1" };
+    const appService = createAppService({ getPayload: () => routePayload });
+    let finishStoring;
+    const storing = new Promise((resolve) => {
+      finishStoring = resolve;
+    });
+    const onUploadError = vi.fn();
+    const processFile = vi.fn(async () => {
+      await storing;
+      // Like the project service, storing needs the project in the route.
+      if (routePayload.p !== "project-1") {
+        throw new Error(
+          "Project reference not initialized. Call ensureRepository() first.",
+        );
+      }
+      return true;
+    });
+    const deps = { ...createDeps(), appService };
+
+    const uploads = processPendingUploads({
+      deps,
+      files: [{ name: "first.png" }],
+      parentId: "folder-1",
+      pendingIdPrefix: "pending-image",
+      processFile,
+      onUploadError,
+    });
+    await vi.waitFor(() => expect(processFile).toHaveBeenCalledOnce());
+
+    // Like a route transition, the route changes once navigation is prepared.
+    let leftProject = false;
+    const leaveProject = appService
+      .prepareNavigation({ path: "/projects", payload: undefined })
+      .then(() => {
+        routePayload = {};
+        leftProject = true;
+      });
+    await appService.prepareNavigation({
+      path: "/project/sounds",
+      payload: { p: "project-1" },
+    });
+    await appService.prepareNavigation({ reason: "background" });
+    await new Promise((resolve) => setTimeout(resolve, 0));
+    expect(leftProject).toBe(false);
+
+    finishStoring();
+    await expect(uploads).resolves.toEqual({
+      status: "ok",
+      successfulUploadCount: 1,
+    });
+    await leaveProject;
+
+    expect(onUploadError).not.toHaveBeenCalled();
+    expect(leftProject).toBe(true);
   });
 });
