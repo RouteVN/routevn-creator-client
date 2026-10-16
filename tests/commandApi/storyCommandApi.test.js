@@ -1394,3 +1394,122 @@ describe("story command api: duplicating and moving a large section", () => {
     );
   });
 });
+
+describe("story command api: a line that is in no scene", () => {
+  // A project with one scene and line, where the command is for a line that
+  // is not in it, such as a line deleted after the command was made.
+  const createApi = () => {
+    const projectId = "project-1";
+    const repositoryState = structuredClone(initialProjectData);
+    repositoryState.story.initialSceneId = "scene-1";
+    repositoryState.scenes = createStoryState().scenes;
+    repositoryState.scenes.items["scene-1"].name = "Scene 1";
+    repositoryState.scenes.items["scene-1"].sections.items["section-1"].name =
+      "Section 1";
+    const context = { projectId, state: repositoryState };
+    const shared = {
+      ensureCommandContext: vi.fn(async () => context),
+      submitCommandWithContext: vi.fn(async () => ({ valid: true })),
+      scenePartitionFor: vi.fn((_projectId, sceneId) =>
+        scenePartitionFor(sceneId),
+      ),
+    };
+    return {
+      projectId,
+      repositoryState,
+      shared,
+      api: createStoryCommandApi(shared),
+    };
+  };
+
+  it.each([
+    [
+      "line actions",
+      (api) =>
+        api.updateLineActions({
+          lineId: "line-deleted",
+          data: { background: { resourceId: "image-1" } },
+        }),
+    ],
+    [
+      "one line action",
+      (api) =>
+        api.updateLineAction({
+          lineId: "line-deleted",
+          actionType: "background",
+          action: { resourceId: "image-1" },
+        }),
+    ],
+    [
+      "a dialogue",
+      (api) =>
+        api.updateLineDialogueAction({
+          lineId: "line-deleted",
+          dialogue: { characterId: "character-1" },
+          preserve: ["dialogue.content"],
+        }),
+    ],
+  ])("refuses a change to %s, without saving it", async (_change, update) => {
+    const { shared, api } = createApi();
+
+    await expect(update(api)).resolves.toEqual({
+      valid: false,
+      error: {
+        code: "precondition_validation_failed",
+        message: "payload.lineId must reference an existing line",
+      },
+    });
+    expect(shared.ensureCommandContext).toHaveBeenCalledWith({
+      lineIds: ["line-deleted"],
+    });
+    expect(shared.submitCommandWithContext).not.toHaveBeenCalled();
+  });
+
+  it("refuses it the way the project model refuses the same change", async () => {
+    const { projectId, repositoryState, api } = createApi();
+
+    const result = await api.updateLineActions({
+      lineId: "line-deleted",
+      data: { background: { resourceId: "image-1" } },
+    });
+    const modelResult = applyCommandsToRepositoryState({
+      repositoryState,
+      commands: [
+        {
+          id: "command-1",
+          projectId,
+          partition: scenePartitionFor("scene-1"),
+          type: COMMAND_TYPES.LINE_UPDATE_ACTIONS,
+          payload: {
+            lineId: "line-deleted",
+            data: { background: { resourceId: "image-1" } },
+          },
+          actor: { userId: "user-1", clientId: "client-1" },
+          clientTs: 1,
+          schemaVersion: 1,
+        },
+      ],
+      projectId,
+    });
+
+    expect(modelResult.valid).toBe(false);
+    expect(result.error).toEqual({
+      code: modelResult.error.code,
+      message: modelResult.error.message,
+    });
+  });
+
+  it("still saves a change to a line in a scene to that scene's partition", async () => {
+    const { shared, api } = createApi();
+
+    await api.updateLineActions({
+      lineId: "line-1",
+      data: { background: { resourceId: "image-1" } },
+    });
+
+    expect(shared.submitCommandWithContext).toHaveBeenCalledOnce();
+    expect(shared.submitCommandWithContext.mock.calls[0][0].partition).toBe(
+      scenePartitionFor("scene-1"),
+    );
+  });
+});

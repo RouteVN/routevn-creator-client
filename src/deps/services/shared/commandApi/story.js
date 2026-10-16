@@ -318,7 +318,9 @@ export const createStoryCommandApi = (shared) => {
     return shared.scenePartitionFor(context.projectId, sceneId);
   };
 
-  const getStoryLinePartition = (context, lineIds) => {
+  // The partition of the scene that holds the first of `lineIds` found in a
+  // scene, or undefined when none is.
+  const findStoryLinePartition = (context, lineIds) => {
     for (const lineId of lineIds || []) {
       const lineLocation = findLineLocation(context.state, lineId);
       if (lineLocation?.sceneId) {
@@ -329,8 +331,29 @@ export const createStoryCommandApi = (shared) => {
       }
     }
 
-    throw new Error("Could not resolve scene partition for line command");
+    return undefined;
   };
+
+  const getStoryLinePartition = (context, lineIds) => {
+    const partition = findStoryLinePartition(context, lineIds);
+    if (!partition) {
+      throw new Error("Could not resolve scene partition for line command");
+    }
+
+    return partition;
+  };
+
+  // The project model refuses a change to a line that is in no scene, such
+  // as a line deleted after the change was made. Without a scene there is no
+  // partition to save the change to, so it is refused here in the same way,
+  // and the editor that made it tells the user.
+  const createMissingLineResult = () => ({
+    valid: false,
+    error: {
+      code: "precondition_validation_failed",
+      message: "payload.lineId must reference an existing line",
+    },
+  });
 
   const buildLineActionsPayload = ({
     lineId,
@@ -438,11 +461,15 @@ export const createStoryCommandApi = (shared) => {
     const context = await shared.ensureCommandContext({
       lineIds: [lineId],
     });
+    const partition = findStoryLinePartition(context, [lineId]);
+    if (!partition) {
+      return createMissingLineResult();
+    }
 
     return shared.submitCommandWithContext({
       context,
       scope: "story",
-      partition: getStoryLinePartition(context, [lineId]),
+      partition,
       type: COMMAND_TYPES.LINE_UPDATE_ACTIONS,
       payload: buildLineActionsPayload({
         lineId,

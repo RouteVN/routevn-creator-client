@@ -1775,6 +1775,14 @@ lines that were never stored. Flushes read live lines only from the section's
 own editor, never another section's, and a flush queued before a drop does not
 save the lines it was handed then.
 
+A line action command (the actions dialog and panel, the character shortcut,
+and deleting an action) that is refused shows an alert that leads with a
+localized message and adds the refusal's details, then ends without reloading
+the project. The command API refuses a command for a line that is in no scene,
+such as a line deleted after the command was made, the way the project model
+does (`payload.lineId must reference an existing line`): without a scene there
+is no partition to save it to.
+
 Editor blur uses the normal text debounce path; navigation, preview, and
 explicit persistence workflows remain responsible for immediate flushes when
 leaving the editing context. The editor reports line changes only while it has
