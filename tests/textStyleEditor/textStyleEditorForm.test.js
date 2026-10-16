@@ -1,4 +1,5 @@
 import { describe, expect, it } from "vitest";
+import { collectNonJsonFields } from "../../src/deps/services/shared/commandApi/shared.js";
 import {
   applyTextStyleColorChange,
   applyTextStyleFontChange,
@@ -13,6 +14,17 @@ import { EN_I18N } from "../support/i18n.js";
 const copy = selectTextStyleEditorPageCopy(EN_I18N);
 
 const optionValues = (options) => options.map((option) => option.value);
+
+// The names of the fields a text style update would report as non-JSON.
+const nonJsonFieldsOf = (data) => {
+  const fields = new Set();
+  collectNonJsonFields(
+    { textStyleId: "text-style-1", data },
+    "payload",
+    fields,
+  );
+  return [...fields];
+};
 
 const createItem = (fields = {}) => ({
   id: "text-style-1",
@@ -120,7 +132,10 @@ describe("text style editor form", () => {
     );
     const values = toTextStyleValues(createItem());
 
-    expect(toTextStyleUpdateData(values, savedValues)).toEqual({
+    const data = toTextStyleUpdateData(values, savedValues);
+
+    // null is how a removed outline color is cleared: JSON keeps it.
+    expect(data).toStrictEqual({
       fontId: ["font-1"],
       colorId: "color-1",
       fontSize: 24,
@@ -130,14 +145,82 @@ describe("text style editor form", () => {
       strokeWidth: 0,
       clearShadow: true,
     });
+    expect(nonJsonFieldsOf(data)).toEqual([]);
   });
 
-  it("sends no null outline color when none was saved", () => {
+  it("leaves the outline color out of the update when there is no outline", () => {
     const values = toTextStyleValues(createItem());
 
     const data = toTextStyleUpdateData(values, values);
 
-    expect(data.strokeColorId).toBeUndefined();
+    // Strict equality tells a field set to undefined from a missing one.
+    expect(data).toStrictEqual({
+      fontId: ["font-1"],
+      colorId: "color-1",
+      fontSize: 24,
+      lineHeight: 1.5,
+      fontWeight: "400",
+      strokeWidth: 0,
+      clearShadow: true,
+    });
+    expect(nonJsonFieldsOf(data)).toEqual([]);
+  });
+
+  it("holds only JSON values whatever the text style looks like", () => {
+    const outlined = toTextStyleValues(
+      createItem({ strokeColorId: "color-2", strokeWidth: 2 }),
+    );
+    const shadowed = toTextStyleValues(
+      createItem({ shadow: { colorId: "color-3" } }),
+    );
+    const plain = toTextStyleValues(createItem());
+
+    for (const [values, savedValues] of [
+      [plain, plain],
+      [plain, outlined],
+      [outlined, plain],
+      [outlined, outlined],
+      [shadowed, plain],
+      [plain, shadowed],
+      [shadowed, shadowed],
+    ]) {
+      expect(
+        nonJsonFieldsOf(toTextStyleUpdateData(values, savedValues)),
+      ).toEqual([]);
+    }
+  });
+
+  it("sends an outline color that was added or changed", () => {
+    const plain = toTextStyleValues(createItem());
+    const outlined = toTextStyleValues(
+      createItem({ strokeColorId: "color-2", strokeWidth: 2 }),
+    );
+
+    const added = toTextStyleUpdateData(
+      applyTextStyleColorChange(plain, {
+        field: "strokeColorId",
+        colorId: "color-2",
+      }),
+      plain,
+    );
+    expect(added).toMatchObject({ strokeColorId: "color-2", strokeWidth: 2 });
+
+    const changed = toTextStyleUpdateData(
+      applyTextStyleColorChange(outlined, {
+        field: "strokeColorId",
+        colorId: "color-3",
+      }),
+      outlined,
+    );
+    expect(changed).toMatchObject({ strokeColorId: "color-3", strokeWidth: 2 });
+
+    // An unchanged outline is sent as it is, which changes nothing.
+    expect(toTextStyleUpdateData(outlined, outlined)).toMatchObject({
+      strokeColorId: "color-2",
+      strokeWidth: 2,
+    });
+    expect(nonJsonFieldsOf(added)).toEqual([]);
+    expect(nonJsonFieldsOf(changed)).toEqual([]);
   });
 
   it("keeps values the fields cannot keep, and normalizes the ones they can", () => {
