@@ -378,6 +378,13 @@ export const markPreviewDataSaved = (
   state.previewSavedVersion = Math.max(state.previewSavedVersion, version);
 };
 
+// Gives up the save of an edit that failed, so it is not tried again. The
+// preview data stays as it is, though it was not stored. Edits made since are
+// still unsaved.
+export const markPreviewDataSaveFailed = ({ state }, { version } = {}) => {
+  state.previewSavedVersion = Math.max(state.previewSavedVersion, version);
+};
+
 export const setPreviewMounted = ({ state }, { isMounted } = {}) => {
   state.isPreviewMounted = isMounted === true;
 };
@@ -661,6 +668,10 @@ export const syncRepositoryState = ({ state }, payload = {}) => {
 
 export const selectLayoutId = ({ state }) => {
   return state.layout?.id;
+};
+
+export const selectLayoutName = ({ state }) => {
+  return state.layout?.name ?? "";
 };
 
 export const selectLayoutResourceType = ({ state }) => {
