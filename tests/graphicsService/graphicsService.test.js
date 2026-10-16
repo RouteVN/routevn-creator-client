@@ -2826,6 +2826,154 @@ describe("graphicsService", () => {
     );
   });
 
+  describe("video elements", () => {
+    const createVideoTexture = () => ({
+      destroyed: false,
+      destroy: vi.fn(),
+      source: {
+        destroyed: false,
+        resource: { pause: vi.fn() },
+      },
+    });
+
+    const createRenderState = () => ({
+      id: "render-with-videos",
+      elements: [
+        {
+          id: "background",
+          type: "video",
+          src: "video-missing",
+        },
+        {
+          id: "character",
+          type: "sprite",
+          src: "image-1",
+        },
+        {
+          id: "layer",
+          type: "container",
+          children: [
+            {
+              id: "loaded-video",
+              type: "video",
+              src: "video-loaded",
+            },
+            {
+              id: "destroyed-video",
+              type: "video",
+              src: "video-destroyed",
+            },
+            {
+              id: "video-without-src",
+              type: "video",
+            },
+          ],
+        },
+      ],
+      audio: [],
+      animations: [],
+    });
+
+    const expectedElements = [
+      {
+        id: "character",
+        type: "sprite",
+        src: "image-1",
+      },
+      {
+        id: "layer",
+        type: "container",
+        children: [
+          {
+            id: "loaded-video",
+            type: "video",
+            src: "video-loaded",
+          },
+        ],
+      },
+    ];
+
+    const createService = async () => {
+      createAssetBufferManagerMock.mockReturnValue({ clear: vi.fn() });
+      assetsCache.set("video-loaded", createVideoTexture());
+      // An unloaded texture can stay in the cache, destroyed and without its
+      // video.
+      const destroyedTexture = createVideoTexture();
+      destroyedTexture.destroyed = true;
+      destroyedTexture.source.destroyed = true;
+      destroyedTexture.source.resource = null;
+      assetsCache.set("video-destroyed", destroyedTexture);
+      const { createGraphicsService } = await import(
+        "../../src/deps/services/graphicsService.js"
+      );
+      const service = await createGraphicsService({
+        subject: { dispatch: vi.fn() },
+      });
+      await service.init({ width: 1920, height: 1080 });
+      return service;
+    };
+
+    it("leaves a video that is not loaded out of an engine render", async () => {
+      const service = await createService();
+      try {
+        service.initRouteEngine({
+          screen: { width: 1920, height: 1080 },
+          story: { scenes: {} },
+          resources: {},
+        });
+        routeGraphicsInstance.render.mockClear();
+        const renderState = createRenderState();
+
+        service.engineRenderCurrentState({ renderState });
+
+        expect(routeGraphicsInstance.render).toHaveBeenCalledOnce();
+        expect(routeGraphicsInstance.render.mock.calls[0][0]).toEqual({
+          ...renderState,
+          elements: expectedElements,
+        });
+        // The caller's state is not changed.
+        expect(renderState.elements).toHaveLength(3);
+        expect(renderState.elements[2].children).toHaveLength(3);
+      } finally {
+        await service.destroy();
+      }
+    });
+
+    it("leaves a video that is not loaded out of a direct render", async () => {
+      const service = await createService();
+      try {
+        routeGraphicsInstance.render.mockClear();
+        const renderState = createRenderState();
+
+        service.render(renderState);
+
+        expect(routeGraphicsInstance.render).toHaveBeenCalledWith({
+          ...renderState,
+          elements: expectedElements,
+        });
+      } finally {
+        await service.destroy();
+      }
+    });
+
+    it("passes a state whose videos are all loaded on unchanged", async () => {
+      const service = await createService();
+      try {
+        routeGraphicsInstance.render.mockClear();
+        const renderState = {
+          elements: [{ id: "intro", type: "video", src: "video-loaded" }],
+          animations: [],
+        };
+
+        service.render(renderState);
+
+        expect(routeGraphicsInstance.render.mock.calls[0][0]).toBe(renderState);
+      } finally {
+        await service.destroy();
+      }
+    });
+  });
+
   it("uses renderer snapshot mode for editor frames and completion callbacks only", async () => {
     audioAssetApi.getAsset.mockReturnValue({});
     const { createGraphicsService } = await import(

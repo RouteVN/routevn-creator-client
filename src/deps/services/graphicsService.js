@@ -1163,6 +1163,61 @@ export const createGraphicsService = async ({
     return undefined;
   };
 
+  // Route Graphics takes a video element's texture from the shared cache and
+  // reads its video without checking that it is there. A video whose file did
+  // not load, or was unloaded, would stop the whole render, so it is left out
+  // of the frame instead. Its failed load is reported where it was requested.
+  const hasRenderableVideoTexture = (key) => {
+    const texture = getCachedPixiAsset(key);
+    return (
+      isUsableCachedPixiAsset(texture) && Boolean(texture.source?.resource)
+    );
+  };
+
+  const omitUnloadedVideoElements = (elements) => {
+    if (!Array.isArray(elements) || elements.length === 0) {
+      return elements;
+    }
+
+    let didChange = false;
+    const nextElements = [];
+    for (const element of elements) {
+      if (
+        element?.type === "video" &&
+        !hasRenderableVideoTexture(element.src)
+      ) {
+        didChange = true;
+        continue;
+      }
+
+      const children = element?.children;
+      const nextChildren = omitUnloadedVideoElements(children);
+      if (nextChildren === children) {
+        nextElements.push(element);
+        continue;
+      }
+
+      const nextElement = { ...element };
+      nextElement.children = nextChildren;
+      nextElements.push(nextElement);
+      didChange = true;
+    }
+
+    return didChange ? nextElements : elements;
+  };
+
+  const omitUnloadedVideos = (renderState) => {
+    const elements = renderState?.elements;
+    const nextElements = omitUnloadedVideoElements(elements);
+    if (nextElements === elements) {
+      return renderState;
+    }
+
+    const nextRenderState = { ...renderState };
+    nextRenderState.elements = nextElements;
+    return nextRenderState;
+  };
+
   const isVideoReadyForPlayback = (video) => {
     if (!video) {
       return true;
@@ -2151,10 +2206,10 @@ export const createGraphicsService = async ({
       return;
     }
 
-    nextRenderState = {
+    nextRenderState = omitUnloadedVideos({
       ...nextRenderState,
       animations: nextRenderState?.animations || [],
-    };
+    });
     if (!routeGraphics) {
       return;
     }
@@ -2768,7 +2823,7 @@ export const createGraphicsService = async ({
     attachCanvas,
     render: (payload) => {
       return routeGraphics?.render(
-        sanitizeRenderStateInteractionSoundVolumes(payload),
+        omitUnloadedVideos(sanitizeRenderStateInteractionSoundVolumes(payload)),
       );
     },
     parse: (payload) => routeGraphics?.parse(payload),
