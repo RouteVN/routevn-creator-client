@@ -154,6 +154,15 @@ Both SDKs keep zero breadcrumbs. The webview flush on quit and the Rust send
 after each panic wait at most about two seconds. There is no app-level retry or
 forwarding path; the SDK handles collector rate limits and transport errors.
 
+The webview does not report one kind of unhandled rejection: the `AbortError`
+that Chromium gives the promise of `HTMLMediaElement.play()` when the media is
+paused, removed from the page, reloaded or frozen before playback starts ("The
+play() request was interrupted by a call to pause()" and its variants). That
+is a normal change of playback, and the renderer starts its video elements
+without handling the promise. These events are dropped before they count
+toward the session limit. Other `AbortError`s and a refused start
+(`NotAllowedError`) are still reported.
+
 ## Local verification
 
 Run the RouteVN API locally, then launch the Tauri desktop app with its

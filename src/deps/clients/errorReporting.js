@@ -164,6 +164,37 @@ const isExplicitReport = (event) =>
     (exception) => exception.mechanism?.type === CAPTURE_MECHANISM_TYPE,
   );
 
+const UNHANDLED_REJECTION_MECHANISM_TYPE =
+  "auto.browser.global_handlers.onunhandledrejection";
+// Chromium's messages for a `play()` that never started: "interrupted by a
+// call to pause()", "by a new load request", "because the media was removed
+// from the document", "because the containing page was frozen", and so on.
+const INTERRUPTED_PLAY_MESSAGE =
+  /^(?:AbortError: )?The play\(\) request was interrupted\b/;
+
+// `HTMLMediaElement.play()` rejects with an `AbortError` when the media is
+// paused, removed, reloaded or frozen with its page before playback starts.
+// That is a normal change of playback, not a failure. The renderer's video
+// elements start this way (`video.play()` with the promise left unhandled), so
+// scenes that change while a video starts surface it as an unhandled rejection
+// that the app cannot catch. The DOMException of such a rejection has no
+// stack, and the SDK then reports it as `Error: AbortError: <message>`.
+// Match only that rejection: other `AbortError`s, such as an aborted fetch,
+// and a refused start (`NotAllowedError`) stay reported.
+const isInterruptedPlayRejection = (event) => {
+  const values = event.exception?.values;
+  if (values?.length !== 1) {
+    return false;
+  }
+
+  const { type, value, mechanism } = values[0];
+  return (
+    mechanism?.type === UNHANDLED_REJECTION_MECHANISM_TYPE &&
+    INTERRUPTED_PLAY_MESSAGE.test(value) &&
+    (type === "AbortError" || value.startsWith("AbortError: "))
+  );
+};
+
 // Describe a thrown non-Error value without reading its contents.
 const getValueKind = (value) => {
   if (value === null) {
@@ -217,6 +248,10 @@ export const createErrorReporter = ({
   };
 
   const sendErrorEvent = (event) => {
+    if (isInterruptedPlayRejection(event)) {
+      return null;
+    }
+
     const source = isExplicitReport(event) ? "explicit" : "global";
     if (sentEvents[source] >= MAX_EVENTS_PER_SESSION) {
       return null;
