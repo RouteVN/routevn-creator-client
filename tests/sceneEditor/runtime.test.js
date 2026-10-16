@@ -8,6 +8,7 @@ import {
   renderSceneEditorCanvas,
   renderSceneEditorState,
   resolveSceneEditorEntrySelection,
+  restoreSceneEditorFromPreview,
   updateSceneEditorSectionChanges,
 } from "../../src/internal/ui/sceneEditor/runtime.js";
 
@@ -623,6 +624,122 @@ describe("renderSceneEditorState", () => {
       expect(appService.showAlertWhenIdle).toHaveBeenCalledOnce();
     } finally {
       unmount();
+      consoleError.mockRestore();
+    }
+  });
+
+  it("reports and alerts a failed render after the canvas wheel moves to another line", async () => {
+    const subject = new Subject();
+    subject.dispatch = (action, payload) => {
+      subject.next({ action, payload });
+    };
+    const failure = new Error("Canvas render failed");
+    const appService = {
+      reportError: vi.fn(),
+      showAlertWhenIdle: vi.fn(),
+    };
+    const consoleError = vi
+      .spyOn(console, "error")
+      .mockImplementation(() => {});
+    const unhandledRejections = [];
+    const onUnhandledRejection = (reason) => {
+      unhandledRejections.push(reason);
+    };
+    process.on("unhandledRejection", onUnhandledRejection);
+    let selectedLineId = "line-2";
+    const store = {
+      selectSelectedLineId: () => selectedLineId,
+      selectSelectedSectionId: () => "section-1",
+      selectPreviousLineId: () => "line-1",
+      selectNextLineId: () => undefined,
+      setSelectedLineId: ({ selectedLineId: lineId }) => {
+        selectedLineId = lineId;
+      },
+      // The render of the line the wheel moved to fails.
+      selectSceneId: () => {
+        throw failure;
+      },
+    };
+    const unmount = mountSceneEditorSubscriptions({
+      subject,
+      appService,
+      store,
+      refs: {},
+      render: vi.fn(),
+      i18n: {
+        resourcePages: { errorTitle: "Error title" },
+        scenesPage: {},
+        sceneEditorPage: {
+          errorDetailsLabel: "Details label:",
+          failedRenderCanvas: "Canvas message",
+        },
+      },
+    });
+    const canvasRoot = new EventTarget();
+
+    try {
+      subject.dispatch("sceneEditor.canvasMounted", { canvasRoot });
+      const wheel = new Event("wheel");
+      wheel.deltaY = -10;
+      canvasRoot.dispatchEvent(wheel);
+
+      await vi.waitFor(() => {
+        expect(appService.showAlertWhenIdle).toHaveBeenCalledWith({
+          title: "Error title",
+          message: "Canvas message\n\nDetails label:\nCanvas render failed",
+        });
+      });
+      expect(selectedLineId).toBe("line-1");
+      expect(appService.reportError).toHaveBeenCalledWith(failure, {
+        operation: "sceneEditor.renderCanvas",
+      });
+      await new Promise((resolve) => setTimeout(resolve, 0));
+      expect(unhandledRejections).toEqual([]);
+    } finally {
+      unmount();
+      process.off("unhandledRejection", onUnhandledRejection);
+      consoleError.mockRestore();
+    }
+  });
+
+  it("reports and alerts a failed return from the full-screen preview", async () => {
+    const failure = new Error("Canvas render failed");
+    const appService = {
+      reportError: vi.fn(),
+      showAlertWhenIdle: vi.fn(),
+    };
+    const consoleError = vi
+      .spyOn(console, "error")
+      .mockImplementation(() => {});
+
+    try {
+      await expect(
+        restoreSceneEditorFromPreview({
+          appService,
+          i18n: {
+            resourcePages: { errorTitle: "Error title" },
+            scenesPage: {},
+            sceneEditorPage: {
+              errorDetailsLabel: "Details label:",
+              failedRenderCanvas: "Canvas message",
+            },
+          },
+          store: {
+            selectSceneId: () => {
+              throw failure;
+            },
+          },
+        }),
+      ).resolves.toBeUndefined();
+
+      expect(appService.reportError).toHaveBeenCalledWith(failure, {
+        operation: "sceneEditor.restoreFromPreview",
+      });
+      expect(appService.showAlertWhenIdle).toHaveBeenCalledWith({
+        title: "Error title",
+        message: "Canvas message\n\nDetails label:\nCanvas render failed",
+      });
+    } finally {
       consoleError.mockRestore();
     }
   });

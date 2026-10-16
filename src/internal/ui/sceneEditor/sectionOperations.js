@@ -1,8 +1,5 @@
 import { generateId } from "../../id.js";
-import {
-  renderSceneEditorState,
-  updateSceneEditorSectionChanges,
-} from "./runtime.js";
+import { updateSceneEditorSectionChanges } from "./runtime.js";
 
 export const isSectionsOverviewOpen = (store) => {
   return store.selectIsSectionsOverviewOpen();
@@ -164,7 +161,7 @@ export const createSceneEditorSectionWithName = async (
   syncProjectState,
   options = {},
 ) => {
-  const { store, projectService, render } = deps;
+  const { store, projectService, render, subject } = deps;
   const {
     inheritPresentationFromSelectedLine = true,
     position = "last",
@@ -252,8 +249,5 @@ export const createSceneEditorSectionWithName = async (
 
   syncProjectState(store, projectService);
   render();
-
-  setTimeout(async () => {
-    await renderSceneEditorState(deps);
-  }, 10);
+  subject.dispatch("sceneEditor.renderCanvas", {});
 };
