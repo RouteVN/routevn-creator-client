@@ -154,9 +154,14 @@ const buildBackgroundDataFromState = (
   const hasBackgroundTarget =
     !!selectedResource?.resourceId || !!selectedColorId;
 
-  const backgroundData = {
-    resourceId: selectedResource?.resourceId,
-  };
+  const backgroundData = {};
+
+  // A background with only a color, or one whose image was removed, has no
+  // resourceId. The saved action is the whole object, so leaving the field out
+  // removes it, and an undefined field would be reported as a non-JSON value.
+  if (selectedResource?.resourceId !== undefined) {
+    backgroundData.resourceId = selectedResource.resourceId;
+  }
 
   if (
     selectedResource?.resourceType === "spritesheet" &&
