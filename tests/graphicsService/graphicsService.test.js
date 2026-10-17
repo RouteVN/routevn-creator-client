@@ -470,6 +470,40 @@ describe("graphicsService", () => {
     }
   });
 
+  it("tells the owner when the device cannot create a WebGL context, and still rejects", async () => {
+    const failure = new Error(
+      "This browser does not support WebGL. Try using the canvas renderer",
+    );
+    routeGraphicsInstance.init.mockRejectedValueOnce(failure);
+    const onGraphicsUnavailable = vi.fn();
+    const { createGraphicsService } = await import(
+      "../../src/deps/services/graphicsService.js"
+    );
+    const service = await createGraphicsService({ onGraphicsUnavailable });
+
+    await expect(service.init({ width: 64, height: 64 })).rejects.toBe(failure);
+
+    expect(onGraphicsUnavailable).toHaveBeenCalledExactlyOnceWith(failure);
+    await service.destroy();
+  });
+
+  it("does not call the WebGL owner for other initialization failures", async () => {
+    routeGraphicsInstance.init.mockRejectedValueOnce(
+      new Error("Initialization failed"),
+    );
+    const onGraphicsUnavailable = vi.fn();
+    const { createGraphicsService } = await import(
+      "../../src/deps/services/graphicsService.js"
+    );
+    const service = await createGraphicsService({ onGraphicsUnavailable });
+
+    await expect(service.init({ width: 64, height: 64 })).rejects.toThrow(
+      "Initialization failed",
+    );
+
+    expect(onGraphicsUnavailable).not.toHaveBeenCalled();
+  });
+
   it("releases the asset queue after a decoder hangs so the next request can retry", async () => {
     const manager = {
       has: () => false,

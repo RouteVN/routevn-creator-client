@@ -280,6 +280,7 @@ appPage:
   failedUpdateStatusBar: "Could not update the status bar. Please restart the app."
   failedRevealEditorCaret: "Could not scroll to the cursor. Please restart the app."
   failedSaveProjectIcon: "The project was created, but its icon could not be saved."
+  graphicsUnavailableMessage: "This device cannot display the preview or the canvas editors because it could not start WebGL graphics. Restart the app or the device. Updating the system web view, browser or graphics driver may also help."
   incompatibleProjectTitle: "Incompatible Project"
   latestVersionMessage: "You are already on the latest version"
   laterButton: "Later"

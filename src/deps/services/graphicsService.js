@@ -25,6 +25,7 @@ import {
   loadGraphicsEnginePlugins,
 } from "../../internal/runtime/graphicsEngineRuntime.js";
 import { requireProjectResolution } from "../../internal/projectResolution.js";
+import { isGraphicsUnavailableError } from "../../internal/graphicsErrors.js";
 import { startCanvasVideoRecording } from "../clients/canvasVideoRecorder.js";
 import { decodeAudioBuffer } from "../clients/audioDecoder.js";
 import { loadFontBuffer } from "./shared/fontLoader.js";
@@ -643,6 +644,9 @@ export const createGraphicsService = async ({
   audioOutput,
   onAudioOutputError,
   onRenderError,
+  // Called when graphics cannot start because the device has no usable WebGL.
+  // The initialization still rejects with the same error.
+  onGraphicsUnavailable,
 } = {}) => {
   let routeGraphics;
   let routeGraphicsInitPromise;
@@ -2518,6 +2522,9 @@ export const createGraphicsService = async ({
               "[graphicsService] Failed to release initialization resources",
               cleanupError,
             );
+          }
+          if (isGraphicsUnavailableError(error)) {
+            onGraphicsUnavailable?.(error);
           }
           throw error;
         } finally {
