@@ -8,6 +8,7 @@ import {
   getTransitionTimelineDuration,
   getUpdateAnimationTween,
 } from "./animationDisplay.js";
+import { canAutoTweenProperty } from "./animationPlayback.js";
 
 export const ANIMATION_PREVIEW_BG_COLOR = "#4a4a4a";
 export const ANIMATION_PREVIEW_UPDATE_ELEMENT_ID = "preview-element";
@@ -143,6 +144,8 @@ export const createPropertyFieldConfig = (
   };
 };
 
+// Route Graphics keeps scaleX and scaleY in an element's state only when the
+// element sets them, and an Auto scale tween reads its end value from there.
 const createPreviewRect = ({ id, x, y, fill, width, height } = {}) => {
   return {
     id,
@@ -154,6 +157,8 @@ const createPreviewRect = ({ id, x, y, fill, width, height } = {}) => {
     fill,
     anchorX: 0.5,
     anchorY: 0.5,
+    scaleX: 1,
+    scaleY: 1,
   };
 };
 
@@ -369,6 +374,8 @@ const createPreviewContentElement = ({
     height: toPositiveNumber(imageItem.height, height),
     anchorX: 0.5,
     anchorY: 0.5,
+    scaleX: 1,
+    scaleY: 1,
   };
 };
 
@@ -467,6 +474,10 @@ const createTweenAnimationsForTarget = ({
       const tween = {};
 
       if (config?.auto) {
+        // Saved before Auto was limited to properties it can resolve.
+        if (!canAutoTweenProperty(property)) {
+          continue;
+        }
         tween[property] = {
           auto: resolveAutoTweenConfig(config.auto),
         };
