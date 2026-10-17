@@ -1,12 +1,15 @@
 import { processWithConcurrency } from "../../../processWithConcurrency.js";
 import { generatePrefixedId } from "../../../id.js";
 import { getLocalProjectPathFromPayload } from "../../../localProjectRoute.js";
+import { selectI18nCopy } from "../../i18nCopy.js";
 
 const CREATE_ABORT_ERROR = "pending-upload-create-abort";
 
 // Leaving a project waits for its uploads, but not for ever: a file that never
 // finishes processing must not keep the user from leaving.
 const MAX_LEAVE_WAIT_MS = 120_000;
+// A wait shorter than this shows no message, so a quick finish does not flash.
+const SHOW_WAIT_MESSAGE_AFTER_MS = 300;
 
 const createAbortError = () => {
   const error = new Error(CREATE_ABORT_ERROR);
@@ -63,20 +66,44 @@ const leavesProject = (destination, routePayload) => {
 };
 
 // Stores the files in the project open when the uploads start. Leaving that
-// project waits until they finish, for up to MAX_LEAVE_WAIT_MS: its files and
-// items can only be saved while it is open. The batch registers itself rather than its page, because
-// moving to another page of the same project does not stop it.
+// project waits until they finish, for up to MAX_LEAVE_WAIT_MS, with a message
+// once the wait is noticeable: its files and items can only be saved while it
+// is open. The batch registers itself rather than its page, because moving to
+// another page of the same project does not stop it.
 export const processPendingUploads = async (options) => {
-  const { appService } = options.deps;
+  const { appService, i18n } = options.deps;
   const routePayload = appService.getPayload();
   const batch = runPendingUploads(options);
+  let leaveWait;
+
+  const waitToLeave = async () => {
+    const copy = selectI18nCopy(i18n, ["resourcePages"]);
+    let dialog;
+    const timer = setTimeout(() => {
+      dialog = appService.showProgressDialog({
+        title: copy.finishingUploadsTitle,
+        message: copy.finishingUploadsMessage,
+        progress: {},
+      });
+    }, SHOW_WAIT_MESSAGE_AFTER_MS);
+
+    try {
+      await waitForBatch(batch);
+    } finally {
+      clearTimeout(timer);
+      dialog?.close();
+      leaveWait = undefined;
+    }
+  };
+
   const unregisterBeforeNavigation = appService.registerBeforeNavigation(
     (destination) => {
       if (!leavesProject(destination, routePayload)) {
         return undefined;
       }
       // Navigation only waits for the batch; its caller handles a failure.
-      return waitForBatch(batch);
+      leaveWait ??= waitToLeave();
+      return leaveWait;
     },
   );
 
