@@ -213,8 +213,17 @@ already handled. It never shows UI. Handled errors are still shown through
 - Do not report expected environment failures. `isProjectStorageUnavailableError`
   in `src/internal/projectOpenErrors.js` matches a project database that cannot
   be opened because its folder was moved, deleted, or is inaccessible (code
-  `project_database_missing`, or SQLite code 14 in plugin-sql's message), and
-  full browser storage (`QuotaExceededError`).
+  `project_database_missing`, or SQLite code 14 in plugin-sql's message), and a
+  full device or full browser storage. `isStorageFullError` in
+  `src/internal/storageFullError.js` recognizes the full-storage failures of
+  every platform: the browser's `QuotaExceededError`, the iOS bridge's
+  `storageFull` code (sent when the system refuses a write for lack of space,
+  because its message follows the device language), the Android bridge's
+  `SQLiteFullException` code or `ENOSPC` message, and the "No space left on
+  device", "database or disk is full" and "(os error 28|39|112)" messages of
+  desktop file and SQL calls. Resource page mutations and scene editor saves
+  show a message that asks the user to free up space and do not report these
+  failures.
 - Current call sites: project-open route failures, `runResourcePageMutation`
   thrown errors, engine render failures (`operation` `graphics.render`), and
   scene editor canvas renders that throw with no caller waiting for them

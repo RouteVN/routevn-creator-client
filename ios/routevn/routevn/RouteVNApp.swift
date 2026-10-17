@@ -688,10 +688,34 @@ final class RouteVNViewController: UIViewController, WKNavigationDelegate, WKScr
             "ok": false,
             "error": [
                 "message": error.localizedDescription,
-                "code": (error as? ProjectFolderSetupError)?.rawValue ?? String(describing: type(of: error))
+                "code": bridgeFailureCode(error)
             ]
         ]
         evaluateJavaScriptCallback(name: "__routeVNIOSBridgeResult", result: result)
+    }
+
+    /// The code JavaScript reads from a failed bridge call. A write refused for
+    /// lack of space is "storageFull", because the system's message for it
+    /// follows the device language.
+    private func bridgeFailureCode(_ error: Error) -> String {
+        if isStorageFull(error) {
+            return "storageFull"
+        }
+        return (error as? ProjectFolderSetupError)?.rawValue ?? String(describing: type(of: error))
+    }
+
+    private func isStorageFull(_ error: Error) -> Bool {
+        let nsError = error as NSError
+        if nsError.domain == NSCocoaErrorDomain && nsError.code == CocoaError.fileWriteOutOfSpace.rawValue {
+            return true
+        }
+        if nsError.domain == NSPOSIXErrorDomain && nsError.code == Int(ENOSPC) {
+            return true
+        }
+        if let underlying = nsError.userInfo[NSUnderlyingErrorKey] as? Error {
+            return isStorageFull(underlying)
+        }
+        return false
     }
 
     private func evaluateJavaScriptCallback(name: String, result: [String: Any]) {

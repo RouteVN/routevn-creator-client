@@ -11,6 +11,7 @@ import {
 } from "../sceneEditor/persistenceQueue.js";
 import { selectSceneEditorCopy } from "../sceneEditor/sceneEditorCopy.js";
 import { withErrorDetails } from "../../errorDetails.js";
+import { isStorageFullError } from "../../storageFullError.js";
 import {
   emitSceneEditorTiming,
   getSceneEditorTimingDurationMs,
@@ -187,18 +188,26 @@ const saveDraftSectionLines = async (deps, { draftSection, snapshotLines }) => {
 const notifyDraftSaveFailure = (deps, { error, sceneName, sectionName }) => {
   const { appService, i18n } = deps;
   const copy = selectSceneEditorCopy(i18n);
+  // A full device is not a bug in the app: the message tells the user to free
+  // up space, and the failure is not reported.
+  const storageFull = isStorageFullError(error);
   const message = (
-    copy.failedSaveSectionChangesDiscarded ??
-    "Your latest changes to section “{sectionName}” in scene “{sceneName}” could not be saved and were removed. Please enter them again."
+    storageFull
+      ? (copy.failedSaveSectionChangesStorageFull ??
+        "Your latest changes to section “{sectionName}” in scene “{sceneName}” could not be saved because this device is out of storage space, and they were removed. Free up some space, then enter them again.")
+      : (copy.failedSaveSectionChangesDiscarded ??
+        "Your latest changes to section “{sectionName}” in scene “{sceneName}” could not be saved and were removed. Please enter them again.")
   )
     .replaceAll("{sectionName}", sectionName)
     .replaceAll("{sceneName}", sceneName);
 
   console.error("[sceneEditor] Failed to save scene changes", error);
-  appService.reportError(error, {
-    operation: "sceneEditor.saveDraft",
-    code: error.code,
-  });
+  if (!storageFull) {
+    appService.reportError(error, {
+      operation: "sceneEditor.saveDraft",
+      code: error.code,
+    });
+  }
   appService.showAlertWhenIdle({
     title: copy.errorTitle ?? "Error",
     message: withErrorDetails(
