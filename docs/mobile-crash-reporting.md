@@ -93,7 +93,7 @@ both apps recover by loading the app again instead of closing:
 | Android: renderer killed by the system (`didCrash() == false`)                                              | The app loads again at its start page. In the background, loading waits until it is resumed. | Nothing                                                         |
 | Android: renderer crashed (`didCrash() == true`)                                                            | The same reload                                                                              | `MainActivity$WebViewRendererCrashedException` at level `error` |
 | iOS: content process ended (`webViewWebContentProcessDidTerminate`); WebKit does not say whether it crashed | The same reload; in the background it waits until the app is active                          | Nothing                                                         |
-| The process is lost again within 30 seconds of the page loading, twice in a row                             | The app closes                                                                               | A crash at level `fatal` (below)                                |
+| In the foreground, the process is lost within 30 seconds of the page loading, twice in a row                | The app closes                                                                               | A crash at level `fatal` (below)                                |
 
 Memory kills are not reported on either platform. They are normal system
 behaviour, most often while the app is in the background, and there is nothing
@@ -127,12 +127,21 @@ transaction and closes its SQLite handles on the main thread, where page SQL
 runs, then loads the start page again, at once if the app is active, otherwise
 when it next becomes active.
 
-A loss within 30 seconds of the page starting to load counts as rapid. After two
-rapid losses in a row the app stops reloading, so a page that cannot start does
-not loop: Android throws `MainActivity$WebViewRendererKilledException` or
+A loss counts as rapid when the page started loading less than 30 seconds
+earlier and the app has stayed in the foreground since: resumed on Android,
+active on iOS (`RendererLossGuard` on both). After two rapid losses in a row the
+app stops reloading, so a page that cannot start does not loop: Android throws
+`MainActivity$WebViewRendererKilledException` or
 `MainActivity$WebViewRendererCrashedException` from the main looper, and iOS
 calls `fatalError` in `webViewWebContentProcessDidTerminate`. Both reach the
 crash reporter as ordinary `fatal` crashes.
+
+Once the app leaves the foreground, even briefly (a system prompt, or on
+Android a file or photo picker), the system may reclaim the process to free
+memory. That says nothing about the page, so a later loss of that page is not
+rapid and starts the count again, and the app reloads instead of closing. A
+page lost in the background is not loaded again until the app returns, so it
+cannot loop there.
 
 Anything unsaved on the page is lost, as in a crash, and an edit whose SQL
 transaction had not committed is rolled back. Saved project data is not
