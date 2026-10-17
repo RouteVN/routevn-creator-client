@@ -2361,6 +2361,7 @@ describe("sceneEditorLexical.handlers actions dialog", () => {
       handleSystemActionsActionDelete(
         {
           store,
+          i18n: EN_I18N,
           render: vi.fn(),
           subject: { dispatch: vi.fn() },
           projectService: { updateLineActions },
