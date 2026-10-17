@@ -890,6 +890,17 @@ const constructAnimationResources = (
         } else {
           delete animation.mask;
         }
+
+        // Route Engine refuses a transition with no prev, next or mask. One
+        // saved before anything was added to it, or whose mask image is gone,
+        // shows nothing, so it is left out and lines show without it.
+        if (
+          animation.prev === undefined &&
+          animation.next === undefined &&
+          animation.mask === undefined
+        ) {
+          return result;
+        }
       }
 
       result[animationId] = animation;
@@ -2689,7 +2700,13 @@ export const recursivelyCheckResource = ({ state, itemId, checkTargets }) => {
       }
 
       scanNodeForResourceReferences(data, ({ key, value }) => {
-        if (key === "animation" && typeof value === "string") {
+        // Lines, layouts and controls pick animations as
+        // `animations: { resourceId }`; ids that are not animations are
+        // skipped below.
+        if (
+          (key === "animation" || key === "resourceId") &&
+          typeof value === "string"
+        ) {
           referencedAnimationIds.add(value);
         }
 
