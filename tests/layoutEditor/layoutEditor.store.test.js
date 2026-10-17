@@ -17,6 +17,8 @@ import {
   selectUnsavedPreviewData,
   markPreviewDataEdited,
   markPreviewDataSaved,
+  markPreviewDataSaveFailed,
+  selectLayoutName,
   setUiConfig,
   setPendingPersistPayload,
   clearPendingPersistPayload,
@@ -1062,5 +1064,52 @@ describe("layoutEditor.store preview autosave", () => {
     syncLayout(state, {}, "layout-2");
 
     expect(selectUnsavedPreviewData({ state })).toBeUndefined();
+  });
+
+  it("gives up the save of an edit that failed, and keeps what the preview shows and the edits made since", () => {
+    const state = createInitialState();
+    syncLayout(state, { backgroundImageId: "image-one" });
+    setPreviewData(
+      { state },
+      { previewData: { backgroundImageId: "image-two" } },
+    );
+    markPreviewDataEdited({ state });
+
+    markPreviewDataSaveFailed({ state }, { version: 1 });
+
+    expect(selectUnsavedPreviewData({ state })).toBeUndefined();
+    expect(state.previewData).toEqual({ backgroundImageId: "image-two" });
+    expect(state.persistedPreviewData).toEqual({
+      backgroundImageId: "image-one",
+    });
+    // The page still shows the edit after the project reloads.
+    syncLayout(state, { backgroundImageId: "image-one" });
+    expect(state.previewData).toEqual({ backgroundImageId: "image-two" });
+
+    setPreviewData(
+      { state },
+      { previewData: { backgroundImageId: "image-three" } },
+    );
+    markPreviewDataEdited({ state });
+    expect(selectUnsavedPreviewData({ state })).toEqual({
+      backgroundImageId: "image-three",
+    });
+  });
+
+  it("names the layout the page shows", () => {
+    const state = createInitialState();
+    expect(selectLayoutName({ state })).toBe("");
+
+    syncRepositoryState(
+      { state },
+      {
+        projectResolution: { width: 1920, height: 1080 },
+        layoutId: "layout-1",
+        layout: { id: "layout-1", name: "Layout One", layoutType: "general" },
+        layoutData: { items: {}, tree: [] },
+      },
+    );
+
+    expect(selectLayoutName({ state })).toBe("Layout One");
   });
 });
