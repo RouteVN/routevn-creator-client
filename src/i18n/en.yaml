@@ -590,6 +590,8 @@ resourcePages:
   cannotDeleteResourceInUse: "Cannot delete resource, it is currently in use."
   cancelButton: "Cancel"
   clickToUploadLabel: "Click to Upload"
+  finishingUploadsMessage: "Please wait while your files finish uploading."
+  finishingUploadsTitle: "Finishing uploads…"
   createTagButton: "Create Tag"
   createTagTitle: "Create Tag"
   deleteButton: "Delete"

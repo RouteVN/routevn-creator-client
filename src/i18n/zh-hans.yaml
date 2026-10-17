@@ -590,6 +590,8 @@ resourcePages:
   cannotDeleteResourceInUse: "该素材正在使用中，无法删除。"
   cancelButton: "取消"
   clickToUploadLabel: "点击上传"
+  finishingUploadsMessage: "文件正在完成上传，请稍候。"
+  finishingUploadsTitle: "正在完成上传…"
   createTagButton: "创建标签"
   createTagTitle: "创建标签"
   deleteButton: "删除"

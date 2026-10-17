@@ -590,6 +590,8 @@ resourcePages:
   cannotDeleteResourceInUse: "ไม่สามารถลบทรัพยากรได้เนื่องจากกำลังใช้งานอยู่"
   cancelButton: "ยกเลิก"
   clickToUploadLabel: "อัปโหลดไฟล์"
+  finishingUploadsMessage: "โปรดรอสักครู่ขณะไฟล์อัปโหลดเสร็จสิ้น"
+  finishingUploadsTitle: "กำลังอัปโหลดให้เสร็จสิ้น…"
   createTagButton: "สร้างแท็ก"
   createTagTitle: "สร้างแท็ก"
   deleteButton: "ลบ"

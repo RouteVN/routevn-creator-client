@@ -590,6 +590,8 @@ resourcePages:
   cannotDeleteResourceInUse: "No se puede eliminar el recurso porque está en uso."
   cancelButton: "Cancelar"
   clickToUploadLabel: "Haz clic para subir"
+  finishingUploadsMessage: "Espera mientras terminan de subirse tus archivos."
+  finishingUploadsTitle: "Terminando las cargas…"
   createTagButton: "Crear etiqueta"
   createTagTitle: "Crear etiqueta"
   deleteButton: "Eliminar"

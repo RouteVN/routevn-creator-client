@@ -590,6 +590,8 @@ resourcePages:
   cannotDeleteResourceInUse: "この素材は使用中のため削除できません。"
   cancelButton: "キャンセル"
   clickToUploadLabel: "クリックしてアップロード"
+  finishingUploadsMessage: "ファイルのアップロードが完了するまでしばらくお待ちください。"
+  finishingUploadsTitle: "アップロードを完了しています…"
   createTagButton: "タグを作成"
   createTagTitle: "タグを作成"
   deleteButton: "削除"
