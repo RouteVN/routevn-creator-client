@@ -4,6 +4,10 @@ import { getLocalProjectPathFromPayload } from "../../../localProjectRoute.js";
 
 const CREATE_ABORT_ERROR = "pending-upload-create-abort";
 
+// Leaving a project waits for its uploads, but not for ever: a file that never
+// finishes processing must not keep the user from leaving.
+const MAX_LEAVE_WAIT_MS = 120_000;
+
 const createAbortError = () => {
   const error = new Error(CREATE_ABORT_ERROR);
   error.code = CREATE_ABORT_ERROR;
@@ -32,6 +36,16 @@ const createPendingUploads = ({
   }));
 };
 
+const waitForBatch = (batch) => {
+  let timer;
+  const timeout = new Promise((resolve) => {
+    timer = setTimeout(resolve, MAX_LEAVE_WAIT_MS);
+  });
+  return Promise.race([batch.catch(() => {}), timeout]).finally(() => {
+    clearTimeout(timer);
+  });
+};
+
 // Whether a navigation to `destination` leaves the project at `routePayload`.
 // A save before the app suspends or backs up has no destination: it does not
 // leave the project, and waiting there would hold up the editors' saves.
@@ -49,8 +63,8 @@ const leavesProject = (destination, routePayload) => {
 };
 
 // Stores the files in the project open when the uploads start. Leaving that
-// project waits until they finish: its files and items can only be saved
-// while it is open. The batch registers itself rather than its page, because
+// project waits until they finish, for up to MAX_LEAVE_WAIT_MS: its files and
+// items can only be saved while it is open. The batch registers itself rather than its page, because
 // moving to another page of the same project does not stop it.
 export const processPendingUploads = async (options) => {
   const { appService } = options.deps;
@@ -62,7 +76,7 @@ export const processPendingUploads = async (options) => {
         return undefined;
       }
       // Navigation only waits for the batch; its caller handles a failure.
-      return batch.catch(() => {});
+      return waitForBatch(batch);
     },
   );
 

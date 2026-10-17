@@ -91,6 +91,39 @@ describe("processPendingUploads", () => {
     );
   });
 
+  it("stops waiting for uploads that never finish", async () => {
+    vi.useFakeTimers();
+    try {
+      const appService = createAppService();
+      const processFile = vi.fn(() => new Promise(() => {}));
+      void processPendingUploads({
+        deps: { ...createDeps(), appService },
+        files: [{ name: "stuck.png" }],
+        parentId: "folder-1",
+        pendingIdPrefix: "pending-image",
+        processFile,
+        onUploadError: vi.fn(),
+      });
+      await vi.advanceTimersByTimeAsync(0);
+      expect(processFile).toHaveBeenCalledOnce();
+
+      let leftProject = false;
+      const leaveProject = appService
+        .prepareNavigation({ path: "/projects", payload: undefined })
+        .then(() => {
+          leftProject = true;
+        });
+      await vi.advanceTimersByTimeAsync(119_999);
+      expect(leftProject).toBe(false);
+
+      await vi.advanceTimersByTimeAsync(1);
+      await leaveProject;
+      expect(leftProject).toBe(true);
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+
   it("leaves the project only after the uploads stored in it finish", async () => {
     let routePayload = { p: "project-1" };
     const appService = createAppService({ getPayload: () => routePayload });

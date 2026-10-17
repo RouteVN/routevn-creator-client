@@ -423,7 +423,8 @@ Pages that must persist local work before leaving should register that work with
 cleanup. Do not rely on asynchronous page cleanup for data required by the
 destination page. Work that can outlive its page, such as a resource upload
 batch, registers for its own duration instead, so leaving the project waits
-for it while moving between pages of the same project does not.
+for it, within a time limit, while moving between pages of the same project
+does not.
 
 ### Project-Backed Page Rendering
 
