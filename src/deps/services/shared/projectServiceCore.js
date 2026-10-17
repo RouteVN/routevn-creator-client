@@ -121,10 +121,11 @@ export const createProjectServiceCore = ({
     repositoryService.getEnsuredProjectId() || router.getPayload()?.p;
 
   const contentPatchesByProject = new Map();
-  // The repository each project last completed its content patches for. The
-  // route opens a project once and its pages ensure it many times; only the
-  // first ensure of an opened repository reads the patch markers.
-  const patchedRepositoryByProject = new Map();
+  // The repositories whose content patches completed. The route opens a project
+  // once and its pages ensure it many times; only the first ensure of an opened
+  // repository reads the patch markers. Held weakly, so a released repository
+  // can be freed.
+  const patchedRepositories = new WeakSet();
 
   const getRepositoryState = () => {
     const repository = repositoryService.getCachedRepository();
@@ -431,10 +432,7 @@ export const createProjectServiceCore = ({
 
   const ensureContentPatches = async (repository) => {
     const projectId = getCurrentProjectId();
-    if (
-      patchedRepositoryByProject.has(projectId) &&
-      patchedRepositoryByProject.get(projectId) === repository
-    ) {
+    if (patchedRepositories.has(repository)) {
       return;
     }
 
@@ -448,7 +446,7 @@ export const createProjectServiceCore = ({
 
     try {
       await patches;
-      patchedRepositoryByProject.set(projectId, repository);
+      patchedRepositories.add(repository);
     } finally {
       if (contentPatchesByProject.get(projectId) === patches) {
         contentPatchesByProject.delete(projectId);
