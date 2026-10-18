@@ -87,6 +87,47 @@ describe("sceneEditorLexical view", () => {
     expect(view).toContain("handler: handleDownloadCanvasClick");
   });
 
+  it("shows a notice in place of the canvas, without preview or download, when graphics cannot start", () => {
+    const source = readFileSync(
+      new URL(
+        "../../src/pages/sceneEditorLexical/sceneEditorLexical.view.yaml",
+        import.meta.url,
+      ),
+      "utf8",
+    );
+    const findBranches = (node, key, found = []) => {
+      if (Array.isArray(node)) {
+        node.forEach((item) => findBranches(item, key, found));
+      } else if (node && typeof node === "object") {
+        if (key in node) {
+          found.push(node);
+        }
+        Object.values(node).forEach((value) => findBranches(value, key, found));
+      }
+      return found;
+    };
+    const { template } = yaml.load(source);
+
+    // Phone and desktop.
+    const canvasBranches = findBranches(template, "$if isCanvasUnavailable");
+    expect(canvasBranches).toHaveLength(2);
+    for (const branch of canvasBranches) {
+      const notice = JSON.stringify(branch["$if isCanvasUnavailable"]);
+      expect(notice).toContain("rtgl-view#canvasUnavailableNotice");
+      expect(notice).toContain("${canvasUnavailableMessage}");
+      expect(notice).not.toContain("previewCanvasHost");
+      expect(JSON.stringify(branch.$else)).toContain(
+        "rvn-scene-editor-preview-canvas#previewCanvasHost",
+      );
+    }
+    const [controls] = findBranches(template, "$if !isCanvasUnavailable");
+    expect(JSON.stringify(controls)).toContain("rtgl-button#previewButton");
+    expect(JSON.stringify(controls)).toContain(
+      "rtgl-button#downloadCanvasButton",
+    );
+    expect(source).toContain(":previewHidden=${isCanvasUnavailable}");
+  });
+
   it("renders the mobile preview canvas without wrapper padding", () => {
     const view = readFileSync(
       new URL(

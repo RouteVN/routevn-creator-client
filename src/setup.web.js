@@ -20,6 +20,7 @@ import { createAudioService } from "./deps/services/audioService.js";
 import Subject from "./deps/subject.js";
 import Router from "./deps/clients/router.js";
 import { createGraphicsService } from "./deps/services/graphicsService.js";
+import { createGraphicsUnavailableNotifier } from "./deps/services/shared/graphicsUnavailableNotice.js";
 import { deriveProjectFormatVersionFromAppVersion } from "./internal/projectCompatibility.js";
 import { isVisualTestMode } from "./internal/visualTestMode.js";
 import { registerPrimitives } from "./primitives/registerPrimitives.js";
@@ -123,6 +124,7 @@ const apiService = createApiService();
 // Initialize async resources first
 const graphicsService = await createGraphicsService({
   subject,
+  onGraphicsUnavailable: createGraphicsUnavailableNotifier({ appService }),
   onRenderError: (error) => {
     console.error(error);
     errorReporter.capture(error, { operation: "graphics.render" });

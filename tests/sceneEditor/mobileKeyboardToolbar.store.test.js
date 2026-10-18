@@ -108,6 +108,18 @@ describe("mobileKeyboardToolbar.store", () => {
     ).toMatchObject({ title: "Redo", disabled: true, opacity: "0.4" });
   });
 
+  it("leaves Preview out of the More menu when the device cannot show it", () => {
+    const state = createInitialState();
+
+    expect(
+      selectViewData({
+        state,
+        props: { previewHidden: true },
+        i18n: EN_I18N,
+      }).moreMenuItems.map((item) => item.value),
+    ).toEqual(["sections-overview", "scene-settings"]);
+  });
+
   it("opens the More menu at its button and closes it", () => {
     const state = createInitialState();
 

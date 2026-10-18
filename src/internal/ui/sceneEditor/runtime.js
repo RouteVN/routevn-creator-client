@@ -130,6 +130,11 @@ const isSceneEditorPreviewVisible = (store) => {
   return store?.selectPreviewScene?.()?.previewVisible === true;
 };
 
+// Graphics could not start on this device, so the editor has no canvas.
+const isSceneEditorCanvasUnavailable = (store) => {
+  return store?.selectIsCanvasUnavailable?.() === true;
+};
+
 const waitForNextFrame = () =>
   new Promise((resolve) => {
     if (typeof requestAnimationFrame === "function") {
@@ -1357,6 +1362,9 @@ const prepareTemporaryPresentationProjectData = async (
 
 export const renderSceneEditorState = async (deps, payload = {}) => {
   const { store, graphicsService, refs } = deps;
+  if (isSceneEditorCanvasUnavailable(store)) {
+    return;
+  }
   const {
     preserveAnimationPlayback = false,
     skipAnimations = true,
@@ -1734,6 +1742,10 @@ export const resolveSceneEditorEntrySelection = (scene, { sectionId } = {}) => {
 
 export const updateSceneEditorSectionChanges = async (deps) => {
   const { store, graphicsService } = deps;
+  // The changes come from the engine that renders the canvas.
+  if (isSceneEditorCanvasUnavailable(store)) {
+    return;
+  }
   const timingStartedAt = getDebugNow();
   const selectedSectionId = store.selectSelectedSectionId();
   const sectionIds = getSceneSectionIds(store.selectScene?.());
@@ -1901,6 +1913,9 @@ export const restoreSceneEditorFromPreview = async (deps) => {
 
   store.hidePreviewScene();
   render();
+  if (isSceneEditorCanvasUnavailable(store)) {
+    return;
+  }
 
   resetAssetLoadCache("restore scene editor from preview");
   setSceneAssetLoading(deps, false);
@@ -1972,6 +1987,17 @@ export const renderSceneEditorCanvas = async (deps, payload) => {
       emitSceneEditorTiming("runtime.render-canvas.skipped", {
         durationMs: getDebugDurationMs(canvasStartedAt),
         reason: "preview-visible",
+        skipRender: payload?.skipRender === true,
+      });
+    }
+    return;
+  }
+
+  if (isSceneEditorCanvasUnavailable(store)) {
+    if (timingEnabled) {
+      emitSceneEditorTiming("runtime.render-canvas.skipped", {
+        durationMs: getDebugDurationMs(canvasStartedAt),
+        reason: "canvas-unavailable",
         skipRender: payload?.skipRender === true,
       });
     }

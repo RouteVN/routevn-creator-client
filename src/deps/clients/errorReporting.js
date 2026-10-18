@@ -1,3 +1,4 @@
+import { isGraphicsUnavailableError } from "../../internal/graphicsErrors.js";
 import { isDeviceId } from "./deviceIdentity.js";
 import {
   captureEvent,
@@ -216,7 +217,12 @@ export const createErrorReporter = ({
     };
   };
 
-  const sendErrorEvent = (event) => {
+  const sendErrorEvent = (event, hint) => {
+    // A device without WebGL is a limit of the device, and the app tells the
+    // user. It is not a bug to report.
+    if (isGraphicsUnavailableError(hint?.originalException)) {
+      return null;
+    }
     const source = isExplicitReport(event) ? "explicit" : "global";
     if (sentEvents[source] >= MAX_EVENTS_PER_SESSION) {
       return null;

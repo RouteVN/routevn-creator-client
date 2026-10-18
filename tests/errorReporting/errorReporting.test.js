@@ -397,6 +397,35 @@ describe("explicit error reporting through the SDK", () => {
     expect(JSON.stringify(events)).not.toContain("user@example.com");
   });
 
+  it("does not send a device that cannot create a WebGL context", async () => {
+    const reporter = createErrorReporter({
+      dsn: TEST_DSN,
+      runtime: "tauri",
+      captureGlobal: true,
+    });
+    const events = collectSentEvents();
+    const webGlFailure = new Error(
+      "This browser does not support WebGL. Try using the canvas renderer",
+    );
+
+    reporter.capture(webGlFailure, { operation: "sceneEditor.renderCanvas" });
+    globalThis.onerror(
+      `Uncaught ${webGlFailure.message}`,
+      "main.js",
+      1,
+      1,
+      webGlFailure,
+    );
+    reporter.capture(new Error("save failed"), {
+      operation: "resourcePage.mutation",
+    });
+    await reporter.flush();
+
+    expect(events.map((event) => event.exception.values[0].value)).toEqual([
+      "save failed",
+    ]);
+  });
+
   it("tags web reports with the web build's dist", async () => {
     vi.stubEnv("VITE_ROUTEVN_SENTRY_DSN", TEST_DSN);
     vi.stubEnv("VITE_ROUTEVN_SENTRY_ENVIRONMENT", "production");

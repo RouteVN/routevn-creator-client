@@ -224,6 +224,22 @@ already handled. It never shows UI. Handled errors are still shown through
   desktop file and SQL calls. Resource page mutations and scene editor saves
   show a message that asks the user to free up space and do not report these
   failures.
+- A device or web view that cannot create a WebGL context is not reported
+  either. Route Graphics offers WebGL and WebGPU only, so there is no renderer
+  to fall back to. `isGraphicsUnavailableError` in
+  `src/internal/graphicsErrors.js` matches Pixi's "does not support WebGL"
+  failure and the "CanvasRenderer is not yet implemented" failure of a device
+  with no WebGL at all. A context that could not be created is tried again
+  twice, after 0.5 s and 1.5 s, before the user is told, since the refusal may
+  be temporary. A device with no WebGL at all is not, because Pixi remembers
+  that for the session. `graphicsService.init` still rejects with it and calls its
+  `onGraphicsUnavailable` option, which every platform setup points at
+  `createGraphicsUnavailableNotifier`: one localized alert at a time, with the
+  technical details after it. The preview skips its own generic alert for this
+  error, and the reporter drops events for it. The scene editor stays open
+  without its canvas: it shows a short notice where the canvas would be, hides
+  the preview and canvas download controls, and skips every canvas render,
+  while lines and their actions can still be edited and saved.
 - Current call sites: project-open route failures, `runResourcePageMutation`
   thrown errors, engine render failures (`operation` `graphics.render`), and
   scene editor canvas renders that throw with no caller waiting for them

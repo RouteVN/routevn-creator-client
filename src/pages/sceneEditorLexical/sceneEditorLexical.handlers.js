@@ -74,6 +74,7 @@ import {
   selectSceneEditorCopy,
 } from "../../internal/ui/sceneEditor/sceneEditorCopy.js";
 import { withErrorDetails } from "../../internal/errorDetails.js";
+import { isGraphicsUnavailableError } from "../../internal/graphicsErrors.js";
 import {
   createSceneCanvasFileName,
   dataUrlToBlob,
@@ -1316,6 +1317,9 @@ const renderBackgroundTransformPositionPreview = (
   { transform, startTransform } = {},
 ) => {
   const { graphicsService, store } = deps;
+  if (store.selectIsCanvasUnavailable()) {
+    return false;
+  }
   const renderState = graphicsService?.engineSelectRenderState?.();
   if (!renderState || !startTransform) {
     return false;
@@ -2039,6 +2043,15 @@ export const handleAfterMount = async (deps) => {
     await initializeSceneEditorPage({
       ...deps,
       syncProjectState: syncStoreProjectState,
+    }).catch((error) => {
+      if (!isGraphicsUnavailableError(error)) {
+        throw error;
+      }
+      // Graphics could not start on this device, and the graphics service
+      // has told the user. Lines and their actions need no canvas, so the
+      // editor stays open without it.
+      store.markCanvasUnavailable();
+      setSceneEditorPageLoading(deps, false);
     });
     const projectInfo = await projectService.getCurrentProjectInfo();
     store.setProjectLanguage({ language: projectInfo.language });
@@ -3887,7 +3900,10 @@ export const handleToggleSectionsGraphView = (deps) => {
 };
 
 export const handleDownloadCanvasClick = async (deps) => {
-  const { appService, graphicsService, refs, subject } = deps;
+  const { appService, graphicsService, refs, store, subject } = deps;
+  if (store.selectIsCanvasUnavailable()) {
+    return;
+  }
   const copy = selectCopy(deps);
 
   try {
@@ -3930,8 +3946,13 @@ export const handleDownloadCanvasClick = async (deps) => {
 };
 
 export const handlePreviewClick = (deps) => {
+  const { store, render, appService, projectService } = deps;
+  // The preview needs graphics too, which this device could not start.
+  if (store.selectIsCanvasUnavailable()) {
+    return;
+  }
+
   const openPreview = async () => {
-    const { store, render, appService, projectService } = deps;
     const copy = selectCopy(deps);
     let didPersistDraft = false;
 

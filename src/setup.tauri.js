@@ -26,6 +26,7 @@ import { createApiService } from "./deps/services/apiService";
 import Subject from "./deps/subject";
 import Router from "./deps/clients/router";
 import { createGraphicsService } from "./deps/services/graphicsService";
+import { createGraphicsUnavailableNotifier } from "./deps/services/shared/graphicsUnavailableNotice.js";
 import { deriveProjectFormatVersionFromAppVersion } from "./internal/projectCompatibility.js";
 import { registerPrimitives } from "./primitives/registerPrimitives";
 
@@ -106,6 +107,7 @@ const apiService = createApiService();
 
 const graphicsService = await createGraphicsService({
   subject,
+  onGraphicsUnavailable: createGraphicsUnavailableNotifier({ appService }),
   projectMediaOrigin,
   onRenderError: (error) => {
     console.error(error);

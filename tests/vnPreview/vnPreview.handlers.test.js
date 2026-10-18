@@ -294,6 +294,46 @@ describe("vnPreview.handlers", () => {
     }
   });
 
+  it("exits the preview without a second alert when the device has no WebGL", async () => {
+    const { handleAfterMount } = await import(
+      "../../src/components/vnPreview/vnPreview.handlers.js"
+    );
+    // The graphics service has already told the user.
+    const failure = new Error(
+      "This browser does not support WebGL. Try using the canvas renderer",
+    );
+    const log = vi.spyOn(console, "error").mockImplementation(() => {});
+    const deps = {
+      projectService: {
+        ensureRepository: vi.fn().mockRejectedValue(failure),
+      },
+      refs: { previewSurface: { focus: vi.fn() } },
+      appService: { showAlert: vi.fn(), showToast: vi.fn() },
+      store: {
+        setAssetLoading: vi.fn(),
+        setLoadingProgress: vi.fn(),
+        selectIsPreviewLoading: vi.fn(() => false),
+        setLoadingDetailsVisible: vi.fn(),
+        selectLoadingDescription: vi.fn(() => "Opening project..."),
+        setPreviewReady: vi.fn(),
+      },
+      render: vi.fn(),
+      dispatchEvent: vi.fn(),
+      i18n: {
+        resourcePages: {},
+        scenesPage: {},
+        sceneEditorPage: { failedOpenPreview: "Failed to open preview" },
+      },
+    };
+    try {
+      await handleAfterMount(deps);
+      expect(deps.appService.showAlert).not.toHaveBeenCalled();
+      expect(deps.dispatchEvent.mock.calls[0][0].type).toBe("close");
+    } finally {
+      log.mockRestore();
+    }
+  });
+
   it("exits the preview when startup fails without an error value", async () => {
     const { handleAfterMount } = await import(
       "../../src/components/vnPreview/vnPreview.handlers.js"
