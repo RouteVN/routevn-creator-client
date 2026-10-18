@@ -68,12 +68,7 @@ final class RouteVNViewController: UIViewController, WKNavigationDelegate, WKScr
     private var webView: WKWebView!
     private var sqliteDatabases: [String: OpaquePointer] = [:]
     private var appActive = false
-    // A content process lost this soon after its page started loading counts
-    // as a rapid loss; this many in a row means the page cannot start.
-    private static let rapidContentProcessLossSeconds: TimeInterval = 30
-    private static let rapidContentProcessLossLimit = 2
-    private var pageLoadStartedAt: TimeInterval = 0
-    private var rapidContentProcessLosses = 0
+    private var rendererLossGuard = RendererLossGuard()
     private var reloadWhenActive = false
     private var canGoBackInWebApp = false
     private var pendingDocumentPicker: PendingDocumentPicker?
@@ -207,6 +202,11 @@ final class RouteVNViewController: UIViewController, WKNavigationDelegate, WKScr
     }
 
     func setAppActive(_ active: Bool) {
+        // Only a change from active counts: didFinish also reports the launch
+        // state, which is not yet active.
+        if appActive, !active {
+            rendererLossGuard.appLeftForeground()
+        }
         appActive = active
         if active, reloadWhenActive {
             // The page is gone. didFinish sets the active state on the new one.
@@ -234,7 +234,7 @@ final class RouteVNViewController: UIViewController, WKNavigationDelegate, WKScr
     }
 
     private func loadInitialAppURL() {
-        pageLoadStartedAt = ProcessInfo.processInfo.systemUptime
+        rendererLossGuard.pageLoadStarted(at: ProcessInfo.processInfo.systemUptime)
         if let url = devServerURL {
             recordDevEvent("Loading \(url.absoluteString)")
             webView.load(URLRequest(url: url, cachePolicy: .reloadIgnoringLocalCacheData, timeoutInterval: 15))
@@ -306,12 +306,10 @@ final class RouteVNViewController: UIViewController, WKNavigationDelegate, WKScr
     // Load the app again (see "WebView renderer loss" in
     // docs/mobile-crash-reporting.md). Nothing is reported, since WebKit does
     // not say which it was. If the process keeps dying right after its page
-    // starts loading, crash, so a page that cannot start does not reload forever.
+    // starts loading while the app stays active, crash, so a page that cannot
+    // start does not reload forever (see RendererLossGuard).
     func webViewWebContentProcessDidTerminate(_ webView: WKWebView) {
-        let sinceLoad = ProcessInfo.processInfo.systemUptime - pageLoadStartedAt
-        let rapid = sinceLoad < Self.rapidContentProcessLossSeconds
-        rapidContentProcessLosses = rapid ? rapidContentProcessLosses + 1 : 0
-        if rapidContentProcessLosses >= Self.rapidContentProcessLossLimit {
+        if rendererLossGuard.lossMeansPageCannotStart(at: ProcessInfo.processInfo.systemUptime) {
             fatalError("WebKit content process lost repeatedly")
         }
         // Page SQL runs on this main thread. Roll back any transaction the dead
@@ -690,10 +688,34 @@ final class RouteVNViewController: UIViewController, WKNavigationDelegate, WKScr
             "ok": false,
             "error": [
                 "message": error.localizedDescription,
-                "code": (error as? ProjectFolderSetupError)?.rawValue ?? String(describing: type(of: error))
+                "code": bridgeFailureCode(error)
             ]
         ]
         evaluateJavaScriptCallback(name: "__routeVNIOSBridgeResult", result: result)
+    }
+
+    /// The code JavaScript reads from a failed bridge call. A write refused for
+    /// lack of space is "storageFull", because the system's message for it
+    /// follows the device language.
+    private func bridgeFailureCode(_ error: Error) -> String {
+        if isStorageFull(error) {
+            return "storageFull"
+        }
+        return (error as? ProjectFolderSetupError)?.rawValue ?? String(describing: type(of: error))
+    }
+
+    private func isStorageFull(_ error: Error) -> Bool {
+        let nsError = error as NSError
+        if nsError.domain == NSCocoaErrorDomain && nsError.code == CocoaError.fileWriteOutOfSpace.rawValue {
+            return true
+        }
+        if nsError.domain == NSPOSIXErrorDomain && nsError.code == Int(ENOSPC) {
+            return true
+        }
+        if let underlying = nsError.userInfo[NSUnderlyingErrorKey] as? Error {
+            return isStorageFull(underlying)
+        }
+        return false
     }
 
     private func evaluateJavaScriptCallback(name: String, result: [String: Any]) {

@@ -421,7 +421,18 @@ Page handlers should not repeat route-level repository boot logic.
 Pages that must persist local work before leaving should register that work with
 `appService.registerBeforeNavigation(...)` during mount and unregister it during
 cleanup. Do not rely on asynchronous page cleanup for data required by the
-destination page.
+destination page. Work that can outlive its page, such as a resource upload
+batch, registers for its own duration instead, so leaving the project waits
+for it, within a time limit and with a progress message, while moving between
+pages of the same project does not.
+
+A preparation that throws cancels the navigation, and the user sees nothing for
+a link or sidebar click. Saving before the app goes to the background or quits
+cannot wait on a failure at all; it only reports it. A page whose save can fail
+should therefore handle the failure itself and resolve: drop only the changes
+that failed, tell the user with a localized alert that names the location and
+carries the error details, and report the error. The Scene and Layout editors
+do this.
 
 ### Project-Backed Page Rendering
 
