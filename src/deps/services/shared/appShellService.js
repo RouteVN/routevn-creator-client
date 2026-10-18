@@ -47,6 +47,16 @@ const applyThemeToDocument = (
   return resolvedTheme;
 };
 
+// Screen readers, hyphenation and spellcheck read the document language.
+const applyLanguageToDocument = (
+  language,
+  root = typeof document === "undefined" ? undefined : document,
+) => {
+  if (root?.documentElement) {
+    root.documentElement.lang = language;
+  }
+};
+
 const getActiveElement = (root = document) => {
   let active = root.activeElement;
   while (active && active.shadowRoot && active.shadowRoot.activeElement) {
@@ -312,6 +322,11 @@ export const createAppShellService = ({
 
     applyTheme(theme) {
       return applyThemeToDocument(theme);
+    },
+
+    // `language` is a BCP 47 tag, such as an app locale id.
+    setDocumentLanguage(language) {
+      applyLanguageToDocument(language);
     },
 
     getAppVersion() {

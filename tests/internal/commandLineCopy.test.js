@@ -2,9 +2,29 @@ import { describe, expect, it } from "vitest";
 import {
   formatCommandLineActionCount,
   localizeCommandLineForm,
+  localizeCommandLineText,
   selectCommandLineCopy,
 } from "../../src/internal/ui/sceneEditor/commandLineCopy.js";
-import { EN_I18N, RU_I18N } from "../support/i18n.js";
+import { getRuntimeFieldItems } from "../../src/internal/runtimeFields.js";
+import {
+  EN_I18N,
+  ES_I18N,
+  JA_I18N,
+  PT_I18N,
+  RU_I18N,
+  TH_I18N,
+  ZH_HANS_I18N,
+} from "../support/i18n.js";
+
+const LOCALE_I18N = {
+  en: EN_I18N,
+  ja: JA_I18N,
+  "zh-hans": ZH_HANS_I18N,
+  es: ES_I18N,
+  th: TH_I18N,
+  ru: RU_I18N,
+  pt: PT_I18N,
+};
 
 describe("command-line action counts", () => {
   it("picks the singular or plural English template", () => {
@@ -47,4 +67,55 @@ describe("command-line form layout", () => {
     expect(form.rowStackAt).toBe("lg");
     expect(form.fields[1].stackAt).toBe("sm");
   });
+});
+
+describe("runtime field descriptions", () => {
+  it.each(Object.keys(LOCALE_I18N))(
+    "translates every runtime field description in %s",
+    (locale) => {
+      const copy = selectCommandLineCopy(LOCALE_I18N[locale]);
+      const englishCopy = selectCommandLineCopy(EN_I18N);
+
+      for (const field of Object.values(getRuntimeFieldItems())) {
+        const description = localizeCommandLineText(field.description, copy);
+        expect(description).toEqual(expect.any(String));
+        expect(localizeCommandLineText(field.description, englishCopy)).toBe(
+          field.description,
+        );
+        if (locale !== "en") {
+          expect(description).not.toBe(field.description);
+        }
+      }
+    },
+  );
+
+  it("shows a translated description in the runtime action form", () => {
+    const form = localizeCommandLineForm(
+      {
+        fields: [
+          {
+            name: "value",
+            type: "input-number",
+            description: "Controls the default dialogue text reveal speed.",
+          },
+        ],
+      },
+      selectCommandLineCopy(PT_I18N),
+    );
+
+    expect(form.fields[0].description).toBe(
+      "Define a velocidade predefinida com que o texto do diálogo aparece.",
+    );
+  });
+});
+
+describe("visual resource type labels", () => {
+  it.each(["Image", "Video", "Spritesheet", "Layout"])(
+    "translates %s",
+    (label) => {
+      const copy = selectCommandLineCopy(JA_I18N);
+
+      expect(localizeCommandLineText(label, copy)).not.toBe(label);
+    },
+  );
 });

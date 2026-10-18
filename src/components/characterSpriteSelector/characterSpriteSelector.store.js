@@ -38,8 +38,13 @@ const getCharacter = (state, characterId) => {
   return item?.type === "character" ? item : undefined;
 };
 
-const selectSpriteGroups = (state) =>
-  buildSpriteSelectionGroups(getCharacter(state, state.characterId));
+// groupLabel names a sprite group that has no name; see
+// buildSpriteSelectionGroups.
+const selectSpriteGroups = (state, groupLabel) =>
+  buildSpriteSelectionGroups(
+    getCharacter(state, state.characterId),
+    groupLabel,
+  );
 
 // The tabs list the groups top first, so the top group is picked first.
 const selectCurrentSpriteGroup = (state) => {
@@ -197,7 +202,7 @@ export const selectViewData = ({ state, i18n }) => {
     charactersLabel: copy.charactersLabel,
     showGroupTabs: hasSpriteGroups && character.spriteGroups.length > 1,
     groupTabs: orderSpriteSelectionGroupsTopFirst(
-      selectSpriteGroups(state),
+      selectSpriteGroups(state, i18n.charactersPage.spriteGroupLabel),
     ).map((group) => ({
       id: group.id,
       label: hasSpriteGroups ? group.name : copy.defaultSpriteGroupName,

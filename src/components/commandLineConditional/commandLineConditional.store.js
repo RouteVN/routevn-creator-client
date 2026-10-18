@@ -159,16 +159,21 @@ const getSimpleCondition = (when = {}) => {
   };
 };
 
-const formatConditionValue = (value) => {
+// A boolean is shown with the same label as in the value select.
+const formatConditionValue = (value, copy) => {
   if (Array.isArray(value)) {
-    return value.map(formatConditionValue).join(", ");
+    return value.map((item) => formatConditionValue(item, copy)).join(", ");
   }
 
   if (typeof value === "string") {
     return value;
   }
 
-  if (typeof value === "number" || typeof value === "boolean") {
+  if (typeof value === "boolean") {
+    return localizeCommandLineText(value ? "True" : "False", copy);
+  }
+
+  if (typeof value === "number") {
     return String(value);
   }
 
@@ -197,7 +202,7 @@ const getBranchSummary = (branch, variablesData = {}, copy = {}) => {
       CONDITION_OPERATOR_LABELS[simpleCondition.op] ?? simpleCondition.op,
       copy,
     );
-    return `${variableName} ${operatorLabel} ${formatConditionValue(simpleCondition.value)}`;
+    return `${variableName} ${operatorLabel} ${formatConditionValue(simpleCondition.value, copy)}`;
   }
 
   return localizeCommandLineText("Unsupported condition", copy);
@@ -451,12 +456,12 @@ export const selectViewData = ({ state, props, i18n }) => {
   const actionCount = countActions(state.tempBranch.actions);
 
   const booleanOptions = [
-    { value: "true", label: "true" },
-    { value: "false", label: "false" },
+    { value: "true", label: "True" },
+    { value: "false", label: "False" },
   ];
   const booleanOneOfOptions = [
-    { value: true, label: "true" },
-    { value: false, label: "false" },
+    { value: true, label: "True" },
+    { value: false, label: "False" },
   ];
   const booleanValue =
     state.tempBranch.value === true

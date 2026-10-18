@@ -13,6 +13,7 @@ import {
 import { getFragmentLayoutOptions } from "./support/layoutFragments.js";
 import { applyLayoutItemFieldChange } from "./support/layoutEditorMutations.js";
 import { getLayoutEditorCreateDefinition } from "../../internal/layoutEditorElementRegistry.js";
+import { createLayoutEditorElementTemplate } from "./support/layoutEditorViewData.js";
 import {
   persistLayoutEditorElementUpdate,
   shouldPersistLayoutEditorFieldImmediately,
@@ -1370,24 +1371,27 @@ const handleFileExplorerActionUnsafe = async (deps, payload) => {
     const parentId = payload?._event?.detail?.itemId ?? null;
     const projectResolution = store.selectProjectResolution();
 
-    const slotContainer = getLayoutEditorCreateDefinition(
+    const slotContainer = createLayoutEditorElementTemplate(
       "container-save-load-slot",
       {
         projectResolution,
+        copy,
       },
-    ).template;
-    const slotImage = getLayoutEditorCreateDefinition(
+    );
+    const slotImage = createLayoutEditorElementTemplate(
       "sprite-save-load-slot-image",
       {
         projectResolution,
+        copy,
       },
-    ).template;
-    const slotDate = getLayoutEditorCreateDefinition(
+    );
+    const slotDate = createLayoutEditorElementTemplate(
       "text-save-load-slot-date",
       {
         projectResolution,
+        copy,
       },
-    ).template;
+    );
 
     const createContainerResult = await projectService.createLayoutElement({
       layoutId,

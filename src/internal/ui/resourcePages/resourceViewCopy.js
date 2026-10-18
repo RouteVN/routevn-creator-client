@@ -26,8 +26,10 @@ export const selectResourceViewCopy = ({
   }
 
   return {
+    addText: resourceCopy.addText ?? "Add",
     backButtonLabel: resourceCopy.backButtonLabel ?? "Back",
     clearButton: resourceCopy.clearButton ?? "Clear",
+    deleteMenuItem: resourceCopy.deleteMenuItem ?? "Delete",
     dropFilesMessage:
       resourceCopy.dropFilesMessage ?? "Drop files to upload to {folder}",
     emptyMessage,
@@ -45,6 +47,7 @@ export const selectResourceViewCopy = ({
     searchPlaceholder: resourceCopy.searchPlaceholder ?? "Search...",
     spritesButtonLabel: copy.spritesButtonLabel ?? "Sprites",
     tagFilterPlaceholder: resourceCopy.tagFilterPlaceholder ?? "Filter tags",
+    typeSummaryTemplate: resourceCopy.typeSummaryTemplate ?? "Type: {type}",
     updateToSetPreviewLabel:
       resourceCopy.updateToSetPreviewLabel ?? "Update to set preview",
     zoomLabel: resourceCopy.zoomLabel ?? "Zoom",

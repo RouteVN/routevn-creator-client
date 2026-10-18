@@ -26,7 +26,6 @@ export const createInitialState = () => ({
     x: 0,
     y: 0,
     targetItemId: undefined,
-    items: [],
   },
 });
 
@@ -45,9 +44,6 @@ export const showContextMenu = ({ state }, { itemId, x, y } = {}) => {
   state.dropdownMenu.x = x;
   state.dropdownMenu.y = y;
   state.dropdownMenu.targetItemId = itemId;
-  state.dropdownMenu.items = [
-    { label: "Delete", type: "item", value: "delete-item" },
-  ];
 };
 
 export const hideContextMenu = ({ state }, _payload = {}) => {
@@ -55,7 +51,6 @@ export const hideContextMenu = ({ state }, _payload = {}) => {
   state.dropdownMenu.x = 0;
   state.dropdownMenu.y = 0;
   state.dropdownMenu.targetItemId = undefined;
-  state.dropdownMenu.items = [];
 };
 
 export const selectDropdownMenu = ({ state }) => state.dropdownMenu;
@@ -139,7 +134,7 @@ export const clearSyncRenderFrameId = ({ state }) => {
 
 export const selectSyncRenderFrameId = ({ state }) => state.syncRenderFrameId;
 
-export const selectViewData = ({ state, props, i18n }) => {
+export const selectViewData = ({ state, props, i18n = {} }) => {
   const mobileLayout = parseBooleanProp(props.mobileLayout);
   const hasActiveTagFilter = (props.selectedTagFilterValues?.length ?? 0) > 0;
   const searchQuery = props.searchQuery ?? "";
@@ -269,9 +264,17 @@ export const selectViewData = ({ state, props, i18n }) => {
     ),
     emptyMessage: props.emptyMessage ?? viewCopy.emptyMessage,
     viewCopy,
-    addText: props.addText ?? "Add Character",
+    addText:
+      props.addText ??
+      i18n.charactersPage?.addCharacterButton ??
+      "Add Character",
     mobileLayout,
     scrollBottomPadding,
-    dropdownMenu: state.dropdownMenu,
+    dropdownMenu: {
+      ...state.dropdownMenu,
+      items: [
+        { label: viewCopy.deleteMenuItem, type: "item", value: "delete-item" },
+      ],
+    },
   };
 };

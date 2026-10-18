@@ -18,7 +18,7 @@ const formatDuration = (duration, copy) => {
     .padStart(2, "0")}`;
 };
 
-const buildDetailFields = (item, { copy } = {}) => {
+const buildDetailFields = (item, { copy, dateTime } = {}) => {
   if (!item) {
     return [];
   }
@@ -46,7 +46,7 @@ const buildDetailFields = (item, { copy } = {}) => {
     {
       type: "text",
       label: copy.fileSizeLabel,
-      value: formatFileSize(item.fileSize),
+      value: formatFileSize(item.fileSize, dateTime),
     },
     {
       type: "text",

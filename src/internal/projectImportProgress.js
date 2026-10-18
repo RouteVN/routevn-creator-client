@@ -14,8 +14,9 @@ const toPercent = (current, total) => {
 
 // Progress dialog view for one native import event. Stages: "downloading"
 // (bytes received of the content length, total 0 when unknown), "extracting"
-// (uncompressed bytes written of the declared total) and "finishing".
-export const createProjectImportProgressView = ({ copy, event }) => {
+// (uncompressed bytes written of the declared total) and "finishing". Sizes
+// are formatted for the `dateTime` catalog of the active locale.
+export const createProjectImportProgressView = ({ copy, dateTime, event }) => {
   const current = Math.max(0, Number(event?.current) || 0);
   const total = Math.max(0, Number(event?.total) || 0);
 
@@ -23,8 +24,8 @@ export const createProjectImportProgressView = ({ copy, event }) => {
     if (total > 0) {
       return {
         status: formatCopy(copy.importDownloadingStatus, {
-          received: formatFileSize(current),
-          total: formatFileSize(total),
+          received: formatFileSize(current, dateTime),
+          total: formatFileSize(total, dateTime),
           percent: String(toPercent(current, total)),
         }),
         progress: { current: Math.min(current, total), total },
@@ -32,7 +33,7 @@ export const createProjectImportProgressView = ({ copy, event }) => {
     }
     return {
       status: formatCopy(copy.importDownloadingUnknownStatus, {
-        received: formatFileSize(current),
+        received: formatFileSize(current, dateTime),
       }),
       progress: {},
     };

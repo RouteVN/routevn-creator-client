@@ -56,6 +56,8 @@ export const activateAppLocale = async ({
 
   await localeService?.set?.(nextLocale);
   const activeLocale = localeService?.current?.() ?? nextLocale;
+  // App locale ids are BCP 47 tags, so the document can use them directly.
+  appService?.setDocumentLanguage?.(activeLocale);
 
   if (persist && activeLocale === nextLocale) {
     appService?.setUserConfig?.(APP_LOCALE_CONFIG_KEY, activeLocale);

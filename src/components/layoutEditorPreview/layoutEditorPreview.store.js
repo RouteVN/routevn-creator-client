@@ -21,6 +21,7 @@ import { toCharacterSelectOptions } from "../../internal/characterOptions.js";
 import { buildCharacterSpritePreviewLayer } from "../../internal/characterSpritePreview.js";
 import { getImageSelectorResources } from "../../internal/imageSelectorResources.js";
 import { isTouchUiConfig } from "../../internal/ui/resourcePages/mobileResourcePage.js";
+import { selectRuntimeFieldTexts } from "../../internal/ui/runtimeFieldCopy.js";
 
 const EMPTY_LAYOUT_DATA = {
   items: {},
@@ -690,6 +691,7 @@ export const selectViewData = ({ state, constants, props = {}, i18n }) => {
     variablesData: state.repositoryState.variables,
     previewVariableValues: state.previewVariableValues,
     labels: createPreviewVariablesFormLabels(i18n),
+    runtimeFieldTexts: selectRuntimeFieldTexts(i18n),
   });
   const inputFieldsViewData = createPreviewInputFieldsViewData({
     currentLayoutId: layoutState.id,

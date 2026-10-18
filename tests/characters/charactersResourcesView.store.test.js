@@ -1,8 +1,10 @@
 import { describe, expect, it } from "vitest";
 import {
   createInitialState,
+  hideContextMenu,
   selectViewData,
   setProgressiveRenderedItemCount,
+  showContextMenu,
 } from "../../src/components/charactersResourcesView/charactersResourcesView.store.js";
 
 describe("charactersResourcesView.store", () => {
@@ -78,5 +80,35 @@ describe("charactersResourcesView.store", () => {
         showEmptyAdd: true,
       }),
     );
+  });
+
+  it("shows a localized Delete item in the character context menu", () => {
+    const state = createInitialState();
+    const props = {
+      groups: [{ id: "folder-1", children: [{ id: "character-1" }] }],
+    };
+    const i18n = {
+      resourcePages: { deleteMenuItem: "Apagar" },
+      charactersPage: { addCharacterButton: "Adicionar personagem" },
+    };
+
+    showContextMenu({ state }, { itemId: "character-1", x: 10, y: 20 });
+    const openViewData = selectViewData({ state, props, i18n });
+
+    expect(openViewData.dropdownMenu).toEqual({
+      isOpen: true,
+      x: 10,
+      y: 20,
+      targetItemId: "character-1",
+      items: [{ label: "Apagar", type: "item", value: "delete-item" }],
+    });
+    expect(openViewData.addText).toBe("Adicionar personagem");
+
+    hideContextMenu({ state });
+    const closedViewData = selectViewData({ state, props, i18n });
+    expect(closedViewData.dropdownMenu).toMatchObject({
+      isOpen: false,
+      targetItemId: undefined,
+    });
   });
 });

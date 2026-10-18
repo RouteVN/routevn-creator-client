@@ -21,4 +21,28 @@ describe("app locale", () => {
     expect(activeLocale).toBe("en");
     expect(appService.setUserConfig).not.toHaveBeenCalled();
   });
+
+  it("sets the document language to the active locale", async () => {
+    let currentLocale = "en";
+    const appService = {
+      setUserConfig: vi.fn(),
+      setDocumentLanguage: vi.fn(),
+    };
+    const localeService = {
+      available: vi.fn(() => ["en", "pt"]),
+      current: vi.fn(() => currentLocale),
+      set: vi.fn(async (locale) => {
+        currentLocale = locale;
+      }),
+    };
+
+    await activateAppLocale({
+      appService,
+      localeService,
+      locale: "pt",
+      persist: false,
+    });
+
+    expect(appService.setDocumentLanguage).toHaveBeenCalledWith("pt");
+  });
 });

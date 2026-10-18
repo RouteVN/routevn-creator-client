@@ -823,6 +823,44 @@ describe("project page handlers", () => {
     );
   });
 
+  it("leads a failed project export alert with the localized message", async () => {
+    const deps = {
+      appService: {
+        getPlatform: vi.fn(() => "android"),
+        getCurrentProjectEntry: vi.fn(() => ({
+          id: "project-1",
+          source: "local",
+        })),
+        openFolderPicker: vi.fn(async () => ({ uri: "content://exports" })),
+        showAlert: vi.fn(),
+      },
+      projectService: {
+        exportProjectFolder: vi.fn(async () => {
+          throw new Error("Failed to finalize project export.");
+        }),
+      },
+      store: {
+        closeProjectActionMenu: vi.fn(),
+        setProjectExportLoading: vi.fn(),
+      },
+      render: vi.fn(),
+      i18n: EN_I18N,
+    };
+
+    await handleProjectActionMenuClickItem(deps, {
+      _event: { detail: { item: { value: "export" } } },
+    });
+
+    const copy = EN_I18N.projectPage;
+    expect(deps.appService.showAlert).toHaveBeenCalledWith({
+      message: `${copy.failedExportProject}\n\n${copy.errorDetailsLabel}\nFailed to finalize project export.`,
+      title: copy.errorTitle,
+    });
+    expect(deps.store.setProjectExportLoading).toHaveBeenLastCalledWith({
+      isLoading: false,
+    });
+  });
+
   it("persists project language from the edit form", async () => {
     const nextProjectInfo = {
       name: "Project One Updated",

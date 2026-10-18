@@ -72,6 +72,7 @@ import {
   filterTemplateFileIds,
   resolveTemplateFontsForLanguage,
 } from "../../../internal/defaultTemplateFonts.js";
+import { createProjectFolderNotEmptyError } from "../../../internal/projectInitialization.js";
 
 const PROJECT_INFO_KEY = "projectInfo";
 const CREATOR_VERSION_KEY = "creatorVersion";
@@ -667,7 +668,9 @@ export const createTauriProjectServiceAdapters = ({
     return filePicker.saveFilePicker({
       title: options.title || "Save Distribution ZIP",
       defaultPath: `${zipName}.zip`,
-      filters: [{ name: "ZIP Archive", extensions: ["zip"] }],
+      filters: [
+        { name: options.fileTypeName ?? "ZIP Archive", extensions: ["zip"] },
+      ],
     });
   };
 
@@ -679,7 +682,12 @@ export const createTauriProjectServiceAdapters = ({
     return filePicker.saveFilePicker({
       title: options.title || "Save Windows Executable",
       defaultPath: `${exeName}.exe`,
-      filters: [{ name: "Windows Executable", extensions: ["exe"] }],
+      filters: [
+        {
+          name: options.fileTypeName ?? "Windows Executable",
+          extensions: ["exe"],
+        },
+      ],
     });
   };
 
@@ -691,7 +699,12 @@ export const createTauriProjectServiceAdapters = ({
     return filePicker.saveFilePicker({
       title: options.title || "Save Windows Installer",
       defaultPath: `${installerName} Setup.exe`,
-      filters: [{ name: "Windows Installer", extensions: ["exe"] }],
+      filters: [
+        {
+          name: options.fileTypeName ?? "Windows Installer",
+          extensions: ["exe"],
+        },
+      ],
     });
   };
 
@@ -703,7 +716,12 @@ export const createTauriProjectServiceAdapters = ({
     return filePicker.saveFilePicker({
       title: options.title || "Save macOS Application",
       defaultPath: `${applicationName}.app.zip`,
-      filters: [{ name: "macOS Application Archive", extensions: ["zip"] }],
+      filters: [
+        {
+          name: options.fileTypeName ?? "macOS Application Archive",
+          extensions: ["zip"],
+        },
+      ],
     });
   };
 
@@ -1098,9 +1116,7 @@ export const createTauriProjectServiceAdapters = ({
 
       const projectEntries = await readDir(projectPath);
       if (projectEntries.length > 0) {
-        throw new Error(
-          "The selected folder must be empty. Please choose an empty folder for your new project.",
-        );
+        throw createProjectFolderNotEmptyError();
       }
 
       const filesPath = await join(projectPath, "files");

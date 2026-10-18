@@ -107,6 +107,23 @@ import {
 } from "./lexicalSceneDocumentReferences.js";
 
 const DEFAULT_PLACEHOLDER = "";
+// English defaults for the context and variable menus. The owning component
+// passes localized labels through the `menuLabels` property. `variableTypes`
+// maps a variable type to the text shown after the variable name; a type
+// without a label shows as is.
+const DEFAULT_MENU_LABELS = Object.freeze({
+  changeVariable: "Change variable",
+  removeVariable: "Remove variable",
+  addTextStyle: "Add text style",
+  editTextStyle: "Edit text style",
+  removeTextStyle: "Remove text style",
+  addRubyText: "Add ruby text",
+  editRubyText: "Edit ruby text",
+  removeRubyText: "Remove ruby text",
+  noVariables: "No variables",
+  noTextStyles: "No text styles",
+  variableTypes: Object.freeze({}),
+});
 const LEFT_GUTTER_WIDTH_WITH_NUMBERS = 60;
 const LEFT_GUTTER_WIDTH_WITHOUT_NUMBERS = 26;
 const DEFAULT_RIGHT_GUTTER_WIDTH = 24;
@@ -1257,6 +1274,7 @@ export class LexicalSceneDocumentEditorElement extends HTMLElement {
       },
       mentionMenu: createClosedMentionMenuState(),
       placeholder: DEFAULT_PLACEHOLDER,
+      menuLabels: DEFAULT_MENU_LABELS,
     };
 
     this.refs = {};
@@ -1717,6 +1735,28 @@ export class LexicalSceneDocumentEditorElement extends HTMLElement {
 
   get mentionTargets() {
     return normalizeMentionTargets(this.state.mentionTargets);
+  }
+
+  // Menus read these labels when they open, so new labels apply to the next
+  // menu that opens.
+  set menuLabels(value) {
+    const menuLabels = {};
+    for (const [key, defaultLabel] of Object.entries(DEFAULT_MENU_LABELS)) {
+      menuLabels[key] = value?.[key] ?? defaultLabel;
+    }
+    this.state.menuLabels = menuLabels;
+  }
+
+  get menuLabels() {
+    return this.state.menuLabels;
+  }
+
+  getVariableTypeLabel(variableType) {
+    if (!variableType) {
+      return "";
+    }
+
+    return this.state.menuLabels.variableTypes[variableType] ?? variableType;
   }
 
   set selectedLineId(value) {
@@ -4614,44 +4654,20 @@ export class LexicalSceneDocumentEditorElement extends HTMLElement {
     const richTextState = this.getReferenceRichTextState(
       referenceSnapshot.nodeKey,
     );
-    const hasTextStyle = !!richTextState.textStyleId;
-    const hasFurigana = !!richTextState.furigana;
+    const { changeVariable, removeVariable } = this.state.menuLabels;
     menu.items = [
       {
         id: "change-reference",
         type: "item",
-        label: "Change variable",
+        label: changeVariable,
       },
       {
         id: "remove-reference",
         type: "item",
-        label: "Remove variable",
+        label: removeVariable,
       },
-      {
-        id: hasTextStyle ? "edit-text-style" : "add-text-style",
-        type: "item",
-        label: hasTextStyle ? "Edit text style" : "Add text style",
-      },
-      {
-        id: hasFurigana ? "edit-furigana" : "add-furigana",
-        type: "item",
-        label: hasFurigana ? "Edit ruby text" : "Add ruby text",
-      },
+      ...this.getRichTextMenuItems(richTextState),
     ];
-    if (hasTextStyle) {
-      menu.items.push({
-        id: "remove-text-style",
-        type: "item",
-        label: "Remove text style",
-      });
-    }
-    if (hasFurigana) {
-      menu.items.push({
-        id: "remove-furigana",
-        type: "item",
-        label: "Remove ruby text",
-      });
-    }
 
     menu.x = this.selectionMenuPosition.x;
     menu.y = this.selectionMenuPosition.y;
@@ -4666,7 +4682,7 @@ export class LexicalSceneDocumentEditorElement extends HTMLElement {
         {
           id: "no-reference-targets",
           type: "item",
-          label: "No variables",
+          label: this.state.menuLabels.noVariables,
           disabled: true,
         },
       ];
@@ -4676,7 +4692,7 @@ export class LexicalSceneDocumentEditorElement extends HTMLElement {
       id: `reference:${target.id}`,
       type: "item",
       label: target.label,
-      suffixText: target.variableType || "",
+      suffixText: this.getVariableTypeLabel(target.variableType),
       referenceResourceId: target.id,
     }));
   }
@@ -5545,13 +5561,56 @@ export class LexicalSceneDocumentEditorElement extends HTMLElement {
     });
   }
 
+  getRichTextMenuItems(richTextState = {}) {
+    const {
+      addTextStyle,
+      editTextStyle,
+      removeTextStyle,
+      addRubyText,
+      editRubyText,
+      removeRubyText,
+    } = this.state.menuLabels;
+    const hasTextStyle = !!richTextState.textStyleId;
+    const hasFurigana = !!richTextState.furigana;
+    const items = [
+      {
+        id: hasTextStyle ? "edit-text-style" : "add-text-style",
+        type: "item",
+        label: hasTextStyle ? editTextStyle : addTextStyle,
+      },
+      {
+        id: hasFurigana ? "edit-furigana" : "add-furigana",
+        type: "item",
+        label: hasFurigana ? editRubyText : addRubyText,
+      },
+    ];
+
+    if (hasTextStyle) {
+      items.push({
+        id: "remove-text-style",
+        type: "item",
+        label: removeTextStyle,
+      });
+    }
+
+    if (hasFurigana) {
+      items.push({
+        id: "remove-furigana",
+        type: "item",
+        label: removeRubyText,
+      });
+    }
+
+    return items;
+  }
+
   getTextStyleMenuItems() {
     if (this.state.textStyles.length === 0) {
       return [
         {
           id: "no-text-styles",
           type: "item",
-          label: "No text styles",
+          label: this.state.menuLabels.noTextStyles,
           disabled: true,
         },
       ];
@@ -5596,43 +5655,13 @@ export class LexicalSceneDocumentEditorElement extends HTMLElement {
     const richTextState = this.getRichTextStateForSelectionSnapshot(
       this.pendingSelectionSnapshot,
     );
-    const hasTextStyle = !!richTextState.textStyleId;
-    const hasFurigana = !!richTextState.furigana;
-    const actions = [
-      {
-        id: hasTextStyle ? "edit-text-style" : "add-text-style",
-        type: "item",
-        label: hasTextStyle ? "Edit text style" : "Add text style",
-      },
-      {
-        id: hasFurigana ? "edit-furigana" : "add-furigana",
-        type: "item",
-        label: hasFurigana ? "Edit ruby text" : "Add ruby text",
-      },
-    ];
-
-    if (hasTextStyle) {
-      actions.push({
-        id: "remove-text-style",
-        type: "item",
-        label: "Remove text style",
-      });
-    }
-
-    if (hasFurigana) {
-      actions.push({
-        id: "remove-furigana",
-        type: "item",
-        label: "Remove ruby text",
-      });
-    }
 
     this.selectionMenuPosition = {
       x: String(event.clientX),
       y: String(event.clientY),
     };
 
-    menu.items = actions;
+    menu.items = this.getRichTextMenuItems(richTextState);
     menu.x = this.selectionMenuPosition.x;
     menu.y = this.selectionMenuPosition.y;
     menu.place = "bs";
@@ -9541,7 +9570,7 @@ export class LexicalSceneDocumentEditorElement extends HTMLElement {
       id: `mention:${item.id}`,
       type: "item",
       label: item.label,
-      suffixText: item.variableType ?? "",
+      suffixText: this.getVariableTypeLabel(item.variableType),
     }));
     const nextX = String(menuState.left);
     const nextY = String(menuState.top);

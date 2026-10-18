@@ -371,8 +371,82 @@ describe("keyframeTimeline easing curves", () => {
 
     expect(viewData.selectedProperties[0]).toMatchObject({
       initialValue: "automatic",
+      initialValueTitle: "automatic",
       initialValueColor: "mu",
     });
+  });
+
+  it("marks a default initial value with a dash and a localized title", () => {
+    const viewData = selectViewData({
+      state: createInitialState(),
+      props: {
+        properties: {
+          alpha: {
+            keyframes: [{ duration: 500, value: 1 }],
+          },
+          x: {
+            initialValue: 0.5,
+            keyframes: [{ duration: 500, value: 1 }],
+          },
+        },
+      },
+      i18n: {
+        animationEditorPage: {
+          defaultLabel: "Predefinido",
+        },
+      },
+    });
+
+    expect(viewData.selectedProperties[0]).toMatchObject({
+      initialValue: "—",
+      initialValueTitle: "Predefinido",
+    });
+    expect(viewData.selectedProperties[1]).toMatchObject({
+      initialValue: 0.5,
+      initialValueTitle: 0.5,
+    });
+  });
+
+  it("titles the initial value display with its own title field", () => {
+    const view = readFileSync(
+      "src/components/keyframeTimeline/keyframeTimeline.view.yaml",
+      "utf8",
+    );
+
+    expect(view).toContain(
+      'ellipsis title="${property.initialValueTitle}"\': ${property.initialValue}',
+    );
+  });
+
+  it("localizes the linear easing title", () => {
+    const viewData = selectViewData({
+      state: createInitialState(),
+      props: {
+        properties: {
+          x: {
+            keyframes: [
+              { duration: 500, value: 100 },
+              { duration: 500, easing: "easeInQuad", value: 200 },
+            ],
+          },
+          alpha: {
+            auto: { duration: 1000, easing: "linear" },
+          },
+        },
+      },
+      i18n: {
+        animationEditorPage: {
+          linearEasingLabel: "Lineal",
+        },
+      },
+    });
+
+    const [keyframeProperty, autoProperty] = viewData.selectedProperties;
+    expect(keyframeProperty.keyframes.map((k) => k.easingLabel)).toEqual([
+      "Lineal",
+      "Ease In Quad",
+    ]);
+    expect(autoProperty.auto.easingLabel).toBe("Lineal");
   });
 
   it("uses non-interactive cursors for read-only keyframes", () => {

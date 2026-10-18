@@ -271,9 +271,8 @@ export const showContextMenu = ({ state, props }, { itemId, x, y } = {}) => {
   state.dropdownMenu.x = x;
   state.dropdownMenu.y = y;
   state.dropdownMenu.targetItemId = itemId;
-  state.dropdownMenu.items = props.itemContextMenuItems ?? [
-    { label: "Delete", icon: "trash", type: "item", value: "delete-item" },
-  ];
+  // Undefined items fall back to a localized Delete item in selectViewData.
+  state.dropdownMenu.items = props.itemContextMenuItems;
 };
 
 export const hideContextMenu = ({ state }, _payload = {}) => {
@@ -603,6 +602,16 @@ export const selectViewData = ({ state, props, i18n }) => {
     showImageCardPreview: parseBooleanProp(props.showImageCardPreview, true),
     scrollBottomPadding,
     draggingGroupId: state.draggingGroupId,
-    dropdownMenu: state.dropdownMenu,
+    dropdownMenu: {
+      ...state.dropdownMenu,
+      items: state.dropdownMenu.items ?? [
+        {
+          label: viewCopy.deleteMenuItem,
+          icon: "trash",
+          type: "item",
+          value: "delete-item",
+        },
+      ],
+    },
   };
 };

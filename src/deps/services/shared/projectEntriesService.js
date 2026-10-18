@@ -84,9 +84,11 @@ export const createProjectEntriesService = ({
     currentProjectIconCleanup = undefined;
   };
 
+  // An unnamed project keeps an empty name; the projects page shows its
+  // localized "Untitled" label.
   const mapProjectEntryToProject = (entry) => ({
     id: entry.id,
-    name: entry.name || "Untitled Project",
+    name: entry.name ?? "",
     description: entry.description || "",
     language: normalizeProjectLanguage(entry.language),
     iconFileId: entry.iconFileId || null,

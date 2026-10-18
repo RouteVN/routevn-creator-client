@@ -117,6 +117,19 @@ describe("appShellService", () => {
     }
   });
 
+  it("sets the document language", () => {
+    const service = createAppShellService(createDeps());
+    const root = { documentElement: { lang: "en" } };
+    vi.stubGlobal("document", root);
+
+    try {
+      service.setDocumentLanguage("zh-hans");
+      expect(root.documentElement.lang).toBe("zh-hans");
+    } finally {
+      vi.unstubAllGlobals();
+    }
+  });
+
   it("awaits registered work before navigation continues", async () => {
     const deps = createDeps();
     const service = createAppShellService(deps);
