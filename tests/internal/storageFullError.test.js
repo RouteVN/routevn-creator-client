@@ -77,6 +77,11 @@ describe("isStorageFullError", () => {
     ).toBe(true);
   });
 
+  it("does not take other error numbers for a full disk", () => {
+    // 39 is ENOTEMPTY on Linux, not a disk full error.
+    expect(isStorageFullError("Directory not empty (os error 39)")).toBe(false);
+  });
+
   it("recognizes full browser storage", () => {
     expect(
       isStorageFullError(

@@ -220,7 +220,7 @@ already handled. It never shows UI. Handled errors are still shown through
   `storageFull` code (sent when the system refuses a write for lack of space,
   because its message follows the device language), the Android bridge's
   `SQLiteFullException` code or `ENOSPC` message, and the "No space left on
-  device", "database or disk is full" and "(os error 28|39|112)" messages of
+  device", "database or disk is full" and "(os error 28|112)" messages of
   desktop file and SQL calls. Resource page mutations and scene editor saves
   show a message that asks the user to free up space and do not report these
   failures.

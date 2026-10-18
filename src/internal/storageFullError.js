@@ -18,8 +18,9 @@ const STORAGE_FULL_MESSAGES = [
   // Windows: "There is not enough space on the disk."
   /not enough space on the disk/,
   // Rust keeps the error number when the system message is in another
-  // language: 28 is ENOSPC, 39 and 112 are the Windows disk full errors.
-  /\(os error (?:28|39|112)\)/,
+  // language: 28 is ENOSPC and 112 is the Windows disk full error. Not 39:
+  // on Linux that is ENOTEMPTY, "Directory not empty".
+  /\(os error (?:28|112)\)/,
 ];
 
 const readProperty = (value, name) => {
