@@ -917,6 +917,7 @@ animationCameraEditor:
   zoomOutLabel: "Уменьшить (Shift: 5×)"
   viewportLabel: "Предпросмотр камеры. Чтобы переместить камеру, перетащите её или нажимайте клавиши со стрелками. Для масштабирования используйте клавиши «+» и «−»."
 animationEditorPage:
+  addCombineLabel: "Сложение"
   cameraPropertyLabel: "Камера"
   adjustCameraButton: "Настроить камеру"
   absoluteValueType: "Абсолютное"

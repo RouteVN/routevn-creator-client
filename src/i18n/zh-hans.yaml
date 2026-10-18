@@ -917,6 +917,7 @@ animationCameraEditor:
   zoomOutLabel: "缩小（Shift：5 倍）"
   viewportLabel: "镜头预览。拖动或使用方向键移动，使用加号和减号缩放。"
 animationEditorPage:
+  addCombineLabel: "相加"
   cameraPropertyLabel: "镜头"
   adjustCameraButton: "调整镜头"
   absoluteValueType: "绝对值"

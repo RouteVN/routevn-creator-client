@@ -917,6 +917,7 @@ animationCameraEditor:
   zoomOutLabel: "Alejar (Shift: 5×)"
   viewportLabel: "Vista previa de la cámara. Arrastra o usa las teclas de flecha para moverla. Usa las teclas más y menos para hacer zoom."
 animationEditorPage:
+  addCombineLabel: "Sumar"
   cameraPropertyLabel: "Cámara"
   adjustCameraButton: "Ajustar cámara"
   absoluteValueType: "Absoluto"
