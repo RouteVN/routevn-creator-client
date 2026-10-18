@@ -41,6 +41,7 @@ const createDeps = ({ repositoryState = createRepositoryState() } = {}) => ({
   },
   i18n: EN_I18N,
   projectService: {
+    checkResourceUsage: vi.fn(async () => ({ isUsed: false })),
     createVariable: vi.fn(),
     deleteVariables: vi.fn(),
     getRepositoryState: vi.fn(() => repositoryState),
@@ -48,6 +49,7 @@ const createDeps = ({ repositoryState = createRepositoryState() } = {}) => ({
     updateVariable: vi.fn(),
   },
   store: {
+    selectSelectedItemId: vi.fn(() => undefined),
     setItems: vi.fn(),
     setTagsData: vi.fn(),
     setSelectedFolderId: vi.fn(),
@@ -294,6 +296,40 @@ describe("variables.handlers", () => {
     expect(deps.appService.showAlert).toHaveBeenCalledWith({
       message: "This variable is used by: Score label",
       title: "Warning",
+    });
+  });
+
+  // The table's Delete menu item and the mobile detail sheet use this
+  // handler, so it must refuse what the explorer refuses.
+  it("blocks deletion while a scene, layout or control still uses the variable", async () => {
+    const deps = createDeps();
+    deps.projectService.checkResourceUsage.mockResolvedValue({ isUsed: true });
+
+    await handleVariableDelete(deps, {
+      _event: { detail: { itemId: "variable1" } },
+    });
+
+    expect(deps.projectService.checkResourceUsage).toHaveBeenCalledWith({
+      itemId: "variable1",
+      checkTargets: ["scenes", "layouts", "controls"],
+    });
+    expect(deps.projectService.deleteVariables).not.toHaveBeenCalled();
+    expect(deps.appService.showAlert).toHaveBeenCalledWith({
+      message: "Cannot delete resource, it is currently in use.",
+      title: "Warning",
+    });
+  });
+
+  it("deletes a variable that nothing uses", async () => {
+    const deps = createDeps();
+
+    await handleVariableDelete(deps, {
+      _event: { detail: { itemId: "variable1" } },
+    });
+
+    expect(deps.appService.showAlert).not.toHaveBeenCalled();
+    expect(deps.projectService.deleteVariables).toHaveBeenCalledWith({
+      variableIds: ["variable1"],
     });
   });
 });

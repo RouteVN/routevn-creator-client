@@ -3,7 +3,10 @@ import {
   getTagsCollection,
   resolveCollectionWithTags,
 } from "../../internal/resourceTags.js";
-import { createVariablesFileExplorerHandlers } from "../../internal/ui/fileExplorer.js";
+import {
+  checkVariableDeletion,
+  createVariablesFileExplorerHandlers,
+} from "../../internal/ui/fileExplorer.js";
 import { createFileExplorerKeyboardScopeHandlers } from "../../internal/ui/fileExplorerKeyboardScope.js";
 import { createProjectStateStream } from "../../deps/services/shared/projectStateStream.js";
 import { runResourcePageMutation } from "../../internal/ui/resourcePages/resourcePageErrors.js";
@@ -24,7 +27,6 @@ import { clearResourcePageSelection } from "../../internal/ui/resourcePages/reso
 import { tap } from "rxjs";
 import { resolveComputedVariables } from "route-engine-js";
 import { getRuntimeFieldItems } from "../../internal/runtimeFields.js";
-import { getComputedVariableDeletionDependents } from "../../internal/project/projection.js";
 import { toExecutableComputed } from "../../internal/computedExamples.js";
 
 const EMPTY_TREE = { tree: [], items: {} };
@@ -688,18 +690,14 @@ export const handleVariableDelete = async (deps, payload) => {
   const { appService, store, projectService } = deps;
   const copy = selectCopy(deps);
   const { itemId } = payload._event.detail;
-  const dependents = getComputedVariableDeletionDependents(
-    projectService.getRepositoryState()?.variables,
-    { variableIds: [itemId] },
-  );
-  if (dependents.length > 0) {
+  const deletion = await checkVariableDeletion({
+    projectService,
+    itemId,
+    copy,
+  });
+  if (!deletion.canDelete) {
     appService.showAlert({
-      message: (
-        copy.computedVariableDeleteBlocked ??
-        "This variable is used by: {dependents}"
-      ).replace("{dependents}", () =>
-        dependents.map((item) => item.name).join(", "),
-      ),
+      message: deletion.message,
       title: copy.warningTitle ?? "Warning",
     });
     return;
