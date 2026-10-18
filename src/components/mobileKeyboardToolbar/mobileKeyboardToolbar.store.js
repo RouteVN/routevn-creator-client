@@ -264,6 +264,8 @@ export const selectViewData = ({ state, props = {}, i18n }) => {
         icon: "settings",
         value: "scene-settings",
       },
-    ],
+    ].filter(
+      (item) => item.value !== "preview" || props.previewHidden !== true,
+    ),
   };
 };

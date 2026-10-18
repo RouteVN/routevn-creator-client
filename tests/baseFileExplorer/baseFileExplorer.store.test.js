@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 import {
   createInitialState,
   selectViewData,
+  showPopover,
 } from "../../src/components/baseFileExplorer/baseFileExplorer.store.js";
 
 describe("baseFileExplorer.store", () => {
@@ -213,5 +214,36 @@ describe("baseFileExplorer.store", () => {
     expect(disabledViewData.items[0].showMenuAction).toBe(false);
     expect(enabledViewData.items[0].showMenuAction).toBe(true);
     expect(enabledViewData.itemActionsLabel).toBe("Item actions");
+  });
+
+  it("labels the rename popover from the catalog", () => {
+    const state = createInitialState();
+    showPopover({ state }, { position: { x: 4, y: 8 }, itemId: "item-1" });
+
+    const viewData = selectViewData({
+      state,
+      props: {
+        items: [
+          {
+            id: "item-1",
+            type: "image",
+            name: "Image 1",
+            _level: 0,
+            hasChildren: false,
+          },
+        ],
+      },
+      i18n: {
+        resourcePages: {
+          nameLabel: "Nome",
+          renameMenuItem: "Renomear",
+        },
+      },
+    });
+
+    expect(viewData.hasRenameTarget).toBe(true);
+    expect(viewData.form.fields[0].label).toBe("Nome");
+    expect(viewData.form.actions.buttons[0].label).toBe("Renomear");
+    expect(viewData.renameFormDefaultValues).toEqual({ name: "Image 1" });
   });
 });

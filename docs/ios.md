@@ -217,7 +217,7 @@ source snapshot so the shared `_site` output is not replaced underneath watch:
 
 ```bash
 bun run build:ios
-release_dir=".artifacts/ios-release/1.18.1-15"
+release_dir=".artifacts/ios-release/1.18.2-16"
 mkdir -p "$release_dir"
 xcodebuild -project ios/routevn/routevn.xcodeproj -scheme routevn \
   -configuration Release -sdk iphoneos -destination 'generic/platform=iOS' \
@@ -618,6 +618,8 @@ swiftc -module-cache-path /tmp/routevn-export-swift-cache ios/routevn/routevn/Sa
 /tmp/routevn-save-destinations-tests
 swiftc -module-cache-path /tmp/routevn-device-id-swift-cache ios/routevn/routevn/NativeDeviceIdReader.swift tests/ios/nativeDeviceIdReaderNative.swift -lsqlite3 -o /tmp/routevn-device-id-tests
 /tmp/routevn-device-id-tests
+swiftc -module-cache-path /tmp/routevn-renderer-loss-swift-cache ios/routevn/routevn/RendererLossGuard.swift tests/ios/rendererLossGuardNative.swift -o /tmp/routevn-renderer-loss-tests
+/tmp/routevn-renderer-loss-tests
 ```
 
 Use a physical device for these final checks:

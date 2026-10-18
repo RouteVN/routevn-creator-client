@@ -1,4 +1,11 @@
-export const formatFileSize = (bytes) => {
+/**
+ * Format a byte count with a binary unit, such as "2.45 MB".
+ * @param {number} bytes - Size in bytes
+ * @param {Object} [options] - The `dateTime` catalog of the active locale
+ * @param {string} [options.intlLocale] - BCP 47 tag used for number formatting
+ * @returns {string} Formatted size, or an empty string for an invalid size
+ */
+export const formatFileSize = (bytes, { intlLocale = "en-US" } = {}) => {
   if (bytes === undefined || bytes === null) {
     return "";
   }
@@ -13,7 +20,8 @@ export const formatFileSize = (bytes) => {
   const k = 1024;
   const sizes = ["B", "KB", "MB", "GB"];
   const i = Math.floor(Math.log(normalizedBytes) / Math.log(k));
-  return (
-    Math.round((normalizedBytes / Math.pow(k, i)) * 100) / 100 + " " + sizes[i]
-  );
+  const value = new Intl.NumberFormat(intlLocale, {
+    maximumFractionDigits: 2,
+  }).format(normalizedBytes / Math.pow(k, i));
+  return `${value} ${sizes[i]}`;
 };

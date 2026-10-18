@@ -81,6 +81,22 @@ describe("projectEntriesService", () => {
     ]);
   });
 
+  it("leaves an unnamed project's name empty for the page to label", async () => {
+    const { service } = createService([
+      {
+        id: "project-1",
+        projectPath: "/projects/project-one",
+        description: "",
+        language: "en",
+        iconFileId: null,
+      },
+    ]);
+
+    const [project] = await service.loadAllProjects();
+
+    expect(project.name).toBe("");
+  });
+
   it("keeps the selected local path when project ids match", async () => {
     const entries = [
       {

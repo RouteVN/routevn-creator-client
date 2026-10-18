@@ -415,7 +415,41 @@ const validateVariableDeletion = async ({
     message: (
       copy.computedVariableDeleteBlocked ??
       "This variable is used by: {dependents}"
-    ).replace("{dependents}", dependents.map((item) => item.name).join(", ")),
+    ).replace("{dependents}", () =>
+      dependents.map((item) => item.name).join(", "),
+    ),
+  };
+};
+
+// The Variables page also deletes from its table and its detail panel. Those
+// deletes need the explorer's checks, or a scene can keep updating a variable
+// that no longer exists.
+export const checkVariableDeletion = async ({
+  projectService,
+  itemId,
+  copy = {},
+}) => {
+  const currentItem = projectService.getState()?.variables?.items?.[itemId];
+  const deletion = await validateVariableDeletion({
+    projectService,
+    resourceType: "variables",
+    currentItem,
+    itemId,
+    copy,
+  });
+  if (deletion.canDelete) {
+    return deletion;
+  }
+
+  return {
+    canDelete: false,
+    message:
+      deletion.message ??
+      getDeletionBlockedCopyMessage({
+        copy,
+        itemType: currentItem?.type,
+        reason: deletion.reason,
+      }),
   };
 };
 

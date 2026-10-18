@@ -149,12 +149,12 @@ template:
                                                                   - rvn-file-image fileId=${item.previewFileId} w=f h=f: null
                                                                 $else:
                                                                   - rtgl-view w=f h=f av=c ah=c bgc=mu-fg:
-                                                                      - rtgl-text s=sm c=mu-fg: No thumbnail
+                                                                      - rtgl-text s=sm c=mu-fg: ${viewCopy.noThumbnailLabel}
                                                         $elif item.previewFileId:
                                                           - rvn-file-image fileId=${item.previewFileId} w=f h=120: null
                                                         $else:
                                                           - rtgl-view w=f h=120 av=c ah=c bgc=mu-fg:
-                                                              - rtgl-text s=sm c=mu-fg: No thumbnail
+                                                              - rtgl-text s=sm c=mu-fg: ${viewCopy.noThumbnailLabel}
                                                       - rtgl-view d=v w=f g=xs ph=md pt=sm pb=md:
                                                           - rtgl-text s=sm ellipsis w=f: ${item.name}
                                                           - $if item.typeInfo || item.typeInfoSvg:
@@ -186,16 +186,16 @@ template:
                                                             $else:
                                                               - rtgl-view w=f h=f av=c ah=c bgc=bg:
                                                                   - rtgl-view d=v av=c ah=c g=xs ph=sm:
-                                                                      - rtgl-text s=xs c=mu-fg: No preview image
-                                                                      - rtgl-text s=xs c=mu-fg: Update to set preview
+                                                                      - rtgl-text s=xs c=mu-fg: ${viewCopy.noPreviewImageLabel}
+                                                                      - rtgl-text s=xs c=mu-fg: ${viewCopy.updateToSetPreviewLabel}
                                                     $else:
                                                       - $if item.thumbnailFileId:
                                                           - rvn-file-image fileId=${item.thumbnailFileId} w=${item.transformPreviewWidth} h=120: null
                                                         $else:
                                                           - rtgl-view w=${item.transformPreviewWidth} h=120 av=c ah=c bgc=bg:
                                                               - rtgl-view d=v av=c ah=c g=xs ph=sm:
-                                                                  - rtgl-text s=xs c=mu-fg: No preview image
-                                                                  - rtgl-text s=xs c=mu-fg: Update to set preview
+                                                                  - rtgl-text s=xs c=mu-fg: ${viewCopy.noPreviewImageLabel}
+                                                                  - rtgl-text s=xs c=mu-fg: ${viewCopy.updateToSetPreviewLabel}
                                                   - rtgl-view w=f p=md d=h av=c g=sm:
                                                       - rtgl-text s=xs c=mu-fg ellipsis w=1fg: ${item.name}
                                                       - $if item.titleIcon:
@@ -204,7 +204,7 @@ template:
                                             $elif item.cardKind == 'animation':
                                               - rtgl-view w=f h=1fg bgc=bg br=md p=md:
                                                   - rtgl-text s=h4 mb=md: ${item.name}
-                                                  - rtgl-text s=xs c=mu-fg mb=md: 'Type: ${item.animationTypeLabel}'
+                                                  - rtgl-text s=xs c=mu-fg mb=md: ${item.animationTypeSummary}
                                                   - $if item.animationType == 'transition':
                                                       - rtgl-view d=v w=f g=md:
                                                           - rvn-keyframe-timeline w=f ?showRuler=true ?showTracks=false timelineDuration=${item.transitionTimelineDuration}: null
@@ -235,15 +235,15 @@ template:
                   - rtgl-text s=lg c=mu-fg: ${emptyMessage}
             $else:
               - rtgl-view w=f h=f av=c ah=c:
-                  - rtgl-text s=lg c=mu-fg: No data
+                  - rtgl-text s=lg c=mu-fg: ${viewCopy.noDataMessage}
           - $if groups.length > 0:
               - 'rtgl-view w=f h="${scrollBottomPadding}" style="flex-shrink: 0;"': null
   - rtgl-popover#tagFilterPopover ?open=${tagFilterPopover.isOpen} x=${tagFilterPopover.position.x} y=${tagFilterPopover.position.y} place=be content-w=320 content-g=sm content-sv=true content-ph=md content-pv=md:
       - $if showFilterPopoverSearch:
-          - rtgl-text s=md: Filter
+          - rtgl-text s=md: ${viewCopy.filterLabel}
           - rtgl-input#searchInput s=sm placeholder=${searchPlaceholder} value=${searchQuery} w=f: null
       - $if !tagFilterPopover.hasOptions:
-          - rtgl-text s=sm c=mu-fg: No tags available
+          - rtgl-text s=sm c=mu-fg: ${viewCopy.noTagsAvailableMessage}
       - $if tagFilterPopover.hasOptions:
           - rtgl-view d=h wrap g=sm w=f:
               - $for option, i in tagFilterPopover.options:
@@ -252,11 +252,11 @@ template:
                           ${option.label}
       - rtgl-view d=h av=c g=sm w=f pt=sm:
           - rtgl-view w=1fg: null
-          - rtgl-button#tagFilterClear v=se s=sm ?disabled=${tagFilterPopover.clearDisabled}: Clear
-          - rtgl-button#tagFilterApply v=pr s=sm: Save
+          - rtgl-button#tagFilterClear v=se s=sm ?disabled=${tagFilterPopover.clearDisabled}: ${viewCopy.clearButton}
+          - rtgl-button#tagFilterApply v=pr s=sm: ${viewCopy.saveButton}
   - $if showZoomControls:
       - rtgl-popover#zoomPopover ?open=${zoomPopover.isOpen} x=${zoomPopover.position.x} y=${zoomPopover.position.y} place=be content-w=260 content-g=sm content-ph=md content-pv=md:
-          - rtgl-text s=md: Zoom
+          - rtgl-text s=md: ${viewCopy.zoomLabel}
           - rtgl-view d=h av=c g=sm w=f:
               - rtgl-button#zoomOut sq v=ol: '-'
               - rtgl-slider#zoomSlider w=160 min=${zoomControlMin} max=${zoomControlMax} step=${zoomControlStep} value=${zoomControlValue}: null

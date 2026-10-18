@@ -23,10 +23,10 @@ template:
           - 'img#sourceImage src=${imageSrc} style="display: none;"': null
       - $if status == "loading":
           - rtgl-view pos=abs cor=full av=c ah=c:
-              - rtgl-text s=sm c=mu-fg: Loading preview...
+              - rtgl-text s=sm c=mu-fg: ${loadingLabel}
         $elif status == "empty" && emptyLabel:
           - rtgl-view pos=abs cor=full av=c ah=c:
               - rtgl-text s=sm c=mu-fg: ${emptyLabel}
         $elif status == "error":
           - rtgl-view pos=abs cor=full av=c ah=c:
-              - rtgl-text s=sm c=er: Failed to load preview
+              - rtgl-text s=sm c=er: ${errorLabel}

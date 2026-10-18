@@ -169,5 +169,5 @@ template:
                       - rtgl-text s=sm c=mu-fg: ${actionsLabel}
                       - rvn-system-actions#branchActionsEditor :showSelected=${true} :actions=${branchActions} actionType=system :hiddenModes=${hiddenModes} :allowedModes=${branchActionAllowedModes} :showEmbeddedClose=${false}: null
           - 'rtgl-view d=h av=c ah=e w=f g=lg ph=md pt=md style="flex: 0 0 auto;"':
-              - rtgl-button#saveBranchButton ?disabled=${!canSaveBranch}: ${saveButtonPrefix} ${editBranchTitle}
+              - rtgl-button#saveBranchButton ?disabled=${!canSaveBranch}: ${saveBranchButton}
   - rtgl-dropdown-menu#dropdownMenu :items=${dropdownMenu.items} x=${dropdownMenu.position.x} y=${dropdownMenu.position.y} ?open=${dropdownMenu.isOpen}: null

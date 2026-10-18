@@ -55,6 +55,21 @@ describe("projectOpenErrors", () => {
     );
   });
 
+  it("treats a full device as an expected failure", () => {
+    expect(
+      isProjectStorageUnavailableError(
+        new Error(
+          "You can’t save the file “project.db” because there isn’t enough space.",
+        ),
+      ),
+    ).toBe(true);
+    expect(
+      isProjectStorageUnavailableError(
+        "error returned from database: (code: 13) database or disk is full",
+      ),
+    ).toBe(true);
+  });
+
   it("treats other project open failures as unexpected", () => {
     const validationError = new Error("state is invalid");
     validationError.code = "state_validation_failed";

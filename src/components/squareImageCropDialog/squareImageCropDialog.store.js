@@ -7,9 +7,9 @@ export const createInitialState = () => ({
   open: false,
   file: undefined,
   outputSize: undefined,
-  title: DEFAULT_TITLE,
-  description: DEFAULT_DESCRIPTION,
-  confirmLabel: DEFAULT_CONFIRM_LABEL,
+  title: undefined,
+  description: undefined,
+  confirmLabel: undefined,
   isCropReady: false,
 });
 
@@ -24,9 +24,9 @@ export const syncFromProps = ({ state }, { props } = {}) => {
   state.open = props?.open === true;
   state.file = nextFile;
   state.outputSize = props?.outputSize;
-  state.title = props?.title ?? DEFAULT_TITLE;
-  state.description = props?.description ?? DEFAULT_DESCRIPTION;
-  state.confirmLabel = props?.confirmLabel ?? DEFAULT_CONFIRM_LABEL;
+  state.title = props?.title;
+  state.description = props?.description;
+  state.confirmLabel = props?.confirmLabel;
 };
 
 export const setCropReady = ({ state }, { isReady } = {}) => {
@@ -37,14 +37,18 @@ export const selectIsCropReady = ({ state }) => {
   return state.isCropReady;
 };
 
-export const selectViewData = ({ state }) => {
+// Callers may pass their own text; otherwise the dialog uses the shared copy.
+export const selectViewData = ({ state, i18n = {} }) => {
+  const copy = i18n.resourcePages ?? {};
   return {
     isOpen: state.open,
     file: state.file,
     outputSize: state.outputSize,
-    title: state.title,
-    description: state.description,
-    confirmLabel: state.confirmLabel,
+    title: state.title ?? copy.cropImageTitle ?? DEFAULT_TITLE,
+    description:
+      state.description ?? copy.cropImageDescription ?? DEFAULT_DESCRIPTION,
+    confirmLabel:
+      state.confirmLabel ?? copy.useCropButton ?? DEFAULT_CONFIRM_LABEL,
     isCropReady: state.isCropReady,
   };
 };

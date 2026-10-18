@@ -1,9 +1,12 @@
 import { describe, expect, it } from "vitest";
 import {
   collectLayoutPreviewTargets,
+  createPreviewVariablesViewData,
   createSaveLoadPreviewSlots,
   getLayoutPreviewVariableItems,
 } from "../../src/internal/layoutEditorPreview/layoutEditorPreviewSupport.js";
+import { selectRuntimeFieldTexts } from "../../src/internal/ui/runtimeFieldCopy.js";
+import { EN_I18N, PT_I18N } from "../support/i18n.js";
 import { createLayoutEditorPreviewData } from "../../src/internal/layoutEditorPreview/layoutEditorPreviewData.js";
 import {
   setHistoryDefaultValue,
@@ -265,6 +268,50 @@ describe("layoutEditorPreviewSupport", () => {
       "Line 1",
       "Line 2",
       "Line 3",
+    ]);
+  });
+
+  it("names runtime state preview fields and describes them in the active locale", () => {
+    const createForm = (i18n) =>
+      createPreviewVariablesViewData({
+        layoutType: "general",
+        currentLayoutId: "layout-1",
+        currentLayoutData: {
+          items: {
+            badge: { type: "container", $when: "runtime.autoMode == true" },
+            mute: { type: "container", $when: "runtime.muteAll == true" },
+          },
+          tree: [{ id: "badge" }, { id: "mute" }],
+        },
+        layoutsData: { items: {} },
+        variablesData: { items: {} },
+        previewVariableValues: {},
+        runtimeFieldTexts: selectRuntimeFieldTexts(i18n),
+      }).previewVariablesForm.fields;
+
+    expect(
+      createForm(PT_I18N).map(({ name, label, description }) => ({
+        name,
+        label,
+        description,
+      })),
+    ).toEqual([
+      {
+        name: "runtime.autoMode",
+        label: "Modo automático",
+        description:
+          "Runtime state (boolean) • Indica se o modo automático está ativo.",
+      },
+      {
+        name: "runtime.muteAll",
+        label: "Silenciar tudo",
+        description:
+          "Runtime state (boolean) • Define se todo o áudio fica silenciado.",
+      },
+    ]);
+    expect(createForm(EN_I18N).map((field) => field.label)).toEqual([
+      "Auto Mode",
+      "Mute All",
     ]);
   });
 });

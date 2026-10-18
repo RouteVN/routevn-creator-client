@@ -1,4 +1,5 @@
 import { buildResourceOverflowMenuItems } from "../../internal/ui/resourcePages/resourceOverflowMenu.js";
+import { selectResourceViewCopy } from "../../internal/ui/resourcePages/resourceViewCopy.js";
 import { buildProgressivePlaceholderChildren } from "../../internal/ui/resourcePages/progressivePlaceholders.js";
 import {
   buildTagFilterPopoverViewData,
@@ -12,8 +13,6 @@ import {
 import { resolveResourceScrollBottomPadding } from "../../internal/ui/resourcePages/mobileResourcePage.js";
 
 const DEFAULT_PROGRESSIVE_INITIAL_ITEM_COUNT = 4;
-const MENU_BUTTON_LABEL = "Menu";
-const FILTER_BUTTON_LABEL = "Filter";
 
 export const createInitialState = () => ({
   collapsedIds: [],
@@ -27,7 +26,6 @@ export const createInitialState = () => ({
     x: 0,
     y: 0,
     targetItemId: undefined,
-    items: [],
   },
 });
 
@@ -46,9 +44,6 @@ export const showContextMenu = ({ state }, { itemId, x, y } = {}) => {
   state.dropdownMenu.x = x;
   state.dropdownMenu.y = y;
   state.dropdownMenu.targetItemId = itemId;
-  state.dropdownMenu.items = [
-    { label: "Delete", type: "item", value: "delete-item" },
-  ];
 };
 
 export const hideContextMenu = ({ state }, _payload = {}) => {
@@ -56,7 +51,6 @@ export const hideContextMenu = ({ state }, _payload = {}) => {
   state.dropdownMenu.x = 0;
   state.dropdownMenu.y = 0;
   state.dropdownMenu.targetItemId = undefined;
-  state.dropdownMenu.items = [];
 };
 
 export const selectDropdownMenu = ({ state }) => state.dropdownMenu;
@@ -140,7 +134,7 @@ export const clearSyncRenderFrameId = ({ state }) => {
 
 export const selectSyncRenderFrameId = ({ state }) => state.syncRenderFrameId;
 
-export const selectViewData = ({ state, props, i18n }) => {
+export const selectViewData = ({ state, props, i18n = {} }) => {
   const mobileLayout = parseBooleanProp(props.mobileLayout);
   const hasActiveTagFilter = (props.selectedTagFilterValues?.length ?? 0) > 0;
   const searchQuery = props.searchQuery ?? "";
@@ -149,6 +143,13 @@ export const selectViewData = ({ state, props, i18n }) => {
   const menuButtonPlacement =
     props.menuButtonPlacement === "trailing" ? "trailing" : "leading";
   const hasActiveSearch = searchQuery.trim().length > 0;
+  const viewCopy = selectResourceViewCopy({
+    i18n,
+    namespace: "charactersPage",
+    searchQuery,
+    hasActiveSearch,
+    hasActiveTagFilter,
+  });
   const hasActiveFilter =
     hasActiveTagFilter || (searchInFilterPopover && hasActiveSearch);
   const showTagFilter = parseBooleanProp(props.showTagFilter);
@@ -218,10 +219,11 @@ export const selectViewData = ({ state, props, i18n }) => {
     groups,
     selectedItemId: props.selectedItemId,
     searchQuery,
-    searchPlaceholder: props.searchPlaceholder ?? "Search...",
+    searchPlaceholder: props.searchPlaceholder ?? viewCopy.searchPlaceholder,
     tagFilterOptions: props.tagFilterOptions ?? [],
     selectedTagFilterValues: props.selectedTagFilterValues ?? [],
-    tagFilterPlaceholder: props.tagFilterPlaceholder ?? "Filter tags",
+    tagFilterPlaceholder:
+      props.tagFilterPlaceholder ?? viewCopy.tagFilterPlaceholder,
     tagFilterPopover: {
       ...tagFilterPopoverViewData.tagFilterPopover,
       clearDisabled:
@@ -232,8 +234,8 @@ export const selectViewData = ({ state, props, i18n }) => {
     resourceImportMenuItems,
     hasActiveTagFilter,
     tagFilterButtonVariant: hasActiveFilter ? "pr" : "ol",
-    menuButtonLabel: MENU_BUTTON_LABEL,
-    filterButtonLabel: FILTER_BUTTON_LABEL,
+    menuButtonLabel: viewCopy.menuButtonLabel,
+    filterButtonLabel: viewCopy.filterLabel,
     showSearch:
       parseBooleanProp(props.showSearch, true) && !searchInFilterPopover,
     showFilterPopoverSearch: searchInFilterPopover,
@@ -260,16 +262,19 @@ export const selectViewData = ({ state, props, i18n }) => {
       props.progressiveInitialItemCount,
       DEFAULT_PROGRESSIVE_INITIAL_ITEM_COUNT,
     ),
-    emptyMessage:
-      props.emptyMessage ??
-      (hasActiveSearch
-        ? `No characters found matching "${searchQuery}"`
-        : hasActiveTagFilter
-          ? "No characters found for the selected tags"
-          : `No characters found matching "${searchQuery}"`),
-    addText: props.addText ?? "Add Character",
+    emptyMessage: props.emptyMessage ?? viewCopy.emptyMessage,
+    viewCopy,
+    addText:
+      props.addText ??
+      i18n.charactersPage?.addCharacterButton ??
+      "Add Character",
     mobileLayout,
     scrollBottomPadding,
-    dropdownMenu: state.dropdownMenu,
+    dropdownMenu: {
+      ...state.dropdownMenu,
+      items: [
+        { label: viewCopy.deleteMenuItem, type: "item", value: "delete-item" },
+      ],
+    },
   };
 };

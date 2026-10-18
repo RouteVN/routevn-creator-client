@@ -174,6 +174,20 @@ export const createTextContentDialogForm = (copy = {}) => ({
   },
 });
 
+// The text editor's variable menu. Variable types use the names the scene
+// editor shows for them.
+export const createTextContentMenuLabels = (i18n = {}, copy = {}) => {
+  const variableTypeCopy = i18n.commandLinePage ?? {};
+  return {
+    noVariables: copy.noVariablesMenuItem ?? "No variables",
+    variableTypes: {
+      string: variableTypeCopy.string,
+      number: variableTypeCopy.number,
+      boolean: variableTypeCopy.boolean,
+    },
+  };
+};
+
 export const getLayoutInteractionActions = (values, interactionType) => {
   return getInteractionActions(values?.[interactionType]);
 };
@@ -283,7 +297,7 @@ export const toInspectorValues = ({
   firstTextStyleId,
   hiddenActionModes,
   variablesData,
-  copy,
+  copy = {},
 }) => {
   const capabilities =
     getLayoutEditorElementDefinition(values?.type)?.capabilities ?? {};
@@ -324,11 +338,13 @@ export const toInspectorValues = ({
           fallbackText: values?.text,
         })
       : values?.content;
+  const emptyText = copy.emptyTextSummary ?? "Empty";
   const textContentSummary =
     capabilities.supportsTextEditing === true
       ? getLayoutTextSummary(values?.content, {
           fallbackText: values?.text,
           variablesData,
+          emptyText,
         })
       : "";
   const textContentSummaryParts =
@@ -336,6 +352,7 @@ export const toInspectorValues = ({
       ? getLayoutTextSummaryParts(values?.content, {
           fallbackText: values?.text,
           variablesData,
+          emptyText,
         })
       : [];
 

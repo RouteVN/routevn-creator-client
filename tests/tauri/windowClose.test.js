@@ -1,4 +1,5 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import { RU_I18N } from "../support/i18n.js";
 
 const mocked = vi.hoisted(() => ({
   calls: [],
@@ -18,8 +19,13 @@ const { QUIT_SAVE_TIMEOUT_MS, setupCloseListener } = await import(
   "../../src/deps/clients/tauri/windowClose.js"
 );
 
-const createHarness = ({ confirmQuit = true, saveBeforeSuspend } = {}) => {
+const createHarness = ({
+  confirmQuit = true,
+  saveBeforeSuspend,
+  appCopy = {},
+} = {}) => {
   const appService = {
+    getAppCopy: () => appCopy,
     saveBeforeSuspend: vi.fn(
       saveBeforeSuspend ??
         (async () => {
@@ -190,5 +196,21 @@ describe("desktop window close", () => {
 
     expect(second.preventDefault).toHaveBeenCalled();
     expect(globalUI.showConfirm).toHaveBeenCalledTimes(2);
+  });
+
+  it("asks in the app language", async () => {
+    const { appService, globalUI } = createHarness({
+      appCopy: RU_I18N.appPage,
+    });
+    await setupCloseListener({ appService, globalUI });
+
+    await requestClose();
+
+    expect(globalUI.showConfirm).toHaveBeenCalledWith({
+      message: "Выйти из приложения?",
+      title: "Подтверждение",
+      confirmText: "Выйти",
+      cancelText: "Отмена",
+    });
   });
 });

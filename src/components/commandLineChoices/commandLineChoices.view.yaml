@@ -69,10 +69,10 @@ template:
                                   - 'rtgl-view w=1fg style="min-width: 0;"':
                                       - rtgl-text w=f ellipsis=true: ${item.content}
                                   - 'rtgl-text s=xs c=mu-fg style="white-space: nowrap; flex: 0 0 auto;"': ${item.actionLabel}
-                          - rtgl-button#addChoiceButton v=ol w=f mt=md: + Add Choice
+                          - rtgl-button#addChoiceButton v=ol w=f mt=md: ${addChoiceButtonLabel}
                   - 'rtgl-view h=240 aria-hidden=true style="flex: 0 0 240px;"': null
               - 'rtgl-view d=h av=c ah=e w=f g=lg ph=md pt=md style="flex: 0 0 auto;"':
-                  - rtgl-button#submitButton: Submit
+                  - rtgl-button#submitButton: ${submitButtonLabel}
         $elif mode == "editChoice":
           - 'rtgl-view wh=f style="min-height: 0;"':
               - rtgl-view w=f h=24 av=c ph=md mb=md:
@@ -83,6 +83,6 @@ template:
                           - rvn-system-actions#choiceUpdateVariableEditor :showSelected=${true} :actions=${choiceUpdateVariableActions} actionType=system :allowedModes=${choiceUpdateVariableAllowedModes} :showEmbeddedClose=${false}: null
                   - 'rtgl-view h=240 aria-hidden=true style="flex: 0 0 240px;"': null
               - 'rtgl-view d=h av=c ah=e w=f g=lg ph=md pt=md style="flex: 0 0 auto;"':
-                  - rtgl-button#cancelEditButton v=ol: Cancel
-                  - rtgl-button#saveChoiceButton: Save Choice
+                  - rtgl-button#cancelEditButton v=ol: ${cancelButtonLabel}
+                  - rtgl-button#saveChoiceButton: ${saveChoiceButtonLabel}
   - rtgl-dropdown-menu#dropdownMenu :items=${dropdownMenu.items} x=${dropdownMenu.position.x} y=${dropdownMenu.position.y} ?open=${dropdownMenu.isOpen}: null
