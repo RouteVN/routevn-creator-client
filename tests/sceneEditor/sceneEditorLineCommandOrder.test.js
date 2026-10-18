@@ -333,6 +333,29 @@ describe("scene editor: a line action among the saves around it", () => {
     });
   });
 
+  it("lets go of the actions dialog's line when its save is refused, so that undo still works", async () => {
+    const page = createPage();
+    // A real edit, so that undo has something to undo.
+    await page.type("line-1", "First, rewritten");
+    page.shared.submitCommandWithContext.mockResolvedValueOnce({
+      valid: false,
+      error: { code: "invalid", message: "Section not found." },
+    });
+    page.store.setSelectedLineId({ selectedLineId: "line-1" });
+    page.store.setActionTargetLineId({ lineId: "line-1" });
+    expect(page.store.selectIsEditHistoryBlocked()).toBe(true);
+
+    await expect(
+      handleCommandLineSubmit(page.deps, {
+        _event: { detail: { sectionTransition: { sectionId: "section-9" } } },
+      }),
+    ).resolves.toBeUndefined();
+
+    expect(page.deps.appService.showAlert).toHaveBeenCalledOnce();
+    expect(page.store.selectActionTargetLineId()).toBeUndefined();
+    expect(page.store.selectIsEditHistoryBlocked()).toBe(false);
+  });
+
   it("still fails, so that it is reported, for a line the page shows and the project does not have", async () => {
     const page = createPage();
     // The page shows line-2, but the saved project has lost it by some path

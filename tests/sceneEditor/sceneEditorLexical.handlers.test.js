@@ -3835,7 +3835,8 @@ describe("sceneEditorLexical.handlers refused section commands", () => {
           "Failed to save section transition\n\nDetails:\nSection not found.",
         title: "Error",
       });
-      expect(deps.store.clearActionTargetLineId).not.toHaveBeenCalled();
+      // The dialog hides on submit, so its line is let go: undo stays usable.
+      expect(deps.store.clearActionTargetLineId).toHaveBeenCalledOnce();
       expect(deps.render).not.toHaveBeenCalled();
       expectNothingFollowedTheFailedSave(deps);
     });
@@ -3870,7 +3871,8 @@ describe("sceneEditorLexical.handlers refused section commands", () => {
           skipAnimations: true,
         },
       );
-      expect(deps.store.clearActionTargetLineId).not.toHaveBeenCalled();
+      // The dialog hides on submit, so its line is let go: undo stays usable.
+      expect(deps.store.clearActionTargetLineId).toHaveBeenCalledOnce();
       expect(deps.render).not.toHaveBeenCalled();
       expect(deps.projectService.getRepositoryState).not.toHaveBeenCalled();
     });

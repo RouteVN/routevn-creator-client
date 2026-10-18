@@ -1424,8 +1424,9 @@ saved, which the save failure alert already says, or the line or its section
 was deleted before the command's turn. A command for a line the page still
 shows, but the project does not have, is not skipped: the command API refuses
 it with `Could not resolve scene partition for line command`, which goes on
-to be reported, so a cause that is not known stays visible. The actions
-dialog's line is let go either way, so that undo is not held off. Commands can wait behind each other, so
+to be reported, so a cause that is not known stays visible. However a command
+ends, saved, refused, failed or skipped, the actions dialog's line is let go,
+since the dialog hides on submit, so that undo is not held off. Commands can wait behind each other, so
 the page counts the ones still pending and undo waits for all of them. A draft
 that is still dirty afterwards, from typing during the save, takes the
 command's saved actions for its line, so the command shows at once and its

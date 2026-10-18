@@ -983,7 +983,6 @@ const runRecordedLineCommand = async (deps, { lineId }, command) => {
       async () => {
         const line = findSceneLine(store, lineId);
         if (!line && !isStoredSceneLine(store, lineId)) {
-          store.clearActionTargetLineId();
           clearTemporaryPresentationPreview(deps);
           return undefined;
         }
@@ -992,18 +991,18 @@ const runRecordedLineCommand = async (deps, { lineId }, command) => {
         });
         try {
           return await command({ lineId, line });
-        } catch (error) {
-          // The command has ended: the actions dialog it came from is closed,
-          // so its line must not keep undo off. The failure still goes on to
-          // be reported. A dialog's own preview is ended by its submit.
-          store.clearActionTargetLineId?.();
-          throw error;
         } finally {
           takeSavedLineActionsIntoDraft(deps, lineId);
         }
       },
     );
   } finally {
+    // However the command ended, saved, refused, failed or skipped, the
+    // actions dialog it came from is closed, so its line must not keep undo
+    // off. A failure still goes on to be reported.
+    if (store.selectActionTargetLineId?.() === lineId) {
+      store.clearActionTargetLineId?.();
+    }
     recordSceneEditorLineEdits(deps, selectPageSectionLines(store));
     store.setLineCommandRunning({ running: false });
   }
