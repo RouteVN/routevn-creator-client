@@ -397,6 +397,7 @@ export const selectVersion = ({ state }, versionId) => {
 export const selectViewData = ({ state, i18n }) => {
   const copy = selectVersionsPageCopy(i18n);
   const platformDetailsCopy = i18n?.platformDetailsPage ?? {};
+  const dateTimeCopy = i18n?.dateTime;
   const selectedVersion = findVersionById(state.versions, state.selectedItemId);
   const isEditing = !!state.editingVersionId;
   const detailDescription = getVersionDescription(selectedVersion);
@@ -422,7 +423,7 @@ export const selectViewData = ({ state, i18n }) => {
         {
           type: "text",
           label: copy.createdLabel ?? "Created",
-          value: formatDate(selectedVersion.createdAt),
+          value: formatDate(selectedVersion.createdAt, dateTimeCopy),
         },
         {
           type: "slot",
@@ -438,12 +439,12 @@ export const selectViewData = ({ state, i18n }) => {
     return {
       ...version,
       description: getVersionDescription(version),
-      formattedCreatedAt: formatDate(version.createdAt),
+      formattedCreatedAt: formatDate(version.createdAt, dateTimeCopy),
       actionSummary: formatI18nCopy(
         copy.actionSummaryTemplate ?? "Action {actionIndex} • {createdAt}",
         {
           actionIndex: version.actionIndex,
-          createdAt: formatDate(version.createdAt),
+          createdAt: formatDate(version.createdAt, dateTimeCopy),
         },
       ),
       itemBorderColor: isSelected ? "pr" : "bo",

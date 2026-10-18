@@ -532,6 +532,7 @@ export const selectViewData = ({ state, i18n }) => {
   };
 
   return {
+    noWaveformLabel: localizeCommandLineText("No waveform", copy),
     mode: state.mode,
     items: folderItems,
     groups,

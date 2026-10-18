@@ -1,4 +1,6 @@
 import { buildResourceOverflowMenuItems } from "../../internal/ui/resourcePages/resourceOverflowMenu.js";
+import { selectResourceViewCopy } from "../../internal/ui/resourcePages/resourceViewCopy.js";
+import { formatI18nCopy } from "../../internal/ui/i18nCopy.js";
 import { buildProgressivePlaceholderChildren } from "../../internal/ui/resourcePages/progressivePlaceholders.js";
 import {
   buildTagFilterPopoverViewData,
@@ -372,6 +374,12 @@ export const selectViewData = ({ state, props, i18n }) => {
   const menuButtonPlacement =
     props.menuButtonPlacement === "trailing" ? "trailing" : "leading";
   const hasActiveSearch = searchQuery.trim().length > 0;
+  const viewCopy = selectResourceViewCopy({
+    i18n,
+    searchQuery,
+    hasActiveSearch,
+    hasActiveTagFilter,
+  });
   const hasActiveFilter =
     hasActiveTagFilter || (searchInFilterPopover && hasActiveSearch);
   const tagFilterPopoverViewData = buildTagFilterPopoverViewData({
@@ -426,6 +434,9 @@ export const selectViewData = ({ state, props, i18n }) => {
       hasChildren: hasVisibleChildren,
       hasChildFolders,
       showEmptyUpload: !hasVisibleChildren && !hasChildFolders,
+      dropFilesLabel: formatI18nCopy(viewCopy.dropFilesMessage, {
+        folder: group.fullLabel,
+      }),
       headerBackgroundColor: group.id === props.selectedFolderId ? "mu" : "bg",
       progressiveContentMinHeight: 0,
       children: progressiveChildren.children.map((item, itemIndex) => {
@@ -538,10 +549,11 @@ export const selectViewData = ({ state, props, i18n }) => {
     groups,
     selectedItemId: props.selectedItemId,
     searchQuery,
-    searchPlaceholder: props.searchPlaceholder ?? "Search...",
+    searchPlaceholder: props.searchPlaceholder ?? viewCopy.searchPlaceholder,
     tagFilterOptions: props.tagFilterOptions ?? [],
     selectedTagFilterValues: props.selectedTagFilterValues ?? [],
-    tagFilterPlaceholder: props.tagFilterPlaceholder ?? "Filter tags",
+    tagFilterPlaceholder:
+      props.tagFilterPlaceholder ?? viewCopy.tagFilterPlaceholder,
     tagFilterPopover: {
       ...tagFilterPopoverViewData.tagFilterPopover,
       clearDisabled:
@@ -553,13 +565,8 @@ export const selectViewData = ({ state, props, i18n }) => {
     showTagFilter: showTagFilter && !filterInOverflowMenu,
     uploadText: props.uploadText ?? "Upload Files",
     uploadIcon: props.uploadIcon ?? "upload",
-    emptyMessage:
-      props.emptyMessage ??
-      (hasActiveSearch
-        ? `No items found matching "${searchQuery}"`
-        : hasActiveTagFilter
-          ? "No items found for the selected tags"
-          : "No items found"),
+    emptyMessage: props.emptyMessage ?? viewCopy.emptyMessage,
+    viewCopy,
     acceptedFileTypes: props.acceptedFileTypes ?? [],
     imageHeight,
     maxWidth,

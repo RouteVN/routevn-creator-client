@@ -697,7 +697,9 @@ export const handleVariableDelete = async (deps, payload) => {
       message: (
         copy.computedVariableDeleteBlocked ??
         "This variable is used by: {dependents}"
-      ).replace("{dependents}", dependents.map((item) => item.name).join(", ")),
+      ).replace("{dependents}", () =>
+        dependents.map((item) => item.name).join(", "),
+      ),
       title: copy.warningTitle ?? "Warning",
     });
     return;

@@ -674,6 +674,7 @@ export const selectViewData = ({ state, constants, props = {}, i18n }) => {
       ? state.imageSelectorDialog.characterId
       : state.imageSelectorDialog.selectedImageId,
     imageSelectorConfirmDisabled: !state.imageSelectorDialog.selectedImageId,
+    imageSelectorConfirmLabel: i18n.layoutEditPanel.okButton,
     dropdownMenu: state.dropdownMenu,
     fileExplorerItems,
     showImageSelectorFileExplorer: !state.isTouchMode,

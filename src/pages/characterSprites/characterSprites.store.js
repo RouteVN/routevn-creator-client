@@ -434,7 +434,7 @@ const buildClipFpsForm = (copy, clipName) => {
     ...clipFpsForm,
     title:
       typeof clipName === "string" && clipName.length > 0
-        ? copy.clipFpsTitleWithName.replace("{clipName}", clipName)
+        ? copy.clipFpsTitleWithName.replace("{clipName}", () => clipName)
         : clipFpsForm.title,
   };
 };

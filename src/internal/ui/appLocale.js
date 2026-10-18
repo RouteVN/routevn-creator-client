@@ -7,6 +7,7 @@ export const APP_LOCALE_OPTIONS = Object.freeze([
   Object.freeze({ value: "zh-hans", label: "简体中文 (Beta)" }),
   Object.freeze({ value: "es", label: "Español (Beta)" }),
   Object.freeze({ value: "th", label: "ไทย (Beta)" }),
+  Object.freeze({ value: "ru", label: "Русский (Beta)" }),
 ]);
 
 const getAvailableAppLocales = (localeService) => {

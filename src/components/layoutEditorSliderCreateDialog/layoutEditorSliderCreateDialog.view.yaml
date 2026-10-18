@@ -60,7 +60,7 @@ template:
                       - 'div.layoutEditorImageFieldTransparencyGrid style="display: block; width: 100%; height: 100%; overflow: hidden;"':
                           - rvn-file-image imageId=${images.barImageId} source="thumbnail" w=f h=f: null
                     $else:
-                      - rtgl-text c=mu-fg: Select bar image
+                      - rtgl-text c=mu-fg: ${selectBarImageLabel}
               - $if validationErrors.barImageId:
                   - rtgl-text s=sm c=de: ${validationErrors.barImageId}
           - rtgl-view slot=slider-thumb-image g=xs:
@@ -69,7 +69,7 @@ template:
                       - 'div.layoutEditorImageFieldTransparencyGrid style="display: block; width: 100%; height: 100%; overflow: hidden;"':
                           - rvn-file-image imageId=${images.thumbImageId} source="thumbnail" w=f h=f: null
                     $else:
-                      - rtgl-text c=mu-fg ta=c: Select thumb image
+                      - rtgl-text c=mu-fg ta=c: ${selectThumbImageLabel}
               - $if validationErrors.thumbImageId:
                   - rtgl-text s=sm c=de: ${validationErrors.thumbImageId}
           - rtgl-view slot=slider-hover-bar-image d=h g=sm av=c:
@@ -78,18 +78,18 @@ template:
                       - 'div.layoutEditorImageFieldTransparencyGrid style="display: block; width: 100%; height: 100%; overflow: hidden;"':
                           - rvn-file-image imageId=${images.hoverBarImageId} source="thumbnail" w=f h=f: null
                     $else:
-                      - rtgl-text c=mu-fg: Select hover bar image
+                      - rtgl-text c=mu-fg: ${selectHoverBarImageLabel}
               - $if images.hoverBarImageId:
-                  - rtgl-button#clearSliderCreateImageHoverBar data-field-name=hoverBarImageId variant=se size=sm: Clear
+                  - rtgl-button#clearSliderCreateImageHoverBar data-field-name=hoverBarImageId variant=se size=sm: ${clearImageButton}
           - rtgl-view slot=slider-hover-thumb-image d=h g=sm av=c:
               - rtgl-view#sliderCreateImageFieldHoverThumb data-field-name=hoverThumbImageId w=140 h=140 bw=xs bc=bo br=md cur=pointer av=c ah=c overflow=hidden:
                   - $if images.hoverThumbImageId:
                       - 'div.layoutEditorImageFieldTransparencyGrid style="display: block; width: 100%; height: 100%; overflow: hidden;"':
                           - rvn-file-image imageId=${images.hoverThumbImageId} source="thumbnail" w=f h=f: null
                     $else:
-                      - rtgl-text c=mu-fg ta=c: Select hover thumb image
+                      - rtgl-text c=mu-fg ta=c: ${selectHoverThumbImageLabel}
               - $if images.hoverThumbImageId:
-                  - rtgl-button#clearSliderCreateImageHoverThumb data-field-name=hoverThumbImageId variant=se size=sm: Clear
+                  - rtgl-button#clearSliderCreateImageHoverThumb data-field-name=hoverThumbImageId variant=se size=sm: ${clearImageButton}
   - rtgl-dialog#imageSelectorDialog ?open=${imageSelectorDialog.open} s=lg:
       - rtgl-view slot=content d=v w=f g=md:
           - 'rtgl-view d=h w=f h=70vh g=lg style="min-width: 0; min-height: 0;"':
@@ -99,8 +99,8 @@ template:
               - 'rtgl-view w=1fg h=f style="min-width: 0; min-height: 0;"':
                   - rvn-image-selector#imageSelector selectedImageId=${imageSelectorDialog.selectedImageId}: null
           - rtgl-view d=h g=sm w=f ah=e:
-              - rtgl-button#cancelImageSelection variant=se: Cancel
-              - rtgl-button#confirmImageSelection variant=pr: OK
+              - rtgl-button#cancelImageSelection variant=se: ${cancelButton}
+              - rtgl-button#confirmImageSelection variant=pr: ${okButton}
   - $when: fullImagePreviewVisible
     rtgl-dialog#fullPreviewDialog open layout=fixed bare p=none:
       - rtgl-view#previewOverlay slot=content pos=fix edge=f z=3000 cur=pointer:

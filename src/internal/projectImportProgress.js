@@ -3,7 +3,7 @@ import { formatFileSize } from "./files.js";
 const formatCopy = (template, replacements) => {
   let text = template;
   Object.entries(replacements).forEach(([key, value]) => {
-    text = text.replaceAll(`{${key}}`, value);
+    text = text.replaceAll(`{${key}}`, () => value);
   });
   return text;
 };
