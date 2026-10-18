@@ -229,7 +229,10 @@ already handled. It never shows UI. Handled errors are still shown through
   to fall back to. `isGraphicsUnavailableError` in
   `src/internal/graphicsErrors.js` matches Pixi's "does not support WebGL"
   failure and the "CanvasRenderer is not yet implemented" failure of a device
-  with no WebGL at all. `graphicsService.init` still rejects with it and calls its
+  with no WebGL at all. A context that could not be created is tried again
+  twice, after 0.5 s and 1.5 s, before the user is told, since the refusal may
+  be temporary. A device with no WebGL at all is not, because Pixi remembers
+  that for the session. `graphicsService.init` still rejects with it and calls its
   `onGraphicsUnavailable` option, which every platform setup points at
   `createGraphicsUnavailableNotifier`: one localized alert at a time, with the
   technical details after it. The preview and the scene editor skip their own

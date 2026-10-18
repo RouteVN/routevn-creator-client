@@ -1,5 +1,8 @@
 import { describe, expect, it } from "vitest";
-import { isGraphicsUnavailableError } from "../../src/internal/graphicsErrors.js";
+import {
+  isGraphicsContextCreationError,
+  isGraphicsUnavailableError,
+} from "../../src/internal/graphicsErrors.js";
 
 describe("isGraphicsUnavailableError", () => {
   it("recognizes the failure to create a WebGL context", () => {
@@ -14,6 +17,32 @@ describe("isGraphicsUnavailableError", () => {
       isGraphicsUnavailableError(
         new Error("No available renderer for the current environment"),
       ),
+    ).toBe(true);
+  });
+
+  it("tells a context that could not be created from a device with no WebGL", () => {
+    // Only the first can pass: Pixi has found WebGL, but the browser refused.
+    expect(
+      isGraphicsContextCreationError(
+        new Error(
+          "This browser does not support WebGL. Try using the canvas renderer",
+        ),
+      ),
+    ).toBe(true);
+    expect(
+      isGraphicsContextCreationError(
+        new Error("CanvasRenderer is not yet implemented"),
+      ),
+    ).toBe(false);
+    expect(
+      isGraphicsContextCreationError(
+        new Error("No available renderer for the current environment"),
+      ),
+    ).toBe(false);
+    expect(
+      isGraphicsContextCreationError({
+        cause: new Error("This browser does not support WebGL."),
+      }),
     ).toBe(true);
   });
 
