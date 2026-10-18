@@ -23,7 +23,7 @@ import * as handlers from '${source}/${folder}.handlers.js';
 import * as methods from '${source}/${folder}.methods.js';
 const appService={async previewNewProjectLocation({name}){
   await new Promise(resolve=>setTimeout(resolve,150));
-  const folderName=name==='Project/One'?'Project-One (2)':name||'Untitled Project';
+  const folderName=name==='Project/One'?'Project-One (2)':name;
   return {folderName,displayPath:'On My iPhone / RouteVN Projects / '+folderName};
 }};
 const deps={appService,__rtglI18nRuntime:{locale:'en',getMessages:()=>(${JSON.stringify(EN_I18N)})}};
@@ -73,7 +73,7 @@ for (const [engineName, engine] of Object.entries({ chromium, webkit })) {
       const destination = page.locator("#iosProjectLocation");
       if (platform === "ios") {
         await destination
-          .getByText("Untitled Project", { exact: true })
+          .getByText(EN_I18N.projectsPage.untitledProject, { exact: true })
           .waitFor();
         await destination.evaluate((element) => {
           const icon = element.querySelector('rtgl-svg[svg="folder"]');

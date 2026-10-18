@@ -1,3 +1,5 @@
+import { formatI18nCopy } from "../../../internal/ui/i18nCopy.js";
+
 const createSaveLoadPaginationModeOptions = (copy = {}) => [
   { label: copy.continuousOption ?? "Continuous", value: "continuous" },
   { label: copy.paginatedOption ?? "Paginated", value: "paginated" },
@@ -14,7 +16,13 @@ export const getSaveLoadPaginationSummary = ({ values, copy = {} } = {}) => {
   const resolvedPaginationSize =
     Number.isFinite(paginationSize) && paginationSize > 0 ? paginationSize : 0;
 
-  return `${copy.paginatedOption ?? "Paginated"}: runtime.saveLoadPagination • ${resolvedPaginationSize} ${copy.perPageLabel ?? "per page"}`;
+  const perPageLabel = formatI18nCopy(
+    copy.perPageCountLabel ?? "{count} per page",
+    { count: resolvedPaginationSize },
+  );
+
+  // The page shown comes from the Save/Load Pagination runtime value.
+  return `${copy.paginatedOption ?? "Paginated"}: ${copy.runtimeSaveLoadPaginationLabel ?? "Save/Load Pagination"} • ${perPageLabel}`;
 };
 
 export const createSaveLoadPaginationDialogDefaults = (values = {}) => {

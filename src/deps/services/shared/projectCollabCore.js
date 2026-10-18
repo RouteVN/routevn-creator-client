@@ -23,6 +23,11 @@ export const createProjectCollabCore = ({
   onSessionCleared,
   onSessionTransportUpdated,
   errorTracker,
+  // The project that is open, and its repository. A change is made in it, and
+  // takes its id: while a project closes, the route already names the page
+  // that comes next.
+  getOpenProjectId,
+  getOpenRepository,
 }) => {
   const collabSessionsByProject = new Map();
   const collabSessionModeByProject = new Map();
@@ -267,7 +272,7 @@ export const createProjectCollabCore = ({
   const commandApi = createCommandApi({
     idGenerator,
     now,
-    getCurrentProjectId,
+    getCurrentProjectId: getOpenProjectId ?? getCurrentProjectId,
     getCurrentRepository,
     getCachedRepository,
     ensureCommandSessionForProject,
@@ -277,6 +282,7 @@ export const createProjectCollabCore = ({
     scenePartitionFor: directScenePartitionFor,
     resourceTypePartitionFor,
     errorTracker,
+    getOpenRepository,
   });
 
   const deleteItemIfUnused = async ({

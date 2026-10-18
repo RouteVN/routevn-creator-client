@@ -148,6 +148,7 @@ export const selectViewData = ({ state, props, i18n }) => {
   }
 
   return {
+    submitButtonLabel: localizeCommandLineText("Submit", copy),
     breadcrumb: localizeCommandLineBreadcrumb(
       [
         {

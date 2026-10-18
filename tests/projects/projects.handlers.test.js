@@ -29,6 +29,8 @@ import {
   handleProjectLongPress,
   handleProjectsClick,
 } from "../../src/pages/projects/projects.handlers.js";
+import { createProjectFolderNotEmptyError } from "../../src/internal/projectInitialization.js";
+import { PT_I18N } from "../support/i18n.js";
 
 const EN_I18N_URL = new URL("../../src/i18n/en.yaml", import.meta.url);
 const EN_I18N = yaml.load(readFileSync(EN_I18N_URL, "utf8"));
@@ -599,7 +601,32 @@ describe("projects create dialog", () => {
       deps.appService.showProgressDialog.mock.invocationCallOrder[0],
     );
     expect(deps.appService.showAlert).toHaveBeenCalledWith({
-      message: "creation failed",
+      message: `${EN_I18N.projectsPage.failedCreateProject}\n\n${EN_I18N.projectsPage.errorDetailsLabel}\ncreation failed`,
+    });
+  });
+
+  it("explains a non-empty project folder in the app language", async () => {
+    const deps = createDeps();
+    deps.i18n = PT_I18N;
+    deps.appService.createNewProject.mockRejectedValue(
+      createProjectFolderNotEmptyError(),
+    );
+
+    await handleCreateDialogSubmit(deps, {
+      _event: {
+        detail: {
+          values: {
+            name: "Project One",
+            template: "default",
+            resolution: "1920x1080",
+            projectPath: "/projects/project-one",
+          },
+        },
+      },
+    });
+
+    expect(deps.appService.showAlert).toHaveBeenCalledWith({
+      message: PT_I18N.projectsPage.importDestinationNotEmptyMessage,
     });
   });
 });
@@ -1389,6 +1416,7 @@ describe("projects zip import", () => {
 
     expect(deps.appService.openArchivePicker).toHaveBeenCalledWith({
       title: "Select Project Zip File",
+      fileTypeName: EN_I18N.projectsPage.zipFileTypeName,
     });
     expect(deps.appService.openFolderPicker).not.toHaveBeenCalled();
     expect(deps.appService.importProjectFromArchive).toHaveBeenCalledWith({
@@ -1570,6 +1598,7 @@ describe("projects desktop zip import", () => {
 
     expect(deps.appService.openArchivePicker).toHaveBeenCalledWith({
       title: "Select Project Zip File",
+      fileTypeName: EN_I18N.projectsPage.zipFileTypeName,
     });
     expect(deps.store.setZipImportArchive).toHaveBeenCalledWith({
       archive: ZIP_ARCHIVE,

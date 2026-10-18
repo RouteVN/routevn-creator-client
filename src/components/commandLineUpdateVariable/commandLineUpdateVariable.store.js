@@ -212,8 +212,8 @@ export const selectViewData = ({ state, i18n }) => {
   const roundToValue = state.tempOperation.roundTo ?? DEFAULT_DIVIDE_ROUND_TO;
 
   const booleanOptions = [
-    { value: "true", label: "true" },
-    { value: "false", label: "false" },
+    { value: "true", label: "True" },
+    { value: "false", label: "False" },
   ];
 
   const operationsWithData = state.operations.map((op) => {
@@ -221,13 +221,15 @@ export const selectViewData = ({ state, i18n }) => {
     const varType = (variable?.variableType || "string").toLowerCase();
     const opDef = OPERATIONS_BY_TYPE[varType]?.find((o) => o.value === op.op);
 
-    // Format display value
+    // Format display value; a boolean uses its label from the value select.
     let displayValue = op.value;
     if (op.op === "toggle") {
       displayValue = "";
     } else if (varType === "boolean") {
-      displayValue =
-        op.value === true || op.value === "true" ? "true" : "false";
+      displayValue = localizeCommandLineText(
+        op.value === true || op.value === "true" ? "True" : "False",
+        copy,
+      );
     }
 
     return {

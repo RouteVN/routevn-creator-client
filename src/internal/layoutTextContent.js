@@ -192,16 +192,17 @@ export const getLayoutTextDisplayText = (
     .join("");
 };
 
+// `emptyText` is the caller's localized placeholder for text with no content.
 export const getLayoutTextSummary = (
   content,
-  { fallbackText, variablesData } = {},
+  { fallbackText, variablesData, emptyText = "Empty" } = {},
 ) => {
   const displayText = getLayoutTextDisplayText(content, {
     fallbackText,
     variablesData,
   }).trim();
 
-  return displayText || "Empty";
+  return displayText || emptyText;
 };
 
 const toSummaryTextPart = (text, index) => {
@@ -219,7 +220,7 @@ const toSummaryTextPart = (text, index) => {
 
 export const getLayoutTextSummaryParts = (
   content,
-  { fallbackText, variablesData } = {},
+  { fallbackText, variablesData, emptyText = "Empty" } = {},
 ) => {
   const parts = normalizeLayoutTextContent(content, { fallbackText })
     .map((item, index) => {
@@ -243,7 +244,7 @@ export const getLayoutTextSummaryParts = (
         {
           key: "empty",
           type: "text",
-          text: "Empty",
+          text: emptyText,
           muted: true,
         },
       ];

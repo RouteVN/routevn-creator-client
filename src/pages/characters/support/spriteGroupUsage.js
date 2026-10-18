@@ -80,21 +80,27 @@ export const buildSpriteGroupInUseMessage = ({
 
   if (usage?.sceneName) {
     locationParts.push(
-      copy.spriteGroupInUseScene.replace("{sceneName}", usage.sceneName),
+      copy.spriteGroupInUseScene.replace("{sceneName}", () => usage.sceneName),
     );
   }
 
   if (usage?.sectionName) {
     locationParts.push(
-      copy.spriteGroupInUseSection.replace("{sectionName}", usage.sectionName),
+      copy.spriteGroupInUseSection.replace(
+        "{sectionName}",
+        () => usage.sectionName,
+      ),
     );
   }
 
   if (locationParts.length === 0) {
-    return copy.spriteGroupInUseMessage.replace("{groupLabel}", groupLabel);
+    return copy.spriteGroupInUseMessage.replace(
+      "{groupLabel}",
+      () => groupLabel,
+    );
   }
 
   return copy.spriteGroupInUseMessageWithLocation
-    .replace("{groupLabel}", groupLabel)
-    .replace("{location}", locationParts.join(", "));
+    .replace("{groupLabel}", () => groupLabel)
+    .replace("{location}", () => locationParts.join(", "));
 };

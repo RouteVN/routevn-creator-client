@@ -27,6 +27,22 @@ const listPlaceholders = (value) =>
 const defaultCatalog = loadCatalog(defaultLocale);
 const problems = [];
 
+// Rettangoli reads a "." in a key as a nested path, so the build reports
+// such a key as missing in every other locale. Map English sentences that
+// end with a period to camelCase keys instead (see commandLineCopy.js).
+const listDottedKeys = (node, prefix) =>
+  Object.entries(node).flatMap(([key, value]) => {
+    const path = prefix ? `${prefix}.${key}` : key;
+    const nested =
+      value && typeof value === "object" ? listDottedKeys(value, path) : [];
+    return key.includes(".") ? [path, ...nested] : nested;
+  });
+for (const key of listDottedKeys(loadYaml(`${dir}/${defaultLocale}.yaml`))) {
+  problems.push(
+    `${dir}/${defaultLocale}.yaml: "${key}" contains ".", which Rettangoli reads as a nested key`,
+  );
+}
+
 for (const locale of locales) {
   if (locale === defaultLocale) {
     continue;

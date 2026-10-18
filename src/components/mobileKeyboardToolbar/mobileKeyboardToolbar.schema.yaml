@@ -8,6 +8,8 @@ propsSchema:
       type: boolean
     redoDisabled:
       type: boolean
+    previewHidden:
+      type: boolean
 events:
   action-click:
     type: object

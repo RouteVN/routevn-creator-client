@@ -61,7 +61,13 @@ const createSystemActionLabels = (copy = {}) => ({
     copy.actionToggleDialogueUI ?? "Toggle Dialogue Box Visibility",
   pushOverlay: copy.actionPushOverlay ?? "Push Overlay",
   popOverlay: copy.actionPopOverlay ?? "Pop Overlay",
+  rollbackByOffset: copy.actionRollbackByOffset ?? "Rollback",
   updateVariable: copy.actionUpdateVariable ?? "Update Variable",
+  conditional: copy.actionConditional ?? "Conditional",
+  showConfirmDialog: copy.actionShowConfirmDialog ?? "Show Confirm Dialog",
+  hideConfirmDialog: copy.actionHideConfirmDialog ?? "Hide Confirm Dialog",
+  saveSlot: copy.actionSaveSlot ?? "Save Slot",
+  loadSlot: copy.actionLoadSlot ?? "Load Slot",
   setDialogueTextSpeed:
     copy.actionSetDialogueTextSpeed ??
     RUNTIME_ACTION_LABELS.setDialogueTextSpeed,

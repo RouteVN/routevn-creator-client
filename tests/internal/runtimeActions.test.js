@@ -51,9 +51,11 @@ describe("runtimeActions", () => {
       }),
     ).toEqual({ setMenuEntryPoint: { value: "title" } });
     expect(
-      createRuntimeActionPreview("setMenuEntryPoint", { value: "title" })
-        .summary,
-    ).toBe("Set Menu Entry Point: Title Screen");
+      createRuntimeActionPreview("setMenuEntryPoint", { value: "title" }),
+    ).toMatchObject({
+      label: "Set Menu Entry Point",
+      valueLabel: "Title Screen",
+    });
   });
 
   it("offers the default template's menu pages as predefined values, or a custom one", () => {
@@ -121,15 +123,15 @@ describe("runtimeActions", () => {
       setMenuPage: { value: "_event.value" },
     });
     expect(
-      createRuntimeActionPreview("setMenuPage", { value: "options" }).summary,
-    ).toBe("Set Current Menu Page: Options");
+      createRuntimeActionPreview("setMenuPage", { value: "options" }),
+    ).toMatchObject({ label: "Set Current Menu Page", valueLabel: "Options" });
     expect(
       createRuntimeActionPreview("setMenuPage", { value: "scene-replay" })
-        .summary,
-    ).toBe("Set Current Menu Page: Scene Replay");
+        .valueLabel,
+    ).toBe("Scene Replay");
     expect(
-      createRuntimeActionPreview("setMenuPage", { value: "settings" }).summary,
-    ).toBe("Set Current Menu Page: settings");
+      createRuntimeActionPreview("setMenuPage", { value: "settings" }),
+    ).toMatchObject({ valueText: "settings" });
   });
 
   it("shows a value source segmented control for runtime value actions", () => {
@@ -183,7 +185,27 @@ describe("runtimeActions", () => {
         value: "_event.value",
       }),
     ).toMatchObject({
-      summary: "Set Music Volume: Current Value",
+      label: "Set Music Volume",
+      valueLabel: "Current Value",
+    });
+  });
+
+  it("previews a boolean as its True or False label and an empty action without a value", () => {
+    expect(
+      createRuntimeActionPreview("setMuteAll", { value: true }).valueLabel,
+    ).toBe("True");
+    expect(
+      createRuntimeActionPreview("setMuteAll", { value: false }).valueLabel,
+    ).toBe("False");
+    expect(
+      createRuntimeActionPreview("setMusicVolume", { value: 25 }),
+    ).toMatchObject({ valueText: "25" });
+    expect(
+      createRuntimeActionPreview("incrementSaveLoadPagination", {}),
+    ).toEqual({
+      mode: "incrementSaveLoadPagination",
+      icon: "settings",
+      label: "Next Save/Load Page",
     });
   });
 });

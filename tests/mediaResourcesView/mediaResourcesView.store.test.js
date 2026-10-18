@@ -3,6 +3,7 @@ import {
   createInitialState,
   selectViewData,
   setSoundWaveformRenderedItemIds,
+  showContextMenu,
 } from "../../src/components/mediaResourcesView/mediaResourcesView.store.js";
 import { MOBILE_RESOURCE_SCROLL_BOTTOM_PADDING } from "../../src/internal/ui/resourcePages/mobileResourcePage.js";
 
@@ -307,5 +308,43 @@ describe("mediaResourcesView.store", () => {
         (item) => item.shouldRenderWaveform,
       ),
     ).toEqual([true, false]);
+  });
+
+  it("falls back to a localized Delete item when the page passes no menu", () => {
+    const state = createInitialState();
+    const props = {
+      groups: [
+        { id: "folder-1", children: [{ id: "image-1", cardKind: "image" }] },
+      ],
+    };
+
+    showContextMenu({ state, props }, { itemId: "image-1", x: 1, y: 2 });
+    const viewData = selectViewData({
+      state,
+      props,
+      i18n: { resourcePages: { deleteMenuItem: "Apagar" } },
+    });
+
+    expect(viewData.dropdownMenu.items).toEqual([
+      { label: "Apagar", icon: "trash", type: "item", value: "delete-item" },
+    ]);
+  });
+
+  it("keeps the context menu items a page passes", () => {
+    const state = createInitialState();
+    const itemContextMenuItems = [
+      { label: "Edit", type: "item", value: "edit-item" },
+    ];
+    const props = {
+      groups: [
+        { id: "folder-1", children: [{ id: "image-1", cardKind: "image" }] },
+      ],
+      itemContextMenuItems,
+    };
+
+    showContextMenu({ state, props }, { itemId: "image-1", x: 1, y: 2 });
+    const viewData = selectViewData({ state, props });
+
+    expect(viewData.dropdownMenu.items).toEqual(itemContextMenuItems);
   });
 });

@@ -6,7 +6,7 @@ import {
   handleSoundFormAction,
   handleOptionSelected,
 } from "../../src/components/layoutEditPanel/layoutEditPanel.handlers.js";
-import { EN_I18N } from "../support/i18n.js";
+import { EN_I18N, PT_I18N } from "../support/i18n.js";
 import * as layoutEditorStore from "../../src/pages/layoutEditor/layoutEditor.store.js";
 import { createLayoutEditorRepositoryStoreData } from "../../src/pages/layoutEditor/support/layoutEditorRepositoryState.js";
 import {
@@ -65,6 +65,7 @@ const createLayoutEditorDeps = ({
     setLastPersistErrorAt: vi.fn(),
     syncRepositoryState: vi.fn(),
     selectLayoutId: vi.fn(() => "layout-1"),
+    selectLayoutName: vi.fn(() => "Layout One"),
     selectLayoutResourceType: vi.fn(() => resourceType),
     selectPreviewData: vi.fn(() => state.previewData),
     setPreviewData: vi.fn(({ previewData: nextPreviewData } = {}) => {
@@ -80,6 +81,9 @@ const createLayoutEditorDeps = ({
         : undefined,
     ),
     markPreviewDataSaved: vi.fn(({ version } = {}) => {
+      state.previewSavedVersion = Math.max(state.previewSavedVersion, version);
+    }),
+    markPreviewDataSaveFailed: vi.fn(({ version } = {}) => {
       state.previewSavedVersion = Math.max(state.previewSavedVersion, version);
     }),
     selectSelectedItemId: vi.fn(() => undefined),
@@ -106,7 +110,9 @@ const createLayoutEditorDeps = ({
       resourceType: "layouts",
     })),
     navigate: vi.fn(),
+    reportError: vi.fn(),
     showAlert: vi.fn(),
+    showAlertWhenIdle: vi.fn(),
     showToast: vi.fn(),
   };
 
@@ -658,7 +664,7 @@ describe("layoutEditor.handleBackClick", () => {
     );
   });
 
-  it("does not navigate when the pending flush fails", async () => {
+  it("drops the edit that failed to save, says so in the user's language, and does not navigate", async () => {
     const updateLayoutElement = vi.fn(async () => ({
       valid: false,
       error: {
@@ -683,11 +689,64 @@ describe("layoutEditor.handleBackClick", () => {
 
     await handleBackClick(deps);
 
-    expect(deps.appService.showAlert).toHaveBeenCalledWith({
-      message: "save failed",
+    expect(deps.appService.showAlertWhenIdle).toHaveBeenCalledWith({
+      message:
+        "Your latest changes to element “Container” in layout “Layout One” could not be saved and were removed. Please enter them again.\n\nDetails:\nsave failed",
       title: "Error",
     });
+    expect(deps.appService.showAlert).not.toHaveBeenCalled();
+    expect(deps.appService.reportError).toHaveBeenCalledWith(
+      expect.objectContaining({ message: "save failed" }),
+      { operation: "layoutEditor.saveElement" },
+    );
+    expect(deps.store.selectPendingPersistPayload()).toBeUndefined();
+    expect(deps.store.syncRepositoryState).toHaveBeenCalled();
     expect(deps.appService.navigate).not.toHaveBeenCalled();
+
+    // The edit is not saved again, and the page can be left.
+    await handleBackClick(deps);
+
+    expect(updateLayoutElement).toHaveBeenCalledTimes(1);
+    expect(deps.appService.navigate).toHaveBeenCalledTimes(1);
+  });
+
+  it("names the control when the edit that failed to save belongs to one", async () => {
+    const updateControlElement = vi.fn(async () => {
+      throw new Error("database is locked");
+    });
+    const deps = createLayoutEditorDeps({
+      resourceType: "controls",
+      pendingPersistPayload: {
+        layoutId: "layout-1",
+        resourceType: "controls",
+        selectedItemId: "item-1",
+        updatedItem: { id: "item-1", type: "container", x: 24, y: 0 },
+        persistenceRequestId: "persist-3",
+      },
+      updateControlElement,
+    });
+    deps.store.selectLayoutName.mockReturnValue("Control One");
+    deps.projectService.getRepositoryState.mockReturnValue({
+      layouts: { items: {} },
+      controls: {
+        items: {
+          "layout-1": {
+            elements: {
+              items: { "item-1": { type: "container", x: 0, y: 0 } },
+            },
+          },
+        },
+      },
+    });
+
+    await handleBackClick(deps);
+
+    expect(deps.appService.showAlertWhenIdle).toHaveBeenCalledWith({
+      message:
+        "Your latest changes to element “Container” in control “Control One” could not be saved and were removed. Please enter them again.\n\nDetails:\ndatabase is locked",
+      title: "Error",
+    });
+    expect(deps.store.selectPendingPersistPayload()).toBeUndefined();
   });
 
   it("flushes the latest canvas drag change before navigating back", async () => {
@@ -930,23 +989,30 @@ describe("layoutEditor preview autosave", () => {
     expect(deps.projectService.requestLayoutThumbnails).not.toHaveBeenCalled();
   });
 
-  it("keeps a preview that failed to save unsaved, says so, and stays on the page", async () => {
+  it("does not save a preview that failed to save again, and says so without stopping the page from being left", async () => {
     const { deps, leave } = mountEditor({
       updateLayoutItem: vi.fn(async () => ({ valid: false })),
     });
 
     changePreview(deps, { backgroundImageId: "image-two" });
-    await expect(leave({})).rejects.toThrow();
+    await leave({});
+    await leave({});
 
-    expect(deps.appService.showAlert).toHaveBeenCalledWith({
-      message: "Failed to save layout preview.",
+    expect(deps.projectService.updateLayoutItem).toHaveBeenCalledTimes(1);
+    expect(deps.appService.showAlertWhenIdle).toHaveBeenCalledWith({
+      message:
+        "Failed to save layout preview.\n\nDetails:\nFailed to save layout preview.",
       title: "Error",
     });
+    expect(deps.appService.reportError).toHaveBeenCalledWith(
+      expect.objectContaining({ message: "Failed to save layout preview." }),
+      { operation: "layoutEditor.savePreview" },
+    );
     expect(deps.store.markPreviewDataSaved).not.toHaveBeenCalled();
-    expect(deps.store.selectUnsavedPreviewData()).toEqual({
-      backgroundImageId: "image-two",
-    });
-    expect(deps.projectService.requestLayoutThumbnails).not.toHaveBeenCalled();
+    expect(deps.store.selectUnsavedPreviewData()).toBeUndefined();
+    expect(deps.projectService.requestLayoutThumbnails).toHaveBeenCalledTimes(
+      2,
+    );
   });
 });
 
@@ -1363,6 +1429,42 @@ describe("layoutEditor.handleFileExplorerAction", () => {
     } finally {
       vi.useRealTimers();
     }
+  });
+
+  it("names the parts of a new save/load slot in the app's language", async () => {
+    const createLayoutElement = vi.fn(async () => ({ valid: true }));
+    const deps = createLayoutEditorDeps();
+    deps.i18n = PT_I18N;
+    deps.projectService.createLayoutElement = createLayoutElement;
+    deps.store.selectProjectResolution = vi.fn(() => ({
+      width: 1920,
+      height: 1080,
+    }));
+    deps.store.setSelectedItemId = vi.fn();
+    deps.store.setDetailPanelSelectedItemId = vi.fn();
+    deps.store.setRightPanelMode = vi.fn();
+
+    await handleFileExplorerAction(deps, {
+      _event: {
+        detail: {
+          item: {
+            value: {
+              action: "new-child-item",
+              type: "container-ref-save-load-slot",
+            },
+          },
+        },
+      },
+    });
+
+    const createdNames = createLayoutElement.mock.calls.map(
+      ([payload]) => payload.data.name,
+    );
+    expect(createdNames).toEqual([
+      PT_I18N.layoutEditorPage.containerSaveLoadSlotMenuItem,
+      PT_I18N.layoutEditorPage.imageSaveImageMenuItem,
+      PT_I18N.layoutEditorPage.textSaveDateMenuItem,
+    ]);
   });
 });
 

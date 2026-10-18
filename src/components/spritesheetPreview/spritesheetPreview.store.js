@@ -116,7 +116,8 @@ export const selectAnimationFrameId = ({ state }) => state.animationFrameId;
 
 export const selectPlaybackStartedAt = ({ state }) => state.playbackStartedAt;
 
-export const selectViewData = ({ state, props }) => {
+export const selectViewData = ({ state, props, i18n = {} }) => {
+  const resourceCopy = i18n.resourcePages ?? {};
   const checkerCellSize = normalizeCheckerCellSize(props.checkerCellSize);
   const showCheckerboard = parseBooleanProp(props.showCheckerboard, true);
   const { br, borderRadiusCss } = resolveBorderRadius(props.br);
@@ -132,6 +133,9 @@ export const selectViewData = ({ state, props }) => {
       borderRadiusCss,
       showCheckerboard,
     }),
-    emptyLabel: props.emptyLabel ?? "No Preview",
+    emptyLabel:
+      props.emptyLabel ?? resourceCopy.previewEmptyLabel ?? "No Preview",
+    loadingLabel: resourceCopy.previewLoadingLabel ?? "Loading preview...",
+    errorLabel: resourceCopy.previewLoadFailedLabel ?? "Failed to load preview",
   };
 };

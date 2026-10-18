@@ -595,7 +595,7 @@ template:
       - $if textContentDialog.open:
           - rtgl-view slot=content g=md w=f:
               - rtgl-form#textContentForm key=${textContentDialog.key} :form=${textContentDialogForm} :defaultValues=${textContentDialogDefaults} w=f:
-                  - 'rvn-lexical-layout-text-editor#textContentEditor slot="text-content-editor" :content=${textContentDialogContent} :mentionTargets=${textContentMentionTargets}': null
+                  - 'rvn-lexical-layout-text-editor#textContentEditor slot="text-content-editor" :content=${textContentDialogContent} :mentionTargets=${textContentMentionTargets} :menuLabels=${textContentMenuLabels}': null
   - rtgl-dialog#conditionalOverrideConditionDialog ?open=${conditionalOverrideConditionDialog.open} s=md:
       - $if conditionalOverrideConditionDialog.open:
           - rtgl-view slot=content g=md:

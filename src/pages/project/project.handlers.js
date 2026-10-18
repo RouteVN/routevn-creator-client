@@ -1,6 +1,7 @@
 import { mountMobileResourceWindowLayout } from "../../internal/ui/resourcePages/mobileResourcePage.js";
 import { requireProjectResolution } from "../../internal/projectResolution.js";
 import { requireProjectLanguage } from "../../internal/projectLanguage.js";
+import { withErrorDetails } from "../../internal/errorDetails.js";
 import { createProjectStateStream } from "../../deps/services/shared/projectStateStream.js";
 import {
   catchError,
@@ -118,6 +119,49 @@ const failProjectAnalyticsRefresh = (deps, request) => {
   return true;
 };
 
+const createProjectAnalyticsRefreshStream = (deps, { repositoryState }) => {
+  const request = beginProjectAnalyticsRefresh(deps, { repositoryState });
+  if (request.sceneIds.length === 0) {
+    return EMPTY;
+  }
+
+  return createProjectAnalyticsLoadStream(deps, request).pipe(
+    tap((result) => {
+      completeProjectAnalyticsRefresh(deps, result);
+    }),
+    catchError(() => {
+      failProjectAnalyticsRefresh(deps, request);
+      return EMPTY;
+    }),
+  );
+};
+
+// Loads the open project's details, then its analytics. The subscription ends
+// with the page, so leaving the project while the details load stops the page
+// from reading a project that is no longer open.
+const createProjectLoadStream = (deps) => {
+  const { appService, projectService, store, i18n } = deps;
+  const copy = selectProjectPageCopy(i18n);
+
+  return defer(() => projectService.getCurrentProjectInfo()).pipe(
+    switchMap((projectInfo) => {
+      const repositoryState = projectService.getRepositoryState();
+      const projectResolution = requireProjectResolution(
+        repositoryState?.project?.resolution,
+        copy.projectResolutionLabel,
+      );
+      store.setCurrentProject({
+        project: {
+          ...projectInfo,
+          resolution: projectResolution,
+          source: appService.getCurrentProjectEntry()?.source,
+        },
+      });
+      return createProjectAnalyticsRefreshStream(deps, { repositoryState });
+    }),
+  );
+};
+
 const refreshProjectAnalytics = async (
   deps,
   { repositoryState, showFailureToast = false } = {},
@@ -157,29 +201,15 @@ export const handleBeforeMount = (deps) => {
     },
   });
 
-  const subscription = createProjectStateStream({
+  const projectLoadSubscription = createProjectLoadStream(deps).subscribe();
+  const analyticsSubscription = createProjectStateStream({
     projectService,
     emitCurrent: false,
   })
     .pipe(
-      switchMap(({ repositoryState }) => {
-        const request = beginProjectAnalyticsRefresh(deps, {
-          repositoryState,
-        });
-        if (request.sceneIds.length === 0) {
-          return EMPTY;
-        }
-
-        return createProjectAnalyticsLoadStream(deps, request).pipe(
-          tap((result) => {
-            completeProjectAnalyticsRefresh(deps, result);
-          }),
-          catchError(() => {
-            failProjectAnalyticsRefresh(deps, request);
-            return EMPTY;
-          }),
-        );
-      }),
+      switchMap(({ repositoryState }) =>
+        createProjectAnalyticsRefreshStream(deps, { repositoryState }),
+      ),
     )
     .subscribe();
   const cleanupWindowLayout = mountMobileResourceWindowLayout(deps);
@@ -188,29 +218,10 @@ export const handleBeforeMount = (deps) => {
     store.setProjectAnalyticsRequestId({
       requestId: store.selectProjectAnalyticsRequestId() + 1,
     });
-    subscription.unsubscribe();
+    projectLoadSubscription.unsubscribe();
+    analyticsSubscription.unsubscribe();
     cleanupWindowLayout?.();
   };
-};
-
-export const handleAfterMount = async (deps) => {
-  const { appService, projectService, store, i18n } = deps;
-  const copy = selectProjectPageCopy(i18n);
-  await projectService.ensureRepository();
-  const projectInfo = await projectService.getCurrentProjectInfo();
-  const repositoryState = projectService.getRepositoryState();
-  const projectResolution = requireProjectResolution(
-    repositoryState?.project?.resolution,
-    copy.projectResolutionLabel,
-  );
-  store.setCurrentProject({
-    project: {
-      ...projectInfo,
-      resolution: projectResolution,
-      source: appService.getCurrentProjectEntry()?.source,
-    },
-  });
-  await refreshProjectAnalytics(deps, { repositoryState });
 };
 
 const getActionMenuPosition = (event) => {
@@ -287,11 +298,14 @@ const exportCurrentNativeProject = async (deps) => {
       title: copy.exportCompleteTitle,
     });
   } catch (error) {
-    const message = String(error?.message ?? "").trim();
     store.setProjectExportLoading({ isLoading: false });
     render();
     await appService.showAlert({
-      message: message || copy.failedExportProject,
+      message: withErrorDetails(
+        copy.failedExportProject,
+        error,
+        copy.errorDetailsLabel,
+      ),
       title: copy.errorTitle,
     });
   }

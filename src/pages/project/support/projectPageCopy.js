@@ -9,7 +9,7 @@ export const selectProjectPageCopy = (i18n = {}) => {
 export const formatProjectPageCopy = (template, replacements = {}) => {
   let text = template;
   Object.entries(replacements).forEach(([key, value]) => {
-    text = text.replaceAll(`{${key}}`, value ?? "");
+    text = text.replaceAll(`{${key}}`, () => value ?? "");
   });
   return text;
 };

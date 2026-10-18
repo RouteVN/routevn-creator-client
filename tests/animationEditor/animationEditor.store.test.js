@@ -82,7 +82,7 @@ import {
   updateKeyframe,
   updatePopoverFormValues,
 } from "../../src/pages/animationEditor/animationEditor.store.js";
-import { EN_I18N } from "../support/i18n.js";
+import { EN_I18N, ES_I18N } from "../support/i18n.js";
 
 describe("animationEditor.store", () => {
   it("tracks the first y press for the animation JSON shortcut", () => {
@@ -148,6 +148,19 @@ describe("animationEditor.store", () => {
 
     openDialog({ state }, { dialogType: "update" });
     expect(selectSelectedEditorTab({ state })).toBe("tween");
+  });
+
+  it("labels the mask Add combine mode as an operation, not the Add button", () => {
+    const state = createInitialState();
+
+    expect(
+      selectViewData({ state, i18n: EN_I18N }).maskCombineOptions.at(-1),
+    ).toMatchObject({ value: "add", label: "Add" });
+    expect(
+      selectViewData({ state, i18n: ES_I18N }).maskCombineOptions.map(
+        ({ label }) => label,
+      ),
+    ).toEqual(["Máximo", "Mínimo", "Multiplicar", "Sumar"]);
   });
 
   it("hides empty transition property categories", () => {

@@ -1,3 +1,4 @@
+import { defer } from "rxjs";
 import { generateId, generatePrefixedId } from "../../internal/id.js";
 import {
   createCollabRemoteRefreshStream,
@@ -137,7 +138,8 @@ const buildSceneWhiteboardItems = ({
 
     return {
       id: sceneId,
-      name: scene.name || repositoryScene?.name || `Scene ${sceneId}`,
+      // A scene without a name shows its id, as a folder does.
+      name: scene.name || repositoryScene?.name || sceneId,
       x: toFiniteNumberOr(
         scene.position?.x,
         toFiniteNumberOr(
@@ -769,17 +771,25 @@ export const handleBeforeMount = (deps) => {
     matches: matchesRemoteTargets(["scenes", "layouts", "story"]),
     refresh: refreshScenesData,
   }).subscribe();
+  // The scene map opens once the project details load. The subscription ends
+  // with the page, so leaving the project while they load stops the page
+  // from reading a project that is no longer open.
+  const workspaceSubscription = defer(() =>
+    projectService.getCurrentProjectInfo(),
+  ).subscribe((projectInfo) => {
+    openScenesWorkspace(deps, { projectInfo });
+  });
 
   return () => {
     subscription.unsubscribe();
+    workspaceSubscription.unsubscribe();
     cancelDeferredWhiteboardWork(store);
   };
 };
 
-export const handleAfterMount = async (deps) => {
+const openScenesWorkspace = (deps, { projectInfo }) => {
   const { store, projectService, render, refs, appService } = deps;
 
-  const projectInfo = await projectService.getCurrentProjectInfo();
   store.setProjectLanguage({ language: projectInfo.language });
 
   const sceneItems = store.selectWhiteboardItems() ?? [];

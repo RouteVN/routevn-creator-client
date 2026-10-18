@@ -813,7 +813,7 @@ export const selectMinimapData = (
   );
 };
 
-export const selectViewData = ({ state, props }) => {
+export const selectViewData = ({ state, props, i18n = {} }) => {
   const isTouchMode = props.isTouchMode === true;
   const items = (props.items || []).map((item) => ({
     ...item,
@@ -918,6 +918,7 @@ export const selectViewData = ({ state, props }) => {
     sceneBoxWidth: SCENE_BOX_WIDTH,
     sceneBoxHeight: SCENE_BOX_HEIGHT,
     startBadgeSize,
+    startLabel: i18n.scenesPage?.mapStartLabel ?? "Start",
     startLineWidth,
     startLineHeight,
     startBadgeOffsetX: startBadgeSize + startLineWidth,
