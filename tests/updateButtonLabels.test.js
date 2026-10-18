@@ -3,6 +3,7 @@ import {
   EN_I18N,
   ES_I18N,
   JA_I18N,
+  PT_I18N,
   RU_I18N,
   TH_I18N,
   ZH_HANS_I18N,
@@ -33,6 +34,7 @@ describe("update button labels", () => {
     ["Spanish", ES_I18N, "Actualizar"],
     ["Thai", TH_I18N, "อัปเดต"],
     ["Russian", RU_I18N, "Сохранить"],
+    ["Portuguese", PT_I18N, "Atualizar"],
   ])("uses a generic label in %s edit forms", (_locale, catalog, expected) => {
     const labels = collectUpdateButtonLabels(catalog);
 

@@ -919,6 +919,7 @@ animationCameraEditor:
   zoomOutLabel: "縮小（Shift: 5倍）"
   viewportLabel: "カメラのプレビュー。ドラッグまたは矢印キーで移動、プラスとマイナスで拡大・縮小できます。"
 animationEditorPage:
+  addCombineLabel: "加算"
   cameraPropertyLabel: "カメラ"
   adjustCameraButton: "カメラを調整"
   absoluteValueType: "絶対値"

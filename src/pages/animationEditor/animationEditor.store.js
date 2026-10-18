@@ -306,7 +306,9 @@ const localizeText = (value, copy = {}) => {
 const localizeOptions = (options = [], copy = {}) => {
   return options.map((option) => ({
     ...option,
-    label: localizeText(option.label, copy),
+    label: option.labelKey
+      ? (copy[option.labelKey] ?? option.label)
+      : localizeText(option.label, copy),
   }));
 };
 

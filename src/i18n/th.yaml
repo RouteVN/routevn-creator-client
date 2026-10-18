@@ -919,6 +919,7 @@ animationCameraEditor:
   zoomOutLabel: "ซูมออก (Shift: 5×)"
   viewportLabel: "ตัวอย่างกล้อง ลากหรือใช้แป้นลูกศรเพื่อย้ายกล้อง ใช้แป้น + และ - เพื่อซูม"
 animationEditorPage:
+  addCombineLabel: "บวก"
   cameraPropertyLabel: "กล้อง"
   adjustCameraButton: "ปรับกล้อง"
   absoluteValueType: "ค่าสัมบูรณ์"
