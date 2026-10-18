@@ -291,7 +291,7 @@ export const selectCropSelection = ({ state }) => {
   };
 };
 
-export const selectViewData = ({ state }) => {
+export const selectViewData = ({ state, i18n = {} }) => {
   const isReady = hasImage(state) && Boolean(state.imageUrl);
   const maxZoom = getEffectiveMaxZoom(state);
   const zoomLevel = clamp(state.zoomLevel, MIN_ZOOM, maxZoom);
@@ -305,6 +305,7 @@ export const selectViewData = ({ state }) => {
   return {
     imageUrl: state.imageUrl,
     isReady,
+    loadingLabel: i18n.resourcePages?.imageLoadingLabel ?? "Loading image...",
     cropCursor:
       state.pointers.length > 0 ? "grabbing" : isReady ? "grab" : "default",
     imageFrameStyle: [

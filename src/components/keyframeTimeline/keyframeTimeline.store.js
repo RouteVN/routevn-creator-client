@@ -717,6 +717,8 @@ export const selectViewData = ({ state, props, props: attrs, i18n = {} }) => {
     usedDuration,
     usedDurationStyle,
     editable: attrs.editable,
+    noKeyframesLabel:
+      i18n.animationEditorPage?.noKeyframesLabel ?? "No keyframes",
   };
 
   return result;

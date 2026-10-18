@@ -195,10 +195,9 @@ const {
         : "0px",
       mobileDeleteDialogOpen: state.mobileDeleteDialogOpen,
       mobileDeleteDialogTitle: copy.deleteTitle,
-      mobileDeleteDialogMessage: copy.deleteMessage.replace(
-        "{itemName}",
-        deleteDialogItemName,
-      ),
+      mobileDeleteDialogMessage: formatI18nCopy(copy.deleteMessage, {
+        itemName: deleteDialogItemName,
+      }),
       mobileDeleteDialogConfirmLabel: copy.deleteButton,
     };
   },

@@ -43,6 +43,21 @@ const COMMAND_LINE_COPY_KEYS = Object.freeze({
   "The selected input layout does not contain input fields.":
     "inputLayoutHasNoFields",
   "Variable operation value is invalid.": "variableOperationValueInvalid",
+  "Choose an operation...": "chooseOperationPlaceholder",
+  "Decrement the current save/load pagination page.":
+    "decrementSaveLoadPageDescription",
+  "Increment the current save/load pagination page.":
+    "incrementSaveLoadPageDescription",
+  "Leave empty for auto, or use a fixed value like 1, ${slot.slotId}, or _event.slotId":
+    "slotIdDescription",
+  "Pop the current overlay and return to the previous view.":
+    "popOverlayDescription",
+  "Single Line applies only to the next line. Persistent keeps this config active until changed":
+    "nextLineConfigModeTooltip",
+  "Specific Value lets you enter a value. Current Value uses the value from the triggering control.":
+    "runtimeValueSourceTooltip",
+  "When the auto-advance timer starts counting. 'Text Complete' waits for the text animation to finish first. 'Line Start' starts the timer immediately when the line begins":
+    "autoAdvanceTimerStartTooltip",
 });
 
 export const selectCommandLineCopy = (i18n = {}) => {

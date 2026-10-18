@@ -1,4 +1,5 @@
 import { buildResourceOverflowMenuItems } from "../../internal/ui/resourcePages/resourceOverflowMenu.js";
+import { selectResourceViewCopy } from "../../internal/ui/resourcePages/resourceViewCopy.js";
 import { buildProgressivePlaceholderChildren } from "../../internal/ui/resourcePages/progressivePlaceholders.js";
 import {
   buildTagFilterPopoverViewData,
@@ -259,6 +260,13 @@ export const selectViewData = ({ state, props, i18n }) => {
   const menuButtonPlacement =
     props.menuButtonPlacement === "trailing" ? "trailing" : "leading";
   const hasActiveSearch = searchQuery.trim().length > 0;
+  const viewCopy = selectResourceViewCopy({
+    i18n,
+    namespace: "textStylesPage",
+    searchQuery,
+    hasActiveSearch,
+    hasActiveTagFilter,
+  });
   const hasActiveFilter =
     hasActiveTagFilter || (searchInFilterPopover && hasActiveSearch);
   const tagFilterPopoverViewData = buildTagFilterPopoverViewData({
@@ -331,10 +339,11 @@ export const selectViewData = ({ state, props, i18n }) => {
     groups,
     selectedItemId: props.selectedItemId,
     searchQuery,
-    searchPlaceholder: props.searchPlaceholder ?? "Search...",
+    searchPlaceholder: props.searchPlaceholder ?? viewCopy.searchPlaceholder,
     tagFilterOptions: props.tagFilterOptions ?? [],
     selectedTagFilterValues: props.selectedTagFilterValues ?? [],
-    tagFilterPlaceholder: props.tagFilterPlaceholder ?? "Filter tags",
+    tagFilterPlaceholder:
+      props.tagFilterPlaceholder ?? viewCopy.tagFilterPlaceholder,
     tagFilterPopover: {
       ...tagFilterPopoverViewData.tagFilterPopover,
       clearDisabled:
@@ -368,13 +377,8 @@ export const selectViewData = ({ state, props, i18n }) => {
       props.progressiveInitialItemCount,
       DEFAULT_PROGRESSIVE_INITIAL_ITEM_COUNT,
     ),
-    emptyMessage:
-      props.emptyMessage ??
-      (hasActiveSearch
-        ? `No text styles found matching "${searchQuery}"`
-        : hasActiveTagFilter
-          ? "No text styles found for the selected tags"
-          : `No text styles found matching "${searchQuery}"`),
+    emptyMessage: props.emptyMessage ?? viewCopy.emptyMessage,
+    viewCopy,
     addText: props.addText ?? "Add Text Style",
     dropdownMenu: state.dropdownMenu,
     mobileLayout,

@@ -980,7 +980,8 @@ export const selectViewData = ({ state, i18n }) => {
       copy.deleteProjectConfirmationPlaceholder,
     deleteDialogConfirmDisabled:
       isAndroidProjectDelete &&
-      state.deleteDialog.confirmationText !== "Delete",
+      state.deleteDialog.confirmationText !==
+        copy.deleteProjectConfirmationWord,
     deleteDialogConfirmLabel: isAndroidProjectDelete
       ? copy.deleteButton
       : copy.removeButton,

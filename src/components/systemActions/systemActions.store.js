@@ -353,7 +353,7 @@ export const selectViewData = ({ state, props, props: attrs, i18n }) => {
       copy,
     ),
     hideConfirmDialogLabel: localizeCommandLineText(
-      "Hide confirm dialog",
+      "Hide Confirm Dialog",
       copy,
     ),
     nextLineConfigLabel: localizeCommandLineText("Next Line Config", copy),

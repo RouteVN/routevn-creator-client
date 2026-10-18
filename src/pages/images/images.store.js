@@ -290,10 +290,9 @@ const {
     viewData.deleteDialogOpen = state.deleteDialogOpen;
     viewData.selectedOriginalFileId = selectedItem?.fileId;
     viewData.deleteDialogTitle = copy.deleteTitle;
-    viewData.deleteDialogMessage = copy.deleteMessage.replace(
-      "{itemName}",
-      deleteDialogItemName,
-    );
+    viewData.deleteDialogMessage = formatI18nCopy(copy.deleteMessage, {
+      itemName: deleteDialogItemName,
+    });
     viewData.deleteDialogConfirmLabel = copy.deleteButton;
     return viewData;
   },

@@ -65,6 +65,12 @@ hook and CI run it too. The `i18n` workflow also runs it on every push to
 other. When you add or change an English string, add the same key to every
 locale in the same pull request.
 
+A catalog key must not contain `.`, because Rettangoli reads it as a nested
+path and the build then reports the key as missing in every other locale.
+`check:i18n` reports such keys. When English text is used as the lookup key,
+as in the scene editor forms, map text that contains a period to a camelCase
+key in `COMMAND_LINE_COPY_KEYS`.
+
 Rettangoli passes `i18n` into store selectors and handler deps. Do not pass
 page-level `copy` objects through component props only to localize a child
 component. Components that render or compute their own copy should read from

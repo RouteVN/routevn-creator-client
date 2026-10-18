@@ -129,4 +129,4 @@ template:
                                     $else:
                                       - rtgl-view d=h p=xs h=f w=1fg br=sm ah=c av=c:
                                           - $if property.emptyLabelVisible:
-                                              - rtgl-text s=xs: No keyframes
+                                              - rtgl-text s=xs: ${noKeyframesLabel}

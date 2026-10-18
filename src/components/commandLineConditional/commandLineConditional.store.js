@@ -559,10 +559,6 @@ export const selectViewData = ({ state, props, i18n }) => {
     canSaveBranch,
     isEditingDefault: state.tempBranch.conditionKind === "default",
     isEditingUnsupportedCondition,
-    editBranchTitle:
-      state.tempBranch.conditionKind === "default"
-        ? localizeCommandLineText(DEFAULT_BRANCH_LABEL, copy)
-        : localizeCommandLineText("Branch", copy),
     hiddenModes: getHiddenModes(props),
     dropdownMenu: localizeCommandLineDropdownMenu(state.dropdownMenu, copy),
     actionsLabel: localizeCommandLineText("Actions", copy),
@@ -578,7 +574,12 @@ export const selectViewData = ({ state, props, i18n }) => {
     defaultBranchLabel: localizeCommandLineText(DEFAULT_BRANCH_LABEL, copy),
     operatorLabel: localizeCommandLineText("Operator", copy),
     removeValueButton: localizeCommandLineText("Remove Value", copy),
-    saveButtonPrefix: localizeCommandLineText("Save", copy),
+    saveBranchButton: localizeCommandLineText(
+      state.tempBranch.conditionKind === "default"
+        ? "Save Default Branch"
+        : "Save Branch",
+      copy,
+    ),
     submitButton: localizeCommandLineText("Submit", copy),
     unsupportedConditionLabel: localizeCommandLineText(
       "Unsupported condition",

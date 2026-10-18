@@ -109,7 +109,7 @@ const createFolderNameForm = (copy = {}) => ({
     {
       name: "name",
       type: "input-text",
-      label: copy.nameLabel ?? "Name",
+      label: copy.folderNameLabel ?? "Name",
       required: true,
     },
     {

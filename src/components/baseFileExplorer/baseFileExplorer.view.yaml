@@ -87,7 +87,7 @@ template:
       - 'rtgl-view w=f h=1fg d=v g=sm pos=rel style="min-height: 0;"':
           - $if items.length == 0 && !noEmptyMessage:
               - rtgl-view#emptyMessage w=f h=1fg d=f av=c ah=c p=xl cur=pointer:
-                  - rtgl-text s=sm c=mu-fg ta=c: No items.
+                  - rtgl-text s=sm c=mu-fg ta=c: ${emptyMessageLabel}
             $else:
               - rtgl-view w=f:
                   - $for item, i in items:
