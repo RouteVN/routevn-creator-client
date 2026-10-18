@@ -322,6 +322,7 @@ describe("sceneEditorLexical.handlers preview", () => {
       selectPendingDraftSections: vi.fn(() => []),
       setDraftSavePendingSinceAt: vi.fn(),
       setSkipNextEditorBlurDraftFlush: vi.fn(),
+      selectIsCanvasUnavailable: () => false,
       showPreviewSceneId: vi.fn(() => calls.push("show-preview")),
       selectScene: vi.fn(() => ({
         sections: [{ id: "section-1", lines: [line] }],
@@ -394,6 +395,7 @@ describe("sceneEditorLexical.handlers canvas download", () => {
           payload.completion.resolve();
         }),
       },
+      store: { selectIsCanvasUnavailable: () => false },
     };
 
     await handleDownloadCanvasClick(deps);
@@ -447,7 +449,7 @@ describe("sceneEditorLexical.handlers canvas download", () => {
           payload.completion.resolve();
         }),
       },
-      store: {},
+      store: { selectIsCanvasUnavailable: () => false },
     };
 
     await handleDownloadCanvasClick(deps);
@@ -1130,6 +1132,7 @@ describe("sceneEditorLexical.handlers actions dialog", () => {
       store: {
         clearBackgroundTransformEditorDragStartPosition: vi.fn(),
         setBackgroundTransformEditorTransform: vi.fn(),
+        selectIsCanvasUnavailable: () => false,
       },
       render: vi.fn(),
       subject: {
@@ -1178,6 +1181,7 @@ describe("sceneEditorLexical.handlers actions dialog", () => {
           editor.transform = transform;
         }),
         selectBackgroundTransformEditor: vi.fn(() => editor),
+        selectIsCanvasUnavailable: () => false,
       },
       graphicsService: {
         engineSelectRenderState: vi.fn(() => ({

@@ -235,8 +235,11 @@ already handled. It never shows UI. Handled errors are still shown through
   that for the session. `graphicsService.init` still rejects with it and calls its
   `onGraphicsUnavailable` option, which every platform setup points at
   `createGraphicsUnavailableNotifier`: one localized alert at a time, with the
-  technical details after it. The preview and the scene editor skip their own
-  generic alert for this error, and the reporter drops events for it.
+  technical details after it. The preview skips its own generic alert for this
+  error, and the reporter drops events for it. The scene editor stays open
+  without its canvas: it shows a short notice where the canvas would be, hides
+  the preview and canvas download controls, and skips every canvas render,
+  while lines and their actions can still be edited and saved.
 - Current call sites: project-open route failures, `runResourcePageMutation`
   thrown errors, engine render failures (`operation` `graphics.render`), and
   scene editor canvas renders that throw with no caller waiting for them

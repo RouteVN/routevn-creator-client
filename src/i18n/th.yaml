@@ -2027,6 +2027,7 @@ sceneEditorPage:
   createSectionTitle: "สร้างส่วน"
   createTextStyleBeforeFurigana: "สร้างรูปแบบตัวอักษรก่อนเพิ่มข้อความกำกับ"
   canvasDownloaded: "ดาวน์โหลดแคนวาสแล้ว"
+  canvasUnavailableMessage: "อุปกรณ์นี้ไม่สามารถแสดงตัวอย่างได้ แต่คุณยังแก้ไขบรรทัดและแอ็กชันได้ตามปกติ"
   deadEndTooltipContent: "ส่วนนี้ไม่มีทางไปต่อยังส่วนอื่น"
   downloadCanvasButton: "ดาวน์โหลดแคนวาส"
   downLabel: "ลง"

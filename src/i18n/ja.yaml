@@ -2027,6 +2027,7 @@ sceneEditorPage:
   createSectionTitle: "セクションを作成"
   createTextStyleBeforeFurigana: "ルビを追加する前にテキストスタイルを作成してください。"
   canvasDownloaded: "キャンバスをダウンロードしました。"
+  canvasUnavailableMessage: "この端末ではプレビューを表示できません。行とアクションは引き続き編集できます。"
   deadEndTooltipContent: "このセクションから別のセクションへの遷移がありません。"
   downloadCanvasButton: "キャンバスをダウンロード"
   downLabel: "下"

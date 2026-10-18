@@ -2027,6 +2027,7 @@ sceneEditorPage:
   createSectionTitle: "创建段落"
   createTextStyleBeforeFurigana: "添加注音文本前，请先创建文本样式。"
   canvasDownloaded: "画布已下载。"
+  canvasUnavailableMessage: "此设备无法显示预览。你仍可以编辑各行及其动作。"
   deadEndTooltipContent: "该段落没有跳转到其他段落。"
   downloadCanvasButton: "下载画布"
   downLabel: "下"

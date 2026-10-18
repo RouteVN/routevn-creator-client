@@ -2027,6 +2027,7 @@ sceneEditorPage:
   createSectionTitle: "Crear sección"
   createTextStyleBeforeFurigana: "Crea un estilo de texto antes de añadir texto ruby."
   canvasDownloaded: "Lienzo descargado."
+  canvasUnavailableMessage: "Este dispositivo no puede mostrar la vista previa. Aún puedes editar las líneas y sus acciones."
   deadEndTooltipContent: "Esta sección no lleva a ninguna otra sección."
   downloadCanvasButton: "Descargar lienzo"
   downLabel: "Abajo"
