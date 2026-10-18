@@ -917,6 +917,7 @@ animationCameraEditor:
   zoomOutLabel: "Zoom out (Shift: 5×)"
   viewportLabel: "Camera preview. Drag or use arrow keys to move. Use plus and minus to zoom."
 animationEditorPage:
+  addCombineLabel: "Add"
   cameraPropertyLabel: "Camera"
   adjustCameraButton: "Adjust camera"
   absoluteValueType: "Absolute"
