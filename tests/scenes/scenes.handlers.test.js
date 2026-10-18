@@ -198,6 +198,26 @@ describe("scenes.handlers config keys", () => {
     cleanup();
   });
 
+  it("shows a scene without a name by its id on the map", () => {
+    const deps = createDeps();
+    deps.projectService.getRepositoryState.mockReturnValue({
+      scenes: { tree: [], items: { "scene-1": { id: "scene-1" } } },
+      layouts: { tree: [], items: {} },
+    });
+    deps.projectService.getDomainState.mockReturnValue({
+      scenes: { "scene-1": { id: "scene-1" } },
+      story: { sceneOrder: ["scene-1"] },
+    });
+
+    const cleanup = handleBeforeMount(deps);
+
+    expect(deps.store.setWhiteboardItems).toHaveBeenCalledWith({
+      items: [expect.objectContaining({ id: "scene-1", name: "scene-1" })],
+    });
+
+    cleanup();
+  });
+
   it("loads the scenes viewport from project-scoped userConfig keys", async () => {
     const deps = createDeps({
       userConfig: {

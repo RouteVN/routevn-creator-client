@@ -1,9 +1,12 @@
 import { describe, expect, it } from "vitest";
 import {
+  createLayoutEditorElementTemplate,
   toLayoutEditorContextMenuItems,
   toLayoutEditorExplorerItems,
 } from "../../src/pages/layoutEditor/support/layoutEditorViewData.js";
+import { selectLayoutEditorPageCopy } from "../../src/pages/layoutEditor/support/layoutEditorPageCopy.js";
 import { createLayoutEditorItemTemplate } from "../../src/internal/layoutEditorElementRegistry.js";
+import { PT_I18N } from "../support/i18n.js";
 
 describe("layoutEditorViewData", () => {
   it("creates save/load date elements with the date-only default format", () => {
@@ -172,6 +175,54 @@ describe("layoutEditorViewData", () => {
     });
     expect(submitItem.value).not.toHaveProperty("width");
     expect(submitItem.value).not.toHaveProperty("height");
+  });
+
+  it("names created elements as their menu item in the app's language", () => {
+    const copy = selectLayoutEditorPageCopy(PT_I18N);
+    const [textItem, imageItem] = toLayoutEditorContextMenuItems(
+      [
+        {
+          label: copy.textDialogueContentMenuItem,
+          type: "item",
+          createType: "text-dialogue-content",
+        },
+        {
+          label: copy.imageMenuItem,
+          type: "item",
+          createType: "sprite",
+        },
+      ],
+      undefined,
+      copy,
+    );
+
+    expect(textItem.value).toMatchObject({
+      action: "new-child-item",
+      type: "text-revealing-ref-dialogue-content",
+      name: PT_I18N.layoutEditorPage.textDialogueContentMenuItem,
+    });
+    expect(imageItem.value).toMatchObject({
+      type: "sprite",
+      name: PT_I18N.layoutEditorPage.imageMenuItem,
+    });
+  });
+
+  it("creates element templates with the localized default name", () => {
+    const copy = selectLayoutEditorPageCopy(PT_I18N);
+
+    expect(
+      createLayoutEditorElementTemplate("container-save-load-slot", { copy }),
+    ).toMatchObject({
+      type: "container-ref-save-load-slot",
+      name: PT_I18N.layoutEditorPage.containerSaveLoadSlotMenuItem,
+      paginationMode: "continuous",
+    });
+    expect(
+      createLayoutEditorElementTemplate("text-save-load-slot-date"),
+    ).toMatchObject({
+      type: "text-ref-save-load-slot-date",
+      name: "Text (Save Date)",
+    });
   });
 
   it("builds choice single item container create actions", () => {

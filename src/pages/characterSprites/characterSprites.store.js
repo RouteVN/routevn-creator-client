@@ -153,7 +153,7 @@ const resolveSheetHeight = (item) =>
 const resolveFrameCount = (item) =>
   item?.frameCount ?? Object.keys(item?.jsonData?.frames ?? {}).length ?? 0;
 
-const buildImageDetailFields = (item, copy) => {
+const buildImageDetailFields = (item, copy, dateTime) => {
   if (!item) {
     return [];
   }
@@ -186,7 +186,7 @@ const buildImageDetailFields = (item, copy) => {
     {
       type: "text",
       label: copy.fileSizeLabel,
-      value: formatFileSize(item.fileSize),
+      value: formatFileSize(item.fileSize, dateTime),
     },
     {
       type: "text",
@@ -196,7 +196,7 @@ const buildImageDetailFields = (item, copy) => {
   ];
 };
 
-const buildSpritesheetDetailFields = (item, copy) => {
+const buildSpritesheetDetailFields = (item, copy, dateTime) => {
   if (!item) {
     return [];
   }
@@ -231,7 +231,7 @@ const buildSpritesheetDetailFields = (item, copy) => {
     {
       type: "text",
       label: copy.fileSizeLabel,
-      value: formatFileSize(item.fileSize),
+      value: formatFileSize(item.fileSize, dateTime),
     },
     {
       type: "text",
@@ -1337,9 +1337,9 @@ export const selectViewData = ({ state, i18n }) => {
   const selectedDetailName = selectedItem?.name ?? selectedFolder?.name ?? "";
   const detailFields =
     selectedItem?.type === "image"
-      ? buildImageDetailFields(selectedItem, copy)
+      ? buildImageDetailFields(selectedItem, copy, i18n.dateTime)
       : selectedItem?.type === "spritesheet"
-        ? buildSpritesheetDetailFields(selectedItem, copy)
+        ? buildSpritesheetDetailFields(selectedItem, copy, i18n.dateTime)
         : buildFolderDetailFields(selectedFolder, copy);
   const visibleSpriteIds = selectVisibleSpriteIds({
     mediaGroups,

@@ -138,7 +138,8 @@ const buildSceneWhiteboardItems = ({
 
     return {
       id: sceneId,
-      name: scene.name || repositoryScene?.name || `Scene ${sceneId}`,
+      // A scene without a name shows its id, as a folder does.
+      name: scene.name || repositoryScene?.name || sceneId,
       x: toFiniteNumberOr(
         scene.position?.x,
         toFiniteNumberOr(

@@ -213,6 +213,51 @@ describe("lexical layout text editor", () => {
     }
   });
 
+  it("shows the variable menu in the language its owner passes", async () => {
+    const { editorElement, dispose } = await createTextEditorHarness();
+    const menu = editorElement.refs.mentionMenu;
+    const openMenu = (items) => {
+      editorElement.state.mentionMenu = {
+        ...editorElement.state.mentionMenu,
+        isOpen: true,
+        items,
+      };
+      editorElement.renderMentionMenu();
+    };
+    const items = [
+      { id: "playerName", label: "Player Name", variableType: "string" },
+      { id: "score", label: "Score", variableType: "number" },
+    ];
+
+    try {
+      openMenu(items);
+      expect(menu.items.map((item) => item.suffixText)).toEqual([
+        "string",
+        "number",
+      ]);
+
+      openMenu([]);
+      expect(menu.items[0]).toMatchObject({
+        label: "No variables",
+        disabled: true,
+      });
+
+      editorElement.menuLabels = {
+        noVariables: "Sem variáveis",
+        variableTypes: { string: "texto", number: "número" },
+      };
+      expect(menu.items[0].label).toBe("Sem variáveis");
+
+      openMenu(items);
+      expect(menu.items.map((item) => item.suffixText)).toEqual([
+        "texto",
+        "número",
+      ]);
+    } finally {
+      dispose();
+    }
+  });
+
   it("keeps a DOM-opened slash menu open when Lexical catches up", async () => {
     const { editorElement, dispose } = await createTextEditorHarness();
 

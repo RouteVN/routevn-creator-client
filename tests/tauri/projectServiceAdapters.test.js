@@ -991,9 +991,7 @@ describe("tauri project service adapters preflight reads", () => {
           height: 720,
         },
       }),
-    ).rejects.toThrow(
-      "The selected folder must be empty. Please choose an empty folder for your new project.",
-    );
+    ).rejects.toMatchObject({ code: "project_folder_not_empty" });
 
     expect(mocked.mkdir).not.toHaveBeenCalled();
     expect(mocked.writeFile).not.toHaveBeenCalled();

@@ -56,7 +56,7 @@ describe("layoutEditPanel child interaction tooltip", () => {
 
     expect(section).toMatchObject({
       label: "Child Interaction",
-      tooltip: "Inherit child event from parent",
+      tooltip: "Child elements inherit interaction events from the parent",
     });
   });
 
@@ -90,7 +90,10 @@ describe("layoutEditPanel child interaction tooltip", () => {
       {
         _event: {
           currentTarget: {
-            dataset: { tooltip: "Inherit child event from parent" },
+            dataset: {
+              tooltip:
+                "Child elements inherit interaction events from the parent",
+            },
             getBoundingClientRect: () => ({ left: 20, top: 40, width: 16 }),
           },
         },
@@ -100,7 +103,7 @@ describe("layoutEditPanel child interaction tooltip", () => {
     expect(store.showSectionTooltip).toHaveBeenCalledWith({
       x: 28,
       y: 32,
-      content: "Inherit child event from parent",
+      content: "Child elements inherit interaction events from the parent",
     });
 
     handleSectionTooltipMouseLeave({ store, render });

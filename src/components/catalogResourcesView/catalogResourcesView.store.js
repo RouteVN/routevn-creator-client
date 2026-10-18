@@ -1,3 +1,4 @@
+import { formatI18nCopy } from "../../internal/ui/i18nCopy.js";
 import { buildResourceOverflowMenuItems } from "../../internal/ui/resourcePages/resourceOverflowMenu.js";
 import { selectResourceViewCopy } from "../../internal/ui/resourcePages/resourceViewCopy.js";
 import { buildProgressivePlaceholderChildren } from "../../internal/ui/resourcePages/progressivePlaceholders.js";
@@ -203,10 +204,9 @@ export const showContextMenu = ({ state, props }, { itemId, x, y } = {}) => {
   const item = props.groups
     ?.flatMap((group) => group.children ?? [])
     .find((entry) => entry.id === itemId);
-  state.dropdownMenu.items = item?.contextMenuItems ??
-    props.itemContextMenuItems ?? [
-      { label: "Delete", type: "item", value: "delete-item" },
-    ];
+  // Undefined items fall back to a localized Delete item in selectViewData.
+  state.dropdownMenu.items =
+    item?.contextMenuItems ?? props.itemContextMenuItems;
 };
 
 export const hideContextMenu = ({ state }, _payload = {}) => {
@@ -227,7 +227,8 @@ export {
   toggleTagFilterPopoverTagId,
 };
 
-export const selectViewData = ({ state, props, i18n }) => {
+export const selectViewData = ({ state, props, i18n = {} }) => {
+  const animationCopy = i18n.animationEditorPage ?? {};
   const mobileLayout = parseBooleanProp(props.mobileLayout);
   const useColumnZoomControl = isColumnZoomControlMode(props);
   const columnZoomControlMax = getMaxItemsPerRow(props);
@@ -329,8 +330,20 @@ export const selectViewData = ({ state, props, i18n }) => {
 
         return {
           ...item,
-          transitionOutgoingLabel: item.transitionOutgoingLabel ?? "Outgoing",
-          transitionIncomingLabel: item.transitionIncomingLabel ?? "Incoming",
+          animationTypeSummary:
+            item.cardKind === "animation"
+              ? formatI18nCopy(viewCopy.typeSummaryTemplate, {
+                  type: item.animationTypeLabel,
+                })
+              : undefined,
+          transitionOutgoingLabel:
+            item.transitionOutgoingLabel ??
+            animationCopy.outTimelineLabel ??
+            "Outgoing",
+          transitionIncomingLabel:
+            item.transitionIncomingLabel ??
+            animationCopy.inTimelineLabel ??
+            "Incoming",
           domItemId: isPlaceholder ? "" : item.id,
           longPressEnabled: mobileLayout && !isPlaceholder,
           cursor: isPlaceholder ? "default" : "pointer",
@@ -405,10 +418,15 @@ export const selectViewData = ({ state, props, i18n }) => {
     ),
     emptyMessage: props.emptyMessage ?? viewCopy.emptyMessage,
     viewCopy,
-    addText: props.addText ?? "Add",
+    addText: props.addText ?? viewCopy.addText,
     canAdd: parseBooleanProp(props.canAdd, true),
     mobileLayout,
     scrollBottomPadding,
-    dropdownMenu: state.dropdownMenu,
+    dropdownMenu: {
+      ...state.dropdownMenu,
+      items: state.dropdownMenu.items ?? [
+        { label: viewCopy.deleteMenuItem, type: "item", value: "delete-item" },
+      ],
+    },
   };
 };

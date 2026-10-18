@@ -423,6 +423,7 @@ export const selectPopoverItemId = ({ state }) => {
 };
 
 export const selectViewData = ({ state, props, props: attrs, i18n = {} }) => {
+  const resourceCopy = i18n.resourcePages ?? {};
   let items = props.items || [];
 
   // Filter items based on collapsed state
@@ -555,7 +556,7 @@ export const selectViewData = ({ state, props, props: attrs, i18n = {} }) => {
           {
             name: "name",
             type: "input-text",
-            label: "Name",
+            label: resourceCopy.nameLabel ?? "Name",
             required: true,
           },
         ],
@@ -565,7 +566,7 @@ export const selectViewData = ({ state, props, props: attrs, i18n = {} }) => {
             {
               id: "submit",
               variant: "pr",
-              label: "Rename",
+              label: resourceCopy.renameMenuItem ?? "Rename",
               validate: true,
             },
           ],
@@ -599,9 +600,8 @@ export const selectViewData = ({ state, props, props: attrs, i18n = {} }) => {
     ),
     noEmptyMessage: getBooleanAttr(attrs, "noEmptyMessage", "no-empty-message"),
     shrinkable: getBooleanAttr(attrs, "shrinkable", "shrinkable"),
-    itemActionsLabel: i18n.resourcePages?.actionsLabel ?? "Actions",
-    emptyMessageLabel:
-      i18n.resourcePages?.fileExplorerEmptyMessage ?? "No items.",
+    itemActionsLabel: resourceCopy.actionsLabel ?? "Actions",
+    emptyMessageLabel: resourceCopy.fileExplorerEmptyMessage ?? "No items.",
   };
 
   return viewData;

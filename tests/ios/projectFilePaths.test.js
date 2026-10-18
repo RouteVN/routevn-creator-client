@@ -3,6 +3,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import Subject from "../../src/deps/subject.js";
 import { createAppService } from "../../src/deps/services/ios/appService.js";
 import { createAppServiceCore } from "../../src/deps/services/shared/appServiceCore.js";
+import { PT_I18N, ZH_HANS_I18N } from "../support/i18n.js";
 
 const { callIOSBridge } = vi.hoisted(() => ({ callIOSBridge: vi.fn() }));
 vi.mock("../../src/deps/clients/ios/bridge.js", () => ({ callIOSBridge }));
@@ -88,6 +89,25 @@ describe("iOS project file paths", () => {
       expect(createService().getFileDisplayPath(path)).toBe(displayPath);
     },
   );
+
+  it("names the Files app locations in the app language", async () => {
+    const service = createService();
+    service.setAppCopyProvider(() => PT_I18N.appPage);
+    callIOSBridge.mockResolvedValue({ configured: false, deviceName: "iPad" });
+    await service.initializeProjectFolderSetup();
+
+    expect(
+      service.getFileDisplayPath(
+        "/private/example/File Provider Storage/RouteVN Projects/Project One",
+      ),
+    ).toBe("No meu iPad / RouteVN Projects / Project One");
+    service.setAppCopyProvider(() => ZH_HANS_I18N.appPage);
+    expect(
+      service.getFileDisplayPath(
+        "/private/var/mobile/Library/Mobile Documents/com~apple~CloudDocs/Exports/Project One_v1.zip",
+      ),
+    ).toBe("iCloud 云盘 / Exports / Project One_v1.zip");
+  });
 
   it("keeps desktop file paths unchanged without an iOS adapter", () => {
     const service = createAppServiceCore({
@@ -249,6 +269,14 @@ describe("iOS project file paths", () => {
     });
     expect(project.projectFilePath).toBe(filePath);
     expect(project.projectPath).toBeUndefined();
+  });
+
+  it("keeps an unnamed project's name empty instead of an English placeholder", async () => {
+    callIOSBridge.mockResolvedValue([
+      { id: "project-1", name: "  ", language: "en" },
+    ]);
+    const projects = await createService().loadAllProjects();
+    expect(projects[0].name).toBe("");
   });
 
   it("continues listing projects on an older shell that has no file-path field", async () => {

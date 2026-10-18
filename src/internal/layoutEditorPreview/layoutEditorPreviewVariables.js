@@ -228,12 +228,15 @@ export const isSupportedPreviewVariableType = (type) => {
   return PREVIEW_VARIABLE_TYPES.has(type);
 };
 
+// runtimeFieldTexts holds the runtime fields' names and descriptions in the
+// active locale, by id. Without it, they are English.
 export const getLayoutPreviewVariableItems = ({
   currentLayoutId,
   currentLayoutData,
   currentLayoutType,
   layoutsData,
   variablesData = {},
+  runtimeFieldTexts = {},
 } = {}) => {
   const availableVariables = variablesData.items ?? {};
   const runtimeItems = getRuntimeLayoutConditionItems();
@@ -259,7 +262,9 @@ export const getLayoutPreviewVariableItems = ({
       continue;
     }
 
-    const variable = variableId ? availableVariables[variableId] : runtimeItem;
+    const variable = variableId
+      ? availableVariables[variableId]
+      : { ...runtimeItem, ...runtimeFieldTexts[runtimeItem.id] };
     if (!variable) {
       continue;
     }
@@ -386,6 +391,7 @@ export const createPreviewVariablesViewData = ({
   variablesData,
   previewVariableValues,
   labels,
+  runtimeFieldTexts,
 } = {}) => {
   const previewVariableItems = supportsPreviewVariablesForLayoutType(layoutType)
     ? getLayoutPreviewVariableItems({
@@ -394,6 +400,7 @@ export const createPreviewVariablesViewData = ({
         currentLayoutType: layoutType,
         layoutsData,
         variablesData,
+        runtimeFieldTexts,
       })
     : [];
   const editablePreviewVariableItems = previewVariableItems.filter(

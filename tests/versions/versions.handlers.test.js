@@ -15,7 +15,7 @@ import {
   handleVersionFormAction,
 } from "../../src/pages/versions/versions.handlers.js";
 import { initialProjectData } from "../../src/deps/services/shared/projectRepository.js";
-import { EN_I18N } from "../support/i18n.js";
+import { EN_I18N, PT_I18N } from "../support/i18n.js";
 
 const createTreeCollection = (items = {}, tree = []) => ({
   items,
@@ -683,6 +683,51 @@ describe("versions.handleDownloadZipClick", () => {
     });
   });
 
+  it("formats package sizes and an unknown error in the app language", async () => {
+    const repository = {
+      getRevision: vi.fn(() => 3),
+      getState: vi.fn(() => structuredClone(initialProjectData)),
+      loadState: vi.fn(async () => structuredClone(initialProjectData)),
+    };
+    const deps = createDeps({ repository });
+    deps.i18n = PT_I18N;
+    const copy = PT_I18N.versionsPage;
+    const MB = 1024 * 1024;
+    deps.projectService.promptDistributionZipPath.mockResolvedValue(
+      "/tmp/export.zip",
+    );
+    deps.projectService.createDistributionZipStreamedToPath.mockImplementation(
+      async (_projectData, _fileEntries, _outputPath, options) => {
+        options.onProgress({
+          phase: "writePackage",
+          current: 1.5 * MB,
+          total: 12.3 * MB,
+        });
+        throw {};
+      },
+    );
+
+    await chooseAndConfirmExport(handleDownloadZipClick, deps);
+
+    expect(deps.projectService.promptDistributionZipPath).toHaveBeenCalledWith(
+      expect.any(String),
+      { title: copy.saveZipDialogTitle, fileTypeName: copy.zipFileTypeName },
+    );
+    expect(deps.progressDialog.update).toHaveBeenCalledWith({
+      progress: { current: 1.5 * MB, total: 12.3 * MB },
+      status: copy.bundleWritingPackageStatus
+        .replace("{current}", "1,5 MB")
+        .replace("{total}", "12,3 MB"),
+    });
+    expect(deps.appService.showAlert).toHaveBeenCalledWith({
+      message: copy.failedSaveZipFile.replace(
+        "{message}",
+        copy.unknownErrorDetails,
+      ),
+      title: copy.errorTitle,
+    });
+  });
+
   it("discards an Android save document when export preparation fails", async () => {
     const repository = {
       getRevision: vi.fn(() => 3),
@@ -860,7 +905,10 @@ describe("versions.handleDownloadZipClick", () => {
 
       expect(
         deps.projectService.promptDistributionZipPath,
-      ).toHaveBeenCalledWith("Web Edition_Version 1");
+      ).toHaveBeenCalledWith("Web Edition_Version 1", {
+        title: EN_I18N.versionsPage.saveZipDialogTitle,
+        fileTypeName: EN_I18N.versionsPage.zipFileTypeName,
+      });
       expect(deps.appService.getFileDisplayPath).toHaveBeenCalledWith(
         savedPath,
       );
@@ -1072,7 +1120,10 @@ describe("versions Windows export handlers", () => {
 
     expect(
       deps.projectService.promptWindowsExecutablePath,
-    ).toHaveBeenCalledWith("Story- Part-Two-Final_Version 1");
+    ).toHaveBeenCalledWith("Story- Part-Two-Final_Version 1", {
+      title: EN_I18N.versionsPage.saveWindowsExecutableDialogTitle,
+      fileTypeName: EN_I18N.versionsPage.windowsExecutableFileTypeName,
+    });
     expect(
       deps.projectService.createWindowsPortableExecutableToPath.mock
         .calls[0][3],
@@ -1155,7 +1206,10 @@ describe("versions Windows export handlers", () => {
     expect(deps.progressDialog.close).toHaveBeenCalledTimes(1);
     expect(
       deps.projectService.promptWindowsExecutablePath,
-    ).toHaveBeenCalledWith("Windows Edition_Version 1");
+    ).toHaveBeenCalledWith("Windows Edition_Version 1", {
+      title: EN_I18N.versionsPage.saveWindowsExecutableDialogTitle,
+      fileTypeName: EN_I18N.versionsPage.windowsExecutableFileTypeName,
+    });
     expect(
       deps.projectService.createWindowsPortableExecutableToPath.mock
         .calls[0][3],
@@ -1478,6 +1532,10 @@ describe("versions macOS export handlers", () => {
     expect(deps.progressDialog.close).toHaveBeenCalledTimes(1);
     expect(deps.projectService.promptMacosApplicationPath).toHaveBeenCalledWith(
       "Mac Edition_Version 1",
+      {
+        title: EN_I18N.versionsPage.saveMacosApplicationDialogTitle,
+        fileTypeName: EN_I18N.versionsPage.macosApplicationFileTypeName,
+      },
     );
     expect(
       deps.projectService.createMacosApplicationToPath.mock.calls[0][3],

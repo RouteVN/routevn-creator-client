@@ -333,7 +333,7 @@ layoutSections:
   - "$when": "supportsChildInteractionInheritance"
     id: childInteraction
     label: Child Interaction
-    tooltip: Inherit child event from parent
+    tooltip: Child elements inherit interaction events from the parent
     "$if canAddChildInteractionInheritance":
       labelAction: plus
     items:

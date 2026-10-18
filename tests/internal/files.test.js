@@ -12,5 +12,13 @@ describe("files", () => {
   it("formats zero-byte and positive sizes", () => {
     expect(formatFileSize(0)).toBe("0 B");
     expect(formatFileSize(1024)).toBe("1 KB");
+    expect(formatFileSize(2.45 * 1024 * 1024)).toBe("2.45 MB");
+  });
+
+  it("formats the number for the active locale and keeps the unit", () => {
+    const size = 2.45 * 1024 * 1024;
+    expect(formatFileSize(size, { intlLocale: "pt" })).toBe("2,45 MB");
+    expect(formatFileSize(1.5 * 1024, { intlLocale: "ru" })).toBe("1,5 KB");
+    expect(formatFileSize(size, { intlLocale: "ja" })).toBe("2.45 MB");
   });
 });

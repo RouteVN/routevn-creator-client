@@ -58,6 +58,30 @@ const COMMAND_LINE_COPY_KEYS = Object.freeze({
     "runtimeValueSourceTooltip",
   "When the auto-advance timer starts counting. 'Text Complete' waits for the text animation to finish first. 'Line Start' starts the timer immediately when the line begins":
     "autoAdvanceTimerStartTooltip",
+  // The runtime field descriptions in runtimeFields.js.
+  "Controls the default dialogue text reveal speed.":
+    "dialogueTextSpeedDescription",
+  "Controls the default auto mode delay in milliseconds.":
+    "autoForwardDelayDescription",
+  "When enabled, skip mode can continue through lines the player has not viewed yet.":
+    "skipUnseenTextDescription",
+  "When enabled, transitions and animations are skipped during presentation.":
+    "skipTransitionsAndAnimationsDescription",
+  "Controls the effective sound effects volume.": "soundVolumeDescription",
+  "Controls the effective music volume.": "musicVolumeDescription",
+  "Controls whether all audio output is muted.": "muteAllDescription",
+  "Tracks the current save/load pagination page for the active context.":
+    "saveLoadPaginationDescription",
+  "Tracks the current menu page id for the active UI flow.":
+    "menuPageDescription",
+  "Tracks how the current menu flow was opened for the active context.":
+    "menuEntryPointDescription",
+  "Reflects whether auto mode is currently active.": "autoModeDescription",
+  "Reflects whether skip mode is currently active.": "skipModeDescription",
+  "Reflects whether the dialogue UI is currently hidden.":
+    "dialogueUIHiddenDescription",
+  "Reflects whether the current line has completed its presentation.":
+    "isLineCompletedDescription",
 });
 
 export const selectCommandLineCopy = (i18n = {}) => {

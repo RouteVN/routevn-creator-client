@@ -369,16 +369,33 @@ const getCharacterItemById = ({ state, characterId } = {}) => {
   );
 };
 
-const getSpriteSelectionGroupsForCharacterId = ({ state, characterId } = {}) =>
-  buildSpriteSelectionGroups(getCharacterItemById({ state, characterId }));
+// groupLabel names a sprite group that has no name; see
+// buildSpriteSelectionGroups.
+const getSpriteSelectionGroupsForCharacterId = ({
+  state,
+  characterId,
+  groupLabel,
+} = {}) =>
+  buildSpriteSelectionGroups(
+    getCharacterItemById({ state, characterId }),
+    groupLabel,
+  );
 
-const getSpriteSelectionGroupsForCharacterIndex = ({ state, index } = {}) => {
+const getSpriteSelectionGroupsForCharacterIndex = ({
+  state,
+  index,
+  groupLabel,
+} = {}) => {
   if (!Number.isInteger(index)) {
     return [];
   }
 
   const characterId = state.selectedCharacters?.[index]?.id;
-  return getSpriteSelectionGroupsForCharacterId({ state, characterId });
+  return getSpriteSelectionGroupsForCharacterId({
+    state,
+    characterId,
+    groupLabel,
+  });
 };
 
 const resolveSelectedSpriteGroupId = ({
@@ -1087,7 +1104,11 @@ export const setExistingCharacters = ({ state }, { characters } = {}) => {
   );
 };
 
-export const selectCharactersWithRepositoryData = ({ state, copy }) => {
+export const selectCharactersWithRepositoryData = ({
+  state,
+  copy,
+  groupLabel,
+}) => {
   if (!state.selectedCharacters || !Array.isArray(state.selectedCharacters)) {
     return [];
   }
@@ -1097,7 +1118,10 @@ export const selectCharactersWithRepositoryData = ({ state, copy }) => {
       state,
       characterId: char.id,
     });
-    const spriteSelectionGroups = buildSpriteSelectionGroups(characterData);
+    const spriteSelectionGroups = buildSpriteSelectionGroups(
+      characterData,
+      groupLabel,
+    );
     const selectedSpriteIdsByGroup = buildTempSelectedSpriteIdsByGroup({
       character: char,
       spriteSelectionGroups,
@@ -1441,6 +1465,7 @@ const createCharactersForm = (characters = []) => ({
 
 export const selectViewData = ({ state, i18n }) => {
   const copy = selectCommandLineCopy(i18n);
+  const spriteGroupLabel = i18n.charactersPage.spriteGroupLabel;
   const resourceSelectorLayout = createCharacterSelectorLayout({
     isTouchMode: state.isTouchMode,
   });
@@ -1485,6 +1510,7 @@ export const selectViewData = ({ state, i18n }) => {
   const enrichedCharacters = selectCharactersWithRepositoryData({
     state,
     copy,
+    groupLabel: spriteGroupLabel,
   });
   const processedSelectedCharacters = enrichedCharacters.map((character) => ({
     ...character,
@@ -1512,6 +1538,7 @@ export const selectViewData = ({ state, i18n }) => {
       getSpriteSelectionGroupsForCharacterIndex({
         state,
         index: state.selectedCharacterIndex,
+        groupLabel: spriteGroupLabel,
       });
     const spriteSelectionTabGroups = orderSpriteSelectionGroupsTopFirst(
       currentSpriteSelectionGroups,

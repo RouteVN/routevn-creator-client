@@ -1,7 +1,7 @@
 import { readFileSync } from "node:fs";
 import yaml from "js-yaml";
 import { describe, expect, it } from "vitest";
-import { EN_I18N } from "../support/i18n.js";
+import { EN_I18N, PT_I18N } from "../support/i18n.js";
 import {
   createInitialState,
   selectViewData,
@@ -222,6 +222,38 @@ describe("layoutEditor.store", () => {
         (item) => item.label === "Container (Save/Load Slot)",
       ),
     ).toBe(true);
+  });
+
+  it("names elements from the Add Element menu in the app's language", () => {
+    const state = createInitialState();
+
+    setLayout(
+      { state },
+      {
+        id: "layout-save-load",
+        layout: {
+          id: "layout-save-load",
+          layoutType: "save-load",
+        },
+      },
+    );
+
+    const viewData = selectViewData({
+      state,
+      constants: TEST_CONSTANTS,
+      i18n: PT_I18N,
+    });
+    const slotItem = viewData.emptyContextMenuItems.find(
+      (item) => item.value?.type === "container-ref-save-load-slot",
+    );
+
+    expect(slotItem).toMatchObject({
+      label: PT_I18N.layoutEditorPage.containerSaveLoadSlotMenuItem,
+      value: {
+        action: "new-child-item",
+        name: PT_I18N.layoutEditorPage.containerSaveLoadSlotMenuItem,
+      },
+    });
   });
 
   it("normalizes a legacy load layout to save-load", () => {

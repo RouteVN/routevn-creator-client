@@ -21,7 +21,8 @@ export const getSaveLoadPaginationSummary = ({ values, copy = {} } = {}) => {
     { count: resolvedPaginationSize },
   );
 
-  return `${copy.paginatedOption ?? "Paginated"}: runtime.saveLoadPagination • ${perPageLabel}`;
+  // The page shown comes from the Save/Load Pagination runtime value.
+  return `${copy.paginatedOption ?? "Paginated"}: ${copy.runtimeSaveLoadPaginationLabel ?? "Save/Load Pagination"} • ${perPageLabel}`;
 };
 
 export const createSaveLoadPaginationDialogDefaults = (values = {}) => {

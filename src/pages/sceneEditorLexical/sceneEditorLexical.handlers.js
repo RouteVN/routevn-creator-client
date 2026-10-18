@@ -3925,7 +3925,9 @@ export const handleDownloadCanvasClick = async (deps) => {
       createSceneCanvasFileName(),
       {
         title: copy.saveCanvasDialogTitle ?? "Save canvas image",
-        filters: [{ name: "PNG Image", extensions: ["png"] }],
+        filters: [
+          { name: copy.pngFileTypeName ?? "PNG Image", extensions: ["png"] },
+        ],
       },
     );
     if (!savedPath) {

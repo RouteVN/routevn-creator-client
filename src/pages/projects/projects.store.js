@@ -928,6 +928,8 @@ export const selectViewData = ({ state, i18n }) => {
           project.projectFileDisplayPath?.split(" / ").slice(0, -1) ?? [];
         return {
           ...project,
+          // Services leave an unnamed project's name empty.
+          name: project.name || copy.untitledProject,
           itemId: createLocalProjectItemId(project, index),
           encodedProjectPath: encodeProjectPathAttribute(project.projectPath),
           projectFileDisplayPrefix: pathParts.slice(0, -1).join("/"),

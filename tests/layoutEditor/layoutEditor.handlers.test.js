@@ -6,7 +6,7 @@ import {
   handleSoundFormAction,
   handleOptionSelected,
 } from "../../src/components/layoutEditPanel/layoutEditPanel.handlers.js";
-import { EN_I18N } from "../support/i18n.js";
+import { EN_I18N, PT_I18N } from "../support/i18n.js";
 import * as layoutEditorStore from "../../src/pages/layoutEditor/layoutEditor.store.js";
 import { createLayoutEditorRepositoryStoreData } from "../../src/pages/layoutEditor/support/layoutEditorRepositoryState.js";
 import {
@@ -1429,6 +1429,42 @@ describe("layoutEditor.handleFileExplorerAction", () => {
     } finally {
       vi.useRealTimers();
     }
+  });
+
+  it("names the parts of a new save/load slot in the app's language", async () => {
+    const createLayoutElement = vi.fn(async () => ({ valid: true }));
+    const deps = createLayoutEditorDeps();
+    deps.i18n = PT_I18N;
+    deps.projectService.createLayoutElement = createLayoutElement;
+    deps.store.selectProjectResolution = vi.fn(() => ({
+      width: 1920,
+      height: 1080,
+    }));
+    deps.store.setSelectedItemId = vi.fn();
+    deps.store.setDetailPanelSelectedItemId = vi.fn();
+    deps.store.setRightPanelMode = vi.fn();
+
+    await handleFileExplorerAction(deps, {
+      _event: {
+        detail: {
+          item: {
+            value: {
+              action: "new-child-item",
+              type: "container-ref-save-load-slot",
+            },
+          },
+        },
+      },
+    });
+
+    const createdNames = createLayoutElement.mock.calls.map(
+      ([payload]) => payload.data.name,
+    );
+    expect(createdNames).toEqual([
+      PT_I18N.layoutEditorPage.containerSaveLoadSlotMenuItem,
+      PT_I18N.layoutEditorPage.imageSaveImageMenuItem,
+      PT_I18N.layoutEditorPage.textSaveDateMenuItem,
+    ]);
   });
 });
 

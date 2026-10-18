@@ -26,7 +26,13 @@ export const runProjectImport = async (deps, { run, status }) => {
     progress: {},
   });
   const onProgress = (event) => {
-    progressDialog.update(createProjectImportProgressView({ copy, event }));
+    progressDialog.update(
+      createProjectImportProgressView({
+        copy,
+        dateTime: i18n.dateTime,
+        event,
+      }),
+    );
   };
 
   let importedProject;
@@ -59,7 +65,7 @@ export const runProjectImport = async (deps, { run, status }) => {
 
   appService.showToast({
     message: formatProjectsPageCopy(copy.importedProjectMessage, {
-      projectName: importedProject.name,
+      projectName: importedProject.name || copy.untitledProject,
     }),
   });
 };
@@ -143,6 +149,7 @@ export const pickProjectArchive = (deps) => {
   return pickOrAlert(deps, () =>
     appService.openArchivePicker({
       title: copy.selectProjectArchiveTitle,
+      fileTypeName: copy.zipFileTypeName,
     }),
   );
 };

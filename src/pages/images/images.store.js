@@ -36,7 +36,7 @@ const resolveImageAspectRatio = (item) => {
   return `${Math.max(1, Math.round(width))} / ${Math.max(1, Math.round(height))}`;
 };
 
-const buildDetailFields = (item, { copy } = {}) => {
+const buildDetailFields = (item, { copy, dateTime } = {}) => {
   if (!item) {
     return [];
   }
@@ -64,7 +64,7 @@ const buildDetailFields = (item, { copy } = {}) => {
     {
       type: "text",
       label: copy.fileSizeLabel,
-      value: formatFileSize(item.fileSize),
+      value: formatFileSize(item.fileSize, dateTime),
     },
     {
       type: "text",
