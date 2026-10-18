@@ -264,6 +264,7 @@ projectPage:
   wordsLabel: "Слова"
 appPage:
   errorDetailsLabel: "Подробности:"
+  graphicsUnavailableMessage: "Это устройство не может показать предпросмотр и редакторы с холстом, потому что не удалось запустить графику WebGL. Перезапустите приложение или устройство. Также может помочь обновление системного WebView, браузера или графического драйвера."
   filePickerSourceTitle: "Выберите источник"
   filePickerGallery: "Галерея"
   filePickerFiles: "Файлы"
@@ -2074,6 +2075,7 @@ sceneEditorPage:
   canvasDownloaded: "Изображение холста сохранено."
   deadEndTooltipContent: "Из этого раздела нет перехода в другой раздел."
   downloadCanvasButton: "Сохранить изображение холста"
+  canvasUnavailableMessage: "Это устройство не может показать предпросмотр. Вы по-прежнему можете редактировать строки и их действия."
   downLabel: "Вниз"
   dontInheritOption: "Не наследовать"
   editSectionTitle: "Изменить раздел"
