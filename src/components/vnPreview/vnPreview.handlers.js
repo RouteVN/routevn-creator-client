@@ -35,6 +35,7 @@ import {
 import { isFontAssetError } from "../../internal/fontAssetError.js";
 import { isRoutingCycleError } from "../../internal/routingCycleError.js";
 import { withErrorDetails } from "../../internal/errorDetails.js";
+import { isGraphicsUnavailableError } from "../../internal/graphicsErrors.js";
 import {
   getComputedVariableErrorId,
   getComputedVariableErrorName,
@@ -825,7 +826,9 @@ export const handleAfterMount = async (deps) => {
           title: i18n?.resourcePages?.warningTitle ?? "Warning",
           message: startup.timeoutMessage(error),
         });
-      } else if (!error?.reported) {
+      } else if (!error?.reported && !isGraphicsUnavailableError(error)) {
+        // A device without WebGL has already been told by the graphics
+        // service.
         const copy = selectSceneEditorCopy(i18n);
         appService.showAlert({
           title: copy.errorTitle ?? "Error",
