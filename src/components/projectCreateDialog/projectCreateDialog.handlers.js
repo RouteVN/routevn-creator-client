@@ -43,14 +43,17 @@ const syncFromProps = ({ store, props } = {}) => {
 };
 
 const refreshProjectLocation = async (deps) => {
-  const { appService, store, render } = deps;
+  const { appService, store, render, i18n } = deps;
   if (store.selectPlatform() !== "ios") return;
   store.beginLocationPreview();
   const requestId = store.selectLocationRequestId();
   const { name } = store.selectDefaultValues();
   render();
   try {
-    const location = await appService.previewNewProjectLocation({ name });
+    // Until a name is typed, preview the folder under the "Untitled" label.
+    const location = await appService.previewNewProjectLocation({
+      name: name.trim() || selectCopy(i18n).untitledProject,
+    });
     if (store.selectLocationRequestId() !== requestId) return;
     store.setLocationPreview({ location });
   } catch {

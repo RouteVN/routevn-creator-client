@@ -20,4 +20,4 @@ template:
               - rtgl-form#form :form=${form} :defaultValues=${defaultValues} :context=${context} w=f ph=md pv=none: null
               - 'rtgl-view h=240 aria-hidden=true style="flex: 0 0 240px;"': null
           - 'rtgl-view d=h av=c ah=e w=f g=lg ph=md pt=md style="flex: 0 0 auto;"':
-              - rtgl-button#submitButton variant=pr: Submit
+              - rtgl-button#submitButton variant=pr: ${submitButtonLabel}

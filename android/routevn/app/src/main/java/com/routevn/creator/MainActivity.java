@@ -116,10 +116,6 @@ public class MainActivity extends Activity {
     private static final int ANDROID_FOLDER_PICKER_REQUEST_CODE = 3714;
     private static final int ANDROID_ARCHIVE_PICKER_REQUEST_CODE = 3715;
     private static final long SPLASH_READY_TIMEOUT_MS = 5000L;
-    // A renderer lost this soon after its page started loading counts as a
-    // rapid loss; this many in a row means the page cannot start.
-    private static final long RAPID_RENDERER_LOSS_MS = 30_000L;
-    private static final int RAPID_RENDERER_LOSS_LIMIT = 2;
     private static final String DEBUG_VALIDATION_PREFS = "debug-validation";
     private static final String NATIVE_EXPORTER_SMOKE_LAST_UPDATE_KEY =
         "nativeExporterSmokeLastUpdateTime";
@@ -189,8 +185,7 @@ public class MainActivity extends Activity {
     }
 
     private WebView webView;
-    private long pageLoadStartedAt;
-    private int rapidRendererLosses = 0;
+    private final RendererLossGuard rendererLossGuard = new RendererLossGuard();
     private boolean webViewRecoveryPending = false;
     private String lastReportedWindowMetrics = "";
     private ProjectBackup projectBackup;
@@ -483,7 +478,7 @@ public class MainActivity extends Activity {
         // A replacement WebView starts a new page with nothing reported to it.
         lastReportedWindowMetrics = "";
         canGoBackInWebApp = false;
-        pageLoadStartedAt = SystemClock.elapsedRealtime();
+        rendererLossGuard.pageLoadStarted(SystemClock.elapsedRealtime());
         webView.loadUrl(getInitialAppUrl());
 
         FrameLayout rootView = new FrameLayout(this);
@@ -896,6 +891,7 @@ public class MainActivity extends Activity {
     @Override
     protected void onPause() {
         appResumed = false;
+        rendererLossGuard.appLeftForeground();
         notifyAudioLifecycle();
         if (webView != null) {
             webView.onPause();
@@ -979,8 +975,9 @@ public class MainActivity extends Activity {
     // app. Load the app again in a new WebView instead (see "WebView renderer
     // loss" in docs/mobile-crash-reporting.md). Only a renderer crash is
     // reported. If the renderer keeps dying right after its page starts
-    // loading, crash with an exception that names the cause, so a page that
-    // cannot start does not reload forever.
+    // loading while the app stays in the foreground, crash with an exception
+    // that names the cause, so a page that cannot start does not reload
+    // forever (see RendererLossGuard).
     private boolean recoverFromRenderProcessGone(WebView deadView, boolean didCrash) {
         // The dead WebView can never be drawn or used again.
         if (deadView.getParent() instanceof ViewGroup parent) {
@@ -993,10 +990,7 @@ public class MainActivity extends Activity {
         RuntimeException loss = didCrash
             ? new WebViewRendererCrashedException()
             : new WebViewRendererKilledException();
-        boolean rapid =
-            SystemClock.elapsedRealtime() - pageLoadStartedAt < RAPID_RENDERER_LOSS_MS;
-        rapidRendererLosses = rapid ? rapidRendererLosses + 1 : 0;
-        if (rapidRendererLosses >= RAPID_RENDERER_LOSS_LIMIT) {
+        if (rendererLossGuard.lossMeansPageCannotStart(SystemClock.elapsedRealtime())) {
             // Throw from the main looper, not from inside WebView's callback.
             mainHandler.post(() -> {
                 throw loss;

@@ -9,9 +9,68 @@ import {
   showDropdownMenu,
   updateBranch,
 } from "../../src/components/commandLineConditional/commandLineConditional.store.js";
-import { EN_I18N, JA_I18N, ZH_HANS_I18N } from "../support/i18n.js";
+import { EN_I18N, JA_I18N, PT_I18N, ZH_HANS_I18N } from "../support/i18n.js";
 
 describe("commandLineConditional.store", () => {
+  it("shows boolean values with the True and False labels of the value select", () => {
+    const state = createInitialState();
+
+    setVariablesData(
+      { state },
+      {
+        variables: {
+          items: {
+            active: {
+              id: "active",
+              name: "Active",
+              type: "variable",
+              variableType: "boolean",
+            },
+          },
+          tree: [{ id: "active" }],
+        },
+      },
+    );
+    setBranches(
+      { state },
+      {
+        branches: [
+          {
+            id: "branch-active",
+            when: { eq: [{ var: "variables.active" }, true] },
+            actions: {},
+          },
+          {
+            id: "branch-inactive",
+            when: { in: [{ var: "variables.active" }, { literal: [false] }] },
+            actions: {},
+          },
+        ],
+      },
+    );
+    setTempBranch({ state }, { variableId: "active", value: true });
+
+    const ptViewData = selectViewData({ state, i18n: PT_I18N });
+    expect(ptViewData.branches.map((branch) => branch.summary)).toEqual([
+      "Active Igual a Verdadeiro",
+      "Active Igual a um de Falso",
+    ]);
+    expect(ptViewData.booleanOptions).toEqual([
+      { value: "true", label: "Verdadeiro" },
+      { value: "false", label: "Falso" },
+    ]);
+    expect(ptViewData.booleanOneOfOptions).toEqual([
+      { value: true, label: "Verdadeiro" },
+      { value: false, label: "Falso" },
+    ]);
+    expect(
+      selectViewData({ state, i18n: JA_I18N }).branches[0].summary,
+    ).toMatch(/真$/);
+    expect(selectViewData({ state, i18n: EN_I18N }).branches[0].summary).toBe(
+      "Active Equals True",
+    );
+  });
+
   it("summarizes conditional branches and the default branch separately", () => {
     const state = createInitialState();
 

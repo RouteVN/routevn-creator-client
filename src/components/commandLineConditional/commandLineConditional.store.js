@@ -5,6 +5,7 @@ import {
   normalizeVariableEnumValues,
 } from "../../internal/variableEnums.js";
 import {
+  formatCommandLineActionCount,
   localizeCommandLineBreadcrumb,
   localizeCommandLineDropdownMenu,
   localizeCommandLineOptions,
@@ -158,16 +159,21 @@ const getSimpleCondition = (when = {}) => {
   };
 };
 
-const formatConditionValue = (value) => {
+// A boolean is shown with the same label as in the value select.
+const formatConditionValue = (value, copy) => {
   if (Array.isArray(value)) {
-    return value.map(formatConditionValue).join(", ");
+    return value.map((item) => formatConditionValue(item, copy)).join(", ");
   }
 
   if (typeof value === "string") {
     return value;
   }
 
-  if (typeof value === "number" || typeof value === "boolean") {
+  if (typeof value === "boolean") {
+    return localizeCommandLineText(value ? "True" : "False", copy);
+  }
+
+  if (typeof value === "number") {
     return String(value);
   }
 
@@ -196,7 +202,7 @@ const getBranchSummary = (branch, variablesData = {}, copy = {}) => {
       CONDITION_OPERATOR_LABELS[simpleCondition.op] ?? simpleCondition.op,
       copy,
     );
-    return `${variableName} ${operatorLabel} ${formatConditionValue(simpleCondition.value)}`;
+    return `${variableName} ${operatorLabel} ${formatConditionValue(simpleCondition.value, copy)}`;
   }
 
   return localizeCommandLineText("Unsupported condition", copy);
@@ -450,12 +456,12 @@ export const selectViewData = ({ state, props, i18n }) => {
   const actionCount = countActions(state.tempBranch.actions);
 
   const booleanOptions = [
-    { value: "true", label: "true" },
-    { value: "false", label: "false" },
+    { value: "true", label: "True" },
+    { value: "false", label: "False" },
   ];
   const booleanOneOfOptions = [
-    { value: true, label: "true" },
-    { value: false, label: "false" },
+    { value: true, label: "True" },
+    { value: false, label: "False" },
   ];
   const booleanValue =
     state.tempBranch.value === true
@@ -473,10 +479,7 @@ export const selectViewData = ({ state, props, i18n }) => {
       summary: getBranchSummary(branch, state.variablesData, copy),
       actionsSummary:
         branchActionCount > 0
-          ? `${branchActionCount} ${localizeCommandLineText(
-              branchActionCount === 1 ? "action" : "actions",
-              copy,
-            )}`
+          ? formatCommandLineActionCount(branchActionCount, copy)
           : localizeCommandLineText("No actions", copy),
     };
   };
@@ -554,20 +557,13 @@ export const selectViewData = ({ state, props, i18n }) => {
     branchActions: state.tempBranch.actions,
     branchActionsSummary:
       actionCount > 0
-        ? `${actionCount} ${localizeCommandLineText(
-            actionCount === 1 ? "action" : "actions",
-            copy,
-          )}`
+        ? formatCommandLineActionCount(actionCount, copy)
         : localizeCommandLineText("No actions", copy),
     branchActionAllowedModes: BRANCH_ACTION_ALLOWED_MODES,
     hasBranches: state.branches.length > 0,
     canSaveBranch,
     isEditingDefault: state.tempBranch.conditionKind === "default",
     isEditingUnsupportedCondition,
-    editBranchTitle:
-      state.tempBranch.conditionKind === "default"
-        ? localizeCommandLineText(DEFAULT_BRANCH_LABEL, copy)
-        : localizeCommandLineText("Branch", copy),
     hiddenModes: getHiddenModes(props),
     dropdownMenu: localizeCommandLineDropdownMenu(state.dropdownMenu, copy),
     actionsLabel: localizeCommandLineText("Actions", copy),
@@ -583,7 +579,12 @@ export const selectViewData = ({ state, props, i18n }) => {
     defaultBranchLabel: localizeCommandLineText(DEFAULT_BRANCH_LABEL, copy),
     operatorLabel: localizeCommandLineText("Operator", copy),
     removeValueButton: localizeCommandLineText("Remove Value", copy),
-    saveButtonPrefix: localizeCommandLineText("Save", copy),
+    saveBranchButton: localizeCommandLineText(
+      state.tempBranch.conditionKind === "default"
+        ? "Save Default Branch"
+        : "Save Branch",
+      copy,
+    ),
     submitButton: localizeCommandLineText("Submit", copy),
     unsupportedConditionLabel: localizeCommandLineText(
       "Unsupported condition",

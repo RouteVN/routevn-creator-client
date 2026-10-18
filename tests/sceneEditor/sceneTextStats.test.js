@@ -1,8 +1,10 @@
 import { describe, expect, it } from "vitest";
 import {
   buildSceneTextStats,
+  formatSceneTextStatsLabel,
   getSceneTextForStats,
 } from "../../src/internal/ui/sceneTextStats.js";
+import { RU_I18N } from "../support/i18n.js";
 
 describe("sceneTextStats", () => {
   it("counts dialogue words and choice text", () => {
@@ -188,5 +190,14 @@ describe("sceneTextStats", () => {
       wordCount: 0,
       characterCount: 0,
     });
+  });
+
+  it("joins the line and word labels with the catalog summary", () => {
+    expect(
+      formatSceneTextStatsLabel(
+        { lineCount: 2, wordCount: 5, characterCount: 20 },
+        { language: "ru", copy: RU_I18N.scenesPage },
+      ),
+    ).toBe("Строк: 2 · Слов: 5");
   });
 });

@@ -7,6 +7,8 @@ export const APP_LOCALE_OPTIONS = Object.freeze([
   Object.freeze({ value: "zh-hans", label: "简体中文 (Beta)" }),
   Object.freeze({ value: "es", label: "Español (Beta)" }),
   Object.freeze({ value: "th", label: "ไทย (Beta)" }),
+  Object.freeze({ value: "ru", label: "Русский (Beta)" }),
+  Object.freeze({ value: "pt", label: "Português (Beta)" }),
 ]);
 
 const getAvailableAppLocales = (localeService) => {
@@ -54,6 +56,8 @@ export const activateAppLocale = async ({
 
   await localeService?.set?.(nextLocale);
   const activeLocale = localeService?.current?.() ?? nextLocale;
+  // App locale ids are BCP 47 tags, so the document can use them directly.
+  appService?.setDocumentLanguage?.(activeLocale);
 
   if (persist && activeLocale === nextLocale) {
     appService?.setUserConfig?.(APP_LOCALE_CONFIG_KEY, activeLocale);

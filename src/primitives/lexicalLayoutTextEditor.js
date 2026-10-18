@@ -56,6 +56,14 @@ import {
 export const LEXICAL_LAYOUT_TEXT_EDITOR_TAG_NAME =
   "rvn-lexical-layout-text-editor";
 
+// The variable menu's text. The owning component passes it in the app's
+// language as `menuLabels`; `variableTypes` names each variable type, and a
+// type it leaves out shows as it is stored.
+const DEFAULT_MENU_LABELS = Object.freeze({
+  noVariables: "No variables",
+  variableTypes: Object.freeze({}),
+});
+
 const createClosedMentionMenuState = () => ({
   isOpen: false,
   query: "",
@@ -241,6 +249,7 @@ export class LexicalLayoutTextEditorElement extends HTMLElement {
       mentionMenu: createClosedMentionMenuState(),
     };
     this.refs = {};
+    this.menuLabelsValue = undefined;
     this.isInitialized = false;
     this.isApplyingExternalContent = false;
     this.isEditorFocused = false;
@@ -471,6 +480,27 @@ export class LexicalLayoutTextEditorElement extends HTMLElement {
 
   get mentionTargets() {
     return normalizeMentionTargets(this.state.mentionTargets);
+  }
+
+  set menuLabels(value) {
+    if (areJsonEqual(this.menuLabelsValue, value)) {
+      return;
+    }
+
+    this.menuLabelsValue = value;
+    if (this.state.mentionMenu.isOpen) {
+      this.renderMentionMenu();
+    }
+  }
+
+  get menuLabels() {
+    return {
+      noVariables:
+        this.menuLabelsValue?.noVariables ?? DEFAULT_MENU_LABELS.noVariables,
+      variableTypes:
+        this.menuLabelsValue?.variableTypes ??
+        DEFAULT_MENU_LABELS.variableTypes,
+    };
   }
 
   getContent() {
@@ -1565,6 +1595,7 @@ export class LexicalLayoutTextEditorElement extends HTMLElement {
       return;
     }
 
+    const { noVariables, variableTypes } = this.menuLabels;
     menu.items =
       mentionItems.length > 0
         ? mentionItems.map((item, index) => ({
@@ -1572,7 +1603,8 @@ export class LexicalLayoutTextEditorElement extends HTMLElement {
             key: item.id,
             type: "item",
             label: item.label,
-            suffixText: item.variableType ?? "",
+            suffixText:
+              variableTypes[item.variableType] ?? item.variableType ?? "",
             selected: index === this.state.mentionMenu.highlightedIndex,
           }))
         : [
@@ -1580,7 +1612,7 @@ export class LexicalLayoutTextEditorElement extends HTMLElement {
               id: "no-variables",
               key: "no-variables",
               type: "item",
-              label: "No variables",
+              label: noVariables,
               disabled: true,
             },
           ];

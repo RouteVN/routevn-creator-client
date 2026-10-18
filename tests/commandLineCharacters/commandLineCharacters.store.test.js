@@ -15,6 +15,7 @@ import {
   setSelectedCharacterIndex,
   setSelectedSpriteGroupId,
   setTransforms,
+  showAddCharacterTransformDropdownMenu,
   showCharacterFlipOption,
   showDropdownMenu,
   updateCharacterBlurEnabled,
@@ -25,7 +26,7 @@ import {
   updateCharacterShaderAdjustment,
 } from "../../src/components/commandLineCharacters/commandLineCharacters.store.js";
 import { COMMAND_LINE_SHADER_ADJUSTMENTS } from "../../src/internal/commandLineShaderAdjustments.js";
-import { EN_I18N } from "../support/i18n.js";
+import { EN_I18N, PT_I18N } from "../support/i18n.js";
 
 const createSpriteSelectState = () => {
   const state = createInitialState();
@@ -958,5 +959,77 @@ describe("commandLineCharacters.store mobile resource selectors", () => {
     expect(viewData.characterSelectorPreviewStyle).toBe(
       "width: 100%; aspect-ratio: 16 / 9;",
     );
+  });
+});
+
+describe("commandLineCharacters.store fallback names", () => {
+  it("names sprite groups without a name by their position in the active locale", () => {
+    const state = createInitialState();
+    setItems(
+      { state },
+      {
+        items: {
+          items: {
+            "character-one": {
+              id: "character-one",
+              type: "character",
+              name: "Character One",
+              spriteGroups: [{ id: "body" }, { id: "face", name: "Face" }],
+              sprites: { items: {}, tree: [] },
+            },
+          },
+          tree: [{ id: "character-one" }],
+        },
+      },
+    );
+    setExistingCharacters(
+      { state },
+      { characters: [{ id: "character-one", sprites: [] }] },
+    );
+    setSelectedCharacterIndex({ state }, { index: 0 });
+
+    const currentViewData = selectViewData({ state, i18n: PT_I18N });
+    expect(
+      currentViewData.defaultValues.characters[0].spriteGroupBoxes.map(
+        (group) => group.name,
+      ),
+    ).toEqual(["Face", "Grupo 1"]);
+
+    setMode({ state }, { mode: "sprite-select" });
+    expect(
+      selectViewData({ state, i18n: PT_I18N }).spriteSelectionTabs,
+    ).toEqual([
+      { id: "face", label: "Face" },
+      { id: "body", label: "Grupo 1" },
+    ]);
+    expect(
+      selectViewData({ state, i18n: EN_I18N }).spriteSelectionTabs[1].label,
+    ).toBe("Group 1");
+  });
+
+  it("names a transform without a name in the active locale", () => {
+    const state = createInitialState();
+    setTransforms(
+      { state },
+      {
+        transforms: {
+          items: {
+            "transform-1": { id: "transform-1", type: "transform" },
+          },
+          tree: [{ id: "transform-1" }],
+        },
+      },
+    );
+    showAddCharacterTransformDropdownMenu(
+      { state },
+      { position: { x: 0, y: 0 } },
+    );
+
+    expect(
+      selectViewData({ state, i18n: PT_I18N }).dropdownMenu.items[0].label,
+    ).toBe("Transformação sem nome");
+    expect(
+      selectViewData({ state, i18n: EN_I18N }).dropdownMenu.items[0].label,
+    ).toBe("Unnamed Transform");
   });
 });

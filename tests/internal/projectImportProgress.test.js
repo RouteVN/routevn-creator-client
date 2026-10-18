@@ -44,4 +44,15 @@ describe("createProjectImportProgressView", () => {
       expected,
     );
   });
+
+  it("formats downloaded sizes for the active locale", () => {
+    const event = { stage: "downloading", current: 1.5 * MB, total: 0 };
+    expect(
+      createProjectImportProgressView({
+        copy: COPY,
+        dateTime: { intlLocale: "pt" },
+        event,
+      }),
+    ).toEqual({ status: "Downloading… 1,5 MB", progress: {} });
+  });
 });

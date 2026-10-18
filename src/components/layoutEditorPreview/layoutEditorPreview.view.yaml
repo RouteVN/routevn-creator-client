@@ -188,7 +188,7 @@ template:
                   - rvn-image-selector#imageSelector selectedImageId=${imageSelectorSelectedId} resourceTarget=${imageSelectorDialog.resourceTarget} characterId=${imageSelectorDialog.characterId}: null
           - $if !isCharacterSelection:
               - rtgl-view d=h g=sm w=f ah=e:
-                  - rtgl-button#confirmImageSelection variant=pr ?disabled=${imageSelectorConfirmDisabled}: OK
+                  - rtgl-button#confirmImageSelection variant=pr ?disabled=${imageSelectorConfirmDisabled}: ${imageSelectorConfirmLabel}
   - $when: fullImagePreviewVisible
     rtgl-dialog#fullPreviewDialog open layout=fixed bare p=none:
       - rtgl-view#previewOverlay slot=content pos=fix edge=f z=3000 cur=pointer:

@@ -109,7 +109,7 @@ const createFolderNameForm = (copy = {}) => ({
     {
       name: "name",
       type: "input-text",
-      label: copy.nameLabel ?? "Name",
+      label: copy.folderNameLabel ?? "Name",
       required: true,
     },
     {
@@ -482,8 +482,9 @@ export const createMediaPageStore = ({
     });
   };
 
-  const selectViewData = ({ state, i18n }) => {
+  const selectViewData = ({ state, i18n = {} }) => {
     const copy = resolveCopy(i18n);
+    const { dateTime } = i18n;
     const resolvedTitle = copy.title ?? title;
     const resolvedPreviewMenuLabel =
       copy.previewMenuLabel ?? copy.previewMenuItem ?? previewMenuLabel;
@@ -579,7 +580,7 @@ export const createMediaPageStore = ({
         })
       : {};
     const detailFields = selectedItem
-      ? buildDetailFields(selectedItem, { copy })
+      ? buildDetailFields(selectedItem, { copy, dateTime })
       : buildFolderDetailFields(selectedFolder).map((field) => {
           if (field.label === "Type") {
             return {
@@ -660,6 +661,7 @@ export const createMediaPageStore = ({
       mediaGroups,
       baseViewData,
       copy,
+      dateTime,
     });
 
     if (extendedViewData.detailFields !== baseViewData.detailFields) {

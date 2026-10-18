@@ -179,7 +179,7 @@ export const MASK_COMBINE_OPTIONS = Object.freeze([
   { label: "Max", value: "max" },
   { label: "Min", value: "min" },
   { label: "Multiply", value: "multiply" },
-  { label: "Add", value: "add" },
+  { label: "Add", value: "add", labelKey: "addCombineLabel" },
 ]);
 
 export const MASK_BOOLEAN_OPTIONS = Object.freeze([

@@ -353,7 +353,7 @@ export const selectViewData = ({ state, props, props: attrs, i18n }) => {
       copy,
     ),
     hideConfirmDialogLabel: localizeCommandLineText(
-      "Hide confirm dialog",
+      "Hide Confirm Dialog",
       copy,
     ),
     nextLineConfigLabel: localizeCommandLineText("Next Line Config", copy),
@@ -540,6 +540,28 @@ const countActions = (actions = {}) => {
   return actions && typeof actions === "object" && !Array.isArray(actions)
     ? Object.keys(actions).length
     : 0;
+};
+
+// A typed-in value shows as it is; a value's catalog label is translated.
+const formatRuntimeActionSummary = (runtimePreview, copy) => {
+  const action = localizeCommandLineText(runtimePreview.label, copy);
+  const value =
+    localizeCommandLineText(runtimePreview.valueLabel, copy) ??
+    runtimePreview.valueText;
+  if (value === undefined) {
+    return action;
+  }
+
+  return formatCommandLineCopy("{action}: {value}", { action, value }, copy);
+};
+
+// A boolean is shown with the same label as in the operation's value select.
+const formatUpdateVariableValue = (value, copy) => {
+  if (typeof value === "boolean") {
+    return localizeCommandLineText(value ? "True" : "False", copy);
+  }
+
+  return value;
 };
 
 const isActionBranchDefault = (branch) => {
@@ -1234,8 +1256,12 @@ export const selectActionsData = ({ props, state, copy }) => {
       continue;
     }
 
-    preview[mode] = runtimePreview;
-    runtimePreviewItems.push(runtimePreview);
+    const runtimeActionPreview = {
+      ...runtimePreview,
+      summary: formatRuntimeActionSummary(runtimePreview, copy),
+    };
+    preview[mode] = runtimeActionPreview;
+    runtimePreviewItems.push(runtimeActionPreview);
   }
 
   if (runtimePreviewItems.length > 0) {
@@ -1326,7 +1352,7 @@ export const selectActionsData = ({ props, state, copy }) => {
               copy,
             );
           } else if (op.op === "set") {
-            return `${varName} = ${op.value}`;
+            return `${varName} = ${formatUpdateVariableValue(op.value, copy)}`;
           } else if (op.op === "increment") {
             return `${varName} +${op.value ?? 1}`;
           } else if (op.op === "decrement") {

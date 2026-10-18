@@ -298,7 +298,7 @@ const buildClipOptions = (
   };
 };
 
-const buildDetailFields = (item, copy = {}) => {
+const buildDetailFields = (item, copy = {}, dateTime) => {
   if (!item) {
     return [];
   }
@@ -328,7 +328,7 @@ const buildDetailFields = (item, copy = {}) => {
     {
       type: "text",
       label: copy.fileSizeLabel ?? "File Size",
-      value: formatFileSize(item.fileSize),
+      value: formatFileSize(item.fileSize, dateTime),
     },
     {
       type: "text",
@@ -938,7 +938,7 @@ export const selectViewData = ({ state, i18n }) => {
   const dialogAtlasFieldValue = state.dialogSourceFiles?.atlasFile?.name ?? "";
   const isDialogPreviewMode = state.dialogMode === "preview";
   const detailFields = selectedItem
-    ? buildDetailFields(selectedItem, copy)
+    ? buildDetailFields(selectedItem, copy, i18n.dateTime)
     : buildFolderDetailFields(selectedFolder, copy);
   const dialogSubmitLabel =
     state.dialogMode === "create"

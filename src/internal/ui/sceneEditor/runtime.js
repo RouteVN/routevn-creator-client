@@ -130,6 +130,11 @@ const isSceneEditorPreviewVisible = (store) => {
   return store?.selectPreviewScene?.()?.previewVisible === true;
 };
 
+// Graphics could not start on this device, so the editor has no canvas.
+const isSceneEditorCanvasUnavailable = (store) => {
+  return store?.selectIsCanvasUnavailable?.() === true;
+};
+
 const waitForNextFrame = () =>
   new Promise((resolve) => {
     if (typeof requestAnimationFrame === "function") {
@@ -1103,25 +1108,34 @@ const createBeforeHandleActionsHook = (deps) => {
   };
 };
 
-const stripSelectedLinePreviewNavigation = (
-  projectData,
-  { sceneId, sectionId, lineId },
-) => {
-  if (!sceneId || !sectionId || !lineId) {
-    return projectData;
-  }
+// Route Engine leaves a line as soon as it enters it through these actions: a
+// section transition or a story reset moves to another section, and a
+// conditional does that or continues to the next line. The canvas shows one
+// line, so the line it enters keeps none of them. Following them would show
+// another line, and a transition loop in the story would stop the canvas. The
+// full-screen preview still plays them.
+const CANVAS_ENTRY_LINE_ROUTING_ACTION_TYPES = [
+  "sectionTransition",
+  "resetStoryAtSection",
+  "conditional",
+];
 
-  const selectedScene = projectData?.story?.scenes?.[sceneId];
-  const selectedSection = selectedScene?.sections?.[sectionId];
-  const selectedLine = selectedSection?.lines?.find(
-    (line) => line?.id === lineId,
+// The entered line is the selected line, or the section's first line when the
+// selected line is not in that section.
+const stripCanvasEntryLineRouting = (projectData) => {
+  const { story } = projectData;
+  const scene = story.scenes?.[story.initialSceneId];
+  const section = scene?.sections?.[scene.initialSectionId];
+  const entryLine = section?.lines.find(
+    (line) => line.id === section.initialLineId,
   );
-
-  if (!selectedLine?.actions?.sectionTransition) {
+  if (!entryLine?.actions) {
     return projectData;
   }
 
-  delete selectedLine.actions.sectionTransition;
+  for (const actionType of CANVAS_ENTRY_LINE_ROUTING_ACTION_TYPES) {
+    delete entryLine.actions[actionType];
+  }
   return projectData;
 };
 
@@ -1174,12 +1188,6 @@ const stripSelectedLinePreviewAudioEffect = (
   return projectData;
 };
 
-const prepareSelectedLinePreviewProjectData = (projectData, selection) => {
-  stripSelectedLinePreviewNavigation(projectData, selection);
-  stripSelectedLinePreviewAudioEffect(projectData, selection);
-  return projectData;
-};
-
 const createProjectDataWithSelectedEntryPoint = (projectData, selection) => {
   const { sceneId, sectionId, lineId } = selection;
   const projectDataWithSelection = structuredClone(projectData);
@@ -1188,7 +1196,7 @@ const createProjectDataWithSelectedEntryPoint = (projectData, selection) => {
     const sanitized = sanitizeProjectDataForRouteEngine(
       projectDataWithSelection,
     );
-    return sanitized.projectData;
+    return stripCanvasEntryLineRouting(sanitized.projectData);
   }
 
   projectDataWithSelection.story.initialSceneId = sceneId;
@@ -1203,9 +1211,9 @@ const createProjectDataWithSelectedEntryPoint = (projectData, selection) => {
   }
 
   const sanitized = sanitizeProjectDataForRouteEngine(
-    prepareSelectedLinePreviewProjectData(projectDataWithSelection, selection),
+    stripSelectedLinePreviewAudioEffect(projectDataWithSelection, selection),
   );
-  return sanitized.projectData;
+  return stripCanvasEntryLineRouting(sanitized.projectData);
 };
 
 const createProjectDataWithAudioEffectHandoff = (
@@ -1354,6 +1362,9 @@ const prepareTemporaryPresentationProjectData = async (
 
 export const renderSceneEditorState = async (deps, payload = {}) => {
   const { store, graphicsService, refs } = deps;
+  if (isSceneEditorCanvasUnavailable(store)) {
+    return;
+  }
   const {
     preserveAnimationPlayback = false,
     skipAnimations = true,
@@ -1731,6 +1742,10 @@ export const resolveSceneEditorEntrySelection = (scene, { sectionId } = {}) => {
 
 export const updateSceneEditorSectionChanges = async (deps) => {
   const { store, graphicsService } = deps;
+  // The changes come from the engine that renders the canvas.
+  if (isSceneEditorCanvasUnavailable(store)) {
+    return;
+  }
   const timingStartedAt = getDebugNow();
   const selectedSectionId = store.selectSelectedSectionId();
   const sectionIds = getSceneSectionIds(store.selectScene?.());
@@ -1898,6 +1913,9 @@ export const restoreSceneEditorFromPreview = async (deps) => {
 
   store.hidePreviewScene();
   render();
+  if (isSceneEditorCanvasUnavailable(store)) {
+    return;
+  }
 
   resetAssetLoadCache("restore scene editor from preview");
   setSceneAssetLoading(deps, false);
@@ -1969,6 +1987,17 @@ export const renderSceneEditorCanvas = async (deps, payload) => {
       emitSceneEditorTiming("runtime.render-canvas.skipped", {
         durationMs: getDebugDurationMs(canvasStartedAt),
         reason: "preview-visible",
+        skipRender: payload?.skipRender === true,
+      });
+    }
+    return;
+  }
+
+  if (isSceneEditorCanvasUnavailable(store)) {
+    if (timingEnabled) {
+      emitSceneEditorTiming("runtime.render-canvas.skipped", {
+        durationMs: getDebugDurationMs(canvasStartedAt),
+        reason: "canvas-unavailable",
         skipRender: payload?.skipRender === true,
       });
     }

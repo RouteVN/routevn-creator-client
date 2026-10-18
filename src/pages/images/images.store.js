@@ -1,5 +1,6 @@
 import { formatFileSize } from "../../internal/files.js";
 import { applyFolderRequiredRootDragOptions } from "../../internal/fileExplorerDragOptions.js";
+import { formatI18nCopy } from "../../internal/ui/i18nCopy.js";
 import { createMediaPageStore } from "../../internal/ui/resourcePages/media/createMediaPageStore.js";
 import { createTagField } from "../../internal/ui/resourcePages/tags.js";
 import { matchesTagAwareSearch } from "../../internal/resourceTags.js";
@@ -35,7 +36,7 @@ const resolveImageAspectRatio = (item) => {
   return `${Math.max(1, Math.round(width))} / ${Math.max(1, Math.round(height))}`;
 };
 
-const buildDetailFields = (item, { copy } = {}) => {
+const buildDetailFields = (item, { copy, dateTime } = {}) => {
   if (!item) {
     return [];
   }
@@ -63,7 +64,7 @@ const buildDetailFields = (item, { copy } = {}) => {
     {
       type: "text",
       label: copy.fileSizeLabel,
-      value: formatFileSize(item.fileSize),
+      value: formatFileSize(item.fileSize, dateTime),
     },
     {
       type: "text",
@@ -284,15 +285,14 @@ const {
       ? state.data?.items?.[state.deleteDialogItemId]
       : undefined;
     const deleteDialogItemName = deleteDialogItem?.name
-      ? `"${deleteDialogItem.name}"`
+      ? formatI18nCopy(copy.deleteTargetName, { name: deleteDialogItem.name })
       : copy.deleteTargetFallback;
     viewData.deleteDialogOpen = state.deleteDialogOpen;
     viewData.selectedOriginalFileId = selectedItem?.fileId;
     viewData.deleteDialogTitle = copy.deleteTitle;
-    viewData.deleteDialogMessage = copy.deleteMessage.replace(
-      "{itemName}",
-      deleteDialogItemName,
-    );
+    viewData.deleteDialogMessage = formatI18nCopy(copy.deleteMessage, {
+      itemName: deleteDialogItemName,
+    });
     viewData.deleteDialogConfirmLabel = copy.deleteButton;
     return viewData;
   },

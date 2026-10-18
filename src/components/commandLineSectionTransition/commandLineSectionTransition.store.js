@@ -7,6 +7,7 @@ import {
 import {
   localizeCommandLineBreadcrumb,
   localizeCommandLineForm,
+  localizeCommandLineText,
   selectCommandLineCopy,
 } from "../../internal/ui/sceneEditor/commandLineCopy.js";
 
@@ -178,6 +179,7 @@ export const selectViewData = ({ state, props, i18n }) => {
   };
 
   return {
+    submitButtonLabel: localizeCommandLineText("Submit", copy),
     initiated: state.initiated,
     mode: state.mode,
     breadcrumb: localizeCommandLineBreadcrumb(breadcrumb, copy),

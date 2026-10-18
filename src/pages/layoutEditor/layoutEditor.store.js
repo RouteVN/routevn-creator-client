@@ -16,6 +16,7 @@ import {
   setMobileResourcePageWindowMetricsState,
 } from "../../internal/ui/resourcePages/mobileResourcePage.js";
 import {
+  CREATE_TYPE_LABEL_KEYS,
   isItemDirectChildOfDirectedContainer,
   isItemInsideSaveLoadSlot,
   selectLayoutEditorSelectedItem,
@@ -88,35 +89,6 @@ const selectCanvasZoom = ({ state }) =>
   selectShowRightPanel({ state }) ? state.canvasZoom : 1;
 
 const RIGHT_PANEL_MODES = new Set(["edit", "preview"]);
-
-const CREATE_TYPE_LABEL_KEYS = Object.freeze({
-  container: "containerMenuItem",
-  sprite: "imageMenuItem",
-  "spritesheet-animation": "spritesheetAnimationMenuItem",
-  particle: "particleMenuItem",
-  text: "textMenuItem",
-  slider: "sliderMenuItem",
-  input: "inputMenuItem",
-  "form-submit-button": "inputSubmitContainerMenuItem",
-  "fragment-ref": "fragmentMenuItem",
-  "container-confirm-dialog-ok": "containerConfirmOkMenuItem",
-  "container-confirm-dialog-cancel": "containerConfirmCancelMenuItem",
-  "text-dialogue-content": "textDialogueContentMenuItem",
-  "text-character-name": "textCharacterNameMenuItem",
-  "container-dialogue-line": "containerDialogueLineMenuItem",
-  "text-dialogue-line-character-name": "textLineCharacterNameMenuItem",
-  "text-dialogue-line-content": "textLineContentMenuItem",
-  "container-history-line": "containerHistoryItemMenuItem",
-  "text-history-line-character-name": "textHistoryCharacterNameMenuItem",
-  "text-history-line-content": "textHistoryLineContentMenuItem",
-  "container-choice-item": "containerRepeatedChoiceItemMenuItem",
-  "container-choice-single-item": "containerSingleChoiceItemMenuItem",
-  "container-save-load-slot": "containerSaveLoadSlotMenuItem",
-  "sprite-save-load-slot-image": "imageSaveImageMenuItem",
-  "text-save-load-slot-date": "textSaveDateMenuItem",
-  "text-choice-item-content": "textChoiceContentMenuItem",
-  rect: "rectMenuItem",
-});
 
 const VALUE_LABEL_KEYS = Object.freeze({
   "rename-item": "renameMenuItem",
@@ -375,6 +347,13 @@ export const markPreviewDataSaved = (
   { previewData, version } = {},
 ) => {
   state.persistedPreviewData = normalizePreviewData(previewData);
+  state.previewSavedVersion = Math.max(state.previewSavedVersion, version);
+};
+
+// Gives up the save of an edit that failed, so it is not tried again. The
+// preview data stays as it is, though it was not stored. Edits made since are
+// still unsaved.
+export const markPreviewDataSaveFailed = ({ state }, { version } = {}) => {
   state.previewSavedVersion = Math.max(state.previewSavedVersion, version);
 };
 
@@ -663,6 +642,10 @@ export const selectLayoutId = ({ state }) => {
   return state.layout?.id;
 };
 
+export const selectLayoutName = ({ state }) => {
+  return state.layout?.name ?? "";
+};
+
 export const selectLayoutResourceType = ({ state }) => {
   return state.layout?.resourceType || "layouts";
 };
@@ -783,10 +766,12 @@ export const selectViewData = ({ state, constants, i18n }) => {
   const contextMenuItems = toLayoutEditorContextMenuItems(
     localizeMenuItems(parsedContextMenuItems, copy),
     state.projectResolution,
+    copy,
   );
   const emptyContextMenuItems = toLayoutEditorContextMenuItems(
     localizeMenuItems(parsedEmptyContextMenuItems, copy),
     state.projectResolution,
+    copy,
   );
   const flatLayoutItems = toFlatItems(state.layoutData);
   const flatItems = toLayoutEditorExplorerItems(flatLayoutItems, {

@@ -786,6 +786,70 @@ describe("projectServiceCore releaseProjectRuntime", () => {
     expect(mocked.projectStore.app.set).not.toHaveBeenCalled();
   });
 
+  it("does not read the patch markers again when a page ensures the open project", async () => {
+    const repository = {
+      getState: vi.fn(() => ({
+        layouts: {
+          items: {},
+        },
+      })),
+    };
+    let routePayload = { p: "project-1" };
+    let leaveOnNextMarkerRead = false;
+    mocked.repositoryService.ensureRepository.mockResolvedValue(repository);
+    mocked.repositoryService.getEnsuredProjectId.mockReturnValue("project-1");
+    // Like the repository service, the cached store belongs to the project
+    // in the route.
+    mocked.repositoryService.getCachedStore.mockImplementation(() => {
+      if (routePayload.p !== "project-1") {
+        throw new Error(
+          "Adapter not initialized. Call ensureRepository() first.",
+        );
+      }
+      return mocked.projectStore;
+    });
+    mocked.projectStore.app.get.mockImplementation(async () => {
+      if (leaveOnNextMarkerRead) {
+        routePayload = {};
+      }
+      return true;
+    });
+    const projectService = createTestProjectService({
+      router: {
+        getPayload: () => routePayload,
+      },
+    });
+
+    // The route opens the project and evaluates its content patches.
+    await projectService.ensureRepository();
+    expect(mocked.projectStore.app.get).toHaveBeenCalledTimes(2);
+
+    // A page ensures the open project again, and the user leaves the project
+    // while that call would read the project store.
+    leaveOnNextMarkerRead = true;
+    await expect(projectService.ensureRepository()).resolves.toBe(repository);
+    expect(mocked.projectStore.app.get).toHaveBeenCalledTimes(2);
+  });
+
+  it("evaluates the content patches again for a reopened project", async () => {
+    const firstRepository = {
+      getState: vi.fn(() => ({ layouts: { items: {} } })),
+    };
+    const reopenedRepository = {
+      getState: vi.fn(() => ({ layouts: { items: {} } })),
+    };
+    mocked.repositoryService.ensureRepository
+      .mockResolvedValueOnce(firstRepository)
+      .mockResolvedValueOnce(reopenedRepository);
+    mocked.projectStore.app.get.mockResolvedValue(true);
+    const projectService = createTestProjectService();
+
+    await projectService.ensureRepository();
+    await projectService.ensureRepository();
+
+    expect(mocked.projectStore.app.get).toHaveBeenCalledTimes(4);
+  });
+
   it("defers automatic content patches until the platform marks the project ready", async () => {
     const repository = {
       getState: vi.fn(() => ({

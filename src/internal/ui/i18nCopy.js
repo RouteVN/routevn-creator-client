@@ -16,7 +16,7 @@ export const selectI18nCopy = (i18n = {}, namespaces = []) => {
 export const formatI18nCopy = (template, replacements = {}) => {
   let text = template;
   Object.entries(replacements).forEach(([key, value]) => {
-    text = text.replaceAll(`{${key}}`, value ?? "");
+    text = text.replaceAll(`{${key}}`, () => value ?? "");
   });
   return text;
 };
