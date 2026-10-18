@@ -460,6 +460,30 @@ that failed, tell the user with a localized alert that names the location and
 carries the error details, and report the error. The Scene and Layout editors
 do this.
 
+### Project Change Order
+
+Every change to a project goes through the command API, which runs changes one
+at a time, in the order they are made. A change is checked against the project
+state when it starts, so a change made while another one is saving is checked
+against the state that one leaves. A change that fails does not hold up the
+next one.
+
+- A change belongs to the project that is open when it is made. It keeps that
+  project's id and repository while it waits, and runs with them, whatever the
+  route names by then: a route leaves a project before the project is closed.
+- `projectService.releaseProjectRuntime` waits for the changes still waiting to
+  run, and those they lead to, then closes the project as a step among the
+  changes (`commandApi.runAfterChanges`), whether the project is left,
+  switched, exported or deleted. A change made while it closes waits for that
+  step and is then refused and reported (`projectCommand.projectClosed`), never
+  run in a closing or another project. Opening the next project waits for the
+  release.
+- A change still running after 60 seconds holds up every change after it, so it
+  is reported (`projectCommand.slowChange`) and left to finish.
+- A command, or the closing step, must not call a command API method that
+  changes the project: it would wait for itself. Commands share helpers through
+  `commandApi/shared.js` instead.
+
 ### Project-Backed Page Rendering
 
 Repository state is the authoritative source of truth for project-backed pages.
