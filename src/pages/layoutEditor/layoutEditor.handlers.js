@@ -22,6 +22,10 @@ import {
   waitForLayoutEditorPersistenceIdle,
 } from "./support/layoutEditorPersistenceQueue.js";
 import {
+  notifyLayoutEditorSaveFailure,
+  toLayoutEditorSaveError,
+} from "./support/layoutEditorSaveFailure.js";
+import {
   captureLayoutElementSnapshot,
   getChangedLayoutElementIds,
   isFragmentLayout,
@@ -46,7 +50,6 @@ import {
 import { createLayoutElementsFileExplorerHandlers } from "../../internal/ui/fileExplorer.js";
 import { createLayoutEditorRepositoryStoreData } from "./support/layoutEditorRepositoryState.js";
 import { formatI18nCopy } from "../../internal/ui/i18nCopy.js";
-import { runResourcePageMutation } from "../../internal/ui/resourcePages/resourcePageErrors.js";
 import { selectLayoutEditorPageCopy } from "./support/layoutEditorPageCopy.js";
 
 const mountSubscriptions = (deps) => {
@@ -99,31 +102,33 @@ const getResultErrorMessage = (result, fallbackMessage) => {
 
 const showLayoutEditorError = ({
   appService,
-  store,
   error,
   fallbackMessage,
   lockedMessage = fallbackMessage,
-  throttle = false,
   copy = {},
 } = {}) => {
-  if (throttle) {
-    const now = Date.now();
-    const lastPersistErrorAt = store.selectLastPersistErrorAt();
-    if (
-      Number.isFinite(lastPersistErrorAt) &&
-      now - lastPersistErrorAt < LAYOUT_EDITOR_PERSIST_ERROR_COOLDOWN_MS
-    ) {
-      return;
-    }
-    store.setLastPersistErrorAt({
-      timestamp: now,
-    });
-  }
-
   const message = isSqliteLockError(error)
     ? lockedMessage
     : error?.message || fallbackMessage;
   appService.showAlert({ message: message, title: copy.errorTitle ?? "Error" });
+};
+
+// Failures of saves in the background can come close together, as when
+// several drags fail one after another. The first alert explains them all.
+// Returns whether this failure should be announced, and counts it if so.
+const claimLayoutEditorSaveFailureAlert = (store) => {
+  const now = Date.now();
+  const lastPersistErrorAt = store.selectLastPersistErrorAt();
+  if (
+    Number.isFinite(lastPersistErrorAt) &&
+    now - lastPersistErrorAt < LAYOUT_EDITOR_PERSIST_ERROR_COOLDOWN_MS
+  ) {
+    return false;
+  }
+  store.setLastPersistErrorAt({
+    timestamp: now,
+  });
+  return true;
 };
 
 const runLayoutEditorPersistence = (deps, task) => {
@@ -137,8 +142,9 @@ const PREVIEW_AUTOSAVE_ACTION = "layoutEditor.savePreview";
 
 // Saves the preview data when the user edited it since the last save. It
 // saves on its own, outside the undo history, in order with element edits.
+// A save that fails is not repeated, and the user is told.
 const saveLayoutEditorPreview = (deps) => {
-  const { appService, projectService, store } = deps;
+  const { appService, i18n, projectService, store } = deps;
   return runLayoutEditorPersistence(deps, async () => {
     const layoutId = store.selectLayoutId();
     const version = store.selectPreviewEditVersion();
@@ -148,29 +154,44 @@ const saveLayoutEditorPreview = (deps) => {
     }
 
     const copy = selectCopy(deps);
+    const resourceType = store.selectLayoutResourceType();
     const { ownerPayloadKey, ownerLabel, updateItem } =
-      getLayoutEditorOwnerConfig(
-        store.selectLayoutResourceType(),
-        projectService,
-        copy,
-      );
-    const updateAttempt = await runResourcePageMutation({
-      appService,
-      fallbackMessage: formatI18nCopy(
-        copy.failedSaveOwnerPreview ?? "Failed to save {ownerLabel} preview.",
-        { ownerLabel: ownerLabel.toLowerCase() },
-      ),
-      title: copy.errorTitle ?? "Error",
-      action: () =>
-        updateItem({
-          [ownerPayloadKey]: layoutId,
-          data: { preview: previewData },
-        }),
-    });
-    if (updateAttempt.ok) {
+      getLayoutEditorOwnerConfig(resourceType, projectService, copy);
+    const failedMessage = formatI18nCopy(
+      copy.failedSaveOwnerPreview ?? "Failed to save {ownerLabel} preview.",
+      { ownerLabel: ownerLabel.toLowerCase() },
+    );
+    try {
+      const result = await updateItem({
+        [ownerPayloadKey]: layoutId,
+        data: { preview: previewData },
+      });
+      if (result?.valid === false) {
+        throw toLayoutEditorSaveError(result.error, failedMessage);
+      }
       store.markPreviewDataSaved({ previewData, version });
+      return { ok: true };
+    } catch (failure) {
+      const error = toLayoutEditorSaveError(failure, failedMessage);
+      // The Preview keeps showing what it shows. Only the save is given up,
+      // so that leaving the page does not try it again.
+      store.markPreviewDataSaveFailed({ version });
+      console.error("[layoutEditor] Failed to save the preview", {
+        error,
+        layoutId,
+        resourceType,
+      });
+      notifyLayoutEditorSaveFailure({
+        appService,
+        detailsLabel: i18n.appPage.errorDetailsLabel,
+        error,
+        message: failedMessage,
+        operation: "layoutEditor.savePreview",
+        showAlert: claimLayoutEditorSaveFailureAlert(store),
+        title: copy.errorTitle ?? "Error",
+      });
+      return { ok: false };
     }
-    return { ok: updateAttempt.ok };
   });
 };
 
@@ -472,16 +493,19 @@ const queuePendingLayoutEditorPersist = (
   return pendingPayload;
 };
 
-// Saves every edit waiting to save, and then the preview data.
+// Saves every edit waiting to save, and then the preview data. A save that
+// fails has already dropped its changes and told the user, so the others
+// still save. The result says whether everything was saved.
 const flushQueuedLayoutEditorUpdates = async (deps) => {
   const { projectService, store } = deps;
+  let allSaved = true;
 
   while (true) {
     const pendingPayload = store.selectPendingPersistPayload();
     if (pendingPayload) {
       const flushResult = await handleDebouncedUpdate(deps, pendingPayload);
       if (flushResult.ok === false) {
-        return flushResult;
+        allSaved = false;
       }
       continue;
     }
@@ -490,7 +514,7 @@ const flushQueuedLayoutEditorUpdates = async (deps) => {
       owner: projectService,
     });
     if (idleResult?.ok === false) {
-      return idleResult;
+      allSaved = false;
     }
 
     if (!store.selectPendingPersistPayload()) {
@@ -498,7 +522,8 @@ const flushQueuedLayoutEditorUpdates = async (deps) => {
     }
   }
 
-  return saveLayoutEditorPreview(deps);
+  const previewResult = await saveLayoutEditorPreview(deps);
+  return { ok: allSaved && previewResult.ok };
 };
 
 // Records an edit the page makes to its elements, from what it shows before
@@ -817,10 +842,10 @@ export const handleBeforeMount = (deps) => {
   });
   const unregisterBeforeNavigation = appService.registerBeforeNavigation(
     async ({ reason } = {}) => {
-      const flushResult = await flushQueuedLayoutEditorUpdates(deps);
-      if (!flushResult.ok) {
-        throw new Error("Failed to save layout changes before navigation.");
-      }
+      // Leaving never waits on a failed save and never throws for it: the
+      // save dropped its own changes and told the user, as the page cannot
+      // wait on it when the app goes to the background or quits.
+      await flushQueuedLayoutEditorUpdates(deps);
       // A layout's thumbnail follows in the background, once the page is
       // left: a backup, the app going to the background, or quitting only
       // saves. Controls show none.
@@ -2008,7 +2033,6 @@ export const handleFileExplorerAction = async (deps, payload) => {
     });
     showLayoutEditorError({
       appService: deps.appService,
-      store: deps.store,
       error,
       fallbackMessage:
         copy.failedCreateLayoutItem ?? "Failed to create layout item.",
@@ -2027,6 +2051,65 @@ export const handleFileExplorerTargetChanged = (deps, payload) =>
 
 export const handleDataChanged = refreshLayoutEditorData;
 
+// Goes back to the stored element after its save failed. The failed edit is
+// not saved again: a failure can come after part of the write was stored.
+// Only that edit is dropped; edits to other elements, and edits made since,
+// stay. The user is told at once, and the failure is reported.
+const dropFailedLayoutEditorEdit = (deps, { payload, error }) => {
+  const { appService, i18n, projectService, refs, render, store } = deps;
+  const copy = selectCopy(deps);
+  const { layoutId, resourceType, selectedItemId, persistenceRequestId } =
+    payload;
+
+  console.error("[layoutEditor] Failed to save layout changes", {
+    error,
+    layoutId,
+    resourceType,
+    selectedItemId,
+  });
+
+  store.clearPendingPersistPayload({ persistenceRequestId });
+  // The page shows an edit sent to save until it is saved; this one is not.
+  store.removeSavingPersistPayload({ persistenceRequestId });
+  const currentPayload = getEditorPayload(appService);
+  store.syncRepositoryState(
+    createLayoutEditorRepositoryStoreData({
+      repositoryState: projectService.getRepositoryState(),
+      layoutId: currentPayload.layoutId || layoutId,
+      resourceType: currentPayload.resourceType || resourceType,
+    }),
+  );
+  // The canvas keeps the item it was moving until the page has its position.
+  refs.layoutEditorCanvas?.discardPendingUpdate();
+  render();
+
+  const isControl = resourceType === "controls";
+  const elementName =
+    store.selectItemDataById({ itemId: selectedItemId })?.name ??
+    payload.updatedItem?.name ??
+    "";
+  const message = isControl
+    ? formatI18nCopy(
+        copy.failedSaveControlElementChangesDiscarded ??
+          "Your latest changes to element “{elementName}” in control “{controlName}” could not be saved and were removed. Please enter them again.",
+        { elementName, controlName: store.selectLayoutName() },
+      )
+    : formatI18nCopy(
+        copy.failedSaveLayoutElementChangesDiscarded ??
+          "Your latest changes to element “{elementName}” in layout “{layoutName}” could not be saved and were removed. Please enter them again.",
+        { elementName, layoutName: store.selectLayoutName() },
+      );
+  notifyLayoutEditorSaveFailure({
+    appService,
+    detailsLabel: i18n.appPage.errorDetailsLabel,
+    error,
+    message,
+    operation: "layoutEditor.saveElement",
+    showAlert: claimLayoutEditorSaveFailureAlert(store),
+    title: copy.errorTitle ?? "Error",
+  });
+};
+
 /**
  * Handler for debounced element updates (saves to repository)
  * @param {Object} payload - Update payload
@@ -2035,7 +2118,9 @@ export const handleDataChanged = refreshLayoutEditorData;
  */
 async function handleDebouncedUpdate(deps, payload) {
   const { appService, projectService, store } = deps;
-  const copy = selectCopy(deps);
+  const failedMessage =
+    selectCopy(deps).failedSaveLayoutChanges ??
+    "Failed to save layout changes.";
   const { layoutId, resourceType, selectedItemId, updatedItem, replace } =
     payload;
 
@@ -2071,23 +2156,10 @@ async function handleDebouncedUpdate(deps, payload) {
       }
 
       if (persistResult.updateResult?.valid === false) {
-        showLayoutEditorError({
-          appService,
-          store,
-          error: persistResult.updateResult?.error,
-          fallbackMessage: getResultErrorMessage(
-            persistResult.updateResult,
-            copy.failedSaveLayoutChanges ?? "Failed to save layout changes.",
-          ),
-          lockedMessage:
-            copy.databaseBusySaveLayoutChanges ??
-            "The project database is busy. RouteVN couldn't save the latest layout changes. Please wait a moment and try again.",
-          throttle: true,
-          copy,
-        });
-        return {
-          ok: false,
-        };
+        throw toLayoutEditorSaveError(
+          persistResult.updateResult.error,
+          failedMessage,
+        );
       }
 
       // Only edits newer than this acknowledged save should overlay repository data.
@@ -2106,24 +2178,10 @@ async function handleDebouncedUpdate(deps, payload) {
         ok: true,
         didPersist: true,
       };
-    } catch (error) {
-      console.error("[layoutEditor] Failed to save layout changes", {
-        error,
-        layoutId,
-        resourceType,
-        selectedItemId,
-      });
-      showLayoutEditorError({
-        appService,
-        store,
-        error,
-        fallbackMessage:
-          copy.failedSaveLayoutChanges ?? "Failed to save layout changes.",
-        lockedMessage:
-          copy.databaseBusySaveLayoutChanges ??
-          "The project database is busy. RouteVN couldn't save the latest layout changes. Please wait a moment and try again.",
-        throttle: true,
-        copy,
+    } catch (failure) {
+      dropFailedLayoutEditorEdit(deps, {
+        payload,
+        error: toLayoutEditorSaveError(failure, failedMessage),
       });
       return {
         ok: false,
