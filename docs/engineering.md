@@ -65,6 +65,12 @@ hook and CI run it too. The `i18n` workflow also runs it on every push to
 other. When you add or change an English string, add the same key to every
 locale in the same pull request.
 
+A catalog key must not contain `.`, because Rettangoli reads it as a nested
+path and the build then reports the key as missing in every other locale.
+`check:i18n` reports such keys. When English text is used as the lookup key,
+as in the scene editor forms, map text that contains a period to a camelCase
+key in `COMMAND_LINE_COPY_KEYS`.
+
 Rettangoli passes `i18n` into store selectors and handler deps. Do not pass
 page-level `copy` objects through component props only to localize a child
 component. Components that render or compute their own copy should read from
@@ -80,6 +86,14 @@ and docs copy.
 For Simplified Chinese localization, follow the RouteVN Simplified Chinese
 translation style guide. Use it as the terminology and tone reference for
 RouteVN `zh-hans` UI and docs copy.
+
+For Russian localization, follow the RouteVN Russian translation style guide.
+Use it as the terminology and tone reference for RouteVN `ru` UI copy.
+
+Keep a count inside its catalog template, such as `"{count} actions"`, instead
+of joining a number and a translated word in code. Russian has three plural
+forms, so its catalog writes counts as a label followed by the number, such as
+`Строк: {count}`, and needs to move the number.
 
 ## Code Style
 
@@ -421,7 +435,18 @@ Page handlers should not repeat route-level repository boot logic.
 Pages that must persist local work before leaving should register that work with
 `appService.registerBeforeNavigation(...)` during mount and unregister it during
 cleanup. Do not rely on asynchronous page cleanup for data required by the
-destination page.
+destination page. Work that can outlive its page, such as a resource upload
+batch, registers for its own duration instead, so leaving the project waits
+for it, within a time limit and with a progress message, while moving between
+pages of the same project does not.
+
+A preparation that throws cancels the navigation, and the user sees nothing for
+a link or sidebar click. Saving before the app goes to the background or quits
+cannot wait on a failure at all; it only reports it. A page whose save can fail
+should therefore handle the failure itself and resolve: drop only the changes
+that failed, tell the user with a localized alert that names the location and
+carries the error details, and report the error. The Scene and Layout editors
+do this.
 
 ### Project-Backed Page Rendering
 

@@ -13,6 +13,6 @@ template:
           - rtgl-view w=f h=24 av=c ph=md mb=md:
               - rtgl-breadcrumb#breadcrumb :items=${breadcrumb}: null
           - 'rtgl-view h=1fg sv w=f ph=md style="min-height: 0;"':
-              - rtgl-text s=sm: Pop the current overlay and return to the previous view.
+              - rtgl-text s=sm: ${popOverlayDescription}
           - 'rtgl-view d=h g=md w=f ah=e ph=md pt=md style="flex: 0 0 auto;"':
-              - rtgl-button#submitButton variant=pr: Submit
+              - rtgl-button#submitButton variant=pr: ${submitButtonLabel}

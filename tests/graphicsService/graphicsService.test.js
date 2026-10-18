@@ -470,6 +470,109 @@ describe("graphicsService", () => {
     }
   });
 
+  describe("when a WebGL context cannot be created", () => {
+    const contextFailure = () =>
+      new Error(
+        "This browser does not support WebGL. Try using the canvas renderer",
+      );
+
+    const startService = async (options = {}) => {
+      const { createGraphicsService } = await import(
+        "../../src/deps/services/graphicsService.js"
+      );
+      return createGraphicsService({ startRetryDelaysMs: [5, 10], ...options });
+    };
+
+    it("tries again, then tells the owner once and still rejects", async () => {
+      const failure = contextFailure();
+      routeGraphicsInstance.init
+        .mockRejectedValueOnce(failure)
+        .mockRejectedValueOnce(failure)
+        .mockRejectedValueOnce(failure);
+      const onGraphicsUnavailable = vi.fn();
+      const service = await startService({ onGraphicsUnavailable });
+
+      await expect(service.init({ width: 64, height: 64 })).rejects.toBe(
+        failure,
+      );
+
+      expect(routeGraphicsInstance.init).toHaveBeenCalledTimes(3);
+      expect(onGraphicsUnavailable).toHaveBeenCalledExactlyOnceWith(failure);
+      await service.destroy();
+    });
+
+    it("starts when a later try gets a context, and tells nobody", async () => {
+      routeGraphicsInstance.init.mockRejectedValueOnce(contextFailure());
+      const onGraphicsUnavailable = vi.fn();
+      const service = await startService({ onGraphicsUnavailable });
+
+      await service.init({ width: 64, height: 64 });
+
+      expect(routeGraphicsInstance.init).toHaveBeenCalledTimes(2);
+      expect(onGraphicsUnavailable).not.toHaveBeenCalled();
+      await service.destroy();
+    });
+
+    it("stops trying again when it is cancelled while it waits", async () => {
+      routeGraphicsInstance.init.mockRejectedValueOnce(contextFailure());
+      const onGraphicsUnavailable = vi.fn();
+      const service = await startService({
+        onGraphicsUnavailable,
+        startRetryDelaysMs: [500, 500],
+      });
+      const controller = new AbortController();
+
+      const started = service.init({
+        width: 64,
+        height: 64,
+        signal: controller.signal,
+      });
+      const rejection = expect(started).rejects.toThrow();
+      await vi.waitFor(() =>
+        expect(routeGraphicsInstance.init).toHaveBeenCalledTimes(1),
+      );
+      controller.abort();
+      await rejection;
+
+      expect(routeGraphicsInstance.init).toHaveBeenCalledTimes(1);
+      expect(onGraphicsUnavailable).not.toHaveBeenCalled();
+      await service.destroy();
+    });
+  });
+
+  it("does not try again when the device has no WebGL at all, which Pixi remembers", async () => {
+    const failure = new Error("CanvasRenderer is not yet implemented");
+    routeGraphicsInstance.init.mockRejectedValueOnce(failure);
+    const onGraphicsUnavailable = vi.fn();
+    const { createGraphicsService } = await import(
+      "../../src/deps/services/graphicsService.js"
+    );
+    const service = await createGraphicsService({ onGraphicsUnavailable });
+
+    await expect(service.init({ width: 64, height: 64 })).rejects.toBe(failure);
+
+    expect(routeGraphicsInstance.init).toHaveBeenCalledTimes(1);
+    expect(onGraphicsUnavailable).toHaveBeenCalledExactlyOnceWith(failure);
+    await service.destroy();
+  });
+
+  it("does not call the WebGL owner for other initialization failures", async () => {
+    routeGraphicsInstance.init.mockRejectedValueOnce(
+      new Error("Initialization failed"),
+    );
+    const onGraphicsUnavailable = vi.fn();
+    const { createGraphicsService } = await import(
+      "../../src/deps/services/graphicsService.js"
+    );
+    const service = await createGraphicsService({ onGraphicsUnavailable });
+
+    await expect(service.init({ width: 64, height: 64 })).rejects.toThrow(
+      "Initialization failed",
+    );
+
+    expect(onGraphicsUnavailable).not.toHaveBeenCalled();
+  });
+
   it("releases the asset queue after a decoder hangs so the next request can retry", async () => {
     const manager = {
       has: () => false,

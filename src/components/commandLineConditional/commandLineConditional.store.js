@@ -5,6 +5,7 @@ import {
   normalizeVariableEnumValues,
 } from "../../internal/variableEnums.js";
 import {
+  formatCommandLineActionCount,
   localizeCommandLineBreadcrumb,
   localizeCommandLineDropdownMenu,
   localizeCommandLineOptions,
@@ -473,10 +474,7 @@ export const selectViewData = ({ state, props, i18n }) => {
       summary: getBranchSummary(branch, state.variablesData, copy),
       actionsSummary:
         branchActionCount > 0
-          ? `${branchActionCount} ${localizeCommandLineText(
-              branchActionCount === 1 ? "action" : "actions",
-              copy,
-            )}`
+          ? formatCommandLineActionCount(branchActionCount, copy)
           : localizeCommandLineText("No actions", copy),
     };
   };
@@ -554,20 +552,13 @@ export const selectViewData = ({ state, props, i18n }) => {
     branchActions: state.tempBranch.actions,
     branchActionsSummary:
       actionCount > 0
-        ? `${actionCount} ${localizeCommandLineText(
-            actionCount === 1 ? "action" : "actions",
-            copy,
-          )}`
+        ? formatCommandLineActionCount(actionCount, copy)
         : localizeCommandLineText("No actions", copy),
     branchActionAllowedModes: BRANCH_ACTION_ALLOWED_MODES,
     hasBranches: state.branches.length > 0,
     canSaveBranch,
     isEditingDefault: state.tempBranch.conditionKind === "default",
     isEditingUnsupportedCondition,
-    editBranchTitle:
-      state.tempBranch.conditionKind === "default"
-        ? localizeCommandLineText(DEFAULT_BRANCH_LABEL, copy)
-        : localizeCommandLineText("Branch", copy),
     hiddenModes: getHiddenModes(props),
     dropdownMenu: localizeCommandLineDropdownMenu(state.dropdownMenu, copy),
     actionsLabel: localizeCommandLineText("Actions", copy),
@@ -583,7 +574,12 @@ export const selectViewData = ({ state, props, i18n }) => {
     defaultBranchLabel: localizeCommandLineText(DEFAULT_BRANCH_LABEL, copy),
     operatorLabel: localizeCommandLineText("Operator", copy),
     removeValueButton: localizeCommandLineText("Remove Value", copy),
-    saveButtonPrefix: localizeCommandLineText("Save", copy),
+    saveBranchButton: localizeCommandLineText(
+      state.tempBranch.conditionKind === "default"
+        ? "Save Default Branch"
+        : "Save Branch",
+      copy,
+    ),
     submitButton: localizeCommandLineText("Submit", copy),
     unsupportedConditionLabel: localizeCommandLineText(
       "Unsupported condition",

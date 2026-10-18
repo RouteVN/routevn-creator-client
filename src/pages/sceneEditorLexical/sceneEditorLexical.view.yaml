@@ -189,12 +189,16 @@ template:
                       - $if backgroundTransformEditor.isOpen == false:
                           - 'rtgl-view w=f style="min-width: 0; flex-shrink: 0;"':
                               - 'div style="position: relative; width: ${mobilePreviewCanvasMaxWidth}; max-width: 100%; margin-left: auto; margin-right: auto;"':
-                                  - 'rvn-scene-editor-preview-canvas#previewCanvasHost style="display: block; width: 100%;" canvas-aspect-ratio="${canvasAspectRatio}"': null
-                                  - $if isSceneAssetLoading:
-                                      - rtgl-view pos=abs cor=full w=f h=f bgc=bg op=0.7 av=c ah=c g=sm role=status:
-                                          - rtgl-text s=sm: ${loadingAssetsLabel}
-                                          - $if loadingAssetName:
-                                              - rtgl-text s=sm c=mu-fg: ${loadingAssetName}
+                                  - $if isCanvasUnavailable:
+                                      - 'rtgl-view#canvasUnavailableNotice w=f av=c ah=c p=lg bgc=mu role=status style="aspect-ratio: ${canvasAspectRatio};"':
+                                          - rtgl-text s=sm c=mu-fg ta=c: ${canvasUnavailableMessage}
+                                    $else:
+                                      - 'rvn-scene-editor-preview-canvas#previewCanvasHost style="display: block; width: 100%;" canvas-aspect-ratio="${canvasAspectRatio}"': null
+                                      - $if isSceneAssetLoading:
+                                          - rtgl-view pos=abs cor=full w=f h=f bgc=bg op=0.7 av=c ah=c g=sm role=status:
+                                              - rtgl-text s=sm: ${loadingAssetsLabel}
+                                              - $if loadingAssetName:
+                                                  - rtgl-text s=sm c=mu-fg: ${loadingAssetName}
                       - 'rtgl-view#mobilePresentationState w=f p=${mobilePresentationStatePadding} g=md style="${mobilePresentationStateStyle}"':
                           - $if mobileSideBySide:
                               - 'rtgl-text#mobilePresentationStateTitle s=sm c=mu-fg style="flex-shrink: 0;"': ${stateTitle}
@@ -215,7 +219,7 @@ template:
                                           - rtgl-button#sectionMenu${sectionIndex} data-section-id=${section.id} sq v=gh s=sm pre=ellipsisLarge: null
                                       - rvn-scene-document-editor-lexical#sectionEditor${sectionIndex} key=${section.editorKey} data-section-id=${section.id} :lines=${section.documentEditorLines} :lineDecorations=${section.documentLineDecorations} :selectionActive=${section.selectionActive} :selectedLineId=${section.selectedLineId} :hasPreviousSectionLine=${section.hasPreviousSectionLine} :hasNextSectionLine=${section.hasNextSectionLine} :showLineNumbers=${sceneSettings.showLineNumbers} :fontSize=${sceneSettings.fontSize} :textStyles=${textStyles} :mentionTargets=${mentionTargets} :compactPreviews=${isTouchMode}: null
                               - 'rtgl-view h=${mobileEditorBottomSpacerHeight} aria-hidden=true style="flex-shrink: 0;"': null
-              - rvn-mobile-keyboard-toolbar#mobileKeyboardToolbar width=${mobileToolbarWidth} :undoDisabled=${undoDisabled} :redoDisabled=${redoDisabled}: null
+              - rvn-mobile-keyboard-toolbar#mobileKeyboardToolbar width=${mobileToolbarWidth} :undoDisabled=${undoDisabled} :redoDisabled=${redoDisabled} :previewHidden=${isCanvasUnavailable}: null
         $else:
           - 'rtgl-view d=h w=f h=f style="min-width: 0; min-height: 0;"':
               - 'rtgl-view w="calc((100vw - 64px) / 2)" d=v h=f style="min-width: 0; min-height: 0;"':
@@ -247,20 +251,25 @@ template:
               - rtgl-view w=1 h=f bgc=mu: null
               - 'rtgl-view w=1fg d=v h=f style="min-width: 0; min-height: 0;"':
                   - rtgl-view bwb=xs w=f h=48 av=c ph=sm d=h jc=e g=sm:
-                      - 'rtgl-button#previewButton sq pre=play v=ol title="${previewButton}" aria-label="${previewButton}"': null
-                      - 'rtgl-button#downloadCanvasButton sq pre=download v=ol title="${downloadCanvasButton}" aria-label="${downloadCanvasButton}"': null
+                      - $if !isCanvasUnavailable:
+                          - 'rtgl-button#previewButton sq pre=play v=ol title="${previewButton}" aria-label="${previewButton}"': null
+                          - 'rtgl-button#downloadCanvasButton sq pre=download v=ol title="${downloadCanvasButton}" aria-label="${downloadCanvasButton}"': null
                       - rtgl-view w=1fg: null
                       - 'rtgl-text#sceneTextStats s=xs c=mu-fg style="white-space: nowrap;"': ${sceneTextStatsLabel}
                   - 'rtgl-view w=f h=1fg sv style="min-height: 0;"':
                       - 'rtgl-view w=f style="min-width: 0;"':
                           - $if backgroundTransformEditor.isOpen == false:
                               - 'div style="position: relative; width: ${previewCanvasMaxWidth}; max-width: 100%; margin-left: auto; margin-right: auto;"':
-                                  - 'rvn-scene-editor-preview-canvas#previewCanvasHost style="display: block; width: 100%;" canvas-aspect-ratio="${canvasAspectRatio}"': null
-                                  - $if isSceneAssetLoading:
-                                      - rtgl-view pos=abs cor=full w=f h=f bgc=bg op=0.7 av=c ah=c g=sm role=status:
-                                          - rtgl-text s=sm: ${loadingAssetsLabel}
-                                          - $if loadingAssetName:
-                                              - rtgl-text s=sm c=mu-fg: ${loadingAssetName}
+                                  - $if isCanvasUnavailable:
+                                      - 'rtgl-view#canvasUnavailableNotice w=f av=c ah=c p=lg bgc=mu role=status style="aspect-ratio: ${canvasAspectRatio};"':
+                                          - rtgl-text s=sm c=mu-fg ta=c: ${canvasUnavailableMessage}
+                                    $else:
+                                      - 'rvn-scene-editor-preview-canvas#previewCanvasHost style="display: block; width: 100%;" canvas-aspect-ratio="${canvasAspectRatio}"': null
+                                      - $if isSceneAssetLoading:
+                                          - rtgl-view pos=abs cor=full w=f h=f bgc=bg op=0.7 av=c ah=c g=sm role=status:
+                                              - rtgl-text s=sm: ${loadingAssetsLabel}
+                                              - $if loadingAssetName:
+                                                  - rtgl-text s=sm c=mu-fg: ${loadingAssetName}
                       - rtgl-view w=f h=1 bgc=mu: null
                       - rtgl-view w=f m=md:
                           - rtgl-view d=h av=c:

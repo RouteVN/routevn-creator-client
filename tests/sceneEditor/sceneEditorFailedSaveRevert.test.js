@@ -220,6 +220,27 @@ describe("scene editor: a draft that cannot be saved", () => {
     );
   });
 
+  it("tells the user the device is full instead of reporting it", async () => {
+    syncSectionLinesSnapshot.mockRejectedValue(
+      new Error(
+        "You can’t save the file “project.db” because there isn’t enough space.",
+      ),
+    );
+
+    await prepareSceneEditorNavigation(deps, { path: "/project/images" });
+
+    expect(deps.appService.showAlertWhenIdle).toHaveBeenCalledTimes(1);
+    expect(deps.appService.showAlertWhenIdle.mock.calls[0][0].message).toBe(
+      "Your latest changes to section “Section One” in scene “Scene One” could not be saved because this device is out of storage space, and they were removed. Free up some space, then enter them again.\n\nDetails:\nYou can’t save the file “project.db” because there isn’t enough space.",
+    );
+    expect(deps.appService.reportError).not.toHaveBeenCalled();
+    // The unsaved changes are still dropped, as for any failed save.
+    expect(editors.first.replaceLines.mock.calls[0][0].lines).toEqual(
+      savedLines["section-1"],
+    );
+    expect(store.selectPendingDraftSections()).toEqual([]);
+  });
+
   it("names an unnamed section by its position", async () => {
     store.setSelectedSectionId({ selectedSectionId: "section-2" });
     makeDirty("section-2", [line("c", "typed in the second section")]);

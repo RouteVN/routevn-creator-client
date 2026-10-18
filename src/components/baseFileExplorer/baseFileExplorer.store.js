@@ -600,6 +600,8 @@ export const selectViewData = ({ state, props, props: attrs, i18n = {} }) => {
     noEmptyMessage: getBooleanAttr(attrs, "noEmptyMessage", "no-empty-message"),
     shrinkable: getBooleanAttr(attrs, "shrinkable", "shrinkable"),
     itemActionsLabel: i18n.resourcePages?.actionsLabel ?? "Actions",
+    emptyMessageLabel:
+      i18n.resourcePages?.fileExplorerEmptyMessage ?? "No items.",
   };
 
   return viewData;

@@ -415,7 +415,9 @@ const validateVariableDeletion = async ({
     message: (
       copy.computedVariableDeleteBlocked ??
       "This variable is used by: {dependents}"
-    ).replace("{dependents}", dependents.map((item) => item.name).join(", ")),
+    ).replace("{dependents}", () =>
+      dependents.map((item) => item.name).join(", "),
+    ),
   };
 };
 

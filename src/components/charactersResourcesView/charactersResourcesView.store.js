@@ -1,4 +1,5 @@
 import { buildResourceOverflowMenuItems } from "../../internal/ui/resourcePages/resourceOverflowMenu.js";
+import { selectResourceViewCopy } from "../../internal/ui/resourcePages/resourceViewCopy.js";
 import { buildProgressivePlaceholderChildren } from "../../internal/ui/resourcePages/progressivePlaceholders.js";
 import {
   buildTagFilterPopoverViewData,
@@ -12,8 +13,6 @@ import {
 import { resolveResourceScrollBottomPadding } from "../../internal/ui/resourcePages/mobileResourcePage.js";
 
 const DEFAULT_PROGRESSIVE_INITIAL_ITEM_COUNT = 4;
-const MENU_BUTTON_LABEL = "Menu";
-const FILTER_BUTTON_LABEL = "Filter";
 
 export const createInitialState = () => ({
   collapsedIds: [],
@@ -149,6 +148,13 @@ export const selectViewData = ({ state, props, i18n }) => {
   const menuButtonPlacement =
     props.menuButtonPlacement === "trailing" ? "trailing" : "leading";
   const hasActiveSearch = searchQuery.trim().length > 0;
+  const viewCopy = selectResourceViewCopy({
+    i18n,
+    namespace: "charactersPage",
+    searchQuery,
+    hasActiveSearch,
+    hasActiveTagFilter,
+  });
   const hasActiveFilter =
     hasActiveTagFilter || (searchInFilterPopover && hasActiveSearch);
   const showTagFilter = parseBooleanProp(props.showTagFilter);
@@ -218,10 +224,11 @@ export const selectViewData = ({ state, props, i18n }) => {
     groups,
     selectedItemId: props.selectedItemId,
     searchQuery,
-    searchPlaceholder: props.searchPlaceholder ?? "Search...",
+    searchPlaceholder: props.searchPlaceholder ?? viewCopy.searchPlaceholder,
     tagFilterOptions: props.tagFilterOptions ?? [],
     selectedTagFilterValues: props.selectedTagFilterValues ?? [],
-    tagFilterPlaceholder: props.tagFilterPlaceholder ?? "Filter tags",
+    tagFilterPlaceholder:
+      props.tagFilterPlaceholder ?? viewCopy.tagFilterPlaceholder,
     tagFilterPopover: {
       ...tagFilterPopoverViewData.tagFilterPopover,
       clearDisabled:
@@ -232,8 +239,8 @@ export const selectViewData = ({ state, props, i18n }) => {
     resourceImportMenuItems,
     hasActiveTagFilter,
     tagFilterButtonVariant: hasActiveFilter ? "pr" : "ol",
-    menuButtonLabel: MENU_BUTTON_LABEL,
-    filterButtonLabel: FILTER_BUTTON_LABEL,
+    menuButtonLabel: viewCopy.menuButtonLabel,
+    filterButtonLabel: viewCopy.filterLabel,
     showSearch:
       parseBooleanProp(props.showSearch, true) && !searchInFilterPopover,
     showFilterPopoverSearch: searchInFilterPopover,
@@ -260,13 +267,8 @@ export const selectViewData = ({ state, props, i18n }) => {
       props.progressiveInitialItemCount,
       DEFAULT_PROGRESSIVE_INITIAL_ITEM_COUNT,
     ),
-    emptyMessage:
-      props.emptyMessage ??
-      (hasActiveSearch
-        ? `No characters found matching "${searchQuery}"`
-        : hasActiveTagFilter
-          ? "No characters found for the selected tags"
-          : `No characters found matching "${searchQuery}"`),
+    emptyMessage: props.emptyMessage ?? viewCopy.emptyMessage,
+    viewCopy,
     addText: props.addText ?? "Add Character",
     mobileLayout,
     scrollBottomPadding,

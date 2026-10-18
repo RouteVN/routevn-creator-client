@@ -38,11 +38,14 @@ export async function setupCloseListener(deps) {
       quitState = "quitting";
 
       try {
+        const copy = appService.getAppCopy();
         const confirmQuit = await globalUI.showConfirm({
-          message: `Are you sure you want to quit the application?`,
-          title: "Confirm",
-          confirmText: "Quit",
-          cancelText: "Cancel",
+          message:
+            copy.quitConfirmMessage ??
+            "Are you sure you want to quit the application?",
+          title: copy.quitConfirmTitle ?? "Confirm",
+          confirmText: copy.quitConfirmButton ?? "Quit",
+          cancelText: copy.quitCancelButton ?? "Cancel",
         });
         if (!confirmQuit) return;
 

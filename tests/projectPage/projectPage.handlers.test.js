@@ -1,6 +1,9 @@
 import { describe, expect, it, vi } from "vitest";
-import {
-  handleAfterMount,
+import * as projectPageHandlers from "../../src/pages/project/project.handlers.js";
+import { EN_I18N } from "../support/i18n.js";
+import { mountHandlers } from "../support/mountHandlers.js";
+
+const {
   handleAnalyticsLinkClick,
   handleAnalyticsLinkKeyDown,
   handleBackButtonKeyDown,
@@ -9,8 +12,27 @@ import {
   handleEditFormAction,
   handleProjectActionMenuClickItem,
   handleSceneTextAnalyticsRetry,
-} from "../../src/pages/project/project.handlers.js";
-import { EN_I18N } from "../support/i18n.js";
+} = projectPageHandlers;
+
+// Adds what mounting the page needs besides the project load under test.
+const withMountDeps = (deps) => ({
+  ...deps,
+  appService: {
+    getPlatform: vi.fn(() => "android"),
+    ...deps.appService,
+  },
+  projectService: {
+    subscribeProjectState: vi.fn(() => vi.fn()),
+    ...deps.projectService,
+  },
+  store: {
+    setPlatform: vi.fn(),
+    setUiConfig: vi.fn(),
+    ...deps.store,
+  },
+});
+
+const mountProjectPage = (deps) => mountHandlers(projectPageHandlers, deps);
 
 const createDeps = () => ({
   appService: {
@@ -58,12 +80,11 @@ describe("project page handlers", () => {
         },
       },
     };
-    const deps = {
+    const deps = withMountDeps({
       appService: {
         getCurrentProjectEntry: vi.fn(() => ({ source: "local" })),
       },
       projectService: {
-        ensureRepository: vi.fn(async () => {}),
         getCurrentProjectInfo: vi.fn(async () => ({
           name: "Project One",
           language: "en",
@@ -78,9 +99,9 @@ describe("project page handlers", () => {
       }),
       render: vi.fn(),
       i18n: EN_I18N,
-    };
+    });
 
-    const mountPromise = handleAfterMount(deps);
+    const page = mountProjectPage(deps);
 
     await vi.waitFor(() => {
       expect(deps.projectService.ensureSceneTextStats).toHaveBeenCalledWith({
@@ -102,7 +123,12 @@ describe("project page handlers", () => {
         language: "en",
       },
     });
-    await mountPromise;
+    await page.afterMount;
+    await vi.waitFor(() => {
+      expect(deps.store.setSceneTextAnalyticsStatus).toHaveBeenLastCalledWith({
+        status: "ready",
+      });
+    });
 
     expect(deps.projectService.ensureSceneTextStats).toHaveBeenCalledWith({
       sceneIds: ["scene-1"],
@@ -153,12 +179,11 @@ describe("project page handlers", () => {
           language: "en",
         },
       });
-    const deps = {
+    const deps = withMountDeps({
       appService: {
         getCurrentProjectEntry: vi.fn(() => ({ source: "local" })),
       },
       projectService: {
-        ensureRepository: vi.fn(async () => {}),
         getCurrentProjectInfo: vi.fn(async () => ({
           name: "Project One",
           language: "en",
@@ -173,28 +198,27 @@ describe("project page handlers", () => {
       }),
       render: vi.fn(),
       i18n: EN_I18N,
-    };
+    });
 
-    const mountPromise = handleAfterMount(deps);
+    const page = mountProjectPage(deps);
 
     await vi.waitFor(
       () => {
         expect(ensureSceneTextStats).toHaveBeenCalledTimes(3);
+        expect(deps.store.setProjectAnalytics).toHaveBeenLastCalledWith({
+          analytics: expect.objectContaining({
+            scenes: [
+              expect.objectContaining({
+                id: "scene-1",
+                textStats: expect.objectContaining({ wordCount: 45 }),
+              }),
+            ],
+          }),
+        });
       },
       { timeout: 1_500 },
     );
-    await mountPromise;
-
-    expect(deps.store.setProjectAnalytics).toHaveBeenLastCalledWith({
-      analytics: expect.objectContaining({
-        scenes: [
-          expect.objectContaining({
-            id: "scene-1",
-            textStats: expect.objectContaining({ wordCount: 45 }),
-          }),
-        ],
-      }),
-    });
+    await page.afterMount;
   });
 
   it("stops retrying permanent failures and exposes an analytics error", async () => {
@@ -210,12 +234,11 @@ describe("project page handlers", () => {
     const ensureSceneTextStats = vi.fn(async () => {
       throw new Error("malformed scene projection");
     });
-    const deps = {
+    const deps = withMountDeps({
       appService: {
         getCurrentProjectEntry: vi.fn(() => ({ source: "local" })),
       },
       projectService: {
-        ensureRepository: vi.fn(async () => {}),
         getCurrentProjectInfo: vi.fn(async () => ({
           name: "Project One",
           language: "en",
@@ -230,14 +253,84 @@ describe("project page handlers", () => {
       }),
       render: vi.fn(),
       i18n: EN_I18N,
-    };
-
-    await handleAfterMount(deps);
-
-    expect(ensureSceneTextStats).toHaveBeenCalledTimes(3);
-    expect(deps.store.setSceneTextAnalyticsStatus).toHaveBeenLastCalledWith({
-      status: "error",
     });
+
+    const page = mountProjectPage(deps);
+
+    await vi.waitFor(
+      () => {
+        expect(deps.store.setSceneTextAnalyticsStatus).toHaveBeenLastCalledWith(
+          {
+            status: "error",
+          },
+        );
+      },
+      { timeout: 1_500 },
+    );
+    await page.afterMount;
+    expect(ensureSceneTextStats).toHaveBeenCalledTimes(3);
+  });
+
+  it("stops loading the project when the page closes before its details load", async () => {
+    let projectOpen = true;
+    let resolveProjectInfo;
+    // Like the project service, reading the repository fails once the
+    // project is no longer open.
+    const getRepositoryState = vi.fn(() => {
+      if (!projectOpen) {
+        throw new Error(
+          "Repository not initialized. Call ensureRepository() first.",
+        );
+      }
+      return {
+        project: { resolution: { width: 1920, height: 1080 } },
+        scenes: {
+          items: {
+            "scene-1": { id: "scene-1", name: "Opening", type: "scene" },
+          },
+          tree: [{ id: "scene-1" }],
+        },
+      };
+    });
+    const deps = withMountDeps({
+      appService: {
+        getCurrentProjectEntry: vi.fn(() => ({ source: "local" })),
+      },
+      projectService: {
+        ensureRepository: vi.fn(async () => {}),
+        getCurrentProjectInfo: vi.fn(
+          () =>
+            new Promise((resolve) => {
+              resolveProjectInfo = resolve;
+            }),
+        ),
+        getRepositoryState,
+        ensureSceneTextStats: vi.fn(async () => ({})),
+      },
+      store: withProjectAnalyticsRequestState({
+        setCurrentProject: vi.fn(),
+        setProjectAnalytics: vi.fn(),
+        selectCurrentProject: vi.fn(() => ({ language: "en" })),
+      }),
+      render: vi.fn(),
+      i18n: EN_I18N,
+    });
+
+    const page = mountProjectPage(deps);
+    await vi.waitFor(() =>
+      expect(deps.projectService.getCurrentProjectInfo).toHaveBeenCalledOnce(),
+    );
+
+    // The user leaves the project: the page closes, then the project does.
+    page.unmount();
+    projectOpen = false;
+    resolveProjectInfo({ name: "Project One", language: "en" });
+
+    await expect(page.afterMount).resolves.toBeUndefined();
+    await new Promise((resolve) => setTimeout(resolve, 0));
+    expect(getRepositoryState).not.toHaveBeenCalled();
+    expect(deps.store.setProjectAnalytics).not.toHaveBeenCalled();
+    expect(deps.projectService.ensureSceneTextStats).not.toHaveBeenCalled();
   });
 
   it("shows feedback when a manual analytics retry keeps failing", async () => {
@@ -334,6 +427,8 @@ describe("project page handlers", () => {
         getCurrentProjectEntry: vi.fn(() => ({ source: "local" })),
       },
       projectService: {
+        // The project details stay loading; only state updates refresh.
+        getCurrentProjectInfo: vi.fn(() => new Promise(() => {})),
         subscribeProjectState: vi.fn((listener) => {
           projectStateListener = listener;
           return unsubscribe;
@@ -355,6 +450,7 @@ describe("project page handlers", () => {
         selectCurrentProject: vi.fn(() => ({ language: "en" })),
       }),
       render: vi.fn(),
+      i18n: EN_I18N,
     };
 
     const cleanup = handleBeforeMount(deps);
@@ -468,7 +564,6 @@ describe("project page handlers", () => {
         getCurrentProjectEntry: vi.fn(() => ({ source: "local" })),
       },
       projectService: {
-        ensureRepository: vi.fn(async () => {}),
         getCurrentProjectInfo: vi.fn(async () => ({
           name: "Project One",
           language: "en",
@@ -493,8 +588,7 @@ describe("project page handlers", () => {
       i18n: EN_I18N,
     };
 
-    const cleanup = handleBeforeMount(deps);
-    const mountPromise = handleAfterMount(deps);
+    const page = mountProjectPage(deps);
     await vi.waitFor(() => {
       expect(ensureSceneTextStats).toHaveBeenCalledTimes(1);
     });
@@ -529,7 +623,8 @@ describe("project page handlers", () => {
         language: "en",
       },
     });
-    await mountPromise;
+    await page.afterMount;
+    await new Promise((resolve) => setTimeout(resolve, 0));
 
     expect(deps.render).toHaveBeenCalledTimes(renderCountAfterNewerRefresh);
     expect(deps.store.setProjectAnalytics).toHaveBeenLastCalledWith({
@@ -548,7 +643,7 @@ describe("project page handlers", () => {
         ],
       }),
     });
-    cleanup();
+    page.unmount();
   });
 
   it("requires project icon sources to be at least 512px", async () => {

@@ -37,6 +37,7 @@ import {
   EN_I18N,
   ES_I18N,
   JA_I18N,
+  RU_I18N,
   TH_I18N,
   ZH_HANS_I18N,
 } from "../support/i18n.js";
@@ -322,6 +323,7 @@ describe("sceneEditorLexical.handlers preview", () => {
       selectPendingDraftSections: vi.fn(() => []),
       setDraftSavePendingSinceAt: vi.fn(),
       setSkipNextEditorBlurDraftFlush: vi.fn(),
+      selectIsCanvasUnavailable: () => false,
       showPreviewSceneId: vi.fn(() => calls.push("show-preview")),
       selectScene: vi.fn(() => ({
         sections: [{ id: "section-1", lines: [line] }],
@@ -394,6 +396,7 @@ describe("sceneEditorLexical.handlers canvas download", () => {
           payload.completion.resolve();
         }),
       },
+      store: { selectIsCanvasUnavailable: () => false },
     };
 
     await handleDownloadCanvasClick(deps);
@@ -447,7 +450,7 @@ describe("sceneEditorLexical.handlers canvas download", () => {
           payload.completion.resolve();
         }),
       },
-      store: {},
+      store: { selectIsCanvasUnavailable: () => false },
     };
 
     await handleDownloadCanvasClick(deps);
@@ -1130,6 +1133,7 @@ describe("sceneEditorLexical.handlers actions dialog", () => {
       store: {
         clearBackgroundTransformEditorDragStartPosition: vi.fn(),
         setBackgroundTransformEditorTransform: vi.fn(),
+        selectIsCanvasUnavailable: () => false,
       },
       render: vi.fn(),
       subject: {
@@ -1178,6 +1182,7 @@ describe("sceneEditorLexical.handlers actions dialog", () => {
           editor.transform = transform;
         }),
         selectBackgroundTransformEditor: vi.fn(() => editor),
+        selectIsCanvasUnavailable: () => false,
       },
       graphicsService: {
         engineSelectRenderState: vi.fn(() => ({
@@ -3604,6 +3609,7 @@ describe("sceneEditorLexical.handlers refused section commands", () => {
     ["Spanish", ES_I18N],
     ["Japanese", JA_I18N],
     ["Thai", TH_I18N],
+    ["Russian", RU_I18N],
     ["Simplified Chinese", ZH_HANS_I18N],
   ])(
     "tells the user in %s that a referenced section can't be deleted",

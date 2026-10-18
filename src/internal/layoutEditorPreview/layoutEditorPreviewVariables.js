@@ -17,10 +17,15 @@ const NORMAL_LIKE_LAYOUT_TYPES = new Set([
   "save-load",
   "confirmDialog",
 ]);
-const PREVIEW_BOOLEAN_OPTIONS = [
-  { label: "True", value: true },
-  { label: "False", value: false },
-];
+// English labels, used when the caller passes no catalog labels.
+const DEFAULT_PREVIEW_VARIABLES_FORM_LABELS = {
+  description: "Edit visibility conditions to preview conditional elements",
+  runtimeState: "Runtime state",
+  variable: "Variable",
+  trueOption: "True",
+  falseOption: "False",
+  types: {},
+};
 
 const getPreviewVariableType = (variable = {}) => {
   if (variable?.type === "variable") {
@@ -309,18 +314,26 @@ export const supportsPreviewVariablesForLayoutType = (layoutType) => {
   return NORMAL_LIKE_LAYOUT_TYPES.has(layoutType);
 };
 
-export const createPreviewVariablesForm = (previewVariableItems = []) => {
+export const createPreviewVariablesForm = (
+  previewVariableItems = [],
+  labels = DEFAULT_PREVIEW_VARIABLES_FORM_LABELS,
+) => {
   const editablePreviewVariableItems = previewVariableItems.filter(
     (variable) => variable.source !== "computed",
   );
+  const booleanOptions = [
+    { label: labels.trueOption, value: true },
+    { label: labels.falseOption, value: false },
+  ];
 
   return {
-    description: "Edit visibility conditions to preview conditional elements",
+    description: labels.description,
     fields: editablePreviewVariableItems.map((variable) => {
       const sourceLabel =
-        variable.source === "runtime" ? "Runtime state" : "Variable";
+        variable.source === "runtime" ? labels.runtimeState : labels.variable;
+      const typeLabel = labels.types[variable.type] ?? variable.type;
       const descriptionParts = [
-        `${sourceLabel} (${variable.type})`,
+        `${sourceLabel} (${typeLabel})`,
         variable.description,
       ].filter(Boolean);
 
@@ -330,7 +343,7 @@ export const createPreviewVariablesForm = (previewVariableItems = []) => {
           type: "select",
           label: variable.name,
           clearable: false,
-          options: PREVIEW_BOOLEAN_OPTIONS,
+          options: booleanOptions,
           description: descriptionParts.join(" • "),
         };
       }
@@ -372,6 +385,7 @@ export const createPreviewVariablesViewData = ({
   layoutsData,
   variablesData,
   previewVariableValues,
+  labels,
 } = {}) => {
   const previewVariableItems = supportsPreviewVariablesForLayoutType(layoutType)
     ? getLayoutPreviewVariableItems({
@@ -398,6 +412,7 @@ export const createPreviewVariablesViewData = ({
     previewVariableItems,
     previewVariablesForm: createPreviewVariablesForm(
       editablePreviewVariableItems,
+      labels,
     ),
     previewVariablesDefaultValues,
     previewVariablesFormKey,

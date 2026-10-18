@@ -31,7 +31,7 @@ template:
                   - rtgl-image src=${imageUrl} w=f h=f of=cov: null
             $else:
               - rtgl-view w=f h=f av=c ah=c:
-                  - rtgl-text s=sm c=mu-fg: Loading image...
+                  - rtgl-text s=sm c=mu-fg: ${loadingLabel}
           - 'rtgl-view pos=abs bw=sm bc=pr br=lg style="inset: 0; pointer-events: none;"': null
       - rtgl-view d=h w=f ah=c av=c g=sm:
           - rtgl-button#zoomOutButton sq v=gh s=sm: '-'

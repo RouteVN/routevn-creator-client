@@ -10,15 +10,15 @@ import {
 
 export * from "../sceneTextStats.js";
 
-const formatSceneTextStatsNumber = (value) => {
+const formatSceneTextStatsNumber = (value, intlLocale) => {
   const count = Math.max(0, Math.trunc(Number(value) || 0));
 
-  return count.toLocaleString();
+  return count.toLocaleString(intlLocale);
 };
 
 export const formatSceneTextStatsLabel = (
   stats = {},
-  { language, copy = {} } = {},
+  { language, copy = {}, intlLocale } = {},
 ) => {
   const { lineCount } = normalizeSceneTextStats(stats);
   const count = getSceneTextStatsCount(stats, { language });
@@ -41,11 +41,14 @@ export const formatSceneTextStatsLabel = (
   }
 
   const lineLabel = formatI18nCopy(lineTemplate, {
-    count: formatSceneTextStatsNumber(lineCount),
+    count: formatSceneTextStatsNumber(lineCount, intlLocale),
   });
   const textCountLabel = formatI18nCopy(template, {
-    count: formatSceneTextStatsNumber(count),
+    count: formatSceneTextStatsNumber(count, intlLocale),
   });
 
-  return `${lineLabel} ${textCountLabel}`;
+  return formatI18nCopy(
+    copy.sceneTextStatsSummary ?? "{lineLabel} {textCountLabel}",
+    { lineLabel, textCountLabel },
+  );
 };

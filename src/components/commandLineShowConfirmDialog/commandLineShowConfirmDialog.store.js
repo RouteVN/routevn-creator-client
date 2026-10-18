@@ -1,4 +1,5 @@
 import {
+  formatCommandLineActionCount,
   localizeCommandLineBreadcrumb,
   localizeCommandLineForm,
   localizeCommandLineText,
@@ -119,6 +120,9 @@ export const selectViewData = ({ state, props, i18n }) => {
   ];
 
   return {
+    confirmActionsLabel: localizeCommandLineText("Confirm Actions", copy),
+    cancelActionsLabel: localizeCommandLineText("Cancel Actions", copy),
+    submitButtonLabel: localizeCommandLineText("Submit", copy),
     mode: state.mode,
     breadcrumb: localizeCommandLineBreadcrumb(breadcrumb, copy),
     form: localizeCommandLineForm(form, copy),
@@ -134,11 +138,11 @@ export const selectViewData = ({ state, props, i18n }) => {
     cancelActions: state.cancelActions,
     confirmActionsSummary:
       confirmActionCount > 0
-        ? `${confirmActionCount} ${localizeCommandLineText("action(s)", copy)}`
+        ? formatCommandLineActionCount(confirmActionCount, copy)
         : localizeCommandLineText("No actions", copy),
     cancelActionsSummary:
       cancelActionCount > 0
-        ? `${cancelActionCount} ${localizeCommandLineText("action(s)", copy)}`
+        ? formatCommandLineActionCount(cancelActionCount, copy)
         : localizeCommandLineText("Default hide only", copy),
     nestedHiddenModes: ["showConfirmDialog", "hideConfirmDialog"],
   };

@@ -1,3 +1,5 @@
+import { formatDateTimeWithSeconds } from "../../internal/dates.js";
+
 export const createInitialState = () => ({
   status: { configured: false, projects: [] },
   currentProjectId: undefined,
@@ -45,24 +47,8 @@ export const selectViewData = ({ state, props, i18n }) => {
       .map((project) => ({
         id: project.id,
         date: project.snapshotAt
-          ? formatBackupDate(project.snapshotAt)
+          ? formatDateTimeWithSeconds(project.snapshotAt, i18n.dateTime)
           : copy.never,
       })),
   };
-};
-const formatBackupDate = (value) => {
-  const parts = Object.fromEntries(
-    new Intl.DateTimeFormat("en", {
-      day: "2-digit",
-      month: "short",
-      year: "numeric",
-      hour: "2-digit",
-      minute: "2-digit",
-      second: "2-digit",
-      hourCycle: "h23",
-    })
-      .formatToParts(new Date(value))
-      .map(({ type, value }) => [type, value]),
-  );
-  return `${parts.day} ${parts.month} ${parts.year}, ${parts.hour}:${parts.minute}:${parts.second}`;
 };

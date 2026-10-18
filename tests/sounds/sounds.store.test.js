@@ -20,6 +20,7 @@ const createContext = () => ({
       deleteButton: "Delete",
       deleteMessage: "Delete {itemName}? This cannot be undone.",
       deleteTargetFallback: "this sound",
+      deleteTargetName: '"{name}"',
       deleteTitle: "Delete Sound",
     },
   },

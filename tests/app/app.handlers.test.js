@@ -240,6 +240,49 @@ describe("app route transitions", () => {
     dom.window.close();
   });
 
+  it("applies the saved app language when the app mounts on any page", async () => {
+    const dom = new JSDOM("<!doctype html><body></body>");
+    vi.stubGlobal("window", dom.window);
+    vi.stubGlobal("document", dom.window.document);
+    vi.stubGlobal("Element", dom.window.Element);
+    const appService = {
+      getPath: vi.fn(() => "/project/scenes"),
+      getPayload: vi.fn(() => ({ p: "project-1" })),
+      getUserConfig: vi.fn((key) => (key === "app.locale" ? "ru" : undefined)),
+      getPlatform: vi.fn(() => "web"),
+      setAppCopyProvider: vi.fn(),
+      setUserConfig: vi.fn(),
+    };
+    let currentLocale = "en";
+    const locale = {
+      available: vi.fn(() => ["en", "ru"]),
+      current: vi.fn(() => currentLocale),
+      set: vi.fn(async (nextLocale) => {
+        currentLocale = nextLocale;
+      }),
+      subscribe: vi.fn(() => () => {}),
+    };
+    const deps = {
+      appService,
+      locale,
+      i18n: { appPage: {} },
+      store: {
+        setPlatform: vi.fn(),
+        setUiConfig: vi.fn(),
+        setHelpButtonVisible: vi.fn(),
+      },
+      subject: { dispatch: vi.fn(), pipe: vi.fn(() => NEVER) },
+      uiConfig: {},
+    };
+
+    const cleanup = handleBeforeMount(deps);
+    await vi.waitFor(() => expect(locale.set).toHaveBeenCalledWith("ru"));
+
+    expect(appService.setUserConfig).not.toHaveBeenCalled();
+    cleanup();
+    dom.window.close();
+  });
+
   it("updates Discord presence after the active locale changes", () => {
     const dom = new JSDOM("<!doctype html><body></body>");
     vi.stubGlobal("window", dom.window);
@@ -689,6 +732,101 @@ describe("app route transitions", () => {
     expect(onOpenProjectChange.mock.calls).toEqual([
       ["project-1"],
       [undefined],
+    ]);
+  });
+
+  it("opens a project again only after its previous release finishes", async () => {
+    // Like the project service, the project counts as ensured until its
+    // release has flushed and closed it.
+    let routeProjectId = "project-1";
+    let ensuredProjectId;
+    let finishRelease;
+    const appService = {
+      prepareNavigation: vi.fn(async () => {}),
+      getCurrentProjectId: vi.fn(() => routeProjectId),
+      refreshCurrentProjectEntry: vi.fn(async () => {}),
+      getPlatform: vi.fn(() => "android"),
+    };
+    const projectService = {
+      ensureRepository: vi.fn(async () => {
+        ensuredProjectId = routeProjectId;
+      }),
+      getEnsuredProjectId: vi.fn(() => ensuredProjectId),
+      releaseProjectRuntime: vi.fn(
+        () =>
+          new Promise((resolve) => {
+            finishRelease = () => {
+              ensuredProjectId = undefined;
+              resolve();
+            };
+          }),
+      ),
+    };
+    const store = {
+      setCurrentRoute: vi.fn(),
+      closeMobileSheet: vi.fn(),
+      setRepositoryLoading: vi.fn(),
+      setRepositoryLoadingPhase: vi.fn(),
+      setRepositoryLoadingProgress: vi.fn(),
+    };
+    const onOpenProjectChange = vi.fn();
+    const runRouteTransition = createRouteTransitionRunner(
+      {
+        appService,
+        projectService,
+        store,
+        render: vi.fn(),
+        i18n: {},
+      },
+      { onOpenProjectChange },
+    );
+
+    await runRouteTransition({
+      path: "/project",
+      payload: { p: "project-1" },
+      navigationPrepared: true,
+    });
+
+    routeProjectId = "";
+    const leaveProject = runRouteTransition({
+      path: "/projects",
+      payload: {},
+      navigationPrepared: true,
+    });
+    await vi.waitFor(() =>
+      expect(projectService.releaseProjectRuntime).toHaveBeenCalledWith(
+        "project-1",
+      ),
+    );
+
+    routeProjectId = "project-1";
+    const reopenProject = runRouteTransition({
+      path: "/project",
+      payload: { p: "project-1" },
+      navigationPrepared: true,
+    });
+    await Promise.resolve();
+
+    // The closing project is not shown as ready, nor ensured again, while
+    // its release can still close it.
+    expect(store.setRepositoryLoading).toHaveBeenLastCalledWith({
+      isLoading: true,
+    });
+    expect(projectService.ensureRepository).toHaveBeenCalledOnce();
+    expect(projectService.releaseProjectRuntime).toHaveBeenCalledOnce();
+
+    finishRelease();
+    await Promise.all([leaveProject, reopenProject]);
+
+    expect(projectService.ensureRepository).toHaveBeenCalledTimes(2);
+    expect(ensuredProjectId).toBe("project-1");
+    expect(store.setRepositoryLoading).toHaveBeenLastCalledWith({
+      isLoading: false,
+    });
+    expect(onOpenProjectChange.mock.calls).toEqual([
+      ["project-1"],
+      [undefined],
+      ["project-1"],
     ]);
   });
 

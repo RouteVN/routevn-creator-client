@@ -753,6 +753,9 @@ export const createInitialState = () => ({
   sceneLoadingProgress: { stage: "repository" },
   sceneLoadingDetailsVisible: false,
   isScenePageLoading: true,
+  // Graphics could not start on this device, so the editor runs without its
+  // canvas.
+  isCanvasUnavailable: false,
   mountVersion: 0,
   isSceneAssetLoading: false,
   warnedAssetFileIds: [],
@@ -1302,6 +1305,14 @@ export const selectMountVersion = ({ state }) => state.mountVersion;
 
 export const selectIsScenePageLoading = ({ state }) => {
   return state.isScenePageLoading;
+};
+
+export const markCanvasUnavailable = ({ state }) => {
+  state.isCanvasUnavailable = true;
+};
+
+export const selectIsCanvasUnavailable = ({ state }) => {
+  return state.isCanvasUnavailable;
 };
 
 export const setSceneAssetLoading = ({ state }, { isLoading } = {}) => {
@@ -2213,6 +2224,7 @@ export const selectViewData = ({ state, i18n }) => {
       sceneTextStatsLabel: formatSceneTextStatsLabel(state.sceneTextStats, {
         language: state.projectLanguage,
         copy,
+        intlLocale: i18n?.dateTime?.intlLocale,
       }),
       backgroundTransformEditor: selectBackgroundTransformEditorViewData({
         state,
@@ -2238,6 +2250,8 @@ export const selectViewData = ({ state, i18n }) => {
         : undefined,
       previewButton: copy.previewButton ?? "Preview",
       downloadCanvasButton: copy.downloadCanvasButton ?? "Download canvas",
+      isCanvasUnavailable: state.isCanvasUnavailable,
+      canvasUnavailableMessage: copy.canvasUnavailableMessage,
       sectionsTitle: copy.sectionsLabel ?? "Sections",
       stateTitle: copy.stateTitle ?? "Presentation state",
       undoDisabled: true,
@@ -2615,6 +2629,7 @@ export const selectViewData = ({ state, i18n }) => {
     sceneTextStatsLabel: formatSceneTextStatsLabel(state.sceneTextStats, {
       language: state.projectLanguage,
       copy,
+      intlLocale: i18n?.dateTime?.intlLocale,
     }),
     backgroundTransformEditor: selectBackgroundTransformEditorViewData({
       state,
@@ -2640,6 +2655,8 @@ export const selectViewData = ({ state, i18n }) => {
       : undefined,
     previewButton: copy.previewButton ?? "Preview",
     downloadCanvasButton: copy.downloadCanvasButton ?? "Download canvas",
+    isCanvasUnavailable: state.isCanvasUnavailable,
+    canvasUnavailableMessage: copy.canvasUnavailableMessage,
     sectionsTitle: copy.sectionsLabel ?? "Sections",
     stateTitle: copy.stateTitle ?? "Presentation state",
     undoDisabled: state.editHistory.undo.length === 0,

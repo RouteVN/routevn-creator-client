@@ -17,6 +17,7 @@ import { toParticleSelectionItems } from "../../internal/particles.js";
 import { getVariableOptions } from "../../internal/project/projection.js";
 import { toFlatItems } from "../../internal/project/tree.js";
 import { getRuntimeNumberFieldOptions } from "../../internal/runtimeFields.js";
+import { getRuntimeFieldLabel } from "./support/layoutEditPanelRuntimeLabels.js";
 import { getFragmentLayoutOptions } from "../../pages/layoutEditor/support/layoutFragments.js";
 import { getLayoutEditorElementDefinition } from "../../internal/layoutEditorElementRegistry.js";
 import { splitLayoutConditionFromWhen } from "../../internal/layoutConditions.js";
@@ -1613,7 +1614,10 @@ export const selectViewData = ({ state, props, constants, i18n }) => {
   });
   const sliderValueOptions = [
     { label: copy.manualOption ?? "Manual", value: "" },
-    ...getRuntimeNumberFieldOptions(),
+    ...getRuntimeNumberFieldOptions().map((option) => ({
+      ...option,
+      label: getRuntimeFieldLabel(option.value, option.label, copy),
+    })),
   ];
   const revealEffectOptions = createRevealEffectOptions(copy);
   const dateFormatOptions = createSaveLoadDateFormatOptions();
@@ -1623,6 +1627,7 @@ export const selectViewData = ({ state, props, constants, i18n }) => {
     charactersData: props.charactersData,
     systemSectionLabel: copy.systemSection ?? "System",
     variablesSectionLabel: copy.variablesSection ?? "Variables",
+    targetLabelCopy: copy,
   };
   // Visibility and conditional overrides list the same targets, by section.
   const conditionTargetOptions = toSectionedVisibilityConditionTargetOptions(
@@ -1866,11 +1871,13 @@ export const selectViewData = ({ state, props, constants, i18n }) => {
     getVisibilityConditionCharacterValueOptions({
       charactersData: props.charactersData,
       currentValue: visibilityConditionDialogDefaults.characterValue,
+      noneLabel: copy.noCharacterOption,
     });
   const conditionalOverrideCharacterValueOptions =
     getVisibilityConditionCharacterValueOptions({
       charactersData: props.charactersData,
       currentValue: conditionalOverrideConditionDefaults.characterValue,
+      noneLabel: copy.noCharacterOption,
     });
   const textRevealIndicatorDialogDefaults =
     createTextRevealIndicatorDialogDefaults({

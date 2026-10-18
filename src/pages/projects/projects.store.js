@@ -630,7 +630,9 @@ export const selectViewData = ({ state, i18n }) => {
   const copy = selectProjectsPageCopy(i18n);
   const isAndroidProjectDelete = state.platform === "android";
   const deleteDialogProjectName = state.deleteDialog.projectName
-    ? `"${state.deleteDialog.projectName}"`
+    ? formatProjectsPageCopy(copy.removeProjectTargetName, {
+        projectName: state.deleteDialog.projectName,
+      })
     : copy.removeProjectTargetFallback;
   const profileDisplayName =
     state.userName || state.userEmail || copy.profileDefaultName;
@@ -978,7 +980,8 @@ export const selectViewData = ({ state, i18n }) => {
       copy.deleteProjectConfirmationPlaceholder,
     deleteDialogConfirmDisabled:
       isAndroidProjectDelete &&
-      state.deleteDialog.confirmationText !== "Delete",
+      state.deleteDialog.confirmationText !==
+        copy.deleteProjectConfirmationWord,
     deleteDialogConfirmLabel: isAndroidProjectDelete
       ? copy.deleteButton
       : copy.removeButton,

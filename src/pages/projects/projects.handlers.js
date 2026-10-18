@@ -1228,7 +1228,11 @@ export const handleDeleteDialogConfirm = async (deps) => {
   const isAndroid = appService.getPlatform() === "android";
   const projectId = store.selectDeleteDialogProjectId();
   const projectPath = store.selectDeleteDialogProjectPath();
-  if (isAndroid && store.selectDeleteDialogConfirmationText() !== "Delete") {
+  if (
+    isAndroid &&
+    store.selectDeleteDialogConfirmationText() !==
+      copy.deleteProjectConfirmationWord
+  ) {
     return;
   }
   if ((isAndroid && !projectId) || (!isAndroid && !projectId && !projectPath)) {
