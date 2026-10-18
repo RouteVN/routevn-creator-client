@@ -1,5 +1,8 @@
-import { describe, expect, it, vi } from "vitest";
-import { createCommandApi } from "../../src/deps/services/shared/commandApi.js";
+import { afterEach, describe, expect, it, vi } from "vitest";
+import {
+  createCommandApi,
+  SLOW_CHANGE_REPORT_MS,
+} from "../../src/deps/services/shared/commandApi.js";
 import { createProjectRepository } from "../../src/deps/services/shared/projectRepository.js";
 
 // A change is checked against the project state, saved, then applied. Changes
@@ -13,13 +16,21 @@ const createStore = () => ({
   deleteMaterializedViewCheckpoint: vi.fn(async () => {}),
 });
 
+// Two projects, as the repository service holds them: the cached repository
+// is the open project's only while the route names that project, and a
+// repository ensured for the route opens the route's project.
 const setup = async () => {
-  const repository = await createProjectRepository({
-    projectId: "project-1",
-    store: createStore(),
-    events: [],
-    historyLoaded: true,
-  });
+  const repositories = {};
+  for (const projectId of ["project-1", "project-2"]) {
+    repositories[projectId] = await createProjectRepository({
+      projectId,
+      store: createStore(),
+      events: [],
+      historyLoaded: true,
+    });
+  }
+  let routeProjectId = "project-1";
+  let openProjectId = "project-1";
   const storedCommands = [];
   const store = (command) => {
     storedCommands.push(structuredClone(command));
@@ -30,22 +41,67 @@ const setup = async () => {
     submitCommand: vi.fn(async (command) => store(command)),
     submitCommands: vi.fn(async (commands) => commands.map(store)),
   };
+  const ensureCommandSessionForProject = vi.fn(async () => session);
   let index = 0;
+  const errorTracker = { capture: vi.fn() };
   const api = createCommandApi({
     idGenerator: () => `id-${++index}`,
     now: () => 1,
-    getCurrentProjectId: () => "project-1",
-    getCurrentRepository: async () => repository,
-    getCachedRepository: () => repository,
-    ensureCommandSessionForProject: async () => session,
+    getCurrentProjectId: () => openProjectId ?? routeProjectId,
+    getCachedRepository: () => {
+      if (!openProjectId || openProjectId !== routeProjectId) {
+        throw new Error("Repository not initialized.");
+      }
+      return repositories[openProjectId];
+    },
+    getCurrentRepository: async () => {
+      if (!routeProjectId) {
+        throw new Error("No project selected (missing ?p= in URL)");
+      }
+      openProjectId = routeProjectId;
+      return repositories[openProjectId];
+    },
+    getOpenRepository: () => repositories[openProjectId],
+    ensureCommandSessionForProject,
     getOrCreateLocalActor: () => ({ userId: "user-1", clientId: "client-1" }),
     storyBasePartitionFor: () => "m",
     storyScenePartitionFor: () => "m",
     scenePartitionFor: () => "s:test",
     resourceTypePartitionFor: () => "m",
+    errorTracker,
   });
+  const routeTo = (projectId) => {
+    routeProjectId = projectId;
+  };
+  const closeOpenProject = () => {
+    openProjectId = undefined;
+  };
 
-  return { api, repository, session, storedCommands };
+  return {
+    api,
+    repository: repositories["project-1"],
+    otherRepository: repositories["project-2"],
+    session,
+    ensureCommandSessionForProject,
+    storedCommands,
+    errorTracker,
+    routeTo,
+    closeOpenProject,
+  };
+};
+
+// Holds the next save until `finish` is called.
+const holdNextSave = (session) => {
+  const submit = session.submitCommands.getMockImplementation();
+  let finish;
+  const held = new Promise((resolve) => {
+    finish = resolve;
+  });
+  session.submitCommands.mockImplementationOnce(async (commands) => {
+    await held;
+    return submit(commands);
+  });
+  return () => finish();
 };
 
 const fileRecord = (id, mimeType) => ({
@@ -136,6 +192,208 @@ describe("project changes run one at a time", () => {
     expect(results[1]).toEqual({ status: "fulfilled", value: "image-1" });
     expect(repository.getState().images.items["image-1"]).toMatchObject({
       fileId: "file-1",
+    });
+  });
+
+  it.each([
+    ["another project", "project-2"],
+    ["the project list", undefined],
+  ])(
+    "makes a change that waits while the route moves to %s in the project it was made in",
+    async (_destination, routeProjectId) => {
+      const {
+        api,
+        repository,
+        otherRepository,
+        session,
+        ensureCommandSessionForProject,
+        storedCommands,
+        errorTracker,
+        routeTo,
+      } = await setup();
+      const finishFirst = holdNextSave(session);
+
+      const first = createImageOne(api);
+      const second = replaceImageOneFile(api);
+      await vi.waitFor(() => expect(session.submitCommands).toHaveBeenCalled());
+      // The route changes before the project it leaves is closed.
+      routeTo(routeProjectId);
+      finishFirst();
+
+      await expect(first).resolves.toBe("image-1");
+      await expect(second).resolves.toMatchObject({ valid: true });
+      expect(storedCommands.map(describeCommand)).toEqual([
+        "file.create file-1",
+        "file.create thumbnail-1",
+        "image.create image-1",
+        "file.create file-2",
+        "file.create thumbnail-2",
+        "image.update image-1",
+      ]);
+      expect(repository.getState().images.items["image-1"]).toMatchObject({
+        fileId: "file-2",
+      });
+      expect(otherRepository.getState().images.items).toEqual({});
+      expect(
+        ensureCommandSessionForProject.mock.calls.map(
+          ([projectId]) => projectId,
+        ),
+      ).toEqual(["project-1", "project-1"]);
+      expect(errorTracker.capture).not.toHaveBeenCalled();
+    },
+  );
+
+  it("refuses and reports a change whose project was closed before it ran", async () => {
+    const {
+      api,
+      repository,
+      otherRepository,
+      session,
+      storedCommands,
+      errorTracker,
+      routeTo,
+      closeOpenProject,
+    } = await setup();
+    const finishFirst = holdNextSave(session);
+
+    const first = createImageOne(api);
+    const second = replaceImageOneFile(api);
+    await vi.waitFor(() => expect(session.submitCommands).toHaveBeenCalled());
+    routeTo("project-2");
+    closeOpenProject();
+    finishFirst();
+
+    await expect(first).resolves.toBe("image-1");
+    await expect(second).rejects.toMatchObject({ name: "ProjectClosedError" });
+    expect(storedCommands.map(describeCommand)).toEqual([
+      "file.create file-1",
+      "file.create thumbnail-1",
+      "image.create image-1",
+    ]);
+    expect(repository.getState().images.items["image-1"]).toMatchObject({
+      fileId: "file-1",
+    });
+    expect(otherRepository.getState().images.items).toEqual({});
+    expect(errorTracker.capture).toHaveBeenCalledExactlyOnceWith(
+      expect.objectContaining({ name: "ProjectClosedError" }),
+      { operation: "projectCommand.projectClosed" },
+    );
+  });
+
+  it("closes a project after the changes made before, and refuses one made while it closes", async () => {
+    const {
+      api,
+      repository,
+      session,
+      storedCommands,
+      errorTracker,
+      routeTo,
+      closeOpenProject,
+    } = await setup();
+    const finishFirst = holdNextSave(session);
+    const first = createImageOne(api);
+
+    let imagesWhenClosing;
+    let finishClosing;
+    const closing = api.runAfterChanges(
+      () =>
+        new Promise((resolve) => {
+          imagesWhenClosing = Object.keys(repository.getState().images.items);
+          finishClosing = () => {
+            closeOpenProject();
+            resolve();
+          };
+        }),
+    );
+    routeTo(undefined);
+    finishFirst();
+    await expect(first).resolves.toBe("image-1");
+    await vi.waitFor(() => expect(finishClosing).toBeTypeOf("function"));
+    expect(imagesWhenClosing).toEqual(["image-1"]);
+
+    // Made while the project closes, as by a page saving late.
+    const late = replaceImageOneFile(api);
+    finishClosing();
+    await closing;
+
+    await expect(late).rejects.toMatchObject({ name: "ProjectClosedError" });
+    expect(storedCommands.map(describeCommand)).toEqual([
+      "file.create file-1",
+      "file.create thumbnail-1",
+      "image.create image-1",
+    ]);
+    expect(errorTracker.capture).toHaveBeenCalledExactlyOnceWith(
+      expect.objectContaining({ name: "ProjectClosedError" }),
+      { operation: "projectCommand.projectClosed" },
+    );
+  });
+
+  it("waits for every change made so far, until the last one has finished", async () => {
+    const { api, repository, session } = await setup();
+    const finishFirst = holdNextSave(session);
+    createImageOne(api);
+    const second = replaceImageOneFile(api);
+
+    let waited = false;
+    const waiting = api.waitForChanges().then(() => {
+      waited = true;
+    });
+    await new Promise((resolve) => setTimeout(resolve, 10));
+    expect(waited).toBe(false);
+
+    finishFirst();
+    await waiting;
+    expect(waited).toBe(true);
+    await expect(second).resolves.toMatchObject({ valid: true });
+    expect(repository.getState().images.items["image-1"]).toMatchObject({
+      fileId: "file-2",
+    });
+  });
+
+  it("waits for a change made while it waits", async () => {
+    const { api, repository, session } = await setup();
+    const finishFirst = holdNextSave(session);
+    const first = createImageOne(api);
+
+    const waiting = api.waitForChanges();
+    // A change made once the first one is saved, as a page saving after another.
+    const second = first.then(() => replaceImageOneFile(api));
+    finishFirst();
+    await waiting;
+
+    expect(repository.getState().images.items["image-1"]).toMatchObject({
+      fileId: "file-2",
+    });
+    await expect(second).resolves.toMatchObject({ valid: true });
+  });
+
+  describe("a change that keeps running", () => {
+    afterEach(() => {
+      vi.useRealTimers();
+    });
+
+    it("is reported once it has run for the report time, and a quick one is not", async () => {
+      const { api, session, errorTracker } = await setup();
+      vi.useFakeTimers();
+      await createImageOne(api);
+      await vi.advanceTimersByTimeAsync(SLOW_CHANGE_REPORT_MS);
+      expect(errorTracker.capture).not.toHaveBeenCalled();
+
+      const finishSave = holdNextSave(session);
+      const slow = replaceImageOneFile(api);
+      await vi.advanceTimersByTimeAsync(SLOW_CHANGE_REPORT_MS - 1);
+      expect(errorTracker.capture).not.toHaveBeenCalled();
+      await vi.advanceTimersByTimeAsync(1);
+      expect(errorTracker.capture).toHaveBeenCalledExactlyOnceWith(
+        expect.objectContaining({
+          name: "SlowProjectChangeError",
+          message: "Project change updateImage is still running after 60 s",
+        }),
+        { operation: "projectCommand.slowChange" },
+      );
+
+      finishSave();
+      await expect(slow).resolves.toMatchObject({ valid: true });
     });
   });
 });

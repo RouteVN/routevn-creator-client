@@ -88,6 +88,8 @@ export const createProjectServiceCore = ({
     getRepositoryByProject: repositoryService.getRepositoryByProject,
     getAdapterByProject: repositoryService.getStoreByProjectSync,
     getProjectCacheKey: repositoryService.getProjectCacheKey,
+    getOpenProjectId: () => getCurrentProjectId(),
+    getOpenRepository: repositoryService.getEnsuredRepository,
     createSessionForProject: (payload) =>
       collabAdapter.createSessionForProject({
         ...payload,
@@ -650,18 +652,24 @@ export const createProjectServiceCore = ({
   };
 
   const releaseProjectRuntime = async (projectId) => {
-    const targetProjectId =
-      projectId ||
-      repositoryService.getEnsuredProjectId() ||
-      router.getPayload()?.p;
+    // The changes made in the project, and those they lead to, reach it before
+    // it closes. Closing then takes its turn among the changes, so one made
+    // while it closes waits for it and is refused, not run in a closing project.
+    await collabService.commandApi.waitForChanges();
+    await collabService.commandApi.runAfterChanges(async () => {
+      const targetProjectId =
+        projectId ||
+        repositoryService.getEnsuredProjectId() ||
+        router.getPayload()?.p;
 
-    if (targetProjectId) {
-      await collabService.stopCollabSession(targetProjectId);
-      await repositoryService.releaseRepositoryByProjectId(targetProjectId);
-      return;
-    }
+      if (targetProjectId) {
+        await collabService.stopCollabSession(targetProjectId);
+        await repositoryService.releaseRepositoryByProjectId(targetProjectId);
+        return;
+      }
 
-    await repositoryService.releaseCurrentRepository();
+      await repositoryService.releaseCurrentRepository();
+    });
   };
 
   return {
