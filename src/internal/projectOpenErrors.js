@@ -1,3 +1,5 @@
+import { isStorageFullError } from "./storageFullError.js";
+
 export const UNSUPPORTED_PROJECT_STORE_FORMAT_MESSAGE =
   "Unsupported project store format. This RouteVN Creator build only supports the current project storage layout and will not repair older local stores automatically.";
 
@@ -80,10 +82,11 @@ const isProjectDatabaseOpenError = (error) => {
   );
 };
 
-// Expected environment failures: the project database cannot be opened or
-// browser storage is full. Show them, but do not report them as app errors.
+// Expected environment failures: the project database cannot be opened, or the
+// device or browser storage is full. Show them, but do not report them as app
+// errors.
 export const isProjectStorageUnavailableError = (error) =>
-  isProjectDatabaseOpenError(error) || error?.name === "QuotaExceededError";
+  isProjectDatabaseOpenError(error) || isStorageFullError(error);
 
 const isProjectDataStructureValidationError = (error) => {
   const code = String(error?.code ?? "");
