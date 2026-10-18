@@ -466,6 +466,30 @@ const composeSceneReplayState = ({ mainState, sceneId, sceneState }) => {
   return composed;
 };
 
+// A replay starts with every section main still has, so the replayed create
+// of one fails and is skipped as obsolete, and the events around it are
+// replayed apart. Drop those creates before the batch is replayed. Line events
+// and section creates leave sections in place, so the state before the batch
+// answers this until the first other event, such as a section delete. Creates
+// after it are replayed, and skipped if obsolete, as before.
+const dropCreatesOfExistingSections = ({ entries, repositoryState }) => {
+  const firstOtherIndex = entries.findIndex(
+    ({ event }) =>
+      !event.type.startsWith("line.") && event.type !== "section.create",
+  );
+  const checkedCount =
+    firstOtherIndex === -1 ? entries.length : firstOtherIndex;
+
+  return entries.filter(({ event }, index) => {
+    if (index >= checkedCount || event.type !== "section.create") {
+      return true;
+    }
+
+    const { sceneId, sectionId } = event.payload;
+    return !repositoryState.scenes.items[sceneId]?.sections?.items[sectionId];
+  });
+};
+
 // Drop the sections main no longer has and take main's section order.
 const keepMainSceneSections = ({ state, mainState, sceneId }) => {
   const sections = state?.scenes?.items?.[sceneId]?.sections;
@@ -806,7 +830,7 @@ export const loadSceneProjectionState = async ({
     listCommittedAfter,
     sinceCommittedId: replayStartIndex,
   })) {
-    const relevantEventEntries = [];
+    const batchEntries = [];
 
     for (const event of committedBatch) {
       if (!isRelevantSceneProjectionEvent({ event, sceneId })) {
@@ -818,12 +842,16 @@ export const loadSceneProjectionState = async ({
         continue;
       }
 
-      relevantEventEntries.push({
+      batchEntries.push({
         event: replayEvent,
         index: Math.max(0, getCommittedEventRevision(event) - 1),
       });
     }
 
+    const relevantEventEntries = dropCreatesOfExistingSections({
+      entries: batchEntries,
+      repositoryState: workingState,
+    });
     if (relevantEventEntries.length === 0) {
       continue;
     }

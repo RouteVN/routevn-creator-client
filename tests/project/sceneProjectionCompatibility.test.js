@@ -1334,6 +1334,120 @@ describe("scene projection replay after section deletes", () => {
     ]);
   });
 
+  it("drops replayed creates of sections main state already has", async () => {
+    const initialState = createSceneWithOneLine();
+    const events = [
+      createProjectCreateRepositoryEvent({
+        projectId,
+        state: initialState,
+      }),
+      createLineEvent({
+        id: "section-1-line",
+        toSectionId: sectionId,
+        newLineId: otherLineId,
+      }),
+      createSectionEvent({
+        id: "create-section-2",
+        newSectionId: targetSectionId,
+        name: "Section 2",
+        position: "last",
+      }),
+      createLineEvent({
+        id: "section-2-line",
+        toSectionId: targetSectionId,
+        newLineId: "line-3",
+      }),
+    ];
+    const finalState = replayAll(initialProjectData, events);
+    const reduceEventToStateSpy = vi.fn(reduceEventToState);
+    const reduceEventsToStateSpy = vi.fn(reduceEventsToState);
+
+    const warnSpy = vi.spyOn(console, "warn").mockImplementation(() => {});
+    try {
+      const projection = await loadSceneProjectionState({
+        store: createCheckpointStore(),
+        mainState: createMainProjectionState(finalState),
+        events,
+        createInitialState: () => structuredClone(initialProjectData),
+        reduceEventToState: reduceEventToStateSpy,
+        reduceEventsToState: reduceEventsToStateSpy,
+        sceneId,
+      });
+
+      expect(getSectionLineIds(projection, sectionId)).toEqual([
+        lineId,
+        otherLineId,
+      ]);
+      expect(getSectionLineIds(projection, targetSectionId)).toEqual([
+        "line-3",
+      ]);
+      // Only the project.create seed is applied on its own, and the batch
+      // replays without the create, so nothing is skipped as obsolete.
+      expect(
+        reduceEventToStateSpy.mock.calls.map(([{ event }]) => event.id),
+      ).toEqual([events[0].id]);
+      expect(
+        reduceEventsToStateSpy.mock.calls.map(([{ events: batch }]) =>
+          batch.map((event) => event.id),
+        ),
+      ).toEqual([["section-1-line", "section-2-line"]]);
+      expect(warnSpy).not.toHaveBeenCalled();
+    } finally {
+      warnSpy.mockRestore();
+    }
+  });
+
+  it("replays a section re-created after a delete in the same batch", async () => {
+    const initialState = createSceneWithOneLine();
+    const events = [
+      createProjectCreateRepositoryEvent({
+        projectId,
+        state: initialState,
+      }),
+      createSectionEvent({
+        id: "create-section-2",
+        newSectionId: targetSectionId,
+        name: "Section 2",
+        position: "last",
+      }),
+      createLineEvent({
+        id: "deleted-line",
+        toSectionId: targetSectionId,
+        newLineId: otherLineId,
+      }),
+      deleteSectionsEvent({
+        id: "delete-section-2",
+        sectionIds: [targetSectionId],
+      }),
+      createSectionEvent({
+        id: "recreate-section-2",
+        newSectionId: targetSectionId,
+        name: "Section 2",
+        position: "last",
+      }),
+      createLineEvent({
+        id: "kept-line",
+        toSectionId: targetSectionId,
+        newLineId: "line-3",
+      }),
+    ];
+    const finalState = replayAll(initialProjectData, events);
+
+    const projection = await loadSceneProjectionState({
+      store: createCheckpointStore(),
+      mainState: createMainProjectionState(finalState),
+      events,
+      createInitialState: () => structuredClone(initialProjectData),
+      reduceEventToState,
+      reduceEventsToState,
+      sceneId,
+    });
+
+    // Main state already has Section 2, but the delete before the second
+    // create removes it, so that create must still be replayed.
+    expect(getSectionLineIds(projection, targetSectionId)).toEqual(["line-3"]);
+  });
+
   it("keeps a moved line when the active scene's old section is already deleted", () => {
     const initialState = createSceneWithOneLine();
     const lineMove = moveLineEvent({
