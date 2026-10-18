@@ -13,6 +13,7 @@ import {
   getLatestSceneProjectionRevision,
   iterateCommittedEventBatches,
   isNonEmptyString,
+  replayFailedEventBatch,
 } from "./shared.js";
 
 const getScenePartition = (sceneId) => scenePartitionFor(sceneId);
@@ -759,58 +760,44 @@ export const loadSceneProjectionState = async ({
     (projectCreateEvent ? [structuredClone(projectCreateEvent)] : []);
   let relevantReplayCount = 0;
 
-  const replayEntriesOneAtATime = (entries) => {
-    for (const relevantEntry of entries) {
-      try {
-        const nextState = reduceEventToState({
-          repositoryState: workingState,
-          event: relevantEntry.event,
-        });
-        if (nextState !== undefined) {
-          workingState = nextState;
-        }
-      } catch (sequentialError) {
-        if (
-          shouldSkipObsoleteSceneReplayEvent({
-            event: relevantEntry.event,
-            repositoryState: workingState,
-            error: sequentialError,
-          })
-        ) {
-          console.warn("[sceneProjection] skipped obsolete replay event", {
-            sceneId,
-            eventId: relevantEntry.event?.id,
-            partition: relevantEntry.event?.partition,
-            error: sequentialError?.message || "unknown",
-          });
-          continue;
-        }
-
-        logSceneProjectionReplayFailure({
-          sceneId,
-          event: relevantEntry.event,
-          index: relevantEntry.index,
-          events:
-            streamedDebugReplayEvents === debugReplayEvents
-              ? replayEvents
-              : streamedDebugReplayEvents,
-          mainState,
-          bootstrapProjection,
-          initialWorkingState,
-          repositoryState: workingState,
+  const replayEventOnItsOwn = ({ repositoryState, event, index }) => {
+    try {
+      return reduceEventToState({
+        repositoryState,
+        event,
+      });
+    } catch (sequentialError) {
+      if (
+        shouldSkipObsoleteSceneReplayEvent({
+          event,
+          repositoryState,
           error: sequentialError,
+        })
+      ) {
+        console.warn("[sceneProjection] skipped obsolete replay event", {
+          sceneId,
+          eventId: event?.id,
+          partition: event?.partition,
+          error: sequentialError?.message || "unknown",
         });
-        throw sequentialError;
+        return repositoryState;
       }
-    }
-  };
-  const replayEntriesTogether = (entries) => {
-    const nextState = reduceEventsToState({
-      repositoryState: workingState,
-      events: entries.map(({ event }) => event),
-    });
-    if (nextState !== undefined) {
-      workingState = nextState;
+
+      logSceneProjectionReplayFailure({
+        sceneId,
+        event,
+        index,
+        events:
+          streamedDebugReplayEvents === debugReplayEvents
+            ? replayEvents
+            : streamedDebugReplayEvents,
+        mainState,
+        bootstrapProjection,
+        initialWorkingState,
+        repositoryState,
+        error: sequentialError,
+      });
+      throw sequentialError;
     }
   };
 
@@ -847,40 +834,28 @@ export const loadSceneProjectionState = async ({
       );
     }
 
-    // Each event replayed on its own validates the whole state, so a batch
-    // that fails is replayed together up to the event it reports, and only
-    // that event is replayed on its own. A failure without an event index
-    // replays the rest of the batch one event at a time.
-    let pendingEntries = relevantEventEntries;
-    while (pendingEntries.length > 0) {
-      let failedIndex;
-      try {
-        replayEntriesTogether(pendingEntries);
-        break;
-      } catch (error) {
-        failedIndex = error?.details?.commandIndex;
+    const relevantEvents = relevantEventEntries.map(({ event }) => event);
+    try {
+      const nextState = reduceEventsToState({
+        repositoryState: workingState,
+        events: relevantEvents,
+      });
+      if (nextState !== undefined) {
+        workingState = nextState;
       }
-
-      if (
-        !Number.isInteger(failedIndex) ||
-        failedIndex < 0 ||
-        failedIndex >= pendingEntries.length
-      ) {
-        replayEntriesOneAtATime(pendingEntries);
-        break;
-      }
-
-      try {
-        if (failedIndex > 0) {
-          replayEntriesTogether(pendingEntries.slice(0, failedIndex));
-        }
-      } catch {
-        replayEntriesOneAtATime(pendingEntries);
-        break;
-      }
-
-      replayEntriesOneAtATime([pendingEntries[failedIndex]]);
-      pendingEntries = pendingEntries.slice(failedIndex + 1);
+    } catch (error) {
+      workingState = replayFailedEventBatch({
+        repositoryState: workingState,
+        events: relevantEvents,
+        error,
+        reduceEventsToState,
+        replayEvent: ({ repositoryState, event, index }) =>
+          replayEventOnItsOwn({
+            repositoryState,
+            event,
+            index: relevantEventEntries[index].index,
+          }),
+      });
     }
 
     relevantReplayCount += relevantEventEntries.length;
@@ -946,54 +921,53 @@ export const applySceneEventsToLoadedProjection = ({
     if (nextState !== undefined) {
       workingState = nextState;
     }
-  } catch {
-    let recoveredState = workingState;
-
-    for (const relevantEvent of relevantEvents) {
-      try {
-        const nextState = reduceEventsToState({
-          repositoryState: recoveredState,
-          events: [relevantEvent],
-        });
-        if (nextState !== undefined) {
-          recoveredState = nextState;
-        }
-      } catch (sequentialError) {
-        if (
-          shouldSkipObsoleteSceneReplayEvent({
-            event: relevantEvent,
-            repositoryState: recoveredState,
-            error: sequentialError,
-          })
-        ) {
-          console.warn("[sceneProjection] skipped obsolete replay event", {
-            sceneId,
-            eventId: relevantEvent?.id,
-            partition: relevantEvent?.partition,
-            error: sequentialError?.message || "unknown",
+  } catch (error) {
+    workingState = replayFailedEventBatch({
+      repositoryState: workingState,
+      events: relevantEvents,
+      error,
+      reduceEventsToState,
+      replayEvent: ({ repositoryState, event: relevantEvent }) => {
+        try {
+          return reduceEventsToState({
+            repositoryState,
+            events: [relevantEvent],
           });
-          continue;
+        } catch (sequentialError) {
+          if (
+            shouldSkipObsoleteSceneReplayEvent({
+              event: relevantEvent,
+              repositoryState,
+              error: sequentialError,
+            })
+          ) {
+            console.warn("[sceneProjection] skipped obsolete replay event", {
+              sceneId,
+              eventId: relevantEvent?.id,
+              partition: relevantEvent?.partition,
+              error: sequentialError?.message || "unknown",
+            });
+            return repositoryState;
+          }
+
+          const failedSequentialIndex = Math.max(
+            0,
+            committedEvents.findIndex((event) => event.id === relevantEvent.id),
+          );
+          logSceneProjectionReplayFailure({
+            sceneId,
+            event: relevantEvent,
+            index: failedSequentialIndex,
+            events: committedEvents,
+            mainState,
+            initialWorkingState: workingState,
+            repositoryState,
+            error: sequentialError,
+          });
+          throw sequentialError;
         }
-
-        const failedSequentialIndex = Math.max(
-          0,
-          committedEvents.findIndex((event) => event.id === relevantEvent.id),
-        );
-        logSceneProjectionReplayFailure({
-          sceneId,
-          event: relevantEvent,
-          index: failedSequentialIndex,
-          events: committedEvents,
-          mainState,
-          initialWorkingState: workingState,
-          repositoryState: recoveredState,
-          error: sequentialError,
-        });
-        throw sequentialError;
-      }
-    }
-
-    workingState = recoveredState;
+      },
+    });
   }
 
   keepMainSceneSections({ state: workingState, mainState, sceneId });
