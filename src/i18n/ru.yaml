@@ -2921,3 +2921,16 @@ editHistory:
 dateTime:
   intlLocale: "ru"
   justNow: "Только что"
+formValidation:
+  required: "Обязательное поле"
+  minLength: "Минимум символов: {value}"
+  maxLength: "Максимум символов: {value}"
+  pattern: "Неверный формат"
+  invalidDate: "Неверный формат даты"
+  invalidTime: "Неверный формат времени"
+  invalidDateTime: "Неверный формат даты и времени"
+  minTemporal: "Не раньше {value}"
+  maxTemporal: "Не позже {value}"
+  invalidDuration: "Неверная длительность"
+  minDuration: "Не меньше {value}"
+  maxDuration: "Не больше {value}"

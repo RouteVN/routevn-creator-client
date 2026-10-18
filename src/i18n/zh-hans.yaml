@@ -2921,3 +2921,16 @@ editHistory:
 dateTime:
   intlLocale: "zh-Hans"
   justNow: "刚刚"
+formValidation:
+  required: "此项为必填项"
+  minLength: "至少需要 {value} 个字符"
+  maxLength: "最多 {value} 个字符"
+  pattern: "格式无效"
+  invalidDate: "日期格式无效"
+  invalidTime: "时间格式无效"
+  invalidDateTime: "日期和时间格式无效"
+  minTemporal: "不能早于 {value}"
+  maxTemporal: "不能晚于 {value}"
+  invalidDuration: "时长无效"
+  minDuration: "不能短于 {value}"
+  maxDuration: "不能长于 {value}"

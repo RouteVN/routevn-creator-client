@@ -2921,3 +2921,16 @@ editHistory:
 dateTime:
   intlLocale: "es"
   justNow: "Justo ahora"
+formValidation:
+  required: "Este campo es obligatorio"
+  minLength: "Debe tener al menos {value} caracteres"
+  maxLength: "Debe tener como máximo {value} caracteres"
+  pattern: "Formato no válido"
+  invalidDate: "Formato de fecha no válido"
+  invalidTime: "Formato de hora no válido"
+  invalidDateTime: "Formato de fecha y hora no válido"
+  minTemporal: "Debe ser igual o posterior a {value}"
+  maxTemporal: "Debe ser igual o anterior a {value}"
+  invalidDuration: "Duración no válida"
+  minDuration: "Debe durar al menos {value}"
+  maxDuration: "Debe durar como máximo {value}"
