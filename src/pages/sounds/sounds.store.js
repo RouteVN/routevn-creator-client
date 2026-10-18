@@ -1,5 +1,6 @@
 import { formatFileSize } from "../../internal/files.js";
 import { applyFolderRequiredRootDragOptions } from "../../internal/fileExplorerDragOptions.js";
+import { formatI18nCopy } from "../../internal/ui/i18nCopy.js";
 import { createMediaPageStore } from "../../internal/ui/resourcePages/media/createMediaPageStore.js";
 import { createTagField } from "../../internal/ui/resourcePages/tags.js";
 import { matchesTagAwareSearch } from "../../internal/resourceTags.js";
@@ -172,7 +173,7 @@ const {
       ? state.data?.items?.[state.mobileDeleteDialogItemId]
       : undefined;
     const deleteDialogItemName = deleteDialogItem?.name
-      ? `"${deleteDialogItem.name}"`
+      ? formatI18nCopy(copy.deleteTargetName, { name: deleteDialogItem.name })
       : copy.deleteTargetFallback;
 
     // Touch players span the window, except beside the tablet explorer pane.

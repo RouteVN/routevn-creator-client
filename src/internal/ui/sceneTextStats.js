@@ -47,5 +47,8 @@ export const formatSceneTextStatsLabel = (
     count: formatSceneTextStatsNumber(count),
   });
 
-  return `${lineLabel} ${textCountLabel}`;
+  return formatI18nCopy(
+    copy.sceneTextStatsSummary ?? "{lineLabel} {textCountLabel}",
+    { lineLabel, textCountLabel },
+  );
 };

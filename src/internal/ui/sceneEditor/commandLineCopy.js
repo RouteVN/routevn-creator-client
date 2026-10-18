@@ -65,6 +65,14 @@ export const localizeCommandLineText = (value, copy = {}) => {
 export const formatCommandLineCopy = (template, replacements = {}, copy = {}) =>
   formatI18nCopy(localizeCommandLineText(template, copy), replacements);
 
+// The count is part of the template so that each language can place it.
+export const formatCommandLineActionCount = (count, copy = {}) =>
+  formatCommandLineCopy(
+    count === 1 ? "{count} action" : "{count} actions",
+    { count },
+    copy,
+  );
+
 export const localizeCommandLineOptions = (options = [], copy = {}) => {
   return options.map((option) => ({
     ...option,

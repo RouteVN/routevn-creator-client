@@ -5,6 +5,7 @@ import {
   normalizeVariableEnumValues,
 } from "../../internal/variableEnums.js";
 import {
+  formatCommandLineActionCount,
   localizeCommandLineBreadcrumb,
   localizeCommandLineDropdownMenu,
   localizeCommandLineOptions,
@@ -473,10 +474,7 @@ export const selectViewData = ({ state, props, i18n }) => {
       summary: getBranchSummary(branch, state.variablesData, copy),
       actionsSummary:
         branchActionCount > 0
-          ? `${branchActionCount} ${localizeCommandLineText(
-              branchActionCount === 1 ? "action" : "actions",
-              copy,
-            )}`
+          ? formatCommandLineActionCount(branchActionCount, copy)
           : localizeCommandLineText("No actions", copy),
     };
   };
@@ -554,10 +552,7 @@ export const selectViewData = ({ state, props, i18n }) => {
     branchActions: state.tempBranch.actions,
     branchActionsSummary:
       actionCount > 0
-        ? `${actionCount} ${localizeCommandLineText(
-            actionCount === 1 ? "action" : "actions",
-            copy,
-          )}`
+        ? formatCommandLineActionCount(actionCount, copy)
         : localizeCommandLineText("No actions", copy),
     branchActionAllowedModes: BRANCH_ACTION_ALLOWED_MODES,
     hasBranches: state.branches.length > 0,

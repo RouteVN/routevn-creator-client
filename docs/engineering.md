@@ -81,6 +81,14 @@ For Simplified Chinese localization, follow the RouteVN Simplified Chinese
 translation style guide. Use it as the terminology and tone reference for
 RouteVN `zh-hans` UI and docs copy.
 
+For Russian localization, follow the RouteVN Russian translation style guide.
+Use it as the terminology and tone reference for RouteVN `ru` UI copy.
+
+Keep a count inside its catalog template, such as `"{count} actions"`, instead
+of joining a number and a translated word in code. Russian has three plural
+forms, so its catalog writes counts as a label followed by the number, such as
+`Строк: {count}`, and needs to move the number.
+
 ## Code Style
 
 - Prefer direct values and `??` defaults over verbose string guards like
