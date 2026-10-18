@@ -440,6 +440,14 @@ batch, registers for its own duration instead, so leaving the project waits
 for it, within a time limit and with a progress message, while moving between
 pages of the same project does not.
 
+When the preparations for a move to another page take more than 0.3 seconds,
+`appService.prepareNavigation` shows a "Saving your changes…" progress dialog
+(`appPage.savingChangesTitle` and `savingChangesMessage`) and closes it when
+they finish, so a slow save does not leave the page looking frozen. The app
+going to the background or quitting has no destination page and shows nothing.
+A preparation that is long for its own reason, such as an upload batch, can
+show a dialog with its own words; it replaces this one.
+
 A preparation that throws cancels the navigation, and the user sees nothing for
 a link or sidebar click. Saving before the app goes to the background or quits
 cannot wait on a failure at all; it only reports it. A page whose save can fail
