@@ -15,3 +15,4 @@ export const ZH_HANS_I18N = loadI18n("zh-hans");
 export const ES_I18N = loadI18n("es");
 export const TH_I18N = loadI18n("th");
 export const RU_I18N = loadI18n("ru");
+export const PT_I18N = loadI18n("pt");
