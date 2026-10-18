@@ -2187,7 +2187,7 @@ describe("sceneEditorLexical.handlers actions dialog", () => {
   it("clears temporary presentation state and refreshes the canvas when action save fails", async () => {
     const saveError = new Error("save failed");
     const store = {
-      ...editHistoryStore(),
+      ...editHistoryStore({ line: { id: "line-2", actions: {} } }),
       selectActionTargetLineId: vi.fn(() => "line-2"),
       selectSelectedLineId: vi.fn(() => "line-1"),
       selectDraftSection: vi.fn(() => undefined),
@@ -2243,7 +2243,7 @@ describe("sceneEditorLexical.handlers actions dialog", () => {
       throw saveError;
     });
     const store = {
-      ...editHistoryStore(),
+      ...editHistoryStore({ line: { id: "line-1", actions: {} } }),
       selectActionTargetLineId: vi.fn(() => undefined),
       selectSelectedLineId: vi.fn(() => "line-1"),
       selectDraftSection: vi.fn(() => undefined),
@@ -3796,7 +3796,7 @@ describe("sceneEditorLexical.handlers refused section commands", () => {
     const createCommandLineDeps = ({ updateLineActions }) => ({
       i18n: EN_I18N,
       store: {
-        ...editHistoryStore(),
+        ...editHistoryStore({ line: { id: "line-2", actions: {} } }),
         selectActionTargetLineId: vi.fn(() => "line-2"),
         selectSelectedLineId: vi.fn(() => "line-1"),
         selectDraftSection: vi.fn(() => undefined),

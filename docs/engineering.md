@@ -1414,11 +1414,22 @@ and load them into the editor with `replaceLines`, since setting `lines` keeps
 a focused editor's own text; the caret goes where the text changed. The draft
 flush saves them, and restored lines are marked (`actionLineIds`) so it saves
 their whole actions, not only their dialogue. A line action command reads its
-line before anything is awaited, then saves pending drafts without waiting for
-the save interval, and does not run when that save fails. A draft that is still
-dirty afterwards, from typing during the save, takes the command's saved
-actions for its line, so the command shows at once and its step holds only its
-change. The shortcuts also work in the editor's own text, through
+line id before anything is awaited and takes its place in the save queue at
+once (`runAfterSceneEditorDraftSave`), so a later save runs after it and
+leaving the page waits for it. In its turn it first saves the pending drafts,
+without waiting for the save interval, so a new line is stored before its
+actions change. It does not run when that save fails outright, or when its
+line is then neither on the page nor stored: the line's section could not be
+saved, which the save failure alert already says, or the line or its section
+was deleted before the command's turn. A command for a line the page still
+shows, but the project does not have, is not skipped: the command API refuses
+it with `Could not resolve scene partition for line command`, which goes on
+to be reported, so a cause that is not known stays visible. The actions
+dialog's line is let go either way, so that undo is not held off. Commands can wait behind each other, so
+the page counts the ones still pending and undo waits for all of them. A draft
+that is still dirty afterwards, from typing during the save, takes the
+command's saved actions for its line, so the command shows at once and its
+step holds only its change. The shortcuts also work in the editor's own text, through
 `resolveEditHistoryShortcut`'s `textEditorTagName`; Lexical's own undo stays
 off. On phones the keyboard toolbar has Undo and Redo, which keep the
 keyboard open, and a More menu with Preview, Sections, and Settings; the menu
@@ -1821,6 +1832,11 @@ repository-state reconciliation cannot accidentally clear the active throttle
 window. The same minimum-interval check runs inside the queued draft-flush task
 before `syncSectionLinesSnapshot()` is called, so a task already accepted by the
 latest-task queue still reschedules instead of writing too soon.
+
+Leaving the scene editor for another page saves its drafts and then waits for
+saves already queued, such as a line action still waiting behind a slow save,
+so that the action reaches the project the page showed, not the next one
+opened.
 
 The app saves the open page when it leaves the user's hands.
 `appService.saveBeforeSuspend` runs the before-navigation hooks with the
