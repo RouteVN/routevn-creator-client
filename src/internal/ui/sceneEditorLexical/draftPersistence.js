@@ -316,7 +316,6 @@ export const createSceneEditorDraftPersistence = ({
         key: "draft-flush",
         task: async () => {
           const taskStartedAt = getSceneEditorTimingNow();
-          const taskSections = [];
           const taskSyncStartedAt = getSceneEditorTimingNow();
           // The editor may have changed while this save waited, or been put
           // back to the stored lines by a failed save, so read it again.
@@ -363,185 +362,203 @@ export const createSceneEditorDraftPersistence = ({
             return;
           }
 
-          const flushStartedAt = nowMs();
-          const ownerTiming = getDraftFlushTiming(deps.projectService);
-          ownerTiming.lastFlushStartedAt = flushStartedAt;
-          store.setLastDraftFlushStartedAt({
-            timestamp: flushStartedAt,
+          return saveDraftSections(deps, {
+            draftSections: taskDraftSections,
+            draftReason: taskDraftReason,
+            rescheduleReason,
+            showErrorAlert,
+            targetSectionId,
+            taskStartedAt,
+            taskSyncDurationMs,
           });
-          store.setDraftSavePendingSinceAt({ timestamp: 0 });
-
-          try {
-            let shouldReschedule = false;
-            let nextRescheduleReason = taskDraftReason;
-
-            for (const draftSection of taskDraftSections) {
-              const sectionTimingStartedAt = getSceneEditorTimingNow();
-              const cloneStartedAt = getSceneEditorTimingNow();
-              const snapshotLines = cloneSceneEditorLines(draftSection?.lines);
-              const cloneDurationMs =
-                getSceneEditorTimingDurationMs(cloneStartedAt);
-              if (snapshotLines.length === 0) {
-                taskSections.push({
-                  sectionId: draftSection?.sectionId,
-                  lineCount: 0,
-                  cloneDurationMs,
-                  skipped: true,
-                });
-                continue;
-              }
-
-              const syncSnapshotStartedAt = getSceneEditorTimingNow();
-              const saveError = await saveDraftSectionLines(deps, {
-                draftSection,
-                snapshotLines,
-              });
-              const syncSnapshotDurationMs = getSceneEditorTimingDurationMs(
-                syncSnapshotStartedAt,
-              );
-              if (saveError) {
-                // Fail fast: drop only this section's unsaved changes and say
-                // so at once. Other sections still save, and the user carries
-                // on from the lines that are stored.
-                const { sceneName, sectionName } = describeDraftSection(
-                  deps,
-                  draftSection,
-                );
-                await revertFailedDraftSection(deps, {
-                  draftSection,
-                  error: saveError,
-                });
-                notifyDraftSaveFailure(deps, {
-                  error: saveError,
-                  sceneName,
-                  sectionName,
-                });
-                taskSections.push({
-                  sectionId: draftSection?.sectionId,
-                  lineCount: snapshotLines.length,
-                  cloneDurationMs,
-                  syncSnapshotDurationMs,
-                  failed: true,
-                  errorCode: saveError.code,
-                });
-                continue;
-              }
-              const storeSyncStartedAt = getSceneEditorTimingNow();
-              syncStoreProjectState(store, deps.projectService);
-              const storeSyncDurationMs =
-                getSceneEditorTimingDurationMs(storeSyncStartedAt);
-              const currentDraftSection = selectSceneEditorDraftSectionByTarget(
-                store,
-                draftSection,
-              );
-              const revision = store.selectRepositoryRevision();
-              const isSameDraftTarget =
-                currentDraftSection?.sceneId === draftSection?.sceneId &&
-                currentDraftSection?.sectionId === draftSection?.sectionId;
-              const equalityStartedAt = getSceneEditorTimingNow();
-              const didDraftAdvance =
-                isSameDraftTarget &&
-                !areSceneEditorLinesEqual(
-                  currentDraftSection?.lines,
-                  snapshotLines,
-                );
-              const equalityDurationMs =
-                getSceneEditorTimingDurationMs(equalityStartedAt);
-              taskSections.push({
-                sectionId: draftSection?.sectionId,
-                lineCount: snapshotLines.length,
-                cloneDurationMs,
-                syncSnapshotDurationMs,
-                storeSyncDurationMs,
-                equalityDurationMs,
-                didDraftAdvance,
-                durationMs: getSceneEditorTimingDurationMs(
-                  sectionTimingStartedAt,
-                ),
-              });
-
-              if (didDraftAdvance) {
-                nextRescheduleReason = getSceneEditorDraftReason(
-                  currentDraftSection,
-                  rescheduleReason,
-                );
-                store.setDraftSection({
-                  draftSection: rebaseSceneEditorDraftSection(
-                    currentDraftSection,
-                    {
-                      revision,
-                    },
-                  ),
-                });
-                shouldReschedule = true;
-                continue;
-              }
-
-              if (isSameDraftTarget) {
-                store.setDraftSection({
-                  draftSection: markSceneEditorDraftSectionClean(
-                    currentDraftSection,
-                    {
-                      revision,
-                    },
-                  ),
-                });
-
-                if (
-                  !store.selectSelectedSectionId ||
-                  currentDraftSection?.sectionId ===
-                    store.selectSelectedSectionId?.()
-                ) {
-                  reconcileCurrentEditorSession(deps);
-                }
-              }
-            }
-
-            if (shouldReschedule) {
-              scheduleSceneEditorDraftFlush(deps, {
-                reason: nextRescheduleReason,
-              });
-              emitSceneEditorTiming("draft.flush.rescheduled", {
-                durationMs: getSceneEditorTimingDurationMs(taskStartedAt),
-                targetSectionId,
-                draftReason: taskDraftReason,
-                pendingSectionCount: taskDraftSections.length,
-                taskSyncDurationMs,
-                sections: taskSections,
-              });
-              return;
-            }
-
-            await onDidFlush(deps);
-
-            const renderStartedAt = getSceneEditorTimingNow();
-            deps.render();
-            const renderDurationMs =
-              getSceneEditorTimingDurationMs(renderStartedAt);
-            emitSceneEditorTiming("draft.flush.complete", {
-              durationMs: getSceneEditorTimingDurationMs(taskStartedAt),
-              targetSectionId,
-              draftReason: taskDraftReason,
-              pendingSectionCount: taskDraftSections.length,
-              taskSyncDurationMs,
-              renderDurationMs,
-              sections: taskSections,
-            });
-          } catch (error) {
-            if (showErrorAlert) {
-              const copy = selectSceneEditorCopy(deps.i18n);
-              deps.appService?.showAlert({
-                message:
-                  copy.failedSaveSceneChanges ?? "Failed to save scene changes",
-                title: copy.errorTitle ?? "Error",
-              });
-            }
-            throw error;
-          }
         },
       });
     } finally {
       store.setDraftFlushInFlight?.({ value: false });
+    }
+  };
+
+  // Saves each draft section with the lines it has here, in order. A section
+  // that cannot be saved is put back to its stored lines and reported, and
+  // the others still save. A section whose draft changed meanwhile stays
+  // pending and is saved again later.
+  const saveDraftSections = async (
+    deps,
+    {
+      draftSections,
+      draftReason,
+      rescheduleReason,
+      showErrorAlert,
+      targetSectionId,
+      taskStartedAt,
+      taskSyncDurationMs,
+    },
+  ) => {
+    const { store } = deps;
+    const taskSections = [];
+    const flushStartedAt = nowMs();
+    const ownerTiming = getDraftFlushTiming(deps.projectService);
+    ownerTiming.lastFlushStartedAt = flushStartedAt;
+    store.setLastDraftFlushStartedAt({
+      timestamp: flushStartedAt,
+    });
+    store.setDraftSavePendingSinceAt({ timestamp: 0 });
+
+    try {
+      let shouldReschedule = false;
+      let nextRescheduleReason = draftReason;
+
+      for (const draftSection of draftSections) {
+        const sectionTimingStartedAt = getSceneEditorTimingNow();
+        const cloneStartedAt = getSceneEditorTimingNow();
+        const snapshotLines = cloneSceneEditorLines(draftSection?.lines);
+        const cloneDurationMs = getSceneEditorTimingDurationMs(cloneStartedAt);
+        if (snapshotLines.length === 0) {
+          taskSections.push({
+            sectionId: draftSection?.sectionId,
+            lineCount: 0,
+            cloneDurationMs,
+            skipped: true,
+          });
+          continue;
+        }
+
+        const syncSnapshotStartedAt = getSceneEditorTimingNow();
+        const saveError = await saveDraftSectionLines(deps, {
+          draftSection,
+          snapshotLines,
+        });
+        const syncSnapshotDurationMs = getSceneEditorTimingDurationMs(
+          syncSnapshotStartedAt,
+        );
+        if (saveError) {
+          // Fail fast: drop only this section's unsaved changes and say
+          // so at once. Other sections still save, and the user carries
+          // on from the lines that are stored.
+          const { sceneName, sectionName } = describeDraftSection(
+            deps,
+            draftSection,
+          );
+          await revertFailedDraftSection(deps, {
+            draftSection,
+            error: saveError,
+          });
+          notifyDraftSaveFailure(deps, {
+            error: saveError,
+            sceneName,
+            sectionName,
+          });
+          taskSections.push({
+            sectionId: draftSection?.sectionId,
+            lineCount: snapshotLines.length,
+            cloneDurationMs,
+            syncSnapshotDurationMs,
+            failed: true,
+            errorCode: saveError.code,
+          });
+          continue;
+        }
+        const storeSyncStartedAt = getSceneEditorTimingNow();
+        syncStoreProjectState(store, deps.projectService);
+        const storeSyncDurationMs =
+          getSceneEditorTimingDurationMs(storeSyncStartedAt);
+        const currentDraftSection = selectSceneEditorDraftSectionByTarget(
+          store,
+          draftSection,
+        );
+        const revision = store.selectRepositoryRevision();
+        const isSameDraftTarget =
+          currentDraftSection?.sceneId === draftSection?.sceneId &&
+          currentDraftSection?.sectionId === draftSection?.sectionId;
+        const equalityStartedAt = getSceneEditorTimingNow();
+        const didDraftAdvance =
+          isSameDraftTarget &&
+          !areSceneEditorLinesEqual(currentDraftSection?.lines, snapshotLines);
+        const equalityDurationMs =
+          getSceneEditorTimingDurationMs(equalityStartedAt);
+        taskSections.push({
+          sectionId: draftSection?.sectionId,
+          lineCount: snapshotLines.length,
+          cloneDurationMs,
+          syncSnapshotDurationMs,
+          storeSyncDurationMs,
+          equalityDurationMs,
+          didDraftAdvance,
+          durationMs: getSceneEditorTimingDurationMs(sectionTimingStartedAt),
+        });
+
+        if (didDraftAdvance) {
+          nextRescheduleReason = getSceneEditorDraftReason(
+            currentDraftSection,
+            rescheduleReason,
+          );
+          store.setDraftSection({
+            draftSection: rebaseSceneEditorDraftSection(currentDraftSection, {
+              revision,
+            }),
+          });
+          shouldReschedule = true;
+          continue;
+        }
+
+        if (isSameDraftTarget) {
+          store.setDraftSection({
+            draftSection: markSceneEditorDraftSectionClean(
+              currentDraftSection,
+              {
+                revision,
+              },
+            ),
+          });
+
+          if (
+            !store.selectSelectedSectionId ||
+            currentDraftSection?.sectionId === store.selectSelectedSectionId?.()
+          ) {
+            reconcileCurrentEditorSession(deps);
+          }
+        }
+      }
+
+      if (shouldReschedule) {
+        scheduleSceneEditorDraftFlush(deps, {
+          reason: nextRescheduleReason,
+        });
+        emitSceneEditorTiming("draft.flush.rescheduled", {
+          durationMs: getSceneEditorTimingDurationMs(taskStartedAt),
+          targetSectionId,
+          draftReason,
+          pendingSectionCount: draftSections.length,
+          taskSyncDurationMs,
+          sections: taskSections,
+        });
+        return;
+      }
+
+      await onDidFlush(deps);
+
+      const renderStartedAt = getSceneEditorTimingNow();
+      deps.render();
+      const renderDurationMs = getSceneEditorTimingDurationMs(renderStartedAt);
+      emitSceneEditorTiming("draft.flush.complete", {
+        durationMs: getSceneEditorTimingDurationMs(taskStartedAt),
+        targetSectionId,
+        draftReason,
+        pendingSectionCount: draftSections.length,
+        taskSyncDurationMs,
+        renderDurationMs,
+        sections: taskSections,
+      });
+    } catch (error) {
+      if (showErrorAlert) {
+        const copy = selectSceneEditorCopy(deps.i18n);
+        deps.appService?.showAlert({
+          message:
+            copy.failedSaveSceneChanges ?? "Failed to save scene changes",
+          title: copy.errorTitle ?? "Error",
+        });
+      }
+      throw error;
     }
   };
 
@@ -627,6 +644,41 @@ export const createSceneEditorDraftPersistence = ({
     });
   };
 
+  // Runs `command` in the save queue and resolves to its result. It takes its
+  // place in the queue at once, so a later save runs after it and a wait for
+  // the queue covers it. When its turn comes, the pending drafts are saved
+  // first, without waiting for the save interval, and in the same turn, so
+  // that no other save comes between them. When that draft save fails
+  // outright, which it reports, the command does not run.
+  const runAfterSceneEditorDraftSave = (deps, { sectionId } = {}, command) =>
+    enqueueSceneEditorPersistence({
+      owner: deps.projectService,
+      task: async () => {
+        const { store } = deps;
+        if (selectPendingSceneEditorDraftSections(store).length > 0) {
+          const taskStartedAt = getSceneEditorTimingNow();
+          const targetSectionId =
+            sectionId || store.selectSelectedSectionId?.();
+          syncDraftSectionFromLiveEditor(deps, { sectionId: targetSectionId });
+          const draftSections = selectPendingSceneEditorDraftSections(store);
+          try {
+            await saveDraftSections(deps, {
+              draftSections,
+              draftReason: getSceneEditorDraftReason(draftSections[0]),
+              rescheduleReason: "text",
+              showErrorAlert: true,
+              targetSectionId,
+              taskStartedAt,
+              taskSyncDurationMs: 0,
+            });
+          } catch {
+            return undefined;
+          }
+        }
+        return command();
+      },
+    });
+
   // Resolves once every save already queued for the project has run, such as
   // a line action still being written.
   const waitForSceneEditorPersistence = (deps) =>
@@ -645,6 +697,7 @@ export const createSceneEditorDraftPersistence = ({
         timing,
         ...options,
       }),
+    runAfterSceneEditorDraftSave,
     runSceneEditorPersistence,
     scheduleSceneEditorDraftFlush,
   };

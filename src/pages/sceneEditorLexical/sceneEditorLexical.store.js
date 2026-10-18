@@ -763,10 +763,11 @@ export const createInitialState = () => ({
   actionTargetLineId: undefined,
   // Undo and redo for line edits made since the scene opened. A section's
   // baseline is its lines as of its last recorded edit; until then they are
-  // the committed lines. Undo waits while a line action command runs.
+  // the committed lines. Undo waits while a line action command runs or waits
+  // to run.
   editHistory: createEditHistory(),
   editHistoryBaselines: {},
-  isLineCommandRunning: false,
+  runningLineCommandCount: 0,
   deadEndTooltip: {
     open: false,
     x: 0,
@@ -804,7 +805,7 @@ export const selectLineEditBaselines = ({ state }, { sectionIds } = {}) => {
 // Undo and redo wait while a line action command runs, the preview, the
 // actions dialog or a transform editor is open, or text is being composed.
 export const selectIsEditHistoryBlocked = ({ state }) =>
-  state.isLineCommandRunning ||
+  state.runningLineCommandCount > 0 ||
   state.previewVisible ||
   state.actionTargetLineId !== undefined ||
   state.backgroundTransformEditor.isOpen ||
@@ -855,8 +856,13 @@ export const dropEditHistoryStep = ({ state }, { direction } = {}) => {
   dropHistoryStep(state.editHistory, direction);
 };
 
+// Line action commands wait for each other, so several can be pending. Each
+// one that starts also ends.
 export const setLineCommandRunning = ({ state }, { running } = {}) => {
-  state.isLineCommandRunning = running === true;
+  state.runningLineCommandCount = Math.max(
+    0,
+    state.runningLineCommandCount + (running === true ? 1 : -1),
+  );
 };
 
 export const setUiConfig = ({ state }, { uiConfig } = {}) => {

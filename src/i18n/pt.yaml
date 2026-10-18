@@ -285,6 +285,8 @@ appPage:
   failedRevealEditorCaret: "Não foi possível mostrar o cursor. Reinicie o RouteVN Creator."
   failedSaveProjectIcon: "O projeto foi criado, mas não foi possível guardar o ícone."
   graphicsUnavailableMessage: "Este dispositivo não consegue mostrar a pré-visualização nem as áreas de edição, porque não foi possível iniciar os gráficos WebGL. Reinicie o RouteVN Creator ou o dispositivo. Atualizar o WebView do sistema, o navegador ou o driver gráfico também pode ajudar."
+  savingChangesMessage: "As alterações são guardadas antes de mudar de página."
+  savingChangesTitle: "Aguarde…"
   storageFullMessage: "Não há espaço de armazenamento suficiente neste dispositivo para guardar estes dados. Apague alguns arquivos para ter mais espaço e tente novamente."
   incompatibleProjectTitle: "Projeto incompatível"
   latestVersionMessage: "Já tem a versão mais recente"

@@ -812,6 +812,7 @@ const revertFailedDraftSection = (deps, { draftSection }) => {
 const {
   cancelSceneEditorDraftFlush,
   flushSceneEditorDrafts,
+  runAfterSceneEditorDraftSave,
   runSceneEditorPersistence,
   scheduleSceneEditorDraftFlush,
   waitForSceneEditorPersistence,
@@ -941,33 +942,67 @@ const takeSavedLineActionsIntoDraft = (deps, lineId) => {
   });
 };
 
-// Runs a line action command for `lineId` as an undo step. The line is read
-// before anything is awaited, since the selection can move meanwhile. Pending
-// drafts are saved first, without waiting for the save interval, so the
-// command applies to the lines the page shows and the step holds exactly its
-// change; when that save fails, which it reports, the command does not run.
+const isStoredSceneLine = (store, lineId) =>
+  store
+    .selectCommittedScene()
+    ?.sections?.some((section) =>
+      section.lines?.some((line) => line.id === lineId),
+    ) === true;
+
+// A line command saves through `projectService` directly: it already runs in
+// the save queue. A refusal the user was told about ends it, and resolves to
+// false.
+const saveLineCommand = async (task) => {
+  try {
+    await task();
+    return true;
+  } catch (error) {
+    if (error instanceof SceneEditorCommandRefusedError) {
+      return false;
+    }
+    throw error;
+  }
+};
+
+// Runs a line action command for `lineId` as an undo step. The line id is
+// read before anything is awaited, since the selection can move meanwhile.
+// The command takes its place in the save queue at once, so leaving the page
+// waits for it. When its turn comes, pending drafts are saved first, so the
+// command applies to the lines the page shows. A line that is then neither
+// shown nor stored is gone: its section could not be saved, which was
+// reported, or it was deleted, with its section or by an edit saved before
+// the command's turn. Its command does not run, and neither does one whose
+// draft save failed outright.
 const runRecordedLineCommand = async (deps, { lineId }, command) => {
   const { store } = deps;
   store.setLineCommandRunning({ running: true });
   try {
-    if (store.selectPendingDraftSections().length > 0) {
-      try {
-        await flushSceneEditorDrafts(deps, {
-          force: true,
-          deferIfInFlight: false,
-          enforceMinInterval: false,
+    return await runAfterSceneEditorDraftSave(
+      deps,
+      { sectionId: findSectionIdForLine(store, lineId) },
+      async () => {
+        const line = findSceneLine(store, lineId);
+        if (!line && !isStoredSceneLine(store, lineId)) {
+          clearTemporaryPresentationPreview(deps);
+          return undefined;
+        }
+        store.setEditHistoryBaselines({
+          baselines: selectPageSectionLines(store),
         });
-      } catch {
-        return undefined;
-      }
-    }
-    store.setEditHistoryBaselines({ baselines: selectPageSectionLines(store) });
-    try {
-      return await command({ lineId, line: findSceneLine(store, lineId) });
-    } finally {
-      takeSavedLineActionsIntoDraft(deps, lineId);
-    }
+        try {
+          return await command({ lineId, line });
+        } finally {
+          takeSavedLineActionsIntoDraft(deps, lineId);
+        }
+      },
+    );
   } finally {
+    // However the command ended, saved, refused, failed or skipped, the
+    // actions dialog it came from is closed, so its line must not keep undo
+    // off. A failure still goes on to be reported.
+    if (store.selectActionTargetLineId?.() === lineId) {
+      store.clearActionTargetLineId?.();
+    }
     recordSceneEditorLineEdits(deps, selectPageSectionLines(store));
     store.setLineCommandRunning({ running: false });
   }
@@ -1196,6 +1231,9 @@ export const prepareSceneEditorNavigation = async (
 
   cancelSceneTextStatsRefresh(deps.store);
   await flushSceneEditorDrafts(deps, { force: true });
+  // A line action still waiting to be saved must reach this project before
+  // the page leaves it, or it would run against the next project opened.
+  await waitForSceneEditorPersistence(deps);
   refreshSceneTextStatsNow(deps, { render: false });
   await cacheCurrentSceneTextStats(deps);
 };
@@ -2179,31 +2217,22 @@ const submitSceneEditorCommandLine = async (deps, payload, { lineId }) => {
       return;
     }
 
-    const didSave = await persistSceneEditorCommand(
-      deps,
-      async () => {
-        assertSceneEditorCommandResult(
-          await projectService.updateLineActions({
-            lineId,
-            data: safeDetail,
-            replace: false,
-          }),
-          {
-            appService,
-            copy,
-            fallbackMessage:
-              copy.failedSaveSectionTransition ??
-              "Failed to save section transition",
-          },
-        );
-      },
-      {
-        label: "section-transition",
-        meta: {
+    const didSave = await saveLineCommand(async () => {
+      assertSceneEditorCommandResult(
+        await projectService.updateLineActions({
           lineId,
+          data: safeDetail,
+          replace: false,
+        }),
+        {
+          appService,
+          copy,
+          fallbackMessage:
+            copy.failedSaveSectionTransition ??
+            "Failed to save section transition",
         },
-      },
-    );
+      );
+    });
     if (!didSave) {
       return;
     }
@@ -2241,22 +2270,11 @@ const submitSceneEditorCommandLine = async (deps, payload, { lineId }) => {
       return;
     }
 
-    await runSceneEditorPersistence(
-      deps,
-      async () => {
-        await projectService.updateLineActions({
-          lineId,
-          data: safeDetail,
-          replace: false,
-        });
-      },
-      {
-        label: "push-overlay",
-        meta: {
-          lineId,
-        },
-      },
-    );
+    await projectService.updateLineActions({
+      lineId,
+      data: safeDetail,
+      replace: false,
+    });
 
     await refreshSceneEditorStateFromProject(deps);
     finalizeActionTargetLine(store, lineId);
@@ -2291,22 +2309,11 @@ const submitSceneEditorCommandLine = async (deps, payload, { lineId }) => {
       return;
     }
 
-    await runSceneEditorPersistence(
-      deps,
-      async () => {
-        await projectService.updateLineActions({
-          lineId,
-          data: safeDetail,
-          replace: false,
-        });
-      },
-      {
-        label: "pop-overlay",
-        meta: {
-          lineId,
-        },
-      },
-    );
+    await projectService.updateLineActions({
+      lineId,
+      data: safeDetail,
+      replace: false,
+    });
 
     await refreshSceneEditorStateFromProject(deps);
     finalizeActionTargetLine(store, lineId);
@@ -2348,51 +2355,39 @@ const submitSceneEditorCommandLine = async (deps, payload, { lineId }) => {
 
   let didSave = false;
   try {
-    didSave = await persistSceneEditorCommand(
-      deps,
-      async () => {
-        if (dialogue) {
-          assertSceneEditorCommandResult(
-            await projectService.updateLineDialogueAction({
-              lineId,
-              dialogue,
-              preserve: preserveDialogueContent,
-            }),
-            {
-              appService,
-              copy,
-              fallbackMessage:
-                copy.failedSaveDialogueAction ??
-                "Failed to save dialogue action",
-            },
-          );
-        }
+    didSave = await saveLineCommand(async () => {
+      if (dialogue) {
+        assertSceneEditorCommandResult(
+          await projectService.updateLineDialogueAction({
+            lineId,
+            dialogue,
+            preserve: preserveDialogueContent,
+          }),
+          {
+            appService,
+            copy,
+            fallbackMessage:
+              copy.failedSaveDialogueAction ?? "Failed to save dialogue action",
+          },
+        );
+      }
 
-        if (Object.keys(otherActions).length > 0) {
-          assertSceneEditorCommandResult(
-            await projectService.updateLineActions({
-              lineId,
-              data: otherActions,
-              replace: false,
-            }),
-            {
-              appService,
-              copy,
-              fallbackMessage:
-                copy.failedSaveLineActions ?? "Failed to save line actions",
-            },
-          );
-        }
-      },
-      {
-        label: "command-line-submit",
-        meta: {
-          lineId,
-          hasDialogue: Boolean(dialogue),
-          otherActionCount: Object.keys(otherActions).length,
-        },
-      },
-    );
+      if (Object.keys(otherActions).length > 0) {
+        assertSceneEditorCommandResult(
+          await projectService.updateLineActions({
+            lineId,
+            data: otherActions,
+            replace: false,
+          }),
+          {
+            appService,
+            copy,
+            fallbackMessage:
+              copy.failedSaveLineActions ?? "Failed to save line actions",
+          },
+        );
+      }
+    });
   } finally {
     // A save that did not go through, refused or failed, ends the preview.
     if (!didSave) {
@@ -2814,23 +2809,11 @@ const setDialogueCharacterFromShortcut = async (deps, payload, { lineId }) => {
     updatedDialogue.characterId = characterId;
   }
 
-  await runSceneEditorPersistence(
-    deps,
-    async () => {
-      await projectService.updateLineDialogueAction({
-        lineId,
-        dialogue: updatedDialogue,
-        preserve: ["dialogue.content"],
-      });
-    },
-    {
-      label: "dialogue-character-shortcut",
-      meta: {
-        lineId,
-        shortcut,
-      },
-    },
-  );
+  await projectService.updateLineDialogueAction({
+    lineId,
+    dialogue: updatedDialogue,
+    preserve: ["dialogue.content"],
+  });
 
   await refreshSceneEditorStateFromProject(deps);
   render();
@@ -3403,45 +3386,22 @@ const deleteSelectedLineActions = async (
     if (actionsType === "dialogue") {
       const currentDialogue = selectedLine?.actions?.dialogue;
       if (currentDialogue) {
-        await runSceneEditorPersistence(
-          deps,
-          async () => {
-            await projectService.updateLineDialogueAction({
-              lineId: selectedLineId,
-              dialogue: { clear: true },
-              preserve: ["dialogue.content"],
-            });
-          },
-          {
-            label: "delete-dialogue-action",
-            meta: {
-              lineId: selectedLineId,
-            },
-          },
-        );
+        await projectService.updateLineDialogueAction({
+          lineId: selectedLineId,
+          dialogue: { clear: true },
+          preserve: ["dialogue.content"],
+        });
       }
     } else {
       const currentActions = selectedLine?.actions || {};
       const nextActions = structuredClone(currentActions);
       delete nextActions[actionsType];
 
-      await runSceneEditorPersistence(
-        deps,
-        async () => {
-          await projectService.updateLineActions({
-            lineId: selectedLineId,
-            data: nextActions,
-            replace: true,
-          });
-        },
-        {
-          label: "delete-line-action",
-          meta: {
-            lineId: selectedLineId,
-            actionType: actionsType,
-          },
-        },
-      );
+      await projectService.updateLineActions({
+        lineId: selectedLineId,
+        data: nextActions,
+        replace: true,
+      });
     }
 
     await refreshSceneEditorStateFromProject(deps);
@@ -4149,23 +4109,11 @@ const deleteLineActionItem = async (deps, payload, { line }) => {
       delete newActions[actionType];
     }
   }
-  await runSceneEditorPersistence(
-    deps,
-    async () => {
-      await projectService.updateLineActions({
-        lineId: selectedLine.id,
-        data: newActions,
-        replace: true,
-      });
-    },
-    {
-      label: "line-delete-action-item",
-      meta: {
-        lineId: selectedLine.id,
-        actionType,
-      },
-    },
-  );
+  await projectService.updateLineActions({
+    lineId: selectedLine.id,
+    data: newActions,
+    replace: true,
+  });
   // Update store with new repository state
   await refreshSceneEditorStateFromProject(deps);
   // Trigger re-render
@@ -4235,32 +4183,19 @@ const deleteSystemAction = async (deps, payload, { line }) => {
     // For non-inherited actions, delete as before
     delete newActions[actionType];
   }
-  await runSceneEditorPersistence(
-    deps,
-    async () => {
-      if (actionType === "dialogue") {
-        await projectService.updateLineDialogueAction({
-          lineId: selectedLine.id,
-          dialogue: { clear: true },
-          preserve: ["dialogue.content"],
-        });
-        return;
-      }
-
-      await projectService.updateLineActions({
-        lineId: selectedLine.id,
-        data: newActions,
-        replace: true,
-      });
-    },
-    {
-      label: "system-action-delete",
-      meta: {
-        lineId: selectedLine.id,
-        actionType,
-      },
-    },
-  );
+  if (actionType === "dialogue") {
+    await projectService.updateLineDialogueAction({
+      lineId: selectedLine.id,
+      dialogue: { clear: true },
+      preserve: ["dialogue.content"],
+    });
+  } else {
+    await projectService.updateLineActions({
+      lineId: selectedLine.id,
+      data: newActions,
+      replace: true,
+    });
+  }
   // Update store with new repository state
   await refreshSceneEditorStateFromProject(deps);
   // Trigger re-render

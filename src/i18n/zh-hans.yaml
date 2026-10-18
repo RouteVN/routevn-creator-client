@@ -285,6 +285,8 @@ appPage:
   failedRevealEditorCaret: "无法滚动到光标位置。请重启应用。"
   failedSaveProjectIcon: "项目已创建，但无法保存项目图标。"
   graphicsUnavailableMessage: "此设备无法启动 WebGL 图形，因此无法显示预览和画布编辑器。请重启应用或设备。更新系统 WebView、浏览器或显卡驱动程序也可能有帮助。"
+  savingChangesMessage: "更改正在保存，请稍候。"
+  savingChangesTitle: "正在保存更改…"
   storageFullMessage: "此设备的可用存储空间不足，无法保存。请释放一些空间后重试。"
   incompatibleProjectTitle: "项目不兼容"
   latestVersionMessage: "当前已经是最新版本"

@@ -285,6 +285,8 @@ appPage:
   failedRevealEditorCaret: "No se pudo desplazar la vista hasta el cursor. Reinicia la aplicación."
   failedSaveProjectIcon: "El proyecto se creó, pero no se pudo guardar su icono."
   graphicsUnavailableMessage: "Este dispositivo no puede mostrar la vista previa ni los editores de lienzo porque no pudo iniciar los gráficos WebGL. Reinicia la aplicación o el dispositivo. Actualizar el WebView del sistema, el navegador o el controlador gráfico también puede ayudar."
+  savingChangesMessage: "Espera mientras se guardan tus cambios."
+  savingChangesTitle: "Guardando tus cambios…"
   storageFullMessage: "No hay suficiente espacio de almacenamiento libre en este dispositivo para guardarlo. Libera espacio y vuelve a intentarlo."
   incompatibleProjectTitle: "Proyecto incompatible"
   latestVersionMessage: "Ya tienes la versión más reciente"
