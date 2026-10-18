@@ -228,9 +228,12 @@ const getMacosExportErrorMessage = (error) => {
   return message;
 };
 
-const getMacosExportUnavailableMessage = (availability = {}) => {
+const getMacosExportUnavailableMessage = (availability = {}, copy = {}) => {
   if (!availability.hostSupported) {
-    return "macOS application export is supported only on macOS.";
+    return (
+      copy.macosExportHostUnsupported ??
+      "macOS application export is supported only on macOS."
+    );
   }
 
   if (availability.capabilityCheckError) {
@@ -238,11 +241,18 @@ const getMacosExportUnavailableMessage = (availability = {}) => {
   }
 
   if (availability.templateCheckError) {
-    return `Unable to verify the bundled macOS player template: ${availability.templateCheckError}`;
+    return formatI18nCopy(
+      copy.macosTemplateCheckFailed ??
+        "Unable to verify the bundled macOS player template: {message}",
+      { message: availability.templateCheckError },
+    );
   }
 
   if (!availability.templateAvailable) {
-    return "The macOS player template is not bundled with this Creator build.";
+    return (
+      copy.macosTemplateMissing ??
+      "The macOS player template is not bundled with this Creator build."
+    );
   }
 
   const missingTools = [
@@ -256,10 +266,17 @@ const getMacosExportUnavailableMessage = (availability = {}) => {
     .map(([name]) => name);
 
   if (missingTools.length > 0) {
-    return `macOS application export requires these system tools: ${missingTools.join(", ")}.`;
+    return formatI18nCopy(
+      copy.macosToolsMissing ??
+        "macOS application export requires these system tools: {tools}.",
+      { tools: missingTools.join(", ") },
+    );
   }
 
-  return "macOS application export is not available in this Creator build.";
+  return (
+    copy.macosExportUnavailable ??
+    "macOS application export is not available in this Creator build."
+  );
 };
 
 const formatWindowsExportErrorCopy = ({ template, error }) =>
@@ -1468,7 +1485,7 @@ const runMacosApplicationExport = async (deps, confirmation) => {
       message: formatI18nCopy(
         copy.failedSaveMacosApplication ??
           "Failed to save macOS application: {message}",
-        { message: getMacosExportUnavailableMessage(availability) },
+        { message: getMacosExportUnavailableMessage(availability, copy) },
       ),
       title: copy.errorTitle ?? "Error",
     });

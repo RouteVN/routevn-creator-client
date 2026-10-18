@@ -26,11 +26,13 @@ export const selectResourceViewCopy = ({
   }
 
   return {
+    backButtonLabel: resourceCopy.backButtonLabel ?? "Back",
     clearButton: resourceCopy.clearButton ?? "Clear",
     dropFilesMessage:
       resourceCopy.dropFilesMessage ?? "Drop files to upload to {folder}",
     emptyMessage,
     filterLabel: resourceCopy.filterLabel ?? "Filter",
+    menuButtonLabel: resourceCopy.menuButtonLabel ?? "Menu",
     noAvatarLabel: copy.noAvatarLabel ?? "No Avatar",
     noDataMessage: resourceCopy.noDataMessage ?? "No data",
     noPreviewImageLabel: resourceCopy.noPreviewImageLabel ?? "No preview image",

@@ -240,6 +240,49 @@ describe("app route transitions", () => {
     dom.window.close();
   });
 
+  it("applies the saved app language when the app mounts on any page", async () => {
+    const dom = new JSDOM("<!doctype html><body></body>");
+    vi.stubGlobal("window", dom.window);
+    vi.stubGlobal("document", dom.window.document);
+    vi.stubGlobal("Element", dom.window.Element);
+    const appService = {
+      getPath: vi.fn(() => "/project/scenes"),
+      getPayload: vi.fn(() => ({ p: "project-1" })),
+      getUserConfig: vi.fn((key) => (key === "app.locale" ? "ru" : undefined)),
+      getPlatform: vi.fn(() => "web"),
+      setAppCopyProvider: vi.fn(),
+      setUserConfig: vi.fn(),
+    };
+    let currentLocale = "en";
+    const locale = {
+      available: vi.fn(() => ["en", "ru"]),
+      current: vi.fn(() => currentLocale),
+      set: vi.fn(async (nextLocale) => {
+        currentLocale = nextLocale;
+      }),
+      subscribe: vi.fn(() => () => {}),
+    };
+    const deps = {
+      appService,
+      locale,
+      i18n: { appPage: {} },
+      store: {
+        setPlatform: vi.fn(),
+        setUiConfig: vi.fn(),
+        setHelpButtonVisible: vi.fn(),
+      },
+      subject: { dispatch: vi.fn(), pipe: vi.fn(() => NEVER) },
+      uiConfig: {},
+    };
+
+    const cleanup = handleBeforeMount(deps);
+    await vi.waitFor(() => expect(locale.set).toHaveBeenCalledWith("ru"));
+
+    expect(appService.setUserConfig).not.toHaveBeenCalled();
+    cleanup();
+    dom.window.close();
+  });
+
   it("updates Discord presence after the active locale changes", () => {
     const dom = new JSDOM("<!doctype html><body></body>");
     vi.stubGlobal("window", dom.window);

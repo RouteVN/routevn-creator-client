@@ -22,10 +22,6 @@ const DEFAULT_MOBILE_ITEMS_PER_ROW = 2;
 const MIN_ITEMS_PER_ROW = 1;
 const MAX_ITEMS_PER_ROW = 12;
 const MAX_MOBILE_ITEMS_PER_ROW = 6;
-const MENU_BUTTON_LABEL = "Menu";
-const BACK_BUTTON_LABEL = "Back";
-const ZOOM_BUTTON_LABEL = "Zoom";
-const FILTER_BUTTON_LABEL = "Filter";
 const DEFAULT_ZOOM_POPOVER_POSITION = Object.freeze({
   x: 0,
   y: 0,
@@ -586,10 +582,10 @@ export const selectViewData = ({ state, props, i18n }) => {
     showZoomPopover,
     showZoomPopoverButton: showZoomPopover && !zoomInOverflowMenu,
     zoomPopover: state.zoomPopover,
-    menuButtonLabel: MENU_BUTTON_LABEL,
-    backButtonLabel: BACK_BUTTON_LABEL,
-    zoomButtonLabel: ZOOM_BUTTON_LABEL,
-    filterButtonLabel: FILTER_BUTTON_LABEL,
+    menuButtonLabel: viewCopy.menuButtonLabel,
+    backButtonLabel: viewCopy.backButtonLabel,
+    zoomButtonLabel: viewCopy.zoomLabel,
+    filterButtonLabel: viewCopy.filterLabel,
     resourceImportMenuItems,
     showSearch:
       parseBooleanProp(props.showSearch, true) && !searchInFilterPopover,

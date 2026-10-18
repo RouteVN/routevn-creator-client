@@ -26,7 +26,11 @@ import {
 import { getLocalProjectPathFromPayload } from "../../internal/localProjectRoute.js";
 import { getRoutevnCreatorDocsUrl } from "../../internal/routevnUrls.js";
 import { resolveUpdatesEnabled } from "../../internal/updates.js";
-import { readAppLocaleUsage } from "../../internal/ui/appLocale.js";
+import {
+  activateAppLocale,
+  readAppLocaleUsage,
+  resolveAppLocale,
+} from "../../internal/ui/appLocale.js";
 import { recordRecentSceneVisit } from "../../internal/ui/recentScenes.js";
 import { isAssetPackageEnabled } from "../../internal/ui/releasePreferences.js";
 import {
@@ -633,6 +637,16 @@ export const handleBeforeMount = (deps) => {
   const currentPath = appService.getPath();
   const initialPath = currentPath === "/" ? "/projects" : currentPath;
 
+  // Apply the saved language on every load, not only when the Projects or
+  // App Config page opens, so a reload on any other page keeps it.
+  void activateAppLocale({
+    appService,
+    localeService: deps.locale,
+    locale: resolveAppLocale({ appService, localeService: deps.locale }),
+    persist: false,
+  }).catch((error) => {
+    console.warn("Failed to apply the saved app language:", error);
+  });
   appService.setAppCopyProvider?.(() => selectAppCopy(deps.i18n));
   appService.setAppLocaleUsageProvider?.(() =>
     readAppLocaleUsage({ appService, localeService: deps.locale }),
