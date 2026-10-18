@@ -1,11 +1,13 @@
 const MAX_CAUSES = 3;
 
 // What Pixi, under Route Graphics, throws when the device or its web view
-// cannot give the app a WebGL context: no WebGL at all, a context that could
-// not be created, or no renderer left to try. Route Graphics offers WebGL and
-// WebGPU only, so there is no other renderer to fall back to.
+// cannot give the app a WebGL context: a context that could not be created, no
+// WebGL at all (Pixi then reaches for a canvas renderer it does not have), or
+// no renderer left to try. Route Graphics offers WebGL and WebGPU only, so
+// there is no other renderer to fall back to.
 const GRAPHICS_UNAVAILABLE_MESSAGES = [
   /does not support webgl/,
+  /canvasrenderer is not yet implemented/,
   /no available renderer for the current environment/,
 ];
 

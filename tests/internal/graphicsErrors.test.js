@@ -17,6 +17,15 @@ describe("isGraphicsUnavailableError", () => {
     ).toBe(true);
   });
 
+  it("recognizes a device with no WebGL at all", () => {
+    // Pixi finds no WebGL, reaches for its canvas renderer and fails.
+    expect(
+      isGraphicsUnavailableError(
+        new Error("CanvasRenderer is not yet implemented"),
+      ),
+    ).toBe(true);
+  });
+
   it("finds it behind a wrapping error and in a bare string", () => {
     const wrapped = new Error("Initialize graphics failed.", {
       cause: new Error("This browser does not support WebGL."),

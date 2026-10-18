@@ -219,7 +219,8 @@ already handled. It never shows UI. Handled errors are still shown through
   either. Route Graphics offers WebGL and WebGPU only, so there is no renderer
   to fall back to. `isGraphicsUnavailableError` in
   `src/internal/graphicsErrors.js` matches Pixi's "does not support WebGL"
-  failure. `graphicsService.init` still rejects with it and calls its
+  failure and the "CanvasRenderer is not yet implemented" failure of a device
+  with no WebGL at all. `graphicsService.init` still rejects with it and calls its
   `onGraphicsUnavailable` option, which every platform setup points at
   `createGraphicsUnavailableNotifier`: one localized alert at a time, with the
   technical details after it. The preview and the scene editor skip their own
