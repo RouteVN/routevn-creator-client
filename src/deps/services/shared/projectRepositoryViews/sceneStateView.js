@@ -757,7 +757,7 @@ export const loadSceneProjectionState = async ({
   const streamedDebugReplayEvents =
     committedEvents ||
     (projectCreateEvent ? [structuredClone(projectCreateEvent)] : []);
-  let replayedSinceYieldCount = 0;
+  let relevantReplayCount = 0;
 
   const replayEntriesOneAtATime = (entries) => {
     for (const relevantEntry of entries) {
@@ -883,11 +883,8 @@ export const loadSceneProjectionState = async ({
       pendingEntries = pendingEntries.slice(failedIndex + 1);
     }
 
-    // Yields once at least an interval of events has been replayed since the
-    // last yield, whatever size the batches are.
-    replayedSinceYieldCount += relevantEventEntries.length;
-    if (replayedSinceYieldCount >= SCENE_PROJECTION_YIELD_INTERVAL) {
-      replayedSinceYieldCount = 0;
+    relevantReplayCount += relevantEventEntries.length;
+    if (relevantReplayCount % SCENE_PROJECTION_YIELD_INTERVAL === 0) {
       await yieldToBrowser();
     }
   }
