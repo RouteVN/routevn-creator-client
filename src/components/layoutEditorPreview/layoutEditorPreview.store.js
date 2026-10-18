@@ -27,11 +27,6 @@ const EMPTY_LAYOUT_DATA = {
   tree: [],
 };
 const PREVIEW_BACKGROUND_SLOT = "preview-background";
-const PREVIEW_BACKGROUND_FORM_FIELD = {
-  type: "slot",
-  slot: PREVIEW_BACKGROUND_SLOT,
-  label: "Background",
-};
 const PREVIEW_BACKGROUND_MENU_ITEMS = [
   {
     type: "item",
@@ -78,7 +73,7 @@ const cloneFormField = (field) => {
   return nextField;
 };
 
-const withPreviewBackgroundSlot = (form) => {
+const withPreviewBackgroundSlot = (form, backgroundLabel = "Background") => {
   if (!form || typeof form !== "object") {
     return form;
   }
@@ -101,7 +96,10 @@ const withPreviewBackgroundSlot = (form) => {
 
   return {
     ...form,
-    fields: [PREVIEW_BACKGROUND_FORM_FIELD, ...nextFields],
+    fields: [
+      { type: "slot", slot: PREVIEW_BACKGROUND_SLOT, label: backgroundLabel },
+      ...nextFields,
+    ],
   };
 };
 
@@ -137,11 +135,128 @@ const withDialogueCharacterNameField = (form, { visible } = {}) => {
   };
 };
 
-const createPreviewBackgroundOnlyForm = () => {
-  return withPreviewBackgroundSlot({
-    description: "Choose preview-only data for the canvas",
-    fields: [],
-  });
+const createPreviewBackgroundOnlyForm = (copy = {}) => {
+  return withPreviewBackgroundSlot(
+    {
+      description:
+        copy.previewBackgroundOnlyDescription ??
+        "Choose preview-only data for the canvas",
+      fields: [],
+    },
+    copy.previewBackgroundLabel,
+  );
+};
+
+// The preview forms in the constants file are written in English. Each text
+// maps to its catalog string; texts without one stay as written.
+const createPreviewFormTexts = (i18n) => {
+  const copy = i18n.layoutEditorPage;
+  const panelCopy = i18n.layoutEditPanel;
+  return {
+    Speaker: i18n.commandLinePage.Speaker,
+    "Select speaker": copy.previewSpeakerPlaceholder,
+    "Custom Speaker Name": copy.previewCustomSpeakerNameLabel,
+    No: panelCopy.noOption,
+    Yes: panelCopy.yesOption,
+    "Character Name": copy.previewCharacterNameLabel,
+    "Dialogue Content": copy.previewDialogueContentLabel,
+    "Auto Mode": copy.previewAutoModeLabel,
+    "Skip Mode": copy.previewSkipModeLabel,
+    "Line Completed": copy.previewLineCompletedLabel,
+    False: panelCopy.falseOption,
+    True: panelCopy.trueOption,
+    "Edit to see how the layout will look like with different content items":
+      copy.previewNvlDescription,
+    "Number of Lines": copy.previewLinesNumLabel,
+    "Select number of lines": copy.previewLinesNumPlaceholder,
+    "Character name": copy.previewLineCharacterNameLabel,
+    "Enter character name": copy.previewCharacterNamePlaceholder,
+    "Line content text": copy.previewLineTextLabel,
+    "Enter line text": copy.previewLineTextPlaceholder,
+    "Number of Choices": copy.previewChoicesNumLabel,
+    "Select number of choices": copy.previewChoicesNumPlaceholder,
+    "Choice content text": copy.previewChoiceTextLabel,
+    "Enter choice text": copy.previewChoiceTextPlaceholder,
+    "Edit to see how the history layout will look like with different history entries":
+      copy.previewHistoryDescription,
+    "Number of History Lines": copy.previewHistoryLinesNumLabel,
+    "Select number of history lines": copy.previewHistoryLinesNumPlaceholder,
+    "History line text": copy.previewHistoryTextLabel,
+    "Enter history line text": copy.previewHistoryTextPlaceholder,
+    "Edit to see how the layout will look like with different save slot data":
+      copy.previewSaveLoadDescription,
+    "Number of Slots": copy.previewSlotsNumLabel,
+    "Select number of slots": copy.previewSlotsNumPlaceholder,
+    "Save image": copy.previewSaveImageLabel,
+    "Select image": copy.previewBackgroundPlaceholder,
+    "Save date": copy.previewSaveDateLabel,
+    "Enter save date": copy.previewSaveDatePlaceholder,
+  };
+};
+
+const localizePreviewFormText = (value, texts) =>
+  typeof value === "string" ? (texts[value] ?? value) : value;
+
+const localizePreviewFormField = (field, texts) => {
+  if (!field || typeof field !== "object") {
+    return field;
+  }
+
+  const localizedField = { ...field };
+  if (field.label !== undefined) {
+    localizedField.label = localizePreviewFormText(field.label, texts);
+  }
+  if (field.placeholder !== undefined) {
+    localizedField.placeholder = localizePreviewFormText(
+      field.placeholder,
+      texts,
+    );
+  }
+  if (Array.isArray(field.options)) {
+    localizedField.options = field.options.map((option) => ({
+      ...option,
+      label: localizePreviewFormText(option.label, texts),
+    }));
+  }
+  if (Array.isArray(field.fields)) {
+    localizedField.fields = field.fields.map((childField) =>
+      localizePreviewFormField(childField, texts),
+    );
+  }
+  return localizedField;
+};
+
+const localizePreviewForm = (form, texts) => {
+  const localizedForm = {
+    ...form,
+    fields: form.fields.map((field) => localizePreviewFormField(field, texts)),
+  };
+  if (form.description !== undefined) {
+    localizedForm.description = localizePreviewFormText(
+      form.description,
+      texts,
+    );
+  }
+  return localizedForm;
+};
+
+const createPreviewVariablesFormLabels = (i18n) => {
+  const copy = i18n.layoutEditorPage;
+  const commandLineCopy = i18n.commandLinePage;
+  return {
+    description:
+      copy.previewVariablesDescription ??
+      "Edit visibility conditions to preview conditional elements",
+    runtimeState: copy.previewRuntimeStateLabel ?? "Runtime state",
+    variable: commandLineCopy.Variable,
+    trueOption: i18n.layoutEditPanel.trueOption,
+    falseOption: i18n.layoutEditPanel.falseOption,
+    types: {
+      boolean: commandLineCopy.boolean,
+      number: commandLineCopy.number,
+      string: commandLineCopy.string,
+    },
+  };
 };
 
 const resolvePreviewBackgroundFormTarget = ({
@@ -561,6 +676,7 @@ export const selectPreviewData = ({ state }) =>
 
 export const selectViewData = ({ state, constants, props = {}, i18n }) => {
   const copy = i18n.layoutEditorPage;
+  const formTexts = createPreviewFormTexts(i18n);
   const layoutState = getLayoutState(state);
   const layoutType = layoutState.layoutType;
   const previewHydrationVersion = Number.isFinite(state.previewHydrationVersion)
@@ -573,6 +689,7 @@ export const selectViewData = ({ state, constants, props = {}, i18n }) => {
     layoutsData: state.repositoryState.layouts,
     variablesData: state.repositoryState.variables,
     previewVariableValues: state.previewVariableValues,
+    labels: createPreviewVariablesFormLabels(i18n),
   });
   const inputFieldsViewData = createPreviewInputFieldsViewData({
     currentLayoutId: layoutState.id,
@@ -580,6 +697,7 @@ export const selectViewData = ({ state, constants, props = {}, i18n }) => {
     currentLayoutType: layoutType,
     layoutsData: state.repositoryState.layouts,
     previewInputFieldValues: state.previewInputFieldValues,
+    description: copy.previewInputFieldsDescription,
   });
   const saveLoadPreviewViewData = createSaveLoadPreviewViewData({
     currentLayoutId: layoutState.id,
@@ -590,7 +708,7 @@ export const selectViewData = ({ state, constants, props = {}, i18n }) => {
     previewVariableValues: state.previewVariableValues,
     variablesData: state.repositoryState.variables,
     images: state.repositoryState.images,
-    saveLoadForm: constants.saveLoadForm,
+    saveLoadForm: localizePreviewForm(constants.saveLoadForm, formTexts),
   });
   const previewSections = getLayoutPreviewSections({
     layoutType,
@@ -645,11 +763,18 @@ export const selectViewData = ({ state, constants, props = {}, i18n }) => {
       );
     }
   }
-  const dialogueForm = withDialogueCharacterNameField(constants.dialogueForm, {
-    visible:
-      state.dialogueDefaultValues[DIALOGUE_CUSTOM_CHARACTER_NAME_FIELD] ===
-      true,
-  });
+  const dialogueForm = withDialogueCharacterNameField(
+    localizePreviewForm(constants.dialogueForm, formTexts),
+    {
+      visible:
+        state.dialogueDefaultValues[DIALOGUE_CUSTOM_CHARACTER_NAME_FIELD] ===
+        true,
+    },
+  );
+  const nvlForm = localizePreviewForm(constants.nvlForm, formTexts);
+  const choiceForm = localizePreviewForm(constants.choiceForm, formTexts);
+  const historyForm = localizePreviewForm(constants.historyForm, formTexts);
+  const backgroundLabel = copy.previewBackgroundLabel;
 
   return {
     layoutType,
@@ -661,7 +786,7 @@ export const selectViewData = ({ state, constants, props = {}, i18n }) => {
         ?.name ?? "",
     previewBackgroundOnlyForm:
       previewBackgroundFormTarget === "backgroundOnly"
-        ? createPreviewBackgroundOnlyForm()
+        ? createPreviewBackgroundOnlyForm(copy)
         : undefined,
     previewBackgroundOnlyFormKey: `${identityKey}:background-only`,
     imageSelectorDialog: state.imageSelectorDialog,
@@ -675,7 +800,17 @@ export const selectViewData = ({ state, constants, props = {}, i18n }) => {
       : state.imageSelectorDialog.selectedImageId,
     imageSelectorConfirmDisabled: !state.imageSelectorDialog.selectedImageId,
     imageSelectorConfirmLabel: i18n.layoutEditPanel.okButton,
-    dropdownMenu: state.dropdownMenu,
+    dropdownMenu: {
+      ...state.dropdownMenu,
+      items: state.dropdownMenu.items.map((item) =>
+        item.value === "remove-background"
+          ? {
+              ...item,
+              label: copy.previewRemoveBackgroundMenuItem ?? item.label,
+            }
+          : item,
+      ),
+    },
     fileExplorerItems,
     showImageSelectorFileExplorer: !state.isTouchMode,
     fullImagePreviewVisible: state.fullImagePreviewVisible,
@@ -690,7 +825,7 @@ export const selectViewData = ({ state, constants, props = {}, i18n }) => {
     showSaveLoadForm: previewBackgroundFormTarget === "saveLoad",
     dialogueForm:
       previewBackgroundFormTarget === "dialogue"
-        ? withPreviewBackgroundSlot(dialogueForm)
+        ? withPreviewBackgroundSlot(dialogueForm, backgroundLabel)
         : dialogueForm,
     dialogueDefaultValues: state.dialogueDefaultValues,
     characterAvatarPreview: buildCharacterSpritePreviewLayer(avatar),
@@ -711,8 +846,8 @@ export const selectViewData = ({ state, constants, props = {}, i18n }) => {
     dialogueFormKey: `${identityKey}:dialogue`,
     nvlForm:
       previewBackgroundFormTarget === "nvl"
-        ? withPreviewBackgroundSlot(constants.nvlForm)
-        : constants.nvlForm,
+        ? withPreviewBackgroundSlot(nvlForm, backgroundLabel)
+        : nvlForm,
     nvlDefaultValues: createNvlFormDefaultValues(state.nvlDefaultValues),
     nvlContext: {
       characterNames: state.nvlDefaultValues.characterNames,
@@ -723,8 +858,8 @@ export const selectViewData = ({ state, constants, props = {}, i18n }) => {
     previewRevealingSpeed: state.previewRevealingSpeed,
     choiceForm:
       previewBackgroundFormTarget === "choice"
-        ? withPreviewBackgroundSlot(constants.choiceForm)
-        : constants.choiceForm,
+        ? withPreviewBackgroundSlot(choiceForm, backgroundLabel)
+        : choiceForm,
     choiceDefaultValues: createChoiceFormDefaultValues(
       state.choiceDefaultValues,
     ),
@@ -735,8 +870,8 @@ export const selectViewData = ({ state, constants, props = {}, i18n }) => {
     choiceFormKey: `${identityKey}:choice`,
     historyForm:
       previewBackgroundFormTarget === "history"
-        ? withPreviewBackgroundSlot(constants.historyForm)
-        : constants.historyForm,
+        ? withPreviewBackgroundSlot(historyForm, backgroundLabel)
+        : historyForm,
     historyDefaultValues: createHistoryFormDefaultValues(
       state.historyDefaultValues,
     ),
@@ -748,7 +883,10 @@ export const selectViewData = ({ state, constants, props = {}, i18n }) => {
     historyFormKey: `${identityKey}:history`,
     saveLoadForm:
       previewBackgroundFormTarget === "saveLoad"
-        ? withPreviewBackgroundSlot(saveLoadPreviewViewData.saveLoadForm)
+        ? withPreviewBackgroundSlot(
+            saveLoadPreviewViewData.saveLoadForm,
+            backgroundLabel,
+          )
         : saveLoadPreviewViewData.saveLoadForm,
     saveLoadDefaultValues: saveLoadPreviewViewData.saveLoadDefaultValues,
     saveLoadContext: saveLoadPreviewViewData.saveLoadContext,
@@ -756,7 +894,10 @@ export const selectViewData = ({ state, constants, props = {}, i18n }) => {
     hasSaveLoadPreview: saveLoadPreviewViewData.hasSaveLoadPreview,
     inputFieldsForm:
       previewBackgroundFormTarget === "inputFields"
-        ? withPreviewBackgroundSlot(inputFieldsViewData.inputFieldsForm)
+        ? withPreviewBackgroundSlot(
+            inputFieldsViewData.inputFieldsForm,
+            backgroundLabel,
+          )
         : inputFieldsViewData.inputFieldsForm,
     inputFieldsDefaultValues: inputFieldsViewData.inputFieldsDefaultValues,
     inputFieldsFormKey: inputFieldsViewData.inputFieldsFormKey,
@@ -765,6 +906,7 @@ export const selectViewData = ({ state, constants, props = {}, i18n }) => {
       previewBackgroundFormTarget === "previewVariables"
         ? withPreviewBackgroundSlot(
             previewVariablesViewData.previewVariablesForm,
+            backgroundLabel,
           )
         : previewVariablesViewData.previewVariablesForm,
     previewVariablesDefaultValues:
