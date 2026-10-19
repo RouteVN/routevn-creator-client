@@ -255,15 +255,22 @@ export const createRuntimeSaveSlots = (saveLoadData = {}) => {
                 ? Date.parse(slot.saveDate)
                 : undefined;
     const savedAt = Number.isFinite(rawSavedAt) ? rawSavedAt : undefined;
+    const image = slot?.image ?? slot?.saveImageId;
 
-    return {
-      slotId,
-      image: slot?.image ?? slot?.saveImageId,
-      savedAt,
-      state: slot?.state,
-      isAvailable:
-        slot?.isAvailable === true ||
-        Boolean(slot?.image ?? slot?.saveImageId ?? savedAt),
-    };
+    // The slots are saved with the layout's preview data, which cannot hold
+    // an undefined field, so a field the slot does not have is left out.
+    const runtimeSlot = { slotId };
+    if (image !== undefined) {
+      runtimeSlot.image = image;
+    }
+    if (savedAt !== undefined) {
+      runtimeSlot.savedAt = savedAt;
+    }
+    if (slot?.state !== undefined) {
+      runtimeSlot.state = slot.state;
+    }
+    runtimeSlot.isAvailable =
+      slot?.isAvailable === true || Boolean(image ?? savedAt);
+    return runtimeSlot;
   });
 };
