@@ -16,7 +16,12 @@ export const loadPreviewStartupAssets = async (
 ) => {
   const references = new Map(fileReferences.map((item) => [item.url, item]));
   const repository = projectService.getRepositoryState?.() ?? {};
-  const names = getAssetNames(repository, resources, i18n?.resourceTypes ?? {});
+  const names = getAssetNames(
+    repository,
+    resources,
+    i18n?.resourceTypes ?? {},
+    i18n?.resourcePages?.labelValue,
+  );
   const assets = {};
   const contents = [];
   const failures = [];

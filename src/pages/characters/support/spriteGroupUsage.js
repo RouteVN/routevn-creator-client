@@ -78,13 +78,17 @@ export const buildSpriteGroupInUseMessage = ({
       : copy.spriteGroupInUseLabelFallback;
   const locationParts = [];
 
-  if (usage?.sceneName) {
+  if (usage?.sceneName && usage?.sectionName) {
+    locationParts.push(
+      copy.spriteGroupInUseSceneSection
+        .replace("{sceneName}", () => usage.sceneName)
+        .replace("{sectionName}", () => usage.sectionName),
+    );
+  } else if (usage?.sceneName) {
     locationParts.push(
       copy.spriteGroupInUseScene.replace("{sceneName}", () => usage.sceneName),
     );
-  }
-
-  if (usage?.sectionName) {
+  } else if (usage?.sectionName) {
     locationParts.push(
       copy.spriteGroupInUseSection.replace(
         "{sectionName}",

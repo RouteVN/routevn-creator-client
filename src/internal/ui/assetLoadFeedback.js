@@ -15,11 +15,20 @@ export const getAssetLoadFailures = (error) => {
   return [{ fileId: error?.fileId ?? error?.details?.assetKey, error }];
 };
 
-export const getAssetNames = (repository, resources, types) => {
+// `labelValue` is the catalog template that joins the type and the name.
+export const getAssetNames = (
+  repository,
+  resources,
+  types,
+  labelValue = "{label}: {value}",
+) => {
   const names = new Map();
   const add = (item, type, name = item.name ?? item.fontFamily) => {
     if (!item.fileId) return;
-    names.set(item.fileId, `${type}: ${name ?? item.fileId}`);
+    names.set(
+      item.fileId,
+      formatI18nCopy(labelValue, { label: type, value: name ?? item.fileId }),
+    );
   };
   for (const [collection, fallback] of Object.entries({
     images: "Images",
@@ -68,7 +77,12 @@ export const showAssetLoadFailures = (
   const copy = i18n.assetLoadFeedback ?? {};
   const repository = projectService?.getRepositoryState?.() ?? {};
   const types = { ...i18n.resourceTypes, voices: copy.voices ?? "Voices" };
-  const names = getAssetNames(repository, resources, types);
+  const names = getAssetNames(
+    repository,
+    resources,
+    types,
+    i18n.resourcePages?.labelValue,
+  );
   const uniqueFailures = new Map(
     failures.map((failure) => [failure.fileId ?? failure.error, failure]),
   );

@@ -5,6 +5,7 @@ import {
   normalizeVariableEnumValues,
 } from "../../internal/variableEnums.js";
 import {
+  formatCommandLineCopy,
   localizeCommandLineBreadcrumb,
   localizeCommandLineDropdownMenu,
   localizeCommandLineOptions,
@@ -235,6 +236,13 @@ export const selectViewData = ({ state, i18n }) => {
     return {
       ...op,
       variableName: variable?.name || localizeCommandLineText("Unknown", copy),
+      variableLabel: formatCommandLineCopy(
+        "{variable}:",
+        {
+          variable: variable?.name || localizeCommandLineText("Unknown", copy),
+        },
+        copy,
+      ),
       type: varType,
       opLabel: localizeCommandLineText(opDef?.label || op.op, copy),
       displayValue,

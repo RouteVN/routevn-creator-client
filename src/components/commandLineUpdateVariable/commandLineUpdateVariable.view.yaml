@@ -60,7 +60,7 @@ template:
               - rtgl-view g=md mt=md w=f p=md ph=md:
                   - $for operation, i in operations:
                       - rtgl-view#operation${i} data-operation-id=${operation.id} cur=pointer d=h av=c ah=c g=md p=md bgc=mu h-bgc=ac br=md w=f:
-                          - rtgl-text s=sm: '${operation.variableName}:'
+                          - rtgl-text s=sm: ${operation.variableLabel}
                           - rtgl-text s=sm c=pr: ${operation.opLabel}
                           - $if operation.op != 'toggle':
                               - rtgl-text s=sm: ${operation.displayValue}

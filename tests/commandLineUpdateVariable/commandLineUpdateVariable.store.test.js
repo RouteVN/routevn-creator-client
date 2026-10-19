@@ -5,7 +5,7 @@ import {
   setOperations,
   setVariablesData,
 } from "../../src/components/commandLineUpdateVariable/commandLineUpdateVariable.store.js";
-import { EN_I18N, JA_I18N, PT_I18N } from "../support/i18n.js";
+import { EN_I18N, FR_I18N, JA_I18N, PT_I18N } from "../support/i18n.js";
 
 const createState = () => {
   const state = createInitialState();
@@ -44,6 +44,16 @@ const createState = () => {
 };
 
 describe("commandLineUpdateVariable.store", () => {
+  it("labels each row's variable with the catalog's colon spacing", () => {
+    const state = createState();
+    const [operation] = selectViewData({ state, i18n: FR_I18N }).operations;
+
+    expect(operation.variableLabel).toBe(`${operation.variableName}\u00a0:`);
+    expect(
+      selectViewData({ state, i18n: EN_I18N }).operations[0].variableLabel,
+    ).toBe(`${operation.variableName}:`);
+  });
+
   it("shows boolean values with the True and False labels of the value select", () => {
     const state = createState();
 
