@@ -1,4 +1,5 @@
 import { generateId } from "../../internal/id.js";
+import { formatElapsedSeconds } from "../../internal/dates.js";
 import { formatI18nCopy } from "../../internal/ui/i18nCopy.js";
 import { normalizeExportFileMimeType } from "../../internal/bundleRuntimeAssets.js";
 import {
@@ -888,32 +889,34 @@ export const handleExportConfirmationClose = (deps) => {
   render();
 };
 
-// Whole kilobytes below 1 MB, then megabytes with one decimal, with the
-// number formatted for the `dateTime` catalog of the active locale.
-const formatBundleByteCount = (value, { intlLocale = "en-US" } = {}) => {
+// Whole kilobytes below 1 MB, then megabytes with one decimal, formatted with
+// the `dateTime` catalog of the active locale.
+const formatBundleByteCount = (value, dateTime = {}) => {
+  const {
+    intlLocale = "en-US",
+    fileSizeKilobytes = "{value} KB",
+    fileSizeMegabytes = "{value} MB",
+  } = dateTime;
   const bytes = Number(value) || 0;
   if (bytes < 1024 * 1024) {
     const kilobytes = new Intl.NumberFormat(intlLocale, {
       maximumFractionDigits: 0,
     }).format(bytes / 1024);
-    return `${kilobytes} KB`;
+    return fileSizeKilobytes.replaceAll("{value}", () => kilobytes);
   }
   const megabytes = new Intl.NumberFormat(intlLocale, {
     minimumFractionDigits: 1,
     maximumFractionDigits: 1,
   }).format(bytes / (1024 * 1024));
-  return `${megabytes} MB`;
+  return fileSizeMegabytes.replaceAll("{value}", () => megabytes);
 };
 
-const formatBundleElapsedTime = (value) => {
+const formatBundleElapsedTime = (value, dateTime) => {
   const elapsedSeconds = Math.floor((Number(value) || 0) / 1000);
   if (elapsedSeconds < 1) {
     return "";
   }
-  if (elapsedSeconds < 60) {
-    return `${elapsedSeconds}s`;
-  }
-  return `${Math.floor(elapsedSeconds / 60)}m ${elapsedSeconds % 60}s`;
+  return formatElapsedSeconds(elapsedSeconds, dateTime);
 };
 
 const createBundleProgressView = ({ copy, dateTime, progress } = {}) => {
@@ -921,7 +924,7 @@ const createBundleProgressView = ({ copy, dateTime, progress } = {}) => {
   const total = Math.max(0, Number(progress?.total) || 0);
   const determinateProgress = total > 0 ? { current, total } : {};
   const withElapsedTime = (status) => {
-    const elapsed = formatBundleElapsedTime(progress?.elapsedMs);
+    const elapsed = formatBundleElapsedTime(progress?.elapsedMs, dateTime);
     if (!elapsed) {
       return status;
     }
@@ -1014,7 +1017,7 @@ const createMacosApplicationProgressView = ({
     return createBundleProgressView({ copy, dateTime, progress });
   }
 
-  const elapsed = formatBundleElapsedTime(progress?.elapsedMs);
+  const elapsed = formatBundleElapsedTime(progress?.elapsedMs, dateTime);
   return {
     status: elapsed
       ? formatI18nCopy(copy.bundleElapsedStatus ?? "{status} · {elapsed}", {
@@ -1045,7 +1048,7 @@ const createWindowsExecutableProgressView = ({
     return createBundleProgressView({ copy, dateTime, progress });
   }
 
-  const elapsed = formatBundleElapsedTime(progress?.elapsedMs);
+  const elapsed = formatBundleElapsedTime(progress?.elapsedMs, dateTime);
   return {
     status: elapsed
       ? formatI18nCopy(copy.bundleElapsedStatus ?? "{status} · {elapsed}", {

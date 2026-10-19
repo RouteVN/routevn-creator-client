@@ -479,7 +479,7 @@ export const selectViewData = ({ state, props, i18n }) => {
       summary: getBranchSummary(branch, state.variablesData, copy),
       actionsSummary:
         branchActionCount > 0
-          ? formatCommandLineActionCount(branchActionCount, copy)
+          ? formatCommandLineActionCount(branchActionCount, copy, i18n.dateTime)
           : localizeCommandLineText("No actions", copy),
     };
   };
@@ -557,7 +557,7 @@ export const selectViewData = ({ state, props, i18n }) => {
     branchActions: state.tempBranch.actions,
     branchActionsSummary:
       actionCount > 0
-        ? formatCommandLineActionCount(actionCount, copy)
+        ? formatCommandLineActionCount(actionCount, copy, i18n.dateTime)
         : localizeCommandLineText("No actions", copy),
     branchActionAllowedModes: BRANCH_ACTION_ALLOWED_MODES,
     hasBranches: state.branches.length > 0,

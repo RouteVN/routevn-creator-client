@@ -94,6 +94,11 @@ For Portuguese localization, follow the RouteVN Portuguese translation style
 guide. The `pt` catalog uses one neutral Portuguese for Brazil and Portugal, so
 use it as the terminology and tone reference for RouteVN `pt` UI copy.
 
+For French localization, follow the RouteVN French translation style guide.
+The `fr` catalog uses one standard French for France, Quebec, Belgium, and
+Switzerland, and types its non-breaking spaces (U+202F before `;`, `!`, and
+`?`, U+00A0 before `:` and inside « ») as the characters themselves.
+
 Rettangoli UI form validation errors, such as the required-field message, come
 from the `formValidation` catalog namespace. The app passes it to Rettangoli UI
 as `window.rtglFormMessages` on mount and on every locale change; a field's own
@@ -102,7 +107,20 @@ as `window.rtglFormMessages` on mount and on every locale change; a field's own
 Keep a count inside its catalog template, such as `"{count} actions"`, instead
 of joining a number and a translated word in code. Russian has three plural
 forms, so its catalog writes counts as a label followed by the number, such as
-`Строк: {count}`, and needs to move the number.
+`Строк: {count}`, and needs to move the number. Pick the singular template with
+`isSingularCount` from `src/internal/ui/i18nCopy.js`, which applies
+`Intl.PluralRules` for `dateTime.pluralRulesLocale`. French uses the singular
+for 0, so `fr` shows `0 ligne`. `pt` sets `pt-PT` so that 0 keeps the plural
+as its guide asks, because CLDR's `pt` rule makes 0 singular.
+
+Do not join a number and a unit in code. `formatFileSize`,
+`formatDurationLabel`, `formatMilliseconds`, and `formatElapsedSeconds` take
+the unit from `dateTime` catalog templates such as `fileSizeMegabytes` and
+`durationSeconds`, so a locale can write `2,45 Mo` or `250 ms`.
+
+Do not join a label and a value with `: ` in code either. French puts a
+non-breaking space before the colon, so use a catalog template such as
+`labelValue: "{label}: {value}"` in `resourcePages` or `resourceImport`.
 
 ## Code Style
 

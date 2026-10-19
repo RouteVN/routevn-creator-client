@@ -74,3 +74,69 @@ export const formatDateTimeWithSeconds = (
     second: "2-digit",
     hourCycle: "h23",
   }).format(new Date(value));
+
+const formatUnitValue = (template, value, intlLocale) =>
+  template.replaceAll("{value}", () =>
+    new Intl.NumberFormat(intlLocale, {
+      maximumFractionDigits: 2,
+      useGrouping: false,
+    }).format(value),
+  );
+
+/**
+ * Format a number of milliseconds with the unit, such as "250ms".
+ * @param {number} value - Duration in milliseconds
+ * @param {Object} [options] - The `dateTime` catalog of the active locale
+ * @param {string} [options.intlLocale] - BCP 47 tag used for number formatting
+ * @param {string} [options.durationMilliseconds] - Template with `{value}`
+ * @returns {string} Formatted duration
+ */
+export const formatMilliseconds = (
+  value,
+  { intlLocale = "en-US", durationMilliseconds = "{value}ms" } = {},
+) => formatUnitValue(durationMilliseconds, Number(value) || 0, intlLocale);
+
+/**
+ * Format a duration in milliseconds below one second, then in seconds with
+ * one decimal below ten seconds and two from there, such as "1.5s".
+ * @param {number} durationMs - Duration in milliseconds
+ * @param {Object} [dateTime] - The `dateTime` catalog of the active locale
+ * @returns {string} Formatted duration
+ */
+export const formatDurationLabel = (durationMs, dateTime = {}) => {
+  const resolvedDurationMs = Number(durationMs) || 0;
+  if (resolvedDurationMs < 1000) {
+    return formatMilliseconds(resolvedDurationMs, dateTime);
+  }
+
+  const { intlLocale = "en-US", durationSeconds = "{value}s" } = dateTime;
+  const seconds = resolvedDurationMs / 1000;
+  const roundedSeconds = Number.isInteger(seconds)
+    ? seconds
+    : Number(seconds.toFixed(seconds < 10 ? 1 : 2));
+  return formatUnitValue(durationSeconds, roundedSeconds, intlLocale);
+};
+
+/**
+ * Format whole elapsed seconds, such as "12s" or "2m 5s".
+ * @param {number} elapsedSeconds - Whole seconds
+ * @param {Object} [options] - The `dateTime` catalog of the active locale
+ * @param {string} [options.durationSeconds] - Template with `{value}`
+ * @param {string} [options.durationMinutesSeconds] - Template with
+ *   `{minutes}` and `{seconds}`
+ * @returns {string} Formatted elapsed time
+ */
+export const formatElapsedSeconds = (
+  elapsedSeconds,
+  {
+    durationSeconds = "{value}s",
+    durationMinutesSeconds = "{minutes}m {seconds}s",
+  } = {},
+) => {
+  if (elapsedSeconds < 60) {
+    return durationSeconds.replaceAll("{value}", () => String(elapsedSeconds));
+  }
+  return durationMinutesSeconds
+    .replaceAll("{minutes}", () => String(Math.floor(elapsedSeconds / 60)))
+    .replaceAll("{seconds}", () => String(elapsedSeconds % 60));
+};

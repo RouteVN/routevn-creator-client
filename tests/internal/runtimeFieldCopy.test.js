@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { getRuntimeFieldItems } from "../../src/internal/runtimeFields.js";
 import { selectRuntimeFieldTexts } from "../../src/internal/ui/runtimeFieldCopy.js";
-import { EN_I18N, JA_I18N, PT_I18N } from "../support/i18n.js";
+import { EN_I18N, FR_I18N, JA_I18N, PT_I18N } from "../support/i18n.js";
 
 describe("runtimeFieldCopy", () => {
   it("names and describes every runtime field in English as runtimeFields.js does", () => {
@@ -18,6 +18,7 @@ describe("runtimeFieldCopy", () => {
   it.each([
     ["ja", JA_I18N],
     ["pt", PT_I18N],
+    ["fr", FR_I18N],
   ])(
     "translates every runtime field's name and description in %s",
     (_, i18n) => {

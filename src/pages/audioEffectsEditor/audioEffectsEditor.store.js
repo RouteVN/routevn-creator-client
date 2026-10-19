@@ -2,6 +2,7 @@ import {
   isTouchUiConfig,
   setMobileResourcePageWindowMetricsState,
 } from "../../internal/ui/resourcePages/mobileResourcePage.js";
+import { formatMilliseconds } from "../../internal/dates.js";
 import { buildTimelineEditorControlsPlacement } from "../../internal/ui/timelineEditorControls.js";
 import {
   getAudioEffectDefinitionDuration,
@@ -1610,7 +1611,7 @@ export const selectViewData = ({ state, i18n }) => {
         keyframe.startValue === undefined
           ? (copy.currentValueOption ?? "Current value")
           : `${keyframe.startValue}`,
-      timingLabel: `${keyframe.delay ?? 0}ms + ${keyframe.duration}ms`,
+      timingLabel: `${formatMilliseconds(keyframe.delay ?? 0, i18n.dateTime)} + ${formatMilliseconds(keyframe.duration, i18n.dateTime)}`,
       easingLabel: formatEasingLabel(keyframe.easing ?? "linear"),
       canDelete: index < config.keyframes.length - 1,
     })),

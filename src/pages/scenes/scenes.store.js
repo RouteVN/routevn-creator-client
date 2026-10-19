@@ -477,7 +477,7 @@ export const selectViewData = ({ state, i18n }) => {
         {
           language: state.projectLanguage,
           copy,
-          intlLocale: i18n?.dateTime?.intlLocale,
+          dateTime: i18n?.dateTime,
         },
       );
     }

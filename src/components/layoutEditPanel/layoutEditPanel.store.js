@@ -204,7 +204,9 @@ const localizeOptions = (options, copy = {}) => {
     const nextOption = {
       ...option,
     };
-    if (typeof nextOption.label === "string") {
+    if (nextOption.labelKey) {
+      nextOption.label = copy[nextOption.labelKey] ?? nextOption.label;
+    } else if (typeof nextOption.label === "string") {
       nextOption.label = localizeStaticLabel(nextOption.label, copy);
     }
     if (typeof nextOption.ariaLabel === "string") {

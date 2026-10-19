@@ -1,3 +1,4 @@
+import { isSingularCount } from "../../internal/ui/i18nCopy.js";
 import {
   createRuntimeActionPreview,
   getRuntimeActionModes,
@@ -214,6 +215,7 @@ export const selectViewData = ({ state, props, props: attrs, i18n }) => {
     props: actionProps,
     state,
     copy,
+    dateTime: i18n.dateTime,
   });
   const hiddenModes = getHiddenModes(attrs);
   const allowedModes = getAllowedModes(attrs);
@@ -615,7 +617,7 @@ const isDisplayableScreenAction = (screenAction) => {
 };
 
 // Moved from sceneEditor.store.js - now returns object instead of array
-export const selectActionsData = ({ props, state, copy }) => {
+export const selectActionsData = ({ props, state, copy, dateTime }) => {
   const actions = normalizeLineActions(props.actions || {});
   const presentationState =
     props.presentationState && typeof props.presentationState === "object"
@@ -909,18 +911,17 @@ export const selectActionsData = ({ props, state, copy }) => {
     const offset = Number.isFinite(rawOffset) ? rawOffset : -1;
     preview.rollbackByOffset = {
       offset,
-      summary:
-        Math.abs(offset) === 1
-          ? formatCommandLineCopy(
-              "Rollback by {count} line",
-              { count: Math.abs(offset) },
-              copy,
-            )
-          : formatCommandLineCopy(
-              "Rollback by {count} lines",
-              { count: Math.abs(offset) },
-              copy,
-            ),
+      summary: isSingularCount(Math.abs(offset), dateTime)
+        ? formatCommandLineCopy(
+            "Rollback by {count} line",
+            { count: Math.abs(offset) },
+            copy,
+          )
+        : formatCommandLineCopy(
+            "Rollback by {count} lines",
+            { count: Math.abs(offset) },
+            copy,
+          ),
     };
   }
 
@@ -976,18 +977,17 @@ export const selectActionsData = ({ props, state, copy }) => {
       branchCount: branches.length,
       actionCount,
       summary: formatConditionalSummary(branches, copy),
-      actionsSummary:
-        actionCount === 1
-          ? formatCommandLineCopy(
-              "{count} nested action",
-              { count: actionCount },
-              copy,
-            )
-          : formatCommandLineCopy(
-              "{count} nested actions",
-              { count: actionCount },
-              copy,
-            ),
+      actionsSummary: isSingularCount(actionCount, dateTime)
+        ? formatCommandLineCopy(
+            "{count} nested action",
+            { count: actionCount },
+            copy,
+          )
+        : formatCommandLineCopy(
+            "{count} nested actions",
+            { count: actionCount },
+            copy,
+          ),
     };
     preview.conditional.title = formatCommandLineCopy(
       "Conditional: {summary}",

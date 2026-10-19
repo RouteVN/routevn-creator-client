@@ -6,6 +6,7 @@ import { selectViewData } from "../../src/components/sceneDocumentEditorLexical/
 import {
   EN_I18N,
   ES_I18N,
+  FR_I18N,
   JA_I18N,
   PT_I18N,
   RU_I18N,
@@ -22,6 +23,7 @@ const LOCALES = {
   th: TH_I18N,
   ru: RU_I18N,
   pt: PT_I18N,
+  fr: FR_I18N,
 };
 
 const findEditorNode = (node) => {

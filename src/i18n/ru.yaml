@@ -695,6 +695,7 @@ resourcePages:
   useCropButton: "Обрезать"
   typeSummaryTemplate: "Тип: {type}"
   pngFileTypeName: "Изображение PNG"
+  labelValue: "{label}: {value}"
 resourceTypes:
   animatedAssetsLabel: "Анимированные ресурсы"
   animations: "Анимации"
@@ -1806,6 +1807,7 @@ layoutEditPanel:
   noRepeatEdgeSummary: "без повтора краёв"
   noSoundsAvailable: "Нет доступных звуков. Сначала добавьте звук в ресурсы."
   noneOption: "Нет"
+  noChildInteractionLabel: "Нет"
   notSetLabel: "Не задано"
   offsetXLabel: "Смещение X"
   offsetYLabel: "Смещение Y"
@@ -2799,6 +2801,7 @@ resourceImport:
   committingLabel: "Сохранение импортированных ресурсов"
   completeLabel: "Импорт завершён"
   failed: "Не удалось импортировать пакет."
+  labelValue: "{label}: {value}"
 resourceImportErrors:
     invalid_url: "Введите корректный URL-адрес для импорта."
     unsupported_protocol: "Ссылки для импорта должны использовать HTTPS. HTTP разрешён только для тестирования на localhost."
@@ -2920,7 +2923,15 @@ editHistory:
   redoUnavailableMessage: "Это изменение нельзя повторить."
 dateTime:
   intlLocale: "ru"
+  pluralRulesLocale: "ru"
   justNow: "Только что"
+  fileSizeBytes: "{value} B"
+  fileSizeKilobytes: "{value} KB"
+  fileSizeMegabytes: "{value} MB"
+  fileSizeGigabytes: "{value} GB"
+  durationMilliseconds: "{value}ms"
+  durationSeconds: "{value}s"
+  durationMinutesSeconds: "{minutes}m {seconds}s"
 formValidation:
   required: "Обязательное поле"
   minLength: "Минимум символов: {value}"

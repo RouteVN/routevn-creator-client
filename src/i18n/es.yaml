@@ -695,6 +695,7 @@ resourcePages:
   useCropButton: "Usar recorte"
   typeSummaryTemplate: "Tipo: {type}"
   pngFileTypeName: "Imagen PNG"
+  labelValue: "{label}: {value}"
 resourceTypes:
   animatedAssetsLabel: "Recursos animados"
   animations: "Animaciones"
@@ -1806,6 +1807,7 @@ layoutEditPanel:
   noRepeatEdgeSummary: "sin repetir borde"
   noSoundsAvailable: "No hay sonidos disponibles. Primero crea un recurso de sonido."
   noneOption: "Ninguno"
+  noChildInteractionLabel: "Ninguna"
   notSetLabel: "Sin definir"
   offsetXLabel: "Desplazamiento X"
   offsetYLabel: "Desplazamiento Y"
@@ -2799,6 +2801,7 @@ resourceImport:
   committingLabel: "Guardando los recursos importados"
   completeLabel: "Importación completada"
   failed: "No se pudo importar el paquete."
+  labelValue: "{label}: {value}"
 resourceImportErrors:
     invalid_url: "Escribe una URL de importación válida."
     unsupported_protocol: "Los enlaces de importación deben usar HTTPS. HTTP solo se permite para pruebas en localhost."
@@ -2920,7 +2923,15 @@ editHistory:
   redoUnavailableMessage: "Este cambio no se puede rehacer."
 dateTime:
   intlLocale: "es"
+  pluralRulesLocale: "es"
   justNow: "Justo ahora"
+  fileSizeBytes: "{value} B"
+  fileSizeKilobytes: "{value} KB"
+  fileSizeMegabytes: "{value} MB"
+  fileSizeGigabytes: "{value} GB"
+  durationMilliseconds: "{value}ms"
+  durationSeconds: "{value}s"
+  durationMinutesSeconds: "{minutes}m {seconds}s"
 formValidation:
   required: "Este campo es obligatorio"
   minLength: "Debe tener al menos {value} caracteres"

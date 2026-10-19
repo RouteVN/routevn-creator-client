@@ -695,6 +695,7 @@ resourcePages:
   useCropButton: "使用裁剪"
   typeSummaryTemplate: "类型：{type}"
   pngFileTypeName: "PNG 图像"
+  labelValue: "{label}: {value}"
 resourceTypes:
   animatedAssetsLabel: "动画素材"
   animations: "动画"
@@ -1806,6 +1807,7 @@ layoutEditPanel:
   noRepeatEdgeSummary: "不重复边缘"
   noSoundsAvailable: "没有可用音频。请先创建音频资源。"
   noneOption: "无"
+  noChildInteractionLabel: "无"
   notSetLabel: "未设置"
   offsetXLabel: "偏移 X"
   offsetYLabel: "偏移 Y"
@@ -2799,6 +2801,7 @@ resourceImport:
   committingLabel: "正在保存导入的资源"
   completeLabel: "导入完成"
   failed: "无法导入资源包。"
+  labelValue: "{label}: {value}"
 resourceImportErrors:
     invalid_url: "请输入有效的导入链接。"
     unsupported_protocol: "导入链接必须使用 HTTPS。HTTP 仅可用于本地主机测试。"
@@ -2920,7 +2923,15 @@ editHistory:
   redoUnavailableMessage: "无法重做此更改。"
 dateTime:
   intlLocale: "zh-Hans"
+  pluralRulesLocale: "zh-Hans"
   justNow: "刚刚"
+  fileSizeBytes: "{value} B"
+  fileSizeKilobytes: "{value} KB"
+  fileSizeMegabytes: "{value} MB"
+  fileSizeGigabytes: "{value} GB"
+  durationMilliseconds: "{value}ms"
+  durationSeconds: "{value}s"
+  durationMinutesSeconds: "{minutes}m {seconds}s"
 formValidation:
   required: "此项为必填项"
   minLength: "至少需要 {value} 个字符"

@@ -6,7 +6,7 @@ import {
   selectViewData,
   setValues,
 } from "../../src/components/layoutEditPanel/layoutEditPanel.store.js";
-import { EN_I18N } from "../support/i18n.js";
+import { EN_I18N, FR_I18N } from "../support/i18n.js";
 
 const EMPTY_TREE = { items: {}, tree: [] };
 const LAYOUT_EDIT_PANEL_CONSTANTS = yaml.load(
@@ -19,7 +19,7 @@ const LAYOUT_EDIT_PANEL_CONSTANTS = yaml.load(
   ),
 );
 
-const getAnchorItem = (itemType) => {
+const getAnchorItem = (itemType, i18n = EN_I18N) => {
   const state = createInitialState();
   setValues(
     { state },
@@ -45,7 +45,7 @@ const getAnchorItem = (itemType) => {
       isInsideDirectedContainer: false,
     },
     constants: LAYOUT_EDIT_PANEL_CONSTANTS,
-    i18n: EN_I18N,
+    i18n,
   });
 
   return viewData.config.sections
@@ -55,6 +55,17 @@ const getAnchorItem = (itemType) => {
 };
 
 describe("layoutEditPanel anchor grid", () => {
+  it("labels the middle cell as an anchor position, not a text alignment", () => {
+    const { options } = getAnchorItem(
+      "text-revealing-ref-dialogue-content",
+      FR_I18N,
+    );
+
+    expect(
+      options.find(({ value }) => value.x === 0.5 && value.y === 0.5),
+    ).toMatchObject({ label: FR_I18N.layoutEditPanel.anchorCenter });
+  });
+
   it("uses the nine-cell grid for text anchors", () => {
     expect(getAnchorItem("text-revealing-ref-dialogue-content")).toMatchObject({
       type: "anchor-grid",

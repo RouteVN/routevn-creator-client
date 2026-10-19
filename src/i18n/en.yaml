@@ -695,6 +695,7 @@ resourcePages:
   useCropButton: "Use Crop"
   typeSummaryTemplate: "Type: {type}"
   pngFileTypeName: "PNG Image"
+  labelValue: "{label}: {value}"
 resourceTypes:
   animatedAssetsLabel: "Animated Assets"
   animations: "Animations"
@@ -1806,6 +1807,7 @@ layoutEditPanel:
   noRepeatEdgeSummary: "no repeat edge"
   noSoundsAvailable: "No sounds available. Create a sound resource first."
   noneOption: "None"
+  noChildInteractionLabel: "None"
   notSetLabel: "Not set"
   offsetXLabel: "Offset X"
   offsetYLabel: "Offset Y"
@@ -2799,6 +2801,7 @@ resourceImport:
   committingLabel: "Saving imported resources"
   completeLabel: "Import complete"
   failed: "The package could not be imported."
+  labelValue: "{label}: {value}"
 resourceImportErrors:
     invalid_url: "Enter a valid import URL."
     unsupported_protocol: "Import links must use HTTPS. HTTP is allowed only for localhost testing."
@@ -2920,7 +2923,15 @@ editHistory:
   redoUnavailableMessage: "This change can't be redone."
 dateTime:
   intlLocale: "en-US"
+  pluralRulesLocale: "en-US"
   justNow: "Just now"
+  fileSizeBytes: "{value} B"
+  fileSizeKilobytes: "{value} KB"
+  fileSizeMegabytes: "{value} MB"
+  fileSizeGigabytes: "{value} GB"
+  durationMilliseconds: "{value}ms"
+  durationSeconds: "{value}s"
+  durationMinutesSeconds: "{minutes}m {seconds}s"
 formValidation:
   required: "This field is required"
   minLength: "Must be at least {value} characters"
