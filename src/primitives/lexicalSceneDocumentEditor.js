@@ -147,6 +147,12 @@ const DEFAULT_EDITOR_FONT_SIZE = "md";
 const isTouchInputMode = () =>
   document.documentElement.dataset.rvnInputMode === "touch";
 
+// Chromium, Android WebView included, sends the keys of a composing keyboard as
+// process keys and sends insertText only once it has no composition left. The
+// lost-composition checks rely on that order; other engines keep Lexical's own
+// handling.
+const isChromiumEngine = () => /Chrome\//.test(navigator.userAgent);
+
 const normalizeEditorFontSize = (fontSize) =>
   EDITOR_FONT_SIZE_VALUES[fontSize] ? fontSize : DEFAULT_EDITOR_FONT_SIZE;
 
@@ -1044,36 +1050,6 @@ const getPrintableKeyText = (event) => {
 
   const key = String(event?.key ?? "");
   return [...key].length === 1 ? key : undefined;
-};
-
-// Typing removes the invisible placeholder that keeps an empty line, or a line
-// ending in a reference, editable. Touch keyboards remember positions in the
-// text before the caret, so removing a placeholder before the caret shifted
-// them: SwiftKey then re-composed "Привет" one character too far right, as
-// "ППривет". Returns a collapsed caret moved before its text node's trailing
-// placeholder.
-const getCaretRangeBeforeTrailingPlaceholder = (range) => {
-  const textNode = range?.startContainer;
-  if (!range?.collapsed || textNode.nodeType !== Node.TEXT_NODE) {
-    return range;
-  }
-
-  const text = textNode.data;
-  let offset = range.startOffset;
-  if (text.slice(offset).replaceAll(EDITOR_CARET_TEXT, "") !== "") {
-    return range;
-  }
-  while (offset > 0 && text[offset - 1] === EDITOR_CARET_TEXT) {
-    offset -= 1;
-  }
-  if (offset === range.startOffset) {
-    return range;
-  }
-
-  const caretRange = document.createRange();
-  caretRange.setStart(textNode, offset);
-  caretRange.collapse(true);
-  return caretRange;
 };
 
 const isInvisibleLineBoundarySelectionText = (text = "") => {
@@ -1999,12 +1975,7 @@ export class LexicalSceneDocumentEditorElement extends HTMLElement {
       },
       { discrete: true },
     );
-    setSelectionFromRange(
-      this.refs.editor,
-      isTouchInputMode()
-        ? getCaretRangeBeforeTrailingPlaceholder(range)
-        : range,
-    );
+    setSelectionFromRange(this.refs.editor, range);
     scrollElementIntoNearestScrollableView(lineElement, {
       behavior: "auto",
       block: "nearest",
@@ -3346,9 +3317,12 @@ export class LexicalSceneDocumentEditorElement extends HTMLElement {
     }
 
     // A key the keyboard did not process, sent while the browser reports no
-    // composition, shows that the editor's composition was lost.
+    // composition, shows that the editor's composition was lost. A key sent by
+    // the page, such as a keyboard toolbar arrow, says nothing about it.
     if (
       this.isComposing &&
+      event.isTrusted &&
+      isChromiumEngine() &&
       !event.isComposing &&
       !isImeProcessKeyboardEvent(event) &&
       isEditorOrSurfaceEventTarget({
@@ -4045,12 +4019,6 @@ export class LexicalSceneDocumentEditorElement extends HTMLElement {
     const range = getSelectionRange(this.refs.editor);
     if (this.normalizeInvisibleLineBoundarySelection(range)) {
       return;
-    }
-    if (isTouchInputMode()) {
-      const caretRange = getCaretRangeBeforeTrailingPlaceholder(range);
-      if (caretRange !== range) {
-        setSelectionFromRange(this.refs.editor, caretRange);
-      }
     }
     requestAnimationFrame(() => {
       if (!this.isConnected) {
@@ -5204,7 +5172,10 @@ export class LexicalSceneDocumentEditorElement extends HTMLElement {
     // keyboard's composition was lost without a compositionend. The insertion
     // below ends Lexical's composition once it has read the target range.
     const isLostComposition =
-      this.isComposing && !event.isComposing && inputType === "insertText";
+      this.isComposing &&
+      isChromiumEngine() &&
+      !event.isComposing &&
+      inputType === "insertText";
     if (isLostComposition) {
       this.handleCompositionEnd();
     }
@@ -5301,6 +5272,10 @@ export class LexicalSceneDocumentEditorElement extends HTMLElement {
         event.preventDefault();
         event.stopPropagation?.();
         event.stopImmediatePropagation?.();
+        // No insertion follows to end Lexical's composition.
+        if (isLostComposition) {
+          this.endLostComposition();
+        }
         return;
       }
 
@@ -5308,6 +5283,9 @@ export class LexicalSceneDocumentEditorElement extends HTMLElement {
         allowKeyFallback: inputType === "insertText",
       });
       if (inputText === undefined) {
+        if (isLostComposition) {
+          this.endLostComposition();
+        }
         return;
       }
 

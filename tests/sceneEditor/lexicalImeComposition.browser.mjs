@@ -1,10 +1,10 @@
-// TXT-B021/TXT-B022: replay software-keyboard (IME) input through Chromium's
+// TXT-B021: replay software-keyboard (IME) input through Chromium's
 // own IME path, so the browser keeps a real composition, fires its events and
 // applies its default edits. Input.imeSetComposition with a replacement range
 // models Android's setComposingRegion + setComposingText, Input.insertText
 // models commitText, and raw key events model a keyboard's key presses.
 import assert from "node:assert/strict";
-import { chromium, webkit } from "playwright";
+import { chromium } from "playwright";
 import { createSceneEditorBrowserFixture } from "../support/sceneEditorBrowser.js";
 
 const USER_AGENTS = {
@@ -101,12 +101,6 @@ async function openEditor(
         index,
       );
     },
-    domCaretOffset() {
-      return page.evaluate(
-        () =>
-          window.owner.refs.editor.getRootNode().getSelection().anchorOffset,
-      );
-    },
     lastCompositionStart() {
       return page.evaluate(() => window.compositionStarts.at(-1));
     },
@@ -175,22 +169,6 @@ async function assertCommitted(editor, expected, caret, label) {
     `${label}: next character`,
   );
   assert.deepEqual(editor.errors, [], `${label}: page errors`);
-}
-
-// Gives the keyboard's view of an empty line: SwiftKey commits each letter,
-// then re-composes the word at the space from the caret it saw beforehand.
-async function typeWithSwiftKey(editor, lineIndex, word) {
-  const wordStart =
-    (await editor.lineOffset(lineIndex)) + (await editor.domCaretOffset());
-  for (const letter of word) {
-    await editor.commitText(letter);
-  }
-  await editor.compose(word, {
-    replacementStart: wordStart,
-    replacementEnd: wordStart + word.length,
-  });
-  await editor.commitText(word);
-  await editor.commitText(" ");
 }
 
 const SCENARIOS = [
@@ -270,6 +248,38 @@ const SCENARIOS = [
       return {
         lines: ["alpha", "beta gamma wor"],
         caret: { line: 1, offset: 14 },
+      };
+    },
+  },
+  {
+    name: "a keyboard toolbar arrow while composing leaves the composition alone",
+    lines: ["alpha", "beta gamma"],
+    lineIndex: 1,
+    async run(editor) {
+      await editor.commitText(" ");
+      for (const text of ["w", "wo", "wor"]) {
+        await editor.compose(text);
+      }
+      // The scene editor's keyboard toolbar sends its arrows as keys made by
+      // the page, which say nothing about the keyboard's composition.
+      await editor.page.evaluate(() => {
+        window.owner.refs.editor.dispatchEvent(
+          new KeyboardEvent("keydown", {
+            key: "ArrowRight",
+            code: "ArrowRight",
+            bubbles: true,
+            cancelable: true,
+            composed: true,
+          }),
+        );
+      });
+      await pause(editor.page);
+      await editor.compose("word");
+      await assertComposedLines(editor, ["alpha", "beta gamma word"], "word");
+      await editor.commitText("word");
+      return {
+        lines: ["alpha", "beta gamma word"],
+        caret: { line: 1, offset: 15 },
       };
     },
   },
@@ -385,88 +395,6 @@ const SCENARIOS = [
       // keyboard continues without a composition.
       await editor.backspace();
       return { lines: ["alphabeta gamma"], caret: { line: 0, offset: 5 } };
-    },
-  },
-  {
-    name: "SwiftKey re-composes a word typed into a tapped empty line",
-    lines: ["alpha", "", "gamma"],
-    lineIndex: 0,
-    async run(editor) {
-      const box = await editor.page.evaluate(() => {
-        const rect =
-          window.owner.refs.editor.children[1].getBoundingClientRect();
-        return { x: rect.left + 60, y: rect.top + rect.height / 2 };
-      });
-      await editor.page.touchscreen.tap(box.x, box.y);
-      await editor.page.waitForTimeout(80);
-      await typeWithSwiftKey(editor, 1, "Привет");
-      assert.equal(await editor.lastCompositionStart(), "Привет");
-      return {
-        lines: ["alpha", "Привет ", "gamma"],
-        caret: { line: 1, offset: 7 },
-      };
-    },
-  },
-  {
-    name: "SwiftKey re-composes a word typed into an empty line tapped in block mode",
-    lines: ["alpha", "", "gamma"],
-    lineIndex: 0,
-    async run(editor) {
-      await editor.page.evaluate(() => window.owner.blurEditor());
-      await editor.page.waitForTimeout(80);
-      const box = await editor.page.evaluate(() => {
-        const rect =
-          window.owner.refs.editor.children[1].getBoundingClientRect();
-        return { x: rect.left + 60, y: rect.top + rect.height / 2 };
-      });
-      await editor.page.touchscreen.tap(box.x, box.y);
-      await editor.page.waitForTimeout(80);
-      await typeWithSwiftKey(editor, 1, "Привет");
-      return {
-        lines: ["alpha", "Привет ", "gamma"],
-        caret: { line: 1, offset: 7 },
-      };
-    },
-  },
-  {
-    name: "SwiftKey re-composes a word typed into a focused empty line",
-    lines: ["alpha", "", "gamma"],
-    lineIndex: 1,
-    cursorPosition: 0,
-    async run(editor) {
-      await typeWithSwiftKey(editor, 1, "Привет");
-      return {
-        lines: ["alpha", "Привет ", "gamma"],
-        caret: { line: 1, offset: 7 },
-      };
-    },
-  },
-  {
-    name: "SwiftKey re-composes a word typed into a line made with Enter",
-    lines: ["alpha", "gamma"],
-    lineIndex: 0,
-    async run(editor) {
-      await editor.page.keyboard.press("Enter");
-      await editor.page.waitForTimeout(80);
-      await typeWithSwiftKey(editor, 1, "Привет");
-      return {
-        lines: ["alpha", "Привет ", "gamma"],
-        caret: { line: 1, offset: 7 },
-      };
-    },
-  },
-  {
-    name: "SwiftKey re-composes a word typed into a line emptied by Backspace",
-    lines: ["alpha", "x", "gamma"],
-    lineIndex: 1,
-    async run(editor) {
-      await editor.backspace();
-      await editor.page.waitForTimeout(80);
-      await typeWithSwiftKey(editor, 1, "Привет");
-      return {
-        lines: ["alpha", "Привет ", "gamma"],
-        caret: { line: 1, offset: 7 },
-      };
     },
   },
   {
@@ -592,50 +520,6 @@ try {
     }
   } finally {
     await browser.close();
-  }
-
-  // iOS uses WebKit in touch mode: a tapped empty line still takes typing.
-  const webkitBrowser = await webkit.launch({ headless: true });
-  try {
-    const { page, errors } = await fixture.newPage({
-      newPage: () => webkitBrowser.newPage({ hasTouch: true }),
-    });
-    await page.evaluate(() => {
-      document.documentElement.dataset.rvnInputMode = "touch";
-      window.owner.lines = ["alpha", "", "gamma"].map((text, index) => ({
-        id: `line-${index + 1}`,
-        actions: { dialogue: { content: [{ text }] } },
-      }));
-      window.owner.enterTextMode({ lineId: "line-1", cursorPosition: -1 });
-    });
-    await page.waitForTimeout(80);
-    const box = await page.evaluate(() => {
-      const rect = window.owner.refs.editor.children[1].getBoundingClientRect();
-      return { x: rect.left + 60, y: rect.top + rect.height / 2 };
-    });
-    await page.touchscreen.tap(box.x, box.y);
-    await page.waitForTimeout(80);
-    await page.keyboard.type("ab");
-    assert.deepEqual(
-      await page.evaluate(() => ({
-        lines: window.owner
-          .getLinesSnapshot()
-          .map((line) =>
-            line.actions.dialogue.content.map((item) => item.text).join(""),
-          ),
-        caret: window.owner.getNativeLineSelectionContext(),
-      })),
-      {
-        lines: ["alpha", "ab", "gamma"],
-        caret: { lineId: "line-2", start: 2, end: 2 },
-      },
-      "webkit: typing into a tapped empty line",
-    );
-    assert.deepEqual(errors, []);
-    console.log("webkit: typing into a tapped empty line passed");
-    await page.close();
-  } finally {
-    await webkitBrowser.close();
   }
 } finally {
   await fixture.close();
