@@ -54,13 +54,14 @@ describe("projectCreateDialog handlers", () => {
     });
     await first;
     requests[0].resolve({
-      folderName: "Untitled Project",
+      folderName: "Untitled",
       displayPath: "Initial path",
     });
     await Promise.resolve();
     expect(deps.store.selectViewData().projectLocation).toEqual(location);
+    // Before a name is typed, the preview uses the localized "Untitled" label.
     expect(requests.map(({ name }) => name)).toEqual([
-      "",
+      EN_I18N.projectsPage.untitledProject,
       "Project / One",
       "Project Two",
     ]);
@@ -109,8 +110,8 @@ describe("projectCreateDialog handlers", () => {
     deps.dispatchEvent = vi.fn();
     handleBeforeMount(deps);
     const initialLocation = {
-      folderName: "Untitled Project",
-      displayPath: "On My iPhone / RouteVN Projects / Untitled Project",
+      folderName: "Untitled",
+      displayPath: "On My iPhone / RouteVN Projects / Untitled",
     };
     requests[0].resolve(initialLocation);
     await Promise.resolve();

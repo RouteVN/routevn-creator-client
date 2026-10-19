@@ -10,14 +10,17 @@ import { normalizeProjectLanguage } from "../../internal/projectLanguage.js";
 import { setDiscordPresenceDetails as setDiscordPresenceDetailsClient } from "../clients/tauri/discordPresence.js";
 import { createTauriProjectImportHost } from "../clients/tauri/projectImportHost.js";
 import { createProjectImportService } from "./shared/projectImportService.js";
+import { createProjectFolderNotEmptyError } from "../../internal/projectInitialization.js";
 
+// The folder name, or empty when the path has none. The projects page shows
+// its localized "Untitled" label for a project without a name.
 const deriveProjectNameFromPath = (projectPath) => {
   if (typeof projectPath !== "string" || projectPath.length === 0) {
-    return "Untitled Project";
+    return "";
   }
   const normalizedPath = projectPath.replace(/[\\/]+$/, "");
   const segments = normalizedPath.split(/[\\/]/).filter(Boolean);
-  return segments[segments.length - 1] || "Untitled Project";
+  return segments.at(-1) ?? "";
 };
 
 const isFolderEmpty = async (folderPath) =>
@@ -176,9 +179,7 @@ export const createAppService = (params) => {
     }) => {
       const entries = await readDir(projectPath);
       if (entries.length > 0) {
-        throw new Error(
-          "The selected folder must be empty. Please choose an empty folder for your new project.",
-        );
+        throw createProjectFolderNotEmptyError();
       }
 
       let iconFileId = null;
@@ -361,10 +362,11 @@ export const createAppService = (params) => {
 
     // A zip file on this computer. Resolves to `{ uri, name }`, where `uri` is
     // the file's path, or undefined when the picker is cancelled.
-    async openArchivePicker({ title } = {}) {
+    // `fileTypeName` labels the zip filter in the system dialog.
+    async openArchivePicker({ title, fileTypeName = "Zip" } = {}) {
       const path = await appService.openFilePicker({
         title,
-        filters: [{ name: "Zip", extensions: ["zip"] }],
+        filters: [{ name: fileTypeName, extensions: ["zip"] }],
       });
       if (!path) {
         return undefined;

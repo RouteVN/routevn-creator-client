@@ -1,5 +1,6 @@
 import {
   localizeCommandLineBreadcrumb,
+  localizeCommandLineText,
   selectCommandLineCopy,
 } from "../../internal/ui/sceneEditor/commandLineCopy.js";
 
@@ -24,6 +25,11 @@ export const selectViewData = ({ state, i18n }) => {
   ];
 
   return {
+    popOverlayDescription: localizeCommandLineText(
+      "Pop the current overlay and return to the previous view.",
+      copy,
+    ),
+    submitButtonLabel: localizeCommandLineText("Submit", copy),
     initiated: state.initiated,
     mode: state.mode,
     breadcrumb: localizeCommandLineBreadcrumb(breadcrumb, copy),

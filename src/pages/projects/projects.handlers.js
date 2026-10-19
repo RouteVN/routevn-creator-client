@@ -14,6 +14,8 @@ import {
   resolveProjectResolution,
 } from "../../internal/projectResolution.js";
 import { createProjectRoutePayload } from "../../internal/localProjectRoute.js";
+import { withErrorDetails } from "../../internal/errorDetails.js";
+import { isProjectFolderNotEmptyError } from "../../internal/projectInitialization.js";
 import { parseProjectImportUrl } from "../../internal/projectImportUrl.js";
 import { getProjectImportErrorMessage } from "../../internal/projectImportErrors.js";
 import { ROUTEVN_CONTACT_URL } from "../../internal/routevnUrls.js";
@@ -317,7 +319,13 @@ const createProjectFromValues = async (deps, values = {}) => {
     render();
   } catch (error) {
     appService.showAlert({
-      message: error?.message || copy.failedCreateProject,
+      message: isProjectFolderNotEmptyError(error)
+        ? copy.importDestinationNotEmptyMessage
+        : withErrorDetails(
+            copy.failedCreateProject,
+            error,
+            copy.errorDetailsLabel,
+          ),
     });
   }
 };
@@ -1228,7 +1236,11 @@ export const handleDeleteDialogConfirm = async (deps) => {
   const isAndroid = appService.getPlatform() === "android";
   const projectId = store.selectDeleteDialogProjectId();
   const projectPath = store.selectDeleteDialogProjectPath();
-  if (isAndroid && store.selectDeleteDialogConfirmationText() !== "Delete") {
+  if (
+    isAndroid &&
+    store.selectDeleteDialogConfirmationText() !==
+      copy.deleteProjectConfirmationWord
+  ) {
     return;
   }
   if ((isAndroid && !projectId) || (!isAndroid && !projectId && !projectPath)) {

@@ -38,9 +38,66 @@ const getExplorerElementIcon = (definition) => {
   return getElementIcon(definition);
 };
 
+// The Add Element menu labels. A new element is named as the menu item that
+// creates it, in the app's language.
+export const CREATE_TYPE_LABEL_KEYS = Object.freeze({
+  container: "containerMenuItem",
+  sprite: "imageMenuItem",
+  "spritesheet-animation": "spritesheetAnimationMenuItem",
+  particle: "particleMenuItem",
+  text: "textMenuItem",
+  slider: "sliderMenuItem",
+  input: "inputMenuItem",
+  "form-submit-button": "inputSubmitContainerMenuItem",
+  "fragment-ref": "fragmentMenuItem",
+  "container-confirm-dialog-ok": "containerConfirmOkMenuItem",
+  "container-confirm-dialog-cancel": "containerConfirmCancelMenuItem",
+  "text-dialogue-content": "textDialogueContentMenuItem",
+  "text-character-name": "textCharacterNameMenuItem",
+  "container-dialogue-line": "containerDialogueLineMenuItem",
+  "text-dialogue-line-character-name": "textLineCharacterNameMenuItem",
+  "text-dialogue-line-content": "textLineContentMenuItem",
+  "container-history-line": "containerHistoryItemMenuItem",
+  "text-history-line-character-name": "textHistoryCharacterNameMenuItem",
+  "text-history-line-content": "textHistoryLineContentMenuItem",
+  "container-choice-item": "containerRepeatedChoiceItemMenuItem",
+  "container-choice-single-item": "containerSingleChoiceItemMenuItem",
+  "container-save-load-slot": "containerSaveLoadSlotMenuItem",
+  "sprite-save-load-slot-image": "imageSaveImageMenuItem",
+  "text-save-load-slot-date": "textSaveDateMenuItem",
+  "text-choice-item-content": "textChoiceContentMenuItem",
+  rect: "rectMenuItem",
+});
+
+const toLocalizedTemplate = (createType, template, copy = {}) => {
+  const labelKey = CREATE_TYPE_LABEL_KEYS[createType];
+  const name = labelKey ? copy[labelKey] : undefined;
+  if (!name) {
+    return template;
+  }
+
+  const localizedTemplate = {
+    ...template,
+  };
+  localizedTemplate.name = name;
+  return localizedTemplate;
+};
+
+// The element a create type adds, with its default name in the app's language.
+export const createLayoutEditorElementTemplate = (
+  createType,
+  { projectResolution, copy } = {},
+) => {
+  const { template } = getLayoutEditorCreateDefinition(createType, {
+    projectResolution,
+  });
+  return toLocalizedTemplate(createType, template, copy);
+};
+
 export const toLayoutEditorContextMenuItems = (
   items = [],
   projectResolution = DEFAULT_PROJECT_RESOLUTION,
+  copy = {},
 ) => {
   return compactContextMenuItems(
     items.map((item) => {
@@ -58,7 +115,7 @@ export const toLayoutEditorContextMenuItems = (
         icon: getElementIcon(createDefinition),
         value: {
           action: "new-child-item",
-          ...createDefinition.template,
+          ...toLocalizedTemplate(createType, createDefinition.template, copy),
         },
       };
     }),

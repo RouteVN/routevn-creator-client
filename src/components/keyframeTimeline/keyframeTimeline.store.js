@@ -248,6 +248,10 @@ export const clearKeyframeClickSuppression = ({ state }, _payload = {}) => {
 
 const RULER_TARGET_MAJOR_TICK_COUNT = 6;
 const RULER_MINOR_TICKS_PER_MAJOR = 5;
+// Marks a property that keeps its default initial value. A dash reads the same
+// in every language, and the localized word, too wide for the 24px value
+// column, becomes its title.
+const DEFAULT_INITIAL_VALUE_MARKER = "—";
 
 const clamp = (value, min, max) => {
   return Math.min(Math.max(value, min), max);
@@ -266,9 +270,9 @@ const formatRulerTimeLabel = (timeMs) => {
   return `${Number(seconds.toFixed(seconds < 10 ? 1 : 2))}s`;
 };
 
-const formatEasingLabel = (easingName) => {
+const formatEasingLabel = (easingName, linearLabel) => {
   if (easingName === "linear") {
-    return "Linear";
+    return linearLabel;
   }
 
   return easingName
@@ -423,7 +427,10 @@ const createRulerTicks = (durationMs) => {
 };
 
 export const selectViewData = ({ state, props, props: attrs, i18n = {} }) => {
-  const autoLabel = i18n.animationEditorPage?.autoTweenMode ?? "Auto";
+  const animationCopy = i18n.animationEditorPage ?? {};
+  const autoLabel = animationCopy.autoTweenMode ?? "Auto";
+  const defaultInitialValueLabel = animationCopy.defaultLabel ?? "Default";
+  const linearEasingLabel = animationCopy.linearEasingLabel ?? "Linear";
   const showRuler = attrs.showRuler === true;
   const showTracks = attrs.showTracks !== false;
   const resolveTrackCursor = ({ propertyName, trackMode } = {}) => {
@@ -446,6 +453,11 @@ export const selectViewData = ({ state, props, props: attrs, i18n = {} }) => {
       const value = propertyConfig.initialValue;
       const isDefault = value === undefined || value === "";
       const autoConfig = propertyConfig.auto;
+      const initialValue = autoConfig
+        ? autoLabel.toLocaleLowerCase()
+        : isDefault
+          ? DEFAULT_INITIAL_VALUE_MARKER
+          : (propertyConfig.initialValueLabel ?? value);
       const selected =
         propertyConfig.selected === true ||
         (attrs.selectedProperty?.side === attrs.side &&
@@ -468,11 +480,9 @@ export const selectViewData = ({ state, props, props: attrs, i18n = {} }) => {
         thumbnailBorderColor: propertyConfig.thumbnailBorderColor ?? "bo",
         thumbnailFileId: propertyConfig.thumbnailFileId,
         thumbnailName: propertyConfig.thumbnailName ?? propertyName,
-        initialValue: autoConfig
-          ? autoLabel.toLocaleLowerCase()
-          : isDefault
-            ? "D"
-            : (propertyConfig.initialValueLabel ?? value),
+        initialValue,
+        initialValueTitle:
+          !autoConfig && isDefault ? defaultInitialValueLabel : initialValue,
         initialValueColor: autoConfig ? "mu" : selected ? "ac-fg" : "fg",
         trackMode: autoConfig ? "auto" : "keyframes",
         keyframes: propertyConfig.keyframes,
@@ -563,7 +573,7 @@ export const selectViewData = ({ state, props, props: attrs, i18n = {} }) => {
       nextProperty.auto = {
         ...property.auto,
         duration: propertyDuration,
-        easingLabel: formatEasingLabel(property.auto.easing),
+        easingLabel: formatEasingLabel(property.auto.easing, linearEasingLabel),
         widthPercent: autoWidthPercent.toFixed(2),
       };
       nextProperty.fillerWidthPercent = Math.max(
@@ -627,7 +637,10 @@ export const selectViewData = ({ state, props, props: attrs, i18n = {} }) => {
             return {
               ...keyframe,
               easing: keyframe.easing ?? "linear",
-              easingLabel: formatEasingLabel(keyframe.easing ?? "linear"),
+              easingLabel: formatEasingLabel(
+                keyframe.easing ?? "linear",
+                linearEasingLabel,
+              ),
               startValueLabel:
                 keyframe.startValueLabel ??
                 formatKeyframeValue({
@@ -717,6 +730,7 @@ export const selectViewData = ({ state, props, props: attrs, i18n = {} }) => {
     usedDuration,
     usedDurationStyle,
     editable: attrs.editable,
+    noKeyframesLabel: animationCopy.noKeyframesLabel ?? "No keyframes",
   };
 
   return result;

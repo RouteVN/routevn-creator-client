@@ -3307,7 +3307,9 @@ export const handleCaptureAnimationCanvas = async (deps) => {
       `${animationName}.png`,
       {
         title: copy.saveAnimationCanvasTitle ?? "Save animation canvas",
-        filters: [{ name: "PNG Image", extensions: ["png"] }],
+        filters: [
+          { name: copy.pngFileTypeName ?? "PNG Image", extensions: ["png"] },
+        ],
       },
     );
     if (!savedPath) {

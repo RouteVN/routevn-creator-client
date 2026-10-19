@@ -163,7 +163,7 @@ export const handleDownloadAssetPackageButtonClick = async (deps) => {
     outputPath = await appService.saveFilePicker({
       title: copy.saveAssetPackageTitle,
       defaultPath: "asset-package.zip",
-      filters: [{ name: "ZIP Archive", extensions: ["zip"] }],
+      filters: [{ name: copy.zipFileTypeName, extensions: ["zip"] }],
     });
   } catch (error) {
     console.error("[asset-package] Failed to choose an export path.", error);

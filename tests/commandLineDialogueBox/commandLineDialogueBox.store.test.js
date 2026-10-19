@@ -18,7 +18,7 @@ import {
   setCustomizeTextSpeed,
   setTextSpeed,
 } from "../../src/components/commandLineDialogueBox/commandLineDialogueBox.store.js";
-import { EN_I18N, JA_I18N, ZH_HANS_I18N } from "../support/i18n.js";
+import { EN_I18N, JA_I18N, PT_I18N, ZH_HANS_I18N } from "../support/i18n.js";
 
 const selectTestViewData = ({ state, props }) =>
   selectViewData({ state, props, i18n: EN_I18N });
@@ -980,6 +980,34 @@ describe("commandLineDialogueBox.store", () => {
         },
       ],
     });
+  });
+
+  it("names sprite groups without a name by their position in the active locale", () => {
+    const state = createInitialState();
+    setSpriteCharacterId({ state }, { characterId: "character-1" });
+    const props = {
+      layouts: [],
+      characters: [
+        {
+          id: "character-1",
+          type: "character",
+          name: "Character One",
+          spriteGroups: [{ id: "body", name: "Body" }, { id: "face" }],
+          sprites: { tree: [], items: {} },
+        },
+      ],
+    };
+
+    const groupNames = (i18n) =>
+      selectViewData({
+        state,
+        props,
+        i18n,
+      }).selectedSpriteCharacter.spriteGroupBoxes.map((group) => group.name);
+
+    expect(groupNames(EN_I18N)).toEqual(["Body", "Group 2"]);
+    expect(groupNames(PT_I18N)).toEqual(["Body", "Grupo 2"]);
+    expect(groupNames(JA_I18N)).toEqual(["Body", "グループ2"]);
   });
 
   it("derives animation mode from the selected animation and clears it", () => {

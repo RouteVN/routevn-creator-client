@@ -186,10 +186,10 @@ template:
                                                           - $if item.isProcessing:
                                                               - $if item.useFullWidthImageCard:
                                                                   - 'rtgl-view w=f bw=xs bc=bo bgc=mu av=c ah=c style="aspect-ratio: ${item.previewAspectRatio};"':
-                                                                      - rtgl-text s=sm c=fg: Processing...
+                                                                      - rtgl-text s=sm c=fg: ${viewCopy.processingLabel}
                                                                 $else:
                                                                   - rtgl-view w=f h=${imageHeight} bw=xs bc=bo bgc=mu av=c ah=c:
-                                                                      - rtgl-text s=sm c=fg: Processing...
+                                                                      - rtgl-text s=sm c=fg: ${viewCopy.processingLabel}
                                                             $elif item.useFullWidthImageCard:
                                                               - 'div.mediaImageThumbnailTransparencyGrid style="display: block; width: 100%; aspect-ratio: ${item.previewAspectRatio}; overflow: hidden;"':
                                                                   - $if lazyImageCards && item.shouldLazyLoadPreview:
@@ -213,20 +213,20 @@ template:
                                                           - 'rtgl-view w=f style="aspect-ratio: ${item.previewAspectRatio}; overflow: hidden;"':
                                                               - $if item.isProcessing:
                                                                   - rtgl-view w=f h=f bw=xs bc=bo av=c ah=c:
-                                                                      - rtgl-text s=sm c=mu-fg: Processing...
+                                                                      - rtgl-text s=sm c=mu-fg: ${viewCopy.processingLabel}
                                                                 $elif item.thumbnailFileId:
                                                                   - rvn-file-image w=f h=f fileId=${item.thumbnailFileId}: null
                                                                 $else:
                                                                   - rtgl-view w=f h=f bw=xs bc=bo av=c ah=c:
-                                                                      - rtgl-text s=xs c=mu-fg: No thumbnail
+                                                                      - rtgl-text s=xs c=mu-fg: ${viewCopy.noThumbnailLabel}
                                                         $elif item.isProcessing:
                                                           - rtgl-view w=f h=${mediaHeight} bw=xs bc=bo av=c ah=c:
-                                                              - rtgl-text s=sm c=mu-fg: Processing...
+                                                              - rtgl-text s=sm c=mu-fg: ${viewCopy.processingLabel}
                                                         $elif item.thumbnailFileId:
                                                           - rvn-file-image w=f h=${mediaHeight} fileId=${item.thumbnailFileId}: null
                                                         $else:
                                                           - rtgl-view w=f h=${mediaHeight} bw=xs bc=bo av=c ah=c:
-                                                              - rtgl-text s=xs c=mu-fg: No thumbnail
+                                                              - rtgl-text s=xs c=mu-fg: ${viewCopy.noThumbnailLabel}
                                                       - $if item.showPreviewIcon:
                                                           - 'rtgl-view#previewActionRef${gIndex}x${itemIndex} data-item-id=${item.id} br=f w=32 h=32 pos=abs z=2 ah=c av=c cur=pointer style="top: 6px; right: 6px; background-color: #000;"':
                                                               - rtgl-svg svg=play wh=24 c=white: null
@@ -238,24 +238,24 @@ template:
                                                           - 'rtgl-view#soundPreviewRef${item.refKey} w=f style="aspect-ratio: ${item.previewAspectRatio}; overflow: hidden;"':
                                                               - $if item.isProcessing:
                                                                   - rtgl-view w=f h=f bw=xs bc=bo av=c ah=c:
-                                                                      - rtgl-text s=sm c=mu-fg: Processing...
+                                                                      - rtgl-text s=sm c=mu-fg: ${viewCopy.processingLabel}
                                                                 $elif item.shouldRenderWaveform:
                                                                   - rvn-waveform-visualizer#waveformRef${item.refKey} waveformDataFileId=${item.waveformDataFileId} w=f h=f: null
                                                                 $elif item.waveformDataFileId:
                                                                   - rtgl-view w=f h=f bw=xs bc=bo bgc=mu: null
                                                                 $else:
                                                                   - rtgl-view w=f h=f bw=xs bc=bo av=c ah=c:
-                                                                      - rtgl-text s=xs c=mu-fg: No waveform
+                                                                      - rtgl-text s=xs c=mu-fg: ${viewCopy.noWaveformLabel}
                                                         $elif item.isProcessing:
                                                           - rtgl-view w=f h=${mediaHeight} bw=xs bc=bo av=c ah=c:
-                                                              - rtgl-text s=sm c=mu-fg: Processing...
+                                                              - rtgl-text s=sm c=mu-fg: ${viewCopy.processingLabel}
                                                         $elif item.shouldRenderWaveform:
                                                           - rvn-waveform-visualizer#waveformRef${item.refKey} waveformDataFileId=${item.waveformDataFileId} w=f h=${mediaHeight}: null
                                                         $elif item.waveformDataFileId:
                                                           - rtgl-view w=f h=${mediaHeight} bw=xs bc=bo bgc=mu: null
                                                         $else:
                                                           - rtgl-view w=f h=${mediaHeight} bw=xs bc=bo av=c ah=c:
-                                                              - rtgl-text s=xs c=mu-fg: No waveform
+                                                              - rtgl-text s=xs c=mu-fg: ${viewCopy.noWaveformLabel}
                                                       - $if item.showPreviewIcon:
                                                           - 'rtgl-view#previewActionRef${gIndex}x${itemIndex} data-item-id=${item.id} br=f w=32 h=32 pos=abs z=2 ah=c av=c cur=pointer style="top: 6px; right: 6px; background-color: #000;"':
                                                               - rtgl-svg svg=play wh=24 c=white: null
@@ -267,12 +267,12 @@ template:
                                                           - 'rtgl-view w=f style="aspect-ratio: ${item.previewAspectRatio}; overflow: hidden;"':
                                                               - $if item.isProcessing:
                                                                   - rtgl-view w=f h=f bw=xs bc=bo av=c ah=c:
-                                                                      - rtgl-text s=sm c=mu-fg: Processing...
+                                                                      - rtgl-text s=sm c=mu-fg: ${viewCopy.processingLabel}
                                                                 $else:
                                                                   - rvn-font-preview mode=thumbnail :fontFamily=${item.fontFamily} previewText="${item.previewText}" fileId=${item.fontFileId} :fontWeightDescriptor=${item.fontWeightDescriptor} fontWeight=${item.fontWeight} fontSize=60 width=f height=f padding=8 av=c ah=c: null
                                                         $elif item.isProcessing:
                                                           - rtgl-view w=f h=${mediaHeight} bw=xs bc=bo av=c ah=c:
-                                                              - rtgl-text s=sm c=mu-fg: Processing...
+                                                              - rtgl-text s=sm c=mu-fg: ${viewCopy.processingLabel}
                                                         $else:
                                                           - rvn-font-preview mode=thumbnail :fontFamily=${item.fontFamily} previewText="${item.previewText}" fileId=${item.fontFileId} :fontWeightDescriptor=${item.fontWeightDescriptor} fontWeight=${item.fontWeight} fontSize=60 width=${item.fontPreviewWidth} height=${mediaHeight} av=c ah=c: null
                                                       - rtgl-view w=f p=md:
@@ -289,7 +289,7 @@ template:
                               - 'rtgl-view d=h av=c pos=abs w=f h=f bw=md bc=pr style="top: 0; bottom: 0; left: 0; right: 0;"':
                                   - 'rtgl-view pos=abs w=f h=f bgc=se op="0.5" style="top: 0; bottom: 0; left: 0; right: 0;"': null
                                   - rtgl-view w=f h=f av=c ah=c pos=rel z=1:
-                                      - rtgl-text s=lg: Drop files to upload to ${group.fullLabel}
+                                      - rtgl-text s=lg: ${group.dropFilesLabel}
             $elif searchQuery || selectedTagFilterValues.length > 0:
               - rtgl-view w=f h=400 av=c ah=c:
                   - rtgl-text s=lg c=mu-fg: ${emptyMessage}
@@ -300,15 +300,15 @@ template:
                           - rtgl-svg svg=${uploadIcon} wh=24: null
                           - rtgl-text: ${uploadText}
                     $else:
-                      - rtgl-text s=lg c=mu-fg: No data
+                      - rtgl-text s=lg c=mu-fg: ${viewCopy.noDataMessage}
           - $if groups.length > 0:
               - 'rtgl-view w=f h="${scrollBottomPadding}" style="flex-shrink: 0;"': null
   - rtgl-popover#tagFilterPopover ?open=${tagFilterPopover.isOpen} x=${tagFilterPopover.position.x} y=${tagFilterPopover.position.y} place=be content-w=320 content-g=sm content-sv=true content-ph=md content-pv=md:
       - $if showFilterPopoverSearch:
-          - rtgl-text s=md: Filter
+          - rtgl-text s=md: ${viewCopy.filterLabel}
           - rtgl-input#searchInput s=sm placeholder=${searchPlaceholder} value=${searchQuery} w=f: null
       - $if !tagFilterPopover.hasOptions:
-          - rtgl-text s=sm c=mu-fg: No tags available
+          - rtgl-text s=sm c=mu-fg: ${viewCopy.noTagsAvailableMessage}
       - $if tagFilterPopover.hasOptions:
           - rtgl-view d=h wrap g=sm w=f:
               - $for option, i in tagFilterPopover.options:
@@ -317,11 +317,11 @@ template:
                           ${option.label}
       - rtgl-view d=h av=c g=sm w=f pt=sm:
           - rtgl-view w=1fg: null
-          - rtgl-button#tagFilterClear v=se s=sm ?disabled=${tagFilterPopover.clearDisabled}: Clear
-          - rtgl-button#tagFilterApply v=pr s=sm: Save
+          - rtgl-button#tagFilterClear v=se s=sm ?disabled=${tagFilterPopover.clearDisabled}: ${viewCopy.clearButton}
+          - rtgl-button#tagFilterApply v=pr s=sm: ${viewCopy.saveButton}
   - $if showZoomPopover:
       - rtgl-popover#zoomPopover ?open=${zoomPopover.isOpen} x=${zoomPopover.position.x} y=${zoomPopover.position.y} place=be content-w=260 content-g=sm content-ph=md content-pv=md:
-          - rtgl-text s=md: Zoom
+          - rtgl-text s=md: ${viewCopy.zoomLabel}
           - rtgl-view d=h av=c g=sm w=f:
               - rtgl-button#zoomOut sq v=ol: '-'
               - rtgl-slider#zoomSlider w=160 min=${zoomControlMin} max=${zoomControlMax} step=${zoomControlStep} value=${zoomControlValue}: null

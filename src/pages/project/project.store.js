@@ -21,8 +21,8 @@ import {
 import { buildProjectAnalytics } from "./support/projectAnalytics.js";
 import { selectProjectPageCopy } from "./support/projectPageCopy.js";
 
-const formatCount = (value) =>
-  Math.max(0, Math.trunc(Number(value) || 0)).toLocaleString();
+const formatCount = (value, intlLocale) =>
+  Math.max(0, Math.trunc(Number(value) || 0)).toLocaleString(intlLocale);
 
 export const createInitialState = () => ({
   platform: "web",
@@ -173,6 +173,7 @@ export const selectIsEditIconCropDialogOpen = ({ state }) => {
 
 export const selectViewData = ({ state, i18n }) => {
   const copy = selectProjectPageCopy(i18n);
+  const intlLocale = i18n?.dateTime?.intlLocale;
   const resourceTypeCopy = i18n.resourceTypes ?? {};
   const projectLanguageCopy = selectProjectLanguageCopy(i18n);
   const showCharacterCount =
@@ -304,27 +305,27 @@ export const selectViewData = ({ state, i18n }) => {
       resources: group.resources.map(({ key, count }) => ({
         key,
         label: resourceTypeCopy[key] ?? key,
-        count: formatCount(count),
+        count: formatCount(count, intlLocale),
       })),
     })),
     characterResources: state.analytics.characterResources.map((character) => ({
       id: character.id,
       name: character.name,
-      spriteCount: formatCount(character.spriteCount),
+      spriteCount: formatCount(character.spriteCount, intlLocale),
     })),
     sceneTextStats: sceneTextStats.map((scene) => ({
       ...scene,
-      lineCount: formatCount(scene.lineCount),
-      textCount: formatCount(scene.textCount),
+      lineCount: formatCount(scene.lineCount, intlLocale),
+      textCount: formatCount(scene.textCount, intlLocale),
     })),
-    sceneCount: formatCount(state.analytics.scenes.length),
+    sceneCount: formatCount(state.analytics.scenes.length, intlLocale),
     sceneCountLabel: copy.scenesTitle,
     sceneTextCountLabel: showCharacterCount
       ? copy.charactersLabel
       : copy.wordsLabel,
     sceneLineCountLabel: copy.linesLabel,
-    totalLineCount: formatCount(totalLineCount),
-    totalTextCount: formatCount(totalTextCount),
+    totalLineCount: formatCount(totalLineCount, intlLocale),
+    totalTextCount: formatCount(totalTextCount, intlLocale),
     hasSceneTextError,
     isSceneTextLoading,
     showNativeProjectActions:

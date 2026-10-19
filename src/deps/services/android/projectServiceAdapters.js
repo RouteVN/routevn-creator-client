@@ -866,7 +866,9 @@ export const createAndroidProjectServiceAdapters = ({
       return filePicker.saveFilePicker({
         title: options.title || "Save Distribution ZIP",
         defaultPath: `${zipName}.zip`,
-        filters: [{ name: "ZIP Archive", extensions: ["zip"] }],
+        filters: [
+          { name: options.fileTypeName ?? "ZIP Archive", extensions: ["zip"] },
+        ],
         mimeType: "application/zip",
       });
     },

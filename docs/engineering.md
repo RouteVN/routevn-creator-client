@@ -65,6 +65,12 @@ hook and CI run it too. The `i18n` workflow also runs it on every push to
 other. When you add or change an English string, add the same key to every
 locale in the same pull request.
 
+A catalog key must not contain `.`, because Rettangoli reads it as a nested
+path and the build then reports the key as missing in every other locale.
+`check:i18n` reports such keys. When English text is used as the lookup key,
+as in the scene editor forms, map text that contains a period to a camelCase
+key in `COMMAND_LINE_COPY_KEYS`.
+
 Rettangoli passes `i18n` into store selectors and handler deps. Do not pass
 page-level `copy` objects through component props only to localize a child
 component. Components that render or compute their own copy should read from
@@ -80,6 +86,23 @@ and docs copy.
 For Simplified Chinese localization, follow the RouteVN Simplified Chinese
 translation style guide. Use it as the terminology and tone reference for
 RouteVN `zh-hans` UI and docs copy.
+
+For Russian localization, follow the RouteVN Russian translation style guide.
+Use it as the terminology and tone reference for RouteVN `ru` UI copy.
+
+For Portuguese localization, follow the RouteVN Portuguese translation style
+guide. The `pt` catalog uses one neutral Portuguese for Brazil and Portugal, so
+use it as the terminology and tone reference for RouteVN `pt` UI copy.
+
+Rettangoli UI form validation errors, such as the required-field message, come
+from the `formValidation` catalog namespace. The app passes it to Rettangoli UI
+as `window.rtglFormMessages` on mount and on every locale change; a field's own
+`required.message` or rule `message` still takes precedence.
+
+Keep a count inside its catalog template, such as `"{count} actions"`, instead
+of joining a number and a translated word in code. Russian has three plural
+forms, so its catalog writes counts as a label followed by the number, such as
+`Строк: {count}`, and needs to move the number.
 
 ## Code Style
 
@@ -421,7 +444,50 @@ Page handlers should not repeat route-level repository boot logic.
 Pages that must persist local work before leaving should register that work with
 `appService.registerBeforeNavigation(...)` during mount and unregister it during
 cleanup. Do not rely on asynchronous page cleanup for data required by the
-destination page.
+destination page. Work that can outlive its page, such as a resource upload
+batch, registers for its own duration instead, so leaving the project waits
+for it, within a time limit and with a progress message, while moving between
+pages of the same project does not.
+
+When the preparations for a move to another page take more than 0.3 seconds,
+`appService.prepareNavigation` shows a "Saving your changes…" progress dialog
+(`appPage.savingChangesTitle` and `savingChangesMessage`) and closes it when
+they finish, so a slow save does not leave the page looking frozen. The app
+going to the background or quitting has no destination page and shows nothing.
+A preparation that is long for its own reason, such as an upload batch, can
+show a dialog with its own words; it replaces this one.
+
+A preparation that throws cancels the navigation, and the user sees nothing for
+a link or sidebar click. Saving before the app goes to the background or quits
+cannot wait on a failure at all; it only reports it. A page whose save can fail
+should therefore handle the failure itself and resolve: drop only the changes
+that failed, tell the user with a localized alert that names the location and
+carries the error details, and report the error. The Scene and Layout editors
+do this.
+
+### Project Change Order
+
+Every change to a project goes through the command API, which runs changes one
+at a time, in the order they are made. A change is checked against the project
+state when it starts, so a change made while another one is saving is checked
+against the state that one leaves. A change that fails does not hold up the
+next one.
+
+- A change belongs to the project that is open when it is made. It keeps that
+  project's id and repository while it waits, and runs with them, whatever the
+  route names by then: a route leaves a project before the project is closed.
+- `projectService.releaseProjectRuntime` waits for the changes still waiting to
+  run, and those they lead to, then closes the project as a step among the
+  changes (`commandApi.runAfterChanges`), whether the project is left,
+  switched, exported or deleted. A change made while it closes waits for that
+  step and is then refused and reported (`projectCommand.projectClosed`), never
+  run in a closing or another project. Opening the next project waits for the
+  release.
+- A change still running after 60 seconds holds up every change after it, so it
+  is reported (`projectCommand.slowChange`) and left to finish.
+- A command, or the closing step, must not call a command API method that
+  changes the project: it would wait for itself. Commands share helpers through
+  `commandApi/shared.js` instead.
 
 ### Project-Backed Page Rendering
 
@@ -1389,11 +1455,23 @@ and load them into the editor with `replaceLines`, since setting `lines` keeps
 a focused editor's own text; the caret goes where the text changed. The draft
 flush saves them, and restored lines are marked (`actionLineIds`) so it saves
 their whole actions, not only their dialogue. A line action command reads its
-line before anything is awaited, then saves pending drafts without waiting for
-the save interval, and does not run when that save fails. A draft that is still
-dirty afterwards, from typing during the save, takes the command's saved
-actions for its line, so the command shows at once and its step holds only its
-change. The shortcuts also work in the editor's own text, through
+line id before anything is awaited and takes its place in the save queue at
+once (`runAfterSceneEditorDraftSave`), so a later save runs after it and
+leaving the page waits for it. In its turn it first saves the pending drafts,
+without waiting for the save interval, so a new line is stored before its
+actions change. It does not run when that save fails outright, or when its
+line is then neither on the page nor stored: the line's section could not be
+saved, which the save failure alert already says, or the line or its section
+was deleted before the command's turn. A command for a line the page still
+shows, but the project does not have, is not skipped: the command API refuses
+it with `Could not resolve scene partition for line command`, which goes on
+to be reported, so a cause that is not known stays visible. However a command
+ends, saved, refused, failed or skipped, the actions dialog's line is let go,
+since the dialog hides on submit, so that undo is not held off. Commands can wait behind each other, so
+the page counts the ones still pending and undo waits for all of them. A draft
+that is still dirty afterwards, from typing during the save, takes the
+command's saved actions for its line, so the command shows at once and its
+step holds only its change. The shortcuts also work in the editor's own text, through
 `resolveEditHistoryShortcut`'s `textEditorTagName`; Lexical's own undo stays
 off. On phones the keyboard toolbar has Undo and Redo, which keep the
 keyboard open, and a More menu with Preview, Sections, and Settings; the menu
@@ -1748,6 +1826,15 @@ The Lexical document editor must not own:
 - split/merge/create/delete persistence workflows
 - scene-specific badge/preview shaping
 
+Software keyboards keep their own model of the text, including the range they
+are composing. The primitive keeps the browser's composition intact. A delete
+that arrives while a keyboard composes is left to the browser when it stays
+inside the caret's text node: Lexical would end its composition and rewrite the
+node, which drops the browser's composition without a compositionend, and the
+keyboard's next update inserted its word again. The editor leaves composition
+mode when the browser shows that the composition is gone. See TXT-017 in the
+[scene text editor specifications](scene-text-editor-spec.md).
+
 Scene editor draft persistence uses latest-wins coalescing for draft flushes:
 if a running flush already has a pending replacement, the newer pending flush
 replaces it. This coalesces scheduled draft tasks, not generated commands.
@@ -1796,6 +1883,11 @@ repository-state reconciliation cannot accidentally clear the active throttle
 window. The same minimum-interval check runs inside the queued draft-flush task
 before `syncSectionLinesSnapshot()` is called, so a task already accepted by the
 latest-task queue still reschedules instead of writing too soon.
+
+Leaving the scene editor for another page saves its drafts and then waits for
+saves already queued, such as a line action still waiting behind a slow save,
+so that the action reaches the project the page showed, not the next one
+opened.
 
 The app saves the open page when it leaves the user's hands.
 `appService.saveBeforeSuspend` runs the before-navigation hooks with the

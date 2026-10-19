@@ -26,6 +26,7 @@
 		2A0000010000000000000026 /* FileDownloader.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2A0000010000000000000023 /* FileDownloader.swift */; };
 		2A0000010000000000000028 /* CodedError.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2A0000010000000000000027 /* CodedError.swift */; };
 		2A000001000000000000002A /* TransferProgress.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2A0000010000000000000029 /* TransferProgress.swift */; };
+		2A000001000000000000002D /* RendererLossGuard.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2A000001000000000000002C /* RendererLossGuard.swift */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXFileReference section */
@@ -48,6 +49,7 @@
 		2A0000010000000000000023 /* FileDownloader.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FileDownloader.swift; sourceTree = "<group>"; };
 		2A0000010000000000000027 /* CodedError.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CodedError.swift; sourceTree = "<group>"; };
 		2A0000010000000000000029 /* TransferProgress.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TransferProgress.swift; sourceTree = "<group>"; };
+		2A000001000000000000002C /* RendererLossGuard.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RendererLossGuard.swift; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -87,6 +89,7 @@
 				2A0000010000000000000023 /* FileDownloader.swift */,
 				2A0000010000000000000027 /* CodedError.swift */,
 				2A0000010000000000000029 /* TransferProgress.swift */,
+				2A000001000000000000002C /* RendererLossGuard.swift */,
 				2A0000010000000000000012 /* Info.plist */,
 				2A000001000000000000001A /* PrivacyInfo.xcprivacy */,
 				2A0000010000000000000015 /* Assets.xcassets */,
@@ -220,6 +223,7 @@
 				2A0000010000000000000026 /* FileDownloader.swift in Sources */,
 				2A0000010000000000000028 /* CodedError.swift in Sources */,
 				2A000001000000000000002A /* TransferProgress.swift in Sources */,
+				2A000001000000000000002D /* RendererLossGuard.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};

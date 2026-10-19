@@ -12,14 +12,6 @@ const formatDimensionLabel = (width, height) => {
   return `${Math.round(width)} × ${Math.round(height)}`;
 };
 
-const capitalize = (value = "") => {
-  if (!value) {
-    return "";
-  }
-
-  return `${value.charAt(0).toUpperCase()}${value.slice(1)}`;
-};
-
 const getSourceKindLabel = (kind, copy = {}) => {
   switch (kind) {
     case "point":
@@ -40,6 +32,12 @@ const getEmissionModeLabel = (mode, copy = {}) => {
     : (copy.emissionModeContinuous ?? "Continuous");
 };
 
+const TEXTURE_SELECTOR_COPY_KEYS = {
+  single: "textureSelectorSingle",
+  random: "textureSelectorRandom",
+  cycle: "textureSelectorCycle",
+};
+
 const summarizeTexture = (texture, imageItems = {}, copy = {}) => {
   if (!texture) {
     return copy.notSetValue ?? "Not set";
@@ -50,7 +48,7 @@ const summarizeTexture = (texture, imageItems = {}, copy = {}) => {
   }
 
   if (texture?.mode) {
-    return `${capitalize(texture.mode)} ${copy.selectorLabel ?? "selector"}`;
+    return copy[TEXTURE_SELECTOR_COPY_KEYS[texture.mode]] ?? texture.mode;
   }
 
   return copy.legacyShapeValue ?? "Legacy shape";

@@ -176,14 +176,14 @@ const getProjectExportTitle = ({ projectInfo, applicationInfo } = {}) => {
   );
 };
 
-const UNKNOWN_ERROR_MESSAGE =
-  "Unknown error. Check the developer console for details.";
 const WINDOWS_EXPORT_COMMAND_RESTART_MESSAGE =
   "The running Tauri shell does not include Windows export commands. Restart the Tauri dev process so the native shell rebuilds.";
 const MACOS_EXPORT_COMMAND_RESTART_MESSAGE =
   "The running Tauri shell does not include the macOS export command. Restart the Tauri dev process so the native shell rebuilds.";
 
-const getErrorMessage = (error, fallback = UNKNOWN_ERROR_MESSAGE) => {
+// The error's own text, or the localized unknown-error text when it has none.
+const getErrorMessage = (error, copy) => {
+  const fallback = copy.unknownErrorDetails;
   if (typeof error === "string") {
     return error.trim() || fallback;
   }
@@ -203,8 +203,8 @@ const getErrorMessage = (error, fallback = UNKNOWN_ERROR_MESSAGE) => {
   return fallback;
 };
 
-const getWindowsExportErrorMessage = (error) => {
-  const message = getErrorMessage(error);
+const getWindowsExportErrorMessage = (error, copy) => {
+  const message = getErrorMessage(error, copy);
   if (
     /^Command export_windows_(portable_executable|installer_from_project) not found$/.test(
       message,
@@ -216,8 +216,8 @@ const getWindowsExportErrorMessage = (error) => {
   return message;
 };
 
-const getMacosExportErrorMessage = (error) => {
-  const message = getErrorMessage(error);
+const getMacosExportErrorMessage = (error, copy) => {
+  const message = getErrorMessage(error, copy);
   if (
     /^Command (get_macos_export_host_capabilities|export_macos_application) not found$/.test(
       message,
@@ -228,21 +228,31 @@ const getMacosExportErrorMessage = (error) => {
   return message;
 };
 
-const getMacosExportUnavailableMessage = (availability = {}) => {
+const getMacosExportUnavailableMessage = (availability = {}, copy = {}) => {
   if (!availability.hostSupported) {
-    return "macOS application export is supported only on macOS.";
+    return (
+      copy.macosExportHostUnsupported ??
+      "macOS application export is supported only on macOS."
+    );
   }
 
   if (availability.capabilityCheckError) {
-    return getMacosExportErrorMessage(availability.capabilityCheckError);
+    return getMacosExportErrorMessage(availability.capabilityCheckError, copy);
   }
 
   if (availability.templateCheckError) {
-    return `Unable to verify the bundled macOS player template: ${availability.templateCheckError}`;
+    return formatI18nCopy(
+      copy.macosTemplateCheckFailed ??
+        "Unable to verify the bundled macOS player template: {message}",
+      { message: availability.templateCheckError },
+    );
   }
 
   if (!availability.templateAvailable) {
-    return "The macOS player template is not bundled with this Creator build.";
+    return (
+      copy.macosTemplateMissing ??
+      "The macOS player template is not bundled with this Creator build."
+    );
   }
 
   const missingTools = [
@@ -256,15 +266,22 @@ const getMacosExportUnavailableMessage = (availability = {}) => {
     .map(([name]) => name);
 
   if (missingTools.length > 0) {
-    return `macOS application export requires these system tools: ${missingTools.join(", ")}.`;
+    return formatI18nCopy(
+      copy.macosToolsMissing ??
+        "macOS application export requires these system tools: {tools}.",
+      { tools: missingTools.join(", ") },
+    );
   }
 
-  return "macOS application export is not available in this Creator build.";
+  return (
+    copy.macosExportUnavailable ??
+    "macOS application export is not available in this Creator build."
+  );
 };
 
-const formatWindowsExportErrorCopy = ({ template, error }) =>
+const formatWindowsExportErrorCopy = ({ template, error, copy }) =>
   formatI18nCopy(template, {
-    message: getWindowsExportErrorMessage(error),
+    message: getWindowsExportErrorMessage(error, copy),
   });
 
 const getPlatformDetailsValidationMessage = (code, copy) => {
@@ -413,9 +430,10 @@ const logWindowsExportError = ({
   outputPath,
   windowsFileVersion,
   replay,
+  copy,
 } = {}) => {
   console.error(`Version Windows ${exportType} export failed`, {
-    errorMessage: getWindowsExportErrorMessage(error),
+    errorMessage: getWindowsExportErrorMessage(error, copy),
     versionId,
     versionName: version?.name,
     versionActionIndex: version?.actionIndex,
@@ -870,12 +888,21 @@ export const handleExportConfirmationClose = (deps) => {
   render();
 };
 
-const formatBundleByteCount = (value) => {
+// Whole kilobytes below 1 MB, then megabytes with one decimal, with the
+// number formatted for the `dateTime` catalog of the active locale.
+const formatBundleByteCount = (value, { intlLocale = "en-US" } = {}) => {
   const bytes = Number(value) || 0;
   if (bytes < 1024 * 1024) {
-    return `${Math.round(bytes / 1024)} KB`;
+    const kilobytes = new Intl.NumberFormat(intlLocale, {
+      maximumFractionDigits: 0,
+    }).format(bytes / 1024);
+    return `${kilobytes} KB`;
   }
-  return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
+  const megabytes = new Intl.NumberFormat(intlLocale, {
+    minimumFractionDigits: 1,
+    maximumFractionDigits: 1,
+  }).format(bytes / (1024 * 1024));
+  return `${megabytes} MB`;
 };
 
 const formatBundleElapsedTime = (value) => {
@@ -889,7 +916,7 @@ const formatBundleElapsedTime = (value) => {
   return `${Math.floor(elapsedSeconds / 60)}m ${elapsedSeconds % 60}s`;
 };
 
-const createBundleProgressView = ({ copy, progress } = {}) => {
+const createBundleProgressView = ({ copy, dateTime, progress } = {}) => {
   const current = Math.max(0, Number(progress?.current) || 0);
   const total = Math.max(0, Number(progress?.total) || 0);
   const determinateProgress = total > 0 ? { current, total } : {};
@@ -937,8 +964,8 @@ const createBundleProgressView = ({ copy, progress } = {}) => {
           copy.bundleWritingPackageStatus ??
             "Writing package... {current} / {total}",
           {
-            current: formatBundleByteCount(current),
-            total: formatBundleByteCount(total),
+            current: formatBundleByteCount(current, dateTime),
+            total: formatBundleByteCount(total, dateTime),
           },
         ),
       ),
@@ -961,7 +988,11 @@ const createBundleProgressView = ({ copy, progress } = {}) => {
   };
 };
 
-const createMacosApplicationProgressView = ({ copy, progress } = {}) => {
+const createMacosApplicationProgressView = ({
+  copy,
+  dateTime,
+  progress,
+} = {}) => {
   const statusByPhase = {
     prepareApplication:
       copy.macosPreparingApplicationStatus ?? "Preparing application...",
@@ -980,7 +1011,7 @@ const createMacosApplicationProgressView = ({ copy, progress } = {}) => {
   };
   const status = statusByPhase[progress?.phase];
   if (!status) {
-    return createBundleProgressView({ copy, progress });
+    return createBundleProgressView({ copy, dateTime, progress });
   }
 
   const elapsed = formatBundleElapsedTime(progress?.elapsedMs);
@@ -995,7 +1026,11 @@ const createMacosApplicationProgressView = ({ copy, progress } = {}) => {
   };
 };
 
-const createWindowsExecutableProgressView = ({ copy, progress } = {}) => {
+const createWindowsExecutableProgressView = ({
+  copy,
+  dateTime,
+  progress,
+} = {}) => {
   const statusByPhase = {
     prepareExecutable:
       copy.windowsPreparingExecutableStatus ?? "Preparing executable...",
@@ -1007,7 +1042,7 @@ const createWindowsExecutableProgressView = ({ copy, progress } = {}) => {
   };
   const status = statusByPhase[progress?.phase];
   if (!status) {
-    return createBundleProgressView({ copy, progress });
+    return createBundleProgressView({ copy, dateTime, progress });
   }
 
   const elapsed = formatBundleElapsedTime(progress?.elapsedMs);
@@ -1045,12 +1080,15 @@ const runWebExport = async (deps, confirmation) => {
   let outputPath;
 
   try {
-    outputPath = await projectService.promptDistributionZipPath(zipName);
+    outputPath = await projectService.promptDistributionZipPath(zipName, {
+      title: copy.saveZipDialogTitle,
+      fileTypeName: copy.zipFileTypeName,
+    });
   } catch (error) {
     appService.showAlert({
       message: formatI18nCopy(
         copy.failedOpenSaveDialog ?? "Failed to open save dialog: {message}",
-        { message: getErrorMessage(error) },
+        { message: getErrorMessage(error, copy) },
       ),
       title: copy.errorTitle ?? "Error",
     });
@@ -1084,7 +1122,9 @@ const runWebExport = async (deps, confirmation) => {
     });
     const exportOptions = {
       onProgress: (progress) => {
-        progressDialog.update(createBundleProgressView({ copy, progress }));
+        progressDialog.update(
+          createBundleProgressView({ copy, dateTime: i18n.dateTime, progress }),
+        );
       },
     };
     savedPath = outputPath
@@ -1112,7 +1152,7 @@ const runWebExport = async (deps, confirmation) => {
         await appService.discardPendingSaveDocument(outputPath);
       } catch (cleanupError) {
         const combinedError = new Error(
-          `${getErrorMessage(exportError)} ${getErrorMessage(cleanupError)}`,
+          `${getErrorMessage(exportError, copy)} ${getErrorMessage(cleanupError, copy)}`,
           { cause: exportError },
         );
         combinedError.details = exportError?.details;
@@ -1132,10 +1172,10 @@ const runWebExport = async (deps, confirmation) => {
 
     appService.showAlert({
       message: replay
-        ? `${formatReplayFailureMessage({ replay, copy })}\n${getErrorMessage(exportError)}`
+        ? `${formatReplayFailureMessage({ replay, copy })}\n${getErrorMessage(exportError, copy)}`
         : formatI18nCopy(
             copy.failedSaveZipFile ?? "Failed to save ZIP file: {message}",
-            { message: getErrorMessage(exportError) },
+            { message: getErrorMessage(exportError, copy) },
           ),
       title: copy.errorTitle ?? "Error",
     });
@@ -1177,6 +1217,7 @@ const runWindowsExecutableExport = async (deps, confirmation) => {
   } catch (error) {
     appService.showAlert({
       message: formatWindowsExportErrorCopy({
+        copy,
         template:
           copy.failedSaveWindowsExecutable ??
           "Failed to save Windows executable: {message}",
@@ -1196,9 +1237,13 @@ const runWindowsExecutableExport = async (deps, confirmation) => {
   let outputPath;
 
   try {
-    outputPath = await projectService.promptWindowsExecutablePath(exeName);
+    outputPath = await projectService.promptWindowsExecutablePath(exeName, {
+      title: copy.saveWindowsExecutableDialogTitle,
+      fileTypeName: copy.windowsExecutableFileTypeName,
+    });
   } catch (error) {
     logWindowsExportError({
+      copy,
       exportType: "executable save dialog",
       error,
       version,
@@ -1207,6 +1252,7 @@ const runWindowsExecutableExport = async (deps, confirmation) => {
     });
     appService.showAlert({
       message: formatWindowsExportErrorCopy({
+        copy,
         template:
           copy.failedOpenSaveDialog ?? "Failed to open save dialog: {message}",
         error,
@@ -1243,7 +1289,11 @@ const runWindowsExecutableExport = async (deps, confirmation) => {
     const exportOptions = {
       onProgress: (progress) => {
         progressDialog.update(
-          createWindowsExecutableProgressView({ copy, progress }),
+          createWindowsExecutableProgressView({
+            copy,
+            dateTime: i18n.dateTime,
+            progress,
+          }),
         );
       },
     };
@@ -1278,6 +1328,7 @@ const runWindowsExecutableExport = async (deps, confirmation) => {
     const replay = error?.details?.replay;
 
     logWindowsExportError({
+      copy,
       exportType: "executable",
       error,
       version,
@@ -1289,8 +1340,9 @@ const runWindowsExecutableExport = async (deps, confirmation) => {
 
     appService.showAlert({
       message: replay
-        ? `${formatReplayFailureMessage({ replay, copy })}\n${getErrorMessage(error)}`
+        ? `${formatReplayFailureMessage({ replay, copy })}\n${getErrorMessage(error, copy)}`
         : formatWindowsExportErrorCopy({
+            copy,
             template:
               copy.failedSaveWindowsExecutable ??
               "Failed to save Windows executable: {message}",
@@ -1321,6 +1373,7 @@ const runWindowsInstallerExport = async (deps, confirmation) => {
   } catch (error) {
     appService.showAlert({
       message: formatWindowsExportErrorCopy({
+        copy,
         template:
           copy.failedSaveWindowsInstaller ??
           "Failed to save Windows installer: {message}",
@@ -1340,9 +1393,16 @@ const runWindowsInstallerExport = async (deps, confirmation) => {
   let outputPath;
 
   try {
-    outputPath = await projectService.promptWindowsInstallerPath(installerName);
+    outputPath = await projectService.promptWindowsInstallerPath(
+      installerName,
+      {
+        title: copy.saveWindowsInstallerDialogTitle,
+        fileTypeName: copy.windowsInstallerFileTypeName,
+      },
+    );
   } catch (error) {
     logWindowsExportError({
+      copy,
       exportType: "installer save dialog",
       error,
       version,
@@ -1351,6 +1411,7 @@ const runWindowsInstallerExport = async (deps, confirmation) => {
     });
     appService.showAlert({
       message: formatWindowsExportErrorCopy({
+        copy,
         template:
           copy.failedOpenSaveDialog ?? "Failed to open save dialog: {message}",
         error,
@@ -1411,6 +1472,7 @@ const runWindowsInstallerExport = async (deps, confirmation) => {
     const replay = error?.details?.replay;
 
     logWindowsExportError({
+      copy,
       exportType: "installer",
       error,
       version,
@@ -1422,8 +1484,9 @@ const runWindowsInstallerExport = async (deps, confirmation) => {
 
     appService.showAlert({
       message: replay
-        ? `${formatReplayFailureMessage({ replay, copy })}\n${getErrorMessage(error)}`
+        ? `${formatReplayFailureMessage({ replay, copy })}\n${getErrorMessage(error, copy)}`
         : formatWindowsExportErrorCopy({
+            copy,
             template:
               copy.failedSaveWindowsInstaller ??
               "Failed to save Windows installer: {message}",
@@ -1456,7 +1519,7 @@ const runMacosApplicationExport = async (deps, confirmation) => {
       message: formatI18nCopy(
         copy.failedSaveMacosApplication ??
           "Failed to save macOS application: {message}",
-        { message: getMacosExportErrorMessage(error) },
+        { message: getMacosExportErrorMessage(error, copy) },
       ),
       title: copy.errorTitle ?? "Error",
     });
@@ -1468,7 +1531,7 @@ const runMacosApplicationExport = async (deps, confirmation) => {
       message: formatI18nCopy(
         copy.failedSaveMacosApplication ??
           "Failed to save macOS application: {message}",
-        { message: getMacosExportUnavailableMessage(availability) },
+        { message: getMacosExportUnavailableMessage(availability, copy) },
       ),
       title: copy.errorTitle ?? "Error",
     });
@@ -1483,13 +1546,18 @@ const runMacosApplicationExport = async (deps, confirmation) => {
   });
   let outputPath;
   try {
-    outputPath =
-      await projectService.promptMacosApplicationPath(applicationName);
+    outputPath = await projectService.promptMacosApplicationPath(
+      applicationName,
+      {
+        title: copy.saveMacosApplicationDialogTitle,
+        fileTypeName: copy.macosApplicationFileTypeName,
+      },
+    );
   } catch (error) {
     appService.showAlert({
       message: formatI18nCopy(
         copy.failedOpenSaveDialog ?? "Failed to open save dialog: {message}",
-        { message: getMacosExportErrorMessage(error) },
+        { message: getMacosExportErrorMessage(error, copy) },
       ),
       title: copy.errorTitle ?? "Error",
     });
@@ -1522,7 +1590,11 @@ const runMacosApplicationExport = async (deps, confirmation) => {
     const exportOptions = {
       onProgress: (progress) => {
         progressDialog.update(
-          createMacosApplicationProgressView({ copy, progress }),
+          createMacosApplicationProgressView({
+            copy,
+            dateTime: i18n.dateTime,
+            progress,
+          }),
         );
       },
     };
@@ -1553,7 +1625,7 @@ const runMacosApplicationExport = async (deps, confirmation) => {
     progressDialog.close();
     const replay = error?.details?.replay;
     console.error("Version macOS application export failed", {
-      errorMessage: getMacosExportErrorMessage(error),
+      errorMessage: getMacosExportErrorMessage(error, copy),
       versionId,
       versionName: version.name,
       versionActionIndex: version.actionIndex,
@@ -1565,11 +1637,11 @@ const runMacosApplicationExport = async (deps, confirmation) => {
     });
     appService.showAlert({
       message: replay
-        ? `${formatReplayFailureMessage({ replay, copy })}\n${getErrorMessage(error)}`
+        ? `${formatReplayFailureMessage({ replay, copy })}\n${getErrorMessage(error, copy)}`
         : formatI18nCopy(
             copy.failedSaveMacosApplication ??
               "Failed to save macOS application: {message}",
-            { message: getMacosExportErrorMessage(error) },
+            { message: getMacosExportErrorMessage(error, copy) },
           ),
       title: copy.errorTitle ?? "Error",
     });

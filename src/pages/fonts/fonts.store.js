@@ -44,7 +44,12 @@ const formatSupportedFontWeights = ({ item, copy = {} } = {}) => {
     : `${minWeight}\u2013${maxWeight}`;
 };
 
-const buildDetailFields = ({ item, selectedFontInfo, copy = {} } = {}) => {
+const buildDetailFields = ({
+  item,
+  selectedFontInfo,
+  copy = {},
+  dateTime,
+} = {}) => {
   if (!item) {
     return [];
   }
@@ -81,7 +86,7 @@ const buildDetailFields = ({ item, selectedFontInfo, copy = {} } = {}) => {
     {
       type: "text",
       label: copy.fileSizeLabel ?? "File Size",
-      value: item.fileSize ? formatFileSize(item.fileSize) : "",
+      value: item.fileSize ? formatFileSize(item.fileSize, dateTime) : "",
     },
   ];
 };
@@ -197,7 +202,8 @@ const {
     { label: "Delete", type: "item", value: "delete-item" },
   ],
   matchesSearch: matchesTagAwareSearch,
-  buildDetailFields: (item, { copy }) => buildDetailFields({ item, copy }),
+  buildDetailFields: (item, { copy, dateTime }) =>
+    buildDetailFields({ item, copy, dateTime }),
   buildMediaItem,
   buildPendingMediaItem,
   createEditForm,
@@ -205,7 +211,7 @@ const {
   tagging: {
     tagFilterPlaceholder: "Filter tags",
   },
-  extendViewData: ({ state, selectedItem, baseViewData, copy }) => {
+  extendViewData: ({ state, selectedItem, baseViewData, copy, dateTime }) => {
     const selectedFontInfo = selectedItem
       ? state.fontInfoById[selectedItem.id]
       : undefined;
@@ -240,6 +246,7 @@ const {
         item: selectedItem,
         selectedFontInfo,
         copy,
+        dateTime,
       }),
       editPreviewFontFamily:
         state.editUploadResult?.fontName ?? editItem?.fontFamily ?? "",

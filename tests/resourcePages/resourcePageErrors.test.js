@@ -1,10 +1,12 @@
 import { describe, expect, it, vi } from "vitest";
 import { runResourcePageMutation } from "../../src/internal/ui/resourcePages/resourcePageErrors.js";
+import { ES_I18N, EN_I18N } from "../support/i18n.js";
 
-const runFailingMutation = async (action) => {
+const runFailingMutation = async (action, copy = EN_I18N.appPage) => {
   const appService = {
     reportError: vi.fn(),
     showAlert: vi.fn(),
+    getAppCopy: () => copy,
   };
   const consoleError = vi.spyOn(console, "error").mockImplementation(() => {});
 
@@ -51,5 +53,59 @@ describe("runResourcePageMutation", () => {
     }));
 
     expect(appService.reportError).not.toHaveBeenCalled();
+  });
+
+  it("tells the user to free up space when the device is full, without reporting it", async () => {
+    const iosRejection = new Error(
+      "You can’t save the file “photo.png” because there isn’t enough space.",
+    );
+    const desktopRejection = "No space left on device (os error 28)";
+
+    const iosAppService = await runFailingMutation(async () => {
+      throw iosRejection;
+    });
+    const desktopAppService = await runFailingMutation(async () => {
+      throw desktopRejection;
+    });
+
+    for (const appService of [iosAppService, desktopAppService]) {
+      expect(appService.reportError).not.toHaveBeenCalled();
+      expect(appService.showAlert).toHaveBeenCalledWith({
+        message: EN_I18N.appPage.storageFullMessage,
+        title: "Error",
+      });
+    }
+  });
+
+  it("explains a full device in the app language, whatever language the system message is in", async () => {
+    const error = new Error("Not enough room to save the file.");
+    error.code = "storageFull";
+
+    const appService = await runFailingMutation(async () => {
+      throw error;
+    }, ES_I18N.appPage);
+
+    expect(appService.showAlert).toHaveBeenCalledWith({
+      message: ES_I18N.appPage.storageFullMessage,
+      title: "Error",
+    });
+    expect(ES_I18N.appPage.storageFullMessage).not.toBe(
+      EN_I18N.appPage.storageFullMessage,
+    );
+  });
+
+  it("explains a full device found in a refused result", async () => {
+    const appService = await runFailingMutation(async () => ({
+      valid: false,
+      error: {
+        code: "write_failed",
+        message: "No space left on device (os error 28)",
+      },
+    }));
+
+    expect(appService.showAlert).toHaveBeenCalledWith({
+      message: EN_I18N.appPage.storageFullMessage,
+      title: "Error",
+    });
   });
 });

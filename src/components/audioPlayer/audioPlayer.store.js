@@ -95,6 +95,7 @@ export const selectViewData = ({ state, props, i18n }) => ({
   duration: state.duration,
   seekPosition: state.seekTime ?? state.currentTime,
   seekLabel: i18n.audioPlayerPage.seekLabel,
+  loadingLabel: i18n.audioPlayerPage.loadingLabel,
   currentTimeFormatted: selectFormattedCurrentTime({ state }),
   durationFormatted: selectFormattedDuration({ state }),
   progressPercentage: selectProgressPercentage({ state }),

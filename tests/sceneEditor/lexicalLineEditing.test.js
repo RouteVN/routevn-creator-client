@@ -3154,6 +3154,8 @@ describe("lexical scene document editor line editing", () => {
           top: 193,
         },
       };
+      // Start from the default menu labels, as a constructed element does.
+      editorElement.menuLabels = undefined;
       editorElement.refs = {
         mentionMenu: {
           open: true,

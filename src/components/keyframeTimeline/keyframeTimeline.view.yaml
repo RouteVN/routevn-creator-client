@@ -93,7 +93,7 @@ template:
                                     $else:
                                       - rtgl-text s=xs c=${property.nameColor}: ${property.label}
                               - 'rtgl-view h=24 w=24 av=c ah=e mr=sm ml=sm pos=rel style="z-index: 2; pointer-events: none;"':
-                                  - 'rtgl-text s=xs c=${property.initialValueColor} ellipsis title="${property.initialValue}"': ${property.initialValue}
+                                  - 'rtgl-text s=xs c=${property.initialValueColor} ellipsis title="${property.initialValueTitle}"': ${property.initialValue}
                           - 'rtgl-view#track${pIndex} data-keyframe-track=true data-property=${property.name} data-track-mode=${property.trackMode} d=h w=f h=24 bgc=mu br=sm pos=rel style="min-width: 0; overflow: hidden; cursor: ${property.trackCursor};"':
                               - $if property.valueCurvePath:
                                   - 'svg data-value-curve=${property.name} aria-hidden=true viewBox="0 0 100 20" preserveAspectRatio="none" style="position: absolute; inset: 0; width: 100%; height: 100%; pointer-events: none; opacity: 0.72; z-index: 3;"':
@@ -129,4 +129,4 @@ template:
                                     $else:
                                       - rtgl-view d=h p=xs h=f w=1fg br=sm ah=c av=c:
                                           - $if property.emptyLabelVisible:
-                                              - rtgl-text s=xs: No keyframes
+                                              - rtgl-text s=xs: ${noKeyframesLabel}

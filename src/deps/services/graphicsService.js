@@ -25,6 +25,10 @@ import {
   loadGraphicsEnginePlugins,
 } from "../../internal/runtime/graphicsEngineRuntime.js";
 import { requireProjectResolution } from "../../internal/projectResolution.js";
+import {
+  isGraphicsContextCreationError,
+  isGraphicsUnavailableError,
+} from "../../internal/graphicsErrors.js";
 import { startCanvasVideoRecording } from "../clients/canvasVideoRecorder.js";
 import { decodeAudioBuffer } from "../clients/audioDecoder.js";
 import { loadFontBuffer } from "./shared/fontLoader.js";
@@ -637,12 +641,35 @@ const installManagedAudioAsset = () => {
 
 installManagedAudioAsset();
 
+// Pauses between the tries to start graphics after a context could not be
+// created.
+const GRAPHICS_START_RETRY_DELAYS_MS = [500, 1500];
+
+const waitBeforeGraphicsRetry = (delayMs, signal) =>
+  new Promise((resolve, reject) => {
+    signal?.throwIfAborted();
+    const onAbort = () => {
+      clearTimeout(timer);
+      reject(signal.reason);
+    };
+    const timer = setTimeout(() => {
+      signal?.removeEventListener("abort", onAbort);
+      resolve();
+    }, delayMs);
+    signal?.addEventListener("abort", onAbort, { once: true });
+  });
+
 export const createGraphicsService = async ({
   subject,
   projectMediaOrigin,
   audioOutput,
   onAudioOutputError,
   onRenderError,
+  // Called when graphics cannot start because the device has no usable WebGL.
+  // The initialization still rejects with the same error.
+  onGraphicsUnavailable,
+  // Pauses before each new try after a context could not be created.
+  startRetryDelaysMs = GRAPHICS_START_RETRY_DELAYS_MS,
 } = {}) => {
   let routeGraphics;
   let routeGraphicsInitPromise;
@@ -2331,199 +2358,227 @@ export const createGraphicsService = async ({
     }
   };
 
-  return {
-    init: (options = {}) =>
-      queueGraphicsLifecycle(async () => {
-        options.signal?.throwIfAborted();
-        if (routeGraphicsInitPromise) {
-          await routeGraphicsInitPromise;
-        }
+  const initGraphicsOnce = (options = {}) =>
+    queueGraphicsLifecycle(async () => {
+      options.signal?.throwIfAborted();
+      if (routeGraphicsInitPromise) {
+        await routeGraphicsInitPromise;
+      }
 
-        if (destroyRuntimePromise) {
-          await destroyRuntimePromise;
-        }
+      if (destroyRuntimePromise) {
+        await destroyRuntimePromise;
+      }
 
-        if (routeGraphics) {
-          await runDestroyRuntime();
-        }
+      if (routeGraphics) {
+        await runDestroyRuntime();
+      }
 
-        options.signal?.throwIfAborted();
-        let activeRouteGraphics;
-        let rendererInitialization;
-        routeGraphicsInitPromise = (async () => {
-          ticker = new Ticker();
-          ticker.start();
-          const { canvas, beforeHandleActions: onBeforeHandleActions } =
-            options;
-          const { width: renderWidth, height: renderHeight } =
-            requireProjectResolution(
-              {
-                width: options.width,
-                height: options.height,
-              },
-              "Graphics runtime resolution",
-            );
-          beforeHandleActions = onBeforeHandleActions;
-          onPlaybackError = options.onPlaybackError;
-          actionQueue = Promise.resolve();
-          assetLoadQueue = Promise.resolve();
-          assetLoadRuntimeVersion += 1;
-          invalidateDeferredAudioRender();
-          clearAllPendingClickInteractions();
-          runtimeInteractionsEnabled = true;
-          loadedAssetTypes = new Map();
-          assetBufferManager = createAssetBufferManager();
-          // Media playback can remain pending until the browser produces audio.
-          // It must not hold up canvas creation, asset loading, or teardown.
-          if (audioOutput) {
-            void audioOutput.resume().catch((error) => {
-              console.error(
-                "[graphicsService] Failed to start audio output",
-                error,
-              );
-              onAudioOutputError?.(error);
-            });
-          }
-          const plugins = await runAsyncOperation(loadGraphicsEnginePlugins, {
-            signal: options.signal,
-            label: "Load graphics plugins",
-          });
-
-          await runWithNonPassiveWheelListeners(() =>
-            runAsyncOperation(
-              () => {
-                activeRouteGraphics = createRouteGraphics();
-                routeGraphics = activeRouteGraphics;
-                rendererInitialization = Promise.resolve().then(() =>
-                  activeRouteGraphics.init({
-                    width: renderWidth,
-                    height: renderHeight,
-                    plugins,
-                    eventHandler: (eventName, payload) => {
-                      if (
-                        routeGraphics !== activeRouteGraphics ||
-                        options.signal?.aborted
-                      )
-                        return;
-                      const eventId = payload?._event?.id;
-                      const actions = getRuntimeEventActions(payload);
-                      const layoutEditorDragTarget =
-                        isLayoutEditorDragTarget(eventId);
-                      if (eventName === "dragMove") {
-                        if (layoutEditorDragTarget) {
-                          subject.dispatch(
-                            "border-drag-move",
-                            createLayoutEditorDragPayload(payload, {
-                              includePosition: true,
-                            }),
-                          );
-                        }
-                      } else if (eventName === "dragStart") {
-                        if (layoutEditorDragTarget) {
-                          subject.dispatch(
-                            "border-drag-start",
-                            createLayoutEditorDragPayload(payload),
-                          );
-                        }
-                      } else if (eventName === "dragEnd") {
-                        if (layoutEditorDragTarget) {
-                          subject.dispatch(
-                            "border-drag-end",
-                            createLayoutEditorDragPayload(payload),
-                          );
-                        }
-                      }
-
-                      if (!runtimeInteractionsEnabled) {
-                        return;
-                      }
-
-                      if (!engine) {
-                        return;
-                      }
-
-                      if (eventName === "renderComplete") {
-                        if (payload?.aborted === true) {
-                          return;
-                        }
-                        runEnginePlayback(() =>
-                          engine.handleActions({ markLineCompleted: {} }),
-                        );
-                        return;
-                      }
-
-                      if (actions && engine) {
-                        const eventContext = createRuntimeEventContext(payload);
-
-                        const interactionId =
-                          eventContext?._event?.id ?? "__unknown__";
-
-                        if (isRuntimeRightClickEvent(eventName)) {
-                          clearPendingClickInteraction(interactionId);
-                          enqueueInteractionActions(actions, eventContext);
-                          return;
-                        }
-
-                        if (eventName === "click") {
-                          scheduleClickInteraction(actions, eventContext);
-                          return;
-                        }
-
-                        enqueueInteractionActions(actions, eventContext);
-                      }
-                    },
-                  }),
-                );
-                return rendererInitialization;
-              },
-              {
-                signal: options.signal,
-                label: "Initialize graphics",
-              },
-            ),
+      options.signal?.throwIfAborted();
+      let activeRouteGraphics;
+      let rendererInitialization;
+      routeGraphicsInitPromise = (async () => {
+        ticker = new Ticker();
+        ticker.start();
+        const { canvas, beforeHandleActions: onBeforeHandleActions } = options;
+        const { width: renderWidth, height: renderHeight } =
+          requireProjectResolution(
+            {
+              width: options.width,
+              height: options.height,
+            },
+            "Graphics runtime resolution",
           );
-
-          options.signal?.throwIfAborted();
-          if (canvas) {
-            await attachCanvas(canvas);
-          }
-        })();
-
-        try {
-          await routeGraphicsInitPromise;
-        } catch (error) {
-          // Invalidate this session immediately, but never destroy Pixi while
-          // Application.init is pending. Its renderer does not exist yet.
-          routeGraphics = undefined;
-          if (rendererInitialization) {
-            const destroyFailedRenderer = () => {
-              activeRouteGraphics.setAnimationPlaybackMode?.("manual");
-              activeRouteGraphics.destroy();
-            };
-            // Use the underlying promise, including rejection, rather than the
-            // abortable wait. Cleanup owns only this renderer, not its replacement.
-            void rendererInitialization
-              .then(destroyFailedRenderer, destroyFailedRenderer)
-              .catch((cleanupError) => {
-                console.error(
-                  "[graphicsService] Failed to release abandoned renderer",
-                  cleanupError,
-                );
-              });
-          }
-          try {
-            await runDestroyRuntime();
-          } catch (cleanupError) {
+        beforeHandleActions = onBeforeHandleActions;
+        onPlaybackError = options.onPlaybackError;
+        actionQueue = Promise.resolve();
+        assetLoadQueue = Promise.resolve();
+        assetLoadRuntimeVersion += 1;
+        invalidateDeferredAudioRender();
+        clearAllPendingClickInteractions();
+        runtimeInteractionsEnabled = true;
+        loadedAssetTypes = new Map();
+        assetBufferManager = createAssetBufferManager();
+        // Media playback can remain pending until the browser produces audio.
+        // It must not hold up canvas creation, asset loading, or teardown.
+        if (audioOutput) {
+          void audioOutput.resume().catch((error) => {
             console.error(
-              "[graphicsService] Failed to release initialization resources",
-              cleanupError,
+              "[graphicsService] Failed to start audio output",
+              error,
             );
-          }
-          throw error;
-        } finally {
-          routeGraphicsInitPromise = undefined;
+            onAudioOutputError?.(error);
+          });
         }
-      }),
+        const plugins = await runAsyncOperation(loadGraphicsEnginePlugins, {
+          signal: options.signal,
+          label: "Load graphics plugins",
+        });
+
+        await runWithNonPassiveWheelListeners(() =>
+          runAsyncOperation(
+            () => {
+              activeRouteGraphics = createRouteGraphics();
+              routeGraphics = activeRouteGraphics;
+              rendererInitialization = Promise.resolve().then(() =>
+                activeRouteGraphics.init({
+                  width: renderWidth,
+                  height: renderHeight,
+                  plugins,
+                  eventHandler: (eventName, payload) => {
+                    if (
+                      routeGraphics !== activeRouteGraphics ||
+                      options.signal?.aborted
+                    )
+                      return;
+                    const eventId = payload?._event?.id;
+                    const actions = getRuntimeEventActions(payload);
+                    const layoutEditorDragTarget =
+                      isLayoutEditorDragTarget(eventId);
+                    if (eventName === "dragMove") {
+                      if (layoutEditorDragTarget) {
+                        subject.dispatch(
+                          "border-drag-move",
+                          createLayoutEditorDragPayload(payload, {
+                            includePosition: true,
+                          }),
+                        );
+                      }
+                    } else if (eventName === "dragStart") {
+                      if (layoutEditorDragTarget) {
+                        subject.dispatch(
+                          "border-drag-start",
+                          createLayoutEditorDragPayload(payload),
+                        );
+                      }
+                    } else if (eventName === "dragEnd") {
+                      if (layoutEditorDragTarget) {
+                        subject.dispatch(
+                          "border-drag-end",
+                          createLayoutEditorDragPayload(payload),
+                        );
+                      }
+                    }
+
+                    if (!runtimeInteractionsEnabled) {
+                      return;
+                    }
+
+                    if (!engine) {
+                      return;
+                    }
+
+                    if (eventName === "renderComplete") {
+                      if (payload?.aborted === true) {
+                        return;
+                      }
+                      runEnginePlayback(() =>
+                        engine.handleActions({ markLineCompleted: {} }),
+                      );
+                      return;
+                    }
+
+                    if (actions && engine) {
+                      const eventContext = createRuntimeEventContext(payload);
+
+                      const interactionId =
+                        eventContext?._event?.id ?? "__unknown__";
+
+                      if (isRuntimeRightClickEvent(eventName)) {
+                        clearPendingClickInteraction(interactionId);
+                        enqueueInteractionActions(actions, eventContext);
+                        return;
+                      }
+
+                      if (eventName === "click") {
+                        scheduleClickInteraction(actions, eventContext);
+                        return;
+                      }
+
+                      enqueueInteractionActions(actions, eventContext);
+                    }
+                  },
+                }),
+              );
+              return rendererInitialization;
+            },
+            {
+              signal: options.signal,
+              label: "Initialize graphics",
+            },
+          ),
+        );
+
+        options.signal?.throwIfAborted();
+        if (canvas) {
+          await attachCanvas(canvas);
+        }
+      })();
+
+      try {
+        await routeGraphicsInitPromise;
+      } catch (error) {
+        // Invalidate this session immediately, but never destroy Pixi while
+        // Application.init is pending. Its renderer does not exist yet.
+        routeGraphics = undefined;
+        if (rendererInitialization) {
+          const destroyFailedRenderer = () => {
+            activeRouteGraphics.setAnimationPlaybackMode?.("manual");
+            activeRouteGraphics.destroy();
+          };
+          // Use the underlying promise, including rejection, rather than the
+          // abortable wait. Cleanup owns only this renderer, not its replacement.
+          void rendererInitialization
+            .then(destroyFailedRenderer, destroyFailedRenderer)
+            .catch((cleanupError) => {
+              console.error(
+                "[graphicsService] Failed to release abandoned renderer",
+                cleanupError,
+              );
+            });
+        }
+        try {
+          await runDestroyRuntime();
+        } catch (cleanupError) {
+          console.error(
+            "[graphicsService] Failed to release initialization resources",
+            cleanupError,
+          );
+        }
+        throw error;
+      } finally {
+        routeGraphicsInitPromise = undefined;
+      }
+    });
+
+  // A context that cannot be created may only be refused for the moment, such
+  // as while the graphics process restarts or memory is short, so starting is
+  // tried again after short pauses before the device is given up on. The owner
+  // hears about a device that cannot show graphics once, after the last try.
+  const initGraphics = async (options = {}) => {
+    for (let retry = 0; ; retry += 1) {
+      try {
+        return await initGraphicsOnce(options);
+      } catch (error) {
+        const delayMs = startRetryDelaysMs[retry];
+        if (isGraphicsContextCreationError(error) && delayMs !== undefined) {
+          console.warn(
+            "[graphicsService] Graphics did not start, trying again",
+            error,
+          );
+          await waitBeforeGraphicsRetry(delayMs, options.signal);
+          continue;
+        }
+
+        if (isGraphicsUnavailableError(error)) {
+          onGraphicsUnavailable?.(error);
+        }
+        throw error;
+      }
+    }
+  };
+
+  return {
+    init: initGraphics,
     loadAssets: async (assets, options = {}) => {
       await runAsyncOperation(waitUntilReady, {
         signal: options.signal,

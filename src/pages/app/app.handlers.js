@@ -26,7 +26,11 @@ import {
 import { getLocalProjectPathFromPayload } from "../../internal/localProjectRoute.js";
 import { getRoutevnCreatorDocsUrl } from "../../internal/routevnUrls.js";
 import { resolveUpdatesEnabled } from "../../internal/updates.js";
-import { readAppLocaleUsage } from "../../internal/ui/appLocale.js";
+import {
+  activateAppLocale,
+  readAppLocaleUsage,
+  resolveAppLocale,
+} from "../../internal/ui/appLocale.js";
 import { recordRecentSceneVisit } from "../../internal/ui/recentScenes.js";
 import { isAssetPackageEnabled } from "../../internal/ui/releasePreferences.js";
 import {
@@ -266,6 +270,23 @@ export const createRouteTransitionRunner = (
   { onOpenProjectChange = () => {} } = {},
 ) => {
   let transitionToken = 0;
+  // The release of the project a route left, while it is still closing. The
+  // project keeps reporting itself as ensured until the release finishes, so
+  // a route that opens a project in the meantime must not reuse it: the
+  // release would close it under the page that route mounts.
+  let projectRelease;
+
+  const releaseProject = (projectId) => {
+    const release = deps.projectService
+      .releaseProjectRuntime(projectId)
+      .finally(() => {
+        if (projectRelease === release) {
+          projectRelease = undefined;
+        }
+      });
+    projectRelease = release;
+    return release;
+  };
 
   return async ({
     path,
@@ -360,8 +381,13 @@ export const createRouteTransitionRunner = (
     const needsRepository =
       !isIOSConfig && routeNeedsRepository(canonicalPath, currentProjectId);
     const currentProjectPath = getLocalProjectPathFromPayload(nextPayload);
-    const ensuredProjectId = projectService.getEnsuredProjectId();
-    const ensuredProjectPath = projectService.getEnsuredProjectPath?.() ?? "";
+    const closingProject = projectRelease;
+    const ensuredProjectId = closingProject
+      ? undefined
+      : projectService.getEnsuredProjectId();
+    const ensuredProjectPath = closingProject
+      ? ""
+      : (projectService.getEnsuredProjectPath?.() ?? "");
     const isAlreadyEnsured =
       currentProjectId === ensuredProjectId &&
       (!currentProjectPath || currentProjectPath === ensuredProjectPath);
@@ -396,7 +422,7 @@ export const createRouteTransitionRunner = (
       markNavigationTiming(routeTiming, "repository.release.start", {
         ensuredProjectId,
       });
-      await projectService.releaseProjectRuntime(ensuredProjectId);
+      await releaseProject(ensuredProjectId);
       markNavigationTiming(routeTiming, "repository.release.end", {
         ensuredProjectId,
       });
@@ -423,6 +449,13 @@ export const createRouteTransitionRunner = (
     }
 
     try {
+      if (closingProject) {
+        // The route that started the release handles its failure; this one
+        // only needs the project closed before it opens one.
+        markNavigationTiming(routeTiming, "repository.release-wait.start");
+        await closingProject.catch(() => {});
+        markNavigationTiming(routeTiming, "repository.release-wait.end");
+      }
       markNavigationTiming(routeTiming, "project-entry.refresh.start");
       await appService.refreshCurrentProjectEntry();
       markNavigationTiming(routeTiming, "project-entry.refresh.end");
@@ -594,16 +627,32 @@ export const handleBeforeMount = (deps) => {
         status: "error",
       }),
   });
-  let cleanupDiscordPresenceLocaleSubscription = () => {};
-  if (appService.getPlatform() === "tauri") {
-    syncDiscordPresenceDetails(deps);
-    cleanupDiscordPresenceLocaleSubscription = deps.locale.subscribe(() =>
-      syncDiscordPresenceDetails(deps),
-    );
-  }
+  // Copy kept outside the component tree follows the active locale: Rettangoli
+  // UI's default form validation messages, which forms read on each
+  // validation (errors already shown keep their text until their field is
+  // validated again), and the desktop Discord presence.
+  const isTauri = appService.getPlatform() === "tauri";
+  const syncLocaleCopy = () => {
+    appService.setFormValidationMessages?.(deps.i18n.formValidation);
+    if (isTauri) {
+      syncDiscordPresenceDetails(deps);
+    }
+  };
+  syncLocaleCopy();
+  const cleanupLocaleCopySubscription = deps.locale.subscribe(syncLocaleCopy);
   const currentPath = appService.getPath();
   const initialPath = currentPath === "/" ? "/projects" : currentPath;
 
+  // Apply the saved language on every load, not only when the Projects or
+  // App Config page opens, so a reload on any other page keeps it.
+  void activateAppLocale({
+    appService,
+    localeService: deps.locale,
+    locale: resolveAppLocale({ appService, localeService: deps.locale }),
+    persist: false,
+  }).catch((error) => {
+    console.warn("Failed to apply the saved app language:", error);
+  });
   appService.setAppCopyProvider?.(() => selectAppCopy(deps.i18n));
   appService.setAppLocaleUsageProvider?.(() =>
     readAppLocaleUsage({ appService, localeService: deps.locale }),
@@ -626,7 +675,7 @@ export const handleBeforeMount = (deps) => {
 
   return () => {
     cleanupSubscriptions();
-    cleanupDiscordPresenceLocaleSubscription();
+    cleanupLocaleCopySubscription();
     cleanupWindowMetrics?.();
     cleanupBackup?.();
     cleanupFullscreenEscape?.();

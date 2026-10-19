@@ -117,6 +117,31 @@ describe("appShellService", () => {
     }
   });
 
+  it("sets the document language", () => {
+    const service = createAppShellService(createDeps());
+    const root = { documentElement: { lang: "en" } };
+    vi.stubGlobal("document", root);
+
+    try {
+      service.setDocumentLanguage("zh-hans");
+      expect(root.documentElement.lang).toBe("zh-hans");
+    } finally {
+      vi.unstubAllGlobals();
+    }
+  });
+
+  it("sets the default form validation messages for Rettangoli UI forms", () => {
+    const service = createAppShellService(createDeps());
+    const messages = { required: "Este campo é obrigatório" };
+
+    try {
+      service.setFormValidationMessages(messages);
+      expect(globalThis.rtglFormMessages).toBe(messages);
+    } finally {
+      delete globalThis.rtglFormMessages;
+    }
+  });
+
   it("awaits registered work before navigation continues", async () => {
     const deps = createDeps();
     const service = createAppShellService(deps);

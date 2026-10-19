@@ -115,7 +115,7 @@ template:
                                               - rvn-file-image w=96 h=96 bw=xs bc=bo br=f fileId=${item.fileId}: null
                                             $else:
                                               - rtgl-view w=96 h=96 av=c ah=c bgc=bg bc=bo bw=xs br=f:
-                                                  - rtgl-text c=mu-fg s=sm: No Avatar
+                                                  - rtgl-text c=mu-fg s=sm: ${viewCopy.noAvatarLabel}
                                           - 'rtgl-view w=1fg g=${characterCardContentGap} style="${characterCardContentStyle}"':
                                               - rtgl-text s=${characterNameSize}: ${item.name}
                                               - $if item.description:
@@ -126,7 +126,7 @@ template:
                                                       - 'rtgl-text s=${characterDescriptionSize} c=mu-fg style="${characterDescriptionStyle}"': ${item.description}
                                           - $if showCharacterCardSpritesButton:
                                               - rtgl-view h=f av=c:
-                                                  - rtgl-button#spritesButtonRef${gIndex}x${itemIndex} data-item-id=${item.id} v=se: Sprites
+                                                  - rtgl-button#spritesButtonRef${gIndex}x${itemIndex} data-item-id=${item.id} v=se: ${viewCopy.spritesButtonLabel}
                                 $else:
                                   - $if group.showEmptyAdd:
                                       - rtgl-view#addBtnEmptyRef${gIndex} data-group-id=${group.id} data-resource-view-control=true w=f h=150 av=c ah=c g=md p=lg bw=xs bc=bo br=lg cur=pointer:
@@ -137,15 +137,15 @@ template:
                   - rtgl-text s=lg c=mu-fg: ${emptyMessage}
             $else:
               - rtgl-view w=f h=f av=c ah=c:
-                  - rtgl-text s=lg c=mu-fg: No data
+                  - rtgl-text s=lg c=mu-fg: ${viewCopy.noDataMessage}
           - $if groups.length > 0:
               - 'rtgl-view w=f h="${scrollBottomPadding}" style="flex-shrink: 0;"': null
   - rtgl-popover#tagFilterPopover ?open=${tagFilterPopover.isOpen} x=${tagFilterPopover.position.x} y=${tagFilterPopover.position.y} place=be content-w=320 content-g=sm content-sv=true content-ph=md content-pv=md:
       - $if showFilterPopoverSearch:
-          - rtgl-text s=md: Filter
+          - rtgl-text s=md: ${viewCopy.filterLabel}
           - rtgl-input#searchInput s=sm placeholder=${searchPlaceholder} value=${searchQuery} w=f: null
       - $if !tagFilterPopover.hasOptions:
-          - rtgl-text s=sm c=mu-fg: No tags available
+          - rtgl-text s=sm c=mu-fg: ${viewCopy.noTagsAvailableMessage}
       - $if tagFilterPopover.hasOptions:
           - rtgl-view d=h wrap g=sm w=f:
               - $for option, i in tagFilterPopover.options:
@@ -154,6 +154,6 @@ template:
                           ${option.label}
       - rtgl-view d=h av=c g=sm w=f pt=sm:
           - rtgl-view w=1fg: null
-          - rtgl-button#tagFilterClear v=se s=sm ?disabled=${tagFilterPopover.clearDisabled}: Clear
-          - rtgl-button#tagFilterApply v=pr s=sm: Save
+          - rtgl-button#tagFilterClear v=se s=sm ?disabled=${tagFilterPopover.clearDisabled}: ${viewCopy.clearButton}
+          - rtgl-button#tagFilterApply v=pr s=sm: ${viewCopy.saveButton}
   - rtgl-dropdown-menu#contextMenu :items=${dropdownMenu.items} ?open=${dropdownMenu.isOpen} x=${dropdownMenu.x} y=${dropdownMenu.y}: null
